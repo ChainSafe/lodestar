@@ -29,3 +29,5 @@ class CrossLinkRecord {
       }
     }
 }
+
+exports.CrossLinkRecord = CrossLinkRecord;
