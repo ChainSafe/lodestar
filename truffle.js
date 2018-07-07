@@ -13,6 +13,7 @@
  */
 
 module.exports = {
+  networks: {
   development: {
             //host: "localhost",
             port: 8545,
@@ -32,5 +33,5 @@ module.exports = {
             gas: 580000,
             gasLimit: 10000000
    },
-
+  }
 };
