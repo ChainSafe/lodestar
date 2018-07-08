@@ -33,8 +33,8 @@ class AggregateVote {
     }
 
     // Returns the number of aggregate signatures
-    const numAggregateSig => {
-      return this.fields.aggregateSig.length;
+    const numAggregateSig() => {
+      return this.aggregateSig.length;
     }
 }
 
