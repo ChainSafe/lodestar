@@ -49,12 +49,12 @@ class ActiveState {
     }
 
     // Returns the number of recent attesters
-    const numRecentAttesters() => {
+    const function numRecentAttesters() {
       return this.recent_attesters.length;
     }
 
     // Returns the number of recent proposers
-    const numRecentProposers() => {
+    const function numRecentProposers() {
       return this.recent_proposers.length;
     }
 }

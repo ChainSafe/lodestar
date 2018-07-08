@@ -1,6 +1,6 @@
 var exports = module.exports = {};
 
-class CrossLinkRecord {
+class CrosslinkRecord {
     var fields = {
       // What epoch the crosslink was submitted in
       'epoch':'int64',
@@ -30,4 +30,4 @@ class CrossLinkRecord {
     }
 }
 
-exports.CrossLinkRecord = CrossLinkRecord;
+exports.CrosslinkRecord = CrosslinkRecord;

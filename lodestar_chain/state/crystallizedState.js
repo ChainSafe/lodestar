@@ -65,22 +65,22 @@ class CrystallizedState {
     }
 
     // Returns the number of active validators
-    const numActivateValidators() => {
+    const function numActivateValidators() {
       return this.active_validators.length;
     }
 
     // Returns the number of queued validators
-    const numQueuedValidators() => {
+    const function numQueuedValidators() {
       return this.queued_validators.length;
     }
 
     // Returns the number of exited validators
-    const numExitedValidators() => {
+    const function numExitedValidators() {
       return this.exited_validators.length;
     }
 
     // Returns the number of crosslink records
-    const numCrosslinkRecords() => {
+    const function numCrosslinkRecords() {
       return this.crosslink_records.length;
     }
 }
