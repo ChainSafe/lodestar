@@ -17,3 +17,5 @@ You will need to go over the [specification](https://notes.ethereum.org/SCIg8AH5
 1. Have well-documented tests
 2. Have a UI demonstrating how a beacon chain can work.
 3. Optimized code 
+4. Have clean and consistent code base
+5. Be a reference implementation of the beacon chain in Javascript
