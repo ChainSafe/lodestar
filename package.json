@@ -2,7 +2,19 @@
   "name": "lodestar-chain",
   "version": "0.1.0",
   "description": "A javascript implementation of the beacon chain",
+  "author": "ChainSafe System",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ChainSafe/lodestar_chain/issues"
+  },
+  "homepage": "https://github.com/ChainSafe/lodestar_chain#readme",
   "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha --recursive"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com:ChainSafe/lodestar_chain.git"
@@ -10,19 +22,16 @@
   "keywords": [
     "Ethereum",
     "beacon",
-    "future"
+    "future",
     "p2p",
     "blockchain"
   ],
-  "author": "ChainSafe System",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/ChainSafe/lodestar_chain/issues"
-  },
-  "homepage": "https://github.com/ChainSafe/lodestar_chain#readme",
-  "dependencies": {
-  },
+  "dependencies": {},
   "bin": {
     "lodestar-chain": "./index.js"
+  },
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "mocha": "^5.2.0"
   }
 }
