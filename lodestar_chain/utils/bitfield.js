@@ -7,7 +7,7 @@ const setVoted = (bitfield, index) => {
     const byteIndex = Math.floor(index / 8);
     const bitIndex = index % 8;
     const newByteValue = bitfield[byteIndex] | (128 >> bitIndex);
-    return bitfield[:byteIndex] + newByteValue + bitfield[byteIndex + 1:];
+    return bitfield.slice(0,byteIndex) + newByteValue + bitfield.slice(byteIndex + 1);
 }
 
 const getBitfieldLength = (bitCount) => {
@@ -21,7 +21,7 @@ const getEmptyBitfield = (bitCount) => {
 
 const getVoteCount = (bitfield) => {
     let votes = 0;
-    for(const i=0; i < bitfield.length * 8; i++) {
+    for(let i=0; i < bitfield.length * 8; i++) {
       if(hasVoted(bitfield, i)) {
         votes += 1;
       }

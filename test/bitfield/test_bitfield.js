@@ -10,9 +10,13 @@ const attestBitfield = [
 	[17, 3],
 ];
 
-describe('hasVoted should export', () => {
-	for(let i=0; i < attestBitfield.length; i++) {
-		const cur = attestBitfield[i];
-		expect(bitfield.getBitfieldLength(cur[i][0])).to.be.equal(cur[1])
-	}
+describe('Bitfield', () => {
+
+	describe('getBitfieldLength should return the correct length', () => {
+		for(let i=0; i < attestBitfield.length; i++) {
+			const cur = attestBitfield[i];
+			const length = bitfield.getBitfieldLength(cur[0]);
+			expect(length).to.equal(cur[1]);
+		}
+	});
 });
