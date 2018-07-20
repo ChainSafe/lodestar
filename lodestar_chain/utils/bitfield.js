@@ -1,6 +1,6 @@
 // Takes a bitfield(str) and index(int) and returns a bool
 const hasVoted = (bitfield, index) => {
-    return bitfield[Math.floor(index / 8)] & (128 >> (index % 8));
+    return Boolean(bitfield[Math.floor(index / 8)] & (128 >> (index % 8)));
 }
 
 const setVoted = (bitfield, index) => {
