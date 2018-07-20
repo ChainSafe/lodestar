@@ -1,5 +1,5 @@
-const expect = require('chai').expect;
 const bitfield = require('../../lodestar_chain/utils/bitfield');
+const assert = require('assert');
 
 const attestBitfield = [
 	[0, 0],
@@ -12,11 +12,15 @@ const attestBitfield = [
 
 describe('Bitfield', () => {
 
-	describe('getBitfieldLength should return the correct length', () => {
+	it('getBitfieldLength() should return the correct length', () => {
 		for(let i=0; i < attestBitfield.length; i++) {
 			const cur = attestBitfield[i];
 			const length = bitfield.getBitfieldLength(cur[0]);
-			expect(length).to.equal(cur[1]);
+			assert.equal(length, cur[1]);
 		}
+	});
+
+	it('getEmptyBitfieldLength should ', () => {
+		const attesters =
 	});
 });
