@@ -10,10 +10,21 @@ class ShardAndCommittee {
     }
 
     var defaults = {
-
+        'shard_id': 0,
+        'committee': []
     }
 
-    constructor(var toSet) {
-        
+    contrusctor(var toSet) {
+      for(var key in fields) {
+        if(fields.hasOwnProperty(key)){
+          if(toSet.hasOwnProperty(key)) {
+            this.key = toSet.key;
+          } else {
+            this.key = defaults.key;
+          }
+        }
+      }
     }
 }
+
+exports.ShardAndCommittee = ShardAndCommittee;

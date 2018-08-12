@@ -24,7 +24,7 @@ class CrystallizedState {
       // The current dynasty
       'current_dynasty': 'int64',
       // The next shard that assignment for cross-linking will start from
-      'crosslinking_next_shard': 'int16',
+      'crosslinking_start_shard': 'int16',
       // Records about the most recent crosslink for each shard
       'crosslink_records': [CrosslinkRecord],
       // Total balance of deposits
@@ -36,18 +36,18 @@ class CrystallizedState {
     };
 
     var defaults = {
-      'active_validators': [],
-      'queued_validators': [],
-      'exited_validators': [],
-      'current_shuffling': [],
-      'current_epoch': 0,
-      'last_justified_epoch': 0,
-      'last_finalized_epoch': 0,
-      'dynasty': 0,
-      'next_shard': 0,
-      'current_checkpoint': 'x00'.repeat(32),
+      'validators': [],
+      'last_state_recalc': 'int64',
+      'indices_for_height': [],
+      'last_justified_slot': 0,
+      'justified_streak': 0,
+      'last_finalized_slot': 0,
+      'current_dynasty': 0,
+      'crosslinking_start_shard': 0,
       'crosslink_records': [],
-      'total_deposits': 0
+      'total_deposits': 0,
+      'dynasty_seed': 'hash32',
+      'dynasty_seed_last_reset': 'int64'
     };
 
     /*
@@ -68,17 +68,7 @@ class CrystallizedState {
 
     // Returns the number of active validators
     const function numActivateValidators() {
-      return this.active_validators.length;
-    }
-
-    // Returns the number of queued validators
-    const function numQueuedValidators() {
-      return this.queued_validators.length;
-    }
-
-    // Returns the number of exited validators
-    const function numExitedValidators() {
-      return this.exited_validators.length;
+      return this.validators.length;
     }
 
     // Returns the number of crosslink records

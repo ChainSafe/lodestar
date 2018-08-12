@@ -9,8 +9,8 @@ class CrosslinkRecord {
     };
 
     var defaults = {
-      'epoch':0,
-      'hash': 'x00'.repeat(32)
+      'dynasty':0,
+      'hash': '\x00'.repeat(32)
     };
 
     /*
