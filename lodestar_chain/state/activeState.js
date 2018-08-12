@@ -1,35 +1,19 @@
 var exports = module.exports = {};
 
-var PartialCrossLinks = require('./partialCrosslinks.js');
-var RecentProposerRecord = require('./recentProposerRecord.js');
+var AttestationRecord = require('./attestationRecord.js');
 
 class ActiveState {
 
     var fields = {
-      // Block height
-      'height':'int64',
-      // Global RANDAO beacon state
-      'randao':'bytes32',
-      // Which validators have made FFG votes this epoch (as a bitfield)
-      'ffg_voter_bitfield': 'bytes',
-      // Block attesters in the last epoch
-      'recent_attesters': ['int24'],
-      // Storing data about crosslinks-in-progress attempted in this epoch
-      'partial_crosslinks': [PartialCrossLinks],
-      // Total number of skips (used to determine minimum timestamp)
-      'total_skip_count': 'int64',
-      // Block proposer in the last epoch
-      'recent_proposers': [RecentProposerRecord]
+      // Attestations that have not yet been processed
+      'pending_attestations': [AttestationRecord],
+      // Most recent 2 * CYCLE_LENGTH block hashes, older to newer
+      'recent_block_hashes': ['hash32']
     };
 
     var defaults = {
-      'height': 0,
-      'randao': 'x00'.repeat(32),
-      'ffg_voter_bitfield': '',
-      'recent_attesters': [],
-      'partial_crosslinks': [],
-      'total_skip_count': 0,
-      'recent_proposers': []
+      'pending_attestations': [],
+      'recent_block_hashes': []
     };
 
     /*
@@ -46,17 +30,19 @@ class ActiveState {
           }
         }
       }
+
+      if(toSet.hasOwnProperty('block_vote_cache')){
+          this.block_vote_cache = toSet['block_vote_cache']
+      } else {
+          this.block_vote_cache = {}
+      }
     }
 
     // Returns the number of recent attesters
-    const function numRecentAttesters() {
-      return this.recent_attesters.length;
+    const function numPendingAttestations() {
+      return this.pending_attestations.length;
     }
 
-    // Returns the number of recent proposers
-    const function numRecentProposers() {
-      return this.recent_proposers.length;
-    }
 }
 
 exports.ActiveState = ActiveState;
