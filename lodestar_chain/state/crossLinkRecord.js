@@ -2,8 +2,8 @@ var exports = module.exports = {};
 
 class CrosslinkRecord {
     var fields = {
-      // What epoch the crosslink was submitted in
-      'epoch':'int64',
+      // What dynasty the crosslink was submitted in
+      'dynasty':'int64',
       // The block hash
       'hash':'bytes32'
     };
