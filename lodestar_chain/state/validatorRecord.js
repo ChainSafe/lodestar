@@ -12,8 +12,10 @@ class ValidatorRecord {
       'randao_commitment': 'bytes32',
       // Current balance
       'balance': 'int64',
-      // Dynasty where the validator can (be inducted | be removed | withdraw)
-      'switch_dynasty': 'int64'
+      // Dynasty where the validator is inducted
+      'start_dynasty': 'int64',
+      // Dynasty where the validator leaves
+      'end_dynasty': 'int64'
     };
 
     var defaults = {};
