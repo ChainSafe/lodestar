@@ -46,8 +46,8 @@ class CrystallizedState {
       'crosslinking_start_shard': 0,
       'crosslink_records': [],
       'total_deposits': 0,
-      'dynasty_seed': 'hash32',
-      'dynasty_seed_last_reset': 'int64'
+      'dynasty_seed': '\x00'.repeat(32),
+      'dynasty_seed_last_reset': 0
     };
 
     /*
