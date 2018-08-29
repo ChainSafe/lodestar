@@ -1,6 +1,7 @@
 // Helper algorithms for the state transition function
 const assert = require('assert');
 const blake = require('../utils/blake.js');
+const ShardAndCommittee = require('./shardAndCommittee.js');
 const fs = require('fs');
 const constants = JSON.parse(fs.readFileSync('constants.json', 'utf8'));
 
@@ -85,4 +86,50 @@ function getNewShuffling(seed, validators, dynasty, crosslinkStartShard) {
     }
 
     var tmp = [];
+
+    var shuffledActiveValidatorSet = shuffle(activeValidatorSet, seed);
+    var splitActiveValidatorSet = split(shuffledActiveValidatorSet, constants['CYCLE_LENGTH']);
+
+    var iterator = splitActiveValidatorSet.entries();
+    for(let item in iterator){
+        var i = item[0];
+        var slotIndices = item[1];
+
+        var shardIndices = split(slotIndices, committeesPerSlot);
+        var shardIdStart = crosslinkingStartShard + i * Math.floor(committeesPerSlot / slotsPerCommittee);
+
+        var iterator1 = shardIndices.entries();
+        for(let item1 in iterator1) {
+            var j = item1[0];
+            var indices = item1[1];
+
+            var obj = {
+                "shard_id" : (shardIdStart + j) % constants["SHARD_COUNT"],
+                "committee": indices
+            };
+
+            tmp.push(new ShardAndCommittee(obj));
+
+        }
+    }
+
+    return tmp;
+
+}
+
+function getIndicesForSlot(crystallizedState, slot) {
+    var ifhStart = crystallizedState.last_state_recalc - CYCLE_LENGTH;
+    assert(ifhStart <= slot && slot < ifhStart + CYCLE_LENGTH * 2);
+    return crystallizedState.indices_for_slots[slot - ifh_start];
+}
+
+function getBlockHash(activeState, curblock, slot) {
+    var sback = curblock.slot_number - CYCLE_LENGTH * 2;
+    assert(sback <= slot && slot < sback + CYCLE_LENGTH * 2);
+    return activeState.recent_block_hashes[slot - sback];
+}
+
+function getNewRecentBlockHashes(oldBlockHashes, parentSlot, currentSlot, parentHash) {
+    var d = currentSlot - parentSlot;
+    return oldBlockHashes.slice(d).concat([parentHash].fill(Math.min(d, oldBlockHashes.length)));
 }
