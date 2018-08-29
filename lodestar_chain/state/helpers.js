@@ -15,8 +15,16 @@ function getActiveValidatorIndices(validators, dynasty) {
     return indexSet;
 }
 
-function byteArrayToInt(array, endianness) {
+function byteArrayToInt(array) {
+    var val = 0;
+    for(var i = 0; i < array.length; ++i) {
+        val += array[i];
+        if(i < array.length - 1) {
+            val = val*(2**8);
+        }
+    }
 
+    return val;
 }
 
 function shuffle(list, seed) {
