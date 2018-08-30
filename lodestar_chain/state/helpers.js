@@ -141,3 +141,13 @@ function getNewRecentBlockHashes(oldBlockHashes, parentSlot, currentSlot, parent
     var d = currentSlot - parentSlot;
     return oldBlockHashes.slice(d).concat([parentHash].fill(Math.min(d, oldBlockHashes.length)));
 }
+
+module.exports = {
+    getActiveValidatorIndices,
+    shuffle,
+    split,
+    getNewShuffling,
+    getIndicesForSlot,
+    getBlockHash,
+    getNewRecentBlockHashes
+}
