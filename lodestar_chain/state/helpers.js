@@ -2,6 +2,11 @@
 const assert = require('assert');
 const blake = require('../utils/blake.js');
 const ShardAndCommittee = require('./shardAndCommittee.js');
+const ActiveState = require('./activeState.js');
+const AttestationRecord = require('./attestationRecord.js');
+const CrystallizedState = require('./crystallizedState.js');
+const Block = require('./block.js');
+const ValidatorRecord = require('./validatorRecord.js');
 const fs = require('fs');
 const constants = JSON.parse(fs.readFileSync('constants.json', 'utf8'));
 
@@ -126,20 +131,50 @@ function getNewShuffling(seed, validators, dynasty, crosslinkStartShard) {
 }
 
 function getIndicesForSlot(crystallizedState, slot) {
-    var ifhStart = crystallizedState.last_state_recalc - CYCLE_LENGTH;
-    assert(ifhStart <= slot && slot < ifhStart + CYCLE_LENGTH * 2);
+    var ifhStart = crystallizedState.last_state_recalc - constants["CYCLE_LENGTH"];
+    assert(ifhStart <= slot && slot < ifhStart + constants["CYCLE_LENGTH"] * 2);
     return crystallizedState.indices_for_slots[slot - ifh_start];
 }
 
 function getBlockHash(activeState, curblock, slot) {
-    var sback = curblock.slot_number - CYCLE_LENGTH * 2;
-    assert(sback <= slot && slot < sback + CYCLE_LENGTH * 2);
+    var sback = curblock.slot_number - constants["CYCLE_LENGTH"] * 2;
+    assert(sback <= slot && slot < sback + constants["CYCLE_LENGTH"] * 2);
     return activeState.recent_block_hashes[slot - sback];
 }
 
 function getNewRecentBlockHashes(oldBlockHashes, parentSlot, currentSlot, parentHash) {
     var d = currentSlot - parentSlot;
     return oldBlockHashes.slice(d).concat([parentHash].fill(Math.min(d, oldBlockHashes.length)));
+}
+
+function getSignedParentHashes(activeState, block, attestation) {
+    var cycleLength = constants["CYCLE_LENGTH"];
+
+    var parentHashes = [];
+
+    for(var i=0; i < (cycleLength - attestation.oblique_parent_hashes.length); i++) {
+        parentHashes.push(getBlockHash(activeState, block, attestation.slot - cycleLength + i));
+    }
+
+    parentHashes = parentHashes.concat(attestation.oblique_parent_hashes);
+    return parentHashes;
+}
+
+function getAttestationIndices(crystallizedState, attestation) {
+    var shardId = attestation.shard_id;
+
+    var filteredIndicesForSlot = getIndicesForSlot(
+        crystallizedState, attestation.slot
+    ).filter(function(x) {
+        return x.shard_id === shardId
+    });
+
+    var attestationIndices = [];
+    if(filteredIndicesForSlot.length > 0) {
+        attestationIndices = filteredIndicesForSlot[0].committee;
+    }
+
+    return attestationIndices;
 }
 
 module.exports = {
@@ -149,5 +184,7 @@ module.exports = {
     getNewShuffling,
     getIndicesForSlot,
     getBlockHash,
-    getNewRecentBlockHashes
+    getNewRecentBlockHashes,
+    getSignedParentHashes,
+    getAttestationIndices
 }
