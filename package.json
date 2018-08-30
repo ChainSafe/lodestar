@@ -26,7 +26,10 @@
     "p2p",
     "blockchain"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "bignumber.js": "^7.2.1",
+    "blakejs": "^1.1.0"
+  },
   "bin": {
     "lodestar-chain": "./index.js"
   },
