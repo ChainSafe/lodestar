@@ -1,0 +1,24 @@
+{
+  "name": "bls-js",
+  "version": "1.0.0",
+  "description": "Implementation of BLS signatures",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChainSafeSystems/bls-js.git"
+  },
+  "keywords": [
+    "\"bls\"",
+    "\"signatures\"",
+    "\"cryptography\""
+  ],
+  "author": "Mikerah",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ChainSafeSystems/bls-js/issues"
+  },
+  "homepage": "https://github.com/ChainSafeSystems/bls-js#readme"
+}
