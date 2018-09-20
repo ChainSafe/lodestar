@@ -79,26 +79,46 @@ describe('SimpleSerialize', () => {
 
     /** integers */
 
-    
+    it(`serializes int8`, () => {        
+        
+        let intInput = 5;
+        let result = serialize(intInput, 'int8');
+        let intResult = new DataView(result).getUint8(0);
+
+        assert.isNotNull(result, 'int8 result should not be null');
+        assert.equal(intResult, intInput, 'int8 result should be same as input');
+
+    });
+
+    it(`errors when serializing int8, given int larger than 255`, () => {
+        
+        let intInput = 256;
+        assert.throws(
+            () => serialize(intInput, 'int8'),
+            Error,
+            `given value is too large for type size int8`
+        );
+
+    });
 
 
     // TODO - move into utils
     /**
      * Convert a hex string to a byte array
      *
-     * Note: Implementation from crypto-js
-     *
      * @method hexToBytes
      * @param {string} hex
-     * @return {Array} the byte array
+     * @return {Uint8Array} the byte array
      */
     var hexToBytes = function(hex) {
         hex = hex.toString(16);
 
         hex = hex.replace(/^0x/i,'');
 
-        for (var bytes = [], c = 0; c < hex.length; c += 2)
-            bytes.push(parseInt(hex.substr(c, 2), 16));
+        let bytes = new Uint8Array(hex.length/2);
+        for (var i = 0, c = 0; c < hex.length; c += 2, i += 1){
+            bytes[i] = parseInt(hex.substr(c, 2), 16);
+        }
         return bytes;
     };
 

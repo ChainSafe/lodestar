@@ -27,3 +27,4 @@ def serialize(val, typ=None):
 
 print(serialize(b'\x00'*32, 'hash32'))
 print(serialize(b'\x00'*20, 'address'))
+print(serialize(-1, 'int8'))
