@@ -145,6 +145,24 @@ describe('SimpleSerialize', () => {
 
     });
 
+    /** bytes */
+
+    it(`serializes bytes`, () => {        
+        
+        let bytesArray = [];
+        for(var i = 0; i < 280; i++){
+            bytesArray.push(1);
+        }
+        let bytesInput = Uint8Array.from(bytesArray);
+        let result = serialize(bytesInput.buffer, 'bytes');
+
+        assert.isNotNull(result);
+        let lengthResult = new DataView(result, 0);
+        assert.equal(lengthResult.getUint32(0), bytesInput.byteLength)
+        let bytesResult = new Uint8Array(result, 4);
+        assert.deepEqual(bytesResult, bytesInput);
+
+    });
 
 
     // TODO - move into utils

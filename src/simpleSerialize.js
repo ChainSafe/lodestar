@@ -19,7 +19,7 @@ function serialize(value, type) {
     // serialize hashes
     if(type === 'hash32') {
         
-        // check length is 32 bytes
+        // check length is 32 byte
         if(value.byteLength !== 32) {
             throw Error(`given hash32 ${value} should be 32 bytes`);
         }
@@ -30,7 +30,7 @@ function serialize(value, type) {
     // serialize (Ethereum) addresses
     if(type === 'address') {
 
-        // check length is 20 bytes
+        // check length is 20 byte
         if(value.byteLength !== 20) {
             throw Error(`given address ${value} should be 20 bytes`);
         }
@@ -61,6 +61,18 @@ function serialize(value, type) {
         intToBytes[intSize](view, intValue);
         return view.buffer;
         
+    }
+
+    if(type === 'bytes') {
+        // return (length + bytes)
+        let buffer = new ArrayBuffer(4 + value.byteLength);
+        let view = new DataView(buffer);
+        // write length to buffer as 4 byte int
+        view.setUint32(0, value.byteLength, false); // bigendian
+        // write bytes to buffer
+        let tmp = new Uint8Array(buffer);
+        tmp.set(new Uint8Array(value), 4); // length offset
+        return tmp.buffer;
     }
 
     // cannot serialize
