@@ -31,7 +31,7 @@ function serialize(value, type) {
     if(type === 'address') {
 
         // check length is 20 bytes
-        if(value.length !== 20) {
+        if(value.byteLength !== 20) {
             throw Error(`given address ${value} should be 20 bytes`);
         }
         return value;
