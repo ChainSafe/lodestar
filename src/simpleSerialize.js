@@ -63,6 +63,7 @@ function serialize(value, type) {
         
     }
 
+    // serialize bytes
     if(type === 'bytes') {
         // return (length + bytes)
         let buffer = new ArrayBuffer(4 + value.byteLength);
@@ -72,7 +73,38 @@ function serialize(value, type) {
         // write bytes to buffer
         let tmp = new Uint8Array(buffer);
         tmp.set(new Uint8Array(value), 4); // length offset
-        return tmp.buffer;
+        return buffer;
+    }
+
+    // serialize array of a specified type
+    if (Array.isArray(value) && Array.isArray(type)) {
+        
+        // only 1 element type is allowed
+        if(type.length > 1){
+            throw Error('array type should only have one element type');
+        }
+
+        // serialize each element of the array
+        let serializedValues = value.map((element) => serialize(element, type[0]));
+        let totalByteLength = serializedValues.reduce((acc, v) => acc + v.byteLength, 0);
+
+        // return (length + bytes of array element)
+        let buffer = new ArrayBuffer(4 + totalByteLength);
+        let view = new DataView(buffer);
+
+        // write length to buffer as 4 byte int
+        view.setUint32(0, totalByteLength, false); // bigendian
+        let tmp = new Uint8Array(buffer);
+
+        // start from end of the length number (4 bytes)
+        let offset = 4;
+        for (let i = 0; i < serializedValues.length; i++) {
+            let serializedValue = serializedValues[i];
+            tmp.set(new Uint8Array(serializedValue), offset); 
+            offset += serializedValue.byteLength;   
+        }
+        return buffer;
+
     }
 
     // cannot serialize

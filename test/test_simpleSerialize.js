@@ -164,6 +164,31 @@ describe('SimpleSerialize', () => {
 
     });
 
+    /** serializes arrays of elements (of same type) */
+
+    it(`serializes arrays of elements (of the same type)`, () => {
+
+        let arrayInput = [1, 2, 3];
+        let result = serialize(arrayInput, ['int8']);
+
+        assert.isNotNull(result);
+        let lengthResult = new DataView(result, 0);
+        assert.equal(lengthResult.getUint32(0), arrayInput.length)
+        let bytesResult = new Uint8Array(result, 4);
+        assert.deepEqual(bytesResult, new Uint8Array(arrayInput));
+
+    });
+
+    it(`errors when serializing array, given more than one element type pro`, () =>{
+
+        assert.throws(
+            () => serialize([1,2], ['int32', 'int8']),
+            Error,
+            `array type should only have one element type`
+        );
+
+    });
+
 
     // TODO - move into utils
     /**
