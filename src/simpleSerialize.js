@@ -7,6 +7,12 @@ var exports = module.exports = {};
  */
 
  // TODO - hash32 and address expects bytes - bit inconvenient
+const intToBytes = {
+     8: (view, value) => { view.setUint8(0, value, false) },
+     16: (view, value) => { view.setUint16(0, value, false) },
+     32: (view, value) => { view.setUint32(0, value, false) }
+}
+
 
 function serialize(value, type) {
 
@@ -35,38 +41,26 @@ function serialize(value, type) {
     // serialize integers
     if((typeof type === 'string') && type.startsWith('int')) {
 
+        // determine int size
         let intSize = parseInt(type.substr(3));
-        if(intSize > 0 && intSize <= 64 && intSize % 8 !== 0) {
-            throw Error(`given int type has invalid size (8, 16, 32, 64)`);
+        if(intSize > 0 && intSize <= 32 && intSize % 8 !== 0) {
+            throw Error(`given int type has invalid size (8, 16, 32)`);
         }
 
-        // convert to int
+        // convert to value to int
         let intValue = parseInt(value);
 
         // check max size is within bounds of type
-        let maxSize = 32 * intSize;
+        let maxSize = Math.pow(2, intSize) / 2;
         if(intValue >= maxSize){
             throw Error(`given value is too large for type size ${type}`);
         }
 
         // return bytes
         let view = new DataView(new ArrayBuffer(intSize / 8));
-        switch(intSize) {
-            case 8:
-                view.setUint8(0, intValue, false); // bigendian
-                return view.buffer;
-            case 16:
-                view.setUint16(0, intValue, false); // bigendian
-                return view.buffer;
-            case 32:
-                view.setUint32(0, intValue, false); // bigendian
-                return view.buffer;
-            case 64:
-                view.setUint64(0, intValue, false); // bigendian
-                return view.buffer;
-            default:
-                throw Error("Unmatched..")
-        }  
+        intToBytes[intSize](view, intValue);
+        return view.buffer;
+        
     }
 
     // cannot serialize

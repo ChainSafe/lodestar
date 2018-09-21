@@ -101,6 +101,51 @@ describe('SimpleSerialize', () => {
 
     });
 
+    it(`serializes int16`, () => {        
+        
+        let intInput = 32000;
+        let result = serialize(intInput, 'int16');
+        let intResult = new DataView(result).getUint16(0);
+
+        assert.isNotNull(result, 'int16 result should not be null');
+        assert.equal(intResult, intInput, 'int16 result should be same as input');
+
+    });
+
+    it(`errors when serializing int16, given int larger than 32767`, () => {
+        
+        let intInput = 32768;
+        assert.throws(
+            () => serialize(intInput, 'int16'),
+            Error,
+            `given value is too large for type size int16`
+        );
+
+    });
+
+    it(`serializes int32`, () => {        
+        
+        let intInput = 1000000000;
+        let result = serialize(intInput, 'int32');
+        let intResult = new DataView(result).getUint32(0);
+
+        assert.isNotNull(result, 'int32 result should not be null');
+        assert.equal(intResult, intInput, 'int32 result should be same as input');
+
+    });
+
+    it(`errors when serializing int16, given int larger than 2147483647`, () => {
+        
+        let intInput = 2147483648;
+        assert.throws(
+            () => serialize(intInput, 'int32'),
+            Error,
+            `given value is too large for type size int32`
+        );
+
+    });
+
+
 
     // TODO - move into utils
     /**
