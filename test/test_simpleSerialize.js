@@ -1,9 +1,14 @@
 const assert = require('chai').assert;
+const intByteLength = require('../src/typedArrayUtils').intByteLength;
 const serialize = require('../src/simpleSerialize').serialize;
 
-describe('SimpleSerialize', () => {
+const intToBytes = {
+    'int8': (view, value) => view.getUint8(value, false),
+    'int16': (view, value) => view.getUint16(value, false),
+    'int32': (view, value) => view.getUint32(value, false)
+}
 
-    it(`does something with null type`);
+describe('SimpleSerialize', () => {
 
     /** hash32 */
 
@@ -166,20 +171,68 @@ describe('SimpleSerialize', () => {
 
     /** serializes arrays of elements (of same type) */
 
-    it(`serializes arrays of elements (of the same type)`, () => {
 
-        let arrayInput = [1, 2, 3];
-        let result = serialize(arrayInput, ['int8']);
+    it(`serializes arrays of elements (of the same type) - hash32`, () => {
+
+        let arrayInput = [
+            hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'),
+            hexToBytes('dd7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015bb')
+        ];
+        let result = serialize(arrayInput, ['hash32']);
+
+        let flatInput = [...new Uint8Array(arrayInput[0]), ...new Uint8Array(arrayInput[1])];
+        let expectedLength = 4 + flatInput.length; // (length + bytes)
 
         assert.isNotNull(result);
+    
         let lengthResult = new DataView(result, 0);
-        assert.equal(lengthResult.getUint32(0), arrayInput.length)
-        let bytesResult = new Uint8Array(result, 4);
-        assert.deepEqual(bytesResult, new Uint8Array(arrayInput));
+        assert.equal(lengthResult.getUint32(0), expectedLength)
+        
+        let arrayResult = new Uint8Array(result, 4);
+        assert.deepEqual(arrayResult, new Uint8Array(flatInput));
 
     });
 
-    it(`errors when serializing array, given more than one element type pro`, () =>{
+    it(`serializes arrays of elements (of the same type) - address`, () => {
+
+        let arrayInput = [
+            hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a30'),
+            hexToBytes('ccccb53f339a726e0b347bbad221ad7b50daaaaa')
+        ];
+        let result = serialize(arrayInput, ['address']);
+
+        let flatInput = [...new Uint8Array(arrayInput[0]), ...new Uint8Array(arrayInput[1])];
+        let expectedLength = 4 + flatInput.length; // (length + bytes)
+
+        assert.isNotNull(result);
+    
+        let lengthResult = new DataView(result, 0);
+        assert.equal(lengthResult.getUint32(0), expectedLength)
+        
+        let arrayResult = new Uint8Array(result, 4);
+        assert.deepEqual(arrayResult, new Uint8Array(flatInput));
+
+    });
+
+    it(`serializes arrays of elements (of the same type) - int8`, () => {
+
+        scenarioTestArrayOfInts([1, 2, 3], 'int8');
+
+    });
+
+    it(`serializes arrays of elements (of the same type) - int16`, () => {
+
+        scenarioTestArrayOfInts([32000, 32001, 32002], 'int16');
+
+    });
+
+    it(`serializes arrays of elements (of the same type) - int32`, () => {
+
+        scenarioTestArrayOfInts([1000000000, 1000000001, 1000000002], 'int32');
+
+    });
+
+    it(`errors when serializing array, given more than one element type provided`, () =>{
 
         assert.throws(
             () => serialize([1,2], ['int32', 'int8']),
@@ -188,6 +241,20 @@ describe('SimpleSerialize', () => {
         );
 
     });
+
+    function scenarioTestArrayOfInts(arrayInput, type){
+        let result = serialize(arrayInput, [type]);
+
+        assert.isNotNull(result);
+        let lengthResult = new DataView(result, 0);
+        assert.equal(lengthResult.getUint32(0), (4 + arrayInput.length * intByteLength(type)));
+        let resultView = new DataView(result, 4);
+        let inputIndex = 0;
+        for(var i = 0; i < (result.byteLength-4); i+=intByteLength(type)) {
+            assert.equal(intToBytes[type](resultView, i), arrayInput[inputIndex++]);
+        }
+        
+    }
 
 
     // TODO - move into utils
@@ -207,7 +274,7 @@ describe('SimpleSerialize', () => {
         for (var i = 0, c = 0; c < hex.length; c += 2, i += 1){
             bytes[i] = parseInt(hex.substr(c, 2), 16);
         }
-        return bytes;
+        return bytes.buffer;
     };
 
 

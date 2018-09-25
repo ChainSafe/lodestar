@@ -1,3 +1,7 @@
+
+const intByteLength = require('./typedArrayUtils').intByteLength;
+const newIntArray = require('./typedArrayUtils').newIntArray;
+
 var exports = module.exports = {};
 
 /**
@@ -83,25 +87,27 @@ function serialize(value, type) {
         if(type.length > 1){
             throw Error('array type should only have one element type');
         }
+        let elementType = type[0];
 
         // serialize each element of the array
-        let serializedValues = value.map((element) => serialize(element, type[0]));
-        let totalByteLength = serializedValues.reduce((acc, v) => acc + v.byteLength, 0);
+        let serializedValues = value.map((element) => serialize(element, elementType));
+        let totalByteLength = 4 + serializedValues.reduce((acc, v) => acc + v.byteLength, 0);
 
         // return (length + bytes of array element)
-        let buffer = new ArrayBuffer(4 + totalByteLength);
+        let buffer = new ArrayBuffer(totalByteLength);
         let view = new DataView(buffer);
 
         // write length to buffer as 4 byte int
         view.setUint32(0, totalByteLength, false); // bigendian
-        let tmp = new Uint8Array(buffer);
 
         // start from end of the length number (4 bytes)
-        let offset = 4;
+        let tmp = new DataView(buffer, 4);
+        let offset = 0;
         for (let i = 0; i < serializedValues.length; i++) {
             let serializedValue = serializedValues[i];
-            tmp.set(new Uint8Array(serializedValue), offset); 
-            offset += serializedValue.byteLength;   
+            for(let j = 0; j < serializedValue.byteLength; j++) {
+                tmp.setUint8(offset++, new DataView(serializedValue).getUint8(j, false), false);
+            }
         }
         return buffer;
 
