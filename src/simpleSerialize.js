@@ -1,23 +1,10 @@
-
-const intByteLength = require('./typedArrayUtils').intByteLength;
-const newIntArray = require('./typedArrayUtils').newIntArray;
-
-var exports = module.exports = {};
+const writeIntBytes = require('./intBytes').writeIntBytes;
 
 /**
  * Simply Serializes
  * hash32 - expects input as bytes of hash
  * address - expects input as bytes of address
  */
-
- // TODO - hash32 and address expects bytes - bit inconvenient
-const intToBytes = {
-     8: (view, value) => { view.setUint8(0, value, false) },
-     16: (view, value) => { view.setUint16(0, value, false) },
-     32: (view, value) => { view.setUint32(0, value, false) }
-}
-
-
 function serialize(value, type) {
 
     // serialize hashes
@@ -61,23 +48,21 @@ function serialize(value, type) {
         }
 
         // return bytes
-        let view = new DataView(new ArrayBuffer(intSize / 8));
-        intToBytes[intSize](view, intValue);
-        return view.buffer;
+        // let view = new DataView(new ArrayBuffer(intSize / 8));
+        let buffer = Buffer.alloc(intSize / 8)
+        writeIntBytes(type)(buffer, intValue);
+        return buffer;
         
     }
 
     // serialize bytes
     if(type === 'bytes') {
         // return (length + bytes)
-        let buffer = new ArrayBuffer(4 + value.byteLength);
-        let view = new DataView(buffer);
+        let buffer = Buffer.alloc(4);
         // write length to buffer as 4 byte int
-        view.setUint32(0, value.byteLength, false); // bigendian
+        buffer.writeUInt32BE(value.byteLength); // bigendian
         // write bytes to buffer
-        let tmp = new Uint8Array(buffer);
-        tmp.set(new Uint8Array(value), 4); // length offset
-        return buffer;
+        return Buffer.concat([buffer, value]);
     }
 
     // serialize array of a specified type
@@ -87,29 +72,19 @@ function serialize(value, type) {
         if(type.length > 1){
             throw Error('array type should only have one element type');
         }
-        let elementType = type[0];
 
         // serialize each element of the array
+        let elementType = type[0];
         let serializedValues = value.map((element) => serialize(element, elementType));
         let totalByteLength = 4 + serializedValues.reduce((acc, v) => acc + v.byteLength, 0);
 
-        // return (length + bytes of array element)
-        let buffer = new ArrayBuffer(totalByteLength);
-        let view = new DataView(buffer);
-
         // write length to buffer as 4 byte int
-        view.setUint32(0, totalByteLength, false); // bigendian
+        let buffer = Buffer.alloc(4);
+        buffer.writeUInt32BE(totalByteLength); // bigendian
 
         // start from end of the length number (4 bytes)
-        let tmp = new DataView(buffer, 4);
-        let offset = 0;
-        for (let i = 0; i < serializedValues.length; i++) {
-            let serializedValue = serializedValues[i];
-            for(let j = 0; j < serializedValue.byteLength; j++) {
-                tmp.setUint8(offset++, new DataView(serializedValue).getUint8(j, false), false);
-            }
-        }
-        return buffer;
+        let ass = serializedValues.map((ab) => Buffer.from(ab));
+        return Buffer.concat([buffer, ...ass], totalByteLength);
 
     }
 

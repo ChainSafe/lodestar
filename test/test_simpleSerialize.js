@@ -1,12 +1,7 @@
 const assert = require('chai').assert;
-const intByteLength = require('../src/typedArrayUtils').intByteLength;
+const readIntBytes = require('../src/intBytes').readIntBytes;
+const intByteLength = require('../src/intBytes').intByteLength;
 const serialize = require('../src/simpleSerialize').serialize;
-
-const intToBytes = {
-    'int8': (view, value) => view.getUint8(value, false),
-    'int16': (view, value) => view.getUint16(value, false),
-    'int32': (view, value) => view.getUint32(value, false)
-}
 
 describe('SimpleSerialize', () => {
 
@@ -88,7 +83,7 @@ describe('SimpleSerialize', () => {
         
         let intInput = 5;
         let result = serialize(intInput, 'int8');
-        let intResult = new DataView(result).getUint8(0);
+        let intResult = result.readUInt8(0);
 
         assert.isNotNull(result, 'int8 result should not be null');
         assert.equal(intResult, intInput, 'int8 result should be same as input');
@@ -110,7 +105,7 @@ describe('SimpleSerialize', () => {
         
         let intInput = 32000;
         let result = serialize(intInput, 'int16');
-        let intResult = new DataView(result).getUint16(0);
+        let intResult = result.readUInt16BE(0);
 
         assert.isNotNull(result, 'int16 result should not be null');
         assert.equal(intResult, intInput, 'int16 result should be same as input');
@@ -132,7 +127,7 @@ describe('SimpleSerialize', () => {
         
         let intInput = 1000000000;
         let result = serialize(intInput, 'int32');
-        let intResult = new DataView(result).getUint32(0);
+        let intResult = result.readUInt32BE(0);
 
         assert.isNotNull(result, 'int32 result should not be null');
         assert.equal(intResult, intInput, 'int32 result should be same as input');
@@ -158,13 +153,12 @@ describe('SimpleSerialize', () => {
         for(var i = 0; i < 280; i++){
             bytesArray.push(1);
         }
-        let bytesInput = Uint8Array.from(bytesArray);
-        let result = serialize(bytesInput.buffer, 'bytes');
+        let bytesInput = Buffer.from(bytesArray);
+        let result = serialize(bytesInput, 'bytes');
 
         assert.isNotNull(result);
-        let lengthResult = new DataView(result, 0);
-        assert.equal(lengthResult.getUint32(0), bytesInput.byteLength)
-        let bytesResult = new Uint8Array(result, 4);
+        assert.equal(result.readUInt32BE(0), bytesInput.byteLength)
+        let bytesResult = result.slice(4);
         assert.deepEqual(bytesResult, bytesInput);
 
     });
@@ -184,11 +178,10 @@ describe('SimpleSerialize', () => {
         let expectedLength = 4 + flatInput.length; // (length + bytes)
 
         assert.isNotNull(result);
-    
-        let lengthResult = new DataView(result, 0);
-        assert.equal(lengthResult.getUint32(0), expectedLength)
+
+        assert.equal(result.readUInt32BE(0), expectedLength)
         
-        let arrayResult = new Uint8Array(result, 4);
+        let arrayResult = result.slice(4);
         assert.deepEqual(arrayResult, new Uint8Array(flatInput));
 
     });
@@ -206,10 +199,9 @@ describe('SimpleSerialize', () => {
 
         assert.isNotNull(result);
     
-        let lengthResult = new DataView(result, 0);
-        assert.equal(lengthResult.getUint32(0), expectedLength)
+        assert.equal(result.readUInt32BE(0), expectedLength)
         
-        let arrayResult = new Uint8Array(result, 4);
+        let arrayResult = result.slice(4);
         assert.deepEqual(arrayResult, new Uint8Array(flatInput));
 
     });
@@ -246,12 +238,12 @@ describe('SimpleSerialize', () => {
         let result = serialize(arrayInput, [type]);
 
         assert.isNotNull(result);
-        let lengthResult = new DataView(result, 0);
-        assert.equal(lengthResult.getUint32(0), (4 + arrayInput.length * intByteLength(type)));
-        let resultView = new DataView(result, 4);
+        let lengthResult = result.readUInt32BE(0);
+        assert.equal(lengthResult, (4 + arrayInput.length * intByteLength(type)));
+        let resultView = result.slice(4);
         let inputIndex = 0;
         for(var i = 0; i < (result.byteLength-4); i+=intByteLength(type)) {
-            assert.equal(intToBytes[type](resultView, i), arrayInput[inputIndex++]);
+            assert.equal(readIntBytes(type)(resultView, i), arrayInput[inputIndex++]);
         }
         
     }
