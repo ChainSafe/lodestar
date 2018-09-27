@@ -234,6 +234,24 @@ describe('SimpleSerialize', () => {
 
     });
 
+    it(`serialises objects of simple types`, () => {
+        serialize(
+            {
+                //'publicAddress':'e17cb53f339a726e0b347bbad221ad7b50dc2a30',
+                //'secret': 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+                'age': '30'
+            },
+            {
+                'fields':{
+                    //'publicAddress': 'address',
+                    //'secret': 'hash32',
+                    'age': 'int8'
+                }
+            }
+        );
+    });
+
+
     function scenarioTestArrayOfInts(arrayInput, type){
         let result = serialize(arrayInput, [type]);
 

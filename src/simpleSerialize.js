@@ -88,6 +88,19 @@ function serialize(value, type) {
 
     }
 
+    if (typeof type == 'object' && type.hasOwnProperty('fields')) {
+        let buffers = [];
+        Object.keys(type.fields).forEach(fieldName => {
+            buffers.push(serialize(value[fieldName], type.fields[fieldName]));
+        });
+
+        let totalByteLength = buffers.reduce((acc, v) => acc + v.byteLength, 0);
+        let byteLengthBuffer = Buffer.alloc(4);
+        byteLengthBuffer.writeUInt32BE(totalByteLength); // bigendian
+
+        return Buffer.concat([byteLengthBuffer, ...buffers]);
+    }
+
     // cannot serialize
     return null;
 }
