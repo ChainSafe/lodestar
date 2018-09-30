@@ -235,21 +235,83 @@ describe('SimpleSerialize', () => {
     });
 
     it(`serialises objects of simple types`, () => {
-        serialize(
+        let addressValue = 'e17cb53f339a726e0b347bbad221ad7b50dc2a30';
+        let hashValue = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
+        let int8Value = 30;
+        let int16Value = 32000;
+        let int32Value = 1000000000;
+
+        let bytesArray = [];
+        for(var i = 0; i < 280; i++){
+            bytesArray.push(8);
+        }
+        let bytesValue = Buffer.from(bytesArray);
+
+        let result = serialize(
             {
-                //'publicAddress':'e17cb53f339a726e0b347bbad221ad7b50dc2a30',
-                //'secret': 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
-                'age': '30'
+                'publicAddress':hexToBytes(addressValue),
+                'secret': hexToBytes(hashValue),
+                'age': int8Value,
+                'distance': int16Value,
+                'halfLife': int32Value,
+                'file': bytesValue
             },
             {
                 'fields':{
-                    //'publicAddress': 'address',
-                    //'secret': 'hash32',
-                    'age': 'int8'
+                    'publicAddress': 'address',
+                    'secret': 'hash32',
+                    'age': 'int8',
+                    'distance': 'int16',
+                    'halfLife': 'int32',
+                    'file': 'bytes'
                 }
             }
         );
+        
+        let offset = 0;
+
+        // assert byte length
+        let expectedByteLength = 343;
+        let actualByteLength = result.readInt32BE(offset);
+        offset += 4;
+        console.log(actualByteLength)
+        assert.equal(actualByteLength, expectedByteLength, 'Byte length is not correct');
+
+        // assert address value
+        let actualAddress = result.slice(offset, (offset + 20));
+        offset += 20;
+        assert.equal(actualAddress.toString('hex'), addressValue, 'Address type not serialised correctly');
+
+        // assert hash value
+        let actualHash = result.slice(offset, (offset + 32));
+        offset += 32;
+        assert.equal(actualHash.toString('hex'), hashValue, 'Hash32 type not serialised correctly');
+
+        // assert int8 value
+        let actualInt8 = result.readUInt8(offset);
+        offset += 1;
+        assert.equal(actualInt8, int8Value, 'Int8 value not serialised correctly');
+        
+        // assert int16 value
+        let actualInt16 = result.readUInt16BE(offset);
+        offset += 2;
+        assert.equal(actualInt16, int16Value, 'Int16 value not serialised correctly');
+
+        // assert int32 value
+        let actualInt32 = result.readUInt32BE(offset);
+        offset += 4;
+        assert.equal(actualInt32, int32Value, 'Int32 value not serialised correctly');
+
+        // assert bytes value
+        let actualBytesLength = result.readUInt32BE(offset);
+        assert.equal(actualBytesLength, 280);
+        offset += 4;
+        let actualBytes = result.slice(offset, (offset + 280));
+        offset += 280;
+        assert.equal(actualBytes.toString('hex'), bytesValue.toString('hex'), 'Bytes type not serialised correctly');
     });
+
+    xit(`serializes objects containing objects`);
 
 
     function scenarioTestArrayOfInts(arrayInput, type){
@@ -275,7 +337,7 @@ describe('SimpleSerialize', () => {
      * @param {string} hex
      * @return {Uint8Array} the byte array
      */
-    var hexToBytes = function(hex) {
+    function hexToBytes(hex) {
         hex = hex.toString(16);
 
         hex = hex.replace(/^0x/i,'');
@@ -284,7 +346,7 @@ describe('SimpleSerialize', () => {
         for (var i = 0, c = 0; c < hex.length; c += 2, i += 1){
             bytes[i] = parseInt(hex.substr(c, 2), 16);
         }
-        return bytes.buffer;
+        return Buffer.from(bytes.buffer);
     };
 
 
