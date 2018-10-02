@@ -1,75 +1,110 @@
-var exports = module.exports = {};
+const writeIntBytes = require('./intBytes').writeIntBytes;
 
-const assert = require('assert');
-
-function _toBytes(n, length, endianess) {
-    var buffer = new ArrayBuffer(length);
-    var dataView = new DataView(buffer);
-    if(endianess === 'big') {
-        dataView.setInt32(0, n, true);
-    } else {
-        dataView.setInt32(0, n, false);
-    }
-
-    var byteArray = Array.from(buffer);
-    return byteArray;
-
-}
-
+/**
+ * Simply Serializes (SSZ)
+ * @method serialize
+ * @param {Buffer|array|number|object} value - Value to serialize: hash32 (Buffer) | address (Buffer) | int8/16/32 | bytes (Buffer) | array | object
+ * @param {string|object} type - A type string ('hash32', 'address', 'int8', 'int16', 'int32', 'bytes'), or type array ['hash32'], or type object containing fields property
+ * @return {Buffer} the byte output
+ */
 function serialize(value, type) {
-    if (type === null && val.hasOwnProperty('fields')) {
-        type = typeof(value);
-    }
 
-    if (['hash32', 'address'].includes(type)) {
-        if(type === 'address') {
-            assert(value.length === 20);
-        } else {
-            assert(value.length === 32);
+    // serialize hashes
+    if(type === 'hash32') {
+        
+        // check length is 32 byte
+        if(value.byteLength !== 32) {
+            throw Error(`given hash32 ${value} should be 32 bytes`);
         }
         return value;
+
     }
-    else if (type instanceof String && type[:3] === 'int') {
-        length = Number(type[:3]);
-        assert(length % 8 === 0);
-        return _toBytes(value, Math.floor(length / 8), 'big');
-    }
-    else if (type === 'bytes') {
-        return _toBytes(value.length, 4, 'big') + type;
-    }
-    else if (type instanceof Array) {
-        assert(type.length === 1);
-        for(x in value) {
-            sub = [serialize(x, type[0])].join('');
-            return _toBytes(sub.length, 4, 'big') + sub
+
+    // serialize (Ethereum) addresses
+    if(type === 'address') {
+
+        // check length is 20 byte
+        if(value.byteLength !== 20) {
+            throw Error(`given address ${value} should be 20 bytes`);
         }
+        return value;
+
     }
 
-    throw new Error('Cannot serialize: value -> ' + value + ' type -> ' + type);
+    // serialize integers
+    if((typeof type === 'string') && type.startsWith('int')) {
+
+        // determine int size
+        let intSize = parseInt(type.substr(3));
+        if(intSize > 0 && intSize <= 32 && intSize % 8 !== 0) {
+            throw Error(`given int type has invalid size (8, 16, 32)`);
+        }
+
+        // convert to value to int
+        let intValue = parseInt(value);
+
+        // check max size is within bounds of type
+        let maxSize = Math.pow(2, intSize) / 2;
+        if(intValue >= maxSize){
+            throw Error(`given value is too large for type size ${type}`);
+        }
+
+        // return bytes
+        // let view = new DataView(new ArrayBuffer(intSize / 8));
+        let buffer = Buffer.alloc(intSize / 8)
+        writeIntBytes(type)(buffer, intValue);
+        return buffer;
+        
+    }
+
+    // serialize bytes
+    if(type === 'bytes') {
+        // return (length + bytes)
+        let buffer = Buffer.alloc(4);
+        // write length to buffer as 4 byte int
+        buffer.writeUInt32BE(value.byteLength); // bigendian
+        // write bytes to buffer
+        return Buffer.concat([buffer, value]);
+    }
+
+    // serialize array of a specified type
+    if (Array.isArray(value) && Array.isArray(type)) {
+        
+        // only 1 element type is allowed
+        if(type.length > 1){
+            throw Error('array type should only have one element type');
+        }
+
+        // serialize each element of the array
+        let elementType = type[0];
+        let serializedValues = value.map((element) => serialize(element, elementType));
+        let totalByteLength = serializedValues.reduce((acc, v) => acc + v.byteLength, 0);
+
+        // write length to buffer as 4 byte int
+        let byteLengthBuffer = Buffer.alloc(4);
+        byteLengthBuffer.writeUInt32BE(totalByteLength); // bigendian
+
+        // start from end of the length number (4 bytes)
+        let ass = serializedValues.map((ab) => Buffer.from(ab));
+        return Buffer.concat([byteLengthBuffer, ...ass], totalByteLength + 4);
+
+    }
+
+    if ((typeof type == 'object'|| typeof type == 'function') && type.hasOwnProperty('fields')) {
+        let buffers = [];
+        Object.keys(type.fields).forEach(fieldName => {
+            buffers.push(serialize(value[fieldName], type.fields[fieldName]));
+        });
+
+        let totalByteLength = buffers.reduce((acc, v) => acc + v.byteLength, 0);
+        let byteLengthBuffer = Buffer.alloc(4);
+        byteLengthBuffer.writeUInt32BE(totalByteLength); // bigendian
+
+        return Buffer.concat([byteLengthBuffer, ...buffers]);
+    }
+
+    // cannot serialize
+    return null;
 }
 
-function _deserialize(data, start, type) {
-
-}
-
-function deserialize(data, type) {
-    return _deserialize(data, 0, type)[0]
-}
-
-function eq(x,y) {
-
-}
-
-function deepcopy(x) {
-
-}
-
-function toObj(x) {
-
-}
-
-exports.serialize = serialize;
-exports.deserialize = deserialize;
-exports.eq = eq;
-exports.deepcopy = deepcopy;
-exports.toObj = toObj;
+exports.serialize = serialize

@@ -20,5 +20,9 @@
   "bugs": {
     "url": "https://github.com/ChainSafeSystems/ssz-js/issues"
   },
-  "homepage": "https://github.com/ChainSafeSystems/ssz-js#readme"
+  "homepage": "https://github.com/ChainSafeSystems/ssz-js#readme",
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "moch": "0.0.1"
+  }
 }
