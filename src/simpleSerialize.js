@@ -76,19 +76,19 @@ function serialize(value, type) {
         // serialize each element of the array
         let elementType = type[0];
         let serializedValues = value.map((element) => serialize(element, elementType));
-        let totalByteLength = 4 + serializedValues.reduce((acc, v) => acc + v.byteLength, 0);
+        let totalByteLength = serializedValues.reduce((acc, v) => acc + v.byteLength, 0);
 
         // write length to buffer as 4 byte int
-        let buffer = Buffer.alloc(4);
-        buffer.writeUInt32BE(totalByteLength); // bigendian
+        let byteLengthBuffer = Buffer.alloc(4);
+        byteLengthBuffer.writeUInt32BE(totalByteLength); // bigendian
 
         // start from end of the length number (4 bytes)
         let ass = serializedValues.map((ab) => Buffer.from(ab));
-        return Buffer.concat([buffer, ...ass], totalByteLength);
+        return Buffer.concat([byteLengthBuffer, ...ass], totalByteLength + 4);
 
     }
 
-    if (typeof type == 'object' && type.hasOwnProperty('fields')) {
+    if ((typeof type == 'object'|| typeof type == 'function') && type.hasOwnProperty('fields')) {
         let buffers = [];
         Object.keys(type.fields).forEach(fieldName => {
             buffers.push(serialize(value[fieldName], type.fields[fieldName]));

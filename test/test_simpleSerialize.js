@@ -1,6 +1,9 @@
 const assert = require('chai').assert;
+const hexToBytes = require('./utils/hexToBytes').hexToBytes;
 const readIntBytes = require('../src/intBytes').readIntBytes;
 const intByteLength = require('../src/intBytes').intByteLength;
+const ActiveState = require('./utils/activeState').ActiveState;
+const AttestationRecord = require('./utils/activeState').AttestationRecord;
 const serialize = require('../src/simpleSerialize').serialize;
 
 describe('SimpleSerialize', () => {
@@ -174,15 +177,15 @@ describe('SimpleSerialize', () => {
         ];
         let result = serialize(arrayInput, ['hash32']);
 
-        let flatInput = [...new Uint8Array(arrayInput[0]), ...new Uint8Array(arrayInput[1])];
-        let expectedLength = 4 + flatInput.length; // (length + bytes)
+        let flatInput = Buffer.from([...arrayInput[0], ...arrayInput[1]]);
+        let expectedLength = flatInput.length; // (length + bytes)
 
         assert.isNotNull(result);
 
         assert.equal(result.readUInt32BE(0), expectedLength)
         
         let arrayResult = result.slice(4);
-        assert.deepEqual(arrayResult, new Uint8Array(flatInput));
+        assert.deepEqual(arrayResult, flatInput);
 
     });
 
@@ -194,15 +197,15 @@ describe('SimpleSerialize', () => {
         ];
         let result = serialize(arrayInput, ['address']);
 
-        let flatInput = [...new Uint8Array(arrayInput[0]), ...new Uint8Array(arrayInput[1])];
-        let expectedLength = 4 + flatInput.length; // (length + bytes)
+        let flatInput = Buffer.from([...arrayInput[0], ...arrayInput[1]]);
+        let expectedLength = flatInput.length; // (length + bytes)
 
         assert.isNotNull(result);
     
         assert.equal(result.readUInt32BE(0), expectedLength)
         
         let arrayResult = result.slice(4);
-        assert.deepEqual(arrayResult, new Uint8Array(flatInput));
+        assert.deepEqual(arrayResult, flatInput);
 
     });
 
@@ -274,7 +277,6 @@ describe('SimpleSerialize', () => {
         let expectedByteLength = 343;
         let actualByteLength = result.readInt32BE(offset);
         offset += 4;
-        console.log(actualByteLength)
         assert.equal(actualByteLength, expectedByteLength, 'Byte length is not correct');
 
         // assert address value
@@ -309,17 +311,83 @@ describe('SimpleSerialize', () => {
         let actualBytes = result.slice(offset, (offset + 280));
         offset += 280;
         assert.equal(actualBytes.toString('hex'), bytesValue.toString('hex'), 'Bytes type not serialised correctly');
+
     });
 
-    xit(`serializes objects containing objects`);
+    it(`serializes objects containing objects`, () => {
+        let testObj = new ActiveState();
+        let recentHash1 = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
+        let recentHash2 = 'aa1116bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
+        testObj.recentBlockHashes = [
+            hexToBytes(recentHash1), 
+            hexToBytes(recentHash2)
+        ]
 
+        let attestRecord1 = new AttestationRecord(0, 1, Buffer.from([11, 12, 13, 14]));
+        let attestRecord2 = new AttestationRecord(2, 3, Buffer.from([255, 254, 253, 252]));
+        testObj.pendingAttestations = [
+            attestRecord1,
+            attestRecord2
+        ]
+
+        let result = serialize(testObj, ActiveState);
+
+        let offset = 0;
+
+        // assert byte length
+        let expectedByteLength = 112;
+        let actualByteLength = result.readInt32BE(offset);
+        offset += 4;
+        assert.equal(actualByteLength, expectedByteLength, 'Byte length is not correct');
+
+        // assert pending attestations array
+        // skip attestation record array byte length because it could vary
+        offset += 4;
+        offset = assertAttestationRecord(offset, result, attestRecord1);
+        offset = assertAttestationRecord(offset, result, attestRecord2);
+
+        // assert hash32 array
+        let expectedHashArrayLength = testObj.recentBlockHashes.length * 32; // 32 byte hashes
+        let actualHashArrayLength = result.readInt32BE(offset);
+        offset += 4;
+        assert.equal(actualHashArrayLength, expectedHashArrayLength, 'Hash array length is not correct');
+        let actualHash1 = result.slice(offset, (offset + 32));
+        offset += 32;
+        assert.equal(actualHash1.toString('hex'), recentHash1, 'Hash 1 not serialised correctly');
+        let actualHash2 = result.slice(offset, (offset + 32));
+        offset += 32;
+        assert.equal(actualHash2.toString('hex'), recentHash2, 'Hash 2 not serialised correctly');
+    });
+
+    function assertAttestationRecord(startOffset, result, attestRecord){
+        let offset = startOffset;
+        // skip attestation record byte length because it could vary 
+        offset += 4;
+        let actualSlotId = result.readUInt32BE(offset);
+        offset += 4;
+        assert.equal(actualSlotId, attestRecord.slotId, 'SlotId value not serialised correctly');
+        let actualShardId = result.readUInt32BE(offset);
+        offset += 4;
+        assert.equal(actualShardId, attestRecord.shardId, 'ShardId value not serialised correctly');                
+
+        // assert bytes value
+        let expectedBitfieldByteLength = 4;
+        let actualBitfieldByteLength = result.readUInt32BE(offset);
+        assert.equal(actualBitfieldByteLength, expectedBitfieldByteLength, 'Attester bitfield array not serialised correctly');
+        offset += 4;
+        let actualBitfield = result.slice(offset, (offset + expectedBitfieldByteLength));
+        offset += expectedBitfieldByteLength;
+        assert.equal(actualBitfield.toString('hex'), attestRecord.attesterBitfield.toString('hex'), 'Attester Bitfield type not serialised correctly');
+
+        return offset;
+    }
 
     function scenarioTestArrayOfInts(arrayInput, type){
         let result = serialize(arrayInput, [type]);
 
         assert.isNotNull(result);
         let lengthResult = result.readUInt32BE(0);
-        assert.equal(lengthResult, (4 + arrayInput.length * intByteLength(type)));
+        assert.equal(lengthResult, (arrayInput.length * intByteLength(type)));
         let resultView = result.slice(4);
         let inputIndex = 0;
         for(var i = 0; i < (result.byteLength-4); i+=intByteLength(type)) {
@@ -327,27 +395,5 @@ describe('SimpleSerialize', () => {
         }
         
     }
-
-
-    // TODO - move into utils
-    /**
-     * Convert a hex string to a byte array
-     *
-     * @method hexToBytes
-     * @param {string} hex
-     * @return {Uint8Array} the byte array
-     */
-    function hexToBytes(hex) {
-        hex = hex.toString(16);
-
-        hex = hex.replace(/^0x/i,'');
-
-        let bytes = new Uint8Array(hex.length/2);
-        for (var i = 0, c = 0; c < hex.length; c += 2, i += 1){
-            bytes[i] = parseInt(hex.substr(c, 2), 16);
-        }
-        return Buffer.from(bytes.buffer);
-    };
-
 
 });
