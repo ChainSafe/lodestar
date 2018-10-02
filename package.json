@@ -1,21 +1,26 @@
 {
-  "name": "ssz-js",
-  "version": "0.1.0",
-  "description": "A Javascript implementation of Simple Serialization",
+  "name": "ssz",
+  "version": "1.0.0",
+  "description": "A pure JS implementation of simple serialize",
   "main": "index.js",
   "scripts": {
-    "test": "mocha --recursive"
+    "test": "mocha"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/darrenlangley/ssz-js.git"
+    "url": "git+https://github.com/ChainSafeSystems/ssz-js.git"
   },
+  "keywords": [
+    "\"ssz\"",
+    "\"simple",
+    "serialize\""
+  ],
   "author": "ChainSafe Systems",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/darrenlangley/ssz-js/issues"
+    "url": "https://github.com/ChainSafeSystems/ssz-js/issues"
   },
-  "homepage": "https://github.com/darrenlangley/ssz-js#readme",
+  "homepage": "https://github.com/ChainSafeSystems/ssz-js#readme",
   "devDependencies": {
     "chai": "^4.1.2",
     "moch": "0.0.1"
