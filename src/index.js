@@ -1,9 +1,11 @@
 const writeIntBytes = require('./intBytes').writeIntBytes;
 
 /**
- * Simply Serializes
- * hash32 - expects input as bytes of hash
- * address - expects input as bytes of address
+ * Simply Serializes (SSZ)
+ * @method serialize
+ * @param {Buffer|array|number|object} value - Value to serialize: hash32 (Buffer) | address (Buffer) | int8/16/32 | bytes (Buffer) | array | object
+ * @param {string|object} type - A type string ('hash32', 'address', 'int8', 'int16', 'int32', 'bytes'), or type array ['hash32'], or type object containing fields property
+ * @return {Buffer} the byte output
  */
 function serialize(value, type) {
 
