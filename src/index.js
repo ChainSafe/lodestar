@@ -92,11 +92,14 @@ function serialize(value, type) {
 
     }
 
+    // serializes objects (including compound objects)
     if ((typeof type == 'object'|| typeof type == 'function') && type.hasOwnProperty('fields')) {
         let buffers = [];
-        Object.keys(type.fields).forEach(fieldName => {
-            buffers.push(serialize(value[fieldName], type.fields[fieldName]));
-        });
+        Object.keys(type.fields)
+            .sort()
+            .forEach(fieldName => {
+                buffers.push(serialize(value[fieldName], type.fields[fieldName]));
+            });
 
         let totalByteLength = buffers.reduce((acc, v) => acc + v.byteLength, 0);
         let byteLengthBuffer = Buffer.alloc(4);
@@ -190,11 +193,31 @@ function deserialize(data, start, type) {
         return {
             deserializedData: output,
             offset: position
-        }
+        };
     }
 
+    // deserializes objects (including compound objects)
+    if ((typeof type == 'object'|| typeof type == 'function') && type.hasOwnProperty('fields')) {
 
+        let length = readIntBytes('int32')(data, start);
+        let output = {};
+        let position = start + int32ByteLength;
 
+        Object.keys(type.fields)
+            .sort()
+            .forEach(fieldName => {
+                let fieldResult = deserialize(data, position, type.fields[fieldName]);
+                position = fieldResult.offset;
+                output[fieldName] = fieldResult.deserializedData;
+            });
+
+        return {
+            deserializedData: output,
+            offset: position
+        };
+    }
+
+    return null;
 }
 
 exports.serialize = serialize;

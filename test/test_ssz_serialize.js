@@ -281,6 +281,29 @@ describe('SimpleSerialize - serializes', () => {
         offset += 4;
         assert.equal(actualByteLength, expectedByteLength, 'Byte length is not correct');
 
+        // assert int8 value
+        let actualInt8 = result.readUInt8(offset);
+        offset += 1;
+        assert.equal(actualInt8, int8Value, 'Int8 value not serialised correctly');
+
+        // assert int16 value
+        let actualInt16 = result.readUInt16BE(offset);
+        offset += 2;
+        assert.equal(actualInt16, int16Value, 'Int16 value not serialised correctly');
+
+        // assert bytes value
+        let actualBytesLength = result.readUInt32BE(offset);
+        assert.equal(actualBytesLength, 280);
+        offset += 4;
+        let actualBytes = result.slice(offset, (offset + 280));
+        offset += 280;
+        assert.equal(actualBytes.toString('hex'), bytesValue.toString('hex'), 'Bytes type not serialised correctly');
+
+        // assert int32 value
+        let actualInt32 = result.readUInt32BE(offset);
+        offset += 4;
+        assert.equal(actualInt32, int32Value, 'Int32 value not serialised correctly');
+
         // assert address value
         let actualAddress = result.slice(offset, (offset + 20));
         offset += 20;
@@ -290,29 +313,6 @@ describe('SimpleSerialize - serializes', () => {
         let actualHash = result.slice(offset, (offset + 32));
         offset += 32;
         assert.equal(actualHash.toString('hex'), hashValue, 'Hash32 type not serialised correctly');
-
-        // assert int8 value
-        let actualInt8 = result.readUInt8(offset);
-        offset += 1;
-        assert.equal(actualInt8, int8Value, 'Int8 value not serialised correctly');
-        
-        // assert int16 value
-        let actualInt16 = result.readUInt16BE(offset);
-        offset += 2;
-        assert.equal(actualInt16, int16Value, 'Int16 value not serialised correctly');
-
-        // assert int32 value
-        let actualInt32 = result.readUInt32BE(offset);
-        offset += 4;
-        assert.equal(actualInt32, int32Value, 'Int32 value not serialised correctly');
-
-        // assert bytes value
-        let actualBytesLength = result.readUInt32BE(offset);
-        assert.equal(actualBytesLength, 280);
-        offset += 4;
-        let actualBytes = result.slice(offset, (offset + 280));
-        offset += 280;
-        assert.equal(actualBytes.toString('hex'), bytesValue.toString('hex'), 'Bytes type not serialised correctly');
 
     });
 
@@ -365,14 +365,8 @@ describe('SimpleSerialize - serializes', () => {
         let offset = startOffset;
         // skip attestation record byte length because it could vary 
         offset += 4;
-        let actualSlotId = result.readUInt32BE(offset);
-        offset += 4;
-        assert.equal(actualSlotId, attestRecord.slotId, 'SlotId value not serialised correctly');
-        let actualShardId = result.readUInt32BE(offset);
-        offset += 4;
-        assert.equal(actualShardId, attestRecord.shardId, 'ShardId value not serialised correctly');                
 
-        // assert bytes value
+        // assert bitfield value
         let expectedBitfieldByteLength = 4;
         let actualBitfieldByteLength = result.readUInt32BE(offset);
         assert.equal(actualBitfieldByteLength, expectedBitfieldByteLength, 'Attester bitfield array not serialised correctly');
@@ -380,6 +374,16 @@ describe('SimpleSerialize - serializes', () => {
         let actualBitfield = result.slice(offset, (offset + expectedBitfieldByteLength));
         offset += expectedBitfieldByteLength;
         assert.equal(actualBitfield.toString('hex'), attestRecord.attesterBitfield.toString('hex'), 'Attester Bitfield type not serialised correctly');
+        
+        // check shard id
+        let actualShardId = result.readUInt32BE(offset);
+        offset += 4;
+        assert.equal(actualShardId, attestRecord.shardId, 'ShardId value not serialised correctly');
+        
+        // check slot id
+        let actualSlotId = result.readUInt32BE(offset);
+        offset += 4;
+        assert.equal(actualSlotId, attestRecord.slotId, 'SlotId value not serialised correctly');
 
         return offset;
     }

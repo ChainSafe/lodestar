@@ -130,6 +130,61 @@ describe('SimpleSerialize - deserialize', () => {
         );
     });
 
+     /** deserializes objects */
+
+     it(`deserialises objects of simple types`, () => {
+        let bytesArray = [];
+        for(var i = 0; i < 280; i++){
+            bytesArray.push(8);
+        }
+
+        let valueObject = {
+            'publicAddress':hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a30'),
+            'secret': hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'),
+            'age': 30,
+            'distance': 32000,
+            'halfLife': 1000000000,
+            'file': Buffer.from(bytesArray)
+        };
+
+        let fields = {
+            'fields':{
+                'publicAddress': 'address',
+                'secret': 'hash32',
+                'age': 'int8',
+                'distance': 'int16',
+                'halfLife': 'int32',
+                'file': 'bytes'
+            }
+        };
+
+        let result = deserialize(serialize(valueObject, fields), 0, fields);
+        assert.deepEqual(result.deserializedData, valueObject);
+    
+    });
+
+    it(`deserializes objects containing objects`, () => {
+
+        let testObj = new ActiveState();
+        let recentHash1 = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
+        let recentHash2 = 'aa1116bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
+        testObj.recentBlockHashes = [
+            hexToBytes(recentHash1), 
+            hexToBytes(recentHash2)
+        ]
+
+        let attestRecord1 = new AttestationRecord(0, 1, Buffer.from([11, 12, 13, 14]));
+        let attestRecord2 = new AttestationRecord(2, 3, Buffer.from([255, 254, 253, 252]));
+        testObj.pendingAttestations = [
+            attestRecord1,
+            attestRecord2
+        ]
+
+        let result = deserialize(serialize(testObj, ActiveState), 0, ActiveState);
+        assert.deepEqual(result.deserializedData, testObj);
+
+    });
+
     function scenarioDeserializeByteArrays(arrayInput, type) {
         let result = deserialize(serialize(arrayInput, [type]), 0, [type]);
 
