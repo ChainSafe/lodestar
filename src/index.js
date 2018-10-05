@@ -1,3 +1,5 @@
+const intByteLength = require('./intBytes').intByteLength;
+const readIntBytes = require('./intBytes').readIntBytes;
 const writeIntBytes = require('./intBytes').writeIntBytes;
 
 /**
@@ -60,11 +62,11 @@ function serialize(value, type) {
     // serialize bytes
     if(type === 'bytes') {
         // return (length + bytes)
-        let buffer = Buffer.alloc(4);
+        let byteLengthBuffer = Buffer.alloc(4);
         // write length to buffer as 4 byte int
-        buffer.writeUInt32BE(value.byteLength); // bigendian
+        byteLengthBuffer.writeUInt32BE(value.byteLength); // bigendian
         // write bytes to buffer
-        return Buffer.concat([buffer, value]);
+        return Buffer.concat([byteLengthBuffer, value]);
     }
 
     // serialize array of a specified type
@@ -107,4 +109,93 @@ function serialize(value, type) {
     return null;
 }
 
-exports.serialize = serialize
+function deserialize(data, start, type) {
+    const int32ByteLength = intByteLength('int32');
+
+    // deserializes hashes
+    if(type === 'hash32') {
+        const hashLength = 32;
+        // TODO: assert len(data) + start >= length
+        return {
+            deserializedData: data.slice(start, (start + hashLength)),
+            offset: start + hashLength
+        }
+    }
+
+    // deserializes addresses
+    if(type === 'address') {
+        const addressLength = 20;
+        // TODO: assert len(data) + start >= length
+        return {
+            deserializedData: data.slice(start, (start + addressLength)),
+            offset: start + addressLength
+        }
+    }
+
+    // deserializes unsigned integers
+    if((typeof type === 'string') && type.startsWith('int')) {
+
+        // determine int size
+        let intSize = parseInt(type.substr(3));
+        if(intSize > 0 && intSize <= 32 && intSize % 8 !== 0) {
+            throw Error(`given int type has invalid size (8, 16, 32)`);
+        }
+
+        // TODO: assert len(data) + start >= length
+        
+        return {
+            deserializedData: readIntBytes(type)(data, start),
+            offset: start + intByteLength(type)
+        }
+    }
+
+    // deserialize bytes
+    if(type === 'bytes') {
+
+        // TODO: assert len(data) + start >= 4+length
+        let length = readIntBytes('int32')(data, start);
+        return {
+            deserializedData: data.slice(start + int32ByteLength, (start + length + int32ByteLength)),
+            offset: start + int32ByteLength + length
+        }
+    }
+
+    // deserializes array of a specified type
+    if (Array.isArray(type)) {
+        
+        // only 1 element type is allowed
+        if(type.length > 1){
+            throw Error('array type should only have one element type');
+        }
+
+        // deserialize each element of the array
+        let elementType = type[0];
+
+        let length = readIntBytes('int32')(data, start);
+        let output = [];
+        let position = start + int32ByteLength;
+        
+        // work through the data deserializing the array elements
+        while(position < (start + int32ByteLength + length)) {
+            let response = deserialize(data, position, elementType);
+            position = response.offset;
+            output.push(response.deserializedData);
+        }
+
+        // check that we have have arrived at the end of the byte stream
+        if(position !== (start + int32ByteLength + length)) {
+            throw Error('We did not arrive at the end of the byte length');
+        }
+
+        return {
+            deserializedData: output,
+            offset: position
+        }
+    }
+
+
+
+}
+
+exports.serialize = serialize;
+exports.deserialize = deserialize;

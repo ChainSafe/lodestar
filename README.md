@@ -1,5 +1,5 @@
 # ssz-js
-Simple Serialized in pure Javascript
+Simple Serialize (SSZ) in pure Javascript
 
 Install:
 ```bash

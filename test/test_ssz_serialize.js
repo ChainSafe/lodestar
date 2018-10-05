@@ -4,9 +4,9 @@ const readIntBytes = require('../src/intBytes').readIntBytes;
 const intByteLength = require('../src/intBytes').intByteLength;
 const ActiveState = require('./utils/activeState').ActiveState;
 const AttestationRecord = require('./utils/activeState').AttestationRecord;
-const serialize = require('../src/index').serialize;
+const serialize = require('../src').serialize;
 
-describe('SimpleSerialize', () => {
+describe('SimpleSerialize - serializes', () => {
 
     /** hash32 */
 
@@ -236,6 +236,8 @@ describe('SimpleSerialize', () => {
         );
 
     });
+
+    /** serializes objects */
 
     it(`serialises objects of simple types`, () => {
         let addressValue = 'e17cb53f339a726e0b347bbad221ad7b50dc2a30';
