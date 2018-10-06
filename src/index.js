@@ -34,10 +34,10 @@ function serialize(value, type) {
     }
 
     // serialize integers
-    if((typeof type === 'string') && type.startsWith('int')) {
+    if((typeof type === 'string') && !!type.match(/^u?int\d+$/g)) {
 
         // determine int size
-        let intSize = parseInt(type.substr(3));
+        let intSize = parseInt(type.match(/\d+/g));
         if(intSize > 0 && intSize <= 32 && intSize % 8 !== 0) {
             throw Error(`given int type has invalid size (8, 16, 32)`);
         }
@@ -136,10 +136,10 @@ function deserialize(data, start, type) {
     }
 
     // deserializes unsigned integers
-    if((typeof type === 'string') && type.startsWith('int')) {
+    if((typeof type === 'string') && !!type.match(/^u?int\d+$/g)) {
 
         // determine int size
-        let intSize = parseInt(type.substr(3));
+        let intSize = parseInt(type.match(/\d+/g));
         if(intSize > 0 && intSize <= 32 && intSize % 8 !== 0) {
             throw Error(`given int type has invalid size (8, 16, 32)`);
         }

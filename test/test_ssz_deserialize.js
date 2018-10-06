@@ -1,13 +1,12 @@
 const assert = require('chai').assert;
 const hexToBytes = require('./utils/hexToBytes').hexToBytes;
-const readIntBytes = require('../src/intBytes').readIntBytes;
 const intByteLength = require('../src/intBytes').intByteLength;
 const ActiveState = require('./utils/activeState').ActiveState;
 const AttestationRecord = require('./utils/activeState').AttestationRecord;
 const serialize = require('../src').serialize;
 const deserialize = require('../src').deserialize;
 
-describe('SimpleSerialize - deserialize', () => {
+describe('SimpleSerialize - deserializes hash32', () => {
 
     it(`deserializes hash32`, () => {
 
@@ -20,6 +19,10 @@ describe('SimpleSerialize - deserialize', () => {
     
     });
 
+});
+
+describe('SimpleSerialize - deserializes addresses', () => {
+
     it(`deserializes addresses`, () => {        
         
         let addressInput = hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a30');
@@ -31,7 +34,9 @@ describe('SimpleSerialize - deserialize', () => {
 
     });
 
-    /** integers */
+});
+
+describe('SimpleSerialize - deserializes signed integers', () => {
 
     it(`deserializes int8`, () => {        
         
@@ -66,8 +71,46 @@ describe('SimpleSerialize - deserialize', () => {
 
     });
 
+});
 
-    /** bytes */
+describe('SimpleSerialize - deserializes unsigned integers', () => {
+
+    it(`deserializes uint8`, () => {        
+        
+        let intInput = 5;
+        let result = deserialize(serialize(intInput, 'uint8'), 0, 'uint8');
+
+        assert.isNotNull(result, 'uint8 result should not be null');
+        assert.equal(result.deserializedData, intInput, 'uint8 result should be same as input');
+        assert.equal(result.offset, 1, 'Offset should be 1 byte');
+
+    });
+
+    it(`deserializes uint16`, () => {        
+        
+        let intInput = 32000;
+        let result = deserialize(serialize(intInput, 'uint16'), 0, 'uint16');
+
+        assert.isNotNull(result, 'uint16 result should not be null');
+        assert.equal(result.deserializedData, intInput, 'uint16 result should be same as input');
+        assert.equal(result.offset, 2, 'Offset should be 2 bytes');
+
+    });
+
+    it(`deserializes uint32`, () => {        
+        
+        let intInput = 1000000000;
+        let result = deserialize(serialize(intInput, 'uint32'), 0, 'uint32');
+
+        assert.isNotNull(result, 'uint32 result should not be null');
+        assert.equal(result.deserializedData, intInput, 'uint32 result should be same as input');
+        assert.equal(result.offset, 4, 'Offset should be 4 bytes');
+
+    });
+
+});
+
+describe('SimpleSerialize - deserialize bytes', () => {
 
     it(`deserializes bytes`, () => {        
         
@@ -83,7 +126,9 @@ describe('SimpleSerialize - deserialize', () => {
         assert.equal(result.offset, 4 + bytesInput.byteLength, 'Offset should be int32 bytes (4) + byte input length');
     });
 
-    /** arrays */
+});
+
+describe('SimpleSerialize - deserialize arrays', () => {
 
     it(`deserializes arrays of elements (of the same type) - hash32`, () => {
 
@@ -130,7 +175,49 @@ describe('SimpleSerialize - deserialize', () => {
         );
     });
 
-     /** deserializes objects */
+    it(`deserializes arrays of elements (of the same type) - uint8`, () => {
+        scenarioDeserializeIntArrays(
+            [1, 2, 3],
+            'uint8'
+        );
+    });
+
+    it(`deserializes arrays of elements (of the same type) - uint16`, () => {
+        scenarioDeserializeIntArrays(
+            [32000, 32001, 32002],
+            'uint16'
+        );
+    });
+
+    it(`deserializes arrays of elements (of the same type) - uint32`, () => {
+        scenarioDeserializeIntArrays(
+            [1000000000, 1000000001, 1000000002],
+            'uint32'
+        );
+    });
+
+    function scenarioDeserializeByteArrays(arrayInput, type) {
+        let result = deserialize(serialize(arrayInput, [type]), 0, [type]);
+
+        let flatInput = Buffer.from([...arrayInput[0], ...arrayInput[1]]);
+        let expectedLength = flatInput.length;
+
+        assert.isNotNull(result);
+        assert.deepEqual(result.deserializedData, arrayInput);
+        assert.equal(result.offset, 4 + expectedLength, 'Offset should be int32 bytes (4) + array bytes length');
+    }
+
+    function scenarioDeserializeIntArrays(arrayInput, type){
+        let result = deserialize(serialize(arrayInput, [type]), 0, [type]);
+
+        assert.isNotNull(result);
+        assert.deepEqual(result.deserializedData, arrayInput, 'Array of integers not deserialized correctly');
+        assert.equal(result.offset, 4 + intByteLength(type) * arrayInput.length, `Offset should be length (4 bytes) + (${intByteLength(type)} * number of elements)`);
+    }
+
+});
+
+describe('SimpleSerialize - deserialize objects', () => {
 
      it(`deserialises objects of simple types`, () => {
         let bytesArray = [];
@@ -184,24 +271,5 @@ describe('SimpleSerialize - deserialize', () => {
         assert.deepEqual(result.deserializedData, testObj);
 
     });
-
-    function scenarioDeserializeByteArrays(arrayInput, type) {
-        let result = deserialize(serialize(arrayInput, [type]), 0, [type]);
-
-        let flatInput = Buffer.from([...arrayInput[0], ...arrayInput[1]]);
-        let expectedLength = flatInput.length;
-
-        assert.isNotNull(result);
-        assert.deepEqual(result.deserializedData, arrayInput);
-        assert.equal(result.offset, 4 + expectedLength, 'Offset should be int32 bytes (4) + array bytes length');
-    }
-
-    function scenarioDeserializeIntArrays(arrayInput, type){
-        let result = deserialize(serialize(arrayInput, [type]), 0, [type]);
-
-        assert.isNotNull(result);
-        assert.deepEqual(result.deserializedData, arrayInput, 'Array of integers not deserialized correctly');
-        assert.equal(result.offset, 4 + intByteLength(type) * arrayInput.length, `Offset should be length (4 bytes) + (${intByteLength(type)} * number of elements)`);
-    }
 
 });
