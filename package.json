@@ -24,5 +24,8 @@
   "devDependencies": {
     "chai": "^4.1.2",
     "moch": "0.0.1"
+  },
+  "dependencies": {
+    "deepcopy": "^1.0.0"
   }
 }

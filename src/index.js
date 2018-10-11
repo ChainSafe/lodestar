@@ -1,4 +1,5 @@
 const writeIntBytes = require('./intBytes').writeIntBytes;
+const deepCopy = require('deepcopy');
 
 /**
  * Simply Serializes (SSZ)
@@ -121,23 +122,21 @@ function eq(x, y) {
 }
 
 /**
- * Simply Serializes (SSZ)
- * @method serialize
- * @param {Buffer|array|number|object} value - Value to serialize: hash32 (Buffer) | address (Buffer) | int8/16/32 | bytes (Buffer) | array | object
- * @param {string|object} type - A type string ('hash32', 'address', 'int8', 'int16', 'int32', 'bytes'), or type array ['hash32'], or type object containing fields property
- * @return {Buffer} the byte output
+ * Returns a deep copy of a simply serialized object (SSZ)
+ * @method deepcopy
+ * @param {Buffer} x - Value to deep copy
+ * @return {Buffer} the deep copy of x
  */
 function deepcopy(x) {
-
-
+    return deepCopy(x);
+    
 }
 
 /**
- * Simply Serializes (SSZ)
- * @method serialize
- * @param {Buffer|array|number|object} value - Value to serialize: hash32 (Buffer) | address (Buffer) | int8/16/32 | bytes (Buffer) | array | object
- * @param {string|object} type - A type string ('hash32', 'address', 'int8', 'int16', 'int32', 'bytes'), or type array ['hash32'], or type object containing fields property
- * @return {Buffer} the byte output
+ * Converts a simply serialized object to a simple Javascript object (SSZ)
+ * @method toObject
+ * @param {Buffer} x - Value to convert to a Js object
+ * @return {Buffer} object
  */
 function toObject(x) {
 
@@ -145,3 +144,5 @@ function toObject(x) {
 
 exports.serialize = serialize
 exports.eq = eq
+exports.deepcopy = deepcopy
+exports.toObject = toObject
