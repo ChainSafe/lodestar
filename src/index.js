@@ -11,7 +11,7 @@ function serialize(value, type) {
 
     // serialize hashes
     if(type === 'hash32') {
-        
+
         // check length is 32 byte
         if(value.byteLength !== 32) {
             throw Error(`given hash32 ${value} should be 32 bytes`);
@@ -54,7 +54,7 @@ function serialize(value, type) {
         let buffer = Buffer.alloc(intSize / 8)
         writeIntBytes(type)(buffer, intValue);
         return buffer;
-        
+
     }
 
     // serialize bytes
@@ -69,7 +69,7 @@ function serialize(value, type) {
 
     // serialize array of a specified type
     if (Array.isArray(value) && Array.isArray(type)) {
-        
+
         // only 1 element type is allowed
         if(type.length > 1){
             throw Error('array type should only have one element type');
@@ -105,6 +105,42 @@ function serialize(value, type) {
 
     // cannot serialize
     return null;
+}
+
+/**
+ * Simply Serializes (SSZ)
+ * @method eq
+ * @param {Buffer} x - simply serialized object
+ * @param {Buffer} y - simply serialized object
+ * @return {Bool} the byte output
+ */
+function eq(x, y) {
+    // Since we serialized x and y as buffers and buffers in JS are deterministic, we can do the following
+    return x.equals(y);
+
+}
+
+/**
+ * Simply Serializes (SSZ)
+ * @method serialize
+ * @param {Buffer|array|number|object} value - Value to serialize: hash32 (Buffer) | address (Buffer) | int8/16/32 | bytes (Buffer) | array | object
+ * @param {string|object} type - A type string ('hash32', 'address', 'int8', 'int16', 'int32', 'bytes'), or type array ['hash32'], or type object containing fields property
+ * @return {Buffer} the byte output
+ */
+function deepcopy(x) {
+
+
+}
+
+/**
+ * Simply Serializes (SSZ)
+ * @method serialize
+ * @param {Buffer|array|number|object} value - Value to serialize: hash32 (Buffer) | address (Buffer) | int8/16/32 | bytes (Buffer) | array | object
+ * @param {string|object} type - A type string ('hash32', 'address', 'int8', 'int16', 'int32', 'bytes'), or type array ['hash32'], or type object containing fields property
+ * @return {Buffer} the byte output
+ */
+function toObject(x) {
+
 }
 
 exports.serialize = serialize
