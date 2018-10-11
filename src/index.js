@@ -108,7 +108,7 @@ function serialize(value, type) {
 }
 
 /**
- * Simply Serializes (SSZ)
+ * Checks if 2 simply serialized objects are equal (SSZ)
  * @method eq
  * @param {Buffer} x - simply serialized object
  * @param {Buffer} y - simply serialized object
@@ -144,3 +144,4 @@ function toObject(x) {
 }
 
 exports.serialize = serialize
+exports.eq = eq
