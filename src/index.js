@@ -38,23 +38,13 @@ function serialize(value, type) {
 
         // determine int size
         let intSize = parseInt(type.match(/\d+/g));
-        if(intSize > 0 && intSize <= 32 && intSize % 8 !== 0) {
-            throw Error(`given int type has invalid size (8, 16, 32)`);
-        }
-
-        // convert to value to int
-        let intValue = parseInt(value);
-
-        // check max size is within bounds of type
-        let maxSize = Math.pow(2, intSize) / 2;
-        if(intValue >= maxSize){
-            throw Error(`given value is too large for type size ${type}`);
+        if(intSize > 0 && intSize <= 256 && intSize % 8 !== 0) {
+            throw Error(`given int type has invalid size (8, 16, 32, 64, 256)`);
         }
 
         // return bytes
-        // let view = new DataView(new ArrayBuffer(intSize / 8));
         let buffer = Buffer.alloc(intSize / 8)
-        writeIntBytes(type)(buffer, intValue);
+        writeIntBytes(type)(buffer, value);
         return buffer;
         
     }

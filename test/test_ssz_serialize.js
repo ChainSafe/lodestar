@@ -1,4 +1,5 @@
 const assert = require('chai').assert;
+const BN = require('bn.js');
 const hexToBytes = require('./utils/hexToBytes').hexToBytes;
 const readIntBytes = require('../src/intBytes').readIntBytes;
 const intByteLength = require('../src/intBytes').intByteLength;
@@ -108,17 +109,6 @@ describe('SimpleSerialize - serializes signed integers', () => {
 
     });
 
-    it(`errors when serializing int8, given int larger than 255`, () => {
-        
-        let intInput = 256;
-        assert.throws(
-            () => serialize(intInput, 'int8'),
-            Error,
-            `given value is too large for type size int8`
-        );
-
-    });
-
     it(`serializes int16`, () => {        
         
         let intInput = 32000;
@@ -138,17 +128,6 @@ describe('SimpleSerialize - serializes signed integers', () => {
 
         assert.isNotNull(result, 'int16 result should not be null');
         assert.equal(intResult, intInput, 'int16 result should be same as input');
-
-    });
-
-    it(`errors when serializing int16, given int larger than 32767`, () => {
-        
-        let intInput = 32768;
-        assert.throws(
-            () => serialize(intInput, 'int16'),
-            Error,
-            `given value is too large for type size int16`
-        );
 
     });
 
@@ -174,14 +153,47 @@ describe('SimpleSerialize - serializes signed integers', () => {
 
     });
 
-    it(`errors when serializing int32, given int larger than 2147483647`, () => {
+    it(`serializes int64`, () => {        
         
-        let intInput = 2147483648;
-        assert.throws(
-            () => serialize(intInput, 'int32'),
-            Error,
-            `given value is too large for type size int32`
-        );
+        let intInput = new BN(100000000000);
+        let result = serialize(intInput, 'int64');
+        let intResult = new BN([...result], 16, 'be').fromTwos(64);
+
+        assert.isNotNull(result, 'int64 result should not be null');
+        assert.isTrue(intResult.eq(intInput), 'int64 result should be same as input');
+
+    });
+
+    it(`serializes int64 (negative)`, () => {        
+        
+        let intInput = new BN(-100000000000);
+        let result = serialize(intInput, 'int64');
+        let intResult = new BN([...result], 16, 'be').fromTwos(64);
+
+        assert.isNotNull(result, 'int64 result should not be null');
+        assert.isTrue(intResult.eq(intInput), 'int64 result should be same as input');
+
+    });
+
+    it(`serializes int256`, () => {        
+        
+        let intInput = new BN('123').pow(new BN(25));
+        let result = serialize(intInput, 'int256');
+        let intResult = new BN([...result], 32, 'be').fromTwos(256);
+
+        assert.isNotNull(result, 'int256 result should not be null');
+        assert.isTrue(intResult.eq(intInput), 'int256 result should be same as input');
+
+    });
+
+    it(`serializes int256 (negative)`, () => {        
+        
+        let intInput = new BN('-123').pow(new BN(25));
+        let result = serialize(intInput, 'int256');
+        let intResult = new BN([...result], 32, 'be').fromTwos(256);
+
+        assert.isNotNull(result, 'int256 result should not be null');
+        assert.isTrue(intResult.eq(intInput), 'int256 result should be same as input');
 
     });
 
@@ -200,17 +212,6 @@ describe('SimpleSerialize - serializes unsigned integers', () => {
 
     });
 
-    it(`errors when serializing uint8, given int larger than 255`, () => {
-        
-        let intInput = 256;
-        assert.throws(
-            () => serialize(intInput, 'uint8'),
-            Error,
-            `given value is too large for type size uint8`
-        );
-
-    });
-
     it(`serializes uint16`, () => {        
         
         let intInput = 32000;
@@ -219,17 +220,6 @@ describe('SimpleSerialize - serializes unsigned integers', () => {
 
         assert.isNotNull(result, 'uint16 result should not be null');
         assert.equal(intResult, intInput, 'uint16 result should be same as input');
-
-    });
-
-    it(`errors when serializing uint16, given int larger than 32767`, () => {
-        
-        let intInput = 32768;
-        assert.throws(
-            () => serialize(intInput, 'uint16'),
-            Error,
-            `given value is too large for type size uint16`
-        );
 
     });
 
@@ -244,14 +234,25 @@ describe('SimpleSerialize - serializes unsigned integers', () => {
 
     });
 
-    it(`errors when serializing uint32, given int larger than 2147483647`, () => {
+    it(`serializes uint64`, () => {        
         
-        let intInput = 2147483648;
-        assert.throws(
-            () => serialize(intInput, 'uint32'),
-            Error,
-            `given value is too large for type size uint32`
-        );
+        let intInput = new BN(100000000000);
+        let result = serialize(intInput, 'uint64');
+        let intResult = new BN([...result], 16, 'be');
+
+        assert.isNotNull(result, 'uint64 result should not be null');
+        assert.isTrue(intResult.eq(intInput), 'uint64 result should be same as input');
+
+    });
+
+    it(`serializes uint256`, () => {        
+        
+        let intInput = new BN('123').pow(new BN(25));
+        let result = serialize(intInput, 'uint256');
+        let intResult = new BN([...result], 32, 'be').fromTwos(256);
+
+        assert.isNotNull(result, 'uint256 result should not be null');
+        assert.isTrue(intResult.eq(intInput), 'uint256 result should be same as input');
 
     });
 
@@ -337,6 +338,18 @@ describe('SimpleSerialize - serializes arrays of elements (of same type)', () =>
 
     });
 
+    it(`serializes arrays of elements (of the same type) - int64`, () => {
+
+        scenarioTestArrayOfInts([new BN(100000000000), new BN(100000000001), new BN(100000000002)], 'int64');
+
+    });
+
+    it(`serializes arrays of elements (of the same type) - int256`, () => {
+
+        scenarioTestArrayOfInts([new BN('1').pow(new BN(20)), new BN('1').pow(new BN(21)), new BN('1').pow(new BN(22))], 'int64');
+
+    });
+
     it(`serializes arrays of elements (of the same type) - uint8`, () => {
 
         scenarioTestArrayOfInts([1, 2, 3], 'uint8');
@@ -352,6 +365,18 @@ describe('SimpleSerialize - serializes arrays of elements (of same type)', () =>
     it(`serializes arrays of elements (of the same type) - uint32`, () => {
 
         scenarioTestArrayOfInts([1000000000, 1000000001, 1000000002], 'uint32');
+
+    });
+
+    it(`serializes arrays of elements (of the same type) - uint64`, () => {
+
+        scenarioTestArrayOfInts([new BN(100000000000), new BN(100000000001), new BN(100000000002)], 'uint64');
+
+    });
+
+    it(`serializes arrays of elements (of the same type) - uint256`, () => {
+
+        scenarioTestArrayOfInts([new BN('1').pow(new BN(20)), new BN('1').pow(new BN(21)), new BN('1').pow(new BN(22))], 'uint64');
 
     });
 
@@ -374,7 +399,15 @@ describe('SimpleSerialize - serializes arrays of elements (of same type)', () =>
         let resultView = result.slice(4);
         let inputIndex = 0;
         for(var i = 0; i < (result.byteLength-4); i+=intByteLength(type)) {
-            assert.equal(readIntBytes(type)(resultView, i), arrayInput[inputIndex++]);
+            let elementResult = readIntBytes(type)(resultView, i);
+            let elementInput = arrayInput[inputIndex++];
+            if (typeof elementResult === 'object') {
+                assert.isTrue(elementResult.eq(elementInput), `Serialised elements do not match input - actual ${elementResult} expected ${elementInput}`);
+            }
+            else{
+                assert.equal(elementResult, elementInput, 'Serialised elements do not match input');
+            }
+
         }
         
     }
@@ -390,6 +423,8 @@ describe('SimpleSerialize - serializes objects', () => {
         let int8Value = 30;
         let int16Value = 32000;
         let int32Value = 1000000000;
+        let uint64Value = new BN(1000000000);
+        let int256Value = new BN(-5).pow(new BN(16));
 
         let bytesArray = [];
         for(var i = 0; i < 280; i++){
@@ -404,7 +439,9 @@ describe('SimpleSerialize - serializes objects', () => {
                 'age': int8Value,
                 'distance': int16Value,
                 'halfLife': int32Value,
-                'file': bytesValue
+                'file': bytesValue,
+                'xxx': uint64Value,
+                'zzz': int256Value
             },
             {
                 'fields':{
@@ -413,7 +450,9 @@ describe('SimpleSerialize - serializes objects', () => {
                     'age': 'int8',
                     'distance': 'int16',
                     'halfLife': 'int32',
-                    'file': 'bytes'
+                    'file': 'bytes',
+                    'xxx': 'uint64',
+                    'zzz': 'int256'
                 }
             }
         );
@@ -421,7 +460,7 @@ describe('SimpleSerialize - serializes objects', () => {
         let offset = 0;
 
         // assert byte length
-        let expectedByteLength = 343;
+        let expectedByteLength = 383;
         let actualByteLength = result.readInt32BE(offset);
         offset += 4;
         assert.equal(actualByteLength, expectedByteLength, 'Byte length is not correct');
@@ -458,6 +497,16 @@ describe('SimpleSerialize - serializes objects', () => {
         let actualHash = result.slice(offset, (offset + 32));
         offset += 32;
         assert.equal(actualHash.toString('hex'), hashValue, 'Hash32 type not serialised correctly');
+
+        // assert uint64 value
+        let actualUint64 = new BN([...result.slice(offset, (offset + 8))], 16, 'be');
+        offset += 8;
+        assert.isTrue(actualUint64.eq(uint64Value), `Serialised object values are not correct actual ${actualUint64} expected ${uint64Value}`);
+
+        // assert int256 value
+        let actualInt256 = new BN([...result.slice(offset, (offset + 32))], 16, 'be');
+        offset += 32;
+        assert.isTrue(actualInt256.eq(int256Value), `Serialised object values are not correct actual ${actualInt256} expected ${int256Value}`);
 
     });
 

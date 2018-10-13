@@ -1,4 +1,5 @@
 const assert = require('chai').assert;
+const BN = require('bn.js');
 const hexToBytes = require('./utils/hexToBytes').hexToBytes;
 const intByteLength = require('../src/intBytes').intByteLength;
 const ActiveState = require('./utils/activeState').ActiveState;
@@ -71,6 +72,50 @@ describe('SimpleSerialize - deserializes signed integers', () => {
 
     });
 
+    it(`deserializes int64`, () => {        
+        
+        let intInput = new BN(100000000000);
+        let result = deserialize(serialize(intInput, 'int64'), 0, 'int64');
+
+        assert.isNotNull(result, 'int64 result should not be null');
+        assert.isTrue(result.deserializedData.eq(intInput), `int64 result should be same as input actual: ${result.deserializedData} expected: ${intInput}`);
+        assert.equal(result.offset, 8, 'Offset should be 8 bytes');
+
+    });
+
+    it(`deserializes int64 (negative)`, () => {        
+        
+        let intInput = new BN(-100000000000);
+        let result = deserialize(serialize(intInput, 'int64'), 0, 'int64');
+
+        assert.isNotNull(result, 'int64 result should not be null');
+        assert.isTrue(result.deserializedData.eq(intInput), `int64 result should be same as input actual: ${result.deserializedData} expected: ${intInput}`);
+        assert.equal(result.offset, 8, 'Offset should be 8 bytes');
+
+    });
+
+    it(`deserializes int256`, () => {        
+        
+        let intInput = new BN('123').pow(new BN(25));
+        let result = deserialize(serialize(intInput, 'int256'), 0, 'int256');
+
+        assert.isNotNull(result, 'int256 result should not be null');
+        assert.isTrue(result.deserializedData.eq(intInput), `int256 result should be same as input actual: ${result.deserializedData} expected: ${intInput}`);
+        assert.equal(result.offset, 32, 'Offset should be 32 bytes');
+
+    });
+
+    it(`deserializes int256 (negative)`, () => {        
+        
+        let intInput = new BN('-123').pow(new BN(25));
+        let result = deserialize(serialize(intInput, 'int256'), 0, 'int256');
+
+        assert.isNotNull(result, 'int256 result should not be null');
+        assert.isTrue(result.deserializedData.eq(intInput), `int256 result should be same as input actual: ${result.deserializedData} expected: ${intInput}`);
+        assert.equal(result.offset, 32, 'Offset should be 32 bytes');
+
+    });
+
 });
 
 describe('SimpleSerialize - deserializes unsigned integers', () => {
@@ -105,6 +150,30 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
         assert.isNotNull(result, 'uint32 result should not be null');
         assert.equal(result.deserializedData, intInput, 'uint32 result should be same as input');
         assert.equal(result.offset, 4, 'Offset should be 4 bytes');
+
+    });
+
+    it(`deserializes uint64`, () => {        
+        
+        let intInput = new BN(100000000000);
+        let result = deserialize(serialize(intInput, 'uint64'), 0, 'uint64');
+
+        assert.isNotNull(result, 'uint64 result should not be null');
+
+        assert.isTrue(result.deserializedData.eq(intInput), `uint64 result should be same as input actual: ${result.deserializedData} expected: ${intInput}`);
+        assert.equal(result.offset, 8, 'Offset should be 8 bytes');
+
+    });
+
+    it(`deserializes uint256`, () => {        
+        
+        let intInput = new BN(100000000000000);
+        let result = deserialize(serialize(intInput, 'uint256'), 0, 'uint256');
+
+        assert.isNotNull(result, 'uint256 result should not be null');
+
+        assert.isTrue(result.deserializedData.eq(intInput), `uint256 result should be same as input actual: ${result.deserializedData} expected: ${intInput}`);
+        assert.equal(result.offset, 32, 'Offset should be 32 bytes');
 
     });
 
@@ -175,6 +244,20 @@ describe('SimpleSerialize - deserialize arrays', () => {
         );
     });
 
+    it(`deserializes arrays of elements (of the same type) - int64`, () => {
+        scenarioDeserializeIntArrays(
+            [new BN(-100000000000), new BN(100000000000), new BN(-100000000000)],
+            'int64'
+        );
+    });
+
+    it(`deserializes arrays of elements (of the same type) - int256`, () => {
+        scenarioDeserializeIntArrays(
+            [new BN(-1).pow(new BN(20)), new BN(1).pow(new BN(21)), new BN(-1).pow(new BN(22))],
+            'int256'
+        );
+    });
+
     it(`deserializes arrays of elements (of the same type) - uint8`, () => {
         scenarioDeserializeIntArrays(
             [1, 2, 3],
@@ -196,6 +279,20 @@ describe('SimpleSerialize - deserialize arrays', () => {
         );
     });
 
+    it(`deserializes arrays of elements (of the same type) - uint64`, () => {
+        scenarioDeserializeIntArrays(
+            [new BN(100000000000), new BN(100000000000), new BN(100000000000)],
+            'uint64'
+        );
+    });
+
+    it(`deserializes arrays of elements (of the same type) - uint256`, () => {
+        scenarioDeserializeIntArrays(
+            [new BN(1).pow(new BN(20)), new BN(1).pow(new BN(21)), new BN(1).pow(new BN(22))],
+            'uint256'
+        );
+    });
+
     function scenarioDeserializeByteArrays(arrayInput, type) {
         let result = deserialize(serialize(arrayInput, [type]), 0, [type]);
 
@@ -211,7 +308,16 @@ describe('SimpleSerialize - deserialize arrays', () => {
         let result = deserialize(serialize(arrayInput, [type]), 0, [type]);
 
         assert.isNotNull(result);
-        assert.deepEqual(result.deserializedData, arrayInput, 'Array of integers not deserialized correctly');
+        for (let index = 0; index < result.deserializedData.length; index++) {
+            const elementResult = result.deserializedData[index];
+            const elementInput = arrayInput[index];
+            if (typeof elementResult === 'object') {
+                assert.isTrue(elementResult.eq(elementInput), `Serialised elements do not match input - actual ${elementResult} expected ${elementInput}`);
+            }
+            else{
+                assert.equal(elementResult, elementInput, 'Serialised elements do not match input');
+            }
+        }
         assert.equal(result.offset, 4 + intByteLength(type) * arrayInput.length, `Offset should be length (4 bytes) + (${intByteLength(type)} * number of elements)`);
     }
 
@@ -231,7 +337,9 @@ describe('SimpleSerialize - deserialize objects', () => {
             'age': 30,
             'distance': 32000,
             'halfLife': 1000000000,
-            'file': Buffer.from(bytesArray)
+            'file': Buffer.from(bytesArray),
+            'xxx': new BN(1000000000),
+            'zzz': new BN(-5).pow(new BN(16))
         };
 
         let fields = {
@@ -241,12 +349,30 @@ describe('SimpleSerialize - deserialize objects', () => {
                 'age': 'int8',
                 'distance': 'int16',
                 'halfLife': 'int32',
-                'file': 'bytes'
+                'file': 'bytes',
+                'xxx': 'uint64',
+                'zzz': 'int256'
             }
         };
 
         let result = deserialize(serialize(valueObject, fields), 0, fields);
-        assert.deepEqual(result.deserializedData, valueObject);
+
+        // assert fields
+        Object.keys(fields['fields'])
+              .forEach(fieldName => {
+                  console.log(fieldName)
+                  let expectedValue = valueObject[fieldName];
+                  let actualValue = result.deserializedData[fieldName];
+                  if(typeof actualValue.eq === 'function'){
+                    assert.isTrue(actualValue.eq(expectedValue), `Object serialised properties do not match input - actual ${actualValue} expected ${expectedValue}`);
+                  }
+                  else if(typeof actualValue.equals === 'function'){
+                    assert.isTrue(actualValue.equals(expectedValue), `Object serialised properties do not match input - actual ${actualValue} expected ${expectedValue}`);   
+                  }
+                  else {
+                    assert.equal(actualValue, expectedValue, 'Object serialised properties do not match input');
+                  }
+              });
     
     });
 
