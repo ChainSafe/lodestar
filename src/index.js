@@ -1,6 +1,7 @@
 const intByteLength = require('./intBytes').intByteLength;
 const readIntBytes = require('./intBytes').readIntBytes;
 const writeIntBytes = require('./intBytes').writeIntBytes;
+const deepCopy = require('deepcopy');
 
 /**
  * Simply Serializes (SSZ)
@@ -13,7 +14,7 @@ function serialize(value, type) {
 
     // serialize hashes
     if(type === 'hash32') {
-        
+
         // check length is 32 byte
         if(value.byteLength !== 32) {
             throw Error(`given hash32 ${value} should be 32 bytes`);
@@ -46,7 +47,7 @@ function serialize(value, type) {
         let buffer = Buffer.alloc(intSize / 8)
         writeIntBytes(type)(buffer, value);
         return buffer;
-        
+
     }
 
     // serialize bytes
@@ -61,7 +62,7 @@ function serialize(value, type) {
 
     // serialize array of a specified type
     if (Array.isArray(value) && Array.isArray(type)) {
-        
+
         // only 1 element type is allowed
         if(type.length > 1){
             throw Error('array type should only have one element type');
@@ -210,5 +211,43 @@ function deserialize(data, start, type) {
     return null;
 }
 
+/**
+ * Checks if 2 simply serialized objects are equal (SSZ)
+ * @method eq
+ * @param {Buffer} x - simply serialized object
+ * @param {Buffer} y - simply serialized object
+ * @return {Bool} the byte output
+ */
+function eq(x, y) {
+    // Since we serialized x and y as buffers and buffers in JS are deterministic, we can do the following
+    return x.equals(y);
+
+}
+
+/**
+ * Returns a deep copy of a simply serialized object (SSZ)
+ * @method deepcopy
+ * @param {Buffer} x - Value to deep copy
+ * @return {Buffer} the deep copy of x
+ */
+function deepcopy(x) {
+    return deepCopy(x);
+    
+}
+
+/**
+ * Converts a simply serialized object to a simple Javascript object (SSZ)
+ * @method toObject
+ * @param {Buffer} x - Value to convert to a Js object
+ * @return {Buffer} object
+ */
+function toObject(x) {
+
+}
+
+
 exports.serialize = serialize;
 exports.deserialize = deserialize;
+exports.eq = eq
+exports.deepcopy = deepcopy
+exports.toObject = toObject

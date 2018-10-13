@@ -1,8 +1,8 @@
 {
   "name": "ssz",
-  "version": "1.0.0",
+  "version": "0.5.0",
   "description": "A pure JS implementation of simple serialize",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "test": "mocha"
   },
@@ -15,7 +15,7 @@
     "\"simple",
     "serialize\""
   ],
-  "author": "ChainSafe Systems",
+  "author": "ChainSafe Systems and contributors",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/ChainSafeSystems/ssz-js/issues"
@@ -26,6 +26,7 @@
     "moch": "0.0.1"
   },
   "dependencies": {
-    "bn.js": "^4.11.8"
+    "bn.js": "^4.11.8",
+    "deepcopy": "^1.0.0"
   }
 }
