@@ -13,11 +13,16 @@ const deepCopy = require('deepcopy');
 function serialize(value, type) {
 
     // serialize hashes
-    if(type === 'hash32') {
+    if((typeof type === 'string') && !!type.match(/^hash\d+$/g)) {
 
-        // check length is 32 byte
-        if(value.byteLength !== 32) {
-            throw Error(`given hash32 ${value} should be 32 bytes`);
+        let hashSize = parseInt(type.match(/\d+/g));
+        if(![32, 96, 97].includes(hashSize)){
+            throw Error('SSZ only serializes hash32, hash96, and hash97');
+        }
+
+        // check byte length
+        if(value.byteLength !== hashSize) {
+            throw Error(`given ${type} ${value} should be ${hashSize} bytes`);
         }
         return value;
 
@@ -114,12 +119,18 @@ function deserialize(data, start, type) {
     const int32ByteLength = intByteLength('int32');
 
     // deserializes hashes
-    if(type === 'hash32') {
-        const hashLength = 32;
-        assertEnoughBytes(data, start, hashLength);
+    if((typeof type === 'string') && !!type.match(/^hash\d+$/g)) {
+
+        let hashSize = parseInt(type.match(/\d+/g));
+        if(![32, 96, 97].includes(hashSize)){
+            throw Error('SSZ only serializes hash32, hash96, and hash97');
+        }
+
+        assertEnoughBytes(data, start, hashSize);
+
         return {
-            deserializedData: data.slice(start, (start + hashLength)),
-            offset: start + hashLength
+            deserializedData: data.slice(start, (start + hashSize)),
+            offset: start + hashSize
         }
     }
 

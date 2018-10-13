@@ -7,7 +7,7 @@ const AttestationRecord = require('./utils/activeState').AttestationRecord;
 const serialize = require('../src').serialize;
 const deserialize = require('../src').deserialize;
 
-describe('SimpleSerialize - deserializes hash32', () => {
+describe(`SimpleSerialize - deserializes hash32, hash96, hash97`, () => {
 
     it(`deserializes hash32`, () => {
 
@@ -16,10 +16,31 @@ describe('SimpleSerialize - deserializes hash32', () => {
 
         assert.isNotNull(result, 'hash32 result should not be null');
         assert.equal(result.deserializedData.toString('hex'), hashInput.toString('hex'), 'hash32 result should be same as input');
-        assert.equal(result.offset, 32, 'Offset is should be 32')
+        assert.equal(result.offset, 32, 'Offset is should be 32');
     
     });
 
+    it(`deserializes hash96`, () => {
+
+        let hashInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+        let result = deserialize(serialize(hashInput, 'hash96'), 0, 'hash96');
+
+        assert.isNotNull(result, 'hash96 result should not be null');
+        assert.equal(result.deserializedData.toString('hex'), hashInput.toString('hex'), 'hash96 result should be same as input');
+        assert.equal(result.offset, 96, 'Offset is should be 96');
+    
+    });
+    
+    it(`deserializes hash97`, () => {
+
+        let hashInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adaa');
+        let result = deserialize(serialize(hashInput, 'hash97'), 0, 'hash97');
+
+        assert.isNotNull(result, 'hash97 result should not be null');
+        assert.equal(result.deserializedData.toString('hex'), hashInput.toString('hex'), 'hash97 result should be same as input');
+        assert.equal(result.offset, 97, 'Offset is should be 97');
+    
+    });
 });
 
 describe('SimpleSerialize - deserializes addresses', () => {
@@ -360,7 +381,6 @@ describe('SimpleSerialize - deserialize objects', () => {
         // assert fields
         Object.keys(fields['fields'])
               .forEach(fieldName => {
-                  console.log(fieldName)
                   let expectedValue = valueObject[fieldName];
                   let actualValue = result.deserializedData[fieldName];
                   if(typeof actualValue.eq === 'function'){

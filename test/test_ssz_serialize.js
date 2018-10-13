@@ -46,6 +46,84 @@ describe('SimpleSerialize - serializes hash32', () => {
     });
 });
 
+describe('SimpleSerialize - serializes hash96', () => {
+
+    /** hash32 */
+
+	it(`successfully serializes hash96`, () => {        
+        
+        let hashInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+        let result = serialize(hashInput, 'hash96');
+
+        assert.isNotNull(result, 'hash96 result should not be null');
+        assert.equal(result, hashInput, 'hash96 result should be same as input');
+
+    });
+
+    it(`errors when serializing hash96, given hash less than 96 bytes`, () => {
+        
+        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'); 
+        
+        assert.throws(
+            () => serialize(hashWithIncorrectLength, 'hash96'),
+            Error,
+            `given hash96 ${hashWithIncorrectLength} should be 96 bytes`
+        );
+
+    });
+
+    it(`errors when serializing hash96, given hash greater than 96 bytes`, () => {
+        
+        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015addfsdfds'); 
+        
+        assert.throws(
+            () => serialize(hashWithIncorrectLength, 'hash96'),
+            Error,
+            `given hash96 ${hashWithIncorrectLength} should be 96 bytes`
+        );
+
+    });
+});
+
+describe('SimpleSerialize - serializes hash97', () => {
+
+    /** hash32 */
+
+	it(`successfully serializes hash97`, () => {        
+        
+        let hashInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adqq');
+        let result = serialize(hashInput, 'hash97');
+
+        assert.isNotNull(result, 'hash97 result should not be null');
+        assert.equal(result, hashInput, 'hash97 result should be same as input');
+
+    });
+
+    it(`errors when serializing hash97, given hash less than 97 bytes`, () => {
+        
+        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'); 
+        
+        assert.throws(
+            () => serialize(hashWithIncorrectLength, 'hash97'),
+            Error,
+            `given hash97 ${hashWithIncorrectLength} should be 97 bytes`
+        );
+
+    });
+
+    it(`errors when serializing hash97, given hash greater than 97 bytes`, () => {
+        
+        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015addfsdfds'); 
+        
+        assert.throws(
+            () => serialize(hashWithIncorrectLength, 'hash97'),
+            Error,
+            `given hash97 ${hashWithIncorrectLength} should be 97 bytes`
+        );
+
+    });
+});
+
 describe('SimpleSerialize - serializes addresses', () => {
 
     /** addresses */
