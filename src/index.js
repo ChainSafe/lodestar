@@ -116,7 +116,7 @@ function deserialize(data, start, type) {
     // deserializes hashes
     if(type === 'hash32') {
         const hashLength = 32;
-        // TODO: assert len(data) + start >= length
+        assertEnoughBytes(data, start, hashLength);
         return {
             deserializedData: data.slice(start, (start + hashLength)),
             offset: start + hashLength
@@ -126,7 +126,7 @@ function deserialize(data, start, type) {
     // deserializes addresses
     if(type === 'address') {
         const addressLength = 20;
-        // TODO: assert len(data) + start >= length
+        assertEnoughBytes(data, start, addressLength);
         return {
             deserializedData: data.slice(start, (start + addressLength)),
             offset: start + addressLength
@@ -142,7 +142,7 @@ function deserialize(data, start, type) {
             throw Error(`given int type has invalid size (8, 16, 32)`);
         }
 
-        // TODO: assert len(data) + start >= length
+        assertEnoughBytes(data, start, intByteLength(type));
         
         return {
             deserializedData: readIntBytes(type)(data, start),
@@ -153,8 +153,10 @@ function deserialize(data, start, type) {
     // deserialize bytes
     if(type === 'bytes') {
 
-        // TODO: assert len(data) + start >= 4+length
         let length = readIntBytes('int32')(data, start);
+
+        assertEnoughBytes(data, start, int32ByteLength + length);
+        
         return {
             deserializedData: data.slice(start + int32ByteLength, (start + length + int32ByteLength)),
             offset: start + int32ByteLength + length
@@ -250,6 +252,12 @@ function deepcopy(x) {
  */
 function toObject(x) {
 
+}
+
+function assertEnoughBytes(data, start, length) {
+    if(data.byteLength < start + length){
+        throw Error('Data bytes is not enough for data type');
+    }
 }
 
 
