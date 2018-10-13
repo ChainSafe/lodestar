@@ -103,6 +103,13 @@ function serialize(value, type) {
     return null;
 }
 
+/**
+ * Simply Deserializes (SSZ)
+ * @method deserialize
+ * @param {Buffer} data bytes (buffer) to deserialize
+ * @param {string|object} type - A type string ('hash32', 'address', 'int8', 'int16', 'int32', 'bytes'), or type array ['hash32'], or type object containing fields property
+ * @return {Buffer|array|number|object} deserialized value : hash32 (Buffer) | address (Buffer) | int8/16/32/64/256 | uint8/16/32/64/256 | bytes (Buffer) | array | object
+ */
 function deserialize(data, start, type) {
     const int32ByteLength = intByteLength('int32');
 
