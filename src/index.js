@@ -1,3 +1,5 @@
+const intByteLength = require('./intBytes').intByteLength;
+const readIntBytes = require('./intBytes').readIntBytes;
 const writeIntBytes = require('./intBytes').writeIntBytes;
 const deepCopy = require('deepcopy');
 
@@ -11,11 +13,16 @@ const deepCopy = require('deepcopy');
 function serialize(value, type) {
 
     // serialize hashes
-    if(type === 'hash32') {
+    if((typeof type === 'string') && !!type.match(/^hash\d+$/g)) {
 
-        // check length is 32 byte
-        if(value.byteLength !== 32) {
-            throw Error(`given hash32 ${value} should be 32 bytes`);
+        let hashSize = parseInt(type.match(/\d+/g));
+        if(![32, 96, 97].includes(hashSize)){
+            throw Error('SSZ only serializes hash32, hash96, and hash97');
+        }
+
+        // check byte length
+        if(value.byteLength !== hashSize) {
+            throw Error(`given ${type} ${value} should be ${hashSize} bytes`);
         }
         return value;
 
@@ -33,27 +40,17 @@ function serialize(value, type) {
     }
 
     // serialize integers
-    if((typeof type === 'string') && type.startsWith('int')) {
+    if((typeof type === 'string') && !!type.match(/^u?int\d+$/g)) {
 
         // determine int size
-        let intSize = parseInt(type.substr(3));
-        if(intSize > 0 && intSize <= 32 && intSize % 8 !== 0) {
-            throw Error(`given int type has invalid size (8, 16, 32)`);
-        }
-
-        // convert to value to int
-        let intValue = parseInt(value);
-
-        // check max size is within bounds of type
-        let maxSize = Math.pow(2, intSize) / 2;
-        if(intValue >= maxSize){
-            throw Error(`given value is too large for type size ${type}`);
+        let intSize = parseInt(type.match(/\d+/g));
+        if(intSize > 0 && intSize <= 256 && intSize % 8 !== 0) {
+            throw Error(`given int type has invalid size (8, 16, 32, 64, 256)`);
         }
 
         // return bytes
-        // let view = new DataView(new ArrayBuffer(intSize / 8));
         let buffer = Buffer.alloc(intSize / 8)
-        writeIntBytes(type)(buffer, intValue);
+        writeIntBytes(type)(buffer, value);
         return buffer;
 
     }
@@ -61,11 +58,11 @@ function serialize(value, type) {
     // serialize bytes
     if(type === 'bytes') {
         // return (length + bytes)
-        let buffer = Buffer.alloc(4);
+        let byteLengthBuffer = Buffer.alloc(4);
         // write length to buffer as 4 byte int
-        buffer.writeUInt32BE(value.byteLength); // bigendian
+        byteLengthBuffer.writeUInt32BE(value.byteLength); // bigendian
         // write bytes to buffer
-        return Buffer.concat([buffer, value]);
+        return Buffer.concat([byteLengthBuffer, value]);
     }
 
     // serialize array of a specified type
@@ -91,11 +88,14 @@ function serialize(value, type) {
 
     }
 
+    // serializes objects (including compound objects)
     if ((typeof type == 'object'|| typeof type == 'function') && type.hasOwnProperty('fields')) {
         let buffers = [];
-        Object.keys(type.fields).forEach(fieldName => {
-            buffers.push(serialize(value[fieldName], type.fields[fieldName]));
-        });
+        Object.keys(type.fields)
+            .sort()
+            .forEach(fieldName => {
+                buffers.push(serialize(value[fieldName], type.fields[fieldName]));
+            });
 
         let totalByteLength = buffers.reduce((acc, v) => acc + v.byteLength, 0);
         let byteLengthBuffer = Buffer.alloc(4);
@@ -105,6 +105,129 @@ function serialize(value, type) {
     }
 
     // cannot serialize
+    return null;
+}
+
+/**
+ * Simply Deserializes (SSZ)
+ * @method deserialize
+ * @param {Buffer} data bytes (buffer) to deserialize
+ * @param {string|object} type - A type string ('hash32', 'address', 'int8', 'int16', 'int32', 'bytes'), or type array ['hash32'], or type object containing fields property
+ * @return {Buffer|array|number|object} deserialized value : hash32 (Buffer) | address (Buffer) | int8/16/32/64/256 | uint8/16/32/64/256 | bytes (Buffer) | array | object
+ */
+function deserialize(data, start, type) {
+    const int32ByteLength = intByteLength('int32');
+
+    // deserializes hashes
+    if((typeof type === 'string') && !!type.match(/^hash\d+$/g)) {
+
+        let hashSize = parseInt(type.match(/\d+/g));
+        if(![32, 96, 97].includes(hashSize)){
+            throw Error('SSZ only serializes hash32, hash96, and hash97');
+        }
+
+        assertEnoughBytes(data, start, hashSize);
+
+        return {
+            deserializedData: data.slice(start, (start + hashSize)),
+            offset: start + hashSize
+        }
+    }
+
+    // deserializes addresses
+    if(type === 'address') {
+        const addressLength = 20;
+        assertEnoughBytes(data, start, addressLength);
+        return {
+            deserializedData: data.slice(start, (start + addressLength)),
+            offset: start + addressLength
+        }
+    }
+
+    // deserializes unsigned integers
+    if((typeof type === 'string') && !!type.match(/^u?int\d+$/g)) {
+
+        // determine int size
+        let intSize = parseInt(type.match(/\d+/g));
+        if(intSize > 0 && intSize <= 32 && intSize % 8 !== 0) {
+            throw Error(`given int type has invalid size (8, 16, 32)`);
+        }
+
+        assertEnoughBytes(data, start, intByteLength(type));
+        
+        return {
+            deserializedData: readIntBytes(type)(data, start),
+            offset: start + intByteLength(type)
+        }
+    }
+
+    // deserialize bytes
+    if(type === 'bytes') {
+
+        let length = readIntBytes('int32')(data, start);
+
+        assertEnoughBytes(data, start, int32ByteLength + length);
+        
+        return {
+            deserializedData: data.slice(start + int32ByteLength, (start + length + int32ByteLength)),
+            offset: start + int32ByteLength + length
+        }
+    }
+
+    // deserializes array of a specified type
+    if (Array.isArray(type)) {
+        
+        // only 1 element type is allowed
+        if(type.length > 1){
+            throw Error('array type should only have one element type');
+        }
+
+        // deserialize each element of the array
+        let elementType = type[0];
+
+        let length = readIntBytes('int32')(data, start);
+        let output = [];
+        let position = start + int32ByteLength;
+        
+        // work through the data deserializing the array elements
+        while(position < (start + int32ByteLength + length)) {
+            let response = deserialize(data, position, elementType);
+            position = response.offset;
+            output.push(response.deserializedData);
+        }
+
+        // check that we have have arrived at the end of the byte stream
+        if(position !== (start + int32ByteLength + length)) {
+            throw Error('We did not arrive at the end of the byte length');
+        }
+
+        return {
+            deserializedData: output,
+            offset: position
+        };
+    }
+
+    // deserializes objects (including compound objects)
+    if ((typeof type == 'object'|| typeof type == 'function') && type.hasOwnProperty('fields')) {
+
+        let length = readIntBytes('int32')(data, start);
+        let output = {};
+        let position = start + int32ByteLength;
+
+        Object.keys(type.fields)
+            .sort()
+            .forEach(fieldName => {
+                let fieldResult = deserialize(data, position, type.fields[fieldName]);
+                position = fieldResult.offset;
+                output[fieldName] = fieldResult.deserializedData;
+            });
+
+        return {
+            deserializedData: output,
+            offset: position
+        };
+    }
+
     return null;
 }
 
@@ -142,7 +265,15 @@ function toObject(x) {
 
 }
 
-exports.serialize = serialize
+function assertEnoughBytes(data, start, length) {
+    if(data.byteLength < start + length){
+        throw Error('Data bytes is not enough for data type');
+    }
+}
+
+
+exports.serialize = serialize;
+exports.deserialize = deserialize;
 exports.eq = eq
 exports.deepcopy = deepcopy
 exports.toObject = toObject
