@@ -3,7 +3,7 @@ Simple Serialize (SSZ) in pure Javascript
 
 Install:
 ```bash
-$ npm install
+$ npm install ssz
 ```
 
 Install mocha globally:
@@ -15,3 +15,8 @@ Run tests:
 ```bash
 $ npm test
 ```
+
+## Usage
+
+## Contributors
+Very special thank you to [Darren Langley](https://github.com/darrenlangley) for helping build this.
