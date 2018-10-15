@@ -154,7 +154,7 @@ function deserialize(data, start, type) {
         }
 
         assertEnoughBytes(data, start, intByteLength(type));
-        
+
         return {
             deserializedData: readIntBytes(type)(data, start),
             offset: start + intByteLength(type)
@@ -167,7 +167,7 @@ function deserialize(data, start, type) {
         let length = readIntBytes('int32')(data, start);
 
         assertEnoughBytes(data, start, int32ByteLength + length);
-        
+
         return {
             deserializedData: data.slice(start + int32ByteLength, (start + length + int32ByteLength)),
             offset: start + int32ByteLength + length
@@ -176,7 +176,7 @@ function deserialize(data, start, type) {
 
     // deserializes array of a specified type
     if (Array.isArray(type)) {
-        
+
         // only 1 element type is allowed
         if(type.length > 1){
             throw Error('array type should only have one element type');
@@ -188,7 +188,7 @@ function deserialize(data, start, type) {
         let length = readIntBytes('int32')(data, start);
         let output = [];
         let position = start + int32ByteLength;
-        
+
         // work through the data deserializing the array elements
         while(position < (start + int32ByteLength + length)) {
             let response = deserialize(data, position, elementType);
@@ -252,18 +252,9 @@ function eq(x, y) {
  */
 function deepcopy(x) {
     return deepCopy(x);
-    
-}
-
-/**
- * Converts a simply serialized object to a simple Javascript object (SSZ)
- * @method toObject
- * @param {Buffer} x - Value to convert to a Js object
- * @return {Buffer} object
- */
-function toObject(x) {
 
 }
+
 
 function assertEnoughBytes(data, start, length) {
     if(data.byteLength < start + length){
@@ -276,4 +267,3 @@ exports.serialize = serialize;
 exports.deserialize = deserialize;
 exports.eq = eq
 exports.deepcopy = deepcopy
-exports.toObject = toObject
