@@ -281,6 +281,29 @@ describe('SimpleSerialize - serializes signed integers', () => {
 
     });
 
+    it(`serializes int128`, () => {        
+        
+        let intInput = new BN('123').pow(new BN(5));
+        let result = serialize(intInput, 'int128');
+        let intResult = new BN([...result], 32, 'be').fromTwos(256);
+
+        assert.isNotNull(result, 'int128 result should not be null');
+        assert.isTrue(intResult.eq(intInput), 'int128 result should be same as input');
+
+    });
+
+    it(`serializes int256 (negative)`, () => {        
+        
+        let intInput = new BN('-123').pow(new BN(25));
+        let result = serialize(intInput, 'int256');
+        let intResult = new BN([...result], 32, 'be').fromTwos(256);
+
+        assert.isNotNull(result, 'int256 result should not be null');
+        assert.isTrue(intResult.eq(intInput), 'int256 result should be same as input');
+
+    });
+
+
     it(`serializes int256`, () => {        
         
         let intInput = new BN('123').pow(new BN(25));
@@ -348,6 +371,17 @@ describe('SimpleSerialize - serializes unsigned integers', () => {
 
         assert.isNotNull(result, 'uint64 result should not be null');
         assert.isTrue(intResult.eq(intInput), 'uint64 result should be same as input');
+
+    });
+
+    it(`serializes uint128`, () => {        
+        
+        let intInput = new BN('123').pow(new BN(5));
+        let result = serialize(intInput, 'uint128');
+        let intResult = new BN([...result], 32, 'be').fromTwos(256);
+
+        assert.isNotNull(result, 'uint128 result should not be null');
+        assert.isTrue(intResult.eq(intInput), 'uint128 result should be same as input');
 
     });
 

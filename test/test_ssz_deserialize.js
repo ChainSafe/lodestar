@@ -207,6 +207,18 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
 
     });
 
+    it(`deserializes uint128`, () => {        
+        
+        let intInput = new BN(1000000000);
+        let result = deserialize(serialize(intInput, 'uint128'), 0, 'uint128');
+
+        assert.isNotNull(result, 'uint128 result should not be null');
+
+        assert.isTrue(result.deserializedData.eq(intInput), `uint128 result should be same as input actual: ${result.deserializedData} expected: ${intInput}`);
+        assert.equal(result.offset, 16, 'Offset should be 16 bytes');
+
+    });
+
     it(`deserializes uint256`, () => {        
         
         let intInput = new BN(100000000000000);
