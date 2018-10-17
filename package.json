@@ -1,6 +1,6 @@
 {
   "name": "ssz",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "A pure JS implementation of simple serialize",
   "main": "src/index.js",
   "scripts": {
