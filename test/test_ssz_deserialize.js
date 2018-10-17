@@ -7,6 +7,27 @@ const AttestationRecord = require('./utils/activeState').AttestationRecord;
 const serialize = require('../src').serialize;
 const deserialize = require('../src').deserialize;
 
+describe(`SimpleSerialize - deserializes boolean`, () => {
+
+    it(`deserializes boolean true value`, () => {
+
+        let boolInput = true;
+        let result = deserialize(serialize(boolInput, 'bool'), 0, 'bool');
+
+        assert.equal(result.deserializedData, boolInput);
+    });
+
+    it(`deserializes boolean false value`, () => {
+
+        let boolInput = false;
+        let result = deserialize(serialize(boolInput, 'bool'), 0, 'bool');
+
+        assert.equal(result.deserializedData, boolInput);
+    });
+
+});
+
+
 describe(`SimpleSerialize - deserializes hash32, hash96, hash97`, () => {
 
     it(`deserializes hash32`, () => {
@@ -220,6 +241,12 @@ describe('SimpleSerialize - deserialize bytes', () => {
 
 describe('SimpleSerialize - deserialize arrays', () => {
 
+    it(`deserializes arrays of elements (of same type) - bool`, () => {
+        let arrayInput = [true, false, true];
+        let result = deserialize(serialize(arrayInput, ['bool']), 0, ['bool']);
+        assert.deepEqual(result.deserializedData, arrayInput);
+    });
+
     it(`deserializes arrays of elements (of the same type) - hash32`, () => {
 
         scenarioDeserializeByteArrays(
@@ -359,8 +386,9 @@ describe('SimpleSerialize - deserialize objects', () => {
             'distance': 32000,
             'halfLife': 1000000000,
             'file': Buffer.from(bytesArray),
-            'xxx': new BN(1000000000),
-            'zzz': new BN(-5).pow(new BN(16))
+            'zz1': new BN(1000000000),
+            'zz2': new BN(-5).pow(new BN(16)),
+            'zz3': true
         };
 
         let fields = {
@@ -371,8 +399,9 @@ describe('SimpleSerialize - deserialize objects', () => {
                 'distance': 'int16',
                 'halfLife': 'int32',
                 'file': 'bytes',
-                'xxx': 'uint64',
-                'zzz': 'int256'
+                'zz1': 'uint64',
+                'zz2': 'int256',
+                'zz3': 'bool'
             }
         };
 

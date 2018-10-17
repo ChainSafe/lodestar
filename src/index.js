@@ -12,6 +12,13 @@ const deepCopy = require('deepcopy');
  */
 function serialize(value, type) {
 
+    // serialize bool
+    if(type === 'bool') {
+        let result = Buffer.alloc(1);
+        result.writeInt8(value ? 1 : 0);
+        return result;
+    }
+
     // serialize hashes
     if((typeof type === 'string') && !!type.match(/^hash\d+$/g)) {
 
@@ -117,6 +124,19 @@ function serialize(value, type) {
  */
 function deserialize(data, start, type) {
     const int32ByteLength = intByteLength('int32');
+
+    // deserializes booleans
+    if(type === 'bool') {
+        let intResult = readIntBytes('int8')(data, start);
+        if(intResult == 0 || intResult == 1)
+        {
+            return {
+                deserializedData: intResult == 1 ? true : false,
+                offset: start + intByteLength('int8')
+            }
+        }
+        
+    }
 
     // deserializes hashes
     if((typeof type === 'string') && !!type.match(/^hash\d+$/g)) {
