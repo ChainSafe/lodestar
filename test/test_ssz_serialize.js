@@ -7,6 +7,34 @@ const ActiveState = require('./utils/activeState').ActiveState;
 const AttestationRecord = require('./utils/activeState').AttestationRecord;
 const serialize = require('../src').serialize;
 
+describe('SimpleSerialize - serializes booleans', () => {
+
+    /** bool */
+
+	it(`successfully serializes boolean true value`, () => {        
+        
+        let boolInput = true;
+        let result = serialize(boolInput, 'bool');
+        
+        assert.isNotNull(result, 'bool result should not be null');
+        let intResult = result.readInt8(0);
+        assert.isTrue(intResult == 1, boolInput, 'bool result should be same as input');
+
+    });
+
+    it(`successfully serializes boolean false value`, () => {        
+        
+        let boolInput = false;
+        let result = serialize(boolInput, 'bool');
+
+        assert.isNotNull(result, 'bool result should not be null');
+        let intResult = result.readInt8(0);
+        assert.isTrue(intResult == 0, boolInput, 'bool result should be same as input');
+
+    });
+
+});
+
 describe('SimpleSerialize - serializes hash32', () => {
 
     /** hash32 */
@@ -253,6 +281,29 @@ describe('SimpleSerialize - serializes signed integers', () => {
 
     });
 
+    it(`serializes int128`, () => {        
+        
+        let intInput = new BN('123').pow(new BN(5));
+        let result = serialize(intInput, 'int128');
+        let intResult = new BN([...result], 32, 'be').fromTwos(256);
+
+        assert.isNotNull(result, 'int128 result should not be null');
+        assert.isTrue(intResult.eq(intInput), 'int128 result should be same as input');
+
+    });
+
+    it(`serializes int256 (negative)`, () => {        
+        
+        let intInput = new BN('-123').pow(new BN(25));
+        let result = serialize(intInput, 'int256');
+        let intResult = new BN([...result], 32, 'be').fromTwos(256);
+
+        assert.isNotNull(result, 'int256 result should not be null');
+        assert.isTrue(intResult.eq(intInput), 'int256 result should be same as input');
+
+    });
+
+
     it(`serializes int256`, () => {        
         
         let intInput = new BN('123').pow(new BN(25));
@@ -323,6 +374,17 @@ describe('SimpleSerialize - serializes unsigned integers', () => {
 
     });
 
+    it(`serializes uint128`, () => {        
+        
+        let intInput = new BN('123').pow(new BN(5));
+        let result = serialize(intInput, 'uint128');
+        let intResult = new BN([...result], 32, 'be').fromTwos(256);
+
+        assert.isNotNull(result, 'uint128 result should not be null');
+        assert.isTrue(intResult.eq(intInput), 'uint128 result should be same as input');
+
+    });
+
     it(`serializes uint256`, () => {        
         
         let intInput = new BN('123').pow(new BN(25));
@@ -357,6 +419,20 @@ describe('SimpleSerialize - serializes bytes', () => {
 });
 
 describe('SimpleSerialize - serializes arrays of elements (of same type)', () => {
+
+    it(`serializes arrays of elements (of same type) - boolean`, () => {
+        let arrayInput = [true, false, false];
+        
+        let result = serialize(arrayInput, ['bool']);
+
+        let actualLength = result.readUInt32BE(0);
+        assert.equal(actualLength, arrayInput.length, 'Byte length should equal 3');
+        let boolResult = result.slice(4);
+        for (let index = 0; index < arrayInput.length; index++) {
+            const input = arrayInput[index];
+            assert.equal(boolResult.readUInt8(index), input ? 1 : 0, 'Booleans not serialized correctly');
+        }
+    });
 
     it(`serializes arrays of elements (of the same type) - hash32`, () => {
 
@@ -503,6 +579,7 @@ describe('SimpleSerialize - serializes objects', () => {
         let int32Value = 1000000000;
         let uint64Value = new BN(1000000000);
         let int256Value = new BN(-5).pow(new BN(16));
+        let boolValue = true;
 
         let bytesArray = [];
         for(var i = 0; i < 280; i++){
@@ -518,8 +595,9 @@ describe('SimpleSerialize - serializes objects', () => {
                 'distance': int16Value,
                 'halfLife': int32Value,
                 'file': bytesValue,
-                'xxx': uint64Value,
-                'zzz': int256Value
+                'zz1': uint64Value,
+                'zz2': int256Value,
+                'zz3': boolValue
             },
             {
                 'fields':{
@@ -529,8 +607,9 @@ describe('SimpleSerialize - serializes objects', () => {
                     'distance': 'int16',
                     'halfLife': 'int32',
                     'file': 'bytes',
-                    'xxx': 'uint64',
-                    'zzz': 'int256'
+                    'zz1': 'uint64',
+                    'zz2': 'int256',
+                    'zz3': 'bool'
                 }
             }
         );
@@ -538,7 +617,7 @@ describe('SimpleSerialize - serializes objects', () => {
         let offset = 0;
 
         // assert byte length
-        let expectedByteLength = 383;
+        let expectedByteLength = 384;
         let actualByteLength = result.readInt32BE(offset);
         offset += 4;
         assert.equal(actualByteLength, expectedByteLength, 'Byte length is not correct');
@@ -585,6 +664,11 @@ describe('SimpleSerialize - serializes objects', () => {
         let actualInt256 = new BN([...result.slice(offset, (offset + 32))], 16, 'be');
         offset += 32;
         assert.isTrue(actualInt256.eq(int256Value), `Serialised object values are not correct actual ${actualInt256} expected ${int256Value}`);
+
+        // assert bool value
+        let actualBool = result.readUInt8(offset);
+        offset += 1;
+        assert.equal(actualBool === 1 ? true : false, boolValue, 'Bool value not serialised correctly');
 
     });
 
