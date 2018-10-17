@@ -37,33 +37,33 @@ $ npm test
 
 ### serialize
 
-[src/index.js:13-109](https://github.com/ChainSafeSystems/ssz-js/blob/769aef6f8c1e1ab5ddae7985b4b90916ac7f22d4/src/index.js#L13-L109 "Source code on GitHub")
+[src/index.js:13-116](https://github.com/ChainSafeSystems/ssz-js/blob/b3c0bbd5a7e10a802af963829901b9375331afb0/src/index.js#L13-L116 "Source code on GitHub")
 
 Simply Serializes (SSZ)
 
 #### Parameters
 
 -   `value` **([Buffer](https://nodejs.org/api/buffer.html) \| [array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array) \| [number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number) \| [object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object))** Value to serialize: hash32 (Buffer) | address (Buffer) | int8/16/32 | bytes (Buffer) | array | object
--   `type` **([string](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String) \| [object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object))** A type string ('hash32', 'address', 'int8', 'int16', 'int32', 'bytes'), or type array ['hash32'], or type object containing fields property
+-   `type` **([string](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String) \| [object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object))** A type string ('hash32', 'address', 'int8', 'int16', 'int32', 'bytes', 'bool', 'hash96', 'hash97'), or type array ['hash32'], or type object containing fields property
 
 Returns **[Buffer](https://nodejs.org/api/buffer.html)** the byte output
 
 ### deserialize
 
-[src/index.js:118-232](https://github.com/ChainSafeSystems/ssz-js/blob/769aef6f8c1e1ab5ddae7985b4b90916ac7f22d4/src/index.js#L118-L232 "Source code on GitHub")
+[src/index.js:125-252](https://github.com/ChainSafeSystems/ssz-js/blob/b3c0bbd5a7e10a802af963829901b9375331afb0/src/index.js#L125-L252 "Source code on GitHub")
 
 Simply Deserializes (SSZ)
 
 #### Parameters
 
 -   `data` **[Buffer](https://nodejs.org/api/buffer.html)** bytes (buffer) to deserialize
--   `type` **([string](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String) \| [object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object))** A type string ('hash32', 'address', 'int8', 'int16', 'int32', 'bytes'), or type array ['hash32'], or type object containing fields property
+-   `type` **([string](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String) \| [object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object))** A type string ('hash32', 'address', 'int8', 'int16', 'int32', 'bytes', 'bool', 'hash96', 'hash97'), or type array ['hash32'], or type object containing fields property
 
 Returns **([Buffer](https://nodejs.org/api/buffer.html) \| [array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array) \| [number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number) \| [object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object))** deserialized value : hash32 (Buffer) | address (Buffer) | int8/16/32/64/256 | uint8/16/32/64/256 | bytes (Buffer) | array | object
 
 ### eq
 
-[src/index.js:241-245](https://github.com/ChainSafeSystems/ssz-js/blob/769aef6f8c1e1ab5ddae7985b4b90916ac7f22d4/src/index.js#L241-L245 "Source code on GitHub")
+[src/index.js:261-265](https://github.com/ChainSafeSystems/ssz-js/blob/b3c0bbd5a7e10a802af963829901b9375331afb0/src/index.js#L261-L265 "Source code on GitHub")
 
 Checks if 2 simply serialized objects are equal (SSZ)
 
@@ -76,7 +76,7 @@ Returns **Bool** the byte output
 
 ### deepcopy
 
-[src/index.js:253-256](https://github.com/ChainSafeSystems/ssz-js/blob/769aef6f8c1e1ab5ddae7985b4b90916ac7f22d4/src/index.js#L253-L256 "Source code on GitHub")
+[src/index.js:273-276](https://github.com/ChainSafeSystems/ssz-js/blob/b3c0bbd5a7e10a802af963829901b9375331afb0/src/index.js#L273-L276 "Source code on GitHub")
 
 Returns a deep copy of a simply serialized object (SSZ)
 
