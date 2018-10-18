@@ -13,7 +13,7 @@ In order to run the code in this repository, you will first need to run `npm ins
 ## Note about tests
 `npm test` runs `truffle test` please ensure that there is a terminal window with ganache-cli running
 
-Note: There is a WIP that will auto boot a ganach terminal wehn you run `npm test` :)
+Note: There is a WIP that will auto boot a ganache terminal wehn you run `npm test` :)
 
 ## Contributors
 If you would like to contribute, please submit an issue or talk to us on our [gitter](https://gitter.im/chainsafe/lodestar-chain).
