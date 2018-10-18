@@ -1,36 +1,41 @@
 var exports = module.exports = {};
 const AttestationRecord = require("./attestationRecord.js");
+const SpecialRecord = require("./specialRecord.js");
 
 const Blake = require("../utils/blake.js");
-const Serialize = require("../utils/serialize.js");
+const ssz = require('ssz');
 
-class Block {
+class BeaconBlock {
 
     var fields = {
-      // Hash of the parent block
-      'parent_hash': 'hash32',
       // Slot number (for the PoS mechanism)
       'slot_number': 'int64',
       // Randao commitment reveal
       'randao_reveal': 'hash32',
-      // Attestations
-      'attestations': [AttestationRecord],
       // Reference to PoW chain block
       'pow_chain_ref': 'hash32',
+      // Skip list of ancestor block hashes (i'th item is 2^i'th ancestor i in {0,...,31})
+      'ancestor_hashes': ['hash32'],
       // Hash of the active state
       'active_state_root': 'hash32',
       // Hash of the crystallized state
-      'crystallized_state_root': 'hash32'
+      'crystallized_state_root': 'hash32',
+      // Attestations
+      'attestations': [AttestationRecord],
+      // Specials (e.g. logouts penalties)
+      'specials': [SpecialRecord]
+
     }
 
     var defaults = {
-        'parent_hash': '\x00'.repeat(32),
         'slot_number': 0,
-        'randao_reveal': '\x00'.repeat(32),
+        'randao_reveal': new Buffer(32),
+        'pow_chain_ref': new Buffer(32),
+        'ancestor_hashes': []
+        'active_state_root': new Buffer(32),
+        'crystallized_state_root': new Buffer(32),
         'attestations': [],
-        'pow_chain_ref': '\x00'.repeat(32),
-        'active_state_root': '\x00'.repeat(32),
-        'crystallized_state_root': '\x00'.repeat(32)
+        'specials' : []
     }
 
     constructor(var toSet) {
@@ -46,7 +51,7 @@ class Block {
     }
 
     function hash() {
-        return Blake.blake(Serialize.serialize(this));
+        return Blake.blake(ssz.serialize(this, this));
     }
 
     function num_attestations() {
@@ -54,4 +59,4 @@ class Block {
     }
 }
 
-exports.Block = Block;
+exports.BeaconBlock = BeaconBlock;
