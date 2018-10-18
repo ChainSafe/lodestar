@@ -1,6 +1,6 @@
 var exports = module.exports = {};
 
-class AttestationRecord {
+class AttestationSignedData{
 
     var fields = {
         // Slot number
@@ -28,7 +28,7 @@ class AttestationRecord {
         'oblique_parent_hashes': [],
         'shard_block_hash': new Buffer(32);
         'attester_bitfield': new Buffer(),
-        'justified_slot': new Buffer(),
+        'justified_slot': 0,
         'justified_block_hash': new Buffer(32),
         'aggregate_sig': [],
 
@@ -47,4 +47,4 @@ class AttestationRecord {
     }
 }
 
-exports.AttestationRecord = AttestationRecord;
+exports.AttestationSignedData = AttestationSignedData;
