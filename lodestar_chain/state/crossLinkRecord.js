@@ -2,15 +2,18 @@ var exports = module.exports = {};
 
 class CrosslinkRecord {
     var fields = {
-      // What dynasty the crosslink was submitted in
-      'dynasty':'int64',
-      // The block hash
-      'hash':'bytes32'
+      // Since last validator set change?
+      'recently_changed': 'bool',
+      // Slot number
+      'slot': 'uint64',
+      // Shard chain block hash
+      'shard_block_hash': 'hash32'
     };
 
     var defaults = {
-      'dynasty':0,
-      'hash': '\x00'.repeat(32)
+      'recently_changed': false,
+      'slot': 0,
+      'shard_block_hash': new Buffer(32)
     };
 
     /*
