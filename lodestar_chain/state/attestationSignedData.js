@@ -39,4 +39,4 @@ class AttestationSignedData {
     }
 }
 
-exports.AttestationRecord = AttestationRecord;
+exports.AttestationSignedData = AttestationSignedData;
