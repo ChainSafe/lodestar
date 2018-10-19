@@ -10,12 +10,14 @@ class ValidatorRecord {
       'withdrawal_address': 'address',
       // The validator's current RANDAO beacon commitment
       'randao_commitment': 'bytes32',
-      // Current balance
-      'balance': 'int64',
-      // Dynasty where the validator is inducted
-      'start_dynasty': 'int64',
-      // Dynasty where the validator leaves
-      'end_dynasty': 'int64'
+      // Slot the RANDAO commitment was last changed
+      'randao_last_change': 'uint64',
+      // Balance
+      'balance': 'uint64',
+      // Status code
+      'status': 'uint8',
+      // Slot when validator exited ( or 0)
+      'exit_slot': 'uint64'
     };
 
     var defaults = {};
