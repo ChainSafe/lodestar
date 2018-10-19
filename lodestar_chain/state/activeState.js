@@ -1,19 +1,26 @@
 var exports = module.exports = {};
 
 var AttestationRecord = require('./attestationRecord.js');
+var SpecialRecord = require('./specialRecord.js');
 
 class ActiveState {
 
     var fields = {
       // Attestations that have not yet been processed
       'pending_attestations': [AttestationRecord],
+      // Specials not yet been processed
+      'pending_specials': [SpecialRecord],
       // Most recent 2 * CYCLE_LENGTH block hashes, older to newer
-      'recent_block_hashes': ['hash32']
+      'recent_block_hashes': ['hash32'],
+      // RANDAO state
+      'randao_mix' : 'hash32'
     };
 
     var defaults = {
       'pending_attestations': [],
-      'recent_block_hashes': []
+      'pending_specials': [],
+      'recent_block_hashes': [],
+      'randao_mix': new Buffer(32)
     };
 
     /*
@@ -29,12 +36,6 @@ class ActiveState {
             this.key = defaults.key;
           }
         }
-      }
-
-      if(toSet.hasOwnProperty('block_vote_cache')){
-          this.block_vote_cache = toSet['block_vote_cache']
-      } else {
-          this.block_vote_cache = {}
       }
     }
 
