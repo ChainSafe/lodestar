@@ -6,8 +6,8 @@ const deepCopy = require('deepcopy');
 /**
  * Simply Serializes (SSZ)
  * @method serialize
- * @param {Buffer|array|number|object} value - Value to serialize: hash32 (Buffer) | address (Buffer) | int8/16/32 | bytes (Buffer) | array | object
- * @param {string|object} type - A type string ('hash32', 'address', 'int8', 'int16', 'int32', 'bytes', 'bool', 'hash96', 'hash97'), or type array ['hash32'], or type object containing fields property
+ * @param {Buffer|array|number|object} value - Value to serialize: hash32 (Buffer) | address (Buffer) | int8/16/24/32 | bytes (Buffer) | array | object
+ * @param {string|object} type - A type string ('hash32', 'address', 'int8', 'int16', 'int24', 'int32', 'bytes', 'bool', 'hash96', 'hash97'), or type array ['hash32'], or type object containing fields property
  * @return {Buffer} the byte output
  */
 function serialize(value, type) {
@@ -52,7 +52,7 @@ function serialize(value, type) {
         // determine int size
         let intSize = parseInt(type.match(/\d+/g));
         if(intSize > 0 && intSize <= 256 && intSize % 8 !== 0) {
-            throw Error(`given int type has invalid size (8, 16, 32, 64, 256)`);
+            throw Error(`given int type has invalid size (8, 16, 24, 32, 64, 256)`);
         }
 
         // return bytes
@@ -119,7 +119,7 @@ function serialize(value, type) {
  * Simply Deserializes (SSZ)
  * @method deserialize
  * @param {Buffer} data bytes (buffer) to deserialize
- * @param {string|object} type - A type string ('hash32', 'address', 'int8', 'int16', 'int32', 'bytes', 'bool', 'hash96', 'hash97'), or type array ['hash32'], or type object containing fields property
+ * @param {string|object} type - A type string ('hash32', 'address', 'int8', 'int16', 'int24, ''int32', 'bytes', 'bool', 'hash96', 'hash97'), or type array ['hash32'], or type object containing fields property
  * @return {Buffer|array|number|object} deserialized value : hash32 (Buffer) | address (Buffer) | int8/16/32/64/256 | uint8/16/32/64/256 | bytes (Buffer) | array | object
  */
 function deserialize(data, start, type) {
@@ -170,7 +170,7 @@ function deserialize(data, start, type) {
         // determine int size
         let intSize = parseInt(type.match(/\d+/g));
         if(intSize > 0 && intSize <= 32 && intSize % 8 !== 0) {
-            throw Error(`given int type has invalid size (8, 16, 32)`);
+            throw Error(`given int type has invalid size (8, 16, 24, 32)`);
         }
 
         assertEnoughBytes(data, start, intByteLength(type));
