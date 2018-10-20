@@ -28,7 +28,7 @@ class AttestationRecord {
 
     }
 
-    contrusctor(var toSet) {
+    constructor(var toSet) {
       for(var key in fields) {
         if(fields.hasOwnProperty(key)){
           if(toSet.hasOwnProperty(key)) {

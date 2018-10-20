@@ -67,7 +67,7 @@ class CrystallizedState {
     }
 
     // Returns the number of active validators
-    const function numActivateValidators() {
+    const function numActiveValidators() {
       return this.validators.length;
     }
 

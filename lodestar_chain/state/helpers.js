@@ -71,7 +71,7 @@ function split(list, N) {
     var size;
 
     if(len % n == 0) {
-        size = MAth.floor(len / n);
+        size = Math.floor(len / n);
         while(i < len) {
             out.push(list.slice(i, i += size));
         }
