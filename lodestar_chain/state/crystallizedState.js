@@ -78,4 +78,4 @@ class CrystallizedState {
     }
 }
 
-exports.ActiveState = ActiveState;
+exports.CrystallizedState = CrystallizedState;
