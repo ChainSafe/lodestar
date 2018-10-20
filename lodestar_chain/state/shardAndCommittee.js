@@ -4,13 +4,13 @@ class ShardAndCommittee {
 
     var fields = {
         // The shard ID
-        'shard_id': 'int16',
+        'shard': 'int16',
         // Validator indices
         'committee': ['int24']
     }
 
     var defaults = {
-        'shard_id': 0,
+        'shard': 0,
         'committee': []
     }
 
