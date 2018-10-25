@@ -16,7 +16,7 @@ const getBitfieldLength = (bitCount) => {
 
 
 const getEmptyBitfield = (bitCount) => {
-    return 'x00'.repeat(getBitfieldLength(bitCount));
+	return new Int8Array(Math.ceil(bitCount/8));
 }
 
 const getVoteCount = (bitfield) => {

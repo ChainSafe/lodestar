@@ -20,7 +20,7 @@ class CrosslinkRecord {
     * Takes in an object with the fields that need to be initialized.
     * If a field is not initialized, it will use the default as in this.defaults
     */
-    contrusctor(var toSet) {
+    constructor(var toSet) {
       for(var key in fields) {
         if(fields.hasOwnProperty(key)){
           if(toSet.hasOwnProperty(key)) {
