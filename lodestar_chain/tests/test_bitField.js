@@ -1,6 +1,6 @@
 const assert = require('chai').assert;
 
-const bitfield = require('../../lodestar_chain/utils/bitfield.js');
+const bitfield = require('../utils/bitfield.js');
 
 describe('bitField',() => {
 	it('should get empty bitfield', () => {
