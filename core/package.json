@@ -10,7 +10,7 @@
   "homepage": "https://github.com/ChainSafe/lodestar_chain#readme",
   "main": "index.js",
   "directories": {
-    "test": "truffle test"
+    "tests": "truffle test"
   },
   "scripts": {
     "test": "mocha --recursive"

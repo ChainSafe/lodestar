@@ -5,15 +5,24 @@ will be implemented, this is our contribution to the effort to transitioning Eth
 
 This is currently a work in progress and you can ask questions and contribute in our [gitter](https://gitter.im/chainsafe/lodestar-chain).
 
+Our current file structure is:
+```
+loadestar_chain/
+-- core/  # Non-solidity components
+-- solidity/    # Contracts, truffle project
+```
+
 ## What you need
 You will need to go over the [specification](https://notes.ethereum.org/SCIg8AH5SA-O4C1G1LYZHQ?view#). You will also need to have a [basic understanding of sharding](https://github.com/ethereum/wiki/wiki/Sharding-FAQs). Note that that the specification is an ongoing document and will get outdated. The reference implementation by the Ethereum development team is written in Python and can be found [here](https://github.com/ethereum/beacon_chain).
 
 In order to run the code in this repository, you will first need to run `npm install` to install all dependencies. Then, to run the tests, you will need to run `npm test`
 
 ## Note about tests
-`npm test` runs `truffle test` please ensure that there is a terminal window with ganache-cli running
+For `solidity/` you will need to ensure that there is a terminal window with ganache-cli running to execute the tests. Ensure the dependencies are installed then run `truffle test`. 
 
-Note: There is a WIP that will auto boot a ganache terminal wehn you run `npm test` :)
+For `core/` you can run `mocha tests/` after installing dependencies.
+
+Note: There is a WIP that will auto boot a ganache terminal when you run `npm test` :)
 
 ## Contributors
 If you would like to contribute, please submit an issue or talk to us on our [gitter](https://gitter.im/chainsafe/lodestar-chain).

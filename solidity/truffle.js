@@ -12,6 +12,9 @@
  *   },
  */
 
+// Required for us to use es6 imports
+require('babel-register')
+
 module.exports = {
   networks: {
   development: {
