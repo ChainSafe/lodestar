@@ -28,7 +28,7 @@ enum BLSDomains {
   DOMAIN_LOGOUT = 3
 }
 
-export default {
+export {
   ValidatorStatusCodes,
   SpecialRecordTypes,
   ValidatorSetDeltaFlags,
