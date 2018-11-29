@@ -1,6 +1,9 @@
 // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
+// TODO Update TBD
+// TODO Explain what each constant does
 
 export default {
+
   SHARD_COUNT: 1024,
   DEPOSIT_SIZE: 32,
   MIN_ONLINE_DEPOSIT_SIZE: 16,
