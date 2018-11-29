@@ -1,3 +1,5 @@
+// https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
+
 export default {
   SHARD_COUNT: 1024,
   DEPOSIT_SIZE: 32,

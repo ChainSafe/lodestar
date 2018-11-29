@@ -1,4 +1,4 @@
-// TODO find home for enums
+// https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
 
 enum ValidatorStatusCodes {
   PENDING_ACTIVATION = 0,
@@ -26,4 +26,11 @@ enum BLSDomains {
   DOMAIN_ATTESTATION = 1,
   DOMAIN_PROPOSAL = 2,
   DOMAIN_LOGOUT = 3
+}
+
+export default {
+  ValidatorStatusCodes,
+  SpecialRecordTypes,
+  ValidatorSetDeltaFlags,
+  BLSDomains,
 }

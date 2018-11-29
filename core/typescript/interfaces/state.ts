@@ -1,86 +1,10 @@
 // TODO replace uint, hash32, bytes
-// TODO potentially move these structs somewhere else once I find a home for them
 
-// Interfaces related to beacon chain blocks
-interface BeaconBlock {
-  // Slot number
-  slot: 'uint64',
-  // Proposer RANDAO reveal
-  randao_reveal: 'hash32',
-  // Recent PoW receipt root
-  candidate_pow_receipt_root: 'hash32',
-  // Skip list of previous beacon block hashes
-  // i'th item is the most recent ancestor whose slot is a multiple of 2**i for i = 0, ..., 31
-  ancestor_hashes: ['hash32'],
-  // State root
-  state_root: 'hash32',
-  // Attestations
-  attestations: AttestationRecord[],
-  // Specials (e.g. logouts, penalties)
-  specials: SpecialRecord[],
-  // Proposer signature
-  proposer_signature: 'uint384'[],
-}
+// These interfaces relate to the data structures for beacon chain state
 
-interface AttestationRecord {
-  // Slot number
-  slot: 'uint64',
-  // Shard number
-  shard: 'uint64',
-  // Beacon block hashes not part of the current chain, oldest to newest
-  oblique_parent_hashes: 'hash32'[],
-  // Shard block hash being attested to
-  shard_block_hash: 'hash32',
-  // Last crosslink hash
-  last_crosslink_hash: 'hash32',
-  // Root of data between last hash and this one
-  shard_block_combined_data_root: 'hash32',
-  // Attester participation bitfield (1 bit per attester)
-  attester_bitfield: 'bytes',
-  // Slot of last justified beacon block
-  justified_slot: 'uint64',
-  // Hash of last justified beacon block
-  justified_block_hash: 'hash32',
-  // BLS aggregate signature
-  aggregate_sig: 'uint384'[]
-}
+import { AttestationRecord } from "./blocks";
 
-interface ProposalSignedData {
-  // Slot number
-  slot: 'uint64',
-  // Shard number (or `2**64 - 1` for beacon chain)
-  shard: 'uint64',
-  // Block hash
-  block_hash: 'hash32',
-}
-
-interface AttestationSignedData {
-  // Slot number
-  slot: 'uint64',
-  // Shard number
-  shard: 'uint64',
-  // CYCLE_LENGTH parent hashes
-  parent_hashes: 'hash32'[],
-  // Shard block hash
-  shard_block_hash: 'hash32',
-  // Last crosslink hash
-  last_crosslink_hash: 'hash32',
-  // Root of data between last hash and this one
-  shard_block_combined_data_root: 'hash32',
-  // Slot of last justified beacon block referenced in the attestation
-  justified_slot: 'uint64'
-}
-
-interface SpecialRecord {
-  // Kind
-  kind: 'uint64',
-  // Data
-  data: 'bytes'
-}
-
-// Interfaces related to beacon chain state
-
-interface BeaconState {
+export interface BeaconState {
   // Slot of last validator set change
   validator_set_change_slot: 'uint64',
   // List of validators
@@ -126,7 +50,7 @@ interface BeaconState {
   randao_mix: 'hash32'
 }
 
-interface  ValidatorRecord {
+export interface  ValidatorRecord {
   // BLS public key
   pubkey: 'uint384',
   // Withdrawal credentials
@@ -145,21 +69,21 @@ interface  ValidatorRecord {
   exit_seq: 'uint64'
 }
 
-interface CrosslinkRecord {
+export interface CrosslinkRecord {
   // Slot number
   slot: 'uint64',
   // Shard chain block hash
   shard_block_hash: 'hash32'
 }
 
-interface ShardAndCommittee {
+export interface ShardAndCommittee {
   // Shard number
   shard: 'uint64',
   // Validator indices
   committee: 'uint24'[]
 }
 
-interface ShardReassignmentRecord {
+export interface ShardReassignmentRecord {
   // Which validator to reassign
   validator_index: 'uint24',
   // To which shard
@@ -168,7 +92,7 @@ interface ShardReassignmentRecord {
   slot: 'uint64'
 }
 
-interface CandidatePoWReceiptRootRecord {
+export interface CandidatePoWReceiptRootRecord {
   // Candidate PoW receipt root
   candidate_pow_receipt_root: 'hash32',
   // Vote count
