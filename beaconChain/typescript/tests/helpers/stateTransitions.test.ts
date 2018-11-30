@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { split } from "../../helpers/stateTransition";
+import { split, clamp } from "../../helpers/stateTransition";
 
 describe('Split', function() {
   it('array of 10 should split by a count of 1', function() {
@@ -57,4 +57,33 @@ describe('Split', function() {
     let result = split(array, 4);
     assert.deepEqual(result, answer);
   });
+});
+
+describe('Clamp', function() {
+  it('should return upper bound', function () {
+    const result = clamp(2, 4, 5);
+    assert.equal(result, 4, "Should have returned 4!");
+  });
+
+  it('should return upper bound', function () {
+    const result = clamp(2, 4, 4);
+    assert.equal(result, 4, "Should have returned 4!");
+  });
+
+  it('should return the lower bound', function () {
+    const result = clamp(2, 4, 1);
+    assert.equal(result, 2, "Should have returned 2!");
+  });
+
+  it('should return the lower bound', function () {
+    const result = clamp(2, 4, 2);
+    assert.equal(result, 2, "Should have returned 2!");
+  });
+
+  it('should return the inbetween value', function () {
+    const result = clamp(2, 4, 3);
+    assert.equal(result, 3, "Should have returned 3!");
+  });
+
+
 });
