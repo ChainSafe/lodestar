@@ -6,20 +6,20 @@ export interface BeaconBlock {
   // Slot number
   slot: 'uint64',
   // Proposer RANDAO reveal
-  randao_reveal: 'hash32',
+  randaoReveal: 'hash32',
   // Recent PoW receipt root
-  candidate_pow_receipt_root: 'hash32',
+  candidatePowReceiptRoot: 'hash32',
   // Skip list of previous beacon block hashes
   // i'th item is the most recent ancestor whose slot is a multiple of 2**i for i = 0, ..., 31
-  ancestor_hashes: ['hash32'],
+  ancestorHashes: ['hash32'],
   // State root
-  state_root: 'hash32',
+  stateRoot: 'hash32',
   // Attestations
   attestations: AttestationRecord[],
   // Specials (e.g. logouts, penalties)
   specials: SpecialRecord[],
   // Proposer signature
-  proposer_signature: 'uint384'[],
+  proposerSignature: 'uint384'[],
 }
 
 export interface AttestationRecord {
@@ -28,21 +28,21 @@ export interface AttestationRecord {
   // Shard number
   shard: 'uint64',
   // Beacon block hashes not part of the current chain, oldest to newest
-  oblique_parent_hashes: 'hash32'[],
+  obliqueParentHashes: 'hash32'[],
   // Shard block hash being attested to
-  shard_block_hash: 'hash32',
+  shardBlockHash: 'hash32',
   // Last crosslink hash
-  last_crosslink_hash: 'hash32',
+  lastCrosslinkHash: 'hash32',
   // Root of data between last hash and this one
-  shard_block_combined_data_root: 'hash32',
+  shardBlockCombinedDataRoot: 'hash32',
   // Attester participation bitfield (1 bit per attester)
-  attester_bitfield: 'bytes',
+  attesterBitfield: 'bytes',
   // Slot of last justified beacon block
-  justified_slot: 'uint64',
+  justifiedSlot: 'uint64',
   // Hash of last justified beacon block
-  justified_block_hash: 'hash32',
+  justifiedBlockHash: 'hash32',
   // BLS aggregate signature
-  aggregate_sig: 'uint384'[]
+  aggregateSig: 'uint384'[]
 }
 
 export interface ProposalSignedData {
@@ -51,7 +51,7 @@ export interface ProposalSignedData {
   // Shard number (or `2**64 - 1` for beacon chain)
   shard: 'uint64',
   // Block hash
-  block_hash: 'hash32',
+  blockHash: 'hash32',
 }
 
 export interface AttestationSignedData {
@@ -60,15 +60,15 @@ export interface AttestationSignedData {
   // Shard number
   shard: 'uint64',
   // CYCLE_LENGTH parent hashes
-  parent_hashes: 'hash32'[],
+  parentHashes: 'hash32'[],
   // Shard block hash
-  shard_block_hash: 'hash32',
+  shardBlockHash: 'hash32',
   // Last crosslink hash
-  last_crosslink_hash: 'hash32',
+  lastCrosslinkHash: 'hash32',
   // Root of data between last hash and this one
-  shard_block_combined_data_root: 'hash32',
+  shardBlockCombinedDataRoot: 'hash32',
   // Slot of last justified beacon block referenced in the attestation
-  justified_slot: 'uint64'
+  justifiedSlot: 'uint64'
 }
 
 export interface SpecialRecord {

@@ -3,7 +3,6 @@
 // TODO Explain what each constant does
 
 export default {
-
   SHARD_COUNT: 1024,
   DEPOSIT_SIZE: 32,
   MIN_ONLINE_DEPOSIT_SIZE: 16,
@@ -20,4 +19,4 @@ export default {
   MAX_VALIDATOR_CHURN_QUOTIENT: 32,
   LOGOUT_MESSAGE: "LOGOUT",
   INITIAL_FORK_VERSION: 0
-}
+};
