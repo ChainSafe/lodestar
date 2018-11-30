@@ -13,7 +13,7 @@
     "tests": "truffle test"
   },
   "scripts": {
-    "test": "mocha --recursive"
+    "test": "mocha --recursive tests"
   },
   "repository": {
     "type": "git",

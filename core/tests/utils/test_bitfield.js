@@ -5,7 +5,7 @@ const {
 	getEmptyBitfield,
 	hasVoted,
 	setVoted,
-} = require('../../lodestar_chain/utils/bitfield');
+} = require('../../../core/utils/bitfield');
 
 const attestBitfield = [
 	[0, 0],
