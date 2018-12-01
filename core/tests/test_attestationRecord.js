@@ -31,25 +31,17 @@ const missingFields = {
     justified_block_hash: new Buffer(32)
 }
 
-// Recursively compares items and handles for Arrays, Buffers, and Objects
-const deepCompare = (a, b) => {
-    if (Buffer.isBuffer(a)) return Buffer.compare(a, b) === 0
-    else if (Array.isArray(a)) return a.every((item, i) => deepCompare(item, b[i]))
-    else if (typeof a === 'object' && a !== null) return Object.keys(a).every(key => deepCompare(a[key], b[key]))
-    else return a === b
-}
-
 describe('attestationRecord',() => {
 	it('should initialize with default values when passed an empty object', () => {
         const instance = new ar.AttestationRecord({})
 
-        assert(deepCompare(instance.fields, defaults), 'deep compare of fields and defaults failed')
+        assert.deepEqual(instance.fields, defaults)
     })
 
     it('given an arbitray object with no missing fields the class should construct an identical object', () => {
         const instance = new ar.AttestationRecord(dummyRecord)
-       
-        assert(deepCompare(instance.fields, dummyRecord))
+
+        assert.deepEqual(instance.fields, dummyRecord)
     })
 
     it('given an object with missing fields, the empty fields should be set to default values', () => {
@@ -57,14 +49,12 @@ describe('attestationRecord',() => {
         const constructedFields = Object.keys(missingFields)
         const allFields = Object.keys(instance.fields)
 
-        assert(
-            allFields
-                .every(field => 
-                    constructedFields.includes(field)
-                    ? deepCompare(instance.fields[field], missingFields[field])
-                    : deepCompare(instance.fields[field], defaults[field])
-                )
-            , 'Constructed object is different from comparison objects'
-        )
+        allFields
+            .every(field => 
+                constructedFields.includes(field)
+                ? assert.deepEqual(instance.fields[field], missingFields[field])
+                : assert.deepEqual(instance.fields[field], defaults[field])
+            )
+
     })
 })
