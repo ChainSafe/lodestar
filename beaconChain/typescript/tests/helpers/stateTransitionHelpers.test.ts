@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { split, clamp } from "../../helpers/stateTransition";
+import { split, clamp } from "../../helpers/stateTransitionHelpers";
 
 describe('Split', function() {
   it('array of 10 should split by a count of 1', function() {
