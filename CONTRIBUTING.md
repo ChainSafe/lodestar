@@ -2,6 +2,8 @@
 
 >First off, thank you for considering contributing to the Lodestar Chain. It's people like you that push the Ethereum ecosystem forward.
 
+We are currently converting our project from JavaScript to TypeScript, if you are interested in contributing please message us on [gitter](https://gitter.im/chainsafe/lodestar-chain).
+
 >Following these guidelines helps to communicate that you respect the time of the developers managing and developing this open source project. In return, they should reciprocate that respect in addressing your issue, assessing changes, and helping you finalize your pull requests.
 
 Keep an open mind! Improving documentation, bug triaging, or writing tests are all examples of helpful contributions that mean everyone can get started and start contributing to the Ethereum ecosystem.
