@@ -28,12 +28,12 @@ function getActiveValidatorIndices(validators: ValidatorRecord[]): int[] {
 
 /**
  * The following is a function that shuffles any list; we primarily use it for the validator list.
- * @param {any[]} values
+ * @param {T[]} values
  * @param {hash32} seed
- * @returns Returns the shuffled values with seed as entropy.
+ * @returns {T[]} Returns the shuffled values with seed as entropy.
  */
 // TODO finish this
-function shuffle(values: any[], seed: hash32): any[] {
+function shuffle<T>(values: T[], seed: hash32): T[] {
   const valuesCount: int = values.length;
   // Entropy is consumed from the seed in 3-byte (24 bit) chunks.
   const randBytes = 3;
@@ -45,7 +45,7 @@ function shuffle(values: any[], seed: hash32): any[] {
   if (valuesCount < randMax) throw new Error("Oversized list supplied to shuffle()!");
 
   // Make a copy of the values
-  let output = values.slice();
+  let output: T[] = values.slice();
   const source = seed; // REALLY??
   let index = 0; // REALLY??
   while (index < valuesCount -1) {
@@ -62,15 +62,15 @@ function shuffle(values: any[], seed: hash32): any[] {
 
 /**
  * Splits a list into split_count pieces.
- * @param {any[]} values
+ * @param {T[]} values
  * @param {int} splitCount
- * @returns {any[]}
+ * @returns {T[]}
  */
-export function split(values: any[], splitCount: int): any[] {
+export function split<T>(values: T[], splitCount: int): T[] {
   // Returns the split ``seq`` in ``split_count`` pieces in protocol.
-  const listLength = values.length;
-  let array: any[] = [];
-  for (let i = 0; i < splitCount; i++) {
+  const listLength: int = values.length;
+  let array: T[] = [];
+  for (let i: int = 0; i < splitCount; i++) {
     array.push(values.slice(
       Math.floor((listLength * i) / splitCount), Math.floor((listLength * (i + 1)) / splitCount)
     ));
