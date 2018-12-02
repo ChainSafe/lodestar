@@ -25,9 +25,9 @@ export interface BeaconState {
   // Number of consecutive justified slots
   justifiedStreak: uint64,
   // Committee members and their assigned shard, per slot
-  shardAndCommitteeForSlots: [[ShardAndCommittee]],
+  shardAndCommitteeForSlots: ShardAndCommittee[][],
   // Persistent shard committees
-  persistentCommittees: [[uint24]],
+  persistentCommittees: uint24[][],
   persistentCommitteeReassignments: ShardReassignmentRecord[],
   // Randao seed used for next shuffling
   nextShufflingSeed: hash32,
