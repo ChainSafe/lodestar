@@ -2,6 +2,13 @@ import { assert } from 'chai';
 import { split, clamp } from "../../helpers/stateTransitionHelpers";
 
 describe('Split', function() {
+  it('array of 0 should return empty', function() {
+    const array = [];
+    const answer = [[]];
+    let result = split(array, 1);
+    assert.deepEqual(result, answer);
+  });
+
   it('array of 10 should split by a count of 1', function() {
     const array = [1,2,3,4,5,6,7,8,9,10];
     const answer = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]];
@@ -84,6 +91,4 @@ describe('Clamp', function() {
     const result = clamp(2, 4, 3);
     assert.equal(result, 3, "Should have returned 3!");
   });
-
-
 });

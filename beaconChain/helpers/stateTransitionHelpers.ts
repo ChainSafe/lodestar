@@ -66,10 +66,10 @@ function shuffle<T>(values: T[], seed: hash32): T[] {
  * @param {int} splitCount
  * @returns {T[]}
  */
-export function split<T>(values: T[], splitCount: int): T[] {
+export function split<T>(values: T[], splitCount: int): T[][] {
   // Returns the split ``seq`` in ``split_count`` pieces in protocol.
   const listLength: int = values.length;
-  let array: T[] = [];
+  let array: T[][] = [];
   for (let i: int = 0; i < splitCount; i++) {
     array.push(values.slice(
       Math.floor((listLength * i) / splitCount), Math.floor((listLength * (i + 1)) / splitCount)
