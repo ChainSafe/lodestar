@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { split, clamp } from "../../helpers/stateTransitionHelpers";
+import { split, clamp, intSqrt } from "../../helpers/stateTransitionHelpers";
 
 describe('Split', function() {
   it('array of 0 should return empty', function() {
@@ -92,3 +92,37 @@ describe('Clamp', function() {
     assert.equal(result, 3, "Should have returned 3!");
   });
 });
+
+
+describe('intSqrt', function() {
+  it('0 should return 0', function () {
+    const result = intSqrt(0);
+    assert.equal(result, 0, "Should have returned 0!");
+  });
+
+  it('1 should return 1', function () {
+    const result = intSqrt(1);
+    assert.equal(result, 1, "Should have returned 1!");
+  });
+
+  it('3 should return 1', function () {
+    const result = intSqrt(3);
+    assert.equal(result, 1, "Should have returned 1!");
+  });
+
+  it('4 should return 2', function () {
+    const result = intSqrt(4);
+    assert.equal(result, 2, "Should have returned 2!");
+  });
+
+  it('16 should return 4', function () {
+    const result = intSqrt(16);
+    assert.equal(result, 4, "Should have returned 4!");
+  });
+
+  it('31 should return 5', function () {
+    const result = intSqrt(31);
+    assert.equal(result, 5, "Should have returned 5!");
+  });
+});
+

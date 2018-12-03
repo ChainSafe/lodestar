@@ -1,6 +1,4 @@
 // Helper functions related to state transition functions
-// TODO convert int (in return value for getActiveValidatorIndeces) to and int
-
 import {BeaconState, ShardAndCommittee, ValidatorRecord} from "../interfaces/state";
 import { ValidatorStatusCodes } from "../constants/enums";
 import constants from "../constants/constants"
@@ -165,7 +163,7 @@ function getAttestationParticipants(state: BeaconState, attestationData: Attesta
  * @returns {int}
  */
 // TODO Math.min requires int, validator.record is a uint64
-function balanceAtStake(validator: ValidatorRecord): int {
+function getEffectiveBalance(validator: ValidatorRecord): int {
   return Math.min(validator.balance, constants.DEPOSIT_SIZE);
 }
 
@@ -183,12 +181,12 @@ function balanceAtStake(validator: ValidatorRecord): int {
  * @returns {int}
  */
 // TODO Can use built in JS function if available
-function intSqrt(n: int): int {
+export function intSqrt(n: int): int {
   let x = n;
   let y = Math.floor((x + 1) / 2);
   while (y < x) {
     x = y;
-    y = Math.floor(x + Math.floor(n / x) / 2)
+    y = Math.floor((x + Math.floor(n / x)) / 2)
   }
   return x;
 }
