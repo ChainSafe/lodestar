@@ -1,5 +1,7 @@
+[![Build Status](https://travis-ci.org/ChainSafeSystems/lodestar_chain.svg?branch=master)](https://travis-ci.org/ChainSafeSystems/lodestar_chain)
+
 # Overview
-The goal of this repository is to provide an implementation of the beacon chain 
+The goal of this repository is to provide an implementation of the beacon chain
 that was recently announced by the Ethereum Core dev team. As even the Ethereum Core dev team don't know how the finalized beacon chain
 will be implemented, this is our contribution to the effort to transitioning Ethereum from a PoW blockchain to a PoS blockchain.
 
@@ -18,7 +20,7 @@ You will need to go over the [specification](https://notes.ethereum.org/SCIg8AH5
 In order to run the code in this repository, you will first need to run `npm install` to install all dependencies. Then, to run the tests, you will need to run `npm test`
 
 ## Note about tests
-For `solidity/` you will need to ensure that there is a terminal window with ganache-cli running to execute the tests. Ensure the dependencies are installed then run `truffle test`. 
+For `solidity/` you will need to ensure that there is a terminal window with ganache-cli running to execute the tests. Ensure the dependencies are installed then run `truffle test`.
 
 For `core/` you can run `mocha tests/` after installing dependencies.
 
