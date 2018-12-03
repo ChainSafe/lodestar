@@ -1,8 +1,8 @@
 // Helper functions related to state transition functions
-import {BeaconState, ShardAndCommittee, ValidatorRecord} from "../interfaces/state";
+import constants from "../constants/constants";
 import { ValidatorStatusCodes } from "../constants/enums";
-import constants from "../constants/constants"
 import {AttestationSignedData, BeaconBlock} from "../interfaces/blocks";
+import {BeaconState, ShardAndCommittee, ValidatorRecord} from "../interfaces/state";
 
 type int = number;
 type bytes = number;
@@ -40,13 +40,13 @@ function shuffle<T>(values: T[], seed: hash32): T[] {
 
   // The range of the RNG places an upper-bound on the size of the list that may be shuffled.
   // It is a logic error to supply an oversized list.
-  if (valuesCount < randMax) throw new Error("Oversized list supplied to shuffle()!");
+  if (valuesCount < randMax) { throw new Error("Oversized list supplied to shuffle()!"); }
 
   // Make a copy of the values
-  let output: T[] = values.slice();
+  const output: T[] = values.slice();
   const source = seed; // REALLY??
-  let index = 0; // REALLY??
-  while (index < valuesCount -1) {
+  const index = 0; // REALLY??
+  while (index < valuesCount - 1) {
     // Re-hash the `source` to obtain a new pattern of bytes.
     // TODO figure out what this hash function is in python -> JS
     // let source = hash(source)
@@ -55,7 +55,7 @@ function shuffle<T>(values: T[], seed: hash32): T[] {
 
   }
 
-  return []
+  return [];
 }
 
 /**
@@ -67,10 +67,10 @@ function shuffle<T>(values: T[], seed: hash32): T[] {
 export function split<T>(values: T[], splitCount: int): T[][] {
   // Returns the split ``seq`` in ``split_count`` pieces in protocol.
   const listLength: int = values.length;
-  let array: T[][] = [];
+  const array: T[][] = [];
   for (let i: int = 0; i < splitCount; i++) {
     array.push(values.slice(
-      Math.floor((listLength * i) / splitCount), Math.floor((listLength * (i + 1)) / splitCount)
+      Math.floor((listLength * i) / splitCount), Math.floor((listLength * (i + 1)) / splitCount),
     ));
   }
   return array;
@@ -86,9 +86,8 @@ export function split<T>(values: T[], splitCount: int): T[][] {
 export function clamp(minval: int, maxval: int, x: int): int {
   if (x <= minval) {
     return minval;
-  }
-  else if (x >= maxval) {
-    return maxval
+  } else if (x >= maxval) {
+    return maxval;
   }
   return x;
 }
@@ -139,7 +138,7 @@ function getBeaconProposerIndex(state: BeaconState, slot: int): int {
 function getAttestationParticipants(state: BeaconState, attestationData: AttestationSignedData, participationBitfield: bytes): int[] {
   const sncsForSlot: ShardAndCommittee[] = getShardsAndCommitteesForSlot(state, attestationData.slot);
   const snc: ShardAndCommittee = sncsForSlot.filter((x: ShardAndCommittee) => {
-    if (x.shard === attestationData.shard) return x;
+    if (x.shard === attestationData.shard) { return x; }
   })[0];
 
   // TODO Figure out why this is an error
@@ -186,7 +185,7 @@ export function intSqrt(n: int): int {
   let y: int = Math.floor((x + 1) / 2);
   while (y < x) {
     x = y;
-    y = Math.floor((x + Math.floor(n / x)) / 2)
+    y = Math.floor((x + Math.floor(n / x)) / 2);
   }
   return x;
 }
