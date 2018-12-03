@@ -5,3 +5,4 @@ before_script:
   - cd beaconChain && npm install
 script:
   - npm test
+  - npm lint
