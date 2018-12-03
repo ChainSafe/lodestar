@@ -148,7 +148,7 @@ function getAttestationParticipants(state: BeaconState, attestationData: Attesta
   // assert len(participation_bitfield) == ceil_div8(len(snc.committee))
 
   const participants: int[] = snc.committee.filter((validator: uint24, index: int) => {
-    const bit = (participationBitfield[Math.floor(index / 8)] >> (7 - (index % 8))) % 2;
+    const bit: int = (participationBitfield[Math.floor(index / 8)] >> (7 - (index % 8))) % 2;
     if (bit === 1) {
       return index;
     }
@@ -182,8 +182,8 @@ function getEffectiveBalance(validator: ValidatorRecord): int {
  */
 // TODO Can use built in JS function if available
 export function intSqrt(n: int): int {
-  let x = n;
-  let y = Math.floor((x + 1) / 2);
+  let x: int = n;
+  let y: int = Math.floor((x + 1) / 2);
   while (y < x) {
     x = y;
     y = Math.floor((x + Math.floor(n / x)) / 2)

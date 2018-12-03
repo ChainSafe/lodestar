@@ -16,7 +16,7 @@ export interface BeaconBlock {
   candidatePowReceiptRoot: hash32,
   // Skip list of previous beacon block hashes
   // i'th item is the most recent ancestor whose slot is a multiple of 2**i for i = 0, ..., 31
-  ancestorHashes: [hash32],
+  ancestorHashes: hash32[],
   // State root
   stateRoot: hash32,
   // Attestations
