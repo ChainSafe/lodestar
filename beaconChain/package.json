@@ -13,7 +13,7 @@
     "tests": "truffle test"
   },
   "scripts": {
-    "test": "mocha -r ts-node/register typescript/tests/**/*.test.ts"
+    "test": "mocha -r ts-node/register tests/**/*.test.ts"
   },
   "repository": {
     "type": "git",
