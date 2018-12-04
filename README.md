@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/ChainSafeSystems/lodestar_chain.svg?branch=master)](https://travis-ci.org/ChainSafeSystems/lodestar_chain)
+[![Build Status](https://travis-ci.com/ChainSafeSystems/lodestar_chain.svg?branch=master)](https://travis-ci.com/ChainSafeSystems/lodestar_chain)
 
 # Overview
 The goal of this repository is to provide an implementation of the beacon chain. As even the Ethereum Core dev team don't know how the finalized beacon chain
