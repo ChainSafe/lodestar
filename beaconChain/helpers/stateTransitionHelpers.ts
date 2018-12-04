@@ -16,12 +16,11 @@ type hash32 = number;
  */
 // TODO .map may cause mutation issues, probably want to look into fixing this later on...
 function getActiveValidatorIndices(validators: ValidatorRecord[]): int[] {
-  const result = validators.map((validator: ValidatorRecord, index: int) => {
-    if (validator.status === ValidatorStatusCodes.ACTIVE) {
-      return index;
-    }
-  });
-  return result;
+  return validators.reduce((accumulator: int[], validator: ValidatorRecord, index: int) => {
+    return validator.status === ValidatorStatusCodes.ACTIVE
+    ? [...accumulator, index] 
+    : accumulator
+  }, []);
 }
 
 /**
