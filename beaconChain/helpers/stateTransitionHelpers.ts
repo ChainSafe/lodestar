@@ -17,8 +17,8 @@ type hash32 = number;
 function getActiveValidatorIndices(validators: ValidatorRecord[]): int[] {
   return validators.reduce((accumulator: int[], validator: ValidatorRecord, index: int) => {
     return validator.status === ValidatorStatusCodes.ACTIVE
-    ? [...accumulator, index] 
-    : accumulator
+    ? [...accumulator, index]
+    : accumulator;
   }, []);
 }
 
