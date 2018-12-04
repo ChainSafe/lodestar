@@ -29,8 +29,8 @@ enum BLSDomains {
 }
 
 export {
-  ValidatorStatusCodes,
+  BLSDomains,
   SpecialRecordTypes,
   ValidatorSetDeltaFlags,
-  BLSDomains,
+  ValidatorStatusCodes,
 };
