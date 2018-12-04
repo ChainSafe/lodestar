@@ -14,7 +14,7 @@ type hash32 = number;
  * @param {ValidatorRecord[]} validators
  * @returns {int[]}
  */
-function getActiveValidatorIndices(validators: ValidatorRecord[]): int[] {
+export function getActiveValidatorIndices(validators: ValidatorRecord[]): int[] {
   return validators.reduce((accumulator: int[], validator: ValidatorRecord, index: int) => {
     return validator.status === ValidatorStatusCodes.ACTIVE
     ? [...accumulator, index]
