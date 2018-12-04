@@ -129,7 +129,7 @@ describe("intSqrt", () => {
 });
 
 describe("getActiveValidatorIndices", () => {
-  const randNum = () =>  Math.floor(Math.random() * Math.floor(10));
+  const randNum = () =>  Math.floor(Math.random() * Math.floor(4));
   const genValidatorRecord = () => ({
     balance: randNum(),
     exit_seq: randNum(),
@@ -140,12 +140,7 @@ describe("getActiveValidatorIndices", () => {
     status: randNum(),
     withdrawalCredentials: randNum(),
   });
-  let vrArray: ValidatorRecord[] = [];
-
-  beforeEach(() => {
-    const tempArray = new Array(10);
-    vrArray = tempArray.map(genValidatorRecord);
-  });
+  const vrArray: ValidatorRecord[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(genValidatorRecord);
 
   it("empty list of ValidatorRecords should return no indices (empty list)", () => {
     assert.deepEqual(getActiveValidatorIndices([]), []);
