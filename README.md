@@ -26,5 +26,10 @@ For `solidity/` you will need to ensure that there is a terminal window with gan
 
 For `beaconChain/` you can run `npm test` after installing dependencies.
 
+## Bugs/Feature Requests
+
+Want to create a report to help us improve? Please use this [bug report](https://github.com/ChainSafeSystems/lodestar_chain/blob/master/.github/ISSUE_TEMPLATE/bug_report.md) to help us fix whatever problems you find. 
+Want to suggest an idea for this project? Please use this [feature request template](https://github.com/ChainSafeSystems/lodestar_chain/blob/master/.github/ISSUE_TEMPLATE/feature_request.md) to request features. 
+
 ## Contributors
 If you would like to contribute, please submit an issue or talk to us on our [gitter](https://gitter.im/chainsafe/lodestar-chain).
