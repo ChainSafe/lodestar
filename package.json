@@ -30,6 +30,9 @@
   "standard": {
     "ignore": [
       "test/"
-   ]
+    ]
+  },
+  "dependencies": {
+    "milagro-crypto-js": "file:milagro-crypto-js"
   }
 }
