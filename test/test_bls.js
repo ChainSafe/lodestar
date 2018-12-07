@@ -5,6 +5,8 @@ const assert = require("chai").assert
 
 describe("bls", () => {
 	it("should generate a key pair", () => {
+		let salt = []
+
 		keys = bls.gen_key_pair("noot", 10)
 		console.log(`pubkey: ${keys.P.toString('hex')}`)
 		console.log(`privkey: ${keys.k.toString('hex')}`)
@@ -14,6 +16,12 @@ describe("bls", () => {
 	it("should perform scalar multiplation", () => {
 		keys = bls.gen_key_pair("noot", 10)
 		Z = bls.scalar_mult(keys.P, keys.k)
+		console.log(`result: ${Z}`)
+	})
+
+	it("should add two points", () => {
+		G = ctx.ECP.generator()
+		Z = bls.add(G, G)
 		console.log(`result: ${Z}`)
 	})
 })

@@ -27,7 +27,14 @@ const scalar_mult = (P, k) => {
 
 // perform Z = k*G1
 const scalar_base_mult = (k) => {
+    G = ctx.ECP.generator()
+    return scalar_mult(G, k)
+}
 
+const add = (P1, P2) => {
+    ctx.ECP.copy(P1)
+    ctx.ECP.add(P2)
+    return {x: ctx.ECP.getX, y: ctx.ECP.getY}
 }
 
 // perform H(m) = sha3(m)*G 
@@ -48,5 +55,11 @@ const bls_verify = (S, P, m) => {
 
 }
 
+// perform S = S_1 + ... + S_n where n is the number of signatures to aggregate
+// return (S, P_1 ... P_n, m_1 ... m_n)
+const bls_aggregate = (S_arr, P_arr, m_arr) => {
 
-module.exports = {gen_key_pair, scalar_mult}
+}
+
+
+module.exports = {gen_key_pair, scalar_mult, scalar_base_mult, add}
