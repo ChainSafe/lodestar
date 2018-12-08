@@ -1,5 +1,5 @@
 {
-  "name": "ssz",
+  "name": "@chainsafesystems/ssz",
   "version": "1.5.3",
   "description": "A pure JS implementation of simple serialize",
   "main": "src/index.js",
