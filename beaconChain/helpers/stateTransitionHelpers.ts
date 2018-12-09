@@ -99,7 +99,9 @@ export function clamp(minval: int, maxval: int, x: int): int {
  */
 function getShardCommitteesAtSlot(state: BeaconState, slot: int): ShardCommittee[] {
   const earliestSlotInArray: int = state.slot - (state.slot % EPOCH_LENGTH) - EPOCH_LENGTH;
-  if (earliestSlotInArray <= slot && slot < earliestSlotInArray + EPOCH_LENGTH * 2) throw new Error();
+  if (earliestSlotInArray <= slot && slot < earliestSlotInArray + EPOCH_LENGTH * 2) {
+    throw new Error();
+  }
   return state.shardCommitteesAtSlots[slot - earliestSlotInArray];
 }
 
@@ -112,7 +114,9 @@ function getShardCommitteesAtSlot(state: BeaconState, slot: int): ShardCommittee
  */
 function getBlockHash(state: BeaconState, slot: int): hash32 {
   const earliestSlotInArray = state.slot - state.latestBlockHashes.length;
-  if (earliestSlotInArray <= slot && slot < state.slot) throw new Error();
+  if (earliestSlotInArray <= slot && slot < state.slot) {
+    throw new Error();
+  }
   return state.latestBlockHashes[slot - earliestSlotInArray];
 }
 
