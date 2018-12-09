@@ -32,9 +32,8 @@ const scalar_base_mult = (k) => {
 }
 
 const add = (P1, P2) => {
-    ctx.ECP.copy(P1)
-    ctx.ECP.add(P2)
-    return {x: ctx.ECP.getX, y: ctx.ECP.getY}
+    P1.add(P2)
+    return P1
 }
 
 // perform H(m) = sha3(m)*G 
