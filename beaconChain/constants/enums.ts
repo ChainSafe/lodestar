@@ -3,34 +3,25 @@
 enum ValidatorStatusCodes {
   PENDING_ACTIVATION = 0,
   ACTIVE = 1,
-  PENDING_EXIT = 2,
-  PENDING_WITHDRAW = 3,
-  WITHDRAWN = 4,
-  PENALIZED = 127,
+  ACTIVE_PENDING_EXIT = 2,
+  EXITED_WITHOUT_PENALTY = 3,
+  EXITED_WITH_PENALTY = 4,
 }
 
-enum SpecialRecordTypes {
-  LOGOUT = 0,
-  CASPER_SLASHING = 1,
-  PROPOSER_SLASHING = 2,
-  DEPOSIT_PROOF = 3,
-}
-
-enum ValidatorSetDeltaFlags {
-  ENTRY = 0,
+enum ValidatorRegistryDeltaFlags {
+  ACTIVATION = 0,
   EXIT = 1,
 }
 
-enum BLSDomains {
+enum SignatureDomains {
   DOMAIN_DEPOSIT = 0,
   DOMAIN_ATTESTATION = 1,
   DOMAIN_PROPOSAL = 2,
-  DOMAIN_LOGOUT = 3,
+  DOMAIN_EXIT = 3,
 }
 
 export {
-  BLSDomains,
-  SpecialRecordTypes,
-  ValidatorSetDeltaFlags,
+  SignatureDomains,
+  ValidatorRegistryDeltaFlags,
   ValidatorStatusCodes,
 };
