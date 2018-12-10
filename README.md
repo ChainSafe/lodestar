@@ -1,3 +1,8 @@
+Note:
+From time to time, it may seem as if there are no contributions. Please note there is a lot of working being done outside of this repository, that are core infastructure pieces for Eth2.0. Contributions to any of the below repositories would be greatly appreciated.
+- SSZ in pure JS https://github.com/ChainSafeSystems/ssz-js
+- Size enforced Big Numbers in JS https://github.com/ansermino/fixed-sized-numbers-ts
+
 [![Build Status](https://travis-ci.com/ChainSafeSystems/lodestar_chain.svg?branch=master)](https://travis-ci.com/ChainSafeSystems/lodestar_chain)
 
 # Overview
