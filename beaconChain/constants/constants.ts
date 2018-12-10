@@ -9,7 +9,7 @@ export const MIN_BALANCE = 2 ** 4; // 16 ETH
 export const MAX_BALANCE_CHURN_QUOTIENT = 2 ** 5; // 32
 export const GWEI_PER_ETH = 10 ** 9; // 1B Gwei/ETH
 export const BEACON_CHAIN_SHARD_NUMBER = 2 ** 64 - 1;
-export const BLS_WITHDRAWAL_PREFIX_BYTE = 0x0;
+export const BLS_WITHDRAWAL_PREFIX_BYTE = 0x00;
 export const MAX_CASPER_VOTES = 2 ** 10; // 1024 votes
 
 // Deposit contract
