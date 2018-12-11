@@ -33,6 +33,7 @@
     ]
   },
   "dependencies": {
-    "milagro-crypto-js": "file:milagro-crypto-js"
+    "csprng": "^0.1.2",
+    "sha3": "^2.0.0"
   }
 }

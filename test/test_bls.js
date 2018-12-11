@@ -1,16 +1,35 @@
 const bls = require("../src/bls.js")
-const CTX = require("milagro-crypto-js")
+const CTX = require("../milagro-crypto-js")
 const ctx = new CTX("BLS381")
 const assert = require("chai").assert
 
 describe("bls", () => {
-	it("should generate a key pair", () => {
-		let salt = []
+	it("should generate a random number", () => {
+		let x = bls.get_rand(128)
+		console.log(x)
+		assert(x.length == 256)
+	})
 
-		keys = bls.gen_key_pair("noot", 10)
+	it("should generate another random number", () => {
+		let x = bls.get_rand(128)
+		console.log(x)
+		assert(x.length == 256)
+	})
+
+	it("should generate a key pair", () => {
+		keys = bls.gen_key_pair("noot", bls.get_rand(128))
 		console.log(`pubkey: ${keys.P.toString('hex')}`)
 		console.log(`privkey: ${keys.k.toString('hex')}`)
 		assert(ctx.ECDH.PUBLIC_KEY_VALIDATE(keys.P) == 0)
+	})
+
+	it("should generate two different key pairs", () => {
+		keys0 = bls.gen_key_pair("noot", bls.get_rand(128))
+		assert(ctx.ECDH.PUBLIC_KEY_VALIDATE(keys0.P) == 0)
+
+		keys1 = bls.gen_key_pair("noot", bls.get_rand(128))
+		assert(ctx.ECDH.PUBLIC_KEY_VALIDATE(keys1.P) == 0)
+		assert(keys1.k !== keys0.k)
 	})
 
 	it("should perform scalar multiplation", () => {
@@ -23,5 +42,9 @@ describe("bls", () => {
 		G = ctx.ECP.generator()
 		Z = bls.add(G, G)
 		console.log(`result: ${Z}`)
+	})
+
+	it("should hash a string", () => {
+		console.log(bls.hash_string("noot"))
 	})
 })
