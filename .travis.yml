@@ -7,4 +7,4 @@ script:
   - npm test
   - npm run lint
 after_success:
-  - codecov
+  - node_modules/.bin/codecov
