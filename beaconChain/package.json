@@ -15,7 +15,8 @@
   "scripts": {
     "lint": "node_modules/.bin/tslint -c tslint.json '*/*.ts'",
     "lint-fix": "node_modules/.bin/tslint -c tslint.json '*/*.ts' --fix",
-    "test": "node_modules/.bin/mocha -r ts-node/register tests/**/*.test.ts"
+    "test": "node_modules/.bin/mocha -r ts-node/register tests/**/*.test.ts",
+    "nyc": "node_modules/.bin/nyc npm run test"
   },
   "repository": {
     "type": "git",
