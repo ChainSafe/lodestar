@@ -3,7 +3,9 @@ From time to time, it may seem as if there are no contributions. Please note the
 - SSZ in pure JS https://github.com/ChainSafeSystems/ssz-js
 - Size enforced Big Numbers in JS https://github.com/ansermino/fixed-sized-numbers-ts
 
-[![Build Status](https://travis-ci.com/ChainSafeSystems/lodestar_chain.svg?branch=master)](https://travis-ci.com/ChainSafeSystems/lodestar_chain)
+[![Build Status](https://img.shields.io/travis/com/ChainSafeSystems/lodestar_chain.svg?label=master&logo=travis "Master Branch (Travis)")](https://travis-ci.com/ChainSafeSystems/lodestar_chain)
+
+[![Join the chat at https://gitter.im/chainsafe/lodestar-chain](https://badges.gitter.im/chainsafe/lodestar-chain.svg)](https://gitter.im/chainsafe/lodestar-chain?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 # Overview
 The goal of this repository is to provide an implementation of the beacon chain. As even the Ethereum Core dev team don't know how the finalized beacon chain
