@@ -15,20 +15,9 @@
   "scripts": {
     "lint": "node_modules/.bin/tslint -c tslint.json '*/*.ts'",
     "lint-fix": "node_modules/.bin/tslint -c tslint.json '*/*.ts' --fix",
-    "test": "node_modules/.bin/mocha -r ts-node/register tests/**/*.test.ts",
+    "test": "node_modules/.bin/_mocha -r ts-node/register tests/**/*.test.ts",
     "nyc": "node_modules/.bin/nyc npm run test"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com:ChainSafe/lodestar_chain.git"
-  },
-  "keywords": [
-    "Ethereum",
-    "beacon",
-    "future",
-    "p2p",
-    "blockchain"
-  ],
   "dependencies": {
     "bignumber.js": "^7.2.1",
     "blakejs": "^1.1.0",
@@ -43,8 +32,20 @@
     "chai": "^4.2.0",
     "mocha": "^5.2.0",
     "nyc": "^13.1.0",
+    "source-map-support": "^0.5.9",
     "ts-node": "^7.0.1",
     "tslint": "^5.11.0",
     "typescript": "^3.2.1"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com:ChainSafe/lodestar_chain.git"
+  },
+  "keywords": [
+    "Ethereum",
+    "beacon",
+    "future",
+    "p2p",
+    "blockchain"
+  ]
 }
