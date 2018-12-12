@@ -132,7 +132,7 @@ describe("getActiveValidatorIndices", () => {
   const randNum = () =>  Math.floor(Math.random() * Math.floor(4));
   const genValidatorRecord = () => ({
     balance: randNum(),
-    exit_seq: randNum(),
+    exitCount: randNum(),
     lastStatusChangeSlot: randNum(),
     pubkey: randNum(),
     randaoCommitment: randNum(),

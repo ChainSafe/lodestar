@@ -2,60 +2,54 @@
 
 // These interfaces relate to the data structures for beacon chain state
 
-import { AttestationRecord } from "./blocks";
+import { AttestationData } from "./blocks";
 
+type bytes = number;
 type uint24 = number;
 type uint64 = number;
 type uint384 = number;
 type hash32 = number;
 
 export interface BeaconState {
-  // Slot of last validator set change
-  validatorSetChangeSlot: uint64;
-  // List of validators
-  validators: ValidatorRecord[];
-  // Most recent crosslink for each shard
-  crosslinks: CrosslinkRecord[];
-  // Last cycle-boundary state recalculation
-  lastStateRecalculationSlot: uint64;
-  // Last finalized slot
-  lastFinalizedSlot: uint64;
-  // Last justified slot
-  lastJustifiedSlot: uint64;
-  // Number of consecutive justified slots
-  justifiedStreak: uint64;
-  // Committee members and their assigned shard, per slot
-  shardAndCommitteeForSlots: ShardAndCommittee[][];
-  // Persistent shard committees
+  slot: uint64;
+  genesisTime: uint64;
+  // For versioning hard forks
+  forkData: ForkData;
+
+  // Validator registry
+  validatorRegistry: ValidatorRecord[];
+  validatorRegistryLatestChangeSlot: uint64;
+  validatorRegistryExitCount: uint64;
+  // For light clients to track deltas
+  validatorRegistryDeltaChainTip: hash32;
+
+  // Randomness and committees
+  randaoMix: hash32;
+  nextSeed: hash32;
+  shardCommitteesAtSlots: ShardCommittee[][];
   persistentCommittees: uint24[][];
   persistentCommitteeReassignments: ShardReassignmentRecord[];
-  // Randao seed used for next shuffling
-  nextShufflingSeed: hash32;
-  // Total deposits penalized in the given withdrawal period
-  depositsPenalizedInPeriod: uint64[];
-  // Hash chain of validator set changes (for light clients to easily track deltas)
-  validatorSetDeltaHashChain: hash32;
-  // Current sequence number for withdrawals
-  currentExitSeq: uint64;
-  // Genesis time
-  genesisTime: uint64;
+
+  // Finality
+  previousJustifiedSlot: uint64;
+  justifiedSlot: uint64;
+  justificationBitfield: uint64;
+  finalizedSlot: uint64;
+
+  // Recent state
+  latestCrosslinks: CrosslinkRecord[];
+  // Needed to process attestations; older to newer
+  latestBlockHashes: hash32[];
+  // Balances penalized at every withdrawal period
+  latestPenalizedExitBalances: uint64[];
+  latestAttestations: PendingAttestationRecord[];
+
   // PoW receipt root
   processedPowReceiptRoot: hash32;
   candidatePowReceiptRoots: CandidatePoWReceiptRootRecord[];
-  // Parameters relevant to hard forks / versioning.
-  // Should be updated only by hard forks.
-  preForkVersion: uint64;
-  postForkVersion: uint64;
-  forkSlotNumber: uint64;
-  // Attestations not yet processed
-  pendingAttestations: AttestationRecord[];
-  // recent beacon block hashes needed to process attestations, older to newer
-  recentBlockHashes: hash32[];
-  // RANDAO state
-  randaoMix: hash32;
 }
 
-export interface  ValidatorRecord {
+export interface ValidatorRecord {
   // BLS public key
   pubkey: uint384;
   // Withdrawal credentials
@@ -70,8 +64,8 @@ export interface  ValidatorRecord {
   status: uint64;
   // Slot when validator last changed status (or 0)
   lastStatusChangeSlot: uint64;
-  // Sequence number when validator exited (or 0)
-  exit_seq: uint64;
+  // Exit counter when validator exited (or 0)
+  exitCount: uint64;
 }
 
 export interface CrosslinkRecord {
@@ -81,11 +75,12 @@ export interface CrosslinkRecord {
   shardBlockHash: hash32;
 }
 
-export interface ShardAndCommittee {
+export interface ShardCommittee {
   // Shard number
   shard: uint64;
   // Validator indices
   committee: uint24[];
+  totalValidatorCount: uint64;
 }
 
 export interface ShardReassignmentRecord {
@@ -102,4 +97,24 @@ export interface CandidatePoWReceiptRootRecord {
   candidatePowReceiptRoot: hash32;
   // Vote count
   votes: uint64;
+}
+
+export interface PendingAttestationRecord {
+  // Signed data
+  data: AttestationData;
+  // Attester participation bitfield
+  participationBitfield: bytes;
+  // Proof of custody bitfield
+  custodyBitfield: bytes;
+  // Slot in which it was included
+  slotIncluded: uint64;
+}
+
+export interface ForkData {
+  // Previous fork version
+  preForkVersion: uint64;
+  // Post fork version
+  postForkVersion: uint64;
+  // Fork slot number
+  forkSlot: uint64;
 }

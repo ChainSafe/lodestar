@@ -1,8 +1,8 @@
 // Helper functions related to state transition functions
-import constants from "../constants/constants";
+import {EPOCH_LENGTH, MAX_DEPOSIT} from "../constants/constants";
 import { ValidatorStatusCodes } from "../constants/enums";
-import {AttestationSignedData, BeaconBlock} from "../interfaces/blocks";
-import {BeaconState, ShardAndCommittee, ValidatorRecord} from "../interfaces/state";
+import {AttestationData, BeaconBlock} from "../interfaces/blocks";
+import {BeaconState, ShardCommittee, ValidatorRecord} from "../interfaces/state";
 
 type int = number;
 type bytes = number;
@@ -97,28 +97,27 @@ export function clamp(minval: int, maxval: int, x: int): int {
  * @param {int} slot
  * @returns {ShardAndCommittee[] | Error}
  */
-function getShardsAndCommitteesForSlot(state: BeaconState, slot: int): ShardAndCommittee[] {
-  const earliestSlotInArray: int = state.lastStateRecalculationSlot - constants.CYCLE_LENGTH;
-  // TODO Figure out why this is an error
-  // TODO fix error with `<`
-  // if (earliestSlotInArray <= slot < earliestSlotInArray + constants.CYCLE_LENGTH * 2) throw new Error();
-  return state.shardAndCommitteeForSlots[slot - earliestSlotInArray];
+function getShardCommitteesAtSlot(state: BeaconState, slot: int): ShardCommittee[] {
+  const earliestSlotInArray: int = state.slot - (state.slot % EPOCH_LENGTH) - EPOCH_LENGTH;
+  if (earliestSlotInArray <= slot && slot < earliestSlotInArray + EPOCH_LENGTH * 2) {
+    throw new Error();
+  }
+  return state.shardCommitteesAtSlots[slot - earliestSlotInArray];
 }
 
 /**
  * Retrieves hash for a given beacon block.
  * It should always return the block hash in the beacon chain slot for `slot`.
  * @param {BeaconState} state
- * @param {BeaconBlock} currentBlock
  * @param {int} slot
  * @returns {hash32}
  */
-function getBlockHash(state: BeaconState, currentBlock: BeaconBlock, slot: int): hash32 {
-  const earliestSlotInArray = currentBlock.slot - state.recentBlockHashes.length;
-  // TODO Figure out why this is an error
-  // TODO fix error with `<`
-// if (earliestSlotInArray <= slot < currentBlock.slot) throw new Error();
-  return state.recentBlockHashes[slot - earliestSlotInArray];
+function getBlockHash(state: BeaconState, slot: int): hash32 {
+  const earliestSlotInArray = state.slot - state.latestBlockHashes.length;
+  if (earliestSlotInArray <= slot && slot < state.slot) {
+    throw new Error();
+  }
+  return state.latestBlockHashes[slot - earliestSlotInArray];
 }
 
 /**
@@ -128,15 +127,15 @@ function getBlockHash(state: BeaconState, currentBlock: BeaconBlock, slot: int):
  * @returns {int}
  */
 function getBeaconProposerIndex(state: BeaconState, slot: int): int {
-  const firstCommittee = getShardsAndCommitteesForSlot(state, slot)[0].committee;
+  const firstCommittee = getShardCommitteesAtSlot(state, slot)[0].committee;
   return firstCommittee[slot % firstCommittee.length];
 }
 
 // TODO finish
-function getAttestationParticipants(state: BeaconState, attestationData: AttestationSignedData, participationBitfield: bytes): int[] {
-  const sncsForSlot: ShardAndCommittee[] = getShardsAndCommitteesForSlot(state, attestationData.slot);
-  const snc: ShardAndCommittee = sncsForSlot.filter((x: ShardAndCommittee) => {
-    if (x.shard === attestationData.shard) { return x; }
+function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, participationBitfield: bytes): int[] {
+  const shardCommittees: ShardCommittee[] = getShardCommitteesAtSlot(state, attestationData.slot);
+  const shardCommittee: ShardCommittee = shardCommittees.filter((x: ShardCommittee) => {
+    return x.shard === attestationData.shard;
   })[0];
 
   // TODO Figure out why this is an error
@@ -144,11 +143,9 @@ function getAttestationParticipants(state: BeaconState, attestationData: Attesta
   // TODO what is ceil_div8()
   // assert len(participation_bitfield) == ceil_div8(len(snc.committee))
 
-  const participants: int[] = snc.committee.filter((validator: uint24, index: int) => {
+  const participants: int[] = shardCommittee.committee.filter((validator: uint24, index: int) => {
     const bit: int = (participationBitfield[Math.floor(index / 8)] >> (7 - (index % 8))) % 2;
-    if (bit === 1) {
-      return index;
-    }
+    return bit === 1;
   });
   return participants;
 }
@@ -161,7 +158,7 @@ function getAttestationParticipants(state: BeaconState, attestationData: Attesta
  */
 // TODO Math.min requires int, validator.record is a uint64
 function getEffectiveBalance(validator: ValidatorRecord): int {
-  return Math.min(validator.balance, constants.DEPOSIT_SIZE);
+  return Math.min(validator.balance, MAX_DEPOSIT);
 }
 
 // TODO figure out what bytes1() does in python
@@ -187,4 +184,3 @@ export function intSqrt(n: int): int {
   }
   return x;
 }
-
