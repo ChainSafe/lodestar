@@ -6,3 +6,5 @@ before_script:
 script:
   - npm test
   - npm run lint
+after_success:
+  - codecov
