@@ -17,24 +17,23 @@ require('babel-register')
 
 module.exports = {
   networks: {
-  development: {
-            //host: "localhost",
-            port: 8545,
-            host: "127.0.0.1",
-            // port: 7545,
-            network_id: "0",
-            gas: 4600000,
-            gasLimit: 10000000
-  },
-  geth_testnet: {
-            host: "127.0.0.1",
-            port: 8545,
-            // host: "127.0.0.1",
-            // port: 7545,
-            network_id: "*",
-            //from: "0x43EC6d0942f7fAeF069F7F63D0384a27f529B062",
-            gas: 580000,
-            gasLimit: 10000000
-   },
+    development: {
+      //host: "localhost",
+      port: 9545,
+      host: "127.0.0.1",
+      network_id: "0",
+      gas: 4600000,
+      gasLimit: 10000000
+    },
+    geth_testnet: {
+      host: "127.0.0.1",
+      port: 8545,
+      // host: "127.0.0.1",
+      // port: 7545,
+      network_id: "*",
+      //from: "0x43EC6d0942f7fAeF069F7F63D0384a27f529B062",
+      gas: 580000,
+      gasLimit: 10000000
+    },
   }
 };
