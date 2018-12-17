@@ -45,3 +45,6 @@ export const MAX_CASPER_SLASHINGS = 2 ** 4; // 16
 export const MAX_ATTESTATIONS = 2 ** 7; // 128
 export const MAX_DEPOSITS = 2 ** 4; // 16
 export const MAX_EXITS = 2 ** 4; // 16
+
+// Smart contract addresses
+export const MAINNET_DEPOSIT_ADDRESS = '0x0'; // Address for teh deposit function on ethereum.
