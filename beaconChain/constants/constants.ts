@@ -1,3 +1,5 @@
+import { ethers } from "ethers";
+
 // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
 // TODO Update TBD
 // TODO Explain what each constant does
@@ -48,3 +50,5 @@ export const MAX_EXITS = 2 ** 4; // 16
 
 // Smart contract addresses
 export const MAINNET_DEPOSIT_ADDRESS = '0x0'; // Address for teh deposit function on ethereum.
+export const DEPOSIT_CONTRACT_BLOCK_NUMBER = 5222222;
+export const DEPOSIT_CONTRACT_ABI = [];
