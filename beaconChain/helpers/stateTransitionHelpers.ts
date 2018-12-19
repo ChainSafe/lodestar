@@ -33,9 +33,9 @@ export function getActiveValidatorIndices(validators: ValidatorRecord[]): int[] 
 function shuffle<T>(values: T[], seed: hash32): T[] {
   const valuesCount: int = values.length;
   // Entropy is consumed from the seed in 3-byte (24 bit) chunks.
-  const randBytes = 3;
+  const randBytes: number = 3;
   // Highest possible result of the RNG
-  const randMax = 2 ** (randBytes * 8) - 1;
+  const randMax: number = 2 ** (randBytes * 8) - 1;
 
   // The range of the RNG places an upper-bound on the size of the list that may be shuffled.
   // It is a logic error to supply an oversized list.
@@ -43,8 +43,8 @@ function shuffle<T>(values: T[], seed: hash32): T[] {
 
   // Make a copy of the values
   const output: T[] = values.slice();
-  let source = toBuffer(seed);
-  let index = 0;
+  let source: Buffer = toBuffer(seed);
+  let index: number = 0;
   while (index < valuesCount - 1) {
     // Re-hash the `source` to obtain a new pattern of bytes.
     source = keccak256(source).slice(0, 32);
@@ -53,21 +53,21 @@ function shuffle<T>(values: T[], seed: hash32): T[] {
     for (let position = 0; position < 32 - (32 % randBytes); position += randBytes) {
       // Determine the number of indices remaining in `values` and exit
       // once the last index is reached.
-      const remaining = valuesCount - index;
+      const remaining: number = valuesCount - index;
       if (remaining === 1) {
         break;
       }
       // Read 3-bytes of `source` as a 24-bit big-endian integer.
-      const sampleFromSource = toBuffer(source).slice(position, position + randBytes).readUIntBE(0, 3);
+      const sampleFromSource: number = toBuffer(source).slice(position, position + randBytes).readUIntBE(0, 3);
 
       // Sample values greater than or equal to `sample_max` will cause
       // modulo bias when mapped into the `remaining` range.
-      const sampleMax = randMax - randMax % remaining;
+      const sampleMax: number = randMax - randMax % remaining;
 
       // Perform a swap if the consumed entropy will not cause modulo bias.
       if (sampleFromSource < sampleMax) {
         // Select a replacement index for the current index.
-        const replacementPosition = (sampleFromSource % remaining) + index;
+        const replacementPosition: number = (sampleFromSource % remaining) + index;
         // Swap the current index with the replacement index.
         // tslint:disable-next-line no-unused-expression
         output[index], output[replacementPosition] = output[replacementPosition], output[index];
