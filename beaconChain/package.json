@@ -31,6 +31,8 @@
   "dependencies": {
     "bignumber.js": "^7.2.1",
     "blakejs": "^1.1.0",
+    "ethereumjs-util": "^6.0.0",
+    "safe-buffer": "^5.1.2",
     "ssz": "^1.5.2"
   },
   "bin": {
@@ -39,6 +41,7 @@
   "devDependencies": {
     "@types/chai": "^4.1.7",
     "@types/mocha": "^5.2.5",
+    "@types/node": "^10.12.17",
     "chai": "^4.2.0",
     "mocha": "^5.2.0",
     "nyc": "^13.1.0",

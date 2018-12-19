@@ -1,3 +1,5 @@
+import { keccak256, toBuffer } from "ethereumjs-util";
+import { Buffer } from "safe-buffer";
 // Helper functions related to state transition functions
 import {EPOCH_LENGTH, MAX_DEPOSIT} from "../constants/constants";
 import { ValidatorStatusCodes } from "../constants/enums";
@@ -7,7 +9,7 @@ import {BeaconState, ShardCommittee, ValidatorRecord} from "../interfaces/state"
 type int = number;
 type bytes = number;
 type uint24 = number;
-type hash32 = number;
+type hash32 = Buffer;
 
 /**
  * The following is a function that gets active validator indices from the validator list.

@@ -2,7 +2,7 @@
 // TODO Update TBD
 // TODO Explain what each constant does
 
-  // Misc
+// Misc
 export const SHARD_COUNT = 2 ** 10; // 1024 shards
 export const TARGET_COMMITTEE_SIZE = 2 ** 8; // 256 validators
 export const MIN_BALANCE = 2 ** 4; // 16 ETH
@@ -21,7 +21,7 @@ export const MAX_DEPOSIT = 2 ** 5; // 32 ETH
 // Initial values
 export const INITIAL_FORK_VERSION = 0;
 export const INITIAL_SLOT_NUMBER = 0;
-export const ZERO_HASH = new ArrayBuffer(32);
+export const ZERO_HASH = Buffer.alloc(32);
 
 // Time parameters
 export const SLOT_DURATION = 6; // 6 seconds

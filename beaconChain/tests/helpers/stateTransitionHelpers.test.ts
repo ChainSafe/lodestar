@@ -1,4 +1,5 @@
 import { assert } from "chai";
+import { toBuffer } from "ethereumjs-util";
 import { ValidatorStatusCodes } from "../../constants/enums";
 import { clamp, getActiveValidatorIndices, intSqrt, split } from "../../helpers/stateTransitionHelpers";
 import { ValidatorRecord } from "../../interfaces/state";
@@ -135,10 +136,10 @@ describe("getActiveValidatorIndices", () => {
     exitCount: randNum(),
     lastStatusChangeSlot: randNum(),
     pubkey: randNum(),
-    randaoCommitment: randNum(),
+    randaoCommitment: toBuffer("A"),
     randaoSkips: randNum(),
     status: randNum(),
-    withdrawalCredentials: randNum(),
+    withdrawalCredentials: toBuffer("A"),
   });
   const vrArray: ValidatorRecord[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(genValidatorRecord);
 
