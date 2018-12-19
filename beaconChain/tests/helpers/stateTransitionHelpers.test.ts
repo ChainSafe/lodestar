@@ -1,8 +1,8 @@
 import { assert } from "chai";
 import { toBuffer } from "ethereumjs-util";
 import { ValidatorStatusCodes } from "../../constants/enums";
-import { clamp, getActiveValidatorIndices, intSqrt, split } from "../../helpers/stateTransitionHelpers";
-import { ValidatorRecord } from "../../interfaces/state";
+import { clamp, getActiveValidatorIndices, getNewShuffling, intSqrt, split } from "../../helpers/stateTransitionHelpers";
+import { ShardCommittee, ValidatorRecord } from "../../interfaces/state";
 
 describe("Split", () => {
   it("array of 0 should return empty", () => {
@@ -167,5 +167,21 @@ describe("getActiveValidatorIndices", () => {
     const getAVI = getActiveValidatorIndices(vrArray);
 
     assert(filtered.length === getAVI.length);
+  });
+});
+
+describe("getNewShuffling", () => {
+  const seed = toBuffer("A");
+  const validators = Array.from({ length: 1000 }, () => ({ status: ValidatorStatusCodes.ACTIVE } as ValidatorRecord));
+  const shuffled = getNewShuffling(seed, validators, 0);
+  const exists = (shuffling: ShardCommittee[][], validatorIndex: number): boolean => {
+    return !!shuffling.find((shardCommittees) => {
+      return !!shardCommittees.find((shardCommittee) => {
+        return shardCommittee.committee.includes(validatorIndex);
+      });
+    });
+  };
+  it("Shuffled committees should include all validators in unshuffled set", () => {
+    validators.forEach((v, index) => assert(exists(shuffled, index)));
   });
 });

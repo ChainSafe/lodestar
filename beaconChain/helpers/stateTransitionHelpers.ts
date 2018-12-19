@@ -1,7 +1,7 @@
 import { keccak256, toBuffer } from "ethereumjs-util";
 import { Buffer } from "safe-buffer";
 // Helper functions related to state transition functions
-import {EPOCH_LENGTH, MAX_DEPOSIT} from "../constants/constants";
+import { EPOCH_LENGTH, MAX_DEPOSIT, SHARD_COUNT, TARGET_COMMITTEE_SIZE } from "../constants/constants";
 import { ValidatorStatusCodes } from "../constants/enums";
 import {AttestationData, BeaconBlock} from "../interfaces/blocks";
 import {BeaconState, ShardCommittee, ValidatorRecord} from "../interfaces/state";
@@ -113,6 +113,45 @@ export function clamp(minval: int, maxval: int, x: int): int {
     return maxval;
   }
   return x;
+}
+
+/**
+ * Shuffles validators into shard committees using seed as entropy.
+ * @param {hash32} seed
+ * @param {ValidatorRecord[]} validators
+ * @param {int} crosslinkingStartShard
+ * @returns {ShardCommittee[][]}
+ */
+export function getNewShuffling(seed: hash32, validators: ValidatorRecord[], crosslinkingStartShard: int): ShardCommittee[][] {
+  const activeValidatorIndices: int[] = getActiveValidatorIndices(validators);
+
+  const committeesPerSlot: int = Math.max(
+    1,
+    Math.min(
+      Math.floor(SHARD_COUNT / EPOCH_LENGTH),
+      Math.floor(getActiveValidatorIndices.length / EPOCH_LENGTH / TARGET_COMMITTEE_SIZE),
+    ),
+  );
+
+  // Shuffle with seed
+  const shuffledActiveValidatorIndices: int[] = shuffle(activeValidatorIndices, seed);
+
+  // Split the shuffled list into EPOCH_LENGTH pieces
+  const validatorsPerSlot: int[][] = split(shuffledActiveValidatorIndices, EPOCH_LENGTH);
+
+  return validatorsPerSlot.map((slotIndices: int[], slot: int) => {
+    // Split the shuffled list into committeesPerSlot pieces
+    const shardIndices: int[][] = split(slotIndices, committeesPerSlot);
+    const shardIdStart: int = crosslinkingStartShard + slot * committeesPerSlot;
+
+    return shardIndices.map((indices: int[], shardPosition: int) => {
+      return {
+        committee: indices,
+        shard: (shardIdStart + shardPosition) % SHARD_COUNT,
+        totalValidatorCount: activeValidatorIndices.length,
+      };
+    });
+  });
 }
 
 /**
