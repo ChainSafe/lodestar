@@ -34,3 +34,7 @@ For `beaconChain/` you can run `npm test` after installing dependencies.
 
 ## Contributors
 If you would like to contribute, please submit an issue or talk to us on our [gitter](https://gitter.im/chainsafe/lodestar-chain).
+
+## Donations
+We are a local group of Toronto open source developers. As such, all of our open source work is funded by grants. We all take the time out of our hectic lives to contribute to the Ethereum ecosystem.
+If you want to donate, you can send us ETH at the following address: 0x3990a27b2dA3612727dD3A9cf877C94465C32776
