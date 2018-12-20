@@ -23,6 +23,7 @@ const gen_key_pair = (pwd, salt) => {
 
 // multiply point P by scalar k
 // Z = P*k
+// return curve point
 const scalar_mult = (P, k) => {
     Z = []
     ctx.ECDH.ECPSVDP_DH(P, k, Z)
@@ -31,11 +32,13 @@ const scalar_mult = (P, k) => {
 
 
 // perform Z = k*G1
+// return curve point
 const scalar_base_mult = (k) => {
     G = ctx.ECP.generator()
     return scalar_mult(G, k)
 }
 
+// add P1, P2, return the result which is another curve point
 const add = (P1, P2) => {
     P1.add(P2)
     return P1
@@ -49,14 +52,16 @@ const hash_string = (m) => {
 
 // perform H(m) = sha3(m)*G 
 // not sure if this is the correct method to hash to curve
+// returns a point on the curve
 const hash_to_curve = (m) => {
     return scalar_base_mult(hash_string(m))
 }
 
 // perform S = k*H(m) where S is the signature and H(m) is the hash of the message to
 // the curve
+// return S, a curve point
 const bls_sign = (k, m) => {
-
+    return scalar_mult(hash_to_curve(m), k)
 }
 
 // perform e(P, H(m)) == e(G, S) where P is our public key, m is our message, S is 

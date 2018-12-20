@@ -45,6 +45,8 @@ describe("bls", () => {
 	})
 
 	it("should hash a string", () => {
-		console.log(bls.hash_string("noot"))
+		let s = bls.hash_string("noot")
+		console.log(s.toString('hex'))
+		assert(s.toString('hex') == "2d7e9bbeb19cc0fc08cf4305c126dbf1f2952c63fb5006de5c2f25292a44ff2b")
 	})
 })
