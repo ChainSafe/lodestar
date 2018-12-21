@@ -77,6 +77,23 @@ describe('SimpleSerialize eq', () => {
         assert(eq(result1,result2) === false, "both int16 objects should be different");
     })
 
+	it('should be reflexive with int24 object that was simply serialized', () => {
+		let intInput = 8355840;
+		let result = serialize(intInput, 'int24');
+
+		assert(eq(result, result) === true === true, "int24 result should be the same as itself");
+	})
+
+	it('should be false given different int24 objects that were simply serialized', () => {
+		let intInput1 = 8355840;
+		let result1 = serialize(intInput1, 'int24');
+
+		let intInput2 = 16777213;
+		let result2 = serialize(intInput2, 'int24');
+
+		assert(eq(result1,result2) === false, "both int24 objects should be different");
+	})
+
     it('should be reflexive with int32 object that was simply serialized', () => {
         let intInput = 1000000000;
         let result = serialize(intInput, 'int32');

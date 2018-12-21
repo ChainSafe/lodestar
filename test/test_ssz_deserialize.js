@@ -103,6 +103,17 @@ describe('SimpleSerialize - deserializes signed integers', () => {
 
     });
 
+	it(`deserializes int24`, () => {
+
+		let intInput = 8355840;
+		let result = deserialize(serialize(intInput, 'int24'), 0, 'int24');
+
+		assert.isNotNull(result, 'int24 result should not be null');
+		assert.equal(result.deserializedData, intInput, 'int24 result should be same as input');
+		assert.equal(result.offset, 3, 'Offset should be 2 bytes');
+
+	});
+
     it(`deserializes int32`, () => {        
         
         let intInput = 1000000000;
@@ -183,6 +194,17 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
         assert.equal(result.offset, 2, 'Offset should be 2 bytes');
 
     });
+
+	it(`deserializes uint24`, () => {
+
+		let intInput = 8355840;
+		let result = deserialize(serialize(intInput, 'uint24'), 0, 'uint24');
+
+		assert.isNotNull(result, 'uint24 result should not be null');
+		assert.equal(result.deserializedData, intInput, 'uint24 result should be same as input');
+		assert.equal(result.offset, 3, 'Offset should be 4 bytes');
+
+	});
 
     it(`deserializes uint32`, () => {        
         

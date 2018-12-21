@@ -237,6 +237,28 @@ describe('SimpleSerialize - serializes signed integers', () => {
 
     });
 
+	it(`serializes int24`, () => {
+
+		let intInput = 8355840;
+		let result = serialize(intInput, 'int24');
+		let intResult = result.readIntBE(0, 3);
+
+		assert.isNotNull(result, 'int24 result should not be null');
+		assert.equal(intResult, intInput, 'int24 result should be same as input');
+
+	});
+
+	it(`serializes int24 (negative)`, () => {
+
+		let intInput = -8355840;
+		let result = serialize(intInput, 'int24');
+		let intResult = result.readIntBE(0, 3);
+
+		assert.isNotNull(result, 'int24 result should not be null');
+		assert.equal(intResult, intInput, 'int24 result should be same as input');
+
+	});
+
     it(`serializes int32`, () => {        
         
         let intInput = 1000000000;
