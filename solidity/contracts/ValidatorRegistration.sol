@@ -1,5 +1,5 @@
 // Adapted from: https://github.com/prysmaticlabs/prysm/blob/master/contracts/validator-registration-contract/validator_registration.sol
-pragma solidity ^0.4.23;
+pragma solidity ^0.5.0;
 pragma experimental ABIEncoderV2;
 
 contract ValidatorRegistration {
@@ -38,7 +38,7 @@ contract ValidatorRegistration {
     //    'randao_commitment`: 'hash32'
     // }
     function deposit(
-        bytes depositParams
+        bytes memory depositParams
     )
         public
         payable
@@ -77,11 +77,11 @@ contract ValidatorRegistration {
         }
     }
 
-    function getReceiptRoot() public constant returns (bytes) {
+    function getReceiptRoot() public view returns (bytes memory) {
         return receiptTree[1];
     }
 
-    function toBytes(uint x) private constant returns (bytes memory) {
+    function toBytes(uint x) private pure returns (bytes memory) {
         bytes memory b = new bytes(32);
         assembly {
           mstore(add(b, 32), x)
@@ -89,7 +89,7 @@ contract ValidatorRegistration {
         return b;
     }
 
-    function mergeBytes(bytes memory a, bytes memory b) private returns (bytes memory c) {
+    function mergeBytes(bytes memory a, bytes memory b) private pure returns (bytes memory c) {
         // Store the length of the first array
         uint alen = a.length;
         // Store the length of BOTH arrays

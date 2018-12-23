@@ -1,7 +1,8 @@
 const registrationContract = artifacts.require('ValidatorRegistration');
 
-const DEPOSIT_AMOUNT = web3.toWei(32, 'ether')
-const MIN_TOPUP_AMOUNT = web3.toWei(1, 'ether')
+const DEPOSIT_AMOUNT = web3.utils.toWei('32', 'ether')
+const MIN_TOPUP_AMOUNT = web3.utils.toWei('1', 'ether')
+const DEPOSIT_DATA = web3.utils.sha3('@aunyks')
 
 const assertRevert = async tx => {
   try {
@@ -42,7 +43,8 @@ contract('ValidatorRegistration', accounts => {
         if (err) {
           reject(err)
         } else {
-          resolve(bal.lt(DEPOSIT_AMOUNT))
+          const balance = web3.utils.toBN(bal)
+          resolve(balance.lt(DEPOSIT_AMOUNT))
         }
       })
     })
@@ -64,46 +66,45 @@ contract('ValidatorRegistration', accounts => {
   })
 
   it('fails on deposit less than the topup amount', async () => {
-    const depositTxion = this.contract.deposit.bind(this.contract, '000', {
+    const depositTxion = this.contract.deposit.bind(this.contract, DEPOSIT_DATA, {
       from: this.depositAddress,
-      value: web3.toWei(0.9, 'ether')
+      value: web3.utils.toWei('0.9', 'ether')
     });
     await assertRevert(depositTxion)
   })
 
   it('fails on deposit more than 32 ETH', async () => {
-    const depositTxion = this.contract.deposit.bind(this.contract, '000', {
+    const depositTxion = this.contract.deposit.bind(this.contract, DEPOSIT_DATA, {
       from: this.depositAddress,
-      value: web3.toWei(33, 'ether')
+      value: web3.utils.toWei('33', 'ether')
     })
     await assertRevert(depositTxion)
   })
 
   it('successfully makes a 32 ETH deposit', async () => {
-    await this.contract.deposit('0000', {
+    await this.contract.deposit(DEPOSIT_DATA, {
       from: this.depositAddress,
       value: DEPOSIT_AMOUNT,
     })
   })
 
   it('properly emits Eth1Deposit event', async () => {
-    const depositData = web3.sha3('@aunyks')
-    const depositTxion = this.contract.deposit.bind(this.contract, depositData, {
+    const depositTxion = this.contract.deposit.bind(this.contract, DEPOSIT_DATA, {
       from: this.depositAddress,
       value: DEPOSIT_AMOUNT
     })
-    await inTransaction(depositTxion, 'Eth1Deposit', { data: depositData })
+    await inTransaction(depositTxion, 'Eth1Deposit', { data: DEPOSIT_DATA })
   })
 
   it('properly emits ChainStart event', async () => {
     let i
     for (i = 0; i < 7; i++) {
-      await this.contract.deposit('00', {
+      await this.contract.deposit(DEPOSIT_DATA, {
         from: accounts[i],
         value: DEPOSIT_AMOUNT,
       })
     }
-    const depositTxion = this.contract.deposit.bind(this.contract, '00', {
+    const depositTxion = this.contract.deposit.bind(this.contract, DEPOSIT_DATA, {
       from: accounts[i + 1],
       value: DEPOSIT_AMOUNT
     })
