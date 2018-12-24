@@ -19,8 +19,7 @@ contract ValidatorRegistration {
     uint public constant DEPOSITS_FOR_CHAIN_START = 8;
     uint public constant MIN_TOPUP_SIZE = 1 ether;
     uint public constant GWEI_PER_ETH = 10 ** 9;
-    // Setting MERKLE_TREE_DEPTH to 16 instead of 32 due to gas limit
-    uint public constant MERKLE_TREE_DEPTH = 16;
+    uint public constant MERKLE_TREE_DEPTH = 32;
     uint public constant SECONDS_PER_DAY = 86400;
 
     mapping (uint => bytes) public receiptTree;
