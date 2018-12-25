@@ -1,16 +1,26 @@
 import { ethers, Contract } from 'ethers';
-
-// Relative imports
-import { MAINNET_DEPOSIT_ADDRESS, DEPOSIT_CONTRACT_ADDRESS, DEPOSIT_CONTRACT_BLOCK_NUMBER } from "../constants/constants";
 import { EtherscanProvider } from 'ethers/providers';
 
+// Relative imports
+import { Deposit } from '../interfaces/blocks';
+import { MAINNET_DEPOSIT_ADDRESS, DEPOSIT_CONTRACT_ADDRESS, DEPOSIT_CONTRACT_BLOCK_NUMBER } from "../constants/constants";
+
+// Type stubs
+type int = number;
+type bytes = number;
+type uint24 = number;
+type hash32 = string;
+
+// NOTE: 
+// Currently the workflow is to call `pollDepositContract` and essential let it run until the `chainStart` log is emitted.
+// If we move to a class based approach it might work better.
 const Start = (): void => {
   pollDepositContract()
   // getInitialBeaconState()
 };
 
-// This is stubbed
 const pollDepositContract = () => {
+  const deposits: Deposit[] = [];
   // Connect to the network
   let provider = ethers.getDefaultProvider();
   let depositContract: ethers.Contract = new ethers.Contract(MAINNET_DEPOSIT_ADDRESS, abi, provider);
@@ -20,10 +30,16 @@ const pollDepositContract = () => {
     topics: [ topic ]
   }
 
-  provider.on(filter, (event) => {
-    console.log(event);
-    return true;
+  // For every deposit push to `deposits`
+  provider.on(filter, (previousReceiptRoot, data, totalDepositcount, log) => {
+    const newReceipt: Deposit = {
+      depositData: data,
+      merkleBranch: previousReceiptRoot,
+      merkleTreeIndex: totalDepositcount
+    };
+    deposits.push(newReceipt);
   });
+
   // Reset filter to start when the contract was mined.
   provider.resetEventsBlock(DEPOSIT_CONTRACT_BLOCK_NUMBER);
 };
