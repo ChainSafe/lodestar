@@ -19,7 +19,7 @@ contract ValidatorRegistration {
     uint public constant DEPOSITS_FOR_CHAIN_START = 8;
     uint public constant MIN_TOPUP_SIZE = 1 ether;
     uint public constant GWEI_PER_ETH = 10 ** 9;
-    uint public constant MERKLE_TREE_DEPTH = 32;
+    uint public constant DEPOSIT_CONTRACT_TREE_DEPTH = 32;
     uint public constant SECONDS_PER_DAY = 86400;
 
     mapping (uint => bytes32) public receiptTree;
@@ -42,7 +42,7 @@ contract ValidatorRegistration {
         public
         payable
     {
-        uint index = totalDepositCount + 2 ** MERKLE_TREE_DEPTH;
+        uint index = totalDepositCount + 2 ** DEPOSIT_CONTRACT_TREE_DEPTH;
         bytes memory msgGweiInBytes = toBytes(msg.value);
         bytes memory timeStampInBytes = toBytes(block.timestamp);
         bytes memory depositData = abi.encodePacked(msgGweiInBytes, timeStampInBytes, depositParams);
@@ -50,7 +50,7 @@ contract ValidatorRegistration {
         emit Eth1Deposit(receiptTree[1], depositParams, totalDepositCount);
 
         receiptTree[index] = keccak256(depositData);
-        for (uint i = 0; i < MERKLE_TREE_DEPTH; i++) {
+        for (uint i = 0; i < DEPOSIT_CONTRACT_TREE_DEPTH; i++) {
             index = index / 2;
             receiptTree[index] = keccak256(abi.encodePacked(receiptTree[index * 2], receiptTree[index * 2 + 1]));
         }
