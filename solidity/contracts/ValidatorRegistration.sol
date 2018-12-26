@@ -42,6 +42,15 @@ contract ValidatorRegistration {
         public
         payable
     {
+        require(
+            msg.value <= DEPOSIT_SIZE,
+            "Deposit can't be greater than DEPOSIT_SIZE."
+        );
+        require(
+            msg.value >= MIN_TOPUP_SIZE,
+            "Deposit can't be lesser than MIN_TOPUP_SIZE."
+        );
+        
         uint index = totalDepositCount + 2 ** DEPOSIT_CONTRACT_TREE_DEPTH;
         bytes memory msgGweiInBytes = toBytes(msg.value);
         bytes memory timeStampInBytes = toBytes(block.timestamp);
@@ -55,14 +64,6 @@ contract ValidatorRegistration {
             receiptTree[index] = keccak256(abi.encodePacked(receiptTree[index * 2], receiptTree[index * 2 + 1]));
         }
 
-        require(
-            msg.value <= DEPOSIT_SIZE,
-            "Deposit can't be greater than DEPOSIT_SIZE."
-        );
-        require(
-            msg.value >= MIN_TOPUP_SIZE,
-            "Deposit can't be lesser than MIN_TOPUP_SIZE."
-        );
         if (msg.value == DEPOSIT_SIZE) {
             totalDepositCount++;
         }
