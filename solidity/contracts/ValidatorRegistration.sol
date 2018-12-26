@@ -7,7 +7,7 @@ contract ValidatorRegistration {
     event Eth1Deposit(
         bytes32 previousReceiptRoot,
         bytes data,
-        uint totalDepositcount
+        uint depositCount
     );
 
     event ChainStart(
@@ -23,6 +23,7 @@ contract ValidatorRegistration {
     uint public constant SECONDS_PER_DAY = 86400;
 
     mapping (uint => bytes32) public receiptTree;
+    uint public depositCount;
     uint public totalDepositCount;
 
     // When users wish to become a validator by moving ETH from
@@ -50,30 +51,30 @@ contract ValidatorRegistration {
             msg.value >= MIN_TOPUP_SIZE,
             "Deposit can't be lesser than MIN_TOPUP_SIZE."
         );
-        
-        uint index = totalDepositCount + 2 ** DEPOSIT_CONTRACT_TREE_DEPTH;
+
+        uint index = depositCount + 2 ** DEPOSIT_CONTRACT_TREE_DEPTH;
         bytes memory msgGweiInBytes = toBytes(msg.value);
         bytes memory timeStampInBytes = toBytes(block.timestamp);
         bytes memory depositData = abi.encodePacked(msgGweiInBytes, timeStampInBytes, depositParams);
 
-        emit Eth1Deposit(receiptTree[1], depositParams, totalDepositCount);
+        emit Eth1Deposit(receiptTree[1], depositParams, depositCount);
 
         receiptTree[index] = keccak256(depositData);
         for (uint i = 0; i < DEPOSIT_CONTRACT_TREE_DEPTH; i++) {
             index = index / 2;
             receiptTree[index] = keccak256(abi.encodePacked(receiptTree[index * 2], receiptTree[index * 2 + 1]));
         }
+        depositCount += 1;
 
         if (msg.value == DEPOSIT_SIZE) {
             totalDepositCount++;
-        }
-
-        // When ChainStart log publishes, beacon chain node initializes the chain and use timestampDayBoundry
-        // as genesis time.
-        if (totalDepositCount == DEPOSITS_FOR_CHAIN_START) {
-            uint timestampDayBoundry = block.timestamp - block.timestamp % SECONDS_PER_DAY + SECONDS_PER_DAY;
-            bytes memory timestampDayBoundryBytes = toBytes(timestampDayBoundry);
-            emit ChainStart(receiptTree[1], timestampDayBoundryBytes);
+            // When ChainStart log publishes, beacon chain node initializes the chain and use timestampDayBoundry
+            // as genesis time.
+            if (totalDepositCount == DEPOSITS_FOR_CHAIN_START) {
+                uint timestampDayBoundry = block.timestamp - block.timestamp % SECONDS_PER_DAY + SECONDS_PER_DAY;
+                bytes memory timestampDayBoundryBytes = toBytes(timestampDayBoundry);
+                emit ChainStart(receiptTree[1], timestampDayBoundryBytes);
+            }
         }
     }
 
