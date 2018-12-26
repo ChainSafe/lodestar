@@ -2,7 +2,7 @@
 
 // These interfaces relate to the data structures for beacon chain state
 
-import { AttestationData } from "./blocks";
+import { AttestationData, Deposit } from "./blocks";
 
 type bytes = number;
 type uint24 = number;
@@ -117,4 +117,14 @@ export interface ForkData {
   postForkVersion: uint64;
   // Fork slot number
   forkSlot: uint64;
+}
+
+// Values returned once ChainStart log is emitted
+export interface ChainStart {
+  // Array of all deposits recorded from EthDeposit log from the eth1 contract
+  deposits: Deposit[];
+  // processedPowReceiptRoot for BeaconState
+  receiptRoot: hash32;
+  // Genesis start time
+  time: uint64;
 }
