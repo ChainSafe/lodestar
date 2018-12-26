@@ -5,13 +5,13 @@ pragma experimental ABIEncoderV2;
 contract ValidatorRegistration {
 
     event Eth1Deposit(
-        bytes previousReceiptRoot,
+        bytes32 previousReceiptRoot,
         bytes data,
         uint totalDepositcount
     );
 
     event ChainStart(
-        bytes receiptRoot,
+        bytes32 receiptRoot,
         bytes time
     );
 
@@ -22,7 +22,7 @@ contract ValidatorRegistration {
     uint public constant MERKLE_TREE_DEPTH = 32;
     uint public constant SECONDS_PER_DAY = 86400;
 
-    mapping (uint => bytes) public receiptTree;
+    mapping (uint => bytes32) public receiptTree;
     uint public totalDepositCount;
 
     // When users wish to become a validator by moving ETH from
@@ -45,14 +45,14 @@ contract ValidatorRegistration {
         uint index = totalDepositCount + 2 ** MERKLE_TREE_DEPTH;
         bytes memory msgGweiInBytes = toBytes(msg.value);
         bytes memory timeStampInBytes = toBytes(block.timestamp);
-        bytes memory depositData = mergeBytes(mergeBytes(msgGweiInBytes, timeStampInBytes), depositParams);
+        bytes memory depositData = abi.encodePacked(msgGweiInBytes, timeStampInBytes, depositParams);
 
         emit Eth1Deposit(receiptTree[1], depositParams, totalDepositCount);
 
-        receiptTree[index] = abi.encodePacked(keccak256(depositData));
+        receiptTree[index] = keccak256(depositData);
         for (uint i = 0; i < MERKLE_TREE_DEPTH; i++) {
             index = index / 2;
-            receiptTree[index] = abi.encodePacked(keccak256(mergeBytes(receiptTree[index * 2], receiptTree[index * 2 + 1])));
+            receiptTree[index] = keccak256(abi.encodePacked(receiptTree[index * 2], receiptTree[index * 2 + 1]));
         }
 
         require(
@@ -76,7 +76,7 @@ contract ValidatorRegistration {
         }
     }
 
-    function getReceiptRoot() public view returns (bytes memory) {
+    function getReceiptRoot() public view returns (bytes32) {
         return receiptTree[1];
     }
 
@@ -86,27 +86,5 @@ contract ValidatorRegistration {
           mstore(add(b, 32), x)
         }
         return b;
-    }
-
-    function mergeBytes(bytes memory a, bytes memory b) private pure returns (bytes memory c) {
-        // Store the length of the first array
-        uint alen = a.length;
-        // Store the length of BOTH arrays
-        uint totallen = alen + b.length;
-        // Count the loops required for array a (sets of 32 bytes)
-        uint loopsa = (a.length + 31) / 32;
-        // Count the loops required for array b (sets of 32 bytes)
-        uint loopsb = (b.length + 31) / 32;
-        assembly {
-            let m := mload(0x40)
-            // Load the length of both arrays to the head of the new bytes array
-            mstore(m, totallen)
-            // Add the contents of a to the array
-            for {  let i := 0 } lt(i, loopsa) { i := add(1, i) } { mstore(add(m, mul(32, add(1, i))), mload(add(a, mul(32, add(1, i))))) }
-            // Add the contents of b to the array
-            for {  let i := 0 } lt(i, loopsb) { i := add(1, i) } { mstore(add(m, add(mul(32, add(1, i)), alen)), mload(add(b, mul(32, add(1, i))))) }
-            mstore(0x40, add(m, add(32, totallen)))
-            c := m
-        }
     }
 }
