@@ -1,4 +1,3 @@
-// Adapted from: https://github.com/prysmaticlabs/prysm/blob/master/contracts/validator-registration-contract/validator_registration.sol
 pragma solidity ^0.5.0;
 pragma experimental ABIEncoderV2;
 
@@ -44,6 +43,10 @@ contract ValidatorRegistration {
         payable
     {
         require(
+            depositParams.length == 2048,
+            "Deposit parameters must be 2048 bytes in length"
+        );
+        require(
             msg.value <= DEPOSIT_SIZE,
             "Deposit can't be greater than DEPOSIT_SIZE."
         );
@@ -53,27 +56,25 @@ contract ValidatorRegistration {
         );
 
         uint index = depositCount + 2 ** DEPOSIT_CONTRACT_TREE_DEPTH;
-        bytes memory msgGweiInBytes = toBytes(msg.value);
+        bytes memory msgGweiInBytes = toBytes(msg.value / GWEI_PER_ETH);
         bytes memory timeStampInBytes = toBytes(block.timestamp);
         bytes memory depositData = abi.encodePacked(msgGweiInBytes, timeStampInBytes, depositParams);
 
-        emit Eth1Deposit(receiptTree[1], depositParams, depositCount);
+        emit Eth1Deposit(receiptTree[1], depositData, depositCount);
 
         receiptTree[index] = keccak256(depositData);
         for (uint i = 0; i < DEPOSIT_CONTRACT_TREE_DEPTH; i++) {
             index = index / 2;
             receiptTree[index] = keccak256(abi.encodePacked(receiptTree[index * 2], receiptTree[index * 2 + 1]));
         }
-        depositCount += 1;
 
+        depositCount++;
         if (msg.value == DEPOSIT_SIZE) {
             totalDepositCount++;
-            // When ChainStart log publishes, beacon chain node initializes the chain and use timestampDayBoundry
-            // as genesis time.
             if (totalDepositCount == DEPOSITS_FOR_CHAIN_START) {
-                uint timestampDayBoundry = block.timestamp - block.timestamp % SECONDS_PER_DAY + SECONDS_PER_DAY;
-                bytes memory timestampDayBoundryBytes = toBytes(timestampDayBoundry);
-                emit ChainStart(receiptTree[1], timestampDayBoundryBytes);
+                uint timestampDayBoundary = block.timestamp - block.timestamp % SECONDS_PER_DAY + SECONDS_PER_DAY;
+                bytes memory timestampDayBoundaryBytes = toBytes(timestampDayBoundary);
+                emit ChainStart(receiptTree[1], timestampDayBoundaryBytes);
             }
         }
     }
@@ -82,6 +83,7 @@ contract ValidatorRegistration {
         return receiptTree[1];
     }
 
+    // Gets last 8 bytes of uint256
     function toBytes(uint x) private pure returns (bytes memory) {
         bytes memory b = new bytes(32);
         assembly {
