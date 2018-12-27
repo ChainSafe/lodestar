@@ -89,6 +89,10 @@ contract ValidatorRegistration {
         assembly {
           mstore(add(b, 32), x)
         }
-        return b;
+        bytes memory c = new bytes(8);
+        for(uint8 i = 24; i < 32; i++){
+            c[i - 24] = b[i];
+        }
+        return c;
     }
 }

@@ -2,7 +2,12 @@ const registrationContract = artifacts.require('ValidatorRegistration');
 
 const DEPOSIT_AMOUNT = web3.utils.toWei('32', 'ether')
 const MIN_TOPUP_AMOUNT = web3.utils.toWei('1', 'ether')
-const DEPOSIT_DATA = web3.utils.sha3('@aunyks')
+// Make a 32 byte digest 64 times to satisfy 2048 byte deposit size
+let rawDepositData = ''
+for (let i = 0; i < 64; i++) {
+  rawDepositData = rawDepositData + web3.utils.sha3('@aunyks').slice(2)
+}
+const DEPOSIT_DATA = '0x' + rawDepositData
 
 const assertRevert = async tx => {
   try {
@@ -93,7 +98,7 @@ contract('ValidatorRegistration', accounts => {
       from: this.depositAddress,
       value: DEPOSIT_AMOUNT
     })
-    await inTransaction(depositTxion, 'Eth1Deposit', { data: DEPOSIT_DATA })
+    await inTransaction(depositTxion, 'Eth1Deposit')
   })
 
   it('properly emits ChainStart event', async () => {
