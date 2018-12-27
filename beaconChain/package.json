@@ -29,10 +29,9 @@
     "blockchain"
   ],
   "dependencies": {
+    "@polkadot/util-crypto": "^0.33.27",
     "bignumber.js": "^7.2.1",
     "blakejs": "^1.1.0",
-    "ethereumjs-util": "^6.0.0",
-    "safe-buffer": "^5.1.2",
     "ssz": "^1.5.2"
   },
   "bin": {

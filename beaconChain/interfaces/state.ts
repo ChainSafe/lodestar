@@ -1,4 +1,3 @@
-import { Buffer } from "safe-buffer";
 // TODO replace uint, hash32, bytes
 
 // These interfaces relate to the data structures for beacon chain state
@@ -9,7 +8,7 @@ type bytes = number;
 type uint24 = number;
 type uint64 = number;
 type uint384 = number;
-type hash32 = Buffer;
+type hash32 = Uint8Array;
 
 export interface BeaconState {
   slot: uint64;

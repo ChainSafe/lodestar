@@ -21,7 +21,7 @@ export const MAX_DEPOSIT = 2 ** 5; // 32 ETH
 // Initial values
 export const INITIAL_FORK_VERSION = 0;
 export const INITIAL_SLOT_NUMBER = 0;
-export const ZERO_HASH = Buffer.alloc(32);
+export const ZERO_HASH = new Uint8Array(32);
 
 // Time parameters
 export const SLOT_DURATION = 6; // 6 seconds

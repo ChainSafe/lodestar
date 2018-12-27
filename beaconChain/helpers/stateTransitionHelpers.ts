@@ -1,5 +1,4 @@
-import { keccak256, toBuffer } from "ethereumjs-util";
-import { Buffer } from "safe-buffer";
+import { keccakAsU8a } from "@polkadot/util-crypto";
 // Helper functions related to state transition functions
 import { EPOCH_LENGTH, MAX_DEPOSIT, SHARD_COUNT, TARGET_COMMITTEE_SIZE } from "../constants/constants";
 import { ValidatorStatusCodes } from "../constants/enums";
@@ -9,7 +8,7 @@ import {BeaconState, ShardCommittee, ValidatorRecord} from "../interfaces/state"
 type int = number;
 type bytes = number;
 type uint24 = number;
-type hash32 = Buffer;
+type hash32 = Uint8Array;
 
 /**
  * The following is a function that gets active validator indices from the validator list.
@@ -22,6 +21,17 @@ export function getActiveValidatorIndices(validators: ValidatorRecord[]): int[] 
     ? [...accumulator, index]
     : accumulator;
   }, []);
+}
+
+// Modified from: https://github.com/feross/buffer/blob/master/index.js#L1125
+function readUIntBE(array: Uint8Array, offset: number, byteLength: number): number {
+    let val: number = array[offset + --byteLength];
+    let mul: number = 1;
+    while (byteLength > 0) {
+        mul *= 0x100;
+        val += array[offset + --byteLength] * mul;
+    }
+    return val;
 }
 
 /**
@@ -43,11 +53,11 @@ function shuffle<T>(values: T[], seed: hash32): T[] {
 
   // Make a copy of the values
   const output: T[] = values.slice();
-  let source: Buffer = toBuffer(seed);
+  let source: Uint8Array = seed;
   let index: number = 0;
   while (index < valuesCount - 1) {
     // Re-hash the `source` to obtain a new pattern of bytes.
-    source = keccak256(source).slice(0, 32);
+    source = keccakAsU8a(source).slice(0, 32);
 
     // Iterate through the `source` bytes in 3-byte chunks.
     for (let position = 0; position < 32 - (32 % randBytes); position += randBytes) {
@@ -58,7 +68,7 @@ function shuffle<T>(values: T[], seed: hash32): T[] {
         break;
       }
       // Read 3-bytes of `source` as a 24-bit big-endian integer.
-      const sampleFromSource: number = toBuffer(source).slice(position, position + randBytes).readUIntBE(0, 3);
+      const sampleFromSource: number = readUIntBE(source.slice(position, position + randBytes), 0, randBytes);
 
       // Sample values greater than or equal to `sample_max` will cause
       // modulo bias when mapped into the `remaining` range.

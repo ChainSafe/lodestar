@@ -1,5 +1,4 @@
 import { assert } from "chai";
-import { toBuffer } from "ethereumjs-util";
 import { ValidatorStatusCodes } from "../../constants/enums";
 import { clamp, getActiveValidatorIndices, getNewShuffling, intSqrt, split } from "../../helpers/stateTransitionHelpers";
 import { ShardCommittee, ValidatorRecord } from "../../interfaces/state";
@@ -136,10 +135,10 @@ describe("getActiveValidatorIndices", () => {
     exitCount: randNum(),
     lastStatusChangeSlot: randNum(),
     pubkey: randNum(),
-    randaoCommitment: toBuffer("A"),
+    randaoCommitment: Uint8Array.of(65),
     randaoSkips: randNum(),
     status: randNum(),
-    withdrawalCredentials: toBuffer("A"),
+    withdrawalCredentials: Uint8Array.of(65),
   });
   const vrArray: ValidatorRecord[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(genValidatorRecord);
 
@@ -171,7 +170,7 @@ describe("getActiveValidatorIndices", () => {
 });
 
 describe("getNewShuffling", () => {
-  const seed = toBuffer("A");
+  const seed = Uint8Array.of(65);
   const validators = Array.from({ length: 1000 }, () => ({ status: ValidatorStatusCodes.ACTIVE } as ValidatorRecord));
   const shuffled = getNewShuffling(seed, validators, 0);
   const exists = (shuffling: ShardCommittee[][], validatorIndex: number): boolean => {
