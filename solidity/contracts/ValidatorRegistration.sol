@@ -15,7 +15,7 @@ contract ValidatorRegistration {
     );
 
     uint public constant DEPOSIT_SIZE = 32 ether;
-    uint public constant DEPOSITS_FOR_CHAIN_START = 8;
+    uint public constant DEPOSITS_FOR_CHAIN_START = 8; // 2**14 in production
     uint public constant MIN_TOPUP_SIZE = 1 ether;
     uint public constant GWEI_PER_ETH = 10 ** 9;
     uint public constant DEPOSIT_CONTRACT_TREE_DEPTH = 32;
@@ -25,17 +25,6 @@ contract ValidatorRegistration {
     uint public depositCount;
     uint public totalDepositCount;
 
-    // When users wish to become a validator by moving ETH from
-    // 1.0 chain to the 2.0 chain, they should call this function
-    // sending along DEPOSIT_SIZE ETH and providing depositParams
-    // as a simple serialize'd DepositParams object of the following
-    // form: 
-    // {
-    //    'pubkey': 'int256',
-    //    'proof_of_possession': ['int256'],
-    //    'withdrawal_credentials`: 'hash32',
-    //    'randao_commitment`: 'hash32'
-    // }
     function deposit(
         bytes memory depositParams
     )
@@ -44,7 +33,7 @@ contract ValidatorRegistration {
     {
         require(
             depositParams.length == 2048,
-            "Deposit parameters must be 2048 bytes in length"
+            "Deposit parameters must be 2048 bytes in length."
         );
         require(
             msg.value <= DEPOSIT_SIZE,
@@ -59,6 +48,10 @@ contract ValidatorRegistration {
         bytes memory msgGweiInBytes = toBytes(msg.value / GWEI_PER_ETH);
         bytes memory timeStampInBytes = toBytes(block.timestamp);
         bytes memory depositData = abi.encodePacked(msgGweiInBytes, timeStampInBytes, depositParams);
+        require(
+            depositData.length == 2064,
+            "Message Gwei and block timestamp bytes improperly sliced."
+        );
 
         emit Eth1Deposit(receiptTree[1], depositData, depositCount);
 
