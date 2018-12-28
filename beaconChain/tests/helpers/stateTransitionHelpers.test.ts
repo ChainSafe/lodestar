@@ -1,6 +1,6 @@
 import { assert } from "chai";
 import { ValidatorStatusCodes } from "../../constants/enums";
-import { clamp, getActiveValidatorIndices, getNewShuffling, intSqrt, split } from "../../helpers/stateTransitionHelpers";
+import { clamp, getActiveValidatorIndices, getNewShuffling, intSqrt, readUIntBE, split } from "../../helpers/stateTransitionHelpers";
 import { ShardCommittee, ValidatorRecord } from "../../interfaces/state";
 
 describe("Split", () => {
@@ -166,6 +166,17 @@ describe("getActiveValidatorIndices", () => {
     const getAVI = getActiveValidatorIndices(vrArray);
 
     assert(filtered.length === getAVI.length);
+  });
+});
+
+describe("readUIntBE", () => {
+  const buf = Uint8Array.from([0x01, 0x02, 0x03, 0x04, 0x05, 0x06]);
+
+  it("Read uints should be calculated correctly", () => {
+    assert.strictEqual(readUIntBE(buf, 0, 1), 0x01);
+    assert.strictEqual(readUIntBE(buf, 0, 3), 0x010203);
+    assert.strictEqual(readUIntBE(buf, 0, 5), 0x0102030405);
+    assert.strictEqual(readUIntBE(buf, 0, 6), 0x010203040506);
   });
 });
 

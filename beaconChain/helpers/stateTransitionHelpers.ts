@@ -24,7 +24,7 @@ export function getActiveValidatorIndices(validators: ValidatorRecord[]): int[] 
 }
 
 // Modified from: https://github.com/feross/buffer/blob/master/index.js#L1125
-function readUIntBE(array: Uint8Array, offset: number, byteLength: number): number {
+export function readUIntBE(array: Uint8Array, offset: number, byteLength: number): number {
     let val: number = array[offset + --byteLength];
     let mul: number = 1;
     while (byteLength > 0) {
