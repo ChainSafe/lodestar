@@ -8,7 +8,7 @@ type bytes = number;
 type uint24 = number;
 type uint64 = number;
 type uint384 = number;
-type hash32 = number;
+type hash32 = Uint8Array;
 
 export interface BeaconState {
   slot: uint64;

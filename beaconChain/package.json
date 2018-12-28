@@ -29,6 +29,7 @@
     "blockchain"
   ],
   "dependencies": {
+    "@polkadot/util-crypto": "^0.33.27",
     "bignumber.js": "^7.2.1",
     "blakejs": "^1.1.0",
     "ssz": "^1.5.2"
@@ -39,6 +40,7 @@
   "devDependencies": {
     "@types/chai": "^4.1.7",
     "@types/mocha": "^5.2.5",
+    "@types/node": "^10.12.17",
     "chai": "^4.2.0",
     "mocha": "^5.2.0",
     "nyc": "^13.1.0",

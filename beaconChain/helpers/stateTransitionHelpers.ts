@@ -1,5 +1,6 @@
+import { keccakAsU8a } from "@polkadot/util-crypto";
 // Helper functions related to state transition functions
-import {EPOCH_LENGTH, MAX_DEPOSIT} from "../constants/constants";
+import { EPOCH_LENGTH, MAX_DEPOSIT, SHARD_COUNT, TARGET_COMMITTEE_SIZE } from "../constants/constants";
 import { ValidatorStatusCodes } from "../constants/enums";
 import {AttestationData, BeaconBlock} from "../interfaces/blocks";
 import {BeaconState, ShardCommittee, ValidatorRecord} from "../interfaces/state";
@@ -7,7 +8,7 @@ import {BeaconState, ShardCommittee, ValidatorRecord} from "../interfaces/state"
 type int = number;
 type bytes = number;
 type uint24 = number;
-type hash32 = number;
+type hash32 = Uint8Array;
 
 /**
  * The following is a function that gets active validator indices from the validator list.
@@ -22,38 +23,72 @@ export function getActiveValidatorIndices(validators: ValidatorRecord[]): int[] 
   }, []);
 }
 
+// Modified from: https://github.com/feross/buffer/blob/master/index.js#L1125
+export function readUIntBE(array: Uint8Array, offset: number, byteLength: number): number {
+    let val: number = array[offset + --byteLength];
+    let mul: number = 1;
+    while (byteLength > 0) {
+        mul *= 0x100;
+        val += array[offset + --byteLength] * mul;
+    }
+    return val;
+}
+
 /**
  * The following is a function that shuffles any list; we primarily use it for the validator list.
  * @param {T[]} values
  * @param {hash32} seed
  * @returns {T[]} Returns the shuffled values with seed as entropy.
  */
-// TODO finish this
 function shuffle<T>(values: T[], seed: hash32): T[] {
   const valuesCount: int = values.length;
   // Entropy is consumed from the seed in 3-byte (24 bit) chunks.
-  const randBytes = 3;
+  const randBytes: number = 3;
   // Highest possible result of the RNG
-  const randMax = 2 ** (randBytes * 8) - 1;
+  const randMax: number = 2 ** (randBytes * 8) - 1;
 
   // The range of the RNG places an upper-bound on the size of the list that may be shuffled.
   // It is a logic error to supply an oversized list.
-  if (valuesCount < randMax) { throw new Error("Oversized list supplied to shuffle()!"); }
+  if (!(valuesCount < randMax)) { throw new Error("Oversized list supplied to shuffle!"); }
 
   // Make a copy of the values
   const output: T[] = values.slice();
-  const source = seed; // REALLY??
-  const index = 0; // REALLY??
+  let source: Uint8Array = seed;
+  let index: number = 0;
   while (index < valuesCount - 1) {
     // Re-hash the `source` to obtain a new pattern of bytes.
-    // TODO figure out what this hash function is in python -> JS
-    // let source = hash(source)
+    source = keccakAsU8a(source); // 32 bytes long
 
     // Iterate through the `source` bytes in 3-byte chunks.
+    for (let position = 0; position < 32 - (32 % randBytes); position += randBytes) {
+      // Determine the number of indices remaining in `values` and exit
+      // once the last index is reached.
+      const remaining: number = valuesCount - index;
+      if (remaining === 1) {
+        break;
+      }
+      // Read 3-bytes of `source` as a 24-bit big-endian integer.
+      const sampleFromSource: number = readUIntBE(source.slice(position, position + randBytes), 0, randBytes);
 
+      // Sample values greater than or equal to `sample_max` will cause
+      // modulo bias when mapped into the `remaining` range.
+      const sampleMax: number = randMax - randMax % remaining;
+
+      // Perform a swap if the consumed entropy will not cause modulo bias.
+      if (sampleFromSource < sampleMax) {
+        // Select a replacement index for the current index.
+        const replacementPosition: number = (sampleFromSource % remaining) + index;
+        // Swap the current index with the replacement index.
+        // tslint:disable-next-line no-unused-expression
+        output[index], output[replacementPosition] = output[replacementPosition], output[index];
+        index += 1;
+      } else {
+        // The sample causes modulo bias. A new sample should be read.
+        // index = index
+      }
+    }
   }
-
-  return [];
+  return output;
 }
 
 /**
@@ -88,6 +123,45 @@ export function clamp(minval: int, maxval: int, x: int): int {
     return maxval;
   }
   return x;
+}
+
+/**
+ * Shuffles validators into shard committees using seed as entropy.
+ * @param {hash32} seed
+ * @param {ValidatorRecord[]} validators
+ * @param {int} crosslinkingStartShard
+ * @returns {ShardCommittee[][]}
+ */
+export function getNewShuffling(seed: hash32, validators: ValidatorRecord[], crosslinkingStartShard: int): ShardCommittee[][] {
+  const activeValidatorIndices: int[] = getActiveValidatorIndices(validators);
+
+  const committeesPerSlot: int = Math.max(
+    1,
+    Math.min(
+      Math.floor(SHARD_COUNT / EPOCH_LENGTH),
+      Math.floor(getActiveValidatorIndices.length / EPOCH_LENGTH / TARGET_COMMITTEE_SIZE),
+    ),
+  );
+
+  // Shuffle with seed
+  const shuffledActiveValidatorIndices: int[] = shuffle(activeValidatorIndices, seed);
+
+  // Split the shuffled list into EPOCH_LENGTH pieces
+  const validatorsPerSlot: int[][] = split(shuffledActiveValidatorIndices, EPOCH_LENGTH);
+
+  return validatorsPerSlot.map((slotIndices: int[], slot: int) => {
+    // Split the shuffled list into committeesPerSlot pieces
+    const shardIndices: int[][] = split(slotIndices, committeesPerSlot);
+    const shardIdStart: int = crosslinkingStartShard + slot * committeesPerSlot;
+
+    return shardIndices.map((indices: int[], shardPosition: int) => {
+      return {
+        committee: indices,
+        shard: (shardIdStart + shardPosition) % SHARD_COUNT,
+        totalValidatorCount: activeValidatorIndices.length,
+      };
+    });
+  });
 }
 
 /**

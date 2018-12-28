@@ -1,7 +1,7 @@
 import { assert } from "chai";
 import { ValidatorStatusCodes } from "../../constants/enums";
-import { clamp, getActiveValidatorIndices, intSqrt, split } from "../../helpers/stateTransitionHelpers";
-import { ValidatorRecord } from "../../interfaces/state";
+import { clamp, getActiveValidatorIndices, getNewShuffling, intSqrt, readUIntBE, split } from "../../helpers/stateTransitionHelpers";
+import { ShardCommittee, ValidatorRecord } from "../../interfaces/state";
 
 describe("Split", () => {
   it("array of 0 should return empty", () => {
@@ -135,10 +135,10 @@ describe("getActiveValidatorIndices", () => {
     exitCount: randNum(),
     lastStatusChangeSlot: randNum(),
     pubkey: randNum(),
-    randaoCommitment: randNum(),
+    randaoCommitment: Uint8Array.of(65),
     randaoSkips: randNum(),
     status: randNum(),
-    withdrawalCredentials: randNum(),
+    withdrawalCredentials: Uint8Array.of(65),
   });
   const vrArray: ValidatorRecord[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(genValidatorRecord);
 
@@ -166,5 +166,32 @@ describe("getActiveValidatorIndices", () => {
     const getAVI = getActiveValidatorIndices(vrArray);
 
     assert(filtered.length === getAVI.length);
+  });
+});
+
+describe("readUIntBE", () => {
+  const buf = Uint8Array.from([0x01, 0x02, 0x03, 0x04, 0x05, 0x06]);
+
+  it("Read uints should be calculated correctly", () => {
+    assert.strictEqual(readUIntBE(buf, 0, 1), 0x01);
+    assert.strictEqual(readUIntBE(buf, 0, 3), 0x010203);
+    assert.strictEqual(readUIntBE(buf, 0, 5), 0x0102030405);
+    assert.strictEqual(readUIntBE(buf, 0, 6), 0x010203040506);
+  });
+});
+
+describe("getNewShuffling", () => {
+  const seed = Uint8Array.of(65);
+  const validators = Array.from({ length: 1000 }, () => ({ status: ValidatorStatusCodes.ACTIVE } as ValidatorRecord));
+  const shuffled = getNewShuffling(seed, validators, 0);
+  const exists = (shuffling: ShardCommittee[][], validatorIndex: number): boolean => {
+    return !!shuffling.find((shardCommittees) => {
+      return !!shardCommittees.find((shardCommittee) => {
+        return shardCommittee.committee.includes(validatorIndex);
+      });
+    });
+  };
+  it("Shuffled committees should include all validators in unshuffled set", () => {
+    validators.forEach((v, index) => assert(exists(shuffled, index)));
   });
 });
