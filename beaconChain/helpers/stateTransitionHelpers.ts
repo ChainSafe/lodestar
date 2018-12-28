@@ -57,7 +57,7 @@ function shuffle<T>(values: T[], seed: hash32): T[] {
   let index: number = 0;
   while (index < valuesCount - 1) {
     // Re-hash the `source` to obtain a new pattern of bytes.
-    source = keccakAsU8a(source).slice(0, 32);
+    source = keccakAsU8a(source); // 32 bytes long
 
     // Iterate through the `source` bytes in 3-byte chunks.
     for (let position = 0; position < 32 - (32 % randBytes); position += randBytes) {
