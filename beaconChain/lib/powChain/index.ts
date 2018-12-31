@@ -5,16 +5,17 @@ import { ChainStart } from "../../interfaces/state";
 import { MAINNET_DEPOSIT_ADDRESS, DEPOSIT_CONTRACT_ADDRESS, DEPOSIT_CONTRACT_BLOCK_NUMBER, DEPOSIT_CONTRACT_ABI } from "../../constants/constants";
 
 // Type stubs
-type int = number;
-type bytes = number;
-type uint24 = number;
 type uint64 = number;
 type hash32 = string;
 
+
+// NOTE: This is stubbed
+// TODO: We should find a way to reject the promise somehow.
+// TODO: There is porbably a better way to scrape the logs.
 /**
- * NOTE: Haven't been able to test this yet. Waiting for contracts to test against.
- * TODO: We should find a way to reject the promise somehow.
- * TODO: There is porbably a better way to scrape the logs.
+ * Polls the eth1.x deposit contract for validator deposits. If the ChainStart log is emitted, return the promise with
+ * intial state data.
+ * @returns {Promise<ChainStart>}
  */
 const waitForChainStart = () => {
   return new Promise<ChainStart>((resolve) => {
@@ -46,9 +47,7 @@ const waitForChainStart = () => {
       deposits.push(newDeposit);
     });
 
-    // Listen for ChainStart log
-    // Resolve the promise on ChainStart as we will need to generate initial state.
-    // Deposits are also handled differently after the points
+    // Listen for ChainStart log and resolve the promise.
     provider.on(chainStartFilter, (receiptRoot, time, log) => {
       resolve({ deposits, receiptRoot, time });
     });
@@ -58,7 +57,16 @@ const waitForChainStart = () => {
   });
 };
 
-// TODO Remove `any` from data field.
+// NOTE This is stubbed.
+// TODO Create custom type for param data.
+// TODO Test against contract
+/**
+ * Helper function for processing the Eth1Deposit event.
+ * @param {hash32[]} previousReceiptRoot
+ * @param data
+ * @param {uint64} totalDepositCount
+ * @returns {Deposit}
+ */
 const formatDeposit = (previousReceiptRoot: hash32[], data: any, totalDepositCount: uint64): Deposit => {
   // Reassign values to stay consistent with camel case
   const depositInput: DepositInput = {
@@ -75,6 +83,7 @@ const formatDeposit = (previousReceiptRoot: hash32[], data: any, totalDepositCou
     timestamp: data.timestamp_bytes8
   };
 
+  // Formatted Deposit
   return {
     depositData: depositData,
     merkleBranch: previousReceiptRoot,
