@@ -41,27 +41,8 @@ const inTransaction = async (tx, eventName, eventArgs = {}) => {
 }
 
 contract('ValidatorRegistration', accounts => {
-
-  const addrBalanceTooLow = address => {
-    return new Promise((resolve, reject) => {
-      web3.eth.getBalance(address, (err, bal) => {
-        if (err) {
-          reject(err)
-        } else {
-          const balance = web3.utils.toBN(bal)
-          resolve(balance.lt(DEPOSIT_AMOUNT))
-        }
-      })
-    })
-  }
-
-  let accountIndex = 0
   beforeEach(async () => {
-    this.depositAddress = accounts[accountIndex]
-    while (await addrBalanceTooLow(this.depositAddress)) {
-      accountIndex++
-      this.depositAddress = accounts[accountIndex]
-    }
+    this.depositAddress = accounts[0]
     web3.eth.defaultAccount = this.depositAddress
     this.contract = await registrationContract.new();
   })
