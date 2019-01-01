@@ -2,7 +2,7 @@ import { ethers, Contract } from 'ethers';
 import { EtherscanProvider } from 'ethers/providers';
 import { Deposit, DepositData, DepositInput } from '../../interfaces/blocks';
 import { ChainStart } from "../../interfaces/state";
-import { MAINNET_DEPOSIT_ADDRESS, DEPOSIT_CONTRACT_ADDRESS, DEPOSIT_CONTRACT_BLOCK_NUMBER, DEPOSIT_CONTRACT_ABI } from "../../constants/constants";
+import { DEPOSIT_CONTRACT_ADDRESS, DEPOSIT_CONTRACT_BLOCK_NUMBER, DEPOSIT_CONTRACT_ABI } from "../../constants/constants";
 
 // Type stubs
 type uint64 = number;
@@ -25,19 +25,19 @@ const waitForChainStart = () => {
     let provider = ethers.getDefaultProvider();
 
     // Deposit Contract
-    let depositContract: ethers.Contract = new ethers.Contract(MAINNET_DEPOSIT_ADDRESS, DEPOSIT_CONTRACT_ABI, provider);
+    let depositContract: ethers.Contract = new ethers.Contract(DEPOSIT_CONTRACT_ADDRESS, DEPOSIT_CONTRACT_ABI, provider);
 
     // Eth1Deposit log filter
     let depositTopic: string = depositContract.Eth1Deposit();
     let depositFilter: ethers.EventFilter = {
-      address: MAINNET_DEPOSIT_ADDRESS,
+      address: DEPOSIT_CONTRACT_ADDRESS,
       topics: [ depositTopic ]
     };
 
     // ChainStart log filter
     let chainStartTopic: string = depositContract.ChainStart();
     let chainStartFilter: ethers.EventFilter = {
-      address: MAINNET_DEPOSIT_ADDRESS,
+      address: DEPOSIT_CONTRACT_ADDRESS,
       topics: [ chainStartTopic ]
     };
 
