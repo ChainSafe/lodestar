@@ -1,5 +1,7 @@
-var Migrations = artifacts.require("./Migrations.sol");
+const Migrations = artifacts.require("./Migrations.sol")
+const ValidatorRegistration = artifacts.require("./ValidatorRegistration.sol")
 
-module.exports = function(deployer) {
-  deployer.deploy(Migrations);
-};
+module.exports = deployer => {
+  deployer.deploy(Migrations)
+  deployer.deploy(ValidatorRegistration)
+}

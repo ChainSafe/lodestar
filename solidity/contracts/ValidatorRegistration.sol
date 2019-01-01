@@ -1,23 +1,91 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.5.0;
+pragma experimental ABIEncoderV2;
 
 contract ValidatorRegistration {
 
-  event Deposit(bytes32 _pubkey, uint256 _withdrawal_shard_id, address _withdrawal_address, bytes32 _randao_commitment);
+    event Eth1Deposit(
+        bytes32 previousReceiptRoot,
+        bytes data,
+        uint depositCount
+    );
 
-  mapping(bytes32 => bool) public used_pubkeys;
+    event ChainStart(
+        bytes32 receiptRoot,
+        bytes time
+    );
 
-  function deposit(
-    bytes32 _pubkey,
-    uint256 _withdrawal_shard_id,
-    address _withdrawal_address,
-    bytes32 _randao_commitment
-    ) public payable {
-      require(msg.value == 32 ether);
-      require(!used_pubkeys[_pubkey]);
+    uint public constant DEPOSIT_SIZE = 32 ether;
+    uint public constant DEPOSITS_FOR_CHAIN_START = 8; // 2**14 in production
+    uint public constant MIN_TOPUP_SIZE = 1 ether;
+    uint public constant GWEI_PER_ETH = 10 ** 9;
+    uint public constant DEPOSIT_CONTRACT_TREE_DEPTH = 32;
+    uint public constant SECONDS_PER_DAY = 86400;
 
-      used_pubkeys[_pubkey] = true;
+    mapping (uint => bytes32) public receiptTree;
+    uint public depositCount;
+    uint public totalDepositCount;
 
-      emit Deposit(_pubkey, _withdrawal_shard_id, _withdrawal_address, _randao_commitment);
-  }
+    function deposit(
+        bytes memory depositParams
+    )
+        public
+        payable
+    {
+        require(
+            depositParams.length == 2048,
+            "Deposit parameters must be 2048 bytes in length."
+        );
+        require(
+            msg.value <= DEPOSIT_SIZE,
+            "Deposit can't be greater than DEPOSIT_SIZE."
+        );
+        require(
+            msg.value >= MIN_TOPUP_SIZE,
+            "Deposit can't be lesser than MIN_TOPUP_SIZE."
+        );
 
+        uint index = depositCount + 2 ** DEPOSIT_CONTRACT_TREE_DEPTH;
+        bytes memory msgGweiInBytes = toBytes(msg.value / GWEI_PER_ETH);
+        bytes memory timeStampInBytes = toBytes(block.timestamp);
+        bytes memory depositData = abi.encodePacked(msgGweiInBytes, timeStampInBytes, depositParams);
+        require(
+            depositData.length == 2064,
+            "Message Gwei and block timestamp bytes improperly sliced."
+        );
+
+        emit Eth1Deposit(receiptTree[1], depositData, depositCount);
+
+        receiptTree[index] = keccak256(depositData);
+        for (uint i = 0; i < DEPOSIT_CONTRACT_TREE_DEPTH; i++) {
+            index = index / 2;
+            receiptTree[index] = keccak256(abi.encodePacked(receiptTree[index * 2], receiptTree[index * 2 + 1]));
+        }
+
+        depositCount++;
+        if (msg.value == DEPOSIT_SIZE) {
+            totalDepositCount++;
+            if (totalDepositCount == DEPOSITS_FOR_CHAIN_START) {
+                uint timestampDayBoundary = block.timestamp - block.timestamp % SECONDS_PER_DAY + SECONDS_PER_DAY;
+                bytes memory timestampDayBoundaryBytes = toBytes(timestampDayBoundary);
+                emit ChainStart(receiptTree[1], timestampDayBoundaryBytes);
+            }
+        }
+    }
+
+    function getReceiptRoot() public view returns (bytes32) {
+        return receiptTree[1];
+    }
+
+    // Gets last 8 bytes of uint256
+    function toBytes(uint x) private pure returns (bytes memory) {
+        bytes memory b = new bytes(32);
+        assembly {
+          mstore(add(b, 32), x)
+        }
+        bytes memory c = new bytes(8);
+        for(uint8 i = 24; i < 32; i++){
+            c[i - 24] = b[i];
+        }
+        return c;
+    }
 }
