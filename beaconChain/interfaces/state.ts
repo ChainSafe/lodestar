@@ -11,24 +11,25 @@ type uint384 = number;
 type hash32 = Uint8Array;
 
 export interface BeaconState {
+  // Misc
   slot: uint64;
   genesisTime: uint64;
-  // For versioning hard forks
-  forkData: ForkData;
+  forkData: ForkData; // For versioning hard forks
 
   // Validator registry
   validatorRegistry: ValidatorRecord[];
+  validatorBalances: uint64[];
   validatorRegistryLatestChangeSlot: uint64;
   validatorRegistryExitCount: uint64;
-  // For light clients to track deltas
-  validatorRegistryDeltaChainTip: hash32;
+  validatorRegistryDeltaChainTip: hash32; // For light clients to track deltas
 
   // Randomness and committees
-  randaoMix: hash32;
-  nextSeed: hash32;
+  latestRandaoMixes: hash32[];
+  latestVdfOutputs: hash32[];
   shardCommitteesAtSlots: ShardCommittee[][];
-  persistentCommittees: uint24[][];
-  persistentCommitteeReassignments: ShardReassignmentRecord[];
+
+  // Custody Challenges
+  custodyChallenges: CustodyChallenge[];
 
   // Finality
   previousJustifiedSlot: uint64;
@@ -38,11 +39,10 @@ export interface BeaconState {
 
   // Recent state
   latestCrosslinks: CrosslinkRecord[];
-  // Needed to process attestations; older to newer
-  latestBlockHashes: hash32[];
-  // Balances penalized at every withdrawal period
-  latestPenalizedExitBalances: uint64[];
+  latestBlockRoots: hash32[]; // Needed to process attestations; older to newer
+  latestPenalizedExitBalances: uint64[]; // Balances penalized at every withdrawal period
   latestAttestations: PendingAttestationRecord[];
+  batchedBlockRoots: hash32[];
 
   // PoW receipt root
   processedPowReceiptRoot: hash32;
@@ -118,3 +118,8 @@ export interface ForkData {
   // Fork slot number
   forkSlot: uint64;
 }
+
+// Empty for Phase 0
+export interface CustodyReseed {};
+export interface CustodyChallenge {};
+export interface CustodyResponse {};
