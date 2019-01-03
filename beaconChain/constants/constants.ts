@@ -5,12 +5,14 @@
 // Misc
 export const SHARD_COUNT = 2 ** 10; // 1024 shards
 export const TARGET_COMMITTEE_SIZE = 2 ** 8; // 256 validators
-export const MIN_BALANCE = 2 ** 4; // 16 ETH
+export const EJECTION_BALANCE = 2 ** 4; // 16 ETH
 export const MAX_BALANCE_CHURN_QUOTIENT = 2 ** 5; // 32
 export const GWEI_PER_ETH = 10 ** 9; // 1B Gwei/ETH
 export const BEACON_CHAIN_SHARD_NUMBER = 2 ** 64 - 1;
 export const BLS_WITHDRAWAL_PREFIX_BYTE = 0x00;
 export const MAX_CASPER_VOTES = 2 ** 10; // 1024 votes
+export const LATEST_BLOCK_ROOTS_LENGTH =  2 ** 13; // 8192 block roots
+export const LATEST_RANDAO_MIXES_LENGTH = 2 ** 13; // 8192 randao mixes
 
 // Deposit contract
 export const DEPOSIT_CONTRACT_ADDRESS = "TBD";
