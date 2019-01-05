@@ -131,14 +131,16 @@ describe("intSqrt", () => {
 describe("getActiveValidatorIndices", () => {
   const randNum = () =>  Math.floor(Math.random() * Math.floor(4));
   const genValidatorRecord = () => ({
-    balance: randNum(),
-    exitCount: randNum(),
-    lastStatusChangeSlot: randNum(),
     pubkey: randNum(),
-    randaoCommitment: Uint8Array.of(65),
-    randaoSkips: randNum(),
-    status: randNum(),
     withdrawalCredentials: Uint8Array.of(65),
+    randaoCommitment: Uint8Array.of(65),
+    randaoLayers: randNum(),
+    status: randNum(),
+    latestStatusChangeSlot: randNum(),
+    exitCount: randNum(),
+    custodyCommitment:  Uint8Array.of(65),
+    latestCustodyReseedSlot: randNum(),
+    penultimateCustodyResseedSlot: randNum()
   });
   const vrArray: ValidatorRecord[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(genValidatorRecord);
 
