@@ -1,6 +1,9 @@
 import { keccakAsU8a } from "@polkadot/util-crypto";
 // Helper functions related to state transition functions
-import {EPOCH_LENGTH, GWEI_PER_ETH, MAX_DEPOSIT, SHARD_COUNT, TARGET_COMMITTEE_SIZE} from "../constants/constants";
+import {
+  EPOCH_LENGTH, GWEI_PER_ETH, LATEST_BLOCK_ROOTS_LENGTH, MAX_DEPOSIT, SHARD_COUNT,
+  TARGET_COMMITTEE_SIZE
+} from "../constants/constants";
 import { ValidatorStatusCodes } from "../constants/enums";
 import {AttestationData, BeaconBlock} from "../interfaces/blocks";
 import {BeaconState, ShardCommittee, ValidatorRecord} from "../interfaces/state";
@@ -186,12 +189,11 @@ function getShardCommitteesAtSlot(state: BeaconState, slot: int): ShardCommittee
  * @param {int} slot
  * @returns {hash32}
  */
-function getBlockHash(state: BeaconState, slot: int): hash32 {
-  const earliestSlotInArray = state.slot - state.latestBlockHashes.length;
-  if (earliestSlotInArray <= slot && slot < state.slot) {
-    throw new Error();
-  }
-  return state.latestBlockHashes[slot - earliestSlotInArray];
+function getBlockRoot(state: BeaconState, slot: int): hash32 {
+  // Returns the block root at a recent ``slot``.
+  if (state.slot <= slot + LATEST_BLOCK_ROOTS_LENGTH) throw new Error();
+  if (slot < state.slot) throw new Error();
+  return state.latestBlockRoots[slot % LATEST_BLOCK_ROOTS_LENGTH];
 }
 
 /**
