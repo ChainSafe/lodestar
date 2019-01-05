@@ -13,6 +13,7 @@ export const BLS_WITHDRAWAL_PREFIX_BYTE = 0x00;
 export const MAX_CASPER_VOTES = 2 ** 10; // 1024 votes
 export const LATEST_BLOCK_ROOTS_LENGTH =  2 ** 13; // 8192 block roots
 export const LATEST_RANDAO_MIXES_LENGTH = 2 ** 13; // 8192 randao mixes
+export const EMPTY_SIGNATURE = [new Uint8Array(48), new Uint8Array(48)]; //[bytes48(0), bytes48(0)]
 
 // Deposit contract
 export const DEPOSIT_CONTRACT_ADDRESS = "TBD";

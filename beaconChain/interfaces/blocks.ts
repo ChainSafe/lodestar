@@ -6,7 +6,7 @@ type bytes = number;
 type uint24 = number;
 type uint64 = number;
 type uint384 = number;
-type hash32 = number;
+type hash32 = Uint8Array;
 
 // Beacon chain operations
 
@@ -82,22 +82,24 @@ export interface Deposit {
 
 export interface DepositData {
   // Deposit parameters
-  depositParameters: DepositParameters;
+  depositParameters: DepositInput;
   // Value in Gwei
   value: uint64;
   // Timestamp from deposit contract
   timestamp: uint64;
 }
 
-export interface DepositParameters {
+export interface DepositInput {
   // BLS pubkey
   pubkey: uint384;
-  // BLS proof of possession (a BLS signature)
-  proofOfPossession: uint384[];
   // Withdrawal credentials
   withdrawalCredentials: hash32;
   // Initial RANDAO commitment
   randaoCommitment: hash32;
+  // Initial custody commitment
+  custodyCommitment: hash32;
+  // BLS proof of possession (a BLS signature)
+  proofOfPossession: Uint8Array[];
 }
 
 export interface Exit {

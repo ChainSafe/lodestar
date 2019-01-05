@@ -56,16 +56,20 @@ export interface ValidatorRecord {
   withdrawalCredentials: hash32;
   // RANDAO commitment
   randaoCommitment: hash32;
-  // Slot the proposer has skipped (ie. layers of RANDAO expected)
-  randaoSkips: uint64;
-  // Balance in Gwei
-  balance: uint64;
+  // Slots the proposer has skipped (i.e. layers of RANDAO expected)
+  randaoLayers: uint64;
   // Status code
   status: uint64;
   // Slot when validator last changed status (or 0)
-  lastStatusChangeSlot: uint64;
+  latestStatusChangeSlot: uint64;
   // Exit counter when validator exited (or 0)
   exitCount: uint64;
+  // Custody Commitment
+  custodyCommitment: hash32;
+  // Slot of latest custody reseed
+  latestCustodyReseedSlot: uint64;
+  // Slotof second-latest custody reseed
+  penultimateCustodyResseedSlot: uint64;
 }
 
 export interface CrosslinkRecord {
