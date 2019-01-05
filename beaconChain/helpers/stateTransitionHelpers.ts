@@ -1,6 +1,6 @@
 import { keccakAsU8a } from "@polkadot/util-crypto";
 // Helper functions related to state transition functions
-import { EPOCH_LENGTH, MAX_DEPOSIT, SHARD_COUNT, TARGET_COMMITTEE_SIZE } from "../constants/constants";
+import {EPOCH_LENGTH, GWEI_PER_ETH, MAX_DEPOSIT, SHARD_COUNT, TARGET_COMMITTEE_SIZE} from "../constants/constants";
 import { ValidatorStatusCodes } from "../constants/enums";
 import {AttestationData, BeaconBlock} from "../interfaces/blocks";
 import {BeaconState, ShardCommittee, ValidatorRecord} from "../interfaces/state";
@@ -231,8 +231,9 @@ function getAttestationParticipants(state: BeaconState, attestationData: Attesta
  * @returns {int}
  */
 // TODO Math.min requires int, validator.record is a uint64
-function getEffectiveBalance(validator: ValidatorRecord): int {
-  return Math.min(validator.balance, MAX_DEPOSIT);
+export function getEffectiveBalance(state: BeaconState, index: int): int {
+  // Returns the effective balance (also known as "balance at stake") for a ``validator`` with the given ``index``.
+  return Math.min(state.validatorBalances[index], MAX_DEPOSIT * GWEI_PER_ETH);
 }
 
 // TODO figure out what bytes1() does in python
