@@ -82,7 +82,7 @@ export interface Deposit {
 
 export interface DepositData {
   // Deposit parameters
-  depositParameters: DepositInput;
+  depositInput: DepositInput;
   // Value in Gwei
   value: uint64;
   // Timestamp from deposit contract
