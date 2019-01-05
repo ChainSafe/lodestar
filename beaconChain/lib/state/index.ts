@@ -2,10 +2,11 @@ import { BeaconState, CrosslinkRecord, ValidatorRecord } from "../../interfaces/
 import {Deposit, DepositInput} from "../../interfaces/blocks";
 import {
   INITIAL_SLOT_NUMBER, INITIAL_FORK_VERSION, ZERO_HASH, LATEST_RANDAO_MIXES_LENGTH, EPOCH_LENGTH, SHARD_COUNT,
-  LATEST_BLOCK_ROOTS_LENGTH, ZERO_BALANCE_VALIDATOR_TTL, EMPTY_SIGNATURE, MAX_DEPOSIT, GWEI_PER_ETH
+  LATEST_BLOCK_ROOTS_LENGTH, ZERO_BALANCE_VALIDATOR_TTL, EMPTY_SIGNATURE, MAX_DEPOSIT, GWEI_PER_ETH,
+  COLLECTIVE_PENALTY_CALCULATION_PERIOD, WHISTLEBLOWER_REWARD_QUOTIENT
 } from "../../constants/constants";
 import {ValidatorRegistryDeltaFlags, ValidatorStatusCodes} from "../../constants/enums";
-import {getEffectiveBalance, getNewShuffling} from "../../helpers/stateTransitionHelpers";
+import {getBeaconProposerIndex, getEffectiveBalance, getNewShuffling} from "../../helpers/stateTransitionHelpers";
 
 type int = number;
 type bytes = Uint8Array;
@@ -157,12 +158,11 @@ function updateValidatorStatus(state: BeaconState, index: int, newStatus: int): 
     // Note that this function mutates ``state``.
     if (newStatus === ValidatorStatusCodes.ACTIVE) {
       activateValidator(state, index);
+    } else if (newStatus === ValidatorStatusCodes.ACTIVE_PENDING_EXIT) {
+      inititateValidatorExit(state, index);
+    } else if (newStatus === ValidatorStatusCodes.EXITED_WITH_PENALTY || newStatus === ValidatorStatusCodes.EXITED_WITHOUT_PENALTY) {
+        exitValidator(state, index, newStatus);
     }
-    // } else if (newStatus === ValidatorStatusCodes.ACTIVE_PENDING_EXIT){
-    //     inititateValidatorExit(state, index);
-    // } else if (newStatus === ValidatorStatusCodes.EXITED_WITH_PENALTY || newStatus === ValidatorStatusCodes.EXITED_WITHOUT_PENALTY) {
-    //     exitValidator(state, index, newStatus);
-    // }
 }
 
 function activateValidator(state: BeaconState, index: int): void {
@@ -178,5 +178,47 @@ function activateValidator(state: BeaconState, index: int): void {
     //   index,
     //   validator.pubkey,
     //   ValidatorRegistryDeltaFlags.ACTIVATION
+    // )
+}
+
+function inititateValidatorExit(state: BeaconState, index: int): void {
+    // Initiate exit for the validator with the given ``index``.
+    // Note that this function mutates ``state``.
+    const validator = state.validatorRegistry[index];
+    if (validator.status != ValidatorStatusCodes.ACTIVE) return;
+    validator.status = ValidatorStatusCodes.ACTIVE_PENDING_EXIT;
+    validator.latestStatusChangeSlot = state.slot;
+}
+
+function exitValidator(state: BeaconState, index: int, newStatus: int): void {
+    // Exit the validator with the given ``index``.
+    // Note that this function mutates ``state``.
+    const validator = state.validatorRegistry[index];
+    const prevStatus = validator.status;
+    if (prevStatus === ValidatorStatusCodes.EXITED_WITH_PENALTY) return;
+
+    validator.status = newStatus;
+    validator.latestStatusChangeSlot = state.slot;
+
+    if (newStatus === ValidatorStatusCodes.EXITED_WITH_PENALTY) {
+        state.latestPenalizedExitBalances[Math.floor(state.slot / COLLECTIVE_PENALTY_CALCULATION_PERIOD)] += getEffectiveBalance(state, index);
+
+        // Adjusted balances based on penalty
+        const whistleblowerIndex = getBeaconProposerIndex(state, state.slot);
+        const whistleblowerReward = Math.floor(getEffectiveBalance(state, index) / WHISTLEBLOWER_REWARD_QUOTIENT);
+        state.validatorBalances[whistleblowerIndex] += whistleblowerReward;
+        state.validatorBalances[index] -= whistleblowerReward;
+    }
+
+    if (prevStatus === ValidatorStatusCodes.EXITED_WITHOUT_PENALTY) return;
+
+    // The following updates only ocur if not previous exited
+    state.validatorRegistryExitCount += 1;
+    validator.exitCount = state.validatorRegistryExitCount;
+    // state.validatorRegistryDeltaChainTip = getNewValidatorRegistryDeltaChainTip(
+    //   state.validatorRegistryDeltaChainTip,
+    //   index,
+    //   validator.pubkey,
+    //   ValidatorRegistryDeltaFlags.EXIT
     // )
 }

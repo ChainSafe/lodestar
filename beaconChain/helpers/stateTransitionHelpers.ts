@@ -200,7 +200,7 @@ function getBlockHash(state: BeaconState, slot: int): hash32 {
  * @param {int} slot
  * @returns {int}
  */
-function getBeaconProposerIndex(state: BeaconState, slot: int): int {
+export function getBeaconProposerIndex(state: BeaconState, slot: int): int {
   const firstCommittee = getShardCommitteesAtSlot(state, slot)[0].committee;
   return firstCommittee[slot % firstCommittee.length];
 }
