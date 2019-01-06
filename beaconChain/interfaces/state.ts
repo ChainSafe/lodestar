@@ -124,6 +124,6 @@ export interface ForkData {
 }
 
 // Empty for Phase 0
-export interface CustodyReseed {};
-export interface CustodyChallenge {};
-export interface CustodyResponse {};
+export const CustodyReseed = {};
+export const CustodyChallenge = {};
+export const CustodyResponse = {};

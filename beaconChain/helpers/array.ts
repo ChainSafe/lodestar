@@ -9,8 +9,8 @@
  * @param {Array<X>} b
  * @returns {(T | X)[][]}
  */
-function zip<T, X>(a: Array<T>, b: Array<X>): (T|X)[][] {
-    return a.map((e,i) => { return [e, b[i]] });
-};
+function zip<T, X>(a: T[], b: X[]): Array<Array<T|X>> {
+    return a.map((e, i) => [e, b[i]]);
+}
 
 export { zip };
