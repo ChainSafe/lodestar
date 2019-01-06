@@ -123,7 +123,8 @@ export interface ForkData {
   forkSlot: uint64;
 }
 
+/* tslint:disable:no-empty-interface*/
 // Empty for Phase 0
-export const CustodyReseed = {};
-export const CustodyChallenge = {};
-export const CustodyResponse = {};
+export interface CustodyReseed {}
+export interface CustodyChallenge {}
+export interface CustodyResponse {}
