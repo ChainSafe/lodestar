@@ -1,3 +1,19 @@
+//BLS JS
+//Copyright (C) 2018 ChainSafe Systems
+
+ // This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 const bls = require("../src/bls.js")
 const CTX = require("../milagro-crypto-js")
 const ctx = new CTX("BLS381")
@@ -18,8 +34,9 @@ describe("bls", () => {
 
 	it("should generate a key pair", () => {
 		keys = bls.gen_key_pair("noot", bls.get_rand(128))
-		console.log(`pubkey: ${keys.P.toString('hex')}`)
-		console.log(`privkey: ${keys.k.toString('hex')}`)
+		console.log(typeof keys.k)
+		console.log(`pubkey: ${keys.P}`)
+		console.log(`privkey: ${keys.k}`)
 		assert(ctx.ECDH.PUBLIC_KEY_VALIDATE(keys.P) == 0)
 	})
 
@@ -48,5 +65,18 @@ describe("bls", () => {
 		let s = bls.hash_string("noot")
 		console.log(s.toString('hex'))
 		assert(s.toString('hex') == "2d7e9bbeb19cc0fc08cf4305c126dbf1f2952c63fb5006de5c2f25292a44ff2b")
+	})
+
+	it("should hash a point to the curve", () => {
+		let h = bls.hash_to_curve("noot")
+		console.log(h.toString('hex'))
+		//assert(s.toString('hex') == "2d7e9bbeb19cc0fc08cf4305c126dbf1f2952c63fb5006de5c2f25292a44ff2b")
+	})
+
+	it("should sign a message", () => {
+		keys = bls.gen_key_pair("noot", bls.get_rand(128))
+		let sig = bls.bls_sign(keys.k, "test message!!")
+
+		assert(sig)
 	})
 })

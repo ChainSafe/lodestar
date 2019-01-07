@@ -1,3 +1,19 @@
+// BLS JS
+// Copyright (C) 2018 ChainSafe Systems
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 const CTX = require("../milagro-crypto-js")
 const ctx = new CTX("BLS381")
 const rand = require("csprng")
@@ -50,11 +66,16 @@ const hash_string = (m) => {
     return hash.digest()
 }
 
-// perform H(m) = sha3(m)*G 
+// perform H(m) = sha3(m)*G
 // not sure if this is the correct method to hash to curve
 // returns a point on the curve
 const hash_to_curve = (m) => {
-    return scalar_base_mult(hash_string(m))
+    let h = hash_string(m)
+    let arr = buffer_to_uint8array(h)
+    //console.log(h)
+    //console.log(arr)
+    //console.log(typeof arr)
+    return scalar_base_mult(arr)
 }
 
 // perform S = k*H(m) where S is the signature and H(m) is the hash of the message to
@@ -64,7 +85,7 @@ const bls_sign = (k, m) => {
     return scalar_mult(hash_to_curve(m), k)
 }
 
-// perform e(P, H(m)) == e(G, S) where P is our public key, m is our message, S is 
+// perform e(P, H(m)) == e(G, S) where P is our public key, m is our message, S is
 // our signature, and G is the generator point
 const bls_verify = (S, P, m) => {
 
@@ -76,5 +97,13 @@ const bls_aggregate = (S_arr, P_arr, m_arr) => {
 
 }
 
+const buffer_to_uint8array = (buf) => {
+    var ab = new ArrayBuffer(buf.length);
+    var view = new Uint8Array(ab);
+    for (var i = 0; i < buf.length; ++i) {
+        view[i] = buf[i];
+    }
+    return view;
+}
 
-module.exports = {get_rand, gen_key_pair, scalar_mult, scalar_base_mult, add, hash_string, hash_to_curve}
+module.exports = {get_rand, gen_key_pair, scalar_mult, scalar_base_mult, add, hash_string, hash_to_curve, bls_sign}
