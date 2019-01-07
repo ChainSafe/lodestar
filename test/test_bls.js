@@ -1,5 +1,5 @@
-//BLS JS
-//Copyright (C) 2018 ChainSafe Systems
+// BLS JS
+// Copyright (C) 2018 ChainSafe Systems
 
  // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
