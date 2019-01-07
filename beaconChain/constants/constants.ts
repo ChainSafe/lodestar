@@ -1,5 +1,5 @@
-//Lodestar Chain
-//Copyright (C) 2018 ChainSafe Systems
+// Lodestar Chain
+// Copyright (C) 2018 ChainSafe Systems
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
