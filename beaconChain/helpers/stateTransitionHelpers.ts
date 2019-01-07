@@ -232,7 +232,6 @@ function getAttestationParticipants(state: BeaconState, attestationData: Attesta
  * @param {ValidatorRecord} validator
  * @returns {int}
  */
-// TODO Math.min requires int, validator.record is a uint64
 export function getEffectiveBalance(state: BeaconState, index: int): int {
   // Returns the effective balance (also known as "balance at stake") for a ``validator`` with the given ``index``.
   return Math.min(state.validatorBalances[index], MAX_DEPOSIT * GWEI_PER_ETH);

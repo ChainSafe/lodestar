@@ -1,5 +1,5 @@
 /**
- * Takes two arrays and combines them similar to the Array.zip() form Python.
+ * Takes two arrays and combines them, similar to the Array.zip() from Python.
  * a = [1,2,3] b = [4,5,6]
  * c = zip(a,b) // [[1,4], [2,5], [3,6]]
  * NOTE: Lodash would be an alternative, although theres no need *YET* to import lodash for one function.

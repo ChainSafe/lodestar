@@ -12,8 +12,15 @@ type int = number;
 type bytes = Uint8Array;
 type hash32 = Uint8Array;
 
+/**
+ * Generates the initial state for slot 0. This should be called after the ChainStart log has been emitted.
+ * @param {Deposit[]} initialValidatorDeposits
+ * @param {int} genesisTime
+ * @param {hash32} processedPowReceiptRoot
+ * @returns {BeaconState}
+ */
 function getInitialBeaconState(initialValidatorDeposits: Deposit[], genesisTime: int, processedPowReceiptRoot: hash32): BeaconState {
-    // Weird behaviour, could not set these explicitly for latestCrosslinks
+    // Line 52 we initialize `latestCrosslinks` and I could not set the CrossLinkRecord explicitly, thus created a variable.
     const initialCrosslinkRecord: CrosslinkRecord = {
         slot: INITIAL_SLOT_NUMBER,
         shardBlockHash: ZERO_HASH
@@ -88,8 +95,9 @@ function processDeposit(state: BeaconState, pubkey: int, deposit: int, proofOfPo
     // Note that this function mutates state.
 
     // Validate the given proofOfPossession
-    // const proof = validateProofOfPossession(state, pubkey, proofOfPossession, withdrawalCredentials, randaoCommitment, custodyCommitment);
-    // if (!proof) throw new Error();
+    const proof = validateProofOfPossession(state, pubkey, proofOfPossession, withdrawalCredentials, randaoCommitment, custodyCommitment);
+    if (!proof) throw new Error();
+
     const validatorPubkeys = state.validatorRegistry.map(v => { return v.pubkey });
     let index: int;
     if (!validatorPubkeys.includes(pubkey)) {
@@ -132,7 +140,7 @@ function minEmptyValidatorIndex(validators: ValidatorRecord[], validatorBalances
     return null;
 };
 
-function validateProofOfPossession(state: BeaconState, pubkey: int, proofOfPossession: bytes, withdrawalCredentials: hash32, randaoCommitment: hash32, custodyCommitment: hash32): boolean {
+function validateProofOfPossession(state: BeaconState, pubkey: int, proofOfPossession: bytes[], withdrawalCredentials: hash32, randaoCommitment: hash32, custodyCommitment: hash32): boolean {
     const proofOfPossessionData: DepositInput = {
         pubkey: pubkey,
         withdrawalCredentials: withdrawalCredentials,
@@ -140,6 +148,7 @@ function validateProofOfPossession(state: BeaconState, pubkey: int, proofOfPosse
         custodyCommitment: custodyCommitment,
         proofOfPossession: EMPTY_SIGNATURE
     };
+    // Stubbed due to bls not yet a dependency
     // return bls_verify(
     //   pubkey=pubkey,
     //   message=hash_tree_root(proof_of_possession_data),
@@ -152,14 +161,14 @@ function validateProofOfPossession(state: BeaconState, pubkey: int, proofOfPosse
     return true;
 };
 
-function updateValidatorStatus(state: BeaconState, index: int, newStatus: int): void {
+function updateValidatorStatus(state: BeaconState, index: int, newStatus: ValidatorStatusCodes): void {
     // Update the validator status with the given ``index`` to ``new_status``.
     // Handle other general accounting related to this status update.
     // Note that this function mutates ``state``.
     if (newStatus === ValidatorStatusCodes.ACTIVE) {
       activateValidator(state, index);
     } else if (newStatus === ValidatorStatusCodes.ACTIVE_PENDING_EXIT) {
-      inititateValidatorExit(state, index);
+      initiateValidatorExit(state, index);
     } else if (newStatus === ValidatorStatusCodes.EXITED_WITH_PENALTY || newStatus === ValidatorStatusCodes.EXITED_WITHOUT_PENALTY) {
         exitValidator(state, index, newStatus);
     }
@@ -173,6 +182,7 @@ function activateValidator(state: BeaconState, index: int): void {
 
     validator.status = ValidatorStatusCodes.ACTIVE;
     validator.latestStatusChangeSlot = state.slot;
+    // Stubbed due to getNewValidatorRegistryDeltaChainTip() not yet implemented as helper
     // state.validatorRegistryDeltaChainTip = getNewValidatorRegistryDeltaChainTip(
     //   state.validatorRegistryDeltaChainTip,
     //   index,
@@ -181,7 +191,7 @@ function activateValidator(state: BeaconState, index: int): void {
     // )
 }
 
-function inititateValidatorExit(state: BeaconState, index: int): void {
+function initiateValidatorExit(state: BeaconState, index: int): void {
     // Initiate exit for the validator with the given ``index``.
     // Note that this function mutates ``state``.
     const validator = state.validatorRegistry[index];
@@ -190,7 +200,7 @@ function inititateValidatorExit(state: BeaconState, index: int): void {
     validator.latestStatusChangeSlot = state.slot;
 }
 
-function exitValidator(state: BeaconState, index: int, newStatus: int): void {
+function exitValidator(state: BeaconState, index: int, newStatus: ValidatorStatusCodes): void {
     // Exit the validator with the given ``index``.
     // Note that this function mutates ``state``.
     const validator = state.validatorRegistry[index];
@@ -215,6 +225,7 @@ function exitValidator(state: BeaconState, index: int, newStatus: int): void {
     // The following updates only ocur if not previous exited
     state.validatorRegistryExitCount += 1;
     validator.exitCount = state.validatorRegistryExitCount;
+    // Stubbed due to getNewValidatorRegistryDeltaChainTip() not yet implemented as helper
     // state.validatorRegistryDeltaChainTip = getNewValidatorRegistryDeltaChainTip(
     //   state.validatorRegistryDeltaChainTip,
     //   index,
