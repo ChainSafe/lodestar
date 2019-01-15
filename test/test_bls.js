@@ -1,7 +1,7 @@
 // BLS JS
 // Copyright (C) 2018 ChainSafe Systems
 
- // This program is free software: you can redistribute it and/or modify
+// This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
@@ -67,8 +67,8 @@ describe("bls", () => {
 		assert(s.toString('hex') == "2d7e9bbeb19cc0fc08cf4305c126dbf1f2952c63fb5006de5c2f25292a44ff2b")
 	})
 
-	it("should hash a point to the curve", () => {
-		let h = bls.hash_to_curve("noot")
+	it("should hash a point to G2", () => {
+		let h = bls.hash_to_G2("noot")
 		console.log(h.toString('hex'))
 		//assert(s.toString('hex') == "2d7e9bbeb19cc0fc08cf4305c126dbf1f2952c63fb5006de5c2f25292a44ff2b")
 	})
