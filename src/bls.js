@@ -21,6 +21,9 @@ const rng = new ctx.RAND()
 const { SHA3 } = require("sha3")
 const hash = new SHA3(256)
 
+const G2_cofactor = 305502333931268344200999753193121504214466019254188142667664032982267604182971884026507427359259977847832272839041616661285803823378372096355777062779109
+const q = 4002409555221667393417789825735904156556882819939007885332058136124031650490837864442687629129015664037894272559787
+
 const get_rand = (bytes) => {
     return rand(bytes*8, 16) // rand accepts bits and radix
 }
@@ -69,7 +72,7 @@ const hash_string = (m) => {
 // perform H(m) = sha3(m)*G
 // not sure if this is the correct method to hash to curve
 // returns a point on the curve
-const hash_to_curve = (m) => {
+const hash_to_G2 = (m) => {
     let h = hash_string(m)
     let arr = buffer_to_uint8array(h)
     //console.log(h)
@@ -82,7 +85,7 @@ const hash_to_curve = (m) => {
 // the curve
 // return S, a curve point
 const bls_sign = (k, m) => {
-    return scalar_mult(hash_to_curve(m), k)
+    return scalar_mult(hash_to_G2(m), k)
 }
 
 // perform e(P, H(m)) == e(G, S) where P is our public key, m is our message, S is
@@ -106,4 +109,4 @@ const buffer_to_uint8array = (buf) => {
     return view;
 }
 
-module.exports = {get_rand, gen_key_pair, scalar_mult, scalar_base_mult, add, hash_string, hash_to_curve, bls_sign}
+module.exports = {get_rand, gen_key_pair, scalar_mult, scalar_base_mult, add, hash_string, hash_to_G2, bls_sign}
