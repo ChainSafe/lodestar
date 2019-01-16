@@ -1,16 +1,18 @@
 import { BeaconState, CrosslinkRecord, ValidatorRecord } from "../../interfaces/state"
 import {Deposit, DepositInput} from "../../interfaces/blocks";
 import {
-  INITIAL_SLOT_NUMBER, INITIAL_FORK_VERSION, ZERO_HASH, LATEST_RANDAO_MIXES_LENGTH, EPOCH_LENGTH, SHARD_COUNT,
-  LATEST_BLOCK_ROOTS_LENGTH, ZERO_BALANCE_VALIDATOR_TTL, EMPTY_SIGNATURE, MAX_DEPOSIT, GWEI_PER_ETH,
-  COLLECTIVE_PENALTY_CALCULATION_PERIOD, WHISTLEBLOWER_REWARD_QUOTIENT
+  ZERO_HASH, LATEST_RANDAO_MIXES_LENGTH, EPOCH_LENGTH, SHARD_COUNT,
+  LATEST_BLOCK_ROOTS_LENGTH, EMPTY_SIGNATURE, MAX_DEPOSIT, GWEI_PER_ETH,
+  WHISTLEBLOWER_REWARD_QUOTIENT, GENESIS_SLOT, GENESIS_FORK_VERSION,
+  GENESIS_START_SHARD, LATEST_PENALIZED_EXIT_LENGTH, FAR_FUTURE_SLOT, ENTRY_EXIT_DELAY
 } from "../../constants/constants";
-import {ValidatorRegistryDeltaFlags, ValidatorStatusCodes} from "../../constants/enums";
-import {getBeaconProposerIndex, getEffectiveBalance, getNewShuffling} from "../../helpers/stateTransitionHelpers";
+import {getBeaconProposerIndex, getEffectiveBalance } from "../../helpers/stateTransitionHelpers";
+import {StatusFlags} from "../../constants/enums";
 
 type int = number;
 type bytes = Uint8Array;
 type hash32 = Uint8Array;
+type uint384 = number;
 
 /**
  * Generates the initial state for slot 0. This should be called after the ChainStart log has been emitted.
@@ -19,78 +21,92 @@ type hash32 = Uint8Array;
  * @param {hash32} processedPowReceiptRoot
  * @returns {BeaconState}
  */
-function getInitialBeaconState(initialValidatorDeposits: Deposit[], genesisTime: int, processedPowReceiptRoot: hash32): BeaconState {
-    // Line 52 we initialize `latestCrosslinks` and I could not set the CrossLinkRecord explicitly, thus created a variable.
+function getInitialBeaconState(initialValidatorDeposits: Deposit[], genesisTime: int, latestDepositRoot: hash32): BeaconState {
     const initialCrosslinkRecord: CrosslinkRecord = {
         slot: INITIAL_SLOT_NUMBER,
-        shardBlockHash: ZERO_HASH
+        shardBlockRoot: ZERO_HASH
     };
 
     const state: BeaconState = {
         // MISC
-        slot: INITIAL_SLOT_NUMBER,
+        slot: GENESIS_SLOT,
         genesisTime: genesisTime,
         forkData: {
-            preForkVersion: INITIAL_FORK_VERSION,
-            postForkVersion: INITIAL_FORK_VERSION,
-            forkSlot: INITIAL_SLOT_NUMBER
+            preForkVersion: GENESIS_FORK_VERSION,
+            postForkVersion: GENESIS_FORK_VERSION,
+            forkSlot: GENESIS_SLOT
         },
         // Validator registry
         validatorRegistry: [],
         validatorBalances: [],
-        validatorRegistryLatestChangeSlot: INITIAL_SLOT_NUMBER,
+        validatorRegistryLatestChangeSlot: GENESIS_SLOT,
         validatorRegistryExitCount: 0,
         validatorRegistryDeltaChainTip: ZERO_HASH,
 
         // Randomness and committees
         latestRandaoMixes: Array.from({length: LATEST_RANDAO_MIXES_LENGTH}, () => ZERO_HASH),
         latestVdfOutputs: Array.from({length: Math.floor(LATEST_RANDAO_MIXES_LENGTH / EPOCH_LENGTH)}, () => ZERO_HASH),
-        shardCommitteesAtSlots: [],
+        previousEpochStartShard: GENESIS_START_SHARD,
+        currentEpochStartShard: GENESIS_START_SHARD,
+        previousEpochCalculationSlot: GENESIS_SLOT,
+        currentEpochCalculationSlot: GENESIS_SLOT,
+        previousEpochRandaoMix: ZERO_HASH,
+        currentEpochRandaoMix: ZERO_HASH,
+
         // Custody Challenges
         custodyChallenges: [],
 
         // Finality
-        previousJustifiedSlot: INITIAL_SLOT_NUMBER,
-        justifiedSlot: INITIAL_SLOT_NUMBER,
+        previousJustifiedSlot: GENESIS_SLOT,
+        justifiedSlot: GENESIS_SLOT,
         justificationBitfield: 0,
-        finalizedSlot: INITIAL_SLOT_NUMBER,
+        finalizedSlot: GENESIS_SLOT,
 
         // Recent state
         latestCrosslinks: Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
         latestBlockRoots: Array.from({length: LATEST_BLOCK_ROOTS_LENGTH}, () => ZERO_HASH),
-        latestPenalizedExitBalances: [],
+        latestPenalizedExitBalances: Array.from({length: LATEST_PENALIZED_EXIT_LENGTH}, () => 0),
         latestAttestations: [],
         batchedBlockRoots: [],
 
         // PoW receipt root
-        processedPowReceiptRoot: processedPowReceiptRoot,
-        candidatePowReceiptRoots: []
+        latestDepositRoot: latestDepositRoot,
+        depositRootVotes: [],
     };
 
-    // handle initial deposits and activations
+    // Process initial deposists
     initialValidatorDeposits.forEach(deposit => {
         const validatorIndex = processDeposit(
           state,
           deposit.depositData.depositInput.pubkey,
-          deposit.depositData.value,
+          deposit.depositData.amount,
           deposit.depositData.depositInput.proofOfPossession,
           deposit.depositData.depositInput.withdrawalCredentials,
           deposit.depositData.depositInput.randaoCommitment,
           deposit.depositData.depositInput.custodyCommitment
         );
-      if (getEffectiveBalance(state, validatorIndex) === MAX_DEPOSIT * GWEI_PER_ETH) {
-          // Async??
-          updateValidatorStatus(state, validatorIndex, ValidatorStatusCodes.ACTIVE);
-      }
     });
 
-    // Set initial committee shuffling
-    const intialShuffling = getNewShuffling(ZERO_HASH, state.validatorRegistry, 0);
-    state.shardCommitteesAtSlots = intialShuffling.concat(intialShuffling);
+    // Process initial activations
+    for (let i: number = 0; i < state.validatorRegistry.length; i ++) {
+      if (getEffectiveBalance(state, i) === MAX_DEPOSIT * GWEI_PER_ETH) {
+        updateValidatorStatus(state, i, true);
+      }
+    }
     return state;
 }
 
-function processDeposit(state: BeaconState, pubkey: int, deposit: int, proofOfPossession: bytes[], withdrawalCredentials: hash32, randaoCommitment: hash32, custodyCommitment: hash32): int {
+/**
+ * Process deposits from ETH1.x chain to ETH2.0 chain
+ * @param {BeaconState} state
+ * @param {int} pubkey
+ * @param {int} amount
+ * @param {uint384[]} proofOfPossession
+ * @param {hash32} withdrawalCredentials
+ * @param {hash32} randaoCommitment
+ * @param {hash32} custodyCommitment
+ */
+function processDeposit(state: BeaconState, pubkey: int, amount: int, proofOfPossession: uint384[], withdrawalCredentials: hash32, randaoCommitment: hash32, custodyCommitment: hash32): void {
     // Process a deposit from Ethereum 1.0.
     // Note that this function mutates state.
 
@@ -99,55 +115,53 @@ function processDeposit(state: BeaconState, pubkey: int, deposit: int, proofOfPo
     if (!proof) throw new Error();
 
     const validatorPubkeys = state.validatorRegistry.map(v => { return v.pubkey });
-    let index: int;
+
     if (!validatorPubkeys.includes(pubkey)) {
-        // Add new validator
-        const validator: ValidatorRecord = {
-            pubkey: pubkey,
-            withdrawalCredentials: withdrawalCredentials,
-            randaoCommitment: randaoCommitment,
-            randaoLayers: 0,
-            status: ValidatorStatusCodes.PENDING_ACTIVATION,
-            latestStatusChangeSlot: state.slot,
-            exitCount: 0,
-            custodyCommitment: custodyCommitment,
-            latestCustodyReseedSlot: INITIAL_SLOT_NUMBER,
-            penultimateCustodyResseedSlot: INITIAL_SLOT_NUMBER
-        };
-        index = minEmptyValidatorIndex(state.validatorRegistry, state.validatorBalances, state.slot);
-        if (index === null) {
-            state.validatorRegistry.push(validator);
-            state.validatorBalances.push(deposit);
-            index = state.validatorRegistry.length - 1;
-        } else {
-            state.validatorRegistry[index] = validator;
-            state.validatorBalances[index] = deposit;
-        }
-    } else {
-        // Increase balance by deposit
-        let index = validatorPubkeys.indexOf(pubkey);
-        if(state.validatorRegistry[index].withdrawalCredentials === withdrawalCredentials) throw new Error();
-
-        state.validatorBalances[index] += deposit;
-    }
-    return index;
-}
-
-function minEmptyValidatorIndex(validators: ValidatorRecord[], validatorBalances: int[], currentSlot: int): int | null {
-    for (let i: number = 0; i < validators.length; i++) {
-        if(validatorBalances[i] === 0 && (validators[i].latestStatusChangeSlot + ZERO_BALANCE_VALIDATOR_TTL <= currentSlot)) return i;
-    }
-    return null;
-};
-
-function validateProofOfPossession(state: BeaconState, pubkey: int, proofOfPossession: bytes[], withdrawalCredentials: hash32, randaoCommitment: hash32, custodyCommitment: hash32): boolean {
-    const proofOfPossessionData: DepositInput = {
+      // Add new validator
+      const validator: ValidatorRecord = {
         pubkey: pubkey,
         withdrawalCredentials: withdrawalCredentials,
         randaoCommitment: randaoCommitment,
+        randaoLayers: 0,
+        activationSlot: FAR_FUTURE_SLOT,
+        exitSlot: FAR_FUTURE_SLOT,
+        withdrawalSlot: FAR_FUTURE_SLOT,
+        penalizedSlot: FAR_FUTURE_SLOT,
+        exitCount: 0,
+        statusFlags: 0,
         custodyCommitment: custodyCommitment,
-        proofOfPossession: EMPTY_SIGNATURE
-    };
+        latestCustodyReseedSlot: GENESIS_SLOT,
+        penultimateCustodyResseedSlot: GENESIS_SLOT
+      };
+      const index = state.validatorRegistry.length;
+      state.validatorRegistry.push(validator);
+      state.validatorBalances.push(amount);
+    } else {
+    // Increase balance by deposit amount
+      const index = validatorPubkeys.indexOf(pubkey);
+      if (state.validatorRegistry[index].withdrawalCredentials === withdrawalCredentials) throw new Error("Deposit already made!")
+      state.validatorBalances[index] += amount;
+    }
+}
+
+/**
+ * Validate the deposit
+ * @param {BeaconState} state
+ * @param {int} pubkey
+ * @param {uint384[]} proofOfPossession
+ * @param {hash32} withdrawalCredentials
+ * @param {hash32} randaoCommitment
+ * @param {hash32} custodyCommitment
+ * @returns {boolean}
+ */
+function validateProofOfPossession(state: BeaconState, pubkey: int, proofOfPossession: uint384[], withdrawalCredentials: hash32, randaoCommitment: hash32, custodyCommitment: hash32): boolean {
+    // const proofOfPossessionData: DepositInput = {
+    //     pubkey: pubkey,
+    //     withdrawalCredentials: withdrawalCredentials,
+    //     randaoCommitment: randaoCommitment,
+    //     custodyCommitment: custodyCommitment,
+    //     proofOfPossession: EMPTY_SIGNATURE
+    // };
     // Stubbed due to bls not yet a dependency
     // return bls_verify(
     //   pubkey=pubkey,
@@ -159,77 +173,98 @@ function validateProofOfPossession(state: BeaconState, pubkey: int, proofOfPosse
     //       DOMAIN_DEPOSIT,
     //   )
     return true;
-};
-
-function updateValidatorStatus(state: BeaconState, index: int, newStatus: ValidatorStatusCodes): void {
-    // Update the validator status with the given ``index`` to ``new_status``.
-    // Handle other general accounting related to this status update.
-    // Note that this function mutates ``state``.
-    if (newStatus === ValidatorStatusCodes.ACTIVE) {
-      activateValidator(state, index);
-    } else if (newStatus === ValidatorStatusCodes.ACTIVE_PENDING_EXIT) {
-      initiateValidatorExit(state, index);
-    } else if (newStatus === ValidatorStatusCodes.EXITED_WITH_PENALTY || newStatus === ValidatorStatusCodes.EXITED_WITHOUT_PENALTY) {
-        exitValidator(state, index, newStatus);
-    }
 }
 
-function activateValidator(state: BeaconState, index: int): void {
-    // Activate the validator with the given ``index``
-    // Note  this function mutates state
+/**
+ * Activate the validator with the given ``index``
+ * Note: this function mutates state
+ * @param {BeaconState} state
+ * @param {int} index
+ * @param {boolean} genesis
+ */
+function activateValidator(state: BeaconState, index: int, genesis: boolean): void {
     const validator: ValidatorRecord = state.validatorRegistry[index];
-    if (validator.status != ValidatorStatusCodes.PENDING_ACTIVATION) return;
 
-    validator.status = ValidatorStatusCodes.ACTIVE;
-    validator.latestStatusChangeSlot = state.slot;
-    // Stubbed due to getNewValidatorRegistryDeltaChainTip() not yet implemented as helper
-    // state.validatorRegistryDeltaChainTip = getNewValidatorRegistryDeltaChainTip(
-    //   state.validatorRegistryDeltaChainTip,
-    //   index,
-    //   validator.pubkey,
-    //   ValidatorRegistryDeltaFlags.ACTIVATION
+    validator.activationSlot = genesis ? GENESIS_SLOT : state.slot + ENTRY_EXIT_DELAY;
+    // Stubbed due to SSZ
+    // state.validator_registry_delta_chain_tip = hash_tree_root(
+    //   ValidatorRegistryDeltaBlock(
+    //     latest_registry_delta_root=state.validator_registry_delta_chain_tip,
+    //     validator_index=index,
+    //     pubkey=validator.pubkey,
+    //     slot=validator.activation_slot,
+    //     flag=ACTIVATION,
+    //   )
     // )
 }
 
+/**
+ * Initiate exit for the validator with the given ``index``.
+ * Note: that this function mutates ``state``.
+ * @param {BeaconState} state
+ * @param {int} index
+ */
 function initiateValidatorExit(state: BeaconState, index: int): void {
-    // Initiate exit for the validator with the given ``index``.
-    // Note that this function mutates ``state``.
     const validator = state.validatorRegistry[index];
-    if (validator.status != ValidatorStatusCodes.ACTIVE) return;
-    validator.status = ValidatorStatusCodes.ACTIVE_PENDING_EXIT;
-    validator.latestStatusChangeSlot = state.slot;
+    if (!validator.statusFlags) {
+        validator.statusFlags = StatusFlags.INTIATED_EXIT;
+    }
 }
 
-function exitValidator(state: BeaconState, index: int, newStatus: ValidatorStatusCodes): void {
-    // Exit the validator with the given ``index``.
-    // Note that this function mutates ``state``.
+/**
+ * Process a validator exit
+ * @param {BeaconState} state
+ * @param {int} index
+ */
+function exitValidator(state: BeaconState, index: int): void {
     const validator = state.validatorRegistry[index];
-    const prevStatus = validator.status;
-    if (prevStatus === ValidatorStatusCodes.EXITED_WITH_PENALTY) return;
 
-    validator.status = newStatus;
-    validator.latestStatusChangeSlot = state.slot;
+    // The foillowing updates only occur if not previous exited
+  if (validator.exitSlot <= state.slot + ENTRY_EXIT_DELAY) {
+      return;
+  }
 
-    if (newStatus === ValidatorStatusCodes.EXITED_WITH_PENALTY) {
-        state.latestPenalizedExitBalances[Math.floor(state.slot / COLLECTIVE_PENALTY_CALCULATION_PERIOD)] += getEffectiveBalance(state, index);
+  validator.exitSlot = state.slot + ENTRY_EXIT_DELAY;
 
-        // Adjusted balances based on penalty
-        const whistleblowerIndex = getBeaconProposerIndex(state, state.slot);
-        const whistleblowerReward = Math.floor(getEffectiveBalance(state, index) / WHISTLEBLOWER_REWARD_QUOTIENT);
-        state.validatorBalances[whistleblowerIndex] += whistleblowerReward;
-        state.validatorBalances[index] -= whistleblowerReward;
-    }
+  state.validatorRegistryExitCount += 1;
+  validator.exitCount = state.validatorRegistryExitCount;
+  // Stubbed due to SSZ
+  // state.validator_registry_delta_chain_tip = hash_tree_root(
+  //   ValidatorRegistryDeltaBlock(
+  //     latest_registry_delta_root=state.validator_registry_delta_chain_tip,
+  //     validator_index=index,
+  //     pubkey=validator.pubkey,
+  //     slot=validator.exit_slot,
+  //     flag=EXIT,
+  //   )
+  // )
+}
 
-    if (prevStatus === ValidatorStatusCodes.EXITED_WITHOUT_PENALTY) return;
+/**
+ * Penalize bad acting validator
+ * @param {BeaconState} state
+ * @param {int} index
+ */
+function penalizeValidator(state: BeaconState, index: int): void {
+    exitValidator(state, index);
+    const validator = state.validatorRegistry[index];
+    state.latestPenalizedExitBalances[Math.floor(state.slot / EPOCH_LENGTH) % LATEST_PENALIZED_EXIT_LENGTH] += getEffectiveBalance(state, index);
 
-    // The following updates only ocur if not previous exited
-    state.validatorRegistryExitCount += 1;
-    validator.exitCount = state.validatorRegistryExitCount;
-    // Stubbed due to getNewValidatorRegistryDeltaChainTip() not yet implemented as helper
-    // state.validatorRegistryDeltaChainTip = getNewValidatorRegistryDeltaChainTip(
-    //   state.validatorRegistryDeltaChainTip,
-    //   index,
-    //   validator.pubkey,
-    //   ValidatorRegistryDeltaFlags.EXIT
-    // )
+    const whistleblowerIndex = getBeaconProposerIndex(state, state.slot);
+    const whistleblowerReward = Math.floor(getEffectiveBalance(state, index) / WHISTLEBLOWER_REWARD_QUOTIENT);
+    state.validatorBalances[whistleblowerIndex] += whistleblowerReward;
+    state.validatorBalances[index] -= whistleblowerReward;
+    validator.penalizedSlot = state.slot;
+}
+
+/**
+ * Prepare the validator for an exit
+ * @param {BeaconState} state
+ * @param {int} index
+ */
+function prepareValidatorForWithdrawal(state: BeaconState, index: int): void {
+  const validator = state.validatorRegistry[index];
+  if (!validator.statusFlags) {
+    validator.statusFlags = StatusFlags.WITHDRAWABLE;
+  }
 }
