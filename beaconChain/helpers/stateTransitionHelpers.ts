@@ -148,9 +148,9 @@ export function getCommitteeCountPerSlot(activeValidatorCount: int): int {
     1,
     Math.min(
       Math.floor(SHARD_COUNT / EPOCH_LENGTH),
-      Math.floor(Math.floor(activeValidatorCount / EPOCH_LENGTH) / TARGET_COMMITTEE_SIZE)
-    )
-  )
+      Math.floor(Math.floor(activeValidatorCount / EPOCH_LENGTH) / TARGET_COMMITTEE_SIZE),
+    ),
+  );
 }
 
 /**
@@ -208,7 +208,7 @@ export function getCurrentEpochCommitteeCountPerSlot(state: BeaconState): int {
 function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: int): CommitteeShard[] {
   const earliestSlot = state.slot - (state.slot % EPOCH_LENGTH) - EPOCH_LENGTH;
 
-  if (earliestSlot <= slot && slot < (earliestSlot + EPOCH_LENGTH * 2)) throw new Error("Slot is too early!");
+  if (earliestSlot <= slot && slot < (earliestSlot + EPOCH_LENGTH * 2)) { throw new Error("Slot is too early!"); }
 
   const offset = slot % EPOCH_LENGTH;
 
@@ -221,24 +221,24 @@ function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: int): CommitteeS
     shuffling = getShuffling(
       state.previousEpochRandaoMix,
       state.validatorRegistry,
-      state.previousEpochCalculationSlot
+      state.previousEpochCalculationSlot,
     );
     slotStartShard = (state.currentEpochStartShard + committeesPerSlot * offset) % SHARD_COUNT;
   } else {
-    const committeesPerSlot = getCurrentEpochCommitteeCountPerSlot(state);
+    committeesPerSlot = getCurrentEpochCommitteeCountPerSlot(state);
     shuffling = getShuffling(
       state.currentEpochRandaoMix,
       state.validatorRegistry,
-      state.currentEpochCalculationSlot
+      state.currentEpochCalculationSlot,
     );
     slotStartShard = (state.currentEpochStartShard + committeesPerSlot * offset) % SHARD_COUNT;
   }
 
-  let returnValues: CommitteeShard[];
+  const returnValues: CommitteeShard[] = [];
   for (let i: number = 0; i < committeesPerSlot; i++) {
     const committeeShard: CommitteeShard = {
       committee: shuffling[committeesPerSlot * offset + i],
-      shard: (slotStartShard + i) % SHARD_COUNT
+      shard: (slotStartShard + i) % SHARD_COUNT,
     };
     returnValues.push(committeeShard);
   }
@@ -323,7 +323,7 @@ export function getForkVersion(forkData: ForkData, slot: int): int {
  * @returns {Number}
  */
 export function getDomain(forkData: ForkData, slot: int, domainType: int): int {
-  return (getForkVersion(forkData, slot) * 2**32) + domainType
+  return (getForkVersion(forkData, slot) * 2 ** 32) + domainType;
 }
 
 export function verifySlashableVoteData(state: BeaconState, voteData: SlashableVoteData): boolean {
@@ -378,7 +378,7 @@ export function isSurroundVote(attestationData1: AttestationData, attestationDat
     (sourceEpoch1 < sourceEpoch2) &&
     (sourceEpoch2 + 1 === targetEpoch2) &&
     (targetEpoch2 < targetEpoch1)
-  )
+  );
 }
 
 /**

@@ -75,9 +75,9 @@ export interface AttestationData {
 
 export interface AttestationDataAndCustodyBit {
   // Attestation data
-  data: AttestationData,
+  data: AttestationData;
   // Custody bit
-  custodyBit: boolean
+  custodyBit: boolean;
 }
 
 export interface Deposit {
@@ -139,7 +139,7 @@ export interface BeaconBlockBody {
   casperSlashings: CasperSlashing[];
   attestations: Attestation[];
   custodyReseeds: CustodyReseed[];
-  custodyResponses: CustodyResponse[]
+  custodyResponses: CustodyResponse[];
   deposits: Deposit[];
   exits: Exit[];
 }

@@ -1,5 +1,5 @@
 import { BeaconState, CrosslinkRecord, ValidatorRecord } from "../../interfaces/state"
-import {Deposit, DepositInput} from "../../interfaces/blocks";
+import {Deposit} from "../../interfaces/blocks";
 import {
   ZERO_HASH, LATEST_RANDAO_MIXES_LENGTH, EPOCH_LENGTH, SHARD_COUNT,
   LATEST_BLOCK_ROOTS_LENGTH, EMPTY_SIGNATURE, MAX_DEPOSIT, GWEI_PER_ETH,
@@ -23,7 +23,7 @@ type uint384 = number;
  */
 function getInitialBeaconState(initialValidatorDeposits: Deposit[], genesisTime: int, latestDepositRoot: hash32): BeaconState {
     const initialCrosslinkRecord: CrosslinkRecord = {
-        slot: INITIAL_SLOT_NUMBER,
+        slot: GENESIS_SLOT,
         shardBlockRoot: ZERO_HASH
     };
 
@@ -90,7 +90,7 @@ function getInitialBeaconState(initialValidatorDeposits: Deposit[], genesisTime:
     // Process initial activations
     for (let i: number = 0; i < state.validatorRegistry.length; i ++) {
       if (getEffectiveBalance(state, i) === MAX_DEPOSIT * GWEI_PER_ETH) {
-        updateValidatorStatus(state, i, true);
+        activateValidator(state, i, true);
       }
     }
     return state;
