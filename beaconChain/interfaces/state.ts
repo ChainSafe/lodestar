@@ -5,6 +5,7 @@
 import { AttestationData } from "./blocks";
 
 type bytes = number;
+type int = number;
 type uint24 = number;
 type uint64 = number;
 type uint384 = number;
@@ -141,6 +142,11 @@ export interface ShardReassignmentRecord {
   shard: uint64;
   // When
   slot: uint64;
+}
+
+export interface CommitteeShard {
+  committee: int[];
+  shard: int;
 }
 
 /* tslint:disable:no-empty-interface*/
