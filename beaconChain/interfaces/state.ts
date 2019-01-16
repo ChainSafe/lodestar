@@ -26,7 +26,12 @@ export interface BeaconState {
   // Randomness and committees
   latestRandaoMixes: hash32[];
   latestVdfOutputs: hash32[];
-  shardCommitteesAtSlots: ShardCommittee[][];
+  previousEpochStartShard: uint64;
+  currentEpochStartShard: uint64;
+  previousEpochCalculationSlot: uint64;
+  currentEpochCalculationSlot: uint64;
+  previousEpochRandaoMix: hash32;
+  currentEpochRandaoMix: hash32;
 
   // Custody Challenges
   custodyChallenges: CustodyChallenge[];
@@ -44,9 +49,9 @@ export interface BeaconState {
   latestAttestations: PendingAttestationRecord[];
   batchedBlockRoots: hash32[];
 
-  // PoW receipt root
-  processedPowReceiptRoot: hash32;
-  candidatePowReceiptRoots: CandidatePoWReceiptRootRecord[];
+  // Ethereum 1.0 deposit root
+  latestDepositRoot: hash32;
+  depositRootVotes: DepositRootVote[];
 }
 
 export interface ValidatorRecord {
@@ -59,11 +64,17 @@ export interface ValidatorRecord {
   // Slots the proposer has skipped (i.e. layers of RANDAO expected)
   randaoLayers: uint64;
   // Status code
-  status: uint64;
-  // Slot when validator last changed status (or 0)
-  latestStatusChangeSlot: uint64;
-  // Exit counter when validator exited (or 0)
+  activationSlot: uint64;
+  // Slot when validator exited
+  exitSlot: uint64;
+  // Slot when validator withdrew
+  withdrawalSlot: uint64;
+  // Slot when validator was penalized
+  penalizedSlot: uint64;
+  // Exit counter when validator exited
   exitCount: uint64;
+  // Status flags
+  statusFlags: uint64;
   // Custody Commitment
   custodyCommitment: hash32;
   // Slot of latest custody reseed
@@ -76,7 +87,14 @@ export interface CrosslinkRecord {
   // Slot number
   slot: uint64;
   // Shard chain block hash
-  shardBlockHash: hash32;
+  shardBlockRoot: hash32;
+}
+
+export interface DepositRootVote {
+  // Deposit root
+  depositRoot: hash32;
+  // Vote count
+  voteCount: uint64;
 }
 
 export interface ShardCommittee {
@@ -85,22 +103,6 @@ export interface ShardCommittee {
   // Validator indices
   committee: uint24[];
   totalValidatorCount: uint64;
-}
-
-export interface ShardReassignmentRecord {
-  // Which validator to reassign
-  validatorIndex: uint24;
-  // To which shard
-  shard: uint64;
-  // When
-  slot: uint64;
-}
-
-export interface CandidatePoWReceiptRootRecord {
-  // Candidate PoW receipt root
-  candidatePowReceiptRoot: hash32;
-  // Vote count
-  votes: uint64;
 }
 
 export interface PendingAttestationRecord {
@@ -114,6 +116,7 @@ export interface PendingAttestationRecord {
   slotIncluded: uint64;
 }
 
+
 export interface ForkData {
   // Previous fork version
   preForkVersion: uint64;
@@ -121,6 +124,23 @@ export interface ForkData {
   postForkVersion: uint64;
   // Fork slot number
   forkSlot: uint64;
+}
+
+export interface ValidatorRegistryDeltaBlock {
+  latestRegistryDeltaRoot: hash32;
+  validatorIndex: uint64;
+  pubkey: uint384;
+  slot: uint64;
+  flag: uint64;
+}
+
+export interface ShardReassignmentRecord {
+  // Which validator to reassign
+  validatorIndex: uint24;
+  // To which shard
+  shard: uint64;
+  // When
+  slot: uint64;
 }
 
 /* tslint:disable:no-empty-interface*/

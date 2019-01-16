@@ -2,6 +2,8 @@
 
 // These interfaces relate to the data structures for beacon chain blocks
 
+import {CustodyReseed, CustodyResponse} from "./state";
+
 type bytes = number;
 type uint24 = number;
 type uint64 = number;
@@ -25,16 +27,16 @@ export interface ProposerSlashing {
 
 export interface CasperSlashing {
   // First batch of votes
-  votes1: SlashableVoteData;
+  slashableVoteData1: SlashableVoteData;
   // Second batch of votes
-  votes2: SlashableVoteData;
+  slashableVoteData2: SlashableVoteData;
 }
 
 export interface SlashableVoteData {
   // Proof-of-custody indices (0 bits)
-  aggregateSignaturePoc0Indices: uint24[];
+  custodyBit0Indices: uint24[];
   // Proof-of-custody indices (1 bits)
-  aggregateSignaturePoc1Indices: uint24[];
+  custodyBit1Indices: uint24[];
   // Attestation data
   data: AttestationData;
   // Aggregate signature
@@ -58,35 +60,42 @@ export interface AttestationData {
   // Shard number
   shard: uint64;
   // Hash of the signed beacon block
-  beaconBlockHash: hash32;
+  beaconBlockRoot: hash32;
   // Hash of the ancestor at the epoch boundary
-  epochBoundaryHash: hash32;
+  epochBoundaryRoot: hash32;
   // Shard block hash being attested to
-  shardBlockHash: hash32;
+  shardBlockRoot: hash32;
   // Last crosslink hash
-  latestCrosslinkHash: hash32;
+  latestCrosslinkRoot: hash32;
   // Slot of the last justified beacon block
   justifiedSlot: uint64;
   // Hash of the last justified beacon block
-  justifiedBlockHash: hash32;
+  justifiedBlockRoot: hash32;
+}
+
+export interface AttestationDataAndCustodyBit {
+  // Attestation data
+  data: AttestationData,
+  // Custody bit
+  custodyBit: boolean
 }
 
 export interface Deposit {
-  // Receipt Merkle branch
-  merkleBranch: hash32[];
-  // Merkle tree index
-  merkleTreeIndex: uint64;
+  // Branch in the deposit tree
+  branch: hash32[];
+  // index in the deposit tree
+  index: uint64;
   // Deposit data
   depositData: DepositData;
 }
 
 export interface DepositData {
-  // Deposit parameters
-  depositInput: DepositInput;
-  // Value in Gwei
-  value: uint64;
+  // Amount in Gwei
+  amount: uint64;
   // Timestamp from deposit contract
   timestamp: uint64;
+  // Deposit Input
+  depositInput: DepositInput;
 }
 
 export interface DepositInput {
@@ -99,33 +108,26 @@ export interface DepositInput {
   // Initial custody commitment
   custodyCommitment: hash32;
   // BLS proof of possession (a BLS signature)
-  proofOfPossession: Uint8Array[];
+  proofOfPossession: uint384[];
 }
 
 export interface Exit {
   // Minimum slot for processing exit
   slot: uint64;
   // Index of the exiting validator
-  validator_index: uint64;
+  validator_index: uint24;
   // Validator signature
   signature: uint384[];
 }
 
 // Beacon chain blocks
-
 export interface BeaconBlock {
-  // Slot number
+  // Header
   slot: uint64;
-  // Skip list of previous beacon block hashes
-  // i'th item is the most recent ancestor whose slot is a multiple of 2**i for i = 0, ..., 31
-  ancestorHashes: hash32[];
-  // State root
+  parentRoot: hash32;
   stateRoot: hash32;
-  // Proposer RANDAO reveal
   randaoReveal: hash32;
-  // Recent PoW receipt root
-  candidatePowReceiptRoot: hash32;
-  // Proposer signature
+  depositRoot: hash32;
   signature: uint384[];
 
   // Body
@@ -133,9 +135,11 @@ export interface BeaconBlock {
 }
 
 export interface BeaconBlockBody {
-  attestations: Attestation[];
   proposerSlashings: ProposerSlashing[];
   casperSlashings: CasperSlashing[];
+  attestations: Attestation[];
+  custodyReseeds: CustodyReseed[];
+  custodyResponses: CustodyResponse[]
   deposits: Deposit[];
   exits: Exit[];
 }
