@@ -7,6 +7,7 @@ There is a lot of work being done that are core infrastructural pieces for Eth2.
 |-- [Simple Serialize (SSZ)](https://github.com/ChainSafeSystems/ssz-js)<br />
 |-- [Fixed Size Numbers](https://github.com/ChainSafeSystems/fixed-sized-numbers-ts/)<br />
 |-- [BLS Singatures and Signature Aggregation](https://github.com/ChainSafeSystems/bls-js)<br />
+|-- [Gossipsub](https://github.com/ChainSafeSystems/gossipsub-js)<br />
 
 [![Build Status](https://img.shields.io/travis/com/ChainSafeSystems/lodestar/master.svg?label=master&logo=travis "Master Branch (Travis)")](https://travis-ci.com/ChainSafeSystems/lodestar) [![Join the chat at https://gitter.im/chainsafe/lodestar](https://badges.gitter.im/chainsafe/lodestar.svg)](https://gitter.im/chainsafe/lodestar?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
