@@ -74,11 +74,12 @@ const hash_string = (m) => {
 // returns a point on the curve
 const hash_to_G2 = (m) => {
     let h = hash_string(m)
-    let arr = buffer_to_uint8array(h)
-    //console.log(h)
-    //console.log(arr)
+    let h_arr = buffer_to_Array(h)
+    console.log(h)
+    //let arr = buffer_to_uint8array(h)
+    console.log(h_arr)
     //console.log(typeof arr)
-    return scalar_base_mult(arr)
+    //return scalar_base_mult(arr)
 }
 
 // perform S = k*H(m) where S is the signature and H(m) is the hash of the message to
@@ -90,7 +91,7 @@ const bls_sign = (k, m) => {
 
 // perform e(P, H(m)) == e(G, S) where P is our public key, m is our message, S is
 // our signature, and G is the generator point
-const bls_verify = (S, P, m) => {
+const bls_verify = (S, P, m) => {o
 
 }
 
@@ -103,6 +104,15 @@ const bls_aggregate = (S_arr, P_arr, m_arr) => {
 const buffer_to_uint8array = (buf) => {
     var ab = new ArrayBuffer(buf.length);
     var view = new Uint8Array(ab);
+    for (var i = 0; i < buf.length; ++i) {
+        view[i] = buf[i];
+    }
+    return view;
+}
+
+const buffer_to_Array = (buf) => {
+    var ab = new Array(buf.length);
+    var view = new Array(ab);
     for (var i = 0; i < buf.length; ++i) {
         view[i] = buf[i];
     }
