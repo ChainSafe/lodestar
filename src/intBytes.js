@@ -10,7 +10,7 @@ function readIntBytes (type) {
   let byteSize = intSize / 8
 
   return (buffer, offset) => {
-    let bnResult = new BN([...buffer.slice(offset, (offset + byteSize))], 16, 'be').fromTwos(intSize)
+    let bnResult = new BN([...buffer.slice(offset, (offset + byteSize))], 16, 'le').fromTwos(intSize)
     return intSize <= 32 ? bnResult.toNumber() : bnResult
   }
 }
@@ -18,7 +18,7 @@ function readIntBytes (type) {
 function writeIntBytes (type) {
   let intSize = parseInt(type.match(/\d+/g))
   let byteSize = intSize / 8
-  return (buffer, value) => { new BN(value).toTwos(intSize).toBuffer('be', byteSize).copy(buffer) }
+  return (buffer, value) => { new BN(value).toTwos(intSize).toBuffer('le', byteSize).copy(buffer) }
 }
 
 exports.intByteLength = intByteLength
