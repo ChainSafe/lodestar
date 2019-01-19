@@ -6,8 +6,8 @@ const deepCopy = require('deepcopy')
 /**
  * Simply Serializes (SSZ)
  * @method serialize
- * @param {Buffer|array|number|object} value - Value to serialize: hash32 (Buffer) | address (Buffer) | int8/16/24/32 | bytes (Buffer) | array | object
- * @param {string|object} type - A type string ('hash32', 'address', 'int8', 'int16', 'int24', 'int32', 'bytes', 'bool', 'hash96', 'hash97'), or type array ['hash32'], or type object containing fields property
+ * @param {boolean|Buffer|array|number|object} value - Value to serialize: boolean | int8/16/24/32 | bytesN (Buffer) | bytes (Buffer) | array | object
+ * @param {string|object} type - A type string ('bool', 'int8', 'int16', 'int24', 'int32', `bytes${N}`, 'bytes'), or type array ['bytes32'], or type object containing fields property
  * @return {Buffer} the byte output
  */
 function serialize (value, type) {
@@ -16,29 +16,6 @@ function serialize (value, type) {
     let result = Buffer.alloc(1)
     result.writeInt8(value ? 1 : 0)
     return result
-  }
-
-  // serialize hashes
-  if ((typeof type === 'string') && !!type.match(/^hash\d+$/g)) {
-    let hashSize = parseInt(type.match(/\d+/g))
-    if (![32, 96, 97].includes(hashSize)) {
-      throw Error('SSZ only serializes hash32, hash96, and hash97')
-    }
-
-    // check byte length
-    if (value.byteLength !== hashSize) {
-      throw Error(`given ${type} ${value} should be ${hashSize} bytes`)
-    }
-    return value
-  }
-
-  // serialize (Ethereum) addresses
-  if (type === 'address') {
-    // check length is 20 byte
-    if (value.byteLength !== 20) {
-      throw Error(`given address ${value} should be 20 bytes`)
-    }
-    return value
   }
 
   // serialize integers
@@ -53,6 +30,16 @@ function serialize (value, type) {
     let buffer = Buffer.alloc(intSize / 8)
     writeIntBytes(type)(buffer, value)
     return buffer
+  }
+
+  // serialize bytesN
+  if ((typeof type === 'string') && !!type.match(/^bytes\d+$/g)) {
+    let bytesSize = parseInt(type.match(/\d+/g))
+    // check byte length
+    if (value.byteLength !== bytesSize) {
+      throw Error(`given ${type} ${value} should be ${bytesSize} bytes`)
+    }
+    return value
   }
 
   // serialize bytes
@@ -110,8 +97,8 @@ function serialize (value, type) {
  * Simply Deserializes (SSZ)
  * @method deserialize
  * @param {Buffer} data bytes (buffer) to deserialize
- * @param {string|object} type - A type string ('hash32', 'address', 'int8', 'int16', 'int24, ''int32', 'bytes', 'bool', 'hash96', 'hash97'), or type array ['hash32'], or type object containing fields property
- * @return {Buffer|array|number|object} deserialized value : hash32 (Buffer) | address (Buffer) | int8/16/32/64/256 | uint8/16/32/64/256 | bytes (Buffer) | array | object
+ * @param {string|object} type - A type string ('bool', 'int8', 'int16', 'int24, 'int32', `bytes${N}`, 'bytes'), or type array ['bytes32'], or type object containing fields property
+ * @return {Buffer|array|number|object} deserialized value : boolean | int8/16/32/64/256 | uint8/16/32/64/256 | bytesN (Buffer) | bytes (Buffer) | array | object
  */
 function deserialize (data, start, type) {
   const int32ByteLength = intByteLength('int32')
@@ -124,31 +111,6 @@ function deserialize (data, start, type) {
         deserializedData: intResult === 1,
         offset: start + intByteLength('int8')
       }
-    }
-  }
-
-  // deserializes hashes
-  if ((typeof type === 'string') && !!type.match(/^hash\d+$/g)) {
-    let hashSize = parseInt(type.match(/\d+/g))
-    if (![32, 96, 97].includes(hashSize)) {
-      throw Error('SSZ only serializes hash32, hash96, and hash97')
-    }
-
-    assertEnoughBytes(data, start, hashSize)
-
-    return {
-      deserializedData: data.slice(start, (start + hashSize)),
-      offset: start + hashSize
-    }
-  }
-
-  // deserializes addresses
-  if (type === 'address') {
-    const addressLength = 20
-    assertEnoughBytes(data, start, addressLength)
-    return {
-      deserializedData: data.slice(start, (start + addressLength)),
-      offset: start + addressLength
     }
   }
 
@@ -165,6 +127,18 @@ function deserialize (data, start, type) {
     return {
       deserializedData: readIntBytes(type)(data, start),
       offset: start + intByteLength(type)
+    }
+  }
+
+  // deserializes bytesN
+  if ((typeof type === 'string') && !!type.match(/^bytes\d+$/g)) {
+    let bytesSize = parseInt(type.match(/\d+/g))
+
+    assertEnoughBytes(data, start, bytesSize)
+
+    return {
+      deserializedData: data.slice(start, (start + bytesSize)),
+      offset: start + bytesSize
     }
   }
 
