@@ -270,15 +270,15 @@ function deepcopy (x) {
  * @param {boolean} recursive - If recursive is false, pad output to 32 bytes
  * @return {Buffer} the hash
  */
-function treeHash (value, type, recursive=false) {
-  let output;
+function treeHash (value, type, recursive = false) {
+  let output
   if (typeof type === 'string') {
     // bool
     // bytes
     if (type === 'bool') {
       output = serialize(value, type)
     // uint
-    } else if (!!type.match(/^uint\d+$/g)) {
+    } else if (type.match(/^uint\d+$/g)) {
       const intSize = parseInt(type.match(/\d+/g))
       if (intSize <= 256) {
         output = serialize(value, type)
@@ -286,9 +286,9 @@ function treeHash (value, type, recursive=false) {
         output = hash(serialize(value, type))
       }
     // bytesN
-    } else if (!!type.match(/^bytes\d+$/g)) {
+    } else if (type.match(/^bytes\d+$/g)) {
       const bytesSize = parseInt(type.match(/\d+/g))
-      if (bytesSize <=32) {
+      if (bytesSize <= 32) {
         output = serialize(value, type)
       } else {
         output = hash(serialize(value, type))
@@ -304,7 +304,7 @@ function treeHash (value, type, recursive=false) {
     output = merkleHash(value.map(v => treeHash(v, elementType, true)))
   } else if ((typeof type === 'object' || typeof type === 'function') && type.hasOwnProperty('fields')) {
     output = hash(type.fields.map(f => treeHash(value[f], type[f], true)))
-  } 
+  }
   if (!output) {
     throw Error(`Unable to hash value ${value} of type ${type}`)
   }
@@ -325,7 +325,7 @@ function merkleHash (list) {
   // Store length of list (to compensate for non-bijectiveness of padding)
   const dataLen = Buffer.alloc(32)
   dataLen.writeUInt32BE(list.length, 28) // big endian
-  let chunkz;
+  let chunkz
   if (list.length === 0) {
     chunkz = [Buffer.alloc(SSZ_CHUNK_SIZE)]
   } else if (list[0].length < SSZ_CHUNK_SIZE) {
