@@ -2,7 +2,7 @@ const intByteLength = require('./intBytes').intByteLength
 const readIntBytes = require('./intBytes').readIntBytes
 const writeIntBytes = require('./intBytes').writeIntBytes
 const deepCopy = require('deepcopy')
-const keccak256 = require('js-sha3').keccak256
+const keccakAsU8a = require('@polkadot/util-crypto').keccakAsU8a
 
 const SSZ_CHUNK_SIZE = 128
 
@@ -358,7 +358,7 @@ function merkleHash (list) {
 }
 
 function hash (x) {
-  return Buffer.from(keccak256.update(x).arrayBuffer())
+  return Buffer.from(keccakAsU8a(x))
 }
 
 function padRight (x) {
