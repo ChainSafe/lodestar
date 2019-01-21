@@ -2,6 +2,9 @@ const intByteLength = require('./intBytes').intByteLength
 const readIntBytes = require('./intBytes').readIntBytes
 const writeIntBytes = require('./intBytes').writeIntBytes
 const deepCopy = require('deepcopy')
+const keccakAsU8a = require('@polkadot/util-crypto').keccakAsU8a
+
+const SSZ_CHUNK_SIZE = 128
 
 /**
  * Simply Serializes (SSZ)
@@ -231,13 +234,117 @@ function deepcopy (x) {
   return deepCopy(x)
 }
 
+/**
+ * Returns a tree hash of an object
+ * @method treeHash
+ * @param {} value
+ * @param {} type
+ * @param {boolean|Buffer|array|number|object} value - Value to hash: boolean | uint8/16/24/32 | bytesN (Buffer) | bytes (Buffer) | array | object
+ * @param {string|object} type - A type string ('bool', 'int8', 'int16', 'int24', 'int32', `bytes${N}`, 'bytes'), or type array ['bytes32'], or type object containing fields property
+ * @param {boolean} recursive - If recursive is false, pad output to 32 bytes
+ * @return {Buffer} the hash
+ */
+function treeHash (value, type, recursive = false) {
+  let output
+  if (typeof type === 'string') {
+    // bool
+    // bytes
+    if (type === 'bool') {
+      output = serialize(value, type)
+    // uint
+    } else if (type.match(/^uint\d+$/g)) {
+      const intSize = parseInt(type.match(/\d+/g))
+      if (intSize <= 256) {
+        output = serialize(value, type)
+      } else {
+        output = hash(serialize(value, type))
+      }
+    // bytesN
+    } else if (type.match(/^bytes\d+$/g)) {
+      const bytesSize = parseInt(type.match(/\d+/g))
+      if (bytesSize <= 32) {
+        output = serialize(value, type)
+      } else {
+        output = hash(serialize(value, type))
+      }
+    // bytes
+    } else if (type === 'bytes') {
+      output = hash(serialize(value, type))
+    } else {
+      throw Error(`Unable to hash: unknown type ${type}`)
+    }
+  } else if (Array.isArray(value) && Array.isArray(type)) {
+    const elementType = type[0]
+    output = merkleHash(value.map(v => treeHash(v, elementType, true)))
+  } else if ((typeof type === 'object' || typeof type === 'function') && type.hasOwnProperty('fields')) {
+    output = hash(type.fields.map(f => treeHash(value[f], type[f], true)))
+  }
+  if (!output) {
+    throw Error(`Unable to hash value ${value} of type ${type}`)
+  }
+  if (recursive) {
+    return output
+  }
+  return padRight(output)
+}
+
 function assertEnoughBytes (data, start, length) {
   if (data.byteLength < start + length) {
     throw Error('Data bytes is not enough for data type')
   }
 }
 
+// Merkle tree hash of a list of homogenous, non-empty items
+function merkleHash (list) {
+  // Store length of list (to compensate for non-bijectiveness of padding)
+  const dataLen = Buffer.alloc(32)
+  dataLen.writeUInt32BE(list.length, 28) // big endian
+  let chunkz
+  if (list.length === 0) {
+    chunkz = [Buffer.alloc(SSZ_CHUNK_SIZE)]
+  } else if (list[0].length < SSZ_CHUNK_SIZE) {
+    // See how many items fit in a chunk
+    const itemsPerChunk = Math.floor(SSZ_CHUNK_SIZE / list[0].length)
+
+    // Build a list of chunks based on the number of items in the chunk
+    chunkz = []
+    for (let i = 0; i < list.length; i += itemsPerChunk) {
+      chunkz.push(Buffer.concat(list.slice(i, i + itemsPerChunk)))
+    }
+  } else {
+    chunkz = list
+  }
+
+  // Tree-hash
+  while (chunkz.length > 1) {
+    if (chunkz.length % 2 === 1) {
+      chunkz.push(Buffer.alloc(SSZ_CHUNK_SIZE))
+    }
+    const chunkz2 = []
+    for (let i = 0; i < chunkz.length; i += 2) {
+      chunkz2.push(hash(Buffer.concat([chunkz[i], chunkz[i + 1]])))
+    }
+    chunkz = chunkz2
+  }
+
+  // Return hash of root and length data
+  return hash(Buffer.concat([chunkz[0], dataLen]))
+}
+
+function hash (x) {
+  return Buffer.from(keccakAsU8a(x))
+}
+
+function padRight (x) {
+  if (x.length < 32) {
+    return Buffer.concat([x, Buffer.alloc(32 - x.length)])
+  }
+  return x
+}
+
 exports.serialize = serialize
 exports.deserialize = deserialize
 exports.eq = eq
 exports.deepcopy = deepcopy
+exports.merkleHash = merkleHash
+exports.treeHash = treeHash
