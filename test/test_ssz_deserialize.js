@@ -6,6 +6,12 @@ const ActiveState = require('./utils/activeState').ActiveState;
 const AttestationRecord = require('./utils/activeState').AttestationRecord;
 const serialize = require('../src').serialize;
 const deserialize = require('../src').deserialize;
+const testObjects = require('./utils/objects')
+
+const SimpleObject = testObjects.SimpleObject
+const OuterObject = testObjects.OuterObject
+const InnerObject = testObjects.InnerObject
+const ArrayObject = testObjects.ArrayObject
 
 describe(`SimpleSerialize - deserializes boolean`, () => {
 
@@ -426,24 +432,24 @@ describe('SimpleSerialize - deserialize objects', () => {
         };
 
         let fields = {
-            'fields':{
-                'publicAddress': 'bytes20',
-                'secret': 'bytes32',
-                'age': 'int8',
-                'distance': 'int16',
-                'halfLife': 'int32',
-                'file': 'bytes',
-                'zz1': 'uint64',
-                'zz2': 'int256',
-                'zz3': 'bool'
-            }
+            'fields': [
+                ['age', 'int8'],
+                ['distance', 'int16'],
+                ['file', 'bytes'],
+                ['halfLife', 'int32'],
+                ['publicAddress', 'bytes20'],
+                ['secret', 'bytes32'],
+                ['zz1', 'uint64'],
+                ['zz2', 'int256'],
+                ['zz3', 'bool'],
+            ]
         };
 
         let result = deserialize(serialize(valueObject, fields), 0, fields);
 
         // assert fields
-        Object.keys(fields['fields'])
-              .forEach(fieldName => {
+        fields['fields']
+              .forEach(([fieldName, fieldType]) => {
                   let expectedValue = valueObject[fieldName];
                   let actualValue = result.deserializedData[fieldName];
                   if(typeof actualValue.eq === 'function'){
@@ -481,4 +487,34 @@ describe('SimpleSerialize - deserialize objects', () => {
 
     });
 
+    const testCases = [
+      [["00000003000000", SimpleObject], new SimpleObject({b:0,a:0})],
+      [["00000003000201", SimpleObject], new SimpleObject({b:2,a:1})],
+      [["0000000703000000020006", OuterObject], new OuterObject({v:3, subV: new InnerObject({v:6})})],
+      [["000000120000000e0000000300020100000003000403", ArrayObject], new ArrayObject({v: [new SimpleObject({b:2,a:1}), new SimpleObject({b:4,a:3})]})],
+      [["0000001600000007030000000200060000000705000000020007", [OuterObject]], [new OuterObject({v:3, subV: new InnerObject({v:6})}), new OuterObject({v:5, subV: new InnerObject({v:7})})]],
+    ]
+    // like a deepEqual,but reliant on type, instead of inspection of ownProperties
+    const genericEqual = (obj1, obj2, type) => {
+      if (typeof type === 'string') { // simple type
+        assert.equal(obj1, obj2)
+      } else if (Array.isArray(type)) { // array type
+        const elementType = type[0]
+        assert.equal(obj1.length, obj2.length)
+        for (let i = 0; i < obj1.length; i++) {
+          genericEqual(obj1[i], obj2[i], elementType)
+        }
+      } else if (typeof type === 'function') { // object type
+        for (const [fieldName, fieldType] of type.fields) {
+          genericEqual(obj1[fieldName], obj2[fieldName], fieldType)
+        }
+      }
+    }
+    for (const [input, output] of testCases) {
+      const [bytes, type] = input
+      it(`successfully decodes objects - ${type.name || typeof type}`, () => {
+        const result = deserialize(Buffer.from(bytes, 'hex'), 0, type).deserializedData
+        genericEqual(result, output, type)
+      })
+    }
 });

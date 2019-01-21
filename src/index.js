@@ -78,11 +78,9 @@ function serialize (value, type) {
 
   // serializes objects (including compound objects)
   if ((typeof type === 'object' || typeof type === 'function') && type.hasOwnProperty('fields')) {
-    let buffers = []
-    Object.keys(type.fields)
-      .sort()
-      .forEach(fieldName => {
-        buffers.push(serialize(value[fieldName], type.fields[fieldName]))
+    const buffers = type.fields
+      .map(([fieldName, fieldType]) => {
+        return serialize(value[fieldName], fieldType)
       })
 
     let totalByteLength = buffers.reduce((acc, v) => acc + v.byteLength, 0)
@@ -195,10 +193,9 @@ function deserialize (data, start, type) {
     let output = {}
     let position = start + int32ByteLength
 
-    Object.keys(type.fields)
-      .sort()
-      .forEach(fieldName => {
-        let fieldResult = deserialize(data, position, type.fields[fieldName])
+    type.fields
+      .forEach(([fieldName, fieldType]) => {
+        let fieldResult = deserialize(data, position, fieldType)
         position = fieldResult.offset
         output[fieldName] = fieldResult.deserializedData
       })
