@@ -9,38 +9,38 @@ const eq = require('../src/index').eq;
 
 describe('SimpleSerialize eq', () => {
 
-    it('should be reflexive with hash32 object that was simply serialized', () => {
-        let hashInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
-        let result = serialize(hashInput, 'hash32');
+    it('should be reflexive with bytes32 object that was simply serialized', () => {
+        let bytesInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+        let result = serialize(bytesInput, 'bytes32');
 
-        assert(eq(result,result) === true, "hash32 result should be the same as itself");
+        assert(eq(result,result) === true, "bytes32 result should be the same as itself");
     })
 
-    it('should be false given different hash32 objects that were simply serialized', () => {
-        let hashInput1 = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
-        let result1 = serialize(hashInput1, 'hash32');
+    it('should be false given different bytes32 objects that were simply serialized', () => {
+        let bytesInput1 = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+        let result1 = serialize(bytesInput1, 'bytes32');
 
-        let hashInput2 = hexToBytes('bb7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
-        let result2 = serialize(hashInput2, 'hash32');
+        let bytesInput2 = hexToBytes('bb7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+        let result2 = serialize(bytesInput2, 'bytes32');
 
-        assert(eq(result1,result2) === false, "both hash32 objects should be different");
+        assert(eq(result1,result2) === false, "both bytes32 objects should be different");
     })
 
-    it('should be reflexive with address object that was simply serialized', () => {
-        let addressInput = hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a30');
-        let result = serialize(addressInput, 'address');
+    it('should be reflexive with bytes20 object that was simply serialized', () => {
+        let bytes20Input = hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a30');
+        let result = serialize(bytes20Input, 'bytes20');
 
-        assert(eq(result,result) === true, "address result should be the same as itself");
+        assert(eq(result,result) === true, "bytes20 result should be the same as itself");
     })
 
-    it('should be false given different hash32 objects that were simply serialized', () => {
-        let addressInput1 = hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a30');
-        let result1 = serialize(addressInput1, 'address');
+    it('should be false given different bytes32 objects that were simply serialized', () => {
+        let bytes20Input1 = hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a30');
+        let result1 = serialize(bytes20Input1, 'bytes20');
 
-        let addressInput2 = hexToBytes('e17db53f339a726e0b347bbad221ad7b50dc2a30');
-        let result2 = serialize(addressInput2, 'address');
+        let bytes20Input2 = hexToBytes('e17db53f339a726e0b347bbad221ad7b50dc2a30');
+        let result2 = serialize(bytes20Input2, 'bytes20');
 
-        assert(eq(result1,result2) === false, "both address objects should be different");
+        assert(eq(result1,result2) === false, "both bytes20 objects should be different");
     })
 
     it('should be reflexive with int8 object that was simply serialized', () => {

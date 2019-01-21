@@ -2,7 +2,7 @@ class ActiveState {
     static get fields(){ 
         return {
             'pendingAttestations': [AttestationRecord],
-            'recentBlockHashes': ['hash32']
+            'recentBlockHashes': ['bytes32']
 
         }; 
     }
