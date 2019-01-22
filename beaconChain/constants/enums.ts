@@ -1,11 +1,8 @@
 // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
 
-enum ValidatorStatusCodes {
-  PENDING_ACTIVATION = 0,
-  ACTIVE = 1,
-  ACTIVE_PENDING_EXIT = 2,
-  EXITED_WITHOUT_PENALTY = 3,
-  EXITED_WITH_PENALTY = 4,
+enum StatusFlags {
+  INTIATED_EXIT = 2 ** 0,
+  WITHDRAWABLE = 2 ** 1,
 }
 
 enum ValidatorRegistryDeltaFlags {
@@ -23,5 +20,5 @@ enum SignatureDomains {
 export {
   SignatureDomains,
   ValidatorRegistryDeltaFlags,
-  ValidatorStatusCodes,
+  StatusFlags,
 };
