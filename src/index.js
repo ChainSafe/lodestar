@@ -274,7 +274,7 @@ function treeHash (value, type, recursive = false) {
     const elementType = type[0]
     output = merkleHash(value.map(v => treeHash(v, elementType, true)))
   } else if ((typeof type === 'object' || typeof type === 'function') && type.hasOwnProperty('fields')) {
-    output = hash(type.fields.map(f => treeHash(value[f], type[f], true)))
+    output = hash(Buffer.concat(type.fields.map(([fieldName, fieldType]) => treeHash(value[fieldName], fieldType, true))))
   }
   if (!output) {
     throw Error(`Unable to hash value ${value} of type ${type}`)
