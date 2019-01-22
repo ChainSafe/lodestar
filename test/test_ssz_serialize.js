@@ -6,6 +6,12 @@ const intByteLength = require('../src/intBytes').intByteLength;
 const ActiveState = require('./utils/activeState').ActiveState;
 const AttestationRecord = require('./utils/activeState').AttestationRecord;
 const serialize = require('../src').serialize;
+const testObjects = require('./utils/objects')
+
+const SimpleObject = testObjects.SimpleObject
+const OuterObject = testObjects.OuterObject
+const InnerObject = testObjects.InnerObject
+const ArrayObject = testObjects.ArrayObject
 
 describe('SimpleSerialize - serializes booleans', () => {
 
@@ -622,17 +628,17 @@ describe('SimpleSerialize - serializes objects', () => {
                 'zz3': boolValue
             },
             {
-                'fields':{
-                    'publicAddress': 'bytes20',
-                    'secret': 'bytes32',
-                    'age': 'int8',
-                    'distance': 'int16',
-                    'halfLife': 'int32',
-                    'file': 'bytes',
-                    'zz1': 'uint64',
-                    'zz2': 'int256',
-                    'zz3': 'bool'
-                }
+                'fields': [
+                    ['age', 'int8'],
+                    ['distance', 'int16'],
+                    ['file', 'bytes'],
+                    ['halfLife', 'int32'],
+                    ['publicAddress', 'bytes20'],
+                    ['secret', 'bytes32'],
+                    ['zz1', 'uint64'],
+                    ['zz2', 'int256'],
+                    ['zz3', 'bool'],
+                ]
             }
         );
         
@@ -765,5 +771,17 @@ describe('SimpleSerialize - serializes objects', () => {
 
         return offset;
     }
-
+    const testCases = [
+      [[new SimpleObject({b:0,a:0}), SimpleObject], "00000003000000"],
+      [[new SimpleObject({b:2,a:1}), SimpleObject], "00000003000201"],
+      [[new OuterObject({v:3,subV:new InnerObject({v:6})}), OuterObject], "0000000703000000020006"],
+      [[new ArrayObject({v: [new SimpleObject({b:2,a:1}), new SimpleObject({b:4,a:3})]}), ArrayObject], "000000120000000e0000000300020100000003000403"],
+      [[[new OuterObject({v:3, subV:new InnerObject({v:6})}), new OuterObject({v:5, subV:new InnerObject({v:7})})],[OuterObject]], "0000001600000007030000000200060000000705000000020007"],
+    ]
+    for (const [input, output] of testCases) {
+      const [value, type] = input
+      it(`serializes objects - ${type.name || typeof type}`, () => {
+        assert.equal(serialize(value, type).toString('hex'), output)
+      })
+    }
 });
