@@ -21,7 +21,7 @@ type uint384 = number;
  * @param {hash32} processedPowReceiptRoot
  * @returns {BeaconState}
  */
-function getInitialBeaconState(initialValidatorDeposits: Deposit[], genesisTime: int, latestDepositRoot: hash32): BeaconState {
+export function getInitialBeaconState(initialValidatorDeposits: Deposit[], genesisTime: int, latestDepositRoot: hash32): BeaconState {
     const initialCrosslinkRecord: CrosslinkRecord = {
         slot: GENESIS_SLOT,
         shardBlockRoot: ZERO_HASH
