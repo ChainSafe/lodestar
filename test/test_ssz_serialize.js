@@ -732,7 +732,7 @@ describe('SimpleSerialize - serializes objects', () => {
 
         // assert bytes32 array
         let expectedBytesArrayLength = testObj.recentBlockHashes.length * 32; // 32 byte bytes
-        let actualBytesArrayLength = result.readInt32BE(offset);
+        let actualBytesArrayLength = result.readInt32LE(offset);
         offset += 4;
         assert.equal(actualBytesArrayLength, expectedBytesArrayLength, 'Bytes32 array length is not correct');
         let actualBytes1 = result.slice(offset, (offset + 32));
@@ -770,14 +770,15 @@ describe('SimpleSerialize - serializes objects', () => {
         return offset;
     }
     const testCases = [
-      [[new SimpleObject({b:0,a:0}), SimpleObject], "00000003000000"],
-      [[new SimpleObject({b:2,a:1}), SimpleObject], "00000003000201"],
-      [[new OuterObject({v:3,subV:new InnerObject({v:6})}), OuterObject], "0000000703000000020006"],
-      [[new ArrayObject({v: [new SimpleObject({b:2,a:1}), new SimpleObject({b:4,a:3})]}), ArrayObject], "000000120000000e0000000300020100000003000403"],
-      [[[new OuterObject({v:3, subV:new InnerObject({v:6})}), new OuterObject({v:5, subV:new InnerObject({v:7})})],[OuterObject]], "0000001600000007030000000200060000000705000000020007"],
-    ]
+      [[new SimpleObject({b:0,a:0}), SimpleObject], "03000000000000"],
+      [[new SimpleObject({b:2,a:1}), SimpleObject], "03000000020001"],
+      [[new OuterObject({v:3,subV:new InnerObject({v:6})}), OuterObject], "0700000003020000000600"],
+      [[new ArrayObject({v: [new SimpleObject({b:2,a:1}), new SimpleObject({b:4,a:3})]}), ArrayObject], "120000000e0000000300000002000103000000040003"],
+      [[[new OuterObject({v:3, subV:new InnerObject({v:6})}), new OuterObject({v:5, subV:new InnerObject({v:7})})],[OuterObject]], "1600000007000000030200000006000700000005020000000700"],
+    ];
+
     for (const [input, output] of testCases) {
-      const [value, type] = input
+      const [value, type] = input;
       it(`serializes objects - ${type.name || typeof type}`, () => {
         assert.equal(serialize(value, type).toString('hex'), output)
       })
