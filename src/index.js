@@ -294,9 +294,9 @@ function assertEnoughBytes (data, start, length) {
 // Merkle tree hash of a list of homogenous, non-empty items
 function merkleHash (list) {
   // Store length of list (to compensate for non-bijectiveness of padding)
-  const dataLen = Buffer.alloc(32)
-  dataLen.writeUInt32LE(list.length, 28) // big endian
-  let chunkz
+  const dataLen = Buffer.alloc(32);
+  dataLen.writeUInt32LE(list.length); // little endian
+  let chunkz;
   if (list.length === 0) {
     chunkz = [Buffer.alloc(SSZ_CHUNK_SIZE)]
   } else if (list[0].length < SSZ_CHUNK_SIZE) {
@@ -304,7 +304,7 @@ function merkleHash (list) {
     const itemsPerChunk = Math.floor(SSZ_CHUNK_SIZE / list[0].length)
 
     // Build a list of chunks based on the number of items in the chunk
-    chunkz = []
+    chunkz = [];
     for (let i = 0; i < list.length; i += itemsPerChunk) {
       chunkz.push(Buffer.concat(list.slice(i, i + itemsPerChunk)))
     }
@@ -317,7 +317,7 @@ function merkleHash (list) {
     if (chunkz.length % 2 === 1) {
       chunkz.push(Buffer.alloc(SSZ_CHUNK_SIZE))
     }
-    const chunkz2 = []
+    const chunkz2 = [];
     for (let i = 0; i < chunkz.length; i += 2) {
       chunkz2.push(hash(Buffer.concat([chunkz[i], chunkz[i + 1]])))
     }
