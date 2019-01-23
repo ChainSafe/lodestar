@@ -62,7 +62,8 @@ describe('SimpleSerialize - tree hashes', () => {
     [[new OuterObject({v:3,subV: new InnerObject({v:6})}), OuterObject], 'bb2f30386c55445381eee7a33c3794227b8c8e4be4caa54506901a4ddfe79ee2'],
     [[new ArrayObject({v: [new SimpleObject({b:2,a:1}), new SimpleObject({b:4,a:3})]}), ArrayObject], 'f3032dce4b4218187e34aa8b6ef87a3fabe1f8d734ce92796642dc6b2911277c'],
     [[[new OuterObject({v:3,subV: new InnerObject({v:6})}), new OuterObject({v:5,subV: new InnerObject({v:7})})], [OuterObject]], 'de43bc05aa6b011121f9590c10de1734291a595798c84a0e3edd1cc1e6710908'],
-  ]
+  ];
+
   const stringifyType = type => {
     if (typeof type === 'string') {
       return type
@@ -71,14 +72,15 @@ describe('SimpleSerialize - tree hashes', () => {
     } else if (typeof type === 'function') {
       return type.name
     } else return ''
-  }
+  };
+
   for (const [input, output] of testCases) {
-    const [value, type] = input
+    const [value, type] = input;
     it(`successfully tree hashes ${stringifyType(type)}`, () => {
       assert.equal(treeHash(value, type).toString('hex'), output)
     })
   }
-})
+});
 
 describe('SimpleSerialize - merkle hashes', () => {
   const testCases = [
