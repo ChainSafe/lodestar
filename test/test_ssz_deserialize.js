@@ -6,6 +6,12 @@ const ActiveState = require('./utils/activeState').ActiveState;
 const AttestationRecord = require('./utils/activeState').AttestationRecord;
 const serialize = require('../src').serialize;
 const deserialize = require('../src').deserialize;
+const testObjects = require('./utils/objects')
+
+const SimpleObject = testObjects.SimpleObject
+const OuterObject = testObjects.OuterObject
+const InnerObject = testObjects.InnerObject
+const ArrayObject = testObjects.ArrayObject
 
 describe(`SimpleSerialize - deserializes boolean`, () => {
 
@@ -28,51 +34,51 @@ describe(`SimpleSerialize - deserializes boolean`, () => {
 });
 
 
-describe(`SimpleSerialize - deserializes hash32, hash96, hash97`, () => {
+describe(`SimpleSerialize - deserializes bytes32, bytes96, bytes97`, () => {
 
-    it(`deserializes hash32`, () => {
+    it(`deserializes bytes32`, () => {
 
-        let hashInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
-        let result = deserialize(serialize(hashInput, 'hash32'), 0, 'hash32');
+        let bytesInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+        let result = deserialize(serialize(bytesInput, 'bytes32'), 0, 'bytes32');
 
-        assert.isNotNull(result, 'hash32 result should not be null');
-        assert.equal(result.deserializedData.toString('hex'), hashInput.toString('hex'), 'hash32 result should be same as input');
+        assert.isNotNull(result, 'bytes32 result should not be null');
+        assert.equal(result.deserializedData.toString('hex'), bytesInput.toString('hex'), 'bytes32 result should be same as input');
         assert.equal(result.offset, 32, 'Offset is should be 32');
 
     });
 
-    it(`deserializes hash96`, () => {
+    it(`deserializes bytes96`, () => {
 
-        let hashInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
-        let result = deserialize(serialize(hashInput, 'hash96'), 0, 'hash96');
+        let bytesInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+        let result = deserialize(serialize(bytesInput, 'bytes96'), 0, 'bytes96');
 
-        assert.isNotNull(result, 'hash96 result should not be null');
-        assert.equal(result.deserializedData.toString('hex'), hashInput.toString('hex'), 'hash96 result should be same as input');
+        assert.isNotNull(result, 'bytes96 result should not be null');
+        assert.equal(result.deserializedData.toString('hex'), bytesInput.toString('hex'), 'bytes96 result should be same as input');
         assert.equal(result.offset, 96, 'Offset is should be 96');
 
     });
 
-    it(`deserializes hash97`, () => {
+    it(`deserializes bytes97`, () => {
 
-        let hashInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adaa');
-        let result = deserialize(serialize(hashInput, 'hash97'), 0, 'hash97');
+        let bytesInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adaa');
+        let result = deserialize(serialize(bytesInput, 'bytes97'), 0, 'bytes97');
 
-        assert.isNotNull(result, 'hash97 result should not be null');
-        assert.equal(result.deserializedData.toString('hex'), hashInput.toString('hex'), 'hash97 result should be same as input');
+        assert.isNotNull(result, 'bytes97 result should not be null');
+        assert.equal(result.deserializedData.toString('hex'), bytesInput.toString('hex'), 'bytes97 result should be same as input');
         assert.equal(result.offset, 97, 'Offset is should be 97');
 
     });
 });
 
-describe('SimpleSerialize - deserializes addresses', () => {
+describe('SimpleSerialize - deserializes bytes20', () => {
 
-    it(`deserializes addresses`, () => {
+    it(`deserializes bytes20`, () => {
 
-        let addressInput = hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a30');
-        let result = deserialize(serialize(addressInput, 'address'), 0, 'address');
+        let bytes20Input = hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a30');
+        let result = deserialize(serialize(bytes20Input, 'bytes20'), 0, 'bytes20');
 
-        assert.isNotNull(result, 'address result should not be null');
-        assert.equal(result.deserializedData.toString('hex'), addressInput.toString('hex'), 'address result should be same as input');
+        assert.isNotNull(result, 'bytes result should not be null');
+        assert.equal(result.deserializedData.toString('hex'), bytes20Input.toString('hex'), 'bytes result should be same as input');
         assert.equal(result.offset, 20, 'Offset is should be 20')
 
     });
@@ -281,26 +287,26 @@ describe('SimpleSerialize - deserialize arrays', () => {
         assert.deepEqual(result.deserializedData, arrayInput);
     });
 
-    it(`deserializes arrays of elements (of the same type) - hash32`, () => {
+    it(`deserializes arrays of elements (of the same type) - bytes32`, () => {
 
         scenarioDeserializeByteArrays(
             [
                 hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'),
                 hexToBytes('dd7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015bb')
             ],
-            'hash32'
+            'bytes32'
         );
 
     });
 
-    it(`deserializes arrays of elements (of the same type) - address`, () => {
+    it(`deserializes arrays of elements (of the same type) - bytes20`, () => {
 
         scenarioDeserializeByteArrays(
             [
                 hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a30'),
                 hexToBytes('ccccb53f339a726e0b347bbad221ad7b50daaaaa')
             ],
-            'address'
+            'bytes20'
         );
 
     });
@@ -426,24 +432,24 @@ describe('SimpleSerialize - deserialize objects', () => {
         };
 
         let fields = {
-            'fields':{
-                'publicAddress': 'address',
-                'secret': 'hash32',
-                'age': 'int8',
-                'distance': 'int16',
-                'halfLife': 'int32',
-                'file': 'bytes',
-                'zz1': 'uint64',
-                'zz2': 'int256',
-                'zz3': 'bool'
-            }
+            'fields': [
+                ['age', 'int8'],
+                ['distance', 'int16'],
+                ['file', 'bytes'],
+                ['halfLife', 'int32'],
+                ['publicAddress', 'bytes20'],
+                ['secret', 'bytes32'],
+                ['zz1', 'uint64'],
+                ['zz2', 'int256'],
+                ['zz3', 'bool'],
+            ]
         };
 
         let result = deserialize(serialize(valueObject, fields), 0, fields);
 
         // assert fields
-        Object.keys(fields['fields'])
-              .forEach(fieldName => {
+        fields['fields']
+              .forEach(([fieldName, fieldType]) => {
                   let expectedValue = valueObject[fieldName];
                   let actualValue = result.deserializedData[fieldName];
                   if(typeof actualValue.eq === 'function'){
@@ -467,18 +473,50 @@ describe('SimpleSerialize - deserialize objects', () => {
         testObj.recentBlockHashes = [
             hexToBytes(recentHash1),
             hexToBytes(recentHash2)
-        ]
+        ];
 
         let attestRecord1 = new AttestationRecord(0, 1, Buffer.from([11, 12, 13, 14]));
         let attestRecord2 = new AttestationRecord(2, 3, Buffer.from([255, 254, 253, 252]));
         testObj.pendingAttestations = [
             attestRecord1,
             attestRecord2
-        ]
+        ];
 
         let result = deserialize(serialize(testObj, ActiveState), 0, ActiveState);
         assert.deepEqual(result.deserializedData, testObj);
 
     });
 
+    const testCases = [
+      [["30000000000000", SimpleObject], new SimpleObject({b:0,a:0})],
+      [["03000000020001", SimpleObject], new SimpleObject({b:2,a:1})],
+      [["0700000003020000000600", OuterObject], new OuterObject({v:3, subV: new InnerObject({v:6})})],
+      [["120000000E0000000300000002000103000000040003", ArrayObject], new ArrayObject({v: [new SimpleObject({b:2,a:1}), new SimpleObject({b:4,a:3})]})],
+      [["1600000007000000030200000006000700000005020000020700", [OuterObject]], [new OuterObject({v:3, subV: new InnerObject({v:6})}), new OuterObject({v:5, subV: new InnerObject({v:7})})]],
+    ];
+
+    // like a deepEqual,but reliant on type, instead of inspection of ownProperties
+    const genericEqual = (obj1, obj2, type) => {
+      if (typeof type === 'string') { // simple type
+        assert.equal(obj1, obj2)
+      } else if (Array.isArray(type)) { // array type
+        const elementType = type[0];
+        assert.equal(obj1.length, obj2.length);
+        for (let i = 0; i < obj1.length; i++) {
+          genericEqual(obj1[i], obj2[i], elementType)
+        }
+      } else if (typeof type === 'function') { // object type
+        for (const [fieldName, fieldType] of type.fields) {
+          genericEqual(obj1[fieldName], obj2[fieldName], fieldType)
+        }
+      }
+    };
+
+    for (const [input, output] of testCases) {
+      const [bytes, type] = input;
+      it(`successfully decodes objects - ${type.name || typeof type}`, () => {
+        const result = deserialize(Buffer.from(bytes, 'hex'), 0, type).deserializedData;
+        genericEqual(result, output, type)
+      })
+    }
 });

@@ -2,12 +2,15 @@ const intByteLength = require('./intBytes').intByteLength
 const readIntBytes = require('./intBytes').readIntBytes
 const writeIntBytes = require('./intBytes').writeIntBytes
 const deepCopy = require('deepcopy')
+const keccakAsU8a = require('@polkadot/util-crypto').keccakAsU8a
+
+const SSZ_CHUNK_SIZE = 128
 
 /**
  * Simply Serializes (SSZ)
  * @method serialize
- * @param {Buffer|array|number|object} value - Value to serialize: hash32 (Buffer) | address (Buffer) | int8/16/24/32 | bytes (Buffer) | array | object
- * @param {string|object} type - A type string ('hash32', 'address', 'int8', 'int16', 'int24', 'int32', 'bytes', 'bool', 'hash96', 'hash97'), or type array ['hash32'], or type object containing fields property
+ * @param {boolean|Buffer|array|number|object} value - Value to serialize: boolean | int8/16/24/32 | bytesN (Buffer) | bytes (Buffer) | array | object
+ * @param {string|object} type - A type string ('bool', 'int8', 'int16', 'int24', 'int32', `bytes${N}`, 'bytes'), or type array ['bytes32'], or type object containing fields property
  * @return {Buffer} the byte output
  */
 function serialize (value, type) {
@@ -16,29 +19,6 @@ function serialize (value, type) {
     let result = Buffer.alloc(1)
     result.writeInt8(value ? 1 : 0)
     return result
-  }
-
-  // serialize hashes
-  if ((typeof type === 'string') && !!type.match(/^hash\d+$/g)) {
-    let hashSize = parseInt(type.match(/\d+/g))
-    if (![32, 96, 97].includes(hashSize)) {
-      throw Error('SSZ only serializes hash32, hash96, and hash97')
-    }
-
-    // check byte length
-    if (value.byteLength !== hashSize) {
-      throw Error(`given ${type} ${value} should be ${hashSize} bytes`)
-    }
-    return value
-  }
-
-  // serialize (Ethereum) addresses
-  if (type === 'address') {
-    // check length is 20 byte
-    if (value.byteLength !== 20) {
-      throw Error(`given address ${value} should be 20 bytes`)
-    }
-    return value
   }
 
   // serialize integers
@@ -53,6 +33,16 @@ function serialize (value, type) {
     let buffer = Buffer.alloc(intSize / 8)
     writeIntBytes(type)(buffer, value)
     return buffer
+  }
+
+  // serialize bytesN
+  if ((typeof type === 'string') && !!type.match(/^bytes\d+$/g)) {
+    let bytesSize = parseInt(type.match(/\d+/g))
+    // check byte length
+    if (value.byteLength !== bytesSize) {
+      throw Error(`given ${type} ${value} should be ${bytesSize} bytes`)
+    }
+    return value
   }
 
   // serialize bytes
@@ -88,11 +78,9 @@ function serialize (value, type) {
 
   // serializes objects (including compound objects)
   if ((typeof type === 'object' || typeof type === 'function') && type.hasOwnProperty('fields')) {
-    let buffers = []
-    Object.keys(type.fields)
-      .sort()
-      .forEach(fieldName => {
-        buffers.push(serialize(value[fieldName], type.fields[fieldName]))
+    const buffers = type.fields
+      .map(([fieldName, fieldType]) => {
+        return serialize(value[fieldName], fieldType)
       })
 
     let totalByteLength = buffers.reduce((acc, v) => acc + v.byteLength, 0)
@@ -110,8 +98,8 @@ function serialize (value, type) {
  * Simply Deserializes (SSZ)
  * @method deserialize
  * @param {Buffer} data bytes (buffer) to deserialize
- * @param {string|object} type - A type string ('hash32', 'address', 'int8', 'int16', 'int24, ''int32', 'bytes', 'bool', 'hash96', 'hash97'), or type array ['hash32'], or type object containing fields property
- * @return {Buffer|array|number|object} deserialized value : hash32 (Buffer) | address (Buffer) | int8/16/32/64/256 | uint8/16/32/64/256 | bytes (Buffer) | array | object
+ * @param {string|object} type - A type string ('bool', 'int8', 'int16', 'int24, 'int32', `bytes${N}`, 'bytes'), or type array ['bytes32'], or type object containing fields property
+ * @return {Buffer|array|number|object} deserialized value : boolean | int8/16/32/64/256 | uint8/16/32/64/256 | bytesN (Buffer) | bytes (Buffer) | array | object
  */
 function deserialize (data, start, type) {
   const int32ByteLength = intByteLength('int32')
@@ -124,31 +112,6 @@ function deserialize (data, start, type) {
         deserializedData: intResult === 1,
         offset: start + intByteLength('int8')
       }
-    }
-  }
-
-  // deserializes hashes
-  if ((typeof type === 'string') && !!type.match(/^hash\d+$/g)) {
-    let hashSize = parseInt(type.match(/\d+/g))
-    if (![32, 96, 97].includes(hashSize)) {
-      throw Error('SSZ only serializes hash32, hash96, and hash97')
-    }
-
-    assertEnoughBytes(data, start, hashSize)
-
-    return {
-      deserializedData: data.slice(start, (start + hashSize)),
-      offset: start + hashSize
-    }
-  }
-
-  // deserializes addresses
-  if (type === 'address') {
-    const addressLength = 20
-    assertEnoughBytes(data, start, addressLength)
-    return {
-      deserializedData: data.slice(start, (start + addressLength)),
-      offset: start + addressLength
     }
   }
 
@@ -165,6 +128,18 @@ function deserialize (data, start, type) {
     return {
       deserializedData: readIntBytes(type)(data, start),
       offset: start + intByteLength(type)
+    }
+  }
+
+  // deserializes bytesN
+  if ((typeof type === 'string') && !!type.match(/^bytes\d+$/g)) {
+    let bytesSize = parseInt(type.match(/\d+/g))
+
+    assertEnoughBytes(data, start, bytesSize)
+
+    return {
+      deserializedData: data.slice(start, (start + bytesSize)),
+      offset: start + bytesSize
     }
   }
 
@@ -218,10 +193,9 @@ function deserialize (data, start, type) {
     let output = {}
     let position = start + int32ByteLength
 
-    Object.keys(type.fields)
-      .sort()
-      .forEach(fieldName => {
-        let fieldResult = deserialize(data, position, type.fields[fieldName])
+    type.fields
+      .forEach(([fieldName, fieldType]) => {
+        let fieldResult = deserialize(data, position, fieldType)
         position = fieldResult.offset
         output[fieldName] = fieldResult.deserializedData
       })
@@ -257,13 +231,117 @@ function deepcopy (x) {
   return deepCopy(x)
 }
 
+/**
+ * Returns a tree hash of an object
+ * @method treeHash
+ * @param {} value
+ * @param {} type
+ * @param {boolean|Buffer|array|number|object} value - Value to hash: boolean | uint8/16/24/32 | bytesN (Buffer) | bytes (Buffer) | array | object
+ * @param {string|object} type - A type string ('bool', 'int8', 'int16', 'int24', 'int32', `bytes${N}`, 'bytes'), or type array ['bytes32'], or type object containing fields property
+ * @param {boolean} recursive - If recursive is false, pad output to 32 bytes
+ * @return {Buffer} the hash
+ */
+function treeHash (value, type, recursive = false) {
+  let output
+  if (typeof type === 'string') {
+    // bool
+    // bytes
+    if (type === 'bool') {
+      output = serialize(value, type)
+    // uint
+    } else if (type.match(/^uint\d+$/g)) {
+      const intSize = parseInt(type.match(/\d+/g))
+      if (intSize <= 256) {
+        output = serialize(value, type)
+      } else {
+        output = hash(serialize(value, type))
+      }
+    // bytesN
+    } else if (type.match(/^bytes\d+$/g)) {
+      const bytesSize = parseInt(type.match(/\d+/g))
+      if (bytesSize <= 32) {
+        output = serialize(value, type)
+      } else {
+        output = hash(serialize(value, type))
+      }
+    // bytes
+    } else if (type === 'bytes') {
+      output = hash(serialize(value, type))
+    } else {
+      throw Error(`Unable to hash: unknown type ${type}`)
+    }
+  } else if (Array.isArray(value) && Array.isArray(type)) {
+    const elementType = type[0]
+    output = merkleHash(value.map(v => treeHash(v, elementType, true)))
+  } else if ((typeof type === 'object' || typeof type === 'function') && type.hasOwnProperty('fields')) {
+    output = hash(Buffer.concat(type.fields.map(([fieldName, fieldType]) => treeHash(value[fieldName], fieldType, true))))
+  }
+  if (!output) {
+    throw Error(`Unable to hash value ${value} of type ${type}`)
+  }
+  if (recursive) {
+    return output
+  }
+  return padRight(output)
+}
+
 function assertEnoughBytes (data, start, length) {
   if (data.byteLength < start + length) {
     throw Error('Data bytes is not enough for data type')
   }
 }
 
+// Merkle tree hash of a list of homogenous, non-empty items
+function merkleHash (list) {
+  // Store length of list (to compensate for non-bijectiveness of padding)
+  const dataLen = Buffer.alloc(32)
+  dataLen.writeUInt32LE(list.length, 28) // big endian
+  let chunkz
+  if (list.length === 0) {
+    chunkz = [Buffer.alloc(SSZ_CHUNK_SIZE)]
+  } else if (list[0].length < SSZ_CHUNK_SIZE) {
+    // See how many items fit in a chunk
+    const itemsPerChunk = Math.floor(SSZ_CHUNK_SIZE / list[0].length)
+
+    // Build a list of chunks based on the number of items in the chunk
+    chunkz = []
+    for (let i = 0; i < list.length; i += itemsPerChunk) {
+      chunkz.push(Buffer.concat(list.slice(i, i + itemsPerChunk)))
+    }
+  } else {
+    chunkz = list
+  }
+
+  // Tree-hash
+  while (chunkz.length > 1) {
+    if (chunkz.length % 2 === 1) {
+      chunkz.push(Buffer.alloc(SSZ_CHUNK_SIZE))
+    }
+    const chunkz2 = []
+    for (let i = 0; i < chunkz.length; i += 2) {
+      chunkz2.push(hash(Buffer.concat([chunkz[i], chunkz[i + 1]])))
+    }
+    chunkz = chunkz2
+  }
+
+  // Return hash of root and length data
+  return hash(Buffer.concat([chunkz[0], dataLen]))
+}
+
+function hash (x) {
+  return Buffer.from(keccakAsU8a(x))
+}
+
+function padRight (x) {
+  if (x.length < 32) {
+    return Buffer.concat([x, Buffer.alloc(32 - x.length)])
+  }
+  return x
+}
+
 exports.serialize = serialize
 exports.deserialize = deserialize
 exports.eq = eq
 exports.deepcopy = deepcopy
+exports.merkleHash = merkleHash
+exports.treeHash = treeHash

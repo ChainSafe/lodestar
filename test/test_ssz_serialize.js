@@ -6,13 +6,18 @@ const intByteLength = require('../src/intBytes').intByteLength;
 const ActiveState = require('./utils/activeState').ActiveState;
 const AttestationRecord = require('./utils/activeState').AttestationRecord;
 const serialize = require('../src').serialize;
+const testObjects = require('./utils/objects')
+
+const SimpleObject = testObjects.SimpleObject
+const OuterObject = testObjects.OuterObject
+const InnerObject = testObjects.InnerObject
+const ArrayObject = testObjects.ArrayObject
 
 describe('SimpleSerialize - serializes booleans', () => {
 
     /** bool */
 
 	it(`successfully serializes boolean true value`, () => {
-
         let boolInput = true;
         let result = serialize(boolInput, 'bool');
 
@@ -23,7 +28,6 @@ describe('SimpleSerialize - serializes booleans', () => {
     });
 
     it(`successfully serializes boolean false value`, () => {
-
         let boolInput = false;
         let result = serialize(boolInput, 'bool');
 
@@ -35,157 +39,157 @@ describe('SimpleSerialize - serializes booleans', () => {
 
 });
 
-describe('SimpleSerialize - serializes hash32', () => {
+describe('SimpleSerialize - serializes bytes32', () => {
 
-    /** hash32 */
+    /** bytes32 */
 
-	it(`successfully serializes hash32`, () => {
+	it(`successfully serializes bytes32`, () => {
 
-        let hashInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
-        let result = serialize(hashInput, 'hash32');
+        let bytesInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+        let result = serialize(bytesInput, 'bytes32');
 
-        assert.isNotNull(result, 'hash32 result should not be null');
-        assert.equal(result, hashInput, 'hash32 result should be same as input');
+        assert.isNotNull(result, 'bytes32 result should not be null');
+        assert.equal(result, bytesInput, 'bytes32 result should be same as input');
 
     });
 
-    it(`errors when serializing hash32, given hash less than 32 bytes`, () => {
+    it(`errors when serializing bytes32, given bytes less than 32 bytes`, () => {
 
-        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223');
+        let bytesWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223');
 
         assert.throws(
-            () => serialize(hashWithIncorrectLength, 'hash32'),
+            () => serialize(bytesWithIncorrectLength, 'bytes32'),
             Error,
-            `given hash32 ${hashWithIncorrectLength} should be 32 bytes`
+            `given bytes32 ${bytesWithIncorrectLength} should be 32 bytes`
         );
 
     });
 
-    it(`errors when serializing hash32, given hash greater than 32 bytes`, () => {
+    it(`errors when serializing bytes32, given bytes greater than 32 bytes`, () => {
 
-        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015addfsdfds');
-
-        assert.throws(
-            () => serialize(hashWithIncorrectLength, 'hash32'),
-            Error,
-            `given hash32 ${hashWithIncorrectLength} should be 32 bytes`
-        );
-
-    });
-});
-
-describe('SimpleSerialize - serializes hash96', () => {
-
-    /** hash32 */
-
-	it(`successfully serializes hash96`, () => {
-
-        let hashInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
-        let result = serialize(hashInput, 'hash96');
-
-        assert.isNotNull(result, 'hash96 result should not be null');
-        assert.equal(result, hashInput, 'hash96 result should be same as input');
-
-    });
-
-    it(`errors when serializing hash96, given hash less than 96 bytes`, () => {
-
-        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+        let bytesWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015addfsdfds');
 
         assert.throws(
-            () => serialize(hashWithIncorrectLength, 'hash96'),
+            () => serialize(bytesWithIncorrectLength, 'bytes32'),
             Error,
-            `given hash96 ${hashWithIncorrectLength} should be 96 bytes`
-        );
-
-    });
-
-    it(`errors when serializing hash96, given hash greater than 96 bytes`, () => {
-
-        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015addfsdfds');
-
-        assert.throws(
-            () => serialize(hashWithIncorrectLength, 'hash96'),
-            Error,
-            `given hash96 ${hashWithIncorrectLength} should be 96 bytes`
+            `given bytes32 ${bytesWithIncorrectLength} should be 32 bytes`
         );
 
     });
 });
 
-describe('SimpleSerialize - serializes hash97', () => {
+describe('SimpleSerialize - serializes bytes96', () => {
 
-    /** hash32 */
+    /** bytes32 */
 
-	it(`successfully serializes hash97`, () => {
+	it(`successfully serializes bytes96`, () => {
 
-        let hashInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adqq');
-        let result = serialize(hashInput, 'hash97');
+        let bytesInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+        let result = serialize(bytesInput, 'bytes96');
 
-        assert.isNotNull(result, 'hash97 result should not be null');
-        assert.equal(result, hashInput, 'hash97 result should be same as input');
+        assert.isNotNull(result, 'bytes96 result should not be null');
+        assert.equal(result, bytesInput, 'bytes96 result should be same as input');
 
     });
 
-    it(`errors when serializing hash97, given hash less than 97 bytes`, () => {
+    it(`errors when serializing bytes96, given bytes less than 96 bytes`, () => {
 
-        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+        let bytesWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
 
         assert.throws(
-            () => serialize(hashWithIncorrectLength, 'hash97'),
+            () => serialize(bytesWithIncorrectLength, 'bytes96'),
             Error,
-            `given hash97 ${hashWithIncorrectLength} should be 97 bytes`
+            `given bytes96 ${bytesWithIncorrectLength} should be 96 bytes`
         );
 
     });
 
-    it(`errors when serializing hash97, given hash greater than 97 bytes`, () => {
+    it(`errors when serializing bytes96, given bytes greater than 96 bytes`, () => {
 
-        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015addfsdfds');
+        let bytesWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015addfsdfds');
 
         assert.throws(
-            () => serialize(hashWithIncorrectLength, 'hash97'),
+            () => serialize(bytesWithIncorrectLength, 'bytes96'),
             Error,
-            `given hash97 ${hashWithIncorrectLength} should be 97 bytes`
+            `given bytes96 ${bytesWithIncorrectLength} should be 96 bytes`
         );
 
     });
 });
 
-describe('SimpleSerialize - serializes addresses', () => {
+describe('SimpleSerialize - serializes bytes97', () => {
 
-    /** addresses */
+    /** bytes32 */
 
-    it(`serializes addresses`, () => {
+	it(`successfully serializes bytes97`, () => {
 
-        let addressInput = hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a30');
-        let result = serialize(addressInput, 'address');
+        let bytesInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adqq');
+        let result = serialize(bytesInput, 'bytes97');
 
-        assert.isNotNull(result, 'address result should not be null');
-        assert.equal(result, addressInput, 'address result should be same as input');
+        assert.isNotNull(result, 'bytes97 result should not be null');
+        assert.equal(result, bytesInput, 'bytes97 result should be same as input');
 
     });
 
-    it(`errors when serializing address, given address less than 20 bytes`, () => {
+    it(`errors when serializing bytes97, given bytes less than 97 bytes`, () => {
 
-        let addressWithIncorrectLength = hexToBytes('e17cb53f339a726e0b34');
+        let bytesWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
 
         assert.throws(
-            () => serialize(addressWithIncorrectLength, 'address'),
+            () => serialize(bytesWithIncorrectLength, 'bytes97'),
             Error,
-            `given address ${addressWithIncorrectLength} should be 20 bytes`
+            `given bytes97 ${bytesWithIncorrectLength} should be 97 bytes`
         );
 
     });
 
-    it(`errors when serializing address, given address greater than 20 bytes`, () => {
+    it(`errors when serializing bytes97, given bytes greater than 97 bytes`, () => {
 
-        let addressWithIncorrectLength = hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a300000000');
+        let bytesWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015addfsdfds');
 
         assert.throws(
-            () => serialize(addressWithIncorrectLength, 'address'),
+            () => serialize(bytesWithIncorrectLength, 'bytes97'),
             Error,
-            `given address ${addressWithIncorrectLength} should be 20 bytes`
+            `given bytes97 ${bytesWithIncorrectLength} should be 97 bytes`
+        );
+
+    });
+});
+
+describe('SimpleSerialize - serializes bytes20', () => {
+
+    /** bytes20 */
+
+    it(`serializes bytes20`, () => {
+
+        let bytes20Input = hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a30');
+        let result = serialize(bytes20Input, 'bytes20');
+
+        assert.isNotNull(result, 'bytes20 result should not be null');
+        assert.equal(result, bytes20Input, 'bytes20 result should be same as input');
+
+    });
+
+    it(`errors when serializing bytes20, given bytes20 less than 20 bytes`, () => {
+
+        let bytes20WithIncorrectLength = hexToBytes('e17cb53f339a726e0b34');
+
+        assert.throws(
+            () => serialize(bytes20WithIncorrectLength, 'bytes20'),
+            Error,
+            `given bytes20 ${bytes20WithIncorrectLength} should be 20 bytes`
+        );
+
+    });
+
+    it(`errors when serializing bytes20, given bytes20 greater than 20 bytes`, () => {
+
+        let bytes20WithIncorrectLength = hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a300000000');
+
+        assert.throws(
+            () => serialize(bytes20WithIncorrectLength, 'bytes20'),
+            Error,
+            `given bytes20 ${bytes20WithIncorrectLength} should be 20 bytes`
         );
 
     });
@@ -456,13 +460,13 @@ describe('SimpleSerialize - serializes arrays of elements (of same type)', () =>
         }
     });
 
-    it(`serializes arrays of elements (of the same type) - hash32`, () => {
+    it(`serializes arrays of elements (of the same type) - bytes32`, () => {
 
         let arrayInput = [
             hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'),
             hexToBytes('dd7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015bb')
         ];
-        let result = serialize(arrayInput, ['hash32']);
+        let result = serialize(arrayInput, ['bytes32']);
 
         let flatInput = Buffer.from([...arrayInput[0], ...arrayInput[1]]);
         let expectedLength = flatInput.length; // (length + bytes)
@@ -476,13 +480,13 @@ describe('SimpleSerialize - serializes arrays of elements (of same type)', () =>
 
     });
 
-    it(`serializes arrays of elements (of the same type) - address`, () => {
+    it(`serializes arrays of elements (of the same type) - bytes20`, () => {
 
         let arrayInput = [
             hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a30'),
             hexToBytes('ccccb53f339a726e0b347bbad221ad7b50daaaaa')
         ];
-        let result = serialize(arrayInput, ['address']);
+        let result = serialize(arrayInput, ['bytes20']);
 
         let flatInput = Buffer.from([...arrayInput[0], ...arrayInput[1]]);
         let expectedLength = flatInput.length; // (length + bytes)
@@ -594,8 +598,8 @@ describe('SimpleSerialize - serializes arrays of elements (of same type)', () =>
 describe('SimpleSerialize - serializes objects', () => {
 
     it(`serialises objects of simple types`, () => {
-        let addressValue = 'e17cb53f339a726e0b347bbad221ad7b50dc2a30';
-        let hashValue = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
+        let bytes20Value = 'e17cb53f339a726e0b347bbad221ad7b50dc2a30';
+        let bytes32Value = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
         let int8Value = 30;
         let int16Value = 32000;
         let int32Value = 1000000000;
@@ -611,8 +615,8 @@ describe('SimpleSerialize - serializes objects', () => {
 
         let result = serialize(
             {
-                'publicAddress':hexToBytes(addressValue),
-                'secret': hexToBytes(hashValue),
+                'publicAddress':hexToBytes(bytes20Value),
+                'secret': hexToBytes(bytes32Value),
                 'age': int8Value,
                 'distance': int16Value,
                 'halfLife': int32Value,
@@ -622,17 +626,17 @@ describe('SimpleSerialize - serializes objects', () => {
                 'zz3': boolValue
             },
             {
-                'fields':{
-                    'publicAddress': 'address',
-                    'secret': 'hash32',
-                    'age': 'int8',
-                    'distance': 'int16',
-                    'halfLife': 'int32',
-                    'file': 'bytes',
-                    'zz1': 'uint64',
-                    'zz2': 'int256',
-                    'zz3': 'bool'
-                }
+                'fields': [
+                    ['age', 'int8'],
+                    ['distance', 'int16'],
+                    ['file', 'bytes'],
+                    ['halfLife', 'int32'],
+                    ['publicAddress', 'bytes20'],
+                    ['secret', 'bytes32'],
+                    ['zz1', 'uint64'],
+                    ['zz2', 'int256'],
+                    ['zz3', 'bool'],
+                ]
             }
         );
 
@@ -667,15 +671,15 @@ describe('SimpleSerialize - serializes objects', () => {
         offset += 4;
         assert.equal(actualInt32, int32Value, 'Int32 value not serialised correctly');
 
-        // assert address value
-        let actualAddress = result.slice(offset, (offset + 20));
+        // assert bytes20 value
+        let actualBytes20 = result.slice(offset, (offset + 20));
         offset += 20;
-        assert.equal(actualAddress.toString('hex'), addressValue, 'Address type not serialised correctly');
+        assert.equal(actualBytes20.toString('hex'), bytes20Value, 'Bytes20 type not serialised correctly');
 
-        // assert hash value
-        let actualHash = result.slice(offset, (offset + 32));
+        // assert bytes32 value
+        let actualBytes32 = result.slice(offset, (offset + 32));
         offset += 32;
-        assert.equal(actualHash.toString('hex'), hashValue, 'Hash32 type not serialised correctly');
+        assert.equal(actualBytes32.toString('hex'), bytes32Value, 'Bytes32 type not serialised correctly');
 
         // assert uint64 value
         let actualUint64 = new BN([...result.slice(offset, (offset + 8))], 16, 'le');
@@ -696,11 +700,11 @@ describe('SimpleSerialize - serializes objects', () => {
 
     it(`serializes objects containing objects`, () => {
         let testObj = new ActiveState();
-        let recentHash1 = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
-        let recentHash2 = 'aa1116bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
+        let recentBytes1 = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
+        let recentBytes2 = 'aa1116bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
         testObj.recentBlockHashes = [
-            hexToBytes(recentHash1),
-            hexToBytes(recentHash2)
+            hexToBytes(recentBytes1),
+            hexToBytes(recentBytes2)
         ]
 
         let attestRecord1 = new AttestationRecord(0, 1, Buffer.from([11, 12, 13, 14]));
@@ -726,17 +730,17 @@ describe('SimpleSerialize - serializes objects', () => {
         offset = assertAttestationRecord(offset, result, attestRecord1);
         offset = assertAttestationRecord(offset, result, attestRecord2);
 
-        // assert hash32 array
-        let expectedHashArrayLength = testObj.recentBlockHashes.length * 32; // 32 byte hashes
-        let actualHashArrayLength = result.readInt32LE(offset);
+        // assert bytes32 array
+        let expectedBytesArrayLength = testObj.recentBlockHashes.length * 32; // 32 byte bytes
+        let actualBytesArrayLength = result.readInt32BE(offset);
         offset += 4;
-        assert.equal(actualHashArrayLength, expectedHashArrayLength, 'Hash array length is not correct');
-        let actualHash1 = result.slice(offset, (offset + 32));
+        assert.equal(actualBytesArrayLength, expectedBytesArrayLength, 'Bytes32 array length is not correct');
+        let actualBytes1 = result.slice(offset, (offset + 32));
         offset += 32;
-        assert.equal(actualHash1.toString('hex'), recentHash1, 'Hash 1 not serialised correctly');
-        let actualHash2 = result.slice(offset, (offset + 32));
+        assert.equal(actualBytes1.toString('hex'), recentBytes1, 'Bytes32 1 not serialised correctly');
+        let actualBytes2 = result.slice(offset, (offset + 32));
         offset += 32;
-        assert.equal(actualHash2.toString('hex'), recentHash2, 'Hash 2 not serialised correctly');
+        assert.equal(actualBytes2.toString('hex'), recentBytes2, 'Bytes32 2 not serialised correctly');
     });
 
     function assertAttestationRecord(startOffset, result, attestRecord){
@@ -765,5 +769,17 @@ describe('SimpleSerialize - serializes objects', () => {
 
         return offset;
     }
-
+    const testCases = [
+      [[new SimpleObject({b:0,a:0}), SimpleObject], "00000003000000"],
+      [[new SimpleObject({b:2,a:1}), SimpleObject], "00000003000201"],
+      [[new OuterObject({v:3,subV:new InnerObject({v:6})}), OuterObject], "0000000703000000020006"],
+      [[new ArrayObject({v: [new SimpleObject({b:2,a:1}), new SimpleObject({b:4,a:3})]}), ArrayObject], "000000120000000e0000000300020100000003000403"],
+      [[[new OuterObject({v:3, subV:new InnerObject({v:6})}), new OuterObject({v:5, subV:new InnerObject({v:7})})],[OuterObject]], "0000001600000007030000000200060000000705000000020007"],
+    ]
+    for (const [input, output] of testCases) {
+      const [value, type] = input
+      it(`serializes objects - ${type.name || typeof type}`, () => {
+        assert.equal(serialize(value, type).toString('hex'), output)
+      })
+    }
 });
