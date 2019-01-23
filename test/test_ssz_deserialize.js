@@ -258,27 +258,16 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
 describe('SimpleSerialize - deserialize bytes', () => {
 
     it(`deserializes bytes`, () => {
-	    console.log('here')
         let bytesArray = [];
         for(var i = 0; i < 280; i++){
             bytesArray.push(1);
         }
-	    console.log('here2')
 
 	      let bytesInput = Buffer.from(bytesArray);
-	    console.log('here3')
-        try {
-	        let result = deserialize(serialize(bytesInput, 'bytes'), 0, 'bytes');
-        } catch (e) {
-	        console.log(e)
-        }
-	    console.log('here4')
+        let result = deserialize(serialize(bytesInput, 'bytes'), 0, 'bytes');
 
         assert.isNotNull(result);
         assert.deepEqual(result.deserializedData.toString('hex'), bytesInput.toString('hex'));
-	    console.log('here')
-        console.log(result)
-	      console.log(bytesInput.byteLength)
         assert.equal(result.offset, 4 + bytesInput.byteLength, 'Offset should be int32 bytes (4) + byte input length');
     });
 

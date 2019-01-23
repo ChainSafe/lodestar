@@ -1,10 +1,9 @@
 class ActiveState {
-    static get fields(){ 
+    static get fields(){
         return {
             'pendingAttestations': [AttestationRecord],
             'recentBlockHashes': ['hash32']
-
-        }; 
+        };
     }
 
     constructor(){
@@ -14,7 +13,7 @@ class ActiveState {
 }
 
 class AttestationRecord {
-    static get fields(){ 
+    static get fields(){
         return {
             'slotId': 'int32',
             'shardId': 'int32',

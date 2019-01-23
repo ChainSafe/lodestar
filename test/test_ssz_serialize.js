@@ -11,19 +11,19 @@ describe('SimpleSerialize - serializes booleans', () => {
 
     /** bool */
 
-	it(`successfully serializes boolean true value`, () => {        
-        
+	it(`successfully serializes boolean true value`, () => {
+
         let boolInput = true;
         let result = serialize(boolInput, 'bool');
-        
+
         assert.isNotNull(result, 'bool result should not be null');
         let intResult = result.readInt8(0);
         assert.isTrue(intResult == 1, boolInput, 'bool result should be same as input');
 
     });
 
-    it(`successfully serializes boolean false value`, () => {        
-        
+    it(`successfully serializes boolean false value`, () => {
+
         let boolInput = false;
         let result = serialize(boolInput, 'bool');
 
@@ -39,8 +39,8 @@ describe('SimpleSerialize - serializes hash32', () => {
 
     /** hash32 */
 
-	it(`successfully serializes hash32`, () => {        
-        
+	it(`successfully serializes hash32`, () => {
+
         let hashInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
         let result = serialize(hashInput, 'hash32');
 
@@ -50,9 +50,9 @@ describe('SimpleSerialize - serializes hash32', () => {
     });
 
     it(`errors when serializing hash32, given hash less than 32 bytes`, () => {
-        
-        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223'); 
-        
+
+        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223');
+
         assert.throws(
             () => serialize(hashWithIncorrectLength, 'hash32'),
             Error,
@@ -62,9 +62,9 @@ describe('SimpleSerialize - serializes hash32', () => {
     });
 
     it(`errors when serializing hash32, given hash greater than 32 bytes`, () => {
-        
-        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015addfsdfds'); 
-        
+
+        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015addfsdfds');
+
         assert.throws(
             () => serialize(hashWithIncorrectLength, 'hash32'),
             Error,
@@ -78,8 +78,8 @@ describe('SimpleSerialize - serializes hash96', () => {
 
     /** hash32 */
 
-	it(`successfully serializes hash96`, () => {        
-        
+	it(`successfully serializes hash96`, () => {
+
         let hashInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
         let result = serialize(hashInput, 'hash96');
 
@@ -89,9 +89,9 @@ describe('SimpleSerialize - serializes hash96', () => {
     });
 
     it(`errors when serializing hash96, given hash less than 96 bytes`, () => {
-        
-        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'); 
-        
+
+        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+
         assert.throws(
             () => serialize(hashWithIncorrectLength, 'hash96'),
             Error,
@@ -101,9 +101,9 @@ describe('SimpleSerialize - serializes hash96', () => {
     });
 
     it(`errors when serializing hash96, given hash greater than 96 bytes`, () => {
-        
-        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015addfsdfds'); 
-        
+
+        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015addfsdfds');
+
         assert.throws(
             () => serialize(hashWithIncorrectLength, 'hash96'),
             Error,
@@ -117,8 +117,8 @@ describe('SimpleSerialize - serializes hash97', () => {
 
     /** hash32 */
 
-	it(`successfully serializes hash97`, () => {        
-        
+	it(`successfully serializes hash97`, () => {
+
         let hashInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adqq');
         let result = serialize(hashInput, 'hash97');
 
@@ -128,9 +128,9 @@ describe('SimpleSerialize - serializes hash97', () => {
     });
 
     it(`errors when serializing hash97, given hash less than 97 bytes`, () => {
-        
-        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'); 
-        
+
+        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+
         assert.throws(
             () => serialize(hashWithIncorrectLength, 'hash97'),
             Error,
@@ -140,9 +140,9 @@ describe('SimpleSerialize - serializes hash97', () => {
     });
 
     it(`errors when serializing hash97, given hash greater than 97 bytes`, () => {
-        
-        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015addfsdfds'); 
-        
+
+        let hashWithIncorrectLength = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015addfsdfds');
+
         assert.throws(
             () => serialize(hashWithIncorrectLength, 'hash97'),
             Error,
@@ -156,8 +156,8 @@ describe('SimpleSerialize - serializes addresses', () => {
 
     /** addresses */
 
-    it(`serializes addresses`, () => {        
-        
+    it(`serializes addresses`, () => {
+
         let addressInput = hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a30');
         let result = serialize(addressInput, 'address');
 
@@ -165,11 +165,11 @@ describe('SimpleSerialize - serializes addresses', () => {
         assert.equal(result, addressInput, 'address result should be same as input');
 
     });
-    
+
     it(`errors when serializing address, given address less than 20 bytes`, () => {
-        
-        let addressWithIncorrectLength = hexToBytes('e17cb53f339a726e0b34'); 
-        
+
+        let addressWithIncorrectLength = hexToBytes('e17cb53f339a726e0b34');
+
         assert.throws(
             () => serialize(addressWithIncorrectLength, 'address'),
             Error,
@@ -179,9 +179,9 @@ describe('SimpleSerialize - serializes addresses', () => {
     });
 
     it(`errors when serializing address, given address greater than 20 bytes`, () => {
-        
+
         let addressWithIncorrectLength = hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a300000000');
-        
+
         assert.throws(
             () => serialize(addressWithIncorrectLength, 'address'),
             Error,
@@ -193,8 +193,8 @@ describe('SimpleSerialize - serializes addresses', () => {
 
 describe('SimpleSerialize - serializes signed integers', () => {
 
-    it(`serializes int8`, () => {        
-        
+    it(`serializes int8`, () => {
+
         let intInput = 5;
         let result = serialize(intInput, 'int8');
         let intResult = result.readInt8(0);
@@ -204,8 +204,8 @@ describe('SimpleSerialize - serializes signed integers', () => {
 
     });
 
-    it(`serializes int8 (negative)`, () => {        
-        
+    it(`serializes int8 (negative)`, () => {
+
         let intInput = -5;
         let result = serialize(intInput, 'int8');
         let intResult = result.readInt8(0);
@@ -215,22 +215,22 @@ describe('SimpleSerialize - serializes signed integers', () => {
 
     });
 
-    it(`serializes int16`, () => {        
-        
+    it(`serializes int16`, () => {
+
         let intInput = 32000;
         let result = serialize(intInput, 'int16');
-        let intResult = result.readInt16BE(0);
+        let intResult = result.readInt16LE(0);
 
         assert.isNotNull(result, 'int16 result should not be null');
         assert.equal(intResult, intInput, 'int16 result should be same as input');
 
     });
 
-    it(`serializes int16 (negative)`, () => {        
-        
+    it(`serializes int16 (negative)`, () => {
+
         let intInput = -32000;
         let result = serialize(intInput, 'int16');
-        let intResult = result.readInt16BE(0);
+        let intResult = result.readInt16LE(0);
 
         assert.isNotNull(result, 'int16 result should not be null');
         assert.equal(intResult, intInput, 'int16 result should be same as input');
@@ -241,7 +241,7 @@ describe('SimpleSerialize - serializes signed integers', () => {
 
 		let intInput = 8355840;
 		let result = serialize(intInput, 'int24');
-		let intResult = result.readIntBE(0, 3);
+		let intResult = result.readIntLE(0, 3);
 
 		assert.isNotNull(result, 'int24 result should not be null');
 		assert.equal(intResult, intInput, 'int24 result should be same as input');
@@ -252,73 +252,73 @@ describe('SimpleSerialize - serializes signed integers', () => {
 
 		let intInput = -8355840;
 		let result = serialize(intInput, 'int24');
-		let intResult = result.readIntBE(0, 3);
+		let intResult = result.readIntLE(0, 3);
 
 		assert.isNotNull(result, 'int24 result should not be null');
 		assert.equal(intResult, intInput, 'int24 result should be same as input');
 
 	});
 
-    it(`serializes int32`, () => {        
-        
+    it(`serializes int32`, () => {
+
         let intInput = 1000000000;
         let result = serialize(intInput, 'int32');
-        let intResult = result.readInt32BE(0);
+        let intResult = result.readInt32LE(0);
 
         assert.isNotNull(result, 'int32 result should not be null');
         assert.equal(intResult, intInput, 'int32 result should be same as input');
 
     });
 
-    it(`serializes int32 (negative)`, () => {        
-        
+    it(`serializes int32 (negative)`, () => {
+
         let intInput = -1000000000;
         let result = serialize(intInput, 'int32');
-        let intResult = result.readInt32BE(0);
+        let intResult = result.readInt32LE(0);
 
         assert.isNotNull(result, 'int32 result should not be null');
         assert.equal(intResult, intInput, 'int32 result should be same as input');
 
     });
 
-    it(`serializes int64`, () => {        
-        
+    it(`serializes int64`, () => {
+
         let intInput = new BN(100000000000);
         let result = serialize(intInput, 'int64');
-        let intResult = new BN([...result], 16, 'be').fromTwos(64);
+        let intResult = new BN([...result], 16, 'le').fromTwos(64);
 
         assert.isNotNull(result, 'int64 result should not be null');
         assert.isTrue(intResult.eq(intInput), 'int64 result should be same as input');
 
     });
 
-    it(`serializes int64 (negative)`, () => {        
-        
+    it(`serializes int64 (negative)`, () => {
+
         let intInput = new BN(-100000000000);
         let result = serialize(intInput, 'int64');
-        let intResult = new BN([...result], 16, 'be').fromTwos(64);
+        let intResult = new BN([...result], 16, 'le').fromTwos(64);
 
         assert.isNotNull(result, 'int64 result should not be null');
         assert.isTrue(intResult.eq(intInput), 'int64 result should be same as input');
 
     });
 
-    it(`serializes int128`, () => {        
-        
+    it(`serializes int128`, () => {
+
         let intInput = new BN('123').pow(new BN(5));
         let result = serialize(intInput, 'int128');
-        let intResult = new BN([...result], 32, 'be').fromTwos(256);
+        let intResult = new BN([...result], 32, 'le').fromTwos(256);
 
         assert.isNotNull(result, 'int128 result should not be null');
         assert.isTrue(intResult.eq(intInput), 'int128 result should be same as input');
 
     });
 
-    it(`serializes int256 (negative)`, () => {        
-        
+    it(`serializes int256 (negative)`, () => {
+
         let intInput = new BN('-123').pow(new BN(25));
         let result = serialize(intInput, 'int256');
-        let intResult = new BN([...result], 32, 'be').fromTwos(256);
+        let intResult = new BN([...result], 32, 'le').fromTwos(256);
 
         assert.isNotNull(result, 'int256 result should not be null');
         assert.isTrue(intResult.eq(intInput), 'int256 result should be same as input');
@@ -326,22 +326,22 @@ describe('SimpleSerialize - serializes signed integers', () => {
     });
 
 
-    it(`serializes int256`, () => {        
-        
+    it(`serializes int256`, () => {
+
         let intInput = new BN('123').pow(new BN(25));
         let result = serialize(intInput, 'int256');
-        let intResult = new BN([...result], 32, 'be').fromTwos(256);
+        let intResult = new BN([...result], 32, 'le').fromTwos(256);
 
         assert.isNotNull(result, 'int256 result should not be null');
         assert.isTrue(intResult.eq(intInput), 'int256 result should be same as input');
 
     });
 
-    it(`serializes int256 (negative)`, () => {        
-        
+    it(`serializes int256 (negative)`, () => {
+
         let intInput = new BN('-123').pow(new BN(25));
         let result = serialize(intInput, 'int256');
-        let intResult = new BN([...result], 32, 'be').fromTwos(256);
+        let intResult = new BN([...result], 32, 'le').fromTwos(256);
 
         assert.isNotNull(result, 'int256 result should not be null');
         assert.isTrue(intResult.eq(intInput), 'int256 result should be same as input');
@@ -352,8 +352,8 @@ describe('SimpleSerialize - serializes signed integers', () => {
 
 describe('SimpleSerialize - serializes unsigned integers', () => {
 
-    it(`serializes uint8`, () => {        
-            
+    it(`serializes uint8`, () => {
+
         let intInput = 5;
         let result = serialize(intInput, 'uint8');
         let intResult = result.readUInt8(0);
@@ -363,55 +363,55 @@ describe('SimpleSerialize - serializes unsigned integers', () => {
 
     });
 
-    it(`serializes uint16`, () => {        
-        
+    it(`serializes uint16`, () => {
+
         let intInput = 32000;
         let result = serialize(intInput, 'uint16');
-        let intResult = result.readInt16BE(0);
+        let intResult = result.readInt16LE(0);
 
         assert.isNotNull(result, 'uint16 result should not be null');
         assert.equal(intResult, intInput, 'uint16 result should be same as input');
 
     });
 
-    it(`serializes uint32`, () => {        
-        
+    it(`serializes uint32`, () => {
+
         let intInput = 1000000000;
         let result = serialize(intInput, 'uint32');
-        let intResult = result.readInt32BE(0);
+        let intResult = result.readInt32LE(0);
 
         assert.isNotNull(result, 'uint32 result should not be null');
         assert.equal(intResult, intInput, 'uint32 result should be same as input');
 
     });
 
-    it(`serializes uint64`, () => {        
-        
+    it(`serializes uint64`, () => {
+
         let intInput = new BN(100000000000);
         let result = serialize(intInput, 'uint64');
-        let intResult = new BN([...result], 16, 'be');
+        let intResult = new BN([...result], 16, 'le');
 
         assert.isNotNull(result, 'uint64 result should not be null');
         assert.isTrue(intResult.eq(intInput), 'uint64 result should be same as input');
 
     });
 
-    it(`serializes uint128`, () => {        
-        
+    it(`serializes uint128`, () => {
+
         let intInput = new BN('123').pow(new BN(5));
         let result = serialize(intInput, 'uint128');
-        let intResult = new BN([...result], 32, 'be').fromTwos(256);
+        let intResult = new BN([...result], 32, 'le').fromTwos(256);
 
         assert.isNotNull(result, 'uint128 result should not be null');
         assert.isTrue(intResult.eq(intInput), 'uint128 result should be same as input');
 
     });
 
-    it(`serializes uint256`, () => {        
-        
+    it(`serializes uint256`, () => {
+
         let intInput = new BN('123').pow(new BN(25));
         let result = serialize(intInput, 'uint256');
-        let intResult = new BN([...result], 32, 'be').fromTwos(256);
+        let intResult = new BN([...result], 32, 'le').fromTwos(256);
 
         assert.isNotNull(result, 'uint256 result should not be null');
         assert.isTrue(intResult.eq(intInput), 'uint256 result should be same as input');
@@ -422,8 +422,8 @@ describe('SimpleSerialize - serializes unsigned integers', () => {
 
 describe('SimpleSerialize - serializes bytes', () => {
 
-    it(`serializes bytes`, () => {        
-        
+    it(`serializes bytes`, () => {
+
         let bytesArray = [];
         for(var i = 0; i < 280; i++){
             bytesArray.push(1);
@@ -432,7 +432,7 @@ describe('SimpleSerialize - serializes bytes', () => {
         let result = serialize(bytesInput, 'bytes');
 
         assert.isNotNull(result);
-        assert.equal(result.readUInt32BE(0), bytesInput.byteLength)
+        assert.equal(result.readUInt32LE(0), bytesInput.byteLength)
         let bytesResult = result.slice(4);
         assert.deepEqual(bytesResult, bytesInput);
 
@@ -444,10 +444,10 @@ describe('SimpleSerialize - serializes arrays of elements (of same type)', () =>
 
     it(`serializes arrays of elements (of same type) - boolean`, () => {
         let arrayInput = [true, false, false];
-        
+
         let result = serialize(arrayInput, ['bool']);
 
-        let actualLength = result.readUInt32BE(0);
+        let actualLength = result.readUInt32LE(0);
         assert.equal(actualLength, arrayInput.length, 'Byte length should equal 3');
         let boolResult = result.slice(4);
         for (let index = 0; index < arrayInput.length; index++) {
@@ -469,8 +469,8 @@ describe('SimpleSerialize - serializes arrays of elements (of same type)', () =>
 
         assert.isNotNull(result);
 
-        assert.equal(result.readUInt32BE(0), expectedLength)
-        
+        assert.equal(result.readUInt32LE(0), expectedLength)
+
         let arrayResult = result.slice(4);
         assert.deepEqual(arrayResult, flatInput);
 
@@ -488,9 +488,9 @@ describe('SimpleSerialize - serializes arrays of elements (of same type)', () =>
         let expectedLength = flatInput.length; // (length + bytes)
 
         assert.isNotNull(result);
-    
-        assert.equal(result.readUInt32BE(0), expectedLength)
-        
+
+        assert.equal(result.readUInt32LE(0), expectedLength)
+
         let arrayResult = result.slice(4);
         assert.deepEqual(arrayResult, flatInput);
 
@@ -570,7 +570,7 @@ describe('SimpleSerialize - serializes arrays of elements (of same type)', () =>
         let result = serialize(arrayInput, [type]);
 
         assert.isNotNull(result);
-        let lengthResult = result.readUInt32BE(0);
+        let lengthResult = result.readUInt32LE(0);
         assert.equal(lengthResult, (arrayInput.length * intByteLength(type)));
         let resultView = result.slice(4);
         let inputIndex = 0;
@@ -585,7 +585,7 @@ describe('SimpleSerialize - serializes arrays of elements (of same type)', () =>
             }
 
         }
-        
+
     }
 
 });
@@ -635,12 +635,12 @@ describe('SimpleSerialize - serializes objects', () => {
                 }
             }
         );
-        
+
         let offset = 0;
 
         // assert byte length
         let expectedByteLength = 384;
-        let actualByteLength = result.readInt32BE(offset);
+        let actualByteLength = result.readInt32LE(offset);
         offset += 4;
         assert.equal(actualByteLength, expectedByteLength, 'Byte length is not correct');
 
@@ -650,12 +650,12 @@ describe('SimpleSerialize - serializes objects', () => {
         assert.equal(actualInt8, int8Value, 'Int8 value not serialised correctly');
 
         // assert int16 value
-        let actualInt16 = result.readUInt16BE(offset);
+        let actualInt16 = result.readUInt16LE(offset);
         offset += 2;
         assert.equal(actualInt16, int16Value, 'Int16 value not serialised correctly');
 
         // assert bytes value
-        let actualBytesLength = result.readUInt32BE(offset);
+        let actualBytesLength = result.readUInt32LE(offset);
         assert.equal(actualBytesLength, 280);
         offset += 4;
         let actualBytes = result.slice(offset, (offset + 280));
@@ -663,7 +663,7 @@ describe('SimpleSerialize - serializes objects', () => {
         assert.equal(actualBytes.toString('hex'), bytesValue.toString('hex'), 'Bytes type not serialised correctly');
 
         // assert int32 value
-        let actualInt32 = result.readUInt32BE(offset);
+        let actualInt32 = result.readUInt32LE(offset);
         offset += 4;
         assert.equal(actualInt32, int32Value, 'Int32 value not serialised correctly');
 
@@ -678,12 +678,12 @@ describe('SimpleSerialize - serializes objects', () => {
         assert.equal(actualHash.toString('hex'), hashValue, 'Hash32 type not serialised correctly');
 
         // assert uint64 value
-        let actualUint64 = new BN([...result.slice(offset, (offset + 8))], 16, 'be');
+        let actualUint64 = new BN([...result.slice(offset, (offset + 8))], 16, 'le');
         offset += 8;
         assert.isTrue(actualUint64.eq(uint64Value), `Serialised object values are not correct actual ${actualUint64} expected ${uint64Value}`);
 
         // assert int256 value
-        let actualInt256 = new BN([...result.slice(offset, (offset + 32))], 16, 'be');
+        let actualInt256 = new BN([...result.slice(offset, (offset + 32))], 16, 'le');
         offset += 32;
         assert.isTrue(actualInt256.eq(int256Value), `Serialised object values are not correct actual ${actualInt256} expected ${int256Value}`);
 
@@ -699,7 +699,7 @@ describe('SimpleSerialize - serializes objects', () => {
         let recentHash1 = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
         let recentHash2 = 'aa1116bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
         testObj.recentBlockHashes = [
-            hexToBytes(recentHash1), 
+            hexToBytes(recentHash1),
             hexToBytes(recentHash2)
         ]
 
@@ -716,7 +716,7 @@ describe('SimpleSerialize - serializes objects', () => {
 
         // assert byte length
         let expectedByteLength = 112;
-        let actualByteLength = result.readInt32BE(offset);
+        let actualByteLength = result.readInt32LE(offset);
         offset += 4;
         assert.equal(actualByteLength, expectedByteLength, 'Byte length is not correct');
 
@@ -728,7 +728,7 @@ describe('SimpleSerialize - serializes objects', () => {
 
         // assert hash32 array
         let expectedHashArrayLength = testObj.recentBlockHashes.length * 32; // 32 byte hashes
-        let actualHashArrayLength = result.readInt32BE(offset);
+        let actualHashArrayLength = result.readInt32LE(offset);
         offset += 4;
         assert.equal(actualHashArrayLength, expectedHashArrayLength, 'Hash array length is not correct');
         let actualHash1 = result.slice(offset, (offset + 32));
@@ -741,25 +741,25 @@ describe('SimpleSerialize - serializes objects', () => {
 
     function assertAttestationRecord(startOffset, result, attestRecord){
         let offset = startOffset;
-        // skip attestation record byte length because it could vary 
+        // skip attestation record byte length because it could vary
         offset += 4;
 
         // assert bitfield value
         let expectedBitfieldByteLength = 4;
-        let actualBitfieldByteLength = result.readUInt32BE(offset);
+        let actualBitfieldByteLength = result.readUInt32LE(offset);
         assert.equal(actualBitfieldByteLength, expectedBitfieldByteLength, 'Attester bitfield array not serialised correctly');
         offset += 4;
         let actualBitfield = result.slice(offset, (offset + expectedBitfieldByteLength));
         offset += expectedBitfieldByteLength;
         assert.equal(actualBitfield.toString('hex'), attestRecord.attesterBitfield.toString('hex'), 'Attester Bitfield type not serialised correctly');
-        
+
         // check shard id
-        let actualShardId = result.readUInt32BE(offset);
+        let actualShardId = result.readUInt32LE(offset);
         offset += 4;
         assert.equal(actualShardId, attestRecord.shardId, 'ShardId value not serialised correctly');
-        
+
         // check slot id
-        let actualSlotId = result.readUInt32BE(offset);
+        let actualSlotId = result.readUInt32LE(offset);
         offset += 4;
         assert.equal(actualSlotId, attestRecord.slotId, 'SlotId value not serialised correctly');
 
