@@ -11,6 +11,12 @@ type uint64 = number;
 type uint384 = number;
 type hash32 = Uint8Array;
 
+const bytes = "bytes";
+const uint24 = "uint24";
+const uint64 = "uint64";
+const uint384 = "uint384";
+const hash32 = "hash32";
+
 // Beacon chain operations
 
 export interface ProposerSlashing {
@@ -27,11 +33,11 @@ export interface ProposerSlashing {
 }
 export var ProposerSlashing = {
   fields: [
-    ["proposerIndex", "uint24"],
+    ["proposerIndex", uint24],
     ["proposalData1", ProposalSignedData],
-    ["proposalSignature1", ["uint384"]],
+    ["proposalSignature1", [uint384]],
     ["proposalData2", ProposalSignedData],
-    ["proposalSignature2", ["uint384"]],
+    ["proposalSignature2", [uint384]],
   ],
 };
 
@@ -60,10 +66,10 @@ export interface SlashableVoteData {
 }
 export var SlashableVoteData = {
   fields: [
-    ["custodyBit0Indices", ["uint24"]],
-    ["custodyBit1Indices", ["uint24"]],
+    ["custodyBit0Indices", [uint24]],
+    ["custodyBit1Indices", [uint24]],
     ["data", AttestationData],
-    ["aggregateSignature", ["uint384"]],
+    ["aggregateSignature", [uint384]],
   ],
 };
 
@@ -80,9 +86,9 @@ export interface Attestation {
 export var Attestation = {
   fields: [
     ["data", AttestationData],
-    ["participationBitfield", "bytes"],
-    ["custodyBitfield", "bytes"],
-    ["aggregateSignature", ["uint384"]],
+    ["participationBitfield", bytes],
+    ["custodyBitfield", bytes],
+    ["aggregateSignature", [uint384]],
   ],
 };
 
@@ -106,14 +112,14 @@ export interface AttestationData {
 }
 export var AttestationData = {
   fields: [
-    ["slot", "uint64"],
-    ["shard", "uint64"],
-    ["beaconBlockRoot", "hash32"],
-    ["epochBoundaryRoot", "hash32"],
-    ["shardBlockRoot", "hash32"],
-    ["latestCrosslinkRoot", "hash32"],
-    ["justifiedSlot", "uint64"],
-    ["justifiedBlockRoot", "hash32"],
+    ["slot", uint64],
+    ["shard", uint64],
+    ["beaconBlockRoot", hash32],
+    ["epochBoundaryRoot", hash32],
+    ["shardBlockRoot", hash32],
+    ["latestCrosslinkRoot", hash32],
+    ["justifiedSlot", uint64],
+    ["justifiedBlockRoot", hash32],
   ],
 };
 
@@ -140,8 +146,8 @@ export interface Deposit {
 }
 export var Deposit = {
   fields: [
-    ["branch", ["hash32"]],
-    ["index", "uint64"],
+    ["branch", [hash32]],
+    ["index", uint64],
     ["depositData", DepositData],
   ],
 };
@@ -156,8 +162,8 @@ export interface DepositData {
 }
 export var DepositData = {
   fields: [
-    ["amount", "uint64"],
-    ["timestamp", "uint64"],
+    ["amount", uint64],
+    ["timestamp", uint64],
     ["depositInput", DepositInput],
   ],
 };
@@ -176,11 +182,11 @@ export interface DepositInput {
 }
 export var DepositInput = {
   fields: [
-    ["pubkey", "uint384"],
-    ["withdrawalCredentials", "hash32"],
-    ["randaoCommitment", "hash32"],
-    ["custodyCommitment", "hash32"],
-    ["proofOfPossession", ["uint384"]],
+    ["pubkey", uint384],
+    ["withdrawalCredentials", hash32],
+    ["randaoCommitment", hash32],
+    ["custodyCommitment", hash32],
+    ["proofOfPossession", [uint384]],
   ],
 };
 
@@ -194,9 +200,9 @@ export interface Exit {
 }
 export var Exit = {
   fields: [
-    ["slot", "uint64"],
-    ["validator_index", "uint24"],
-    ["signature", ["uint384"]],
+    ["slot", uint64],
+    ["validator_index", uint24],
+    ["signature", [uint384]],
   ],
 };
 
@@ -215,12 +221,12 @@ export interface BeaconBlock {
 }
 export var BeaconBlock = {
   fields: [
-    ["slot", "uint64"],
-    ["parentRoot", "hash32"],
-    ["stateRoot", "hash32"],
-    ["randaoReveal", "hash32"],
-    ["depositRoot", "hash32"],
-    ["signature", ["uint384"]],
+    ["slot", uint64],
+    ["parentRoot", hash32],
+    ["stateRoot", hash32],
+    ["randaoReveal", hash32],
+    ["depositRoot", hash32],
+    ["signature", [uint384]],
     ["body", BeaconBlockBody],
   ],
 };
@@ -256,8 +262,8 @@ export interface ProposalSignedData {
 }
 export var ProposalSignedData = {
   fields: [
-    ["slot", "uint64"],
-    ["shard", "uint64"],
-    ["blockHash", "hash32"],
+    ["slot", uint64],
+    ["shard", uint64],
+    ["blockHash", hash32],
   ],
 };
