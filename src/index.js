@@ -50,7 +50,7 @@ function serialize (value, type) {
     // return (length + bytes)
     let byteLengthBuffer = Buffer.alloc(4)
     // write length to buffer as 4 byte int
-    byteLengthBuffer.writeUInt32BE(value.byteLength) // bigendian
+    byteLengthBuffer.writeUInt32LE(value.byteLength) // little endian
     // write bytes to buffer
     return Buffer.concat([byteLengthBuffer, value])
   }
@@ -69,7 +69,7 @@ function serialize (value, type) {
 
     // write length to buffer as 4 byte int
     let byteLengthBuffer = Buffer.alloc(4)
-    byteLengthBuffer.writeUInt32BE(totalByteLength) // bigendian
+    byteLengthBuffer.writeUInt32LE(totalByteLength) // little endian
 
     // start from end of the length number (4 bytes)
     let ass = serializedValues.map((ab) => Buffer.from(ab))
@@ -85,7 +85,7 @@ function serialize (value, type) {
 
     let totalByteLength = buffers.reduce((acc, v) => acc + v.byteLength, 0)
     let byteLengthBuffer = Buffer.alloc(4)
-    byteLengthBuffer.writeUInt32BE(totalByteLength) // bigendian
+    byteLengthBuffer.writeUInt32LE(totalByteLength) // little endian
 
     return Buffer.concat([byteLengthBuffer, ...buffers])
   }
@@ -295,7 +295,7 @@ function assertEnoughBytes (data, start, length) {
 function merkleHash (list) {
   // Store length of list (to compensate for non-bijectiveness of padding)
   const dataLen = Buffer.alloc(32)
-  dataLen.writeUInt32BE(list.length, 28) // big endian
+  dataLen.writeUInt32LE(list.length) // little endian
   let chunkz
   if (list.length === 0) {
     chunkz = [Buffer.alloc(SSZ_CHUNK_SIZE)]

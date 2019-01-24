@@ -44,7 +44,7 @@ describe(`SimpleSerialize - deserializes bytes32, bytes96, bytes97`, () => {
         assert.isNotNull(result, 'bytes32 result should not be null');
         assert.equal(result.deserializedData.toString('hex'), bytesInput.toString('hex'), 'bytes32 result should be same as input');
         assert.equal(result.offset, 32, 'Offset is should be 32');
-    
+
     });
 
     it(`deserializes bytes96`, () => {
@@ -55,9 +55,9 @@ describe(`SimpleSerialize - deserializes bytes32, bytes96, bytes97`, () => {
         assert.isNotNull(result, 'bytes96 result should not be null');
         assert.equal(result.deserializedData.toString('hex'), bytesInput.toString('hex'), 'bytes96 result should be same as input');
         assert.equal(result.offset, 96, 'Offset is should be 96');
-    
+
     });
-    
+
     it(`deserializes bytes97`, () => {
 
         let bytesInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adaa');
@@ -66,14 +66,14 @@ describe(`SimpleSerialize - deserializes bytes32, bytes96, bytes97`, () => {
         assert.isNotNull(result, 'bytes97 result should not be null');
         assert.equal(result.deserializedData.toString('hex'), bytesInput.toString('hex'), 'bytes97 result should be same as input');
         assert.equal(result.offset, 97, 'Offset is should be 97');
-    
+
     });
 });
 
 describe('SimpleSerialize - deserializes bytes20', () => {
 
     it(`deserializes bytes20`, () => {
-        
+
         let bytes20Input = hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a30');
         let result = deserialize(serialize(bytes20Input, 'bytes20'), 0, 'bytes20');
 
@@ -87,8 +87,8 @@ describe('SimpleSerialize - deserializes bytes20', () => {
 
 describe('SimpleSerialize - deserializes signed integers', () => {
 
-    it(`deserializes int8`, () => {        
-        
+    it(`deserializes int8`, () => {
+
         let intInput = 5;
         let result = deserialize(serialize(intInput, 'int8'), 0, 'int8');
 
@@ -98,8 +98,8 @@ describe('SimpleSerialize - deserializes signed integers', () => {
 
     });
 
-    it(`deserializes int16`, () => {        
-        
+    it(`deserializes int16`, () => {
+
         let intInput = 32000;
         let result = deserialize(serialize(intInput, 'int16'), 0, 'int16');
 
@@ -120,8 +120,8 @@ describe('SimpleSerialize - deserializes signed integers', () => {
 
 	});
 
-    it(`deserializes int32`, () => {        
-        
+    it(`deserializes int32`, () => {
+
         let intInput = 1000000000;
         let result = deserialize(serialize(intInput, 'int32'), 0, 'int32');
 
@@ -131,8 +131,8 @@ describe('SimpleSerialize - deserializes signed integers', () => {
 
     });
 
-    it(`deserializes int64`, () => {        
-        
+    it(`deserializes int64`, () => {
+
         let intInput = new BN(100000000000);
         let result = deserialize(serialize(intInput, 'int64'), 0, 'int64');
 
@@ -142,8 +142,8 @@ describe('SimpleSerialize - deserializes signed integers', () => {
 
     });
 
-    it(`deserializes int64 (negative)`, () => {        
-        
+    it(`deserializes int64 (negative)`, () => {
+
         let intInput = new BN(-100000000000);
         let result = deserialize(serialize(intInput, 'int64'), 0, 'int64');
 
@@ -153,8 +153,8 @@ describe('SimpleSerialize - deserializes signed integers', () => {
 
     });
 
-    it(`deserializes int256`, () => {        
-        
+    it(`deserializes int256`, () => {
+
         let intInput = new BN('123').pow(new BN(25));
         let result = deserialize(serialize(intInput, 'int256'), 0, 'int256');
 
@@ -164,8 +164,8 @@ describe('SimpleSerialize - deserializes signed integers', () => {
 
     });
 
-    it(`deserializes int256 (negative)`, () => {        
-        
+    it(`deserializes int256 (negative)`, () => {
+
         let intInput = new BN('-123').pow(new BN(25));
         let result = deserialize(serialize(intInput, 'int256'), 0, 'int256');
 
@@ -179,8 +179,8 @@ describe('SimpleSerialize - deserializes signed integers', () => {
 
 describe('SimpleSerialize - deserializes unsigned integers', () => {
 
-    it(`deserializes uint8`, () => {        
-        
+    it(`deserializes uint8`, () => {
+
         let intInput = 5;
         let result = deserialize(serialize(intInput, 'uint8'), 0, 'uint8');
 
@@ -190,8 +190,8 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
 
     });
 
-    it(`deserializes uint16`, () => {        
-        
+    it(`deserializes uint16`, () => {
+
         let intInput = 32000;
         let result = deserialize(serialize(intInput, 'uint16'), 0, 'uint16');
 
@@ -212,8 +212,8 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
 
 	});
 
-    it(`deserializes uint32`, () => {        
-        
+    it(`deserializes uint32`, () => {
+
         let intInput = 1000000000;
         let result = deserialize(serialize(intInput, 'uint32'), 0, 'uint32');
 
@@ -223,8 +223,8 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
 
     });
 
-    it(`deserializes uint64`, () => {        
-        
+    it(`deserializes uint64`, () => {
+
         let intInput = new BN(100000000000);
         let result = deserialize(serialize(intInput, 'uint64'), 0, 'uint64');
 
@@ -235,8 +235,8 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
 
     });
 
-    it(`deserializes uint128`, () => {        
-        
+    it(`deserializes uint128`, () => {
+
         let intInput = new BN(1000000000);
         let result = deserialize(serialize(intInput, 'uint128'), 0, 'uint128');
 
@@ -247,8 +247,8 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
 
     });
 
-    it(`deserializes uint256`, () => {        
-        
+    it(`deserializes uint256`, () => {
+
         let intInput = new BN(100000000000000);
         let result = deserialize(serialize(intInput, 'uint256'), 0, 'uint256');
 
@@ -263,12 +263,12 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
 
 describe('SimpleSerialize - deserialize bytes', () => {
 
-    it(`deserializes bytes`, () => {        
-        
+    it(`deserializes bytes`, () => {
         let bytesArray = [];
         for(var i = 0; i < 280; i++){
             bytesArray.push(1);
         }
+
         let bytesInput = Buffer.from(bytesArray);
         let result = deserialize(serialize(bytesInput, 'bytes'), 0, 'bytes');
 
@@ -456,13 +456,13 @@ describe('SimpleSerialize - deserialize objects', () => {
                     assert.isTrue(actualValue.eq(expectedValue), `Object serialised properties do not match input - actual ${actualValue} expected ${expectedValue}`);
                   }
                   else if(typeof actualValue.equals === 'function'){
-                    assert.isTrue(actualValue.equals(expectedValue), `Object serialised properties do not match input - actual ${actualValue} expected ${expectedValue}`);   
+                    assert.isTrue(actualValue.equals(expectedValue), `Object serialised properties do not match input - actual ${actualValue} expected ${expectedValue}`);
                   }
                   else {
                     assert.equal(actualValue, expectedValue, 'Object serialised properties do not match input');
                   }
               });
-    
+
     });
 
     it(`deserializes objects containing objects`, () => {
@@ -471,16 +471,16 @@ describe('SimpleSerialize - deserialize objects', () => {
         let recentHash1 = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
         let recentHash2 = 'aa1116bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
         testObj.recentBlockHashes = [
-            hexToBytes(recentHash1), 
+            hexToBytes(recentHash1),
             hexToBytes(recentHash2)
-        ]
+        ];
 
         let attestRecord1 = new AttestationRecord(0, 1, Buffer.from([11, 12, 13, 14]));
         let attestRecord2 = new AttestationRecord(2, 3, Buffer.from([255, 254, 253, 252]));
         testObj.pendingAttestations = [
             attestRecord1,
             attestRecord2
-        ]
+        ];
 
         let result = deserialize(serialize(testObj, ActiveState), 0, ActiveState);
         assert.deepEqual(result.deserializedData, testObj);
@@ -488,19 +488,20 @@ describe('SimpleSerialize - deserialize objects', () => {
     });
 
     const testCases = [
-      [["00000003000000", SimpleObject], new SimpleObject({b:0,a:0})],
-      [["00000003000201", SimpleObject], new SimpleObject({b:2,a:1})],
-      [["0000000703000000020006", OuterObject], new OuterObject({v:3, subV: new InnerObject({v:6})})],
-      [["000000120000000e0000000300020100000003000403", ArrayObject], new ArrayObject({v: [new SimpleObject({b:2,a:1}), new SimpleObject({b:4,a:3})]})],
-      [["0000001600000007030000000200060000000705000000020007", [OuterObject]], [new OuterObject({v:3, subV: new InnerObject({v:6})}), new OuterObject({v:5, subV: new InnerObject({v:7})})]],
-    ]
+      [["30000000000000", SimpleObject], new SimpleObject({b:0,a:0})],
+      [["03000000020001", SimpleObject], new SimpleObject({b:2,a:1})],
+      [["0700000003020000000600", OuterObject], new OuterObject({v:3, subV: new InnerObject({v:6})})],
+      [["120000000E0000000300000002000103000000040003", ArrayObject], new ArrayObject({v: [new SimpleObject({b:2,a:1}), new SimpleObject({b:4,a:3})]})],
+      [["1600000007000000030200000006000700000005020000020700", [OuterObject]], [new OuterObject({v:3, subV: new InnerObject({v:6})}), new OuterObject({v:5, subV: new InnerObject({v:7})})]],
+    ];
+
     // like a deepEqual,but reliant on type, instead of inspection of ownProperties
     const genericEqual = (obj1, obj2, type) => {
       if (typeof type === 'string') { // simple type
         assert.equal(obj1, obj2)
       } else if (Array.isArray(type)) { // array type
-        const elementType = type[0]
-        assert.equal(obj1.length, obj2.length)
+        const elementType = type[0];
+        assert.equal(obj1.length, obj2.length);
         for (let i = 0; i < obj1.length; i++) {
           genericEqual(obj1[i], obj2[i], elementType)
         }
@@ -509,11 +510,12 @@ describe('SimpleSerialize - deserialize objects', () => {
           genericEqual(obj1[fieldName], obj2[fieldName], fieldType)
         }
       }
-    }
+    };
+
     for (const [input, output] of testCases) {
-      const [bytes, type] = input
+      const [bytes, type] = input;
       it(`successfully decodes objects - ${type.name || typeof type}`, () => {
-        const result = deserialize(Buffer.from(bytes, 'hex'), 0, type).deserializedData
+        const result = deserialize(Buffer.from(bytes, 'hex'), 0, type).deserializedData;
         genericEqual(result, output, type)
       })
     }
