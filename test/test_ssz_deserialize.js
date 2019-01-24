@@ -26,7 +26,7 @@ describe(`SimpleSerialize - deserializes boolean`, () => {
     it(`deserializes boolean false value`, () => {
 
         let boolInput = false;
-        let result =    deserialize(serialize(boolInput, 'bool'), 0, 'bool');
+        let result = deserialize(serialize(boolInput, 'bool'), 0, 'bool');
 
         assert.equal(result.deserializedData, boolInput);
     });
@@ -269,7 +269,7 @@ describe('SimpleSerialize - deserialize bytes', () => {
             bytesArray.push(1);
         }
 
-	      let bytesInput = Buffer.from(bytesArray);
+        let bytesInput = Buffer.from(bytesArray);
         let result = deserialize(serialize(bytesInput, 'bytes'), 0, 'bytes');
 
         assert.isNotNull(result);
