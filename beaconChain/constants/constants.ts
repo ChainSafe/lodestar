@@ -1,6 +1,4 @@
 // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
-// TODO Update TBD
-// TODO Explain what each constant does
 
 // Misc
 export const SHARD_COUNT = 2 ** 10; // 1024 shards
