@@ -2,26 +2,35 @@
   "name": "bls-js",
   "version": "0.0.1",
   "description": "Implementation of BLS signatures",
-  "main": "src/index.js",
-  "scripts": {
-    "test": "mocha",
-    "lint": "standard"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ChainSafeSystems/bls-js.git"
-  },
+  "main": "dist/index",
+  "typings": "dist/index",
+  "author": "ChainSafe Systems",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/ChainSafeSystems/bls-js#readme",
   "keywords": [
     "\"bls\"",
     "\"signatures\"",
     "\"cryptography\""
   ],
-  "author": "ChainSafe Systems",
-  "license": "Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/ChainSafeSystems/bls-js/issues"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChainSafeSystems/bls-js.git"
   },
-  "homepage": "https://github.com/ChainSafeSystems/bls-js#readme",
+  "bugs": {
+    "url": "https://github.com/ChainSafeSystems/bls-js/issues",
+  },
+  "scripts": {
+    "prepublishOnly": "npm run compile",
+    "compile": "npm run clean && tsc -p .",
+    "clean": "rm -rf dist",
+    "test": "mocha",
+    "lint": "node_modules/.bin/tslint -c tslint.json '*/*.ts'",
+    "lint-fix": "node_modules/.bin/tslint -c tslint.json '*/*.ts' --fix"
+  },
+  "dependencies": {
+    "csprng": "^0.1.2",
+    "sha3": "^2.0.0"
+  },
   "devDependencies": {
     "@types/chai": "^4.1.7",
     "@types/mocha": "^5.2.5",
@@ -33,13 +42,9 @@
     "tslint": "^5.12.1",
     "typescript": "^3.2.4"
   },
-  "standard": {
-    "ignore": [
-      "test/"
-    ]
-  },
-  "dependencies": {
-    "csprng": "^0.1.2",
-    "sha3": "^2.0.0"
-  }
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/lib/*"
+  ]
 }
