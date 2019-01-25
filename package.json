@@ -23,9 +23,15 @@
   },
   "homepage": "https://github.com/ChainSafeSystems/bls-js#readme",
   "devDependencies": {
+    "@types/chai": "^4.1.7",
+    "@types/mocha": "^5.2.5",
     "chai": "^4.2.0",
     "mocha": "^5.2.0",
-    "standard": "^12.0.1"
+    "nyc": "^13.1.0",
+    "standard": "^12.0.1",
+    "ts-node": "^8.0.1",
+    "tslint": "^5.12.1",
+    "typescript": "^3.2.4"
   },
   "standard": {
     "ignore": [
