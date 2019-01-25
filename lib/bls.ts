@@ -18,6 +18,12 @@ import rand = require("csprng");
 import sha3 = require("sha3");
 import CTX = require("../milagro-crypto-js");
 
+/**
+ * q denoted by the field modulus
+ * i denoted by the imaginary unit
+` */
+
+
 const ctx = new CTX("BLS381");
 const rng = new ctx.RAND();
 const hash = new sha3.SHA3(256);
