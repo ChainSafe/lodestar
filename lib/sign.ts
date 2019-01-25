@@ -14,29 +14,29 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-class public_key {
-	constructor(k: number) { };
-	x: number;
-	y: number;
-}
-
-class key {
-	k: number; // private_key
-	p: public_key; // public_key
-}
-
-
-var field_mod: number;
-
-class field_element {
-	f: number;
-	constructor(n: number) {
-		this.f = n % field_mod
-	}
-}
-
-class signature {
-	keygen():public_key {
-		return new public_key(0);
-	}
-}
+// class public_key {
+//
+//   public x: number;
+//   public y: number;
+//   constructor(k: number) { }}
+//
+// class key {
+//   public k: number; // private_key
+//   public p: public_key; // public_key
+// }
+//
+//
+// let field_mod: number;
+//
+// class field_element {
+//   public f: number;
+//   constructor(n: number) {
+//     this.f = n % field_mod;
+//   }
+// }
+//
+// class signature {
+//   public keygen(): public_key {
+//     return new public_key(0);
+//   }
+// }

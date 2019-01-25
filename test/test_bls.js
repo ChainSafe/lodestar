@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-const bls = require("../lib/bls.js")
+const bls = require("../lib/bls.ts")
 const CTX = require("../milagro-crypto-js")
 const ctx = new CTX("BLS381")
 const assert = require("chai").assert

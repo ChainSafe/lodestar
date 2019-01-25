@@ -17,7 +17,7 @@
     "url": "git+https://github.com/ChainSafeSystems/bls-js.git"
   },
   "bugs": {
-    "url": "https://github.com/ChainSafeSystems/bls-js/issues",
+    "url": "https://github.com/ChainSafeSystems/bls-js/issues"
   },
   "scripts": {
     "prepublishOnly": "npm run compile",
