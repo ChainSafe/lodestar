@@ -21,7 +21,7 @@ import CTX = require("../milagro-crypto-js");
 /**
  * q denoted by the field modulus
  * i denoted by the imaginary unit
-` */
+ */
 
 
 const ctx = new CTX("BLS381");
