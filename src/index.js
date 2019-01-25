@@ -7,13 +7,13 @@ const keccakAsU8a = require('@polkadot/util-crypto').keccakAsU8a
 const SSZ_CHUNK_SIZE = 128
 
 /**
- * Simply Serializes (SSZ)
+ * Simply Serializes, as specified [here](https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#serializeencode)
  * @method serialize
- * @param {boolean|Buffer|array|number|object} value - Value to serialize: boolean | int8/16/24/32 | bytesN (Buffer) | bytes (Buffer) | array | object
- * @param {string|object} type - A type string ('bool', 'int8', 'int16', 'int24', 'int32', `bytes${N}`, 'bytes'), or type array ['bytes32'], or type object containing fields property
- * @return {Buffer} the byte output
+ * @param {Array|boolean|Buffer|number|object} value - value to serialize
+ * @param {Array|string|object} type - type of value to serialize: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
+ * @return {Buffer} serialized value
  */
-function serialize (value, type) {
+function serialize(value, type) {
   // serialize bool
   if (type === 'bool') {
     let result = Buffer.alloc(1)
@@ -95,13 +95,14 @@ function serialize (value, type) {
 }
 
 /**
- * Simply Deserializes (SSZ)
+ * Simply Deserializes, as specified [here](https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#deserializedecode)
  * @method deserialize
- * @param {Buffer} data bytes (buffer) to deserialize
- * @param {string|object} type - A type string ('bool', 'int8', 'int16', 'int24, 'int32', `bytes${N}`, 'bytes'), or type array ['bytes32'], or type object containing fields property
- * @return {Buffer|array|number|object} deserialized value : boolean | int8/16/32/64/256 | uint8/16/32/64/256 | bytesN (Buffer) | bytes (Buffer) | array | object
+ * @param {Buffer} data - byte array to deserialize
+ * @param {number} start - starting offset index in data
+ * @param {Array|string|object} type - type of value to deserialize: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
+ * @return {Array|boolean|Buffer|number|object} deserialized value
  */
-function deserialize (data, start, type) {
+function deserialize(data, start, type) {
   const int32ByteLength = intByteLength('int32')
 
   // deserializes booleans
@@ -210,45 +211,21 @@ function deserialize (data, start, type) {
 }
 
 /**
- * Checks if 2 simply serialized objects are equal (SSZ)
- * @method eq
- * @param {Buffer} x - simply serialized object
- * @param {Buffer} y - simply serialized object
- * @return {Bool} the byte output
- */
-function eq (x, y) {
-  // Since we serialized x and y as buffers and buffers in JS are deterministic, we can do the following
-  return x.equals(y)
-}
-
-/**
- * Returns a deep copy of a simply serialized object (SSZ)
- * @method deepcopy
- * @param {Buffer} x - Value to deep copy
- * @return {Buffer} the deep copy of x
- */
-function deepcopy (x) {
-  return deepCopy(x)
-}
-
-/**
- * Returns a tree hash of an object
+ * Returns a tree hash of a simple-serializable value, as specified [here](https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#tree-hash)
  * @method treeHash
- * @param {} value
- * @param {} type
- * @param {boolean|Buffer|array|number|object} value - Value to hash: boolean | uint8/16/24/32 | bytesN (Buffer) | bytes (Buffer) | array | object
- * @param {string|object} type - A type string ('bool', 'int8', 'int16', 'int24', 'int32', `bytes${N}`, 'bytes'), or type array ['bytes32'], or type object containing fields property
- * @param {boolean} recursive - If recursive is false, pad output to 32 bytes
- * @return {Buffer} the hash
+ * @param {Array|boolean|Buffer|number|object} value - Value to hash
+ * @param {Array|string|object} type - The type of the value to hash: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
+ * @param {boolean} [recursive=false] - If recursive is false, pad output to 32 bytes
+ * @return {Buffer} the hash, length <= 32
  */
-function treeHash (value, type, recursive = false) {
+function treeHash(value, type, recursive = false) {
   let output
   if (typeof type === 'string') {
     // bool
     // bytes
     if (type === 'bool') {
       output = serialize(value, type)
-    // uint
+      // uint
     } else if (type.match(/^uint\d+$/g)) {
       const intSize = parseInt(type.match(/\d+/g))
       if (intSize <= 256) {
@@ -256,7 +233,7 @@ function treeHash (value, type, recursive = false) {
       } else {
         output = hash(serialize(value, type))
       }
-    // bytesN
+      // bytesN
     } else if (type.match(/^bytes\d+$/g)) {
       const bytesSize = parseInt(type.match(/\d+/g))
       if (bytesSize <= 32) {
@@ -264,7 +241,7 @@ function treeHash (value, type, recursive = false) {
       } else {
         output = hash(serialize(value, type))
       }
-    // bytes
+      // bytes
     } else if (type === 'bytes') {
       output = hash(serialize(value, type))
     } else {
@@ -285,14 +262,36 @@ function treeHash (value, type, recursive = false) {
   return padRight(output)
 }
 
-function assertEnoughBytes (data, start, length) {
+/**
+ * Checks if two serialized objects are equal by value
+ * @method eq
+ * @param {Buffer} x - serialized object
+ * @param {Buffer} y - serialized object
+ * @return {boolean} x equals y
+ */
+function eq(x, y) {
+  // Since we serialized x and y as buffers and buffers in JS are deterministic, we can do the following
+  return x.equals(y)
+}
+
+/**
+ * Returns a deep copy of a serialized object
+ * @method deepcopy
+ * @param {Buffer} x - Value to deep copy
+ * @return {Buffer} the deep copy of x
+ */
+function deepcopy(x) {
+  return deepCopy(x)
+}
+
+function assertEnoughBytes(data, start, length) {
   if (data.byteLength < start + length) {
     throw Error('Data bytes is not enough for data type')
   }
 }
 
 // Merkle tree hash of a list of homogenous, non-empty items
-function merkleHash (list) {
+function merkleHash(list) {
   // Store length of list (to compensate for non-bijectiveness of padding)
   const dataLen = Buffer.alloc(32)
   dataLen.writeUInt32LE(list.length) // little endian
@@ -328,11 +327,11 @@ function merkleHash (list) {
   return hash(Buffer.concat([chunkz[0], dataLen]))
 }
 
-function hash (x) {
+function hash(x) {
   return Buffer.from(keccakAsU8a(x))
 }
 
-function padRight (x) {
+function padRight(x) {
   if (x.length < 32) {
     return Buffer.concat([x, Buffer.alloc(32 - x.length)])
   }

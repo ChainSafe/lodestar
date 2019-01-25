@@ -1,12 +1,13 @@
 ### ChainSafe ETH2.0 Projects
+
 Note:
 There is a lot of work being done that are core infrastructural pieces for Eth2.0. Contributions to any of the below repositories would be greatly appreciated. All the libraries are written in TypeScript (or in the process of being converted from pure JS to TypeScript):
 <br />
--- [PM / Meta Repo](https://github.com/ChainSafeSystems/Sharding)<br />
-|-- [Beacon Chain](https://github.com/ChainSafeSystems/lodestar_chain)<br />
-|-- [Simple Serialize (SSZ)](https://github.com/ChainSafeSystems/ssz-js)<br />
-|-- [Fixed Size Numbers](https://github.com/ChainSafeSystems/fixed-sized-numbers-ts/)<br />
-|-- [BLS Singatures and Signature Aggregation](https://github.com/ChainSafeSystems/bls-js)<br />
+\-- [PM / Meta Repo](https://github.com/ChainSafeSystems/Sharding)<br />
+\|-- [Beacon Chain](https://github.com/ChainSafeSystems/lodestar_chain)<br />
+\|-- [Simple Serialize (SSZ)](https://github.com/ChainSafeSystems/ssz-js)<br />
+\|-- [Fixed Size Numbers](https://github.com/ChainSafeSystems/fixed-sized-numbers-ts/)<br />
+\|-- [BLS Singatures and Signature Aggregation](https://github.com/ChainSafeSystems/bls-js)<br />
 
 # ssz-js
 
@@ -40,55 +41,62 @@ $ npm test
     -   [Parameters](#parameters)
 -   [deserialize](#deserialize)
     -   [Parameters](#parameters-1)
--   [eq](#eq)
+-   [treeHash](#treehash)
     -   [Parameters](#parameters-2)
--   [deepcopy](#deepcopy)
+-   [eq](#eq)
     -   [Parameters](#parameters-3)
+-   [deepcopy](#deepcopy)
+    -   [Parameters](#parameters-4)
 
 ### serialize
 
-[src/index.js:13-116](https://github.com/ChainSafeSystems/ssz-js/blob/b3c0bbd5a7e10a802af963829901b9375331afb0/src/index.js#L13-L116 "Source code on GitHub")
-
-Simply Serializes (SSZ)
+Simply Serializes, as specified [here](https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#serializeencode)
 
 #### Parameters
 
--   `value` **([Buffer](https://nodejs.org/api/buffer.html) \| [array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array) \| [number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number) \| [object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object))** Value to serialize: hash32 (Buffer) | address (Buffer) | int8/16/32 | bytes (Buffer) | array | object
--   `type` **([string](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String) \| [object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object))** A type string ('hash32', 'address', 'int8', 'int16', 'int32', 'bytes', 'bool', 'hash96', 'hash97'), or type array ['hash32'], or type object containing fields property
+-   `value` **([Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array) \| [boolean](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean) \| [Buffer](https://nodejs.org/api/buffer.html) \| [number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number) \| [object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object))** value to serialize
+-   `type` **([Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array) \| [string](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String) \| [object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object))** type of value to serialize: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
 
-Returns **[Buffer](https://nodejs.org/api/buffer.html)** the byte output
+Returns **[Buffer](https://nodejs.org/api/buffer.html)** serialized value
 
 ### deserialize
 
-[src/index.js:125-252](https://github.com/ChainSafeSystems/ssz-js/blob/b3c0bbd5a7e10a802af963829901b9375331afb0/src/index.js#L125-L252 "Source code on GitHub")
-
-Simply Deserializes (SSZ)
+Simply Deserializes, as specified [here](https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#deserializedecode)
 
 #### Parameters
 
--   `data` **[Buffer](https://nodejs.org/api/buffer.html)** bytes (buffer) to deserialize
--   `type` **([string](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String) \| [object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object))** A type string ('hash32', 'address', 'int8', 'int16', 'int32', 'bytes', 'bool', 'hash96', 'hash97'), or type array ['hash32'], or type object containing fields property
+-   `data` **[Buffer](https://nodejs.org/api/buffer.html)** byte array to deserialize
+-   `start` **[number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number)** starting offset index in data
+-   `type` **([Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array) \| [string](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String) \| [object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object))** type of value to deserialize: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
 
-Returns **([Buffer](https://nodejs.org/api/buffer.html) \| [array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array) \| [number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number) \| [object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object))** deserialized value : hash32 (Buffer) | address (Buffer) | int8/16/32/64/256 | uint8/16/32/64/256 | bytes (Buffer) | array | object
+Returns **([Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array) \| [boolean](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean) \| [Buffer](https://nodejs.org/api/buffer.html) \| [number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number) \| [object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object))** deserialized value
+
+### treeHash
+
+Returns a tree hash of a simple-serializable value, as specified [here](https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#tree-hash)
+
+#### Parameters
+
+-   `value` **([Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array) \| [boolean](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean) \| [Buffer](https://nodejs.org/api/buffer.html) \| [number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number) \| [object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object))** Value to hash
+-   `type` **([Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array) \| [string](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String) \| [object](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object))** The type of the value to hash: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
+-   `recursive` **[boolean](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean)** If recursive is false, pad output to 32 bytes (optional, default `false`)
+
+Returns **[Buffer](https://nodejs.org/api/buffer.html)** the hash, length &lt;= 32
 
 ### eq
 
-[src/index.js:261-265](https://github.com/ChainSafeSystems/ssz-js/blob/b3c0bbd5a7e10a802af963829901b9375331afb0/src/index.js#L261-L265 "Source code on GitHub")
-
-Checks if 2 simply serialized objects are equal (SSZ)
+Checks if two serialized objects are equal by value
 
 #### Parameters
 
--   `x` **[Buffer](https://nodejs.org/api/buffer.html)** simply serialized object
--   `y` **[Buffer](https://nodejs.org/api/buffer.html)** simply serialized object
+-   `x` **[Buffer](https://nodejs.org/api/buffer.html)** serialized object
+-   `y` **[Buffer](https://nodejs.org/api/buffer.html)** serialized object
 
-Returns **Bool** the byte output
+Returns **[boolean](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean)** x equals y
 
 ### deepcopy
 
-[src/index.js:273-276](https://github.com/ChainSafeSystems/ssz-js/blob/b3c0bbd5a7e10a802af963829901b9375331afb0/src/index.js#L273-L276 "Source code on GitHub")
-
-Returns a deep copy of a simply serialized object (SSZ)
+Returns a deep copy of a serialized object
 
 #### Parameters
 
