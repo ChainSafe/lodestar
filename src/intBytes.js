@@ -18,7 +18,7 @@ function readIntBytes (type) {
 function writeIntBytes (type) {
   let intSize = parseInt(type.match(/\d+/g))
   let byteSize = intSize / 8
-  return (buffer, value) => { new BN(value).toTwos(intSize).toBuffer('le', byteSize).copy(buffer) }
+  return (buffer, value) => { new BN(value).toTwos(intSize).toArrayLike(Buffer, 'le', byteSize).copy(buffer) }
 }
 
 exports.intByteLength = intByteLength
