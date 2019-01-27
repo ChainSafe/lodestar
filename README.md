@@ -19,7 +19,7 @@ Simple Serialize (SSZ) in pure Javascript
 
 ## Usage
 
-See `API.md` for comprehensive API docs.
+See [API.md](API.md) for comprehensive API docs.
 
 ### Serialize:
 
