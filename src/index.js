@@ -13,7 +13,7 @@ const SSZ_CHUNK_SIZE = 128
  * @param {Array|string|object} type - type of value to serialize: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
  * @return {Buffer} serialized value
  */
-function serialize(value, type) {
+function serialize (value, type) {
   // serialize bool
   if (type === 'bool') {
     let result = Buffer.alloc(1)
@@ -102,7 +102,7 @@ function serialize(value, type) {
  * @param {Array|string|object} type - type of value to deserialize: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
  * @return {Array|boolean|Buffer|number|object} deserialized value
  */
-function deserialize(data, start, type) {
+function deserialize (data, start, type) {
   const int32ByteLength = intByteLength('int32')
 
   // deserializes booleans
@@ -218,7 +218,7 @@ function deserialize(data, start, type) {
  * @param {boolean} [recursive=false] - If recursive is false, pad output to 32 bytes
  * @return {Buffer} the hash, length <= 32
  */
-function treeHash(value, type, recursive = false) {
+function treeHash (value, type, recursive = false) {
   let output
   if (typeof type === 'string') {
     // bool
@@ -269,7 +269,7 @@ function treeHash(value, type, recursive = false) {
  * @param {Buffer} y - serialized object
  * @return {boolean} x equals y
  */
-function eq(x, y) {
+function eq (x, y) {
   // Since we serialized x and y as buffers and buffers in JS are deterministic, we can do the following
   return x.equals(y)
 }
@@ -280,18 +280,18 @@ function eq(x, y) {
  * @param {Buffer} x - Value to deep copy
  * @return {Buffer} the deep copy of x
  */
-function deepcopy(x) {
+function deepcopy (x) {
   return deepCopy(x)
 }
 
-function assertEnoughBytes(data, start, length) {
+function assertEnoughBytes (data, start, length) {
   if (data.byteLength < start + length) {
     throw Error('Data bytes is not enough for data type')
   }
 }
 
 // Merkle tree hash of a list of homogenous, non-empty items
-function merkleHash(list) {
+function merkleHash (list) {
   // Store length of list (to compensate for non-bijectiveness of padding)
   const dataLen = Buffer.alloc(32)
   dataLen.writeUInt32LE(list.length) // little endian
@@ -327,11 +327,11 @@ function merkleHash(list) {
   return hash(Buffer.concat([chunkz[0], dataLen]))
 }
 
-function hash(x) {
+function hash (x) {
   return Buffer.from(keccakAsU8a(x))
 }
 
-function padRight(x) {
+function padRight (x) {
   if (x.length < 32) {
     return Buffer.concat([x, Buffer.alloc(32 - x.length)])
   }
