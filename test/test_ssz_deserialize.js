@@ -488,11 +488,11 @@ describe('SimpleSerialize - deserialize objects', () => {
     });
 
     const testCases = [
-      [["30000000000000", SimpleObject], new SimpleObject({b:0,a:0})],
-      [["03000000020001", SimpleObject], new SimpleObject({b:2,a:1})],
-      [["0700000003020000000600", OuterObject], new OuterObject({v:3, subV: new InnerObject({v:6})})],
-      [["120000000E0000000300000002000103000000040003", ArrayObject], new ArrayObject({v: [new SimpleObject({b:2,a:1}), new SimpleObject({b:4,a:3})]})],
-      [["1600000007000000030200000006000700000005020000020700", [OuterObject]], [new OuterObject({v:3, subV: new InnerObject({v:6})}), new OuterObject({v:5, subV: new InnerObject({v:7})})]],
+      [["30000000000000", SimpleObject], {b:0,a:0}],
+      [["03000000020001", SimpleObject], {b:2,a:1}],
+      [["0700000003020000000600", OuterObject], {v:3, subV: {v:6}}],
+      [["120000000E0000000300000002000103000000040003", ArrayObject], {v: [{b:2,a:1}, {b:4,a:3}]}],
+      [["1600000007000000030200000006000700000005020000020700", [OuterObject]], [{v:3, subV: {v:6}}, {v:5, subV: {v:7}}]],
     ];
 
     // like a deepEqual,but reliant on type, instead of inspection of ownProperties

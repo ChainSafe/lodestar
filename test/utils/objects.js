@@ -1,46 +1,30 @@
 // Adapted from https://github.com/prysmaticlabs/prysm/blob/master/shared/ssz/encode_test.go#L296
 
-class SimpleObject {
-  constructor(opts) {
-    Object.keys(opts)
-      .forEach(key => this[key] = opts[key])
-  }
+const SimpleObject = {
+  fields: [
+    ['b', 'uint16'],
+    ['a', 'uint8'],
+  ],
 }
-SimpleObject.fields = [
-  ['b', 'uint16'],
-  ['a', 'uint8'],
-]
 
-class InnerObject {
-  constructor(opts) {
-    Object.keys(opts)
-      .forEach(key => this[key] = opts[key])
-  }
+const InnerObject = {
+  fields: [
+    ['v', 'uint16'],
+  ],
 }
-InnerObject.fields = [
-  ['v', 'uint16'],
-]
 
-class OuterObject {
-  constructor(opts) {
-    Object.keys(opts)
-      .forEach(key => this[key] = opts[key])
-  }
+const OuterObject = {
+  fields: [
+    ['v', 'uint8'],
+    ['subV', InnerObject],
+  ],
 }
-OuterObject.fields = [
-  ['v', 'uint8'],
-  ['subV', InnerObject],
-]
 
-class ArrayObject {
-  constructor(opts) {
-    Object.keys(opts)
-      .forEach(key => this[key] = opts[key])
-  }
+const ArrayObject = {
+  fields: [
+    ['v', [SimpleObject]],
+  ],
 }
-ArrayObject.fields = [
-  ['v', [SimpleObject]],
-]
 
 exports.SimpleObject = SimpleObject
 exports.InnerObject = InnerObject

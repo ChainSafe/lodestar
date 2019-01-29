@@ -770,11 +770,11 @@ describe('SimpleSerialize - serializes objects', () => {
         return offset;
     }
     const testCases = [
-      [[new SimpleObject({b:0,a:0}), SimpleObject], "03000000000000"],
-      [[new SimpleObject({b:2,a:1}), SimpleObject], "03000000020001"],
-      [[new OuterObject({v:3,subV:new InnerObject({v:6})}), OuterObject], "0700000003020000000600"],
-      [[new ArrayObject({v: [new SimpleObject({b:2,a:1}), new SimpleObject({b:4,a:3})]}), ArrayObject], "120000000e0000000300000002000103000000040003"],
-      [[[new OuterObject({v:3, subV:new InnerObject({v:6})}), new OuterObject({v:5, subV:new InnerObject({v:7})})],[OuterObject]], "1600000007000000030200000006000700000005020000000700"],
+      [[{b:0,a:0}, SimpleObject], "03000000000000"],
+      [[{b:2,a:1}, SimpleObject], "03000000020001"],
+      [[{v:3, subV:{v:6}}, OuterObject], "0700000003020000000600"],
+      [[{v: [{b:2,a:1}, {b:4,a:3}]}, ArrayObject], "120000000e0000000300000002000103000000040003"],
+      [[[{v:3, subV:{v:6}}, {v:5, subV:{v:7}}], [OuterObject]], "1600000007000000030200000006000700000005020000000700"],
     ];
 
     for (const [input, output] of testCases) {
