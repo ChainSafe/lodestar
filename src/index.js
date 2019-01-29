@@ -25,8 +25,8 @@ function serialize (value, type) {
   if ((typeof type === 'string') && !!type.match(/^u?int\d+$/g)) {
     // determine int size
     let intSize = parseInt(type.match(/\d+/g))
-    if (intSize > 0 && intSize <= 256 && intSize % 8 !== 0) {
-      throw Error(`given int type has invalid size (8, 16, 24, 32, 64, 256)`)
+    if (intSize > 0 && intSize % 8 !== 0) {
+      throw Error('given int type has invalid size, must be size > 0 and size % 8 == 0')
     }
 
     // return bytes
@@ -120,8 +120,8 @@ function deserialize (data, type, start = 0) {
   if ((typeof type === 'string') && !!type.match(/^u?int\d+$/g)) {
     // determine int size
     let intSize = parseInt(type.match(/\d+/g))
-    if (intSize > 0 && intSize <= 32 && intSize % 8 !== 0) {
-      throw Error(`given int type has invalid size (8, 16, 24, 32)`)
+    if (intSize > 0 && intSize % 8 !== 0) {
+      throw Error('given int type has invalid size, must be size > 0 and size % 8 == 0')
     }
 
     assertEnoughBytes(data, start, intByteLength(type))
