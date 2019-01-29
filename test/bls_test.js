@@ -4,15 +4,21 @@ const mcl_bls = require("bls-wasm")
 const assert = require("chai").assert
 
 describe("bls", () => {
-        it("should aggregate pubkeys ie. G1 members", async() => {
-                let curve = await mcl.init(mcl.BLS12_381)
-                let P1 = new mcl.G1()
-                P1.setHashOf("noot1")
-                let P2 = new mcl.G1()
-                P2.setHashOf("noot2")
-                let aggregated_pubkey = await bls.aggregate([P1, P2])
-                console.log(aggregated_pubkey)
-        })
+	// it("should create generator point", async() => {
+ //        let curve = await mcl.init(mcl.BLS12_381)
+ //        let g = bls.g1()
+ //        console.log(g)
+	// })
+
+    it("should aggregate pubkeys ie. G1 members", async() => {
+        let curve = await mcl.init(mcl.BLS12_381)
+        let P1 = new mcl.G1()
+        P1.setHashOf("noot1")
+        let P2 = new mcl.G1()
+        P2.setHashOf("noot2")
+        let aggregated_pubkey = await bls.aggregate([P1, P2])
+        assert(aggregated_pubkey instanceof mcl.G1)
+    })
 
 	it("should aggregate signatures ie. G2 members", async() => {
 		let curve = await mcl.init(mcl.BLS12_381)
@@ -21,7 +27,7 @@ describe("bls", () => {
 		let P2 = new mcl.G2()
 		P2.setHashOf("noot2")
 		let aggregated_sig = await bls.aggregate([P1, P2])
-		console.log(aggregated_sig)
+		assert(aggregated_sig instanceof mcl.G2)
 	})
 
 	it("should verify a signature", async() => {
@@ -33,7 +39,20 @@ describe("bls", () => {
 		let str = "hello"
 		let msg = `${str}${domain}`
 		let sig = sec.sign(msg)
-		console.log(bls.verify(pub, str, sig, domain))
+		assert(bls.verify(pub, str, sig, domain), "did not verify signature")
 	})
+
+	it("should verify an aggregated signature", async() => {
+		let curve = await mcl.init(mcl.BLS12_381)
+        let P1 = new mcl.G1()
+        P1.setHashOf("noot1")
+
+		let domain = 0
+		let str = "hello"
+		let msg = `${str}${domain}`
+		let sig = mcl.hashAndMapToG2(msg)
+		assert(bls.verify_multiple([P1], [str], sig, domain), "did not verify aggregated signature")
+	})
+
 })
 
