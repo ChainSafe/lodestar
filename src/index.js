@@ -98,11 +98,11 @@ function serialize (value, type) {
  * Simply Deserializes, as specified [here](https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#deserializedecode)
  * @method deserialize
  * @param {Buffer} data - byte array to deserialize
- * @param {number} start - starting offset index in data
  * @param {Array|string|object} type - type of value to deserialize: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
+ * @param {number} [start=0] - starting offset index in data
  * @return {Array|boolean|Buffer|number|object} deserialized value
  */
-function deserialize (data, start, type) {
+function deserialize (data, type, start = 0) {
   const int32ByteLength = intByteLength('int32')
 
   // deserializes booleans
@@ -172,7 +172,7 @@ function deserialize (data, start, type) {
 
     // work through the data deserializing the array elements
     while (position < (start + int32ByteLength + length)) {
-      let response = deserialize(data, position, elementType)
+      let response = deserialize(data, elementType, position)
       position = response.offset
       output.push(response.deserializedData)
     }
@@ -196,7 +196,7 @@ function deserialize (data, start, type) {
 
     type.fields
       .forEach(([fieldName, fieldType]) => {
-        let fieldResult = deserialize(data, position, fieldType)
+        let fieldResult = deserialize(data, fieldType, position)
         position = fieldResult.offset
         output[fieldName] = fieldResult.deserializedData
       })

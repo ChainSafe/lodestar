@@ -18,7 +18,7 @@ describe(`SimpleSerialize - deserializes boolean`, () => {
     it(`deserializes boolean true value`, () => {
 
         let boolInput = true;
-        let result = deserialize(serialize(boolInput, 'bool'), 0, 'bool');
+        let result = deserialize(serialize(boolInput, 'bool'), 'bool');
 
         assert.equal(result.deserializedData, boolInput);
     });
@@ -26,7 +26,7 @@ describe(`SimpleSerialize - deserializes boolean`, () => {
     it(`deserializes boolean false value`, () => {
 
         let boolInput = false;
-        let result = deserialize(serialize(boolInput, 'bool'), 0, 'bool');
+        let result = deserialize(serialize(boolInput, 'bool'), 'bool');
 
         assert.equal(result.deserializedData, boolInput);
     });
@@ -39,7 +39,7 @@ describe(`SimpleSerialize - deserializes bytes32, bytes96, bytes97`, () => {
     it(`deserializes bytes32`, () => {
 
         let bytesInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
-        let result = deserialize(serialize(bytesInput, 'bytes32'), 0, 'bytes32');
+        let result = deserialize(serialize(bytesInput, 'bytes32'), 'bytes32');
 
         assert.isNotNull(result, 'bytes32 result should not be null');
         assert.equal(result.deserializedData.toString('hex'), bytesInput.toString('hex'), 'bytes32 result should be same as input');
@@ -50,7 +50,7 @@ describe(`SimpleSerialize - deserializes bytes32, bytes96, bytes97`, () => {
     it(`deserializes bytes96`, () => {
 
         let bytesInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
-        let result = deserialize(serialize(bytesInput, 'bytes96'), 0, 'bytes96');
+        let result = deserialize(serialize(bytesInput, 'bytes96'), 'bytes96');
 
         assert.isNotNull(result, 'bytes96 result should not be null');
         assert.equal(result.deserializedData.toString('hex'), bytesInput.toString('hex'), 'bytes96 result should be same as input');
@@ -61,7 +61,7 @@ describe(`SimpleSerialize - deserializes bytes32, bytes96, bytes97`, () => {
     it(`deserializes bytes97`, () => {
 
         let bytesInput = hexToBytes('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015adaa');
-        let result = deserialize(serialize(bytesInput, 'bytes97'), 0, 'bytes97');
+        let result = deserialize(serialize(bytesInput, 'bytes97'), 'bytes97');
 
         assert.isNotNull(result, 'bytes97 result should not be null');
         assert.equal(result.deserializedData.toString('hex'), bytesInput.toString('hex'), 'bytes97 result should be same as input');
@@ -75,7 +75,7 @@ describe('SimpleSerialize - deserializes bytes20', () => {
     it(`deserializes bytes20`, () => {
 
         let bytes20Input = hexToBytes('e17cb53f339a726e0b347bbad221ad7b50dc2a30');
-        let result = deserialize(serialize(bytes20Input, 'bytes20'), 0, 'bytes20');
+        let result = deserialize(serialize(bytes20Input, 'bytes20'), 'bytes20');
 
         assert.isNotNull(result, 'bytes result should not be null');
         assert.equal(result.deserializedData.toString('hex'), bytes20Input.toString('hex'), 'bytes result should be same as input');
@@ -90,7 +90,7 @@ describe('SimpleSerialize - deserializes signed integers', () => {
     it(`deserializes int8`, () => {
 
         let intInput = 5;
-        let result = deserialize(serialize(intInput, 'int8'), 0, 'int8');
+        let result = deserialize(serialize(intInput, 'int8'), 'int8');
 
         assert.isNotNull(result, 'int8 result should not be null');
         assert.equal(result.deserializedData, intInput, 'int8 result should be same as input');
@@ -101,7 +101,7 @@ describe('SimpleSerialize - deserializes signed integers', () => {
     it(`deserializes int16`, () => {
 
         let intInput = 32000;
-        let result = deserialize(serialize(intInput, 'int16'), 0, 'int16');
+        let result = deserialize(serialize(intInput, 'int16'), 'int16');
 
         assert.isNotNull(result, 'int16 result should not be null');
         assert.equal(result.deserializedData, intInput, 'int16 result should be same as input');
@@ -112,7 +112,7 @@ describe('SimpleSerialize - deserializes signed integers', () => {
 	it(`deserializes int24`, () => {
 
 		let intInput = 8355840;
-		let result = deserialize(serialize(intInput, 'int24'), 0, 'int24');
+		let result = deserialize(serialize(intInput, 'int24'), 'int24');
 
 		assert.isNotNull(result, 'int24 result should not be null');
 		assert.equal(result.deserializedData, intInput, 'int24 result should be same as input');
@@ -123,7 +123,7 @@ describe('SimpleSerialize - deserializes signed integers', () => {
     it(`deserializes int32`, () => {
 
         let intInput = 1000000000;
-        let result = deserialize(serialize(intInput, 'int32'), 0, 'int32');
+        let result = deserialize(serialize(intInput, 'int32'), 'int32');
 
         assert.isNotNull(result, 'int32 result should not be null');
         assert.equal(result.deserializedData, intInput, 'int32 result should be same as input');
@@ -134,7 +134,7 @@ describe('SimpleSerialize - deserializes signed integers', () => {
     it(`deserializes int64`, () => {
 
         let intInput = new BN(100000000000);
-        let result = deserialize(serialize(intInput, 'int64'), 0, 'int64');
+        let result = deserialize(serialize(intInput, 'int64'), 'int64');
 
         assert.isNotNull(result, 'int64 result should not be null');
         assert.isTrue(result.deserializedData.eq(intInput), `int64 result should be same as input actual: ${result.deserializedData} expected: ${intInput}`);
@@ -145,7 +145,7 @@ describe('SimpleSerialize - deserializes signed integers', () => {
     it(`deserializes int64 (negative)`, () => {
 
         let intInput = new BN(-100000000000);
-        let result = deserialize(serialize(intInput, 'int64'), 0, 'int64');
+        let result = deserialize(serialize(intInput, 'int64'), 'int64');
 
         assert.isNotNull(result, 'int64 result should not be null');
         assert.isTrue(result.deserializedData.eq(intInput), `int64 result should be same as input actual: ${result.deserializedData} expected: ${intInput}`);
@@ -156,7 +156,7 @@ describe('SimpleSerialize - deserializes signed integers', () => {
     it(`deserializes int256`, () => {
 
         let intInput = new BN('123').pow(new BN(25));
-        let result = deserialize(serialize(intInput, 'int256'), 0, 'int256');
+        let result = deserialize(serialize(intInput, 'int256'), 'int256');
 
         assert.isNotNull(result, 'int256 result should not be null');
         assert.isTrue(result.deserializedData.eq(intInput), `int256 result should be same as input actual: ${result.deserializedData} expected: ${intInput}`);
@@ -167,7 +167,7 @@ describe('SimpleSerialize - deserializes signed integers', () => {
     it(`deserializes int256 (negative)`, () => {
 
         let intInput = new BN('-123').pow(new BN(25));
-        let result = deserialize(serialize(intInput, 'int256'), 0, 'int256');
+        let result = deserialize(serialize(intInput, 'int256'), 'int256');
 
         assert.isNotNull(result, 'int256 result should not be null');
         assert.isTrue(result.deserializedData.eq(intInput), `int256 result should be same as input actual: ${result.deserializedData} expected: ${intInput}`);
@@ -182,7 +182,7 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
     it(`deserializes uint8`, () => {
 
         let intInput = 5;
-        let result = deserialize(serialize(intInput, 'uint8'), 0, 'uint8');
+        let result = deserialize(serialize(intInput, 'uint8'), 'uint8');
 
         assert.isNotNull(result, 'uint8 result should not be null');
         assert.equal(result.deserializedData, intInput, 'uint8 result should be same as input');
@@ -193,7 +193,7 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
     it(`deserializes uint16`, () => {
 
         let intInput = 32000;
-        let result = deserialize(serialize(intInput, 'uint16'), 0, 'uint16');
+        let result = deserialize(serialize(intInput, 'uint16'), 'uint16');
 
         assert.isNotNull(result, 'uint16 result should not be null');
         assert.equal(result.deserializedData, intInput, 'uint16 result should be same as input');
@@ -204,7 +204,7 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
 	it(`deserializes uint24`, () => {
 
 		let intInput = 8355840;
-		let result = deserialize(serialize(intInput, 'uint24'), 0, 'uint24');
+		let result = deserialize(serialize(intInput, 'uint24'), 'uint24');
 
 		assert.isNotNull(result, 'uint24 result should not be null');
 		assert.equal(result.deserializedData, intInput, 'uint24 result should be same as input');
@@ -215,7 +215,7 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
     it(`deserializes uint32`, () => {
 
         let intInput = 1000000000;
-        let result = deserialize(serialize(intInput, 'uint32'), 0, 'uint32');
+        let result = deserialize(serialize(intInput, 'uint32'), 'uint32');
 
         assert.isNotNull(result, 'uint32 result should not be null');
         assert.equal(result.deserializedData, intInput, 'uint32 result should be same as input');
@@ -226,7 +226,7 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
     it(`deserializes uint64`, () => {
 
         let intInput = new BN(100000000000);
-        let result = deserialize(serialize(intInput, 'uint64'), 0, 'uint64');
+        let result = deserialize(serialize(intInput, 'uint64'), 'uint64');
 
         assert.isNotNull(result, 'uint64 result should not be null');
 
@@ -238,7 +238,7 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
     it(`deserializes uint128`, () => {
 
         let intInput = new BN(1000000000);
-        let result = deserialize(serialize(intInput, 'uint128'), 0, 'uint128');
+        let result = deserialize(serialize(intInput, 'uint128'), 'uint128');
 
         assert.isNotNull(result, 'uint128 result should not be null');
 
@@ -250,7 +250,7 @@ describe('SimpleSerialize - deserializes unsigned integers', () => {
     it(`deserializes uint256`, () => {
 
         let intInput = new BN(100000000000000);
-        let result = deserialize(serialize(intInput, 'uint256'), 0, 'uint256');
+        let result = deserialize(serialize(intInput, 'uint256'), 'uint256');
 
         assert.isNotNull(result, 'uint256 result should not be null');
 
@@ -270,7 +270,7 @@ describe('SimpleSerialize - deserialize bytes', () => {
         }
 
         let bytesInput = Buffer.from(bytesArray);
-        let result = deserialize(serialize(bytesInput, 'bytes'), 0, 'bytes');
+        let result = deserialize(serialize(bytesInput, 'bytes'), 'bytes');
 
         assert.isNotNull(result);
         assert.deepEqual(result.deserializedData.toString('hex'), bytesInput.toString('hex'));
@@ -283,7 +283,7 @@ describe('SimpleSerialize - deserialize arrays', () => {
 
     it(`deserializes arrays of elements (of same type) - bool`, () => {
         let arrayInput = [true, false, true];
-        let result = deserialize(serialize(arrayInput, ['bool']), 0, ['bool']);
+        let result = deserialize(serialize(arrayInput, ['bool']), ['bool']);
         assert.deepEqual(result.deserializedData, arrayInput);
     });
 
@@ -382,7 +382,7 @@ describe('SimpleSerialize - deserialize arrays', () => {
     });
 
     function scenarioDeserializeByteArrays(arrayInput, type) {
-        let result = deserialize(serialize(arrayInput, [type]), 0, [type]);
+        let result = deserialize(serialize(arrayInput, [type]), [type]);
 
         let flatInput = Buffer.from([...arrayInput[0], ...arrayInput[1]]);
         let expectedLength = flatInput.length;
@@ -393,7 +393,7 @@ describe('SimpleSerialize - deserialize arrays', () => {
     }
 
     function scenarioDeserializeIntArrays(arrayInput, type){
-        let result = deserialize(serialize(arrayInput, [type]), 0, [type]);
+        let result = deserialize(serialize(arrayInput, [type]), [type]);
 
         assert.isNotNull(result);
         for (let index = 0; index < result.deserializedData.length; index++) {
@@ -445,7 +445,7 @@ describe('SimpleSerialize - deserialize objects', () => {
             ]
         };
 
-        let result = deserialize(serialize(valueObject, fields), 0, fields);
+        let result = deserialize(serialize(valueObject, fields), fields);
 
         // assert fields
         fields['fields']
@@ -482,7 +482,7 @@ describe('SimpleSerialize - deserialize objects', () => {
             attestRecord2
         ];
 
-        let result = deserialize(serialize(testObj, ActiveState), 0, ActiveState);
+        let result = deserialize(serialize(testObj, ActiveState), ActiveState);
         assert.deepEqual(result.deserializedData, testObj);
 
     });
@@ -515,7 +515,7 @@ describe('SimpleSerialize - deserialize objects', () => {
     for (const [input, output] of testCases) {
       const [bytes, type] = input;
       it(`successfully decodes objects - ${type.name || typeof type}`, () => {
-        const result = deserialize(Buffer.from(bytes, 'hex'), 0, type).deserializedData;
+        const result = deserialize(Buffer.from(bytes, 'hex'), type).deserializedData;
         genericEqual(result, output, type)
       })
     }

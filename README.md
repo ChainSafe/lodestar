@@ -78,21 +78,21 @@ let serialized = ssz.serialize(obj, types)
 
 For deserialization we need to specify:
 - data {buffer} - encoded data
-- start {number} - start location in the data buffer from where we wish to read
 - type {string | object | array} - type of data we want to decode, same as encoding types
+- start {number} - optional, default: 0, start location in the data buffer from where we wish to read
 ```
 // eg. deserialize a boolean at position 0
-ssz.deserialize(buf, 0, 'bool')
+ssz.deserialize(buf, 'bool')
 ```
 ```
-// eg. desearlize an object at position 32
+// eg. deserialize an object at position 32
 let types = {
     'fields' : [
         ['a', 'bool'],
         ['b', 'uint8']
     ]
 }
-ssz.deserialize(buf, 32, types)
+ssz.deserialize(buf, types, 32)
 ```
 
 

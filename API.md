@@ -31,8 +31,8 @@ Simply Deserializes, as specified [here][18]
 ### Parameters
 
 -   `data` **[Buffer][14]** byte array to deserialize
--   `start` **[number][15]** starting offset index in data
 -   `type` **([Array][12] \| [string][17] \| [object][16])** type of value to deserialize: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
+-   `start` **[number][15]** starting offset index in data (optional, default `0`)
 
 Returns **([Array][12] \| [boolean][13] \| [Buffer][14] \| [number][15] \| [object][16])** deserialized value
 
