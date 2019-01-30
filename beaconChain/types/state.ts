@@ -1,6 +1,9 @@
 /* tslint:disable:no-var-keyword */
 // TODO replace uint, hash32, bytes
 
+// Each type exported here contains both a compile-time type (a typescript interface) and a run-time type (a javascript variable)
+// For more information, see ./index.ts
+
 // These interfaces relate to the data structures for beacon chain state
 
 import { AttestationData } from "./blocks";
