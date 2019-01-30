@@ -1,6 +1,6 @@
 import { assert } from "chai";
 import { clamp, getShuffling, getActiveValidatorIndices, intSqrt, readUIntBE, split } from "../../helpers/stateTransitionHelpers";
-import { ShardCommittee, ValidatorRecord } from "../../interfaces/state";
+import { ShardCommittee, ValidatorRecord } from "../../types";
 
 describe("Split", () => {
   it("array of 0 should return empty", () => {

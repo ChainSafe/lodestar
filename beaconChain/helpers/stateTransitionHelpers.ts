@@ -5,8 +5,16 @@ import {
   SHARD_COUNT,
   TARGET_COMMITTEE_SIZE,
 } from "../constants/constants";
-import {AttestationData, BeaconBlock, SlashableVoteData} from "../interfaces/blocks";
-import {BeaconState, CommitteeShard, ForkData, ShardCommittee, ValidatorRecord} from "../interfaces/state";
+import {
+  AttestationData,
+  BeaconBlock,
+  BeaconState,
+  CommitteeShard,
+  ForkData,
+  ShardCommittee,
+  SlashableVoteData,
+  ValidatorRecord,
+} from "../types";
 
 type int = number;
 type bytes = number;
