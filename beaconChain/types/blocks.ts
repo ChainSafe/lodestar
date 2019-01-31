@@ -6,6 +6,8 @@
 
 // These interfaces relate to the data structures for beacon chain blocks
 
+import { Eth1Data } from "./state";
+
 type bytes = number;
 type bytes32 = number;
 type bytes48 = number;

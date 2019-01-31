@@ -92,7 +92,7 @@ export var BeaconState = {
     ["latestBlockRoots", [bytes32]],
     ["latestIndexRoots", [bytes32]],
     ["latestPenalizedBalances", [uint64]],
-    ["latestAttestations", [PendingAttestationRecord]],
+    ["latestAttestations", [PendingAttestation]],
     ["batchedBlockRoots", [hash32]],
     // Eth1
     ["latestEth1Data", Eth1Data],
@@ -141,7 +141,7 @@ export var Crosslink = {
   ],
 };
 
-export interface PendingAttestationRecord {
+export interface PendingAttestation {
   // Signed data
   data: AttestationData;
   // Attester participation bitfield
@@ -151,7 +151,7 @@ export interface PendingAttestationRecord {
   // Slot in which it was included
   inclusionSlot: uint64;
 }
-export var PendingAttestationRecord = {
+export var PendingAttestation = {
   fields: [
     ["data", AttestationData],
     ["aggregationBitfield", bytes],
