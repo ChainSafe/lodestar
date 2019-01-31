@@ -1,4 +1,8 @@
+/* tslint:disable:no-var-keyword */
 // TODO replace uint, hash32, bytes
+
+// Each type exported here contains both a compile-time type (a typescript interface) and a run-time type (a javascript variable)
+// For more information, see ./index.ts
 
 // These interfaces relate to the data structures for beacon chain blocks
 
@@ -9,6 +13,12 @@ type uint24 = number;
 type uint64 = number;
 type uint384 = number;
 type hash32 = Uint8Array;
+
+const bytes = "bytes";
+const uint24 = "uint24";
+const uint64 = "uint64";
+const uint384 = "uint384";
+const hash32 = "hash32";
 
 // Beacon chain operations
 
@@ -24,6 +34,15 @@ export interface ProposerSlashing {
   // Second proposal signature
   proposalSignature2: uint384[];
 }
+export var ProposerSlashing = {
+  fields: [
+    ["proposerIndex", uint24],
+    ["proposalData1", ProposalSignedData],
+    ["proposalSignature1", [uint384]],
+    ["proposalData2", ProposalSignedData],
+    ["proposalSignature2", [uint384]],
+  ],
+};
 
 export interface CasperSlashing {
   // First batch of votes
@@ -31,6 +50,12 @@ export interface CasperSlashing {
   // Second batch of votes
   slashableVoteData2: SlashableVoteData;
 }
+export var CasperSlashing = {
+  fields: [
+    ["slashableVoteData1", SlashableVoteData],
+    ["slashableVoteData2", SlashableVoteData],
+  ],
+};
 
 export interface SlashableVoteData {
   // Proof-of-custody indices (0 bits)
@@ -42,6 +67,14 @@ export interface SlashableVoteData {
   // Aggregate signature
   aggregateSignature: uint384[];
 }
+export var SlashableVoteData = {
+  fields: [
+    ["custodyBit0Indices", [uint24]],
+    ["custodyBit1Indices", [uint24]],
+    ["data", AttestationData],
+    ["aggregateSignature", [uint384]],
+  ],
+};
 
 export interface Attestation {
   // Attestation data
@@ -53,6 +86,14 @@ export interface Attestation {
   // BLS aggregate signature
   aggregateSignature: uint384[];
 }
+export var Attestation = {
+  fields: [
+    ["data", AttestationData],
+    ["participationBitfield", bytes],
+    ["custodyBitfield", bytes],
+    ["aggregateSignature", [uint384]],
+  ],
+};
 
 export interface AttestationData {
   // Slot number
@@ -72,6 +113,18 @@ export interface AttestationData {
   // Hash of the last justified beacon block
   justifiedBlockRoot: hash32;
 }
+export var AttestationData = {
+  fields: [
+    ["slot", uint64],
+    ["shard", uint64],
+    ["beaconBlockRoot", hash32],
+    ["epochBoundaryRoot", hash32],
+    ["shardBlockRoot", hash32],
+    ["latestCrosslinkRoot", hash32],
+    ["justifiedSlot", uint64],
+    ["justifiedBlockRoot", hash32],
+  ],
+};
 
 export interface AttestationDataAndCustodyBit {
   // Attestation data
@@ -79,6 +132,12 @@ export interface AttestationDataAndCustodyBit {
   // Custody bit
   custodyBit: boolean;
 }
+export var AttestationDataAndCustodyBit = {
+  fields: [
+    ["data", AttestationData],
+    ["custodyBit", "bool"],
+  ],
+};
 
 export interface Deposit {
   // Branch in the deposit tree
@@ -88,6 +147,13 @@ export interface Deposit {
   // Deposit data
   depositData: DepositData;
 }
+export var Deposit = {
+  fields: [
+    ["branch", [hash32]],
+    ["index", uint64],
+    ["depositData", DepositData],
+  ],
+};
 
 export interface DepositData {
   // Amount in Gwei
@@ -97,6 +163,13 @@ export interface DepositData {
   // Deposit Input
   depositInput: DepositInput;
 }
+export var DepositData = {
+  fields: [
+    ["amount", uint64],
+    ["timestamp", uint64],
+    ["depositInput", DepositInput],
+  ],
+};
 
 export interface DepositInput {
   // BLS pubkey
@@ -110,6 +183,15 @@ export interface DepositInput {
   // BLS proof of possession (a BLS signature)
   proofOfPossession: uint384[];
 }
+export var DepositInput = {
+  fields: [
+    ["pubkey", uint384],
+    ["withdrawalCredentials", hash32],
+    ["randaoCommitment", hash32],
+    ["custodyCommitment", hash32],
+    ["proofOfPossession", [uint384]],
+  ],
+};
 
 export interface Exit {
   // Minimum slot for processing exit
@@ -119,6 +201,13 @@ export interface Exit {
   // Validator signature
   signature: uint384[];
 }
+export var Exit = {
+  fields: [
+    ["slot", uint64],
+    ["validator_index", uint24],
+    ["signature", [uint384]],
+  ],
+};
 
 // Beacon chain blocks
 export interface BeaconBlock {
@@ -133,6 +222,17 @@ export interface BeaconBlock {
   // Body
   body: BeaconBlockBody;
 }
+export var BeaconBlock = {
+  fields: [
+    ["slot", uint64],
+    ["parentRoot", hash32],
+    ["stateRoot", hash32],
+    ["randaoReveal", hash32],
+    ["depositRoot", hash32],
+    ["signature", [uint384]],
+    ["body", BeaconBlockBody],
+  ],
+};
 
 export interface BeaconBlockBody {
   proposerSlashings: ProposerSlashing[];
@@ -143,6 +243,17 @@ export interface BeaconBlockBody {
   deposits: Deposit[];
   exits: Exit[];
 }
+export var BeaconBlockBody = {
+  fields: [
+    ["proposerSlashings", [ProposerSlashing]],
+    ["casperSlashings", [CasperSlashing]],
+    ["attestations", [Attestation]],
+    ["custodyReseeds", [CustodyReseed]],
+    ["custodyResponses", [CustodyResponse]],
+    ["deposits", [Deposit]],
+    ["exits", [Exit]],
+  ],
+};
 
 export interface ProposalSignedData {
   // Slot number
@@ -152,3 +263,10 @@ export interface ProposalSignedData {
   // Block hash
   blockHash: hash32;
 }
+export var ProposalSignedData = {
+  fields: [
+    ["slot", uint64],
+    ["shard", uint64],
+    ["blockHash", hash32],
+  ],
+};

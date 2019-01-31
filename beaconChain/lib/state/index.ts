@@ -1,5 +1,4 @@
-import { BeaconState, CrosslinkRecord, ValidatorRecord } from "../../interfaces/state"
-import {Deposit} from "../../interfaces/blocks";
+import { BeaconState, CrosslinkRecord, Deposit, ValidatorRecord } from "../../types";
 import {
   ZERO_HASH, LATEST_RANDAO_MIXES_LENGTH, EPOCH_LENGTH, SHARD_COUNT,
   LATEST_BLOCK_ROOTS_LENGTH, EMPTY_SIGNATURE, MAX_DEPOSIT, GWEI_PER_ETH,
