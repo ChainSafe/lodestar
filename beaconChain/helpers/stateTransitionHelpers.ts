@@ -2,10 +2,9 @@ import { keccakAsU8a } from "@polkadot/util-crypto";
 // Helper functions related to state transition functions
 import {
   ENTRY_EXIT_DELAY,
-  EPOCH_LENGTH, GENESIS_EPOCH, GWEI_PER_ETH, LATEST_BLOCK_ROOTS_LENGTH, LATEST_INDEX_ROOTS_LENGTH,
+  EPOCH_LENGTH, GENESIS_EPOCH, LATEST_BLOCK_ROOTS_LENGTH, LATEST_INDEX_ROOTS_LENGTH,
   LATEST_RANDAO_MIXES_LENGTH,
-  MAX_CASPER_SLASHINGS, MAX_CASPER_VOTES,
-  MAX_DEPOSIT, MAX_DEPOSIT_AMOUNT, SEED_LOOKAHEAD,
+  MAX_DEPOSIT_AMOUNT,
   SHARD_COUNT,
   TARGET_COMMITTEE_SIZE,
 } from "../constants/constants";
@@ -15,10 +14,7 @@ import {
   BeaconState, Bytes32,
   Fork,
   EpochNumber,
-  ForkData,
-  ShardCommittee,
-  SlashableVoteData, SlotNumber,
-  Validator, ValidatorIndex,
+  Validator, ValidatorIndex, SlotNumber,
 } from "../types";
 
 type int = number;
@@ -195,9 +191,9 @@ export function getEpochCommitteeCount(activeValidatorCount: int): int {
 /**
  * Shuffles validators into shard committees seeded by seed and slot.
  * @param {hash32} seed
- * @param {ValidatorRecord[]} validators
- * @param {int} crosslinkingStartShard
- * @returns {ShardCommittee[][]} List of EPOCH_LENGTH * committeesPerSlot committees where each committee is itself a list of validator indices.
+ * @param {Validator[]} validators
+ * @param {int} slot
+ * @returns {int[][]}
  */
 export function getShuffling(seed: hash32, validators: Validator[], slot: int): int[][] {
   // Normalizes slot to start of epoch boundary
@@ -255,7 +251,7 @@ export function getNextEpochCommitteeCount(state: BeaconState): int {
  * @param {boolean} registryChange
  * @returns {[]}
  */
-function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: SlotNumber, registryChange: boolean = false): CommitteeShard[] {
+function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: SlotNumber, registryChange: boolean = false): {ShardNumber, ValidatorIndex}[] {
   const epoch = slotToEpoch(slot);
   const currentEpoch = getCurrentEpoch(state);
   const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : currentEpoch;
@@ -368,7 +364,7 @@ export function generateSeed(state: BeaconState, epoch: EpochNumber): Bytes32 {
  * @returns {int}
  */
 export function getBeaconProposerIndex(state: BeaconState, slot: int): int {
-  const firstCommittee = getCrosslinkCommitteesAtSlot(state, slot)[0].committee;
+  const firstCommittee = getCrosslinkCommitteesAtSlot(state, slot)[0].ValidatorIndex;
   return firstCommittee[slot % firstCommittee.length];
 }
 
@@ -395,9 +391,6 @@ export function getBeaconProposerIndex(state: BeaconState, slot: int): int {
 //     return x.shard === attestationData.shard;
 //   })[0];
 //
-//   // TODO Figure out why this is an error
-//   // TODO implement error based on python pseudo code
-//   // TODO what is ceil_div8()
 //   // assert len(participation_bitfield) == ceil_div8(len(snc.committee))
 //
 //   const participants: int[] = shardCommittee.committee.filter((validator: uint24, index: int) => {
