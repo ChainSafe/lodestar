@@ -10,9 +10,9 @@ import {
 import {
   AttestationData,
   BeaconState, Bytes32,
-  Fork,
   EpochNumber,
-  Validator, ValidatorIndex, SlotNumber,
+  Fork,
+  SlotNumber, Validator, ValidatorIndex,
 } from "../types";
 
 type int = number;
@@ -247,7 +247,7 @@ export function getNextEpochCommitteeCount(state: BeaconState): int {
  * @param {boolean} registryChange
  * @returns {[]}
  */
-function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: SlotNumber, registryChange: boolean = false): {ShardNumber, ValidatorIndex}[] {
+function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: SlotNumber, registryChange: boolean = false): Array<{ShardNumber, ValidatorIndex}> {
   const epoch = slotToEpoch(slot);
   const currentEpoch = getCurrentEpoch(state);
   const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : currentEpoch;
@@ -274,7 +274,7 @@ function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: SlotNumber, regi
     shufflingStartShard = state.currentEpochStartShard;
   } else if (epoch === nextEpoch) {
     currentCommitteesPerEpoch = getCurrentEpochCommitteeCount(state);
-    committeesPerEpoch = getNextEpochCommitteeCount(state)
+    committeesPerEpoch = getNextEpochCommitteeCount(state);
     shufflingEpoch = nextEpoch;
 
     const epochsSinceLastRegistryUpdate = currentEpoch - state.validatorRegistryUpdateEpoch;
@@ -298,8 +298,8 @@ function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: SlotNumber, regi
   return Array.apply(null, Array(committeesPerSlot)).map((x, i) => {
     return {
       committee: shuffling[committeesPerSlot * offset + i],
-      shard: (slotStartShard + i) % SHARD_COUNT
-    }
+      shard: (slotStartShard + i) % SHARD_COUNT,
+    };
   });
 }
 
@@ -324,7 +324,7 @@ export function getBlockRoot(state: BeaconState, slot: int): Bytes32 {
  * @returns {Bytes32}
  */
 export function getRandaoMix(state: BeaconState, epoch: EpochNumber): Bytes32 {
-  if (getCurrentEpoch(state) - LATEST_RANDAO_MIXES_LENGTH < epoch && epoch < getCurrentEpoch(state)) { throw new Error("")}
+  if (getCurrentEpoch(state) - LATEST_RANDAO_MIXES_LENGTH < epoch && epoch < getCurrentEpoch(state)) { throw new Error(""); }
   return state.latestRandaoMixes[epoch % LATEST_RANDAO_MIXES_LENGTH];
 }
 
@@ -335,7 +335,7 @@ export function getRandaoMix(state: BeaconState, epoch: EpochNumber): Bytes32 {
  * @returns {Bytes32}
  */
 export function getActiveIndexRoot(state: BeaconState, epoch: EpochNumber): Bytes32 {
-  if (getCurrentEpoch(state) - LATEST_INDEX_ROOTS_LENGTH + ENTRY_EXIT_DELAY < epoch && epoch < getCurrentEpoch(state) + ENTRY_EXIT_DELAY) { throw new Error("")}
+  if (getCurrentEpoch(state) - LATEST_INDEX_ROOTS_LENGTH + ENTRY_EXIT_DELAY < epoch && epoch < getCurrentEpoch(state) + ENTRY_EXIT_DELAY) { throw new Error(""); }
   return state.latestIndexRoots[epoch % LATEST_INDEX_ROOTS_LENGTH];
 }
 
@@ -502,5 +502,5 @@ export function intSqrt(n: int): int {
  * @returns {EpochNumber}
  */
 export function getEntryExitEffectEpoch(epoch: EpochNumber): EpochNumber {
-  return epoch + 1 +ENTRY_EXIT_DELAY;
+  return epoch + 1 + ENTRY_EXIT_DELAY;
 }

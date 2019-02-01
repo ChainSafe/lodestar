@@ -1,6 +1,6 @@
 enum StatusFlags {
   INTIATED_EXIT = 2 ** 0,
-  WITHDRAWABLE = 2 ** 1
+  WITHDRAWABLE = 2 ** 1,
 }
 
 enum SignatureDomains {
@@ -8,10 +8,10 @@ enum SignatureDomains {
   DOMAIN_ATTESTATION = 1,
   DOMAIN_PROPOSAL = 2,
   DOMAIN_EXIT = 3,
-  DOMAIN_RANDAO = 4
+  DOMAIN_RANDAO = 4,
 }
 
 export {
   SignatureDomains,
-  StatusFlags
+  StatusFlags,
 };

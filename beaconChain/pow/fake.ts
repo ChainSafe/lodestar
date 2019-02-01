@@ -11,16 +11,16 @@ interface DummyChainStart {
 export function getInitialDeposits(): DummyChainStart {
   return {
     deposits: generateFakeDeposits(),
+    eth1Data: generateEthData(),
     genesisTime: Date.now() / 1000 | 0,
-    eth1Data: generateEthData()
   };
 }
 
 function generateEthData(): Eth1Data {
   return {
+    blockHash: new Uint8Array(32),
     depositRoot: new Uint8Array(32),
-    blockHash: new Uint8Array(32)
-  }
+  };
 }
 
 function generateFakeDeposits(): Deposit[] {

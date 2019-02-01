@@ -4,7 +4,7 @@ export const TARGET_COMMITTEE_SIZE = 2 ** 7; // 256 validators
 export const EJECTION_BALANCE = 2 ** 4 * 1e9; // 16000000000 Gwei
 export const MAX_BALANCE_CHURN_QUOTIENT = 2 ** 5; // 32
 export const BEACON_CHAIN_SHARD_NUMBER = 2 ** 64 - 1;
-export const MAX_INDICES_PER_SLASHABLE_VOTE = 2**12; // 4096
+export const MAX_INDICES_PER_SLASHABLE_VOTE = 2 ** 12; // 4096
 export const MAX_WITHDRAWALS_PER_EPOCH = 2 ** 2; // 4 withdrawals
 
 // Deposit contract
@@ -24,7 +24,7 @@ export const MIN_VALIDATOR_WITHDRAWAL_TIME = 2 ** 8; // epochs || ~27 hours
 
 // Initial values
 export const GENESIS_FORK_VERSION	= 0;
-export const GENESIS_SLOT = 2**19;
+export const GENESIS_SLOT = 2 ** 19;
 export const GENESIS_EPOCH = Math.min(GENESIS_SLOT / EPOCH_LENGTH);
 export const GENESIS_START_SHARD = 0;
 export const FAR_FUTURE_EPOCH = 2 ** 64 - 1;

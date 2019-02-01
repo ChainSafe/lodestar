@@ -178,26 +178,26 @@ export var Fork = {
 
 export interface Eth1Data {
   // Root of the deposit tree
-  depositRoot: bytes32,
+  depositRoot: bytes32;
   // Block hash
-  blockHash: bytes32
+  blockHash: bytes32;
 }
 export var Eth1Data = {
   fields: [
     ["depositRoot", bytes32],
-    ["blockHash", bytes32]
-  ]
+    ["blockHash", bytes32],
+  ],
 };
 
 export interface Eth1DataVote {
   // Data being voted for
-  eth1Data: Eth1Data,
+  eth1Data: Eth1Data;
   // Vote count
-  voteCount: uint64
+  voteCount: uint64;
 }
 export var Eth1DataVote = {
   fields: [
     ["eth1Data", Eth1Data],
-    ["voteCount", uint64]
-  ]
+    ["voteCount", uint64],
+  ],
 };
