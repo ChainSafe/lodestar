@@ -11,6 +11,7 @@
     "indent": [true, "spaces", 2],
     "no-conditional-assignment": true,
     "no-consecutive-blank-lines": false,
+    "object-literal-sort-keys": false,
     "no-console": {
       "severity": "warning",
       "options": [

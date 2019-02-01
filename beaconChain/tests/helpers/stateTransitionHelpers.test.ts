@@ -1,6 +1,6 @@
 import { assert } from "chai";
-import { clamp, getShuffling, getActiveValidatorIndices, intSqrt, readUIntBE, split } from "../../helpers/stateTransitionHelpers";
-import { ShardCommittee, ValidatorRecord } from "../../types";
+import { clamp, getActiveValidatorIndices, intSqrt, readUIntBE, split } from "../../helpers/stateTransitionHelpers";
+import { Validator } from "../../types";
 
 describe("Split", () => {
   it("array of 0 should return empty", () => {
@@ -129,28 +129,22 @@ describe("intSqrt", () => {
 
 describe("getActiveValidatorIndices", () => {
   const randNum = () =>  Math.floor(Math.random() * Math.floor(4));
-  const genValidatorRecord = () => ({
-    pubkey: randNum(),
+  const genValidator = (): Validator => ({
+    pubkey: new Uint8Array(48),
     withdrawalCredentials: Uint8Array.of(65),
-    randaoCommitment: Uint8Array.of(65),
-    randaoLayers: randNum(),
-    activationSlot: randNum(),
-    exitSlot: randNum(),
-    withdrawalSlot: randNum(),
-    penalizedSlot: randNum(),
-    exitCount: randNum(),
+    activationEpoch: randNum(),
+    exitEpoch: randNum(),
+    withdrawalEpoch: randNum(),
+    penalizedEpoch: randNum(),
     statusFlags: randNum(),
-    custodyCommitment:  Uint8Array.of(65),
-    latestCustodyReseedSlot: randNum(),
-    penultimateCustodyResseedSlot: randNum()
   });
-  const vrArray: ValidatorRecord[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(genValidatorRecord);
+  const vrArray: Validator[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(genValidator);
 
-  it("empty list of ValidatorRecords should return no indices (empty list)", () => {
+  it("empty list of Validators should return no indices (empty list)", () => {
     assert.deepEqual(getActiveValidatorIndices([], randNum()), []);
   });
 
-  // it("list of all active ValidatorRecords should return a list of all indices", () => {
+  // it("list of all active Validators should return a list of all indices", () => {
   //   const allActive = vrArray.map((vr) => ({...vr, status: ValidatorStatusCodes.ACTIVE}));
   //   const indices = vrArray.map((_, i) => i);
   //   const activeIndices = getActiveValidatorIndices(allActive, 0);
@@ -159,13 +153,13 @@ describe("getActiveValidatorIndices", () => {
   //   assert.deepEqual(indices, activeIndices);
   // });
   //
-  // it("list of no active ValidatorRecords should return an empty list", () => {
+  // it("list of no active Validators should return an empty list", () => {
   //   const noActive = vrArray.map((vr) => ({...vr, status: ValidatorStatusCodes.PENDING_ACTIVATION}));
   //
   //   assert.deepEqual(getActiveValidatorIndices(noActive), []);
   // });
   //
-  // it("list of random mixed ValidatorRecords should return a filtered and mutated list", () => {
+  // it("list of random mixed Validators should return a filtered and mutated list", () => {
   //   const filtered = vrArray.filter((vr) => vr.status === ValidatorStatusCodes.ACTIVE);
   //   const getAVI = getActiveValidatorIndices(vrArray);
   //
@@ -186,7 +180,7 @@ describe("readUIntBE", () => {
 
 // describe("getShuffling", () => {
 //   const seed = Uint8Array.of(65);
-//   const validators = Array.from({ length: 1000 }, () => ({} as ValidatorRecord));
+//   const validators = Array.from({ length: 1000 }, () => ({} as Validator));
 //   const shuffled = getShuffling(seed, validators, 0);
 //   const exists = (shuffling: ShardCommittee[][], validatorIndex: number): boolean => {
 //     return !!shuffling.find((shardCommittees) => {
