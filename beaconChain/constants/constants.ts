@@ -10,8 +10,8 @@ export const MAX_WITHDRAWALS_PER_EPOCH = 2 ** 2; // 4 withdrawals
 // Deposit contract
 export const DEPOSIT_CONTRACT_ADDRESS = "TBD";
 export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
-export const MIN_DEPOSIT = 2 ** 0 * 1e9; // 1,000,000,000 Gwei
-export const MAX_DEPOSIT = 2 ** 5 * 1e9; // 32,000,000,000 Gwei
+export const MIN_DEPOSIT_AMOUNT = 2 ** 0 * 1e9; // 1,000,000,000 Gwei
+export const MAX_DEPOSIT_AMOUNT = 2 ** 5 * 1e9; // 32,000,000,000 Gwei
 
 // Time parameters
 export const SLOT_DURATION = 6; // seconds || 6 seconds
@@ -33,9 +33,9 @@ export const EMPTY_SIGNATURE = new Uint8Array(96);
 export const BLS_WITHDRAWAL_PREFIX_BYTE = new Uint8Array(1);
 
 // State list lengths
-export const LATEST_BLOCK_ROOTS = 2 ** 13; // slots || ~13 hours
 export const LATEST_BLOCK_ROOTS_LENGTH =  2 ** 13; // epochs || ~36 days
 export const LATEST_RANDAO_MIXES_LENGTH = 2 ** 13; // epochs || ~36 days
+export const LATEST_INDEX_ROOTS_LENGTH = 2 ** 13; // epochs || ~36 days
 export const LATEST_PENALIZED_EXIT_LENGTH = 2 ** 13; // epochs || ~36 days
 
 // Reward and penalty quotients

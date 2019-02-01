@@ -8,18 +8,18 @@
 
 import { AttestationData } from "./blocks";
 
-type bytes = number;
-type bytes32 = number;
-type bytes48 = number;
+type bytes = Uint8Array;
+type bytes32 = Uint8Array;
+type bytes48 = Uint8Array;
 type int = number;
 type uint24 = number;
 type uint64 = number;
 type uint384 = number;
 type hash32 = Uint8Array;
 
-const bytes = "bytes";
-const bytes32 = "bytes32";
-const bytes48 = "bytes48";
+const bytes = "Uint8Array";
+const bytes32 = "Uint8Array";
+const bytes48 = "Uint8Array";
 const int = "int";
 const uint24 = "uint24";
 const uint64 = "uint64";
@@ -41,8 +41,8 @@ export interface BeaconState {
   latestRandaoMixes: bytes32[];
   previousEpochStartShard: uint64;
   currentEpochStartShard: uint64;
-  previousEpochCalculationEpoch: uint64;
-  currentEpochCalculationEpoch: uint64;
+  previousCalculationEpoch: uint64;
+  currentCalculationEpoch: uint64;
   previousEpochSeed: bytes32;
   currentEpochSeed: bytes32;
 
@@ -55,7 +55,7 @@ export interface BeaconState {
   // Recent state
   latestCrosslinks: Crosslink[];
   latestBlockRoots: bytes32[];
-  latestIndexroots: bytes32[];
+  latestIndexRoots: bytes32[];
   latestPenalizedBalances: uint64[]; // Balances penalized at every withdrawal period
   latestAttestations: PendingAttestation[];
   batchedBlockRoots: bytes32[];
@@ -78,8 +78,8 @@ export var BeaconState = {
     ["latestRandaoMixes", [bytes32]],
     ["previousEpochStartShard", uint64],
     ["currentEpochStartShard", uint64],
-    ["previousEpochCalculationSlot", uint64],
-    ["currentEpochCalculationSlot", uint64],
+    ["previousCalculationSlot", uint64],
+    ["currentCalculationSlot", uint64],
     ["previousEpochSeed", hash32],
     ["currentEpochSeed", hash32],
     // Finality

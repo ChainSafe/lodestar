@@ -115,7 +115,7 @@ export interface AttestationData {
   // Last crosslink hash
   latestCrosslinkRoot: bytes32;
   // Slot of the last justified beacon block
-  justifiedSlot: uint64;
+  justifiedEpoch: uint64;
   // Hash of the last justified beacon block
   justifiedBlockRoot: bytes32;
 }
@@ -127,7 +127,7 @@ export var AttestationData = {
     ["epochBoundaryRoot", bytes32],
     ["shardBlockRoot", bytes32],
     ["latestCrosslinkRoot", bytes32],
-    ["justifiedSlot", uint64],
+    ["justifiedEpoch", uint64],
     ["justifiedBlockRoot", bytes32],
   ],
 };
