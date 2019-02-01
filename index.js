@@ -1,13 +1,11 @@
 const mcl = require('mcl-wasm')
 const bls = require('bls-wasm')
 
-// return generator of mcl.G1
-const g1 = () => {
-	let g_x = "3685416753713387016781088315183077757961620795782546409894578378688607592378376318836054947676345821548104185464507"
-	let g_y = "1339506544944476473020471379941921221584933875938349620426543736416511423956333506472724655353366534992391756441569"
-	let g = new mcl.G1()
-	g.setStr(`${g_x}${g_y}`)
-	return g
+// return base point of mcl.G1
+const Q = () => {
+	let P = new mcl.G1()
+	P.setStr('1 3685416753713387016781088315183077757961620795782546409894578378688607592378376318836054947676345821548104185464507 1339506544944476473020471379941921221584933875938349620426543736416511423956333506472724655353366534992391756441569')
+	return P
 }
 
 const setup = async() => {
@@ -17,14 +15,16 @@ const setup = async() => {
 
 // return s: mcl.Fr
 const gen_secret = () => {
-	return (new mcl.FR).setByCSPRNG()
+	let s = new mcl.Fr()
+	s.setByCSPRNG()
+	return s
 }
 
 // s: mcl.Fr
 // return P: mcl.G1
 const gen_public = (s) => {
-	// todo: generator point for G1
-	return mcl.mul(new mcl.G1(), s)
+	let q = Q()
+	return mcl.mul(q, s)
 }
 
 // s:mcl.Fr
@@ -75,9 +75,8 @@ const verify_multiple = (pubkeys, messages, signature, domain) => {
 	}
 
 	// ned generator point for g1...
-	let g = new mcl.G1()
-	return ePH.isEqual(mcl.pairing(g, signature))
+	return ePH.isEqual(mcl.pairing(Q(), signature))
 }
 
 
-module.exports = {g1, aggregate, verify, verify_multiple}
+module.exports = {Q, gen_secret, gen_public, aggregate, sign, verify, verify_multiple}

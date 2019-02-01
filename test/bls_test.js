@@ -4,11 +4,22 @@ const mcl_bls = require("bls-wasm")
 const assert = require("chai").assert
 
 describe("bls", () => {
-	// it("should create generator point", async() => {
- //        let curve = await mcl.init(mcl.BLS12_381)
- //        let g = bls.g1()
- //        console.log(g)
-	// })
+	beforeEach(async() => {
+		await mcl.init(mcl.BLS12_381)
+	})
+
+	it("should create base point for G1", async() => {
+        let curve = await mcl.init(mcl.BLS12_381)
+        let q = bls.Q()
+        assert(!q.isZero(), "did not create G1 base point")
+	})
+
+	it("should generate a secret key", async() => {
+		await mcl.init(mcl.BLS12_381)
+        let s = bls.gen_secret()
+        console.log(s)
+        assert(s instanceof mcl.Fr)
+	})
 
     it("should aggregate pubkeys ie. G1 members", async() => {
         let curve = await mcl.init(mcl.BLS12_381)
@@ -44,14 +55,16 @@ describe("bls", () => {
 
 	it("should verify an aggregated signature", async() => {
 		let curve = await mcl.init(mcl.BLS12_381)
-        let P1 = new mcl.G1()
-        P1.setHashOf("noot1")
+        // let P1 = new mcl.G1()
+        // P1.setHashOf("noot1")
 
+        let s = bls.gen_secret()
+        let P = bls.gen_public(s)
 		let domain = 0
 		let str = "hello"
 		let msg = `${str}${domain}`
-		let sig = mcl.hashAndMapToG2(msg)
-		assert(bls.verify_multiple([P1], [str], sig, domain), "did not verify aggregated signature")
+		let sig = bls.sign(s, msg)
+		assert(bls.verify_multiple([P], [str], sig, domain), "did not verify aggregated signature")
 	})
 
 })
