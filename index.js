@@ -1,16 +1,10 @@
 const mcl = require('mcl-wasm')
-const bls = require('bls-wasm')
 
 // return base point of mcl.G1
 const Q = () => {
 	let P = new mcl.G1()
 	P.setStr('1 3685416753713387016781088315183077757961620795782546409894578378688607592378376318836054947676345821548104185464507 1339506544944476473020471379941921221584933875938349620426543736416511423956333506472724655353366534992391756441569')
 	return P
-}
-
-const setup = async() => {
-	let curve = await mcl.init(mcl.BLS12_381)
-	return curve
 }
 
 // return s: mcl.Fr
@@ -35,6 +29,9 @@ const sign = (s, msg) => {
 	return mcl.mul(hash, s)
 }
 
+// list can be either pubkeys:mcl.G1[] or signatures:mcl.G2[]
+// if pubkeys, returns aggregated pubkey P:mcl.G1
+// if signatures, returns aggregated signature Sig:mc;.G2
 const aggregate = (list) => {
 	let res = list[0]
 	for (let i = 1; i < list.length; i++) {
@@ -48,10 +45,11 @@ const aggregate = (list) => {
 // signature:bls.Signature()
 // domain:uint
 const verify = (pub, message, sig, domain) => {
-	if (!(pub instanceof bls.PublicKey)) throw new Error('verify:wrong pubkey type')
-	if (!(sig instanceof bls.Signature)) throw new Error('verify:wrong signature type')
+	if (!(pub instanceof mcl.G1)) throw new Error('verify:wrong pubkey type')
+	if (!(sig instanceof mcl.G2)) throw new Error('verify:wrong signature type')
 	let msg = `${message}${domain}`
-	return pub.verify(sig, msg)
+	let hash = mcl.hashAndMapToG2(msg)
+	return mcl.pairing(pub, hash).isEqual(mcl.pairing(Q(), sig))
 }
 
 // pubkeys:list[mcl.G1]
@@ -74,7 +72,6 @@ const verify_multiple = (pubkeys, messages, signature, domain) => {
 		ePH = mcl.mul(ePH, mcl.pairing(pubkeys[i], hash))
 	}
 
-	// ned generator point for g1...
 	return ePH.isEqual(mcl.pairing(Q(), signature))
 }
 
