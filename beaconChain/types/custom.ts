@@ -1,7 +1,7 @@
 type uint64 = number;
 type bytes32 = Uint8Array;
-type bytes48 = number;
-type bytes96 = number;
+type bytes48 = Uint8Array;
+type bytes96 = Uint8Array;
 
 export type SlotNumber = uint64;
 export type EpochNumber = uint64;

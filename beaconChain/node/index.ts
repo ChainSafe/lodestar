@@ -1,7 +1,7 @@
 import { DEPOSIT_CONTRACT_ADDRESS } from "../constants/constants";
-import { BeaconState } from "../interfaces/state";
-import { getInitialBeaconState } from "../lib/state/index";
+import { getInitialBeaconState } from "../lib/state";
 import {getInitialDeposits} from "../pow/fake";
+import {BeaconState} from "../types";
 
 interface BeaconNodeCtx {
   chain: string;
@@ -20,7 +20,7 @@ class BeaconNode {
 
     // TODO :: Replace stubbed functionality
     const initialDeposits = getInitialDeposits(); // Stubbed - uses fake data
-    this.state = opts.state ? opts.state : getInitialBeaconState(initialDeposits.deposits, initialDeposits.genesisTime, initialDeposits.depositRoot);
+    this.state = opts.state ? opts.state : getInitialBeaconState(initialDeposits.deposits, initialDeposits.genesisTime, initialDeposits.eth1Data);
   }
 }
 

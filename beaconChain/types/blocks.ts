@@ -8,10 +8,10 @@
 
 import { Eth1Data } from "./state";
 
-type bytes = number;
-type bytes32 = number;
-type bytes48 = number;
-type bytes96 = number;
+type bytes = Uint8Array;
+type bytes32 = Uint8Array;
+type bytes48 = Uint8Array;
+type bytes96 = Uint8Array;
 type uint24 = number;
 type uint64 = number;
 type uint384 = number;

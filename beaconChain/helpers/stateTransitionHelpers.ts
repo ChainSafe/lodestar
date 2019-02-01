@@ -1,5 +1,4 @@
 import { keccakAsU8a } from "@polkadot/util-crypto";
-// Helper functions related to state transition functions
 import {
   ENTRY_EXIT_DELAY,
   EPOCH_LENGTH, GENESIS_EPOCH, LATEST_BLOCK_ROOTS_LENGTH, LATEST_INDEX_ROOTS_LENGTH,
@@ -10,7 +9,6 @@ import {
 } from "../constants/constants";
 import {
   AttestationData,
-  BeaconBlock,
   BeaconState, Bytes32,
   Fork,
   EpochNumber,
@@ -18,8 +16,6 @@ import {
 } from "../types";
 
 type int = number;
-type bytes = number;
-type uint24 = number;
 type hash32 = Uint8Array;
 
 /**
@@ -349,8 +345,8 @@ export function getActiveIndexRoot(state: BeaconState, epoch: EpochNumber): Byte
  * @param {EpochNumber} epoch
  * @returns {Bytes32}
  */
+// TODO FINSIH
 export function generateSeed(state: BeaconState, epoch: EpochNumber): Bytes32 {
-  // TODO figure out how to add bytearrays
   // return hash(
   //   getRandaoMix(state, epoch - SEED_LOOKAHEAD) + getActiveIndexRoot(state, epoch))
   // )
@@ -411,9 +407,9 @@ export function isPowerOfTwo(value: int): boolean {
 
 /**
  * Determine the balance of a validator.
- * Used for determining punishments and calculating stake.
- * @param {ValidatorRecord} validator
- * @returns {int}
+ * @param {BeaconState} state
+ * @param {int} index
+ * @returns {Number}
  */
 export function getEffectiveBalance(state: BeaconState, index: int): int {
   // Returns the effective balance (also known as "balance at stake") for a ``validator`` with the given ``index``.

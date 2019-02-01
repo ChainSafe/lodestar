@@ -47,8 +47,8 @@ export interface BeaconState {
   currentEpochSeed: bytes32;
 
   // Finality
-  previousJustifiedSlot: uint64;
-  justifiedSlot: uint64;
+  previousJustifiedEpoch: uint64;
+  justifiedEpoch: uint64;
   justificationBitfield: uint64;
   finalizedEpoch: uint64;
 
@@ -84,9 +84,9 @@ export var BeaconState = {
     ["currentEpochSeed", hash32],
     // Finality
     ["previousJustifiedEpoch", uint64],
-    ["justifiedSlot", uint64],
+    ["justifiedEpoch", uint64],
     ["justificationBitfield", uint64],
-    ["finalizedSlot", uint64],
+    ["finalizedEpoch", uint64],
     // Recent State
     ["latestCrosslinks", [Crosslink]],
     ["latestBlockRoots", [bytes32]],
