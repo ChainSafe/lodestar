@@ -12,8 +12,9 @@ There is a lot of work being done that are core infrastructural pieces for Eth2.
 
 This is a Javascript library that implements BLS (Boneh-Lynn-Shacham) signatures and supports signature aggregation.
 
-[spec](https://github.com/ethereum/eth2.0-specs/blob/master/specs/bls_signature.md)
-[test vectors](https://github.com/ethereum/eth2.0-tests/blob/bls-vectors/test_vectors/test_bls.yml)
+>[spec](https://github.com/ethereum/eth2.0-specs/blob/master/specs/bls_signature.md)
+
+>[test vectors](https://github.com/ethereum/eth2.0-tests/blob/bls-vectors/test_vectors/test_bls.yml)
 
 ## Install
 `npm install -g bls-js`
