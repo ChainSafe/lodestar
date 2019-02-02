@@ -20,6 +20,9 @@ beyond that in the final javascript output. Because of this, we also export an
 object (of the same name as the interface), which defines the interface's field
 names/types that can be inspected at run-time.
  */
-export * from "./blocks";
+export * from "./primitive";
+export * from "./attestation";
+export * from "./eth1";
+export * from "./block";
 export * from "./state";
 export * from "./custom";
