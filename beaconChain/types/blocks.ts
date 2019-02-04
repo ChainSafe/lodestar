@@ -37,7 +37,7 @@ export interface ProposerSlashing {
   // Second proposal data
   proposalData2: ProposalSignedData;
   // Second proposal signature
-  proposalSignature2: uint384[];
+  proposalSignature2: bytes96;
 }
 export var ProposerSlashing = {
   fields: [
@@ -49,13 +49,13 @@ export var ProposerSlashing = {
   ],
 };
 
-export interface AttesterSlashing {
+export interface AttesterSlashings {
   // First batch of votes
   slashableVoteData1: SlashableAttestation;
   // Second batch of votes
   slashableVoteData2: SlashableAttestation;
 }
-export var AttesterSlashing = {
+export var AttesterSlashings = {
   fields: [
     ["slashableVoteData1", SlashableAttestation],
     ["slashableVoteData2", SlashableAttestation],
@@ -96,7 +96,7 @@ export var Attestation = {
     ["data", AttestationData],
     ["participationBitfield", bytes],
     ["custodyBitfield", bytes],
-    ["aggregateSignature", [uint384]],
+    ["aggregateSignature", bytes96],
   ],
 };
 
@@ -194,7 +194,7 @@ export var DepositInput = {
 
 export interface Exit {
   // Minimum slot for processing exit
-  slot: uint64;
+  epoch: uint64;
   // Index of the exiting validator
   validator_index: uint64;
   // Validator signature
@@ -202,7 +202,7 @@ export interface Exit {
 }
 export var Exit = {
   fields: [
-    ["slot", uint64],
+    ["epoch", uint64],
     ["validator_index", uint64],
     ["signature", bytes96],
   ],
@@ -235,7 +235,7 @@ export var BeaconBlock = {
 
 export interface BeaconBlockBody {
   proposerSlashings: ProposerSlashing[];
-  casperSlashings: AttesterSlashing[];
+  casperSlashings: AttesterSlashings[];
   attestations: Attestation[];
   deposits: Deposit[];
   exits: Exit[];
@@ -243,7 +243,7 @@ export interface BeaconBlockBody {
 export var BeaconBlockBody = {
   fields: [
     ["proposerSlashings", [ProposerSlashing]],
-    ["casperSlashings", [AttesterSlashing]],
+    ["casperSlashings", [AttesterSlashings]],
     ["attestations", [Attestation]],
     ["deposits", [Deposit]],
     ["exits", [Exit]],
@@ -262,6 +262,6 @@ export var ProposalSignedData = {
   fields: [
     ["slot", uint64],
     ["shard", uint64],
-    ["blockHash", bytes32],
+    ["blockRoot", bytes32],
   ],
 };

@@ -16,7 +16,7 @@ import {
   getBeaconProposerIndex, getCurrentEpoch, getEffectiveBalance,
   getEntryExitEffectEpoch
 } from "../../helpers/stateTransitionHelpers";
-import {StatusFlags} from "../../constants/enums";
+import {StatusFlag} from "../../constants/enums";
 
 type int = number;
 
@@ -203,7 +203,7 @@ function activateValidator(state: BeaconState, index: ValidatorIndex, isGenesis:
 function initiateValidatorExit(state: BeaconState, index: ValidatorIndex): void {
     const validator = state.validatorRegistry[index];
     if (!validator.statusFlags) {
-        validator.statusFlags = StatusFlags.INTIATED_EXIT;
+        validator.statusFlags = StatusFlag.INTIATED_EXIT;
     }
 }
 
@@ -250,6 +250,6 @@ function penalizeValidator(state: BeaconState, index: ValidatorIndex): void {
 function prepareValidatorForWithdrawal(state: BeaconState, index: ValidatorIndex): void {
   const validator = state.validatorRegistry[index];
   if (!validator.statusFlags) {
-    validator.statusFlags = StatusFlags.WITHDRAWABLE;
+    validator.statusFlags = StatusFlag.WITHDRAWABLE;
   }
 }

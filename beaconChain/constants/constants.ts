@@ -1,7 +1,7 @@
 // Misc
 export const SHARD_COUNT = 2 ** 10; // 1024 shards
 export const TARGET_COMMITTEE_SIZE = 2 ** 7; // 128 validators
-export const EJECTION_BALANCE = 2 ** 4 * 1e9; // 16000000000 Gwei
+export const EJECTION_BALANCE = 2 ** 4 * 1e9; // 16,000,000,000 Gwei
 export const MAX_BALANCE_CHURN_QUOTIENT = 2 ** 5; // 32
 export const BEACON_CHAIN_SHARD_NUMBER = 2 ** 64 - 1;
 export const MAX_INDICES_PER_SLASHABLE_VOTE = 2 ** 12; // 4096
@@ -16,7 +16,7 @@ export const MAX_DEPOSIT_AMOUNT = 2 ** 5 * 1e9; // 32,000,000,000 Gwei
 // Time parameters
 export const SLOT_DURATION = 6; // seconds || 6 seconds
 export const MIN_ATTESTATION_INCLUSION_DELAY = 2 ** 2; // slots || 24 seconds
-export const EPOCH_LENGTH = 2 ** 6; // slots || 6.4 seconds
+export const EPOCH_LENGTH = 2 ** 6; // slots || 6.4 minutes
 export const SEED_LOOKAHEAD = 2 ** 0; // epochs || 6.4 minutes
 export const ENTRY_EXIT_DELAY = 2 ** 2; // epochs || 25.6 minutes
 export const DEPOSIT_ROOT_VOTING_PERIOD = 2 ** 4; // epochs || ~1.7 hours
@@ -33,7 +33,7 @@ export const EMPTY_SIGNATURE = new Uint8Array(96);
 export const BLS_WITHDRAWAL_PREFIX_BYTE = new Uint8Array(1);
 
 // State list lengths
-export const LATEST_BLOCK_ROOTS_LENGTH =  2 ** 13; // epochs || ~36 days
+export const LATEST_BLOCK_ROOTS_LENGTH =  2 ** 13; // epochs || ~13 hours
 export const LATEST_RANDAO_MIXES_LENGTH = 2 ** 13; // epochs || ~36 days
 export const LATEST_INDEX_ROOTS_LENGTH = 2 ** 13; // epochs || ~36 days
 export const LATEST_PENALIZED_EXIT_LENGTH = 2 ** 13; // epochs || ~36 days
