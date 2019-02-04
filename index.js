@@ -1,10 +1,20 @@
 const mcl = require('mcl-wasm')
+const keccak256 = require('keccak256')
 
 // return base point of mcl.G1
 const Q = () => {
 	let P = new mcl.G1()
 	P.setStr('1 3685416753713387016781088315183077757961620795782546409894578378688607592378376318836054947676345821548104185464507 1339506544944476473020471379941921221584933875938349620426543736416511423956333506472724655353366534992391756441569')
 	return P
+}
+
+// return 
+const q = () => {
+	let q = new mcl.Fr()
+	q.setLittleEndian('409555221667393417789825735904156556882819939007885332058136124031650490837864442687629129015664037894272559787', 10)
+	// todo: don't think this is correct
+	//console.log(q.getStr(10))
+	return q
 }
 
 // return s: mcl.Fr
@@ -26,16 +36,52 @@ const getHexStr = (p) => {
 		return '0x' + p.getStr(16)
 	} else if (p instanceof mcl.G1) {
 		let x = p.getStr(16).slice(2, 98)
-		if (x.slice(95,96) === " ") return '0x0' + x.slice(95,96)
+		if (x.slice(95,96) == " ") return '0x0' + x.slice(0,95)
 		else return '0x' + x
 	}
+}
+
+// x:mcl.Fr
+const modular_squareroot = (x) => {
+	candidate = x ** (q() + 8)
+	return null
+}
+
+// msg:string
+// domain:int
+const hash_to_G2 = (msg, domain) => {
+	let x_re = keccak256(`${msg}${domain}01`)
+	//console.log(x_re.toString('hex'))
+	let x_im = keccak256(`${msg}${domain}02`)
+	//console.log(x_im.toString('hex'))
+	//let x_coordinate = [x_re, x_im]
+
+	let done = false
+	let y_re
+	let y_im 
+
+	while(!done) {
+		let x_re_num = parseInt(x_re.toString('hex'), 16)
+		let x_im_num = parseInt(x_im.toString('hex'), 16)
+		let y_re_sq = x_re_num ** 3 + 4
+		let y_im_sq = x_im_num ** 3 + 4
+		y_re = modular_squareroot(y_re_sq)
+		y_im = modular_squareroot(y_im_sq)
+
+		if (y_re !== null && y_im !== null) done = true
+
+		done = true
+	}
+
+	return [y_re, y_im]
 }
 
 // s:mcl.Fr
 // msg:string
 // return sig:mcl.G2
-const sign = (s, msg) => {
-	let hash = mcl.hashAndMapToG2(msg)
+const sign = (s, msg, domain) => {
+	let str = `${msg}${domain}`
+	let hash = mcl.hashAndMapToG2(str)
 	return mcl.mul(hash, s)
 }
 
@@ -86,4 +132,4 @@ const verify_multiple = (pubkeys, messages, signature, domain) => {
 }
 
 
-module.exports = {Q, getHexStr, gen_secret, gen_public, aggregate, sign, verify, verify_multiple}
+module.exports = {Q, getHexStr, hash_to_G2, gen_secret, gen_public, aggregate, sign, verify, verify_multiple}

@@ -12,8 +12,15 @@ describe("bls", () => {
         assert(!q.isZero(), "did not create G1 base point")
 	})
 
+	it("should hash message to G2", () => {
+		let domain = 0
+		let message = '0x6d657373616765'
+		console.log(bls.hash_to_G2(message, domain))
+	})
+
 	it("should generate a secret key", () => {
         let s = bls.gen_secret()
+        console.log(s.getStr(10))
         assert(s instanceof mcl.Fr && !s.isZero())
 	})
 
@@ -41,8 +48,9 @@ describe("bls", () => {
 
         let P = bls.gen_public(s)
         let Pstr = bls.getHexStr(P)
-        assert(public == Pstr, "incorrect deserialization")
-        assert(public.length === 98, "wrong length")
+
+        assert(public === Pstr, "incorrect deserialization")
+        assert(Pstr.length === 98, "wrong length")
 	})
 
 	it("should get deserialize a hex string to a secret key and the corresponding public key", () => {
@@ -52,29 +60,48 @@ describe("bls", () => {
         s.setStr(secret, 16)
         assert(s instanceof mcl.Fr)
         assert(s.getStr(16) === secret)
+
         let P = bls.gen_public(s)
-        // console.log(P.getStr(16))
-        // console.log(public)
-        assert(public.slice(2) === P.getStr(16).slice(2, 98), "incorrect deserialization")
-        assert(public.length === 98, "wrong length")
+        let Pstr = bls.getHexStr(P)
+        assert(public === Pstr, "incorrect deserialization")
+        assert(Pstr.length === 98, "wrong length")
+	})
+
+	it("should get deserialize a hex string to a secret key and the corresponding public key", () => {
+		let secret = '328388aff0d4a5b7dc9205abd374e7e98f3cd9f3418edb4eafda5fb16473d216'
+		let public = '0x153d21a4cfd562c469cc81514d4ce5a6b577d8403d32a394dc265dd190b47fa9f829fdd7963afdf972e5e77854051f6f'
+		let s = new mcl.Fr()
+        s.setStr(secret, 16)
+        assert(s instanceof mcl.Fr)
+        assert(s.getStr(16) === secret)
+
+        let P = bls.gen_public(s)
+        let Pstr = bls.getHexStr(P)
+        assert(public === Pstr, "incorrect deserialization")
+        assert(Pstr.length === 98, "wrong length")
 	})
 
 	it("should sign a message", () => {
-        let s = bls.gen_secret()
-        let P = bls.gen_public(s)
-        let msg = "noot"
-		let sig = bls.sign(s, msg)
+		let secret = '263dbd792f5b1be47ed85f8938c0f29586af0d3ac7b977f21c278fe1462040e3'
+		let s = new mcl.Fr()
+        s.setStr(secret, 16)
+        assert(s instanceof mcl.Fr)
+        assert(s.getStr(16) === secret)
+
+        let msg = "0x6d657373616765"
+        let domain = 0
+		let sig = bls.sign(s, msg, 0)
 		assert(sig instanceof mcl.G2)
+		console.log(sig.getStr(16))
 	})
 
 	it("should verify a signature", () => {
         let s = bls.gen_secret()
         let P = bls.gen_public(s)
 		let domain = 0
-		let str = "hello"
-		let msg = `${str}${domain}`
-		let sig = bls.sign(s, msg)
-		assert(bls.verify(P, str, sig, domain), "did not verify aggregated signature")
+		let msg = "hello"
+		let sig = bls.sign(s, msg, domain)
+		assert(bls.verify(P, msg, sig, domain), "did not verify aggregated signature")
 	})
 
     it("should aggregate pubkeys ie. G1 members", () => {
@@ -99,10 +126,9 @@ describe("bls", () => {
         let s = bls.gen_secret()
         let P = bls.gen_public(s)
 		let domain = 0
-		let str = "hello"
-		let msg = `${str}${domain}`
-		let sig = bls.sign(s, msg)
-		assert(bls.verify_multiple([P], [str], sig, domain), "did not verify aggregated signature")
+		let msg = "hello"
+		let sig = bls.sign(s, msg, domain)
+		assert(bls.verify_multiple([P], [msg], sig, domain), "did not verify aggregated signature")
 	})
 
 	it("should verify an aggregated signature of 2", () => {
@@ -111,11 +137,10 @@ describe("bls", () => {
         let s2 = bls.gen_secret()
         let P2 = bls.gen_public(s2)
 		let domain = 0
-		let str = "hello"
-		let msg = `${str}${domain}`
-		let sig1 = bls.sign(s1, msg)
-		let sig2 = bls.sign(s2, msg)
+		let msg = "hello"
+		let sig1 = bls.sign(s1, msg, domain)
+		let sig2 = bls.sign(s2, msg, domain)
 		let aggregated_sig = bls.aggregate([sig1, sig2])
-		assert(bls.verify_multiple([P1, P2], [str, str], aggregated_sig, domain), "did not verify aggregated signature")
+		assert(bls.verify_multiple([P1, P2], [msg, msg], aggregated_sig, domain), "did not verify aggregated signature")
 	})
 })
