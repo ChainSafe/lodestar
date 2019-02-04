@@ -24,7 +24,6 @@ const bytes96 = "bytes96";
 const uint24 = "uint24";
 const uint64 = "uint64";
 const uint384 = "uint384";
-const hash32 = "hash32";
 
 // Beacon chain operations
 
@@ -263,6 +262,6 @@ export var ProposalSignedData = {
   fields: [
     ["slot", uint64],
     ["shard", uint64],
-    ["blockHash", hash32],
+    ["blockHash", bytes32],
   ],
 };

@@ -1,5 +1,5 @@
 /* tslint:disable:no-var-keyword */
-// TODO replace uint, hash32, bytes
+// TODO replace uint, bytes32, bytes
 
 // Each type exported here contains both a compile-time type (a typescript interface) and a run-time type (a javascript variable)
 // For more information, see ./index.ts
@@ -15,7 +15,6 @@ type int = number;
 type uint24 = number;
 type uint64 = number;
 type uint384 = number;
-type hash32 = Uint8Array;
 
 const bytes = "Uint8Array";
 const bytes32 = "Uint8Array";
@@ -24,7 +23,6 @@ const int = "int";
 const uint24 = "uint24";
 const uint64 = "uint64";
 const uint384 = "uint384";
-const hash32 = "hash32";
 
 export interface BeaconState {
   // Misc
@@ -78,10 +76,10 @@ export var BeaconState = {
     ["latestRandaoMixes", [bytes32]],
     ["previousEpochStartShard", uint64],
     ["currentEpochStartShard", uint64],
-    ["previousCalculationSlot", uint64],
-    ["currentCalculationSlot", uint64],
-    ["previousEpochSeed", hash32],
-    ["currentEpochSeed", hash32],
+    ["previousCalculationEpoch", uint64],
+    ["currentCalculationEpoch", uint64],
+    ["previousEpochSeed", bytes32],
+    ["currentEpochSeed", bytes32],
     // Finality
     ["previousJustifiedEpoch", uint64],
     ["justifiedEpoch", uint64],
@@ -93,7 +91,7 @@ export var BeaconState = {
     ["latestIndexRoots", [bytes32]],
     ["latestPenalizedBalances", [uint64]],
     ["latestAttestations", [PendingAttestation]],
-    ["batchedBlockRoots", [hash32]],
+    ["batchedBlockRoots", [bytes32]],
     // Eth1
     ["latestEth1Data", Eth1Data],
     ["eth1DataVotes", [Eth1DataVote]],
@@ -105,7 +103,7 @@ export interface Validator {
   pubkey: bytes48;
   // Withdrawal credentials
   withdrawalCredentials: bytes32;
-  // Status code
+  // Epoch when validator activated
   activationEpoch: uint64;
   // Slot when validator exited
   exitEpoch: uint64;
@@ -119,7 +117,7 @@ export interface Validator {
 export var Validator = {
   fields: [
     ["pubkey", bytes48],
-    ["withdrawalCredentials", hash32],
+    ["withdrawalCredentials", bytes32],
     ["activationEpoch", uint64],
     ["exitEpoch", uint64],
     ["withdrawalEpoch", uint64],
@@ -142,20 +140,20 @@ export var Crosslink = {
 };
 
 export interface PendingAttestation {
+  // Proof of custody bitfield
+  aggregationBitfield: bytes;
+  // Attester participation bitfield
+  custodyBitfield: bytes;
   // Signed data
   data: AttestationData;
-  // Attester participation bitfield
-  aggregationBitfield: bytes;
-  // Proof of custody bitfield
-  custodyBitfield: bytes;
   // Slot in which it was included
   inclusionSlot: uint64;
 }
 export var PendingAttestation = {
   fields: [
-    ["data", AttestationData],
     ["aggregationBitfield", bytes],
     ["custodyBitfield", bytes],
+    ["data", AttestationData],
     ["inclusionSlot", uint64],
   ],
 };
@@ -165,7 +163,7 @@ export interface Fork {
   previousVersion: uint64;
   // Post fork version
   currentVersion: uint64;
-  // Fork slot number
+  // Fork epoch number
   epoch: uint64;
 }
 export var Fork = {

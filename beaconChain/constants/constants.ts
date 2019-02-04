@@ -1,6 +1,6 @@
 // Misc
 export const SHARD_COUNT = 2 ** 10; // 1024 shards
-export const TARGET_COMMITTEE_SIZE = 2 ** 7; // 256 validators
+export const TARGET_COMMITTEE_SIZE = 2 ** 7; // 128 validators
 export const EJECTION_BALANCE = 2 ** 4 * 1e9; // 16000000000 Gwei
 export const MAX_BALANCE_CHURN_QUOTIENT = 2 ** 5; // 32
 export const BEACON_CHAIN_SHARD_NUMBER = 2 ** 64 - 1;
