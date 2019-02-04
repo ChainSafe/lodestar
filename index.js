@@ -21,6 +21,16 @@ const gen_public = (s) => {
 	return mcl.mul(q, s)
 }
 
+const getHexStr = (p) => {
+	if (p instanceof mcl.Fr) {
+		return '0x' + p.getStr(16)
+	} else if (p instanceof mcl.G1) {
+		let x = p.getStr(16).slice(2, 98)
+		if (x.slice(95,96) === " ") return '0x0' + x.slice(95,96)
+		else return '0x' + x
+	}
+}
+
 // s:mcl.Fr
 // msg:string
 // return sig:mcl.G2
@@ -76,4 +86,4 @@ const verify_multiple = (pubkeys, messages, signature, domain) => {
 }
 
 
-module.exports = {Q, gen_secret, gen_public, aggregate, sign, verify, verify_multiple}
+module.exports = {Q, getHexStr, gen_secret, gen_public, aggregate, sign, verify, verify_multiple}
