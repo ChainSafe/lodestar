@@ -215,7 +215,7 @@ export interface BeaconBlock {
   parentRoot: bytes32;
   stateRoot: bytes32;
   randaoReveal: bytes96;
-  depositRoot: Eth1Data;
+  eth1Data: Eth1Data;
   signature: bytes96;
 
   // Body
@@ -227,7 +227,7 @@ export var BeaconBlock = {
     ["parentRoot", bytes32],
     ["stateRoot", bytes32],
     ["randaoReveal", bytes96],
-    ["depositRoot", Eth1Data],
+    ["eth1Data", Eth1Data],
     ["signature", bytes96],
     ["body", BeaconBlockBody],
   ],
