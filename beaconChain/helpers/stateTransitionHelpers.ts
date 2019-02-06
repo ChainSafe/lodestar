@@ -402,7 +402,8 @@ export function getBeaconProposerIndex(state: BeaconState, slot: int): int {
  * @returns {boolean}
  */
 export function isPowerOfTwo(value: int): boolean {
-  return value === 0 ? false : 2 ** (Math.log2(value)) === value;
+  if (value < 0) { throw new Error("Value is negative!"); }
+  return value === 0 ? false : 2 ** Math.floor(Math.log2(value)) === value;
 }
 
 /**
