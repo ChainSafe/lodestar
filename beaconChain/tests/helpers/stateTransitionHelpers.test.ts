@@ -1,6 +1,6 @@
 import { assert } from "chai";
 import {
-  clamp, getActiveValidatorIndices, intSqrt, readUIntBE, slotToEpoch, split,
+  clamp, getActiveValidatorIndices, getEpochStartSlot, intSqrt, readUIntBE, slotToEpoch, split,
 } from "../../helpers/stateTransitionHelpers";
 import {EpochNumber, SlotNumber, Validator} from "../../types";
 
@@ -210,6 +210,25 @@ describe("slotToEpoch", () => {
   for (const pair of pairs) {
     it(`Return ${pair.expected} a value of ${pair.test}`, () => {
       const result: EpochNumber = slotToEpoch(pair.test);
+      assert.equal(result, pair.expected);
+    });
+  }
+});
+
+describe("getEpochStartSlot", () => {
+  const pairs = [
+    {test: 0, expected: 0},
+    {test: 1, expected: 64},
+    {test: 10, expected: 640},
+    {test: 100, expected: 6400},
+    {test: 1000, expected: 64000},
+    {test: 10000, expected: 640000},
+    {test: 100000, expected: 6400000},
+    {test: 1000000, expected: 64000000},
+  ];
+  for (const pair of pairs) {
+    it(`Return ${pair.expected} a value of ${pair.test}`, () => {
+      const result: SlotNumber = getEpochStartSlot(pair.test);
       assert.equal(result, pair.expected);
     });
   }
