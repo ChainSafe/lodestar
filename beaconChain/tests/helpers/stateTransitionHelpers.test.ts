@@ -1,5 +1,5 @@
 import { assert } from "chai";
-import { clamp, getActiveValidatorIndices, intSqrt, readUIntBE, split } from "../../helpers/stateTransitionHelpers";
+import { clamp, getActiveValidatorIndices, intSqrt, isPowerOfTwo, readUIntBE, split } from "../../helpers/stateTransitionHelpers";
 import { Validator } from "../../types";
 
 describe("Split", () => {
@@ -94,6 +94,43 @@ describe("Clamp", () => {
   });
 });
 
+describe("isPowerOfTwo", () => {
+  it("0 should return false", () => {
+    const result = isPowerOfTwo(0);
+    assert.equal(result, false, "Should have returned false!");
+  });
+
+  it("1 should return true", () => {
+    const result = isPowerOfTwo(1);
+    assert.equal(result, true, "Should have returned true!");
+  });
+
+  it("2 should return true", () => {
+    const result = isPowerOfTwo(2);
+    assert.equal(result, true, "Should have returned true!");
+  });
+
+  it("3 should return false", () => {
+    const result = isPowerOfTwo(3);
+    assert.equal(result, false, "Should have returned false!");
+  });
+
+  it("2**32 should return true", () => {
+    const result = isPowerOfTwo(2 ** 32);
+    assert.equal(result, true, "Should have returned true!");
+  });
+
+  it("Numbers close to 2**32 should return false", () => {
+    const result1 = isPowerOfTwo(2 ** 32 - 1);
+    assert.equal(result1, false, "Should have returned false!");
+    const result2 = isPowerOfTwo(2 ** 32 + 1);
+    assert.equal(result2, false, "Should have returned false!");
+  });
+
+  it("Should throw if a negative number is passed in", () => {
+    assert.throws(function() { isPowerOfTwo(-1) });
+  });
+});
 
 describe("intSqrt", () => {
   it("0 should return 0", () => {
