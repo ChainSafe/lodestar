@@ -1,8 +1,10 @@
 import { assert } from "chai";
 import {
-  clamp, getActiveValidatorIndices, getEpochStartSlot, intSqrt, readUIntBE, slotToEpoch, split,
+  clamp, getActiveValidatorIndices, getEpochStartSlot, intSqrt, isActiveValidator, readUIntBE, slotToEpoch, split,
 } from "../../helpers/stateTransitionHelpers";
 import {EpochNumber, SlotNumber, Validator} from "../../types";
+import {generateMnemonic} from "bip39";
+import {generateValidator} from "../utils/validator";
 
 describe("Split", () => {
   it("array of 0 should return empty", () => {
@@ -232,4 +234,42 @@ describe("getEpochStartSlot", () => {
       assert.equal(result, pair.expected);
     });
   }
+});
+
+describe("isActiveValidator", () => {
+  it("should be active", () => {
+    const v: Validator = generateValidator(0, 100);
+    const result: boolean = isActiveValidator(v, 0);
+    assert.equal(result, true);
+  });
+
+  it("should be active", () => {
+    const v: Validator = generateValidator(10, 101);
+    const result: boolean = isActiveValidator(v, 100);
+    assert.equal(result, true);
+  });
+
+  it("should be active", () => {
+    const v: Validator = generateValidator(100, 1000);
+    const result: boolean = isActiveValidator(v, 100);
+    assert.equal(result, true);
+  });
+
+  it("should not be active", () => {
+    const v: Validator = generateValidator(1);
+    const result: boolean = isActiveValidator(v, 0);
+    assert.equal(result, false);
+  });
+
+  it("should not be active", () => {
+    const v: Validator = generateValidator(100);
+    const result: boolean = isActiveValidator(v, 5);
+    assert.equal(result, false);
+  });
+
+  it("should not be active", () => {
+    const v: Validator = generateValidator(1, 5);
+    const result: boolean = isActiveValidator(v, 100);
+    assert.equal(result, false);
+  });
 });
