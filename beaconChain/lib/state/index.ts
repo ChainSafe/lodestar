@@ -1,138 +1,147 @@
-import { BeaconState, CrosslinkRecord, Deposit, ValidatorRecord } from "../../types";
 import {
-  ZERO_HASH, LATEST_RANDAO_MIXES_LENGTH, EPOCH_LENGTH, SHARD_COUNT,
-  LATEST_BLOCK_ROOTS_LENGTH, EMPTY_SIGNATURE, MAX_DEPOSIT, GWEI_PER_ETH,
+  BeaconState, BLSPubkey, BLSSignature, Bytes32, Crosslink, Deposit, DepositInput, Eth1Data, Gwei,
+  Validator,
+  ValidatorIndex,
+} from "../../types";
+import {
+  ZERO_HASH, LATEST_RANDAO_MIXES_LENGTH, SHARD_COUNT,
+  LATEST_BLOCK_ROOTS_LENGTH, EMPTY_SIGNATURE,
   WHISTLEBLOWER_REWARD_QUOTIENT, GENESIS_SLOT, GENESIS_FORK_VERSION,
-  GENESIS_START_SHARD, LATEST_PENALIZED_EXIT_LENGTH, FAR_FUTURE_SLOT, ENTRY_EXIT_DELAY
+  GENESIS_START_SHARD, LATEST_PENALIZED_EXIT_LENGTH, FAR_FUTURE_EPOCH, GENESIS_EPOCH,
+  MAX_DEPOSIT_AMOUNT, LATEST_INDEX_ROOTS_LENGTH
 } from "../../constants/constants";
-import {getBeaconProposerIndex, getEffectiveBalance } from "../../helpers/stateTransitionHelpers";
-import {StatusFlags} from "../../constants/enums";
+import {
+  generateSeed,
+  getActiveValidatorIndices,
+  getBeaconProposerIndex, getCurrentEpoch, getEffectiveBalance,
+  getEntryExitEffectEpoch
+} from "../../helpers/stateTransitionHelpers";
+import {StatusFlag} from "../../constants/enums";
 
 type int = number;
-type bytes = Uint8Array;
-type hash32 = Uint8Array;
-type uint384 = number;
 
-/**
- * Generates the initial state for slot 0. This should be called after the ChainStart log has been emitted.
- * @param {Deposit[]} initialValidatorDeposits
- * @param {int} genesisTime
- * @param {hash32} processedPowReceiptRoot
- * @returns {BeaconState}
- */
-export function getInitialBeaconState(initialValidatorDeposits: Deposit[], genesisTime: int, latestDepositRoot: hash32): BeaconState {
-    const initialCrosslinkRecord: CrosslinkRecord = {
-        slot: GENESIS_SLOT,
-        shardBlockRoot: ZERO_HASH
-    };
-
-    const state: BeaconState = {
-        // MISC
-        slot: GENESIS_SLOT,
-        genesisTime: genesisTime,
-        forkData: {
-            preForkVersion: GENESIS_FORK_VERSION,
-            postForkVersion: GENESIS_FORK_VERSION,
-            forkSlot: GENESIS_SLOT
-        },
-        // Validator registry
-        validatorRegistry: [],
-        validatorBalances: [],
-        validatorRegistryLatestChangeSlot: GENESIS_SLOT,
-        validatorRegistryExitCount: 0,
-        validatorRegistryDeltaChainTip: ZERO_HASH,
-
-        // Randomness and committees
-        latestRandaoMixes: Array.from({length: LATEST_RANDAO_MIXES_LENGTH}, () => ZERO_HASH),
-        latestVdfOutputs: Array.from({length: Math.floor(LATEST_RANDAO_MIXES_LENGTH / EPOCH_LENGTH)}, () => ZERO_HASH),
-        previousEpochStartShard: GENESIS_START_SHARD,
-        currentEpochStartShard: GENESIS_START_SHARD,
-        previousEpochCalculationSlot: GENESIS_SLOT,
-        currentEpochCalculationSlot: GENESIS_SLOT,
-        previousEpochRandaoMix: ZERO_HASH,
-        currentEpochRandaoMix: ZERO_HASH,
-
-        // Custody Challenges
-        custodyChallenges: [],
-
-        // Finality
-        previousJustifiedSlot: GENESIS_SLOT,
-        justifiedSlot: GENESIS_SLOT,
-        justificationBitfield: 0,
-        finalizedSlot: GENESIS_SLOT,
-
-        // Recent state
-        latestCrosslinks: Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
-        latestBlockRoots: Array.from({length: LATEST_BLOCK_ROOTS_LENGTH}, () => ZERO_HASH),
-        latestPenalizedExitBalances: Array.from({length: LATEST_PENALIZED_EXIT_LENGTH}, () => 0),
-        latestAttestations: [],
-        batchedBlockRoots: [],
-
-        // PoW receipt root
-        latestDepositRoot: latestDepositRoot,
-        depositRootVotes: [],
-    };
-
-    // Process initial deposists
-    initialValidatorDeposits.forEach(deposit => {
-        const validatorIndex = processDeposit(
-          state,
-          deposit.depositData.depositInput.pubkey,
-          deposit.depositData.amount,
-          deposit.depositData.depositInput.proofOfPossession,
-          deposit.depositData.depositInput.withdrawalCredentials,
-          deposit.depositData.depositInput.randaoCommitment,
-          deposit.depositData.depositInput.custodyCommitment
-        );
-    });
-
-    // Process initial activations
-    for (let i: number = 0; i < state.validatorRegistry.length; i ++) {
-      if (getEffectiveBalance(state, i) === MAX_DEPOSIT * GWEI_PER_ETH) {
-        activateValidator(state, i, true);
-      }
-    }
-    return state;
+// Stubbed functions from SSZ
+function hashTreeRoot(x: any): Bytes32 {
+  return new Uint8Array(2);
 }
 
 /**
- * Process deposits from ETH1.x chain to ETH2.0 chain
- * @param {BeaconState} state
- * @param {int} pubkey
- * @param {int} amount
- * @param {uint384[]} proofOfPossession
- * @param {hash32} withdrawalCredentials
- * @param {hash32} randaoCommitment
- * @param {hash32} custodyCommitment
+ * Generate the initial beacon chain state.
+ * @param {Deposit[]} initialValidatorDeposits
+ * @param {int} genesisTime
+ * @param {Eth1Data} latestEth1Data
+ * @returns {BeaconState}
  */
-function processDeposit(state: BeaconState, pubkey: int, amount: int, proofOfPossession: uint384[], withdrawalCredentials: hash32, randaoCommitment: hash32, custodyCommitment: hash32): void {
-    // Process a deposit from Ethereum 1.0.
-    // Note that this function mutates state.
+export function getInitialBeaconState(
+  initialValidatorDeposits: Deposit[],
+  genesisTime: int,
+  latestEth1Data: Eth1Data): BeaconState {
 
+  const initialCrosslinkRecord: Crosslink = {
+      epoch: GENESIS_EPOCH,
+      shardBlockRoot: ZERO_HASH
+  };
+
+  const state: BeaconState = {
+      // MISC
+      slot: GENESIS_SLOT,
+      genesisTime: genesisTime,
+      fork: {
+          previousVersion: GENESIS_FORK_VERSION,
+          currentVersion: GENESIS_FORK_VERSION,
+          epoch: GENESIS_EPOCH
+      },
+      // Validator registry
+      validatorRegistry: [],
+      validatorBalances: [],
+      validatorRegistryUpdateEpoch: GENESIS_EPOCH,
+
+      // Randomness and committees
+      latestRandaoMixes: Array.from({length: LATEST_RANDAO_MIXES_LENGTH}, () => ZERO_HASH),
+      previousEpochStartShard: GENESIS_START_SHARD,
+      currentEpochStartShard: GENESIS_START_SHARD,
+      previousCalculationEpoch: GENESIS_EPOCH,
+      currentCalculationEpoch: GENESIS_EPOCH,
+      previousEpochSeed: ZERO_HASH,
+      currentEpochSeed: ZERO_HASH,
+
+      // Finality
+      previousJustifiedEpoch: GENESIS_EPOCH,
+      justifiedEpoch: GENESIS_EPOCH,
+      justificationBitfield: 0,
+      finalizedEpoch: GENESIS_EPOCH,
+
+      // Recent state
+      latestCrosslinks: Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
+      latestBlockRoots: Array.from({length: LATEST_BLOCK_ROOTS_LENGTH}, () => ZERO_HASH),
+      latestIndexRoots: Array.from({length: LATEST_INDEX_ROOTS_LENGTH}, () => ZERO_HASH),
+      latestPenalizedBalances: Array.from({length: LATEST_PENALIZED_EXIT_LENGTH}, () => 0),
+      latestAttestations: [],
+      batchedBlockRoots: [],
+
+      // PoW receipt root
+      latestEth1Data: latestEth1Data,
+      eth1DataVotes: [],
+  };
+
+  // Process initial deposists
+  initialValidatorDeposits.forEach(deposit => {
+      const validatorIndex = processDeposit(
+        state,
+        deposit.depositData.depositInput.pubkey,
+        deposit.depositData.amount,
+        deposit.depositData.depositInput.proofOfPossession,
+        deposit.depositData.depositInput.withdrawalCredentials,
+      );
+  });
+
+  // Process initial activations
+  for (let i: ValidatorIndex = 0; i < state.validatorRegistry.length; i ++) {
+    if (getEffectiveBalance(state, i) >= MAX_DEPOSIT_AMOUNT) {
+      activateValidator(state, i, true);
+    }
+  }
+
+  const genesisActiveIndexRoot = hashTreeRoot(getActiveValidatorIndices(state.validatorRegistry, GENESIS_EPOCH));
+  for (let index: number; index < LATEST_INDEX_ROOTS_LENGTH; index++) {
+    state.latestIndexRoots[index] = genesisActiveIndexRoot;
+  }
+  state.currentEpochSeed = generateSeed(state, GENESIS_EPOCH);
+  return state;
+}
+
+/**
+ * Process a deposit from eth1.x to eth2.
+ * @param {BeaconState} state
+ * @param {BLSPubkey} pubkey
+ * @param {Gwei} amount
+ * @param {BLSSignature} proofOfPossession
+ * @param {Bytes32} withdrawalCredentials
+ */
+function processDeposit(
+  state: BeaconState,
+  pubkey: BLSPubkey,
+  amount: Gwei,
+  proofOfPossession: BLSSignature,
+  withdrawalCredentials: Bytes32): void {
     // Validate the given proofOfPossession
-    const proof = validateProofOfPossession(state, pubkey, proofOfPossession, withdrawalCredentials, randaoCommitment, custodyCommitment);
-    if (!proof) throw new Error();
+    if (!validateProofOfPossession(state, pubkey, proofOfPossession, withdrawalCredentials)) {throw new Error("")};
 
     const validatorPubkeys = state.validatorRegistry.map(v => { return v.pubkey });
 
     if (!validatorPubkeys.includes(pubkey)) {
       // Add new validator
-      const validator: ValidatorRecord = {
+      const validator: Validator = {
         pubkey: pubkey,
         withdrawalCredentials: withdrawalCredentials,
-        randaoCommitment: randaoCommitment,
-        randaoLayers: 0,
-        activationSlot: FAR_FUTURE_SLOT,
-        exitSlot: FAR_FUTURE_SLOT,
-        withdrawalSlot: FAR_FUTURE_SLOT,
-        penalizedSlot: FAR_FUTURE_SLOT,
-        exitCount: 0,
+        activationEpoch: FAR_FUTURE_EPOCH,
+        exitEpoch: FAR_FUTURE_EPOCH,
+        withdrawalEpoch: FAR_FUTURE_EPOCH,
+        penalizedEpoch: FAR_FUTURE_EPOCH,
         statusFlags: 0,
-        custodyCommitment: custodyCommitment,
-        latestCustodyReseedSlot: GENESIS_SLOT,
-        penultimateCustodyResseedSlot: GENESIS_SLOT
       };
-      const index = state.validatorRegistry.length;
+
+      // Note: In phase 2 registry indices that have been withdrawn for a long time will be recycled.
       state.validatorRegistry.push(validator);
       state.validatorBalances.push(amount);
     } else {
@@ -144,69 +153,57 @@ function processDeposit(state: BeaconState, pubkey: int, amount: int, proofOfPos
 }
 
 /**
- * Validate the deposit
+ * Validate a eth1 deposit
  * @param {BeaconState} state
- * @param {int} pubkey
- * @param {uint384[]} proofOfPossession
- * @param {hash32} withdrawalCredentials
- * @param {hash32} randaoCommitment
- * @param {hash32} custodyCommitment
+ * @param {BLSPubkey} pubkey
+ * @param {BLSSignature} proofOfPossession
+ * @param {Bytes32} withdrawalCredentials
  * @returns {boolean}
  */
-function validateProofOfPossession(state: BeaconState, pubkey: int, proofOfPossession: uint384[], withdrawalCredentials: hash32, randaoCommitment: hash32, custodyCommitment: hash32): boolean {
-    // const proofOfPossessionData: DepositInput = {
-    //     pubkey: pubkey,
-    //     withdrawalCredentials: withdrawalCredentials,
-    //     randaoCommitment: randaoCommitment,
-    //     custodyCommitment: custodyCommitment,
-    //     proofOfPossession: EMPTY_SIGNATURE
-    // };
-    // Stubbed due to bls not yet a dependency
+function validateProofOfPossession(
+  state: BeaconState,
+  pubkey: BLSPubkey,
+  proofOfPossession: BLSSignature,
+  withdrawalCredentials: Bytes32): boolean {
+    const proofOfPossessionData: DepositInput = {
+        pubkey: pubkey,
+        withdrawalCredentials: withdrawalCredentials,
+        proofOfPossession: EMPTY_SIGNATURE
+    };
+    // Stubbed until BLS is a dependency
     // return bls_verify(
     //   pubkey=pubkey,
-    //   message=hash_tree_root(proof_of_possession_data),
-    //   signature=proof_of_possession,
-    //   domain=get_domain(
-    //       state.fork_data,
-    //       state.slot,
+    //   message=hash_tree_root(proofOfPossessionData),
+    //   signature=proofOfPossession,
+    //   domain=getDomain(
+    //       state.fork,
+    //       getCurrentEpoch(state),
     //       DOMAIN_DEPOSIT,
     //   )
     return true;
 }
 
 /**
- * Activate the validator with the given ``index``
- * Note: this function mutates state
+ * Activate a validator given an index.
  * @param {BeaconState} state
- * @param {int} index
- * @param {boolean} genesis
+ * @param {ValidatorIndex} index
+ * @param {boolean} isGenesis
  */
-function activateValidator(state: BeaconState, index: int, genesis: boolean): void {
-    const validator: ValidatorRecord = state.validatorRegistry[index];
-
-    validator.activationSlot = genesis ? GENESIS_SLOT : state.slot + ENTRY_EXIT_DELAY;
-    // Stubbed due to SSZ
-    // state.validator_registry_delta_chain_tip = hash_tree_root(
-    //   ValidatorRegistryDeltaBlock(
-    //     latest_registry_delta_root=state.validator_registry_delta_chain_tip,
-    //     validator_index=index,
-    //     pubkey=validator.pubkey,
-    //     slot=validator.activation_slot,
-    //     flag=ACTIVATION,
-    //   )
-    // )
+function activateValidator(state: BeaconState, index: ValidatorIndex, isGenesis: boolean): void {
+    const validator: Validator = state.validatorRegistry[index];
+    validator.activationEpoch = isGenesis ? GENESIS_EPOCH : getEntryExitEffectEpoch(getCurrentEpoch(state));
 }
 
 /**
- * Initiate exit for the validator with the given ``index``.
- * Note: that this function mutates ``state``.
+ * Initiate exit for the validator with the given index.
+ * Note: that this function mutates state.
  * @param {BeaconState} state
  * @param {int} index
  */
-function initiateValidatorExit(state: BeaconState, index: int): void {
+function initiateValidatorExit(state: BeaconState, index: ValidatorIndex): void {
     const validator = state.validatorRegistry[index];
     if (!validator.statusFlags) {
-        validator.statusFlags = StatusFlags.INTIATED_EXIT;
+        validator.statusFlags = StatusFlag.INTIATED_EXIT;
     }
 }
 
@@ -215,55 +212,44 @@ function initiateValidatorExit(state: BeaconState, index: int): void {
  * @param {BeaconState} state
  * @param {int} index
  */
-function exitValidator(state: BeaconState, index: int): void {
-    const validator = state.validatorRegistry[index];
+function exitValidator(state: BeaconState, index: ValidatorIndex): void {
+  const validator = state.validatorRegistry[index];
 
-    // The foillowing updates only occur if not previous exited
-  if (validator.exitSlot <= state.slot + ENTRY_EXIT_DELAY) {
+  // The following updates only occur if not previous exited
+  if (validator.exitEpoch <= getEntryExitEffectEpoch(getCurrentEpoch(state))) {
       return;
   }
 
-  validator.exitSlot = state.slot + ENTRY_EXIT_DELAY;
-
-  state.validatorRegistryExitCount += 1;
-  validator.exitCount = state.validatorRegistryExitCount;
-  // Stubbed due to SSZ
-  // state.validator_registry_delta_chain_tip = hash_tree_root(
-  //   ValidatorRegistryDeltaBlock(
-  //     latest_registry_delta_root=state.validator_registry_delta_chain_tip,
-  //     validator_index=index,
-  //     pubkey=validator.pubkey,
-  //     slot=validator.exit_slot,
-  //     flag=EXIT,
-  //   )
-  // )
+  validator.exitEpoch = getEntryExitEffectEpoch(getCurrentEpoch(state));
 }
 
 /**
- * Penalize bad acting validator
+ * Penalize the validator of the given index.
+ * Note that this function mutates state.
  * @param {BeaconState} state
- * @param {int} index
+ * @param {ValidatorIndex} index
  */
-function penalizeValidator(state: BeaconState, index: int): void {
+function penalizeValidator(state: BeaconState, index: ValidatorIndex): void {
     exitValidator(state, index);
     const validator = state.validatorRegistry[index];
-    state.latestPenalizedExitBalances[Math.floor(state.slot / EPOCH_LENGTH) % LATEST_PENALIZED_EXIT_LENGTH] += getEffectiveBalance(state, index);
+    state.latestPenalizedBalances[getCurrentEpoch(state) % LATEST_PENALIZED_EXIT_LENGTH] += getEffectiveBalance(state, index);
 
     const whistleblowerIndex = getBeaconProposerIndex(state, state.slot);
     const whistleblowerReward = Math.floor(getEffectiveBalance(state, index) / WHISTLEBLOWER_REWARD_QUOTIENT);
     state.validatorBalances[whistleblowerIndex] += whistleblowerReward;
     state.validatorBalances[index] -= whistleblowerReward;
-    validator.penalizedSlot = state.slot;
+    validator.penalizedEpoch = getCurrentEpoch(state);
 }
 
 /**
- * Prepare the validator for an exit
+ * Set the validator with the given index with WITHDRAWABLE flag.
+ * Note that this function mutates state.
  * @param {BeaconState} state
- * @param {int} index
+ * @param {ValidatorIndex} index
  */
-function prepareValidatorForWithdrawal(state: BeaconState, index: int): void {
+function prepareValidatorForWithdrawal(state: BeaconState, index: ValidatorIndex): void {
   const validator = state.validatorRegistry[index];
   if (!validator.statusFlags) {
-    validator.statusFlags = StatusFlags.WITHDRAWABLE;
+    validator.statusFlags = StatusFlag.WITHDRAWABLE;
   }
 }

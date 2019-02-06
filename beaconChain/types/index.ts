@@ -22,3 +22,4 @@ names/types that can be inspected at run-time.
  */
 export * from "./blocks";
 export * from "./state";
+export * from "./custom";

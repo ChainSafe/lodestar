@@ -1,19 +1,25 @@
-import {Deposit, DepositData, DepositInput} from "../interfaces/blocks";
+import { Deposit, DepositData, DepositInput, Eth1Data } from "../types";
 
 type int = number;
-type hash32 = Uint8Array;
 
 interface DummyChainStart {
   deposits: Deposit[];
   genesisTime: int;
-  depositRoot: hash32;
+  eth1Data: Eth1Data;
 }
 
 export function getInitialDeposits(): DummyChainStart {
   return {
-    depositRoot: new Uint8Array(32),
     deposits: generateFakeDeposits(),
+    eth1Data: generateEthData(),
     genesisTime: Date.now() / 1000 | 0,
+  };
+}
+
+function generateEthData(): Eth1Data {
+  return {
+    blockHash: new Uint8Array(32),
+    depositRoot: new Uint8Array(32),
   };
 }
 
@@ -22,10 +28,8 @@ function generateFakeDeposits(): Deposit[] {
 
   for (let i: number = 0; i < 10; i++) {
     const depositInput: DepositInput = {
-      custodyCommitment: new Uint8Array(32),
-      proofOfPossession: [486468, 486484],
-      pubkey: 0xe4b32544f1d3fa0a071e3629a1a22e76dc216312,
-      randaoCommitment: new Uint8Array(32),
+      proofOfPossession: new Uint8Array(2),
+      pubkey: new Uint8Array(2),
       withdrawalCredentials: new Uint8Array(32),
     };
 

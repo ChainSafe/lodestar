@@ -6,73 +6,78 @@
 
 // These interfaces relate to the data structures for beacon chain blocks
 
-import {CustodyReseed, CustodyResponse} from "./state";
+import { Eth1Data } from "./state";
 
-type bytes = number;
+type bytes = Uint8Array;
+type bytes32 = Uint8Array;
+type bytes48 = Uint8Array;
+type bytes96 = Uint8Array;
 type uint24 = number;
 type uint64 = number;
 type uint384 = number;
 type hash32 = Uint8Array;
 
 const bytes = "bytes";
+const bytes32 = "bytes32";
+const bytes48 = "bytes48";
+const bytes96 = "bytes96";
 const uint24 = "uint24";
 const uint64 = "uint64";
 const uint384 = "uint384";
-const hash32 = "hash32";
 
 // Beacon chain operations
 
 export interface ProposerSlashing {
   // Proposer index
-  proposerIndex: uint24;
+  proposerIndex: uint64;
   // First proposal data
   proposalData1: ProposalSignedData;
   // First proposal signature
-  proposalSignature1: uint384[];
+  proposalSignature1: bytes96;
   // Second proposal data
   proposalData2: ProposalSignedData;
   // Second proposal signature
-  proposalSignature2: uint384[];
+  proposalSignature2: bytes96;
 }
 export var ProposerSlashing = {
   fields: [
     ["proposerIndex", uint24],
     ["proposalData1", ProposalSignedData],
-    ["proposalSignature1", [uint384]],
+    ["proposalSignature1", bytes96],
     ["proposalData2", ProposalSignedData],
-    ["proposalSignature2", [uint384]],
+    ["proposalSignature2", bytes96],
   ],
 };
 
-export interface CasperSlashing {
+export interface AttesterSlashings {
   // First batch of votes
-  slashableVoteData1: SlashableVoteData;
+  slashableVoteData1: SlashableAttestation;
   // Second batch of votes
-  slashableVoteData2: SlashableVoteData;
+  slashableVoteData2: SlashableAttestation;
 }
-export var CasperSlashing = {
+export var AttesterSlashings = {
   fields: [
-    ["slashableVoteData1", SlashableVoteData],
-    ["slashableVoteData2", SlashableVoteData],
+    ["slashableVoteData1", SlashableAttestation],
+    ["slashableVoteData2", SlashableAttestation],
   ],
 };
 
-export interface SlashableVoteData {
-  // Proof-of-custody indices (0 bits)
-  custodyBit0Indices: uint24[];
-  // Proof-of-custody indices (1 bits)
-  custodyBit1Indices: uint24[];
-  // Attestation data
+export interface SlashableAttestation {
+  // Validator Indices
+  validatorIndices: uint64[];
+  // Attestation Data
   data: AttestationData;
+  // Custody Bitfield
+  custodyBitfield: bytes;
   // Aggregate signature
-  aggregateSignature: uint384[];
+  aggregateSignature: bytes96;
 }
-export var SlashableVoteData = {
+export var SlashableAttestation = {
   fields: [
-    ["custodyBit0Indices", [uint24]],
-    ["custodyBit1Indices", [uint24]],
+    ["validatorIndices", [uint64]],
     ["data", AttestationData],
-    ["aggregateSignature", [uint384]],
+    ["custodyBitfield", bytes],
+    ["aggregateSignature", bytes96],
   ],
 };
 
@@ -80,18 +85,18 @@ export interface Attestation {
   // Attestation data
   data: AttestationData;
   // Attester participation bitfield
-  participationBitfield: bytes;
+  aggregationBitfield: bytes;
   // Proof of custody bitfield
   custodyBitfield: bytes;
   // BLS aggregate signature
-  aggregateSignature: uint384[];
+  aggregateSignature: bytes96;
 }
 export var Attestation = {
   fields: [
     ["data", AttestationData],
     ["participationBitfield", bytes],
     ["custodyBitfield", bytes],
-    ["aggregateSignature", [uint384]],
+    ["aggregateSignature", bytes96],
   ],
 };
 
@@ -101,28 +106,28 @@ export interface AttestationData {
   // Shard number
   shard: uint64;
   // Hash of the signed beacon block
-  beaconBlockRoot: hash32;
+  beaconBlockRoot: bytes32;
   // Hash of the ancestor at the epoch boundary
-  epochBoundaryRoot: hash32;
+  epochBoundaryRoot: bytes32;
   // Shard block hash being attested to
-  shardBlockRoot: hash32;
+  shardBlockRoot: bytes32;
   // Last crosslink hash
-  latestCrosslinkRoot: hash32;
+  latestCrosslinkRoot: bytes32;
   // Slot of the last justified beacon block
-  justifiedSlot: uint64;
+  justifiedEpoch: uint64;
   // Hash of the last justified beacon block
-  justifiedBlockRoot: hash32;
+  justifiedBlockRoot: bytes32;
 }
 export var AttestationData = {
   fields: [
     ["slot", uint64],
     ["shard", uint64],
-    ["beaconBlockRoot", hash32],
-    ["epochBoundaryRoot", hash32],
-    ["shardBlockRoot", hash32],
-    ["latestCrosslinkRoot", hash32],
-    ["justifiedSlot", uint64],
-    ["justifiedBlockRoot", hash32],
+    ["beaconBlockRoot", bytes32],
+    ["epochBoundaryRoot", bytes32],
+    ["shardBlockRoot", bytes32],
+    ["latestCrosslinkRoot", bytes32],
+    ["justifiedEpoch", uint64],
+    ["justifiedBlockRoot", bytes32],
   ],
 };
 
@@ -141,7 +146,7 @@ export var AttestationDataAndCustodyBit = {
 
 export interface Deposit {
   // Branch in the deposit tree
-  branch: hash32[];
+  branch: bytes32[];
   // index in the deposit tree
   index: uint64;
   // Deposit data
@@ -149,7 +154,7 @@ export interface Deposit {
 }
 export var Deposit = {
   fields: [
-    ["branch", [hash32]],
+    ["branch", [bytes32]],
     ["index", uint64],
     ["depositData", DepositData],
   ],
@@ -173,39 +178,33 @@ export var DepositData = {
 
 export interface DepositInput {
   // BLS pubkey
-  pubkey: uint384;
+  pubkey: bytes48;
   // Withdrawal credentials
-  withdrawalCredentials: hash32;
-  // Initial RANDAO commitment
-  randaoCommitment: hash32;
-  // Initial custody commitment
-  custodyCommitment: hash32;
+  withdrawalCredentials: bytes32;
   // BLS proof of possession (a BLS signature)
-  proofOfPossession: uint384[];
+  proofOfPossession: bytes96;
 }
 export var DepositInput = {
   fields: [
-    ["pubkey", uint384],
-    ["withdrawalCredentials", hash32],
-    ["randaoCommitment", hash32],
-    ["custodyCommitment", hash32],
-    ["proofOfPossession", [uint384]],
+    ["pubkey", bytes48],
+    ["withdrawalCredentials", bytes32],
+    ["proofOfPossession", bytes96],
   ],
 };
 
 export interface Exit {
   // Minimum slot for processing exit
-  slot: uint64;
+  epoch: uint64;
   // Index of the exiting validator
-  validator_index: uint24;
+  validator_index: uint64;
   // Validator signature
-  signature: uint384[];
+  signature: bytes96;
 }
 export var Exit = {
   fields: [
-    ["slot", uint64],
-    ["validator_index", uint24],
-    ["signature", [uint384]],
+    ["epoch", uint64],
+    ["validator_index", uint64],
+    ["signature", bytes96],
   ],
 };
 
@@ -213,11 +212,11 @@ export var Exit = {
 export interface BeaconBlock {
   // Header
   slot: uint64;
-  parentRoot: hash32;
-  stateRoot: hash32;
-  randaoReveal: hash32;
-  depositRoot: hash32;
-  signature: uint384[];
+  parentRoot: bytes32;
+  stateRoot: bytes32;
+  randaoReveal: bytes96;
+  eth1Data: Eth1Data;
+  signature: bytes96;
 
   // Body
   body: BeaconBlockBody;
@@ -225,31 +224,27 @@ export interface BeaconBlock {
 export var BeaconBlock = {
   fields: [
     ["slot", uint64],
-    ["parentRoot", hash32],
-    ["stateRoot", hash32],
-    ["randaoReveal", hash32],
-    ["depositRoot", hash32],
-    ["signature", [uint384]],
+    ["parentRoot", bytes32],
+    ["stateRoot", bytes32],
+    ["randaoReveal", bytes96],
+    ["eth1Data", Eth1Data],
+    ["signature", bytes96],
     ["body", BeaconBlockBody],
   ],
 };
 
 export interface BeaconBlockBody {
   proposerSlashings: ProposerSlashing[];
-  casperSlashings: CasperSlashing[];
+  casperSlashings: AttesterSlashings[];
   attestations: Attestation[];
-  custodyReseeds: CustodyReseed[];
-  custodyResponses: CustodyResponse[];
   deposits: Deposit[];
   exits: Exit[];
 }
 export var BeaconBlockBody = {
   fields: [
     ["proposerSlashings", [ProposerSlashing]],
-    ["casperSlashings", [CasperSlashing]],
+    ["casperSlashings", [AttesterSlashings]],
     ["attestations", [Attestation]],
-    ["custodyReseeds", [CustodyReseed]],
-    ["custodyResponses", [CustodyResponse]],
     ["deposits", [Deposit]],
     ["exits", [Exit]],
   ],
@@ -260,13 +255,13 @@ export interface ProposalSignedData {
   slot: uint64;
   // Shard number (`BEACON_CHAIN_SHARD_NUMBER` for beacon chain)
   shard: uint64;
-  // Block hash
-  blockHash: hash32;
+  // Block root
+  blockRoot: bytes32;
 }
 export var ProposalSignedData = {
   fields: [
     ["slot", uint64],
     ["shard", uint64],
-    ["blockHash", hash32],
+    ["blockRoot", bytes32],
   ],
 };
