@@ -2,10 +2,12 @@ import {Validator} from "../../types";
 
 export function generateValidator(activation: number = null, exit: number = null): Validator {
   const randNum = () =>  Math.floor(Math.random() * Math.floor(4));
+  // For some reason activationEpoch was defaulting to randNum()
+  const activationValue = activation !== null ? activation : randNum();
   return {
     pubkey: new Uint8Array(48),
     withdrawalCredentials: Uint8Array.of(65),
-    activationEpoch: activation || randNum(),
+    activationEpoch: activationValue,
     exitEpoch: exit || randNum(),
     withdrawalEpoch: randNum(),
     penalizedEpoch: randNum(),
