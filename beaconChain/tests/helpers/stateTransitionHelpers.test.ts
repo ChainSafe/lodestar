@@ -1,6 +1,8 @@
 import { assert } from "chai";
-import { clamp, getActiveValidatorIndices, intSqrt, readUIntBE, split } from "../../helpers/stateTransitionHelpers";
-import { Validator } from "../../types";
+import {
+  clamp, getActiveValidatorIndices, intSqrt, readUIntBE, slotToEpoch, split,
+} from "../../helpers/stateTransitionHelpers";
+import {EpochNumber, SlotNumber, Validator} from "../../types";
 
 describe("Split", () => {
   it("array of 0 should return empty", () => {
@@ -193,3 +195,22 @@ describe("readUIntBE", () => {
 //     validators.forEach((v, index) => assert(exists(shuffled, index)));
 //   });
 // });
+
+describe("slotToEpoch", () => {
+  const pairs = [
+    {test: 0, expected: 0},
+    {test: 1, expected: 0},
+    {test: 10, expected: 0},
+    {test: 100, expected: 1},
+    {test: 1000, expected: 15},
+    {test: 10000, expected: 156},
+    {test: 100000, expected: 1562},
+    {test: 1000000, expected: 15625},
+  ];
+  for (const pair of pairs) {
+    it(`Return ${pair.expected} a value of ${pair.test}`, () => {
+      const result: EpochNumber = slotToEpoch(pair.test);
+      assert.equal(result, pair.expected);
+    });
+  }
+});
