@@ -2,6 +2,8 @@ import { assert } from "chai";
 import { clamp, getActiveValidatorIndices, intSqrt, isPowerOfTwo, readUIntBE, split } from "../../helpers/stateTransitionHelpers";
 import { Validator } from "../../types";
 
+type int = number;
+
 describe("Split", () => {
   it("array of 0 should return empty", () => {
     const array: any[] = [];
@@ -115,20 +117,25 @@ describe("isPowerOfTwo", () => {
     assert.equal(result, false, "Should have returned false!");
   });
 
-  it("2**32 should return true", () => {
-    const result = isPowerOfTwo(2 ** 32);
-    assert.equal(result, true, "Should have returned true!");
-  });
-
   it("Numbers close to 2**32 should return false", () => {
-    const result1 = isPowerOfTwo(2 ** 32 - 1);
-    assert.equal(result1, false, "Should have returned false!");
-    const result2 = isPowerOfTwo(2 ** 32 + 1);
-    assert.equal(result2, false, "Should have returned false!");
+    for (let i: int = 2; i < 53; i++) {
+      const result = isPowerOfTwo(2 ** i);
+      assert.equal(result, true, "Should have returned true!");
+      const result1 = isPowerOfTwo(2 ** i - 1);
+      assert.equal(result1, false, "Should have returned false!");
+      const result2 = isPowerOfTwo(2 ** i + 1);
+      assert.equal(result2, false, "Should have returned false!");
+    }
   });
 
   it("Should throw if a negative number is passed in", () => {
     assert.throws(function() { isPowerOfTwo(-1) });
+  });
+
+  it("Should throw if a value greater or equal to 2 ** 53 is passed in", () => {
+    // TODO: Remove this when we are able to support larger values.
+    assert.throws(function() { isPowerOfTwo(2 ** 53) });
+    assert.throws(function() { isPowerOfTwo(2 ** 53 + 1) });
   });
 });
 
