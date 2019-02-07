@@ -1,6 +1,9 @@
 import { assert } from "chai";
-import { clamp, getActiveValidatorIndices, intSqrt, isPowerOfTwo, readUIntBE, split } from "../../helpers/stateTransitionHelpers";
-import { Validator } from "../../types";
+import {
+  clamp, getActiveValidatorIndices, getEpochStartSlot, intSqrt, isActiveValidator, isPowerOfTwo, readUIntBE, slotToEpoch, split,
+} from "../../helpers/stateTransitionHelpers";
+import {EpochNumber, SlotNumber, Validator} from "../../types";
+import {generateValidator} from "../utils/validator";
 
 type int = number;
 
@@ -129,7 +132,7 @@ describe("isPowerOfTwo", () => {
   });
 
   it("Should throw if a negative number is passed in", () => {
-    assert.throws(function() { isPowerOfTwo(-1) });
+    assert.throws(() => { isPowerOfTwo(-1); });
   });
 
   it("Should throw if a value greater or equal to 2 ** 53 is passed in", () => {
@@ -237,3 +240,79 @@ describe("readUIntBE", () => {
 //     validators.forEach((v, index) => assert(exists(shuffled, index)));
 //   });
 // });
+
+describe("slotToEpoch", () => {
+  const pairs = [
+    {test: 0, expected: 0},
+    {test: 1, expected: 0},
+    {test: 10, expected: 0},
+    {test: 100, expected: 1},
+    {test: 1000, expected: 15},
+    {test: 10000, expected: 156},
+    {test: 100000, expected: 1562},
+    {test: 1000000, expected: 15625},
+  ];
+  for (const pair of pairs) {
+    it(`Slot ${pair.test} should map to epoch ${pair.expected}`, () => {
+      const result: EpochNumber = slotToEpoch(pair.test);
+      assert.equal(result, pair.expected);
+    });
+  }
+});
+
+describe("getEpochStartSlot", () => {
+  const pairs = [
+    {test: 0, expected: 0},
+    {test: 1, expected: 64},
+    {test: 10, expected: 640},
+    {test: 100, expected: 6400},
+    {test: 1000, expected: 64000},
+    {test: 10000, expected: 640000},
+    {test: 100000, expected: 6400000},
+    {test: 1000000, expected: 64000000},
+  ];
+  for (const pair of pairs) {
+    it(`Epoch ${pair.test} should map to slot ${pair.expected}`, () => {
+      const result: SlotNumber = getEpochStartSlot(pair.test);
+      assert.equal(result, pair.expected);
+    });
+  }
+});
+
+describe("isActiveValidator", () => {
+  it("should be active", () => {
+    const v: Validator = generateValidator(0, 100);
+    const result: boolean = isActiveValidator(v, 0);
+    assert.isTrue(result);
+  });
+
+  it("should be active", () => {
+    const v: Validator = generateValidator(10, 101);
+    const result: boolean = isActiveValidator(v, 100);
+    assert.isTrue(result);
+  });
+
+  it("should be active", () => {
+    const v: Validator = generateValidator(100, 1000);
+    const result: boolean = isActiveValidator(v, 100);
+    assert.isTrue(result);
+  });
+
+  it("should not be active", () => {
+    const v: Validator = generateValidator(1);
+    const result: boolean = isActiveValidator(v, 0);
+    assert.isFalse(result);
+  });
+
+  it("should not be active", () => {
+    const v: Validator = generateValidator(100);
+    const result: boolean = isActiveValidator(v, 5);
+    assert.isFalse(result);
+  });
+
+  it("should not be active", () => {
+    const v: Validator = generateValidator(1, 5);
+    const result: boolean = isActiveValidator(v, 100);
+    assert.isFalse(result);
+  });
+});
