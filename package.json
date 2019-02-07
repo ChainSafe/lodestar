@@ -4,15 +4,17 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha test"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "bls-wasm": "^0.2.1",
-    "chai": "^4.2.0",
     "keccak256": "^1.0.0",
-    "mcl-wasm": "^0.2.7",
-    "mocha": "^5.2.0"
+    "mcl-wasm": "^0.2.7"
+  },
+  "devDependencies": {
+    "mocha": "^5.2.0",
+    "chai": "^4.2.0"
   }
 }
