@@ -403,6 +403,8 @@ export function getBeaconProposerIndex(state: BeaconState, slot: int): int {
  */
 export function isPowerOfTwo(value: int): boolean {
   if (value < 0) { throw new Error("Value is negative!"); }
+  if (value >= 2 ** 53) { throw new Error("Values greater or equal to 2 ** 53 are not supported yet!"); }
+  // TODO: Add support for values that are greater or equal to 2 ** 53
   return value === 0 ? false : 2 ** Math.floor(Math.log2(value)) === value;
 }
 
