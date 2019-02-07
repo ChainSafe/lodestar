@@ -246,7 +246,7 @@ describe("slotToEpoch", () => {
     {test: 1000000, expected: 15625},
   ];
   for (const pair of pairs) {
-    it(`Return ${pair.expected} a value of ${pair.test}`, () => {
+    it(`Slot ${pair.test} should map to epoch ${pair.expected}`, () => {
       const result: EpochNumber = slotToEpoch(pair.test);
       assert.equal(result, pair.expected);
     });
@@ -265,7 +265,7 @@ describe("getEpochStartSlot", () => {
     {test: 1000000, expected: 64000000},
   ];
   for (const pair of pairs) {
-    it(`Return ${pair.expected} a value of ${pair.test}`, () => {
+    it(`Epoch ${pair.test} should map to slot ${pair.expected}`, () => {
       const result: SlotNumber = getEpochStartSlot(pair.test);
       assert.equal(result, pair.expected);
     });
@@ -276,36 +276,36 @@ describe("isActiveValidator", () => {
   it("should be active", () => {
     const v: Validator = generateValidator(0, 100);
     const result: boolean = isActiveValidator(v, 0);
-    assert.equal(result, true);
+    assert.isTrue(result);
   });
 
   it("should be active", () => {
     const v: Validator = generateValidator(10, 101);
     const result: boolean = isActiveValidator(v, 100);
-    assert.equal(result, true);
+    assert.isTrue(result);
   });
 
   it("should be active", () => {
     const v: Validator = generateValidator(100, 1000);
     const result: boolean = isActiveValidator(v, 100);
-    assert.equal(result, true);
+    assert.isTrue(result);
   });
 
   it("should not be active", () => {
     const v: Validator = generateValidator(1);
     const result: boolean = isActiveValidator(v, 0);
-    assert.equal(result, false);
+    assert.isFalse(result);
   });
 
   it("should not be active", () => {
     const v: Validator = generateValidator(100);
     const result: boolean = isActiveValidator(v, 5);
-    assert.equal(result, false);
+    assert.isFalse(result);
   });
 
   it("should not be active", () => {
     const v: Validator = generateValidator(1, 5);
     const result: boolean = isActiveValidator(v, 100);
-    assert.equal(result, false);
+    assert.isFalse(result);
   });
 });
