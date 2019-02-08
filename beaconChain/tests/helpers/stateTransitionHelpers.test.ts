@@ -124,13 +124,14 @@ describe("isPowerOfTwo", () => {
     assert.equal(result, false, "Should have returned false!");
   });
 
-  it("Numbers close to 2**32 should return false", () => {
-    for (let i: int = 2; i < 53; i++) {
-      const result = isPowerOfTwo(new BN(2 ** i));
+  it("Numbers close to 2**257 should return false", () => {
+    for (let i: int = 2; i < 257; i++) {
+      const powOfTwo = new BN(2).pow(new BN(i));
+      const result = isPowerOfTwo(powOfTwo);
       assert.equal(result, true, "Should have returned true!");
-      const result1 = isPowerOfTwo(new BN(2 ** i - 1));
+      const result1 = isPowerOfTwo(powOfTwo.subn(1));
       assert.equal(result1, false, "Should have returned false!");
-      const result2 = isPowerOfTwo(new BN(2 ** i + 1));
+      const result2 = isPowerOfTwo(powOfTwo.addn(1));
       assert.equal(result2, false, "Should have returned false!");
     }
   });
