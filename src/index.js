@@ -91,7 +91,7 @@ function serialize (value, type) {
   }
 
   // cannot serialize
-  return null
+  throw new Error(`Unrecognized type: ${type}`)
 }
 
 /**
@@ -207,7 +207,8 @@ function deserialize (data, type, start = 0) {
     }
   }
 
-  return null
+  // cannot deserialize
+  throw new Error(`Unrecognized type: ${type}`)
 }
 
 /**
