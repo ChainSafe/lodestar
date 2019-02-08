@@ -1,4 +1,4 @@
-import { DEPOSIT_CONTRACT_ADDRESS } from "../constants/constants";
+import { DEPOSIT_CONTRACT_ADDRESS } from "../constants";
 import { getInitialBeaconState } from "../lib/state";
 import {getInitialDeposits} from "../pow/fake";
 import {BeaconState} from "../types";

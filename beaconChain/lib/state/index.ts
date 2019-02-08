@@ -8,15 +8,14 @@ import {
   LATEST_BLOCK_ROOTS_LENGTH, EMPTY_SIGNATURE,
   WHISTLEBLOWER_REWARD_QUOTIENT, GENESIS_SLOT, GENESIS_FORK_VERSION,
   GENESIS_START_SHARD, LATEST_PENALIZED_EXIT_LENGTH, FAR_FUTURE_EPOCH, GENESIS_EPOCH,
-  MAX_DEPOSIT_AMOUNT, LATEST_INDEX_ROOTS_LENGTH
-} from "../../constants/constants";
+  MAX_DEPOSIT_AMOUNT, LATEST_INDEX_ROOTS_LENGTH, StatusFlag,
+} from "../../constants";
 import {
   generateSeed,
   getActiveValidatorIndices,
   getBeaconProposerIndex, getCurrentEpoch, getEffectiveBalance,
   getEntryExitEffectEpoch
 } from "../../helpers/stateTransitionHelpers";
-import {StatusFlag} from "../../constants/enums";
 
 type int = number;
 
