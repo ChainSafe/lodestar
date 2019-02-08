@@ -1,13 +1,14 @@
 import { assert } from "chai";
 import BN from "bn.js";
-import {
-  clamp, getActiveValidatorIndices, getEpochStartSlot, intSqrt, isActiveValidator, isPowerOfTwo, readUIntBE, slotToEpoch, split, isDoubleVote,
-} from "../../helpers/stateTransitionHelpers";
+
 import {EpochNumber, SlotNumber, Validator} from "../../types";
+import { EPOCH_LENGTH, TARGET_COMMITTEE_SIZE } from "../../constants";
+import {
+  clamp, getActiveValidatorIndices, getEpochCommitteeCount, getEpochStartSlot, intSqrt, isActiveValidator, isPowerOfTwo, readUIntBE, slotToEpoch, split, isDoubleVote,
+} from "../../helpers/stateTransitionHelpers";
 import {generateValidator} from "../utils/validator";
 import {generateAttestationData} from "../utils/attestation";
 import {randBetween} from "../utils/misc";
-import {EPOCH_LENGTH} from "../../constants/constants";
 
 type int = number;
 
@@ -219,6 +220,23 @@ describe("getActiveValidatorIndices", () => {
   //
   //   assert(filtered.length === getAVI.length);
   // });
+});
+
+describe("getEpochCommitteeCount", () => {
+  // this defines the # of validators required to have 1 committee
+  // per slot for epoch length.
+  const validatorsPerEpoch = EPOCH_LENGTH * TARGET_COMMITTEE_SIZE;
+  const tests = [
+    {validatorCount: 0, committeeCount: EPOCH_LENGTH},
+    {validatorCount: 1000, committeeCount: EPOCH_LENGTH},
+    {validatorCount: 2 * validatorsPerEpoch, committeeCount: 2 * EPOCH_LENGTH},
+    {validatorCount: 5 * validatorsPerEpoch, committeeCount: 5 * EPOCH_LENGTH},
+    {validatorCount: 16 * validatorsPerEpoch, committeeCount: 16 * EPOCH_LENGTH},
+    {validatorCount: 32 * validatorsPerEpoch, committeeCount: 16 * EPOCH_LENGTH},
+  ];
+  for (const {validatorCount, committeeCount} of tests) {
+    assert.equal(getEpochCommitteeCount(validatorCount), committeeCount);
+  }
 });
 
 describe("readUIntBE", () => {

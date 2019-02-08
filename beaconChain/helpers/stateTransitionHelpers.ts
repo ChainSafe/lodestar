@@ -188,7 +188,7 @@ export function getEpochCommitteeCount(activeValidatorCount: int): int {
       Math.floor(SHARD_COUNT / EPOCH_LENGTH),
       Math.floor(Math.floor(activeValidatorCount / EPOCH_LENGTH) / TARGET_COMMITTEE_SIZE),
     ),
-  );
+  ) * EPOCH_LENGTH;
 }
 
 /**
