@@ -1,4 +1,5 @@
 import { assert } from "chai";
+import BN from "bn.js";
 import {
   clamp, getActiveValidatorIndices, getEpochStartSlot, intSqrt, isActiveValidator, isPowerOfTwo, readUIntBE, slotToEpoch, split, isDoubleVote,
 } from "../../helpers/stateTransitionHelpers";
@@ -104,44 +105,38 @@ describe("Clamp", () => {
 
 describe("isPowerOfTwo", () => {
   it("0 should return false", () => {
-    const result = isPowerOfTwo(0);
+    const result = isPowerOfTwo(new BN(0));
     assert.equal(result, false, "Should have returned false!");
   });
 
   it("1 should return true", () => {
-    const result = isPowerOfTwo(1);
+    const result = isPowerOfTwo(new BN(1));
     assert.equal(result, true, "Should have returned true!");
   });
 
   it("2 should return true", () => {
-    const result = isPowerOfTwo(2);
+    const result = isPowerOfTwo(new BN(2));
     assert.equal(result, true, "Should have returned true!");
   });
 
   it("3 should return false", () => {
-    const result = isPowerOfTwo(3);
+    const result = isPowerOfTwo(new BN(3));
     assert.equal(result, false, "Should have returned false!");
   });
 
   it("Numbers close to 2**32 should return false", () => {
     for (let i: int = 2; i < 53; i++) {
-      const result = isPowerOfTwo(2 ** i);
+      const result = isPowerOfTwo(new BN(2 ** i));
       assert.equal(result, true, "Should have returned true!");
-      const result1 = isPowerOfTwo(2 ** i - 1);
+      const result1 = isPowerOfTwo(new BN(2 ** i - 1));
       assert.equal(result1, false, "Should have returned false!");
-      const result2 = isPowerOfTwo(2 ** i + 1);
+      const result2 = isPowerOfTwo(new BN(2 ** i + 1));
       assert.equal(result2, false, "Should have returned false!");
     }
   });
 
   it("Should throw if a negative number is passed in", () => {
-    assert.throws(() => { isPowerOfTwo(-1); });
-  });
-
-  it("Should throw if a value greater or equal to 2 ** 53 is passed in", () => {
-    // TODO: Remove this when we are able to support larger values.
-    assert.throws(function() { isPowerOfTwo(2 ** 53) });
-    assert.throws(function() { isPowerOfTwo(2 ** 53 + 1) });
+    assert.throws(() => { isPowerOfTwo(new BN(-1)); });
   });
 });
 
@@ -199,7 +194,7 @@ describe("getActiveValidatorIndices", () => {
   const vrArray: Validator[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(generateValidator);
 
   it("empty list of Validators should return no indices (empty list)", () => {
-    assert.deepEqual(getActiveValidatorIndices([], randBetween(0, 4)), []);
+    assert.deepEqual(getActiveValidatorIndices([], new BN(randBetween(0, 4))), []);
   });
 
   // it("list of all active Validators should return a list of all indices", () => {
@@ -265,8 +260,8 @@ describe("slotToEpoch", () => {
   ];
   for (const pair of pairs) {
     it(`Slot ${pair.test} should map to epoch ${pair.expected}`, () => {
-      const result: EpochNumber = slotToEpoch(pair.test);
-      assert.equal(result, pair.expected);
+      const result: EpochNumber = slotToEpoch(new BN(pair.test));
+      assert(result.eq(new BN(pair.expected)));
     });
   }
 });
@@ -284,8 +279,8 @@ describe("getEpochStartSlot", () => {
   ];
   for (const pair of pairs) {
     it(`Epoch ${pair.test} should map to slot ${pair.expected}`, () => {
-      const result: SlotNumber = getEpochStartSlot(pair.test);
-      assert.equal(result, pair.expected);
+      const result: SlotNumber = getEpochStartSlot(new BN(pair.test));
+      assert(result.eq(new BN(pair.expected)));
     });
   }
 });
@@ -293,37 +288,37 @@ describe("getEpochStartSlot", () => {
 describe("isActiveValidator", () => {
   it("should be active", () => {
     const v: Validator = generateValidator(0, 100);
-    const result: boolean = isActiveValidator(v, 0);
+    const result: boolean = isActiveValidator(v, new BN(0));
     assert.isTrue(result);
   });
 
   it("should be active", () => {
     const v: Validator = generateValidator(10, 101);
-    const result: boolean = isActiveValidator(v, 100);
+    const result: boolean = isActiveValidator(v, new BN(100));
     assert.isTrue(result);
   });
 
   it("should be active", () => {
     const v: Validator = generateValidator(100, 1000);
-    const result: boolean = isActiveValidator(v, 100);
+    const result: boolean = isActiveValidator(v, new BN(100));
     assert.isTrue(result);
   });
 
   it("should not be active", () => {
     const v: Validator = generateValidator(1);
-    const result: boolean = isActiveValidator(v, 0);
+    const result: boolean = isActiveValidator(v, new BN(0));
     assert.isFalse(result);
   });
 
   it("should not be active", () => {
     const v: Validator = generateValidator(100);
-    const result: boolean = isActiveValidator(v, 5);
+    const result: boolean = isActiveValidator(v, new BN(5));
     assert.isFalse(result);
   });
 
   it("should not be active", () => {
     const v: Validator = generateValidator(1, 5);
-    const result: boolean = isActiveValidator(v, 100);
+    const result: boolean = isActiveValidator(v, new BN(100));
     assert.isFalse(result);
   });
 });

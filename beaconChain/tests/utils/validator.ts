@@ -1,3 +1,4 @@
+import BN from "bn.js";
 import {Validator} from "../../types";
 
 /**
@@ -13,11 +14,11 @@ export function generateValidator(activation?: number, exit?: number): Validator
   return {
     pubkey: new Uint8Array(48),
     withdrawalCredentials: Uint8Array.of(65),
-    activationEpoch: activationValue,
-    exitEpoch: exit || randNum(),
-    withdrawalEpoch: randNum(),
-    penalizedEpoch: randNum(),
-    statusFlags: randNum(),
+    activationEpoch: new BN(activationValue),
+    exitEpoch: new BN(exit || randNum()),
+    withdrawalEpoch: new BN(randNum()),
+    penalizedEpoch: new BN(randNum()),
+    statusFlags: new BN(randNum()),
   };
 }
 
