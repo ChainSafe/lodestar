@@ -6,7 +6,7 @@ import {
   MAX_DEPOSIT_AMOUNT,
   SHARD_COUNT,
   TARGET_COMMITTEE_SIZE,
-} from "../constants/constants";
+} from "../constants";
 import {
   AttestationData,
   BeaconState, Bytes32,
