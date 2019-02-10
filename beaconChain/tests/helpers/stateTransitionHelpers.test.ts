@@ -1,11 +1,12 @@
 import { assert } from "chai";
 import BN from "bn.js";
 
-import {EpochNumber, SlotNumber, Validator} from "../../types";
 import { EPOCH_LENGTH, TARGET_COMMITTEE_SIZE } from "../../constants";
 import {
-  clamp, getActiveValidatorIndices, getEpochCommitteeCount, getEpochStartSlot, intSqrt, isActiveValidator, isPowerOfTwo, readUIntBE, slotToEpoch, split, isDoubleVote,
+  clamp, getActiveValidatorIndices, getEpochStartSlot, intSqrt, isActiveValidator, isPowerOfTwo, readUIntBE,
+  slotToEpoch, split, isDoubleVote, getCurrentEpoch, getForkVersion, getDomain, getEpochCommitteeCount
 } from "../../helpers/stateTransitionHelpers";
+import {EpochNumber, Fork, SlotNumber, Validator} from "../../types";
 import {generateValidator} from "../utils/validator";
 import {generateAttestationData} from "../utils/attestation";
 import {randBetween} from "../utils/misc";
@@ -339,5 +340,47 @@ describe("isActiveValidator", () => {
     const v: Validator = generateValidator(1, 5);
     const result: boolean = isActiveValidator(v, new BN(100));
     assert.isFalse(result);
+  });
+});
+
+describe("getForkVersion", () => {
+  const fork: Fork = {
+    epoch: 12,
+    previousVersion: 4,
+    currentVersion: 5
+  };
+
+  it("fork version should be 4", () => {
+    assert.equal(getForkVersion(fork, 8), 4);
+  });
+
+  it("fork version should be 5", () => {
+    assert.equal(getForkVersion(fork, 13), 5);
+  });
+
+  it("fork version should be 5", () => {
+    assert.equal(getForkVersion(fork, 12), 5);
+  });
+});
+
+describe("getDomain", () => {
+  const fork: Fork = {
+    epoch: 12,
+    previousVersion: 4,
+    currentVersion: 5
+  };
+
+  const constant: number = 2 ** 32;
+
+  it("domain version should be ", () => {
+    assert.equal(getDomain(fork, 8, 4), 4 * constant + 4);
+  });
+
+  it("domain version should be ", () => {
+    assert.equal(getDomain(fork, 13, 5), 5 * constant + 5);
+  });
+
+  it("domain version should be ", () => {
+    assert.equal(getDomain(fork, 12, 5), 5 * constant + 5);
   });
 });
