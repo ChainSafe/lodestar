@@ -2,6 +2,7 @@ import {SHARD_COUNT, GENESIS_EPOCH, ZERO_HASH, GENESIS_SLOT, GENESIS_FORK_VERSIO
 import {BeaconState, Crosslink, Eth1Data, Fork, PendingAttestation, uint64, Validator} from "../../types";
 import {Eth1DataVote, bytes32} from "../../types";
 import {generateValidators} from "./validator";
+import {randBetween} from "./misc";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -52,7 +53,6 @@ interface TestBeaconState {
  * @returns {BeaconState}
  */
 export function generateState(opts?: TestBeaconState): BeaconState {
-
   const initialCrosslinkRecord: Crosslink = {
     epoch: GENESIS_EPOCH,
     shardBlockRoot: ZERO_HASH
@@ -104,11 +104,15 @@ export function generateState(opts?: TestBeaconState): BeaconState {
   };
 }
 
-const randNum = () =>  Math.floor(Math.random() * Math.floor(4));
-
+/**
+ * Generates a random beacon state, with the option to override on or more parameters.
+ * TODO: Should check to make sure that if a field is changed the appropriate conditions are met, BeaconState should be valid.
+ * @param {TestBeaconState} opts
+ * @returns {BeaconState}
+ */
 export function generateRandomState(opts?: TestBeaconState): BeaconState {
   const initialCrosslinkRecord: Crosslink = {
-    epoch: randNum(),
+    epoch: randBetween(0,1000),
     shardBlockRoot: new Uint8Array()
   };
 
@@ -117,43 +121,43 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
     blockHash: new Uint8Array(32)
   };
 
-  const validatorNum: number = randNum();
+  const validatorNum: number = randBetween(0,1000);
 
   return {
     // MISC
-    slot: opts.slot || randNum(),
+    slot: opts.slot || randBetween(0,1000),
     genesisTime: opts.genesisTime || new Date().getTime(),
     fork: opts.fork || {
-      previousVersion: randNum(),
-      currentVersion: randNum(),
-      epoch: randNum()
+      previousVersion: randBetween(0,1000),
+      currentVersion: randBetween(0,1000),
+      epoch: randBetween(0,1000)
     },
     // Validator registry
     validatorRegistry: opts.validatorRegistry || generateValidators(validatorNum),
-    validatorBalances: opts.validatorBalances || Array.from({length: validatorNum}, () => randNum()),
-    validatorRegistryUpdateEpoch: opts.validatorRegistryUpdateEpoch || randNum(),
+    validatorBalances: opts.validatorBalances || Array.from({length: validatorNum}, () => randBetween(0,1000)),
+    validatorRegistryUpdateEpoch: opts.validatorRegistryUpdateEpoch || randBetween(0,1000),
 
     // Randomness and committees
-    latestRandaoMixes: opts.latestRandaoMixes || Array.from({length: randNum()}, () => new Uint8Array(32)),
-    previousEpochStartShard: opts.previousEpochStartShard || randNum(),
-    currentEpochStartShard: opts.currentEpochStartShard || randNum(),
-    previousCalculationEpoch: opts.previousCalculationEpoch || randNum(),
-    currentCalculationEpoch: opts.currentCalculationEpoch || randNum(),
+    latestRandaoMixes: opts.latestRandaoMixes || Array.from({length: randBetween(0,1000)}, () => new Uint8Array(32)),
+    previousEpochStartShard: opts.previousEpochStartShard || randBetween(0,1000),
+    currentEpochStartShard: opts.currentEpochStartShard || randBetween(0,1000),
+    previousCalculationEpoch: opts.previousCalculationEpoch || randBetween(0,1000),
+    currentCalculationEpoch: opts.currentCalculationEpoch || randBetween(0,1000),
     previousEpochSeed: opts.previousEpochSeed|| new Uint8Array(32),
     currentEpochSeed: opts.currentEpochSeed || new Uint8Array(32),
 
     // Finality
-    previousJustifiedEpoch: opts.previousJustifiedEpoch || randNum(),
-    justifiedEpoch: opts.justifiedEpoch || randNum(),
-    justificationBitfield: opts.justificationBitfield || randNum(),
-    finalizedEpoch: opts.finalizedEpoch || randNum(),
+    previousJustifiedEpoch: opts.previousJustifiedEpoch || randBetween(0,1000),
+    justifiedEpoch: opts.justifiedEpoch || randBetween(0,1000),
+    justificationBitfield: opts.justificationBitfield || randBetween(0,1000),
+    finalizedEpoch: opts.finalizedEpoch || randBetween(0,1000),
 
-    latestCrosslinks: opts.latestCrosslinks || Array.from({length: randNum()}, () => initialCrosslinkRecord),
-    latestBlockRoots: opts.latestBlockRoots || Array.from({length: randNum()}, () => new Uint8Array()),
-    latestIndexRoots: opts.latestIndexRoots || Array.from({length: randNum()}, () => new Uint8Array()),
-    latestPenalizedBalances: opts.latestPenalizedBalances || Array.from({length: randNum()}, () => randNum()),
+    latestCrosslinks: opts.latestCrosslinks || Array.from({length: randBetween(0,1000)}, () => initialCrosslinkRecord),
+    latestBlockRoots: opts.latestBlockRoots || Array.from({length: randBetween(0,1000)}, () => new Uint8Array()),
+    latestIndexRoots: opts.latestIndexRoots || Array.from({length: randBetween(0,1000)}, () => new Uint8Array()),
+    latestPenalizedBalances: opts.latestPenalizedBalances || Array.from({length: randBetween(0,1000)}, () => randBetween(0,1000)),
     latestAttestations: opts.latestAttestations || [],
-    batchedBlockRoots: opts.batchedBlockRoots || Array.from({length: randNum()}, () => new Uint8Array()),
+    batchedBlockRoots: opts.batchedBlockRoots || Array.from({length: randBetween(0,1000)}, () => new Uint8Array()),
 
     // PoW receipt root
     latestEth1Data: opts.latestEth1Data || {
@@ -174,9 +178,9 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
 //     const type = field[1];
 //
 //     if (type.includes("uint")) {
-//       state[name] = randNum();
+//       state[name] = randBetween(0,1000);
 //     } else if (type.includes("bytes")) {
-//       state[name] = new Uint8Array(randNum());
+//       state[name] = new Uint8Array(randBetween(0,1000));
 //
 //     // Check if the type is array
 //     } else if (Array.isArray(type)) {
@@ -184,12 +188,12 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
 //
 //       if (arrType.includes("CrossLink")) {
 //       } else if (arrType.includes("Validator")) {
-//         state[name] = generateValidators(randNum());
+//         state[name] = generateValidators(randBetween(0,1000));
 //       } else if (arrType.includes("PendingAttestation")) {
 //       } else if (arrType.includes("bytes")) {
-//         state[name] = Array.from({length: randNum()}, () => new Uint8Array(randNum()));
+//         state[name] = Array.from({length: randBetween(0,1000)}, () => new Uint8Array(randBetween(0,1000)));
 //       } else if (arrType.includes("uint")) {
-//         state[name] = Array.from({length: randNum()}, () => ZERO_HASH)
+//         state[name] = Array.from({length: randBetween(0,1000)}, () => ZERO_HASH)
 //       } else if (arrType.includes("Eth1DataVote")) {
 //       } else if (arrType.includes("Eth1Data")) {
 //
