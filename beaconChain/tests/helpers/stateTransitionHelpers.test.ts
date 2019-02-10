@@ -1,9 +1,12 @@
 import { assert } from "chai";
 import {
-  clamp, getActiveValidatorIndices, getEpochStartSlot, intSqrt, isActiveValidator, isPowerOfTwo, readUIntBE, slotToEpoch, split,
+  clamp, getActiveValidatorIndices, getEpochStartSlot, intSqrt, isActiveValidator, isPowerOfTwo, readUIntBE, slotToEpoch, split, isDoubleVote,
 } from "../../helpers/stateTransitionHelpers";
 import {EpochNumber, SlotNumber, Validator} from "../../types";
 import {generateValidator} from "../utils/validator";
+import {generateAttestationData} from "../utils/attestation";
+import {randBetween} from "../utils/misc";
+import {EPOCH_LENGTH} from "../../constants/constants";
 
 type int = number;
 
@@ -174,21 +177,29 @@ describe("intSqrt", () => {
   });
 });
 
-describe("getActiveValidatorIndices", () => {
-  const randNum = () =>  Math.floor(Math.random() * Math.floor(4));
-  const genValidator = (): Validator => ({
-    pubkey: new Uint8Array(48),
-    withdrawalCredentials: Uint8Array.of(65),
-    activationEpoch: randNum(),
-    exitEpoch: randNum(),
-    withdrawalEpoch: randNum(),
-    penalizedEpoch: randNum(),
-    statusFlags: randNum(),
+describe("isDoubleVote", () => {
+  it("Attestation data with the same epoch should return true", () => {
+    const epoch = randBetween(1, 1000);
+    const slot = epoch * EPOCH_LENGTH;
+    const a1 = generateAttestationData(slot, randBetween(1, 1000));
+    const a2 = generateAttestationData(slot + EPOCH_LENGTH - 1, randBetween(1, 1000));
+    assert.isTrue(isDoubleVote(a1, a2));
   });
-  const vrArray: Validator[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(genValidator);
+
+  it("Attestation data with different epochs should return false", () => {
+    const epoch = randBetween(1, 1000);
+    const slot = epoch * EPOCH_LENGTH;
+    const a1 = generateAttestationData(slot, randBetween(1, 1000));
+    const a2 = generateAttestationData(slot - 1, randBetween(1, 1000));
+    assert.isFalse(isDoubleVote(a1, a2));
+  });
+});
+
+describe("getActiveValidatorIndices", () => {
+  const vrArray: Validator[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(generateValidator);
 
   it("empty list of Validators should return no indices (empty list)", () => {
-    assert.deepEqual(getActiveValidatorIndices([], randNum()), []);
+    assert.deepEqual(getActiveValidatorIndices([], randBetween(0, 4)), []);
   });
 
   // it("list of all active Validators should return a list of all indices", () => {
