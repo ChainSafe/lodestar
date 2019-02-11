@@ -1,11 +1,12 @@
 import { assert } from "chai";
 import BN from "bn.js";
 
-import {EpochNumber, SlotNumber, Validator} from "../../types";
 import { EPOCH_LENGTH, TARGET_COMMITTEE_SIZE } from "../../constants";
 import {
-  clamp, getActiveValidatorIndices, getEpochCommitteeCount, getEpochStartSlot, intSqrt, isActiveValidator, isPowerOfTwo, readUIntBE, slotToEpoch, split, isDoubleVote,
+  clamp, getActiveValidatorIndices, getEpochStartSlot, intSqrt, isActiveValidator, isPowerOfTwo, readUIntBE,
+  slotToEpoch, split, isDoubleVote, getCurrentEpoch, getForkVersion, getDomain, getEpochCommitteeCount
 } from "../../helpers/stateTransitionHelpers";
+import {EpochNumber, Fork, SlotNumber, uint64, Validator} from "../../types";
 import {generateValidator} from "../utils/validator";
 import {generateAttestationData} from "../utils/attestation";
 import {randBetween} from "../utils/misc";
@@ -339,5 +340,61 @@ describe("isActiveValidator", () => {
     const v: Validator = generateValidator(1, 5);
     const result: boolean = isActiveValidator(v, new BN(100));
     assert.isFalse(result);
+  });
+});
+
+describe("getForkVersion", () => {
+  const fork: Fork = {
+    epoch: new BN(12),
+    previousVersion: new BN(4),
+    currentVersion: new BN(5)
+  };
+
+  const four: uint64 = new BN(4);
+  const five: uint64 = new BN(5);
+
+  it("epoch after fork epoch returns current fork version", () => {
+    const result = getForkVersion(fork, new BN(8));
+    assert(result.eq(four));
+  });
+
+  it("epoch after fork epoch returns current fork version", () => {
+    const result = getForkVersion(fork, new BN(13));
+    assert(result.eq(five));
+  });
+
+  it("epoch after fork epoch returns current fork version", () => {
+    const result = getForkVersion(fork, new BN(12));
+    assert(result.eq(five));
+  });
+});
+
+describe("getDomain", () => {
+  const fork: Fork = {
+    epoch: new BN(12),
+    previousVersion: new BN(4),
+    currentVersion: new BN(5)
+  };
+
+  const constant: uint64 = new BN(2 ** 32);
+  const four: uint64 = new BN(4);
+  const five: uint64 = new BN(5);
+
+  it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
+    const result = getDomain(fork, new BN(8), 4);
+    const expected = four.mul(constant).add(four);
+    assert(result.eq(expected));
+  });
+
+  it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
+    const result = getDomain(fork, new BN(13), 5);
+    const expected = five.mul(constant).add(five);
+    assert(result.eq(expected));
+  });
+
+  it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
+    const result = getDomain(fork, new BN(12), 5);
+    const expected = five.mul(constant).add(five);
+    assert(result.eq(expected));
   });
 });
