@@ -1,3 +1,5 @@
+import BN from "bn.js";
+
 import {randBetween} from "./misc";
 import {AttestationData} from "../../types";
 
@@ -7,15 +9,15 @@ import {AttestationData} from "../../types";
  * @param {number} justifiedEpochValue
  * @returns {AttestationData}
  */
-export function generateAttestationData(slotValue: number, justifiedEpochValue: number): AttestationData {
+export function generateAttestationData(slotValue: number | BN, justifiedEpochValue: number | BN): AttestationData {
   return {
-    slot: slotValue,
-    shard: randBetween(0, 1024),
+    slot: new BN(slotValue),
+    shard: new BN(randBetween(0, 1024)),
     beaconBlockRoot: Uint8Array.of(65),
     epochBoundaryRoot: Uint8Array.of(65),
     shardBlockRoot: Uint8Array.of(65),
     latestCrosslinkRoot: Uint8Array.of(65),
-    justifiedEpoch: justifiedEpochValue,
+    justifiedEpoch: new BN(justifiedEpochValue),
     justifiedBlockRoot: Uint8Array.of(65),
   };
 }

@@ -1,4 +1,4 @@
-// TODO replace uint, bytes32, bytes
+import BN from "bn.js";
 
 // Each type exported here contains both a compile-time type (a typescript interface) and a run-time type (a javascript variable)
 // For more information, see ./index.ts
@@ -9,8 +9,8 @@ export type bytes32 = Uint8Array;
 export type bytes48 = Uint8Array;
 export type bytes96 = Uint8Array;
 export type uint24 = number;
-export type uint64 = number;
-export type uint384 = number;
+export type uint64 = BN;
+export type uint384 = BN;
 
 export const bool = "bool";
 export const bytes = "bytes";

@@ -30,8 +30,10 @@
   ],
   "dependencies": {
     "@polkadot/util-crypto": "^0.33.27",
+    "@types/bn.js": "^4.11.4",
     "bignumber.js": "^7.2.1",
     "blakejs": "^1.1.0",
+    "bn.js": "^4.11.8",
     "ssz": "^1.5.2"
   },
   "bin": {
