@@ -459,7 +459,8 @@ export function getForkVersion(fork: Fork, epoch: EpochNumber): uint64 {
  * @returns {Number}
  */
 export function getDomain(fork: Fork, epoch: EpochNumber, domainType: int): uint64 {
-  return getForkVersion(fork, epoch).muln(2 ** 32).addn(domainType);
+  const constant = new BN(2).pow(new BN(32));
+  return getForkVersion(fork, epoch).mul(constant).addn(domainType);
 }
 
 // TODO finish
