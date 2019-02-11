@@ -6,7 +6,7 @@ import {
   clamp, getActiveValidatorIndices, getEpochStartSlot, intSqrt, isActiveValidator, isPowerOfTwo, readUIntBE,
   slotToEpoch, split, isDoubleVote, getCurrentEpoch, getForkVersion, getDomain, getEpochCommitteeCount
 } from "../../helpers/stateTransitionHelpers";
-import {EpochNumber, Fork, SlotNumber, Validator} from "../../types";
+import {EpochNumber, Fork, SlotNumber, uint64, Validator} from "../../types";
 import {generateValidator} from "../utils/validator";
 import {generateAttestationData} from "../utils/attestation";
 import {randBetween} from "../utils/misc";
@@ -345,42 +345,42 @@ describe("isActiveValidator", () => {
 
 describe("getForkVersion", () => {
   const fork: Fork = {
-    epoch: 12,
-    previousVersion: 4,
-    currentVersion: 5
+    epoch: new BN(12),
+    previousVersion: new BN(4),
+    currentVersion: new BN(5)
   };
 
   it("fork version should be 4", () => {
-    assert.equal(getForkVersion(fork, 8), 4);
+    assert.equal(getForkVersion(fork, new BN(8)), new BN(4));
   });
 
   it("fork version should be 5", () => {
-    assert.equal(getForkVersion(fork, 13), 5);
+    assert.equal(getForkVersion(fork, new BN(13)), new BN(5));
   });
 
   it("fork version should be 5", () => {
-    assert.equal(getForkVersion(fork, 12), 5);
+    assert.equal(getForkVersion(fork, new BN(12)), new BN(5));
   });
 });
 
 describe("getDomain", () => {
   const fork: Fork = {
-    epoch: 12,
-    previousVersion: 4,
-    currentVersion: 5
+    epoch: new BN(12),
+    previousVersion: new BN(4),
+    currentVersion: new BN(5)
   };
 
-  const constant: number = 2 ** 32;
+  const constant: uint64 = new BN(2 ** 32);
 
   it("domain version should be ", () => {
-    assert.equal(getDomain(fork, 8, 4), 4 * constant + 4);
+    assert.equal(getDomain(fork, new BN(8),4), new BN(4).mul(constant).addn(4));
   });
 
   it("domain version should be ", () => {
-    assert.equal(getDomain(fork, 13, 5), 5 * constant + 5);
+    assert.equal(getDomain(fork, new BN(13), 5), new BN(5).mul(constant).addn(5));
   });
 
   it("domain version should be ", () => {
-    assert.equal(getDomain(fork, 12, 5), 5 * constant + 5);
+    assert.equal(getDomain(fork, new BN(12), 5), new BN(5).mul(constant).addn(5));
   });
 });
