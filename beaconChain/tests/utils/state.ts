@@ -48,7 +48,7 @@ interface TestBeaconState {
 
 /**
  * Generate beaconState, by default it will use the initial state defined when the `ChainStart` log is emitted.
- * NOTE: All fields can be ovverriden through `opts`.
+ * NOTE: All fields can be overridden through `opts`.
  * @param {TestBeaconState} opts
  * @returns {BeaconState}
  */
