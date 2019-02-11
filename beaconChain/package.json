@@ -15,6 +15,7 @@
   "scripts": {
     "lint": "node_modules/.bin/tslint -c tslint.json '*/*.ts'",
     "lint-fix": "node_modules/.bin/tslint -c tslint.json '*/*.ts' --fix",
+    "nyc": "node_modules/.bin/nyc -r lcov -e .ts -x \"*.test.ts\" node_modules/.bin/mocha -r ts-node/register tests/**/*.test.ts && node_modules/.bin/nyc report",
     "test": "node_modules/.bin/mocha -r ts-node/register tests/**/*.test.ts"
   },
   "repository": {
@@ -45,7 +46,7 @@
     "@types/node": "^10.12.17",
     "chai": "^4.2.0",
     "mocha": "^5.2.0",
-    "nyc": "^13.1.0",
+    "nyc": "^13.2.0",
     "ts-node": "^7.0.1",
     "tslint": "^5.11.0",
     "typescript": "^3.2.1"

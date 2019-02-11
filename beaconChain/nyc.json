@@ -1,0 +1,13 @@
+{
+  "include": [
+    "helpers/**/*.ts",
+    "lib/**/*.ts",
+    "node/**/*.ts",
+    "pow/**/*.ts",
+    "types/**/*.ts"
+  ],
+  "extensions": [
+    ".ts"
+  ],
+  "all": true
+}
