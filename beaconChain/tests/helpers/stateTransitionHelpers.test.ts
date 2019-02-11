@@ -353,17 +353,17 @@ describe("getForkVersion", () => {
   const four: uint64 = new BN(4);
   const five: uint64 = new BN(5);
 
-  it("fork version should be 4", () => {
+  it("epoch after fork epoch returns current fork version", () => {
     const result = getForkVersion(fork, new BN(8));
     assert(result.eq(four));
   });
 
-  it("fork version should be 5", () => {
+  it("epoch after fork epoch returns current fork version", () => {
     const result = getForkVersion(fork, new BN(13));
     assert(result.eq(five));
   });
 
-  it("fork version should be 5", () => {
+  it("epoch after fork epoch returns current fork version", () => {
     const result = getForkVersion(fork, new BN(12));
     assert(result.eq(five));
   });
@@ -380,20 +380,20 @@ describe("getDomain", () => {
   const four: uint64 = new BN(4);
   const five: uint64 = new BN(5);
 
-  it("domain version should be 4", () => {
-    const result = getDomain(fork, new BN(8),4);
+  it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
+    const result = getDomain(fork, new BN(8), 4);
     const expected = four.mul(constant).add(four);
     assert(result.eq(expected));
   });
 
-  it("domain version should be 5", () => {
-    const result = getDomain(fork, new BN(13),5);
+  it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
+    const result = getDomain(fork, new BN(13), 5);
     const expected = five.mul(constant).add(five);
     assert(result.eq(expected));
   });
 
-  it("domain version should be 5", () => {
-    const result = getDomain(fork, new BN(12),5);
+  it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
+    const result = getDomain(fork, new BN(12), 5);
     const expected = five.mul(constant).add(five);
     assert(result.eq(expected));
   });
