@@ -12,7 +12,7 @@ There is a lot of work being done that are core infrastructural pieces for Eth2.
 [![](https://img.shields.io/travis/com/ChainSafeSystems/lodestar/master.svg?label=master&logo=travis "Master Branch (Travis)")](https://travis-ci.com/ChainSafeSystems/lodestar)
 [![](https://badges.gitter.im/chainsafe/lodestar.svg)](https://gitter.im/chainsafe/lodestar?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 ![](https://img.shields.io/codecov/c/github/ChainSafeSystems/lodestar.svg?label=Codecov&style=flat)
-![](https://img.shields.io/codeclimate/coverage/ChainSafeSystems/lodestar.svg?label=Code%20Climate&style=flat)
+[![Maintainability](https://api.codeclimate.com/v1/badges/678099476c401e1af503/maintainability)](https://codeclimate.com/github/ChainSafeSystems/lodestar/maintainability)
 
 # Overview
 The goal of this repository is to provide an implementation of the beacon chain. As even the Ethereum Core dev team don't know how the finalized beacon chain
