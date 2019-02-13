@@ -1,8 +1,10 @@
+import BN from "bn.js";
+
 import {SHARD_COUNT, GENESIS_EPOCH, ZERO_HASH, GENESIS_SLOT, GENESIS_FORK_VERSION, GENESIS_START_SHARD, LATEST_RANDAO_MIXES_LENGTH, LATEST_BLOCK_ROOTS_LENGTH, LATEST_INDEX_ROOTS_LENGTH, LATEST_PENALIZED_EXIT_LENGTH} from "../../constants";
 import {BeaconState, Crosslink, Eth1Data, Fork, PendingAttestation, uint64, Validator} from "../../types";
 import {Eth1DataVote, bytes32} from "../../types";
 import {generateValidators} from "./validator";
-import {randBetween} from "./misc";
+import {randBetween, randBetweenBN} from "./misc";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -52,7 +54,7 @@ interface TestBeaconState {
  * @param {TestBeaconState} opts
  * @returns {BeaconState}
  */
-export function generateState(opts?: TestBeaconState): BeaconState {
+export function generateState(opts?: TestBeaconState): TestBeaconState {
   const initialCrosslinkRecord: Crosslink = {
     epoch: GENESIS_EPOCH,
     shardBlockRoot: ZERO_HASH
@@ -61,7 +63,7 @@ export function generateState(opts?: TestBeaconState): BeaconState {
   return {
     // MISC
     slot: opts.slot || GENESIS_SLOT,
-    genesisTime: opts.genesisTime || new Date().getTime(),
+    genesisTime: opts.genesisTime || new BN(new Date().getTime()),
     fork: opts.fork || {
       previousVersion: GENESIS_FORK_VERSION,
       currentVersion: GENESIS_FORK_VERSION,
@@ -84,14 +86,14 @@ export function generateState(opts?: TestBeaconState): BeaconState {
     // Finality
     previousJustifiedEpoch: opts.previousJustifiedEpoch || GENESIS_EPOCH,
     justifiedEpoch: opts.justifiedEpoch || GENESIS_EPOCH,
-    justificationBitfield: opts.justificationBitfield || 0,
+    justificationBitfield: opts.justificationBitfield || new BN(0),
     finalizedEpoch: opts.finalizedEpoch || GENESIS_EPOCH,
 
     // Recent state
     latestCrosslinks: opts.latestCrosslinks || Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
     latestBlockRoots: opts.latestBlockRoots || Array.from({length: LATEST_BLOCK_ROOTS_LENGTH}, () => ZERO_HASH),
     latestIndexRoots: opts.latestIndexRoots || Array.from({length: LATEST_INDEX_ROOTS_LENGTH}, () => ZERO_HASH),
-    latestPenalizedBalances: opts.latestPenalizedBalances || Array.from({length: LATEST_PENALIZED_EXIT_LENGTH}, () => 0),
+    latestPenalizedBalances: opts.latestPenalizedBalances || Array.from({length: LATEST_PENALIZED_EXIT_LENGTH}, () => new BN(0)),
     latestAttestations: opts.latestAttestations || [],
     batchedBlockRoots: opts.batchedBlockRoots || [],
 
@@ -112,7 +114,7 @@ export function generateState(opts?: TestBeaconState): BeaconState {
  */
 export function generateRandomState(opts?: TestBeaconState): BeaconState {
   const initialCrosslinkRecord: Crosslink = {
-    epoch: randBetween(0,1000),
+    epoch: randBetweenBN(0,1000),
     shardBlockRoot: new Uint8Array()
   };
 
@@ -125,37 +127,37 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
 
   return {
     // MISC
-    slot: opts.slot || randBetween(0,1000),
-    genesisTime: opts.genesisTime || new Date().getTime(),
+    slot: opts.slot || randBetweenBN(0,1000),
+    genesisTime: opts.genesisTime || new BN(new Date().getTime()),
     fork: opts.fork || {
-      previousVersion: randBetween(0,1000),
-      currentVersion: randBetween(0,1000),
-      epoch: randBetween(0,1000)
+      previousVersion: randBetweenBN(0,1000),
+      currentVersion: randBetweenBN(0,1000),
+      epoch: randBetweenBN(0,1000)
     },
     // Validator registry
     validatorRegistry: opts.validatorRegistry || generateValidators(validatorNum),
-    validatorBalances: opts.validatorBalances || Array.from({length: validatorNum}, () => randBetween(0,1000)),
-    validatorRegistryUpdateEpoch: opts.validatorRegistryUpdateEpoch || randBetween(0,1000),
+    validatorBalances: opts.validatorBalances || Array.from({length: validatorNum}, () => randBetweenBN(0,1000)),
+    validatorRegistryUpdateEpoch: opts.validatorRegistryUpdateEpoch || randBetweenBN(0,1000),
 
     // Randomness and committees
     latestRandaoMixes: opts.latestRandaoMixes || Array.from({length: randBetween(0,1000)}, () => new Uint8Array(32)),
-    previousEpochStartShard: opts.previousEpochStartShard || randBetween(0,1000),
-    currentEpochStartShard: opts.currentEpochStartShard || randBetween(0,1000),
-    previousCalculationEpoch: opts.previousCalculationEpoch || randBetween(0,1000),
-    currentCalculationEpoch: opts.currentCalculationEpoch || randBetween(0,1000),
+    previousEpochStartShard: opts.previousEpochStartShard || randBetweenBN(0,1000),
+    currentEpochStartShard: opts.currentEpochStartShard || randBetweenBN(0,1000),
+    previousCalculationEpoch: opts.previousCalculationEpoch || randBetweenBN(0,1000),
+    currentCalculationEpoch: opts.currentCalculationEpoch || randBetweenBN(0,1000),
     previousEpochSeed: opts.previousEpochSeed|| new Uint8Array(32),
     currentEpochSeed: opts.currentEpochSeed || new Uint8Array(32),
 
     // Finality
-    previousJustifiedEpoch: opts.previousJustifiedEpoch || randBetween(0,1000),
-    justifiedEpoch: opts.justifiedEpoch || randBetween(0,1000),
-    justificationBitfield: opts.justificationBitfield || randBetween(0,1000),
-    finalizedEpoch: opts.finalizedEpoch || randBetween(0,1000),
+    previousJustifiedEpoch: opts.previousJustifiedEpoch || randBetweenBN(0,1000),
+    justifiedEpoch: opts.justifiedEpoch || randBetweenBN(0,1000),
+    justificationBitfield: opts.justificationBitfield || randBetweenBN(0,1000),
+    finalizedEpoch: opts.finalizedEpoch || randBetweenBN(0,1000),
 
     latestCrosslinks: opts.latestCrosslinks || Array.from({length: randBetween(0,1000)}, () => initialCrosslinkRecord),
     latestBlockRoots: opts.latestBlockRoots || Array.from({length: randBetween(0,1000)}, () => new Uint8Array()),
     latestIndexRoots: opts.latestIndexRoots || Array.from({length: randBetween(0,1000)}, () => new Uint8Array()),
-    latestPenalizedBalances: opts.latestPenalizedBalances || Array.from({length: randBetween(0,1000)}, () => randBetween(0,1000)),
+    latestPenalizedBalances: opts.latestPenalizedBalances || Array.from({length: randBetween(0,1000)}, () => randBetweenBN(0,1000)),
     latestAttestations: opts.latestAttestations || [],
     batchedBlockRoots: opts.batchedBlockRoots || Array.from({length: randBetween(0,1000)}, () => new Uint8Array()),
 
