@@ -4,7 +4,7 @@ import BN from "bn.js";
 import { EPOCH_LENGTH, TARGET_COMMITTEE_SIZE } from "../../constants";
 import {
   clamp, getActiveValidatorIndices, getEpochStartSlot, intSqrt, isActiveValidator, isPowerOfTwo, readUIntBE,
-  slotToEpoch, split, isDoubleVote, getCurrentEpoch, getForkVersion, getDomain, getEpochCommitteeCount
+  slotToEpoch, split, isDoubleVote, getCurrentEpoch, getForkVersion, getDomain, getEpochCommitteeCount, isSurroundVote
 } from "../../helpers/stateTransitionHelpers";
 import {EpochNumber, Fork, SlotNumber, uint64, Validator} from "../../types";
 import {generateValidator} from "../utils/validator";
@@ -177,19 +177,86 @@ describe("intSqrt", () => {
 
 describe("isDoubleVote", () => {
   it("Attestation data with the same epoch should return true", () => {
-    const epoch = randBetween(1, 1000);
-    const slot = epoch * EPOCH_LENGTH;
-    const a1 = generateAttestationData(slot, randBetween(1, 1000));
-    const a2 = generateAttestationData(slot + EPOCH_LENGTH - 1, randBetween(1, 1000));
+    const epoch: uint64 = new BN(randBetween(1, 1000));
+    const slot1: uint64 = epoch.muln(EPOCH_LENGTH);
+    const slot2: uint64 = slot1.addn(EPOCH_LENGTH - 1);
+    const a1 = generateAttestationData(slot1, new BN(randBetween(1, 1000)));
+    const a2 = generateAttestationData(slot2, new BN(randBetween(1, 1000)));
     assert.isTrue(isDoubleVote(a1, a2));
   });
 
   it("Attestation data with different epochs should return false", () => {
-    const epoch = randBetween(1, 1000);
-    const slot = epoch * EPOCH_LENGTH;
-    const a1 = generateAttestationData(slot, randBetween(1, 1000));
-    const a2 = generateAttestationData(slot - 1, randBetween(1, 1000));
+    const epoch: uint64 = new BN(randBetween(1, 1000));
+    const slot1: uint64  = epoch.muln(EPOCH_LENGTH);
+    const slot2: uint64  = slot1.subn(1);
+    const a1 = generateAttestationData(slot1, new BN(randBetween(1, 1000)));
+    const a2 = generateAttestationData(slot2, new BN(randBetween(1, 1000)));
     assert.isFalse(isDoubleVote(a1, a2));
+  });
+});
+
+describe("isSurroundVote", () => {
+  it("Attestation data with the same epoch should return true", () => {
+    let sourceEpoch1: uint64 = new BN(randBetween(1, 1000));
+    let sourceEpoch2: uint64 = sourceEpoch1.addn(1);
+
+    let targetEpoch1: uint64 = new BN(randBetween(1, 1000));
+    let targetEpoch2: uint64 = targetEpoch1.subn(1);
+
+    let targetSlot1: uint64 = targetEpoch1.muln(EPOCH_LENGTH);
+    let targetSlot2: uint64 = targetEpoch2.muln(EPOCH_LENGTH);
+
+    let a1 = generateAttestationData(targetSlot1, sourceEpoch1);
+    let a2 = generateAttestationData(targetSlot2, sourceEpoch2);
+
+    assert.isTrue(isSurroundVote(a1, a2));
+  });
+
+  it("Should return false if the second attestation does not have a greater source epoch", () => {
+    // Both attestations have the same source epoch.
+    let sourceEpoch1: uint64 = new BN(randBetween(1, 1000));
+    let sourceEpoch2: uint64 = sourceEpoch1;
+
+    let targetEpoch1: uint64 = new BN(randBetween(1, 1000));
+    let targetEpoch2: uint64 = targetEpoch1.subn(1);
+
+    let targetSlot1: uint64 = targetEpoch1.muln(EPOCH_LENGTH);
+    let targetSlot2: uint64 = targetEpoch2.muln(EPOCH_LENGTH);
+
+    let a1 = generateAttestationData(targetSlot1, sourceEpoch1);
+    let a2 = generateAttestationData(targetSlot2, sourceEpoch2);
+
+    assert.isFalse(isSurroundVote(a1, a2));
+
+    // Second attestation has a smaller source epoch.
+    sourceEpoch2 = sourceEpoch1.subn(1);
+    a2 = generateAttestationData(targetSlot2, sourceEpoch2);
+    assert.isFalse(isSurroundVote(a1, a2));
+  });
+
+  it("Should return false if the second attestation does not have a smaller target epoch", () => {
+    // Both attestations have the same target epoch.
+    let sourceEpoch1: uint64 = new BN(randBetween(1, 1000));
+    let sourceEpoch2: uint64 = sourceEpoch1.addn(1);
+
+    let targetEpoch = new BN(randBetween(2, 1000));
+
+    // Last slot in the epoch.
+    let targetSlot1: uint64 = targetEpoch.muln(EPOCH_LENGTH).subn(1);
+    // First slot in the epoch
+    let targetSlot2: uint64 = targetEpoch.subn(1).muln(EPOCH_LENGTH);
+
+    let a1 = generateAttestationData(targetSlot1, sourceEpoch1);
+    let a2 = generateAttestationData(targetSlot2, sourceEpoch2);
+
+    assert.isFalse(isSurroundVote(a1, a2));
+
+    // Second attestation has a greater target epoch.
+    targetSlot1 = targetEpoch.muln(EPOCH_LENGTH);
+    targetSlot2 = targetEpoch.addn(1).muln(EPOCH_LENGTH);
+    a1 = generateAttestationData(targetSlot1, sourceEpoch1);
+    a2 = generateAttestationData(targetSlot2, sourceEpoch2);
+    assert.isFalse(isSurroundVote(a1, a2));
   });
 });
 
