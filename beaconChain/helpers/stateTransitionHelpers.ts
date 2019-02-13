@@ -257,7 +257,7 @@ export function getNextEpochCommitteeCount(state: BeaconState): int {
 function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: SlotNumber, registryChange: boolean = false): Array<{ShardNumber, ValidatorIndex}> {
   const epoch = slotToEpoch(slot);
   const currentEpoch = getCurrentEpoch(state);
-  const previousEpoch = currentEpoch.gtn(GENESIS_EPOCH) ? currentEpoch.subn(1) : currentEpoch;
+  const previousEpoch = currentEpoch.gt(GENESIS_EPOCH) ? currentEpoch.subn(1) : currentEpoch;
   const nextEpoch = currentEpoch.addn(1);
 
   if (previousEpoch <= epoch && epoch <= nextEpoch) { throw new Error("Slot is too early!"); }
