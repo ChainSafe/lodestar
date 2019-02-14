@@ -1,15 +1,15 @@
-import { assert } from "chai";
 import BN from "bn.js";
+import { assert } from "chai";
 
 import { EPOCH_LENGTH, TARGET_COMMITTEE_SIZE } from "../../constants";
 import {
-  clamp, getActiveValidatorIndices, getEpochStartSlot, intSqrt, isActiveValidator, isPowerOfTwo, readUIntBE,
-  slotToEpoch, split, isDoubleVote, getCurrentEpoch, getForkVersion, getDomain, getEpochCommitteeCount, isSurroundVote
+  clamp, getActiveValidatorIndices, getCurrentEpoch, getDomain, getEpochCommitteeCount, getEpochStartSlot, getForkVersion,
+  intSqrt, isActiveValidator, isDoubleVote, isPowerOfTwo, isSurroundVote, readUIntBE, slotToEpoch, split,
 } from "../../helpers/stateTransitionHelpers";
 import {EpochNumber, Fork, SlotNumber, uint64, Validator} from "../../types";
-import {generateValidator} from "../utils/validator";
 import {generateAttestationData} from "../utils/attestation";
 import {randBetween} from "../utils/misc";
+import {generateValidator} from "../utils/validator";
 
 type int = number;
 
@@ -197,33 +197,33 @@ describe("isDoubleVote", () => {
 
 describe("isSurroundVote", () => {
   it("Attestation data with the same epoch should return true", () => {
-    let sourceEpoch1: uint64 = new BN(randBetween(1, 1000));
-    let sourceEpoch2: uint64 = sourceEpoch1.addn(1);
+    const sourceEpoch1: uint64 = new BN(randBetween(1, 1000));
+    const sourceEpoch2: uint64 = sourceEpoch1.addn(1);
 
-    let targetEpoch1: uint64 = new BN(randBetween(1, 1000));
-    let targetEpoch2: uint64 = targetEpoch1.subn(1);
+    const targetEpoch1: uint64 = new BN(randBetween(1, 1000));
+    const targetEpoch2: uint64 = targetEpoch1.subn(1);
 
-    let targetSlot1: uint64 = targetEpoch1.muln(EPOCH_LENGTH);
-    let targetSlot2: uint64 = targetEpoch2.muln(EPOCH_LENGTH);
+    const targetSlot1: uint64 = targetEpoch1.muln(EPOCH_LENGTH);
+    const targetSlot2: uint64 = targetEpoch2.muln(EPOCH_LENGTH);
 
-    let a1 = generateAttestationData(targetSlot1, sourceEpoch1);
-    let a2 = generateAttestationData(targetSlot2, sourceEpoch2);
+    const a1 = generateAttestationData(targetSlot1, sourceEpoch1);
+    const a2 = generateAttestationData(targetSlot2, sourceEpoch2);
 
     assert.isTrue(isSurroundVote(a1, a2));
   });
 
   it("Should return false if the second attestation does not have a greater source epoch", () => {
     // Both attestations have the same source epoch.
-    let sourceEpoch1: uint64 = new BN(randBetween(1, 1000));
+    const sourceEpoch1: uint64 = new BN(randBetween(1, 1000));
     let sourceEpoch2: uint64 = sourceEpoch1;
 
-    let targetEpoch1: uint64 = new BN(randBetween(1, 1000));
-    let targetEpoch2: uint64 = targetEpoch1.subn(1);
+    const targetEpoch1: uint64 = new BN(randBetween(1, 1000));
+    const targetEpoch2: uint64 = targetEpoch1.subn(1);
 
-    let targetSlot1: uint64 = targetEpoch1.muln(EPOCH_LENGTH);
-    let targetSlot2: uint64 = targetEpoch2.muln(EPOCH_LENGTH);
+    const targetSlot1: uint64 = targetEpoch1.muln(EPOCH_LENGTH);
+    const targetSlot2: uint64 = targetEpoch2.muln(EPOCH_LENGTH);
 
-    let a1 = generateAttestationData(targetSlot1, sourceEpoch1);
+    const a1 = generateAttestationData(targetSlot1, sourceEpoch1);
     let a2 = generateAttestationData(targetSlot2, sourceEpoch2);
 
     assert.isFalse(isSurroundVote(a1, a2));
@@ -236,10 +236,10 @@ describe("isSurroundVote", () => {
 
   it("Should return false if the second attestation does not have a smaller target epoch", () => {
     // Both attestations have the same target epoch.
-    let sourceEpoch1: uint64 = new BN(randBetween(1, 1000));
-    let sourceEpoch2: uint64 = sourceEpoch1.addn(1);
+    const sourceEpoch1: uint64 = new BN(randBetween(1, 1000));
+    const sourceEpoch2: uint64 = sourceEpoch1.addn(1);
 
-    let targetEpoch = new BN(randBetween(2, 1000));
+    const targetEpoch = new BN(randBetween(2, 1000));
 
     // Last slot in the epoch.
     let targetSlot1: uint64 = targetEpoch.muln(EPOCH_LENGTH).subn(1);
@@ -414,7 +414,7 @@ describe("getForkVersion", () => {
   const fork: Fork = {
     epoch: new BN(12),
     previousVersion: new BN(4),
-    currentVersion: new BN(5)
+    currentVersion: new BN(5),
   };
 
   const four: uint64 = new BN(4);
@@ -440,7 +440,7 @@ describe("getDomain", () => {
   const fork: Fork = {
     epoch: new BN(12),
     previousVersion: new BN(4),
-    currentVersion: new BN(5)
+    currentVersion: new BN(5),
   };
 
   const constant: uint64 = new BN(2 ** 32);

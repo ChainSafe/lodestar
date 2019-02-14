@@ -1,5 +1,5 @@
-import fs from "fs";
 import { assert } from "chai";
+import fs from "fs";
 import * as types from "../../types";
 
 describe("types", () => {
@@ -11,36 +11,36 @@ describe("types", () => {
   const interfaces = {};
   const typesDir = __dirname + "/../../types/";
   // Get all ts files in our types directory
-  const typeFiles = fs.readdirSync(typesDir).filter(s => s.endsWith(".ts"));
-  typeFiles.map(file => {
+  const typeFiles = fs.readdirSync(typesDir).filter((s) => s.endsWith(".ts"));
+  typeFiles.map((file) => {
     // Read file contents as a string
-    let fileStr = fs.readFileSync(typesDir+file, "utf-8")
+    const fileStr = fs.readFileSync(typesDir + file, "utf-8")
       // remove line comments
       .replace(/\/\/.*\n/g, "")
       // remove multiline comments
       .replace(/\/\*[\s\S]*?\*\//mg, "");
     let match;
     // extract interface definitions
-    let interfaceRe = /export interface (.*) {([\s\S]*?)}/g
-    while(match = interfaceRe.exec(fileStr)) {
+    const interfaceRe = /export interface (.*) {([\s\S]*?)}/g;
+    while (match = interfaceRe.exec(fileStr)) {
       const name = match[1];
       const fields = match[2]
         // remove newlines
-        .replace(/\n/g,"")
+        .replace(/\n/g, "")
         // remove spaces
-        .replace(/ /g,"")
+        .replace(/ /g, "")
         // split fields by ;
         .split(";")
         // remove blank matches
-        .filter(s => s)
+        .filter((s) => s)
         // separate the field name from type
-        .map(s => {
+        .map((s) => {
           let [name, type] = s.split(":");
           // replace string [] with real []
           // allowing for nested arrays
-          let nArr = 0
+          let nArr = 0;
           while (type.match(/\[\]/)) {
-            type = type.replace("[]","");
+            type = type.replace("[]", "");
             nArr++;
           }
           for (let i = 0; i < nArr; i++) {
@@ -57,18 +57,18 @@ describe("types", () => {
   });
     //
   // put runtime type variables into an object
-  const vars = {}
-  for (let name in types) {
+  const vars = {};
+  for (const name in types) {
     vars[name] = types[name];
   }
   // Now that we have an object of interfaces and and object of runtime type variables, we can perform our tests
   it("Every interface should have a corresponding runtime type variable", () => {
     Object.keys(interfaces)
-      .map(name => {
+      .map((name) => {
         assert(
           !!vars[name],
           `var ${name} does not exist`);
-      })
+      });
   });
   it("Every interface field name/type should have the corresponding runtime type field name/type in the same order", () => {
     // Utility function to check interface field type (parsed by hand to either an array or a string)
