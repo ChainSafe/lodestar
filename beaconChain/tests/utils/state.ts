@@ -54,7 +54,7 @@ interface TestBeaconState {
  * @param {TestBeaconState} opts
  * @returns {BeaconState}
  */
-export function generateState(opts?: TestBeaconState): TestBeaconState {
+export function generateState(opts?: TestBeaconState): BeaconState {
   const initialCrosslinkRecord: Crosslink = {
     epoch: GENESIS_EPOCH,
     shardBlockRoot: ZERO_HASH
@@ -62,40 +62,40 @@ export function generateState(opts?: TestBeaconState): TestBeaconState {
 
   return {
     // MISC
-    slot: opts.slot || GENESIS_SLOT,
-    genesisTime: opts.genesisTime || new BN(new Date().getTime()),
-    fork: opts.fork || {
+    slot: GENESIS_SLOT,
+    genesisTime: new BN(new Date().getTime()),
+    fork: {
       previousVersion: GENESIS_FORK_VERSION,
       currentVersion: GENESIS_FORK_VERSION,
       epoch: GENESIS_EPOCH
     },
     // Validator registry
-    validatorRegistry: opts.validatorRegistry || [],
-    validatorBalances: opts.validatorBalances || [],
-    validatorRegistryUpdateEpoch: opts.validatorRegistryUpdateEpoch || GENESIS_EPOCH,
+    validatorRegistry: [],
+    validatorBalances: [],
+    validatorRegistryUpdateEpoch: GENESIS_EPOCH,
 
     // Randomness and committees
-    latestRandaoMixes: opts.latestRandaoMixes || Array.from({length: LATEST_RANDAO_MIXES_LENGTH}, () => ZERO_HASH),
-    previousEpochStartShard: opts.previousEpochStartShard || GENESIS_START_SHARD,
-    currentEpochStartShard: opts.currentEpochStartShard || GENESIS_START_SHARD,
-    previousCalculationEpoch: opts.previousCalculationEpoch || GENESIS_EPOCH,
-    currentCalculationEpoch: opts.currentCalculationEpoch || GENESIS_EPOCH,
-    previousEpochSeed: opts.previousEpochSeed || ZERO_HASH,
-    currentEpochSeed: opts.currentEpochSeed || ZERO_HASH,
+    latestRandaoMixes: Array.from({length: LATEST_RANDAO_MIXES_LENGTH}, () => ZERO_HASH),
+    previousEpochStartShard: GENESIS_START_SHARD,
+    currentEpochStartShard: GENESIS_START_SHARD,
+    previousCalculationEpoch: GENESIS_EPOCH,
+    currentCalculationEpoch: GENESIS_EPOCH,
+    previousEpochSeed: ZERO_HASH,
+    currentEpochSeed: ZERO_HASH,
 
     // Finality
-    previousJustifiedEpoch: opts.previousJustifiedEpoch || GENESIS_EPOCH,
-    justifiedEpoch: opts.justifiedEpoch || GENESIS_EPOCH,
-    justificationBitfield: opts.justificationBitfield || new BN(0),
-    finalizedEpoch: opts.finalizedEpoch || GENESIS_EPOCH,
+    previousJustifiedEpoch: GENESIS_EPOCH,
+    justifiedEpoch: GENESIS_EPOCH,
+    justificationBitfield: new BN(0),
+    finalizedEpoch: GENESIS_EPOCH,
 
     // Recent state
-    latestCrosslinks: opts.latestCrosslinks || Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
-    latestBlockRoots: opts.latestBlockRoots || Array.from({length: LATEST_BLOCK_ROOTS_LENGTH}, () => ZERO_HASH),
-    latestIndexRoots: opts.latestIndexRoots || Array.from({length: LATEST_INDEX_ROOTS_LENGTH}, () => ZERO_HASH),
-    latestPenalizedBalances: opts.latestPenalizedBalances || Array.from({length: LATEST_PENALIZED_EXIT_LENGTH}, () => new BN(0)),
-    latestAttestations: opts.latestAttestations || [],
-    batchedBlockRoots: opts.batchedBlockRoots || [],
+    latestCrosslinks: Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
+    latestBlockRoots: Array.from({length: LATEST_BLOCK_ROOTS_LENGTH}, () => ZERO_HASH),
+    latestIndexRoots: Array.from({length: LATEST_INDEX_ROOTS_LENGTH}, () => ZERO_HASH),
+    latestPenalizedBalances: Array.from({length: LATEST_PENALIZED_EXIT_LENGTH}, () => new BN(0)),
+    latestAttestations: [],
+    batchedBlockRoots: [],
 
     // PoW receipt root
     latestEth1Data: opts.latestEth1Data || {
@@ -103,6 +103,7 @@ export function generateState(opts?: TestBeaconState): TestBeaconState {
       blockHash: new Uint8Array(32)
     },
     eth1DataVotes: opts.eth1DataVotes || [],
+    ...opts
   };
 }
 
@@ -118,48 +119,43 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
     shardBlockRoot: new Uint8Array()
   };
 
-  const defaultEth1Data: Eth1Data = {
-    depositRoot: new Uint8Array(32),
-    blockHash: new Uint8Array(32)
-  };
-
   const validatorNum: number = randBetween(0,1000);
 
   return {
     // MISC
-    slot: opts.slot || randBetweenBN(0,1000),
-    genesisTime: opts.genesisTime || new BN(new Date().getTime()),
-    fork: opts.fork || {
+    slot: randBetweenBN(0,1000),
+    genesisTime: new BN(new Date().getTime()),
+    fork: {
       previousVersion: randBetweenBN(0,1000),
       currentVersion: randBetweenBN(0,1000),
       epoch: randBetweenBN(0,1000)
     },
     // Validator registry
-    validatorRegistry: opts.validatorRegistry || generateValidators(validatorNum),
-    validatorBalances: opts.validatorBalances || Array.from({length: validatorNum}, () => randBetweenBN(0,1000)),
-    validatorRegistryUpdateEpoch: opts.validatorRegistryUpdateEpoch || randBetweenBN(0,1000),
+    validatorRegistry: generateValidators(validatorNum),
+    validatorBalances: Array.from({length: validatorNum}, () => randBetweenBN(0,1000)),
+    validatorRegistryUpdateEpoch: randBetweenBN(0,1000),
 
     // Randomness and committees
-    latestRandaoMixes: opts.latestRandaoMixes || Array.from({length: randBetween(0,1000)}, () => new Uint8Array(32)),
-    previousEpochStartShard: opts.previousEpochStartShard || randBetweenBN(0,1000),
-    currentEpochStartShard: opts.currentEpochStartShard || randBetweenBN(0,1000),
-    previousCalculationEpoch: opts.previousCalculationEpoch || randBetweenBN(0,1000),
-    currentCalculationEpoch: opts.currentCalculationEpoch || randBetweenBN(0,1000),
+    latestRandaoMixes: Array.from({length: randBetween(0,1000)}, () => new Uint8Array(32)),
+    previousEpochStartShard: randBetweenBN(0,1000),
+    currentEpochStartShard: randBetweenBN(0,1000),
+    previousCalculationEpoch: randBetweenBN(0,1000),
+    currentCalculationEpoch: randBetweenBN(0,1000),
     previousEpochSeed: opts.previousEpochSeed|| new Uint8Array(32),
-    currentEpochSeed: opts.currentEpochSeed || new Uint8Array(32),
+    currentEpochSeed: new Uint8Array(32),
 
     // Finality
-    previousJustifiedEpoch: opts.previousJustifiedEpoch || randBetweenBN(0,1000),
-    justifiedEpoch: opts.justifiedEpoch || randBetweenBN(0,1000),
-    justificationBitfield: opts.justificationBitfield || randBetweenBN(0,1000),
-    finalizedEpoch: opts.finalizedEpoch || randBetweenBN(0,1000),
+    previousJustifiedEpoch: randBetweenBN(0,1000),
+    justifiedEpoch: randBetweenBN(0,1000),
+    justificationBitfield: randBetweenBN(0,1000),
+    finalizedEpoch: randBetweenBN(0,1000),
 
-    latestCrosslinks: opts.latestCrosslinks || Array.from({length: randBetween(0,1000)}, () => initialCrosslinkRecord),
-    latestBlockRoots: opts.latestBlockRoots || Array.from({length: randBetween(0,1000)}, () => new Uint8Array()),
-    latestIndexRoots: opts.latestIndexRoots || Array.from({length: randBetween(0,1000)}, () => new Uint8Array()),
-    latestPenalizedBalances: opts.latestPenalizedBalances || Array.from({length: randBetween(0,1000)}, () => randBetweenBN(0,1000)),
-    latestAttestations: opts.latestAttestations || [],
-    batchedBlockRoots: opts.batchedBlockRoots || Array.from({length: randBetween(0,1000)}, () => new Uint8Array()),
+    latestCrosslinks: Array.from({length: randBetween(0,1000)}, () => initialCrosslinkRecord),
+    latestBlockRoots: Array.from({length: randBetween(0,1000)}, () => new Uint8Array()),
+    latestIndexRoots: Array.from({length: randBetween(0,1000)}, () => new Uint8Array()),
+    latestPenalizedBalances: Array.from({length: randBetween(0,1000)}, () => randBetweenBN(0,1000)),
+    latestAttestations: [],
+    batchedBlockRoots: Array.from({length: randBetween(0,1000)}, () => new Uint8Array()),
 
     // PoW receipt root
     latestEth1Data: opts.latestEth1Data || {
@@ -167,40 +163,6 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
       blockHash: new Uint8Array(32)
     },
     eth1DataVotes: opts.eth1DataVotes || [],
+    ...opts
   };
 }
-
-// Automated approach
-// export function generateRandomState(): BeaconState {
-//   let state = {};
-//
-//   // Field represents an individual field in BeaconState
-//   for (let field in BeaconState.fields) {
-//     const name = field[0];
-//     const type = field[1];
-//
-//     if (type.includes("uint")) {
-//       state[name] = randBetween(0,1000);
-//     } else if (type.includes("bytes")) {
-//       state[name] = new Uint8Array(randBetween(0,1000));
-//
-//     // Check if the type is array
-//     } else if (Array.isArray(type)) {
-//       const arrType = type[0];
-//
-//       if (arrType.includes("CrossLink")) {
-//       } else if (arrType.includes("Validator")) {
-//         state[name] = generateValidators(randBetween(0,1000));
-//       } else if (arrType.includes("PendingAttestation")) {
-//       } else if (arrType.includes("bytes")) {
-//         state[name] = Array.from({length: randBetween(0,1000)}, () => new Uint8Array(randBetween(0,1000)));
-//       } else if (arrType.includes("uint")) {
-//         state[name] = Array.from({length: randBetween(0,1000)}, () => ZERO_HASH)
-//       } else if (arrType.includes("Eth1DataVote")) {
-//       } else if (arrType.includes("Eth1Data")) {
-//
-//       }
-//     }
-//   }
-//   return state;
-// }
