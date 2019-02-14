@@ -1,7 +1,7 @@
 import BN from "bn.js";
 
-import {randBetween} from "./misc";
 import {AttestationData, uint64} from "../../types";
+import {randBetween} from "./misc";
 
 /**
  * Generates a fake attestation data for test purposes.

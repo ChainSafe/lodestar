@@ -1,3 +1,5 @@
+import BN from "bn.js";
+
 // Misc
 export const SHARD_COUNT = 2 ** 10; // 1024 shards
 export const TARGET_COMMITTEE_SIZE = 2 ** 7; // 128 validators
@@ -23,10 +25,10 @@ export const DEPOSIT_ROOT_VOTING_PERIOD = 2 ** 4; // epochs || ~1.7 hours
 export const MIN_VALIDATOR_WITHDRAWAL_TIME = 2 ** 8; // epochs || ~27 hours
 
 // Initial values
-export const GENESIS_FORK_VERSION	= 0;
-export const GENESIS_SLOT = 2 ** 19;
-export const GENESIS_EPOCH = Math.min(GENESIS_SLOT / EPOCH_LENGTH);
-export const GENESIS_START_SHARD = 0;
+export const GENESIS_FORK_VERSION	= new BN(0);
+export const GENESIS_SLOT = new BN(2 ** 19);
+export const GENESIS_EPOCH = GENESIS_SLOT.div(GENESIS_SLOT);
+export const GENESIS_START_SHARD = new BN(0);
 export const FAR_FUTURE_EPOCH = 2 ** 64 - 1;
 export const ZERO_HASH = new Uint8Array(32);
 export const EMPTY_SIGNATURE = new Uint8Array(96);
