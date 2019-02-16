@@ -2,6 +2,7 @@ import BN from "bn.js";
 
 import {AttestationData, uint64} from "../../types";
 import {randBetween} from "./misc";
+import {slotToEpoch} from "../../helpers/stateTransitionHelpers";
 
 /**
  * Generates a fake attestation data for test purposes.
@@ -16,7 +17,10 @@ export function generateAttestationData(slotValue: uint64, justifiedEpochValue: 
     beaconBlockRoot: Uint8Array.of(65),
     epochBoundaryRoot: Uint8Array.of(65),
     shardBlockRoot: Uint8Array.of(65),
-    latestCrosslinkRoot: Uint8Array.of(65),
+    latestCrosslink: {
+      epoch: slotToEpoch(slotValue),
+      shardBlockRoot: Uint8Array.of(65),
+    },
     justifiedEpoch: justifiedEpochValue,
     justifiedBlockRoot: Uint8Array.of(65),
   };

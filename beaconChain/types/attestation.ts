@@ -11,6 +11,7 @@ import {
   uint384,
   uint64,
 } from "./primitive";
+import {Crosslink} from "./state";
 
 export interface AttestationData {
   // Slot number
@@ -24,7 +25,7 @@ export interface AttestationData {
   // Shard block hash being attested to
   shardBlockRoot: bytes32;
   // Last crosslink hash
-  latestCrosslinkRoot: bytes32;
+  latestCrosslink: Crosslink;
   // Slot of the last justified beacon block
   justifiedEpoch: uint64;
   // Hash of the last justified beacon block
@@ -38,17 +39,17 @@ export const AttestationData = {
     ["beaconBlockRoot", bytes32],
     ["epochBoundaryRoot", bytes32],
     ["shardBlockRoot", bytes32],
-    ["latestCrosslinkRoot", bytes32],
+    ["latestCrosslink", Crosslink],
     ["justifiedEpoch", uint64],
     ["justifiedBlockRoot", bytes32],
   ],
 };
 
 export interface Attestation {
-  // Attestation data
-  data: AttestationData;
   // Attester participation bitfield
   aggregationBitfield: bytes;
+  // Attestation data
+  data: AttestationData;
   // Proof of custody bitfield
   custodyBitfield: bytes;
   // BLS aggregate signature
@@ -57,8 +58,8 @@ export interface Attestation {
 export const Attestation = {
   name: "Attestation",
   fields: [
-    ["data", AttestationData],
     ["aggregationBitfield", bytes],
+    ["data", AttestationData],
     ["custodyBitfield", bytes],
     ["aggregateSignature", bytes96],
   ],
@@ -81,10 +82,10 @@ export const AttestationDataAndCustodyBit = {
 export interface PendingAttestation {
   // Proof of custody bitfield
   aggregationBitfield: bytes;
-  // Attester participation bitfield
-  custodyBitfield: bytes;
   // Signed data
   data: AttestationData;
+  // Attester participation bitfield
+  custodyBitfield: bytes;
   // Slot in which it was included
   inclusionSlot: uint64;
 }
@@ -92,8 +93,8 @@ export const PendingAttestation = {
   name: "PendingAttestation",
   fields: [
     ["aggregationBitfield", bytes],
-    ["custodyBitfield", bytes],
     ["data", AttestationData],
+    ["custodyBitfield", bytes],
     ["inclusionSlot", uint64],
   ],
 };

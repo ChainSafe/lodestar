@@ -60,6 +60,7 @@ describe("types", () => {
   const vars = {};
   for (const name in types) {
     vars[name] = types[name];
+    if(name === "latestAttestations") console.log(`TYPE: ${types[name]}`)
   }
   // Now that we have an object of interfaces and and object of runtime type variables, we can perform our tests
   it("Every interface should have a corresponding runtime type variable", () => {
@@ -95,6 +96,11 @@ describe("types", () => {
     Object.values(interfaces)
       .map((iface: any) => {
         const rtVar = vars[iface.name];
+        if(iface.name === 'BeaconState') {
+            console.log(JSON.stringify(rtVar))
+            console.log(JSON.stringify(iface))
+        }
+
         assert(
           rtVar.fields.length === iface.fields.length,
           `interface and runtime type ${iface.name} have a differing number of fields`);

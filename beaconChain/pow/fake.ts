@@ -1,4 +1,5 @@
 import { Deposit, DepositData, DepositInput, Eth1Data } from "../types";
+import BN = require("bn.js");
 
 type int = number;
 
@@ -34,15 +35,15 @@ function generateFakeDeposits(): Deposit[] {
     };
 
     const depositData: DepositData = {
-      amount: 32000000000,
+      amount: new BN(32).mul(new BN(10).muln(9)), // 32000000000
       depositInput,
-      timestamp: Date.now() / 1000 | 0,
+      timestamp: new BN(Date.now()).divn(1000),
     };
 
     const deposit: Deposit = {
       branch: [new Uint8Array(32)],
       depositData,
-      index: i,
+      index: new BN(i),
     };
     deposits.push(deposit);
   }

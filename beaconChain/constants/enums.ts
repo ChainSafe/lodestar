@@ -1,17 +1,12 @@
-enum StatusFlag {
-  INTIATED_EXIT = 2 ** 0,
-  WITHDRAWABLE = 2 ** 1,
-}
-
-enum SignatureDomain {
-  DOMAIN_DEPOSIT = 0,
-  DOMAIN_ATTESTATION = 1,
-  DOMAIN_PROPOSAL = 2,
-  DOMAIN_EXIT = 3,
-  DOMAIN_RANDAO = 4,
+enum Domain {
+  DEPOSIT = 0,
+  ATTESTATION = 1,
+  PROPOSAL = 2,
+  EXIT = 3,
+  RANDAO = 4,
+  TRANSFER = 5
 }
 
 export {
-  SignatureDomain,
-  StatusFlag,
+  Domain,
 };

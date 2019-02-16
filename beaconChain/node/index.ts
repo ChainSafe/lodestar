@@ -2,6 +2,7 @@ import { DEPOSIT_CONTRACT_ADDRESS } from "../constants";
 import { getInitialBeaconState } from "../lib/state";
 import {getInitialDeposits} from "../pow/fake";
 import {BeaconState} from "../types";
+import BN = require("bn.js");
 
 interface BeaconNodeCtx {
   chain: string;
@@ -20,7 +21,7 @@ class BeaconNode {
 
     // TODO :: Replace stubbed functionality
     const initialDeposits = getInitialDeposits(); // Stubbed - uses fake data
-    this.state = opts.state ? opts.state : getInitialBeaconState(initialDeposits.deposits, initialDeposits.genesisTime, initialDeposits.eth1Data);
+    this.state = opts.state ? opts.state : getInitialBeaconState(initialDeposits.deposits, new BN(initialDeposits.genesisTime), initialDeposits.eth1Data);
   }
 }
 

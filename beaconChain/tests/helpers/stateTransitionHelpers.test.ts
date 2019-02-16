@@ -1,7 +1,7 @@
 import BN from "bn.js";
 import { assert } from "chai";
 
-import { EPOCH_LENGTH, TARGET_COMMITTEE_SIZE } from "../../constants";
+import { SLOTS_PER_EPOCH, TARGET_COMMITTEE_SIZE } from "../../constants";
 import {
   clamp, getActiveValidatorIndices, getCurrentEpoch, getDomain, getEpochCommitteeCount, getEpochStartSlot, getForkVersion,
   intSqrt, isActiveValidator, isDoubleVote, isPowerOfTwo, isSurroundVote, readUIntBE, slotToEpoch, split,
@@ -178,8 +178,8 @@ describe("intSqrt", () => {
 describe("isDoubleVote", () => {
   it("Attestation data with the same epoch should return true", () => {
     const epoch: uint64 = new BN(randBetween(1, 1000));
-    const slot1: uint64 = epoch.muln(EPOCH_LENGTH);
-    const slot2: uint64 = slot1.addn(EPOCH_LENGTH - 1);
+    const slot1: uint64 = epoch.muln(SLOTS_PER_EPOCH);
+    const slot2: uint64 = slot1.addn(SLOTS_PER_EPOCH - 1);
     const a1 = generateAttestationData(slot1, new BN(randBetween(1, 1000)));
     const a2 = generateAttestationData(slot2, new BN(randBetween(1, 1000)));
     assert.isTrue(isDoubleVote(a1, a2));
@@ -187,7 +187,7 @@ describe("isDoubleVote", () => {
 
   it("Attestation data with different epochs should return false", () => {
     const epoch: uint64 = new BN(randBetween(1, 1000));
-    const slot1: uint64  = epoch.muln(EPOCH_LENGTH);
+    const slot1: uint64  = epoch.muln(SLOTS_PER_EPOCH);
     const slot2: uint64  = slot1.subn(1);
     const a1 = generateAttestationData(slot1, new BN(randBetween(1, 1000)));
     const a2 = generateAttestationData(slot2, new BN(randBetween(1, 1000)));
@@ -203,8 +203,8 @@ describe("isSurroundVote", () => {
     const targetEpoch1: uint64 = new BN(randBetween(1, 1000));
     const targetEpoch2: uint64 = targetEpoch1.subn(1);
 
-    const targetSlot1: uint64 = targetEpoch1.muln(EPOCH_LENGTH);
-    const targetSlot2: uint64 = targetEpoch2.muln(EPOCH_LENGTH);
+    const targetSlot1: uint64 = targetEpoch1.muln(SLOTS_PER_EPOCH);
+    const targetSlot2: uint64 = targetEpoch2.muln(SLOTS_PER_EPOCH);
 
     const a1 = generateAttestationData(targetSlot1, sourceEpoch1);
     const a2 = generateAttestationData(targetSlot2, sourceEpoch2);
@@ -220,8 +220,8 @@ describe("isSurroundVote", () => {
     const targetEpoch1: uint64 = new BN(randBetween(1, 1000));
     const targetEpoch2: uint64 = targetEpoch1.subn(1);
 
-    const targetSlot1: uint64 = targetEpoch1.muln(EPOCH_LENGTH);
-    const targetSlot2: uint64 = targetEpoch2.muln(EPOCH_LENGTH);
+    const targetSlot1: uint64 = targetEpoch1.muln(SLOTS_PER_EPOCH);
+    const targetSlot2: uint64 = targetEpoch2.muln(SLOTS_PER_EPOCH);
 
     const a1 = generateAttestationData(targetSlot1, sourceEpoch1);
     let a2 = generateAttestationData(targetSlot2, sourceEpoch2);
@@ -242,9 +242,9 @@ describe("isSurroundVote", () => {
     const targetEpoch = new BN(randBetween(2, 1000));
 
     // Last slot in the epoch.
-    let targetSlot1: uint64 = targetEpoch.muln(EPOCH_LENGTH).subn(1);
+    let targetSlot1: uint64 = targetEpoch.muln(SLOTS_PER_EPOCH).subn(1);
     // First slot in the epoch
-    let targetSlot2: uint64 = targetEpoch.subn(1).muln(EPOCH_LENGTH);
+    let targetSlot2: uint64 = targetEpoch.subn(1).muln(SLOTS_PER_EPOCH);
 
     let a1 = generateAttestationData(targetSlot1, sourceEpoch1);
     let a2 = generateAttestationData(targetSlot2, sourceEpoch2);
@@ -252,8 +252,8 @@ describe("isSurroundVote", () => {
     assert.isFalse(isSurroundVote(a1, a2));
 
     // Second attestation has a greater target epoch.
-    targetSlot1 = targetEpoch.muln(EPOCH_LENGTH);
-    targetSlot2 = targetEpoch.addn(1).muln(EPOCH_LENGTH);
+    targetSlot1 = targetEpoch.muln(SLOTS_PER_EPOCH);
+    targetSlot2 = targetEpoch.addn(1).muln(SLOTS_PER_EPOCH);
     a1 = generateAttestationData(targetSlot1, sourceEpoch1);
     a2 = generateAttestationData(targetSlot2, sourceEpoch2);
     assert.isFalse(isSurroundVote(a1, a2));
@@ -293,14 +293,14 @@ describe("getActiveValidatorIndices", () => {
 describe("getEpochCommitteeCount", () => {
   // this defines the # of validators required to have 1 committee
   // per slot for epoch length.
-  const validatorsPerEpoch = EPOCH_LENGTH * TARGET_COMMITTEE_SIZE;
+  const validatorsPerEpoch = SLOTS_PER_EPOCH * TARGET_COMMITTEE_SIZE;
   const tests = [
-    {validatorCount: 0, committeeCount: EPOCH_LENGTH},
-    {validatorCount: 1000, committeeCount: EPOCH_LENGTH},
-    {validatorCount: 2 * validatorsPerEpoch, committeeCount: 2 * EPOCH_LENGTH},
-    {validatorCount: 5 * validatorsPerEpoch, committeeCount: 5 * EPOCH_LENGTH},
-    {validatorCount: 16 * validatorsPerEpoch, committeeCount: 16 * EPOCH_LENGTH},
-    {validatorCount: 32 * validatorsPerEpoch, committeeCount: 16 * EPOCH_LENGTH},
+    {validatorCount: 0, committeeCount: SLOTS_PER_EPOCH},
+    {validatorCount: 1000, committeeCount: SLOTS_PER_EPOCH},
+    {validatorCount: 2 * validatorsPerEpoch, committeeCount: 2 * SLOTS_PER_EPOCH},
+    {validatorCount: 5 * validatorsPerEpoch, committeeCount: 5 * SLOTS_PER_EPOCH},
+    {validatorCount: 16 * validatorsPerEpoch, committeeCount: 16 * SLOTS_PER_EPOCH},
+    {validatorCount: 32 * validatorsPerEpoch, committeeCount: 16 * SLOTS_PER_EPOCH},
   ];
   for (const {validatorCount, committeeCount} of tests) {
     assert.equal(getEpochCommitteeCount(validatorCount), committeeCount);

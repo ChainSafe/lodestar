@@ -114,7 +114,7 @@ export const Deposit = {
   ],
 };
 
-export interface Exit {
+export interface VoluntaryExit {
   // Minimum slot for processing exit
   epoch: uint64;
   // Index of the exiting validator
@@ -122,12 +122,42 @@ export interface Exit {
   // Validator signature
   signature: bytes96;
 }
-export const Exit = {
-  name: "Exit",
+export const VoluntaryExit = {
+  name: "VoluntaryExit",
   fields: [
     ["epoch", uint64],
     ["validator_index", uint64],
     ["signature", bytes96],
+  ],
+};
+
+export interface Transfer {
+    // Sender index
+    from: uint64;
+    // Recipient index
+    to: uint64;
+    // Amount in Gwei
+    amount: uint64;
+    // Fee in Gwei for block proposer
+    fee: uint64;
+    // Inclusion slot
+    slot: uint64;
+    // Sender withdrawal pubkey
+    pubkey: bytes48;
+    // Sender signature
+    signature: bytes96;
+}
+
+export const Transfer = {
+  name: "Transfer",
+  fields: [
+      ["from", uint64],
+      ["to", uint64],
+      ["amount", uint64],
+      ["fee", uint64],
+      ["slot", uint64],
+      ["pubkey", bytes48],
+      ["signature", bytes96],
   ],
 };
 
@@ -136,7 +166,8 @@ export interface BeaconBlockBody {
   casperSlashings: AttesterSlashings[];
   attestations: Attestation[];
   deposits: Deposit[];
-  exits: Exit[];
+  exits: VoluntaryExit[];
+  transfers: Transfer[]
 }
 export const BeaconBlockBody = {
   name: "BeaconBlockBody",
@@ -145,7 +176,8 @@ export const BeaconBlockBody = {
     ["casperSlashings", [AttesterSlashings]],
     ["attestations", [Attestation]],
     ["deposits", [Deposit]],
-    ["exits", [Exit]],
+    ["exits", [VoluntaryExit]],
+    ["transfers", [Transfer]],
   ],
 };
 

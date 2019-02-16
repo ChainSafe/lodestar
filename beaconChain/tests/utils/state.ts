@@ -1,7 +1,7 @@
 import BN from "bn.js";
 
 import {GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD, LATEST_BLOCK_ROOTS_LENGTH,
-  LATEST_INDEX_ROOTS_LENGTH, LATEST_PENALIZED_EXIT_LENGTH, LATEST_RANDAO_MIXES_LENGTH, SHARD_COUNT, ZERO_HASH} from "../../constants";
+  LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_SLASHED_EXIT_LENGTH, LATEST_RANDAO_MIXES_LENGTH, SHARD_COUNT, ZERO_HASH} from "../../constants";
 import {BeaconState, Crosslink, Eth1Data, Fork, PendingAttestation, uint64, Validator} from "../../types";
 import {bytes32, Eth1DataVote} from "../../types";
 import {randBetween, randBetweenBN} from "./misc";
@@ -77,12 +77,12 @@ export function generateState(opts?: TestBeaconState): BeaconState {
 
     // Randomness and committees
     latestRandaoMixes: Array.from({length: LATEST_RANDAO_MIXES_LENGTH}, () => ZERO_HASH),
-    previousEpochStartShard: GENESIS_START_SHARD,
-    currentEpochStartShard: GENESIS_START_SHARD,
-    previousCalculationEpoch: GENESIS_EPOCH,
-    currentCalculationEpoch: GENESIS_EPOCH,
-    previousEpochSeed: ZERO_HASH,
-    currentEpochSeed: ZERO_HASH,
+    previousShufflingStartShard: GENESIS_START_SHARD,
+    currentShufflingStartShard: GENESIS_START_SHARD,
+    previousShufflingEpoch: GENESIS_EPOCH,
+    currentShufflingEpoch: GENESIS_EPOCH,
+    previousShufflingSeed: ZERO_HASH,
+    currentShufflingSeed: ZERO_HASH,
 
     // Finality
     previousJustifiedEpoch: GENESIS_EPOCH,
@@ -93,8 +93,8 @@ export function generateState(opts?: TestBeaconState): BeaconState {
     // Recent state
     latestCrosslinks: Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
     latestBlockRoots: Array.from({length: LATEST_BLOCK_ROOTS_LENGTH}, () => ZERO_HASH),
-    latestIndexRoots: Array.from({length: LATEST_INDEX_ROOTS_LENGTH}, () => ZERO_HASH),
-    latestPenalizedBalances: Array.from({length: LATEST_PENALIZED_EXIT_LENGTH}, () => new BN(0)),
+    latestActiveIndexRoots: Array.from({length: LATEST_ACTIVE_INDEX_ROOTS_LENGTH}, () => ZERO_HASH),
+    latestSlashedBalances: Array.from({length: LATEST_SLASHED_EXIT_LENGTH}, () => new BN(0)),
     latestAttestations: [],
     batchedBlockRoots: [],
 
@@ -104,6 +104,7 @@ export function generateState(opts?: TestBeaconState): BeaconState {
       blockHash: new Uint8Array(32),
     },
     eth1DataVotes: [],
+    depositIndex: new BN(0),
     ...opts,
   };
 }
@@ -138,12 +139,12 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
 
     // Randomness and committees
     latestRandaoMixes: Array.from({length: randBetween(0, 1000)}, () => new Uint8Array(32)),
-    previousEpochStartShard: randBetweenBN(0, 1000),
-    currentEpochStartShard: randBetweenBN(0, 1000),
-    previousCalculationEpoch: randBetweenBN(0, 1000),
-    currentCalculationEpoch: randBetweenBN(0, 1000),
-    previousEpochSeed: new Uint8Array(32),
-    currentEpochSeed: new Uint8Array(32),
+    previousShufflingStartShard: randBetweenBN(0, 1000),
+    currentShufflingStartShard: randBetweenBN(0, 1000),
+    previousShufflingEpoch: randBetweenBN(0, 1000),
+    currentShufflingEpoch: randBetweenBN(0, 1000),
+    previousShufflingSeed: new Uint8Array(32),
+    currentShufflingSeed: new Uint8Array(32),
 
     // Finality
     previousJustifiedEpoch: randBetweenBN(0, 1000),
@@ -153,8 +154,8 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
 
     latestCrosslinks: Array.from({length: randBetween(0, 1000)}, () => initialCrosslinkRecord),
     latestBlockRoots: Array.from({length: randBetween(0, 1000)}, () => new Uint8Array()),
-    latestIndexRoots: Array.from({length: randBetween(0, 1000)}, () => new Uint8Array()),
-    latestPenalizedBalances: Array.from({length: randBetween(0, 1000)}, () => randBetweenBN(0, 1000)),
+    latestActiveIndexRoots: Array.from({length: randBetween(0, 1000)}, () => new Uint8Array()),
+    latestSlashedBalances: Array.from({length: randBetween(0, 1000)}, () => randBetweenBN(0, 1000)),
     latestAttestations: [],
     batchedBlockRoots: Array.from({length: randBetween(0, 1000)}, () => new Uint8Array()),
 
@@ -164,6 +165,7 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
       blockHash: new Uint8Array(32),
     },
     eth1DataVotes: [],
+    depositIndex: new BN(0),
     ...opts,
   };
 }
