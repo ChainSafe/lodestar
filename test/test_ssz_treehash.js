@@ -57,11 +57,11 @@ describe('SimpleSerialize - tree hashes', () => {
     [[[1, 2], ['uint16']], 'da760e411ffbada0568ea1a2f6adedde9534ed86320cf87703800a5c3332ce32'],
     [[[[1,2,3,4],[5,6,7,8]], [['uint16']]], '6dbe0a9d5becd51d752bb3af7422a7970ec94174013f9667a516b1a07c55fea7'],
     // object
-    [[{b:0,a:0}, SimpleObject], '99ff0d9125e1fc9531a11262e15aeb2c60509a078c4cc4c64cefdfb06ff68647'],
-    [[{b:2,a:1}, SimpleObject], 'd2b49b00c76582823e30b56fe608ff030ef7b6bd7dcc16b8994c9d74860a7e1c'],
-    [[{v:3,subV: {v:6}}, OuterObject], 'bb2f30386c55445381eee7a33c3794227b8c8e4be4caa54506901a4ddfe79ee2'],
-    [[{v: [{b:2,a:1}, {b:4,a:3}]}, ArrayObject], '2da34dd1d08d6b11ede0e3b0193b30f44dac334943304936767a2baca201dfb2'],
-    [[[{v:3, subV:{v:6}}, {v:5, subV:{v:7}}], [OuterObject]], '95fb2ae53e7b7b91d11b76456f2be2934477f298dfe7717af86c6922e8fada5f'],
+    [[{b:0,a:0}, SimpleObject], 'c87b68af113458ce95144697bc32a6f5158133dfdaab2054c17dad360b628a3b'],
+    [[{b:2,a:1}, SimpleObject], '3d13b1009c21fadfc3786bdbf86b25c4e4a6626d5b353a3ac00d26ee133872d6'],
+    [[{v:3,subV: {v:6}}, OuterObject], '14ffea433bc95132556da00e311261e4ffaa789cf8a184adb7bcad116355a311'],
+    [[{v: [{b:2,a:1}, {b:4,a:3}]}, ArrayObject], 'cc89fba7753b94c4a6f31809851c0de8daad90d08f2d7b042b94a55aabc91b24'],
+    [[[{v:3, subV:{v:6}}, {v:5, subV:{v:7}}], [OuterObject]], '4573b60a4a9e123b97155bf945e1b3f9bd0b273a1c2d3f0d464d8fc4219c2c15'],
   ];
 
   const stringifyType = type => {
