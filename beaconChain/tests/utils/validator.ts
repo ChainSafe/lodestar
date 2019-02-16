@@ -17,7 +17,7 @@ export function generateValidator(activation?: number, exit?: number): Validator
     activationEpoch: new BN(activationValue),
     exitEpoch: new BN(exit || randNum()),
     withdrawalEpoch: new BN(randNum()),
-    penalizedEpoch: new BN(randNum()),
+    slashedEpoch: new BN(randNum()),
     statusFlags: new BN(randNum()),
   };
 }

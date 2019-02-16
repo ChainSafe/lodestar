@@ -2,11 +2,11 @@ import { keccakAsU8a } from "@polkadot/util-crypto";
 import BN from "bn.js";
 
 import {
-  ENTRY_EXIT_DELAY,
-  EPOCH_LENGTH, GENESIS_EPOCH, LATEST_BLOCK_ROOTS_LENGTH, LATEST_INDEX_ROOTS_LENGTH,
-  LATEST_RANDAO_MIXES_LENGTH,
+  ACTIVATION_EXIT_DELAY,
+  GENESIS_EPOCH, LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH,
   MAX_DEPOSIT_AMOUNT,
   SHARD_COUNT,
+  SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
 } from "../constants";
 import {
@@ -16,7 +16,6 @@ import {
   EpochNumber,
   Fork,
   SlotNumber,
-  uint24,
   uint64,
   Validator,
   ValidatorIndex,
@@ -31,7 +30,7 @@ type hash32 = Uint8Array;
  * @returns {EpochNumber}
  */
 export function slotToEpoch(slot: SlotNumber): EpochNumber {
-  return slot.divn(EPOCH_LENGTH);
+  return slot.divn(SLOTS_PER_EPOCH);
 }
 
 /**
@@ -49,7 +48,7 @@ export function getCurrentEpoch(state: BeaconState): EpochNumber {
  * @returns {SlotNumber}
  */
 export function getEpochStartSlot(epoch: EpochNumber): SlotNumber {
-  return epoch.muln(EPOCH_LENGTH);
+  return epoch.muln(SLOTS_PER_EPOCH);
 }
 
 /**
@@ -185,10 +184,10 @@ export function getEpochCommitteeCount(activeValidatorCount: int): int {
   return Math.max(
     1,
     Math.min(
-      Math.floor(SHARD_COUNT / EPOCH_LENGTH),
-      Math.floor(Math.floor(activeValidatorCount / EPOCH_LENGTH) / TARGET_COMMITTEE_SIZE),
+      Math.floor(SHARD_COUNT / SLOTS_PER_EPOCH),
+      Math.floor(Math.floor(activeValidatorCount / SLOTS_PER_EPOCH) / TARGET_COMMITTEE_SIZE),
     ),
-  ) * EPOCH_LENGTH;
+  ) * SLOTS_PER_EPOCH;
 }
 
 /**
@@ -200,7 +199,7 @@ export function getEpochCommitteeCount(activeValidatorCount: int): int {
  */
 export function getShuffling(seed: hash32, validators: Validator[], slot: SlotNumber): ValidatorIndex[][] {
   // Normalizes slot to start of epoch boundary
-  const slotAtEpoch = slot.sub(slot.umod(new BN(EPOCH_LENGTH)));
+  const slotAtEpoch = slot.sub(slot.umod(new BN(SLOTS_PER_EPOCH)));
 
   const activeValidatorIndices = getActiveValidatorIndices(validators, slotAtEpoch);
 
@@ -213,8 +212,8 @@ export function getShuffling(seed: hash32, validators: Validator[], slot: SlotNu
   // const shuffledActiveValidatorIndices = shuffle(activeValidatorIndices, newSeed);
   const shuffledActiveValidatorIndices = shuffle(activeValidatorIndices, seed);
 
-  // Split the shuffle list into EPOCH_LENGTH * committeesPerSlot pieces
-  return split(shuffledActiveValidatorIndices, committeesPerSlot * EPOCH_LENGTH);
+  // Split the shuffle list into SLOTS_PER_EPOCH * committeesPerSlot pieces
+  return split(shuffledActiveValidatorIndices, committeesPerSlot * SLOTS_PER_EPOCH);
 }
 
 /**
@@ -223,7 +222,7 @@ export function getShuffling(seed: hash32, validators: Validator[], slot: SlotNu
  * @returns {Number}
  */
 export function getPreviousEpochCommitteeCount(state: BeaconState): int {
-  const previousActiveValidators = getActiveValidatorIndices(state.validatorRegistry, state.previousCalculationEpoch);
+  const previousActiveValidators = getActiveValidatorIndices(state.validatorRegistry, state.previousShufflingEpoch);
   return getEpochCommitteeCount(previousActiveValidators.length);
 }
 
@@ -233,7 +232,7 @@ export function getPreviousEpochCommitteeCount(state: BeaconState): int {
  * @returns {Number}
  */
 export function getCurrentEpochCommitteeCount(state: BeaconState): int {
-  const currentActiveValidators = getActiveValidatorIndices(state.validatorRegistry, state.currentCalculationEpoch);
+  const currentActiveValidators = getActiveValidatorIndices(state.validatorRegistry, state.currentShufflingEpoch);
   return getEpochCommitteeCount(currentActiveValidators.length);
 }
 
@@ -271,14 +270,14 @@ function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: SlotNumber, regi
 
   if (epoch === previousEpoch) {
     committeesPerEpoch = getPreviousEpochCommitteeCount(state);
-    seed = state.previousEpochSeed;
-    shufflingEpoch = state.previousCalculationEpoch;
-    shufflingStartShard = state.previousEpochStartShard;
+    seed = state.previousShufflingSeed;
+    shufflingEpoch = state.previousShufflingEpoch;
+    shufflingStartShard = state.previousShufflingStartShard;
   } else if (epoch === currentEpoch) {
     committeesPerEpoch = getCurrentEpochCommitteeCount(state);
-    seed = state.currentEpochSeed;
-    shufflingEpoch = state.currentCalculationEpoch;
-    shufflingStartShard = state.currentEpochStartShard;
+    seed = state.currentShufflingSeed;
+    shufflingEpoch = state.currentShufflingEpoch;
+    shufflingStartShard = state.currentShufflingStartShard;
   } else if (epoch === nextEpoch) {
     currentCommitteesPerEpoch = getCurrentEpochCommitteeCount(state);
     committeesPerEpoch = getNextEpochCommitteeCount(state);
@@ -287,19 +286,19 @@ function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: SlotNumber, regi
     const epochsSinceLastRegistryUpdate: BN = currentEpoch.sub(state.validatorRegistryUpdateEpoch);
     if (registryChange) {
       seed = generateSeed(state, nextEpoch);
-      shufflingStartShard = (state.currentEpochStartShard.addn(currentCommitteesPerEpoch)).umod(new BN(SHARD_COUNT));
+      shufflingStartShard = (state.currentShufflingStartShard.addn(currentCommitteesPerEpoch)).umod(new BN(SHARD_COUNT));
     } else if (epochsSinceLastRegistryUpdate.gtn(1) && isPowerOfTwo(epochsSinceLastRegistryUpdate)) {
       seed = generateSeed(state, nextEpoch);
-      shufflingStartShard = state.currentEpochStartShard;
+      shufflingStartShard = state.currentShufflingStartShard;
     } else {
-      seed = state.currentEpochSeed;
-      shufflingStartShard = state.currentEpochStartShard;
+      seed = state.currentShufflingSeed;
+      shufflingStartShard = state.currentShufflingStartShard;
     }
   }
 
   const shuffling: ValidatorIndex[][] = getShuffling(seed, state.validatorRegistry, shufflingEpoch);
-  const offset: int = slot.umod(new BN(EPOCH_LENGTH)).toNumber();
-  const committeesPerSlot = Math.floor(committeesPerEpoch / EPOCH_LENGTH);
+  const offset: int = slot.umod(new BN(SLOTS_PER_EPOCH)).toNumber();
+  const committeesPerSlot = Math.floor(committeesPerEpoch / SLOTS_PER_EPOCH);
   const slotStartShard = shufflingStartShard.addn(committeesPerSlot * offset).umod(new BN(SHARD_COUNT));
 
   return Array.apply(null, Array(committeesPerSlot)).map((x, i) => {
@@ -342,8 +341,9 @@ export function getRandaoMix(state: BeaconState, epoch: EpochNumber): bytes32 {
  * @returns {bytes32}
  */
 export function getActiveIndexRoot(state: BeaconState, epoch: EpochNumber): bytes32 {
-  if (getCurrentEpoch(state).subn(LATEST_INDEX_ROOTS_LENGTH + ENTRY_EXIT_DELAY).lt(epoch) && epoch.lt(getCurrentEpoch(state).addn(ENTRY_EXIT_DELAY))) { throw new Error(""); }
-  return state.latestIndexRoots[epoch.umod(new BN(LATEST_INDEX_ROOTS_LENGTH)).toNumber()];
+  if (getCurrentEpoch(state).subn(LATEST_ACTIVE_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY).lt(epoch)
+      && epoch.lt(getCurrentEpoch(state).addn(ACTIVATION_EXIT_DELAY))) { throw new Error(""); }
+  return state.latestActiveIndexRoots[epoch.umod(new BN(LATEST_ACTIVE_INDEX_ROOTS_LENGTH)).toNumber()];
 }
 
 /**
@@ -355,7 +355,7 @@ export function getActiveIndexRoot(state: BeaconState, epoch: EpochNumber): byte
 // TODO FINSIH
 export function generateSeed(state: BeaconState, epoch: EpochNumber): bytes32 {
   // return hash(
-  //   getRandaoMix(state, epoch - SEED_LOOKAHEAD) + getActiveIndexRoot(state, epoch))
+  //   getRandaoMix(state, epoch - MIN_SEED_LOOKAHEAD) + getActiveIndexRoot(state, epoch))
   // )
   return new Uint8Array(1);
 }
@@ -527,5 +527,5 @@ export function intSqrt(n: int): int {
  * @returns {EpochNumber}
  */
 export function getEntryExitEffectEpoch(epoch: EpochNumber): EpochNumber {
-  return epoch.addn(1 + ENTRY_EXIT_DELAY);
+  return epoch.addn(1 + ACTIVATION_EXIT_DELAY);
 }

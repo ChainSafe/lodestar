@@ -95,6 +95,7 @@ describe("types", () => {
     Object.values(interfaces)
       .map((iface: any) => {
         const rtVar = vars[iface.name];
+
         assert(
           rtVar.fields.length === iface.fields.length,
           `interface and runtime type ${iface.name} have a differing number of fields`);

@@ -1,21 +1,22 @@
+import BN = require("bn.js");
 import {
-  BeaconState, BLSPubkey, BLSSignature, Bytes32, Crosslink, Deposit, DepositInput, Eth1Data, Gwei,
-  Validator,
-  ValidatorIndex,
-} from "../../types";
-import {
-  ZERO_HASH, LATEST_RANDAO_MIXES_LENGTH, SHARD_COUNT,
-  LATEST_BLOCK_ROOTS_LENGTH, EMPTY_SIGNATURE,
-  WHISTLEBLOWER_REWARD_QUOTIENT, GENESIS_SLOT, GENESIS_FORK_VERSION,
-  GENESIS_START_SHARD, LATEST_PENALIZED_EXIT_LENGTH, FAR_FUTURE_EPOCH, GENESIS_EPOCH,
-  MAX_DEPOSIT_AMOUNT, LATEST_INDEX_ROOTS_LENGTH, StatusFlag,
+  EMPTY_SIGNATURE, FAR_FUTURE_EPOCH, GENESIS_EPOCH,
+  GENESIS_FORK_VERSION, GENESIS_SLOT,
+  GENESIS_START_SHARD, INITIATED_EXIT, LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
+  LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH, MAX_DEPOSIT_AMOUNT,
+  SHARD_COUNT, WHISTLEBLOWER_REWARD_QUOTIENT, ZERO_HASH,
 } from "../../constants";
 import {
   generateSeed,
   getActiveValidatorIndices,
   getBeaconProposerIndex, getCurrentEpoch, getEffectiveBalance,
-  getEntryExitEffectEpoch
+  getEntryExitEffectEpoch,
 } from "../../helpers/stateTransitionHelpers";
+import {
+    BeaconState, BLSPubkey, BLSSignature, Bytes32, Crosslink, Deposit, DepositInput, Eth1Data, Gwei, uint64,
+    Validator,
+    ValidatorIndex,
+} from "../../types";
 
 type int = number;
 
@@ -33,22 +34,22 @@ function hashTreeRoot(x: any): Bytes32 {
  */
 export function getInitialBeaconState(
   initialValidatorDeposits: Deposit[],
-  genesisTime: int,
+  genesisTime: uint64,
   latestEth1Data: Eth1Data): BeaconState {
 
   const initialCrosslinkRecord: Crosslink = {
       epoch: GENESIS_EPOCH,
-      shardBlockRoot: ZERO_HASH
+      shardBlockRoot: ZERO_HASH,
   };
 
   const state: BeaconState = {
       // MISC
       slot: GENESIS_SLOT,
-      genesisTime: genesisTime,
+      genesisTime,
       fork: {
           previousVersion: GENESIS_FORK_VERSION,
           currentVersion: GENESIS_FORK_VERSION,
-          epoch: GENESIS_EPOCH
+          epoch: GENESIS_EPOCH,
       },
       // Validator registry
       validatorRegistry: [],
@@ -57,34 +58,35 @@ export function getInitialBeaconState(
 
       // Randomness and committees
       latestRandaoMixes: Array.from({length: LATEST_RANDAO_MIXES_LENGTH}, () => ZERO_HASH),
-      previousEpochStartShard: GENESIS_START_SHARD,
-      currentEpochStartShard: GENESIS_START_SHARD,
-      previousCalculationEpoch: GENESIS_EPOCH,
-      currentCalculationEpoch: GENESIS_EPOCH,
-      previousEpochSeed: ZERO_HASH,
-      currentEpochSeed: ZERO_HASH,
+      previousShufflingStartShard: GENESIS_START_SHARD,
+      currentShufflingStartShard: GENESIS_START_SHARD,
+      previousShufflingEpoch: GENESIS_EPOCH,
+      currentShufflingEpoch: GENESIS_EPOCH,
+      previousShufflingSeed: ZERO_HASH,
+      currentShufflingSeed: ZERO_HASH,
 
       // Finality
       previousJustifiedEpoch: GENESIS_EPOCH,
       justifiedEpoch: GENESIS_EPOCH,
-      justificationBitfield: 0,
+      justificationBitfield: new BN(0),
       finalizedEpoch: GENESIS_EPOCH,
 
       // Recent state
       latestCrosslinks: Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
       latestBlockRoots: Array.from({length: LATEST_BLOCK_ROOTS_LENGTH}, () => ZERO_HASH),
-      latestIndexRoots: Array.from({length: LATEST_INDEX_ROOTS_LENGTH}, () => ZERO_HASH),
-      latestPenalizedBalances: Array.from({length: LATEST_PENALIZED_EXIT_LENGTH}, () => 0),
+      latestActiveIndexRoots: Array.from({length: LATEST_ACTIVE_INDEX_ROOTS_LENGTH}, () => ZERO_HASH),
+      latestSlashedBalances: Array.from({length: LATEST_SLASHED_EXIT_LENGTH}, () => new BN(0)),
       latestAttestations: [],
       batchedBlockRoots: [],
 
       // PoW receipt root
-      latestEth1Data: latestEth1Data,
+      latestEth1Data,
       eth1DataVotes: [],
+      depositIndex: new BN(0),
   };
 
   // Process initial deposists
-  initialValidatorDeposits.forEach(deposit => {
+  initialValidatorDeposits.forEach((deposit) => {
       const validatorIndex = processDeposit(
         state,
         deposit.depositData.depositInput.pubkey,
@@ -95,17 +97,18 @@ export function getInitialBeaconState(
   });
 
   // Process initial activations
-  for (let i: ValidatorIndex = 0; i < state.validatorRegistry.length; i ++) {
-    if (getEffectiveBalance(state, i) >= MAX_DEPOSIT_AMOUNT) {
+  for (let i: ValidatorIndex = new BN(0); i.ltn(state.validatorRegistry.length); i = i.add(new BN(1))) {
+    // TODO: Unsafe usage of toNumber on i
+    if (getEffectiveBalance(state, i.toNumber()) >= MAX_DEPOSIT_AMOUNT) {
       activateValidator(state, i, true);
     }
   }
 
   const genesisActiveIndexRoot = hashTreeRoot(getActiveValidatorIndices(state.validatorRegistry, GENESIS_EPOCH));
-  for (let index: number; index < LATEST_INDEX_ROOTS_LENGTH; index++) {
-    state.latestIndexRoots[index] = genesisActiveIndexRoot;
+  for (let index: number; index < LATEST_ACTIVE_INDEX_ROOTS_LENGTH; index++) {
+    state.latestActiveIndexRoots[index] = genesisActiveIndexRoot;
   }
-  state.currentEpochSeed = generateSeed(state, GENESIS_EPOCH);
+  state.currentShufflingSeed = generateSeed(state, GENESIS_EPOCH);
   return state;
 }
 
@@ -124,20 +127,20 @@ function processDeposit(
   proofOfPossession: BLSSignature,
   withdrawalCredentials: Bytes32): void {
     // Validate the given proofOfPossession
-    if (!validateProofOfPossession(state, pubkey, proofOfPossession, withdrawalCredentials)) {throw new Error("")};
+    if (!validateProofOfPossession(state, pubkey, proofOfPossession, withdrawalCredentials)) {throw new Error("");}
 
-    const validatorPubkeys = state.validatorRegistry.map(v => { return v.pubkey });
+    const validatorPubkeys = state.validatorRegistry.map((v) => v.pubkey);
 
     if (!validatorPubkeys.includes(pubkey)) {
       // Add new validator
       const validator: Validator = {
-        pubkey: pubkey,
-        withdrawalCredentials: withdrawalCredentials,
+        pubkey,
+        withdrawalCredentials,
         activationEpoch: FAR_FUTURE_EPOCH,
         exitEpoch: FAR_FUTURE_EPOCH,
         withdrawalEpoch: FAR_FUTURE_EPOCH,
-        penalizedEpoch: FAR_FUTURE_EPOCH,
-        statusFlags: 0,
+        slashedEpoch: FAR_FUTURE_EPOCH,
+        statusFlags: new BN(0),
       };
 
       // Note: In phase 2 registry indices that have been withdrawn for a long time will be recycled.
@@ -146,8 +149,8 @@ function processDeposit(
     } else {
     // Increase balance by deposit amount
       const index = validatorPubkeys.indexOf(pubkey);
-      if (state.validatorRegistry[index].withdrawalCredentials === withdrawalCredentials) throw new Error("Deposit already made!")
-      state.validatorBalances[index] += amount;
+      if (state.validatorRegistry[index].withdrawalCredentials === withdrawalCredentials) { throw new Error("Deposit already made!"); }
+      state.validatorBalances[index] = state.validatorBalances[index].add(amount);
     }
 }
 
@@ -165,9 +168,9 @@ function validateProofOfPossession(
   proofOfPossession: BLSSignature,
   withdrawalCredentials: Bytes32): boolean {
     const proofOfPossessionData: DepositInput = {
-        pubkey: pubkey,
-        withdrawalCredentials: withdrawalCredentials,
-        proofOfPossession: EMPTY_SIGNATURE
+        pubkey,
+        withdrawalCredentials,
+        proofOfPossession: EMPTY_SIGNATURE,
     };
     // Stubbed until BLS is a dependency
     // return bls_verify(
@@ -177,7 +180,7 @@ function validateProofOfPossession(
     //   domain=getDomain(
     //       state.fork,
     //       getCurrentEpoch(state),
-    //       DOMAIN_DEPOSIT,
+    //       DEPOSIT,
     //   )
     return true;
 }
@@ -189,7 +192,8 @@ function validateProofOfPossession(
  * @param {boolean} isGenesis
  */
 function activateValidator(state: BeaconState, index: ValidatorIndex, isGenesis: boolean): void {
-    const validator: Validator = state.validatorRegistry[index];
+    // TODO: Unsafe usage of toNumber for index
+    const validator: Validator = state.validatorRegistry[index.toNumber()];
     validator.activationEpoch = isGenesis ? GENESIS_EPOCH : getEntryExitEffectEpoch(getCurrentEpoch(state));
 }
 
@@ -200,9 +204,10 @@ function activateValidator(state: BeaconState, index: ValidatorIndex, isGenesis:
  * @param {int} index
  */
 function initiateValidatorExit(state: BeaconState, index: ValidatorIndex): void {
-    const validator = state.validatorRegistry[index];
+    // TODO: Unsafe usage of toNumber for index
+    const validator = state.validatorRegistry[index.toNumber()];
     if (!validator.statusFlags) {
-        validator.statusFlags = StatusFlag.INTIATED_EXIT;
+        validator.statusFlags = INITIATED_EXIT;
     }
 }
 
@@ -212,7 +217,8 @@ function initiateValidatorExit(state: BeaconState, index: ValidatorIndex): void 
  * @param {int} index
  */
 function exitValidator(state: BeaconState, index: ValidatorIndex): void {
-  const validator = state.validatorRegistry[index];
+  // TODO: Unsafe usage of toNumber for index
+  const validator = state.validatorRegistry[index.toNumber()];
 
   // The following updates only occur if not previous exited
   if (validator.exitEpoch <= getEntryExitEffectEpoch(getCurrentEpoch(state))) {
@@ -230,14 +236,16 @@ function exitValidator(state: BeaconState, index: ValidatorIndex): void {
  */
 function penalizeValidator(state: BeaconState, index: ValidatorIndex): void {
     exitValidator(state, index);
-    const validator = state.validatorRegistry[index];
-    state.latestPenalizedBalances[getCurrentEpoch(state) % LATEST_PENALIZED_EXIT_LENGTH] += getEffectiveBalance(state, index);
+    // TODO: Unsafe usage of toNumber
+    const validator = state.validatorRegistry[index.toNumber()];
+    state.latestSlashedBalances[getCurrentEpoch(state).toNumber() % LATEST_SLASHED_EXIT_LENGTH] =
+        state.latestSlashedBalances[getCurrentEpoch(state).toNumber() % LATEST_SLASHED_EXIT_LENGTH].addn(getEffectiveBalance(state, index.toNumber()));
 
     const whistleblowerIndex = getBeaconProposerIndex(state, state.slot);
-    const whistleblowerReward = Math.floor(getEffectiveBalance(state, index) / WHISTLEBLOWER_REWARD_QUOTIENT);
-    state.validatorBalances[whistleblowerIndex] += whistleblowerReward;
-    state.validatorBalances[index] -= whistleblowerReward;
-    validator.penalizedEpoch = getCurrentEpoch(state);
+    const whistleblowerReward = Math.floor(getEffectiveBalance(state, index.toNumber()) / WHISTLEBLOWER_REWARD_QUOTIENT);
+    state.validatorBalances[whistleblowerIndex] = state.validatorBalances[whistleblowerIndex].addn(whistleblowerReward);
+    state.validatorBalances[index.toNumber()] = state.validatorBalances[index.toNumber()].subn(whistleblowerReward);
+    validator.slashedEpoch = getCurrentEpoch(state);
 }
 
 /**
@@ -247,8 +255,9 @@ function penalizeValidator(state: BeaconState, index: ValidatorIndex): void {
  * @param {ValidatorIndex} index
  */
 function prepareValidatorForWithdrawal(state: BeaconState, index: ValidatorIndex): void {
-  const validator = state.validatorRegistry[index];
-  if (!validator.statusFlags) {
-    validator.statusFlags = StatusFlag.WITHDRAWABLE;
-  }
+  const validator = state.validatorRegistry[index.toNumber()];
+  // TODO: Update from spec
+  // if (!validator.statusFlags) {
+  //   validator.statusFlags = StatusFlag.WITHDRAWABLE;
+  // }
 }

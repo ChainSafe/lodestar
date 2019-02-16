@@ -13,6 +13,7 @@ import {
 } from "./primitive";
 
 import {
+  Crosslink,
   PendingAttestation,
 } from "./attestation";
 
@@ -50,7 +51,7 @@ export interface Validator {
   // Slot when validator withdrew
   withdrawalEpoch: uint64;
   // Slot when validator was penalized
-  penalizedEpoch: uint64;
+  slashedEpoch: uint64;
   // Status flags
   statusFlags: uint64;
 }
@@ -62,22 +63,8 @@ export const Validator = {
     ["activationEpoch", uint64],
     ["exitEpoch", uint64],
     ["withdrawalEpoch", uint64],
-    ["penalizedEpoch", uint64],
+    ["slashedEpoch", uint64],
     ["statusFlags", uint64],
-  ],
-};
-
-export interface Crosslink {
-  // Slot number
-  epoch: uint64;
-  // Shard chain block hash
-  shardBlockRoot: bytes32;
-}
-export const Crosslink = {
-  name: "Crosslink",
-  fields: [
-    ["epoch", uint64],
-    ["shardBlockRoot", bytes32],
   ],
 };
 
@@ -94,12 +81,12 @@ export interface BeaconState {
 
   // Randomness and committees
   latestRandaoMixes: bytes32[];
-  previousEpochStartShard: uint64;
-  currentEpochStartShard: uint64;
-  previousCalculationEpoch: uint64;
-  currentCalculationEpoch: uint64;
-  previousEpochSeed: bytes32;
-  currentEpochSeed: bytes32;
+  previousShufflingStartShard: uint64;
+  currentShufflingStartShard: uint64;
+  previousShufflingEpoch: uint64;
+  currentShufflingEpoch: uint64;
+  previousShufflingSeed: bytes32;
+  currentShufflingSeed: bytes32;
 
   // Finality
   previousJustifiedEpoch: uint64;
@@ -110,14 +97,15 @@ export interface BeaconState {
   // Recent state
   latestCrosslinks: Crosslink[];
   latestBlockRoots: bytes32[];
-  latestIndexRoots: bytes32[];
-  latestPenalizedBalances: uint64[]; // Balances penalized at every withdrawal period
+  latestActiveIndexRoots: bytes32[];
+  latestSlashedBalances: uint64[]; // Balances penalized at every withdrawal period
   latestAttestations: PendingAttestation[];
   batchedBlockRoots: bytes32[];
 
   // Ethereum 1.0 deposit root
   latestEth1Data: Eth1Data;
   eth1DataVotes: Eth1DataVote[];
+  depositIndex: uint64;
 }
 export const BeaconState = {
   name: "BeaconState",
@@ -132,12 +120,12 @@ export const BeaconState = {
     ["validatorRegistryUpdateEpoch", uint64],
     // Randomness and committees
     ["latestRandaoMixes", [bytes32]],
-    ["previousEpochStartShard", uint64],
-    ["currentEpochStartShard", uint64],
-    ["previousCalculationEpoch", uint64],
-    ["currentCalculationEpoch", uint64],
-    ["previousEpochSeed", bytes32],
-    ["currentEpochSeed", bytes32],
+    ["previousShufflingStartShard", uint64],
+    ["currentShufflingStartShard", uint64],
+    ["previousShufflingEpoch", uint64],
+    ["currentShufflingEpoch", uint64],
+    ["previousShufflingSeed", bytes32],
+    ["currentShufflingSeed", bytes32],
     // Finality
     ["previousJustifiedEpoch", uint64],
     ["justifiedEpoch", uint64],
@@ -146,13 +134,14 @@ export const BeaconState = {
     // Recent State
     ["latestCrosslinks", [Crosslink]],
     ["latestBlockRoots", [bytes32]],
-    ["latestIndexRoots", [bytes32]],
-    ["latestPenalizedBalances", [uint64]],
+    ["latestActiveIndexRoots", [bytes32]],
+    ["latestSlashedBalances", [uint64]],
     ["latestAttestations", [PendingAttestation]],
     ["batchedBlockRoots", [bytes32]],
     // Eth1
     ["latestEth1Data", Eth1Data],
     ["eth1DataVotes", [Eth1DataVote]],
+    ["depositIndex", uint64],
   ],
 };
 
