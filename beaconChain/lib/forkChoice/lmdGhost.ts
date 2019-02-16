@@ -14,7 +14,7 @@ interface Store {
 
 interface AttestationTarget {
   validatorIndex: ValidatorIndex;
-  target: PendingAttestation;
+  target: BeaconBlock;
 }
 
 /**
