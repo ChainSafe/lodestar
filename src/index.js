@@ -1,9 +1,12 @@
 const intByteLength = require('./intBytes').intByteLength
-const readIntBytes = require('./intBytes').readIntBytes
-const writeIntBytes = require('./intBytes').writeIntBytes
+const readIntFromBuffer = require('./intBytes').readIntFromBuffer
+const writeIntToBuffer = require('./intBytes').writeIntToBuffer
 const deepCopy = require('deepcopy')
 const keccakAsU8a = require('@polkadot/util-crypto').keccakAsU8a
 
+// Number of bytes used for the length added before a variable-length serialized object.
+const LENGTH_BYTES = 4
+// Number of bytes for the chunk size of the Merkle tree leaf.
 const SSZ_CHUNK_SIZE = 128
 
 /**
@@ -24,14 +27,11 @@ function serialize (value, type) {
   // serialize integers
   if ((typeof type === 'string') && !!type.match(/^u?int\d+$/g)) {
     // determine int size
-    let intSize = parseInt(type.match(/\d+/g))
-    if (intSize > 0 && intSize % 8 !== 0) {
-      throw Error('given int type has invalid size, must be size > 0 and size % 8 == 0')
-    }
+    const byteLength = intByteLength(type)
 
     // return bytes
-    let buffer = Buffer.alloc(intSize / 8)
-    writeIntBytes(type)(buffer, value)
+    let buffer = Buffer.alloc(byteLength)
+    writeIntToBuffer(buffer, value, byteLength)
     return buffer
   }
 
@@ -103,15 +103,13 @@ function serialize (value, type) {
  * @return {Array|boolean|Buffer|number|object} deserialized value
  */
 function deserialize (data, type, start = 0) {
-  const int32ByteLength = intByteLength('int32')
-
   // deserializes booleans
   if (type === 'bool') {
-    let intResult = readIntBytes('int8')(data, start)
+    let intResult = readIntFromBuffer(data, 1, start)
     if (intResult === 0 || intResult === 1) {
       return {
         deserializedData: intResult === 1,
-        offset: start + intByteLength('int8')
+        offset: start + 1
       }
     }
   }
@@ -119,16 +117,12 @@ function deserialize (data, type, start = 0) {
   // deserializes unsigned integers
   if ((typeof type === 'string') && !!type.match(/^u?int\d+$/g)) {
     // determine int size
-    let intSize = parseInt(type.match(/\d+/g))
-    if (intSize > 0 && intSize % 8 !== 0) {
-      throw Error('given int type has invalid size, must be size > 0 and size % 8 == 0')
-    }
-
-    assertEnoughBytes(data, start, intByteLength(type))
+    const byteLength = intByteLength(type)
+    assertEnoughBytes(data, start, byteLength)
 
     return {
-      deserializedData: readIntBytes(type)(data, start),
-      offset: start + intByteLength(type)
+      deserializedData: readIntFromBuffer(data, byteLength, start),
+      offset: start + byteLength
     }
   }
 
@@ -146,13 +140,13 @@ function deserialize (data, type, start = 0) {
 
   // deserialize bytes
   if (type === 'bytes') {
-    let length = readIntBytes('int32')(data, start)
+    let length = readIntFromBuffer(data, LENGTH_BYTES, start)
 
-    assertEnoughBytes(data, start, int32ByteLength + length)
+    assertEnoughBytes(data, start, LENGTH_BYTES + length)
 
     return {
-      deserializedData: data.slice(start + int32ByteLength, (start + length + int32ByteLength)),
-      offset: start + int32ByteLength + length
+      deserializedData: data.slice(start + LENGTH_BYTES, (start + LENGTH_BYTES + length)),
+      offset: start + LENGTH_BYTES + length
     }
   }
 
@@ -166,19 +160,19 @@ function deserialize (data, type, start = 0) {
     // deserialize each element of the array
     let elementType = type[0]
 
-    let length = readIntBytes('int32')(data, start)
+    let length = readIntFromBuffer(data, LENGTH_BYTES, start)
     let output = []
-    let position = start + int32ByteLength
+    let position = start + LENGTH_BYTES
 
     // work through the data deserializing the array elements
-    while (position < (start + int32ByteLength + length)) {
+    while (position < (start + LENGTH_BYTES + length)) {
       let response = deserialize(data, elementType, position)
       position = response.offset
       output.push(response.deserializedData)
     }
 
     // check that we have have arrived at the end of the byte stream
-    if (position !== (start + int32ByteLength + length)) {
+    if (position !== (start + LENGTH_BYTES + length)) {
       throw Error('We did not arrive at the end of the byte length')
     }
 
@@ -190,9 +184,8 @@ function deserialize (data, type, start = 0) {
 
   // deserializes objects (including compound objects)
   if ((typeof type === 'object' || typeof type === 'function') && type.hasOwnProperty('fields')) {
-    // let length = readIntBytes('int32')(data, start)
     let output = {}
-    let position = start + int32ByteLength
+    let position = start + LENGTH_BYTES
 
     type.fields
       .forEach(([fieldName, fieldType]) => {
@@ -218,9 +211,9 @@ function treeHashInternal (value, type) {
     if (type === 'bool') {
       return serialize(value, type)
       // uint
-    } else if (type.match(/^uint\d+$/g)) {
-      const intSize = parseInt(type.match(/\d+/g))
-      if (intSize <= 256) {
+    } else if (type.match(/^u?int\d+$/g)) {
+      const bitSize = parseInt(type.match(/\d+/g))
+      if (bitSize <= 256) {
         return serialize(value, type)
       } else {
         return hash(serialize(value, type))

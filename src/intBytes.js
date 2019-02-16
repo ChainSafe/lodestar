@@ -1,26 +1,22 @@
 const BN = require('bn.js')
 
 function intByteLength (type) {
-  let intSize = parseInt(type.match(/\d+/g))
-  return intSize / 8
-}
-
-function readIntBytes (type) {
-  let intSize = parseInt(type.match(/\d+/g))
-  let byteSize = intSize / 8
-
-  return (buffer, offset) => {
-    let bnResult = new BN([...buffer.slice(offset, (offset + byteSize))], 16, 'le').fromTwos(intSize)
-    return intSize <= 32 ? bnResult.toNumber() : bnResult
+  const bitSize = parseInt(type.match(/\d+/g))
+  if (bitSize > 0 && bitSize % 8 !== 0) {
+    throw Error('given int type has invalid size, must be size > 0 and size % 8 == 0')
   }
+  return bitSize / 8
 }
 
-function writeIntBytes (type) {
-  let intSize = parseInt(type.match(/\d+/g))
-  let byteSize = intSize / 8
-  return (buffer, value) => { new BN(value).toTwos(intSize).toArrayLike(Buffer, 'le', byteSize).copy(buffer) }
+function readIntFromBuffer (buffer, byteSize, offset = 0) {
+  const bnResult = new BN(buffer.slice(offset, (offset + byteSize)), 16, 'le').fromTwos(byteSize * 8)
+  return byteSize <= 4 ? bnResult.toNumber() : bnResult
+}
+
+function writeIntToBuffer (buffer, value, byteSize, offset = 0) {
+  new BN(value).toTwos(byteSize * 8).toArrayLike(Buffer, 'le', byteSize).copy(buffer, offset)
 }
 
 exports.intByteLength = intByteLength
-exports.readIntBytes = readIntBytes
-exports.writeIntBytes = writeIntBytes
+exports.readIntFromBuffer = readIntFromBuffer
+exports.writeIntToBuffer = writeIntToBuffer
