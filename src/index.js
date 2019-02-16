@@ -300,11 +300,21 @@ function merkleHash (list) {
     chunkz = list
   }
 
-  // Tree-hash
-  while (chunkz.length > 1) {
-    if (chunkz.length % 2 === 1) {
-      chunkz.push(Buffer.alloc(SSZ_CHUNK_SIZE))
+  const bitLength = (x) => {
+    let numBits = 0
+    while (x !== 0) {
+      x = x >> 1
+      numBits++
     }
+    return numBits
+  }
+  const nextPowerOf2 = (x) => x === 0 ? 1 : Math.pow(2, bitLength(x - 1))
+  // Add zeroed chunks as leaf nodes to create full binary tree
+  chunkz = chunkz.concat(
+    Array.from({ length: nextPowerOf2(chunkz.length) - chunkz.length },
+      () => Buffer.alloc(SSZ_CHUNK_SIZE)))
+  // Merkleise
+  while (chunkz.length > 1) {
     const chunkz2 = []
     for (let i = 0; i < chunkz.length; i += 2) {
       chunkz2.push(hash(Buffer.concat([chunkz[i], chunkz[i + 1]])))
