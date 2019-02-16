@@ -44,7 +44,6 @@ Returns a tree hash of a simple-serializable value, as specified [here][19]
 
 -   `value` **([Array][12] \| [boolean][13] \| [Buffer][14] \| [number][15] \| [object][16])** Value to hash
 -   `type` **([Array][12] \| [string][17] \| [object][16])** The type of the value to hash: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
--   `recursive` **[boolean][13]** If recursive is false, pad output to 32 bytes (optional, default `false`)
 
 Returns **[Buffer][14]** the hash, length &lt;= 32
 
