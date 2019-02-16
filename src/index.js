@@ -211,56 +211,51 @@ function deserialize (data, type, start = 0) {
   throw new Error(`Unrecognized type: ${type}`)
 }
 
-/**
- * Returns a tree hash of a simple-serializable value, as specified [here](https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#tree-hash)
- * @method treeHash
- * @param {Array|boolean|Buffer|number|object} value - Value to hash
- * @param {Array|string|object} type - The type of the value to hash: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
- * @param {boolean} [recursive=false] - If recursive is false, pad output to 32 bytes
- * @return {Buffer} the hash, length <= 32
- */
-function treeHash (value, type, recursive = false) {
-  let output
+function treeHashInternal (value, type, recursive = false) {
   if (typeof type === 'string') {
     // bool
     // bytes
     if (type === 'bool') {
-      output = serialize(value, type)
+      return serialize(value, type)
       // uint
     } else if (type.match(/^uint\d+$/g)) {
       const intSize = parseInt(type.match(/\d+/g))
       if (intSize <= 256) {
-        output = serialize(value, type)
+        return serialize(value, type)
       } else {
-        output = hash(serialize(value, type))
+        return hash(serialize(value, type))
       }
       // bytesN
     } else if (type.match(/^bytes\d+$/g)) {
       const bytesSize = parseInt(type.match(/\d+/g))
       if (bytesSize <= 32) {
-        output = serialize(value, type)
+        return serialize(value, type)
       } else {
-        output = hash(serialize(value, type))
+        return hash(serialize(value, type))
       }
       // bytes
     } else if (type === 'bytes') {
-      output = hash(serialize(value, type))
+      return hash(serialize(value, type))
     } else {
       throw Error(`Unable to hash: unknown type ${type}`)
     }
   } else if (Array.isArray(value) && Array.isArray(type)) {
     const elementType = type[0]
-    output = merkleHash(value.map(v => treeHash(v, elementType, true)))
+    return merkleHash(value.map(v => treeHashInternal(v, elementType, true)))
   } else if ((typeof type === 'object' || typeof type === 'function') && type.hasOwnProperty('fields')) {
-    output = hash(Buffer.concat(type.fields.map(([fieldName, fieldType]) => treeHash(value[fieldName], fieldType, true))))
+    return hash(Buffer.concat(type.fields.map(([fieldName, fieldType]) => treeHashInternal(value[fieldName], fieldType, true))))
   }
-  if (!output) {
-    throw Error(`Unable to hash value ${value} of type ${type}`)
-  }
-  if (recursive) {
-    return output
-  }
-  return padRight(output)
+}
+
+/**
+ * Returns a tree hash of a simple-serializable value, as specified [here](https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#tree-hash)
+ * @method treeHash
+ * @param {Array|boolean|Buffer|number|object} value - Value to hash
+ * @param {Array|string|object} type - The type of the value to hash: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
+ * @return {Buffer} the hash, length <= 32
+ */
+function treeHash (value, type) {
+  return zpad(treeHashInternal(value, type), 32)
 }
 
 /**
@@ -332,11 +327,11 @@ function hash (x) {
   return Buffer.from(keccakAsU8a(x))
 }
 
-function padRight (x) {
-  if (x.length < 32) {
-    return Buffer.concat([x, Buffer.alloc(32 - x.length)])
+function zpad (input, length) {
+  if (input.length < length) {
+    return Buffer.concat([input, Buffer.alloc(length - input.length)])
   }
-  return x
+  return input
 }
 
 exports.serialize = serialize
