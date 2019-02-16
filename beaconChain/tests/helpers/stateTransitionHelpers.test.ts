@@ -6,7 +6,7 @@ import {
   clamp, getActiveValidatorIndices, getCurrentEpoch, getDomain, getEpochCommitteeCount, getEpochStartSlot, getForkVersion,
   intSqrt, isActiveValidator, isDoubleVote, isPowerOfTwo, isSurroundVote, readUIntBE, slotToEpoch, split,
 } from "../../helpers/stateTransitionHelpers";
-import {EpochNumber, Fork, SlotNumber, uint64, Validator} from "../../types";
+import {Epoch, Fork, Slot, uint64, Validator} from "../../types";
 import {generateAttestationData} from "../utils/attestation";
 import {randBetween} from "../utils/misc";
 import {generateValidator} from "../utils/validator";
@@ -347,7 +347,7 @@ describe("slotToEpoch", () => {
   ];
   for (const pair of pairs) {
     it(`Slot ${pair.test} should map to epoch ${pair.expected}`, () => {
-      const result: EpochNumber = slotToEpoch(new BN(pair.test));
+      const result: Epoch = slotToEpoch(new BN(pair.test));
       assert(result.eq(new BN(pair.expected)));
     });
   }
@@ -366,7 +366,7 @@ describe("getEpochStartSlot", () => {
   ];
   for (const pair of pairs) {
     it(`Epoch ${pair.test} should map to slot ${pair.expected}`, () => {
-      const result: SlotNumber = getEpochStartSlot(new BN(pair.test));
+      const result: Slot = getEpochStartSlot(new BN(pair.test));
       assert(result.eq(new BN(pair.expected)));
     });
   }

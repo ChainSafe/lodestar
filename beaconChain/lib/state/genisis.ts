@@ -7,10 +7,9 @@ import {
 } from "../../types";
 import {
   ZERO_HASH, LATEST_RANDAO_MIXES_LENGTH, SHARD_COUNT,
-  LATEST_BLOCK_ROOTS_LENGTH, EMPTY_SIGNATURE,
-  WHISTLEBLOWER_REWARD_QUOTIENT, GENESIS_SLOT, GENESIS_FORK_VERSION,
-  GENESIS_START_SHARD, LATEST_PENALIZED_EXIT_LENGTH, FAR_FUTURE_EPOCH, GENESIS_EPOCH,
-  MAX_DEPOSIT_AMOUNT, LATEST_INDEX_ROOTS_LENGTH, StatusFlag,
+  LATEST_BLOCK_ROOTS_LENGTH, GENESIS_SLOT, GENESIS_FORK_VERSION,
+  GENESIS_START_SHARD, GENESIS_EPOCH,
+  MAX_DEPOSIT_AMOUNT, StatusFlag, LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_SLASHED_EXIT_LENGTH,
 } from "../../constants";
 import {activateValidator, hashTreeRoot, processDeposit} from "./index";
 
@@ -24,7 +23,7 @@ type int = number;
  * @returns {BeaconState}
  */
 export function getInitialBeaconState(
-  initialValidatorDeposits: Deposit[],
+  genesisValidatorDeposits: Deposit[],
   genesisTime: int,
   latestEth1Data: Eth1Data): BeaconState {
 
@@ -49,12 +48,12 @@ export function getInitialBeaconState(
 
     // Randomness and committees
     latestRandaoMixes: Array.from({length: LATEST_RANDAO_MIXES_LENGTH}, () => ZERO_HASH),
-    previousEpochStartShard: GENESIS_START_SHARD,
-    currentEpochStartShard: GENESIS_START_SHARD,
-    previousCalculationEpoch: GENESIS_EPOCH,
-    currentCalculationEpoch: GENESIS_EPOCH,
-    previousEpochSeed: ZERO_HASH,
-    currentEpochSeed: ZERO_HASH,
+    previousShufflingStartShard: GENESIS_START_SHARD,
+    currentShufflingStartShard: GENESIS_START_SHARD,
+    previousShufflingEpoch: GENESIS_EPOCH,
+    currentShufflingEpoch: GENESIS_EPOCH,
+    previousShufflingSeed: ZERO_HASH,
+    currentShufflingSeed: ZERO_HASH,
 
     // Finality
     previousJustifiedEpoch: GENESIS_EPOCH,
@@ -65,19 +64,20 @@ export function getInitialBeaconState(
     // Recent state
     latestCrosslinks: Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
     latestBlockRoots: Array.from({length: LATEST_BLOCK_ROOTS_LENGTH}, () => ZERO_HASH),
-    latestIndexRoots: Array.from({length: LATEST_INDEX_ROOTS_LENGTH}, () => ZERO_HASH),
-    latestPenalizedBalances: Array.from({length: LATEST_PENALIZED_EXIT_LENGTH}, () => new BN(0)),
+    latestActiveIndexRoots: Array.from({length: LATEST_ACTIVE_INDEX_ROOTS_LENGTH}, () => ZERO_HASH),
+    latestSlashedBalances: Array.from({length: LATEST_SLASHED_EXIT_LENGTH}, () => new BN(0)),
     latestAttestations: [],
     batchedBlockRoots: [],
 
     // PoW receipt root
     latestEth1Data: latestEth1Data,
     eth1DataVotes: [],
+    depositIndex: new BN(genesisValidatorDeposits.length),
   };
 
   // Process initial deposists
-  initialValidatorDeposits.forEach(deposit => {
-    const validatorIndex = processDeposit(
+  genesisValidatorDeposits.forEach(deposit => {
+    processDeposit(
       state,
       deposit.depositData.depositInput.pubkey,
       deposit.depositData.amount,
@@ -86,8 +86,8 @@ export function getInitialBeaconState(
     );
   });
 
-  // Process initial activations
-  // TODO For loop is stubbed, should not cast .toNumber()
+  // Process genesis activations
+  // TODO For loop is stubbed, should not cast new BN(i)
   for (let i = 0; i< state.validatorRegistry.length; i ++) {
     if (getEffectiveBalance(state, i) >= MAX_DEPOSIT_AMOUNT) {
       activateValidator(state, new BN(i), true);
@@ -95,9 +95,9 @@ export function getInitialBeaconState(
   }
 
   const genesisActiveIndexRoot = hashTreeRoot(getActiveValidatorIndices(state.validatorRegistry, GENESIS_EPOCH));
-  for (let index: number; index < LATEST_INDEX_ROOTS_LENGTH; index++) {
-    state.latestIndexRoots[index] = genesisActiveIndexRoot;
+  for (let index: number = 0; index < LATEST_ACTIVE_INDEX_ROOTS_LENGTH; index++) {
+    state.latestActiveIndexRoots[index] = genesisActiveIndexRoot;
   }
-  state.currentEpochSeed = generateSeed(state, GENESIS_EPOCH);
+  state.currentShufflingSeed = generateSeed(state, GENESIS_EPOCH);
   return state;
 }
