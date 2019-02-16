@@ -11,7 +11,21 @@ import {
   uint384,
   uint64,
 } from "./primitive";
-import {Crosslink} from "./state";
+
+export interface Crosslink {
+  // Slot number
+  epoch: uint64;
+  // Shard chain block hash
+  shardBlockRoot: bytes32;
+}
+
+export const Crosslink = {
+  name: "Crosslink",
+  fields: [
+    ["epoch", uint64],
+    ["shardBlockRoot", bytes32],
+  ],
+};
 
 export interface AttestationData {
   // Slot number
