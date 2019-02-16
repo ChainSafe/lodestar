@@ -35,7 +35,7 @@ function getAncestor(store: Store, block: BeaconBlock, slot: Slot): BeaconBlock 
  * @param {ValidatorIndex} validatorIndex
  * @returns {Attestation}
  */
-function getLatestAttestation(store: Store, validatorIndex: ValidatorIndex): PendingAttestation {
+function getLatestAttestationTarget(store: Store, validatorIndex: ValidatorIndex): PendingAttestation {
   const validator: Validator = store.validatorRegistry[validatorIndex.toNumber()];
   const attestation = store.pendingAttestations
   // NOTE: This may not be correct
