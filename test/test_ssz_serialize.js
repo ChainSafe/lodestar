@@ -1,7 +1,7 @@
 const assert = require('chai').assert;
 const BN = require('bn.js');
 const hexToBytes = require('./utils/hexToBytes').hexToBytes;
-const readIntBytes = require('../src/intBytes').readIntBytes;
+const readIntFromBuffer = require('../src/intBytes').readIntFromBuffer;
 const intByteLength = require('../src/intBytes').intByteLength;
 const ActiveState = require('./utils/activeState').ActiveState;
 const AttestationRecord = require('./utils/activeState').AttestationRecord;
@@ -579,7 +579,8 @@ describe('SimpleSerialize - serializes arrays of elements (of same type)', () =>
         let resultView = result.slice(4);
         let inputIndex = 0;
         for(var i = 0; i < (result.byteLength-4); i+=intByteLength(type)) {
-            let elementResult = readIntBytes(type)(resultView, i);
+            const byteLength = intByteLength(type)
+            let elementResult = readIntFromBuffer(resultView, byteLength, i);
             let elementInput = arrayInput[inputIndex++];
             if (typeof elementResult === 'object') {
                 assert.isTrue(elementResult.eq(elementInput), `Serialised elements do not match input - actual ${elementResult} expected ${elementInput}`);
