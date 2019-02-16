@@ -301,7 +301,7 @@ function merkleHash (list) {
     // Build a list of chunks based on the number of items in the chunk
     chunkz = []
     for (let i = 0; i < list.length; i += itemsPerChunk) {
-      chunkz.push(Buffer.concat(list.slice(i, i + itemsPerChunk)))
+      chunkz.push(zpad(Buffer.concat(list.slice(i, i + itemsPerChunk)), SSZ_CHUNK_SIZE))
     }
   } else {
     chunkz = list

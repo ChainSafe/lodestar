@@ -53,15 +53,15 @@ describe('SimpleSerialize - tree hashes', () => {
     [[Buffer.from([1, 2, 3, 4, 5, 6]), 'bytes'], '1310542d28be8e0b3ff72e985bc06232b9a30d93ae1ad2e33c5383a54ab5c9a7'],
     // array
     [[[], ['uint16']], 'dfded4ed5ac76ba7379cfe7b3b0f53e768dca8d45a34854e649cfc3c18cbd9cd'],
-    [[[1], ['uint16']], 'e3f121f639dae19b7e2fd6f5002f321b83f17288a7ca7560f81c2ace832cc5d5'],
-    [[[1, 2], ['uint16']], 'a9b7d66d80f70c6da7060c3dedb01e6ed6cea251a3247093cbf27a439ecb0bea'],
-    [[[[1,2,3,4],[5,6,7,8]], [['uint16']]], '1a400eb17c755e4445c2c57dd2d3a0200a290c56cd68957906dd7bfe04493b10'],
+    [[[1], ['uint16']], 'c06186a930277b15545e5b499386cb8f1f03028c080ae5b1542d9e40d52098e5'],
+    [[[1, 2], ['uint16']], 'da760e411ffbada0568ea1a2f6adedde9534ed86320cf87703800a5c3332ce32'],
+    [[[[1,2,3,4],[5,6,7,8]], [['uint16']]], '6dbe0a9d5becd51d752bb3af7422a7970ec94174013f9667a516b1a07c55fea7'],
     // object
     [[{b:0,a:0}, SimpleObject], '99ff0d9125e1fc9531a11262e15aeb2c60509a078c4cc4c64cefdfb06ff68647'],
     [[{b:2,a:1}, SimpleObject], 'd2b49b00c76582823e30b56fe608ff030ef7b6bd7dcc16b8994c9d74860a7e1c'],
     [[{v:3,subV: {v:6}}, OuterObject], 'bb2f30386c55445381eee7a33c3794227b8c8e4be4caa54506901a4ddfe79ee2'],
-    [[{v: [{b:2,a:1}, {b:4,a:3}]}, ArrayObject], 'f3032dce4b4218187e34aa8b6ef87a3fabe1f8d734ce92796642dc6b2911277c'],
-    [[[{v:3, subV:{v:6}}, {v:5, subV:{v:7}}], [OuterObject]], 'de43bc05aa6b011121f9590c10de1734291a595798c84a0e3edd1cc1e6710908'],
+    [[{v: [{b:2,a:1}, {b:4,a:3}]}, ArrayObject], '2da34dd1d08d6b11ede0e3b0193b30f44dac334943304936767a2baca201dfb2'],
+    [[[{v:3, subV:{v:6}}, {v:5, subV:{v:7}}], [OuterObject]], '95fb2ae53e7b7b91d11b76456f2be2934477f298dfe7717af86c6922e8fada5f'],
   ];
 
   const stringifyType = type => {
@@ -85,9 +85,9 @@ describe('SimpleSerialize - tree hashes', () => {
 describe('SimpleSerialize - merkle hashes', () => {
   const testCases = [
     [[], 'dfded4ed5ac76ba7379cfe7b3b0f53e768dca8d45a34854e649cfc3c18cbd9cd'],
-    [[Buffer.from([1,2]), Buffer.from([3,4])], '64f741b8bab62525a01f9084582c148ff56c82f96dc12e270d3e7b5103cf7b48'],
-    [[1,2,3,4,5,6,7,8,9,10].map(i => Buffer.alloc(16,i)), '839d98509e2efc53bd1dea17403921a89856e275bbf4d56c600cc3f6730aaffa'],
-    [[1,2,3,4,5,6,7,8,9,10].map(i => Buffer.alloc(32,i)), '55dc6699e7b5713dd9102224c302996f931836c6dae9a4ec6ab49c966f394685'],
+    [[Buffer.from([1,2]), Buffer.from([3,4])], '82ebb0994e3eb23d08ec5d00415de7b14ff8f21e34396710f561b6ab4e83bd24'],
+    [[1,2,3,4,5,6,7,8,9,10].map(i => Buffer.alloc(16,i)), '29f50926f6e96cd360b39ecc55d0b29cb9a6c28bb2960df801c5353b3ddd249c'],
+    [[1,2,3,4,5,6,7,8,9,10].map(i => Buffer.alloc(32,i)), '9b40b5dd36ee986ffaa104a8ffe2492fdd79d433ebf0702075fa7d6d557b6cdd'],
   ]
   for (const [input, output] of testCases) {
     it('successfully merkle hashes', () => {
