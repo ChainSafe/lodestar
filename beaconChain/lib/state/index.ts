@@ -20,7 +20,7 @@ type int = number;
 
 // Stubbed functions from SSZ
 export function hashTreeRoot(x: any): Bytes32 {
-  return new Uint8Array(2);
+  return Buffer.alloc(2);
 }
 
 /**

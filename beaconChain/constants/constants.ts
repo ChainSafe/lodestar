@@ -25,9 +25,9 @@ export const GENESIS_SLOT = new BN(2).pow(new BN(63)); // 2 ** 63
 export const GENESIS_EPOCH = GENESIS_SLOT.div(new BN(2 ** 6)); // slotToEpoch(GENESIS_SLOT);
 export const GENESIS_START_SHARD = new BN(0);
 export const FAR_FUTURE_EPOCH = new BN(2).pow(new BN(64)).sub( new BN(1)); // 2 ** 64 - 1
-export const ZERO_HASH = new Uint8Array(32);
-export const EMPTY_SIGNATURE = new Uint8Array(96);
-export const BLS_WITHDRAWAL_PREFIX_BYTE = new Uint8Array(1);
+export const ZERO_HASH = Buffer.alloc(32);
+export const EMPTY_SIGNATURE = Buffer.alloc(96);
+export const BLS_WITHDRAWAL_PREFIX_BYTE = Buffer.alloc(1);
 
 // Time parameters
 export const SECONDS_PER_SLOT = 6; // seconds || 6 seconds

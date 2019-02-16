@@ -14,14 +14,14 @@ export function generateAttestationData(slotValue: uint64, justifiedEpochValue: 
   return {
     slot: slotValue,
     shard: new BN(randBetween(0, 1024)),
-    beaconBlockRoot: Uint8Array.of(65),
-    epochBoundaryRoot: Uint8Array.of(65),
-    shardBlockRoot: Uint8Array.of(65),
+    beaconBlockRoot: Buffer.alloc(65),
+    epochBoundaryRoot: Buffer.alloc(65),
+    shardBlockRoot: Buffer.alloc(65),
     latestCrosslink: {
       epoch: slotToEpoch(slotValue),
-      shardBlockRoot: Uint8Array.of(65),
+      shardBlockRoot: Buffer.alloc(65),
     },
     justifiedEpoch: justifiedEpochValue,
-    justifiedBlockRoot: Uint8Array.of(65),
+    justifiedBlockRoot: Buffer.alloc(65),
   };
 }

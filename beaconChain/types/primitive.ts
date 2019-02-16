@@ -4,10 +4,11 @@ import BN from "bn.js";
 // For more information, see ./index.ts
 
 export type bool = boolean;
-export type bytes = Uint8Array;
-export type bytes32 = Uint8Array;
-export type bytes48 = Uint8Array;
-export type bytes96 = Uint8Array;
+export type bytes = Buffer;
+export type bytes32 = Buffer;
+export type bytes48 = Buffer;
+export type bytes96 = Buffer;
+export type int = number;
 export type uint24 = number;
 export type uint64 = BN;
 export type uint384 = BN;
