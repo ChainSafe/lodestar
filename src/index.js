@@ -236,7 +236,7 @@ function treeHashInternal (value, type) {
     const elementType = type[0]
     return merkleHash(value.map(v => treeHashInternal(v, elementType)))
   } else if ((typeof type === 'object' || typeof type === 'function') && type.hasOwnProperty('fields')) {
-    return hash(Buffer.concat(type.fields.map(([fieldName, fieldType]) => treeHashInternal(value[fieldName], fieldType))))
+    return merkleHash(type.fields.map(([fieldName, fieldType]) => treeHashInternal(value[fieldName], fieldType)))
   }
 }
 
