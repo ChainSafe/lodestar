@@ -3,21 +3,23 @@ import { assert } from "chai";
 
 import { SLOTS_PER_EPOCH, TARGET_COMMITTEE_SIZE } from "../../constants";
 import {
-    clamp,
-    getActiveValidatorIndices,
-    getBitfieldBit,
-    getCurrentEpoch,
-    getDomain,
-    getEpochCommitteeCount,
-    getEpochStartSlot,
-    getForkVersion,
-    intSqrt,
-    isActiveValidator,
-    isDoubleVote,
-    isPowerOfTwo,
-    isSurroundVote,
-    slotToEpoch,
-    split,
+  clamp,
+  getActiveValidatorIndices,
+  getBitfieldBit,
+  getCurrentEpoch,
+  getDomain,
+  getEpochCommitteeCount,
+  getEpochStartSlot,
+  getForkVersion,
+  hash,
+  intSqrt,
+  isActiveValidator,
+  isDoubleVote,
+  isPowerOfTwo,
+  isSurroundVote,
+  merkleRoot,
+  slotToEpoch,
+  split,
 } from "../../helpers/stateTransitionHelpers";
 import {Epoch, Fork, Slot, uint64, Validator} from "../../types";
 import {generateAttestationData} from "../utils/attestation";
@@ -486,3 +488,29 @@ describe("getBitfieldBit", () => {
     assert(result === 0, `returned ${result} not 0`);
   });
 })
+
+describe("merkleRoot", () => {
+  it("Merkle root and computed merkle root should be equal", () => {
+    const testValue = [
+      Buffer.from('a'),
+      Buffer.from('b'),
+      Buffer.from('c'),
+      Buffer.from('d'),
+    ];
+    const computedRoot = merkleRoot(testValue);
+
+    // hash leaf nodes
+    const hashV1 = hash(Buffer.from('a'));
+    const hashV2 = hash(Buffer.from('b'));
+    const hashV3 = hash(Buffer.from('c'));
+    const hashV4 = hash(Buffer.from('d'));
+
+    // hash intermediate nodes
+    const leftNode = hash(Buffer.concat([hashV1, hashV2]));
+    const rightNode = hash(Buffer.concat([hashV3, hashV4]));
+    // hash root node
+    const expectedRoot = hash(Buffer.concat([leftNode, rightNode]));
+
+    assert(expectedRoot.equals(computedRoot), `${expectedRoot} didn't equal ${computedRoot}`);
+  });
+});
