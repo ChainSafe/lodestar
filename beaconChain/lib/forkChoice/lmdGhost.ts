@@ -24,10 +24,10 @@ interface AttestationTarget {
  * @param {slot} slot
  * @returns {BeaconBlock}
  */
-function getAncestor(store: Store, block: BeaconBlock, slot: Slot): BeaconBlock {
-  if (block.slot === slot) {
+function getAncestor(store: Store, block: BeaconBlock, slot: Slot): BeaconBlock | null {
+  if (block.slot.eq(slot)) {
       return block;
-  } else if (block.slot < slot) {
+  } else if (block.slot.lt(slot)) {
     return null;
   } else {
     // TODO Find way to access parent block properly
@@ -41,7 +41,7 @@ function getAncestor(store: Store, block: BeaconBlock, slot: Slot): BeaconBlock 
  * @param {ValidatorIndex} validatorIndex
  * @returns {Attestation}
  */
-function getLatestAttestationTarget(store: Store, validatorIndex: ValidatorIndex): PendingAttestation {
+function getLatestAttestation(store: Store, validatorIndex: ValidatorIndex): Attestation {
   const validator: Validator = store.validatorRegistry[validatorIndex.toNumber()];
   const attestation = store.pendingAttestations
   // NOTE: This may not be correct
@@ -49,6 +49,12 @@ function getLatestAttestationTarget(store: Store, validatorIndex: ValidatorIndex
     .reduce((prev: PendingAttestation, cur: PendingAttestation) => prev.data.slot < cur.data.slot ?  cur : prev);
   // If there are more than one, return the index 0
   return attestation[0];
+}
+
+// TODO FINSIH
+function getLatestAttestationTarget(store: Store, validatorIndex: ValidatorIndex): BeaconBlock {
+  // const attestation = getLatestAttestation(store, validatorIndex);
+  return store.blocks[store.blocks.length - 1];
 }
 
 /**
