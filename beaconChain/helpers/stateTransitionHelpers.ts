@@ -12,16 +12,37 @@ import {
 import {
   AttestationData,
   BeaconState,
+  bool,
   bytes,
   bytes32,
   Epoch,
   Fork,
   int,
+  Shard,
+  SlashableAttestation,
   Slot,
   uint64,
   Validator,
   ValidatorIndex,
 } from "../types";
+
+/**
+ * Return a byte array from an int
+ * @param {BN | number} value
+ * @param {number} length
+ * @returns {bytes}
+ */
+export function intToBytes(value: BN | number, length: number): bytes {
+  if (BN.isBN(value)) {
+    return value.toArrayLike(Buffer, "le", length);
+  } else {
+    // value is a number
+    const b = Buffer.alloc(length);
+    // Buffer#writeIntLE can only write at max 6 bytes
+    b.writeUIntLE(value, 0, Math.min(length, 6));
+    return b;
+  }
+}
 
 /**
  * Return the epoch number of the given slot.
@@ -241,7 +262,7 @@ export function getNextEpochCommitteeCount(state: BeaconState): int {
  * @param {boolean} registryChange
  * @returns {[]}
  */
-function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, registryChange: boolean = false): Array<{ShardNumber, ValidatorIndex}> {
+export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, registryChange: boolean = false): Array<{shard: Shard, validatorIndices: ValidatorIndex[]}> {
   const epoch = slotToEpoch(slot);
   const currentEpoch = getCurrentEpoch(state);
   const previousEpoch = currentEpoch.gt(GENESIS_EPOCH) ? currentEpoch.subn(1) : currentEpoch;
@@ -355,8 +376,8 @@ export function generateSeed(state: BeaconState, epoch: Epoch): bytes32 {
  * @returns {int}
  */
 export function getBeaconProposerIndex(state: BeaconState, slot: Slot): int {
-  const firstCommittee = getCrosslinkCommitteesAtSlot(state, slot)[0].ValidatorIndex;
-  return firstCommittee[slot.umod(new BN(firstCommittee.length)).toNumber()];
+  const firstCommittee = getCrosslinkCommitteesAtSlot(state, slot)[0].validatorIndices;
+  return firstCommittee[slot.umod(new BN(firstCommittee.length)).toNumber()].toNumber();
 }
 
 // This function was copied from ssz-js
@@ -386,7 +407,10 @@ export function merkleRoot(values: bytes32[]): bytes32 {
 }
 
 // // TODO finish
-// function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, participationBitfield: bytes): int[] {
+export function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, participationBitfield: bytes): int[] {
+   return [];
+}
+// export function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, participationBitfield: bytes): int[] {
 //   const crosslinkCommittee: CommitteeShard[] = getCrosslinkCommitteesAtSlot(state, attestationData.slot);
 //
 //   // assert attestation.shard in [shard for _, shard in crosslink_committees]
@@ -538,4 +562,26 @@ export function intSqrt(n: int): int {
  */
 export function getEntryExitEffectEpoch(epoch: Epoch): Epoch {
   return epoch.addn(1 + ACTIVATION_EXIT_DELAY);
+}
+
+// TODO finish
+/**
+ * Slash the validator with index ``index``.
+ * Note that this function mutates ``state``.
+ * @param {BeaconState} state
+ * @param {ValidatorIndex} index
+ */
+export function slashValidator(state: BeaconState, index: ValidatorIndex) {
+  return;
+}
+
+// TODO finish
+/**
+ * Verify validity of ``slashable_attestation`` fields.
+ * @param {BeaconState} state
+ * @param {SlashableAttestation} slashableAttesation
+ * @returns {bool}
+ */
+export function verifySlashableAttestation(state: BeaconState, slashableAttestation: SlashableAttestation): bool {
+  return true;
 }
