@@ -211,7 +211,7 @@ function deserialize (data, type, start = 0) {
   throw new Error(`Unrecognized type: ${type}`)
 }
 
-function treeHashInternal (value, type, recursive = false) {
+function treeHashInternal (value, type) {
   if (typeof type === 'string') {
     // bool
     // bytes
@@ -241,9 +241,9 @@ function treeHashInternal (value, type, recursive = false) {
     }
   } else if (Array.isArray(value) && Array.isArray(type)) {
     const elementType = type[0]
-    return merkleHash(value.map(v => treeHashInternal(v, elementType, true)))
+    return merkleHash(value.map(v => treeHashInternal(v, elementType)))
   } else if ((typeof type === 'object' || typeof type === 'function') && type.hasOwnProperty('fields')) {
-    return hash(Buffer.concat(type.fields.map(([fieldName, fieldType]) => treeHashInternal(value[fieldName], fieldType, true))))
+    return hash(Buffer.concat(type.fields.map(([fieldName, fieldType]) => treeHashInternal(value[fieldName], fieldType))))
   }
 }
 
