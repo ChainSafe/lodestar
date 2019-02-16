@@ -4,7 +4,7 @@ import { assert } from "chai";
 import { SLOTS_PER_EPOCH, TARGET_COMMITTEE_SIZE } from "../../constants";
 import {
   clamp, getActiveValidatorIndices, getCurrentEpoch, getDomain, getEpochCommitteeCount, getEpochStartSlot, getForkVersion,
-  intSqrt, isActiveValidator, isDoubleVote, isPowerOfTwo, isSurroundVote, readUIntBE, slotToEpoch, split,
+  intSqrt, isActiveValidator, isDoubleVote, isPowerOfTwo, isSurroundVote, slotToEpoch, split,
 } from "../../helpers/stateTransitionHelpers";
 import {Epoch, Fork, Slot, uint64, Validator} from "../../types";
 import {generateAttestationData} from "../utils/attestation";
@@ -307,19 +307,8 @@ describe("getEpochCommitteeCount", () => {
   }
 });
 
-describe("readUIntBE", () => {
-  const buf = Uint8Array.from([0x01, 0x02, 0x03, 0x04, 0x05, 0x06]);
-
-  it("Read uints should be calculated correctly", () => {
-    assert.strictEqual(readUIntBE(buf, 0, 1), 0x01);
-    assert.strictEqual(readUIntBE(buf, 0, 3), 0x010203);
-    assert.strictEqual(readUIntBE(buf, 0, 5), 0x0102030405);
-    assert.strictEqual(readUIntBE(buf, 0, 6), 0x010203040506);
-  });
-});
-
 // describe("getShuffling", () => {
-//   const seed = Uint8Array.of(65);
+//   const seed = Buffer.alloc(65);
 //   const validators = Array.from({ length: 1000 }, () => ({} as Validator));
 //   const shuffled = getShuffling(seed, validators, 0);
 //   const exists = (shuffling: ShardCommittee[][], validatorIndex: number): boolean => {

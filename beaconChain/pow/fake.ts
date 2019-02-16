@@ -1,7 +1,5 @@
 import BN = require("bn.js");
-import { Deposit, DepositData, DepositInput, Eth1Data } from "../types";
-
-type int = number;
+import { Deposit, DepositData, DepositInput, Eth1Data, int } from "../types";
 
 interface DummyChainStart {
   deposits: Deposit[];
@@ -19,8 +17,8 @@ export function getInitialDeposits(): DummyChainStart {
 
 function generateEthData(): Eth1Data {
   return {
-    blockHash: new Uint8Array(32),
-    depositRoot: new Uint8Array(32),
+    blockHash: Buffer.alloc(32),
+    depositRoot: Buffer.alloc(32),
   };
 }
 
@@ -29,9 +27,9 @@ function generateFakeDeposits(): Deposit[] {
 
   for (let i: number = 0; i < 10; i++) {
     const depositInput: DepositInput = {
-      proofOfPossession: new Uint8Array(2),
-      pubkey: new Uint8Array(2),
-      withdrawalCredentials: new Uint8Array(32),
+      proofOfPossession: Buffer.alloc(2),
+      pubkey: Buffer.alloc(2),
+      withdrawalCredentials: Buffer.alloc(32),
     };
 
     const depositData: DepositData = {
@@ -41,7 +39,7 @@ function generateFakeDeposits(): Deposit[] {
     };
 
     const deposit: Deposit = {
-      branch: [new Uint8Array(32)],
+      branch: [Buffer.alloc(32)],
       depositData,
       index: new BN(i),
     };

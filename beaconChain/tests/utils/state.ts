@@ -100,8 +100,8 @@ export function generateState(opts?: TestBeaconState): BeaconState {
 
     // PoW receipt root
     latestEth1Data: {
-      depositRoot: new Uint8Array(32),
-      blockHash: new Uint8Array(32),
+      depositRoot: Buffer.alloc(32),
+      blockHash: Buffer.alloc(32),
     },
     eth1DataVotes: [],
     depositIndex: new BN(0),
@@ -118,7 +118,7 @@ export function generateState(opts?: TestBeaconState): BeaconState {
 export function generateRandomState(opts?: TestBeaconState): BeaconState {
   const initialCrosslinkRecord: Crosslink = {
     epoch: randBetweenBN(0, 1000),
-    shardBlockRoot: new Uint8Array(),
+    shardBlockRoot: Buffer.alloc(0),
   };
 
   const validatorNum: number = randBetween(0, 1000);
@@ -138,13 +138,13 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
     validatorRegistryUpdateEpoch: randBetweenBN(0, 1000),
 
     // Randomness and committees
-    latestRandaoMixes: Array.from({length: randBetween(0, 1000)}, () => new Uint8Array(32)),
+    latestRandaoMixes: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(32)),
     previousShufflingStartShard: randBetweenBN(0, 1000),
     currentShufflingStartShard: randBetweenBN(0, 1000),
     previousShufflingEpoch: randBetweenBN(0, 1000),
     currentShufflingEpoch: randBetweenBN(0, 1000),
-    previousShufflingSeed: new Uint8Array(32),
-    currentShufflingSeed: new Uint8Array(32),
+    previousShufflingSeed: Buffer.alloc(32),
+    currentShufflingSeed: Buffer.alloc(32),
 
     // Finality
     previousJustifiedEpoch: randBetweenBN(0, 1000),
@@ -153,16 +153,16 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
     finalizedEpoch: randBetweenBN(0, 1000),
 
     latestCrosslinks: Array.from({length: randBetween(0, 1000)}, () => initialCrosslinkRecord),
-    latestBlockRoots: Array.from({length: randBetween(0, 1000)}, () => new Uint8Array()),
-    latestActiveIndexRoots: Array.from({length: randBetween(0, 1000)}, () => new Uint8Array()),
+    latestBlockRoots: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(0)),
+    latestActiveIndexRoots: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(0)),
     latestSlashedBalances: Array.from({length: randBetween(0, 1000)}, () => randBetweenBN(0, 1000)),
     latestAttestations: [],
-    batchedBlockRoots: Array.from({length: randBetween(0, 1000)}, () => new Uint8Array()),
+    batchedBlockRoots: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(0)),
 
     // PoW receipt root
     latestEth1Data: {
-      depositRoot: new Uint8Array(32),
-      blockHash: new Uint8Array(32),
+      depositRoot: Buffer.alloc(32),
+      blockHash: Buffer.alloc(32),
     },
     eth1DataVotes: [],
     depositIndex: new BN(0),

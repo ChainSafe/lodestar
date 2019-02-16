@@ -15,14 +15,12 @@ import {
   bytes32,
   Epoch,
   Fork,
+  int,
   Slot,
   uint64,
   Validator,
   ValidatorIndex,
 } from "../types";
-
-type int = number;
-type hash32 = Uint8Array;
 
 /**
  * Return the epoch number of the given slot.
@@ -75,21 +73,10 @@ export function getActiveValidatorIndices(validators: Validator[], epoch: Epoch)
   }, []);
 }
 
-// Modified from: https://github.com/feross/buffer/blob/master/index.js#L1125
-export function readUIntBE(array: Uint8Array, offset: number, byteLength: number): number {
-    let val: number = array[offset + --byteLength];
-    let mul: number = 1;
-    while (byteLength > 0) {
-        mul *= 0x100;
-        val += array[offset + --byteLength] * mul;
-    }
-    return val;
-}
-
 /**
  * The following is a function that shuffles any list; we primarily use it for the validator list.
  * @param {T[]} values
- * @param {hash32} seed
+ * @param {bytes32} seed
  * @returns {T[]} Returns the shuffled values with seed as entropy.
  */
 function shuffle<T>(values: T[], seed: bytes32): T[] {
@@ -105,11 +92,11 @@ function shuffle<T>(values: T[], seed: bytes32): T[] {
 
   // Make a copy of the values
   const output: T[] = values.slice();
-  let source: Uint8Array = seed;
+  let source: bytes32 = seed;
   let index: number = 0;
   while (index < valuesCount - 1) {
     // Re-hash the `source` to obtain a new pattern of bytes.
-    source = keccakAsU8a(source); // 32 bytes long
+    source = Buffer.from(keccakAsU8a(source)); // 32 bytes long
 
     // Iterate through the `source` bytes in 3-byte chunks.
     for (let position = 0; position < 32 - (32 % randBytes); position += randBytes) {
@@ -120,7 +107,7 @@ function shuffle<T>(values: T[], seed: bytes32): T[] {
         break;
       }
       // Read 3-bytes of `source` as a 24-bit big-endian integer.
-      const sampleFromSource: number = readUIntBE(source.slice(position, position + randBytes), 0, randBytes);
+      const sampleFromSource: number = source.slice(position, position + randBytes).readUIntBE(0, randBytes);
 
       // Sample values greater than or equal to `sample_max` will cause
       // modulo bias when mapped into the `remaining` range.
@@ -192,12 +179,12 @@ export function getEpochCommitteeCount(activeValidatorCount: int): int {
 
 /**
  * Shuffles validators into shard committees seeded by seed and slot.
- * @param {hash32} seed
+ * @param {bytes32} seed
  * @param {Validator[]} validators
  * @param {int} slot
  * @returns {int[][]}
  */
-export function getShuffling(seed: hash32, validators: Validator[], slot: Slot): ValidatorIndex[][] {
+export function getShuffling(seed: bytes32, validators: Validator[], slot: Slot): ValidatorIndex[][] {
   // Normalizes slot to start of epoch boundary
   const slotAtEpoch = slot.sub(slot.umod(new BN(SLOTS_PER_EPOCH)));
 
@@ -207,7 +194,7 @@ export function getShuffling(seed: hash32, validators: Validator[], slot: Slot):
 
   // TODO fix below
   // Shuffle
-  // const proposedSeed = new Uint8Array(slot);
+  // const proposedSeed = Buffer.from(slot);
   // const newSeed = seed ^ seedY;
   // const shuffledActiveValidatorIndices = shuffle(activeValidatorIndices, newSeed);
   const shuffledActiveValidatorIndices = shuffle(activeValidatorIndices, seed);
@@ -314,7 +301,7 @@ function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, registryCh
  * It should always return the block hash in the beacon chain slot for `slot`.
  * @param {BeaconState} state
  * @param {int} slot
- * @returns {hash32}
+ * @returns {bytes32}
  */
 export function getBlockRoot(state: BeaconState, slot: Slot): bytes32 {
   // Returns the block root at a recent ``slot``.
@@ -357,7 +344,7 @@ export function generateSeed(state: BeaconState, epoch: Epoch): bytes32 {
   // return hash(
   //   getRandaoMix(state, epoch - MIN_SEED_LOOKAHEAD) + getActiveIndexRoot(state, epoch))
   // )
-  return new Uint8Array(1);
+  return Buffer.alloc(1);
 }
 
 /**
@@ -378,7 +365,7 @@ export function getBeaconProposerIndex(state: BeaconState, slot: Slot): int {
  */
 // TODO finish
 // export function merkleRoot(values: bytes32[]): bytes32 {
-//   let o: Uint8Array = new Uint8Array(values.length + 1);
+//   let o: bytes = Buffer.alloc(values.length + 1);
 //   o.set(values, o.length - 1);
 // }
 

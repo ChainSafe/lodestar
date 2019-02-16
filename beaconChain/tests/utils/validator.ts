@@ -12,8 +12,8 @@ export function generateValidator(activation?: number, exit?: number): Validator
   // For some reason activationEpoch was defaulting to randNum()
   const activationValue = activation !== null ? activation : randNum();
   return {
-    pubkey: new Uint8Array(48),
-    withdrawalCredentials: Uint8Array.of(65),
+    pubkey: Buffer.alloc(48),
+    withdrawalCredentials: Buffer.alloc(65),
     activationEpoch: new BN(activationValue),
     exitEpoch: new BN(exit || randNum()),
     withdrawalEpoch: new BN(randNum()),
