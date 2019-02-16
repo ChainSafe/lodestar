@@ -1,10 +1,8 @@
-import BN = require("bn.js");
+import BN from "bn.js";
 import {
-  EMPTY_SIGNATURE, FAR_FUTURE_EPOCH, GENESIS_EPOCH,
-  GENESIS_FORK_VERSION, GENESIS_SLOT,
-  GENESIS_START_SHARD, INITIATED_EXIT, LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
-  LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH, MAX_DEPOSIT_AMOUNT,
-  SHARD_COUNT, WHISTLEBLOWER_REWARD_QUOTIENT, ZERO_HASH,
+  EMPTY_SIGNATURE, FAR_FUTURE_EPOCH, GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD,
+  INITIATED_EXIT, LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH,
+  LATEST_SLASHED_EXIT_LENGTH, MAX_DEPOSIT_AMOUNT, SHARD_COUNT, WHISTLEBLOWER_REWARD_QUOTIENT, ZERO_HASH,
 } from "../../constants";
 import {
   generateSeed,
@@ -13,15 +11,15 @@ import {
   getEntryExitEffectEpoch,
 } from "../../helpers/stateTransitionHelpers";
 import {
-    BeaconState, BLSPubkey, BLSSignature, Bytes32, Crosslink, Deposit, DepositInput, Eth1Data, Gwei, uint64,
-    Validator,
-    ValidatorIndex,
+  BeaconState, BLSPubkey, BLSSignature, Bytes32, Crosslink, Deposit, DepositInput, Eth1Data, Gwei, uint64,
+  Validator,
+  ValidatorIndex,
 } from "../../types";
 
 type int = number;
 
 // Stubbed functions from SSZ
-function hashTreeRoot(x: any): Bytes32 {
+export function hashTreeRoot(x: any): Bytes32 {
   return new Uint8Array(2);
 }
 
@@ -120,7 +118,7 @@ export function getInitialBeaconState(
  * @param {BLSSignature} proofOfPossession
  * @param {Bytes32} withdrawalCredentials
  */
-function processDeposit(
+export function processDeposit(
   state: BeaconState,
   pubkey: BLSPubkey,
   amount: Gwei,
@@ -134,12 +132,12 @@ function processDeposit(
     if (!validatorPubkeys.includes(pubkey)) {
       // Add new validator
       const validator: Validator = {
-        pubkey,
-        withdrawalCredentials,
-        activationEpoch: FAR_FUTURE_EPOCH,
-        exitEpoch: FAR_FUTURE_EPOCH,
-        withdrawalEpoch: FAR_FUTURE_EPOCH,
-        slashedEpoch: FAR_FUTURE_EPOCH,
+        pubkey: pubkey,
+        withdrawalCredentials: withdrawalCredentials,
+        activationEpoch: new BN(FAR_FUTURE_EPOCH),
+        exitEpoch: new BN(FAR_FUTURE_EPOCH),
+        withdrawalEpoch: new BN(FAR_FUTURE_EPOCH),
+        slashedEpoch: new BN(FAR_FUTURE_EPOCH),
         statusFlags: new BN(0),
       };
 
@@ -149,7 +147,7 @@ function processDeposit(
     } else {
     // Increase balance by deposit amount
       const index = validatorPubkeys.indexOf(pubkey);
-      if (state.validatorRegistry[index].withdrawalCredentials === withdrawalCredentials) { throw new Error("Deposit already made!"); }
+      if (state.validatorRegistry[index].withdrawalCredentials === withdrawalCredentials) throw new Error("Deposit already made!");
       state.validatorBalances[index] = state.validatorBalances[index].add(amount);
     }
 }
@@ -162,7 +160,7 @@ function processDeposit(
  * @param {Bytes32} withdrawalCredentials
  * @returns {boolean}
  */
-function validateProofOfPossession(
+export function validateProofOfPossession(
   state: BeaconState,
   pubkey: BLSPubkey,
   proofOfPossession: BLSSignature,
@@ -191,7 +189,7 @@ function validateProofOfPossession(
  * @param {ValidatorIndex} index
  * @param {boolean} isGenesis
  */
-function activateValidator(state: BeaconState, index: ValidatorIndex, isGenesis: boolean): void {
+export function activateValidator(state: BeaconState, index: ValidatorIndex, isGenesis: boolean): void {
     // TODO: Unsafe usage of toNumber for index
     const validator: Validator = state.validatorRegistry[index.toNumber()];
     validator.activationEpoch = isGenesis ? GENESIS_EPOCH : getEntryExitEffectEpoch(getCurrentEpoch(state));
@@ -203,7 +201,7 @@ function activateValidator(state: BeaconState, index: ValidatorIndex, isGenesis:
  * @param {BeaconState} state
  * @param {int} index
  */
-function initiateValidatorExit(state: BeaconState, index: ValidatorIndex): void {
+export function initiateValidatorExit(state: BeaconState, index: ValidatorIndex): void {
     // TODO: Unsafe usage of toNumber for index
     const validator = state.validatorRegistry[index.toNumber()];
     if (!validator.statusFlags) {
@@ -224,7 +222,6 @@ function exitValidator(state: BeaconState, index: ValidatorIndex): void {
   if (validator.exitEpoch <= getEntryExitEffectEpoch(getCurrentEpoch(state))) {
       return;
   }
-
   validator.exitEpoch = getEntryExitEffectEpoch(getCurrentEpoch(state));
 }
 
@@ -234,7 +231,7 @@ function exitValidator(state: BeaconState, index: ValidatorIndex): void {
  * @param {BeaconState} state
  * @param {ValidatorIndex} index
  */
-function penalizeValidator(state: BeaconState, index: ValidatorIndex): void {
+export function penalizeValidator(state: BeaconState, index: ValidatorIndex): void {
     exitValidator(state, index);
     // TODO: Unsafe usage of toNumber
     const validator = state.validatorRegistry[index.toNumber()];

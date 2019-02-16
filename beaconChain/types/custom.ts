@@ -5,18 +5,18 @@ import {
   uint64,
 } from "./primitive";
 
-export type SlotNumber = uint64;
-export type EpochNumber = uint64;
-export type ShardNumber = uint64;
+export type Slot = uint64;
+export type Epoch = uint64;
+export type Shard = uint64;
 export type ValidatorIndex = uint64;
 export type Gwei = uint64;
 export type Bytes32 = bytes32;
 export type BLSPubkey = bytes48;
 export type BLSSignature = bytes96;
 
-export const SlotNumber = uint64;
-export const EpochNumber = uint64;
-export const ShardNumber = uint64;
+export const Slot = uint64;
+export const Epoch = uint64;
+export const Shard = uint64;
 export const ValidatorIndex = uint64;
 export const Gwei = uint64;
 export const Bytes32 = bytes32;

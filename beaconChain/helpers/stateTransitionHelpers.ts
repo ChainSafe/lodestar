@@ -13,9 +13,9 @@ import {
   AttestationData,
   BeaconState,
   bytes32,
-  EpochNumber,
+  Epoch,
   Fork,
-  SlotNumber,
+  Slot,
   uint64,
   Validator,
   ValidatorIndex,
@@ -26,48 +26,48 @@ type hash32 = Uint8Array;
 
 /**
  * Return the epoch number of the given slot.
- * @param {SlotNumber} slot
- * @returns {EpochNumber}
+ * @param {Slot} slot
+ * @returns {Epoch}
  */
-export function slotToEpoch(slot: SlotNumber): EpochNumber {
+export function slotToEpoch(slot: Slot): Epoch {
   return slot.divn(SLOTS_PER_EPOCH);
 }
 
 /**
  * Return the current epoch of the given state.
  * @param {BeaconState} state
- * @returns {EpochNumber}
+ * @returns {Epoch}
  */
-export function getCurrentEpoch(state: BeaconState): EpochNumber {
+export function getCurrentEpoch(state: BeaconState): Epoch {
   return slotToEpoch(state.slot);
 }
 
 /**
  * Return the starting slot of the given epoch.
- * @param {EpochNumber} epoch
- * @returns {SlotNumber}
+ * @param {Epoch} epoch
+ * @returns {Slot}
  */
-export function getEpochStartSlot(epoch: EpochNumber): SlotNumber {
+export function getEpochStartSlot(epoch: Epoch): Slot {
   return epoch.muln(SLOTS_PER_EPOCH);
 }
 
 /**
  * Checks to see if a validator is active.
  * @param {Validator} validator
- * @param {EpochNumber} epoch
+ * @param {Epoch} epoch
  * @returns {boolean}
  */
-export function isActiveValidator(validator: Validator, epoch: EpochNumber): boolean {
+export function isActiveValidator(validator: Validator, epoch: Epoch): boolean {
   return validator.activationEpoch.lte(epoch) && epoch.lt(validator.exitEpoch);
 }
 
 /**
  * Get indices of active validators from validators.
  * @param {Validator[]} validators
- * @param {EpochNumber} epoch
+ * @param {Epoch} epoch
  * @returns {ValidatorIndex[]}
  */
-export function getActiveValidatorIndices(validators: Validator[], epoch: EpochNumber): ValidatorIndex[] {
+export function getActiveValidatorIndices(validators: Validator[], epoch: Epoch): ValidatorIndex[] {
   return validators.reduce((accumulator: ValidatorIndex[], validator: Validator, index: int) => {
     return isActiveValidator(validator, epoch)
     ? [...accumulator, new BN(index)]
@@ -197,7 +197,7 @@ export function getEpochCommitteeCount(activeValidatorCount: int): int {
  * @param {int} slot
  * @returns {int[][]}
  */
-export function getShuffling(seed: hash32, validators: Validator[], slot: SlotNumber): ValidatorIndex[][] {
+export function getShuffling(seed: hash32, validators: Validator[], slot: Slot): ValidatorIndex[][] {
   // Normalizes slot to start of epoch boundary
   const slotAtEpoch = slot.sub(slot.umod(new BN(SLOTS_PER_EPOCH)));
 
@@ -249,11 +249,11 @@ export function getNextEpochCommitteeCount(state: BeaconState): int {
 /**
  * Return the list of (committee, shard) acting as a tuple for the slot.
  * @param {BeaconState} state
- * @param {SlotNumber} slot
+ * @param {Slot} slot
  * @param {boolean} registryChange
  * @returns {[]}
  */
-function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: SlotNumber, registryChange: boolean = false): Array<{ShardNumber, ValidatorIndex}> {
+function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, registryChange: boolean = false): Array<{ShardNumber, ValidatorIndex}> {
   const epoch = slotToEpoch(slot);
   const currentEpoch = getCurrentEpoch(state);
   const previousEpoch = currentEpoch.gt(GENESIS_EPOCH) ? currentEpoch.subn(1) : currentEpoch;
@@ -264,7 +264,7 @@ function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: SlotNumber, regi
   // variables
   let committeesPerEpoch: int;
   let seed: bytes32;
-  let shufflingEpoch: EpochNumber;
+  let shufflingEpoch: Epoch;
   let shufflingStartShard: uint64;
   let currentCommitteesPerEpoch: int;
 
@@ -316,7 +316,7 @@ function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: SlotNumber, regi
  * @param {int} slot
  * @returns {hash32}
  */
-export function getBlockRoot(state: BeaconState, slot: SlotNumber): bytes32 {
+export function getBlockRoot(state: BeaconState, slot: Slot): bytes32 {
   // Returns the block root at a recent ``slot``.
   if (state.slot.lte(slot.addn(LATEST_BLOCK_ROOTS_LENGTH))) { throw new Error(); }
   if (slot.lt(state.slot)) { throw new Error(); }
@@ -326,10 +326,10 @@ export function getBlockRoot(state: BeaconState, slot: SlotNumber): bytes32 {
 /**
  * Return the randao mix at a recent epoch.
  * @param {BeaconState} state
- * @param {EpochNumber} epoch
+ * @param {Epoch} epoch
  * @returns {bytes32}
  */
-export function getRandaoMix(state: BeaconState, epoch: EpochNumber): bytes32 {
+export function getRandaoMix(state: BeaconState, epoch: Epoch): bytes32 {
   if (getCurrentEpoch(state).subn(LATEST_RANDAO_MIXES_LENGTH).lt(epoch) && epoch.lt(getCurrentEpoch(state))) { throw new Error(""); }
   return state.latestRandaoMixes[epoch.umod(new BN(LATEST_RANDAO_MIXES_LENGTH)).toNumber()];
 }
@@ -337,10 +337,10 @@ export function getRandaoMix(state: BeaconState, epoch: EpochNumber): bytes32 {
 /**
  * Return the index root at a recent epoch.
  * @param {BeaconState} state
- * @param {EpochNumber} epoch
+ * @param {Epoch} epoch
  * @returns {bytes32}
  */
-export function getActiveIndexRoot(state: BeaconState, epoch: EpochNumber): bytes32 {
+export function getActiveIndexRoot(state: BeaconState, epoch: Epoch): bytes32 {
   if (getCurrentEpoch(state).subn(LATEST_ACTIVE_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY).lt(epoch)
       && epoch.lt(getCurrentEpoch(state).addn(ACTIVATION_EXIT_DELAY))) { throw new Error(""); }
   return state.latestActiveIndexRoots[epoch.umod(new BN(LATEST_ACTIVE_INDEX_ROOTS_LENGTH)).toNumber()];
@@ -349,11 +349,11 @@ export function getActiveIndexRoot(state: BeaconState, epoch: EpochNumber): byte
 /**
  * Generate a seed for the given epoch.
  * @param {BeaconState} state
- * @param {EpochNumber} epoch
+ * @param {Epoch} epoch
  * @returns {bytes32}
  */
 // TODO FINSIH
-export function generateSeed(state: BeaconState, epoch: EpochNumber): bytes32 {
+export function generateSeed(state: BeaconState, epoch: Epoch): bytes32 {
   // return hash(
   //   getRandaoMix(state, epoch - MIN_SEED_LOOKAHEAD) + getActiveIndexRoot(state, epoch))
   // )
@@ -366,7 +366,7 @@ export function generateSeed(state: BeaconState, epoch: EpochNumber): bytes32 {
  * @param {int} slot
  * @returns {int}
  */
-export function getBeaconProposerIndex(state: BeaconState, slot: SlotNumber): int {
+export function getBeaconProposerIndex(state: BeaconState, slot: Slot): int {
   const firstCommittee = getCrosslinkCommitteesAtSlot(state, slot)[0].ValidatorIndex;
   return firstCommittee[slot.umod(new BN(firstCommittee.length)).toNumber()];
 }
@@ -444,21 +444,21 @@ export function getEffectiveBalance(state: BeaconState, index: int): int {
 /**
  * Return the fork version of the given epoch.
  * @param {Fork} fork
- * @param {EpochNumber} epoch
+ * @param {Epoch} epoch
  * @returns {Number}
  */
-export function getForkVersion(fork: Fork, epoch: EpochNumber): uint64 {
+export function getForkVersion(fork: Fork, epoch: Epoch): uint64 {
   return epoch.lt(fork.epoch) ? fork.previousVersion : fork.currentVersion;
 }
 
 /**
  * Get the domain number that represents the fork meta and signature domain.
  * @param {Fork} fork
- * @param {EpochNumber} epoch
+ * @param {Epoch} epoch
  * @param {int} domainType
  * @returns {Number}
  */
-export function getDomain(fork: Fork, epoch: EpochNumber, domainType: int): uint64 {
+export function getDomain(fork: Fork, epoch: Epoch, domainType: int): uint64 {
   return getForkVersion(fork, epoch).mul(new BN(2 ** 32)).addn(domainType);
 }
 
@@ -483,8 +483,8 @@ export function getDomain(fork: Fork, epoch: EpochNumber, domainType: int): uint
  * @returns {boolean}
  */
 export function isDoubleVote(attestationData1: AttestationData, attestationData2: AttestationData): boolean {
-  const targetEpoch1: EpochNumber = slotToEpoch(attestationData1.slot);
-  const targetEpoch2: EpochNumber = slotToEpoch(attestationData2.slot);
+  const targetEpoch1: Epoch = slotToEpoch(attestationData1.slot);
+  const targetEpoch2: Epoch = slotToEpoch(attestationData2.slot);
   return targetEpoch1.eq(targetEpoch2);
 }
 
@@ -495,10 +495,10 @@ export function isDoubleVote(attestationData1: AttestationData, attestationData2
  * @returns {boolean}
  */
 export function isSurroundVote(attestationData1: AttestationData, attestationData2: AttestationData): boolean {
-  const sourceEpoch1: EpochNumber  = attestationData1.justifiedEpoch;
-  const sourceEpoch2: EpochNumber  = attestationData2.justifiedEpoch;
-  const targetEpoch1: EpochNumber  = slotToEpoch(attestationData1.slot);
-  const targetEpoch2: EpochNumber  = slotToEpoch(attestationData2.slot);
+  const sourceEpoch1: Epoch  = attestationData1.justifiedEpoch;
+  const sourceEpoch2: Epoch  = attestationData2.justifiedEpoch;
+  const targetEpoch1: Epoch  = slotToEpoch(attestationData1.slot);
+  const targetEpoch2: Epoch  = slotToEpoch(attestationData2.slot);
   return (
     sourceEpoch1.lt(sourceEpoch2) &&
     targetEpoch2.lt(targetEpoch1)
@@ -523,9 +523,9 @@ export function intSqrt(n: int): int {
 
 /**
  * An entry or exit triggered in the epoch given by the input takes effect at the epoch given by the output.
- * @param {EpochNumber} epoch
- * @returns {EpochNumber}
+ * @param {Epoch} epoch
+ * @returns {Epoch}
  */
-export function getEntryExitEffectEpoch(epoch: EpochNumber): EpochNumber {
+export function getEntryExitEffectEpoch(epoch: Epoch): Epoch {
   return epoch.addn(1 + ACTIVATION_EXIT_DELAY);
 }
