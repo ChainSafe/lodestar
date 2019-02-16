@@ -167,7 +167,7 @@ export interface BeaconBlockBody {
   attestations: Attestation[];
   deposits: Deposit[];
   exits: VoluntaryExit[];
-  transfers: Transfer[]
+  transfers: Transfer[];
 }
 export const BeaconBlockBody = {
   name: "BeaconBlockBody",

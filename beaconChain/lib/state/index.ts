@@ -1,22 +1,22 @@
+import BN = require("bn.js");
 import {
-    BeaconState, BLSPubkey, BLSSignature, Bytes32, Crosslink, Deposit, DepositInput, Eth1Data, Gwei, uint64,
-    Validator,
-    ValidatorIndex,
-} from "../../types";
-import {
-  ZERO_HASH, LATEST_RANDAO_MIXES_LENGTH, SHARD_COUNT,
-  LATEST_BLOCK_ROOTS_LENGTH, EMPTY_SIGNATURE,
-  WHISTLEBLOWER_REWARD_QUOTIENT, GENESIS_SLOT, GENESIS_FORK_VERSION,
-  GENESIS_START_SHARD, LATEST_SLASHED_EXIT_LENGTH, FAR_FUTURE_EPOCH, GENESIS_EPOCH,
-  MAX_DEPOSIT_AMOUNT, LATEST_ACTIVE_INDEX_ROOTS_LENGTH, INITIATED_EXIT,
+  EMPTY_SIGNATURE, FAR_FUTURE_EPOCH, GENESIS_EPOCH,
+  GENESIS_FORK_VERSION, GENESIS_SLOT,
+  GENESIS_START_SHARD, INITIATED_EXIT, LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
+  LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH, MAX_DEPOSIT_AMOUNT,
+  SHARD_COUNT, WHISTLEBLOWER_REWARD_QUOTIENT, ZERO_HASH,
 } from "../../constants";
 import {
   generateSeed,
   getActiveValidatorIndices,
   getBeaconProposerIndex, getCurrentEpoch, getEffectiveBalance,
-  getEntryExitEffectEpoch
+  getEntryExitEffectEpoch,
 } from "../../helpers/stateTransitionHelpers";
-import BN = require("bn.js");
+import {
+    BeaconState, BLSPubkey, BLSSignature, Bytes32, Crosslink, Deposit, DepositInput, Eth1Data, Gwei, uint64,
+    Validator,
+    ValidatorIndex,
+} from "../../types";
 
 type int = number;
 
@@ -39,17 +39,17 @@ export function getInitialBeaconState(
 
   const initialCrosslinkRecord: Crosslink = {
       epoch: GENESIS_EPOCH,
-      shardBlockRoot: ZERO_HASH
+      shardBlockRoot: ZERO_HASH,
   };
 
   const state: BeaconState = {
       // MISC
       slot: GENESIS_SLOT,
-      genesisTime: genesisTime,
+      genesisTime,
       fork: {
           previousVersion: GENESIS_FORK_VERSION,
           currentVersion: GENESIS_FORK_VERSION,
-          epoch: GENESIS_EPOCH
+          epoch: GENESIS_EPOCH,
       },
       // Validator registry
       validatorRegistry: [],
@@ -80,13 +80,13 @@ export function getInitialBeaconState(
       batchedBlockRoots: [],
 
       // PoW receipt root
-      latestEth1Data: latestEth1Data,
+      latestEth1Data,
       eth1DataVotes: [],
       depositIndex: new BN(0),
   };
 
   // Process initial deposists
-  initialValidatorDeposits.forEach(deposit => {
+  initialValidatorDeposits.forEach((deposit) => {
       const validatorIndex = processDeposit(
         state,
         deposit.depositData.depositInput.pubkey,
@@ -127,15 +127,15 @@ function processDeposit(
   proofOfPossession: BLSSignature,
   withdrawalCredentials: Bytes32): void {
     // Validate the given proofOfPossession
-    if (!validateProofOfPossession(state, pubkey, proofOfPossession, withdrawalCredentials)) {throw new Error("")};
+    if (!validateProofOfPossession(state, pubkey, proofOfPossession, withdrawalCredentials)) {throw new Error("");}
 
-    const validatorPubkeys = state.validatorRegistry.map(v => { return v.pubkey });
+    const validatorPubkeys = state.validatorRegistry.map((v) => v.pubkey);
 
     if (!validatorPubkeys.includes(pubkey)) {
       // Add new validator
       const validator: Validator = {
-        pubkey: pubkey,
-        withdrawalCredentials: withdrawalCredentials,
+        pubkey,
+        withdrawalCredentials,
         activationEpoch: FAR_FUTURE_EPOCH,
         exitEpoch: FAR_FUTURE_EPOCH,
         withdrawalEpoch: FAR_FUTURE_EPOCH,
@@ -149,7 +149,7 @@ function processDeposit(
     } else {
     // Increase balance by deposit amount
       const index = validatorPubkeys.indexOf(pubkey);
-      if (state.validatorRegistry[index].withdrawalCredentials === withdrawalCredentials) throw new Error("Deposit already made!")
+      if (state.validatorRegistry[index].withdrawalCredentials === withdrawalCredentials) { throw new Error("Deposit already made!"); }
       state.validatorBalances[index] = state.validatorBalances[index].add(amount);
     }
 }
@@ -168,9 +168,9 @@ function validateProofOfPossession(
   proofOfPossession: BLSSignature,
   withdrawalCredentials: Bytes32): boolean {
     const proofOfPossessionData: DepositInput = {
-        pubkey: pubkey,
-        withdrawalCredentials: withdrawalCredentials,
-        proofOfPossession: EMPTY_SIGNATURE
+        pubkey,
+        withdrawalCredentials,
+        proofOfPossession: EMPTY_SIGNATURE,
     };
     // Stubbed until BLS is a dependency
     // return bls_verify(
@@ -243,7 +243,7 @@ function penalizeValidator(state: BeaconState, index: ValidatorIndex): void {
 
     const whistleblowerIndex = getBeaconProposerIndex(state, state.slot);
     const whistleblowerReward = Math.floor(getEffectiveBalance(state, index.toNumber()) / WHISTLEBLOWER_REWARD_QUOTIENT);
-    state.validatorBalances[whistleblowerIndex] = state.validatorBalances[whistleblowerIndex].addn(whistleblowerReward)
+    state.validatorBalances[whistleblowerIndex] = state.validatorBalances[whistleblowerIndex].addn(whistleblowerReward);
     state.validatorBalances[index.toNumber()] = state.validatorBalances[index.toNumber()].subn(whistleblowerReward);
     validator.slashedEpoch = getCurrentEpoch(state);
 }

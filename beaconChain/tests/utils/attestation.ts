@@ -1,8 +1,8 @@
 import BN from "bn.js";
 
+import {slotToEpoch} from "../../helpers/stateTransitionHelpers";
 import {AttestationData, uint64} from "../../types";
 import {randBetween} from "./misc";
-import {slotToEpoch} from "../../helpers/stateTransitionHelpers";
 
 /**
  * Generates a fake attestation data for test purposes.

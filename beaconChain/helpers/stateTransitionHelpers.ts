@@ -3,10 +3,10 @@ import BN from "bn.js";
 
 import {
   ACTIVATION_EXIT_DELAY,
-  SLOTS_PER_EPOCH, GENESIS_EPOCH, LATEST_BLOCK_ROOTS_LENGTH, LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
-  LATEST_RANDAO_MIXES_LENGTH,
+  GENESIS_EPOCH, LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH,
   MAX_DEPOSIT_AMOUNT,
   SHARD_COUNT,
+  SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
 } from "../constants";
 import {
@@ -16,7 +16,6 @@ import {
   EpochNumber,
   Fork,
   SlotNumber,
-  uint24,
   uint64,
   Validator,
   ValidatorIndex,
@@ -342,7 +341,8 @@ export function getRandaoMix(state: BeaconState, epoch: EpochNumber): bytes32 {
  * @returns {bytes32}
  */
 export function getActiveIndexRoot(state: BeaconState, epoch: EpochNumber): bytes32 {
-  if (getCurrentEpoch(state).subn(LATEST_ACTIVE_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY).lt(epoch) && epoch.lt(getCurrentEpoch(state).addn(ACTIVATION_EXIT_DELAY))) { throw new Error(""); }
+  if (getCurrentEpoch(state).subn(LATEST_ACTIVE_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY).lt(epoch)
+      && epoch.lt(getCurrentEpoch(state).addn(ACTIVATION_EXIT_DELAY))) { throw new Error(""); }
   return state.latestActiveIndexRoots[epoch.umod(new BN(LATEST_ACTIVE_INDEX_ROOTS_LENGTH)).toNumber()];
 }
 

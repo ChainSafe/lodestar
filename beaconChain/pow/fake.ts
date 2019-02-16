@@ -1,5 +1,5 @@
-import { Deposit, DepositData, DepositInput, Eth1Data } from "../types";
 import BN = require("bn.js");
+import { Deposit, DepositData, DepositInput, Eth1Data } from "../types";
 
 type int = number;
 

@@ -141,7 +141,7 @@ export const BeaconState = {
     // Eth1
     ["latestEth1Data", Eth1Data],
     ["eth1DataVotes", [Eth1DataVote]],
-    ["depositIndex", uint64]
+    ["depositIndex", uint64],
   ],
 };
 

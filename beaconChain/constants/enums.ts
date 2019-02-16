@@ -4,7 +4,7 @@ enum Domain {
   PROPOSAL = 2,
   EXIT = 3,
   RANDAO = 4,
-  TRANSFER = 5
+  TRANSFER = 5,
 }
 
 export {

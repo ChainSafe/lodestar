@@ -1,11 +1,10 @@
 import BN from "bn.js";
-import {slotToEpoch} from "../helpers/stateTransitionHelpers";
 
 // Misc
 export const SHARD_COUNT = 2 ** 10; // 1024 shards
 export const TARGET_COMMITTEE_SIZE = 2 ** 7; // 128 validators
 export const MAX_BALANCE_CHURN_QUOTIENT = 2 ** 5; // 32
-export const BEACON_CHAIN_SHARD_NUMBER = new BN(2).pow(new BN(64)).sub( new BN(1)); //2 ** 64 - 1
+export const BEACON_CHAIN_SHARD_NUMBER = new BN(2).pow(new BN(64)).sub( new BN(1)); // 2 ** 64 - 1
 export const MAX_INDICES_PER_SLASHABLE_VOTE = 2 ** 12; // 4096
 export const MAX_WITHDRAWALS_PER_EPOCH = 2 ** 2; // 4 withdrawals
 
@@ -16,14 +15,14 @@ export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
 // GWei Values
 export const MIN_DEPOSIT_AMOUNT = 2 ** 0 * 1e9; // 1,000,000,000 Gwei
 export const MAX_DEPOSIT_AMOUNT = 2 ** 5 * 1e9; // 32,000,000,000 Gwei
-export const FORK_CHOICE_BALANCE_INCREMENT = 2 ** 0 * 1e9 // 1,000,000,000 Gwei
+export const FORK_CHOICE_BALANCE_INCREMENT = 2 ** 0 * 1e9; // 1,000,000,000 Gwei
 export const EJECTION_BALANCE = 2 ** 4 * 1e9; // 16,000,000,000 Gwei
 
 // Initial values
 export const GENESIS_FORK_VERSION	= new BN(0);
 export const GENESIS_SLOT = new BN(2).pow(new BN(63)); // 2 ** 63
 
-export const GENESIS_EPOCH = GENESIS_SLOT.div(new BN(2 ** 6)) //slotToEpoch(GENESIS_SLOT);
+export const GENESIS_EPOCH = GENESIS_SLOT.div(new BN(2 ** 6)); // slotToEpoch(GENESIS_SLOT);
 export const GENESIS_START_SHARD = new BN(0);
 export const FAR_FUTURE_EPOCH = new BN(2).pow(new BN(64)).sub( new BN(1)); // 2 ** 64 - 1
 export const ZERO_HASH = new Uint8Array(32);
