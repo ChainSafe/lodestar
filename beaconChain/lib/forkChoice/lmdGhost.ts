@@ -1,6 +1,8 @@
 import {Attestation, BeaconBlock, BeaconState, PendingAttestation, Validator, ValidatorIndex} from "../types";
 import {getActiveValidatorIndices, getEffectiveBalance, slotToEpoch} from "../helpers/stateTransitionHelpers";
 
+type int = number;
+
 // Probably add this as a field to BeaconState
 interface Store {
   pendingAttestations: PendingAttestation[];
@@ -75,7 +77,7 @@ function lmdGhost(store: Store, startState: BeaconState, startBlock: BeaconBlock
   // Inner function
   function getVoteCount(block: BeaconBlock): int {
     let sum: number;
-    for (let target in attestationTargets) {
+    for (let target of attestationTargets) {
       if (getAncestor(store, target[1], block.slot) ==== block) {
         sum += Math.floor(getEffectiveBalance(startState, target[0]) / FORK_CHOICE_BALANCE_INCREMENT);
       }
