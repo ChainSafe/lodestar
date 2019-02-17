@@ -83,6 +83,19 @@ export function slotToEpoch(slot: Slot): Epoch {
 }
 
 /**
+ * Return the previous epoch of the given state.
+ * @param {BeaconState} state
+ * @returns {Epoch}
+ */
+export function getPreviousEpoch(state: BeaconState): Epoch {
+  const currentEpoch = getCurrentEpoch(state);
+  if (currentEpoch === GENESIS_EPOCH) {
+    return GENESIS_EPOCH;
+  }
+  return currentEpoch.subn(1);
+}
+
+/**
  * Return the current epoch of the given state.
  * @param {BeaconState} state
  * @returns {Epoch}
@@ -458,6 +471,8 @@ export function getAttestationParticipants(state: BeaconState, attestationData: 
 }
 // export function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, participationBitfield: bytes): int[] {
 //   const crosslinkCommittee: CommitteeShard[] = getCrosslinkCommitteesAtSlot(state, attestationData.slot);
+// function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, bitfield: bytes): int[] {
+//   const crosslinkCommittees: Array<{ShardNumber, ValidatorIndex}> = getCrosslinkCommitteesAtSlot(state, attestationData.slot);
 //
 //   // assert attestation.shard in [shard for _, shard in crosslink_committees]
 //   // crosslink_committee = [committee for committee, shard in crosslink_committees if shard == attestation_data.shard][0]
@@ -482,13 +497,20 @@ export function getAttestationParticipants(state: BeaconState, attestationData: 
  * @param {int} index
  * @returns {Number}
  */
-export function getEffectiveBalance(state: BeaconState, index: ValidatorIndex): int {
-  // Returns the effective balance (also known as "balance at stake") for a ``validator`` with the given ``index``.
-  if (state.validatorBalances[index.toNumber()].ltn(MAX_DEPOSIT_AMOUNT)) {
-    return state.validatorBalances[index.toNumber()].toNumber();
-  } else {
-    return MAX_DEPOSIT_AMOUNT;
-  }
+export function getEffectiveBalance(state: BeaconState, index: ValidatorIndex): Gwei {
+  const bnMax = new BN(MAX_DEPOSIT_AMOUNT);
+  const vBal = state.validatorBalances[index.toNumber()];
+  return vBal.lt(bnMax) ? vBal : bnMax;
+}
+
+/**
+ * Return the combined effective balance of an array of validators.
+ * @param {BeaconState} state
+ * @param {ValidatorIndex[]} validators
+ * @returns {Gwei}
+ */
+export function getTotalBalance(state: BeaconState, validators: ValidatorIndex[]): Gwei {
+  return validators.reduce((a, validator) => a.add(getEffectiveBalance(state, validator)))[0];
 }
 
 /**

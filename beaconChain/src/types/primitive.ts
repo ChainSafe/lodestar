@@ -14,6 +14,7 @@ export type uint64 = BN;
 export type uint384 = BN;
 
 export const bool = "bool";
+export const int = "number";
 export const bytes = "bytes";
 export const bytes32 = "bytes32";
 export const bytes48 = "bytes48";
