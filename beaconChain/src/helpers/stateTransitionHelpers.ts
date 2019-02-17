@@ -89,7 +89,7 @@ export function slotToEpoch(slot: Slot): Epoch {
  */
 export function getPreviousEpoch(state: BeaconState): Epoch {
   const currentEpoch = getCurrentEpoch(state);
-  if (currentEpoch === GENESIS_EPOCH) {
+  if (currentEpoch.eq(GENESIS_EPOCH)) {
     return GENESIS_EPOCH;
   }
   return currentEpoch.subn(1);

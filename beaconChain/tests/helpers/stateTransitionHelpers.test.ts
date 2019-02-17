@@ -1,19 +1,19 @@
 import BN from "bn.js";
 import { assert } from "chai";
 
-import { SLOTS_PER_EPOCH, TARGET_COMMITTEE_SIZE } from "../../src/constants";
+import {GENESIS_SLOT, SLOTS_PER_EPOCH, TARGET_COMMITTEE_SIZE} from "../../src/constants";
 import {
   clamp,
   getActiveValidatorIndices,
   getBitfieldBit,
-  getCurrentEpoch,
   getDomain,
   getEpochCommitteeCount,
   getEpochStartSlot,
   getForkVersion,
   hash,
-  intSqrt,
   intToBytes,
+  getPreviousEpoch,
+  intSqrt,
   isActiveValidator,
   isDoubleVote,
   isPowerOfTwo,
@@ -22,10 +22,11 @@ import {
   slotToEpoch,
   split,
 } from "../../src/helpers/stateTransitionHelpers";
-import {Epoch, Fork, int, Slot, uint64, Validator} from "../../src/types";
+import {BeaconState, Epoch, Fork, int, Slot, uint64, Validator} from "../../src/types";
 import {generateAttestationData} from "../utils/attestation";
 import {randBetween} from "../utils/misc";
 import {generateValidator} from "../utils/validator";
+import {generateState} from "../utils/state";
 
 describe("intToBytes", () => {
   const zeroedArray = (length) => Array.from({length}, () => 0);
@@ -540,5 +541,30 @@ describe("merkleRoot", () => {
     const expectedRoot = hash(Buffer.concat([leftNode, rightNode]));
 
     assert(expectedRoot.equals(computedRoot), `${expectedRoot} didn't equal ${computedRoot}`);
+  });
+});
+
+describe("getPreviousEpoch", () => {
+
+  it("epoch should return previous epoch", () => {
+    const state: BeaconState = generateState({ slot: new BN(512)});
+    const expected: Epoch = new BN(7);
+    const result = getPreviousEpoch(state);
+    assert(result.eq(expected), `expected: ${expected}, result: ${result}`);
+  });
+
+  it("epoch should return previous epoch", () => {
+    const state: BeaconState = generateState({ slot: new BN(256)});
+    const expected: Epoch = new BN(3);
+    const result = getPreviousEpoch(state);
+    assert(result.eq(expected), `expected: ${expected}, result: ${result}`);
+  });
+
+  it("epoch should return genesis epoch", () => {
+    const state: BeaconState = generateState({ slot: new BN(GENESIS_SLOT)});
+    const expected: Epoch = slotToEpoch(GENESIS_SLOT);
+    // const expected: Epoch = new BN(1.441151881e17);
+    const result = getPreviousEpoch(state);
+    assert(result.eq(expected), `expected: ${expected}, result: ${result}`);
   });
 });
