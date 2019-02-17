@@ -565,7 +565,6 @@ describe("getPreviousEpoch", () => {
   it("epoch should return genesis epoch", () => {
     const state: BeaconState = generateState({ slot: new BN(GENESIS_SLOT)});
     const expected: Epoch = slotToEpoch(GENESIS_SLOT);
-    // const expected: Epoch = new BN(1.441151881e17);
     const result = getPreviousEpoch(state);
     assert(result.eq(expected), `expected: ${expected}, result: ${result}`);
   });
