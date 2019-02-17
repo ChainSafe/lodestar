@@ -371,10 +371,13 @@ export function hash(value: bytes): bytes32 {
  * @returns {bytes32}
  */
 export function merkleRoot(values: bytes32[]): bytes32 {
+  // Create array twice as long as values
+  // first half of the array representing intermediate tree nodes
   const o: bytes[] = Array.from({ length: values.length },
     () => Buffer.alloc(0))
-      // hash leaf nodes
-      .concat(values.map((v) => hash(v)));
+      // do not hash leaf nodes
+      // we assume leaf nodes are prehashed
+      .concat(values);
   for (let i = values.length - 1; i > 0; i--) {
     // hash intermediate/root nodes
     o[i] = hash(Buffer.concat([o[i * 2], o[i * 2 + 1]]));

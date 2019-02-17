@@ -499,11 +499,11 @@ describe("merkleRoot", () => {
     ];
     const computedRoot = merkleRoot(testValue);
 
-    // hash leaf nodes
-    const hashV1 = hash(Buffer.from('a'));
-    const hashV2 = hash(Buffer.from('b'));
-    const hashV3 = hash(Buffer.from('c'));
-    const hashV4 = hash(Buffer.from('d'));
+    // leaf nodes
+    const hashV1 = Buffer.from('a');
+    const hashV2 = Buffer.from('b');
+    const hashV3 = Buffer.from('c');
+    const hashV4 = Buffer.from('d');
 
     // hash intermediate nodes
     const leftNode = hash(Buffer.concat([hashV1, hashV2]));
