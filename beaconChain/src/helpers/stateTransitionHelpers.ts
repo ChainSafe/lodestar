@@ -510,7 +510,7 @@ export function getEffectiveBalance(state: BeaconState, index: ValidatorIndex): 
  * @returns {Gwei}
  */
 export function getTotalBalance(state: BeaconState, validators: ValidatorIndex[]): Gwei {
-  return validators.reduce((a, validator) => a.add(getEffectiveBalance(state, validator)));
+  return validators.reduce((acc: BN, cur: BN): BN => acc.add(getEffectiveBalance(state, cur)), new BN(0));
 }
 
 /**
