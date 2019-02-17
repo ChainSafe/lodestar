@@ -10,16 +10,16 @@ import {
   TARGET_COMMITTEE_SIZE,
 } from "../constants";
 import {
-  AttestationData,
-  BeaconState,
-  bytes32,
-  Epoch,
-  Fork,
-  int,
-  Slot,
-  uint64,
-  Validator,
-  ValidatorIndex,
+    AttestationData,
+    BeaconState, bytes,
+    bytes32,
+    Epoch,
+    Fork,
+    int,
+    Slot,
+    uint64,
+    Validator,
+    ValidatorIndex,
 } from "../types";
 
 /**
@@ -449,10 +449,17 @@ export function getDomain(fork: Fork, epoch: Epoch, domainType: int): uint64 {
   return getForkVersion(fork, epoch).mul(new BN(2 ** 32)).addn(domainType);
 }
 
-// TODO finish
-// export function getBitfieldBit(bitfied: bytes, i: int): int {
-//
-// }
+/**
+ * Returns the ith bit in bitfield
+ * @param {bytes} bitfield
+ * @param {int} i
+ * @returns {Number}
+ */
+export function getBitfieldBit(bitfield: bytes, i: int): int {
+  const bit = i % 8;
+  const byte = Math.floor(i / 8);
+  return (bitfield[byte] >> bit) & 1;
+}
 
 // TODO finish
 // export function verifyBitfield(bitfield: bytes, committeeSize: int): boolean {
