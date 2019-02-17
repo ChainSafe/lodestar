@@ -79,7 +79,7 @@ export function slashValidator(state: BeaconState, index: ValidatorIndex): void 
     state.latestSlashedBalances[currentEpoch.modn(LATEST_SLASHED_EXIT_LENGTH)].addn(getEffectiveBalance(state, index));
 
   const whistleblowerIndex = getBeaconProposerIndex(state, state.slot);
-  const whistleblowerReward = Math.floor(getEffectiveBalance(state, index) / WHISTLEBLOWER_REWARD_QUOTIENT);
+  const whistleblowerReward = Math.floor(getEffectiveBalance(state, index.to) / WHISTLEBLOWER_REWARD_QUOTIENT);
   state.validatorBalances[whistleblowerIndex] =
     state.validatorBalances[whistleblowerIndex].addn(whistleblowerReward);
   state.validatorBalances[index.toNumber()] =
