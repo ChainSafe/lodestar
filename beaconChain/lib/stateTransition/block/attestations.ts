@@ -32,7 +32,6 @@ import {
 import {blsAggregatePubkeys, blsVerifyMultiple} from "../../stubs/bls";
 
 export default function processAttestations(state: BeaconState, block: BeaconBlock) {
-  // Attestations
   assert(block.body.attestations.length <= MAX_ATTESTATIONS);
   for (const attestation of block.body.attestations) {
     assert(attestation.data.slot.lte(state.slot.subn(MIN_ATTESTATION_INCLUSION_DELAY)) &&
