@@ -2,6 +2,7 @@ const BN = require('bn.js')
 
 /**
  * Counts number of bytes in an integer
+ * @ignore
  * @param type
  * @returns {number}
  */
