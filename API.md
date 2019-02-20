@@ -12,40 +12,42 @@
     -   [Parameters][8]
 -   [deepcopy][9]
     -   [Parameters][10]
+-   [intByteLength][11]
+    -   [Parameters][12]
 
 ## serialize
 
-Simply Serializes, as specified [here][11]
+Simply Serializes, as specified [here][13]
 
 ### Parameters
 
--   `value` **([Array][12] \| [boolean][13] \| [Buffer][14] \| [number][15] \| [object][16])** value to serialize
--   `type` **([Array][12] \| [string][17] \| [object][16])** type of value to serialize: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
+-   `value` **([Array][14] \| [boolean][15] \| [Buffer][16] \| [number][17] \| [object][18])** value to serialize
+-   `type` **([Array][14] \| [string][19] \| [object][18])** type of value to serialize: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
 
-Returns **[Buffer][14]** serialized value
+Returns **[Buffer][16]** serialized value
 
 ## deserialize
 
-Simply Deserializes, as specified [here][18]
+Simply Deserializes, as specified [here][20]
 
 ### Parameters
 
--   `data` **[Buffer][14]** byte array to deserialize
--   `type` **([Array][12] \| [string][17] \| [object][16])** type of value to deserialize: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
--   `start` **[number][15]** starting offset index in data (optional, default `0`)
+-   `data` **[Buffer][16]** byte array to deserialize
+-   `type` **([Array][14] \| [string][19] \| [object][18])** type of value to deserialize: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
+-   `start` **[number][17]** starting offset index in data (optional, default `0`)
 
-Returns **([Array][12] \| [boolean][13] \| [Buffer][14] \| [number][15] \| [object][16])** deserialized value
+Returns **([Array][14] \| [boolean][15] \| [Buffer][16] \| [number][17] \| [object][18])** deserialized value
 
 ## treeHash
 
-Returns a tree hash of a simple-serializable value, as specified [here][19]
+Returns a tree hash of a simple-serializable value, as specified [here][21]
 
 ### Parameters
 
--   `value` **([Array][12] \| [boolean][13] \| [Buffer][14] \| [number][15] \| [object][16])** Value to hash
--   `type` **([Array][12] \| [string][17] \| [object][16])** The type of the value to hash: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
+-   `value` **([Array][14] \| [boolean][15] \| [Buffer][16] \| [number][17] \| [object][18])** Value to hash
+-   `type` **([Array][14] \| [string][19] \| [object][18])** The type of the value to hash: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
 
-Returns **[Buffer][14]** the hash, length &lt;= 32
+Returns **[Buffer][16]** the hash, length &lt;= 32
 
 ## eq
 
@@ -53,10 +55,10 @@ Checks if two serialized objects are equal by value
 
 ### Parameters
 
--   `x` **[Buffer][14]** serialized object
--   `y` **[Buffer][14]** serialized object
+-   `x` **[Buffer][16]** serialized object
+-   `y` **[Buffer][16]** serialized object
 
-Returns **[boolean][13]** x equals y
+Returns **[boolean][15]** x equals y
 
 ## deepcopy
 
@@ -64,9 +66,19 @@ Returns a deep copy of a serialized object
 
 ### Parameters
 
--   `x` **[Buffer][14]** Value to deep copy
+-   `x` **[Buffer][16]** Value to deep copy
 
-Returns **[Buffer][14]** the deep copy of x
+Returns **[Buffer][16]** the deep copy of x
+
+## intByteLength
+
+Counts number of bytes in an integer
+
+### Parameters
+
+-   `type`  
+
+Returns **[number][17]** 
 
 [1]: #serialize
 
@@ -88,20 +100,24 @@ Returns **[Buffer][14]** the deep copy of x
 
 [10]: #parameters-4
 
-[11]: https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#serializeencode
+[11]: #intbytelength
 
-[12]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array
+[12]: #parameters-5
 
-[13]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean
+[13]: https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#serializeencode
 
-[14]: https://nodejs.org/api/buffer.html
+[14]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array
 
-[15]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number
+[15]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean
 
-[16]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object
+[16]: https://nodejs.org/api/buffer.html
 
-[17]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String
+[17]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number
 
-[18]: https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#deserializedecode
+[18]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object
 
-[19]: https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#tree-hash
+[19]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String
+
+[20]: https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#deserializedecode
+
+[21]: https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#tree-hash
