@@ -585,3 +585,11 @@ export function slashValidator(state: BeaconState, index: ValidatorIndex) {
 export function verifySlashableAttestation(state: BeaconState, slashableAttestation: SlashableAttestation): bool {
   return true;
 }
+
+// TODO finish
+/**
+ * Verify that the given ``leaf`` is on the merkle branch ``branch``.
+ */
+export function verifyMerkleBranch(leaf: bytes32, branch: bytes32[], depth: int, index: int, root: bytes32): bool {
+  return true;
+}

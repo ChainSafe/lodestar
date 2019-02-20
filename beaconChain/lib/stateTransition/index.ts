@@ -1,12 +1,11 @@
 import {
-  bool,
   BeaconBlock,
   BeaconState,
   bytes32,
 } from "../../types";
 
 import {processSlot} from "./processSlot";
-import {processBlock} from "./processBlock";
+import processBlock from "./block";
 import {processEpoch} from "./processEpoch";
 
 export {
@@ -15,6 +14,9 @@ export {
   processEpoch,
 }
 
-export function executeStateTransition(state: BeaconState, block: BeaconBlock, prevBlockRoot: bytes32, verifySignatures: bool): BeaconState {
-  return processEpoch(processBlock(processSlot(state, prevBlockRoot), block, verifySignatures))
+export function executeStateTransition(state: BeaconState, block: BeaconBlock, prevBlockRoot: bytes32): BeaconState {
+  processSlot(state, prevBlockRoot);
+  processBlock(state, block);
+  processEpoch(state);
+  return state;
 }
