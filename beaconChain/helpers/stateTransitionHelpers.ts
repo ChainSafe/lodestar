@@ -10,16 +10,17 @@ import {
   TARGET_COMMITTEE_SIZE,
 } from "../constants";
 import {
-    AttestationData,
-    BeaconState, bytes,
-    bytes32,
-    Epoch,
-    Fork,
-    int,
-    Slot,
-    uint64,
-    Validator,
-    ValidatorIndex,
+  AttestationData,
+  BeaconState,
+  bytes,
+  bytes32,
+  Epoch,
+  Fork,
+  int,
+  Slot,
+  uint64,
+  Validator,
+  ValidatorIndex,
 } from "../types";
 
 /**
@@ -96,7 +97,7 @@ function shuffle<T>(values: T[], seed: bytes32): T[] {
   let index: number = 0;
   while (index < valuesCount - 1) {
     // Re-hash the `source` to obtain a new pattern of bytes.
-    source = Buffer.from(keccakAsU8a(source)); // 32 bytes long
+    source = hash(source); // 32 bytes long
 
     // Iterate through the `source` bytes in 3-byte chunks.
     for (let position = 0; position < 32 - (32 % randBytes); position += randBytes) {
@@ -358,16 +359,31 @@ export function getBeaconProposerIndex(state: BeaconState, slot: Slot): int {
   return firstCommittee[slot.umod(new BN(firstCommittee.length)).toNumber()];
 }
 
+// This function was copied from ssz-js
+// TODO: either export hash from ssz-js or move to a util-crypto library
+export function hash(value: bytes): bytes32 {
+  return Buffer.from(keccakAsU8a(value));
+}
+
 /**
  * Merkleize values where the length of values is a power of two and return the Merkle root.
  * @param {bytes32[]} values
  * @returns {bytes32}
  */
-// TODO finish
-// export function merkleRoot(values: bytes32[]): bytes32 {
-//   let o: bytes = Buffer.alloc(values.length + 1);
-//   o.set(values, o.length - 1);
-// }
+export function merkleRoot(values: bytes32[]): bytes32 {
+  // Create array twice as long as values
+  // first half of the array representing intermediate tree nodes
+  const o: bytes[] = Array.from({ length: values.length },
+    () => Buffer.alloc(0))
+      // do not hash leaf nodes
+      // we assume leaf nodes are prehashed
+      .concat(values);
+  for (let i = values.length - 1; i > 0; i--) {
+    // hash intermediate/root nodes
+    o[i] = hash(Buffer.concat([o[i * 2], o[i * 2 + 1]]));
+  }
+  return o[1];
+}
 
 // // TODO finish
 // function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, participationBitfield: bytes): int[] {
