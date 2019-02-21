@@ -3,20 +3,20 @@ pragma experimental ABIEncoderV2;
 
 contract ValidatorRegistration {
 
-    event Eth1Deposit(
+    event Deposit(
         bytes32 previousReceiptRoot,
         bytes data,
         uint depositCount
     );
 
-    event ChainStart(
+    event Eth2Genesis(
         bytes32 receiptRoot,
         bytes time
     );
 
-    uint public constant DEPOSIT_SIZE = 32 ether;
+    uint public constant MAX_DEPOSIT_AMOUNT = 32 ether;
     uint public constant DEPOSITS_FOR_CHAIN_START = 8; // 2**14 in production
-    uint public constant MIN_TOPUP_SIZE = 1 ether;
+    uint public constant MIN_DEPOSIT_AMOUNT = 1 ether;
     uint public constant GWEI_PER_ETH = 10 ** 9;
     uint public constant DEPOSIT_CONTRACT_TREE_DEPTH = 32;
     uint public constant SECONDS_PER_DAY = 86400;
@@ -36,12 +36,12 @@ contract ValidatorRegistration {
             "Deposit parameters must be 2048 bytes in length."
         );
         require(
-            msg.value <= DEPOSIT_SIZE,
-            "Deposit can't be greater than DEPOSIT_SIZE."
+            msg.value <= MAX_DEPOSIT_AMOUNT,
+            "Deposit can't be greater than MAX_DEPOSIT_AMOUNT."
         );
         require(
-            msg.value >= MIN_TOPUP_SIZE,
-            "Deposit can't be lesser than MIN_TOPUP_SIZE."
+            msg.value >= MIN_DEPOSIT_AMOUNT,
+            "Deposit can't be lesser than MIN_DEPOSIT_AMOUNT."
         );
 
         uint index = depositCount + 2 ** DEPOSIT_CONTRACT_TREE_DEPTH;
@@ -53,7 +53,7 @@ contract ValidatorRegistration {
             "Message Gwei and block timestamp bytes improperly sliced."
         );
 
-        emit Eth1Deposit(receiptTree[1], depositData, depositCount);
+        emit Deposit(receiptTree[1], depositData, depositCount);
 
         receiptTree[index] = keccak256(depositData);
         for (uint i = 0; i < DEPOSIT_CONTRACT_TREE_DEPTH; i++) {
@@ -62,12 +62,12 @@ contract ValidatorRegistration {
         }
 
         depositCount++;
-        if (msg.value == DEPOSIT_SIZE) {
+        if (msg.value == MAX_DEPOSIT_AMOUNT) {
             totalDepositCount++;
             if (totalDepositCount == DEPOSITS_FOR_CHAIN_START) {
                 uint timestampDayBoundary = block.timestamp - block.timestamp % SECONDS_PER_DAY + SECONDS_PER_DAY;
                 bytes memory timestampDayBoundaryBytes = toBytes(timestampDayBoundary);
-                emit ChainStart(receiptTree[1], timestampDayBoundaryBytes);
+                emit Eth2Genesis(receiptTree[1], timestampDayBoundaryBytes);
             }
         }
     }
