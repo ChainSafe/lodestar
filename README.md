@@ -41,6 +41,15 @@ let num = 16
 let serialized = ssz.serialize(num, 'uint32')
 ```
 
+#### BN (Big Number)
+```
+const BN = require('bn.js')
+let num = new BN(0xFFFFFFFFFFFFFFF0)
+let searialized = ssc.serialize(num, 'uint64')
+```
+
+Note: Any value greater than `2^53 - 1` should be stored in a [BigNumber](https://github.com/indutny/bn.js)
+
 #### Bytes
 ```
 let bytes = Buffer.from([1,2,3])

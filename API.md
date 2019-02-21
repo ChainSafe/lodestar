@@ -19,7 +19,7 @@ Simply Serializes, as specified [here][11]
 
 ### Parameters
 
--   `value` **([Array][12] \| [boolean][13] \| [Buffer][14] \| [number][15] \| [object][16])** value to serialize
+-   `value` **([Array][12] | BN | [boolean][13] \| [Buffer][14] \| [number][15] \| [object][16])** value to serialize
 -   `type` **([Array][12] \| [string][17] \| [object][16])** type of value to serialize: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
 
 Returns **[Buffer][14]** serialized value
@@ -34,7 +34,7 @@ Simply Deserializes, as specified [here][18]
 -   `type` **([Array][12] \| [string][17] \| [object][16])** type of value to deserialize: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
 -   `start` **[number][15]** starting offset index in data (optional, default `0`)
 
-Returns **([Array][12] \| [boolean][13] \| [Buffer][14] \| [number][15] \| [object][16])** deserialized value
+Returns **[object][16]** deserialized value object: {deserializedData, offset}
 
 ## treeHash
 

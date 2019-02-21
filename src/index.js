@@ -12,7 +12,7 @@ const SSZ_CHUNK_SIZE = 128
 /**
  * Simply Serializes, as specified [here](https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#serializeencode)
  * @method serialize
- * @param {Array|boolean|Buffer|number|object} value - value to serialize
+ * @param {Array|BN|boolean|Buffer|number|object} value - value to serialize
  * @param {Array|string|object} type - type of value to serialize: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
  * @return {Buffer} serialized value
  */
@@ -24,7 +24,7 @@ function serialize (value, type) {
     return result
   }
 
-  // serialize integers
+  // serialize integers (incl. BNs)
   if ((typeof type === 'string') && !!type.match(/^u?int\d+$/g)) {
     // determine int size
     const byteLength = intByteLength(type)
@@ -100,7 +100,7 @@ function serialize (value, type) {
  * @param {Buffer} data - byte array to deserialize
  * @param {Array|string|object} type - type of value to deserialize: A string ('bool', 'uintN','bytesN', 'bytes'), an Array [type], or object containing a `fields` property
  * @param {number} [start=0] - starting offset index in data
- * @return {Array|boolean|Buffer|number|object} deserialized value
+ * @return {object} deserialized value object: {deserializedData, offset}
  */
 function deserialize (data, type, start = 0) {
   // deserializes booleans
