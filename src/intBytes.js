@@ -1,11 +1,17 @@
 const BN = require('bn.js')
 
+/**
+ * Counts number of bytes in an integer
+ * @ignore
+ * @param type
+ * @returns {number}
+ */
 function intByteLength (type) {
-  const bitSize = parseInt(type.match(/\d+/g))
-  if (bitSize > 0 && bitSize % 8 !== 0) {
+  const bits = parseInt(type.match(/\d+/g))
+  if (bits < 0 || bits % 8 !== 0) {
     throw Error('given int type has invalid size, must be size > 0 and size % 8 == 0')
   }
-  return bitSize / 8
+  return bits / 8
 }
 
 function readIntFromBuffer (buffer, byteSize, offset = 0) {
