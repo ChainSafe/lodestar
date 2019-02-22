@@ -74,15 +74,15 @@ contract('ValidatorRegistration', accounts => {
     })
   })
 
-  it('properly emits Eth1Deposit event', async () => {
+  it('properly emits Deposit event', async () => {
     const depositTxion = this.contract.deposit.bind(this.contract, DEPOSIT_DATA, {
       from: this.depositAddress,
       value: DEPOSIT_AMOUNT
     })
-    await inTransaction(depositTxion, 'Eth1Deposit')
+    await inTransaction(depositTxion, 'Deposit')
   })
 
-  it('properly emits ChainStart event', async () => {
+  it('properly emits Eth2Genesis event', async () => {
     let i
     for (i = 0; i < 7; i++) {
       await this.contract.deposit(DEPOSIT_DATA, {
@@ -94,6 +94,6 @@ contract('ValidatorRegistration', accounts => {
       from: accounts[i + 1],
       value: DEPOSIT_AMOUNT
     })
-    await inTransaction(depositTxion, 'ChainStart')
+    await inTransaction(depositTxion, 'Eth2Genesis')
   })
 });
