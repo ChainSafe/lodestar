@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "assert": "^1.4.1",
     "bls-wasm": "^0.2.1",
     "keccak256": "^1.0.0",
     "mcl-wasm": "^0.3.0"

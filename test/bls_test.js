@@ -53,7 +53,7 @@ describe("bls", () => {
     assert(s instanceof mcl.Fr)
     assert(s.getStr(16) === secret)
 
-    const msg = Buffer.from("6d657373616765", 'hex')
+    const msg = keccak256(Buffer.from("6d657373616765", 'hex'))
     const domain = 0
 	  const sig = bls.sign(Buffer.from(s.serialize()), msg, 0)
 		assert(sig.length === 96)
