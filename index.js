@@ -1,135 +1,190 @@
-const mcl = require('mcl-wasm')
+const assert = require('assert')
 const keccak256 = require('keccak256')
+const mcl = require('mcl-wasm')
 
-// return base point of mcl.G1
-const Q = () => {
-	let P = new mcl.G1()
-	P.setStr('1 3685416753713387016781088315183077757961620795782546409894578378688607592378376318836054947676345821548104185464507 1339506544944476473020471379941921221584933875938349620426543736416511423956333506472724655353366534992391756441569')
-	return P
+async function init () {
+  await mcl.init(mcl.BLS12_381)
 }
 
-// return 
-const q = () => {
-	let q = new mcl.Fr()
-	q.setLittleEndian('409555221667393417789825735904156556882819939007885332058136124031650490837864442687629129015664037894272559787', 10)
-	// todo: don't think this is correct
-	//console.log(q.getStr(10))
-	return q
+/**
+ * @returns {bytes32} secretKey
+ */
+function genSecret () {
+  const s = new mcl.Fr()
+  s.setByCSPRNG()
+  return Buffer.from(s.serialize())
 }
 
-// return s: mcl.Fr
-const gen_secret = () => {
-	let s = new mcl.Fr()
-	s.setByCSPRNG()
-	return s
+/**
+ * @param {bytes32} secretKey
+ * @returns {bytes48} pubkey
+ */
+function genPublic (secretKey) {
+  const s = mclSecretKey(secretKey)
+  const q = g1()
+  return toBuffer(mcl.mul(q, s))
 }
 
-// s: mcl.Fr
-// return P: mcl.G1
-const gen_public = (s) => {
-	let q = Q()
-	return mcl.mul(q, s)
+/**
+ * @param {bytes32} secretKey
+ * @param {bytes32} messageHash
+ * @returns {bytes96} signature
+ */
+function sign (secretKey, messageHash, domain) {
+  const s = mclSecretKey(secretKey)
+  const hash = hashToG2(messageHash, domain)
+  return toBuffer(mcl.mul(hash, s))
 }
 
-const getHexStr = (p) => {
-	if (p instanceof mcl.Fr) {
-		return '0x' + p.getStr(16)
-	} else if (p instanceof mcl.G1) {
-		let x = p.getStr(16).slice(2, 98)
-		if (x.slice(95,96) == " ") return '0x0' + x.slice(0,95)
-		else return '0x' + x
-	}
+/**
+ * Return G1 as defined [here](https://github.com/zkcrypto/pairing/tree/master/src/bls12_381#g1)
+ * @returns {mcl.G1} g1
+ */
+function g1() {
+	const g = new mcl.G1()
+	g.setStr('1 3685416753713387016781088315183077757961620795782546409894578378688607592378376318836054947676345821548104185464507 1339506544944476473020471379941921221584933875938349620426543736416511423956333506472724655353366534992391756441569')
+	return g
 }
 
-// x:mcl.Fr
-const modular_squareroot = (x) => {
-	candidate = x ** (q() + 8)
-	return null
+/**
+ * @param {bytes32} messageHash
+ * @param {int} domain
+ * @returns {mcl.G2} g2
+ */
+function hashToG2 (messageHash, domain) {
+  assert.equal(messageHash.length, 32, 'messageHash must be 32 bytes long')
+	const xReal = keccak256(Buffer.concat([
+    messageHash,
+    Buffer.alloc(1, domain),
+    Buffer.from([1]),
+  ]))
+  const xRealFp = new mcl.Fp()
+  xRealFp.setLittleEndian(xReal)
+	const xImag = keccak256(Buffer.concat([
+    messageHash,
+    Buffer.alloc(1, domain),
+    Buffer.from([2]),
+  ]))
+  const xImagFp = new mcl.Fp()
+  xImagFp.setLittleEndian(xImag)
+  const xCoordinate = new mcl.Fp2()
+  xCoordinate.set_a(xRealFp)
+  xCoordinate.set_b(xImagFp)
+  return xCoordinate.mapToG2()
 }
 
-// msg:string
-// domain:int
-const hash_to_G2 = (msg, domain) => {
-	let x_re = keccak256(`${msg}${domain}01`)
-	//console.log(x_re.toString('hex'))
-	let x_im = keccak256(`${msg}${domain}02`)
-	//console.log(x_im.toString('hex'))
-	//let x_coordinate = [x_re, x_im]
-
-	let done = false
-	let y_re
-	let y_im 
-
-	while(!done) {
-		let x_re_num = parseInt(x_re.toString('hex'), 16)
-		let x_im_num = parseInt(x_im.toString('hex'), 16)
-		let y_re_sq = x_re_num ** 3 + 4
-		let y_im_sq = x_im_num ** 3 + 4
-		y_re = modular_squareroot(y_re_sq)
-		y_im = modular_squareroot(y_im_sq)
-
-		if (y_re !== null && y_im !== null) done = true
-
-		done = true
-	}
-
-	return [y_re, y_im]
+/**
+ * @param {Array<bytes48>} pubkeys
+ * @returns {bytes48}
+ */
+function aggregatePubkeys(pubkeys) {
+  return Buffer.from(
+    pubkeys.map((pub) => mclPubkey(pub))
+      .reduce((acc, val) => mcl.add(acc, val))
+      .serialize()
+  )
 }
 
-// s:mcl.Fr
-// msg:string
-// return sig:mcl.G2
-const sign = (s, msg, domain) => {
-	let str = `${msg}${domain}`
-	let hash = mcl.hashAndMapToG2(str)
-	return mcl.mul(hash, s)
+/**
+ * @param {Array<bytes96>} signatures
+ * @returns {bytes96}
+ */
+function aggregateSignatures(signatures) {
+  return Buffer.from(
+    signatures.map((sig) => mclSignature(sig))
+      .reduce((acc, val) => mcl.add(acc, val))
+      .serialize()
+  )
 }
 
-// list can be either pubkeys:mcl.G1[] or signatures:mcl.G2[]
-// if pubkeys, returns aggregated pubkey P:mcl.G1
-// if signatures, returns aggregated signature Sig:mc;.G2
-const aggregate = (list) => {
-	let res = list[0]
-	for (let i = 1; i < list.length; i++) {
-		res = mcl.add(res, list[i])
-	}
-	return res
+/**
+ * @param {bytes48} pubkey
+ * @param {bytes32} messageHash
+ * @param {bytes96} signature
+ * @param {int} domain
+ * @returns {boolean}
+ */
+function verify (pubkey, messageHash, signature, domain) {
+  const pubkeyG1 = mclPubkey(pubkey)
+  const signatureG2 = mclSignature(signature)
+	return toG2AndPairing(pubkeyG1, messageHash, domain).isEqual(mcl.pairing(g1(), signatureG2))
 }
 
-// pubkey:bls.PublicKey()
-// message:string
-// signature:bls.Signature()
-// domain:uint
-const verify = (pub, message, sig, domain) => {
-	if (!(pub instanceof mcl.G1)) throw new Error('verify:wrong pubkey type')
-	if (!(sig instanceof mcl.G2)) throw new Error('verify:wrong signature type')
-	let msg = `${message}${domain}`
-	let hash = mcl.hashAndMapToG2(msg)
-	return mcl.pairing(pub, hash).isEqual(mcl.pairing(Q(), sig))
+/**
+ * @param {Array<bytes48>} pubkeys
+ * @param {Array<bytes32>} messageHashes
+ * @param {bytes96} signature
+ * @param {int} domain
+ * @returns {boolean}
+ */
+function verifyMultiple (pubkeys, messageHashes, signature, domain) {
+  assert.equal(pubkeys.length, messageHashes.length,
+    'number of pubkeys must equal number of message hashes')
+	const pubkeyG1s = pubkeys.map((pub) => mclPubkey(pub))
+  const signatureG2 = mclSignature(signature)
+
+  const ePH = Array.from({length: pubkeys.length}, (_, i) => i)
+    // create a pairing for each pubkey, messageHash pair
+    .map((i) => toG2AndPairing(pubkeyG1s[i], messageHashes[i], domain))
+    // accumulate into a single mcl.GT
+    .reduce((acc, val) => mcl.mul(acc, val))
+	return ePH.isEqual(mcl.pairing(g1(), signatureG2))
 }
 
-// pubkeys:list[mcl.G1]
-// messages:list[string]
-// signature:mcl.G2
-// domain:int
-const verify_multiple = (pubkeys, messages, signature, domain) => {
-	pubkeys.map((pub) => {
-        	if (!(pub instanceof mcl.G1)) throw new Error('verify_multiple:wrong pubkey type')
-	})
-	if (!(signature instanceof mcl.G2)) throw new Error('verify_multiple:wrong signature type')
-	if (pubkeys.length !== messages.length) throw new Error('verify_multiple:number of pubkeys does not equal number of messages')
+// Internal functions
 
-	let msg = `${messages[0]}${domain}`
-	let hash = mcl.hashAndMapToG2(msg)
- 	let ePH = mcl.pairing(pubkeys[0], hash)
-	for(let i = 1; i < pubkeys.length; i++) {
-		msg = `${messages[i]}${domain}`
-		hash = mcl.hashAndMapToG2(msg)
-		ePH = mcl.mul(ePH, mcl.pairing(pubkeys[i], hash))
-	}
+/**
+ * Utility function used to hash messageHash and domain to G2 and do a pairing with pubkey
+ * @param {mcl.G1} pubkey
+ * @param {bytes32} messageHash
+ * @param {int} domain
+ * @returns {mcl.GT}
+ */
+function toG2AndPairing (pubkey, messageHash, domain) {
+  return mcl.pairing(pubkey, hashToG2(messageHash, domain))
+}
 
-	return ePH.isEqual(mcl.pairing(Q(), signature))
+// mcl object constructors with 'type' assertions
+
+function mclSecretKey(secretKey) {
+  assert.equal(secretKey.length, 32, 'secretKey must be 32 bytes long')
+  return fromBuffer(mcl.Fr, secretKey)
+}
+
+function mclPubkey(pubkey) {
+  assert.equal(pubkey.length, 48, 'pubkey must be 48 bytes long')
+  return fromBuffer(mcl.G1, pubkey)
+}
+
+function mclSignature(signature) {
+  assert.equal(signature.length, 96, 'signature must be 96 bytes long')
+  return fromBuffer(mcl.G2, signature)
+}
+
+// Utility function to create a new mcl object from a buffer
+// Used to create a mcl.G1, mcl.G2, mcl.Fp, etc.
+function fromBuffer(mclType, buffer) {
+  const object = new mclType()
+  object.deserialize(buffer)
+  return object
+}
+
+// Utility function to create a buffer from an mcl object
+// Used to create a buffer from a mcl.G1, mcl.G2, mcl.Fp, etc.
+function toBuffer(object) {
+  return Buffer.from(object.serialize())
 }
 
 
-module.exports = {Q, getHexStr, hash_to_G2, gen_secret, gen_public, aggregate, sign, verify, verify_multiple}
+module.exports = {
+  init,
+  genSecret,
+  genPublic,
+  sign,
+  g1,
+  hashToG2,
+  aggregatePubkeys,
+  aggregateSignatures,
+  verify,
+  verifyMultiple,
+}
