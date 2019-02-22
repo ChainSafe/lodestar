@@ -105,7 +105,7 @@ function aggregateSignatures(signatures) {
 function verify (pubkey, messageHash, signature, domain) {
   const pubkeyG1 = fromBuffer(mcl.G1, pubkey)
   const signatureG2 = fromBuffer(mcl.G2, signature)
-	return mcl.pairing(pubkeyG1, hashToG2(messageHash, domain)).isEqual(mcl.pairing(g1(), signatureG2))
+	return toG2AndPairing(pubkeyG1, messageHash, domain).isEqual(mcl.pairing(g1(), signatureG2))
 }
 
 /**
@@ -122,9 +122,9 @@ function verifyMultiple (pubkeys, messageHashes, signature, domain) {
     throw new Error('number of pubkeys does not equal number of message hashes')
   }
 
-  let ePH = pairing(pubkeyG1s[0], messageHashes[0], domain)
+  let ePH = toG2AndPairing(pubkeyG1s[0], messageHashes[0], domain)
   for (let i = 1; i < messageHashes.length; i++) {
-    ePH = mcl.mul(ePH, pairing(pubkeyG1s[i], messageHashes[i], domain))
+    ePH = mcl.mul(ePH, toG2AndPairing(pubkeyG1s[i], messageHashes[i], domain))
   }
 	return ePH.isEqual(mcl.pairing(g1(), signatureG2))
 }
@@ -138,7 +138,7 @@ function verifyMultiple (pubkeys, messageHashes, signature, domain) {
  * @param {int} domain
  * @returns {mcl.GT}
  */
-function pairing (pubkey, messageHash, domain) {
+function toG2AndPairing (pubkey, messageHash, domain) {
   return mcl.pairing(pubkey, hashToG2(messageHash, domain))
 }
 
