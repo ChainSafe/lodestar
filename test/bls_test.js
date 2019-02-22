@@ -32,18 +32,32 @@ describe("bls", () => {
     assert.equal(P.length, 48)
 	})
 
-	it("should get deserialize a hex string to a secret key and the corresponding public key", () => {
-		const secret = '263dbd792f5b1be47ed85f8938c0f29586af0d3ac7b977f21c278fe1462040e3'
-		const pub = '9af7a7e5f618067c064d65771b0ce1d60fe2a6b9ff8d364f64e2e573a8c4ea2204ea0d4fe7f0897991bbd9ecb0d19104'
-		const s = new mcl.Fr()
-    s.setStr(secret, 16)
-    assert(s instanceof mcl.Fr)
-    assert(s.getStr(16) === secret)
+	it("should generate the correct public key from a secret key", () => {
+    // test cases from: https://github.com/ethereum/eth2.0-tests/blob/master/bls/test_bls.yml
+    const testCases = [
+      {secret: '263dbd792f5b1be47ed85f8938c0f29586af0d3ac7b977f21c278fe1462040e3',
+       pubkey: '0491d1b0ecd9bb917989f0e74f0dea0422eac4a873e5e2644f368dffb9a6e20fd6e10c1b77654d067c0618f6e5a7f79a'},
+      {secret: '47b8192d77bf871b62e87859d653922725724a5c031afeabc60bcef5ff665138',
+       pubkey: '1301803f8b5ac4a1133581fc676dfedc60d891dd5fa99028805e5ea5b08d3491af75d0707adab3b70c6a6a580217bf81'},
+      {secret: '328388aff0d4a5b7dc9205abd374e7e98f3cd9f3418edb4eafda5fb16473d216',
+       pubkey: '153d21a4cfd562c469cc81514d4ce5a6b577d8403d32a394dc265dd190b47fa9f829fdd7963afdf972e5e77854051f6f'},
+    ]
+    for (let {secret, pubkey} of testCases) {
+      const secretBuf = Buffer.from(secret, 'hex').reverse()
+      secret = secretBuf.toString('hex')
+      const pubkeyBuf = Buffer.from(pubkey, 'hex').reverse()
+      pubkey = pubkeyBuf.toString('hex')
 
-    const P = bls.genPublic(s.serialize())
+      const s = new mcl.Fr()
+      s.deserialize(secretBuf)
+      assert(s instanceof mcl.Fr)
+      assert(Buffer.from(s.serialize()).toString('hex') === secret)
 
-    assert(pub === P.toString('hex'), "incorrect deserialization")
-    assert(P.length === 48, "wrong length")
+      const P = bls.genPublic(s.serialize())
+      const PHex = P.toString('hex')
+      assert(pubkey === PHex, `incorrect deserialization, ${pubkey} should equal ${PHex}`)
+      assert(P.length === 48, "calculated pubkey wrong length")
+    }
 	})
 
   it("should sign a message", () => {
