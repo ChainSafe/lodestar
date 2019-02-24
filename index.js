@@ -48,21 +48,22 @@ function g1() {
 
 /**
  * @param {bytes32} messageHash
- * @param {int} domain
+ * @param {bytes8} domain
  * @returns {mcl.G2} g2
  */
 function hashToG2 (messageHash, domain) {
   assert.equal(messageHash.length, 32, 'messageHash must be 32 bytes long')
+  assert.equal(domain.length, 8, 'domain must be 8 bytes long')
 	const xReal = keccak256(Buffer.concat([
     messageHash,
-    Buffer.alloc(1, domain),
+    domain,
     Buffer.from([1]),
   ]))
   const xRealFp = new mcl.Fp()
   xRealFp.setLittleEndian(xReal)
 	const xImag = keccak256(Buffer.concat([
     messageHash,
-    Buffer.alloc(1, domain),
+    domain,
     Buffer.from([2]),
   ]))
   const xImagFp = new mcl.Fp()
@@ -101,7 +102,7 @@ function aggregateSignatures(signatures) {
  * @param {bytes48} pubkey
  * @param {bytes32} messageHash
  * @param {bytes96} signature
- * @param {int} domain
+ * @param {bytes8} domain
  * @returns {boolean}
  */
 function verify (pubkey, messageHash, signature, domain) {
@@ -114,7 +115,7 @@ function verify (pubkey, messageHash, signature, domain) {
  * @param {Array<bytes48>} pubkeys
  * @param {Array<bytes32>} messageHashes
  * @param {bytes96} signature
- * @param {int} domain
+ * @param {bytes8} domain
  * @returns {boolean}
  */
 function verifyMultiple (pubkeys, messageHashes, signature, domain) {
@@ -137,7 +138,7 @@ function verifyMultiple (pubkeys, messageHashes, signature, domain) {
  * Utility function used to hash messageHash and domain to G2 and do a pairing with pubkey
  * @param {mcl.G1} pubkey
  * @param {bytes32} messageHash
- * @param {int} domain
+ * @param {bytes8} domain
  * @returns {mcl.GT}
  */
 function toG2AndPairing (pubkey, messageHash, domain) {

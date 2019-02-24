@@ -15,7 +15,7 @@ describe("bls", () => {
 	})
 
 	it("should hash message to G2", () => {
-		const domain = 0
+		const domain = Buffer.alloc(8)
 		const message = keccak256(Buffer.from('6d657373616765', 'hex'))
 		assert(bls.hashToG2(message, domain))
 	})
@@ -68,15 +68,15 @@ describe("bls", () => {
     assert(s.getStr(16) === secret)
 
     const msg = keccak256(Buffer.from("6d657373616765", 'hex'))
-    const domain = 0
-	  const sig = bls.sign(Buffer.from(s.serialize()), msg, 0)
+    const domain = Buffer.alloc(8)
+	  const sig = bls.sign(Buffer.from(s.serialize()), msg, domain)
 		assert(sig.length === 96)
 	})
 
 	it("should verify a signature", () => {
     const s = bls.genSecret()
     const P = bls.genPublic(s)
-		const domain = 0
+		const domain = Buffer.alloc(8)
 		const msg = keccak256(Buffer.from("hello", "hex"))
 		const sig = bls.sign(s, msg, domain)
 		assert(bls.verify(P, msg, sig, domain), "did not verify aggregated signature")
@@ -103,7 +103,7 @@ describe("bls", () => {
 	it("should verify an aggregated signature of 1", () => {
     const s = bls.genSecret()
     const P = bls.genPublic(s)
-		const domain = 0
+		const domain = Buffer.alloc(8)
 		const msg = keccak256(Buffer.from("hello", "hex"))
 		const sig = bls.sign(s, msg, domain)
 		assert(bls.verifyMultiple([P], [msg], sig, domain), "did not verify aggregated signature")
@@ -114,7 +114,7 @@ describe("bls", () => {
     const P1 = bls.genPublic(s1)
     const s2 = bls.genSecret()
     const P2 = bls.genPublic(s2)
-		const domain = 0
+		const domain = Buffer.alloc(8)
 		const msg = keccak256(Buffer.from("hello", "hex"))
 		const sig1 = bls.sign(s1, msg, domain)
 		const sig2 = bls.sign(s2, msg, domain)
