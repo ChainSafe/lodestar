@@ -7,7 +7,7 @@ import {
   Eth1DataVote,
 } from "../../../types";
 
-export default function processEth1Data(state: BeaconState, block: BeaconBlock) {
+export default function processEth1Data(state: BeaconState, block: BeaconBlock): void {
   const eth1DataVote: Eth1DataVote = state.eth1DataVotes.find((vote) =>
     vote.eth1Data.blockHash.equals(block.eth1Data.blockHash) &&
     vote.eth1Data.depositRoot.equals(block.eth1Data.depositRoot));

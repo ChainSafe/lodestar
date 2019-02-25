@@ -26,7 +26,7 @@ import {
 
 import { blsVerify } from "../../stubs/bls";
 
-export default function processVoluntaryExits(state: BeaconState, block: BeaconBlock) {
+export default function processVoluntaryExits(state: BeaconState, block: BeaconBlock): void {
   const currentEpoch = getCurrentEpoch(state);
   assert(block.body.voluntaryExits.length <= MAX_VOLUNTARY_EXITS);
   for (const exit of block.body.voluntaryExits) {

@@ -23,7 +23,7 @@ import {
   slashValidator,
 } from "../../../helpers/validatorStatus";
 
-export default function processAttesterSlashings(state: BeaconState, block: BeaconBlock) {
+export default function processAttesterSlashings(state: BeaconState, block: BeaconBlock): void {
   assert(block.body.attesterSlashings.length <= MAX_ATTESTER_SLASHINGS);
   for (const attesterSlashing of block.body.attesterSlashings) {
     const slashableAttestation1 = attesterSlashing.slashableAttestation1;

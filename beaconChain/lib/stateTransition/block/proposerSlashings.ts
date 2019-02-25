@@ -25,7 +25,7 @@ import {
 
 import {blsVerify} from "../../stubs/bls";
 
-export default function processProposerSlashings(state: BeaconState, block: BeaconBlock) {
+export default function processProposerSlashings(state: BeaconState, block: BeaconBlock): void {
   assert(block.body.proposerSlashings.length <= MAX_PROPOSER_SLASHINGS);
   for (const proposerSlashing of block.body.proposerSlashings) {
     const proposer: Validator =

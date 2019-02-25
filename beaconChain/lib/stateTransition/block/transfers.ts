@@ -26,7 +26,7 @@ import {
 
 import { blsVerify } from "../../stubs/bls";
 
-export default function processTransfers(state: BeaconState, block: BeaconBlock) {
+export default function processTransfers(state: BeaconState, block: BeaconBlock): void {
   // Note: Transfers are a temporary functionality for phases 0 and 1, to be removed in phase 2.
   assert(block.body.transfers.length <= MAX_TRANSFERS);
   for (const transfer of block.body.transfers) {

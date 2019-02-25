@@ -20,7 +20,7 @@ import {
 
 import { processDeposit} from "../../state";
 
-export default function processDeposits(state: BeaconState, block: BeaconBlock) {
+export default function processDeposits(state: BeaconState, block: BeaconBlock): void {
   assert(block.body.deposits.length <= MAX_DEPOSITS);
   // TODO: add logic to ensure that deposits from 1.0 chain are processed in order
   for (const deposit of block.body.deposits) {
