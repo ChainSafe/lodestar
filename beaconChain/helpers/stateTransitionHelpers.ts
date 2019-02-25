@@ -1,16 +1,24 @@
 import { keccakAsU8a } from "@polkadot/util-crypto";
+import assert from "assert";
 import BN from "bn.js";
 
 import {
   ACTIVATION_EXIT_DELAY,
-  GENESIS_EPOCH, LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH,
+  Domain,
+  GENESIS_EPOCH,
+  LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
+  LATEST_BLOCK_ROOTS_LENGTH,
+  LATEST_RANDAO_MIXES_LENGTH,
   MAX_DEPOSIT_AMOUNT,
   SHARD_COUNT,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
+  MAX_INDICES_PER_SLASHABLE_VOTE,
 } from "../constants";
+
 import {
   AttestationData,
+  AttestationDataAndCustodyBit,
   BeaconState,
   bool,
   bytes,
@@ -25,6 +33,13 @@ import {
   Validator,
   ValidatorIndex,
 } from "../types";
+
+import {
+  blsAggregatePubkeys,
+  blsVerifyMultiple,
+} from "../lib/stubs/bls";
+
+import { hashTreeRoot } from "../lib/state";
 
 /**
  * Return a byte array from an int
@@ -459,10 +474,10 @@ export function isPowerOfTwo(value: BN): boolean {
  * @param {int} index
  * @returns {Number}
  */
-export function getEffectiveBalance(state: BeaconState, index: int): int {
+export function getEffectiveBalance(state: BeaconState, index: ValidatorIndex): int {
   // Returns the effective balance (also known as "balance at stake") for a ``validator`` with the given ``index``.
-  if (state.validatorBalances[index].ltn(MAX_DEPOSIT_AMOUNT)) {
-    return state.validatorBalances[index].toNumber();
+  if (state.validatorBalances[index.toNumber()].ltn(MAX_DEPOSIT_AMOUNT)) {
+    return state.validatorBalances[index.toNumber()].toNumber();
   } else {
     return MAX_DEPOSIT_AMOUNT;
   }
@@ -502,9 +517,9 @@ export function getBitfieldBit(bitfield: bytes, i: int): int {
 }
 
 // TODO finish
-// export function verifyBitfield(bitfield: bytes, committeeSize: int): boolean {
-//
-// }
+export function verifyBitfield(bitfield: bytes, committeeSize: int): bool {
+  return true;
+}
 
 // TODO finish
 // export function verifySlashableVoteData(state: BeaconState, slashableAttestation: SlashableAttestation): boolean {
@@ -564,18 +579,6 @@ export function getEntryExitEffectEpoch(epoch: Epoch): Epoch {
   return epoch.addn(1 + ACTIVATION_EXIT_DELAY);
 }
 
-// TODO finish
-/**
- * Slash the validator with index ``index``.
- * Note that this function mutates ``state``.
- * @param {BeaconState} state
- * @param {ValidatorIndex} index
- */
-export function slashValidator(state: BeaconState, index: ValidatorIndex) {
-  return;
-}
-
-// TODO finish
 /**
  * Verify validity of ``slashable_attestation`` fields.
  * @param {BeaconState} state
@@ -583,13 +586,77 @@ export function slashValidator(state: BeaconState, index: ValidatorIndex) {
  * @returns {bool}
  */
 export function verifySlashableAttestation(state: BeaconState, slashableAttestation: SlashableAttestation): bool {
-  return true;
+  // Remove conditional in Phase 1
+  if (!slashableAttestation.custodyBitfield.equals(Buffer.alloc(slashableAttestation.custodyBitfield.length))) {
+    return false;
+  }
+
+  if (slashableAttestation.validatorIndices.length === 0) {
+    return false;
+  }
+
+  for (let i = 0; i < slashableAttestation.validatorIndices.length; i++) {
+    if (slashableAttestation.validatorIndices[i].gte(slashableAttestation.validatorIndices[i + 1])) {
+      return false;
+    }
+  }
+
+  if (!verifyBitfield(slashableAttestation.custodyBitfield, slashableAttestation.validatorIndices.length)) {
+    return false;
+  }
+
+  if (slashableAttestation.validatorIndices.length > MAX_INDICES_PER_SLASHABLE_VOTE) {
+    return false;
+  }
+
+  const custodyBit0Indices = [];
+  const custodyBit1Indices = [];
+  for (let i = 0; i < slashableAttestation.validatorIndices.length; i++) {
+    const validatorIndex = slashableAttestation.validatorIndices[i];
+    if (getBitfieldBit(slashableAttestation.custodyBitfield, i) === 0) {
+      custodyBit0Indices.push(validatorIndex);
+    } else {
+      custodyBit1Indices.push(validatorIndex);
+    }
+  }
+
+  return blsVerifyMultiple(
+    [
+      blsAggregatePubkeys(custodyBit0Indices.map((i) => state.validatorRegistry[i].pubkey)),
+      blsAggregatePubkeys(custodyBit1Indices.map((i) => state.validatorRegistry[i].pubkey)),
+    ],
+    [
+      hashTreeRoot({
+        data: slashableAttestation.data,
+        custodyBit: false,
+      } as AttestationDataAndCustodyBit),
+      hashTreeRoot({
+        data: slashableAttestation.data,
+        custodyBit: true,
+      } as AttestationDataAndCustodyBit),
+    ],
+    slashableAttestation.aggregateSignature,
+    getDomain(state.fork, slotToEpoch(slashableAttestation.data.slot), Domain.ATTESTATION)
+  );
 }
 
-// TODO finish
 /**
  * Verify that the given ``leaf`` is on the merkle branch ``branch``.
+ * @param {bytes32} leaf
+ * @param {bytes32[]} branch
+ * @param {int} depth
+ * @param {int} index
+ * @param {bytes32} root
+ * @returns {bool}
  */
 export function verifyMerkleBranch(leaf: bytes32, branch: bytes32[], depth: int, index: int, root: bytes32): bool {
-  return true;
+  let value = leaf;
+  for (let i = 0; i < depth; i++) {
+    if (Math.floor(index / (2 ** i)) % 2) {
+      value = hash(Buffer.concat([branch[i], value]));
+    } else {
+      value = hash(Buffer.concat([value, branch[i]]));
+    }
+  }
+  return value.equals(root);
 }

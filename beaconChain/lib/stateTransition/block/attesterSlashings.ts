@@ -16,9 +16,12 @@ import {
   getCurrentEpoch,
   isDoubleVote,
   isSurroundVote,
-  slashValidator,
   verifySlashableAttestation,
 } from "../../../helpers/stateTransitionHelpers";
+
+import {
+  slashValidator,
+} from "../../../helpers/validatorStatus";
 
 export default function processAttesterSlashings(state: BeaconState, block: BeaconBlock) {
   assert(block.body.attesterSlashings.length <= MAX_ATTESTER_SLASHINGS);

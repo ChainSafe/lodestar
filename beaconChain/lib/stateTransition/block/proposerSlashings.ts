@@ -16,9 +16,12 @@ import {
 import {
   getCurrentEpoch,
   getDomain,
-  slashValidator,
   slotToEpoch,
 } from "../../../helpers/stateTransitionHelpers";
+
+import {
+  slashValidator,
+} from "../../../helpers/validatorStatus";
 
 import {blsVerify} from "../../stubs/bls";
 

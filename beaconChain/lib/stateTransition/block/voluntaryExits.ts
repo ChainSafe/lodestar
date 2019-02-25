@@ -20,7 +20,9 @@ import {
   getEntryExitEffectEpoch,
 } from "../../../helpers/stateTransitionHelpers";
 
-import { initiateValidatorExit } from "../../state";
+import {
+  initiateValidatorExit,
+} from "../../../helpers/validatorStatus";
 
 import { blsVerify } from "../../stubs/bls";
 

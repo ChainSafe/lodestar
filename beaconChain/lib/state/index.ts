@@ -16,6 +16,10 @@ import {
   ValidatorIndex,
 } from "../../types";
 
+import {
+  activateValidator,
+} from "../../helpers/validatorStatus";
+
 type int = number;
 
 // Stubbed functions from SSZ
@@ -97,7 +101,7 @@ export function getInitialBeaconState(
   // Process initial activations
   for (let i: ValidatorIndex = new BN(0); i.ltn(state.validatorRegistry.length); i = i.add(new BN(1))) {
     // TODO: Unsafe usage of toNumber on i
-    if (getEffectiveBalance(state, i.toNumber()) >= MAX_DEPOSIT_AMOUNT) {
+    if (getEffectiveBalance(state, i) >= MAX_DEPOSIT_AMOUNT) {
       activateValidator(state, i, true);
     }
   }
@@ -181,80 +185,4 @@ export function validateProofOfPossession(
     //       DEPOSIT,
     //   )
     return true;
-}
-
-/**
- * Activate a validator given an index.
- * @param {BeaconState} state
- * @param {ValidatorIndex} index
- * @param {boolean} isGenesis
- */
-export function activateValidator(state: BeaconState, index: ValidatorIndex, isGenesis: boolean): void {
-    // TODO: Unsafe usage of toNumber for index
-    const validator: Validator = state.validatorRegistry[index.toNumber()];
-    validator.activationEpoch = isGenesis ? GENESIS_EPOCH : getEntryExitEffectEpoch(getCurrentEpoch(state));
-}
-
-/**
- * Initiate exit for the validator with the given index.
- * Note: that this function mutates state.
- * @param {BeaconState} state
- * @param {int} index
- */
-export function initiateValidatorExit(state: BeaconState, index: ValidatorIndex): void {
-    // TODO: Unsafe usage of toNumber for index
-    const validator = state.validatorRegistry[index.toNumber()];
-    if (!validator.statusFlags) {
-        validator.statusFlags = INITIATED_EXIT;
-    }
-}
-
-/**
- * Process a validator exit
- * @param {BeaconState} state
- * @param {int} index
- */
-function exitValidator(state: BeaconState, index: ValidatorIndex): void {
-  // TODO: Unsafe usage of toNumber for index
-  const validator = state.validatorRegistry[index.toNumber()];
-
-  // The following updates only occur if not previous exited
-  if (validator.exitEpoch <= getEntryExitEffectEpoch(getCurrentEpoch(state))) {
-      return;
-  }
-  validator.exitEpoch = getEntryExitEffectEpoch(getCurrentEpoch(state));
-}
-
-/**
- * Penalize the validator of the given index.
- * Note that this function mutates state.
- * @param {BeaconState} state
- * @param {ValidatorIndex} index
- */
-export function penalizeValidator(state: BeaconState, index: ValidatorIndex): void {
-    exitValidator(state, index);
-    // TODO: Unsafe usage of toNumber
-    const validator = state.validatorRegistry[index.toNumber()];
-    state.latestSlashedBalances[getCurrentEpoch(state).toNumber() % LATEST_SLASHED_EXIT_LENGTH] =
-        state.latestSlashedBalances[getCurrentEpoch(state).toNumber() % LATEST_SLASHED_EXIT_LENGTH].addn(getEffectiveBalance(state, index.toNumber()));
-
-    const whistleblowerIndex = getBeaconProposerIndex(state, state.slot);
-    const whistleblowerReward = Math.floor(getEffectiveBalance(state, index.toNumber()) / WHISTLEBLOWER_REWARD_QUOTIENT);
-    state.validatorBalances[whistleblowerIndex] = state.validatorBalances[whistleblowerIndex].addn(whistleblowerReward);
-    state.validatorBalances[index.toNumber()] = state.validatorBalances[index.toNumber()].subn(whistleblowerReward);
-    validator.slashedEpoch = getCurrentEpoch(state);
-}
-
-/**
- * Set the validator with the given index with WITHDRAWABLE flag.
- * Note that this function mutates state.
- * @param {BeaconState} state
- * @param {ValidatorIndex} index
- */
-function prepareValidatorForWithdrawal(state: BeaconState, index: ValidatorIndex): void {
-  const validator = state.validatorRegistry[index.toNumber()];
-  // TODO: Update from spec
-  // if (!validator.statusFlags) {
-  //   validator.statusFlags = StatusFlag.WITHDRAWABLE;
-  // }
 }
