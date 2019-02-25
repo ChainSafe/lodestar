@@ -10,10 +10,10 @@ import {
   LATEST_BLOCK_ROOTS_LENGTH,
   LATEST_RANDAO_MIXES_LENGTH,
   MAX_DEPOSIT_AMOUNT,
+  MAX_INDICES_PER_SLASHABLE_VOTE,
   SHARD_COUNT,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
-  MAX_INDICES_PER_SLASHABLE_VOTE,
 } from "../constants";
 
 import {
@@ -636,7 +636,7 @@ export function verifySlashableAttestation(state: BeaconState, slashableAttestat
       } as AttestationDataAndCustodyBit),
     ],
     slashableAttestation.aggregateSignature,
-    getDomain(state.fork, slotToEpoch(slashableAttestation.data.slot), Domain.ATTESTATION)
+    getDomain(state.fork, slotToEpoch(slashableAttestation.data.slot), Domain.ATTESTATION),
   );
 }
 

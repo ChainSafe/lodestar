@@ -1,16 +1,16 @@
 import assert from "assert";
 
 import {
-	BeaconState,
-	ValidatorIndex,
+  BeaconState,
+  ValidatorIndex,
 } from "../types";
 
 import {
-	GENESIS_EPOCH,
-	INITIATED_EXIT,
-	LATEST_SLASHED_EXIT_LENGTH,
-	MIN_VALIDATOR_WITHDRAWAL_DELAY,
-	WHISTLEBLOWER_REWARD_QUOTIENT,
+  GENESIS_EPOCH,
+  INITIATED_EXIT,
+  LATEST_SLASHED_EXIT_LENGTH,
+  MIN_VALIDATOR_WITHDRAWAL_DELAY,
+  WHISTLEBLOWER_REWARD_QUOTIENT,
 } from "../constants";
 
 import {
@@ -70,7 +70,7 @@ export function exitValidator(state: BeaconState, index: ValidatorIndex): void {
  */
 export function slashValidator(state: BeaconState, index: ValidatorIndex): void {
   const validator = state.validatorRegistry[index.toNumber()];
-  const currentEpoch = getCurrentEpoch(state)
+  const currentEpoch = getCurrentEpoch(state);
   // Remove assertion in phase 2
   assert(state.slot.lt(getEpochStartSlot(validator.withdrawalEpoch)));
 
@@ -80,12 +80,12 @@ export function slashValidator(state: BeaconState, index: ValidatorIndex): void 
 
   const whistleblowerIndex = getBeaconProposerIndex(state, state.slot);
   const whistleblowerReward = Math.floor(getEffectiveBalance(state, index) / WHISTLEBLOWER_REWARD_QUOTIENT);
-  state.validatorBalances[whistleblowerIndex] = 
+  state.validatorBalances[whistleblowerIndex] =
     state.validatorBalances[whistleblowerIndex].addn(whistleblowerReward);
-  state.validatorBalances[index.toNumber()] = 
+  state.validatorBalances[index.toNumber()] =
     state.validatorBalances[index.toNumber()].subn(whistleblowerReward);
 
-  validator.slashedEpoch = currentEpoch
+  validator.slashedEpoch = currentEpoch;
   validator.withdrawalEpoch = currentEpoch.addn(LATEST_SLASHED_EXIT_LENGTH);
 }
 
@@ -98,5 +98,5 @@ export function slashValidator(state: BeaconState, index: ValidatorIndex): void 
  */
 function prepareValidatorForWithdrawal(state: BeaconState, index: ValidatorIndex): void {
   const validator = state.validatorRegistry[index.toNumber()];
-  validator.withdrawalEpoch = getCurrentEpoch(state).addn(MIN_VALIDATOR_WITHDRAWAL_DELAY)
+  validator.withdrawalEpoch = getCurrentEpoch(state).addn(MIN_VALIDATOR_WITHDRAWAL_DELAY);
 }
