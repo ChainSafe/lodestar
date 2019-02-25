@@ -12,7 +12,7 @@ async function init () {
 function genSecret () {
   const s = new mcl.Fr()
   s.setByCSPRNG()
-  return Buffer.from(s.serialize())
+  return toBuffer(s)
 }
 
 /**
@@ -79,10 +79,9 @@ function hashToG2 (messageHash, domain) {
  * @returns {bytes48}
  */
 function aggregatePubkeys(pubkeys) {
-  return Buffer.from(
+  return toBuffer(
     pubkeys.map((pub) => mclPubkey(pub))
       .reduce((acc, val) => mcl.add(acc, val))
-      .serialize()
   )
 }
 
@@ -91,10 +90,9 @@ function aggregatePubkeys(pubkeys) {
  * @returns {bytes96}
  */
 function aggregateSignatures(signatures) {
-  return Buffer.from(
+  return toBuffer(
     signatures.map((sig) => mclSignature(sig))
       .reduce((acc, val) => mcl.add(acc, val))
-      .serialize()
   )
 }
 
@@ -166,14 +164,20 @@ function mclSignature(signature) {
 // Used to create a mcl.G1, mcl.G2, mcl.Fp, etc.
 function fromBuffer(mclType, buffer) {
   const object = new mclType()
-  object.deserialize(buffer)
+  // We assume input is serialized to big-endian order
+  // the mcl library expects little-endian order
+  // so we must reverse before deserializing
+  object.deserialize((new Uint8Array(buffer)).slice().reverse())
   return object
 }
 
 // Utility function to create a buffer from an mcl object
 // Used to create a buffer from a mcl.G1, mcl.G2, mcl.Fp, etc.
 function toBuffer(object) {
-  return Buffer.from(object.serialize())
+  // Our standard expects output serialized to big-endian order
+  // the mcl library serializes to little-endian order
+  // so we must reverse after serializing
+  return Buffer.from(object.serialize()).reverse()
 }
 
 
