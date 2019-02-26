@@ -4,13 +4,9 @@
 // These interfaces relate to the data structures for beacon chain blocks
 
 import {
-  bool,
-  bytes,
   bytes32,
   bytes48,
   bytes96,
-  uint24,
-  uint384,
   uint64,
 } from "./primitive";
 
@@ -132,32 +128,32 @@ export const VoluntaryExit = {
 };
 
 export interface Transfer {
-    // Sender index
-    from: uint64;
-    // Recipient index
-    to: uint64;
-    // Amount in Gwei
-    amount: uint64;
-    // Fee in Gwei for block proposer
-    fee: uint64;
-    // Inclusion slot
-    slot: uint64;
-    // Sender withdrawal pubkey
-    pubkey: bytes48;
-    // Sender signature
-    signature: bytes96;
+  // Sender index
+  from: uint64;
+  // Recipient index
+  to: uint64;
+  // Amount in Gwei
+  amount: uint64;
+  // Fee in Gwei for block proposer
+  fee: uint64;
+  // Inclusion slot
+  slot: uint64;
+  // Sender withdrawal pubkey
+  pubkey: bytes48;
+  // Sender signature
+  signature: bytes96;
 }
 
 export const Transfer = {
   name: "Transfer",
   fields: [
-      ["from", uint64],
-      ["to", uint64],
-      ["amount", uint64],
-      ["fee", uint64],
-      ["slot", uint64],
-      ["pubkey", bytes48],
-      ["signature", bytes96],
+    ["from", uint64],
+    ["to", uint64],
+    ["amount", uint64],
+    ["fee", uint64],
+    ["slot", uint64],
+    ["pubkey", bytes48],
+    ["signature", bytes96],
   ],
 };
 

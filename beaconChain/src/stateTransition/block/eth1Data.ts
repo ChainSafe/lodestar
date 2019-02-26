@@ -1,4 +1,3 @@
-import assert from "assert";
 import BN from "bn.js";
 
 import {

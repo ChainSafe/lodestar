@@ -7,14 +7,6 @@ interface DummyChainStart {
   eth1Data: Eth1Data;
 }
 
-export function getInitialDeposits(): DummyChainStart {
-  return {
-    deposits: generateFakeDeposits(),
-    eth1Data: generateEthData(),
-    genesisTime: Date.now() / 1000 | 0,
-  };
-}
-
 function generateEthData(): Eth1Data {
   return {
     blockHash: Buffer.alloc(32),
@@ -25,7 +17,7 @@ function generateEthData(): Eth1Data {
 function generateFakeDeposits(): Deposit[] {
   const deposits: Deposit[] = [];
 
-  for (let i: number = 0; i < 10; i++) {
+  for (let i = 0; i < 10; i++) {
     const depositInput: DepositInput = {
       proofOfPossession: Buffer.alloc(2),
       pubkey: Buffer.alloc(2),
@@ -47,3 +39,13 @@ function generateFakeDeposits(): Deposit[] {
   }
   return deposits;
 }
+
+export function getInitialDeposits(): DummyChainStart {
+  return {
+    deposits: generateFakeDeposits(),
+    eth1Data: generateEthData(),
+    genesisTime: Date.now() / 1000 | 0,
+  };
+}
+
+

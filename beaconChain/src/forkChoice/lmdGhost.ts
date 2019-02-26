@@ -41,7 +41,7 @@ interface AttestationTarget {
  */
 function getAncestor(store: Store, block: BeaconBlock, slot: Slot): BeaconBlock | null {
   if (block.slot.eq(slot)) {
-      return block;
+    return block;
   } else if (block.slot.lt(slot)) {
     return null;
   } else {
@@ -56,6 +56,7 @@ function getAncestor(store: Store, block: BeaconBlock, slot: Slot): BeaconBlock 
  * @param {ValidatorIndex} validatorIndex
  * @returns {Attestation}
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getLatestAttestation(store: Store, validatorIndex: ValidatorIndex): Attestation {
   const validator: Validator = store.validatorRegistry[validatorIndex.toNumber()];
   const attestation = store.pendingAttestations
@@ -67,6 +68,7 @@ function getLatestAttestation(store: Store, validatorIndex: ValidatorIndex): Att
 }
 
 // TODO FINSIH
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getLatestAttestationTarget(store: Store, validatorIndex: ValidatorIndex): BeaconBlock {
   // const attestation = getLatestAttestation(store, validatorIndex);
   return store.blocks[store.blocks.length - 1];
@@ -90,7 +92,7 @@ function getChildren(store: Store, block: BeaconBlock): BeaconBlock[] {
  * @param {BeaconBlock} startBlock
  * @returns {BeaconBlock}
  */
-function lmdGhost(store: Store, startState: BeaconState, startBlock: BeaconBlock): BeaconBlock {
+export function lmdGhost(store: Store, startState: BeaconState, startBlock: BeaconBlock): BeaconBlock {
   const validators = startState.validatorRegistry;
   const activeValidatorIndices: ValidatorIndex[] = getActiveValidatorIndices(validators, slotToEpoch(startState.slot));
 
@@ -101,7 +103,7 @@ function lmdGhost(store: Store, startState: BeaconState, startBlock: BeaconBlock
 
   // Inner function
   function getVoteCount(block: BeaconBlock): int {
-    let sum: number = 0;
+    let sum = 0;
     for (const target of attestationTargets) {
       if (getAncestor(store, target[1], block.slot) === block) {
         sum += Math.floor(getEffectiveBalance(startState, target[0]) / FORK_CHOICE_BALANCE_INCREMENT);

@@ -16,7 +16,7 @@ class BeaconNode {
   public state: BeaconState;
   public powChainAddress: string;
 
-  constructor(opts: BeaconNodeCtx) {
+  public constructor(opts: BeaconNodeCtx) {
     this.chain = opts.chain ? opts.chain : "mainnet";
     this.powChainAddress = opts.powChainAddress ? opts.powChainAddress : DEPOSIT_CONTRACT_ADDRESS;
 

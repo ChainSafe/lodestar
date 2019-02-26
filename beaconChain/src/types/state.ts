@@ -3,11 +3,8 @@
 // These interfaces relate to the data structures for beacon chain state
 
 import {
-  bytes,
   bytes32,
   bytes48,
-  uint24,
-  uint384,
   uint64,
 } from "./primitive";
 

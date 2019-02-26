@@ -1,16 +1,20 @@
 import { keccakAsU8a } from "@polkadot/util-crypto";
-import assert from "assert";
+import assert = require("assert");
 import BN from "bn.js";
+import { hashTreeRoot } from "@chainsafesystems/ssz";
 
 import {
   ACTIVATION_EXIT_DELAY,
   Domain,
+  EMPTY_SIGNATURE,
+  FAR_FUTURE_EPOCH,
   GENESIS_EPOCH,
   LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
   LATEST_BLOCK_ROOTS_LENGTH,
   LATEST_RANDAO_MIXES_LENGTH,
   MAX_DEPOSIT_AMOUNT,
   MAX_INDICES_PER_SLASHABLE_VOTE,
+  MIN_SEED_LOOKAHEAD,
   SHARD_COUNT,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
@@ -19,12 +23,15 @@ import {
 import {
   AttestationData,
   AttestationDataAndCustodyBit,
+  BLSSignature,
   BeaconState,
   bool,
   bytes,
   bytes32,
+  DepositInput,
   Epoch,
   Fork,
+  Gwei,
   int,
   Shard,
   SlashableAttestation,
@@ -32,14 +39,21 @@ import {
   uint64,
   Validator,
   ValidatorIndex,
+  BLSPubkey,
 } from "../types";
 
 import {
   blsAggregatePubkeys,
   blsVerifyMultiple,
+  blsVerify,
 } from "../stubs/bls";
 
-import { hashTreeRoot } from "../state";
+
+// This function was copied from ssz-js
+// TODO: either export hash from ssz-js or move to a util-crypto library
+export function hash(value: bytes): bytes32 {
+  return Buffer.from(keccakAsU8a(value));
+}
 
 /**
  * Return a byte array from an int
@@ -105,8 +119,8 @@ export function isActiveValidator(validator: Validator, epoch: Epoch): boolean {
 export function getActiveValidatorIndices(validators: Validator[], epoch: Epoch): ValidatorIndex[] {
   return validators.reduce((accumulator: ValidatorIndex[], validator: Validator, index: int) => {
     return isActiveValidator(validator, epoch)
-    ? [...accumulator, new BN(index)]
-    : accumulator;
+      ? [...accumulator, new BN(index)]
+      : accumulator;
   }, []);
 }
 
@@ -119,7 +133,7 @@ export function getActiveValidatorIndices(validators: Validator[], epoch: Epoch)
 function shuffle<T>(values: T[], seed: bytes32): T[] {
   const valuesCount: int = values.length;
   // Entropy is consumed from the seed in 3-byte (24 bit) chunks.
-  const randBytes: number = 3;
+  const randBytes = 3;
   // Highest possible result of the RNG
   const randMax: number = 2 ** (randBytes * 8) - 1;
 
@@ -130,7 +144,7 @@ function shuffle<T>(values: T[], seed: bytes32): T[] {
   // Make a copy of the values
   const output: T[] = values.slice();
   let source: bytes32 = seed;
-  let index: number = 0;
+  let index = 0;
   while (index < valuesCount - 1) {
     // Re-hash the `source` to obtain a new pattern of bytes.
     source = hash(source); // 32 bytes long
@@ -271,13 +285,72 @@ export function getNextEpochCommitteeCount(state: BeaconState): int {
 }
 
 /**
+ * Return the randao mix at a recent epoch.
+ * @param {BeaconState} state
+ * @param {Epoch} epoch
+ * @returns {bytes32}
+ */
+export function getRandaoMix(state: BeaconState, epoch: Epoch): bytes32 {
+  if (getCurrentEpoch(state).subn(LATEST_RANDAO_MIXES_LENGTH).lt(epoch) && epoch.lt(getCurrentEpoch(state))) { throw new Error(""); }
+  return state.latestRandaoMixes[epoch.umod(new BN(LATEST_RANDAO_MIXES_LENGTH)).toNumber()];
+}
+
+/**
+ * Return the index root at a recent epoch.
+ * @param {BeaconState} state
+ * @param {Epoch} epoch
+ * @returns {bytes32}
+ */
+export function getActiveIndexRoot(state: BeaconState, epoch: Epoch): bytes32 {
+  if (getCurrentEpoch(state).subn(LATEST_ACTIVE_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY).lt(epoch)
+      && epoch.lt(getCurrentEpoch(state).addn(ACTIVATION_EXIT_DELAY))) { throw new Error(""); }
+  return state.latestActiveIndexRoots[epoch.umod(new BN(LATEST_ACTIVE_INDEX_ROOTS_LENGTH)).toNumber()];
+}
+
+/**
+ * Generate a seed for the given epoch.
+ * @param {BeaconState} state
+ * @param {Epoch} epoch
+ * @returns {bytes32}
+ */
+export function generateSeed(state: BeaconState, epoch: Epoch): bytes32 {
+  return hash(Buffer.concat([
+    getRandaoMix(state, epoch.subn(MIN_SEED_LOOKAHEAD)),
+    getActiveIndexRoot(state, epoch),
+  ]))
+}
+
+/**
+ * Check if value is a power of two integer.
+ * @param {int} value
+ * @returns {boolean}
+ */
+export function isPowerOfTwo(value: BN): boolean {
+  if (value.ltn(0)) {
+    throw new Error("Value is negative!");
+  } else if (value.eqn(0)) {
+    return false;
+  } else {
+    // a power of two has only one bit set
+    let hasBitSet = false;
+    for (let i = 0; i < value.bitLength(); i++) {
+      if (hasBitSet) {
+        return false;
+      }
+      hasBitSet = value.testn(i);
+    }
+    return true;
+  }
+}
+
+/**
  * Return the list of (committee, shard) acting as a tuple for the slot.
  * @param {BeaconState} state
  * @param {Slot} slot
  * @param {boolean} registryChange
  * @returns {[]}
  */
-export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, registryChange: boolean = false): Array<{shard: Shard, validatorIndices: ValidatorIndex[]}> {
+export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, registryChange: boolean = false): {shard: Shard; validatorIndices: ValidatorIndex[]}[] {
   const epoch = slotToEpoch(slot);
   const currentEpoch = getCurrentEpoch(state);
   const previousEpoch = currentEpoch.gt(GENESIS_EPOCH) ? currentEpoch.subn(1) : currentEpoch;
@@ -348,43 +421,6 @@ export function getBlockRoot(state: BeaconState, slot: Slot): bytes32 {
 }
 
 /**
- * Return the randao mix at a recent epoch.
- * @param {BeaconState} state
- * @param {Epoch} epoch
- * @returns {bytes32}
- */
-export function getRandaoMix(state: BeaconState, epoch: Epoch): bytes32 {
-  if (getCurrentEpoch(state).subn(LATEST_RANDAO_MIXES_LENGTH).lt(epoch) && epoch.lt(getCurrentEpoch(state))) { throw new Error(""); }
-  return state.latestRandaoMixes[epoch.umod(new BN(LATEST_RANDAO_MIXES_LENGTH)).toNumber()];
-}
-
-/**
- * Return the index root at a recent epoch.
- * @param {BeaconState} state
- * @param {Epoch} epoch
- * @returns {bytes32}
- */
-export function getActiveIndexRoot(state: BeaconState, epoch: Epoch): bytes32 {
-  if (getCurrentEpoch(state).subn(LATEST_ACTIVE_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY).lt(epoch)
-      && epoch.lt(getCurrentEpoch(state).addn(ACTIVATION_EXIT_DELAY))) { throw new Error(""); }
-  return state.latestActiveIndexRoots[epoch.umod(new BN(LATEST_ACTIVE_INDEX_ROOTS_LENGTH)).toNumber()];
-}
-
-/**
- * Generate a seed for the given epoch.
- * @param {BeaconState} state
- * @param {Epoch} epoch
- * @returns {bytes32}
- */
-// TODO FINSIH
-export function generateSeed(state: BeaconState, epoch: Epoch): bytes32 {
-  // return hash(
-  //   getRandaoMix(state, epoch - MIN_SEED_LOOKAHEAD) + getActiveIndexRoot(state, epoch))
-  // )
-  return Buffer.alloc(1);
-}
-
-/**
  * Return the beacon proposer index for the slot.
  * @param {BeaconState} state
  * @param {int} slot
@@ -393,12 +429,6 @@ export function generateSeed(state: BeaconState, epoch: Epoch): bytes32 {
 export function getBeaconProposerIndex(state: BeaconState, slot: Slot): int {
   const firstCommittee = getCrosslinkCommitteesAtSlot(state, slot)[0].validatorIndices;
   return firstCommittee[slot.umod(new BN(firstCommittee.length)).toNumber()].toNumber();
-}
-
-// This function was copied from ssz-js
-// TODO: either export hash from ssz-js or move to a util-crypto library
-export function hash(value: bytes): bytes32 {
-  return Buffer.from(keccakAsU8a(value));
 }
 
 /**
@@ -411,9 +441,9 @@ export function merkleRoot(values: bytes32[]): bytes32 {
   // first half of the array representing intermediate tree nodes
   const o: bytes[] = Array.from({ length: values.length },
     () => Buffer.alloc(0))
-      // do not hash leaf nodes
-      // we assume leaf nodes are prehashed
-      .concat(values);
+  // do not hash leaf nodes
+  // we assume leaf nodes are prehashed
+    .concat(values);
   for (let i = values.length - 1; i > 0; i--) {
     // hash intermediate/root nodes
     o[i] = hash(Buffer.concat([o[i * 2], o[i * 2 + 1]]));
@@ -422,8 +452,9 @@ export function merkleRoot(values: bytes32[]): bytes32 {
 }
 
 // // TODO finish
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, participationBitfield: bytes): int[] {
-   return [];
+  return [];
 }
 // export function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, participationBitfield: bytes): int[] {
 //   const crosslinkCommittee: CommitteeShard[] = getCrosslinkCommitteesAtSlot(state, attestationData.slot);
@@ -444,29 +475,6 @@ export function getAttestationParticipants(state: BeaconState, attestationData: 
 //   });
 //   return participants;
 // }
-
-/**
- * Check if value is a power of two integer.
- * @param {int} value
- * @returns {boolean}
- */
-export function isPowerOfTwo(value: BN): boolean {
-  if (value.ltn(0)) {
-    throw new Error("Value is negative!");
-  } else if (value.eqn(0)) {
-    return false;
-  } else {
-    // a power of two has only one bit set
-    let hasBitSet: boolean = false;
-    for (let i = 0; i < value.bitLength(); i++) {
-      if (hasBitSet) {
-        return false;
-      }
-      hasBitSet = value.testn(i);
-    }
-    return true;
-  }
-}
 
 /**
  * Determine the balance of a validator.
@@ -517,6 +525,7 @@ export function getBitfieldBit(bitfield: bytes, i: int): int {
 }
 
 // TODO finish
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function verifyBitfield(bitfield: bytes, committeeSize: int): bool {
   return true;
 }
@@ -620,20 +629,22 @@ export function verifySlashableAttestation(state: BeaconState, slashableAttestat
     }
   }
 
+  const dataAndCustodyBit0: AttestationDataAndCustodyBit = {
+    data: slashableAttestation.data,
+    custodyBit: false,
+  };
+  const dataAndCustodyBit1: AttestationDataAndCustodyBit = {
+    data: slashableAttestation.data,
+    custodyBit: true,
+  };
   return blsVerifyMultiple(
     [
       blsAggregatePubkeys(custodyBit0Indices.map((i) => state.validatorRegistry[i].pubkey)),
       blsAggregatePubkeys(custodyBit1Indices.map((i) => state.validatorRegistry[i].pubkey)),
     ],
     [
-      hashTreeRoot({
-        data: slashableAttestation.data,
-        custodyBit: false,
-      } as AttestationDataAndCustodyBit),
-      hashTreeRoot({
-        data: slashableAttestation.data,
-        custodyBit: true,
-      } as AttestationDataAndCustodyBit),
+      hashTreeRoot(dataAndCustodyBit0, AttestationDataAndCustodyBit),
+      hashTreeRoot(dataAndCustodyBit1, AttestationDataAndCustodyBit),
     ],
     slashableAttestation.aggregateSignature,
     getDomain(state.fork, slotToEpoch(slashableAttestation.data.slot), Domain.ATTESTATION),
@@ -659,4 +670,76 @@ export function verifyMerkleBranch(leaf: bytes32, branch: bytes32[], depth: int,
     }
   }
   return value.equals(root);
+}
+
+/**
+ * Validate a eth1 deposit
+ * @param {BeaconState} state
+ * @param {BLSPubkey} pubkey
+ * @param {BLSSignature} proofOfPossession
+ * @param {Bytes32} withdrawalCredentials
+ * @returns {boolean}
+ */
+export function validateProofOfPossession(
+  state: BeaconState,
+  pubkey: BLSPubkey,
+  proofOfPossession: BLSSignature,
+  withdrawalCredentials: bytes32): boolean {
+  const proofOfPossessionData: DepositInput = {
+    pubkey,
+    withdrawalCredentials,
+    proofOfPossession: EMPTY_SIGNATURE,
+  };
+  return blsVerify(
+    pubkey,
+    hashTreeRoot(proofOfPossessionData, DepositInput),
+    proofOfPossession,
+    getDomain(
+      state.fork,
+      getCurrentEpoch(state),
+      Domain.DEPOSIT,
+    ),
+  );
+}
+
+/**
+ * Process a deposit from eth1.x to eth2.
+ * @param {BeaconState} state
+ * @param {BLSPubkey} pubkey
+ * @param {Gwei} amount
+ * @param {BLSSignature} proofOfPossession
+ * @param {Bytes32} withdrawalCredentials
+ */
+export function processDeposit(
+  state: BeaconState,
+  pubkey: BLSPubkey,
+  amount: Gwei,
+  proofOfPossession: BLSSignature,
+  withdrawalCredentials: bytes32): void {
+  // Validate the given proofOfPossession
+  assert(validateProofOfPossession(state, pubkey, proofOfPossession, withdrawalCredentials));
+
+  const validatorPubkeys = state.validatorRegistry.map((v) => v.pubkey);
+
+  if (!validatorPubkeys.includes(pubkey)) {
+    // Add new validator
+    const validator: Validator = {
+      pubkey,
+      withdrawalCredentials,
+      activationEpoch: new BN(FAR_FUTURE_EPOCH),
+      exitEpoch: new BN(FAR_FUTURE_EPOCH),
+      withdrawalEpoch: new BN(FAR_FUTURE_EPOCH),
+      slashedEpoch: new BN(FAR_FUTURE_EPOCH),
+      statusFlags: new BN(0),
+    };
+
+    // Note: In phase 2 registry indices that have been withdrawn for a long time will be recycled.
+    state.validatorRegistry.push(validator);
+    state.validatorBalances.push(amount);
+  } else {
+    // Increase balance by deposit amount
+    const index = validatorPubkeys.indexOf(pubkey);
+    assert(!state.validatorRegistry[index].withdrawalCredentials.equals(withdrawalCredentials), "Deposit already made!");
+    state.validatorBalances[index] = state.validatorBalances[index].add(amount);
+  }
 }

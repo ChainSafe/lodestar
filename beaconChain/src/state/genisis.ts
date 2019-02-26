@@ -1,17 +1,12 @@
 import BN from "bn.js";
+import { hashTreeRoot } from "@chainsafesystems/ssz";
 
 import {
   BeaconState,
-  BLSPubkey,
-  BLSSignature,
-  Bytes32,
   Crosslink,
   Deposit,
-  DepositInput,
   Eth1Data,
-  Gwei,
   int,
-  Validator,
   ValidatorIndex,
 } from "../types";
 
@@ -29,7 +24,7 @@ import {
   ZERO_HASH,
 } from "../constants";
 
-import {hashTreeRoot, processDeposit} from "./index";
+import {processDeposit} from "./index";
 
 import {
   generateSeed,
@@ -120,8 +115,8 @@ export function getInitialBeaconState(
     }
   }
 
-  const genesisActiveIndexRoot = hashTreeRoot(getActiveValidatorIndices(state.validatorRegistry, GENESIS_EPOCH));
-  for (let index: number = 0; index < LATEST_ACTIVE_INDEX_ROOTS_LENGTH; index++) {
+  const genesisActiveIndexRoot = hashTreeRoot(getActiveValidatorIndices(state.validatorRegistry, GENESIS_EPOCH), [ValidatorIndex]);
+  for (let index = 0; index < LATEST_ACTIVE_INDEX_ROOTS_LENGTH; index++) {
     state.latestActiveIndexRoots[index] = genesisActiveIndexRoot;
   }
   state.currentShufflingSeed = generateSeed(state, GENESIS_EPOCH);
