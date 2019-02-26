@@ -16,7 +16,7 @@ import {
 
 import {
   Attestation,
-  AttesterSlashings,
+  AttesterSlashing,
 } from "./attestation";
 
 import {
@@ -118,7 +118,7 @@ export interface VoluntaryExit {
   // Minimum slot for processing exit
   epoch: uint64;
   // Index of the exiting validator
-  validator_index: uint64;
+  validatorIndex: uint64;
   // Validator signature
   signature: bytes96;
 }
@@ -126,7 +126,7 @@ export const VoluntaryExit = {
   name: "VoluntaryExit",
   fields: [
     ["epoch", uint64],
-    ["validator_index", uint64],
+    ["validatorIndex", uint64],
     ["signature", bytes96],
   ],
 };
@@ -163,20 +163,20 @@ export const Transfer = {
 
 export interface BeaconBlockBody {
   proposerSlashings: ProposerSlashing[];
-  casperSlashings: AttesterSlashings[];
+  attesterSlashings: AttesterSlashing[];
   attestations: Attestation[];
   deposits: Deposit[];
-  exits: VoluntaryExit[];
+  voluntaryExits: VoluntaryExit[];
   transfers: Transfer[];
 }
 export const BeaconBlockBody = {
   name: "BeaconBlockBody",
   fields: [
     ["proposerSlashings", [ProposerSlashing]],
-    ["casperSlashings", [AttesterSlashings]],
+    ["attesterSlashings", [AttesterSlashing]],
     ["attestations", [Attestation]],
     ["deposits", [Deposit]],
-    ["exits", [VoluntaryExit]],
+    ["voluntaryExits", [VoluntaryExit]],
     ["transfers", [Transfer]],
   ],
 };

@@ -133,17 +133,17 @@ export const SlashableAttestation = {
   ],
 };
 
-export interface AttesterSlashings {
-  // First batch of votes
-  slashableVoteData1: SlashableAttestation;
-  // Second batch of votes
-  slashableVoteData2: SlashableAttestation;
+export interface AttesterSlashing {
+  // First slashable attestation
+  slashableAttestation1: SlashableAttestation;
+  // Second slashable attestation
+  slashableAttestation2: SlashableAttestation;
 }
-export const AttesterSlashings = {
-  name: "AttesterSlashings",
+export const AttesterSlashing = {
+  name: "AttesterSlashing",
   fields: [
-    ["slashableVoteData1", SlashableAttestation],
-    ["slashableVoteData2", SlashableAttestation],
+    ["slashableAttestation1", SlashableAttestation],
+    ["slashableAttestation2", SlashableAttestation],
   ],
 };
 
