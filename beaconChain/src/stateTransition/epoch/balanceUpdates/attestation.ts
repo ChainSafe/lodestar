@@ -1,6 +1,7 @@
 import {BeaconState} from "../../../../types";
 import {getBeaconProposerIndex} from "../../../../helpers/stateTransitionHelpers";
 import {ATTESTATION_INCLUSION_REWARD_QUOTIENT} from "../../../../constants";
+import {inclusionSlot} from "../helpers";
 
 export function processAttestationInclusion(state: BeaconState, previousEpochAttesterIndices, baseReward: Function): void {
   for (let index of previousEpochAttesterIndices) {
