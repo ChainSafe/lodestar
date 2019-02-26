@@ -4,7 +4,8 @@ import {
 } from "../../../helpers/stateTransitionHelpers";
 import {Attestation, BeaconState, PendingAttestation, Shard, uint64, ValidatorIndex} from "../../../types";
 import {
-  EJECTION_BALANCE, INITIATED_EXIT, MAX_BALANCE_CHURN_QUOTIENT, MAX_DEPOSIT_AMOUNT,
+  EJECTION_BALANCE, FAR_FUTURE_EPOCH, INITIATED_EXIT, MAX_BALANCE_CHURN_QUOTIENT, MAX_DEPOSIT_AMOUNT,
+  MIN_VALIDATOR_WITHDRAWAL_DELAY,
   SHARD_COUNT
 } from "../../../constants";
 import BN from "bn.js";
@@ -129,4 +130,27 @@ export function inclusionDistance(state: BeaconState, validatorIndex: ValidatorI
       })
   });
   return lowestAttestation.inclusionSlot.sub(lowestAttestation.data.slot);
+}
+
+/**
+ * Process the exit queue.
+ * @param {BeaconState} state
+ */
+export function processExitQueue(state: BeaconState): void {
+  const eligibleIndices: number[] = Array.from({length: state.validatorRegistry.length})
+    .map(Number.call, Number)
+    .filter((index: number) => {
+      const validator = state.validatorRegistry[index];
+
+      // Filter out dequeued validators
+      if (validator.withdrawalEpoch.lt(FAR_FUTURE_EPOCH)) {
+        return false;
+      }
+      return getCurrentEpoch(state).gte(validator.exitEpoch.addn(MIN_VALIDATOR_WITHDRAWAL_DELAY))
+    });
+
+  // Sort in order of exit epoch, and validators that exit within the same epoch exit in order of validator index
+  eligibleIndices.sort((a: number, b: number) => {
+    return state.validatorRegistry[a].exitEpoch.sub(state.validatorRegistry[b].exitEpoch).toNumber();
+  });
 }

@@ -1,11 +1,8 @@
 import {BeaconState, Epoch, Shard} from "../../../types";
-import {
-  generateSeed, getActiveValidatorIndices, getCurrentEpoch, getCurrentEpochCommitteeCount, getEffectiveBalance,
-  isPowerOfTwo
-} from "../../../helpers/stateTransitionHelpers";
+import {generateSeed,getCurrentEpochCommitteeCount, isPowerOfTwo} from "../../../helpers/stateTransitionHelpers";
 import {SHARD_COUNT} from "../../../constants";
 import BN from "bn.js";
-import {isValidCrosslink, processSlashing} from "./helpers";
+import {isValidCrosslink, processExitQueue, processSlashing} from "./helpers";
 
 /**
  * Main function to process the validator registry and shuffle seed data.
