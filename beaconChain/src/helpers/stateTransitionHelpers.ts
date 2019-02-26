@@ -472,6 +472,11 @@ export function getAttestationParticipants(state: BeaconState, attestationData: 
 // export function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, participationBitfield: bytes): int[] {
 //   const crosslinkCommittee: CommitteeShard[] = getCrosslinkCommitteesAtSlot(state, attestationData.slot);
 // function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, bitfield: bytes): int[] {
+
+export function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, bitfield: bytes): ValidatorIndex[] {
+  return [] as ValidatorIndex[];
+}
+
 //   const crosslinkCommittees: Array<{ShardNumber, ValidatorIndex}> = getCrosslinkCommitteesAtSlot(state, attestationData.slot);
 //
 //   // assert attestation.shard in [shard for _, shard in crosslink_committees]
