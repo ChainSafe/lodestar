@@ -1,13 +1,21 @@
-import {BeaconBlock, BeaconState} from "../../../types";
+import assert from "assert";
+import {BeaconBlock, BeaconState, Epoch, Eth1DataVote} from "../../../types";
+import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "../../../constants";
 
-export function processEth1Data(state: BeaconState): void {
-  // ETH1 Data
-  // If next_epoch % EPOCHS_PER_ETH1_VOTING_PERIOD == 0:
-  //
-  // If eth1_data_vote.vote_count * 2 > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH for some eth1_data_vote in state.eth1_data_votes (ie. more than half the votes in this voting period were for that value), set state.latest_eth1_data = eth1_data_vote.eth1_data.
-  //   Set state.eth1_data_votes = [].
-  // if (nextEpoch.mod(new BN(EPOCHS_PER_ETH1_VOTING_PERIOD)).eqn(0)) {
-  //   if (state.eth1)
-  // }
+export function processEth1Data(
+  state: BeaconState,
+  nextEpoch: Epoch): void {
+
+  assert(nextEpoch.modn(EPOCHS_PER_ETH1_VOTING_PERIOD) === 0);
+
+  state.eth1DataVotes.forEach((vote: Eth1DataVote) => {
+    // Check if more than half the votes were for that value
+    if (vote.voteCount.muln(2).gtn(EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH)) {
+      state.latestEth1Data = vote.eth1Data;
+    }
+  });
+
+  // reset the votes for next round
+  state.eth1DataVotes = [];
 }
 
