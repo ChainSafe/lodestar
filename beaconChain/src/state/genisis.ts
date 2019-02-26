@@ -24,12 +24,11 @@ import {
   ZERO_HASH,
 } from "../constants";
 
-import {processDeposit} from "./index";
-
 import {
   generateSeed,
   getActiveValidatorIndices,
   getEffectiveBalance,
+  processDeposit,
 } from "../helpers/stateTransitionHelpers";
 
 import {

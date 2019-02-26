@@ -1,5 +1,5 @@
 import { keccakAsU8a } from "@polkadot/util-crypto";
-import assert = require("assert");
+import assert from "assert";
 import BN from "bn.js";
 import { hashTreeRoot } from "@chainsafesystems/ssz";
 
