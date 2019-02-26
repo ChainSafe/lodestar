@@ -19,7 +19,7 @@ import {activateValidator} from "../../state";
 export function isValidCrosslink(state: BeaconState): boolean {
   let shards: Shard[] = [];
   for (let i: number = 0; i < getCurrentEpochCommitteeCount(state); i++) {
-    const shard: BN = state.currentShufflingStartShard.addn(i).modn(SHARD_COUNT) as Shard;
+    const shard: BN = state.currentShufflingStartShard.addn(i).mod(new BN(SHARD_COUNT)) as Shard;
     shards.push(shard);
   }
   shards.map((shard: Shard) => {
