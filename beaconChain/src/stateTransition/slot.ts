@@ -1,7 +1,7 @@
 import {
-  bytes32,
   BeaconState,
-} from "../types"
+  bytes32,
+} from "../types";
 
 import {
   LATEST_BLOCK_ROOTS_LENGTH,

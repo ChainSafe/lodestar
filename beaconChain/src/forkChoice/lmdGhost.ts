@@ -1,9 +1,24 @@
-import {Attestation, BeaconBlock, BeaconState, PendingAttestation, Validator, ValidatorIndex} from "../types";
-import {getActiveValidatorIndices, getEffectiveBalance, slotToEpoch} from "../helpers/stateTransitionHelpers";
-import {FORK_CHOICE_BALANCE_INCREMENT} from "../constants";
-import {Slot} from "../types";
+import {
+  Attestation,
+  BeaconBlock,
+  BeaconState,
+  int,
+  PendingAttestation,
+  Slot,
+  Validator,
+  ValidatorIndex,
+} from "../types";
 
-type int = number;
+import {
+  FORK_CHOICE_BALANCE_INCREMENT,
+} from "../constants";
+
+import {
+  getActiveValidatorIndices,
+  getEffectiveBalance,
+  slotToEpoch,
+} from "../helpers/stateTransitionHelpers";
+
 
 // Probably add this as a field to BeaconState
 interface Store {
@@ -45,7 +60,7 @@ function getLatestAttestation(store: Store, validatorIndex: ValidatorIndex): Att
   const validator: Validator = store.validatorRegistry[validatorIndex.toNumber()];
   const attestation = store.pendingAttestations
   // NOTE: This may not be correct
-    .filter(a => a.aggregationBitfield === validator.pubkey)
+    .filter((a) => a.aggregationBitfield === validator.pubkey)
     .reduce((prev: PendingAttestation, cur: PendingAttestation) => prev.data.slot < cur.data.slot ?  cur : prev);
   // If there are more than one, return the index 0
   return attestation[0];
@@ -80,14 +95,14 @@ function lmdGhost(store: Store, startState: BeaconState, startBlock: BeaconBlock
   const activeValidatorIndices: ValidatorIndex[] = getActiveValidatorIndices(validators, slotToEpoch(startState.slot));
 
   const attestationTargets: AttestationTarget[] = [];
-  for (let validatorIndex of activeValidatorIndices) {
+  for (const validatorIndex of activeValidatorIndices) {
     attestationTargets.push({validatorIndex, target: getLatestAttestationTarget(store, validatorIndex)});
   }
 
   // Inner function
   function getVoteCount(block: BeaconBlock): int {
     let sum: number = 0;
-    for (let target of attestationTargets) {
+    for (const target of attestationTargets) {
       if (getAncestor(store, target[1], block.slot) === block) {
         sum += Math.floor(getEffectiveBalance(startState, target[0]) / FORK_CHOICE_BALANCE_INCREMENT);
       }
