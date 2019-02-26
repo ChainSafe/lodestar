@@ -1,4 +1,4 @@
-import BN = require("bn.js");
+import BN from "bn.js";
 
 /**
  * Renerates a random integer between min (included) and max (excluded).
