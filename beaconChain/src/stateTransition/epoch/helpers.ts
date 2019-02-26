@@ -1,8 +1,8 @@
 import {
-  getActiveValidatorIndices, getCurrentEpoch, getCurrentEpochCommitteeCount,
+  getActiveValidatorIndices, getAttestationParticipants, getCurrentEpoch, getCurrentEpochCommitteeCount,
   getEffectiveBalance, getEntryExitEffectEpoch, getTotalBalance
 } from "../../../helpers/stateTransitionHelpers";
-import {BeaconState, Shard} from "../../../types";
+import {Attestation, BeaconState, PendingAttestation, Shard, uint64, ValidatorIndex} from "../../../types";
 import {
   EJECTION_BALANCE, INITIATED_EXIT, MAX_BALANCE_CHURN_QUOTIENT, MAX_DEPOSIT_AMOUNT,
   SHARD_COUNT
@@ -97,4 +97,36 @@ export function processEjections(state: BeaconState): void {
       exitValidator(state, index);
     }
   }
+}
+
+/**
+ * Returns the attestation with the lowest inclusion slot for a specified validatorIndex.
+ * @param {BeaconState} state
+ * @param {ValidatorIndex} validatorIndex
+ * @returns {uint64}
+ */
+export function inclusionSlot(state: BeaconState, validatorIndex: ValidatorIndex): uint64 {
+  let lowestInclusionSlot: uint64;
+  state.latestAttestations.forEach((attestation: PendingAttestation) => {
+    getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield)
+      .forEach((index: ValidatorIndex) => {
+        if (index.eq(validatorIndex) && attestation.inclusionSlot.lt(lowestInclusionSlot)) {
+          lowestInclusionSlot = attestation.inclusionSlot;
+        }
+      })
+  });
+  return lowestInclusionSlot;
+}
+
+export function inclusionDistance(state: BeaconState, validatorIndex: ValidatorIndex): uint64 {
+  let lowestAttestation: PendingAttestation;
+  state.latestAttestations.forEach((attestation: PendingAttestation) => {
+    getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield)
+      .forEach((index: ValidatorIndex) => {
+        if (index.eq(validatorIndex) && attestation.inclusionSlot.lt(lowestAttestation.inclusionSlot)) {
+          lowestAttestation = attestation;
+        }
+      })
+  });
+  return lowestAttestation.inclusionSlot.sub(lowestAttestation.data.slot);
 }
