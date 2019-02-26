@@ -1,5 +1,5 @@
 import {
-  getActiveValidatorIndices,
+  getActiveValidatorIndices, getAttestationParticipants,
   getBlockRoot, getCurrentEpoch, getEpochStartSlot, getPreviousEpoch, getTotalBalance,
   slotToEpoch
 } from "../../../helpers/stateTransitionHelpers";
@@ -42,7 +42,7 @@ export function processVariables(state: BeaconState) {
     }
   });
 
-  const previousEpochAttesterIndices: ValidatorIndex[] = previousEpochAttestations.map((attestation) => {
+  const previousEpochAttesterIndices: ValidatorIndex[][] = previousEpochAttestations.map((attestation) => {
     return getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield);
   });
 
@@ -55,14 +55,14 @@ export function processVariables(state: BeaconState) {
     }
   });
 
-  const previousEpochBoundaryAttesterIndices: ValidatorIndex[] = previousEpochBoundaryAttestations.map((attestation) => {
+  const previousEpochBoundaryAttesterIndices: ValidatorIndex[][] = previousEpochBoundaryAttestations.map((attestation) => {
     return getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield)
   });
 
   const previousEpochBoundaryAttestingBalance: Gwei = getTotalBalance(state, previousEpochBoundaryAttesterIndices);
 
   ///
-  // Validators attesting to the expected beacon chain head during the previous epoch TODO: This might need to be a switch case
+  // Validators attesting to the expected beacon chain head during the previous epoch
   ///
 
   const previousEpochHeadAttestations: PendingAttestation[] = previousEpochAttestations.filter((attestation) => {
@@ -71,7 +71,7 @@ export function processVariables(state: BeaconState) {
     }
   });
 
-  const previousEpochHeadAttesterIndices: ValidatorIndex[] = previousEpochAttestations.map((attestation) => {
+  const previousEpochHeadAttesterIndices: ValidatorIndex[][] = previousEpochAttestations.map((attestation) => {
     return getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield)
   });
 

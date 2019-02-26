@@ -2,14 +2,14 @@ import {
   getActiveValidatorIndices, getAttestationParticipants, getCurrentEpoch, getCurrentEpochCommitteeCount,
   getEffectiveBalance, getEntryExitEffectEpoch, getTotalBalance
 } from "../../../helpers/stateTransitionHelpers";
-import {Attestation, BeaconState, PendingAttestation, Shard, uint64, ValidatorIndex} from "../../../types";
+import {Attestation, BeaconState, PendingAttestation, Shard, uint64, Validator, ValidatorIndex} from "../../../types";
 import {
   EJECTION_BALANCE, FAR_FUTURE_EPOCH, INITIATED_EXIT, MAX_BALANCE_CHURN_QUOTIENT, MAX_DEPOSIT_AMOUNT,
   MIN_VALIDATOR_WITHDRAWAL_DELAY,
   SHARD_COUNT
 } from "../../../constants";
 import BN from "bn.js";
-import {activateValidator} from "../../state";
+import {activateValidator, exitValidator} from "../../../helpers/validatorStatus";
 
 /**
  * Check if the latest crosslink epochs are valid for all shards.
@@ -73,10 +73,11 @@ export function updateValidatorRegistry(state: BeaconState): void {
 
   // Exit validators within the allowable balance churn
   balanceChurn = new BN(0);
-  state.validatorRegistry.forEach((validator, index) => {
+  state.validatorRegistry.forEach((validator: Validator, i) => {
+    const index: ValidatorIndex = new BN(i);
     if (validator.exitEpoch > getEntryExitEffectEpoch(currentEpoch) && validator.statusFlags.and(INITIATED_EXIT)) {
       // Check the balance churn would be within the allowance
-      balanceChurn = balanceChurn.add(getEffectiveBalance(state, new BN(index)));
+      balanceChurn = balanceChurn.add(getEffectiveBalance(state, index));
       if (balanceChurn.gt(maxBalanceChrun)) {
         return;
       }
