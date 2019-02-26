@@ -2,7 +2,7 @@ import {
   BeaconBlock,
   BeaconState,
   bytes32,
-} from "../../types";
+} from "../types";
 
 import {processSlot} from "./processSlot";
 import processBlock from "./block";

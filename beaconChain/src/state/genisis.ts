@@ -1,22 +1,22 @@
 import BN from "bn.js";
-import {generateSeed, getActiveValidatorIndices, getEffectiveBalance} from "../../helpers/stateTransitionHelpers";
+import {generateSeed, getActiveValidatorIndices, getEffectiveBalance} from "../helpers/stateTransitionHelpers";
 import {
   BeaconState, BLSPubkey, BLSSignature, Bytes32, Crosslink, Deposit, DepositInput, Eth1Data, Gwei,
   int,
   Validator,
   ValidatorIndex,
-} from "../../types";
+} from "../types";
 import {
   ZERO_HASH, LATEST_RANDAO_MIXES_LENGTH, SHARD_COUNT,
   LATEST_BLOCK_ROOTS_LENGTH, GENESIS_SLOT, GENESIS_FORK_VERSION,
   GENESIS_START_SHARD, GENESIS_EPOCH,
   MAX_DEPOSIT_AMOUNT, LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_SLASHED_EXIT_LENGTH,
-} from "../../constants";
+} from "../constants";
 import {hashTreeRoot, processDeposit} from "./index";
 
 import {
   activateValidator,
-} from "../../helpers/validatorStatus";
+} from "../helpers/validatorStatus";
 
 /**
  * Generate the initial beacon chain state.

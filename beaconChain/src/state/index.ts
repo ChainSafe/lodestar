@@ -3,22 +3,22 @@ import {
   EMPTY_SIGNATURE, FAR_FUTURE_EPOCH, GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD,
   INITIATED_EXIT, LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH,
   LATEST_SLASHED_EXIT_LENGTH, MAX_DEPOSIT_AMOUNT, SHARD_COUNT, WHISTLEBLOWER_REWARD_QUOTIENT, ZERO_HASH,
-} from "../../constants";
+} from "../constants";
 import {
   generateSeed,
   getActiveValidatorIndices,
   getBeaconProposerIndex, getCurrentEpoch, getEffectiveBalance,
   getEntryExitEffectEpoch,
-} from "../../helpers/stateTransitionHelpers";
+} from "../helpers/stateTransitionHelpers";
 import {
   BeaconState, BLSPubkey, BLSSignature, Bytes32, Crosslink, Deposit, DepositInput, Eth1Data, Gwei, uint64,
   Validator,
   ValidatorIndex,
-} from "../../types";
+} from "../types";
 
 import {
   activateValidator,
-} from "../../helpers/validatorStatus";
+} from "../helpers/validatorStatus";
 
 type int = number;
 

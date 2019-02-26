@@ -13,8 +13,8 @@
     "tests": "truffle test"
   },
   "scripts": {
-    "lint": "node_modules/.bin/tslint -c tslint.json '*/*.ts'",
-    "lint-fix": "node_modules/.bin/tslint -c tslint.json '*/*.ts' --fix",
+    "lint": "node_modules/.bin/tslint -c tslint.json 'src/*.ts'",
+    "lint-fix": "node_modules/.bin/tslint -c tslint.json 'src/*.ts' --fix",
     "test": "node_modules/.bin/nyc -r lcov -e .ts -x \"*.test.ts\" node_modules/.bin/mocha -r ts-node/register tests/**/*.test.ts && node_modules/.bin/nyc report",
     "coverage": "./node_modules/.bin/codecov"
   },

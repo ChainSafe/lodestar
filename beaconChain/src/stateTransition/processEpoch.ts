@@ -1,6 +1,6 @@
 import {
   BeaconState,
-} from "../../types";
+} from "../types";
 
 export function processEpoch(state: BeaconState): BeaconState {
   return state;

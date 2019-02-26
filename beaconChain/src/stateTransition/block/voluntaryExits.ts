@@ -6,23 +6,23 @@ import {
   BeaconBlock,
   BeaconState,
   VoluntaryExit,
-} from "../../../types";
+} from "../../types";
 
 import {
   Domain,
   EMPTY_SIGNATURE,
   MAX_VOLUNTARY_EXITS,
-} from "../../../constants";
+} from "../../constants";
 
 import {
   getCurrentEpoch,
   getDomain,
   getEntryExitEffectEpoch,
-} from "../../../helpers/stateTransitionHelpers";
+} from "../../helpers/stateTransitionHelpers";
 
 import {
   initiateValidatorExit,
-} from "../../../helpers/validatorStatus";
+} from "../../helpers/validatorStatus";
 
 import { blsVerify } from "../../stubs/bls";
 

@@ -1,9 +1,9 @@
 import BN from "bn.js";
 
 import {GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD, LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
-  LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH, SHARD_COUNT, ZERO_HASH} from "../../constants";
-import {BeaconState, Crosslink, Eth1Data, Fork, PendingAttestation, uint64, Validator} from "../../types";
-import {bytes32, Eth1DataVote} from "../../types";
+  LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH, SHARD_COUNT, ZERO_HASH} from "../../src/constants";
+import {BeaconState, Crosslink, Eth1Data, Fork, PendingAttestation, uint64, Validator} from "../../src/types";
+import {bytes32, Eth1DataVote} from "../../src/types";
 import {randBetween, randBetweenBN} from "./misc";
 import {generateValidators} from "./validator";
 

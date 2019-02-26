@@ -1,7 +1,7 @@
-import {Attestation, BeaconBlock, BeaconState, PendingAttestation, Validator, ValidatorIndex} from "../../types";
-import {getActiveValidatorIndices, getEffectiveBalance, slotToEpoch} from "../../helpers/stateTransitionHelpers";
-import {FORK_CHOICE_BALANCE_INCREMENT} from "../../constants";
-import {Slot} from "../../types";
+import {Attestation, BeaconBlock, BeaconState, PendingAttestation, Validator, ValidatorIndex} from "../types";
+import {getActiveValidatorIndices, getEffectiveBalance, slotToEpoch} from "../helpers/stateTransitionHelpers";
+import {FORK_CHOICE_BALANCE_INCREMENT} from "../constants";
+import {Slot} from "../types";
 
 type int = number;
 

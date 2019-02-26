@@ -6,22 +6,22 @@ import {
   BeaconBlock,
   BeaconState,
   Validator,
-} from "../../../types";
+} from "../../types";
 
 import {
   Domain,
   MAX_PROPOSER_SLASHINGS,
-} from "../../../constants";
+} from "../../constants";
 
 import {
   getCurrentEpoch,
   getDomain,
   slotToEpoch,
-} from "../../../helpers/stateTransitionHelpers";
+} from "../../helpers/stateTransitionHelpers";
 
 import {
   slashValidator,
-} from "../../../helpers/validatorStatus";
+} from "../../helpers/validatorStatus";
 
 import {blsVerify} from "../../stubs/bls";
 

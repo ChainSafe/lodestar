@@ -3,7 +3,7 @@ import assert from "assert";
 import {
   BeaconBlock,
   BeaconState,
-} from "../../../types";
+} from "../../types";
 
 import processAttestations from "./attestations";
 import processAttesterSlashings from "./attesterSlashings";

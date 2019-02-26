@@ -37,9 +37,9 @@ import {
 import {
   blsAggregatePubkeys,
   blsVerifyMultiple,
-} from "../lib/stubs/bls";
+} from "../stubs/bls";
 
-import { hashTreeRoot } from "../lib/state";
+import { hashTreeRoot } from "../state";
 
 /**
  * Return a byte array from an int

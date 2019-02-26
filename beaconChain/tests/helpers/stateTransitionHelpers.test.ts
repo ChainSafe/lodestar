@@ -1,7 +1,7 @@
 import BN from "bn.js";
 import { assert } from "chai";
 
-import { SLOTS_PER_EPOCH, TARGET_COMMITTEE_SIZE } from "../../constants";
+import { SLOTS_PER_EPOCH, TARGET_COMMITTEE_SIZE } from "../../src/constants";
 import {
   clamp,
   getActiveValidatorIndices,
@@ -21,8 +21,8 @@ import {
   merkleRoot,
   slotToEpoch,
   split,
-} from "../../helpers/stateTransitionHelpers";
-import {Epoch, Fork, int, Slot, uint64, Validator} from "../../types";
+} from "../../src/helpers/stateTransitionHelpers";
+import {Epoch, Fork, int, Slot, uint64, Validator} from "../../src/types";
 import {generateAttestationData} from "../utils/attestation";
 import {randBetween} from "../utils/misc";
 import {generateValidator} from "../utils/validator";

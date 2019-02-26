@@ -7,19 +7,19 @@ import {
   BeaconState,
   bytes32,
   ProposalSignedData,
-} from "../../../types";
+} from "../../types";
 
 import {
   BEACON_CHAIN_SHARD_NUMBER,
   Domain,
   EMPTY_SIGNATURE,
-} from "../../../constants";
+} from "../../constants";
 
 import {
   getBeaconProposerIndex,
   getCurrentEpoch,
   getDomain,
-} from "../../../helpers/stateTransitionHelpers";
+} from "../../helpers/stateTransitionHelpers";
 
 import {blsVerify} from "../../stubs/bls";
 
