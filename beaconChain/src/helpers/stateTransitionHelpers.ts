@@ -466,9 +466,6 @@ export function merkleRoot(values: bytes32[]): bytes32 {
 
 // // TODO finish
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, participationBitfield: bytes): int[] {
-  return [];
-}
 // export function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, participationBitfield: bytes): int[] {
 //   const crosslinkCommittee: CommitteeShard[] = getCrosslinkCommitteesAtSlot(state, attestationData.slot);
 // function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, bitfield: bytes): int[] {
