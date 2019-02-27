@@ -542,3 +542,31 @@ describe("merkleRoot", () => {
     assert(expectedRoot.equals(computedRoot), `${expectedRoot} didn't equal ${computedRoot}`);
   });
 });
+
+
+describe("Int to Bytes", () => {
+  it("should convert number 0 to an empty buffer", () => {
+    const res = intToBytes(0, 1)
+    assert(res.equals(Uint8Array.from([0])), `got: ${res}, expected:${[0]}`)
+  });
+  it("should convert BigNumber 0 to an empty buffer", () => {
+    const res = intToBytes(new BN(0), 1)
+    assert(res.equals(Uint8Array.from([0])), `got: ${res}, expected:${[0]}`)
+  });
+  it("should convert number 1 to a single byte 0b00000001", () => {
+    const res = intToBytes(1, 1)
+    assert(res.equals(Uint8Array.from([1])), `got: ${res}, expected:${[1]}`)
+  });
+  it("should convert BigNumber 1 to a single byte 0b00000001", () => {
+    const res = intToBytes(new BN(1), 1)
+    assert(res.equals(Uint8Array.from([1])), `got: ${res}, expected:${[1]}`)
+  });
+  it("should convert number 16704 to two bytes [0x40, 0x42]", () => {
+    const res = intToBytes(16704, 2)
+    assert(res.equals(Uint8Array.from([0x40, 0x41])), `got: ${res}, expected:${[0x40, 0x41]}`)
+  });
+  it("should convert BigNumber 16704 to two bytes [0x40, 0x42]", () => {
+    const res = intToBytes(new BN(16704), 2)
+    assert(res.equals(Uint8Array.from([0x40, 0x41])), `got: ${res}, expected:${[0x40, 0x41]}`)
+  });
+});
