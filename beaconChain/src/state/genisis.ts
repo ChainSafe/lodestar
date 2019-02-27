@@ -1,22 +1,45 @@
 import BN from "bn.js";
-import {generateSeed, getActiveValidatorIndices, getEffectiveBalance} from "../../helpers/stateTransitionHelpers";
+
 import {
-  BeaconState, BLSPubkey, BLSSignature, Bytes32, Crosslink, Deposit, DepositInput, Eth1Data, Gwei,
+  BeaconState,
+  BLSPubkey,
+  BLSSignature,
+  Bytes32,
+  Crosslink,
+  Deposit,
+  DepositInput,
+  Eth1Data,
+  Gwei,
   int,
   Validator,
   ValidatorIndex,
-} from "../../types";
+} from "../types";
+
 import {
-  ZERO_HASH, LATEST_RANDAO_MIXES_LENGTH, SHARD_COUNT,
-  LATEST_BLOCK_ROOTS_LENGTH, GENESIS_SLOT, GENESIS_FORK_VERSION,
-  GENESIS_START_SHARD, GENESIS_EPOCH,
-  MAX_DEPOSIT_AMOUNT, LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_SLASHED_EXIT_LENGTH,
-} from "../../constants";
+  GENESIS_EPOCH,
+  GENESIS_FORK_VERSION,
+  GENESIS_SLOT,
+  GENESIS_START_SHARD,
+  LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
+  LATEST_BLOCK_ROOTS_LENGTH,
+  LATEST_RANDAO_MIXES_LENGTH,
+  LATEST_SLASHED_EXIT_LENGTH,
+  MAX_DEPOSIT_AMOUNT,
+  SHARD_COUNT,
+  ZERO_HASH,
+} from "../constants";
+
 import {hashTreeRoot, processDeposit} from "./index";
 
 import {
+  generateSeed,
+  getActiveValidatorIndices,
+  getEffectiveBalance,
+} from "../helpers/stateTransitionHelpers";
+
+import {
   activateValidator,
-} from "../../helpers/validatorStatus";
+} from "../helpers/validatorStatus";
 
 /**
  * Generate the initial beacon chain state.
@@ -32,7 +55,7 @@ export function getInitialBeaconState(
 
   const initialCrosslinkRecord: Crosslink = {
     epoch: GENESIS_EPOCH,
-    shardBlockRoot: ZERO_HASH
+    shardBlockRoot: ZERO_HASH,
   };
 
   const state: BeaconState = {
@@ -42,7 +65,7 @@ export function getInitialBeaconState(
     fork: {
       previousVersion: GENESIS_FORK_VERSION,
       currentVersion: GENESIS_FORK_VERSION,
-      epoch: GENESIS_EPOCH
+      epoch: GENESIS_EPOCH,
     },
     // Validator registry
     validatorRegistry: [],
@@ -73,13 +96,13 @@ export function getInitialBeaconState(
     batchedBlockRoots: [],
 
     // PoW receipt root
-    latestEth1Data: latestEth1Data,
+    latestEth1Data,
     eth1DataVotes: [],
     depositIndex: new BN(genesisValidatorDeposits.length),
   };
 
   // Process initial deposists
-  genesisValidatorDeposits.forEach(deposit => {
+  genesisValidatorDeposits.forEach((deposit) => {
     processDeposit(
       state,
       deposit.depositData.depositInput.pubkey,
@@ -91,7 +114,7 @@ export function getInitialBeaconState(
 
   // Process genesis activations
   // TODO For loop is stubbed, should not cast new BN(i)
-  for (let i = 0; i< state.validatorRegistry.length; i ++) {
+  for (let i = 0; i < state.validatorRegistry.length; i ++) {
     if (getEffectiveBalance(state, new BN(i)) >= MAX_DEPOSIT_AMOUNT) {
       activateValidator(state, new BN(i), true);
     }

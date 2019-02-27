@@ -1,26 +1,39 @@
+import assert from "assert";
 import BN from "bn.js";
+
+import {
+  BeaconState,
+  BLSPubkey,
+  BLSSignature,
+  Bytes32,
+  Crosslink,
+  Deposit,
+  DepositInput,
+  Eth1Data,
+  Gwei,
+  int,
+  uint64,
+  Validator,
+  ValidatorIndex,
+} from "../types";
+
 import {
   EMPTY_SIGNATURE, FAR_FUTURE_EPOCH, GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD,
   INITIATED_EXIT, LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH,
   LATEST_SLASHED_EXIT_LENGTH, MAX_DEPOSIT_AMOUNT, SHARD_COUNT, WHISTLEBLOWER_REWARD_QUOTIENT, ZERO_HASH,
-} from "../../constants";
+} from "../constants";
+
 import {
   generateSeed,
   getActiveValidatorIndices,
   getBeaconProposerIndex, getCurrentEpoch, getEffectiveBalance,
   getEntryExitEffectEpoch,
-} from "../../helpers/stateTransitionHelpers";
-import {
-  BeaconState, BLSPubkey, BLSSignature, Bytes32, Crosslink, Deposit, DepositInput, Eth1Data, Gwei, uint64,
-  Validator,
-  ValidatorIndex,
-} from "../../types";
+} from "../helpers/stateTransitionHelpers";
 
 import {
   activateValidator,
-} from "../../helpers/validatorStatus";
+} from "../helpers/validatorStatus";
 
-type int = number;
 
 // Stubbed functions from SSZ
 export function hashTreeRoot(x: any): Bytes32 {
@@ -129,15 +142,15 @@ export function processDeposit(
   proofOfPossession: BLSSignature,
   withdrawalCredentials: Bytes32): void {
     // Validate the given proofOfPossession
-    if (!validateProofOfPossession(state, pubkey, proofOfPossession, withdrawalCredentials)) {throw new Error("");}
+    assert(validateProofOfPossession(state, pubkey, proofOfPossession, withdrawalCredentials));
 
     const validatorPubkeys = state.validatorRegistry.map((v) => v.pubkey);
 
     if (!validatorPubkeys.includes(pubkey)) {
       // Add new validator
       const validator: Validator = {
-        pubkey: pubkey,
-        withdrawalCredentials: withdrawalCredentials,
+        pubkey,
+        withdrawalCredentials,
         activationEpoch: new BN(FAR_FUTURE_EPOCH),
         exitEpoch: new BN(FAR_FUTURE_EPOCH),
         withdrawalEpoch: new BN(FAR_FUTURE_EPOCH),
@@ -151,7 +164,7 @@ export function processDeposit(
     } else {
     // Increase balance by deposit amount
       const index = validatorPubkeys.indexOf(pubkey);
-      if (state.validatorRegistry[index].withdrawalCredentials === withdrawalCredentials) throw new Error("Deposit already made!");
+      assert(!state.validatorRegistry[index].withdrawalCredentials.equals(withdrawalCredentials), "Deposit already made!");
       state.validatorBalances[index] = state.validatorBalances[index].add(amount);
     }
 }

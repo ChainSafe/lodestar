@@ -6,22 +6,22 @@ import {
   AttestationData,
   BeaconBlock,
   BeaconState,
-} from "../../../types";
+} from "../../types";
 
 import {
   MAX_ATTESTER_SLASHINGS,
-} from "../../../constants";
+} from "../../constants";
 
 import {
   getCurrentEpoch,
   isDoubleVote,
   isSurroundVote,
   verifySlashableAttestation,
-} from "../../../helpers/stateTransitionHelpers";
+} from "../../helpers/stateTransitionHelpers";
 
 import {
   slashValidator,
-} from "../../../helpers/validatorStatus";
+} from "../../helpers/validatorStatus";
 
 export default function processAttesterSlashings(state: BeaconState, block: BeaconBlock): void {
   assert(block.body.attesterSlashings.length <= MAX_ATTESTER_SLASHINGS);

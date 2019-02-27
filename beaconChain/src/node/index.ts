@@ -1,7 +1,8 @@
-import BN = require("bn.js");
+import BN from "bn.js";
+
 import { DEPOSIT_CONTRACT_ADDRESS } from "../constants";
-import { getInitialBeaconState } from "../lib/state";
 import {getInitialDeposits} from "../pow/fake";
+import { getInitialBeaconState } from "../state";
 import {BeaconState} from "../types";
 
 interface BeaconNodeCtx {

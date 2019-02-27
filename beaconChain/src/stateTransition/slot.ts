@@ -1,15 +1,15 @@
 import {
-  bytes32,
   BeaconState,
-} from "../../types"
+  bytes32,
+} from "../types";
 
 import {
   LATEST_BLOCK_ROOTS_LENGTH,
-} from "../../constants";
+} from "../constants";
 
 import {
   merkleRoot,
-} from "../../helpers/stateTransitionHelpers";
+} from "../helpers/stateTransitionHelpers";
 
 export function processSlot(state: BeaconState, prevBlockRoot: bytes32): BeaconState {
   state.slot = state.slot.addn(1);

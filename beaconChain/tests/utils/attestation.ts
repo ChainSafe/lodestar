@@ -1,7 +1,7 @@
 import BN from "bn.js";
 
-import {slotToEpoch} from "../../helpers/stateTransitionHelpers";
-import {AttestationData, uint64} from "../../types";
+import {slotToEpoch} from "../../src/helpers/stateTransitionHelpers";
+import {AttestationData, uint64} from "../../src/types";
 import {randBetween} from "./misc";
 
 /**

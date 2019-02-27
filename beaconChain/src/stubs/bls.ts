@@ -5,7 +5,7 @@ import {
   bytes96,
   int,
   uint64,
-} from "../../types";
+} from "../types";
 
 // TODO: unstub this, connect bls-js repo
 

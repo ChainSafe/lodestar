@@ -1,5 +1,5 @@
 import BN from "bn.js";
-import {Validator} from "../../types";
+import {Validator} from "../../src/types";
 
 /**
  * Generates a single fake validator, for tests purposes only.

@@ -6,7 +6,7 @@ import {
   BeaconBlock,
   BeaconState,
   Transfer,
-} from "../../../types";
+} from "../../types";
 
 import {
   BLS_WITHDRAWAL_PREFIX_BYTE,
@@ -14,7 +14,7 @@ import {
   EMPTY_SIGNATURE,
   MAX_TRANSFERS,
   MIN_DEPOSIT_AMOUNT,
-} from "../../../constants";
+} from "../../constants";
 
 import {
   getBeaconProposerIndex,
@@ -22,7 +22,7 @@ import {
   getDomain,
   hash,
   slotToEpoch,
-} from "../../../helpers/stateTransitionHelpers";
+} from "../../helpers/stateTransitionHelpers";
 
 import { blsVerify } from "../../stubs/bls";
 

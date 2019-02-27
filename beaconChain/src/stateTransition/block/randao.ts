@@ -4,12 +4,12 @@ import xor from "buffer-xor";
 import {
   BeaconBlock,
   BeaconState,
-} from "../../../types";
+} from "../../types";
 
 import {
   Domain,
   LATEST_RANDAO_MIXES_LENGTH,
-} from "../../../constants";
+} from "../../constants";
 
 import {
   getBeaconProposerIndex,
@@ -18,7 +18,7 @@ import {
   getRandaoMix,
   hash,
   intToBytes,
-} from "../../../helpers/stateTransitionHelpers";
+} from "../../helpers/stateTransitionHelpers";
 
 import {blsVerify} from "../../stubs/bls";
 
