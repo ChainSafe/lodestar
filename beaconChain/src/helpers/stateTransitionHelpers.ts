@@ -1,7 +1,7 @@
 import { keccakAsU8a } from "@polkadot/util-crypto";
-import assert from "assert";
 import BN from "bn.js";
 import { hashTreeRoot } from "@chainsafesystems/ssz";
+import assert from "assert";
 
 import {
   ACTIVATION_EXIT_DELAY,
@@ -39,7 +39,7 @@ import {
   uint64,
   Validator,
   ValidatorIndex,
-  BLSPubkey,
+  BLSPubkey, CrosslinkCommittee,
 } from "../types";
 
 import {
@@ -363,7 +363,7 @@ export function isPowerOfTwo(value: BN): boolean {
  * @param {boolean} registryChange
  * @returns {[]}
  */
-export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, registryChange: boolean = false): {shard: Shard; validatorIndices: ValidatorIndex[]}[] {
+export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, registryChange: boolean = false): CrosslinkCommittee[] {
   const epoch = slotToEpoch(slot);
   const currentEpoch = getCurrentEpoch(state);
   const previousEpoch = currentEpoch.gt(GENESIS_EPOCH) ? currentEpoch.subn(1) : currentEpoch;
