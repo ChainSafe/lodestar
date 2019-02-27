@@ -2,7 +2,7 @@ import {BeaconState, Epoch, Shard} from "../../../types";
 import {generateSeed,getCurrentEpochCommitteeCount, isPowerOfTwo} from "../../../helpers/stateTransitionHelpers";
 import {SHARD_COUNT} from "../../../constants";
 import BN from "bn.js";
-import {isValidCrosslink, processExitQueue, processSlashing} from "./helpers";
+import {isValidCrosslink, processExitQueue, processSlashings, updateValidatorRegistry} from "./helpers";
 
 /**
  * Main function to process the validator registry and shuffle seed data.
@@ -20,8 +20,9 @@ export function processValidatorRegistryAndShuffleSeedData(
   state.previousShufflingSeed = state.currentShufflingSeed;
 
   if (state.finalizedEpoch.gt(state.validatorRegistryUpdateEpoch) && isValidCrosslink(state)) {
+    updateValidatorRegistry(state);
     state.currentShufflingEpoch = nextEpoch;
-    state.currentShufflingStartShard = (state.currentShufflingStartShard.addn(getCurrentEpochCommitteeCount(state))).mod(new BN(SHARD_COUNT));
+    state.currentShufflingStartShard = state.currentShufflingStartShard.addn(getCurrentEpochCommitteeCount(state)).mod(new BN(SHARD_COUNT));
     state.currentShufflingSeed = generateSeed(state, state.currentShufflingEpoch);
   } else {
     const epochsSinceLastRegistryUpdate = currentEpoch.sub(state.validatorRegistryUpdateEpoch);
@@ -31,6 +32,6 @@ export function processValidatorRegistryAndShuffleSeedData(
     }
   }
 
-  processSlashing(state);
+  processSlashings(state);
   processExitQueue(state);
 }

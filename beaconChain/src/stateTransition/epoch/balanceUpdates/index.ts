@@ -1,9 +1,11 @@
 import {processAttestationInclusion} from "./attestation";
-import {BeaconState, Epoch} from "../../../../types";
+import {BeaconState, Epoch, PendingAttestation, ValidatorIndex} from "../../../../types";
 import BN = require("bn.js");
 import {processJustificationAndFinalization} from "./justification";
 import {processCrosslinksRewards} from "./crosslinks";
 import {processEth1Data} from "../eth1data";
+import {BASE_REWARD_QUOTIENT, INACTIVITY_PENALTY_QUOTIENT} from "../../../../constants";
+import {getEffectiveBalance} from "../../../../helpers/stateTransitionHelpers";
 
 export function processRewardsAndPenalties(
   state: BeaconState,
@@ -11,14 +13,24 @@ export function processRewardsAndPenalties(
   nextEpoch: Epoch,
   previousEpoch: Epoch,
   previousTotalBalance: BN,
+  previousEpochAttestations: PendingAttestation[],
   previousEpochAttesterIndices: BN[],
   previousEpochBoundaryAttesterIndices: BN[],
   previousEpochHeadAttesterIndices: BN[],
   previousEpochAttestingBalance: BN,
   previousEpochBoundaryAttestingBalance: BN,
-  previousEpochHeadAttestingBalance: BN,
-  baseReward: Function,
-  inactivityPenalty: Function): void {
+  previousEpochHeadAttestingBalance: BN): void {
+
+  // Rewards and penalties helpers
+  const baseRewardQuotient = previousTotalBalance.sqr().divn(BASE_REWARD_QUOTIENT);
+  const baseReward = (state: BeaconState, index: ValidatorIndex) => getEffectiveBalance(state, index).div(baseRewardQuotient).divn(5);
+  const inactivityPenalty = (state: BeaconState, index: ValidatorIndex, epochsSinceFinality: Epoch): BN => {
+    return baseReward(state, index)
+      .add(getEffectiveBalance(state, index))
+      .mul(epochsSinceFinality)
+      .divn(INACTIVITY_PENALTY_QUOTIENT)
+      .divn(2);
+  };
 
   processJustificationAndFinalization(
     state,
@@ -38,6 +50,7 @@ export function processRewardsAndPenalties(
 
   processAttestationInclusion(
     state,
+    previousEpochAttestations,
     previousEpochAttesterIndices,
     baseReward,
   );

@@ -12,28 +12,28 @@ export function processJustification(
   ): void {
 
   let newJustifiedEpoch = state.justifiedEpoch;
-
   state.justificationBitfield = state.justificationBitfield.shln(1);
-  state.justificationBitfield = state.justificationBitfield.or(new BN(2));
-  if (previousEpochBoundaryAttestingBalance.muln(3) >= previousTotalBalance.muln(2)) {
+
+  if (previousEpochBoundaryAttestingBalance.muln(3).gte(previousTotalBalance.muln(2))) {
+    state.justificationBitfield = state.justificationBitfield.or(new BN(2));
     newJustifiedEpoch = previousEpoch
   }
-  state.justificationBitfield = state.justificationBitfield.or(new BN(1));
-  if (currentEpochBoundaryAttestingBalance.muln(3) >= currentTotalBalance.muln(2)) {
+  if (currentEpochBoundaryAttestingBalance.muln(3).gte(currentTotalBalance.muln(2))) {
+    state.justificationBitfield = state.justificationBitfield.or(new BN(1));
     newJustifiedEpoch = currentEpoch;
   }
 
   // Update last finalized epoch if possible
-  if (state.justificationBitfield.shln(1).modn(8) === 0b111 && state.previousJustifiedEpoch === previousEpoch.subn(2)) {
+  if (state.justificationBitfield.shrn(1).modn(8) === 0b111 && state.previousJustifiedEpoch === previousEpoch.subn(2)) {
     state.finalizedEpoch = state.previousJustifiedEpoch;
   }
-  if (state.justificationBitfield.shln(1).modn(4) === 0b11 && state.previousJustifiedEpoch === previousEpoch.subn(1)) {
+  if (state.justificationBitfield.shrn(1).modn(4) === 0b11 && state.previousJustifiedEpoch === previousEpoch.subn(1)) {
     state.finalizedEpoch = state.previousJustifiedEpoch;
   }
-  if (state.justificationBitfield.shln(0).modn(8) === 0b111 && state.justifiedEpoch === previousEpoch.subn(1)) {
+  if (state.justificationBitfield.shrn(0).modn(8) === 0b111 && state.justifiedEpoch === previousEpoch.subn(1)) {
     state.finalizedEpoch = state.justifiedEpoch;
   }
-  if (state.justificationBitfield.ishln(0).modn(4) === 0b11 && state.justifiedEpoch === previousEpoch) {
+  if (state.justificationBitfield.shrn(0).modn(4) === 0b11 && state.justifiedEpoch === previousEpoch) {
     state.finalizedEpoch = state.justifiedEpoch;
   }
   state.previousJustifiedEpoch = state.justifiedEpoch;

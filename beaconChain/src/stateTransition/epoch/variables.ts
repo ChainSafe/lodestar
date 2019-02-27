@@ -1,9 +1,10 @@
 import {
   getActiveValidatorIndices, getAttestationParticipants,
-  getBlockRoot, getCurrentEpoch, getEpochStartSlot, getPreviousEpoch, getTotalBalance,
+  getBlockRoot, getCrosslinkCommitteesAtSlot, getCurrentEpoch, getEpochStartSlot, getPreviousEpoch, getTotalBalance,
   slotToEpoch
 } from "../../../helpers/stateTransitionHelpers";
-import {BeaconState, Epoch, Gwei, PendingAttestation, ValidatorIndex} from "../../../types";
+import {BeaconState, CrosslinkCommittee, Epoch, Gwei, PendingAttestation, ValidatorIndex} from "../../../types";
+import BN = require("bn.js");
 
 export function processVariables(state: BeaconState) {
   // Variables
@@ -13,11 +14,7 @@ export function processVariables(state: BeaconState) {
 
   // Validators attesting during the current epoch
   const currentTotalBalance: Gwei = getTotalBalance(state, getActiveValidatorIndices(state.validatorRegistry, currentEpoch));
-  const currentEpochAttestations: PendingAttestation[] = state.latestAttestations.filter((attestation) => {
-    if (currentEpoch === slotToEpoch(attestation.data.slot)) {
-      return attestation;
-    }
-  });
+  const currentEpochAttestations: PendingAttestation[] = state.latestAttestations.filter((attestation) => currentEpoch === slotToEpoch(attestation.data.slot));
 
   // Validators justifying the epoch boundary block at the start of the current epoch
   const currentEpochBoundaryAttestations: PendingAttestation[] = currentEpochAttestations.filter((attestation) => {
@@ -61,10 +58,7 @@ export function processVariables(state: BeaconState) {
 
   const previousEpochBoundaryAttestingBalance: Gwei = getTotalBalance(state, previousEpochBoundaryAttesterIndices);
 
-  ///
   // Validators attesting to the expected beacon chain head during the previous epoch
-  ///
-
   const previousEpochHeadAttestations: PendingAttestation[] = previousEpochAttestations.filter((attestation) => {
     if (attestation.data.beaconBlockRoot === getBlockRoot(state, attestation.data.slot)) {
       return attestation;
@@ -76,6 +70,17 @@ export function processVariables(state: BeaconState) {
   });
 
   const previousEpochHeadAttestingBalance: Gwei = getTotalBalance(state, previousEpochHeadAttesterIndices);
+
+  const startSlot = getEpochStartSlot(previousEpoch).toNumber();
+  const endSlot = getEpochStartSlot(nextEpoch).toNumber();
+
+  for (let slot = startSlot; slot < endSlot; slot++) {
+    const crosslinkCommitteesAtSlot = getCrosslinkCommitteesAtSlot(state, new BN(slot)).map((value: CrosslinkCommittee) => {
+      const { shard, validatorIndices } = value;
+      const shardBlockRoot = state.latestCrosslinks[shard.toNumber()];
+
+    })
+  }
 
   return {
     currentEpoch,
