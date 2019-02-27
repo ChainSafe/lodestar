@@ -62,6 +62,7 @@ export function hash(value: bytes): bytes32 {
  * @returns {bytes}
  */
 export function intToBytes(value: BN | number, length: number): bytes {
+  // TODO: Warn if value is negative or length > 6 (writeUintLE won't accept either)
   if (BN.isBN(value)) {
     return value.toArrayLike(Buffer, "le", length);
   } else {
