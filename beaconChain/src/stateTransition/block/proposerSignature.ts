@@ -24,10 +24,11 @@ import {
 import {blsVerify} from "../../stubs/bls";
 
 export default function processProposerSignature(state: BeaconState, block: BeaconBlock): void {
-  const blockWithoutSignatureRoot: bytes32 = treeHash({
+  const b: BeaconBlock = {
     ...block,
     signature: EMPTY_SIGNATURE,
-  } as BeaconBlock);
+  };
+  const blockWithoutSignatureRoot: bytes32 = treeHash(b, BeaconBlock);
 
   const p: ProposalSignedData = {
     slot: state.slot,

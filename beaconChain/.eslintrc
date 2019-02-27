@@ -1,0 +1,21 @@
+{
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  },
+  "plugins": ["@typescript-eslint"],
+  "extends": ["plugin:@typescript-eslint/recommended"],
+  "rules": {
+    "max-line-length": {
+      "options": [180]
+    },
+    "new-parens": "error",
+    "no-caller": "error",
+    "no-bitwise": "off",
+    "@typescript-eslint/indent": ["error", 2],
+    "no-conditional-assignment": true,
+    "no-consecutive-blank-lines": false,
+    "object-literal-sort-keys": false,
+    "no-console": "warn"
+  }
+}

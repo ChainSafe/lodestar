@@ -40,12 +40,13 @@ export default function processAttestations(state: BeaconState, block: BeaconBlo
       state.justifiedEpoch : state.previousJustifiedEpoch;
     assert(attestation.data.justifiedEpoch.eq(justifiedEpoch));
     assert(attestation.data.justifiedBlockRoot.equals(getBlockRoot(state, getEpochStartSlot(attestation.data.justifiedEpoch))));
+    const c: Crosslink = {
+      epoch: slotToEpoch(attestation.data.slot),
+      shardBlockRoot: attestation.data.shardBlockRoot,
+    };
     assert(serialize(state.latestCrosslinks[attestation.data.shard.toNumber()], Crosslink).eq(serialize(attestation.data.latestCrosslink), Crosslink) ||
       serialize(state.latestCrosslinks[attestation.data.shard.toNumber()], Crosslink).eq(
-        serialize({
-          epoch: slotToEpoch(attestation.data.slot),
-          shardBlockRoot: attestation.data.shardBlockRoot,
-        } as Crosslink, Crosslink)));
+        serialize(c, Crosslink)));
 
     // Remove this condition in Phase 1
     assert((attestation.custodyBitfield.equals(Buffer.alloc(attestation.custodyBitfield.length))));
@@ -63,14 +64,22 @@ export default function processAttestations(state: BeaconState, block: BeaconBlo
     const custodyBit1Participants = getAttestationParticipants(state, attestation.data, attestation.custodyBitfield);
     const custodyBit0Participants = participants.filter((i) => custodyBit1Participants.find((i2) => i === i2));
 
+    const dataAndCustodyBit0: AttestationDataAndCustodyBit = {
+      data: attestation.data,
+      custodyBit: false,
+    };
+    const dataAndCustodyBit1: AttestationDataAndCustodyBit = {
+      data: attestation.data,
+      custodyBit: true,
+    };
     const custodyBitsVerified = blsVerifyMultiple(
       [
         blsAggregatePubkeys(custodyBit0Participants.map((i) => state.validatorRegistry[i].pubkey)),
         blsAggregatePubkeys(custodyBit1Participants.map((i) => state.validatorRegistry[i].pubkey)),
       ],
       [
-        treeHash({ data: attestation.data, custodyBit: false } as AttestationDataAndCustodyBit),
-        treeHash({ data: attestation.data, custodyBit: true } as AttestationDataAndCustodyBit),
+        treeHash(dataAndCustodyBit0, AttestationDataAndCustodyBit),
+        treeHash(dataAndCustodyBit1, AttestationDataAndCustodyBit),
       ],
       attestation.aggregateSignature,
       getDomain(state.fork, slotToEpoch(attestation.data.slot), Domain.ATTESTATION),
@@ -78,11 +87,12 @@ export default function processAttestations(state: BeaconState, block: BeaconBlo
     assert(custodyBitsVerified);
     // Remove the following conditional in Phase 1
     assert(attestation.data.shardBlockRoot.equals(ZERO_HASH));
-    state.latestAttestations.push({
+    const p: PendingAttestation = {
       data: attestation.data,
       aggregationBitfield: attestation.aggregationBitfield,
       custodyBitfield: attestation.custodyBitfield,
       inclusionSlot: state.slot,
-    } as PendingAttestation);
+    };
+    state.latestAttestations.push(p);
   }
 }

@@ -15,10 +15,9 @@ import {
 
 import {
   hash,
+  processDeposit,
   verifyMerkleBranch,
 } from "../../helpers/stateTransitionHelpers";
-
-import { processDeposit} from "../../state";
 
 export default function processDeposits(state: BeaconState, block: BeaconBlock): void {
   assert(block.body.deposits.length <= MAX_DEPOSITS);

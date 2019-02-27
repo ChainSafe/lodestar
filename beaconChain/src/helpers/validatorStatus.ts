@@ -28,9 +28,9 @@ import {
  * @param {boolean} isGenesis
  */
 export function activateValidator(state: BeaconState, index: ValidatorIndex, isGenesis: boolean): void {
-    // TODO: Unsafe usage of toNumber for index
-    const validator = state.validatorRegistry[index.toNumber()];
-    validator.activationEpoch = isGenesis ? GENESIS_EPOCH : getEntryExitEffectEpoch(getCurrentEpoch(state));
+  // TODO: Unsafe usage of toNumber for index
+  const validator = state.validatorRegistry[index.toNumber()];
+  validator.activationEpoch = isGenesis ? GENESIS_EPOCH : getEntryExitEffectEpoch(getCurrentEpoch(state));
 }
 
 /**
@@ -40,9 +40,9 @@ export function activateValidator(state: BeaconState, index: ValidatorIndex, isG
  * @param {int} index
  */
 export function initiateValidatorExit(state: BeaconState, index: ValidatorIndex): void {
-    // TODO: Unsafe usage of toNumber for index
-    const validator = state.validatorRegistry[index.toNumber()];
-    validator.statusFlags = validator.statusFlags.or(INITIATED_EXIT);
+  // TODO: Unsafe usage of toNumber for index
+  const validator = state.validatorRegistry[index.toNumber()];
+  validator.statusFlags = validator.statusFlags.or(INITIATED_EXIT);
 }
 /**
  * Exit the validator of the given ``index``.
@@ -96,7 +96,7 @@ export function slashValidator(state: BeaconState, index: ValidatorIndex): void 
  * @param {BeaconState} state
  * @param {ValidatorIndex} index
  */
-function prepareValidatorForWithdrawal(state: BeaconState, index: ValidatorIndex): void {
+export function prepareValidatorForWithdrawal(state: BeaconState, index: ValidatorIndex): void {
   const validator = state.validatorRegistry[index.toNumber()];
   validator.withdrawalEpoch = getCurrentEpoch(state).addn(MIN_VALIDATOR_WITHDRAWAL_DELAY);
 }

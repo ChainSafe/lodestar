@@ -37,14 +37,16 @@ export default function processTransfers(state: BeaconState, block: BeaconBlock)
     assert(state.slot.eq(transfer.slot));
     assert(getCurrentEpoch(state).gte(state.validatorRegistry[transfer.from.toNumber()].withdrawalEpoch));
     assert(state.validatorRegistry[transfer.from.toNumber()].withdrawalCredentials.equals(Buffer.concat([BLS_WITHDRAWAL_PREFIX_BYTE, hash(transfer.pubkey).slice(1)])));
-    const transferMessage = treeHash({
+    const t: Transfer = {
       from: transfer.from,
       to: transfer.to,
       amount: transfer.amount,
       fee: transfer.fee,
       slot: transfer.slot,
+      pubkey: transfer.pubkey,
       signature: EMPTY_SIGNATURE,
-    } as Transfer);
+    };
+    const transferMessage = treeHash(t, Transfer);
     const transferMessageVerified = blsVerify(
       transfer.pubkey,
       transferMessage,

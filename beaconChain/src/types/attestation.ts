@@ -5,10 +5,7 @@ import {
   bool,
   bytes,
   bytes32,
-  bytes48,
   bytes96,
-  uint24,
-  uint384,
   uint64,
 } from "./primitive";
 

@@ -33,11 +33,12 @@ export default function processVoluntaryExits(state: BeaconState, block: BeaconB
     const validator = state.validatorRegistry[exit.validatorIndex.toNumber()];
     assert(validator.exitEpoch.gt(getEntryExitEffectEpoch(currentEpoch)));
     assert(currentEpoch.gte(exit.epoch));
-    const exitMessage = treeHash({
+    const v: VoluntaryExit = {
       epoch: exit.epoch,
       validatorIndex: exit.validatorIndex,
       signature: EMPTY_SIGNATURE,
-    } as VoluntaryExit);
+    };
+    const exitMessage = treeHash(v, VoluntaryExit);
     const exitMessageVerified = blsVerify(
       validator.pubkey,
       exitMessage,
