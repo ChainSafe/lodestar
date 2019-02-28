@@ -17,60 +17,63 @@ export function processVariables(state: BeaconState) {
 
   // Validators attesting during the current epoch
   const currentTotalBalance: Gwei = getTotalBalance(state, getActiveValidatorIndices(state.validatorRegistry, currentEpoch));
-  const currentEpochAttestations: PendingAttestation[] = state.latestAttestations.filter((attestation) => currentEpoch === slotToEpoch(attestation.data.slot));
+  const currentEpochAttestations: PendingAttestation[] = state.latestAttestations.filter((attestation) => currentEpoch.eq(slotToEpoch(attestation.data.slot)));
 
   // Validators justifying the epoch boundary block at the start of the current epoch
-  const currentEpochBoundaryAttestations: PendingAttestation[] = currentEpochAttestations.filter((attestation) => {
-    if (attestation.data.epochBoundaryRoot === getBlockRoot(state, getEpochStartSlot(currentEpoch))) {
-      return attestation;
-    }
+  const currentEpochBoundaryAttestations: PendingAttestation[] = currentEpochAttestations.filter((attestation: PendingAttestation) => {
+    attestation.data.epochBoundaryRoot.equals(getBlockRoot(state, getEpochStartSlot(currentEpoch)));
   });
 
-  const currentEpochBoundaryAttesterIndices: ValidatorIndex[] = currentEpochBoundaryAttestations
-    .map((attestation: PendingAttestation) => getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield))
-    .reduce((previousValue: ValidatorIndex[], currentValue: ValidatorIndex[]) => previousValue.concat(...currentValue));
+  const currentEpochBoundaryAttesterIndices: ValidatorIndex[] = [
+    ...new Set(
+      currentEpochBoundaryAttestations.flatMap((a: PendingAttestation) =>
+        getAttestationParticipants(state, a.data, a.aggregationBitfield)))
+  ];
 
   const currentEpochBoundaryAttestingBalance = getTotalBalance(state, currentEpochBoundaryAttesterIndices);
 
   // Validators attesting during the previous epoch
-  const previousTotalBalance = getTotalBalance(state, getActiveValidatorIndices(state.validatorRegistry, previousEpoch));
+  const previousTotalBalance: Gwei = getTotalBalance(state, getActiveValidatorIndices(state.validatorRegistry, previousEpoch));
 
   // Validators that made an attestation during the previous epoch, targeting the previous justified slot
   const previousEpochAttestations: PendingAttestation[] = state.latestAttestations.filter((attestation) => {
-    if (previousEpoch === slotToEpoch(attestation.data.slot)) {
-      return attestation;
-    }
+    previousEpoch.eq(slotToEpoch(attestation.data.slot))
   });
 
-  const previousEpochAttesterIndices: ValidatorIndex[] = previousEpochAttestations
-    .map((attestation: PendingAttestation) => getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield))
-    .reduce((previousValue: ValidatorIndex[], currentValue: ValidatorIndex[]) => previousValue.concat(...currentValue));
+  // const previousEpochAttesterIndices: ValidatorIndex[] = previousEpochAttestations
+  //   .map((attestation: PendingAttestation) => getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield))
+  //   .reduce((previousValue: ValidatorIndex[], currentValue: ValidatorIndex[]) => previousValue.concat(...currentValue));
+  const previousEpochAttesterIndices: ValidatorIndex[] = [
+    ...new Set(
+      previousEpochAttestations.flatMap((a: PendingAttestation) => getAttestationParticipants(state, a.data, a.aggregationBitfield))
+    )
+  ];
 
   const previousEpochAttestingBalance: Gwei = getTotalBalance(state, previousEpochAttesterIndices);
 
   // Validators justifying the epoch boundary block at the start of the previous epoch
   const previousEpochBoundaryAttestations: PendingAttestation[] = previousEpochAttestations.filter((attestation) => {
-    if (attestation.data.epochBoundaryRoot === getBlockRoot(state, getEpochStartSlot(previousEpoch))) {
-      return attestation;
-    }
+    attestation.data.epochBoundaryRoot.equals(getBlockRoot(state, getEpochStartSlot(previousEpoch)));
   });
 
-  const previousEpochBoundaryAttesterIndices: ValidatorIndex[] = previousEpochBoundaryAttestations
-    .map((attestation) => getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield))
-    .reduce((previousValue: ValidatorIndex[], currentValue: ValidatorIndex[]) => previousValue.concat(...currentValue));
+  const previousEpochBoundaryAttesterIndices: ValidatorIndex[] = [
+    ...new Set(
+      previousEpochBoundaryAttestations.flatMap((a: PendingAttestation) => getAttestationParticipants(state, a.data, a.aggregationBitfield))
+    )
+  ];
 
   const previousEpochBoundaryAttestingBalance: Gwei = getTotalBalance(state, previousEpochBoundaryAttesterIndices);
 
   // Validators attesting to the expected beacon chain head during the previous epoch
   const previousEpochHeadAttestations: PendingAttestation[] = previousEpochAttestations.filter((attestation) => {
-    if (attestation.data.beaconBlockRoot === getBlockRoot(state, attestation.data.slot)) {
-      return attestation;
-    }
+    attestation.data.beaconBlockRoot.equals(getBlockRoot(state, attestation.data.slot));
   });
 
-  const previousEpochHeadAttesterIndices: ValidatorIndex[] = previousEpochAttestations
-    .map((attestation) => getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield))
-    .reduce((previousValue: ValidatorIndex[], currentValue: ValidatorIndex[]) => previousValue.concat(...currentValue));
+  const previousEpochHeadAttesterIndices: ValidatorIndex[] = [
+    ...new Set(
+      previousEpochAttestations.flatMap((a: PendingAttestation) => getAttestationParticipants(state, a.data, a.aggregationBitfield))
+    )
+  ];
 
   const previousEpochHeadAttestingBalance: Gwei = getTotalBalance(state, previousEpochHeadAttesterIndices);
 
