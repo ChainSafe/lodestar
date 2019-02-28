@@ -1,5 +1,4 @@
-import assert from "assert";
-import {BeaconBlock, BeaconState, Epoch, Eth1DataVote} from "../../types";
+import {BeaconState, Epoch, Eth1DataVote} from "../../types";
 import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "../../constants";
 
 export function processEth1Data(

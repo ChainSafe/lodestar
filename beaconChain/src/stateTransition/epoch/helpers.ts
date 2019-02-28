@@ -1,16 +1,16 @@
 import {
   getActiveValidatorIndices, getAttestationParticipants, getCurrentEpoch, getCurrentEpochCommitteeCount,
   getEffectiveBalance, getEntryExitEffectEpoch, getTotalBalance
-} from "../../../helpers/stateTransitionHelpers";
-import {Attestation, BeaconState, PendingAttestation, Shard, uint64, Validator, ValidatorIndex} from "../../../types";
+} from "../../helpers/stateTransitionHelpers";
+import {Attestation, BeaconState, PendingAttestation, Shard, uint64, Validator, ValidatorIndex} from "../../types";
 import {
   EJECTION_BALANCE, FAR_FUTURE_EPOCH, INITIATED_EXIT, LATEST_SLASHED_EXIT_LENGTH, MAX_BALANCE_CHURN_QUOTIENT,
   MAX_DEPOSIT_AMOUNT, MAX_EXIT_DEQUEUES_PER_EPOCH, MIN_PENALTY_QUOTIENT,
   MIN_VALIDATOR_WITHDRAWAL_DELAY,
   SHARD_COUNT
-} from "../../../constants";
+} from "../../constants";
 import BN from "bn.js";
-import {activateValidator, exitValidator, prepareValidatorForWithdrawal} from "../../../helpers/validatorStatus";
+import {activateValidator, exitValidator, prepareValidatorForWithdrawal} from "../../helpers/validatorStatus";
 import {bnMax, bnMin} from "../../../helpers/math";
 
 /**

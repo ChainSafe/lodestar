@@ -4,7 +4,10 @@ import {
   getBlockRoot, getCrosslinkCommitteesAtSlot, getCurrentEpoch, getEpochStartSlot, getPreviousEpoch, getTotalBalance,
   slotToEpoch
 } from "../../helpers/stateTransitionHelpers";
-import {BeaconState, CrosslinkCommittee, Epoch, Gwei, PendingAttestation, ValidatorIndex} from "../../types";
+import {
+  Attestation, BeaconState, CrosslinkCommittee, Epoch, Gwei, PendingAttestation,
+  ValidatorIndex
+} from "../../types";
 
 export function processVariables(state: BeaconState) {
   // Variables
@@ -23,9 +26,9 @@ export function processVariables(state: BeaconState) {
     }
   });
 
-  const currentEpochBoundaryAttesterIndices: ValidatorIndex[] = currentEpochAttestations.map((attestation) => {
-    return getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield)
-  });
+  const currentEpochBoundaryAttesterIndices: ValidatorIndex[] = currentEpochBoundaryAttestations
+    .map((attestation: PendingAttestation) => getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield))
+    .reduce((previousValue: ValidatorIndex[], currentValue: ValidatorIndex[]) => previousValue.concat(...currentValue));
 
   const currentEpochBoundaryAttestingBalance = getTotalBalance(state, currentEpochBoundaryAttesterIndices);
 
@@ -39,9 +42,9 @@ export function processVariables(state: BeaconState) {
     }
   });
 
-  const previousEpochAttesterIndices: ValidatorIndex[][] = previousEpochAttestations.map((attestation) => {
-    return getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield);
-  });
+  const previousEpochAttesterIndices: ValidatorIndex[] = previousEpochAttestations
+    .map((attestation: PendingAttestation) => getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield))
+    .reduce((previousValue: ValidatorIndex[], currentValue: ValidatorIndex[]) => previousValue.concat(...currentValue));
 
   const previousEpochAttestingBalance: Gwei = getTotalBalance(state, previousEpochAttesterIndices);
 
@@ -52,9 +55,9 @@ export function processVariables(state: BeaconState) {
     }
   });
 
-  const previousEpochBoundaryAttesterIndices: ValidatorIndex[][] = previousEpochBoundaryAttestations.map((attestation) => {
-    return getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield)
-  });
+  const previousEpochBoundaryAttesterIndices: ValidatorIndex[] = previousEpochBoundaryAttestations
+    .map((attestation) => getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield))
+    .reduce((previousValue: ValidatorIndex[], currentValue: ValidatorIndex[]) => previousValue.concat(...currentValue));
 
   const previousEpochBoundaryAttestingBalance: Gwei = getTotalBalance(state, previousEpochBoundaryAttesterIndices);
 
@@ -65,15 +68,15 @@ export function processVariables(state: BeaconState) {
     }
   });
 
-  const previousEpochHeadAttesterIndices: ValidatorIndex[][] = previousEpochAttestations.map((attestation) => {
-    return getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield)
-  });
+  const previousEpochHeadAttesterIndices: ValidatorIndex[] = previousEpochAttestations
+    .map((attestation) => getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield))
+    .reduce((previousValue: ValidatorIndex[], currentValue: ValidatorIndex[]) => previousValue.concat(...currentValue));
 
   const previousEpochHeadAttestingBalance: Gwei = getTotalBalance(state, previousEpochHeadAttesterIndices);
 
+  // TODO Need to finish
   const startSlot = getEpochStartSlot(previousEpoch).toNumber();
   const endSlot = getEpochStartSlot(nextEpoch).toNumber();
-
   for (let slot = startSlot; slot < endSlot; slot++) {
     const crosslinkCommitteesAtSlot = getCrosslinkCommitteesAtSlot(state, new BN(slot)).map((value: CrosslinkCommittee) => {
       const { shard, validatorIndices } = value;

@@ -1,11 +1,11 @@
 import BN from "bn.js";
-import {BeaconState, Epoch, PendingAttestation} from "../../../types";
-import {hashTreeRoot} from "../../state";
-import {getActiveValidatorIndices, getRandaoMix, slotToEpoch} from "../../../helpers/stateTransitionHelpers";
+import {hashTreeRoot} from "@chainsafesystems/ssz";
+import {BeaconState, Epoch, PendingAttestation} from "../../types";
+import {getActiveValidatorIndices, getRandaoMix, slotToEpoch} from "../../helpers/stateTransitionHelpers";
 import {
   ACTIVATION_EXIT_DELAY, LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH,
   LATEST_SLASHED_EXIT_LENGTH
-} from "../../../constants";
+} from "../../constants";
 
 export function processFinalUpdates(
   state: BeaconState,
