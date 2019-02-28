@@ -1,15 +1,19 @@
-import {
-  getActiveValidatorIndices, getAttestationParticipants, getCurrentEpoch, getCurrentEpochCommitteeCount,
-  getEffectiveBalance, getEntryExitEffectEpoch, getTotalBalance
-} from "../../helpers/stateTransitionHelpers";
-import {Attestation, BeaconState, PendingAttestation, Shard, uint64, Validator, ValidatorIndex} from "../../types";
-import {
-  EJECTION_BALANCE, FAR_FUTURE_EPOCH, INITIATED_EXIT, LATEST_SLASHED_EXIT_LENGTH, MAX_BALANCE_CHURN_QUOTIENT,
-  MAX_DEPOSIT_AMOUNT, MAX_EXIT_DEQUEUES_PER_EPOCH, MIN_PENALTY_QUOTIENT,
-  MIN_VALIDATOR_WITHDRAWAL_DELAY,
-  SHARD_COUNT
-} from "../../constants";
 import BN from "bn.js";
+import { deserialize } from "@chainsafesystems/ssz"
+import {
+getActiveValidatorIndices, getAttestationParticipants, getCurrentEpoch, getCurrentEpochCommitteeCount,
+getEffectiveBalance, getEntryExitEffectEpoch, getTotalBalance
+} from "../../helpers/stateTransitionHelpers";
+import {
+  Attestation, BeaconState, bytes32, CrosslinkCommittee, PendingAttestation, Shard, uint64, Validator,
+  ValidatorIndex
+} from "../../types";
+import {
+EJECTION_BALANCE, FAR_FUTURE_EPOCH, INITIATED_EXIT, LATEST_SLASHED_EXIT_LENGTH, MAX_BALANCE_CHURN_QUOTIENT,
+MAX_DEPOSIT_AMOUNT, MAX_EXIT_DEQUEUES_PER_EPOCH, MIN_PENALTY_QUOTIENT,
+MIN_VALIDATOR_WITHDRAWAL_DELAY,
+SHARD_COUNT
+} from "../../constants";
 import {activateValidator, exitValidator, prepareValidatorForWithdrawal} from "../../helpers/validatorStatus";
 import {bnMax, bnMin} from "../../../helpers/math";
 
@@ -133,6 +137,12 @@ export function inclusionSlot(state: BeaconState, previousEpochAttestations: Pen
   return lowestInclusionSlot;
 }
 
+/**
+ * Find the difference between an attestation slot and the data slot of that attestation
+ * @param {BeaconState} state
+ * @param {ValidatorIndex} validatorIndex
+ * @returns {uint64}
+ */
 export function inclusionDistance(state: BeaconState, validatorIndex: ValidatorIndex): uint64 {
   let lowestAttestation: PendingAttestation;
   state.latestAttestations.forEach((attestation: PendingAttestation) => {
@@ -174,6 +184,77 @@ export function processExitQueue(state: BeaconState): void {
   });
 }
 
-export function winningRoot(state: BeaconState) {
+/**
+ * Returns the data root that the largest set of validators (as defined by total effective balance) votes for.
+ * @param {BeaconState} state
+ * @param {Attestation[]} previousEpochAttestations
+ * @param {Attestation[]} currentEpochAttestations
+ * @param {ValidatorIndex[]} crosslinkCommittee
+ * @returns {bytes32}
+ */
+export function winningRoot(
+  state: BeaconState,
+  shard: Shard,
+  previousEpochAttestations: PendingAttestation[],
+  currentEpochAttestations: PendingAttestation[],
+  crosslinkCommittee: CrosslinkCommittee): bytes32 {
 
+  return currentEpochAttestations.concat(previousEpochAttestations)
+    .map((a: PendingAttestation) => a.data.shardBlockRoot)
+    .map((shardBlockRoot: bytes32) => {
+      return ({
+        shardBlockRoot,
+        balance: getTotalBalance(
+          state,
+          attestingValidatorIndices(
+            state,
+            shard,
+            crosslinkCommittee,
+            shardBlockRoot,
+            currentEpochAttestations,
+            previousEpochAttestations
+          ))
+        })
+      })
+    .reduce((a, b) => {
+      if (b.balance.gt(a.balance)) {
+        return b;
+      } else if (b.balance.eq(a.balance)) {
+        if (deserialize(b.shardBlockRoot, "uint32").deserializedData.lt(deserialize(a.shardBlockRoot, "uint32").deserializedData)) {
+          return b;
+        }
+      }
+      return a;
+    }).shardBlockRoot;
 }
+
+/**
+ * Returns the union of validators index sets from getAttestationParticipants
+ * @param {BeaconState} state
+ * @param {Shard} shard
+ * @param {CrosslinkCommittee} crosslinkCommittee
+ * @param {bytes32} shardBlockRoot
+ * @param {PendingAttestation[]} currentEpochAttestations
+ * @param {PendingAttestation[]} previousEpochAttestations
+ * @returns {ValidatorIndex[]}
+ */
+export function attestingValidatorIndices(
+  state: BeaconState,
+  shard: Shard,
+  crosslinkCommittee: CrosslinkCommittee,
+  shardBlockRoot: bytes32,
+  currentEpochAttestations: PendingAttestation[],
+  previousEpochAttestations: PendingAttestation[]): ValidatorIndex[] {
+
+  const attestations: PendingAttestation[] = currentEpochAttestations.concat(previousEpochAttestations);
+  return attestations
+    .map((attestation: PendingAttestation) => {
+      if (attestation.data.shard === shard) {
+        return getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield);
+      }
+    })
+    .reduce((a: ValidatorIndex[], b: ValidatorIndex[]) => a.concat(...b));
+}
+
+export function attestingValidators() {}
+export function totalAttestingBalance() {}

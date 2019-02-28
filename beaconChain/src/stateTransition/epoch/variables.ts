@@ -74,6 +74,10 @@ export function processVariables(state: BeaconState) {
 
   const previousEpochHeadAttestingBalance: Gwei = getTotalBalance(state, previousEpochHeadAttesterIndices);
 
+  // For every slot in range(get_epoch_start_slot(previous_epoch), get_epoch_start_slot(next_epoch)), let crosslink_committees_at_slot = get_crosslink_committees_at_slot(state, slot). For every (crosslink_committee, shard) in crosslink_committees_at_slot, compute:
+  //
+  // Let shard_block_root be state.latest_crosslinks[shard].shard_block_root
+  // Let total_attesting_balance(crosslink_committee) = get_total_balance(state, attesting_validators(crosslink_committee)).
   // TODO Need to finish
   const startSlot = getEpochStartSlot(previousEpoch).toNumber();
   const endSlot = getEpochStartSlot(nextEpoch).toNumber();

@@ -49,7 +49,13 @@ export function processEpoch(state: BeaconState): BeaconState {
   );
 
   // Crosslinks
-  processCrosslinks(state, previousEpoch, nextEpoch);
+  processCrosslinks(
+    state,
+    previousEpoch,
+    nextEpoch,
+    previousEpochAttestations,
+    currentEpochAttestations
+  );
 
   // Process Rewards and penalties
   processRewardsAndPenalties(
