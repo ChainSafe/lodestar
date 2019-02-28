@@ -1,6 +1,6 @@
-import {BeaconState, Epoch, Shard} from "../../../types";
-import {generateSeed,getCurrentEpochCommitteeCount, isPowerOfTwo} from "../../../helpers/stateTransitionHelpers";
-import {SHARD_COUNT} from "../../../constants";
+import {BeaconState, Epoch} from "../../types";
+import {generateSeed,getCurrentEpochCommitteeCount, isPowerOfTwo} from "../../helpers/stateTransitionHelpers";
+import {SHARD_COUNT} from "../../constants";
 import BN from "bn.js";
 import {isValidCrosslink, processExitQueue, processSlashings, updateValidatorRegistry} from "./helpers";
 

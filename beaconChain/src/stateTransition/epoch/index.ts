@@ -1,6 +1,6 @@
 import assert from "assert";
-import {BeaconState} from "../../../types";
-import {SLOTS_PER_EPOCH} from "../../../constants";
+import {BeaconState} from "../../types";
+import {SLOTS_PER_EPOCH} from "../../constants";
 import {processRewardsAndPenalties} from "./balanceUpdates";
 import {processEth1Data} from "./eth1data";
 import {processValidatorRegistryAndShuffleSeedData} from "./shuffling";
@@ -49,7 +49,7 @@ export function processEpoch(state: BeaconState): BeaconState {
   );
 
   // Crosslinks
-  processCrosslinks(state);
+  processCrosslinks(state, previousEpoch, nextEpoch);
 
   // Process Rewards and penalties
   processRewardsAndPenalties(

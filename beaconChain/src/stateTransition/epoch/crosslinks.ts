@@ -1,8 +1,8 @@
-import {BeaconState, Crosslink, CrosslinkCommittee, Epoch, Slot} from "../../../types";
+import {BeaconState, Crosslink, CrosslinkCommittee, Epoch, Slot} from "../../types";
 import {
   getCrosslinkCommitteesAtSlot, getEpochStartSlot, getTotalBalance,
   slotToEpoch
-} from "../../../helpers/stateTransitionHelpers";
+} from "../../helpers/stateTransitionHelpers";
 import BN = require("bn.js");
 
 export function processCrosslinks(

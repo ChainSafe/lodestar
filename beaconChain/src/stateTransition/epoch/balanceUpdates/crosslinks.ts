@@ -1,4 +1,4 @@
-import {BeaconState} from "../../../../types";
+import {BeaconState} from "../../../types";
 
 export function processCrosslinksRewards(state: BeaconState): void {
   // Crosslinks

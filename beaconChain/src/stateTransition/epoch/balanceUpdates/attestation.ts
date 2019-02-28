@@ -1,6 +1,6 @@
-import {BeaconState, PendingAttestation} from "../../../../types";
-import {getBeaconProposerIndex} from "../../../../helpers/stateTransitionHelpers";
-import {ATTESTATION_INCLUSION_REWARD_QUOTIENT} from "../../../../constants";
+import {BeaconState, PendingAttestation} from "../../../types";
+import {getBeaconProposerIndex} from "../../../helpers/stateTransitionHelpers";
+import {ATTESTATION_INCLUSION_REWARD_QUOTIENT} from "../../../constants";
 import {inclusionSlot} from "../helpers";
 
 export function processAttestationInclusion(state: BeaconState, previousEpochAttestations: PendingAttestation[], previousEpochAttesterIndices, baseReward: Function): void {

@@ -1,4 +1,4 @@
-import {BeaconState, Epoch} from "../../../types";
+import {BeaconState, Epoch} from "../../types";
 import BN from "bn.js";
 
 export function processJustification(

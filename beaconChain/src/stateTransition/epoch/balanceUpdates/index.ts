@@ -1,11 +1,10 @@
-import {processAttestationInclusion} from "./attestation";
-import {BeaconState, Epoch, PendingAttestation, ValidatorIndex} from "../../../../types";
 import BN = require("bn.js");
+import {processAttestationInclusion} from "./attestation";
+import {BeaconState, Epoch, PendingAttestation, ValidatorIndex} from "../../../types";
 import {processJustificationAndFinalization} from "./justification";
 import {processCrosslinksRewards} from "./crosslinks";
-import {processEth1Data} from "../eth1data";
-import {BASE_REWARD_QUOTIENT, INACTIVITY_PENALTY_QUOTIENT} from "../../../../constants";
-import {getEffectiveBalance} from "../../../../helpers/stateTransitionHelpers";
+import {BASE_REWARD_QUOTIENT, INACTIVITY_PENALTY_QUOTIENT} from "../../../constants";
+import {getEffectiveBalance} from "../../../helpers/stateTransitionHelpers";
 
 export function processRewardsAndPenalties(
   state: BeaconState,

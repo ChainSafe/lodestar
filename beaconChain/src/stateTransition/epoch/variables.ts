@@ -1,10 +1,10 @@
+import BN = require("bn.js");
 import {
   getActiveValidatorIndices, getAttestationParticipants,
   getBlockRoot, getCrosslinkCommitteesAtSlot, getCurrentEpoch, getEpochStartSlot, getPreviousEpoch, getTotalBalance,
   slotToEpoch
-} from "../../../helpers/stateTransitionHelpers";
-import {BeaconState, CrosslinkCommittee, Epoch, Gwei, PendingAttestation, ValidatorIndex} from "../../../types";
-import BN = require("bn.js");
+} from "../../helpers/stateTransitionHelpers";
+import {BeaconState, CrosslinkCommittee, Epoch, Gwei, PendingAttestation, ValidatorIndex} from "../../types";
 
 export function processVariables(state: BeaconState) {
   // Variables
