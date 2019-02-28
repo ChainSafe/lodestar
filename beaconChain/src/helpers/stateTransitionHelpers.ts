@@ -417,8 +417,8 @@ export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, reg
  */
 export function getBlockRoot(state: BeaconState, slot: Slot): bytes32 {
   // Returns the block root at a recent ``slot``.
-  if (state.slot.lte(slot.addn(LATEST_BLOCK_ROOTS_LENGTH))) { throw new Error(); }
-  if (slot.lt(state.slot)) { throw new Error(); }
+  if (!state.slot.lte(slot.addn(LATEST_BLOCK_ROOTS_LENGTH))) { throw new Error(); }
+  if (!slot.lt(state.slot)) { throw new Error(); }
   return state.latestBlockRoots[slot.umod(new BN(LATEST_BLOCK_ROOTS_LENGTH)).toNumber()];
 }
 
