@@ -1,10 +1,16 @@
 import BN from "bn.js";
 import { assert } from "chai";
 
-import { SLOTS_PER_EPOCH, TARGET_COMMITTEE_SIZE } from "../../src/constants";
+import {
+  GENESIS_SLOT,
+  LATEST_BLOCK_ROOTS_LENGTH,
+  SLOTS_PER_EPOCH,
+  TARGET_COMMITTEE_SIZE,
+  ZERO_HASH
+} from "../../src/constants";
 import {
   getActiveValidatorIndices,
-  getBitfieldBit,
+  getBitfieldBit, getBlockRoot,
   getCurrentEpoch,
   getDomain,
   getEpochCommitteeCount,
@@ -25,6 +31,7 @@ import {Epoch, Fork, int, Slot, uint64, Validator} from "../../src/types";
 import {generateAttestationData} from "../utils/attestation";
 import {randBetween} from "../utils/misc";
 import {generateValidator} from "../utils/validator";
+import {generateState} from "../utils/state";
 
 describe("intToBytes", () => {
   const zeroedArray = (length) => Array.from({length}, () => 0);
@@ -544,7 +551,7 @@ describe("merkleRoot", () => {
 });
 
 
-describe("Int to Bytes", () => {
+describe("intToBytes", () => {
   it("should convert number 0 to an empty buffer", () => {
     const res = intToBytes(0, 1)
     assert(res.equals(Uint8Array.from([0])), `got: ${res}, expected:${[0]}`)
@@ -570,3 +577,42 @@ describe("Int to Bytes", () => {
     assert(res.equals(Uint8Array.from([0x40, 0x41])), `got: ${res}, expected:${[0x40, 0x41]}`)
   });
 });
+
+describe("getBlockRoot", () => {
+  it("should return first block root for genesis slot", () => {
+    const state = generateState({
+      slot:  GENESIS_SLOT.addn(1),
+      latestBlockRoots: [Buffer.from([0xAB])]
+    })
+    const res = getBlockRoot(state, GENESIS_SLOT)
+    assert((new BN(res)).eq(new BN(0xAB)),
+      `got: ${new BN(res)}, expected: ${0xAB}`)
+  })
+  it("should return second block root for genesis + 1 slot", () => {
+    const state = generateState({
+      slot:  GENESIS_SLOT.addn(2),
+      latestBlockRoots: [Buffer.from([0xAB]), Buffer.from([0xCD])]
+    })
+    const res = getBlockRoot(state, GENESIS_SLOT.addn(1))
+    assert((new BN(res)).eq(new BN(0xCD)),
+      `got: ${new BN(res)}, expected: ${0xAB}`)
+  })
+  it("should fail if slot is current slot", () => {
+    const state = generateState({slot: GENESIS_SLOT})
+    try {
+      getBlockRoot(state, GENESIS_SLOT)
+      assert.fail('Expected error thrown')
+    } catch (e) {
+      assert(e)
+    }
+  })
+  it("should fail if slot is not within LATEST_BLOCK_ROOTS_LENGTH of current slot", () => {
+    const state = generateState({slot: GENESIS_SLOT.addn(LATEST_BLOCK_ROOTS_LENGTH + 1)})
+    try {
+      getBlockRoot(state, GENESIS_SLOT)
+      assert.fail('Expected error to be thrown')
+    } catch (e) {
+      assert(e)
+    }
+  })
+})
