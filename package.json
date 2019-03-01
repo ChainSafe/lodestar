@@ -1,43 +1,47 @@
 {
-  "name": "@chainsafesystems/ssz",
-  "version": "1.6.0",
-  "description": "A pure JS implementation of simple serialize",
-  "main": "src/index.js",
+  "name": "@chainsafe/ssz",
+  "version": "0.1.0",
+  "description": "Simple Serialize",
+  "main": "lib/index.js",
   "scripts": {
-    "docs": "documentation build src/index.js -f md > API.md",
-    "test": "mocha",
-    "lint": "standard",
-    "lint-fix": "standard --fix"
+    "build": "npm run build-lib && npm run build-web && npm run build-docs",
+    "build-docs": "documentation build lib/ -f md > docs/API.md",
+    "build-lib": "babel src -x .ts -d lib",
+    "build-web": "webpack --mode production --entry ./lib/web.js --output ./dist/ssz.min.js",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint --ext .ts src/ test/",
+    "pretest": "npm run check-types",
+    "test": "nyc -r lcov -e .ts mocha -r ./.babel-register test/**/*.test.ts && nyc report"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ChainSafeSystems/ssz-js.git"
-  },
-  "keywords": [
-    "\"ssz\"",
-    "\"simple",
-    "serialize\""
-  ],
-  "author": "ChainSafe Systems and contributors",
+  "author": "ChainSafe",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/ChainSafeSystems/ssz-js/issues"
-  },
-  "homepage": "https://github.com/ChainSafeSystems/ssz-js#readme",
   "devDependencies": {
-    "chai": "^4.1.2",
-    "documentation": "^9.1.1",
+    "@babel/cli": "^7.2.3",
+    "@babel/core": "^7.3.4",
+    "@babel/plugin-proposal-class-properties": "^7.3.4",
+    "@babel/plugin-proposal-object-rest-spread": "^7.3.4",
+    "@babel/preset-env": "^7.3.4",
+    "@babel/preset-typescript": "^7.3.3",
+    "@babel/register": "^7.0.0",
+    "@types/chai": "^4.1.7",
+    "@types/mocha": "^5.2.5",
+    "@types/node": "^10.12.17",
+    "@typescript-eslint/eslint-plugin": "^1.4.2",
+    "@typescript-eslint/parser": "^1.4.2",
+    "chai": "^4.2.0",
+    "codecov": "^3.2.0",
+    "documentation": "^9.3.0",
+    "eslint": "^5.14.1",
     "mocha": "^5.2.0",
-    "standard": "^12.0.1"
+    "nyc": "^13.3.0",
+    "webpack": "^4.29.6",
+    "webpack-cli": "^3.2.3"
   },
   "dependencies": {
-    "@polkadot/util-crypto": "^0.33.35",
+    "@types/bn.js": "^4.11.4",
+    "assert": "^1.4.1",
     "bn.js": "^4.11.8",
-    "deepcopy": "^1.0.0"
-  },
-  "standard": {
-    "ignore": [
-      "test/"
-    ]
+    "js-sha3": "^0.8.0",
+    "typescript": "^3.3.3333"
   }
 }
