@@ -23,7 +23,12 @@ function _serializeUint(value: Uint, byteLength: number, output: Buffer, start: 
     value.toArrayLike(Buffer, "le", byteLength)
       .copy(output, start);
   } else {
-    output.writeUIntLE(value, start, byteLength > 6 ? 6 : byteLength);
+    if (value >= 2**48) {
+      (new BN(value)).toArrayLike(Buffer, "le", byteLength)
+        .copy(output, start);
+    } else {
+      output.writeUIntLE(value, start, byteLength > 6 ? 6 : byteLength);
+    }
   }
   return offset;
 }
