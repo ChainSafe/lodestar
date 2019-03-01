@@ -13,7 +13,7 @@ export type Gwei = uint64;
 export type Bytes32 = bytes32;
 export type BLSPubkey = bytes48;
 export type BLSSignature = bytes96;
-export type CrosslinkCommittee = {shard: Shard, validatorIndices: ValidatorIndex[]};
+export interface CrosslinkCommittee {shard: Shard; validatorIndices: ValidatorIndex[]}
 
 export const Slot = uint64;
 export const Epoch = uint64;

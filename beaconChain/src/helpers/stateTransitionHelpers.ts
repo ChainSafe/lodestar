@@ -83,6 +83,15 @@ export function slotToEpoch(slot: Slot): Epoch {
 }
 
 /**
+ * Return the current epoch of the given state.
+ * @param {BeaconState} state
+ * @returns {Epoch}
+ */
+export function getCurrentEpoch(state: BeaconState): Epoch {
+  return slotToEpoch(state.slot);
+}
+
+/**
  * Return the previous epoch of the given state.
  * @param {BeaconState} state
  * @returns {Epoch}
@@ -93,15 +102,6 @@ export function getPreviousEpoch(state: BeaconState): Epoch {
     return GENESIS_EPOCH;
   }
   return currentEpoch.subn(1);
-}
-
-/**
- * Return the current epoch of the given state.
- * @param {BeaconState} state
- * @returns {Epoch}
- */
-export function getCurrentEpoch(state: BeaconState): Epoch {
-  return slotToEpoch(state.slot);
 }
 
 /**

@@ -9,7 +9,7 @@ export function processJustification(
   currentEpochBoundaryAttestingBalance: BN,
   currentTotalBalance: BN,
   previousTotalBalance: BN,
-  ): void {
+): void {
 
   let newJustifiedEpoch = state.justifiedEpoch;
   state.justificationBitfield = state.justificationBitfield.shln(1);

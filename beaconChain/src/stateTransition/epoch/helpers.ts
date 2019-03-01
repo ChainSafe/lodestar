@@ -1,18 +1,18 @@
 import BN from "bn.js";
 import { deserialize } from "@chainsafesystems/ssz"
 import {
-getActiveValidatorIndices, getAttestationParticipants, getCurrentEpoch, getCurrentEpochCommitteeCount,
-getEffectiveBalance, getEntryExitEffectEpoch, getTotalBalance
+  getActiveValidatorIndices, getAttestationParticipants, getCurrentEpoch, getCurrentEpochCommitteeCount,
+  getEffectiveBalance, getEntryExitEffectEpoch, getTotalBalance
 } from "../../helpers/stateTransitionHelpers";
 import {
   Attestation, BeaconState, bytes32, CrosslinkCommittee, PendingAttestation, Shard, uint64, Validator,
   ValidatorIndex
 } from "../../types";
 import {
-EJECTION_BALANCE, FAR_FUTURE_EPOCH, INITIATED_EXIT, LATEST_SLASHED_EXIT_LENGTH, MAX_BALANCE_CHURN_QUOTIENT,
-MAX_DEPOSIT_AMOUNT, MAX_EXIT_DEQUEUES_PER_EPOCH, MIN_PENALTY_QUOTIENT,
-MIN_VALIDATOR_WITHDRAWAL_DELAY,
-SHARD_COUNT
+  EJECTION_BALANCE, FAR_FUTURE_EPOCH, INITIATED_EXIT, LATEST_SLASHED_EXIT_LENGTH, MAX_BALANCE_CHURN_QUOTIENT,
+  MAX_DEPOSIT_AMOUNT, MAX_EXIT_DEQUEUES_PER_EPOCH, MIN_PENALTY_QUOTIENT,
+  MIN_VALIDATOR_WITHDRAWAL_DELAY,
+  SHARD_COUNT
 } from "../../constants";
 import {activateValidator, exitValidator, prepareValidatorForWithdrawal} from "../../helpers/validatorStatus";
 import {bnMax, bnMin} from "../../../helpers/math";
@@ -117,6 +117,7 @@ export function processEjections(state: BeaconState): void {
 /**
  * Returns the attestation with the lowest inclusion slot for a specified validatorIndex.
  * @param {BeaconState} state
+ * @param {PendingAttestation[]} previousEpochAttestations
  * @param {ValidatorIndex} validatorIndex
  * @returns {uint64}
  */
@@ -185,6 +186,34 @@ export function processExitQueue(state: BeaconState): void {
 }
 
 /**
+ * Returns the union of validators index sets from getAttestationParticipants
+ * @param {BeaconState} state
+ * @param {Shard} shard
+ * @param {CrosslinkCommittee} crosslinkCommittee
+ * @param {bytes32} shardBlockRoot
+ * @param {PendingAttestation[]} currentEpochAttestations
+ * @param {PendingAttestation[]} previousEpochAttestations
+ * @returns {ValidatorIndex[]}
+ */
+export function attestingValidatorIndices(
+  state: BeaconState,
+  shard: Shard,
+  crosslinkCommittee: CrosslinkCommittee,
+  shardBlockRoot: bytes32,
+  currentEpochAttestations: PendingAttestation[],
+  previousEpochAttestations: PendingAttestation[]): ValidatorIndex[] {
+
+  const attestations: PendingAttestation[] = currentEpochAttestations.concat(previousEpochAttestations);
+  return attestations
+    .map((attestation: PendingAttestation) => {
+      if (attestation.data.shard === shard) {
+        return getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield);
+      }
+    })
+    .reduce((a: ValidatorIndex[], b: ValidatorIndex[]) => a.concat(...b));
+}
+
+/**
  * Returns the data root that the largest set of validators (as defined by total effective balance) votes for.
  * @param {BeaconState} state
  * @param {Attestation[]} previousEpochAttestations
@@ -214,8 +243,8 @@ export function winningRoot(
             currentEpochAttestations,
             previousEpochAttestations
           ))
-        })
       })
+    })
     .reduce((a, b) => {
       if (b.balance.gt(a.balance)) {
         return b;
@@ -226,34 +255,6 @@ export function winningRoot(
       }
       return a;
     }).shardBlockRoot;
-}
-
-/**
- * Returns the union of validators index sets from getAttestationParticipants
- * @param {BeaconState} state
- * @param {Shard} shard
- * @param {CrosslinkCommittee} crosslinkCommittee
- * @param {bytes32} shardBlockRoot
- * @param {PendingAttestation[]} currentEpochAttestations
- * @param {PendingAttestation[]} previousEpochAttestations
- * @returns {ValidatorIndex[]}
- */
-export function attestingValidatorIndices(
-  state: BeaconState,
-  shard: Shard,
-  crosslinkCommittee: CrosslinkCommittee,
-  shardBlockRoot: bytes32,
-  currentEpochAttestations: PendingAttestation[],
-  previousEpochAttestations: PendingAttestation[]): ValidatorIndex[] {
-
-  const attestations: PendingAttestation[] = currentEpochAttestations.concat(previousEpochAttestations);
-  return attestations
-    .map((attestation: PendingAttestation) => {
-      if (attestation.data.shard === shard) {
-        return getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield);
-      }
-    })
-    .reduce((a: ValidatorIndex[], b: ValidatorIndex[]) => a.concat(...b));
 }
 
 export function attestingValidators() {}
