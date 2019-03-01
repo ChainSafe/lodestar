@@ -293,7 +293,7 @@ export function getNextEpochCommitteeCount(state: BeaconState): int {
  * @returns {bytes32}
  */
 export function getRandaoMix(state: BeaconState, epoch: Epoch): bytes32 {
-  if (getCurrentEpoch(state).subn(LATEST_RANDAO_MIXES_LENGTH).lt(epoch) && epoch.lt(getCurrentEpoch(state))) { throw new Error(""); }
+  if (!(getCurrentEpoch(state).subn(LATEST_RANDAO_MIXES_LENGTH).lt(epoch) && epoch.lt(getCurrentEpoch(state)))) { throw new Error(""); }
   return state.latestRandaoMixes[epoch.umod(new BN(LATEST_RANDAO_MIXES_LENGTH)).toNumber()];
 }
 
