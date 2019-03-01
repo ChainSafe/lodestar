@@ -17,7 +17,7 @@ import {
   MIN_SEED_LOOKAHEAD,
   SHARD_COUNT,
   SLOTS_PER_EPOCH,
-  TARGET_COMMITTEE_SIZE,
+  TARGET_COMMITTEE_SIZE, ZERO_HASH,
 } from "../constants";
 
 import {

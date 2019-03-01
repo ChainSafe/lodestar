@@ -2,11 +2,11 @@ import BN from "bn.js";
 import { assert } from "chai";
 
 import {
+  GENESIS_EPOCH,
   GENESIS_SLOT,
-  LATEST_BLOCK_ROOTS_LENGTH,
+  LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
-  ZERO_HASH
 } from "../../src/constants";
 import {
   getActiveValidatorIndices,
@@ -15,7 +15,7 @@ import {
   getDomain,
   getEpochCommitteeCount,
   getEpochStartSlot,
-  getForkVersion,
+  getForkVersion, getRandaoMix,
   hash,
   intSqrt,
   intToBytes,
@@ -578,6 +578,54 @@ describe("intToBytes", () => {
   });
 });
 
+
+describe("getRandaoMix", () => {
+  it("should return first randao mix for GENESIS_EPOCH", () => {
+    // Empty state in 2nd epoch
+    const state = generateState({
+      slot: GENESIS_SLOT.addn(SLOTS_PER_EPOCH),
+      latestRandaoMixes: [Buffer.from([0xAB]), Buffer.from([0xCD])]
+    })
+    const res = getRandaoMix(state, GENESIS_EPOCH)
+    assert(res.equals(Uint8Array.from([0xAB])))
+  })
+  it("should return second randao mix for GENESIS_EPOCH + 1", () => {
+    // Empty state in 2nd epoch
+    const state = generateState({
+      slot: GENESIS_SLOT.addn(SLOTS_PER_EPOCH * 2),
+      latestRandaoMixes: [Buffer.from([0xAB]), Buffer.from([0xCD]), Buffer.from([0xEF])]
+    })
+    const res = getRandaoMix(state, GENESIS_EPOCH.addn(1))
+    assert(res.equals(Uint8Array.from([0xCD])))
+  })
+  it("should fail to get randao mix for epoch more than LATEST_RANDAO_MIXES_LENGTH in the past", () => {
+    // Empty state in epoch LATEST_RANDAO_MIXES_LENGTH with incrementing randao mixes
+    const state = generateState({
+      slot: GENESIS_SLOT.addn(SLOTS_PER_EPOCH * LATEST_RANDAO_MIXES_LENGTH),
+      latestRandaoMixes: Array.from({length: LATEST_RANDAO_MIXES_LENGTH}, (e, i) => Buffer.from([i]))
+    })
+    try {
+      getRandaoMix(state, GENESIS_EPOCH)
+      assert.fail('Expected error to be thrown')
+    } catch (e) {
+      assert(e. message === "", e)
+    }
+  })
+  it("should fail to get randao mix for epoch > current epoch", () => {
+    // Empty state in second epoch (genesis + 1)
+    const state = generateState({
+      slot: GENESIS_SLOT.addn(SLOTS_PER_EPOCH),
+      latestRandaoMixes: [Buffer.from([0xAB]), Buffer.from([0xCD])]
+    })
+    try {
+      getRandaoMix(state, GENESIS_EPOCH.addn(1))
+      assert.fail('Expected error to be thrown')
+    } catch (e) {
+      assert(e.message === "", e)
+    }
+  })
+})
+
 describe("getBlockRoot", () => {
   it("should return first block root for genesis slot", () => {
     const state = generateState({
@@ -603,7 +651,7 @@ describe("getBlockRoot", () => {
       getBlockRoot(state, GENESIS_SLOT)
       assert.fail('Expected error thrown')
     } catch (e) {
-      assert(e)
+      assert(e.message === "", e)
     }
   })
   it("should fail if slot is not within LATEST_BLOCK_ROOTS_LENGTH of current slot", () => {
@@ -612,7 +660,7 @@ describe("getBlockRoot", () => {
       getBlockRoot(state, GENESIS_SLOT)
       assert.fail('Expected error to be thrown')
     } catch (e) {
-      assert(e)
+      assert(e.message === "", e)
     }
   })
 })
