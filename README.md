@@ -14,7 +14,7 @@ This is a Javascript library that implements BLS (Boneh-Lynn-Shacham) signatures
 
 >[spec](https://github.com/ethereum/eth2.0-specs/blob/master/specs/bls_signature.md)
 
->[test vectors](https://github.com/ethereum/eth2.0-tests/blob/bls-vectors/test_vectors/test_bls.yml)
+>[test vectors](https://github.com/ethereum/eth2.0-tests/blob/master/bls/test_bls.yml)
 
 ## Install
 `npm install -g bls-js`
