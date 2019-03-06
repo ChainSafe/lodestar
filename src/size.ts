@@ -11,6 +11,12 @@ import {
 
 import { BYTES_PER_LENGTH_PREFIX } from "./constants";
 
+import {
+  bytesPattern,
+  digitsPattern,
+  uintPattern,
+} from "./util/types";
+
 function _sizeByteArray(value: ByteArray, type: SerializableType, typeLength: number): number {
   if (!isNaN(typeLength)) {
     assert(typeLength > 0, `Invalid byte array type: ${type}`);
@@ -25,14 +31,14 @@ export function size(value: SerializableValue, type: SerializableType): number {
       assert(value === true || value === false, `Invalid bool value: ${value}`);
       return 1;
     }
-    if (type.match(/^bytes\d*$/)) {
+    if (type.match(bytesPattern)) {
       value = value as ByteArray;
       assert(value.length !== undefined, `Invalid byte array value: ${value}`);
-      const typeLength = parseInt(type.match(/\d+$/) as unknown as string);
+      const typeLength = parseInt(type.match(digitsPattern) as unknown as string);
       return _sizeByteArray(value, type, typeLength);
     }
-    if (type.match(/^uint\d+$/)) {
-      const bits = parseInt(type.match(/\d+$/) as unknown as string);
+    if (type.match(uintPattern)) {
+      const bits = parseInt(type.match(digitsPattern) as unknown as string);
       assert([8, 16, 32, 64, 128, 256].find((b) => b === bits), `Invalid uint type: ${type}`);
       return bits / 8;
     }

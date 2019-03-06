@@ -3,13 +3,13 @@ import {keccak256} from "js-sha3";
 import {
   SerializableType,
   SerializableValue,
-} from "./types";
+} from "../types";
 
-import { BYTES_PER_CHUNK } from "./constants";
+import { BYTES_PER_CHUNK } from "../constants";
 
-import { size } from "./size";
+import { size } from "../size";
 
-import { _serialize } from "./serialize";
+import { _serialize } from "../serialize";
 
 export function pack (input: SerializableValue[], type: SerializableType): Buffer[] {
   const packedLength = input.map((v) => size(v, type)).reduce((a, b) => a + b);

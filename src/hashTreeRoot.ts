@@ -14,7 +14,12 @@ import {
   merkleize,
   mixInLength,
   pack,
-} from "./hashUtils";
+} from "./util/hash";
+
+import {
+  bytesPattern,
+  uintPattern,
+} from "./util/types";
 
 /**
  * Merkleize an SSZ value
@@ -33,10 +38,10 @@ export function hashTreeRoot(value: SerializableValue, type: SerializableType): 
         merkleize(pack([value], type)),
         (value as ByteArray).length);
     }
-    if (type.match(/^bytes\d+?$/)) {
+    if (type.match(bytesPattern)) {
       return merkleize(pack([value], type));
     }
-    if (type.match(/^uint\d+?$/)) {
+    if (type.match(uintPattern)) {
       return merkleize(pack([value], type));
     }
   } else if (Array.isArray(type)) {

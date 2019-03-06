@@ -17,6 +17,12 @@ import { BYTES_PER_LENGTH_PREFIX } from "./constants";
 
 import { size } from "./size";
 
+import {
+  bytesPattern,
+  digitsPattern,
+  uintPattern,
+} from "./util/types";
+
 function _serializeUint(value: Uint, byteLength: number, output: Buffer, start: number): number {
   const offset = start + byteLength;
   if (BN.isBN(value)) {
@@ -82,12 +88,12 @@ export function _serialize(value: SerializableValue, type: SerializableType, out
     if (type === "bool") {
       return _serializeBool(value as Bool, output, start);
     }
-    if (type.match(/^bytes\d*$/)) {
-      const typeLength = parseInt(type.match(/\d+$/) as unknown as string);
+    if (type.match(bytesPattern)) {
+      const typeLength = parseInt(type.match(digitsPattern) as unknown as string);
       return _serializeByteArray(value as ByteArray, typeLength, output, start);
     }
-    if (type.match(/^uint\d+$/)) {
-      const byteLength = parseInt(type.match(/\d+$/) as unknown as string) / 8;
+    if (type.match(uintPattern)) {
+      const byteLength = parseInt(type.match(digitsPattern) as unknown as string) / 8;
       return _serializeUint(value as Uint, byteLength, output, start);
     }
   } else if (Array.isArray(type)) {

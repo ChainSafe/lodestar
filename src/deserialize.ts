@@ -13,6 +13,12 @@ import {
 
 import { BYTES_PER_LENGTH_PREFIX } from "./constants";
 
+import {
+  bytesPattern,
+  digitsPattern,
+  uintPattern,
+} from "./util/types";
+
 function _deserializeUint(data: Buffer, byteLength: number, alwaysNumber: boolean, start: number): DeserializedValue {
   const offset = start + byteLength;
   const bn = new BN(data.slice(start, offset), 16, "le");
@@ -85,11 +91,11 @@ export function _deserialize(data: Buffer, type: SerializableType, start: number
     if (type === "bool") {
       return _deserializeBool(data, start);
     }
-    if (type.match(/^bytes\d*$/)) {
+    if (type.match(bytesPattern)) {
       return _deserializeByteArray(data, start);
     }
-    if (type.match(/^uint\d+$/)) {
-      const bits = parseInt(type.match(/\d+$/) as unknown as string);
+    if (type.match(uintPattern)) {
+      const bits = parseInt(type.match(digitsPattern) as unknown as string);
       assert([8, 16, 32, 64, 128, 256].find((b) => b === bits), `Invalid uint type: ${type}`);
       return _deserializeUint(data, bits / 8, false, start);
     }
