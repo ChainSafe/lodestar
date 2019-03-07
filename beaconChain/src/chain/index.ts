@@ -1,6 +1,9 @@
 import {EventEmitter} from "events";
 import { BeaconState, uint64, Deposit, Eth1Data } from "../types";
 
+/**
+ * The BeaconChain service deals with processing incoming blocks, advancing a state transition, and applying the fork choice rule to update the chain head
+ */
 export class BeaconChain extends EventEmitter {
   public chain: string;
   private db;

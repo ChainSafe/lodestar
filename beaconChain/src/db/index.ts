@@ -4,6 +4,10 @@ import {
   BeaconState,
 } from "../types";
 
+/**
+ * The DB service manages the data layer of the beacon chain
+ * The exposed methods do not refer to the underlying data engine, but instead expose relevent beacon chain objects
+ */
 export class DB extends EventEmitter {
   public constructor(opts) {
     super();

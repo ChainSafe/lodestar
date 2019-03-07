@@ -1,5 +1,8 @@
 import {EventEmitter} from "events";
 
+/**
+ * The Eth1Notifier service watches the Eth1.0 chain for relevant events
+ */
 export class Eth1Notifier extends EventEmitter {
   public depositContractAddress: string;
 
