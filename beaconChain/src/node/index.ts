@@ -1,11 +1,12 @@
 import BN from "bn.js";
 import deepmerge from "deepmerge";
 
-import {DB} from "../db";
-import {P2PNetwork} from "../p2p";
-import {Eth1Notifier} from "../eth1";
 import {BeaconChain} from "../chain";
+import {DB} from "../db";
+import {Eth1Notifier} from "../eth1";
+import {P2PNetwork} from "../p2p";
 import {BeaconRPC} from "../rpc";
+import {Sync} from "../sync";
 
 import defaultConf from "./defaults";
 
@@ -20,6 +21,7 @@ interface BeaconNodeCtx {
   eth1: object;
   network: object;
   rpc: object;
+  sync: object;
 }
 
 class BeaconNode {
@@ -29,6 +31,7 @@ class BeaconNode {
   public network: Service;
   public chain: Service;
   public rpc: Service;
+  public sync: Service;
 
   public constructor(opts: BeaconNodeCtx) {
     this.conf = deepmerge(defaultConf, opts);
@@ -37,6 +40,7 @@ class BeaconNode {
     this.db = new DB(this.conf.db);
     this.network = new P2PNetwork(this.conf.network);
     this.eth1 = new Eth1Notifier(this.conf.eth1);
+    this.sync = new Sync(this.conf.sync);
     this.chain = new BeaconChain(this.conf.chain);
     this.rpc = new BeaconRPC(this.conf.rpc);
   }
@@ -45,6 +49,7 @@ class BeaconNode {
     await this.db.start();
     await this.network.start();
     await this.eth1.start();
+    await this.sync.start();
     await this.chain.start();
     await this.rpc.start();
   }
@@ -52,6 +57,7 @@ class BeaconNode {
   public async stop() {
     await this.rpc.start();
     await this.chain.stop();
+    await this.sync.start();
     await this.eth1.stop();
     await this.network.stop();
     await this.db.stop();
