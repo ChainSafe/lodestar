@@ -38,6 +38,8 @@ describe("serialize", () => {
     {value: 2**32-1, type: "uint32", expected: "ffffffff"},
     {value: 2**32, type: "uint64", expected: "0000000001000000"},
     {value: 2**52-1, type: "uint64", expected: "ffffffffffff0f00"},
+    {value: 2**32, type: "number64", expected: "0000000001000000"},
+    {value: 2**52-1, type: "number64", expected: "ffffffffffff0f00"},
     {value: new BN("01", 16), type: "uint64", expected: "0100000000000000"},
     {value: new BN("1000000000000000", 16), type: "uint64", expected: "0000000000000010"},
     {value: new BN("ffffffffffffffff", 16), type: "uint64", expected: "ffffffffffffffff"},

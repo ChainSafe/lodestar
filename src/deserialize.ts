@@ -16,6 +16,7 @@ import { BYTES_PER_LENGTH_PREFIX } from "./constants";
 import {
   bytesPattern,
   digitsPattern,
+  numberPattern,
   uintPattern,
 } from "./util/types";
 
@@ -95,9 +96,10 @@ export function _deserialize(data: Buffer, type: SerializableType, start: number
       return _deserializeByteArray(data, start);
     }
     if (type.match(uintPattern)) {
+      const useNumber = Array.isArray(type.match(numberPattern));
       const bits = parseInt(type.match(digitsPattern) as unknown as string);
       assert([8, 16, 32, 64, 128, 256].find((b) => b === bits), `Invalid uint type: ${type}`);
-      return _deserializeUint(data, bits / 8, false, start);
+      return _deserializeUint(data, bits / 8, useNumber, start);
     }
   } else if (Array.isArray(type)) {
     assert(type.length <= 2, `Invalid array type: ${type}`);

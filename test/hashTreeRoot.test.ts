@@ -38,6 +38,8 @@ describe("hashTreeRoot", () => {
     {value: 2**32-1, type: "uint32", expected: ""},
     {value: 2**32, type: "uint64", expected: ""},
     {value: 2**52-1, type: "uint64", expected: ""},
+    {value: 2**32, type: "number64", expected: hashTreeRoot(2**32, "uint64").toString('hex')},
+    {value: 2**52-1, type: "number64", expected: hashTreeRoot(2**52-1, "uint64").toString('hex')},
     {value: new BN("01", 16), type: "uint64", expected: ""},
     {value: new BN("1000000000000000", 16), type: "uint64", expected: ""},
     {value: new BN("ffffffffffffffff", 16), type: "uint64", expected: ""},
