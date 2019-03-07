@@ -76,7 +76,7 @@ jobs:
 
       - run:
           name: Check API
-          command: npm run build-docs && ./test-diff.sh
+          command: npm run build-lib && npm run build-docs && ./test-diff.sh
 workflows:
   version: 2
   lint_and_test:

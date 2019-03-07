@@ -4,14 +4,14 @@
   "description": "Simple Serialize",
   "main": "lib/index.js",
   "scripts": {
-    "build": "npm run build-lib && npm run build-web && npm run build-docs",
+    "build-all": "npm run build-lib && npm run build-web && npm run build-docs",
     "build-docs": "documentation build lib/ -f md > docs/API.md",
-    "build-lib": "babel src -x .ts -d lib",
-    "build-web": "webpack --mode production --entry ./lib/web.js --output ./dist/ssz.min.js",
+    "build-lib": "rm -rf lib && babel src -x .ts -d lib",
+    "build-web": "rm -rf dist && webpack --mode production --entry ./lib/web.js --output ./dist/ssz.min.js",
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts src/ test/",
     "pretest": "npm run check-types",
-    "test": "nyc -r lcov -e .ts mocha -r ./.babel-register test/**/*.test.ts && nyc report"
+    "test": "nyc -r lcov -e .ts mocha -r ./.babel-register \"test/**/*.test.ts\" && nyc report"
   },
   "author": "ChainSafe",
   "license": "MIT",
