@@ -40,8 +40,13 @@ class BeaconNode {
     this.db = new DB(this.conf.db);
     this.network = new P2PNetwork(this.conf.network);
     this.eth1 = new Eth1Notifier(this.conf.eth1);
-    this.sync = new Sync(this.conf.sync);
-    this.chain = new BeaconChain(this.conf.chain);
+    this.sync = new Sync(this.conf.sync, {
+      network: this.network,
+    });
+    this.chain = new BeaconChain(this.conf.chain, {
+      db: this.db,
+      eth1: this.eth1,
+    });
     this.rpc = new BeaconRPC(this.conf.rpc);
   }
 
