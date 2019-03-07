@@ -7,7 +7,10 @@ import {
 
 import { hashTreeRoot } from "./hashTreeRoot";
 
-import { copyType } from "./util/types";
+import {
+  copyType,
+  isObjectType,
+} from "./util/types";
 
 /**
  * Merkleize an SSZ object w/o its last field
@@ -18,8 +21,7 @@ import { copyType } from "./util/types";
  * @returns {Buffer}
  */
 export function signedRoot(value: SerializableObject, type: ObjectType): Buffer {
-  assert.strictEqual(type, Object(type));
-  assert(Array.isArray(type.fields));
+  assert(isObjectType(type));
   const truncatedType = copyType(type) as ObjectType;
   truncatedType.fields.pop();
   return hashTreeRoot(value, type);

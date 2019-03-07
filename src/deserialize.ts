@@ -16,6 +16,8 @@ import { BYTES_PER_LENGTH_PREFIX } from "./constants";
 import {
   bytesPattern,
   digitsPattern,
+  isArrayType,
+  isObjectType,
   numberPattern,
   uintPattern,
 } from "./util/types";
@@ -101,12 +103,10 @@ export function _deserialize(data: Buffer, type: SerializableType, start: number
       assert([8, 16, 32, 64, 128, 256].find((b) => b === bits), `Invalid uint type: ${type}`);
       return _deserializeUint(data, bits / 8, useNumber, start);
     }
-  } else if (Array.isArray(type)) {
-    assert(type.length <= 2, `Invalid array type: ${type}`);
-    return _deserializeArray(data, type, start);
-  } else if (type === Object(type)) {
-    assert(Array.isArray(type.fields), `Invalid object type: ${type}`);
-    return _deserializeObject(data, type, start);
+  } else if (isArrayType(type)) {
+    return _deserializeArray(data, type as ArrayType, start);
+  } else if (isObjectType(type)) {
+    return _deserializeObject(data, type as ObjectType, start);
   }
   throw new Error(`Invalid type: ${type}`);
 }

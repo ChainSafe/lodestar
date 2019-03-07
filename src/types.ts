@@ -1,5 +1,7 @@
 import BN from "bn.js";
 
+// Serializable values
+
 export type Uint = number | BN;
 export type Bool = boolean;
 export type ByteArray = Buffer | Uint8Array;
@@ -15,6 +17,8 @@ export interface DeserializedValue {
   offset: number;
   value: SerializableValue;
 }
+
+// Serializable types
 
 export type PrimitiveType = string;
 export interface ListType extends Array<SerializableType> {

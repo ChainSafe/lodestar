@@ -1,7 +1,9 @@
 import assert from "assert";
 
 import {
+  ArrayType,
   ByteArray,
+  ObjectType,
   SerializableArray,
   SerializableList,
   SerializableObject,
@@ -14,6 +16,8 @@ import { BYTES_PER_LENGTH_PREFIX } from "./constants";
 import {
   bytesPattern,
   digitsPattern,
+  isArrayType,
+  isObjectType,
   uintPattern,
 } from "./util/types";
 
@@ -42,9 +46,9 @@ export function size(value: SerializableValue, type: SerializableType): number {
       assert([8, 16, 32, 64, 128, 256].find((b) => b === bits), `Invalid uint type: ${type}`);
       return bits / 8;
     }
-  } else if (Array.isArray(type)) {
+  } else if (isArrayType(type)) {
+    type = type as ArrayType;
     assert((value as SerializableArray).length !== undefined, `Invalid array value: ${value}`);
-    assert(type.length <= 2, `Invalid array type: ${type}`);
     const elementType = type[0];
     if (elementType === "byte") {
       return _sizeByteArray(value as ByteArray, type, parseInt(type[1] as string));
@@ -52,9 +56,9 @@ export function size(value: SerializableValue, type: SerializableType): number {
     return (value as SerializableList)
       .map((v) => size(v, elementType))
       .reduce((a, b) => a + b) + BYTES_PER_LENGTH_PREFIX;
-  } else if (type === Object(type)) {
+  } else if (isObjectType(type)) {
+    type = type as ObjectType;
     assert(value === Object(value), `Invalid object value: ${value}`);
-    assert(Array.isArray(type.fields), `Invalid object type: ${type}`);
     return type.fields
       .map(([fieldName, fieldType]) => size((value as SerializableObject)[fieldName], fieldType))
       .reduce((a, b) => a + b) + BYTES_PER_LENGTH_PREFIX;

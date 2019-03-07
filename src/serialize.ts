@@ -20,6 +20,8 @@ import { size } from "./size";
 import {
   bytesPattern,
   digitsPattern,
+  isArrayType,
+  isObjectType,
   uintPattern,
 } from "./util/types";
 
@@ -96,10 +98,10 @@ export function _serialize(value: SerializableValue, type: SerializableType, out
       const byteLength = parseInt(type.match(digitsPattern) as unknown as string) / 8;
       return _serializeUint(value as Uint, byteLength, output, start);
     }
-  } else if (Array.isArray(type)) {
-    return _serializeArray(value as SerializableArray, type, output, start);
-  } else if (type === Object(type)) {
-    return _serializeObject(value as SerializableObject, type, output, start);
+  } else if (isArrayType(type)) {
+    return _serializeArray(value as SerializableArray, type as ArrayType, output, start);
+  } else if (isObjectType(type)) {
+    return _serializeObject(value as SerializableObject, type as ObjectType, output, start);
   }
   throw new Error(`Invalid type: ${type}`);
 }

@@ -1,6 +1,7 @@
 import assert from "assert";
 
 import {
+  ArrayType,
   ByteArray,
   ObjectType,
   SerializableArray,
@@ -18,6 +19,8 @@ import {
 
 import {
   bytesPattern,
+  isArrayType,
+  isObjectType,
   uintPattern,
 } from "./util/types";
 
@@ -44,9 +47,9 @@ export function hashTreeRoot(value: SerializableValue, type: SerializableType): 
     if (type.match(uintPattern)) {
       return merkleize(pack([value], type));
     }
-  } else if (Array.isArray(type)) {
+  } else if (isArrayType(type)) {
+    type = type as ArrayType;
     assert((value as SerializableArray).length !== undefined, `Invalid array value: ${value}`);
-    assert(type.length <= 2, `Invalid array type: ${type}`);
     const elementType = type[0];
     if (elementType === "byte") {
       if (type.length === 1) {
@@ -70,8 +73,9 @@ export function hashTreeRoot(value: SerializableValue, type: SerializableType): 
         return merkleize(value.map((v) => hashTreeRoot(v, elementType)));
       }
     }
-  } else if (typeof type === "object") {
-    return merkleize((type as ObjectType).fields
+  } else if (isObjectType(type)) {
+    type = type as ObjectType;
+    return merkleize(type.fields
       .map(([fieldName, fieldType]) => hashTreeRoot((value as SerializableObject)[fieldName], fieldType)));
   }
   throw new Error(`Invalid type: ${type}`);
