@@ -1,11 +1,11 @@
 import {
   BeaconState,
   bytes32,
-} from "../types";
+} from "../../types";
 
 import {
   LATEST_BLOCK_ROOTS_LENGTH,
-} from "../constants";
+} from "../../constants";
 
 import {
   merkleRoot,

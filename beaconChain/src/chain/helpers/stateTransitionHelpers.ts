@@ -18,7 +18,7 @@ import {
   SHARD_COUNT,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
-} from "../constants";
+} from "../../constants";
 
 import {
   AttestationData,
@@ -40,13 +40,13 @@ import {
   Validator,
   ValidatorIndex,
   BLSPubkey,
-} from "../types";
+} from "../../types";
 
 import {
   blsAggregatePubkeys,
   blsVerifyMultiple,
   blsVerify,
-} from "../stubs/bls";
+} from "../../stubs/bls";
 
 
 // This function was copied from ssz-js

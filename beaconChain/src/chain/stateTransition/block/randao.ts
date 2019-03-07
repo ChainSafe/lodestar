@@ -4,12 +4,12 @@ import xor from "buffer-xor";
 import {
   BeaconBlock,
   BeaconState,
-} from "../../types";
+} from "../../../types";
 
 import {
   Domain,
   LATEST_RANDAO_MIXES_LENGTH,
-} from "../../constants";
+} from "../../../constants";
 
 import {
   getBeaconProposerIndex,
@@ -20,7 +20,7 @@ import {
   intToBytes,
 } from "../../helpers/stateTransitionHelpers";
 
-import {blsVerify} from "../../stubs/bls";
+import {blsVerify} from "../../../stubs/bls";
 
 export default function processRandao(state: BeaconState, block: BeaconBlock): void {
   const currentEpoch = getCurrentEpoch(state);

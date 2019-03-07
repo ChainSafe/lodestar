@@ -6,12 +6,12 @@ import {
   BeaconBlock,
   BeaconState,
   DepositData,
-} from "../../types";
+} from "../../../types";
 
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
   MAX_DEPOSITS,
-} from "../../constants";
+} from "../../../constants";
 
 import {
   hash,

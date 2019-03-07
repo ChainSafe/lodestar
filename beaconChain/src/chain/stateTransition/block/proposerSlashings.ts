@@ -6,12 +6,12 @@ import {
   BeaconBlock,
   BeaconState,
   Validator,
-} from "../../types";
+} from "../../../types";
 
 import {
   Domain,
   MAX_PROPOSER_SLASHINGS,
-} from "../../constants";
+} from "../../../constants";
 
 import {
   getCurrentEpoch,
@@ -23,7 +23,7 @@ import {
   slashValidator,
 } from "../../helpers/validatorStatus";
 
-import {blsVerify} from "../../stubs/bls";
+import {blsVerify} from "../../../stubs/bls";
 
 export default function processProposerSlashings(state: BeaconState, block: BeaconBlock): void {
   assert(block.body.proposerSlashings.length <= MAX_PROPOSER_SLASHINGS);

@@ -6,13 +6,13 @@ import {
   BeaconBlock,
   BeaconState,
   VoluntaryExit,
-} from "../../types";
+} from "../../../types";
 
 import {
   Domain,
   EMPTY_SIGNATURE,
   MAX_VOLUNTARY_EXITS,
-} from "../../constants";
+} from "../../../constants";
 
 import {
   getCurrentEpoch,
@@ -24,7 +24,7 @@ import {
   initiateValidatorExit,
 } from "../../helpers/validatorStatus";
 
-import { blsVerify } from "../../stubs/bls";
+import { blsVerify } from "../../../stubs/bls";
 
 export default function processVoluntaryExits(state: BeaconState, block: BeaconBlock): void {
   const currentEpoch = getCurrentEpoch(state);

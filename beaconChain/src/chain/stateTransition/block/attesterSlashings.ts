@@ -6,11 +6,11 @@ import {
   AttestationData,
   BeaconBlock,
   BeaconState,
-} from "../../types";
+} from "../../../types";
 
 import {
   MAX_ATTESTER_SLASHINGS,
-} from "../../constants";
+} from "../../../constants";
 
 import {
   getCurrentEpoch,

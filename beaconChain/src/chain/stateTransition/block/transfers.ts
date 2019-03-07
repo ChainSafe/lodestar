@@ -6,7 +6,7 @@ import {
   BeaconBlock,
   BeaconState,
   Transfer,
-} from "../../types";
+} from "../../../types";
 
 import {
   BLS_WITHDRAWAL_PREFIX_BYTE,
@@ -14,7 +14,7 @@ import {
   EMPTY_SIGNATURE,
   MAX_TRANSFERS,
   MIN_DEPOSIT_AMOUNT,
-} from "../../constants";
+} from "../../../constants";
 
 import {
   getBeaconProposerIndex,
@@ -24,7 +24,7 @@ import {
   slotToEpoch,
 } from "../../helpers/stateTransitionHelpers";
 
-import { blsVerify } from "../../stubs/bls";
+import { blsVerify } from "../../../stubs/bls";
 
 export default function processTransfers(state: BeaconState, block: BeaconBlock): void {
   // Note: Transfers are a temporary functionality for phases 0 and 1, to be removed in phase 2.

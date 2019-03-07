@@ -8,7 +8,7 @@ import {
   BeaconState,
   Crosslink,
   PendingAttestation,
-} from "../../types";
+} from "../../../types";
 
 import {
   Domain,
@@ -16,7 +16,7 @@ import {
   MIN_ATTESTATION_INCLUSION_DELAY,
   SLOTS_PER_EPOCH,
   ZERO_HASH,
-} from "../../constants";
+} from "../../../constants";
 
 import {
   getAttestationParticipants,
@@ -29,7 +29,7 @@ import {
   slotToEpoch,
 } from "../../helpers/stateTransitionHelpers";
 
-import {blsAggregatePubkeys, blsVerifyMultiple} from "../../stubs/bls";
+import {blsAggregatePubkeys, blsVerifyMultiple} from "../../../stubs/bls";
 
 export default function processAttestations(state: BeaconState, block: BeaconBlock): void {
   assert(block.body.attestations.length <= MAX_ATTESTATIONS);

@@ -1,20 +1,28 @@
 import BN from "bn.js";
-import {hashTreeRoot} from "@chainsafesystems/ssz";
+import { hashTreeRoot } from "@chainsafesystems/ssz";
 
 import {
   BeaconState,
   Crosslink,
   Deposit,
   Eth1Data,
-  uint64,
+  int,
   ValidatorIndex,
-} from "../types";
+} from "../../types";
 
 import {
-  GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD,
-  LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH,
-  LATEST_SLASHED_EXIT_LENGTH, MAX_DEPOSIT_AMOUNT, SHARD_COUNT, ZERO_HASH,
-} from "../constants";
+  GENESIS_EPOCH,
+  GENESIS_FORK_VERSION,
+  GENESIS_SLOT,
+  GENESIS_START_SHARD,
+  LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
+  LATEST_BLOCK_ROOTS_LENGTH,
+  LATEST_RANDAO_MIXES_LENGTH,
+  LATEST_SLASHED_EXIT_LENGTH,
+  MAX_DEPOSIT_AMOUNT,
+  SHARD_COUNT,
+  ZERO_HASH,
+} from "../../constants";
 
 import {
   generateSeed,
@@ -27,7 +35,6 @@ import {
   activateValidator,
 } from "../helpers/validatorStatus";
 
-
 /**
  * Generate the initial beacon chain state.
  * @param {Deposit[]} initialValidatorDeposits
@@ -36,8 +43,8 @@ import {
  * @returns {BeaconState}
  */
 export function getInitialBeaconState(
-  initialValidatorDeposits: Deposit[],
-  genesisTime: uint64,
+  genesisValidatorDeposits: Deposit[],
+  genesisTime: int,
   latestEth1Data: Eth1Data): BeaconState {
 
   const initialCrosslinkRecord: Crosslink = {
@@ -48,7 +55,7 @@ export function getInitialBeaconState(
   const state: BeaconState = {
     // MISC
     slot: GENESIS_SLOT,
-    genesisTime,
+    genesisTime: new BN(genesisTime),
     fork: {
       previousVersion: GENESIS_FORK_VERSION,
       currentVersion: GENESIS_FORK_VERSION,
@@ -85,11 +92,11 @@ export function getInitialBeaconState(
     // PoW receipt root
     latestEth1Data,
     eth1DataVotes: [],
-    depositIndex: new BN(0),
+    depositIndex: new BN(genesisValidatorDeposits.length),
   };
 
   // Process initial deposists
-  initialValidatorDeposits.forEach((deposit) => {
+  genesisValidatorDeposits.forEach((deposit) => {
     processDeposit(
       state,
       deposit.depositData.depositInput.pubkey,
@@ -99,16 +106,16 @@ export function getInitialBeaconState(
     );
   });
 
-  // Process initial activations
-  for (let i: ValidatorIndex = new BN(0); i.ltn(state.validatorRegistry.length); i = i.add(new BN(1))) {
-    // TODO: Unsafe usage of toNumber on i
-    if (getEffectiveBalance(state, i) >= MAX_DEPOSIT_AMOUNT) {
-      activateValidator(state, i, true);
+  // Process genesis activations
+  // TODO For loop is stubbed, should not cast new BN(i)
+  for (let i = 0; i < state.validatorRegistry.length; i ++) {
+    if (getEffectiveBalance(state, new BN(i)) >= MAX_DEPOSIT_AMOUNT) {
+      activateValidator(state, new BN(i), true);
     }
   }
 
   const genesisActiveIndexRoot = hashTreeRoot(getActiveValidatorIndices(state.validatorRegistry, GENESIS_EPOCH), [ValidatorIndex]);
-  for (let index: number; index < LATEST_ACTIVE_INDEX_ROOTS_LENGTH; index++) {
+  for (let index = 0; index < LATEST_ACTIVE_INDEX_ROOTS_LENGTH; index++) {
     state.latestActiveIndexRoots[index] = genesisActiveIndexRoot;
   }
   state.currentShufflingSeed = generateSeed(state, GENESIS_EPOCH);

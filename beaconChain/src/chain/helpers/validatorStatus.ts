@@ -3,7 +3,7 @@ import assert from "assert";
 import {
   BeaconState,
   ValidatorIndex,
-} from "../types";
+} from "../../types";
 
 import {
   GENESIS_EPOCH,
@@ -11,7 +11,7 @@ import {
   LATEST_SLASHED_EXIT_LENGTH,
   MIN_VALIDATOR_WITHDRAWAL_DELAY,
   WHISTLEBLOWER_REWARD_QUOTIENT,
-} from "../constants";
+} from "../../constants";
 
 import {
   getBeaconProposerIndex,

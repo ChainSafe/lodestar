@@ -7,11 +7,11 @@ import {
   Slot,
   Validator,
   ValidatorIndex,
-} from "../types";
+} from "../../types";
 
 import {
   FORK_CHOICE_BALANCE_INCREMENT,
-} from "../constants";
+} from "../../constants";
 
 import {
   getActiveValidatorIndices,
