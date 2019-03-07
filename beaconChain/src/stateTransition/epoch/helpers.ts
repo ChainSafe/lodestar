@@ -127,7 +127,7 @@ export function inclusionSlot(state: BeaconState, previousEpochAttestations: Pen
     getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield)
       .forEach((index: ValidatorIndex) => {
         if (index.eq(validatorIndex)) {
-            if (!lowestInclusionSlot) {
+          if (!lowestInclusionSlot) {
             lowestInclusionSlot = attestation.inclusionSlot;
           } else if (attestation.inclusionSlot.lt(lowestInclusionSlot)) {
             lowestInclusionSlot = attestation.inclusionSlot;
