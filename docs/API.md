@@ -8,7 +8,7 @@
     -   [Parameters][4]
 -   [serialize][5]
     -   [Parameters][6]
--   [treeHash][7]
+-   [signedRoot][7]
     -   [Parameters][8]
 
 ## deserialize
@@ -44,14 +44,15 @@ Serialize, according to the SSZ spec
 
 Returns **[Buffer][9]** 
 
-## treeHash
+## signedRoot
 
-Merkleize an SSZ value
+Merkleize an SSZ object w/o its last field
+Used for signing/verifying signed data
 
 ### Parameters
 
--   `value` **SerializableValue** 
--   `type` **SerializableType** 
+-   `value` **SerializableObject** 
+-   `type` **ObjectType** 
 
 Returns **[Buffer][9]** 
 
@@ -67,7 +68,7 @@ Returns **[Buffer][9]**
 
 [6]: #parameters-2
 
-[7]: #treehash
+[7]: #signedroot
 
 [8]: #parameters-3
 
