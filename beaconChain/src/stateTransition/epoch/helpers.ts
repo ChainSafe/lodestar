@@ -5,7 +5,7 @@ import {
   getEffectiveBalance, getEntryExitEffectEpoch, getTotalBalance
 } from "../../helpers/stateTransitionHelpers";
 import {
-  Attestation, BeaconState, bytes32, CrosslinkCommittee, PendingAttestation, Shard, uint64, Validator,
+  Attestation, BeaconState, bytes32, CrosslinkCommittee, PendingAttestation, Shard, Slot, uint64, Validator,
   ValidatorIndex
 } from "../../types";
 import {
@@ -43,8 +43,6 @@ export function processSlashings(state: BeaconState): void {
       const totalAtStart = state.latestSlashedBalances[(epochIndex + 1) % LATEST_SLASHED_EXIT_LENGTH];
       const totalAtEnd = state.latestSlashedBalances[epochIndex];
       const totalPenalties = totalAtEnd.sub(totalAtStart);
-      // const penalty1 = getEffectiveBalance(state, new BN(index)).mul()
-      // const penalty = getEffectiveBalance(state, new BN(index))
       const penalty = bnMax(
         getEffectiveBalance(state, new BN(index)).mul(bnMin(totalPenalties.muln(3), totalBalance)).div(totalBalance),
         getEffectiveBalance(state, new BN(index)).divn(MIN_PENALTY_QUOTIENT)
@@ -68,12 +66,12 @@ export function updateValidatorRegistry(state: BeaconState): void {
   // The maximum balance chrun in Gwei (for deposits and exists separately)
   const a = new BN(MAX_DEPOSIT_AMOUNT);
   const b = totalBalance.divn(2 * MAX_BALANCE_CHURN_QUOTIENT);
-  const maxBalanceChurn = a.gt(b) ? a : b;
+  const maxBalanceChurn = bnMax(a,b);
 
   // Activate validators within the allowable balance churn
   let balanceChurn = new BN(0);
   state.validatorRegistry.forEach((validator, index) => {
-    if (validator.activationEpoch.gt(getEntryExitEffectEpoch(currentEpoch)) && state.validatorBalances[index].lten(MAX_DEPOSIT_AMOUNT)) {
+    if (validator.activationEpoch.gt(getEntryExitEffectEpoch(currentEpoch)) && state.validatorBalances[index].gten(MAX_DEPOSIT_AMOUNT)) {
       // Check the balance churn would be within the allowance
       balanceChurn = balanceChurn.add(getEffectiveBalance(state, new BN(index)));
       if (balanceChurn.gt(maxBalanceChurn)) {
@@ -114,20 +112,22 @@ export function processEjections(state: BeaconState): void {
   }
 }
 
+function inclusionAttestation(state: BeaconState, ) {}
+
 /**
  * Returns the attestation with the lowest inclusion slot for a specified validatorIndex.
  * @param {BeaconState} state
  * @param {PendingAttestation[]} previousEpochAttestations
  * @param {ValidatorIndex} validatorIndex
- * @returns {uint64}
+ * @returns {Slot}
  */
-export function inclusionSlot(state: BeaconState, previousEpochAttestations: PendingAttestation[], validatorIndex: ValidatorIndex): uint64 {
-  let lowestInclusionSlot: uint64;
+export function inclusionSlot(state: BeaconState, previousEpochAttestations: PendingAttestation[], validatorIndex: ValidatorIndex): Slot {
+  let lowestInclusionSlot: Slot;
   previousEpochAttestations.forEach((attestation: PendingAttestation) => {
     getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield)
       .forEach((index: ValidatorIndex) => {
         if (index.eq(validatorIndex)) {
-          if (!lowestInclusionSlot) {
+            if (!lowestInclusionSlot) {
             lowestInclusionSlot = attestation.inclusionSlot;
           } else if (attestation.inclusionSlot.lt(lowestInclusionSlot)) {
             lowestInclusionSlot = attestation.inclusionSlot;
@@ -162,8 +162,7 @@ export function inclusionDistance(state: BeaconState, validatorIndex: ValidatorI
  * @param {BeaconState} state
  */
 export function processExitQueue(state: BeaconState): void {
-  const eligibleIndices: number[] = Array.from({length: state.validatorRegistry.length})
-    .map(Number.call, Number)
+  const eligibleIndices: number[] = Array.from({length: state.validatorRegistry.length}, (_, i) => i)
     .filter((index: number) => {
       const validator = state.validatorRegistry[index];
 
@@ -178,7 +177,7 @@ export function processExitQueue(state: BeaconState): void {
   const sortedIndices: number[] = eligibleIndices.sort((a: number, b: number) => {
     return state.validatorRegistry[a].exitEpoch.sub(state.validatorRegistry[b].exitEpoch).toNumber();
   });
-  sortedIndices.map((dequeues: number, index: number) => {
+  sortedIndices.forEach((dequeues: number, index: number) => {
     if (dequeues < MAX_EXIT_DEQUEUES_PER_EPOCH) {
       prepareValidatorForWithdrawal(state, new BN(index));
     }
@@ -200,17 +199,17 @@ export function attestingValidatorIndices(
   shard: Shard,
   crosslinkCommittee: CrosslinkCommittee,
   shardBlockRoot: bytes32,
-  currentEpochAttestations: PendingAttestation[],
-  previousEpochAttestations: PendingAttestation[]): ValidatorIndex[] {
+  attestations: PendingAttestation[]): ValidatorIndex[] {
 
-  const attestations: PendingAttestation[] = currentEpochAttestations.concat(previousEpochAttestations);
-  return attestations
-    .map((attestation: PendingAttestation) => {
-      if (attestation.data.shard === shard) {
-        return getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield);
-      }
-    })
-    .reduce((a: ValidatorIndex[], b: ValidatorIndex[]) => a.concat(...b));
+  return [
+    ...new Set(
+      attestations.flatMap((a: PendingAttestation) => {
+        if (a.data.shard === shard) {
+          return getAttestationParticipants(state,a.data, a.aggregationBitfield);
+        }
+      })
+    )
+  ]
 }
 
 /**
@@ -240,16 +239,16 @@ export function winningRoot(
             shard,
             crosslinkCommittee,
             shardBlockRoot,
-            currentEpochAttestations,
-            previousEpochAttestations
-          ))
+            currentEpochAttestations.concat(previousEpochAttestations)
+          )
+        )
       })
     })
     .reduce((a, b) => {
       if (b.balance.gt(a.balance)) {
         return b;
       } else if (b.balance.eq(a.balance)) {
-        if (deserialize(b.shardBlockRoot, "uint32").deserializedData.lt(deserialize(a.shardBlockRoot, "uint32").deserializedData)) {
+        if (deserialize(b.shardBlockRoot, "uint32").deserializedData < deserialize(a.shardBlockRoot, "uint32").deserializedData) {
           return b;
         }
       }
