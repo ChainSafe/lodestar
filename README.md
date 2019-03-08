@@ -49,12 +49,6 @@ The container serialization type must be an `Object`, with a `fields` value of `
 
 ### Serialize:
 
-#### Array
-```typescript
-let array = [1, 2, 3]
-let serialized = ssz.serialize(array, ['uint16'])
-```
-
 #### Boolean
 ```typescript
 let bool = true
@@ -76,7 +70,7 @@ let searialized = ssc.serialize(num, 'uint64')
 
 Note: Any value greater than `2^53 - 1` should be stored in a [BN](https://github.com/indutny/bn.js)
 
-#### Bytes
+#### Buffer
 ```typescript
 let bytes = Buffer.from([1,2,3])
 let serialized = ssz.serialize(bytes, 'bytes')
@@ -87,6 +81,12 @@ With `bytesN`:
 // Note: N === bytes.length
 let bytes = Buffer.from([1, 2, 3, 4])
 let serialized = ssz.serialize(bytes, 'bytes4')
+```
+
+#### Array
+```typescript
+let array = [1, 2, 3]
+let serialized = ssz.serialize(array, ['uint16'])
 ```
 
 #### Object
@@ -111,22 +111,93 @@ let serialized = ssz.serialize(obj, types)
 ### Deserialize
 
 For deserialization we need to specify:
-- data {buffer} - encoded data
-- type {string | object | array} - type of data we want to decode, same as encoding types
-- start {number} - optional, default: 0, start location in the data buffer from where we wish to read
+- data {Buffer} - encoded data
+- type {SerializableType} - type of data we want to decode, same as encoding types
+
+#### Boolean
 ```typescript
-// eg. deserialize a boolean at position 0
 ssz.deserialize(buf, 'bool')
 ```
+
+#### Number/BN
 ```typescript
-// eg. deserialize an object at position 32
-let types = {
-    'fields' : [
-        ['a', 'bool'],
-        ['b', 'uint8']
-    ]
+// Deserialize to a BN
+ssz.deserialize(buf, 'uint64')
+
+// Deserialize to a js number
+// WARNING: this will cause issues if you try to deserialize to a value greater than 2^53-1
+ssz.deserialize(buf, 'number64')
+```
+
+#### Buffer
+```typescript
+ssz.deserialize(buf1, 'bytes')
+```
+
+#### Array
+```typescript
+ssz.deserialize(buf1, ['uint32'])
+```
+
+#### Object
+```typescript
+let myType = {
+  fields: [
+    ['a', 'bool'],
+    ['b', 'uint8'],
+  ],
 }
-ssz.deserialize(buf, types, 32)
+ssz.deserialize(buf, myType)
+```
+
+### Hash Tree Root
+
+To hash an SSZ-serializable function, we need pass in the value and the type, like with `serialize`:
+
+```typescript
+ssz.hashTreeRoot(true, 'bool')
+
+ssz.hashTreeRoot(5, 'uint16')
+
+ssz.hashTreeRoot(Buffer.from([1, 2, 3, 4]), 'bytes')
+
+ssz.hashTreeRoot([true, true], ['bool'])
+
+let myType = {
+  fields: [
+    ['a', 'bool'],
+    ['b', 'uint8'],
+  ],
+}
+ssz.hashTreeRoot({a: true, b: 5}, myType)
+```
+
+### Signed Root
+
+An object type can be hashed without its final field using `signedRoot`. This is useful if we assume the final field is a signature.
+
+```typescript
+let myType = {
+  fields: [
+    ['a', 'bool'],
+    ['b', 'bool'],
+    ['c', 'bytes48'],
+  ],
+}
+
+let data = {
+  a: true,
+  b: true,
+  c: null,
+}
+
+let signedRoot = ssz.signedRoot(data, myType)
+
+data.c = privateKey.sign(signedRoot)
+
+// Others can verify by:
+
+publicKey.verify(signedRoot(data, myType))
 ```
 
 ### License
