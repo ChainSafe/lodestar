@@ -15,7 +15,7 @@ import {
   SHARD_COUNT
 } from "../../constants";
 import {activateValidator, exitValidator, prepareValidatorForWithdrawal} from "../../helpers/validatorStatus";
-import {bnMax, bnMin} from "../../../helpers/math";
+import {bnMax, bnMin} from "../../helpers/math";
 
 /**
  * Check if the latest crosslink epochs are valid for all shards.
