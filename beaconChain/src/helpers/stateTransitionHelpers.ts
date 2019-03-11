@@ -293,7 +293,7 @@ export function getNextEpochCommitteeCount(state: BeaconState): int {
  * @returns {bytes32}
  */
 export function getRandaoMix(state: BeaconState, epoch: Epoch): bytes32 {
-  if (!(getCurrentEpoch(state).subn(LATEST_RANDAO_MIXES_LENGTH).lt(epoch) && epoch.lt(getCurrentEpoch(state)))) { throw new Error(""); }
+  assert(getCurrentEpoch(state).subn(LATEST_RANDAO_MIXES_LENGTH).lt(epoch) && epoch.lt(getCurrentEpoch(state)))
   return state.latestRandaoMixes[epoch.umod(new BN(LATEST_RANDAO_MIXES_LENGTH)).toNumber()];
 }
 
@@ -417,8 +417,8 @@ export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, reg
  */
 export function getBlockRoot(state: BeaconState, slot: Slot): bytes32 {
   // Returns the block root at a recent ``slot``.
-  if (!state.slot.lte(slot.addn(LATEST_BLOCK_ROOTS_LENGTH))) { throw new Error(); }
-  if (!slot.lt(state.slot)) { throw new Error(); }
+  assert(state.slot.lte(slot.addn(LATEST_BLOCK_ROOTS_LENGTH)));
+  assert(slot.lt(state.slot));
   return state.latestBlockRoots[slot.umod(new BN(LATEST_BLOCK_ROOTS_LENGTH)).toNumber()];
 }
 
