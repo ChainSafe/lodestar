@@ -198,22 +198,6 @@ export function split<T>(values: T[], splitCount: int): T[][] {
   return array;
 }
 
-// TODO: Remove; no longer in spec
-// /**
-//  * Helper function for readability.
-//  * @param {int} minval
-//  * @param {int} maxval
-//  * @param {int} x
-//  * @returns {int}
-//  */
-// export function clamp(minval: int, maxval: int, x: int): int {
-//   if (x <= minval) {
-//     return minval;
-//   } else if (x >= maxval) {
-//     return maxval;
-//   }
-//   return x;
-// }
 
 /**
  * Return the number of committees in one epoch.

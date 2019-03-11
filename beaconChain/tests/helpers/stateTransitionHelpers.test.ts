@@ -127,34 +127,6 @@ describe("Split", () => {
   });
 });
 
-// TODO: Remove; No longer in spec
-// describe("Clamp", () => {
-//   it("should return upper bound", () => {
-//     const result = clamp(2, 4, 5);
-//     assert.equal(result, 4, "Should have returned 4!");
-//   });
-//
-//   it("should return upper bound", () => {
-//     const result = clamp(2, 4, 4);
-//     assert.equal(result, 4, "Should have returned 4!");
-//   });
-//
-//   it("should return the lower bound", () => {
-//     const result = clamp(2, 4, 1);
-//     assert.equal(result, 2, "Should have returned 2!");
-//   });
-//
-//   it("should return the lower bound", () => {
-//     const result = clamp(2, 4, 2);
-//     assert.equal(result, 2, "Should have returned 2!");
-//   });
-//
-//   it("should return the inbetween value", () => {
-//     const result = clamp(2, 4, 3);
-//     assert.equal(result, 3, "Should have returned 3!");
-//   });
-// });
-
 describe("isPowerOfTwo", () => {
   it("0 should return false", () => {
     const result = isPowerOfTwo(new BN(0));
