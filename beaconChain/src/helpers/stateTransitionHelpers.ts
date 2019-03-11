@@ -1,7 +1,9 @@
 import { keccakAsU8a } from "@polkadot/util-crypto";
-import assert from "assert";
+//import assert from "assert";
+import { assert } from "chai";
 import BN from "bn.js";
 import { hashTreeRoot } from "@chainsafesystems/ssz";
+
 
 import {
   ACTIVATION_EXIT_DELAY,
