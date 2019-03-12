@@ -41,7 +41,8 @@
     "blakejs": "^1.1.0",
     "bn.js": "^4.11.8",
     "buffer-xor": "^2.0.2",
-    "deepmerge": "^3.2.0"
+    "deepmerge": "^3.2.0",
+    "level": "^4.0.0"
   },
   "bin": {
     "lodestar-chain": "./index.js"
