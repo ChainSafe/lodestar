@@ -1,19 +1,20 @@
 import BN from "bn.js";
 import { assert } from "chai";
 
-import { SLOTS_PER_EPOCH, TARGET_COMMITTEE_SIZE } from "../../src/constants";
+import {GENESIS_SLOT, SLOTS_PER_EPOCH, TARGET_COMMITTEE_SIZE} from "../../src/constants";
 import {
   clamp,
   getActiveValidatorIndices,
   getBitfieldBit,
-  getCurrentEpoch,
   getDomain,
   getEpochCommitteeCount,
   getEpochStartSlot,
   getForkVersion,
   hash,
-  intSqrt,
   intToBytes,
+  getPreviousEpoch,
+  getTotalBalance,
+  intSqrt,
   isActiveValidator,
   isDoubleVote,
   isPowerOfTwo,
@@ -22,10 +23,12 @@ import {
   slotToEpoch,
   split,
 } from "../../src/helpers/stateTransitionHelpers";
-import {Epoch, Fork, int, Slot, uint64, Validator} from "../../src/types";
+import {BeaconState, Epoch, Fork, int, Slot, uint64, Validator, ValidatorIndex} from "../../src/types";
 import {generateAttestationData} from "../utils/attestation";
 import {randBetween} from "../utils/misc";
-import {generateValidator} from "../utils/validator";
+import {generateValidator, generateValidators} from "../utils/validator";
+import {generateState} from "../utils/state";
+import {setInterval} from "timers";
 
 describe("intToBytes", () => {
   const zeroedArray = (length) => Array.from({length}, () => 0);
@@ -540,5 +543,56 @@ describe("merkleRoot", () => {
     const expectedRoot = hash(Buffer.concat([leftNode, rightNode]));
 
     assert(expectedRoot.equals(computedRoot), `${expectedRoot} didn't equal ${computedRoot}`);
+  });
+});
+
+describe("getPreviousEpoch", () => {
+
+  it("epoch should return previous epoch", () => {
+    const state: BeaconState = generateState({ slot: new BN(512)});
+    const expected: Epoch = new BN(7);
+    const result = getPreviousEpoch(state);
+    assert(result.eq(expected), `expected: ${expected}, result: ${result}`);
+  });
+
+  it("epoch should return previous epoch", () => {
+    const state: BeaconState = generateState({ slot: new BN(256)});
+    const expected: Epoch = new BN(3);
+    const result = getPreviousEpoch(state);
+    assert(result.eq(expected), `expected: ${expected}, result: ${result}`);
+  });
+
+  it("epoch should return genesis epoch", () => {
+    const state: BeaconState = generateState({ slot: new BN(GENESIS_SLOT)});
+    const expected: Epoch = slotToEpoch(GENESIS_SLOT);
+      const result = getPreviousEpoch(state);
+    assert(result.eq(expected), `expected: ${expected}, result: ${result}`);
+  });
+});
+
+describe("getTotalBalance", () => {
+
+  it("should return correct balances", () => {
+    const num = 5;
+    const validators: Validator[] = generateValidators(num);
+    const balances: uint64[] = Array.from({length: num}, () => new BN(500));
+    const state: BeaconState = generateState({ validatorRegistry: validators, validatorBalances: balances });
+    const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => new BN(i));
+
+    const result = getTotalBalance(state, validatorIndices);
+    const expected = new BN(num).muln(500);
+    assert(result.eq(expected), `Expected: ${expected} :: Result: ${result}`);
+  });
+
+  it("should return correct balances", () => {
+    const num = 5;
+    const validators: Validator[] = generateValidators(num);
+    const balances: uint64[] = Array.from({length: num}, () => new BN(0));
+    const state: BeaconState = generateState({ validatorRegistry: validators, validatorBalances: balances });
+    const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => new BN(i));
+
+    const result = getTotalBalance(state, validatorIndices);
+    const expected = new BN(num).muln(0);
+    assert(result.eq(expected), `Expected: ${expected} :: Result: ${result}`);
   });
 });
