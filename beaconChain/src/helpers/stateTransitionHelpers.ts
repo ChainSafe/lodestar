@@ -33,7 +33,6 @@ import {
   Fork,
   Gwei,
   int,
-  Shard,
   SlashableAttestation,
   Slot,
   uint64,

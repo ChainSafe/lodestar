@@ -18,13 +18,15 @@ export function processCrosslinks(
   for (let slot: number = start; slot < end; slot++) {
     getCrosslinkCommitteesAtSlot(state, new BN(slot)).map((value: CrosslinkCommittee) => {
       const { shard, validatorIndices } = value;
-      const newCrossLink: Crosslink = {
-        epoch: slotToEpoch(new BN(slot)),
-        shardBlockRoot: winningRoot(state, shard, previousEpochAttestations, currentEpochAttestations, validatorIndices)};
+      // TODO Complete totalAttestingBalance to complete below
+      // const newCrossLink: Crosslink = {
+      //   epoch: slotToEpoch(new BN(slot)),
+      //   shardBlockRoot: winningRoot(state, shard, previousEpochAttestations, currentEpochAttestations, validatorIndices)
+      // };
 
-      if (totalAttestingBalance(validatorIndices).muln(3).gte(getTotalBalance(state, validatorIndices).muln(2))) {
-        state.latestCrosslinks[shard.toNumber()] =  newCrossLink;
-      }
+      // if (totalAttestingBalance(validatorIndices).muln(3).gte(getTotalBalance(state, validatorIndices).muln(2))) {
+      //   state.latestCrosslinks[shard.toNumber()] =  newCrossLink;
+      // }
     });
   }
 }
