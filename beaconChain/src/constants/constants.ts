@@ -6,7 +6,7 @@ export const TARGET_COMMITTEE_SIZE = 2 ** 7; // 128 validators
 export const MAX_BALANCE_CHURN_QUOTIENT = 2 ** 5; // 32
 export const BEACON_CHAIN_SHARD_NUMBER = new BN(2).pow(new BN(64)).sub( new BN(1)); // 2 ** 64 - 1
 export const MAX_INDICES_PER_SLASHABLE_VOTE = 2 ** 12; // 4096
-export const MAX_WITHDRAWALS_PER_EPOCH = 2 ** 2; // 4 withdrawals
+export const MAX_EXIT_DEQUEUES_PER_EPOCH = 2 ** 2; // 4 withdrawals
 
 // Deposit contract
 export const DEPOSIT_CONTRACT_ADDRESS = "TBD";

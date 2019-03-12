@@ -5,7 +5,7 @@ import {
 } from "../../types";
 
 import processBlock from "./block";
-import {processEpoch} from "./processEpoch";
+import {processEpoch} from "./epoch";
 import {processSlot} from "./slot";
 
 export {

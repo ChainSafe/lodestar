@@ -102,7 +102,7 @@ export function getInitialBeaconState(
   // Process initial activations
   for (let i: ValidatorIndex = new BN(0); i.ltn(state.validatorRegistry.length); i = i.add(new BN(1))) {
     // TODO: Unsafe usage of toNumber on i
-    if (getEffectiveBalance(state, i) >= MAX_DEPOSIT_AMOUNT) {
+    if (getEffectiveBalance(state, i).gten(MAX_DEPOSIT_AMOUNT)) {
       activateValidator(state, i, true);
     }
   }

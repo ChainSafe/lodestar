@@ -74,8 +74,8 @@ export default function processAttestations(state: BeaconState, block: BeaconBlo
     };
     const custodyBitsVerified = blsVerifyMultiple(
       [
-        blsAggregatePubkeys(custodyBit0Participants.map((i) => state.validatorRegistry[i].pubkey)),
-        blsAggregatePubkeys(custodyBit1Participants.map((i) => state.validatorRegistry[i].pubkey)),
+        blsAggregatePubkeys(custodyBit0Participants.map((i) => state.validatorRegistry[i.toNumber()].pubkey)),
+        blsAggregatePubkeys(custodyBit1Participants.map((i) => state.validatorRegistry[i.toNumber()].pubkey)),
       ],
       [
         treeHash(dataAndCustodyBit0, AttestationDataAndCustodyBit),

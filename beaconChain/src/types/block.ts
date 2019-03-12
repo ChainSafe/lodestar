@@ -18,6 +18,7 @@ import {
 import {
   Eth1Data,
 } from "./eth1";
+import {Shard, ValidatorIndex} from "./custom";
 
 export interface ProposalSignedData {
   // Slot number
@@ -202,3 +203,14 @@ export const BeaconBlock = {
   ],
 };
 
+export interface CrosslinkCommittee {
+  shard: uint64;
+  validatorIndices: uint64[];
+}
+export const CrosslinkCommittee = {
+  name: "CrosslinkCommittee",
+  fields: [
+    ["shard", uint64],
+    ["validatorIndices", [uint64]],
+  ],
+};

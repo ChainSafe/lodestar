@@ -109,7 +109,7 @@ export function getInitialBeaconState(
   // Process genesis activations
   // TODO For loop is stubbed, should not cast new BN(i)
   for (let i = 0; i < state.validatorRegistry.length; i ++) {
-    if (getEffectiveBalance(state, new BN(i)) >= MAX_DEPOSIT_AMOUNT) {
+    if (getEffectiveBalance(state, new BN(i)).gten(MAX_DEPOSIT_AMOUNT)) {
       activateValidator(state, new BN(i), true);
     }
   }
