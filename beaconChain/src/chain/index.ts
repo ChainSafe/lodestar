@@ -27,6 +27,7 @@ export class BeaconChain extends EventEmitter {
   public async stop() {}
 
   public initializeBeaconChain(genesisTime: uint64, deposits: Deposit[], eth1Data: Eth1Data): BeaconState {
+    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
     return {} as BeaconState;
   }
 }

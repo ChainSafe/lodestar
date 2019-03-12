@@ -20,6 +20,7 @@ export class DB extends EventEmitter {
    * @returns {BeaconState}
    */
   public get state(): BeaconState {
+    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
     return {} as BeaconState;
   }
 
