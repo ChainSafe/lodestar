@@ -1,15 +1,22 @@
 import BN from "bn.js";
 import { assert } from "chai";
 
-import {GENESIS_SLOT, SLOTS_PER_EPOCH, TARGET_COMMITTEE_SIZE} from "../../src/constants";
 import {
-  clamp,
+  GENESIS_EPOCH,
+  GENESIS_SLOT,
+  LATEST_BLOCK_ROOTS_LENGTH,
+  LATEST_RANDAO_MIXES_LENGTH,
+  SLOTS_PER_EPOCH,
+  TARGET_COMMITTEE_SIZE,
+} from "../../src/constants";
+import {
   getActiveValidatorIndices,
   getBitfieldBit,
+  getBlockRoot,
   getDomain,
   getEpochCommitteeCount,
   getEpochStartSlot,
-  getForkVersion,
+  getForkVersion, getRandaoMix,
   hash,
   intToBytes,
   getPreviousEpoch,
@@ -121,33 +128,6 @@ describe("Split", () => {
     const answer = [[1], [2, 3], [4, 5], [6, 7]];
     const result = split(array, 4);
     assert.deepEqual(result, answer);
-  });
-});
-
-describe("Clamp", () => {
-  it("should return upper bound", () => {
-    const result = clamp(2, 4, 5);
-    assert.equal(result, 4, "Should have returned 4!");
-  });
-
-  it("should return upper bound", () => {
-    const result = clamp(2, 4, 4);
-    assert.equal(result, 4, "Should have returned 4!");
-  });
-
-  it("should return the lower bound", () => {
-    const result = clamp(2, 4, 1);
-    assert.equal(result, 2, "Should have returned 2!");
-  });
-
-  it("should return the lower bound", () => {
-    const result = clamp(2, 4, 2);
-    assert.equal(result, 2, "Should have returned 2!");
-  });
-
-  it("should return the inbetween value", () => {
-    const result = clamp(2, 4, 3);
-    assert.equal(result, 3, "Should have returned 3!");
   });
 });
 
@@ -596,3 +576,98 @@ describe("getTotalBalance", () => {
     assert(result.eq(expected), `Expected: ${expected} :: Result: ${result}`);
   });
 });
+
+
+describe("intToBytes", () => {
+  it("should convert number 0 to an empty buffer", () => {
+    const res = intToBytes(0, 1)
+    assert(res.equals(Uint8Array.from([0])), `got: ${res}, expected:${[0]}`)
+  });
+  it("should convert BigNumber 0 to an empty buffer", () => {
+    const res = intToBytes(new BN(0), 1)
+    assert(res.equals(Uint8Array.from([0])), `got: ${res}, expected:${[0]}`)
+  });
+  it("should convert number 1 to a single byte 0b00000001", () => {
+    const res = intToBytes(1, 1)
+    assert(res.equals(Uint8Array.from([1])), `got: ${res}, expected:${[1]}`)
+  });
+  it("should convert BigNumber 1 to a single byte 0b00000001", () => {
+    const res = intToBytes(new BN(1), 1)
+    assert(res.equals(Uint8Array.from([1])), `got: ${res}, expected:${[1]}`)
+  });
+  it("should convert number 16704 to two bytes [0x40, 0x42]", () => {
+    const res = intToBytes(16704, 2)
+    assert(res.equals(Uint8Array.from([0x40, 0x41])), `got: ${res}, expected:${[0x40, 0x41]}`)
+  });
+  it("should convert BigNumber 16704 to two bytes [0x40, 0x42]", () => {
+    const res = intToBytes(new BN(16704), 2)
+    assert(res.equals(Uint8Array.from([0x40, 0x41])), `got: ${res}, expected:${[0x40, 0x41]}`)
+  });
+});
+
+
+describe("getRandaoMix", () => {
+  it("should return first randao mix for GENESIS_EPOCH", () => {
+    // Empty state in 2nd epoch
+    const state = generateState({
+      slot: GENESIS_SLOT.addn(SLOTS_PER_EPOCH),
+      latestRandaoMixes: [Buffer.from([0xAB]), Buffer.from([0xCD])]
+    })
+    const res = getRandaoMix(state, GENESIS_EPOCH)
+    assert(res.equals(Uint8Array.from([0xAB])))
+  })
+  it("should return second randao mix for GENESIS_EPOCH + 1", () => {
+    // Empty state in 2nd epoch
+    const state = generateState({
+      slot: GENESIS_SLOT.addn(SLOTS_PER_EPOCH * 2),
+      latestRandaoMixes: [Buffer.from([0xAB]), Buffer.from([0xCD]), Buffer.from([0xEF])]
+    })
+    const res = getRandaoMix(state, GENESIS_EPOCH.addn(1))
+    assert(res.equals(Uint8Array.from([0xCD])))
+  })
+  it("should fail to get randao mix for epoch more than LATEST_RANDAO_MIXES_LENGTH in the past", () => {
+    // Empty state in epoch LATEST_RANDAO_MIXES_LENGTH with incrementing randao mixes
+    const state = generateState({
+      slot: GENESIS_SLOT.addn(SLOTS_PER_EPOCH * LATEST_RANDAO_MIXES_LENGTH),
+      latestRandaoMixes: Array.from({length: LATEST_RANDAO_MIXES_LENGTH}, (e, i) => Buffer.from([i]))
+    })
+    assert.throws(() => getRandaoMix(state, GENESIS_EPOCH), "")
+  })
+  it("should fail to get randao mix for epoch > current epoch", () => {
+    // Empty state in second epoch (genesis + 1)
+    const state = generateState({
+      slot: GENESIS_SLOT.addn(SLOTS_PER_EPOCH),
+      latestRandaoMixes: [Buffer.from([0xAB]), Buffer.from([0xCD])]
+    })
+    assert.throws(() => getRandaoMix(state, GENESIS_EPOCH.addn(1)), "")
+  })
+})
+
+describe("getBlockRoot", () => {
+  it("should return first block root for genesis slot", () => {
+    const state = generateState({
+      slot:  GENESIS_SLOT.addn(1),
+      latestBlockRoots: [Buffer.from([0xAB])]
+    })
+    const res = getBlockRoot(state, GENESIS_SLOT)
+    assert((new BN(res)).eq(new BN(0xAB)),
+      `got: ${new BN(res)}, expected: ${0xAB}`)
+  })
+  it("should return second block root for genesis + 1 slot", () => {
+    const state = generateState({
+      slot:  GENESIS_SLOT.addn(2),
+      latestBlockRoots: [Buffer.from([0xAB]), Buffer.from([0xCD])]
+    })
+    const res = getBlockRoot(state, GENESIS_SLOT.addn(1))
+    assert((new BN(res)).eq(new BN(0xCD)),
+      `got: ${new BN(res)}, expected: ${0xAB}`)
+  })
+  it("should fail if slot is current slot", () => {
+    const state = generateState({slot: GENESIS_SLOT})
+    assert.throws(() => getBlockRoot(state, GENESIS_SLOT), "")
+  })
+  it("should fail if slot is not within LATEST_BLOCK_ROOTS_LENGTH of current slot", () => {
+    const state = generateState({slot: GENESIS_SLOT.addn(LATEST_BLOCK_ROOTS_LENGTH + 1)})
+    assert.throws(() => getBlockRoot(state, GENESIS_SLOT), "")
+  })
+})

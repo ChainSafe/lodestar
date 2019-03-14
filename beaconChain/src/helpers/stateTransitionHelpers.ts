@@ -3,6 +3,7 @@ import BN from "bn.js";
 import { hashTreeRoot } from "@chainsafesystems/ssz";
 import assert from "assert";
 
+
 import {
   ACTIVATION_EXIT_DELAY,
   Domain,
@@ -17,7 +18,7 @@ import {
   MIN_SEED_LOOKAHEAD,
   SHARD_COUNT,
   SLOTS_PER_EPOCH,
-  TARGET_COMMITTEE_SIZE,
+  TARGET_COMMITTEE_SIZE, ZERO_HASH,
 } from "../constants";
 
 import {
@@ -61,14 +62,15 @@ export function hash(value: bytes): bytes32 {
  * @returns {bytes}
  */
 export function intToBytes(value: BN | number, length: number): bytes {
-  if (BN.isBN(value)) {
+  if (BN.isBN(value)) { // value is BN
     return value.toArrayLike(Buffer, "le", length);
-  } else {
-    // value is a number
+  } else if (length <= 6) { // value is a number and length is at most 6 bytes
     const b = Buffer.alloc(length);
-    // Buffer#writeIntLE can only write at max 6 bytes
-    b.writeUIntLE(value, 0, Math.min(length, 6));
+    b.writeUIntLE(value, 0, length);
     return b;
+  } else { // value is number and length is too large for Buffer#writeUIntLE
+    value = new BN(value)
+    return value.toArrayLike(Buffer, "le", length);
   }
 }
 
@@ -209,21 +211,6 @@ export function split<T>(values: T[], splitCount: int): T[][] {
   return array;
 }
 
-/**
- * Helper function for readability.
- * @param {int} minval
- * @param {int} maxval
- * @param {int} x
- * @returns {int}
- */
-export function clamp(minval: int, maxval: int, x: int): int {
-  if (x <= minval) {
-    return minval;
-  } else if (x >= maxval) {
-    return maxval;
-  }
-  return x;
-}
 
 /**
  * Return the number of committees in one epoch.
@@ -303,7 +290,7 @@ export function getNextEpochCommitteeCount(state: BeaconState): int {
  * @returns {bytes32}
  */
 export function getRandaoMix(state: BeaconState, epoch: Epoch): bytes32 {
-  if (getCurrentEpoch(state).subn(LATEST_RANDAO_MIXES_LENGTH).lt(epoch) && epoch.lt(getCurrentEpoch(state))) { throw new Error(""); }
+  assert(getCurrentEpoch(state).subn(LATEST_RANDAO_MIXES_LENGTH).lt(epoch) && epoch.lt(getCurrentEpoch(state)))
   return state.latestRandaoMixes[epoch.umod(new BN(LATEST_RANDAO_MIXES_LENGTH)).toNumber()];
 }
 
@@ -427,8 +414,8 @@ export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, reg
  */
 export function getBlockRoot(state: BeaconState, slot: Slot): bytes32 {
   // Returns the block root at a recent ``slot``.
-  if (state.slot.lte(slot.addn(LATEST_BLOCK_ROOTS_LENGTH))) { throw new Error(); }
-  if (slot.lt(state.slot)) { throw new Error(); }
+  assert(state.slot.lte(slot.addn(LATEST_BLOCK_ROOTS_LENGTH)));
+  assert(slot.lt(state.slot));
   return state.latestBlockRoots[slot.umod(new BN(LATEST_BLOCK_ROOTS_LENGTH)).toNumber()];
 }
 
