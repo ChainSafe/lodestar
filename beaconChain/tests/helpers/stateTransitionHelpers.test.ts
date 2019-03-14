@@ -1,17 +1,18 @@
 import BN from "bn.js";
 import { assert } from "chai";
 
-import {GENESIS_SLOT, SLOTS_PER_EPOCH, TARGET_COMMITTEE_SIZE} from "../../src/constants";
 import {
   GENESIS_EPOCH,
   GENESIS_SLOT,
-  LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH,
+  LATEST_BLOCK_ROOTS_LENGTH,
+  LATEST_RANDAO_MIXES_LENGTH,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
 } from "../../src/constants";
 import {
   getActiveValidatorIndices,
   getBitfieldBit,
+  getBlockRoot,
   getDomain,
   getEpochCommitteeCount,
   getEpochStartSlot,
