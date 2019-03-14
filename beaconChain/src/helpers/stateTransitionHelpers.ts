@@ -64,15 +64,15 @@ export function hash(value: bytes): bytes32 {
  * @returns {bytes}
  */
 export function intToBytes(value: BN | number, length: number): bytes {
-  // TODO: Warn if value is negative or length > 6 (writeUintLE won't accept either)
-  if (BN.isBN(value)) {
+  if (BN.isBN(value)) { // value is BN
     return value.toArrayLike(Buffer, "le", length);
-  } else {
-    // value is a number
+  } else if (length <= 6) { // value is a number and length is at most 6 bytes
     const b = Buffer.alloc(length);
-    // Buffer#writeIntLE can only write at max 6 bytes
-    b.writeUIntLE(value, 0, Math.min(length, 6));
+    b.writeUIntLE(value, 0, length);
     return b;
+  } else { // value is number and length is too large for Buffer#writeUIntLE
+    value = new BN(value)
+    return value.toArrayLike(Buffer, "le", length);
   }
 }
 
