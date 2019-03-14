@@ -1,8 +1,7 @@
 import { keccakAsU8a } from "@polkadot/util-crypto";
-//import assert from "assert";
-import { assert } from "chai";
 import BN from "bn.js";
 import { hashTreeRoot } from "@chainsafesystems/ssz";
+import assert from "assert";
 
 
 import {
@@ -35,13 +34,12 @@ import {
   Fork,
   Gwei,
   int,
-  Shard,
   SlashableAttestation,
   Slot,
   uint64,
   Validator,
   ValidatorIndex,
-  BLSPubkey,
+  BLSPubkey, CrosslinkCommittee,
 } from "../types";
 
 import {
@@ -92,6 +90,19 @@ export function slotToEpoch(slot: Slot): Epoch {
  */
 export function getCurrentEpoch(state: BeaconState): Epoch {
   return slotToEpoch(state.slot);
+}
+
+/**
+ * Return the previous epoch of the given state.
+ * @param {BeaconState} state
+ * @returns {Epoch}
+ */
+export function getPreviousEpoch(state: BeaconState): Epoch {
+  const currentEpoch = getCurrentEpoch(state);
+  if (currentEpoch.eq(GENESIS_EPOCH)) {
+    return GENESIS_EPOCH;
+  }
+  return currentEpoch.subn(1);
 }
 
 /**
@@ -338,7 +349,7 @@ export function isPowerOfTwo(value: BN): boolean {
  * @param {boolean} registryChange
  * @returns {[]}
  */
-export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, registryChange: boolean = false): {shard: Shard; validatorIndices: ValidatorIndex[]}[] {
+export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, registryChange: boolean = false): CrosslinkCommittee[] {
   const epoch = slotToEpoch(slot);
   const currentEpoch = getCurrentEpoch(state);
   const previousEpoch = currentEpoch.gt(GENESIS_EPOCH) ? currentEpoch.subn(1) : currentEpoch;
@@ -441,11 +452,15 @@ export function merkleRoot(values: bytes32[]): bytes32 {
 
 // // TODO finish
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, participationBitfield: bytes): int[] {
-  return [];
-}
 // export function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, participationBitfield: bytes): int[] {
 //   const crosslinkCommittee: CommitteeShard[] = getCrosslinkCommitteesAtSlot(state, attestationData.slot);
+// function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, bitfield: bytes): int[] {
+
+export function getAttestationParticipants(state: BeaconState, attestationData: AttestationData, bitfield: bytes): ValidatorIndex[] {
+  return [] as ValidatorIndex[];
+}
+
+//   const crosslinkCommittees: Array<{ShardNumber, ValidatorIndex}> = getCrosslinkCommitteesAtSlot(state, attestationData.slot);
 //
 //   // assert attestation.shard in [shard for _, shard in crosslink_committees]
 //   // crosslink_committee = [committee for committee, shard in crosslink_committees if shard == attestation_data.shard][0]
@@ -470,13 +485,20 @@ export function getAttestationParticipants(state: BeaconState, attestationData: 
  * @param {int} index
  * @returns {Number}
  */
-export function getEffectiveBalance(state: BeaconState, index: ValidatorIndex): int {
-  // Returns the effective balance (also known as "balance at stake") for a ``validator`` with the given ``index``.
-  if (state.validatorBalances[index.toNumber()].ltn(MAX_DEPOSIT_AMOUNT)) {
-    return state.validatorBalances[index.toNumber()].toNumber();
-  } else {
-    return MAX_DEPOSIT_AMOUNT;
-  }
+export function getEffectiveBalance(state: BeaconState, index: ValidatorIndex): Gwei {
+  const bnMax = new BN(MAX_DEPOSIT_AMOUNT);
+  const vBal = state.validatorBalances[index.toNumber()];
+  return vBal.lt(bnMax) ? vBal : bnMax;
+}
+
+/**
+ * Return the combined effective balance of an array of validators.
+ * @param {BeaconState} state
+ * @param {ValidatorIndex[]} validators
+ * @returns {Gwei}
+ */
+export function getTotalBalance(state: BeaconState, validators: ValidatorIndex[]): Gwei {
+  return validators.reduce((acc: BN, cur: BN): BN => acc.add(getEffectiveBalance(state, cur)), new BN(0));
 }
 
 /**

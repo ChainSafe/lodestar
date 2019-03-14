@@ -106,7 +106,7 @@ export function lmdGhost(store: Store, startState: BeaconState, startBlock: Beac
     let sum = 0;
     for (const target of attestationTargets) {
       if (getAncestor(store, target[1], block.slot) === block) {
-        sum += Math.floor(getEffectiveBalance(startState, target[0]) / FORK_CHOICE_BALANCE_INCREMENT);
+        sum += Math.floor(getEffectiveBalance(startState, target[0]).toNumber() / FORK_CHOICE_BALANCE_INCREMENT);
       }
     }
     return sum;

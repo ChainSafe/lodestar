@@ -140,4 +140,3 @@ export const BeaconState = {
     ["depositIndex", uint64],
   ],
 };
-
