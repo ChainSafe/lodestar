@@ -1,16 +1,23 @@
 {
-  "name": "@chainsafe/ssz",
+  "name": "@chainsafesystems/ssz",
   "version": "0.1.0",
   "description": "Simple Serialize",
   "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
   "scripts": {
-    "build-all": "npm run build-lib && npm run build-web && npm run build-docs",
+    "prebuild": "rm -rf lib && rm -rf dist",
+    "build-all": "npm run prebuild && npm run build-lib && npm run build-web && npm run build-docs && npm run build-types",
     "build-docs": "documentation build lib/ -f md > docs/API.md",
-    "build-lib": "rm -rf lib && babel src -x .ts -d lib",
-    "build-web": "rm -rf dist && webpack --mode production --entry ./lib/web.js --output ./dist/ssz.min.js",
+    "build-lib": "babel src -x .ts -d lib",
+    "build-types": "tsc --declaration --outDir lib --emitDeclarationOnly",
+    "build-web": "webpack --mode production --entry ./lib/web.js --output ./dist/ssz.min.js",
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts src/ test/",
     "pretest": "npm run check-types",
+    "prepublishOnly": "npm run build-all",
     "test": "nyc -r lcov -e .ts mocha -r ./.babel-register \"test/**/*.test.ts\" && nyc report"
   },
   "author": "ChainSafe",
