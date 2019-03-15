@@ -1,9 +1,10 @@
 import {EventEmitter} from "events";
 import level from "level";
-import { hashTreeRoot } from "@chainsafesystems/ssz";
+import {LevelUp} from "levelup";
+import { serialize, deserialize, treeHash } from "@chainsafesystems/ssz";
 
 import {
-  BeaconState, bytes32, BeaconBlock, Slot, Attestation,
+  BeaconState, bytes32, BeaconBlock, Slot, Attestation, uint64,
 } from "../types";
 
 import {
@@ -12,21 +13,26 @@ import {
   Key,
 } from "./schema";
 
+export interface DBOptions {
+  name?: string;
+  db?: LevelUp;
+}
+
 /**
  * The DB service manages the data layer of the beacon chain
  * The exposed methods do not refer to the underlying data engine, but instead expose relevent beacon chain objects
  */
 export class DB extends EventEmitter {
-  private db;
+  private db: LevelUp;
 
-  public constructor(opts) {
+  public constructor(opts: DBOptions) {
     super();
-    this.db = level('beaconchain')
+    this.db = opts.db || level(opts.name || 'beaconchain');
   }
-  public async start() {
+  public async start(): Promise<void> {
     await this.db.open();
   }
-  public async stop() {
+  public async stop(): Promise<void> {
     await this.db.close();
   }
 
@@ -35,7 +41,8 @@ export class DB extends EventEmitter {
    * @returns {Promise<BeaconState>}
    */
   public async getState(): Promise<BeaconState> {
-    return await this.db.get(encodeKey(Bucket.chainInfo, Key.state));
+    const buf = await this.db.get(encodeKey(Bucket.chainInfo, Key.state));
+    return deserialize(buf, BeaconState).deserializedData;
   }
 
   /**
@@ -44,7 +51,7 @@ export class DB extends EventEmitter {
    * @returns {Promise<void>}
    */
   public async setState(state: BeaconState): Promise<void> {
-    await this.db.put(encodeKey(Bucket.chainInfo, Key.state), state);
+    await this.db.put(encodeKey(Bucket.chainInfo, Key.state), serialize(state, BeaconState));
   }
 
   /**
@@ -52,7 +59,8 @@ export class DB extends EventEmitter {
    * @returns {Promise<BeaconState>}
    */
   public async getFinalizedState(): Promise<BeaconState> {
-    return await this.db.get(encodeKey(Bucket.chainInfo, Key.finalizedState));
+    const buf = await this.db.get(encodeKey(Bucket.chainInfo, Key.finalizedState));
+    return deserialize(buf, BeaconState).deserializedData;
   }
 
   /**
@@ -61,7 +69,7 @@ export class DB extends EventEmitter {
    * @returns {Promise<void>}
    */
   public async setFinalizedState(state: BeaconState): Promise<void> {
-    await this.db.put(encodeKey(Bucket.chainInfo, Key.finalizedState), state);
+    await this.db.put(encodeKey(Bucket.chainInfo, Key.finalizedState), serialize(state, BeaconState));
   }
 
   /**
@@ -69,7 +77,8 @@ export class DB extends EventEmitter {
    * @returns {Promise<BeaconBlock>}
    */
   public async getBlock(blockRoot: bytes32): Promise<BeaconBlock> {
-    return await this.db.get(encodeKey(Bucket.block, blockRoot));
+    const buf = await this.db.get(encodeKey(Bucket.block, blockRoot));
+    return deserialize(buf, BeaconBlock).deserializedData;
   }
 
   /**
@@ -87,8 +96,8 @@ export class DB extends EventEmitter {
    * @returns {Promise<void>}
    */
   public async setBlock(block: BeaconBlock): Promise<void> {
-    const blockRoot = hashTreeRoot(block);
-    await this.db.put(encodeKey(Bucket.block, blockRoot), block);
+    const blockRoot = treeHash(block, BeaconBlock);
+    await this.db.put(encodeKey(Bucket.block, blockRoot), serialize(block, BeaconBlock));
   }
 
   /**
@@ -96,7 +105,8 @@ export class DB extends EventEmitter {
    * @returns {Promise<BeaconBlock>}
    */
   public async getChainHead(): Promise<BeaconBlock> {
-    const height = await this.db.get(encodeKey(Bucket.chainInfo, Key.chainHeight));
+    const heightBuf = await this.db.get(encodeKey(Bucket.chainInfo, Key.chainHeight));
+    const height = deserialize(heightBuf, uint64).deserializedData;
     const blockRoot = await this.db.get(encodeKey(Bucket.mainChain, height));
     return await this.getBlock(blockRoot);
   }
@@ -108,14 +118,14 @@ export class DB extends EventEmitter {
    * @returns {Promise<void>}
    */
   public async setChainHead(state: BeaconState, block: BeaconBlock): Promise<void> {
-    const blockRoot = hashTreeRoot(block);
-    const slot = block.slot.toNumber();
+    const blockRoot = treeHash(block, BeaconBlock);
+    const slot = block.slot;
     // block should already be set
     await this.getBlock(blockRoot);
     await this.db.batch()
       .put(encodeKey(Bucket.mainChain, slot), blockRoot)
-      .put(encodeKey(Bucket.chainInfo, Key.chainHeight), slot)
-      .put(encodeKey(Bucket.chainInfo, Key.state), state)
+      .put(encodeKey(Bucket.chainInfo, Key.chainHeight), serialize(slot, uint64))
+      .put(encodeKey(Bucket.chainInfo, Key.state), serialize(state, BeaconState))
       .write();
   }
 
@@ -124,7 +134,8 @@ export class DB extends EventEmitter {
    * @returns {Promise<Attestation>}
    */
   public async getAttestation(attestationRoot: bytes32): Promise<Attestation> {
-    return await this.db.get(encodeKey(Bucket.attestation, attestationRoot));
+    const buf = await this.db.get(encodeKey(Bucket.attestation, attestationRoot));
+    return deserialize(buf, Attestation).deserializedData;
   }
 
   /**
@@ -133,8 +144,8 @@ export class DB extends EventEmitter {
    * @returns {Promise<void>}
    */
   public async setAttestation(attestation: Attestation): Promise<void> {
-    const attestationRoot = hashTreeRoot(attestation);
-    await this.db.put(encodeKey(Bucket.attestation, attestationRoot), attestation);
+    const attestationRoot = treeHash(attestation, Attestation);
+    await this.db.put(encodeKey(Bucket.attestation, attestationRoot), serialize(attestation, Attestation));
   }
 
   /**
@@ -143,7 +154,7 @@ export class DB extends EventEmitter {
    * @returns {Promise<void>}
    */
   public async deleteAttestation(attestation: Attestation): Promise<void> {
-    const attestationRoot = hashTreeRoot(attestation);
+    const attestationRoot = treeHash(attestation, Attestation);
     await this.db.del(encodeKey(Bucket.attestation, attestationRoot));
   }
 }

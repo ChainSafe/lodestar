@@ -1,4 +1,6 @@
-// Buckets are separate database areas
+import BN from "bn.js";
+
+// Buckets are separate database namespaces
 export enum Bucket {
   attestation,
   block,
@@ -17,14 +19,14 @@ export const Key = {
 /**
  * Prepend a bucket to a key
  */
-export function encodeKey(bucket: Bucket, key: Buffer | string | number, useBuffer = true): Buffer | string {
+export function encodeKey(bucket: Bucket, key: Buffer | string | number | BN, useBuffer = true): Buffer | string {
   let buf;
   if (typeof key === 'string') {
     buf = Buffer.alloc(key.length + 1);
     buf.write(key, 1);
-  } else if (typeof key === 'number') {
-    buf = Buffer.alloc(9)
-    buf.writeUInt32(key, 1);
+  } else if (typeof key === 'number' || BN.isBN(key)) {
+    buf = Buffer.alloc(9);
+    (new BN(key)).toArrayLike(Buffer, 'le', 8).copy(buf, 1);
   } else {
     buf = Buffer.alloc(key.length + 1);
     key.copy(buf, 1);
