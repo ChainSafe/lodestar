@@ -1,15 +1,15 @@
-import {EventEmitter} from "events";
-import ethers from "ethers";
+import BN from "bn.js";
+import { EventEmitter } from "events";
+import { ethers } from "ethers";
 import { deserialize } from "@chainsafesystems/ssz";
 
 import { bytes32, DepositData } from "../types";
-import { validMerkleProof } from "./util";
 
 interface Eth1Options {
   depositContract: {
     address: string;
     abi: [];
-  }
+  };
   provider: ethers.providers.Provider;
 }
 
@@ -20,7 +20,7 @@ export class Eth1Notifier extends EventEmitter {
   private provider: ethers.providers.Provider;
   private contract: ethers.Contract;
 
-  private latestIndex: number;
+  private depositCount: number;
   private depositRoot: Buffer;
   private chainStarted: boolean;
 
@@ -31,6 +31,7 @@ export class Eth1Notifier extends EventEmitter {
     const address = opts.depositContract.address;
     const abi = opts.depositContract.abi;
     this.contract = new ethers.Contract(address, abi, this.provider);
+    this.depositCount = 0;
   }
 
   public async start(): Promise<void> {
@@ -48,46 +49,42 @@ export class Eth1Notifier extends EventEmitter {
   /**
    * Process new block events sent from the Eth 1.0 chain
    */
-  public processBlockHeadUpdate(blockNumber): void {
-    this.emit('block', this.provider.getBlock(blockNumber));
+  public async processBlockHeadUpdate(blockNumber): Promise<void> {
+    const block = await this.provider.getBlock(blockNumber);
+    this.emit('block', block);
   }
 
   /**
    * Process a Desposit log which has been received from the Eth 1.0 chain
    */
-  public processDepositLog(depositRootHex: string, dataHex: string, indexHex: string, branchHex: string): void {
-    const depositRoot = Buffer.from(depositRootHex, 'hex');
-    const dataBuf = Buffer.from(dataHex, 'hex');
-    const index = Buffer.from(indexHex, 'hex').readUInt32LE(0);
-    const branch = Buffer.from(branchHex, 'hex');
+  public processDepositLog(dataHex: string, indexHex: string): void {
+    const dataBuf = Buffer.from(dataHex.substr(2), 'hex');
+    const index = Buffer.from(indexHex.substr(2), 'hex').readUIntLE(0, 6);
 
-    // Ensure we're processing the "next" deposit
-    if (index !== this.latestIndex + 1) {
+    if (index !== this.depositCount) {
+      // TODO log warning
+      // deposit processed out of order
       return;
     }
+    this.depositCount++;
 
-    // Ensure the proof we received is valid
-    if (!validMerkleProof(dataBuf, depositRoot, index, branch)) {
-      return;
-    }
-
-    this.latestIndex = index;
-    this.depositRoot = depositRoot;
     const data: DepositData = deserialize(dataBuf, DepositData);
-    this.emit('deposit', data, index, depositRoot);
+
+    // TODO: Add deposit to merkle trie/db
+
+    this.emit('deposit', data, index);
   }
 
   /**
    * Process a Eth2genesis log which has been received from the Eth 1.0 chain
    */
-  public processEth2GenesisLog(depositRootHex: string, timeHex: string) {
-    const depositRoot = Buffer.from(depositRootHex, 'hex');
-    const time = Buffer.from(timeHex, 'hex').readUInt32LE(0);
+  public processEth2GenesisLog(depositRootHex: string, depositCountHex: string, timeHex: string): void {
+    const depositRoot = Buffer.from(depositRootHex.substr(2), 'hex');
+    const depositCount = Buffer.from(depositCountHex.substr(2), 'hex').readUIntLE(0, 6);
+    const time = Buffer.from(timeHex.substr(2), 'hex').readUIntLE(0, 6);
 
-    // Ensure the deposit root is the same that we've stored
-    if (!depositRoot.equals(this.depositRoot)) {
-      return;
-    }
+    // TODO: Ensure the deposit root is the same that we've stored
+
     this.chainStarted = true;
     this.emit('eth2genesis', time);
   }

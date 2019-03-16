@@ -67,8 +67,10 @@
     "chai": "^4.2.0",
     "codecov": "^3.1.0",
     "eslint": "^5.14.1",
+    "ganache-core": "^2.5.3",
     "mocha": "^5.2.0",
     "nyc": "^13.3.0",
+    "sinon": "^7.2.7",
     "ts-node": "^7.0.1",
     "tslint": "^5.11.0",
     "typescript": "^3.2.1"
