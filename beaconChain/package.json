@@ -18,7 +18,7 @@
     "lint": "eslint --ext .ts src/",
     "lint-fix": "eslint --ext .ts src/ --fix",
     "pretest": "npm run check-types",
-    "test": "nyc -r lcov -e .ts -x \"*.test.ts\" mocha -r ./.babel-register tests/**/*.test.ts && nyc report",
+    "test": "nyc -r lcov -e .ts -x \"*.test.ts\" mocha -r ./.babel-register \"tests/**/*.test.ts\" && nyc report",
     "coverage": "codecov"
   },
   "repository": {
@@ -40,7 +40,8 @@
     "bignumber.js": "^7.2.1",
     "blakejs": "^1.1.0",
     "bn.js": "^4.11.8",
-    "buffer-xor": "^2.0.2"
+    "buffer-xor": "^2.0.2",
+    "deepmerge": "^3.2.0"
   },
   "bin": {
     "lodestar-chain": "./index.js"
