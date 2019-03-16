@@ -118,7 +118,7 @@ export function generateState(opts?: TestBeaconState): BeaconState {
 export function generateRandomState(opts?: TestBeaconState): BeaconState {
   const initialCrosslinkRecord: Crosslink = {
     epoch: randBetweenBN(0, 1000),
-    shardBlockRoot: Buffer.alloc(0),
+    shardBlockRoot: Buffer.alloc(32),
   };
 
   const validatorNum: number = randBetween(0, 1000);
@@ -153,11 +153,11 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
     finalizedEpoch: randBetweenBN(0, 1000),
 
     latestCrosslinks: Array.from({length: randBetween(0, 1000)}, () => initialCrosslinkRecord),
-    latestBlockRoots: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(0)),
-    latestActiveIndexRoots: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(0)),
+    latestBlockRoots: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(32)),
+    latestActiveIndexRoots: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(32)),
     latestSlashedBalances: Array.from({length: randBetween(0, 1000)}, () => randBetweenBN(0, 1000)),
     latestAttestations: [],
-    batchedBlockRoots: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(0)),
+    batchedBlockRoots: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(32)),
 
     // PoW receipt root
     latestEth1Data: {
