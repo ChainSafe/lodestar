@@ -1,4 +1,4 @@
-import {keccak256} from "js-sha3";
+import { keccak256 } from "js-sha3";
 
 import {
   SerializableType,
@@ -41,8 +41,8 @@ function nextPowerOf2 (n: number): number {
   return n === 0 ? 1 : Math.pow(2, bitLength(n - 1));
 }
 
-export function hash(input: Buffer): Buffer {
-  return Buffer.from(keccak256.arrayBuffer(input));
+export function hash(...inputs: Buffer[]): Buffer {
+  return Buffer.from(inputs.reduce((acc, i) => acc.update(i), keccak256.create()).arrayBuffer());
 }
 
 export function merkleize(chunks: Buffer[]): Buffer {
@@ -56,7 +56,7 @@ export function merkleize(chunks: Buffer[]): Buffer {
   }
   while (chunks.length > 1) {
     for (let i = 0; i < chunks.length; i += 2) {
-      chunks[i / 2] = hash(Buffer.concat([chunks[i], chunks[i + 1]]));
+      chunks[i / 2] = hash(chunks[i], chunks[i + 1]);
     }
     chunks.splice(chunks.length / 2, chunks.length / 2);
   }
@@ -64,8 +64,7 @@ export function merkleize(chunks: Buffer[]): Buffer {
 }
 
 export function mixInLength(root: Buffer, length: number): Buffer {
-  const buf = Buffer.alloc(64);
-  root.copy(buf);
-  buf.writeUInt32LE(length, 32);
-  return hash(buf);
+  const lengthBuf = Buffer.alloc(32);
+  lengthBuf.writeUIntLE(length, 0, 6);
+  return hash(root, lengthBuf);
 }
