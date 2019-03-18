@@ -9,10 +9,11 @@ import defaults from "../../src/eth1/defaults";
 import promisify from "promisify-es6";
 
 // TODO integrate this into longer running tests
-describe("", () => {
+describe("Eth1Notifier - using deployed contract", () => {
   const N = 10; // number of private keys to generate
   const privateKeys = Array.from({length: N}, (_, i) =>
     Buffer.concat([Buffer.alloc(16), (new BN(i+1)).toArrayLike(Buffer, 'le', 16)]));
+  // Seed ephemeral testnet with balances for each privateKey
   const ganacheProvider = ganache.provider({
     accounts: privateKeys.map((secretKey) => ({
       secretKey,
