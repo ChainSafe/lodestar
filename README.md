@@ -7,6 +7,7 @@ There is a lot of work being done that are core infrastructural pieces for Eth2.
 |-- [Validator Client](https://github.com/ChainSafeSystems/Validator-Client)<br />
 |-- [Simple Serialize (SSZ)](https://github.com/ChainSafeSystems/ssz-js)<br />
 |-- [BLS Singatures and Signature Aggregation](https://github.com/ChainSafeSystems/bls-js)<br />
+|-- [Hobbits](https://github.com/ChainSafeSystems/hobbits-ts)<br />
 |-- [Gossipsub](https://github.com/ChainSafeSystems/gossipsub-js)<br />
 
 [![](https://img.shields.io/travis/com/ChainSafeSystems/lodestar/master.svg?label=master&logo=travis "Master Branch (Travis)")](https://travis-ci.com/ChainSafeSystems/lodestar)
