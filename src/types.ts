@@ -24,11 +24,11 @@ export type PrimitiveType = string;
 export interface ListType extends Array<SerializableType> {
   0: SerializableType;
 }
-export interface TupleType extends Array<SerializableType | number> {
+export interface VectorType extends Array<SerializableType | number> {
   0: SerializableType;
   1: number;
 }
-export type ArrayType = ListType | TupleType;
+export type ArrayType = ListType | VectorType;
 export interface ObjectType {
   name: string;
   fields: [string, SerializableType][];
