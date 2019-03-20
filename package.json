@@ -25,7 +25,7 @@
       "ethereum",
       "serenity",
       "simple serialize",
-      "ssz",
+      "ssz"
   ],
   "author": "ChainSafe",
   "license": "MIT",
