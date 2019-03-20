@@ -207,4 +207,4 @@ publicKey.verify(signedRoot(data, myType))
 
 ### License
 
-MIT
+Apache 2.0
