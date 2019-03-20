@@ -1,14 +1,14 @@
-import assert from "assert";
-
 import {
-  ArrayType,
-  ByteArray,
-  ObjectType,
+  AnyType,
+  Bytes,
   SerializableArray,
-  SerializableList,
-  SerializableType,
   SerializableValue,
   SerializableObject,
+  SSZType,
+  Type,
+  ListType,
+  ContainerType,
+  VectorType,
 } from "./types";
 
 import {
@@ -18,65 +18,55 @@ import {
 } from "./util/hash";
 
 import {
-  bytesPattern,
-  isArrayType,
-  isObjectType,
-  uintPattern,
+  isBasicType,
+  parseType,
 } from "./util/types";
+
+export function _hashTreeRoot(value: SerializableValue, type: SSZType): Buffer {
+  switch (type.type) {
+    case Type.uint:
+      return merkleize(pack([value], type));
+    case Type.bool:
+      return merkleize(pack([value], type));
+    case Type.byteList:
+      return mixInLength(
+        merkleize(pack([value], type)),
+        (value as Bytes).length);
+    case Type.byteVector:
+      return merkleize(pack([value], type));
+    case Type.list:
+      value = value as SerializableArray;
+      if (isBasicType(type.elementType)) {
+        return mixInLength(
+          merkleize(pack(value, (type as ListType).elementType)),
+          value.length);
+      } else {
+        return mixInLength(
+          merkleize(value.map((v) => hashTreeRoot(v, (type as ListType).elementType))),
+          value.length);
+      }
+    case Type.vector:
+      value = value as SerializableArray;
+      if (isBasicType(type.elementType)) {
+        return merkleize(pack(value, (type as VectorType).elementType));
+      } else {
+        return merkleize(value.map((v) => hashTreeRoot(v, (type as VectorType).elementType)));
+      }
+    case Type.container:
+      type = type as ContainerType;
+      return merkleize(type.fields
+        .map(([fieldName, fieldType]) => hashTreeRoot((value as SerializableObject)[fieldName], fieldType)));
+  }
+}
 
 /**
  * Merkleize an SSZ value
  * @method hashTreeRoot
  * @param {SerializableValue} value
- * @param {SerializableType} type
+ * @param {AnyType} type
  * @returns {Buffer}
  */
-export function hashTreeRoot(value: SerializableValue, type: SerializableType): Buffer {
-  if (typeof type === "string") {
-    if (type === "bool") {
-      return merkleize(pack([value], type));
-    }
-    if (type === "bytes") {
-      return mixInLength(
-        merkleize(pack([value], type)),
-        (value as ByteArray).length);
-    }
-    if (type.match(bytesPattern)) {
-      return merkleize(pack([value], type));
-    }
-    if (type.match(uintPattern)) {
-      return merkleize(pack([value], type));
-    }
-  } else if (isArrayType(type)) {
-    type = type as ArrayType;
-    assert((value as SerializableArray).length !== undefined, `Invalid array value: ${value}`);
-    const elementType = type[0];
-    if (elementType === "byte") {
-      if (type.length === 1) {
-        return mixInLength(
-          merkleize(pack([value], type)),
-          (value as ByteArray).length);
-      } else { // type.length === 2
-        return merkleize(pack([value], type));
-      }
-    }
-    value = value as SerializableList;
-    if (type.length === 1) {
-      return mixInLength(
-        merkleize(value.map((v) => hashTreeRoot(v, elementType))),
-        value.length);
-    }
-    if (type.length === 2) {
-      if (typeof elementType === "string") {
-        return merkleize(pack(value, elementType));
-      } else {
-        return merkleize(value.map((v) => hashTreeRoot(v, elementType)));
-      }
-    }
-  } else if (isObjectType(type)) {
-    type = type as ObjectType;
-    return merkleize(type.fields
-      .map(([fieldName, fieldType]) => hashTreeRoot((value as SerializableObject)[fieldName], fieldType)));
-  }
-  throw new Error(`Invalid type: ${type}`);
+export function hashTreeRoot(value: SerializableValue, type: AnyType): Buffer {
+  const _type = parseType(type);
+  return _hashTreeRoot(value, _type);
 }

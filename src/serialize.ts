@@ -1,41 +1,39 @@
 import BN from "bn.js";
 
 import {
+  AnyType,
   ArrayType,
   Bool,
-  ByteArray,
-  ObjectType,
+  Bytes,
+  BytesType,
+  ContainerType,
   SerializableArray,
   SerializableObject,
-  SerializableType,
   SerializableValue,
+  SSZType,
+  Type,
   Uint,
-  SerializableList,
+  UintType,
 } from "./types";
 
 import { BYTES_PER_LENGTH_PREFIX } from "./constants";
 
 import { size } from "./size";
 
-import {
-  bytesPattern,
-  digitsPattern,
-  isArrayType,
-  isObjectType,
-  uintPattern,
-} from "./util/types";
+import { parseType } from "./util/types";
 
-function _serializeUint(value: Uint, byteLength: number, output: Buffer, start: number): number {
-  const offset = start + byteLength;
+
+function _serializeUint(value: Uint, type: UintType, output: Buffer, start: number): number {
+  const offset = start + type.byteLength;
   if (BN.isBN(value)) {
-    value.toArrayLike(Buffer, "le", byteLength)
+    value.toArrayLike(Buffer, "le", type.byteLength)
       .copy(output, start);
   } else {
     if (value >= 2**48) {
-      (new BN(value)).toArrayLike(Buffer, "le", byteLength)
+      (new BN(value)).toArrayLike(Buffer, "le", type.byteLength)
         .copy(output, start);
     } else {
-      output.writeUIntLE(value, start, byteLength > 6 ? 6 : byteLength);
+      output.writeUIntLE(value, start, type.byteLength > 6 ? 6 : type.byteLength);
     }
   }
   return offset;
@@ -51,9 +49,9 @@ function _serializeBool(value: Bool, output: Buffer, start: number): number {
   return offset;
 }
 
-function _serializeByteArray(value: ByteArray, typeLength: number, output: Buffer, start: number): number {
+function _serializeByteArray(value: Bytes, type: BytesType, output: Buffer, start: number): number {
   const index0 = start + BYTES_PER_LENGTH_PREFIX;
-  const length = !isNaN(typeLength) ? typeLength : value.length;
+  const length = (type as any).length || value.length;
   const offset = start + length + BYTES_PER_LENGTH_PREFIX;
   output.writeUIntLE(length, start, BYTES_PER_LENGTH_PREFIX);
   (Buffer.isBuffer(value) ? value : Buffer.from(value))
@@ -62,20 +60,16 @@ function _serializeByteArray(value: ByteArray, typeLength: number, output: Buffe
 }
 
 function _serializeArray(value: SerializableArray, type: ArrayType, output: Buffer, start: number): number {
-  const elementType = type[0];
-  if (elementType === "byte") {
-    return _serializeByteArray((value as ByteArray), parseInt(type[1] as string), output, start);
-  }
   const index0 = start + BYTES_PER_LENGTH_PREFIX;
   let index = index0;
-  for (const v of (value as SerializableList)) {
-    index = _serialize(v, elementType, output, index);
+  for (const v of (value as SerializableArray)) {
+    index = _serialize(v, type.elementType, output, index);
   }
   output.writeUIntLE(index - index0, start, BYTES_PER_LENGTH_PREFIX)
   return index;
 }
 
-function _serializeObject(value: SerializableObject, type: ObjectType, output: Buffer, start: number): number {
+function _serializeObject(value: SerializableObject, type: ContainerType, output: Buffer, start: number): number {
   const index0 = start + BYTES_PER_LENGTH_PREFIX;
   let index = index0;
   for (const [fieldName, fieldType] of type.fields) {
@@ -85,36 +79,33 @@ function _serializeObject(value: SerializableObject, type: ObjectType, output: B
   return index;
 }
 
-export function _serialize(value: SerializableValue, type: SerializableType, output: Buffer, start: number): number {
-  if (typeof type === "string") {
-    if (type === "bool") {
+export function _serialize(value: SerializableValue, type: SSZType, output: Buffer, start: number): number {
+  switch(type.type) {
+    case Type.bool:
       return _serializeBool(value as Bool, output, start);
-    }
-    if (type.match(bytesPattern)) {
-      const typeLength = parseInt(type.match(digitsPattern) as unknown as string);
-      return _serializeByteArray(value as ByteArray, typeLength, output, start);
-    }
-    if (type.match(uintPattern)) {
-      const byteLength = parseInt(type.match(digitsPattern) as unknown as string) / 8;
-      return _serializeUint(value as Uint, byteLength, output, start);
-    }
-  } else if (isArrayType(type)) {
-    return _serializeArray(value as SerializableArray, type as ArrayType, output, start);
-  } else if (isObjectType(type)) {
-    return _serializeObject(value as SerializableObject, type as ObjectType, output, start);
+    case Type.uint:
+      return _serializeUint(value as Uint, type, output, start);
+    case Type.byteList:
+    case Type.byteVector:
+      return _serializeByteArray(value as Bytes, type, output, start);
+    case Type.list:
+    case Type.vector:
+      return _serializeArray(value as SerializableArray, type, output, start);
+    case Type.container:
+      return _serializeObject(value as SerializableObject, type, output, start);
   }
-  throw new Error(`Invalid type: ${type}`);
 }
 
 /**
  * Serialize, according to the SSZ spec
  * @method serialize
  * @param {SerializableValue} value
- * @param {SerializableType} type
+ * @param {AnyType} type
  * @returns {Buffer}
  */
-export function serialize(value: SerializableValue, type: SerializableType): Buffer {
-  const buf = Buffer.alloc(size(value, type));
-  _serialize(value, type, buf, 0);
+export function serialize(value: SerializableValue, type: AnyType): Buffer {
+  const _type = parseType(type);
+  const buf = Buffer.alloc(size(value, _type));
+  _serialize(value, _type, buf, 0);
   return buf;
 }

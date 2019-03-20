@@ -1,15 +1,17 @@
 import assert from "assert";
 
 import {
-  ObjectType,
+  AnyContainerType,
+  ContainerType,
   SerializableObject,
+  Type,
 } from "./types";
 
 import { hashTreeRoot } from "./hashTreeRoot";
 
 import {
   copyType,
-  isObjectType,
+  parseType,
 } from "./util/types";
 
 /**
@@ -17,12 +19,13 @@ import {
  * Used for signing/verifying signed data
  * @method signedRoot
  * @param {SerializableObject} value
- * @param {ObjectType} type
+ * @param {AnyContainerType} type
  * @returns {Buffer}
  */
-export function signedRoot(value: SerializableObject, type: ObjectType): Buffer {
-  assert(isObjectType(type));
-  const truncatedType = copyType(type) as ObjectType;
+export function signedRoot(value: SerializableObject, type: AnyContainerType): Buffer {
+  const _type = parseType(type);
+  assert(_type.type === Type.container);
+  const truncatedType = copyType(type) as ContainerType;
   truncatedType.fields.pop();
-  return hashTreeRoot(value, type);
+  return hashTreeRoot(value, _type);
 }

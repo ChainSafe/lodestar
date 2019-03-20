@@ -14,6 +14,7 @@
     "no-bitwise": "off",
     "@typescript-eslint/indent": ["error", 2],
     "@typescript-eslint/no-use-before-define": "off",
+    "@typescript-eslint/no-explicit-any": "off",
     "no-conditional-assignment": true,
     "no-consecutive-blank-lines": false,
     "object-literal-sort-keys": false,

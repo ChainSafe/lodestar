@@ -3,7 +3,6 @@ import { assert } from "chai";
 import BN from "bn.js";
 
 import {
-  SerializableType,
   SerializableValue,
 } from "../src/types";
 
@@ -20,7 +19,7 @@ import { stringifyType } from "./utils";
 describe("serialize", () => {
   const testCases: {
     value: SerializableValue;
-    type: SerializableType;
+    type: any;
     expected: string;
   }[] = [
     {value: true, type: "bool", expected: "01"},
@@ -67,7 +66,7 @@ describe("serialize", () => {
 
   const failCases: {
     value: SerializableValue;
-    type: SerializableType;
+    type: any;
     reason: string;
   }[] = [
     {value: 1, type: "foo", reason: "Invalid type"},

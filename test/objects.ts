@@ -1,8 +1,7 @@
 // Adapted from https://github.com/prysmaticlabs/prysm/blob/master/shared/ssz/encode_test.go#L296
 
-import { ObjectType } from "../src/types";
 
-export const SimpleObject: ObjectType = {
+export const SimpleObject = {
   name: "SimpleObject",
   fields: [
     ['b', 'uint16'],
@@ -10,14 +9,14 @@ export const SimpleObject: ObjectType = {
   ],
 }
 
-export const InnerObject: ObjectType = {
+export const InnerObject = {
   name: "InnerObject",
   fields: [
     ['v', 'uint16'],
   ],
 }
 
-export const OuterObject: ObjectType = {
+export const OuterObject = {
   name: "OuterObject",
   fields: [
     ['v', 'uint8'],
@@ -25,7 +24,7 @@ export const OuterObject: ObjectType = {
   ],
 }
 
-export const ArrayObject: ObjectType = {
+export const ArrayObject = {
   name: "ArrayObject",
   fields: [
     ['v', [SimpleObject]],

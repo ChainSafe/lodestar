@@ -1,31 +1,26 @@
-import assert from "assert";
 import BN from "bn.js";
 
 import {
+  AnyType,
   ArrayType,
+  ContainerType,
   DeserializedValue,
-  ObjectType,
-  SerializableType,
+  SerializableArray,
   SerializableObject,
   SerializableValue,
-  SerializableList,
+  SSZType,
+  Type,
+  UintType,
 } from "./types";
 
 import { BYTES_PER_LENGTH_PREFIX } from "./constants";
 
-import {
-  bytesPattern,
-  digitsPattern,
-  isArrayType,
-  isObjectType,
-  numberPattern,
-  uintPattern,
-} from "./util/types";
+import { parseType } from "./util/types";
 
-function _deserializeUint(data: Buffer, byteLength: number, alwaysNumber: boolean, start: number): DeserializedValue {
-  const offset = start + byteLength;
+function _deserializeUint(data: Buffer, type: UintType, start: number): DeserializedValue {
+  const offset = start + type.byteLength;
   const bn = new BN(data.slice(start, offset), 16, "le");
-  const value = (alwaysNumber || byteLength <= 4) ? bn.toNumber() : bn;
+  const value = (type.useNumber || type.byteLength <= 4) ? bn.toNumber() : bn;
   return {
     offset,
     value,
@@ -52,17 +47,13 @@ function _deserializeByteArray(data: Buffer, start: number): DeserializedValue {
 }
 
 function _deserializeArray(data: Buffer, type: ArrayType, start: number): DeserializedValue {
-  const elementType = type[0];
-  if (elementType === "byte") {
-    return _deserializeByteArray(data, start);
-  }
   const length = data.readUIntLE(start, BYTES_PER_LENGTH_PREFIX);
   const index0 = start + BYTES_PER_LENGTH_PREFIX;
   const offset = index0 + length;
   let index = index0;
-  const value: SerializableList = [];
+  const value: SerializableArray = [];
   for (; index < offset;) {
-    const deserialized = _deserialize(data, elementType, index);
+    const deserialized = _deserialize(data, type.elementType, index);
     index = deserialized.offset;
     value.push(deserialized.value);
   }
@@ -72,7 +63,7 @@ function _deserializeArray(data: Buffer, type: ArrayType, start: number): Deseri
   }
 }
 
-function _deserializeObject(data: Buffer, type: ObjectType, start: number): DeserializedValue {
+function _deserializeObject(data: Buffer, type: ContainerType, start: number): DeserializedValue {
   const length = data.readUIntLE(start, BYTES_PER_LENGTH_PREFIX);
   const index0 = start + BYTES_PER_LENGTH_PREFIX;
   const offset = index0 + length;
@@ -89,35 +80,31 @@ function _deserializeObject(data: Buffer, type: ObjectType, start: number): Dese
   }
 }
 
-export function _deserialize(data: Buffer, type: SerializableType, start: number): DeserializedValue {
-  if (typeof type === "string") {
-    if (type === "bool") {
+export function _deserialize(data: Buffer, type: SSZType, start: number): DeserializedValue {
+  switch (type.type) {
+    case Type.uint:
+      return _deserializeUint(data, type, start);
+    case Type.bool:
       return _deserializeBool(data, start);
-    }
-    if (type.match(bytesPattern)) {
+    case Type.byteList:
+    case Type.byteVector:
       return _deserializeByteArray(data, start);
-    }
-    if (type.match(uintPattern)) {
-      const useNumber = Array.isArray(type.match(numberPattern));
-      const bits = parseInt(type.match(digitsPattern) as unknown as string);
-      assert([8, 16, 32, 64, 128, 256].find((b) => b === bits), `Invalid uint type: ${type}`);
-      return _deserializeUint(data, bits / 8, useNumber, start);
-    }
-  } else if (isArrayType(type)) {
-    return _deserializeArray(data, type as ArrayType, start);
-  } else if (isObjectType(type)) {
-    return _deserializeObject(data, type as ObjectType, start);
+    case Type.list:
+    case Type.vector:
+      return _deserializeArray(data, type, start);
+    case Type.container:
+      return _deserializeObject(data, type, start);
   }
-  throw new Error(`Invalid type: ${type}`);
 }
 
 /**
  * Deserialize, according to the SSZ spec
  * @method deserialize
  * @param {Buffer} data
- * @param {SerializableType} type
- * @returns {SerializableType}
+ * @param {AnyType} type
+ * @returns {SerializableValue}
  */
-export function deserialize(data: Buffer, type: SerializableType): SerializableValue {
-  return _deserialize(data, type, 0).value;
+export function deserialize(data: Buffer, type: AnyType): SerializableValue {
+  const _type = parseType(type);
+  return _deserialize(data, _type, 0).value;
 }

@@ -1,8 +1,7 @@
 import { keccak256 } from "js-sha3";
 
 import {
-  SerializableType,
-  SerializableValue,
+  SerializableValue, SSZType,
 } from "../types";
 
 import { BYTES_PER_CHUNK } from "../constants";
@@ -11,7 +10,8 @@ import { size } from "../size";
 
 import { _serialize } from "../serialize";
 
-export function pack (input: SerializableValue[], type: SerializableType): Buffer[] {
+export function pack (input: SerializableValue[], type: SSZType): Buffer[] {
+  // Serialize inputs into one long buffer
   const packedLength = input.map((v) => size(v, type)).reduce((a, b) => a + b);
   const packedBuf = Buffer.alloc(packedLength);
   let index = 0;
@@ -19,6 +19,7 @@ export function pack (input: SerializableValue[], type: SerializableType): Buffe
     index = _serialize(v, type, packedBuf, index);
   }
   const chunkLength = Math.ceil(packedLength / BYTES_PER_CHUNK);
+  // Chop buffer into chunks
   const chunks = Array.from({ length: chunkLength },
     (_, i) => packedBuf.slice(i * BYTES_PER_CHUNK, i * BYTES_PER_CHUNK + BYTES_PER_CHUNK));
   const lastChunk = chunks[chunkLength - 1];

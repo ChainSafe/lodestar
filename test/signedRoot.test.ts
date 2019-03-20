@@ -1,9 +1,7 @@
 import { assert } from "chai";
 
 import {
-  ObjectType,
   SerializableObject,
-  SerializableType,
   SerializableValue,
 } from "../src/types";
 
@@ -20,7 +18,7 @@ import { stringifyType } from "./utils";
 describe("signedRoot", () => {
   const testCases: {
     value: SerializableObject;
-    type: ObjectType;
+    type: any;
     expected: string;
   }[] = [
     {value: {b:0,a:0}, type: SimpleObject, expected: ""},
@@ -37,7 +35,7 @@ describe("signedRoot", () => {
 
   const failCases: {
     value: SerializableValue;
-    type: SerializableType;
+    type: any;
     reason: string;
   }[] = [
     {value: 1, type: "foo", reason: "Invalid type"},
@@ -45,7 +43,7 @@ describe("signedRoot", () => {
   ];
   for (const {value, type, reason} of failCases) {
     it(`should throw an error for ${stringifyType(type)}: ${reason}`, () => {
-      assert.throws(() => signedRoot(value as SerializableObject, type as ObjectType));
+      assert.throws(() => signedRoot(value as SerializableObject, type));
     });
   }
 });

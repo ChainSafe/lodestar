@@ -18,9 +18,9 @@ Deserialize, according to the SSZ spec
 ### Parameters
 
 -   `data` **[Buffer][9]** 
--   `type` **SerializableType** 
+-   `type` **AnyType** 
 
-Returns **SerializableType** 
+Returns **SerializableValue** 
 
 ## hashTreeRoot
 
@@ -29,7 +29,7 @@ Merkleize an SSZ value
 ### Parameters
 
 -   `value` **SerializableValue** 
--   `type` **SerializableType** 
+-   `type` **AnyType** 
 
 Returns **[Buffer][9]** 
 
@@ -40,7 +40,7 @@ Serialize, according to the SSZ spec
 ### Parameters
 
 -   `value` **SerializableValue** 
--   `type` **SerializableType** 
+-   `type` **AnyType** 
 
 Returns **[Buffer][9]** 
 
@@ -52,7 +52,7 @@ Used for signing/verifying signed data
 ### Parameters
 
 -   `value` **SerializableObject** 
--   `type` **ObjectType** 
+-   `type` **AnyContainerType** 
 
 Returns **[Buffer][9]** 
 
