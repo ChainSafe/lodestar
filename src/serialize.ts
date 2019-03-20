@@ -26,7 +26,7 @@ import { parseType } from "./util/types";
 function _serializeUint(value: Uint, type: UintType, output: Buffer, start: number): number {
   const offset = start + type.byteLength;
   (new BN(value)).addn(type.offset).toArrayLike(Buffer, "le", type.byteLength)
-      .copy(output, start);
+    .copy(output, start);
   return offset;
 }
 
