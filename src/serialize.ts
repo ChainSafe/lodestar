@@ -25,17 +25,8 @@ import { parseType } from "./util/types";
 
 function _serializeUint(value: Uint, type: UintType, output: Buffer, start: number): number {
   const offset = start + type.byteLength;
-  if (BN.isBN(value)) {
-    value.toArrayLike(Buffer, "le", type.byteLength)
+  (new BN(value)).addn(type.offset).toArrayLike(Buffer, "le", type.byteLength)
       .copy(output, start);
-  } else {
-    if (value >= 2**48) {
-      (new BN(value)).toArrayLike(Buffer, "le", type.byteLength)
-        .copy(output, start);
-    } else {
-      output.writeUIntLE(value, start, type.byteLength > 6 ? 6 : type.byteLength);
-    }
-  }
   return offset;
 }
 
