@@ -27,7 +27,7 @@
       "simple serialize",
       "ssz"
   ],
-  "author": "ChainSafe",
+  "author": "ChainSafe Systems",
   "license": "MIT",
   "devDependencies": {
     "@babel/cli": "^7.2.3",
