@@ -1,45 +1,53 @@
-import assert from "assert";
+import blgr from 'blgr';
+import ethers from "ethers";
+import {ValidatorCtx} from "./types";
+const logger = blgr.logger('debug');
 
-const ETH1_FOLLOW_DISTANCE = 2**10; //1024 blocks ~4 hours 
 
-// The validator constructs their withdrawal_credentials via the following:
-
-// Set withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX_BYTE.
-// Set withdrawal_credentials[1:] == hash(withdrawal_pubkey)[1:].
-
-class Validator {
-  constructor(publicKey, withdrawalKey) {
-    this.publicKey = publicKey;
-    this.withdrawalKey = withdrawalKey;
+export class Validator {
+  ctx: ValidatorCtx;
+  constructor(ctx: ValidatorCtx) {
+    this.ctx= ctx;
   }
 
-  function start(): void {
-    
+  setupRPC(): void {
+    logger.info("Setting up RPC connection...");
+    // TODO: Use ethers to connect to a BeaconChain node
+    logger.info(`RPC connection successfully established ${this.ctx.rpcUrl}!`);
   }
 
-  function 
+  validateKeystores(): void {
+    logger.info("Checking wallets...");
 
-}
+    // Attempt to unlock public wallet
+    ethers.Wallet.fromEncryptedJson(this.ctx.publicKeystore, this.ctx.publicKeystorePassword)
+      .then((wallet: ethers.Wallet) => logger.info(`Successfully unlocked the public wallet - ${wallet.address}`))
+      .catch((error: Error) => {
+        logger.error("Could not unlock the public wallet!");
+        console.log(error);
+        process.exit(1);
+      });
 
-function getCommitteeAssignment(state: BeaconState, epoch: Epoch, validatorIndex: ValidatorIndex, registryChange: Boolean = false) {
-  const previousEpoch = getPreviousEpoch(state);
-  const nextEpoch = getCurrentEpoch(state) + 1;
-  const assert(previousEpoch <= epoch && epoch <= nextEpoch);
+    // Attempt to unlock withdrawal wallet
+    ethers.Wallet.fromEncryptedJson(this.ctx.withdrawalKeystore, this.ctx.withdrawalKeystorePassword)
+      .then((wallet: ethers.Wallet) => logger.info(`Successfully unlocked the withdrawal wallet - ${wallet.address}`))
+      .catch((error: Error) => {
+        logger.error("Could not unlock the withdrawal wallet!");
+        console.log(error);
+        process.exit(1);
+      });
 
-  const epochStartSlot: number = getEpochStartSlot(epoch);
-  const loopEnd: number = epochStartSlot + SLOTS_PER_EPOCH;
-  for (let i: number = epochStartSlot; i < loopEnd; i++) {
-    const crosslinkCommittees = getCrosslinkCommitteesAtSlot(state, slot, registryChange);
-    const selectedCommittees = crosslinkCommittees.map((x: committee) => {
-      if (committee[0].contains(validatorIndex)) {
-        return committee;
-      }
-    }  
+    logger.info("Wallets check success!");
   }
-  if (selectedCommittees.length > 0) {
-    const validators = selectedCommittees[0][0];
-    const shard = selectedCommittees[0][1];
-    const isPropose = validatorIndex === getBeaconProposerIndex(state, slot, registryChange);
-    return {validators, shard, slot, isProposer}
+
+  setup(): void {
+    this.validateKeystores();
+    this.setupRPC();
+  }
+
+  start(): void {
+    logger.info("Starting validator client...");
+    this.setup();
+    logger.info("Validator client successfully started!")
   }
 }
