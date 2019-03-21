@@ -1,7 +1,7 @@
 import BN from "bn.js";
 
 import {
-  AnyType,
+  AnySSZType,
   ArrayType,
   Bool,
   Bytes,
@@ -91,10 +91,10 @@ export function _serialize(value: SerializableValue, type: SSZType, output: Buff
  * Serialize, according to the SSZ spec
  * @method serialize
  * @param {SerializableValue} value
- * @param {AnyType} type
+ * @param {AnySSZType} type
  * @returns {Buffer}
  */
-export function serialize(value: SerializableValue, type: AnyType): Buffer {
+export function serialize(value: SerializableValue, type: AnySSZType): Buffer {
   const _type = parseType(type);
   const buf = Buffer.alloc(size(value, _type));
   _serialize(value, _type, buf, 0);

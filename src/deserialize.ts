@@ -1,7 +1,7 @@
 import BN from "bn.js";
 
 import {
-  AnyType,
+  AnySSZType,
   ArrayType,
   ContainerType,
   DeserializedValue,
@@ -101,10 +101,10 @@ export function _deserialize(data: Buffer, type: SSZType, start: number): Deseri
  * Deserialize, according to the SSZ spec
  * @method deserialize
  * @param {Buffer} data
- * @param {AnyType} type
+ * @param {AnySSZType} type
  * @returns {SerializableValue}
  */
-export function deserialize(data: Buffer, type: AnyType): SerializableValue {
+export function deserialize(data: Buffer, type: AnySSZType): SerializableValue {
   const _type = parseType(type);
   return _deserialize(data, _type, 0).value;
 }

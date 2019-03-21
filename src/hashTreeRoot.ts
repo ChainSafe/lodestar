@@ -1,5 +1,5 @@
 import {
-  AnyType,
+  AnySSZType,
   Bytes,
   SerializableArray,
   SerializableValue,
@@ -63,10 +63,10 @@ export function _hashTreeRoot(value: SerializableValue, type: SSZType): Buffer {
  * Merkleize an SSZ value
  * @method hashTreeRoot
  * @param {SerializableValue} value
- * @param {AnyType} type
+ * @param {AnySSZType} type
  * @returns {Buffer}
  */
-export function hashTreeRoot(value: SerializableValue, type: AnyType): Buffer {
+export function hashTreeRoot(value: SerializableValue, type: AnySSZType): Buffer {
   const _type = parseType(type);
   return _hashTreeRoot(value, _type);
 }

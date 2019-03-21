@@ -17,26 +17,26 @@ export interface DeserializedValue {
   value: SerializableValue;
 }
 
-// Simplified types
+// Simple types
 // These types are supplied to provide a convenient interface with which to specify types
 
-export type SimplifiedPrimitiveType = string;
+export type SimplePrimitiveType = string;
 
-export interface SimplifiedListType extends Array<SimplifiedType> {
-  0: SimplifiedType;
+export interface SimpleListType extends Array<SimpleSSZType> {
+  0: SimpleSSZType;
 }
 
-export interface SimplifiedVectorType extends Array<SimplifiedType | number> {
-  0: SimplifiedType;
+export interface SimpleVectorType extends Array<SimpleSSZType | number> {
+  0: SimpleSSZType;
   1: number;
 }
 
-export interface SimplifiedContainerType {
+export interface SimpleContainerType {
   name: string;
-  fields: [string, SimplifiedType][];
+  fields: [string, SimpleSSZType][];
 }
 
-export type SimplifiedType = SimplifiedPrimitiveType | SimplifiedListType | SimplifiedPrimitiveType | SimplifiedContainerType;
+export type SimpleSSZType = SimplePrimitiveType | SimpleListType | SimplePrimitiveType | SimpleContainerType;
 
 // Full types
 // These types are used internally
@@ -94,6 +94,8 @@ export interface ContainerType {
 
 export type SSZType = UintType | BoolType | BytesType | ArrayType | ContainerType;
 
-export type AnyContainerType = ContainerType | SimplifiedContainerType;
+// simple + full types
 
-export type AnyType = SSZType | SimplifiedType;
+export type AnyContainerType = ContainerType | SimpleContainerType;
+
+export type AnySSZType = SSZType | SimpleSSZType;

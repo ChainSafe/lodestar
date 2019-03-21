@@ -1,10 +1,10 @@
 import assert from "assert";
 
 import {
-  AnyType,
+  AnySSZType,
   Type,
-  SimplifiedContainerType,
-  SimplifiedVectorType,
+  SimpleContainerType,
+  SimpleVectorType,
   SSZType,
 } from "../types";
 
@@ -17,11 +17,11 @@ export const uintPattern = /^(uint|number)\d+$/;
 // regex to identify a number type specifically
 export const numberPattern = /^number/;
 
-export function copyType(type: AnyType): AnyType {
+export function copyType(type: AnySSZType): AnySSZType {
   return JSON.parse(JSON.stringify(type));
 }
 
-export function parseType(type: AnyType): SSZType {
+export function parseType(type: AnySSZType): SSZType {
   if(typeof type === "string") {
     if (type === "bool") {
       return {
@@ -75,7 +75,7 @@ export function parseType(type: AnyType): SSZType {
       }
     } else if (type.length === 2) {
       const elementType = parseType(type[0]);
-      const length = (type as SimplifiedVectorType)[1] as number;
+      const length = (type as SimpleVectorType)[1] as number;
       assert(Number.isInteger(length), "Vector length must be an integer")
       if (elementType.type === Type.uint && elementType.byteLength === 1) {
         return {
@@ -95,7 +95,7 @@ export function parseType(type: AnyType): SSZType {
     if (isSSZType(type)) {
       return type as SSZType;
     } else {
-      type = type as SimplifiedContainerType;
+      type = type as SimpleContainerType;
       assert(typeof type.name === "string", "Container must have a name");
       assert(Array.isArray(type.fields), "Container must have fields specified as an array");
       return {
@@ -111,7 +111,7 @@ export function parseType(type: AnyType): SSZType {
   throw new Error(`Invalid type: ${type}`);
 }
 
-export function isSSZType(type: AnyType): boolean {
+export function isSSZType(type: AnySSZType): boolean {
   return type === Object(type) && Object.values(Type).includes((type as any).type);
 }
 
