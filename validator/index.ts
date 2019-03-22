@@ -1,47 +1,42 @@
 import blgr from 'blgr';
 import ethers from "ethers";
+import to from 'await-to-js';
 import {ValidatorCtx} from "./types";
+import {unlockWallet} from "./utils/wallet";
 const logger = blgr.logger('debug');
 
-
 export class Validator {
-  ctx: ValidatorCtx;
+  private ctx: ValidatorCtx;
+  private publicWallet: ethers.Wallet;
+  private withdrawalWallet: ethers.Wallet;
   constructor(ctx: ValidatorCtx) {
     this.ctx= ctx;
   }
 
   setupRPC(): void {
     logger.info("Setting up RPC connection...");
-    // TODO: Use ethers to connect to a BeaconChain node
+    // TODO connect to a beacon chain
     logger.info(`RPC connection successfully established ${this.ctx.rpcUrl}!`);
   }
 
-  validateKeystores(): void {
-    logger.info("Checking wallets...");
+  async validateKeystores() {
+    logger.info("Unlocking wallets...");
 
     // Attempt to unlock public wallet
-    ethers.Wallet.fromEncryptedJson(this.ctx.publicKeystore, this.ctx.publicKeystorePassword)
-      .then((wallet: ethers.Wallet) => logger.info(`Successfully unlocked the public wallet - ${wallet.address}`))
-      .catch((error: Error) => {
-        logger.error("Could not unlock the public wallet!");
-        console.log(error);
-        process.exit(1);
-      });
+    const [err1, publicWallet] = await to<ethers.Wallet>(unlockWallet(this.ctx.publicKeystore, this.ctx.publicKeystorePassword, "public wallet"));
+    if (err1) throw new Error("Public wallet could not be unlocked!");
+    this.publicWallet = publicWallet;
 
     // Attempt to unlock withdrawal wallet
-    ethers.Wallet.fromEncryptedJson(this.ctx.withdrawalKeystore, this.ctx.withdrawalKeystorePassword)
-      .then((wallet: ethers.Wallet) => logger.info(`Successfully unlocked the withdrawal wallet - ${wallet.address}`))
-      .catch((error: Error) => {
-        logger.error("Could not unlock the withdrawal wallet!");
-        console.log(error);
-        process.exit(1);
-      });
+    let [err2, withdrawalWallet] = await to<ethers.Wallet>(unlockWallet(this.ctx.withdrawalKeystore, this.ctx.withdrawalKeystorePassword, "withrawal wallet"));
+    if (err2) throw new Error("Withdrawal wallet could not be unlocked!");
+    this.withdrawalWallet = withdrawalWallet;
 
-    logger.info("Wallets check success!");
+    logger.info("Wallets successfully unlocked!");
   }
 
-  setup(): void {
-    this.validateKeystores();
+  async setup() {
+    await this.validateKeystores();
     this.setupRPC();
   }
 
