@@ -1,8 +1,8 @@
 import assert from "assert";
-import {BeaconState, Epoch, Slot, ValidatorIndex} from "../src/types";
+import {BeaconState, Epoch, ValidatorIndex} from "../src/types";
 import {getPreviousEpoch, getCurrentEpoch, getEpochStartSlot, getCrosslinkCommitteesAtSlot, getBeaconProposerIndex} from "../src/chain/helpers/stateTransitionHelpers";
-import {SLOTS_PER_EPOCH} from "./constants";
 import BN = require("bn.js");
+import {SLOTS_PER_EPOCH} from "../src/constants";
 
 /**
  * Return the committee assignment in the ``epoch`` for ``validator_index`` and ``registry_change``.

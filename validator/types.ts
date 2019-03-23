@@ -10,11 +10,3 @@ export interface ValidatorCtx {
   // Connection string to RPC
   rpcUrl: string;
 }
-export const ValidatorCtx = {
-  name: "ValidatorCtx",
-  fields: [
-    ["publicKey", "string"],
-    ["withdrawalKey", "string"],
-    ["rpcUrl", "string"]
-  ],
-};
