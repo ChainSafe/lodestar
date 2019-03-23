@@ -1,10 +1,8 @@
-import {DEPOSIT_CONTRACT_ADDRESS} from "../constants";
+import eth1Defaults from "../eth1/defaults";
 
 export default {
   chain: {
     chain: "mainnet",
   },
-  eth1: {
-    depositContractAddress: DEPOSIT_CONTRACT_ADDRESS,
-  }
+  eth1: eth1Defaults,
 }
