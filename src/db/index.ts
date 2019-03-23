@@ -64,6 +64,24 @@ export class DB extends EventEmitter {
   }
 
   /**
+   * Set the last justified state
+   * @param {BeaconState} state
+   * @returns {Promise<void>}
+   */
+  public async setJustifiedState(state: BeaconState): Promise<void> {
+    await this.db.put(encodeKey(Bucket.chainInfo, Key.justifiedState), serialize(state, BeaconState));
+  }
+
+  /**
+   * Get the last justified state
+   * @returns {Promise<BeaconState>}
+   */
+  public async getJustifiedState(): Promise<BeaconState> {
+    const buf = await this.db.get(encodeKey(Bucket.chainInfo, Key.justifiedState));
+    return deserialize(buf, BeaconState).deserializedData;
+  }
+
+  /**
    * Set the last finalized state
    * @param {BeaconState} state
    * @returns {Promise<void>}
@@ -79,6 +97,15 @@ export class DB extends EventEmitter {
   public async getBlock(blockRoot: bytes32): Promise<BeaconBlock> {
     const buf = await this.db.get(encodeKey(Bucket.block, blockRoot));
     return deserialize(buf, BeaconBlock).deserializedData;
+  }
+
+  public async hasBlock(blockHash: bytes32): Promise<boolean> {
+    try {
+      const block = this.getBlock(blockHash);
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   /**
@@ -101,6 +128,42 @@ export class DB extends EventEmitter {
   }
 
   /**
+   * Get the latest finalized block
+   * @returns {Promise<BeaconBlock>}
+   */
+  public async getFinalizedBlock(): Promise<BeaconBlock> {
+    const buf = await this.db.get(encodeKey(Bucket.chainInfo, Key.finalizedBlock));
+    return deserialize(buf, BeaconBlock).deserializedData;
+  }
+
+  /**
+   * Set the latest finalized block
+   * @param {BeaconBlock} block
+   * @returns {Promise<void>}
+   */
+  public async setFinalizedBlock(block: BeaconBlock): Promise<void> {
+    await this.db.put(encodeKey(Bucket.chainInfo, Key.finalizedBlock), serialize(block, BeaconBlock));
+  }
+
+  /**
+   * Get the latest justified block
+   * @returns {Promise<BeaconBlock>}
+   */
+  public async getJustifiedBlock(): Promise<BeaconBlock> {
+    const buf = await this.db.get(encodeKey(Bucket.chainInfo, Key.justifiedBlock));
+    return deserialize(buf, BeaconBlock).deserializedData;
+  }
+
+  /**
+   * Set the latest justified block
+   * @param {BeaconBlock} block
+   * @returns {Promise<void>}
+   */
+  public async setJustifiedBlock(block: BeaconBlock): Promise<void> {
+    await this.db.put(encodeKey(Bucket.chainInfo, Key.justifiedBlock), serialize(block, BeaconBlock));
+  }
+
+  /**
    * Get the head of the chain
    * @returns {Promise<BeaconBlock>}
    */
@@ -109,6 +172,15 @@ export class DB extends EventEmitter {
     const height = deserialize(heightBuf, uint64).deserializedData;
     const blockRoot = await this.db.get(encodeKey(Bucket.mainChain, height));
     return await this.getBlock(blockRoot);
+  }
+
+  /**
+   * Get the root of the head of the chain
+   * @returns {Promise<bytes32>}
+   */
+  public async getChainHeadRoot(): Promise<bytes32> {
+    const block = await this.getChainHead();
+    return treeHash(block, BeaconBlock);
   }
 
   /**
