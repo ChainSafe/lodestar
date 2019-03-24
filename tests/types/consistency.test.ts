@@ -1,14 +1,15 @@
 import { assert } from "chai";
 import fs from "fs";
-import * as types from "../../src/types";
+import * as sszTypes from "../../src/types";
 
 describe("types", () => {
   // interfaces are not available at run time, so we must parse our interface
   // files ourselves in order to retrieve their information
 
 
-  // put interfaces into an object
+  // put interfaces and types into objects
   const interfaces = {};
+  const types = {};
   const typesDir = __dirname + "/../../src/types/";
   // Get all ts files in our types directory
   const typeFiles = fs.readdirSync(typesDir).filter((s) => s.endsWith(".ts"));
@@ -54,12 +55,19 @@ describe("types", () => {
         fields,
       };
     }
+    // extract type definitions
+    const typeRe = /export type (.*) = (\S+);/g;
+    while (match = typeRe.exec(fileStr)) {
+      const name = match[1];
+      const t = match[2];
+      types[name] = t;
+    }
   });
     //
   // put runtime type variables into an object
   const vars = {};
-  for (const name in types) {
-    vars[name] = types[name];
+  for (const name in sszTypes) {
+    vars[name] = sszTypes[name];
   }
   // Now that we have an object of interfaces and and object of runtime type variables, we can perform our tests
   it("Every interface should have a corresponding runtime type variable", () => {
@@ -80,14 +88,22 @@ describe("types", () => {
           `field type mismatch in ${ifaceName}, field ${ifaceFieldName}:
              interface field type is an array but corresponding interface field is not`);
         return checkType(ifaceName, ifaceFieldName, ifaceFieldType[0], rtFieldType[0]);
-      } else if (typeof rtFieldType === "object") {
+      } else if (typeof rtFieldType === "object" && rtFieldType.name) {
         assert(
           ifaceFieldType === rtFieldType.name,
           `field type mismatch in ${ifaceName}, field ${ifaceFieldName}:
              interface field type: ${ifaceFieldType}, runtime type field name: ${rtFieldType.name}`);
       } else {
-        assert(
-          ifaceFieldType === rtFieldType,
+        let ifaceInferredFieldType = ifaceFieldType;
+        // recursively traverse type aliases
+        while (ifaceInferredFieldType) {
+          // if their is a variable whose name is the interface field type and it is the same object thats passed in
+          if (sszTypes[ifaceInferredFieldType] === rtFieldType) {
+            return;
+          }
+          ifaceInferredFieldType = types[ifaceInferredFieldType];
+        }
+        assert.fail(
           `field type mismatch in ${ifaceName}, field ${ifaceFieldName}:
              interface field type: ${ifaceFieldType}, runtime type field name: ${rtFieldType}`);
       }
