@@ -31,9 +31,9 @@ export class BeaconChain extends EventEmitter {
   }
 
   /**
-   * Start the beacon chain processing
+   * Start beacon chain processing
    */
-  public async start() {
+  public async start(): Promise<void> {
     try {
       const state = await this.db.getState();
     } catch (e) {
@@ -43,7 +43,10 @@ export class BeaconChain extends EventEmitter {
     }
   }
 
-  public async stop() {}
+  /**
+   * Stop beacon chain processing
+   */
+  public async stop(): Promise<void> {}
 
   /**
    * Initialize the beacon chain with a genesis beacon state / block
