@@ -29,18 +29,26 @@ export class BeaconChain extends EventEmitter {
     this.db = db;
     this.eth1 = eth1;
   }
+
+  /**
+   * Start the beacon chain processing
+   */
   public async start() {
     try {
       const state = await this.db.getState();
     } catch (e) {
       // if state doesn't exist in the db, the chain maybe hasn't started
       // listen for eth1 Eth2Genesis event
-      this.eth1.once('eth2genesis', this.processEth2Genesis.bind(this));
+      this.eth1.once('eth2genesis', this.initializeChain.bind(this));
     }
   }
+
   public async stop() {}
 
-  public async processEth2Genesis(genesisTime: uint64, genesisDeposits: Deposit[], genesisEth1Data: Eth1Data) {
+  /**
+   * Initialize the beacon chain with a genesis beacon state / block
+   */
+  public async initializeChain(genesisTime: uint64, genesisDeposits: Deposit[], genesisEth1Data: Eth1Data): Promise<void> {
     const genesisState = getGenesisBeaconState(genesisDeposits, genesisTime, genesisEth1Data);
     const genesisBlock = getEmptyBlock();
     genesisBlock.stateRoot = hashTreeRoot(genesisState, BeaconState);
