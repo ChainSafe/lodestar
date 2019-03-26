@@ -5,11 +5,11 @@ export function processEth1Data(
   state: BeaconState,
   nextEpoch: Epoch): void {
 
-  if (nextEpoch.modn(EPOCHS_PER_ETH1_VOTING_PERIOD) === 0) {
+  if (nextEpoch % EPOCHS_PER_ETH1_VOTING_PERIOD === 0) {
     state.eth1DataVotes.forEach((vote: Eth1DataVote) => {
 
       // Check if more than half the votes were for that value
-      if (vote.voteCount.muln(2).gtn(EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH)) {
+      if (vote.voteCount* 2 > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH) {
         state.latestEth1Data = vote.eth1Data;
       }
     });

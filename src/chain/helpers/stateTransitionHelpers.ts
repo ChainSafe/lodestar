@@ -25,22 +25,24 @@ import {
 import {
   AttestationData,
   AttestationDataAndCustodyBit,
+  BLSPubkey,
   BLSSignature,
   BeaconState,
   bool,
   bytes,
   bytes32,
+  CrosslinkCommittee,
   DepositInput,
   Epoch,
   Fork,
   Gwei,
   int,
+  Shard,
   SlashableAttestation,
   Slot,
   uint64,
   Validator,
   ValidatorIndex,
-  BLSPubkey, CrosslinkCommittee,
 } from "../../types";
 
 import {
@@ -81,7 +83,7 @@ export function intToBytes(value: BN | number, length: number): bytes {
  * @returns {Epoch}
  */
 export function slotToEpoch(slot: Slot): Epoch {
-  return slot.divn(SLOTS_PER_EPOCH);
+  return Math.floor(slot / SLOTS_PER_EPOCH);
 }
 
 /**
@@ -100,10 +102,10 @@ export function getCurrentEpoch(state: BeaconState): Epoch {
  */
 export function getPreviousEpoch(state: BeaconState): Epoch {
   const currentEpoch = getCurrentEpoch(state);
-  if (currentEpoch.eq(GENESIS_EPOCH)) {
+  if (currentEpoch == GENESIS_EPOCH) {
     return GENESIS_EPOCH;
   }
-  return currentEpoch.subn(1);
+  return currentEpoch - 1;
 }
 
 /**
@@ -112,7 +114,7 @@ export function getPreviousEpoch(state: BeaconState): Epoch {
  * @returns {Slot}
  */
 export function getEpochStartSlot(epoch: Epoch): Slot {
-  return epoch.muln(SLOTS_PER_EPOCH);
+  return epoch * SLOTS_PER_EPOCH;
 }
 
 /**
@@ -122,7 +124,7 @@ export function getEpochStartSlot(epoch: Epoch): Slot {
  * @returns {boolean}
  */
 export function isActiveValidator(validator: Validator, epoch: Epoch): boolean {
-  return validator.activationEpoch.lte(epoch) && epoch.lt(validator.exitEpoch);
+  return validator.activationEpoch <= epoch && epoch < validator.exitEpoch;
 }
 
 /**
@@ -134,7 +136,7 @@ export function isActiveValidator(validator: Validator, epoch: Epoch): boolean {
 export function getActiveValidatorIndices(validators: Validator[], epoch: Epoch): ValidatorIndex[] {
   return validators.reduce((accumulator: ValidatorIndex[], validator: Validator, index: int) => {
     return isActiveValidator(validator, epoch)
-      ? [...accumulator, new BN(index)]
+      ? [...accumulator, index]
       : accumulator;
   }, []);
 }
@@ -237,7 +239,7 @@ export function getEpochCommitteeCount(activeValidatorCount: int): int {
  */
 export function getShuffling(seed: bytes32, validators: Validator[], slot: Slot): ValidatorIndex[][] {
   // Normalizes slot to start of epoch boundary
-  const slotAtEpoch = slot.sub(slot.umod(new BN(SLOTS_PER_EPOCH)));
+  const slotAtEpoch = slot - slot % SLOTS_PER_EPOCH;
 
   const activeValidatorIndices = getActiveValidatorIndices(validators, slotAtEpoch);
 
@@ -280,7 +282,7 @@ export function getCurrentEpochCommitteeCount(state: BeaconState): int {
  * @returns {Number}
  */
 export function getNextEpochCommitteeCount(state: BeaconState): int {
-  const nextActiveValidators = getActiveValidatorIndices(state.validatorRegistry, getCurrentEpoch(state).addn(1));
+  const nextActiveValidators = getActiveValidatorIndices(state.validatorRegistry, getCurrentEpoch(state) + 1);
   return getEpochCommitteeCount(nextActiveValidators.length);
 }
 
@@ -291,8 +293,8 @@ export function getNextEpochCommitteeCount(state: BeaconState): int {
  * @returns {bytes32}
  */
 export function getRandaoMix(state: BeaconState, epoch: Epoch): bytes32 {
-  assert(getCurrentEpoch(state).subn(LATEST_RANDAO_MIXES_LENGTH).lt(epoch) && epoch.lt(getCurrentEpoch(state)))
-  return state.latestRandaoMixes[epoch.umod(new BN(LATEST_RANDAO_MIXES_LENGTH)).toNumber()];
+  assert((getCurrentEpoch(state) - LATEST_RANDAO_MIXES_LENGTH) < epoch && epoch < getCurrentEpoch(state))
+  return state.latestRandaoMixes[epoch % LATEST_RANDAO_MIXES_LENGTH];
 }
 
 /**
@@ -302,9 +304,9 @@ export function getRandaoMix(state: BeaconState, epoch: Epoch): bytes32 {
  * @returns {bytes32}
  */
 export function getActiveIndexRoot(state: BeaconState, epoch: Epoch): bytes32 {
-  if (getCurrentEpoch(state).subn(LATEST_ACTIVE_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY).lt(epoch)
-      && epoch.lt(getCurrentEpoch(state).addn(ACTIVATION_EXIT_DELAY))) { throw new Error(""); }
-  return state.latestActiveIndexRoots[epoch.umod(new BN(LATEST_ACTIVE_INDEX_ROOTS_LENGTH)).toNumber()];
+  if (getCurrentEpoch(state) - (LATEST_ACTIVE_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY) < epoch
+    && epoch < (getCurrentEpoch(state) + ACTIVATION_EXIT_DELAY)) { throw new Error(""); }
+  return state.latestActiveIndexRoots[epoch % LATEST_ACTIVE_INDEX_ROOTS_LENGTH];
 }
 
 /**
@@ -315,29 +317,29 @@ export function getActiveIndexRoot(state: BeaconState, epoch: Epoch): bytes32 {
  */
 export function generateSeed(state: BeaconState, epoch: Epoch): bytes32 {
   return hash(Buffer.concat([
-    getRandaoMix(state, epoch.subn(MIN_SEED_LOOKAHEAD)),
+    getRandaoMix(state, epoch - MIN_SEED_LOOKAHEAD),
     getActiveIndexRoot(state, epoch),
   ]))
 }
 
 /**
  * Check if value is a power of two integer.
- * @param {int} value
+ * @param {number} value
  * @returns {boolean}
  */
-export function isPowerOfTwo(value: BN): boolean {
-  if (value.ltn(0)) {
+export function isPowerOfTwo(value: number): boolean {
+  if (value < 0) {
     throw new Error("Value is negative!");
-  } else if (value.eqn(0)) {
+  } else if (value === 0) {
     return false;
   } else {
-    // a power of two has only one bit set
-    let hasBitSet = false;
-    for (let i = 0; i < value.bitLength(); i++) {
-      if (hasBitSet) {
+    let n = value;
+    // A power of two only has one bit set
+    while (n != 1) {
+      if (n % 2 != 0) {
         return false;
       }
-      hasBitSet = value.testn(i);
+      n /= 2;
     }
     return true;
   }
@@ -353,8 +355,8 @@ export function isPowerOfTwo(value: BN): boolean {
 export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, registryChange: boolean = false): CrosslinkCommittee[] {
   const epoch = slotToEpoch(slot);
   const currentEpoch = getCurrentEpoch(state);
-  const previousEpoch = currentEpoch.gt(GENESIS_EPOCH) ? currentEpoch.subn(1) : currentEpoch;
-  const nextEpoch = currentEpoch.addn(1);
+  const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : currentEpoch;
+  const nextEpoch = currentEpoch + 1;
 
   if (previousEpoch <= epoch && epoch <= nextEpoch) { throw new Error("Slot is too early!"); }
 
@@ -362,7 +364,7 @@ export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, reg
   let committeesPerEpoch: int;
   let seed: bytes32;
   let shufflingEpoch: Epoch;
-  let shufflingStartShard: uint64;
+  let shufflingStartShard: Shard;
   let currentCommitteesPerEpoch: int;
 
   if (epoch === previousEpoch) {
@@ -380,11 +382,11 @@ export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, reg
     committeesPerEpoch = getNextEpochCommitteeCount(state);
     shufflingEpoch = nextEpoch;
 
-    const epochsSinceLastRegistryUpdate: BN = currentEpoch.sub(state.validatorRegistryUpdateEpoch);
+    const epochsSinceLastRegistryUpdate = currentEpoch - state.validatorRegistryUpdateEpoch;
     if (registryChange) {
       seed = generateSeed(state, nextEpoch);
-      shufflingStartShard = (state.currentShufflingStartShard.addn(currentCommitteesPerEpoch)).umod(new BN(SHARD_COUNT));
-    } else if (epochsSinceLastRegistryUpdate.gtn(1) && isPowerOfTwo(epochsSinceLastRegistryUpdate)) {
+      shufflingStartShard = (state.currentShufflingStartShard + currentCommitteesPerEpoch) % SHARD_COUNT;
+    } else if (epochsSinceLastRegistryUpdate < 1 && isPowerOfTwo(epochsSinceLastRegistryUpdate)) {
       seed = generateSeed(state, nextEpoch);
       shufflingStartShard = state.currentShufflingStartShard;
     } else {
@@ -394,9 +396,9 @@ export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, reg
   }
 
   const shuffling: ValidatorIndex[][] = getShuffling(seed, state.validatorRegistry, shufflingEpoch);
-  const offset: int = slot.umod(new BN(SLOTS_PER_EPOCH)).toNumber();
+  const offset = slot % SLOTS_PER_EPOCH;
   const committeesPerSlot = Math.floor(committeesPerEpoch / SLOTS_PER_EPOCH);
-  const slotStartShard = shufflingStartShard.addn(committeesPerSlot * offset).umod(new BN(SHARD_COUNT));
+  const slotStartShard = (shufflingStartShard + (committeesPerSlot * offset))  % SHARD_COUNT;
 
   return Array.apply(null, Array(committeesPerSlot)).map((x, i) => {
     return {
@@ -415,9 +417,9 @@ export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, reg
  */
 export function getBlockRoot(state: BeaconState, slot: Slot): bytes32 {
   // Returns the block root at a recent ``slot``.
-  assert(state.slot.lte(slot.addn(LATEST_BLOCK_ROOTS_LENGTH)));
-  assert(slot.lt(state.slot));
-  return state.latestBlockRoots[slot.umod(new BN(LATEST_BLOCK_ROOTS_LENGTH)).toNumber()];
+  assert(state.slot <= slot + LATEST_BLOCK_ROOTS_LENGTH);
+  assert(slot < state.slot);
+  return state.latestBlockRoots[slot % LATEST_BLOCK_ROOTS_LENGTH];
 }
 
 /**
@@ -428,7 +430,7 @@ export function getBlockRoot(state: BeaconState, slot: Slot): bytes32 {
  */
 export function getBeaconProposerIndex(state: BeaconState, slot: Slot): int {
   const firstCommittee = getCrosslinkCommitteesAtSlot(state, slot)[0].validatorIndices;
-  return firstCommittee[slot.umod(new BN(firstCommittee.length)).toNumber()].toNumber();
+  return firstCommittee[slot % firstCommittee.length];
 }
 
 /**
@@ -488,7 +490,7 @@ export function getAttestationParticipants(state: BeaconState, attestationData: 
  */
 export function getEffectiveBalance(state: BeaconState, index: ValidatorIndex): Gwei {
   const bnMax = new BN(MAX_DEPOSIT_AMOUNT);
-  const vBal = state.validatorBalances[index.toNumber()];
+  const vBal = state.validatorBalances[index];
   return vBal.lt(bnMax) ? vBal : bnMax;
 }
 
@@ -499,7 +501,7 @@ export function getEffectiveBalance(state: BeaconState, index: ValidatorIndex): 
  * @returns {Gwei}
  */
 export function getTotalBalance(state: BeaconState, validators: ValidatorIndex[]): Gwei {
-  return validators.reduce((acc: BN, cur: BN): BN => acc.add(getEffectiveBalance(state, cur)), new BN(0));
+  return validators.reduce((acc: BN, cur: ValidatorIndex): BN => acc.add(getEffectiveBalance(state, cur)), new BN(0));
 }
 
 /**
@@ -509,7 +511,7 @@ export function getTotalBalance(state: BeaconState, validators: ValidatorIndex[]
  * @returns {Number}
  */
 export function getForkVersion(fork: Fork, epoch: Epoch): uint64 {
-  return epoch.lt(fork.epoch) ? fork.previousVersion : fork.currentVersion;
+  return epoch < fork.epoch ? fork.previousVersion : fork.currentVersion;
 }
 
 /**
@@ -554,7 +556,7 @@ export function verifyBitfield(bitfield: bytes, committeeSize: int): bool {
 export function isDoubleVote(attestationData1: AttestationData, attestationData2: AttestationData): boolean {
   const targetEpoch1: Epoch = slotToEpoch(attestationData1.slot);
   const targetEpoch2: Epoch = slotToEpoch(attestationData2.slot);
-  return targetEpoch1.eq(targetEpoch2);
+  return targetEpoch1 === targetEpoch2;
 }
 
 /**
@@ -569,8 +571,8 @@ export function isSurroundVote(attestationData1: AttestationData, attestationDat
   const targetEpoch1: Epoch  = slotToEpoch(attestationData1.slot);
   const targetEpoch2: Epoch  = slotToEpoch(attestationData2.slot);
   return (
-    sourceEpoch1.lt(sourceEpoch2) &&
-    targetEpoch2.lt(targetEpoch1)
+    sourceEpoch1 < sourceEpoch2 &&
+    targetEpoch2 < targetEpoch1
   );
 }
 
@@ -596,7 +598,7 @@ export function intSqrt(n: int): int {
  * @returns {Epoch}
  */
 export function getEntryExitEffectEpoch(epoch: Epoch): Epoch {
-  return epoch.addn(1 + ACTIVATION_EXIT_DELAY);
+  return epoch + 1 + ACTIVATION_EXIT_DELAY;
 }
 
 /**
@@ -616,7 +618,7 @@ export function verifySlashableAttestation(state: BeaconState, slashableAttestat
   }
 
   for (let i = 0; i < slashableAttestation.validatorIndices.length; i++) {
-    if (slashableAttestation.validatorIndices[i].gte(slashableAttestation.validatorIndices[i + 1])) {
+    if (slashableAttestation.validatorIndices[i] >= slashableAttestation.validatorIndices[i + 1]) {
       return false;
     }
   }
@@ -737,10 +739,10 @@ export function processDeposit(
     const validator: Validator = {
       pubkey,
       withdrawalCredentials,
-      activationEpoch: new BN(FAR_FUTURE_EPOCH),
-      exitEpoch: new BN(FAR_FUTURE_EPOCH),
-      withdrawalEpoch: new BN(FAR_FUTURE_EPOCH),
-      slashedEpoch: new BN(FAR_FUTURE_EPOCH),
+      activationEpoch: FAR_FUTURE_EPOCH, 
+      exitEpoch: FAR_FUTURE_EPOCH,
+      withdrawalEpoch: FAR_FUTURE_EPOCH,
+      slashedEpoch: FAR_FUTURE_EPOCH,
       statusFlags: new BN(0),
     };
 

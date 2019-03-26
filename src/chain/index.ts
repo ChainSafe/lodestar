@@ -3,7 +3,7 @@ import BN from "bn.js";
 import {EventEmitter} from "events";
 import { hashTreeRoot } from "@chainsafe/ssz";
 
-import { BeaconState, uint64, Deposit, Eth1Data, bytes32, BeaconBlock } from "../types";
+import { BeaconBlock, BeaconState, bytes32, Deposit, Eth1Data, number64, uint64, } from "../types";
 import { GENESIS_SLOT, SECONDS_PER_SLOT } from "../constants";
 
 import { DB } from "../db";
@@ -51,7 +51,7 @@ export class BeaconChain extends EventEmitter {
   /**
    * Initialize the beacon chain with a genesis beacon state / block
    */
-  public async initializeChain(genesisTime: uint64, genesisDeposits: Deposit[], genesisEth1Data: Eth1Data): Promise<void> {
+  public async initializeChain(genesisTime: number64, genesisDeposits: Deposit[], genesisEth1Data: Eth1Data): Promise<void> {
     const genesisState = getGenesisBeaconState(genesisDeposits, genesisTime, genesisEth1Data);
     const genesisBlock = getEmptyBlock();
     genesisBlock.stateRoot = hashTreeRoot(genesisState, BeaconState);
@@ -73,7 +73,7 @@ export class BeaconChain extends EventEmitter {
     const headRoot = await this.db.getChainHeadRoot()
 
     // process skipped slots
-    for (let i = state.slot; i.lt(block.slot.subn(1)); i.addn(1)) {
+    for (let i = state.slot; i < block.slot - 1; i++) {
       state = this.runStateTransition(headRoot, null, state);
     }
     
@@ -120,8 +120,8 @@ export class BeaconChain extends EventEmitter {
     // TODO: implement
     
     // The node's Unix time is greater than or equal to state.genesis_time + (block.slot - GENESIS_SLOT) * SECONDS_PER_SLOT.
-    const stateSlotTime = state.genesisTime.add(block.slot.sub(GENESIS_SLOT).muln(SECONDS_PER_SLOT));
-    if (!(new BN(Date.now())).gte(stateSlotTime)) {
+    const stateSlotTime = state.genesisTime + (block.slot - GENESIS_SLOT) * SECONDS_PER_SLOT;
+    if (Math.floor(Date.now() / 1000) < stateSlotTime) {
       return false;
     }
     

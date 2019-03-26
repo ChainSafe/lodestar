@@ -2,7 +2,7 @@ import BN from "bn.js";
 
 import {GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD, LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
   LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH, SHARD_COUNT, ZERO_HASH} from "../../src/constants";
-import {BeaconState, Crosslink, Eth1Data, Fork, PendingAttestation, uint64, Validator} from "../../src/types";
+import {BeaconState, Crosslink, Eth1Data, Fork, PendingAttestation, uint64, Validator, Slot, number64, Epoch, Shard} from "../../src/types";
 import {bytes32, Eth1DataVote} from "../../src/types";
 import {randBetween, randBetweenBN} from "./misc";
 import {generateValidators} from "./validator";
@@ -12,29 +12,29 @@ import {generateValidators} from "./validator";
  */
 interface TestBeaconState {
   // Misc
-  slot?: uint64;
-  genesisTime?: uint64;
+  slot?: Slot;
+  genesisTime?: number64;
   fork?: Fork; // For versioning hard forks
 
   // Validator registry
   validatorRegistry?: Validator[];
   validatorBalances?: uint64[];
-  validatorRegistryUpdateEpoch?: uint64;
+  validatorRegistryUpdateEpoch?: Epoch;
 
   // Randomness and committees
   latestRandaoMixes?: bytes32[];
-  previousEpochStartShard?: uint64;
-  currentEpochStartShard?: uint64;
-  previousCalculationEpoch?: uint64;
-  currentCalculationEpoch?: uint64;
+  previousEpochStartShard?: Shard;
+  currentEpochStartShard?: Shard;
+  previousCalculationEpoch?: Epoch;
+  currentCalculationEpoch?: Epoch;
   previousEpochSeed?: bytes32;
   currentEpochSeed?: bytes32;
 
   // Finality
-  previousJustifiedEpoch?: uint64;
-  justifiedEpoch?: uint64;
+  previousJustifiedEpoch?: Epoch;
+  justifiedEpoch?: Epoch;
   justificationBitfield?: uint64;
-  finalizedEpoch?: uint64;
+  finalizedEpoch?: Epoch;
 
   // Recent state
   latestCrosslinks?: Crosslink[];
@@ -64,7 +64,7 @@ export function generateState(opts?: TestBeaconState): BeaconState {
   return {
     // MISC
     slot: GENESIS_SLOT,
-    genesisTime: new BN(new Date().getTime()),
+    genesisTime: Math.floor(Date.now() / 1000),
     fork: {
       previousVersion: GENESIS_FORK_VERSION,
       currentVersion: GENESIS_FORK_VERSION,
@@ -104,7 +104,7 @@ export function generateState(opts?: TestBeaconState): BeaconState {
       blockHash: Buffer.alloc(32),
     },
     eth1DataVotes: [],
-    depositIndex: new BN(0),
+    depositIndex: 0,
     ...opts,
   };
 }
@@ -117,7 +117,7 @@ export function generateState(opts?: TestBeaconState): BeaconState {
  */
 export function generateRandomState(opts?: TestBeaconState): BeaconState {
   const initialCrosslinkRecord: Crosslink = {
-    epoch: randBetweenBN(0, 1000),
+    epoch: randBetween(0, 1000),
     shardBlockRoot: Buffer.alloc(32),
   };
 
@@ -125,32 +125,32 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
 
   return {
     // MISC
-    slot: randBetweenBN(0, 1000),
-    genesisTime: new BN(new Date().getTime()),
+    slot: randBetween(0, 1000),
+    genesisTime: Math.floor(Date.now() / 1000),
     fork: {
       previousVersion: randBetweenBN(0, 1000),
       currentVersion: randBetweenBN(0, 1000),
-      epoch: randBetweenBN(0, 1000),
+      epoch: randBetween(0, 1000),
     },
     // Validator registry
     validatorRegistry: generateValidators(validatorNum),
     validatorBalances: Array.from({length: validatorNum}, () => randBetweenBN(0, 1000)),
-    validatorRegistryUpdateEpoch: randBetweenBN(0, 1000),
+    validatorRegistryUpdateEpoch: randBetween(0, 1000),
 
     // Randomness and committees
     latestRandaoMixes: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(32)),
-    previousShufflingStartShard: randBetweenBN(0, 1000),
-    currentShufflingStartShard: randBetweenBN(0, 1000),
-    previousShufflingEpoch: randBetweenBN(0, 1000),
-    currentShufflingEpoch: randBetweenBN(0, 1000),
+    previousShufflingStartShard: randBetween(0, 1000),
+    currentShufflingStartShard: randBetween(0, 1000),
+    previousShufflingEpoch: randBetween(0, 1000),
+    currentShufflingEpoch: randBetween(0, 1000),
     previousShufflingSeed: Buffer.alloc(32),
     currentShufflingSeed: Buffer.alloc(32),
 
     // Finality
-    previousJustifiedEpoch: randBetweenBN(0, 1000),
-    justifiedEpoch: randBetweenBN(0, 1000),
+    previousJustifiedEpoch: randBetween(0, 1000),
+    justifiedEpoch: randBetween(0, 1000),
     justificationBitfield: randBetweenBN(0, 1000),
-    finalizedEpoch: randBetweenBN(0, 1000),
+    finalizedEpoch: randBetween(0, 1000),
 
     latestCrosslinks: Array.from({length: randBetween(0, 1000)}, () => initialCrosslinkRecord),
     latestBlockRoots: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(32)),
@@ -165,7 +165,7 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
       blockHash: Buffer.alloc(32),
     },
     eth1DataVotes: [],
-    depositIndex: new BN(0),
+    depositIndex: 0,
     ...opts,
   };
 }

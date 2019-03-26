@@ -133,39 +133,39 @@ describe("Split", () => {
 
 describe("isPowerOfTwo", () => {
   it("0 should return false", () => {
-    const result = isPowerOfTwo(new BN(0));
+    const result = isPowerOfTwo(0);
     assert.equal(result, false, "Should have returned false!");
   });
 
   it("1 should return true", () => {
-    const result = isPowerOfTwo(new BN(1));
+    const result = isPowerOfTwo(1);
     assert.equal(result, true, "Should have returned true!");
   });
 
   it("2 should return true", () => {
-    const result = isPowerOfTwo(new BN(2));
+    const result = isPowerOfTwo(2);
     assert.equal(result, true, "Should have returned true!");
   });
 
   it("3 should return false", () => {
-    const result = isPowerOfTwo(new BN(3));
+    const result = isPowerOfTwo(3);
     assert.equal(result, false, "Should have returned false!");
   });
 
-  it("Numbers close to 2**257 should return false", () => {
-    for (let i: int = 2; i < 257; i++) {
-      const powOfTwo = new BN(2).pow(new BN(i));
+  it("Numbers close to 2**32 should return false", () => {
+    for (let i = 2; i < 32; i++) {
+      const powOfTwo = 2 ** i;
       const result = isPowerOfTwo(powOfTwo);
       assert.equal(result, true, "Should have returned true!");
-      const result1 = isPowerOfTwo(powOfTwo.subn(1));
+      const result1 = isPowerOfTwo(powOfTwo - 1);
       assert.equal(result1, false, "Should have returned false!");
-      const result2 = isPowerOfTwo(powOfTwo.addn(1));
+      const result2 = isPowerOfTwo(powOfTwo + 1);
       assert.equal(result2, false, "Should have returned false!");
     }
   });
 
   it("Should throw if a negative number is passed in", () => {
-    assert.throws(() => { isPowerOfTwo(new BN(-1)); });
+    assert.throws(() => { isPowerOfTwo(-1); });
   });
 });
 
@@ -203,34 +203,34 @@ describe("intSqrt", () => {
 
 describe("isDoubleVote", () => {
   it("Attestation data with the same epoch should return true", () => {
-    const epoch: uint64 = new BN(randBetween(1, 1000));
-    const slot1: uint64 = epoch.muln(SLOTS_PER_EPOCH);
-    const slot2: uint64 = slot1.addn(SLOTS_PER_EPOCH - 1);
-    const a1 = generateAttestationData(slot1, new BN(randBetween(1, 1000)));
-    const a2 = generateAttestationData(slot2, new BN(randBetween(1, 1000)));
+    const epoch: Epoch = randBetween(1, 1000);
+    const slot1: Slot = epoch * SLOTS_PER_EPOCH;
+    const slot2: Slot = slot1 + SLOTS_PER_EPOCH - 1;
+    const a1 = generateAttestationData(slot1, randBetween(1, 1000));
+    const a2 = generateAttestationData(slot2, randBetween(1, 1000));
     assert.isTrue(isDoubleVote(a1, a2));
   });
 
   it("Attestation data with different epochs should return false", () => {
-    const epoch: uint64 = new BN(randBetween(1, 1000));
-    const slot1: uint64  = epoch.muln(SLOTS_PER_EPOCH);
-    const slot2: uint64  = slot1.subn(1);
-    const a1 = generateAttestationData(slot1, new BN(randBetween(1, 1000)));
-    const a2 = generateAttestationData(slot2, new BN(randBetween(1, 1000)));
+    const epoch: Epoch = randBetween(1, 1000);
+    const slot1: Slot = epoch * SLOTS_PER_EPOCH;
+    const slot2: Slot = slot1 - 1;
+    const a1 = generateAttestationData(slot1, randBetween(1, 1000));
+    const a2 = generateAttestationData(slot2, randBetween(1, 1000));
     assert.isFalse(isDoubleVote(a1, a2));
   });
 });
 
 describe("isSurroundVote", () => {
   it("Attestation data with the same epoch should return true", () => {
-    const sourceEpoch1: uint64 = new BN(randBetween(1, 1000));
-    const sourceEpoch2: uint64 = sourceEpoch1.addn(1);
+    const sourceEpoch1: Epoch = randBetween(1, 1000);
+    const sourceEpoch2: Epoch = sourceEpoch1 + 1;
 
-    const targetEpoch1: uint64 = new BN(randBetween(1, 1000));
-    const targetEpoch2: uint64 = targetEpoch1.subn(1);
+    const targetEpoch1: Epoch = randBetween(1, 1000);
+    const targetEpoch2: Epoch = targetEpoch1 - 1;
 
-    const targetSlot1: uint64 = targetEpoch1.muln(SLOTS_PER_EPOCH);
-    const targetSlot2: uint64 = targetEpoch2.muln(SLOTS_PER_EPOCH);
+    const targetSlot1: Slot = targetEpoch1 * SLOTS_PER_EPOCH;
+    const targetSlot2: Slot = targetEpoch2 * SLOTS_PER_EPOCH;
 
     const a1 = generateAttestationData(targetSlot1, sourceEpoch1);
     const a2 = generateAttestationData(targetSlot2, sourceEpoch2);
@@ -240,14 +240,14 @@ describe("isSurroundVote", () => {
 
   it("Should return false if the second attestation does not have a greater source epoch", () => {
     // Both attestations have the same source epoch.
-    const sourceEpoch1: uint64 = new BN(randBetween(1, 1000));
-    let sourceEpoch2: uint64 = sourceEpoch1;
+    const sourceEpoch1: Epoch = randBetween(1, 1000);
+    let sourceEpoch2: Epoch = sourceEpoch1;
 
-    const targetEpoch1: uint64 = new BN(randBetween(1, 1000));
-    const targetEpoch2: uint64 = targetEpoch1.subn(1);
+    const targetEpoch1: Epoch = randBetween(1, 1000);
+    const targetEpoch2: Epoch = targetEpoch1 - 1;
 
-    const targetSlot1: uint64 = targetEpoch1.muln(SLOTS_PER_EPOCH);
-    const targetSlot2: uint64 = targetEpoch2.muln(SLOTS_PER_EPOCH);
+    const targetSlot1: Slot = targetEpoch1 * SLOTS_PER_EPOCH;
+    const targetSlot2: Slot = targetEpoch2 * SLOTS_PER_EPOCH;
 
     const a1 = generateAttestationData(targetSlot1, sourceEpoch1);
     let a2 = generateAttestationData(targetSlot2, sourceEpoch2);
@@ -255,22 +255,22 @@ describe("isSurroundVote", () => {
     assert.isFalse(isSurroundVote(a1, a2));
 
     // Second attestation has a smaller source epoch.
-    sourceEpoch2 = sourceEpoch1.subn(1);
+    sourceEpoch2 = sourceEpoch1 - 1;
     a2 = generateAttestationData(targetSlot2, sourceEpoch2);
     assert.isFalse(isSurroundVote(a1, a2));
   });
 
   it("Should return false if the second attestation does not have a smaller target epoch", () => {
     // Both attestations have the same target epoch.
-    const sourceEpoch1: uint64 = new BN(randBetween(1, 1000));
-    const sourceEpoch2: uint64 = sourceEpoch1.addn(1);
+    const sourceEpoch1: Epoch = randBetween(1, 1000);
+    const sourceEpoch2: Epoch = sourceEpoch1 + 1;
 
-    const targetEpoch = new BN(randBetween(2, 1000));
+    const targetEpoch: Epoch = randBetween(2, 1000);
 
     // Last slot in the epoch.
-    let targetSlot1: uint64 = targetEpoch.muln(SLOTS_PER_EPOCH).subn(1);
+    let targetSlot1: Slot = targetEpoch * SLOTS_PER_EPOCH - 1;
     // First slot in the epoch
-    let targetSlot2: uint64 = targetEpoch.subn(1).muln(SLOTS_PER_EPOCH);
+    let targetSlot2: Slot = (targetEpoch - 1) * SLOTS_PER_EPOCH;
 
     let a1 = generateAttestationData(targetSlot1, sourceEpoch1);
     let a2 = generateAttestationData(targetSlot2, sourceEpoch2);
@@ -278,8 +278,8 @@ describe("isSurroundVote", () => {
     assert.isFalse(isSurroundVote(a1, a2));
 
     // Second attestation has a greater target epoch.
-    targetSlot1 = targetEpoch.muln(SLOTS_PER_EPOCH);
-    targetSlot2 = targetEpoch.addn(1).muln(SLOTS_PER_EPOCH);
+    targetSlot1 = targetEpoch * SLOTS_PER_EPOCH;
+    targetSlot2 = (targetEpoch + 1) * SLOTS_PER_EPOCH;
     a1 = generateAttestationData(targetSlot1, sourceEpoch1);
     a2 = generateAttestationData(targetSlot2, sourceEpoch2);
     assert.isFalse(isSurroundVote(a1, a2));
@@ -290,7 +290,7 @@ describe("getActiveValidatorIndices", () => {
   const vrArray: Validator[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(generateValidator);
 
   it("empty list of Validators should return no indices (empty list)", () => {
-    assert.deepEqual(getActiveValidatorIndices([], new BN(randBetween(0, 4))), []);
+    assert.deepEqual(getActiveValidatorIndices([], randBetween(0, 4)), []);
   });
 
   // it("list of all active Validators should return a list of all indices", () => {
@@ -362,8 +362,8 @@ describe("slotToEpoch", () => {
   ];
   for (const pair of pairs) {
     it(`Slot ${pair.test} should map to epoch ${pair.expected}`, () => {
-      const result: Epoch = slotToEpoch(new BN(pair.test));
-      assert(result.eq(new BN(pair.expected)));
+      const result: Epoch = slotToEpoch(pair.test);
+      assert.equal(result, pair.expected);
     });
   }
 });
@@ -381,8 +381,8 @@ describe("getEpochStartSlot", () => {
   ];
   for (const pair of pairs) {
     it(`Epoch ${pair.test} should map to slot ${pair.expected}`, () => {
-      const result: Slot = getEpochStartSlot(new BN(pair.test));
-      assert(result.eq(new BN(pair.expected)));
+      const result: Slot = getEpochStartSlot(pair.test);
+      assert.equal(result, pair.expected);
     });
   }
 });
@@ -390,44 +390,44 @@ describe("getEpochStartSlot", () => {
 describe("isActiveValidator", () => {
   it("should be active", () => {
     const v: Validator = generateValidator(0, 100);
-    const result: boolean = isActiveValidator(v, new BN(0));
+    const result: boolean = isActiveValidator(v, 0);
     assert.isTrue(result);
   });
 
   it("should be active", () => {
     const v: Validator = generateValidator(10, 101);
-    const result: boolean = isActiveValidator(v, new BN(100));
+    const result: boolean = isActiveValidator(v, 100);
     assert.isTrue(result);
   });
 
   it("should be active", () => {
     const v: Validator = generateValidator(100, 1000);
-    const result: boolean = isActiveValidator(v, new BN(100));
+    const result: boolean = isActiveValidator(v, 100);
     assert.isTrue(result);
   });
 
   it("should not be active", () => {
     const v: Validator = generateValidator(1);
-    const result: boolean = isActiveValidator(v, new BN(0));
+    const result: boolean = isActiveValidator(v, 0);
     assert.isFalse(result);
   });
 
   it("should not be active", () => {
     const v: Validator = generateValidator(100);
-    const result: boolean = isActiveValidator(v, new BN(5));
+    const result: boolean = isActiveValidator(v, 5);
     assert.isFalse(result);
   });
 
   it("should not be active", () => {
     const v: Validator = generateValidator(1, 5);
-    const result: boolean = isActiveValidator(v, new BN(100));
+    const result: boolean = isActiveValidator(v, 100);
     assert.isFalse(result);
   });
 });
 
 describe("getForkVersion", () => {
   const fork: Fork = {
-    epoch: new BN(12),
+    epoch: 12,
     previousVersion: new BN(4),
     currentVersion: new BN(5),
   };
@@ -436,24 +436,24 @@ describe("getForkVersion", () => {
   const five: uint64 = new BN(5);
 
   it("epoch after fork epoch returns current fork version", () => {
-    const result = getForkVersion(fork, new BN(8));
+    const result = getForkVersion(fork, 8);
     assert(result.eq(four));
   });
 
   it("epoch after fork epoch returns current fork version", () => {
-    const result = getForkVersion(fork, new BN(13));
+    const result = getForkVersion(fork, 13);
     assert(result.eq(five));
   });
 
   it("epoch after fork epoch returns current fork version", () => {
-    const result = getForkVersion(fork, new BN(12));
+    const result = getForkVersion(fork, 12);
     assert(result.eq(five));
   });
 });
 
 describe("getDomain", () => {
   const fork: Fork = {
-    epoch: new BN(12),
+    epoch: 12,
     previousVersion: new BN(4),
     currentVersion: new BN(5),
   };
@@ -463,19 +463,19 @@ describe("getDomain", () => {
   const five: uint64 = new BN(5);
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
-    const result = getDomain(fork, new BN(8), 4);
+    const result = getDomain(fork, 8, 4);
     const expected = four.mul(constant).add(four);
     assert(result.eq(expected));
   });
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
-    const result = getDomain(fork, new BN(13), 5);
+    const result = getDomain(fork, 13, 5);
     const expected = five.mul(constant).add(five);
     assert(result.eq(expected));
   });
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
-    const result = getDomain(fork, new BN(12), 5);
+    const result = getDomain(fork, 12, 5);
     const expected = five.mul(constant).add(five);
     assert(result.eq(expected));
   });
@@ -529,24 +529,24 @@ describe("merkleRoot", () => {
 describe("getPreviousEpoch", () => {
 
   it("epoch should return previous epoch", () => {
-    const state: BeaconState = generateState({ slot: new BN(512)});
-    const expected: Epoch = new BN(7);
+    const state: BeaconState = generateState({ slot: 512});
+    const expected: Epoch = 7;
     const result = getPreviousEpoch(state);
-    assert(result.eq(expected), `expected: ${expected}, result: ${result}`);
+    assert.equal(result, expected);
   });
 
   it("epoch should return previous epoch", () => {
-    const state: BeaconState = generateState({ slot: new BN(256)});
-    const expected: Epoch = new BN(3);
+    const state: BeaconState = generateState({ slot: 256});
+    const expected: Epoch = 3;
     const result = getPreviousEpoch(state);
-    assert(result.eq(expected), `expected: ${expected}, result: ${result}`);
+    assert.equal(result, expected);
   });
 
   it("epoch should return genesis epoch", () => {
-    const state: BeaconState = generateState({ slot: new BN(GENESIS_SLOT)});
+    const state: BeaconState = generateState({ slot: GENESIS_SLOT});
     const expected: Epoch = slotToEpoch(GENESIS_SLOT);
       const result = getPreviousEpoch(state);
-    assert(result.eq(expected), `expected: ${expected}, result: ${result}`);
+    assert.equal(result, expected);
   });
 });
 
@@ -557,7 +557,7 @@ describe("getTotalBalance", () => {
     const validators: Validator[] = generateValidators(num);
     const balances: uint64[] = Array.from({length: num}, () => new BN(500));
     const state: BeaconState = generateState({ validatorRegistry: validators, validatorBalances: balances });
-    const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => new BN(i));
+    const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
     const result = getTotalBalance(state, validatorIndices);
     const expected = new BN(num).muln(500);
@@ -569,7 +569,7 @@ describe("getTotalBalance", () => {
     const validators: Validator[] = generateValidators(num);
     const balances: uint64[] = Array.from({length: num}, () => new BN(0));
     const state: BeaconState = generateState({ validatorRegistry: validators, validatorBalances: balances });
-    const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => new BN(i));
+    const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
     const result = getTotalBalance(state, validatorIndices);
     const expected = new BN(num).muln(0);
@@ -610,7 +610,7 @@ describe("getRandaoMix", () => {
   it("should return first randao mix for GENESIS_EPOCH", () => {
     // Empty state in 2nd epoch
     const state = generateState({
-      slot: GENESIS_SLOT.addn(SLOTS_PER_EPOCH),
+      slot: GENESIS_SLOT + SLOTS_PER_EPOCH,
       latestRandaoMixes: [Buffer.from([0xAB]), Buffer.from([0xCD])]
     })
     const res = getRandaoMix(state, GENESIS_EPOCH)
@@ -619,16 +619,16 @@ describe("getRandaoMix", () => {
   it("should return second randao mix for GENESIS_EPOCH + 1", () => {
     // Empty state in 2nd epoch
     const state = generateState({
-      slot: GENESIS_SLOT.addn(SLOTS_PER_EPOCH * 2),
+      slot: GENESIS_SLOT + SLOTS_PER_EPOCH * 2,
       latestRandaoMixes: [Buffer.from([0xAB]), Buffer.from([0xCD]), Buffer.from([0xEF])]
     })
-    const res = getRandaoMix(state, GENESIS_EPOCH.addn(1))
+    const res = getRandaoMix(state, GENESIS_EPOCH + 1)
     assert(res.equals(Uint8Array.from([0xCD])))
   })
   it("should fail to get randao mix for epoch more than LATEST_RANDAO_MIXES_LENGTH in the past", () => {
     // Empty state in epoch LATEST_RANDAO_MIXES_LENGTH with incrementing randao mixes
     const state = generateState({
-      slot: GENESIS_SLOT.addn(SLOTS_PER_EPOCH * LATEST_RANDAO_MIXES_LENGTH),
+      slot: GENESIS_SLOT + SLOTS_PER_EPOCH * LATEST_RANDAO_MIXES_LENGTH,
       latestRandaoMixes: Array.from({length: LATEST_RANDAO_MIXES_LENGTH}, (e, i) => Buffer.from([i]))
     })
     assert.throws(() => getRandaoMix(state, GENESIS_EPOCH), "")
@@ -636,17 +636,17 @@ describe("getRandaoMix", () => {
   it("should fail to get randao mix for epoch > current epoch", () => {
     // Empty state in second epoch (genesis + 1)
     const state = generateState({
-      slot: GENESIS_SLOT.addn(SLOTS_PER_EPOCH),
+      slot: GENESIS_SLOT + SLOTS_PER_EPOCH,
       latestRandaoMixes: [Buffer.from([0xAB]), Buffer.from([0xCD])]
     })
-    assert.throws(() => getRandaoMix(state, GENESIS_EPOCH.addn(1)), "")
+    assert.throws(() => getRandaoMix(state, GENESIS_EPOCH + 1), "")
   })
 })
 
 describe("getBlockRoot", () => {
   it("should return first block root for genesis slot", () => {
     const state = generateState({
-      slot:  GENESIS_SLOT.addn(1),
+      slot:  GENESIS_SLOT + 1,
       latestBlockRoots: [Buffer.from([0xAB])]
     })
     const res = getBlockRoot(state, GENESIS_SLOT)
@@ -655,10 +655,10 @@ describe("getBlockRoot", () => {
   })
   it("should return second block root for genesis + 1 slot", () => {
     const state = generateState({
-      slot:  GENESIS_SLOT.addn(2),
+      slot:  GENESIS_SLOT + 2,
       latestBlockRoots: [Buffer.from([0xAB]), Buffer.from([0xCD])]
     })
-    const res = getBlockRoot(state, GENESIS_SLOT.addn(1))
+    const res = getBlockRoot(state, GENESIS_SLOT + 1)
     assert((new BN(res)).eq(new BN(0xCD)),
       `got: ${new BN(res)}, expected: ${0xAB}`)
   })
@@ -667,7 +667,7 @@ describe("getBlockRoot", () => {
     assert.throws(() => getBlockRoot(state, GENESIS_SLOT), "")
   })
   it("should fail if slot is not within LATEST_BLOCK_ROOTS_LENGTH of current slot", () => {
-    const state = generateState({slot: GENESIS_SLOT.addn(LATEST_BLOCK_ROOTS_LENGTH + 1)})
+    const state = generateState({slot: GENESIS_SLOT + LATEST_BLOCK_ROOTS_LENGTH + 1})
     assert.throws(() => getBlockRoot(state, GENESIS_SLOT), "")
   })
 })

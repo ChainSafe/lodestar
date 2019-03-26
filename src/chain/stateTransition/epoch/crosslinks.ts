@@ -13,10 +13,10 @@ export function processCrosslinks(
   previousEpochAttestations: PendingAttestation[],
   currentEpochAttestations: PendingAttestation[]): void {
 
-  const start: number = getEpochStartSlot(previousEpoch).toNumber();
-  const end: number = getEpochStartSlot(nextEpoch).toNumber();
-  for (let slot: number = start; slot < end; slot++) {
-    getCrosslinkCommitteesAtSlot(state, new BN(slot)).map((value: CrosslinkCommittee) => {
+  const start = getEpochStartSlot(previousEpoch);
+  const end = getEpochStartSlot(nextEpoch);
+  for (let slot = start; slot < end; slot++) {
+    getCrosslinkCommitteesAtSlot(state, slot).map((value: CrosslinkCommittee) => {
       const { shard, validatorIndices } = value;
       // TODO Complete totalAttestingBalance to complete below
       // const newCrossLink: Crosslink = {

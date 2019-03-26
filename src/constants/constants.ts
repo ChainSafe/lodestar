@@ -18,17 +18,6 @@ export const MAX_DEPOSIT_AMOUNT = 2 ** 5 * 1e9; // 32,000,000,000 Gwei
 export const FORK_CHOICE_BALANCE_INCREMENT = 2 ** 0 * 1e9; // 1,000,000,000 Gwei
 export const EJECTION_BALANCE = 2 ** 4 * 1e9; // 16,000,000,000 Gwei
 
-// Initial values
-export const GENESIS_FORK_VERSION	= new BN(0);
-export const GENESIS_SLOT = new BN(2).pow(new BN(63)); // 2 ** 63
-
-export const GENESIS_EPOCH = GENESIS_SLOT.div(new BN(2 ** 6)); // slotToEpoch(GENESIS_SLOT);
-export const GENESIS_START_SHARD = new BN(0);
-export const FAR_FUTURE_EPOCH = new BN(2).pow(new BN(64)).sub( new BN(1)); // 2 ** 64 - 1
-export const ZERO_HASH = Buffer.alloc(32);
-export const EMPTY_SIGNATURE = Buffer.alloc(96);
-export const BLS_WITHDRAWAL_PREFIX_BYTE = Buffer.alloc(1);
-
 // Time parameters
 export const SECONDS_PER_SLOT = 6; // seconds || 6 seconds
 export const MIN_ATTESTATION_INCLUSION_DELAY = 2 ** 2; // slots || 24 seconds
@@ -38,6 +27,18 @@ export const ACTIVATION_EXIT_DELAY = 2 ** 2; // epochs || 25.6 minutes
 export const EPOCHS_PER_ETH1_VOTING_PERIOD = 2 ** 4; // epochs || ~1.7 hours
 export const MIN_VALIDATOR_WITHDRAWAL_DELAY = 2 ** 8; // epochs || ~27 hours
 
+// Initial values
+export const GENESIS_FORK_VERSION	= new BN(0);
+export const GENESIS_SLOT = 0;
+export const SLOT_OFFSET = 2 ** 32; // 2 ** 32
+
+export const GENESIS_EPOCH = 0;
+export const EPOCH_OFFSET = SLOT_OFFSET / SLOTS_PER_EPOCH; // slotToEpoch(GENESIS_SLOT);
+export const GENESIS_START_SHARD = 0;
+export const FAR_FUTURE_EPOCH = 2 ** 40 - 1; // 2 ** 64 - 1
+export const ZERO_HASH = Buffer.alloc(32);
+export const EMPTY_SIGNATURE = Buffer.alloc(96);
+export const BLS_WITHDRAWAL_PREFIX_BYTE = Buffer.alloc(1);
 
 // State list lengths
 export const LATEST_BLOCK_ROOTS_LENGTH =  2 ** 13; // epochs || ~13 hours

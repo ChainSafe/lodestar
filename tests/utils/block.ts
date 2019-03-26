@@ -7,7 +7,7 @@ import {
 
 export function generateEmptyBlock(): BeaconBlock {
   return {
-    slot: new BN(0),
+    slot: 0,
     parentRoot: Buffer.alloc(32),
     stateRoot: Buffer.alloc(32),
     randaoReveal: Buffer.alloc(96),

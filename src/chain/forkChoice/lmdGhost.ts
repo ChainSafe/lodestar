@@ -40,9 +40,9 @@ interface AttestationTarget {
  * @returns {BeaconBlock}
  */
 function getAncestor(store: Store, block: BeaconBlock, slot: Slot): BeaconBlock | null {
-  if (block.slot.eq(slot)) {
+  if (block.slot === slot) {
     return block;
-  } else if (block.slot.lt(slot)) {
+  } else if (block.slot < slot) {
     return null;
   } else {
     // TODO Find way to access parent block properly
@@ -58,7 +58,7 @@ function getAncestor(store: Store, block: BeaconBlock, slot: Slot): BeaconBlock 
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getLatestAttestation(store: Store, validatorIndex: ValidatorIndex): Attestation {
-  const validator: Validator = store.validatorRegistry[validatorIndex.toNumber()];
+  const validator: Validator = store.validatorRegistry[validatorIndex];
   const attestation = store.pendingAttestations
   // NOTE: This may not be correct
     .filter((a) => a.aggregationBitfield === validator.pubkey)

@@ -12,11 +12,11 @@ export default function processEth1Data(state: BeaconState, block: BeaconBlock):
     vote.eth1Data.depositRoot.equals(block.eth1Data.depositRoot));
 
   if (eth1DataVote) {
-    eth1DataVote.voteCount = eth1DataVote.voteCount.addn(1);
+    eth1DataVote.voteCount++;
   } else {
     state.eth1DataVotes.push({
       eth1Data: block.eth1Data,
-      voteCount: new BN(1),
+      voteCount: 1,
     });
   }
 }
