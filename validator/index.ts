@@ -17,6 +17,7 @@ export class Validator {
   private validatorIndex: ValidatorIndex;
   private blockService: BlockProcessingService;
   public isActive: boolean;
+
   public constructor(ctx: ValidatorCtx, logger: blgr) {
     this.ctx = ctx;
     this.logger = logger;
@@ -36,7 +37,7 @@ export class Validator {
 
     this.logger.info("Validator client successfully started!");
 
-    this.processBlock();
+    this.processBlocks();
   }
 
   /**
@@ -54,7 +55,7 @@ export class Validator {
   private setupRPC(): void {
     this.logger.info("Setting up RPC connection...");
     // TODO below is stubbed.
-    this.provider = new Provider(this.ctx.rpcUrl);
+    this.provider = new RPCProvider(this.ctx.rpcUrl, this.logger);
     this.logger.info(`RPC connection successfully established ${this.ctx.rpcUrl}!`);
   }
 
@@ -99,10 +100,13 @@ export class Validator {
       this.logger.info("Checking if validator is active...");
       isValid = await this.provider.isActiveValidator(this.validatorIndex);
     }
-    this.logger.info("Validator is active!")
+    this.logger.info("Validator is active!");
     return true;
   }
 
+  /**
+   * Creates a new block proccessing service and starts it.
+   */
   private processBlocks() {
     this.blockService = new BlockProcessingService(this.validatorIndex, this.provider);
     this.blockService.start();
