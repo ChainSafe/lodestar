@@ -1,4 +1,4 @@
-import { keccak256 } from "js-sha3";
+import { sha256 } from "js-sha256";
 
 import {
   SerializableValue, SSZType,
@@ -43,7 +43,7 @@ function nextPowerOf2 (n: number): number {
 }
 
 export function hash(...inputs: Buffer[]): Buffer {
-  return Buffer.from(inputs.reduce((acc, i) => acc.update(i), keccak256.create()).arrayBuffer());
+  return Buffer.from(inputs.reduce((acc, i) => acc.update(i), sha256.create()).arrayBuffer());
 }
 
 export function merkleize(chunks: Buffer[]): Buffer {
