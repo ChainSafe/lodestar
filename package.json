@@ -49,7 +49,8 @@
     "promisify-es6": "^1.0.3"
   },
   "bin": {
-    "lodestar": "./bin/lodestar"
+    "lodestar": "./bin/lodestar",
+    "lodestar-validator": "./bin/lodestar-validator"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",
