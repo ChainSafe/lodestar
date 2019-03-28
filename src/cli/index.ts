@@ -1,3 +1,4 @@
+// NOTE :: All commands are stubbed as examples
 // Useful repo https://github.com/tsantef/commander-starter
 const program = require("commander");
 
