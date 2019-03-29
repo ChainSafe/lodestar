@@ -28,7 +28,7 @@ export class Validator {
    * Main method that starts a client.
    * @returns {Promise<void>}
    */
-  public async start() {
+  public async start(): Promise<void> {
     this.logger.info("Starting validator client...");
 
     await this.setup();
@@ -44,7 +44,7 @@ export class Validator {
    * Main method invoking all setup steps
    * @returns {Promise<void>}
    */
-  private async setup() {
+  private async setup(): Promise<void> {
     await this.setupKeystores();
     this.setupRPC();
   }
@@ -63,7 +63,7 @@ export class Validator {
    * Sets up necessary keystores and checks that requirements are met.
    * @returns {Promise<void>}
    */
-  private async setupKeystores() {
+  private async setupKeystores(): Promise<void> {
     this.logger.info("Unlocking wallet...");
 
     // Attempt to unlock public wallet
@@ -95,7 +95,7 @@ export class Validator {
    * @returns {Promise<boolean>}
    */
   private async checkValidatorStatus(): Promise<boolean> {
-    let isValid: boolean = false;
+    let isValid = false;
     while (!isValid) {
       this.logger.info("Checking if validator is active...");
       isValid = await this.provider.isActiveValidator(this.validatorIndex);
@@ -107,8 +107,8 @@ export class Validator {
   /**
    * Creates a new block proccessing service and starts it.
    */
-  private processBlocks() {
-    this.blockService = new BlockProcessingService(this.validatorIndex, this.provider);
+  private processBlocks(): void {
+    this.blockService = new BlockProcessingService(this.validatorIndex, this.provider, this.logger);
     this.blockService.start();
   }
 }

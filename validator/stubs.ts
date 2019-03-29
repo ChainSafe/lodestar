@@ -4,13 +4,26 @@ import BN = require("bn.js");
 import blgr from "blgr";
 import {ValidatorIndex, Slot, BeaconBlock, BeaconState} from "../src/types";
 
+// Super awesome stubs
+function notSoRandomRandomBoolean(): boolean {
+  return [true, false][Math.round(Math.random())];
+}
+
+function notSoRandomRandomValidatorIndex(): ValidatorIndex {
+  return new BN(Math.round(Math.random() * 1000));
+}
+
+function notSoRandomRandomSlot(): Slot {
+  return new BN(Math.round(Math.random() * 1000));
+}
+
 export default class RPCProvider {
-  readonly rpcUrl: string;
+  private readonly rpcUrl: string;
   private validatorIndex: ValidatorIndex;
   private currentSlot: Slot;
   private logger: blgr;
 
-  constructor(url: string, logger: blgr) {
+  public constructor(url: string, logger: blgr) {
     this.rpcUrl = url;
     this.logger = logger;
 
@@ -56,18 +69,4 @@ export default class RPCProvider {
       return this.currentSlot;
     }
   }
-}
-
-
-// Super awesome stubs
-function notSoRandomRandomBoolean(): boolean {
-  return [true, false][Math.round(Math.random())];
-}
-
-function notSoRandomRandomValidatorIndex(): ValidatorIndex {
-  return new BN(Math.round(Math.random() * 1000));
-}
-
-function notSoRandomRandomSlot(): Slot {
-  return new BN(Math.round(Math.random() * 1000));
 }
