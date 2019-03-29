@@ -7,6 +7,7 @@ import {Eth1Notifier} from "../eth1";
 import {P2PNetwork} from "../p2p";
 import {BeaconRPC} from "../rpc";
 import {Sync} from "../sync";
+import {TxPool} from "../txPool";
 
 import defaultConf from "./defaults";
 
@@ -22,6 +23,7 @@ interface BeaconNodeCtx {
   network: object;
   rpc: object;
   sync: object;
+  txPool: object;
 }
 
 class BeaconNode {
@@ -30,6 +32,7 @@ class BeaconNode {
   public eth1: Service;
   public network: Service;
   public chain: Service;
+  public txPool: Service;
   public rpc: Service;
   public sync: Service;
 
@@ -47,6 +50,10 @@ class BeaconNode {
       db: this.db,
       eth1: this.eth1,
     });
+    this.txPool = new TxPool(this.conf.txPool, {
+      db: this.db,
+      chain: this.chain,
+    });
     this.rpc = new BeaconRPC(this.conf.rpc);
   }
 
@@ -54,15 +61,17 @@ class BeaconNode {
     await this.db.start();
     await this.network.start();
     await this.eth1.start();
-    await this.sync.start();
     await this.chain.start();
+    await this.txPool.start();
+    await this.sync.start();
     await this.rpc.start();
   }
 
   public async stop() {
-    await this.rpc.start();
+    await this.rpc.stop();
+    await this.sync.stop();
+    await this.txPool.stop();
     await this.chain.stop();
-    await this.sync.start();
     await this.eth1.stop();
     await this.network.stop();
     await this.db.stop();

@@ -4,7 +4,16 @@ import {LevelUp} from "levelup";
 import { serialize, deserialize, treeHash } from "@chainsafesystems/ssz";
 
 import {
-  BeaconState, bytes32, BeaconBlock, Slot, Attestation, uint64,
+  Attestation,
+  AttesterSlashing,
+  BeaconBlock,
+  BeaconState,
+  bytes32,
+  ProposerSlashing,
+  Slot,
+  uint64,
+  VoluntaryExit,
+  Transfer,
 } from "../types";
 
 import {
@@ -202,12 +211,23 @@ export class DB extends EventEmitter {
   }
 
   /**
-   * Fetch an attestation by hash
-   * @returns {Promise<Attestation>}
+   * Fetch all attestations
+   * @returns {Promise<Attestation[]>}
    */
-  public async getAttestation(attestationRoot: bytes32): Promise<Attestation> {
-    const buf = await this.db.get(encodeKey(Bucket.attestation, attestationRoot));
-    return deserialize(buf, Attestation).deserializedData;
+  public async getAttestations(): Promise<Attestation[]> {
+    return new Promise<Attestation[]>((resolve, reject) => {
+      const attestations: Attestation[] = [];
+      this.db.createValueStream({
+        gt: encodeKey(Bucket.attestation, Buffer.alloc(0)),
+        lt: encodeKey(Bucket.attestation + 1, Buffer.alloc(0)),
+      }).on('data', function(data) {
+        attestations.push(deserialize(data, Attestation).deserializedData);
+      }).on('close', function() {
+        resolve(attestations);
+      }).on('end', function() {
+        resolve(attestations);
+      });
+    });
   }
 
   /**
@@ -221,12 +241,182 @@ export class DB extends EventEmitter {
   }
 
   /**
-   * Delete an attestation from the db
-   * @param {Attestation} attestation
+   * Delete attestations from the db
+   * @param {Attestation[]} attestations
    * @returns {Promise<void>}
    */
-  public async deleteAttestation(attestation: Attestation): Promise<void> {
-    const attestationRoot = treeHash(attestation, Attestation);
-    await this.db.del(encodeKey(Bucket.attestation, attestationRoot));
+  public async deleteAttestations(attestations: Attestation[]): Promise<void> {
+    let batchOp = this.db.batch();
+    attestations.forEach((n) =>
+      batchOp = batchOp.del(encodeKey(Bucket.attestation, treeHash(n, Attestation))))
+    await batchOp.write();
+  }
+
+  /**
+   * Fetch all voluntary exits
+   * @returns {Promise<VoluntaryExit[]>}
+   */
+  public async getVoluntaryExits(): Promise<VoluntaryExit[]> {
+    return new Promise<VoluntaryExit[]>((resolve, reject) => {
+      const exits: VoluntaryExit[] = [];
+      this.db.createValueStream({
+        gt: encodeKey(Bucket.exit, Buffer.alloc(0)),
+        lt: encodeKey(Bucket.exit + 1, Buffer.alloc(0)),
+      }).on('data', function(data) {
+        exits.push(deserialize(data, VoluntaryExit).deserializedData);
+      }).on('close', function() {
+        resolve(exits);
+      }).on('end', function() {
+        resolve(exits);
+      });
+    });
+  }
+
+  /**
+   * Put a voluntary exit into the db
+   * @param {VoluntaryExit} exit
+   * @returns {Promise<void>}
+   */
+  public async setVoluntaryExit(exit: VoluntaryExit): Promise<void> {
+    const exitRoot = treeHash(exit, VoluntaryExit);
+    await this.db.put(encodeKey(Bucket.exit, exitRoot), serialize(exit, VoluntaryExit));
+  }
+
+  /**
+   * Delete voluntary exits from the db
+   * @param {VoluntaryExit[]} exits
+   * @returns {Promise<void>}
+   */
+  public async deleteVoluntaryExits(exits: VoluntaryExit[]): Promise<void> {
+    let batchOp = this.db.batch();
+    exits.forEach((n) =>
+      batchOp = batchOp.del(encodeKey(Bucket.exit, treeHash(n, VoluntaryExit))))
+    await batchOp.write();
+  }
+
+  /**
+   * Fetch all transfers
+   * @returns {Promise<Transfer[]>}
+   */
+  public async getTransfers(): Promise<Transfer[]> {
+    return new Promise<Transfer[]>((resolve, reject) => {
+      const transfers: Transfer[] = [];
+      this.db.createValueStream({
+        gt: encodeKey(Bucket.transfer, Buffer.alloc(0)),
+        lt: encodeKey(Bucket.transfer + 1, Buffer.alloc(0)),
+      }).on('data', function(data) {
+        transfers.push(deserialize(data, Transfer).deserializedData);
+      }).on('close', function() {
+        resolve(transfers);
+      }).on('end', function() {
+        resolve(transfers);
+      });
+    });
+  }
+
+  /**
+   * Put a transfer into the db
+   * @param {Transfer} transfer
+   * @returns {Promise<void>}
+   */
+  public async setTransfer(transfer: Transfer): Promise<void> {
+    const transferRoot = treeHash(transfer, Transfer);
+    await this.db.put(encodeKey(Bucket.transfer, transferRoot), serialize(transfer, Transfer));
+  }
+
+  /**
+   * Delete transfers from the db
+   * @param {Transfer[]} transfers
+   * @returns {Promise<void>}
+   */
+  public async deleteTransfers(transfers: Transfer[]): Promise<void> {
+    let batchOp = this.db.batch();
+    transfers.forEach((n) =>
+      batchOp = batchOp.del(encodeKey(Bucket.transfer, treeHash(n, Transfer))))
+    await batchOp.write();
+  }
+
+  /**
+   * Fetch all proposer slashings
+   * @returns {Promise<ProposerSlashing[]>}
+   */
+  public async getProposerSlashings(): Promise<ProposerSlashing[]> {
+    return new Promise<ProposerSlashing[]>((resolve, reject) => {
+      const proposerSlashings: ProposerSlashing[] = [];
+      this.db.createValueStream({
+        gt: encodeKey(Bucket.proposerSlashing, Buffer.alloc(0)),
+        lt: encodeKey(Bucket.proposerSlashing + 1, Buffer.alloc(0)),
+      }).on('data', function(data) {
+        proposerSlashings.push(deserialize(data, ProposerSlashing).deserializedData);
+      }).on('close', function() {
+        resolve(proposerSlashings);
+      }).on('end', function() {
+        resolve(proposerSlashings);
+      });
+    });
+  }
+
+  /**
+   * Put a proposer slashing into the db
+   * @param {ProposerSlashing} proposerSlashing
+   * @returns {Promise<void>}
+   */
+  public async setProposerSlashing(proposerSlashing: ProposerSlashing): Promise<void> {
+    const proposerSlashingRoot = treeHash(proposerSlashing, ProposerSlashing);
+    await this.db.put(encodeKey(Bucket.proposerSlashing, proposerSlashingRoot), serialize(proposerSlashing, ProposerSlashing));
+  }
+
+  /**
+   * Delete attestations from the db
+   * @param {Attestation[]} attestations
+   * @returns {Promise<void>}
+   */
+  public async deleteProposerSlashings(proposerSlashings: ProposerSlashing[]): Promise<void> {
+    let batchOp = this.db.batch();
+    proposerSlashings.forEach((n) =>
+      batchOp = batchOp.del(encodeKey(Bucket.proposerSlashing, treeHash(n, ProposerSlashing))))
+    await batchOp.write();
+  }
+
+  /**
+   * Fetch all attester slashings
+   * @returns {Promise<AttesterSlashing[]>}
+   */
+  public async getAttesterSlashings(): Promise<AttesterSlashing[]> {
+    return new Promise<AttesterSlashing[]>((resolve, reject) => {
+      const attesterSlashings: AttesterSlashing[] = [];
+      this.db.createValueStream({
+        gt: encodeKey(Bucket.attesterSlashing, Buffer.alloc(0)),
+        lt: encodeKey(Bucket.attesterSlashing + 1, Buffer.alloc(0)),
+      }).on('data', function(data) {
+        attesterSlashings.push(deserialize(data, AttesterSlashing).deserializedData);
+      }).on('close', function() {
+        resolve(attesterSlashings);
+      }).on('end', function() {
+        resolve(attesterSlashings);
+      });
+    });
+  }
+
+  /**
+   * Put an attester slashing into the db
+   * @param {AttesterSlashing} attesterSlashing
+   * @returns {Promise<void>}
+   */
+  public async setAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<void> {
+    const attesterSlashingRoot = treeHash(attesterSlashing, AttesterSlashing);
+    await this.db.put(encodeKey(Bucket.attesterSlashing, attesterSlashingRoot), serialize(attesterSlashing, AttesterSlashing));
+  }
+
+  /**
+   * Delete attester slashings from the db
+   * @param {AttesterSlashing[]} attesterSlashings
+   * @returns {Promise<void>}
+   */
+  public async deleteAttesterSlashings(attesterSlashings: AttesterSlashing[]): Promise<void> {
+    let batchOp = this.db.batch();
+    attesterSlashings.forEach((n) =>
+      batchOp = batchOp.del(encodeKey(Bucket.attesterSlashing, treeHash(n, AttesterSlashing))))
+    await batchOp.write();
   }
 }
