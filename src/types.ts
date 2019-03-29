@@ -1,0 +1,101 @@
+import BN from "bn.js";
+
+// Serializable values
+
+export type Uint = number | BN;
+export type Bool = boolean;
+export type Bytes = Buffer | Uint8Array;
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface SerializableArray extends Array<SerializableValue> {}
+export interface SerializableObject {
+  [field: string]: SerializableValue;
+}
+export type SerializableValue = Uint | Bool | Bytes | SerializableArray | SerializableObject;
+
+export interface DeserializedValue {
+  offset: number;
+  value: SerializableValue;
+}
+
+// Simple types
+// These types are supplied to provide a convenient interface with which to specify types
+
+export type SimplePrimitiveType = string;
+
+export interface SimpleListType extends Array<SimpleSSZType> {
+  0: SimpleSSZType;
+}
+
+export interface SimpleVectorType extends Array<SimpleSSZType | number> {
+  0: SimpleSSZType;
+  1: number;
+}
+
+export interface SimpleContainerType {
+  name: string;
+  fields: [string, SimpleSSZType][];
+}
+
+export type SimpleSSZType = SimplePrimitiveType | SimpleListType | SimplePrimitiveType | SimpleContainerType;
+
+// Full types
+// These types are used internally
+
+export enum Type {
+  uint,
+  bool,
+  byteList,
+  byteVector,
+  list,
+  vector,
+  container,
+}
+
+export interface UintType {
+  type: Type.uint;
+  byteLength: number;
+  offset: number;
+  useNumber: boolean;
+}
+
+export interface BoolType {
+  type: Type.bool;
+}
+
+export interface ByteListType {
+  type: Type.byteList;
+}
+
+export interface ByteVectorType {
+  type: Type.byteVector;
+  length: number;
+}
+
+export type BytesType = ByteListType | ByteVectorType;
+
+export interface ListType {
+  type: Type.list;
+  elementType: SSZType;
+}
+
+export interface VectorType {
+  type: Type.vector;
+  elementType: SSZType;
+  length: number;
+}
+
+export type ArrayType = ListType | VectorType;
+
+export interface ContainerType {
+  type: Type.container;
+  name: string;
+  fields: [string, SSZType][];
+}
+
+export type SSZType = UintType | BoolType | BytesType | ArrayType | ContainerType;
+
+// simple + full types
+
+export type AnyContainerType = ContainerType | SimpleContainerType;
+
+export type AnySSZType = SSZType | SimpleSSZType;
