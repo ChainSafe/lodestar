@@ -8,12 +8,16 @@ export enum Bucket {
   chainInfo,
   blockOperations,
   validator,
+  deposit,
 }
 
 export const Key = {
   chainHeight: Buffer.from('chainHeight'),
   state: Buffer.from('state'),
   finalizedState: Buffer.from('finalizedState'),
+  justifiedState: Buffer.from('justifiedState'),
+  finalizedBlock: Buffer.from('finalizedBlock'),
+  justifiedBlock: Buffer.from('justifiedBlock'),
 }
 
 /**

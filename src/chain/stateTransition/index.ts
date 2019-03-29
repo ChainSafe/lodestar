@@ -5,7 +5,7 @@ import {
 } from "../../types";
 
 import processBlock from "./block";
-import {processEpoch} from "./epoch";
+import { processEpoch, shouldProcessEpoch } from "./epoch";
 import {processSlot} from "./slot";
 
 export {
@@ -14,9 +14,16 @@ export {
   processEpoch,
 };
 
-export function executeStateTransition(state: BeaconState, block: BeaconBlock, prevBlockRoot: bytes32): BeaconState {
+export function executeStateTransition(state: BeaconState, block: BeaconBlock | null, prevBlockRoot: bytes32): BeaconState {
   processSlot(state, prevBlockRoot);
-  processBlock(state, block);
-  processEpoch(state);
+  
+  if (block) {
+    processBlock(state, block);
+  }
+
+  if (shouldProcessEpoch(state)) {
+    processEpoch(state);
+  }
+
   return state;
 }
