@@ -8,7 +8,7 @@ export default class BlockProcessingService {
   private provider: RPCProvider;
   private logger: blgr;
 
-  constructor(index: ValidatorIndex, provider: RPCProvider, logger: blgr) {
+  public constructor(index: ValidatorIndex, provider: RPCProvider, logger: blgr) {
     this.validatorIndex= index;
     this.provider = provider;
     this.logger = logger;
@@ -19,7 +19,7 @@ export default class BlockProcessingService {
    * @returns {Promise<boolean>}
    */
   private async isProposer(): Promise<boolean> {
-    let isValid: boolean = false;
+    let isValid = false;
     while (!isValid) {
       this.logger.info("Checking if validator is proposer...");
       isValid = await this.provider.isActiveValidator(this.validatorIndex);

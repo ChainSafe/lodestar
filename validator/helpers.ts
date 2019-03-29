@@ -1,5 +1,5 @@
 import assert from "assert";
-import {BeaconState, Epoch, ValidatorIndex} from "../src/types";
+import {BeaconState, Epoch, ValidatorIndex, Shard} from "../src/types";
 import {getPreviousEpoch, getCurrentEpoch, getEpochStartSlot, getCrosslinkCommitteesAtSlot, getBeaconProposerIndex} from "../src/chain/helpers/stateTransitionHelpers";
 import BN = require("bn.js");
 import {SLOTS_PER_EPOCH} from "../src/constants";
@@ -16,14 +16,14 @@ import {SLOTS_PER_EPOCH} from "../src/constants";
  * @param {Epoch} epoch
  * @param {ValidatorIndex} validatorIndex
  * @param {boolean} registryChange
- * @returns {{validators: any; shard: any; slot: number; isProposer: boolean}}
+ * @returns {{validators: ValidatorIndex[]; shard: Shard; slot: number; isProposer: boolean}}
  */
 // TODO: Fix small bugs
 export function getCommitteeAssignment(
   state: BeaconState,
   epoch: Epoch,
   validatorIndex: ValidatorIndex,
-  registryChange: boolean = false) {
+  registryChange: boolean = false): {validators: ValidatorIndex[]; shard: Shard; slot: number; isProposer: boolean} {
 
   const previousEpoch = getPreviousEpoch(state);
   const nextEpoch = getCurrentEpoch(state).addn(1);
