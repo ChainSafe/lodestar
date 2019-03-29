@@ -18,7 +18,7 @@ Deserialize, according to the SSZ spec
 ### Parameters
 
 -   `data` **[Buffer][9]** 
--   `type` **AnyType** 
+-   `type` **AnySSZType** 
 
 Returns **SerializableValue** 
 
@@ -29,7 +29,7 @@ Merkleize an SSZ value
 ### Parameters
 
 -   `value` **SerializableValue** 
--   `type` **AnyType** 
+-   `type` **AnySSZType** 
 
 Returns **[Buffer][9]** 
 
@@ -40,7 +40,7 @@ Serialize, according to the SSZ spec
 ### Parameters
 
 -   `value` **SerializableValue** 
--   `type` **AnyType** 
+-   `type` **AnySSZType** 
 
 Returns **[Buffer][9]** 
 
