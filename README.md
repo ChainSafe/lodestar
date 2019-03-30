@@ -15,7 +15,8 @@ In order to properly serialize/deserialize/hash values, we need both the value a
 ### Types
 
 The simple serialization spec operates over a few specific types.
-Types are either specified in a simplified form (eg: `"uint32"`) or an extended form. In most cases, the simplified form suffices.
+Types are either specified in a simplified form (eg: `"uint32"`) or an extended form
+(eg: `{type: Type.uint, byteLength: 4, offset: 0, useNumber: false}`). In most cases, the simplified form suffices.
 
 #### Uint
 A uint serialization value may be either a js `number` or a `BN` from [bn.js](https://github.com/indutny/bn.js).
@@ -54,119 +55,120 @@ See `SSZType` in `src/types.ts` for more information.
 
 ### Serialize:
 
-#### Boolean
-```typescript
-let bool = true
-let serialized = ssz.serialize(bool, 'bool')
-```
+Serialize takes a value and a type as input and returns a Buffer.
 
-#### Number
 ```typescript
-let num = 16
-let serialized = ssz.serialize(num, 'uint32')
-```
+let buf: Buffer
 
-#### BN (Big Number)
-```typescript
+// Boolean
+
+buf = ssz.serialize(true, 'bool')
+
+// Number
+
+buf = ssz.serialize(16, 'uint32')
+
+// BN (big number)
+
 const BN = require('bn.js')
-let num = new BN(0xFFFFFFFFFFFFFFF0)
-let searialized = ssc.serialize(num, 'uint64')
-```
+buf = ssc.serialize(new BN(0xFFFFFFFFFFFFFFF0), 'uint64')
 
-Note: Any value greater than `2^53 - 1` should be stored in a [BN](https://github.com/indutny/bn.js)
+// Buffer
 
-#### Buffer
-```typescript
-let bytes = Buffer.from([1,2,3])
-let serialized = ssz.serialize(bytes, 'bytes')
-```
-
-With `bytesN`:
-```typescript
-// Note: N === bytes.length
 let bytes = Buffer.from([1, 2, 3, 4])
-let serialized = ssz.serialize(bytes, 'bytes4')
-```
+buf = ssz.serialize(bytes, 'bytes')
 
-#### Array
-```typescript
+// bytesN
+// Note: N === bytes.length
+buf = ssz.serialize(bytes, 'bytes4')
+
+// Array
+
 let array = [1, 2, 3]
-let serialized = ssz.serialize(array, ['uint16'])
-```
+buf = ssz.serialize(array, ['uint16'])
 
-#### Object
-```typescript
+// Object
+
 let obj = {
 	a: Buffer.from('hello'),
 	b: 10,
 	c: false
 }
 
-let types = {
-	'fields' : [
-		['a', 'bytes'],
-		['b', 'int16'],
-		['c', 'bool'],
-	]
+let myType = {
+  name: 'myType',
+  fields: [
+    ['a', 'bytes'],
+    ['b', 'int16'],
+    ['c', 'bool'],
+  ],
 }
 
-let serialized = ssz.serialize(obj, types)
+buf = ssz.serialize(obj, myType)
 ```
 
 ### Deserialize
 
-For deserialization we need to specify:
-- data {Buffer} - encoded data
-- type {SerializableType} - type of data we want to decode, same as encoding types
+Deserialize takes a Buffer and a type as input and returns a value.
 
-#### Boolean
 ```typescript
-ssz.deserialize(buf, 'bool')
-```
+// Boolean
 
-#### Number/BN
-```typescript
+let b: boolean = ssz.deserialize(buf, 'bool')
+
 // Deserialize to a BN
-ssz.deserialize(buf, 'uint64')
+let n: BN = ssz.deserialize(buf, 'uint64')
 
 // Deserialize to a js number
 // WARNING: this will cause issues if you try to deserialize to a value greater than 2^53-1
-ssz.deserialize(buf, 'number64')
-```
+let n: number = ssz.deserialize(buf, 'number64')
 
-#### Buffer
-```typescript
-ssz.deserialize(buf1, 'bytes')
-```
+// Buffer
+let b: Buffer = ssz.deserialize(buf, 'bytes')
 
-#### Array
-```typescript
-ssz.deserialize(buf1, ['uint32'])
-```
+// Array
 
-#### Object
-```typescript
+let a: number[] = ssz.deserialize(buf, ['uint32'])
+
+// Object
+
+interface myType {
+  a: boolean;
+  b: number;
+}
+
 let myType = {
+  name: 'myType',
   fields: [
     ['a', 'bool'],
     ['b', 'uint8'],
   ],
 }
-ssz.deserialize(buf, myType)
+let o: myType = ssz.deserialize(buf, myType)
 ```
 
 ### Hash Tree Root
 
-To hash an SSZ-serializable function, we need pass in the value and the type, like with `serialize`:
+Hash Tree Root returns a hash of a SSZ-able value.
 
 ```typescript
+// Boolean
+
 ssz.hashTreeRoot(true, 'bool')
+
+// Number
 
 ssz.hashTreeRoot(5, 'uint16')
 
+// Buffer
+
 ssz.hashTreeRoot(Buffer.from([1, 2, 3, 4]), 'bytes')
 
+// Array
+
 ssz.hashTreeRoot([true, true], ['bool'])
+
+// Object
 
 let myType = {
   fields: [
