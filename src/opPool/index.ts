@@ -6,9 +6,9 @@ import { BeaconChain } from "../chain";
 import { DB } from "../db";
 
 /**
- * Pool of transactions not yet included on chain
+ * Pool of operations not yet included on chain
  */
-export class TxPool extends EventEmitter {
+export class OpPool extends EventEmitter {
   private chain: BeaconChain;
   private db: DB;
   public constructor(opts, {chain, db}) {
@@ -18,17 +18,17 @@ export class TxPool extends EventEmitter {
   }
 
   /**
-   * Start tx pool processing
+   * Start operation processing
    */
   public async start(): Promise<void> {
-    this.chain.on('processedBlock', this.removeTransactions.bind(this));
+    this.chain.on('processedBlock', this.removeOperations.bind(this));
   }
 
   /**
-   * Stop tx pool processing
+   * Stop operation processing
    */
   public async stop(): Promise<void> {
-    this.chain.removeListener('processedBlock', this.removeTransactions.bind(this));
+    this.chain.removeListener('processedBlock', this.removeOperations.bind(this));
   }
 
   /**
@@ -102,9 +102,9 @@ export class TxPool extends EventEmitter {
   }
 
   /**
-   * Remove stored transactions based on a newly processed block
+   * Remove stored operations based on a newly processed block
    */
-  public async removeTransactions(processedBlock: BeaconBlock): Promise<void> {
+  public async removeOperations(processedBlock: BeaconBlock): Promise<void> {
     const tasks = [
       this.removeAttestations(processedBlock.body.attestations),
       this.removeOldAttestations(processedBlock.slot),
