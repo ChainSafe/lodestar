@@ -1,4 +1,4 @@
-import BN = require("bn.js");
+import BN  from "bn.js";
 import {processAttestationInclusion} from "./attestation";
 import {BeaconState, Epoch, PendingAttestation, ValidatorIndex} from "../../../../types";
 import {processJustificationAndFinalization} from "./justification";

@@ -1,7 +1,8 @@
 import assert from "assert";
+import BN from "bn.js";
+
 import {BeaconState, Epoch, ValidatorIndex, Shard} from "../src/types";
 import {getPreviousEpoch, getCurrentEpoch, getEpochStartSlot, getCrosslinkCommitteesAtSlot, getBeaconProposerIndex} from "../src/chain/helpers/stateTransitionHelpers";
-import BN = require("bn.js");
 import {SLOTS_PER_EPOCH} from "../src/constants";
 
 /**

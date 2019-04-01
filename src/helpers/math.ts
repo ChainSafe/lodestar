@@ -1,4 +1,4 @@
-import BN = require("bn.js");
+import BN from "bn.js";
 
 /**
  * Return the min number between two big numbers.

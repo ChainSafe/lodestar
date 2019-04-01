@@ -1,4 +1,4 @@
-import BN = require("bn.js");
+import BN from "bn.js";
 import {
   getActiveValidatorIndices, getAttestationParticipants,
   getBlockRoot, getCrosslinkCommitteesAtSlot, getCurrentEpoch, getEpochStartSlot, getPreviousEpoch, getTotalBalance,
