@@ -1,6 +1,6 @@
 // This file makes some naive assumptions surrounding the way RPC like calls will be made in ETH2.0
 // Subject to change with future developments with Hobbits and wire protocol
-import BN = require("bn.js");
+import BN from "bn.js";
 import blgr from "blgr";
 import {ValidatorIndex, Slot, BeaconBlock, BeaconState} from "../src/types";
 

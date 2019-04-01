@@ -3,7 +3,7 @@ import {
   getCrosslinkCommitteesAtSlot, getEpochStartSlot, getTotalBalance,
   slotToEpoch
 } from "../../helpers/stateTransitionHelpers";
-import BN = require("bn.js");
+import BN from "bn.js";
 import {winningRoot} from "./helpers";
 
 export function processCrosslinks(
