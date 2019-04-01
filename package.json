@@ -44,13 +44,15 @@
     "blgr": "^0.1.7",
     "bn.js": "^4.11.8",
     "buffer-xor": "^2.0.2",
+    "commander": "^2.19.0",
     "deepmerge": "^3.2.0",
     "ethers": "^4.0.27",
     "level": "^4.0.0",
     "promisify-es6": "^1.0.3"
   },
   "bin": {
-    "lodestar-chain": "./index.js"
+    "lodestar": "./bin/lodestar",
+    "lodestar-validator": "./bin/lodestar-validator"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",
