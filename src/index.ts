@@ -1,1 +1,1 @@
-require("./cli/index.ts");
+import "./cli";
