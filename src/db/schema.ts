@@ -6,9 +6,12 @@ export enum Bucket {
   block,
   mainChain,
   chainInfo,
-  blockOperations,
   validator,
   deposit,
+  exit,
+  transfer,
+  proposerSlashing,
+  attesterSlashing,
 }
 
 export const Key = {

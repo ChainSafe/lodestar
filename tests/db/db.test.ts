@@ -50,13 +50,6 @@ describe("DB", () => {
     const actualBlock = await db.getBlock(testBlockRoot);
     assert.deepEqual(serialize(actualBlock, BeaconBlock), serialize(testBlock, BeaconBlock));
   })
-  it("should correctly get and set an attestation", async () => {
-    const testAttestation = generateEmptyAttestation();
-    const testAttestationRoot = treeHash(testAttestation, Attestation);
-    await db.setAttestation(testAttestation);
-    const actualAttestation = await db.getAttestation(testAttestationRoot);
-    assert.deepEqual(serialize(actualAttestation, Attestation), serialize(testAttestation, Attestation));
-  })
   it("should correctly set the chain head", async () => {
     const testState = generateState();
     const testBlock = generateEmptyBlock();
@@ -67,5 +60,20 @@ describe("DB", () => {
     await db.setChainHead(testState, testBlock);
     const actualBlock = await db.getBlockBySlot(slot);
     assert.deepEqual(serialize(actualBlock, BeaconBlock), serialize(testBlock, BeaconBlock));
+  })
+  it("should correctly set, get, delete attestations", async () => {
+    const testAttestations = Array.from({length: 64}, (_, i) => {
+      const a = generateEmptyAttestation();
+      a.aggregationBitfield = Buffer.from(i.toString());
+      return a;
+    })
+    for (const a of testAttestations) {
+      await db.setAttestation(a);
+    }
+    const actualAttestations = await db.getAttestations();
+    assert.equal(actualAttestations.length, testAttestations.length);
+    await db.deleteAttestations(testAttestations);
+    const noAttestations = await db.getAttestations();
+    assert.equal(noAttestations.length, 0);
   })
 });
