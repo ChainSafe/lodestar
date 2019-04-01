@@ -14,7 +14,7 @@ import {
   Attestation,
 } from "../../src/types";
 
-import {DB} from "../../src/db";
+import {LevelDB} from "../../src/db";
 
 import { generateState } from "../utils/state";
 import { generateEmptyBlock } from "../utils/block";
@@ -23,7 +23,7 @@ import { generateEmptyAttestation } from "../utils/attestation";
 describe("DB", () => {
   const dbLocation = "./.__testdb";
   const testDb = levelup(leveldown(dbLocation));
-  const db = new DB({db: testDb});
+  const db = new LevelDB({db: testDb});
   before(async () => {
     await db.start();
   })
