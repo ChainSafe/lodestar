@@ -1,4 +1,4 @@
-import assert = require("assert");
+import assert from "assert";
 import BN from "bn.js";
 import {EventEmitter} from "events";
 import { treeHash } from "@chainsafesystems/ssz";

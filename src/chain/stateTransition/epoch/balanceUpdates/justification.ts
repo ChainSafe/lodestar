@@ -1,7 +1,7 @@
 import {getActiveValidatorIndices, isActiveValidator} from "../../../helpers/stateTransitionHelpers";
 import {MIN_ATTESTATION_INCLUSION_DELAY} from "../../../../constants";
 import {BeaconState, Epoch} from "../../../../types";
-import BN = require("bn.js");
+import BN from "bn.js";
 import {inclusionDistance} from "../helpers";
 
 export function processJustificationAndFinalization(
