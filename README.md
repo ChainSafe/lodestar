@@ -2,18 +2,18 @@
 Note:
 There is a lot of work being done that are core infrastructural pieces for Eth2.0. Contributions to any of the below repositories would be greatly appreciated. All the libraries are written in TypeScript (or in the process of being converted from pure JS to TypeScript):
 <br />
--- [PM / Meta Repo](https://github.com/ChainSafeSystems/Sharding)<br />
-|-- [Beacon Chain](https://github.com/ChainSafeSystems/lodestar)<br />
-|-- [Validator Client](https://github.com/ChainSafeSystems/Validator-Client)<br />
-|-- [Simple Serialize (SSZ)](https://github.com/ChainSafeSystems/ssz-js)<br />
-|-- [BLS Singatures and Signature Aggregation](https://github.com/ChainSafeSystems/bls-js)<br />
-|-- [Hobbits](https://github.com/ChainSafeSystems/hobbits-ts)<br />
-|-- [Gossipsub](https://github.com/ChainSafeSystems/gossipsub-js)<br />
+-- [PM / Meta Repo](https://github.com/ChainSafe/Sharding)<br />
+|-- [Beacon Chain](https://github.com/ChainSafe/lodestar)<br />
+|-- [Validator Client](https://github.com/ChainSafe/Validator-Client)<br />
+|-- [Simple Serialize (SSZ)](https://github.com/ChainSafe/ssz-js)<br />
+|-- [BLS Singatures and Signature Aggregation](https://github.com/ChainSafe/bls-js)<br />
+|-- [Hobbits](https://github.com/ChainSafe/hobbits-ts)<br />
+|-- [Gossipsub](https://github.com/ChainSafe/gossipsub-js)<br />
 
-[![](https://img.shields.io/travis/com/ChainSafeSystems/lodestar/master.svg?label=master&logo=travis "Master Branch (Travis)")](https://travis-ci.com/ChainSafeSystems/lodestar)
+[![](https://img.shields.io/travis/com/ChainSafe/lodestar/master.svg?label=master&logo=travis "Master Branch (Travis)")](https://travis-ci.com/ChainSafe/lodestar)
 [![](https://badges.gitter.im/chainsafe/lodestar.svg)](https://gitter.im/chainsafe/lodestar?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-![](https://img.shields.io/codecov/c/github/ChainSafeSystems/lodestar.svg?label=Codecov&style=flat)
-[![Maintainability](https://api.codeclimate.com/v1/badges/678099476c401e1af503/maintainability)](https://codeclimate.com/github/ChainSafeSystems/lodestar/maintainability)
+![](https://img.shields.io/codecov/c/github/ChainSafe/lodestar.svg?label=Codecov&style=flat)
+[![Maintainability](https://api.codeclimate.com/v1/badges/678099476c401e1af503/maintainability)](https://codeclimate.com/github/ChainSafe/lodestar/maintainability)
 
 # Overview
 The goal of this repository is to provide an implementation of the beacon chain. As even the Ethereum Core dev team don't know how the finalized beacon chain

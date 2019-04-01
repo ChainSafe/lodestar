@@ -10,6 +10,10 @@ import {processCrosslinks} from "./crosslinks";
 import {processJustification} from "./justification";
 import {processVariables} from "./variables";
 
+export function shouldProcessEpoch(state: BeaconState): boolean {
+  return state.slot.addn(1).modn(SLOTS_PER_EPOCH) === 0;
+}
+
 export function processEpoch(state: BeaconState): BeaconState {
   assert(state.slot.addn(1).modn(SLOTS_PER_EPOCH) === 0);
 

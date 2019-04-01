@@ -1,6 +1,6 @@
 import BN from "bn.js";
 import { assert } from "chai";
-import { ethers } from "ethers";
+import { ethers, Event } from "ethers";
 import ganache from "ganache-core";
 import sinon from "sinon";
 
@@ -39,8 +39,9 @@ describe("Eth1Notifier", () => {
     const unixTimeNow = Math.floor(Date.now() / 1000);
     timeBuf.writeUInt32LE(unixTimeNow, 0);
     const timeHex = "0x" + timeBuf.toString("hex");
+    const event = { blockHash: "0x0000000000000000" } as Event;
 
-    eth1.processEth2GenesisLog(depositRootHex, depositCountHex, timeHex);
+    eth1.processEth2GenesisLog(depositRootHex, depositCountHex, timeHex, event);
     assert(cb.calledOnce, "eth2genesis event did not fire");
   });
   it("should process a new block", async function() {

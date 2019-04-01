@@ -2,6 +2,7 @@ import BN from "bn.js";
 import {hashTreeRoot} from "@chainsafesystems/ssz";
 
 import {
+  BeaconBlock,
   BeaconState,
   Crosslink,
   Deposit,
@@ -11,7 +12,7 @@ import {
 } from "../../types";
 
 import {
-  GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD,
+  EMPTY_SIGNATURE, GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD,
   LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH,
   LATEST_SLASHED_EXIT_LENGTH, MAX_DEPOSIT_AMOUNT, SHARD_COUNT, ZERO_HASH,
 } from "../../constants";
@@ -21,21 +22,21 @@ import {
   getActiveValidatorIndices,
   getEffectiveBalance,
   processDeposit,
-} from "../helpers/stateTransitionHelpers";
+} from "./stateTransitionHelpers";
 
 import {
   activateValidator,
-} from "../helpers/validatorStatus";
+} from "./validatorStatus";
 
 
 /**
  * Generate the initial beacon chain state.
  * @param {Deposit[]} initialValidatorDeposits
- * @param {int} genesisTime
+ * @param {uint64} genesisTime
  * @param {Eth1Data} latestEth1Data
  * @returns {BeaconState}
  */
-export function getInitialBeaconState(
+export function getGenesisBeaconState(
   initialValidatorDeposits: Deposit[],
   genesisTime: uint64,
   latestEth1Data: Eth1Data): BeaconState {
@@ -114,3 +115,30 @@ export function getInitialBeaconState(
   state.currentShufflingSeed = generateSeed(state, GENESIS_EPOCH);
   return state;
 }
+
+/**
+ * Get an empty ``BeaconBlock``.
+ * @returns {BeaconBlock}
+ */
+export function getEmptyBlock(): BeaconBlock {
+  return {
+    slot: GENESIS_SLOT,
+    parentRoot: ZERO_HASH,
+    stateRoot: ZERO_HASH,
+    randaoReveal: EMPTY_SIGNATURE,
+    eth1Data: {
+      depositRoot: ZERO_HASH,
+      blockHash: ZERO_HASH,
+    },
+    signature: EMPTY_SIGNATURE,
+    body: {
+      proposerSlashings: [],
+      attesterSlashings: [],
+      attestations: [],
+      deposits: [],
+      voluntaryExits: [],
+      transfers: [],
+    },
+  };
+}
+
