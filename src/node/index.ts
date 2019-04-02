@@ -5,7 +5,7 @@ import {BeaconChain} from "../chain";
 import {LevelDB} from "../db";
 import {Eth1Notifier} from "../eth1";
 import {P2PNetwork} from "../p2p";
-import {BeaconRPC} from "../rpc";
+import {BeaconAPI, JSONRPC, WSServer} from "../rpc";
 import {Sync} from "../sync";
 import {OpPool} from "../opPool";
 
@@ -54,7 +54,14 @@ class BeaconNode {
       db: this.db,
       chain: this.chain,
     });
-    this.rpc = new BeaconRPC(this.conf.rpc);
+    this.rpc = new JSONRPC(this.conf.rpc, {
+      transport: new WSServer(this.conf.rpc), 
+      api: new BeaconAPI(this.conf.rpc, {
+        chain: this.chain,
+        db: this.db,
+        opPool: this.opPool,
+      }),
+    });
   }
 
   public async start() {
