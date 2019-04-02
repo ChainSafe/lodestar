@@ -16,6 +16,7 @@ export interface DBOptions {
   name?: string;
 }
 
+
 /**
  * The DB service manages the data layer of the beacon chain
  * The exposed methods do not refer to the underlying data engine, but instead expose relevent beacon chain objects
@@ -205,7 +206,7 @@ export interface DB extends EventEmitter {
 
   /**
    * Delete attestations from the db
-   * @param {Attestation[]} attestations
+   * @param {ProposerSlashing[]} proposerSlashings
    * @returns {Promise<void>}
    */
   deleteProposerSlashings(proposerSlashings: ProposerSlashing[]): Promise<void>;
