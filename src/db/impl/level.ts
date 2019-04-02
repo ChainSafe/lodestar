@@ -14,15 +14,15 @@ import {
   uint64,
   VoluntaryExit,
   Transfer,
-} from "../types";
+} from "../../types";
 
 import {
   Bucket,
   encodeKey,
   Key,
-} from "./schema";
+} from "../schema";
 
-import { DB, DBOptions } from "./interface";
+import { DB, DBOptions } from "../interface";
 
 export interface LevelDBOptions extends DBOptions {
   db?: LevelUp;
