@@ -4,7 +4,7 @@ import { ethers } from "ethers";
 import ganache from "ganache-core";
 import sinon from "sinon";
 
-import { Eth1Notifier } from "../../src/eth1";
+import { EthersEth1Notifier } from "../../src/eth1";
 import defaults from "../../src/eth1/defaults";
 import promisify from "promisify-es6";
 
@@ -38,7 +38,7 @@ describe("Eth1Notifier - using deployed contract", () => {
     await contract.deployed();
     console.log('deployed!');
 
-    eth1 = new Eth1Notifier({
+    eth1 = new EthersEth1Notifier({
       depositContract: {
         ...defaults.depositContract,
         address,

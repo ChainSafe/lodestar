@@ -3,7 +3,7 @@ import deepmerge from "deepmerge";
 
 import {BeaconChain} from "../chain";
 import {LevelDB} from "../db";
-import {Eth1Notifier} from "../eth1";
+import {EthersEth1Notifier} from "../eth1";
 import {P2PNetwork} from "../p2p";
 import {BeaconRPC} from "../rpc";
 import {Sync} from "../sync";
@@ -42,7 +42,7 @@ class BeaconNode {
     // this.logger ?
     this.db = new LevelDB(this.conf.db);
     this.network = new P2PNetwork(this.conf.network);
-    this.eth1 = new Eth1Notifier(this.conf.eth1);
+    this.eth1 = new EthersEth1Notifier(this.conf.eth1);
     this.sync = new Sync(this.conf.sync, {
       network: this.network,
     });
