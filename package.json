@@ -28,7 +28,7 @@
     "ssz"
   ],
   "author": "ChainSafe Systems",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "devDependencies": {
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.3.4",
