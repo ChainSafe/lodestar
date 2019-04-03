@@ -4,10 +4,10 @@ import {
   ArrayType,
   Bytes,
   BytesType,
+  FullSSZType,
   SerializableArray,
   SerializableObject,
   SerializableValue,
-  SSZType,
   Type,
 } from "./types";
 
@@ -19,7 +19,7 @@ function _sizeByteArray(value: Bytes, type: BytesType): number {
   return length + BYTES_PER_LENGTH_PREFIX;
 }
 
-export function size(value: SerializableValue, type: SSZType): number {
+export function size(value: SerializableValue, type: FullSSZType): number {
   switch (type.type) {
     case Type.uint:
       return type.byteLength;

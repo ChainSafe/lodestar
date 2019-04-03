@@ -2,10 +2,10 @@ import assert from "assert";
 
 import {
   AnySSZType,
-  Type,
+  FullSSZType,
   SimpleContainerType,
   SimpleVectorType,
-  SSZType,
+  Type,
 } from "../types";
 
 // regex to identify a bytes type
@@ -21,7 +21,7 @@ export function copyType(type: AnySSZType): AnySSZType {
   return JSON.parse(JSON.stringify(type));
 }
 
-export function parseType(type: AnySSZType): SSZType {
+export function parseType(type: AnySSZType): FullSSZType {
   if(typeof type === "string") {
     if (type === "bool") {
       return {
@@ -92,8 +92,8 @@ export function parseType(type: AnySSZType): SSZType {
     }
     assert.fail("Array length must be 1 or 2");
   } else if (type === Object(type)) {
-    if (isSSZType(type)) {
-      return type as SSZType;
+    if (isFullSSZType(type)) {
+      return type as FullSSZType;
     } else {
       type = type as SimpleContainerType;
       assert(typeof type.name === "string", "Container must have a name");
@@ -104,25 +104,25 @@ export function parseType(type: AnySSZType): SSZType {
         fields: type.fields.map(([fieldName, fieldType]: [string, any]) => {
           assert(typeof fieldName === "string", "Container field name must be a string");
           return [fieldName, parseType(fieldType)];
-        }) as [string, SSZType][],
+        }) as [string, FullSSZType][],
       }
     }
   }
   throw new Error(`Invalid type: ${type}`);
 }
 
-export function isSSZType(type: AnySSZType): boolean {
+export function isFullSSZType(type: AnySSZType): boolean {
   return type === Object(type) && Object.values(Type).includes((type as any).type);
 }
 
-export function isBasicType(type: SSZType): boolean {
+export function isBasicType(type: FullSSZType): boolean {
   return [
     Type.uint,
     Type.bool,
   ].includes(type.type);
 }
 
-export function isCompositeType(type: SSZType): boolean {
+export function isCompositeType(type: FullSSZType): boolean {
   return [
     Type.byteList,
     Type.byteVector,

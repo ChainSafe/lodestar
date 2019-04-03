@@ -7,10 +7,10 @@ import {
   Bytes,
   BytesType,
   ContainerType,
+  FullSSZType,
   SerializableArray,
   SerializableObject,
   SerializableValue,
-  SSZType,
   Type,
   Uint,
   UintType,
@@ -70,7 +70,7 @@ function _serializeObject(value: SerializableObject, type: ContainerType, output
   return index;
 }
 
-export function _serialize(value: SerializableValue, type: SSZType, output: Buffer, start: number): number {
+export function _serialize(value: SerializableValue, type: FullSSZType, output: Buffer, start: number): number {
   switch(type.type) {
     case Type.bool:
       return _serializeBool(value as Bool, output, start);

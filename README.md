@@ -49,7 +49,7 @@ The container serialization type must be an `Object`, with a string `name`, and 
 
 #### Extended form
 
-See `SSZType` in `src/types.ts` for more information.
+See `FullSSZType` in `src/types.ts` for more information.
 
 ## Examples
 
