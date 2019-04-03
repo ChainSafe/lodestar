@@ -1,5 +1,5 @@
 import BN from "bn.js";
-import {hashTreeRoot} from "@chainsafesystems/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 
 import {
   BeaconBlock,

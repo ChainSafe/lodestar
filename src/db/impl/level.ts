@@ -4,7 +4,6 @@ import {LevelUp} from "levelup";
 import {DB, DBOptions} from "../interface";
 import AbstractDB, {SearchOptions} from "./abstract";
 import {Attestation} from "../../types";
-import {deserialize} from "@chainsafesystems/ssz";
 
 export interface LevelDBOptions extends DBOptions {
   db?: LevelUp;

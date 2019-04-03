@@ -1,6 +1,7 @@
 // Each type exported here contains both a compile-time type (a typescript interface) and a run-time type (a javascript variable)
 // For more information, see ./index.ts
 // These interfaces relate to the data structures for beacon chain state
+import { SimpleContainerType } from "@chainsafe/ssz";
 
 import {
   bytes32,
@@ -26,7 +27,7 @@ export interface Fork {
   // Fork epoch number
   epoch: uint64;
 }
-export const Fork = {
+export const Fork: SimpleContainerType = {
   name: "Fork",
   fields: [
     ["previousVersion", uint64],
@@ -51,7 +52,7 @@ export interface Validator {
   // Status flags
   statusFlags: uint64;
 }
-export const Validator = {
+export const Validator: SimpleContainerType = {
   name: "Validator",
   fields: [
     ["pubkey", bytes48],
@@ -103,7 +104,7 @@ export interface BeaconState {
   eth1DataVotes: Eth1DataVote[];
   depositIndex: uint64;
 }
-export const BeaconState = {
+export const BeaconState: SimpleContainerType = {
   name: "BeaconState",
   fields: [
     // Misc

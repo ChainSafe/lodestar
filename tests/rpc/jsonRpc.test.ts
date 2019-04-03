@@ -3,10 +3,6 @@ import BN from "bn.js";
 import promisify from "promisify-es6";
 import * as jsonRpc from "noice-json-rpc";
 import Websocket from "ws";
-import {
-  serialize,
-  treeHash,
-} from "@chainsafesystems/ssz";
 
 import {
   BeaconBlock,

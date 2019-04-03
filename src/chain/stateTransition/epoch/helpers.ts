@@ -1,5 +1,5 @@
 import BN from "bn.js";
-import { deserialize } from "@chainsafesystems/ssz"
+import { deserialize } from "@chainsafe/ssz"
 import {
   getActiveValidatorIndices, getAttestationParticipants, getCurrentEpoch, getCurrentEpochCommitteeCount,
   getEffectiveBalance, getEntryExitEffectEpoch, getTotalBalance
@@ -248,7 +248,7 @@ export function winningRoot(
       if (b.balance.gt(a.balance)) {
         return b;
       } else if (b.balance.eq(a.balance)) {
-        if (deserialize(b.shardBlockRoot, "uint32").deserializedData < deserialize(a.shardBlockRoot, "uint32").deserializedData) {
+        if (deserialize(b.shardBlockRoot, "uint32") < deserialize(a.shardBlockRoot, "uint32")) {
           return b;
         }
       }

@@ -1,6 +1,6 @@
 import assert from "assert";
 
-import {treeHash} from "@chainsafesystems/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 
 import {
   BeaconBlock,
@@ -46,7 +46,7 @@ export default function processTransfers(state: BeaconState, block: BeaconBlock)
       pubkey: transfer.pubkey,
       signature: EMPTY_SIGNATURE,
     };
-    const transferMessage = treeHash(t, Transfer);
+    const transferMessage = hashTreeRoot(t, Transfer);
     const transferMessageVerified = blsVerify(
       transfer.pubkey,
       transferMessage,
