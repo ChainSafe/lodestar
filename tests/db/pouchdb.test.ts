@@ -64,7 +64,7 @@ describe("PouchDB", () => {
     }
     const actualAttestations = await db.getAttestations();
     assert.equal(actualAttestations.length, testAttestations.length);
-    await db.deleteAttestations(testAttestations);
+    await db.deleteAttestations(actualAttestations);
     const noAttestations = await db.getAttestations();
     assert.equal(noAttestations.length, 0);
   })

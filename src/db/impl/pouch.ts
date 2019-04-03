@@ -6,7 +6,7 @@ import AbstractDB, {SearchOptions} from "./abstract";
 
 PouchDB.plugin(MemoryAdapter);
 
-const BASE_REVISION: string = "v1";
+const BASE_REVISION: string = "1";
 
 export class PouchDb extends AbstractDB {
 
@@ -14,7 +14,14 @@ export class PouchDb extends AbstractDB {
 
     public constructor(opts: DBOptions) {
         super();
-        this.db = new PouchDB(opts.name || 'lodestar-beaconchain', {adapter: 'memory'});
+        this.db = new PouchDB(
+            opts.name || 'lodestar-beaconchain',
+            {
+                adapter: 'memory',
+                revs_limit: 1,
+                deterministic_revs: false
+            }
+        );
     }
 
     start(): Promise<void> {
@@ -29,9 +36,17 @@ export class PouchDb extends AbstractDB {
         return this.db.destroy();
     }
 
-    batchDelete(items: Array<any>): Promise<any> {
+    async batchDelete(items: Array<any>): Promise<any> {
         const deletitions = [];
-        items.forEach(item => deletitions.push(this.db.remove(item.toString('hex'), BASE_REVISION)));
+        //not really optimized,
+        items.forEach(async item => {
+            const doc = await this.db.get(item.toString('hex'));
+            if(doc) {
+                await this.db.remove(doc);
+            }
+        });
+        //Search by key returns deleted documents, this line purges them completely
+        await this.db.compact();
         return Promise.all(deletitions);
     }
 
@@ -64,9 +79,10 @@ export class PouchDb extends AbstractDB {
 
     async search(opts: SearchOptions): Promise<Array<any>> {
         const data = await this.db.allDocs({
-            startKey: opts.gt.toString('hex'),
-            endKey: opts.lt.toString('hex'),
-            include_docs: true
+            startkey: opts.gt.toString('hex'),
+            endkey: opts.lt.toString('hex'),
+            include_docs: true,
+            inclusive_end: false
         });
         return data.rows.map(item => Buffer.from(item.doc.value.data));
     }
