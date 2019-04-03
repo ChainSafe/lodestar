@@ -75,12 +75,12 @@ export type BytesType = ByteListType | ByteVectorType;
 
 export interface ListType {
   type: Type.list;
-  elementType: SSZType;
+  elementType: FullSSZType;
 }
 
 export interface VectorType {
   type: Type.vector;
-  elementType: SSZType;
+  elementType: FullSSZType;
   length: number;
 }
 
@@ -89,13 +89,13 @@ export type ArrayType = ListType | VectorType;
 export interface ContainerType {
   type: Type.container;
   name: string;
-  fields: [string, SSZType][];
+  fields: [string, FullSSZType][];
 }
 
-export type SSZType = UintType | BoolType | BytesType | ArrayType | ContainerType;
+export type FullSSZType = UintType | BoolType | BytesType | ArrayType | ContainerType;
 
 // simple + full types
 
 export type AnyContainerType = ContainerType | SimpleContainerType;
 
-export type AnySSZType = SSZType | SimpleSSZType;
+export type AnySSZType = FullSSZType | SimpleSSZType;

@@ -1,7 +1,8 @@
 import { sha256 } from "js-sha256";
 
 import {
-  SerializableValue, SSZType,
+  FullSSZType,
+  SerializableValue,
 } from "../types";
 
 import { BYTES_PER_CHUNK } from "../constants";
@@ -10,7 +11,7 @@ import { size } from "../size";
 
 import { _serialize } from "../serialize";
 
-export function pack (input: SerializableValue[], type: SSZType): Buffer[] {
+export function pack (input: SerializableValue[], type: FullSSZType): Buffer[] {
   // Serialize inputs into one long buffer
   const packedLength = input.map((v) => size(v, type)).reduce((a, b) => a + b);
   const packedBuf = Buffer.alloc(packedLength);

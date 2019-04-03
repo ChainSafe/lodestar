@@ -1,13 +1,13 @@
 import {
   AnySSZType,
   Bytes,
+  ContainerType,
+  FullSSZType,
+  ListType,
   SerializableArray,
   SerializableValue,
   SerializableObject,
-  SSZType,
   Type,
-  ListType,
-  ContainerType,
   VectorType,
 } from "./types";
 
@@ -22,7 +22,7 @@ import {
   parseType,
 } from "./util/types";
 
-export function _hashTreeRoot(value: SerializableValue, type: SSZType): Buffer {
+export function _hashTreeRoot(value: SerializableValue, type: FullSSZType): Buffer {
   switch (type.type) {
     case Type.uint:
       return merkleize(pack([value], type));

@@ -5,10 +5,10 @@ import {
   ArrayType,
   ContainerType,
   DeserializedValue,
+  FullSSZType,
   SerializableArray,
   SerializableObject,
   SerializableValue,
-  SSZType,
   Type,
   UintType,
 } from "./types";
@@ -80,7 +80,7 @@ function _deserializeObject(data: Buffer, type: ContainerType, start: number): D
   }
 }
 
-export function _deserialize(data: Buffer, type: SSZType, start: number): DeserializedValue {
+export function _deserialize(data: Buffer, type: FullSSZType, start: number): DeserializedValue {
   switch (type.type) {
     case Type.uint:
       return _deserializeUint(data, type, start);
