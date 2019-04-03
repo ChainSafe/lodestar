@@ -19,7 +19,7 @@ function _sizeByteArray(value: Bytes, type: BytesType): number {
   return length + BYTES_PER_LENGTH_PREFIX;
 }
 
-export function size(value: SerializableValue, type: FullSSZType): number {
+export function size(value: any, type: FullSSZType): number {
   switch (type.type) {
     case Type.uint:
       return type.byteLength;
