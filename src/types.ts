@@ -22,18 +22,18 @@ export interface DeserializedValue {
 
 export type SimplePrimitiveType = string;
 
-export interface SimpleListType extends Array<SimpleSSZType> {
-  0: SimpleSSZType;
+export interface SimpleListType extends Array<AnySSZType> {
+  0: AnySSZType;
 }
 
-export interface SimpleVectorType extends Array<SimpleSSZType | number> {
-  0: SimpleSSZType;
+export interface SimpleVectorType extends Array<AnySSZType | number> {
+  0: AnySSZType;
   1: number;
 }
 
 export interface SimpleContainerType {
   name: string;
-  fields: [string, SimpleSSZType][];
+  fields: [string, AnySSZType][];
 }
 
 export type SimpleSSZType = SimplePrimitiveType | SimpleListType | SimplePrimitiveType | SimpleContainerType;
