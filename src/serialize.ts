@@ -90,11 +90,11 @@ export function _serialize(value: SerializableValue, type: FullSSZType, output: 
 /**
  * Serialize, according to the SSZ spec
  * @method serialize
- * @param {SerializableValue} value
+ * @param {any} value
  * @param {AnySSZType} type
  * @returns {Buffer}
  */
-export function serialize(value: SerializableValue, type: AnySSZType): Buffer {
+export function serialize(value: any, type: AnySSZType): Buffer {
   const _type = parseType(type);
   const buf = Buffer.alloc(size(value, _type));
   _serialize(value, _type, buf, 0);

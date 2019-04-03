@@ -102,9 +102,9 @@ export function _deserialize(data: Buffer, type: FullSSZType, start: number): De
  * @method deserialize
  * @param {Buffer} data
  * @param {AnySSZType} type
- * @returns {SerializableValue}
+ * @returns {any}
  */
-export function deserialize(data: Buffer, type: AnySSZType): SerializableValue {
+export function deserialize(data: Buffer, type: AnySSZType): any {
   const _type = parseType(type);
   return _deserialize(data, _type, 0).value;
 }

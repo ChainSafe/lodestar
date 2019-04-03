@@ -62,11 +62,11 @@ export function _hashTreeRoot(value: SerializableValue, type: FullSSZType): Buff
 /**
  * Merkleize an SSZ value
  * @method hashTreeRoot
- * @param {SerializableValue} value
+ * @param {any} value
  * @param {AnySSZType} type
  * @returns {Buffer}
  */
-export function hashTreeRoot(value: SerializableValue, type: AnySSZType): Buffer {
+export function hashTreeRoot(value: any, type: AnySSZType): Buffer {
   const _type = parseType(type);
   return _hashTreeRoot(value, _type);
 }
