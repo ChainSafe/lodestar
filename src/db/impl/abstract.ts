@@ -28,14 +28,22 @@ export default abstract class AbstractDB extends EventEmitter implements DB{
 
     abstract batchDelete(items: Array<any>): Promise<any>;
 
+    /**
+     * Should return items which has key prefix >= opts.gt && prefix < opt.lt
+     * @param opts
+     */
     abstract search(opts: SearchOptions): Promise<Array<any>>;
 
+    /**
+     * Should insert or update
+     * @param key
+     * @param value
+     */
     abstract put(key: any, value: any): Promise<any>;
 
     abstract start(): Promise<void>;
 
     abstract stop(): Promise<void>;
-
 
     public async getState(): Promise<BeaconState> {
         const buf = await this.get(encodeKey(Bucket.chainInfo, Key.state));
