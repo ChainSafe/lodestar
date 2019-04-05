@@ -34,11 +34,13 @@
   ],
   "dependencies": {
     "@chainsafesystems/ssz": "^1.6.0",
+    "@nodeutils/defaults-deep": "^1.1.0",
     "@polkadot/ts": "^0.1.56",
     "@polkadot/util-crypto": "^0.33.27",
     "@types/bn.js": "^4.11.4",
     "@types/levelup": "^3.1.0",
     "assert": "^1.4.1",
+    "async": "^2.6.2",
     "await-to-js": "^2.1.1",
     "bignumber.js": "^7.2.1",
     "blakejs": "^1.1.0",
@@ -49,7 +51,12 @@
     "deepmerge": "^3.2.0",
     "ethers": "^4.0.27",
     "level": "^4.0.0",
+    "libp2p": "^0.24.4",
+    "libp2p-bootstrap": "^0.9.7",
     "libp2p-floodsub": "^0.15.8",
+    "libp2p-mplex": "^0.8.5",
+    "libp2p-tcp": "^0.13.0",
+    "peer-info": "^0.15.1",
     "promisify-es6": "^1.0.3"
   },
   "bin": {
