@@ -1,8 +1,5 @@
 import { assert } from "chai";
 import BN from "bn.js";
-import leveldown from "leveldown";
-import levelup from "levelup";
-import promisify from "promisify-es6";
 import {
   serialize,
   treeHash,
@@ -11,27 +8,22 @@ import {
 import {
   BeaconBlock,
   BeaconState,
-  Attestation,
 } from "../../src/types";
 
-import {LevelDB} from "../../src/db";
+import {PouchDb} from "../../src/db";
 
 import { generateState } from "../utils/state";
 import { generateEmptyBlock } from "../utils/block";
 import { generateEmptyAttestation } from "../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../utils/voluntaryExits";
 
-describe("LevelDB", () => {
-  const dbLocation = "./.__testdb";
-  const testDb = levelup(leveldown(dbLocation));
-  const db = new LevelDB({db: testDb});
-  before(async () => {
-    await db.start();
-  })
+describe("PouchDB", () => {
+  const db = new PouchDb({name: 'testdb'});
+
   after(async () => {
-    await db.stop();
-    await promisify(leveldown.destroy)(dbLocation, function() {})
-  })
+    await db.clean();
+  });
+
   it("should correctly get and set the state", async () => {
     const testState = generateState();
     await db.setState(testState);
@@ -52,15 +44,15 @@ describe("LevelDB", () => {
     assert.deepEqual(serialize(actualBlock, BeaconBlock), serialize(testBlock, BeaconBlock));
   })
   it("should correctly set the chain head", async () => {
-    const testState = generateState();
-    const testBlock = generateEmptyBlock();
-    const slot = new BN(5);
-    testBlock.slot = slot;
-    const testBlockRoot = treeHash(testBlock, BeaconBlock);
-    await db.setBlock(testBlock);
-    await db.setChainHead(testState, testBlock);
-    const actualBlock = await db.getBlockBySlot(slot);
-    assert.deepEqual(serialize(actualBlock, BeaconBlock), serialize(testBlock, BeaconBlock));
+      const testState = generateState();
+      const testBlock = generateEmptyBlock();
+      const slot = new BN(5);
+      testBlock.slot = slot;
+      const testBlockRoot = treeHash(testBlock, BeaconBlock);
+      await db.setBlock(testBlock);
+      await db.setChainHead(testState, testBlock);
+      const actualBlock = await db.getBlockBySlot(slot);
+      assert.deepEqual(serialize(actualBlock, BeaconBlock), serialize(testBlock, BeaconBlock));
   })
   it("should correctly set, get, delete attestations", async () => {
     const testAttestations = Array.from({length: 64}, (_, i) => {
@@ -73,7 +65,7 @@ describe("LevelDB", () => {
     }
     const actualAttestations = await db.getAttestations();
     assert.equal(actualAttestations.length, testAttestations.length);
-    await db.deleteAttestations(testAttestations);
+    await db.deleteAttestations(actualAttestations);
     const noAttestations = await db.getAttestations();
     assert.equal(noAttestations.length, 0);
   })

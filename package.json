@@ -48,8 +48,10 @@
     "deepmerge": "^3.2.0",
     "ethers": "^4.0.27",
     "level": "^4.0.0",
-    "noice-json-rpc": "^1.2.0",
+    "pouchdb-adapter-memory": "^7.0.0",
+    "pouchdb-core": "^7.0.0",
     "promisify-es6": "^1.0.3",
+    "noice-json-rpc": "^1.2.0",
     "ws": "^6.2.1"
   },
   "bin": {
