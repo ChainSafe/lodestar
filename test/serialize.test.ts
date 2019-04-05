@@ -56,6 +56,7 @@ describe("serialize", () => {
     {value: {v:3, subV:{v:6}}, type: OuterObject, expected: "0700000003020000000600"},
     {value: {v: [{b:2,a:1}, {b:4,a:3}]}, type: ArrayObject, expected: "120000000e0000000300000002000103000000040003"},
     {value: [{v:3, subV:{v:6}}, {v:5, subV:{v:7}}], type: [OuterObject], expected: "1600000007000000030200000006000700000005020000000700"},
+    {value: [], type: [OuterObject], expected: "00000000"},
   ];
   for (const {value, type, expected} of testCases) {
     it(`should correctly serialize ${stringifyType(type)}`, () => {

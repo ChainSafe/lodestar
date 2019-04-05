@@ -13,7 +13,7 @@ import { _serialize } from "../serialize";
 
 export function pack (input: SerializableValue[], type: FullSSZType): Buffer[] {
   // Serialize inputs into one long buffer
-  const packedLength = input.map((v) => size(v, type)).reduce((a, b) => a + b);
+  const packedLength = input.map((v) => size(v, type)).reduce((a, b) => a + b, 0);
   const packedBuf = Buffer.alloc(packedLength);
   let index = 0;
   for (const v of input) {
