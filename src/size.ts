@@ -36,11 +36,11 @@ export function size(value: any, type: FullSSZType): number {
       assert((value as SerializableArray).length !== undefined, `Invalid array value: ${value}`);
       return (value as SerializableArray)
         .map((v) => size(v, (type as ArrayType).elementType))
-        .reduce((a, b) => a + b) + BYTES_PER_LENGTH_PREFIX;
+        .reduce((a, b) => a + b, 0) + BYTES_PER_LENGTH_PREFIX;
     case Type.container:
       assert(value === Object(value), `Invalid object value: ${value}`);
       return type.fields
         .map(([fieldName, fieldType]) => size((value as SerializableObject)[fieldName], fieldType))
-        .reduce((a, b) => a + b) + BYTES_PER_LENGTH_PREFIX;
+        .reduce((a, b) => a + b, 0) + BYTES_PER_LENGTH_PREFIX;
   }
 }
