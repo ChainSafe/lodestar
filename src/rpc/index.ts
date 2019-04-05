@@ -1,8 +1,3 @@
-/**
- * The BeaconRPC service manages incoming/outgoing RPC requests
- */
-export class BeaconRPC {
-  public constructor(opts) {}
-  public async start() {}
-  public async stop() {}
-}
+export * from "./api";
+export * from "./transport";
+export * from "./protocol";
