@@ -34,6 +34,7 @@
   ],
   "dependencies": {
     "@chainsafesystems/ssz": "^1.6.0",
+    "@polkadot/ts": "^0.1.56",
     "@polkadot/util-crypto": "^0.33.27",
     "@types/bn.js": "^4.11.4",
     "@types/levelup": "^3.1.0",
@@ -48,6 +49,7 @@
     "deepmerge": "^3.2.0",
     "ethers": "^4.0.27",
     "level": "^4.0.0",
+    "libp2p-floodsub": "^0.15.8",
     "promisify-es6": "^1.0.3"
   },
   "bin": {
