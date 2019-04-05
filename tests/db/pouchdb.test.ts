@@ -15,6 +15,7 @@ import {PouchDb} from "../../src/db";
 import { generateState } from "../utils/state";
 import { generateEmptyBlock } from "../utils/block";
 import { generateEmptyAttestation } from "../utils/attestation";
+import {generateEmptyVoluntaryExit} from "../utils/voluntaryExits";
 
 describe("PouchDB", () => {
   const db = new PouchDb({name: 'testdb'});
@@ -67,5 +68,21 @@ describe("PouchDB", () => {
     await db.deleteAttestations(actualAttestations);
     const noAttestations = await db.getAttestations();
     assert.equal(noAttestations.length, 0);
+  })
+
+  it("should correctly set, get, delete voluntary exits", async () => {
+      const testVoluntaryExits = Array.from({length: 10}, (_, i) => {
+          const a = generateEmptyVoluntaryExit();
+          a.epoch = new BN(i);
+          return a;
+      });
+      for (const a of testVoluntaryExits) {
+          await db.setVoluntaryExit(a);
+      }
+      const actualVoluntaryExits = await db.getVoluntaryExits();
+      assert.equal(actualVoluntaryExits.length, testVoluntaryExits.length);
+      await db.deleteVoluntaryExits(actualVoluntaryExits);
+      const noVoluntaryExits = await db.getVoluntaryExits();
+      assert.equal(noVoluntaryExits.length, 0);
   })
 });

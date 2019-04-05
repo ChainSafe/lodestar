@@ -169,11 +169,11 @@ export default abstract class AbstractDB extends EventEmitter implements DB {
   }
 
   public async getVoluntaryExits(): Promise<VoluntaryExit[]> {
-    const data = this.search({
+    const data = await this.search({
       gt: encodeKey(Bucket.exit, Buffer.alloc(0)),
       lt: encodeKey(Bucket.exit + 1, Buffer.alloc(0)),
     });
-    return deserialize(data, VoluntaryExit).deserializedData;
+    return data.map((data) => deserialize(data, VoluntaryExit).deserializedData);
   }
 
   public async setVoluntaryExit(exit: VoluntaryExit): Promise<void> {

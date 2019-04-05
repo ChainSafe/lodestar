@@ -35,7 +35,7 @@ export class PouchDb extends AbstractDB {
   }
 
   public async batchDelete(items: any[]): Promise<any> {
-    const deletitions = [];
+    const deletions = [];
     //not really optimized,
     items.forEach(async item => {
       const doc = await this.db.get(item.toString('hex'));
@@ -45,7 +45,7 @@ export class PouchDb extends AbstractDB {
     });
     //Search by key returns deleted documents, this line purges them completely
     await this.db.compact();
-    return Promise.all(deletitions);
+    return Promise.all(deletions);
   }
 
   public batchPut(items: { key: any; value: any }[]): Promise<any> {
