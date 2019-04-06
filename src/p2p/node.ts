@@ -38,10 +38,15 @@ class LodestarNode extends libp2p {
 	node = new LodestarNode({
           peerInfo
 	})
-        node.start(cb)
+	node.start(cb)
       }
       ], (err) => callback(err, node)
     );
+
+    node.pubsub = new FloodSub(node);
+    node.pubsub.start((err) => {
+      if (err) throw new Error('PubSub failed to start.')
+    })
 
     return node;
   }
