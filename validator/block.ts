@@ -1,6 +1,6 @@
 import blgr from "blgr";
-import {hashTreeRoot} from "@chainsafesystems/ssz";
-import {ValidatorIndex, BeaconBlock} from "../src/types";
+import {hashTreeRoot} from "@chainsafe/ssz";
+import {ValidatorIndex, BeaconBlock, BeaconState} from "../src/types";
 import RPCProvider from "./stubs";
 
 export default class BlockProcessingService {
@@ -41,8 +41,8 @@ export default class BlockProcessingService {
     // Note: To calculate state_root, the validator should first run the state transition function on an unsigned block
     // containing a stub for the state_root. It is useful to be able to run a state transition function that does not
     // validate signatures or state root for this purpose.
-    block.parentRoot = hashTreeRoot(prevBlock);
-    block.stateRoot = hashTreeRoot(curState);
+    block.parentRoot = hashTreeRoot(prevBlock, BeaconBlock);
+    block.stateRoot = hashTreeRoot(curState, BeaconState);
     // TODO remove stub and use blsSign
     block.randaoReveal = new Buffer(0);
   }

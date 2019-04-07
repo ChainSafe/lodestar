@@ -1,7 +1,7 @@
 import assert from "assert";
 import BN from "bn.js";
 import {EventEmitter} from "events";
-import { treeHash } from "@chainsafesystems/ssz";
+import { hashTreeRoot } from "@chainsafe/ssz";
 
 import { BeaconState, uint64, Deposit, Eth1Data, bytes32, BeaconBlock } from "../types";
 import { GENESIS_SLOT, SECONDS_PER_SLOT } from "../constants";
@@ -43,7 +43,7 @@ export class BeaconChain extends EventEmitter {
   public async processEth2Genesis(genesisTime: uint64, genesisDeposits: Deposit[], genesisEth1Data: Eth1Data) {
     const genesisState = getGenesisBeaconState(genesisDeposits, genesisTime, genesisEth1Data);
     const genesisBlock = getEmptyBlock();
-    genesisBlock.stateRoot = treeHash(genesisState, BeaconState);
+    genesisBlock.stateRoot = hashTreeRoot(genesisState, BeaconState);
     await this.db.setBlock(genesisBlock);
     await this.db.setChainHead(genesisState, genesisBlock);
     await this.db.setJustifiedBlock(genesisBlock);
@@ -91,7 +91,7 @@ export class BeaconChain extends EventEmitter {
     const currentRoot = await this.db.getChainHeadRoot()
     // TODO use lmd ghost to compute best block
     const block = this._latestBlock;
-    if (!currentRoot.equals(treeHash(block, BeaconBlock))) {
+    if (!currentRoot.equals(hashTreeRoot(block, BeaconBlock))) {
       await this.db.setChainHead(state, block)
     }
   }

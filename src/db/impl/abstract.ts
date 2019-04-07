@@ -15,7 +15,7 @@ import {
 
 import {Bucket, encodeKey, Key} from "../schema";
 
-import {deserialize, serialize, treeHash} from "@chainsafesystems/ssz";
+import {deserialize, serialize, hashTreeRoot} from "@chainsafe/ssz";
 
 export interface SearchOptions {
   gt: any;
@@ -48,7 +48,7 @@ export default abstract class AbstractDB extends EventEmitter implements DB {
 
   public async getState(): Promise<BeaconState> {
     const buf = await this.get(encodeKey(Bucket.chainInfo, Key.state));
-    return deserialize(buf, BeaconState).deserializedData;
+    return deserialize(buf, BeaconState);
   }
 
   public async setState(state: BeaconState): Promise<void> {
@@ -57,7 +57,7 @@ export default abstract class AbstractDB extends EventEmitter implements DB {
 
   public async getFinalizedState(): Promise<BeaconState> {
     const buf = await this.get(encodeKey(Bucket.chainInfo, Key.finalizedState));
-    return deserialize(buf, BeaconState).deserializedData;
+    return deserialize(buf, BeaconState);
   }
 
   public async setJustifiedState(state: BeaconState): Promise<void> {
@@ -66,7 +66,7 @@ export default abstract class AbstractDB extends EventEmitter implements DB {
 
   public async getJustifiedState(): Promise<BeaconState> {
     const buf = await this.get(encodeKey(Bucket.chainInfo, Key.justifiedState));
-    return deserialize(buf, BeaconState).deserializedData;
+    return deserialize(buf, BeaconState);
   }
 
   public async setFinalizedState(state: BeaconState): Promise<void> {
@@ -75,7 +75,7 @@ export default abstract class AbstractDB extends EventEmitter implements DB {
 
   public async getBlock(blockRoot: bytes32): Promise<BeaconBlock> {
     const buf = await this.get(encodeKey(Bucket.block, blockRoot));
-    return deserialize(buf, BeaconBlock).deserializedData;
+    return deserialize(buf, BeaconBlock);
   }
 
   public async hasBlock(blockHash: bytes32): Promise<boolean> {
@@ -92,13 +92,13 @@ export default abstract class AbstractDB extends EventEmitter implements DB {
   }
 
   public async setBlock(block: BeaconBlock): Promise<void> {
-    const blockRoot = treeHash(block, BeaconBlock);
+    const blockRoot = hashTreeRoot(block, BeaconBlock);
     await this.put(encodeKey(Bucket.block, blockRoot), serialize(block, BeaconBlock));
   }
 
   public async getFinalizedBlock(): Promise<BeaconBlock> {
     const buf = await this.get(encodeKey(Bucket.chainInfo, Key.finalizedBlock));
-    return deserialize(buf, BeaconBlock).deserializedData;
+    return deserialize(buf, BeaconBlock);
   }
 
   public async setFinalizedBlock(block: BeaconBlock): Promise<void> {
@@ -107,7 +107,7 @@ export default abstract class AbstractDB extends EventEmitter implements DB {
 
   public async getJustifiedBlock(): Promise<BeaconBlock> {
     const buf = await this.get(encodeKey(Bucket.chainInfo, Key.justifiedBlock));
-    return deserialize(buf, BeaconBlock).deserializedData;
+    return deserialize(buf, BeaconBlock);
   }
 
   public async setJustifiedBlock(block: BeaconBlock): Promise<void> {
@@ -116,18 +116,18 @@ export default abstract class AbstractDB extends EventEmitter implements DB {
 
   public async getChainHead(): Promise<BeaconBlock> {
     const heightBuf = await this.get(encodeKey(Bucket.chainInfo, Key.chainHeight));
-    const height = deserialize(heightBuf, uint64).deserializedData;
+    const height = deserialize(heightBuf, uint64);
     const blockRoot = await this.get(encodeKey(Bucket.mainChain, height));
     return await this.getBlock(blockRoot);
   }
 
   public async getChainHeadRoot(): Promise<bytes32> {
     const block = await this.getChainHead();
-    return treeHash(block, BeaconBlock);
+    return hashTreeRoot(block, BeaconBlock);
   }
 
   public async setChainHead(state: BeaconState, block: BeaconBlock): Promise<void> {
-    const blockRoot = treeHash(block, BeaconBlock);
+    const blockRoot = hashTreeRoot(block, BeaconBlock);
     const slot = block.slot;
     // block should already be set
     await this.getBlock(blockRoot);
@@ -152,18 +152,18 @@ export default abstract class AbstractDB extends EventEmitter implements DB {
       gt: encodeKey(Bucket.attestation, Buffer.alloc(0)),
       lt: encodeKey(Bucket.attestation + 1, Buffer.alloc(0)),
     });
-    return data.map((data) => deserialize(data, Attestation).deserializedData);
+    return data.map((data) => deserialize(data, Attestation));
   }
 
   public async setAttestation(attestation: Attestation): Promise<void> {
-    const attestationRoot = treeHash(attestation, Attestation);
+    const attestationRoot = hashTreeRoot(attestation, Attestation);
     await this.put(encodeKey(Bucket.attestation, attestationRoot), serialize(attestation, Attestation));
   }
 
   public async deleteAttestations(attestations: Attestation[]): Promise<void> {
     const criteria: any[] = [];
     attestations.forEach((n) =>
-      criteria.push(encodeKey(Bucket.attestation, treeHash(n, Attestation)))
+      criteria.push(encodeKey(Bucket.attestation, hashTreeRoot(n, Attestation)))
     );
     await this.batchDelete(criteria);
   }
@@ -173,18 +173,18 @@ export default abstract class AbstractDB extends EventEmitter implements DB {
       gt: encodeKey(Bucket.exit, Buffer.alloc(0)),
       lt: encodeKey(Bucket.exit + 1, Buffer.alloc(0)),
     });
-    return data.map((data) => deserialize(data, VoluntaryExit).deserializedData);
+    return data.map((data) => deserialize(data, VoluntaryExit));
   }
 
   public async setVoluntaryExit(exit: VoluntaryExit): Promise<void> {
-    const exitRoot = treeHash(exit, VoluntaryExit);
+    const exitRoot = hashTreeRoot(exit, VoluntaryExit);
     await this.put(encodeKey(Bucket.exit, exitRoot), serialize(exit, VoluntaryExit));
   }
 
   public async deleteVoluntaryExits(exits: VoluntaryExit[]): Promise<void> {
     const criteria: any[] = [];
     exits.forEach((n) =>
-      criteria.push(encodeKey(Bucket.exit, treeHash(n, VoluntaryExit)))
+      criteria.push(encodeKey(Bucket.exit, hashTreeRoot(n, VoluntaryExit)))
     );
     await this.batchDelete(criteria);
   }
@@ -194,18 +194,18 @@ export default abstract class AbstractDB extends EventEmitter implements DB {
       gt: encodeKey(Bucket.transfer, Buffer.alloc(0)),
       lt: encodeKey(Bucket.transfer + 1, Buffer.alloc(0)),
     });
-    return data.map((data) => deserialize(data, Transfer).deserializedData);
+    return data.map((data) => deserialize(data, Transfer));
   }
 
   public async setTransfer(transfer: Transfer): Promise<void> {
-    const transferRoot = treeHash(transfer, Transfer);
+    const transferRoot = hashTreeRoot(transfer, Transfer);
     await this.put(encodeKey(Bucket.transfer, transferRoot), serialize(transfer, Transfer));
   }
 
   public async deleteTransfers(transfers: Transfer[]): Promise<void> {
     const criteria: any[] = [];
     transfers.forEach((n) =>
-      criteria.push(encodeKey(Bucket.transfer, treeHash(n, Transfer)))
+      criteria.push(encodeKey(Bucket.transfer, hashTreeRoot(n, Transfer)))
     );
     await this.batchDelete(criteria);
   }
@@ -215,18 +215,18 @@ export default abstract class AbstractDB extends EventEmitter implements DB {
       gt: encodeKey(Bucket.proposerSlashing, Buffer.alloc(0)),
       lt: encodeKey(Bucket.proposerSlashing + 1, Buffer.alloc(0)),
     });
-    return data.map((data) => deserialize(data, ProposerSlashing).deserializedData);
+    return data.map((data) => deserialize(data, ProposerSlashing));
   }
 
   public async setProposerSlashing(proposerSlashing: ProposerSlashing): Promise<void> {
-    const proposerSlashingRoot = treeHash(proposerSlashing, ProposerSlashing);
+    const proposerSlashingRoot = hashTreeRoot(proposerSlashing, ProposerSlashing);
     await this.put(encodeKey(Bucket.proposerSlashing, proposerSlashingRoot), serialize(proposerSlashing, ProposerSlashing));
   }
 
   public async deleteProposerSlashings(proposerSlashings: ProposerSlashing[]): Promise<void> {
     const criteria: any[] = [];
     proposerSlashings.forEach((n) =>
-      criteria.push(encodeKey(Bucket.proposerSlashing, treeHash(n, ProposerSlashing)))
+      criteria.push(encodeKey(Bucket.proposerSlashing, hashTreeRoot(n, ProposerSlashing)))
     );
     await this.batchDelete(criteria);
   }
@@ -236,18 +236,18 @@ export default abstract class AbstractDB extends EventEmitter implements DB {
       gt: encodeKey(Bucket.attesterSlashing, Buffer.alloc(0)),
       lt: encodeKey(Bucket.attesterSlashing + 1, Buffer.alloc(0)),
     });
-    return data.map((data) => deserialize(data, AttesterSlashing).deserializedData);
+    return data.map((data) => deserialize(data, AttesterSlashing));
   }
 
   public async setAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<void> {
-    const attesterSlashingRoot = treeHash(attesterSlashing, AttesterSlashing);
+    const attesterSlashingRoot = hashTreeRoot(attesterSlashing, AttesterSlashing);
     await this.put(encodeKey(Bucket.attesterSlashing, attesterSlashingRoot), serialize(attesterSlashing, AttesterSlashing));
   }
 
   public async deleteAttesterSlashings(attesterSlashings: AttesterSlashing[]): Promise<void> {
     const criteria: any[] = [];
     attesterSlashings.forEach((n) =>
-      criteria.push(encodeKey(Bucket.attesterSlashing, treeHash(n, AttesterSlashing)))
+      criteria.push(encodeKey(Bucket.attesterSlashing, hashTreeRoot(n, AttesterSlashing)))
     );
     await this.batchDelete(criteria);
   }

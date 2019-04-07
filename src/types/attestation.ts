@@ -1,3 +1,4 @@
+import { SimpleContainerType } from "@chainsafe/ssz";
 // Each type exported here contains both a compile-time type (a typescript interface) and a run-time type (a javascript variable)
 // For more information, see ./index.ts
 
@@ -16,7 +17,7 @@ export interface Crosslink {
   shardBlockRoot: bytes32;
 }
 
-export const Crosslink = {
+export const Crosslink: SimpleContainerType = {
   name: "Crosslink",
   fields: [
     ["epoch", uint64],
@@ -42,7 +43,7 @@ export interface AttestationData {
   // Hash of the last justified beacon block
   justifiedBlockRoot: bytes32;
 }
-export const AttestationData = {
+export const AttestationData: SimpleContainerType = {
   name: "AttestationData",
   fields: [
     ["slot", uint64],
@@ -66,7 +67,7 @@ export interface Attestation {
   // BLS aggregate signature
   aggregateSignature: bytes96;
 }
-export const Attestation = {
+export const Attestation: SimpleContainerType = {
   name: "Attestation",
   fields: [
     ["aggregationBitfield", bytes],
@@ -82,7 +83,7 @@ export interface AttestationDataAndCustodyBit {
   // Custody bit
   custodyBit: bool;
 }
-export const AttestationDataAndCustodyBit = {
+export const AttestationDataAndCustodyBit: SimpleContainerType = {
   name: "AttestationDataAndCustodyBit",
   fields: [
     ["data", AttestationData],
@@ -100,7 +101,7 @@ export interface PendingAttestation {
   // Slot in which it was included
   inclusionSlot: uint64;
 }
-export const PendingAttestation = {
+export const PendingAttestation: SimpleContainerType = {
   name: "PendingAttestation",
   fields: [
     ["aggregationBitfield", bytes],
@@ -120,7 +121,7 @@ export interface SlashableAttestation {
   // Aggregate signature
   aggregateSignature: bytes96;
 }
-export const SlashableAttestation = {
+export const SlashableAttestation: SimpleContainerType = {
   name: "SlashableAttestation",
   fields: [
     ["validatorIndices", [uint64]],
@@ -136,7 +137,7 @@ export interface AttesterSlashing {
   // Second slashable attestation
   slashableAttestation2: SlashableAttestation;
 }
-export const AttesterSlashing = {
+export const AttesterSlashing: SimpleContainerType = {
   name: "AttesterSlashing",
   fields: [
     ["slashableAttestation1", SlashableAttestation],

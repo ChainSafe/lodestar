@@ -1,7 +1,6 @@
-// TODO replace uint, bytes32, bytes
-
 // Each type exported here contains both a compile-time type (a typescript interface) and a run-time type (a javascript variable)
 // For more information, see ./index.ts
+import { SimpleContainerType } from "@chainsafe/ssz";
 
 import {
   bytes32,
@@ -14,7 +13,7 @@ export interface Eth1Data {
   // Block hash
   blockHash: bytes32;
 }
-export const Eth1Data = {
+export const Eth1Data: SimpleContainerType = {
   name: "Eth1Data",
   fields: [
     ["depositRoot", bytes32],
@@ -28,7 +27,7 @@ export interface Eth1DataVote {
   // Vote count
   voteCount: uint64;
 }
-export const Eth1DataVote = {
+export const Eth1DataVote: SimpleContainerType = {
   name: "Eth1DataVote",
   fields: [
     ["eth1Data", Eth1Data],

@@ -1,6 +1,6 @@
 import assert from "assert";
 
-import {serialize} from "@chainsafesystems/ssz";
+import {serialize} from "@chainsafe/ssz";
 
 import {
   BeaconBlock,

@@ -1,3 +1,4 @@
+import {SimpleContainerType} from "@chainsafe/ssz";
 // Each type exported here contains both a compile-time type (a typescript interface) and a run-time type (a javascript variable)
 // For more information, see ./index.ts
 
@@ -28,7 +29,7 @@ export interface ProposalSignedData {
   // Block root
   blockRoot: bytes32;
 }
-export const ProposalSignedData = {
+export const ProposalSignedData: SimpleContainerType = {
   name: "ProposalSignedData",
   fields: [
     ["slot", uint64],
@@ -49,7 +50,7 @@ export interface ProposerSlashing {
   // Second proposal signature
   proposalSignature2: bytes96;
 }
-export const ProposerSlashing = {
+export const ProposerSlashing: SimpleContainerType = {
   name: "ProposerSlashing",
   fields: [
     ["proposerIndex", uint64],
@@ -68,7 +69,7 @@ export interface DepositInput {
   // BLS proof of possession (a BLS signature)
   proofOfPossession: bytes96;
 }
-export const DepositInput = {
+export const DepositInput: SimpleContainerType = {
   name: "DepositInput",
   fields: [
     ["pubkey", bytes48],
@@ -85,7 +86,7 @@ export interface DepositData {
   // Deposit Input
   depositInput: DepositInput;
 }
-export const DepositData = {
+export const DepositData: SimpleContainerType = {
   name: "DepositData",
   fields: [
     ["amount", uint64],
@@ -102,7 +103,7 @@ export interface Deposit {
   // Deposit data
   depositData: DepositData;
 }
-export const Deposit = {
+export const Deposit: SimpleContainerType = {
   name: "Deposit",
   fields: [
     ["branch", [bytes32]],
@@ -119,7 +120,7 @@ export interface VoluntaryExit {
   // Validator signature
   signature: bytes96;
 }
-export const VoluntaryExit = {
+export const VoluntaryExit: SimpleContainerType = {
   name: "VoluntaryExit",
   fields: [
     ["epoch", uint64],
@@ -145,7 +146,7 @@ export interface Transfer {
   signature: bytes96;
 }
 
-export const Transfer = {
+export const Transfer: SimpleContainerType = {
   name: "Transfer",
   fields: [
     ["from", uint64],
@@ -166,7 +167,7 @@ export interface BeaconBlockBody {
   voluntaryExits: VoluntaryExit[];
   transfers: Transfer[];
 }
-export const BeaconBlockBody = {
+export const BeaconBlockBody: SimpleContainerType = {
   name: "BeaconBlockBody",
   fields: [
     ["proposerSlashings", [ProposerSlashing]],
@@ -190,7 +191,7 @@ export interface BeaconBlock {
   // Body
   body: BeaconBlockBody;
 }
-export const BeaconBlock = {
+export const BeaconBlock: SimpleContainerType = {
   name: "BeaconBlock",
   fields: [
     ["slot", uint64],
@@ -207,7 +208,7 @@ export interface CrosslinkCommittee {
   shard: uint64;
   validatorIndices: uint64[];
 }
-export const CrosslinkCommittee = {
+export const CrosslinkCommittee: SimpleContainerType = {
   name: "CrosslinkCommittee",
   fields: [
     ["shard", uint64],

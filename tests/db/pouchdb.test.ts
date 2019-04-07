@@ -2,8 +2,8 @@ import { assert } from "chai";
 import BN from "bn.js";
 import {
   serialize,
-  treeHash,
-} from "@chainsafesystems/ssz";
+  hashTreeRoot,
+} from "@chainsafe/ssz";
 
 import {
   BeaconBlock,
@@ -38,7 +38,7 @@ describe("PouchDB", () => {
   })
   it("should correctly get and set a block", async () => {
     const testBlock = generateEmptyBlock();
-    const testBlockRoot = treeHash(testBlock, BeaconBlock);
+    const testBlockRoot = hashTreeRoot(testBlock, BeaconBlock);
     await db.setBlock(testBlock);
     const actualBlock = await db.getBlock(testBlockRoot);
     assert.deepEqual(serialize(actualBlock, BeaconBlock), serialize(testBlock, BeaconBlock));
@@ -48,7 +48,7 @@ describe("PouchDB", () => {
       const testBlock = generateEmptyBlock();
       const slot = new BN(5);
       testBlock.slot = slot;
-      const testBlockRoot = treeHash(testBlock, BeaconBlock);
+      const testBlockRoot = hashTreeRoot(testBlock, BeaconBlock);
       await db.setBlock(testBlock);
       await db.setChainHead(testState, testBlock);
       const actualBlock = await db.getBlockBySlot(slot);
