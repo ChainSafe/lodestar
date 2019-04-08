@@ -1,12 +1,13 @@
 import * as http from "http";
 import promisify from "promisify-es6";
 import WebSocket from "ws";
+import {LikeSocketServer} from "../protocol";
 
 export interface WSServerOpts {
   port: number;
 }
 
-export class WSServer {
+export class WSServer implements LikeSocketServer {
   private ws: WebSocket.Server;
   private httpServer: http.Server;
   private opts: WSServerOpts;
