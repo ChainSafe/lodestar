@@ -1,7 +1,7 @@
 import BN from "bn.js";
 import { EventEmitter } from "events";
 import { ethers } from "ethers";
-import { deserialize } from "@chainsafesystems/ssz";
+import { deserialize } from "@chainsafe/ssz";
 
 import { bytes32, DepositData, Deposit, Eth1Data } from "../types";
 

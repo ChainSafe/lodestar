@@ -1,10 +1,11 @@
 import assert from "assert";
 
-import { treeHash} from "@chainsafesystems/ssz";
+import { hashTreeRoot } from "@chainsafe/ssz";
 
 import {
   BeaconBlock,
   BeaconState,
+  ProposalSignedData,
   Validator,
 } from "../../../types";
 
@@ -37,14 +38,14 @@ export default function processProposerSlashings(state: BeaconState, block: Beac
     assert(proposer.slashedEpoch.gt(getCurrentEpoch(state)));
     const proposalData1Verified = blsVerify(
       proposer.pubkey,
-      treeHash(proposerSlashing.proposalData1),
+      hashTreeRoot(proposerSlashing.proposalData1, ProposalSignedData),
       proposerSlashing.proposalSignature1,
       getDomain(state.fork, slotToEpoch(proposerSlashing.proposalData1.slot), Domain.PROPOSAL),
     );
     assert(proposalData1Verified);
     const proposalData2Verified = blsVerify(
       proposer.pubkey,
-      treeHash(proposerSlashing.proposalData2),
+      hashTreeRoot(proposerSlashing.proposalData2, ProposalSignedData),
       proposerSlashing.proposalSignature2,
       getDomain(state.fork, slotToEpoch(proposerSlashing.proposalData2.slot), Domain.PROPOSAL),
     );

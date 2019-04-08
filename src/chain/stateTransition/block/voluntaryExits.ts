@@ -1,6 +1,6 @@
 import assert from "assert";
 
-import {treeHash} from "@chainsafesystems/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 
 import {
   BeaconBlock,
@@ -38,7 +38,7 @@ export default function processVoluntaryExits(state: BeaconState, block: BeaconB
       validatorIndex: exit.validatorIndex,
       signature: EMPTY_SIGNATURE,
     };
-    const exitMessage = treeHash(v, VoluntaryExit);
+    const exitMessage = hashTreeRoot(v, VoluntaryExit);
     const exitMessageVerified = blsVerify(
       validator.pubkey,
       exitMessage,

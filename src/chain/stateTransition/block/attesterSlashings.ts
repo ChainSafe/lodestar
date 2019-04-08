@@ -1,6 +1,6 @@
 import assert from "assert";
 
-import {serialize} from "@chainsafesystems/ssz";
+import {serialize} from "@chainsafe/ssz";
 
 import {
   AttestationData,
@@ -29,7 +29,7 @@ export default function processAttesterSlashings(state: BeaconState, block: Beac
     const slashableAttestation1 = attesterSlashing.slashableAttestation1;
     const slashableAttestation2 = attesterSlashing.slashableAttestation2;
 
-    assert(!serialize(slashableAttestation1.data, AttestationData).eq(serialize(slashableAttestation2.data, AttestationData)));
+    assert(!serialize(slashableAttestation1.data, AttestationData).equals(serialize(slashableAttestation2.data, AttestationData)));
     assert(isDoubleVote(slashableAttestation1.data, slashableAttestation2.data) ||
       isSurroundVote(slashableAttestation1.data, slashableAttestation2.data));
     assert(verifySlashableAttestation(state, slashableAttestation1));

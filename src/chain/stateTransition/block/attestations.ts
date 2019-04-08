@@ -1,6 +1,6 @@
 import assert from "assert";
 
-import {serialize, treeHash} from "@chainsafesystems/ssz";
+import {serialize, hashTreeRoot} from "@chainsafe/ssz";
 
 import {
   AttestationDataAndCustodyBit,
@@ -44,8 +44,10 @@ export default function processAttestations(state: BeaconState, block: BeaconBlo
       epoch: slotToEpoch(attestation.data.slot),
       shardBlockRoot: attestation.data.shardBlockRoot,
     };
-    assert(serialize(state.latestCrosslinks[attestation.data.shard.toNumber()], Crosslink).eq(serialize(attestation.data.latestCrosslink), Crosslink) ||
-      serialize(state.latestCrosslinks[attestation.data.shard.toNumber()], Crosslink).eq(
+    assert(
+      serialize(state.latestCrosslinks[attestation.data.shard.toNumber()], Crosslink).equals(
+        serialize(attestation.data.latestCrosslink, Crosslink)) ||
+      serialize(state.latestCrosslinks[attestation.data.shard.toNumber()], Crosslink).equals(
         serialize(c, Crosslink)));
 
     // Remove this condition in Phase 1
@@ -78,8 +80,8 @@ export default function processAttestations(state: BeaconState, block: BeaconBlo
         blsAggregatePubkeys(custodyBit1Participants.map((i) => state.validatorRegistry[i.toNumber()].pubkey)),
       ],
       [
-        treeHash(dataAndCustodyBit0, AttestationDataAndCustodyBit),
-        treeHash(dataAndCustodyBit1, AttestationDataAndCustodyBit),
+        hashTreeRoot(dataAndCustodyBit0, AttestationDataAndCustodyBit),
+        hashTreeRoot(dataAndCustodyBit1, AttestationDataAndCustodyBit),
       ],
       attestation.aggregateSignature,
       getDomain(state.fork, slotToEpoch(attestation.data.slot), Domain.ATTESTATION),
