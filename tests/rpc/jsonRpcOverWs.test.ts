@@ -1,27 +1,13 @@
 import { assert } from "chai";
 import BN from "bn.js";
-import promisify from "promisify-es6";
 import * as jsonRpc from "noice-json-rpc";
 import Websocket from "ws";
-import {
-  serialize,
-  treeHash,
-} from "@chainsafesystems/ssz";
-
-import {
-  BeaconBlock,
-  BeaconState,
-  Attestation,
-} from "../../src/types";
-
-import {MockAPI, JSONRPC, API, WSServer} from "../../src/rpc"; 
-
-import { generateState } from "../utils/state";
+import {MockAPI, JSONRPC, API, WSServer} from "../../src/rpc";
 import { generateEmptyBlock } from "../utils/block";
 import { generateEmptyAttestation } from "../utils/attestation";
 
-describe("RPC JSONRPC", () => {
-  const rpc = new JSONRPC({}, {transport: new WSServer({port: 32420}), api: new MockAPI()}); 
+describe("Json RPC over WS", () => {
+  const rpc = new JSONRPC({}, {transport: new WSServer({port: 32420}), api: new MockAPI()});
   let client;
   let ws;
   let clientApi: {BeaconChain: API};
@@ -72,5 +58,5 @@ describe("RPC JSONRPC", () => {
       assert.fail('Unknown/undefined method should fail');
     } catch (e) {}
   })
-  
+
 });
