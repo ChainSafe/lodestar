@@ -98,8 +98,8 @@ export default class HttpServer implements LikeSocketServer{
           resolve();
         })
         .on('error', e => {
-            logger.error(`Failed to start JSON RPC HTTP server on port ${this.opts.port}. Reason: ${e.message}`);
-            reject(e);
+          logger.error(`Failed to start JSON RPC HTTP server on port ${this.opts.port}. Reason: ${e.message}`);
+          reject(e);
         });
     });
   }
