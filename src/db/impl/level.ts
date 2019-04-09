@@ -17,7 +17,12 @@ export class LevelDB extends AbstractDB implements DB {
 
   public constructor(opts: LevelDBOptions) {
     super();
-    this.db = opts.db || level(opts.name || 'beaconchain');
+    this.db =
+            opts.db
+            || level(opts.name || 'beaconchain', {
+              keyEncoding: 'binary',
+              valueEncoding: 'binary',
+            });
   }
 
   public async start(): Promise<void> {

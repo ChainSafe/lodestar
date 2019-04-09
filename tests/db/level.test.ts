@@ -1,7 +1,6 @@
 import { assert } from "chai";
 import BN from "bn.js";
 import leveldown from "leveldown";
-import levelup from "levelup";
 import promisify from "promisify-es6";
 import {
   serialize,
@@ -20,10 +19,14 @@ import { generateState } from "../utils/state";
 import { generateEmptyBlock } from "../utils/block";
 import { generateEmptyAttestation } from "../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../utils/voluntaryExits";
+import level from "level";
 
 describe("LevelDB", () => {
   const dbLocation = "./.__testdb";
-  const testDb = levelup(leveldown(dbLocation));
+  const testDb = level(dbLocation, {
+      keyEncoding: 'binary',
+      valueEncoding: 'binary',
+  });
   const db = new LevelDB({db: testDb});
   before(async () => {
     await db.start();
