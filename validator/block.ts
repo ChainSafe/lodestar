@@ -1,17 +1,15 @@
-import blgr from "blgr";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {ValidatorIndex, BeaconBlock, BeaconState} from "../src/types";
 import RPCProvider from "./stubs";
+import logger from "../src/logger/winston";
 
 export default class BlockProcessingService {
   private validatorIndex: ValidatorIndex;
   private provider: RPCProvider;
-  private logger: blgr;
 
-  public constructor(index: ValidatorIndex, provider: RPCProvider, logger: blgr) {
+  public constructor(index: ValidatorIndex, provider: RPCProvider) {
     this.validatorIndex= index;
     this.provider = provider;
-    this.logger = logger;
   }
 
   /**
@@ -21,10 +19,10 @@ export default class BlockProcessingService {
   private async isProposer(): Promise<boolean> {
     let isValid = false;
     while (!isValid) {
-      this.logger.info("Checking if validator is proposer...");
+      logger.info("Checking if validator is proposer...");
       isValid = await this.provider.isActiveValidator(this.validatorIndex);
     }
-    this.logger.info("Validator is proposer!");
+    logger.info("Validator is proposer!");
     return true;
   }
 

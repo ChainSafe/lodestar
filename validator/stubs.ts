@@ -1,7 +1,6 @@
 // This file makes some naive assumptions surrounding the way RPC like calls will be made in ETH2.0
 // Subject to change with future developments with Hobbits and wire protocol
 import BN from "bn.js";
-import blgr from "blgr";
 import {ValidatorIndex, Slot, BeaconBlock, BeaconState} from "../src/types";
 
 // Super awesome stubs
@@ -21,11 +20,9 @@ export default class RPCProvider {
   private readonly rpcUrl: string;
   private validatorIndex: ValidatorIndex;
   private currentSlot: Slot;
-  private logger: blgr;
 
-  public constructor(url: string, logger: blgr) {
+  public constructor(url: string) {
     this.rpcUrl = url;
-    this.logger = logger;
 
     // Automatically attempt to make a connection
     this.connect();
