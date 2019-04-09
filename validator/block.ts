@@ -1,15 +1,19 @@
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {ValidatorIndex, BeaconBlock, BeaconState} from "../src/types";
 import RPCProvider from "./stubs";
-import logger from "../src/logger/winston";
+import {blsSign} from "../src/stubs/bls";
+import {getDomain, slotToEpoch} from "../src/chain/helpers/stateTransitionHelpers";
+import {DOMAIN_RANDAO} from "./constants";
 
 export default class BlockProcessingService {
   private validatorIndex: ValidatorIndex;
   private provider: RPCProvider;
+  private logger: blgr;
 
-  public constructor(index: ValidatorIndex, provider: RPCProvider) {
-    this.validatorIndex= index;
+  public constructor(index: ValidatorIndex, provider: RPCProvider, logger: blgr) {
+    this.validatorIndex = index;
     this.provider = provider;
+    this.logger = logger;
   }
 
   /**
@@ -19,10 +23,10 @@ export default class BlockProcessingService {
   private async isProposer(): Promise<boolean> {
     let isValid = false;
     while (!isValid) {
-      logger.info("Checking if validator is proposer...");
+      this.logger.info("Checking if validator is proposer...");
       isValid = await this.provider.isActiveValidator(this.validatorIndex);
     }
-    logger.info("Validator is proposer!");
+    thislogger.info("Validator is proposer!");
     return true;
   }
 
@@ -39,10 +43,14 @@ export default class BlockProcessingService {
     // Note: To calculate state_root, the validator should first run the state transition function on an unsigned block
     // containing a stub for the state_root. It is useful to be able to run a state transition function that does not
     // validate signatures or state root for this purpose.
-    block.parentRoot = hashTreeRoot(prevBlock, BeaconBlock);
-    block.stateRoot = hashTreeRoot(curState, BeaconState);
-    // TODO remove stub and use blsSign
-    block.randaoReveal = new Buffer(0);
+    block.parentRoot = hashTreeRoot(prevBlock);
+    block.stateRoot = hashTreeRoot(curState);
+    const epoch = slotToEpoch(block.slot);
+    block.randaoReveal = blsSign(
+      validator.privkey,
+      hashTreeRoot(epoch),
+      getDomain(curState.fork, epoch, DOMAIN_RANDAO)
+      )
   }
 
   /**
@@ -54,16 +62,3 @@ export default class BlockProcessingService {
     this.buildBlock();
   }
 }
-
-// export interface BeaconBlock {
-//   // Header
-//   slot: uint64;
-//   parentRoot: bytes32;
-//   stateRoot: bytes32;
-//   randaoReveal: bytes96;
-//   eth1Data: Eth1Data;
-//   signature: bytes96;
-//
-//   // Body
-//   body: BeaconBlockBody;
-// }
