@@ -56,6 +56,7 @@
     "libp2p-floodsub": "^0.15.8",
     "libp2p-mplex": "^0.8.5",
     "libp2p-tcp": "^0.13.0",
+    "peer-book": "^0.9.1",
     "peer-info": "^0.15.1",
     "promisify-es6": "^1.0.3"
   },

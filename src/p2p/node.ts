@@ -6,8 +6,8 @@ import {waterfall} from "async/waterfall";
 import {PeerInfo} from "peer-info";
 import {defaultsDeep} from "@nodeutils/defaults-deep";
 
-class LodestarNode extends libp2p {
-  constructor(_options: Object) {
+export class LodestarNode extends libp2p {
+  constructor(_options: object) {
     const defaults = {
       modules: {
         transport: [TCP],
@@ -34,20 +34,23 @@ class LodestarNode extends libp2p {
     waterfall([
       (cb) => PeerInfo.create(cb),
       (peerInfo, cb) => {
-        peerInfo.multiaddrs.add('/ip4/0.0.0.0/tcp/9000')
+        peerInfo.multiaddrs.add('/ip4/0.0.0.0/tcp/9000');
 	node = new LodestarNode({
           peerInfo
-	})
-	node.start(cb)
+	});
+	node.start(cb);
       }
       ], (err) => callback(err, node)
     );
 
     node.pubsub = new FloodSub(node);
     node.pubsub.start((err) => {
-      if (err) throw new Error('PubSub failed to start.')
+      if (err) { 
+        throw new Error('PubSub failed to start.');
+      }
     })
 
     return node;
   }
 }
+

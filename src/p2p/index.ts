@@ -1,12 +1,12 @@
 import {EventEmitter} from "events";
 import {LodestarNode} from "node";
+import {debug} from "debug";
+import {PeerBook} from "peer-book";
 
 const defaultOpts = {
-  // logger
   maxPeers: 25,
   refreshInterval: 15000,
-  multiaddrs: ['/ip4/127.0.0.1/tcp/9000'],
-  key: null,
+  peerBook: new PeerBook(),
   bootnodes: []
 };
 
@@ -16,16 +16,17 @@ const defaultOpts = {
 export class P2PNetwork extends EventEmitter {
   public constructor(opts) {
     super();
-    options = { ...defaultOpts, ..opt};
+    options = { ...defaultOpts, ...opts};
 
     this.maxPeers = options.maxPeers;
     this.refreshInterval = options.refreshInterval;
     this.started = false;
-    this.multiaddrs = opts.multiaddrs;
-    this.key = opts.key;
+    this.peerBook = opts.peerBook;
     this.bootnodes = opts.bootnodes;
     this.node = null;
-    this.peers = new Map();
+    this.discoveredPeers = new Set();
+
+    this.log = debug('p2p');
   }
 
   get isRunning () {
@@ -38,29 +39,68 @@ export class P2PNetwork extends EventEmitter {
     }
 
     if (!this.node) {
-      this.node new LodestarNode({
+      this.node = new LodestarNode({
         peerInfo: await this.createPeerInfo(),
 	bootnodes: this.bootnodes
       });
 
+      // TODO: Add protocol handling for RPC over Libp2p
+
       this.node.on('peer:discovery', async (peerInfo) => {
-      
+        try {
+	  const peerId = peerInfo.id.toB58String();
+	  // Check if peer has already been discovered
+	  if (this.peerBook.has(peerId) || this.discoveredPeers.has(peerId)) {
+	    return;
+	  }
+	  peerBook.put(peerInfo);
+	  this.node.dial(peerInfo, () => {});
+	  this.log(`Peer discovered: ${peerInfo}`);
+	  this.emit('connected', peerInfo);
+	} catch (err) {
+	  this.log(err);
+	} 
+
       });
 
       this.node.on('peer:connect', async (peerInfo) => {
-      
+        try {
+          this.log(`Peer connected: ${peerInfo}`);
+	  this.peerBook.put(peerInfo);
+	  this.discoveredPeers.add(peerInfo);
+	} catch (err) {
+	  this.log(err);
+	}
       });
 
+      this.node.on('peer:disconnect', async (peerInfo) => {
+        try {
+	  this.peerBook.remove(peerInfo);
+          this.discoveredPeers.delete(peerInfo);
+	} catch (err) {
+	  this.log(err);
+	}
+      });
     }
+    await new Promise((resolve, reject) => this.node.start((err) => {
+      if (err) {
+        reject(err);
+      }
+      resolve();
+    }));
 
     this.started = true;
   }
   public async stop() {
-    this.started = false;
-    // TODO: Add logger
-  }
+    if (!this.started) {
+      return false;
+    }
 
-  public async createPeerInfo() {
-  
+    await new Promise((resolve, reject) => this.node.stop((err) => {
+      if (err) {
+        reject(err);
+      }
+      resolve();
+    }));
   }
 }
