@@ -2,7 +2,7 @@ import {LikeSocketServer} from "../protocol";
 import {LikeSocket} from "noice-json-rpc";
 import http from "http";
 import promisify from "promisify-es6";
-import logger from "../../logger/winston";
+import logger from "../../logger";
 
 export interface HttpServerOpts {
   port: number;
