@@ -30,12 +30,12 @@ export default function processProposerSlashings(state: BeaconState, block: Beac
   assert(block.body.proposerSlashings.length <= MAX_PROPOSER_SLASHINGS);
   for (const proposerSlashing of block.body.proposerSlashings) {
     const proposer: Validator =
-      state.validatorRegistry[proposerSlashing.proposerIndex.toNumber()];
+      state.validatorRegistry[proposerSlashing.proposerIndex];
 
-    assert(proposerSlashing.proposalData1.slot.eq(proposerSlashing.proposalData2.slot));
-    assert(proposerSlashing.proposalData1.shard.eq(proposerSlashing.proposalData2.shard));
+    assert(proposerSlashing.proposalData1.slot === proposerSlashing.proposalData2.slot);
+    assert(proposerSlashing.proposalData1.shard === proposerSlashing.proposalData2.shard);
     assert(proposerSlashing.proposalData1.blockRoot.equals(proposerSlashing.proposalData2.blockRoot));
-    assert(proposer.slashedEpoch.gt(getCurrentEpoch(state)));
+    assert(proposer.slashedEpoch > getCurrentEpoch(state));
     const proposalData1Verified = blsVerify(
       proposer.pubkey,
       hashTreeRoot(proposerSlashing.proposalData1, ProposalSignedData),

@@ -7,6 +7,7 @@ import {
   Crosslink,
   Deposit,
   Eth1Data,
+  number64,
   uint64,
   ValidatorIndex,
 } from "../../types";
@@ -32,13 +33,13 @@ import {
 /**
  * Generate the initial beacon chain state.
  * @param {Deposit[]} initialValidatorDeposits
- * @param {uint64} genesisTime
+ * @param {number64} genesisTime
  * @param {Eth1Data} latestEth1Data
  * @returns {BeaconState}
  */
 export function getGenesisBeaconState(
   initialValidatorDeposits: Deposit[],
-  genesisTime: uint64,
+  genesisTime: number64,
   latestEth1Data: Eth1Data): BeaconState {
 
   const initialCrosslinkRecord: Crosslink = {
@@ -86,7 +87,7 @@ export function getGenesisBeaconState(
     // PoW receipt root
     latestEth1Data,
     eth1DataVotes: [],
-    depositIndex: new BN(0),
+    depositIndex: 0,
   };
 
   // Process initial deposists
@@ -101,7 +102,7 @@ export function getGenesisBeaconState(
   });
 
   // Process initial activations
-  for (let i: ValidatorIndex = new BN(0); i.ltn(state.validatorRegistry.length); i = i.add(new BN(1))) {
+  for (let i = 0; i < state.validatorRegistry.length - 1; i++) {
     // TODO: Unsafe usage of toNumber on i
     if (getEffectiveBalance(state, i).gten(MAX_DEPOSIT_AMOUNT)) {
       activateValidator(state, i, true);

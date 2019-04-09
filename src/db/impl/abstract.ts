@@ -87,7 +87,7 @@ export default abstract class AbstractDB extends EventEmitter implements DB {
   }
 
   public async getBlockBySlot(slot: Slot): Promise<BeaconBlock> {
-    const blockRoot = await this.get(encodeKey(Bucket.mainChain, slot.toNumber()));
+    const blockRoot = await this.get(encodeKey(Bucket.mainChain, slot));
     return await this.getBlock(blockRoot);
   }
 

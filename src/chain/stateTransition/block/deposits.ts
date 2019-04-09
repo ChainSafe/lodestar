@@ -24,8 +24,8 @@ export default function processDeposits(state: BeaconState, block: BeaconBlock):
   // TODO: add logic to ensure that deposits from 1.0 chain are processed in order
   for (const deposit of block.body.deposits) {
     const serializedDepositData = serialize(deposit.depositData, DepositData);
-    assert(deposit.index.eq(state.depositIndex));
-    assert(verifyMerkleBranch(hash(serializedDepositData), deposit.branch, DEPOSIT_CONTRACT_TREE_DEPTH, deposit.index.toNumber(), state.latestEth1Data.depositRoot));
+    assert(deposit.index === state.depositIndex);
+    assert(verifyMerkleBranch(hash(serializedDepositData), deposit.branch, DEPOSIT_CONTRACT_TREE_DEPTH, deposit.index, state.latestEth1Data.depositRoot));
     processDeposit(
       state,
       deposit.depositData.depositInput.pubkey,
@@ -33,6 +33,6 @@ export default function processDeposits(state: BeaconState, block: BeaconBlock):
       deposit.depositData.depositInput.proofOfPossession,
       deposit.depositData.depositInput.withdrawalCredentials,
     );
-    state.depositIndex = state.depositIndex.addn(1);
+    state.depositIndex++;
   }
 }

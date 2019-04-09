@@ -27,14 +27,14 @@ export function getCommitteeAssignment(
   registryChange: boolean = false): {validators: ValidatorIndex[]; shard: Shard; slot: number; isProposer: boolean} {
 
   const previousEpoch = getPreviousEpoch(state);
-  const nextEpoch = getCurrentEpoch(state).addn(1);
+  const nextEpoch = getCurrentEpoch(state) + 1;
   assert(previousEpoch <= epoch && epoch <= nextEpoch);
 
-  const epochStartSlot: number = getEpochStartSlot(epoch).toNumber();
-  const loopEnd: number = epochStartSlot + SLOTS_PER_EPOCH;
+  const epochStartSlot = getEpochStartSlot(epoch);
+  const loopEnd = epochStartSlot + SLOTS_PER_EPOCH;
 
-  for (let slot: number = epochStartSlot; slot < loopEnd; slot++) {
-    const crosslinkCommittees = getCrosslinkCommitteesAtSlot(state, new BN(slot), registryChange);
+  for (let slot = epochStartSlot; slot < loopEnd; slot++) {
+    const crosslinkCommittees = getCrosslinkCommitteesAtSlot(state, slot, registryChange);
     const selectedCommittees = crosslinkCommittees.map((x) => {
       if (x[0].contains(validatorIndex)) {
         return x;
@@ -44,9 +44,7 @@ export function getCommitteeAssignment(
     if (selectedCommittees.length > 0) {
       const validators = selectedCommittees[0][0];
       const shard = selectedCommittees[0][1];
-      // uncomment when we update the spec`
-      // const isProposer = validatorIndex === getBeaconProposerIndex(state, slot, registryChange);
-      const isProposer = validatorIndex.eqn(getBeaconProposerIndex(state, new BN(slot)));
+      const isProposer = validatorIndex === getBeaconProposerIndex(state, slot);
       return {validators, shard, slot, isProposer}
     }
   }

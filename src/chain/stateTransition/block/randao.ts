@@ -33,6 +33,6 @@ export default function processRandao(state: BeaconState, block: BeaconBlock): v
     getDomain(state.fork, currentEpoch, Domain.PROPOSAL),
   );
   assert(randaoRevealVerified);
-  state.latestRandaoMixes[currentEpoch.modn(LATEST_RANDAO_MIXES_LENGTH)] =
+  state.latestRandaoMixes[currentEpoch % LATEST_RANDAO_MIXES_LENGTH] =
     xor(getRandaoMix(state, currentEpoch), hash(block.randaoReveal));
 }

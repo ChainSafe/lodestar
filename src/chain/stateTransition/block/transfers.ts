@@ -30,13 +30,13 @@ export default function processTransfers(state: BeaconState, block: BeaconBlock)
   // Note: Transfers are a temporary functionality for phases 0 and 1, to be removed in phase 2.
   assert(block.body.transfers.length <= MAX_TRANSFERS);
   for (const transfer of block.body.transfers) {
-    assert(state.validatorBalances[transfer.from.toNumber()].gte(transfer.amount));
-    assert(state.validatorBalances[transfer.from.toNumber()].gte(transfer.fee));
-    assert(state.validatorBalances[transfer.from.toNumber()].eq(transfer.amount.add(transfer.fee)) ||
-      state.validatorBalances[transfer.from.toNumber()].gte(transfer.amount.add(transfer.fee).addn(MIN_DEPOSIT_AMOUNT)));
-    assert(state.slot.eq(transfer.slot));
-    assert(getCurrentEpoch(state).gte(state.validatorRegistry[transfer.from.toNumber()].withdrawalEpoch));
-    assert(state.validatorRegistry[transfer.from.toNumber()].withdrawalCredentials.equals(Buffer.concat([BLS_WITHDRAWAL_PREFIX_BYTE, hash(transfer.pubkey).slice(1)])));
+    assert(state.validatorBalances[transfer.from].gte(transfer.amount));
+    assert(state.validatorBalances[transfer.from].gte(transfer.fee));
+    assert(state.validatorBalances[transfer.from].eq(transfer.amount.add(transfer.fee)) ||
+      state.validatorBalances[transfer.from].gte(transfer.amount.add(transfer.fee).addn(MIN_DEPOSIT_AMOUNT)));
+    assert(state.slot === transfer.slot);
+    assert(getCurrentEpoch(state) >= state.validatorRegistry[transfer.from].withdrawalEpoch);
+    assert(state.validatorRegistry[transfer.from].withdrawalCredentials.equals(Buffer.concat([BLS_WITHDRAWAL_PREFIX_BYTE, hash(transfer.pubkey).slice(1)])));
     const t: Transfer = {
       from: transfer.from,
       to: transfer.to,
@@ -54,8 +54,8 @@ export default function processTransfers(state: BeaconState, block: BeaconBlock)
       getDomain(state.fork, slotToEpoch(transfer.slot), Domain.TRANSFER),
     );
     assert(transferMessageVerified);
-    state.validatorBalances[transfer.from.toNumber()] = state.validatorBalances[transfer.from.toNumber()].sub(transfer.amount.add(transfer.fee));
-    state.validatorBalances[transfer.to.toNumber()] = state.validatorBalances[transfer.to.toNumber()].add(transfer.amount);
+    state.validatorBalances[transfer.from] = state.validatorBalances[transfer.from].sub(transfer.amount.add(transfer.fee));
+    state.validatorBalances[transfer.to] = state.validatorBalances[transfer.to].add(transfer.amount);
     const proposerIndex = getBeaconProposerIndex(state, state.slot);
     state.validatorBalances[proposerIndex] = state.validatorBalances[proposerIndex].add(transfer.fee);
   }

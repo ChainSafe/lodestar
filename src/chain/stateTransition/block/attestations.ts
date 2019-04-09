@@ -34,20 +34,20 @@ import {blsAggregatePubkeys, blsVerifyMultiple} from "../../../stubs/bls";
 export default function processAttestations(state: BeaconState, block: BeaconBlock): void {
   assert(block.body.attestations.length <= MAX_ATTESTATIONS);
   for (const attestation of block.body.attestations) {
-    assert(attestation.data.slot.lte(state.slot.subn(MIN_ATTESTATION_INCLUSION_DELAY)) &&
-      state.slot.subn(MIN_ATTESTATION_INCLUSION_DELAY).lt(attestation.data.slot.addn(SLOTS_PER_EPOCH)));
-    const justifiedEpoch = slotToEpoch(attestation.data.slot.addn(1)).gte(getCurrentEpoch(state)) ?
+    assert(attestation.data.slot <= state.slot - MIN_ATTESTATION_INCLUSION_DELAY &&
+      state.slot - MIN_ATTESTATION_INCLUSION_DELAY < attestation.data.slot + SLOTS_PER_EPOCH);
+    const justifiedEpoch = slotToEpoch(attestation.data.slot + 1) >= getCurrentEpoch(state) ?
       state.justifiedEpoch : state.previousJustifiedEpoch;
-    assert(attestation.data.justifiedEpoch.eq(justifiedEpoch));
+    assert(attestation.data.justifiedEpoch === justifiedEpoch);
     assert(attestation.data.justifiedBlockRoot.equals(getBlockRoot(state, getEpochStartSlot(attestation.data.justifiedEpoch))));
     const c: Crosslink = {
       epoch: slotToEpoch(attestation.data.slot),
       shardBlockRoot: attestation.data.shardBlockRoot,
     };
     assert(
-      serialize(state.latestCrosslinks[attestation.data.shard.toNumber()], Crosslink).equals(
+      serialize(state.latestCrosslinks[attestation.data.shard], Crosslink).equals(
         serialize(attestation.data.latestCrosslink, Crosslink)) ||
-      serialize(state.latestCrosslinks[attestation.data.shard.toNumber()], Crosslink).equals(
+      serialize(state.latestCrosslinks[attestation.data.shard], Crosslink).equals(
         serialize(c, Crosslink)));
 
     // Remove this condition in Phase 1
@@ -55,7 +55,7 @@ export default function processAttestations(state: BeaconState, block: BeaconBlo
     assert(attestation.aggregationBitfield.equals(Buffer.alloc(attestation.aggregationBitfield.length)));
 
     const crosslinkCommittee = getCrosslinkCommitteesAtSlot(state, attestation.data.slot)
-      .filter(({shard}) => shard.eq(attestation.data.shard))
+      .filter(({shard}) => shard === attestation.data.shard)
       .map(({validatorIndices}) => validatorIndices)[0];
     for (let i = 0; i < crosslinkCommittee.length; i++) {
       if (getBitfieldBit(attestation.aggregationBitfield, i) === 0b0) {
@@ -76,8 +76,8 @@ export default function processAttestations(state: BeaconState, block: BeaconBlo
     };
     const custodyBitsVerified = blsVerifyMultiple(
       [
-        blsAggregatePubkeys(custodyBit0Participants.map((i) => state.validatorRegistry[i.toNumber()].pubkey)),
-        blsAggregatePubkeys(custodyBit1Participants.map((i) => state.validatorRegistry[i.toNumber()].pubkey)),
+        blsAggregatePubkeys(custodyBit0Participants.map((i) => state.validatorRegistry[i].pubkey)),
+        blsAggregatePubkeys(custodyBit1Participants.map((i) => state.validatorRegistry[i].pubkey)),
       ],
       [
         hashTreeRoot(dataAndCustodyBit0, AttestationDataAndCustodyBit),

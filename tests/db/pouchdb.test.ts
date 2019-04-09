@@ -1,5 +1,4 @@
 import { assert } from "chai";
-import BN from "bn.js";
 import {
   serialize,
   hashTreeRoot,
@@ -46,7 +45,7 @@ describe("PouchDB", () => {
   it("should correctly set the chain head", async () => {
       const testState = generateState();
       const testBlock = generateEmptyBlock();
-      const slot = new BN(5);
+      const slot = 5;
       testBlock.slot = slot;
       const testBlockRoot = hashTreeRoot(testBlock, BeaconBlock);
       await db.setBlock(testBlock);
@@ -73,7 +72,7 @@ describe("PouchDB", () => {
   it("should correctly set, get, delete voluntary exits", async () => {
       const testVoluntaryExits = Array.from({length: 10}, (_, i) => {
           const a = generateEmptyVoluntaryExit();
-          a.epoch = new BN(i);
+          a.epoch = i;
           return a;
       });
       for (const a of testVoluntaryExits) {
