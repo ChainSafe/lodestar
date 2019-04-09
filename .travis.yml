@@ -1,10 +1,10 @@
 language: node_js
 node_js:
   - "lts/*"
-cache: npm
+cache: yarn
 before_script:
-  - npm install
+  - yarn install
 script:
-  - npm run lint
-  - npm test
-  - npm run coverage
+  - yarn run lint
+  - yarn test
+  - yarn run coverage
