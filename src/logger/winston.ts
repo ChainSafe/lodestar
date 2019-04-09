@@ -1,7 +1,7 @@
 import {AbstractLogger, LogLevel} from "./interface";
 import {createLogger, Logger, transports, format} from 'winston';
 
-class WinstonLogger extends AbstractLogger {
+export class WinstonLogger extends AbstractLogger {
 
   private winston: Logger;
 

@@ -1,4 +1,4 @@
 import logger from "./winston";
-
-export default logger;
+export * from "./winston";
 export {LogLevel} from "./interface";
+export default logger;
