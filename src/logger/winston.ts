@@ -53,6 +53,10 @@ class WinstonLogger extends AbstractLogger {
         this.winston.level = level;
     }
 
+    public silent(silent: boolean): void {
+        this.winston.silent = silent;
+    }
+
 }
 
 const logger = new WinstonLogger();

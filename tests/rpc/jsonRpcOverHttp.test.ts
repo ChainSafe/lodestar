@@ -3,11 +3,13 @@ import * as request from "supertest";
 import {JSONRPC, MockAPI} from "../../src/rpc";
 import HttpServer from "../../src/rpc/transport/http";
 import {generateRPCCall} from "../utils/rpcCall";
+import logger from "../../src/logger/winston";
 
 describe("Json RPC over http", () => {
     let rpc;
     let server;
     before(async () => {
+        logger.silent(true);
         const rpcServer = new HttpServer({port: 32421});
         server = rpcServer.server;
         rpc = new JSONRPC({}, {transport: rpcServer, api: new MockAPI()})
@@ -15,6 +17,7 @@ describe("Json RPC over http", () => {
     });
     after(async () => {
         await rpc.stop();
+        logger.silent(false);
     });
     it("should get the chain head", (done) => {
         request.default(server)

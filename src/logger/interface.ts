@@ -2,7 +2,8 @@ export enum LogLevel {
     DEBUG = 'debug',
     INFO = 'info',
     WARN = 'warn',
-    ERROR = 'error'
+    ERROR = 'error',
+    NONE = 'none'
 }
 
 export abstract class AbstractLogger {
@@ -17,5 +18,12 @@ export abstract class AbstractLogger {
      * @param level
      */
     public abstract setLogLevel(level: LogLevel): void;
+
+    /**
+     * Disables all logging. Setting it to true is same as setting {@link setLogLevel}
+     * with {@link LogLevel.NONE}
+     * @param silent
+     */
+    public abstract silent(silent: boolean): void;
 
 }
