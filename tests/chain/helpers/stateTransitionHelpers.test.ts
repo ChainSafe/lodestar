@@ -428,34 +428,34 @@ describe("isActiveValidator", () => {
 describe("getForkVersion", () => {
   const fork: Fork = {
     epoch: 12,
-    previousVersion: new BN(4),
-    currentVersion: new BN(5),
+    previousVersion: 4,
+    currentVersion: 5,
   };
 
-  const four: uint64 = new BN(4);
-  const five: uint64 = new BN(5);
+  const four = 4;
+  const five = 5;
 
   it("epoch after fork epoch returns current fork version", () => {
     const result = getForkVersion(fork, 8);
-    assert(result.eq(four));
+    assert.equal(result, four);
   });
 
   it("epoch after fork epoch returns current fork version", () => {
     const result = getForkVersion(fork, 13);
-    assert(result.eq(five));
+    assert.equal(result, five);
   });
 
   it("epoch after fork epoch returns current fork version", () => {
     const result = getForkVersion(fork, 12);
-    assert(result.eq(five));
+    assert.equal(result, five);
   });
 });
 
 describe("getDomain", () => {
   const fork: Fork = {
     epoch: 12,
-    previousVersion: new BN(4),
-    currentVersion: new BN(5),
+    previousVersion: 4,
+    currentVersion: 5,
   };
 
   const constant: uint64 = new BN(2 ** 32);

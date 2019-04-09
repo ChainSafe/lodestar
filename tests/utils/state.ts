@@ -128,8 +128,8 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
     slot: randBetween(0, 1000),
     genesisTime: Math.floor(Date.now() / 1000),
     fork: {
-      previousVersion: randBetweenBN(0, 1000),
-      currentVersion: randBetweenBN(0, 1000),
+      previousVersion: randBetween(0, 1000),
+      currentVersion: randBetween(0, 1000),
       epoch: randBetween(0, 1000),
     },
     // Validator registry

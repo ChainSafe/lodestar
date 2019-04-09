@@ -28,7 +28,7 @@ export const EPOCHS_PER_ETH1_VOTING_PERIOD = 2 ** 4; // epochs || ~1.7 hours
 export const MIN_VALIDATOR_WITHDRAWAL_DELAY = 2 ** 8; // epochs || ~27 hours
 
 // Initial values
-export const GENESIS_FORK_VERSION	= new BN(0);
+export const GENESIS_FORK_VERSION	= 0;
 export const GENESIS_SLOT = 0;
 export const SLOT_OFFSET = 2 ** 32; // 2 ** 32
 

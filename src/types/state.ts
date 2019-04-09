@@ -28,17 +28,17 @@ import {
 
 export interface Fork {
   // Previous fork version
-  previousVersion: uint64;
+  previousVersion: number64;
   // Post fork version
-  currentVersion: uint64;
+  currentVersion: number64;
   // Fork epoch number
   epoch: Epoch;
 }
 export const Fork: SimpleContainerType = {
   name: "Fork",
   fields: [
-    ["previousVersion", uint64],
-    ["currentVersion", uint64],
+    ["previousVersion", number64],
+    ["currentVersion", number64],
     ["epoch", Epoch],
   ],
 };

@@ -43,6 +43,7 @@ import {
   uint64,
   Validator,
   ValidatorIndex,
+  number64,
 } from "../../types";
 
 import {
@@ -510,7 +511,7 @@ export function getTotalBalance(state: BeaconState, validators: ValidatorIndex[]
  * @param {Epoch} epoch
  * @returns {Number}
  */
-export function getForkVersion(fork: Fork, epoch: Epoch): uint64 {
+export function getForkVersion(fork: Fork, epoch: Epoch): number64 {
   return epoch < fork.epoch ? fork.previousVersion : fork.currentVersion;
 }
 
@@ -522,7 +523,7 @@ export function getForkVersion(fork: Fork, epoch: Epoch): uint64 {
  * @returns {Number}
  */
 export function getDomain(fork: Fork, epoch: Epoch, domainType: int): uint64 {
-  return getForkVersion(fork, epoch).mul(new BN(2 ** 32)).addn(domainType);
+  return new BN(getForkVersion(fork, epoch)).mul(new BN(2 ** 32)).addn(domainType);
 }
 
 /**
