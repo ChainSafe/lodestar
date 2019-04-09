@@ -386,7 +386,7 @@ export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot, reg
     if (registryChange) {
       seed = generateSeed(state, nextEpoch);
       shufflingStartShard = (state.currentShufflingStartShard + currentCommitteesPerEpoch) % SHARD_COUNT;
-    } else if (epochsSinceLastRegistryUpdate < 1 && isPowerOfTwo(epochsSinceLastRegistryUpdate)) {
+    } else if (epochsSinceLastRegistryUpdate > 1 && isPowerOfTwo(epochsSinceLastRegistryUpdate)) {
       seed = generateSeed(state, nextEpoch);
       shufflingStartShard = state.currentShufflingStartShard;
     } else {

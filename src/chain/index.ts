@@ -120,7 +120,7 @@ export class BeaconChain extends EventEmitter {
     // TODO: implement
     
     // The node's Unix time is greater than or equal to state.genesis_time + (block.slot - GENESIS_SLOT) * SECONDS_PER_SLOT.
-    const stateSlotTime = state.genesisTime + (block.slot - GENESIS_SLOT) * SECONDS_PER_SLOT;
+    const stateSlotTime = state.genesisTime + ((block.slot - GENESIS_SLOT) * SECONDS_PER_SLOT);
     if (Math.floor(Date.now() / 1000) < stateSlotTime) {
       return false;
     }
