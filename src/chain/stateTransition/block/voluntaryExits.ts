@@ -1,6 +1,6 @@
 import assert from "assert";
 
-import {treeHash} from "@chainsafesystems/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 
 import {
   BeaconBlock,
@@ -30,15 +30,15 @@ export default function processVoluntaryExits(state: BeaconState, block: BeaconB
   const currentEpoch = getCurrentEpoch(state);
   assert(block.body.voluntaryExits.length <= MAX_VOLUNTARY_EXITS);
   for (const exit of block.body.voluntaryExits) {
-    const validator = state.validatorRegistry[exit.validatorIndex.toNumber()];
-    assert(validator.exitEpoch.gt(getEntryExitEffectEpoch(currentEpoch)));
-    assert(currentEpoch.gte(exit.epoch));
+    const validator = state.validatorRegistry[exit.validatorIndex];
+    assert(validator.exitEpoch > getEntryExitEffectEpoch(currentEpoch));
+    assert(currentEpoch >= exit.epoch);
     const v: VoluntaryExit = {
       epoch: exit.epoch,
       validatorIndex: exit.validatorIndex,
       signature: EMPTY_SIGNATURE,
     };
-    const exitMessage = treeHash(v, VoluntaryExit);
+    const exitMessage = hashTreeRoot(v, VoluntaryExit);
     const exitMessageVerified = blsVerify(
       validator.pubkey,
       exitMessage,

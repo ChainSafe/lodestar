@@ -205,7 +205,7 @@ export interface DB extends EventEmitter {
 
   /**
    * Delete attestations from the db
-   * @param {Attestation[]} attestations
+   * @param {ProposerSlashing[]} proposerSlashings
    * @returns {Promise<void>}
    */
   deleteProposerSlashings(proposerSlashings: ProposerSlashing[]): Promise<void>;

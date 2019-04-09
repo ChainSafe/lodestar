@@ -1,6 +1,6 @@
 import assert from "assert";
 
-import {treeHash} from "@chainsafesystems/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 
 import {
   BeaconBlock,
@@ -28,14 +28,14 @@ export default function processProposerSignature(state: BeaconState, block: Beac
     ...block,
     signature: EMPTY_SIGNATURE,
   };
-  const blockWithoutSignatureRoot: bytes32 = treeHash(b, BeaconBlock);
+  const blockWithoutSignatureRoot: bytes32 = hashTreeRoot(b, BeaconBlock);
 
   const p: ProposalSignedData = {
     slot: state.slot,
-    shard: BEACON_CHAIN_SHARD_NUMBER,
+    shard: 2**32, // TODO this will get removed in update to more recent spec
     blockRoot: blockWithoutSignatureRoot,
   };
-  const proposalRoot = treeHash(p);
+  const proposalRoot = hashTreeRoot(p, ProposalSignedData);
 
   const blockSignatureVerified = blsVerify(
     state.validatorRegistry[getBeaconProposerIndex(state, state.slot)].pubkey,

@@ -24,13 +24,13 @@ export function processJustification(
   }
 
   // Update last finalized epoch if possible
-  if (state.justificationBitfield.shrn(1).modn(8) === 0b111 && state.previousJustifiedEpoch === previousEpoch.subn(2)) {
+  if (state.justificationBitfield.shrn(1).modn(8) === 0b111 && state.previousJustifiedEpoch === previousEpoch - 2) {
     state.finalizedEpoch = state.previousJustifiedEpoch;
   }
-  if (state.justificationBitfield.shrn(1).modn(4) === 0b11 && state.previousJustifiedEpoch === previousEpoch.subn(1)) {
+  if (state.justificationBitfield.shrn(1).modn(4) === 0b11 && state.previousJustifiedEpoch === previousEpoch - 1) {
     state.finalizedEpoch = state.previousJustifiedEpoch;
   }
-  if (state.justificationBitfield.shrn(0).modn(8) === 0b111 && state.justifiedEpoch === previousEpoch.subn(1)) {
+  if (state.justificationBitfield.shrn(0).modn(8) === 0b111 && state.justifiedEpoch === previousEpoch - 1) {
     state.finalizedEpoch = state.justifiedEpoch;
   }
   if (state.justificationBitfield.shrn(0).modn(4) === 0b11 && state.justifiedEpoch === previousEpoch) {

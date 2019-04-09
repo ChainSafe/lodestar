@@ -1,12 +1,11 @@
 import { assert } from "chai";
-import BN from "bn.js";
 import leveldown from "leveldown";
 import levelup from "levelup";
 import promisify from "promisify-es6";
 import {
   serialize,
-  treeHash,
-} from "@chainsafesystems/ssz";
+  hashTreeRoot,
+} from "@chainsafe/ssz";
 
 import {
   BeaconBlock,
@@ -19,8 +18,9 @@ import {LevelDB} from "../../src/db";
 import { generateState } from "../utils/state";
 import { generateEmptyBlock } from "../utils/block";
 import { generateEmptyAttestation } from "../utils/attestation";
+import {generateEmptyVoluntaryExit} from "../utils/voluntaryExits";
 
-describe("DB", () => {
+describe("LevelDB", () => {
   const dbLocation = "./.__testdb";
   const testDb = levelup(leveldown(dbLocation));
   const db = new LevelDB({db: testDb});
@@ -45,7 +45,7 @@ describe("DB", () => {
   })
   it("should correctly get and set a block", async () => {
     const testBlock = generateEmptyBlock();
-    const testBlockRoot = treeHash(testBlock, BeaconBlock);
+    const testBlockRoot = hashTreeRoot(testBlock, BeaconBlock);
     await db.setBlock(testBlock);
     const actualBlock = await db.getBlock(testBlockRoot);
     assert.deepEqual(serialize(actualBlock, BeaconBlock), serialize(testBlock, BeaconBlock));
@@ -53,9 +53,9 @@ describe("DB", () => {
   it("should correctly set the chain head", async () => {
     const testState = generateState();
     const testBlock = generateEmptyBlock();
-    const slot = new BN(5);
+    const slot = 5;
     testBlock.slot = slot;
-    const testBlockRoot = treeHash(testBlock, BeaconBlock);
+    const testBlockRoot = hashTreeRoot(testBlock, BeaconBlock);
     await db.setBlock(testBlock);
     await db.setChainHead(testState, testBlock);
     const actualBlock = await db.getBlockBySlot(slot);
@@ -75,5 +75,21 @@ describe("DB", () => {
     await db.deleteAttestations(testAttestations);
     const noAttestations = await db.getAttestations();
     assert.equal(noAttestations.length, 0);
+  })
+
+  it("should correctly set, get, delete voluntary exits", async () => {
+      const testVoluntaryExits = Array.from({length: 10}, (_, i) => {
+          const a = generateEmptyVoluntaryExit();
+          a.epoch = i;
+          return a;
+      });
+      for (const a of testVoluntaryExits) {
+          await db.setVoluntaryExit(a);
+      }
+      const actualVoluntaryExits = await db.getVoluntaryExits();
+      assert.equal(actualVoluntaryExits.length, testVoluntaryExits.length);
+      await db.deleteVoluntaryExits(actualVoluntaryExits);
+      const noVoluntaryExits = await db.getVoluntaryExits();
+      assert.equal(noVoluntaryExits.length, 0);
   })
 });

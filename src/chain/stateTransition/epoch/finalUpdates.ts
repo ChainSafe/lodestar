@@ -1,6 +1,6 @@
 import BN from "bn.js";
-import {hashTreeRoot} from "@chainsafesystems/ssz";
-import {BeaconState, Epoch, PendingAttestation} from "../../../types";
+import {hashTreeRoot} from "@chainsafe/ssz";
+import {BeaconState, Epoch, PendingAttestation, ValidatorIndex} from "../../../types";
 import {getActiveValidatorIndices, getRandaoMix, slotToEpoch} from "../../helpers/stateTransitionHelpers";
 import {
   ACTIVATION_EXIT_DELAY, LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH,
@@ -12,8 +12,8 @@ export function processFinalUpdates(
   currentEpoch: Epoch,
   nextEpoch: Epoch): void {
 
-  state.latestActiveIndexRoots[nextEpoch.addn(ACTIVATION_EXIT_DELAY).modn(LATEST_ACTIVE_INDEX_ROOTS_LENGTH)] = hashTreeRoot(getActiveValidatorIndices(state.validatorRegistry, nextEpoch.addn(ACTIVATION_EXIT_DELAY)));
-  state.latestSlashedBalances[nextEpoch.modn(LATEST_SLASHED_EXIT_LENGTH)] = state.latestSlashedBalances[currentEpoch.modn(LATEST_SLASHED_EXIT_LENGTH)];
-  state.latestRandaoMixes[nextEpoch.modn(LATEST_RANDAO_MIXES_LENGTH)] = getRandaoMix(state, currentEpoch);
-  state.latestAttestations = state.latestAttestations.filter((attestation: PendingAttestation) => slotToEpoch(attestation.data.slot).lt(new BN(currentEpoch)));
+  state.latestActiveIndexRoots[(nextEpoch + ACTIVATION_EXIT_DELAY) % LATEST_ACTIVE_INDEX_ROOTS_LENGTH] = hashTreeRoot(getActiveValidatorIndices(state.validatorRegistry, nextEpoch + ACTIVATION_EXIT_DELAY), [ValidatorIndex]);
+  state.latestSlashedBalances[nextEpoch % LATEST_SLASHED_EXIT_LENGTH] = state.latestSlashedBalances[currentEpoch % LATEST_SLASHED_EXIT_LENGTH];
+  state.latestRandaoMixes[nextEpoch % LATEST_RANDAO_MIXES_LENGTH] = getRandaoMix(state, currentEpoch);
+  state.latestAttestations = state.latestAttestations.filter((attestation: PendingAttestation) => slotToEpoch(attestation.data.slot) < currentEpoch);
 }

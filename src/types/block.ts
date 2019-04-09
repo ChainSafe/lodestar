@@ -1,3 +1,4 @@
+import {SimpleContainerType} from "@chainsafe/ssz";
 // Each type exported here contains both a compile-time type (a typescript interface) and a run-time type (a javascript variable)
 // For more information, see ./index.ts
 
@@ -8,7 +9,15 @@ import {
   bytes48,
   bytes96,
   uint64,
+  number64,
 } from "./primitive";
+
+import {
+  Shard,
+  Slot,
+  ValidatorIndex,
+  Epoch,
+} from "./custom";
 
 import {
   Attestation,
@@ -18,28 +27,27 @@ import {
 import {
   Eth1Data,
 } from "./eth1";
-import {Shard, ValidatorIndex} from "./custom";
 
 export interface ProposalSignedData {
   // Slot number
-  slot: uint64;
+  slot: Slot;
   // Shard number (`BEACON_CHAIN_SHARD_NUMBER` for beacon chain)
-  shard: uint64;
+  shard: Shard;
   // Block root
   blockRoot: bytes32;
 }
-export const ProposalSignedData = {
+export const ProposalSignedData: SimpleContainerType = {
   name: "ProposalSignedData",
   fields: [
-    ["slot", uint64],
-    ["shard", uint64],
+    ["slot", Slot],
+    ["shard", Shard],
     ["blockRoot", bytes32],
   ],
 };
 
 export interface ProposerSlashing {
   // Proposer index
-  proposerIndex: uint64;
+  proposerIndex: ValidatorIndex;
   // First proposal data
   proposalData1: ProposalSignedData;
   // First proposal signature
@@ -49,10 +57,10 @@ export interface ProposerSlashing {
   // Second proposal signature
   proposalSignature2: bytes96;
 }
-export const ProposerSlashing = {
+export const ProposerSlashing: SimpleContainerType = {
   name: "ProposerSlashing",
   fields: [
-    ["proposerIndex", uint64],
+    ["proposerIndex", ValidatorIndex],
     ["proposalData1", ProposalSignedData],
     ["proposalSignature1", bytes96],
     ["proposalData2", ProposalSignedData],
@@ -68,7 +76,7 @@ export interface DepositInput {
   // BLS proof of possession (a BLS signature)
   proofOfPossession: bytes96;
 }
-export const DepositInput = {
+export const DepositInput: SimpleContainerType = {
   name: "DepositInput",
   fields: [
     ["pubkey", bytes48],
@@ -81,15 +89,15 @@ export interface DepositData {
   // Amount in Gwei
   amount: uint64;
   // Timestamp from deposit contract
-  timestamp: uint64;
+  timestamp: number64;
   // Deposit Input
   depositInput: DepositInput;
 }
-export const DepositData = {
+export const DepositData: SimpleContainerType = {
   name: "DepositData",
   fields: [
     ["amount", uint64],
-    ["timestamp", uint64],
+    ["timestamp", number64],
     ["depositInput", DepositInput],
   ],
 };
@@ -98,61 +106,61 @@ export interface Deposit {
   // Branch in the deposit tree
   branch: bytes32[];
   // index in the deposit tree
-  index: uint64;
+  index: number64;
   // Deposit data
   depositData: DepositData;
 }
-export const Deposit = {
+export const Deposit: SimpleContainerType = {
   name: "Deposit",
   fields: [
     ["branch", [bytes32]],
-    ["index", uint64],
+    ["index", number64],
     ["depositData", DepositData],
   ],
 };
 
 export interface VoluntaryExit {
   // Minimum slot for processing exit
-  epoch: uint64;
+  epoch: Epoch;
   // Index of the exiting validator
-  validatorIndex: uint64;
+  validatorIndex: ValidatorIndex;
   // Validator signature
   signature: bytes96;
 }
-export const VoluntaryExit = {
+export const VoluntaryExit: SimpleContainerType = {
   name: "VoluntaryExit",
   fields: [
-    ["epoch", uint64],
-    ["validatorIndex", uint64],
+    ["epoch", Epoch],
+    ["validatorIndex", ValidatorIndex],
     ["signature", bytes96],
   ],
 };
 
 export interface Transfer {
   // Sender index
-  from: uint64;
+  from: ValidatorIndex;
   // Recipient index
-  to: uint64;
+  to: ValidatorIndex;
   // Amount in Gwei
   amount: uint64;
   // Fee in Gwei for block proposer
   fee: uint64;
   // Inclusion slot
-  slot: uint64;
+  slot: Slot;
   // Sender withdrawal pubkey
   pubkey: bytes48;
   // Sender signature
   signature: bytes96;
 }
 
-export const Transfer = {
+export const Transfer: SimpleContainerType = {
   name: "Transfer",
   fields: [
-    ["from", uint64],
-    ["to", uint64],
+    ["from", ValidatorIndex],
+    ["to", ValidatorIndex],
     ["amount", uint64],
     ["fee", uint64],
-    ["slot", uint64],
+    ["slot", Slot],
     ["pubkey", bytes48],
     ["signature", bytes96],
   ],
@@ -166,7 +174,7 @@ export interface BeaconBlockBody {
   voluntaryExits: VoluntaryExit[];
   transfers: Transfer[];
 }
-export const BeaconBlockBody = {
+export const BeaconBlockBody: SimpleContainerType = {
   name: "BeaconBlockBody",
   fields: [
     ["proposerSlashings", [ProposerSlashing]],
@@ -180,7 +188,7 @@ export const BeaconBlockBody = {
 
 export interface BeaconBlock {
   // Header
-  slot: uint64;
+  slot: Slot;
   parentRoot: bytes32;
   stateRoot: bytes32;
   randaoReveal: bytes96;
@@ -190,10 +198,10 @@ export interface BeaconBlock {
   // Body
   body: BeaconBlockBody;
 }
-export const BeaconBlock = {
+export const BeaconBlock: SimpleContainerType = {
   name: "BeaconBlock",
   fields: [
-    ["slot", uint64],
+    ["slot", Slot],
     ["parentRoot", bytes32],
     ["stateRoot", bytes32],
     ["randaoReveal", bytes96],
@@ -204,13 +212,13 @@ export const BeaconBlock = {
 };
 
 export interface CrosslinkCommittee {
-  shard: uint64;
-  validatorIndices: uint64[];
+  shard: Shard;
+  validatorIndices: ValidatorIndex[];
 }
-export const CrosslinkCommittee = {
+export const CrosslinkCommittee: SimpleContainerType = {
   name: "CrosslinkCommittee",
   fields: [
-    ["shard", uint64],
-    ["validatorIndices", [uint64]],
+    ["shard", Shard],
+    ["validatorIndices", [ValidatorIndex]],
   ],
 };

@@ -1,6 +1,6 @@
 import assert from "assert";
 
-import {serialize} from "@chainsafesystems/ssz";
+import {serialize} from "@chainsafe/ssz";
 
 import {
   AttestationData,
@@ -29,15 +29,15 @@ export default function processAttesterSlashings(state: BeaconState, block: Beac
     const slashableAttestation1 = attesterSlashing.slashableAttestation1;
     const slashableAttestation2 = attesterSlashing.slashableAttestation2;
 
-    assert(!serialize(slashableAttestation1.data, AttestationData).eq(serialize(slashableAttestation2.data, AttestationData)));
+    assert(!serialize(slashableAttestation1.data, AttestationData).equals(serialize(slashableAttestation2.data, AttestationData)));
     assert(isDoubleVote(slashableAttestation1.data, slashableAttestation2.data) ||
       isSurroundVote(slashableAttestation1.data, slashableAttestation2.data));
     assert(verifySlashableAttestation(state, slashableAttestation1));
     assert(verifySlashableAttestation(state, slashableAttestation2));
     const slashableIndices = slashableAttestation1.validatorIndices
       .filter((validatorIndex1) => (
-        slashableAttestation2.validatorIndices.find((validatorIndex2) => validatorIndex1.eq(validatorIndex2)) &&
-        state.validatorRegistry[validatorIndex1.toNumber()].slashedEpoch.gt(getCurrentEpoch(state))
+        slashableAttestation2.validatorIndices.find((validatorIndex2) => validatorIndex1 === validatorIndex2) &&
+        state.validatorRegistry[validatorIndex1].slashedEpoch > getCurrentEpoch(state)
       ));
     assert(slashableIndices.length >= 1);
     slashableIndices.forEach((index) => slashValidator(state, index));

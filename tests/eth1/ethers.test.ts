@@ -4,14 +4,14 @@ import { ethers, Event } from "ethers";
 import ganache from "ganache-core";
 import sinon from "sinon";
 
-import { Eth1Notifier } from "../../src/eth1";
+import { EthersEth1Notifier } from "../../src/eth1";
 import defaults from "../../src/eth1/defaults";
 import promisify from "promisify-es6";
 
 describe("Eth1Notifier", () => {
   const ganacheProvider = ganache.provider();
   const provider = new ethers.providers.Web3Provider(ganacheProvider);
-  const eth1 = new Eth1Notifier({
+  const eth1 = new EthersEth1Notifier({
     depositContract: defaults.depositContract,
     provider,
   });

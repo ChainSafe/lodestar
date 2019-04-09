@@ -36,6 +36,7 @@
     "@chainsafesystems/ssz": "^1.6.0",
     "@nodeutils/defaults-deep": "^1.1.0",
     "@polkadot/ts": "^0.1.56",
+    "@chainsafe/ssz": "^0.1.2",
     "@polkadot/util-crypto": "^0.33.27",
     "@types/bn.js": "^4.11.4",
     "@types/levelup": "^3.1.0",
@@ -59,6 +60,11 @@
     "peer-book": "^0.9.1",
     "peer-info": "^0.15.1",
     "promisify-es6": "^1.0.3"
+    "noice-json-rpc": "^1.2.0",
+    "pouchdb-adapter-memory": "^7.0.0",
+    "pouchdb-core": "^7.0.0",
+    "promisify-es6": "^1.0.3",
+    "ws": "^6.2.1"
   },
   "bin": {
     "lodestar": "./bin/lodestar",
@@ -85,6 +91,7 @@
     "mocha": "^5.2.0",
     "nyc": "^13.3.0",
     "sinon": "^7.2.7",
+    "supertest": "^4.0.2",
     "ts-node": "^7.0.1",
     "typescript": "^3.2.1"
   }

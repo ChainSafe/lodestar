@@ -1,9 +1,9 @@
 import assert from "assert";
 import BN from "bn.js";
 import {EventEmitter} from "events";
-import { treeHash } from "@chainsafesystems/ssz";
+import { hashTreeRoot } from "@chainsafe/ssz";
 
-import { BeaconState, uint64, Deposit, Eth1Data, bytes32, BeaconBlock } from "../types";
+import { BeaconBlock, BeaconState, bytes32, Deposit, Eth1Data, number64, uint64, } from "../types";
 import { GENESIS_SLOT, SECONDS_PER_SLOT } from "../constants";
 
 import { DB } from "../db";
@@ -29,21 +29,32 @@ export class BeaconChain extends EventEmitter {
     this.db = db;
     this.eth1 = eth1;
   }
-  public async start() {
+
+  /**
+   * Start beacon chain processing
+   */
+  public async start(): Promise<void> {
     try {
       const state = await this.db.getState();
     } catch (e) {
       // if state doesn't exist in the db, the chain maybe hasn't started
       // listen for eth1 Eth2Genesis event
-      this.eth1.once('eth2genesis', this.processEth2Genesis.bind(this));
+      this.eth1.once('eth2genesis', this.initializeChain.bind(this));
     }
   }
-  public async stop() {}
 
-  public async processEth2Genesis(genesisTime: uint64, genesisDeposits: Deposit[], genesisEth1Data: Eth1Data) {
+  /**
+   * Stop beacon chain processing
+   */
+  public async stop(): Promise<void> {}
+
+  /**
+   * Initialize the beacon chain with a genesis beacon state / block
+   */
+  public async initializeChain(genesisTime: number64, genesisDeposits: Deposit[], genesisEth1Data: Eth1Data): Promise<void> {
     const genesisState = getGenesisBeaconState(genesisDeposits, genesisTime, genesisEth1Data);
     const genesisBlock = getEmptyBlock();
-    genesisBlock.stateRoot = treeHash(genesisState, BeaconState);
+    genesisBlock.stateRoot = hashTreeRoot(genesisState, BeaconState);
     await this.db.setBlock(genesisBlock);
     await this.db.setChainHead(genesisState, genesisBlock);
     await this.db.setJustifiedBlock(genesisBlock);
@@ -62,7 +73,7 @@ export class BeaconChain extends EventEmitter {
     const headRoot = await this.db.getChainHeadRoot()
 
     // process skipped slots
-    for (let i = state.slot; i.lt(block.slot.subn(1)); i.addn(1)) {
+    for (let i = state.slot; i < block.slot - 1; i++) {
       state = this.runStateTransition(headRoot, null, state);
     }
     
@@ -91,7 +102,7 @@ export class BeaconChain extends EventEmitter {
     const currentRoot = await this.db.getChainHeadRoot()
     // TODO use lmd ghost to compute best block
     const block = this._latestBlock;
-    if (!currentRoot.equals(treeHash(block, BeaconBlock))) {
+    if (!currentRoot.equals(hashTreeRoot(block, BeaconBlock))) {
       await this.db.setChainHead(state, block)
     }
   }
@@ -109,8 +120,8 @@ export class BeaconChain extends EventEmitter {
     // TODO: implement
     
     // The node's Unix time is greater than or equal to state.genesis_time + (block.slot - GENESIS_SLOT) * SECONDS_PER_SLOT.
-    const stateSlotTime = state.genesisTime.add(block.slot.sub(GENESIS_SLOT).muln(SECONDS_PER_SLOT));
-    if (!(new BN(Date.now())).gte(stateSlotTime)) {
+    const stateSlotTime = state.genesisTime + ((block.slot - GENESIS_SLOT) * SECONDS_PER_SLOT);
+    if (Math.floor(Date.now() / 1000) < stateSlotTime) {
       return false;
     }
     
