@@ -10,14 +10,14 @@ import {Validator} from "../../src/types";
 export function generateValidator(activation?: number, exit?: number): Validator {
   const randNum = () =>  Math.floor(Math.random() * Math.floor(4));
   // For some reason activationEpoch was defaulting to randNum()
-  const activationValue = activation !== null ? activation : randNum();
+  const activationEpoch = activation !== null ? activation : randNum();
   return {
     pubkey: Buffer.alloc(48),
     withdrawalCredentials: Buffer.alloc(65),
-    activationEpoch: new BN(activationValue),
-    exitEpoch: new BN(exit || randNum()),
-    withdrawalEpoch: new BN(randNum()),
-    slashedEpoch: new BN(randNum()),
+    activationEpoch,
+    exitEpoch: exit || randNum(),
+    withdrawalEpoch: randNum(),
+    slashedEpoch: randNum(),
     statusFlags: new BN(randNum()),
   };
 }

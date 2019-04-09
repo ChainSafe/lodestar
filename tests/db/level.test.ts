@@ -1,5 +1,4 @@
-import {assert} from "chai";
-import BN from "bn.js";
+import { assert } from "chai";
 import leveldown from "leveldown";
 import promisify from "promisify-es6";
 import {hashTreeRoot, serialize,} from "@chainsafe/ssz";
@@ -52,7 +51,7 @@ describe("LevelDB", () => {
   it("should correctly set the chain head", async () => {
     const testState = generateState();
     const testBlock = generateEmptyBlock();
-    const slot = new BN(5);
+    const slot = 5;
     testBlock.slot = slot;
     const testBlockRoot = hashTreeRoot(testBlock, BeaconBlock);
     await db.setBlock(testBlock);
@@ -77,18 +76,18 @@ describe("LevelDB", () => {
   });
 
   it("should correctly set, get, delete voluntary exits", async () => {
-    const testVoluntaryExits = Array.from({length: 10}, (_, i) => {
-      const a = generateEmptyVoluntaryExit();
-      a.epoch = new BN(i);
-      return a;
-    });
-    for (const a of testVoluntaryExits) {
-      await db.setVoluntaryExit(a);
-    }
-    const actualVoluntaryExits = await db.getVoluntaryExits();
-    assert.equal(actualVoluntaryExits.length, testVoluntaryExits.length);
-    await db.deleteVoluntaryExits(actualVoluntaryExits);
-    const noVoluntaryExits = await db.getVoluntaryExits();
-    assert.equal(noVoluntaryExits.length, 0);
+      const testVoluntaryExits = Array.from({length: 10}, (_, i) => {
+          const a = generateEmptyVoluntaryExit();
+          a.epoch = i;
+          return a;
+      });
+      for (const a of testVoluntaryExits) {
+          await db.setVoluntaryExit(a);
+      }
+      const actualVoluntaryExits = await db.getVoluntaryExits();
+      assert.equal(actualVoluntaryExits.length, testVoluntaryExits.length);
+      await db.deleteVoluntaryExits(actualVoluntaryExits);
+      const noVoluntaryExits = await db.getVoluntaryExits();
+      assert.equal(noVoluntaryExits.length, 0);
   })
 });

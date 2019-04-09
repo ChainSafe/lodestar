@@ -1,9 +1,9 @@
 import BN from "bn.js";
-import { Deposit, DepositData, DepositInput, Eth1Data, int } from "../types";
+import { Deposit, DepositData, DepositInput, Eth1Data, number64 } from "../types";
 
 interface DummyChainStart {
   deposits: Deposit[];
-  genesisTime: int;
+  genesisTime: number64;
   eth1Data: Eth1Data;
 }
 
@@ -27,13 +27,13 @@ function generateFakeDeposits(): Deposit[] {
     const depositData: DepositData = {
       amount: new BN(32).mul(new BN(10).muln(9)), // 32000000000
       depositInput,
-      timestamp: new BN(Date.now()).divn(1000),
+      timestamp: Math.floor(Date.now() / 1000),
     };
 
     const deposit: Deposit = {
       branch: [Buffer.alloc(32)],
       depositData,
-      index: new BN(i),
+      index: i,
     };
     deposits.push(deposit);
   }
@@ -44,7 +44,7 @@ export function getInitialDeposits(): DummyChainStart {
   return {
     deposits: generateFakeDeposits(),
     eth1Data: generateEthData(),
-    genesisTime: Date.now() / 1000 | 0,
+    genesisTime: Math.floor(Date.now() / 1000),
   };
 }
 

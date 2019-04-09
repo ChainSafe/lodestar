@@ -19,14 +19,14 @@ export function processValidatorRegistryAndShuffleSeedData(
   state.previousShufflingStartShard = state.currentShufflingStartShard;
   state.previousShufflingSeed = state.currentShufflingSeed;
 
-  if (state.finalizedEpoch.gt(state.validatorRegistryUpdateEpoch) && isValidCrosslink(state)) {
+  if (state.finalizedEpoch > state.validatorRegistryUpdateEpoch && isValidCrosslink(state)) {
     updateValidatorRegistry(state);
     state.currentShufflingEpoch = nextEpoch;
-    state.currentShufflingStartShard = state.currentShufflingStartShard.addn(getCurrentEpochCommitteeCount(state)).mod(new BN(SHARD_COUNT));
+    state.currentShufflingStartShard = (state.currentShufflingStartShard + getCurrentEpochCommitteeCount(state)) % SHARD_COUNT;
     state.currentShufflingSeed = generateSeed(state, state.currentShufflingEpoch);
   } else {
-    const epochsSinceLastRegistryUpdate = currentEpoch.sub(state.validatorRegistryUpdateEpoch);
-    if (epochsSinceLastRegistryUpdate.gtn(1) && isPowerOfTwo(epochsSinceLastRegistryUpdate)) {
+    const epochsSinceLastRegistryUpdate = currentEpoch - state.validatorRegistryUpdateEpoch;
+    if (epochsSinceLastRegistryUpdate > 1 && isPowerOfTwo(epochsSinceLastRegistryUpdate)) {
       state.currentShufflingEpoch = nextEpoch;
       state.currentShufflingSeed = generateSeed(state, state.currentShufflingEpoch);
     }

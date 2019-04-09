@@ -13,9 +13,9 @@ export function processRewardsAndPenalties(
   previousEpoch: Epoch,
   previousTotalBalance: BN,
   previousEpochAttestations: PendingAttestation[],
-  previousEpochAttesterIndices: BN[],
-  previousEpochBoundaryAttesterIndices: BN[],
-  previousEpochHeadAttesterIndices: BN[],
+  previousEpochAttesterIndices: ValidatorIndex[],
+  previousEpochBoundaryAttesterIndices: ValidatorIndex[],
+  previousEpochHeadAttesterIndices: ValidatorIndex[],
   previousEpochAttestingBalance: BN,
   previousEpochBoundaryAttestingBalance: BN,
   previousEpochHeadAttestingBalance: BN): void {
@@ -26,7 +26,7 @@ export function processRewardsAndPenalties(
   const inactivityPenalty = (state: BeaconState, index: ValidatorIndex, epochsSinceFinality: Epoch): BN => {
     return baseReward(state, index)
       .add(getEffectiveBalance(state, index))
-      .mul(epochsSinceFinality)
+      .muln(epochsSinceFinality)
       .divn(INACTIVITY_PENALTY_QUOTIENT)
       .divn(2);
   };

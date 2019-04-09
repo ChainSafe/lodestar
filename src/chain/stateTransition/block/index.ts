@@ -17,7 +17,7 @@ import processVoluntaryExits from "./voluntaryExits";
 
 export default function processBlock(state: BeaconState, block: BeaconBlock): void {
   // Slot
-  assert(block.slot.eq(state.slot), "block root must equal state root");
+  assert(block.slot === state.slot, "block root must equal state root");
 
   // Proposer signature
   processProposerSignature(state, block);

@@ -1,7 +1,7 @@
 import BN from "bn.js";
 
 import {slotToEpoch} from "../../src/chain/helpers/stateTransitionHelpers";
-import {Attestation, AttestationData, uint64} from "../../src/types";
+import {Attestation, AttestationData, Slot, Epoch, uint64} from "../../src/types";
 import {randBetween} from "./misc";
 
 /**
@@ -10,18 +10,18 @@ import {randBetween} from "./misc";
  * @param {number} justifiedEpochValue
  * @returns {AttestationData}
  */
-export function generateAttestationData(slotValue: uint64, justifiedEpochValue: uint64): AttestationData {
+export function generateAttestationData(slot: Slot, justifiedEpoch: Epoch): AttestationData {
   return {
-    slot: slotValue,
-    shard: new BN(randBetween(0, 1024)),
+    slot,
+    shard: randBetween(0, 1024),
     beaconBlockRoot: Buffer.alloc(65),
     epochBoundaryRoot: Buffer.alloc(65),
     shardBlockRoot: Buffer.alloc(65),
     latestCrosslink: {
-      epoch: slotToEpoch(slotValue),
+      epoch: slotToEpoch(slot),
       shardBlockRoot: Buffer.alloc(65),
     },
-    justifiedEpoch: justifiedEpochValue,
+    justifiedEpoch: justifiedEpoch,
     justifiedBlockRoot: Buffer.alloc(65),
   };
 }
@@ -30,16 +30,16 @@ export function generateEmptyAttestation(): Attestation {
   return {
     aggregationBitfield: Buffer.alloc(32),
     data: {
-      slot: new BN(0),
-      shard: new BN(0),
+      slot: 0,
+      shard: 0,
       beaconBlockRoot: Buffer.alloc(32),
       epochBoundaryRoot: Buffer.alloc(32),
       shardBlockRoot: Buffer.alloc(32),
       latestCrosslink: {
-        epoch: new BN(0),
+        epoch: 0,
         shardBlockRoot: Buffer.alloc(32),
       },
-      justifiedEpoch: new BN(0),
+      justifiedEpoch: 0,
       justifiedBlockRoot: Buffer.alloc(32),
     },
     custodyBitfield: Buffer.alloc(32),

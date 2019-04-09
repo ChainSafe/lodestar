@@ -36,8 +36,8 @@ export default function processAttesterSlashings(state: BeaconState, block: Beac
     assert(verifySlashableAttestation(state, slashableAttestation2));
     const slashableIndices = slashableAttestation1.validatorIndices
       .filter((validatorIndex1) => (
-        slashableAttestation2.validatorIndices.find((validatorIndex2) => validatorIndex1.eq(validatorIndex2)) &&
-        state.validatorRegistry[validatorIndex1.toNumber()].slashedEpoch.gt(getCurrentEpoch(state))
+        slashableAttestation2.validatorIndices.find((validatorIndex2) => validatorIndex1 === validatorIndex2) &&
+        state.validatorRegistry[validatorIndex1].slashedEpoch > getCurrentEpoch(state)
       ));
     assert(slashableIndices.length >= 1);
     slashableIndices.forEach((index) => slashValidator(state, index));

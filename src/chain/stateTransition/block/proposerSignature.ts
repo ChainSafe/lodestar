@@ -32,7 +32,7 @@ export default function processProposerSignature(state: BeaconState, block: Beac
 
   const p: ProposalSignedData = {
     slot: state.slot,
-    shard: BEACON_CHAIN_SHARD_NUMBER,
+    shard: 2**32, // TODO this will get removed in update to more recent spec
     blockRoot: blockWithoutSignatureRoot,
   };
   const proposalRoot = hashTreeRoot(p, ProposalSignedData);

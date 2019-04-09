@@ -5,8 +5,8 @@ import {
   getEffectiveBalance, getEntryExitEffectEpoch, getTotalBalance
 } from "../../helpers/stateTransitionHelpers";
 import {
-  Attestation, BeaconState, bytes32, CrosslinkCommittee, PendingAttestation, Shard, Slot, uint64, Validator,
-  ValidatorIndex
+  Attestation, BeaconState, bytes32, CrosslinkCommittee, number64, PendingAttestation,
+  Shard, Slot, uint64, Validator, ValidatorIndex,
 } from "../../../types";
 import {
   EJECTION_BALANCE, FAR_FUTURE_EPOCH, INITIATED_EXIT, LATEST_SLASHED_EXIT_LENGTH, MAX_BALANCE_CHURN_QUOTIENT,
@@ -24,8 +24,8 @@ import {bnMax, bnMin} from "../../../helpers/math";
  */
 export function isValidCrosslink(state: BeaconState): boolean {
   return Array.from({ length: getCurrentEpochCommitteeCount(state) },
-    (_, i) => state.currentShufflingStartShard.addn(i).modn(SHARD_COUNT))
-    .every((shard) => state.latestCrosslinks[shard].epoch.lte(state.validatorRegistryUpdateEpoch));
+    (_, i) => (state.currentShufflingStartShard + i) % SHARD_COUNT)
+    .every((shard) => state.latestCrosslinks[shard].epoch <= state.validatorRegistryUpdateEpoch);
 }
 
 /**
@@ -38,14 +38,14 @@ export function processSlashings(state: BeaconState): void {
   const totalBalance = activeValidatorIndices.reduce((acc, cur) => acc.add(getEffectiveBalance(state, cur)), new BN(0));
 
   state.validatorRegistry.map((validator: Validator, index: number) => {
-    if (currentEpoch.eq(validator.slashedEpoch.addn(LATEST_SLASHED_EXIT_LENGTH).divn(2))) {
-      const epochIndex = currentEpoch.modn(LATEST_SLASHED_EXIT_LENGTH);
+    if (currentEpoch === (validator.slashedEpoch + LATEST_SLASHED_EXIT_LENGTH) / 2) {
+      const epochIndex = currentEpoch % LATEST_SLASHED_EXIT_LENGTH;
       const totalAtStart = state.latestSlashedBalances[(epochIndex + 1) % LATEST_SLASHED_EXIT_LENGTH];
       const totalAtEnd = state.latestSlashedBalances[epochIndex];
       const totalPenalties = totalAtEnd.sub(totalAtStart);
       const penalty = bnMax(
-        getEffectiveBalance(state, new BN(index)).mul(bnMin(totalPenalties.muln(3), totalBalance)).div(totalBalance),
-        getEffectiveBalance(state, new BN(index)).divn(MIN_PENALTY_QUOTIENT)
+        getEffectiveBalance(state, index).mul(bnMin(totalPenalties.muln(3), totalBalance)).div(totalBalance),
+        getEffectiveBalance(state, index).divn(MIN_PENALTY_QUOTIENT)
       );
       state.validatorBalances[index] = state.validatorBalances[index].sub(penalty);
     }
@@ -71,22 +71,22 @@ export function updateValidatorRegistry(state: BeaconState): void {
   // Activate validators within the allowable balance churn
   let balanceChurn = new BN(0);
   state.validatorRegistry.forEach((validator, index) => {
-    if (validator.activationEpoch.gt(getEntryExitEffectEpoch(currentEpoch)) && state.validatorBalances[index].gten(MAX_DEPOSIT_AMOUNT)) {
+    if (validator.activationEpoch > getEntryExitEffectEpoch(currentEpoch) && state.validatorBalances[index].gten(MAX_DEPOSIT_AMOUNT)) {
       // Check the balance churn would be within the allowance
-      balanceChurn = balanceChurn.add(getEffectiveBalance(state, new BN(index)));
+      balanceChurn = balanceChurn.add(getEffectiveBalance(state, index));
       if (balanceChurn.gt(maxBalanceChurn)) {
         return;
       }
       // Activate Validator
-      activateValidator(state, new BN(index), false);
+      activateValidator(state, index, false);
     }
   });
 
   // Exit validators within the allowable balance churn
   balanceChurn = new BN(0);
   state.validatorRegistry.forEach((validator: Validator, i) => {
-    const index: ValidatorIndex = new BN(i);
-    if (validator.exitEpoch.gt(getEntryExitEffectEpoch(currentEpoch)) && validator.statusFlags.and(INITIATED_EXIT)) {
+    const index: ValidatorIndex = i;
+    if (validator.exitEpoch > getEntryExitEffectEpoch(currentEpoch) && validator.statusFlags.and(INITIATED_EXIT)) {
       // Check the balance churn would be within the allowance
       balanceChurn = balanceChurn.add(getEffectiveBalance(state, index));
       if (balanceChurn.gt(maxBalanceChurn)) {
@@ -106,7 +106,7 @@ export function updateValidatorRegistry(state: BeaconState): void {
  */
 export function processEjections(state: BeaconState): void {
   for (let index of getActiveValidatorIndices(state.validatorRegistry, getCurrentEpoch(state))) {
-    if (state.validatorBalances[index.toNumber()].ltn(EJECTION_BALANCE)) {
+    if (state.validatorBalances[index].ltn(EJECTION_BALANCE)) {
       exitValidator(state, index);
     }
   }
@@ -126,10 +126,10 @@ export function inclusionSlot(state: BeaconState, previousEpochAttestations: Pen
   previousEpochAttestations.forEach((attestation: PendingAttestation) => {
     getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield)
       .forEach((index: ValidatorIndex) => {
-        if (index.eq(validatorIndex)) {
+        if (index === validatorIndex) {
           if (!lowestInclusionSlot) {
             lowestInclusionSlot = attestation.inclusionSlot;
-          } else if (attestation.inclusionSlot.lt(lowestInclusionSlot)) {
+          } else if (attestation.inclusionSlot < lowestInclusionSlot) {
             lowestInclusionSlot = attestation.inclusionSlot;
           }
         }
@@ -142,19 +142,19 @@ export function inclusionSlot(state: BeaconState, previousEpochAttestations: Pen
  * Find the difference between an attestation slot and the data slot of that attestation
  * @param {BeaconState} state
  * @param {ValidatorIndex} validatorIndex
- * @returns {uint64}
+ * @returns {number64}
  */
-export function inclusionDistance(state: BeaconState, validatorIndex: ValidatorIndex): uint64 {
+export function inclusionDistance(state: BeaconState, validatorIndex: ValidatorIndex): number64 {
   let lowestAttestation: PendingAttestation;
   state.latestAttestations.forEach((attestation: PendingAttestation) => {
     getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield)
       .forEach((index: ValidatorIndex) => {
-        if (index.eq(validatorIndex) && attestation.inclusionSlot.lt(lowestAttestation.inclusionSlot)) {
+        if (index === validatorIndex && attestation.inclusionSlot < lowestAttestation.inclusionSlot) {
           lowestAttestation = attestation;
         }
       })
   });
-  return lowestAttestation.inclusionSlot.sub(lowestAttestation.data.slot);
+  return lowestAttestation.inclusionSlot - lowestAttestation.data.slot;
 }
 
 /**
@@ -167,19 +167,19 @@ export function processExitQueue(state: BeaconState): void {
       const validator = state.validatorRegistry[index];
 
       // Dequeue if the minimum amount of time has passed
-      if (validator.withdrawalEpoch.lt(FAR_FUTURE_EPOCH)) {
+      if (validator.withdrawalEpoch < FAR_FUTURE_EPOCH) {
         return false;
       }
-      return getCurrentEpoch(state).gte(validator.exitEpoch.addn(MIN_VALIDATOR_WITHDRAWAL_DELAY))
+      return getCurrentEpoch(state) >= validator.exitEpoch + MIN_VALIDATOR_WITHDRAWAL_DELAY;
     });
 
   // Sort in order of exit epoch, and validators that exit within the same epoch exit in order of validator index
-  const sortedIndices: number[] = eligibleIndices.sort((a: number, b: number) => {
-    return state.validatorRegistry[a].exitEpoch.sub(state.validatorRegistry[b].exitEpoch).toNumber();
+  const sortedIndices = eligibleIndices.sort((a: number, b: number) => {
+    return state.validatorRegistry[a].exitEpoch - state.validatorRegistry[b].exitEpoch;
   });
   sortedIndices.forEach((dequeues: number, index: number) => {
     if (dequeues < MAX_EXIT_DEQUEUES_PER_EPOCH) {
-      prepareValidatorForWithdrawal(state, new BN(index));
+      prepareValidatorForWithdrawal(state, index);
     }
   });
 }

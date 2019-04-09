@@ -13,11 +13,11 @@ export function processVariables(state: BeaconState) {
   // Variables
   const currentEpoch: Epoch = getCurrentEpoch(state);
   const previousEpoch: Epoch = getPreviousEpoch(state);
-  const nextEpoch: Epoch = currentEpoch.addn(1);
+  const nextEpoch: Epoch = currentEpoch + 1;
 
   // Validators attesting during the current epoch
   const currentTotalBalance: Gwei = getTotalBalance(state, getActiveValidatorIndices(state.validatorRegistry, currentEpoch));
-  const currentEpochAttestations: PendingAttestation[] = state.latestAttestations.filter((attestation) => currentEpoch.eq(slotToEpoch(attestation.data.slot)));
+  const currentEpochAttestations: PendingAttestation[] = state.latestAttestations.filter((attestation) => currentEpoch === slotToEpoch(attestation.data.slot));
 
   // Validators justifying the epoch boundary block at the start of the current epoch
   const currentEpochBoundaryAttestations: PendingAttestation[] = currentEpochAttestations.filter((attestation: PendingAttestation) => {
@@ -36,9 +36,8 @@ export function processVariables(state: BeaconState) {
   const previousTotalBalance: Gwei = getTotalBalance(state, getActiveValidatorIndices(state.validatorRegistry, previousEpoch));
 
   // Validators that made an attestation during the previous epoch, targeting the previous justified slot
-  const previousEpochAttestations: PendingAttestation[] = state.latestAttestations.filter((attestation) => {
-    previousEpoch.eq(slotToEpoch(attestation.data.slot))
-  });
+  const previousEpochAttestations: PendingAttestation[] = state.latestAttestations.filter((attestation) =>
+    previousEpoch === slotToEpoch(attestation.data.slot));
 
   // const previousEpochAttesterIndices: ValidatorIndex[] = previousEpochAttestations
   //   .map((attestation: PendingAttestation) => getAttestationParticipants(state, attestation.data, attestation.aggregationBitfield))
@@ -82,12 +81,12 @@ export function processVariables(state: BeaconState) {
   // Let shard_block_root be state.latest_crosslinks[shard].shard_block_root
   // Let total_attesting_balance(crosslink_committee) = get_total_balance(state, attesting_validators(crosslink_committee)).
   // TODO Need to finish
-  const startSlot = getEpochStartSlot(previousEpoch).toNumber();
-  const endSlot = getEpochStartSlot(nextEpoch).toNumber();
+  const startSlot = getEpochStartSlot(previousEpoch);
+  const endSlot = getEpochStartSlot(nextEpoch);
   for (let slot = startSlot; slot < endSlot; slot++) {
-    const crosslinkCommitteesAtSlot = getCrosslinkCommitteesAtSlot(state, new BN(slot)).map((value: CrosslinkCommittee) => {
+    const crosslinkCommitteesAtSlot = getCrosslinkCommitteesAtSlot(state, slot).map((value: CrosslinkCommittee) => {
       const { shard, validatorIndices } = value;
-      const shardBlockRoot = state.latestCrosslinks[shard.toNumber()];
+      const shardBlockRoot = state.latestCrosslinks[shard];
 
     })
   }

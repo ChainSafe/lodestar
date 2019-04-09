@@ -1,5 +1,4 @@
 import { assert } from "chai";
-import BN from "bn.js";
 import * as jsonRpc from "noice-json-rpc";
 import Websocket from "ws";
 import {MockAPI, JSONRPC, API, WSServer} from "../../src/rpc";
@@ -41,7 +40,7 @@ describe("Json RPC over WS", () => {
     assert.ok(root);
   })
   it("should get attestation data", async () => {
-    const data = await clientApi.BeaconChain.getAttestationData(new BN(0), new BN(0));
+    const data = await clientApi.BeaconChain.getAttestationData(0, 0);
     assert.ok(data);
   })
   it("should accept an attestation submission", async () => {

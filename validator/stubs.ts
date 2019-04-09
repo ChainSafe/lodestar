@@ -10,11 +10,11 @@ function notSoRandomRandomBoolean(): boolean {
 }
 
 function notSoRandomRandomValidatorIndex(): ValidatorIndex {
-  return new BN(Math.round(Math.random() * 1000));
+  return Math.round(Math.random() * 1000);
 }
 
 function notSoRandomRandomSlot(): Slot {
-  return new BN(Math.round(Math.random() * 1000));
+  return Math.round(Math.random() * 1000);
 }
 
 export default class RPCProvider {
@@ -65,7 +65,7 @@ export default class RPCProvider {
       this.currentSlot = slot;
       return slot;
     } else {
-      this.currentSlot = this.currentSlot.addn(1);
+      this.currentSlot = this.currentSlot + 1;
       return this.currentSlot;
     }
   }

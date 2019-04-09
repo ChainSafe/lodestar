@@ -7,7 +7,14 @@ import {
   bytes32,
   bytes48,
   uint64,
+  number64,
 } from "./primitive";
+
+import {
+  Epoch,
+  Slot,
+  Shard,
+} from "./custom";
 
 import {
   Crosslink,
@@ -21,18 +28,18 @@ import {
 
 export interface Fork {
   // Previous fork version
-  previousVersion: uint64;
+  previousVersion: number64;
   // Post fork version
-  currentVersion: uint64;
+  currentVersion: number64;
   // Fork epoch number
-  epoch: uint64;
+  epoch: Epoch;
 }
 export const Fork: SimpleContainerType = {
   name: "Fork",
   fields: [
-    ["previousVersion", uint64],
-    ["currentVersion", uint64],
-    ["epoch", uint64],
+    ["previousVersion", number64],
+    ["currentVersion", number64],
+    ["epoch", Epoch],
   ],
 };
 
@@ -42,13 +49,13 @@ export interface Validator {
   // Withdrawal credentials
   withdrawalCredentials: bytes32;
   // Epoch when validator activated
-  activationEpoch: uint64;
+  activationEpoch: Epoch;
   // Slot when validator exited
-  exitEpoch: uint64;
+  exitEpoch: Epoch;
   // Slot when validator withdrew
-  withdrawalEpoch: uint64;
+  withdrawalEpoch: Epoch;
   // Slot when validator was penalized
-  slashedEpoch: uint64;
+  slashedEpoch: Epoch;
   // Status flags
   statusFlags: uint64;
 }
@@ -57,39 +64,39 @@ export const Validator: SimpleContainerType = {
   fields: [
     ["pubkey", bytes48],
     ["withdrawalCredentials", bytes32],
-    ["activationEpoch", uint64],
-    ["exitEpoch", uint64],
-    ["withdrawalEpoch", uint64],
-    ["slashedEpoch", uint64],
+    ["activationEpoch", Epoch],
+    ["exitEpoch", Epoch],
+    ["withdrawalEpoch", Epoch],
+    ["slashedEpoch", Epoch],
     ["statusFlags", uint64],
   ],
 };
 
 export interface BeaconState {
   // Misc
-  slot: uint64;
-  genesisTime: uint64;
+  slot: Slot;
+  genesisTime: number64;
   fork: Fork; // For versioning hard forks
 
   // Validator registry
   validatorRegistry: Validator[];
   validatorBalances: uint64[];
-  validatorRegistryUpdateEpoch: uint64;
+  validatorRegistryUpdateEpoch: Epoch;
 
   // Randomness and committees
   latestRandaoMixes: bytes32[];
-  previousShufflingStartShard: uint64;
-  currentShufflingStartShard: uint64;
-  previousShufflingEpoch: uint64;
-  currentShufflingEpoch: uint64;
+  previousShufflingStartShard: Shard;
+  currentShufflingStartShard: Shard;
+  previousShufflingEpoch: Epoch;
+  currentShufflingEpoch: Epoch;
   previousShufflingSeed: bytes32;
   currentShufflingSeed: bytes32;
 
   // Finality
-  previousJustifiedEpoch: uint64;
-  justifiedEpoch: uint64;
+  previousJustifiedEpoch: Epoch;
+  justifiedEpoch: Epoch;
   justificationBitfield: uint64;
-  finalizedEpoch: uint64;
+  finalizedEpoch: Epoch;
 
   // Recent state
   latestCrosslinks: Crosslink[];
@@ -102,32 +109,32 @@ export interface BeaconState {
   // Ethereum 1.0 deposit root
   latestEth1Data: Eth1Data;
   eth1DataVotes: Eth1DataVote[];
-  depositIndex: uint64;
+  depositIndex: number64;
 }
 export const BeaconState: SimpleContainerType = {
   name: "BeaconState",
   fields: [
     // Misc
-    ["slot", uint64],
-    ["genesisTime", uint64],
+    ["slot", Slot],
+    ["genesisTime", number64],
     ["fork", Fork],
     // Validator Registry
     ["validatorRegistry", [Validator]],
     ["validatorBalances", [uint64]],
-    ["validatorRegistryUpdateEpoch", uint64],
+    ["validatorRegistryUpdateEpoch", Epoch],
     // Randomness and committees
     ["latestRandaoMixes", [bytes32]],
-    ["previousShufflingStartShard", uint64],
-    ["currentShufflingStartShard", uint64],
-    ["previousShufflingEpoch", uint64],
-    ["currentShufflingEpoch", uint64],
+    ["previousShufflingStartShard", Shard],
+    ["currentShufflingStartShard", Shard],
+    ["previousShufflingEpoch", Epoch],
+    ["currentShufflingEpoch", Epoch],
     ["previousShufflingSeed", bytes32],
     ["currentShufflingSeed", bytes32],
     // Finality
-    ["previousJustifiedEpoch", uint64],
-    ["justifiedEpoch", uint64],
+    ["previousJustifiedEpoch", Epoch],
+    ["justifiedEpoch", Epoch],
     ["justificationBitfield", uint64],
-    ["finalizedEpoch", uint64],
+    ["finalizedEpoch", Epoch],
     // Recent State
     ["latestCrosslinks", [Crosslink]],
     ["latestBlockRoots", [bytes32]],
@@ -138,6 +145,6 @@ export const BeaconState: SimpleContainerType = {
     // Eth1
     ["latestEth1Data", Eth1Data],
     ["eth1DataVotes", [Eth1DataVote]],
-    ["depositIndex", uint64],
+    ["depositIndex", number64],
   ],
 };
