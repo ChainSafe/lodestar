@@ -36,7 +36,7 @@ export interface SimpleContainerType {
   fields: [string, AnySSZType][];
 }
 
-export type SimpleSSZType = SimplePrimitiveType | SimpleListType | SimplePrimitiveType | SimpleContainerType;
+export type SimpleSSZType = SimplePrimitiveType | SimpleListType | SimpleVectorType | SimpleContainerType;
 
 // Full types
 // These types are used internally
