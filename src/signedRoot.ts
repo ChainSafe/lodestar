@@ -3,7 +3,6 @@ import assert from "assert";
 import {
   AnyContainerType,
   ContainerType,
-  SerializableObject,
   Type,
 } from "./types";
 

@@ -8,7 +8,6 @@ import {
   FullSSZType,
   SerializableArray,
   SerializableObject,
-  SerializableValue,
   Type,
   UintType,
 } from "./types";
@@ -19,7 +18,7 @@ import { parseType } from "./util/types";
 
 function _deserializeUint(data: Buffer, type: UintType, start: number): DeserializedValue {
   const offset = start + type.byteLength;
-  const bn = (new BN(data.slice(start, offset), 16, "le")).subn(type.offset);
+  const bn = (new BN(data.slice(start, offset), 16, "le")).sub(new BN(type.offset));
   const value = (type.useNumber || type.byteLength <= 4) ? bn.toNumber() : bn;
   return {
     offset,

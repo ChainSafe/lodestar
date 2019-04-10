@@ -4,6 +4,7 @@ import BN from "bn.js";
 
 import {
   SerializableValue,
+  Type,
 } from "../src/types";
 
 import { deserialize } from "../src/deserialize";
@@ -35,6 +36,8 @@ describe("deserialize", () => {
     {value: "ffffff0f", type: "uint32", expected: 2**28-1},
     {value: "00000010", type: "uint32", expected: 2**28},
     {value: "ffffffff", type: "uint32", expected: 2**32-1},
+    {value: "0100000001000000", type: {type: Type.uint, byteLength: 8, offset: 2**32, useNumber: true}, expected: 1},
+    {value: "0100000001000000", type: {type: Type.uint, byteLength: 8, offset: new BN(2**32), useNumber: true}, expected: 1},
     {value: "0000000001000000", type: "uint64", expected: new BN(2**32)},
     {value: "ffffffffffff0f00", type: "uint64", expected: new BN(2**52-1)},
     {value: "0100000000000000", type: "uint64", expected: new BN("01", 16)},

@@ -4,6 +4,7 @@ import BN from "bn.js";
 
 import {
   SerializableValue,
+  Type,
 } from "../src/types";
 
 import { hashTreeRoot } from "../src/hashTreeRoot";
@@ -35,6 +36,7 @@ describe("hashTreeRoot", () => {
     {value: 2**28-1, type: "uint32", expected: ""},
     {value: 2**28, type: "uint32", expected: ""},
     {value: 2**32-1, type: "uint32", expected: ""},
+    {value: 1, type: {type: Type.uint, byteLength: 8, offset: 2**32, useNumber: true}, expected: ""},
     {value: 2**32, type: "uint64", expected: ""},
     {value: 2**52-1, type: "uint64", expected: ""},
     {value: 2**32, type: "number64", expected: hashTreeRoot(2**32, "uint64").toString('hex')},

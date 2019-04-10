@@ -4,6 +4,7 @@ import BN from "bn.js";
 
 import {
   SerializableValue,
+  Type,
 } from "../src/types";
 
 import { serialize } from "../src/serialize";
@@ -39,6 +40,8 @@ describe("serialize", () => {
     {value: 2**52-1, type: "uint64", expected: "ffffffffffff0f00"},
     {value: 2**32, type: "number64", expected: "0000000001000000"},
     {value: 2**52-1, type: "number64", expected: "ffffffffffff0f00"},
+    {value: 1, type: {type: Type.uint, byteLength: 8, offset: 2**32, useNumber: true}, expected: "0100000001000000"},
+    {value: 1, type: {type: Type.uint, byteLength: 8, offset: new BN(2**32), useNumber: true}, expected: "0100000001000000"},
     {value: new BN("01", 16), type: "uint64", expected: "0100000000000000"},
     {value: new BN("1000000000000000", 16), type: "uint64", expected: "0000000000000010"},
     {value: new BN("ffffffffffffffff", 16), type: "uint64", expected: "ffffffffffffffff"},
