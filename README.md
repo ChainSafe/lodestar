@@ -179,9 +179,9 @@ let myType = {
 ssz.hashTreeRoot({a: true, b: 5}, myType)
 ```
 
-### Signed Root
+### Signing Root
 
-An object type can be hashed without its final field using `signedRoot`. This is useful if we assume the final field is a signature.
+An object type can be hashed without its final field using `signingRoot`. This is useful if we assume the final field is a signature.
 
 ```typescript
 let myType = {
@@ -198,13 +198,13 @@ let data = {
   c: null,
 }
 
-let signedRoot = ssz.signedRoot(data, myType)
+let signingRoot = ssz.signingRoot(data, myType)
 
-data.c = privateKey.sign(signedRoot)
+data.c = privateKey.sign(signingRoot)
 
 // Others can verify by:
 
-publicKey.verify(signedRoot(data, myType))
+publicKey.verify(signingRoot(data, myType))
 ```
 
 ### License

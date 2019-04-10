@@ -8,7 +8,7 @@
     -   [Parameters][4]
 -   [serialize][5]
     -   [Parameters][6]
--   [signedRoot][7]
+-   [signingRoot][7]
     -   [Parameters][8]
 
 ## deserialize
@@ -44,7 +44,7 @@ Serialize, according to the SSZ spec
 
 Returns **[Buffer][9]** 
 
-## signedRoot
+## signingRoot
 
 Merkleize an SSZ object w/o its last field
 Used for signing/verifying signed data
@@ -68,7 +68,7 @@ Returns **[Buffer][9]**
 
 [6]: #parameters-2
 
-[7]: #signedroot
+[7]: #signingroot
 
 [8]: #parameters-3
 

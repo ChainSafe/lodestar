@@ -16,12 +16,12 @@ import {
 /**
  * Merkleize an SSZ object w/o its last field
  * Used for signing/verifying signed data
- * @method signedRoot
+ * @method signingRoot
  * @param {any} value
  * @param {AnyContainerType} type
  * @returns {Buffer}
  */
-export function signedRoot(value: any, type: AnyContainerType): Buffer {
+export function signingRoot(value: any, type: AnyContainerType): Buffer {
   const _type = parseType(type);
   assert(_type.type === Type.container);
   const truncatedType = copyType(type) as ContainerType;

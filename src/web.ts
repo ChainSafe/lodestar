@@ -1,5 +1,6 @@
 import {
   hashTreeRoot,
+  signingRoot,
   deserialize,
   serialize,
   Type,
@@ -10,6 +11,7 @@ import {
 (function (window: any) {
   window.ssz = {
     hashTreeRoot,
+    signingRoot,
     deserialize,
     serialize,
     Type,
