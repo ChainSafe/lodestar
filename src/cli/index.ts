@@ -6,55 +6,28 @@ import {PrivateEth1Network} from "../eth1/dev/network";
 program
   .version('0.0.1');
 
-// Below are some useful examples
-
 program
   .command('dev')
   .description('Start private eth1 chain with deposit contract and 10 accounts with balance')
   .option("-p, --port [port]", 'Port on which private network node should start', 8545)
   .option("-h, --host [host]", 'Host on which node will be', '127.0.0.1')
+  .option("-m, --mnemonic [mnemonic]", 'mnemonic string to be used for generating account')
   .option("-n, --network [networkId]", "Id of eth1 chain", 200)
   .option("-d, --database [db_path]", 'Path to database, if specified chain will be initialized from stored point')
-  .action(({port, host, network, database}) => {
-      new PrivateEth1Network({port, host, networkId: network, db_path:database}).start();
+  .action(({port, host, network, mnemonic, database}) => {
+      new PrivateEth1Network({port, host, mnemonic, networkId: network, db_path:database}).start();
   });
 
-// // Try $ ./bin/lodestar setup
-// // Try $ ./bin/lodestar setup foo
-// // Try $ ./bin/lodestar setup foo bar
-// // Try $ ./bin/lodestar setup foo bar -s
-// // Try $ ./bin/lodestar setup foo bar -s next
-// program
-//   .command('setup [first] [second]')
-//   .description('run setup commands for all envs')
-//   .option("-s, --setup_mode [mode]", "Which setup mode to use")
-//   .action((first, second, options) => {
-//     console.log("First: ", first);
-//     console.log("Second: ", second);
-//     console.log("Flag: ", options.setup_mode)
-//   });
-//
-// // Try $ ./bin/lodestar exec
-// // Try $ ./bin/lodestar exec something
-// // Try $ ./bin/lodestar exec -e
-// // Try $ ./bin/lodestar exec -e else
-// // Try $ ./bin/lodestar exec -e else --help
-// program
-//   .command('exec <cmd>')
-//   .alias('ex')
-//   .description('execute the given remote cmd')
-//   .option("-e, --exec_mode <mode>", "Which exec mode to use")
-//   .action((cmd, options) => {
-//     console.log("cmd: ", cmd);
-//     console.log("Flag: ", options.exec_mode);
-//   })
-//   .on('--help', () => {
-//     console.log('');
-//     console.log('Examples:');
-//     console.log('');
-//     console.log('  $ deploy exec sequential');
-//     console.log('  $ deploy exec async');
-//   });
+program
+  .command('deposit')
+  .description('Start private network with deposit contract and 10 accounts with balance')
+  .option("-k, --privateKey [privateKey]", 'Private key of account that will deposit 32 ETH')
+  .option("-p, --seed [seed]", 'If seed is submitted, first 10 accounts will deposit 32 ETH')
+  .option("-h, --host [host]", 'Host on which eth node is running', '127.0.0.1')
+  .option("-p, --port [host]", 'Port on which eth node is running', 8545)
+  .action(({privateKey, seed, port, host}) => {
+
+  });
 
 program.on('command:*', function () {
   console.error('Invalid command: %s \n', program.args.join(' '));

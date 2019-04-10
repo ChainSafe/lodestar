@@ -2,7 +2,7 @@ export const networkOpts =  {
   port: 8545,
   networkId: 200,
   default_balance_ether: 1000,
-  host: '127.0.0.1',
+  host: '127.0.0.1'
 };
 
 export const depositContract = {

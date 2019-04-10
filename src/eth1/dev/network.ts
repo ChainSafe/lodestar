@@ -13,6 +13,7 @@ export interface PrivateNetworkOpts {
   default_balance_ether?: number;
   db_path?: string;
   blockTime?: number;
+  mnemonic?: string;
 }
 
 export class PrivateEth1Network {
@@ -31,6 +32,7 @@ export class PrivateEth1Network {
   public async start() {
     this.blockchain  = await promisify(this.server.listen.bind(this.server))(this.opts.port, this.opts.host);
     logger.info(`Started private network node on ${this.opts.host}:${this.opts.port}`);
+    logger.info(`Generating accounts with mnemonic: ${this.blockchain._provider.options.mnemonic}`);
     logger.info('List of accounts with eth balance (<address>:<privateKey>-<balance>):');
     Object.keys(this.blockchain.accounts).forEach((address) => {
       const privateKey = this.blockchain.accounts[address].secretKey.toString('hex');
