@@ -522,8 +522,8 @@ export function getForkVersion(fork: Fork, epoch: Epoch): number64 {
  * @param {int} domainType
  * @returns {Number}
  */
-export function getDomain(fork: Fork, epoch: Epoch, domainType: int): uint64 {
-  return new BN(getForkVersion(fork, epoch)).mul(new BN(2 ** 32)).addn(domainType);
+export function getDomain(fork: Fork, epoch: Epoch, domainType: int): number64 {
+  return (getForkVersion(fork, epoch) * (2 ** 32)) + domainType;
 }
 
 /**
@@ -740,7 +740,7 @@ export function processDeposit(
     const validator: Validator = {
       pubkey,
       withdrawalCredentials,
-      activationEpoch: FAR_FUTURE_EPOCH, 
+      activationEpoch: FAR_FUTURE_EPOCH,
       exitEpoch: FAR_FUTURE_EPOCH,
       withdrawalEpoch: FAR_FUTURE_EPOCH,
       slashedEpoch: FAR_FUTURE_EPOCH,
