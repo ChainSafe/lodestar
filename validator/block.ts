@@ -1,18 +1,21 @@
 import {hashTreeRoot} from "@chainsafe/ssz";
-import {ValidatorIndex, BeaconBlock, BeaconState} from "../src/types";
+import {ValidatorIndex, BeaconBlock, BeaconState, bytes48, Epoch} from "../src/types";
 import RPCProvider from "./stubs";
 import {blsSign} from "../src/stubs/bls";
 import {getDomain, slotToEpoch} from "../src/chain/helpers/stateTransitionHelpers";
 import {DOMAIN_RANDAO} from "./constants";
+import {getEmptyBlock} from "../src/chain/helpers/genesis";
 
 export default class BlockProcessingService {
   private validatorIndex: ValidatorIndex;
   private provider: RPCProvider;
-  private logger: blgr;
+  private privateKey: bytes48[];
+  private logger: Function;
 
-  public constructor(index: ValidatorIndex, provider: RPCProvider, logger: blgr) {
+  public constructor(index: ValidatorIndex, provider: RPCProvider, privateKey: bytes48[], logger: Function) {
     this.validatorIndex = index;
     this.provider = provider;
+    this.privateKey = privateKey;
     this.logger = logger;
   }
 
@@ -23,10 +26,10 @@ export default class BlockProcessingService {
   private async isProposer(): Promise<boolean> {
     let isValid = false;
     while (!isValid) {
-      this.logger.info("Checking if validator is proposer...");
+      this.logger("Checking if validator is proposer...");
       isValid = await this.provider.isActiveValidator(this.validatorIndex);
     }
-    thislogger.info("Validator is proposer!");
+    this.logger("Validator is proposer!");
     return true;
   }
 
@@ -35,22 +38,39 @@ export default class BlockProcessingService {
    * @returns {Promise<void>}
    */
   private async buildBlock() {
-    let block: BeaconBlock;
-    const slot = await this.provider.getCurrentSlot();
-    const prevBlock = await this.provider.getCurrentBlock();
-    const curState = await this.provider.getCurrentState();
-    block.slot = slot;
+    let block: BeaconBlock = getEmptyBlock();
+    block = await this.assembleHeader(block);
+    block = await this.assembleBody(block);
+    block = await this.assembleAttestations(block);
+  }
+
+  private async assembleHeader(block: BeaconBlock): Promise<BeaconBlock> {
+    const slot: number = await this.provider.getCurrentSlot();
+    const prevBlock: BeaconBlock = await this.provider.getCurrentBlock();
+    const curState: BeaconState = await this.provider.getCurrentState();
+    const epoch = slotToEpoch(block.slot);
     // Note: To calculate state_root, the validator should first run the state transition function on an unsigned block
     // containing a stub for the state_root. It is useful to be able to run a state transition function that does not
     // validate signatures or state root for this purpose.
-    block.parentRoot = hashTreeRoot(prevBlock);
-    block.stateRoot = hashTreeRoot(curState);
-    const epoch = slotToEpoch(block.slot);
+    block.slot = slot;
+    block.parentRoot = hashTreeRoot(prevBlock, BeaconBlock);
+    block.stateRoot = hashTreeRoot(curState, BeaconState);
     block.randaoReveal = blsSign(
-      validator.privkey,
-      hashTreeRoot(epoch),
+      this.privateKey,
+      hashTreeRoot(epoch, Epoch),
       getDomain(curState.fork, epoch, DOMAIN_RANDAO)
-      )
+    );
+    // TODO Eth1Data
+    // TODO Signature
+    return block;
+  }
+
+  private async assembleBody(block: BeaconBlock): Promise<BeaconBlock> {
+    return block;
+  }
+
+  private async assembleAttestations(block: BeaconBlock): Promise<BeaconBlock> {
+    return block;
   }
 
   /**

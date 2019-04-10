@@ -1,7 +1,7 @@
 // This file makes some naive assumptions surrounding the way RPC like calls will be made in ETH2.0
 // Subject to change with future developments with Hobbits and wire protocol
 import BN from "bn.js";
-import {ValidatorIndex, Slot, BeaconBlock, BeaconState} from "../src/types";
+import {ValidatorIndex, Slot, BeaconBlock, BeaconState, bytes48} from "../src/types";
 
 // Super awesome stubs
 function notSoRandomRandomBoolean(): boolean {
@@ -36,7 +36,7 @@ export default class RPCProvider {
     return notSoRandomRandomBoolean();
   }
 
-  public getValidatorIndex(pubkey: string): ValidatorIndex {
+  public getValidatorIndex(pubkey: bytes48[]): ValidatorIndex {
     this.validatorIndex = notSoRandomRandomValidatorIndex();
     return this.validatorIndex;
   }
