@@ -56,6 +56,13 @@ export default class RPCProvider {
     return b;
   }
 
+  public hasChainStarted(): number {
+    if (notSoRandomRandomBoolean()) {
+      return Date.now();
+    }
+    return 0;
+  }
+
   public getCurrentSlot(): Slot {
     if (!this.currentSlot) {
       const slot = notSoRandomRandomSlot();

@@ -28,22 +28,18 @@ class Validator {
   public async start(): Promise<void> {
     this.logger("Starting validator client...");
 
-    await this.setup();
+    await this.setupRPC();
+
+    this.isActive = await this.isChainLive();
     this.validatorIndex = await this.getValidatorIndex();
-    this.isActive = await this.checkValidatorStatus();
 
-    this.logger("Validator client successfully started!");
-
-    this.processBlocks();
+    await this.setupServices();
+    this.startServices();
   }
 
-  /**
-   * Main method invoking all setup steps
-   * @returns {Promise<void>}
-   */
-  private async setup(): Promise<void> {
-    // await this.setupKeystores();
-    this.setupRPC();
+  private async setupServices(): Promise<void> {
+    this.blockService = new BlockProcessingService(this.validatorIndex, this.provider, this.ctx.privateKey, this.logger);
+    // TODO setup attestation service
   }
 
   /**
@@ -57,56 +53,40 @@ class Validator {
   }
 
   /**
-   * Sets up necessary keystores and checks that requirements are met.
-   * @returns {Promise<void>}
-   */
-  // private async setupKeystores(): Promise<void> {
-  //   this.logger("Unlocking wallet...");
-  //
-  //   // Attempt to unlock public wallet
-  //   const [err1, publicWallet] = await to<ethers.Wallet>(unlockWallet(this.ctx.publicKeystore, this.ctx.publicKeystorePassword, "public wallet"));
-  //   if (err1) {
-  //     this.logger.Error("Public wallet could not be unlocked!");
-  //   }
-  //   this.publicWallet = publicWallet;
-  //
-  //   this.logger.info("Wallet successfully unlocked!");
-  // }
-
-  /**
    * Checks to see if the validator has been processed on the beacon chain.
    * @returns {Promise<ValidatorIndex>}
    */
   private async getValidatorIndex(): Promise<ValidatorIndex> {
-    let index: ValidatorIndex;
-    while (!index) {
-      this.logger("Checking if validator has been processed...");
-      index = await this.provider.getValidatorIndex(this.ctx.publicKey);
+    this.logger("Checking if validator has been processed...");
+    const index = await this.provider.getValidatorIndex(this.ctx.publicKey);
+    if (index) {
+      this.logger("Validator has been processed!");
+      return index;
     }
-    this.logger("Validator has been processed!")
-    return index;
+    setTimeout(this.getValidatorIndex, 1000);
   }
 
   /**
-   * Checks to see if a validator is active.
+   * Recursively checks for the chain start log event from the ETH1.x deposit contract
    * @returns {Promise<boolean>}
    */
-  private async checkValidatorStatus(): Promise<boolean> {
-    let isValid = false;
-    while (!isValid) {
-      this.logger("Checking if validator is active...");
-      isValid = await this.provider.isActiveValidator(this.validatorIndex);
+  private async isChainLive(): Promise<boolean> {
+    this.logger("Checking if chain has started...");
+    if (await this.provider.hasChainStarted()) {
+      this.logger("Chain start has occured!");
+      return true;
     }
-    this.logger("Validator is active!");
-    return true;
+    setTimeout(this.isChainLive, 1000);
   }
 
   /**
    * Creates a new block proccessing service and starts it.
    */
-  private processBlocks(): void {
-    this.blockService = new BlockProcessingService(this.validatorIndex, this.provider, this.ctx.privateKey, this.logger);
+  private startServices(): void {
+    this.logger("Starting all services...");
+
     this.blockService.start();
+    // TODO start attestation service
   }
 }
 
