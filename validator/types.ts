@@ -5,3 +5,7 @@ export interface ValidatorCtx {
   privateKey: bytes48[];
   rpcUrl: string;
 }
+
+export interface GenesisInfo {
+  startTime: number;
+}

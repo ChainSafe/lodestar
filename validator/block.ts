@@ -20,20 +20,6 @@ export default class BlockProcessingService {
   }
 
   /**
-   * Check if validator is a proposer
-   * @returns {Promise<boolean>}
-   */
-  private async isProposer(): Promise<boolean> {
-    let isValid = false;
-    while (!isValid) {
-      this.logger("Checking if validator is proposer...");
-      isValid = await this.provider.isActiveValidator(this.validatorIndex);
-    }
-    this.logger("Validator is proposer!");
-    return true;
-  }
-
-  /**
    * IFF a validator is selected construct a block to propose.
    * @returns {Promise<void>}
    */
@@ -78,7 +64,6 @@ export default class BlockProcessingService {
    * @returns {Promise<void>}
    */
   public async start() {
-    await this.isProposer();
-    this.buildBlock();
+    await this.buildBlock();
   }
 }

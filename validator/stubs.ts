@@ -1,7 +1,7 @@
 // This file makes some naive assumptions surrounding the way RPC like calls will be made in ETH2.0
 // Subject to change with future developments with Hobbits and wire protocol
-import BN from "bn.js";
 import {ValidatorIndex, Slot, BeaconBlock, BeaconState, bytes48} from "../src/types";
+import {GenesisInfo} from "./types";
 
 // Super awesome stubs
 function notSoRandomRandomBoolean(): boolean {
@@ -56,11 +56,14 @@ export default class RPCProvider {
     return b;
   }
 
-  public hasChainStarted(): number {
-    if (notSoRandomRandomBoolean()) {
-      return Date.now();
-    }
-    return 0;
+  public hasChainStarted(): boolean {
+    return notSoRandomRandomBoolean();
+  }
+
+  public getGenisisInfo(): GenesisInfo {
+    return {
+      startTime: Date.now()
+    };
   }
 
   public getCurrentSlot(): Slot {
