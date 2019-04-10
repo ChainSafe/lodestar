@@ -17,7 +17,7 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts src/ validator/",
     "lint-fix": "eslint --ext .ts src/ --fix",
-    "pretest": "npm run check-types",
+    "pretest": "npm brun check-types",
     "test": "nyc -r lcov -e .ts -x \"*.test.ts\" mocha -r ./.babel-register \"tests/**/*.test.ts\" && nyc report",
     "coverage": "codecov"
   },
@@ -52,6 +52,7 @@
     "pouchdb-core": "^7.0.0",
     "promisify-es6": "^1.0.3",
     "winston": "^3.2.1",
+    "ganache-core": "^2.5.3",
     "ws": "^6.2.1"
   },
   "bin": {
@@ -75,7 +76,6 @@
     "chai": "^4.2.0",
     "codecov": "^3.1.0",
     "eslint": "^5.14.1",
-    "ganache-core": "^2.5.3",
     "mocha": "^5.2.0",
     "nyc": "^13.3.0",
     "sinon": "^7.2.7",
