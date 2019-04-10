@@ -1,5 +1,4 @@
 import assert from "assert";
-import BN from "bn.js";
 
 import {BeaconState, Epoch, ValidatorIndex, Shard} from "../src/types";
 import {getPreviousEpoch, getCurrentEpoch, getEpochStartSlot, getCrosslinkCommitteesAtSlot, getBeaconProposerIndex} from "../src/chain/helpers/stateTransitionHelpers";
@@ -23,8 +22,7 @@ import {SLOTS_PER_EPOCH} from "../src/constants";
 export function getCommitteeAssignment(
   state: BeaconState,
   epoch: Epoch,
-  validatorIndex: ValidatorIndex,
-  registryChange: boolean = false): {validators: ValidatorIndex[]; shard: Shard; slot: number; isProposer: boolean} {
+  validatorIndex: ValidatorIndex): {validators: ValidatorIndex[]; shard: Shard; slot: number; isProposer: boolean} {
 
   const previousEpoch = getPreviousEpoch(state);
   const nextEpoch = getCurrentEpoch(state) + 1;
@@ -34,13 +32,12 @@ export function getCommitteeAssignment(
   const loopEnd = epochStartSlot + SLOTS_PER_EPOCH;
 
   for (let slot = epochStartSlot; slot < loopEnd; slot++) {
-    const crosslinkCommittees = getCrosslinkCommitteesAtSlot(state, slot, registryChange);
+    const crosslinkCommittees = getCrosslinkCommitteesAtSlot(state, slot);
     const selectedCommittees = crosslinkCommittees.map((x) => {
       if (x[0].contains(validatorIndex)) {
         return x;
       }
     });
-
     if (selectedCommittees.length > 0) {
       const validators = selectedCommittees[0][0];
       const shard = selectedCommittees[0][1];

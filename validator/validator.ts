@@ -14,6 +14,8 @@ import RPCProvider from "./stubs";
 import {ValidatorIndex} from "../src/types";
 import BlockProcessingService from "./block";
 import {SLOTS_PER_EPOCH} from "../src/constants";
+import {getCommitteeAssignment} from "./helpers";
+import {getCurrentEpoch} from "../src/chain/helpers/stateTransitionHelpers";
 
 /**
  * Main class for the Validator client.
@@ -110,7 +112,9 @@ class Validator {
   private checkAssignment(): void {
     // If epoch boundary then look up for new assignment
     if ((Date.now() - this.genesisInfo.startTime) % SLOTS_PER_EPOCH === 0) {
-      
+      const epoch = getCurrentEpoch(this.ctx.state);
+      getCommitteeAssignment(this.ctx.state, epoch, this.validatorIndex);
+      // 
     }
   }
 }
