@@ -3,6 +3,8 @@ import {promisify} from "util";
 import logger from "../../logger";
 import * as utils from 'ethers/utils';
 import deepmerge from "deepmerge";
+import {networkOpts as defaultOpts, depositContract} from "./defaults";
+import * as ethers from "ethers/ethers";
 
 export interface PrivateNetworkOpts {
   port?: number;
@@ -13,16 +15,11 @@ export interface PrivateNetworkOpts {
   blockTime?: number;
 }
 
-const defaultOpts: PrivateNetworkOpts = {
-  port: 8545,
-  networkId: 200,
-  default_balance_ether: 1000,
-  host: '127.0.0.1',
-};
-
 export class PrivateEth1Network {
 
   private server: any;
+
+  private blockchain: any;
 
   private opts: PrivateNetworkOpts;
 
@@ -32,14 +29,26 @@ export class PrivateEth1Network {
   }
 
   public async start() {
-    const blockchain  = await promisify(this.server.listen.bind(this.server))(this.opts.port, this.opts.host);
+    this.blockchain  = await promisify(this.server.listen.bind(this.server))(this.opts.port, this.opts.host);
     logger.info(`Started private network node on ${this.opts.host}:${this.opts.port}`);
     logger.info('List of accounts with eth balance (<address>:<privateKey>-<balance>):');
-    Object.keys(blockchain.accounts).forEach((address) => {
-      const privateKey = blockchain.accounts[address].secretKey.toString('hex');
-      const balance = utils.formatEther(blockchain.accounts[address].account.balance);
+    Object.keys(this.blockchain.accounts).forEach((address) => {
+      const privateKey = this.blockchain.accounts[address].secretKey.toString('hex');
+      const balance = utils.formatEther(this.blockchain.accounts[address].account.balance);
       logger.info(`${address}:0x${privateKey} - ${balance} ETH`)
     });
+    await this.deployDepositContract();
+  }
+
+  public async deployDepositContract() {
+    const deployKey = this.blockchain.accounts[this.blockchain.coinbase].secretKey.toString('hex');
+    const provider = new ethers.providers.Web3Provider(this.blockchain._provider);
+    const deployWallet = new ethers.Wallet(deployKey, provider);
+    const factory = new ethers.ContractFactory(depositContract.abi, depositContract.bytecode, deployWallet);
+    const contract = await factory.deploy();
+    const address = contract.address;
+    await contract.deployed();
+    logger.info(`Deposit contract deployed to address: ${address}`);
   }
 
 }
