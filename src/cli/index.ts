@@ -10,13 +10,13 @@ program
 
 program
   .command('dev')
-  .description('Start private network with deposit contract and 10 accounts with balance')
-  .option("-p, --port [port]", 'Port on which private network node should start(Default: 8545)')
-  .option("-h, --host [host]", 'Host on which node will be . (Default: 127.0.0.1)')
-  .option("-n, --network [networkId]", '(Default: 200)')
+  .description('Start private eth1 chain with deposit contract and 10 accounts with balance')
+  .option("-p, --port [port]", 'Port on which private network node should start', 8545)
+  .option("-h, --host [host]", 'Host on which node will be', '127.0.0.1')
+  .option("-n, --network [networkId]", "Id of eth1 chain", 200)
   .option("-d, --database [db_path]", 'Path to database, if specified chain will be initialized from stored point')
-  .action(({port, host, networkId, db_path}) => {
-      new PrivateEth1Network({port, host, networkId, db_path}).start();
+  .action(({port, host, network, database}) => {
+      new PrivateEth1Network({port, host, networkId: network, db_path:database}).start();
   });
 
 // // Try $ ./bin/lodestar setup

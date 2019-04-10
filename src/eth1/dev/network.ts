@@ -25,7 +25,7 @@ export class PrivateEth1Network {
 
   constructor(opts: PrivateNetworkOpts) {
     this.opts = deepmerge(defaultOpts, opts);
-    this.server = ganache.server(opts);
+    this.server = ganache.server(this.opts);
   }
 
   public async start() {
