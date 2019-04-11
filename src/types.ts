@@ -54,7 +54,7 @@ export enum Type {
 export interface UintType {
   type: Type.uint;
   byteLength: number;
-  offset: number;
+  offset: number | BN;
   useNumber: boolean;
 }
 

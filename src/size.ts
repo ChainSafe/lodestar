@@ -7,7 +7,6 @@ import {
   FullSSZType,
   SerializableArray,
   SerializableObject,
-  SerializableValue,
   Type,
 } from "./types";
 
