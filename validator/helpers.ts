@@ -18,11 +18,10 @@ import {SLOTS_PER_EPOCH} from "../src/constants";
  * @param {boolean} registryChange
  * @returns {{validators: ValidatorIndex[]; shard: Shard; slot: number; isProposer: boolean}}
  */
-// TODO: Fix small bugs
 export function getCommitteeAssignment(
   state: BeaconState,
   epoch: Epoch,
-  validatorIndex: ValidatorIndex): {validators: ValidatorIndex[]; shard: Shard; slot: number; isProposer: boolean} {
+  validatorIndex: ValidatorIndex): {validators: ValidatorIndex[]; shard: Shard; slot: number;} {
 
   const previousEpoch = getPreviousEpoch(state);
   const nextEpoch = getCurrentEpoch(state) + 1;
@@ -33,16 +32,12 @@ export function getCommitteeAssignment(
 
   for (let slot = epochStartSlot; slot < loopEnd; slot++) {
     const crosslinkCommittees = getCrosslinkCommitteesAtSlot(state, slot);
-    const selectedCommittees = crosslinkCommittees.map((x) => {
-      if (x[0].contains(validatorIndex)) {
-        return x;
-      }
-    });
+    const selectedCommittees = crosslinkCommittees.map((committee) => committee[0].contains(validatorIndex))
+    
     if (selectedCommittees.length > 0) {
       const validators = selectedCommittees[0][0];
       const shard = selectedCommittees[0][1];
-      const isProposer = validatorIndex === getBeaconProposerIndex(state, slot);
-      return {validators, shard, slot, isProposer}
+      return {validators, shard, slot};
     }
   }
 }

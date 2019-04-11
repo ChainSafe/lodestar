@@ -114,7 +114,7 @@ class Validator {
     if ((Date.now() - this.genesisInfo.startTime) % SLOTS_PER_EPOCH === 0) {
       const epoch = getCurrentEpoch(this.ctx.state);
       getCommitteeAssignment(this.ctx.state, epoch, this.validatorIndex);
-      // 
+      //
     }
   }
 }
