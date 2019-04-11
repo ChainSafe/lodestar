@@ -21,7 +21,8 @@ export class Eth1Wallet {
    * @param amount amount to wei to deposit on contract
    */
   public async createValidatorDeposit(address: string, amount: BigNumber): Promise<string> {
-    const contract = new ethers.Contract(address, defaults.depositContract.abi, this.wallet);
+    let contract = new ethers.Contract(address, defaults.depositContract.abi, this.wallet);
+    contract = await contract.deployed();
     //TODO: Implement real deposit arguments according to spec : https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#deposit-arguments
     const depositData = Buffer.alloc(512);
     const tx: ContractTransaction = await contract.deposit(depositData, {value: amount});

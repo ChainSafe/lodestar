@@ -42,7 +42,28 @@ export class PrivateEth1Network {
     await this.deployDepositContract();
   }
 
-  public async deployDepositContract() {
+  /**
+   * Returns array of private keys
+   */
+  public accounts(): Array<string> {
+    return Object
+      .values(this.blockchain.accounts as any[])
+      .map(account => account.secretKey);
+  }
+
+  public rpcUrl(): string {
+    return `http://${this.opts.host}:${this.opts.port}`;
+  }
+
+  public mnemonic(): string {
+    return this.blockchain._provider.options.mnemonic;
+  }
+
+  public async stop() {
+    await promisify(this.server.close)();
+  }
+
+  public async deployDepositContract(): Promise<string> {
     const deployKey = this.blockchain.accounts[this.blockchain.coinbase].secretKey.toString('hex');
     const provider = new ethers.providers.Web3Provider(this.blockchain._provider);
     const deployWallet = new ethers.Wallet(deployKey, provider);
@@ -51,6 +72,6 @@ export class PrivateEth1Network {
     const address = contract.address;
     await contract.deployed();
     logger.info(`Deposit contract deployed to address: ${address}`);
+    return address;
   }
-
 }

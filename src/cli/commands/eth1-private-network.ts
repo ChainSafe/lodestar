@@ -1,6 +1,7 @@
 import {ICliCommand} from "./interface";
 import {PrivateEth1Network} from "../../eth1/dev";
 import * as commander from "commander";
+import logger from "../../logger/winston";
 
 export class Eth1PrivateNetworkCommand implements ICliCommand {
 
@@ -13,19 +14,26 @@ export class Eth1PrivateNetworkCommand implements ICliCommand {
       .option("-m, --mnemonic [mnemonic]", 'mnemonic string to be used for generating account')
       .option("-n, --network [networkId]", "Id of eth1 chain", 200)
       .option("-d, --database [db_path]", 'Path to database, if specified chain will be initialized from stored point')
-      .action(({port, host, network, mnemonic, database}) => {
-        this.action(host, port, network, mnemonic, database);
+      .action(async ({port, host, network, mnemonic, database}) => {
+        try {
+          await this.action(host, port, network, mnemonic, database);
+        } catch (e) {
+          logger.error(e.message);
+        }
+
       });
   }
 
-  public action(host: string, port: number, network: number, mnemonic: string, database: string) {
-    new PrivateEth1Network({
+  public async action(host: string, port: number, network: number, mnemonic: string, database: string): Promise<PrivateEth1Network> {
+    const privateNetwork = new PrivateEth1Network({
       port,
       host,
       mnemonic,
       networkId: network,
       db_path: database
-    }).start();
+    });
+    await privateNetwork.start();
+    return privateNetwork;
   }
 
 }
