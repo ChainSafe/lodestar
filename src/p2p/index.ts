@@ -1,7 +1,9 @@
 import {EventEmitter} from "events";
-import {LodestarNode} from "node";
+import {Service} from "../node";
+import {LodestarNode} from "./";
 import {debug} from "debug";
 import {PeerBook} from "peer-book";
+import {promisify} from "promisify-es6";
 
 const defaultOpts = {
   maxPeers: 25,
@@ -13,7 +15,7 @@ const defaultOpts = {
 /**
  * The P2PNetwork service manages p2p connection/subscription objects
  */
-export class P2PNetwork extends EventEmitter {
+export class P2PNetwork extends EventEmitter implements Service {
   public constructor(opts) {
     super();
     options = { ...defaultOpts, ...opts};
@@ -82,12 +84,7 @@ export class P2PNetwork extends EventEmitter {
 	}
       });
     }
-    await new Promise((resolve, reject) => this.node.start((err) => {
-      if (err) {
-        reject(err);
-      }
-      resolve();
-    }));
+    let startNode = promisify(this.node.start.bind(this.node))();
 
     this.started = true;
   }
