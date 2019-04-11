@@ -5,6 +5,7 @@ import chaiAsPromised from 'chai-as-promised';
 import logger from "../../../src/logger/winston";
 import {CliError} from "../../../src/cli/error";
 import {Wallet} from "ethers";
+import program from "commander";
 
 chai.use(chaiAsPromised);
 
@@ -24,6 +25,15 @@ describe('[CLI] deposit', () => {
   after(async () => {
     await eth1Network.stop();
     logger.silent(false);
+  });
+
+  it('Should be able to register', async () => {
+    const command = new DepositCommand();
+    const commandCount = program.commands.length;
+    await expect(
+      command.register(program)
+    ).to.not.throw;
+    expect(program.commands.length).to.be.equal(commandCount + 1);
   });
 
   it('Should trow error if unable to connect to eth1 network', async () => {
