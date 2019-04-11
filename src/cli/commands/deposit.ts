@@ -5,6 +5,7 @@ import * as ethers from "ethers/ethers";
 import {Wallet} from "ethers/ethers";
 import logger from "../../logger/winston";
 import {Eth1Wallet} from "../../eth1";
+import {CliError} from "../error";
 
 export class DepositCommand implements ICliCommand {
 
@@ -17,8 +18,8 @@ export class DepositCommand implements ICliCommand {
       .option("-n, --node [node]", 'Url of eth1 node', 'http://127.0.0.1:8545')
       .option("-v, --value [value]", 'Amount of ether to deposit', "32")
       .option("-c, --contract [contract]", 'Address of deposit contract', defaults.depositContract.address)
-      .action(async ({privateKey, mnemonic, node, value, contract}) => {
-
+      .action( ({privateKey, mnemonic, node, value, contract}) => {
+          this.action(privateKey, mnemonic, node, value, contract);
       });
   }
 
@@ -34,7 +35,7 @@ export class DepositCommand implements ICliCommand {
     } else if (privateKey) {
       wallets.push(new Wallet(privateKey, provider))
     } else {
-      return logger.error('You have to submit either privateKey or mnemonic. Check --help');
+      throw new CliError('You have to submit either privateKey or mnemonic. Check --help');
     }
     wallets.forEach(async wallet => {
       try {

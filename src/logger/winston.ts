@@ -18,6 +18,7 @@ export class WinstonLogger extends AbstractLogger {
             }),
             format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`)
           ),
+          handleExceptions: true
         }),
 
       ],
