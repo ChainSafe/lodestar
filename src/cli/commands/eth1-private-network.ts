@@ -14,7 +14,7 @@ export class Eth1PrivateNetworkCommand implements ICliCommand {
       .option("-n, --network [networkId]", "Id of eth1 chain", 200)
       .option("-d, --database [db_path]", 'Path to database, if specified chain will be initialized from stored point')
       .action(({port, host, network, mnemonic, database}) => {
-        this.action(port, host, network, mnemonic, database);
+        this.action(host, port, network, mnemonic, database);
       });
   }
 

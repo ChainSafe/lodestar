@@ -18,13 +18,23 @@ export class DepositCommand implements ICliCommand {
       .option("-n, --node [node]", 'Url of eth1 node', 'http://127.0.0.1:8545')
       .option("-v, --value [value]", 'Amount of ether to deposit', "32")
       .option("-c, --contract [contract]", 'Address of deposit contract', defaults.depositContract.address)
-      .action( ({privateKey, mnemonic, node, value, contract}) => {
-          this.action(privateKey, mnemonic, node, value, contract);
+      .action( async ({privateKey, mnemonic, node, value, contract}) => {
+        try {
+          await this.action(privateKey, mnemonic, node, value, contract);
+        } catch (e) {
+          logger.error(e.message);
+        }
+
       });
   }
 
-  public action(privateKey: string, mnemonic: string, node: string, value: string, contract: string) {
+  public async action(privateKey: string, mnemonic: string, node: string, value: string, contract: string) {
     const provider = new ethers.providers.JsonRpcProvider(node);
+    try {
+      await provider.getNetwork();
+    } catch (e) {
+      throw new CliError(`JSON RPC node (${node}) not available. Reason: ${e.message}`);
+    }
     const wallets = [];
     if(mnemonic) {
       for (let i=0; i<10; i++) {
@@ -37,15 +47,16 @@ export class DepositCommand implements ICliCommand {
     } else {
       throw new CliError('You have to submit either privateKey or mnemonic. Check --help');
     }
-    wallets.forEach(async wallet => {
+    await wallets.forEach(async wallet => {
       try {
         const hash = await (new Eth1Wallet(wallet.privateKey, provider))
           .createValidatorDeposit(contract, ethers.utils.parseEther(value));
         logger.info(`Successfully deposited ${value} ETH from ${wallet.address} to deposit contract. Tx hash: ${hash}`);
       } catch (e) {
-        logger.error(`Failed to make deposit for account ${wallet.address}. Reason: ${e.message}`);
+        throw new CliError(`Failed to make deposit for account ${wallet.address}. Reason: ${e.message}`);
       }
     });
+
   }
 
 }
