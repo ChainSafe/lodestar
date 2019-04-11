@@ -8,11 +8,11 @@ export class Eth1Wallet {
 
   private wallet: Wallet;
 
-  constructor(privateKey: string, provider?: Provider) {
-      if(!provider) {
-        provider = ethers.getDefaultProvider()
-      }
-      this.wallet = new Wallet(privateKey, provider);
+  public constructor(privateKey: string, provider?: Provider) {
+    if(!provider) {
+      provider = ethers.getDefaultProvider()
+    }
+    this.wallet = new Wallet(privateKey, provider);
   }
 
   /**
@@ -22,7 +22,6 @@ export class Eth1Wallet {
    */
   public async createValidatorDeposit(address: string, amount: BigNumber): Promise<string> {
     let contract = new ethers.Contract(address, defaults.depositContract.abi, this.wallet);
-    contract = await contract.deployed();
     //TODO: Implement real deposit arguments according to spec : https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#deposit-arguments
     const depositData = Buffer.alloc(512);
     const tx: ContractTransaction = await contract.deposit(depositData, {value: amount});

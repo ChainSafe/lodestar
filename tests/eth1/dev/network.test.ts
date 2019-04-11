@@ -17,14 +17,16 @@ describe('Eth1 dev network', () => {
   it('should start as configured', async () => {
     const network = new PrivateEth1Network({
       host: '127.0.0.1',
-      port: 34567,
+      port: 34568,
       mnemonic: 'test',
       default_balance_ether: 1400
     });
     await network.start();
-    const accountBalance = await new Wallet(network.accounts()[0]).getBalance();
-    expect(accountBalance.toString()).to.be.equal(ethers.utils.parseEther('1400').toString());
-    expect(network.rpcUrl()).to.be.equal('http://127.0.0.1:34567');
+    const accountBalance = await new Wallet(
+      network.accounts()[9],
+      new ethers.providers.JsonRpcProvider(network.rpcUrl())).getBalance();
+    expect(accountBalance.gt(ethers.utils.parseEther('1300'))).to.be.true;
+    expect(network.rpcUrl()).to.be.equal('http://127.0.0.1:34568');
     expect(network.mnemonic()).to.be.equal('test');
     expect(network.accounts().length).to.be.equal(10);
     await network.stop();

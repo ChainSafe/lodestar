@@ -1,9 +1,9 @@
-import {ICliCommand} from "./interface";
+import {CliCommand} from "./interface";
 import {PrivateEth1Network} from "../../eth1/dev";
 import * as commander from "commander";
 import logger from "../../logger/winston";
 
-export class Eth1PrivateNetworkCommand implements ICliCommand {
+export class Eth1PrivateNetworkCommand implements CliCommand {
 
   public register(commander: commander.CommanderStatic): void {
     commander
@@ -13,7 +13,7 @@ export class Eth1PrivateNetworkCommand implements ICliCommand {
       .option("-h, --host [host]", 'Host on which node will be', '127.0.0.1')
       .option("-m, --mnemonic [mnemonic]", 'mnemonic string to be used for generating account')
       .option("-n, --network [networkId]", "Id of eth1 chain", 200)
-      .option("-d, --database [db_path]", 'Path to database, if specified chain will be initialized from stored point')
+      .option("-d, --database [database]", 'Path to database, if specified chain will be initialized from stored point')
       .action(async ({port, host, network, mnemonic, database}) => {
         try {
           await this.action(host, port, network, mnemonic, database);
@@ -30,7 +30,7 @@ export class Eth1PrivateNetworkCommand implements ICliCommand {
       host,
       mnemonic,
       networkId: network,
-      db_path: database
+      dbPath: database
     });
     await privateNetwork.start();
     return privateNetwork;

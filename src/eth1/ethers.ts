@@ -6,6 +6,7 @@ import { deserialize } from "@chainsafe/ssz";
 import { bytes32, DepositData, Deposit, Eth1Data } from "../types";
 
 import {Eth1Options, Eth1Notifier} from "./interface";
+import logger from "../logger/winston";
 
 export interface EthersEth1Options extends Eth1Options {
   provider: ethers.providers.Provider;
@@ -63,7 +64,7 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     const data: DepositData = deserialize(dataBuf, DepositData);
 
     // TODO: Add deposit to merkle trie/db
-
+    logger.info('Deposit');
     this.emit('deposit', data, index);
   }
 

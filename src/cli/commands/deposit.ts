@@ -1,4 +1,4 @@
-import {ICliCommand} from "./interface";
+import {CliCommand} from "./interface";
 import * as commander from "commander";
 import defaults from "../../eth1/defaults";
 import * as ethers from "ethers/ethers";
@@ -7,7 +7,7 @@ import logger from "../../logger/winston";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
 
-export class DepositCommand implements ICliCommand {
+export class DepositCommand implements CliCommand {
 
   public register(commander: commander.CommanderStatic): void {
     commander
@@ -67,7 +67,7 @@ export class DepositCommand implements ICliCommand {
    * @param provider
    * @param n number of wallets to retrieve
    */
-  private fromMnemonic(mnemonic: string, provider, n: number): Array<Wallet> {
+  private fromMnemonic(mnemonic: string, provider, n: number): Wallet[] {
     const wallets = [];
     for (let i = 0; i < 10; i++) {
       let wallet = Wallet.fromMnemonic(mnemonic, `m/44'/60'/0'/0/${i}`);

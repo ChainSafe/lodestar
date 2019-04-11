@@ -10,8 +10,8 @@ export interface PrivateNetworkOpts {
   port?: number;
   host?: string;
   networkId?: number;
-  default_balance_ether?: number;
-  db_path?: string;
+  defaultBalance?: number;
+  dbPath?: string;
   blockTime?: number;
   mnemonic?: string;
 }
@@ -24,9 +24,15 @@ export class PrivateEth1Network {
 
   private opts: PrivateNetworkOpts;
 
-  constructor(opts: PrivateNetworkOpts) {
+  public constructor(opts: PrivateNetworkOpts) {
     this.opts = deepmerge(defaultOpts, opts);
-    this.server = ganache.server(this.opts);
+    this.server = ganache.server({
+      ...this.opts,
+      // eslint-disable-next-line  @typescript-eslint/camelcase
+      default_balance_ether: this.opts.defaultBalance,
+      // eslint-disable-next-line  @typescript-eslint/camelcase
+      db_path: this.opts.dbPath
+    });
   }
 
   public async start() {
@@ -45,7 +51,7 @@ export class PrivateEth1Network {
   /**
    * Returns array of private keys
    */
-  public accounts(): Array<string> {
+  public accounts(): string[] {
     return Object
       .values(this.blockchain.accounts as any[])
       .map(account => account.secretKey);

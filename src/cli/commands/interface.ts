@@ -1,6 +1,6 @@
 import {CommanderStatic} from "commander";
 
-export interface ICliCommand {
+export interface CliCommand {
 
   register(commander: CommanderStatic): void;
 
