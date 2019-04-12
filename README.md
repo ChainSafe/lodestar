@@ -12,7 +12,7 @@ There is a lot of work being done that are core infrastructural pieces for Eth2.
 
 [![](https://img.shields.io/travis/com/ChainSafe/lodestar/master.svg?label=master&logo=travis "Master Branch (Travis)")](https://travis-ci.com/ChainSafe/lodestar)
 [![](https://badges.gitter.im/chainsafe/lodestar.svg)](https://gitter.im/chainsafe/lodestar?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-![](https://img.shields.io/codecov/c/github/ChainSafe/lodestar.svg?label=Codecov&style=flat)
+[![codecov](https://codecov.io/gh/ChainSafe/lodestar/branch/master/graph/badge.svg)](https://codecov.io/gh/ChainSafe/lodestar)
 [![Maintainability](https://api.codeclimate.com/v1/badges/678099476c401e1af503/maintainability)](https://codeclimate.com/github/ChainSafe/lodestar/maintainability)
 
 # Overview
@@ -26,8 +26,8 @@ We are currently targeting version 0.3.0: Let There Be Liquidity release of the 
 You will need to go over the [specification](https://github.com/ethereum/eth2.0-specs). You will also need to have a [basic understanding of sharding](https://github.com/ethereum/wiki/wiki/Sharding-FAQs). Note that that the specification is an ongoing document and will get outdated. The reference implementation by the Ethereum development team is written in Python and can be found [here](https://github.com/ethereum/beacon_chain).
 
 ## Run
-1. `npm install`
-2. `npm test`
+1. `yarn install`
+2. `yarn test`
 
 ## Usage
 
