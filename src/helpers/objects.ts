@@ -1,3 +1,7 @@
+function isObjectObject(val: any): boolean {
+  return val != null && typeof val === 'object' && Array.isArray(val) === false;
+}
+
 export function isPlainObject(o: any): boolean {
   let ctor,prot;
 
@@ -18,8 +22,4 @@ export function isPlainObject(o: any): boolean {
 
   // Most likely a plain Object
   return true;
-}
-
-function isObjectObject(val: any): boolean {
-  return val != null && typeof val === 'object' && Array.isArray(val) === false;
 }
