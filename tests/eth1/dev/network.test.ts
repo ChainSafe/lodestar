@@ -19,7 +19,7 @@ describe('Eth1 dev network', () => {
       host: '127.0.0.1',
       port: 34568,
       mnemonic: 'test',
-      default_balance_ether: 1400
+      defaultBalance: 1400
     });
     await network.start();
     const accountBalance = await new Wallet(
@@ -37,7 +37,7 @@ describe('Eth1 dev network', () => {
       host: '127.0.0.1',
       port: 34567,
       mnemonic: 'test',
-      default_balance_ether: 1400
+      defaultBalance: 1400
     });
     await network.start();
     const address = await network.deployDepositContract();

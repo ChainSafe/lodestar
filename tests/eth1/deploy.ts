@@ -56,11 +56,10 @@ describe("Eth1Notifier - using deployed contract", () => {
   });
 
   it("should process a Eth2Genesis log", async function() {
-    this.timeout(50000);
+    this.timeout(30000);
 
     const cb = sinon.spy();
     eth1Notifier.on('eth2genesis', cb);
-    await eth1Notifier.start();
     await Promise.all(
       eth1Network
         .accounts()
@@ -72,8 +71,7 @@ describe("Eth1Notifier - using deployed contract", () => {
             )
         )
     );
-
-    assert(cb.calledOnce, "eth2genesis event did not fire");
+    assert(cb.called, "eth2genesis event did not fire");
   });
 
 });
