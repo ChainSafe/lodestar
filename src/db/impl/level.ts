@@ -4,7 +4,7 @@ import {LevelUp} from "levelup";
 import {DB, DBOptions} from "../interface";
 import AbstractDB, {SearchOptions} from "./abstract";
 import {Attestation} from "../../types";
-import logger from "../../logger/winston";
+import logger from "../../logger";
 
 export interface LevelDBOptions extends DBOptions {
   db?: LevelUp;

@@ -6,7 +6,7 @@ import { deserialize } from "@chainsafe/ssz";
 import { bytes32, DepositData, Deposit, Eth1Data } from "../types";
 
 import {Eth1Options, Eth1Notifier} from "./interface";
-import logger from "../logger/winston";
+import logger from "../logger";
 
 export interface EthersEth1Options extends Eth1Options {
   provider: ethers.providers.Provider;

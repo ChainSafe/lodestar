@@ -1,5 +1,4 @@
 import assert from "assert";
-import BN from "bn.js";
 import {EventEmitter} from "events";
 import { hashTreeRoot } from "@chainsafe/ssz";
 
@@ -13,7 +12,7 @@ import { getEmptyBlock, getGenesisBeaconState } from "./helpers/genesis";
 
 import { executeStateTransition } from "./stateTransition";
 import { getBlockRoot, getEpochStartSlot } from "./helpers/stateTransitionHelpers";
-import logger from "../logger/winston";
+import logger from "../logger";
 
 /**
  * The BeaconChain service deals with processing incoming blocks, advancing a state transition, and applying the fork choice rule to update the chain head

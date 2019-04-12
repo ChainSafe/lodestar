@@ -3,7 +3,7 @@ import * as commander from "commander";
 import defaults from "../../eth1/defaults";
 import * as ethers from "ethers/ethers";
 import {Wallet} from "ethers/ethers";
-import logger from "../../logger/winston";
+import logger from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
 

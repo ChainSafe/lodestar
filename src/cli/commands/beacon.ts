@@ -1,6 +1,6 @@
 import {CliCommand} from "./interface";
 import * as commander from "commander";
-import logger from "../../logger/winston";
+import logger from "../../logger";
 import BeaconNode from "../../node";
 import defaults from "../../node/defaults";
 import {ethers} from "ethers";

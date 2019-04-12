@@ -1,7 +1,7 @@
 import {CliCommand} from "./interface";
 import {PrivateEth1Network} from "../../eth1/dev";
 import * as commander from "commander";
-import logger from "../../logger/winston";
+import logger from "../../logger";
 
 export class Eth1PrivateNetworkCommand implements CliCommand {
 
