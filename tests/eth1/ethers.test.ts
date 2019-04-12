@@ -44,7 +44,7 @@ describe("Eth1Notifier", () => {
     const timeHex = "0x" + timeBuf.toString("hex");
     const event = { blockHash: "0x0000000000000000" } as Event;
 
-    eth1.processEth2GenesisLog(depositRootHex, depositCountHex, timeHex, event);
+    await eth1.processEth2GenesisLog(depositRootHex, depositCountHex, timeHex, event);
     assert(cb.calledOnce, "eth2genesis event did not fire");
   });
   it("should process a new block", async function() {
