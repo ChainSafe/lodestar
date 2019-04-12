@@ -1,20 +1,6 @@
-// This file makes some naive assumptions surrounding the way RPC like calls will be made in ETH2.0
-// Subject to change with future developments with Hobbits and wire protocol
-import {ValidatorIndex, Slot, BeaconBlock, BeaconState, bytes48} from "../types";
-import {GenesisInfo} from "./types";
-
-// Super awesome stubs
-function notSoRandomRandomBoolean(): boolean {
-  return [true, false][Math.round(Math.random())];
-}
-
-function notSoRandomRandomValidatorIndex(): ValidatorIndex {
-  return Math.round(Math.random() * 1000);
-}
-
-function notSoRandomRandomSlot(): Slot {
-  return Math.round(Math.random() * 1000);
-}
+import {GenesisInfo} from "../types";
+import {BeaconBlock, BeaconState, bytes48, CrosslinkCommittee, Epoch, Slot, ValidatorIndex} from "../../types";
+import {notSoRandomRandomBoolean, notSoRandomRandomSlot, notSoRandomRandomValidatorIndex} from "./helpers";
 
 export default class RPCProvider {
   private readonly rpcUrl: string;
@@ -56,14 +42,30 @@ export default class RPCProvider {
     return b;
   }
 
+  public getCurrentEpoch(): Epoch {
+    return notSoRandomRandomValidatorIndex() as Epoch;
+  }
+
+  public getPreviousEpoch(): Epoch {
+    return notSoRandomRandomValidatorIndex() as Epoch;
+  }
+
   public hasChainStarted(): boolean {
     return notSoRandomRandomBoolean();
+  }
+
+  public getCrosslinkCommitteesAtSlot(slot: Slot): CrosslinkCommittee[] {
+    return [] as CrosslinkCommittee[];
   }
 
   public getGenisisInfo(): GenesisInfo {
     return {
       startTime: Date.now()
     };
+  }
+
+  public getEpochStartSlot(epoch: Epoch): Slot {
+    return notSoRandomRandomValidatorIndex() as Slot;
   }
 
   public getCurrentSlot(): Slot {

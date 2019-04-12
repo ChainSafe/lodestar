@@ -1,23 +1,21 @@
 import ssz from "@chainsafe/ssz";
 import {ValidatorIndex, BeaconBlock, BeaconState, bytes48, Epoch} from "../types";
-import RPCProvider from "./stubs";
+import RPCProvider from "./stubs/rpc";
 import {blsSign} from "../stubs/bls";
 import {getDomain, slotToEpoch} from "../chain/helpers/stateTransitionHelpers";
 import {DOMAIN_BEACON_BLOCK, DOMAIN_RANDAO} from "./constants";
 import {getEmptyBlock} from "../chain/helpers/genesis";
-import {AbstractLogger} from "../logger";
+import logger from "../logger";
 
 export default class BlockProcessingService {
   private validatorIndex: ValidatorIndex;
   private provider: RPCProvider;
   private privateKey: bytes48[];
-  private logger: AbstractLogger;
 
-  public constructor(index: ValidatorIndex, provider: RPCProvider, privateKey: bytes48[], logger: AbstractLogger) {
+  public constructor(index: ValidatorIndex, provider: RPCProvider, privateKey: bytes48[]) {
     this.validatorIndex = index;
     this.provider = provider;
     this.privateKey = privateKey;
-    this.logger = logger;
   }
 
   /**

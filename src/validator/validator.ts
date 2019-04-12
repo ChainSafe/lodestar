@@ -10,12 +10,11 @@
  * 6. Repeat step 5
  */
 import {GenesisInfo, ValidatorCtx} from "./types";
-import RPCProvider from "./stubs";
+import RPCProvider from "./stubs/rpc";
 import {ValidatorIndex} from "../types";
 import BlockProcessingService from "./block";
 import {SLOTS_PER_EPOCH} from "../constants";
 import {getCommitteeAssignment} from "./helpers";
-import {getCurrentEpoch} from "../chain/helpers/stateTransitionHelpers";
 import logger, {AbstractLogger} from "../logger";
 
 /**
@@ -105,7 +104,7 @@ class Validator {
    * @returns {Promise<void>}
    */
   private async setupServices(): Promise<void> {
-    this.blockService = new BlockProcessingService(this.validatorIndex, this.provider, this.ctx.privateKey, this.logger.info);
+    this.blockService = new BlockProcessingService(this.validatorIndex, this.provider, this.ctx.privateKey);
     // TODO setup attestation service
   }
   private startServices(): void {};
@@ -113,9 +112,9 @@ class Validator {
   private checkAssignment(): void {
     // If epoch boundary then look up for new assignment
     if ((Date.now() - this.genesisInfo.startTime) % SLOTS_PER_EPOCH === 0) {
-      const epoch = getCurrentEpoch(this.ctx.state);
+      const epoch = this.provider.getCurrentEpoch();
       // TODO check if validator exists or write helper for that
-      const {validators, shard, slot} = getCommitteeAssignment(this.ctx.state, epoch, this.validatorIndex);
+      const {validators, shard, slot} = getCommitteeAssignment(this.provider, epoch, this.validatorIndex);
     }
   }
 }

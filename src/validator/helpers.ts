@@ -1,8 +1,8 @@
 import assert from "assert";
 
 import {BeaconState, Epoch, ValidatorIndex, Shard} from "../types";
-import {getPreviousEpoch, getCurrentEpoch, getEpochStartSlot, getCrosslinkCommitteesAtSlot, getBeaconProposerIndex} from "../chain/helpers/stateTransitionHelpers";
 import {SLOTS_PER_EPOCH} from "../constants";
+import RPCProvider from "./stubs/rpc";
 
 /**
  * Return the committee assignment in the ``epoch`` for ``validator_index`` and ``registry_change``.
@@ -19,20 +19,20 @@ import {SLOTS_PER_EPOCH} from "../constants";
  * @returns {{validators: ValidatorIndex[]; shard: Shard; slot: number; isProposer: boolean}}
  */
 export function getCommitteeAssignment(
-  state: BeaconState,
+  provider: RPCProvider,
   epoch: Epoch,
   validatorIndex: ValidatorIndex): {validators: ValidatorIndex[]; shard: Shard; slot: number;} {
 
-  const previousEpoch = getPreviousEpoch(state);
-  const nextEpoch = getCurrentEpoch(state) + 1;
+  const previousEpoch = provider.getPreviousEpoch();
+  const nextEpoch = provider.getCurrentEpoch() + 1;
   assert(previousEpoch <= epoch && epoch <= nextEpoch);
 
-  const epochStartSlot = getEpochStartSlot(epoch);
+  const epochStartSlot = provider.getEpochStartSlot(epoch);
   const loopEnd = epochStartSlot + SLOTS_PER_EPOCH;
 
   for (let slot = epochStartSlot; slot < loopEnd; slot++) {
-    const crosslinkCommittees = getCrosslinkCommitteesAtSlot(state, slot);
-    const selectedCommittees = crosslinkCommittees.map((committee) => committee[0].contains(validatorIndex))
+    const crosslinkCommittees = provider.getCrosslinkCommitteesAtSlot(slot);
+    const selectedCommittees = crosslinkCommittees.map((committee) => committee[0].contains(validatorIndex));
 
     if (selectedCommittees.length > 0) {
       const validators = selectedCommittees[0][0];
