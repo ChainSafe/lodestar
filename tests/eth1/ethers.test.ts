@@ -7,6 +7,7 @@ import sinon from "sinon";
 import { EthersEth1Notifier } from "../../src/eth1";
 import defaults from "../../src/eth1/defaults";
 import promisify from "promisify-es6";
+import logger from "../../src/logger/winston";
 
 describe("Eth1Notifier", () => {
   const ganacheProvider = ganache.provider();
@@ -17,15 +18,17 @@ describe("Eth1Notifier", () => {
   });
 
   before(async function() {
+    logger.silent(true);
     await eth1.start();
   });
+
   it("should process a Deposit log", async function() {
     const cb = sinon.spy();
     eth1.on('deposit', cb);
 
     const dataHex = "0x" + Buffer.alloc(528).toString("hex");
     const indexHex = "0x" + Buffer.alloc(528).toString("hex");
-    
+
     eth1.processDepositLog(dataHex, indexHex);
     assert(cb.calledOnce, "deposit event did not fire");
   });
@@ -57,5 +60,6 @@ describe("Eth1Notifier", () => {
   after(async function() {
     await eth1.stop();
     await promisify(ganacheProvider.close)();
+    logger.silent(false);
   })
 })

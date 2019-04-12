@@ -1,19 +1,15 @@
-import BN from "bn.js";
 import deepmerge from "deepmerge";
-
-import {BeaconChain} from "../chain";
 import {LevelDB} from "../db";
 import {EthersEth1Notifier} from "../eth1";
 import {P2PNetwork} from "../p2p";
-import {BeaconAPI, JSONRPC, WSServer} from "../rpc";
-import {Sync} from "../sync";
-import {OpPool} from "../opPool";
 
 import defaultConf from "./defaults";
 import logger from "../logger/winston";
+import {isPlainObject} from "../helpers/objects";
 
 interface Service {
   start(): Promise<void>;
+
   stop(): Promise<void>;
 }
 
@@ -38,11 +34,18 @@ class BeaconNode {
   public sync: Service;
 
   public constructor(opts: BeaconNodeCtx) {
-    this.conf = deepmerge(defaultConf, opts);
+    this.conf = deepmerge(
+      defaultConf,
+      opts,
+      {
+        //clone doesn't work very vell on classes like ethers.Provider
+        isMergeableObject: isPlainObject
+      }
+    );
 
     this.db = new LevelDB(this.conf.db);
-    // this.network = new P2PNetwork(this.conf.network);
-    // this.eth1 = new EthersEth1Notifier(this.conf.eth1);
+    this.network = new P2PNetwork(this.conf.network);
+    this.eth1 = new EthersEth1Notifier(this.conf.eth1);
     // this.sync = new Sync(this.conf.sync, {
     //   network: this.network,
     // });
@@ -67,8 +70,8 @@ class BeaconNode {
   public async start() {
     logger.info('Starting eth2 beacon node - LODESTAR!');
     await this.db.start();
-    // await this.network.start();
-    // await this.eth1.start();
+    await this.network.start();
+    await this.eth1.start();
     // await this.chain.start();
     // await this.opPool.start();
     // await this.sync.start();

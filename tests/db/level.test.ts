@@ -12,6 +12,7 @@ import {generateEmptyBlock} from "../utils/block";
 import {generateEmptyAttestation} from "../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../utils/voluntaryExits";
 import level from "level";
+import logger from "../../src/logger/winston";
 
 describe("LevelDB", () => {
   const dbLocation = "./.__testdb";
@@ -22,12 +23,14 @@ describe("LevelDB", () => {
     });
   const db = new LevelDB({db: testDb});
   before(async () => {
+    logger.silent(true);
     await db.start();
   });
   after(async () => {
     await db.stop();
     await promisify(leveldown.destroy)(dbLocation, function () {
-    })
+    });
+    logger.silent(false);
   });
   it("should correctly get and set the state", async () => {
     const testState = generateState();
