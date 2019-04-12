@@ -16,13 +16,14 @@ import BlockProcessingService from "./block";
 import {SLOTS_PER_EPOCH} from "../src/constants";
 import {getCommitteeAssignment} from "./helpers";
 import {getCurrentEpoch} from "../src/chain/helpers/stateTransitionHelpers";
+import logger, {AbstractLogger} from "../src/logger";
 
 /**
  * Main class for the Validator client.
  */
 class Validator {
   private ctx: ValidatorCtx;
-  private logger: Function;
+  private logger: AbstractLogger;
   private provider: RPCProvider;
   private validatorIndex: ValidatorIndex;
   private blockService: BlockProcessingService;
@@ -34,7 +35,7 @@ class Validator {
    */
   public constructor(ctx: ValidatorCtx) {
     this.ctx = ctx;
-    this.logger = (msg: string) => console.log(msg);
+    this.logger = logger;
     this.isActive = false;
   }
 
@@ -51,7 +52,7 @@ class Validator {
    * @returns {Promise<void>}
    */
   public async setup(): Promise<void> {
-    this.logger("Setting up validator client...");
+    this.logger.info.info("Setting up validator client...");
 
     await this.setupRPC();
 
@@ -66,9 +67,9 @@ class Validator {
    * Establishes a connection to a specified beacon chain url.
    */
   private setupRPC(): void {
-    this.logger("Setting up RPC connection...");
+    this.logger.info.info("Setting up RPC connection...");
     this.provider = new RPCProvider(this.ctx.rpcUrl);
-    this.logger(`RPC connection successfully established ${this.ctx.rpcUrl}!`);
+    this.logger.info(`RPC connection successfully established ${this.ctx.rpcUrl}!`);
   }
 
   /**
@@ -76,10 +77,10 @@ class Validator {
    * @returns {Promise<boolean>}
    */
   private async isChainLive(): Promise<boolean> {
-    this.logger("Checking if chain has started...");
+    this.logger.info("Checking if chain has started...");
     if (await this.provider.hasChainStarted()) {
       this.genesisInfo = await this.provider.getGenisisInfo();
-      this.logger("Chain start has occured!");
+      this.logger.info("Chain start has occured!");
       return true;
     }
     setTimeout(this.isChainLive, 1000);
@@ -90,10 +91,10 @@ class Validator {
    * @returns {Promise<ValidatorIndex>}
    */
   private async getValidatorIndex(): Promise<ValidatorIndex> {
-    this.logger("Checking if validator has been processed...");
+    this.logger.info("Checking if validator has been processed...");
     const index = await this.provider.getValidatorIndex(this.ctx.publicKey);
     if (index) {
-      this.logger("Validator has been processed!");
+      this.logger.info("Validator has been processed!");
       return index;
     }
     setTimeout(this.getValidatorIndex, 1000);
@@ -104,7 +105,7 @@ class Validator {
    * @returns {Promise<void>}
    */
   private async setupServices(): Promise<void> {
-    this.blockService = new BlockProcessingService(this.validatorIndex, this.provider, this.ctx.privateKey, this.logger);
+    this.blockService = new BlockProcessingService(this.validatorIndex, this.provider, this.ctx.privateKey, this.logger.info);
     // TODO setup attestation service
   }
   private startServices(): void {};
@@ -113,8 +114,8 @@ class Validator {
     // If epoch boundary then look up for new assignment
     if ((Date.now() - this.genesisInfo.startTime) % SLOTS_PER_EPOCH === 0) {
       const epoch = getCurrentEpoch(this.ctx.state);
-      getCommitteeAssignment(this.ctx.state, epoch, this.validatorIndex);
-      //
+      // TODO check if validator exists or write helper for that
+      const {validators, shard, slot} = getCommitteeAssignment(this.ctx.state, epoch, this.validatorIndex);
     }
   }
 }

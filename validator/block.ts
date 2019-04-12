@@ -5,14 +5,15 @@ import {blsSign} from "../src/stubs/bls";
 import {getDomain, slotToEpoch} from "../src/chain/helpers/stateTransitionHelpers";
 import {DOMAIN_BEACON_BLOCK, DOMAIN_RANDAO} from "./constants";
 import {getEmptyBlock} from "../src/chain/helpers/genesis";
+import {AbstractLogger} from "../src/logger";
 
 export default class BlockProcessingService {
   private validatorIndex: ValidatorIndex;
   private provider: RPCProvider;
   private privateKey: bytes48[];
-  private logger: Function;
+  private logger: AbstractLogger;
 
-  public constructor(index: ValidatorIndex, provider: RPCProvider, privateKey: bytes48[], logger: Function) {
+  public constructor(index: ValidatorIndex, provider: RPCProvider, privateKey: bytes48[], logger: AbstractLogger) {
     this.validatorIndex = index;
     this.provider = provider;
     this.privateKey = privateKey;
