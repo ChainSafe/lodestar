@@ -10,6 +10,7 @@ import {Sync} from "../sync";
 import {OpPool} from "../opPool";
 
 import defaultConf from "./defaults";
+import logger from "../logger/winston";
 
 interface Service {
   start(): Promise<void>;
@@ -17,13 +18,13 @@ interface Service {
 }
 
 interface BeaconNodeCtx {
-  chain: object;
-  db: object;
-  eth1: object;
-  network: object;
-  rpc: object;
-  sync: object;
-  opPool: object;
+  chain?: object;
+  db?: object;
+  eth1?: object;
+  network?: object;
+  rpc?: object;
+  sync?: object;
+  opPool?: object;
 }
 
 class BeaconNode {
@@ -39,49 +40,49 @@ class BeaconNode {
   public constructor(opts: BeaconNodeCtx) {
     this.conf = deepmerge(defaultConf, opts);
 
-    // this.logger ?
     this.db = new LevelDB(this.conf.db);
-    this.network = new P2PNetwork(this.conf.network);
-    this.eth1 = new EthersEth1Notifier(this.conf.eth1);
-    this.sync = new Sync(this.conf.sync, {
-      network: this.network,
-    });
-    this.chain = new BeaconChain(this.conf.chain, {
-      db: this.db,
-      eth1: this.eth1,
-    });
-    this.opPool = new OpPool(this.conf.opPool, {
-      db: this.db,
-      chain: this.chain,
-    });
-    this.rpc = new JSONRPC(this.conf.rpc, {
-      transport: new WSServer(this.conf.rpc), 
-      api: new BeaconAPI(this.conf.rpc, {
-        chain: this.chain,
-        db: this.db,
-        opPool: this.opPool,
-      }),
-    });
+    // this.network = new P2PNetwork(this.conf.network);
+    // this.eth1 = new EthersEth1Notifier(this.conf.eth1);
+    // this.sync = new Sync(this.conf.sync, {
+    //   network: this.network,
+    // });
+    // this.chain = new BeaconChain(this.conf.chain, {
+    //   db: this.db,
+    //   eth1: this.eth1,
+    // });
+    // this.opPool = new OpPool(this.conf.opPool, {
+    //   db: this.db,
+    //   chain: this.chain,
+    // });
+    // this.rpc = new JSONRPC(this.conf.rpc, {
+    //   transport: new WSServer(this.conf.rpc),
+    //   api: new BeaconAPI(this.conf.rpc, {
+    //     chain: this.chain,
+    //     db: this.db,
+    //     opPool: this.opPool,
+    //   }),
+    // });
   }
 
   public async start() {
+    logger.info('Starting eth2 beacon node - LODESTAR!');
     await this.db.start();
-    await this.network.start();
-    await this.eth1.start();
-    await this.chain.start();
-    await this.opPool.start();
-    await this.sync.start();
-    await this.rpc.start();
+    // await this.network.start();
+    // await this.eth1.start();
+    // await this.chain.start();
+    // await this.opPool.start();
+    // await this.sync.start();
+    // await this.rpc.start();
   }
 
   public async stop() {
-    await this.rpc.stop();
-    await this.sync.stop();
-    await this.opPool.stop();
-
-    await this.chain.stop();
-    await this.eth1.stop();
-    await this.network.stop();
+    // await this.rpc.stop();
+    // await this.sync.stop();
+    // await this.opPool.stop();
+    //
+    // await this.chain.stop();
+    // await this.eth1.stop();
+    // await this.network.stop();
     await this.db.stop();
   }
 }
