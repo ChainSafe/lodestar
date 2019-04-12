@@ -1,4 +1,4 @@
-import {BeaconState, bytes48} from "../src/types";
+import {BeaconState, bytes48} from "../types";
 
 export interface ValidatorCtx {
   publicKey: bytes48[];

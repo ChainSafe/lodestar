@@ -11,12 +11,12 @@
  */
 import {GenesisInfo, ValidatorCtx} from "./types";
 import RPCProvider from "./stubs";
-import {ValidatorIndex} from "../src/types";
+import {ValidatorIndex} from "../types";
 import BlockProcessingService from "./block";
-import {SLOTS_PER_EPOCH} from "../src/constants";
+import {SLOTS_PER_EPOCH} from "../constants";
 import {getCommitteeAssignment} from "./helpers";
-import {getCurrentEpoch} from "../src/chain/helpers/stateTransitionHelpers";
-import logger, {AbstractLogger} from "../src/logger";
+import {getCurrentEpoch} from "../chain/helpers/stateTransitionHelpers";
+import logger, {AbstractLogger} from "../logger";
 
 /**
  * Main class for the Validator client.
@@ -52,7 +52,7 @@ class Validator {
    * @returns {Promise<void>}
    */
   public async setup(): Promise<void> {
-    this.logger.info.info("Setting up validator client...");
+    this.logger.info("Setting up validator client...");
 
     await this.setupRPC();
 
@@ -67,7 +67,7 @@ class Validator {
    * Establishes a connection to a specified beacon chain url.
    */
   private setupRPC(): void {
-    this.logger.info.info("Setting up RPC connection...");
+    this.logger.info("Setting up RPC connection...");
     this.provider = new RPCProvider(this.ctx.rpcUrl);
     this.logger.info(`RPC connection successfully established ${this.ctx.rpcUrl}!`);
   }

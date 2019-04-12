@@ -1,8 +1,8 @@
 import assert from "assert";
 
-import {BeaconState, Epoch, ValidatorIndex, Shard} from "../src/types";
-import {getPreviousEpoch, getCurrentEpoch, getEpochStartSlot, getCrosslinkCommitteesAtSlot, getBeaconProposerIndex} from "../src/chain/helpers/stateTransitionHelpers";
-import {SLOTS_PER_EPOCH} from "../src/constants";
+import {BeaconState, Epoch, ValidatorIndex, Shard} from "../types";
+import {getPreviousEpoch, getCurrentEpoch, getEpochStartSlot, getCrosslinkCommitteesAtSlot, getBeaconProposerIndex} from "../chain/helpers/stateTransitionHelpers";
+import {SLOTS_PER_EPOCH} from "../constants";
 
 /**
  * Return the committee assignment in the ``epoch`` for ``validator_index`` and ``registry_change``.
@@ -33,7 +33,7 @@ export function getCommitteeAssignment(
   for (let slot = epochStartSlot; slot < loopEnd; slot++) {
     const crosslinkCommittees = getCrosslinkCommitteesAtSlot(state, slot);
     const selectedCommittees = crosslinkCommittees.map((committee) => committee[0].contains(validatorIndex))
-    
+
     if (selectedCommittees.length > 0) {
       const validators = selectedCommittees[0][0];
       const shard = selectedCommittees[0][1];

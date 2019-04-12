@@ -1,6 +1,6 @@
 // This file makes some naive assumptions surrounding the way RPC like calls will be made in ETH2.0
 // Subject to change with future developments with Hobbits and wire protocol
-import {ValidatorIndex, Slot, BeaconBlock, BeaconState, bytes48} from "../src/types";
+import {ValidatorIndex, Slot, BeaconBlock, BeaconState, bytes48} from "../types";
 import {GenesisInfo} from "./types";
 
 // Super awesome stubs
