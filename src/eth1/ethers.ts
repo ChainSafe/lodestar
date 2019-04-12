@@ -90,7 +90,7 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     };
 
     this.chainStarted = true;
-    this.emit('eth2genesis', time, this.genesisDeposits(), genesisEth1Data);
+    this.emit('eth2genesis', time, await this.genesisDeposits(), genesisEth1Data);
   }
 
   public async genesisDeposits(): Promise<Deposit[]> {
