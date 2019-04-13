@@ -15,6 +15,7 @@ import {CommitteeAssignment, ValidatorIndex} from "../types";
 import BlockProcessingService from "./block";
 import {SLOTS_PER_EPOCH} from "../constants";
 import logger, {AbstractLogger} from "../logger";
+import {Bool} from "@chainsafe/ssz";
 
 /**
  * Main class for the Validator client.
@@ -42,7 +43,7 @@ class Validator {
    */
   private async start(): Promise<void> {
     await this.setup();
-    this.startServices();
+    this.run();
   }
 
   /**
@@ -106,16 +107,31 @@ class Validator {
     this.blockService = new BlockProcessingService(this.validatorIndex, this.provider, this.ctx.privateKey);
     // TODO setup attestation service
   }
-  private startServices(): void {};
 
-  private checkAssignment(): void {
+  private async checkAssignment(): Promise<void> {
     // If epoch boundary then look up for new assignment
     if ((Date.now() - this.genesisInfo.startTime) % SLOTS_PER_EPOCH === 0) {
-      const epoch = this.provider.getCurrentEpoch();
-      // TODO check if validator exists or write helper for that
-      const {validators, shard, slot}: CommitteeAssignment = this.provider.getCommitteeAssignment(epoch, this.validatorIndex);
+      const epoch = await this.provider.getCurrentEpoch();
+      const assignment: CommitteeAssignment = await this.provider.getCommitteeAssignment(epoch, this.validatorIndex);
+      const isProposer: Boolean = this.provider.isProposerAtSlot(assignment.slot, this.validatorIndex);
+
+      if (assignment.validators.includes(this.validatorIndex) && isProposer) {
+        // Run attestation and then block proposer on `slot`
+        this.logger.info(`Validator: ${this.validatorIndex}, Attesting: True, Proposing: True`);
+      } else if (assignment.validators.includes(this.validatorIndex)) {
+        // Run attestation on `slot`
+        this.logger.info(`Validator: ${this.validatorIndex}, Attesting: True, Proposing: False`);
+      } else {
+        this.logger.info(`Validator with index ${this.validatorIndex} has no role for slot ${assignment.slot}`);
+      }
     }
   }
+
+
+
+  private run(): void {
+
+  };
 }
 
 export default Validator;

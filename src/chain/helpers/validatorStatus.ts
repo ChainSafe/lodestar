@@ -1,7 +1,7 @@
 import assert from "assert";
 
 import {
-  BeaconState, CommitteeAssignment, Epoch, Shard,
+  BeaconState, CommitteeAssignment, Epoch, Shard, Slot,
   ValidatorIndex,
 } from "../../types";
 
@@ -18,7 +18,7 @@ import {
   getCurrentEpoch,
   getEffectiveBalance,
   getEntryExitEffectEpoch,
-  getEpochStartSlot, getPreviousEpoch,
+  getEpochStartSlot, getPreviousEpoch, slotToEpoch,
 } from "./stateTransitionHelpers";
 import RPCProvider from "../../validator/stubs/rpc";
 
@@ -137,4 +137,22 @@ export function getCommitteeAssignment(
       return {validators, shard, slot};
     }
   }
+}
+
+/**
+ * Checks if a validator is supposed to propose a block
+ * @param {BeaconState} state
+ * @param {Slot} slot
+ * @param {ValidatorIndex} validatorIndex
+ * @returns {Boolean}
+ */
+export function isProposerAtSlot(
+  state: BeaconState,
+  slot: Slot,
+  validatorIndex: ValidatorIndex): Boolean {
+
+  const currentEpoch = getCurrentEpoch(state);
+  assert(slotToEpoch(slot) === currentEpoch);
+
+  return getBeaconProposerIndex(state, slot) === validatorIndex;
 }

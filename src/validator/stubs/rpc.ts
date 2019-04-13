@@ -3,6 +3,7 @@ import {
   ValidatorIndex
 } from "../../types";
 import {notSoRandomRandomBoolean, notSoRandomRandomSlot, notSoRandomRandomValidatorIndex} from "./helpers";
+import {Bool} from "@chainsafe/ssz";
 
 export default class RPCProvider {
   private readonly rpcUrl: string;
@@ -72,6 +73,10 @@ export default class RPCProvider {
 
   public getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): CommitteeAssignment {
     return {} as CommitteeAssignment;
+  }
+
+  public isProposerAtSlot(slot: Slot, validatorIndex: ValidatorIndex): Boolean {
+    return notSoRandomRandomBoolean();
   }
 
   public getCurrentSlot(): Slot {

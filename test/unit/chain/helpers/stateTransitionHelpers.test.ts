@@ -465,19 +465,21 @@ describe("getDomain", () => {
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
     const result = getDomain(fork, 8, 4);
     const expected = four.mul(constant).add(four);
-    assert(result.eq(expected));
+    console.log(result);
+    console.log(expected);
+    assert(expected.eqn(result));
   });
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
     const result = getDomain(fork, 13, 5);
     const expected = five.mul(constant).add(five);
-    assert(result.eq(expected));
+    assert(expected.eqn(result));
   });
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
     const result = getDomain(fork, 12, 5);
     const expected = five.mul(constant).add(five);
-    assert(result.eq(expected));
+    assert(expected.eqn(result));
   });
 });
 
