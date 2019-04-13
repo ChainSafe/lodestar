@@ -33,10 +33,10 @@
     "blockchain"
   ],
   "dependencies": {
+    "@chainsafe/ssz": "^0.1.2",
     "@chainsafesystems/ssz": "^1.6.0",
     "@nodeutils/defaults-deep": "^1.1.0",
     "@polkadot/ts": "^0.1.56",
-    "@chainsafe/ssz": "^0.1.2",
     "@polkadot/util-crypto": "^0.33.27",
     "@types/bn.js": "^4.11.4",
     "@types/levelup": "^3.1.0",
@@ -55,12 +55,13 @@
     "libp2p": "^0.24.4",
     "libp2p-bootstrap": "^0.9.7",
     "libp2p-floodsub": "^0.15.8",
+    "libp2p-kad-dht": "^0.14.12",
     "libp2p-mplex": "^0.8.5",
     "libp2p-tcp": "^0.13.0",
+    "libp2p-webrtc-star": "^0.15.8",
+    "noice-json-rpc": "^1.2.0",
     "peer-book": "^0.9.1",
     "peer-info": "^0.15.1",
-    "promisify-es6": "^1.0.3"
-    "noice-json-rpc": "^1.2.0",
     "pouchdb-adapter-memory": "^7.0.0",
     "pouchdb-core": "^7.0.0",
     "promisify-es6": "^1.0.3",
