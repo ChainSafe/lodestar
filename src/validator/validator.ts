@@ -9,12 +9,11 @@
  * 7. Wait for new role
  * 6. Repeat step 5
  */
-import {GenesisInfo, ValidatorCtx} from "./types";
+import {GenesisInfo, ValidatorCtx} from "../types";
 import RPCProvider from "./stubs/rpc";
-import {ValidatorIndex} from "../types";
+import {CommitteeAssignment, ValidatorIndex} from "../types";
 import BlockProcessingService from "./block";
 import {SLOTS_PER_EPOCH} from "../constants";
-import {getCommitteeAssignment} from "./helpers";
 import logger, {AbstractLogger} from "../logger";
 
 /**
@@ -114,7 +113,7 @@ class Validator {
     if ((Date.now() - this.genesisInfo.startTime) % SLOTS_PER_EPOCH === 0) {
       const epoch = this.provider.getCurrentEpoch();
       // TODO check if validator exists or write helper for that
-      const {validators, shard, slot} = getCommitteeAssignment(this.provider, epoch, this.validatorIndex);
+      const {validators, shard, slot}: CommitteeAssignment = this.provider.getCommitteeAssignment(epoch, this.validatorIndex);
     }
   }
 }

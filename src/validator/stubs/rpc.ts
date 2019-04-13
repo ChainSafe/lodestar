@@ -1,5 +1,7 @@
-import {GenesisInfo} from "../types";
-import {BeaconBlock, BeaconState, bytes48, CrosslinkCommittee, Epoch, Slot, ValidatorIndex} from "../../types";
+import {
+  BeaconBlock, BeaconState, bytes48, CommitteeAssignment, CrosslinkCommittee, Epoch, GenesisInfo, Shard, Slot,
+  ValidatorIndex
+} from "../../types";
 import {notSoRandomRandomBoolean, notSoRandomRandomSlot, notSoRandomRandomValidatorIndex} from "./helpers";
 
 export default class RPCProvider {
@@ -66,6 +68,10 @@ export default class RPCProvider {
 
   public getEpochStartSlot(epoch: Epoch): Slot {
     return notSoRandomRandomValidatorIndex() as Slot;
+  }
+
+  public getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): CommitteeAssignment {
+    return {} as CommitteeAssignment;
   }
 
   public getCurrentSlot(): Slot {
