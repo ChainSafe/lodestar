@@ -5,7 +5,6 @@ import {blsSign} from "../stubs/bls";
 import {getDomain, slotToEpoch} from "../chain/helpers/stateTransitionHelpers";
 import {DOMAIN_BEACON_BLOCK, DOMAIN_RANDAO} from "./constants";
 import {getEmptyBlock} from "../chain/helpers/genesis";
-import logger from "../logger";
 
 export default class BlockProcessingService {
   private validatorIndex: ValidatorIndex;
