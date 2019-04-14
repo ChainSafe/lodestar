@@ -5,7 +5,7 @@ import {
   Bucket,
   encodeKey,
   Key,
-} from "../../src/db/schema";
+} from "../../../src/db/schema";
 
 
 describe("encodeKey", () => {

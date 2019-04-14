@@ -4,15 +4,15 @@ import {
   BeaconBlock,
   BeaconState,
   Attestation,
-} from "../../src/types";
+} from "../../../src/types";
 
-import {BeaconChain} from "../../src/chain";
-import {OpPool} from "../../src/opPool";
-import {LevelDB} from "../../src/db";
-import {BeaconAPI} from "../../src/rpc"; 
+import {BeaconChain} from "../../../src/chain";
+import {OpPool} from "../../../src/opPool";
+import {LevelDB} from "../../../src/db";
+import {BeaconAPI} from "../../../src/rpc"; 
 
-import { generateEmptyBlock } from "../utils/block";
-import { generateEmptyAttestation } from "../utils/attestation";
+import { generateEmptyBlock } from "../../utils/block";
+import { generateEmptyAttestation } from "../../utils/attestation";
 
 describe("RPC API", () => {
   /*

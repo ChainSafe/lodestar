@@ -8,7 +8,7 @@ import {
   LATEST_RANDAO_MIXES_LENGTH,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
-} from "../../../src/constants";
+} from "../../../../src/constants";
 import {
   getActiveValidatorIndices,
   getBitfieldBit,
@@ -29,12 +29,12 @@ import {
   merkleRoot,
   slotToEpoch,
   split,
-} from "../../../src/chain/helpers/stateTransitionHelpers";
-import {BeaconState, Epoch, Fork, int, Slot, uint64, Validator, ValidatorIndex} from "../../../src/types";
-import {generateAttestationData} from "../../utils/attestation";
-import {randBetween} from "../../utils/misc";
-import {generateValidator, generateValidators} from "../../utils/validator";
-import {generateState} from "../../utils/state";
+} from "../../../../src/chain/helpers/stateTransitionHelpers";
+import {BeaconState, Epoch, Fork, int, Slot, uint64, Validator, ValidatorIndex} from "../../../../src/types";
+import {generateAttestationData} from "../../../utils/attestation";
+import {randBetween} from "../../../utils/misc";
+import {generateValidator, generateValidators} from "../../../utils/validator";
+import {generateState} from "../../../utils/state";
 import {setInterval} from "timers";
 
 describe("intToBytes", () => {
