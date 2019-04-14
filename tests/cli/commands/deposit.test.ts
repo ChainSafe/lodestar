@@ -9,7 +9,7 @@ import program from "commander";
 
 chai.use(chaiAsPromised);
 
-describe('[CLI] deposit', () => {
+describe('[CLI] deposit', function() {
 
   let eth1Network: PrivateEth1Network;
 
@@ -36,7 +36,7 @@ describe('[CLI] deposit', () => {
     expect(program.commands.length).to.be.equal(commandCount + 1);
   });
 
-  it('Should trow error if unable to connect to eth1 network', async () => {
+  it('Should throw error if unable to connect to eth1 network', async () => {
     const command = new DepositCommand();
     await expect(
       command.action(
@@ -49,7 +49,7 @@ describe('[CLI] deposit', () => {
     ).to.be.rejectedWith(CliError, 'JSON RPC node (http://worong_host:123) not available.')
   });
 
-  it('Should trow error if bot private key and mnemonic are not submitted', async () => {
+  it('Should throw error if bot private key and mnemonic are not submitted', async () => {
     const command = new DepositCommand();
     await expect(
       command.action(
@@ -62,7 +62,7 @@ describe('[CLI] deposit', () => {
     ).to.be.rejectedWith(CliError, 'You have to submit either privateKey or mnemonic.');
   });
 
-  it('Should trow error if mnemonic is invalid', async () => {
+  it('Should throw error if mnemonic is invalid', async () => {
     const command = new DepositCommand();
     await expect(
       command.action(
@@ -75,7 +75,7 @@ describe('[CLI] deposit', () => {
     ).to.be.rejectedWith(Error, 'invalid mnemonic');
   });
 
-  it('Should trow error if contract doesn\'t exist', async () => {
+  it('Should throw error if contract doesn\'t exist', async () => {
     const command = new DepositCommand();
     await expect(
       command.action(
@@ -103,6 +103,7 @@ describe('[CLI] deposit', () => {
   });
 
   it('Should make a deposit for 10 accounts derived from mnemonic', async () => {
+    this.timeout(4000);
     const contractAddress = await eth1Network.deployDepositContract();
     const command = new DepositCommand();
     await expect(
