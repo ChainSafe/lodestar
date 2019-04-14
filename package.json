@@ -9,16 +9,13 @@
   },
   "homepage": "https://github.com/ChainSafe/lodestar_chain#readme",
   "main": "lib/index.js",
-  "directories": {
-    "tests": "truffle test"
-  },
   "scripts": {
     "build": "babel src -x .ts -d lib",
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts src/ validator/",
     "lint-fix": "eslint --ext .ts src/ --fix",
     "pretest": "yarn run check-types",
-    "test": "nyc -r lcov -e .ts -x \"*.test.ts\" mocha -r ./.babel-register \"tests/**/*.test.ts\" && nyc report",
+    "test": "nyc -r lcov -e .ts mocha -r ./.babel-register 'test/**/*.test.ts' && nyc report",
     "coverage": "codecov"
   },
   "repository": {
