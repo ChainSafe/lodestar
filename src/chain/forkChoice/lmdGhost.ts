@@ -1,123 +1,279 @@
+import assert from "assert";
+import BN from "bn.js";
+
 import {
-  Attestation,
-  BeaconBlock,
-  BeaconState,
-  int,
-  PendingAttestation,
+  bytes32,
+  Gwei,
   Slot,
-  Validator,
   ValidatorIndex,
 } from "../../types";
 
 import {
-  FORK_CHOICE_BALANCE_INCREMENT,
-} from "../../constants";
+  AttestationAggregator,
+  Root,
+} from "./attestationAggregator";
 
-import {
-  getActiveValidatorIndices,
-  getEffectiveBalance,
-  slotToEpoch,
-} from "../helpers/stateTransitionHelpers";
-
-
-// Probably add this as a field to BeaconState
-interface Store {
-  blocks: BeaconBlock[];
-  pendingAttestations: PendingAttestation[];
-  validatorRegistry: Validator[];
-}
-
-interface AttestationTarget {
-  validatorIndex: ValidatorIndex;
-  target: BeaconBlock;
-}
 
 /**
- * Get the ancestor of block with slot number slot; return None if not found.
- * @param {Store} store
- * @param {BeaconBlock} block
- * @param {slot} slot
- * @returns {BeaconBlock}
+ * A block root with additional metadata required to form a DAG
+ * with vote weights and best blocks stored as metadata
  */
-function getAncestor(store: Store, block: BeaconBlock, slot: Slot): BeaconBlock | null {
-  if (block.slot === slot) {
-    return block;
-  } else if (block.slot < slot) {
-    return null;
-  } else {
-    // TODO Find way to access parent block properly
-    return getAncestor(store, store.blocks.pop(), slot);
-  }
-}
+class Node {
+  // block data
+  public slot: number;
+  public blockRoot: Root;
 
-/**
- * Return the attetation with the highest slot number in store given validator index.
- * @param {Store} store
- * @param {ValidatorIndex} validatorIndex
- * @returns {Attestation}
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function getLatestAttestation(store: Store, validatorIndex: ValidatorIndex): Attestation {
-  const validator: Validator = store.validatorRegistry[validatorIndex];
-  const attestation = store.pendingAttestations
-  // NOTE: This may not be correct
-    .filter((a) => a.aggregationBitfield === validator.pubkey)
-    .reduce((prev: PendingAttestation, cur: PendingAttestation) => prev.data.slot < cur.data.slot ?  cur : prev);
-  // If there are more than one, return the index 0
-  return attestation[0];
-}
+  /**
+   * Total weight for a block and its children
+   */
+  public weight: Gwei;
 
-// TODO FINSIH
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function getLatestAttestationTarget(store: Store, validatorIndex: ValidatorIndex): BeaconBlock {
-  // const attestation = getLatestAttestation(store, validatorIndex);
-  return store.blocks[store.blocks.length - 1];
-}
+  /**
+   * Parent node, the previous block
+   */
+  public parent: Node;
 
-/**
- * Returns child blocks of a given block.
- * @param {Store} store
- * @param {BeaconBlock} block
- * @returns {BeaconBlock[]}
- */
-function getChildren(store: Store, block: BeaconBlock): BeaconBlock[] {
-  // TODO Finish
-  return [block];
-}
+  /**
+   * Child node with the most weight
+   */
+  public bestChild: Node;
 
-/**
- * Execute the LMD-GHOST algorithm to find the head BeaconBlock
- * @param {Store} store
- * @param {BeaconState} startState
- * @param {BeaconBlock} startBlock
- * @returns {BeaconBlock}
- */
-export function lmdGhost(store: Store, startState: BeaconState, startBlock: BeaconBlock): BeaconBlock {
-  const validators = startState.validatorRegistry;
-  const activeValidatorIndices: ValidatorIndex[] = getActiveValidatorIndices(validators, slotToEpoch(startState.slot));
+  /**
+   * Decendent node with the most weight
+   */
+  public bestTarget: Node;
 
-  const attestationTargets: AttestationTarget[] = [];
-  for (const validatorIndex of activeValidatorIndices) {
-    attestationTargets.push({validatorIndex, target: getLatestAttestationTarget(store, validatorIndex)});
+  /**
+   * All direct children
+   */
+  public children: Record<Root, Node>;
+
+  public constructor({slot, blockRoot, parent}: {slot: Slot; blockRoot: Root; parent: Node}) {
+    this.slot = slot;
+    this.blockRoot = blockRoot;
+    this.parent = parent;
+
+    this.weight = new BN(0);
+    this.bestChild = null;
+    this.bestTarget = null;
+    this.children = {};
   }
 
-  // Inner function
-  function getVoteCount(block: BeaconBlock): int {
-    let sum = 0;
-    for (const target of attestationTargets) {
-      if (getAncestor(store, target[1], block.slot) === block) {
-        sum += Math.floor(getEffectiveBalance(startState, target[0]).toNumber() / FORK_CHOICE_BALANCE_INCREMENT);
+  /**
+   * Compare two nodes for equality
+   */
+  public equals(other: Node): boolean {
+    return this.blockRoot === other.blockRoot;
+  }
+
+  /**
+   * Determine which node is 'better'
+   */
+  public betterThan(other: Node): boolean {
+    return (
+      // n2 weight greater
+      this.weight.gt(other.weight) ||
+      // equal weights and lexographically higher root
+      (this.weight.eq(other.weight) && this.blockRoot > other.blockRoot)
+    );
+  }
+
+  /**
+   * Update node weight
+   */
+  public updateWeightWithUpdates(delta: Gwei): void {
+    this.weight = this.weight.add(delta);
+    if (delta.ltn(0)) {
+      this.onRemoveWeight();
+    } else {
+      this.onAddWeight();
+    }
+  }
+
+  /**
+   * Update best child / best target in the added weight case
+   */
+  private onAddWeight(): void {
+    if (this.parent) {
+      // if this node not the best child but has a bigger weight
+      if (!this.equals(this.parent.bestChild) && this.betterThan(this.parent.bestChild)) {
+        this.parent.bestChild = this;
+        this.parent.bestTarget = this.bestTarget;
       }
     }
-    return sum;
   }
 
-  let head = startBlock;
-  while (1) {
-    const children = getChildren(store, head);
-    if (children.length === 0) {
-      return head;
+  /**
+   * Update best child / best target in the removed weight case
+   */
+  private onRemoveWeight(): void {
+    if (this.parent) {
+      // if this node is the best child it may lost that position
+      if (this.equals(this.parent.bestChild)) {
+        const newBest = Object.values(this.parent.children).reduce((a, b) => b.betterThan(a) ? b : a, this);
+        // no longer the best
+        if (!this.equals(newBest)) {
+          this.parent.bestChild = newBest;
+          this.parent.bestTarget = newBest.bestTarget;
+        }
+      }
     }
-    head = children.reduce((a, c) => getVoteCount(a) < getVoteCount(c) ? c : a);
+  }
+}
+
+/**
+ * Calculate best block using
+ * Latest Message-Driven Greedy Heaviest Observed SubTree
+ * See https://github.com/protolambda/lmd-ghost#state-ful-dag
+ */
+export class LMDGHOST {
+  /**
+   * Aggregated attestations
+   */
+  private aggregator: AttestationAggregator;
+
+  /**
+   * Recently seen blocks, pruned up to last finalized block
+   */
+  private nodes: Record<Root, Node>;
+
+  /**
+   * Last finalized block
+   */
+  private finalized: Node;
+
+  /**
+   * Last justified block
+   */
+  private justified: Node;
+  private synced: boolean;
+
+  public constructor() {
+    this.aggregator = new AttestationAggregator((hex) => this.nodes[hex] ? this.nodes[hex].slot : null);
+    this.nodes = {};
+    this.finalized = null;
+    this.justified = null;
+    this.synced = true;
+  }
+
+  public addBlock(slot: Slot, blockRootBuf: bytes32, parentRootBuf: bytes32): void {
+    this.synced = false;
+    const blockRoot = blockRootBuf.toString('hex');
+    const parentRoot = parentRootBuf.toString('hex');
+    // ensure blockRoot exists
+    const node: Node = this.nodes[blockRoot] || new Node({
+      slot,
+      blockRoot,
+      parent: this.nodes[parentRoot],
+    });
+    // best target is the node itself
+    node.bestTarget = node;
+    this.nodes[blockRoot] = node;
+
+    // if parent root exists, link to blockRoot
+    if (this.nodes[parentRoot]) {
+      this.nodes[parentRoot].children[blockRoot] = node;
+      if (Object.values(this.nodes[parentRoot].children).length === 1) {
+        // this is the only child, propogate itself as best target as far as necessary
+        let c = node;
+        let p = c.parent;
+        p.bestChild = c;
+        while (p) {
+          if (c.equals(p.bestChild)) {
+            p.bestTarget = node.bestTarget;
+            c = p;
+            p = p.parent;
+          } else {
+            // stop propogating when the child is not the best child of the parent
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  public addAttestation(blockRootBuf: bytes32, attester: ValidatorIndex, weight: Gwei): void {
+    this.synced = false;
+    this.aggregator.addAttestation({
+      target: blockRootBuf.toString('hex'),
+      attester,
+      weight,
+    });
+  }
+
+  public setFinalized(blockRoot: bytes32): void {
+    const rootHex = blockRoot.toString('hex');
+    this.finalized = this.nodes[rootHex];
+    this.prune();
+    this.aggregator.prune();
+  }
+
+  public setJustified(blockRoot: bytes32): void {
+    const rootHex = blockRoot.toString('hex');
+    this.justified = this.nodes[rootHex];
+  }
+
+  private prune(): void {
+    if (this.finalized) {
+      Object.values(this.nodes).forEach((n) => {
+        if (n.slot < this.finalized.slot) {
+          delete this.nodes[n.blockRoot];
+        }
+      });
+      this.finalized.parent = null;
+    }
+  }
+
+  public syncChanges(): void {
+    // calculate changes
+    const changes: [Node, Gwei][] = [];
+    let netDelta = new BN(0);
+    Object.values(this.aggregator.latestAggregates).forEach((agg) => {
+      if (!agg.prevWeight.eq(agg.weight)) {
+        const delta = agg.weight.sub(agg.prevWeight);
+        agg.prevWeight = agg.weight;
+        
+        changes.push([this.nodes[agg.target], delta]);
+        netDelta = netDelta.add(delta);
+      }
+    });
+
+    // apply changes
+    // back-propagation cut-off strategy:
+    // If n has sufficient weight to not lose its position on the canonical chain
+    //   (ie: n.weight + delta > (totalWeight + possible change) / 2
+    // then the target will stay the same during this run, just propagate the weight adjustment
+    let cutOff = (this.finalized ? this.finalized.weight : new BN(0)).add(netDelta);
+    changes.forEach(([node, delta]) => {
+      let n = node;
+      while (n) {
+        // update node weight
+        n.updateWeightWithUpdates(delta);
+        // less possible change = better cutoff
+        cutOff = cutOff.sub(delta);
+        if (n.parent && n.equals(n.parent.bestChild) && n.weight.muln(2).gt(cutOff)) {
+          const target = n.bestTarget;
+          n = n.parent;
+          while (n) {
+            n.bestTarget = target;
+            n.weight = n.weight.add(delta);
+            n = n.parent;
+          }
+          break;
+        } else {
+          n = n.parent;
+        }
+      }
+    });
+
+    this.synced = true;
+  }
+
+  public head(): bytes32 {
+    assert(this.justified);
+    if (!this.synced) {
+      this.syncChanges();
+    }
+    return Buffer.from(this.justified.bestTarget.blockRoot, 'hex');
   }
 }

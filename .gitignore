@@ -3,5 +3,5 @@ lib
 .nyc_output/
 coverage/**
 .DS_Store
-
+*.swp
 .idea/
