@@ -47,6 +47,7 @@ describe("deserialize", () => {
     {value: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", type: "uint256", expected: new BN("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)},
     {value: "0000000001000000", type: "number64", expected: 2**32},
     {value: "ffffffffffff0f00", type: "number64", expected: 2**52-1},
+    {value: "ffffffffffffffff", type: "number64", expected: Infinity},
     {value: "04000000deadbeef", type: "bytes8", expected: Buffer.from("deadbeef", "hex")},
     {value: "10000000deadbeefdeadbeefdeadbeefdeadbeef", type: "bytes32", expected: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex")},
     {value: "04000000deadbeef", type: "bytes", expected: Buffer.from("deadbeef", "hex")},
