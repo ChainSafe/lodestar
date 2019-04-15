@@ -25,7 +25,13 @@ import { parseType } from "./util/types";
 
 function _serializeUint(value: Uint, type: UintType, output: Buffer, start: number): number {
   const offset = start + type.byteLength;
-  (new BN(value)).add(new BN(type.offset)).toArrayLike(Buffer, "le", type.byteLength)
+  let bnValue: BN;
+  if (type.byteLength > 6 && type.useNumber && value === Infinity) {
+    bnValue = new BN(Buffer.alloc(type.byteLength, 255));
+  } else {
+    bnValue = (new BN(value)).add(new BN(type.offset));
+  }
+  bnValue.toArrayLike(Buffer, "le", type.byteLength)
     .copy(output, start);
   return offset;
 }
