@@ -79,43 +79,64 @@ class Node {
   }
 
   /**
-   * Update node weight
+   * Add child node
    */
-  public updateWeightWithUpdates(delta: Gwei): void {
-    this.weight = this.weight.add(delta);
-    if (delta.ltn(0)) {
-      this.onRemoveWeight();
-    } else {
-      this.onAddWeight();
-    }
-  }
-
-  /**
-   * Update best child / best target in the added weight case
-   */
-  private onAddWeight(): void {
-    if (this.parent) {
-      // if this node not the best child but has a bigger weight
-      if (!this.equals(this.parent.bestChild) && this.betterThan(this.parent.bestChild)) {
-        this.parent.bestChild = this;
-        this.parent.bestTarget = this.bestTarget;
+  public addChild(child: Node): void {
+    this.children[child.blockRoot] = child;
+    if (Object.values(this.children).length === 1) {
+      // this is the only child, propagate itself as best target as far as necessary
+      this.bestChild = child;
+      let c: Node = child;
+      let p: Node = this;
+      while (p) {
+        if (c.equals(p.bestChild)) {
+          p.bestTarget = child.bestTarget;
+          c = p;
+          p = p.parent;
+        } else {
+          // stop propagating when the child is not the best child of the parent
+          break;
+        }
       }
     }
   }
 
   /**
-   * Update best child / best target in the removed weight case
+   * Update node weight
+   */
+  public propagateWeightChange(delta: Gwei): void {
+    this.weight = this.weight.add(delta);
+    if (this.parent) {
+      if (delta.ltn(0)) {
+        this.onRemoveWeight();
+      } else {
+        this.onAddWeight();
+      }
+      this.parent.propagateWeightChange(delta);
+    }
+  }
+
+  /**
+   * Update parent best child / best target in the added weight case
+   */
+  private onAddWeight(): void {
+    if (this.equals(this.parent.bestChild) || this.betterThan(this.parent.bestChild)) {
+      this.parent.bestChild = this;
+      this.parent.bestTarget = this.bestTarget;
+    }
+  }
+
+  /**
+   * Update parent best child / best target in the removed weight case
    */
   private onRemoveWeight(): void {
-    if (this.parent) {
-      // if this node is the best child it may lost that position
-      if (this.equals(this.parent.bestChild)) {
-        const newBest = Object.values(this.parent.children).reduce((a, b) => b.betterThan(a) ? b : a, this);
-        // no longer the best
-        if (!this.equals(newBest)) {
-          this.parent.bestChild = newBest;
-          this.parent.bestTarget = newBest.bestTarget;
-        }
+    // if this node is the best child it may lost that position
+    if (this.equals(this.parent.bestChild)) {
+      const newBest = Object.values(this.parent.children).reduce((a, b) => b.betterThan(a) ? b : a, this);
+      // no longer the best
+      if (!this.equals(newBest)) {
+        this.parent.bestChild = newBest;
+        this.parent.bestTarget = newBest.bestTarget;
       }
     }
   }
@@ -172,23 +193,7 @@ export class LMDGHOST {
 
     // if parent root exists, link to blockRoot
     if (this.nodes[parentRoot]) {
-      this.nodes[parentRoot].children[blockRoot] = node;
-      if (Object.values(this.nodes[parentRoot].children).length === 1) {
-        // this is the only child, propogate itself as best target as far as necessary
-        let c = node;
-        let p = c.parent;
-        p.bestChild = c;
-        while (p) {
-          if (c.equals(p.bestChild)) {
-            p.bestTarget = node.bestTarget;
-            c = p;
-            p = p.parent;
-          } else {
-            // stop propogating when the child is not the best child of the parent
-            break;
-          }
-        }
-      }
+      this.nodes[parentRoot].addChild(node);
     }
   }
 
@@ -225,44 +230,12 @@ export class LMDGHOST {
   }
 
   public syncChanges(): void {
-    // calculate changes
-    const changes: [Node, Gwei][] = [];
-    let netDelta = new BN(0);
     Object.values(this.aggregator.latestAggregates).forEach((agg) => {
       if (!agg.prevWeight.eq(agg.weight)) {
         const delta = agg.weight.sub(agg.prevWeight);
         agg.prevWeight = agg.weight;
         
-        changes.push([this.nodes[agg.target], delta]);
-        netDelta = netDelta.add(delta);
-      }
-    });
-
-    // apply changes
-    // back-propagation cut-off strategy:
-    // If n has sufficient weight to not lose its position on the canonical chain
-    //   (ie: n.weight + delta > (totalWeight + possible change) / 2
-    // then the target will stay the same during this run, just propagate the weight adjustment
-    let cutOff = (this.finalized ? this.finalized.weight : new BN(0)).add(netDelta);
-    changes.forEach(([node, delta]) => {
-      let n = node;
-      while (n) {
-        // update node weight
-        n.updateWeightWithUpdates(delta);
-        // less possible change = better cutoff
-        cutOff = cutOff.sub(delta);
-        if (n.parent && n.equals(n.parent.bestChild) && n.weight.muln(2).gt(cutOff)) {
-          const target = n.bestTarget;
-          n = n.parent;
-          while (n) {
-            n.bestTarget = target;
-            n.weight = n.weight.add(delta);
-            n = n.parent;
-          }
-          break;
-        } else {
-          n = n.parent;
-        }
+        this.nodes[agg.target].propagateWeightChange(delta);
       }
     });
 
