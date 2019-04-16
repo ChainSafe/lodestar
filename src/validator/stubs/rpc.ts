@@ -1,9 +1,9 @@
 import {
-  BeaconBlock, BeaconState, bytes48, CommitteeAssignment, CrosslinkCommittee, Epoch, GenesisInfo, Shard, Slot,
+  BeaconBlock, BeaconState, bytes48, CrosslinkCommittee, Epoch, Shard, Slot,
   ValidatorIndex
 } from "../../types";
 import {notSoRandomRandomBoolean, notSoRandomRandomSlot, notSoRandomRandomValidatorIndex} from "./helpers";
-import {Bool} from "@chainsafe/ssz";
+import {CommitteeAssignment, GenesisInfo} from "../types";
 
 export default class RPCProvider {
   private readonly rpcUrl: string;

@@ -26,4 +26,3 @@ export * from "./eth1";
 export * from "./block";
 export * from "./state";
 export * from "./custom";
-export * from "./validator";

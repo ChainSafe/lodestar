@@ -1,7 +1,7 @@
 import assert from "assert";
 
 import {
-  BeaconState, CommitteeAssignment, Epoch, Shard, Slot,
+  BeaconState, Epoch, Shard, Slot,
   ValidatorIndex,
 } from "../../types";
 
@@ -21,6 +21,7 @@ import {
   getEpochStartSlot, getPreviousEpoch, slotToEpoch,
 } from "./stateTransitionHelpers";
 import RPCProvider from "../../validator/stubs/rpc";
+import {CommitteeAssignment} from "../../validator/types";
 
 /**
  * Activate a validator given an index.

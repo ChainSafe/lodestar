@@ -30,7 +30,7 @@ import {
   slotToEpoch,
   split,
 } from "../../../../src/chain/helpers/stateTransitionHelpers";
-import {BeaconState, Epoch, Fork, int, Slot, uint64, Validator, ValidatorIndex} from "../../../../src/types";
+import {BeaconState, Epoch, Fork, int, number64, Slot, uint64, Validator, ValidatorIndex} from "../../../../src/types";
 import {generateAttestationData} from "../../../utils/attestation";
 import {randBetween} from "../../../utils/misc";
 import {generateValidator, generateValidators} from "../../../utils/validator";
@@ -458,47 +458,46 @@ describe("getDomain", () => {
     currentVersion: 5,
   };
 
-  const constant: uint64 = new BN(2 ** 32);
-  const four: uint64 = new BN(4);
-  const five: uint64 = new BN(5);
+  const constant: number64 = 2 ** 32;
+  const four: number64 = 4;
+  const five: number64 = 5;
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
     const result = getDomain(fork, 8, 4);
-    const expected = four.mul(constant).add(four);
-    console.log(result);
-    console.log(expected);
-    assert(expected.eqn(result));
+    // const expected = four.mul(constant).add(four);
+    const expected = (four * constant) + four;
+    assert.equal(expected, result, `Returned ${result} instead of ${expected}`);
   });
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
     const result = getDomain(fork, 13, 5);
-    const expected = five.mul(constant).add(five);
-    assert(expected.eqn(result));
+    const expected = (five * constant) + five;
+    assert.equal(expected, result, `Returned ${result} instead of ${expected}`);
   });
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
     const result = getDomain(fork, 12, 5);
-    const expected = five.mul(constant).add(five);
-    assert(expected.eqn(result));
+    const expected = (five * constant) + five;
+    assert.equal(expected, result, `Returned ${result} instead of ${expected}`);
   });
 });
 
 describe("getBitfieldBit", () => {
   it("should return 1 for the 4th (index 3) bit of [0x8]", () => {
     const result = getBitfieldBit(Buffer.from([0x8]), 3);
-    assert(result === 1, `returned ${result} not 1`);
+    assert.equal(result, 1, `returned ${result} not 1`);
   });
   it("should return 0 for the 3rd (index 2) bit of [0x8]", () => {
     const result = getBitfieldBit(Buffer.from([0x8]), 2);
-    assert(result === 0, `returned ${result} not 0`);
+    assert.equal(result, 0, `returned ${result} not 0`);
   });
   it("should return 1 for the 18th (index 17) bit of [0x8, 0x4, 0x2, 0x1]", () => {
     const result = getBitfieldBit(Buffer.from([0x8, 0x4, 0x2, 0x1]), 17);
-    assert(result === 1, `returned ${result} not 1`);
+    assert.equal(result, 1, `returned ${result} not 1`);
   });
   it("should return 1 for the 19th (index 18) bit of [0x8, 0x4, 0x2, 0x1]", () => {
     const result = getBitfieldBit(Buffer.from([0x8, 0x4, 0x2, 0x1]), 18);
-    assert(result === 0, `returned ${result} not 0`);
+    assert.equal(result, 0, `returned ${result} not 0`);
   });
 })
 

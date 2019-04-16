@@ -9,13 +9,12 @@
  * 7. Wait for new role
  * 6. Repeat step 5
  */
-import {GenesisInfo, ValidatorCtx} from "../types";
 import RPCProvider from "./stubs/rpc";
-import {CommitteeAssignment, ValidatorIndex} from "../types";
 import BlockProcessingService from "./block";
 import {SLOTS_PER_EPOCH} from "../constants";
 import logger, {AbstractLogger} from "../logger";
-import {Bool} from "@chainsafe/ssz";
+import {Slot, ValidatorIndex} from "../types/custom";
+import {ValidatorCtx, GenesisInfo, CommitteeAssignment} from "./types";
 
 /**
  * Main class for the Validator client.
