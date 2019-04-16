@@ -4,8 +4,8 @@ import { ethers } from "ethers";
 import ganache from "ganache-core";
 import sinon from "sinon";
 
-import { EthersEth1Notifier } from "../../src/eth1";
-import defaults from "../../src/eth1/defaults";
+import { EthersEth1Notifier } from "../../../src/eth1";
+import defaults from "../../../src/eth1/defaults";
 import promisify from "promisify-es6";
 
 // TODO integrate this into longer running tests
