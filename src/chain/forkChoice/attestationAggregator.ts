@@ -47,7 +47,7 @@ export class AttestationAggregator {
 
   public constructor(slotLookup: (Root) => Slot | null) {
     this.latestAggregates = {};
-    this.latestAttestations = {}
+    this.latestAttestations = {};
     this.slotLookup = slotLookup;
   }
 
