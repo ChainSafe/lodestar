@@ -149,7 +149,7 @@ export function getCommitteeAssignment(
 export function isProposerAtSlot(
   state: BeaconState,
   slot: Slot,
-  validatorIndex: ValidatorIndex): Boolean {
+  validatorIndex: ValidatorIndex): boolean {
 
   const currentEpoch = getCurrentEpoch(state);
   assert(slotToEpoch(slot) === currentEpoch);

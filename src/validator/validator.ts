@@ -113,7 +113,7 @@ class Validator {
     if ((Date.now() - this.genesisInfo.startTime) % SLOTS_PER_EPOCH === 0) {
       const epoch = await this.provider.getCurrentEpoch();
       const assignment: CommitteeAssignment = await this.provider.getCommitteeAssignment(epoch, this.validatorIndex);
-      const isProposer: Boolean = this.provider.isProposerAtSlot(assignment.slot, this.validatorIndex);
+      const isProposer: boolean = this.provider.isProposerAtSlot(assignment.slot, this.validatorIndex);
 
       if (assignment.validators.includes(this.validatorIndex) && isProposer) {
         // Run attestation and then block proposer on `slot`

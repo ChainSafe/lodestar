@@ -72,10 +72,11 @@ export default class RPCProvider {
   }
 
   public getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): CommitteeAssignment {
+    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
     return {} as CommitteeAssignment;
   }
 
-  public isProposerAtSlot(slot: Slot, validatorIndex: ValidatorIndex): Boolean {
+  public isProposerAtSlot(slot: Slot, validatorIndex: ValidatorIndex): boolean {
     return notSoRandomRandomBoolean();
   }
 
