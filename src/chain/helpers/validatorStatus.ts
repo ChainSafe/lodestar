@@ -108,7 +108,6 @@ export function prepareValidatorForWithdrawal(state: BeaconState, index: Validat
  * ``assignment[0]`` is the list of validators in the committee
  * ``assignment[1]`` is the shard to which the committee is assigned
  * ``assignment[2]`` is the slot at which the committee is assigned
- * ``assignment[3]`` is a bool signalling if the validator is expected to propose
  * a beacon block at the assigned slot.
  * @param {BeaconState} state
  * @param {Epoch} epoch

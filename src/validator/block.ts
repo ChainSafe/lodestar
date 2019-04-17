@@ -21,10 +21,11 @@ export default class BlockProcessingService {
    * IFF a validator is selected construct a block to propose.
    * @returns {Promise<void>}
    */
-  private async buildBlock() {
+  public async buildBlock(): Promise<BeaconBlock> {
     let block: BeaconBlock = getEmptyBlock();
     block = await this.assembleHeader(block);
     block = await this.assembleBody(block);
+    return block;
   }
 
   private async assembleHeader(block: BeaconBlock): Promise<BeaconBlock> {
@@ -55,13 +56,5 @@ export default class BlockProcessingService {
 
   private async assembleBody(block: BeaconBlock): Promise<BeaconBlock> {
     return block;
-  }
-
-  /**
-   * Main function to start block processing
-   * @returns {Promise<void>}
-   */
-  public async start() {
-    await this.buildBlock();
   }
 }

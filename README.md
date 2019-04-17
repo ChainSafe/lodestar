@@ -31,7 +31,7 @@ You will need to go over the [specification](https://github.com/ethereum/eth2.0-
 1. If you haven't `yarn install`
 2. `yarn build`
 
-Two executables are available, `./bin/lodestar` and `./bin/lodestar-client`
+One executable is available: `./bin/lodestar` 
 
 ## Contributors
 If you would like to contribute, please submit an issue or talk to us on our [gitter](https://gitter.im/chainsafe/lodestar-chain).

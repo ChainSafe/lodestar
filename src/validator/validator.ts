@@ -44,7 +44,12 @@ class Validator {
     await this.setup();
     this.run();
   }
-
+  
+  /**
+   * Stops all validator functions
+   */
+  private async stop(): Promise<void> {}
+	  
   /**
    * Main method that starts a client.
    * @returns {Promise<void>}
