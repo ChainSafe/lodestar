@@ -1,9 +1,9 @@
-import {PrivateEth1Network} from "../../../src/eth1/dev";
+import {PrivateEth1Network} from "../../../../src/eth1/dev/index";
 import chai, {expect} from 'chai';
-import {DepositCommand} from "../../../src/cli/commands";
+import {DepositCommand} from "../../../../src/cli/commands/index";
 import chaiAsPromised from 'chai-as-promised';
-import logger from "../../../src/logger/winston";
-import {CliError} from "../../../src/cli/error";
+import logger from "../../../../src/logger/winston";
+import {CliError} from "../../../../src/cli/error";
 import {Wallet} from "ethers";
 import program from "commander";
 

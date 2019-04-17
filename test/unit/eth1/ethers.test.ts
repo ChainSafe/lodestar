@@ -7,7 +7,7 @@ import sinon from "sinon";
 import { EthersEth1Notifier } from "../../../src/eth1";
 import defaults from "../../../src/eth1/defaults";
 import promisify from "promisify-es6";
-import logger from "../../src/logger/winston";
+import logger from "../../../src/logger/winston";
 
 describe("Eth1Notifier", () => {
   const ganacheProvider = ganache.provider();

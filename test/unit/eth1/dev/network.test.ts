@@ -1,5 +1,5 @@
-import logger from "../../../src/logger";
-import {PrivateEth1Network} from "../../../src/eth1/dev";
+import logger from "../../../../src/logger/index";
+import {PrivateEth1Network} from "../../../../src/eth1/dev/index";
 import {Wallet} from "ethers";
 import * as ethers from "ethers/ethers";
 import {expect} from "chai";

@@ -1,6 +1,6 @@
 import {expect} from 'chai';
-import {BeaconNodeCommand} from "../../../src/cli/commands";
-import logger from "../../../src/logger/winston";
+import {BeaconNodeCommand} from "../../../../src/cli/commands/index";
+import logger from "../../../../src/logger/winston";
 
 import program from "commander";
 

@@ -12,7 +12,7 @@ import {generateEmptyBlock} from "../../utils/block";
 import {generateEmptyAttestation} from "../../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../../utils/voluntaryExits";
 import level from "level";
-import logger from "../../src/logger/winston";
+import logger from "../../../src/logger/winston";
 
 describe("LevelDB", () => {
   const dbLocation = "./.__testdb";

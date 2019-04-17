@@ -1,6 +1,6 @@
 import {expect} from 'chai';
-import {Eth1PrivateNetworkCommand} from "../../../src/cli/commands";
-import logger from "../../../src/logger/winston";
+import {Eth1PrivateNetworkCommand} from "../../../../src/cli/commands/index";
+import logger from "../../../../src/logger/winston";
 
 import program from "commander";
 
