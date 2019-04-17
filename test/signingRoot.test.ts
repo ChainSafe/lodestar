@@ -5,7 +5,7 @@ import {
   SerializableValue,
 } from "../src/types";
 
-import { signedRoot } from "../src/signedRoot";
+import { signingRoot } from "../src/signingRoot";
 
 import {
   ArrayObject,
@@ -28,7 +28,7 @@ describe("signedRoot", () => {
   ];
   for (const {value, type, expected} of testCases) {
     it(`should correctly hash ${stringifyType(type)}`, () => {
-      const actual = signedRoot(value, type).toString('hex');
+      const actual = signingRoot(value, type).toString('hex');
       assert(actual);
     });
   }
@@ -43,7 +43,7 @@ describe("signedRoot", () => {
   ];
   for (const {value, type, reason} of failCases) {
     it(`should throw an error for ${stringifyType(type)}: ${reason}`, () => {
-      assert.throws(() => signedRoot(value as SerializableObject, type));
+      assert.throws(() => signingRoot(value as SerializableObject, type));
     });
   }
 });
