@@ -4,6 +4,7 @@ import {LevelUp} from "levelup";
 import {DB, DBOptions} from "../interface";
 import AbstractDB, {SearchOptions} from "./abstract";
 import {Attestation} from "../../types";
+import logger from "../../logger";
 
 export interface LevelDBOptions extends DBOptions {
   db?: LevelUp;
@@ -15,8 +16,11 @@ export interface LevelDBOptions extends DBOptions {
 export class LevelDB extends AbstractDB implements DB {
   private db: LevelUp;
 
+  private opts: LevelDBOptions;
+
   public constructor(opts: LevelDBOptions) {
     super();
+    this.opts = opts;
     this.db =
       opts.db
       ||
@@ -28,6 +32,7 @@ export class LevelDB extends AbstractDB implements DB {
 
   public async start(): Promise<void> {
     await this.db.open();
+    logger.info( `Connected to LevelDB database at ${this.opts.name}`)
   }
 
   public async stop(): Promise<void> {

@@ -1,29 +1,32 @@
-import BN from "bn.js";
 import deepmerge from "deepmerge";
-
-import {BeaconChain} from "../chain";
 import {LevelDB} from "../db";
 import {EthersEth1Notifier} from "../eth1";
 import {P2PNetwork} from "../p2p";
-import {BeaconAPI, JSONRPC, WSServer} from "../rpc";
-import {Sync} from "../sync";
-import {OpPool} from "../opPool";
 
 import defaultConf from "./defaults";
+import logger from "../logger/winston";
+import {isPlainObject} from "../helpers/objects";
+import {Sync} from "../sync";
+import {BeaconChain} from "../chain";
+import {OpPool} from "../opPool";
+import {JSONRPC} from "../rpc/protocol";
+import {WSServer} from "../rpc/transport";
+import {BeaconAPI} from "../rpc/api";
 
 interface Service {
   start(): Promise<void>;
+
   stop(): Promise<void>;
 }
 
 interface BeaconNodeCtx {
-  chain: object;
-  db: object;
-  eth1: object;
-  network: object;
-  rpc: object;
-  sync: object;
-  opPool: object;
+  chain?: object;
+  db?: object;
+  eth1?: object;
+  network?: object;
+  rpc?: object;
+  sync?: object;
+  opPool?: object;
 }
 
 class BeaconNode {
@@ -37,9 +40,15 @@ class BeaconNode {
   public sync: Service;
 
   public constructor(opts: BeaconNodeCtx) {
-    this.conf = deepmerge(defaultConf, opts);
+    this.conf = deepmerge(
+      defaultConf,
+      opts,
+      {
+        //clone doesn't work very vell on classes like ethers.Provider
+        isMergeableObject: isPlainObject
+      }
+    );
 
-    // this.logger ?
     this.db = new LevelDB(this.conf.db);
     this.network = new P2PNetwork(this.conf.network);
     this.eth1 = new EthersEth1Notifier(this.conf.eth1);
@@ -55,7 +64,7 @@ class BeaconNode {
       chain: this.chain,
     });
     this.rpc = new JSONRPC(this.conf.rpc, {
-      transport: new WSServer(this.conf.rpc), 
+      transport: new WSServer(this.conf.rpc),
       api: new BeaconAPI(this.conf.rpc, {
         chain: this.chain,
         db: this.db,
@@ -65,6 +74,7 @@ class BeaconNode {
   }
 
   public async start() {
+    logger.info('Starting eth2 beacon node - LODESTAR!');
     await this.db.start();
     await this.network.start();
     await this.eth1.start();
