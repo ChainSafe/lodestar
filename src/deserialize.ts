@@ -18,11 +18,19 @@ import { parseType } from "./util/types";
 
 function _deserializeUint(data: Buffer, type: UintType, start: number): DeserializedValue {
   const offset = start + type.byteLength;
-  const bn = (new BN(data.slice(start, offset), 16, "le")).sub(new BN(type.offset));
-  const value = (type.useNumber || type.byteLength <= 4) ? bn.toNumber() : bn;
-  return {
-    offset,
-    value,
+  const uintData = data.slice(start, offset);
+  if (type.byteLength > 6 && type.useNumber && uintData.equals(Buffer.alloc(type.byteLength, 255))) {
+    return {
+      offset,
+      value: Infinity,
+    }
+  } else {
+    const bn = (new BN(uintData, 16, "le")).sub(new BN(type.offset));
+    const value = (type.useNumber || type.byteLength <= 6) ? bn.toNumber() : bn;
+    return {
+      offset,
+      value,
+    }
   }
 }
 

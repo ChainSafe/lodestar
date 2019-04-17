@@ -21,7 +21,7 @@ Types are either specified in a simplified form (eg: `"uint32"`) or an extended 
 #### Uint
 A uint serialization value may be either a js `number` or a `BN` from [bn.js](https://github.com/indutny/bn.js).
 A uint type is specified by either `"uintN"` or `"numberN"`, where N is the number of bits to serialize.
-`uintN` > 32 bits is deserialized to a `BN` else deserialized to a `number`.
+`uintN` > 48 bits is deserialized to a `BN` else deserialized to a `number`.
 Every `numberN` is deserialized to a number.
 
 #### Boolean
