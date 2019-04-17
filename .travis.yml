@@ -1,0 +1,9 @@
+language: node_js
+node_js:
+  - "lts/*"
+cache: yarn
+before_script:
+  - yarn install
+script:
+  - yarn run lint
+  - yarn test
