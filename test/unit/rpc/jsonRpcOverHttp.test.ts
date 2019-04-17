@@ -1,9 +1,9 @@
 import {assert} from "chai";
 import * as request from "supertest";
-import {JSONRPC, MockAPI} from "../../src/rpc";
-import HttpServer from "../../src/rpc/transport/http";
-import {generateRPCCall} from "../utils/rpcCall";
-import logger from "../../src/logger/winston";
+import {JSONRPC, MockAPI} from "../../../src/rpc";
+import HttpServer from "../../../src/rpc/transport/http";
+import {generateRPCCall} from "../../utils/rpcCall";
+import logger from "../../../src/logger/winston";
 
 describe("Json RPC over http", () => {
     let rpc;

@@ -2,10 +2,10 @@ import { assert } from "chai";
 import {ethers} from "ethers";
 import sinon from "sinon";
 
-import {Eth1Wallet, EthersEth1Notifier} from "../../src/eth1";
-import {depositContract} from "../../src/eth1/dev/defaults";
-import {PrivateEth1Network} from "../../src/eth1/dev";
-import logger from "../../src/logger/winston";
+import {Eth1Wallet, EthersEth1Notifier} from "../../../src/eth1";
+import {depositContract} from "../../../src/eth1/dev/defaults";
+import {PrivateEth1Network} from "../../../src/eth1/dev";
+import logger from "../../../src/logger/winston";
 
 describe("Eth1Notifier - using deployed contract", () => {
 

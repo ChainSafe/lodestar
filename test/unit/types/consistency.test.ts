@@ -1,6 +1,6 @@
 import { assert } from "chai";
 import fs from "fs";
-import * as sszTypes from "../../src/types";
+import * as sszTypes from "../../../src/types";
 
 describe("types", () => {
   // interfaces are not available at run time, so we must parse our interface
@@ -10,7 +10,7 @@ describe("types", () => {
   // put interfaces and types into objects
   const interfaces = {};
   const types = {};
-  const typesDir = __dirname + "/../../src/types/";
+  const typesDir = __dirname + "/../../../src/types/";
   // Get all ts files in our types directory
   const typeFiles = fs.readdirSync(typesDir).filter((s) => s.endsWith(".ts"));
   typeFiles.map((file) => {
