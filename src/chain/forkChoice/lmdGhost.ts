@@ -130,7 +130,7 @@ class Node {
    * Update parent best child / best target in the removed weight case
    */
   private onRemoveWeight(): void {
-    // if this node is the best child it may lost that position
+    // if this node is the best child it may lose that position
     if (this.equals(this.parent.bestChild)) {
       const newBest = Object.values(this.parent.children).reduce((a, b) => b.betterThan(a) ? b : a, this);
       // no longer the best
@@ -207,6 +207,7 @@ export class LMDGHOST {
   }
 
   public setFinalized(blockRoot: bytes32): void {
+    this.synced = false;
     const rootHex = blockRoot.toString('hex');
     this.finalized = this.nodes[rootHex];
     this.prune();

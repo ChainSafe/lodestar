@@ -43,6 +43,9 @@ export class AttestationAggregator {
    */
   public latestAttestations: Record<ValidatorIndex, ForkChoiceAttestation>;
 
+  /**
+   * Rather than storing the slot on every attestation, a lookup function is required
+   */
   private slotLookup: (Root) => Slot | null;
 
   public constructor(slotLookup: (Root) => Slot | null) {
