@@ -35,7 +35,7 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
   public async start(): Promise<void> {
     const address = this.opts.depositContract.address;
     const abi = this.opts.depositContract.abi;
-    if(!(await this.contractExists(address))) {
+    if (!(await this.contractExists(address))) {
       throw new Error(`There is no deposit contract at given address: ${address}`);
     }
     try {
@@ -109,7 +109,7 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
   }
 
   private async contractExists(address: string) {
-    if(!isValidAddress(address)) return false;
+    if (!isValidAddress(address)) return false;
     const code = await this.provider.getCode(address);
     return !(!code || code === '0x');
   }
