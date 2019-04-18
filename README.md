@@ -28,8 +28,9 @@ You will need to go over the [specification](https://github.com/ethereum/eth2.0-
 2. `yarn test`
 
 ## Usage
-
-`./bin/lodestar --help`
+1. If you haven't `yarn install`
+2. `yarn build`
+3. `./bin/lodestar --help`
 
 ### Starting private eth1 chain
 
