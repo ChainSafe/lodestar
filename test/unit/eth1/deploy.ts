@@ -1,73 +1,77 @@
-import BN from "bn.js";
 import { assert } from "chai";
-import { ethers } from "ethers";
-import ganache from "ganache-core";
+import {ethers} from "ethers";
 import sinon from "sinon";
 
-import { EthersEth1Notifier } from "../../../src/eth1";
-import defaults from "../../../src/eth1/defaults";
-import promisify from "promisify-es6";
+import {Eth1Wallet, EthersEth1Notifier} from "../../../src/eth1";
+import {depositContract} from "../../../src/eth1/dev/defaults";
+import {PrivateEth1Network} from "../../../src/eth1/dev";
+import logger from "../../../src/logger/winston";
 
-// TODO integrate this into longer running tests
 describe("Eth1Notifier - using deployed contract", () => {
-  const N = 10; // number of private keys to generate
-  const privateKeys = Array.from({length: N}, (_, i) =>
-    Buffer.concat([Buffer.alloc(16), (new BN(i+1)).toArrayLike(Buffer, 'le', 16)]));
-  // Seed ephemeral testnet with balances for each privateKey
-  const ganacheProvider = ganache.provider({
-    accounts: privateKeys.map((secretKey) => ({
-      secretKey,
-      balance: "0x100000000000000000",
-    })),
-    locked: false,
-  });
-  const provider = new ethers.providers.Web3Provider(ganacheProvider);
-  let address;
-  let eth1;
+
+  let eth1Notifier;
+  let eth1Network;
+  let depositContractAddress;
+  let provider;
 
   before(async function() {
-    // This takes a while
-    this.timeout(0);
+    logger.silent(true);
     // deploy deposit contract
-    console.log('deploying deposit contract...');
-    const deployKey = privateKeys[privateKeys.length - 1];
-    const deployWallet = new ethers.Wallet(deployKey, provider);
-    const factory = new ethers.ContractFactory(defaults.depositContract.abi, defaults.depositContract.bytecode, deployWallet);
-    const contract = await factory.deploy();
-    address = contract.address;
-    await contract.deployed();
-    console.log('deployed!');
-
-    eth1 = new EthersEth1Notifier({
-      depositContract: {
-        ...defaults.depositContract,
-        address,
-      },
-      provider,
+    eth1Network = new PrivateEth1Network({
+      host: '127.0.0.1',
+      port: 34569
     });
+    await eth1Network.start();
+    depositContractAddress = await eth1Network.deployDepositContract();
+    provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:34569');
+    provider.pollingInterval = 1;
+    provider.polling = true;
+    eth1Notifier = new EthersEth1Notifier({
+      depositContract: {
+        ...depositContract,
+        address: depositContractAddress,
+      },
+      provider
+    });
+    await eth1Notifier.start();
+  });
+
+  after(async() => {
+    await eth1Notifier.stop();
+    await eth1Network.stop();
+    logger.silent(false);
   });
 
   it("should process a Deposit log", async function() {
-    // This takes a while
-    this.timeout(0);
-
-    const depositKey = privateKeys[privateKeys.length - 2];
-    const depositWallet = new ethers.Wallet(depositKey, provider);
-    const contract = (new ethers.Contract(address, defaults.depositContract.abi, provider)).connect(depositWallet);
+    this.timeout(6000);
+    const wallet = new Eth1Wallet(eth1Network.accounts()[0], provider);
 
     const cb = sinon.spy();
-    eth1.on('deposit', cb);
-    await eth1.start();
+    eth1Notifier.on('deposit', cb);
 
-    const depositData = Buffer.alloc(512);
-    const tx = await contract.deposit(depositData, {value: ethers.utils.parseEther('32.0')});
-    await tx.wait();
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+
+    await wallet.createValidatorDeposit(depositContractAddress, ethers.utils.parseEther('32.0'));
+
     assert(cb.calledOnce, "deposit event did not fire");
   });
 
-  after(async function() {
-    await eth1.stop();
-    await promisify(ganacheProvider.close)();
-  })
-})
+  it("should process a Eth2Genesis log", async function() {
+    this.timeout(30000);
+
+    const cb = sinon.spy();
+    eth1Notifier.on('eth2genesis', cb);
+    await Promise.all(
+      eth1Network
+        .accounts()
+        .map((account) =>
+          (new Eth1Wallet(account, provider))
+            .createValidatorDeposit(
+              depositContractAddress,
+              ethers.utils.parseEther('32.0')
+            )
+        )
+    );
+    assert(cb.called, "eth2genesis event did not fire");
+  });
+
+});

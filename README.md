@@ -27,11 +27,28 @@ You will need to go over the [specification](https://github.com/ethereum/eth2.0-
 1. `yarn install`
 2. `yarn test`
 
-# Building
+## Usage
 1. If you haven't `yarn install`
 2. `yarn build`
+3. `./bin/lodestar --help`
 
-One executable is available: `./bin/lodestar` 
+### Starting private eth1 chain
+
+`./bin/lodestar eth1:dev -m "vast thought differ pull jewel broom cook wrist tribe word before omit"`
+
+This will start ganache server on `http://127.0.0.1:8545`. For more configuration check `./bin/lodestar eth1:dev --help`
+
+### Starting lodestar beacon chain
+
+`./bin/lodestar beacon --db test-db --eth1RpcUrl http://127.0.0.1:8545 --depositContract <depositContractAddress>`
+
+You will see deposit contract address in console if you used `./bin/lodestar eth1:dev`.
+
+### Making validator deposit
+
+`./bin/lodestar deposit -m "vast thought differ pull jewel broom cook wrist tribe word before omit" -n http://127.0.0.1:8545 -c <depositContractAddress>>`
+
+This will trigger 10 deposits to deposit contract which will trigger beacon chain initialization. Make sure to use same mnemonic which you used to start eth1 network.
 
 ## Contributors
 If you would like to contribute, please submit an issue or talk to us on our [gitter](https://gitter.im/chainsafe/lodestar-chain).
