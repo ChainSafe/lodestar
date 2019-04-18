@@ -1,6 +1,5 @@
 import {isPlainObject} from "../../../src/helpers/objects";
 import {expect} from "chai";
-import {BeaconNodeCommand} from "../../../src/cli/commands/index";
 
 describe('Objects helper', () => {
 
