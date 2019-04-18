@@ -83,14 +83,14 @@ describe("types", () => {
     // against runtime type field type (parsed normally, as an array, object, or string)
     const checkType = (ifaceName, ifaceFieldName, ifaceFieldType, rtFieldType) => {
       if (Array.isArray(rtFieldType)) {
-        assert(
+        assert.isTrue(
           Array.isArray(ifaceFieldType),
           `field type mismatch in ${ifaceName}, field ${ifaceFieldName}:
              interface field type is an array but corresponding interface field is not`);
         return checkType(ifaceName, ifaceFieldName, ifaceFieldType[0], rtFieldType[0]);
       } else if (typeof rtFieldType === "object" && rtFieldType.name) {
-        assert(
-          ifaceFieldType === rtFieldType.name,
+        assert.equal(
+          ifaceFieldType, rtFieldType.name,
           `field type mismatch in ${ifaceName}, field ${ifaceFieldName}:
              interface field type: ${ifaceFieldType}, runtime type field name: ${rtFieldType.name}`);
       } else {
@@ -112,14 +112,14 @@ describe("types", () => {
       .map((iface: any) => {
         const rtVar = vars[iface.name];
 
-        assert(
-          rtVar.fields.length === iface.fields.length,
+        assert.equal(
+          rtVar.fields.length, iface.fields.length,
           `interface and runtime type ${iface.name} have a differing number of fields`);
         for (let ix = 0; ix < iface.fields.length; ix++) {
           const [ifaceFieldName, ifaceFieldType] = iface.fields[ix];
           const [rtVarFieldName, rtVarFieldType] = rtVar.fields[ix];
-          assert(
-            ifaceFieldName === rtVarFieldName,
+          assert.equal(
+            ifaceFieldName, rtVarFieldName,
             `field name mismatch in ${iface.name}:
                interface field name: ${ifaceFieldName}, runtime type field name: ${rtVarFieldName}`);
           checkType(iface.name, ifaceFieldName, ifaceFieldType, rtVarFieldType);
