@@ -1,5 +1,4 @@
-import BN from "bn.js";
-import { assert } from "chai";
+import chai, {assert, expect} from "chai";
 import { ethers, Event } from "ethers";
 import ganache from "ganache-core";
 import sinon from "sinon";
@@ -8,7 +7,9 @@ import { EthersEth1Notifier } from "../../../src/eth1";
 import defaults from "../../../src/eth1/defaults";
 import promisify from "promisify-es6";
 import logger from "../../../src/logger/winston";
+import chaiAsPromised from "chai-as-promised";
 
+chai.use(chaiAsPromised);
 describe("Eth1Notifier", () => {
   const ganacheProvider = ganache.provider();
   const provider = new ethers.providers.Web3Provider(ganacheProvider);
@@ -19,7 +20,10 @@ describe("Eth1Notifier", () => {
 
   before(async function() {
     logger.silent(true);
-    await eth1.start();
+  });
+
+  it("should fail to start because there isn't contract at given address",  async function() {
+    await expect(eth1.start()).to.be.rejectedWith('There is no deposit contract at given address');
   });
 
   it("should process a Deposit log", async function() {
@@ -58,8 +62,7 @@ describe("Eth1Notifier", () => {
   });
 
   after(async function() {
-    await eth1.stop();
     await promisify(ganacheProvider.close)();
     logger.silent(false);
   })
-})
+});

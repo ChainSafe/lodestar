@@ -1,15 +1,16 @@
 import BN from "bn.js";
-import { EventEmitter } from "events";
-import { ethers } from "ethers";
-import { deserialize } from "@chainsafe/ssz";
+import {EventEmitter} from "events";
+import {ethers} from "ethers";
+import {deserialize} from "@chainsafe/ssz";
 
-import { bytes32, DepositData, Deposit, Eth1Data } from "../types";
+import {bytes32, Deposit, DepositData, Eth1Data} from "../types";
 
-import {Eth1Options, Eth1Notifier} from "./interface";
+import {Eth1Notifier, Eth1Options} from "./interface";
 import logger from "../logger";
+import {isValidAddress} from "../helpers/address";
 
 export interface EthersEth1Options extends Eth1Options {
-  provider: ethers.providers.Provider;
+  provider: ethers.providers.BaseProvider;
 }
 
 /**
@@ -22,23 +23,25 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
   private _latestBlockHash: bytes32;
   private depositCount: number;
   private chainStarted: boolean;
+  private opts: EthersEth1Options;
 
-  public constructor(opts) {
+  public constructor(opts: EthersEth1Options) {
     super();
+    this.opts = opts;
     this.provider = opts.provider;
-    const address = opts.depositContract.address;
-    const abi = opts.depositContract.abi;
-    try {
-      this.contract = new ethers.Contract(address, abi, this.provider);
-    } catch (e) {
-      //probably wrong address (contract not found or provider not connected
-    }
     this.depositCount = 0;
   }
 
   public async start(): Promise<void> {
-    if(!this.contract) {
-      throw new Error('Eth1 deposit contract not found! Probably wrong rpc url or contract address');
+    const address = this.opts.depositContract.address;
+    const abi = this.opts.depositContract.abi;
+    if(!(await this.contractExists(address))) {
+      throw new Error(`There is no deposit contract at given address: ${address}`);
+    }
+    try {
+      this.contract = new ethers.Contract(address, abi, this.provider);
+    } catch (e) {
+      throw new Error('Eth1 deposit contract not found! Probably wrong eth1 rpc url');
     }
     this.provider.on('block', this.processBlockHeadUpdate.bind(this));
     this.contract.on('Deposit', this.processDepositLog.bind(this));
@@ -103,6 +106,12 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
 
   public async depositRoot(): Promise<bytes32> {
     return Buffer.alloc(32);
+  }
+
+  private async contractExists(address: string) {
+    if(!isValidAddress(address)) return false;
+    const code = await this.provider.getCode(address);
+    return !(!code || code === '0x');
   }
 
 }

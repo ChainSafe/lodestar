@@ -1,6 +1,6 @@
 import deepmerge from "deepmerge";
 import {LevelDB} from "../db";
-import {EthersEth1Notifier} from "../eth1";
+import {Eth1Options, EthersEth1Notifier} from "../eth1";
 import {P2PNetwork} from "../p2p";
 
 import defaultConf from "./defaults";
@@ -22,7 +22,7 @@ interface Service {
 interface BeaconNodeCtx {
   chain?: object;
   db?: object;
-  eth1?: object;
+  eth1?: any;
   network?: object;
   rpc?: object;
   sync?: object;
