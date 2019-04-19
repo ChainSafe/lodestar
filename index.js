@@ -22,12 +22,15 @@ function genSecret () {
 function genPublic (secretKey) {
   const s = mclSecretKey(secretKey)
   const q = g1()
-  return toBuffer(mcl.mul(q, s))
+  const key = toBuffer(mcl.mul(q, s));
+  key[0] |= 0xa0;
+  return key
 }
 
 /**
  * @param {bytes32} secretKey
  * @param {bytes32} messageHash
+ * @param {bytes8} domain
  * @returns {bytes96} signature
  */
 function sign (secretKey, messageHash, domain) {
@@ -192,4 +195,4 @@ module.exports = {
   aggregateSignatures,
   verify,
   verifyMultiple,
-}
+};
