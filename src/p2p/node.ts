@@ -1,17 +1,27 @@
-import {libp2p} from "libp2p";
+import LibP2p from "libp2p";
 import {TCP} from "libp2p-tcp";
 import {Mplex} from "libp2p-mplex";
 import {Bootstrap} from "libp2p-bootstrap";
 import {waterfall} from "async/waterfall";
 import {PeerInfo} from "peer-info";
 import {defaultsDeep} from "@nodeutils/defaults-deep";
+import * as FloodSub from "libp2p-floodsub";
 
-export class LodestarNode extends libp2p {
-  constructor(_options: object) {
+export interface LodestarNodeOpts {
+  bootstrap?: any[],
+  peerInfo: PeerInfo,
+  bootnodes?: any[]
+}
+
+export class LodestarNode extends LibP2p {
+
+  private pubsub: FloodSub;
+
+  constructor(_options: LodestarNodeOpts) {
     const defaults = {
       modules: {
         transport: [TCP],
-	streamMuxer: [Mplex],
+        streamMuxer: [Mplex],
         peerDiscovery: [Bootstrap]
       },
       config: {
@@ -28,27 +38,27 @@ export class LodestarNode extends libp2p {
     super(defaultsDeep(_options, defaults));
   }
 
-  static async createNode (callback) {
-    var node: LodestarNode;
+  static async createNode(callback) {
+    let node: LodestarNode;
 
     waterfall([
-      (cb) => PeerInfo.create(cb),
-      (peerInfo, cb) => {
-        peerInfo.multiaddrs.add('/ip4/0.0.0.0/tcp/9000');
-	node = new LodestarNode({
-          peerInfo
-	});
-	node.start(cb);
-      }
+        (cb) => PeerInfo.create(cb),
+        (peerInfo, cb) => {
+          peerInfo.multiaddrs.add('/ip4/0.0.0.0/tcp/9000');
+          node = new LodestarNode({
+            peerInfo
+          });
+          (node as LibP2p).start(cb);
+        }
       ], (err) => callback(err, node)
     );
 
     node.pubsub = new FloodSub(node);
     node.pubsub.start((err) => {
-      if (err) { 
+      if (err) {
         throw new Error('PubSub failed to start.');
       }
-    })
+    });
 
     return node;
   }

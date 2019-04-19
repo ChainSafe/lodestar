@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import deepmerge from "deepmerge";
 
 import {BeaconChain} from "../chain";
@@ -11,7 +10,7 @@ import {OpPool} from "../opPool";
 
 import defaultConf from "./defaults";
 
-interface Service {
+export interface Service {
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -20,7 +19,7 @@ interface BeaconNodeCtx {
   chain: object;
   db: object;
   eth1: object;
-  network: object;
+  network: any;
   rpc: object;
   sync: object;
   opPool: object;
@@ -55,7 +54,7 @@ class BeaconNode {
       chain: this.chain,
     });
     this.rpc = new JSONRPC(this.conf.rpc, {
-      transport: new WSServer(this.conf.rpc), 
+      transport: new WSServer(this.conf.rpc),
       api: new BeaconAPI(this.conf.rpc, {
         chain: this.chain,
         db: this.db,
