@@ -1,4 +1,3 @@
-import {libp2p} from "libp2p";
 import {TCP} from "libp2p-tcp";
 import {Mplex} from "libp2p-mplex";
 import {Bootstrap} from "libp2p-bootstrap";
@@ -11,7 +10,7 @@ import LibP2p from "libp2p";
 import * as FloodSub from "libp2p-floodsub";
 import {LodestarNodeOpts} from "./node";
 
-export class LodestarNode2 extends libp2p {
+export class LodestarNode2 extends LibP2p {
   constructor(_options: LodestarNodeOpts) {
     const wrtcStar = new WStar({ id: _options.peerInfo.id });
 
