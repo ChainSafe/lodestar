@@ -88,33 +88,5 @@ describe('[CLI] deposit', function() {
     ).to.be.rejectedWith(CliError, 'Failed to make deposit for account');
   });
 
-  it('Should make a deposit for single private key', async () => {
-    const contractAddress = await eth1Network.deployDepositContract();
-    const command = new DepositCommand();
-    await expect(
-      command.action(
-        eth1Network.accounts()[0],
-        null,
-        eth1Network.rpcUrl(),
-        '32',
-        contractAddress
-      )
-    ).to.not.be.rejected;
-  });
-
-  it('Should make a deposit for 10 accounts derived from mnemonic', async () => {
-    this.timeout(4000);
-    const contractAddress = await eth1Network.deployDepositContract();
-    const command = new DepositCommand();
-    await expect(
-      command.action(
-        null,
-        eth1Network.mnemonic(),
-        eth1Network.rpcUrl(),
-        '32',
-        contractAddress
-      )
-    ).to.not.be.rejected;
-  });
 
 });
