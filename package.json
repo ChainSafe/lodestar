@@ -16,7 +16,8 @@
     "lint-fix": "eslint --ext .ts src/ --fix",
     "pretest": "yarn run check-types",
     "test:unit": "nyc -r lcov -e .ts mocha -r ./.babel-register 'test/unit/**/*.test.ts' && nyc report",
-    "test": "yarn test:unit",
+    "test:e2e": "mocha -r ./.babel-register 'test/e2e/**/*.test.ts'",
+    "test": "yarn test:unit & yarn test:e2e",
     "coverage": "codecov"
   },
   "repository": {
