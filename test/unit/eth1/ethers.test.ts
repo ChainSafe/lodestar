@@ -63,6 +63,14 @@ describe("Eth1Notifier", () => {
     assert(cb.calledOnce, "new block event did not fire");
   });
 
+  it("should get latest block hash", async function(): Promise<void> {
+    this.timeout(0);
+
+    await eth1.processBlockHeadUpdate(0);
+    expect(eth1.latestBlockHash()).to.not.be.null;
+    expect(eth1.latestBlockHash().length).to.be.equal(32);
+  });
+
   it("should get deposit root from contract", async function(): Promise<void> {
     const spy = sinon.stub();
     const contract = {

@@ -39,7 +39,7 @@ export interface Eth1Notifier extends EventEmitter {
   /**
    * Return the latest block hash
    */
-  latestBlockHash(): Promise<bytes32>;
+  latestBlockHash(): bytes32;
 
   /**
    * Return the merkle root of the deposits

@@ -30,19 +30,13 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     this.opts = opts;
     this.provider = opts.provider;
     this.depositCount = 0;
+    this._latestBlockHash = null;
   }
 
   public async start(): Promise<void> {
-    const address = this.opts.depositContract.address;
-    const abi = this.opts.depositContract.abi;
-    if (!(await this.contractExists(address))) {
-      throw new Error(`There is no deposit contract at given address: ${address}`);
-    }
-    try {
-      this.contract = new ethers.Contract(address, abi, this.provider);
-    } catch (e) {
-      throw new Error('Eth1 deposit contract not found! Probably wrong eth1 rpc url');
-    }
+    await this.initContract();
+    const latestBlockNumber = await this.provider.getBlockNumber();
+    await this.processBlockHeadUpdate(latestBlockNumber);
     this.provider.on('block', this.processBlockHeadUpdate.bind(this));
     this.contract.on('Deposit', this.processDepositLog.bind(this));
     this.contract.on('Eth2Genesis', this.processEth2GenesisLog.bind(this));
@@ -58,6 +52,7 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
   public async processBlockHeadUpdate(blockNumber): Promise<void> {
     logger.debug(`Received eth1 block ${blockNumber}`);
     const block = await this.provider.getBlock(blockNumber);
+    this._latestBlockHash = Buffer.from(block.hash.substr(2), 'hex');
     this.emit('block', block);
   }
 
@@ -100,7 +95,7 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     return [];
   }
 
-  public async latestBlockHash(): Promise<bytes32> {
+  public latestBlockHash(): bytes32 {
     return this._latestBlockHash;
   }
 
@@ -111,6 +106,19 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
 
   public setContract(contract: Contract) {
     this.contract = contract;
+  }
+
+  private async initContract(): Promise<void> {
+    const address = this.opts.depositContract.address;
+    const abi = this.opts.depositContract.abi;
+    if (!(await this.contractExists(address))) {
+      throw new Error(`There is no deposit contract at given address: ${address}`);
+    }
+    try {
+      this.contract = new ethers.Contract(address, abi, this.provider);
+    } catch (e) {
+      throw new Error('Eth1 deposit contract not found! Probably wrong eth1 rpc url');
+    }
   }
 
   private async contractExists(address: string) {
