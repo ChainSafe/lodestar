@@ -1,6 +1,6 @@
 import BN from "bn.js";
 import {EventEmitter} from "events";
-import {ethers} from "ethers";
+import {Contract, ethers} from "ethers";
 import {deserialize} from "@chainsafe/ssz";
 
 import {bytes32, Deposit, DepositData, Eth1Data} from "../types";
@@ -105,7 +105,12 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
   }
 
   public async depositRoot(): Promise<bytes32> {
-    return Buffer.alloc(32);
+    const depositRootHex = await this.contract.get_deposit_root();
+    return Buffer.from(depositRootHex.substr(2), 'hex');
+  }
+
+  public setContract(contract: Contract) {
+    this.contract = contract;
   }
 
   private async contractExists(address: string) {

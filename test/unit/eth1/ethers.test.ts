@@ -1,5 +1,5 @@
 import chai, {assert, expect} from "chai";
-import { ethers, Event } from "ethers";
+import {Contract, ethers, Event} from "ethers";
 import ganache from "ganache-core";
 import sinon from "sinon";
 
@@ -18,11 +18,11 @@ describe("Eth1Notifier", () => {
     provider,
   });
 
-  before(async function() {
+  before(async function(): Promise<void> {
     logger.silent(true);
   });
 
-  it("should fail to start because there isn't contract at given address",  async function() {
+  it("should fail to start because there isn't contract at given address",  async function(): Promise<void> {
     await expect(eth1.start()).to.be.rejectedWith('There is no deposit contract at given address');
   });
 
@@ -36,6 +36,7 @@ describe("Eth1Notifier", () => {
     eth1.processDepositLog(dataHex, indexHex);
     assert(cb.calledOnce, "deposit event did not fire");
   });
+
   it("should process a Eth2Genesis log", async function() {
     const cb = sinon.spy();
     eth1.on("eth2genesis", cb);
@@ -51,7 +52,8 @@ describe("Eth1Notifier", () => {
     await eth1.processEth2GenesisLog(depositRootHex, depositCountHex, timeHex, event);
     assert(cb.calledOnce, "eth2genesis event did not fire");
   });
-  it("should process a new block", async function() {
+
+  it("should process a new block", async function(): Promise<void> {
     this.timeout(0);
 
     const cb = sinon.spy();
@@ -61,8 +63,23 @@ describe("Eth1Notifier", () => {
     assert(cb.calledOnce, "new block event did not fire");
   });
 
-  after(async function() {
+  it("should get deposit root from contract", async function(): Promise<void> {
+    const spy = sinon.stub();
+    const contract = {
+      // eslint-disable-next-line
+      get_deposit_root: spy
+    };
+    eth1.setContract(contract as any);
+    const testDepositRoot = Buffer.alloc(32);
+    spy.resolves('0x' + testDepositRoot.toString('hex'));
+
+    const depositRoot = await eth1.depositRoot();
+    expect(depositRoot).to.be.deep.equal(testDepositRoot);
+
+  });
+
+  after(async function(): Promise<void> {
     await promisify(ganacheProvider.close)();
     logger.silent(false);
-  })
+  });
 });
