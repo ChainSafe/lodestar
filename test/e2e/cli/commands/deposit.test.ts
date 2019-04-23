@@ -38,7 +38,7 @@ describe('[CLI] deposit', function() {
     ).to.not.be.rejected;
   });
 
-  it('Should make a deposit for 10 accounts derived from mnemonic', async () => {
+  it('Should make a deposit for 10 accounts derived from mnemonic', async function() {
     this.timeout(4000);
     const contractAddress = await eth1Network.deployDepositContract();
     const command = new DepositCommand();
