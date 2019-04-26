@@ -1,21 +1,22 @@
 import assert from "assert";
 import {EventEmitter} from "events";
-import { hashTreeRoot } from "@chainsafe/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 
-import { BeaconBlock, BeaconState, bytes32, Deposit, Eth1Data, number64, uint64, } from "../types";
-import { GENESIS_SLOT, SECONDS_PER_SLOT } from "../constants";
+import {BeaconBlock, BeaconState, Deposit, Eth1Data, number64} from "../types";
+import {GENESIS_SLOT, SECONDS_PER_SLOT} from "../constants";
 
-import { DB } from "../db";
-import { Eth1Notifier } from "../eth1";
-
-import { getEmptyBlock, getGenesisBeaconState } from "./helpers/genesis";
-
-import { executeStateTransition } from "./stateTransition";
-import { getBlockRoot, getEpochStartSlot } from "./helpers/stateTransitionHelpers";
+import {DB} from "../db";
+import {Eth1Notifier} from "../eth1";
 import logger from "../logger";
 
+import {getEmptyBlock, getGenesisBeaconState} from "./genesis";
+
+import {executeStateTransition} from "./stateTransition";
+import {getBlockRoot, getEpochStartSlot} from "./stateTransition/util";
+
 /**
- * The BeaconChain service deals with processing incoming blocks, advancing a state transition, and applying the fork choice rule to update the chain head
+ * The BeaconChain service deals with processing incoming blocks, advancing a state transition
+ * and applying the fork choice rule to update the chain head
  */
 export class BeaconChain extends EventEmitter {
   public chain: string;
@@ -75,11 +76,11 @@ export class BeaconChain extends EventEmitter {
 
     // process skipped slots
     for (let i = state.slot; i < block.slot - 1; i++) {
-      state = this.runStateTransition(headRoot, null, state);
+      state = this.runStateTransition(null, state);
     }
 
     // process current slot
-    state = this.runStateTransition(headRoot, block, state);
+    state = this.runStateTransition(block, state);
 
     await this.db.setBlock(block);
 
@@ -96,15 +97,15 @@ export class BeaconChain extends EventEmitter {
    */
   public async applyForkChoiceRule(): Promise<void> {
     const state = await this.db.getState();
-    const currentJustifiedRoot = getBlockRoot(state, getEpochStartSlot(state.justifiedEpoch));
+    const currentJustifiedRoot = getBlockRoot(state, getEpochStartSlot(state.currentJustifiedEpoch));
     // const currentJustifiedRoot = state.currentJustifiedRoot;
     const currentJustifiedBlock = await this.db.getBlock(currentJustifiedRoot);
     const currentJustifiedState = await this.db.getJustifiedState();
-    const currentRoot = await this.db.getChainHeadRoot()
+    const currentRoot = await this.db.getChainHeadRoot();
     // TODO use lmd ghost to compute best block
     const block = this._latestBlock;
     if (!currentRoot.equals(hashTreeRoot(block, BeaconBlock))) {
-      await this.db.setChainHead(state, block)
+      await this.db.setChainHead(state, block);
     }
   }
 
@@ -113,7 +114,7 @@ export class BeaconChain extends EventEmitter {
    */
   public async isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean> {
     // The parent block with root block.previous_block_root has been processed and accepted.
-    const hasParent = await this.db.hasBlock(block.parentRoot);
+    const hasParent = await this.db.hasBlock(block.previousBlockRoot);
     if (!hasParent) {
       return false;
     }
@@ -129,8 +130,8 @@ export class BeaconChain extends EventEmitter {
     return true;
   }
 
-  private runStateTransition(headRoot: bytes32, block: BeaconBlock | null, state: BeaconState): BeaconState {
-    const newState = executeStateTransition(state, block, headRoot);
+  private runStateTransition(block: BeaconBlock | null, state: BeaconState): BeaconState {
+    const newState = executeStateTransition(state, block);
     // TODO any extra processing, eg post epoch
     // TODO update ffg checkpoints (requires updated state object)
     return newState;

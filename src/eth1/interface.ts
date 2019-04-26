@@ -1,6 +1,6 @@
-import { EventEmitter } from "events";
+import {EventEmitter} from "events";
 
-import { bytes32, DepositData, Deposit, Eth1Data } from "../types";
+import {bytes32, DepositData, Deposit, Eth1Data} from "../types";
 
 export interface Eth1Options {
   depositContract: {

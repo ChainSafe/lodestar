@@ -11,4 +11,4 @@ export default {
     port: 9545
   },
   eth1: eth1Defaults,
-}
+};
