@@ -4,9 +4,9 @@ There is a lot of work being done that are core infrastructural pieces for Eth2.
 <br />
 -- [PM / Meta Repo](https://github.com/ChainSafe/Sharding)<br />
 |-- [Beacon Chain](https://github.com/ChainSafe/lodestar)<br />
-|-- [Validator Client](https://github.com/ChainSafe/Validator-Client)<br />
+|-- [Validator Client](https://github.com/ChainSafe/lodestar/tree/master/src/validator)<br />
 |-- [Simple Serialize (SSZ)](https://github.com/ChainSafe/ssz-js)<br />
-|-- [BLS Singatures and Signature Aggregation](https://github.com/ChainSafe/bls-js)<br />
+|-- [BLS Signatures and Signature Aggregation](https://github.com/ChainSafe/bls-js)<br />
 |-- [Hobbits](https://github.com/ChainSafe/hobbits-ts)<br />
 |-- [Gossipsub](https://github.com/ChainSafe/gossipsub-js)<br />
 
