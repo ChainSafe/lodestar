@@ -12,6 +12,8 @@ import {getWinningCrosslinkAndAttestingIndices} from "./util";
 
 
 export function processCrosslinks(state: BeaconState): void {
+  state.previousCrosslinks = state.currentCrosslinks.slice();
+
   const currentEpoch = getCurrentEpoch(state);
   const previousEpoch = getPreviousEpoch(state);
   const nextEpoch = currentEpoch + 1;

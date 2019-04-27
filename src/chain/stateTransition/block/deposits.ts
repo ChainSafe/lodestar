@@ -83,7 +83,7 @@ export function processDeposit(state: BeaconState, deposit: Deposit): void {
 }
 
 export default function processDeposits(state: BeaconState, block: BeaconBlock): void {
-  assert(block.body.deposits.length === Math.min(MAX_DEPOSITS, block.body.eth1Data.depositCount - state.depositIndex));
+  assert(block.body.deposits.length === Math.min(MAX_DEPOSITS, state.latestEth1Data.depositCount - state.depositIndex));
   for (const deposit of block.body.deposits) {
     processDeposit(state, deposit);
   }

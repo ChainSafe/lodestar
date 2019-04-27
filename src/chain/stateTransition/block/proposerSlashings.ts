@@ -28,7 +28,7 @@ import {
 export function processProposerSlashing(state, proposerSlashing: ProposerSlashing): void {
   const proposer = state.validatorRegistry[proposerSlashing.proposerIndex];
   // Verify that the epoch is the same
-  assert(proposerSlashing.header1.slot === proposerSlashing.header2.slot);
+  assert(slotToEpoch(proposerSlashing.header1.slot) === slotToEpoch(proposerSlashing.header2.slot));
   // But the headers are different
   assert(!serialize(proposerSlashing.header1, BeaconBlockHeader).equals(
     serialize(proposerSlashing.header2, BeaconBlockHeader)));

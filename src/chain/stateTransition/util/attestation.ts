@@ -126,7 +126,6 @@ export function verifyIndexedAttestation(state: BeaconState, indexedAttestation:
     return false;
   }
 
-
   const sortedCustodyBit0Indices = custodyBit0Indices.slice().sort();
   if (!custodyBit0Indices.every((index, i) => index === sortedCustodyBit0Indices[i])) {
     return false;

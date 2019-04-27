@@ -38,23 +38,18 @@ export function processAttestation(state: BeaconState, attestation: Attestation)
   assert(minSlot <= data.slot && data.slot <= state.slot - MIN_ATTESTATION_INCLUSION_DELAY);
 
   // Check target epoch, source epoch, and source root
-  const targetEpoch = slotToEpoch(attestation.data.slot);
-  assert(
-    currentEpoch === targetEpoch ||
-    previousEpoch === targetEpoch
-  );
-  assert(
-    state.currentJustifiedEpoch === data.sourceEpoch ||
-    state.previousJustifiedEpoch === data.sourceEpoch
-  );
-  assert(
-    state.currentJustifiedRoot.equals(data.sourceRoot) ||
-    state.previousJustifiedRoot.equals(data.sourceRoot)
-  );
-  assert(
-    hashTreeRoot(state.currentCrosslinks[data.shard], Crosslink).equals(data.previousCrosslinkRoot) ||
+  const targetEpoch = slotToEpoch(data.slot);
+  assert((
+    currentEpoch === targetEpoch &&
+    state.currentJustifiedEpoch === data.sourceEpoch &&
+    state.currentJustifiedRoot.equals(data.sourceRoot) &&
+    hashTreeRoot(state.currentCrosslinks[data.shard], Crosslink).equals(data.previousCrosslinkRoot)
+  ) || (
+    previousEpoch === targetEpoch &&
+    state.previousJustifiedEpoch === data.sourceEpoch &&
+    state.previousJustifiedRoot.equals(data.sourceRoot) &&
     hashTreeRoot(state.previousCrosslinks[data.shard], Crosslink).equals(data.previousCrosslinkRoot)
-  );
+  ));
 
   // Check crosslink data
   assert(data.crosslinkDataRoot.equals(ZERO_HASH)); // TO BE REMOVED IN PHASE 1

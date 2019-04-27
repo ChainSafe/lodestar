@@ -1,4 +1,5 @@
 import assert from "assert";
+import BN from "bn.js";
 import {signingRoot} from "@chainsafe/ssz";
 
 import {
@@ -64,8 +65,14 @@ export function processTransfer(state: BeaconState, transfer: Transfer): void {
   increaseBalance(state, transfer.recipient, transfer.amount);
   increaseBalance(state, getBeaconProposerIndex(state), transfer.fee);
   // Verify balances are not dust
-  assert(!(state.balances[transfer.sender].ltn(MIN_DEPOSIT_AMOUNT)));
-  assert(!(state.balances[transfer.recipient].ltn(MIN_DEPOSIT_AMOUNT)));
+  assert(!(
+    (new BN(0)).lt(state.balances[transfer.sender]) &&
+    state.balances[transfer.sender].ltn(MIN_DEPOSIT_AMOUNT)
+  ));
+  assert(!(
+    (new BN(0)).lt(state.balances[transfer.recipient]) &&
+    state.balances[transfer.recipient].ltn(MIN_DEPOSIT_AMOUNT)
+  ));
 }
 
 export default function processTransfers(state: BeaconState, block: BeaconBlock): void {

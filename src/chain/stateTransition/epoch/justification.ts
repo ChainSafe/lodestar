@@ -14,12 +14,12 @@ export function processJustificationAndFinalization(state: BeaconState): void {
   const oldCurrentJustifiedEpoch = state.currentJustifiedEpoch;
 
   // Process justifications
-  state.previousJustifiedEpoch = state.currentJustifiedEpoch;
+  state.previousJustifiedEpoch = oldCurrentJustifiedEpoch;
   state.previousJustifiedRoot = state.currentJustifiedRoot;
   // Rotate the justification bitfield up one epoch to make room for the current epoch
   state.justificationBitfield = state.justificationBitfield.shln(1).mod((new BN(2)).pow(new BN(64)));
   const totalActiveBalance = getTotalActiveBalance(state);
-  const justifiedRoot = getBlockRoot(state, state.currentJustifiedEpoch);
+  const justifiedRoot = getBlockRoot(state, oldCurrentJustifiedEpoch);
 
   // If the previous epoch gets justified, fill the second last bit
   const previousEpochMatchingTargetBalance = getAttestingBalance(state, getMatchingTargetAttestations(state, previousEpoch));
@@ -40,22 +40,22 @@ export function processJustificationAndFinalization(state: BeaconState): void {
 
   // Process finalizations
   // The 2nd/3rd/4th most recent epochs are all justified, the 2nd using the 4th as source
-  if (state.justificationBitfield.shrn(1).modn(8) === 0b111 && state.previousJustifiedEpoch === currentEpoch - 3) {
+  if (state.justificationBitfield.shrn(1).modn(8) === 0b111 && oldPreviousJustifiedEpoch === currentEpoch - 3) {
     state.finalizedEpoch = oldPreviousJustifiedEpoch;
     state.finalizedRoot = finalizedRoot;
   }
   // The 2nd/3rd most recent epochs are both justified, the 2nd using the 3rd as source
-  if (state.justificationBitfield.shrn(1).modn(4) === 0b11 && state.previousJustifiedEpoch === currentEpoch - 2) {
+  if (state.justificationBitfield.shrn(1).modn(4) === 0b11 && oldPreviousJustifiedEpoch === currentEpoch - 2) {
     state.finalizedEpoch = oldPreviousJustifiedEpoch;
     state.finalizedRoot = finalizedRoot;
   }
   // The 1st/2nd/3rd most recent epochs are all justified, the 1st using the 3rd as source
-  if (state.justificationBitfield.shrn(0).modn(8) === 0b111 && state.currentJustifiedEpoch === currentEpoch - 2) {
+  if (state.justificationBitfield.shrn(0).modn(8) === 0b111 && oldCurrentJustifiedEpoch === currentEpoch - 2) {
     state.finalizedEpoch = oldCurrentJustifiedEpoch;
     state.finalizedRoot = finalizedRoot;
   }
   // The 1st/2nd most recent epochs are both justified, the 1st using the 2nd as source
-  if (state.justificationBitfield.shrn(0).modn(4) === 0b11 && state.currentJustifiedEpoch === currentEpoch - 1) {
+  if (state.justificationBitfield.shrn(0).modn(4) === 0b11 && oldCurrentJustifiedEpoch === currentEpoch - 1) {
     state.finalizedEpoch = oldCurrentJustifiedEpoch;
     state.finalizedRoot = finalizedRoot;
   }
