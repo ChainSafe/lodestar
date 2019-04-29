@@ -47,6 +47,7 @@
     "commander": "^2.19.0",
     "deepmerge": "^3.2.0",
     "ethers": "^4.0.27",
+    "ganache-core": "^2.5.3",
     "level": "^4.0.0",
     "libp2p": "^0.24.4",
     "libp2p-bootstrap": "^0.9.7",
@@ -57,12 +58,12 @@
     "libp2p-webrtc-star": "^0.15.8",
     "noice-json-rpc": "^1.2.0",
     "peer-book": "^0.9.1",
+    "peer-id": "^0.12.2",
     "peer-info": "^0.15.1",
     "pouchdb-adapter-memory": "^7.0.0",
     "pouchdb-core": "^7.0.0",
     "promisify-es6": "^1.0.3",
     "winston": "^3.2.1",
-    "ganache-core": "^2.5.3",
     "ws": "^6.2.1"
   },
   "bin": {

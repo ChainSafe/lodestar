@@ -5,12 +5,14 @@ import {logger} from "../logger";
 import {PeerInfo} from "peer-info";
 import LibP2p from "libp2p";
 import {PeerBook} from "peer-book";
+import {PeerId} from "peer-id";
 import {promisify} from "promisify-es6";
 
 export interface P2pOptions {
   maxPeers: number,
   refreshInterval: number,
   peerBook: PeerBook,
+  privateKey: Buffer,
   bootnodes: any[]
 }
 
@@ -21,6 +23,16 @@ export class P2PNetwork extends EventEmitter implements Service {
 
   private options: P2pOptions;
 
+  private maxPeers: number;
+
+  private refreshInterval: number;
+
+  private peerBook: PeerBook;
+
+  private privateKey: Buffer;
+
+  private bootnodes: any[];
+
   private started: boolean;
 
   private node: LibP2p;
@@ -30,8 +42,15 @@ export class P2PNetwork extends EventEmitter implements Service {
   private log: logger;
 
   public constructor(opts: P2pOptions) {
-    super();
+    super(opts);
     this.options = opts;
+    this.maxPeers = this.options.maxPeers;
+    this.refreshInterval = this.options.refreshInterval;
+    this.peerBook = this.options.peerBook;
+    this.privateKey = this.options.privateKey;
+    this.bootnodes = this.options.bootnodes;
+
+
     this.started = false;
     this.node = null;
     this.discoveredPeers = new Set();
@@ -62,7 +81,7 @@ export class P2PNetwork extends EventEmitter implements Service {
           if (this.options.peerBook.has(peerId) || this.discoveredPeers.has(peerId)) {
             return;
           }
-          this.options.peerBook.put(peerInfo);
+          this.peerBook.put(peerInfo);
           this.node.dial(peerInfo, () => {
           });
           this.log.info(`Peer discovered: ${peerInfo}`);
@@ -76,7 +95,7 @@ export class P2PNetwork extends EventEmitter implements Service {
       this.node.on('peer:connect', async (peerInfo) => {
         try {
           this.log.info(`Peer connected: ${peerInfo}`);
-          this.options.peerBook.put(peerInfo);
+          this.peerBook.put(peerInfo);
           this.discoveredPeers.add(peerInfo);
         } catch (err) {
           this.log.error(err);
@@ -85,7 +104,7 @@ export class P2PNetwork extends EventEmitter implements Service {
 
       this.node.on('peer:disconnect', async (peerInfo) => {
         try {
-          this.options.peerBook.remove(peerInfo);
+          this.peerBook.remove(peerInfo);
           this.discoveredPeers.delete(peerInfo);
         } catch (err) {
           this.log.error(err);
@@ -105,7 +124,30 @@ export class P2PNetwork extends EventEmitter implements Service {
     await promisify(this.node.stop.bind(this.node))();
   }
 
-  private createPeerInfo() {
-  
+  private async createPeerInfo() {
+    return new Promise((resolve, reject) => {
+      const handler = (err, peerInfo) => {
+        if (err) {
+	  return reject(err)
+	}
+	this.peerBook.getAll().forEach((peer) => {
+	  peer.multiaddrs.forEach((multiaddr) => {
+	    peerInfo.multiaddrs.add(multiaddr)
+	    resolve(peerInfo)
+	  })
+	});
+
+        if (this.privateKey) {
+          PeerId.createFromPrivKey(this.privateKey, (err, id) => {
+	    if (err) {
+	      return reject(err)
+	    }
+	    PeerInfo.create(id, handler)	  
+	  });
+	} else {
+	  PeerInfo.create(handler);
+	}
+      }
+    });
   }
 }
