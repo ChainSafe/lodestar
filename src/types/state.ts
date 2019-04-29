@@ -1,76 +1,34 @@
-// Each type exported here contains both a compile-time type (a typescript interface) and a run-time type (a javascript variable)
+// Each type exported here contains both a compile-time type (a typescript interface) and a run-time ssz type (a javascript variable)
 // For more information, see ./index.ts
-// These interfaces relate to the data structures for beacon chain state
-import { SimpleContainerType } from "@chainsafe/ssz";
+import {SimpleContainerType} from "@chainsafe/ssz";
+
+import {
+  LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
+  LATEST_RANDAO_MIXES_LENGTH,
+  LATEST_SLASHED_EXIT_LENGTH,
+  SLOTS_PER_HISTORICAL_ROOT,
+  SHARD_COUNT,
+} from "../constants";
 
 import {
   bytes32,
-  bytes48,
-  uint64,
   number64,
+  uint64,
+  Epoch,
+  Shard,
+  Slot,
+  Gwei,
 } from "./primitive";
 
 import {
-  Epoch,
-  Slot,
-  Shard,
-} from "./custom";
-
-import {
+  BeaconBlockHeader,
   Crosslink,
-  PendingAttestation,
-} from "./attestation";
-
-import {
   Eth1Data,
-  Eth1DataVote,
-} from "./eth1";
+  Fork,
+  PendingAttestation,
+  Validator,
+} from "./misc";
 
-export interface Fork {
-  // Previous fork version
-  previousVersion: number64;
-  // Post fork version
-  currentVersion: number64;
-  // Fork epoch number
-  epoch: Epoch;
-}
-export const Fork: SimpleContainerType = {
-  name: "Fork",
-  fields: [
-    ["previousVersion", number64],
-    ["currentVersion", number64],
-    ["epoch", Epoch],
-  ],
-};
-
-export interface Validator {
-  // BLS public key
-  pubkey: bytes48;
-  // Withdrawal credentials
-  withdrawalCredentials: bytes32;
-  // Epoch when validator activated
-  activationEpoch: Epoch;
-  // Slot when validator exited
-  exitEpoch: Epoch;
-  // Slot when validator withdrew
-  withdrawalEpoch: Epoch;
-  // Slot when validator was penalized
-  slashedEpoch: Epoch;
-  // Status flags
-  statusFlags: uint64;
-}
-export const Validator: SimpleContainerType = {
-  name: "Validator",
-  fields: [
-    ["pubkey", bytes48],
-    ["withdrawalCredentials", bytes32],
-    ["activationEpoch", Epoch],
-    ["exitEpoch", Epoch],
-    ["withdrawalEpoch", Epoch],
-    ["slashedEpoch", Epoch],
-    ["statusFlags", uint64],
-  ],
-};
 
 export interface BeaconState {
   // Misc
@@ -80,35 +38,36 @@ export interface BeaconState {
 
   // Validator registry
   validatorRegistry: Validator[];
-  validatorBalances: uint64[];
-  validatorRegistryUpdateEpoch: Epoch;
+  balances: Gwei[];
 
   // Randomness and committees
   latestRandaoMixes: bytes32[];
-  previousShufflingStartShard: Shard;
-  currentShufflingStartShard: Shard;
-  previousShufflingEpoch: Epoch;
-  currentShufflingEpoch: Epoch;
-  previousShufflingSeed: bytes32;
-  currentShufflingSeed: bytes32;
+  latestStartShard: Shard;
 
   // Finality
+  previousEpochAttestations: PendingAttestation[];
+  currentEpochAttestations: PendingAttestation[];
   previousJustifiedEpoch: Epoch;
-  justifiedEpoch: Epoch;
+  currentJustifiedEpoch: Epoch;
+  previousJustifiedRoot: bytes32;
+  currentJustifiedRoot: bytes32;
   justificationBitfield: uint64;
   finalizedEpoch: Epoch;
+  finalizedRoot: bytes32;
 
   // Recent state
-  latestCrosslinks: Crosslink[];
+  currentCrosslinks: Crosslink[];
+  previousCrosslinks: Crosslink[];
   latestBlockRoots: bytes32[];
+  latestStateRoots: bytes32[];
   latestActiveIndexRoots: bytes32[];
-  latestSlashedBalances: uint64[]; // Balances penalized at every withdrawal period
-  latestAttestations: PendingAttestation[];
-  batchedBlockRoots: bytes32[];
+  latestSlashedBalances: Gwei[]; // Balances penalized at every withdrawal period
+  latestBlockHeader: BeaconBlockHeader; //  `latest_block_header.state_root == ZERO_HASH` temporarily
+  historicalRoots: bytes32[];
 
   // Ethereum 1.0 deposit root
   latestEth1Data: Eth1Data;
-  eth1DataVotes: Eth1DataVote[];
+  eth1DataVotes: Eth1Data[];
   depositIndex: number64;
 }
 export const BeaconState: SimpleContainerType = {
@@ -120,31 +79,32 @@ export const BeaconState: SimpleContainerType = {
     ["fork", Fork],
     // Validator Registry
     ["validatorRegistry", [Validator]],
-    ["validatorBalances", [uint64]],
-    ["validatorRegistryUpdateEpoch", Epoch],
+    ["balances", [Gwei]],
     // Randomness and committees
-    ["latestRandaoMixes", [bytes32]],
-    ["previousShufflingStartShard", Shard],
-    ["currentShufflingStartShard", Shard],
-    ["previousShufflingEpoch", Epoch],
-    ["currentShufflingEpoch", Epoch],
-    ["previousShufflingSeed", bytes32],
-    ["currentShufflingSeed", bytes32],
+    ["latestRandaoMixes", [bytes32, LATEST_RANDAO_MIXES_LENGTH]],
+    ["latestStartShard", Shard],
     // Finality
+    ["previousEpochAttestations", [PendingAttestation]],
+    ["currentEpochAttestations", [PendingAttestation]],
     ["previousJustifiedEpoch", Epoch],
-    ["justifiedEpoch", Epoch],
+    ["currentJustifiedEpoch", Epoch],
+    ["previousJustifiedRoot", bytes32],
+    ["currentJustifiedRoot", bytes32],
     ["justificationBitfield", uint64],
     ["finalizedEpoch", Epoch],
+    ["finalizedRoot", bytes32],
     // Recent State
-    ["latestCrosslinks", [Crosslink]],
-    ["latestBlockRoots", [bytes32]],
-    ["latestActiveIndexRoots", [bytes32]],
-    ["latestSlashedBalances", [uint64]],
-    ["latestAttestations", [PendingAttestation]],
-    ["batchedBlockRoots", [bytes32]],
+    ["currentCrosslinks", [Crosslink, SHARD_COUNT]],
+    ["previousCrosslinks", [Crosslink, SHARD_COUNT]],
+    ["latestBlockRoots", [bytes32, SLOTS_PER_HISTORICAL_ROOT]],
+    ["latestStateRoots", [bytes32, SLOTS_PER_HISTORICAL_ROOT]],
+    ["latestActiveIndexRoots", [bytes32, LATEST_ACTIVE_INDEX_ROOTS_LENGTH]],
+    ["latestSlashedBalances", [Gwei, LATEST_SLASHED_EXIT_LENGTH]],
+    ["latestBlockHeader", BeaconBlockHeader],
+    ["historicalRoots", [bytes32]],
     // Eth1
     ["latestEth1Data", Eth1Data],
-    ["eth1DataVotes", [Eth1DataVote]],
+    ["eth1DataVotes", [Eth1Data]],
     ["depositIndex", number64],
   ],
 };

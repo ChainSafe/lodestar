@@ -1,6 +1,6 @@
 import assert from "assert";
-
-import {hashTreeRoot} from "@chainsafe/ssz";
+import BN from "bn.js";
+import {signingRoot} from "@chainsafe/ssz";
 
 import {
   BeaconBlock,
@@ -11,52 +11,74 @@ import {
 import {
   BLS_WITHDRAWAL_PREFIX_BYTE,
   Domain,
-  EMPTY_SIGNATURE,
   MAX_TRANSFERS,
   MIN_DEPOSIT_AMOUNT,
+  FAR_FUTURE_EPOCH,
+  MAX_EFFECTIVE_BALANCE,
 } from "../../../constants";
+
+import {blsVerify} from "../../../stubs/bls";
+
+import {hash} from "../../../util/crypto";
 
 import {
   getBeaconProposerIndex,
   getCurrentEpoch,
   getDomain,
-  hash,
   slotToEpoch,
-} from "../../helpers/stateTransitionHelpers";
+  decreaseBalance,
+  increaseBalance,
+} from "../util";
 
-import { blsVerify } from "../../../stubs/bls";
+/**
+ * Process ``Transfer`` operation.
+ * Note that this function mutates ``state``.
+ * @param {BeaconState} state
+ * @param {Transfer} transfer
+ */
+export function processTransfer(state: BeaconState, transfer: Transfer): void {
+  // Verify the amount and fee aren't individually too big (for anti-overflow purposes)
+  const senderBalance = state.balances[transfer.sender];
+  assert(senderBalance.gte(transfer.amount));
+  assert(senderBalance.gte(transfer.fee));
+  // A transfer is valid in only one slot
+  assert(state.slot === transfer.slot);
+  // Sender must be not yet eligible for activation, withdrawn, or transfer
+  // balance over MAX_EFFECTIVE_BALANCE
+  assert(
+    state.validatorRegistry[transfer.sender].activationEligibilityEpoch === FAR_FUTURE_EPOCH ||
+    getCurrentEpoch(state) >= state.validatorRegistry[transfer.sender].withdrawableEpoch ||
+    transfer.amount.add(transfer.fee).addn(MAX_EFFECTIVE_BALANCE).lte(state.balances[transfer.sender])
+  );
+  // Verify that the pubkey is valid
+  assert(state.validatorRegistry[transfer.sender].withdrawalCredentials.equals(
+    Buffer.concat([BLS_WITHDRAWAL_PREFIX_BYTE, hash(transfer.pubkey).slice(1)])));
+  // Verify that the signature is valid
+  assert(blsVerify(
+    transfer.pubkey,
+    signingRoot(transfer, Transfer),
+    transfer.signature,
+    getDomain(state, Domain.TRANSFER, slotToEpoch(transfer.slot)),
+  ));
+  // Process the transfer
+  decreaseBalance(state, transfer.sender, transfer.amount.add(transfer.fee));
+  increaseBalance(state, transfer.recipient, transfer.amount);
+  increaseBalance(state, getBeaconProposerIndex(state), transfer.fee);
+  // Verify balances are not dust
+  assert(!(
+    (new BN(0)).lt(state.balances[transfer.sender]) &&
+    state.balances[transfer.sender].ltn(MIN_DEPOSIT_AMOUNT)
+  ));
+  assert(!(
+    (new BN(0)).lt(state.balances[transfer.recipient]) &&
+    state.balances[transfer.recipient].ltn(MIN_DEPOSIT_AMOUNT)
+  ));
+}
 
 export default function processTransfers(state: BeaconState, block: BeaconBlock): void {
   // Note: Transfers are a temporary functionality for phases 0 and 1, to be removed in phase 2.
   assert(block.body.transfers.length <= MAX_TRANSFERS);
   for (const transfer of block.body.transfers) {
-    assert(state.validatorBalances[transfer.from].gte(transfer.amount));
-    assert(state.validatorBalances[transfer.from].gte(transfer.fee));
-    assert(state.validatorBalances[transfer.from].eq(transfer.amount.add(transfer.fee)) ||
-      state.validatorBalances[transfer.from].gte(transfer.amount.add(transfer.fee).addn(MIN_DEPOSIT_AMOUNT)));
-    assert(state.slot === transfer.slot);
-    assert(getCurrentEpoch(state) >= state.validatorRegistry[transfer.from].withdrawalEpoch);
-    assert(state.validatorRegistry[transfer.from].withdrawalCredentials.equals(Buffer.concat([BLS_WITHDRAWAL_PREFIX_BYTE, hash(transfer.pubkey).slice(1)])));
-    const t: Transfer = {
-      from: transfer.from,
-      to: transfer.to,
-      amount: transfer.amount,
-      fee: transfer.fee,
-      slot: transfer.slot,
-      pubkey: transfer.pubkey,
-      signature: EMPTY_SIGNATURE,
-    };
-    const transferMessage = hashTreeRoot(t, Transfer);
-    const transferMessageVerified = blsVerify(
-      transfer.pubkey,
-      transferMessage,
-      transfer.signature,
-      getDomain(state.fork, slotToEpoch(transfer.slot), Domain.TRANSFER),
-    );
-    assert(transferMessageVerified);
-    state.validatorBalances[transfer.from] = state.validatorBalances[transfer.from].sub(transfer.amount.add(transfer.fee));
-    state.validatorBalances[transfer.to] = state.validatorBalances[transfer.to].add(transfer.amount);
-    const proposerIndex = getBeaconProposerIndex(state, state.slot);
-    state.validatorBalances[proposerIndex] = state.validatorBalances[proposerIndex].add(transfer.fee);
+    processTransfer(state, transfer);
   }
 }

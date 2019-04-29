@@ -1,7 +1,5 @@
-import BN from "bn.js";
-
-import {slotToEpoch} from "../../src/chain/helpers/stateTransitionHelpers";
-import {Attestation, AttestationData, Slot, Epoch, uint64} from "../../src/types";
+import {Attestation, AttestationData, Slot, Epoch} from "../../src/types";
+import {slotToEpoch} from "../../src/chain/stateTransition/util";
 import {randBetween} from "./misc";
 
 /**
@@ -10,19 +8,16 @@ import {randBetween} from "./misc";
  * @param {number} justifiedEpochValue
  * @returns {AttestationData}
  */
-export function generateAttestationData(slot: Slot, justifiedEpoch: Epoch): AttestationData {
+export function generateAttestationData(slot: Slot, sourceEpoch: Epoch): AttestationData {
   return {
     slot,
+    beaconBlockRoot: Buffer.alloc(32),
+    sourceEpoch: sourceEpoch,
+    sourceRoot: Buffer.alloc(32),
+    targetRoot: Buffer.alloc(32),
     shard: randBetween(0, 1024),
-    beaconBlockRoot: Buffer.alloc(65),
-    epochBoundaryRoot: Buffer.alloc(65),
-    shardBlockRoot: Buffer.alloc(65),
-    latestCrosslink: {
-      epoch: slotToEpoch(slot),
-      shardBlockRoot: Buffer.alloc(65),
-    },
-    justifiedEpoch: justifiedEpoch,
-    justifiedBlockRoot: Buffer.alloc(65),
+    previousCrosslinkRoot: Buffer.alloc(32),
+    crosslinkDataRoot: Buffer.alloc(32),
   };
 }
 
@@ -31,18 +26,15 @@ export function generateEmptyAttestation(): Attestation {
     aggregationBitfield: Buffer.alloc(32),
     data: {
       slot: 0,
-      shard: 0,
       beaconBlockRoot: Buffer.alloc(32),
-      epochBoundaryRoot: Buffer.alloc(32),
-      shardBlockRoot: Buffer.alloc(32),
-      latestCrosslink: {
-        epoch: 0,
-        shardBlockRoot: Buffer.alloc(32),
-      },
-      justifiedEpoch: 0,
-      justifiedBlockRoot: Buffer.alloc(32),
+      sourceEpoch: 0,
+      sourceRoot: Buffer.alloc(32),
+      targetRoot: Buffer.alloc(32),
+      shard: randBetween(0, 1024),
+      previousCrosslinkRoot: Buffer.alloc(32),
+      crosslinkDataRoot: Buffer.alloc(32),
     },
     custodyBitfield: Buffer.alloc(32),
-    aggregateSignature: Buffer.alloc(96),
+    signature: Buffer.alloc(96),
   }
 }

@@ -1,21 +1,22 @@
 import {
   BeaconBlock,
   BeaconState,
-  bytes32,
 } from "../../types";
 
 import processBlock from "./block";
-import { processEpoch, shouldProcessEpoch } from "./epoch";
-import {processSlot} from "./slot";
+import {processEpoch, shouldProcessEpoch} from "./epoch";
+import {advanceSlot, cacheState} from "./slot";
 
 export {
-  processSlot,
+  advanceSlot,
+  cacheState,
   processBlock,
   processEpoch,
 };
 
-export function executeStateTransition(state: BeaconState, block: BeaconBlock | null, prevBlockRoot: bytes32): BeaconState {
-  processSlot(state, prevBlockRoot);
+export function executeStateTransition(state: BeaconState, block: BeaconBlock | null): BeaconState {
+  cacheState(state);
+  advanceSlot(state);
   
   if (block) {
     processBlock(state, block);

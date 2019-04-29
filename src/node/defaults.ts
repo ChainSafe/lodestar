@@ -13,4 +13,4 @@ export default {
   },
   eth1: eth1Defaults,
   p2p: p2pDefaults
-}
+};

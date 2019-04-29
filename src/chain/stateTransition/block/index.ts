@@ -1,5 +1,3 @@
-import assert from "assert";
-
 import {
   BeaconBlock,
   BeaconState,
@@ -9,18 +7,16 @@ import processAttestations from "./attestations";
 import processAttesterSlashings from "./attesterSlashings";
 import processDeposits from "./deposits";
 import processEth1Data from "./eth1Data";
-import processProposerSignature from "./proposerSignature";
+import processBlockHeader from "./blockHeader";
 import processProposerSlashings from "./proposerSlashings";
 import processRandao from "./randao";
 import processTransfers from "./transfers";
 import processVoluntaryExits from "./voluntaryExits";
+import verifyBlockStateRoot from "./rootVerification";
 
 export default function processBlock(state: BeaconState, block: BeaconBlock): void {
-  // Slot
-  assert(block.slot === state.slot, "block root must equal state root");
-
-  // Proposer signature
-  processProposerSignature(state, block);
+  // block header
+  processBlockHeader(state, block);
 
   // RANDAO
   processRandao(state, block);
@@ -28,7 +24,7 @@ export default function processBlock(state: BeaconState, block: BeaconBlock): vo
   // Eth1 Data
   processEth1Data(state, block);
 
-  // Transactions
+  // Operations
 
   // Proposer slashings
   processProposerSlashings(state, block);
@@ -47,4 +43,7 @@ export default function processBlock(state: BeaconState, block: BeaconBlock): vo
 
   // Transfers
   processTransfers(state, block);
+
+  // Verify block stateRoot
+  verifyBlockStateRoot(state, block);
 }

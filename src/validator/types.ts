@@ -1,5 +1,4 @@
-import {Slot} from "../types/custom";
-import {bytes48, Shard, ValidatorIndex} from "../types";
+import {bytes48, Slot, Shard, ValidatorIndex} from "../types";
 
 export interface ValidatorCtx {
   publicKey: bytes48[];

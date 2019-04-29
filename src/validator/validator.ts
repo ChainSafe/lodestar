@@ -13,7 +13,7 @@ import RPCProvider from "./stubs/rpc";
 import BlockProcessingService from "./block";
 import {SLOTS_PER_EPOCH} from "../constants";
 import logger, {AbstractLogger} from "../logger";
-import {Slot, ValidatorIndex} from "../types/custom";
+import {Slot, ValidatorIndex} from "../types";
 import {ValidatorCtx, GenesisInfo, CommitteeAssignment} from "./types";
 
 /**

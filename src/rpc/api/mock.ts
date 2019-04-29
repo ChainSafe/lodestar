@@ -1,6 +1,6 @@
-import { Attestation, AttestationData, BeaconBlock, bytes32, Deposit, Shard, Slot, Eth1Data } from "../../types";
+import {Attestation, AttestationData, BeaconBlock, bytes32, Deposit, Shard, Slot, Eth1Data} from "../../types";
 
-import { getEmptyBlock } from "../../chain/helpers/genesis";
+import {getEmptyBlock} from "../../chain/genesis";
 
 import {API} from "./interface";
 

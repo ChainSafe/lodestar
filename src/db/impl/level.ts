@@ -32,7 +32,7 @@ export class LevelDB extends AbstractDB implements DB {
 
   public async start(): Promise<void> {
     await this.db.open();
-    logger.info( `Connected to LevelDB database at ${this.opts.name}`)
+    logger.info( `Connected to LevelDB database at ${this.opts.name}`);
   }
 
   public async stop(): Promise<void> {
