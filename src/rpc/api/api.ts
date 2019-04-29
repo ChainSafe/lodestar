@@ -1,7 +1,7 @@
-import { Attestation, AttestationData, BeaconBlock, bytes32, Deposit, Shard, Slot, Eth1Data } from "../../types";
-import { DB } from "../../db";
-import { BeaconChain } from "../../chain";
-import { OpPool } from "../../opPool";
+import {Attestation, AttestationData, BeaconBlock, bytes32, Deposit, Shard, Slot, Eth1Data} from "../../types";
+import {DB} from "../../db";
+import {BeaconChain} from "../../chain";
+import {OpPool} from "../../opPool";
 
 import {API} from "./interface"; 
 

@@ -21,7 +21,7 @@ export const Key = {
   justifiedState: Buffer.from('justifiedState'),
   finalizedBlock: Buffer.from('finalizedBlock'),
   justifiedBlock: Buffer.from('justifiedBlock'),
-}
+};
 
 /**
  * Prepend a bucket to a key

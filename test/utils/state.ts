@@ -1,11 +1,12 @@
 import BN from "bn.js";
 
+import { BeaconState, bytes32, Crosslink, Eth1Data, Fork, PendingAttestation, uint64, Validator, Slot, number64, Epoch, Shard, BeaconBlockHeader } from "../../src/types";
 import {GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD, LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
-  LATEST_BLOCK_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH, SHARD_COUNT, ZERO_HASH} from "../../src/constants";
-import {BeaconState, Crosslink, Eth1Data, Fork, PendingAttestation, uint64, Validator, Slot, number64, Epoch, Shard} from "../../src/types";
-import {bytes32, Eth1DataVote} from "../../src/types";
+  LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH, SHARD_COUNT, ZERO_HASH, SLOTS_PER_HISTORICAL_ROOT} from "../../src/constants";
+import { intToBytes } from "../../src/util/bytes";
 import {randBetween, randBetweenBN} from "./misc";
 import {generateValidators} from "./validator";
+
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -18,35 +19,36 @@ interface TestBeaconState {
 
   // Validator registry
   validatorRegistry?: Validator[];
-  validatorBalances?: uint64[];
-  validatorRegistryUpdateEpoch?: Epoch;
+  balances?: uint64[];
 
   // Randomness and committees
   latestRandaoMixes?: bytes32[];
-  previousEpochStartShard?: Shard;
-  currentEpochStartShard?: Shard;
-  previousCalculationEpoch?: Epoch;
-  currentCalculationEpoch?: Epoch;
-  previousEpochSeed?: bytes32;
-  currentEpochSeed?: bytes32;
+  latestStartShard?: Shard;
 
   // Finality
+  previousEpochAttestations?: PendingAttestation[];
+  currentEpochAttestations?: PendingAttestation[];
   previousJustifiedEpoch?: Epoch;
-  justifiedEpoch?: Epoch;
+  currentJustifiedEpoch?: Epoch;
+  previousJustifiedRoot?: bytes32;
+  currentJustifiedRoot?: bytes32;
   justificationBitfield?: uint64;
   finalizedEpoch?: Epoch;
+  finalizedRoot?: bytes32;
 
   // Recent state
   latestCrosslinks?: Crosslink[];
   latestBlockRoots?: bytes32[];
-  latestIndexRoots?: bytes32[];
-  latestPenalizedBalances?: uint64[]; // Balances penalized at every withdrawal period
-  latestAttestations?: PendingAttestation[];
-  batchedBlockRoots?: bytes32[];
+  latestStateRoots?: bytes32[];
+  latestActiveIndexRoots?: bytes32[];
+  latestSlashedBalances?: uint64[]; // Balances penalized at every withdrawal period
+  latestBlockHeader?: BeaconBlockHeader;
+  historicalRoots?: bytes32[];
 
   // Ethereum 1.0 deposit root
   latestEth1Data?: Eth1Data;
-  eth1DataVotes?: Eth1DataVote[];
+  eth1DataVotes?: Eth1Data[];
+  depositIndex?: number64;
 }
 
 /**
@@ -58,7 +60,8 @@ interface TestBeaconState {
 export function generateState(opts?: TestBeaconState): BeaconState {
   const initialCrosslinkRecord: Crosslink = {
     epoch: GENESIS_EPOCH,
-    shardBlockRoot: ZERO_HASH,
+    previousCrosslinkRoot: ZERO_HASH,
+    crosslinkDataRoot: ZERO_HASH,
   };
 
   return {
@@ -72,36 +75,44 @@ export function generateState(opts?: TestBeaconState): BeaconState {
     },
     // Validator registry
     validatorRegistry: [],
-    validatorBalances: [],
-    validatorRegistryUpdateEpoch: GENESIS_EPOCH,
+    balances: [],
 
     // Randomness and committees
     latestRandaoMixes: Array.from({length: LATEST_RANDAO_MIXES_LENGTH}, () => ZERO_HASH),
-    previousShufflingStartShard: GENESIS_START_SHARD,
-    currentShufflingStartShard: GENESIS_START_SHARD,
-    previousShufflingEpoch: GENESIS_EPOCH,
-    currentShufflingEpoch: GENESIS_EPOCH,
-    previousShufflingSeed: ZERO_HASH,
-    currentShufflingSeed: ZERO_HASH,
+    latestStartShard: GENESIS_START_SHARD,
 
     // Finality
+    previousEpochAttestations: [],
+    currentEpochAttestations: [],
     previousJustifiedEpoch: GENESIS_EPOCH,
-    justifiedEpoch: GENESIS_EPOCH,
+    currentJustifiedEpoch: GENESIS_EPOCH,
+    previousJustifiedRoot: Buffer.alloc(32),
+    currentJustifiedRoot: Buffer.alloc(32),
     justificationBitfield: new BN(0),
     finalizedEpoch: GENESIS_EPOCH,
+    finalizedRoot: Buffer.alloc(32),
 
     // Recent state
-    latestCrosslinks: Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
-    latestBlockRoots: Array.from({length: LATEST_BLOCK_ROOTS_LENGTH}, () => ZERO_HASH),
+    currentCrosslinks: Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
+    previousCrosslinks: Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
+    latestBlockRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
+    latestStateRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
     latestActiveIndexRoots: Array.from({length: LATEST_ACTIVE_INDEX_ROOTS_LENGTH}, () => ZERO_HASH),
     latestSlashedBalances: Array.from({length: LATEST_SLASHED_EXIT_LENGTH}, () => new BN(0)),
-    latestAttestations: [],
-    batchedBlockRoots: [],
+    latestBlockHeader: {
+      slot: 0,
+      previousBlockRoot: Buffer.alloc(32),
+      stateRoot: Buffer.alloc(32),
+      blockBodyRoot: Buffer.alloc(32),
+      signature: Buffer.alloc(96),
+    },
+    historicalRoots: [],
 
     // PoW receipt root
     latestEth1Data: {
       depositRoot: Buffer.alloc(32),
       blockHash: Buffer.alloc(32),
+      depositCount: 0,
     },
     eth1DataVotes: [],
     depositIndex: 0,
@@ -118,7 +129,8 @@ export function generateState(opts?: TestBeaconState): BeaconState {
 export function generateRandomState(opts?: TestBeaconState): BeaconState {
   const initialCrosslinkRecord: Crosslink = {
     epoch: randBetween(0, 1000),
-    shardBlockRoot: Buffer.alloc(32),
+    previousCrosslinkRoot: ZERO_HASH,
+    crosslinkDataRoot: ZERO_HASH,
   };
 
   const validatorNum: number = randBetween(0, 1000);
@@ -128,41 +140,49 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
     slot: randBetween(0, 1000),
     genesisTime: Math.floor(Date.now() / 1000),
     fork: {
-      previousVersion: randBetween(0, 1000),
-      currentVersion: randBetween(0, 1000),
+      previousVersion: intToBytes(randBetween(0, 1000), 4),
+      currentVersion: intToBytes(randBetween(0, 1000), 4),
       epoch: randBetween(0, 1000),
     },
     // Validator registry
     validatorRegistry: generateValidators(validatorNum),
-    validatorBalances: Array.from({length: validatorNum}, () => randBetweenBN(0, 1000)),
-    validatorRegistryUpdateEpoch: randBetween(0, 1000),
+    balances: Array.from({length: validatorNum}, () => randBetweenBN(0, 1000)),
 
     // Randomness and committees
     latestRandaoMixes: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(32)),
-    previousShufflingStartShard: randBetween(0, 1000),
-    currentShufflingStartShard: randBetween(0, 1000),
-    previousShufflingEpoch: randBetween(0, 1000),
-    currentShufflingEpoch: randBetween(0, 1000),
-    previousShufflingSeed: Buffer.alloc(32),
-    currentShufflingSeed: Buffer.alloc(32),
+    latestStartShard: randBetween(0, 1000),
 
     // Finality
+    previousEpochAttestations: [],
+    currentEpochAttestations: [],
     previousJustifiedEpoch: randBetween(0, 1000),
-    justifiedEpoch: randBetween(0, 1000),
+    currentJustifiedEpoch: randBetween(0, 1000),
+    previousJustifiedRoot: Buffer.alloc(32),
+    currentJustifiedRoot: Buffer.alloc(32),
     justificationBitfield: randBetweenBN(0, 1000),
     finalizedEpoch: randBetween(0, 1000),
+    finalizedRoot: Buffer.alloc(32),
 
-    latestCrosslinks: Array.from({length: randBetween(0, 1000)}, () => initialCrosslinkRecord),
-    latestBlockRoots: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(32)),
-    latestActiveIndexRoots: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(32)),
-    latestSlashedBalances: Array.from({length: randBetween(0, 1000)}, () => randBetweenBN(0, 1000)),
-    latestAttestations: [],
-    batchedBlockRoots: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(32)),
+    currentCrosslinks: Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
+    previousCrosslinks: Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
+    latestBlockRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => Buffer.alloc(32)),
+    latestStateRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => Buffer.alloc(32)),
+    latestActiveIndexRoots: Array.from({length: LATEST_ACTIVE_INDEX_ROOTS_LENGTH}, () => Buffer.alloc(32)),
+    latestSlashedBalances: Array.from({length: LATEST_SLASHED_EXIT_LENGTH}, () => randBetweenBN(0, 1000)),
+    latestBlockHeader: {
+      slot: 0,
+      previousBlockRoot: Buffer.alloc(32),
+      stateRoot: Buffer.alloc(32),
+      blockBodyRoot: Buffer.alloc(32),
+      signature: Buffer.alloc(96),
+    },
+    historicalRoots: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(32)),
 
     // PoW receipt root
     latestEth1Data: {
       depositRoot: Buffer.alloc(32),
       blockHash: Buffer.alloc(32),
+      depositCount: 0,
     },
     eth1DataVotes: [],
     depositIndex: 0,

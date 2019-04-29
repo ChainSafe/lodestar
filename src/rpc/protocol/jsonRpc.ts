@@ -27,7 +27,7 @@ export class JSONRPC {
     const methods = {};
     for (let name of Object.getOwnPropertyNames(Object.getPrototypeOf(api))) {
       if (name !== 'constructor' && typeof api[name] === 'function') {
-        methods[name] = api[name].bind(api)
+        methods[name] = api[name].bind(api);
       }
     }
     this.jsonRpcApi.BeaconChain.expose(methods);

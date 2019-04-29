@@ -54,7 +54,7 @@ export class PouchDb extends AbstractDB {
     items.map((item) => {
       additions.push(
         this.put(item.key, item.value)
-      )
+      );
     });
     return Promise.all(additions);
   }
