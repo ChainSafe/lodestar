@@ -48,7 +48,7 @@ export class P2PNetwork extends EventEmitter implements Service {
     }
 
     if (!this.node) {
-      this.node = new LodestarNode({
+      this.node = LodestarNode.createNode({
         peerInfo: await this.createPeerInfo(),
         bootnodes: this.options.bootnodes
       });
@@ -105,7 +105,7 @@ export class P2PNetwork extends EventEmitter implements Service {
     await promisify(this.node.stop.bind(this.node))();
   }
 
-  private async createPeerInfo(): PeerInfo {
-    return null;
+  private createPeerInfo() {
+  
   }
 }

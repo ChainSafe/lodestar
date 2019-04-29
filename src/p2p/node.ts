@@ -17,7 +17,7 @@ export class LodestarNode extends LibP2p {
 
   private pubsub: FloodSub;
 
-  constructor(_options: LodestarNodeOpts) {
+  private constructor(_options: LodestarNodeOpts) {
     const defaults = {
       modules: {
         transport: [TCP],
@@ -38,7 +38,7 @@ export class LodestarNode extends LibP2p {
     super(defaultsDeep(_options, defaults));
   }
 
-  static async createNode(callback) {
+  public static async createNode(callback) {
     let node: LodestarNode;
 
     waterfall([
