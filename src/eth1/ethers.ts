@@ -7,7 +7,7 @@ import {bytes32, Deposit, DepositData, Eth1Data} from "../types";
 
 import {Eth1Notifier, Eth1Options} from "./interface";
 import logger from "../logger";
-import {isValidAddress} from "../helpers/address";
+import {isValidAddress} from "../util/address";
 
 export interface EthersEth1Options extends Eth1Options {
   provider: ethers.providers.BaseProvider;
@@ -46,7 +46,7 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     this.provider.on('block', this.processBlockHeadUpdate.bind(this));
     this.contract.on('Deposit', this.processDepositLog.bind(this));
     this.contract.on('Eth2Genesis', this.processEth2GenesisLog.bind(this));
-    logger.info(`Started listening on eth1 events on chain ${(await this.provider.getNetwork()).chainId}`)
+    logger.info(`Started listening on eth1 events on chain ${(await this.provider.getNetwork()).chainId}`);
   }
 
   public async stop(): Promise<void> {
@@ -90,6 +90,7 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     const genesisEth1Data: Eth1Data = {
       depositRoot,
       blockHash,
+      depositCount,
     };
 
     this.chainStarted = true;

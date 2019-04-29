@@ -1,9 +1,9 @@
 import {EventEmitter} from "events";
 
-import { Attestation, VoluntaryExit, Transfer, ProposerSlashing, AttesterSlashing, BeaconBlock, Slot } from "../types";
+import {Attestation, VoluntaryExit, Transfer, ProposerSlashing, AttesterSlashing, BeaconBlock, Slot} from "../types";
 
-import { BeaconChain } from "../chain";
-import { DB } from "../db";
+import {BeaconChain} from "../chain";
+import {DB} from "../db";
 
 /**
  * Pool of operations not yet included on chain

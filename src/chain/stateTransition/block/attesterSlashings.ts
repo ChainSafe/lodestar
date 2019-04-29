@@ -6,6 +6,7 @@ import {
   AttestationData,
   BeaconBlock,
   BeaconState,
+  AttesterSlashing,
 } from "../../../types";
 
 import {
@@ -15,31 +16,47 @@ import {
 import {
   getCurrentEpoch,
   isDoubleVote,
+  isSlashableValidator,
   isSurroundVote,
-  verifySlashableAttestation,
-} from "../../helpers/stateTransitionHelpers";
-
-import {
   slashValidator,
-} from "../../helpers/validatorStatus";
+  verifyIndexedAttestation,
+} from "../../stateTransition/util";
 
+
+/**
+ * Process ``AttesterSlashing`` operation.
+ * Note that this function mutates ``state``.
+ * @param {BeaconState} state
+ * @param {AttesterSlashing} attesterSlashing
+ */
+export function processAttesterSlashing(state: BeaconState, attesterSlashing: AttesterSlashing): void {
+  const attestation1 = attesterSlashing.attestation1;
+  const attestation2 = attesterSlashing.attestation2;
+  // Check that the attestations are conflicting
+  assert(!serialize(attestation1.data, AttestationData).equals(serialize(attestation2.data, AttestationData)));
+  assert(isDoubleVote(attestation1.data, attestation2.data) ||
+    isSurroundVote(attestation1.data, attestation2.data));
+
+  assert(verifyIndexedAttestation(state, attestation1));
+  assert(verifyIndexedAttestation(state, attestation2));
+  const attestingIndices1 = attestation1.custodyBit0Indices.concat(attestation1.custodyBit1Indices);
+  const attestingIndices2 = attestation2.custodyBit0Indices.concat(attestation2.custodyBit1Indices);
+
+  const currentEpoch = getCurrentEpoch(state);
+  const slashableIndices = attestingIndices1
+    .filter((index) => (
+      attestingIndices2.includes(index) &&
+      isSlashableValidator(state.validatorRegistry[index], currentEpoch)
+    ));
+
+  assert(slashableIndices.length >= 1);
+  slashableIndices.forEach((index) =>
+    slashValidator(state, index));
+}
+ 
 export default function processAttesterSlashings(state: BeaconState, block: BeaconBlock): void {
   assert(block.body.attesterSlashings.length <= MAX_ATTESTER_SLASHINGS);
   for (const attesterSlashing of block.body.attesterSlashings) {
-    const slashableAttestation1 = attesterSlashing.slashableAttestation1;
-    const slashableAttestation2 = attesterSlashing.slashableAttestation2;
-
-    assert(!serialize(slashableAttestation1.data, AttestationData).equals(serialize(slashableAttestation2.data, AttestationData)));
-    assert(isDoubleVote(slashableAttestation1.data, slashableAttestation2.data) ||
-      isSurroundVote(slashableAttestation1.data, slashableAttestation2.data));
-    assert(verifySlashableAttestation(state, slashableAttestation1));
-    assert(verifySlashableAttestation(state, slashableAttestation2));
-    const slashableIndices = slashableAttestation1.validatorIndices
-      .filter((validatorIndex1) => (
-        slashableAttestation2.validatorIndices.find((validatorIndex2) => validatorIndex1 === validatorIndex2) &&
-        state.validatorRegistry[validatorIndex1].slashedEpoch > getCurrentEpoch(state)
-      ));
-    assert(slashableIndices.length >= 1);
-    slashableIndices.forEach((index) => slashValidator(state, index));
+    processAttesterSlashing(state, attesterSlashing);
   }
 }

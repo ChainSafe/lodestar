@@ -43,7 +43,7 @@ export class PrivateEth1Network {
     Object.keys(this.blockchain.accounts).forEach((address) => {
       const privateKey = this.blockchain.accounts[address].secretKey.toString('hex');
       const balance = utils.formatEther(this.blockchain.accounts[address].account.balance);
-      logger.info(`${address}:0x${privateKey} - ${balance} ETH`)
+      logger.info(`${address}:0x${privateKey} - ${balance} ETH`);
     });
     await this.deployDepositContract();
   }

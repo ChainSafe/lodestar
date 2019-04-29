@@ -8,15 +8,15 @@ import {
 export function generateEmptyBlock(): BeaconBlock {
   return {
     slot: 0,
-    parentRoot: Buffer.alloc(32),
+    previousBlockRoot: Buffer.alloc(32),
     stateRoot: Buffer.alloc(32),
-    randaoReveal: Buffer.alloc(96),
-    eth1Data: {
-      depositRoot: Buffer.alloc(32),
-      blockHash: Buffer.alloc(32),
-    },
-    signature: Buffer.alloc(96),
     body: {
+      randaoReveal: Buffer.alloc(96),
+      eth1Data: {
+        depositRoot: Buffer.alloc(32),
+        blockHash: Buffer.alloc(32),
+        depositCount: 0,
+      },
       proposerSlashings: [],
       attesterSlashings: [],
       attestations: [],
@@ -24,5 +24,6 @@ export function generateEmptyBlock(): BeaconBlock {
       voluntaryExits: [],
       transfers: [],
     },
+    signature: Buffer.alloc(96),
   }
 }

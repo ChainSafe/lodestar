@@ -10,7 +10,7 @@ export class Eth1Wallet {
 
   public constructor(privateKey: string, provider?: Provider) {
     if(!provider) {
-      provider = ethers.getDefaultProvider()
+      provider = ethers.getDefaultProvider();
     }
     this.wallet = new Wallet(privateKey, provider);
   }

@@ -42,7 +42,7 @@ export class DepositCommand implements CliCommand {
     if(mnemonic) {
       wallets.push(...this.fromMnemonic(mnemonic, provider, 10));
     } else if (privateKey) {
-      wallets.push(new Wallet(privateKey, provider))
+      wallets.push(new Wallet(privateKey, provider));
     } else {
       throw new CliError('You have to submit either privateKey or mnemonic. Check --help');
     }
