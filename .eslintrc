@@ -17,6 +17,7 @@
     "no-conditional-assignment": true,
     "no-consecutive-blank-lines": false,
     "object-literal-sort-keys": false,
-    "no-console": "warn"
+    "no-console": "warn",
+    "semi": ["warn", "always"]
   }
 }

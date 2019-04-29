@@ -1,5 +1,4 @@
 import assert from "assert";
-import BN from "bn.js";
 import {EventEmitter} from "events";
 import { hashTreeRoot } from "@chainsafe/ssz";
 
@@ -13,6 +12,7 @@ import { getEmptyBlock, getGenesisBeaconState } from "./helpers/genesis";
 
 import { executeStateTransition } from "./stateTransition";
 import { getBlockRoot, getEpochStartSlot } from "./helpers/stateTransitionHelpers";
+import logger from "../logger";
 
 /**
  * The BeaconChain service deals with processing incoming blocks, advancing a state transition, and applying the fork choice rule to update the chain head
@@ -52,6 +52,7 @@ export class BeaconChain extends EventEmitter {
    * Initialize the beacon chain with a genesis beacon state / block
    */
   public async initializeChain(genesisTime: number64, genesisDeposits: Deposit[], genesisEth1Data: Eth1Data): Promise<void> {
+    logger.info('Initializing beacon chain.');
     const genesisState = getGenesisBeaconState(genesisDeposits, genesisTime, genesisEth1Data);
     const genesisBlock = getEmptyBlock();
     genesisBlock.stateRoot = hashTreeRoot(genesisState, BeaconState);
@@ -70,13 +71,13 @@ export class BeaconChain extends EventEmitter {
     let state = await this.db.getState();
     const isValidBlock = await this.isValidBlock(state, block);
     assert(isValidBlock);
-    const headRoot = await this.db.getChainHeadRoot()
+    const headRoot = await this.db.getChainHeadRoot();
 
     // process skipped slots
     for (let i = state.slot; i < block.slot - 1; i++) {
       state = this.runStateTransition(headRoot, null, state);
     }
-    
+
     // process current slot
     state = this.runStateTransition(headRoot, block, state);
 
@@ -118,13 +119,13 @@ export class BeaconChain extends EventEmitter {
     }
     // An Ethereum 1.0 block pointed to by the state.latest_eth1_data.block_hash has been processed and accepted.
     // TODO: implement
-    
+
     // The node's Unix time is greater than or equal to state.genesis_time + (block.slot - GENESIS_SLOT) * SECONDS_PER_SLOT.
     const stateSlotTime = state.genesisTime + ((block.slot - GENESIS_SLOT) * SECONDS_PER_SLOT);
     if (Math.floor(Date.now() / 1000) < stateSlotTime) {
       return false;
     }
-    
+
     return true;
   }
 

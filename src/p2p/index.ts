@@ -1,7 +1,7 @@
 import {EventEmitter} from "events";
 import {Service} from "../node";
 import {LodestarNode} from "./node";
-import {debug} from "debug";
+import {logger} from "../logger";
 import {PeerInfo} from "peer-info";
 import LibP2p from "libp2p";
 import {PeerBook} from "peer-book";
@@ -27,7 +27,7 @@ export class P2PNetwork extends EventEmitter implements Service {
 
   private discoveredPeers: Set<any>;
 
-  private log: debug;
+  private log: logger;
 
   public constructor(opts: P2pOptions) {
     super();
@@ -35,7 +35,7 @@ export class P2PNetwork extends EventEmitter implements Service {
     this.started = false;
     this.node = null;
     this.discoveredPeers = new Set();
-    this.log = debug('p2p');
+    this.log = logger;
   }
 
   get isRunning() {
@@ -65,7 +65,7 @@ export class P2PNetwork extends EventEmitter implements Service {
           this.options.peerBook.put(peerInfo);
           this.node.dial(peerInfo, () => {
           });
-          this.log(`Peer discovered: ${peerInfo}`);
+          this.log.info(`Peer discovered: ${peerInfo}`);
           this.emit('connected', peerInfo);
         } catch (err) {
           this.log(err);
@@ -75,11 +75,11 @@ export class P2PNetwork extends EventEmitter implements Service {
 
       this.node.on('peer:connect', async (peerInfo) => {
         try {
-          this.log(`Peer connected: ${peerInfo}`);
+          this.log.info(`Peer connected: ${peerInfo}`);
           this.options.peerBook.put(peerInfo);
           this.discoveredPeers.add(peerInfo);
         } catch (err) {
-          this.log(err);
+          this.log.error(err);
         }
       });
 
@@ -88,7 +88,7 @@ export class P2PNetwork extends EventEmitter implements Service {
           this.options.peerBook.remove(peerInfo);
           this.discoveredPeers.delete(peerInfo);
         } catch (err) {
-          this.log(err);
+          this.log.error(err);
         }
       });
     }

@@ -30,7 +30,7 @@ We're trying to follow a few rules (the linter should catch most of these):
 >2. Do the changes in your fork
 >3. If you like the change and think the project could use it:
     * Be sure you have followed the code style for the project.
-    * run the linter within lodestar (npm run lint) and fix any issues if they arrise.
+    * run the linter within lodestar (yarn run lint) and fix any issues if they arrise.
     * Send a pull request.
 
 > Small contributions such as fixing spelling errors, where the content is small enough to not be considered intellectual property, can be submitted by a contributor as a patch, without a CLA.

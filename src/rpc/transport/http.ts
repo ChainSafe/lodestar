@@ -2,6 +2,7 @@ import {LikeSocketServer} from "../protocol";
 import {LikeSocket} from "noice-json-rpc";
 import http from "http";
 import promisify from "promisify-es6";
+import logger from "../../logger";
 
 export interface HttpServerOpts {
   port: number;
@@ -92,8 +93,14 @@ export default class HttpServer implements LikeSocketServer{
   public async start(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.server.listen(this.opts.port)
-        .on('listening', resolve)
-        .on('error', e => reject(e));
+        .on('listening', () => {
+          logger.info(`JSON RPC HTTP server started on port ${this.opts.port}`);
+          resolve();
+        })
+        .on('error', e => {
+          logger.error(`Failed to start JSON RPC HTTP server on port ${this.opts.port}. Reason: ${e.message}`);
+          reject(e);
+        });
     });
   }
 
