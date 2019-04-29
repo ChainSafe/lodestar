@@ -92,7 +92,7 @@ export class P2PNetwork extends EventEmitter implements Service {
         }
       });
     }
-    let startNode = promisify(this.node.start.bind(this.node))();
+    await promisify(this.node.start.bind(this.node))();
 
     this.started = true;
   }
@@ -101,13 +101,8 @@ export class P2PNetwork extends EventEmitter implements Service {
     if (!this.started) {
       return;
     }
-
-    await new Promise((resolve, reject) => this.node.stop((err) => {
-      if (err) {
-        reject(err);
-      }
-      resolve();
-    }));
+    this.node.removeAllListeners();
+    await promisify(this.node.stop.bind(this.node))();
   }
 
   private async createPeerInfo(): PeerInfo {
