@@ -9,11 +9,11 @@ import {PeerId} from "peer-id";
 import {promisify} from "promisify-es6";
 
 export interface P2pOptions {
-  maxPeers: number,
-  refreshInterval: number,
-  peerBook: PeerBook,
-  privateKey: Buffer,
-  bootnodes: any[]
+  maxPeers: number;
+  refreshInterval: number;
+  peerBook: PeerBook;
+  privateKey: Buffer;
+  bootnodes: string[];
 }
 
 /**
@@ -31,13 +31,13 @@ export class P2PNetwork extends EventEmitter implements Service {
 
   private privateKey: Buffer;
 
-  private bootnodes: any[];
+  private bootnodes: string[];
 
   private started: boolean;
 
   private node: LibP2p;
 
-  private discoveredPeers: Set<any>;
+  private discoveredPeers: Set<PeerInfo>;
 
   private log: logger;
 
@@ -57,7 +57,7 @@ export class P2PNetwork extends EventEmitter implements Service {
     this.log = logger;
   }
 
-  get isRunning() {
+  public get isRunning(): boolean {
     return this.started;
   }
 
@@ -124,30 +124,29 @@ export class P2PNetwork extends EventEmitter implements Service {
     await promisify(this.node.stop.bind(this.node))();
   }
 
-  private async createPeerInfo() {
+  private async createPeerInfo(): PeerInfo {
     return new Promise((resolve, reject) => {
       const handler = (err, peerInfo) => {
         if (err) {
-	  return reject(err)
-	}
-	this.peerBook.getAll().forEach((peer) => {
+	  return reject(err);
+        }
+        this.peerBook.getAll().forEach((peer) => {
 	  peer.multiaddrs.forEach((multiaddr) => {
-	    peerInfo.multiaddrs.add(multiaddr)
-	    resolve(peerInfo)
-	  })
-	});
-
-        if (this.privateKey) {
-          PeerId.createFromPrivKey(this.privateKey, (err, id) => {
-	    if (err) {
-	      return reject(err)
-	    }
-	    PeerInfo.create(id, handler)	  
+	    peerInfo.multiaddrs.add(multiaddr);
+	    resolve(peerInfo);
 	  });
-	} else {
-	  PeerInfo.create(handler);
-	}
-      }
+        });
+      };
+      if (this.privateKey) {
+        PeerId.createFromPrivKey(this.privateKey, (err, id) => {
+	  if (err) {
+	    return reject(err);
+	  }
+	  PeerInfo.create(id, handler);	  
+	});
+      } else {
+	PeerInfo.create(handler);
+      } 
     });
   }
 }
