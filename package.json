@@ -9,15 +9,15 @@
   ],
   "scripts": {
     "prebuild": "rm -rf lib && rm -rf dist",
-    "build-all": "npm run prebuild && npm run build-lib && npm run build-web && npm run build-docs && npm run build-types",
+    "build": "yarn prebuild && yarn build-lib && yarn build-web && yarn build-docs && yarn build-types",
     "build-docs": "documentation build lib/ -f md > docs/API.md",
     "build-lib": "babel src -x .ts -d lib",
     "build-types": "tsc --declaration --outDir lib --emitDeclarationOnly",
     "build-web": "webpack --mode production --entry ./lib/web.js --output ./dist/ssz.min.js",
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts src/ test/",
-    "pretest": "npm run check-types",
-    "prepublishOnly": "npm run build-all",
+    "pretest": "yarn check-types",
+    "prepublishOnly": "yarn build",
     "test": "nyc -r lcov -e .ts mocha -r ./.babel-register \"test/**/*.test.ts\" && nyc report"
   },
   "homepage": "https://github.com/chainsafe/ssz-js",
