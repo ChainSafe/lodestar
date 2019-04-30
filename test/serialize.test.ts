@@ -48,19 +48,18 @@ describe("serialize", () => {
     {value: new BN("ffffffffffffffff", 16), type: "uint64", expected: "ffffffffffffffff"},
     {value: new BN("ffffffffffffffffffffffffffffffff", 16), type: "uint128", expected: "ffffffffffffffffffffffffffffffff"},
     {value: new BN("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16), type: "uint256", expected: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"},
-    {value: Buffer.from("deadbeef", "hex"), type: "bytes4", expected: "04000000deadbeef"},
-    {value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"), type: "bytes16", expected: "10000000deadbeefdeadbeefdeadbeefdeadbeef"},
-    {value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"), type: "bytes32", expected: "20000000deadbeefdeadbeefdeadbeefdeadbeef00000000000000000000000000000000"},
-    {value: Buffer.from("deadbeef", "hex"), type: "bytes", expected: "04000000deadbeef"},
-    {value: Buffer.from("deadbeef", "hex"), type: ["byte", 4], expected: "04000000deadbeef"},
-    {value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"), type: ["byte", 16], expected: "10000000deadbeefdeadbeefdeadbeefdeadbeef"},
-    {value: Buffer.from("deadbeef", "hex"), type: ["byte"], expected: "04000000deadbeef"},
-    {value: {b:0,a:0}, type: SimpleObject, expected: "03000000000000"},
-    {value: {b:2,a:1}, type: SimpleObject, expected: "03000000020001"},
-    {value: {v:3, subV:{v:6}}, type: OuterObject, expected: "0700000003020000000600"},
-    {value: {v: [{b:2,a:1}, {b:4,a:3}]}, type: ArrayObject, expected: "120000000e0000000300000002000103000000040003"},
-    {value: [{v:3, subV:{v:6}}, {v:5, subV:{v:7}}], type: [OuterObject], expected: "1600000007000000030200000006000700000005020000000700"},
-    {value: [], type: [OuterObject], expected: "00000000"},
+    {value: Buffer.from("deadbeef", "hex"), type: "bytes4", expected: "deadbeef"},
+    {value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"), type: "bytes16", expected: "deadbeefdeadbeefdeadbeefdeadbeef"},
+    {value: Buffer.from("deadbeef", "hex"), type: "bytes", expected: "deadbeef"},
+    {value: Buffer.from("deadbeef", "hex"), type: ["byte", 4], expected: "deadbeef"},
+    {value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"), type: ["byte", 16], expected: "deadbeefdeadbeefdeadbeefdeadbeef"},
+    {value: Buffer.from("deadbeef", "hex"), type: ["byte"], expected: "deadbeef"},
+    {value: {b:0,a:0}, type: SimpleObject, expected: "000000"},
+    {value: {b:2,a:1}, type: SimpleObject, expected: "020001"},
+    {value: {v:3, subV:{v:6}}, type: OuterObject, expected: "030600"},
+    {value: {v: [{b:2,a:1}, {b:4,a:3}]}, type: ArrayObject, expected: "04000000020001040003"},
+    {value: [{v:3, subV:{v:6}}, {v:5, subV:{v:7}}], type: [OuterObject], expected: "030600050700"},
+    {value: [], type: [OuterObject], expected: ""},
   ];
   for (const {value, type, expected} of testCases) {
     it(`should correctly serialize ${stringifyType(type)}`, () => {
@@ -76,6 +75,7 @@ describe("serialize", () => {
   }[] = [
     {value: 1, type: "foo", reason: "Invalid type"},
     {value: 1, type: "bar", reason: "Invalid type"},
+    {value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"), type: "bytes32", reason: "invalid byte array length"},
   ];
   for (const {value, type, reason} of failCases) {
     it(`should throw an error for ${stringifyType(type)}: ${reason}`, () => {

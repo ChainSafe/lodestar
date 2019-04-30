@@ -131,3 +131,21 @@ export function isCompositeType(type: FullSSZType): boolean {
     Type.container,
   ].includes(type.type);
 }
+
+// A "variable-size" type is a list and all types that contain a variable-size type.
+// All other types are said to be "fixed-size"
+export function isVariableSizeType(type: FullSSZType): boolean {
+  switch (type.type) {
+    case Type.bool:
+    case Type.uint:
+    case Type.byteVector:
+      return false;
+    case Type.byteList:
+    case Type.list:
+      return true;
+    case Type.vector:
+      return isVariableSizeType(type.elementType);
+    case Type.container:
+      return type.fields.some(([_, fieldType]) => isVariableSizeType(fieldType));
+  }
+}

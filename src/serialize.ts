@@ -18,9 +18,10 @@ import {
 
 import { BYTES_PER_LENGTH_PREFIX } from "./constants";
 
-import { size } from "./size";
+import { size, fixedSize } from "./size";
 
-import { parseType } from "./util/types";
+import { parseType, isVariableSizeType } from "./util/types";
+import { assertValidValue } from "./assertValidValue";
 
 
 function _serializeUint(value: Uint, type: UintType, output: Buffer, start: number): number {
@@ -47,36 +48,66 @@ function _serializeBool(value: Bool, output: Buffer, start: number): number {
 }
 
 function _serializeByteArray(value: Bytes, type: BytesType, output: Buffer, start: number): number {
-  const index0 = start + BYTES_PER_LENGTH_PREFIX;
-  const length = (type as any).length || value.length;
-  const offset = start + length + BYTES_PER_LENGTH_PREFIX;
-  output.writeUIntLE(length, start, BYTES_PER_LENGTH_PREFIX);
+  const length = type.type === Type.byteVector ? type.length : value.length;
+  const offset = start + length;
   (Buffer.isBuffer(value) ? value : Buffer.from(value))
-    .copy(output, index0);
+    .copy(output, start);
   return offset;
 }
 
 function _serializeArray(value: SerializableArray, type: ArrayType, output: Buffer, start: number): number {
-  const index0 = start + BYTES_PER_LENGTH_PREFIX;
-  let index = index0;
-  for (const v of (value as SerializableArray)) {
-    index = _serialize(v, type.elementType, output, index);
+  let index = start;
+  if (isVariableSizeType(type.elementType)) {
+    // all elements are variable-size
+    let fixedIndex = index;
+    let currentOffsetIndex = start + value.length * BYTES_PER_LENGTH_PREFIX;
+    let nextOffsetIndex = currentOffsetIndex;
+    for (const v of value) {
+      // write serialized element to variable section
+      nextOffsetIndex = _serialize(v, type.elementType, output, currentOffsetIndex);
+      // write offset
+      output.writeUIntLE(currentOffsetIndex, fixedIndex, BYTES_PER_LENGTH_PREFIX)
+      // update offset
+      currentOffsetIndex = nextOffsetIndex;
+      fixedIndex += BYTES_PER_LENGTH_PREFIX;
+    }
+    index = currentOffsetIndex;
+  } else {
+    // all elements are fixed-size
+    for (const v of value) {
+      index = _serialize(v, type.elementType, output, index);
+    }
   }
-  output.writeUIntLE(index - index0, start, BYTES_PER_LENGTH_PREFIX)
   return index;
 }
 
 function _serializeObject(value: SerializableObject, type: ContainerType, output: Buffer, start: number): number {
-  const index0 = start + BYTES_PER_LENGTH_PREFIX;
-  let index = index0;
+  let fixedIndex = start;
+  let fixedLength = type.fields
+    .map(([_, fieldType]) => isVariableSizeType(type) ? BYTES_PER_LENGTH_PREFIX : fixedSize(fieldType))
+    .reduce((a, b) => a + b, 0)
+  let currentOffsetIndex = start + fixedLength;
+  let nextOffsetIndex = currentOffsetIndex;
   for (const [fieldName, fieldType] of type.fields) {
-    index = _serialize(value[fieldName], fieldType, output, index);
+    if (isVariableSizeType(fieldType)) {
+      // field type is variable-size
+      // write serialized element to variable section
+      nextOffsetIndex = _serialize(value[fieldName], fieldType, output, currentOffsetIndex);
+      // write offset
+      output.writeUIntLE(currentOffsetIndex, fixedIndex, BYTES_PER_LENGTH_PREFIX)
+      // update offset
+      currentOffsetIndex = nextOffsetIndex;
+      fixedIndex += BYTES_PER_LENGTH_PREFIX;
+    } else {
+      fixedIndex = _serialize(value[fieldName], fieldType, output, fixedIndex);
+    }
   }
-  output.writeUIntLE(index - index0, start, BYTES_PER_LENGTH_PREFIX)
-  return index;
+
+  return currentOffsetIndex;
 }
 
 export function _serialize(value: SerializableValue, type: FullSSZType, output: Buffer, start: number): number {
+  assertValidValue(value, type);
   switch(type.type) {
     case Type.bool:
       return _serializeBool(value as Bool, output, start);

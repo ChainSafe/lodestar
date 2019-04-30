@@ -12,11 +12,6 @@ export interface SerializableObject {
 }
 export type SerializableValue = Uint | Bool | Bytes | SerializableArray | SerializableObject;
 
-export interface DeserializedValue {
-  offset: number;
-  value: SerializableValue;
-}
-
 // Simple types
 // These types are supplied to provide a convenient interface with which to specify types
 

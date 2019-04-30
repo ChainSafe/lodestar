@@ -47,7 +47,6 @@ describe("hashTreeRoot", () => {
     {value: new BN("ffffffffffffffffffffffffffffffff", 16), type: "uint128", expected: ""},
     {value: new BN("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16), type: "uint256", expected: ""},
     {value: Buffer.from("deadbeef", "hex"), type: "bytes4", expected: ""},
-    {value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"), type: "bytes32", expected: ""},
     {value: Buffer.from("deadbeef", "hex"), type: "bytes", expected: ""},
     {value: Buffer.from("deadbeef", "hex"), type: ["byte", 4], expected: ""},
     {value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"), type: ["byte", 16], expected: ""},
@@ -74,6 +73,7 @@ describe("hashTreeRoot", () => {
   }[] = [
     {value: 1, type: "foo", reason: "Invalid type"},
     {value: 1, type: "bar", reason: "Invalid type"},
+    {value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"), type: "bytes32", reason: "Invalida byte array length"},
   ];
   for (const {value, type, reason} of failCases) {
     it(`should throw an error for ${stringifyType(type)}: ${reason}`, () => {
