@@ -1,4 +1,4 @@
-import { Attestation, AttestationData, BeaconBlock, bytes32, Deposit, Shard, Slot, Eth1Data } from "../../types";
+import {Attestation, AttestationData, BeaconBlock, bytes32, Deposit, Shard, Slot, Eth1Data} from "../../types";
 
 /**
  * The API interface defines the calls that can be made externally

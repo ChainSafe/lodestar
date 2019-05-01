@@ -1,5 +1,7 @@
-import {isValidAddress} from "../../../src/helpers/address";
 import {expect} from "chai";
+
+import {isValidAddress} from "../../../src/util/address";
+
 
 describe('Eth address helper', () => {
 
@@ -12,6 +14,6 @@ describe('Eth address helper', () => {
     expect(isValidAddress('0x00')).to.be.false;
     expect(isValidAddress('TPB')).to.be.false;
     expect(isValidAddress(null)).to.be.false;
-  })
+  });
 
 });

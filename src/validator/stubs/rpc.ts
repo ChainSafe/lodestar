@@ -1,5 +1,5 @@
 import {
-  BeaconBlock, BeaconState, bytes48, CrosslinkCommittee, Epoch, Shard, Slot,
+  BeaconBlock, BeaconState, bytes48, Epoch, Shard, Slot,
   ValidatorIndex
 } from "../../types";
 import {notSoRandomRandomBoolean, notSoRandomRandomSlot, notSoRandomRandomValidatorIndex} from "./helpers";
@@ -57,8 +57,8 @@ export default class RPCProvider {
     return notSoRandomRandomBoolean();
   }
 
-  public getCrosslinkCommitteesAtSlot(slot: Slot): CrosslinkCommittee[] {
-    return [] as CrosslinkCommittee[];
+  public getCrosslinkCommitteesAtSlot(slot: Slot): [ValidatorIndex[], Shard][] {
+    return [];
   }
 
   public getGenisisInfo(): GenesisInfo {

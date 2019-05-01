@@ -1,6 +1,6 @@
 /*
 Each type exported here contains both a compile-time type (a typescript
-interface) and a run-time type (a javascript variable)
+interface) and a run-time ssz type (a javascript variable)
 
 In practice, this means that any type can be used for typescript type hinting,
 eg: `let b: BeaconBlock = {...};` as well as for encoding/decoding with
@@ -21,8 +21,7 @@ object (of the same name as the interface), which defines the interface's field
 names/types that can be inspected at run-time.
  */
 export * from "./primitive";
-export * from "./attestation";
-export * from "./eth1";
+export * from "./misc";
+export * from "./operations";
 export * from "./block";
 export * from "./state";
-export * from "./custom";

@@ -5,7 +5,7 @@ import {P2PNetwork} from "../p2p";
 
 import defaultConf from "./defaults";
 import logger from "../logger/winston";
-import {isPlainObject} from "../helpers/objects";
+import {isPlainObject} from "../util/objects";
 import {Sync} from "../sync";
 import {BeaconChain} from "../chain";
 import {OpPool} from "../opPool";

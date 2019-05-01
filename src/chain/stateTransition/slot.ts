@@ -1,21 +1,30 @@
+import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
+
 import {
   BeaconState,
-  bytes32,
+  BeaconBlockHeader,
 } from "../../types";
 
 import {
-  LATEST_BLOCK_ROOTS_LENGTH,
+  SLOTS_PER_HISTORICAL_ROOT, ZERO_HASH,
 } from "../../constants";
 
-import {
-  merkleRoot,
-} from "../helpers/stateTransitionHelpers";
 
-export function processSlot(state: BeaconState, prevBlockRoot: bytes32): BeaconState {
-  state.slot++;
-  state.latestBlockRoots[(state.slot - 1) % LATEST_BLOCK_ROOTS_LENGTH] = prevBlockRoot;
-  if (state.slot % LATEST_BLOCK_ROOTS_LENGTH === 0) {
-    state.batchedBlockRoots.push(merkleRoot(state.latestBlockRoots));
+export function cacheState(state: BeaconState): void {
+  // Cache latest known state root (for previous slot)
+  const latestStateRoot = hashTreeRoot(state, BeaconState);
+  state.latestStateRoots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = latestStateRoot;
+
+  // Store latest known state root (for previous slot) in latest_block_header if it is empty
+  if (state.latestBlockHeader.stateRoot.equals(ZERO_HASH)) {
+    state.latestBlockHeader.stateRoot = latestStateRoot;
   }
-  return state;
+
+  // Cache latest known block root (for previous slot)
+  state.latestBlockRoots[state.slot % SLOTS_PER_HISTORICAL_ROOT] =
+    signingRoot(state.latestBlockHeader, BeaconBlockHeader);
+}
+
+export function advanceSlot(state: BeaconState): void {
+  state.slot++;
 }

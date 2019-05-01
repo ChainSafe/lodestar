@@ -29,7 +29,7 @@ class MessageRequest implements LikeSocket {
           if(that.messageCallback) {
             that.messageCallback(message);
           }
-        })
+        });
     }
   }
 
