@@ -1,7 +1,7 @@
 import {EventEmitter} from "events";
 import {Service} from "../node";
 import {LodestarNode} from "./node";
-import logger from "../logger";
+import logger, {AbstractLogger} from "../logger";
 import {PeerInfo} from "peer-info";
 import LibP2p from "libp2p";
 import {PeerBook} from "peer-book";
@@ -39,7 +39,7 @@ export class P2PNetwork extends EventEmitter implements Service {
 
   private discoveredPeers: Set<PeerInfo>;
 
-  private log: logger;
+  private log: AbstractLogger;
 
   public constructor(opts: P2pOptions) {
     super();
@@ -126,7 +126,7 @@ export class P2PNetwork extends EventEmitter implements Service {
 
   private async createPeerInfo(): PeerInfo {
     return new Promise((resolve, reject) => {
-      const handler = (err, peerInfo): function => {
+      const handler = (err, peerInfo) => {
         if (err) {
 	  return reject(err);
         }
