@@ -2,7 +2,7 @@
  * The API interface defines the calls that can be made from a Validator
  */
 import {
-  BeaconBlock, bytes, bytes32, bytes48, Fork, Shard, Slot, SyncingStatus, uint64,
+  BeaconBlock, bytes, bytes32, bytes48, Fork, IndexedAttestation, Shard, Slot, SyncingStatus, uint64,
   ValidatorDuty
 } from "../../types";
 
@@ -15,9 +15,9 @@ export interface API {
 
   /**
    * Requests the BeaconNode to provide which fork version it is currently on.
-   * @returns {Promise<{fork: Fork; chain_id: uint64}>}
+   * @returns {Promise<{fork: Fork; chainId: uint64}>}
    */
-  getFork(): Promise<{fork: Fork, chain_id: uint64}>;
+  getFork(): Promise<{fork: Fork; chainId: uint64}>;
 
   /**
    * Requests the genesis_time parameter from the BeaconNode, which should be consistent across all BeaconNodes that follow the same beacon chain.
@@ -33,18 +33,18 @@ export interface API {
 
   /**
    * Requests the BeaconNode to provide a set of “duties”, which are actions that should be performed by ValidatorClients. This API call should be polled at every slot, to ensure that any chain reorganisations are catered for, and to ensure that the currently connected BeaconNode is properly synchronised.
-   * @param {bytes48[]} validator_pubkeys
-   * @returns {Promise<{current_version: bytes4; validator_duties: ValidatorDuty[]}>} A list of unique validator public keys, where each item is a 0x encoded hex string.
+   * @param {bytes48[]} validatorPubkeys
+   * @returns {Promise<{currentVersion: bytes4; validatorDuties: ValidatorDuty[]}>} A list of unique validator public keys, where each item is a 0x encoded hex string.
    */
-  getDuties(validator_pubkeys: bytes48[]): Promise<{current_version: Fork, validator_duties: ValidatorDuty[]}>;
+  getDuties(validatorPubkeys: bytes48[]): Promise<{currentVersion: Fork; validatorDuties: ValidatorDuty[]}>;
 
   /**
    * Requests a BeaconNode to produce a valid block, which can then be signed by a ValidatorClient.
    * @param {Slot} slot
-   * @param {bytes} randao_reveal
+   * @param {bytes} randaoReveal
    * @returns {Promise<BeaconBlock>} A proposed BeaconBlock object, but with the signature field left blank.
    */
-  produceBlock(slot: Slot, randao_reveal: bytes): Promise<BeaconBlock>;
+  produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock>;
 
   /**
    * Requests that the BeaconNode produce an IndexedAttestation, with a blank signature field, which the ValidatorClient will then sign.
@@ -56,15 +56,15 @@ export interface API {
 
   /**
    * Instructs the BeaconNode to publish a newly signed beacon block to the beacon network, to be included in the beacon chain.
-   * @param {BeaconBlock} beacon_block
+   * @param {BeaconBlock} beaconBlock
    * @returns {Promise<void>}
    */
-  publishBlock(beacon_block: BeaconBlock): Promise<void>;
+  publishBlock(beaconBlock: BeaconBlock): Promise<void>;
 
   /**
    * Instructs the BeaconNode to publish a newly signed IndexedAttestation object, to be incorporated into the beacon chain.
-   * @param {IndexedAttestation} indexed_attestation
+   * @param {IndexedAttestation} indexedAttestation
    * @returns {Promise<void>}
    */
-  publishAttestation(indexed_attestation: IndexedAttestation): Promise<void>;
+  publishAttestation(indexedAttestation: IndexedAttestation): Promise<void>;
 }

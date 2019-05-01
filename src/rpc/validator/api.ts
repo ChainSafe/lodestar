@@ -1,10 +1,10 @@
 import {
   Attestation, AttestationData, BeaconBlock, bytes32, Deposit, Shard, Slot, Eth1Data, uint64,
-  Fork, SyncingStatus, ValidatorDuty, bytes48, bytes
+  Fork, SyncingStatus, ValidatorDuty, bytes48, bytes, IndexedAttestation
 } from "../../types";
-import { DB } from "../../db";
-import { BeaconChain } from "../../chain";
-import { OpPool } from "../../opPool";
+import {DB} from "../../db";
+import {BeaconChain} from "../../chain";
+import {OpPool} from "../../opPool";
 
 import {API} from "./interface";
 
@@ -23,9 +23,9 @@ export class ValidatorAPI implements API {
     return Buffer.alloc(32);
   }
 
-  public async getFork(): Promise<{fork: Fork, chain_id: uint64}> {
+  public async getFork(): Promise<{fork: Fork; chainId: uint64}> {
     // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as {fork: Fork, chain_id: uint64};
+    return {} as {fork: Fork; chainId: uint64};
   }
 
   public async getGenesisTime(): Promise<uint64> {
@@ -38,25 +38,22 @@ export class ValidatorAPI implements API {
     return {} as boolean | SyncingStatus;
   }
 
-  public async getDuties(validator_pubkeys: bytes48[]): Promise<{current_version: Fork, validator_duties: ValidatorDuty[]}> {
+  public async getDuties(validatorPubkeys: bytes48[]): Promise<{currentVersion: Fork; validatorDuties: ValidatorDuty[]}> {
     // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as {current_version: Fork, validator_duties: ValidatorDuty[]};
+    return {} as {currentVersion: Fork; validatorDuties: ValidatorDuty[]};
   }
 
-  public async produceBlock(slot: Slot, randao_reveal: bytes): Promise<BeaconBlock> {
+  public async produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock> {
     // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
     return {} as BeaconBlock;
   }
 
   public async produceAttestation(slot: Slot, shard: Shard): Promise<IndexedAttestation> {
-    // await this.opPool.receiveAttestation(attestation);
+    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
+    return {} as IndexedAttestation;
   }
 
-  public async publishBlock(beacon_block: BeaconBlock): Promise<void> {
-    // await this.chain.receiveBlock(block);
-  }
+  public async publishBlock(beaconBlock: BeaconBlock): Promise<void> {}
 
-  public async publishAttestation(indexed_attestation: IndexedAttestation): Promise<void> {
-    // await this.chain.receiveBlock(block);
-  }
+  public async publishAttestation(indexedAttestation: IndexedAttestation): Promise<void> {}
 }
