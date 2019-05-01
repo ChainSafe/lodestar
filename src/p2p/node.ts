@@ -41,16 +41,13 @@ export class LodestarNode extends LibP2p {
   public static createNode(callback): LodestarNode {
     let node: LodestarNode;
 
-    waterfall([
-      (cb) => PeerInfo.create(cb),
-      (peerInfo, cb) => {
-        peerInfo.multiaddrs.add('/ip4/0.0.0.0/tcp/9000');
-        node = new LodestarNode({
-          peerInfo
-        });
-        (node as LibP2p).start(cb);
-      }
-    ], (err) => callback(err, node));
+    const id = await promisify(PeerId.create)({ bits: 1024});
+    const peerInfo = await promisify(PeerInfo.create)(id);
+    peerInfo.multiaddrs.add('ip4/0.0.0.0/tcp/9000');
+    const node = new LodestarNode({
+      peerInfo
+    });
+    (node as LibP2p).start(callback);
 
     node.pubsub = new FloodSub(node);
     node.pubsub.start((err) => {
