@@ -87,7 +87,7 @@ export class P2PNetwork extends EventEmitter implements Service {
           this.log.info(`Peer discovered: ${peerInfo}`);
           this.emit('connected', peerInfo);
         } catch (err) {
-          this.log(err);
+          this.log.error(err);
         }
 
       });
