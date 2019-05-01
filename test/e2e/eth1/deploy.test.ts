@@ -15,6 +15,7 @@ describe("Eth1Notifier - using deployed contract", () => {
   let provider;
 
   before(async function() {
+    this.timeout(0);
     logger.silent(true);
     // deploy deposit contract
     eth1Network = new PrivateEth1Network({
@@ -71,6 +72,7 @@ describe("Eth1Notifier - using deployed contract", () => {
             )
         )
     );
+    console.log(await eth1Notifier.genesisDeposits('latest'));
     assert(cb.called, "eth2genesis event did not fire");
   });
 
