@@ -4,6 +4,7 @@ import {bytes32, DepositData, Deposit, Eth1Data} from "../types";
 
 export interface Eth1Options {
   depositContract: {
+    deployedAt: number;
     address: string;
     abi: any[];
   };
