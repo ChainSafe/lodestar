@@ -9,7 +9,7 @@ import {
   ProposerSlashing,
   Slot,
   VoluntaryExit,
-  Transfer,
+  Transfer, Deposit,
 } from "../types";
 
 export interface DBOptions {
@@ -23,6 +23,24 @@ export interface DBOptions {
 export interface DB extends EventEmitter {
   start(): Promise<void>;
   stop(): Promise<void>;
+
+  /**
+   * Adds deposit to database
+   * @param deposit
+   */
+  setGenesisDeposit(deposit: Deposit): Promise<void>;
+
+  /**
+   * Get all stored deposits sorted from oldest to newest.
+   * It will only contain deposits until Eth2Genesis event.
+   * After that, deposits will be kept in BeaconBlock
+   */
+  getGenesisDeposits(): Promise<Deposit[]>;
+
+  /**
+   * Deletes all deposits.
+   */
+  deleteGenesisDeposits(deposits: Deposit[]): Promise<void>;
 
   /**
    * Get the beacon chain state

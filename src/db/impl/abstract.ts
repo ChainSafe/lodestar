@@ -6,6 +6,7 @@ import {
   BeaconBlock,
   BeaconState,
   bytes32,
+  Deposit,
   ProposerSlashing,
   Slot,
   Transfer,
@@ -15,7 +16,7 @@ import {
 
 import {Bucket, encodeKey, Key} from "../schema";
 
-import {deserialize, serialize, hashTreeRoot} from "@chainsafe/ssz";
+import {deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
 
 export interface SearchOptions {
   gt: any;
@@ -248,6 +249,26 @@ export default abstract class AbstractDB extends EventEmitter implements DB {
     const criteria: any[] = [];
     attesterSlashings.forEach((n) =>
       criteria.push(encodeKey(Bucket.attesterSlashing, hashTreeRoot(n, AttesterSlashing)))
+    );
+    await this.batchDelete(criteria);
+  }
+
+  public async getGenesisDeposits(): Promise<Deposit[]> {
+    const data = await this.search({
+      gt: encodeKey(Bucket.genesisDeposit, Buffer.alloc(0)),
+      lt: encodeKey(Bucket.genesisDeposit + 1, Buffer.alloc(0)),
+    });
+    return data.map((data) => deserialize(data, Deposit));
+  }
+
+  public async setGenesisDeposit(deposit: Deposit): Promise<void> {
+    await this.put(encodeKey(Bucket.genesisDeposit, deposit.index), serialize(deposit, Deposit));
+  }
+
+  public async deleteGenesisDeposits(deposits: Deposit[]): Promise<void> {
+    const criteria: any[] = [];
+    deposits.forEach((deposit) =>
+      criteria.push(encodeKey(Bucket.genesisDeposit, deposit.index))
     );
     await this.batchDelete(criteria);
   }

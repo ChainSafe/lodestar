@@ -1,4 +1,4 @@
-import { assert } from "chai";
+import {assert} from "chai";
 import leveldown from "leveldown";
 import promisify from "promisify-es6";
 import {hashTreeRoot, serialize,} from "@chainsafe/ssz";
@@ -13,6 +13,7 @@ import {generateEmptyAttestation} from "../../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../../utils/voluntaryExits";
 import level from "level";
 import logger from "../../../src/logger/winston";
+import {generateDeposit} from "../../utils/deposit";
 
 describe("LevelDB", () => {
   const dbLocation = "./.__testdb";
@@ -78,19 +79,33 @@ describe("LevelDB", () => {
     assert.equal(noAttestations.length, 0);
   });
 
+  it("should correctly set, get, delete genesis deposits", async () => {
+    const testDeposits = Array.from({length: 64}, (_, i) => {
+      return generateDeposit(i);
+    });
+    for (const a of testDeposits) {
+      await db.setGenesisDeposit(a);
+    }
+    const actualDeposits = await db.getGenesisDeposits();
+    assert.equal(actualDeposits.length, actualDeposits.length);
+    await db.deleteGenesisDeposits(testDeposits);
+    const noDeposits = await db.getGenesisDeposits();
+    assert.equal(noDeposits.length, 0);
+  });
+
   it("should correctly set, get, delete voluntary exits", async () => {
-      const testVoluntaryExits = Array.from({length: 10}, (_, i) => {
-          const a = generateEmptyVoluntaryExit();
-          a.epoch = i;
-          return a;
-      });
-      for (const a of testVoluntaryExits) {
-          await db.setVoluntaryExit(a);
-      }
-      const actualVoluntaryExits = await db.getVoluntaryExits();
-      assert.equal(actualVoluntaryExits.length, testVoluntaryExits.length);
-      await db.deleteVoluntaryExits(actualVoluntaryExits);
-      const noVoluntaryExits = await db.getVoluntaryExits();
-      assert.equal(noVoluntaryExits.length, 0);
-  })
+    const testVoluntaryExits = Array.from({length: 10}, (_, i) => {
+      const a = generateEmptyVoluntaryExit();
+      a.epoch = i;
+      return a;
+    });
+    for (const a of testVoluntaryExits) {
+      await db.setVoluntaryExit(a);
+    }
+    const actualVoluntaryExits = await db.getVoluntaryExits();
+    assert.equal(actualVoluntaryExits.length, testVoluntaryExits.length);
+    await db.deleteVoluntaryExits(actualVoluntaryExits);
+    const noVoluntaryExits = await db.getVoluntaryExits();
+    assert.equal(noVoluntaryExits.length, 0);
+  });
 });
