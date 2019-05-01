@@ -1,4 +1,4 @@
-import { assert } from "chai";
+import {assert} from "chai";
 import {ethers} from "ethers";
 import sinon from "sinon";
 
@@ -6,6 +6,8 @@ import {Eth1Wallet, EthersEth1Notifier} from "../../../src/eth1";
 import {depositContract} from "../../../src/eth1/dev/defaults";
 import {PrivateEth1Network} from "../../../src/eth1/dev";
 import logger from "../../../src/logger/winston";
+import {LevelDB} from "../../../src/db";
+import level from "level";
 
 describe("Eth1Notifier - using deployed contract", () => {
 
@@ -13,6 +15,13 @@ describe("Eth1Notifier - using deployed contract", () => {
   let eth1Network;
   let depositContractAddress;
   let provider;
+  const dbLocation = "./.__testdb";
+  const testDb = level(
+    dbLocation, {
+      keyEncoding: 'binary',
+      valueEncoding: 'binary',
+    });
+  const db = new LevelDB({db: testDb});
 
   before(async function() {
     this.timeout(0);
@@ -32,7 +41,8 @@ describe("Eth1Notifier - using deployed contract", () => {
         ...depositContract,
         address: depositContractAddress,
       },
-      provider
+      provider,
+      db
     });
     await eth1Notifier.start();
   });
