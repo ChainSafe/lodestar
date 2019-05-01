@@ -1,7 +1,7 @@
 import {EventEmitter} from "events";
 import {Service} from "../node";
 import {LodestarNode} from "./node";
-import {logger} from "../logger";
+import logger from "../logger";
 import {PeerInfo} from "peer-info";
 import LibP2p from "libp2p";
 import {PeerBook} from "peer-book";
@@ -42,7 +42,7 @@ export class P2PNetwork extends EventEmitter implements Service {
   private log: logger;
 
   public constructor(opts: P2pOptions) {
-    super(opts);
+    super();
     this.options = opts;
     this.maxPeers = this.options.maxPeers;
     this.refreshInterval = this.options.refreshInterval;
@@ -126,7 +126,7 @@ export class P2PNetwork extends EventEmitter implements Service {
 
   private async createPeerInfo(): PeerInfo {
     return new Promise((resolve, reject) => {
-      const handler = (err, peerInfo) => {
+      const handler = (err, peerInfo): function => {
         if (err) {
 	  return reject(err);
         }
@@ -143,9 +143,9 @@ export class P2PNetwork extends EventEmitter implements Service {
 	    return reject(err);
 	  }
 	  PeerInfo.create(id, handler);	  
-	});
+        });
       } else {
-	PeerInfo.create(handler);
+        PeerInfo.create(handler);
       } 
     });
   }

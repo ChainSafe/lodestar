@@ -19,14 +19,16 @@ export interface Service {
   stop(): Promise<void>;
 }
 
+// Temporarily have properties be optional until others portions of lodestar are ready
 interface BeaconNodeCtx {
-  chain: object;
-  db: object;
-  eth1: object;
-  network: any;
-  rpc: object;
-  sync: object;
-  opPool: object;
+  chain?: object;
+  db?: object;
+  // Temporarily set to any. Will be changed to object later.
+  eth1?: any;
+  network?: any;
+  rpc?: object;
+  sync?: object;
+  opPool?: object;
 }
 
 class BeaconNode {

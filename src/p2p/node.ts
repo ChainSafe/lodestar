@@ -38,18 +38,18 @@ export class LodestarNode extends LibP2p {
     super(defaultsDeep(_options, defaults));
   }
 
-    public static async createNode(callback): LodestarNode {
+  public static createNode(callback): LodestarNode {
     let node: LodestarNode;
 
     waterfall([
       (cb) => PeerInfo.create(cb),
       (peerInfo, cb) => {
-         peerInfo.multiaddrs.add('/ip4/0.0.0.0/tcp/9000');
-         node = new LodestarNode({
-           peerInfo
-         });
-         (node as LibP2p).start(cb);
-        }
+        peerInfo.multiaddrs.add('/ip4/0.0.0.0/tcp/9000');
+        node = new LodestarNode({
+          peerInfo
+        });
+        (node as LibP2p).start(cb);
+      }
     ], (err) => callback(err, node));
 
     node.pubsub = new FloodSub(node);
