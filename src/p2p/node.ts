@@ -2,8 +2,9 @@ import LibP2p from "libp2p";
 import {TCP} from "libp2p-tcp";
 import {Mplex} from "libp2p-mplex";
 import {Bootstrap} from "libp2p-bootstrap";
-import {waterfall} from "async/waterfall";
+import {promisify} from "es6-promisify";
 import {PeerInfo} from "peer-info";
+import {PeerId} from "peer-id";
 import {defaultsDeep} from "@nodeutils/defaults-deep";
 import * as FloodSub from "libp2p-floodsub";
 
@@ -41,10 +42,10 @@ export class LodestarNode extends LibP2p {
   public static createNode(callback): LodestarNode {
     let node: LodestarNode;
 
-    const id = await promisify(PeerId.create)({ bits: 1024});
-    const peerInfo = await promisify(PeerInfo.create)(id);
+    const id = promisify(PeerId.create)({bits: 1024});
+    const peerInfo = promisify(PeerInfo.create)(id);
     peerInfo.multiaddrs.add('ip4/0.0.0.0/tcp/9000');
-    const node = new LodestarNode({
+    node = new LodestarNode({
       peerInfo
     });
     (node as LibP2p).start(callback);
