@@ -230,8 +230,8 @@ export interface HistoricalBatch {
 export const HistoricalBatch: SimpleContainerType = {
   name: "HistoricalBatch",
   fields: [
-    ["blockRoots", [bytes32, SLOTS_PER_HISTORICAL_ROOT]],
-    ["stateRoots", [bytes32, SLOTS_PER_HISTORICAL_ROOT]],
+    ["blockRoots", [bytes32]],
+    ["stateRoots", [bytes32]],
   ],
 };
 
