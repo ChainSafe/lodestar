@@ -72,9 +72,7 @@ export class P2PNetwork extends EventEmitter implements Service {
         bootnodes: this.options.bootnodes
       });
 
-      // TODO: Add protocol handling for RPC over Libp2p
-
-      this.node.on('peer:discovery', async (peerInfo) => {
+      this.node.on('peer:discovery', (peerInfo) => {
         try {
           const peerId = peerInfo.id.toB58String();
           // Check if peer has already been discovered
@@ -82,8 +80,7 @@ export class P2PNetwork extends EventEmitter implements Service {
             return;
           }
           this.peerBook.put(peerInfo);
-          this.node.dial(peerInfo, () => {
-          });
+	  this.node.dial(peerInfo, () => {});
           this.log.info(`Peer discovered: ${peerInfo}`);
           this.emit('connected', peerInfo);
         } catch (err) {
@@ -92,7 +89,7 @@ export class P2PNetwork extends EventEmitter implements Service {
 
       });
 
-      this.node.on('peer:connect', async (peerInfo) => {
+      this.node.on('peer:connect', (peerInfo) => {
         try {
           this.log.info(`Peer connected: ${peerInfo}`);
           this.peerBook.put(peerInfo);
@@ -102,7 +99,7 @@ export class P2PNetwork extends EventEmitter implements Service {
         }
       });
 
-      this.node.on('peer:disconnect', async (peerInfo) => {
+      this.node.on('peer:disconnect', (peerInfo) => {
         try {
           this.peerBook.remove(peerInfo);
           this.discoveredPeers.delete(peerInfo);
