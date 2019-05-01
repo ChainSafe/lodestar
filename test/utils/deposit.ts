@@ -1,6 +1,5 @@
 import {Deposit} from "../../src/types";
-import {randBetween} from "./misc";
-import {MAX_EFFECTIVE_BALANCE, MIN_DEPOSIT_AMOUNT} from "../../src/constants";
+import {EMPTY_SIGNATURE} from "../../src/constants";
 import BN from "bn.js";
 
 /**
@@ -13,10 +12,10 @@ export function generateDeposit(index: number): Deposit {
     index,
     proof: [],
     data: {
-      amount: new BN(randBetween(MIN_DEPOSIT_AMOUNT, MAX_EFFECTIVE_BALANCE).toString()),
+      amount: new BN(32).mul(new BN(10).muln(9)),
       pubkey: Buffer.alloc(48),
       withdrawalCredentials: Buffer.alloc(32),
-      signature: Buffer.alloc(48)
+      signature: EMPTY_SIGNATURE
     }
   };
 }
