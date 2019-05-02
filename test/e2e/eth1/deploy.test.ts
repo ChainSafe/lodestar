@@ -6,8 +6,7 @@ import {Eth1Wallet, EthersEth1Notifier} from "../../../src/eth1";
 import {depositContract} from "../../../src/eth1/dev/defaults";
 import {PrivateEth1Network} from "../../../src/eth1/dev";
 import logger from "../../../src/logger/winston";
-import {LevelDB, PouchDb} from "../../../src/db";
-import level from "level";
+import {PouchDb} from "../../../src/db";
 
 describe("Eth1Notifier - using deployed contract", () => {
 
@@ -36,8 +35,7 @@ describe("Eth1Notifier - using deployed contract", () => {
         address: depositContractAddress,
       },
       provider,
-      db
-    });
+    }, {db});
     await eth1Notifier.start();
   });
 

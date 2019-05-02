@@ -12,7 +12,6 @@ import {DB} from "../../db";
 
 export interface EthersEth1Options extends Eth1Options {
   provider: ethers.providers.BaseProvider;
-  db: DB;
   contract?: Contract;
 }
 
@@ -36,12 +35,12 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
   private opts: EthersEth1Options;
 
 
-  public constructor(opts: EthersEth1Options) {
+  public constructor(opts: EthersEth1Options, {db}) {
     super();
     this.opts = opts;
     this.provider = opts.provider;
     this.contract = this.opts.contract;
-    this.db = opts.db;
+    this.db = db;
     this.depositCount = 0;
     this._latestBlockHash = null;
     this.genesisBlockHash = null;

@@ -26,9 +26,8 @@ describe("Eth1Notifier", () => {
     db.deleteGenesisDeposits = sandbox.stub();
     eth1 = new EthersEth1Notifier({
       depositContract: defaults.depositContract,
-      provider,
-      db
-    });
+      provider
+    }, {db});
   });
 
   after(async () => {
@@ -52,10 +51,9 @@ describe("Eth1Notifier", () => {
       const notifier = new EthersEth1Notifier({
         depositContract: defaults.depositContract,
         provider,
-        db,
         // @ts-ignore
         contract
-      });
+      }, {db});
       contract.on.returns(null);
       await notifier.start();
       expect(contract.on.withArgs('Deposit', sinon.match.any).calledOnce).to.be.true;
@@ -70,10 +68,9 @@ describe("Eth1Notifier", () => {
       const notifier = new EthersEth1Notifier({
         depositContract: defaults.depositContract,
         provider,
-        db,
         // @ts-ignore
         contract
-      });
+      }, {db});
       contract.removeAllListeners.returns(null);
       await notifier.stop();
       expect(contract.removeAllListeners.withArgs('Deposit').calledOnce).to.be.true;
@@ -144,9 +141,8 @@ describe("Eth1Notifier", () => {
     const notifier = new EthersEth1Notifier({
       depositContract: defaults.depositContract,
       provider,
-      db,
       contract
-    });
+    }, {db});
     const testDepositRoot = Buffer.alloc(32);
     spy.resolves('0x' + testDepositRoot.toString('hex'));
 
