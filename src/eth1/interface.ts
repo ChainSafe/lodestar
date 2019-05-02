@@ -4,6 +4,7 @@ import {bytes32, DepositData, Deposit, Eth1Data} from "../types";
 
 export interface Eth1Options {
   depositContract: {
+    deployedAt: number;
     address: string;
     abi: any[];
   };
@@ -39,7 +40,7 @@ export interface Eth1Notifier extends EventEmitter {
   /**
    * Return the latest block hash
    */
-  latestBlockHash(): Promise<bytes32>;
+  latestBlockHash(): bytes32;
 
   /**
    * Return the merkle root of the deposits

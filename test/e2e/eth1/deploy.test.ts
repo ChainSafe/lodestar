@@ -1,4 +1,4 @@
-import { assert } from "chai";
+import {assert} from "chai";
 import {ethers} from "ethers";
 import sinon from "sinon";
 
@@ -6,6 +6,7 @@ import {Eth1Wallet, EthersEth1Notifier} from "../../../src/eth1";
 import {depositContract} from "../../../src/eth1/dev/defaults";
 import {PrivateEth1Network} from "../../../src/eth1/dev";
 import logger from "../../../src/logger/winston";
+import {PouchDb} from "../../../src/db";
 
 describe("Eth1Notifier - using deployed contract", () => {
 
@@ -13,8 +14,10 @@ describe("Eth1Notifier - using deployed contract", () => {
   let eth1Network;
   let depositContractAddress;
   let provider;
+  const db = new PouchDb({name: 'testDb'});
 
   before(async function() {
+    this.timeout(0);
     logger.silent(true);
     // deploy deposit contract
     eth1Network = new PrivateEth1Network({
@@ -31,8 +34,8 @@ describe("Eth1Notifier - using deployed contract", () => {
         ...depositContract,
         address: depositContractAddress,
       },
-      provider
-    });
+      provider,
+    }, {db});
     await eth1Notifier.start();
   });
 
@@ -71,6 +74,7 @@ describe("Eth1Notifier - using deployed contract", () => {
             )
         )
     );
+    await eth1Notifier.genesisDeposits('latest');
     assert(cb.called, "eth2genesis event did not fire");
   });
 
