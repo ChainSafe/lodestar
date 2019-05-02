@@ -22,7 +22,7 @@ describe("Json RPC over http", () => {
     it("should get the chain head", (done) => {
         request.default(server)
             .post('/')
-            .send(generateRPCCall('BeaconChain.getChainHead', []))
+            .send(generateRPCCall('BeaconChain.getFork', []))
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200)

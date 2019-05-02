@@ -2,7 +2,8 @@
  * The API interface defines the calls that can be made from a Validator
  */
 import {
-  BeaconBlock, bytes, bytes32, bytes48, Fork, IndexedAttestation, Shard, Slot, SyncingStatus, uint64,
+  Attestation, AttestationData,
+  BeaconBlock, bytes, bytes32, bytes48, Fork, IndexedAttestation, number64, Shard, Slot, SyncingStatus, uint64,
   ValidatorDuty
 } from "../../../types";
 
@@ -17,13 +18,13 @@ export interface IValidatorApi {
    * Requests the BeaconNode to provide which fork version it is currently on.
    * @returns {Promise<{fork: Fork; chainId: uint64}>}
    */
-  getFork(): Promise<{fork: Fork; chainId: uint64}>;
+  getFork(): Promise<{fork: Fork; chainId: number64}>;
 
   /**
    * Requests the genesis_time parameter from the BeaconNode, which should be consistent across all BeaconNodes that follow the same beacon chain.
    * @returns {Promise<uint64>} The genesis_time, which is a fairly static configuration option for the BeaconNode.
    */
-  getGenesisTime(): Promise<uint64>;
+  getGenesisTime(): Promise<number64>;
 
   /**
    * Requests the BeaconNode to describe if it's currently syncing or not, and if it is, what block it is up to. This is modelled after the Eth1.0 JSON-RPC eth_syncing call.
@@ -50,9 +51,9 @@ export interface IValidatorApi {
    * Requests that the BeaconNode produce an IndexedAttestation, with a blank signature field, which the ValidatorClient will then sign.
    * @param {Slot} slot
    * @param {Shard} shard
-   * @returns {Promise<IndexedAttestation>}
+   * @returns {Promise<Attestation>}
    */
-  produceAttestation(slot: Slot, shard: Shard): Promise<IndexedAttestation>;
+  produceAttestation(slot: Slot, shard: Shard): Promise<AttestationData>;
 
   /**
    * Instructs the BeaconNode to publish a newly signed beacon block to the beacon network, to be included in the beacon chain.
@@ -63,8 +64,8 @@ export interface IValidatorApi {
 
   /**
    * Instructs the BeaconNode to publish a newly signed IndexedAttestation object, to be incorporated into the beacon chain.
-   * @param {IndexedAttestation} indexedAttestation
+   * @param {Attestation} attestation
    * @returns {Promise<void>}
    */
-  publishAttestation(indexedAttestation: IndexedAttestation): Promise<void>;
+  publishAttestation(attestation: Attestation): Promise<void>;
 }

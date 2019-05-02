@@ -1,6 +1,6 @@
 import {
   Attestation, AttestationData, BeaconBlock, bytes32, Deposit, Shard, Slot, Eth1Data, uint64,
-  Fork, SyncingStatus, ValidatorDuty, bytes48, bytes, IndexedAttestation
+  Fork, SyncingStatus, ValidatorDuty, bytes48, bytes, IndexedAttestation, number64
 } from "../../../types";
 import {DB} from "../../../db";
 import {BeaconChain} from "../../../chain";
@@ -23,15 +23,14 @@ export class ValidatorApi implements IValidatorApi {
     return Buffer.alloc(32);
   }
 
-  public async getFork(): Promise<{fork: Fork; chainId: uint64}> {
+  public async getFork(): Promise<{fork: Fork; chainId: number64}> {
     // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as {fork: Fork; chainId: uint64};
+    return {} as {fork: Fork; chainId: number64};
   }
 
-  public async getGenesisTime(): Promise<uint64> {
-    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as uint64;
-  }
+  public async getGenesisTime(): Promise<number64> {
+    return await this.chain.genesisTime;
+  }s
 
   public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
     // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
@@ -48,12 +47,16 @@ export class ValidatorApi implements IValidatorApi {
     return {} as BeaconBlock;
   }
 
-  public async produceAttestation(slot: Slot, shard: Shard): Promise<IndexedAttestation> {
+  public async produceAttestation(slot: Slot, shard: Shard): Promise<AttestationData> {
     // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as IndexedAttestation;
+    return {} as AttestationData;
   }
 
-  public async publishBlock(beaconBlock: BeaconBlock): Promise<void> {}
+  public async publishBlock(block: BeaconBlock): Promise<void> {
+    await this.chain.receiveBlock(block);
+  }
 
-  public async publishAttestation(indexedAttestation: IndexedAttestation): Promise<void> {}
+  public async publishAttestation(attestation: Attestation): Promise<void> {
+    await this.opPool.receiveAttestation(attestation);
+  }
 }

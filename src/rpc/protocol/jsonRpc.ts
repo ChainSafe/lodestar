@@ -1,7 +1,7 @@
 import * as jsonRpc from "noice-json-rpc";
 
 
-import {IValidatorApi, IBeaconApi} from "../api";
+import {IValidatorApi} from "../api";
 
 export interface LikeSocketServer extends jsonRpc.LikeSocketServer {
   start(): Promise<void>;
@@ -10,15 +10,13 @@ export interface LikeSocketServer extends jsonRpc.LikeSocketServer {
 
 /**
  * JSON-RPC over some transport
- *
- *
  */
 export class JSONRPC {
   private rpcServer: jsonRpc.Server;
   private transport: LikeSocketServer;
   private jsonRpcApi;
 
-  public constructor(opts, {transport, api}: {transport: LikeSocketServer; api: IBeaconApi | IValidatorApi}) {
+  public constructor(opts, {transport, api}: {transport: LikeSocketServer; api: IValidatorApi}) {
     this.transport = transport;
     // attach the json-rpc server to underlying transport
     this.rpcServer = new jsonRpc.Server(this.transport);

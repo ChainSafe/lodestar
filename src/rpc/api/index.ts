@@ -1,3 +1,3 @@
 export * from "./interfaces";
-export * from "./mock";
+export * from "./mock/validator";
 export * from "./modules";

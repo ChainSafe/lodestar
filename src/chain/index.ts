@@ -20,6 +20,7 @@ import {getBlockRoot, getEpochStartSlot} from "./stateTransition/util";
  */
 export class BeaconChain extends EventEmitter {
   public chain: string;
+  public genesisTime: number64;
   private db: DB;
   private eth1: Eth1Notifier;
   private _latestBlock: BeaconBlock;
@@ -57,6 +58,7 @@ export class BeaconChain extends EventEmitter {
     const genesisState = getGenesisBeaconState(genesisDeposits, genesisTime, genesisEth1Data);
     const genesisBlock = getEmptyBlock();
     genesisBlock.stateRoot = hashTreeRoot(genesisState, BeaconState);
+    this.genesisTime = genesisTime;
     await this.db.setBlock(genesisBlock);
     await this.db.setChainHead(genesisState, genesisBlock);
     await this.db.setJustifiedBlock(genesisBlock);
