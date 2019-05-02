@@ -13,17 +13,19 @@ import {JSONRPC} from "../rpc/protocol";
 import {WSServer} from "../rpc/transport";
 import {BeaconAPI} from "../rpc/api";
 
-interface Service {
+export interface Service {
   start(): Promise<void>;
 
   stop(): Promise<void>;
 }
 
+// Temporarily have properties be optional until others portions of lodestar are ready
 interface BeaconNodeCtx {
   chain?: object;
   db?: object;
+  // Temporarily set to any. Will be changed to object later.
   eth1?: any;
-  network?: object;
+  network?: any;
   rpc?: object;
   sync?: object;
   opPool?: object;
