@@ -26,7 +26,6 @@ export class JSONRPC {
     // collect the api methods into an enumerable object for rpc exposure
     const methods = {};
     for (let name of Object.getOwnPropertyNames(Object.getPrototypeOf(api))) {
-      console.log(api[name]);
       if (name !== 'constructor' && typeof api[name] === 'function') {
         methods[name] = api[name].bind(api);
       }
