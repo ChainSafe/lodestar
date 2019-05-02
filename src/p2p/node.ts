@@ -40,24 +40,21 @@ export class LodestarNode extends LibP2p {
   }
 
   public static createNode(callback): LodestarNode {
-    let node: LodestarNode;
-
     const id = promisify(PeerId.create)({bits: 1024});
     const peerInfo = promisify(PeerInfo.create)(id);
     peerInfo.multiaddrs.add('ip4/0.0.0.0/tcp/9000');
-    node = new LodestarNode({
+    const node = new LodestarNode({
       peerInfo
     });
-    (node as LibP2p).start(callback);
 
     node.pubsub = new FloodSub(node);
-    node.pubsub.start((err) => {
-      if (err) {
-        throw new Error('PubSub failed to start.');
-      }
-    });
 
     return node;
+  }
+
+	public async start(): Promise<void> {
+    await promisify(super.start.bind(this))();
+    await promisify(this.pubsub.start.bind(this.pubsub))();
   }
 }
 
