@@ -52,7 +52,7 @@ export class LodestarNode extends LibP2p {
     return node;
   }
 
-	public async start(): Promise<void> {
+  public async start(): Promise<void> {
     await promisify(super.start.bind(this))();
     await promisify(this.pubsub.start.bind(this.pubsub))();
   }
