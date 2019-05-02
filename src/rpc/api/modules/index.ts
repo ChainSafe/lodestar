@@ -4,4 +4,4 @@ import {BeaconApi} from "./beacon";
 export {
   ValidatorApi,
   BeaconApi
-}
+};

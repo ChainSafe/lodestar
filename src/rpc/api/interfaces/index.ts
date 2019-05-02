@@ -4,4 +4,4 @@ import {IValidatorApi} from "./validator";
 export {
   IBeaconApi,
   IValidatorApi
-}
+};
