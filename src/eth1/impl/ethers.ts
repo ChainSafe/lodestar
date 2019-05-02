@@ -50,12 +50,19 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     if(!this.contract) {
       await this.initContract();
     }
-    this.provider.on('block', this.processBlockHeadUpdate.bind(this));
-    this.contract.on('Deposit', this.processDepositLog.bind(this));
-    this.contract.on('Eth2Genesis', this.processEth2GenesisLog.bind(this));
-    logger.info(
-      `Started listening on eth1 events on chain ${(await this.provider.getNetwork()).chainId}`
-    );
+    if(await this.isAfterEth2Genesis()) {
+      logger.info('Eth2Genesis event exits, started listening on eth1 block updates');
+      this.provider.on('block', this.processBlockHeadUpdate.bind(this));
+    } else {
+      this.provider.on('block', this.processBlockHeadUpdate.bind(this));
+      this.contract.on('Deposit', this.processDepositLog.bind(this));
+      this.contract.on('Eth2Genesis', this.processEth2GenesisLog.bind(this));
+      logger.info(
+        `Started listening on eth1 events on chain ${(await this.provider.getNetwork()).chainId}`
+      );
+    }
+
+
   }
 
   public async stop(): Promise<void> {
@@ -152,6 +159,19 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     if (!isValidAddress(address)) return false;
     const code = await this.provider.getCode(address);
     return !(!code || code === '0x');
+  }
+
+  private async isAfterEth2Genesis(): Promise<boolean> {
+    const filter = {
+      fromBlock: this.opts.depositContract.deployedAt,
+      toBlock: this.genesisBlockHash,
+      address: this.contract.address,
+      topics: [
+        this.contract.interface.events.Eth2Genesis.topic
+      ]
+    };
+    const logs = await this.provider.getLogs(filter);
+    return logs.length > 0;
   }
 
 }

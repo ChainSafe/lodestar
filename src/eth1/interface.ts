@@ -14,6 +14,11 @@ export interface Eth1Options {
  * The Eth1Notifier service watches the Eth1.0 chain for relevant events
  */
 export interface Eth1Notifier extends EventEmitter {
+  /**
+   * If there isn't Eth2Genesis events in past logs, it should fetch
+   * all the deposit logs from block at which contract is deployed.
+   * If there is Eth2Genesis event in logs it should just listen for new eth1 blocks.
+   */
   start(): Promise<void>;
   stop(): Promise<void>;
 

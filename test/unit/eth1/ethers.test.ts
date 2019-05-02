@@ -48,6 +48,15 @@ describe("Eth1Notifier", () => {
     "should start notifier",
     async function (): Promise<void> {
       const contract = sinon.createStubInstance(Contract);
+      // @ts-ignore
+      contract.interface = {
+        events: {
+          Eth2Genesis: {
+            //random hash
+            topic: '0x6be15e8568869b1e100750dd5079151b32637268ec08d199b318b793181b8a7d'
+          }
+        }
+      };
       const notifier = new EthersEth1Notifier({
         depositContract: defaults.depositContract,
         provider,
