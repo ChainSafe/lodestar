@@ -1,14 +1,14 @@
 import {
   Attestation, AttestationData, BeaconBlock, bytes32, Deposit, Shard, Slot, Eth1Data, uint64,
   Fork, SyncingStatus, ValidatorDuty, bytes48, bytes, IndexedAttestation
-} from "../../types";
-import {DB} from "../../db";
-import {BeaconChain} from "../../chain";
-import {OpPool} from "../../opPool";
+} from "../../../types";
+import {DB} from "../../../db";
+import {BeaconChain} from "../../../chain";
+import {OpPool} from "../../../opPool";
 
-import {API} from "./interface";
+import {IValidatorApi} from "../interfaces";
 
-export class ValidatorAPI implements API {
+export class ValidatorApi implements IValidatorApi {
   private chain: BeaconChain;
   private db: DB;
   private opPool: OpPool;

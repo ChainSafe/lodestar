@@ -11,7 +11,7 @@ import {BeaconChain} from "../chain";
 import {OpPool} from "../opPool";
 import {JSONRPC} from "../rpc/protocol";
 import {WSServer} from "../rpc/transport";
-import {BeaconAPI} from "../rpc/api";
+import {BeaconApi} from "../rpc/api";
 
 interface Service {
   start(): Promise<void>;
@@ -65,7 +65,7 @@ class BeaconNode {
     });
     this.rpc = new JSONRPC(this.conf.rpc, {
       transport: new WSServer(this.conf.rpc),
-      api: new BeaconAPI(this.conf.rpc, {
+      api: new BeaconApi(this.conf.rpc, {
         chain: this.chain,
         db: this.db,
         opPool: this.opPool,

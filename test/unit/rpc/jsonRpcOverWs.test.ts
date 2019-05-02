@@ -1,7 +1,7 @@
 import { assert } from "chai";
 import * as jsonRpc from "noice-json-rpc";
 import Websocket from "ws";
-import {MockAPI, JSONRPC, API, WSServer} from "../../../src/rpc";
+import {MockAPI, JSONRPC, BeaconApi, WSServer} from "../../../src/rpc";
 import { generateEmptyBlock } from "../../utils/block";
 import { generateEmptyAttestation } from "../../utils/attestation";
 
@@ -9,7 +9,7 @@ describe("Json RPC over WS", () => {
   const rpc = new JSONRPC({}, {transport: new WSServer({port: 32420}), api: new MockAPI()});
   let client;
   let ws;
-  let clientApi: {BeaconChain: API};
+  let clientApi: {BeaconChain: BeaconApi};
   before(async () => {
     await rpc.start();
     ws = new Websocket("ws://localhost:32420");

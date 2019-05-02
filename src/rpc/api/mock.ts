@@ -2,7 +2,7 @@ import {Attestation, AttestationData, BeaconBlock, bytes32, Deposit, Shard, Slot
 
 import {getEmptyBlock} from "../../chain/genesis";
 
-import {API} from "./interface";
+import {IBeaconApi} from "./interfaces";
 
 export interface MockAPIOpts {
   head?: BeaconBlock;
@@ -12,7 +12,7 @@ export interface MockAPIOpts {
   attestationData?: AttestationData;
 }
 
-export class MockAPI implements API {
+export class MockAPI implements IBeaconApi {
   private head;
   private attestations;
   public constructor(opts?: MockAPIOpts) {

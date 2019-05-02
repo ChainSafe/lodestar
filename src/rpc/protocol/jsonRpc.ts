@@ -1,7 +1,7 @@
 import * as jsonRpc from "noice-json-rpc";
 
 
-import {API} from "../api";
+import {IValidatorApi, IBeaconApi} from "../api";
 
 export interface LikeSocketServer extends jsonRpc.LikeSocketServer {
   start(): Promise<void>;
@@ -18,7 +18,7 @@ export class JSONRPC {
   private transport: LikeSocketServer;
   private jsonRpcApi;
 
-  public constructor(opts, {transport, api}: {transport: LikeSocketServer; api: API}) {
+  public constructor(opts, {transport, api}: {transport: LikeSocketServer; api: IBeaconApi | IValidatorApi}) {
     this.transport = transport;
     // attach the json-rpc server to underlying transport
     this.rpcServer = new jsonRpc.Server(this.transport);
@@ -26,15 +26,18 @@ export class JSONRPC {
     // collect the api methods into an enumerable object for rpc exposure
     const methods = {};
     for (let name of Object.getOwnPropertyNames(Object.getPrototypeOf(api))) {
+      console.log(api[name]);
       if (name !== 'constructor' && typeof api[name] === 'function') {
         methods[name] = api[name].bind(api);
       }
     }
     this.jsonRpcApi.BeaconChain.expose(methods);
   }
+
   public async start(): Promise<void> {
     await this.transport.start();
   }
+
   public async stop(): Promise<void> {
     await this.transport.stop();
   }

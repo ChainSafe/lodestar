@@ -1,5 +1,4 @@
-import {bytes48, uint64} from "./primitive";
-import {Shard, Slot} from "./custom";
+import {bytes48, Shard, Slot, uint64} from "./primitive";
 import {SimpleContainerType} from "@chainsafe/ssz";
 
 export interface ValidatorDuty {
