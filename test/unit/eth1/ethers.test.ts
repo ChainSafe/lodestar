@@ -9,6 +9,7 @@ import promisify from "promisify-es6";
 import logger from "../../../src/logger/winston";
 import chaiAsPromised from "chai-as-promised";
 import {generateDeposit} from "../../utils/deposit";
+import {Log, Provider} from "ethers/providers";
 
 chai.use(chaiAsPromised);
 describe("Eth1Notifier", () => {
@@ -45,7 +46,63 @@ describe("Eth1Notifier", () => {
   );
 
   it(
-    "should start notifier",
+    "should start notifier before Eth2Genesis event",
+    async function (): Promise<void> {
+      const stubContract = sinon.createStubInstance(Contract);
+      const stubProvider = sinon.createStubInstance(Provider);
+      stubProvider.getLogs = sandbox.stub();
+      stubProvider.getNetwork = sandbox.stub();
+      stubProvider.on = sandbox.stub();
+      // @ts-ignore
+      stubContract.interface = {
+        events: {
+          Eth2Genesis: {
+            //random hash
+            topic: 'genesisHash'
+          },
+          Deposit: {
+            //random hash
+            topic: 'depositHash'
+          }
+        },
+        parseLog: sandbox.stub()
+      };
+      const notifier = new EthersEth1Notifier({
+        depositContract: defaults.depositContract,
+        // @ts-ignore
+        provider: stubProvider,
+        // @ts-ignore
+        contract: stubContract
+      }, {db});
+      stubContract.on.returns(null);
+      //@ts-ignore
+      stubContract.interface.parseLog.returns({
+        values: {
+          dataHex: "0x" + Buffer.alloc(528).toString("hex"),
+          indexHex: "0x" + Buffer.alloc(528).toString("hex")
+        }
+      });
+      stubProvider.getLogs.withArgs(sinon.match.hasNested('topics[0]', 'genesisHash')).resolves([]);
+      stubProvider.getLogs.withArgs(sinon.match.hasNested('topics[0]', 'depositHash')).resolves([
+        {
+
+        } as any
+      ]);
+      stubProvider.getNetwork.resolves({
+        chainId: 212,
+        ensAddress:'',
+        name: 'test'
+      });
+      await notifier.start();
+      expect(stubProvider.on.withArgs('block', sinon.match.any).calledOnce).to.be.true;
+      expect(stubContract.on.withArgs('Deposit', sinon.match.any).called).to.be.true;
+      expect(stubContract.on.withArgs('Eth2Genesis', sinon.match.any).called).to.be.true;
+      expect(db.setGenesisDeposit.calledOnce).to.be.true;
+    }
+  );
+
+  it(
+    "should start notifier after Eth2Genesis event",
     async function (): Promise<void> {
       const contract = sinon.createStubInstance(Contract);
       // @ts-ignore
@@ -57,16 +114,29 @@ describe("Eth1Notifier", () => {
           }
         }
       };
+
+      const stubProvider = sinon.createStubInstance(Provider);
+      stubProvider.getLogs = sandbox.stub();
+      stubProvider.on = sandbox.stub();
+      stubProvider.getLogs.resolves([
+        //Eth2Genesis event log
+        {
+        } as any
+      ]);
+
       const notifier = new EthersEth1Notifier({
         depositContract: defaults.depositContract,
-        provider,
+        // @ts-ignore
+        provider: stubProvider,
         // @ts-ignore
         contract
       }, {db});
+
       contract.on.returns(null);
       await notifier.start();
-      expect(contract.on.withArgs('Deposit', sinon.match.any).calledOnce).to.be.true;
-      expect(contract.on.withArgs('Eth2Genesis', sinon.match.any).calledOnce).to.be.true;
+      expect(stubProvider.on.withArgs('block', sinon.match.any).calledOnce).to.be.true;
+      expect(contract.on.withArgs('Deposit', sinon.match.any).calledOnce).to.be.false;
+      expect(contract.on.withArgs('Eth2Genesis', sinon.match.any).calledOnce).to.be.false;
     }
   );
 
