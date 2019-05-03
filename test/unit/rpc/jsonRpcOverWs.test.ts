@@ -1,12 +1,13 @@
 import { assert } from "chai";
 import * as jsonRpc from "noice-json-rpc";
 import Websocket from "ws";
-import {MockAPI, JSONRPC, IValidatorApi, WSServer} from "../../../src/rpc";
+import {JSONRPC, IValidatorApi, WSServer} from "../../../src/rpc";
 import { generateEmptyBlock } from "../../utils/block";
+import {MockValidatorApi} from "../../utils/mocks/rpc/validator";
 import { generateEmptyAttestation } from "../../utils/attestation";
 
 describe("Json RPC over WS", () => {
-  const rpc = new JSONRPC({}, {transport: new WSServer({port: 32420}), api: new MockAPI()});
+  const rpc = new JSONRPC({}, {transport: new WSServer({port: 32420}), api: new MockValidatorApi()});
   let client;
   let ws;
   let clientApi: {BeaconChain: IValidatorApi};
@@ -36,7 +37,7 @@ describe("Json RPC over WS", () => {
     assert.ok(eth1Data);
   });
   it("should get validator duties", async () => {
-    const root = await clientApi.BeaconChain.getDuties([Buffer.alloc(48)]);
+    const root = await clientApi.BeaconChain.getDuties(Buffer.alloc(48));
     assert.ok(root);
   });
   it("should produce a block for the validator", async () => {

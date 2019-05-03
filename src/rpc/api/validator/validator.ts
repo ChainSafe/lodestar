@@ -1,12 +1,12 @@
 import {
   Attestation, AttestationData, BeaconBlock, bytes32, Deposit, Shard, Slot, Eth1Data, uint64,
-  Fork, SyncingStatus, ValidatorDuty, bytes48, bytes, IndexedAttestation, number64
+  Fork, SyncingStatus, ValidatorDuty, bytes48, bytes, IndexedAttestation, number64, BeaconState
 } from "../../../types";
 import {DB} from "../../../db";
 import {BeaconChain} from "../../../chain";
 import {OpPool} from "../../../opPool";
 
-import {IValidatorApi} from "../interfaces";
+import {IValidatorApi} from "./interface";
 
 export class ValidatorApi implements IValidatorApi {
   private chain: BeaconChain;
@@ -23,9 +23,9 @@ export class ValidatorApi implements IValidatorApi {
     return Buffer.alloc(32);
   }
 
-  public async getFork(): Promise<{fork: Fork; chainId: number64}> {
-    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as {fork: Fork; chainId: number64};
+  public async getFork(): Promise<Fork> {
+    const state: BeaconState = await this.db.getState();
+    return state.fork;
   }
 
   public async getGenesisTime(): Promise<number64> {
@@ -37,9 +37,9 @@ export class ValidatorApi implements IValidatorApi {
     return {} as boolean | SyncingStatus;
   }
 
-  public async getDuties(validatorPubkeys: bytes48[]): Promise<{currentVersion: Fork; validatorDuties: ValidatorDuty[]}> {
+  public async getDuties(validatorPubkey: bytes48): Promise<{currentVersion: Fork; validatorDuty: ValidatorDuty}> {
     // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as {currentVersion: Fork; validatorDuties: ValidatorDuty[]};
+    return {} as {currentVersion: Fork; validatorDuty: ValidatorDuty};
   }
 
   public async produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock> {

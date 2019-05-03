@@ -1,19 +1,22 @@
-import {Attestation, AttestationData, BeaconBlock, bytes32, Deposit, Shard, Slot, Eth1Data} from "../../../types/index";
+import {Attestation, AttestationData, BeaconBlock, bytes32, Deposit, Shard, Slot, Eth1Data} from "../../../../src/types";
 
-import {getEmptyBlock} from "../../../chain/genesis";
+import {getEmptyBlock} from "../../../../src/chain/genesis";
 
-import {IValidatorApi} from "../interfaces/index";
-import {bytes, bytes48, Fork, number64, SyncingStatus, uint64, ValidatorDuty} from "../../../types";
+import {IValidatorApi} from "../../../../src/rpc/api/validator";
+import {bytes, bytes48, Fork, number64, SyncingStatus, uint64, ValidatorDuty} from "../../../../src/types";
 
 export interface MockAPIOpts {
   head?: BeaconBlock;
+  version?: bytes32;
+  fork?: Fork;
+  chainId?: number64;
   pendingAttestations?: Attestation[];
   getPendingDeposits?: Deposit[];
   Eth1Data?: Eth1Data;
   attestationData?: AttestationData;
 }
 
-export class MockAPI implements IValidatorApi {
+export class MockValidatorApi implements IValidatorApi {
   private version: bytes32;
   private fork: Fork;
   private chainId: number64;
@@ -22,13 +25,17 @@ export class MockAPI implements IValidatorApi {
   public constructor(opts?: MockAPIOpts) {
     this.attestations = opts && opts.pendingAttestations || [];
     this.head = opts && opts.head || getEmptyBlock();
+    this.version = opts && opts.version || Buffer.alloc(0);
+    this.fork = opts && opts.fork || {previousVersion: Buffer.alloc(0), currentVersion: Buffer.alloc(0), epoch: 0}
+    this.chainId = opts && opts.chainId || 0;
   }
+
   public async getClientVersion(): Promise<bytes32> {
     return this.version;
   }
 
-  public async getFork(): Promise<{fork: Fork; chainId: number64}> {
-    return {fork: this.fork, chainId: this.chainId};
+  public async getFork(): Promise<Fork> {
+    return this.fork;
   }
 
   public async getGenesisTime(): Promise<number64> {
@@ -40,9 +47,9 @@ export class MockAPI implements IValidatorApi {
     return false;
   }
 
-  public async getDuties(validatorPubkeys: bytes48[]): Promise<{currentVersion: Fork; validatorDuties: ValidatorDuty[]}> {
+  public async getDuties(validatorPubkey: bytes48): Promise<{currentVersion: Fork; validatorDuty: ValidatorDuty}> {
     // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as {currentVersion: Fork; validatorDuties: ValidatorDuty[]};
+    return {} as {currentVersion: Fork; validatorDuty: ValidatorDuty};
   }
 
   public async produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock> {

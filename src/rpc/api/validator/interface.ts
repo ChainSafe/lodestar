@@ -5,7 +5,7 @@ import {
   Attestation, AttestationData,
   BeaconBlock, bytes, bytes32, bytes48, Fork, IndexedAttestation, number64, Shard, Slot, SyncingStatus, uint64,
   ValidatorDuty
-} from "../../../types";
+} from "../../../types/index";
 
 export interface IValidatorApi {
   /**
@@ -18,7 +18,7 @@ export interface IValidatorApi {
    * Requests the BeaconNode to provide which fork version it is currently on.
    * @returns {Promise<{fork: Fork; chainId: uint64}>}
    */
-  getFork(): Promise<{fork: Fork; chainId: number64}>;
+  getFork(): Promise<Fork>;
 
   /**
    * Requests the genesis_time parameter from the BeaconNode, which should be consistent across all BeaconNodes that follow the same beacon chain.
@@ -34,10 +34,10 @@ export interface IValidatorApi {
 
   /**
    * Requests the BeaconNode to provide a set of “duties”, which are actions that should be performed by ValidatorClients. This API call should be polled at every slot, to ensure that any chain reorganisations are catered for, and to ensure that the currently connected BeaconNode is properly synchronised.
-   * @param {bytes48[]} validatorPubkeys
-   * @returns {Promise<{currentVersion: bytes4; validatorDuties: ValidatorDuty[]}>} A list of unique validator public keys, where each item is a 0x encoded hex string.
+   * @param {bytes48[]} validatorPubkey
+   * @returns {Promise<{currentVersion: bytes4; validatorDuty: ValidatorDuty}>} A list of unique validator public keys, where each item is a 0x encoded hex string.
    */
-  getDuties(validatorPubkeys: bytes48[]): Promise<{currentVersion: Fork; validatorDuties: ValidatorDuty[]}>;
+  getDuties(validatorPubkey: bytes48): Promise<{currentVersion: Fork; validatorDuty: ValidatorDuty}>;
 
   /**
    * Requests a BeaconNode to produce a valid block, which can then be signed by a ValidatorClient.
