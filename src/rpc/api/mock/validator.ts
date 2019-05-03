@@ -41,7 +41,8 @@ export class MockAPI implements IValidatorApi {
   }
 
   public async getDuties(validatorPubkeys: bytes48[]): Promise<{currentVersion: Fork; validatorDuties: ValidatorDuty[]}> {
-  return {} as {currentVersion: Fork; validatorDuties: ValidatorDuty[]};
+    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
+    return {} as {currentVersion: Fork; validatorDuties: ValidatorDuty[]};
   }
 
   public async produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock> {

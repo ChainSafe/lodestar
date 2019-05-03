@@ -30,7 +30,7 @@ export class ValidatorApi implements IValidatorApi {
 
   public async getGenesisTime(): Promise<number64> {
     return await this.chain.genesisTime;
-  }s
+  }
 
   public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
     // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
