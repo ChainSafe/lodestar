@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "prebuild": "rm -rf lib && rm -rf dist",
-    "build": "yarn prebuild && yarn build-lib && yarn build-web && yarn build-docs && yarn build-types",
+    "build": "yarn build-lib && yarn build-web && yarn build-docs && yarn build-types",
     "build-docs": "documentation build lib/ -f md > docs/API.md",
     "build-lib": "babel src -x .ts -d lib",
     "build-types": "tsc --declaration --outDir lib --emitDeclarationOnly",
