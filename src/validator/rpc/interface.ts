@@ -13,7 +13,7 @@ export interface RpcClient {
   connect(): Promise<void>;
 
   /**
-   * Initiates connection to rpc server.
+   * Destroys connection to rpc server.
    */
   disconnect(): Promise<void>;
 
