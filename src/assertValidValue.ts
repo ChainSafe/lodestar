@@ -19,7 +19,7 @@ export function assertValidValue(value: any, type: FullSSZType): void {
       assert(value instanceof Uint8Array, 'Invalid byte array value');
       break;
     case Type.byteVector:
-      assert(value instanceof Uint8Array, 'Invalid byte array value');
+      assert(value instanceof Uint8Array || value instanceof Buffer, 'Invalid byte array value');
       assert(value.length === type.length, 'Invalid byte array length');
       break;
     case Type.list:
