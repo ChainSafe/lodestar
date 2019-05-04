@@ -18,8 +18,6 @@
     "lint": "eslint --ext .ts src/ test/",
     "pretest": "yarn check-types",
     "prepublishOnly": "yarn build",
-    "pretest": "npm run check-types",
-    "prepublishOnly": "npm run build-all",
     "test:spec": "nyc -r lcov -e .ts mocha -r ./.babel-register \"test/spec/**/*.test.ts\" && nyc report",
     "test:unit": "nyc -r lcov -e .ts mocha -r ./.babel-register \"test/unit/**/*.test.ts\" && nyc report"
   },
