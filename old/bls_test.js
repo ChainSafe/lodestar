@@ -2,7 +2,7 @@ const assert = require('chai').assert;
 const keccak256 = require('keccak256');
 const mcl = require('mcl-wasm');
 
-const bls = require('../');
+const bls = require('./index');
 
 describe('bls', () => {
   before(async () => {

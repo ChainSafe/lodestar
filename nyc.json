@@ -1,0 +1,9 @@
+{
+  "include": [
+    "src/**/*.ts",
+  ],
+  "extensions": [
+    ".ts"
+  ],
+  "all": true
+}
