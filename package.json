@@ -6,18 +6,17 @@
   "scripts": {
     "build": "babel src -x .ts -d lib",
     "check-types": "tsc --noEmit",
-    "lint": "eslint --ext .ts src/ validator/",
+    "lint": "eslint --ext .ts src/",
     "lint-fix": "eslint --ext .ts src/ --fix",
     "pretest": "npm run check-types",
-    "test": "nyc -r lcov -x \"*.test.ts\" mocha -r ./.babel-register \"tests/**/*.test.ts\" && nyc report",
+    "test": "nyc -r lcov -e .ts -x \"*.test.ts\" mocha -r ./.babel-register \"tests/**/*.test.ts\" && nyc report",
     "coverage": "codecov"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "assert": "^1.4.1",
-    "keccak256": "^1.0.0",
-    "mcl-wasm": "^0.3.0"
+    "keccak256": "^1.0.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",
