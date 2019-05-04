@@ -7,8 +7,8 @@ import assert from "assert";
  * @param length
  */
 export function padLeft(source: Buffer, length): Buffer {
-    assert(source.length <= length, 'Given array must be smaller or equal to desired array size');
-    const result = Buffer.alloc(length, 0);
-    source.copy(result, 48 - source.length);
-    return result;
+  assert(source.length <= length, 'Given array must be smaller or equal to desired array size');
+  const result = Buffer.alloc(length, 0);
+  source.copy(result, 48 - source.length);
+  return result;
 }
