@@ -55,7 +55,7 @@ describe('bls spec tests', function () {
   // );
 
   testSpec.test(
-    bls.genPublic,
+    bls.generatePublicKey,
     'case03_private_to_public_key',
     (input) => {
       return [Buffer.from(input.replace('0x', ''), 'hex')];
