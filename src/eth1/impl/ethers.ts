@@ -55,7 +55,10 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
       logger.info('Eth2Genesis event exits, started listening on eth1 block updates');
       this.provider.on('block', this.processBlockHeadUpdate.bind(this));
     } else {
-      const pastDeposits = await this.getPastDepositEvents();
+      const pastDeposits = await this.getContractDeposits(
+        this.opts.depositContract.deployedAt,
+        null
+      );
       await Promise.all(pastDeposits.map((pastDeposit) => {
         return this.db.setGenesisDeposit(pastDeposit);
       }));
@@ -125,6 +128,22 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     await this.db.deleteGenesisDeposits(genesisDeposits);
   }
 
+
+  public async getContractDeposits(
+    fromBlock: string | number  = this.opts.depositContract.deployedAt,
+    toBlock?: string | number
+  ): Promise<Deposit[]> {
+    const logs = await this.getContractPastLogs(
+      [this.contract.interface.events.Deposit.topic],
+      fromBlock,
+      toBlock
+    );
+    return logs.map((log) => {
+      const logDescription = this.contract.interface.parseLog(log);
+      return this.createDeposit(logDescription.values.dataHex, logDescription.values.indexHex);
+    });
+  }
+
   public async genesisDeposits(): Promise<Deposit[]> {
     return this.db.getGenesisDeposits();
   }
@@ -162,18 +181,14 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     return logs.length > 0;
   }
 
-  private async getPastDepositEvents(): Promise<Deposit[]> {
-    const logs = await this.getContractPastLogs([this.contract.interface.events.Deposit.topic]);
-    return logs.map((log) => {
-      const logDescription = this.contract.interface.parseLog(log);
-      return this.createDeposit(logDescription.values.dataHex, logDescription.values.indexHex);
-    });
-  }
-
-  private async getContractPastLogs(topics: string[]): Promise<Log[]> {
+  private async getContractPastLogs(
+    topics: string[],
+    fromBlock: number64 | string = this.opts.depositContract.deployedAt,
+    toBlock: number64 | string = null
+  ): Promise<Log[]> {
     const filter = {
-      fromBlock: this.opts.depositContract.deployedAt,
-      toBlock: this.genesisBlockHash,
+      fromBlock,
+      toBlock,
       address: this.contract.address,
       topics
     };

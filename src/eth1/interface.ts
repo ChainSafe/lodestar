@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 
-import {bytes32, DepositData, Deposit, Eth1Data} from "../types";
+import {bytes32, Deposit, number64} from "../types";
 
 export interface Eth1Options {
   depositContract: {
@@ -35,10 +35,21 @@ export interface Eth1Notifier extends EventEmitter {
   /**
    * Process a Eth2genesis log which has been received from the Eth 1.0 chain
    */
-  processEth2GenesisLog(depositRootHex: string, depositCountHex: string, timeHex: string, event: object): Promise<void>;
+  processEth2GenesisLog(
+    depositRootHex: string, depositCountHex: string, timeHex: string, event: object
+  ): Promise<void>;
 
   /**
-   * Return an array of deposits to process at genesis
+   * Obtains Deposit logs between given range of blocks
+   * @param fromBlock either block hash or block number
+   * @param toBlock optional, if not submitted it will assume latest
+   */
+  getContractDeposits(
+    fromBlock: string | number64, toBlock?: string | number64
+  ): Promise<Deposit[]>;
+
+  /**
+   * Return an array of deposits to process at genesis event
    */
   genesisDeposits(): Promise<Deposit[]>;
 
