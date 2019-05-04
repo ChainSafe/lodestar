@@ -2,8 +2,14 @@ language: node_js
 node_js:
   - "lts/*"
 cache: yarn
-before_script:
-  - yarn install
-script:
-  - yarn run lint
-  - yarn test
+jobs:
+    - before_script:
+        - yarn install
+      script:
+        - yarn run lint
+        - yarn test:unit
+    - before_script:
+        - yarn install
+      script:
+        - ./scripts/ci-install-spec-test-dependencies.sh
+        - yarn test:spec

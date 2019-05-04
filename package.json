@@ -18,7 +18,10 @@
     "lint": "eslint --ext .ts src/ test/",
     "pretest": "yarn check-types",
     "prepublishOnly": "yarn build",
-    "test": "nyc -r lcov -e .ts mocha -r ./.babel-register \"test/**/*.test.ts\" && nyc report"
+    "pretest": "npm run check-types",
+    "prepublishOnly": "npm run build-all",
+    "test:spec": "nyc -r lcov -e .ts mocha -r ./.babel-register \"test/spec/**/*.test.ts\" && nyc report",
+    "test:unit": "nyc -r lcov -e .ts mocha -r ./.babel-register \"test/unit/**/*.test.ts\" && nyc report"
   },
   "homepage": "https://github.com/chainsafe/ssz-js",
   "keywords": [
@@ -34,9 +37,12 @@
     "@babel/core": "^7.3.4",
     "@babel/plugin-proposal-class-properties": "^7.3.4",
     "@babel/plugin-proposal-object-rest-spread": "^7.3.4",
+    "@babel/plugin-transform-runtime": "^7.4.4",
     "@babel/preset-env": "^7.3.4",
     "@babel/preset-typescript": "^7.3.3",
     "@babel/register": "^7.0.0",
+    "@babel/runtime": "^7.4.4",
+    "@chainsafe/eth2.0-spec-test-util": "^0.2.3",
     "@types/chai": "^4.1.7",
     "@types/mocha": "^5.2.5",
     "@types/node": "^10.12.17",
