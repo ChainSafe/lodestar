@@ -2,7 +2,10 @@ const yaml = require('js-yaml');
 const expect = require('chai').expect;
 const fs = require('fs');
 
-class Eth2TestSpec {
+export class Eth2TestSpec {
+
+  private testSpec: any;
+  private it: any;
 
   constructor (testYaml, it) {
     this.testSpec = yaml.safeLoad(
@@ -14,7 +17,7 @@ class Eth2TestSpec {
     this.it = it;
   }
 
-  test (func, testCases, convertInput, convertOutput, convertExpected) {
+  test (func, testCases, convertInput, convertOutput, convertExpected = (input) => input) {
     const that = this;
     this.testSpec[testCases].forEach((testCase, index) => {
       that.it(testCases+`[${index}]`, function () {
@@ -30,5 +33,3 @@ class Eth2TestSpec {
 
   }
 }
-
-module.exports = Eth2TestSpec;
