@@ -1,9 +1,14 @@
-import {Attestation, AttestationData, BeaconBlock, bytes32, Deposit, Shard, Slot, Eth1Data} from "../../../../src/types";
+import {
+  Attestation, AttestationData, BeaconBlock, bytes32, Deposit, Shard, Slot, Eth1Data,
+  BeaconState, ValidatorIndex, Epoch
+} from "../../../../src/types";
 
 import {getEmptyBlock} from "../../../../src/chain/genesis";
 
 import {IValidatorApi} from "../../../../src/rpc/api/validator";
 import {bytes, bytes48, Fork, number64, SyncingStatus, uint64, ValidatorDuty} from "../../../../src/types";
+import {getCommitteeAssignment, isProposerAtSlot} from "../../../../src/chain/stateTransition/util";
+import {CommitteeAssignment} from "../../../../src/validator/types";
 
 export interface MockAPIOpts {
   head?: BeaconBlock;
@@ -62,6 +67,15 @@ export class MockValidatorApi implements IValidatorApi {
   public async produceAttestation(slot: Slot, shard: Shard): Promise<AttestationData> {
     // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
     return {} as AttestationData;
+  }
+
+  public async isProposer(index: ValidatorIndex, slot: Slot): Promise<boolean> {
+    return true;
+  }
+
+  public async getCommitteeAssignment(index: ValidatorIndex, epoch: Epoch): Promise<CommitteeAssignment> {
+    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
+    return {} as CommitteeAssignment;
   }
 
   public async publishBlock(block: BeaconBlock): Promise<void> {

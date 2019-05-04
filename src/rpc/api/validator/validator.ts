@@ -1,12 +1,14 @@
 import {
   Attestation, AttestationData, BeaconBlock, bytes32, Deposit, Shard, Slot, Eth1Data, uint64,
-  Fork, SyncingStatus, ValidatorDuty, bytes48, bytes, IndexedAttestation, number64, BeaconState
+  Fork, SyncingStatus, ValidatorDuty, bytes48, bytes, IndexedAttestation, number64, BeaconState, ValidatorIndex, Epoch
 } from "../../../types";
 import {DB} from "../../../db";
 import {BeaconChain} from "../../../chain";
 import {OpPool} from "../../../opPool";
 
 import {IValidatorApi} from "./interface";
+import {getCommitteeAssignment, isProposerAtSlot} from "../../../chain/stateTransition/util";
+import {CommitteeAssignment} from "../../../validator/types";
 
 export class ValidatorApi implements IValidatorApi {
   public namespace: string;
@@ -47,6 +49,16 @@ export class ValidatorApi implements IValidatorApi {
   public async produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock> {
     // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
     return {} as BeaconBlock;
+  }
+
+  public async isProposer(index: ValidatorIndex, slot: Slot): Promise<boolean> {
+    const state: BeaconState = await this.db.getState();
+    return isProposerAtSlot(state, slot, index);
+  }
+
+  public async getCommitteeAssignment(index: ValidatorIndex, epoch: Epoch): Promise<CommitteeAssignment> {
+    const state: BeaconState = await this.db.getState();
+    return getCommitteeAssignment(state, epoch, index);
   }
 
   public async produceAttestation(slot: Slot, shard: Shard): Promise<AttestationData> {

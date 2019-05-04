@@ -3,10 +3,11 @@
  */
 import {
   Attestation, AttestationData,
-  BeaconBlock, bytes, bytes32, bytes48, Fork, IndexedAttestation, number64, Shard, Slot, SyncingStatus, uint64,
-  ValidatorDuty
+  BeaconBlock, bytes, bytes32, bytes48, Epoch, Fork, IndexedAttestation, number64, Shard, Slot, SyncingStatus, uint64,
+  ValidatorDuty, ValidatorIndex
 } from "../../../types/index";
 import {IApi} from "../interface";
+import {CommitteeAssignment} from "../../../validator/types";
 
 export interface IValidatorApi extends IApi {
   /**
@@ -39,6 +40,21 @@ export interface IValidatorApi extends IApi {
    * @returns {Promise<{currentVersion: bytes4; validatorDuty: ValidatorDuty}>} A list of unique validator public keys, where each item is a 0x encoded hex string.
    */
   getDuties(validatorPubkey: bytes48): Promise<{currentVersion: Fork; validatorDuty: ValidatorDuty}>;
+
+  /**
+   * Requests to check if a validator should propose for a given slot.
+   * @param {bytes48} validatorPubkey
+   * @param {Slot} slot
+   * @returns {Promise<{slot: Slot, proposer: boolean}}
+   */
+  isProposer(index: ValidatorIndex, slot: Slot): Promise<boolean>;
+
+  /**
+   * Requests a validators committeeAssignment, can be used for past, current and one epoch in the future
+   * @param {ValidatorIndex} index
+   * @param {Epoch} epoch
+   */
+  getCommitteeAssignment(index: ValidatorIndex, epoch: Epoch): Promise<CommitteeAssignment>;
 
   /**
    * Requests a BeaconNode to produce a valid block, which can then be signed by a ValidatorClient.
