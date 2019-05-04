@@ -9,11 +9,13 @@ import {OpPool} from "../../../opPool";
 import {IValidatorApi} from "./interface";
 
 export class ValidatorApi implements IValidatorApi {
+  public namespace: string;
   private chain: BeaconChain;
   private db: DB;
   private opPool: OpPool;
 
   public constructor(opts, {chain, db, opPool}) {
+    this.namespace = "validator";
     this.chain = chain;
     this.db = db;
     this.opPool = opPool;

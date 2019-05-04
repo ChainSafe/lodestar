@@ -6,8 +6,9 @@ import {
   BeaconBlock, bytes, bytes32, bytes48, Fork, IndexedAttestation, number64, Shard, Slot, SyncingStatus, uint64,
   ValidatorDuty
 } from "../../../types/index";
+import {IApi} from "../interface";
 
-export interface IValidatorApi {
+export interface IValidatorApi extends IApi {
   /**
    * Requests that the BeaconNode identify information about its implementation in a format similar to a HTTP User-Agent field.
    * @returns {Promise<bytes32>} An ASCII-encoded hex string which uniquely defines the implementation of the BeaconNode and its current software version.

@@ -28,7 +28,7 @@ export class JSONRPC {
         methods[name] = api[name].bind(api);
       }
     }
-    this.jsonRpcApi.BeaconChain.expose(methods);
+    this.jsonRpcApi[api.namespace].expose(methods);
   }
 
   public async start(): Promise<void> {

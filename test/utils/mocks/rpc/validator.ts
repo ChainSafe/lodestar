@@ -17,12 +17,14 @@ export interface MockAPIOpts {
 }
 
 export class MockValidatorApi implements IValidatorApi {
+  public namespace: string;
   private version: bytes32;
   private fork: Fork;
   private chainId: number64;
   private attestations;
   private head: BeaconBlock;
   public constructor(opts?: MockAPIOpts) {
+    this.namespace = "validator";
     this.attestations = opts && opts.pendingAttestations || [];
     this.head = opts && opts.head || getEmptyBlock();
     this.version = opts && opts.version || Buffer.alloc(0);

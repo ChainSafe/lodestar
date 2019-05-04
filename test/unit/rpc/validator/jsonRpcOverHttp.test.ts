@@ -1,10 +1,10 @@
 import {assert} from "chai";
 import * as request from "supertest";
-import {JSONRPC} from "../../../src/rpc";
-import {MockValidatorApi} from "../../utils/mocks/rpc/validator";
-import HttpServer from "../../../src/rpc/transport/http";
-import {generateRPCCall} from "../../utils/rpcCall";
-import logger from "../../../src/logger/winston";
+import {JSONRPC} from "../../../../src/rpc/index";
+import {MockValidatorApi} from "../../../utils/mocks/rpc/validator";
+import HttpServer from "../../../../src/rpc/transport/http";
+import {generateRPCCall} from "../../../utils/rpcCall";
+import logger from "../../../../src/logger/winston";
 
 describe("Json RPC over http", () => {
     let rpc;
@@ -20,10 +20,10 @@ describe("Json RPC over http", () => {
         await rpc.stop();
         logger.silent(false);
     });
-    it("should get the chain head", (done) => {
+    it("should get the version", (done) => {
         request.default(server)
             .post('/')
-            .send(generateRPCCall('BeaconChain.getFork', []))
+            .send(generateRPCCall('validator.getFork', []))
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200)
@@ -38,7 +38,7 @@ describe("Json RPC over http", () => {
     it("should fail for unknown methods", (done) => {
         request.default(server)
             .post('/')
-            .send(generateRPCCall('BeaconChain.notExistingMethod', []))
+            .send(generateRPCCall('validator.notExistingMethod', []))
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200)
