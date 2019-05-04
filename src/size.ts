@@ -1,45 +1,69 @@
-import assert from "assert";
-
 import {
-  ArrayType,
   Bytes,
-  BytesType,
   FullSSZType,
   SerializableArray,
   SerializableObject,
   Type,
+  VectorType,
+  ListType,
+  SerializableValue,
 } from "./types";
 
 import { BYTES_PER_LENGTH_PREFIX } from "./constants";
 
+import { isVariableSizeType } from "./util/types";
 
-function _sizeByteArray(value: Bytes, type: BytesType): number {
-  const length = (type as any).length || value.length;
-  return length + BYTES_PER_LENGTH_PREFIX;
-}
 
-export function size(value: any, type: FullSSZType): number {
+// Return the size of a fixed-sized type
+// Will error if a variable-sized type is given
+export function fixedSize(type: FullSSZType): number {
   switch (type.type) {
     case Type.uint:
       return type.byteLength;
     case Type.bool:
-      assert(value === true || value === false, `Invalid bool value: ${value}`);
       return 1;
-    case Type.byteList:
     case Type.byteVector:
-      value = value as Bytes;
-      assert(value.length !== undefined, `Invalid byte array value: ${value}`);
-      return _sizeByteArray(value, type);
-    case Type.list:
+      return type.length;
     case Type.vector:
-      assert((value as SerializableArray).length !== undefined, `Invalid array value: ${value}`);
-      return (value as SerializableArray)
-        .map((v) => size(v, (type as ArrayType).elementType))
-        .reduce((a, b) => a + b, 0) + BYTES_PER_LENGTH_PREFIX;
+      return fixedSize(type.elementType) * type.length
     case Type.container:
-      assert(value === Object(value), `Invalid object value: ${value}`);
       return type.fields
-        .map(([fieldName, fieldType]) => size((value as SerializableObject)[fieldName], fieldType))
-        .reduce((a, b) => a + b, 0) + BYTES_PER_LENGTH_PREFIX;
+        .map(([_, fieldType]) => fixedSize(fieldType))
+        .reduce((a, b) => a + b, 0);
+    default:
+      throw new Error('fixedSize: invalid type');
   }
+}
+
+// Return the size of a variable-sized type, dependent on the value
+// Will error if a fixed-sized type is given
+export function variableSize(value: SerializableValue, type: FullSSZType): number {
+  switch (type.type) {
+    case Type.byteList:
+      return (value as Bytes).length;
+    case Type.list:
+      return (value as SerializableArray)
+        .map((v) =>
+          size(v, (type as ListType).elementType) +
+          (isVariableSizeType(type.elementType) ? BYTES_PER_LENGTH_PREFIX : 0))
+        .reduce((a, b) => a + b, 0);
+    case Type.vector:
+      return (value as SerializableArray)
+        .map((v) =>
+          size(v, (type as VectorType).elementType) +
+          (isVariableSizeType(type.elementType) ? BYTES_PER_LENGTH_PREFIX : 0))
+        .reduce((a, b) => a + b, 0);
+    case Type.container:
+      return type.fields
+        .map(([fieldName, fieldType]) =>
+          size((value as SerializableObject)[fieldName], fieldType) +
+          (isVariableSizeType(fieldType) ? BYTES_PER_LENGTH_PREFIX : 0))
+        .reduce((a, b) => a + b, 0);
+    default:
+      throw new Error('variableSize: invalid type')
+  }
+}
+
+export function size(value: SerializableValue, type: FullSSZType): number {
+  return isVariableSizeType(type) ? variableSize(value, type) : fixedSize(type);
 }
