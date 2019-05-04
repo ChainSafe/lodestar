@@ -3,13 +3,12 @@ node_js:
   - "lts/*"
 cache: yarn
 jobs:
-    - before_script:
-        - yarn install
+  include:
+    - stage: Lint & Unit Tests
       script:
         - yarn run lint
         - yarn test:unit
-    - before_script:
-        - yarn install
+    - stage: Spec Tests
       script:
         - ./scripts/ci-install-spec-test-dependencies.sh
         - yarn test:spec
