@@ -1,11 +1,10 @@
 import { assert } from "chai";
 
 import {
+  signingRoot,
   SerializableObject,
   SerializableValue,
-} from "../src/types";
-
-import { signingRoot } from "../src/signingRoot";
+} from "../../src";
 
 import {
   ArrayObject,

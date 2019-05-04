@@ -3,11 +3,10 @@ import { assert } from "chai";
 import BN from "bn.js";
 
 import {
+  hashTreeRoot,
   SerializableValue,
   Type,
-} from "../src/types";
-
-import { hashTreeRoot } from "../src/hashTreeRoot";
+} from "../../src";
 
 import {
   ArrayObject,

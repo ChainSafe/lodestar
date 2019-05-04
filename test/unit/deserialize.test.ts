@@ -3,11 +3,10 @@ import { assert } from "chai";
 import BN from "bn.js";
 
 import {
+  deserialize,
   SerializableValue,
   Type,
-} from "../src/types";
-
-import { deserialize } from "../src/deserialize";
+} from "../../src";
 
 import {
   ArrayObject,
