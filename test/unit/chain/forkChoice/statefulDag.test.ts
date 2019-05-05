@@ -1,9 +1,9 @@
 import {assert} from "chai";
 import BN from "bn.js";
 
-import {LMDGHOST} from "../../../../src/chain/forkChoice/lmdGhost";
+import {StatefulDagLMDGHOST} from "../../../../src/chain/forkChoice/statefulDag/lmdGhost";
 
-describe("LMDGHOST", () => {
+describe("StatefulDagLMDGHOST", () => {
   const genesis = Buffer.from("genesis");
   const a = Buffer.from("a");
   const b = Buffer.from("b");
@@ -23,7 +23,7 @@ describe("LMDGHOST", () => {
      *         \
      *           e
      */
-    const lmd = new LMDGHOST();
+    const lmd = new StatefulDagLMDGHOST();
     lmd.addBlock(1, a, genesis);
     lmd.setFinalized(a);
     lmd.setJustified(a);
@@ -45,7 +45,7 @@ describe("LMDGHOST", () => {
      *         \
      *           e
      */
-    const lmd = new LMDGHOST();
+    const lmd = new StatefulDagLMDGHOST();
     let head;
     lmd.addBlock(1, a, genesis);
     lmd.setFinalized(a);
@@ -94,7 +94,7 @@ describe("LMDGHOST", () => {
      *
      *
      */
-    const lmd = new LMDGHOST();
+    const lmd = new StatefulDagLMDGHOST();
     let head;
     lmd.addBlock(1, a, genesis);
     lmd.setFinalized(a);
@@ -128,7 +128,7 @@ describe("LMDGHOST", () => {
      *         \
      *           g
      */
-    const lmd = new LMDGHOST();
+    const lmd = new StatefulDagLMDGHOST();
     let head;
     lmd.addBlock(1, a, genesis);
     lmd.setFinalized(a);
@@ -146,4 +146,4 @@ describe("LMDGHOST", () => {
     head = lmd.head();
     assert(head.equals(g), "head should be g");
   });
- });
+});

@@ -7,7 +7,7 @@ export enum Bucket {
   mainChain,
   chainInfo,
   validator,
-  deposit,
+  genesisDeposit,
   exit,
   transfer,
   proposerSlashing,

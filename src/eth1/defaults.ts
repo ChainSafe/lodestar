@@ -4,6 +4,8 @@ import {DEPOSIT_CONTRACT_ADDRESS} from "../constants";
 export default {
   provider: ethers.getDefaultProvider(),
   depositContract: {
+    //block at which contract is deployed
+    deployedAt: 0,
     address: DEPOSIT_CONTRACT_ADDRESS,
     // taken from https://github.com/ethereum/deposit_contract/blob/master/deposit_contract/contracts/validator_registration.json
     abi: [{"name": "Deposit", "inputs": [{"type": "bytes", "name": "data", "indexed": false}, {"type": "bytes", "name": "merkle_tree_index", "indexed": false}], "anonymous": false, "type": "event"}, {"name": "Eth2Genesis", "inputs": [{"type": "bytes32", "name": "deposit_root", "indexed": false}, {"type": "bytes", "name": "deposit_count", "indexed": false}, {"type": "bytes", "name": "time", "indexed": false}], "anonymous": false, "type": "event"}, {"name": "__init__", "outputs": [], "inputs": [], "constant": false, "payable": false, "type": "constructor"}, {"name": "to_little_endian_64", "outputs": [{"type": "bytes", "name": "out"}], "inputs": [{"type": "uint256", "name": "value"}], "constant": true, "payable": false, "type": "function", "gas": 7089}, {"name": "get_deposit_root", "outputs": [{"type": "bytes32", "name": "out"}], "inputs": [], "constant": true, "payable": false, "type": "function", "gas": 26965}, {"name": "get_deposit_count", "outputs": [{"type": "bytes", "name": "out"}], "inputs": [], "constant": true, "payable": false, "type": "function", "gas": 11038}, {"name": "deposit", "outputs": [], "inputs": [{"type": "bytes", "name": "deposit_input"}], "constant": false, "payable": true, "type": "function", "gas": 390140}, {"name": "chainStarted", "outputs": [{"type": "bool", "name": "out"}], "inputs": [], "constant": true, "payable": false, "type": "function", "gas": 603}],

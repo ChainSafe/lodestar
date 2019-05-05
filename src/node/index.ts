@@ -11,7 +11,7 @@ import {BeaconChain} from "../chain";
 import {OpPool} from "../opPool";
 import {JSONRPC} from "../rpc/protocol";
 import {WSServer} from "../rpc/transport";
-import {BeaconAPI} from "../rpc/api";
+import {BeaconApi, ValidatorApi} from "../rpc/api";
 
 export interface Service {
   start(): Promise<void>;
@@ -53,7 +53,12 @@ class BeaconNode {
 
     this.db = new LevelDB(this.conf.db);
     this.network = new P2PNetwork(this.conf.network);
-    this.eth1 = new EthersEth1Notifier(this.conf.eth1);
+    this.eth1 = new EthersEth1Notifier(
+      this.conf.eth1,
+      {
+        db: this.db
+      }
+    );
     this.sync = new Sync(this.conf.sync, {
       network: this.network,
     });
@@ -66,12 +71,18 @@ class BeaconNode {
       chain: this.chain,
     });
     this.rpc = new JSONRPC(this.conf.rpc, {
-      transport: new WSServer(this.conf.rpc),
-      api: new BeaconAPI(this.conf.rpc, {
-        chain: this.chain,
-        db: this.db,
-        opPool: this.opPool,
-      }),
+      transports: [new WSServer(this.conf.rpc)],
+      apis: [
+        new BeaconApi(this.conf.rpc, {
+          chain: this.chain,
+          db: this.db
+        }),
+        new ValidatorApi(this.conf.rpc, {
+          chain: this.chain,
+          db: this.db,
+          opPool: this.opPool,
+        })
+      ],
     });
   }
 
