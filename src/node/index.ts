@@ -12,7 +12,7 @@ import {OpPool} from "../opPool";
 import {JSONRPC} from "../rpc/protocol";
 import {WSServer} from "../rpc/transport";
 import {BeaconApi, ValidatorApi} from "../rpc/api";
-import {IApi} from "../rpc/api/interface";
+import {IApi, IApiConstructor} from "../rpc/api/interface";
 
 export interface Service {
   start(): Promise<void>;
@@ -33,7 +33,7 @@ interface BeaconNodeCtx {
 }
 
 interface RpcCtx {
-  apis?: { new(args, modules): IApi; }[];
+  apis?: IApiConstructor[];
 }
 
 class BeaconNode {

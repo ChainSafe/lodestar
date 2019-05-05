@@ -5,7 +5,7 @@ import BeaconNode from "../../node";
 import defaults from "../../node/defaults";
 import {ethers} from "ethers";
 import {CliError} from "../error";
-import {IApi} from "../../rpc/api/interface";
+import {IApi, IApiConstructor} from "../../rpc/api/interface";
 import {WSServer} from "../../rpc/transport";
 import {BeaconApi, ValidatorApi} from "../../rpc/api";
 import {JSONRPC} from "../../rpc/protocol";
@@ -49,8 +49,8 @@ export class BeaconNodeCommand implements CliCommand {
     await node.start();
   }
 
-  private setupRPC(args: string[]): { new(config, modules): IApi; }[] {
-    let apis: { new(args, modules): IApi; }[];
+  private setupRPC(args: string[]): IApiConstructor[] {
+    let apis: IApiConstructor[];
     if (args.includes("beacon")) {
       apis.push(BeaconApi);
     }
