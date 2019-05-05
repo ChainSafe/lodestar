@@ -2,7 +2,7 @@ import {ECP2} from "../../amcl/version3/js/ctx";
 import {BLSDomain, bytes32} from "../types";
 import hash from "keccak256";
 import ctx from "../ctx";
-import {calculateYFlag} from "./utils";
+import {calculateYFlag, padLeft} from "./utils";
 
 export class G2point {
 
@@ -20,8 +20,6 @@ export class G2point {
         const c1 = true;
         const b1 = this.point.is_infinity();
         const a1 = !b1 && calculateYFlag(this.point.getY().getB());
-
-        console.log({c1, b1, a1});
 
         const flags = ((a1 ? 1 << 5 : 0) | (b1 ? 1 << 6 : 0) | (c1 ? 1 << 7 : 0));
         const mask = 31;
@@ -69,6 +67,32 @@ export class G2point {
             point.setx(new ctx.FP2(xRe, xIm))
         }
         return new G2point(G2point.scaleWithCofactor(G2point.normaliseY(point)));
+    }
+
+    public static fromUncompressedInput(
+        xReBytes: Buffer,
+        xImBytes: Buffer,
+        yReBytes: Buffer,
+        yImBytes: Buffer,
+        zReBytes: Buffer,
+        zImBytes: Buffer): G2point {
+        const xRe = ctx.BIG.frombytearray(padLeft(xReBytes, 48), 0);
+        const xIm = ctx.BIG.frombytearray(padLeft(xImBytes, 48), 0);
+        const yRe = ctx.BIG.frombytearray(padLeft(yReBytes, 48), 0);
+        const yIm = ctx.BIG.frombytearray(padLeft(yImBytes, 48), 0);
+        const zRe = ctx.BIG.frombytearray(padLeft(zReBytes, 48), 0);
+        const zIm = ctx.BIG.frombytearray(padLeft(zImBytes, 48), 0);
+        const x = new ctx.FP2(xRe, xIm);
+        const y = new ctx.FP2(yRe, yIm);
+        const z = new ctx.FP2(zRe, zIm);
+        z.inverse();
+        x.mul(z);
+        x.reduce();
+        y.mul(z);
+        y.reduce();
+        const point = new ctx.ECP2();
+        point.setxy(x, y);
+        return new G2point(point);
     }
 
     public static scaleWithCofactor(point: ECP2): ECP2 {

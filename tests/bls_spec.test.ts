@@ -11,30 +11,30 @@ describe('bls spec tests', function () {
     it
   );
 
-  before(async () => {
-    // await bls.init();
-    // await mcl.init(mcl.BLS12_381);
-  });
-
-  // testSpec.test(
-  //   bls.hashToG2,
-  //   'case01_message_hash_G2_uncompressed',
-  //   (input) => {
-  //     const domain = Buffer.alloc(8);
-  //     domain.copy(Buffer.from(input.domain.replace('0x', ''), 'hex'));
-  //     return [
-  //       hash(Buffer.from(input.message.replace('0x', ''), 'hex')),
-  //       domain
-  //     ];
-  //   },
-  //   (output) => output,
-  //   (expected) => {
-  //     //expected is [[string, string], [string, string], [string, string]]
-  //     //TODO convert uncompressed G2 representations as (x, y, z) to mcl.G2
-  //     // instance
-  //     return '';
-  //   }
-  // );
+  testSpec.test(
+      G2point.hashToG2,
+    'case01_message_hash_G2_uncompressed',
+      (input) => {
+        const domain = padLeft(Buffer.from(input.domain.replace('0x', ''), 'hex'), 8);
+        return [
+          Buffer.from(input.message.replace('0x', ''), 'hex'),
+          domain
+        ];
+      },
+      (output: G2point) => {
+        return '0x' + output.toBytesCompressed().toString('hex');
+      },
+    (expected) => {
+        return '0x' + G2point.fromUncompressedInput(
+            Buffer.from(expected[0][0].replace('0x', ''), 'hex'),
+            Buffer.from(expected[0][1].replace('0x', ''), 'hex'),
+            Buffer.from(expected[1][0].replace('0x', ''), 'hex'),
+            Buffer.from(expected[1][1].replace('0x', ''), 'hex'),
+            Buffer.from(expected[2][0].replace('0x', ''), 'hex'),
+            Buffer.from(expected[2][1].replace('0x', ''), 'hex'),
+        ).toBytesCompressed().toString('hex');
+    }
+  );
 
   testSpec.test(
     G2point.hashToG2,
