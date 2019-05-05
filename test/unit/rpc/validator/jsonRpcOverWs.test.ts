@@ -1,16 +1,25 @@
 import { assert } from "chai";
 import * as jsonRpc from "noice-json-rpc";
 import Websocket from "ws";
-import {JSONRPC, IValidatorApi, WSServer} from "../../../../src/rpc/index";
+import {JSONRPC, IValidatorApi, WSServer, IBeaconApi} from "../../../../src/rpc/index";
 import { generateEmptyBlock } from "../../../utils/block";
 import {MockValidatorApi} from "../../../utils/mocks/rpc/validator";
 import { generateEmptyAttestation } from "../../../utils/attestation";
+import {MockBeaconApi} from "../../../utils/mocks/rpc/beacon";
 
 describe("Json RPC over WS", () => {
-  const rpc = new JSONRPC({}, {transport: new WSServer({port: 32420}), api: new MockValidatorApi()});
+  const rpc = new JSONRPC(
+    {},
+    {
+      transports: [new WSServer({port: 32420})],
+      apis: [
+        new MockBeaconApi(),
+        new MockValidatorApi()
+      ]
+    });
   let client;
   let ws;
-  let clientApi: {validator: IValidatorApi};
+  let clientApi: {validator: IValidatorApi, beacon: IBeaconApi};
   before(async () => {
     await rpc.start();
     ws = new Websocket("ws://localhost:32420");
@@ -21,19 +30,19 @@ describe("Json RPC over WS", () => {
     await rpc.stop();
   });
   it("should get the client version", async () => {
-    const version = await clientApi.validator.getClientVersion();
+    const version = await clientApi.beacon.getClientVersion();
     assert.ok(version);
   });
   it("should get the fork version", async () => {
-    const fork = await clientApi.validator.getFork();
+    const fork = await clientApi.beacon.getFork();
     assert.ok(fork);
   });
   it("should get the genesis time", async () => {
-    const time = await clientApi.validator.getGenesisTime();
+    const time = await clientApi.beacon.getGenesisTime();
     assert.ok(time);
   });
   it("should get the sync status", async () => {
-    const status = await clientApi.validator.getSyncingStatus();
+    const status = await clientApi.beacon.getSyncingStatus();
     assert.ok(status);
   });
   it("should get validator duties", async () => {
