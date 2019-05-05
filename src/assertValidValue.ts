@@ -10,7 +10,7 @@ import {
 export function assertValidValue(value: any, type: FullSSZType): void {
   switch (type.type) {
     case Type.uint:
-      assert(BN.isBN(value) || value === Number(value), 'Invalid uint value')
+      assert((BN.isBN(value) && value.gten(0)) || (value === Number(value) && value >= 0), 'Invalid uint value')
       break;
     case Type.bool:
       assert(value === true || value === false, 'Invalid boolean value');
