@@ -9,7 +9,6 @@ export default {
     name: './lodestar-db'
   },
   rpc: {
-    api: "beacon",
     port: 9545
   },
   eth1: eth1Defaults,
