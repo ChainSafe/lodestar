@@ -1,4 +1,4 @@
-import {PeerBook} from "peer-book";
+import PeerBook from "peer-book";
 
 export default {
   maxPeers: 25,
