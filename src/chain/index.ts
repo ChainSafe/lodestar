@@ -2,7 +2,7 @@ import assert from "assert";
 import {EventEmitter} from "events";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {BeaconBlock, BeaconState, bytes48, Deposit, Epoch, Eth1Data, number64, Slot, ValidatorIndex} from "../types";
+import {BeaconBlock, BeaconState, Deposit, Eth1Data, number64} from "../types";
 import {GENESIS_SLOT, SECONDS_PER_SLOT} from "../constants";
 
 import {DB} from "../db";

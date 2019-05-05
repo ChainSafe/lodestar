@@ -1,6 +1,6 @@
-import {PrivateEth1Network} from "../../../../src/eth1/dev/index";
+import {PrivateEth1Network} from "../../../../src/eth1/dev";
 import chai, {expect} from 'chai';
-import {DepositCommand} from "../../../../src/cli/commands/index";
+import {DepositCommand} from "../../../../src/cli/commands";
 import chaiAsPromised from 'chai-as-promised';
 import logger from "../../../../src/logger/winston";
 import {CliError} from "../../../../src/cli/error";
