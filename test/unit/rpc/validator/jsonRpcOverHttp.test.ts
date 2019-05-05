@@ -1,9 +1,10 @@
 import {assert} from "chai";
 import * as request from "supertest";
-import {JSONRPC, MockAPI} from "../../../src/rpc";
-import HttpServer from "../../../src/rpc/transport/http";
-import {generateRPCCall} from "../../utils/rpcCall";
-import logger from "../../../src/logger/winston";
+import {JSONRPC} from "../../../../src/rpc/index";
+import {MockValidatorApi} from "../../../utils/mocks/rpc/validator";
+import HttpServer from "../../../../src/rpc/transport/http";
+import {generateRPCCall} from "../../../utils/rpcCall";
+import logger from "../../../../src/logger/winston";
 
 describe("Json RPC over http", () => {
     let rpc;
@@ -12,17 +13,17 @@ describe("Json RPC over http", () => {
         logger.silent(true);
         const rpcServer = new HttpServer({port: 32421});
         server = rpcServer.server;
-        rpc = new JSONRPC({}, {transport: rpcServer, api: new MockAPI()})
+        rpc = new JSONRPC({}, {transport: rpcServer, api: new MockValidatorApi()});
         await rpc.start();
     });
     after(async () => {
         await rpc.stop();
         logger.silent(false);
     });
-    it("should get the chain head", (done) => {
+    it("should get the version", (done) => {
         request.default(server)
             .post('/')
-            .send(generateRPCCall('BeaconChain.getChainHead', []))
+            .send(generateRPCCall('validator.getFork', []))
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200)
@@ -33,11 +34,11 @@ describe("Json RPC over http", () => {
                 }
                 done();
             });
-    })
+    });
     it("should fail for unknown methods", (done) => {
         request.default(server)
             .post('/')
-            .send(generateRPCCall('BeaconChain.notExistingMethod', []))
+            .send(generateRPCCall('validator.notExistingMethod', []))
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200)
@@ -49,7 +50,7 @@ describe("Json RPC over http", () => {
                 assert.fail('Should not be successfull');
                 done();
             });
-    })
+    });
     it("should fail for methods other than POST", (done) => {
         request.default(server)
             .get('/')
@@ -58,9 +59,9 @@ describe("Json RPC over http", () => {
             .end((err) => {
                 done(err);
             });
-    })
+    });
     it("should fail to start on existing port", (done) => {
-        const rpc = new JSONRPC({}, {transport: new HttpServer({port: 32421}), api: new MockAPI()});
+        const rpc = new JSONRPC({}, {transport: new HttpServer({port: 32421}), api: new MockValidatorApi()});
         rpc.start()
             .then(async () => {
                 await rpc.stop();

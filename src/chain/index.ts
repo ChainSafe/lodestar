@@ -2,7 +2,7 @@ import assert from "assert";
 import {EventEmitter} from "events";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {BeaconBlock, BeaconState, Deposit, Eth1Data, number64} from "../types";
+import {BeaconBlock, BeaconState, bytes48, Deposit, Epoch, Eth1Data, number64, Slot, ValidatorIndex} from "../types";
 import {GENESIS_SLOT, SECONDS_PER_SLOT} from "../constants";
 
 import {DB} from "../db";
@@ -20,6 +20,7 @@ import {getBlockRoot, getEpochStartSlot} from "./stateTransition/util";
  */
 export class BeaconChain extends EventEmitter {
   public chain: string;
+  public genesisTime: number64;
   private db: DB;
   private eth1: Eth1Notifier;
   private _latestBlock: BeaconBlock;
@@ -57,6 +58,7 @@ export class BeaconChain extends EventEmitter {
     const genesisState = getGenesisBeaconState(genesisDeposits, genesisTime, genesisEth1Data);
     const genesisBlock = getEmptyBlock();
     genesisBlock.stateRoot = hashTreeRoot(genesisState, BeaconState);
+    this.genesisTime = genesisTime;
     await this.db.setBlock(genesisBlock);
     await this.db.setChainHead(genesisState, genesisBlock);
     await this.db.setJustifiedBlock(genesisBlock);

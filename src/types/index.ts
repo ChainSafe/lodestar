@@ -25,3 +25,4 @@ export * from "./misc";
 export * from "./operations";
 export * from "./block";
 export * from "./state";
+export * from "./validator";
