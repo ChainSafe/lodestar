@@ -15,6 +15,7 @@ export class BeaconNodeCommand implements CliCommand {
       .option("-d, --db [db_path]", "Path to file database", defaults.db.name)
       .option("-c, --depositContract [address]", "Address of deposit contract", defaults.eth1.depositContract.address)
       .option("-eth1, --eth1RpcUrl [url]", "Url to eth1 rpc node")
+      .option("--rpc [api]", "Exposes the selected RPC api, must be comma separated", defaults.rpc.api)
       .action(async (options) => {
         //library is not awaiting this method so don't allow error propagation (unhandled promise rejections
         try {
@@ -36,6 +37,9 @@ export class BeaconNodeCommand implements CliCommand {
           address: options.depositContract
         },
         provider: await this.getProvider(options)
+      },
+      rpc: {
+        apis: options.rpc.split(",")
       }
     });
     await node.start();

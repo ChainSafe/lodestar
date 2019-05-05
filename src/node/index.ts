@@ -12,6 +12,7 @@ import {OpPool} from "../opPool";
 import {JSONRPC} from "../rpc/protocol";
 import {WSServer} from "../rpc/transport";
 import {BeaconApi, ValidatorApi} from "../rpc/api";
+import {IApi} from "../rpc/api/interface";
 
 export interface Service {
   start(): Promise<void>;
@@ -26,9 +27,13 @@ interface BeaconNodeCtx {
   // Temporarily set to any. Will be changed to object later.
   eth1?: any;
   network?: any;
-  rpc?: object;
+  rpc?: RpcCtx;
   sync?: object;
   opPool?: object;
+}
+
+interface RpcCtx {
+  apis: string[];
 }
 
 class BeaconNode {
@@ -70,19 +75,21 @@ class BeaconNode {
       db: this.db,
       chain: this.chain,
     });
-    this.rpc = new JSONRPC(this.conf.rpc, {
+    this.rpc = this.setupRPC();
+  }
+
+  private setupRPC() {
+    const apis: IApi[] = [];
+    if (this.conf.rpc.apis.includes("beacon")) {
+      apis.push(new BeaconApi(this.conf.rpc, { chain: this.chain, db: this.db}));
+    }
+    if (this.conf.rpc.apis.includes("validator")) {
+      apis.push(new ValidatorApi(this.conf.rpc, {chain: this.chain, db: this.db, opPool: this.opPool}));
+    }
+
+    return new JSONRPC(this.conf.rpc, {
       transports: [new WSServer(this.conf.rpc)],
-      apis: [
-        new BeaconApi(this.conf.rpc, {
-          chain: this.chain,
-          db: this.db
-        }),
-        new ValidatorApi(this.conf.rpc, {
-          chain: this.chain,
-          db: this.db,
-          opPool: this.opPool,
-        })
-      ],
+      apis
     });
   }
 
