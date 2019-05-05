@@ -4,7 +4,7 @@ import BN from "bn.js";
 import {
   AttestationAggregator,
   ForkChoiceAttestation,
-} from "../../../../src/chain/forkChoice/attestationAggregator";
+} from "../../../../src/chain/forkChoice/statefulDag/attestationAggregator";
 
 
 describe("AttestationAggregator", () => {

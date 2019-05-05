@@ -1,2 +1,2 @@
-export * from "./lmdGhost";
-export * from "./attestationAggregator";
+export * from "./interface";
+export * from "./statefulDag";
