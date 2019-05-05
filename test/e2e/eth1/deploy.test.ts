@@ -74,7 +74,6 @@ describe("Eth1Notifier - using deployed contract", () => {
             )
         )
     );
-    await eth1Notifier.genesisDeposits('latest');
     assert(cb.called, "eth2genesis event did not fire");
   });
 

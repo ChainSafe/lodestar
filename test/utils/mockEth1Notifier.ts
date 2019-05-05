@@ -1,8 +1,8 @@
 import {EventEmitter} from "events";
 
-import {bytes32, Deposit} from "../../types";
+import {bytes32, Deposit} from "../../src/types";
 
-import {Eth1Notifier, Eth1Options} from "../interface";
+import {Eth1Notifier, Eth1Options} from "../../src/eth1/interface";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface MockEth1Options extends Eth1Options {
@@ -42,5 +42,9 @@ export class MockEth1Notifier extends EventEmitter implements Eth1Notifier {
 
   public async depositRoot(): Promise<bytes32> {
     return Buffer.alloc(32);
+  }
+
+  public async getContractDeposits(fromBlock: string | number, toBlock?: string | number): Promise<Deposit[]> {
+    return [];
   }
 }
