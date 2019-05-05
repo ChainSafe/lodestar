@@ -28,3 +28,31 @@ describe("getBitfieldBit", () => {
     assert.equal(result, 0, `returned ${result} not 0`);
   });
 });
+
+describe("verifyBitfield", () => {
+  it("should detect incorrect byte-length bitfields", () => {
+    const byteLength = 10; // min committeeSize == 73, max committeeSize == 80
+    const bitfield = Buffer.alloc(byteLength);
+    for (let committeeSize = (byteLength - 1) * 8; committeeSize < (byteLength + 1) * 8; committeeSize++) {
+      if (
+        committeeSize < (byteLength - 1) * 8 + 1 ||
+        committeeSize > (byteLength * 8)
+      ) {
+        assert(!verifyBitfield(bitfield, committeeSize));
+      } else {
+        assert(verifyBitfield(bitfield, committeeSize));
+      }
+    }
+  });
+  it("should detect extraneous 1s padding a bitfield", () => {
+    const byteLength = 10; // min committeeSize == 73, max committeeSize == 80
+    const bitfield = Buffer.alloc(byteLength);
+    const committeeSize = (byteLength - 1) * 8 + 1;
+    for (let i = 1; i < 8; i++) {
+      bitfield[bitfield.length - 1] = 1 << i;
+      assert(!verifyBitfield(bitfield, committeeSize));
+    }
+    bitfield[bitfield.length - 1] = 1 << 8;
+    assert(verifyBitfield(bitfield, committeeSize));
+  });
+});
