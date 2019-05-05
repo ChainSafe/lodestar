@@ -14,7 +14,7 @@ import {getEmptyBlock, getGenesisBeaconState} from "./genesis";
 import {executeStateTransition} from "./stateTransition";
 import {getBlockRoot, getEpochStartSlot} from "./stateTransition/util";
 
-import {LMDGHOST} from "./forkChoice";
+import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 
 /**
  * The BeaconChain service deals with processing incoming blocks, advancing a state transition
@@ -32,7 +32,7 @@ export class BeaconChain extends EventEmitter {
     this.chain = opts.chain;
     this.db = db;
     this.eth1 = eth1;
-    this.forkChoice = new LMDGHOST();
+    this.forkChoice = new StatefulDagLMDGHOST();
   }
 
   /**

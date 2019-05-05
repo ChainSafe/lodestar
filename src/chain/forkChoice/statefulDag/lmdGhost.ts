@@ -6,7 +6,9 @@ import {
   Gwei,
   Slot,
   ValidatorIndex,
-} from "../../types";
+} from "../../../types";
+
+import {LMDGHOST} from "../interface";
 
 import {
   AttestationAggregator,
@@ -147,7 +149,7 @@ class Node {
  * Latest Message-Driven Greedy Heaviest Observed SubTree
  * See https://github.com/protolambda/lmd-ghost#state-ful-dag
  */
-export class LMDGHOST {
+export class StatefulDagLMDGHOST implements LMDGHOST {
   /**
    * Aggregated attestations
    */
