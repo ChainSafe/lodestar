@@ -81,6 +81,9 @@ function _deserializeArray(data: Buffer, type: ArrayType, start: number, end: nu
       index = nextIndex;
     }
   }
+  if (type.type === Type.vector) {
+    assert(type.length === value.length, "Incorrect deserialized vector length");
+  }
   return value;
 }
 
@@ -117,6 +120,12 @@ function _deserializeObject(data: Buffer, type: ContainerType, start: number, en
       currentIndex = nextIndex;
     }
   });
+  if (offsets.length) {
+    assert(offsetIndex === offsets.length - 1, "Not all variable bytes consumed");
+    assert(currentIndex === offsets[0], "Not all fixed bytes consumed");
+  } else {
+    assert(currentIndex === end, "Not all fixed bytes consumed");
+  }
   return value;
 }
 
@@ -146,5 +155,8 @@ export function _deserialize(data: Buffer, type: FullSSZType, start: number, end
  */
 export function deserialize(data: Buffer, type: AnySSZType): SerializableValue {
   const _type = parseType(type);
+  if (!isVariableSizeType(_type)) {
+    assert(fixedSize(_type) === data.length, "Incorrect data length");
+  }
   return _deserialize(data, _type, 0, data.length);
 }
