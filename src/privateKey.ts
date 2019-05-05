@@ -3,6 +3,7 @@ import {PRIVATE_KEY_LENGTH} from "./constants";
 import assert from "assert";
 import ctx from "./ctx";
 import {padLeft} from "./helpers/utils";
+import {G2point} from "./helpers/g2point";
 
 export class PrivateKey {
 
@@ -14,6 +15,10 @@ export class PrivateKey {
 
   public getValue(): BIG {
     return this.value;
+  }
+
+  public sign(message: G2point): G2point {
+    return message.mul(this.value);
   }
 
   public static fromBytes(bytes: Uint8Array): PrivateKey {

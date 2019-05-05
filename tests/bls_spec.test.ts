@@ -67,23 +67,22 @@ describe('bls spec tests', function () {
     }
   );
 
-  // testSpec.test(
-  //   bls.sign,
-  //   'case04_sign_messages',
-  //   (input) => {
-  //     const domain = Buffer.alloc(8);
-  //     domain.copy(Buffer.from(input.domain.replace('0x', ''), 'hex'));
-  //     return [
-  //       Buffer.from(input.privkey.replace('0x', ''), 'hex'),
-  //       Buffer.from(input.message.replace('0x', ''), 'hex'),
-  //       domain
-  //     ];
-  //   },
-  //   (output) => {
-  //     return `0x${output.toString('hex')}`;
-  //   }
-  // );
-  //
+  testSpec.test(
+    bls.sign,
+    'case04_sign_messages',
+    (input) => {
+        const domain = padLeft(Buffer.from(input.domain.replace('0x', ''), 'hex'), 8);
+        return [
+          Buffer.from(input.privkey.replace('0x', ''), 'hex'),
+          Buffer.from(input.message.replace('0x', ''), 'hex'),
+          domain
+        ];
+    },
+    (output) => {
+      return `0x${output.toString('hex')}`;
+    }
+  );
+
   // testSpec.test(
   //   bls.aggregateSignatures,
   //   'case06_aggregate_sigs',

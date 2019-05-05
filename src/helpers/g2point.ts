@@ -1,4 +1,4 @@
-import {ECP2} from "../../amcl/version3/js/ctx";
+import {BIG, ECP2} from "../../amcl/version3/js/ctx";
 import {BLSDomain, bytes32} from "../types";
 import hash from "keccak256";
 import ctx from "../ctx";
@@ -10,6 +10,11 @@ export class G2point {
 
     public constructor(point: ECP2) {
         this.point = point;
+    }
+
+    public mul(value: BIG): G2point {
+        const newPoint = this.point.mul(value);
+        return new G2point(newPoint);
     }
 
     public toBytesCompressed(): Buffer {
@@ -132,18 +137,18 @@ export class G2point {
     }
 
     public static normaliseY(point: ECP2): ECP2 {
-    const y = point.getY();
-    const yNeg = new ctx.FP2(y);
-    yNeg.neg();
-    if (ctx.BIG.comp(y.getB(), yNeg.getB()) < 0
-        || ((ctx.BIG.comp(y.getB(), yNeg.getB()) == 0)
-            && ctx.BIG.comp(y.getA(), yNeg.getA()) < 0)
-    ) {
-        const newPoint = new ctx.ECP2();
-        newPoint.setxy(point.getX(), yNeg);
-        return newPoint
-    } else {
-        return point;
+        const y = point.getY();
+        const yNeg = new ctx.FP2(y);
+        yNeg.neg();
+        if (ctx.BIG.comp(y.getB(), yNeg.getB()) < 0
+            || ((ctx.BIG.comp(y.getB(), yNeg.getB()) == 0)
+                && ctx.BIG.comp(y.getA(), yNeg.getA()) < 0)
+        ) {
+            const newPoint = new ctx.ECP2();
+            newPoint.setxy(point.getX(), yNeg);
+            return newPoint
+        } else {
+            return point;
+        }
     }
-}
 }

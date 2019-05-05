@@ -1,6 +1,7 @@
-import {BLSDomain, BLSPrivKey, BLSPubkey, bytes32} from "./types";
+import {BLSDomain, BLSPrivKey, BLSPubkey, BLSSignature, bytes32} from "./types";
 import {Keypair} from "./keypair";
 import {PrivateKey} from "./privateKey";
+import {G2point} from "./helpers/g2point";
 
 export default class BLS {
 
@@ -9,9 +10,9 @@ export default class BLS {
     return keypair.publicKey.toBytesCompressed();
   }
 
-  public static sign (secretKey: BLSPrivKey, messageHash: bytes32, domain: BLSDomain) {
-    // const privateKey = PrivateKey.fromBytes(secretKey);
-    // const hash = hashToG2(messageHash, domain)
-    // return toBuffer(mcl.mul(hash, s))
+  public static sign(secretKey: BLSPrivKey, messageHash: bytes32, domain: BLSDomain): BLSSignature {
+    const privateKey = PrivateKey.fromBytes(secretKey);
+    const hash = G2point.hashToG2(messageHash, domain);
+    return privateKey.sign(hash).toBytesCompressed();
   }
 }
