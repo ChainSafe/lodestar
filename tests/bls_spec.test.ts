@@ -1,6 +1,8 @@
-import bls from "../src"
+import bls from "../src";
 import {Eth2TestSpec} from "./helpers/eth2.0-test";
-import path from "path"
+import path from "path";
+import {G2point} from "../src/helpers/g2point";
+import {padLeft} from "../src/helpers/utils";
 
 describe('bls spec tests', function () {
 
@@ -34,25 +36,25 @@ describe('bls spec tests', function () {
   //   }
   // );
 
-  // testSpec.test(
-  //   bls.hashToG2,
-  //   'case02_message_hash_G2_compressed',
-  //   (input) => {
-  //     const domain = Buffer.alloc(8);
-  //     domain.copy(Buffer.from(input.domain.replace('0x', ''), 'hex'));
-  //     return [
-  //       hash(Buffer.from(input.message.replace('0x', ''), 'hex')),
-  //       domain
-  //     ];
-  //   },
-  //   (output) => output,
-  //   (expected) => {
-  //     //expected is [string, string]
-  //     //TODO convert compressed G2 representations as pair (z1, z2) to mcl.G2
-  //     // instance
-  //     return '';
-  //   }
-  // );
+  testSpec.test(
+    G2point.hashToG2,
+    'case02_message_hash_G2_compressed',
+    (input) => {
+      const domain = padLeft(Buffer.from(input.domain.replace('0x', ''), 'hex'), 8);
+      return [
+        Buffer.from(input.message.replace('0x', ''), 'hex'),
+        domain
+      ];
+    },
+    (output: G2point) => {
+      return '0x' + output.toBytesCompressed().toString('hex');
+    },
+    (expected) => {
+      const xReExpected = padLeft(Buffer.from(expected[0].replace('0x', ''), 'hex'), 48);
+      const xImExpected = padLeft(Buffer.from(expected[1].replace('0x', ''), 'hex'), 48);
+      return '0x' + Buffer.concat([xReExpected, xImExpected]).toString('hex')
+    }
+  );
 
   testSpec.test(
     bls.generatePublicKey,

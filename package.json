@@ -27,6 +27,7 @@
     "@babel/preset-env": "^7.3.1",
     "@babel/preset-typescript": "^7.3.3",
     "@babel/register": "^7.0.0",
+    "@babel/runtime": "^7.4.4",
     "@types/assert": "^1.4.2",
     "@types/chai": "^4.1.7",
     "@types/mocha": "^5.2.5",
