@@ -1,8 +1,9 @@
 import {BIG, ECP2} from "../../amcl/version3/js/ctx";
-import {BLSDomain, bytes32} from "../types";
+import {BLSDomain, bytes32, bytes96} from "../types";
 import hash from "keccak256";
 import ctx from "../ctx";
-import {calculateYFlag, padLeft} from "./utils";
+import {calculateYFlag, getModulus, padLeft} from "./utils";
+import assert = require("assert");
 
 export class G2point {
 
@@ -10,6 +11,14 @@ export class G2point {
 
     public constructor(point: ECP2) {
         this.point = point;
+    }
+
+    public add(other: G2point): G2point {
+        const sum = new ctx.ECP2();
+        sum.add(this.point);
+        sum.add(other.point);
+        sum.affine();
+        return new G2point(sum);
     }
 
     public mul(value: BIG): G2point {
@@ -72,6 +81,59 @@ export class G2point {
             point.setx(new ctx.FP2(xRe, xIm))
         }
         return new G2point(G2point.scaleWithCofactor(G2point.normaliseY(point)));
+    }
+
+    public static fromCompressedBytes(value: bytes96): G2point {
+        assert(value.length === 96, 'Expected signature of 96 bytes');
+        const xImBytes = value.slice(0, 48);
+        const xReBytes = value.slice(48);
+        const aIn = (xImBytes[0] & (1 << 5)) != 0;
+        const bIn = (xImBytes[0] & (1 << 6)) != 0;
+        const cIn = (xImBytes[0] & (1 << 7)) != 0;
+        //clear bits
+        xImBytes[0] &= 31;
+        if((xReBytes[0] & 224) != 0) {
+            throw new Error("The input has non-zero a2, b2 or c2 flag on xRe");
+        }
+        if(!cIn) {
+            throw new Error("The serialised input does not have the C flag set.");
+        }
+        const xIm = ctx.BIG.frombytearray(xImBytes, 0);
+        const xRe = ctx.BIG.frombytearray(xReBytes, 0);
+        if (bIn) {
+            if (!aIn
+                && xIm.iszilch()
+                && xRe.iszilch() ) {
+                // This is a correctly formed serialisation of infinity
+                return new G2point(new ctx.ECP2());
+            } else {
+                // The input is malformed
+                throw new Error(
+                    "The serialised input has B flag set, but A flag is set, or X is non-zero.");
+            }
+        }
+
+        const modulus = getModulus();
+        if(ctx.BIG.comp(modulus, xRe) <= 0 || ctx.BIG.comp(modulus, xIm) <= 0) {
+            throw new Error(
+                "The deserialised X real or imaginary coordinate is too large.");
+        }
+
+        let point = new ctx.ECP2();
+        point.setx(new ctx.FP2(xRe, xIm));
+        if(point.is_infinity()) {
+            throw new Error("X coordinate is not on the curve.");
+        }
+
+        if (!point.is_infinity() && aIn != calculateYFlag(point.getY().getB())) {
+            // We didn't: so choose the other branch of the sqrt.
+            const x = point.getX();
+            const yneg = point.getY();
+            yneg.neg();
+            point.setxy(x, yneg);
+        }
+
+        return new G2point(point);
     }
 
     public static fromUncompressedInput(

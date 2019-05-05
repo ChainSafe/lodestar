@@ -15,4 +15,12 @@ export default class BLS {
     const hash = G2point.hashToG2(messageHash, domain);
     return privateKey.sign(hash).toBytesCompressed();
   }
+
+  public static aggregateSignatures(signatures: BLSSignature[]) : BLSSignature {
+    return signatures.map((signature) => {
+      return G2point.fromCompressedBytes(signature)
+    }).reduce((previousValue, currentValue) => {
+      return previousValue.add(currentValue);
+    }).toBytesCompressed();
+  }
 }
