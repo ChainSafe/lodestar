@@ -56,8 +56,7 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
       this.provider.on('block', this.processBlockHeadUpdate.bind(this));
     } else {
       const pastDeposits = await this.getContractDeposits(
-        this.opts.depositContract.deployedAt,
-        null
+        this.opts.depositContract.deployedAt
       );
       await Promise.all(pastDeposits.map((pastDeposit) => {
         return this.db.setGenesisDeposit(pastDeposit);
