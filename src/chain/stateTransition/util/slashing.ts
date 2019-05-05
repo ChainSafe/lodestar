@@ -2,6 +2,8 @@
  * @module chain/stateTransition/util
  */
 
+import {serialize} from "@chainsafe/ssz";
+
 import {
   AttestationData,
   Epoch,
@@ -11,24 +13,15 @@ import {slotToEpoch} from "./epoch";
 
 
 /**
- * Check if ``attestationData1`` and ``attestationData2`` have the same target.
+ * Check if data1 and data2 are slashable according to Casper FFG rules.
  */
-export function isDoubleVote(attestationData1: AttestationData, attestationData2: AttestationData): boolean {
-  const targetEpoch1: Epoch = slotToEpoch(attestationData1.slot);
-  const targetEpoch2: Epoch = slotToEpoch(attestationData2.slot);
-  return targetEpoch1 === targetEpoch2;
-}
-
-/**
- * Check if ``attestationData1`` surrounds ``attestationData2``
- */
-export function isSurroundVote(attestationData1: AttestationData, attestationData2: AttestationData): boolean {
-  const sourceEpoch1: Epoch  = attestationData1.sourceEpoch;
-  const sourceEpoch2: Epoch  = attestationData2.sourceEpoch;
-  const targetEpoch1: Epoch  = slotToEpoch(attestationData1.slot);
-  const targetEpoch2: Epoch  = slotToEpoch(attestationData2.slot);
+export function isSlashableAttestationData(data1: AttestationData, data2: AttestationData): boolean {
   return (
-    sourceEpoch1 < sourceEpoch2 &&
-    targetEpoch2 < targetEpoch1
+    // Double vote
+    (!serialize(data1, AttestationData).equals(serialize(data2, AttestationData))
+      && data1.targetEpoch === data2.targetEpoch) ||
+    // Surround vote
+    (data1.sourceEpoch < data2.sourceEpoch &&
+      data2.targetEpoch < data1.targetEpoch)
   );
 }

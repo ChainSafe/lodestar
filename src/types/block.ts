@@ -28,6 +28,7 @@ import {
 export interface BeaconBlockBody {
   randaoReveal: bytes96;
   eth1Data: Eth1Data;
+  graffiti: bytes32;
   proposerSlashings: ProposerSlashing[];
   attesterSlashings: AttesterSlashing[];
   attestations: Attestation[];
@@ -40,6 +41,7 @@ export const BeaconBlockBody: SimpleContainerType = {
   fields: [
     ["randaoReveal", bytes96],
     ["eth1Data", Eth1Data],
+    ["graffiti", bytes32],
     ["proposerSlashings", [ProposerSlashing]],
     ["attesterSlashings", [AttesterSlashing]],
     ["attestations", [Attestation]],

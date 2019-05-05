@@ -40,6 +40,7 @@ export function getEmptyBlock(): BeaconBlock {
         depositCount: 0,
         blockHash: ZERO_HASH,
       },
+      graffiti: ZERO_HASH,
       proposerSlashings: [],
       attesterSlashings: [],
       attestations: [],

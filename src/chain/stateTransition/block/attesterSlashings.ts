@@ -19,9 +19,8 @@ import {
 
 import {
   getCurrentEpoch,
-  isDoubleVote,
   isSlashableValidator,
-  isSurroundVote,
+  isSlashableAttestationData,
   slashValidator,
   verifyIndexedAttestation,
 } from "../../stateTransition/util";
@@ -35,25 +34,24 @@ export function processAttesterSlashing(state: BeaconState, attesterSlashing: At
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;
   // Check that the attestations are conflicting
-  assert(!serialize(attestation1.data, AttestationData).equals(serialize(attestation2.data, AttestationData)));
-  assert(isDoubleVote(attestation1.data, attestation2.data) ||
-    isSurroundVote(attestation1.data, attestation2.data));
-
+  assert(isSlashableAttestationData(attestation1.data, attestation2.data));
   assert(verifyIndexedAttestation(state, attestation1));
   assert(verifyIndexedAttestation(state, attestation2));
+  let slashedAny = false;
   const attestingIndices1 = attestation1.custodyBit0Indices.concat(attestation1.custodyBit1Indices);
   const attestingIndices2 = attestation2.custodyBit0Indices.concat(attestation2.custodyBit1Indices);
 
   const currentEpoch = getCurrentEpoch(state);
-  const slashableIndices = attestingIndices1
-    .filter((index) => (
+  attestingIndices1.forEach((index) => {
+    if (
       attestingIndices2.includes(index) &&
       isSlashableValidator(state.validatorRegistry[index], currentEpoch)
-    ));
-
-  assert(slashableIndices.length >= 1);
-  slashableIndices.forEach((index) =>
-    slashValidator(state, index));
+    ) {
+      slashValidator(state, index);
+      slashedAny = true;
+    }
+  });
+  assert(slashedAny);
 }
  
 export default function processAttesterSlashings(state: BeaconState, block: BeaconBlock): void {

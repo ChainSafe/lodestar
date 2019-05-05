@@ -24,7 +24,7 @@ import {intDiv} from "../../../util/math";
 
 import {slotToEpoch} from "./epoch";
 
-import {getCrosslinkCommitteesAtSlot} from "./crosslinkCommittee";
+import {getCrosslinkCommittee} from "./crosslinkCommittee";
 
 import {getDomain} from "./misc";
 
@@ -33,9 +33,7 @@ import {getDomain} from "./misc";
  * Return the sorted attesting indices corresponding to ``attestation_data`` and ``bitfield``.
  */
 export function getAttestingIndices(state: BeaconState, attestationData: AttestationData, bitfield: bytes): ValidatorIndex[] {
-  const crosslinkCommittees = getCrosslinkCommitteesAtSlot(state, attestationData.slot);
-  const crosslinkCommittee = crosslinkCommittees
-    .find(([_, shard]) => shard === attestationData.shard)[0];
+  const crosslinkCommittee = getCrosslinkCommittee(state, attestationData.targetEpoch, attestationData.shard);
 
   assert(verifyBitfield(bitfield, crosslinkCommittee.length));
 
@@ -136,6 +134,6 @@ export function verifyIndexedAttestation(state: BeaconState, indexedAttestation:
       }, AttestationDataAndCustodyBit),
     ],
     indexedAttestation.signature,
-    getDomain(state, Domain.ATTESTATION, slotToEpoch(indexedAttestation.data.slot)),
+    getDomain(state, Domain.ATTESTATION, slotToEpoch(indexedAttestation.data.targetEpoch)),
   );
 }

@@ -4,15 +4,16 @@
 
 import {BeaconState} from "../../../types";
 import {
-  getCrosslinkCommitteesAtSlot,
   getCurrentEpoch,
-  getEpochStartSlot,
   getPreviousEpoch,
   getTotalBalance,
-  slotToEpoch,
+  getEpochCommitteeCount,
+  getEpochStartShard,
+  getCrosslinkCommittee,
 } from "../util";
 
 import {getWinningCrosslinkAndAttestingIndices} from "./util";
+import {SHARD_COUNT} from "../../../constants";
 
 
 export function processCrosslinks(state: BeaconState): void {
@@ -20,20 +21,14 @@ export function processCrosslinks(state: BeaconState): void {
 
   const currentEpoch = getCurrentEpoch(state);
   const previousEpoch = getPreviousEpoch(state);
-  const nextEpoch = currentEpoch + 1;
-
-  const start = getEpochStartSlot(previousEpoch);
-  const end = getEpochStartSlot(nextEpoch);
-  for (let slot = start; slot < end; slot++) {
-    const epoch = slotToEpoch(slot);
-    getCrosslinkCommitteesAtSlot(state, slot).forEach(([crosslinkCommittee, shard]) => {
-      const [winningCrosslink, participants] =
-        getWinningCrosslinkAndAttestingIndices(state, shard, epoch);
-      const participatingBalance = getTotalBalance(state, participants);
-      const totalBalance = getTotalBalance(state, crosslinkCommittee);
-      if (participatingBalance.muln(3).gte(totalBalance.muln(2))) {
+  [previousEpoch, currentEpoch].forEach((epoch) => {
+    for (let offset = 0; offset < getEpochCommitteeCount(state, epoch); offset++) {
+      const shard = (getEpochStartShard(state, epoch) + offset) % SHARD_COUNT;
+      const crosslinkCommittee = getCrosslinkCommittee(state, epoch, shard);
+      const [winningCrosslink, attestingIndices] = getWinningCrosslinkAndAttestingIndices(state, epoch, shard);
+      if (getTotalBalance(state, attestingIndices).muln(3).gte(getTotalBalance(state, crosslinkCommittee).muln(2))) {
         state.currentCrosslinks[shard] = winningCrosslink;
       }
-    });
-  }
+    }
+  });
 }

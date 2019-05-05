@@ -17,7 +17,7 @@ import {
 
 import {
   getActiveValidatorIndices, getCurrentEpoch, getTotalBalance, getPreviousEpoch, getBlockRoot,
-  getBlockRootAtSlot, getAttestingIndices, slotToEpoch
+  getBlockRootAtSlot, getAttestingIndices, slotToEpoch, getAttestationDataSlot
 } from "../util";
 
 
@@ -41,7 +41,7 @@ export function getMatchingTargetAttestations(state: BeaconState, epoch: Epoch):
 
 export function getMatchingHeadAttestations(state: BeaconState, epoch: Epoch): PendingAttestation[] {
   return getMatchingSourceAttestations(state, epoch)
-    .filter((a) => a.data.beaconBlockRoot.equals(getBlockRootAtSlot(state, a.data.slot)));
+    .filter((a) => a.data.beaconBlockRoot.equals(getBlockRootAtSlot(state, getAttestationDataSlot(state, a.data))));
 }
 
 export function getUnslashedAttestingIndices(state: BeaconState, attestations: PendingAttestation[]): ValidatorIndex[] {
@@ -61,7 +61,7 @@ export function getAttestingBalance(state: BeaconState, attestations: PendingAtt
 export function getCrosslinkFromAttestationData(state: BeaconState, data: AttestationData): Crosslink {
   return {
     epoch: Math.min(
-      slotToEpoch(data.slot),
+      data.targetEpoch,
       state.currentCrosslinks[data.shard].epoch + MAX_CROSSLINK_EPOCHS
     ),
     previousCrosslinkRoot: data.previousCrosslinkRoot,
@@ -69,7 +69,7 @@ export function getCrosslinkFromAttestationData(state: BeaconState, data: Attest
   };
 }
 
-export function getWinningCrosslinkAndAttestingIndices(state: BeaconState, shard: Shard, epoch: Epoch): [Crosslink, ValidatorIndex[]] {
+export function getWinningCrosslinkAndAttestingIndices(state: BeaconState, epoch: Epoch, shard: Shard): [Crosslink, ValidatorIndex[]] {
   const shardAttestations = getMatchingSourceAttestations(state, epoch)
     .filter((a) => a.data.shard === shard);
   const shardCrosslinks = shardAttestations.map((a) => getCrosslinkFromAttestationData(state, a.data));
@@ -113,10 +113,4 @@ export function getWinningCrosslinkAndAttestingIndices(state: BeaconState, shard
       return a;
     }).crosslink;
   return [winningCrosslink, getUnslashedAttestingIndices(state, getAttestationsFor(winningCrosslink))];
-}
-
-export function getEarliestAttestation(state: BeaconState, attestations: PendingAttestation[], validatorIndex: ValidatorIndex): PendingAttestation {
-  return attestations
-    .filter((a) => getAttestingIndices(state, a.data, a.aggregationBitfield).includes(validatorIndex))
-    .reduce((a, b) => a.inclusionSlot < b.inclusionSlot ? a : b);
 }

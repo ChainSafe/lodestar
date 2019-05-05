@@ -11,6 +11,7 @@ import {
   Shard,
   Slot,
   ValidatorIndex,
+  AttestationData,
 } from "../../../types";
 
 import {
@@ -26,6 +27,7 @@ import {intDiv} from "../../../util/math";
 
 import {
   getCurrentEpoch,
+  getEpochStartSlot,
   getPreviousEpoch,
   slotToEpoch,
 } from "./epoch";
@@ -36,24 +38,23 @@ import {generateSeed} from "./seed";
 
 
 /**
- * Return `p(index)` in a pseudorandom permutation `p` of `0...list_size - 1`
- * with ``seed`` as entropy.
+ * Return the shuffled validator index corresponding to ``seed`` (and ``index_count``).
  *
- * Utilizes 'swap or not' shuffling found in
+ * Swap or not
  * https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf
  *
  * See the 'generalized domain' algorithm on page 3.
  */
-export function getPermutedIndex(index: number, listSize: number, seed: bytes32): number {
+export function getShuffledIndex(index: ValidatorIndex, indexCount: number, seed: bytes32): number {
   let permuted = index;
-  assert(index < listSize);
-  assert(listSize <= 2 ** 40);
+  assert(index < indexCount);
+  assert(indexCount <= 2 ** 40);
   for (let i = 0; i < SHUFFLE_ROUND_COUNT; i++) {
     const pivot = bytesToBN(
       hash(Buffer.concat([seed, intToBytes(i, 1)]))
         .slice(0, 8)
-    ).modn(listSize);
-    const flip = (pivot - permuted) % listSize;
+    ).modn(indexCount);
+    const flip = (pivot - permuted) % indexCount;
     const position = Math.max(permuted, flip);
     const source = hash(Buffer.concat([
       seed,
@@ -99,50 +100,45 @@ export function getShardDelta(state: BeaconState, epoch: Epoch): number {
   );
 }
 
+export function getEpochStartShard(state: BeaconState, epoch: Epoch): Shard {
+  const currentEpoch = getCurrentEpoch(state);
+  let checkEpoch = currentEpoch + 1;
+  assert(epoch <= checkEpoch);
+  let shard = (state.latestStartShard + getShardDelta(state, currentEpoch)) % SHARD_COUNT;
+  while (checkEpoch > epoch) {
+    checkEpoch -= 1;
+    shard = (shard + SHARD_COUNT - getShardDelta(state, checkEpoch)) % SHARD_COUNT;
+  }
+  return shard;
+}
+
+export function getAttestationDataSlot(state: BeaconState, data: AttestationData): Slot {
+  const epoch = data.targetEpoch;
+  const committeeCount = getEpochCommitteeCount(state, epoch);
+  const offset = (data.shard + SHARD_COUNT - getEpochStartShard(state, epoch)) % SHARD_COUNT;
+  return intDiv(getEpochStartSlot(epoch) + offset, intDiv(committeeCount, SLOTS_PER_EPOCH));
+}
+
 /**
  * Return the ``index``'th shuffled committee out of a total ``total_committees``
  * using ``validator_indices`` and ``seed``.
  */
-export function computeCommittee(validatorIndices: ValidatorIndex[], seed: bytes32, index: number, totalCommittees: number): ValidatorIndex[] {
-  const startOffset = getSplitOffset(validatorIndices.length, totalCommittees, index);
-  const endOffset = getSplitOffset(validatorIndices.length, totalCommittees, index + 1);
-  return Array.from({length: endOffset - startOffset},
-    (_, i) => i + startOffset)
-    .map((i) => validatorIndices[getPermutedIndex(i, validatorIndices.length, seed)]);
+export function computeCommittee(indices: ValidatorIndex[], seed: bytes32, index: number, count: number): ValidatorIndex[] {
+  const start = intDiv(indices.length * index, count);
+  const end = intDiv(indices.length * (index + 1), count);
+  return Array.from({length: end - start},
+    (_, i) => i + start)
+    .map((i) => indices[getShuffledIndex(i, indices.length, seed)]);
 }
 
 /**
  * Return the list of (committee, shard) acting as a tuple for the slot.
  */
-export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot): [ValidatorIndex[], Shard][] {
-  const epoch = slotToEpoch(slot);
-  const currentEpoch = getCurrentEpoch(state);
-  const previousEpoch = getPreviousEpoch(state);
-  const nextEpoch = currentEpoch + 1;
-
-  assert(previousEpoch <= epoch && epoch <= nextEpoch);
-  const indices = getActiveValidatorIndices(state, epoch);
-
-  let startShard;
-  if (epoch === currentEpoch) {
-    startShard = state.latestStartShard;
-  } else if (epoch === previousEpoch) {
-    const previousShardDelta = getShardDelta(state, previousEpoch);
-    startShard = (state.latestStartShard - previousShardDelta) % SHARD_COUNT;
-  } else if (epoch === nextEpoch) {
-    const currentShardDelta = getShardDelta(state, currentEpoch);
-    startShard = (state.latestStartShard + currentShardDelta) % SHARD_COUNT;
-  }
-
-  const committeesPerEpoch = getEpochCommitteeCount(state, epoch);
-  const committeesPerSlot = intDiv(committeesPerEpoch, SLOTS_PER_EPOCH);
-  const offset = slot % SLOTS_PER_EPOCH;
-  const slotStartShard = (startShard + committeesPerSlot * offset) % SHARD_COUNT;
-  const seed = generateSeed(state, epoch);
-
-  return Array.apply(null, Array(committeesPerSlot))
-    .map((x, i): [ValidatorIndex[], Shard] => ([
-      computeCommittee(indices, seed, committeesPerSlot * offset + i, committeesPerEpoch),
-      (slotStartShard + i) % SHARD_COUNT,
-    ]));
+export function getCrosslinkCommittee(state: BeaconState, epoch: Epoch, shard: Shard): ValidatorIndex[] {
+  return computeCommittee(
+    getActiveValidatorIndices(state, epoch),
+    generateSeed(state, epoch),
+    (shard + SHARD_COUNT - getEpochStartShard(state, epoch)) % SHARD_COUNT,
+    getEpochCommitteeCount(state, epoch)
+  );
 }

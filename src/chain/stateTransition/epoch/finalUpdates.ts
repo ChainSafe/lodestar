@@ -32,10 +32,12 @@ export function processFinalUpdates(state: BeaconState): void {
   }
   // Update effective balances with hysteresis
   state.validatorRegistry.forEach((validator, index) => {
-    const balance = bnMin(state.balances[index], new BN(MAX_EFFECTIVE_BALANCE));
+    const balance = state.balances[index];
     const HALF_INCREMENT = intDiv(EFFECTIVE_BALANCE_INCREMENT, 2);
     if (balance.lt(validator.effectiveBalance) || validator.effectiveBalance.addn(3 * HALF_INCREMENT).lt(balance)) {
-      validator.effectiveBalance = balance.subn(balance.modn(EFFECTIVE_BALANCE_INCREMENT));
+      validator.effectiveBalance = bnMin(
+        balance.subn(balance.modn(EFFECTIVE_BALANCE_INCREMENT)),
+        new BN(MAX_EFFECTIVE_BALANCE));
     }
   });
   // Update start shard
