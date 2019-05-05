@@ -99,22 +99,22 @@ describe('bls spec tests', function () {
       return `0x${output.toString('hex')}`;
     }
   );
-  //
-  // testSpec.test(
-  //   bls.aggregatePubkeys,
-  //   'case07_aggregate_pubkeys',
-  //   (input) => {
-  //     const pubKeys = [];
-  //     input.forEach((pubKey) => {
-  //       pubKeys.push(Buffer.from(pubKey.replace('0x', ''), 'hex'))
-  //     });
-  //     return [
-  //       pubKeys
-  //     ];
-  //   },
-  //   (output) => {
-  //     return `0x${output.toString('hex')}`;
-  //   }
-  // );
+
+  testSpec.test(
+    bls.aggregatePubkeys,
+    'case07_aggregate_pubkeys',
+    (input) => {
+      const pubKeys = [];
+      input.forEach((pubKey) => {
+        pubKeys.push(Buffer.from(pubKey.replace('0x', ''), 'hex'))
+      });
+      return [
+        pubKeys
+      ];
+    },
+    (output) => {
+      return `0x${output.toString('hex')}`;
+    }
+  );
 
 });

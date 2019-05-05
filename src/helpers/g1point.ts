@@ -1,6 +1,8 @@
 import {BIG, ECP} from "../../amcl/version3/js/ctx";
 import ctx from "../ctx";
 import {bytes48} from "../types";
+import assert = require("assert");
+import {calculateYFlag, getModulus} from "./utils";
 
 export class G1point {
 
@@ -15,12 +17,78 @@ export class G1point {
     return new G1point(newPoint);
   }
 
+  public add(other: G1point): G1point {
+    const sum = new ctx.ECP();
+    sum.add(this.point);
+    sum.add(other.point);
+    sum.affine();
+    return new G1point(sum);
+  }
+
   public toBytes(): bytes48 {
     const buffer = Buffer.alloc(48);
-    this.point.getX().toBytes(buffer, true);
+    this.point.getX().tobytearray(buffer, 0);
     return buffer;
   }
 
+  public toBytesCompressed(): bytes48 {
+    const output = this.toBytes();
+    const c = true;
+    const b = this.point.is_infinity();
+    const a = !b && calculateYFlag(this.point.getY());
+
+    const flags = ((a ? 1 << 5 : 0) | (b ? 1 << 6 : 0) | (c ? 1 << 7 : 0));
+    const mask =  31;
+    output[0] &= mask;
+    output[0] |= flags;
+    return output;
+  }
+
+  public static fromBytesCompressed(value: bytes48): G1point {
+    assert(value.length === 48, 'Expected g1 compressed input to have 48 bytes');
+    const aIn = (value[0] & (1 << 5)) != 0;
+    const bIn = (value[0] & (1 << 6)) != 0;
+    const cIn = (value[0] & (1 << 7)) != 0;
+    value[0] &=  31;
+
+    if (!cIn) {
+      throw new Error("The serialised input does not have the C flag set.");
+    }
+
+    const x = ctx.BIG.frombytearray(value, 0);
+    if (bIn) {
+      if (!aIn && x.iszilch()) {
+        // This is a correctly formed serialisation of infinity
+        return new G1point(new ctx.ECP());
+      } else {
+        // The input is malformed
+        throw new Error(
+            "The serialised input has B flag set, but A flag is set, or X is non-zero.");
+      }
+    }
+    const modulus = getModulus();
+    if (ctx.BIG.comp(modulus, x) <= 0) {
+      throw new Error("X coordinate is too large.");
+    }
+
+    let point = new ctx.ECP();
+    point.setx(x);
+
+    if (point.is_infinity()) {
+      throw new Error("X coordinate is not on the curve.");
+    }
+
+    // Did we get the right branch of the sqrt?
+    if (!point.is_infinity() && aIn != calculateYFlag(point.getY())) {
+      // We didn't: so choose the other branch of the sqrt.
+      const x = new ctx.FP(point.getX());
+      const yneg = new ctx.FP(point.getY());
+      yneg.neg();
+      point.setxy(x.redc(), yneg.redc())
+    }
+
+    return new G1point(point);
+  }
 
   public static generator(): G1point {
     return new G1point(ctx.ECP.generator());
