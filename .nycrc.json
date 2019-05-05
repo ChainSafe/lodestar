@@ -1,0 +1,12 @@
+{
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "**/*.js"
+  ],
+  "extensions": [
+    ".ts"
+  ],
+  "all": true
+}

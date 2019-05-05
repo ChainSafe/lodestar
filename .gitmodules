@@ -1,0 +1,3 @@
+[submodule "amcl"]
+	path = amcl
+	url = https://github.com/mpetrunic/incubator-milagro-crypto
