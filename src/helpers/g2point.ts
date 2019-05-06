@@ -2,6 +2,7 @@ import {BIG, ECP2} from "../../amcl/version3/js/ctx";
 import {BLSDomain, bytes32, bytes96} from "../types";
 import hash from "keccak256";
 import ctx from "../ctx";
+import * as random from "secure-random";
 import {calculateYFlag, getModulus, padLeft} from "./utils";
 import assert from "assert";
 
@@ -26,6 +27,14 @@ export class G2point {
         return new G2point(newPoint);
     }
 
+    public equal(other: G2point): boolean {
+        return this.point.equals(other.point);
+    }
+
+    getPoint(): ECP2 {
+        return this.point;
+    }
+
     public toBytesCompressed(): Buffer {
         const xReBytes = Buffer.alloc(48, 0);
         const xImBytes = Buffer.alloc(48, 0);
@@ -42,8 +51,8 @@ export class G2point {
         xReBytes[0] &= mask;
 
         return Buffer.concat([
-           xImBytes,
-           xReBytes
+            xImBytes,
+            xReBytes
         ]);
     }
 
@@ -92,10 +101,10 @@ export class G2point {
         const cIn = (xImBytes[0] & (1 << 7)) != 0;
         //clear bits
         xImBytes[0] &= 31;
-        if((xReBytes[0] & 224) != 0) {
+        if ((xReBytes[0] & 224) != 0) {
             throw new Error("The input has non-zero a2, b2 or c2 flag on xRe");
         }
-        if(!cIn) {
+        if (!cIn) {
             throw new Error("The serialised input does not have the C flag set.");
         }
         const xIm = ctx.BIG.frombytearray(xImBytes, 0);
@@ -103,7 +112,7 @@ export class G2point {
         if (bIn) {
             if (!aIn
                 && xIm.iszilch()
-                && xRe.iszilch() ) {
+                && xRe.iszilch()) {
                 // This is a correctly formed serialisation of infinity
                 return new G2point(new ctx.ECP2());
             } else {
@@ -114,14 +123,14 @@ export class G2point {
         }
 
         const modulus = getModulus();
-        if(ctx.BIG.comp(modulus, xRe) <= 0 || ctx.BIG.comp(modulus, xIm) <= 0) {
+        if (ctx.BIG.comp(modulus, xRe) <= 0 || ctx.BIG.comp(modulus, xIm) <= 0) {
             throw new Error(
                 "The deserialised X real or imaginary coordinate is too large.");
         }
 
         let point = new ctx.ECP2();
         point.setx(new ctx.FP2(xRe, xIm));
-        if(point.is_infinity()) {
+        if (point.is_infinity()) {
             throw new Error("X coordinate is not on the curve.");
         }
 
@@ -159,6 +168,26 @@ export class G2point {
         y.reduce();
         const point = new ctx.ECP2();
         point.setxy(x, y);
+        return new G2point(point);
+    }
+
+    public static random(): G2point {
+        let point: ECP2;
+        do {
+            point = new ctx.ECP2();
+            point.setx(
+                new ctx.FP2(
+                    ctx.BIG.frombytearray(
+                        random.randomBuffer(48),
+                        0
+                    ),
+                    ctx.BIG.frombytearray(
+                        random.randomBuffer(48),
+                        0
+                    )
+                )
+            )
+        } while (point.is_infinity());
         return new G2point(point);
     }
 
