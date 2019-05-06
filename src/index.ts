@@ -1,8 +1,18 @@
-import {BLSDomain, BLSSecretKey, BLSPubkey, BLSSignature, bytes32} from "./types";
+import {
+  BLSDomain,
+  BLSSecretKey,
+  BLSPubkey,
+  BLSSignature,
+  bytes32,
+  bytes8
+} from "./types";
 import {Keypair} from "./keypair";
 import {PrivateKey} from "./privateKey";
 import {G2point} from "./helpers/g2point";
 import {G1point} from "./helpers/g1point";
+import {PublicKey} from "./publicKey";
+import {Signature} from "./signature";
+import {ElipticCurvePairing} from "./helpers/ec-pairing";
 
 /**
  * Generates new secret and public key
@@ -37,9 +47,9 @@ function sign(secretKey: BLSSecretKey, messageHash: bytes32, domain: BLSDomain):
  * @param signatures
  */
 function aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
-  return signatures.map((signature): G2point => {
-    return G2point.fromCompressedBytes(signature)
-  }).reduce((previousValue, currentValue): G2point => {
+  return signatures.map((signature): Signature => {
+    return Signature.fromCompressedBytes(signature)
+  }).reduce((previousValue, currentValue): Signature => {
     return previousValue.add(currentValue);
   }).toBytesCompressed();
 }
@@ -56,10 +66,22 @@ function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
   }).toBytesCompressed();
 }
 
+function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BLSSignature, domain: bytes8): boolean {
+  const key = PublicKey.fromBytes(publicKey);
+  const sig = Signature.fromCompressedBytes(signature);
+  const g2 = G2point.hashToG2(messageHash, domain);
+
+  const g1Generator = G1point.generator();
+  const e1 = ElipticCurvePairing.pair(key.getPoint(), G2point.hashToG2(messageHash, domain));
+  const e2 = ElipticCurvePairing.pair(g1Generator, sig.getPoint());
+  return e1.equals(e2);
+}
+
 export default {
   generateKeyPair,
   generatePublicKey,
   sign,
   aggregateSignatures,
-  aggregatePubkeys
+  aggregatePubkeys,
+  verify
 }

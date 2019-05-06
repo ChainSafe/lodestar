@@ -10,6 +10,10 @@ export class PublicKey {
     this.point = point;
   }
 
+  public getPoint(): G1point {
+    return this.point;
+  }
+
   public toBytesCompressed(): BLSPubkey {
     const publicKey = this.point.toBytes();
     const flags = ((1 << 5) | 0 | (1 << 7));
