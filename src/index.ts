@@ -18,7 +18,7 @@ export default class BLS {
     return privateKey.sign(hash).toBytesCompressed();
   }
 
-  public static aggregateSignatures(signatures: BLSSignature[]) : BLSSignature {
+  public static aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
     return signatures.map((signature) => {
       return G2point.fromCompressedBytes(signature)
     }).reduce((previousValue, currentValue) => {
@@ -26,7 +26,7 @@ export default class BLS {
     }).toBytesCompressed();
   }
 
-  public static aggregatePubkeys(publicKeys: BLSPubkey[]) : BLSPubkey {
+  public static aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
     return publicKeys.map((publicKey) => {
       return G1point.fromBytesCompressed(publicKey)
     }).reduce((previousValue, currentValue) => {
