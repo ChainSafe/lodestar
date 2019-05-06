@@ -8,8 +8,8 @@ describe('test bls', function () {
 
     it('should verify signature', () => {
         const keypair = Keypair.generate();
-        const messageHash = hash("Test message");
-        const domain = Buffer.from("01", 'hex');
+        const messageHash = hash("Test");
+        const domain = Buffer.alloc(8, 1);
         const signature = keypair.privateKey.sign(
             G2point.hashToG2(messageHash, domain)
         );
@@ -35,6 +35,23 @@ describe('test bls', function () {
             messageHash2,
             signature.toBytesCompressed(),
             domain
+        );
+        expect(result).to.be.false;
+    });
+
+    it('should fail verify signature of different domain', () => {
+        const keypair = Keypair.generate();
+        const messageHash = hash("Test message");
+        const domain = Buffer.from("01", 'hex');
+        const domain2 = Buffer.from("02", 'hex');
+        const signature = keypair.privateKey.sign(
+            G2point.hashToG2(messageHash, domain)
+        );
+        const result = bls.verify(
+            keypair.publicKey.toBytesCompressed(),
+            messageHash,
+            signature.toBytesCompressed(),
+            domain2
         );
         expect(result).to.be.false;
     });

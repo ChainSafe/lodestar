@@ -45,7 +45,7 @@ export class PrivateKey {
   public static random(): PrivateKey {
     return new PrivateKey(
       ctx.BIG.frombytearray(
-        random.randomBuffer(SECRET_KEY_LENGTH),
+        padLeft(random.randomBuffer(SECRET_KEY_LENGTH), 48),
         0
       )
     )

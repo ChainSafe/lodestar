@@ -69,7 +69,6 @@ function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
 function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BLSSignature, domain: bytes8): boolean {
   const key = PublicKey.fromBytes(publicKey);
   const sig = Signature.fromCompressedBytes(signature);
-  const g2 = G2point.hashToG2(messageHash, domain);
 
   const g1Generator = G1point.generator();
   const e1 = ElipticCurvePairing.pair(key.getPoint(), G2point.hashToG2(messageHash, domain));

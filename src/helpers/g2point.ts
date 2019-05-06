@@ -64,7 +64,7 @@ export class G2point {
       hash(
         Buffer.concat([
           message,
-          domain,
+          padLeft(domain, 8),
           Buffer.from('01', 'hex')
         ])
       )
@@ -74,7 +74,7 @@ export class G2point {
       hash(
         Buffer.concat([
           message,
-          domain,
+          padLeft(domain, 8),
           Buffer.from('02', 'hex')
         ])
       )

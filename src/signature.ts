@@ -1,6 +1,6 @@
 import {G2point} from "./helpers/g2point";
 import {BLSSignature} from "./types";
-import assert = require("assert");
+import assert from "assert";
 import {FP_POINT_LENGTH} from "./constants";
 
 export class Signature {
