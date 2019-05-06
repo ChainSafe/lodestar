@@ -1,7 +1,7 @@
 import {BIG, ECP} from "../../amcl/version3/js/ctx";
 import ctx from "../ctx";
 import {bytes48} from "../types";
-import assert = require("assert");
+import assert from "assert";
 import {calculateYFlag, getModulus} from "./utils";
 
 export class G1point {

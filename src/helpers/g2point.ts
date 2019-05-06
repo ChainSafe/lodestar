@@ -3,7 +3,7 @@ import {BLSDomain, bytes32, bytes96} from "../types";
 import hash from "keccak256";
 import ctx from "../ctx";
 import {calculateYFlag, getModulus, padLeft} from "./utils";
-import assert = require("assert");
+import assert from "assert";
 
 export class G2point {
 
