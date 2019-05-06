@@ -4,6 +4,7 @@ import {bytes48} from "../types";
 import assert from "assert";
 import {calculateYFlag, getModulus} from "./utils";
 import * as random from "secure-random";
+import {FP_POINT_LENGTH} from "../constants";
 
 export class G1point {
 
@@ -31,7 +32,7 @@ export class G1point {
   }
 
   public toBytes(): bytes48 {
-    const buffer = Buffer.alloc(48, 0);
+    const buffer = Buffer.alloc(FP_POINT_LENGTH, 0);
     this.point.getX().tobytearray(buffer, 0);
     return buffer;
   }
@@ -54,7 +55,7 @@ export class G1point {
   }
 
   public static fromBytesCompressed(value: bytes48): G1point {
-    assert(value.length === 48, 'Expected g1 compressed input to have 48 bytes');
+    assert(value.length === FP_POINT_LENGTH, `Expected g1 compressed input to have ${FP_POINT_LENGTH} bytes`);
     const aIn = (value[0] & (1 << 5)) != 0;
     const bIn = (value[0] & (1 << 6)) != 0;
     const cIn = (value[0] & (1 << 7)) != 0;
@@ -109,7 +110,7 @@ export class G1point {
       ecp = new ctx.ECP();
       ecp.setx(
           ctx.BIG.frombytearray(
-              random.randomBuffer(48),
+              random.randomBuffer(FP_POINT_LENGTH),
               0
           )
       )

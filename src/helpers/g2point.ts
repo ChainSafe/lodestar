@@ -5,6 +5,7 @@ import ctx from "../ctx";
 import * as random from "secure-random";
 import {calculateYFlag, getModulus, padLeft} from "./utils";
 import assert from "assert";
+import {FP_POINT_LENGTH, G2_HASH_PADDING} from "../constants";
 
 export class G2point {
 
@@ -36,8 +37,8 @@ export class G2point {
     }
 
     public toBytesCompressed(): Buffer {
-        const xReBytes = Buffer.alloc(48, 0);
-        const xImBytes = Buffer.alloc(48, 0);
+        const xReBytes = Buffer.alloc(FP_POINT_LENGTH, 0);
+        const xImBytes = Buffer.alloc(FP_POINT_LENGTH, 0);
         this.point.getX().getA().tobytearray(xReBytes, 0);
         this.point.getX().getB().tobytearray(xImBytes, 0);
         const c1 = true;
@@ -57,7 +58,7 @@ export class G2point {
     }
 
     public static hashToG2(message: bytes32, domain: BLSDomain): G2point {
-        const padding = Buffer.alloc(16, 0);
+        const padding = Buffer.alloc(G2_HASH_PADDING, 0);
         const xReBytes = Buffer.concat([
             padding,
             hash(
@@ -93,9 +94,9 @@ export class G2point {
     }
 
     public static fromCompressedBytes(value: bytes96): G2point {
-        assert(value.length === 96, 'Expected signature of 96 bytes');
-        const xImBytes = value.slice(0, 48);
-        const xReBytes = value.slice(48);
+        assert(value.length === 2 * FP_POINT_LENGTH, 'Expected signature of 96 bytes');
+        const xImBytes = value.slice(0, FP_POINT_LENGTH);
+        const xReBytes = value.slice(FP_POINT_LENGTH);
         const aIn = (xImBytes[0] & (1 << 5)) != 0;
         const bIn = (xImBytes[0] & (1 << 6)) != 0;
         const cIn = (xImBytes[0] & (1 << 7)) != 0;
@@ -152,12 +153,12 @@ export class G2point {
         yImBytes: Buffer,
         zReBytes: Buffer,
         zImBytes: Buffer): G2point {
-        const xRe = ctx.BIG.frombytearray(padLeft(xReBytes, 48), 0);
-        const xIm = ctx.BIG.frombytearray(padLeft(xImBytes, 48), 0);
-        const yRe = ctx.BIG.frombytearray(padLeft(yReBytes, 48), 0);
-        const yIm = ctx.BIG.frombytearray(padLeft(yImBytes, 48), 0);
-        const zRe = ctx.BIG.frombytearray(padLeft(zReBytes, 48), 0);
-        const zIm = ctx.BIG.frombytearray(padLeft(zImBytes, 48), 0);
+        const xRe = ctx.BIG.frombytearray(padLeft(xReBytes, FP_POINT_LENGTH), 0);
+        const xIm = ctx.BIG.frombytearray(padLeft(xImBytes, FP_POINT_LENGTH), 0);
+        const yRe = ctx.BIG.frombytearray(padLeft(yReBytes, FP_POINT_LENGTH), 0);
+        const yIm = ctx.BIG.frombytearray(padLeft(yImBytes, FP_POINT_LENGTH), 0);
+        const zRe = ctx.BIG.frombytearray(padLeft(zReBytes, FP_POINT_LENGTH), 0);
+        const zIm = ctx.BIG.frombytearray(padLeft(zImBytes, FP_POINT_LENGTH), 0);
         const x = new ctx.FP2(xRe, xIm);
         const y = new ctx.FP2(yRe, yIm);
         const z = new ctx.FP2(zRe, zIm);
@@ -178,11 +179,11 @@ export class G2point {
             point.setx(
                 new ctx.FP2(
                     ctx.BIG.frombytearray(
-                        random.randomBuffer(48),
+                        random.randomBuffer(FP_POINT_LENGTH),
                         0
                     ),
                     ctx.BIG.frombytearray(
-                        random.randomBuffer(48),
+                        random.randomBuffer(FP_POINT_LENGTH),
                         0
                     )
                 )
