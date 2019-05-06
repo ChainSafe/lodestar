@@ -43,18 +43,20 @@ export class BeaconNodeCommand implements CliCommand {
         provider: await this.getProvider(options)
       },
       rpc: {
-        apis: this.setupRPC(options.rpc.split(","))
+        apis: this.setupRPC(options.rpc.split(",").map((option: string) => option.trim()))
       }
     });
     await node.start();
   }
 
   private setupRPC(args: string[]): IApiConstructor[] {
-    return Object.keys(RPCApis).map((api: string) => {
-      if (api.substring(0,1) !== 'I') {
-        return RPCApis[api];
-      }
-    }).filter((x) => x !== undefined);
+    return Object.values(RPCApis)
+      .filter((api) => api !== undefined)
+      .filter((api: IApiConstructor) => {
+        return args.some((option: string) => {
+          return api.name.toLowerCase().indexOf(option.toLowerCase()) > -1;
+        });
+      });
   }
 
   private async getProvider(options: any): Promise<ethers.providers.BaseProvider> {
