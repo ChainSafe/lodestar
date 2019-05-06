@@ -63,7 +63,7 @@ export class G1point {
       } else {
         // The input is malformed
         throw new Error(
-            "The serialised input has B flag set, but A flag is set, or X is non-zero.");
+          "The serialised input has B flag set, but A flag is set, or X is non-zero.");
       }
     }
     const modulus = getModulus();

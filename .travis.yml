@@ -5,6 +5,6 @@ cache: yarn
 before_script:
   - yarn install
 script:
-  #- yarn run lint
+  - yarn run lint
   - yarn test
   - yarn run coverage
