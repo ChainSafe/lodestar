@@ -5,6 +5,13 @@ import {G2point} from "./helpers/g2point";
 import {G1point} from "./helpers/g1point";
 
 /**
+ * Generates new secret and public key
+ */
+function generateKeyPair(): Keypair {
+  return new Keypair(PrivateKey.random());
+}
+
+/**
  * Generates public key from given secret.
  * @param {BLSSecretKey} secretKey
  */
@@ -50,6 +57,7 @@ function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
 }
 
 export default {
+  generateKeyPair,
   generatePublicKey,
   sign,
   aggregateSignatures,
