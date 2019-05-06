@@ -33,7 +33,7 @@ export class G2point {
   }
 
   public getPoint(): ECP2 {
-      return this.point;
+    return this.point;
   }
 
   public toBytesCompressed(): Buffer {
@@ -169,6 +169,26 @@ export class G2point {
     y.reduce();
     const point = new ctx.ECP2();
     point.setxy(x, y);
+    return new G2point(point);
+  }
+
+  public static random(): G2point {
+    let point: ECP2;
+    do {
+      point = new ctx.ECP2();
+      point.setx(
+        new ctx.FP2(
+          ctx.BIG.frombytearray(
+            random.randomBuffer(FP_POINT_LENGTH),
+            0
+          ),
+          ctx.BIG.frombytearray(
+            random.randomBuffer(FP_POINT_LENGTH),
+            0
+          )
+        )
+      )
+    } while (point.is_infinity());
     return new G2point(point);
   }
 

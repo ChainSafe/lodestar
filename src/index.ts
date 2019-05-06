@@ -29,10 +29,10 @@ function sign(secretKey: BLSSecretKey, messageHash: bytes32, domain: BLSDomain):
  * Compines all given signature into one.
  * @param signatures
  */
-function aggregateSignatures(signatures: BLSSignature[]) : BLSSignature {
-  return signatures.map((signature) => {
+function aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
+  return signatures.map((signature): G2point => {
     return G2point.fromCompressedBytes(signature)
-  }).reduce((previousValue, currentValue) => {
+  }).reduce((previousValue, currentValue): G2point => {
     return previousValue.add(currentValue);
   }).toBytesCompressed();
 }
@@ -41,10 +41,10 @@ function aggregateSignatures(signatures: BLSSignature[]) : BLSSignature {
  * Combines all given public keys into single one
  * @param publicKeys
  */
-function aggregatePubkeys(publicKeys: BLSPubkey[]) : BLSPubkey {
-  return publicKeys.map((publicKey) => {
+function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
+  return publicKeys.map((publicKey): G1point => {
     return G1point.fromBytesCompressed(publicKey)
-  }).reduce((previousValue, currentValue) => {
+  }).reduce((previousValue, currentValue): G1point => {
     return previousValue.add(currentValue);
   }).toBytesCompressed();
 }

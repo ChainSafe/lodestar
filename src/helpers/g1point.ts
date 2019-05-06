@@ -109,10 +109,10 @@ export class G1point {
     do {
       ecp = new ctx.ECP();
       ecp.setx(
-          ctx.BIG.frombytearray(
-              random.randomBuffer(FP_POINT_LENGTH),
-              0
-          )
+        ctx.BIG.frombytearray(
+          random.randomBuffer(FP_POINT_LENGTH),
+          0
+        )
       )
     } while (ecp.is_infinity());
     return new G1point(ecp);
