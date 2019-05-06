@@ -4,9 +4,30 @@ import {LodestarNode} from "./node";
 import logger, {AbstractLogger} from "../logger";
 import {PeerInfo} from "peer-info";
 import LibP2p from "libp2p";
+import {pull} from "pull-stream";
 import {PeerBook} from "peer-book";
 import {PeerId} from "peer-id";
 import {promisify} from "promisify-es6";
+import {
+  Request,
+  Response,
+  Hello,
+  Goodbye,
+  GetStatus,
+  BeaconBlockRootsRequest,
+  BeaconBlockRootsResponse,
+  BeaconBlockHeadersRequest,
+  BeaconBlockHeadersResponse,
+  BeaconBlockBodiesRequest,
+  BeaconBlockBodiesResponse,
+  BeaconChainStateRequest,
+  BeaconChainStateResponse
+} from "./wire/messages";
+
+import {
+  BlockRootSlot,
+  HashTreeRoot
+} from "../wire/types";
 
 export interface P2pOptions {
   maxPeers: number;
@@ -48,7 +69,7 @@ export class P2PNetwork extends EventEmitter implements Service {
     this.refreshInterval = this.options.refreshInterval;
     this.peerBook = this.options.peerBook;
     this.privateKey = this.options.privateKey;
-    this.bootnodes = this.options.bootnodes;
+    this.bootnodes = this.options.bootnodes || [];
 
 
     this.started = false;
@@ -89,11 +110,37 @@ export class P2PNetwork extends EventEmitter implements Service {
 
       });
 
+      // 2-way handshake
+      const protocol: string = "/eth/serenity/beacon/rpc/1";
+      const helloMsg: Hello = {
+       
+      };
+      this.node.handle((proto, conn) => {
+        pull(
+          pull.values([Buffer.from(JSON.stringify(helloMsg))]),
+          conn,
+          pull.collect((values) => {
+	    // Peers' responses
+
+	  })
+	);	    
+      });
       this.node.on('peer:connect', (peerInfo) => {
         try {
           this.log.info(`Peer connected: ${peerInfo}`);
           this.peerBook.put(peerInfo);
-          this.discoveredPeers.add(peerInfo);
+	  this.discoveredPeers.add(peerInfo);
+	  this.node.dialProtocol(peerInfo, protocol, (err, conn) => {
+	    pull(
+              pull.values([Buffer.from(JSON.stringify(helloMsg))]),
+              conn,
+              pull.collect((values) => {
+	        // Peers responses
+
+	      })
+	    );
+	  })
+
         } catch (err) {
           this.log.error(err);
         }
