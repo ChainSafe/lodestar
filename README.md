@@ -10,15 +10,23 @@ There is a lot of work being done that are core infrastructural pieces for Eth2.
 
 # bls-js
 
+[![Build Status](https://travis-ci.org/ChainSafe/bls-js.svg?branch=master)](https://travis-ci.org/ChainSafe/bls-js)
+[![codecov](https://codecov.io/gh/ChainSafe/bls-js/branch/master/graph/badge.svg)](https://codecov.io/gh/ChainSafe/bls-js)
+[![](https://badges.gitter.im/chainsafe/lodestar.svg)](https://gitter.im/chainsafe/lodestar?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+![ETH2.0_Spec_Version 0.6.0](https://img.shields.io/badge/ETH2.0_Spec_Version-0.6.0-2e86c1.svg)
+
 This is a Javascript library that implements BLS (Boneh-Lynn-Shacham) signatures and supports signature aggregation.
 
 >[spec](https://github.com/ethereum/eth2.0-specs/blob/master/specs/bls_signature.md)
 
->[test vectors](https://github.com/ethereum/eth2.0-tests/blob/master/bls/test_bls.yml)
+>[test vectors](https://github.com/ethereum/eth2.0-spec-tests/tree/master/tests/bls)
 
-## Install
-`npm install -g bls-js`
+## Usage
+- `npm install bls-js`
+- `yarn add bls-js`
 
-## To run test
-`npm test`
+## Development
+- `git clone --recursive git@github.com:ChainSafe/bls-js.git`
+- `yarn install`
+- `yarn test`
 
