@@ -7,7 +7,7 @@ import {ethers} from "ethers";
 import {CliError} from "../error";
 import {IApi, IApiConstructor} from "../../rpc/api/interface";
 import {WSServer} from "../../rpc/transport";
-import {BeaconApi, ValidatorApi} from "../../rpc/api";
+import * as RPCApis from "../../rpc/api";
 import {JSONRPC} from "../../rpc/protocol";
 
 export class BeaconNodeCommand implements CliCommand {
@@ -50,17 +50,11 @@ export class BeaconNodeCommand implements CliCommand {
   }
 
   private setupRPC(args: string[]): IApiConstructor[] {
-    let apis: IApiConstructor[];
-    if (args.includes("beacon")) {
-      apis.push(BeaconApi);
-    }
-    if (args.includes("validator")) {
-      apis.push(ValidatorApi);
-    }
-    if (args.length === 0) {
-      return [];
-    }
-    return apis;
+    return Object.keys(RPCApis).map((api: string) => {
+      if (api.substring(0,1) !== 'I') {
+        return RPCApis[api];
+      }
+    }).filter((x) => x !== undefined);
   }
 
   private async getProvider(options: any): Promise<ethers.providers.BaseProvider> {
