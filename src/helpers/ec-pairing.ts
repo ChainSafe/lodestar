@@ -6,9 +6,9 @@ import ctx from "../ctx";
 
 export class ElipticCurvePairing {
 
-    public static pair(p1: G1point, p2: G2point): FP12 {
-        const e = ctx.PAIR.ate(p2.getPoint(), p1.getPoint());
-        return ctx.PAIR.fexp(e);
-    }
+  public static pair(p1: G1point, p2: G2point): FP12 {
+    const e = ctx.PAIR.ate(p2.getPoint(), p1.getPoint());
+    return ctx.PAIR.fexp(e);
+  }
 
 }

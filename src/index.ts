@@ -97,13 +97,13 @@ function verifyMultiple(publicKeys: BLSPubkey[], messageHashes: bytes32[], signa
   }
   const g1Generated = G1point.generator();
   const eCombined = new ctx.FP12(1);
-  publicKeys.forEach((publicKey, index) => {
+  publicKeys.forEach((publicKey, index): void => {
     const g2 = G2point.hashToG2(messageHashes[index], domain);
     eCombined.mul(
-        ElipticCurvePairing.pair(
-            PublicKey.fromBytes(publicKey).getPoint(),
-            g2
-        )
+      ElipticCurvePairing.pair(
+        PublicKey.fromBytes(publicKey).getPoint(),
+        g2
+      )
     );
   });
   const e2 = ElipticCurvePairing.pair(g1Generated, Signature.fromCompressedBytes(signature).getPoint());

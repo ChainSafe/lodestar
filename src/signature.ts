@@ -5,31 +5,31 @@ import {FP_POINT_LENGTH} from "./constants";
 
 export class Signature {
 
-    private point: G2point;
+  private point: G2point;
 
-    public constructor(point: G2point) {
-        this.point = point;
-    }
+  public constructor(point: G2point) {
+    this.point = point;
+  }
 
-    public add(other: Signature): Signature {
-        return new Signature(
-            this.point.add(other.point)
-        );
-    }
+  public add(other: Signature): Signature {
+    return new Signature(
+      this.point.add(other.point)
+    );
+  }
 
-    public getPoint(): G2point {
-        return this.point;
-    }
+  public getPoint(): G2point {
+    return this.point;
+  }
 
-    public toBytesCompressed(): BLSSignature {
-        return this.point.toBytesCompressed();
-    }
+  public toBytesCompressed(): BLSSignature {
+    return this.point.toBytesCompressed();
+  }
 
-    public static fromCompressedBytes(signature: BLSSignature) {
-        assert(
-            signature.length === 2 * FP_POINT_LENGTH,
-            `Signature must have ${2 * FP_POINT_LENGTH} bytes`
-        );
-        return new Signature(G2point.fromCompressedBytes(signature));
-    }
+  public static fromCompressedBytes(signature: BLSSignature): Signature {
+    assert(
+      signature.length === 2 * FP_POINT_LENGTH,
+      `Signature must have ${2 * FP_POINT_LENGTH} bytes`
+    );
+    return new Signature(G2point.fromCompressedBytes(signature));
+  }
 }
