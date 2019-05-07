@@ -5,6 +5,7 @@ import ctx from "./ctx";
 import {padLeft} from "./helpers/utils";
 import {G2point} from "./helpers/g2point";
 import * as random from "secure-random";
+import {BLSDomain, bytes32} from "./types";
 
 export class PrivateKey {
 
@@ -20,6 +21,10 @@ export class PrivateKey {
 
   public sign(message: G2point): G2point {
     return message.mul(this.value);
+  }
+
+  public signMessage(message: bytes32, domain: BLSDomain): G2point {
+    return G2point.hashToG2(message, domain).mul(this.value);
   }
 
   public static fromBytes(bytes: Uint8Array): PrivateKey {
