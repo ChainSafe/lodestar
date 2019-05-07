@@ -4,7 +4,7 @@ import bls from "../../src";
 import {G2point} from "../../src/helpers/g2point";
 
 describeSpecTest(
-    join(__dirname, "../spec-tests/tests/bls/aggregate_sigs/aggregate_sigs.yaml"),
+    join(__dirname, "./spec-tests/tests/bls/aggregate_sigs/aggregate_sigs.yaml"),
     bls.aggregateSignatures,
     ({input}) => {
         const pubKeys = [];

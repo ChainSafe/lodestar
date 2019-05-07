@@ -4,7 +4,7 @@ import bls from "../../src";
 import {padLeft} from "../../src/helpers/utils";
 
 describeSpecTest(
-    join(__dirname, "../spec-tests/tests/bls/sign_msg/sign_msg.yaml"),
+    join(__dirname, "./spec-tests/tests/bls/sign_msg/sign_msg.yaml"),
     bls.sign,
     ({input}) => {
         const domain = padLeft(Buffer.from(input.domain.replace('0x', ''), 'hex'), 8);

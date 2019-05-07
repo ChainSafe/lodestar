@@ -2,5 +2,5 @@
 	path = amcl
 	url = https://github.com/mpetrunic/incubator-milagro-crypto
 [submodule "test/spec-tests"]
-	path = tests/spec-tests
+	path = tests/spec/spec-tests
 	url = https://github.com/chainsafe/eth2.0-spec-tests
