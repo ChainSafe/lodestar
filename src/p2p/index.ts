@@ -8,26 +8,7 @@ import {pull} from "pull-stream";
 import {PeerBook} from "peer-book";
 import {PeerId} from "peer-id";
 import {promisify} from "promisify-es6";
-import {
-  Request,
-  Response,
-  Hello,
-  Goodbye,
-  GetStatus,
-  BeaconBlockRootsRequest,
-  BeaconBlockRootsResponse,
-  BeaconBlockHeadersRequest,
-  BeaconBlockHeadersResponse,
-  BeaconBlockBodiesRequest,
-  BeaconBlockBodiesResponse,
-  BeaconChainStateRequest,
-  BeaconChainStateResponse
-} from "./wire/messages";
-
-import {
-  BlockRootSlot,
-  HashTreeRoot
-} from "../wire/types";
+import {Hello, Goodbye} from "../rpc/api/wire/messages";
 
 export interface P2pOptions {
   maxPeers: number;
@@ -35,6 +16,10 @@ export interface P2pOptions {
   peerBook: PeerBook;
   privateKey: Buffer;
   bootnodes: string[];
+}
+
+export interface ChainOptions {
+  
 }
 
 /**
@@ -115,7 +100,7 @@ export class P2PNetwork extends EventEmitter implements Service {
       const helloMsg: Hello = {
        
       };
-      this.node.handle((proto, conn) => {
+      this.node.handle(protocol, (proto, conn) => {
         pull(
           pull.values([Buffer.from(JSON.stringify(helloMsg))]),
           conn,
@@ -147,7 +132,8 @@ export class P2PNetwork extends EventEmitter implements Service {
       });
 
       this.node.on('peer:disconnect', (peerInfo) => {
-        try {
+	try {
+            
           this.peerBook.remove(peerInfo);
           this.discoveredPeers.delete(peerInfo);
         } catch (err) {
