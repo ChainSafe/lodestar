@@ -1,12 +1,4 @@
 import {IApi} from "../interface";
-import {
-  BeaconBlock,
-  BeaconState,
-  bytes32,
-  Fork,
-  number64,
-  SyncingStatus
-}  from "../../../types";
 
 import {
   Request,
@@ -23,11 +15,6 @@ import {
   BeaconChainStateRequest,
   BeaconChainStateResponse
 } from "./messages";
-
-import {
-  BlockRootSlot,
-  HashTreeRoot
-} from "./types";
 
 export interface IWireProtocolApi extends IApi {
 
@@ -54,6 +41,6 @@ export interface IWireProtocolApi extends IApi {
   /**
    * Returns the hashes of merkle tree nodes from merkelizing the block's state root.
    */
-  RequestBeaconChainStateRequest(request: BeaconChainStateRequest): Promise<BeaconChainStateResponse>;
+  RequestBeaconChainState(request: BeaconChainStateRequest): Promise<BeaconChainStateResponse>;
   
 }
