@@ -13,8 +13,7 @@ import {
   Response,
   Hello,
   Goodbye,
-  GetStatusRequest,
-  GetStatusResponse,
+  GetStatus,
   BeaconBlockRootsRequest,
   BeaconBlockRootsResponse,
   BeaconBlockHeaderRequest,
@@ -35,5 +34,26 @@ export interface IWireProtocolApi extends IApi {
   /**
    * Returns metadata about the remote node.
    */
-  GetStatus(): Promise<>
+  GetStatus(): Promise<GetStatus>;
+
+  /**
+   * Returns list of block roots and slots from the peer
+   */
+  RequestBeaconBlockRoots(request: BeaconBlockRootsRequest): Promise<BeaconBlockRootsResponse>;
+
+  /**
+   * Returns beacon block headers from peer
+   */
+  RequestBeaconBlockHeaders(request: BeaconBlockHeadersRequest): Promise<BeaconBlockHeaderResponse>;
+
+  /**
+   * Returns block bodies associated with block roots from a peer
+   */
+  RequestBeaconBlockBodies(request: BeaconBlockBodiesRequest): Promise<BeaconBlockBodiesResponse>;
+
+  /**
+   * Returns the hashes of merkle tree nodes from merkelizing the block's state root.
+   */
+  RequestBeaconChainStateRequest(request: BeaconChainStateRequest): Promise<BeaconChainStateResponse>;
+  
 }

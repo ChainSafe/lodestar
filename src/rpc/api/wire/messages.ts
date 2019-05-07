@@ -34,11 +34,11 @@ export interface Goodbye {
 
 // Method ID: 2
 
-export interface GetStatus {
+export interface GetStatusRequest {
   sha: Buffer;
   user_agent: Buffer;
   timestamp: number;
-} 
+}
 
 // Method ID: 10
 
