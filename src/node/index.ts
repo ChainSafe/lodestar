@@ -12,6 +12,7 @@ import {OpPool} from "../opPool";
 import {JSONRPC} from "../rpc/protocol";
 import {WSServer} from "../rpc/transport";
 import {BeaconApi, ValidatorApi} from "../rpc/api";
+import {IApi, IApiConstructor} from "../rpc/api/interface";
 
 export interface Service {
   start(): Promise<void>;
@@ -26,9 +27,13 @@ interface BeaconNodeCtx {
   // Temporarily set to any. Will be changed to object later.
   eth1?: any;
   network?: any;
-  rpc?: object;
+  rpc?: RpcCtx;
   sync?: object;
   opPool?: object;
+}
+
+interface RpcCtx {
+  apis?: IApiConstructor[];
 }
 
 class BeaconNode {
@@ -72,17 +77,9 @@ class BeaconNode {
     });
     this.rpc = new JSONRPC(this.conf.rpc, {
       transports: [new WSServer(this.conf.rpc)],
-      apis: [
-        new BeaconApi(this.conf.rpc, {
-          chain: this.chain,
-          db: this.db
-        }),
-        new ValidatorApi(this.conf.rpc, {
-          chain: this.chain,
-          db: this.db,
-          opPool: this.opPool,
-        })
-      ],
+      apis: this.conf.rpc.apis.map((Api) => {
+        return new Api(this.conf.rpc, {chain: this.chain, db: this.db});
+      })
     });
   }
 

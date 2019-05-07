@@ -5,3 +5,5 @@ coverage/**
 .DS_Store
 *.swp
 .idea
+beaconchain
+lodestar-db

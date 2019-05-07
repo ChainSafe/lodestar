@@ -5,3 +5,6 @@ export interface IApi {
   namespace: string;
 }
 
+export interface IApiConstructor {
+  new(args, modules): IApi;
+}
