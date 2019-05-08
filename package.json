@@ -9,7 +9,8 @@
     "lint": "eslint --ext .ts src/",
     "lint-fix": "eslint --ext .ts src/ --fix",
     "pretest": "npm run check-types",
-    "test:spec": "nyc -r lcov -e .ts -x \"*.test.ts\" mocha -r ./.babel-register \"tests/spec/**/*.test.ts\" && nyc report",
+    "test:unit": "mocha -r ./.babel-register \"tests/unit/**/*.test.ts\"",
+    "test:spec": "mocha -r ./.babel-register \"tests/spec/**/*.test.ts\"",
     "test": "nyc -r lcov -e .ts -x \"*.test.ts\" mocha -r ./.babel-register \"tests/**/*.test.ts\" && nyc report",
     "coverage": "codecov"
   },
@@ -17,7 +18,8 @@
   "license": "ISC",
   "dependencies": {
     "assert": "^1.4.1",
-    "keccak256": "^1.0.0"
+    "keccak256": "^1.0.0",
+    "secure-random": "^1.1.1"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",

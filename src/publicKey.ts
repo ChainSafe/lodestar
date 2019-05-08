@@ -29,4 +29,9 @@ export class PublicKey {
     );
   }
 
+  public static fromBytes(publicKey: BLSPubkey): PublicKey {
+    return new PublicKey(
+      G1point.fromBytesCompressed(publicKey)
+    );
+  }
 }
