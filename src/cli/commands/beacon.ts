@@ -1,18 +1,23 @@
 import {CliCommand} from "./interface";
-import * as commander from "commander";
+import {CommanderStatic} from "commander";
 import logger from "../../logger";
 import BeaconNode from "../../node";
 import defaults from "../../node/defaults";
 import {ethers} from "ethers";
 import {CliError} from "../error";
-import {IApi, IApiConstructor} from "../../rpc/api/interface";
-import {WSServer} from "../../rpc/transport";
+import {IApiConstructor} from "../../rpc/api/interface";
 import * as RPCApis from "../../rpc/api";
-import {JSONRPC} from "../../rpc/protocol";
+
+interface BeaconConfigOptions {
+  db: string;
+  depositContract: string;
+  eth1RpcUrl: string;
+  rpc: string;
+}
 
 export class BeaconNodeCommand implements CliCommand {
 
-  public register(commander: commander.CommanderStatic): void {
+  public register(commander: CommanderStatic): void {
     commander
       .command("beacon")
       .description("Start lodestar node")
@@ -21,7 +26,8 @@ export class BeaconNodeCommand implements CliCommand {
       .option("-eth1, --eth1RpcUrl [url]", "Url to eth1 rpc node")
       .option("--rpc [api]", "Exposes the selected RPC api, must be comma separated")
       .action(async (options) => {
-        //library is not awaiting this method so don't allow error propagation (unhandled promise rejections
+        //library is not awaiting this method so don't allow error propagation
+        // (unhandled promise rejections)
         try {
           await this.action(options);
         } catch (e) {
@@ -31,7 +37,7 @@ export class BeaconNodeCommand implements CliCommand {
       });
   }
 
-  public async action(options: any): Promise<void> {
+  public async action(options: BeaconConfigOptions): Promise<void> {
     const node = new BeaconNode({
       db: {
         name: options.db
@@ -40,7 +46,7 @@ export class BeaconNodeCommand implements CliCommand {
         depositContract: {
           address: options.depositContract
         },
-        provider: await this.getProvider(options)
+        provider: await this.getProvider(options.eth1RpcUrl)
       },
       rpc: {
         apis: this.setupRPC(options.rpc.split(",").map((option: string) => option.trim()))
@@ -59,9 +65,9 @@ export class BeaconNodeCommand implements CliCommand {
       });
   }
 
-  private async getProvider(options: any): Promise<ethers.providers.BaseProvider> {
+  private async getProvider(eth1RpcUrl: string): Promise<ethers.providers.BaseProvider> {
     try {
-      const provider = options.eth1RpcUrl ? new ethers.providers.JsonRpcProvider(options.eth1RpcUrl) : ethers.getDefaultProvider();
+      const provider = eth1RpcUrl ? new ethers.providers.JsonRpcProvider(eth1RpcUrl) : ethers.getDefaultProvider();
       await provider.getNetwork();
       return provider;
     } catch (e) {
