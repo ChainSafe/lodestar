@@ -34,11 +34,16 @@ export class CreateConfigCommand implements CliCommand {
       }
 
       // Stringify defaults into TOML format
-      const defaultsToWrite = (({chain, db, rpc}) => ({
+      const defaultsToWrite = (({chain, db, rpc, eth1}) => ({
         chain,
         db,
         rpc,
         // p2p
+        eth1: {
+          contract: {
+            address: eth1.depositContract.address
+          }
+        }
       }))(defaults);
 
       const tomlString = stringify(defaultsToWrite);

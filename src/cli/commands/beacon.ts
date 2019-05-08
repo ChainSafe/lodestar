@@ -23,6 +23,7 @@ interface IConfigFile extends JsonMap{
   db?: {name: string};
   chain?: {chain: string};
   rpc?: {port: string};
+  eth1?: {contract?: {address: string}};
 }
 
 export class BeaconNodeCommand implements CliCommand {
@@ -58,14 +59,14 @@ export class BeaconNodeCommand implements CliCommand {
       }
       parsedConfig = parse(data.toString());
     }
-      
+    
     let optionsMap: BeaconNodeCtx = {
       db: {
         name: options.db || parsedConfig ? parsedConfig.db.name : defaults.db.name
       },
       eth1: {
         contract: {
-          address: options.depositContract
+          address: options.depositContract || parsedConfig ? parsedConfig.eth1.contract.address : defaults.eth1.depositContract.address
         },
         provider: await this.getProvider(options.eth1RpcUrl)
       },
