@@ -1,12 +1,14 @@
 import {Slot} from "../../types/primitive";
 import {BlockRootSlot, HashTreeRoot} from "./types";
 
-type RPCMethod = Hello | Goodbye | GetStatus;
+interface RequestBody {
+
+}
 
 export interface Request {
   id: number;
   method_id: number;
-  body: string;
+  body: RequestBody;
 }
 
 export interface Response {
@@ -17,7 +19,7 @@ export interface Response {
 
 // Method ID: 0
 
-export interface Hello {
+export interface Hello extends RequestBody {
   network_id: number;
   chain_id: number;
   latest_finalized_root: Buffer;
@@ -28,13 +30,13 @@ export interface Hello {
 
 // Method ID: 1
 
-export interface Goodbye {
+export interface Goodbye extends RequestBody {
   reason: number;
 }
 
 // Method ID: 2
 
-export interface GetStatusRequest {
+export interface GetStatus extends RequestBody {
   sha: Buffer;
   user_agent: Buffer;
   timestamp: number;
@@ -42,7 +44,7 @@ export interface GetStatusRequest {
 
 // Method ID: 10
 
-export interface BeaconBlockRootsRequest {
+export interface BeaconBlockRootsRequest extends RequestBody {
   start_slot: Slot;
   count: number;
 }
@@ -55,7 +57,7 @@ export interface BeaconBlockRootsResponse {
 }
 
 // Method ID: 11
-export interface BeaconBlockHeadersRequest {
+export interface BeaconBlockHeadersRequest extends RequestBody {
   // Doesn't currently exist as a standalone type	
   start_root: HashTreeRoot; 
   start_slot: Slot;
@@ -69,16 +71,16 @@ export interface BeaconBlockHeadersResponse {
 }
 
 // Method ID: 12
-export interface BeaconBlockBodiesRequest {
+export interface BeaconBlockBodiesRequest extends RequestBody {
   block_roots: []HashTreeRoot;
-}
+} 
 
 export interface BeaconBlockBodiesResponse {
   block_bodies: []BeaconBlockBody;
 }
 
 // Method ID: 13
-export interface BeaconChainStateRequest {
+export interface BeaconChainStateRequest extends RequestBody {
   hashes: []HashTreeRoot;
 }
 
