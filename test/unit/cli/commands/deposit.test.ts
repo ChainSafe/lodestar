@@ -40,24 +40,28 @@ describe('[CLI] deposit', function() {
     const command = new DepositCommand();
     await expect(
       command.action(
-        eth1Network.accounts()[0],
-        null,
-        'http://worong_host:123',
-        '32',
-        '0x'
+        { 
+          privateKey: eth1Network.accounts()[0],
+          mnemonic: null,
+          node:'http://worong_host:123',
+          value: '32',
+          contract:'0x'
+        }
       )
-    ).to.be.rejectedWith(CliError, 'JSON RPC node (http://worong_host:123) not available.')
+    ).to.be.rejectedWith(CliError, 'JSON RPC node (http://worong_host:123) not available.');
   });
 
   it('Should throw error if bot private key and mnemonic are not submitted', async () => {
     const command = new DepositCommand();
     await expect(
       command.action(
-        null,
-        null,
-        eth1Network.rpcUrl(),
-        '32',
-        '0x'
+        { 
+          privateKey: null,
+          mnemonic: null,
+          node: eth1Network.rpcUrl(),
+          value: '32',
+          contract:'0x'
+        }
       )
     ).to.be.rejectedWith(CliError, 'You have to submit either privateKey or mnemonic.');
   });
@@ -66,11 +70,13 @@ describe('[CLI] deposit', function() {
     const command = new DepositCommand();
     await expect(
       command.action(
-        null,
-        'invalid mnemonic',
-        eth1Network.rpcUrl(),
-        '32',
-        '0x'
+        { 
+          privateKey: null,
+          mnemonic: 'invalid mnemonic',
+          node: eth1Network.rpcUrl(),
+          value: '32',
+          contract:'0x'
+        }
       )
     ).to.be.rejectedWith(Error, 'invalid mnemonic');
   });
@@ -79,11 +85,13 @@ describe('[CLI] deposit', function() {
     const command = new DepositCommand();
     await expect(
       command.action(
-        eth1Network.accounts()[0],
-        null,
-        eth1Network.rpcUrl(),
-        '32',
-        Wallet.createRandom().address
+        { 
+          privateKey: eth1Network.accounts()[0],
+          mnemonic: null,
+          node: eth1Network.rpcUrl(),
+          value: '32',
+          contract:Wallet.createRandom().address
+        }
       )
     ).to.be.rejectedWith(CliError, 'Failed to make deposit for account');
   });
