@@ -1,4 +1,4 @@
-import {Slot} from "../../types/primitive";
+import {Slot, bytes32, bytes, unint8, uint16, uint64} from "../../types/primitive";
 import {BlockRootSlot, HashTreeRoot} from "./types";
 
 interface RequestBody {
@@ -6,51 +6,51 @@ interface RequestBody {
 }
 
 export interface Request {
-  id: number;
-  method_id: number;
+  id: uint64;
+  methodId: uint16;
   body: RequestBody;
 }
 
 export interface Response {
-  id: number;
-  response_code: number;
+  id: uint64;
+  responseCode: uint16;
   result: Buffer;
 }
 
 // Method ID: 0
 
 export interface Hello extends RequestBody {
-  network_id: number;
-  chain_id: number;
-  latest_finalized_root: Buffer;
-  latest_finalized_epoch: number;
-  best_root: Buffer;
-  best_slot: Slot;
+  networkId: uint64;
+  chainId: uint16;
+  latestFinalizedRoot: bytes32;
+  latestFinalizedEpoch: uint64;
+  bestRoot: bytes32;
+  bestSlot: Slot;
 }
 
 // Method ID: 1
 
 export interface Goodbye extends RequestBody {
-  reason: number;
+  reason: uint64;
 }
 
 // Method ID: 2
 
 export interface GetStatus extends RequestBody {
-  sha: Buffer;
-  user_agent: Buffer;
-  timestamp: number;
+  sha: bytes32;
+  userAgent: bytes;
+  timestamp: uint64;
 }
 
 // Method ID: 10
 
 export interface BeaconBlockRootsRequest extends RequestBody {
-  start_slot: Slot;
-  count: number;
+  startSlot: Slot;
+  count: uint64;
 }
 
 export interface BeaconBlockRootsResponse {
-  block_root: Buffer;
+  blockRoot: bytes32;
   slot: Slot;
   // Doesn't currently exist as a standalone type
   roots: []BlockRootSlot;
@@ -59,24 +59,24 @@ export interface BeaconBlockRootsResponse {
 // Method ID: 11
 export interface BeaconBlockHeadersRequest extends RequestBody {
   // Doesn't currently exist as a standalone type	
-  start_root: HashTreeRoot; 
-  start_slot: Slot;
-  max_headers: number;
-  skip_slots: number;
+  startRoot: HashTreeRoot; 
+  startSlot: Slot;
+  maxHeaders: uint64;
+  skipSlots: uint64;
 }
 
 export interface BeaconBlockHeadersResponse {
   // Doesn't currently exist as a standalone type
-  headers: []BeaconBlockHeader
+  headers: []BeaconBlockHeader;
 }
 
 // Method ID: 12
 export interface BeaconBlockBodiesRequest extends RequestBody {
-  block_roots: []HashTreeRoot;
+  blockRoots: []HashTreeRoot;
 } 
 
 export interface BeaconBlockBodiesResponse {
-  block_bodies: []BeaconBlockBody;
+  blockBodies: []BeaconBlockBody;
 }
 
 // Method ID: 13
