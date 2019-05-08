@@ -52,7 +52,7 @@ class BeaconNode {
     );
 
     this.db = new LevelDB(this.conf.db);
-    this.network = new P2PNetwork(this.conf.network);
+    this.network = new P2PNetwork(this.conf.network, {chain, db});
     this.eth1 = new EthersEth1Notifier(
       this.conf.eth1,
       {
