@@ -1,4 +1,4 @@
-import {BIG} from "../amcl/version3/js/ctx";
+import {BIG} from "@mpetrunic/amcl/ctx";
 import {PRIVATE_KEY_LENGTH} from "./constants";
 import assert from "assert";
 import ctx from "./ctx";

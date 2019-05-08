@@ -1,5 +1,5 @@
 import assert from "assert";
-import {BIG} from "../../amcl/version3/js/ctx";
+import {BIG} from "@mpetrunic/amcl/ctx";
 import ctx from "../ctx";
 
 /**
@@ -8,7 +8,7 @@ import ctx from "../ctx";
  * @param source
  * @param length
  */
-export function padLeft(source: Buffer, length): Buffer {
+export function padLeft(source: Buffer, length: number): Buffer {
   assert(source.length <= length, 'Given array must be smaller or equal to desired array size');
   const result = Buffer.alloc(length, 0);
   source.copy(result, length - source.length);
