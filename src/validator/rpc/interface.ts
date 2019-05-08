@@ -1,11 +1,11 @@
-import {BeaconAPI} from "../../rpc/api";
-import {AttestationData, BeaconState, Slot} from "../../types";
+import {BeaconApi, ValidatorApi} from "../../rpc/api";
+import {Epoch, Slot} from "../../types";
 
 export interface RpcClient {
 
-  beacon: BeaconAPI;
+  beacon: BeaconApi;
 
-  //validator: ValidatorAPI
+  validator: ValidatorApi;
 
   /**
    * Initiates connection to rpc server.
@@ -30,15 +30,6 @@ export interface RpcClient {
    * Depending on implementation it will poll for new head block or getting notified(Websockets)
    * @param cb
    */
-  onNewBeaconState(cb: (state: BeaconState) => void);
-
-  /**
-   * Invokes callback on new attestation data.
-   * Depending on implementation it will poll for attestation data or getting notified(Websockets)
-   * @param cb
-   */
-  onNewAttestation(cb: (attestation: AttestationData) => void);
-
-
+  onEpoch(cb: (epoch: Epoch) => void);
 
 }
