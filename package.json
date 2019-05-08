@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "A javascript implementation of the beacon chain",
   "author": "ChainSafe System",
-  "license": "MIT",
+  "license": "GPL-3.0",
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar_chain/issues"
   },
