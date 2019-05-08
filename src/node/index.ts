@@ -1,6 +1,6 @@
 import deepmerge from "deepmerge";
 import {LevelDB} from "../db";
-import {EthersEth1Notifier, EthersEth1Options} from "../eth1";
+import {EthersEth1Notifier} from "../eth1";
 import {P2PNetwork, P2pOptions} from "../p2p";
 
 import defaultConf from "./defaults";
@@ -20,11 +20,11 @@ export interface Service {
 }
 
 // Temporarily have properties be optional until others portions of lodestar are ready
-interface BeaconNodeCtx {
+export interface BeaconNodeCtx {
   chain?: object;
   db?: object;
-  // Temporarily set to any. Will be changed to object later.
-  eth1?: EthersEth1Options;
+  // eth1 is left as any because the address property of Contract is readonly
+  eth1?: any;
   p2p?: P2pOptions;
   rpc?: RpcCtx;
   sync?: object;

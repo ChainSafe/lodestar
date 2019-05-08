@@ -6,7 +6,7 @@ import {stringify} from "@iarna/toml";
 import defaults from "../../node/defaults";
 import {CliError} from "../error";
 
-interface CreateConfigOptions {
+interface ICreateConfigOptions {
   outputFile: string;
 }
 
@@ -27,7 +27,7 @@ export class CreateConfigCommand implements CliCommand {
       });
   }
 
-  public async action(options: CreateConfigOptions): Promise<void> {
+  public async action(options: ICreateConfigOptions): Promise<void> {
     if (options.outputFile) {
       if (fs.existsSync(options.outputFile)){
         throw new CliError(`${options.outputFile} already exists`);
@@ -49,6 +49,8 @@ export class CreateConfigCommand implements CliCommand {
 
         logger.info(`Successfully wrote config file to ${options.outputFile}`);
       });
+    } else {
+      throw new CliError("A file must be specified using the -o flag");
     }
   }
 }

@@ -1,21 +1,28 @@
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import {parse} from "@iarna/toml";
+import {parse, JsonMap} from "@iarna/toml";
 import fs from "fs";
 import logger from "../../logger";
-import BeaconNode from "../../node";
+import BeaconNode, {BeaconNodeCtx} from "../../node";
 import {ethers} from "ethers";
 import {CliError} from "../error";
 import {IApiConstructor} from "../../rpc/api/interface";
 import * as RPCApis from "../../rpc/api";
+import defaults from "../../node/defaults";
 import deepmerge from "deepmerge";
 
-interface BeaconConfigOptions {
+interface IBeaconCommandOptions {
   db: string;
   depositContract: string;
   eth1RpcUrl: string;
   rpc: string;
   configFile: string;
+}
+
+interface IConfigFile extends JsonMap{
+  db?: {name: string};
+  chain?: {chain: string};
+  rpc?: {port: string};
 }
 
 export class BeaconNodeCommand implements CliCommand {
@@ -37,17 +44,27 @@ export class BeaconNodeCommand implements CliCommand {
         } catch (e) {
           logger.error(e.message);
         }
-
       });
   }
 
-  public async action(options: BeaconConfigOptions): Promise<void> {
-    let optionsMap: object = {
+  public async action(options: IBeaconCommandOptions): Promise<void> {
+    let parsedConfig: IConfigFile;
+    if (options.configFile) {
+      let data: Buffer;
+      try {
+        data = fs.readFileSync(options.configFile);
+      } catch {
+        throw new CliError(`${options.configFile} could not be parsed.`);
+      }
+      parsedConfig = parse(data.toString());
+    }
+      
+    let optionsMap: BeaconNodeCtx = {
       db: {
-        name: options.db
+        name: options.db || parsedConfig ? parsedConfig.db.name : defaults.db.name
       },
       eth1: {
-        depositContract: {
+        contract: {
           address: options.depositContract
         },
         provider: await this.getProvider(options.eth1RpcUrl)
@@ -57,17 +74,8 @@ export class BeaconNodeCommand implements CliCommand {
       }
     };
 
-    if (options.configFile){
-      let data: Buffer;
-      try {
-        data = fs.readFileSync(options.configFile);
-      } catch {
-        throw new CliError(`${options.configFile} could not be parsed.`);
-      }
-      const parsed = parse(data.toString());
-      logger.info(parsed);
-
-      optionsMap = deepmerge(optionsMap, parsed);
+    if (parsedConfig) {
+      optionsMap = deepmerge(optionsMap, parsedConfig);
     }
 
     const node = new BeaconNode(optionsMap);

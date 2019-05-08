@@ -7,7 +7,7 @@ import logger from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
 
-interface DepositConfigOptions {
+interface IDepositCommandOptions {
   privateKey: string;
   mnemonic: string;
   node: string;
@@ -38,7 +38,7 @@ export class DepositCommand implements CliCommand {
       });
   }
 
-  public async action(options: DepositConfigOptions): Promise<void> {
+  public async action(options: IDepositCommandOptions): Promise<void> {
     const provider = new ethers.providers.JsonRpcProvider(options.node);
     try {
       //check if we can connect to node

@@ -25,7 +25,13 @@ describe('[CLI] eth1:dev', () => {
 
   it('Should start private network', async () => {
     const command = new Eth1PrivateNetworkCommand();
-    const network = await command.action('127.0.0.1', 33323, null, null, null);
+    const network = await command.action({
+      host:'127.0.0.1',
+      port:33323,
+      network: null,
+      mnemonic: null,
+      database:null
+    });
     expect(network).to.not.be.null;
     await network.stop();
   });
