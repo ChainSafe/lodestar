@@ -1,9 +1,11 @@
-import {bytes48, Slot, Shard, ValidatorIndex} from "../types";
+import {bytes48, Slot, Shard, ValidatorIndex, BLSPubkey} from "../types";
+import {RpcClient} from "./rpc";
 
 export interface ValidatorCtx {
-  publicKey: bytes48[];
+  publicKey: BLSPubkey;
   privateKey: bytes48[];
-  rpcUrl: string;
+  rpcUrl?: string;
+  rpc?: RpcClient;
 }
 
 export interface CommitteeAssignment {
