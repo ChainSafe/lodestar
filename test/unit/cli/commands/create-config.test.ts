@@ -24,7 +24,7 @@ describe('[CLI] create-config', () => {
     expect(program.commands.length).to.be.equal(commandCount + 1);
   });
 
-  it('Should throw error if bot private key and mnemonic are not submitted', async () => {
+  it('Should throw error if output file is not specified', async () => {
     const command = new CreateConfigCommand();
     await expect(
       command.action({
