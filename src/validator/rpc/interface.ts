@@ -22,14 +22,14 @@ export interface RpcClient {
    * Depending on implementation it will poll for new slot or getting notified(Websockets)
    * @param cb
    */
-  onNewSlot(cb: (slot: Slot) => void);
+  onNewSlot(cb: (slot: Slot) => void): void;
 
 
   /**
-   * Invokes callback on new head block.
-   * Depending on implementation it will poll for new head block or getting notified(Websockets)
+   * Invokes callback on new epoch.
+   * Depending on implementation it will poll for new epoch or getting notified(Websockets)
    * @param cb
    */
-  onEpoch(cb: (epoch: Epoch) => void);
+  onNewEpoch(cb: (epoch: Epoch) => void): void;
 
 }
