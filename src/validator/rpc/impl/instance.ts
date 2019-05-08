@@ -27,11 +27,11 @@ export class RpcClientOverInstance implements RpcClient{
     return null;
   }
 
-  public onEpoch(cb: (epoch: Epoch) => void) {
+  public onNewEpoch(cb: (epoch: Epoch) => void): void {
     //TODO: implement some subscription api in beacon
   }
 
-  public onNewSlot(cb: (slot: Slot) => void) {
+  public onNewSlot(cb: (slot: Slot) => void): void {
     //TODO: implement some subscription api in beacon
   }
 
