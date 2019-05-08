@@ -5,6 +5,10 @@ import BeaconNode from "../../node";
 import defaults from "../../node/defaults";
 import {ethers} from "ethers";
 import {CliError} from "../error";
+import {IApi, IApiConstructor} from "../../rpc/api/interface";
+import {WSServer} from "../../rpc/transport";
+import * as RPCApis from "../../rpc/api";
+import {JSONRPC} from "../../rpc/protocol";
 
 export class BeaconNodeCommand implements CliCommand {
 
@@ -15,6 +19,7 @@ export class BeaconNodeCommand implements CliCommand {
       .option("-d, --db [db_path]", "Path to file database", defaults.db.name)
       .option("-c, --depositContract [address]", "Address of deposit contract", defaults.eth1.depositContract.address)
       .option("-eth1, --eth1RpcUrl [url]", "Url to eth1 rpc node")
+      .option("--rpc [api]", "Exposes the selected RPC api, must be comma separated")
       .action(async (options) => {
         //library is not awaiting this method so don't allow error propagation (unhandled promise rejections
         try {
@@ -36,9 +41,22 @@ export class BeaconNodeCommand implements CliCommand {
           address: options.depositContract
         },
         provider: await this.getProvider(options)
+      },
+      rpc: {
+        apis: this.setupRPC(options.rpc.split(",").map((option: string) => option.trim()))
       }
     });
     await node.start();
+  }
+
+  private setupRPC(args: string[]): IApiConstructor[] {
+    return Object.values(RPCApis)
+      .filter((api) => api !== undefined)
+      .filter((api: IApiConstructor) => {
+        return args.some((option: string) => {
+          return api.name.toLowerCase().indexOf(option.toLowerCase()) > -1;
+        });
+      });
   }
 
   private async getProvider(options: any): Promise<ethers.providers.BaseProvider> {

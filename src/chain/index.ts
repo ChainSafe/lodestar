@@ -14,21 +14,26 @@ import {getEmptyBlock, getGenesisBeaconState} from "./genesis";
 import {executeStateTransition} from "./stateTransition";
 import {getBlockRoot, getEpochStartSlot} from "./stateTransition/util";
 
+import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
+
 /**
  * The BeaconChain service deals with processing incoming blocks, advancing a state transition
  * and applying the fork choice rule to update the chain head
  */
 export class BeaconChain extends EventEmitter {
   public chain: string;
+  public genesisTime: number64;
   private db: DB;
   private eth1: Eth1Notifier;
   private _latestBlock: BeaconBlock;
+  private forkChoice: LMDGHOST;
 
   public constructor(opts, {db, eth1}) {
     super();
     this.chain = opts.chain;
     this.db = db;
     this.eth1 = eth1;
+    this.forkChoice = new StatefulDagLMDGHOST();
   }
 
   /**
@@ -57,12 +62,17 @@ export class BeaconChain extends EventEmitter {
     const genesisState = getGenesisBeaconState(genesisDeposits, genesisTime, genesisEth1Data);
     const genesisBlock = getEmptyBlock();
     genesisBlock.stateRoot = hashTreeRoot(genesisState, BeaconState);
+    this.genesisTime = genesisTime;
     await this.db.setBlock(genesisBlock);
     await this.db.setChainHead(genesisState, genesisBlock);
     await this.db.setJustifiedBlock(genesisBlock);
     await this.db.setFinalizedBlock(genesisBlock);
     await this.db.setJustifiedState(genesisState);
     await this.db.setFinalizedState(genesisState);
+    const genesisRoot = hashTreeRoot(genesisBlock, BeaconBlock);
+    this.forkChoice.addBlock(genesisBlock.slot, genesisRoot, Buffer.alloc(32));
+    this.forkChoice.setJustified(genesisRoot);
+    this.forkChoice.setFinalized(genesisRoot);
   }
 
   /**
@@ -72,7 +82,6 @@ export class BeaconChain extends EventEmitter {
     let state = await this.db.getState();
     const isValidBlock = await this.isValidBlock(state, block);
     assert(isValidBlock);
-    const headRoot = await this.db.getChainHeadRoot();
 
     // process skipped slots
     for (let i = state.slot; i < block.slot - 1; i++) {
@@ -87,8 +96,8 @@ export class BeaconChain extends EventEmitter {
     // forward processed block for additional processing
     this.emit('processedBlock', block);
 
-    // TODO remove this hack, we're currently using this to advance the chain
-    this._latestBlock = block;
+    this.forkChoice.addBlock(block.slot, hashTreeRoot(block, BeaconBlock), block.previousBlockRoot);
+
     return state;
   }
 
@@ -97,14 +106,10 @@ export class BeaconChain extends EventEmitter {
    */
   public async applyForkChoiceRule(): Promise<void> {
     const state = await this.db.getState();
-    const currentJustifiedRoot = getBlockRoot(state, getEpochStartSlot(state.currentJustifiedEpoch));
-    // const currentJustifiedRoot = state.currentJustifiedRoot;
-    const currentJustifiedBlock = await this.db.getBlock(currentJustifiedRoot);
-    const currentJustifiedState = await this.db.getJustifiedState();
     const currentRoot = await this.db.getChainHeadRoot();
-    // TODO use lmd ghost to compute best block
-    const block = this._latestBlock;
-    if (!currentRoot.equals(hashTreeRoot(block, BeaconBlock))) {
+    const headRoot = this.forkChoice.head();
+    if (!currentRoot.equals(headRoot)) {
+      const block = await this.db.getBlock(headRoot);
       await this.db.setChainHead(state, block);
     }
   }

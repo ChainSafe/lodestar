@@ -4,7 +4,7 @@ import {Wallet} from "ethers";
 import * as ethers from "ethers/ethers";
 import {expect} from "chai";
 
-describe('Eth1 dev network', () => {
+describe('Eth1 dev network', function () {
 
   before(() => {
     logger.silent(true);
@@ -32,7 +32,8 @@ describe('Eth1 dev network', () => {
     await network.stop();
   });
 
-  it('should deploy deposit contract', async () => {
+  it('should deploy deposit contract', async function() {
+    this.timeout(3000);
     const network = new PrivateEth1Network({
       host: '127.0.0.1',
       port: 34567,
