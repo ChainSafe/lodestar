@@ -6,6 +6,7 @@ export interface MockBeaconApiOpts {
   version?: bytes32;
   fork?: Fork;
   head?: BeaconBlock;
+  genesisTime?: number64;
 }
 
 export class MockBeaconApi implements IBeaconApi {
@@ -14,6 +15,7 @@ export class MockBeaconApi implements IBeaconApi {
   private version: bytes32;
   private fork: Fork;
   private head: BeaconBlock;
+  private genesisTime: number64;
 
   public constructor(opts?: MockBeaconApiOpts) {
     this.namespace = 'beacon';
@@ -21,6 +23,7 @@ export class MockBeaconApi implements IBeaconApi {
     this.fork = opts && opts.fork
       || {previousVersion: Buffer.alloc(0), currentVersion: Buffer.alloc(0), epoch: 0};
     this.head = opts && opts.head || getEmptyBlock();
+    this.genesisTime = opts && opts.genesisTime || Date.now();
   }
 
   public async getClientVersion(): Promise<bytes32> {
@@ -32,8 +35,7 @@ export class MockBeaconApi implements IBeaconApi {
   }
 
   public async getGenesisTime(): Promise<number64> {
-    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as number64;
+    return this.genesisTime;
   }
 
   public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
