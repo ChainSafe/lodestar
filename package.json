@@ -1,6 +1,6 @@
 {
-  "name": "@chainsafe/bls-js",
-  "version": "1.0.0",
+  "name": "@mpetrunic/bls-js",
+  "version": "0.2.0",
   "description": "Implementation of bls signature verification for ethereum 2.0",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -20,7 +20,7 @@
     "prebuild": "rm -rf lib && rm -rf dist",
     "build": "yarn build-lib && yarn build-web && yarn build-types",
     "build-lib": "babel src -x .ts -d lib",
-    "build-types": "tsc --declaration --out lib/index.d.ts --emitDeclarationOnly",
+    "build-types": "tsc --declaration --emitDeclarationOnly",
     "build-web": "webpack --mode production --entry ./lib/web.js --output ./dist/bls.min.js",
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts src/",
