@@ -1,14 +1,17 @@
 {
-  "name": "lodestar-chain",
+  "name": "@chainsafe/lodestar",
   "version": "0.1.0",
-  "description": "A javascript implementation of the beacon chain",
-  "author": "ChainSafe System",
-  "license": "MIT",
+  "description": "A Typescript implementation of the beacon chain and validator client",
+  "author": "ChainSafe Systems",
+  "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/ChainSafe/lodestar_chain/issues"
+    "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "homepage": "https://github.com/ChainSafe/lodestar_chain#readme",
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "main": "lib/index.js",
+  "files": [
+    "lib"
+  ],
   "scripts": {
     "build": "babel src -x .ts -d lib --source-maps",
     "check-types": "tsc --noEmit",
@@ -22,7 +25,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com:ChainSafe/lodestar_chain.git"
+    "url": "git+https://github.com:ChainSafe/lodestar.git"
   },
   "keywords": [
     "Ethereum",
