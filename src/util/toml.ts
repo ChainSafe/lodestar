@@ -31,20 +31,22 @@ export function getTomlConfig(fileName: string): IConfigFile {
  * @returns {void}
  */
 export function writeTomlConfig(fileName: string): void {
-  // Stringify defaults into TOML format
-  const defaultsToWrite = (({chain, db, rpc, eth1}) => ({
-    chain,
-    db,
-    rpc,
-    // p2p
+  const contentObject: IConfigFile = {
+    chain: {
+      chain: defaults.chain.chain
+    },
+    db: {
+      name: defaults.db.name
+    },
+    rpc: {
+      port: defaults.rpc.port
+    },
     eth1: {
       contract: {
-        address: eth1.depositContract.address
+        address: defaults.eth1.depositContract.address
       }
     }
-  }))(defaults);
-
-  const contentObject: IConfigFile = defaultsToWrite;
+  };
 
   const content = stringify(contentObject);
 
