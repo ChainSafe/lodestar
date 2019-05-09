@@ -1,4 +1,4 @@
-import {BIG, ECP} from "@mpetrunic/amcl/ctx";
+import {BIG, ECP} from "@chainsafe/amcl/ctx";
 import ctx from "../ctx";
 import {bytes48} from "../types";
 import assert from "assert";

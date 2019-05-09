@@ -1,5 +1,5 @@
 import assert from "assert";
-import {BIG} from "@mpetrunic/amcl/ctx";
+import {BIG} from "@chainsafe/amcl/ctx";
 import ctx from "../ctx";
 
 /**

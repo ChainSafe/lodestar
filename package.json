@@ -32,7 +32,7 @@
     "coverage": "codecov"
   },
   "dependencies": {
-    "@mpetrunic/amcl": "^1.0.1",
+    "@chainsafe/amcl": "0.1.0",
     "assert": "^1.4.1",
     "keccak256": "^1.0.0",
     "secure-random": "^1.1.1"
