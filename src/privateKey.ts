@@ -1,4 +1,4 @@
-import {BIG} from "../amcl/version3/js/ctx";
+import {BIG} from "@chainsafe/amcl/ctx";
 import {SECRET_KEY_LENGTH} from "./constants";
 import assert from "assert";
 import ctx from "./ctx";

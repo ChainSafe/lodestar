@@ -1,4 +1,4 @@
-import {BIG, ECP2} from "../../amcl/version3/js/ctx";
+import {BIG, ECP2} from "@chainsafe/amcl/ctx";
 import {BLSDomain, bytes32, bytes96} from "../types";
 import hash from "keccak256";
 import ctx from "../ctx";

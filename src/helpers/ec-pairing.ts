@@ -1,6 +1,6 @@
 import {G1point} from "./g1point";
 import {G2point} from "./g2point";
-import {FP12} from "../../amcl/version3/js/ctx";
+import {FP12} from "@chainsafe/amcl/ctx";
 import ctx from "../ctx";
 
 

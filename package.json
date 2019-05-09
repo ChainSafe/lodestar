@@ -1,10 +1,27 @@
 {
-  "name": "bls-js",
-  "version": "1.0.0",
-  "description": "",
-  "main": "old/index.js",
+  "name": "@chainsafe/bls-js",
+  "version": "0.1.0",
+  "description": "Implementation of bls signature verification for ethereum 2.0",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "homepage": "https://github.com/chainsafe/bls-js",
+  "author": "ChainSafe Systems",
+  "license": "Apache-2.0",
+  "files": [
+    "lib"
+  ],
+  "keywords": [
+    "ethereum",
+    "serenity",
+    "signature verification",
+    "bls"
+  ],
   "scripts": {
-    "build": "babel src -x .ts -d lib",
+    "prebuild": "rm -rf lib && rm -rf dist",
+    "build": "yarn build-lib && yarn build-web && yarn build-types",
+    "build-lib": "babel src -x .ts -d lib",
+    "build-types": "tsc --declaration --emitDeclarationOnly",
+    "build-web": "webpack --mode production --entry ./lib/web.js --output ./dist/bls.min.js",
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts src/",
     "lint-fix": "eslint --ext .ts src/ --fix",
@@ -14,9 +31,8 @@
     "test": "nyc -r lcov -e .ts -x \"*.test.ts\" mocha -r ./.babel-register \"tests/**/*.test.ts\" && nyc report",
     "coverage": "codecov"
   },
-  "author": "",
-  "license": "ISC",
   "dependencies": {
+    "@chainsafe/amcl": "0.1.0",
     "assert": "^1.4.1",
     "keccak256": "^1.0.0",
     "secure-random": "^1.1.1"
@@ -27,7 +43,7 @@
     "@babel/plugin-proposal-class-properties": "^7.3.3",
     "@babel/plugin-proposal-object-rest-spread": "^7.3.2",
     "@babel/plugin-transform-runtime": "^7.3.4",
-    "@babel/preset-env": "^7.3.1",
+    "@babel/preset-env": "^7.4.4",
     "@babel/preset-typescript": "^7.3.3",
     "@babel/register": "^7.0.0",
     "@babel/runtime": "^7.4.4",
@@ -47,6 +63,8 @@
     "sinon": "^7.2.7",
     "supertest": "^4.0.2",
     "ts-node": "^7.0.1",
-    "typescript": "^3.2.1"
+    "typescript": "^3.2.1",
+    "webpack": "^4.30.0",
+    "webpack-cli": "^3.3.2"
   }
 }

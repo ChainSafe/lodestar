@@ -1,3 +1,3 @@
-import {CTX} from "../amcl/version3/js/ctx";
+import {CTX} from "@chainsafe/amcl/ctx";
 
 export default new CTX('BLS381');
