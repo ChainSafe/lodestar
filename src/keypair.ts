@@ -24,4 +24,8 @@ export class Keypair {
   public get privateKey(): PrivateKey {
     return this._privateKey;
   }
+
+  public static generate(): Keypair {
+    return new Keypair(PrivateKey.random());
+  }
 }

@@ -1,9 +1,11 @@
 import {BIG} from "@mpetrunic/amcl/ctx";
-import {PRIVATE_KEY_LENGTH} from "./constants";
+import {SECRET_KEY_LENGTH} from "./constants";
 import assert from "assert";
 import ctx from "./ctx";
 import {padLeft} from "./helpers/utils";
 import {G2point} from "./helpers/g2point";
+import * as random from "secure-random";
+import {BLSDomain, bytes32} from "./types";
 
 export class PrivateKey {
 
@@ -21,8 +23,12 @@ export class PrivateKey {
     return message.mul(this.value);
   }
 
+  public signMessage(message: bytes32, domain: BLSDomain): G2point {
+    return G2point.hashToG2(message, domain).mul(this.value);
+  }
+
   public static fromBytes(bytes: Uint8Array): PrivateKey {
-    assert(bytes.length === PRIVATE_KEY_LENGTH, 'Private key should have 32 bytes');
+    assert(bytes.length === SECRET_KEY_LENGTH, 'Private key should have 32 bytes');
     const value = Buffer.from(bytes);
     return new PrivateKey(
       ctx.BIG.frombytearray(
@@ -39,6 +45,15 @@ export class PrivateKey {
     return PrivateKey.fromBytes(
       Buffer.from(value.replace('0x', ''), 'hex')
     );
+  }
+
+  public static random(): PrivateKey {
+    return new PrivateKey(
+      ctx.BIG.frombytearray(
+        padLeft(random.randomBuffer(SECRET_KEY_LENGTH), 48),
+        0
+      )
+    )
   }
 
 }

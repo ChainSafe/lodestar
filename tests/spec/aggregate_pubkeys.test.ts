@@ -4,7 +4,7 @@ import bls from "../../src";
 import {BLSSignature} from "../../src/types";
 
 describeSpecTest(
-    join(__dirname, "../spec-tests/tests/bls/aggregate_pubkeys/aggregate_pubkeys.yaml"),
+    join(__dirname, "./spec-tests/tests/bls/aggregate_pubkeys/aggregate_pubkeys.yaml"),
     bls.aggregatePubkeys,
     ({input}) => {
         const sigs: BLSSignature[] = [];

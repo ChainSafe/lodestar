@@ -3,6 +3,8 @@ import ctx from "../ctx";
 import {bytes48} from "../types";
 import assert from "assert";
 import {calculateYFlag, getModulus} from "./utils";
+import * as random from "secure-random";
+import {FP_POINT_LENGTH} from "../constants";
 
 export class G1point {
 
@@ -25,10 +27,18 @@ export class G1point {
     return new G1point(sum);
   }
 
+  public equal(other: G1point): boolean {
+    return this.point.equals(other.point);
+  }
+
   public toBytes(): bytes48 {
-    const buffer = Buffer.alloc(48);
+    const buffer = Buffer.alloc(FP_POINT_LENGTH, 0);
     this.point.getX().tobytearray(buffer, 0);
     return buffer;
+  }
+
+  public getPoint(): ECP {
+    return this.point;
   }
 
   public toBytesCompressed(): bytes48 {
@@ -45,7 +55,7 @@ export class G1point {
   }
 
   public static fromBytesCompressed(value: bytes48): G1point {
-    assert(value.length === 48, 'Expected g1 compressed input to have 48 bytes');
+    assert(value.length === FP_POINT_LENGTH, `Expected g1 compressed input to have ${FP_POINT_LENGTH} bytes`);
     const aIn = (value[0] & (1 << 5)) != 0;
     const bIn = (value[0] & (1 << 6)) != 0;
     const cIn = (value[0] & (1 << 7)) != 0;
@@ -92,5 +102,19 @@ export class G1point {
 
   public static generator(): G1point {
     return new G1point(ctx.ECP.generator());
+  }
+
+  public static random(): G1point {
+    let ecp: ECP;
+    do {
+      ecp = new ctx.ECP();
+      ecp.setx(
+        ctx.BIG.frombytearray(
+          random.randomBuffer(FP_POINT_LENGTH),
+          0
+        )
+      )
+    } while (ecp.is_infinity());
+    return new G1point(ecp);
   }
 }

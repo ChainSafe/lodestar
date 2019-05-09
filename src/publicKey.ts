@@ -10,13 +10,12 @@ export class PublicKey {
     this.point = point;
   }
 
+  public getPoint(): G1point {
+    return this.point;
+  }
+
   public toBytesCompressed(): BLSPubkey {
-    const publicKey = this.point.toBytes();
-    const flags = ((1 << 5) | 0 | (1 << 7));
-    const mask = 31;
-    publicKey[0] &= mask;
-    publicKey[0] |= flags;
-    return publicKey;
+    return  this.point.toBytesCompressed();
   }
 
   public toHexString(): string {
@@ -29,4 +28,9 @@ export class PublicKey {
     );
   }
 
+  public static fromBytes(publicKey: BLSPubkey): PublicKey {
+    return new PublicKey(
+      G1point.fromBytesCompressed(publicKey)
+    );
+  }
 }
