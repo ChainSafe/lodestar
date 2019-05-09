@@ -1,8 +1,26 @@
-import {BLSDomain, BLSSecretKey, BLSPubkey, BLSSignature, bytes32} from "./types";
+import {
+  BLSDomain,
+  BLSSecretKey,
+  BLSPubkey,
+  BLSSignature,
+  bytes32,
+  bytes8
+} from "./types";
 import {Keypair} from "./keypair";
 import {PrivateKey} from "./privateKey";
 import {G2point} from "./helpers/g2point";
 import {G1point} from "./helpers/g1point";
+import {PublicKey} from "./publicKey";
+import {Signature} from "./signature";
+import {ElipticCurvePairing} from "./helpers/ec-pairing";
+import ctx from "./ctx";
+
+/**
+ * Generates new secret and public key
+ */
+function generateKeyPair(): Keypair {
+  return Keypair.generate();
+}
 
 /**
  * Generates public key from given secret.
@@ -30,9 +48,9 @@ function sign(secretKey: BLSSecretKey, messageHash: bytes32, domain: BLSDomain):
  * @param signatures
  */
 function aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
-  return signatures.map((signature): G2point => {
-    return G2point.fromCompressedBytes(signature)
-  }).reduce((previousValue, currentValue): G2point => {
+  return signatures.map((signature): Signature => {
+    return Signature.fromCompressedBytes(signature)
+  }).reduce((previousValue, currentValue): Signature => {
     return previousValue.add(currentValue);
   }).toBytesCompressed();
 }
@@ -49,9 +67,55 @@ function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
   }).toBytesCompressed();
 }
 
+/**
+ * Verifies if signature is message signed with given public key.
+ * @param publicKey
+ * @param messageHash
+ * @param signature
+ * @param domain
+ */
+function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BLSSignature, domain: bytes8): boolean {
+  const key = PublicKey.fromBytes(publicKey);
+  const sig = Signature.fromCompressedBytes(signature);
+
+  const g1Generated = G1point.generator();
+  const e1 = ElipticCurvePairing.pair(key.getPoint(), G2point.hashToG2(messageHash, domain));
+  const e2 = ElipticCurvePairing.pair(g1Generated, sig.getPoint());
+  return e1.equals(e2);
+}
+
+/**
+ * Verifies if signature is list of message signed with corresponding public key.
+ * @param publicKeys
+ * @param messageHashes
+ * @param signature
+ * @param domain
+ */
+function verifyMultiple(publicKeys: BLSPubkey[], messageHashes: bytes32[], signature: BLSSignature, domain: bytes8): boolean {
+  if(publicKeys.length === 0 || publicKeys.length != messageHashes.length) {
+    return false;
+  }
+  const g1Generated = G1point.generator();
+  const eCombined = new ctx.FP12(1);
+  publicKeys.forEach((publicKey, index): void => {
+    const g2 = G2point.hashToG2(messageHashes[index], domain);
+    eCombined.mul(
+      ElipticCurvePairing.pair(
+        PublicKey.fromBytes(publicKey).getPoint(),
+        g2
+      )
+    );
+  });
+  const e2 = ElipticCurvePairing.pair(g1Generated, Signature.fromCompressedBytes(signature).getPoint());
+  return e2.equals(eCombined);
+}
+
 export default {
+  generateKeyPair,
   generatePublicKey,
   sign,
   aggregateSignatures,
-  aggregatePubkeys
+  aggregatePubkeys,
+  verify,
+  verifyMultiple
 }

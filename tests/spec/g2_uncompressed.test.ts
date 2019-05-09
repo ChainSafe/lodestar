@@ -4,7 +4,7 @@ import {padLeft} from "../../src/helpers/utils";
 import {G2point} from "../../src/helpers/g2point";
 
 describeSpecTest(
-    join(__dirname, "../spec-tests/tests/bls/msg_hash_g2_uncompressed/g2_uncompressed.yaml"),
+    join(__dirname, "./spec-tests/tests/bls/msg_hash_g2_uncompressed/g2_uncompressed.yaml"),
     G2point.hashToG2,
     ({input}) => {
         const domain = padLeft(Buffer.from(input.domain.replace('0x', ''), 'hex'), 8);
