@@ -63,10 +63,7 @@ export class BeaconNodeCommand implements CliCommand {
     };
 
     if (options.configFile) {
-      optionsMap = deepmerge(
-        parsedConfig,
-        optionsMap, 
-        {isMergeableObject: isPlainObject});
+      optionsMap = deepmerge(parsedConfig, optionsMap, {isMergeableObject: isPlainObject});
     }
 
     const node = new BeaconNode(optionsMap);
