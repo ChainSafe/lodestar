@@ -1,15 +1,15 @@
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import {parse, JsonMap} from "@iarna/toml";
-import fs from "fs";
+import {isPlainObject} from "../../util/objects";
 import logger from "../../logger";
 import BeaconNode, {BeaconNodeCtx} from "../../node";
 import {ethers} from "ethers";
 import {CliError} from "../error";
 import {IApiConstructor} from "../../rpc/api/interface";
 import * as RPCApis from "../../rpc/api";
-import defaults from "../../node/defaults";
 import deepmerge from "deepmerge";
+import {getTomlConfig, IConfigFile} from "../../util/toml";
+import defaults from "../../node/defaults";
 
 interface IBeaconCommandOptions {
   db: string;
@@ -17,13 +17,6 @@ interface IBeaconCommandOptions {
   eth1RpcUrl: string;
   rpc: string;
   configFile: string;
-}
-
-interface IConfigFile extends JsonMap{
-  db?: {name: string};
-  chain?: {chain: string};
-  rpc?: {port: string};
-  eth1?: {contract?: {address: string}};
 }
 
 export class BeaconNodeCommand implements CliCommand {
@@ -51,22 +44,16 @@ export class BeaconNodeCommand implements CliCommand {
   public async action(options: IBeaconCommandOptions): Promise<void> {
     let parsedConfig: IConfigFile;
     if (options.configFile) {
-      let data: Buffer;
-      try {
-        data = fs.readFileSync(options.configFile);
-      } catch {
-        throw new CliError(`${options.configFile} could not be parsed.`);
-      }
-      parsedConfig = parse(data.toString());
+      parsedConfig = getTomlConfig(options.configFile);
     }
-    
+
     let optionsMap: BeaconNodeCtx = {
       db: {
-        name: options.db || parsedConfig ? parsedConfig.db.name : defaults.db.name
+        name: options.db || parsedConfig ? parsedConfig.db.name : defaults.db.name,
       },
       eth1: {
         contract: {
-          address: options.depositContract || parsedConfig ? parsedConfig.eth1.contract.address : defaults.eth1.depositContract.address
+          address: options.depositContract
         },
         provider: await this.getProvider(options.eth1RpcUrl)
       },
@@ -75,8 +62,11 @@ export class BeaconNodeCommand implements CliCommand {
       }
     };
 
-    if (parsedConfig) {
-      optionsMap = deepmerge(optionsMap, parsedConfig);
+    if (options.configFile) {
+      optionsMap = deepmerge(
+        parsedConfig,
+        optionsMap, 
+        {isMergeableObject: isPlainObject});
     }
 
     const node = new BeaconNode(optionsMap);

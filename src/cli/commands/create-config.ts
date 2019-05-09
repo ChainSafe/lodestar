@@ -2,9 +2,8 @@ import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import logger from "../../logger";
 import fs from "fs";
-import {stringify} from "@iarna/toml";
-import defaults from "../../node/defaults";
 import {CliError} from "../error";
+import {writeTomlConfig} from "../../util/toml";
 
 interface ICreateConfigOptions {
   outputFile: string;
@@ -33,27 +32,9 @@ export class CreateConfigCommand implements CliCommand {
         throw new CliError(`${options.outputFile} already exists`);
       }
 
-      // Stringify defaults into TOML format
-      const defaultsToWrite = (({chain, db, rpc, eth1}) => ({
-        chain,
-        db,
-        rpc,
-        // p2p
-        eth1: {
-          contract: {
-            address: eth1.depositContract.address
-          }
-        }
-      }))(defaults);
+      writeTomlConfig(options.outputFile);
 
-      const tomlString = stringify(defaultsToWrite);
-
-      // Save TOML formatted to output file
-      fs.writeFile(options.outputFile, tomlString, err => {
-        if (err) throw new CliError(err.message);
-
-        logger.info(`Successfully wrote config file to ${options.outputFile}`);
-      });
+      logger.info(`Successfully wrote config file to ${options.outputFile}`);
     } else {
       throw new CliError("A file must be specified using the -o flag");
     }
