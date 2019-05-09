@@ -1,11 +1,19 @@
-import {BeaconApi, ValidatorApi} from "../../rpc/api";
+import {IBeaconApi, IValidatorApi} from "../../rpc/api";
 import {Epoch, Slot} from "../../types";
+
+export interface NewSlotCallback {
+  (slot: Slot): void;
+}
+
+export interface NewEpochCallback {
+  (slot: Epoch): void;
+}
 
 export interface RpcClient {
 
-  beacon: BeaconApi;
+  beacon: IBeaconApi;
 
-  validator: ValidatorApi;
+  validator: IValidatorApi;
 
   /**
    * Initiates connection to rpc server.
@@ -22,7 +30,7 @@ export interface RpcClient {
    * Depending on implementation it will poll for new slot or getting notified(Websockets)
    * @param cb
    */
-  onNewSlot(cb: (slot: Slot) => void): void;
+  onNewSlot(cb: NewSlotCallback): void;
 
 
   /**
@@ -30,6 +38,6 @@ export interface RpcClient {
    * Depending on implementation it will poll for new epoch or getting notified(Websockets)
    * @param cb
    */
-  onNewEpoch(cb: (epoch: Epoch) => void): void;
+  onNewEpoch(cb: NewEpochCallback): void;
 
 }
