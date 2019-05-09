@@ -1,6 +1,6 @@
 {
-  "name": "@mpetrunic/bls-js",
-  "version": "0.2.0",
+  "name": "@chainsafe/bls-js",
+  "version": "0.1.0",
   "description": "Implementation of bls signature verification for ethereum 2.0",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

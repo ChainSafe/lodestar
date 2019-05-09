@@ -6,7 +6,7 @@ There is a lot of work being done that are core infrastructural pieces for Eth2.
 |-- [Beacon Chain](https://github.com/ChainSafe/lodestar_chain)<br />
 |-- [Simple Serialize (SSZ)](https://github.com/ChainSafe/ssz-js)<br />
 |-- [Fixed Size Numbers](https://github.com/ChainSafe/fixed-sized-numbers-ts/)<br />
-|-- [BLS Singatures and Signature Aggregation](https://github.com/ChainSafe/bls-js)<br />
+|-- [BLS Signatures and Signature Aggregation](https://github.com/ChainSafe/bls-js)<br />
 
 # bls-js
 
