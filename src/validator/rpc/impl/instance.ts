@@ -1,38 +1,32 @@
-import {RpcClient} from "../interface";
-import {BeaconApi} from "../../../rpc/api/beacon";
-import {ValidatorApi} from "../../../rpc/api/validator";
-import {Epoch, Slot} from "../../../types";
+import {IBeaconApi} from "../../../rpc/api/beacon";
+import {IValidatorApi} from "../../../rpc/api/validator";
+import {AbstractRpcClient} from "../abstract";
 
 export interface RpcClientOverInstanceOpts {
-  beacon: BeaconApi;
-  validator: ValidatorApi;
+  beacon: IBeaconApi;
+  validator: IValidatorApi;
 }
 
-export class RpcClientOverInstance implements RpcClient{
+export class RpcClientOverInstance extends AbstractRpcClient {
 
-  public beacon: BeaconApi;
+  public beacon: IBeaconApi;
 
-  public validator: ValidatorApi;
+  public validator: IValidatorApi;
 
   public constructor(opts: RpcClientOverInstanceOpts) {
+    super();
     this.beacon = opts.beacon;
     this.validator = opts.validator;
   }
 
   public async connect(): Promise<void> {
+    await super.connect();
     return null;
   }
 
   public async disconnect(): Promise<void> {
+    await super.disconnect();
     return null;
-  }
-
-  public onNewEpoch(cb: (epoch: Epoch) => void): void {
-    //TODO: implement some subscription api in beacon
-  }
-
-  public onNewSlot(cb: (slot: Slot) => void): void {
-    //TODO: implement some subscription api in beacon
   }
 
 }
