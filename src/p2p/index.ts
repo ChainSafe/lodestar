@@ -10,7 +10,7 @@ import {PeerId} from "peer-id";
 import {promisify} from "promisify-es6";
 import {Hello, Goodbye} from "../rpc/api/wire/messages";
 import {DB} from "../db";
-import {BeaconChain} from "../chain"
+import {BeaconChain} from "../chain";
 
 export interface P2pOptions {
   maxPeers: number;
@@ -98,14 +98,15 @@ export class P2PNetwork extends EventEmitter implements Service {
         }
 
       });
-
+ 
+      /*
       // 2-way handshake
       const protocol = "/eth/serenity/beacon/rpc/1";
       // Placeholders to make this file compile temporarily
       const helloMsg: Hello = {
         networkId: 0,
         chainId: 0,
-	latestFinalizedRoot: Buffer.from(""),
+        latestFinalizedRoot: Buffer.from(""),
         latestFinalizedEpoch: 0,
         bestRoot: Buffer.from(""),
         bestSlot: 0
@@ -120,11 +121,15 @@ export class P2PNetwork extends EventEmitter implements Service {
 	  })
         );	    
       });
+       */
       this.node.on('peer:connect', (peerInfo) => {
         try {
           this.log.info(`Peer connected: ${peerInfo}`);
           this.peerBook.put(peerInfo);
 	  this.discoveredPeers.add(peerInfo);
+          
+          
+	  /*	
 	  this.node.dialProtocol(peerInfo, protocol, (err, conn) => {
 	    pull(
               pull.values([Buffer.from(JSON.stringify(helloMsg))]),
@@ -138,7 +143,7 @@ export class P2PNetwork extends EventEmitter implements Service {
 
         } catch (err) {
           this.log.error(err);
-        }
+	}*/
       });
 
       this.node.on('peer:disconnect', (peerInfo) => {
@@ -167,8 +172,36 @@ export class P2PNetwork extends EventEmitter implements Service {
     return new Promise((resolve, reject) => {
       const handler = (err, peerInfo) => {
         if (err) {
-	  return reject(err);
-        }
+	   return reject(err);
+	}
+
+	      protobuf.load('../rpc/protocol/wire.proto').then((root) => {
+	        this.node.on('peer:connection', (conn, peer) => {
+		  this.log.info('peer:connection');
+
+                  // Temporary parameters until the rest is ready.
+		  peer.rpc.Hello({
+		    networkId: 0,
+		    chainId: 0,
+                    latestFinalizedRoot: 0x00,
+                    latestFinalizedEpoch: 0,
+                    bestRoot: 0x00,
+                    bestSlot: 0,
+		  },
+
+                  (response, peer) => {
+                    // Process response  
+		  });
+		});
+
+                // Simply this.      
+		this.node.handle('Hello', (networkId, chainId, latestFinalizedRoot, latestFinalizedEpoch, bestRoot, BestSlot, peer, response) => {
+		  response({
+		    // Respond with hello message
+		  });    
+	       });
+	      });
+
         this.peerBook.getAll().forEach((peer) => {
 	  peer.multiaddrs.forEach((multiaddr) => {
 	    peerInfo.multiaddrs.add(multiaddr);
@@ -188,4 +221,4 @@ export class P2PNetwork extends EventEmitter implements Service {
       } 
     });
   }
-}
+}i

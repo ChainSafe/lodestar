@@ -7,6 +7,7 @@ import {PeerInfo} from "peer-info";
 import {PeerId} from "peer-id";
 import {defaultsDeep} from "@nodeutils/defaults-deep";
 import * as FloodSub from "libp2p-floodsub";
+import {protobuf} from "protobufjs";
 
 export interface LodestarNodeOpts {
   bootstrap?: string[];
@@ -18,7 +19,7 @@ export class LodestarNode extends LibP2p {
 
   private pubsub: FloodSub;
 
-  private constructor(_options: LodestarNodeOpts) {
+  private constructor(pInfo: PeerInfo, _options: LodestarNodeOpts) {
     const defaults = {
       modules: {
         transport: [TCP],
@@ -36,6 +37,8 @@ export class LodestarNode extends LibP2p {
       }
     };
 
+    this.handlers = {};
+    this.requests = {};
     super(defaultsDeep(_options, defaults));
   }
 
@@ -55,6 +58,18 @@ export class LodestarNode extends LibP2p {
   public async start(): Promise<void> {
     await promisify(super.start.bind(this))();
     await promisify(this.pubsub.start.bind(this.pubsub))();
+  }
+
+  public async handle() {
+  
+  }
+
+  private async _connection(conn: Connection, peer:): Promise<void> {
+  
+  }
+
+  private async _rpc(send: ): Promise<void> {
+  
   }
 }
 
