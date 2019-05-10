@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/util
+ */
+
 export * from "./epoch";
 export * from "./validator";
 export * from "./validatorStatus";

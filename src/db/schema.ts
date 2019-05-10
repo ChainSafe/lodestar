@@ -1,3 +1,7 @@
+/**
+ * @module db/schema
+ */
+
 import BN from "bn.js";
 
 // Buckets are separate database namespaces

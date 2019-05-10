@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/util
+ */
+
 import BN from "bn.js";
 
 import {
@@ -9,9 +13,6 @@ import {
 
 /**
  * Increase the balance for a validator with the given ``index`` by ``delta``.
- * @param {BeaconState} state
- * @param {ValidatorIndex} index
- * @param {Gwei} delta
  */
 export function increaseBalance(state: BeaconState, index: ValidatorIndex, delta: Gwei): void {
   state.balances[index] = state.balances[index].add(delta);
@@ -19,10 +20,8 @@ export function increaseBalance(state: BeaconState, index: ValidatorIndex, delta
 
 /**
  * Decrease the balance for a validator with the given ``index`` by ``delta``.
+ *
  * Set to ``0`` when underflow.
- * @param {BeaconState} state
- * @param {ValidatorIndex} index
- * @param {Gwei} delta
  */
 export function decreaseBalance(state: BeaconState, index: ValidatorIndex, delta: Gwei): void {
   const currentBalance = state.balances[index];
@@ -33,9 +32,6 @@ export function decreaseBalance(state: BeaconState, index: ValidatorIndex, delta
 
 /**
  * Return the combined effective balance of an array of validators.
- * @param {BeaconState} state
- * @param {ValidatorIndex[]} validators
- * @returns {Gwei}
  */
 export function getTotalBalance(state: BeaconState, indices: ValidatorIndex[]): Gwei {
   return indices.reduce((total: Gwei, index: ValidatorIndex): Gwei =>

@@ -1,3 +1,7 @@
+/**
+ * @module util/crypto
+ */
+
 import {keccakAsU8a} from "@polkadot/util-crypto";
 
 import {

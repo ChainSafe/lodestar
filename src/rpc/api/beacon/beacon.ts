@@ -1,3 +1,7 @@
+/**
+ * @module rpc/api
+ */
+
 import {IBeaconApi} from "./interface";
 import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "../../../types";
 import {BeaconChain} from "../../../chain";

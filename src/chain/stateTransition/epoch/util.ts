@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/epoch/util
+ */
+
 import assert from "assert";
 import {deserialize, serialize, hashTreeRoot} from "@chainsafe/ssz";
 

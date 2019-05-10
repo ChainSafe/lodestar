@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/block
+ */
+
 import assert from "assert";
 
 import {serialize} from "@chainsafe/ssz";
@@ -26,8 +30,6 @@ import {
 /**
  * Process ``AttesterSlashing`` operation.
  * Note that this function mutates ``state``.
- * @param {BeaconState} state
- * @param {AttesterSlashing} attesterSlashing
  */
 export function processAttesterSlashing(state: BeaconState, attesterSlashing: AttesterSlashing): void {
   const attestation1 = attesterSlashing.attestation1;

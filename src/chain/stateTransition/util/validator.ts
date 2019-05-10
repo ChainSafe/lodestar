@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/util
+ */
+
 import assert from "assert";
 import {
   BeaconState,
@@ -13,9 +17,6 @@ import {SLOTS_PER_EPOCH} from "../../../constants";
 
 /**
  * Check if validator is active
- * @param {Validator} validator
- * @param {Epoch} epoch
- * @returns {boolean}
  */
 export function isActiveValidator(validator: Validator, epoch: Epoch): boolean {
   return validator.activationEpoch <= epoch && epoch < validator.exitEpoch;
@@ -23,9 +24,6 @@ export function isActiveValidator(validator: Validator, epoch: Epoch): boolean {
 
 /**
  * Check if validator is slashable
- * @param {Validator} validator
- * @param {Epoch} epoch
- * @returns {boolean}
  */
 export function isSlashableValidator(validator: Validator, epoch: Epoch): boolean {
   return (
@@ -37,9 +35,6 @@ export function isSlashableValidator(validator: Validator, epoch: Epoch): boolea
 
 /**
  * Get indices of active validators from validators.
- * @param {BeaconState} state
- * @param {Epoch} epoch
- * @returns {ValidatorIndex[]}
  */
 export function getActiveValidatorIndices(state: BeaconState, epoch: Epoch): ValidatorIndex[] {
   return state.validatorRegistry.reduce((indices, validator, index) => {
@@ -57,11 +52,6 @@ export function getActiveValidatorIndices(state: BeaconState, epoch: Epoch): Val
  * ``assignment[1]`` is the shard to which the committee is assigned
  * ``assignment[2]`` is the slot at which the committee is assigned
  * a beacon block at the assigned slot.
- * @param {BeaconState} state
- * @param {Epoch} epoch
- * @param {ValidatorIndex} validatorIndex
- * @param {boolean} registryChange
- * @returns {{validators: ValidatorIndex[]; shard: Shard; slot: number; isProposer: boolean}}
  */
 export function getCommitteeAssignment(
   state: BeaconState,
@@ -89,10 +79,6 @@ export function getCommitteeAssignment(
 
 /**
  * Checks if a validator is supposed to propose a block
- * @param {BeaconState} state
- * @param {Slot} slot
- * @param {ValidatorIndex} validatorIndex
- * @returns {Boolean}
  */
 export function isProposerAtSlot(
   state: BeaconState,

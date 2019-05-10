@@ -1,3 +1,7 @@
+/**
+ * @module cli/commands
+ */
+
 import {CliCommand} from "./interface";
 import {PrivateEth1Network} from "../../eth1/dev";
 import * as commander from "commander";

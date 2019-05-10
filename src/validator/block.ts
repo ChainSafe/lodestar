@@ -1,3 +1,7 @@
+/**
+ * @module validator
+ */
+
 import ssz from "@chainsafe/ssz";
 
 import {ValidatorIndex, BeaconBlock, BeaconState, bytes48} from "../types";
@@ -20,7 +24,6 @@ export default class BlockProcessingService {
 
   /**
    * IFF a validator is selected construct a block to propose.
-   * @returns {Promise<void>}
    */
   public async buildBlock(): Promise<BeaconBlock> {
     let block: BeaconBlock = getEmptyBlock();

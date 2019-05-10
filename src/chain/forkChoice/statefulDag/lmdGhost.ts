@@ -1,3 +1,7 @@
+/**
+ * @module chain/forkChoice
+ */
+
 import assert from "assert";
 import BN from "bn.js";
 
@@ -147,6 +151,7 @@ class Node {
 /**
  * Calculate best block using
  * Latest Message-Driven Greedy Heaviest Observed SubTree
+ *
  * See https://github.com/protolambda/lmd-ghost#state-ful-dag
  */
 export class StatefulDagLMDGHOST implements LMDGHOST {

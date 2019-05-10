@@ -1,3 +1,7 @@
+/**
+ * @module cli
+ */
+
 // NOTE :: All commands are stubbed as examples
 // Useful repo https://github.com/tsantef/commander-starter
 import program from "commander";

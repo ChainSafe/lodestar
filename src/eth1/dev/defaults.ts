@@ -1,3 +1,7 @@
+/**
+ * @module eth1/dev
+ */
+
 export const networkOpts =  {
   port: 8545,
   networkId: 200,

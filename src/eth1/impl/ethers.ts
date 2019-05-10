@@ -1,3 +1,7 @@
+/**
+ * @module eth1
+ */
+
 import BN from "bn.js";
 import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";

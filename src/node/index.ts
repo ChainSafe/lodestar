@@ -1,3 +1,7 @@
+/**
+ * @module node
+ */
+
 import deepmerge from "deepmerge";
 import {LevelDB} from "../db";
 import {Eth1Options, EthersEth1Notifier} from "../eth1";

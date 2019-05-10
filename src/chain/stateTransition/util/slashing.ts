@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/util
+ */
+
 import {
   AttestationData,
   Epoch,
@@ -7,10 +11,7 @@ import {slotToEpoch} from "./epoch";
 
 
 /**
- * Check if attestationData1 and attestationData2 have the same target.
- * @param {AttestationData} attestationData1
- * @param {AttestationData} attestationData2
- * @returns {boolean}
+ * Check if ``attestationData1`` and ``attestationData2`` have the same target.
  */
 export function isDoubleVote(attestationData1: AttestationData, attestationData2: AttestationData): boolean {
   const targetEpoch1: Epoch = slotToEpoch(attestationData1.slot);
@@ -19,10 +20,7 @@ export function isDoubleVote(attestationData1: AttestationData, attestationData2
 }
 
 /**
- * Check if attestationData1 surrounds attestationData2
- * @param {AttestationData} attestationData1
- * @param {AttestationData} attestationData2
- * @returns {boolean}
+ * Check if ``attestationData1`` surrounds ``attestationData2``
  */
 export function isSurroundVote(attestationData1: AttestationData, attestationData2: AttestationData): boolean {
   const sourceEpoch1: Epoch  = attestationData1.sourceEpoch;

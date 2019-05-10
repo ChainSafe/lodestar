@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/util
+ */
+
 import {
   BeaconState,
   Epoch,
@@ -31,9 +35,8 @@ import {
 
 /**
  * Initiate exit for the validator with the given index.
+ *
  * Note: that this function mutates state.
- * @param {BeaconState} state
- * @param {ValidatorIndex} index
  */
 export function initiateValidatorExit(state: BeaconState, index: ValidatorIndex): void {
   const validator = state.validatorRegistry[index];
@@ -63,10 +66,8 @@ export function initiateValidatorExit(state: BeaconState, index: ValidatorIndex)
 
 /**
  * Slash the validator with index ``slashedIndex``.
+ * 
  * Note that this function mutates ``state``.
- * @param {BeaconState} state
- * @param {ValidatorIndex} shashedIndex
- * @param {ValidatorIndex} whistleblowerIndex
  */
 export function slashValidator(state: BeaconState, slashedIndex: ValidatorIndex, whistleblowerIndex: ValidatorIndex | null = null): void {
   const currentEpoch = getCurrentEpoch(state);

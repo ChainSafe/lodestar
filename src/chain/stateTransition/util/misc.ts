@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/util
+ */
+
 import assert from "assert";
 
 import {
@@ -38,9 +42,6 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 
 /**
  * Return the block root at a recent ``slot``.
- * @param {BeaconState} state
- * @param {Slot} slot
- * @returns {bytes32}
  */
 export function getBlockRootAtSlot(state: BeaconState, slot: Slot): bytes32 {
   assert(slot < state.slot);
@@ -50,9 +51,6 @@ export function getBlockRootAtSlot(state: BeaconState, slot: Slot): bytes32 {
 
 /**
  * Return the block root at a recent ``epoch``.
- * @param {BeaconState} state
- * @param {Epoch} epoch
- * @returns {bytes32}
  */
 export function getBlockRoot(state: BeaconState, epoch: Epoch): bytes32 {
   return getBlockRootAtSlot(state, getEpochStartSlot(epoch));
@@ -60,9 +58,6 @@ export function getBlockRoot(state: BeaconState, epoch: Epoch): bytes32 {
 
 /**
  * Return the state root at a recent ``slot``.
- * @param {BeaconState} state
- * @param {Slot} slot
- * @returns {bytes32}
  */
 export function getStateRoot(state: BeaconState, slot: Slot): bytes32 {
   assert(slot < state.slot);
@@ -72,8 +67,6 @@ export function getStateRoot(state: BeaconState, slot: Slot): bytes32 {
 
 /**
  * Return the beacon proposer index at ``state.slot``.
- * @param {BeaconState} state
- * @returns {ValidatorIndex}
  */
 export function getBeaconProposerIndex(state: BeaconState): ValidatorIndex {
   const currentEpoch = getCurrentEpoch(state);
@@ -96,12 +89,6 @@ export function getBeaconProposerIndex(state: BeaconState): ValidatorIndex {
 /**
  * Verify that the given ``leaf`` is on the merkle branch ``proof``
  * starting with the given ``root``.
- * @param {bytes32} leaf
- * @param {bytes32[]} proof
- * @param {number} depth
- * @param {number} index
- * @param {bytes32} root
- * @returns {bool}
  */
 export function verifyMerkleBranch(leaf: bytes32, proof: bytes32[], depth: number, index: number, root: bytes32): boolean {
   let value = leaf;
@@ -117,10 +104,6 @@ export function verifyMerkleBranch(leaf: bytes32, proof: bytes32[], depth: numbe
 
 /**
  * Return the signature domain (fork version concatenated with domain type) of a message.
- * @param {Fork} fork
- * @param {Epoch} epoch
- * @param {number} domainType
- * @returns {bytes8}
  */
 export function getDomain(state: BeaconState, domainType: number, messageEpoch: Epoch | null = null): bytes8 {
   const epoch = messageEpoch || getCurrentEpoch(state);
@@ -131,8 +114,7 @@ export function getDomain(state: BeaconState, domainType: number, messageEpoch: 
 }
 
 /**
- * @param {BeaconState} state
- * @returns {number}
+ * Return the churn limit based on the active validator count.
  */
 export function getChurnLimit(state: BeaconState): number {
   return Math.max(
@@ -143,8 +125,6 @@ export function getChurnLimit(state: BeaconState): number {
 
 /**                       
  * Return the block header corresponding to a block with ``state_root`` set to ``ZERO_HASH``.
- * @param {BeaconBlock} block
- * @returns {BeaconBlockHeader} 
  */                                                                                      
 export function getTemporaryBlockHeader(block: BeaconBlock): BeaconBlockHeader {
   return {
