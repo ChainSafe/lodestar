@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/epoch
+ */
+
 import {BeaconState} from "../../../../types";
 import {GENESIS_EPOCH} from "../../../../constants";
 import {getCurrentEpoch, increaseBalance, decreaseBalance} from "../../util";

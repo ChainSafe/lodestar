@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/block
+ */
+
 import assert from "assert";
 
 import {signingRoot} from "@chainsafe/ssz";

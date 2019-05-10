@@ -1,3 +1,7 @@
+/**
+ * @module db
+ */
+
 import {EventEmitter} from "events";
 import {DB} from "../interface";
 import {

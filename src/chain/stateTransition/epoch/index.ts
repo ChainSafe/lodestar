@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/epoch
+ */
+
 import assert from "assert";
 
 import {BeaconState} from "../../../types";

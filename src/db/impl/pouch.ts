@@ -1,3 +1,7 @@
+/**
+ * @module db
+ */
+
 import {DBOptions} from "../interface";
 
 import PouchDB from "pouchdb-core";

@@ -1,3 +1,7 @@
+/**
+ * @module cli/commands
+ */
+
 import {CliCommand} from "./interface";
 import * as commander from "commander";
 import defaults from "../../eth1/defaults";

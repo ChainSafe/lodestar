@@ -1,3 +1,7 @@
+/**
+ * @module rpc/protocol
+ */
+
 import * as jsonRpc from "noice-json-rpc";
 
 import {IApi} from "../api/interface";

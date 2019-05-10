@@ -1,3 +1,7 @@
+/**
+ * @module p2p
+ */
+
 import {EventEmitter} from "events";
 import {Service} from "../node";
 import {LodestarNode} from "./node";

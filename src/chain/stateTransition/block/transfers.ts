@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/block
+ */
+
 import assert from "assert";
 import BN from "bn.js";
 import {signingRoot} from "@chainsafe/ssz";
@@ -32,9 +36,8 @@ import {
 
 /**
  * Process ``Transfer`` operation.
+ *
  * Note that this function mutates ``state``.
- * @param {BeaconState} state
- * @param {Transfer} transfer
  */
 export function processTransfer(state: BeaconState, transfer: Transfer): void {
   // Verify the amount and fee aren't individually too big (for anti-overflow purposes)

@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/epoch
+ */
+
 import BN from "bn.js";
 import {hashTreeRoot} from "@chainsafe/ssz";
 

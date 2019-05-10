@@ -1,3 +1,7 @@
+/**
+ * @module validator/stubs
+ */
+
 import {
   BeaconBlock, BeaconState, bytes48, Epoch, Shard, Slot,
   ValidatorIndex

@@ -1,3 +1,7 @@
+/**
+ * @module constants
+ */
+
 // Misc
 export const SHARD_COUNT = 2 ** 10; // 1024 shards
 export const TARGET_COMMITTEE_SIZE = 2 ** 7; // 128 validators

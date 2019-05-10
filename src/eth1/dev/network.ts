@@ -1,3 +1,7 @@
+/**
+ * @module eth1/dev
+ */
+
 import ganache from "ganache-core";
 import {promisify} from "util";
 import logger from "../../logger";

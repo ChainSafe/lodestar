@@ -1,3 +1,7 @@
+/**
+ * @module validator
+ */
+
 import {Shard, Slot, ValidatorIndex} from "../types";
 import {Keypair} from "@chainsafe/bls-js/lib/keypair";
 

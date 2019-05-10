@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/epoch
+ */
+
 import {BeaconState} from "../../../types";
 
 import {
@@ -14,8 +18,8 @@ import {
 
 /**
  * Process the slashings.
+ *
  * Note that this function mutates ``state``.
- * @param {BeaconState} state
  */
 export function processSlashings(state: BeaconState): void {
   const currentEpoch = getCurrentEpoch(state);

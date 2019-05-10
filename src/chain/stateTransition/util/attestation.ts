@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/util
+ */
+
 import {hashTreeRoot} from "@chainsafe/ssz";
 import assert from "assert";
 
@@ -27,10 +31,6 @@ import {getDomain} from "./misc";
 
 /**
  * Return the sorted attesting indices corresponding to ``attestation_data`` and ``bitfield``.
- * @param {BeaconState} state
- * @param {AttestationData} attestationData
- * @param {bytes} bitfield
- * @returns {ValidatorIndex[]}
  */
 export function getAttestingIndices(state: BeaconState, attestationData: AttestationData, bitfield: bytes): ValidatorIndex[] {
   const crosslinkCommittees = getCrosslinkCommitteesAtSlot(state, attestationData.slot);
@@ -47,9 +47,6 @@ export function getAttestingIndices(state: BeaconState, attestationData: Attesta
 
 /**
  * Returns the ith bit in bitfield
- * @param {bytes} bitfield
- * @param {number} i
- * @returns {number}
  */
 export function getBitfieldBit(bitfield: bytes, i: number): number {
   const bit = i % 8;
@@ -59,9 +56,6 @@ export function getBitfieldBit(bitfield: bytes, i: number): number {
 
 /**
  * Verify ``bitfield`` against the ``committee_size``.
- * @param {bytes} bitfield
- * @param {number} committeeSize
- * @returns {boolean}
  */
 export function verifyBitfield(bitfield: bytes, committeeSize: number): boolean {
   if (bitfield.length !== intDiv(committeeSize + 7, 8)) {
@@ -79,9 +73,6 @@ export function verifyBitfield(bitfield: bytes, committeeSize: number): boolean 
 
 /**
  * Convert ``attestation`` to (almost) indexed-verifiable form.
- * @param {BeaconState} state
- * @param {Attestation} attestation
- * @returns {IndexedAttestation}
  */
 export function convertToIndexed(state: BeaconState, attestation: Attestation): IndexedAttestation {
   const attestingIndices = getAttestingIndices(state, attestation.data, attestation.aggregationBitfield);
@@ -98,9 +89,6 @@ export function convertToIndexed(state: BeaconState, attestation: Attestation): 
 
 /**
  * Verify validity of ``indexed_attestation`` fields.
- * @param {BeaconState} state
- * @param {IndexedAttestation} indexedAttestation
- * @returns {bool}
  */
 export function verifyIndexedAttestation(state: BeaconState, indexedAttestation: IndexedAttestation): bool {
   const custodyBit0Indices = indexedAttestation.custodyBit0Indices;

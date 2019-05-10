@@ -14,6 +14,7 @@
   ],
   "scripts": {
     "build": "babel src -x .ts -d lib --source-maps",
+    "build:docs": "typedoc --exclude src/index.ts --out docs src",
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts src/",
     "lint-fix": "eslint --ext .ts src/ --fix",
@@ -99,6 +100,10 @@
     "sinon": "^7.2.7",
     "supertest": "^4.0.2",
     "ts-node": "^7.0.1",
+    "typedoc": "^0.14.2",
+    "typedoc-plugin-external-module-name": "^2.1.0",
+    "typedoc-plugin-internal-external": "^2.0.2",
+    "typedoc-plugin-markdown": "^1.2.0",
     "typescript": "^3.2.1"
   }
 }
