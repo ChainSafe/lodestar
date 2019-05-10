@@ -1,6 +1,6 @@
 import deepmerge from "deepmerge";
 import {LevelDB} from "../db";
-import {Eth1Options, EthersEth1Notifier} from "../eth1";
+import {EthersEth1Notifier} from "../eth1";
 import {P2PNetwork} from "../p2p";
 
 import defaultConf from "./defaults";
@@ -11,8 +11,7 @@ import {BeaconChain} from "../chain";
 import {OpPool} from "../opPool";
 import {JSONRPC} from "../rpc/protocol";
 import {WSServer} from "../rpc/transport";
-import {BeaconApi, ValidatorApi} from "../rpc/api";
-import {IApi, IApiConstructor} from "../rpc/api/interface";
+import {IApiConstructor} from "../rpc/api/interface";
 
 export interface Service {
   start(): Promise<void>;

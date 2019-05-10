@@ -1,8 +1,8 @@
-import {bytes48, Slot, Shard, ValidatorIndex} from "../types";
+import {Shard, Slot, ValidatorIndex} from "../types";
+import {Keypair} from "@chainsafe/bls-js/lib/keypair";
 
 export interface ValidatorCtx {
-  publicKey: bytes48[];
-  privateKey: bytes48[];
+  keypair: Keypair;
   rpcUrl: string;
 }
 

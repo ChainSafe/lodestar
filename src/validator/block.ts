@@ -1,18 +1,18 @@
 import ssz from "@chainsafe/ssz";
 
-import {ValidatorIndex, BeaconBlock, BeaconState, bytes48} from "../types";
+import {BeaconBlock, BeaconState, ValidatorIndex} from "../types";
 import {Domain} from "../constants";
-import {blsSign} from "../stubs/bls";
-import {getDomain, slotToEpoch} from "../chain/stateTransition/util";
+import {getDomain} from "../chain/stateTransition/util";
 import {getEmptyBlock} from "../chain/genesis";
 import RPCProvider from "./stubs/rpc";
+import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 
 export default class BlockProcessingService {
   private validatorIndex: ValidatorIndex;
   private provider: RPCProvider;
-  private privateKey: bytes48[];
+  private privateKey: PrivateKey;
 
-  public constructor(index: ValidatorIndex, provider: RPCProvider, privateKey: bytes48[]) {
+  public constructor(index: ValidatorIndex, provider: RPCProvider, privateKey: PrivateKey) {
     this.validatorIndex = index;
     this.provider = provider;
     this.privateKey = privateKey;
@@ -40,11 +40,10 @@ export default class BlockProcessingService {
     block.previousBlockRoot = ssz.hashTreeRoot(prevBlock, BeaconBlock);
     block.stateRoot = ssz.hashTreeRoot(curState, BeaconState);
     // TODO Eth1Data
-    block.signature = blsSign(
-      this.privateKey,
+    block.signature = this.privateKey.signMessage(
       ssz.signingRoot(block, BeaconBlock),
       getDomain(curState, Domain.BEACON_PROPOSER)
-    );
+    ).toBytesCompressed();
 
     return block;
   }
