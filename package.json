@@ -1,16 +1,20 @@
 {
-  "name": "lodestar-chain",
+  "name": "@chainsafe/lodestar",
   "version": "0.1.0",
-  "description": "A javascript implementation of the beacon chain",
-  "author": "ChainSafe System",
-  "license": "MIT",
+  "description": "A Typescript implementation of the beacon chain and validator client",
+  "author": "ChainSafe Systems",
+  "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/ChainSafe/lodestar_chain/issues"
+    "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "homepage": "https://github.com/ChainSafe/lodestar_chain#readme",
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "main": "lib/index.js",
+  "files": [
+    "lib"
+  ],
   "scripts": {
     "build": "babel src -x .ts -d lib --source-maps",
+    "build:docs": "typedoc --exclude src/index.ts --out docs src",
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts src/",
     "lint-fix": "eslint --ext .ts src/ --fix",
@@ -22,7 +26,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com:ChainSafe/lodestar_chain.git"
+    "url": "git+https://github.com:ChainSafe/lodestar.git"
   },
   "keywords": [
     "Ethereum",
@@ -96,6 +100,10 @@
     "sinon": "^7.2.7",
     "supertest": "^4.0.2",
     "ts-node": "^7.0.1",
+    "typedoc": "^0.14.2",
+    "typedoc-plugin-external-module-name": "^2.1.0",
+    "typedoc-plugin-internal-external": "^2.0.2",
+    "typedoc-plugin-markdown": "^1.2.0",
     "typescript": "^3.2.1"
   }
 }

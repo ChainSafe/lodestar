@@ -1,3 +1,7 @@
+/**
+ * @module chain/forkChoice
+ */
+
 import {
   bytes32,
   Gwei,

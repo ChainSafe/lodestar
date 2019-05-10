@@ -2,9 +2,16 @@ language: node_js
 node_js:
   - "lts/*"
 cache: yarn
-before_script:
-  - yarn install
 script:
   - yarn run lint
   - yarn test
   - yarn run coverage
+  - yarn build:docs
+deploy:
+  provider: pages
+  skip_cleanup: true
+  github_token: $GH_PAGES_TOKEN
+  keep_history: true
+  local_dir: docs
+  on:
+    branch: master

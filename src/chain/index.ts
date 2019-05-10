@@ -1,3 +1,7 @@
+/**
+ * @module chain
+ */
+
 import assert from "assert";
 import {EventEmitter} from "events";
 import {hashTreeRoot} from "@chainsafe/ssz";

@@ -1,3 +1,7 @@
+/**
+ * @module validator
+ */
+
 import {bytes48, Slot, Shard, ValidatorIndex, BLSPubkey} from "../types";
 import {RpcClient} from "./rpc";
 

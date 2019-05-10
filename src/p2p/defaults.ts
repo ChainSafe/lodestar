@@ -1,3 +1,7 @@
+/**
+ * @module p2p
+ */
+
 import PeerBook from "peer-book";
 
 export default {

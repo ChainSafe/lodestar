@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/block
+ */
+
 import assert from "assert";
 import {signingRoot} from "@chainsafe/ssz";
 
@@ -26,9 +30,8 @@ import {
 
 /**
  * Process ``VoluntaryExit`` operation.
+ *
  * Note that this function mutates ``state``.
- * @param {BeaconState} state
- * @param {VoluntaryExit} exit
  */
 export function processVoluntaryExit(state: BeaconState, exit: VoluntaryExit): void {
   const validator = state.validatorRegistry[exit.validatorIndex];

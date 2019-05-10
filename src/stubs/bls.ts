@@ -1,3 +1,7 @@
+/**
+ * @module stubs
+ */
+
 import {
   bool,
   bytes8,

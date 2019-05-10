@@ -1,3 +1,7 @@
+/**
+ * @module validator
+ */
+
 // This file makes some naive assumptions surrounding the way RPC like calls will be made in ETH2.0
 /**
  * 1. Setup any necessary connections (RPC,...)
@@ -29,9 +33,6 @@ class Validator {
   private genesisInfo: GenesisInfo;
   public isActive: boolean;
 
-  /**
-   * @param {ValidatorCtx} ctx
-   */
   public constructor(ctx: ValidatorCtx) {
     this.ctx = ctx;
     this.logger = logger;
@@ -60,7 +61,6 @@ class Validator {
 
   /**
    * Main method that starts a client.
-   * @returns {Promise<void>}
    */
   public async setup(): Promise<void> {
     this.logger.info("Setting up validator client...");
@@ -88,7 +88,6 @@ class Validator {
 
   /**
    * Recursively checks for the chain start log event from the ETH1.x deposit contract
-   * @returns {Promise<boolean>}
    */
   private async isChainLive(): Promise<boolean> {
     this.logger.info("Checking if chain has started...");
@@ -105,7 +104,6 @@ class Validator {
 
   /**
    * Checks to see if the validator has been processed on the beacon chain.
-   * @returns {Promise<ValidatorIndex>}
    */
   private async getValidatorIndex(): Promise<ValidatorIndex> {
     this.logger.info("Checking if validator has been processed...");

@@ -1,3 +1,7 @@
+/**
+ * @module sync
+ */
+
 import {EventEmitter} from "events";
 
 /**

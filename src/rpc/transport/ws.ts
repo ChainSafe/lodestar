@@ -1,3 +1,7 @@
+/**
+ * @module rpc/transport
+ */
+
 import * as http from "http";
 import promisify from "promisify-es6";
 import WebSocket from "ws";

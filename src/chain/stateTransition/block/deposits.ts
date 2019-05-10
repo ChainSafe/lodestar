@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/block
+ */
+
 import assert from "assert";
 import {serialize, signingRoot} from "@chainsafe/ssz";
 
@@ -30,8 +34,6 @@ import {
 
 /**
  * Process an Eth1 deposit, registering a validator or increasing its balance.
- * @param {BeaconState} state
- * @param {Deposit} deposit
  */
 export function processDeposit(state: BeaconState, deposit: Deposit): void {
   // Verify the Merkle branch

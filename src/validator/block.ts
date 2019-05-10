@@ -1,3 +1,15 @@
+/**
+ * @module validator
+ */
+
+import ssz from "@chainsafe/ssz";
+
+import {ValidatorIndex, BeaconBlock, BeaconState, bytes48} from "../types";
+import {Domain} from "../constants";
+import {blsSign} from "../stubs/bls";
+import {getDomain, slotToEpoch} from "../chain/stateTransition/util";
+import {getEmptyBlock} from "../chain/genesis";
+import RPCProvider from "./stubs/rpc";
 import {BeaconBlock, bytes48, Slot, ValidatorIndex} from "../types";
 import {getRandaoMix, slotToEpoch} from "../chain/stateTransition/util";
 import {RpcClient} from "./rpc";
@@ -15,7 +27,6 @@ export default class BlockProcessingService {
 
   /**
    * IFF a validator is selected construct a block to propose.
-   * @returns {Promise<void>}
    */
   public async buildBlock(slot: Slot): Promise<BeaconBlock> {
     const block = await this.provider.validator.produceBlock(

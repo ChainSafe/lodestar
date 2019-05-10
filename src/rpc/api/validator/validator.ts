@@ -1,3 +1,7 @@
+/**
+ * @module rpc/api
+ */
+
 import {
   Attestation,
   AttestationData,

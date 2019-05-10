@@ -1,3 +1,7 @@
+/**
+ * @module types
+ */
+
 // Each type exported here contains both a compile-time type (a typescript interface) and a run-time type (a javascript variable)
 // For more information, see ./index.ts
 import {SimpleContainerType} from "@chainsafe/ssz";

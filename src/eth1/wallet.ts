@@ -1,3 +1,7 @@
+/**
+ * @module eth1
+ */
+
 import defaults from "./defaults";
 import {ContractTransaction, ethers, Wallet} from "ethers";
 import {Provider} from "ethers/providers";

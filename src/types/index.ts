@@ -1,3 +1,7 @@
+/**
+ * @module types
+ */
+
 /*
 Each type exported here contains both a compile-time type (a typescript
 interface) and a run-time ssz type (a javascript variable)
