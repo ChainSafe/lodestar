@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/util
+ */
+
 import {
   ACTIVATION_EXIT_DELAY,
   GENESIS_EPOCH,
@@ -12,8 +16,6 @@ import {
 
 /**
  * Return the epoch number of the given slot.
- * @param {Slot} slot
- * @returns {Epoch}
  */
 export function slotToEpoch(slot: Slot): Epoch {
   return Math.floor(slot / SLOTS_PER_EPOCH);
@@ -21,8 +23,6 @@ export function slotToEpoch(slot: Slot): Epoch {
 
 /**
  * Return the previous epoch of the given state.
- * @param {BeaconState} state
- * @returns {Epoch}
  */
 export function getPreviousEpoch(state: BeaconState): Epoch {
   const currentEpoch = getCurrentEpoch(state);
@@ -34,8 +34,6 @@ export function getPreviousEpoch(state: BeaconState): Epoch {
 
 /**
  * Return the current epoch of the given state.
- * @param {BeaconState} state
- * @returns {Epoch}
  */
 export function getCurrentEpoch(state: BeaconState): Epoch {
   return slotToEpoch(state.slot);
@@ -43,8 +41,6 @@ export function getCurrentEpoch(state: BeaconState): Epoch {
 
 /**
  * Return the starting slot of the given epoch.
- * @param {Epoch} epoch
- * @returns {Slot}
  */
 export function getEpochStartSlot(epoch: Epoch): Slot {
   return epoch * SLOTS_PER_EPOCH;
@@ -52,8 +48,6 @@ export function getEpochStartSlot(epoch: Epoch): Slot {
 
 /**
  * Return the epoch at which an activation or exit triggered in ``epoch`` takes effect.
- * @param {Epoch} epoch
- * @returns {Epoch}
  */
 export function getDelayedActivationExitEpoch(epoch: Epoch): Epoch {
   return epoch + 1 + ACTIVATION_EXIT_DELAY;

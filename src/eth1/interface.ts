@@ -1,3 +1,7 @@
+/**
+ * @module eth1
+ */
+
 import {EventEmitter} from "events";
 
 import {bytes32, Deposit, number64} from "../types";

@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/util
+ */
+
 import assert from "assert";
 
 import {
@@ -37,11 +41,8 @@ import {generateSeed} from "./seed";
  *
  * Utilizes 'swap or not' shuffling found in
  * https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf
+ *
  * See the 'generalized domain' algorithm on page 3.
- * @param {number} index
- * @param {number} listSize
- * @param {seed} bytes32
- * @returns {number}
  */
 export function getPermutedIndex(index: number, listSize: number, seed: bytes32): number {
   let permuted = index;
@@ -69,10 +70,6 @@ export function getPermutedIndex(index: number, listSize: number, seed: bytes32)
 /**
  * Returns a value such that for a list L, chunk count k and index i,
  * split(L, k)[i] == L[get_split_offset(len(L), k, i): get_split_offset(len(L), k, i+1)]
- * @param {number} listSize
- * @param {number} chunks
- * @param {number} index
- * @returns {number}
  */
 export function getSplitOffset(listSize: number, chunks: number, index: number): number {
   return intDiv(listSize * index, chunks);
@@ -80,9 +77,6 @@ export function getSplitOffset(listSize: number, chunks: number, index: number):
 
 /**
  * Return the number of committees in one epoch.
- * @param {BeaconState} state
- * @param {Epoch} epoch
- * @returns {number}
  */
 export function getEpochCommitteeCount(state: BeaconState, epoch: Epoch): number {
   const activeValidatorIndices = getActiveValidatorIndices(state, epoch);
@@ -97,9 +91,6 @@ export function getEpochCommitteeCount(state: BeaconState, epoch: Epoch): number
 
 /**
  * Return the number of shards to increment ``state.latest_start_shard`` during ``epoch``.
- * @param {BeaconState} state
- * @param {Epoch} epoch
- * @returns {number}
  */
 export function getShardDelta(state: BeaconState, epoch: Epoch): number {
   return Math.min(
@@ -111,11 +102,6 @@ export function getShardDelta(state: BeaconState, epoch: Epoch): number {
 /**
  * Return the ``index``'th shuffled committee out of a total ``total_committees``
  * using ``validator_indices`` and ``seed``.
- * @param {ValidatorIndex[]} validatorIndices
- * @param {bytes32} seed
- * @param {number} index
- * @param {number} totalCommittees
- * @returns {ValidatorIndex[]}
  */
 export function computeCommittee(validatorIndices: ValidatorIndex[], seed: bytes32, index: number, totalCommittees: number): ValidatorIndex[] {
   const startOffset = getSplitOffset(validatorIndices.length, totalCommittees, index);
@@ -127,10 +113,6 @@ export function computeCommittee(validatorIndices: ValidatorIndex[], seed: bytes
 
 /**
  * Return the list of (committee, shard) acting as a tuple for the slot.
- * @param {BeaconState} state
- * @param {Slot} slot
- * @param {boolean} registryChange
- * @returns {[]}
  */
 export function getCrosslinkCommitteesAtSlot(state: BeaconState, slot: Slot): [ValidatorIndex[], Shard][] {
   const epoch = slotToEpoch(slot);

@@ -1,10 +1,11 @@
+/**
+ * @module util/math
+ */
+
 import BN from "bn.js";
 
 /**
  * Return the min number between two big numbers.
- * @param {BN} a
- * @param {BN} b
- * @returns {BN}
  */
 export function bnMin(a: BN, b: BN): BN {
   return a.lt(b) ? a : b;
@@ -12,9 +13,6 @@ export function bnMin(a: BN, b: BN): BN {
 
 /**
  * Return the max number between two big numbers.
- * @param {BN} a
- * @param {BN} b
- * @returns {BN}
  */
 export function bnMax(a: BN, b: BN): BN {
   return a.gt(b) ? a : b;
@@ -26,9 +24,6 @@ export function intDiv(dividend: number, divisor: number): number {
 
 /**
  * Calculate the largest integer k such that k**2 <= n.
- * Used in reward/penalty calculations
- * @param {number} n
- * @returns {number}
  */
 export function intSqrt(n: number): number {
   let x = n;

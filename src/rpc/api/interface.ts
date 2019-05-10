@@ -1,3 +1,7 @@
+/**
+ * @module rpc/api
+ */
+
 export interface IApi {
   /**
    * Name space for API commands

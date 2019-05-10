@@ -1,3 +1,7 @@
+/**
+ * @module rpc/transport
+ */
+
 import {LikeSocketServer} from "../protocol";
 import {LikeSocket} from "noice-json-rpc";
 import http from "http";

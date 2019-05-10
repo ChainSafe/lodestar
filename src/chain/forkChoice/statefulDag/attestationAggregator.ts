@@ -1,3 +1,7 @@
+/**
+ * @module chain/forkChoice
+ */
+
 import BN from "bn.js";
 
 import {Gwei, Slot, ValidatorIndex} from "../../../types";
@@ -5,6 +9,7 @@ import {Gwei, Slot, ValidatorIndex} from "../../../types";
 
 /**
  * Root is a block root as a hex string
+ *
  * Used here for light weight and easy comparison
  */
 export type Root = string;
@@ -99,6 +104,7 @@ export class AttestationAggregator {
 
   /**
    * Remove all unused aggregations
+   *
    * Note: latestAttestations is currently never pruned
    */
   public prune(): void {

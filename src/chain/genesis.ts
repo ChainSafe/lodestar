@@ -1,3 +1,7 @@
+/**
+ * @module chain/genesis
+ */
+
 import BN from "bn.js";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
@@ -22,8 +26,7 @@ import {processDeposit} from "./stateTransition/block/deposits";
 
 
 /**
- * Get an empty ``BeaconBlock``.
- * @returns {BeaconBlock}
+ * Get an empty [[BeaconBlock]].
  */
 export function getEmptyBlock(): BeaconBlock {
   return {
@@ -50,10 +53,6 @@ export function getEmptyBlock(): BeaconBlock {
 
 /**
  * Generate the initial beacon chain state.
- * @param {Deposit[]} initialValidatorDeposits
- * @param {number64} genesisTime
- * @param {Eth1Data} latestEth1Data
- * @returns {BeaconState}
  */
 export function getGenesisBeaconState(
   genesisValidatorDeposits: Deposit[],

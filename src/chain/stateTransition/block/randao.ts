@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/block
+ */
+
 import assert from "assert";
 import xor from "buffer-xor";
 import {hashTreeRoot} from "@chainsafe/ssz";

@@ -1,1 +1,5 @@
+/**
+ * @private
+ */
+
 import "./cli";
