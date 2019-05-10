@@ -6,6 +6,7 @@ import {Wallet} from "ethers/ethers";
 import logger from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
+import {JsonRpcProvider} from "ethers/providers";
 
 interface IDepositCommandOptions {
   privateKey: string;
@@ -13,6 +14,7 @@ interface IDepositCommandOptions {
   node: string;
   value: string;
   contract: string;
+  accounts: number;
 }
 
 export class DepositCommand implements CliCommand {
@@ -26,6 +28,7 @@ export class DepositCommand implements CliCommand {
       .option("-n, --node [node]", 'Url of eth1 node', 'http://127.0.0.1:8545')
       .option("-v, --value [value]", 'Amount of ether to deposit', "32")
       .option("-c, --contract [contract]", 'Address of deposit contract', defaults.depositContract.address)
+      .option("-a, --accounts [accounts]", "Number of accounts to generate at startup", 10)
       .action( async (options) => {
         //library is not awaiting this method so don't allow error propagation 
         // (unhandled promise rejections)
@@ -39,7 +42,7 @@ export class DepositCommand implements CliCommand {
   }
 
   public async action(options: IDepositCommandOptions): Promise<void> {
-    const provider = new ethers.providers.JsonRpcProvider(options.node);
+    const provider = new JsonRpcProvider(options.node);
     try {
       //check if we can connect to node
       await provider.getBlockNumber();
@@ -49,7 +52,7 @@ export class DepositCommand implements CliCommand {
 
     const wallets = [];
     if(options.mnemonic) {
-      wallets.push(...this.fromMnemonic(options.mnemonic, provider, 10));
+      wallets.push(...this.fromMnemonic(options.mnemonic, provider, options.accounts));
     } else if (options.privateKey) {
       wallets.push(new Wallet(options.privateKey, provider));
     } else {
@@ -76,7 +79,7 @@ export class DepositCommand implements CliCommand {
    * @param provider
    * @param n number of wallets to retrieve
    */
-  private fromMnemonic(mnemonic: string, provider, n: number): Wallet[] {
+  private fromMnemonic(mnemonic: string, provider: JsonRpcProvider, n: number): Wallet[] {
     const wallets = [];
     for (let i = 0; i < n; i++) {
       let wallet = Wallet.fromMnemonic(mnemonic, `m/44'/60'/0'/0/${i}`);

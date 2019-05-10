@@ -14,7 +14,7 @@ export class CreateConfigCommand implements CliCommand {
     commander
       .command("create-config")
       .description("Create default config file")
-      .option("-o, --outputFile [output_file]", "Path to output file destination")
+      .option("-o, --outputFile [output_file]", "Path to output file destination", "lodestar-config.toml")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation 
         // (unhandled promise rejections)
@@ -27,16 +27,12 @@ export class CreateConfigCommand implements CliCommand {
   }
 
   public async action(options: ICreateConfigOptions): Promise<void> {
-    if (options.outputFile) {
-      if (fs.existsSync(options.outputFile)){
-        throw new CliError(`${options.outputFile} already exists`);
-      }
-
-      writeTomlConfig(options.outputFile);
-
-      logger.info(`Successfully wrote config file to ${options.outputFile}`);
-    } else {
-      throw new CliError("A file must be specified using the -o flag");
+    if (fs.existsSync(options.outputFile)) {
+      throw new CliError(`${options.outputFile} already exists`);
     }
+
+    writeTomlConfig(options.outputFile);
+
+    logger.info(`Successfully wrote config file to ${options.outputFile}`);
   }
 }

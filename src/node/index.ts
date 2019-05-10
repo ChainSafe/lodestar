@@ -1,6 +1,6 @@
 import deepmerge from "deepmerge";
 import {LevelDB} from "../db";
-import {EthersEth1Notifier} from "../eth1";
+import {EthersEth1Notifier, EthersEth1Options} from "../eth1";
 import {P2PNetwork, P2pOptions} from "../p2p";
 
 import defaultConf from "./defaults";
@@ -12,6 +12,7 @@ import {OpPool} from "../opPool";
 import {JSONRPC} from "../rpc/protocol";
 import {WSServer} from "../rpc/transport";
 import {IApiConstructor} from "../rpc/api/interface";
+import {LevelDBOptions} from '../db/impl/level';
 
 export interface Service {
   start(): Promise<void>;
@@ -22,9 +23,8 @@ export interface Service {
 // Temporarily have properties be optional until others portions of lodestar are ready
 export interface BeaconNodeCtx {
   chain?: object;
-  db?: object;
-  // eth1 is left as any because the address property of Contract is readonly
-  eth1?: any;
+  db?: LevelDBOptions;
+  eth1?: EthersEth1Options;
   p2p?: P2pOptions;
   rpc?: RpcCtx;
   sync?: object;

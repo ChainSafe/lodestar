@@ -24,13 +24,12 @@ describe('[CLI] create-config', () => {
     expect(program.commands.length).to.be.equal(commandCount + 1);
   });
 
-  it('Should throw error if output file is not specified', async () => {
+  it('Should throw error if output file exists', async () => {
     const command = new CreateConfigCommand();
     await expect(
       command.action({
-        outputFile: null,
+        outputFile: "src",
       })
-    ).to.be.rejectedWith(CliError, 'A file must be specified using the -o flag');
+    ).to.be.rejectedWith(CliError, 'src already exists');
   });
-
 });

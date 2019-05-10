@@ -52,8 +52,10 @@ export class BeaconNodeCommand implements CliCommand {
         name: options.db || parsedConfig ? parsedConfig.db.name : defaults.db.name,
       },
       eth1: {
-        contract: {
-          address: options.depositContract
+        depositContract: {
+          deployedAt: defaults.eth1.depositContract.deployedAt,
+          address: options.depositContract,
+          abi: defaults.eth1.depositContract.abi
         },
         provider: await this.getProvider(options.eth1RpcUrl)
       },

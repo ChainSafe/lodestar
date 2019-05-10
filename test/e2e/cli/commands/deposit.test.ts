@@ -34,7 +34,8 @@ describe('[CLI] deposit', function() {
           mnemonic:null,
           node:eth1Network.rpcUrl(),
           value:'32',
-          contract:contractAddress
+          contract:contractAddress,
+          accounts: 10
         }
       )
     ).to.not.be.rejected;
@@ -51,7 +52,8 @@ describe('[CLI] deposit', function() {
           mnemonic:eth1Network.mnemonic(),
           node:eth1Network.rpcUrl(),
           value:'32',
-          contract:contractAddress
+          contract:contractAddress,
+          accounts: 10
         }
       )
     ).to.not.be.rejected;

@@ -45,7 +45,8 @@ describe('[CLI] deposit', function() {
           mnemonic: null,
           node:'http://worong_host:123',
           value: '32',
-          contract:'0x'
+          contract:'0x',
+          accounts: 10
         }
       )
     ).to.be.rejectedWith(CliError, 'JSON RPC node (http://worong_host:123) not available.');
@@ -60,7 +61,8 @@ describe('[CLI] deposit', function() {
           mnemonic: null,
           node: eth1Network.rpcUrl(),
           value: '32',
-          contract:'0x'
+          contract:'0x',
+          accounts: 10
         }
       )
     ).to.be.rejectedWith(CliError, 'You have to submit either privateKey or mnemonic.');
@@ -75,7 +77,8 @@ describe('[CLI] deposit', function() {
           mnemonic: 'invalid mnemonic',
           node: eth1Network.rpcUrl(),
           value: '32',
-          contract:'0x'
+          contract:'0x',
+          accounts: 10
         }
       )
     ).to.be.rejectedWith(Error, 'invalid mnemonic');
@@ -90,7 +93,8 @@ describe('[CLI] deposit', function() {
           mnemonic: null,
           node: eth1Network.rpcUrl(),
           value: '32',
-          contract:Wallet.createRandom().address
+          contract:Wallet.createRandom().address,
+          accounts: 10
         }
       )
     ).to.be.rejectedWith(CliError, 'Failed to make deposit for account');
