@@ -35,7 +35,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/bls-js": "^0.1.0",
+    "@chainsafe/bls-js": "^0.1.1",
     "@chainsafe/ssz": "^0.2.0",
     "@nodeutils/defaults-deep": "^1.1.0",
     "@polkadot/util-crypto": "^0.33.27",

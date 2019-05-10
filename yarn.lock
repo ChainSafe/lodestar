@@ -634,10 +634,10 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/amcl/-/amcl-0.1.0.tgz#8a49445402561e3dcf9d536b78e2dc225b159b22"
   integrity sha512-XzVLRxAqkkFeLA9T3ro1gn8llV3y6FIN38bRgmp5HvOJyfBprotKa6973J7BL7X566R6uztoNweK8ng40G08tw==
 
-"@chainsafe/bls-js@^0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bls-js/-/bls-js-0.1.0.tgz#533b0b961a7d6a3475f7b5ec6e066377197e1cb0"
-  integrity sha512-M/595DnkMCnBfZU2HszkziwsVUje6P5f0sOK2FkBnez7n/RS2tI2UVt5psO1ffN8DDvpijPktu2Bl5+bgWFdRA==
+"@chainsafe/bls-js@^0.1.1":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bls-js/-/bls-js-0.1.1.tgz#b1824a5761b4279ab41c2b1f89cf62965320c3c8"
+  integrity sha512-ocynnP3eDfmJt4NglR+NfrVRlJ2Vd5v9w+mBSF89VugYRF6+HUCkmCmH1GJ2aDyLtdszXoLyFJwqlnHbi+cESg==
   dependencies:
     "@chainsafe/amcl" "0.1.0"
     assert "^1.4.1"
