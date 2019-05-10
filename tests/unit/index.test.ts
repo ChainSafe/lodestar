@@ -77,7 +77,9 @@ describe('test bls', function () {
 
     describe('verify multiple', function() {
 
-        it('should verify aggregated signatures', () => {
+        it('should verify aggregated signatures', function () {
+            this.timeout(5000)
+
 
             const domain = Buffer.alloc(8, 0);
 
@@ -121,7 +123,8 @@ describe('test bls', function () {
             expect(result).to.be.true;
         });
 
-        it('should fail to verify aggregated signatures - swapped messages', () => {
+        it('should fail to verify aggregated signatures - swapped messages', function () {
+            this.timeout(5000)
 
             const domain = Buffer.alloc(8, 0);
 
