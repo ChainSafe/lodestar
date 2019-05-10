@@ -13,7 +13,7 @@ import {
   LATEST_RANDAO_MIXES_LENGTH,
 } from "../../../constants";
 
-import {blsVerify} from "../../../stubs/bls";
+import bls from "@chainsafe/bls-js";
 
 import {hash} from "../../../util/crypto";
 
@@ -30,7 +30,7 @@ export default function processRandao(state: BeaconState, block: BeaconBlock): v
   const proposer = state.validatorRegistry[getBeaconProposerIndex(state)];
 
   // Verify that the provided randao value is valid
-  const randaoRevealVerified = blsVerify(
+  const randaoRevealVerified = bls.verify(
     proposer.pubkey,
     hashTreeRoot(getCurrentEpoch(state), Epoch),
     block.body.randaoReveal,

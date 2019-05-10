@@ -14,8 +14,6 @@ import {
   MAX_PROPOSER_SLASHINGS,
 } from "../../../constants";
 
-import {blsVerify} from "../../../stubs/bls";
-
 import {
   getCurrentEpoch,
   getDomain,
@@ -23,6 +21,8 @@ import {
   slotToEpoch,
   slashValidator,
 } from "../util";
+
+import bls from "@chainsafe/bls-js";
 
 
 export function processProposerSlashing(state, proposerSlashing: ProposerSlashing): void {
@@ -35,14 +35,14 @@ export function processProposerSlashing(state, proposerSlashing: ProposerSlashin
   // Check proposer is slashable
   assert(isSlashableValidator(proposer, getCurrentEpoch(state)));
   // Signatures are valid
-  const proposalData1Verified = blsVerify(
+  const proposalData1Verified = bls.verify(
     proposer.pubkey,
     signingRoot(proposerSlashing.header1, BeaconBlockHeader),
     proposerSlashing.header1.signature,
     getDomain(state.fork, Domain.BEACON_PROPOSER, slotToEpoch(proposerSlashing.header1.slot)),
   );
   assert(proposalData1Verified);
-  const proposalData2Verified = blsVerify(
+  const proposalData2Verified = bls.verify(
     proposer.pubkey,
     signingRoot(proposerSlashing.header2, BeaconBlockHeader),
     proposerSlashing.header2.signature,

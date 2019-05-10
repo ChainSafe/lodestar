@@ -14,7 +14,7 @@ import {
   PERSISTENT_COMMITTEE_PERIOD,
 } from "../../../constants";
 
-import {blsVerify} from "../../../stubs/bls";
+import bls from "@chainsafe/bls-js";
 
 import {
   getCurrentEpoch,
@@ -42,7 +42,7 @@ export function processVoluntaryExit(state: BeaconState, exit: VoluntaryExit): v
   // Verify the validator has been active long enough
   assert(currentEpoch - validator.activationEpoch >= PERSISTENT_COMMITTEE_PERIOD);
   // Verify signature
-  assert(blsVerify(
+  assert(bls.verify(
     validator.pubkey,
     signingRoot(exit, VoluntaryExit),
     exit.signature,
