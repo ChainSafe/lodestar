@@ -16,13 +16,14 @@ export interface IConfigFile extends JsonMap{
  * @returns {IConfigFile}
  */
 export function getTomlConfig(fileName: string): IConfigFile {
-  let data: Buffer;
+  let configObject: IConfigFile;
   try {
-    data = fs.readFileSync(fileName);
+    const data = fs.readFileSync(fileName);
+    configObject = parse(data.toString());
   } catch {
     throw new CliError(`${fileName} could not be parsed.`);
   }
-  return parse(data.toString());
+  return configObject;
 }
 
 /**
