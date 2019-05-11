@@ -107,7 +107,7 @@ class Validator {
    */
   private async getValidatorIndex(): Promise<ValidatorIndex> {
     this.logger.info("Checking if validator has been processed...");
-    const index = await this.rpcClient.validator.getIndex(this.ctx.publicKey);
+    const index = await this.rpcClient.getValidatorIndex(this.ctx.keypair.publicKey.toBytesCompressed());
     if (index) {
       this.logger.info("Validator has been processed!");
       return index;

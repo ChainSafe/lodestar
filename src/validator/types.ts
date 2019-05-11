@@ -2,14 +2,14 @@
  * @module validator
  */
 
-import {bytes48, Slot, Shard, ValidatorIndex, BLSPubkey} from "../types";
+import {Shard, Slot, ValidatorIndex} from "../types";
 import {RpcClient} from "./rpc";
+import {Keypair} from "@chainsafe/bls-js/lib/keypair";
 
 export interface ValidatorCtx {
-  publicKey: BLSPubkey;
-  privateKey: bytes48[];
   rpcUrl?: string;
   rpc?: RpcClient;
+  keypair: Keypair
 }
 
 export interface CommitteeAssignment {

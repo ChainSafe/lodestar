@@ -16,7 +16,6 @@ import logger from "../logger";
 import {getEmptyBlock, getGenesisBeaconState} from "./genesis";
 
 import {executeStateTransition} from "./stateTransition";
-import {getBlockRoot, getEpochStartSlot} from "./stateTransition/util";
 
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 

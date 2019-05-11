@@ -2,16 +2,17 @@
  * @module validator
  */
 
-import {BeaconBlock, bytes48, Slot, ValidatorIndex} from "../types";
+import {BeaconBlock, Slot, ValidatorIndex} from "../types";
 import {getRandaoMix, slotToEpoch} from "../chain/stateTransition/util";
 import {RpcClient} from "./rpc";
+import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 
 export default class BlockProcessingService {
   private validatorIndex: ValidatorIndex;
   private provider: RpcClient;
-  private privateKey: bytes48[];
+  private privateKey: PrivateKey;
 
-  public constructor(index: ValidatorIndex, provider: RpcClient, privateKey: bytes48[]) {
+  public constructor(index: ValidatorIndex, provider: RpcClient, privateKey: PrivateKey) {
     this.validatorIndex = index;
     this.provider = provider;
     this.privateKey = privateKey;

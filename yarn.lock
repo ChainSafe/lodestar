@@ -629,6 +629,21 @@
     lodash "^4.17.11"
     to-fast-properties "^2.0.0"
 
+"@chainsafe/amcl@0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/amcl/-/amcl-0.1.0.tgz#8a49445402561e3dcf9d536b78e2dc225b159b22"
+  integrity sha512-XzVLRxAqkkFeLA9T3ro1gn8llV3y6FIN38bRgmp5HvOJyfBprotKa6973J7BL7X566R6uztoNweK8ng40G08tw==
+
+"@chainsafe/bls-js@^0.1.1":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bls-js/-/bls-js-0.1.1.tgz#b1824a5761b4279ab41c2b1f89cf62965320c3c8"
+  integrity sha512-ocynnP3eDfmJt4NglR+NfrVRlJ2Vd5v9w+mBSF89VugYRF6+HUCkmCmH1GJ2aDyLtdszXoLyFJwqlnHbi+cESg==
+  dependencies:
+    "@chainsafe/amcl" "0.1.0"
+    assert "^1.4.1"
+    keccak256 "^1.0.0"
+    secure-random "^1.1.1"
+
 "@chainsafe/ssz@^0.2.0":
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.2.0.tgz#740e8bf980268cb0493111619d045bdead3b37d5"
@@ -4777,7 +4792,15 @@ k-bucket@^5.0.0:
   dependencies:
     randombytes "^2.0.3"
 
-keccak@^1.0.2:
+keccak256@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/keccak256/-/keccak256-1.0.0.tgz#1ba55ce78ed3d63fb7091d045469007da984171d"
+  integrity sha512-8qv2vJdQk+Aa2tFXo8zYodm+6DgXqUOqvNJhj1p1V2pxQJT1oNKxNF+zWfhtKXNLZdLvyxjB/dvd9GwcvTHSQQ==
+  dependencies:
+    bn.js "^4.11.8"
+    keccak "^1.4.0"
+
+keccak@^1.0.2, keccak@^1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/keccak/-/keccak-1.4.0.tgz#572f8a6dbee8e7b3aa421550f9e6408ca2186f80"
   dependencies:
@@ -7237,6 +7260,11 @@ secp256k1@^3.0.1, secp256k1@^3.6.1:
     elliptic "^6.2.3"
     nan "^2.2.1"
     safe-buffer "^5.1.0"
+
+secure-random@^1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/secure-random/-/secure-random-1.1.1.tgz#0880f2d8c5185f4bcb4684058c836b4ddb07145a"
+  integrity sha1-CIDy2MUYX0vLRoQFjINrTdsHFFo=
 
 seedrandom@2.4.4:
   version "2.4.4"
