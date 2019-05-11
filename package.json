@@ -38,7 +38,7 @@
     "@babel/preset-env": "^7.3.4",
     "@babel/preset-typescript": "^7.3.3",
     "@babel/register": "^7.0.0",
-    "@chainsafe/eth2.0-spec-test-util": "^0.2.3",
+    "@chainsafe/eth2.0-spec-test-util": "^0.3.0",
     "@types/chai": "^4.1.7",
     "@types/mocha": "^5.2.5",
     "@types/node": "^10.12.17",

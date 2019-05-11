@@ -22,7 +22,7 @@ export function pack (input: SerializableValue[], type: FullSSZType): Buffer[] {
   for (const v of input) {
     index = _serialize(v, type, packedBuf, index);
   }
-  const chunkLength = Math.ceil(packedLength / BYTES_PER_CHUNK);
+  const chunkLength = Math.max(Math.ceil(packedLength / BYTES_PER_CHUNK), 1);
   // Chop buffer into chunks
   const chunks = Array.from({ length: chunkLength },
     (_, i) => packedBuf.slice(i * BYTES_PER_CHUNK, i * BYTES_PER_CHUNK + BYTES_PER_CHUNK));
@@ -65,7 +65,7 @@ export function merkleize(chunks: Buffer[]): Buffer {
     }
     chunks.splice(chunks.length / 2, chunks.length / 2);
   }
-  return hash(chunks[0]);
+  return chunks[0];
 }
 
 export function mixInLength(root: Buffer, length: number): Buffer {

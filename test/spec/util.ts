@@ -48,3 +48,26 @@ function _hydrateValue(obj: any, type: FullSSZType): any {
       return obj;
   }
 }
+
+export function eq(type: any, obj1: any, obj2: any): boolean {
+  const _type = parseType(type);
+  return _eq(_type, obj1, obj2);
+}
+
+function _eq(type: FullSSZType, obj1: any, obj2: any): boolean {
+  switch (type.type) {
+    case Type.uint:
+      return obj1.toString(16) === obj2.toString(16);
+    case Type.bool:
+      return obj1 === obj2;
+    case Type.byteList:
+    case Type.byteVector:
+      return obj1.toString('hex') === obj2.toString('hex');
+    case Type.list:
+    case Type.vector:
+      return obj1.length === obj2.length &&
+        obj1.every((e1: any, i: number) => _eq(type.elementType, e1, obj2[i]));
+    case Type.container:
+      return type.fields.every(([fieldName, fieldType]) => _eq(fieldType, obj1[fieldName], obj2[fieldName]));
+  }
+}
