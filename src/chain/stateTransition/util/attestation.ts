@@ -18,10 +18,7 @@ import {
   ValidatorIndex,
 } from "../../../types";
 
-import {
-  blsAggregatePubkeys,
-  blsVerifyMultiple,
-} from "../../../stubs/bls";
+import bls from "@chainsafe/bls-js";
 
 import {intDiv} from "../../../util/math";
 
@@ -124,10 +121,10 @@ export function verifyIndexedAttestation(state: BeaconState, indexedAttestation:
     return false;
   }
 
-  return blsVerifyMultiple(
+  return bls.verifyMultiple(
     [
-      blsAggregatePubkeys(sortedCustodyBit0Indices.map((i) => state.validatorRegistry[i].pubkey)),
-      blsAggregatePubkeys(sortedCustodyBit1Indices.map((i) => state.validatorRegistry[i].pubkey)),
+      bls.aggregatePubkeys(sortedCustodyBit0Indices.map((i) => state.validatorRegistry[i].pubkey)),
+      bls.aggregatePubkeys(sortedCustodyBit1Indices.map((i) => state.validatorRegistry[i].pubkey)),
     ], [
       hashTreeRoot({
         data: indexedAttestation.data,

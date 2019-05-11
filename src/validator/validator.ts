@@ -45,12 +45,12 @@ class Validator {
     await this.setup();
     this.run();
   }
-  
+
   /**
    * Stops all validator functions
    */
   private async stop(): Promise<void> {}
-	  
+
   /**
    * Main method that starts a client.
    */
@@ -93,7 +93,7 @@ class Validator {
    */
   private async getValidatorIndex(): Promise<ValidatorIndex> {
     this.logger.info("Checking if validator has been processed...");
-    const index = await this.provider.getValidatorIndex(this.ctx.publicKey);
+    const index = await this.provider.getValidatorIndex(this.ctx.keypair.publicKey.toBytesCompressed());
     if (index) {
       this.logger.info("Validator has been processed!");
       return index;
@@ -105,7 +105,7 @@ class Validator {
    * Setups the necessary services.
    */
   private async setupServices(): Promise<void> {
-    this.blockService = new BlockProcessingService(this.validatorIndex, this.provider, this.ctx.privateKey);
+    this.blockService = new BlockProcessingService(this.validatorIndex, this.provider, this.ctx.keypair.privateKey);
     // TODO setup attestation service
   }
 

@@ -29,7 +29,7 @@ export default class RPCProvider {
     return notSoRandomRandomBoolean();
   }
 
-  public getValidatorIndex(pubkey: bytes48[]): ValidatorIndex {
+  public getValidatorIndex(pubkey: bytes48): ValidatorIndex {
     this.validatorIndex = notSoRandomRandomValidatorIndex();
     return this.validatorIndex;
   }

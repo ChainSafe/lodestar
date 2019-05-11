@@ -23,7 +23,7 @@ import {
 
 import {hash} from "../../../util/crypto";
 
-import {blsVerify} from "../../../stubs/bls";
+import bls from "@chainsafe/bls-js";
 
 import {
   getDomain,
@@ -55,7 +55,7 @@ export function processDeposit(state: BeaconState, deposit: Deposit): void {
 
   if (!validatorPubkeys.includes(pubkey)) {
     // Verify the deposit signature (proof of possession)
-    if (!blsVerify(
+    if (!bls.verify(
       pubkey,
       signingRoot(deposit.data, DepositData),
       deposit.data.signature,
@@ -68,8 +68,8 @@ export function processDeposit(state: BeaconState, deposit: Deposit): void {
     const validator: Validator = {
       pubkey,
       withdrawalCredentials: deposit.data.withdrawalCredentials,
-      activationEligibilityEpoch: FAR_FUTURE_EPOCH, 
-      activationEpoch: FAR_FUTURE_EPOCH, 
+      activationEligibilityEpoch: FAR_FUTURE_EPOCH,
+      activationEpoch: FAR_FUTURE_EPOCH,
       exitEpoch: FAR_FUTURE_EPOCH,
       withdrawableEpoch: FAR_FUTURE_EPOCH,
       slashed: false,
