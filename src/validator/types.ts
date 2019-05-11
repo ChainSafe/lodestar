@@ -9,7 +9,7 @@ import {Keypair} from "@chainsafe/bls-js/lib/keypair";
 export interface ValidatorCtx {
   rpcUrl?: string;
   rpc?: RpcClient;
-  keypair: Keypair
+  keypair: Keypair;
 }
 
 export interface CommitteeAssignment {

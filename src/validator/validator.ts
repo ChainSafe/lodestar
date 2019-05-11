@@ -72,7 +72,7 @@ class Validator {
     this.validatorIndex = await this.getValidatorIndex();
 
     this.blockService = new BlockProcessingService(
-      this.validatorIndex, this.rpcClient, this.ctx.privateKey
+      this.validatorIndex, this.rpcClient, this.ctx.keypair.privateKey
     );
     this.attestationService = new AttestationService();
   }
@@ -107,7 +107,9 @@ class Validator {
    */
   private async getValidatorIndex(): Promise<ValidatorIndex> {
     this.logger.info("Checking if validator has been processed...");
-    const index = await this.rpcClient.getValidatorIndex(this.ctx.keypair.publicKey.toBytesCompressed());
+    const index = await this.rpcClient.validator.getIndex(
+      this.ctx.keypair.publicKey.toBytesCompressed()
+    );
     if (index) {
       this.logger.info("Validator has been processed!");
       return index;
