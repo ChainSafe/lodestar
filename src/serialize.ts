@@ -66,7 +66,7 @@ function _serializeArray(value: SerializableArray, type: ArrayType, output: Buff
       // write serialized element to variable section
       nextOffsetIndex = _serialize(v, type.elementType, output, currentOffsetIndex);
       // write offset
-      output.writeUIntLE(currentOffsetIndex, fixedIndex, BYTES_PER_LENGTH_PREFIX)
+      output.writeUIntLE(currentOffsetIndex - start, fixedIndex, BYTES_PER_LENGTH_PREFIX)
       // update offset
       currentOffsetIndex = nextOffsetIndex;
       fixedIndex += BYTES_PER_LENGTH_PREFIX;
@@ -84,7 +84,7 @@ function _serializeArray(value: SerializableArray, type: ArrayType, output: Buff
 function _serializeObject(value: SerializableObject, type: ContainerType, output: Buffer, start: number): number {
   let fixedIndex = start;
   let fixedLength = type.fields
-    .map(([_, fieldType]) => isVariableSizeType(type) ? BYTES_PER_LENGTH_PREFIX : fixedSize(fieldType))
+    .map(([_, fieldType]) => isVariableSizeType(fieldType) ? BYTES_PER_LENGTH_PREFIX : fixedSize(fieldType))
     .reduce((a, b) => a + b, 0)
   let currentOffsetIndex = start + fixedLength;
   let nextOffsetIndex = currentOffsetIndex;
@@ -94,7 +94,7 @@ function _serializeObject(value: SerializableObject, type: ContainerType, output
       // write serialized element to variable section
       nextOffsetIndex = _serialize(value[fieldName], fieldType, output, currentOffsetIndex);
       // write offset
-      output.writeUIntLE(currentOffsetIndex, fixedIndex, BYTES_PER_LENGTH_PREFIX)
+      output.writeUIntLE(currentOffsetIndex - start, fixedIndex, BYTES_PER_LENGTH_PREFIX)
       // update offset
       currentOffsetIndex = nextOffsetIndex;
       fixedIndex += BYTES_PER_LENGTH_PREFIX;

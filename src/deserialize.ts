@@ -60,14 +60,15 @@ function _deserializeArray(data: Buffer, type: ArrayType, start: number, end: nu
     // read off offsets, deserializing values until we hit the first offset index
     for (; currentIndex < firstOffset;) {
       nextIndex = currentIndex + BYTES_PER_LENGTH_PREFIX;
-      nextOffset = start + data.readUIntLE(nextIndex, BYTES_PER_LENGTH_PREFIX);
+      nextOffset = nextIndex === firstOffset
+        ? end
+        : start + data.readUIntLE(nextIndex, BYTES_PER_LENGTH_PREFIX);
       value.push(
         _deserialize(data, type.elementType, currentOffset, nextOffset)
       );
       currentIndex = nextIndex;
       currentOffset = nextOffset;
     }
-    assert(currentOffset === end, "Not all variable bytes consumed");
   } else {
     // all elements fixed-sized
     let index = start;
