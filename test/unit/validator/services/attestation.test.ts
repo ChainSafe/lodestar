@@ -7,7 +7,6 @@ import {ValidatorApi} from "../../../../src/rpc/api/validator";
 import logger from "../../../../src/logger";
 import {generateAttestationData} from "../../../utils/attestation";
 import {AttestationService} from "../../../../src/validator/services/attestation";
-import {Attestation} from "../../../../src/types";
 
 describe('validator attestation service', function () {
 
