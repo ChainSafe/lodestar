@@ -61,6 +61,7 @@ export class AttestationService {
     };
     await this.storeAttestation(attestation);
     await this.rpcClient.validator.publishAttestation(attestation);
+    logger.info(`[Validator] Signed and publish new attestation`);
   }
 
   private async isConflictingAttestation(other: AttestationData): Promise<boolean> {

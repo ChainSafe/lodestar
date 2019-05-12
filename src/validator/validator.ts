@@ -144,8 +144,8 @@ class Validator {
     }
   }
 
-  private async lookAhead(epoch: Epoch): Promise<void> {
-    //in phase 1, it should look for attestation duties on next epoch and sync proper shard
+  private async lookAhead(currentEpoch: Epoch): Promise<void> {
+    //in phase 1, it should obtain duties for next epoch and trigger required shard sync
   }
 }
 
