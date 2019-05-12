@@ -74,7 +74,11 @@ class Validator {
     this.blockService = new BlockProposingService(
       this.validatorIndex, this.rpcClient, this.ctx.keypair.privateKey
     );
-    this.attestationService = new AttestationService();
+    this.attestationService = new AttestationService(
+      this.validatorIndex,
+      this.rpcClient,
+      this.ctx.keypair.privateKey
+    );
   }
 
   /**
@@ -123,16 +127,20 @@ class Validator {
   };
 
   private async checkDuties(slot: Slot): Promise<void> {
-    const {fork, validatorDuty} =
+    const {currentVersion, validatorDuty} =
       await this.rpcClient.validator.getDuties(this.validatorIndex);
     const isAttester = validatorDuty.attestationSlot === slot;
     const isProposer = validatorDuty.blockProductionSlot === slot;
     logger.info(`[Validator] Slot: ${slot}, Proposer: ${isProposer}, Attester: ${isAttester}`);
     if (isAttester) {
-      this.attestationService.attest();
+      this.attestationService.createAndPublishAttestation(
+        slot,
+        validatorDuty.attestationShard,
+        currentVersion
+      );
     }
     if (isProposer) {
-      this.blockService.createAndPublishBlock(slot, fork);
+      this.blockService.createAndPublishBlock(slot, currentVersion);
     }
   }
 

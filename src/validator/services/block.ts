@@ -40,9 +40,9 @@ export default class BlockProposingService {
       signingRoot(block, BeaconBlock),
       getDomainFromFork(fork, slotToEpoch(slot), Domain.BEACON_PROPOSER)
     ).toBytesCompressed();
+    await this.storeBlock(block);
     await this.provider.validator.publishBlock(block);
     logger.info(`[Validator] Proposed block with hash ${block.signature}`);
-    await this.storeBlock(block);
     return block;
   }
 
