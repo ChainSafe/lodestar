@@ -30,7 +30,7 @@ export class AttestationService {
   }
 
 
-  public async createAndPublishAttestation(slot: Slot, shard: Shard, fork: Fork): Promise<void> {
+  public async createAndPublishAttestation(slot: Slot, shard: Shard, fork: Fork): Promise<Attestation> {
     const attestationData = await this.rpcClient.validator.produceAttestation(slot, shard);
     if(await this.isConflictingAttestation(attestationData)) {
       logger.warn(
@@ -62,6 +62,7 @@ export class AttestationService {
     await this.storeAttestation(attestation);
     await this.rpcClient.validator.publishAttestation(attestation);
     logger.info(`[Validator] Signed and publish new attestation`);
+    return attestation;
   }
 
   private async isConflictingAttestation(other: AttestationData): Promise<boolean> {

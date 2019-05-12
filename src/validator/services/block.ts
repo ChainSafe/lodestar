@@ -6,7 +6,7 @@ import {BeaconBlock, Fork, Slot, ValidatorIndex} from "../../types";
 import {getDomainFromFork, getRandaoMix, slotToEpoch} from "../../chain/stateTransition/util";
 import {RpcClient} from "../rpc";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
-import {signingRoot} from "@chainsafe/ssz";
+import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {Domain} from "../../constants";
 import logger from "../../logger";
 
@@ -42,7 +42,7 @@ export default class BlockProposingService {
     ).toBytesCompressed();
     await this.storeBlock(block);
     await this.provider.validator.publishBlock(block);
-    logger.info(`[Validator] Proposed block with hash ${block.signature}`);
+    logger.info(`[Validator] Proposed block with hash 0x${hashTreeRoot(block, BeaconBlock).toString('hex')}`);
     return block;
   }
 
