@@ -13,12 +13,12 @@
  * 7. Wait for new role
  * 6. Repeat step 5
  */
-import RPCProvider from "./stubs/rpc";
 import BlockProcessingService from "./block";
-import {SLOTS_PER_EPOCH} from "../constants";
 import logger, {AbstractLogger} from "../logger";
 import {Slot, ValidatorIndex} from "../types";
-import {ValidatorCtx, GenesisInfo, CommitteeAssignment} from "./types";
+import {GenesisInfo, ValidatorCtx} from "./types";
+import {RpcClient, RpcClientOverWs} from "./rpc";
+import {AttestationService} from "./attestation";
 
 /**
  * Main class for the Validator client.
@@ -26,9 +26,10 @@ import {ValidatorCtx, GenesisInfo, CommitteeAssignment} from "./types";
 class Validator {
   private ctx: ValidatorCtx;
   private logger: AbstractLogger;
-  private provider: RPCProvider;
+  private rpcClient: RpcClient;
   private validatorIndex: ValidatorIndex;
   private blockService: BlockProcessingService;
+  private attestationService: AttestationService;
   private genesisInfo: GenesisInfo;
   public isActive: boolean;
 
@@ -36,6 +37,13 @@ class Validator {
     this.ctx = ctx;
     this.logger = logger;
     this.isActive = false;
+    if(ctx.rpc) {
+      this.rpcClient = ctx.rpc;
+    } else if(ctx.rpcUrl) {
+      this.rpcClient = new RpcClientOverWs({rpcUrl: ctx.rpcUrl});
+    } else {
+      throw new Error("Validator requires either RpcClient instance or rpc url as params");
+    }
   }
 
   /**
@@ -63,16 +71,19 @@ class Validator {
     this.isActive = await this.isChainLive();
     this.validatorIndex = await this.getValidatorIndex();
 
-    await this.setupServices();
+    this.blockService = new BlockProcessingService(
+      this.validatorIndex, this.rpcClient, this.ctx.keypair.privateKey
+    );
+    this.attestationService = new AttestationService();
   }
 
   /**
    * Establishes a connection to a specified beacon chain url.
    */
-  private setupRPC(): void {
+  private async setupRPC(): Promise<void> {
     this.logger.info("Setting up RPC connection...");
-    this.provider = new RPCProvider(this.ctx.rpcUrl);
-    this.logger.info(`RPC connection successfully established ${this.ctx.rpcUrl}!`);
+    await this.rpcClient.connect();
+    this.logger.info(`RPC connection successfully established: ${this.ctx.rpcUrl || 'inmemory'}!`);
   }
 
   /**
@@ -80,8 +91,11 @@ class Validator {
    */
   private async isChainLive(): Promise<boolean> {
     this.logger.info("Checking if chain has started...");
-    if (await this.provider.hasChainStarted()) {
-      this.genesisInfo = await this.provider.getGenisisInfo();
+    const genesisTime =  await this.rpcClient.beacon.getGenesisTime();
+    if (genesisTime) {
+      this.genesisInfo = {
+        startTime: genesisTime,
+      };
       this.logger.info("Chain start has occured!");
       return true;
     }
@@ -93,7 +107,9 @@ class Validator {
    */
   private async getValidatorIndex(): Promise<ValidatorIndex> {
     this.logger.info("Checking if validator has been processed...");
-    const index = await this.provider.getValidatorIndex(this.ctx.keypair.publicKey.toBytesCompressed());
+    const index = await this.rpcClient.validator.getIndex(
+      this.ctx.keypair.publicKey.toBytesCompressed()
+    );
     if (index) {
       this.logger.info("Validator has been processed!");
       return index;
@@ -101,37 +117,39 @@ class Validator {
     setTimeout(this.getValidatorIndex, 1000);
   }
 
-  /**
-   * Setups the necessary services.
-   */
-  private async setupServices(): Promise<void> {
-    this.blockService = new BlockProcessingService(this.validatorIndex, this.provider, this.ctx.keypair.privateKey);
-    // TODO setup attestation service
-  }
-
-  private async checkAssignment(): Promise<void> {
-    // If epoch boundary then look up for new assignment
-    if ((Date.now() - this.genesisInfo.startTime) % SLOTS_PER_EPOCH === 0) {
-      const epoch = await this.provider.getCurrentEpoch();
-      const assignment: CommitteeAssignment = await this.provider.getCommitteeAssignment(epoch, this.validatorIndex);
-      const isProposer: boolean = this.provider.isProposerAtSlot(assignment.slot, this.validatorIndex);
-
-      if (assignment.validators.includes(this.validatorIndex) && isProposer) {
-        // Run attestation and then block proposer on `slot`
-        this.logger.info(`Validator: ${this.validatorIndex}, Attesting: True, Proposing: True`);
-      } else if (assignment.validators.includes(this.validatorIndex)) {
-        // Run attestation on `slot`
-        this.logger.info(`Validator: ${this.validatorIndex}, Attesting: True, Proposing: False`);
-      } else {
-        this.logger.info(`Validator with index ${this.validatorIndex} has no role for slot ${assignment.slot}`);
-      }
-    }
-  }
+  // private async checkAssignment(): Promise<void> {
+  //   // If epoch boundary then look up for new assignment
+  //   if ((Date.now() - this.genesisInfo.startTime) % SLOTS_PER_EPOCH === 0) {
+  //
+  //     const epoch = await this.rpcClient.getCurrentEpoch();
+  //     const assignment: CommitteeAssignment = await this.rpcClient.getCommitteeAssignment(epoch, this.validatorIndex);
+  //     const isProposer: boolean = this.rpcClient.isProposerAtSlot(assignment.slot, this.validatorIndex);
+  //
+  //     if (assignment.validators.includes(this.validatorIndex) && isProposer) {
+  //       // Run attestation and then block proposer on `slot`
+  //       this.logger.info(`Validator: ${this.validatorIndex}, Attesting: True, Proposing: True`);
+  //     } else if (assignment.validators.includes(this.validatorIndex)) {
+  //       // Run attestation on `slot`
+  //       this.logger.info(`Validator: ${this.validatorIndex}, Attesting: True, Proposing: False`);
+  //     } else {
+  //       this.logger.info(`Validator with index ${this.validatorIndex} has no role for slot ${assignment.slot}`);
+  //     }
+  //   }
+  // }
 
 
 
   private run(): void {
-
+    this.rpcClient.onNewSlot(async (slot: Slot) => {
+      const {currentVersion, validatorDuty} =
+        await this.rpcClient.validator.getDuties(this.validatorIndex);
+      if(validatorDuty.attestationSlot === slot) {
+        this.attestationService.attest();
+      }
+      if(validatorDuty.blockProductionSlot === slot) {
+        this.blockService.buildBlock(slot);
+      }
+    });
   };
 }
 

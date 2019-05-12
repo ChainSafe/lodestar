@@ -46,7 +46,7 @@ describe("Json RPC over WS", () => {
     assert.ok(status);
   });
   it("should get validator duties", async () => {
-    const duties = await clientApi.validator.getDuties(Buffer.alloc(48));
+    const duties = await clientApi.validator.getDuties(1);
     assert.ok(duties);
   });
   it("should produce a block for the validator", async () => {

@@ -6,7 +6,7 @@ import {
   Attestation,
   AttestationData,
   BeaconBlock,
-  BeaconState,
+  BeaconState, BLSPubkey,
   bytes,
   bytes48,
   Epoch,
@@ -37,7 +37,7 @@ export class ValidatorApi implements IValidatorApi {
     this.opPool = opPool;
   }
 
-  public async getDuties(validatorPubkey: bytes48): Promise<{currentVersion: Fork; validatorDuty: ValidatorDuty}> {
+  public async getDuties(validatorIndex: ValidatorIndex): Promise<{currentVersion: Fork; validatorDuty: ValidatorDuty}> {
     // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
     return {} as {currentVersion: Fork; validatorDuty: ValidatorDuty};
   }
@@ -68,5 +68,15 @@ export class ValidatorApi implements IValidatorApi {
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
     await this.opPool.receiveAttestation(attestation);
+  }
+
+  public async getIndex(validatorPublicKey: BLSPubkey): Promise<ValidatorIndex> {
+    const state = await this.db.getState();
+    state.validatorRegistry.forEach((validator, index) => {
+      if(validator.pubkey === validatorPublicKey) {
+        return index;
+      }
+    });
+    return null;
   }
 }
