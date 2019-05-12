@@ -13,12 +13,12 @@
  * 7. Wait for new role
  * 6. Repeat step 5
  */
-import BlockProcessingService from "./block";
+import BlockProposingService from "./services/block";
 import logger, {AbstractLogger} from "../logger";
-import {Slot, ValidatorIndex} from "../types";
+import {Epoch, Slot, ValidatorIndex} from "../types";
 import {GenesisInfo, ValidatorCtx} from "./types";
 import {RpcClient, RpcClientOverWs} from "./rpc";
-import {AttestationService} from "./attestation";
+import {AttestationService} from "./services/attestation";
 
 /**
  * Main class for the Validator client.
@@ -28,7 +28,7 @@ class Validator {
   private logger: AbstractLogger;
   private rpcClient: RpcClient;
   private validatorIndex: ValidatorIndex;
-  private blockService: BlockProcessingService;
+  private blockService: BlockProposingService;
   private attestationService: AttestationService;
   private genesisInfo: GenesisInfo;
   public isActive: boolean;
@@ -71,7 +71,7 @@ class Validator {
     this.isActive = await this.isChainLive();
     this.validatorIndex = await this.getValidatorIndex();
 
-    this.blockService = new BlockProcessingService(
+    this.blockService = new BlockProposingService(
       this.validatorIndex, this.rpcClient, this.ctx.keypair.privateKey
     );
     this.attestationService = new AttestationService();
@@ -117,40 +117,28 @@ class Validator {
     setTimeout(this.getValidatorIndex, 1000);
   }
 
-  // private async checkAssignment(): Promise<void> {
-  //   // If epoch boundary then look up for new assignment
-  //   if ((Date.now() - this.genesisInfo.startTime) % SLOTS_PER_EPOCH === 0) {
-  //
-  //     const epoch = await this.rpcClient.getCurrentEpoch();
-  //     const assignment: CommitteeAssignment = await this.rpcClient.getCommitteeAssignment(epoch, this.validatorIndex);
-  //     const isProposer: boolean = this.rpcClient.isProposerAtSlot(assignment.slot, this.validatorIndex);
-  //
-  //     if (assignment.validators.includes(this.validatorIndex) && isProposer) {
-  //       // Run attestation and then block proposer on `slot`
-  //       this.logger.info(`Validator: ${this.validatorIndex}, Attesting: True, Proposing: True`);
-  //     } else if (assignment.validators.includes(this.validatorIndex)) {
-  //       // Run attestation on `slot`
-  //       this.logger.info(`Validator: ${this.validatorIndex}, Attesting: True, Proposing: False`);
-  //     } else {
-  //       this.logger.info(`Validator with index ${this.validatorIndex} has no role for slot ${assignment.slot}`);
-  //     }
-  //   }
-  // }
-
-
-
   private run(): void {
-    this.rpcClient.onNewSlot(async (slot: Slot) => {
-      const {currentVersion, validatorDuty} =
-        await this.rpcClient.validator.getDuties(this.validatorIndex);
-      if(validatorDuty.attestationSlot === slot) {
-        this.attestationService.attest();
-      }
-      if(validatorDuty.blockProductionSlot === slot) {
-        this.blockService.buildBlock(slot);
-      }
-    });
+    this.rpcClient.onNewSlot(this.checkDuties);
+    this.rpcClient.onNewEpoch(this.lookAhead);
   };
+
+  private async checkDuties(slot: Slot): Promise<void> {
+    const {fork, validatorDuty} =
+      await this.rpcClient.validator.getDuties(this.validatorIndex);
+    const isAttester = validatorDuty.attestationSlot === slot;
+    const isProposer = validatorDuty.blockProductionSlot === slot;
+    logger.info(`[Validator] Slot: ${slot}, Proposer: ${isProposer}, Attester: ${isAttester}`);
+    if (isAttester) {
+      this.attestationService.attest();
+    }
+    if (isProposer) {
+      this.blockService.createAndPublishBlock(slot, fork);
+    }
+  }
+
+  private async lookAhead(epoch: Epoch): Promise<void> {
+    //in phase 1, it should look for attestation duties on next epoch and sync proper shard
+  }
 }
 
 export default Validator;

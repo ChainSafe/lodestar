@@ -41,7 +41,7 @@ export interface IValidatorApi extends IApi {
    */
   getDuties(
     validatorIndex: ValidatorIndex
-  ): Promise<{ currentVersion: Fork; validatorDuty: ValidatorDuty }>;
+  ): Promise<{ fork: Fork; validatorDuty: ValidatorDuty }>;
 
   /**
    * Requests to check if a validator should propose for a given slot.

@@ -1,5 +1,5 @@
-import {BeaconApi} from "../../../rpc/api/beacon";
-import {ValidatorApi} from "../../../rpc/api/validator";
+import {IBeaconApi} from "../../../rpc/api/beacon";
+import {IValidatorApi} from "../../../rpc/api/validator";
 import * as jsonRpc from "noice-json-rpc";
 import Websocket from "ws";
 import promisify from "promisify-es6";
@@ -13,9 +13,9 @@ export interface RpcClientOverWsOpts {
 
 export class RpcClientOverWs extends AbstractRpcClient {
 
-  public beacon: BeaconApi;
+  public beacon: IBeaconApi;
 
-  public validator: ValidatorApi;
+  public validator: IValidatorApi;
 
   private socket: Websocket;
 
