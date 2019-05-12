@@ -1,3 +1,7 @@
+/**
+ * @module types
+ */
+
 import {bytes48, Shard, Slot, uint64} from "./primitive";
 import {SimpleContainerType} from "@chainsafe/ssz";
 

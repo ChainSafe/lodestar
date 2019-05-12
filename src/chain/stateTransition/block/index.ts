@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/block
+ */
+
 import {
   BeaconBlock,
   BeaconState,

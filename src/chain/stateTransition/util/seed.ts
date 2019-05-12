@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/util
+ */
+
 import assert from "assert";
 
 import {
@@ -21,9 +25,6 @@ import {getCurrentEpoch} from "./epoch";
 
 /**
  * Return the randao mix at a recent epoch.
- * @param {BeaconState} state
- * @param {Epoch} epoch
- * @returns {bytes32}
  */
 export function getRandaoMix(state: BeaconState, epoch: Epoch): bytes32 {
   const currentEpoch = getCurrentEpoch(state);
@@ -36,9 +37,6 @@ export function getRandaoMix(state: BeaconState, epoch: Epoch): bytes32 {
 
 /**
  * Return the index root at a recent epoch.
- * @param {BeaconState} state
- * @param {Epoch} epoch
- * @returns {bytes32}
  */
 export function getActiveIndexRoot(state: BeaconState, epoch: Epoch): bytes32 {
   const currentEpoch = getCurrentEpoch(state);
@@ -51,9 +49,6 @@ export function getActiveIndexRoot(state: BeaconState, epoch: Epoch): bytes32 {
 
 /**
  * Generate a seed for the given epoch.
- * @param {BeaconState} state
- * @param {Epoch} epoch
- * @returns {bytes32}
  */
 export function generateSeed(state: BeaconState, epoch: Epoch): bytes32 {
   return hash(Buffer.concat([

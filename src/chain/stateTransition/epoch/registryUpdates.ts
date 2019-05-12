@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/epoch
+ */
+
 import {BeaconState} from "../../../types";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE, EJECTION_BALANCE} from "../../../constants";
 

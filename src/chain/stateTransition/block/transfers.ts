@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/block
+ */
+
 import assert from "assert";
 import BN from "bn.js";
 import {signingRoot} from "@chainsafe/ssz";
@@ -17,7 +21,7 @@ import {
   MAX_EFFECTIVE_BALANCE,
 } from "../../../constants";
 
-import {blsVerify} from "../../../stubs/bls";
+import bls from "@chainsafe/bls-js";
 
 import {hash} from "../../../util/crypto";
 
@@ -32,9 +36,8 @@ import {
 
 /**
  * Process ``Transfer`` operation.
+ *
  * Note that this function mutates ``state``.
- * @param {BeaconState} state
- * @param {Transfer} transfer
  */
 export function processTransfer(state: BeaconState, transfer: Transfer): void {
   // Verify the amount and fee aren't individually too big (for anti-overflow purposes)
@@ -54,7 +57,7 @@ export function processTransfer(state: BeaconState, transfer: Transfer): void {
   assert(state.validatorRegistry[transfer.sender].withdrawalCredentials.equals(
     Buffer.concat([BLS_WITHDRAWAL_PREFIX_BYTE, hash(transfer.pubkey).slice(1)])));
   // Verify that the signature is valid
-  assert(blsVerify(
+  assert(bls.verify(
     transfer.pubkey,
     signingRoot(transfer, Transfer),
     transfer.signature,

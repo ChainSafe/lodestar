@@ -1,3 +1,7 @@
+/**
+ * @module chain
+ */
+
 import assert from "assert";
 import {EventEmitter} from "events";
 import {hashTreeRoot} from "@chainsafe/ssz";
@@ -12,7 +16,6 @@ import logger from "../logger";
 import {getEmptyBlock, getGenesisBeaconState} from "./genesis";
 
 import {executeStateTransition} from "./stateTransition";
-import {getBlockRoot, getEpochStartSlot} from "./stateTransition/util";
 
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 

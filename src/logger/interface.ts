@@ -1,3 +1,7 @@
+/**
+ * @module logger
+ */
+
 export enum LogLevel {
   DEBUG = 'debug',
   INFO = 'info',

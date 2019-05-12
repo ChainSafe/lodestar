@@ -1,3 +1,7 @@
+/**
+ * @module cli/commands
+ */
+
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import {isPlainObject} from "../../util/objects";

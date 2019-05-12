@@ -1,3 +1,7 @@
+/**
+ * @module p2p
+ */
+
 import LibP2p from "libp2p";
 import {TCP} from "libp2p-tcp";
 import {Mplex} from "libp2p-mplex";

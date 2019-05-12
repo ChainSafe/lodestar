@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/block
+ */
+
 import assert from "assert";
 import {signingRoot} from "@chainsafe/ssz";
 
@@ -14,7 +18,7 @@ import {
   PERSISTENT_COMMITTEE_PERIOD,
 } from "../../../constants";
 
-import {blsVerify} from "../../../stubs/bls";
+import bls from "@chainsafe/bls-js";
 
 import {
   getCurrentEpoch,
@@ -26,9 +30,8 @@ import {
 
 /**
  * Process ``VoluntaryExit`` operation.
+ *
  * Note that this function mutates ``state``.
- * @param {BeaconState} state
- * @param {VoluntaryExit} exit
  */
 export function processVoluntaryExit(state: BeaconState, exit: VoluntaryExit): void {
   const validator = state.validatorRegistry[exit.validatorIndex];
@@ -42,7 +45,7 @@ export function processVoluntaryExit(state: BeaconState, exit: VoluntaryExit): v
   // Verify the validator has been active long enough
   assert(currentEpoch - validator.activationEpoch >= PERSISTENT_COMMITTEE_PERIOD);
   // Verify signature
-  assert(blsVerify(
+  assert(bls.verify(
     validator.pubkey,
     signingRoot(exit, VoluntaryExit),
     exit.signature,

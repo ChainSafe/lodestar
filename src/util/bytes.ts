@@ -1,12 +1,13 @@
+/**
+ * @module util/bytes
+ */
+
 import BN from "bn.js";
 
 import {bytes} from "../types";
 
 /**
  * Return a byte array from a number or BN
- * @param {BN | number} value
- * @param {number} length
- * @returns {bytes}
  */
 export function intToBytes(value: BN | number, length: number): bytes {
   if (BN.isBN(value)) { // value is BN

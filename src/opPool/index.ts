@@ -1,3 +1,7 @@
+/**
+ * @module opPool
+ */
+
 import {EventEmitter} from "events";
 
 import {Attestation, VoluntaryExit, Transfer, ProposerSlashing, AttesterSlashing, BeaconBlock, Slot} from "../types";

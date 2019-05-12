@@ -1,3 +1,7 @@
+/**
+ * @module chain/stateTransition/slot
+ */
+
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 
 import {

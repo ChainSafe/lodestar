@@ -1,7 +1,12 @@
+/**
+ * @module node
+ */
+
 import deepmerge from "deepmerge";
 import {LevelDB} from "../db";
 import {EthersEth1Notifier, EthersEth1Options} from "../eth1";
 import {P2PNetwork, P2pOptions} from "../p2p";
+
 
 import defaultConf from "./defaults";
 import logger from "../logger/winston";
@@ -13,6 +18,7 @@ import {JSONRPC} from "../rpc/protocol";
 import {WSServer} from "../rpc/transport";
 import {IApiConstructor} from "../rpc/api/interface";
 import {LevelDBOptions} from '../db/impl/level';
+
 
 export interface Service {
   start(): Promise<void>;

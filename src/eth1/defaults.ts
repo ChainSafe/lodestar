@@ -1,3 +1,7 @@
+/**
+ * @module eth1
+ */
+
 import {ethers} from "ethers";
 import {DEPOSIT_CONTRACT_ADDRESS} from "../constants";
 

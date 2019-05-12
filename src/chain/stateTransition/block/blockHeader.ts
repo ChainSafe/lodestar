@@ -1,6 +1,12 @@
+/**
+ * @module chain/stateTransition/block
+ */
+
 import assert from "assert";
 
 import {signingRoot} from "@chainsafe/ssz";
+
+import bls from "@chainsafe/bls-js";
 
 import {
   BeaconBlock,
@@ -9,8 +15,6 @@ import {
 } from "../../../types";
 
 import {Domain} from "../../../constants";
-
-import {blsVerify} from "../../../stubs/bls";
 
 import {
   getBeaconProposerIndex,
@@ -34,8 +38,8 @@ export default function processBlockHeader(state: BeaconState, block: BeaconBloc
   assert(!proposer.slashed);
 
   // Verify proposer signature
-  assert(blsVerify(
-    state.validatorRegistry[getBeaconProposerIndex(state)].pubkey,
+  assert(bls.verify(
+    proposer.pubkey,
     signingRoot(block, BeaconBlock),
     block.signature,
     getDomain(state, Domain.BEACON_PROPOSER),

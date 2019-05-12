@@ -1,3 +1,7 @@
+/**
+ * @module db
+ */
+
 import level from "level";
 import {LevelUp} from "levelup";
 
