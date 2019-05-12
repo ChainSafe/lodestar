@@ -1,16 +1,15 @@
 import BlockProposingService from "../../../../src/validator/services/block";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
-import {RpcClient, RpcClientOverInstance} from "../../../../src/validator/rpc";
+import {RpcClientOverInstance} from "../../../../src/validator/rpc";
 import sinon from "sinon";
 import {generateFork} from "../../../utils/fork";
 import {expect} from "chai";
 import {ValidatorApi} from "../../../../src/rpc/api/validator";
-import {bytes32} from "@chainsafe/bls-js/lib/types";
-import {bytes} from "../../../../src/types";
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
 import {BeaconApi} from "../../../../src/rpc/api/beacon";
 import {SLOTS_PER_EPOCH} from "../../../../src/constants";
+import logger from "../../../../src/logger";
 
 describe('block proposing service', function () {
 
@@ -18,12 +17,20 @@ describe('block proposing service', function () {
 
   let rpcClientStub;
 
+  before(() => {
+    logger.silent(true);
+  });
+
   beforeEach(() => {
     rpcClientStub = sandbox.createStubInstance(RpcClientOverInstance);
   });
 
   afterEach(() => {
     sandbox.restore();
+  });
+
+  after(() => {
+    logger.silent(false);
   });
 
   it('should not produce block in same epoch', async function () {
