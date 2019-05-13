@@ -8,3 +8,5 @@ coverage/**
 beaconchain
 lodestar-db
 lodestar-config.toml
+keys/*
+!keys/.gitkeep
