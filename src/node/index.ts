@@ -4,8 +4,9 @@
 
 import deepmerge from "deepmerge";
 import {LevelDB} from "../db";
-import {EthersEth1Notifier} from "../eth1";
-import {P2PNetwork} from "../p2p";
+import {EthersEth1Notifier, EthersEth1Options} from "../eth1";
+import {P2PNetwork, P2pOptions} from "../p2p";
+
 
 import defaultConf from "./defaults";
 import logger from "../logger/winston";
@@ -16,6 +17,8 @@ import {OpPool} from "../opPool";
 import {JSONRPC} from "../rpc/protocol";
 import {WSServer} from "../rpc/transport";
 import {IApiConstructor} from "../rpc/api/interface";
+import {LevelDBOptions} from '../db/impl/level';
+
 
 export interface Service {
   start(): Promise<void>;
@@ -24,12 +27,11 @@ export interface Service {
 }
 
 // Temporarily have properties be optional until others portions of lodestar are ready
-interface BeaconNodeCtx {
+export interface BeaconNodeCtx {
   chain?: object;
-  db?: object;
-  // Temporarily set to any. Will be changed to object later.
-  eth1?: any;
-  network?: any;
+  db?: LevelDBOptions;
+  eth1?: EthersEth1Options;
+  p2p?: P2pOptions;
   rpc?: RpcCtx;
   sync?: object;
   opPool?: object;
@@ -60,7 +62,7 @@ class BeaconNode {
     );
 
     this.db = new LevelDB(this.conf.db);
-    this.network = new P2PNetwork(this.conf.network);
+    this.network = new P2PNetwork(this.conf.p2p);
     this.eth1 = new EthersEth1Notifier(
       this.conf.eth1,
       {
@@ -86,7 +88,7 @@ class BeaconNode {
     });
   }
 
-  public async start() {
+  public async start(): Promise<void> {
     logger.info('Starting eth2 beacon node - LODESTAR!');
     await this.db.start();
     await this.network.start();
@@ -97,7 +99,7 @@ class BeaconNode {
     await this.rpc.start();
   }
 
-  public async stop() {
+  public async stop(): Promise<void> {
     await this.rpc.stop();
     await this.sync.stop();
     await this.opPool.stop();

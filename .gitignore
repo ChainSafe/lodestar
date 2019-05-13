@@ -7,3 +7,4 @@ coverage/**
 .idea
 beaconchain
 lodestar-db
+lodestar-config.toml
