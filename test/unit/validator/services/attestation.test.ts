@@ -7,6 +7,7 @@ import {ValidatorApi} from "../../../../src/rpc/api/validator";
 import logger from "../../../../src/logger";
 import {generateAttestationData} from "../../../utils/attestation";
 import {AttestationService} from "../../../../src/validator/services/attestation";
+import {slotToEpoch} from "../../../../src/chain/stateTransition/util";
 
 describe('validator attestation service', function () {
 
@@ -51,7 +52,10 @@ describe('validator attestation service', function () {
     const shard = 1;
     const attestationData = generateAttestationData(slot, 1);
     rpcClientStub.validator = sandbox.createStubInstance(ValidatorApi);
-    rpcClientStub.validator.produceAttestation.withArgs(slot, shard).resolves(attestationData)
+    rpcClientStub.validator.produceAttestation.withArgs(slot, shard).resolves(attestationData);
+    rpcClientStub.validator.getCommitteeAssignment.withArgs(0, slotToEpoch(slot)).resolves({
+      validators: [0]
+    });
     const service = new AttestationService(
       0, rpcClientStub, PrivateKey.random()
     );
@@ -61,6 +65,9 @@ describe('validator attestation service', function () {
       sinon.match.has('data', attestationData)
         .and(sinon.match.has('signature', sinon.match.defined))
     ).calledOnce).to.be.true;
+    expect(
+      rpcClientStub.validator.getCommitteeAssignment.withArgs(0, slotToEpoch(slot)).calledOnce
+    ).to.be.true;
   });
 
 });
