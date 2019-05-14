@@ -1,10 +1,18 @@
 language: node_js
 node_js:
-  - "lts/*"
+- lts/*
 cache: yarn
 before_script:
-  - yarn install
+- yarn install
 script:
-  - yarn run lint
-  - yarn test
-  - yarn run coverage
+- yarn run lint
+- yarn test
+- yarn run coverage
+deploy:
+  provider: npm
+  email: $GREG_EMAIL 
+  api_key:
+    secure: N+HqEKoJ/9Dc6M6554ZtM8LuPGms++jC0KvykA0GJyVAOmpzdmDlvODdnzfoMQEJfyS0YeL/x9hoWJoEUad2/AlDOyLn+ltd+0y8TLOMgsdwP1KPLGrR07YMgwJZzTDaIEsIAoriuaZp1zXnb7ZFGjSaHgwCUbM5GoRD6+3B42MnrWDxmjvf9aos9ojtN5G5ZTRtnJemcA5Jc8Eeg7KIGgy8nKF6dQHPdTc5oiVp/3UmIMnrZlTrKP4szh6ZZSqj+L818ZSrP4TyhX7OuBz8lLbRImIqOCrBBVA1tGpTcL6zcebxIIE5JnwS4u8RzGDYpqzQqp6P6orllwf+9kLFkYZ8Ou7ezswLuhtTX6XnLjDDlKdJtg7dIyVZGAt1NtnP7VEmJCGh7v1+B24u62128IEYWYyzKeDpY0yWcq+WRmNncDaPPZAwfIGiLclH9923Kb2rhe1GG9hNieWJKJpxLg8vOs/02ouaZhq6rsb5qb11I+q4u7YAEzDBk7qj2N9rEEDdFgqW/PnkltMp5pxoU5OY2NoC79s4U1BdueT2dFrlpfHr6i60Vff2ttq30uZyRi51vTQhEb0/soXvifN8O2sR+qVgrIYn7JYQUTp1Js7KVtl0Dihwa0ohfDxmH2wMpWfThZZwONSwRwsMxvtJxLwf8HYfi3BxWz+91bZ7lgM=
+  on:
+    tags: true
+    branch: master
