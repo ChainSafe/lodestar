@@ -8,6 +8,7 @@ import logger from "../../logger";
 import fs from "fs";
 import {CliError} from "../error";
 import bls from '@chainsafe/bls-js';
+import { blsPrivateKeyToHex } from '../../util/bytes';
 
 interface IWalletCommandOptions {
   outputFile: string;
@@ -37,14 +38,8 @@ export class CreateWalletCommand implements CliCommand {
 
     const keyPair = bls.generateKeyPair();
 
-    // Workaround to convert object to hex string
-    const byteBuffer = Buffer.alloc(48, 0);
-    const pk = keyPair.privateKey.getValue();
-    pk.tobytearray(byteBuffer, 0);
-    const pkBytes = byteBuffer.slice(16, 48);
-
     const object = {
-      privateKey: "0x".concat(pkBytes.toString('hex')),
+      privateKey: blsPrivateKeyToHex(keyPair.privateKey),
       // publicKey: keyPair.publicKey.toHexString()
     }
 

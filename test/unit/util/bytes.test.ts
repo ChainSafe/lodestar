@@ -1,7 +1,9 @@
 import BN from "bn.js";
 import { assert } from "chai";
+import bls from '@chainsafe/bls-js';
 
-import { intToBytes } from "../../../src/util/bytes";
+import { intToBytes, blsPrivateKeyToHex } from "../../../src/util/bytes";
+import { PrivateKey } from "@chainsafe/bls-js/lib/privateKey";
 
 describe("intToBytes", () => {                                    
   const zeroedArray = (length) => Array.from({ length }, () => 0);                              
@@ -30,4 +32,13 @@ describe("intToBytes", () => {
       assert(intToBytes(input[0], input[1]).equals(output));
     });
   }
+});
+
+describe("BLSPrivateKeyToHex conversion", () => {
+  it(" generated private key should equal original", () => {
+    const keyPair = bls.generateKeyPair();
+    const hexString = blsPrivateKeyToHex(keyPair.privateKey);
+    const remadeKey = PrivateKey.fromHexString(hexString);
+    assert(blsPrivateKeyToHex(keyPair.privateKey) === blsPrivateKeyToHex(remadeKey));
+  });
 });
