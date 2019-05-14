@@ -1,11 +1,11 @@
 import {BIG} from "@chainsafe/amcl/ctx";
-import {SECRET_KEY_LENGTH} from "./constants";
+import {FP_POINT_LENGTH, SECRET_KEY_LENGTH} from "./constants";
 import assert from "assert";
 import ctx from "./ctx";
 import {padLeft} from "./helpers/utils";
 import {G2point} from "./helpers/g2point";
 import * as random from "secure-random";
-import {BLSDomain, bytes32} from "./types";
+import {BLSDomain, BLSSecretKey, bytes32} from "./types";
 
 export class PrivateKey {
 
@@ -25,6 +25,16 @@ export class PrivateKey {
 
   public signMessage(message: bytes32, domain: BLSDomain): G2point {
     return G2point.hashToG2(message, domain).mul(this.value);
+  }
+
+  public toBytes(): BLSSecretKey {
+    const buffer = Buffer.alloc(FP_POINT_LENGTH, 0);
+    this.value.tobytearray(buffer, 0);
+    return buffer.slice(FP_POINT_LENGTH - SECRET_KEY_LENGTH);
+  }
+
+  public toHexString(): string {
+    return `0x${this.toBytes().toString('hex')}`;
   }
 
   public static fromBytes(bytes: Uint8Array): PrivateKey {
@@ -48,12 +58,7 @@ export class PrivateKey {
   }
 
   public static random(): PrivateKey {
-    return new PrivateKey(
-      ctx.BIG.frombytearray(
-        padLeft(random.randomBuffer(SECRET_KEY_LENGTH), 48),
-        0
-      )
-    )
+    return PrivateKey.fromBytes(random.randomBuffer(SECRET_KEY_LENGTH));
   }
 
 }
