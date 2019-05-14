@@ -18,8 +18,8 @@ export class CreateWalletCommand implements CliCommand {
   public register(commander: CommanderStatic): void {
     commander
       .command("wallet")
-      .description("Generate wallet with bls-js private and public key")
-      .option("-o, --outputFile [output_file]", "Path to output file destination", "keys/bls.json")
+      .description("Generate wallet private key")
+      .option("-o, --outputFile [output_file]", "Path to output file destination", "keys/validator/bls.json")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation 
         // (unhandled promise rejections)
