@@ -6,7 +6,7 @@ import assert from "assert";
 
 import {
   ACTIVATION_EXIT_DELAY,
-  CHURN_LIMIT_QUOTIENT,
+  CHURN_LIMIT_QUOTIENT, Domain,
   EMPTY_SIGNATURE,
   MAX_EFFECTIVE_BALANCE,
   MIN_PER_EPOCH_CHURN_LIMIT,
@@ -23,14 +23,14 @@ import {
   Epoch,
   Slot,
   ValidatorIndex,
-  BeaconBlockHeader,
+  BeaconBlockHeader, Fork,
 } from "../../../types";
 
 import {intDiv} from "../../../util/math";
 import {hash} from "../../../util/crypto";
 import {intToBytes} from "../../../util/bytes";
 
-import {getCurrentEpoch, getEpochStartSlot} from "./epoch";
+import {getCurrentEpoch, getEpochStartSlot, slotToEpoch} from "./epoch";
 
 import {getActiveValidatorIndices} from "./validator";
 
@@ -38,6 +38,7 @@ import {generateSeed} from "./seed";
 
 import {getCrosslinkCommitteesAtSlot} from "./crosslinkCommittee";
 import {hashTreeRoot} from "@chainsafe/ssz";
+import {BLSDomain} from "@chainsafe/bls-js/lib/types";
 
 
 /**
@@ -105,11 +106,16 @@ export function verifyMerkleBranch(leaf: bytes32, proof: bytes32[], depth: numbe
 /**
  * Return the signature domain (fork version concatenated with domain type) of a message.
  */
-export function getDomain(state: BeaconState, domainType: number, messageEpoch: Epoch | null = null): bytes8 {
+export function getDomain(state: BeaconState, domainType: number, messageEpoch: Epoch | null = null): BLSDomain {
   const epoch = messageEpoch || getCurrentEpoch(state);
+  return getDomainFromFork(state.fork, epoch, domainType);
+}
+
+export function getDomainFromFork(fork: Fork, epoch: Epoch, domainType: Domain): BLSDomain {
+  const forkVersion = epoch < fork.epoch ? fork.previousVersion : fork.currentVersion;
   return Buffer.concat([
-    epoch < state.fork.epoch ? state.fork.previousVersion : state.fork.currentVersion,
-    intToBytes(domainType, 4),
+    forkVersion,
+    intToBytes(domainType, 4)
   ]);
 }
 
@@ -123,15 +129,15 @@ export function getChurnLimit(state: BeaconState): number {
   );
 }
 
-/**                       
+/**
  * Return the block header corresponding to a block with ``state_root`` set to ``ZERO_HASH``.
- */                                                                                      
+ */
 export function getTemporaryBlockHeader(block: BeaconBlock): BeaconBlockHeader {
   return {
     slot: block.slot,
     previousBlockRoot: block.previousBlockRoot,
-    stateRoot: ZERO_HASH,        
+    stateRoot: ZERO_HASH,
     blockBodyRoot: hashTreeRoot(block.body, BeaconBlockBody),
-    signature: EMPTY_SIGNATURE,          
-  };                                 
+    signature: EMPTY_SIGNATURE,
+  };
 }

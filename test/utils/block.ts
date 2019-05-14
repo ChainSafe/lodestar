@@ -1,8 +1,4 @@
-import BN from "bn.js";
-
-import {
-  BeaconBlock,
-} from "../../src/types";
+import {BeaconBlock,} from "../../src/types";
 
 
 export function generateEmptyBlock(): BeaconBlock {

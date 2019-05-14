@@ -1,5 +1,4 @@
-import {Attestation, AttestationData, Slot, Epoch} from "../../src/types";
-import {slotToEpoch} from "../../src/chain/stateTransition/util";
+import {Attestation, AttestationData, Epoch, Slot} from "../../src/types";
 import {randBetween} from "./misc";
 
 /**

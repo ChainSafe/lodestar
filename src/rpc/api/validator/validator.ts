@@ -6,9 +6,9 @@ import {
   Attestation,
   AttestationData,
   BeaconBlock,
-  BeaconState, BLSPubkey,
+  BeaconState,
+  BLSPubkey,
   bytes,
-  bytes48,
   Epoch,
   Fork,
   Shard,
@@ -19,7 +19,7 @@ import {
 import {DB} from "../../../db";
 import {BeaconChain} from "../../../chain";
 import {OpPool} from "../../../opPool";
-
+import ssz from "@chainsafe/ssz";
 import {IValidatorApi} from "./interface";
 import {getCommitteeAssignment, isProposerAtSlot} from "../../../chain/stateTransition/util";
 import {CommitteeAssignment} from "../../../validator/types";
@@ -43,8 +43,25 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock> {
-    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as BeaconBlock;
+    const block: BeaconBlock = {
+      body: undefined,
+      previousBlockRoot: undefined,
+      signature: undefined,
+      slot: undefined,
+      stateRoot: undefined
+    };
+    const prevBlock: BeaconBlock = await this.db.getChainHead();
+    const curState: BeaconState = await this.db.getState();
+    // Note: To calculate state_root,
+    // the validator should first run the state transition function on an unsigned block
+    // containing a stub for the state_root.
+    // It is useful to be able to run a state transition function that does not
+    // validate signatures or state root for this purpose.
+    block.slot = slot;
+    block.previousBlockRoot = ssz.hashTreeRoot(prevBlock, BeaconBlock);
+    block.stateRoot = ssz.hashTreeRoot(curState, BeaconState);
+    // TODO Eth1Data
+    return block;
   }
 
   public async isProposer(index: ValidatorIndex, slot: Slot): Promise<boolean> {
