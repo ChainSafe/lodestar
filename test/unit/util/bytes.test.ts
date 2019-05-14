@@ -39,6 +39,6 @@ describe("BLSPrivateKeyToHex conversion", () => {
     const keyPair = bls.generateKeyPair();
     const hexString = blsPrivateKeyToHex(keyPair.privateKey);
     const remadeKey = PrivateKey.fromHexString(hexString);
-    assert(blsPrivateKeyToHex(keyPair.privateKey) === blsPrivateKeyToHex(remadeKey));
+    assert(hexString === blsPrivateKeyToHex(remadeKey));
   });
 });
