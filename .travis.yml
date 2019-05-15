@@ -4,10 +4,10 @@ node_js:
 cache: yarn
 before_script:
 - yarn install
-script:
-- yarn run lint
-- yarn test
-- yarn run coverage
+  #script:
+        #- yarn run lint
+        #- yarn test
+        #- yarn run coverage
 deploy:
   provider: npm
   email:
