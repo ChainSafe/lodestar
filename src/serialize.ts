@@ -114,6 +114,7 @@ function _serializeObject(value: SerializableObject, type: ContainerType, output
 
 /**
  * Low level serialize
+ * @ignore
  * @param type full ssz type
  * @param output buffer for writing serialized data
  * @param start starting index

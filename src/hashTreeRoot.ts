@@ -25,6 +25,7 @@ import {
 
 /**
  * Low level hashTreeRoot
+ * @ignore
  * @param type full ssz type
  */
 export function _hashTreeRoot(value: SerializableValue, type: FullSSZType): Buffer {

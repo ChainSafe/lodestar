@@ -138,6 +138,7 @@ function _deserializeObject(data: Buffer, type: ContainerType, start: number, en
 
 /**
  * Low level deserialize
+ * @ignore
  * @param type full ssz type
  * @param start starting index
  * @param end ending index
