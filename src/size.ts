@@ -1,3 +1,4 @@
+/** @module ssz */
 import {
   Bytes,
   FullSSZType,
@@ -16,6 +17,7 @@ import { isVariableSizeType } from "./util/types";
 
 // Return the size of a fixed-sized type
 // Will error if a variable-sized type is given
+/** @ignore */
 export function fixedSize(type: FullSSZType): number {
   switch (type.type) {
     case Type.uint:
@@ -37,6 +39,7 @@ export function fixedSize(type: FullSSZType): number {
 
 // Return the size of a variable-sized type, dependent on the value
 // Will error if a fixed-sized type is given
+/** @ignore */
 export function variableSize(value: SerializableValue, type: FullSSZType): number {
   switch (type.type) {
     case Type.byteList:
@@ -64,6 +67,7 @@ export function variableSize(value: SerializableValue, type: FullSSZType): numbe
   }
 }
 
+/** @ignore */
 export function size(value: SerializableValue, type: FullSSZType): number {
   return isVariableSizeType(type) ? variableSize(value, type) : fixedSize(type);
 }

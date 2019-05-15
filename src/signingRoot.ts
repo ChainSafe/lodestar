@@ -1,3 +1,4 @@
+/** @module ssz */
 import assert from "assert";
 
 import {
@@ -15,11 +16,8 @@ import {
 
 /**
  * Merkleize an SSZ object w/o its last field
+ *
  * Used for signing/verifying signed data
- * @method signingRoot
- * @param {any} value
- * @param {AnyContainerType} type
- * @returns {Buffer}
  */
 export function signingRoot(value: any, type: AnyContainerType): Buffer {
   const _type = parseType(type);

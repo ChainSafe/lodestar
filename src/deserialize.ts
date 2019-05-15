@@ -1,3 +1,4 @@
+/** @module ssz */
 import assert from "assert";
 import BN from "bn.js";
 
@@ -21,6 +22,7 @@ import { BYTES_PER_LENGTH_PREFIX } from "./constants";
 import { parseType, isVariableSizeType } from "./util/types";
 import { fixedSize } from "./size";
 
+/** @ignore */
 function _deserializeUint(data: Buffer, type: UintType, start: number): Uint {
   const offset = start + type.byteLength;
   const uintData = data.slice(start, offset);
@@ -32,10 +34,12 @@ function _deserializeUint(data: Buffer, type: UintType, start: number): Uint {
   }
 }
 
+/** @ignore */
 function _deserializeBool(data: Buffer, start: number): Bool {
   return data[start] ? true : false;
 }
 
+/** @ignore */
 function _deserializeByteArray(data: Buffer, start: number, end: number): Bytes {
   const length = end - start;
   const value = Buffer.alloc(length);
@@ -43,6 +47,7 @@ function _deserializeByteArray(data: Buffer, start: number, end: number): Bytes 
   return value;
 }
 
+/** @ignore */
 function _deserializeArray(data: Buffer, type: ArrayType, start: number, end: number): SerializableArray {
   const value: SerializableArray = [];
   if (start === end) {
@@ -88,6 +93,7 @@ function _deserializeArray(data: Buffer, type: ArrayType, start: number, end: nu
   return value;
 }
 
+/** @ignore */
 function _deserializeObject(data: Buffer, type: ContainerType, start: number, end: number): SerializableObject {
   let currentIndex = start;
   let nextIndex = currentIndex;
@@ -130,6 +136,12 @@ function _deserializeObject(data: Buffer, type: ContainerType, start: number, en
   return value;
 }
 
+/**
+ * Low level deserialize
+ * @param type full ssz type
+ * @param start starting index
+ * @param end ending index
+ */
 export function _deserialize(data: Buffer, type: FullSSZType, start: number, end: number): SerializableValue {
   switch (type.type) {
     case Type.uint:
@@ -149,10 +161,6 @@ export function _deserialize(data: Buffer, type: FullSSZType, start: number, end
 
 /**
  * Deserialize, according to the SSZ spec
- * @method deserialize
- * @param {Buffer} data
- * @param {AnySSZType} type
- * @returns {any}
  */
 export function deserialize(data: Buffer, type: AnySSZType): SerializableValue {
   const _type = parseType(type);

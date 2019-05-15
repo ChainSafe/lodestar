@@ -9,8 +9,8 @@
   ],
   "scripts": {
     "prebuild": "rm -rf lib && rm -rf dist",
-    "build": "yarn build-lib && yarn build-web && yarn build-docs && yarn build-types",
-    "build-docs": "documentation build lib/ -f md > docs/API.md",
+    "build": "yarn build-lib && yarn build-web && yarn build-types",
+    "build:docs": "typedoc --exclude src/index.ts,src/web.ts --out docs src",
     "build-lib": "babel src -x .ts -d lib",
     "build-types": "tsc --declaration --outDir lib --emitDeclarationOnly",
     "build-web": "webpack --mode production --entry ./lib/web.js --output ./dist/ssz.min.js",
@@ -50,6 +50,8 @@
     "eslint": "^5.14.1",
     "mocha": "^5.2.0",
     "nyc": "^13.3.0",
+    "typedoc": "^0.14.2",
+    "typedoc-plugin-external-module-name": "^2.1.0",
     "typescript": "^3.3.3333",
     "webpack": "^4.29.6",
     "webpack-cli": "^3.2.3"

@@ -1,3 +1,4 @@
+/** @module ssz */
 import BN from "bn.js";
 
 import {
@@ -24,6 +25,7 @@ import { parseType, isVariableSizeType } from "./util/types";
 import { assertValidValue } from "./assertValidValue";
 
 
+/** @ignore */
 function _serializeUint(value: Uint, type: UintType, output: Buffer, start: number): number {
   const offset = start + type.byteLength;
   let bnValue: BN;
@@ -37,6 +39,7 @@ function _serializeUint(value: Uint, type: UintType, output: Buffer, start: numb
   return offset;
 }
 
+/** @ignore */
 function _serializeBool(value: Bool, output: Buffer, start: number): number {
   const offset = start + 1;
   if (value) {
@@ -47,6 +50,7 @@ function _serializeBool(value: Bool, output: Buffer, start: number): number {
   return offset;
 }
 
+/** @ignore */
 function _serializeByteArray(value: Bytes, type: BytesType, output: Buffer, start: number): number {
   const length = type.type === Type.byteVector ? type.length : value.length;
   const offset = start + length;
@@ -55,6 +59,7 @@ function _serializeByteArray(value: Bytes, type: BytesType, output: Buffer, star
   return offset;
 }
 
+/** @ignore */
 function _serializeArray(value: SerializableArray, type: ArrayType, output: Buffer, start: number): number {
   let index = start;
   if (isVariableSizeType(type.elementType)) {
@@ -81,6 +86,7 @@ function _serializeArray(value: SerializableArray, type: ArrayType, output: Buff
   return index;
 }
 
+/** @ignore */
 function _serializeObject(value: SerializableObject, type: ContainerType, output: Buffer, start: number): number {
   let fixedIndex = start;
   let fixedLength = type.fields
@@ -106,6 +112,12 @@ function _serializeObject(value: SerializableObject, type: ContainerType, output
   return currentOffsetIndex;
 }
 
+/**
+ * Low level serialize
+ * @param type full ssz type
+ * @param output buffer for writing serialized data
+ * @param start starting index
+ */
 export function _serialize(value: SerializableValue, type: FullSSZType, output: Buffer, start: number): number {
   assertValidValue(value, type);
   switch(type.type) {
@@ -126,10 +138,6 @@ export function _serialize(value: SerializableValue, type: FullSSZType, output: 
 
 /**
  * Serialize, according to the SSZ spec
- * @method serialize
- * @param {any} value
- * @param {AnySSZType} type
- * @returns {Buffer}
  */
 export function serialize(value: any, type: AnySSZType): Buffer {
   const _type = parseType(type);

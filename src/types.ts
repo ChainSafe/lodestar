@@ -1,3 +1,4 @@
+/** @module ssz */
 import BN from "bn.js";
 
 // Serializable values
