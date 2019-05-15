@@ -1,4 +1,4 @@
-import {Attestation, AttestationData, Epoch, Slot} from "../../src/types";
+import {Attestation, AttestationData, Epoch} from "../../src/types";
 import {randBetween} from "./misc";
 
 /**
@@ -7,11 +7,11 @@ import {randBetween} from "./misc";
  * @param {number} justifiedEpochValue
  * @returns {AttestationData}
  */
-export function generateAttestationData(slot: Slot, sourceEpoch: Epoch): AttestationData {
+export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch): AttestationData {
   return {
-    slot,
     beaconBlockRoot: Buffer.alloc(32),
     sourceEpoch: sourceEpoch,
+    targetEpoch: targetEpoch,
     sourceRoot: Buffer.alloc(32),
     targetRoot: Buffer.alloc(32),
     shard: randBetween(0, 1024),
@@ -24,9 +24,9 @@ export function generateEmptyAttestation(): Attestation {
   return {
     aggregationBitfield: Buffer.alloc(32),
     data: {
-      slot: 0,
       beaconBlockRoot: Buffer.alloc(32),
       sourceEpoch: 0,
+      targetEpoch: 0,
       sourceRoot: Buffer.alloc(32),
       targetRoot: Buffer.alloc(32),
       shard: randBetween(0, 1024),
@@ -35,5 +35,5 @@ export function generateEmptyAttestation(): Attestation {
     },
     custodyBitfield: Buffer.alloc(32),
     signature: Buffer.alloc(96),
-  }
+  };
 }
