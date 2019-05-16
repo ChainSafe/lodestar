@@ -51,9 +51,18 @@ export class BeaconNodeCommand implements CliCommand {
       parsedConfig = getTomlConfig(options.configFile);
     }
 
+    let dbName: string;
+    if (options.db) {
+      dbName = options.db;
+    } else if (parsedConfig) {
+      dbName = parsedConfig.db.name;
+    } else {
+      dbName = defaults.db.name;
+    }
+
     let optionsMap: BeaconNodeCtx = {
       db: {
-        name: options.db || parsedConfig ? parsedConfig.db.name : defaults.db.name,
+        name: dbName,
       },
       eth1: {
         depositContract: {
