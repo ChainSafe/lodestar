@@ -33,10 +33,11 @@ export function processFinalUpdates(state: BeaconState): void {
   // Update effective balances with hysteresis
   state.validatorRegistry.forEach((validator, index) => {
     const balance = state.balances[index];
-    const HALF_INCREMENT = intDiv(EFFECTIVE_BALANCE_INCREMENT, 2);
+    // TODO probably unsafe
+    const HALF_INCREMENT = EFFECTIVE_BALANCE_INCREMENT.divn(2).toNumber();
     if (balance.lt(validator.effectiveBalance) || validator.effectiveBalance.addn(3 * HALF_INCREMENT).lt(balance)) {
       validator.effectiveBalance = bnMin(
-        balance.subn(balance.modn(EFFECTIVE_BALANCE_INCREMENT)),
+        balance.sub(balance.mod(EFFECTIVE_BALANCE_INCREMENT)),
         new BN(MAX_EFFECTIVE_BALANCE));
     }
   });
