@@ -1,3 +1,4 @@
+/** @module ssz */
 import { sha256 } from "js-sha256";
 
 import {
@@ -11,6 +12,7 @@ import { size } from "../size";
 
 import { _serialize } from "../serialize";
 
+/** @ignore */
 export function pack (input: SerializableValue[], type: FullSSZType): Buffer[] {
   if (input.length === 0) {
     return [];
@@ -33,6 +35,7 @@ export function pack (input: SerializableValue[], type: FullSSZType): Buffer[] {
   return chunks;
 }
 
+/** @ignore */
 function bitLength (n: number): number {
   let length = 0;
   while (n !== 0) {
@@ -42,14 +45,17 @@ function bitLength (n: number): number {
   return length;
 }
 
+/** @ignore */
 function nextPowerOf2 (n: number): number {
   return n === 0 ? 1 : Math.pow(2, bitLength(n - 1));
 }
 
+/** @ignore */
 export function hash(...inputs: Buffer[]): Buffer {
   return Buffer.from(inputs.reduce((acc, i) => acc.update(i), sha256.create()).arrayBuffer());
 }
 
+/** @ignore */
 export function merkleize(chunks: Buffer[]): Buffer {
   const lengthToPad = nextPowerOf2(chunks.length) - chunks.length;
   if (lengthToPad) {
@@ -68,6 +74,7 @@ export function merkleize(chunks: Buffer[]): Buffer {
   return chunks[0];
 }
 
+/** @ignore */
 export function mixInLength(root: Buffer, length: number): Buffer {
   const lengthBuf = Buffer.alloc(32);
   lengthBuf.writeUIntLE(length, 0, 6);

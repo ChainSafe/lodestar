@@ -1,3 +1,4 @@
+/** @module ssz */
 import assert from "assert";
 
 import {
@@ -9,13 +10,13 @@ import {
 } from "../types";
 
 // regex to identify a bytes type
-export const bytesPattern = /^bytes\d*$/;
+const bytesPattern = /^bytes\d*$/;
 // regex to identify digits
-export const digitsPattern = /\d+$/;
+const digitsPattern = /\d+$/;
 // regex to identify a uint type
-export const uintPattern = /^(uint|number)\d+$/;
+const uintPattern = /^(uint|number)\d+$/;
 // regex to identify a number type specifically
-export const numberPattern = /^number/;
+const numberPattern = /^number/;
 
 export function copyType(type: AnySSZType): AnySSZType {
   return JSON.parse(JSON.stringify(type));

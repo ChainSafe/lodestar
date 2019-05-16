@@ -1,3 +1,4 @@
+/** @module ssz */
 import {
   AnySSZType,
   Bytes,
@@ -22,6 +23,11 @@ import {
   parseType,
 } from "./util/types";
 
+/**
+ * Low level hashTreeRoot
+ * @ignore
+ * @param type full ssz type
+ */
 export function _hashTreeRoot(value: SerializableValue, type: FullSSZType): Buffer {
   switch (type.type) {
     case Type.uint:
@@ -61,10 +67,6 @@ export function _hashTreeRoot(value: SerializableValue, type: FullSSZType): Buff
 
 /**
  * Merkleize an SSZ value
- * @method hashTreeRoot
- * @param {any} value
- * @param {AnySSZType} type
- * @returns {Buffer}
  */
 export function hashTreeRoot(value: any, type: AnySSZType): Buffer {
   const _type = parseType(type);

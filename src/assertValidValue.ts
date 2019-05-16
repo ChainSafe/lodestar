@@ -1,3 +1,4 @@
+/** @module ssz */
 import assert from "assert";
 import BN from "bn.js";
 
@@ -7,6 +8,7 @@ import {
 } from "./types";
 
 
+/** @ignore */
 export function assertValidValue(value: any, type: FullSSZType): void {
   switch (type.type) {
     case Type.uint:

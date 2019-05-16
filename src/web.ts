@@ -1,20 +1,7 @@
-import {
-  hashTreeRoot,
-  signingRoot,
-  deserialize,
-  serialize,
-  Type,
-  parseType,
-} from "./index";
+/** @module ssz */
+import * as ssz from "./index";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (function (window: any) {
-  window.ssz = {
-    hashTreeRoot,
-    signingRoot,
-    deserialize,
-    serialize,
-    Type,
-    parseType,
-  }
+  window.ssz = ssz;
 })(window)
