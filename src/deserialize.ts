@@ -59,16 +59,19 @@ function _deserializeArray(data: Buffer, type: ArrayType, start: number, end: nu
     let nextOffset = currentOffset;
     // read off offsets, deserializing values until we hit the first offset index
     for (; currentIndex < firstOffset;) {
+      assert(currentOffset <= end, "Offset out of bounds");
       nextIndex = currentIndex + BYTES_PER_LENGTH_PREFIX;
       nextOffset = nextIndex === firstOffset
         ? end
         : start + data.readUIntLE(nextIndex, BYTES_PER_LENGTH_PREFIX);
+      assert(currentOffset <= nextOffset, "Offsets must be increasing");
       value.push(
         _deserialize(data, type.elementType, currentOffset, nextOffset)
       );
       currentIndex = nextIndex;
       currentOffset = nextOffset;
     }
+    assert(firstOffset === currentIndex, "First offset skipping variable data");
   } else {
     // all elements fixed-sized
     let index = start;
@@ -98,20 +101,23 @@ function _deserializeObject(data: Buffer, type: ContainerType, start: number, en
   const fixedSizes = type.fields.map(([_, fieldType]) => !isVariableSizeType(fieldType) && fixedSize(fieldType));
   // with the fixed sizes, we can read the offsets, and store for later
   let offsets: number[] = [];
-  fixedSizes.reduce((index: number, size, i) => {
-    if (fixedSizes[i] === false) {
+  const fixedEnd = fixedSizes.reduce((index: number, size) => {
+    if (size === false) {
       offsets.push(start + data.readUIntLE(index, BYTES_PER_LENGTH_PREFIX));
       return index + BYTES_PER_LENGTH_PREFIX;
     } else {
-      return index + (size as number);
+      return index + size;
     }
-  }, start)
+  }, start);
   offsets.push(end);
+  assert(fixedEnd === offsets[0], "Not all variable bytes consumed");
   let offsetIndex = 0;
 
   type.fields.forEach(([fieldName, fieldType], i) => {
     const fieldSize = fixedSizes[i];
     if (fieldSize === false) { // variable-sized field
+      assert(offsets[offsetIndex] <= end, "Offset out of bounds");
+      assert(offsets[offsetIndex] <= offsets[offsetIndex + 1], "Offsets must be increasing");
       value[fieldName] = _deserialize(data, fieldType, offsets[offsetIndex], offsets[offsetIndex + 1]);
       offsetIndex++;
       currentIndex += BYTES_PER_LENGTH_PREFIX;
@@ -121,7 +127,7 @@ function _deserializeObject(data: Buffer, type: ContainerType, start: number, en
       currentIndex = nextIndex;
     }
   });
-  if (offsets.length) {
+  if (offsets.length > 1) {
     assert(offsetIndex === offsets.length - 1, "Not all variable bytes consumed");
     assert(currentIndex === offsets[0], "Not all fixed bytes consumed");
   } else {
