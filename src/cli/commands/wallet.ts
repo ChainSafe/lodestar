@@ -7,12 +7,37 @@ import {CommanderStatic} from "commander";
 import logger from "../../logger";
 import fs from "fs";
 import {CliError} from "../error";
-// import readline from "readline";
+import readline from "readline";
 import Keystore from "../../validator/keystore";
 
 interface IWalletCommandOptions {
   outputFile: string;
 }
+
+interface IHiddenReadlineInterface extends readline.Interface {
+  output?: any;
+  _writeToOutput?(stringToWrite: string): void;
+}
+
+const passwordPrompt = "Enter password to encrypt key: ";
+
+const promptPassword = (): Promise<string> => {
+  const rl: IHiddenReadlineInterface = readline.createInterface({input: process.stdin, output: process.stdout});
+
+  rl._writeToOutput = function _writeToOutput(stringToWrite: string): void {
+    if (stringToWrite === passwordPrompt || stringToWrite.match(/\n/g))
+      rl.output.write(stringToWrite);
+    else
+      rl.output.write("*");
+  };
+
+  return new Promise((resolve): void => {
+    rl.question(passwordPrompt, function(password: string): void {
+      rl.close();
+      resolve(password);
+    });
+  });
+};
 
 export class CreateWalletCommand implements CliCommand {
   public register(commander: CommanderStatic): void {
@@ -36,18 +61,11 @@ export class CreateWalletCommand implements CliCommand {
       throw new CliError(`${options.outputFile} already exists`);
     }
 
-    // const rl = readline.createInterface({input: process.stdin, output: process.stdout});
-    
-    // const name = rl.question("Password: ", function(password) {
-    //   console.log('\nPassword is ' + password);
-    //   rl.close();
-    // });
-
-    const password = "tempPassword";
-
+    const password = await promptPassword();
     const keystore = new Keystore(password);
     keystore.saveKeys(options.outputFile);
 
     logger.info(`Successfully wrote keys to: ${options.outputFile}`);
+    logger.info(`Public Key: ${keystore.publicKey}`);
   }
 }

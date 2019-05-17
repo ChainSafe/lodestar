@@ -9,7 +9,7 @@ import {blsPrivateKeyToHex} from "../util/bytes";
 import {encryptKey, decryptKey} from "../util/encrypt";
 
 export default class Keystore {
-  public encryptedPrivateKey: string;
+  private encryptedPrivateKey: string;
   public publicKey: string;
 
   public constructor(password: string) {
