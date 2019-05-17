@@ -23,6 +23,20 @@ describe('test bls', function () {
            expect(result).to.be.true;
        });
 
+       it('should fail verify empty signature', () => {
+           const keypair = Keypair.generate();
+           const messageHash2 = hash("Test message2");
+           const domain = Buffer.from("01", 'hex');
+           const signature = Buffer.alloc(96);
+           const result = bls.verify(
+               keypair.publicKey.toBytesCompressed(),
+               messageHash2,
+               signature,
+               domain
+           );
+           expect(result).to.be.false;
+       });
+
        it('should fail verify signature of different message', () => {
            const keypair = Keypair.generate();
            const messageHash = hash("Test message");

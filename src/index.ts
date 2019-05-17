@@ -75,13 +75,17 @@ function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
  * @param domain
  */
 function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BLSSignature, domain: bytes8): boolean {
-  const key = PublicKey.fromBytes(publicKey);
-  const sig = Signature.fromCompressedBytes(signature);
+  try {
+    const key = PublicKey.fromBytes(publicKey);
+    const sig = Signature.fromCompressedBytes(signature);
 
-  const g1Generated = G1point.generator();
-  const e1 = ElipticCurvePairing.pair(key.getPoint(), G2point.hashToG2(messageHash, domain));
-  const e2 = ElipticCurvePairing.pair(g1Generated, sig.getPoint());
-  return e1.equals(e2);
+    const g1Generated = G1point.generator();
+    const e1 = ElipticCurvePairing.pair(key.getPoint(), G2point.hashToG2(messageHash, domain));
+    const e2 = ElipticCurvePairing.pair(g1Generated, sig.getPoint());
+    return e1.equals(e2);
+  } catch (e) {
+    return false;
+  }
 }
 
 /**
@@ -95,19 +99,23 @@ function verifyMultiple(publicKeys: BLSPubkey[], messageHashes: bytes32[], signa
   if(publicKeys.length === 0 || publicKeys.length != messageHashes.length) {
     return false;
   }
-  const g1Generated = G1point.generator();
-  const eCombined = new ctx.FP12(1);
-  publicKeys.forEach((publicKey, index): void => {
-    const g2 = G2point.hashToG2(messageHashes[index], domain);
-    eCombined.mul(
-      ElipticCurvePairing.pair(
-        PublicKey.fromBytes(publicKey).getPoint(),
-        g2
-      )
-    );
-  });
-  const e2 = ElipticCurvePairing.pair(g1Generated, Signature.fromCompressedBytes(signature).getPoint());
-  return e2.equals(eCombined);
+  try {
+    const g1Generated = G1point.generator();
+    const eCombined = new ctx.FP12(1);
+    publicKeys.forEach((publicKey, index): void => {
+      const g2 = G2point.hashToG2(messageHashes[index], domain);
+      eCombined.mul(
+          ElipticCurvePairing.pair(
+              PublicKey.fromBytes(publicKey).getPoint(),
+              g2
+          )
+      );
+    });
+    const e2 = ElipticCurvePairing.pair(g1Generated, Signature.fromCompressedBytes(signature).getPoint());
+    return e2.equals(eCombined);
+  } catch (e) {
+    return false;
+  }
 }
 
 export default {
