@@ -4,19 +4,7 @@
 
 import {serialize} from "@chainsafe/ssz";
 
-import {
-  AttestationData,
-  Epoch,
-} from "../../../types";
-
-import {slotToEpoch} from "./epoch";
-
-export function isSlashableAttestationData(
-  attestationData1: AttestationData, attestationData2: AttestationData
-) {
-  return isDoubleVote(attestationData1, attestationData2)
-    || isSurroundVote(attestationData1, attestationData2);
-}
+import {AttestationData,} from "../../../types";
 
 /**
  * Check if data1 and data2 are slashable according to Casper FFG rules.
