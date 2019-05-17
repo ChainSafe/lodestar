@@ -8,12 +8,13 @@ import logger from "../../../../src/logger";
 import {generateAttestationData} from "../../../utils/attestation";
 import {AttestationService} from "../../../../src/validator/services/attestation";
 import {slotToEpoch} from "../../../../src/chain/stateTransition/util";
+import {IValidatorDB, ValidatorDB} from "../../../../src/db/api";
 
 describe('validator attestation service', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let rpcClientStub;
+  let rpcClientStub, dbStub;
 
   before(() => {
     logger.silent(true);
@@ -21,6 +22,7 @@ describe('validator attestation service', function () {
 
   beforeEach(() => {
     rpcClientStub = sandbox.createStubInstance(RpcClientOverInstance);
+    dbStub = sandbox.createStubInstance(ValidatorDB);
   });
 
   afterEach(() => {
@@ -38,10 +40,11 @@ describe('validator attestation service', function () {
     rpcClientStub.validator = sandbox.createStubInstance(ValidatorApi);
     rpcClientStub.validator.produceAttestation.withArgs(slot, shard).resolves(attestationData)
 
-    const isConflictingAttestationStub = sandbox.stub(AttestationService.prototype, "isConflictingAttestation" as any);
-    isConflictingAttestationStub.withArgs(attestationData).returns(true);
+    dbStub.getAttestation.resolves({
+      data: generateAttestationData(slot, 1)
+    });
     const service = new AttestationService(
-      0, rpcClientStub, PrivateKey.random()
+      0, rpcClientStub, PrivateKey.random(), dbStub
     );
     const result = await service.createAndPublishAttestation(slot, shard, generateFork());
     expect(result).to.be.null;
@@ -56,8 +59,9 @@ describe('validator attestation service', function () {
     rpcClientStub.validator.getCommitteeAssignment.withArgs(0, slotToEpoch(slot)).resolves({
       validators: [0]
     });
+    dbStub.getAttestation.resolves(null);
     const service = new AttestationService(
-      0, rpcClientStub, PrivateKey.random()
+      0, rpcClientStub, PrivateKey.random(), dbStub
     );
     const result = await service.createAndPublishAttestation(slot, shard, generateFork());
     expect(result).to.not.be.null;

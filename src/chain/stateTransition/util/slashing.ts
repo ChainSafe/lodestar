@@ -9,6 +9,12 @@ import {
 
 import {slotToEpoch} from "./epoch";
 
+export function isSlashableAttestationData(
+  attestationData1: AttestationData, attestationData2: AttestationData
+) {
+  return isDoubleVote(attestationData1, attestationData2)
+    || isSurroundVote(attestationData1, attestationData2);
+}
 
 /**
  * Check if ``attestationData1`` and ``attestationData2`` have the same target.

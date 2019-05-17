@@ -13,21 +13,29 @@ import {
 import {RpcClient} from "../rpc";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import {hashTreeRoot} from "@chainsafe/ssz";
-import {getDomainFromFork, slotToEpoch} from "../../chain/stateTransition/util";
+import {getDomainFromFork, isSlashableAttestationData, slotToEpoch} from "../../chain/stateTransition/util";
 import {Domain} from "../../constants";
 import logger from "../../logger";
 import {intDiv} from "../../util/math";
+import {IValidatorDB} from "../../db/api";
 
 export class AttestationService {
 
   private validatorIndex: ValidatorIndex;
   private rpcClient: RpcClient;
   private privateKey: PrivateKey;
+  private db: IValidatorDB;
 
-  public constructor(validatorIndex: ValidatorIndex, rpcClient: RpcClient, privateKey: PrivateKey) {
+  public constructor(
+    validatorIndex: ValidatorIndex,
+    rpcClient: RpcClient,
+    privateKey: PrivateKey,
+    db: IValidatorDB
+  ) {
     this.validatorIndex = validatorIndex;
     this.rpcClient = rpcClient;
     this.privateKey = privateKey;
+    this.db = db;
   }
 
 
@@ -52,13 +60,14 @@ export class AttestationService {
   }
 
   private async isConflictingAttestation(other: AttestationData): Promise<boolean> {
-    // TODO: Fetch last signed attestation data and check
-    //  if conflicting (https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#is_slashable_attestation_data)
-    return false;
+    const lastProposedAttestation
+      = await this.db.getAttestation(this.validatorIndex);
+    return lastProposedAttestation
+      && isSlashableAttestationData(lastProposedAttestation.data, other);
   }
 
   private async storeAttestation(attestation: Attestation): Promise<void> {
-    //TODO: store attestation in database
+    await this.db.setAttestation(this.validatorIndex, attestation);
   }
 
   private async createAttestation(

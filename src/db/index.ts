@@ -9,4 +9,4 @@ export {
   SearchOptions,
   DBOptions
 } from "./persistance";
-export {BeaconDB, IBeaconDb} from "./api";
+export {BeaconDB, IBeaconDb, ValidatorDB, IValidatorDB} from "./api";
