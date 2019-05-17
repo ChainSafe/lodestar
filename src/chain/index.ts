@@ -9,7 +9,7 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import {BeaconBlock, BeaconState, Deposit, Eth1Data, number64} from "../types";
 import {GENESIS_SLOT, SECONDS_PER_SLOT} from "../constants";
 
-import {DB} from "../db";
+import {BeaconDB} from "../db";
 import {Eth1Notifier} from "../eth1";
 import logger from "../logger";
 
@@ -26,7 +26,7 @@ import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 export class BeaconChain extends EventEmitter {
   public chain: string;
   public genesisTime: number64;
-  private db: DB;
+  private db: BeaconDB;
   private eth1: Eth1Notifier;
   private _latestBlock: BeaconBlock;
   private forkChoice: LMDGHOST;

@@ -2,6 +2,11 @@
  * @module db
  */
 
-export {DB, DBOptions} from "./interface";
-export {LevelDB, LevelDBOptions} from "./impl/level";
-export {PouchDb} from "./impl/pouch";
+export {
+  LevelDbPersistance,
+  PouchDbPersistance,
+  IDatabasePersistance,
+  SearchOptions,
+  DBOptions
+} from "./persistance";
+export {BeaconDB, IBeaconDb} from "./api";

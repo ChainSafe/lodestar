@@ -4,17 +4,17 @@
 
 import {EventEmitter} from "events";
 
-import {Attestation, VoluntaryExit, Transfer, ProposerSlashing, AttesterSlashing, BeaconBlock, Slot} from "../types";
+import {Attestation, AttesterSlashing, BeaconBlock, ProposerSlashing, Slot, Transfer, VoluntaryExit} from "../types";
 
 import {BeaconChain} from "../chain";
-import {DB} from "../db";
+import {BeaconDB} from "../db";
 
 /**
  * Pool of operations not yet included on chain
  */
 export class OpPool extends EventEmitter {
   private chain: BeaconChain;
-  private db: DB;
+  private db: BeaconDB;
   public constructor(opts, {chain, db}) {
     super();
     this.chain = chain;

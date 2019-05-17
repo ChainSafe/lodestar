@@ -1,8 +1,6 @@
 /**
- * @module db
+ * @module db/beacon
  */
-
-import {EventEmitter} from "events";
 
 import {
   Attestation,
@@ -10,23 +8,19 @@ import {
   BeaconBlock,
   BeaconState,
   bytes32,
+  Deposit,
   ProposerSlashing,
   Slot,
+  Transfer,
   VoluntaryExit,
-  Transfer, Deposit,
-} from "../types";
-
-export interface DBOptions {
-  name?: string;
-}
+} from "../../../types";
 
 /**
  * The DB service manages the data layer of the beacon chain
- * The exposed methods do not refer to the underlying data engine, but instead expose relevent beacon chain objects
+ * The exposed methods do not refer to the underlying data engine,
+ * but instead expose relevent beacon chain objects
  */
-export interface DB extends EventEmitter {
-  start(): Promise<void>;
-  stop(): Promise<void>;
+export interface IBeaconDb {
 
   /**
    * Adds deposit to database

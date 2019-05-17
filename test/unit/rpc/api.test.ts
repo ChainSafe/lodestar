@@ -8,7 +8,7 @@ import {
 
 import {BeaconChain} from "../../../src/chain";
 import {OpPool} from "../../../src/opPool";
-import {LevelDB} from "../../../src/db";
+import {LevelDbPersistance} from "../../../src/db";
 // import {BeaconAPI} from "../../../src/rpc";
 
 import { generateEmptyBlock } from "../../utils/block";
