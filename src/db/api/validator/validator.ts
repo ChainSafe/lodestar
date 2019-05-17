@@ -1,3 +1,7 @@
+/**
+ * @module db/api/validator
+ */
+
 import {DatabaseApi, DatabaseApiOptions} from "../abstract";
 import {IValidatorDB} from "./interface";
 import {Attestation, BeaconBlock, ValidatorIndex} from "../../../types";

@@ -6,7 +6,7 @@ import { SLOTS_PER_EPOCH } from "../../../../../src/constants";
 import {
   isDoubleVote,
   isSurroundVote,
-} from "../../../../../src/chain/stateTransition/util/slashing";
+} from "../../../../../src/chain/stateTransition/util";
 
 import { generateAttestationData } from "../../../../utils/attestation";
 import { randBetween } from "../../../../utils/misc";

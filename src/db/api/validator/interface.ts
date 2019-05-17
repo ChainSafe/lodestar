@@ -1,3 +1,7 @@
+/**
+ * @module db/api/validator
+ */
+
 import {Attestation, BeaconBlock, ValidatorIndex} from "../../../types";
 
 export interface IValidatorDB {

@@ -1,5 +1,5 @@
 /**
- * @module db/beacon
+ * @module db/api/beacon
  */
 
 import {

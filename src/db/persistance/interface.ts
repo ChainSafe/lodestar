@@ -1,3 +1,7 @@
+/**
+ * @module db/persistance
+ */
+
 import {EventEmitter} from "events";
 
 export interface DBOptions {
