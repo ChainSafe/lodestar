@@ -12,6 +12,8 @@ import {
   MIN_PER_EPOCH_CHURN_LIMIT,
   SLOTS_PER_HISTORICAL_ROOT,
   ZERO_HASH,
+  SLOTS_PER_EPOCH,
+  SHARD_COUNT,
 } from "../../../constants";
 
 import {
@@ -36,7 +38,7 @@ import {getActiveValidatorIndices} from "./validator";
 
 import {generateSeed} from "./seed";
 
-import {getCrosslinkCommitteesAtSlot} from "./crosslinkCommittee";
+import {getCrosslinkCommittee, getEpochCommitteeCount, getEpochStartShard} from "./crosslinkCommittee";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {BLSDomain} from "@chainsafe/bls-js/lib/types";
 
@@ -58,20 +60,14 @@ export function getBlockRoot(state: BeaconState, epoch: Epoch): bytes32 {
 }
 
 /**
- * Return the state root at a recent ``slot``.
- */
-export function getStateRoot(state: BeaconState, slot: Slot): bytes32 {
-  assert(slot < state.slot);
-  assert(state.slot <= slot + SLOTS_PER_HISTORICAL_ROOT);
-  return state.latestStateRoots[slot % SLOTS_PER_HISTORICAL_ROOT];
-}
-
-/**
  * Return the beacon proposer index at ``state.slot``.
  */
 export function getBeaconProposerIndex(state: BeaconState): ValidatorIndex {
   const currentEpoch = getCurrentEpoch(state);
-  const [firstCommittee, _] = getCrosslinkCommitteesAtSlot(state, state.slot)[0];
+  const committeesPerSlot = intDiv(getEpochCommitteeCount(state, currentEpoch), SLOTS_PER_EPOCH);
+  const offset = committeesPerSlot * (state.slot % SLOTS_PER_EPOCH);
+  const shard = (getEpochStartShard(state, currentEpoch) + offset) % SHARD_COUNT;
+  const firstCommittee = getCrosslinkCommittee(state, currentEpoch, shard);
   let i = 0;
   while (true) {
     const candidateIndex = firstCommittee[(currentEpoch + i) % firstCommittee.length];

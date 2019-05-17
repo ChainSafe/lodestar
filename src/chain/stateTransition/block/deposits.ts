@@ -3,6 +3,7 @@
  */
 
 import assert from "assert";
+import BN from "bn.js";
 import {serialize, signingRoot} from "@chainsafe/ssz";
 
 import {
@@ -19,9 +20,11 @@ import {
   FAR_FUTURE_EPOCH,
   MAX_DEPOSITS,
   EFFECTIVE_BALANCE_INCREMENT,
+  MAX_EFFECTIVE_BALANCE,
 } from "../../../constants";
 
 import {hash} from "../../../util/crypto";
+import {bnMin} from "../../../util/math";
 
 import bls from "@chainsafe/bls-js";
 
@@ -73,7 +76,9 @@ export function processDeposit(state: BeaconState, deposit: Deposit): void {
       exitEpoch: FAR_FUTURE_EPOCH,
       withdrawableEpoch: FAR_FUTURE_EPOCH,
       slashed: false,
-      effectiveBalance: amount.subn(amount.modn(EFFECTIVE_BALANCE_INCREMENT)),
+      effectiveBalance: bnMin(
+        amount.sub(amount.mod(EFFECTIVE_BALANCE_INCREMENT)),
+        new BN(MAX_EFFECTIVE_BALANCE)),
     };
     state.validatorRegistry.push(validator);
     state.balances.push(amount);

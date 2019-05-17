@@ -12,12 +12,12 @@ import {
   INACTIVITY_PENALTY_QUOTIENT,
 } from "../../../../constants";
 
-import {isActiveValidator, getPreviousEpoch} from "../../util";
+import {isActiveValidator, getPreviousEpoch, getAttestingIndices} from "../../util";
 
 import {
   getAttestingBalance, getTotalActiveBalance, getMatchingSourceAttestations,
   getMatchingTargetAttestations, getMatchingHeadAttestations,
-  getUnslashedAttestingIndices, getEarliestAttestation,
+  getUnslashedAttestingIndices,
 } from "../util";
 
 import {getBaseReward} from "./baseReward";
@@ -56,12 +56,13 @@ export function getAttestationDeltas(state: BeaconState): [Gwei[], Gwei[]] {
 
   // Proposer and inclusion delay micro-rewards
   getUnslashedAttestingIndices(state, matchingSourceAttestations).forEach((index) => {
-    const earliestAttestation = getEarliestAttestation(state, matchingSourceAttestations, index);
+    const earliestAttestation = matchingSourceAttestations
+      .filter((a) => getAttestingIndices(state, a.data, a.aggregationBitfield).includes(index))
+      .reduce((a1, a2) => a2.inclusionDelay < a1.inclusionDelay ? a2 : a1)
     rewards[earliestAttestation.proposerIndex] = rewards[earliestAttestation.proposerIndex]
       .add(getBaseReward(state, index).divn(PROPOSER_REWARD_QUOTIENT));
-    const inclusionDelay = earliestAttestation.inclusionSlot - earliestAttestation.data.slot;
     rewards[index] = rewards[index]
-      .add(getBaseReward(state, index).muln(MIN_ATTESTATION_INCLUSION_DELAY).divn(inclusionDelay));
+      .add(getBaseReward(state, index).muln(MIN_ATTESTATION_INCLUSION_DELAY).divn(earliestAttestation.inclusionDelay));
   });
 
   // Inactivity penalty

@@ -9,10 +9,11 @@ import {
   Validator,
   ValidatorIndex,
 } from "../../../types";
-import {getBeaconProposerIndex, getCrosslinkCommitteesAtSlot, getPreviousEpoch, slotToEpoch} from "./index";
+import {getBeaconProposerIndex, getCrosslinkCommittee, getPreviousEpoch, slotToEpoch, getEpochCommitteeCount, getEpochStartShard} from "./index";
 import {CommitteeAssignment} from "../../../validator/types";
 import {getCurrentEpoch, getEpochStartSlot} from "./epoch";
-import {SLOTS_PER_EPOCH} from "../../../constants";
+import {SLOTS_PER_EPOCH, SHARD_COUNT} from "../../../constants";
+import { intDiv } from "../../../util/math";
 
 
 /**
@@ -56,23 +57,27 @@ export function getActiveValidatorIndices(state: BeaconState, epoch: Epoch): Val
 export function getCommitteeAssignment(
   state: BeaconState,
   epoch: Epoch,
-  validatorIndex: ValidatorIndex): CommitteeAssignment {
+  validatorIndex: ValidatorIndex
+): CommitteeAssignment {
 
-  const previousEpoch = getPreviousEpoch(state);
   const nextEpoch = getCurrentEpoch(state) + 1;
-  assert(previousEpoch <= epoch && epoch <= nextEpoch);
+  assert(epoch <= nextEpoch);
 
+  const committeesPerSlot = intDiv(getEpochCommitteeCount(state, epoch), SLOTS_PER_EPOCH);
   const epochStartSlot = getEpochStartSlot(epoch);
-  const loopEnd = epochStartSlot + SLOTS_PER_EPOCH;
-
-  for (let slot = epochStartSlot; slot < loopEnd; slot++) {
-    const crosslinkCommittees = getCrosslinkCommitteesAtSlot(state, slot);
-    const selectedCommittees = crosslinkCommittees.map((committee) => committee[0].includes(validatorIndex));
-
-    if (selectedCommittees.length > 0) {
-      const validators = selectedCommittees[0][0];
-      const shard = selectedCommittees[0][1];
-      return {validators, shard, slot};
+  for (let slot = epochStartSlot; slot < epochStartSlot + SLOTS_PER_EPOCH; slot++) {
+    const slotStartShard =
+      getEpochStartShard(state, epoch) + committeesPerSlot * (slot % SLOTS_PER_EPOCH);
+    for (let i = 0; i < committeesPerSlot; i++) {
+      const shard = (slotStartShard + i) % SHARD_COUNT;
+      const committee = getCrosslinkCommittee(state, epoch, shard);
+      if (committee.includes(validatorIndex)) {
+        return {
+          validators: committee,
+          shard,
+          slot,
+        };
+      }
     }
   }
 }

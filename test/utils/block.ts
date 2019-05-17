@@ -1,4 +1,4 @@
-import {BeaconBlock,} from "../../src/types";
+import {BeaconBlock} from "../../src/types";
 
 
 export function generateEmptyBlock(): BeaconBlock {
@@ -13,6 +13,7 @@ export function generateEmptyBlock(): BeaconBlock {
         blockHash: Buffer.alloc(32),
         depositCount: 0,
       },
+      graffiti: Buffer.alloc(32),
       proposerSlashings: [],
       attesterSlashings: [],
       attestations: [],
@@ -21,5 +22,5 @@ export function generateEmptyBlock(): BeaconBlock {
       transfers: [],
     },
     signature: Buffer.alloc(96),
-  }
+  };
 }

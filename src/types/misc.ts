@@ -77,11 +77,11 @@ export const Eth1Data: SimpleContainerType = {
 
 export interface AttestationData {
   // LMD GHOST vote
-  slot: Slot;
   beaconBlockRoot: bytes32;
   // FFG vote
   sourceEpoch: Epoch;
   sourceRoot: bytes32;
+  targetEpoch: Epoch;
   targetRoot: bytes32;
   // Crosslink vote
   shard: Shard;
@@ -91,10 +91,10 @@ export interface AttestationData {
 export const AttestationData: SimpleContainerType = {
   name: "AttestationData",
   fields: [
-    ["slot", Slot],
     ["beaconBlockRoot", bytes32],
     ["sourceEpoch", Epoch],
     ["sourceRoot", bytes32],
+    ["targetEpoch", Epoch],
     ["targetRoot", bytes32],
     ["shard", Shard],
     ["previousCrosslinkRoot", bytes32],
@@ -210,8 +210,8 @@ export interface PendingAttestation {
   aggregationBitfield: bytes;
   // Attestation data
   data: AttestationData;
-  // Inclusion slot
-  inclusionSlot: Slot;
+  // Inclusion delay
+  inclusionDelay: number64;
   // Proposer index
   proposerIndex: ValidatorIndex;
 }
@@ -220,7 +220,7 @@ export const PendingAttestation: SimpleContainerType = {
   fields: [
     ["aggregationBitfield", bytes],
     ["data", AttestationData],
-    ["inclusionSlot", Slot],
+    ["inclusionDelay", number64],
     ["proposerIndex", ValidatorIndex],
   ],
 };

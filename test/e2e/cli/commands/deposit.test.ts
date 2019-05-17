@@ -29,11 +29,14 @@ describe('[CLI] deposit', function() {
     const command = new DepositCommand();
     await expect(
       command.action(
-        eth1Network.accounts()[0],
-        null,
-        eth1Network.rpcUrl(),
-        '32',
-        contractAddress
+        {
+          privateKey:eth1Network.accounts()[0],
+          mnemonic:null,
+          node:eth1Network.rpcUrl(),
+          value:'32',
+          contract:contractAddress,
+          accounts: 10
+        }
       )
     ).to.not.be.rejected;
   });
@@ -44,11 +47,14 @@ describe('[CLI] deposit', function() {
     const command = new DepositCommand();
     await expect(
       command.action(
-        null,
-        eth1Network.mnemonic(),
-        eth1Network.rpcUrl(),
-        '32',
-        contractAddress
+        {
+          privateKey:null,
+          mnemonic:eth1Network.mnemonic(),
+          node:eth1Network.rpcUrl(),
+          value:'32',
+          contract:contractAddress,
+          accounts: 10
+        }
       )
     ).to.not.be.rejected;
   });

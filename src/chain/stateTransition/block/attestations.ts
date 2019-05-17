@@ -29,6 +29,7 @@ import {
   verifyIndexedAttestation,
   convertToIndexed,
   getBeaconProposerIndex,
+  getAttestationDataSlot,
 } from "../../stateTransition/util";
 
 
@@ -36,20 +37,20 @@ export function processAttestation(state: BeaconState, attestation: Attestation)
   const currentEpoch = getCurrentEpoch(state);
   const previousEpoch = getPreviousEpoch(state);
   const data = attestation.data;
-  const minSlot =  currentEpoch > GENESIS_EPOCH
-    ? state.slot - SLOTS_PER_EPOCH
-    : GENESIS_SLOT;
-  assert(minSlot <= data.slot && data.slot <= state.slot - MIN_ATTESTATION_INCLUSION_DELAY);
+  const attestationSlot = getAttestationDataSlot(state, data);
+  assert(
+    attestationSlot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot &&
+    state.slot <= attestationSlot + SLOTS_PER_EPOCH
+  );
 
   // Check target epoch, source epoch, and source root
-  const targetEpoch = slotToEpoch(data.slot);
   assert((
-    currentEpoch === targetEpoch &&
+    currentEpoch === data.targetEpoch &&
     state.currentJustifiedEpoch === data.sourceEpoch &&
     state.currentJustifiedRoot.equals(data.sourceRoot) &&
     hashTreeRoot(state.currentCrosslinks[data.shard], Crosslink).equals(data.previousCrosslinkRoot)
   ) || (
-    previousEpoch === targetEpoch &&
+    previousEpoch === data.targetEpoch &&
     state.previousJustifiedEpoch === data.sourceEpoch &&
     state.previousJustifiedRoot.equals(data.sourceRoot) &&
     hashTreeRoot(state.previousCrosslinks[data.shard], Crosslink).equals(data.previousCrosslinkRoot)
@@ -65,11 +66,11 @@ export function processAttestation(state: BeaconState, attestation: Attestation)
   const pendingAttestation: PendingAttestation = {
     data,
     aggregationBitfield: attestation.aggregationBitfield,
-    inclusionSlot: state.slot,
+    inclusionDelay: state.slot - attestationSlot,
     proposerIndex: getBeaconProposerIndex(state),
   };
 
-  if (targetEpoch === currentEpoch) {
+  if (data.targetEpoch === currentEpoch) {
     state.currentEpochAttestations.push(pendingAttestation);
   } else {
     state.previousEpochAttestations.push(pendingAttestation);
