@@ -23,7 +23,7 @@ export default class Keystore {
     return decryptKey(this.encryptedPrivateKey, password);
   }
 
-  public saveKeys(password: string, outputFilePath: string): void {
+  public saveKeys(outputFilePath: string): void {
     try {
       fs.writeFileSync(outputFilePath, JSON.stringify(this, null, 2));
     } catch (err) {
