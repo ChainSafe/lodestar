@@ -228,7 +228,7 @@ export class BeaconDB extends DatabaseApi implements IBeaconDb {
     return data.map((data) => deserialize(data, type));
   }
 
-  private async deleteData(key: Bucket, type: AnySSZType, data: any[]) {
+  private async deleteData(key: Bucket, type: AnySSZType, data: any[]): Promise<void> {
     const criteria: any[] = [];
     data.forEach((n) =>
       criteria.push(encodeKey(key, hashTreeRoot(n, type)))
