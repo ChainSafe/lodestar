@@ -7,8 +7,8 @@ import {CommanderStatic} from "commander";
 import logger from "../../logger";
 import fs from "fs";
 import {CliError} from "../error";
-import bls from '@chainsafe/bls-js';
-import { blsPrivateKeyToHex } from '../../util/bytes';
+// import readline from "readline";
+import Keystore from "../../validator/keystore";
 
 interface IWalletCommandOptions {
   outputFile: string;
@@ -36,18 +36,17 @@ export class CreateWalletCommand implements CliCommand {
       throw new CliError(`${options.outputFile} already exists`);
     }
 
-    const keyPair = bls.generateKeyPair();
+    // const rl = readline.createInterface({input: process.stdin, output: process.stdout});
+    
+    // const name = rl.question("Password: ", function(password) {
+    //   console.log('\nPassword is ' + password);
+    //   rl.close();
+    // });
 
-    const object = {
-      privateKey: blsPrivateKeyToHex(keyPair.privateKey),
-      // publicKey: keyPair.publicKey.toHexString()
-    }
+    const password = "tempPassword";
 
-    try {
-      fs.writeFileSync(options.outputFile, JSON.stringify(object, null, 2));
-    } catch (err) {
-      throw new CliError(`Failed to write to ${options.outputFile}: ${err}`);
-    }
+    const keystore = new Keystore(password);
+    keystore.saveKeys(password, options.outputFile);
 
     logger.info(`Successfully wrote keys to: ${options.outputFile}`);
   }
