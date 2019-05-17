@@ -105,10 +105,10 @@ function verifyMultiple(publicKeys: BLSPubkey[], messageHashes: bytes32[], signa
     publicKeys.forEach((publicKey, index): void => {
       const g2 = G2point.hashToG2(messageHashes[index], domain);
       eCombined.mul(
-          ElipticCurvePairing.pair(
-              PublicKey.fromBytes(publicKey).getPoint(),
-              g2
-          )
+        ElipticCurvePairing.pair(
+          PublicKey.fromBytes(publicKey).getPoint(),
+          g2
+        )
       );
     });
     const e2 = ElipticCurvePairing.pair(g1Generated, Signature.fromCompressedBytes(signature).getPoint());
