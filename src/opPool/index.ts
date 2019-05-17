@@ -123,7 +123,7 @@ export class OpPool extends EventEmitter {
   }
 
   private async removeAttestations(attestations: Attestation[]): Promise<void> {
-    await this.db.deleteAttestations(attestations);
+    await this.db.deleteAttestations();
   }
 
   private async removeOldAttestations(slot: Slot): Promise<void> {}

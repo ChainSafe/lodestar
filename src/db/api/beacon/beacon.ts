@@ -18,7 +18,7 @@ import {
 
 import {Bucket, encodeKey, Key} from "../../schema";
 
-import {deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
+import {AnySSZType, deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
 import {DatabaseApi, DatabaseApiOptions} from "../abstract";
 import {IBeaconDb} from "./interface";
 
@@ -141,11 +141,7 @@ export class BeaconDB extends DatabaseApi implements IBeaconDb {
   }
 
   public async getAttestations(): Promise<Attestation[]> {
-    const data = await this.db.search({
-      gt: encodeKey(Bucket.attestation, Buffer.alloc(0)),
-      lt: encodeKey(Bucket.attestation + 1, Buffer.alloc(0)),
-    });
-    return data.map((data) => deserialize(data, Attestation));
+    return await this.getAllData(Bucket.attestation, Attestation);
   }
 
   public async setAttestation(attestation: Attestation): Promise<void> {
@@ -157,19 +153,11 @@ export class BeaconDB extends DatabaseApi implements IBeaconDb {
   }
 
   public async deleteAttestations(attestations: Attestation[]): Promise<void> {
-    const criteria: any[] = [];
-    attestations.forEach((n) =>
-      criteria.push(encodeKey(Bucket.attestation, hashTreeRoot(n, Attestation)))
-    );
-    await this.db.batchDelete(criteria);
+    return await this.deleteData(Bucket.attestation, Attestation, attestations);
   }
 
   public async getVoluntaryExits(): Promise<VoluntaryExit[]> {
-    const data = await this.db.search({
-      gt: encodeKey(Bucket.exit, Buffer.alloc(0)),
-      lt: encodeKey(Bucket.exit + 1, Buffer.alloc(0)),
-    });
-    return data.map((data) => deserialize(data, VoluntaryExit));
+    return await this.getAllData(Bucket.exit, VoluntaryExit);
   }
 
   public async setVoluntaryExit(exit: VoluntaryExit): Promise<void> {
@@ -178,19 +166,11 @@ export class BeaconDB extends DatabaseApi implements IBeaconDb {
   }
 
   public async deleteVoluntaryExits(exits: VoluntaryExit[]): Promise<void> {
-    const criteria: any[] = [];
-    exits.forEach((n) =>
-      criteria.push(encodeKey(Bucket.exit, hashTreeRoot(n, VoluntaryExit)))
-    );
-    await this.db.batchDelete(criteria);
+    await this.deleteData(Bucket.exit, VoluntaryExit, exits);
   }
 
   public async getTransfers(): Promise<Transfer[]> {
-    const data = await this.db.search({
-      gt: encodeKey(Bucket.transfer, Buffer.alloc(0)),
-      lt: encodeKey(Bucket.transfer + 1, Buffer.alloc(0)),
-    });
-    return data.map((data) => deserialize(data, Transfer));
+    return await this.getAllData(Bucket.transfer, Transfer);
   }
 
   public async setTransfer(transfer: Transfer): Promise<void> {
@@ -199,19 +179,11 @@ export class BeaconDB extends DatabaseApi implements IBeaconDb {
   }
 
   public async deleteTransfers(transfers: Transfer[]): Promise<void> {
-    const criteria: any[] = [];
-    transfers.forEach((n) =>
-      criteria.push(encodeKey(Bucket.transfer, hashTreeRoot(n, Transfer)))
-    );
-    await this.db.batchDelete(criteria);
+    await this.deleteData(Bucket.transfer, Transfer, transfers);
   }
 
   public async getProposerSlashings(): Promise<ProposerSlashing[]> {
-    const data = await this.db.search({
-      gt: encodeKey(Bucket.proposerSlashing, Buffer.alloc(0)),
-      lt: encodeKey(Bucket.proposerSlashing + 1, Buffer.alloc(0)),
-    });
-    return data.map((data) => deserialize(data, ProposerSlashing));
+    return await this.getAllData(Bucket.proposerSlashing, ProposerSlashing);
   }
 
   public async setProposerSlashing(proposerSlashing: ProposerSlashing): Promise<void> {
@@ -220,19 +192,11 @@ export class BeaconDB extends DatabaseApi implements IBeaconDb {
   }
 
   public async deleteProposerSlashings(proposerSlashings: ProposerSlashing[]): Promise<void> {
-    const criteria: any[] = [];
-    proposerSlashings.forEach((n) =>
-      criteria.push(encodeKey(Bucket.proposerSlashing, hashTreeRoot(n, ProposerSlashing)))
-    );
-    await this.db.batchDelete(criteria);
+    await this.deleteData(Bucket.proposerSlashing, ProposerSlashing, proposerSlashings);
   }
 
   public async getAttesterSlashings(): Promise<AttesterSlashing[]> {
-    const data = await this.db.search({
-      gt: encodeKey(Bucket.attesterSlashing, Buffer.alloc(0)),
-      lt: encodeKey(Bucket.attesterSlashing + 1, Buffer.alloc(0)),
-    });
-    return data.map((data) => deserialize(data, AttesterSlashing));
+    return await this.getAllData(Bucket.attesterSlashing, AttesterSlashing);
   }
 
   public async setAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<void> {
@@ -241,19 +205,11 @@ export class BeaconDB extends DatabaseApi implements IBeaconDb {
   }
 
   public async deleteAttesterSlashings(attesterSlashings: AttesterSlashing[]): Promise<void> {
-    const criteria: any[] = [];
-    attesterSlashings.forEach((n) =>
-      criteria.push(encodeKey(Bucket.attesterSlashing, hashTreeRoot(n, AttesterSlashing)))
-    );
-    await this.db.batchDelete(criteria);
+    await this.deleteData(Bucket.attesterSlashing, AttesterSlashing, attesterSlashings);
   }
 
   public async getGenesisDeposits(): Promise<Deposit[]> {
-    const data = await this.db.search({
-      gt: encodeKey(Bucket.genesisDeposit, Buffer.alloc(0)),
-      lt: encodeKey(Bucket.genesisDeposit + 1, Buffer.alloc(0)),
-    });
-    return data.map((data) => deserialize(data, Deposit));
+    return await this.getAllData(Bucket.genesisDeposit, Deposit);
   }
 
   public async setGenesisDeposit(deposit: Deposit): Promise<void> {
@@ -261,9 +217,21 @@ export class BeaconDB extends DatabaseApi implements IBeaconDb {
   }
 
   public async deleteGenesisDeposits(deposits: Deposit[]): Promise<void> {
+    await this.deleteData(Bucket.genesisDeposit, Deposit, deposits);
+  }
+
+  private async getAllData(key: Bucket, type: AnySSZType): Promise<any[]> {
+    const data = await this.db.search({
+      gt: encodeKey(key, Buffer.alloc(0)),
+      lt: encodeKey(key + 1, Buffer.alloc(0)),
+    });
+    return data.map((data) => deserialize(data, type));
+  }
+
+  private async deleteData(key: Bucket, type: AnySSZType, data: any[]) {
     const criteria: any[] = [];
-    deposits.forEach((deposit) =>
-      criteria.push(encodeKey(Bucket.genesisDeposit, deposit.index))
+    data.forEach((n) =>
+      criteria.push(encodeKey(key, hashTreeRoot(n, type)))
     );
     await this.db.batchDelete(criteria);
   }

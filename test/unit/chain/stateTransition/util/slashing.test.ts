@@ -2,16 +2,9 @@ import {assert} from "chai";
 
 import {Epoch, Slot} from "../../../../../src/types";
 import {SLOTS_PER_EPOCH} from "../../../../../src/constants";
-
-import {
-  isDoubleVote,
-  isSurroundVote,
-} from "../../../../../src/chain/stateTransition/util";
-  isSlashableAttestationData,
-} from "../../../../../src/chain/stateTransition/util/slashing";
-
 import {generateAttestationData} from "../../../../utils/attestation";
 import {randBetween} from "../../../../utils/misc";
+import {isSlashableAttestationData} from "../../../../../src/chain/stateTransition/util";
 
 
 describe("isSlashableAttestationData", () => {

@@ -4,9 +4,6 @@
 
 import deepmerge from "deepmerge";
 import {BeaconDB, LevelDbPersistance} from "../db";
-import {EthersEth1Notifier} from "../eth1";
-import {P2PNetwork} from "../p2p";
-import {LevelDB} from "../db";
 import {EthersEth1Notifier, EthersEth1Options} from "../eth1";
 import {P2PNetwork, P2pOptions} from "../p2p";
 
@@ -20,7 +17,7 @@ import {OpPool} from "../opPool";
 import {JSONRPC} from "../rpc/protocol";
 import {WSServer} from "../rpc/transport";
 import {IApiConstructor} from "../rpc/api/interface";
-import {LevelDBOptions} from '../db/impl/level';
+import {DBOptions} from '../db';
 
 
 export interface Service {
@@ -32,7 +29,7 @@ export interface Service {
 // Temporarily have properties be optional until others portions of lodestar are ready
 export interface BeaconNodeCtx {
   chain?: object;
-  db?: LevelDBOptions;
+  db?: DBOptions;
   eth1?: EthersEth1Options;
   p2p?: P2pOptions;
   rpc?: RpcCtx;
