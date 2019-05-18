@@ -2,7 +2,7 @@
  * @module db/api/validator
  */
 
-import {DatabaseApi, DatabaseApiOptions} from "../abstract";
+import {DatabaseService, DatabaseApiOptions} from "../abstract";
 import {AttestationSearchOptions, IValidatorDB} from "./interface";
 import {Attestation, BeaconBlock, ValidatorIndex} from "../../../types";
 import {Bucket, encodeKey} from "../../schema";
@@ -10,7 +10,7 @@ import {deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
 import deepmerge from "deepmerge";
 import index from "../../../chain/stateTransition/block";
 
-export class ValidatorDB extends DatabaseApi implements IValidatorDB {
+export class ValidatorDB extends DatabaseService implements IValidatorDB {
 
   public constructor(opts: DatabaseApiOptions) {
     super(opts);

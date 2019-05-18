@@ -5,7 +5,7 @@ export interface DatabaseApiOptions {
   persistance: IDatabasePersistance;
 }
 
-export abstract class DatabaseApi implements Service{
+export abstract class DatabaseService implements Service{
 
   protected db: IDatabasePersistance;
 

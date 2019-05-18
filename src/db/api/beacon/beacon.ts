@@ -19,10 +19,10 @@ import {
 import {Bucket, encodeKey, Key} from "../../schema";
 
 import {AnySSZType, deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
-import {DatabaseApi, DatabaseApiOptions} from "../abstract";
+import {DatabaseService, DatabaseApiOptions} from "../abstract";
 import {IBeaconDb} from "./interface";
 
-export class BeaconDB extends DatabaseApi implements IBeaconDb {
+export class BeaconDB extends DatabaseService implements IBeaconDb {
 
   public constructor(opts: DatabaseApiOptions) {
     super(opts);
