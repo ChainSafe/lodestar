@@ -1,10 +1,9 @@
 import sinon from "sinon";
 
 import * as dbKeys from "../../../../src/db/schema";
-import {Bucket, Key} from "../../../../src/db/schema";
+import {Bucket} from "../../../../src/db/schema";
 import {LevelDbPersistance} from "../../../../src/db/persistance";
-import {Attestation, BeaconBlock, BeaconState} from "../../../../src/types";
-import {generateState} from "../../../utils/state";
+import {Attestation, BeaconBlock} from "../../../../src/types";
 import chai, {expect} from "chai";
 import {serialize} from "@chainsafe/ssz";
 import chaiAsPromised from 'chai-as-promised';
@@ -15,7 +14,7 @@ import {generateEmptyAttestation} from "../../../utils/attestation";
 
 chai.use(chaiAsPromised);
 
-describe('beacon db api', function() {
+describe('beacon db api', function () {
 
   const sandbox = sinon.createSandbox();
 
@@ -51,17 +50,27 @@ describe('beacon db api', function() {
 
   it('get validator attestation', async function () {
     encodeKeyStub.returns('attestationKey');
-    dbStub.get.withArgs('attestationKey').resolves(serialize(generateEmptyAttestation(), Attestation));
-    await validatorDB.getAttestation(1);
-    expect(encodeKeyStub.withArgs(Bucket.lastProposedAttestation, 1).calledOnce).to.be.true;
-    expect(dbStub.get.withArgs('attestationKey').calledOnce).to.be.true;
+    dbStub.search.resolves([serialize(generateEmptyAttestation(), Attestation)]);
+    await validatorDB.getAttestation(1, {gt: 0, lt: 3});
+    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, "10").calledOnce).to.be.true;
+    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, "13").calledOnce).to.be.true;
+    expect(dbStub.search.calledOnce).to.be.true;
+  });
+
+  it('get validator attestation - just lower constraint', async function () {
+    encodeKeyStub.returns('attestationKey');
+    dbStub.search.resolves([serialize(generateEmptyAttestation(), Attestation)]);
+    await validatorDB.getAttestation(1, {gt: 0});
+    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, "10").calledOnce).to.be.true;
+    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, "1" + Number.MAX_SAFE_INTEGER).calledOnce).to.be.true;
+    expect(dbStub.search.calledOnce).to.be.true;
   });
 
   it('set validator attestation', async function () {
     encodeKeyStub.returns('attestationKey');
     dbStub.put.resolves({});
     await validatorDB.setAttestation(1, generateEmptyAttestation());
-    expect(encodeKeyStub.withArgs(Bucket.lastProposedAttestation, 1).calledOnce).to.be.true;
+    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, "10").calledOnce).to.be.true;
     expect(dbStub.put.withArgs('attestationKey', sinon.match.any).calledOnce).to.be.true;
   });
 

@@ -8,7 +8,7 @@ import logger from "../../../../src/logger";
 import {generateAttestationData} from "../../../utils/attestation";
 import {AttestationService} from "../../../../src/validator/services/attestation";
 import {slotToEpoch} from "../../../../src/chain/stateTransition/util";
-import {IValidatorDB, ValidatorDB} from "../../../../src/db/api";
+import {ValidatorDB} from "../../../../src/db/api";
 
 describe('validator attestation service', function () {
 
@@ -40,9 +40,11 @@ describe('validator attestation service', function () {
     rpcClientStub.validator = sandbox.createStubInstance(ValidatorApi);
     rpcClientStub.validator.produceAttestation.withArgs(slot, shard).resolves(attestationData)
 
-    dbStub.getAttestation.resolves({
-      data: generateAttestationData(slot, 1)
-    });
+    dbStub.getAttestation.resolves([
+      {
+        data: generateAttestationData(slot, 1)
+      }
+    ]);
     const service = new AttestationService(
       0, rpcClientStub, PrivateKey.random(), dbStub
     );
@@ -59,7 +61,7 @@ describe('validator attestation service', function () {
     rpcClientStub.validator.getCommitteeAssignment.withArgs(0, slotToEpoch(slot)).resolves({
       validators: [0]
     });
-    dbStub.getAttestation.resolves(null);
+    dbStub.getAttestation.resolves([]);
     const service = new AttestationService(
       0, rpcClientStub, PrivateKey.random(), dbStub
     );

@@ -60,10 +60,10 @@ export class AttestationService {
   }
 
   private async isConflictingAttestation(other: AttestationData): Promise<boolean> {
-    const lastProposedAttestation
-      = await this.db.getAttestation(this.validatorIndex);
-    return lastProposedAttestation
-      && isSlashableAttestationData(lastProposedAttestation.data, other);
+    const potentialAttestationConflicts = await this.db.getAttestation(this.validatorIndex, {gt: other.targetEpoch - 1});
+    return potentialAttestationConflicts.some((attestation => {
+      return isSlashableAttestationData(attestation.data, other);
+    }));
   }
 
   private async storeAttestation(attestation: Attestation): Promise<void> {

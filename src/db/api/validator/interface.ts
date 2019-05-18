@@ -2,7 +2,12 @@
  * @module db/api/validator
  */
 
-import {Attestation, BeaconBlock, ValidatorIndex} from "../../../types";
+import {Attestation, BeaconBlock, Epoch, ValidatorIndex} from "../../../types";
+
+export interface AttestationSearchOptions {
+  gt?: Epoch;
+  lt?: Epoch;
+}
 
 export interface IValidatorDB {
 
@@ -18,9 +23,11 @@ export interface IValidatorDB {
   setBlock(index: ValidatorIndex, block: BeaconBlock): Promise<void>;
 
   /**
-   * Obtains last attestation proposed by validator with given index
+   * Searches proposed attestations based on target epoch and validator index
+   * @param index index of validator in registry
+   * @param options object contains lower and higher target epoch to search
    */
-  getAttestation(index: ValidatorIndex): Promise<Attestation>;
+  getAttestation(index: ValidatorIndex, options?: AttestationSearchOptions): Promise<Attestation[]>;
 
   /**
    * Stores attestation proposed by validator with given index

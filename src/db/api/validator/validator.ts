@@ -3,10 +3,11 @@
  */
 
 import {DatabaseApi, DatabaseApiOptions} from "../abstract";
-import {IValidatorDB} from "./interface";
+import {AttestationSearchOptions, IValidatorDB} from "./interface";
 import {Attestation, BeaconBlock, ValidatorIndex} from "../../../types";
 import {Bucket, encodeKey} from "../../schema";
 import {deserialize, serialize} from "@chainsafe/ssz";
+import deepmerge from "deepmerge";
 
 export class ValidatorDB extends DatabaseApi implements IValidatorDB {
 
@@ -28,16 +29,25 @@ export class ValidatorDB extends DatabaseApi implements IValidatorDB {
     );
   }
 
-  public async getAttestation(index: ValidatorIndex): Promise<Attestation> {
-    const data = await this.db.get(
-      encodeKey(Bucket.lastProposedAttestation, index)
-    );
-    return deserialize(data, Attestation);
+  public async getAttestation(
+    index: ValidatorIndex,
+    options: AttestationSearchOptions): Promise<Attestation[]> {
+    options = deepmerge(options, {gt: 0, lt: Number.MAX_SAFE_INTEGER});
+    const data = await this.db.search({
+      gt: encodeKey(Bucket.proposedAttestations, "" + index + options.gt),
+      lt: encodeKey(Bucket.proposedAttestations, "" + index + options.lt)
+    });
+    return data.map((data) => deserialize(data, Attestation));
   }
 
+  /**
+   * Saves proposed attestation under kombination of validator index and target epoch
+   * @param index
+   * @param attestation
+   */
   public async setAttestation(index: ValidatorIndex, attestation: Attestation): Promise<void> {
     await this.db.put(
-      encodeKey(Bucket.lastProposedAttestation, index),
+      encodeKey(Bucket.proposedAttestations, "" + index + attestation.data.targetEpoch),
       serialize(attestation, Attestation)
     );
   }
