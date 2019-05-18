@@ -27,11 +27,13 @@ export interface IValidatorDB {
    * @param index index of validator in registry
    * @param options object contains lower and higher target epoch to search
    */
-  getAttestation(index: ValidatorIndex, options?: AttestationSearchOptions): Promise<Attestation[]>;
+  getAttestations(index: ValidatorIndex, options?: AttestationSearchOptions): Promise<Attestation[]>;
 
   /**
    * Stores attestation proposed by validator with given index
    */
   setAttestation(index: ValidatorIndex, attestation: Attestation): Promise<void>;
 
+
+  deleteAttestations(index: ValidatorIndex, attestation: Attestation[]): Promise<void>;
 }

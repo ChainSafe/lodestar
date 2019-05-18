@@ -40,7 +40,7 @@ describe('validator attestation service', function () {
     rpcClientStub.validator = sandbox.createStubInstance(ValidatorApi);
     rpcClientStub.validator.produceAttestation.withArgs(slot, shard).resolves(attestationData)
 
-    dbStub.getAttestation.resolves([
+    dbStub.getAttestations.resolves([
       {
         data: generateAttestationData(slot, 1)
       }
@@ -61,7 +61,7 @@ describe('validator attestation service', function () {
     rpcClientStub.validator.getCommitteeAssignment.withArgs(0, slotToEpoch(slot)).resolves({
       validators: [0]
     });
-    dbStub.getAttestation.resolves([]);
+    dbStub.getAttestations.resolves([]);
     const service = new AttestationService(
       0, rpcClientStub, PrivateKey.random(), dbStub
     );

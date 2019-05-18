@@ -60,7 +60,7 @@ export class AttestationService {
   }
 
   private async isConflictingAttestation(other: AttestationData): Promise<boolean> {
-    const potentialAttestationConflicts = await this.db.getAttestation(this.validatorIndex, {gt: other.targetEpoch - 1});
+    const potentialAttestationConflicts = await this.db.getAttestations(this.validatorIndex, {gt: other.targetEpoch - 1});
     return potentialAttestationConflicts.some((attestation => {
       return isSlashableAttestationData(attestation.data, other);
     }));
@@ -68,6 +68,10 @@ export class AttestationService {
 
   private async storeAttestation(attestation: Attestation): Promise<void> {
     await this.db.setAttestation(this.validatorIndex, attestation);
+
+    //cleanup
+    const unusedAttestations = await this.db.getAttestations(this.validatorIndex, {gt: 0, lt: attestation.data.targetEpoch});
+    await this.db.deleteAttestations(this.validatorIndex, unusedAttestations);
   }
 
   private async createAttestation(

@@ -51,7 +51,7 @@ describe('beacon db api', function () {
   it('get validator attestation', async function () {
     encodeKeyStub.returns('attestationKey');
     dbStub.search.resolves([serialize(generateEmptyAttestation(), Attestation)]);
-    await validatorDB.getAttestation(1, {gt: 0, lt: 3});
+    await validatorDB.getAttestations(1, {gt: 0, lt: 3});
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, "10").calledOnce).to.be.true;
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, "13").calledOnce).to.be.true;
     expect(dbStub.search.calledOnce).to.be.true;
@@ -60,7 +60,7 @@ describe('beacon db api', function () {
   it('get validator attestation - just lower constraint', async function () {
     encodeKeyStub.returns('attestationKey');
     dbStub.search.resolves([serialize(generateEmptyAttestation(), Attestation)]);
-    await validatorDB.getAttestation(1, {gt: 0});
+    await validatorDB.getAttestations(1, {gt: 0});
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, "10").calledOnce).to.be.true;
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, "1" + Number.MAX_SAFE_INTEGER).calledOnce).to.be.true;
     expect(dbStub.search.calledOnce).to.be.true;
@@ -72,6 +72,18 @@ describe('beacon db api', function () {
     await validatorDB.setAttestation(1, generateEmptyAttestation());
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, "10").calledOnce).to.be.true;
     expect(dbStub.put.withArgs('attestationKey', sinon.match.any).calledOnce).to.be.true;
+  });
+
+  it('test delete attestation', async function() {
+    encodeKeyStub.returns('attestationKey');
+    dbStub.batchDelete.resolves({});
+    await validatorDB.deleteAttestations(1, [generateEmptyAttestation(), generateEmptyAttestation()]);
+    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, "10").calledTwice).to.be.true;
+    expect(
+      dbStub.batchDelete.withArgs(
+        sinon.match.array
+      ).calledOnce
+    ).to.be.true;
   });
 
 
