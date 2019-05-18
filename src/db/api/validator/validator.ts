@@ -33,7 +33,7 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
   public async getAttestations(
     index: ValidatorIndex,
     options: AttestationSearchOptions): Promise<Attestation[]> {
-    options = deepmerge(options, {gt: 0, lt: Number.MAX_SAFE_INTEGER});
+    options = deepmerge({gt: 0, lt: Number.MAX_SAFE_INTEGER}, options);
     const data = await this.db.search({
       gt: encodeKey(Bucket.proposedAttestations, "" + index + options.gt),
       lt: encodeKey(Bucket.proposedAttestations, "" + index + options.lt)
