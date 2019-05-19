@@ -5,14 +5,14 @@
 import {IBeaconApi} from "./interface";
 import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "../../../types";
 import {BeaconChain} from "../../../chain";
-import {DB} from "../../../db";
+import {BeaconDB} from "../../../db";
 
 export class BeaconApi implements IBeaconApi {
 
   public namespace: string;
 
   private chain: BeaconChain;
-  private db: DB;
+  private db: BeaconDB;
 
   public constructor(opts, {chain, db}) {
     this.namespace = 'beacon';

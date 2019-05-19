@@ -12,7 +12,7 @@ import {bytes32, Deposit, DepositData, Eth1Data, number64} from "../../types";
 import {Eth1Notifier, Eth1Options} from "../interface";
 import logger from "../../logger";
 import {isValidAddress} from "../../util/address";
-import {DB} from "../../db";
+import {BeaconDB} from "../../db";
 import {Log} from "ethers/providers";
 
 export interface EthersEth1Options extends Eth1Options {
@@ -29,7 +29,7 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
 
   private contract: ethers.Contract;
 
-  private db: DB;
+  private db: BeaconDB;
 
   private _latestBlockHash: bytes32;
 

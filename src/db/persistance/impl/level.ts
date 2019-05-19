@@ -1,14 +1,14 @@
 /**
- * @module db
+ * @module db/persistance/impl
  */
 
-import level from "level";
 import {LevelUp} from "levelup";
-
-import {DB, DBOptions} from "../interface";
-import AbstractDB, {SearchOptions} from "./abstract";
-import {Attestation} from "../../types";
-import logger from "../../logger";
+import {SearchOptions} from "../interface";
+import {Attestation} from "../../../types";
+import logger from "../../../logger";
+import {DBOptions, IDatabaseController} from "../interface";
+import {EventEmitter} from "events";
+import level from "level";
 
 export interface LevelDBOptions extends DBOptions {
   db?: LevelUp;
@@ -17,7 +17,8 @@ export interface LevelDBOptions extends DBOptions {
 /**
  * The LevelDB implementation of DB
  */
-export class LevelDB extends AbstractDB implements DB {
+export class LevelDbPersistance extends EventEmitter implements IDatabaseController {
+
   private db: LevelUp;
 
   private opts: LevelDBOptions;
@@ -43,8 +44,15 @@ export class LevelDB extends AbstractDB implements DB {
     await this.db.close();
   }
 
-  public get(key: any): Promise<any> {
-    return this.db.get(key);
+  public async get(key: any): Promise<any> {
+    try {
+      return await this.db.get(key);
+    } catch (e) {
+      if(e.notFound) {
+        return null;
+      }
+      throw e;
+    }
   }
 
   public put(key: any, value: any): Promise<any> {

@@ -4,13 +4,7 @@
 
 import {serialize} from "@chainsafe/ssz";
 
-import {
-  AttestationData,
-  Epoch,
-} from "../../../types";
-
-import {slotToEpoch} from "./epoch";
-
+import {AttestationData,} from "../../../types";
 
 /**
  * Check if data1 and data2 are slashable according to Casper FFG rules.

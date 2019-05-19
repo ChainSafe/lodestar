@@ -16,7 +16,7 @@ import {
   ValidatorDuty,
   ValidatorIndex
 } from "../../../types";
-import {DB} from "../../../db";
+import {BeaconDB} from "../../../db";
 import {BeaconChain} from "../../../chain";
 import {OpPool} from "../../../opPool";
 import ssz from "@chainsafe/ssz";
@@ -27,7 +27,7 @@ import {CommitteeAssignment} from "../../../validator/types";
 export class ValidatorApi implements IValidatorApi {
   public namespace: string;
   private chain: BeaconChain;
-  private db: DB;
+  private db: BeaconDB;
   private opPool: OpPool;
 
   public constructor(opts, {chain, db, opPool}) {
