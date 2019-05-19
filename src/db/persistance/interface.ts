@@ -13,7 +13,7 @@ export interface SearchOptions {
   lt: any;
 }
 
-export interface IDatabasePersistance extends EventEmitter{
+export interface IDatabaseController extends EventEmitter{
 
   get(key: any): Promise<any>;
 

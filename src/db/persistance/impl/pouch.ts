@@ -4,14 +4,14 @@
 
 import PouchDB from "pouchdb-core";
 import MemoryAdapter from "pouchdb-adapter-memory";
-import {DBOptions, IDatabasePersistance, SearchOptions} from "../interface";
+import {DBOptions, IDatabaseController, SearchOptions} from "../interface";
 import {EventEmitter} from "events";
 
 PouchDB.plugin(MemoryAdapter);
 
 const BASE_REVISION = "1";
 
-export class PouchDbPersistance extends EventEmitter implements IDatabasePersistance {
+export class PouchDbPersistance extends EventEmitter implements IDatabaseController {
 
   private db: PouchDB.Database;
 

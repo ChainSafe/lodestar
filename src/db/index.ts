@@ -5,7 +5,7 @@
 export {
   LevelDbPersistance,
   PouchDbPersistance,
-  IDatabasePersistance,
+  IDatabaseController,
   SearchOptions,
   DBOptions
 } from "./persistance";

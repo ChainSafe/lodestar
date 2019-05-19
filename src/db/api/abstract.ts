@@ -1,13 +1,13 @@
-import {IDatabasePersistance} from "../persistance";
+import {IDatabaseController} from "../persistance";
 import {Service} from "../../node";
 
 export interface DatabaseApiOptions {
-  persistance: IDatabasePersistance;
+  persistance: IDatabaseController;
 }
 
 export abstract class DatabaseService implements Service{
 
-  protected db: IDatabasePersistance;
+  protected db: IDatabaseController;
 
   protected constructor(opts: DatabaseApiOptions) {
     this.db = opts.persistance;

@@ -6,7 +6,7 @@ import {LevelUp} from "levelup";
 import {SearchOptions} from "../interface";
 import {Attestation} from "../../../types";
 import logger from "../../../logger";
-import {DBOptions, IDatabasePersistance} from "../interface";
+import {DBOptions, IDatabaseController} from "../interface";
 import {EventEmitter} from "events";
 import level from "level";
 
@@ -17,7 +17,7 @@ export interface LevelDBOptions extends DBOptions {
 /**
  * The LevelDB implementation of DB
  */
-export class LevelDbPersistance extends EventEmitter implements IDatabasePersistance {
+export class LevelDbPersistance extends EventEmitter implements IDatabaseController {
 
   private db: LevelUp;
 
