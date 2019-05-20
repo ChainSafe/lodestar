@@ -10,6 +10,7 @@ script:
 - yarn run coverage
 before_deploy:
 - yarn install
+- yarn build
 deploy:
   provider: npm
   email:
