@@ -19,5 +19,5 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
-    repo: chainsafe/bls-js
+    repo: ChainSafe/bls-js
     branch: master
