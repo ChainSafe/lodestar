@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+message Packet {
+  string key = 1;
+  string method = 2;
+  string type = 3;
+  string dataType = 4;
+}
