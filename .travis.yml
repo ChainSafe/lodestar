@@ -4,10 +4,12 @@ node_js:
 cache: yarn
 before_script:
 - yarn install
-  #script:
-        #- yarn run lint
-        #- yarn test
-        #- yarn run coverage
+script:
+- yarn run lint
+- yarn test
+- yarn run coverage
+before_deploy:
+- yarn install
 deploy:
   provider: npm
   email:
@@ -17,3 +19,5 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
+    repo: chainsafe/bls-js
+    branch: master
