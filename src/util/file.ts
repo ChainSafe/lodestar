@@ -12,7 +12,7 @@ export interface IConfigFile extends JsonMap{
   db?: {name: string};
   chain?: {chain: string};
   rpc?: {port: number};
-  eth1?: {contract?: {address?: string}};
+  eth1?: {depositContract?: {address?: string}};
 }
 
 /**
@@ -48,7 +48,7 @@ export function writeTomlConfig(fileName: string): void {
       port: defaults.rpc.port
     },
     eth1: {
-      contract: {
+      depositContract: {
         address: defaults.eth1.depositContract.address
       }
     }
@@ -75,4 +75,5 @@ export function ensureDirectoryExistence(filePath: string): boolean {
   }
   ensureDirectoryExistence(dirname);
   fs.mkdirSync(dirname);
+  return true;
 }
