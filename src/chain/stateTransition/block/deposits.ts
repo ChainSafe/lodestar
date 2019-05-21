@@ -25,13 +25,13 @@ import {
 
 import {hash} from "../../../util/crypto";
 import {bnMin} from "../../../util/math";
+import {verifyMerkleBranch} from "../../../util/merkleTree";
 
 import bls from "@chainsafe/bls-js";
 
 import {
   getDomain,
   increaseBalance,
-  verifyMerkleBranch,
 } from "../util";
 
 

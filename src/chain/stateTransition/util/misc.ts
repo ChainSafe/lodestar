@@ -84,22 +84,6 @@ export function getBeaconProposerIndex(state: BeaconState): ValidatorIndex {
 }
 
 /**
- * Verify that the given ``leaf`` is on the merkle branch ``proof``
- * starting with the given ``root``.
- */
-export function verifyMerkleBranch(leaf: bytes32, proof: bytes32[], depth: number, index: number, root: bytes32): boolean {
-  let value = leaf;
-  for (let i = 0; i < depth; i++) {
-    if (intDiv(index, 2**i) % 2) {
-      value = hash(Buffer.concat([proof[i], value]));
-    } else {
-      value = hash(Buffer.concat([value, proof[i]]));
-    }
-  }
-  return value.equals(root);
-}
-
-/**
  * Return the signature domain (fork version concatenated with domain type) of a message.
  */
 export function getDomain(state: BeaconState, domainType: number, messageEpoch: Epoch | null = null): BLSDomain {
