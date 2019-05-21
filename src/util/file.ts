@@ -1,10 +1,11 @@
 /**
- * @module util/toml
+ * @module util/file
  */
 
 import {parse, JsonMap, stringify} from "@iarna/toml";
 import {CliError} from "../cli/error";
 import fs from "fs";
+import path from "path";
 import defaults from "../node/defaults";
 
 export interface IConfigFile extends JsonMap{
@@ -56,8 +57,22 @@ export function writeTomlConfig(fileName: string): void {
   const content = stringify(contentObject);
 
   try {
+    ensureDirectoryExistence(fileName);
     fs.writeFileSync(fileName, content);
   } catch {
     throw new CliError(`Could not write to ${fileName}`);
   }
+}
+
+/**
+ * Recursively ensures directory exists by creating any missing directories
+ * @param {string} filePath
+ */
+export function ensureDirectoryExistence(filePath: string): boolean {
+  var dirname = path.dirname(filePath);
+  if (fs.existsSync(dirname)) {
+    return true;
+  }
+  ensureDirectoryExistence(dirname);
+  fs.mkdirSync(dirname);
 }

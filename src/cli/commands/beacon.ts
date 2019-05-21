@@ -12,7 +12,7 @@ import {CliError} from "../error";
 import {IApiConstructor} from "../../rpc/api/interface";
 import * as RPCApis from "../../rpc/api";
 import deepmerge from "deepmerge";
-import {getTomlConfig, IConfigFile} from "../../util/toml";
+import {getTomlConfig, IConfigFile} from "../../util/file";
 import defaults from "../../node/defaults";
 
 interface IBeaconCommandOptions {

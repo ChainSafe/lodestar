@@ -7,7 +7,7 @@ import {CommanderStatic} from "commander";
 import logger from "../../logger";
 import fs from "fs";
 import {CliError} from "../error";
-import {writeTomlConfig} from "../../util/toml";
+import {writeTomlConfig} from "../../util/file";
 
 interface ICreateConfigOptions {
   outputFile: string;

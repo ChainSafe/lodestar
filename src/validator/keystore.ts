@@ -7,6 +7,7 @@ import fs from "fs";
 
 import {blsPrivateKeyToHex} from "../util/bytes";
 import {encryptKey, decryptKey} from "../util/encrypt";
+import {ensureDirectoryExistence} from "../util/file";
 
 export interface IKeystoreObject {
   encryptedPrivateKey: string;
@@ -54,6 +55,7 @@ export default class Keystore {
 
   public saveKeys(outputFilePath: string): void {
     try {
+      ensureDirectoryExistence(outputFilePath);
       fs.writeFileSync(outputFilePath, JSON.stringify(this, null, 2));
     } catch (err) {
       throw new Error(`Failed to write to ${outputFilePath}: ${err}`);
