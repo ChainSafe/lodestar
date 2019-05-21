@@ -18,9 +18,9 @@ import processTransfers from "./transfers";
 import processVoluntaryExits from "./voluntaryExits";
 import verifyBlockStateRoot from "./rootVerification";
 
-export default function processBlock(state: BeaconState, block: BeaconBlock): void {
+export default function processBlock(state: BeaconState, block: BeaconBlock, verify: boolean = true): void {
   // block header
-  processBlockHeader(state, block);
+  processBlockHeader(state, block, verify);
 
   // RANDAO
   processRandao(state, block);
@@ -48,6 +48,8 @@ export default function processBlock(state: BeaconState, block: BeaconBlock): vo
   // Transfers
   processTransfers(state, block);
 
-  // Verify block stateRoot
-  verifyBlockStateRoot(state, block);
+  if(verify) {
+    // Verify block stateRoot
+    verifyBlockStateRoot(state, block);
+  }
 }
