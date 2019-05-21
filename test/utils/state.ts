@@ -1,11 +1,28 @@
 import BN from "bn.js";
 
-import { BeaconState, bytes32, Crosslink, Eth1Data, Fork, PendingAttestation, uint64, Validator, Slot, number64, Epoch, Shard, BeaconBlockHeader } from "../../src/types";
+import {
+  BeaconState,
+  bytes32,
+  Crosslink,
+  Eth1Data,
+  Fork,
+  PendingAttestation,
+  uint64,
+  Validator,
+  Slot,
+  number64,
+  Epoch,
+  Shard,
+  BeaconBlockHeader,
+  BeaconBlockBody
+} from "../../src/types";
 import {GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD, LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
   LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH, SHARD_COUNT, ZERO_HASH, SLOTS_PER_HISTORICAL_ROOT} from "../../src/constants";
 import { intToBytes } from "../../src/util/bytes";
 import {randBetween, randBetweenBN} from "./misc";
 import {generateValidators} from "./validator";
+import {hashTreeRoot} from "@chainsafe/ssz";
+import {generateEmptyBlock} from "./block";
 
 
 /**
@@ -103,7 +120,7 @@ export function generateState(opts?: TestBeaconState): BeaconState {
       slot: 0,
       previousBlockRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
-      blockBodyRoot: Buffer.alloc(32),
+      blockBodyRoot: hashTreeRoot(generateEmptyBlock().body, BeaconBlockBody),
       signature: Buffer.alloc(96),
     },
     historicalRoots: [],

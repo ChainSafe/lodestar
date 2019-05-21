@@ -6,9 +6,10 @@ import {
   Attestation,
   AttestationData,
   BeaconBlock,
+  BeaconBlockBody,
   BeaconState,
   BLSPubkey,
-  bytes,
+  bytes96,
   Epoch,
   Fork,
   Shard,
@@ -23,6 +24,13 @@ import ssz from "@chainsafe/ssz";
 import {IValidatorApi} from "./interface";
 import {getCommitteeAssignment, isProposerAtSlot} from "../../../chain/stateTransition/util";
 import {CommitteeAssignment} from "../../../validator/types";
+import {
+  MAX_ATTESTATIONS,
+  MAX_ATTESTER_SLASHINGS,
+  MAX_PROPOSER_SLASHINGS,
+  MAX_VOLUNTARY_EXITS
+} from "../../../constants";
+import {assembleBlock} from "../../../chain/blockAssembly";
 
 export class ValidatorApi implements IValidatorApi {
   public namespace: string;
@@ -42,26 +50,8 @@ export class ValidatorApi implements IValidatorApi {
     return {} as {currentVersion: Fork; validatorDuty: ValidatorDuty};
   }
 
-  public async produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock> {
-    const block: BeaconBlock = {
-      body: undefined,
-      previousBlockRoot: undefined,
-      signature: undefined,
-      slot: undefined,
-      stateRoot: undefined
-    };
-    const prevBlock: BeaconBlock = await this.db.getChainHead();
-    const curState: BeaconState = await this.db.getState();
-    // Note: To calculate state_root,
-    // the validator should first run the state transition function on an unsigned block
-    // containing a stub for the state_root.
-    // It is useful to be able to run a state transition function that does not
-    // validate signatures or state root for this purpose.
-    block.slot = slot;
-    block.previousBlockRoot = ssz.hashTreeRoot(prevBlock, BeaconBlock);
-    block.stateRoot = ssz.hashTreeRoot(curState, BeaconState);
-    // TODO Eth1Data
-    return block;
+  public async produceBlock(slot: Slot, randaoReveal: bytes96): Promise<BeaconBlock> {
+    return await assembleBlock(this.db, this.opPool, slot, randaoReveal);
   }
 
   public async isProposer(index: ValidatorIndex, slot: Slot): Promise<boolean> {

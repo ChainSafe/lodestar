@@ -38,9 +38,12 @@ export const SLOTS_PER_EPOCH = 2 ** 6; // slots || 6.4 minutes
 export const MIN_SEED_LOOKAHEAD = 2 ** 0; // epochs || 6.4 minutes
 export const ACTIVATION_EXIT_DELAY = 2 ** 2; // epochs || 25.6 minutes
 export const SLOTS_PER_ETH1_VOTING_PERIOD = 2 ** 10; // slots || ~1.7 hours
+export const ETH1_FOLLOW_DISTANCE = 2 ** 10; // blocks || ~4 hours
 export const SLOTS_PER_HISTORICAL_ROOT = 2 ** 13; // slots || ~13 hours
 export const MIN_VALIDATOR_WITHDRAWAL_DELAY = 2 ** 8; // epochs || ~27 hours
 export const PERSISTENT_COMMITTEE_PERIOD = 2 ** 11; // epochs || 9 days
+
+
 // should be a small constant times SHARD_COUNT // SLOTS_PER_EPOCH
 export const MAX_CROSSLINK_EPOCHS = 2 ** 6; // 64
 export const MIN_EPOCHS_TO_INACTIVITY_PENALTY = 2 ** 2; // 25.6 minutes

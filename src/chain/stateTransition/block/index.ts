@@ -18,7 +18,7 @@ import processTransfers from "./transfers";
 import processVoluntaryExits from "./voluntaryExits";
 import verifyBlockStateRoot from "./rootVerification";
 
-export default function processBlock(state: BeaconState, block: BeaconBlock, verify: boolean = true): void {
+export function processBlock(state: BeaconState, block: BeaconBlock, verify: boolean = true): void {
   // block header
   processBlockHeader(state, block, verify);
 
