@@ -8,6 +8,8 @@ import {PeerId} from "peer-id";
 import {defaultsDeep} from "@nodeutils/defaults-deep";
 import * as FloodSub from "libp2p-floodsub";
 import {protobuf} from "protobufjs";
+import logger, {AbstractLogger} from "../logger";
+import {PeerBook} from "peer-book";
 
 export interface LodestarNodeOpts {
   bootstrap?: string[];
@@ -19,7 +21,11 @@ export class LodestarNode extends LibP2p {
 
   private pubsub: FloodSub;
 
-  private constructor(pInfo: PeerInfo, _options: LodestarNodeOpts) {
+  private log: AbstractLogger;
+
+  private peerBook: PeerBook;
+
+  private constructor(_options: LodestarNodeOpts) {
     const defaults = {
       modules: {
         transport: [TCP],
@@ -39,6 +45,8 @@ export class LodestarNode extends LibP2p {
 
     this.handlers = {};
     this.requests = {};
+    this.peerBook = new PeerBook();
+    this.log = logger;
     super(defaultsDeep(_options, defaults));
   }
 
@@ -56,7 +64,46 @@ export class LodestarNode extends LibP2p {
   }
 
   public async start(): Promise<void> {
-    await promisify(super.start.bind(this))();
+    const startFn = promisify(super.start.bind(this));
+    await startFn((err) => {
+      if (err) {
+	this.log.info(err);
+        return;
+      }
+
+      this.on('peer:discovery', (peerInfo) => {
+        this.log.info(`Discovered Peer: ${peerInfo}`);
+	const peerId = peerInfo.id.toB58String();
+	if (peerBook.has(peerId)) {
+	  return;
+	}
+
+	this.peerBook.put(peerInfo);
+
+	this.dialProtocol(peerInfo, 'eth/serenity/beacon/rpc/1', (err, conn) => {
+	  if (err) {
+	    this.log.info(`Error during dialing: ${err} `);
+            return; 
+	  }
+
+	  return this._connection(conn, peerInfo);
+	})
+      });
+      super.handle('eth/serenity/beacon/rpc/1', (protocol, conn) => {
+        return this._connection(conn, null);
+      });
+ 
+      this.on('peer:connect', (peerInfo) => {
+        this.log.info(`Peer connected: ${peerInfo}`);
+	this.peerBook.put(peerInfo);
+      });
+
+      this.on('peer:disconnect', (peerInfo) => {
+        this.log.info(`Peer disconnected: ${peerInfo}`);
+	this.peerBook.remote(peerInfo);
+      });
+      
+    });
     await promisify(this.pubsub.start.bind(this.pubsub))();
   }
 

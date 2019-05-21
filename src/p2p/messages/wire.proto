@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+service Eth2WireProtocol {
+  rpc Hello (HelloRequest) returns (HelloResponse) {}
+  rpc Goodbye (GoodbyeRequest) returns (GoodbyeResponse) {}
+  rpc GetStatus (GetStatusRequest) returns (GetStatusResponse) {}
+  rpc BeaconBlockRoots (BeaconBlockRootsRequest) returns (BeaconBlockRootsResponse) {}
+  rpc BeaconBlockHeaders (BeaconBlockHeadersRequest) returns (BeaconBlockResponse) {}
+  rpc BeaconBlockBodies (BeaconBlockBodiesRequest) returns (BeaconBlockBodiesResponse) {}
+  rpc BeaconChainState (BeaconChainStateRequest) returns (BeaconChainStateResponse) {}
+}
+
+message HelloRequest {
+  uint32 networkId = 1;
+  uint64 chainId = 2;
+  bytes latestFinalizedRoot = 3;
+  uint64 latestFinalizedEpoch = 4;
+  bytes bestRoot = 5;
+  uint64 bestSlot = 6;
+}
+
+message HelloResponse {
+  uint32 networkId = 1;
+  uint64 chainId = 2;
+  bytes latestFinalizedRoot = 3;
+  uint64 latestFinalizedEpoch = 4;
+  bytes bestRoot = 5;
+  uint64 bestSlot = 6;
+}
+
+message GoodbyeRequest {
+  uint64 reason = 1;
+}
+
+message GoodbyeResponse {
+  uint64 reason = 1;
+}
+
+message GetStatusRequest {
+  bytes sha = 1;
+  bytes userAgent = 2;
+  uint64 timestamp = 3;
+}
+
+message GetStatusResponse {
+  bytes sha = 1;
+  bytes userAgent = 2;
+  uint64 timestamp = 3;
+}
+
+message BeaconBlockRootsRequest {
+  uint64 startSlot = 1;
+  uint64 count = 2;
+}
+
+message BeaconBlockRootsResponse {
+  bytes blockRoot = 1;
+  uint64 slot = 2;
+  repeated bytes roots = 3;
+}
+
+message BeaconBlockHeadersRequest {
+  bytes startRoot = 1;
+  uint64 startSlot = 2;
+  uint64 maxHeaders = 3;
+  uint64 skipSlots = 4;
+}
+
+message BeaconBlockHeadersResponse {
+  repeated bytes headers = 1;
+}
+
+message BeaconBlockBodiesRequest {
+  repeated bytes blockRoots = 1;
+}
+
+message BeaconBlockBodiesResponse {
+  repeated bytes blockBodies = 1;
+}
+
+message BeaconChainStateRequest {
+  repeated bytes hashes = 1;
+}
+
+message BeaconChainStateResponse {
+  
+}

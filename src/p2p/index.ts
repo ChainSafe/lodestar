@@ -81,80 +81,6 @@ export class P2PNetwork extends EventEmitter implements Service {
         peerInfo: await this.createPeerInfo(),
         bootnodes: this.options.bootnodes
       });
-
-      this.node.on('peer:discovery', (peerInfo) => {
-        try {
-          const peerId = peerInfo.id.toB58String();
-          // Check if peer has already been discovered
-          if (this.options.peerBook.has(peerId) || this.discoveredPeers.has(peerId)) {
-            return;
-          }
-          this.peerBook.put(peerInfo);
-	  this.node.dial(peerInfo, () => {});
-          this.log.info(`Peer discovered: ${peerInfo}`);
-          this.emit('connected', peerInfo);
-        } catch (err) {
-          this.log.error(err);
-        }
-
-      });
- 
-      /*
-      // 2-way handshake
-      const protocol = "/eth/serenity/beacon/rpc/1";
-      // Placeholders to make this file compile temporarily
-      const helloMsg: Hello = {
-        networkId: 0,
-        chainId: 0,
-        latestFinalizedRoot: Buffer.from(""),
-        latestFinalizedEpoch: 0,
-        bestRoot: Buffer.from(""),
-        bestSlot: 0
-      };
-      this.node.handle(protocol, (proto, conn) => {
-        pull(
-          pull.values([Buffer.from(JSON.stringify(helloMsg))]),
-          conn,
-          pull.collect((values) => {
-	    // Peers' responses
-
-	  })
-        );	    
-      });
-       */
-      this.node.on('peer:connect', (peerInfo) => {
-        try {
-          this.log.info(`Peer connected: ${peerInfo}`);
-          this.peerBook.put(peerInfo);
-	  this.discoveredPeers.add(peerInfo);
-          
-          
-	  /*	
-	  this.node.dialProtocol(peerInfo, protocol, (err, conn) => {
-	    pull(
-              pull.values([Buffer.from(JSON.stringify(helloMsg))]),
-              conn,
-              pull.collect((values) => {
-	        // Peers responses
-
-	      })
-	    );
-	  });
-
-        } catch (err) {
-          this.log.error(err);
-	}*/
-      });
-
-      this.node.on('peer:disconnect', (peerInfo) => {
-        try { 
-          this.peerBook.remove(peerInfo);
-          this.discoveredPeers.delete(peerInfo);
-        } catch (err) {
-          this.log.error(err);
-        }
-      });
-    }
     await promisify(this.node.start.bind(this.node))();
 
     this.started = true;
@@ -175,7 +101,7 @@ export class P2PNetwork extends EventEmitter implements Service {
 	   return reject(err);
 	}
 
-	      protobuf.load('../rpc/protocol/wire.proto').then((root) => {
+	      protobuf.load('./messages/wire.proto').then((root) => {
 	        this.node.on('peer:connection', (conn, peer) => {
 		  this.log.info('peer:connection');
 
@@ -194,7 +120,7 @@ export class P2PNetwork extends EventEmitter implements Service {
 		  });
 		});
 
-                // Simply this.      
+                // Simplify this.      
 		this.node.handle('Hello', (networkId, chainId, latestFinalizedRoot, latestFinalizedEpoch, bestRoot, BestSlot, peer, response) => {
 		  response({
 		    // Respond with hello message
