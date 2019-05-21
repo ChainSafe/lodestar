@@ -16,6 +16,8 @@ export enum Bucket {
   transfer,
   proposerSlashing,
   attesterSlashing,
+  lastProposedBlock,
+  proposedAttestations,
 }
 
 export const Key = {

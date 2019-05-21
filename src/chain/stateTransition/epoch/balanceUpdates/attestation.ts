@@ -58,7 +58,7 @@ export function getAttestationDeltas(state: BeaconState): [Gwei[], Gwei[]] {
   getUnslashedAttestingIndices(state, matchingSourceAttestations).forEach((index) => {
     const earliestAttestation = matchingSourceAttestations
       .filter((a) => getAttestingIndices(state, a.data, a.aggregationBitfield).includes(index))
-      .reduce((a1, a2) => a2.inclusionDelay < a1.inclusionDelay ? a2 : a1)
+      .reduce((a1, a2) => a2.inclusionDelay < a1.inclusionDelay ? a2 : a1);
     rewards[earliestAttestation.proposerIndex] = rewards[earliestAttestation.proposerIndex]
       .add(getBaseReward(state, index).divn(PROPOSER_REWARD_QUOTIENT));
     rewards[index] = rewards[index]

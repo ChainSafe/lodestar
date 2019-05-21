@@ -6,7 +6,8 @@ import {Eth1Wallet, EthersEth1Notifier} from "../../../src/eth1";
 import {depositContract} from "../../../src/eth1/dev/defaults";
 import {PrivateEth1Network} from "../../../src/eth1/dev";
 import logger from "../../../src/logger/winston";
-import {PouchDb} from "../../../src/db";
+import {BeaconDB} from "../../../src/db/api";
+import {PouchDbPersistance} from "../../../src/db";
 
 describe("Eth1Notifier - using deployed contract", () => {
 
@@ -14,9 +15,13 @@ describe("Eth1Notifier - using deployed contract", () => {
   let eth1Network;
   let depositContractAddress;
   let provider;
-  const db = new PouchDb({name: 'testDb'});
+  const db = new BeaconDB({
+    persistance: new PouchDbPersistance(
+      {name: 'testDb'}
+    )
+  });
 
-  before(async function() {
+  before(async function () {
     this.timeout(0);
     logger.silent(true);
     // deploy deposit contract
@@ -39,13 +44,13 @@ describe("Eth1Notifier - using deployed contract", () => {
     await eth1Notifier.start();
   });
 
-  after(async() => {
+  after(async () => {
     await eth1Notifier.stop();
     await eth1Network.stop();
     logger.silent(false);
   });
 
-  it("should process a Deposit log", async function() {
+  it("should process a Deposit log", async function () {
     this.timeout(0);
     const wallet = new Eth1Wallet(eth1Network.accounts()[0], provider);
 
@@ -58,7 +63,7 @@ describe("Eth1Notifier - using deployed contract", () => {
     assert(cb.calledOnce, "deposit event did not fire");
   });
 
-  it("should process a Eth2Genesis log", async function() {
+  it("should process a Eth2Genesis log", async function () {
     this.timeout(0);
 
     const cb = sinon.spy();

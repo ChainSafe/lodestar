@@ -19,6 +19,8 @@ import {Epoch, Slot, ValidatorIndex} from "../types";
 import {GenesisInfo, ValidatorCtx} from "./types";
 import {RpcClient, RpcClientOverWs} from "./rpc";
 import {AttestationService} from "./services/attestation";
+import {ValidatorDB, IValidatorDB} from "../db";
+import {LevelDbPersistance} from "../db/persistance";
 
 /**
  * Main class for the Validator client.
@@ -31,12 +33,18 @@ class Validator {
   private blockService: BlockProposingService;
   private attestationService: AttestationService;
   private genesisInfo: GenesisInfo;
+  private db: IValidatorDB;
   public isActive: boolean;
 
   public constructor(ctx: ValidatorCtx) {
     this.ctx = ctx;
     this.logger = logger;
     this.isActive = false;
+    this.db = ctx.db ? ctx.db : new ValidatorDB({
+      persistance: new LevelDbPersistance({
+        name: 'LodestarValidatorDB'
+      })
+    });
     if(ctx.rpc) {
       this.rpcClient = ctx.rpc;
     } else if(ctx.rpcUrl) {
@@ -72,12 +80,13 @@ class Validator {
     this.validatorIndex = await this.getValidatorIndex();
 
     this.blockService = new BlockProposingService(
-      this.validatorIndex, this.rpcClient, this.ctx.keypair.privateKey
+      this.validatorIndex, this.rpcClient, this.ctx.keypair.privateKey, this.db
     );
     this.attestationService = new AttestationService(
       this.validatorIndex,
       this.rpcClient,
-      this.ctx.keypair.privateKey
+      this.ctx.keypair.privateKey,
+      this.db
     );
   }
 

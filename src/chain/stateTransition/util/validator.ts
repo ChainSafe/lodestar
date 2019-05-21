@@ -13,7 +13,7 @@ import {getBeaconProposerIndex, getCrosslinkCommittee, getPreviousEpoch, slotToE
 import {CommitteeAssignment} from "../../../validator/types";
 import {getCurrentEpoch, getEpochStartSlot} from "./epoch";
 import {SLOTS_PER_EPOCH, SHARD_COUNT} from "../../../constants";
-import { intDiv } from "../../../util/math";
+import {intDiv} from "../../../util/math";
 
 
 /**

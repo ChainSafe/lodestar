@@ -1,18 +1,17 @@
 /**
- * @module db
+ * @module db/persistance/impl
  */
-
-import {DBOptions} from "../interface";
 
 import PouchDB from "pouchdb-core";
 import MemoryAdapter from "pouchdb-adapter-memory";
-import AbstractDB, {SearchOptions} from "./abstract";
+import {DBOptions, IDatabaseController, SearchOptions} from "../interface";
+import {EventEmitter} from "events";
 
 PouchDB.plugin(MemoryAdapter);
 
 const BASE_REVISION = "1";
 
-export class PouchDb extends AbstractDB {
+export class PouchDbPersistance extends EventEmitter implements IDatabaseController {
 
   private db: PouchDB.Database;
 
@@ -64,12 +63,15 @@ export class PouchDb extends AbstractDB {
   }
 
   public async get(key: any): Promise<any> {
-    key = key.toString('hex');
+    if(typeof key !== 'string') {
+      key = key.toString('hex');
+    }
     return  Buffer.from((await this.db.get(key)).value.data);
   }
 
   public put(key: any, value: any): Promise<any> {
     key = key.toString('hex');
+    value = Buffer.from(value);
     return this.db.put({
       _id: key,
       value,

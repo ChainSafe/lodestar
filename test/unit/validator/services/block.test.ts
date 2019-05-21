@@ -10,12 +10,13 @@ import {generateState} from "../../../utils/state";
 import {BeaconApi} from "../../../../src/rpc/api/beacon";
 import {SLOTS_PER_EPOCH} from "../../../../src/constants";
 import logger from "../../../../src/logger";
+import {ValidatorDB} from "../../../../src/db/api";
 
 describe('block proposing service', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let rpcClientStub;
+  let rpcClientStub, dbStub;
 
   before(() => {
     logger.silent(true);
@@ -23,6 +24,7 @@ describe('block proposing service', function () {
 
   beforeEach(() => {
     rpcClientStub = sandbox.createStubInstance(RpcClientOverInstance);
+    dbStub = sandbox.createStubInstance(ValidatorDB);
   });
 
   afterEach(() => {
@@ -34,23 +36,38 @@ describe('block proposing service', function () {
   });
 
   it('should not produce block in same epoch', async function () {
-    const hasProposedStub = sandbox.stub(BlockProposingService.prototype, "hasProposedAlready" as any);
-    hasProposedStub.withArgs(1).returns(true);
+    dbStub.getBlock.resolves(generateEmptyBlock());
     const service = new BlockProposingService(
-      0, rpcClientStub, PrivateKey.random()
+      0, rpcClientStub, PrivateKey.random(), dbStub
     );
     const result = await service.createAndPublishBlock(1, generateFork());
     expect(result).to.be.null;
   });
 
-  it('should produce correct block', async function () {
+  it('should produce correct block - last signed is null', async function () {
     const slot = 2;
     rpcClientStub.validator = sandbox.createStubInstance(ValidatorApi);
     rpcClientStub.beacon = sandbox.createStubInstance(BeaconApi);
     rpcClientStub.validator.produceBlock.withArgs(slot, sinon.match.any).resolves(generateEmptyBlock());
     rpcClientStub.beacon.getBeaconState.resolves(generateState({slot: SLOTS_PER_EPOCH * 2}));
+    dbStub.getBlock.resolves(null);
     const service = new BlockProposingService(
-      0, rpcClientStub, PrivateKey.random()
+      0, rpcClientStub, PrivateKey.random(), dbStub
+    );
+    const result = await service.createAndPublishBlock(slot, generateFork());
+    expect(result).to.not.be.null;
+    expect(rpcClientStub.validator.publishBlock.calledOnce).to.be.true;
+  });
+
+  it('should produce correct block - last signed in previous epoch', async function () {
+    const slot = SLOTS_PER_EPOCH;
+    rpcClientStub.validator = sandbox.createStubInstance(ValidatorApi);
+    rpcClientStub.beacon = sandbox.createStubInstance(BeaconApi);
+    rpcClientStub.validator.produceBlock.withArgs(slot, sinon.match.any).resolves(generateEmptyBlock());
+    rpcClientStub.beacon.getBeaconState.resolves(generateState({slot: SLOTS_PER_EPOCH * 2}));
+    dbStub.getBlock.resolves(generateEmptyBlock());
+    const service = new BlockProposingService(
+      0, rpcClientStub, PrivateKey.random(), dbStub
     );
     const result = await service.createAndPublishBlock(slot, generateFork());
     expect(result).to.not.be.null;
