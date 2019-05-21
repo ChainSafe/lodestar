@@ -10,9 +10,9 @@ script:
 - yarn run coverage
 before_deploy:
 - yarn install
-- yarn build
 deploy:
   provider: npm
+  script: yarn build
   email:
     secure: rOVeyV0nfF5EUsWaZBKJ5deZ0gs1/5WPO67YEmRJx6H4WhyaP4WyLyFtL4OpTGPi010jr/vWOWx0EQ5IRa9dgxg9w49Tfo05+Jpa65nBv8ecBnzgJWsf64bBAHlUwzAOeNGSHPN6a6iA3j0QtFBnpR4/c/eJrUa0q9eaL6motxu8Od9X1Hq25cxLZ9Eg+KG/H5U4KiR+uyv3iayZRGaOzxavuBALTR7XWGgzHEccCQ5KK2NJ/WL3hxWbOJJguIn0/yrxlAEZaYufxp7PTioyvt5pwe/z6yEr2Nz1Oy0EqS2dl085zx8miZ+MhSGmjhFuixtIs+pVAb/j1cGmFBUMBRx0E7iXs7n4UYgcvNoFwmXjMFM9pKR3v/xvllm1IRDDNW2LRHGKyUTm1+BBbYe2xeccQupWfmOBkRayOlvsyZw1NY89mwfLEmWahFzr0iR/9JUQLQJ4EbX7Yo+x5UI7ojFT9DuTCYJT9C/EelP/cim1Mbc/mvnldgG1uATzB0PXW8PgKTHXGHu+xhOVj7yoFF412f+A02bVgPAWEoWCW4QOPKedENC4btzMStpV/d7HwZdhOv1YKPpXCrnjD7z/fGEm3M4NFEa4th4d9Gvo+XI6QKml4gP/1mp756JfUwI+Chm+S2i4xec3A8ab28CUtRO61oBKtPoHwneYp94edRs=
   api_key:
