@@ -30,7 +30,7 @@ export class Eth1PrivateNetworkCommand implements CliCommand {
         try {
           await this.action(options);
         } catch (e) {
-          logger.error(e.message);
+          logger.error(e.message + '\n' + e.stack);
         }
 
       });
