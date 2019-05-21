@@ -62,7 +62,7 @@ export class CreateWalletCommand implements CliCommand {
     }
 
     const password = await promptPassword();
-    const keystore = new Keystore(password);
+    const keystore = Keystore.generateKeys(password);
     keystore.saveKeys(options.outputFile);
 
     logger.info(`Successfully wrote keys to: ${options.outputFile}`);
