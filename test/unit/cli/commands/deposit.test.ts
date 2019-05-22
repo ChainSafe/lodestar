@@ -42,6 +42,7 @@ describe('[CLI] deposit', function() {
       command.action(
         { 
           privateKey: eth1Network.accounts()[0],
+          loggingLevel: null,
           mnemonic: null,
           node:'http://worong_host:123',
           value: '32',
@@ -58,6 +59,7 @@ describe('[CLI] deposit', function() {
       command.action(
         { 
           privateKey: null,
+          loggingLevel: null,
           mnemonic: null,
           node: eth1Network.rpcUrl(),
           value: '32',
@@ -74,6 +76,7 @@ describe('[CLI] deposit', function() {
       command.action(
         { 
           privateKey: null,
+          loggingLevel: null,
           mnemonic: 'invalid mnemonic',
           node: eth1Network.rpcUrl(),
           value: '32',
@@ -90,6 +93,7 @@ describe('[CLI] deposit', function() {
       command.action(
         { 
           privateKey: eth1Network.accounts()[0],
+          loggingLevel: null,
           mnemonic: null,
           node: eth1Network.rpcUrl(),
           value: '32',
