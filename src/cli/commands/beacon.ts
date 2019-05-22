@@ -104,7 +104,8 @@ export class BeaconNodeCommand implements CliCommand {
 
   private async getProvider(eth1RpcUrl: string): Promise<ethers.providers.BaseProvider> {
     try {
-      const provider = eth1RpcUrl ? new ethers.providers.JsonRpcProvider(eth1RpcUrl) : ethers.getDefaultProvider();
+      const provider = eth1RpcUrl ? new ethers.providers.JsonRpcProvider(eth1RpcUrl)
+        : ethers.getDefaultProvider();
       await provider.getNetwork();
       return provider;
     } catch (e) {
