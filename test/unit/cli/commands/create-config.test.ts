@@ -29,6 +29,7 @@ describe('[CLI] create-config', () => {
     await expect(
       command.action({
         outputFile: "src",
+        loggingLevel: null,
       })
     ).to.be.rejectedWith(CliError, 'src already exists');
   });

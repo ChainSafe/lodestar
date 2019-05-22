@@ -35,7 +35,7 @@ export class BeaconNodeCommand implements CliCommand {
       .option("-eth1, --eth1RpcUrl [url]", "Url to eth1 rpc node")
       .option("--rpc [api]", "Exposes the selected RPC api, must be comma separated")
       .option("-c, --configFile [config_file]", "Config file path")
-      .option("-l, --loggingLevel [DEBUG|INFO|WARN|ERROR]", "Logging level")
+      .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
