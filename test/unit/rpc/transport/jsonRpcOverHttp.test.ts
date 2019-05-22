@@ -1,6 +1,6 @@
 import {assert} from "chai";
 import * as request from "supertest";
-import {JSONRPC} from "../../../../src/rpc/index";
+import {JSONRPC} from "../../../../src/rpc";
 import {MockValidatorApi} from "../../../utils/mocks/rpc/validator";
 import HttpServer from "../../../../src/rpc/transport/http";
 import {generateRPCCall} from "../../../utils/rpcCall";
