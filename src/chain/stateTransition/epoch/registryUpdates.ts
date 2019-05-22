@@ -18,16 +18,19 @@ export function processRegistryUpdates(state: BeaconState): void {
   const currentEpoch = getCurrentEpoch(state);
   // Process activation eligibility and ejections
   state.validatorRegistry.forEach((validator, index) => {
-    if (validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH && validator.effectiveBalance.gten(MAX_EFFECTIVE_BALANCE)) {
+    if (validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH && validator
+      .effectiveBalance.gten(MAX_EFFECTIVE_BALANCE)) {
       validator.activationEligibilityEpoch = currentEpoch;
     }
 
-    if (isActiveValidator(validator, currentEpoch) && validator.effectiveBalance.lten(EJECTION_BALANCE)) {
+    if (isActiveValidator(validator, currentEpoch) && validator
+      .effectiveBalance.lten(EJECTION_BALANCE)) {
       initiateValidatorExit(state, index);
     }
   });
 
-  // Queue validators eligible for activation and not dequeued for activation prior to finalized epoch
+  // Queue validators eligible for activation and not dequeued
+  // for activation prior to finalized epoch
   const activationQueue = state.validatorRegistry.filter((validator) =>
     validator.activationEligibilityEpoch !== FAR_FUTURE_EPOCH &&
     validator.activationEpoch >= getDelayedActivationExitEpoch(state.finalizedEpoch)

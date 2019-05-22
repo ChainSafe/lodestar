@@ -9,7 +9,8 @@ import {AttestationData,} from "../../../types";
 /**
  * Check if data1 and data2 are slashable according to Casper FFG rules.
  */
-export function isSlashableAttestationData(data1: AttestationData, data2: AttestationData): boolean {
+export function isSlashableAttestationData(data1: AttestationData
+  , data2: AttestationData): boolean {
   return (
     // Double vote
     (!serialize(data1, AttestationData).equals(serialize(data2, AttestationData))

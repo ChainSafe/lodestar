@@ -18,13 +18,15 @@ import {
   MIN_ATTESTATION_INCLUSION_DELAY,
   SLOTS_PER_EPOCH,
   ZERO_HASH,
-  GENESIS_SLOT,
-  GENESIS_EPOCH,
+  //TODO unused import
+  //GENESIS_SLOT,
+  //GENESIS_EPOCH,
 } from "../../../constants";
 
 import {
   getCurrentEpoch,
-  slotToEpoch,
+  //TODO unused import
+  //slotToEpoch,
   getPreviousEpoch,
   verifyIndexedAttestation,
   convertToIndexed,

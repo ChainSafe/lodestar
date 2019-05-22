@@ -4,10 +4,12 @@
 
 import assert from "assert";
 
-import {serialize} from "@chainsafe/ssz";
+//TODO unused import
+//import {serialize} from "@chainsafe/ssz";
 
 import {
-  AttestationData,
+  //TODO unused import
+  //AttestationData,
   BeaconBlock,
   BeaconState,
   AttesterSlashing,
@@ -30,7 +32,8 @@ import {
  * Process ``AttesterSlashing`` operation.
  * Note that this function mutates ``state``.
  */
-export function processAttesterSlashing(state: BeaconState, attesterSlashing: AttesterSlashing): void {
+export function processAttesterSlashing(state: BeaconState
+  , attesterSlashing: AttesterSlashing): void {
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;
   // Check that the attestations are conflicting

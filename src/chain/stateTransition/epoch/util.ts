@@ -16,8 +16,16 @@ import {
 } from "../../../constants";
 
 import {
-  getActiveValidatorIndices, getCurrentEpoch, getTotalBalance, getPreviousEpoch, getBlockRoot,
-  getBlockRootAtSlot, getAttestingIndices, slotToEpoch, getAttestationDataSlot
+  getActiveValidatorIndices,
+  getCurrentEpoch,
+  getTotalBalance,
+  getPreviousEpoch,
+  getBlockRoot,
+  getBlockRootAtSlot,
+  getAttestingIndices,
+  //TODO unused import
+  //slotToEpoch,
+  getAttestationDataSlot
 } from "../util";
 
 
@@ -25,7 +33,8 @@ export function getTotalActiveBalance(state: BeaconState): Gwei {
   return getTotalBalance(state, getActiveValidatorIndices(state, getCurrentEpoch(state)));
 }
 
-export function getMatchingSourceAttestations(state: BeaconState, epoch: Epoch): PendingAttestation[] {
+export function getMatchingSourceAttestations(state: BeaconState
+  , epoch: Epoch): PendingAttestation[] {
   const currentEpoch = getCurrentEpoch(state);
   assert(epoch === currentEpoch || epoch === getPreviousEpoch(state));
   return epoch === currentEpoch
@@ -33,18 +42,22 @@ export function getMatchingSourceAttestations(state: BeaconState, epoch: Epoch):
     : state.previousEpochAttestations;
 }
 
-export function getMatchingTargetAttestations(state: BeaconState, epoch: Epoch): PendingAttestation[] {
+export function getMatchingTargetAttestations(state: BeaconState
+  , epoch: Epoch): PendingAttestation[] {
   const blockRoot = getBlockRoot(state, epoch);
   return getMatchingSourceAttestations(state, epoch)
     .filter((a) => a.data.targetRoot.equals(blockRoot));
 }
 
-export function getMatchingHeadAttestations(state: BeaconState, epoch: Epoch): PendingAttestation[] {
+export function getMatchingHeadAttestations(state: BeaconState
+  , epoch: Epoch): PendingAttestation[] {
   return getMatchingSourceAttestations(state, epoch)
-    .filter((a) => a.data.beaconBlockRoot.equals(getBlockRootAtSlot(state, getAttestationDataSlot(state, a.data))));
+    .filter((a) => a.data.beaconBlockRoot
+      .equals(getBlockRootAtSlot(state, getAttestationDataSlot(state, a.data))));
 }
 
-export function getUnslashedAttestingIndices(state: BeaconState, attestations: PendingAttestation[]): ValidatorIndex[] {
+export function getUnslashedAttestingIndices(state: BeaconState
+  , attestations: PendingAttestation[]): ValidatorIndex[] {
   const output: Set<ValidatorIndex> = new Set();
   attestations.forEach((a) =>
     getAttestingIndices(state, a.data, a.aggregationBitfield).forEach((index) =>
@@ -58,7 +71,8 @@ export function getAttestingBalance(state: BeaconState, attestations: PendingAtt
   return getTotalBalance(state, getUnslashedAttestingIndices(state, attestations));
 }
 
-export function getCrosslinkFromAttestationData(state: BeaconState, data: AttestationData): Crosslink {
+export function getCrosslinkFromAttestationData(state: BeaconState
+  , data: AttestationData): Crosslink {
   return {
     epoch: Math.min(
       data.targetEpoch,
@@ -69,10 +83,12 @@ export function getCrosslinkFromAttestationData(state: BeaconState, data: Attest
   };
 }
 
-export function getWinningCrosslinkAndAttestingIndices(state: BeaconState, epoch: Epoch, shard: Shard): [Crosslink, ValidatorIndex[]] {
+export function getWinningCrosslinkAndAttestingIndices(state: BeaconState
+  , epoch: Epoch, shard: Shard): [Crosslink, ValidatorIndex[]] {
   const shardAttestations = getMatchingSourceAttestations(state, epoch)
     .filter((a) => a.data.shard === shard);
-  const shardCrosslinks = shardAttestations.map((a) => getCrosslinkFromAttestationData(state, a.data));
+  const shardCrosslinks = shardAttestations
+    .map((a) => getCrosslinkFromAttestationData(state, a.data));
   const currentCrosslinkRoot = hashTreeRoot(state.currentCrosslinks[shard], Crosslink); 
   const candidateCrosslinks = shardCrosslinks.filter((c) => (
     currentCrosslinkRoot.equals(c.previousCrosslinkRoot) ||
@@ -86,8 +102,9 @@ export function getWinningCrosslinkAndAttestingIndices(state: BeaconState, epoch
       crosslinkDataRoot: ZERO_HASH,
     }, []];
   }
-  
-  const getAttestationsFor = (crosslink: Crosslink) => 
+
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  const getAttestationsFor = (crosslink: Crosslink) =>
     shardAttestations.filter((a) =>
       serialize(getCrosslinkFromAttestationData(state, a.data), Crosslink)
         .equals(serialize(crosslink, Crosslink)));
@@ -106,11 +123,13 @@ export function getWinningCrosslinkAndAttestingIndices(state: BeaconState, epoch
       if (b.balance.gt(a.balance)) {
         return b;
       } else if (b.balance.eq(a.balance)) {
-        if (deserialize(b.crosslink.crosslinkDataRoot, "uint256").gt(deserialize(a.crosslink.crosslinkDataRoot, "uint256"))) {
+        if (deserialize(b.crosslink.crosslinkDataRoot, "uint256")
+          .gt(deserialize(a.crosslink.crosslinkDataRoot, "uint256"))) {
           return b;
         }
       }
       return a;
     }).crosslink;
-  return [winningCrosslink, getUnslashedAttestingIndices(state, getAttestationsFor(winningCrosslink))];
+  return [winningCrosslink,
+    getUnslashedAttestingIndices(state, getAttestationsFor(winningCrosslink))];
 }

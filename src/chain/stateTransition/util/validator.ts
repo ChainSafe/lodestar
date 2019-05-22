@@ -9,7 +9,15 @@ import {
   Validator,
   ValidatorIndex,
 } from "../../../types";
-import {getBeaconProposerIndex, getCrosslinkCommittee, getPreviousEpoch, slotToEpoch, getEpochCommitteeCount, getEpochStartShard} from "./index";
+import {
+  getBeaconProposerIndex,
+  getCrosslinkCommittee,
+  //TODO unused import
+  //getPreviousEpoch,
+  slotToEpoch,
+  getEpochCommitteeCount,
+  getEpochStartShard
+} from "./index";
 import {CommitteeAssignment} from "../../../validator/types";
 import {getCurrentEpoch, getEpochStartSlot} from "./epoch";
 import {SLOTS_PER_EPOCH, SHARD_COUNT} from "../../../constants";

@@ -44,7 +44,9 @@ export class BeaconChain extends EventEmitter {
    */
   public async start(): Promise<void> {
     try {
-      const state = await this.db.getState();
+      //TODO unused var
+      //const state = await this.db.getState();
+      await this.db.getState();
     } catch (e) {
       // if state doesn't exist in the db, the chain maybe hasn't started
       // listen for eth1 Eth2Genesis event
@@ -60,7 +62,8 @@ export class BeaconChain extends EventEmitter {
   /**
    * Initialize the beacon chain with a genesis beacon state / block
    */
-  public async initializeChain(genesisTime: number64, genesisDeposits: Deposit[], genesisEth1Data: Eth1Data): Promise<void> {
+  public async initializeChain(genesisTime: number64, genesisDeposits: Deposit[]
+    , genesisEth1Data: Eth1Data): Promise<void> {
     logger.info('Initializing beacon chain.');
     const genesisState = getGenesisBeaconState(genesisDeposits, genesisTime, genesisEth1Data);
     const genesisBlock = getEmptyBlock();
@@ -126,10 +129,12 @@ export class BeaconChain extends EventEmitter {
     if (!hasParent) {
       return false;
     }
-    // An Ethereum 1.0 block pointed to by the state.latest_eth1_data.block_hash has been processed and accepted.
+    // An Ethereum 1.0 block pointed to by the state.latest_eth1_data.
+    // block_hash has been processed and accepted.
     // TODO: implement
 
-    // The node's Unix time is greater than or equal to state.genesis_time + (block.slot - GENESIS_SLOT) * SECONDS_PER_SLOT.
+    // The node's Unix time is greater than or equal to state.
+    // genesis_time + (block.slot - GENESIS_SLOT) * SECONDS_PER_SLOT.
     const stateSlotTime = state.genesisTime + ((block.slot - GENESIS_SLOT) * SECONDS_PER_SLOT);
     if (Math.floor(Date.now() / 1000) < stateSlotTime) {
       return false;

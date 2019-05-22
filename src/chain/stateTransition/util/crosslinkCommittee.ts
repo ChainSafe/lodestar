@@ -28,8 +28,9 @@ import {intDiv} from "../../../util/math";
 import {
   getCurrentEpoch,
   getEpochStartSlot,
-  getPreviousEpoch,
-  slotToEpoch,
+  //TODO unused import
+  //getPreviousEpoch,
+  //slotToEpoch,
 } from "./epoch";
 
 import {getActiveValidatorIndices} from "./validator";
@@ -123,7 +124,8 @@ export function getAttestationDataSlot(state: BeaconState, data: AttestationData
  * Return the ``index``'th shuffled committee out of a total ``total_committees``
  * using ``validator_indices`` and ``seed``.
  */
-export function computeCommittee(indices: ValidatorIndex[], seed: bytes32, index: number, count: number): ValidatorIndex[] {
+export function computeCommittee(indices: ValidatorIndex[]
+  , seed: bytes32, index: number, count: number): ValidatorIndex[] {
   const start = intDiv(indices.length * index, count);
   const end = intDiv(indices.length * (index + 1), count);
   return Array.from({length: end - start},
@@ -134,7 +136,8 @@ export function computeCommittee(indices: ValidatorIndex[], seed: bytes32, index
 /**
  * Return the list of (committee, shard) acting as a tuple for the slot.
  */
-export function getCrosslinkCommittee(state: BeaconState, epoch: Epoch, shard: Shard): ValidatorIndex[] {
+export function getCrosslinkCommittee(state: BeaconState
+  , epoch: Epoch, shard: Shard): ValidatorIndex[] {
   return computeCommittee(
     getActiveValidatorIndices(state, epoch),
     generateSeed(state, epoch),

@@ -35,14 +35,16 @@ export function processFinalUpdates(state: BeaconState): void {
     const balance = state.balances[index];
     // TODO probably unsafe
     const HALF_INCREMENT = intDiv(EFFECTIVE_BALANCE_INCREMENT, 2);
-    if (balance.lt(validator.effectiveBalance) || validator.effectiveBalance.addn(3 * HALF_INCREMENT).lt(balance)) {
+    if (balance.lt(validator.effectiveBalance) || validator.effectiveBalance
+      .addn(3 * HALF_INCREMENT).lt(balance)) {
       validator.effectiveBalance = bnMin(
         balance.sub(new BN(balance.modn(EFFECTIVE_BALANCE_INCREMENT))),
         new BN(MAX_EFFECTIVE_BALANCE));
     }
   });
   // Update start shard
-  state.latestStartShard = (state.latestStartShard + getShardDelta(state, currentEpoch)) % SHARD_COUNT;
+  state.latestStartShard
+    = (state.latestStartShard + getShardDelta(state, currentEpoch)) % SHARD_COUNT;
   // Set active index root
   const indexRootPosition = (nextEpoch + ACTIVATION_EXIT_DELAY) % LATEST_ACTIVE_INDEX_ROOTS_LENGTH;
   state.latestActiveIndexRoots[indexRootPosition] = hashTreeRoot(
@@ -51,7 +53,8 @@ export function processFinalUpdates(state: BeaconState): void {
   state.latestSlashedBalances[nextEpoch % LATEST_SLASHED_EXIT_LENGTH] =
     state.latestSlashedBalances[currentEpoch % LATEST_SLASHED_EXIT_LENGTH];
   // Set randao mix
-  state.latestRandaoMixes[nextEpoch % LATEST_RANDAO_MIXES_LENGTH] = getRandaoMix(state, currentEpoch);
+  state.latestRandaoMixes[nextEpoch % LATEST_RANDAO_MIXES_LENGTH] =
+    getRandaoMix(state, currentEpoch);
   // Set historical root accumulator
   if (nextEpoch % intDiv(SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH) === 0) {
     const historicalBatch: HistoricalBatch = {

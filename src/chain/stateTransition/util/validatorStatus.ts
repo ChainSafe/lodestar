@@ -69,12 +69,14 @@ export function initiateValidatorExit(state: BeaconState, index: ValidatorIndex)
  * 
  * Note that this function mutates ``state``.
  */
-export function slashValidator(state: BeaconState, slashedIndex: ValidatorIndex, whistleblowerIndex: ValidatorIndex | null = null): void {
+export function slashValidator(state: BeaconState, slashedIndex: ValidatorIndex
+  , whistleblowerIndex: ValidatorIndex | null = null): void {
   const currentEpoch = getCurrentEpoch(state);
 
   initiateValidatorExit(state, slashedIndex);
   state.validatorRegistry[slashedIndex].slashed = true;
-  state.validatorRegistry[slashedIndex].withdrawableEpoch = currentEpoch + LATEST_SLASHED_EXIT_LENGTH;
+  state.validatorRegistry[slashedIndex].withdrawableEpoch =
+    currentEpoch + LATEST_SLASHED_EXIT_LENGTH;
   const slashedBalance = state.validatorRegistry[slashedIndex].effectiveBalance;
   state.latestSlashedBalances[currentEpoch % LATEST_SLASHED_EXIT_LENGTH] =
     state.latestSlashedBalances[currentEpoch % LATEST_SLASHED_EXIT_LENGTH].add(slashedBalance);
