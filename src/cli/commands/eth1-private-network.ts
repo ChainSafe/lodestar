@@ -27,7 +27,10 @@ export class Eth1PrivateNetworkCommand implements CliCommand {
       .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
       .option("-m, --mnemonic [mnemonic]", 'mnemonic string to be used for generating account')
       .option("-n, --network [networkId]", "Id of eth1 chain", 200)
-      .option("-d, --database [database]", 'Path to database, if specified chain will be initialized from stored point')
+      .option(
+        "-d, --database [database]",
+        'Path to database, if specified chain will be initialized from stored point'
+      )
       .action(async (options) => {
         try {
           await this.action(options);
