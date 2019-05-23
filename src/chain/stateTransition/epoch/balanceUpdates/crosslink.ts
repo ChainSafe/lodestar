@@ -23,7 +23,8 @@ export function getCrosslinkDeltas(state: BeaconState): [Gwei[], Gwei[]] {
   for (let offset = 0; offset < getEpochCommitteeCount(state, previousEpoch); offset ++) {
     const shard = (getEpochStartShard(state, previousEpoch) + offset) % SHARD_COUNT;
     const crosslinkCommittee = getCrosslinkCommittee(state, previousEpoch, shard);
-    const [_, attestingIndices] = getWinningCrosslinkAndAttestingIndices(state, previousEpoch, shard);
+    const [_, attestingIndices] =
+      getWinningCrosslinkAndAttestingIndices(state, previousEpoch, shard);
     const attestingBalance = getTotalBalance(state, attestingIndices);
     const committeeBalance = getTotalBalance(state, crosslinkCommittee);
     crosslinkCommittee.forEach((index) => {

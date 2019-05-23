@@ -25,8 +25,10 @@ export function processCrosslinks(state: BeaconState): void {
     for (let offset = 0; offset < getEpochCommitteeCount(state, epoch); offset++) {
       const shard = (getEpochStartShard(state, epoch) + offset) % SHARD_COUNT;
       const crosslinkCommittee = getCrosslinkCommittee(state, epoch, shard);
-      const [winningCrosslink, attestingIndices] = getWinningCrosslinkAndAttestingIndices(state, epoch, shard);
-      if (getTotalBalance(state, attestingIndices).muln(3).gte(getTotalBalance(state, crosslinkCommittee).muln(2))) {
+      const [winningCrosslink, attestingIndices] =
+        getWinningCrosslinkAndAttestingIndices(state, epoch, shard);
+      if (getTotalBalance(state, attestingIndices).muln(3)
+        .gte(getTotalBalance(state, crosslinkCommittee).muln(2))) {
         state.currentCrosslinks[shard] = winningCrosslink;
       }
     }

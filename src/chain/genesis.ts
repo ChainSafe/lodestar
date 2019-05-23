@@ -125,7 +125,8 @@ export function getGenesisBeaconState(
     }
   });
 
-  const genesisActiveIndexRoot = hashTreeRoot(getActiveValidatorIndices(state, GENESIS_EPOCH), [ValidatorIndex]);
+  const genesisActiveIndexRoot =
+    hashTreeRoot(getActiveValidatorIndices(state, GENESIS_EPOCH), [ValidatorIndex]);
   for (let i = 0; i < LATEST_ACTIVE_INDEX_ROOTS_LENGTH; i++) {
     state.latestActiveIndexRoots[i] = genesisActiveIndexRoot;
   }
