@@ -62,7 +62,9 @@ export class BeaconChain extends EventEmitter {
   /**
    * Initialize the beacon chain with a genesis beacon state / block
    */
-  public async initializeChain(genesisTime: number64, genesisDeposits: Deposit[]
+  public async initializeChain(
+    genesisTime: number64, 
+    genesisDeposits: Deposit[],
     , genesisEth1Data: Eth1Data): Promise<void> {
     logger.info('Initializing beacon chain.');
     const genesisState = getGenesisBeaconState(genesisDeposits, genesisTime, genesisEth1Data);
