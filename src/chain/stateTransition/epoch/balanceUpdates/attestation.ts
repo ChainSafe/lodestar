@@ -30,7 +30,8 @@ export function getAttestationDeltas(state: BeaconState): [Gwei[], Gwei[]] {
   const penalties = Array.from({length: state.validatorRegistry.length}, () => new BN(0));
   const eligibleValidatorIndices = state.validatorRegistry
     .reduce((indices, v, index) => {
-      if (isActiveValidator(v, previousEpoch) || (v.slashed && previousEpoch + 1 < v.withdrawableEpoch)) {
+      if (isActiveValidator(v, previousEpoch)
+        || (v.slashed && previousEpoch + 1 < v.withdrawableEpoch)) {
         indices.push(index);
       }
       return indices;
@@ -40,19 +41,20 @@ export function getAttestationDeltas(state: BeaconState): [Gwei[], Gwei[]] {
   const matchingSourceAttestations = getMatchingSourceAttestations(state, previousEpoch);
   const matchingTargetAttestations = getMatchingTargetAttestations(state, previousEpoch);
   const matchingHeadAttestations = getMatchingHeadAttestations(state, previousEpoch);
-  [matchingSourceAttestations, matchingTargetAttestations, matchingHeadAttestations].forEach((attestations) => {
-    const unslashedAttestingIndices = getUnslashedAttestingIndices(state, attestations);
-    const attestingBalance = getAttestingBalance(state, attestations);
-    eligibleValidatorIndices.forEach((index) => {
-      if (unslashedAttestingIndices.includes(index)) {
-        rewards[index] = rewards[index]
-          .add(getBaseReward(state, index).mul(attestingBalance).div(totalBalance));
-      } else {
-        penalties[index] = penalties[index]
-          .add(getBaseReward(state, index));
-      }
+  [matchingSourceAttestations, matchingTargetAttestations, matchingHeadAttestations]
+    .forEach((attestations) => {
+      const unslashedAttestingIndices = getUnslashedAttestingIndices(state, attestations);
+      const attestingBalance = getAttestingBalance(state, attestations);
+      eligibleValidatorIndices.forEach((index) => {
+        if (unslashedAttestingIndices.includes(index)) {
+          rewards[index] = rewards[index]
+            .add(getBaseReward(state, index).mul(attestingBalance).div(totalBalance));
+        } else {
+          penalties[index] = penalties[index]
+            .add(getBaseReward(state, index));
+        }
+      });
     });
-  });
 
   // Proposer and inclusion delay micro-rewards
   getUnslashedAttestingIndices(state, matchingSourceAttestations).forEach((index) => {
@@ -62,19 +64,22 @@ export function getAttestationDeltas(state: BeaconState): [Gwei[], Gwei[]] {
     rewards[earliestAttestation.proposerIndex] = rewards[earliestAttestation.proposerIndex]
       .add(getBaseReward(state, index).divn(PROPOSER_REWARD_QUOTIENT));
     rewards[index] = rewards[index]
-      .add(getBaseReward(state, index).muln(MIN_ATTESTATION_INCLUSION_DELAY).divn(earliestAttestation.inclusionDelay));
+      .add(getBaseReward(state, index).muln(MIN_ATTESTATION_INCLUSION_DELAY)
+        .divn(earliestAttestation.inclusionDelay));
   });
 
   // Inactivity penalty
   const finalityDelay = previousEpoch - state.finalizedEpoch;
   if (finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY) {
-    const matchingTargetAttestingIndices = getUnslashedAttestingIndices(state, matchingTargetAttestations);
+    const matchingTargetAttestingIndices =
+      getUnslashedAttestingIndices(state, matchingTargetAttestations);
     eligibleValidatorIndices.forEach((index) => {
       penalties[index] = penalties[index]
         .add(getBaseReward(state, index).muln(BASE_REWARDS_PER_EPOCH));
       if (!matchingTargetAttestingIndices.includes(index)) {
         penalties[index] = penalties[index]
-          .add(state.validatorRegistry[index].effectiveBalance.muln(finalityDelay).divn(INACTIVITY_PENALTY_QUOTIENT));
+          .add(state.validatorRegistry[index].effectiveBalance.muln(finalityDelay)
+            .divn(INACTIVITY_PENALTY_QUOTIENT));
       }
     });
   }
