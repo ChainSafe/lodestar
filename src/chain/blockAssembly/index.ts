@@ -1,11 +1,23 @@
-import {BeaconBlock, BeaconBlockBody, BeaconBlockHeader, BeaconState, bytes96, Slot} from "../../types";
+import {
+  BeaconBlock,
+  BeaconBlockBody,
+  BeaconBlockHeader,
+  BeaconState,
+  bytes96,
+  Slot
+} from "../../types";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {BeaconDB} from "../../db/api";
 import {OpPool} from "../../opPool";
 import {assembleBody} from "./body";
 import {processBlock} from "../stateTransition/block";
 
-export async function assembleBlock(db: BeaconDB, opPool: OpPool, slot: Slot, randao: bytes96): Promise<BeaconBlock> {
+export async function assembleBlock(
+  db: BeaconDB,
+  opPool: OpPool,
+  slot: Slot,
+  randao: bytes96
+): Promise<BeaconBlock> {
   const [parentBlock, currentState] = await Promise.all([
     db.getChainHead(),
     db.getState(),
