@@ -40,7 +40,8 @@ export class PrivateEth1Network {
   }
 
   public async start() {
-    this.blockchain  = await promisify(this.server.listen.bind(this.server))(this.opts.port, this.opts.host);
+    this.blockchain  =
+      await promisify(this.server.listen.bind(this.server))(this.opts.port, this.opts.host);
     logger.info(`Started private network node on ${this.opts.host}:${this.opts.port}`);
     logger.info(`Generating accounts with mnemonic: ${this.blockchain._provider.options.mnemonic}`);
     logger.info('List of accounts with eth balance (<address>:<privateKey>-<balance>):');
@@ -77,7 +78,8 @@ export class PrivateEth1Network {
     const deployKey = this.blockchain.accounts[this.blockchain.coinbase].secretKey.toString('hex');
     const provider = new ethers.providers.Web3Provider(this.blockchain._provider);
     const deployWallet = new ethers.Wallet(deployKey, provider);
-    const factory = new ethers.ContractFactory(depositContract.abi, depositContract.bytecode, deployWallet);
+    const factory =
+      new ethers.ContractFactory(depositContract.abi, depositContract.bytecode, deployWallet);
     const contract = await factory.deploy();
     const address = contract.address;
     await contract.deployed();
