@@ -28,6 +28,7 @@ describe('[CLI] eth1:dev', () => {
     const network = await command.action({
       host:'127.0.0.1',
       port:33323,
+      loggingLevel: null,
       network: null,
       mnemonic: null,
       database:null

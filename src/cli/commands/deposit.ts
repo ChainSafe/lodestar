@@ -7,13 +7,14 @@ import {CommanderStatic} from "commander";
 import defaults from "../../eth1/defaults";
 import * as ethers from "ethers/ethers";
 import {Wallet} from "ethers/ethers";
-import logger from "../../logger";
+import logger, {LogLevel} from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
 import {JsonRpcProvider} from "ethers/providers";
 
 interface IDepositCommandOptions {
   privateKey: string;
+  loggingLevel: string;
   mnemonic: string;
   node: string;
   value: string;
@@ -28,24 +29,35 @@ export class DepositCommand implements CliCommand {
       .command('deposit')
       .description('Start private network with deposit contract and 10 accounts with balance')
       .option("-k, --privateKey [privateKey]", 'Private key of account that will make deposit')
-      .option("-m, --mnemonic [mnemonic]", 'If mnemonic is submitted, first 10 accounts will make deposit')
+      .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
+      .option(
+        "-m, --mnemonic [mnemonic]",
+        'If mnemonic is submitted, first 10 accounts will make deposit'
+      )
       .option("-n, --node [node]", 'Url of eth1 node', 'http://127.0.0.1:8545')
       .option("-v, --value [value]", 'Amount of ether to deposit', "32")
-      .option("-c, --contract [contract]", 'Address of deposit contract', defaults.depositContract.address)
-      .option("-a, --accounts [accounts]", "Number of accounts to generate at startup", 10)
+      .option(
+        "-c, --contract [contract]",
+        'Address of deposit contract',
+        defaults.depositContract.address
+      )
+      .option("-a, --accounts [accounts]","Number of accounts to generate at startup", 10)
       .action( async (options) => {
         //library is not awaiting this method so don't allow error propagation 
         // (unhandled promise rejections)
         try {
           await this.action(options);
         } catch (e) {
-          logger.error(e.message);
+          logger.error(e.message + '\n' + e.stack);
         }
 
       });
   }
 
   public async action(options: IDepositCommandOptions): Promise<void> {
+    if (options.loggingLevel) {
+      logger.setLogLevel(LogLevel[options.loggingLevel]);
+    }
     const provider = new JsonRpcProvider(options.node);
     try {
       //check if we can connect to node
@@ -68,9 +80,14 @@ export class DepositCommand implements CliCommand {
         try {
           const hash = await (new Eth1Wallet(wallet.privateKey, provider))
             .createValidatorDeposit(options.contract, ethers.utils.parseEther(options.value));
-          logger.info(`Successfully deposited ${options.value} ETH from ${wallet.address} to deposit contract. Tx hash: ${hash}`);
+          logger.info(
+            `Successfully deposited ${options.value} ETH from ${wallet.address} 
+            to deposit contract. Tx hash: ${hash}`
+          );
         } catch (e) {
-          throw new CliError(`Failed to make deposit for account ${wallet.address}. Reason: ${e.message}`);
+          throw new CliError(
+            `Failed to make deposit for account ${wallet.address}. Reason: ${e.message}`
+          );
         }
       })
     );

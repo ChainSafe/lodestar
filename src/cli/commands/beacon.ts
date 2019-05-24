@@ -5,14 +5,14 @@
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import {isPlainObject} from "../../util/objects";
-import logger from "../../logger";
+import logger, {LogLevel} from "../../logger";
 import BeaconNode, {BeaconNodeCtx} from "../../node";
 import {ethers} from "ethers";
 import {CliError} from "../error";
 import {IApiConstructor} from "../../rpc/api/interface";
 import * as RPCApis from "../../rpc/api";
 import deepmerge from "deepmerge";
-import {getTomlConfig, IConfigFile} from "../../util/toml";
+import {getTomlConfig, IConfigFile} from "../../util/file";
 import defaults from "../../node/defaults";
 
 interface IBeaconCommandOptions {
@@ -21,6 +21,7 @@ interface IBeaconCommandOptions {
   eth1RpcUrl: string;
   rpc: string;
   configFile: string;
+  loggingLevel: string;
 }
 
 export class BeaconNodeCommand implements CliCommand {
@@ -34,18 +35,23 @@ export class BeaconNodeCommand implements CliCommand {
       .option("-eth1, --eth1RpcUrl [url]", "Url to eth1 rpc node")
       .option("--rpc [api]", "Exposes the selected RPC api, must be comma separated")
       .option("-c, --configFile [config_file]", "Config file path")
+      .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
         try {
           await this.action(options);
         } catch (e) {
-          logger.error(e.message);
+          logger.error(e.message + '\n' + e.stack);
         }
       });
   }
 
   public async action(options: IBeaconCommandOptions): Promise<void> {
+    if (options.loggingLevel) {
+      logger.setLogLevel(LogLevel[options.loggingLevel]);
+    }
+
     let parsedConfig: IConfigFile;
     if (options.configFile) {
       parsedConfig = getTomlConfig(options.configFile);
@@ -98,7 +104,8 @@ export class BeaconNodeCommand implements CliCommand {
 
   private async getProvider(eth1RpcUrl: string): Promise<ethers.providers.BaseProvider> {
     try {
-      const provider = eth1RpcUrl ? new ethers.providers.JsonRpcProvider(eth1RpcUrl) : ethers.getDefaultProvider();
+      const provider =
+        eth1RpcUrl ? new ethers.providers.JsonRpcProvider(eth1RpcUrl) : ethers.getDefaultProvider();
       await provider.getNetwork();
       return provider;
     } catch (e) {

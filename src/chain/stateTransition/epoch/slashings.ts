@@ -32,9 +32,11 @@ export function processSlashings(state: BeaconState): void {
   const totalPenalties = totalAtEnd.sub(totalAtStart);
 
   state.validatorRegistry.forEach((validator, index) => {
-    if (validator.slashed && currentEpoch === intDiv(validator.withdrawableEpoch - LATEST_SLASHED_EXIT_LENGTH, 2)) {
+    if (validator.slashed && currentEpoch ===
+      intDiv(validator.withdrawableEpoch - LATEST_SLASHED_EXIT_LENGTH, 2)) {
       const penalty = bnMax(
-        validator.effectiveBalance.mul(bnMin(totalPenalties.muln(3), totalBalance)).div(totalBalance),
+        validator.effectiveBalance
+          .mul(bnMin(totalPenalties.muln(3), totalBalance)).div(totalBalance),
         validator.effectiveBalance.divn(MIN_SLASHING_PENALTY_QUOTIENT)
       );
       decreaseBalance(state, index, penalty);
