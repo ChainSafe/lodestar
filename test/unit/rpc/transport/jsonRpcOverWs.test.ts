@@ -19,7 +19,7 @@ describe("Json RPC over WS", () => {
     });
   let client;
   let ws;
-  let clientApi: {validator: IValidatorApi, beacon: IBeaconApi};
+  let clientApi: {validator: IValidatorApi; beacon: IBeaconApi};
   before(async () => {
     await rpc.start();
     ws = new Websocket("ws://localhost:32420");
@@ -46,7 +46,7 @@ describe("Json RPC over WS", () => {
     assert.ok(status);
   });
   it("should get validator duties", async () => {
-    const duties = await clientApi.validator.getDuties(1);
+    const duties = await clientApi.validator.getDuties([Buffer.alloc(48)]);
     assert.ok(duties);
   });
   it("should produce a block for the validator", async () => {

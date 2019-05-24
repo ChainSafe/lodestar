@@ -21,7 +21,7 @@ export const ValidatorDuty: SimpleContainerType = {
   name: "ValidatorDuty",
   fields: [
     ["validatorPubkey", bytes48],
-    ["committeeIndex", uint64],
+    ["committeeIndex", number64],
     ["attestationSlot", Slot],
     ["attestationShard", Shard],
     ["blockProductionSlot", Slot],

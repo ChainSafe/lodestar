@@ -1,7 +1,6 @@
 import sinon from "sinon";
 import * as blockAssembly from "../../../../../src/chain/blockAssembly";
 import * as stateTransitionUtils from "../../../../../src/chain/stateTransition/util";
-import * as stateTransition from "../../../../../src/chain/stateTransition";
 import {getCommitteeAssignment, slotToEpoch} from "../../../../../src/chain/stateTransition/util";
 import {ValidatorApi} from "../../../../../src/rpc/api/validator";
 import {BeaconDB} from "../../../../../src/db/api";
