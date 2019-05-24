@@ -68,35 +68,14 @@ export class ValidatorApi implements IValidatorApi {
     const proposerIndex = getBeaconProposerIndex(state);
     const validatorProposer = validatorIndexes.indexOf(proposerIndex);
 
-    return validatorPublicKeys.map((publicKey, index) => {
-      let duty: ValidatorDuty = {
-        validatorPubkey: publicKey,
-        blockProductionSlot: null,
-        attestationShard: null,
-        attestationSlot: null,
-        committeeIndex: null
-      };
-      const comitteeAsignment = getCommitteeAssignment(
+    return validatorPublicKeys.map(
+      this.assembleValidatorDuty(
         state,
-        slotToEpoch(state.slot),
-        validatorIndexes[index]
-      );
-      if (comitteeAsignment) {
-        duty = {
-          ...duty,
-          attestationShard: comitteeAsignment.shard,
-          attestationSlot: comitteeAsignment.slot,
-          committeeIndex: comitteeAsignment.validators.indexOf(validatorIndexes[index])
-        };
-      }
-      if (validatorPublicKeys.indexOf(duty.validatorPubkey) === validatorProposer) {
-        duty = {
-          ...duty,
-          blockProductionSlot: state.slot
-        };
-      }
-      return duty;
-    });
+        validatorIndexes,
+        validatorPublicKeys,
+        validatorProposer
+      )
+    );
   }
 
   public async getCommitteeAssignment(index: ValidatorIndex, epoch: Epoch): Promise<CommitteeAssignment> {
@@ -154,6 +133,46 @@ export class ValidatorApi implements IValidatorApi {
       sourceRoot: headState.currentJustifiedRoot,
       targetEpoch: currentEpoch,
       targetRoot: signingRoot(epochBoundaryBlock, BeaconBlock)
+    };
+  }
+
+  private assembleValidatorDuty(
+    state,
+    validatorIndexes,
+    validatorPublicKeys: Buffer[],
+    validatorProposer) {
+    return (publicKey, index) => {
+      let duty: ValidatorDuty = this.generateEmptyValidatorDuty(publicKey);
+      const comitteeAsignment = getCommitteeAssignment(
+        state,
+        slotToEpoch(state.slot),
+        validatorIndexes[index]
+      );
+      if (comitteeAsignment) {
+        duty = {
+          ...duty,
+          attestationShard: comitteeAsignment.shard,
+          attestationSlot: comitteeAsignment.slot,
+          committeeIndex: comitteeAsignment.validators.indexOf(validatorIndexes[index])
+        };
+      }
+      if (validatorPublicKeys.indexOf(duty.validatorPubkey) === validatorProposer) {
+        duty = {
+          ...duty,
+          blockProductionSlot: state.slot
+        };
+      }
+      return duty;
+    };
+  }
+
+  private generateEmptyValidatorDuty(publicKey) {
+    return {
+      validatorPubkey: publicKey,
+      blockProductionSlot: null,
+      attestationShard: null,
+      attestationSlot: null,
+      committeeIndex: null
     };
   }
 }
