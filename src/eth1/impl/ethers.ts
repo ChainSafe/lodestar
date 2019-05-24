@@ -14,6 +14,7 @@ import logger from "../../logger";
 import {isValidAddress} from "../../util/address";
 import {BeaconDB} from "../../db";
 import {Log} from "ethers/providers";
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants/minimal";
 
 export interface EthersEth1Options extends Eth1Options {
   provider: ethers.providers.BaseProvider;
@@ -89,13 +90,22 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     this.emit('block', block);
   }
 
-  public async processDepositLog(dataHex: string, indexHex: string): Promise<void> {
-    const deposit = this.createDeposit(dataHex, indexHex);
+  public async processDepositLog(pubkey: string, withdrawalCredentials: string, amount: string, signature: string, merkleTreeIndex: string): Promise<void> {
+    const deposit: Deposit = {
+      proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH},() => Buffer.alloc(32)),
+      index: (await this.contract.from_little_endian_64(merkleTreeIndex)).toNumber(),
+      data: {
+        pubkey: Buffer.from(pubkey.slice(2), 'hex'),
+        withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), 'hex'),
+        amount: deserialize(Buffer.from(amount.slice(2), 'hex'), number64),
+        signature: Buffer.from(signature.slice(2), 'hex'),
+      },
+    };
     logger.info(
       `Received validator deposit event index=${deposit.index}`
     );
     if (deposit.index !== this.depositCount) {
-      logger.warn(`Validator deposit with index=${deposit.index} received out of order.`);
+      logger.warn(`Validator deposit with index=${deposit.index} received out of order. (currentCount: ${this.depositCount})`);
       // deposit processed out of order
       return;
     }
