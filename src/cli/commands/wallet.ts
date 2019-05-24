@@ -22,7 +22,8 @@ interface IHiddenReadlineInterface extends readline.Interface {
 const passwordPrompt = "Enter password to encrypt key: ";
 
 const promptPassword = (): Promise<string> => {
-  const rl: IHiddenReadlineInterface = readline.createInterface({input: process.stdin, output: process.stdout});
+  const rl: IHiddenReadlineInterface =
+    readline.createInterface({input: process.stdin, output: process.stdout});
 
   rl._writeToOutput = function _writeToOutput(stringToWrite: string): void {
     if (stringToWrite === passwordPrompt || stringToWrite.match(/\n/g))
@@ -44,7 +45,11 @@ export class CreateWalletCommand implements CliCommand {
     commander
       .command("wallet")
       .description("Generate wallet private key")
-      .option("-o, --outputFile [output_file]", "Path to output file destination", "keys/validator/bls.json")
+      .option(
+        "-o, --outputFile [output_file]",
+        "Path to output file destination",
+        "keys/validator/bls.json"
+      )
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation 
         // (unhandled promise rejections)

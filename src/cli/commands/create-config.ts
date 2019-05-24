@@ -20,7 +20,8 @@ export class CreateConfigCommand implements CliCommand {
       .command("create-config")
       .description("Create default config file")
       .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
-      .option("-o, --outputFile [output_file]", "Path to output file destination", "lodestar-config.toml")
+      .option("-o, --outputFile [output_file]"
+        , "Path to output file destination", "lodestar-config.toml")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation 
         // (unhandled promise rejections)
