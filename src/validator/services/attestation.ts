@@ -40,17 +40,17 @@ export class AttestationService {
 
 
   public async createAndPublishAttestation(slot: Slot, shard: Shard, fork: Fork): Promise<Attestation> {
-    const attestationData = await this.rpcClient.validator.produceAttestation(slot, shard);
-    if (await this.isConflictingAttestation(attestationData)) {
+    const indexedAttestation = await this.rpcClient.validator.produceAttestation(slot, shard);
+    if (await this.isConflictingAttestation(indexedAttestation.data)) {
       logger.warn(
         `[Validator] Avoided signing conflicting attestation! `
-        + `Source epoch: ${attestationData.sourceEpoch}, Target epoch: ${slotToEpoch(slot)}`
+        + `Source epoch: ${indexedAttestation.data.sourceEpoch}, Target epoch: ${slotToEpoch(slot)}`
       );
       return null;
     }
     const attestationDataAndCustodyBit: AttestationDataAndCustodyBit = {
       custodyBit: false,
-      data: attestationData
+      data: indexedAttestation.data
     };
     const attestation = await this.createAttestation(attestationDataAndCustodyBit, fork, slot);
     await this.storeAttestation(attestation);
