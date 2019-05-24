@@ -1,3 +1,7 @@
+/**
+ * @module chain/blockAssembly
+ */
+
 import {
   BeaconBlock,
   BeaconBlockBody,

@@ -1,3 +1,7 @@
+/**
+ * @module chain/blockAssembly
+ */
+
 import {Eth1Data} from "../../types";
 import {Eth1Notifier} from "../../eth1";
 import {ETH1_FOLLOW_DISTANCE} from "../../constants";

@@ -1,3 +1,7 @@
+/**
+ * @module chain/blockAssembly
+ */
+
 import {BeaconState, Deposit} from "../../types";
 import {OpPool} from "../../opPool";
 
