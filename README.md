@@ -22,7 +22,7 @@ This is a Javascript library that implements BLS (Boneh-Lynn-Shacham) signatures
 >[test vectors](https://github.com/ethereum/eth2.0-spec-tests/tree/master/tests/bls)
 
 ## Usage
-- `npm install bls-js`
+- `npm install @chainsafe/bls-js --save`
 - `yarn add bls-js`
 
 ## Development
