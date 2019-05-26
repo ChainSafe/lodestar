@@ -2,14 +2,17 @@ import chai, {assert, expect} from "chai";
 import {Contract, ethers, Event} from "ethers";
 import ganache from "ganache-core";
 import sinon from "sinon";
+import bls from "@chainsafe/bls-js";
+import {Log, Provider} from "ethers/providers";
+import promisify from "promisify-es6";
+import {serialize} from "@chainsafe/ssz";
 
 import {EthersEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/defaults";
-import promisify from "promisify-es6";
 import logger from "../../../src/logger/winston";
 import chaiAsPromised from "chai-as-promised";
 import {generateDeposit} from "../../utils/deposit";
-import {Log, Provider} from "ethers/providers";
+import {number64} from "../../../src/types";
 
 chai.use(chaiAsPromised);
 describe("Eth1Notifier", () => {
@@ -84,9 +87,7 @@ describe("Eth1Notifier", () => {
       });
       stubProvider.getLogs.withArgs(sinon.match.hasNested('topics[0]', 'genesisHash')).resolves([]);
       stubProvider.getLogs.withArgs(sinon.match.hasNested('topics[0]', 'depositHash')).resolves([
-        {
-
-        } as any
+        {} as any
       ]);
       stubProvider.getNetwork.resolves({
         chainId: 212,
@@ -161,10 +162,13 @@ describe("Eth1Notifier", () => {
     const cb = sinon.spy();
     eth1.on('deposit', cb);
 
-    const dataHex = "0x" + Buffer.alloc(528).toString("hex");
-    const indexHex = "0x" + Buffer.alloc(528).toString("hex");
+    const pubKey = bls.generateKeyPair().publicKey.toBytesCompressed();
+    const withdrawalCredentials = "0x" + Buffer.alloc(32).toString("hex");
+    const amount = serialize(32000000000, number64);
+    const signature = "0x" + Buffer.alloc(94).toString("hex");
+    const merkleTreeIndex = serialize(0 , number64);
     db.setGenesisDeposit.resolves(null);
-    await eth1.processDepositLog(dataHex, indexHex);
+    await eth1.processDepositLog(pubKey, withdrawalCredentials, amount, signature, merkleTreeIndex);
     assert(cb.calledOnce, "deposit event did not fire");
   });
 

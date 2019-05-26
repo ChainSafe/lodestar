@@ -60,9 +60,7 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
       logger.info('Eth2Genesis event exits, started listening on eth1 block updates');
       this.provider.on('block', this.processBlockHeadUpdate.bind(this));
     } else {
-      const pastDeposits = await this.getContractDeposits(
-        this.opts.depositContract.deployedAt
-      );
+      const pastDeposits = await this.getContractDeposits(this.opts.depositContract.deployedAt);
       await Promise.all(pastDeposits.map((pastDeposit) => {
         return this.db.setGenesisDeposit(pastDeposit);
       }));
@@ -91,9 +89,12 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
   }
 
   public async processDepositLog(pubkey: string, withdrawalCredentials: string, amount: string, signature: string, merkleTreeIndex: string): Promise<void> {
+    const f = deserialize(merkleTreeIndex, number64);
+    console.log("index", f);
+
     const deposit: Deposit = {
       proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH},() => Buffer.alloc(32)),
-      index: (await this.contract.from_little_endian_64(merkleTreeIndex)).toNumber(),
+      index: deserialize(merkleTreeIndex, number64),
       data: {
         pubkey: Buffer.from(pubkey.slice(2), 'hex'),
         withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), 'hex'),
