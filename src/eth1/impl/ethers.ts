@@ -125,7 +125,6 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     try {
       const depositRoot = Buffer.from(depositRootHex.substr(2), 'hex');
       const depositCount = Buffer.from(depositCountHex.substr(2), 'hex').readUIntLE(0, 6);
-      // const time = new BN(Buffer.from(timeHex.substr(2), 'hex').readUIntLE(0, 6));
       const time: number64 = parseInt(timeHex, 16);
       const blockHash = Buffer.from(event.blockHash.substr(2), 'hex');
       this.genesisBlockHash = event.blockNumber;
