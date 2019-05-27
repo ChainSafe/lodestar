@@ -33,8 +33,6 @@ export class Eth1Wallet {
    * @param value amount to wei to deposit on contract
    */
   public async createValidatorDeposit(address: string, value: BigNumber): Promise<string> {
-    // TODO Regardless of the return value, the calling function will assume success, need to error handle.
-    // Minor hack, no real performance loss
     const amount = new BN(value.toString()).div(new BN(1000000000));
 
     let contract = new ethers.Contract(address, this.contractAbi, this.wallet);
