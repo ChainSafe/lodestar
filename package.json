@@ -22,7 +22,10 @@
     "test:unit": "nyc -r lcov -e .ts mocha -r ./.babel-register 'test/unit/**/*.test.ts' && nyc report",
     "test:e2e": "mocha -r ./.babel-register 'test/e2e/**/*.test.ts'",
     "test": "yarn test:unit && yarn test:e2e",
-    "coverage": "codecov"
+    "coverage": "codecov",
+    "asbuild:untouched": "asc assembly/index.ts -b assembly-build/untouched.wasm -t assembly-build/untouched.wat --sourceMap --validate --debug",
+    "asbuild:optimized": "asc assembly/index.ts -b assembly-build/optimized.wasm -t assembly-build/optimized.wat --sourceMap --validate --optimize",
+    "asbuild": "npm run asbuild:untouched && npm run asbuild:optimized"
   },
   "repository": {
     "type": "git",
@@ -93,6 +96,7 @@
     "@types/ws": "^6.0.1",
     "@typescript-eslint/eslint-plugin": "^1.3.0",
     "@typescript-eslint/parser": "^1.3.0",
+    "assemblyscript": "AssemblyScript/assemblyscript",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "codecov": "^3.1.0",
