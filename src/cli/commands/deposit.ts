@@ -43,7 +43,7 @@ export class DepositCommand implements CliCommand {
       )
       .option("-a, --accounts [accounts]","Number of accounts to generate at startup", 10)
       .action( async (options) => {
-        //library is not awaiting this method so don't allow error propagation 
+        //library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
         try {
           await this.action(options);
@@ -78,7 +78,7 @@ export class DepositCommand implements CliCommand {
     await Promise.all(
       wallets.map(async wallet => {
         try {
-          const hash = await (new Eth1Wallet(wallet.privateKey, provider))
+          const hash = await (new Eth1Wallet(wallet.privateKey, defaults.depositContract.abi, provider))
             .createValidatorDeposit(options.contract, ethers.utils.parseEther(options.value));
           logger.info(
             `Successfully deposited ${options.value} ETH from ${wallet.address} 

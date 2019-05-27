@@ -3,7 +3,7 @@ import {ethers} from "ethers";
 import sinon from "sinon";
 
 import {Eth1Wallet, EthersEth1Notifier} from "../../../src/eth1";
-import {depositContract} from "../../../src/eth1/dev/defaults";
+import defaults from "../../../src/eth1/dev/defaults";
 import {PrivateEth1Network} from "../../../src/eth1/dev";
 import logger from "../../../src/logger/winston";
 import {BeaconDB} from "../../../src/db/api";
@@ -36,7 +36,7 @@ describe("Eth1Notifier - using deployed contract", () => {
     provider.polling = true;
     eth1Notifier = new EthersEth1Notifier({
       depositContract: {
-        ...depositContract,
+        ...defaults,
         address: depositContractAddress,
       },
       provider,
@@ -52,7 +52,7 @@ describe("Eth1Notifier - using deployed contract", () => {
 
   it("should process a Deposit log", async function () {
     this.timeout(0);
-    const wallet = new Eth1Wallet(eth1Network.accounts()[0], provider);
+    const wallet = new Eth1Wallet(eth1Network.accounts()[0], defaults.abi, provider);
 
     const cb = sinon.spy();
     eth1Notifier.on('deposit', cb);
@@ -72,7 +72,7 @@ describe("Eth1Notifier - using deployed contract", () => {
       eth1Network
         .accounts()
         .map((account) =>
-          (new Eth1Wallet(account, provider))
+          (new Eth1Wallet(account, defaults.abi, provider))
             .createValidatorDeposit(
               depositContractAddress,
               ethers.utils.parseEther('32.0')
