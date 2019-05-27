@@ -1,108 +1,73 @@
-// /**
-//  * @module cli/commands
-//  */
-//
-// import {CliCommand} from "./interface";
-// import {CommanderStatic} from "commander";
-// import {isPlainObject} from "../../util/objects";
-// import logger from "../../logger";
-// import BeaconNode, {BeaconNodeCtx} from "../../node";
-// import {ethers} from "ethers";
-// import {CliError} from "../error";
-// import {IApiConstructor} from "../../rpc/api/interface";
-// import * as RPCApis from "../../rpc/api";
-// import deepmerge from "deepmerge";
-// import {getTomlConfig, IConfigFile} from "../../util/toml";
-// import defaults from "../../node/defaults";
-//
-// interface IValidatorCommandOptions {
-//   db: string;
-//   depositContract: string;
-//   eth1RpcUrl: string;
-//   rpc: string;
-//   configFile: string;
-// }
-//
-// export class ValidatorCommand implements CliCommand {
-//
-//   public register(commander: CommanderStatic): void {
-//     commander
-//       .command("validator")
-//       .description("Start lodestar node")
-//       .option("-d, --db [db_path]", "Path to file database")
-//       .option("-dc, --depositContract [address]", "Address of deposit contract")
-//       .option("-eth1, --eth1RpcUrl [url]", "Url to eth1 rpc node")
-//       .option("--rpc [api]", "Exposes the selected RPC api, must be comma separated")
-//       .option("-c, --configFile [config_file]", "Config file path")
-//       .action(async (options) => {
-//         // library is not awaiting this method so don't allow error propagation
-//         // (unhandled promise rejections)
-//         try {
-//           await this.action(options);
-//         } catch (e) {
-//           logger.error(e.message);
-//         }
-//       });
-//   }
-//
-//   public async action(options: IBeaconCommandOptions): Promise<void> {
-//     let parsedConfig: IConfigFile;
-//     if (options.configFile) {
-//       parsedConfig = getTomlConfig(options.configFile);
-//     }
-//
-//     let dbName: string;
-//     if (options.db) {
-//       dbName = options.db;
-//     } else if (parsedConfig) {
-//       dbName = parsedConfig.db.name;
-//     } else {
-//       dbName = defaults.db.name;
-//     }
-//
-//     let optionsMap: BeaconNodeCtx = {
-//       db: {
-//         name: dbName,
-//       },
-//       eth1: {
-//         depositContract: {
-//           deployedAt: defaults.eth1.depositContract.deployedAt,
-//           address: options.depositContract,
-//           abi: defaults.eth1.depositContract.abi
-//         },
-//         provider: await this.getProvider(options.eth1RpcUrl)
-//       },
-//       rpc: {
-//         apis: this.setupRPC(options.rpc)
-//       }
-//     };
-//
-//     if (options.configFile) {
-//       optionsMap = deepmerge(parsedConfig, optionsMap, {isMergeableObject: isPlainObject});
-//     }
-//
-//     const node = new BeaconNode(optionsMap);
-//     await node.start();
-//   }
-//
-//   private setupRPC(rpc: string): IApiConstructor[] {
-//     const args = rpc ? rpc.split(",").map((option: string) => option.trim()) : [];
-//     return Object.values(RPCApis)
-//       .filter((api) => api !== undefined)
-//       .filter((api: IApiConstructor) => {
-//         return args.some((option: string) => {
-//           return api.name.toLowerCase().indexOf(option.toLowerCase()) > -1;
-//         });
-//       });
-//   }
-//
-//   private async getProvider(eth1RpcUrl: string): Promise<ethers.providers.BaseProvider> {
-//     try {
-//       const provider = eth1RpcUrl ? new ethers.providers.JsonRpcProvider(eth1RpcUrl) : ethers.getDefaultProvider();
-//       await provider.getNetwork();
-//       return provider;
-//     } catch (e) {
-//       throw new CliError('Failed to connect to eth1 rpc node.');
-//     }
-//   }
-// }
+/**
+ * @module cli/commands
+ */
+
+import {CliCommand} from "./interface";
+import {CommanderStatic} from "commander";
+import logger, {LogLevel} from "../../logger";
+import defaults from "../../node/defaults";
+import {BeaconNodeCtx} from "../../node";
+import {RpcClientOverInstance} from "../../validator/rpc";
+import {MockBeaconApi} from "../../../test/utils/mocks/rpc/beacon";
+import {MockValidatorApi} from "../../../test/utils/mocks/rpc/validator";
+import {ValidatorCtx} from "../../validator/types";
+import {Keypair} from "@chainsafe/bls-js/lib/keypair";
+import Validator from "../../validator";
+import {expect} from "chai";
+
+interface IValidatorCommandOptions {
+  key: string;
+  db: string;
+  rpc: string;
+  loggingLevel: string;
+}
+
+export class ValidatorCommand implements CliCommand {
+
+  public register(commander: CommanderStatic): void {
+    commander
+      .command("beacon")
+      .description("Start lodestar node")
+      .option("-k, --key [db_path]", "Path to the keystore")
+      .option("-d, --db [db_path]", "Path to file database")
+      .option("--rpc [api]", "Exposes the selected RPC api, must be comma separated")
+      .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
+      .action(async (options) => {
+        // library is not awaiting this method so don't allow error propagation
+        // (unhandled promise rejections)
+        try {
+          await this.action(options);
+        } catch (e) {
+          logger.error(e.message + '\n' + e.stack);
+        }
+      });
+  }
+
+  public async action(options: IValidatorCommandOptions): Promise<void> {
+    if (options.loggingLevel) {
+      logger.setLogLevel(LogLevel[options.loggingLevel]);
+    }
+
+    let dbName: string;
+    if (options.db) {
+      dbName = options.db;
+    } else {
+      dbName = defaults.db.name;
+    }
+
+    const rpcClient = new RpcClientOverInstance({
+      beacon: new MockBeaconApi({
+        genesisTime: Date.now() / 1000
+      }),
+      validator: new MockValidatorApi(),
+    });
+
+    let validatorCtx: ValidatorCtx = {
+      rpc: rpcClient,
+      keypair: Keypair.generate(),
+    };
+
+    let validator = new Validator(validatorCtx);
+    await expect(validator.setup()).to.not.throw;
+  }
+}
