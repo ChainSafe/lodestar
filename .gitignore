@@ -8,3 +8,5 @@ coverage/**
 beaconchain
 lodestar-db
 lodestar-config.toml
+yarn-error.log
+package-lock.json

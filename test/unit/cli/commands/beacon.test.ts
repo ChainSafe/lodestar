@@ -4,7 +4,7 @@ import logger from "../../../../src/logger/winston";
 
 import program from "commander";
 
-describe('[CLI] beacon', () => {
+describe('Validator test', () => {
 
   before(async () => {
     logger.silent(true);

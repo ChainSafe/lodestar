@@ -55,7 +55,7 @@ class Validator {
   }
 
   /**
-   * Creates a new block proccessing service and starts it.
+   * Creates a new block processing service and starts it.
    */
   private async start(): Promise<void> {
     await this.setup();
