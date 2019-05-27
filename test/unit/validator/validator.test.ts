@@ -8,11 +8,9 @@ import {MockBeaconApi} from "../../utils/mocks/rpc/beacon";
 import {MockValidatorApi} from "../../utils/mocks/rpc/validator";
 
 describe('Validator', () => {
-  let sandbox;
-  let db: any = {};
 
   before(async () => {
-    // logger.silent(true);
+    logger.silent(true);
   });
 
   after(async () => {

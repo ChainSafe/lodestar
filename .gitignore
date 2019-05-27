@@ -11,3 +11,4 @@ lodestar-config.toml
 keys/
 yarn-error.log
 package-lock.json
+LodestarValidatorDB/
