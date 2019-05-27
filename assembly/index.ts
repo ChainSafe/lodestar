@@ -68,15 +68,21 @@ export class Node {
   }
 
   private onAddWeight(): void {
-    if (this.equals((this.parent.bestChild)) || this.betterThan(this.parent.bestChild)) {
+    var bestChild = <Node>this.parent.bestChild;
+    if (this.equals((bestChild)) || this.betterThan(bestChild)) {
       this.parent.bestChild = this;
       this.parent.bestTarget = this.bestTarget;
     }
   }
 
   private onRemoveWeight(): void {
-    if (this.equals(this.parent.bestChild)) {
-      this.childValues.reduce((a, b) => b.betterThan((a) ? b : a, this));
+    var bestChild = <Node>this.parent.bestChild;
+    if (this.equals(bestChild)) {
+      let newBest:Node = this.childValues.reduce<Node>((a: Node, b: Node) => b.betterThan(a) ? b : a, this);
+      if (!this.equals(newBest)){
+        this.parent.bestChild = newBest;
+        this.parent.bestTarget = newBest.bestTarget;
+      }
     }
   }
 }
