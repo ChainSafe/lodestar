@@ -32,8 +32,13 @@ import {getDomain} from "./misc";
 /**
  * Return the sorted attesting indices corresponding to ``attestation_data`` and ``bitfield``.
  */
-export function getAttestingIndices(state: BeaconState, attestationData: AttestationData, bitfield: bytes): ValidatorIndex[] {
-  const crosslinkCommittee = getCrosslinkCommittee(state, attestationData.targetEpoch, attestationData.shard);
+export function getAttestingIndices(
+  state: BeaconState,
+  attestationData: AttestationData,
+  bitfield: bytes
+): ValidatorIndex[] {
+  const crosslinkCommittee =
+    getCrosslinkCommittee(state, attestationData.targetEpoch, attestationData.shard);
 
   assert(verifyBitfield(bitfield, crosslinkCommittee.length));
 
@@ -73,8 +78,10 @@ export function verifyBitfield(bitfield: bytes, committeeSize: number): boolean 
  * Convert ``attestation`` to (almost) indexed-verifiable form.
  */
 export function convertToIndexed(state: BeaconState, attestation: Attestation): IndexedAttestation {
-  const attestingIndices = getAttestingIndices(state, attestation.data, attestation.aggregationBitfield);
-  const custodyBit1Indices = getAttestingIndices(state, attestation.data, attestation.custodyBitfield);
+  const attestingIndices =
+    getAttestingIndices(state, attestation.data, attestation.aggregationBitfield);
+  const custodyBit1Indices =
+    getAttestingIndices(state, attestation.data, attestation.custodyBitfield);
   const custodyBit0Indices = attestingIndices.filter((i) => custodyBit1Indices.includes(i));
 
   return {
@@ -88,7 +95,10 @@ export function convertToIndexed(state: BeaconState, attestation: Attestation): 
 /**
  * Verify validity of ``indexed_attestation`` fields.
  */
-export function verifyIndexedAttestation(state: BeaconState, indexedAttestation: IndexedAttestation): bool {
+export function verifyIndexedAttestation(
+  state: BeaconState,
+  indexedAttestation: IndexedAttestation
+): bool {
   const custodyBit0Indices = indexedAttestation.custodyBit0Indices;
   const custodyBit1Indices = indexedAttestation.custodyBit1Indices;
 

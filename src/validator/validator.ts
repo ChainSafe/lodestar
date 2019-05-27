@@ -140,7 +140,10 @@ class Validator {
       await this.rpcClient.validator.getDuties(this.validatorIndex);
     const isAttester = validatorDuty.attestationSlot === slot;
     const isProposer = validatorDuty.blockProductionSlot === slot;
-    logger.info(`[Validator] Slot: ${slot}, Fork: ${currentVersion}, isProposer: ${isProposer}, isAttester: ${isAttester}`);
+    logger.info(
+      `[Validator] Slot: ${slot}, Fork: ${currentVersion}, 
+      isProposer: ${isProposer}, isAttester: ${isAttester}`
+    );
     if (isAttester) {
       this.attestationService.createAndPublishAttestation(
         slot,

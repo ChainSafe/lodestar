@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Helper script to update which constants preset will be used
+# This simplifies changing the exported file in src/constants/index.ts
+
+USAGE="$(basename "$0") preset [constants_file]
+
+eg: ./$(basename "$0") mainnet"
+
+if [ -z "$1" ]
+    then
+    echo "$USAGE"
+    exit 1
+fi
+
+PRESET=$1
+CONSTANTS_FILE=${2:-src/constants/index.ts}
+
+TMP_FILE='.tmpconstants'
+
+sed "s/\".*\"/\"\.\/$PRESET\"/" $CONSTANTS_FILE > $TMP_FILE
+mv $TMP_FILE $CONSTANTS_FILE

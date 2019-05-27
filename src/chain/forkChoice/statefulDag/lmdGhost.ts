@@ -138,7 +138,8 @@ class Node {
   private onRemoveWeight(): void {
     // if this node is the best child it may lose that position
     if (this.equals(this.parent.bestChild)) {
-      const newBest = Object.values(this.parent.children).reduce((a, b) => b.betterThan(a) ? b : a, this);
+      const newBest = Object.values(this.parent.children)
+        .reduce((a, b) => b.betterThan(a) ? b : a, this);
       // no longer the best
       if (!this.equals(newBest)) {
         this.parent.bestChild = newBest;
@@ -177,7 +178,8 @@ export class StatefulDagLMDGHOST implements LMDGHOST {
   private synced: boolean;
 
   public constructor() {
-    this.aggregator = new AttestationAggregator((hex) => this.nodes[hex] ? this.nodes[hex].slot : null);
+    this.aggregator =
+      new AttestationAggregator((hex) => this.nodes[hex] ? this.nodes[hex].slot : null);
     this.nodes = {};
     this.finalized = null;
     this.justified = null;

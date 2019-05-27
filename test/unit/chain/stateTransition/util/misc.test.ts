@@ -11,7 +11,6 @@ import {
   getBeaconProposerIndex,
   getBlockRootAtSlot,
   getBlockRoot,
-  verifyMerkleBranch,
   getDomain,
   getChurnLimit,
 } from "../../../../../src/chain/stateTransition/util/misc";

@@ -5,6 +5,7 @@
 import BN from "bn.js";
 
 import {bytes} from "../types";
+import { PrivateKey } from '@chainsafe/bls-js/lib/privateKey';
 
 /**
  * Return a byte array from a number or BN
@@ -24,4 +25,17 @@ export function intToBytes(value: BN | number, length: number): bytes {
 
 export function bytesToBN(value: bytes): BN {
   return new BN(value, 'le');
+}
+
+/**
+ * Converts PrivateKey to hex string
+ * @param {PrivateKey} privateKey 
+ * @returns {string} hex representation of bls key
+ */
+export function blsPrivateKeyToHex(privateKey: PrivateKey): string {
+  const byteBuffer = Buffer.alloc(48, 0);
+  privateKey.getValue().tobytearray(byteBuffer, 0);
+  const pkBytes = byteBuffer.slice(16, 48);
+
+  return "0x".concat(pkBytes.toString('hex'));
 }

@@ -10,10 +10,16 @@ import {
   Slot,
   ValidatorIndex
 } from "../../types";
+
+import {
+  getDomainFromFork,
+  isSlashableAttestationData,
+  slotToEpoch
+} from "../../chain/stateTransition/util";
+
 import {RpcClient} from "../rpc";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import {hashTreeRoot} from "@chainsafe/ssz";
-import {getDomainFromFork, isSlashableAttestationData, slotToEpoch} from "../../chain/stateTransition/util";
 import {Domain} from "../../constants";
 import logger from "../../logger";
 import {intDiv} from "../../util/math";
@@ -39,7 +45,11 @@ export class AttestationService {
   }
 
 
-  public async createAndPublishAttestation(slot: Slot, shard: Shard, fork: Fork): Promise<Attestation> {
+  public async createAndPublishAttestation(
+    slot: Slot,
+    shard: Shard,
+    fork: Fork
+  ): Promise<Attestation> {
     const attestationData = await this.rpcClient.validator.produceAttestation(slot, shard);
     if (await this.isConflictingAttestation(attestationData)) {
       logger.warn(
@@ -60,7 +70,8 @@ export class AttestationService {
   }
 
   private async isConflictingAttestation(other: AttestationData): Promise<boolean> {
-    const potentialAttestationConflicts = await this.db.getAttestations(this.validatorIndex, {gt: other.targetEpoch - 1});
+    const potentialAttestationConflicts =
+      await this.db.getAttestations(this.validatorIndex, {gt: other.targetEpoch - 1});
     return potentialAttestationConflicts.some((attestation => {
       return isSlashableAttestationData(attestation.data, other);
     }));
@@ -70,7 +81,8 @@ export class AttestationService {
     await this.db.setAttestation(this.validatorIndex, attestation);
 
     //cleanup
-    const unusedAttestations = await this.db.getAttestations(this.validatorIndex, {gt: 0, lt: attestation.data.targetEpoch});
+    const unusedAttestations =
+      await this.db.getAttestations(this.validatorIndex, {gt: 0, lt: attestation.data.targetEpoch});
     await this.db.deleteAttestations(this.validatorIndex, unusedAttestations);
   }
 

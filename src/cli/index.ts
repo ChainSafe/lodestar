@@ -26,7 +26,7 @@ try {
   // CLI ends after being parsed
   program.parse(process.argv);
 } catch (e) {
-  logger.error(e.message);
+  logger.error(e.message + '\n' + e.stack);
 }
 
 
