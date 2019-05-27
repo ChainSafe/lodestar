@@ -1,6 +1,6 @@
 import sinon from "sinon";
 import {OpPool} from "../../../../src/opPool";
-import {blockDeposits} from "../../../../src/chain/blockAssembly/deposits";
+import {blockDeposits} from "../../../../src/chain/factory/block/deposits";
 import {generateState} from "../../../utils/state";
 import {expect} from "chai";
 

@@ -9,12 +9,12 @@ import {
   BeaconState,
   bytes96,
   Slot
-} from "../../types";
+} from "../../../types";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
-import {BeaconDB} from "../../db/api";
-import {OpPool} from "../../opPool";
+import {BeaconDB} from "../../../db/api";
+import {OpPool} from "../../../opPool";
 import {assembleBody} from "./body";
-import {processBlock} from "../stateTransition/block";
+import {processBlock} from "../../stateTransition/block";
 
 export async function assembleBlock(
   db: BeaconDB,

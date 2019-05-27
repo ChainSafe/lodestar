@@ -1,13 +1,13 @@
-import * as blockBodyAssembly from "../../../../src/chain/blockAssembly/body";
-import * as blockTransitions from "../../../../src/chain/stateTransition/block";
+import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
+import * as blockTransitions from "../../../../../src/chain/stateTransition/block";
 import sinon from "sinon";
-import {OpPool} from "../../../../src/opPool";
-import {generateState} from "../../../utils/state";
-import {generateEmptyBlock} from "../../../utils/block";
-import {assembleBlock} from "../../../../src/chain/blockAssembly";
+import {OpPool} from "../../../../../src/opPool";
+import {generateState} from "../../../../utils/state";
+import {generateEmptyBlock} from "../../../../utils/block";
+import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {expect} from "chai";
-import {BeaconDB} from "../../../../src/db/api";
-import {generateValidator} from "../../../utils/validator";
+import {BeaconDB} from "../../../../../src/db/api";
+import {generateValidator} from "../../../../utils/validator";
 
 describe('block assembly', function () {
 

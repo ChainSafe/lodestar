@@ -1,17 +1,17 @@
 import sinon from "sinon";
-import {OpPool} from "../../../../src/opPool";
-import {assembleBody} from "../../../../src/chain/blockAssembly/body";
-import {generateState} from "../../../utils/state";
-import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../utils/slashings";
-import {generateEmptyAttestation} from "../../../utils/attestation";
-import {generateEmptyVoluntaryExit} from "../../../utils/voluntaryExits";
+import {OpPool} from "../../../../../src/opPool";
+import {assembleBody} from "../../../../../src/chain/factory/block/body";
+import {generateState} from "../../../../utils/state";
+import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../../utils/slashings";
+import {generateEmptyAttestation} from "../../../../utils/attestation";
+import {generateEmptyVoluntaryExit} from "../../../../utils/voluntaryExits";
 import {expect} from "chai";
 import {
   MAX_ATTESTATIONS,
   MAX_ATTESTER_SLASHINGS,
   MAX_PROPOSER_SLASHINGS,
   MAX_VOLUNTARY_EXITS
-} from "../../../../src/constants";
+} from "../../../../../src/constants";
 
 describe('blockAssembly - body', function () {
 

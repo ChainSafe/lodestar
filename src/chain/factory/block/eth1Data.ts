@@ -2,9 +2,9 @@
  * @module chain/blockAssembly
  */
 
-import {Eth1Data} from "../../types";
-import {Eth1Notifier} from "../../eth1";
-import {ETH1_FOLLOW_DISTANCE} from "../../constants";
+import {Eth1Data} from "../../../types";
+import {Eth1Notifier} from "../../../eth1";
+import {ETH1_FOLLOW_DISTANCE} from "../../../constants";
 
 export async function bestVoteData(votes: Eth1Data[]): Promise<Eth1Data> {
   const potentialVotes = votes.filter(vote => {
