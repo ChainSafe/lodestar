@@ -1,7 +1,7 @@
 import sinon from "sinon";
-import * as blockAssembly from "../../../../../src/chain/blockAssembly";
+import * as blockAssembly from "../../../../../src/chain/factory/block";
 import * as stateTransitionUtils from "../../../../../src/chain/stateTransition/util";
-import {getCommitteeAssignment, slotToEpoch} from "../../../../../src/chain/stateTransition/util";
+import {getCommitteeAssignment} from "../../../../../src/chain/stateTransition/util";
 import {ValidatorApi} from "../../../../../src/rpc/api/validator";
 import {BeaconDB} from "../../../../../src/db/api";
 import {BeaconChain} from "../../../../../src/chain";
@@ -11,6 +11,7 @@ import {expect} from "chai";
 import {generateState} from "../../../../utils/state";
 import {StatefulDagLMDGHOST} from "../../../../../src/chain/forkChoice";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
+import * as dutyFactory from "../../../../../src/chain/factory/duties";
 
 describe('validator rpc api', function () {
 
@@ -57,15 +58,15 @@ describe('validator rpc api', function () {
     ).to.be.true;
   });
 
-  it('get duties - no duty', async function() {
+  it('get duties', async function() {
     const publicKey = Buffer.alloc(48, 1);
     const state = generateState();
     dbStub.getState.resolves(state);
     dbStub.getValidatorIndex.resolves(5);
     const getProposerStub = sandbox.stub(stateTransitionUtils, 'getBeaconProposerIndex');
     getProposerStub.returns(4);
-    const commiteeAssignmentStub = sandbox.stub(stateTransitionUtils, 'getCommitteeAssignment');
-    commiteeAssignmentStub.returns(null);
+    const assembleValidatorDutyStub = sandbox.stub(dutyFactory, 'assembleValidatorDuty');
+    assembleValidatorDutyStub.returns(dutyFactory.generateEmptyValidatorDuty(publicKey));
     const duties = await validatorApi.getDuties([publicKey]);
     expect(duties.length).to.be.equal(1);
     expect(duties[0].committeeIndex).to.be.null;
@@ -73,27 +74,7 @@ describe('validator rpc api', function () {
     expect(dbStub.getState.calledOnce).to.be.true;
     expect(dbStub.getValidatorIndex.withArgs(publicKey).calledOnce).to.be.true;
     expect(getProposerStub.withArgs(state).calledOnce).to.be.true;
-    expect(commiteeAssignmentStub.withArgs(state, slotToEpoch(state.slot), 5).calledOnce).to.be.true;
-  });
-
-  it('get duties', async function() {
-    const publicKey = Buffer.alloc(48, 1);
-    const state = generateState();
-    dbStub.getState.resolves(state);
-    dbStub.getValidatorIndex.resolves(5);
-    const getProposerStub = sandbox.stub(stateTransitionUtils, 'getBeaconProposerIndex');
-    getProposerStub.returns(5);
-    const commiteeAssignmentStub = sandbox.stub(stateTransitionUtils, 'getCommitteeAssignment');
-    commiteeAssignmentStub.returns({shard: 2, slot: 1, validators:[1, 2, 5]});
-    const duties = await validatorApi.getDuties([publicKey]);
-    expect(duties.length).to.be.equal(1);
-    expect(duties[0].committeeIndex).to.be.equal(2);
-    expect(duties[0].attestationShard).to.be.equal(2);
-    expect(duties[0].blockProductionSlot).to.be.equal(state.slot);
-    expect(dbStub.getState.calledOnce).to.be.true;
-    expect(dbStub.getValidatorIndex.withArgs(publicKey).calledOnce).to.be.true;
-    expect(getProposerStub.withArgs(state).calledOnce).to.be.true;
-    expect(commiteeAssignmentStub.withArgs(state, slotToEpoch(state.slot), 5).calledOnce).to.be.true;
+    expect(assembleValidatorDutyStub.calledOnceWith(publicKey, 5, state, 4)).to.be.true;
   });
 
   it('get committee assignment', async function() {
@@ -114,7 +95,6 @@ describe('validator rpc api', function () {
     dbStub.getBlock.resolves(block);
     const result = await validatorApi.produceAttestation(4, 2);
     expect(result).to.not.be.null;
-    expect(state.slot).to.be.equal(4);
     expect(dbStub.getState.calledOnce).to.be.true;
     expect(dbStub.getBlock.calledTwice).to.be.true;
   });

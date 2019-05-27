@@ -1,7 +1,7 @@
 import sinon from "sinon";
-import {OpPool} from "../../../../src/opPool";
-import {blockDeposits} from "../../../../src/chain/factory/block/deposits";
-import {generateState} from "../../../utils/state";
+import {OpPool} from "../../../../../src/opPool";
+import {blockDeposits} from "../../../../../src/chain/factory/block/deposits";
+import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 
 describe('blockAssembly - deposits', function() {

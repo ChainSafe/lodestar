@@ -4,11 +4,10 @@
 
 import {
   Attestation,
-  AttestationData,
   BeaconBlock,
-  BeaconState, BLSPubkey,
+  BeaconState,
+  BLSPubkey,
   bytes96,
-  Crosslink,
   Epoch,
   IndexedAttestation,
   Shard,
@@ -22,18 +21,13 @@ import {OpPool} from "../../../opPool";
 import {IValidatorApi} from "./interface";
 import {
   getBeaconProposerIndex,
-  getBlockRoot,
   getCommitteeAssignment,
-  getCurrentEpoch,
-  getEpochStartSlot,
-  isProposerAtSlot,
-  slotToEpoch
+  isProposerAtSlot
 } from "../../../chain/stateTransition/util";
 import {CommitteeAssignment} from "../../../validator/types";
-import {assembleBlock} from "../../../chain/blockAssembly";
-import {advanceSlot} from "../../../chain/stateTransition";
-import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
-import {ZERO_HASH} from "../../../constants";
+import {assembleBlock} from "../../../chain/factory/block";
+import {assembleAttestation} from "../../../chain/factory/attestation";
+import {assembleValidatorDuty} from "../../../chain/factory/duties";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -65,20 +59,19 @@ export class ValidatorApi implements IValidatorApi {
       return  await this.db.getValidatorIndex(publicKey);
     }));
 
-    const proposerIndex = getBeaconProposerIndex(state);
-    const validatorProposer = validatorIndexes.indexOf(proposerIndex);
+    const blockProposerIndex = getBeaconProposerIndex(state);
 
     return validatorPublicKeys.map(
-      this.assembleValidatorDuty(
-        state,
-        validatorIndexes,
-        validatorPublicKeys,
-        validatorProposer
-      )
+      (validatorPublicKey, index) => {
+        const validatorIndex = validatorIndexes[index];
+        return assembleValidatorDuty(validatorPublicKey, validatorIndex, state, blockProposerIndex);
+      }
     );
   }
 
-  public async getCommitteeAssignment(index: ValidatorIndex, epoch: Epoch): Promise<CommitteeAssignment> {
+  public async getCommitteeAssignment(
+    index: ValidatorIndex,
+    epoch: Epoch): Promise<CommitteeAssignment> {
     const state: BeaconState = await this.db.getState();
     return getCommitteeAssignment(state, epoch, index);
   }
@@ -88,15 +81,7 @@ export class ValidatorApi implements IValidatorApi {
       this.db.getState(),
       this.db.getBlock(this.chain.forkChoice.head())
     ]);
-    while(headState.slot < slot) {
-      advanceSlot(headState);
-    }
-    return {
-      custodyBit0Indices: [],
-      custodyBit1Indices: [],
-      data: await this.assebmleAttestationData(headState, headBlock, shard),
-      signature: undefined
-    };
+    return await assembleAttestation(this.db, headState, headBlock, shard, slot);
   }
 
   public async publishBlock(block: BeaconBlock): Promise<void> {
@@ -109,70 +94,5 @@ export class ValidatorApi implements IValidatorApi {
 
   public async getIndex(validatorPublicKey: BLSPubkey): Promise<ValidatorIndex> {
     return await this.db.getValidatorIndex(validatorPublicKey);
-  }
-
-  private async assebmleAttestationData(
-    headState: BeaconState,
-    headBlock: BeaconBlock,
-    shard: Shard): Promise<AttestationData> {
-
-    const currentEpoch = getCurrentEpoch(headState);
-    const epochStartSlot = getEpochStartSlot(currentEpoch);
-    let epochBoundaryBlock: BeaconBlock;
-    if(epochStartSlot === headState.slot) {
-      epochBoundaryBlock = headBlock;
-    } else {
-      epochBoundaryBlock = await this.db.getBlock(getBlockRoot(headState, epochStartSlot));
-    }
-    return  {
-      beaconBlockRoot: signingRoot(headBlock, BeaconBlock),
-      crosslinkDataRoot: ZERO_HASH,
-      previousCrosslinkRoot: hashTreeRoot(headState.currentCrosslinks[shard], Crosslink),
-      shard,
-      sourceEpoch: headState.currentJustifiedEpoch,
-      sourceRoot: headState.currentJustifiedRoot,
-      targetEpoch: currentEpoch,
-      targetRoot: signingRoot(epochBoundaryBlock, BeaconBlock)
-    };
-  }
-
-  private assembleValidatorDuty(
-    state,
-    validatorIndexes,
-    validatorPublicKeys: Buffer[],
-    validatorProposer) {
-    return (publicKey, index) => {
-      let duty: ValidatorDuty = this.generateEmptyValidatorDuty(publicKey);
-      const comitteeAsignment = getCommitteeAssignment(
-        state,
-        slotToEpoch(state.slot),
-        validatorIndexes[index]
-      );
-      if (comitteeAsignment) {
-        duty = {
-          ...duty,
-          attestationShard: comitteeAsignment.shard,
-          attestationSlot: comitteeAsignment.slot,
-          committeeIndex: comitteeAsignment.validators.indexOf(validatorIndexes[index])
-        };
-      }
-      if (validatorPublicKeys.indexOf(duty.validatorPubkey) === validatorProposer) {
-        duty = {
-          ...duty,
-          blockProductionSlot: state.slot
-        };
-      }
-      return duty;
-    };
-  }
-
-  private generateEmptyValidatorDuty(publicKey) {
-    return {
-      validatorPubkey: publicKey,
-      blockProductionSlot: null,
-      attestationShard: null,
-      attestationSlot: null,
-      committeeIndex: null
-    };
   }
 }
