@@ -35,6 +35,7 @@ class Validator {
   private genesisInfo: GenesisInfo;
   private db: IValidatorDB;
   public isActive: boolean;
+  public isRunning: boolean;
 
   public constructor(ctx: ValidatorCtx) {
     this.ctx = ctx;
@@ -57,15 +58,18 @@ class Validator {
   /**
    * Creates a new block processing service and starts it.
    */
-  private async start(): Promise<void> {
+  public async start(): Promise<void> {
+    this.isRunning = true;
     await this.setup();
-    this.run();
+    // this.run();
   }
 
   /**
    * Stops all validator functions
    */
-  private async stop(): Promise<void> {}
+  public async stop(): Promise<void> {
+    this.isRunning = false;
+  }
 
   /**
    * Main method that starts a client.
@@ -112,7 +116,9 @@ class Validator {
       this.logger.info("Chain start has occured!");
       return true;
     }
-    setTimeout(this.isChainLive, 1000);
+    if(this.isRunning) {
+      setTimeout(this.isChainLive, 1000);
+    }
   }
 
   /**
@@ -127,7 +133,9 @@ class Validator {
       this.logger.info("Validator has been processed!");
       return index;
     }
-    setTimeout(this.getValidatorIndex, 1000);
+    if(this.isRunning) {
+      setTimeout(this.getValidatorIndex, 1000);
+    }
   }
 
   private run(): void {

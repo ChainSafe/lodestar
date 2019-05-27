@@ -31,7 +31,8 @@ describe('Validator', () => {
     };
 
     let validator = new Validator(validatorCtx);
-    await expect(validator.setup()).to.not.throw;
+    await expect(validator.start()).to.not.throw;
+    await validator.stop();
   });
 
 });
