@@ -39,7 +39,6 @@ export function processAttesterSlashing(state: BeaconState
   let slashedAny = false;
   const attestingIndices1 = attestation1.custodyBit0Indices.concat(attestation1.custodyBit1Indices);
   const attestingIndices2 = attestation2.custodyBit0Indices.concat(attestation2.custodyBit1Indices);
-
   const currentEpoch = getCurrentEpoch(state);
   attestingIndices1.forEach((index) => {
     if (
@@ -52,7 +51,7 @@ export function processAttesterSlashing(state: BeaconState
   });
   assert(slashedAny);
 }
- 
+
 export default function processAttesterSlashings(state: BeaconState, block: BeaconBlock): void {
   assert(block.body.attesterSlashings.length <= MAX_ATTESTER_SLASHINGS);
   for (const attesterSlashing of block.body.attesterSlashings) {
