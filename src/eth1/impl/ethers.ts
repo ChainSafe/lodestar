@@ -2,12 +2,11 @@
  * @module eth1
  */
 
-import BN from "bn.js";
 import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {deserialize} from "@chainsafe/ssz";
 
-import {bytes32, Deposit, DepositData, Eth1Data, number64, uint64} from "../../types";
+import {bytes32, Deposit, Eth1Data, number64} from "../../types";
 
 import {Eth1Notifier, Eth1Options} from "../interface";
 import logger from "../../logger";
@@ -88,7 +87,12 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     this.emit('block', block);
   }
 
-  public async processDepositLog(pubkey: string, withdrawalCredentials: string, amount: string, signature: string, merkleTreeIndex: string): Promise<void> {
+  public async processDepositLog(
+    pubkey: string, withdrawalCredentials: string,
+    amount: string,
+    signature: string,
+    merkleTreeIndex: string
+  ): Promise<void> {
     try {
       const deposit = this.createDeposit(
         pubkey,
@@ -101,7 +105,10 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
         `Received validator deposit event index=${deposit.index}`
       );
       if (deposit.index !== this.depositCount) {
-        logger.warn(`Validator deposit with index=${deposit.index} received out of order. (currentCount: ${this.depositCount})`);
+        logger.warn(
+          `Validator deposit with index=${deposit.index} received out of order. 
+          (currentCount: ${this.depositCount})`
+        );
         // deposit processed out of order
         return;
       }
