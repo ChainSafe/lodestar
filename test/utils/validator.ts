@@ -14,7 +14,7 @@ export function generateValidator(activation?: number, exit?: number): Validator
   const activationEpoch = activation !== null ? activation : FAR_FUTURE_EPOCH;
   return {
     pubkey: Buffer.alloc(48),
-    withdrawalCredentials: Buffer.alloc(65),
+    withdrawalCredentials: Buffer.alloc(32),
     activationEpoch,
     activationEligibilityEpoch: activationEpoch,
     exitEpoch: exit || randNum(),

@@ -7,7 +7,6 @@ import {generateEmptyBlock} from "../../../../utils/block";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {expect} from "chai";
 import {BeaconDB} from "../../../../../src/db/api";
-import {generateValidator} from "../../../../utils/validator";
 
 describe('block assembly', function () {
 
@@ -27,10 +26,9 @@ describe('block assembly', function () {
   });
 
   it('should assemble block', async function() {
-    beaconDB.getState.resolves(generateState({slot: 1, validatorRegistry: [generateValidator()]}));
+    beaconDB.getState.resolves(generateState({slot: 1}));
     beaconDB.getChainHead.resolves(generateEmptyBlock());
     assembleBodyStub.resolves(generateEmptyBlock().body);
-    processBlockStub.resolves(generateState());
     const result = await assembleBlock(beaconDB, opPool, 1, Buffer.alloc(96, 0));
     expect(result).to.not.be.null;
     expect(result.slot).to.equal(1);
