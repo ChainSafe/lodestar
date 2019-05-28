@@ -8,7 +8,8 @@ import {
 } from "../../../../../src/chain/stateTransition/util";
 import sinon from "sinon";
 import {generateEmptyAttesterSlashing} from "../../../../utils/slashings";
-import {processAttesterSlashing} from "../../../../../src/chain/stateTransition/block/attesterSlashings";
+import processAttesterSlashings, {processAttesterSlashing} from "../../../../../src/chain/stateTransition/block/attesterSlashings";
+import {generateEmptyBlock} from "../../../../utils/block";
 
 describe('process block - attester slashings', function () {
 
@@ -110,6 +111,22 @@ describe('process block - attester slashings', function () {
     verifyIndexedAttestationStub.returns(true);
     isSlashableValidatorStub.returns(true);
     processAttesterSlashing(state, attesterSlashing);
+    expect(slashValidatorStub.calledThrice).to.be.true;
+  });
+
+  it('should process block slashings', function () {
+    const state = generateState();
+    const attesterSlashing = generateEmptyAttesterSlashing();
+    attesterSlashing.attestation1.custodyBit0Indices = [1, 2];
+    attesterSlashing.attestation1.custodyBit1Indices = [3];
+    attesterSlashing.attestation2.custodyBit0Indices = [1, 2, 3];
+    attesterSlashing.attestation2.custodyBit1Indices = [];
+    const block = generateEmptyBlock();
+    block.body.attesterSlashings.push(attesterSlashing);
+    isSlashableAttestationStub.returns(true);
+    verifyIndexedAttestationStub.returns(true);
+    isSlashableValidatorStub.returns(true);
+    processAttesterSlashings(state, block);
     expect(slashValidatorStub.calledThrice).to.be.true;
   });
 

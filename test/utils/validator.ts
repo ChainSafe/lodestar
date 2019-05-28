@@ -6,9 +6,10 @@ import { FAR_FUTURE_EPOCH } from "../../src/constants";
  * Generates a single fake validator, for tests purposes only.
  * @param {number} activation
  * @param {number} exit
+ * @param {boolean} slashed
  * @returns {Validator}
  */
-export function generateValidator(activation?: number, exit?: number): Validator {
+export function generateValidator(activation?: number, exit?: number, slashed: boolean = false): Validator {
   const randNum = () =>  Math.floor(Math.random() * Math.floor(4));
   // For some reason activationEpoch was defaulting to randNum()
   const activationEpoch = activation !== null ? activation : FAR_FUTURE_EPOCH;
@@ -19,7 +20,7 @@ export function generateValidator(activation?: number, exit?: number): Validator
     activationEligibilityEpoch: activationEpoch,
     exitEpoch: exit || randNum(),
     withdrawableEpoch: randNum(),
-    slashed: false,
+    slashed,
     effectiveBalance: new BN(0),
   };
 }

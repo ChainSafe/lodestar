@@ -29,7 +29,6 @@ export default function processBlockHeader(state: BeaconState, block: BeaconBloc
 
   // Verify that the parent matches
   assert(block.previousBlockRoot.equals(signingRoot(state.latestBlockHeader, BeaconBlockHeader)));
-
   // Save current block as the new latest block
   state.latestBlockHeader = getTemporaryBlockHeader(block);
 
