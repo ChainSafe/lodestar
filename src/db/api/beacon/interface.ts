@@ -6,12 +6,12 @@ import {
   Attestation,
   AttesterSlashing,
   BeaconBlock,
-  BeaconState,
+  BeaconState, BLSPubkey,
   bytes32,
   Deposit,
   ProposerSlashing,
   Slot,
-  Transfer,
+  Transfer, ValidatorIndex,
   VoluntaryExit,
 } from "../../../types";
 
@@ -48,6 +48,13 @@ export interface IBeaconDb {
    * Set the beacon chain state
    */
   setState(state: BeaconState): Promise<void>;
+
+  /**
+   * Returns validator index coresponding to validator
+   * public key in registry,
+   * @param publicKey
+   */
+  getValidatorIndex(publicKey: BLSPubkey): Promise<ValidatorIndex>;
 
   /**
    * Get the last finalized state
