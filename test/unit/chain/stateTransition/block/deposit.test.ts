@@ -1,20 +1,24 @@
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import * as utils from "../../../../../src/chain/stateTransition/util";
-import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../../src/chain/stateTransition/util";
+import {
+  getBeaconProposerIndex,
+  getDomain,
+  getTemporaryBlockHeader
+} from "../../../../../src/chain/stateTransition/util";
 import * as merkleUtil from "../../../../../src/util/merkleTree";
 import bls from "@chainsafe/bls-js";
 import sinon from "sinon";
-import {processDeposit} from "../../../../../src/chain/stateTransition/block/deposits";
+import processDeposits, {processDeposit} from "../../../../../src/chain/stateTransition/block/deposits";
 import {generateDeposit} from "../../../../utils/deposit";
 import {signingRoot} from "@chainsafe/ssz";
 import {DepositData} from "../../../../../src/types";
-import {getDomain} from "../../../../../src/chain/stateTransition/util";
 import {Domain} from "../../../../../src/constants";
 import {generateValidator} from "../../../../utils/validator";
 import BN from "bn.js";
+import {generateEmptyBlock} from "../../../../utils/block";
 
-describe('process block - attestation', function () {
+describe('process block - deposits', function () {
 
   const sandbox = sinon.createSandbox();
 
@@ -92,9 +96,43 @@ describe('process block - attestation', function () {
     deposit.data.pubkey = validator.pubkey;
     try {
       processDeposit(state, deposit);
-    } catch (e) {
       expect(verifyMerkleTreeStub.calledOnce).to.be.true;
-      expect(state.balances[0]).to.be.equal(deposit.data.amount);
+      expect(state.balances[0].toString()).to.be.equal(deposit.data.amount.toString());
+    } catch (e) {
+      expect.fail(e);
+    }
+  });
+
+  it('should fail process deposit from blocks - missing deposits', function () {
+    const state = generateState({depositIndex: 3});
+    state.latestEth1Data.depositCount = 5;
+    const deposit = generateDeposit(3);
+    const block = generateEmptyBlock();
+    block.body.deposits.push(deposit);
+    try {
+      processDeposits(state, block);
+    } catch (e) {
+
+    }
+  });
+
+  it('should process deposit from blocks', function () {
+    const state = generateState({depositIndex: 3});
+    state.latestEth1Data.depositCount = 4;
+    verifyMerkleTreeStub.returns(true);
+    const deposit = generateDeposit(3);
+    const validator = generateValidator();
+    state.validatorRegistry.push(validator);
+    state.balances.push(new BN(0));
+    deposit.data.pubkey = validator.pubkey;
+    const block = generateEmptyBlock();
+    block.body.deposits.push(deposit);
+    try {
+      processDeposits(state, block);
+      expect(verifyMerkleTreeStub.calledOnce).to.be.true;
+      expect(state.balances[0].toString()).to.be.equal(deposit.data.amount.toString());
+    } catch (e) {
+      expect.fail(e);
     }
   });
 

@@ -12,7 +12,7 @@ import processBlockHeader from "../../../../../src/chain/stateTransition/block/b
 import {generateValidator} from "../../../../utils/validator";
 import {getDomain} from "../../../../../src/chain/stateTransition/util";
 
-describe('process block - attestation', function () {
+describe('process block - block header', function () {
 
   const sandbox = sinon.createSandbox();
 

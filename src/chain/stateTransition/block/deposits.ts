@@ -90,6 +90,7 @@ export function processDeposit(state: BeaconState, deposit: Deposit): void {
 }
 
 export default function processDeposits(state: BeaconState, block: BeaconBlock): void {
+  // Verify that outstanding deposits are processed up to the maximum number of deposits
   assert(block.body.deposits.length ===
     Math.min(MAX_DEPOSITS, state.latestEth1Data.depositCount - state.depositIndex));
   for (const deposit of block.body.deposits) {
