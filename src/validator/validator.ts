@@ -41,6 +41,7 @@ class Validator {
     this.ctx = ctx;
     this.logger = logger;
     this.isActive = false;
+    this.isRunning = false;
     this.db = ctx.db ? ctx.db : new ValidatorDB({
       persistance: new LevelDbPersistance({
         name: 'LodestarValidatorDB'
@@ -61,7 +62,7 @@ class Validator {
   public async start(): Promise<void> {
     this.isRunning = true;
     await this.setup();
-    // this.run();
+    this.run();
   }
 
   /**
@@ -69,6 +70,7 @@ class Validator {
    */
   public async stop(): Promise<void> {
     this.isRunning = false;
+    await this.rpcClient.disconnect();
   }
 
   /**
@@ -118,6 +120,8 @@ class Validator {
     }
     if(this.isRunning) {
       setTimeout(this.isChainLive, 1000);
+    } else {
+      return true;
     }
   }
 
