@@ -9,8 +9,9 @@ export const networkOpts =  {
   host: '127.0.0.1'
 };
 
-export const depositContract = {
+export default {
   deployedAt: 0,
+  address: '0x',
   // eslint-disable-next-line max-len
   //https://github.com/chainsafe/deposit_contract/blob/master/deposit_contract/contracts/validator_registration.json
   abi: [
