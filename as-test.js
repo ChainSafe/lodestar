@@ -1,4 +1,4 @@
-const wasm = require("./index.js");
+const wasm = require("./src/assembly.js");
 
 const f = new wasm.Node(20, wasm.newString("boo"), null);
 const slot = f.slot;
