@@ -43,7 +43,6 @@ export const SLOTS_PER_HISTORICAL_ROOT = 2 ** 13; // slots || ~13 hours
 export const MIN_VALIDATOR_WITHDRAWAL_DELAY = 2 ** 8; // epochs || ~27 hours
 export const PERSISTENT_COMMITTEE_PERIOD = 2 ** 11; // epochs || 9 days
 
-
 // should be a small constant times SHARD_COUNT // SLOTS_PER_EPOCH
 export const MAX_CROSSLINK_EPOCHS = 2 ** 6; // 64
 export const MIN_EPOCHS_TO_INACTIVITY_PENALTY = 2 ** 2; // 25.6 minutes
