@@ -78,7 +78,7 @@ export class Node {
   private onRemoveWeight(): void {
     var bestChild = <Node>this.parent.bestChild;
     if (this.equals(bestChild)) {
-      let newBest:Node = this.childValues.reduce<Node>((a: Node, b: Node) => b.betterThan(a) ? b : a, this);
+      let newBest: Node = this.childValues.reduce<Node>((a: Node, b: Node) => b.betterThan(a) ? b : a, this);
       if (!this.equals(newBest)){
         this.parent.bestChild = newBest;
         this.parent.bestTarget = newBest.bestTarget;
