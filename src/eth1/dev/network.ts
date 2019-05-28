@@ -78,7 +78,8 @@ export class PrivateEth1Network {
     const deployKey = this.blockchain.accounts[this.blockchain.coinbase].secretKey.toString('hex');
     const provider = new ethers.providers.Web3Provider(this.blockchain._provider);
     const deployWallet = new ethers.Wallet(deployKey, provider);
-    const factory = new ethers.ContractFactory(defaults.abi, defaults.bytecode, deployWallet);
+    const factory =
+      new ethers.ContractFactory(defaults.abi, defaults.bytecode, deployWallet);
     const contract = await factory.deploy();
     const address = contract.address;
     await contract.deployed();
