@@ -2,31 +2,34 @@ import chai, {assert, expect} from "chai";
 import {Contract, ethers, Event} from "ethers";
 import ganache from "ganache-core";
 import sinon from "sinon";
+import bls from "@chainsafe/bls-js";
+import {Provider} from "ethers/providers";
+import promisify from "promisify-es6";
+import {serialize} from "@chainsafe/ssz";
 
 import {EthersEth1Notifier} from "../../../src/eth1";
-import defaults from "../../../src/eth1/defaults";
-import promisify from "promisify-es6";
+import defaults from "../../../src/eth1/dev/defaults";
 import logger from "../../../src/logger/winston";
 import chaiAsPromised from "chai-as-promised";
 import {generateDeposit} from "../../utils/deposit";
-import {Log, Provider} from "ethers/providers";
+import {number64} from "../../../src/types";
+import {BeaconDB} from "../../../src/db/api";
+import BN from "bn.js";
 
 chai.use(chaiAsPromised);
 describe("Eth1Notifier", () => {
   const ganacheProvider = ganache.provider();
   const provider = new ethers.providers.Web3Provider(ganacheProvider);
-  let db: any = {};
+  let db;
   let eth1;
   let sandbox;
 
   before(async function (): Promise<void> {
     logger.silent(true);
     sandbox = sinon.createSandbox();
-    db.setGenesisDeposit = sandbox.stub();
-    db.getGenesisDeposits = sandbox.stub();
-    db.deleteGenesisDeposits = sandbox.stub();
+    db = sandbox.createStubInstance(BeaconDB);
     eth1 = new EthersEth1Notifier({
-      depositContract: defaults.depositContract,
+      depositContract: defaults,
       provider
     }, {db});
   });
@@ -68,7 +71,7 @@ describe("Eth1Notifier", () => {
         parseLog: sandbox.stub()
       };
       const notifier = new EthersEth1Notifier({
-        depositContract: defaults.depositContract,
+        depositContract: defaults,
         // @ts-ignore
         provider: stubProvider,
         // @ts-ignore
@@ -78,15 +81,16 @@ describe("Eth1Notifier", () => {
       //@ts-ignore
       stubContract.interface.parseLog.returns({
         values: {
-          dataHex: "0x" + Buffer.alloc(528).toString("hex"),
-          indexHex: "0x" + Buffer.alloc(528).toString("hex")
+          pubkey: '0x' + Buffer.alloc(48, 0).toString('hex'),
+          withdrawalCredentials: '0x' + Buffer.alloc(48, 0).toString('hex'),
+          amount: '0x' + serialize(10, number64).toString('hex'),
+          signature: '0x' + Buffer.alloc(96, 0).toString('hex'),
+          merkleTreeIndex: '0x' + serialize(12, number64).toString('hex')
         }
       });
       stubProvider.getLogs.withArgs(sinon.match.hasNested('topics[0]', 'genesisHash')).resolves([]);
       stubProvider.getLogs.withArgs(sinon.match.hasNested('topics[0]', 'depositHash')).resolves([
-        {
-
-        } as any
+        {} as any
       ]);
       stubProvider.getNetwork.resolves({
         chainId: 212,
@@ -125,7 +129,7 @@ describe("Eth1Notifier", () => {
       ]);
 
       const notifier = new EthersEth1Notifier({
-        depositContract: defaults.depositContract,
+        depositContract: defaults,
         // @ts-ignore
         provider: stubProvider,
         // @ts-ignore
@@ -145,7 +149,7 @@ describe("Eth1Notifier", () => {
     async function (): Promise<void> {
       const contract = sinon.createStubInstance(Contract);
       const notifier = new EthersEth1Notifier({
-        depositContract: defaults.depositContract,
+        depositContract: defaults,
         provider,
         // @ts-ignore
         contract
@@ -161,10 +165,13 @@ describe("Eth1Notifier", () => {
     const cb = sinon.spy();
     eth1.on('deposit', cb);
 
-    const dataHex = "0x" + Buffer.alloc(528).toString("hex");
-    const indexHex = "0x" + Buffer.alloc(528).toString("hex");
+    const pubKey = bls.generateKeyPair().publicKey.toBytesCompressed();
+    const withdrawalCredentials = "0x" + Buffer.alloc(32).toString("hex");
+    const amount = "0x" + serialize(32000000000, number64).toString("hex");
+    const signature = "0x" + Buffer.alloc(94).toString("hex");
+    const merkleTreeIndex = "0x" + serialize(0 , number64).toString("hex");
     db.setGenesisDeposit.resolves(null);
-    await eth1.processDepositLog(dataHex, indexHex);
+    await eth1.processDepositLog(pubKey, withdrawalCredentials, amount, signature, merkleTreeIndex);
     assert(cb.calledOnce, "deposit event did not fire");
   });
 
@@ -218,7 +225,7 @@ describe("Eth1Notifier", () => {
       get_deposit_root: spy
     };
     const notifier = new EthersEth1Notifier({
-      depositContract: defaults.depositContract,
+      depositContract: defaults,
       provider,
       contract
     }, {db});
