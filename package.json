@@ -101,6 +101,7 @@
     "nyc": "^13.3.0",
     "sinon": "^7.2.7",
     "supertest": "^4.0.2",
+    "ts-mock-imports": "^1.2.3",
     "ts-node": "^7.0.1",
     "typedoc": "^0.14.2",
     "typedoc-plugin-external-module-name": "^2.1.0",

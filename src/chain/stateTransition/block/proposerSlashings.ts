@@ -23,13 +23,13 @@ import {
   getDomain,
   isSlashableValidator,
   slotToEpoch,
-  slashValidator,
+  slashValidator, getDomainFromFork,
 } from "../util";
 
 import bls from "@chainsafe/bls-js";
 
 
-export function processProposerSlashing(state, proposerSlashing: ProposerSlashing): void {
+export function processProposerSlashing(state: BeaconState, proposerSlashing: ProposerSlashing): void {
   const proposer = state.validatorRegistry[proposerSlashing.proposerIndex];
   // Verify that the epoch is the same
   assert(slotToEpoch(proposerSlashing.header1.slot) === slotToEpoch(proposerSlashing.header2.slot));
@@ -43,14 +43,14 @@ export function processProposerSlashing(state, proposerSlashing: ProposerSlashin
     proposer.pubkey,
     signingRoot(proposerSlashing.header1, BeaconBlockHeader),
     proposerSlashing.header1.signature,
-    getDomain(state.fork, Domain.BEACON_PROPOSER, slotToEpoch(proposerSlashing.header1.slot)),
+    getDomainFromFork(state.fork, slotToEpoch(proposerSlashing.header1.slot), Domain.BEACON_PROPOSER),
   );
   assert(proposalData1Verified);
   const proposalData2Verified = bls.verify(
     proposer.pubkey,
     signingRoot(proposerSlashing.header2, BeaconBlockHeader),
     proposerSlashing.header2.signature,
-    getDomain(state.fork, Domain.BEACON_PROPOSER, slotToEpoch(proposerSlashing.header2.slot)),
+    getDomainFromFork(state.fork, slotToEpoch(proposerSlashing.header2.slot), Domain.BEACON_PROPOSER),
   );
   assert(proposalData2Verified);
   slashValidator(state, proposerSlashing.proposerIndex);
