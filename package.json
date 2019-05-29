@@ -37,7 +37,7 @@
   ],
   "dependencies": {
     "@chainsafe/bls-js": "^0.1.1",
-    "@chainsafe/ssz": "^0.2.0",
+    "@chainsafe/ssz": "^0.3.0",
     "@iarna/toml": "^2.2.3",
     "@nodeutils/defaults-deep": "^1.1.0",
     "@polkadot/util-crypto": "^0.33.27",
@@ -54,7 +54,7 @@
     "ethers": "^4.0.27",
     "ganache-core": "^2.5.3",
     "level": "^4.0.0",
-    "libp2p": "^0.24.4",
+    "libp2p": "^0.25.3",
     "libp2p-bootstrap": "^0.9.7",
     "libp2p-floodsub": "^0.15.8",
     "libp2p-kad-dht": "^0.14.12",
@@ -68,6 +68,8 @@
     "pouchdb-adapter-memory": "^7.0.0",
     "pouchdb-core": "^7.0.0",
     "promisify-es6": "^1.0.3",
+    "pull-abortable": "^4.1.1",
+    "pull-pushable": "^2.2.0",
     "winston": "^3.2.1",
     "ws": "^6.2.1"
   },

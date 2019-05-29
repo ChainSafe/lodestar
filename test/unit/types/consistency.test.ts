@@ -70,12 +70,12 @@ describe("types", () => {
     vars[name] = sszTypes[name];
   }
   // Now that we have an object of interfaces and and object of runtime type variables, we can perform our tests
-  it("Every interface should have a corresponding runtime type variable", () => {
-    Object.keys(interfaces)
+  it("Every runtime type variable should have a corresponding interface", () => {
+    Object.keys(vars)
       .map((name) => {
         assert(
-          !!vars[name],
-          `var ${name} does not exist`);
+          !!interfaces[name] || !!types[name],
+          `interface ${name} does not exist`);
       });
   });
   it("Every interface field name/type should have the corresponding runtime type field name/type in the same order", () => {
@@ -108,9 +108,10 @@ describe("types", () => {
              interface field type: ${ifaceFieldType}, runtime type field name: ${rtFieldType}`);
       }
     };
-    Object.values(interfaces)
-      .map((iface: any) => {
-        const rtVar = vars[iface.name];
+    Object.values(vars)
+      .forEach((rtVar: any) => {
+        const iface = interfaces[rtVar.name];
+        if (!iface) return;
 
         assert.equal(
           rtVar.fields.length, iface.fields.length,

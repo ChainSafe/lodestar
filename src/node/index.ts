@@ -5,7 +5,7 @@
 import deepmerge from "deepmerge";
 import {BeaconDB, LevelDbPersistance} from "../db";
 import {EthersEth1Notifier, EthersEth1Options} from "../eth1";
-import {P2PNetwork, P2pOptions} from "../p2p";
+import {Libp2pNetwork, NetworkOptions, NodejsNode} from "../network";
 
 
 import defaultConf from "./defaults";
@@ -18,6 +18,7 @@ import {JSONRPC} from "../rpc/protocol";
 import {WSServer} from "../rpc/transport";
 import {IApiConstructor} from "../rpc/api/interface";
 import {DBOptions} from '../db';
+import {createPeerId, initializePeerInfo} from "../network/libp2p/util";
 
 
 export interface Service {
@@ -31,7 +32,7 @@ export interface BeaconNodeCtx {
   chain?: object;
   db?: DBOptions;
   eth1?: EthersEth1Options;
-  p2p?: P2pOptions;
+  network?: NetworkOptions;
   rpc?: RpcCtx;
   sync?: object;
   opPool?: object;
@@ -41,6 +42,9 @@ interface RpcCtx {
   apis?: IApiConstructor[];
 }
 
+/**
+ * Beacon Node configured for desktop (non-browser) use
+ */
 class BeaconNode {
   public conf: BeaconNodeCtx;
   public db: Service;
@@ -66,7 +70,10 @@ class BeaconNode {
         this.conf.db
       )
     });
-    this.network = new P2PNetwork(this.conf.p2p);
+    const libp2p = createPeerId()
+      .then((peerId) => initializePeerInfo(peerId, this.conf.network.multiaddrs))
+      .then((peerInfo) => new NodejsNode({peerInfo}));
+    this.network = new Libp2pNetwork(this.conf.network, {libp2p});
     this.eth1 = new EthersEth1Notifier(
       this.conf.eth1,
       {
