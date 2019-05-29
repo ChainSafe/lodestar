@@ -24,5 +24,5 @@ export function signingRoot(value: any, type: AnyContainerType): Buffer {
   assert(_type.type === Type.container);
   const truncatedType = copyType(type) as ContainerType;
   truncatedType.fields.pop();
-  return hashTreeRoot(value, _type);
+  return hashTreeRoot(value, truncatedType);
 }
