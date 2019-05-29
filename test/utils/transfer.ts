@@ -8,7 +8,7 @@ export function generateEmptyTransfer(): Transfer {
     slot: 0,
     amount: new BN(0),
     fee: new BN(0),
-    pubkey: Buffer.alloc(42, 0),
+    pubkey: Buffer.alloc(48, 0),
     recipient: 0,
     sender: 0,
     signature: EMPTY_SIGNATURE

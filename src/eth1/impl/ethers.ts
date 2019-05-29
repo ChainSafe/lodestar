@@ -7,13 +7,14 @@ import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {deserialize} from "@chainsafe/ssz";
 
-import {bytes32, Deposit, DepositData, Eth1Data, number64} from "../../types";
+import {bytes32, Deposit, DepositData, Eth1Data, number64, uint64} from "../../types";
 
 import {Eth1Notifier, Eth1Options} from "../interface";
 import logger from "../../logger";
 import {isValidAddress} from "../../util/address";
 import {BeaconDB} from "../../db";
 import {Log} from "ethers/providers";
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants/minimal";
 
 export interface EthersEth1Options extends Eth1Options {
   provider: ethers.providers.BaseProvider;
@@ -59,9 +60,7 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
       logger.info('Eth2Genesis event exits, started listening on eth1 block updates');
       this.provider.on('block', this.processBlockHeadUpdate.bind(this));
     } else {
-      const pastDeposits = await this.getContractDeposits(
-        this.opts.depositContract.deployedAt
-      );
+      const pastDeposits = await this.getContractDeposits(this.opts.depositContract.deployedAt);
       await Promise.all(pastDeposits.map((pastDeposit) => {
         return this.db.setGenesisDeposit(pastDeposit);
       }));
@@ -89,22 +88,32 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     this.emit('block', block);
   }
 
-  public async processDepositLog(dataHex: string, indexHex: string): Promise<void> {
-    const deposit = this.createDeposit(dataHex, indexHex);
-    logger.info(
-      `Received validator deposit event index=${deposit.index}`
-    );
-    if (deposit.index !== this.depositCount) {
-      logger.warn(`Validator deposit with index=${deposit.index} received out of order.`);
-      // deposit processed out of order
-      return;
+  public async processDepositLog(pubkey: string, withdrawalCredentials: string, amount: string, signature: string, merkleTreeIndex: string): Promise<void> {
+    try {
+      const deposit = this.createDeposit(
+        pubkey,
+        withdrawalCredentials,
+        amount,
+        signature,
+        merkleTreeIndex
+      );
+      logger.info(
+        `Received validator deposit event index=${deposit.index}`
+      );
+      if (deposit.index !== this.depositCount) {
+        logger.warn(`Validator deposit with index=${deposit.index} received out of order. (currentCount: ${this.depositCount})`);
+        // deposit processed out of order
+        return;
+      }
+      this.depositCount++;
+      //after genesis stop storing in genesisDeposit bucket
+      if (!this.genesisBlockHash) {
+        await this.db.setGenesisDeposit(deposit);
+      }
+      this.emit('deposit', deposit);
+    } catch (e) {
+      logger.error(`Failed to process deposit log. Error: ${e.message}`);
     }
-    this.depositCount++;
-    //after genesis stop storing in genesisDeposit bucket
-    if(!this.genesisBlockHash) {
-      await this.db.setGenesisDeposit(deposit);
-    }
-    this.emit('deposit', deposit);
   }
 
   public async processEth2GenesisLog(
@@ -113,22 +122,27 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     timeHex: string,
     event: ethers.Event
   ): Promise<void> {
-    const depositRoot = Buffer.from(depositRootHex.substr(2), 'hex');
-    const depositCount = Buffer.from(depositCountHex.substr(2), 'hex').readUIntLE(0, 6);
-    const time = new BN(Buffer.from(timeHex.substr(2), 'hex').readUIntLE(0, 6));
-    const blockHash = Buffer.from(event.blockHash.substr(2), 'hex');
-    this.genesisBlockHash = event.blockNumber;
-    logger.info(`Received Eth2Genesis event. blockNumber=${event.blockNumber}, time=${time}`);
+    try {
+      const depositRoot = Buffer.from(depositRootHex.substr(2), 'hex');
+      const depositCount = Buffer.from(depositCountHex.substr(2), 'hex').readUIntLE(0, 6);
+      const time: number64 = parseInt(timeHex, 16);
+      const blockHash = Buffer.from(event.blockHash.substr(2), 'hex');
+      this.genesisBlockHash = event.blockNumber;
+      logger.info(`Received Eth2Genesis event. blockNumber=${event.blockNumber}, time=${time}`);
 
-    const genesisEth1Data: Eth1Data = {
-      depositRoot,
-      blockHash,
-      depositCount,
-    };
-    const genesisDeposits = await this.genesisDeposits();
-    this.emit('eth2genesis', time, genesisDeposits, genesisEth1Data);
-    //from now on it will be kept in BeaconBlock
-    await this.db.deleteGenesisDeposits(genesisDeposits);
+      const genesisEth1Data: Eth1Data = {
+        depositRoot,
+        blockHash,
+        depositCount,
+      };
+      const genesisDeposits = await this.genesisDeposits();
+      this.emit('eth2genesis', time, genesisDeposits, genesisEth1Data);
+      //from now on it will be kept in BeaconBlock
+      await this.db.deleteGenesisDeposits(genesisDeposits);
+    } catch (e) {
+      logger.error(`Failed to process genesis log. Error: ${e.message}`);
+    }
+
   }
 
 
@@ -143,7 +157,13 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     );
     return logs.map((log) => {
       const logDescription = this.contract.interface.parseLog(log);
-      return this.createDeposit(logDescription.values.dataHex, logDescription.values.indexHex);
+      return this.createDeposit(
+        logDescription.values.pubkey,
+        logDescription.values.withdrawalCredentials,
+        logDescription.values.amount,
+        logDescription.values.signature,
+        logDescription.values.merkleTreeIndex
+      );
     });
   }
 
@@ -198,16 +218,21 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     return await this.provider.getLogs(filter);
   }
 
-  private createDeposit(dataHex: string, indexHex: string): Deposit {
-    const dataBuf = Buffer.from(dataHex.substr(2), 'hex');
-    const index = Buffer.from(indexHex.substr(2), 'hex').readUIntLE(0, 6);
-    const data: DepositData = deserialize(dataBuf, DepositData);
-    return  {
-      index: index,
-      //TODO: calculate proof
-      proof: [],
-      data
+  private createDeposit(
+    pubkey: string,
+    withdrawalCredentials: string,
+    amount: string,
+    signature: string,
+    merkleTreeIndex: string): Deposit {
+    return {
+      proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH}, () => Buffer.alloc(32)),
+      index: deserialize(Buffer.from(merkleTreeIndex.substr(2), 'hex'), number64),
+      data: {
+        pubkey: Buffer.from(pubkey.slice(2), 'hex'),
+        withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), 'hex'),
+        amount: deserialize(Buffer.from(amount.slice(2), 'hex'), number64),
+        signature: Buffer.from(signature.slice(2), 'hex'),
+      },
     };
   }
-
 }
