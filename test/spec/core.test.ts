@@ -4,19 +4,22 @@ import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
 import {deserialize, serialize, hashTreeRoot, signingRoot} from "../../src";
 import * as types from "../../../lodestar/src/types";
 
-import {hydrateType, hydrateValue, eq} from "./util";
+import {hydrateType, hydrateValue, eq, getTestType, getTestValue} from "./util";
 
 // Serialize
 
 describeSpecTest(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_static/core/ssz_mainnet_random.yaml"),
   serialize,
-  ({value, typeName}) => {
+  (testCase) => {
+    const typeName = getTestType(testCase)
+    const value = getTestValue(testCase, 'value');
     const type = hydrateType((types as any)[typeName]);
     const v = hydrateValue(value, type)
     return [v, type];
   },
-  ({serialized}) => {
+  (testCase) => {
+    const serialized = getTestValue(testCase, 'serialized');
     return serialized.slice(2)
   },
   (result) => result.toString('hex'),
@@ -27,11 +30,15 @@ describeSpecTest(
 describeSpecTest(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_static/core/ssz_mainnet_random.yaml"),
   deserialize,
-  ({serialized, typeName}) => {
+  (testCase) => {
+    const typeName = getTestType(testCase);
+    const serialized = getTestValue(testCase, 'serialized');
     const type = hydrateType((types as any)[typeName]);
     return [Buffer.from(serialized.slice(2), 'hex'), type];
   },
-  ({value, typeName}) => {
+  (testCase) => {
+    const typeName = getTestType(testCase);
+    const value = getTestValue(testCase, 'value');
     const type = hydrateType((types as any)[typeName]);
     const v = hydrateValue(value, type)
     return v;
@@ -39,7 +46,8 @@ describeSpecTest(
   (result) => result,
   () => false,
   () => false,
-  ({typeName}, expect, expected, actual) => {
+  (testCase, expect, expected, actual) => {
+    const typeName = getTestType(testCase);
     const type = hydrateType((types as any)[typeName]);
     expect(eq(type, expected, actual)).to.equal(true);
   },
@@ -50,12 +58,15 @@ describeSpecTest(
 describeSpecTest(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_static/core/ssz_mainnet_random.yaml"),
   hashTreeRoot,
-  ({value, typeName}) => {
+  (testCase) => {
+    const typeName = getTestType(testCase);
+    const value = getTestValue(testCase, 'value');
     const type = hydrateType((types as any)[typeName]);
     const v = hydrateValue(value, type)
     return [v, type];
   },
-  ({root}) => {
+  (testCase) => {
+    const root = getTestValue(testCase, 'root');
     return root.slice(2)
   },
   (result) => result.toString('hex'),
@@ -66,15 +77,18 @@ describeSpecTest(
 describeSpecTest(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_static/core/ssz_mainnet_random.yaml"),
   signingRoot,
-  ({value, typeName}) => {
+  (testCase) => {
+    const typeName = getTestType(testCase);
+    const value = getTestValue(testCase, 'value');
     const type = hydrateType((types as any)[typeName]);
     const v = hydrateValue(value, type)
     return [v, type];
   },
-  ({root}) => {
-    return root.slice(2)
+  (testCase) => {
+    const signingRoot = getTestValue(testCase, 'signingRoot');
+    return signingRoot.slice(2)
   },
   (result) => result.toString('hex'),
   () => false,
-  (testCase) => testCase.signingRoot
+  (testCase) => !getTestValue(testCase, 'signingRoot')
 );

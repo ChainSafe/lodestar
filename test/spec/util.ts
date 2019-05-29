@@ -1,3 +1,4 @@
+import camelCase from "camelcase";
 import {
   FullSSZType,
   parseType,
@@ -70,4 +71,12 @@ function _eq(type: FullSSZType, obj1: any, obj2: any): boolean {
     case Type.container:
       return type.fields.every(([fieldName, fieldType]) => _eq(fieldType, obj1[fieldName], obj2[fieldName]));
   }
+}
+
+export function getTestType(o: any): string {
+  return camelCase(Object.keys(o)[0], {pascalCase: true});
+}
+
+export function getTestValue(o: any, value: string) {
+  return Object.values(o)[0][value];
 }
