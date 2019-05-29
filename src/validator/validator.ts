@@ -136,8 +136,11 @@ class Validator {
   };
 
   private async checkDuties(slot: Slot): Promise<void> {
-    const {currentVersion, validatorDuty} =
-      await this.rpcClient.validator.getDuties(this.validatorIndex);
+    const validatorDuty =
+      (await this.rpcClient.validator.getDuties([
+        this.ctx.keypair.publicKey.toBytesCompressed()
+      ]))[0];
+    const currentVersion = await this.rpcClient.beacon.getFork();
     const isAttester = validatorDuty.attestationSlot === slot;
     const isProposer = validatorDuty.blockProductionSlot === slot;
     logger.info(

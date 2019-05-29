@@ -2,14 +2,14 @@
  * @module types
  */
 
-import {bytes48, Shard, Slot, uint64} from "./primitive";
+import {BLSPubkey, bytes48, number64, Shard, Slot, uint64} from "./primitive";
 import {SimpleContainerType} from "@chainsafe/ssz";
 
 export interface ValidatorDuty {
   // The validator's public key, uniquely identifying them
-  validatorPubkey: bytes48;
+  validatorPubkey: BLSPubkey;
   // The index of the validator in the committee
-  committeeIndex: uint64;
+  committeeIndex: number64;
   // The slot at which the validator must attest
   attestationSlot: Slot;
   // The shard in which the validator must attest
@@ -21,7 +21,7 @@ export const ValidatorDuty: SimpleContainerType = {
   name: "ValidatorDuty",
   fields: [
     ["validatorPubkey", bytes48],
-    ["committeeIndex", uint64],
+    ["committeeIndex", number64],
     ["attestationSlot", Slot],
     ["attestationShard", Shard],
     ["blockProductionSlot", Slot],

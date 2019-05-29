@@ -23,7 +23,7 @@ import {
 } from "../util";
 
 
-export default function processBlockHeader(state: BeaconState, block: BeaconBlock): void {
+export default function processBlockHeader(state: BeaconState, block: BeaconBlock, verify: boolean = true): void {
   // Verify that the slots match
   assert(block.slot === state.slot);
 
@@ -37,11 +37,13 @@ export default function processBlockHeader(state: BeaconState, block: BeaconBloc
   const proposer = state.validatorRegistry[getBeaconProposerIndex(state)];
   assert(!proposer.slashed);
 
-  // Verify proposer signature
-  assert(bls.verify(
-    proposer.pubkey,
-    signingRoot(block, BeaconBlock),
-    block.signature,
-    getDomain(state, Domain.BEACON_PROPOSER),
-  ));
+  if(verify) {
+    // Verify proposer signature
+    assert(bls.verify(
+      proposer.pubkey,
+      signingRoot(block, BeaconBlock),
+      block.signature,
+      getDomain(state, Domain.BEACON_PROPOSER),
+    ));
+  }
 }

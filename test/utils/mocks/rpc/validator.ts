@@ -7,7 +7,7 @@ import {
   Deposit,
   Epoch,
   Eth1Data,
-  Fork,
+  Fork, IndexedAttestation,
   number64,
   Shard,
   Slot,
@@ -49,9 +49,8 @@ export class MockValidatorApi implements IValidatorApi {
     return this.validatorIndex;
   }
 
-  public async getDuties(index: ValidatorIndex): Promise<{ currentVersion: Fork; validatorDuty: ValidatorDuty }> {
-    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as { currentVersion: Fork; validatorDuty: ValidatorDuty };
+  public async getDuties(validatorPublicKeys: BLSPubkey[]): Promise<ValidatorDuty[]> {
+    return [];
   }
 
   public async produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock> {
@@ -59,9 +58,9 @@ export class MockValidatorApi implements IValidatorApi {
     return {} as BeaconBlock;
   }
 
-  public async produceAttestation(slot: Slot, shard: Shard): Promise<AttestationData> {
+  public async produceAttestation(slot: Slot, shard: Shard): Promise<IndexedAttestation> {
     // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as AttestationData;
+    return {} as IndexedAttestation;
   }
 
   public async isProposer(index: ValidatorIndex, slot: Slot): Promise<boolean> {

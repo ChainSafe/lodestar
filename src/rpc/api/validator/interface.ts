@@ -4,17 +4,13 @@
 
 import {
   Attestation,
-  AttestationData,
-  BeaconBlock, BLSPubkey,
+  BeaconBlock,
+  BLSPubkey,
   bytes,
-  bytes32,
-  bytes48,
   Epoch,
-  Fork,
-  number64,
+  IndexedAttestation,
   Shard,
   Slot,
-  SyncingStatus,
   ValidatorDuty,
   ValidatorIndex
 } from "../../../types";
@@ -37,11 +33,10 @@ export interface IValidatorApi extends IApi {
    * This API call should be polled at every slot,
    * to ensure that any chain reorganisations are catered for,
    * and to ensure that the currently connected BeaconNode is properly synchronised.
-   * @returns A list of unique validator public keys, where each item is a 0x encoded hex string.
    */
   getDuties(
-    validatorIndex: ValidatorIndex
-  ): Promise<{ currentVersion: Fork; validatorDuty: ValidatorDuty }>;
+    validatorPublicKeys: BLSPubkey[]
+  ): Promise<ValidatorDuty[]>;
 
   /**
    * Requests to check if a validator should propose for a given slot.
@@ -66,7 +61,7 @@ export interface IValidatorApi extends IApi {
    * Requests that the BeaconNode produce an IndexedAttestation,
    * with a blank signature field, which the ValidatorClient will then sign.
    */
-  produceAttestation(slot: Slot, shard: Shard): Promise<AttestationData>;
+  produceAttestation(slot: Slot, shard: Shard): Promise<IndexedAttestation>;
 
   /**
    * Instructs the BeaconNode to publish a newly signed beacon block
