@@ -1,9 +1,8 @@
 /**
  * @module util/addressbool
  */
-import {bool} from "../types";
 
-export function isValidAddress(address: string): bool {
+export function isValidAddress(address: string): boolean {
   return !!address && address.startsWith('0x') && address.length === 42;
 
 }
