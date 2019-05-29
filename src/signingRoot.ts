@@ -22,7 +22,7 @@ import {
 export function signingRoot(value: any, type: AnyContainerType): Buffer {
   const _type = parseType(type);
   assert(_type.type === Type.container);
-  const truncatedType = copyType(type) as ContainerType;
+  const truncatedType = copyType(_type) as ContainerType;
   truncatedType.fields.pop();
   return hashTreeRoot(value, truncatedType);
 }
