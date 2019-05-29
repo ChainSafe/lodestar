@@ -1,5 +1,5 @@
 /**
- * @module util/addressbool
+ * @module util/address
  */
 
 export function isValidAddress(address: string): boolean {
