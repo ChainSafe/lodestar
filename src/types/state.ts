@@ -2,7 +2,8 @@
  * @module types
  */
 
-// Each type exported here contains both a compile-time type (a typescript interface) and a run-time ssz type (a javascript variable)
+// Each type exported here contains both a compile-time type (
+// a typescript interface) and a run-time ssz type (a javascript variable)
 // For more information, see ./index.ts
 import {SimpleContainerType} from "@chainsafe/ssz";
 
@@ -66,7 +67,7 @@ export interface BeaconState {
   latestStateRoots: bytes32[];
   latestActiveIndexRoots: bytes32[];
   latestSlashedBalances: Gwei[]; // Balances penalized at every withdrawal period
-  latestBlockHeader: BeaconBlockHeader; //  `latest_block_header.state_root == ZERO_HASH` temporarily
+  latestBlockHeader: BeaconBlockHeader; // `latest_block_header.state_root == ZERO_HASH` temporarily
   historicalRoots: bytes32[];
 
   // Ethereum 1.0 deposit root
