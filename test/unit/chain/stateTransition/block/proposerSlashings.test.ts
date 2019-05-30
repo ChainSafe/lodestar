@@ -132,7 +132,7 @@ describe('process block - proposer slashings', function () {
     new Array({
       length: MAX_PROPOSER_SLASHINGS + 1,
       mapFn: () => {
-        return generateEmptyProposerSlashing();
+        block.body.proposerSlashings.push(generateEmptyProposerSlashing());
       }
     });
     try {
