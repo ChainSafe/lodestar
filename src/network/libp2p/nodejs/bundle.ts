@@ -2,7 +2,7 @@
  * @module network/libp2p/nodejs
  */
 
-import libp2p from "libp2p";
+import LibP2p from "libp2p";
 import TCP from "libp2p-tcp";
 import Mplex from "libp2p-mplex";
 import Bootstrap from "libp2p-bootstrap";
@@ -16,7 +16,7 @@ export interface Libp2pOptions {
   bootnodes?: string[];
 }
 
-export class NodejsNode extends libp2p {
+export class NodejsNode extends LibP2p {
   public constructor(options: Libp2pOptions) {
     const defaults = {
       modules: {

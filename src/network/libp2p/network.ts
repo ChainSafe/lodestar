@@ -4,6 +4,7 @@
 
 import {serialize} from "@chainsafe/ssz";
 import promisify from "promisify-es6";
+import LibP2p from "libp2p";
 import * as FloodSub from "libp2p-floodsub";
 import PeerInfo from "peer-info";
 
@@ -11,27 +12,25 @@ import {Attestation, BeaconBlock, Shard} from "../../types";
 import {RpcController} from "./rpcController";
 import {INetwork, IPeer} from "../interface";
 
-const BLOCK_TOPIC = "beacon_block";
-const ATTESTATION_TOPIC = "beacon_attestation";
-const SHARD_SUBNET_COUNT = 10;
-const shardAttestationTopic = (shard: Shard): string =>
-  `shard${shard % SHARD_SUBNET_COUNT}_attestation`;
+import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "./constants";
+import {shardAttestationTopic} from "./util";
+
 
 export class Libp2pNetwork implements INetwork {
-  private libp2p;
+  private libp2p: LibP2p;
   private pubsub: FloodSub;
   private rpc: RpcController;
   private inited: Promise<void>;
 
   public constructor(conf, {libp2p}) {
     // `libp2p` can be a promise as well as a libp2p object
-    this.inited = new Promise((resolve, _) => {
+    this.inited = new Promise((resolve) => {
       Promise.resolve(libp2p).then((libp2p) => {
         this.libp2p = libp2p;
         this.pubsub = new FloodSub(libp2p);
         this.rpc = new RpcController(libp2p);
         resolve();
-      })
+      });
     });
   }
 

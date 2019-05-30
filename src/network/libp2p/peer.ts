@@ -5,7 +5,7 @@
 import PeerInfo from "peer-info";
 import Connection from "interface-connection";
 import pull from "pull-stream";
-import Pushable from "pull-pushable";
+import pushable, {Pushable} from "pull-pushable";
 import Abortable from "pull-abortable";
 
 import {
@@ -20,21 +20,20 @@ import {RpcController} from "./rpcController";
 
 export class Peer implements IPeer {
   public peerInfo: PeerInfo;
+  public latestHello: Hello | null;
+  public latestStatus: Status | null;
   private conn: Connection;
   private stream: Pushable;
   private controller: RpcController;
-  public latestHello: Hello | null;
-  public latestStatus: Status | null;
-
   private pull;
   private pullAbort;
 
-  public constructor (peerInfo, controller) {
+  public constructor (peerInfo: PeerInfo, controller: RpcController) {
     this.peerInfo = peerInfo;
     this.controller = controller;
     this.latestHello = null;
     this.latestStatus = null;
-    this.stream = new Pushable();
+    this.stream = pushable();
     this.pull = null;
     this.pullAbort = null;
   }
@@ -44,10 +43,10 @@ export class Peer implements IPeer {
       return;
     }
     if (this.pull) {
-      this.pullAbort.abort('aborted');
+      this.pullAbort.abort(new Error('aborted'));
       await this.pull;
     }
-    this.stream = new Pushable();
+    this.stream = pushable();
     this.pullAbort = Abortable();
     this.pull = new Promise((resolve) => {
       pull(
@@ -57,9 +56,10 @@ export class Peer implements IPeer {
         pull.drain(
           (data) => this.controller.onRequestResponse(this, data),
           (err) => {
-            if (err !== 'aborted') {
+            if (err && err.message !== 'aborted') {
               this.controller.onConnectionEnd(this.peerInfo);
             }
+            return true;
           },
         )
       );
@@ -94,7 +94,7 @@ export class Peer implements IPeer {
 
   public async hello(request: Hello): Promise<Hello> {
     const id = this.controller.sendRequest(this, Method.Hello, request);
-    return await this.controller.getResponse(id) as Hello;
+    return await this.controller.getResponse<Hello>(id);
   }
 
   public async goodbye(request: Goodbye): Promise<void> {
@@ -104,26 +104,26 @@ export class Peer implements IPeer {
 
   public async getStatus(request: Status): Promise<Status> {
     const id = this.controller.sendRequest(this, Method.Status, request);
-    return await this.controller.getResponse(id) as Status;
+    return await this.controller.getResponse<Status>(id);
   }
 
   public async getBeaconBlockRoots(request: BeaconBlockRootsRequest): Promise<BeaconBlockRootsResponse> {
     const id = this.controller.sendRequest(this, Method.BeaconBlockRoots, request);
-    return await this.controller.getResponse(id) as BeaconBlockRootsResponse;
+    return await this.controller.getResponse<BeaconBlockRootsResponse>(id);
   }
 
   public async getBeaconBlockHeaders(request: BeaconBlockHeadersRequest): Promise<BeaconBlockHeadersResponse> {
     const id = this.controller.sendRequest(this, Method.BeaconBlockHeaders, request);
-    return await this.controller.getResponse(id) as BeaconBlockHeadersResponse;
+    return await this.controller.getResponse<BeaconBlockHeadersResponse>(id);
   }
 
   public async getBeaconBlockBodies(request: BeaconBlockBodiesRequest): Promise<BeaconBlockBodiesResponse> {
     const id = this.controller.sendRequest(this, Method.BeaconBlockBodies, request);
-    return await this.controller.getResponse(id) as BeaconBlockBodiesResponse;
+    return await this.controller.getResponse<BeaconBlockBodiesResponse>(id);
   }
 
   public async getBeaconStates(request: BeaconStatesRequest): Promise<BeaconStatesResponse> {
     const id = this.controller.sendRequest(this, Method.BeaconStates, request);
-    return await this.controller.getResponse(id) as BeaconStatesResponse;
+    return await this.controller.getResponse<BeaconStatesResponse>(id);
   }
 }

@@ -1,3 +1,6 @@
+/**
+ * @module network
+ */
 import {BeaconBlock, Attestation, Shard, Hello, Goodbye, Status, BeaconBlockRootsRequest, BeaconBlockRootsResponse, BeaconBlockHeadersRequest, BeaconBlockHeadersResponse, BeaconBlockBodiesRequest, BeaconBlockBodiesResponse, BeaconStatesRequest, BeaconStatesResponse} from "../types";
 
 import PeerInfo from "peer-info";
