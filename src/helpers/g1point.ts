@@ -56,6 +56,7 @@ export class G1point {
 
   public static fromBytesCompressed(value: bytes48): G1point {
     assert(value.length === FP_POINT_LENGTH, `Expected g1 compressed input to have ${FP_POINT_LENGTH} bytes`);
+    value = Buffer.from(value);
     const aIn = (value[0] & (1 << 5)) != 0;
     const bIn = (value[0] & (1 << 6)) != 0;
     const cIn = (value[0] & (1 << 7)) != 0;
