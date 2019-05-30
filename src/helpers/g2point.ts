@@ -95,6 +95,7 @@ export class G2point {
 
   public static fromCompressedBytes(value: bytes96): G2point {
     assert(value.length === 2 * FP_POINT_LENGTH, 'Expected signature of 96 bytes');
+    value = Buffer.from(value);
     const xImBytes = value.slice(0, FP_POINT_LENGTH);
     const xReBytes = value.slice(FP_POINT_LENGTH);
     const aIn = (xImBytes[0] & (1 << 5)) != 0;
