@@ -51,7 +51,7 @@ export function processTransfer(state: BeaconState, transfer: Transfer): void {
   assert(
     state.validatorRegistry[transfer.sender].activationEligibilityEpoch === FAR_FUTURE_EPOCH ||
     getCurrentEpoch(state) >= state.validatorRegistry[transfer.sender].withdrawableEpoch ||
-    transfer.amount.add(transfer.fee).addn(MAX_EFFECTIVE_BALANCE)
+    transfer.amount.add(transfer.fee).add(new BN(MAX_EFFECTIVE_BALANCE))
       .lte(state.balances[transfer.sender])
   );
   // Verify that the pubkey is valid
