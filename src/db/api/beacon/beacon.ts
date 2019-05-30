@@ -12,7 +12,7 @@ import {
   ProposerSlashing,
   Slot,
   Transfer,
-  uint64,
+  uint64, ValidatorIndex,
   VoluntaryExit
 } from "../../../types";
 
@@ -217,7 +217,10 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
   }
 
   public async deleteGenesisDeposits(deposits: Deposit[]): Promise<void> {
-    await this.deleteData(Bucket.genesisDeposit, Deposit, deposits);
+    const criteria: any[] = deposits.map((deposit) => {
+      encodeKey(Bucket.genesisDeposit, deposit.index);
+    });
+    await this.db.batchDelete(criteria);
   }
 
   private async getAllData(key: Bucket, type: AnySSZType): Promise<any[]> {
@@ -234,6 +237,12 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
       criteria.push(encodeKey(key, hashTreeRoot(n, type)))
     );
     await this.db.batchDelete(criteria);
+  }
+
+  public async getValidatorIndex(publicKey: Buffer): Promise<ValidatorIndex> {
+    const state = await this.getState();
+    //TODO: cache this (hashmap)
+    return state.validatorRegistry.findIndex(value => value.pubkey === publicKey);
   }
 
 }

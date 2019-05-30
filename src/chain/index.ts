@@ -26,10 +26,10 @@ import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 export class BeaconChain extends EventEmitter {
   public chain: string;
   public genesisTime: number64;
+  public forkChoice: LMDGHOST;
   private db: BeaconDB;
   private eth1: Eth1Notifier;
   private _latestBlock: BeaconBlock;
-  private forkChoice: LMDGHOST;
 
   public constructor(opts, {db, eth1}) {
     super();

@@ -2,7 +2,8 @@
  * @module types
  */
 
-// Each type exported here contains both a compile-time type (a typescript interface) and a run-time type (a javascript variable)
+// Each type exported here contains both a compile-time type
+// (a typescript interface) and a run-time type (a javascript variable)
 // For more information, see ./index.ts
 import {SimpleContainerType} from "@chainsafe/ssz";
 
@@ -11,10 +12,7 @@ import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../constants";
 import {
   bytes,
   bytes32,
-  bytes48,
-  bytes96,
   number64,
-  uint64,
   Epoch,
   Slot,
   ValidatorIndex,

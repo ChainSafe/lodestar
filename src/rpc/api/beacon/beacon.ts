@@ -22,7 +22,7 @@ export class BeaconApi implements IBeaconApi {
 
 
   public async getClientVersion(): Promise<bytes32> {
-    return Buffer.alloc(32);
+    return Buffer.from(`lodestar-${process.env.npm_package_version}`, 'utf-8');
   }
 
   public async getFork(): Promise<Fork> {
@@ -35,8 +35,9 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
+    // TODO: change this after sync service is implemented
     // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as boolean | SyncingStatus;
+    return false;
   }
 
   public async getBeaconState(): Promise<BeaconState> {

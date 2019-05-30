@@ -34,7 +34,13 @@ export interface Eth1Notifier extends EventEmitter {
   /**
    * Process a Desposit log which has been received from the Eth 1.0 chain
    */
-  processDepositLog(dataHex: string, indexHex: string): Promise<void>;
+  processDepositLog(
+    pubkey: string,
+    withdrawalCredentials: string,
+    amount: string,
+    signature: string,
+    merkleTreeIndex: string
+  ): Promise<void>;
 
   /**
    * Process a Eth2genesis log which has been received from the Eth 1.0 chain

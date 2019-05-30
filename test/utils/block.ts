@@ -1,11 +1,12 @@
 import {BeaconBlock} from "../../src/types";
+import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 
 
 export function generateEmptyBlock(): BeaconBlock {
   return {
     slot: 0,
     previousBlockRoot: Buffer.alloc(32),
-    stateRoot: Buffer.alloc(32),
+    stateRoot: ZERO_HASH,
     body: {
       randaoReveal: Buffer.alloc(96),
       eth1Data: {
@@ -21,6 +22,6 @@ export function generateEmptyBlock(): BeaconBlock {
       voluntaryExits: [],
       transfers: [],
     },
-    signature: Buffer.alloc(96),
+    signature: EMPTY_SIGNATURE,
   };
 }

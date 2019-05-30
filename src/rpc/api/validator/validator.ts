@@ -4,13 +4,12 @@
 
 import {
   Attestation,
-  AttestationData,
   BeaconBlock,
   BeaconState,
   BLSPubkey,
-  bytes,
+  bytes96,
   Epoch,
-  Fork,
+  IndexedAttestation,
   Shard,
   Slot,
   ValidatorDuty,
@@ -19,12 +18,19 @@ import {
 import {BeaconDB} from "../../../db";
 import {BeaconChain} from "../../../chain";
 import {OpPool} from "../../../opPool";
-import ssz from "@chainsafe/ssz";
 import {IValidatorApi} from "./interface";
-import {getCommitteeAssignment, isProposerAtSlot} from "../../../chain/stateTransition/util";
+import {
+  getBeaconProposerIndex,
+  getCommitteeAssignment,
+  isProposerAtSlot
+} from "../../../chain/stateTransition/util";
 import {CommitteeAssignment} from "../../../validator/types";
+import {assembleBlock} from "../../../chain/factory/block";
+import {assembleAttestation} from "../../../chain/factory/attestation";
+import {assembleValidatorDuty} from "../../../chain/factory/duties";
 
 export class ValidatorApi implements IValidatorApi {
+
   public namespace: string;
   private chain: BeaconChain;
   private db: BeaconDB;
@@ -37,31 +43,8 @@ export class ValidatorApi implements IValidatorApi {
     this.opPool = opPool;
   }
 
-  public async getDuties(validatorIndex: ValidatorIndex): Promise<{currentVersion: Fork; validatorDuty: ValidatorDuty}> {
-    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as {currentVersion: Fork; validatorDuty: ValidatorDuty};
-  }
-
-  public async produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock> {
-    const block: BeaconBlock = {
-      body: undefined,
-      previousBlockRoot: undefined,
-      signature: undefined,
-      slot: undefined,
-      stateRoot: undefined
-    };
-    const prevBlock: BeaconBlock = await this.db.getChainHead();
-    const curState: BeaconState = await this.db.getState();
-    // Note: To calculate state_root,
-    // the validator should first run the state transition function on an unsigned block
-    // containing a stub for the state_root.
-    // It is useful to be able to run a state transition function that does not
-    // validate signatures or state root for this purpose.
-    block.slot = slot;
-    block.previousBlockRoot = ssz.hashTreeRoot(prevBlock, BeaconBlock);
-    block.stateRoot = ssz.hashTreeRoot(curState, BeaconState);
-    // TODO Eth1Data
-    return block;
+  public async produceBlock(slot: Slot, randaoReveal: bytes96): Promise<BeaconBlock> {
+    return await assembleBlock(this.db, this.opPool, slot, randaoReveal);
   }
 
   public async isProposer(index: ValidatorIndex, slot: Slot): Promise<boolean> {
@@ -69,14 +52,36 @@ export class ValidatorApi implements IValidatorApi {
     return isProposerAtSlot(state, slot, index);
   }
 
-  public async getCommitteeAssignment(index: ValidatorIndex, epoch: Epoch): Promise<CommitteeAssignment> {
+  public async getDuties(validatorPublicKeys: Buffer[]): Promise<ValidatorDuty[]> {
+    const state = await this.db.getState();
+
+    const validatorIndexes = await Promise.all(validatorPublicKeys.map(async publicKey => {
+      return  await this.db.getValidatorIndex(publicKey);
+    }));
+
+    const blockProposerIndex = getBeaconProposerIndex(state);
+
+    return validatorPublicKeys.map(
+      (validatorPublicKey, index) => {
+        const validatorIndex = validatorIndexes[index];
+        return assembleValidatorDuty(validatorPublicKey, validatorIndex, state, blockProposerIndex);
+      }
+    );
+  }
+
+  public async getCommitteeAssignment(
+    index: ValidatorIndex,
+    epoch: Epoch): Promise<CommitteeAssignment> {
     const state: BeaconState = await this.db.getState();
     return getCommitteeAssignment(state, epoch, index);
   }
 
-  public async produceAttestation(slot: Slot, shard: Shard): Promise<AttestationData> {
-    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as AttestationData;
+  public async produceAttestation(slot: Slot, shard: Shard): Promise<IndexedAttestation> {
+    const [headState, headBlock] = await Promise.all([
+      this.db.getState(),
+      this.db.getBlock(this.chain.forkChoice.head())
+    ]);
+    return await assembleAttestation(this.db, headState, headBlock, shard, slot);
   }
 
   public async publishBlock(block: BeaconBlock): Promise<void> {
@@ -88,12 +93,6 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getIndex(validatorPublicKey: BLSPubkey): Promise<ValidatorIndex> {
-    const state = await this.db.getState();
-    state.validatorRegistry.forEach((validator, index) => {
-      if(validator.pubkey === validatorPublicKey) {
-        return index;
-      }
-    });
-    return null;
+    return await this.db.getValidatorIndex(validatorPublicKey);
   }
 }
