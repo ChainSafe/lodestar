@@ -6,7 +6,7 @@ import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {deserialize} from "@chainsafe/ssz";
 
-import {bytes32, Deposit, Eth1Data, number64} from "../../types";
+import {bytes32, Deposit, Eth1Data, number64, Gwei} from "../../types";
 
 import {Eth1Notifier, Eth1Options} from "../interface";
 import logger from "../../logger";
@@ -233,11 +233,11 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     merkleTreeIndex: string): Deposit {
     return {
       proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH}, () => Buffer.alloc(32)),
-      index: deserialize(Buffer.from(merkleTreeIndex.substr(2), 'hex'), number64),
+      index: deserialize(Buffer.from(merkleTreeIndex.substr(2), 'hex'), number64) as number64,
       data: {
         pubkey: Buffer.from(pubkey.slice(2), 'hex'),
         withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), 'hex'),
-        amount: deserialize(Buffer.from(amount.slice(2), 'hex'), number64),
+        amount: deserialize(Buffer.from(amount.slice(2), 'hex'), Gwei) as Gwei,
         signature: Buffer.from(signature.slice(2), 'hex'),
       },
     };

@@ -8,6 +8,7 @@ import {deserialize, serialize, hashTreeRoot} from "@chainsafe/ssz";
 import {
   BeaconState, PendingAttestation,
   Shard, ValidatorIndex, Gwei, Crosslink, Epoch, AttestationData,
+  uint256,
 } from "../../../types";
 import {
   ZERO_HASH,
@@ -127,8 +128,8 @@ export function getWinningCrosslinkAndAttestingIndices(
       if (b.balance.gt(a.balance)) {
         return b;
       } else if (b.balance.eq(a.balance)) {
-        if (deserialize(b.crosslink.crosslinkDataRoot, "uint256")
-          .gt(deserialize(a.crosslink.crosslinkDataRoot, "uint256"))) {
+        if ((deserialize(b.crosslink.crosslinkDataRoot, uint256) as uint256)
+          .gt(deserialize(a.crosslink.crosslinkDataRoot, uint256) as uint256)) {
           return b;
         }
       }

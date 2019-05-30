@@ -21,6 +21,7 @@ export type uint16 = number;
 export type uint24 = number;
 export type number64 = number;
 export type uint64 = BN;
+export type uint256 = BN;
 export type uint384 = BN;
 
 export const bool = "bool";
@@ -36,6 +37,7 @@ export const uint16 = "uint16";
 export const uint24 = "uint24";
 export const number64 = "number64";
 export const uint64 = "uint64";
+export const uint256 = "uint256";
 export const uint384 = "uint384";
 
 // Custom types, defined for type hinting and readability

@@ -30,7 +30,7 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
 
   public async getState(): Promise<BeaconState> {
     const buf = await this.db.get(encodeKey(Bucket.chainInfo, Key.state));
-    return deserialize(buf, BeaconState);
+    return deserialize(buf, BeaconState) as unknown as BeaconState;
   }
 
   public async setState(state: BeaconState): Promise<void> {
@@ -39,7 +39,7 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
 
   public async getFinalizedState(): Promise<BeaconState> {
     const buf = await this.db.get(encodeKey(Bucket.chainInfo, Key.finalizedState));
-    return deserialize(buf, BeaconState);
+    return deserialize(buf, BeaconState) as unknown as BeaconState;
   }
 
   public async setFinalizedState(state: BeaconState): Promise<void> {
@@ -58,13 +58,13 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
 
   public async getJustifiedState(): Promise<BeaconState> {
     const buf = await this.db.get(encodeKey(Bucket.chainInfo, Key.justifiedState));
-    return deserialize(buf, BeaconState);
+    return deserialize(buf, BeaconState) as unknown as BeaconState;
   }
 
   public async getBlock(blockRoot: bytes32): Promise<BeaconBlock> {
     const buf = await this.db.get(encodeKey(Bucket.block, blockRoot));
     if(!buf) return null;
-    return deserialize(buf, BeaconBlock);
+    return deserialize(buf, BeaconBlock) as unknown as BeaconBlock;
   }
 
   public async hasBlock(blockHash: bytes32): Promise<boolean> {
@@ -83,7 +83,7 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
 
   public async getFinalizedBlock(): Promise<BeaconBlock> {
     const buf = await this.db.get(encodeKey(Bucket.chainInfo, Key.finalizedBlock));
-    return deserialize(buf, BeaconBlock);
+    return deserialize(buf, BeaconBlock) as unknown as BeaconBlock;
   }
 
   public async setFinalizedBlock(block: BeaconBlock): Promise<void> {
@@ -95,7 +95,7 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
 
   public async getJustifiedBlock(): Promise<BeaconBlock> {
     const buf = await this.db.get(encodeKey(Bucket.chainInfo, Key.justifiedBlock));
-    return deserialize(buf, BeaconBlock);
+    return deserialize(buf, BeaconBlock) as unknown as BeaconBlock;
   }
 
   public async setJustifiedBlock(block: BeaconBlock): Promise<void> {
@@ -107,7 +107,7 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
 
   public async getChainHead(): Promise<BeaconBlock> {
     const heightBuf = await this.db.get(encodeKey(Bucket.chainInfo, Key.chainHeight));
-    const height = deserialize(heightBuf, uint64);
+    const height = deserialize(heightBuf, uint64) as uint64;
     const blockRoot = await this.db.get(encodeKey(Bucket.mainChain, height));
     return await this.getBlock(blockRoot);
   }
