@@ -661,9 +661,9 @@
   dependencies:
     lodash "^4.15.0"
 
-"@polkadot/ts@^0.1.56":
-  version "0.1.56"
-  resolved "https://registry.yarnpkg.com/@polkadot/ts/-/ts-0.1.56.tgz#ffd6e9c95704a7fb90b918193b9dc5c440114b27"
+"@polkadot/ts@^0.1.57":
+  version "0.1.57"
+  resolved "https://registry.yarnpkg.com/@polkadot/ts/-/ts-0.1.57.tgz#e7853271be7bf60bfa9693393f4f360493ad4681"
 
 "@polkadot/util-crypto@^0.33.27":
   version "0.33.36"
