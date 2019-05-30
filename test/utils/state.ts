@@ -23,6 +23,7 @@ import {randBetween, randBetweenBN} from "./misc";
 import {generateValidators} from "./validator";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {generateEmptyBlock} from "./block";
+import {generateEmptyCrosslink} from "./crosslink";
 
 
 /**
@@ -75,11 +76,7 @@ interface TestBeaconState {
  * @returns {BeaconState}
  */
 export function generateState(opts?: TestBeaconState): BeaconState {
-  const initialCrosslinkRecord: Crosslink = {
-    epoch: GENESIS_EPOCH,
-    previousCrosslinkRoot: ZERO_HASH,
-    crosslinkDataRoot: ZERO_HASH,
-  };
+  const initialCrosslinkRecord: Crosslink = generateEmptyCrosslink();
 
   return {
     // MISC
