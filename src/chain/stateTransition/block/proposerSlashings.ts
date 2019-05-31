@@ -6,6 +6,7 @@ import assert from "assert";
 
 import {serialize, signingRoot} from "@chainsafe/ssz";
 
+
 import {
   BeaconBlock,
   BeaconState,

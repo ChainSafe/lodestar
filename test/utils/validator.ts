@@ -12,7 +12,7 @@ import { FAR_FUTURE_EPOCH } from "../../src/constants";
 export function generateValidator(activation?: number, exit?: number, slashed: boolean = false): Validator {
   const randNum = () =>  Math.floor(Math.random() * Math.floor(4));
   // For some reason activationEpoch was defaulting to randNum()
-  const activationEpoch = activation !== null ? activation : FAR_FUTURE_EPOCH;
+  const activationEpoch = activation ? activation : FAR_FUTURE_EPOCH;
   return {
     pubkey: Buffer.alloc(48),
     withdrawalCredentials: Buffer.alloc(65),
