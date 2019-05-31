@@ -19,7 +19,7 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
     const data = await this.db.get(
       encodeKey(Bucket.lastProposedBlock, index)
     );
-    return deserialize(data, BeaconBlock) as unknown as BeaconBlock;
+    return deserialize(data, BeaconBlock);
   }
 
   public async setBlock(index: ValidatorIndex, block: BeaconBlock): Promise<void> {
@@ -37,7 +37,7 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
       gt: encodeKey(Bucket.proposedAttestations, "" + index + options.gt),
       lt: encodeKey(Bucket.proposedAttestations, "" + index + options.lt)
     });
-    return data.map((data) => deserialize(data, Attestation) as unknown as Attestation);
+    return data.map((data) => deserialize(data, Attestation));
   }
 
   public async setAttestation(index: ValidatorIndex, attestation: Attestation): Promise<void> {

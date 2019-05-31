@@ -166,7 +166,7 @@ export class RpcController extends EventEmitter {
     const method = this.requests[id];
     if (method === undefined) { // incoming request
       try {
-        const request = deserialize(data, WireRequest) as unknown as WireRequest;
+        const request: WireRequest = deserialize(data, WireRequest);
         const decodedBody = decodeRequestBody(request.method, request.body);
         peer.onRequest(method, decodedBody);
         this.onRequest(peer, id, request.method, decodedBody);
@@ -179,7 +179,7 @@ export class RpcController extends EventEmitter {
         const {
           responseCode,
           result,
-        } = deserialize(data, WireResponse) as unknown as WireResponse;
+        }: WireResponse = deserialize(data, WireResponse);
         if (responseCode !== 0) {
           this.emit(event, new Error(`response code error ${responseCode}`), null);
         } else {

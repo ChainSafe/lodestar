@@ -103,19 +103,19 @@ export function encodeResponse(id: RequestId, method: Method, responseCode: numb
 export function decodeRequestBody(method: Method, body: Buffer): RequestBody {
   switch (method) {
     case Method.Hello:
-      return deserialize(body, Hello) as unknown as Hello;
+      return deserialize(body, Hello);
     case Method.Goodbye:
-      return deserialize(body, Goodbye) as unknown as Goodbye;
+      return deserialize(body, Goodbye);
     case Method.Status:
-      return deserialize(body, Status) as unknown as Status;
+      return deserialize(body, Status);
     case Method.BeaconBlockRoots:
-      return deserialize(body, BeaconBlockRootsRequest) as unknown as BeaconBlockRootsRequest;
+      return deserialize(body, BeaconBlockRootsRequest);
     case Method.BeaconBlockHeaders:
-      return deserialize(body, BeaconBlockHeadersRequest) as unknown as BeaconBlockHeadersRequest;
+      return deserialize(body, BeaconBlockHeadersRequest);
     case Method.BeaconBlockBodies:
-      return deserialize(body, BeaconBlockBodiesRequest) as unknown as BeaconBlockBodiesRequest;
+      return deserialize(body, BeaconBlockBodiesRequest);
     case Method.BeaconStates:
-      return deserialize(body, BeaconStatesRequest) as unknown as BeaconStatesRequest;
+      return deserialize(body, BeaconStatesRequest);
     default:
       throw new Error(`Invalid method ${method}`);
   }
@@ -124,19 +124,19 @@ export function decodeRequestBody(method: Method, body: Buffer): RequestBody {
 export function decodeResponseBody(method: Method, result: Buffer): ResponseBody {
   switch (method) {
     case Method.Hello:
-      return deserialize(result, Hello) as unknown as Hello;
+      return deserialize(result, Hello);
     case Method.Goodbye:
-      return deserialize(result, Goodbye) as unknown as Goodbye;
+      return deserialize(result, Goodbye);
     case Method.Status:
-      return deserialize(result, Status) as unknown as Status;
+      return deserialize(result, Status);
     case Method.BeaconBlockRoots:
-      return deserialize(result, BeaconBlockRootsResponse) as unknown as BeaconBlockRootsResponse;
+      return deserialize(result, BeaconBlockRootsResponse);
     case Method.BeaconBlockHeaders:
-      return deserialize(result, BeaconBlockHeadersResponse) as unknown as BeaconBlockHeadersResponse;
+      return deserialize(result, BeaconBlockHeadersResponse);
     case Method.BeaconBlockBodies:
-      return deserialize(result, BeaconBlockBodiesResponse) as unknown as BeaconBlockBodiesResponse;
+      return deserialize(result, BeaconBlockBodiesResponse);
     case Method.BeaconStates:
-      return deserialize(result, BeaconStatesResponse) as unknown as BeaconStatesResponse;
+      return deserialize(result, BeaconStatesResponse);
     default:
       throw new Error(`Invalid method ${method}`);
   }
