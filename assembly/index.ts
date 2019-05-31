@@ -1,4 +1,6 @@
 import "allocator/arena"
+import {AttestationAggregator} from "./attestationAggregator";
+import {LMDGHOST} from "../src/chain/forkChoice";
 export {memory};
 
 type Root = string;
@@ -85,4 +87,23 @@ export class Node {
       }
     }
   }
+}
+
+export class StatefulDagLMDGHOST {
+  private aggregator: AttestationAggregator;
+  private nodes: Map<Root, Node>;
+  private finalized: Node;
+  private justified: Node;
+  private synced: boolean;
+
+  public constructor() {
+    this.aggregator =
+      new AttestationAggregator((hex) => this.nodes[hex] ? this.nodes[hex].slot : null);
+    this.nodes = new Map();
+    this.finalized = <Node>{};
+    this.justified = <Node>{};
+    this.synced = true;
+  }
+
+  public addBlock(slot: Slot, blockRootBuf: )
 }
