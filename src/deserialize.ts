@@ -169,7 +169,7 @@ export function _deserialize(data: Buffer, type: FullSSZType, start: number, end
 /**
  * Deserialize, according to the SSZ spec
  */
-export function deserialize(data: Buffer, type: AnySSZType): SerializableValue {
+export function deserialize(data: Buffer, type: AnySSZType): any {
   const _type = parseType(type);
   if (!isVariableSizeType(_type)) {
     assert(fixedSize(_type) === data.length, "Incorrect data length");
