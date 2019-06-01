@@ -103,7 +103,7 @@ describe('process block - transfers', function () {
 
   it('should process exit', function () {
     const wallet = bls.generateKeyPair();
-    const validator = generateValidator(0, FAR_FUTURE_EPOCH);
+    const validator = generateValidator(1, FAR_FUTURE_EPOCH);
     validator.pubkey = wallet.publicKey.toBytesCompressed();
     const state = generateState({slot: (PERSISTENT_COMMITTEE_PERIOD + 1) * SLOTS_PER_EPOCH});
     const exit = generateEmptyVoluntaryExit();
@@ -142,7 +142,7 @@ describe('process block - transfers', function () {
 
   it('should process block exits', function () {
     const wallet = bls.generateKeyPair();
-    const validator = generateValidator(0, FAR_FUTURE_EPOCH);
+    const validator = generateValidator(1, FAR_FUTURE_EPOCH);
     validator.pubkey = wallet.publicKey.toBytesCompressed();
     const state = generateState({slot: (PERSISTENT_COMMITTEE_PERIOD + 1) * SLOTS_PER_EPOCH});
     const exit = generateEmptyVoluntaryExit();

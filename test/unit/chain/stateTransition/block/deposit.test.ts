@@ -13,7 +13,7 @@ import processDeposits, {processDeposit} from "../../../../../src/chain/stateTra
 import {generateDeposit} from "../../../../utils/deposit";
 import {signingRoot} from "@chainsafe/ssz";
 import {DepositData} from "../../../../../src/types";
-import {Domain} from "../../../../../src/constants";
+import {Domain, MAX_EFFECTIVE_BALANCE} from "../../../../../src/constants";
 import {generateValidator} from "../../../../utils/validator";
 import BN from "bn.js";
 import {generateEmptyBlock} from "../../../../utils/block";
@@ -73,16 +73,18 @@ describe('process block - deposits', function () {
     verifyMerkleTreeStub.returns(true);
     const deposit = generateDeposit(3);
     deposit.data.pubkey = wallet.publicKey.toBytesCompressed();
+    deposit.data.amount = new BN(MAX_EFFECTIVE_BALANCE)
     deposit.data.signature = wallet.privateKey.signMessage(
       signingRoot(deposit.data, DepositData),
       getDomain(state, Domain.DEPOSIT)
     ).toBytesCompressed();
     try {
       processDeposit(state, deposit);
-    } catch (e) {
       expect(verifyMerkleTreeStub.calledOnce).to.be.true;
       expect(state.validatorRegistry.length).to.be.equal(1);
       expect(state.balances.length).to.be.equal(1);
+    } catch (e) {
+      expect.fail(e.stack);
     }
   });
 

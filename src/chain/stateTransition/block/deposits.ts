@@ -66,7 +66,6 @@ export function processDeposit(state: BeaconState, deposit: Deposit): void {
     )) {
       return;
     }
-
     // Add validator and balance entries
     const validator: Validator = {
       pubkey,
@@ -77,7 +76,7 @@ export function processDeposit(state: BeaconState, deposit: Deposit): void {
       withdrawableEpoch: FAR_FUTURE_EPOCH,
       slashed: false,
       effectiveBalance: bnMin(
-        amount.sub(new BN(amount.modn(EFFECTIVE_BALANCE_INCREMENT))),
+        amount.sub(new BN(amount.mod(new BN(EFFECTIVE_BALANCE_INCREMENT)))),
         new BN(MAX_EFFECTIVE_BALANCE)),
     };
     state.validatorRegistry.push(validator);

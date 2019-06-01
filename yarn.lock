@@ -634,20 +634,20 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/amcl/-/amcl-0.1.0.tgz#8a49445402561e3dcf9d536b78e2dc225b159b22"
   integrity sha512-XzVLRxAqkkFeLA9T3ro1gn8llV3y6FIN38bRgmp5HvOJyfBprotKa6973J7BL7X566R6uztoNweK8ng40G08tw==
 
-"@chainsafe/bls-js@^0.1.1":
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bls-js/-/bls-js-0.1.1.tgz#b1824a5761b4279ab41c2b1f89cf62965320c3c8"
-  integrity sha512-ocynnP3eDfmJt4NglR+NfrVRlJ2Vd5v9w+mBSF89VugYRF6+HUCkmCmH1GJ2aDyLtdszXoLyFJwqlnHbi+cESg==
+"@chainsafe/bls-js@^0.1.4":
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bls-js/-/bls-js-0.1.4.tgz#9c2e3a653bef47ab8d3231a011ac3d309adb8054"
+  integrity sha512-IOagC6HtMfChs+CR9cZhUlbJm5o6nr4+kD+sNyeBhOfvOpAs09jgTgRKSL8qVWytdUkM9oAGKkEE337o+PWAIA==
   dependencies:
     "@chainsafe/amcl" "0.1.0"
     assert "^1.4.1"
     keccak256 "^1.0.0"
     secure-random "^1.1.1"
 
-"@chainsafe/ssz@^0.3.0":
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.3.0.tgz#50e9a1cebe185f880f298ea0af70a83fcfa2ccd8"
-  integrity sha512-08BDSm6Ec946XqsWMf57W2WBpHtCZsOShdwPVDtwtc/7W7fhed65D55PC+vhVub5lvjXpJFHSb/NXYpTmrki4w==
+"@chainsafe/ssz@^0.4.0":
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.4.0.tgz#4c49bf7d5e7ed692bdbc1b6c1598a46442272c7d"
+  integrity sha512-RzALlArPZJR8fjt7z5Fp5pULKjwNLGaL2I+lXlA9+uqQ+sJG0jH4B+PyjjIU3RhzDi15jqcj5Ka+ILsqrT3dZQ==
   dependencies:
     "@types/bn.js" "^4.11.4"
     assert "^1.4.1"
