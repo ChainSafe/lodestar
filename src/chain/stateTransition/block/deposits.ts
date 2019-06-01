@@ -66,7 +66,6 @@ export function processDeposit(state: BeaconState, deposit: Deposit): void {
     )) {
       return;
     }
-
     // Add validator and balance entries
     const validator: Validator = {
       pubkey,
@@ -77,7 +76,7 @@ export function processDeposit(state: BeaconState, deposit: Deposit): void {
       withdrawableEpoch: FAR_FUTURE_EPOCH,
       slashed: false,
       effectiveBalance: bnMin(
-        amount.sub(new BN(amount.modn(EFFECTIVE_BALANCE_INCREMENT))),
+        amount.sub(new BN(amount.mod(new BN(EFFECTIVE_BALANCE_INCREMENT)))),
         new BN(MAX_EFFECTIVE_BALANCE)),
     };
     state.validatorRegistry.push(validator);
@@ -90,6 +89,7 @@ export function processDeposit(state: BeaconState, deposit: Deposit): void {
 }
 
 export default function processDeposits(state: BeaconState, block: BeaconBlock): void {
+  // Verify that outstanding deposits are processed up to the maximum number of deposits
   assert(block.body.deposits.length ===
     Math.min(MAX_DEPOSITS, state.latestEth1Data.depositCount - state.depositIndex));
   for (const deposit of block.body.deposits) {

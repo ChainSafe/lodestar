@@ -19,7 +19,7 @@ describe("getActiveValidatorIndices", () => {
   });
   it("list of cloned validators should return all or none", () => {
     const state = generateState();
-    const activationEpoch = 0;
+    const activationEpoch = 1;
     const exitEpoch = 10;
     state.validatorRegistry = Array.from({length: 10},
       () => generateValidator(activationEpoch, exitEpoch));

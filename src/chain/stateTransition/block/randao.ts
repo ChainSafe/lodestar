@@ -32,7 +32,6 @@ import {
 export default function processRandao(state: BeaconState, block: BeaconBlock): void {
   const currentEpoch = getCurrentEpoch(state);
   const proposer = state.validatorRegistry[getBeaconProposerIndex(state)];
-
   // Verify that the provided randao value is valid
   const randaoRevealVerified = bls.verify(
     proposer.pubkey,

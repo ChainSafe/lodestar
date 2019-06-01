@@ -12,19 +12,21 @@ import {
   isActiveValidator,
   initiateValidatorExit,
 } from "../util";
+import BN from "bn.js";
 
 
 export function processRegistryUpdates(state: BeaconState): void {
   const currentEpoch = getCurrentEpoch(state);
   // Process activation eligibility and ejections
+  const maxBalance = new BN(MAX_EFFECTIVE_BALANCE);
+  const ejectionBalance = new BN(EJECTION_BALANCE);
   state.validatorRegistry.forEach((validator, index) => {
     if (validator.activationEligibilityEpoch ===
-      FAR_FUTURE_EPOCH && validator.effectiveBalance.gten(MAX_EFFECTIVE_BALANCE)) {
+      FAR_FUTURE_EPOCH && validator.effectiveBalance.gte(maxBalance)) {
       validator.activationEligibilityEpoch = currentEpoch;
     }
-
     if (isActiveValidator(validator, currentEpoch) &&
-      validator.effectiveBalance.lten(EJECTION_BALANCE)) {
+      validator.effectiveBalance.lte(ejectionBalance)) {
       initiateValidatorExit(state, index);
     }
   });

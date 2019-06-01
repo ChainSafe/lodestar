@@ -27,7 +27,7 @@ import {
   convertToIndexed,
   getBeaconProposerIndex,
   getAttestationDataSlot,
-} from "../../stateTransition/util";
+} from "../util";
 
 
 export function processAttestation(state: BeaconState, attestation: Attestation): void {
