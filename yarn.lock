@@ -633,9 +633,10 @@
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/amcl/-/amcl-0.1.0.tgz#8a49445402561e3dcf9d536b78e2dc225b159b22"
 
-"@chainsafe/bls-js@^0.1.1":
-  version "0.1.3"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bls-js/-/bls-js-0.1.3.tgz#e85702de3388b0b6c02c6c9cafbc5c229082cf54"
+"@chainsafe/bls-js@^0.1.4":
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bls-js/-/bls-js-0.1.4.tgz#9c2e3a653bef47ab8d3231a011ac3d309adb8054"
+  integrity sha512-IOagC6HtMfChs+CR9cZhUlbJm5o6nr4+kD+sNyeBhOfvOpAs09jgTgRKSL8qVWytdUkM9oAGKkEE337o+PWAIA==
   dependencies:
     "@chainsafe/amcl" "0.1.0"
     assert "^1.4.1"
