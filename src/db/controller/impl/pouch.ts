@@ -1,5 +1,5 @@
 /**
- * @module db/persistance/impl
+ * @module db/controller/impl
  */
 
 import PouchDB from "pouchdb-core";
@@ -11,7 +11,7 @@ PouchDB.plugin(MemoryAdapter);
 
 const BASE_REVISION = "1";
 
-export class PouchDbPersistance extends EventEmitter implements IDatabaseController {
+export class PouchDbController extends EventEmitter implements IDatabaseController {
 
   private db: PouchDB.Database;
 

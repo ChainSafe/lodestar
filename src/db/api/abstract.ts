@@ -1,8 +1,8 @@
-import {IDatabaseController} from "../persistance";
+import {IDatabaseController} from "../controller";
 import {Service} from "../../node";
 
 export interface DatabaseApiOptions {
-  persistance: IDatabaseController;
+  controller: IDatabaseController;
 }
 
 export abstract class DatabaseService implements Service{
@@ -10,7 +10,7 @@ export abstract class DatabaseService implements Service{
   protected db: IDatabaseController;
 
   protected constructor(opts: DatabaseApiOptions) {
-    this.db = opts.persistance;
+    this.db = opts.controller;
   }
 
   public async start(): Promise<void> {

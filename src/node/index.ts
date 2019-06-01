@@ -3,7 +3,7 @@
  */
 
 import deepmerge from "deepmerge";
-import {BeaconDB, LevelDbPersistance} from "../db";
+import {BeaconDB, LevelDbController} from "../db";
 import {EthersEth1Notifier, EthersEth1Options} from "../eth1";
 import {Libp2pNetwork, NetworkOptions, NodejsNode} from "../network";
 
@@ -66,7 +66,7 @@ class BeaconNode {
     );
 
     this.db = new BeaconDB({
-      persistance: new LevelDbPersistance(
+      controller: new LevelDbController(
         this.conf.db
       )
     });

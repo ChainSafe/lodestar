@@ -1,5 +1,5 @@
 /**
- * @module db/persistance
+ * @module db/controller
  */
 
 import {EventEmitter} from "events";

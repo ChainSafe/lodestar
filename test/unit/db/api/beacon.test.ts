@@ -3,7 +3,7 @@ import sinon from "sinon";
 import * as dbKeys from "../../../../src/db/schema";
 import {Bucket, Key} from "../../../../src/db/schema";
 import {BeaconDB} from "../../../../src/db/api";
-import {LevelDbPersistance} from "../../../../src/db/persistance";
+import {LevelDbController} from "../../../../src/db/controller";
 import {
   Attestation,
   AttesterSlashing,
@@ -36,9 +36,9 @@ describe('beacon db api', function() {
 
   beforeEach(() => {
     encodeKeyStub = sandbox.stub(dbKeys, 'encodeKey');
-    dbStub = sandbox.createStubInstance(LevelDbPersistance);
+    dbStub = sandbox.createStubInstance(LevelDbController);
     beaconDB = new BeaconDB({
-      persistance: dbStub
+      controller: dbStub
     });
   });
 
