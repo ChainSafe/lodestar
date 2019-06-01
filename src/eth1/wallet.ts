@@ -32,6 +32,7 @@ export class Eth1Wallet {
    * @param address address of deposit contract
    * @param value amount to wei to deposit on contract
    */
+
   public async createValidatorDeposit(address: string, value: BigNumber): Promise<string> {
     const amount = new BN(value.toString()).div(new BN(1000000000));
 

@@ -1,6 +1,9 @@
 {
   "presets": [
-    "@babel/env",
+    [
+      "@babel/env",
+      {"targets": {"node":"current"}}
+    ],
     "@babel/typescript"
   ],
   "plugins": [

@@ -27,7 +27,7 @@ describe('block assembly', function () {
   });
 
   it('should assemble block', async function() {
-    beaconDB.getState.resolves(generateState({slot: 1, validatorRegistry: [generateValidator()]}));
+    beaconDB.getState.resolves(generateState({slot: 1}));
     beaconDB.getChainHead.resolves(generateEmptyBlock());
     assembleBodyStub.resolves(generateEmptyBlock().body);
     try {

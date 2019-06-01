@@ -107,7 +107,7 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
 
   public async getChainHead(): Promise<BeaconBlock> {
     const heightBuf = await this.db.get(encodeKey(Bucket.chainInfo, Key.chainHeight));
-    const height = deserialize(heightBuf, uint64);
+    const height = deserialize(heightBuf, uint64) as uint64;
     const blockRoot = await this.db.get(encodeKey(Bucket.mainChain, height));
     return await this.getBlock(blockRoot);
   }
