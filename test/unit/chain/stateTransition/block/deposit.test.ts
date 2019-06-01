@@ -7,7 +7,8 @@ import {
   getTemporaryBlockHeader
 } from "../../../../../src/chain/stateTransition/util";
 import * as merkleUtil from "../../../../../src/util/merkleTree";
-import bls from "@chainsafe/bls-js";
+// @ts-ignore
+import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import processDeposits, {processDeposit} from "../../../../../src/chain/stateTransition/block/deposits";
 import {generateDeposit} from "../../../../utils/deposit";
@@ -28,10 +29,15 @@ describe('process block - deposits', function () {
     getTemporaryBlockHeaderStub = sandbox.stub(utils, "getTemporaryBlockHeader");
     getBeaconProposeIndexStub = sandbox.stub(utils, "getBeaconProposerIndex");
     verifyMerkleTreeStub = sandbox.stub(merkleUtil, 'verifyMerkleBranch');
+    blsStub = {
+      verify: sandbox.stub()
+    };
+    rewire(blsStub);
   });
 
   afterEach(() => {
     sandbox.restore();
+    restore();
   });
 
   it('should fail to process deposit - invalid merkle branch', function () {
@@ -68,21 +74,17 @@ describe('process block - deposits', function () {
   });
 
   it('should process deposit - new validator', function () {
-    const wallet = bls.generateKeyPair();
     const state = generateState({depositIndex: 3});
     verifyMerkleTreeStub.returns(true);
     const deposit = generateDeposit(3);
-    deposit.data.pubkey = wallet.publicKey.toBytesCompressed();
-    deposit.data.amount = new BN(MAX_EFFECTIVE_BALANCE)
-    deposit.data.signature = wallet.privateKey.signMessage(
-      signingRoot(deposit.data, DepositData),
-      getDomain(state, Domain.DEPOSIT)
-    ).toBytesCompressed();
+    deposit.data.amount = new BN(MAX_EFFECTIVE_BALANCE);
+    blsStub.verify.returns(true);
     try {
       processDeposit(state, deposit);
       expect(verifyMerkleTreeStub.calledOnce).to.be.true;
       expect(state.validatorRegistry.length).to.be.equal(1);
       expect(state.balances.length).to.be.equal(1);
+      expect(blsStub.verify.calledOnce).to.be.true;
     } catch (e) {
       expect.fail(e.stack);
     }

@@ -1,30 +1,35 @@
 import {generateState} from "../../../../utils/state";
 import {generateEmptyBlock} from "../../../../utils/block";
-import {Domain, EMPTY_SIGNATURE} from "../../../../../src/constants";
+import {EMPTY_SIGNATURE} from "../../../../../src/constants";
 import {expect} from "chai";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../../src/chain/stateTransition/util";
 import sinon from "sinon";
-import bls from "@chainsafe/bls-js";
+// @ts-ignore
+import {restore, rewire} from "@chainsafe/bls-js";
 import {signingRoot} from "@chainsafe/ssz";
-import {BeaconBlock, BeaconBlockHeader} from "../../../../../src/types";
+import {BeaconBlockHeader} from "../../../../../src/types";
 import processBlockHeader from "../../../../../src/chain/stateTransition/block/blockHeader";
 import {generateValidator} from "../../../../utils/validator";
-import {getDomain} from "../../../../../src/chain/stateTransition/util";
 
 describe('process block - block header', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let getTemporaryBlockHeaderStub, getBeaconProposeIndexStub;
+  let getTemporaryBlockHeaderStub, getBeaconProposeIndexStub, blsStub;
 
   beforeEach(() => {
     getTemporaryBlockHeaderStub = sandbox.stub(utils, "getTemporaryBlockHeader");
     getBeaconProposeIndexStub = sandbox.stub(utils, "getBeaconProposerIndex");
+    blsStub = {
+      verify: sandbox.stub()
+    };
+    rewire(blsStub);
   });
 
   afterEach(() => {
     sandbox.restore();
+    restore();
   });
 
   it('fail to process header - invalid slot', function () {
@@ -84,6 +89,7 @@ describe('process block - block header', function () {
       stateRoot: Buffer.alloc(10),
       blockBodyRoot: Buffer.alloc(10)
     });
+    blsStub.verify.returns(false);
     getBeaconProposeIndexStub.returns(0);
     try {
       processBlockHeader(state, block);
@@ -91,6 +97,7 @@ describe('process block - block header', function () {
     } catch (e) {
       expect(getTemporaryBlockHeaderStub.calledOnce).to.be.true;
       expect(getBeaconProposeIndexStub.calledOnceWith(state)).to.be.true;
+      expect(blsStub.verify.calledOnce).to.be.true;
     }
   });
 
@@ -119,18 +126,13 @@ describe('process block - block header', function () {
   });
 
   it('should process block - with signature verification', function () {
-    const wallet = bls.generateKeyPair();
     const validator = generateValidator();
-    validator.pubkey = wallet.publicKey.toBytesCompressed();
     const state = generateState({slot: 5});
     state.validatorRegistry.push(validator);
     const block = generateEmptyBlock();
     block.slot = 5;
     block.previousBlockRoot = signingRoot(state.latestBlockHeader, BeaconBlockHeader);
-    block.signature = wallet.privateKey.signMessage(
-      signingRoot(block, BeaconBlock),
-      getDomain(state, Domain.BEACON_PROPOSER),
-    ).toBytesCompressed();
+    blsStub.verify.returns(true);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),
       slot: 5,
@@ -140,11 +142,12 @@ describe('process block - block header', function () {
     });
     getBeaconProposeIndexStub.returns(0);
     try {
-      processBlockHeader(state, block, false);
+      processBlockHeader(state, block, true);
       expect(getTemporaryBlockHeaderStub.calledOnce).to.be.true;
       expect(getBeaconProposeIndexStub.calledOnceWith(state)).to.be.true;
+      expect(blsStub.verify.calledOnce).to.be.true;
     } catch (e) {
-      expect.fail(e.message);
+      expect.fail(e.stack);
     }
   });
 

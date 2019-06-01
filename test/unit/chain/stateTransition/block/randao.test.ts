@@ -5,9 +5,8 @@ import {Domain, LATEST_RANDAO_MIXES_LENGTH} from "../../../../../src/constants";
 import {generateValidator} from "../../../../utils/validator";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {getCurrentEpoch, getDomain} from "../../../../../src/chain/stateTransition/util";
-import bls from "@chainsafe/bls-js";
-import {hashTreeRoot} from "@chainsafe/ssz";
-import {Epoch} from "../../../../../src/types";
+// @ts-ignore
+import {restore, rewire} from "@chainsafe/bls-js";
 import {generateEmptyBlock} from "../../../../utils/block";
 import processRandao from "../../../../../src/chain/stateTransition/block/randao";
 
@@ -15,42 +14,45 @@ describe('process block - randao', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let getBeeaconProposerStub;
+  let getBeaconProposerStub, blsStub;
 
   beforeEach(() => {
-    getBeeaconProposerStub = sandbox.stub(utils, "getBeaconProposerIndex");
+    getBeaconProposerStub = sandbox.stub(utils, "getBeaconProposerIndex");
+    blsStub = {
+      verify: sandbox.stub()
+    };
+    rewire(blsStub);
   });
 
   afterEach(() => {
     sandbox.restore();
+    restore();
   });
 
   it('should fail to process - invalid randao signature', function () {
-    const state = generateState();
+    const state = generateState({validatorRegistry: [generateValidator()]});
     const block = generateEmptyBlock();
-    getBeeaconProposerStub.returns(0);
+    getBeaconProposerStub.returns(0);
+    blsStub.verify.returns(false);
     try {
       processRandao(state, block);
       expect.fail();
     } catch (e) {
-      expect(getBeeaconProposerStub.calledOnce).to.be.true;
+      expect(getBeaconProposerStub.calledOnce).to.be.true;
+      expect(blsStub.verify.calledOnce).to.be.true;
     }
   });
 
   it('should process randao', function () {
-    const wallet = bls.generateKeyPair();
     const validator = generateValidator();
-    validator.pubkey = wallet.publicKey.toBytesCompressed();
     const state = generateState({validatorRegistry: [validator]});
     const block = generateEmptyBlock();
-    getBeeaconProposerStub.returns(0);
-    block.body.randaoReveal = wallet.privateKey.signMessage(
-      hashTreeRoot(getCurrentEpoch(state), Epoch),
-      getDomain(state, Domain.RANDAO)
-    ).toBytesCompressed();
+    getBeaconProposerStub.returns(0);
+    blsStub.verify.returns(true);
     try {
       processRandao(state, block);
-      expect(getBeeaconProposerStub.calledOnce).to.be.true;
+      expect(getBeaconProposerStub.calledOnce).to.be.true;
+      expect(blsStub.verify.calledOnce).to.be.true;
       expect(state.latestRandaoMixes[getCurrentEpoch(state) % LATEST_RANDAO_MIXES_LENGTH]).to.not.be.null;
     } catch (e) {
       expect.fail(e.stack);

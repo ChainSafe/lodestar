@@ -3,16 +3,15 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {
   BLS_WITHDRAWAL_PREFIX_BYTE,
-  Domain,
   FAR_FUTURE_EPOCH,
-  MAX_EFFECTIVE_BALANCE, MIN_DEPOSIT_AMOUNT
+  MAX_EFFECTIVE_BALANCE,
+  MIN_DEPOSIT_AMOUNT
 } from "../../../../../src/constants";
 import {generateValidator} from "../../../../utils/validator";
 import * as utils from "../../../../../src/chain/stateTransition/util";
-import {getDomain, slotToEpoch} from "../../../../../src/chain/stateTransition/util";
-import bls from "@chainsafe/bls-js";
-import {signingRoot} from "@chainsafe/ssz";
-import {Transfer} from "../../../../../src/types";
+import {slotToEpoch} from "../../../../../src/chain/stateTransition/util";
+// @ts-ignore
+import {restore, rewire} from "@chainsafe/bls-js";
 import BN from "bn.js";
 import {generateEmptyTransfer} from "../../../../utils/transfer";
 import processTransfers, {processTransfer} from "../../../../../src/chain/stateTransition/block/transfers";
@@ -23,16 +22,21 @@ describe('process block - transfers', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let increaseBalanceStub, decreaseBalanceStub, getBeaconProposerIndexStub;
+  let increaseBalanceStub, decreaseBalanceStub, getBeaconProposerIndexStub, blsStub;
 
   beforeEach(() => {
     increaseBalanceStub = sandbox.stub(utils, "increaseBalance");
     decreaseBalanceStub = sandbox.stub(utils, "decreaseBalance");
     getBeaconProposerIndexStub = sandbox.stub(utils, "getBeaconProposerIndex");
+    blsStub = {
+      verify: sandbox.stub()
+    };
+    rewire(blsStub);
   });
 
   afterEach(() => {
     sandbox.restore();
+    restore();
   });
 
   it('should fail to process transfer - balance lesser than amount', function () {
@@ -145,19 +149,18 @@ describe('process block - transfers', function () {
     transfer.fee = new BN(2);
     transfer.slot = 1;
     transfer.pubkey = validator.pubkey;
+    blsStub.verify.returns(false);
     try {
       processTransfer(state, transfer);
       expect.fail();
     } catch (e) {
-
+      expect(blsStub.verify.calledOnce).to.be.true;
     }
   });
 
   it('should fail to process transfer - sender balance is dust', function () {
-    const wallet = bls.generateKeyPair();
     const validator = generateValidator();
     validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
-    validator.pubkey = wallet.publicKey.toBytesCompressed();
     validator.withdrawableEpoch = slotToEpoch(1);
     validator.withdrawalCredentials = Buffer.concat([BLS_WITHDRAWAL_PREFIX_BYTE, hash(validator.pubkey).slice(1)]);
     const state = generateState({
@@ -169,14 +172,11 @@ describe('process block - transfers', function () {
     transfer.fee = new BN(2);
     transfer.slot = 1;
     transfer.pubkey = validator.pubkey;
-    transfer.signature = wallet.privateKey.signMessage(
-      signingRoot(transfer, Transfer),
-      getDomain(state, Domain.TRANSFER, slotToEpoch(transfer.slot))
-    ).toBytesCompressed();
     getBeaconProposerIndexStub.returns(0);
     decreaseBalanceStub.callsFake((_, index) => {
       state.balances[index] = new BN(0);
     });
+    blsStub.verify.returns(true);
     try {
       processTransfer(state, transfer);
       expect.fail();
@@ -184,14 +184,13 @@ describe('process block - transfers', function () {
       expect(getBeaconProposerIndexStub.calledOnce).to.be.true;
       expect(decreaseBalanceStub.calledOnce).to.be.true;
       expect(increaseBalanceStub.calledTwice).to.be.true;
+      expect(blsStub.verify.calledOnce).to.be.true;
     }
   });
 
   it('should fail to process transfer - recipient balance is dust', function () {
-    const wallet = bls.generateKeyPair();
     const validator = generateValidator();
     validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
-    validator.pubkey = wallet.publicKey.toBytesCompressed();
     validator.withdrawableEpoch = slotToEpoch(1);
     validator.withdrawalCredentials = Buffer.concat([BLS_WITHDRAWAL_PREFIX_BYTE, hash(validator.pubkey).slice(1)]);
     const state = generateState({
@@ -204,26 +203,22 @@ describe('process block - transfers', function () {
     transfer.slot = 1;
     transfer.pubkey = validator.pubkey;
     transfer.recipient = 1;
-    transfer.signature = wallet.privateKey.signMessage(
-      signingRoot(transfer, Transfer),
-      getDomain(state, Domain.TRANSFER, slotToEpoch(transfer.slot))
-    ).toBytesCompressed();
+    blsStub.verify.returns(true);
     getBeaconProposerIndexStub.returns(0);
     try {
       processTransfer(state, transfer);
       expect.fail();
     } catch (e) {
       expect(getBeaconProposerIndexStub.calledOnce).to.be.true;
+      expect(blsStub.verify.calledOnce).to.be.true;
       expect(decreaseBalanceStub.calledOnce).to.be.true;
       expect(increaseBalanceStub.calledTwice).to.be.true;
     }
   });
 
   it('should process transfer', function () {
-    const wallet = bls.generateKeyPair();
     const validator = generateValidator();
     validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
-    validator.pubkey = wallet.publicKey.toBytesCompressed();
     validator.withdrawableEpoch = slotToEpoch(1);
     validator.withdrawalCredentials = Buffer.concat([BLS_WITHDRAWAL_PREFIX_BYTE, hash(validator.pubkey).slice(1)]);
     const state = generateState({
@@ -236,14 +231,12 @@ describe('process block - transfers', function () {
     transfer.slot = 1;
     transfer.pubkey = validator.pubkey;
     transfer.recipient = 1;
-    transfer.signature = wallet.privateKey.signMessage(
-      signingRoot(transfer, Transfer),
-      getDomain(state, Domain.TRANSFER, slotToEpoch(transfer.slot))
-    ).toBytesCompressed();
+    blsStub.verify.returns(true);
     getBeaconProposerIndexStub.returns(0);
     try {
       processTransfer(state, transfer);
       expect(getBeaconProposerIndexStub.calledOnce).to.be.true;
+      expect(blsStub.verify.calledOnce).to.be.true;
       expect(decreaseBalanceStub.calledOnce).to.be.true;
       expect(increaseBalanceStub.calledTwice).to.be.true;
     } catch (e) {

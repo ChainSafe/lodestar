@@ -11,26 +11,32 @@ import {
 import {generateValidator} from "../../../../utils/validator";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {getDomain, initiateValidatorExit} from "../../../../../src/chain/stateTransition/util";
-import bls from "@chainsafe/bls-js";
+// @ts-ignore
+import {restore, rewire} from "@chainsafe/bls-js";
 import {signingRoot} from "@chainsafe/ssz";
 import {VoluntaryExit} from "../../../../../src/types";
 import processVoluntaryExits, {processVoluntaryExit} from "../../../../../src/chain/stateTransition/block/voluntaryExits";
 import {generateEmptyVoluntaryExit} from "../../../../utils/voluntaryExits";
 import {generateEmptyBlock} from "../../../../utils/block";
 
-describe('process block - transfers', function () {
+describe('process block - voluntary exits', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let isActiveValidatorStub, initiateValidatorExitStub;
+  let isActiveValidatorStub, initiateValidatorExitStub, blsStub;
 
   beforeEach(() => {
     isActiveValidatorStub = sandbox.stub(utils, "isActiveValidator");
     initiateValidatorExitStub = sandbox.stub(utils, "initiateValidatorExit");
+    blsStub = {
+      verify: sandbox.stub()
+    };
+    rewire(blsStub);
   });
 
   afterEach(() => {
     sandbox.restore();
+    restore();
   });
 
   it('should fail - validator not active', function () {
@@ -93,31 +99,29 @@ describe('process block - transfers', function () {
     exit.epoch = 0;
     state.validatorRegistry.push(generateValidator(0, FAR_FUTURE_EPOCH));
     isActiveValidatorStub.returns(true);
+    blsStub.verify.returns(false);
     try {
       processVoluntaryExit(state, exit);
       expect.fail();
     } catch (e) {
       expect(isActiveValidatorStub.calledOnce).to.be.true;
+      expect(blsStub.verify.calledOnce).to.be.true;
     }
   });
 
   it('should process exit', function () {
-    const wallet = bls.generateKeyPair();
     const validator = generateValidator(1, FAR_FUTURE_EPOCH);
-    validator.pubkey = wallet.publicKey.toBytesCompressed();
     const state = generateState({slot: (PERSISTENT_COMMITTEE_PERIOD + 1) * SLOTS_PER_EPOCH});
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = 0;
-    exit.signature = wallet.privateKey.signMessage(
-      signingRoot(exit, VoluntaryExit),
-      getDomain(state, Domain.VOLUNTARY_EXIT, exit.epoch)
-    ).toBytesCompressed();
+    blsStub.verify.returns(true);
     state.validatorRegistry.push(validator);
     isActiveValidatorStub.returns(true);
     try {
       processVoluntaryExit(state, exit);
       expect(isActiveValidatorStub.calledOnce).to.be.true;
       expect(initiateValidatorExitStub.calledOnce).to.be.true;
+      expect(blsStub.verify.calledOnce).to.be.true;
     } catch (e) {
       expect.fail(e.stack);
     }
@@ -141,24 +145,20 @@ describe('process block - transfers', function () {
 
 
   it('should process block exits', function () {
-    const wallet = bls.generateKeyPair();
     const validator = generateValidator(1, FAR_FUTURE_EPOCH);
-    validator.pubkey = wallet.publicKey.toBytesCompressed();
     const state = generateState({slot: (PERSISTENT_COMMITTEE_PERIOD + 1) * SLOTS_PER_EPOCH});
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = 0;
-    exit.signature = wallet.privateKey.signMessage(
-      signingRoot(exit, VoluntaryExit),
-      getDomain(state, Domain.VOLUNTARY_EXIT, exit.epoch)
-    ).toBytesCompressed();
     state.validatorRegistry.push(validator);
     isActiveValidatorStub.returns(true);
     const block = generateEmptyBlock();
+    blsStub.verify.returns(true);
     block.body.voluntaryExits.push(exit);
     try {
       processVoluntaryExits(state, block);
       expect(isActiveValidatorStub.calledOnce).to.be.true;
       expect(initiateValidatorExitStub.calledOnce).to.be.true;
+      expect(blsStub.verify.calledOnce).to.be.true;
     } catch (e) {
       expect.fail(e.stack);
     }

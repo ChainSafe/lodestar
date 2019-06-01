@@ -1,30 +1,33 @@
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
-import {Domain, MAX_PROPOSER_SLASHINGS, SLOTS_PER_EPOCH} from "../../../../../src/constants";
+import {MAX_PROPOSER_SLASHINGS, SLOTS_PER_EPOCH} from "../../../../../src/constants";
 import {generateValidator} from "../../../../utils/validator";
 import {generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import processProposerSlashings, {processProposerSlashing} from "../../../../../src/chain/stateTransition/block/proposerSlashings";
 import * as utils from "../../../../../src/chain/stateTransition/util";
-import {getDomainFromFork, slotToEpoch} from "../../../../../src/chain/stateTransition/util";
-import bls from "@chainsafe/bls-js";
-import {signingRoot} from "@chainsafe/ssz";
-import {BeaconBlockHeader} from "../../../../../src/types";
+// @ts-ignore
+import {restore, rewire} from "@chainsafe/bls-js";
 import {generateEmptyBlock} from "../../../../utils/block";
 
 describe('process block - proposer slashings', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let isSlashableValidatorStub, slashValidatorStub;
+  let isSlashableValidatorStub, slashValidatorStub, blsStub;
 
   beforeEach(() => {
     isSlashableValidatorStub = sandbox.stub(utils, "isSlashableValidator");
     slashValidatorStub = sandbox.stub(utils, "slashValidator");
+    blsStub = {
+      verify: sandbox.stub()
+    };
+    rewire(blsStub);
   });
 
   afterEach(() => {
     sandbox.restore();
+    restore();
   });
 
   it('should fail to process - different epoch', function () {
@@ -71,56 +74,53 @@ describe('process block - proposer slashings', function () {
     proposerSlashing.header1.slot = 1;
     proposerSlashing.header2.slot = 2;
     isSlashableValidatorStub.returns(true);
+    blsStub.verify.returns(false);
     try {
       processProposerSlashing(state, proposerSlashing);
       expect.fail();
     } catch (e) {
+      expect(blsStub.verify.calledOnce).to.be.true;
       expect(isSlashableValidatorStub.calledOnce).to.be.true;
     }
   });
 
   it('should fail to process - invalid signature 2', function () {
-    const wallet = bls.generateKeyPair();
     const validator = generateValidator();
-    validator.pubkey = wallet.publicKey.toBytesCompressed();
     const state = generateState({validatorRegistry: [validator]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
+    proposerSlashing.header1.signature = Buffer.alloc(96, 1);
     proposerSlashing.header2.slot = 2;
+    proposerSlashing.header2.signature = Buffer.alloc(96, 2);
     isSlashableValidatorStub.returns(true);
-    wallet.privateKey.signMessage(
-      signingRoot(proposerSlashing.header1, BeaconBlockHeader),
-      getDomainFromFork(state.fork, Domain.BEACON_PROPOSER, slotToEpoch(proposerSlashing.header1.slot))
-    );
+    blsStub.verify
+      .withArgs(sinon.match.any, sinon.match.any, proposerSlashing.header1.signature, sinon.match.any)
+      .returns(true);
+    blsStub.verify
+      .withArgs(sinon.match.any, sinon.match.any, proposerSlashing.header2.signature, sinon.match.any)
+      .returns(false);
     try {
       processProposerSlashing(state, proposerSlashing);
       expect.fail();
     } catch (e) {
+      expect(blsStub.verify.calledTwice).to.be.true;
       expect(isSlashableValidatorStub.calledOnce).to.be.true;
     }
   });
 
   it('should process', function () {
-    const wallet = bls.generateKeyPair();
     const validator = generateValidator();
-    validator.pubkey = wallet.publicKey.toBytesCompressed();
     const state = generateState({validatorRegistry: [validator]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
     proposerSlashing.header2.slot = 2;
     isSlashableValidatorStub.returns(true);
-    proposerSlashing.header1.signature = wallet.privateKey.signMessage(
-      signingRoot(proposerSlashing.header1, BeaconBlockHeader),
-      getDomainFromFork(state.fork, slotToEpoch(proposerSlashing.header1.slot), Domain.BEACON_PROPOSER)
-    ).toBytesCompressed();
-    proposerSlashing.header2.signature = wallet.privateKey.signMessage(
-      signingRoot(proposerSlashing.header2, BeaconBlockHeader),
-      getDomainFromFork(state.fork, slotToEpoch(proposerSlashing.header2.slot), Domain.BEACON_PROPOSER)
-    ).toBytesCompressed();
+    blsStub.verify.returns(true);
     try {
       processProposerSlashing(state, proposerSlashing);
       expect(isSlashableValidatorStub.calledOnce).to.be.true;
       expect(slashValidatorStub.calledOnce).to.be.true;
+      expect(blsStub.verify.calledTwice).to.be.true;
     } catch (e) {
       expect.fail(e.stack);
     }
@@ -144,28 +144,20 @@ describe('process block - proposer slashings', function () {
   });
 
   it('should process from block', function () {
-    const wallet = bls.generateKeyPair();
     const validator = generateValidator();
-    validator.pubkey = wallet.publicKey.toBytesCompressed();
     const state = generateState({validatorRegistry: [validator]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
     proposerSlashing.header2.slot = 2;
     isSlashableValidatorStub.returns(true);
-    proposerSlashing.header1.signature = wallet.privateKey.signMessage(
-      signingRoot(proposerSlashing.header1, BeaconBlockHeader),
-      getDomainFromFork(state.fork, slotToEpoch(proposerSlashing.header1.slot), Domain.BEACON_PROPOSER)
-    ).toBytesCompressed();
-    proposerSlashing.header2.signature = wallet.privateKey.signMessage(
-      signingRoot(proposerSlashing.header2, BeaconBlockHeader),
-      getDomainFromFork(state.fork, slotToEpoch(proposerSlashing.header2.slot), Domain.BEACON_PROPOSER)
-    ).toBytesCompressed();
     const block = generateEmptyBlock();
+    blsStub.verify.returns(true);
     block.body.proposerSlashings.push(proposerSlashing);
     try {
       processProposerSlashings(state, block);
       expect(isSlashableValidatorStub.calledOnce).to.be.true;
       expect(slashValidatorStub.calledOnce).to.be.true;
+      expect(blsStub.verify.calledTwice).to.be.true;
     } catch (e) {
       expect.fail(e.stack);
     }
