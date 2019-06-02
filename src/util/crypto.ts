@@ -3,8 +3,8 @@
  */
 
 import {bytes, bytes32,} from "../types";
-import {sha256} from "js-sha256";
+import {hash as hash256} from "@chainsafe/ssz/lib/util/hash";
 
 export function hash(value: bytes): bytes32 {
-  return Buffer.from(sha256.arrayBuffer(value));
+  return hash256(value);
 }
