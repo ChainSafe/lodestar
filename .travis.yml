@@ -19,6 +19,9 @@ jobs:
     -
       name: e2e
       script: yarn run test:e2e
+    -
+      name: spec
+      script: yarn run test:spec
 
 before_deploy: yarnr run build:docs
 
