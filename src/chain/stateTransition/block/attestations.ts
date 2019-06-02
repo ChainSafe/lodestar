@@ -30,7 +30,7 @@ import {
 } from "../util";
 
 
-export function processAttestation(state: BeaconState, attestation: Attestation): void {
+export function processAttestation(state: BeaconState, attestation: Attestation): BeaconState {
   const currentEpoch = getCurrentEpoch(state);
   const previousEpoch = getPreviousEpoch(state);
   const data = attestation.data;
@@ -72,6 +72,7 @@ export function processAttestation(state: BeaconState, attestation: Attestation)
   } else {
     state.previousEpochAttestations.push(pendingAttestation);
   }
+  return state;
 }
 
 export default function processAttestations(state: BeaconState, block: BeaconBlock): void {
