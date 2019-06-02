@@ -1,12 +1,27 @@
 language: node_js
 node_js:
   - "lts/*"
-cache: yarn
-script:
-  - yarn run lint
-  - yarn test
-  - yarn run coverage
-  - yarn build:docs
+
+cache:
+  yarn: true
+  directories:
+    - node_modules
+
+jobs:
+  include:
+    - stage: Lint and Check types
+      name: Check types
+      script: yarn run check-types & yarn run lint
+
+    - stage: Tests
+      name: Unit
+      script: yarn run test:unit && yarn run codecov
+    -
+      name: e2e
+      script: yarn run test:e2e
+
+before_deploy: yarnr run build:docs
+
 deploy:
   provider: pages
   skip_cleanup: true
