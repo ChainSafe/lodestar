@@ -60,11 +60,14 @@ function aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
  * @param publicKeys
  */
 function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
+  if(publicKeys.length === 0) {
+    return new G1point(new ctx.ECP()).toBytesCompressed();
+  }
   return publicKeys.map((publicKey): G1point => {
     return G1point.fromBytesCompressed(publicKey)
   }).reduce((previousValue, currentValue): G1point => {
     return previousValue.add(currentValue);
-  }, new G1point(new ctx.ECP())).toBytesCompressed();
+  }).toBytesCompressed();
 }
 
 /**
