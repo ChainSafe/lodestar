@@ -25,10 +25,10 @@ export const EFFECTIVE_BALANCE_INCREMENT = 2 ** 0 * 1e9; // 1,000,000,000 Gwei
 export const GENESIS_SLOT = 0;
 export const GENESIS_EPOCH = 0;
 export const FAR_FUTURE_EPOCH = Infinity;
-export const ZERO_HASH = Buffer.alloc(32);
-export const BLS_WITHDRAWAL_PREFIX_BYTE = Buffer.alloc(1);
-export const EMPTY_SIGNATURE = Buffer.alloc(96);
-export const GENESIS_FORK_VERSION = Buffer.alloc(4);
+export const ZERO_HASH = Buffer.alloc(32, 0);
+export const BLS_WITHDRAWAL_PREFIX_BYTE = Buffer.alloc(1, 0);
+export const EMPTY_SIGNATURE = Buffer.alloc(96, 0);
+export const GENESIS_FORK_VERSION = Buffer.alloc(4, 0);
 export const GENESIS_START_SHARD = 0;
 
 // Time parameters

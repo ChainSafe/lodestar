@@ -36,11 +36,11 @@ export function generateValidators(n: number): Validator[] {
 
 export function validatorFromYaml(value: any): Validator {
   return {
-    pubkey: Buffer.from(value.pubkey.replace('0x', ''), 'hex'),
-    withdrawalCredentials: Buffer.from(value.withdrawalCredentials.replace('0x', ''), 'hex'),
-    activationEpoch: value.activationEpoch.toNumber(),
-    activationEligibilityEpoch: value.activationEligibilityEpoch.toNumber(),
-    exitEpoch: (value.exitEpoch as BN).bitLength() >= 53 ? FAR_FUTURE_EPOCH : value.exitEpoch.toNumber(),
+    pubkey: Buffer.from(value.pubkey.slice(2), 'hex'),
+    withdrawalCredentials: Buffer.from(value.withdrawalCredentials.slice(2), 'hex'),
+    activationEpoch: (value.activationEpoch as BN).bitLength() >= 52 ? FAR_FUTURE_EPOCH : value.activationEpoch.toNumber(),
+    activationEligibilityEpoch: (value.activationEligibilityEpoch as BN).bitLength() >= 52 ? FAR_FUTURE_EPOCH : value.activationEligibilityEpoch.toNumber(),
+    exitEpoch: (value.exitEpoch as BN).bitLength() >= 52 ? FAR_FUTURE_EPOCH : value.exitEpoch.toNumber(),
     withdrawableEpoch: ((value.withdrawableEpoch as BN).bitLength() > 52) ? FAR_FUTURE_EPOCH : value.withdrawableEpoch.toNumber(),
     slashed: value.slashed,
     effectiveBalance: value.effectiveBalance,

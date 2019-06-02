@@ -212,8 +212,8 @@ export function stateFromYaml(value: any): BeaconState {
     slot: value.slot.toNumber(),
     genesisTime: value.genesisTime.toNumber(),
     fork: {
-      previousVersion: Buffer.from(value.fork.previousVersion.replace('0x', ''), 'hex'),
-      currentVersion: Buffer.from(value.fork.currentVersion.replace('0x', ''), 'hex'),
+      previousVersion: Buffer.from(value.fork.previousVersion.slice(2), 'hex'),
+      currentVersion: Buffer.from(value.fork.currentVersion.slice(2), 'hex'),
       epoch: value.fork.epoch.toNumber(),
     },
     // Validator registry

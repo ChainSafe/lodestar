@@ -18,12 +18,12 @@ export function generateEmptyTransfer(): Transfer {
 
 export function transfersFromYaml(value: any): Transfer {
   return {
-    amount: undefined,
-    fee: undefined,
-    pubkey: undefined,
-    recipient: undefined,
-    sender: undefined,
-    signature: undefined,
-    slot: undefined
+    amount: value.amount,
+    fee: value.fee,
+    pubkey: Buffer.from(value.pubkey.slice(2), 'hex'),
+    recipient: value.recipient.toNumber(),
+    sender: value.sender.toNumber(),
+    signature: Buffer.from(value.signature.slice(2), 'hex'),
+    slot: value.slot.toNumber(),
   };
 }
