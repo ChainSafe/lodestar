@@ -20,3 +20,9 @@ export function generateDeposit(index: number): Deposit {
     }
   };
 }
+
+export function depositsFromYaml(value: any): Deposit {
+  return {
+    data: undefined, index: undefined, proof: []
+  };
+}
