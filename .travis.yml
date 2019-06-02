@@ -23,7 +23,7 @@ jobs:
       name: spec
       script: yarn run test:spec
 
-before_deploy: yarnr run build:docs
+before_deploy: yarn run build:docs
 
 deploy:
   provider: pages
