@@ -1,0 +1,3 @@
+[submodule "test/spec/test-cases"]
+	path = test/spec/test-cases
+	url = https://github.com/ethereum/eth2.0-spec-tests.git

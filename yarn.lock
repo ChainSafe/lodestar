@@ -643,6 +643,16 @@
     keccak256 "^1.0.0"
     secure-random "^1.1.1"
 
+"@chainsafe/eth2.0-spec-test-util@^0.3.0":
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/eth2.0-spec-test-util/-/eth2.0-spec-test-util-0.3.0.tgz#6d53539400c7cad87c417a91d40c677a21a0193f"
+  integrity sha512-0c5w+8M1392Q4zTAsq64q6qqo1cCvbhrogmTlZ5fNYZqXaL5a4KpC62SaEqGtY7/IWBuE2joEd3PcdGoJ/K9GQ==
+  dependencies:
+    bn.js "^4.11.8"
+    camelcase "^5.3.1"
+    chai "^4.2.0"
+    js-yaml "^3.13.1"
+
 "@chainsafe/ssz@^0.4.0":
   version "0.4.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.4.0.tgz#4c49bf7d5e7ed692bdbc1b6c1598a46442272c7d"
@@ -2092,7 +2102,7 @@ callsites@^3.0.0:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/callsites/-/callsites-3.1.0.tgz#b3630abd8943432f54b3f0519238e33cd7df2f73"
 
-camelcase@^5.0.0:
+camelcase@^5.0.0, camelcase@^5.3.1:
   version "5.3.1"
   resolved "https://registry.yarnpkg.com/camelcase/-/camelcase-5.3.1.tgz#e3c9b31569e106811df242f715725a1f4c494320"
 

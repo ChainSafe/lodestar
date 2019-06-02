@@ -20,10 +20,12 @@ import {GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD, 
   LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH, SHARD_COUNT, ZERO_HASH, SLOTS_PER_HISTORICAL_ROOT} from "../../src/constants";
 import { intToBytes } from "../../src/util/bytes";
 import {randBetween, randBetweenBN} from "./misc";
-import {generateValidators} from "./validator";
+import {generateValidators, validatorFromYaml} from "./validator";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {generateEmptyBlock} from "./block";
-import {generateEmptyCrosslink} from "./crosslink";
+import {crosslinkFromYaml, generateEmptyCrosslink} from "./crosslink";
+import {eth1DataFromYaml} from "./eth1Data";
+import {pendingAttestationFromYaml} from "./attestation";
 
 
 /**
@@ -201,5 +203,56 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
     eth1DataVotes: [],
     depositIndex: 0,
     ...opts,
+  };
+}
+
+export function stateFromYaml(value: any): BeaconState {
+  return {
+    // MISC
+    slot: value.slot.toNumber(),
+    genesisTime: value.genesisTime.toNumber(),
+    fork: {
+      previousVersion: Buffer.from(value.fork.previousVersion.replace('0x', ''), 'hex'),
+      currentVersion: Buffer.from(value.fork.currentVersion.replace('0x', ''), 'hex'),
+      epoch: value.fork.epoch.toNumber(),
+    },
+    // Validator registry
+    validatorRegistry: value.validatorRegistry.map(validatorFromYaml),
+    balances: value.balances,
+
+    // Randomness and committees
+    latestRandaoMixes: value.latestRandaoMixes.map((value) => Buffer.from(value.replace('0x', ''), 'hex')),
+    latestStartShard: value.latestStartShard.toNumber(),
+
+    // Finality
+    previousEpochAttestations: value.previousEpochAttestations.map(pendingAttestationFromYaml),
+    currentEpochAttestations: value.previousEpochAttestations.map(pendingAttestationFromYaml),
+    previousJustifiedEpoch: value.previousJustifiedEpoch.toNumber(),
+    currentJustifiedEpoch: value.currentJustifiedEpoch.toNumber(),
+    previousJustifiedRoot: Buffer.from(value.previousJustifiedRoot.slice(2), 'hex'),
+    currentJustifiedRoot: Buffer.from(value.currentJustifiedRoot.slice(2), 'hex'),
+    justificationBitfield: value.justificationBitfield,
+    finalizedEpoch: value.finalizedEpoch.toNumber(),
+    finalizedRoot: Buffer.from(value.finalizedRoot.slice(2), 'hex'),
+
+    currentCrosslinks: value.currentCrosslinks.map(crosslinkFromYaml),
+    previousCrosslinks: value.previousCrosslinks.map(crosslinkFromYaml),
+    latestBlockRoots: value.latestBlockRoots.map(value => Buffer.from(value.slice(2), 'hex')),
+    latestStateRoots: value.latestStateRoots.map(value => Buffer.from(value.slice(2), 'hex')),
+    latestActiveIndexRoots: value.latestActiveIndexRoots.map(value => Buffer.from(value.slice(2), 'hex')),
+    latestSlashedBalances: value.latestSlashedBalances,
+    latestBlockHeader: {
+      slot: value.latestBlockHeader.slot.toNumber(),
+      previousBlockRoot: Buffer.from(value.latestBlockHeader.previousBlockRoot.slice(2), 'hex'),
+      stateRoot: Buffer.from(value.latestBlockHeader.stateRoot.slice(2), 'hex'),
+      blockBodyRoot: Buffer.from(value.latestBlockHeader.blockBodyRoot.slice(2), 'hex'),
+      signature: Buffer.from(value.latestBlockHeader.signature.slice(2), 'hex'),
+    },
+    historicalRoots: value.historicalRoots.map(value => Buffer.from(value.slice(2), 'hex')),
+
+    // PoW receipt root
+    latestEth1Data: eth1DataFromYaml(value.latestEth1Data),
+    eth1DataVotes: value.eth1DataVotes.map(eth1DataFromYaml),
+    depositIndex: value.depositIndex.toNumber(),
   };
 }

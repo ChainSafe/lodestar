@@ -36,7 +36,7 @@ export function processFinalUpdates(state: BeaconState): void {
     // TODO probably unsafe
     const HALF_INCREMENT = intDiv(EFFECTIVE_BALANCE_INCREMENT, 2);
     if (balance.lt(validator.effectiveBalance) || validator.effectiveBalance
-      .addn(3 * HALF_INCREMENT).lt(balance)) {
+      .add(new BN(HALF_INCREMENT).muln(3)).lt(balance)) {
       validator.effectiveBalance = bnMin(
         balance.sub(new BN(balance.modn(EFFECTIVE_BALANCE_INCREMENT))),
         new BN(MAX_EFFECTIVE_BALANCE));

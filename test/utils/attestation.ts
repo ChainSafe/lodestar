@@ -1,4 +1,4 @@
-import {Attestation, AttestationData, Epoch} from "../../src/types";
+import {Attestation, AttestationData, Epoch, PendingAttestation} from "../../src/types";
 import {randBetween} from "./misc";
 
 /**
@@ -35,5 +35,23 @@ export function generateEmptyAttestation(): Attestation {
     },
     custodyBitfield: Buffer.alloc(32),
     signature: Buffer.alloc(96),
+  };
+}
+
+export function pendingAttestationFromYaml(value: any): PendingAttestation {
+  return {
+    aggregationBitfield: Buffer.from(value.aggregationBitfield.slice(2), 'hex'),
+    data: {
+      targetEpoch: value.data.targetEpoch.toNumber(),
+      beaconBlockRoot: Buffer.from(value.data.beaconBlockRoot.slice(2), 'hex'),
+      targetRoot: Buffer.from(value.data.targetRoot.slice(2), 'hex'),
+      sourceEpoch: value.data.sourceEpoch.toNumber(),
+      previousCrosslinkRoot: Buffer.from(value.data.previousCrosslinkRoot.slice(2), 'hex'),
+      sourceRoot: Buffer.from(value.data.sourceRoot.slice(2), 'hex'),
+      shard: value.data.shard.toNumber(),
+      crosslinkDataRoot: Buffer.from(value.data.crosslinkDataRoot.slice(2), 'hex')
+    },
+    inclusionDelay: value.inclusionDelay.toNumber(),
+    proposerIndex: value.proposerIndex.toNumber()
   };
 }

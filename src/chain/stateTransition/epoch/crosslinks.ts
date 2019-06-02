@@ -16,7 +16,7 @@ import {getWinningCrosslinkAndAttestingIndices} from "./util";
 import {SHARD_COUNT} from "../../../constants";
 
 
-export function processCrosslinks(state: BeaconState): void {
+export function processCrosslinks(state: BeaconState): BeaconState {
   state.previousCrosslinks = state.currentCrosslinks.slice();
 
   const currentEpoch = getCurrentEpoch(state);
@@ -34,4 +34,5 @@ export function processCrosslinks(state: BeaconState): void {
       }
     }
   });
+  return state;
 }

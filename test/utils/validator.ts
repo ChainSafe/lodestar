@@ -32,3 +32,17 @@ export function generateValidator(activation?: number, exit?: number, slashed: b
 export function generateValidators(n: number): Validator[] {
   return Array.from({ length: n }, () => generateValidator());
 }
+
+
+export function validatorFromYaml(value: any): Validator {
+  return {
+    pubkey: Buffer.from(value.pubkey.replace('0x', ''), 'hex'),
+    withdrawalCredentials: Buffer.from(value.withdrawalCredentials.replace('0x', ''), 'hex'),
+    activationEpoch: value.activationEpoch.toNumber(),
+    activationEligibilityEpoch: value.activationEligibilityEpoch.toNumber(),
+    exitEpoch: value.activationEligibilityEpoch.toNumber(),
+    withdrawableEpoch: value.activationEligibilityEpoch.toNumber(),
+    slashed: value.slashed,
+    effectiveBalance: value.effectiveBalance,
+  };
+}
