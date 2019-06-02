@@ -1,4 +1,4 @@
-import {Attestation, AttestationData, Epoch, PendingAttestation} from "../../src/types";
+import {Attestation, AttestationData, Epoch, IndexedAttestation, PendingAttestation} from "../../src/types";
 import {randBetween} from "./misc";
 
 /**
@@ -54,6 +54,15 @@ export function attestationFromYaml(value: any): Attestation {
     signature: Buffer.from(value.signature.slice(2), 'hex'),
     custodyBitfield: Buffer.from(value.custodyBitfield.slice(2), 'hex'),
     data: attestationDataFromYaml(value.data)
+  };
+}
+
+export function indexedAttestationFromYaml(value: any): IndexedAttestation {
+  return {
+    custodyBit0Indices: value.custodyBit0Indices.map((value) => value.toNumber()),
+    custodyBit1Indices: value.custodyBit1Indices.map((value) => value.toNumber()),
+    data: attestationDataFromYaml(value.data),
+    signature: Buffer.from(value.signature.slice(2), 'hex')
   };
 }
 

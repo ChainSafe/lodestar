@@ -29,7 +29,7 @@ import {
  * Note that this function mutates ``state``.
  */
 export function processAttesterSlashing(state: BeaconState
-  , attesterSlashing: AttesterSlashing): void {
+  , attesterSlashing: AttesterSlashing): BeaconState {
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;
   // Check that the attestations are conflicting
@@ -50,6 +50,7 @@ export function processAttesterSlashing(state: BeaconState
     }
   });
   assert(slashedAny);
+  return state;
 }
 
 export default function processAttesterSlashings(state: BeaconState, block: BeaconBlock): void {

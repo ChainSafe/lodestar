@@ -27,6 +27,7 @@ import {slotToEpoch} from "./epoch";
 import {getCrosslinkCommittee} from "./crosslinkCommittee";
 
 import {getDomain} from "./misc";
+import {PublicKey} from "@chainsafe/bls-js/lib/publicKey";
 
 
 /**
@@ -110,7 +111,7 @@ export function verifyIndexedAttestation(
   assert(duplicates.size === 0);
 
   // TO BE REMOVED IN PHASE 1
-  if (custodyBit0Indices.length > 0) {
+  if (custodyBit1Indices.length > 0) {
     return false;
   }
 
@@ -118,17 +119,15 @@ export function verifyIndexedAttestation(
   if (!(1 <= totalAttestingIndices && totalAttestingIndices <= MAX_INDICES_PER_ATTESTATION)) {
     return false;
   }
-
   const sortedCustodyBit0Indices = custodyBit0Indices.slice().sort();
-  if (!custodyBit0Indices.every((index, i) => index === sortedCustodyBit0Indices[i])) {
+  if (custodyBit0Indices.every((index, i) => index === sortedCustodyBit0Indices[i])) {
     return false;
   }
-
   const sortedCustodyBit1Indices = custodyBit1Indices.slice().sort();
-  if (!custodyBit1Indices.every((index, i) => index === sortedCustodyBit1Indices[i])) {
+  if (custodyBit1Indices.length > 0
+    && custodyBit1Indices.every((index, i) => index === sortedCustodyBit1Indices[i])) {
     return false;
   }
-
   return bls.verifyMultiple(
     [
       bls.aggregatePubkeys(sortedCustodyBit0Indices.map((i) => state.validatorRegistry[i].pubkey)),
@@ -136,11 +135,11 @@ export function verifyIndexedAttestation(
     ], [
       hashTreeRoot({
         data: indexedAttestation.data,
-        custodyBit: 0b0,
+        custodyBit: false,
       }, AttestationDataAndCustodyBit),
       hashTreeRoot({
         data: indexedAttestation.data,
-        custodyBit: 0b1,
+        custodyBit: true,
       }, AttestationDataAndCustodyBit),
     ],
     indexedAttestation.signature,
