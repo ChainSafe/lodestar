@@ -64,7 +64,7 @@ function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
     return G1point.fromBytesCompressed(publicKey)
   }).reduce((previousValue, currentValue): G1point => {
     return previousValue.add(currentValue);
-  }).toBytesCompressed();
+  }, new G1point(new ctx.ECP())).toBytesCompressed();
 }
 
 /**

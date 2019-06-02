@@ -1,6 +1,6 @@
 import {BIG, ECP2} from "@chainsafe/amcl/ctx";
 import {BLSDomain, bytes32, bytes96} from "../types";
-import hash from "keccak256";
+import { sha256 } from 'js-sha256';
 import ctx from "../ctx";
 import * as random from "secure-random";
 import {calculateYFlag, getModulus, padLeft} from "./utils";
@@ -61,23 +61,23 @@ export class G2point {
     const padding = Buffer.alloc(G2_HASH_PADDING, 0);
     const xReBytes = Buffer.concat([
       padding,
-      hash(
+      Buffer.from(sha256.arrayBuffer(
         Buffer.concat([
           message,
           padLeft(domain, 8),
           Buffer.from('01', 'hex')
         ])
-      )
+      ))
     ]);
     const xImBytes = Buffer.concat([
       padding,
-      hash(
+      Buffer.from(sha256.arrayBuffer(
         Buffer.concat([
           message,
           padLeft(domain, 8),
           Buffer.from('02', 'hex')
         ])
-      )
+      ))
     ]);
     const xRe = ctx.BIG.frombytearray(xReBytes, 0);
     const xIm = ctx.BIG.frombytearray(xImBytes, 0);

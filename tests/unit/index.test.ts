@@ -1,15 +1,21 @@
 import bls from "../../src";
 import {Keypair} from "../../src/keypair";
-import hash from "keccak256";
+import { sha256 } from 'js-sha256';
 import {G2point} from "../../src/helpers/g2point";
 import {expect} from "chai";
 
 describe('test bls', function () {
 
+  describe('aggregate pubkey', function () {
+    it('should aggregate empty array', function () {
+      expect(bls.aggregatePubkeys([])).to.not.throw;
+    });
+  });
+
   describe('verify', function() {
     it('should verify signature', () => {
       const keypair = Keypair.generate();
-      const messageHash = hash("Test");
+      const messageHash = Buffer.from(sha256.arrayBuffer("Test"));
       const domain = Buffer.alloc(8, 1);
       const signature = keypair.privateKey.sign(
         G2point.hashToG2(messageHash, domain)
@@ -26,7 +32,7 @@ describe('test bls', function () {
 
     it('should not modify original pubkey when verifying', () => {
       const keypair = Keypair.generate();
-      const messageHash = hash("Test");
+      const messageHash = Buffer.from(sha256.arrayBuffer("Test"));
       const domain = Buffer.alloc(8, 1);
       const signature = keypair.privateKey.sign(
         G2point.hashToG2(messageHash, domain)
@@ -44,7 +50,7 @@ describe('test bls', function () {
 
     it('should fail verify empty signature', () => {
       const keypair = Keypair.generate();
-      const messageHash2 = hash("Test message2");
+      const messageHash2 = Buffer.from(sha256.arrayBuffer("Test message2"));
       const domain = Buffer.from("01", 'hex');
       const signature = Buffer.alloc(96);
       const result = bls.verify(
@@ -58,8 +64,8 @@ describe('test bls', function () {
 
     it('should fail verify signature of different message', () => {
       const keypair = Keypair.generate();
-      const messageHash = hash("Test message");
-      const messageHash2 = hash("Test message2");
+      const messageHash = Buffer.from(sha256.arrayBuffer("Test message"));
+      const messageHash2 = Buffer.from(sha256.arrayBuffer("Test message2"))
       const domain = Buffer.from("01", 'hex');
       const signature = keypair.privateKey.sign(
         G2point.hashToG2(messageHash, domain)
@@ -75,7 +81,7 @@ describe('test bls', function () {
 
     it('should fail verify signature of different domain', () => {
       const keypair = Keypair.generate();
-      const messageHash = hash("Test message");
+      const messageHash = Buffer.from(sha256.arrayBuffer("Test message"));
       const domain = Buffer.from("01", 'hex');
       const domain2 = Buffer.from("02", 'hex');
       const signature = keypair.privateKey.sign(
@@ -93,7 +99,7 @@ describe('test bls', function () {
     it('should fail verify signature signed by different key', () => {
       const keypair = Keypair.generate();
       const keypair2 = Keypair.generate();
-      const messageHash = hash("Test message");
+      const messageHash = Buffer.from(sha256.arrayBuffer("Test message"));
       const domain = Buffer.from("01", 'hex');
       const signature = keypair.privateKey.sign(
         G2point.hashToG2(messageHash, domain)
