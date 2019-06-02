@@ -38,7 +38,7 @@ import {
 /**
  * Process an Eth1 deposit, registering a validator or increasing its balance.
  */
-export function processDeposit(state: BeaconState, deposit: Deposit): void {
+export function processDeposit(state: BeaconState, deposit: Deposit): BeaconState {
   // Verify the Merkle branch
   assert(verifyMerkleBranch(
     hash(serialize(deposit.data, DepositData)), // 48 + 32 + 8 + 96 = 184 bytes serialization
@@ -86,6 +86,7 @@ export function processDeposit(state: BeaconState, deposit: Deposit): void {
     const index = validatorPubkeys.indexOf(pubkey);
     increaseBalance(state, index, amount);
   }
+  return state;
 }
 
 export default function processDeposits(state: BeaconState, block: BeaconBlock): void {
