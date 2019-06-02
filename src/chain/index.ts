@@ -93,12 +93,6 @@ export class BeaconChain extends EventEmitter {
     const isValidBlock = await this.isValidBlock(state, block);
     assert(isValidBlock);
 
-    // process skipped slots
-    for (let i = state.slot; i < block.slot - 1; i++) {
-      state = this.runStateTransition(null, state);
-    }
-
-    // process current slot
     state = this.runStateTransition(block, state);
 
     await this.db.setBlock(block);

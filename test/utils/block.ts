@@ -7,6 +7,7 @@ import voluntaryExits from "../../src/chain/stateTransition/block/voluntaryExits
 import {transfersFromYaml} from "./transfer";
 import {voluntaryExitsFromYaml} from "./voluntaryExits";
 import {depositsFromYaml} from "./deposit";
+import {attesterSlashingFromYaml} from "./attesterSlashing";
 
 
 export function generateEmptyBlock(): BeaconBlock {
@@ -40,7 +41,7 @@ export function blockFromYaml(value: any): BeaconBlock {
       eth1Data: eth1DataFromYaml(value.body.eth1Data),
       graffiti: Buffer.from(value.body.graffiti.slice(2), 'hex'),
       proposerSlashings: value.body.proposerSlashings.map(proposerSlashingFromYaml),
-      attesterSlashings: value.body.attesterSlashings.map(attestationFromYaml),
+      attesterSlashings: value.body.attesterSlashings.map(attesterSlashingFromYaml),
       attestations: value.body.attestations.map(attestationFromYaml),
       deposits: value.body.deposits.map(depositsFromYaml),
       voluntaryExits: value.body.voluntaryExits.map(voluntaryExitsFromYaml),
