@@ -25,6 +25,7 @@ You will need to go over the [specification](https://github.com/ethereum/eth2.0-
 
 ## Run
 1. `yarn install`
+2. `git submodule foreach git lfs pull`
 2. `yarn test`
 
 ## Usage
