@@ -13,7 +13,7 @@ There is a lot of work being done that are core infrastructural pieces for Eth2.
 [![Build Status](https://travis-ci.org/ChainSafe/bls-js.svg?branch=master)](https://travis-ci.org/ChainSafe/bls-js)
 [![codecov](https://codecov.io/gh/ChainSafe/bls-js/branch/master/graph/badge.svg)](https://codecov.io/gh/ChainSafe/bls-js)
 [![](https://badges.gitter.im/chainsafe/lodestar.svg)](https://gitter.im/chainsafe/lodestar?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-![ETH2.0_Spec_Version 0.6.0](https://img.shields.io/badge/ETH2.0_Spec_Version-0.6.0-2e86c1.svg)
+![ETH2.0_Spec_Version 0.6.2](https://img.shields.io/badge/ETH2.0_Spec_Version-0.6.2-2e86c1.svg)
 
 This is a Javascript library that implements BLS (Boneh-Lynn-Shacham) signatures and supports signature aggregation.
 
