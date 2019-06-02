@@ -66,7 +66,7 @@ export function initiateValidatorExit(state: BeaconState, index: ValidatorIndex)
 
 /**
  * Slash the validator with index ``slashedIndex``.
- * 
+ *
  * Note that this function mutates ``state``.
  */
 export function slashValidator(

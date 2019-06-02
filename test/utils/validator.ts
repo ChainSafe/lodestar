@@ -41,7 +41,7 @@ export function validatorFromYaml(value: any): Validator {
     activationEpoch: value.activationEpoch.toNumber(),
     activationEligibilityEpoch: value.activationEligibilityEpoch.toNumber(),
     exitEpoch: (value.exitEpoch as BN).bitLength() >= 53 ? FAR_FUTURE_EPOCH : value.exitEpoch.toNumber(),
-    withdrawableEpoch: (value.withdrawableEpoch as BN).bitLength() >= 53 ? FAR_FUTURE_EPOCH : value.exitEpoch.toNumber(),
+    withdrawableEpoch: ((value.withdrawableEpoch as BN).bitLength() > 52) ? FAR_FUTURE_EPOCH : value.withdrawableEpoch.toNumber(),
     slashed: value.slashed,
     effectiveBalance: value.effectiveBalance,
   };

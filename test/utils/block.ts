@@ -1,4 +1,4 @@
-import {BeaconBlock} from "../../src/types";
+import {BeaconBlock, BeaconBlockHeader} from "../../src/types";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 import {eth1DataFromYaml} from "./eth1Data";
 import {proposerSlashingFromYaml} from "./proposerSlashing";
@@ -51,4 +51,15 @@ export function blockFromYaml(value: any): BeaconBlock {
     slot: value.slot.toNumber(),
     stateRoot: Buffer.from(value.stateRoot.slice(2), 'hex')
   };
+}
+
+export function blockHeaderFromYaml(value: any): BeaconBlockHeader {
+  return {
+    previousBlockRoot: Buffer.from(value.previousBlockRoot.slice(2), 'hex'),
+    signature: Buffer.from(value.signature.slice(2), 'hex'),
+    slot: value.slot.toNumber(),
+    stateRoot: Buffer.from(value.stateRoot.slice(2), 'hex'),
+    blockBodyRoot: Buffer.from(value.blockBodyRoot.slice(2), 'hex'),
+  };
+
 }
