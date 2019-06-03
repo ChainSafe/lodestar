@@ -15,7 +15,7 @@
   "scripts": {
     "build": "babel src -x .ts -d lib --source-maps",
     "build:docs": "typedoc --exclude src/index.ts --out docs src",
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc --noEmit --incremental",
     "lint": "eslint --ext .ts src/",
     "lint-fix": "eslint --ext .ts src/ --fix",
     "pretest": "yarn run check-types",
@@ -108,6 +108,6 @@
     "typedoc-plugin-external-module-name": "^2.1.0",
     "typedoc-plugin-internal-external": "^2.0.2",
     "typedoc-plugin-markdown": "^1.2.0",
-    "typescript": "^3.2.1"
+    "typescript": "^3.5.1"
   }
 }
