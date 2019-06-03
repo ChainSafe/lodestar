@@ -15,7 +15,7 @@
   "scripts": {
     "build": "babel src -x .ts -d lib --source-maps",
     "build:docs": "typedoc --exclude src/index.ts --out docs src",
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc --noEmit --incremental",
     "lint": "eslint --ext .ts src/",
     "lint-fix": "eslint --ext .ts src/ --fix",
     "pretest": "yarn run check-types",
