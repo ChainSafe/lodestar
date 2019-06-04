@@ -1,16 +1,12 @@
 /** @module ssz */
-import { sha256 } from "js-sha256";
-
 import {
   FullSSZType,
   SerializableValue,
 } from "../types";
-
 import { BYTES_PER_CHUNK } from "../constants";
-
 import { size } from "../size";
-
 import { _serialize } from "../serialize";
+import { hash } from "../hash";
 
 /** @ignore */
 export function pack (input: SerializableValue[], type: FullSSZType): Buffer[] {
@@ -48,11 +44,6 @@ function bitLength (n: number): number {
 /** @ignore */
 function nextPowerOf2 (n: number): number {
   return n === 0 ? 1 : Math.pow(2, bitLength(n - 1));
-}
-
-/** @ignore */
-export function hash(...inputs: Buffer[]): Buffer {
-  return Buffer.from(inputs.reduce((acc, i) => acc.update(i), sha256.create()).arrayBuffer());
 }
 
 /** @ignore */

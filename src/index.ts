@@ -1,4 +1,5 @@
 /** @module ssz */
+import { hash } from "./hash";
 import { hashTreeRoot } from "./hashTreeRoot";
 import { deserialize } from "./deserialize";
 import { serialize } from "./serialize";
@@ -10,6 +11,7 @@ export * from "./types";
 export {
   deserialize,
   serialize,
+  hash,
   hashTreeRoot,
   signingRoot,
 };
