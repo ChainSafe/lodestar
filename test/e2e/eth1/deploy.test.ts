@@ -7,7 +7,7 @@ import defaults from "../../../src/eth1/dev/defaults";
 import {PrivateEth1Network} from "../../../src/eth1/dev";
 import logger from "../../../src/logger/winston";
 import {BeaconDB} from "../../../src/db/api";
-import {PouchDbPersistance} from "../../../src/db";
+import {PouchDbController} from "../../../src/db";
 
 describe("Eth1Notifier - using deployed contract", () => {
 
@@ -16,7 +16,7 @@ describe("Eth1Notifier - using deployed contract", () => {
   let depositContractAddress;
   let provider;
   const db = new BeaconDB({
-    persistance: new PouchDbPersistance(
+    controller: new PouchDbController(
       {name: 'testDb'}
     )
   });

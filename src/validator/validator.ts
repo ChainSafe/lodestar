@@ -19,8 +19,7 @@ import {Epoch, Slot, ValidatorIndex} from "../types";
 import {GenesisInfo, ValidatorCtx} from "./types";
 import {RpcClient, RpcClientOverWs} from "./rpc";
 import {AttestationService} from "./services/attestation";
-import {ValidatorDB, IValidatorDB} from "../db";
-import {LevelDbPersistance} from "../db/persistance";
+import {ValidatorDB, IValidatorDB, LevelDbController} from "../db";
 
 /**
  * Main class for the Validator client.
@@ -41,7 +40,7 @@ class Validator {
     this.logger = logger;
     this.isActive = false;
     this.db = ctx.db ? ctx.db : new ValidatorDB({
-      persistance: new LevelDbPersistance({
+      controller: new LevelDbController({
         name: 'LodestarValidatorDB'
       })
     });
