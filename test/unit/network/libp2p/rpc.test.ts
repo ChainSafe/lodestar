@@ -114,7 +114,7 @@ describe("[network] rpc", () => {
       assert.fail(e, null, "connection event not triggered");
     }
     // send hello from A to B, await hello response
-    rpcB.once(`request ${Method.Hello}`, (id, body) => {
+    rpcB.once("request", (method, id, body) => {
       rpcB.sendResponse(id, 0, body)
     });
     try {
@@ -132,7 +132,7 @@ describe("[network] rpc", () => {
       assert.fail("hello not received");
     }
     // send hello from B to A, await hello response
-    rpcA.once(`request ${Method.Hello}`, (id, body) => {
+    rpcA.once("request", (method, id, body) => {
       rpcA.sendResponse(id, 0, body)
     });
     try {
