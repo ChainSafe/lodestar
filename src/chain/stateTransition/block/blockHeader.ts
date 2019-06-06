@@ -23,7 +23,7 @@ import {
 } from "../util";
 
 
-export default function processBlockHeader(state: BeaconState, block: BeaconBlock, verify: boolean = true): void {
+export default function processBlockHeader(state: BeaconState, block: BeaconBlock, verify: boolean = true): BeaconState {
   // Verify that the slots match
   assert(block.slot === state.slot);
 
@@ -45,4 +45,5 @@ export default function processBlockHeader(state: BeaconState, block: BeaconBloc
       getDomain(state, Domain.BEACON_PROPOSER),
     ));
   }
+  return state;
 }
