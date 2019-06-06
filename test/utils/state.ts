@@ -226,7 +226,7 @@ export function stateFromYaml(value: any): BeaconState {
 
     // Finality
     previousEpochAttestations: value.previousEpochAttestations.map(pendingAttestationFromYaml),
-    currentEpochAttestations: value.previousEpochAttestations.map(pendingAttestationFromYaml),
+    currentEpochAttestations: value.currentEpochAttestations.map(pendingAttestationFromYaml),
     previousJustifiedEpoch: value.previousJustifiedEpoch.toNumber(),
     currentJustifiedEpoch: value.currentJustifiedEpoch.toNumber(),
     previousJustifiedRoot: Buffer.from(value.previousJustifiedRoot.slice(2), 'hex'),
