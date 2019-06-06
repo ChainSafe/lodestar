@@ -633,14 +633,14 @@
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/amcl/-/amcl-0.1.0.tgz#8a49445402561e3dcf9d536b78e2dc225b159b22"
 
-"@chainsafe/bls-js@^0.1.4":
-  version "0.1.4"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bls-js/-/bls-js-0.1.4.tgz#9c2e3a653bef47ab8d3231a011ac3d309adb8054"
-  integrity sha512-IOagC6HtMfChs+CR9cZhUlbJm5o6nr4+kD+sNyeBhOfvOpAs09jgTgRKSL8qVWytdUkM9oAGKkEE337o+PWAIA==
+"@chainsafe/bls-js@^0.1.5":
+  version "0.1.5"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bls-js/-/bls-js-0.1.5.tgz#00fed1ef879aa4668092e7010fa21f5bf19f569e"
+  integrity sha512-etAnBTthmeub8igCx08Ww3TQRkK93bwM8nUNE5LNE3W1s1tySka7qsYcdmOKICJNTa7ARV/MbVnBg1nAUwntZQ==
   dependencies:
     "@chainsafe/amcl" "0.1.0"
     assert "^1.4.1"
-    keccak256 "^1.0.0"
+    js-sha256 "^0.9.0"
     secure-random "^1.1.1"
 
 "@chainsafe/eth2.0-spec-test-util@^0.3.0":
@@ -4810,14 +4810,7 @@ k-bucket@^5.0.0:
   dependencies:
     randombytes "^2.0.3"
 
-keccak256@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/keccak256/-/keccak256-1.0.0.tgz#1ba55ce78ed3d63fb7091d045469007da984171d"
-  dependencies:
-    bn.js "^4.11.8"
-    keccak "^1.4.0"
-
-keccak@^1.0.2, keccak@^1.4.0:
+keccak@^1.0.2:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/keccak/-/keccak-1.4.0.tgz#572f8a6dbee8e7b3aa421550f9e6408ca2186f80"
   dependencies:

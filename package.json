@@ -37,7 +37,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/bls-js": "^0.1.4",
+    "@chainsafe/bls-js": "^0.1.5",
     "@chainsafe/ssz": "^0.4.0",
     "@iarna/toml": "^2.2.3",
     "@nodeutils/defaults-deep": "^1.1.0",
