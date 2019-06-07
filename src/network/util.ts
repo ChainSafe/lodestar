@@ -1,5 +1,5 @@
 import {Shard} from "../types";
-import {SHARD_SUBNET_COUNT} from "../constants";
+import {SHARD_SUBNET_COUNT, SHARD_ATTESTATION_TOPIC} from "../constants";
 import {RequestId} from "./codec";
 
 function randomNibble(): string {
@@ -11,8 +11,8 @@ export function randomRequestId(): RequestId {
 }
 
 export function shardSubnetAttestationTopic(shard: Shard): string {
-  return `shard${shard % SHARD_SUBNET_COUNT}_attestation`;
+  return SHARD_ATTESTATION_TOPIC.replace("{shard}", String(shard % SHARD_SUBNET_COUNT));
 }
 export function shardAttestationTopic(shard: Shard): string {
-  return `shard${shard}_attestation`;
+  return SHARD_ATTESTATION_TOPIC.replace("{shard}", String(shard));
 }
