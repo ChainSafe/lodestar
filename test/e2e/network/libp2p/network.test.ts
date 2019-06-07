@@ -1,7 +1,7 @@
 import {expect} from "chai";
 
 import {Libp2pNetwork, INetworkOptions} from "../../../../src/network";
-import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../../../../src/network/constants";
+import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../../../../src/constants";
 import {getEmptyBlock} from "../../../../src/chain/genesis";
 import {createNode} from "../../../unit/network/libp2p/util";
 import {generateEmptyAttestation} from "../../../utils/attestation";

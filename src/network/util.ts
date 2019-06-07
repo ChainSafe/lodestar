@@ -1,5 +1,5 @@
 import {Shard} from "../types";
-import {SHARD_SUBNET_COUNT} from "./constants";
+import {SHARD_SUBNET_COUNT} from "../constants";
 import {RequestId} from "./codec";
 
 function randomNibble(): string {

@@ -10,9 +10,9 @@ import Gossipsub from "libp2p-gossipsub";
 import PeerInfo from "peer-info";
 
 import {Attestation, BeaconBlock, Shard, RequestBody, ResponseBody} from "../../types";
+import {BLOCK_TOPIC, ATTESTATION_TOPIC, SHARD_SUBNET_COUNT} from "../../constants";
 import {INetwork, INetworkOptions} from "../interface";
 import {Method, RequestId} from "../codec";
-import {BLOCK_TOPIC, ATTESTATION_TOPIC, SHARD_SUBNET_COUNT} from "../constants";
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {RpcController} from "./rpcController";
 import {Peer} from "./peer";
