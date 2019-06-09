@@ -9,9 +9,9 @@ const multiaddr = "/ip4/127.0.0.1/tcp/0";
 describe("[network] nodejs libp2p", () => {
   it("can start and stop a node", async () => {
     const node: NodejsNode = await createNode(multiaddr);
-    await promisify(node.start.bind(node))()
+    await promisify(node.start.bind(node))();
     assert.equal(node.isStarted(), true);
-    await promisify(node.stop.bind(node))()
+    await promisify(node.stop.bind(node))();
     assert.equal(node.isStarted(), false);
   });
   it("can connect/disconnect to a peer", async () => {

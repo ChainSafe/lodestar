@@ -22,10 +22,9 @@ import {
   decodeResponseBody,
   decodeRequestBody
 } from "../codec";
+import {randomRequestId} from "../util";
 import {Peer} from "./peer";
-
 import {RPC_MULTICODEC} from "./constants";
-import {randomRequestId} from "./util";
 
 
 
@@ -60,6 +59,7 @@ export class RpcController extends EventEmitter {
     this.requestTimeout = 5000;
     this.requests = {};
     this.responses = {};
+    this.peers = new Map<string, Peer>();
   }
 
   public addPeer(peerInfo: PeerInfo): Peer {
@@ -84,6 +84,11 @@ export class RpcController extends EventEmitter {
   }
   public getPeers(): Peer[] {
     return Array.from(this.peers.values());
+  }
+
+  public getPeer(peerInfo: PeerInfo): Peer | null {
+    const peerId = peerInfo.id.toB58String();
+    return this.peers.get(peerId);
   }
 
   public async onConnection(protocol: string, conn: Connection): Promise<void> {
@@ -194,8 +199,7 @@ export class RpcController extends EventEmitter {
 
   public onRequest(peer: Peer, id: RequestId, method: Method, body: RequestBody): void {
     this.responses[id] = {peer, method};
-    const event = `request ${method}`;
-    this.emit(event, id, body);
+    this.emit("request", method, id, body, peer);
   }
 
   public async start(): Promise<void> {

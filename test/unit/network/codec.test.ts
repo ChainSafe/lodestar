@@ -150,8 +150,6 @@ describe("[p2p] rpc response", () => {
     },
     {
       msg: {
-        blockRoot: Buffer.alloc(32),
-        slot: 0,
         roots: [],
       },
       method: Method.BeaconBlockRoots,

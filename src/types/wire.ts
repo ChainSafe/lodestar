@@ -132,15 +132,11 @@ export const BeaconBlockRootsRequest: SimpleContainerType = {
 };
 
 export interface BeaconBlockRootsResponse {
-  blockRoot: bytes32;
-  slot: Slot;
   roots: BlockRootSlot[];
 }
 export const BeaconBlockRootsResponse: SimpleContainerType = {
   name: "BeaconBlockRootsResponse",
   fields: [
-    ["blockRoot", bytes32],
-    ["slot", Slot],
     ["roots", [BlockRootSlot]],
   ],
 };
