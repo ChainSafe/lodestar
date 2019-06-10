@@ -19,6 +19,7 @@ import {IApiConstructor} from "../rpc/api/interface";
 import {DBOptions} from '../db';
 import {createPeerId, initializePeerInfo} from "../network/libp2p/util";
 import {ILogger} from "../logger";
+import { ReputationStore } from "../sync/reputation";
 
 
 export interface Service {
@@ -55,6 +56,7 @@ class BeaconNode {
   public rpc: Service;
   public sync: Service;
   private logger: ILogger;
+  public reps;
 
   public constructor(opts: BeaconNodeCtx, {logger}: {logger: ILogger}) {
 
@@ -68,39 +70,40 @@ class BeaconNode {
     );
     this.logger = logger;
 
+    this.reps = new ReputationStore();
     this.db = new BeaconDB({
-      controller: new LevelDbController(
-        this.conf.db, {logger: this.logger}
-      )
-    },);
+      controller: new LevelDbController(this.conf.db, {
+        logger: this.logger,
+      }),
+    });
     const libp2p = createPeerId()
       .then((peerId) => initializePeerInfo(peerId, this.conf.network.multiaddrs))
       .then((peerInfo) => new NodejsNode({peerInfo}));
-    this.network = new Libp2pNetwork(this.conf.network,
-      {
-        libp2p: libp2p, logger: this.logger
-      }
-    );
-    this.eth1 = new EthersEth1Notifier(
-      this.conf.eth1,
-      {
-        db: this.db,
-        logger: this.logger
-      }
-    );
-    this.sync = new Sync(this.conf.sync, {
-      network: this.network,
+    this.network = new Libp2pNetwork(this.conf.network, {
+      libp2p: libp2p,
+      logger: this.logger,
     });
-    this.chain = new BeaconChain(this.conf.chain,
-      {
-        db: this.db,
-        eth1: this.eth1,
-        logger: this.logger
-      }
-    );
+    this.eth1 = new EthersEth1Notifier(this.conf.eth1, {
+      db: this.db,
+      logger: this.logger
+    });
+    this.chain = new BeaconChain(this.conf.chain, {
+      db: this.db,
+      eth1: this.eth1,
+      logger: this.logger
+    });
     this.opPool = new OpPool(this.conf.opPool, {
       db: this.db,
       chain: this.chain,
+    });
+    this.sync = new Sync(this.conf.sync, {
+      db: this.db,
+      eth1: this.eth1,
+      chain: this.chain,
+      opPool: this.opPool,
+      network: this.network,
+      reps: this.reps,
+      logger: this.logger,
     });
     this.rpc = new JSONRPC(this.conf.rpc, {
       transports: [new WSServer(this.conf.rpc)],

@@ -91,6 +91,7 @@ export class BeaconChain extends EventEmitter {
     for (let i = 0; i < validators.length; i++) {
       this.forkChoice.addAttestation(attestation.data.beaconBlockRoot, validators[i], balances[i]);
     }
+    this.emit('processedAttestation', attestation);
   }
 
   public async receiveBlock(block: BeaconBlock): Promise<BeaconState> {
@@ -103,10 +104,10 @@ export class BeaconChain extends EventEmitter {
 
     await this.db.setBlock(block);
 
+    this.forkChoice.addBlock(block.slot, hashTreeRoot(block, BeaconBlock), block.previousBlockRoot);
+
     // forward processed block for additional processing
     this.emit('processedBlock', block);
-
-    this.forkChoice.addBlock(block.slot, hashTreeRoot(block, BeaconBlock), block.previousBlockRoot);
 
     return state;
   }
