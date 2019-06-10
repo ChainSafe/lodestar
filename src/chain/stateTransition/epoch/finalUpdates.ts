@@ -2,25 +2,27 @@
  * @module chain/stateTransition/epoch
  */
 
-import BN from "bn.js";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {BeaconState, ValidatorIndex, HistoricalBatch} from "../../../types";
+import {BeaconState, HistoricalBatch, ValidatorIndex} from "../../../types";
 
 import {
-  ACTIVATION_EXIT_DELAY, LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH,
-  LATEST_SLASHED_EXIT_LENGTH,
-  SLOTS_PER_HISTORICAL_ROOT,
-  SLOTS_PER_EPOCH,
-  MAX_EFFECTIVE_BALANCE,
-  SLOTS_PER_ETH1_VOTING_PERIOD,
+  ACTIVATION_EXIT_DELAY,
   EFFECTIVE_BALANCE_INCREMENT,
-  SHARD_COUNT
+  LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
+  LATEST_RANDAO_MIXES_LENGTH,
+  LATEST_SLASHED_EXIT_LENGTH,
+  MAX_EFFECTIVE_BALANCE,
+  SHARD_COUNT,
+  SLOTS_PER_EPOCH,
+  SLOTS_PER_ETH1_VOTING_PERIOD,
+  SLOTS_PER_HISTORICAL_ROOT
 } from "../../../constants";
 
 import {bnMin, intDiv} from "../../../util/math";
 
-import {getActiveValidatorIndices, getRandaoMix, getCurrentEpoch, getShardDelta} from "../util";
+import {getActiveValidatorIndices, getCurrentEpoch, getRandaoMix, getShardDelta} from "../util";
+import BN from "bn.js";
 
 
 export function processFinalUpdates(state: BeaconState): void {
@@ -34,12 +36,12 @@ export function processFinalUpdates(state: BeaconState): void {
   state.validatorRegistry.forEach((validator, index) => {
     const balance = state.balances[index];
     // TODO probably unsafe
-    const HALF_INCREMENT = intDiv(EFFECTIVE_BALANCE_INCREMENT, 2);
+    const HALF_INCREMENT = EFFECTIVE_BALANCE_INCREMENT.divRound(new BN(2));
     if (balance.lt(validator.effectiveBalance) || validator.effectiveBalance
-      .add(new BN(HALF_INCREMENT).muln(3)).lt(balance)) {
+      .add(HALF_INCREMENT.muln(3)).lt(balance)) {
       validator.effectiveBalance = bnMin(
-        balance.sub(new BN(balance.modn(EFFECTIVE_BALANCE_INCREMENT))),
-        new BN(MAX_EFFECTIVE_BALANCE));
+        balance.sub(balance.mod(EFFECTIVE_BALANCE_INCREMENT)),
+        MAX_EFFECTIVE_BALANCE);
     }
   });
   // Update start shard

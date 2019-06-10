@@ -79,7 +79,7 @@ export function getBeaconProposerIndex(state: BeaconState): ValidatorIndex {
       intToBytes(intDiv(i, 32), 8),
     ]))[i % 32];
     const effectiveBalance = state.validatorRegistry[candidateIndex].effectiveBalance;
-    if (effectiveBalance.muln(255).gten(MAX_EFFECTIVE_BALANCE * randByte)) {
+    if (effectiveBalance.muln(255).gte(MAX_EFFECTIVE_BALANCE.muln(randByte))) {
       return candidateIndex;
     }
     i += 1;

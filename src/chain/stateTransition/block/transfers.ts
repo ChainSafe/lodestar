@@ -71,11 +71,11 @@ export function processTransfer(state: BeaconState, transfer: Transfer): BeaconS
   // Verify balances are not dust
   assert(!(
     (new BN(0)).lt(state.balances[transfer.sender]) &&
-    state.balances[transfer.sender].ltn(MIN_DEPOSIT_AMOUNT)
+    state.balances[transfer.sender].lt(MIN_DEPOSIT_AMOUNT)
   ));
   assert(!(
     (new BN(0)).lt(state.balances[transfer.recipient]) &&
-    state.balances[transfer.recipient].ltn(MIN_DEPOSIT_AMOUNT)
+    state.balances[transfer.recipient].lt(MIN_DEPOSIT_AMOUNT)
   ));
   return state;
 }

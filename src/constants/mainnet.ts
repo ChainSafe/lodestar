@@ -1,6 +1,7 @@
 /**
  * @module constants
  */
+import BN from "bn.js";
 
 // Misc
 export const SHARD_COUNT = 2 ** 10; // 1024 shards
@@ -16,10 +17,10 @@ export const DEPOSIT_CONTRACT_ADDRESS = "TBD";
 export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
 
 // Gwei Values
-export const MIN_DEPOSIT_AMOUNT = 2 ** 0 * 1e9; // 1,000,000,000 Gwei
-export const MAX_EFFECTIVE_BALANCE = 2 ** 5 * 1e9; // 32,000,000,000 Gwei
-export const EJECTION_BALANCE = 2 ** 4 * 1e9; // 16,000,000,000 Gwei
-export const EFFECTIVE_BALANCE_INCREMENT = 2 ** 0 * 1e9; // 1,000,000,000 Gwei
+export const MIN_DEPOSIT_AMOUNT = new BN(2 ** 0 * 1e9); // 1,000,000,000 Gwei
+export const MAX_EFFECTIVE_BALANCE = new BN(2 ** 5 * 1e9); // 32,000,000,000 Gwei
+export const EJECTION_BALANCE = new BN(2 ** 4 * 1e9); // 16,000,000,000 Gwei
+export const EFFECTIVE_BALANCE_INCREMENT = new BN(2 ** 0 * 1e9); // 1,000,000,000 Gwei
 
 // Initial values
 export const GENESIS_SLOT = 0;
