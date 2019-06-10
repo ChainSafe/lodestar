@@ -149,26 +149,20 @@ export class SyncRpc {
   ): Promise<void> {
     switch (method) {
       case Method.Hello:
-        await this.onHello(id, body as Hello, peer);
-        return;
+        return await this.onHello(id, body as Hello, peer);
       case Method.Goodbye:
-        await this.onGoodbye(id, body as Goodbye, peer);
-        return;
+        return await this.onGoodbye(id, body as Goodbye, peer);
       case Method.Status:
-        await this.onStatus(id, body as Status, peer);
-        return;
+        return await this.onStatus(id, body as Status, peer);
       case Method.BeaconBlockRoots:
-        await this.onBeaconBlockRoots(id, body as BeaconBlockRootsRequest);
-        return;
+        return await this.onBeaconBlockRoots(id, body as BeaconBlockRootsRequest);
       case Method.BeaconBlockHeaders:
-        await this.onBeaconBlockHeaders(id, body as BeaconBlockHeadersRequest);
-        return;
+        return await this.onBeaconBlockHeaders(id, body as BeaconBlockHeadersRequest);
       case Method.BeaconBlockBodies:
-        await this.onBeaconBlockBodies(id, body as BeaconBlockBodiesRequest);
+        return await this.onBeaconBlockBodies(id, body as BeaconBlockBodiesRequest);
         return;
       case Method.BeaconStates:
-        await this.onBeaconStates(id, body as BeaconStatesRequest);
-        return;
+        return await this.onBeaconStates(id, body as BeaconStatesRequest);
     }
   }
 
