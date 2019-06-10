@@ -5,8 +5,6 @@ import {expect} from "chai";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
-import {processProposerSlashing} from "../../../../src/chain/stateTransition/block/proposerSlashings";
-import {proposerSlashingFromYaml} from "../../../utils/proposerSlashing";
 import {processTransfer} from "../../../../src/chain/stateTransition/block/transfers";
 import {transfersFromYaml} from "../../../utils/transfer";
 
@@ -31,6 +29,9 @@ describeSpecTest(
   },
   () => false,
   (_1, _2, expected, actual) => {
+    //chai hates BN
+    expected.balances = expected.balances.map(b => b.toString());
+    actual.balances = actual.balances.map(b => b.toString());
     expect(expected).to.be.deep.equal(actual);
     restore();
   }
