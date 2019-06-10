@@ -4,7 +4,7 @@
 
 import assert from "assert";
 import BN from "bn.js";
-import {serialize, signingRoot} from "@chainsafe/ssz";
+import {hashTreeRoot, serialize, signingRoot} from "@chainsafe/ssz";
 
 import {
   BeaconBlock,
@@ -41,7 +41,7 @@ import {
 export function processDeposit(state: BeaconState, deposit: Deposit): BeaconState {
   // Verify the Merkle branch
   assert(verifyMerkleBranch(
-    hash(serialize(deposit.data, DepositData)), // 48 + 32 + 8 + 96 = 184 bytes serialization
+    hashTreeRoot(deposit.data, DepositData), // 48 + 32 + 8 + 96 = 184 bytes serialization
     deposit.proof,
     DEPOSIT_CONTRACT_TREE_DEPTH,
     deposit.index,
@@ -54,9 +54,8 @@ export function processDeposit(state: BeaconState, deposit: Deposit): BeaconStat
 
   const pubkey = deposit.data.pubkey;
   const amount = deposit.data.amount;
-  const validatorPubkeys = state.validatorRegistry.map((v) => v.pubkey);
-
-  if (!validatorPubkeys.includes(pubkey)) {
+  const validatorIndex = state.validatorRegistry.findIndex((v) => v.pubkey.equals(pubkey));
+  if (validatorIndex === -1) {
     // Verify the deposit signature (proof of possession)
     if (!bls.verify(
       pubkey,
@@ -64,7 +63,7 @@ export function processDeposit(state: BeaconState, deposit: Deposit): BeaconStat
       deposit.data.signature,
       getDomain(state, Domain.DEPOSIT),
     )) {
-      return;
+      return state;
     }
     // Add validator and balance entries
     const validator: Validator = {
@@ -76,15 +75,15 @@ export function processDeposit(state: BeaconState, deposit: Deposit): BeaconStat
       withdrawableEpoch: FAR_FUTURE_EPOCH,
       slashed: false,
       effectiveBalance: bnMin(
-        amount.sub(new BN(amount.mod(new BN(EFFECTIVE_BALANCE_INCREMENT)))),
-        new BN(MAX_EFFECTIVE_BALANCE)),
+        amount.sub(amount.mod(EFFECTIVE_BALANCE_INCREMENT)),
+        MAX_EFFECTIVE_BALANCE
+      ),
     };
     state.validatorRegistry.push(validator);
     state.balances.push(amount);
   } else {
     // Increase balance by deposit amount
-    const index = validatorPubkeys.indexOf(pubkey);
-    increaseBalance(state, index, amount);
+    increaseBalance(state, validatorIndex, amount);
   }
   return state;
 }
