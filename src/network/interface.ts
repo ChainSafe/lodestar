@@ -4,7 +4,9 @@
 import PeerInfo from "peer-info";
 import {EventEmitter} from "events";
 
-import {BeaconBlock, Attestation, Shard, Hello, Goodbye, Status, BeaconBlockRootsRequest, BeaconBlockRootsResponse, BeaconBlockHeadersRequest, BeaconBlockHeadersResponse, BeaconBlockBodiesRequest, BeaconBlockBodiesResponse, BeaconStatesRequest, BeaconStatesResponse, ResponseBody, RequestBody} from "../types";
+import {
+  Attestation, BeaconBlock, Shard, Hello, Status, ResponseBody, RequestBody,
+} from "../types";
 import {RequestId, Method} from "./codec";
 
 export interface INetworkOptions {
@@ -27,13 +29,7 @@ export interface IPeer {
   peerInfo: PeerInfo;
   latestHello: Hello | null;
   latestStatus: Status | null;
-  hello(request: Hello): Promise<Hello>;
-  goodbye(request: Goodbye): Promise<void>;
-  getStatus(request: Status): Promise<Status>;
-  getBeaconBlockRoots(request: BeaconBlockRootsRequest): Promise<BeaconBlockRootsResponse>;
-  getBeaconBlockHeaders(request: BeaconBlockHeadersRequest): Promise<BeaconBlockHeadersResponse>;
-  getBeaconBlockBodies(request: BeaconBlockBodiesRequest): Promise<BeaconBlockBodiesResponse>;
-  getBeaconStates(request: BeaconStatesRequest): Promise<BeaconStatesResponse>;
+  sendRequest<T extends ResponseBody>(method: Method, request: RequestBody): Promise<T>;
 }
 
 export interface INetwork extends EventEmitter {

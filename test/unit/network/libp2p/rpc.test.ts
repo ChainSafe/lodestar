@@ -2,7 +2,7 @@ import {assert} from "chai";
 import BN from "bn.js";
 import promisify from "promisify-es6";
 
-import {RpcController} from "../../../../src/network/libp2p/rpcController";
+import {NetworkRpc} from "../../../../src/network/libp2p/rpc";
 
 import {createNode} from "./util";
 import {NodejsNode} from "../../../../src/network/libp2p/nodejs";
@@ -13,7 +13,7 @@ const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
 describe("[network] rpc", () => {
   let nodeA: NodejsNode, nodeB: NodejsNode,
-    rpcA: RpcController, rpcB: RpcController;
+    rpcA: NetworkRpc, rpcB: NetworkRpc;
   beforeEach(async () => {
     // setup
     nodeA = await createNode(multiaddr);
@@ -22,8 +22,8 @@ describe("[network] rpc", () => {
       promisify(nodeA.start.bind(nodeA))(),
       promisify(nodeB.start.bind(nodeB))(),
     ]);
-    rpcA = new RpcController(nodeA);
-    rpcB = new RpcController(nodeB);
+    rpcA = new NetworkRpc(nodeA);
+    rpcB = new NetworkRpc(nodeB);
     await Promise.all([
       rpcA.start(),
       rpcB.start(),
@@ -126,7 +126,7 @@ describe("[network] rpc", () => {
         bestRoot: Buffer.alloc(32),
         bestSlot: 0,
       };
-      const helloActual = await rpcA.getPeers()[0].hello(helloExpected);
+      const helloActual = await rpcA.getPeers()[0].sendRequest<Hello>(Method.Hello, helloExpected);
       assert.deepEqual(helloActual, helloExpected);
     } catch (e) {
       assert.fail("hello not received");
@@ -144,7 +144,7 @@ describe("[network] rpc", () => {
         bestRoot: Buffer.alloc(32),
         bestSlot: 0,
       };
-      const helloActual = await rpcB.getPeers()[0].hello(helloExpected);
+      const helloActual = await rpcB.getPeers()[0].sendRequest<Hello>(Method.Hello, helloExpected);
       assert.deepEqual(helloActual, helloExpected);
     } catch (e) {
       assert.fail("hello not received");

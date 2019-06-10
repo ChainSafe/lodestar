@@ -14,7 +14,7 @@ import {BLOCK_TOPIC, ATTESTATION_TOPIC, SHARD_SUBNET_COUNT} from "../../constant
 import {INetwork, INetworkOptions} from "../interface";
 import {Method, RequestId} from "../codec";
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
-import {RpcController} from "./rpcController";
+import {NetworkRpc} from "./rpc";
 import {Peer} from "./peer";
 
 
@@ -23,7 +23,7 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
   private opts: INetworkOptions;
   private libp2p: LibP2p;
   private pubsub: Gossipsub;
-  private rpc: RpcController;
+  private rpc: NetworkRpc;
   private inited: Promise<void>;
 
   public constructor(opts: INetworkOptions, {libp2p}) {
@@ -35,7 +35,7 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
         this.peerInfo = libp2p.peerInfo;
         this.libp2p = libp2p;
         this.pubsub = new Gossipsub(libp2p);
-        this.rpc = new RpcController(libp2p);
+        this.rpc = new NetworkRpc(libp2p);
         resolve();
       });
     });

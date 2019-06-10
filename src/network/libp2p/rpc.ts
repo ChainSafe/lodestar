@@ -28,7 +28,10 @@ import {RPC_MULTICODEC} from "./constants";
 
 
 
-export class RpcController extends EventEmitter {
+/**
+ * The NetworkRpc module controls network-level resources and concerns of p2p connections
+ */
+export class NetworkRpc extends EventEmitter {
   private libp2p: LibP2p;
   /**
    * dials in progress
@@ -144,11 +147,13 @@ export class RpcController extends EventEmitter {
     peer.write(encodedResponse);
   }
 
-  public async getResponse<T extends ResponseBody>(id: string): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
+  public async getResponse(id: string): Promise<ResponseBody> {
+    return new Promise<ResponseBody>((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.removeAllListeners(id);
-        reject(new Error('request timeout'));
+        const method = this.requests[id];
+        delete this.requests[id];
+        reject(new Error(`request timeout, method ${method}, id ${id}`));
       }, this.requestTimeout);
       this.once(`response ${id}`, (err, data) => {
         clearTimeout(timeout);
@@ -173,7 +178,6 @@ export class RpcController extends EventEmitter {
       try {
         const request: WireRequest = deserialize(data, WireRequest);
         const decodedBody = decodeRequestBody(request.method, request.body);
-        peer.onRequest(method, decodedBody);
         this.onRequest(peer, id, request.method, decodedBody);
       } catch (e) {
         logger.warn('unable to decode request', e.message);
@@ -217,7 +221,6 @@ export class RpcController extends EventEmitter {
 
   public async stop(): Promise<void> {
     this.wipDials = new Set();
-    this.peers.forEach((peer) => peer.goodbye({reason: new BN(1)}));
     this.peers.forEach((peer) => peer.close());
     this.peers = new Map<string, Peer>();
 
