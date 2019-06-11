@@ -1,33 +1,43 @@
+// @ts-ignore
 export {memory};
 import {Root, Gwei, Slot, ValidatorIndex} from "../../types";
 
-export interface ForkChoiceAttestation {
-  target: Root;
-  attester: ValidatorIndex;
-  weight: Gwei;
+class Aggregate {
+  public target: Root;
+  public weight: Gwei;
+  public prevWeight: Gwei;
+  public constructor(target: Root, weight: Gwei, prevWeight: Gwei) {
+    this.target = target;
+    this.weight = weight;
+    this.prevWeight = prevWeight;
+  }
 }
 
-export interface AggregatedAttestation {
-  target: Root;
-  weight: Gwei;
-  prevWeight: Gwei;
+class Attestation {
+  public target: Root;
+  public attester: ValidatorIndex;
+  public weight: Gwei;
+  public constructor(target: Root, attester: ValidatorIndex, weight: Gwei) {
+    this.target = target;
+    this.attester = attester;
+    this.weight = weight;
+  }
 }
 
 export class AttestationAggregator {
-  public latestAggregates: Map<Root, AggregatedAttestation> | null = null;
-  public latestAttestations: Map<ValidatorIndex, ForkChoiceAttestation> | null = null;
-  public latestAggregatesValues: AggregatedAttestation[];
-  public latestAttestationValues: ForkChoiceAttestation[];
+  public latestAggregates: Map<Root, Aggregate>;
+  public latestAttestations: Map<ValidatorIndex, Attestation>;
+  public latestAggregatesValues: Aggregate[];
+  public latestAttestationValues: Attestation[];
+  private slotLookup: (arg0: Root) => Slot | null;
 
-  private slotLookup: (Root) => Slot | null;
-
-  public constructor(slotLookup: (Root) => Slot | null) {
+  public constructor(slotLookup: (arg0: Root) => Slot | null) {
     this.latestAggregates = new Map();
     this.latestAttestations = new Map();
     this.slotLookup = slotLookup;
   }
 
-  private ensureAggregate(target: Root): AggregatedAttestation {
+  private ensureAggregate(target: Root): Aggregate {
     if (!this.latestAggregates.has(target)) {
       this.latestAggregates.set(target, {
         target,
@@ -43,7 +53,7 @@ export class AttestationAggregator {
     return this.latestAggregates.get(target);
   }
 
-  public addAttestation(a: ForkChoiceAttestation): void {
+  public addAttestation(a: Attestation): void {
     if (this.latestAttestations.has(a.attester)){
 
       let prevA = this.latestAttestations.get(a.attester);
@@ -54,6 +64,7 @@ export class AttestationAggregator {
         return;
       }
       let newAgg = this.ensureAggregate(a.target);
+      // @ts-ignore // It can't find toString()
       let prevAgg = this.latestAggregates.get(prevA.weight.toString());
 
       if (prevA.target !== a.target) {
@@ -64,7 +75,6 @@ export class AttestationAggregator {
       } else {
         return;
       }
-
     } else{
       this.ensureAggregate(a.target);
 
@@ -77,11 +87,12 @@ export class AttestationAggregator {
 
   public prune(): void {
     let aliveTargets: Map<Root, boolean> = new Map();
-    this.latestAttestationValues.forEach((a: ForkChoiceAttestation) => aliveTargets.set(a.target, true));
-    this.latestAggregatesValues.forEach((agg: AggregatedAttestation, index: i32) => {
+    this.latestAttestationValues.forEach((a) => aliveTargets.set(a.target, true));
+    this.latestAggregatesValues.forEach((agg, index: i32) => {
       if (agg.prevWeight === agg.weight || !aliveTargets.get(agg.target)) {
         this.latestAggregates.delete(agg.target);
       }
     });
   }
+
 }

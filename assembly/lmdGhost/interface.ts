@@ -1,4 +1,4 @@
-import {bytes32, Root, Gwei, Slot, ValidatorIndex} from "../types";
+import {bytes32, Gwei, Slot, ValidatorIndex} from "../types";
 
 
 export interface LMDGHOST {
