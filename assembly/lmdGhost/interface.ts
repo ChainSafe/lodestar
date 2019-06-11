@@ -1,4 +1,5 @@
-import {bytes32, Gwei, Slot, ValidatorIndex} from "../src/types";
+import {bytes32, Root, Gwei, Slot, ValidatorIndex} from "../types";
+
 
 export interface LMDGHOST {
   addBlock(slot: Slot, blockRootBuf: bytes32, parentRootBuf: bytes32): void;

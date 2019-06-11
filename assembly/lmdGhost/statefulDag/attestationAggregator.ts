@@ -1,11 +1,5 @@
-
-
-type Root = string;
-type Gwei = u64;
-type Slot = u32;
-type ValidatorIndex = u32;
-
-export type Root = string;
+export {memory};
+import {Root, Gwei, Slot, ValidatorIndex} from "../../types";
 
 export interface ForkChoiceAttestation {
   target: Root;
