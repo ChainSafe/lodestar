@@ -15,7 +15,6 @@ import {INetwork, INetworkOptions} from "../interface";
 import {Method, RequestId} from "../codec";
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {NetworkRpc} from "./rpc";
-import {Peer} from "./peer";
 
 
 export class Libp2pNetwork extends EventEmitter implements INetwork {
@@ -98,23 +97,26 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
   }
 
   // rpc
-  public getPeers(): Peer[] {
+  public getPeers(): PeerInfo[] {
     return this.rpc.getPeers();
   }
-  public getPeer(peerInfo: PeerInfo): Peer {
-    return this.rpc.getPeer(peerInfo);
+  public hasPeer(peerInfo: PeerInfo): boolean {
+    return this.rpc.hasPeer(peerInfo);
   }
   public async connect(peerInfo: PeerInfo): Promise<void> {
     await promisify(this.libp2p.dial.bind(this.libp2p))(peerInfo);
   }
-  public async disconnect(peer: Peer): Promise<void> {
-    await promisify(this.libp2p.hangUp.bind(this.libp2p))(peer.peerInfo);
+  public async disconnect(peerInfo: PeerInfo): Promise<void> {
+    await promisify(this.libp2p.hangUp.bind(this.libp2p))(peerInfo);
+  }
+  public async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T> {
+    return await this.rpc.sendRequest<T>(peerInfo, method, body);
   }
   public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
     this.rpc.sendResponse(id, responseCode, result);
   }
-  private handleRequest(method: Method, id: RequestId, body: RequestBody, peer: Peer): void {
-    this.emit("request", method, id, body, peer);
+  private emitRequest(peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody): void {
+    this.emit("request", peerInfo, method, id, body);
   }
   private emitPeerConnect(peerInfo: PeerInfo): void {
     this.emit("peer:connect", peerInfo);
@@ -136,7 +138,7 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
         this.handleIncomingShardAttestation.bind(this));
     }
     this.pubsub.on("gossipsub:heartbeat", this.emitGossipHeartbeat.bind(this));
-    this.rpc.on("request", this.handleRequest.bind(this));
+    this.rpc.on("request", this.emitRequest.bind(this));
     this.rpc.on("peer:connect", this.emitPeerConnect.bind(this));
     this.rpc.on("peer:disconnect", this.emitPeerDisconnect.bind(this));
   }
@@ -152,7 +154,7 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
         this.handleIncomingShardAttestation.bind(this));
     }
     this.pubsub.removeListener("gossipsub:heartbeat", this.emitGossipHeartbeat.bind(this));
-    this.rpc.removeListener("request", this.handleRequest.bind(this));
+    this.rpc.removeListener("request", this.emitRequest.bind(this));
     this.rpc.removeListener("peer:connect", this.emitPeerConnect.bind(this));
     this.rpc.removeListener("peer:disconnect", this.emitPeerDisconnect.bind(this));
   }

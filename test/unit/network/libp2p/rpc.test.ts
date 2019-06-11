@@ -114,7 +114,7 @@ describe("[network] rpc", () => {
       assert.fail(e, null, "connection event not triggered");
     }
     // send hello from A to B, await hello response
-    rpcB.once("request", (method, id, body) => {
+    rpcB.once("request", (peerInfo, method, id, body) => {
       rpcB.sendResponse(id, 0, body)
     });
     try {
@@ -126,13 +126,13 @@ describe("[network] rpc", () => {
         bestRoot: Buffer.alloc(32),
         bestSlot: 0,
       };
-      const helloActual = await rpcA.getPeers()[0].sendRequest<Hello>(Method.Hello, helloExpected);
+      const helloActual = await rpcA.sendRequest<Hello>(rpcA.getPeers()[0], Method.Hello, helloExpected);
       assert.deepEqual(helloActual, helloExpected);
     } catch (e) {
       assert.fail("hello not received");
     }
     // send hello from B to A, await hello response
-    rpcA.once("request", (method, id, body) => {
+    rpcA.once("request", (peerInfo, method, id, body) => {
       rpcA.sendResponse(id, 0, body)
     });
     try {
@@ -144,7 +144,7 @@ describe("[network] rpc", () => {
         bestRoot: Buffer.alloc(32),
         bestSlot: 0,
       };
-      const helloActual = await rpcB.getPeers()[0].sendRequest<Hello>(Method.Hello, helloExpected);
+      const helloActual = await rpcB.sendRequest<Hello>(rpcB.getPeers()[0], Method.Hello, helloExpected);
       assert.deepEqual(helloActual, helloExpected);
     } catch (e) {
       assert.fail("hello not received");

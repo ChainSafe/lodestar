@@ -16,11 +16,12 @@ import {
 } from "../types";
 import {intDiv} from "../util/math";
 import {IBeaconDb} from "../db";
-import {BeaconChain} from "../chain";
-import {INetwork, IPeer} from "../network";
+import {IBeaconChain} from "../chain";
+import {INetwork} from "../network";
 import {Method, RequestId} from "../network/codec";
 import {getEmptyBlockBody} from "../chain/genesis";
 import {ZERO_HASH} from "../constants";
+import {ReputationStore} from "./reputation";
 
 /**
  * The SyncRpc module handles app-level requests / responses from other peers,
@@ -28,12 +29,14 @@ import {ZERO_HASH} from "../constants";
  */
 export class SyncRpc {
   private db: IBeaconDb;
-  private chain: BeaconChain;
+  private chain: IBeaconChain;
   private network: INetwork;
-  public constructor(opts, {db, chain, network}) {
+  private reps: ReputationStore;
+  public constructor(opts, {db, chain, network, reps}) {
     this.db = db;
     this.chain = chain;
     this.network = network;
+    this.reps = reps;
   }
 
   // create common requests
@@ -75,100 +78,101 @@ export class SyncRpc {
   private async handshake(peerInfo: PeerInfo): Promise<void> {
     const randomDelay = Math.floor(Math.random() * 5000);
     await new Promise((resolve) => setTimeout(resolve, randomDelay));
-    const peer = this.network.getPeer(peerInfo);
-    if (peer && !peer.latestHello) {
-      await this.getHello(peer).catch((e) => {});
+    if (
+      this.network.hasPeer(peerInfo) &&
+      !this.reps.get(peerInfo.id.toB58String()).latestHello
+    ) {
+      await this.getHello(peerInfo).catch((e) => {});
     }
   }
 
   public async refreshPeerHellos(): Promise<void> {
-    await this.network.getPeers().map((peer) =>
-      this.getHello(peer).catch((e) => {}));
+    await this.network.getPeers().map((peerInfo) =>
+      this.getHello(peerInfo).catch((e) => {}));
   }
 
-  public async getHello(peer: IPeer): Promise<Hello> {
+  public async getHello(peerInfo: PeerInfo): Promise<Hello> {
     const hello = await this.createHello();
-    const response = await peer.sendRequest<Hello>(Method.Hello, hello);
-    peer.latestHello = response;
+    const response = await this.network.sendRequest<Hello>(peerInfo, Method.Hello, hello);
+    this.reps.get(peerInfo.id.toB58String()).latestHello = response;
     return response;
   }
 
-  public async getGoodbye(peer: IPeer): Promise<Goodbye> {
-    return await peer.sendRequest<Goodbye>(Method.Goodbye, {reason: new BN(0)});
+  public async getGoodbye(peerInfo: PeerInfo): Promise<Goodbye> {
+    return await this.network.sendRequest<Goodbye>(peerInfo, Method.Goodbye, {reason: new BN(0)});
   }
 
-  public async getStatus(peer: IPeer): Promise<Status> {
-    const response = await peer.sendRequest<Status>(Method.Status, this.createStatus());
-    peer.latestStatus = response;
+  public async getStatus(peerInfo: PeerInfo): Promise<Status> {
+    const response = await this.network.sendRequest<Status>(peerInfo, Method.Status, this.createStatus());
+    this.reps.get(peerInfo.id.toB58String()).latestStatus = response;
     return response;
   }
 
   public async getBeaconBlockRoots(
-    peer: IPeer,
+    peerInfo: PeerInfo,
     startSlot: Slot,
     count: number64
   ): Promise<BeaconBlockRootsResponse> {
-    return await peer.sendRequest<BeaconBlockRootsResponse>(
-      Method.BeaconBlockRoots, {startSlot, count});
+    return await this.network.sendRequest<BeaconBlockRootsResponse>(
+      peerInfo, Method.BeaconBlockRoots, {startSlot, count});
   }
 
   public async getBeaconBlockHeaders(
-    peer: IPeer,
+    peerInfo: PeerInfo,
     startRoot: bytes32,
     startSlot: Slot,
     maxHeaders: number64,
     skipSlots: number64
   ): Promise<BeaconBlockHeadersResponse> {
-    return await peer.sendRequest<BeaconBlockHeadersResponse>(
-      Method.BeaconBlockHeaders, {startRoot, startSlot, maxHeaders, skipSlots});
+    return await this.network.sendRequest<BeaconBlockHeadersResponse>(
+      peerInfo, Method.BeaconBlockHeaders, {startRoot, startSlot, maxHeaders, skipSlots});
   }
 
   public async getBeaconBlockBodies(
-    peer: IPeer,
+    peerInfo: PeerInfo,
     blockRoots: bytes32[]
   ): Promise<BeaconBlockBodiesResponse> {
-    return await peer.sendRequest<BeaconBlockBodiesResponse>(
-      Method.BeaconBlockBodies, {blockRoots});
+    return await this.network.sendRequest<BeaconBlockBodiesResponse>(
+      peerInfo, Method.BeaconBlockBodies, {blockRoots});
   }
 
   public async getBeaconStates(
-    peer: IPeer,
+    peerInfo: PeerInfo,
     hashes: bytes32[]
   ): Promise<BeaconStatesResponse> {
-    return await peer.sendRequest<BeaconStatesResponse>(
-      Method.BeaconStates, {hashes});
+    return await this.network.sendRequest<BeaconStatesResponse>(
+      peerInfo, Method.BeaconStates, {hashes});
   }
 
   // handle incoming requests
 
   public async onRequest(
+    peerInfo: PeerInfo,
     method: Method,
     id: RequestId,
     body: RequestBody,
-    peer: IPeer
   ): Promise<void> {
     switch (method) {
       case Method.Hello:
-        return await this.onHello(id, body as Hello, peer);
+        return await this.onHello(peerInfo, id, body as Hello);
       case Method.Goodbye:
-        return await this.onGoodbye(id, body as Goodbye, peer);
+        return await this.onGoodbye(peerInfo, id, body as Goodbye);
       case Method.Status:
-        return await this.onStatus(id, body as Status, peer);
+        return await this.onStatus(peerInfo, id, body as Status);
       case Method.BeaconBlockRoots:
         return await this.onBeaconBlockRoots(id, body as BeaconBlockRootsRequest);
       case Method.BeaconBlockHeaders:
         return await this.onBeaconBlockHeaders(id, body as BeaconBlockHeadersRequest);
       case Method.BeaconBlockBodies:
         return await this.onBeaconBlockBodies(id, body as BeaconBlockBodiesRequest);
-        return;
       case Method.BeaconStates:
         return await this.onBeaconStates(id, body as BeaconStatesRequest);
     }
   }
 
-  public async onHello(id: RequestId, request: Hello, peer: IPeer): Promise<void> {
+  public async onHello(peerInfo: PeerInfo, id: RequestId, request: Hello): Promise<void> {
     // set hello on peer
-    peer.latestHello = request;
+    this.reps.get(peerInfo.id.toB58String()).latestHello = request;
     // send hello response
     try {
       const hello = await this.createHello();
@@ -179,12 +183,12 @@ export class SyncRpc {
     // TODO handle incorrect networkId / chainId
   }
 
-  public async onGoodbye(id: RequestId, request: Goodbye, peer: IPeer): Promise<void> {
-    this.network.disconnect(peer);
+  public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
+    this.network.disconnect(peerInfo);
   }
 
-  public async onStatus(id: RequestId, request: Status, peer: IPeer): Promise<void> {
-    peer.latestStatus = request;
+  public async onStatus(peerInfo: PeerInfo, id: RequestId, request: Status): Promise<void> {
+    this.reps.get(peerInfo.id.toB58String()).latestStatus = request;
     this.network.sendResponse(id, 40, this.createStatus());
   }
 

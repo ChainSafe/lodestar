@@ -3,6 +3,7 @@ import sinon from "sinon";
 import BN from "bn.js";
 
 import {SyncRpc} from "../../../src/sync/rpc";
+import {ReputationStore} from "../../../src/sync/reputation";
 import {Libp2pNetwork, INetworkOptions} from "../../../src/network";
 import {BeaconDB, LevelDbController} from "../../../src/db";
 import {Method} from "../../../src/network/codec";
@@ -23,8 +24,8 @@ const opts: INetworkOptions = {
 describe("[sync] rpc", () => {
   const sandbox = sinon.createSandbox();
 
-  let rpcA: SyncRpc, netA: Libp2pNetwork;
-  let rpcB: SyncRpc, netB: Libp2pNetwork;
+  let rpcA: SyncRpc,netA: Libp2pNetwork, repsA: ReputationStore;
+  let rpcB: SyncRpc, netB: Libp2pNetwork, repsB: ReputationStore;
   beforeEach(async () => {
     netA = new Libp2pNetwork(opts, {libp2p: createNode(multiaddr)});
     netB = new Libp2pNetwork(opts, {libp2p: createNode(multiaddr)});
@@ -32,6 +33,7 @@ describe("[sync] rpc", () => {
       netA.start(),
       netB.start(),
     ]);
+    repsA = new ReputationStore();
     rpcA = new SyncRpc({}, {
       db: new BeaconDB({
         controller: sandbox.createStubInstance(LevelDbController),
@@ -42,7 +44,9 @@ describe("[sync] rpc", () => {
         networkId: new BN(0),
       }),
       network: netA,
+      reps: repsA,
     });
+    repsB = new ReputationStore();
     rpcB = new SyncRpc({}, {
       db: new BeaconDB({
         controller: sandbox.createStubInstance(LevelDbController),
@@ -53,6 +57,7 @@ describe("[sync] rpc", () => {
         networkId: new BN(0),
       }),
       network: netB,
+      reps: repsB,
     });
     netA.on("request", rpcA.onRequest.bind(rpcA));
     netB.on("request", rpcB.onRequest.bind(rpcB));
@@ -81,15 +86,15 @@ describe("[sync] rpc", () => {
       new Promise((resolve) => netA.once("peer:connect", resolve)),
       new Promise((resolve) => netB.once("peer:connect", resolve)),
     ]);
-    expect(netA.getPeer(netB.peerInfo)).to.not.equal(undefined);
-    expect(netB.getPeer(netA.peerInfo)).to.not.equal(undefined);
+    expect(netA.hasPeer(netB.peerInfo)).to.equal(true);
+    expect(netB.hasPeer(netA.peerInfo)).to.equal(true);
     await new Promise((resolve) => {
       netA.once("request", resolve);
       netB.once("request", resolve);
     });
     await new Promise((resolve) => setTimeout(resolve, 200));
-    expect(netA.getPeer(netB.peerInfo).latestHello).to.not.equal(null);
-    expect(netB.getPeer(netA.peerInfo).latestHello).to.not.equal(null);
+    expect(repsA.get(netB.peerInfo.id.toB58String()).latestHello).to.not.equal(null);
+    expect(repsB.get(netA.peerInfo.id.toB58String()).latestHello).to.not.equal(null);
   });
 
   it("goodbye on rpc stop", async function() {
@@ -104,7 +109,7 @@ describe("[sync] rpc", () => {
       netB.once("request", resolve);
     });
     await new Promise((resolve) => setTimeout(resolve, 200));
-    const goodbyeEvent = new Promise((resolve) => netB.once("request", resolve));
+    const goodbyeEvent = new Promise((resolve) => netB.once("request", (_, method) => resolve(method)));
     await rpcA.stop();
     const goodbye = await goodbyeEvent;
     expect(goodbye).to.equal(Method.Goodbye);

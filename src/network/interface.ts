@@ -5,7 +5,7 @@ import PeerInfo from "peer-info";
 import {EventEmitter} from "events";
 
 import {
-  Attestation, BeaconBlock, Shard, Hello, Status, ResponseBody, RequestBody,
+  Attestation, BeaconBlock, Shard, ResponseBody, RequestBody,
 } from "../types";
 import {RequestId, Method} from "./codec";
 
@@ -25,13 +25,6 @@ export interface INetworkOptions {
   disconnectTimeout: number;
 }
 
-export interface IPeer {
-  peerInfo: PeerInfo;
-  latestHello: Hello | null;
-  latestStatus: Status | null;
-  sendRequest<T extends ResponseBody>(method: Method, request: RequestBody): Promise<T>;
-}
-
 export interface INetwork extends EventEmitter {
   peerInfo: PeerInfo;
   // Service
@@ -48,9 +41,10 @@ export interface INetwork extends EventEmitter {
   unsubscribeToAttestations(): void;
   unsubscribeToShardAttestations(shard: Shard): void;
   // Rpc/peer
-  getPeers(): IPeer[];
-  getPeer(peerInfo: PeerInfo): IPeer | null;
+  getPeers(): PeerInfo[];
+  hasPeer(peerInfo: PeerInfo): boolean;
+  sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T>;
   sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void;
   connect(peerInfo: PeerInfo): Promise<void>;
-  disconnect(peer: IPeer): void;
+  disconnect(peerInfo: PeerInfo): void;
 }

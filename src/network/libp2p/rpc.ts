@@ -85,13 +85,13 @@ export class NetworkRpc extends EventEmitter {
       this.emit("peer:disconnect", peerInfo);
     }
   }
-  public getPeers(): Peer[] {
-    return Array.from(this.peers.values());
+  public getPeers(): PeerInfo[] {
+    return Array.from(this.peers.values()).map((p) => p.peerInfo);
   }
 
-  public getPeer(peerInfo: PeerInfo): Peer | null {
+  public hasPeer(peerInfo: PeerInfo): boolean {
     const peerId = peerInfo.id.toB58String();
-    return this.peers.get(peerId);
+    return this.peers.has(peerId);
   }
 
   public async onConnection(protocol: string, conn: Connection): Promise<void> {
@@ -128,26 +128,20 @@ export class NetworkRpc extends EventEmitter {
     this.wipDials.delete(peerId);
   }
 
-  public sendRequest(peer: Peer, method: Method, body: RequestBody): RequestId {
+  public async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T> {
+    const peerId = peerInfo.id.toB58String();
+    const peer = this.peers.get(peerId);
+    if (!peer) {
+      throw new Error(`Peer does not exist: ${peerId}`);
+    }
     const id = randomRequestId();
     this.requests[id] = method;
     const encodedRequest = encodeRequest(id, method, body);
     peer.write(encodedRequest);
-    return id;
+    return await this.getResponse(id) as T;
   }
 
-  public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
-    const request = this.responses[id];
-    if (!request) {
-      throw new Error('No request found');
-    }
-    const {peer, method} = request;
-    const encodedResponse = encodeResponse(id, method, responseCode, result);
-    delete this.responses[id];
-    peer.write(encodedResponse);
-  }
-
-  public async getResponse(id: string): Promise<ResponseBody> {
+  private async getResponse(id: string): Promise<ResponseBody> {
     return new Promise<ResponseBody>((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.removeAllListeners(id);
@@ -167,6 +161,17 @@ export class NetworkRpc extends EventEmitter {
     });
   }
 
+  public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
+    const request = this.responses[id];
+    if (!request) {
+      throw new Error('No request found');
+    }
+    const {peer, method} = request;
+    const encodedResponse = encodeResponse(id, method, responseCode, result);
+    delete this.responses[id];
+    peer.write(encodedResponse);
+  }
+
   public onRequestResponse(peer: Peer, data: Buffer): void {
     if(!sanityCheckData(data)) {
       // bad data
@@ -178,7 +183,8 @@ export class NetworkRpc extends EventEmitter {
       try {
         const request: WireRequest = deserialize(data, WireRequest);
         const decodedBody = decodeRequestBody(request.method, request.body);
-        this.onRequest(peer, id, request.method, decodedBody);
+        this.responses[id] = {peer, method: request.method};
+        this.emit("request", peer.peerInfo, request.method, id, decodedBody);
       } catch (e) {
         logger.warn('unable to decode request', e.message);
       }
@@ -199,11 +205,6 @@ export class NetworkRpc extends EventEmitter {
         logger.warn('unable to decode response', e.message);
       }
     }
-  }
-
-  public onRequest(peer: Peer, id: RequestId, method: Method, body: RequestBody): void {
-    this.responses[id] = {peer, method};
-    this.emit("request", method, id, body, peer);
   }
 
   public async start(): Promise<void> {

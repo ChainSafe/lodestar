@@ -11,12 +11,11 @@ import Abortable from "pull-abortable";
 import {
   Hello, Status, RequestBody, ResponseBody
 } from "../../types";
-import {IPeer} from "../interface";
 import {Method} from "../codec";
 import {NetworkRpc} from "./rpc";
 
 
-export class Peer implements IPeer {
+export class Peer {
   public peerInfo: PeerInfo;
   public latestHello: Hello | null;
   public latestStatus: Status | null;
@@ -77,10 +76,5 @@ export class Peer implements IPeer {
   public close(): void {
     this.stream.end();
     this._close();
-  }
-
-  public async sendRequest<T extends ResponseBody>(method: Method, request: RequestBody): Promise<T> {
-    const id = this.controller.sendRequest(this, method, request);
-    return await this.controller.getResponse(id) as T;
   }
 }
