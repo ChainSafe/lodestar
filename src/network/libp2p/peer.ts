@@ -11,7 +11,7 @@ import Abortable from "pull-abortable";
 import {
   Hello, Status, RequestBody, ResponseBody
 } from "../../types";
-import {Method} from "../codec";
+import {Method} from "../../constants";
 import {NetworkRpc} from "./rpc";
 
 

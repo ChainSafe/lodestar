@@ -7,7 +7,7 @@ import {EventEmitter} from "events";
 import {
   Attestation, BeaconBlock, Shard, ResponseBody, RequestBody,
 } from "../types";
-import {RequestId, Method} from "./codec";
+import {RequestId, Method} from "../constants";
 
 export interface INetworkOptions {
   maxPeers: number;
