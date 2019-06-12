@@ -19,9 +19,11 @@ import {
   RequestBody,
   ResponseBody,
 } from "../../../src/types";
-
 import {
   Method,
+} from "../../../src/constants";
+
+import {
   encodeRequest,
   encodeResponse,
   decodeRequestBody,

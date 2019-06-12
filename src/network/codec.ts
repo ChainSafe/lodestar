@@ -11,18 +11,7 @@ import {
   BeaconBlockRootsResponse, BeaconBlockHeadersResponse, BeaconBlockBodiesResponse,
   BeaconStatesResponse, ResponseBody, WireResponse, WireRequest,
 } from "../types";
-
-export type RequestId = string;
-
-export enum Method {
-  Hello = 0,
-  Goodbye = 1,
-  Status = 2,
-  BeaconBlockRoots = 10,
-  BeaconBlockHeaders = 11,
-  BeaconBlockBodies = 12,
-  BeaconStates = 13,
-}
+import {RequestId, Method} from "../constants";
 
 // Encode
 

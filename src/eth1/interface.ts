@@ -6,7 +6,7 @@ import {EventEmitter} from "events";
 
 import {bytes32, Deposit, number64} from "../types";
 
-export interface Eth1Options {
+export interface IEth1Options {
   depositContract: {
     deployedAt: number;
     address: string;
@@ -15,9 +15,9 @@ export interface Eth1Options {
 }
 
 /**
- * The Eth1Notifier service watches the Eth1.0 chain for relevant events
+ * The IEth1Notifier service watches the Eth1.0 chain for relevant events
  */
-export interface Eth1Notifier extends EventEmitter {
+export interface IEth1Notifier extends EventEmitter {
   /**
    * If there isn't Eth2Genesis events in past logs, it should fetch
    * all the deposit logs from block at which contract is deployed.
@@ -68,6 +68,10 @@ export interface Eth1Notifier extends EventEmitter {
    */
   latestBlockHash(): bytes32;
 
+  /**
+   * Return true if the eth2 genesis log has occurred
+   */
+  isAfterEth2Genesis(): Promise<boolean>;
   /**
    * Return the merkle root of the deposits
    */

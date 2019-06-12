@@ -8,14 +8,14 @@ import {deserialize} from "@chainsafe/ssz";
 
 import {bytes32, Deposit, Eth1Data, number64, Gwei} from "../../types";
 
-import {Eth1Notifier, Eth1Options} from "../interface";
+import {IEth1Notifier, IEth1Options} from "../interface";
 import logger from "../../logger";
 import {isValidAddress} from "../../util/address";
 import {BeaconDB} from "../../db";
 import {Log} from "ethers/providers";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants/minimal";
 
-export interface EthersEth1Options extends Eth1Options {
+export interface EthersEth1Options extends IEth1Options {
   provider: ethers.providers.BaseProvider;
   contract?: Contract;
 }
@@ -23,7 +23,7 @@ export interface EthersEth1Options extends Eth1Options {
 /**
  * Watch the Eth1.0 chain using Ethers
  */
-export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
+export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   private provider: ethers.providers.BaseProvider;
 
@@ -206,7 +206,7 @@ export class EthersEth1Notifier extends EventEmitter implements Eth1Notifier {
     return !(!code || code === '0x');
   }
 
-  private async isAfterEth2Genesis(): Promise<boolean> {
+  public async isAfterEth2Genesis(): Promise<boolean> {
     const logs = await this.getContractPastLogs([this.contract.interface.events.Eth2Genesis.topic]);
     return logs.length > 0;
   }

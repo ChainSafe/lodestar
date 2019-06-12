@@ -2,7 +2,6 @@
  * @module network/libp2p
  */
 
-import BN from "bn.js";
 import {EventEmitter} from "events";
 import LibP2p from "libp2p";
 import PeerInfo from "peer-info";
@@ -12,10 +11,9 @@ import {deserialize} from "@chainsafe/ssz";
 
 import logger from "../../logger";
 import {RequestBody, ResponseBody, WireResponse, WireRequest} from "../../types";
+import {Method, RequestId, ResponseCode, RPC_MULTICODEC} from "../../constants";
 
 import {
-  RequestId,
-  Method,
   encodeRequest,
   encodeResponse,
   sanityCheckData,
@@ -24,11 +22,12 @@ import {
 } from "../codec";
 import {randomRequestId} from "../util";
 import {Peer} from "./peer";
-import {RPC_MULTICODEC} from "./constants";
 
 
-
-export class RpcController extends EventEmitter {
+/**
+ * The NetworkRpc module controls network-level resources and concerns of p2p connections
+ */
+export class NetworkRpc extends EventEmitter {
   private libp2p: LibP2p;
   /**
    * dials in progress
@@ -82,13 +81,13 @@ export class RpcController extends EventEmitter {
       this.emit("peer:disconnect", peerInfo);
     }
   }
-  public getPeers(): Peer[] {
-    return Array.from(this.peers.values());
+  public getPeers(): PeerInfo[] {
+    return Array.from(this.peers.values()).map((p) => p.peerInfo);
   }
 
-  public getPeer(peerInfo: PeerInfo): Peer | null {
+  public hasPeer(peerInfo: PeerInfo): boolean {
     const peerId = peerInfo.id.toB58String();
-    return this.peers.get(peerId);
+    return this.peers.has(peerId);
   }
 
   public async onConnection(protocol: string, conn: Connection): Promise<void> {
@@ -125,30 +124,26 @@ export class RpcController extends EventEmitter {
     this.wipDials.delete(peerId);
   }
 
-  public sendRequest(peer: Peer, method: Method, body: RequestBody): RequestId {
+  public async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T> {
+    const peerId = peerInfo.id.toB58String();
+    const peer = this.peers.get(peerId);
+    if (!peer) {
+      throw new Error(`Peer does not exist: ${peerId}`);
+    }
     const id = randomRequestId();
     this.requests[id] = method;
     const encodedRequest = encodeRequest(id, method, body);
     peer.write(encodedRequest);
-    return id;
+    return await this.getResponse(id) as T;
   }
 
-  public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
-    const request = this.responses[id];
-    if (!request) {
-      throw new Error('No request found');
-    }
-    const {peer, method} = request;
-    const encodedResponse = encodeResponse(id, method, responseCode, result);
-    delete this.responses[id];
-    peer.write(encodedResponse);
-  }
-
-  public async getResponse<T extends ResponseBody>(id: string): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
+  private async getResponse(id: string): Promise<ResponseBody> {
+    return new Promise<ResponseBody>((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.removeAllListeners(id);
-        reject(new Error('request timeout'));
+        const method = this.requests[id];
+        delete this.requests[id];
+        reject(new Error(`request timeout, method ${method}, id ${id}`));
       }, this.requestTimeout);
       this.once(`response ${id}`, (err, data) => {
         clearTimeout(timeout);
@@ -162,6 +157,17 @@ export class RpcController extends EventEmitter {
     });
   }
 
+  public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
+    const request = this.responses[id];
+    if (!request) {
+      throw new Error('No request found');
+    }
+    const {peer, method} = request;
+    const encodedResponse = encodeResponse(id, method, responseCode, result);
+    delete this.responses[id];
+    peer.write(encodedResponse);
+  }
+
   public onRequestResponse(peer: Peer, data: Buffer): void {
     if(!sanityCheckData(data)) {
       // bad data
@@ -173,8 +179,8 @@ export class RpcController extends EventEmitter {
       try {
         const request: WireRequest = deserialize(data, WireRequest);
         const decodedBody = decodeRequestBody(request.method, request.body);
-        peer.onRequest(method, decodedBody);
-        this.onRequest(peer, id, request.method, decodedBody);
+        this.responses[id] = {peer, method: request.method};
+        this.emit("request", peer.peerInfo, request.method, id, decodedBody);
       } catch (e) {
         logger.warn('unable to decode request', e.message);
       }
@@ -185,7 +191,7 @@ export class RpcController extends EventEmitter {
           responseCode,
           result,
         }: WireResponse = deserialize(data, WireResponse);
-        if (responseCode !== 0) {
+        if (responseCode !== ResponseCode.Success) {
           this.emit(event, new Error(`response code error ${responseCode}`), null);
         } else {
           const decodedResult = decodeResponseBody(method, result);
@@ -195,11 +201,6 @@ export class RpcController extends EventEmitter {
         logger.warn('unable to decode response', e.message);
       }
     }
-  }
-
-  public onRequest(peer: Peer, id: RequestId, method: Method, body: RequestBody): void {
-    this.responses[id] = {peer, method};
-    this.emit("request", method, id, body, peer);
   }
 
   public async start(): Promise<void> {
@@ -217,7 +218,6 @@ export class RpcController extends EventEmitter {
 
   public async stop(): Promise<void> {
     this.wipDials = new Set();
-    this.peers.forEach((peer) => peer.goodbye({reason: new BN(1)}));
     this.peers.forEach((peer) => peer.close());
     this.peers = new Map<string, Peer>();
 

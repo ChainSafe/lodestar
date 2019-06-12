@@ -1,6 +1,5 @@
 import {Shard} from "../types";
-import {SHARD_SUBNET_COUNT, SHARD_ATTESTATION_TOPIC} from "../constants";
-import {RequestId} from "./codec";
+import {RequestId, SHARD_SUBNET_COUNT, SHARD_ATTESTATION_TOPIC} from "../constants";
 
 function randomNibble(): string {
   return Math.floor(Math.random() * 16).toString(16);
