@@ -59,8 +59,11 @@ export class SyncRpc {
       latestFinalizedRoot = ZERO_HASH;
     } else {
       bestSlot = await this.db.getChainHeadSlot();
-      bestRoot = await this.db.getBlockRoot(bestSlot);
-      const state = await this.db.getState();
+      const [bRoot, state] = await Promise.all([
+        this.db.getBlockRoot(bestSlot),
+        this.db.getState(),
+      ]);
+      bestRoot = bRoot;
       latestFinalizedEpoch = state.finalizedEpoch;
       latestFinalizedRoot = state.finalizedRoot;
     }
