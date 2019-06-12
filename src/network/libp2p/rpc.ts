@@ -2,7 +2,6 @@
  * @module network/libp2p
  */
 
-import BN from "bn.js";
 import {EventEmitter} from "events";
 import LibP2p from "libp2p";
 import PeerInfo from "peer-info";
@@ -12,10 +11,9 @@ import {deserialize} from "@chainsafe/ssz";
 
 import logger from "../../logger";
 import {RequestBody, ResponseBody, WireResponse, WireRequest} from "../../types";
+import {Method, RequestId, ResponseCode, RPC_MULTICODEC} from "../../constants";
 
 import {
-  RequestId,
-  Method,
   encodeRequest,
   encodeResponse,
   sanityCheckData,
@@ -24,8 +22,6 @@ import {
 } from "../codec";
 import {randomRequestId} from "../util";
 import {Peer} from "./peer";
-import {RPC_MULTICODEC} from "./constants";
-
 
 
 /**
@@ -195,7 +191,7 @@ export class NetworkRpc extends EventEmitter {
           responseCode,
           result,
         }: WireResponse = deserialize(data, WireResponse);
-        if (responseCode !== 0) {
+        if (responseCode !== ResponseCode.Success) {
           this.emit(event, new Error(`response code error ${responseCode}`), null);
         } else {
           const decodedResult = decodeResponseBody(method, result);

@@ -6,7 +6,7 @@ import {NetworkRpc} from "../../../../src/network/libp2p/rpc";
 
 import {createNode} from "./util";
 import {NodejsNode} from "../../../../src/network/libp2p/nodejs";
-import {Method} from "../../../../src/network/codec";
+import {Method} from "../../../../src/constants";
 import {Hello} from "../../../../src/types";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";

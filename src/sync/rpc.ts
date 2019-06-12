@@ -14,14 +14,13 @@ import {
   BeaconBlockBodiesRequest, BeaconBlockBodiesResponse,
   BeaconStatesRequest, BeaconStatesResponse, Epoch,
 } from "../types";
+import {ZERO_HASH, Method, RequestId, ResponseCode} from "../constants";
 import logger from "../logger";
 import {intDiv} from "../util/math";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
-import {Method, RequestId} from "../network/codec";
 import {getEmptyBlockBody} from "../chain/genesis";
-import {ZERO_HASH} from "../constants";
 import {ReputationStore} from "./reputation";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
@@ -188,9 +187,9 @@ export class SyncRpc {
     // send hello response
     try {
       const hello = await this.createHello();
-      this.network.sendResponse(id, 0, hello);
+      this.network.sendResponse(id, ResponseCode.Success, hello);
     } catch (e) {
-      this.network.sendResponse(id, 40, null);
+      this.network.sendResponse(id, ResponseCode.ServerError, null);
     }
     // TODO handle incorrect networkId / chainId
   }
@@ -201,7 +200,7 @@ export class SyncRpc {
 
   public async onStatus(peerInfo: PeerInfo, id: RequestId, request: Status): Promise<void> {
     this.reps.get(peerInfo.id.toB58String()).latestStatus = request;
-    this.network.sendResponse(id, 40, this.createStatus());
+    this.network.sendResponse(id, ResponseCode.Success, this.createStatus());
   }
 
   public async onBeaconBlockRoots(id: RequestId, request: BeaconBlockRootsRequest): Promise<void> {
@@ -219,7 +218,7 @@ export class SyncRpc {
       }
     }
     // send a response even if fewer block roots get sent
-    this.network.sendResponse(id, 0, response);
+    this.network.sendResponse(id, ResponseCode.Success, response);
   }
 
   public async onBeaconBlockHeaders(
@@ -250,9 +249,9 @@ export class SyncRpc {
         } catch (e) {
         }
       }
-      this.network.sendResponse(id, 0, response);
+      this.network.sendResponse(id, ResponseCode.Success, response);
     } catch (e) {
-      this.network.sendResponse(id, 40, null);
+      this.network.sendResponse(id, ResponseCode.ServerError, null);
     }
   }
 
@@ -271,7 +270,7 @@ export class SyncRpc {
         response.blockBodies.push(getEmptyBlockBody());
       }
     }
-    this.network.sendResponse(id, 0, response);
+    this.network.sendResponse(id, ResponseCode.Success, response);
   }
 
   public async onBeaconStates(
