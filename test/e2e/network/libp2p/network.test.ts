@@ -52,7 +52,7 @@ describe("[network] network", () => {
       new Promise((resolve) => netA.on("peer:disconnect", resolve)),
       new Promise((resolve) => netB.on("peer:disconnect", resolve)),
     ]);
-    await netA.disconnect(netA.getPeer(netB.peerInfo));
+    await netA.disconnect(netB.peerInfo);
     await disconnection;
     expect(netA.getPeers().length).to.equal(0);
     expect(netB.getPeers().length).to.equal(0);
