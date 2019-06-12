@@ -40,11 +40,11 @@ export function processAttesterSlashing(state: BeaconState
   const attestingIndices1 = attestation1.custodyBit0Indices.concat(attestation1.custodyBit1Indices);
   const attestingIndices2 = attestation2.custodyBit0Indices.concat(attestation2.custodyBit1Indices);
   const currentEpoch = getCurrentEpoch(state);
-  attestingIndices1.forEach((index) => {
-    if (
-      attestingIndices2.includes(index) &&
-      isSlashableValidator(state.validatorRegistry[index], currentEpoch)
-    ) {
+  const indices = Array.from(new Set(attestingIndices1.filter((i) => {
+    return attestingIndices2.indexOf(i) > -1;
+  }))).sort((a, b) => a - b);
+  indices.forEach((index) => {
+    if (isSlashableValidator(state.validatorRegistry[index], currentEpoch)) {
       slashValidator(state, index);
       slashedAny = true;
     }

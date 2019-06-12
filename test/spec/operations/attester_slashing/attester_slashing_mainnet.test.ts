@@ -15,7 +15,8 @@ describeSpecTest(
     if(input.bls_setting && input.bls_setting.toNumber() === 2) {
       rewire({
         verify: sinon.stub().returns(true),
-        verifyMultiple: sinon.stub().returns(true)
+        verifyMultiple: sinon.stub().returns(true),
+        aggregatePubkeys: sinon.stub().returns(Buffer.alloc(48))
       });
     }
     return [stateFromYaml(input.pre), attesterSlashingFromYaml(input.attesterSlashing)];
