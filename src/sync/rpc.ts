@@ -12,8 +12,9 @@ import {
   BeaconBlockRootsRequest, BeaconBlockRootsResponse,
   BeaconBlockHeadersRequest, BeaconBlockHeadersResponse,
   BeaconBlockBodiesRequest, BeaconBlockBodiesResponse,
-  BeaconStatesRequest, BeaconStatesResponse,
+  BeaconStatesRequest, BeaconStatesResponse, Epoch,
 } from "../types";
+import logger from "../logger";
 import {intDiv} from "../util/math";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
@@ -23,16 +24,22 @@ import {getEmptyBlockBody} from "../chain/genesis";
 import {ZERO_HASH} from "../constants";
 import {ReputationStore} from "./reputation";
 
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+interface SyncOptions {
+}
+
 /**
  * The SyncRpc module handles app-level requests / responses from other peers,
  * fetching state from the chain and database as needed.
  */
 export class SyncRpc {
+  private opts: SyncOptions;
   private db: IBeaconDb;
   private chain: IBeaconChain;
   private network: INetwork;
   private reps: ReputationStore;
-  public constructor(opts, {db, chain, network, reps}) {
+  public constructor(opts: SyncOptions, {db, chain, network, reps}) {
+    this.opts = opts;
     this.db = db;
     this.chain = chain;
     this.network = network;
@@ -42,7 +49,10 @@ export class SyncRpc {
   // create common requests
 
   public async createHello(): Promise<Hello> {
-    let bestSlot, bestRoot, latestFinalizedEpoch, latestFinalizedRoot;
+    let bestSlot: Slot,
+      bestRoot: bytes32,
+      latestFinalizedEpoch: Epoch,
+      latestFinalizedRoot: bytes32;
     if (!this.chain.genesisTime) {
       bestSlot = 0;
       bestRoot = ZERO_HASH;
@@ -167,6 +177,8 @@ export class SyncRpc {
         return await this.onBeaconBlockBodies(id, body as BeaconBlockBodiesRequest);
       case Method.BeaconStates:
         return await this.onBeaconStates(id, body as BeaconStatesRequest);
+      default:
+        logger.error(`Invalid request method ${method} from ${peerInfo.id.toB58String()}`);
     }
   }
 

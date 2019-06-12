@@ -66,12 +66,14 @@ export class BeaconChain extends EventEmitter {
     const genesisBlock = getEmptyBlock();
     genesisBlock.stateRoot = hashTreeRoot(genesisState, BeaconState);
     this.genesisTime = genesisTime;
-    await this.db.setBlock(genesisBlock);
-    await this.db.setChainHead(genesisState, genesisBlock);
-    await this.db.setJustifiedBlock(genesisBlock);
-    await this.db.setFinalizedBlock(genesisBlock);
-    await this.db.setJustifiedState(genesisState);
-    await this.db.setFinalizedState(genesisState);
+    await Promise.all([
+      this.db.setBlock(genesisBlock),
+      this.db.setChainHead(genesisState, genesisBlock),
+      this.db.setJustifiedBlock(genesisBlock),
+      this.db.setFinalizedBlock(genesisBlock),
+      this.db.setJustifiedState(genesisState),
+      this.db.setFinalizedState(genesisState),
+    ]);
     const genesisRoot = hashTreeRoot(genesisBlock, BeaconBlock);
     this.forkChoice.addBlock(genesisBlock.slot, genesisRoot, Buffer.alloc(32));
     this.forkChoice.setJustified(genesisRoot);
@@ -112,8 +114,10 @@ export class BeaconChain extends EventEmitter {
   }
 
   public async applyForkChoiceRule(): Promise<void> {
-    const state = await this.db.getState();
-    const currentRoot = await this.db.getChainHeadRoot();
+    const [state, currentRoot] = await Promise.all([
+      this.db.getState(),
+      this.db.getChainHeadRoot(),
+    ]);
     const headRoot = this.forkChoice.head();
     if (!currentRoot.equals(headRoot)) {
       const block = await this.db.getBlock(headRoot);
@@ -132,12 +136,10 @@ export class BeaconChain extends EventEmitter {
     // TODO: implement
 
     // The node's Unix time is greater than or equal to state.
-    // genesis_time + (block.slot - GENESIS_SLOT) * SECONDS_PER_SLOT.
     const stateSlotTime = state.genesisTime + ((block.slot - GENESIS_SLOT) * SECONDS_PER_SLOT);
     if (Math.floor(Date.now() / 1000) < stateSlotTime) {
       return false;
     }
-
     return true;
   }
 
