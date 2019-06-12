@@ -40,13 +40,12 @@ export function getAttestingIndices(
 ): ValidatorIndex[] {
   const crosslinkCommittee =
     getCrosslinkCommittee(state, attestationData.targetEpoch, attestationData.shard);
-
   assert(verifyBitfield(bitfield, crosslinkCommittee.length));
 
   // Find the participating attesters in the committee
   return crosslinkCommittee
-    .filter((_, i) =>  getBitfieldBit(bitfield, i) === 0b1)
-    .sort();
+    .filter((_, i) =>  getBitfieldBit(bitfield, i) === 1)
+    .sort((a, b) => a - b);
 }
 
 /**
@@ -55,7 +54,7 @@ export function getAttestingIndices(
 export function getBitfieldBit(bitfield: bytes, i: number): number {
   const bit = i % 8;
   const byte = intDiv(i,  8);
-  return (bitfield[byte] >> bit) & 1;
+  return (bitfield[byte] >> bit) % 2;
 }
 
 /**
@@ -83,7 +82,7 @@ export function convertToIndexed(state: BeaconState, attestation: Attestation): 
     getAttestingIndices(state, attestation.data, attestation.aggregationBitfield);
   const custodyBit1Indices =
     getAttestingIndices(state, attestation.data, attestation.custodyBitfield);
-  const custodyBit0Indices = attestingIndices.filter((i) => custodyBit1Indices.includes(i));
+  const custodyBit0Indices = attestingIndices.filter((i) => !custodyBit1Indices.includes(i));
 
   return {
     custodyBit0Indices,
@@ -96,7 +95,7 @@ export function convertToIndexed(state: BeaconState, attestation: Attestation): 
 /**
  * Verify validity of ``indexed_attestation`` fields.
  */
-export function verifyIndexedAttestation(
+export function   verifyIndexedAttestation(
   state: BeaconState,
   indexedAttestation: IndexedAttestation
 ): bool {
@@ -109,7 +108,6 @@ export function verifyIndexedAttestation(
     custodyBit1Indices.filter((i) => custodyBit0IndicesSet.has(i))
   );
   assert(duplicates.size === 0);
-
   // TO BE REMOVED IN PHASE 1
   if (custodyBit1Indices.length > 0) {
     return false;
@@ -119,13 +117,13 @@ export function verifyIndexedAttestation(
   if (!(1 <= totalAttestingIndices && totalAttestingIndices <= MAX_INDICES_PER_ATTESTATION)) {
     return false;
   }
-  const sortedCustodyBit0Indices = custodyBit0Indices.slice().sort();
-  if (custodyBit0Indices.every((index, i) => index === sortedCustodyBit0Indices[i])) {
+  const sortedCustodyBit0Indices = custodyBit0Indices.slice().sort((a, b) => a - b);
+  if (!custodyBit0Indices.every((index, i) => index === sortedCustodyBit0Indices[i])) {
     return false;
   }
-  const sortedCustodyBit1Indices = custodyBit1Indices.slice().sort();
+  const sortedCustodyBit1Indices = custodyBit1Indices.slice().sort((a, b) => a - b);
   if (custodyBit1Indices.length > 0
-    && custodyBit1Indices.every((index, i) => index === sortedCustodyBit1Indices[i])) {
+    && !custodyBit1Indices.every((index, i) => index === sortedCustodyBit1Indices[i])) {
     return false;
   }
   return bls.verifyMultiple(

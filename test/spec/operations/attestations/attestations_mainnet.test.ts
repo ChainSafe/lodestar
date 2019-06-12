@@ -4,11 +4,21 @@ import {stateFromYaml} from "../../../utils/state";
 import {expect} from "chai";
 import {processAttestation} from "../../../../src/chain/stateTransition/block/attestations";
 import {attestationFromYaml} from "../../../utils/attestation";
+// @ts-ignore
+import {restore, rewire} from "@chainsafe/bls-js";
+import sinon from "sinon";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/attestation/attestation_mainnet.yaml"),
   processAttestation,
   (input) => {
+    if(input.bls_setting && input.bls_setting.toNumber() === 2) {
+      rewire({
+        verify: sinon.stub().returns(true),
+        verifyMultiple: sinon.stub().returns(true),
+        aggregatePubkeys: sinon.stub().returns(Buffer.alloc(48))
+      });
+    }
     return [stateFromYaml(input.pre), attestationFromYaml(input.attestation)];
   },
   (expected) => {
@@ -21,6 +31,7 @@ describeSpecTest(
   () => false,
   (_1, _2, expected, actual) => {
     expect(expected).to.be.deep.equal(actual);
+    restore();
   }
 );
 
