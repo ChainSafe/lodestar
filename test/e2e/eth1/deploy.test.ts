@@ -53,7 +53,7 @@ describe("Eth1Notifier - using deployed contract", () => {
 
   it("should process a Deposit log", async function () {
     this.timeout(0);
-    const wallet = new Eth1Wallet(eth1Network.accounts()[0], defaults.abi, provider);
+    const wallet = new Eth1Wallet(eth1Network.accounts()[0], defaults.abi,logger, provider);
 
     const cb = sinon.spy();
     eth1Notifier.on('deposit', cb);
@@ -73,7 +73,7 @@ describe("Eth1Notifier - using deployed contract", () => {
       eth1Network
         .accounts()
         .map((account) =>
-          (new Eth1Wallet(account, defaults.abi, provider))
+          (new Eth1Wallet(account, defaults.abi, logger, provider))
             .createValidatorDeposit(
               depositContractAddress,
               ethers.utils.parseEther('32.0')
