@@ -234,9 +234,8 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
   }
 
   public async deleteGenesisDeposits(deposits: Deposit[]): Promise<void> {
-    const criteria: (Buffer | string)[] = [];
-    deposits.map((deposit) => {
-      criteria.push(encodeKey(Bucket.genesisDeposit, deposit.index));
+    const criteria: (Buffer | string)[] = deposits.map((deposit) => {
+      return encodeKey(Bucket.genesisDeposit, deposit.index);
     });
     await this.db.batchDelete(criteria);
   }
