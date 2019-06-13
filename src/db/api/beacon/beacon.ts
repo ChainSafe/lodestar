@@ -203,7 +203,8 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
 
   public async setProposerSlashing(proposerSlashing: ProposerSlashing): Promise<void> {
     const proposerSlashingRoot = hashTreeRoot(proposerSlashing, ProposerSlashing);
-    await this.db.put(encodeKey(Bucket.proposerSlashing, proposerSlashingRoot), serialize(proposerSlashing, ProposerSlashing));
+    await this.db.put(encodeKey(Bucket.proposerSlashing, proposerSlashingRoot),
+      serialize(proposerSlashing, ProposerSlashing));
   }
 
   public async deleteProposerSlashings(proposerSlashings: ProposerSlashing[]): Promise<void> {
@@ -216,7 +217,8 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
 
   public async setAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<void> {
     const attesterSlashingRoot = hashTreeRoot(attesterSlashing, AttesterSlashing);
-    await this.db.put(encodeKey(Bucket.attesterSlashing, attesterSlashingRoot), serialize(attesterSlashing, AttesterSlashing));
+    await this.db.put(encodeKey(Bucket.attesterSlashing, attesterSlashingRoot),
+      serialize(attesterSlashing, AttesterSlashing));
   }
 
   public async deleteAttesterSlashings(attesterSlashings: AttesterSlashing[]): Promise<void> {
@@ -232,8 +234,9 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
   }
 
   public async deleteGenesisDeposits(deposits: Deposit[]): Promise<void> {
-    const criteria: any[] = deposits.map((deposit) => {
-      encodeKey(Bucket.genesisDeposit, deposit.index);
+    const criteria: (Buffer | string)[] = [];
+    deposits.map((deposit) => {
+      criteria.push(encodeKey(Bucket.genesisDeposit, deposit.index));
     });
     await this.db.batchDelete(criteria);
   }
