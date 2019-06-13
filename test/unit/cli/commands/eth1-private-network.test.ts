@@ -1,10 +1,13 @@
 import {expect} from 'chai';
 import {Eth1PrivateNetworkCommand} from "../../../../src/cli/commands/index";
-import logger from "../../../../src/logger/winston";
 
 import program from "commander";
+import {WinstonLogger} from "../../../../src/logger";
+
 
 describe('[CLI] eth1:dev', () => {
+
+  let logger = new WinstonLogger();
 
   before(async () => {
     logger.silent(true);
@@ -32,7 +35,8 @@ describe('[CLI] eth1:dev', () => {
       network: null,
       mnemonic: null,
       database:null
-    });
+    },
+    logger);
     expect(network).to.not.be.null;
     await network.stop();
   });

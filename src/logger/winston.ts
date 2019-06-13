@@ -63,7 +63,3 @@ export class WinstonLogger extends AbstractLogger {
   }
 
 }
-
-const logger = new WinstonLogger();
-
-export default logger;

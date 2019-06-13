@@ -14,35 +14,36 @@
  * 6. Repeat step 5
  */
 import BlockProposingService from "./services/block";
-import logger, {AbstractLogger} from "../logger";
 import {Epoch, Slot, ValidatorIndex} from "../types";
 import {GenesisInfo, ValidatorCtx} from "./types";
 import {RpcClient, RpcClientOverWs} from "./rpc";
 import {AttestationService} from "./services/attestation";
 import {ValidatorDB, IValidatorDB, LevelDbController} from "../db";
+import {WinstonLogger} from "../logger";
 
 /**
  * Main class for the Validator client.
  */
 class Validator {
   private ctx: ValidatorCtx;
-  private logger: AbstractLogger;
   private rpcClient: RpcClient;
   private validatorIndex: ValidatorIndex;
   private blockService: BlockProposingService;
   private attestationService: AttestationService;
   private genesisInfo: GenesisInfo;
   private db: IValidatorDB;
+  private logger: WinstonLogger;
   public isActive: boolean;
 
-  public constructor(ctx: ValidatorCtx) {
+
+  public constructor(ctx: ValidatorCtx, logger: WinstonLogger) {
     this.ctx = ctx;
     this.logger = logger;
     this.isActive = false;
     this.db = ctx.db ? ctx.db : new ValidatorDB({
       controller: new LevelDbController({
         name: 'LodestarValidatorDB'
-      })
+      }, this.logger)
     });
     if(ctx.rpc) {
       this.rpcClient = ctx.rpc;
@@ -79,13 +80,18 @@ class Validator {
     this.validatorIndex = await this.getValidatorIndex();
 
     this.blockService = new BlockProposingService(
-      this.validatorIndex, this.rpcClient, this.ctx.keypair.privateKey, this.db
+      this.validatorIndex,
+      this.rpcClient,
+      this.ctx.keypair.privateKey,
+      this.db, this.logger
     );
+
     this.attestationService = new AttestationService(
       this.validatorIndex,
       this.rpcClient,
       this.ctx.keypair.privateKey,
-      this.db
+      this.db,
+      this.logger
     );
   }
 
@@ -142,7 +148,7 @@ class Validator {
     const currentVersion = await this.rpcClient.beacon.getFork();
     const isAttester = validatorDuty.attestationSlot === slot;
     const isProposer = validatorDuty.blockProductionSlot === slot;
-    logger.info(
+    this.logger.info(
       `[Validator] Slot: ${slot}, Fork: ${currentVersion}, 
       isProposer: ${isProposer}, isAttester: ${isAttester}`
     );

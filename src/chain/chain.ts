@@ -12,7 +12,7 @@ import {GENESIS_SLOT, SECONDS_PER_SLOT} from "../constants";
 
 import {BeaconDB} from "../db";
 import {IEth1Notifier} from "../eth1";
-import logger from "../logger";
+import  {WinstonLogger} from "../logger";
 
 import {getEmptyBlock, getGenesisBeaconState} from "./genesis";
 
@@ -30,8 +30,9 @@ export class BeaconChain extends EventEmitter {
   private db: BeaconDB;
   private eth1: IEth1Notifier;
   private _latestBlock: BeaconBlock;
+  private logger: WinstonLogger;
 
-  public constructor(opts, {db, eth1}) {
+  public constructor(opts, {db, eth1}, logger: WinstonLogger) {
     super();
     this.chain = opts.chain;
     this.db = db;
@@ -39,6 +40,7 @@ export class BeaconChain extends EventEmitter {
     this.forkChoice = new StatefulDagLMDGHOST();
     this.chainId = 0; // TODO make this real
     this.networkId = new BN(0); // TODO make this real
+    this.logger = logger;
   }
 
   public async start(): Promise<void> {
@@ -61,7 +63,7 @@ export class BeaconChain extends EventEmitter {
     genesisDeposits: Deposit[],
     genesisEth1Data: Eth1Data
   ): Promise<void> {
-    logger.info('Initializing beacon chain.');
+    this.logger.info('Initializing beacon chain.');
     const genesisState = getGenesisBeaconState(genesisDeposits, genesisTime, genesisEth1Data);
     const genesisBlock = getEmptyBlock();
     genesisBlock.stateRoot = hashTreeRoot(genesisState, BeaconState);

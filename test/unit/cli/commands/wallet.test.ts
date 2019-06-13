@@ -1,11 +1,14 @@
 import {expect} from 'chai';
-import logger from "../../../../src/logger/winston";
+import {WinstonLogger} from "../../../../src/logger/winston";
 import {CliError} from "../../../../src/cli/error";
 
 import program from "commander";
-import {CreateWalletCommand} from '../../../../src/cli/commands/wallet';
+import {CreateWalletCommand} from '../../../../src/cli/commands';
+
 
 describe('[CLI] wallet', () => {
+  
+  let logger = new WinstonLogger();
 
   before(() => {
     logger.silent(true);
@@ -25,7 +28,7 @@ describe('[CLI] wallet', () => {
   it('Should throw error if output file exists', async () => {
     const command = new CreateWalletCommand();
     await expect(
-      command.action({outputFile: "src"})
+      command.action({outputFile: "src"}, logger)
     ).to.be.rejectedWith(CliError, 'src already exists');
   });
 });

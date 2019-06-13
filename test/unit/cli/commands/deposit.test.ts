@@ -2,23 +2,25 @@ import {PrivateEth1Network} from "../../../../src/eth1/dev";
 import chai, {expect} from 'chai';
 import {DepositCommand} from "../../../../src/cli/commands";
 import chaiAsPromised from 'chai-as-promised';
-import logger from "../../../../src/logger/winston";
 import {CliError} from "../../../../src/cli/error";
 import {Wallet} from "ethers";
 import program from "commander";
+import {WinstonLogger} from "../../../../src/logger";
 
 chai.use(chaiAsPromised);
 
 describe('[CLI] deposit', function() {
 
   let eth1Network: PrivateEth1Network;
+  let logger = new WinstonLogger();
 
   before(async () => {
     logger.silent(true);
     eth1Network = new PrivateEth1Network({
       host: '127.0.0.1',
       port: 32567
-    });
+    },
+    logger);
     await eth1Network.start();
   });
 
@@ -48,7 +50,8 @@ describe('[CLI] deposit', function() {
           value: '32',
           contract:'0x',
           accounts: 10
-        }
+        },
+        logger
       )
     ).to.be.rejectedWith(CliError, 'JSON RPC node (http://worong_host:123) not available.');
   });
@@ -65,7 +68,8 @@ describe('[CLI] deposit', function() {
           value: '32',
           contract:'0x',
           accounts: 10
-        }
+        },
+        logger
       )
     ).to.be.rejectedWith(CliError, 'You have to submit either privateKey or mnemonic.');
   });
@@ -82,7 +86,8 @@ describe('[CLI] deposit', function() {
           value: '32',
           contract:'0x',
           accounts: 10
-        }
+        },
+        logger
       )
     ).to.be.rejectedWith(Error, 'invalid mnemonic');
   });

@@ -4,17 +4,18 @@ import sinon from "sinon";
 import {generateFork} from "../../../utils/fork";
 import {expect} from "chai";
 import {ValidatorApi} from "../../../../src/rpc/api/validator";
-import logger from "../../../../src/logger";
 import {generateAttestationData} from "../../../utils/attestation";
 import {AttestationService} from "../../../../src/validator/services/attestation";
 import {slotToEpoch} from "../../../../src/chain/stateTransition/util";
 import {ValidatorDB} from "../../../../src/db/api";
+import {WinstonLogger} from "../../../../src/logger";
 
 describe('validator attestation service', function () {
 
   const sandbox = sinon.createSandbox();
 
   let rpcClientStub, dbStub;
+  let logger = new WinstonLogger();
 
   before(() => {
     logger.silent(true);
@@ -46,7 +47,7 @@ describe('validator attestation service', function () {
       }
     ]);
     const service = new AttestationService(
-      0, rpcClientStub, PrivateKey.random(), dbStub
+      0, rpcClientStub, PrivateKey.random(), dbStub, logger
     );
     const result = await service.createAndPublishAttestation(slot, shard, generateFork());
     expect(result).to.be.null;
@@ -63,7 +64,7 @@ describe('validator attestation service', function () {
     });
     dbStub.getAttestations.resolves([]);
     const service = new AttestationService(
-      0, rpcClientStub, PrivateKey.random(), dbStub
+      0, rpcClientStub, PrivateKey.random(), dbStub, logger
     );
     const result = await service.createAndPublishAttestation(slot, shard, generateFork());
     expect(result).to.not.be.null;

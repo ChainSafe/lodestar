@@ -6,6 +6,8 @@ import {getEmptyBlock} from "../../../../src/chain/genesis";
 import {createNode} from "../../../unit/network/libp2p/util";
 import {generateEmptyAttestation} from "../../../utils/attestation";
 import {shardAttestationTopic} from "../../../../src/network/util";
+import {loggers} from "winston";
+import {WinstonLogger} from "../../../../src/logger";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -18,10 +20,13 @@ const opts: INetworkOptions = {
 };
 
 describe("[network] network", () => {
+
   let netA: Libp2pNetwork, netB: Libp2pNetwork;
+  let logger = new WinstonLogger();
+
   beforeEach(async () => {
-    netA = new Libp2pNetwork(opts, {libp2p: createNode(multiaddr)});
-    netB = new Libp2pNetwork(opts, {libp2p: createNode(multiaddr)});
+    netA = new Libp2pNetwork(opts, {libp2p: createNode(multiaddr)}, logger);
+    netB = new Libp2pNetwork(opts, {libp2p: createNode(multiaddr)}, logger);
     await Promise.all([
       netA.start(),
       netB.start(),

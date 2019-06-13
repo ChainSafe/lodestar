@@ -8,12 +8,14 @@ import {createNode} from "./util";
 import {NodejsNode} from "../../../../src/network/libp2p/nodejs";
 import {Method} from "../../../../src/constants";
 import {Hello} from "../../../../src/types";
+import {WinstonLogger} from "../../../../src/logger";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
 describe("[network] rpc", () => {
   let nodeA: NodejsNode, nodeB: NodejsNode,
     rpcA: NetworkRpc, rpcB: NetworkRpc;
+  let logger = new WinstonLogger();
   beforeEach(async () => {
     // setup
     nodeA = await createNode(multiaddr);
@@ -22,8 +24,8 @@ describe("[network] rpc", () => {
       promisify(nodeA.start.bind(nodeA))(),
       promisify(nodeB.start.bind(nodeB))(),
     ]);
-    rpcA = new NetworkRpc(nodeA);
-    rpcB = new NetworkRpc(nodeB);
+    rpcA = new NetworkRpc(nodeA, logger);
+    rpcB = new NetworkRpc(nodeB, logger);
     await Promise.all([
       rpcA.start(),
       rpcB.start(),

@@ -10,6 +10,7 @@ import {BeaconDB, LevelDbController} from "../../../src/db";
 
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../unit/network/libp2p/util";
+import {WinstonLogger} from "../../../src/logger";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -23,12 +24,13 @@ const opts: INetworkOptions = {
 
 describe("[sync] rpc", () => {
   const sandbox = sinon.createSandbox();
+  let logger = new WinstonLogger();
 
   let rpcA: SyncRpc,netA: Libp2pNetwork, repsA: ReputationStore;
   let rpcB: SyncRpc, netB: Libp2pNetwork, repsB: ReputationStore;
   beforeEach(async () => {
-    netA = new Libp2pNetwork(opts, {libp2p: createNode(multiaddr)});
-    netB = new Libp2pNetwork(opts, {libp2p: createNode(multiaddr)});
+    netA = new Libp2pNetwork(opts, {libp2p: createNode(multiaddr)}, logger);
+    netB = new Libp2pNetwork(opts, {libp2p: createNode(multiaddr)}, logger);
     await Promise.all([
       netA.start(),
       netB.start(),
@@ -45,7 +47,7 @@ describe("[sync] rpc", () => {
       }),
       network: netA,
       reps: repsA,
-    });
+    },logger);
     repsB = new ReputationStore();
     rpcB = new SyncRpc({}, {
       db: new BeaconDB({
@@ -58,7 +60,7 @@ describe("[sync] rpc", () => {
       }),
       network: netB,
       reps: repsB,
-    });
+    }, logger);
     netA.on("request", rpcA.onRequest.bind(rpcA));
     netB.on("request", rpcB.onRequest.bind(rpcB));
     await Promise.all([

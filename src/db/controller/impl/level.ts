@@ -5,10 +5,11 @@
 import {LevelUp} from "levelup";
 import {SearchOptions} from "../interface";
 import {Attestation} from "../../../types";
-import logger from "../../../logger";
 import {DBOptions, IDatabaseController} from "../interface";
 import {EventEmitter} from "events";
 import level from "level";
+import {WinstonLogger} from "../../../logger";
+import {loggers} from "winston";
 
 export interface LevelDBOptions extends DBOptions {
   db?: LevelUp;
@@ -23,9 +24,12 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
 
   private opts: LevelDBOptions;
 
-  public constructor(opts: LevelDBOptions) {
+  private logger: WinstonLogger;
+
+  public constructor(opts: LevelDBOptions, logger: WinstonLogger) {
     super();
     this.opts = opts;
+    this.logger = logger;
     this.db =
       opts.db
       ||
@@ -37,7 +41,7 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
 
   public async start(): Promise<void> {
     await this.db.open();
-    logger.info( `Connected to LevelDB database at ${this.opts.name}`);
+    this.logger.info( `Connected to LevelDB database at ${this.opts.name}`);
   }
 
   public async stop(): Promise<void> {

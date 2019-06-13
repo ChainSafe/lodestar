@@ -7,7 +7,7 @@ import {CommanderStatic} from "commander";
 import defaults from "../../eth1/defaults";
 import * as ethers from "ethers/ethers";
 import {Wallet} from "ethers/ethers";
-import logger, {LogLevel} from "../../logger";
+import  {LogLevel, WinstonLogger} from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
 import {JsonRpcProvider} from "ethers/providers";
@@ -25,6 +25,7 @@ interface IDepositCommandOptions {
 export class DepositCommand implements CliCommand {
 
   public register(commander: CommanderStatic): void {
+    const logger = new WinstonLogger();
     commander
       .command('deposit')
       .description('Start private network with deposit contract and 10 accounts with balance')
@@ -46,7 +47,7 @@ export class DepositCommand implements CliCommand {
         //library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
         try {
-          await this.action(options);
+          await this.action(options, logger);
         } catch (e) {
           logger.error(e.message + '\n' + e.stack);
         }
@@ -54,7 +55,7 @@ export class DepositCommand implements CliCommand {
       });
   }
 
-  public async action(options: IDepositCommandOptions): Promise<void> {
+  public async action(options: IDepositCommandOptions, logger: WinstonLogger): Promise<void> {
     if (options.loggingLevel) {
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }
@@ -78,8 +79,9 @@ export class DepositCommand implements CliCommand {
     await Promise.all(
       wallets.map(async wallet => {
         try {
-          const hash = await (new Eth1Wallet(wallet.privateKey, defaults.depositContract.abi, provider))
-            .createValidatorDeposit(options.contract, ethers.utils.parseEther(options.value));
+          const hash =
+            await (new Eth1Wallet(wallet.privateKey, defaults.depositContract.abi,logger, provider))
+              .createValidatorDeposit(options.contract, ethers.utils.parseEther(options.value));
           logger.info(
             `Successfully deposited ${options.value} ETH from ${wallet.address} 
             to deposit contract. Tx hash: ${hash}`
