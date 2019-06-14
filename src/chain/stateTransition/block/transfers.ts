@@ -15,7 +15,6 @@ import {
 import {
   BLS_WITHDRAWAL_PREFIX_BYTE,
   Domain,
-  MAX_TRANSFERS,
   MIN_DEPOSIT_AMOUNT,
   FAR_FUTURE_EPOCH,
   MAX_EFFECTIVE_BALANCE,
@@ -82,7 +81,7 @@ export function processTransfer(state: BeaconState, transfer: Transfer): BeaconS
 
 export default function processTransfers(state: BeaconState, block: BeaconBlock): void {
   // Note: Transfers are a temporary functionality for phases 0 and 1, to be removed in phase 2.
-  assert(block.body.transfers.length <= MAX_TRANSFERS);
+  // assert(block.body.transfers.length <= MAX_TRANSFERS);
   for (const transfer of block.body.transfers) {
     processTransfer(state, transfer);
   }

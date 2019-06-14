@@ -18,22 +18,23 @@ export {
   processEpoch,
 };
 
-export function executeStateTransition(state: BeaconState, block: BeaconBlock | null): BeaconState {
-  cacheState(state);
-  advanceSlot(state);
-  if (shouldProcessEpoch(state)) {
-    processEpoch(state);
-  }
+export function executeStateTransition(state: BeaconState, block: BeaconBlock | null, verifyStateRoot = true): BeaconState {
 
   if (block) {
     while(state.slot < block.slot) {
       cacheState(state);
-      advanceSlot(state);
       if (shouldProcessEpoch(state)) {
         processEpoch(state);
       }
+      advanceSlot(state);
     }
-    processBlock(state, block);
+    processBlock(state, block, verifyStateRoot);
+  } else {
+    cacheState(state);
+    if (shouldProcessEpoch(state)) {
+      processEpoch(state);
+    }
+    advanceSlot(state);
   }
 
 
