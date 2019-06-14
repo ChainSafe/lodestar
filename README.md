@@ -28,6 +28,8 @@ You will need to go over the [specification](https://github.com/ethereum/eth2.0-
 2. `git submodule foreach git lfs pull`
 2. `yarn test`
 
+Note: to run spec tests execute `git submodules foreach git lfs pull`
+
 ## Usage
 1. If you haven't `yarn install`
 2. `yarn build`
