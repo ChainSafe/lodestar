@@ -105,7 +105,7 @@ export function getDomainFromFork(fork: Fork, epoch: Epoch, domainType: Domain):
       forkVersion,
       intToBytes(domainType, 4),
     ]
-  )).toBuffer('be');
+  )).toBuffer('be', 8);
 }
 
 /**
