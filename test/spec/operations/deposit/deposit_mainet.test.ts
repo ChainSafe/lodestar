@@ -40,6 +40,7 @@ describeSpecTest(
     }
     expect(expected).to.be.deep.equal(actual);
     restore();
-  }
+  },
+  0
 );
 

@@ -34,6 +34,7 @@ describeSpecTest(
     actual.balances = actual.balances.map(b => b.toString());
     expect(expected).to.be.deep.equal(actual);
     restore();
-  }
+  },
+  0
 );
 

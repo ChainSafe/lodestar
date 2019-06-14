@@ -31,6 +31,7 @@ describeSpecTest(
   (_1, _2, expected, actual) => {
     expect(expected).to.be.deep.equal(actual);
     restore();
-  }
+  },
+  0
 );
 
