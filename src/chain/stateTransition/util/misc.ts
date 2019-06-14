@@ -5,36 +5,34 @@
 import assert from "assert";
 
 import {
-  CHURN_LIMIT_QUOTIENT, Domain,
+  CHURN_LIMIT_QUOTIENT,
+  Domain,
   EMPTY_SIGNATURE,
   MAX_EFFECTIVE_BALANCE,
   MIN_PER_EPOCH_CHURN_LIMIT,
+  SHARD_COUNT,
+  SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
   ZERO_HASH,
-  SLOTS_PER_EPOCH,
-  SHARD_COUNT,
 } from "../../../constants";
 
 import {
-  BeaconState,
   BeaconBlock,
   BeaconBlockBody,
+  BeaconBlockHeader,
+  BeaconState,
   bytes32,
   Epoch,
+  Fork,
   Slot,
   ValidatorIndex,
-  BeaconBlockHeader, Fork,
 } from "../../../types";
 
-import {
-  getCrosslinkCommittee,
-  getEpochCommitteeCount,
-  getEpochStartShard
-} from "./crosslinkCommittee";
+import {getCrosslinkCommittee, getEpochCommitteeCount, getEpochStartShard} from "./crosslinkCommittee";
 
 import {intDiv} from "../../../util/math";
 import {hash} from "../../../util/crypto";
-import {intToBytes} from "../../../util/bytes";
+import {bytesToBN, intToBytes} from "../../../util/bytes";
 
 import {getCurrentEpoch, getEpochStartSlot} from "./epoch";
 
@@ -43,6 +41,7 @@ import {getActiveValidatorIndices} from "./validator";
 import {generateSeed} from "./seed";
 
 import {hashTreeRoot} from "@chainsafe/ssz";
+import BN from "bn.js";
 import {BLSDomain} from "@chainsafe/bls-js/lib/types";
 
 
@@ -100,10 +99,13 @@ export function getDomain(
 
 export function getDomainFromFork(fork: Fork, epoch: Epoch, domainType: Domain): BLSDomain {
   const forkVersion = epoch < fork.epoch ? fork.previousVersion : fork.currentVersion;
-  return Buffer.concat([
-    forkVersion,
-    intToBytes(domainType, 4)
-  ]);
+
+  return bytesToBN(Buffer.concat(
+    [
+      forkVersion,
+      intToBytes(domainType, 4),
+    ]
+  )).toBuffer('be');
 }
 
 /**
