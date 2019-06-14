@@ -3,10 +3,10 @@
  */
 
 export {
-  LevelDbPersistance,
-  PouchDbPersistance,
+  LevelDbController,
+  PouchDbController,
   IDatabaseController,
   SearchOptions,
   DBOptions
-} from "./persistance";
+} from "./controller";
 export {BeaconDB, IBeaconDb, ValidatorDB, IValidatorDB} from "./api";

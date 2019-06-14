@@ -1,5 +1,5 @@
 /**
- * @module db/persistance/impl
+ * @module db/controller/impl
  */
 
 import {LevelUp} from "levelup";
@@ -17,7 +17,7 @@ export interface LevelDBOptions extends DBOptions {
 /**
  * The LevelDB implementation of DB
  */
-export class LevelDbPersistance extends EventEmitter implements IDatabaseController {
+export class LevelDbController extends EventEmitter implements IDatabaseController {
 
   private db: LevelUp;
 

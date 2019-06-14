@@ -19,9 +19,11 @@ import {
   RequestBody,
   ResponseBody,
 } from "../../../src/types";
-
 import {
   Method,
+} from "../../../src/constants";
+
+import {
   encodeRequest,
   encodeResponse,
   decodeRequestBody,
@@ -150,8 +152,6 @@ describe("[p2p] rpc response", () => {
     },
     {
       msg: {
-        blockRoot: Buffer.alloc(32),
-        slot: 0,
         roots: [],
       },
       method: Method.BeaconBlockRoots,

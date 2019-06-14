@@ -84,6 +84,11 @@ export interface IBeaconDb {
   hasBlock(blockHash: bytes32): Promise<boolean>;
 
   /**
+   * Get a block root by slot
+   */
+  getBlockRoot(slot: Slot): Promise<bytes32>;
+
+  /**
    * Get a block by slot
    */
   getBlockBySlot(slot: Slot): Promise<BeaconBlock>;
@@ -114,14 +119,19 @@ export interface IBeaconDb {
   setJustifiedBlock(block: BeaconBlock): Promise<void>;
 
   /**
-   * Get the head of the chain
+   * Get the slot of the head of the chain
    */
-  getChainHead(): Promise<BeaconBlock>;
+  getChainHeadSlot(): Promise<Slot>;
 
   /**
    * Get the root of the head of the chain
    */
   getChainHeadRoot(): Promise<bytes32>;
+
+  /**
+   * Get the head of the chain
+   */
+  getChainHead(): Promise<BeaconBlock>;
 
   /**
    * Set the head of the chain
@@ -132,6 +142,11 @@ export interface IBeaconDb {
    * Fetch all attestations
    */
   getAttestations(): Promise<Attestation[]>;
+
+  /**
+   * Fetch an attestation by hash
+   */
+  getAttestation(attestationRoot: bytes32): Promise<Attestation>;
 
   /**
    * Put an attestation into the db

@@ -9,26 +9,23 @@ import pushable, {Pushable} from "pull-pushable";
 import Abortable from "pull-abortable";
 
 import {
-  Hello, Goodbye, BeaconBlockRootsRequest, BeaconBlockHeadersRequest, BeaconBlockBodiesRequest,
-  BeaconStatesRequest, RequestBody, BeaconBlockRootsResponse, BeaconBlockHeadersResponse,
-  BeaconBlockBodiesResponse, BeaconStatesResponse, Status
+  Hello, Status, RequestBody, ResponseBody
 } from "../../types";
-import {IPeer} from "../interface";
-import {Method} from "../codec";
-import {RpcController} from "./rpcController";
+import {Method} from "../../constants";
+import {NetworkRpc} from "./rpc";
 
 
-export class Peer implements IPeer {
+export class Peer {
   public peerInfo: PeerInfo;
   public latestHello: Hello | null;
   public latestStatus: Status | null;
   private conn: Connection;
   private stream: Pushable;
-  private controller: RpcController;
+  private controller: NetworkRpc;
   private pull;
   private pullAbort;
 
-  public constructor (peerInfo: PeerInfo, controller: RpcController) {
+  public constructor (peerInfo: PeerInfo, controller: NetworkRpc) {
     this.peerInfo = peerInfo;
     this.controller = controller;
     this.latestHello = null;
@@ -79,51 +76,5 @@ export class Peer implements IPeer {
   public close(): void {
     this.stream.end();
     this._close();
-  }
-
-  public onRequest(method: Method, body: RequestBody): void {
-    switch (method) {
-      case Method.Hello:
-        this.latestHello = body as Hello;
-        break;
-      case Method.Status:
-        this.latestStatus = body as Status;
-        break;
-    }
-  }
-
-  public async hello(request: Hello): Promise<Hello> {
-    const id = this.controller.sendRequest(this, Method.Hello, request);
-    return await this.controller.getResponse<Hello>(id);
-  }
-
-  public async goodbye(request: Goodbye): Promise<void> {
-    this.controller.sendRequest(this, Method.Goodbye, request);
-    return;
-  }
-
-  public async getStatus(request: Status): Promise<Status> {
-    const id = this.controller.sendRequest(this, Method.Status, request);
-    return await this.controller.getResponse<Status>(id);
-  }
-
-  public async getBeaconBlockRoots(request: BeaconBlockRootsRequest): Promise<BeaconBlockRootsResponse> {
-    const id = this.controller.sendRequest(this, Method.BeaconBlockRoots, request);
-    return await this.controller.getResponse<BeaconBlockRootsResponse>(id);
-  }
-
-  public async getBeaconBlockHeaders(request: BeaconBlockHeadersRequest): Promise<BeaconBlockHeadersResponse> {
-    const id = this.controller.sendRequest(this, Method.BeaconBlockHeaders, request);
-    return await this.controller.getResponse<BeaconBlockHeadersResponse>(id);
-  }
-
-  public async getBeaconBlockBodies(request: BeaconBlockBodiesRequest): Promise<BeaconBlockBodiesResponse> {
-    const id = this.controller.sendRequest(this, Method.BeaconBlockBodies, request);
-    return await this.controller.getResponse<BeaconBlockBodiesResponse>(id);
-  }
-
-  public async getBeaconStates(request: BeaconStatesRequest): Promise<BeaconStatesResponse> {
-    const id = this.controller.sendRequest(this, Method.BeaconStates, request);
-    return await this.controller.getResponse<BeaconStatesResponse>(id);
   }
 }

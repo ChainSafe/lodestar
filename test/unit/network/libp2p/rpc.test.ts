@@ -2,18 +2,18 @@ import {assert} from "chai";
 import BN from "bn.js";
 import promisify from "promisify-es6";
 
-import {RpcController} from "../../../../src/network/libp2p/rpcController";
+import {NetworkRpc} from "../../../../src/network/libp2p/rpc";
 
 import {createNode} from "./util";
 import {NodejsNode} from "../../../../src/network/libp2p/nodejs";
-import {Method} from "../../../../src/network/codec";
+import {Method} from "../../../../src/constants";
 import {Hello} from "../../../../src/types";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
 describe("[network] rpc", () => {
   let nodeA: NodejsNode, nodeB: NodejsNode,
-    rpcA: RpcController, rpcB: RpcController;
+    rpcA: NetworkRpc, rpcB: NetworkRpc;
   beforeEach(async () => {
     // setup
     nodeA = await createNode(multiaddr);
@@ -22,8 +22,8 @@ describe("[network] rpc", () => {
       promisify(nodeA.start.bind(nodeA))(),
       promisify(nodeB.start.bind(nodeB))(),
     ]);
-    rpcA = new RpcController(nodeA);
-    rpcB = new RpcController(nodeB);
+    rpcA = new NetworkRpc(nodeA);
+    rpcB = new NetworkRpc(nodeB);
     await Promise.all([
       rpcA.start(),
       rpcB.start(),
@@ -114,7 +114,7 @@ describe("[network] rpc", () => {
       assert.fail(e, null, "connection event not triggered");
     }
     // send hello from A to B, await hello response
-    rpcB.once(`request ${Method.Hello}`, (id, body) => {
+    rpcB.once("request", (peerInfo, method, id, body) => {
       rpcB.sendResponse(id, 0, body)
     });
     try {
@@ -126,13 +126,13 @@ describe("[network] rpc", () => {
         bestRoot: Buffer.alloc(32),
         bestSlot: 0,
       };
-      const helloActual = await rpcA.getPeers()[0].hello(helloExpected);
+      const helloActual = await rpcA.sendRequest<Hello>(rpcA.getPeers()[0], Method.Hello, helloExpected);
       assert.deepEqual(helloActual, helloExpected);
     } catch (e) {
       assert.fail("hello not received");
     }
     // send hello from B to A, await hello response
-    rpcA.once(`request ${Method.Hello}`, (id, body) => {
+    rpcA.once("request", (peerInfo, method, id, body) => {
       rpcA.sendResponse(id, 0, body)
     });
     try {
@@ -144,7 +144,7 @@ describe("[network] rpc", () => {
         bestRoot: Buffer.alloc(32),
         bestSlot: 0,
       };
-      const helloActual = await rpcB.getPeers()[0].hello(helloExpected);
+      const helloActual = await rpcB.sendRequest<Hello>(rpcB.getPeers()[0], Method.Hello, helloExpected);
       assert.deepEqual(helloActual, helloExpected);
     } catch (e) {
       assert.fail("hello not received");

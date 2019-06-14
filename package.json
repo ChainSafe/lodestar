@@ -15,7 +15,7 @@
   "scripts": {
     "build": "babel src -x .ts -d lib --source-maps",
     "build:docs": "typedoc --exclude src/index.ts --out docs src",
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc --noEmit --incremental",
     "lint": "eslint --ext .ts src/",
     "lint-fix": "eslint --ext .ts src/ --fix",
     "pretest": "yarn run check-types",
@@ -55,7 +55,7 @@
     "level": "^4.0.0",
     "libp2p": "^0.25.3",
     "libp2p-bootstrap": "^0.9.7",
-    "libp2p-floodsub": "^0.15.8",
+    "libp2p-gossipsub": "^0.0.2",
     "libp2p-kad-dht": "^0.14.12",
     "libp2p-mplex": "^0.8.5",
     "libp2p-tcp": "^0.13.0",
@@ -111,6 +111,6 @@
     "typedoc-plugin-external-module-name": "^2.1.0",
     "typedoc-plugin-internal-external": "^2.0.2",
     "typedoc-plugin-markdown": "^1.2.0",
-    "typescript": "^3.2.1"
+    "typescript": "^3.5.1"
   }
 }

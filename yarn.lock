@@ -5098,9 +5098,10 @@ libp2p-crypto@~0.16.0, libp2p-crypto@~0.16.1:
     tweetnacl "^1.0.0"
     ursa-optional "~0.9.10"
 
-libp2p-floodsub@^0.15.8:
+libp2p-floodsub@~0.15.8:
   version "0.15.8"
   resolved "https://registry.yarnpkg.com/libp2p-floodsub/-/libp2p-floodsub-0.15.8.tgz#ecfd94162825ed7b5431ccbe672f5bf58f7efab2"
+  integrity sha512-tsRTRRz9vg3iPqhSgkn4gotX635Hp/VMxPd4VQZlRvO8pZsfZwd61Qn9Vx8bES881RhRX0YpGM4Sa0izInHEWA==
   dependencies:
     async "^2.6.1"
     bs58 "^4.0.1"
@@ -5127,6 +5128,23 @@ libp2p-floodsub@~0.16.0:
     protons "^1.0.1"
     pull-length-prefixed "^1.3.2"
     pull-pushable "^2.2.0"
+    pull-stream "^3.6.9"
+
+libp2p-gossipsub@^0.0.2:
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/libp2p-gossipsub/-/libp2p-gossipsub-0.0.2.tgz#26a9bc03a9b56f236f77ffe03343cd0ccb86d58b"
+  integrity sha512-6FDYBilaYspw59Y7YJIBnNLbD57akm/29uYWcYSAqY5IzW05whnGAQdJPmYElm40lgluzjuwj2j/G7l6QEBqQg==
+  dependencies:
+    async "^2.6.2"
+    err-code "^1.1.2"
+    libp2p "~0.25.0-rc.5"
+    libp2p-floodsub "~0.15.8"
+    libp2p-pubsub "~0.1.0"
+    libp2p-switch "~0.42.2"
+    peer-id "~0.12.2"
+    peer-info "~0.15.1"
+    protons "^1.0.1"
+    pull-length-prefixed "^1.3.2"
     pull-stream "^3.6.9"
 
 libp2p-identify@~0.7.6:
@@ -5237,6 +5255,30 @@ libp2p-record@~0.6.2:
     multihashing-async "~0.6.0"
     protons "^1.0.1"
 
+libp2p-switch@~0.42.2:
+  version "0.42.12"
+  resolved "https://registry.yarnpkg.com/libp2p-switch/-/libp2p-switch-0.42.12.tgz#672ab3b249121e876231d9fef9a143a5ed2c41da"
+  integrity sha512-aNjJQpP9kSClXXKIliSqIowIoxAy0JQ8hnw6BoqOHUIG9Eov4GVyuOdU6lQKl1ym4uKMsnF2G49qpZJ47O01XA==
+  dependencies:
+    async "^2.6.2"
+    bignumber.js "^8.1.1"
+    class-is "^1.1.0"
+    debug "^4.1.1"
+    err-code "^1.1.2"
+    fsm-event "^2.1.0"
+    hashlru "^2.3.0"
+    interface-connection "~0.3.3"
+    libp2p-circuit "~0.3.6"
+    libp2p-identify "~0.7.6"
+    moving-average "^1.0.0"
+    multiaddr "^6.0.6"
+    multistream-select "~0.14.4"
+    once "^1.4.0"
+    peer-id "~0.12.2"
+    peer-info "~0.15.1"
+    pull-stream "^3.6.9"
+    retimer "^2.0.0"
+
 libp2p-switch@~0.42.9:
   version "0.42.11"
   resolved "https://registry.yarnpkg.com/libp2p-switch/-/libp2p-switch-0.42.11.tgz#31bf5b08718eeb9c6e9b033614521d58671698f8"
@@ -5310,7 +5352,7 @@ libp2p-websockets@~0.12.2:
     multiaddr-to-uri "^4.0.1"
     pull-ws hugomrdias/pull-ws#fix/bundle-size
 
-libp2p@^0.25.3:
+libp2p@^0.25.3, libp2p@~0.25.0-rc.5:
   version "0.25.3"
   resolved "https://registry.yarnpkg.com/libp2p/-/libp2p-0.25.3.tgz#5d566e4ada10d951ba71062e572c5d85fabfe116"
   dependencies:
@@ -8294,9 +8336,10 @@ typescript@3.2.x:
   version "3.2.4"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.2.4.tgz#c585cb952912263d915b462726ce244ba510ef3d"
 
-typescript@^3.2.1:
+typescript@^3.5.1:
   version "3.5.1"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.5.1.tgz#ba72a6a600b2158139c5dd8850f700e231464202"
+  integrity sha512-64HkdiRv1yYZsSe4xC1WVgamNigVYjlssIoaH2HcZF0+ijsk5YK2g0G34w9wJkze8+5ow4STd22AynfO6ZYYLw==
 
 typewise-core@^1.2, typewise-core@^1.2.0:
   version "1.2.0"

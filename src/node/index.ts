@@ -3,9 +3,9 @@
  */
 
 import deepmerge from "deepmerge";
-import {BeaconDB, LevelDbPersistance} from "../db";
+import {BeaconDB, LevelDbController} from "../db";
 import {EthersEth1Notifier, EthersEth1Options} from "../eth1";
-import {Libp2pNetwork, NetworkOptions, NodejsNode} from "../network";
+import {Libp2pNetwork, INetworkOptions, NodejsNode} from "../network";
 
 
 import defaultConf from "./defaults";
@@ -32,7 +32,7 @@ export interface BeaconNodeCtx {
   chain?: object;
   db?: DBOptions;
   eth1?: EthersEth1Options;
-  network?: NetworkOptions;
+  network?: INetworkOptions;
   rpc?: RpcCtx;
   sync?: object;
   opPool?: object;
@@ -66,7 +66,7 @@ class BeaconNode {
     );
 
     this.db = new BeaconDB({
-      persistance: new LevelDbPersistance(
+      controller: new LevelDbController(
         this.conf.db
       )
     });
