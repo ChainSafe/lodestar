@@ -6,14 +6,15 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import {blockFromYaml} from "../../../utils/block";
-import {BeaconBlock, BeaconState, number64} from "../../../../src/types";
+import {BeaconBlock, BeaconState, number64, Validator} from "../../../../src/types";
 import {executeStateTransition} from "../../../../src/chain/stateTransition";
+import {hashTreeRoot} from "@chainsafe/ssz";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/sanity/slots/slotsanity_s_mainnet.yaml"),
   (state: BeaconState, slots: number64) => {
     for(let i = 0; i < slots; i++) {
-      executeStateTransition(state, null);
+      executeStateTransition(state, null, false);
     }
     return state;
   },
@@ -35,8 +36,15 @@ describeSpecTest(
   },
   () => false,
   (_1, _2, expected, actual) => {
+    if(expected && actual) {
+      expected.balances = expected.balances.map(b => b.toString());
+      actual.balances = actual.balances.map(b => b.toString());
+      expected.validatorRegistry = expected.validatorRegistry.map(b => hashTreeRoot(b, Validator));
+      actual.validatorRegistry = actual.validatorRegistry.map(b => hashTreeRoot(b, Validator));
+    }
     expect(expected).to.be.deep.equal(actual);
     restore();
-  }
+  },
+  0
 );
 
