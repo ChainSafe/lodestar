@@ -12,6 +12,7 @@ describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/proposer_slashing/proposer_slashing_mainnet.yaml"),
   processProposerSlashing,
   (input) => {
+    restore();
     if(input.bls_setting && input.bls_setting.toNumber() === 2) {
       rewire({
         verify: sinon.stub().returns(true),
@@ -31,6 +32,7 @@ describeSpecTest(
   (_1, _2, expected, actual) => {
     expect(expected).to.be.deep.equal(actual);
     restore();
-  }
+  },
+  0
 );
 
