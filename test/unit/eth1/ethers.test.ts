@@ -13,7 +13,7 @@ import chaiAsPromised from "chai-as-promised";
 import {generateDeposit} from "../../utils/deposit";
 import {number64} from "../../../src/types";
 import {BeaconDB} from "../../../src/db/api";
-import {WinstonLogger} from "../../../src/logger";
+import {ILogger, WinstonLogger} from "../../../src/logger";
 
 
 chai.use(chaiAsPromised);
@@ -23,7 +23,7 @@ describe("Eth1Notifier", () => {
   let db;
   let eth1;
   let sandbox;
-  let logger = new WinstonLogger();
+  let logger: ILogger = new WinstonLogger();
 
   before(async function (): Promise<void> {
     logger.silent(true);
@@ -31,8 +31,12 @@ describe("Eth1Notifier", () => {
     db = sandbox.createStubInstance(BeaconDB);
     eth1 = new EthersEth1Notifier({
       depositContract: defaults,
-      provider
-    }, {db}, logger);
+      provider: provider
+    },
+    {
+      db: db,
+      logger: logger
+    });
   });
 
   after(async () => {
@@ -77,7 +81,12 @@ describe("Eth1Notifier", () => {
         provider: stubProvider,
         // @ts-ignore
         contract: stubContract
-      }, {db}, logger);
+      },
+      {
+        db: db,
+        logger: logger
+      }
+      );
       stubContract.on.returns(null);
       //@ts-ignore
       stubContract.interface.parseLog.returns({
@@ -135,7 +144,11 @@ describe("Eth1Notifier", () => {
         provider: stubProvider,
         // @ts-ignore
         contract
-      }, {db},logger);
+      },
+      {
+        db: db,
+        logger: logger
+      });
 
       contract.on.returns(null);
       await notifier.start();
@@ -154,7 +167,11 @@ describe("Eth1Notifier", () => {
         provider,
         // @ts-ignore
         contract
-      }, {db}, logger);
+      },
+      {
+        db: db,
+        logger: logger
+      });
       contract.removeAllListeners.returns(null);
       await notifier.stop();
       expect(contract.removeAllListeners.withArgs('Deposit').calledOnce).to.be.true;
@@ -229,7 +246,11 @@ describe("Eth1Notifier", () => {
       depositContract: defaults,
       provider,
       contract
-    }, {db}, logger);
+    },
+    {
+      db:db,
+      logger: logger
+    });
     const testDepositRoot = Buffer.alloc(32);
     spy.resolves('0x' + testDepositRoot.toString('hex'));
 

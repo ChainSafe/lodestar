@@ -4,7 +4,7 @@
 
 import deepmerge from "deepmerge";
 import {BeaconDB, LevelDbController} from "../db";
-import {EthersEth1Notifier, EthersEth1Options} from "../eth1";
+import {EthersEth1Notifier, EthersEth1Options, IEth1Notifier} from "../eth1";
 import {Libp2pNetwork, INetworkOptions, NodejsNode} from "../network";
 
 
@@ -18,7 +18,7 @@ import {WSServer} from "../rpc/transport";
 import {IApiConstructor} from "../rpc/api/interface";
 import {DBOptions} from '../db';
 import {createPeerId, initializePeerInfo} from "../network/libp2p/util";
-import {WinstonLogger} from "../logger";
+import {ILogger} from "../logger";
 
 
 export interface Service {
@@ -47,17 +47,17 @@ interface RpcCtx {
  */
 class BeaconNode {
   public conf: BeaconNodeCtx;
-  public db: Service;
-  public eth1: Service;
+  public db: BeaconDB;
+  public eth1: IEth1Notifier;
   public network: Service;
   public chain: Service;
   public opPool: Service;
   public rpc: Service;
   public sync: Service;
-  private logger: WinstonLogger;
+  private logger: ILogger;
 
-  public constructor(opts: BeaconNodeCtx, logger: WinstonLogger) {
-    this.logger = logger;
+  public constructor(opts: BeaconNodeCtx, {logger}: {logger: ILogger}) {
+
     this.conf = deepmerge(
       defaultConf,
       opts,
@@ -66,30 +66,38 @@ class BeaconNode {
         isMergeableObject: isPlainObject
       }
     );
+    this.logger = logger;
 
     this.db = new BeaconDB({
       controller: new LevelDbController(
-        this.conf.db, this.logger
+        this.conf.db, {logger: this.logger}
       )
     },);
     const libp2p = createPeerId()
       .then((peerId) => initializePeerInfo(peerId, this.conf.network.multiaddrs))
       .then((peerInfo) => new NodejsNode({peerInfo}));
-    this.network = new Libp2pNetwork(this.conf.network, {libp2p}, this.logger);
+    this.network = new Libp2pNetwork(this.conf.network,
+      {
+        libp2p: libp2p, logger: this.logger
+      }
+    );
     this.eth1 = new EthersEth1Notifier(
       this.conf.eth1,
       {
-        db: this.db
-      },
-      this.logger
+        db: this.db,
+        logger: this.logger
+      }
     );
     this.sync = new Sync(this.conf.sync, {
       network: this.network,
     });
-    this.chain = new BeaconChain(this.conf.chain, {
-      db: this.db,
-      eth1: this.eth1,
-    }, this.logger);
+    this.chain = new BeaconChain(this.conf.chain,
+      {
+        db: this.db,
+        eth1: this.eth1,
+        logger: this.logger
+      }
+    );
     this.opPool = new OpPool(this.conf.opPool, {
       db: this.db,
       chain: this.chain,

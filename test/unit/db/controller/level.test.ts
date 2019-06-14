@@ -3,17 +3,17 @@ import level from "level";
 import leveldown from "leveldown";
 import {LevelDbController} from "../../../../src/db/controller";
 import promisify from "promisify-es6";
-import {WinstonLogger} from "../../../../src/logger";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 describe("LevelDB controller", () => {
-  let logger = new WinstonLogger();
+  let logger: ILogger = new WinstonLogger();
   const dbLocation = "./.__testdb";
   const testDb = level(
     dbLocation, {
       keyEncoding: 'binary',
       valueEncoding: 'binary',
     });
-  const db = new LevelDbController({db: testDb}, logger);
+  const db = new LevelDbController({db: testDb}, {logger: logger});
 
 
   before(async () => {

@@ -12,7 +12,7 @@ import {GENESIS_SLOT, SECONDS_PER_SLOT} from "../constants";
 
 import {BeaconDB} from "../db";
 import {IEth1Notifier} from "../eth1";
-import  {WinstonLogger} from "../logger";
+import {ILogger} from "../logger";
 
 import {getEmptyBlock, getGenesisBeaconState} from "./genesis";
 
@@ -30,17 +30,18 @@ export class BeaconChain extends EventEmitter {
   private db: BeaconDB;
   private eth1: IEth1Notifier;
   private _latestBlock: BeaconBlock;
-  private logger: WinstonLogger;
+  private logger: ILogger;
 
-  public constructor(opts, {db, eth1}, logger: WinstonLogger) {
+  public constructor(opts, {db, eth1, logger}: {db: BeaconDB; eth1: IEth1Notifier; logger: ILogger}) {
     super();
     this.chain = opts.chain;
     this.db = db;
     this.eth1 = eth1;
+    this.logger = logger;
     this.forkChoice = new StatefulDagLMDGHOST();
     this.chainId = 0; // TODO make this real
     this.networkId = new BN(0); // TODO make this real
-    this.logger = logger;
+
   }
 
   public async start(): Promise<void> {

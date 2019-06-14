@@ -1,5 +1,5 @@
 import {expect} from 'chai';
-import {WinstonLogger} from "../../../../src/logger/winston";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 import {CliError} from "../../../../src/cli/error";
 
 import program from "commander";
@@ -8,7 +8,7 @@ import {CreateWalletCommand} from '../../../../src/cli/commands';
 
 describe('[CLI] wallet', () => {
   
-  let logger = new WinstonLogger();
+  let logger: ILogger = new WinstonLogger();
 
   before(() => {
     logger.silent(true);

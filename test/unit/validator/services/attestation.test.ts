@@ -8,14 +8,14 @@ import {generateAttestationData} from "../../../utils/attestation";
 import {AttestationService} from "../../../../src/validator/services/attestation";
 import {slotToEpoch} from "../../../../src/chain/stateTransition/util";
 import {ValidatorDB} from "../../../../src/db/api";
-import {WinstonLogger} from "../../../../src/logger";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 describe('validator attestation service', function () {
 
   const sandbox = sinon.createSandbox();
 
   let rpcClientStub, dbStub;
-  let logger = new WinstonLogger();
+  let logger: ILogger = new WinstonLogger();
 
   before(() => {
     logger.silent(true);

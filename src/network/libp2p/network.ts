@@ -16,7 +16,7 @@ import {
 import {INetwork, INetworkOptions} from "../interface";
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {NetworkRpc} from "./rpc";
-import {WinstonLogger} from "../../logger";
+import {ILogger} from "../../logger";
 
 
 export class Libp2pNetwork extends EventEmitter implements INetwork {
@@ -26,9 +26,9 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
   private pubsub: Gossipsub;
   private rpc: NetworkRpc;
   private inited: Promise<void>;
-  private logger: WinstonLogger;
+  private logger: ILogger;
 
-  public constructor(opts: INetworkOptions, {libp2p}, logger: WinstonLogger) {
+  public constructor(opts: INetworkOptions, {libp2p,logger}: {libp2p: any; logger: ILogger}) {
     super();
     this.opts = opts;
     this.logger = logger;

@@ -2,8 +2,8 @@
  * @module logger
  */
 
-import {AbstractLogger, LogLevel} from "./interface";
 import {createLogger, Logger, transports, format} from 'winston';
+import {AbstractLogger, LogLevel} from "./abstract";
 
 export class WinstonLogger extends AbstractLogger {
 

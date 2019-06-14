@@ -8,7 +8,7 @@ import * as utils from 'ethers/utils';
 import deepmerge from "deepmerge";
 import defaults, {networkOpts} from "./defaults";
 import * as ethers from "ethers/ethers";
-import {WinstonLogger} from "../../logger";
+import {ILogger} from "../../logger";
 
 export interface PrivateNetworkOpts {
   port?: number;
@@ -28,9 +28,9 @@ export class PrivateEth1Network {
 
   private opts: PrivateNetworkOpts;
 
-  private logger: WinstonLogger;
+  private logger: ILogger;
 
-  public constructor(opts: PrivateNetworkOpts, logger: WinstonLogger) {
+  public constructor(opts: PrivateNetworkOpts, {logger}: {logger: ILogger} ) {
     this.opts = deepmerge(networkOpts, opts);
     this.logger = logger;
     this.server = ganache.server({

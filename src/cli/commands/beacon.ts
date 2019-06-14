@@ -14,6 +14,7 @@ import * as RPCApis from "../../rpc/api";
 import deepmerge from "deepmerge";
 import {getTomlConfig, IConfigFile} from "../../util/file";
 import defaults from "../../node/defaults";
+import {ILogger} from "../../logger";
 
 interface IBeaconCommandOptions {
   db: string;
@@ -27,7 +28,9 @@ interface IBeaconCommandOptions {
 export class BeaconNodeCommand implements CliCommand {
 
   public register(commander: CommanderStatic): void {
-    const logger = new WinstonLogger();
+
+    const logger: ILogger = new WinstonLogger();
+
     commander
       .command("beacon")
       .description("Start lodestar node")
@@ -48,7 +51,7 @@ export class BeaconNodeCommand implements CliCommand {
       });
   }
 
-  public async action(options: IBeaconCommandOptions, logger: WinstonLogger): Promise<void> {
+  public async action(options: IBeaconCommandOptions, logger: ILogger): Promise<void> {
     if (options.loggingLevel) {
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }
@@ -88,7 +91,7 @@ export class BeaconNodeCommand implements CliCommand {
       optionsMap = deepmerge(parsedConfig, optionsMap, {isMergeableObject: isPlainObject});
     }
 
-    const node = new BeaconNode(optionsMap, logger);
+    const node = new BeaconNode(optionsMap, {logger});
     await node.start();
   }
 

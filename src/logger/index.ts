@@ -3,4 +3,5 @@
  */
 
 export * from "./winston";
-export {LogLevel, AbstractLogger} from "./interface";
+export {ILogger} from "./interface";
+export {LogLevel, AbstractLogger} from "./abstract";

@@ -21,7 +21,7 @@ import {
 } from "../codec";
 import {randomRequestId} from "../util";
 import {Peer} from "./peer";
-import {WinstonLogger} from "../../logger";
+import {ILogger} from "../../logger";
 
 
 /**
@@ -52,9 +52,9 @@ export class NetworkRpc extends EventEmitter {
    */
   private responses: Record<RequestId, {peer: Peer; method: Method}>;
 
-  private logger: WinstonLogger;
+  private logger: ILogger;
 
-  public constructor(libp2p: LibP2p, logger: WinstonLogger) {
+  public constructor(libp2p: LibP2p, logger: ILogger) {
     super();
     this.logger = logger;
     this.libp2p = libp2p;

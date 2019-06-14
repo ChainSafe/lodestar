@@ -23,7 +23,7 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import {Domain} from "../../constants";
 import {intDiv} from "../../util/math";
 import {IValidatorDB} from "../../db/api";
-import {WinstonLogger} from "../../logger";
+import {ILogger} from "../../logger";
 
 export class AttestationService {
 
@@ -31,14 +31,14 @@ export class AttestationService {
   private rpcClient: RpcClient;
   private privateKey: PrivateKey;
   private db: IValidatorDB;
-  private logger: WinstonLogger;
+  private logger: ILogger;
 
   public constructor(
     validatorIndex: ValidatorIndex,
     rpcClient: RpcClient,
     privateKey: PrivateKey,
     db: IValidatorDB,
-    logger: WinstonLogger
+    logger: ILogger
   ) {
     this.validatorIndex = validatorIndex;
     this.rpcClient = rpcClient;

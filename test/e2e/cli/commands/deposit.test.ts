@@ -2,21 +2,25 @@ import {PrivateEth1Network} from "../../../../src/eth1/dev";
 import chai, {expect} from 'chai';
 import {DepositCommand} from "../../../../src/cli/commands";
 import chaiAsPromised from 'chai-as-promised';
-import {WinstonLogger} from "../../../../src/logger";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 chai.use(chaiAsPromised);
 
 describe('[CLI] deposit', function() {
 
   let eth1Network: PrivateEth1Network;
-  let logger = new WinstonLogger();
+  const logger: ILogger = new WinstonLogger();
 
   before(async () => {
     logger.silent(true);
     eth1Network = new PrivateEth1Network({
       host: '127.0.0.1',
       port: 32567
-    }, logger);
+    },
+    {
+      logger: logger
+    }
+    );
     await eth1Network.start();
   });
 

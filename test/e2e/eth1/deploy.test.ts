@@ -7,7 +7,7 @@ import defaults from "../../../src/eth1/dev/defaults";
 import {PrivateEth1Network} from "../../../src/eth1/dev";
 import {BeaconDB} from "../../../src/db/api";
 import {PouchDbController} from "../../../src/db";
-import {WinstonLogger} from "../../../src/logger";
+import {ILogger, WinstonLogger} from "../../../src/logger";
 
 describe("Eth1Notifier - using deployed contract", () => {
 
@@ -15,7 +15,7 @@ describe("Eth1Notifier - using deployed contract", () => {
   let eth1Network;
   let depositContractAddress;
   let provider;
-  let logger = new WinstonLogger();
+  let logger: ILogger = new WinstonLogger();
   const db = new BeaconDB({
     controller: new PouchDbController(
       {name: 'testDb'}
@@ -29,7 +29,10 @@ describe("Eth1Notifier - using deployed contract", () => {
     eth1Network = new PrivateEth1Network({
       host: '127.0.0.1',
       port: 34569
-    }, logger);
+    },
+    {
+      logger: logger
+    });
     await eth1Network.start();
     depositContractAddress = await eth1Network.deployDepositContract();
     provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:34569');
@@ -41,7 +44,11 @@ describe("Eth1Notifier - using deployed contract", () => {
         address: depositContractAddress,
       },
       provider,
-    }, {db}, logger);
+    },
+    {
+      db: db,
+      logger: logger
+    });
     await eth1Notifier.start();
   });
 

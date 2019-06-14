@@ -8,8 +8,7 @@ import {Attestation} from "../../../types";
 import {DBOptions, IDatabaseController} from "../interface";
 import {EventEmitter} from "events";
 import level from "level";
-import {WinstonLogger} from "../../../logger";
-import {loggers} from "winston";
+import {ILogger} from "../../../logger";
 
 export interface LevelDBOptions extends DBOptions {
   db?: LevelUp;
@@ -24,9 +23,9 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
 
   private opts: LevelDBOptions;
 
-  private logger: WinstonLogger;
+  private logger: ILogger;
 
-  public constructor(opts: LevelDBOptions, logger: WinstonLogger) {
+  public constructor(opts: LevelDBOptions, {logger}: {logger: ILogger}) {
     super();
     this.opts = opts;
     this.logger = logger;

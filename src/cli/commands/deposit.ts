@@ -11,6 +11,7 @@ import  {LogLevel, WinstonLogger} from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
 import {JsonRpcProvider} from "ethers/providers";
+import {ILogger} from "../../logger";
 
 interface IDepositCommandOptions {
   privateKey: string;
@@ -25,7 +26,9 @@ interface IDepositCommandOptions {
 export class DepositCommand implements CliCommand {
 
   public register(commander: CommanderStatic): void {
-    const logger = new WinstonLogger();
+
+    const logger: ILogger = new WinstonLogger();
+
     commander
       .command('deposit')
       .description('Start private network with deposit contract and 10 accounts with balance')
@@ -55,7 +58,7 @@ export class DepositCommand implements CliCommand {
       });
   }
 
-  public async action(options: IDepositCommandOptions, logger: WinstonLogger): Promise<void> {
+  public async action(options: IDepositCommandOptions, logger: ILogger): Promise<void> {
     if (options.loggingLevel) {
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }

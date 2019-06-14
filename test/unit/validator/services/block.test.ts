@@ -10,14 +10,14 @@ import {generateState} from "../../../utils/state";
 import {BeaconApi} from "../../../../src/rpc/api/beacon";
 import {SLOTS_PER_EPOCH} from "../../../../src/constants";
 import {ValidatorDB} from "../../../../src/db/api";
-import {WinstonLogger} from "../../../../src/logger";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 describe('block proposing service', function () {
 
   const sandbox = sinon.createSandbox();
 
   let rpcClientStub, dbStub;
-  let logger = new WinstonLogger();
+  let logger: ILogger = new WinstonLogger();
 
   before(() => {
     logger.silent(true);

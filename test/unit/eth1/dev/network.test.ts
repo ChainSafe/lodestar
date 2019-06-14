@@ -7,7 +7,7 @@ import {WinstonLogger} from "../../../../src/logger";
 
 describe('Eth1 dev network', () => {
 
-  let logger = new WinstonLogger();
+  let logger: WinstonLogger = new WinstonLogger();
 
   before(() => {
     logger.silent(true);
@@ -24,7 +24,10 @@ describe('Eth1 dev network', () => {
       mnemonic: 'test',
       defaultBalance: 1400
     }
-    ,logger);
+    ,
+    {
+      logger: logger
+    });
     await network.start();
     const accountBalance = await new Wallet(
       network.accounts()[9],
@@ -42,7 +45,10 @@ describe('Eth1 dev network', () => {
       port: 34567,
       mnemonic: 'test',
       defaultBalance: 1400
-    }, logger );
+    },
+    {
+      logger: logger
+    });
     await network.start();
     const address = await network.deployDepositContract();
     expect(address).to.not.be.null;

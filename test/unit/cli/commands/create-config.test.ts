@@ -3,12 +3,12 @@ import {CreateConfigCommand} from "../../../../src/cli/commands/index";
 import {CliError} from "../../../../src/cli/error";
 
 import program from "commander";
-import {WinstonLogger} from "../../../../src/logger";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 
 describe('[CLI] create-config', () => {
 
-  let logger = new WinstonLogger();
+  let logger: ILogger = new WinstonLogger();
   before(async () => {
     logger.silent(true);
   });

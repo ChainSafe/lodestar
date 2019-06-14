@@ -9,6 +9,7 @@ import fs from "fs";
 import {CliError} from "../error";
 import readline from "readline";
 import Keystore from "../../validator/keystore";
+import {ILogger} from "../../logger/interface";
 
 interface IWalletCommandOptions {
   outputFile: string;
@@ -42,7 +43,9 @@ const promptPassword = (): Promise<string> => {
 
 export class CreateWalletCommand implements CliCommand {
   public register(commander: CommanderStatic): void {
-    const logger = new WinstonLogger();
+
+    const logger: ILogger = new WinstonLogger();
+
     commander
       .command("wallet")
       .description("Generate wallet private key")
@@ -62,7 +65,7 @@ export class CreateWalletCommand implements CliCommand {
       });
   }
 
-  public async action(options: IWalletCommandOptions, logger: WinstonLogger): Promise<void> {
+  public async action(options: IWalletCommandOptions, logger: ILogger): Promise<void> {
     if (fs.existsSync(options.outputFile)) {
       throw new CliError(`${options.outputFile} already exists`);
     }

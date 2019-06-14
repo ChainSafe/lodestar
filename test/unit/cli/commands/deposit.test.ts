@@ -5,14 +5,14 @@ import chaiAsPromised from 'chai-as-promised';
 import {CliError} from "../../../../src/cli/error";
 import {Wallet} from "ethers";
 import program from "commander";
-import {WinstonLogger} from "../../../../src/logger";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 chai.use(chaiAsPromised);
 
 describe('[CLI] deposit', function() {
 
   let eth1Network: PrivateEth1Network;
-  let logger = new WinstonLogger();
+  let logger: ILogger = new WinstonLogger();
 
   before(async () => {
     logger.silent(true);
@@ -20,7 +20,9 @@ describe('[CLI] deposit', function() {
       host: '127.0.0.1',
       port: 32567
     },
-    logger);
+    {
+      logger: logger
+    });
     await eth1Network.start();
   });
 

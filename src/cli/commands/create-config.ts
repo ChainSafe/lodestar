@@ -8,6 +8,7 @@ import  {LogLevel, WinstonLogger} from "../../logger";
 import fs from "fs";
 import {CliError} from "../error";
 import {writeTomlConfig} from "../../util/file";
+import {ILogger} from "../../logger";
 
 interface ICreateConfigOptions {
   loggingLevel: string;
@@ -16,7 +17,9 @@ interface ICreateConfigOptions {
 
 export class CreateConfigCommand implements CliCommand {
   public register(commander: CommanderStatic): void {
-    const logger = new WinstonLogger();
+
+    const logger: ILogger = new WinstonLogger();
+
     commander
       .command("create-config")
       .description("Create default config file")
@@ -34,7 +37,7 @@ export class CreateConfigCommand implements CliCommand {
       });
   }
 
-  public async action(options: ICreateConfigOptions, logger: WinstonLogger): Promise<void> {
+  public async action(options: ICreateConfigOptions, logger: ILogger): Promise<void> {
     if (options.loggingLevel) {
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }

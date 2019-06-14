@@ -6,7 +6,7 @@ import {LikeSocketServer} from "../protocol";
 import {LikeSocket} from "noice-json-rpc";
 import http from "http";
 import promisify from "promisify-es6";
-import {WinstonLogger} from "../../logger";
+import {ILogger} from "../../logger";
 
 export interface HttpServerOpts {
   port: number;
@@ -73,9 +73,9 @@ export default class HttpServer implements LikeSocketServer{
 
   private connectionCallback: Function;
 
-  private logger: WinstonLogger;
+  private logger: ILogger;
 
-  public constructor(opts: HttpServerOpts, logger: WinstonLogger) {
+  public constructor(opts: HttpServerOpts, {logger}: {logger: ILogger}) {
     this.opts = opts;
     this.logger = logger;
     this.server = http.createServer(async (req, resp) => {

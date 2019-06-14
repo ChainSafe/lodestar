@@ -8,14 +8,14 @@ import {createNode} from "./util";
 import {NodejsNode} from "../../../../src/network/libp2p/nodejs";
 import {Method} from "../../../../src/constants";
 import {Hello} from "../../../../src/types";
-import {WinstonLogger} from "../../../../src/logger";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
 describe("[network] rpc", () => {
   let nodeA: NodejsNode, nodeB: NodejsNode,
     rpcA: NetworkRpc, rpcB: NetworkRpc;
-  let logger = new WinstonLogger();
+  let logger: ILogger = new WinstonLogger();
   beforeEach(async () => {
     // setup
     nodeA = await createNode(multiaddr);

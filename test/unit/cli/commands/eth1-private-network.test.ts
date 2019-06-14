@@ -2,12 +2,12 @@ import {expect} from 'chai';
 import {Eth1PrivateNetworkCommand} from "../../../../src/cli/commands/index";
 
 import program from "commander";
-import {WinstonLogger} from "../../../../src/logger";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 
 describe('[CLI] eth1:dev', () => {
 
-  let logger = new WinstonLogger();
+  let logger: ILogger = new WinstonLogger();
 
   before(async () => {
     logger.silent(true);

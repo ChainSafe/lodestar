@@ -13,7 +13,7 @@ import {isValidAddress} from "../../util/address";
 import {BeaconDB} from "../../db";
 import {Log} from "ethers/providers";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants/minimal";
-import {WinstonLogger} from "../../logger";
+import {ILogger} from "../../logger";
 
 export interface EthersEth1Options extends IEth1Options {
   provider: ethers.providers.BaseProvider;
@@ -39,10 +39,10 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   private opts: EthersEth1Options;
 
-  private logger: WinstonLogger;
+  private logger: ILogger;
 
 
-  public constructor(opts: EthersEth1Options, {db}, logger: WinstonLogger) {
+  public constructor(opts: EthersEth1Options, {db, logger}: {db: any; logger: ILogger}) {
     super();
     this.logger = logger;
     this.opts = opts;

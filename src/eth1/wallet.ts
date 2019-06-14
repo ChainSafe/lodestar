@@ -11,7 +11,7 @@ import {hash} from "@chainsafe/ssz/lib/util/hash";
 import {BLS_WITHDRAWAL_PREFIX_BYTE, Domain} from "../constants";
 import {DepositData} from "../types";
 import {signingRoot} from "@chainsafe/ssz";
-import {WinstonLogger} from "../logger";
+import {ILogger} from "../logger";
 
 
 export class Eth1Wallet {
@@ -20,9 +20,9 @@ export class Eth1Wallet {
 
   private contractAbi;
 
-  private logger: WinstonLogger;
+  private logger: ILogger;
 
-  public constructor(privateKey: string, contractAbi: any, logger: WinstonLogger, provider?: Provider) {
+  public constructor(privateKey: string, contractAbi: any, logger: ILogger, provider?: Provider) {
     this.logger = logger;
     if(!provider) {
       provider = ethers.getDefaultProvider();

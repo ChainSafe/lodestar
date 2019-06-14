@@ -9,21 +9,21 @@ import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {Domain} from "../../constants";
 import {IValidatorDB} from "../../db";
-import {WinstonLogger} from "../../logger";
+import {ILogger} from "../../logger";
 
 export default class BlockProposingService {
   private validatorIndex: ValidatorIndex;
   private provider: RpcClient;
   private privateKey: PrivateKey;
   private db: IValidatorDB;
-  private logger: WinstonLogger;
+  private logger: ILogger;
 
   public constructor(
     index: ValidatorIndex,
     provider: RpcClient,
     privateKey: PrivateKey,
     db: IValidatorDB,
-    logger: WinstonLogger
+    logger: ILogger
   ) {
     this.validatorIndex = index;
     this.provider = provider;
