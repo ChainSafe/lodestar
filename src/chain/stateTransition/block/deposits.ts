@@ -3,36 +3,24 @@
  */
 
 import assert from "assert";
-import BN from "bn.js";
-import {hashTreeRoot, serialize, signingRoot} from "@chainsafe/ssz";
+import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 
-import {
-  BeaconBlock,
-  BeaconState,
-  Deposit,
-  DepositData,
-  Validator,
-} from "../../../types";
+import {BeaconBlock, BeaconState, Deposit, DepositData, Validator,} from "../../../types";
 
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
   Domain,
+  EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
   MAX_DEPOSITS,
-  EFFECTIVE_BALANCE_INCREMENT,
   MAX_EFFECTIVE_BALANCE,
 } from "../../../constants";
-
-import {hash} from "../../../util/crypto";
 import {bnMin} from "../../../util/math";
 import {verifyMerkleBranch} from "../../../util/merkleTree";
 
 import bls from "@chainsafe/bls-js";
 
-import {
-  getDomain,
-  increaseBalance,
-} from "../util";
+import {getDomain, increaseBalance,} from "../util";
 
 
 /**
@@ -41,7 +29,7 @@ import {
 export function processDeposit(state: BeaconState, deposit: Deposit): BeaconState {
   // Verify the Merkle branch
   assert(verifyMerkleBranch(
-    hashTreeRoot(deposit.data, DepositData), // 48 + 32 + 8 + 96 = 184 bytes serialization
+    hashTreeRoot(deposit.data, DepositData),
     deposit.proof,
     DEPOSIT_CONTRACT_TREE_DEPTH,
     deposit.index,

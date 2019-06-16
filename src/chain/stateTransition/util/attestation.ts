@@ -95,7 +95,7 @@ export function convertToIndexed(state: BeaconState, attestation: Attestation): 
 /**
  * Verify validity of ``indexed_attestation`` fields.
  */
-export function   verifyIndexedAttestation(
+export function verifyIndexedAttestation(
   state: BeaconState,
   indexedAttestation: IndexedAttestation
 ): bool {

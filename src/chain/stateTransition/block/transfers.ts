@@ -81,6 +81,7 @@ export function processTransfer(state: BeaconState, transfer: Transfer): BeaconS
 
 export default function processTransfers(state: BeaconState, block: BeaconBlock): void {
   // Note: Transfers are a temporary functionality for phases 0 and 1, to be removed in phase 2.
+  // TODO: enable when configurable constants are implemented
   // assert(block.body.transfers.length <= MAX_TRANSFERS);
   for (const transfer of block.body.transfers) {
     processTransfer(state, transfer);
