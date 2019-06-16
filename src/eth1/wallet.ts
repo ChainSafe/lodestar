@@ -7,11 +7,11 @@ import {Provider} from "ethers/providers";
 import {BigNumber} from "ethers/utils";
 import BN from "bn.js";
 import bls from "@chainsafe/bls-js";
-import {hash} from "@chainsafe/ssz/lib/util/hash";
 import {BLS_WITHDRAWAL_PREFIX_BYTE, Domain} from "../constants";
 import {DepositData} from "../types";
 import {signingRoot} from "@chainsafe/ssz";
 import logger from "../logger";
+import {hash} from "../util/crypto";
 
 export class Eth1Wallet {
 
