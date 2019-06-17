@@ -10,7 +10,7 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import {BeaconBlock, BeaconState, Deposit, Eth1Data, number64, Attestation, uint16, uint64} from "../types";
 import {GENESIS_SLOT, SECONDS_PER_SLOT} from "../constants";
 
-import {BeaconDB} from "../db";
+import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
 import {ILogger} from "../logger";
 
@@ -32,7 +32,7 @@ export class BeaconChain extends EventEmitter {
   private _latestBlock: BeaconBlock;
   private logger: ILogger;
 
-  public constructor(opts, {db, eth1, logger}: {db: BeaconDB; eth1: IEth1Notifier; logger: ILogger}) {
+  public constructor(opts, {db, eth1, logger}: {db: IBeaconDb; eth1: IEth1Notifier; logger: ILogger}) {
     super();
     this.chain = opts.chain;
     this.db = db;
