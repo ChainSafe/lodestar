@@ -209,12 +209,20 @@ describe("Eth1Notifier", () => {
     assert(cb.calledOnce, "new block event did not fire");
   });
 
-  it("should get latest block hash", async function (): Promise<void> {
-    this.timeout(0);
+  it("should get block 0", async function (): Promise<void> {
+    const block = await eth1.getBlock(0);
+    expect(block).to.not.be.null;
+  });
 
-    await eth1.processBlockHeadUpdate(0);
-    expect(eth1.latestBlockHash()).to.not.be.null;
-    expect(eth1.latestBlockHash().length).to.be.equal(32);
+  it("should get block by hash", async function (): Promise<void> {
+    let block = await eth1.getBlock(0);
+    block = await eth1.getBlock(block.hash);
+    expect(block).to.not.be.null;
+  });
+
+  it("should get latest block", async function (): Promise<void> {
+    let block = await eth1.getHead();
+    expect(block).to.not.be.null;
   });
 
   it("should get deposit root from contract", async function (): Promise<void> {

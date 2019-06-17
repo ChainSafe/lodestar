@@ -12,7 +12,7 @@ import {IEth1Notifier, IEth1Options} from "../interface";
 import logger from "../../logger";
 import {isValidAddress} from "../../util/address";
 import {BeaconDB} from "../../db";
-import {Log} from "ethers/providers";
+import {Block, Log} from "ethers/providers";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants/minimal";
 
 export interface EthersEth1Options extends IEth1Options {
@@ -31,8 +31,6 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   private db: BeaconDB;
 
-  private _latestBlockHash: bytes32;
-
   private genesisBlockHash: number64;
 
   private depositCount: number;
@@ -47,7 +45,6 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     this.contract = opts.contract;
     this.db = db;
     this.depositCount = 0;
-    this._latestBlockHash = null;
     this.genesisBlockHash = null;
   }
 
@@ -82,8 +79,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   public async processBlockHeadUpdate(blockNumber): Promise<void> {
     logger.debug(`Received eth1 block ${blockNumber}`);
-    const block = await this.provider.getBlock(blockNumber);
-    this._latestBlockHash = Buffer.from(block.hash.substr(2), 'hex');
+    const block = await this.getBlock(blockNumber);
     this.emit('block', block);
   }
 
@@ -178,8 +174,12 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     return this.db.getGenesisDeposits();
   }
 
-  public latestBlockHash(): bytes32 {
-    return this._latestBlockHash;
+  public async getHead(): Promise<Block> {
+    return this.getBlock('latest');
+  }
+
+  public async getBlock(blockHashOrBlockNumber: string | number): Promise<Block> {
+    return this.provider.getBlock(blockHashOrBlockNumber, false);
   }
 
   public async depositRoot(): Promise<bytes32> {
