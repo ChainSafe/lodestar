@@ -15,13 +15,13 @@ import {
   BeaconStatesRequest, BeaconStatesResponse, Epoch,
 } from "../types";
 import {ZERO_HASH, Method, RequestId, ResponseCode} from "../constants";
-import logger from "../logger";
 import {intDiv} from "../util/math";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
 import {getEmptyBlockBody} from "../chain/genesis";
 import {ReputationStore} from "./reputation";
+import {ILogger} from "../logger";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface SyncOptions {
@@ -37,7 +37,13 @@ export class SyncRpc {
   private chain: IBeaconChain;
   private network: INetwork;
   private reps: ReputationStore;
-  public constructor(opts: SyncOptions, {db, chain, network, reps}) {
+  private logger: ILogger;
+
+  public constructor(opts: SyncOptions,
+    {db, chain, network, reps, logger}:
+    {db: IBeaconDb; chain: IBeaconChain; network: INetwork; reps: ReputationStore; logger: ILogger} )
+  {
+    this.logger = logger;
     this.opts = opts;
     this.db = db;
     this.chain = chain;
@@ -180,7 +186,7 @@ export class SyncRpc {
       case Method.BeaconStates:
         return await this.onBeaconStates(id, body as BeaconStatesRequest);
       default:
-        logger.error(`Invalid request method ${method} from ${peerInfo.id.toB58String()}`);
+        this.logger.error(`Invalid request method ${method} from ${peerInfo.id.toB58String()}`);
     }
   }
 

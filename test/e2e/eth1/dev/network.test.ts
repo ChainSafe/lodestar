@@ -1,10 +1,12 @@
-import logger from "../../../../src/logger";
 import {PrivateEth1Network} from "../../../../src/eth1/dev";
 import {Wallet} from "ethers";
 import * as ethers from "ethers/ethers";
 import {expect} from "chai";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 describe('Eth1 dev network', function () {
+
+  const logger: ILogger = new WinstonLogger();
 
   before(() => {
     logger.silent(true);
@@ -20,7 +22,11 @@ describe('Eth1 dev network', function () {
       port: 34568,
       mnemonic: 'test',
       defaultBalance: 1400
-    });
+    },
+    {
+      logger: logger
+    }
+    );
     await network.start();
     const accountBalance = await new Wallet(
       network.accounts()[9],
@@ -39,7 +45,11 @@ describe('Eth1 dev network', function () {
       port: 34567,
       mnemonic: 'test',
       defaultBalance: 1400
-    });
+    },
+    {
+      logger: logger
+    }
+    );
     await network.start();
     const address = await network.deployDepositContract();
     expect(address).to.not.be.null;

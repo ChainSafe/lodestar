@@ -4,16 +4,17 @@ import {JSONRPC} from "../../../../src/rpc";
 import {MockValidatorApi} from "../../../utils/mocks/rpc/validator";
 import HttpServer from "../../../../src/rpc/transport/http";
 import {generateRPCCall} from "../../../utils/rpcCall";
-import logger from "../../../../src/logger/winston";
 import {MockBeaconApi} from "../../../utils/mocks/rpc/beacon";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 describe("Json RPC over http", () => {
   let rpc;
   let server;
+  let logger: ILogger = new WinstonLogger();
 
   before(async () => {
     logger.silent(true);
-    const rpcServer = new HttpServer({port: 32421});
+    const rpcServer = new HttpServer({port: 32421}, {logger: logger});
     server = rpcServer.server;
     rpc = new JSONRPC(
       {},
@@ -94,7 +95,7 @@ describe("Json RPC over http", () => {
   it("should fail to start on existing port", (done) => {
     const rpc = new JSONRPC(
       {},
-      {transports: [new HttpServer({port: 32421})],
+      {transports: [new HttpServer({port: 32421}, {logger: logger})],
         apis: [new MockValidatorApi()]});
     rpc.start()
       .then(async () => {

@@ -8,25 +8,28 @@ import {RpcClient} from "../rpc";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {Domain} from "../../constants";
-import logger from "../../logger";
 import {IValidatorDB} from "../../db";
+import {ILogger} from "../../logger";
 
 export default class BlockProposingService {
   private validatorIndex: ValidatorIndex;
   private provider: RpcClient;
   private privateKey: PrivateKey;
   private db: IValidatorDB;
+  private logger: ILogger;
 
   public constructor(
     index: ValidatorIndex,
     provider: RpcClient,
     privateKey: PrivateKey,
-    db: IValidatorDB
+    db: IValidatorDB,
+    logger: ILogger
   ) {
     this.validatorIndex = index;
     this.provider = provider;
     this.privateKey = privateKey;
     this.db = db;
+    this.logger = logger;
   }
 
   /**
@@ -34,7 +37,7 @@ export default class BlockProposingService {
    */
   public async createAndPublishBlock(slot: Slot, fork: Fork): Promise<BeaconBlock> {
     if(await this.hasProposedAlready(slot)) {
-      logger.info(`[Validator] Already proposed block in current epoch: ${slotToEpoch(slot)}`);
+      this.logger.info(`[Validator] Already proposed block in current epoch: ${slotToEpoch(slot)}`);
       return null;
     }
     const block = await this.provider.validator.produceBlock(
@@ -50,7 +53,7 @@ export default class BlockProposingService {
     ).toBytesCompressed();
     await this.storeBlock(block);
     await this.provider.validator.publishBlock(block);
-    logger.info(
+    this.logger.info(
       `[Validator] Proposed block with hash 0x${hashTreeRoot(block, BeaconBlock).toString('hex')}`
     );
     return block;
