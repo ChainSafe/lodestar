@@ -2,25 +2,26 @@
  * @module chain/blockAssembly
  */
 
-import {Eth1Data} from "../../../types";
+import {BeaconState, Eth1Data} from "../../../types";
 import {IEth1Notifier} from "../../../eth1";
 import {ETH1_FOLLOW_DISTANCE} from "../../../constants";
 
-export async function bestVoteData(votes: Eth1Data[]): Promise<Eth1Data> {
-  const potentialVotes = votes.filter(vote => {
-    //TODO: check vote
-    /**
-     * vote.eth1_data.block_hash is the hash of an eth1.0 block that is
-     * (i) part of the canonical chain, (ii) >= ETH1_FOLLOW_DISTANCE blocks behind the head,
-     * and (iii) newer than state.latest_eth1_data.block_data.
-     *
-     * vote.eth1_data.deposit_count is the deposit count of the eth1.0 deposit contract
-     * at the block defined by vote.eth1_data.block_hash.
-     *
-     * vote.eth1_data.deposit_root is the deposit root of the eth1.0 deposit contract at
-     * the block defined by vote.eth1_data.block_hash.
-     */
-  });
+export async function bestVoteData(state: BeaconState, eth1: IEth1Notifier): Promise<Eth1Data> {
+  const potentialVotes = [];
+  const [head, latestStateBlock] = await Promise.all([
+    eth1.getHead(),
+    eth1.getBlock(state.latestEth1Data.blockHash.toString('hex'))
+  ]);
+  for(let i = 0; i < state.eth1DataVotes.length; i++) {
+    const vote = state.eth1DataVotes[i];
+    const block = await eth1.getBlock(vote.blockHash.toString('hex'));
+    if(block
+      && (head.number - block.number) >= ETH1_FOLLOW_DISTANCE
+      && block.number > latestStateBlock.number
+    ) {
+
+    }
+  }
 
   // if(potentialVotes.length === 0) {
   //   const blockHash = await eth1.getAncestoreBlockHash(eth1.latestBlockHash(), ETH1_FOLLOW_DISTANCE);

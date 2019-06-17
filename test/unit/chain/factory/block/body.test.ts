@@ -12,15 +12,17 @@ import {
   MAX_PROPOSER_SLASHINGS,
   MAX_VOLUNTARY_EXITS
 } from "../../../../../src/constants";
+import {EthersEth1Notifier} from "../../../../../src/eth1";
 
 describe('blockAssembly - body', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let opPool;
+  let opPool, eth1;
 
   beforeEach(() => {
     opPool = sandbox.createStubInstance(OpPool);
+    eth1 = sandbox.createStubInstance(EthersEth1Notifier);
   });
 
   afterEach(() => {
@@ -32,7 +34,7 @@ describe('blockAssembly - body', function () {
     opPool.getAttesterSlashings.resolves([generateEmptyAttesterSlashing()]);
     opPool.getAttestations.resolves([generateEmptyAttestation()]);
     opPool.getVoluntaryExits.resolves([generateEmptyVoluntaryExit()]);
-    const result = await assembleBody(opPool, generateState(), Buffer.alloc(96, 0));
+    const result = await assembleBody(opPool, eth1, generateState(), Buffer.alloc(96, 0));
     expect(result).to.not.be.null;
     expect(result.randaoReveal.length).to.be.equal(96);
     expect(result.attestations.length).to.be.equal(1);
@@ -47,7 +49,7 @@ describe('blockAssembly - body', function () {
     opPool.getAttesterSlashings.resolves(new Array(MAX_ATTESTER_SLASHINGS + 1).map(generateEmptyAttesterSlashing));
     opPool.getAttestations.resolves(new Array(MAX_ATTESTATIONS + 1).map(generateEmptyAttestation));
     opPool.getVoluntaryExits.resolves(new Array(MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit));
-    const result = await assembleBody(opPool, generateState(), Buffer.alloc(96, 0));
+    const result = await assembleBody(opPool, eth1, generateState(), Buffer.alloc(96, 0));
     expect(result).to.not.be.null;
     expect(result.randaoReveal.length).to.be.equal(96);
     expect(result.attestations.length).to.be.equal(MAX_ATTESTATIONS);

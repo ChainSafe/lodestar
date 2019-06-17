@@ -4,7 +4,7 @@
 
 import deepmerge from "deepmerge";
 import {BeaconDB, LevelDbController} from "../db";
-import {EthersEth1Notifier, EthersEth1Options} from "../eth1";
+import {EthersEth1Notifier, EthersEth1Options, IEth1Notifier} from "../eth1";
 import {Libp2pNetwork, INetworkOptions, NodejsNode} from "../network";
 
 
@@ -47,10 +47,10 @@ interface RpcCtx {
  */
 class BeaconNode {
   public conf: BeaconNodeCtx;
-  public db: Service;
-  public eth1: Service;
+  public db: BeaconDB;
+  public eth1: IEth1Notifier;
   public network: Service;
-  public chain: Service;
+  public chain: BeaconChain;
   public opPool: Service;
   public rpc: Service;
   public sync: Service;
@@ -94,7 +94,7 @@ class BeaconNode {
     this.rpc = new JSONRPC(this.conf.rpc, {
       transports: [new WSServer(this.conf.rpc)],
       apis: this.conf.rpc.apis.map((Api) => {
-        return new Api(this.conf.rpc, {chain: this.chain, db: this.db});
+        return new Api(this.conf.rpc, {chain: this.chain, db: this.db, eth1: this.eth1});
       })
     });
   }
