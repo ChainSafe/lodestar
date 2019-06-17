@@ -5,6 +5,7 @@ import {generateState} from "../../../../utils/state";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../../../../utils/voluntaryExits";
+import * as eth1DataAssembly from "../../../../../src/chain/factory/block/eth1Data";
 import {expect} from "chai";
 import {
   MAX_ATTESTATIONS,
@@ -18,11 +19,12 @@ describe('blockAssembly - body', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let opPool, eth1;
+  let opPool, eth1, bestVoteStub;
 
   beforeEach(() => {
     opPool = sandbox.createStubInstance(OpPool);
     eth1 = sandbox.createStubInstance(EthersEth1Notifier);
+    bestVoteStub = sandbox.stub(eth1DataAssembly, "bestVoteData");
   });
 
   afterEach(() => {
@@ -34,6 +36,7 @@ describe('blockAssembly - body', function () {
     opPool.getAttesterSlashings.resolves([generateEmptyAttesterSlashing()]);
     opPool.getAttestations.resolves([generateEmptyAttestation()]);
     opPool.getVoluntaryExits.resolves([generateEmptyVoluntaryExit()]);
+    bestVoteStub.resolves([]);
     const result = await assembleBody(opPool, eth1, generateState(), Buffer.alloc(96, 0));
     expect(result).to.not.be.null;
     expect(result.randaoReveal.length).to.be.equal(96);
@@ -42,6 +45,7 @@ describe('blockAssembly - body', function () {
     expect(result.voluntaryExits.length).to.be.equal(1);
     expect(result.proposerSlashings.length).to.be.equal(1);
     expect(result.transfers.length).to.be.equal(0);
+    expect(bestVoteStub.calledOnce).to.be.true;
   });
 
   it('should generate block body with max respective field lengths', async function() {
@@ -49,6 +53,7 @@ describe('blockAssembly - body', function () {
     opPool.getAttesterSlashings.resolves(new Array(MAX_ATTESTER_SLASHINGS + 1).map(generateEmptyAttesterSlashing));
     opPool.getAttestations.resolves(new Array(MAX_ATTESTATIONS + 1).map(generateEmptyAttestation));
     opPool.getVoluntaryExits.resolves(new Array(MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit));
+    bestVoteStub.resolves([]);
     const result = await assembleBody(opPool, eth1, generateState(), Buffer.alloc(96, 0));
     expect(result).to.not.be.null;
     expect(result.randaoReveal.length).to.be.equal(96);
@@ -57,6 +62,7 @@ describe('blockAssembly - body', function () {
     expect(result.voluntaryExits.length).to.be.equal(MAX_VOLUNTARY_EXITS);
     expect(result.proposerSlashings.length).to.be.equal(MAX_PROPOSER_SLASHINGS);
     expect(result.transfers.length).to.be.equal(0);
+    expect(bestVoteStub.calledOnce).to.be.true;
   });
 
 

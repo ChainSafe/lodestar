@@ -2,7 +2,6 @@
  * @module util/objects
  */
 import {AnySSZType, hashTreeRoot} from "@chainsafe/ssz";
-import has = Reflect.has;
 
 function isObjectObject(val: any): boolean {
   return val != null && typeof val === 'object' && Array.isArray(val) === false;
