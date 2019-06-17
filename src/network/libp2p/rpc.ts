@@ -9,7 +9,6 @@ import Connection from "interface-connection";
 import promisify from "es6-promisify";
 import {deserialize} from "@chainsafe/ssz";
 
-import logger from "../../logger";
 import {RequestBody, ResponseBody, WireResponse, WireRequest} from "../../types";
 import {Method, RequestId, ResponseCode, RPC_MULTICODEC} from "../../constants";
 
@@ -22,6 +21,7 @@ import {
 } from "../codec";
 import {randomRequestId} from "../util";
 import {Peer} from "./peer";
+import {ILogger} from "../../logger";
 
 
 /**
@@ -52,8 +52,11 @@ export class NetworkRpc extends EventEmitter {
    */
   private responses: Record<RequestId, {peer: Peer; method: Method}>;
 
-  public constructor(libp2p: LibP2p) {
+  private logger: ILogger;
+
+  public constructor(libp2p: LibP2p, logger: ILogger) {
     super();
+    this.logger = logger;
     this.libp2p = libp2p;
     this.requestTimeout = 5000;
     this.requests = {};
@@ -182,7 +185,7 @@ export class NetworkRpc extends EventEmitter {
         this.responses[id] = {peer, method: request.method};
         this.emit("request", peer.peerInfo, request.method, id, decodedBody);
       } catch (e) {
-        logger.warn('unable to decode request', e.message);
+        this.logger.warn('unable to decode request', e.message);
       }
     } else { // incoming response
       try {
@@ -198,7 +201,7 @@ export class NetworkRpc extends EventEmitter {
           this.emit(event, null, decodedResult);
         }
       } catch (e) {
-        logger.warn('unable to decode response', e.message);
+        this.logger.warn('unable to decode response', e.message);
       }
     }
   }

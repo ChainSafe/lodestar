@@ -2,32 +2,28 @@
  * @module logger
  */
 
-export enum LogLevel {
-  DEBUG = 'debug',
-  INFO = 'info',
-  WARN = 'warn',
-  ERROR = 'error',
-  NONE = 'none'
-}
 
-export abstract class AbstractLogger {
+import {LogLevel} from "./abstract";
 
-  public abstract info(message: string|object, context?: object): void;
-  public abstract warn(message: string|object, context?: object): void;
-  public abstract error(message: string|object, context?: object): void;
-  public abstract debug(message: string|object, context?: object): void;
+
+export interface ILogger {
+  info(message: string|object, context?: object): void;
+  warn(message: string|object, context?: object): void;
+  error(message: string|object, context?: object): void;
+  debug(message: string|object, context?: object): void;
 
   /**
-     * Should change which log levels are recorded.
-     * @param level
-     */
-  public abstract setLogLevel(level: LogLevel): void;
+   * Should change which log levels are recorded.
+   * @param level
+   */
+  setLogLevel(level: LogLevel): void;
 
   /**
-     * Disables all logging. Setting it to true is same as setting {@link setLogLevel}
-     * with {@link LogLevel.NONE}
-     * @param silent
-     */
-  public abstract silent(silent: boolean): void;
+   * Disables all logging. Setting it to true is same as setting {@link setLogLevel}
+   * with {@link LogLevel.NONE}
+   * @param silent
+   */
+
+  silent(silent: boolean): void;
 
 }

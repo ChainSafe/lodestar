@@ -9,11 +9,11 @@ import {deserialize} from "@chainsafe/ssz";
 import {bytes32, Deposit, Eth1Data, number64, Gwei} from "../../types";
 
 import {IEth1Notifier, IEth1Options} from "../interface";
-import logger from "../../logger";
 import {isValidAddress} from "../../util/address";
 import {BeaconDB} from "../../db";
 import {Log} from "ethers/providers";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants/minimal";
+import {ILogger} from "../../logger";
 
 export interface EthersEth1Options extends IEth1Options {
   provider: ethers.providers.BaseProvider;
@@ -39,9 +39,12 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   private opts: EthersEth1Options;
 
+  private logger: ILogger;
 
-  public constructor(opts: EthersEth1Options, {db}) {
+
+  public constructor(opts: EthersEth1Options, {db, logger}: {db: any; logger: ILogger}) {
     super();
+    this.logger = logger;
     this.opts = opts;
     this.provider = opts.provider;
     this.contract = opts.contract;
@@ -56,7 +59,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
       await this.initContract();
     }
     if(await this.isAfterEth2Genesis()) {
-      logger.info('Eth2Genesis event exits, started listening on eth1 block updates');
+      this.logger.info('Eth2Genesis event exits, started listening on eth1 block updates');
       this.provider.on('block', this.processBlockHeadUpdate.bind(this));
     } else {
       const pastDeposits = await this.getContractDeposits(this.opts.depositContract.deployedAt);
@@ -66,7 +69,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
       this.provider.on('block', this.processBlockHeadUpdate.bind(this));
       this.contract.on('Deposit', this.processDepositLog.bind(this));
       this.contract.on('Eth2Genesis', this.processEth2GenesisLog.bind(this));
-      logger.info(
+      this.logger.info(
         `Started listening on eth1 events on chain ${(await this.provider.getNetwork()).chainId}`
       );
     }
@@ -81,7 +84,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
   }
 
   public async processBlockHeadUpdate(blockNumber): Promise<void> {
-    logger.debug(`Received eth1 block ${blockNumber}`);
+    this.logger.debug(`Received eth1 block ${blockNumber}`);
     const block = await this.provider.getBlock(blockNumber);
     this._latestBlockHash = Buffer.from(block.hash.substr(2), 'hex');
     this.emit('block', block);
@@ -101,11 +104,11 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
         signature,
         merkleTreeIndex
       );
-      logger.info(
+      this.logger.info(
         `Received validator deposit event index=${deposit.index}`
       );
       if (deposit.index !== this.depositCount) {
-        logger.warn(
+        this.logger.warn(
           `Validator deposit with index=${deposit.index} received out of order. 
           (currentCount: ${this.depositCount})`
         );
@@ -119,7 +122,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
       }
       this.emit('deposit', deposit);
     } catch (e) {
-      logger.error(`Failed to process deposit log. Error: ${e.message}`);
+      this.logger.error(`Failed to process deposit log. Error: ${e.message}`);
     }
   }
 
@@ -135,7 +138,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
       const time: number64 = parseInt(timeHex, 16);
       const blockHash = Buffer.from(event.blockHash.substr(2), 'hex');
       this.genesisBlockHash = event.blockNumber;
-      logger.info(`Received Eth2Genesis event. blockNumber=${event.blockNumber}, time=${time}`);
+      this.logger.info(`Received Eth2Genesis event. blockNumber=${event.blockNumber}, time=${time}`);
 
       const genesisEth1Data: Eth1Data = {
         depositRoot,
@@ -147,7 +150,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
       //from now on it will be kept in BeaconBlock
       await this.db.deleteGenesisDeposits(genesisDeposits);
     } catch (e) {
-      logger.error(`Failed to process genesis log. Error: ${e.message}`);
+      this.logger.error(`Failed to process genesis log. Error: ${e.message}`);
     }
 
   }
