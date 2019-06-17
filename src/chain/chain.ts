@@ -27,7 +27,7 @@ export class BeaconChain extends EventEmitter {
   public forkChoice: LMDGHOST;
   public chainId: uint16;
   public networkId: uint64;
-  private db: BeaconDB;
+  private db: IBeaconDb;
   private eth1: IEth1Notifier;
   private _latestBlock: BeaconBlock;
   private logger: ILogger;
