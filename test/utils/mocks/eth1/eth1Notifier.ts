@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 
-import {bytes32, Deposit} from "../../../../src/types";
+import {bytes32, Deposit, number64} from "../../../../src/types";
 
 import {IEth1Notifier, IEth1Options} from "../../../../src/eth1";
 import {Block} from "ethers/providers";
@@ -54,6 +54,10 @@ export class MockEth1Notifier extends EventEmitter implements IEth1Notifier {
   }
 
   public async getHead(): Promise<Block> {
+    return undefined;
+  }
+
+  public async depositCount(block?: string | number): Promise<number64> {
     return undefined;
   }
 }

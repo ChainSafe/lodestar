@@ -82,6 +82,12 @@ export interface IEth1Notifier extends EventEmitter {
   /**
    * Return the merkle root of the deposits
    */
-  depositRoot(): Promise<bytes32>;
+  depositRoot(block?: string | number): Promise<bytes32>;
+
+  /**
+   * Retruns deposit count
+   * @param block
+   */
+  depositCount(block?: string | number): Promise<number64>;
 
 }

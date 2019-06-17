@@ -33,9 +33,9 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   private genesisBlockHash: number64;
 
-  private depositCount: number;
-
   private opts: EthersEth1Options;
+
+  private _depositCount: number;
 
 
   public constructor(opts: EthersEth1Options, {db}) {
@@ -44,7 +44,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     this.provider = opts.provider;
     this.contract = opts.contract;
     this.db = db;
-    this.depositCount = 0;
+    this._depositCount = 0;
     this.genesisBlockHash = null;
   }
 
@@ -100,15 +100,15 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
       logger.info(
         `Received validator deposit event index=${deposit.index}`
       );
-      if (deposit.index !== this.depositCount) {
+      if (deposit.index !== this._depositCount) {
         logger.warn(
           `Validator deposit with index=${deposit.index} received out of order. 
-          (currentCount: ${this.depositCount})`
+          (currentCount: ${this._depositCount})`
         );
         // deposit processed out of order
         return;
       }
-      this.depositCount++;
+      this._depositCount++;
       //after genesis stop storing in genesisDeposit bucket
       if (!this.genesisBlockHash) {
         await this.db.setGenesisDeposit(deposit);
@@ -182,9 +182,14 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     return this.provider.getBlock(blockHashOrBlockNumber, false);
   }
 
-  public async depositRoot(): Promise<bytes32> {
-    const depositRootHex = await this.contract.get_deposit_root();
+  public async depositRoot(block?: string | number): Promise<bytes32> {
+    const depositRootHex = await this.contract.get_deposit_root({blockTag: block || 'latest'});
     return Buffer.from(depositRootHex.substr(2), 'hex');
+  }
+
+  public async depositCount(block?: string | number): Promise<number> {
+    const depositCountHex = await this.contract.get_deposit_count({blockTag: block || 'latest'});
+    return Buffer.from(depositCountHex.substr(2), 'hex').readUIntLE(0, 6);
   }
 
   private async initContract(): Promise<void> {
