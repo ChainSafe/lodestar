@@ -4,8 +4,10 @@
 
 import assert from "assert";
 import {bytes32} from "../types";
-import {hash} from "../util/crypto";
-import {intDiv} from "../util/math";
+import {hash} from "./crypto";
+import {intDiv} from "./math";
+import {serialize} from "@chainsafe/ssz";
+import {MerkleTree} from "../types";
 
 interface IProgressiveMerkleTree {
   /**
@@ -32,20 +34,41 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
   private _branch: bytes32[];
   private _zerohashes: bytes32[];
 
-  public constructor(depth: number) {
+  protected constructor(depth: number, count: number, branch: bytes32[], zeroHashes: bytes32[]) {
     assert(depth <= 52, "tree depth must be less than 53");
     this._depth = depth;
-    this._count = 0;
-    this._branch = Array.from({length: depth}, () => Buffer.alloc(32));
-    this._zerohashes = Array.from({length: depth}, () => Buffer.alloc(32));
+    this._count = count;
+    this._branch = branch;
+    this._zerohashes = zeroHashes;
+  }
+
+  public static empty(depth: number): ProgressiveMerkleTree {
+    const branch = Array.from({length: depth}, () => Buffer.alloc(32));
+    const zerohashes = Array.from({length: depth}, () => Buffer.alloc(32));
     for (let i = 0; i < depth - 1; i++) {
-      this._zerohashes[i + 1] = this._branch[i + 1] =
+      zerohashes[i + 1] = branch[i + 1] =
         hash(Buffer.concat([
-          this._zerohashes[i],
-          this._zerohashes[i],
+          zerohashes[i],
+          zerohashes[i],
         ]));
     }
+    return new ProgressiveMerkleTree(
+      depth,
+      0,
+      branch,
+      zerohashes
+    );
   }
+
+  public static fromObject(value: MerkleTree) {
+    return new ProgressiveMerkleTree(
+      value.depth,
+      value.count,
+      value.branch,
+      value.zeroHashes
+    );
+  }
+
 
   public count(): number {
     return this._count;
@@ -111,6 +134,18 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
       size = intDiv(size, 2);
     }
     return root;
+  }
+
+  public serialize(): Buffer {
+    return serialize(
+      {
+        count: this._count,
+        depth: this._depth,
+        branch: this._branch,
+        zeroHashes: this._zerohashes
+      },
+      MerkleTree
+    );
   }
 
   private _proof(): bytes32[] {

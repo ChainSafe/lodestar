@@ -240,3 +240,19 @@ export const HistoricalBatch: SimpleContainerType = {
   ],
 };
 
+export interface MerkleTree {
+  depth: number64;
+  count: number64;
+  branch: bytes32[];
+  zeroHashes: bytes32[];
+}
+
+export const MerkleTree: SimpleContainerType = {
+  name: "MerkleTree",
+  fields: [
+    ["depth", number64],
+    ["count", number64],
+    ["branch", [bytes32]],
+    ["zeroHashes", [bytes32]],
+  ]
+};
