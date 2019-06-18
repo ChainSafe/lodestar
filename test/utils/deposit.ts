@@ -20,3 +20,16 @@ export function generateDeposit(index: number): Deposit {
     }
   };
 }
+
+export function depositsFromYaml(value: any): Deposit {
+  return {
+    data: {
+      amount: value.data.amount,
+      pubkey: Buffer.from(value.data.pubkey.slice(2), 'hex'),
+      signature: Buffer.from(value.data.signature.slice(2), 'hex'),
+      withdrawalCredentials: Buffer.from(value.data.withdrawalCredentials.slice(2), 'hex'),
+    },
+    index: value.index.toNumber(),
+    proof: value.proof.map(value => Buffer.from(value.slice(2), 'hex'))
+  };
+}

@@ -11,7 +11,8 @@ describe('[CLI] deposit', function() {
   let eth1Network: PrivateEth1Network;
   const logger: ILogger = new WinstonLogger();
 
-  before(async () => {
+  before(async function() {
+    this.timeout(0);
     logger.silent(true);
     eth1Network = new PrivateEth1Network({
       host: '127.0.0.1',

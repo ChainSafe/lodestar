@@ -8,8 +8,11 @@ import {BeaconState, Gwei} from "../../../../types";
 import {SHARD_COUNT} from "../../../../constants";
 
 import {
-  getPreviousEpoch, getTotalBalance, getEpochStartShard,
-  getEpochCommitteeCount, getCrosslinkCommittee,
+  getCrosslinkCommittee,
+  getEpochCommitteeCount,
+  getEpochStartShard,
+  getPreviousEpoch,
+  getTotalBalance,
 } from "../../util";
 
 import {getWinningCrosslinkAndAttestingIndices} from "../util";
@@ -20,7 +23,8 @@ export function getCrosslinkDeltas(state: BeaconState): [Gwei[], Gwei[]] {
   const rewards = Array.from({length: state.validatorRegistry.length}, () => new BN(0));
   const penalties = Array.from({length: state.validatorRegistry.length}, () => new BN(0));
   const previousEpoch = getPreviousEpoch(state);
-  for (let offset = 0; offset < getEpochCommitteeCount(state, previousEpoch); offset ++) {
+  const comitteeCount = getEpochCommitteeCount(state, previousEpoch);
+  for (let offset = 0; offset < comitteeCount; offset++) {
     const shard = (getEpochStartShard(state, previousEpoch) + offset) % SHARD_COUNT;
     const crosslinkCommittee = getCrosslinkCommittee(state, previousEpoch, shard);
     const [_, attestingIndices] =
@@ -31,7 +35,7 @@ export function getCrosslinkDeltas(state: BeaconState): [Gwei[], Gwei[]] {
       const baseReward = getBaseReward(state, index);
       if (attestingIndices.includes(index)) {
         rewards[index] = rewards[index]
-          .add(baseReward.mul(attestingBalance.div(committeeBalance)));
+          .add(baseReward.mul(attestingBalance).div(committeeBalance));
       } else {
         penalties[index] = penalties[index].add(baseReward);
       }

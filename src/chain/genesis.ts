@@ -124,7 +124,7 @@ export function getGenesisBeaconState(
 
   // Process genesis activations
   state.validatorRegistry.forEach((validator) => {
-    if (validator.effectiveBalance.gten(MAX_EFFECTIVE_BALANCE)) {
+    if (validator.effectiveBalance.gte(MAX_EFFECTIVE_BALANCE)) {
       validator.activationEligibilityEpoch = GENESIS_EPOCH;
       validator.activationEpoch = GENESIS_EPOCH;
     }

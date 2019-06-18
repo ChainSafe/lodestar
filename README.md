@@ -14,7 +14,7 @@ There is a lot of work being done that are core infrastructural pieces for Eth2.
 [![](https://badges.gitter.im/chainsafe/lodestar.svg)](https://gitter.im/chainsafe/lodestar?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![codecov](https://codecov.io/gh/ChainSafe/lodestar/branch/master/graph/badge.svg)](https://codecov.io/gh/ChainSafe/lodestar)
 [![Maintainability](https://api.codeclimate.com/v1/badges/678099476c401e1af503/maintainability)](https://codeclimate.com/github/ChainSafe/lodestar/maintainability)
-![ETH2.0_Spec_Version 0.6.1](https://img.shields.io/badge/ETH2.0_Spec_Version-0.6.1-2e86c1.svg)
+![ETH2.0_Spec_Version 0.6.3](https://img.shields.io/badge/ETH2.0_Spec_Version-0.6.3-2e86c1.svg)
 
 # Overview
 The goal of this repository is to provide an implementation of the beacon chain. As even the Ethereum Core dev team don't know how the finalized beacon chain
@@ -25,7 +25,10 @@ You will need to go over the [specification](https://github.com/ethereum/eth2.0-
 
 ## Run
 1. `yarn install`
+2. `git submodule foreach git lfs pull`
 2. `yarn test`
+
+Note: to run spec tests execute `git submodules foreach git lfs pull`
 
 ## Usage
 1. If you haven't `yarn install`
