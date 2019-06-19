@@ -15,7 +15,6 @@ import {
 import {
   BLS_WITHDRAWAL_PREFIX_BYTE,
   Domain,
-  MAX_TRANSFERS,
   MIN_DEPOSIT_AMOUNT,
   FAR_FUTURE_EPOCH,
   MAX_EFFECTIVE_BALANCE,
@@ -39,7 +38,7 @@ import {
  *
  * Note that this function mutates ``state``.
  */
-export function processTransfer(state: BeaconState, transfer: Transfer): void {
+export function processTransfer(state: BeaconState, transfer: Transfer): BeaconState {
   // Verify the amount and fee aren't individually too big (for anti-overflow purposes)
   const senderBalance = state.balances[transfer.sender];
   assert(senderBalance.gte(transfer.amount));
@@ -71,17 +70,19 @@ export function processTransfer(state: BeaconState, transfer: Transfer): void {
   // Verify balances are not dust
   assert(!(
     (new BN(0)).lt(state.balances[transfer.sender]) &&
-    state.balances[transfer.sender].ltn(MIN_DEPOSIT_AMOUNT)
+    state.balances[transfer.sender].lt(MIN_DEPOSIT_AMOUNT)
   ));
   assert(!(
     (new BN(0)).lt(state.balances[transfer.recipient]) &&
-    state.balances[transfer.recipient].ltn(MIN_DEPOSIT_AMOUNT)
+    state.balances[transfer.recipient].lt(MIN_DEPOSIT_AMOUNT)
   ));
+  return state;
 }
 
 export default function processTransfers(state: BeaconState, block: BeaconBlock): void {
   // Note: Transfers are a temporary functionality for phases 0 and 1, to be removed in phase 2.
-  assert(block.body.transfers.length <= MAX_TRANSFERS);
+  // TODO: enable when configurable constants are implemented
+  // assert(block.body.transfers.length <= MAX_TRANSFERS);
   for (const transfer of block.body.transfers) {
     processTransfer(state, transfer);
   }

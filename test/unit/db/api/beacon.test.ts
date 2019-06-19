@@ -3,7 +3,7 @@ import sinon from "sinon";
 import * as dbKeys from "../../../../src/db/schema";
 import {Bucket, Key} from "../../../../src/db/schema";
 import {BeaconDB} from "../../../../src/db/api";
-import {LevelDbPersistance} from "../../../../src/db/persistance";
+import {LevelDbController} from "../../../../src/db/controller";
 import {
   Attestation,
   AttesterSlashing,
@@ -36,9 +36,9 @@ describe('beacon db api', function() {
 
   beforeEach(() => {
     encodeKeyStub = sandbox.stub(dbKeys, 'encodeKey');
-    dbStub = sandbox.createStubInstance(LevelDbPersistance);
+    dbStub = sandbox.createStubInstance(LevelDbController);
     beaconDB = new BeaconDB({
-      persistance: dbStub
+      controller: dbStub
     });
   });
 
@@ -477,6 +477,7 @@ describe('beacon db api', function() {
 
   it('test delete genesis deposits', async function() {
     encodeKeyStub.returns('genesisDepositKey');
+    let argForBatchDelete = ['genesisDepositKey','genesisDepositKey'];
     dbStub.batchDelete.resolves({});
     await beaconDB.deleteGenesisDeposits(
       [generateDeposit(1), generateDeposit(2)]
@@ -485,10 +486,9 @@ describe('beacon db api', function() {
       encodeKeyStub.withArgs(Bucket.genesisDeposit, sinon.match.any).calledTwice
     ).to.be.true;
     expect(
-      dbStub.batchDelete.withArgs(
-        sinon.match.array
-      ).calledOnce
+      dbStub.batchDelete.calledWith(argForBatchDelete)
     ).to.be.true;
   });
+
 
 });

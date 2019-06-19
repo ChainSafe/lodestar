@@ -4,7 +4,7 @@
 import fs from "fs";
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import logger, {LogLevel} from "../../logger";
+import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import {BeaconNodeCtx} from "../../node";
 import {RpcClientOverInstance, RpcClientOverWs} from "../../validator/rpc";
 import {MockBeaconApi} from "../../../test/utils/mocks/rpc/beacon";
@@ -19,10 +19,10 @@ import {BeaconDB, ValidatorDB} from "../../db/api";
 import {BeaconChain} from "../../chain";
 import {ValidatorApi} from "../../rpc/api/validator";
 import {OpPool} from "../../opPool";
-import {LevelDbPersistance} from "../../db/persistance";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import Keystore from "../../validator/keystore";
 import {promptPassword} from "../../util/io";
+import {LevelDbController} from "../../db/controller";
 
 interface IValidatorCommandOptions {
   key: string;
@@ -34,6 +34,8 @@ interface IValidatorCommandOptions {
 export class ValidatorCommand implements CliCommand {
 
   public register(commander: CommanderStatic): void {
+    const logger: ILogger = new WinstonLogger();
+
     commander
       .command("beacon")
       .description("Start lodestar node")
@@ -45,14 +47,14 @@ export class ValidatorCommand implements CliCommand {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
         try {
-          await this.action(options);
+          await this.action(options, logger);
         } catch (e) {
           logger.error(e.message + '\n' + e.stack);
         }
       });
   }
 
-  public async action(options: IValidatorCommandOptions): Promise<void> {
+  public async action(options: IValidatorCommandOptions, logger: ILogger): Promise<void> {
     if (options.loggingLevel) {
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }
@@ -64,8 +66,10 @@ export class ValidatorCommand implements CliCommand {
       dbName = defaults.db.name;
     }
     let db = new ValidatorDB({
-      persistance: new LevelDbPersistance({
+      controller: new LevelDbController({
         name: dbName
+      }, {
+        logger: logger
       })
     });
 
@@ -81,7 +85,7 @@ export class ValidatorCommand implements CliCommand {
     }
 
     let keypair: Keypair;
-    if(options.key){
+    if (options.key) {
       if (fs.existsSync(options.key)) {
         keypair = await this.getKeyFromKeyStore(options.key);
       } else {
@@ -97,7 +101,7 @@ export class ValidatorCommand implements CliCommand {
       db: db,
     };
 
-    let validator = new Validator(validatorCtx);
+    let validator = new Validator(validatorCtx, logger);
     await validator.start();
   }
 

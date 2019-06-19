@@ -2,7 +2,7 @@ import sinon from "sinon";
 
 import * as dbKeys from "../../../../src/db/schema";
 import {Bucket} from "../../../../src/db/schema";
-import {LevelDbPersistance} from "../../../../src/db/persistance";
+import {LevelDbController} from "../../../../src/db/controller";
 import {Attestation, BeaconBlock} from "../../../../src/types";
 import chai, {expect} from "chai";
 import {serialize} from "@chainsafe/ssz";
@@ -22,9 +22,9 @@ describe('beacon db api', function () {
 
   beforeEach(() => {
     encodeKeyStub = sandbox.stub(dbKeys, 'encodeKey');
-    dbStub = sandbox.createStubInstance(LevelDbPersistance);
+    dbStub = sandbox.createStubInstance(LevelDbController);
     validatorDB = new ValidatorDB({
-      persistance: dbStub
+      controller: dbStub
     });
   });
 

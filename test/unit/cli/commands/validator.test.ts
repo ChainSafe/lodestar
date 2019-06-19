@@ -1,5 +1,5 @@
 import {expect, assert} from 'chai';
-import logger from "../../../../src/logger/winston";
+import {WinstonLogger} from "../../../../src/logger/winston";
 
 import program from "commander";
 import {ValidatorCommand} from '../../../../src/cli/commands/validator';
@@ -7,8 +7,10 @@ import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import {BeaconChain} from "../../../../src/chain";
 import * as RPCApis from "../../../../src/rpc/api";
 import BeaconNode, {BeaconNodeCtx} from "../../../../src/node";
+import {ILogger} from "../../../../src/logger";
 
-describe('Validator test', () => {
+describe('[CLI] validator', () => {
+  let logger: ILogger = new WinstonLogger();
 
   let beaconNode: BeaconChain;
   before(async () => {
@@ -32,7 +34,7 @@ describe('Validator test', () => {
       }
     };
 
-    const node = new BeaconNode(optionsMap);
+    const node = new BeaconNode(optionsMap, {logger: logger});
     await expect(node.start()).not.throw;
     await node.stop();
   });
@@ -50,7 +52,7 @@ describe('Validator test', () => {
     await expect(
       command.action({
         key:keyString
-      })
+      }, logger)
     ).not.throw;
   });
 

@@ -1,11 +1,13 @@
 import {expect, assert} from 'chai';
-import logger from "../../../../src/logger/winston";
+import {WinstonLogger} from "../../../../src/logger/winston";
 
 import program from "commander";
 import {BeaconChain} from "../../../../src/chain";
 import {StartCommand} from "../../../../src/cli/commands/start";
+import {ILogger} from "../../../../src/logger";
 
-describe('Start test', () => {
+describe('[CLI] start', () => {
+  let logger: ILogger = new WinstonLogger();
 
   let beaconNode: BeaconChain;
   before(async () => {

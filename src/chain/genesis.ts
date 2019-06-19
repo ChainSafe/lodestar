@@ -12,6 +12,7 @@ import {
   Eth1Data,
   number64,
   ValidatorIndex,
+  BeaconBlockBody,
 } from "../types";
 
 import {
@@ -25,6 +26,24 @@ import {getActiveValidatorIndices, getTemporaryBlockHeader} from "./stateTransit
 import {processDeposit} from "./stateTransition/block/deposits";
 
 
+export function getEmptyBlockBody(): BeaconBlockBody {
+  return {
+    randaoReveal: EMPTY_SIGNATURE,
+    eth1Data: {
+      depositRoot: ZERO_HASH,
+      depositCount: 0,
+      blockHash: ZERO_HASH,
+    },
+    graffiti: ZERO_HASH,
+    proposerSlashings: [],
+    attesterSlashings: [],
+    attestations: [],
+    deposits: [],
+    voluntaryExits: [],
+    transfers: [],
+  };
+}
+
 /**
  * Get an empty [[BeaconBlock]].
  */
@@ -33,21 +52,7 @@ export function getEmptyBlock(): BeaconBlock {
     slot: GENESIS_SLOT,
     previousBlockRoot: ZERO_HASH,
     stateRoot: ZERO_HASH,
-    body: {
-      randaoReveal: EMPTY_SIGNATURE,
-      eth1Data: {
-        depositRoot: ZERO_HASH,
-        depositCount: 0,
-        blockHash: ZERO_HASH,
-      },
-      graffiti: ZERO_HASH,
-      proposerSlashings: [],
-      attesterSlashings: [],
-      attestations: [],
-      deposits: [],
-      voluntaryExits: [],
-      transfers: [],
-    },
+    body: getEmptyBlockBody(),
     signature: EMPTY_SIGNATURE,
   };
 }
@@ -119,7 +124,7 @@ export function getGenesisBeaconState(
 
   // Process genesis activations
   state.validatorRegistry.forEach((validator) => {
-    if (validator.effectiveBalance.gten(MAX_EFFECTIVE_BALANCE)) {
+    if (validator.effectiveBalance.gte(MAX_EFFECTIVE_BALANCE)) {
       validator.activationEligibilityEpoch = GENESIS_EPOCH;
       validator.activationEpoch = GENESIS_EPOCH;
     }

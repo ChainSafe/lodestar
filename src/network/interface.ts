@@ -1,11 +1,15 @@
 /**
  * @module network
  */
-import {BeaconBlock, Attestation, Shard, Hello, Goodbye, Status, BeaconBlockRootsRequest, BeaconBlockRootsResponse, BeaconBlockHeadersRequest, BeaconBlockHeadersResponse, BeaconBlockBodiesRequest, BeaconBlockBodiesResponse, BeaconStatesRequest, BeaconStatesResponse} from "../types";
-
 import PeerInfo from "peer-info";
+import {EventEmitter} from "events";
 
-export interface NetworkOptions {
+import {
+  Attestation, BeaconBlock, Shard, ResponseBody, RequestBody,
+} from "../types";
+import {RequestId, Method} from "../constants";
+
+export interface INetworkOptions {
   maxPeers: number;
   /**
    * Multiaddrs to listen on
@@ -16,31 +20,31 @@ export interface NetworkOptions {
    * RPC request timeout in milliseconds
    */
   rpcTimeout: number;
+
+  connectTimeout: number;
+  disconnectTimeout: number;
 }
 
-export interface IPeer {
+export interface INetwork extends EventEmitter {
   peerInfo: PeerInfo;
-  hello(request: Hello): Promise<Hello>;
-  goodbye(request: Goodbye): Promise<void>;
-  getStatus(request: Status): Promise<Status>;
-  getBeaconBlockRoots(request: BeaconBlockRootsRequest): Promise<BeaconBlockRootsResponse>;
-  getBeaconBlockHeaders(request: BeaconBlockHeadersRequest): Promise<BeaconBlockHeadersResponse>;
-  getBeaconBlockBodies(request: BeaconBlockBodiesRequest): Promise<BeaconBlockBodiesResponse>;
-  getBeaconStates(request: BeaconStatesRequest): Promise<BeaconStatesResponse>;
-}
-
-export interface INetwork {
   // Service
   start(): Promise<void>;
   stop(): Promise<void>;
   // Pubsub
   publishBlock(block: BeaconBlock): Promise<void>;
   publishAttestation(attestation: Attestation): Promise<void>;
-  publishShardAttestation(shard: Shard, attestation: Attestation): Promise<void>;
-  subscribe(topic: string): void;
-  unsubscribe(topic: string): void;
+  publishShardAttestation(attestation: Attestation): Promise<void>;
+  subscribeToBlocks(): void;
+  subscribeToAttestations(): void;
+  subscribeToShardAttestations(shard: Shard): void;
+  unsubscribeToBlocks(): void;
+  unsubscribeToAttestations(): void;
+  unsubscribeToShardAttestations(shard: Shard): void;
   // Rpc/peer
-  getPeers(): IPeer[];
+  getPeers(): PeerInfo[];
+  hasPeer(peerInfo: PeerInfo): boolean;
+  sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T>;
+  sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void;
   connect(peerInfo: PeerInfo): Promise<void>;
-  disconnect(peer: IPeer): void;
+  disconnect(peerInfo: PeerInfo): void;
 }

@@ -1,18 +1,20 @@
 import {assert, expect} from "chai";
 import level from "level";
 import leveldown from "leveldown";
-import {LevelDbPersistance} from "../../../../src/db/persistance";
-import logger from "../../../../src/logger";
+import {LevelDbController} from "../../../../src/db/controller";
 import promisify from "promisify-es6";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
-describe("LevelDB persistance", () => {
+describe("LevelDB controller", () => {
+  let logger: ILogger = new WinstonLogger();
   const dbLocation = "./.__testdb";
   const testDb = level(
     dbLocation, {
       keyEncoding: 'binary',
       valueEncoding: 'binary',
     });
-  const db = new LevelDbPersistance({db: testDb});
+  const db = new LevelDbController({db: testDb}, {logger: logger});
+
 
   before(async () => {
     logger.silent(true);

@@ -1,14 +1,14 @@
 /**
- * @module db/persistance/impl
+ * @module db/controller/impl
  */
 
 import {LevelUp} from "levelup";
 import {SearchOptions} from "../interface";
 import {Attestation} from "../../../types";
-import logger from "../../../logger";
 import {DBOptions, IDatabaseController} from "../interface";
 import {EventEmitter} from "events";
 import level from "level";
+import {ILogger} from "../../../logger";
 
 export interface LevelDBOptions extends DBOptions {
   db?: LevelUp;
@@ -17,15 +17,18 @@ export interface LevelDBOptions extends DBOptions {
 /**
  * The LevelDB implementation of DB
  */
-export class LevelDbPersistance extends EventEmitter implements IDatabaseController {
+export class LevelDbController extends EventEmitter implements IDatabaseController {
 
   private db: LevelUp;
 
   private opts: LevelDBOptions;
 
-  public constructor(opts: LevelDBOptions) {
+  private logger: ILogger;
+
+  public constructor(opts: LevelDBOptions, {logger}: {logger: ILogger}) {
     super();
     this.opts = opts;
+    this.logger = logger;
     this.db =
       opts.db
       ||
@@ -37,7 +40,7 @@ export class LevelDbPersistance extends EventEmitter implements IDatabaseControl
 
   public async start(): Promise<void> {
     await this.db.open();
-    logger.info( `Connected to LevelDB database at ${this.opts.name}`);
+    this.logger.info( `Connected to LevelDB database at ${this.opts.name}`);
   }
 
   public async stop(): Promise<void> {

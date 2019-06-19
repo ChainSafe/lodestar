@@ -63,16 +63,24 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
 
   public async getBlock(blockRoot: bytes32): Promise<BeaconBlock> {
     const buf = await this.db.get(encodeKey(Bucket.block, blockRoot));
-    if(!buf) return null;
     return deserialize(buf, BeaconBlock);
   }
 
   public async hasBlock(blockHash: bytes32): Promise<boolean> {
-    return !! await this.getBlock(blockHash);
+    try {
+      await this.getBlock(blockHash);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  public async getBlockRoot(slot: Slot): Promise<bytes32> {
+    return await this.db.get(encodeKey(Bucket.mainChain, slot));
   }
 
   public async getBlockBySlot(slot: Slot): Promise<BeaconBlock> {
-    const blockRoot = await this.db.get(encodeKey(Bucket.mainChain, slot));
+    const blockRoot = await this.getBlockRoot(slot);
     return await this.getBlock(blockRoot);
   }
 
@@ -105,16 +113,19 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
     );
   }
 
-  public async getChainHead(): Promise<BeaconBlock> {
+  public async getChainHeadSlot(): Promise<Slot> {
     const heightBuf = await this.db.get(encodeKey(Bucket.chainInfo, Key.chainHeight));
-    const height = deserialize(heightBuf, uint64) as uint64;
-    const blockRoot = await this.db.get(encodeKey(Bucket.mainChain, height));
-    return await this.getBlock(blockRoot);
+    return deserialize(heightBuf, uint64) as Slot;
   }
 
   public async getChainHeadRoot(): Promise<bytes32> {
-    const block = await this.getChainHead();
-    return hashTreeRoot(block, BeaconBlock);
+    const slot  = await this.getChainHeadSlot();
+    return await this.getBlockRoot(slot);
+  }
+
+  public async getChainHead(): Promise<BeaconBlock> {
+    const blockRoot = await this.getChainHeadRoot();
+    return await this.getBlock(blockRoot);
   }
 
   public async setChainHead(state: BeaconState, block: BeaconBlock): Promise<void> {
@@ -142,6 +153,10 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
 
   public async getAttestations(): Promise<Attestation[]> {
     return await this.getAllData(Bucket.attestation, Attestation);
+  }
+
+  public async getAttestation(root: bytes32): Promise<Attestation> {
+    return await this.db.get(encodeKey(Bucket.attestation, root));
   }
 
   public async setAttestation(attestation: Attestation): Promise<void> {
@@ -188,7 +203,8 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
 
   public async setProposerSlashing(proposerSlashing: ProposerSlashing): Promise<void> {
     const proposerSlashingRoot = hashTreeRoot(proposerSlashing, ProposerSlashing);
-    await this.db.put(encodeKey(Bucket.proposerSlashing, proposerSlashingRoot), serialize(proposerSlashing, ProposerSlashing));
+    await this.db.put(encodeKey(Bucket.proposerSlashing, proposerSlashingRoot),
+      serialize(proposerSlashing, ProposerSlashing));
   }
 
   public async deleteProposerSlashings(proposerSlashings: ProposerSlashing[]): Promise<void> {
@@ -201,7 +217,8 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
 
   public async setAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<void> {
     const attesterSlashingRoot = hashTreeRoot(attesterSlashing, AttesterSlashing);
-    await this.db.put(encodeKey(Bucket.attesterSlashing, attesterSlashingRoot), serialize(attesterSlashing, AttesterSlashing));
+    await this.db.put(encodeKey(Bucket.attesterSlashing, attesterSlashingRoot),
+      serialize(attesterSlashing, AttesterSlashing));
   }
 
   public async deleteAttesterSlashings(attesterSlashings: AttesterSlashing[]): Promise<void> {
@@ -217,8 +234,8 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
   }
 
   public async deleteGenesisDeposits(deposits: Deposit[]): Promise<void> {
-    const criteria: any[] = deposits.map((deposit) => {
-      encodeKey(Bucket.genesisDeposit, deposit.index);
+    const criteria: (Buffer | string)[] = deposits.map((deposit) => {
+      return encodeKey(Bucket.genesisDeposit, deposit.index);
     });
     await this.db.batchDelete(criteria);
   }

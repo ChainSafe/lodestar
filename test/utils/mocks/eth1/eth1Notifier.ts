@@ -1,14 +1,14 @@
 import {EventEmitter} from "events";
 
-import {bytes32, Deposit} from "../../src/types";
+import {bytes32, Deposit} from "../../../../src/types";
 
-import {Eth1Notifier, Eth1Options} from "../../src/eth1/interface";
+import {IEth1Notifier, IEth1Options} from "../../../../src/eth1/interface";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface MockEth1Options extends Eth1Options {
+export interface MockEth1Options extends IEth1Options {
 }
 
-export class MockEth1Notifier extends EventEmitter implements Eth1Notifier {
+export class MockEth1Notifier extends EventEmitter implements IEth1Notifier {
   public constructor(opts: MockEth1Options) {
     super();
   }
@@ -17,6 +17,10 @@ export class MockEth1Notifier extends EventEmitter implements Eth1Notifier {
   }
 
   public async stop(): Promise<void> {
+  }
+
+  public async isAfterEth2Genesis(): Promise<boolean> {
+    return true;
   }
 
   public async processBlockHeadUpdate(blockNumber): Promise<void> {

@@ -144,4 +144,4 @@ describe("AttestationAggregator", () => {
     assert(agg.latestAggregates[target1] === undefined);
   });
 
- });
+});

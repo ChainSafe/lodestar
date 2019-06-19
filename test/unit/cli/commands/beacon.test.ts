@@ -1,10 +1,13 @@
 import {expect} from 'chai';
 import {BeaconNodeCommand} from "../../../../src/cli/commands/index";
-import logger from "../../../../src/logger/winston";
 
 import program from "commander";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
-describe('Validator test', () => {
+
+
+describe('[CLI] beacon', () => {
+  let logger: ILogger = new WinstonLogger();
 
   before(async () => {
     logger.silent(true);

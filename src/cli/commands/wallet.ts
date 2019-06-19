@@ -4,11 +4,12 @@
 
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import logger from "../../logger";
+import  {WinstonLogger} from "../../logger";
 import fs from "fs";
 import {CliError} from "../error";
 import Keystore from "../../validator/keystore";
 import {promptPassword} from "../../util/io";
+import {ILogger} from "../../logger/interface";
 
 interface IWalletCommandOptions {
   outputFile: string;
@@ -17,6 +18,9 @@ interface IWalletCommandOptions {
 
 export class CreateWalletCommand implements CliCommand {
   public register(commander: CommanderStatic): void {
+
+    const logger: ILogger = new WinstonLogger();
+
     commander
       .command("wallet")
       .description("Generate wallet private key")
@@ -29,14 +33,14 @@ export class CreateWalletCommand implements CliCommand {
         // library is not awaiting this method so don't allow error propagation 
         // (unhandled promise rejections)
         try {
-          await this.action(options);
+          await this.action(options, logger);
         } catch (e) {
           logger.error(e.message);
         }
       });
   }
 
-  public async action(options: IWalletCommandOptions): Promise<void> {
+  public async action(options: IWalletCommandOptions, logger: ILogger): Promise<void> {
     if (fs.existsSync(options.outputFile)) {
       throw new CliError(`${options.outputFile} already exists`);
     }

@@ -5,7 +5,7 @@
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import {isPlainObject} from "../../util/objects";
-import logger, {LogLevel} from "../../logger";
+import  {LogLevel, WinstonLogger} from "../../logger";
 import BeaconNode, {BeaconNodeCtx} from "../../node";
 import {ethers} from "ethers";
 import {CliError} from "../error";
@@ -14,6 +14,7 @@ import * as RPCApis from "../../rpc/api";
 import deepmerge from "deepmerge";
 import {getTomlConfig, IConfigFile} from "../../util/file";
 import defaults from "../../node/defaults";
+import {ILogger} from "../../logger";
 
 interface IBeaconCommandOptions {
   db: string;
@@ -28,6 +29,9 @@ export class BeaconNodeCommand implements CliCommand {
   public node: BeaconNode;
 
   public register(commander: CommanderStatic): void {
+
+    const logger: ILogger = new WinstonLogger();
+
     commander
       .command("beacon")
       .description("Start lodestar node")
@@ -41,14 +45,14 @@ export class BeaconNodeCommand implements CliCommand {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
         try {
-          await this.action(options);
+          await this.action(options,logger);
         } catch (e) {
           logger.error(e.message + '\n' + e.stack);
         }
       });
   }
 
-  public async action(options: IBeaconCommandOptions): Promise<void> {
+  public async action(options: IBeaconCommandOptions, logger: ILogger): Promise<void> {
     if (options.loggingLevel) {
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }
@@ -88,7 +92,7 @@ export class BeaconNodeCommand implements CliCommand {
       optionsMap = deepmerge(parsedConfig, optionsMap, {isMergeableObject: isPlainObject});
     }
 
-    this.node = new BeaconNode(optionsMap);
+    this.node = new BeaconNode(optionsMap, {logger});
     await this.node.start();
   }
 

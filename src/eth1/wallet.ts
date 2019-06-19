@@ -7,11 +7,12 @@ import {Provider} from "ethers/providers";
 import {BigNumber} from "ethers/utils";
 import BN from "bn.js";
 import bls from "@chainsafe/bls-js";
-import {hash} from "@chainsafe/ssz/lib/util/hash";
 import {BLS_WITHDRAWAL_PREFIX_BYTE, Domain} from "../constants";
 import {DepositData} from "../types";
 import {signingRoot} from "@chainsafe/ssz";
-import logger from "../logger";
+import {hash} from "../util/crypto";
+import {ILogger} from "../logger";
+
 
 export class Eth1Wallet {
 
@@ -19,7 +20,10 @@ export class Eth1Wallet {
 
   private contractAbi;
 
-  public constructor(privateKey: string, contractAbi: any, provider?: Provider) {
+  private logger: ILogger;
+
+  public constructor(privateKey: string, contractAbi: any, logger: ILogger, provider?: Provider) {
+    this.logger = logger;
     if(!provider) {
       provider = ethers.getDefaultProvider();
     }
@@ -68,7 +72,7 @@ export class Eth1Wallet {
       return tx.hash;
     } catch(e) {
       console.log(e);
-      logger.error(e.message);
+      this.logger.error(e.message);
     }
   }
 

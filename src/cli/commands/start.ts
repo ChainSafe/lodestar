@@ -4,7 +4,7 @@
 import fs from "fs";
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import logger, {LogLevel} from "../../logger";
+import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import BeaconNode, {BeaconNodeCtx} from "../../node";
 import {RpcClientOverInstance, RpcClientOverWs} from "../../validator/rpc";
 import {ValidatorCtx} from "../../validator/types";
@@ -15,11 +15,11 @@ import {BeaconApi} from "../../rpc/api/beacon";
 import {BeaconDB, ValidatorDB} from "../../db/api";
 import {BeaconChain} from "../../chain";
 import {ValidatorApi} from "../../rpc/api/validator";
-import {LevelDbPersistance} from "../../db/persistance";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import Keystore from "../../validator/keystore";
 import {promptPassword} from "../../util/io";
 import {BeaconNodeCommand} from "./beacon";
+import {LevelDbController} from "../../db/controller";
 
 interface IStartCommandOptions {
   db: string;
@@ -35,6 +35,8 @@ interface IStartCommandOptions {
 export class StartCommand implements CliCommand {
 
   public register(commander: CommanderStatic): void {
+    const logger: ILogger = new WinstonLogger();
+
     commander
       .command("start")
       .description("Start lodestar node and bundled validator")
@@ -52,15 +54,15 @@ export class StartCommand implements CliCommand {
         // (unhandled promise rejections)
         try {
           let nodeCommand = new BeaconNodeCommand();
-          await nodeCommand.action(options);
-          await this.action(options, nodeCommand.node);
+          await nodeCommand.action(options, logger);
+          await this.action(options, nodeCommand.node, logger);
         } catch (e) {
           logger.error(e.message + '\n' + e.stack);
         }
       });
   }
 
-  public async action(options: IStartCommandOptions, node: BeaconNode): Promise<void> {
+  public async action(options: IStartCommandOptions, node: BeaconNode, logger: ILogger): Promise<void> {
     if (options.loggingLevel) {
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }
@@ -72,8 +74,10 @@ export class StartCommand implements CliCommand {
       dbName = defaults.db.name;
     }
     let db = new ValidatorDB({
-      persistance: new LevelDbPersistance({
+      controller: new LevelDbController({
         name: dbName
+      }, {
+        logger: logger
       })
     });
 
@@ -99,7 +103,7 @@ export class StartCommand implements CliCommand {
       db: db,
     };
 
-    let validator = new Validator(validatorCtx);
+    let validator = new Validator(validatorCtx, logger);
     await validator.start();
   }
 

@@ -1,4 +1,4 @@
-import {Attestation, AttestationData, Epoch} from "../../src/types";
+import {Attestation, AttestationData, Epoch, IndexedAttestation, PendingAttestation} from "../../src/types";
 import {randBetween} from "./misc";
 
 /**
@@ -35,5 +35,46 @@ export function generateEmptyAttestation(): Attestation {
     },
     custodyBitfield: Buffer.alloc(32),
     signature: Buffer.alloc(96),
+  };
+}
+
+export function pendingAttestationFromYaml(value: any): PendingAttestation {
+  return {
+    aggregationBitfield: Buffer.from(value.aggregationBitfield.slice(2), 'hex'),
+    data: attestationDataFromYaml(value.data),
+    inclusionDelay: value.inclusionDelay.toNumber(),
+    proposerIndex: value.proposerIndex.toNumber()
+  };
+}
+
+
+export function attestationFromYaml(value: any): Attestation {
+  return {
+    aggregationBitfield: Buffer.from(value.aggregationBitfield.slice(2), 'hex'),
+    signature: Buffer.from(value.signature.slice(2), 'hex'),
+    custodyBitfield: Buffer.from(value.custodyBitfield.slice(2), 'hex'),
+    data: attestationDataFromYaml(value.data)
+  };
+}
+
+export function indexedAttestationFromYaml(value: any): IndexedAttestation {
+  return {
+    custodyBit0Indices: value.custodyBit0Indices.map((value) => value.toNumber()),
+    custodyBit1Indices: value.custodyBit1Indices.map((value) => value.toNumber()),
+    data: attestationDataFromYaml(value.data),
+    signature: Buffer.from(value.signature.slice(2), 'hex')
+  };
+}
+
+export function attestationDataFromYaml(value: any): AttestationData {
+  return {
+    targetEpoch: value.targetEpoch.toNumber(),
+    beaconBlockRoot: Buffer.from(value.beaconBlockRoot.slice(2), 'hex'),
+    targetRoot: Buffer.from(value.targetRoot.slice(2), 'hex'),
+    sourceEpoch: value.sourceEpoch.toNumber(),
+    previousCrosslinkRoot: Buffer.from(value.previousCrosslinkRoot.slice(2), 'hex'),
+    sourceRoot: Buffer.from(value.sourceRoot.slice(2), 'hex'),
+    shard: value.shard.toNumber(),
+    crosslinkDataRoot: Buffer.from(value.crosslinkDataRoot.slice(2), 'hex')
   };
 }

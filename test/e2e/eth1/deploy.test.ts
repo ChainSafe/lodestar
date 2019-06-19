@@ -5,9 +5,9 @@ import sinon from "sinon";
 import {Eth1Wallet, EthersEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/defaults";
 import {PrivateEth1Network} from "../../../src/eth1/dev";
-import logger from "../../../src/logger/winston";
 import {BeaconDB} from "../../../src/db/api";
-import {PouchDbPersistance} from "../../../src/db";
+import {PouchDbController} from "../../../src/db";
+import {ILogger, WinstonLogger} from "../../../src/logger";
 
 describe("Eth1Notifier - using deployed contract", () => {
 
@@ -15,8 +15,9 @@ describe("Eth1Notifier - using deployed contract", () => {
   let eth1Network;
   let depositContractAddress;
   let provider;
+  let logger: ILogger = new WinstonLogger();
   const db = new BeaconDB({
-    persistance: new PouchDbPersistance(
+    controller: new PouchDbController(
       {name: 'testDb'}
     )
   });
@@ -28,6 +29,9 @@ describe("Eth1Notifier - using deployed contract", () => {
     eth1Network = new PrivateEth1Network({
       host: '127.0.0.1',
       port: 34569
+    },
+    {
+      logger: logger
     });
     await eth1Network.start();
     depositContractAddress = await eth1Network.deployDepositContract();
@@ -40,7 +44,11 @@ describe("Eth1Notifier - using deployed contract", () => {
         address: depositContractAddress,
       },
       provider,
-    }, {db});
+    },
+    {
+      db: db,
+      logger: logger
+    });
     await eth1Notifier.start();
   });
 
@@ -52,7 +60,7 @@ describe("Eth1Notifier - using deployed contract", () => {
 
   it("should process a Deposit log", async function () {
     this.timeout(0);
-    const wallet = new Eth1Wallet(eth1Network.accounts()[0], defaults.abi, provider);
+    const wallet = new Eth1Wallet(eth1Network.accounts()[0], defaults.abi,logger, provider);
 
     const cb = sinon.spy();
     eth1Notifier.on('deposit', cb);
@@ -72,7 +80,7 @@ describe("Eth1Notifier - using deployed contract", () => {
       eth1Network
         .accounts()
         .map((account) =>
-          (new Eth1Wallet(account, defaults.abi, provider))
+          (new Eth1Wallet(account, defaults.abi, logger, provider))
             .createValidatorDeposit(
               depositContractAddress,
               ethers.utils.parseEther('32.0')

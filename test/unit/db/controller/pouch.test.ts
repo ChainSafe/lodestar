@@ -1,9 +1,10 @@
 import {assert, expect} from "chai";
-import {PouchDbPersistance} from "../../../../src/db/persistance";
-import logger from "../../../../src/logger";
+import {PouchDbController} from "../../../../src/db/controller";
+import {WinstonLogger} from "../../../../src/logger";
 
-describe("PouchDB persistance", () => {
-  const db = new PouchDbPersistance({name: 'testDb'});
+describe("PouchDB controller", () => {
+  const db = new PouchDbController({name: 'testDb'});
+  let logger = new WinstonLogger();
 
   before(async () => {
     logger.silent(true);
