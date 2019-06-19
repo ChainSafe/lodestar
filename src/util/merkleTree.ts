@@ -9,7 +9,7 @@ import {intDiv} from "./math";
 import {serialize} from "@chainsafe/ssz";
 import {MerkleTree} from "../types";
 
-interface IProgressiveMerkleTree {
+export interface IProgressiveMerkleTree {
   /**
    * The number of items in the tree
    */
@@ -26,6 +26,8 @@ interface IProgressiveMerkleTree {
    * The merkle root of the tree
    */
   root(): bytes32;
+
+  serialize(): Buffer;
 }
 
 export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
