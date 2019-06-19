@@ -25,6 +25,7 @@ interface IBeaconCommandOptions {
 }
 
 export class BeaconNodeCommand implements CliCommand {
+  public node: BeaconNode;
 
   public register(commander: CommanderStatic): void {
     commander
@@ -87,8 +88,8 @@ export class BeaconNodeCommand implements CliCommand {
       optionsMap = deepmerge(parsedConfig, optionsMap, {isMergeableObject: isPlainObject});
     }
 
-    const node = new BeaconNode(optionsMap);
-    await node.start();
+    this.node = new BeaconNode(optionsMap);
+    await this.node.start();
   }
 
   private setupRPC(rpc: string): IApiConstructor[] {

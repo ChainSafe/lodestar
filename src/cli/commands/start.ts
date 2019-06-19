@@ -5,61 +5,69 @@ import fs from "fs";
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import logger, {LogLevel} from "../../logger";
-import {BeaconNodeCtx} from "../../node";
+import BeaconNode, {BeaconNodeCtx} from "../../node";
 import {RpcClientOverInstance, RpcClientOverWs} from "../../validator/rpc";
-import {MockBeaconApi} from "../../../test/utils/mocks/rpc/beacon";
-import {MockValidatorApi} from "../../../test/utils/mocks/rpc/validator";
 import {ValidatorCtx} from "../../validator/types";
 import {Keypair} from "@chainsafe/bls-js/lib/keypair";
 import Validator from "../../validator";
-import {expect} from "chai";
 import defaults from "../../validator/defaults";
 import {BeaconApi} from "../../rpc/api/beacon";
 import {BeaconDB, ValidatorDB} from "../../db/api";
 import {BeaconChain} from "../../chain";
 import {ValidatorApi} from "../../rpc/api/validator";
-import {OpPool} from "../../opPool";
 import {LevelDbPersistance} from "../../db/persistance";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import Keystore from "../../validator/keystore";
 import {promptPassword} from "../../util/io";
+import {BeaconNodeCommand} from "./beacon";
 
-interface IValidatorCommandOptions {
+interface IStartCommandOptions {
+  db: string;
+  depositContract: string;
+  eth1RpcUrl: string;
+  rpc: string;
+  configFile: string;
   key: string;
-  db?: string;
-  rpc?: string;
-  loggingLevel?: string;
+  dbValidator: string;
+  loggingLevel: string;
 }
 
-export class ValidatorCommand implements CliCommand {
+export class StartCommand implements CliCommand {
 
   public register(commander: CommanderStatic): void {
     commander
-      .command("beacon")
-      .description("Start lodestar node")
+      .command("start")
+      .description("Start lodestar node and bundled validator")
+      .option("--db [db_path]", "Path to Beacon node database")
+      .option("-dc, --depositContract [address]", "Address of deposit contract")
+      .option("-eth1, --eth1RpcUrl [url]", "Url to eth1 rpc node")
+      .option("--rpc [api]", "Exposes the selected RPC api, must be comma separated")
+      .option("-c, --configFile [config_file]", "Config file path")
+
       .option("-k, --key [key]", "Private key of the validator")
-      .option("-d, --db [db_path]", "Path to file database")
-      .option("--rpc [rpcUrl]", "RpcUrl of a running Beacon node to connect with")
+      .option("--dbValidator [db_path]", "Path to the validator database")
       .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
         try {
-          await this.action(options);
+          let nodeCommand = new BeaconNodeCommand();
+          await nodeCommand.action(options);
+          await this.action(options, nodeCommand.node);
         } catch (e) {
           logger.error(e.message + '\n' + e.stack);
         }
       });
   }
 
-  public async action(options: IValidatorCommandOptions): Promise<void> {
+  public async action(options: IStartCommandOptions, node: BeaconNode): Promise<void> {
     if (options.loggingLevel) {
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }
 
     let dbName: string;
-    if (options.db) {
-      dbName = options.db;
+    if (options.dbValidator) {
+      dbName = options.dbValidator;
     } else {
       dbName = defaults.db.name;
     }
@@ -69,16 +77,10 @@ export class ValidatorCommand implements CliCommand {
       })
     });
 
-    let rpcClient: RpcClientOverWs;
-    if (options.rpc) {
-      rpcClient = new RpcClientOverWs({
-        rpcUrl: options.rpc
-      });
-    } else {
-      rpcClient = new RpcClientOverWs({
-        rpcUrl: defaults.rpc.rpcUrl
-      });
-    }
+    const rpcClient = new RpcClientOverInstance({
+      beacon: new BeaconApi({}, {chain: node.chain, db: node.db}),
+      validator: new ValidatorApi({},{chain:node.chain, db: node.db, opPool: node.opPool})
+    });
 
     let keypair: Keypair;
     if(options.key){

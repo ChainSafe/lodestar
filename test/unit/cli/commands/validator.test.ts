@@ -8,18 +8,18 @@ import {BeaconChain} from "../../../../src/chain";
 import * as RPCApis from "../../../../src/rpc/api";
 import BeaconNode, {BeaconNodeCtx} from "../../../../src/node";
 
-describe('[CLI] wallet', () => {
+describe('Validator test', () => {
 
   let beaconNode: BeaconChain;
   before(async () => {
-    // logger.silent(true);
+    logger.silent(true);
   });
 
   after(() => {
-    // logger.silent(false);
+    logger.silent(false);
   });
 
-  it('BeaconNode start testing', async () => {
+  it.skip('BeaconNode start testing', async () => {
     // logger.setLogLevel(LogLevel.INFO);
     // let key = PrivateKey.random();
     // logger.info(key.toHexString());
@@ -37,7 +37,7 @@ describe('[CLI] wallet', () => {
     await node.stop();
   });
 
-  it.skip('Should be able to register', async () => {
+  it('Should be able to register', async () => {
     const command = new ValidatorCommand();
     const commandCount = program.commands.length;
     await expect(command.register(program)).to.not.throw;
