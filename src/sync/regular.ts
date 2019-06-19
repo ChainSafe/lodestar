@@ -40,11 +40,10 @@ export class RegularSync {
 
   public async receiveAttestation(attestation: Attestation): Promise<void> {
     // skip attestation if it already exists
-    try {
-      const root = hashTreeRoot(attestation, Attestation);
-      await this.db.getAttestation(root);
+    const root = hashTreeRoot(attestation, Attestation);
+    if (await this.db.hasAttestation(root)) {
       return;
-    } catch (e) {}
+    }
     // skip attestation if its too old
     const state = await this.db.getState();
     if (attestation.data.targetEpoch < slotToEpoch(state.finalizedEpoch)) {

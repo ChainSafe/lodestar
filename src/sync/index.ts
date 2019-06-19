@@ -13,12 +13,26 @@ import {RegularSync} from "./regular";
 import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
 
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface SyncOptions {
+}
+
+interface SyncModules {
+  chain: IBeaconChain;
+  db: IBeaconDb;
+  eth1: IEth1Notifier;
+  network: INetwork;
+  opPool: OpPool;
+  reps: ReputationStore;
+  logger: ILogger;
+}
+
 /**
  * The Sync service syncing data between the network and the local chain
  * The strategy may differ depending on whether the chain is synced or not
  */
 export class Sync extends EventEmitter {
-  private opts;
+  private opts: SyncOptions;
   private chain: IBeaconChain;
   private network: INetwork;
   private opPool: OpPool;
@@ -27,9 +41,9 @@ export class Sync extends EventEmitter {
   private rpc: SyncRpc;
   private reps: ReputationStore;
   private logger: ILogger;
-  private syncer;
+  private syncer: RegularSync;
 
-  public constructor(opts, {chain, db, eth1, network, opPool, reps, logger}) {
+  public constructor(opts: SyncOptions, {chain, db, eth1, network, opPool, reps, logger}: SyncModules) {
     super();
     this.opts = opts;
     this.chain = chain;

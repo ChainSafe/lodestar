@@ -5,13 +5,13 @@
 import deepmerge from "deepmerge";
 import {BeaconDB, LevelDbController} from "../db";
 import {EthersEth1Notifier, EthersEth1Options, IEth1Notifier} from "../eth1";
-import {Libp2pNetwork, INetworkOptions, NodejsNode} from "../network";
+import {Libp2pNetwork, INetworkOptions, NodejsNode, INetwork} from "../network";
 
 
 import defaultConf from "./defaults";
 import {isPlainObject} from "../util/objects";
 import {Sync} from "../sync";
-import {BeaconChain} from "../chain";
+import {BeaconChain, IBeaconChain} from "../chain";
 import {OpPool} from "../opPool";
 import {JSONRPC} from "../rpc/protocol";
 import {WSServer} from "../rpc/transport";
@@ -19,7 +19,7 @@ import {IApiConstructor} from "../rpc/api/interface";
 import {DBOptions} from '../db';
 import {createPeerId, initializePeerInfo} from "../network/libp2p/util";
 import {ILogger} from "../logger";
-import { ReputationStore } from "../sync/reputation";
+import {ReputationStore} from "../sync/reputation";
 
 
 export interface Service {
@@ -50,13 +50,13 @@ class BeaconNode {
   public conf: BeaconNodeCtx;
   public db: BeaconDB;
   public eth1: IEth1Notifier;
-  public network: Service;
-  public chain: Service;
-  public opPool: Service;
+  public network: INetwork;
+  public chain: IBeaconChain;
+  public opPool: OpPool;
   public rpc: Service;
-  public sync: Service;
+  public sync: Sync;
+  public reps: ReputationStore;
   private logger: ILogger;
-  public reps;
 
   public constructor(opts: BeaconNodeCtx, {logger}: {logger: ILogger}) {
 
