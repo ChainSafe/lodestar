@@ -8,7 +8,7 @@ import {
   BeaconBlock,
   BeaconState,
   bytes32,
-  Deposit,
+  Deposit, MerkleTree,
   ProposerSlashing,
   Slot,
   Transfer,
@@ -21,6 +21,7 @@ import {Bucket, encodeKey, Key} from "../../schema";
 import {AnySSZType, deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
 import {DatabaseService, DatabaseApiOptions} from "../abstract";
 import {IBeaconDb} from "./interface";
+import {IProgressiveMerkleTree, ProgressiveMerkleTree} from "../../../util/merkleTree";
 
 export class BeaconDB extends DatabaseService implements IBeaconDb {
 
@@ -156,7 +157,7 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
   }
 
   public async getAttestation(root: bytes32): Promise<Attestation> {
-    return await this.db.get(encodeKey(Bucket.attestation, root));
+    return deserialize(await this.db.get(encodeKey(Bucket.attestation, root)), Attestation);
   }
 
   public async setAttestation(attestation: Attestation): Promise<void> {
@@ -225,15 +226,15 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
     await this.deleteData(Bucket.attesterSlashing, AttesterSlashing, attesterSlashings);
   }
 
-  public async getGenesisDeposits(): Promise<Deposit[]> {
+  public async getDeposits(): Promise<Deposit[]> {
     return await this.getAllData(Bucket.genesisDeposit, Deposit);
   }
 
-  public async setGenesisDeposit(deposit: Deposit): Promise<void> {
+  public async setDeposit(deposit: Deposit): Promise<void> {
     await this.db.put(encodeKey(Bucket.genesisDeposit, deposit.index), serialize(deposit, Deposit));
   }
 
-  public async deleteGenesisDeposits(deposits: Deposit[]): Promise<void> {
+  public async deleteDeposits(deposits: Deposit[]): Promise<void> {
     const criteria: (Buffer | string)[] = deposits.map((deposit) => {
       return encodeKey(Bucket.genesisDeposit, deposit.index);
     });
@@ -260,6 +261,23 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
     const state = await this.getState();
     //TODO: cache this (hashmap)
     return state.validatorRegistry.findIndex(value => value.pubkey === publicKey);
+  }
+
+  public async getMerkleTree(): Promise<IProgressiveMerkleTree | null> {
+    const merkleTreeSerialized = await this.db.get(
+      encodeKey(Bucket.merkleTree, Key.progressiveMerkleTree)
+    );
+    if(merkleTreeSerialized) {
+      return ProgressiveMerkleTree.fromObject(deserialize(merkleTreeSerialized, MerkleTree));
+    }
+    return null;
+  }
+
+  public async setMerkleTree(merkleTree: IProgressiveMerkleTree): Promise<void> {
+    return this.db.put(
+      encodeKey(Bucket.merkleTree, Key.progressiveMerkleTree),
+      merkleTree.serialize()
+    );
   }
 
 }
