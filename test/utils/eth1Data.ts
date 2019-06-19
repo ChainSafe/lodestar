@@ -6,6 +6,8 @@ export function generateEth1Data(blockHash = ZERO_HASH, depositCount = 0, deposi
     blockHash,
     depositCount,
     depositRoot
+  };
+}
 
 export function eth1DataFromYaml(value: any): Eth1Data {
   return {

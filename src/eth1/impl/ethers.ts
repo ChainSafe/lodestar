@@ -83,7 +83,6 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
   public async processBlockHeadUpdate(blockNumber): Promise<void> {
     this.logger.debug(`Received eth1 block ${blockNumber}`);
     const block = await this.provider.getBlock(blockNumber);
-    this._latestBlockHash = Buffer.from(block.hash.substr(2), 'hex');
     this.emit('block', block);
   }
 
