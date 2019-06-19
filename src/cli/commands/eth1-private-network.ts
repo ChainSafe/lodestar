@@ -5,7 +5,8 @@
 import {CliCommand} from "./interface";
 import {PrivateEth1Network} from "../../eth1/dev";
 import {CommanderStatic} from "commander";
-import logger, {LogLevel} from "../../logger";
+import {LogLevel, WinstonLogger} from "../../logger";
+import {ILogger} from "../../logger";
 
 interface IEth1CommandOptions {
   host: string;
@@ -19,6 +20,9 @@ interface IEth1CommandOptions {
 export class Eth1PrivateNetworkCommand implements CliCommand {
 
   public register(commander: CommanderStatic): void {
+
+    const logger: ILogger = new WinstonLogger();
+
     commander
       .command('eth1:dev')
       .description('Start private eth1 chain with deposit contract and 10 accounts with balance')
@@ -33,7 +37,7 @@ export class Eth1PrivateNetworkCommand implements CliCommand {
       )
       .action(async (options) => {
         try {
-          await this.action(options);
+          await this.action(options, logger);
         } catch (e) {
           logger.error(e.message + '\n' + e.stack);
         }
@@ -41,7 +45,7 @@ export class Eth1PrivateNetworkCommand implements CliCommand {
       });
   }
 
-  public async action(options: IEth1CommandOptions): Promise<PrivateEth1Network> {
+  public async action(options: IEth1CommandOptions, logger: ILogger): Promise<PrivateEth1Network> {
     if (options.loggingLevel) {
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }
@@ -51,7 +55,11 @@ export class Eth1PrivateNetworkCommand implements CliCommand {
       mnemonic: options.mnemonic,
       networkId: options.network,
       dbPath: options.database
-    });
+    },
+    {
+      logger: logger
+    }
+    );
     await privateNetwork.start();
     return privateNetwork;
   }

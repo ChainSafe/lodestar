@@ -4,11 +4,11 @@
 
 import ganache from "ganache-core";
 import {promisify} from "util";
-import logger from "../../logger";
 import * as utils from 'ethers/utils';
 import deepmerge from "deepmerge";
 import defaults, {networkOpts} from "./defaults";
 import * as ethers from "ethers/ethers";
+import {ILogger} from "../../logger";
 
 export interface PrivateNetworkOpts {
   port?: number;
@@ -28,8 +28,11 @@ export class PrivateEth1Network {
 
   private opts: PrivateNetworkOpts;
 
-  public constructor(opts: PrivateNetworkOpts) {
+  private logger: ILogger;
+
+  public constructor(opts: PrivateNetworkOpts, {logger}: {logger: ILogger} ) {
     this.opts = deepmerge(networkOpts, opts);
+    this.logger = logger;
     this.server = ganache.server({
       ...this.opts,
       // eslint-disable-next-line  @typescript-eslint/camelcase
@@ -42,13 +45,15 @@ export class PrivateEth1Network {
   public async start() {
     this.blockchain  =
       await promisify(this.server.listen.bind(this.server))(this.opts.port, this.opts.host);
-    logger.info(`Started private network node on ${this.opts.host}:${this.opts.port}`);
-    logger.info(`Generating accounts with mnemonic: ${this.blockchain._provider.options.mnemonic}`);
-    logger.info('List of accounts with eth balance (<address>:<privateKey>-<balance>):');
+    this.logger.info(`Started private network node on ${this.opts.host}:${this.opts.port}`);
+    this.logger.info(
+      `Generating accounts with mnemonic: ${this.blockchain._provider.options.mnemonic}`
+    );
+    this.logger.info('List of accounts with eth balance (<address>:<privateKey>-<balance>):');
     Object.keys(this.blockchain.accounts).forEach((address) => {
       const privateKey = this.blockchain.accounts[address].secretKey.toString('hex');
       const balance = utils.formatEther(this.blockchain.accounts[address].account.balance);
-      logger.info(`${address}:0x${privateKey} - ${balance} ETH`);
+      this.logger.info(`${address}:0x${privateKey} - ${balance} ETH`);
     });
     await this.deployDepositContract();
   }
@@ -83,7 +88,7 @@ export class PrivateEth1Network {
     const contract = await factory.deploy();
     const address = contract.address;
     await contract.deployed();
-    logger.info(`Deposit contract deployed to address: ${address}`);
+    this.logger.info(`Deposit contract deployed to address: ${address}`);
     return address;
   }
 }

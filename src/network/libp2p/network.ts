@@ -16,6 +16,7 @@ import {
 import {INetwork, INetworkOptions} from "../interface";
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {NetworkRpc} from "./rpc";
+import {ILogger} from "../../logger";
 
 
 export class Libp2pNetwork extends EventEmitter implements INetwork {
@@ -25,17 +26,19 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
   private pubsub: Gossipsub;
   private rpc: NetworkRpc;
   private inited: Promise<void>;
+  private logger: ILogger;
 
-  public constructor(opts: INetworkOptions, {libp2p}) {
+  public constructor(opts: INetworkOptions, {libp2p,logger}: {libp2p: any; logger: ILogger}) {
     super();
     this.opts = opts;
+    this.logger = logger;
     // `libp2p` can be a promise as well as a libp2p object
     this.inited = new Promise((resolve) => {
       Promise.resolve(libp2p).then((libp2p) => {
         this.peerInfo = libp2p.peerInfo;
         this.libp2p = libp2p;
         this.pubsub = new Gossipsub(libp2p);
-        this.rpc = new NetworkRpc(libp2p);
+        this.rpc = new NetworkRpc(libp2p,logger);
         resolve();
       });
     });

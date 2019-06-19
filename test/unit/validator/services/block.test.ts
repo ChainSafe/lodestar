@@ -9,14 +9,15 @@ import {generateEmptyBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
 import {BeaconApi} from "../../../../src/rpc/api/beacon";
 import {SLOTS_PER_EPOCH} from "../../../../src/constants";
-import logger from "../../../../src/logger";
 import {ValidatorDB} from "../../../../src/db/api";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 describe('block proposing service', function () {
 
   const sandbox = sinon.createSandbox();
 
   let rpcClientStub, dbStub;
+  let logger: ILogger = new WinstonLogger();
 
   before(() => {
     logger.silent(true);
@@ -38,7 +39,7 @@ describe('block proposing service', function () {
   it('should not produce block in same epoch', async function () {
     dbStub.getBlock.resolves(generateEmptyBlock());
     const service = new BlockProposingService(
-      0, rpcClientStub, PrivateKey.random(), dbStub
+      0, rpcClientStub, PrivateKey.random(), dbStub, logger
     );
     const result = await service.createAndPublishBlock(1, generateFork());
     expect(result).to.be.null;
@@ -52,7 +53,7 @@ describe('block proposing service', function () {
     rpcClientStub.beacon.getBeaconState.resolves(generateState({slot: SLOTS_PER_EPOCH * 2}));
     dbStub.getBlock.resolves(null);
     const service = new BlockProposingService(
-      0, rpcClientStub, PrivateKey.random(), dbStub
+      0, rpcClientStub, PrivateKey.random(), dbStub, logger
     );
     const result = await service.createAndPublishBlock(slot, generateFork());
     expect(result).to.not.be.null;
@@ -67,7 +68,7 @@ describe('block proposing service', function () {
     rpcClientStub.beacon.getBeaconState.resolves(generateState({slot: SLOTS_PER_EPOCH * 2}));
     dbStub.getBlock.resolves(generateEmptyBlock());
     const service = new BlockProposingService(
-      0, rpcClientStub, PrivateKey.random(), dbStub
+      0, rpcClientStub, PrivateKey.random(), dbStub, logger
     );
     const result = await service.createAndPublishBlock(slot, generateFork());
     expect(result).to.not.be.null;

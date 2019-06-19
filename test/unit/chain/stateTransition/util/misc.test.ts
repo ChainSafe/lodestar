@@ -27,27 +27,19 @@ describe("getDomain", () => {
   };
   state.fork = fork;
 
-  const constant = 2 ** 32;
-  const four = 4;
-  const five = 5;
-
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
     const result = getDomain(state, 4, 8);
-    const expected = (new BN((four * constant) + four)).toArrayLike(Buffer, "le", 8);
-    assert.equal(expected.toString('hex'), result.toString('hex'));
+    assert.equal(result.toString('hex'), '0000000400000004');
   });
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
     const result = getDomain(state, 5, 13);
-    const expected = 
-    (new BN((five * constant) + five)).toArrayLike(Buffer, "le", 8);
-    assert.equal(expected.toString('hex'), result.toString('hex'));
+    assert.equal(result.toString('hex'), '0000000500000005');
   });
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
     const result = getDomain(state, 5, 12);
-    const expected = (new BN((five * constant) + five)).toArrayLike(Buffer, "le", 8);
-    assert.equal(expected.toString('hex'), result.toString('hex'));
+    assert.equal(result.toString('hex'), '0000000500000005');
   });
 });
 

@@ -2,7 +2,6 @@
  * @module logger
  */
 
-import logger from "./winston";
 export * from "./winston";
-export {LogLevel, AbstractLogger} from "./interface";
-export default logger;
+export {ILogger} from "./interface";
+export {LogLevel, AbstractLogger} from "./abstract";

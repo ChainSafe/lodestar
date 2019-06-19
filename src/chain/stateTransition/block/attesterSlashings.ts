@@ -29,7 +29,7 @@ import {
  * Note that this function mutates ``state``.
  */
 export function processAttesterSlashing(state: BeaconState
-  , attesterSlashing: AttesterSlashing): void {
+  , attesterSlashing: AttesterSlashing): BeaconState {
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;
   // Check that the attestations are conflicting
@@ -40,16 +40,17 @@ export function processAttesterSlashing(state: BeaconState
   const attestingIndices1 = attestation1.custodyBit0Indices.concat(attestation1.custodyBit1Indices);
   const attestingIndices2 = attestation2.custodyBit0Indices.concat(attestation2.custodyBit1Indices);
   const currentEpoch = getCurrentEpoch(state);
-  attestingIndices1.forEach((index) => {
-    if (
-      attestingIndices2.includes(index) &&
-      isSlashableValidator(state.validatorRegistry[index], currentEpoch)
-    ) {
+  const indices = Array.from(new Set(attestingIndices1.filter((i) => {
+    return attestingIndices2.indexOf(i) > -1;
+  }))).sort((a, b) => a - b);
+  indices.forEach((index) => {
+    if (isSlashableValidator(state.validatorRegistry[index], currentEpoch)) {
       slashValidator(state, index);
       slashedAny = true;
     }
   });
   assert(slashedAny);
+  return state;
 }
 
 export default function processAttesterSlashings(state: BeaconState, block: BeaconBlock): void {

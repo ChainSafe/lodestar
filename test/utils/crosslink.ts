@@ -8,3 +8,11 @@ export function generateEmptyCrosslink(epoch: Epoch = GENESIS_EPOCH): Crosslink 
     crosslinkDataRoot: ZERO_HASH,
   };
 }
+
+export function crosslinkFromYaml(value: any): Crosslink {
+  return {
+    epoch: value.epoch.toNumber(),
+    previousCrosslinkRoot: Buffer.from(value.previousCrosslinkRoot.slice(2), 'hex'),
+    crosslinkDataRoot: Buffer.from(value.crosslinkDataRoot.slice(2), 'hex'),
+  };
+}

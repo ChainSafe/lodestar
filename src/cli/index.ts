@@ -6,7 +6,6 @@
 // Useful repo https://github.com/tsantef/commander-starter
 import program from "commander";
 import * as commands from "./commands";
-import logger from "../logger/winston";
 
 program
   .version('0.0.1');
@@ -26,7 +25,8 @@ try {
   // CLI ends after being parsed
   program.parse(process.argv);
 } catch (e) {
-  logger.error(e.message + '\n' + e.stack);
+  // logger.error(e.message + '\n' + e.stack);
+  console.error(e.message + '\n' + e.stack);
 }
 
 

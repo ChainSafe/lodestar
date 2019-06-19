@@ -9,7 +9,6 @@ import {Libp2pNetwork, INetworkOptions, NodejsNode} from "../network";
 
 
 import defaultConf from "./defaults";
-import logger from "../logger/winston";
 import {isPlainObject} from "../util/objects";
 import {Sync} from "../sync";
 import {BeaconChain} from "../chain";
@@ -19,6 +18,7 @@ import {WSServer} from "../rpc/transport";
 import {IApiConstructor} from "../rpc/api/interface";
 import {DBOptions} from '../db';
 import {createPeerId, initializePeerInfo} from "../network/libp2p/util";
+import {ILogger} from "../logger";
 
 
 export interface Service {
@@ -54,8 +54,10 @@ class BeaconNode {
   public opPool: Service;
   public rpc: Service;
   public sync: Service;
+  private logger: ILogger;
 
-  public constructor(opts: BeaconNodeCtx) {
+  public constructor(opts: BeaconNodeCtx, {logger}: {logger: ILogger}) {
+
     this.conf = deepmerge(
       defaultConf,
       opts,
@@ -64,29 +66,38 @@ class BeaconNode {
         isMergeableObject: isPlainObject
       }
     );
+    this.logger = logger;
 
     this.db = new BeaconDB({
       controller: new LevelDbController(
-        this.conf.db
+        this.conf.db, {logger: this.logger}
       )
-    });
+    },);
     const libp2p = createPeerId()
       .then((peerId) => initializePeerInfo(peerId, this.conf.network.multiaddrs))
       .then((peerInfo) => new NodejsNode({peerInfo}));
-    this.network = new Libp2pNetwork(this.conf.network, {libp2p});
+    this.network = new Libp2pNetwork(this.conf.network,
+      {
+        libp2p: libp2p, logger: this.logger
+      }
+    );
     this.eth1 = new EthersEth1Notifier(
       this.conf.eth1,
       {
-        db: this.db
+        db: this.db,
+        logger: this.logger
       }
     );
     this.sync = new Sync(this.conf.sync, {
       network: this.network,
     });
-    this.chain = new BeaconChain(this.conf.chain, {
-      db: this.db,
-      eth1: this.eth1,
-    });
+    this.chain = new BeaconChain(this.conf.chain,
+      {
+        db: this.db,
+        eth1: this.eth1,
+        logger: this.logger
+      }
+    );
     this.opPool = new OpPool(this.conf.opPool, {
       db: this.db,
       chain: this.chain,
@@ -97,10 +108,11 @@ class BeaconNode {
         return new Api(this.conf.rpc, {chain: this.chain, db: this.db, eth1: this.eth1});
       })
     });
+
   }
 
   public async start(): Promise<void> {
-    logger.info('Starting eth2 beacon node - LODESTAR!');
+    this.logger.info('Starting eth2 beacon node - LODESTAR!');
     await this.db.start();
     await this.network.start();
     await this.eth1.start();

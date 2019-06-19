@@ -1,12 +1,14 @@
 import {expect} from 'chai';
 import {CreateConfigCommand} from "../../../../src/cli/commands/index";
-import logger from "../../../../src/logger/winston";
 import {CliError} from "../../../../src/cli/error";
 
 import program from "commander";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
+
 
 describe('[CLI] create-config', () => {
 
+  let logger: ILogger = new WinstonLogger();
   before(async () => {
     logger.silent(true);
   });
@@ -30,7 +32,7 @@ describe('[CLI] create-config', () => {
       command.action({
         outputFile: "src",
         loggingLevel: null,
-      })
+      }, logger)
     ).to.be.rejectedWith(CliError, 'src already exists');
   });
 });

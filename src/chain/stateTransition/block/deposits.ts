@@ -3,45 +3,33 @@
  */
 
 import assert from "assert";
-import BN from "bn.js";
-import {serialize, signingRoot} from "@chainsafe/ssz";
+import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 
-import {
-  BeaconBlock,
-  BeaconState,
-  Deposit,
-  DepositData,
-  Validator,
-} from "../../../types";
+import {BeaconBlock, BeaconState, Deposit, DepositData, Validator,} from "../../../types";
 
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
   Domain,
+  EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
   MAX_DEPOSITS,
-  EFFECTIVE_BALANCE_INCREMENT,
   MAX_EFFECTIVE_BALANCE,
 } from "../../../constants";
-
-import {hash} from "../../../util/crypto";
 import {bnMin} from "../../../util/math";
 import {verifyMerkleBranch} from "../../../util/merkleTree";
 
 import bls from "@chainsafe/bls-js";
 
-import {
-  getDomain,
-  increaseBalance,
-} from "../util";
+import {getDomain, increaseBalance,} from "../util";
 
 
 /**
  * Process an Eth1 deposit, registering a validator or increasing its balance.
  */
-export function processDeposit(state: BeaconState, deposit: Deposit): void {
+export function processDeposit(state: BeaconState, deposit: Deposit): BeaconState {
   // Verify the Merkle branch
   assert(verifyMerkleBranch(
-    hash(serialize(deposit.data, DepositData)), // 48 + 32 + 8 + 96 = 184 bytes serialization
+    hashTreeRoot(deposit.data, DepositData),
     deposit.proof,
     DEPOSIT_CONTRACT_TREE_DEPTH,
     deposit.index,
@@ -54,9 +42,8 @@ export function processDeposit(state: BeaconState, deposit: Deposit): void {
 
   const pubkey = deposit.data.pubkey;
   const amount = deposit.data.amount;
-  const validatorPubkeys = state.validatorRegistry.map((v) => v.pubkey);
-
-  if (!validatorPubkeys.includes(pubkey)) {
+  const validatorIndex = state.validatorRegistry.findIndex((v) => v.pubkey.equals(pubkey));
+  if (validatorIndex === -1) {
     // Verify the deposit signature (proof of possession)
     if (!bls.verify(
       pubkey,
@@ -64,7 +51,7 @@ export function processDeposit(state: BeaconState, deposit: Deposit): void {
       deposit.data.signature,
       getDomain(state, Domain.DEPOSIT),
     )) {
-      return;
+      return state;
     }
     // Add validator and balance entries
     const validator: Validator = {
@@ -76,16 +63,17 @@ export function processDeposit(state: BeaconState, deposit: Deposit): void {
       withdrawableEpoch: FAR_FUTURE_EPOCH,
       slashed: false,
       effectiveBalance: bnMin(
-        amount.sub(new BN(amount.mod(new BN(EFFECTIVE_BALANCE_INCREMENT)))),
-        new BN(MAX_EFFECTIVE_BALANCE)),
+        amount.sub(amount.mod(EFFECTIVE_BALANCE_INCREMENT)),
+        MAX_EFFECTIVE_BALANCE
+      ),
     };
     state.validatorRegistry.push(validator);
     state.balances.push(amount);
   } else {
     // Increase balance by deposit amount
-    const index = validatorPubkeys.indexOf(pubkey);
-    increaseBalance(state, index, amount);
+    increaseBalance(state, validatorIndex, amount);
   }
+  return state;
 }
 
 export default function processDeposits(state: BeaconState, block: BeaconBlock): void {
