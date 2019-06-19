@@ -120,11 +120,6 @@ class Validator {
     }
     if(this.isRunning) {
       setTimeout(this.isChainLive, 1000);
-<<<<<<< HEAD
-    } else {
-      return true;
-=======
->>>>>>> 16926bdcf363586a4c9b851b0e01aa239bc453ad
     }
   }
 

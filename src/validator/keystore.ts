@@ -8,6 +8,8 @@ import fs from "fs";
 import {blsPrivateKeyToHex} from "../util/bytes";
 import {encryptKey, decryptKey} from "../util/encrypt";
 import {ensureDirectoryExistence} from "../util/file";
+import {Keypair} from "@chainsafe/bls-js/lib/keypair";
+import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 
 export interface IKeystoreObject {
   encryptedPrivateKey: string;
@@ -28,6 +30,10 @@ export default class Keystore {
   
   public privateKey(password: string): string {
     return decryptKey(this.encryptedPrivateKey, password);
+  }
+
+  public getKeypair(password: string): Keypair {
+    return new Keypair(PrivateKey.fromHexString(this.privateKey(password)));
   }
   
   public static generateKeys(password: string): Keystore {
