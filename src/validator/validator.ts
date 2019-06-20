@@ -44,12 +44,10 @@ class Validator {
     this.isRunning = false;
     this.db = ctx.db ? ctx.db : new ValidatorDB({
       controller: new LevelDbController({
-        name: 'LodestarValidatorDB'
-      },
-      {
+        name: ctx.dbName
+      }, {
         logger: this.logger
-      }
-      )
+      })
     });
     if(ctx.rpc) {
       this.rpcClient = ctx.rpc;
@@ -66,7 +64,7 @@ class Validator {
   public async start(): Promise<void> {
     this.isRunning = true;
     await this.setup();
-    // this.run();
+    this.run();
   }
 
   /**

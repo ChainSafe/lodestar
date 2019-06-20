@@ -67,4 +67,9 @@ export default class Keystore {
       throw new Error(`Failed to write to ${outputFilePath}: ${err}`);
     }
   }
+
+  public static getKeyFromKeyStore(keyStorePath: string, password: string): Keypair {
+    const keystore = Keystore.fromJson(keyStorePath);
+    return keystore.getKeypair(password);
+  }
 }

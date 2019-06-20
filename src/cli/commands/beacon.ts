@@ -15,6 +15,7 @@ import deepmerge from "deepmerge";
 import {getTomlConfig, IConfigFile} from "../../util/file";
 import defaults from "../../node/defaults";
 import {ILogger} from "../../logger";
+import {promptPassword} from "../../util/io";
 
 interface IBeaconCommandOptions {
   db: string;
@@ -22,7 +23,10 @@ interface IBeaconCommandOptions {
   eth1RpcUrl: string;
   rpc: string;
   configFile: string;
-  loggingLevel: string;
+  validator: boolean;
+  key?: string;
+  dbValidator?: string;
+  loggingLevel?: string;
 }
 
 export class BeaconNodeCommand implements CliCommand {
@@ -45,7 +49,7 @@ export class BeaconNodeCommand implements CliCommand {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
         try {
-          await this.action(options,logger);
+          await this.action({...options, validator: false},logger);
         } catch (e) {
           logger.error(e.message + '\n' + e.stack);
         }
@@ -71,6 +75,11 @@ export class BeaconNodeCommand implements CliCommand {
       dbName = defaults.db.name;
     }
 
+    let password: string;
+    if(options.validator){
+      password = await promptPassword("Enter password to decrypt the keystore: ");
+    }
+
     let optionsMap: BeaconNodeCtx = {
       db: {
         name: dbName,
@@ -85,7 +94,11 @@ export class BeaconNodeCommand implements CliCommand {
       },
       rpc: {
         apis: this.setupRPC(options.rpc)
-      }
+      },
+      validator: options.validator,
+      key: options.key,
+      password: password,
+      dbValidator: options.dbValidator
     };
 
     if (options.configFile) {

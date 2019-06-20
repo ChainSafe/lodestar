@@ -5,24 +5,13 @@ import fs from "fs";
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
-import {BeaconNodeCtx} from "../../node";
-import {RpcClientOverInstance, RpcClientOverWs} from "../../validator/rpc";
-import {MockBeaconApi} from "../../../test/utils/mocks/rpc/beacon";
-import {MockValidatorApi} from "../../../test/utils/mocks/rpc/validator";
 import {ValidatorCtx} from "../../validator/types";
 import {Keypair} from "@chainsafe/bls-js/lib/keypair";
 import Validator from "../../validator";
-import {expect} from "chai";
 import defaults from "../../validator/defaults";
-import {BeaconApi} from "../../rpc/api/beacon";
-import {BeaconDB, ValidatorDB} from "../../db/api";
-import {BeaconChain} from "../../chain";
-import {ValidatorApi} from "../../rpc/api/validator";
-import {OpPool} from "../../opPool";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
-import Keystore from "../../validator/keystore";
 import {promptPassword} from "../../util/io";
-import {LevelDbController} from "../../db/controller";
+import keystore from "../../validator/keystore";
 
 interface IValidatorCommandOptions {
   key: string;
@@ -37,8 +26,8 @@ export class ValidatorCommand implements CliCommand {
     const logger: ILogger = new WinstonLogger();
 
     commander
-      .command("beacon")
-      .description("Start lodestar node")
+      .command("validator")
+      .description("Start lodestar validator")
       .option("-k, --key [key]", "Private key of the validator")
       .option("-d, --db [db_path]", "Path to file database")
       .option("--rpc [rpcUrl]", "RpcUrl of a running Beacon node to connect with")
@@ -65,29 +54,19 @@ export class ValidatorCommand implements CliCommand {
     } else {
       dbName = defaults.db.name;
     }
-    let db = new ValidatorDB({
-      controller: new LevelDbController({
-        name: dbName
-      }, {
-        logger: logger
-      })
-    });
 
-    let rpcClient: RpcClientOverWs;
+    let rpcUrl: string;
     if (options.rpc) {
-      rpcClient = new RpcClientOverWs({
-        rpcUrl: options.rpc
-      });
+      rpcUrl = options.rpc;
     } else {
-      rpcClient = new RpcClientOverWs({
-        rpcUrl: defaults.rpc.rpcUrl
-      });
+      rpcUrl = defaults.rpc.rpcUrl;
     }
 
     let keypair: Keypair;
     if (options.key) {
       if (fs.existsSync(options.key)) {
-        keypair = await this.getKeyFromKeyStore(options.key);
+        const password = await promptPassword("Enter password to decrypt the keystore: ");
+        keypair = keystore.getKeyFromKeyStore(options.key, password);
       } else {
         keypair = new Keypair(PrivateKey.fromHexString(options.key));
       }
@@ -96,20 +75,13 @@ export class ValidatorCommand implements CliCommand {
     }
 
     let validatorCtx: ValidatorCtx = {
-      rpc: rpcClient,
+      rpcUrl: rpcUrl,
       keypair: keypair,
-      db: db,
+      dbName: dbName,
     };
 
     let validator = new Validator(validatorCtx, logger);
     await validator.start();
-  }
-
-  public async getKeyFromKeyStore(keyStorePath: string): Promise<Keypair> {
-    const password = await promptPassword("Enter password to decrypt the keystore: ");
-
-    const keystore = Keystore.fromJson(keyStorePath);
-    return keystore.getKeypair(password);
   }
 
 }

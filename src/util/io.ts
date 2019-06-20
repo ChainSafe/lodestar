@@ -1,4 +1,6 @@
 import readline from "readline";
+import {Keypair} from "@chainsafe/bls-js/lib/keypair";
+import Keystore from "../validator/keystore";
 
 interface IHiddenReadlineInterface extends readline.Interface {
   output?: any;
@@ -24,4 +26,5 @@ export function promptPassword(passwordPrompt: string): Promise<string>{
     });
   });
 }
+
 
