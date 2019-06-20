@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/ssz",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Simple Serialize",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
