@@ -3,25 +3,26 @@
  */
 
 import assert from "assert";
-import {bytes32} from "../types";
+import {bytes32, number64} from "../types";
 import {hash} from "./crypto";
 import {intDiv} from "./math";
 import {serialize} from "@chainsafe/ssz";
 import {MerkleTree} from "../types";
 
 export interface IProgressiveMerkleTree {
-  /**
-   * The number of items in the tree
-   */
-  count(): number;
+
   depth(): number;
+
   /**
    * Add a new item into the tree
    *
    * Return a proof to verify the item is in the tree
    * @returns proof
    */
-  push(item: bytes32): bytes32[];
+  push(item: bytes32): void;
+
+  getProof(index: number64): bytes32[];
+
   /**
    * The merkle root of the tree
    */
@@ -31,24 +32,24 @@ export interface IProgressiveMerkleTree {
 }
 
 export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
-  private _depth: number;
-  private _count: number;
-  private _branch: bytes32[];
-  private _zerohashes: bytes32[];
+  private readonly _depth: number;
+  private readonly _zerohashes: bytes32[];
+  private _tree: bytes32[][];
+  private _dirty: boolean;
 
-  protected constructor(depth: number, count: number, branch: bytes32[], zeroHashes: bytes32[]) {
-    assert(depth <= 52, "tree depth must be less than 53");
+  protected constructor(depth: number, tree: bytes32[][], zeroHashes: bytes32[]) {
+    assert(depth > 1 && depth <= 52, "tree depth must be between 1 and 53");
     this._depth = depth;
-    this._count = count;
-    this._branch = branch;
+    this._tree = tree;
     this._zerohashes = zeroHashes;
+    this._dirty = false;
   }
 
   public static empty(depth: number): ProgressiveMerkleTree {
-    const branch = Array.from({length: depth}, () => Buffer.alloc(32));
+    const tree = Array.from({length: depth + 1}, () => []);
     const zerohashes = Array.from({length: depth}, () => Buffer.alloc(32));
     for (let i = 0; i < depth - 1; i++) {
-      zerohashes[i + 1] = branch[i + 1] =
+      zerohashes[i + 1] =
         hash(Buffer.concat([
           zerohashes[i],
           zerohashes[i],
@@ -56,110 +57,77 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
     }
     return new ProgressiveMerkleTree(
       depth,
-      0,
-      branch,
+      tree,
       zerohashes
     );
   }
 
-  public static fromObject(value: MerkleTree) {
+  public static fromObject(value: MerkleTree): ProgressiveMerkleTree {
     return new ProgressiveMerkleTree(
       value.depth,
-      value.count,
-      value.branch,
+      value.tree,
       value.zeroHashes
     );
-  }
-
-
-  public count(): number {
-    return this._count;
   }
 
   public depth(): number {
     return this._depth;
   }
 
-  public push(item: bytes32): bytes32[] {
-    const depth = this._depth;
-    const proof = this._proof();
-    this._count++;
-    let i = 0;
-    let powerOfTwo = 2;
-    for (let j = 0; j < depth; j++) {
-      if (this._count % powerOfTwo !== 0) {
-        break;
-      }
-      i++;
-      powerOfTwo *= 2;
-    }
+  public push(item: bytes32): void {
+    this._dirty = true;
+    this._tree[0].push(item);
+  }
 
-    let value = item;
-    for (let j = 0; j < depth; j++) {
-      if (j < i) {
-        value = hash(Buffer.concat([
-          this._branch[j],
-          value,
-        ]));
-      } else {
-        break;
-      }
+  public getProof(index: number): bytes32[] {
+    if(this._dirty) {
+      this.calculateBranches();
     }
-    this._branch[i] = value;
+    const proof: bytes32[] = [];
+    for(let i = 0; i < this._depth; i++) {
+      index = index % 2 === 1 ? index - 1 : index + 1;
+      if(index < this._tree[i].length) {
+        proof.push(this._tree[i][index]);
+      } else {
+        proof.push(this._zerohashes[i]);
+      }
+      index = intDiv(index, 2);
+    }
     return proof;
   }
 
-  public clone(): ProgressiveMerkleTree {
-    const cloned: ProgressiveMerkleTree = Object.create(ProgressiveMerkleTree.prototype);
-    cloned._depth = this._depth;
-    cloned._count = this._count;
-    cloned._branch = this._branch.slice();
-    cloned._zerohashes = this._zerohashes;
-    return cloned;
-  }
-
   public root(): bytes32 {
-    let root = Buffer.alloc(32);
-    let size = this._count;
-    for (let i = 0; i < this._depth; i++) {
-      if (size % 2 === 1) {
-        root = hash(Buffer.concat([
-          this._branch[i],
-          root,
-        ]));
-      } else {
-        root = hash(Buffer.concat([
-          root,
-          this._zerohashes[i],
-        ]));
-      }
-      size = intDiv(size, 2);
+    if(this._dirty) {
+      this.calculateBranches();
     }
-    return root;
+    return this._tree[this._depth][0];
   }
 
   public serialize(): Buffer {
     return serialize(
       {
-        count: this._count,
         depth: this._depth,
-        branch: this._branch,
+        tree: this._tree,
         zeroHashes: this._zerohashes
       },
       MerkleTree
     );
   }
 
-  private _proof(): bytes32[] {
-    let size = this._count;
-    let proof = this._branch.slice();
-    for (let i = 0; i < this._depth; i++) {
-      if (size % 2 === 0) {
-        proof[i] = this._zerohashes[i];
+
+  private calculateBranches(): void {
+    for(let i = 0; i < this._depth; i++) {
+      const parent = this._tree[i + 1];
+      const child = this._tree[i];
+      for(let j = 0; j < child.length; j += 2) {
+        const left = child[j];
+        const right = (j + 1) < child.length ? child[j + 1] : this._zerohashes[i];
+        parent[j / 2] = hash(Buffer.concat([left, right]));
       }
-      size = intDiv(size, 2);
+      //unnecessary but makes clearer
+      this._tree[i + 1] = parent;
     }
-    return proof;
+    this._dirty = false;
   }
 
 }
