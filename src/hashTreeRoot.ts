@@ -12,6 +12,8 @@ import {
   VectorType,
 } from "./types";
 
+import { assertValidValue } from "./assertValidValue";
+
 import {
   merkleize,
   mixInLength,
@@ -70,5 +72,6 @@ export function _hashTreeRoot(value: SerializableValue, type: FullSSZType): Buff
  */
 export function hashTreeRoot(value: any, type: AnySSZType): Buffer {
   const _type = parseType(type);
+  assertValidValue(value, _type);
   return _hashTreeRoot(value, _type);
 }

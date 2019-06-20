@@ -120,7 +120,6 @@ function _serializeObject(value: SerializableObject, type: ContainerType, output
  * @param start starting index
  */
 export function _serialize(value: SerializableValue, type: FullSSZType, output: Buffer, start: number): number {
-  assertValidValue(value, type);
   switch(type.type) {
     case Type.bool:
       return _serializeBool(value as Bool, output, start);
@@ -142,6 +141,7 @@ export function _serialize(value: SerializableValue, type: FullSSZType, output: 
  */
 export function serialize(value: any, type: AnySSZType): Buffer {
   const _type = parseType(type);
+  assertValidValue(value, _type);
   const buf = Buffer.alloc(size(value, _type));
   _serialize(value, _type, buf, 0);
   return buf;
