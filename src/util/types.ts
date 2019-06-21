@@ -23,6 +23,9 @@ export function copyType(type: AnySSZType): AnySSZType {
 }
 
 export function parseType(type: AnySSZType): FullSSZType {
+  if (isFullSSZType(type)) {
+    return type as FullSSZType;
+  }
   if(typeof type === "string") {
     if (type === "bool") {
       return {
@@ -93,20 +96,16 @@ export function parseType(type: AnySSZType): FullSSZType {
     }
     assert.fail("Array length must be 1 or 2");
   } else if (type === Object(type)) {
-    if (isFullSSZType(type)) {
-      return type as FullSSZType;
-    } else {
-      type = type as SimpleContainerType;
-      assert(typeof type.name === "string", "Container must have a name");
-      assert(Array.isArray(type.fields), "Container must have fields specified as an array");
-      return {
-        type: Type.container,
-        name: type.name,
-        fields: type.fields.map(([fieldName, fieldType]: [string, any]) => {
-          assert(typeof fieldName === "string", "Container field name must be a string");
-          return [fieldName, parseType(fieldType)];
-        }) as [string, FullSSZType][],
-      }
+    type = type as SimpleContainerType;
+    assert(typeof type.name === "string", "Container must have a name");
+    assert(Array.isArray(type.fields), "Container must have fields specified as an array");
+    return {
+      type: Type.container,
+      name: type.name,
+      fields: type.fields.map(([fieldName, fieldType]: [string, any]) => {
+        assert(typeof fieldName === "string", "Container field name must be a string");
+        return [fieldName, parseType(fieldType)];
+      }) as [string, FullSSZType][],
     }
   }
   throw new Error(`Invalid type: ${type}`);
