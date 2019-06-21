@@ -13,6 +13,40 @@ import { parseType } from "./util/types";
 
 /**
  * Equality of two values of an SSZ type
+ *
+ * Most useful to compare arrays/objects
+ *
+ * ```typescript
+ * equals(10, 10, "uint64");
+ *
+ * equals(true, true, "bool");
+ *
+ * equals(
+ *   Buffer.from("abcd", "hex"),
+ *   Buffer.from("abcd", "hex"),
+ *   "bytes"
+ * );
+ *
+ * equals(
+ *   [0, 1, 2, 3, 4, 5],
+ *   [0, 1, 2, 3, 4, 5],
+ *   ["uint32"]
+ * );
+ *
+ * const myDataType: SimpleContainerType = {
+ *   name: "MyData",
+ *   fields: [
+ *     ["a", "uint16"],
+ *     ["b", "bool"],
+ *     ["c", "bytes96"],
+ *   ],
+ * };
+ * equals(
+ *   {a: 10, b: false, c: Buffer.alloc(96)},
+ *   {a: 10, b: false, c: Buffer.alloc(96)},
+ *   myDataType
+ * );
+  * ```
  */
 export function equals(value1: any, value2: any, type: AnySSZType): boolean {
   const _type = parseType(type);
