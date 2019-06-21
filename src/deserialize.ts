@@ -22,6 +22,81 @@ import { BYTES_PER_LENGTH_PREFIX } from "./constants";
 import { parseType, isVariableSizeType } from "./util/types";
 import { fixedSize } from "./size";
 
+
+/**
+ * Deserialize, according to the SSZ spec
+ *
+ * ```typescript
+ * let data: Buffer = sszSerializedData;
+ *
+ * // deserialize a number
+ * const n: number = deserialize(
+ *   data,
+ *   "uint32" // "uintN", N == length in bits, N <= 32
+ * );
+ *
+ * // deserialize a BN bignumber
+ * import BN from "bn.js";
+ * const bn: BN = deserialize(
+ *   data,
+ *   "uint64" // "uintN", N == length in bits, N >= 64
+ * );
+ *
+ * // deserialize a number (forced)
+ * const m: number = deserialize(
+ *   data,
+ *   "number64" // "numberN", N == length in bits
+ * );
+ *
+ * // deserialize a boolean
+ * const b: boolean = deserialize(data, "bool");
+ *
+ * // deserialize a variable-length byte array
+ * const buf1: Buffer = deserialize(data, "bytes");
+ *
+ * // deserialize a fixed-length byte array
+ * const buf2: Buffer = serialize(
+ *   data,
+ *   "bytes2" // "bytesN", N == length in bytes
+ * );
+ *
+ * // deserialize a variable-length array
+ * const arr1: number[] = deserialize(
+ *   data,
+ *   ["uint32"] // [elementType]
+ * );
+ *
+ * // deserialize a fixed-length array
+ * const arr2: number[] = deserialize(
+ *   [0, 1, 2, 3, 4, 5],
+ *   ["uint32", 6] // [elementType, arrayLength]
+ * );
+ *
+ * // deserialize an object
+ * interface myData {
+ *   a: number;
+ *   b: boolean;
+ *   c: Buffer;
+ * }
+ * const myDataType: SimpleContainerType = {
+ *   name: "MyData",
+ *   fields: [
+ *     ["a", "uint16"], // [fieldName, fieldType]
+ *     ["b", "bool"],
+ *     ["c", "bytes96"],
+ *   ],
+ * };
+ * const obj: myData = deserialize(data, myDataType);
+ * ```
+  */
+export function deserialize(data: Buffer, type: AnySSZType): any {
+  const _type = parseType(type);
+  if (!isVariableSizeType(_type)) {
+    assert(fixedSize(_type) === data.length, "Incorrect data length");
+  }
+  return _deserialize(data, _type, 0, data.length);
+}
+
 /** @ignore */
 function _deserializeUint(data: Buffer, type: UintType, start: number): Uint {
   const offset = start + type.byteLength;
@@ -164,15 +239,4 @@ export function _deserialize(data: Buffer, type: FullSSZType, start: number, end
     case Type.container:
       return _deserializeObject(data, type, start, end);
   }
-}
-
-/**
- * Deserialize, according to the SSZ spec
- */
-export function deserialize(data: Buffer, type: AnySSZType): any {
-  const _type = parseType(type);
-  if (!isVariableSizeType(_type)) {
-    assert(fixedSize(_type) === data.length, "Incorrect data length");
-  }
-  return _deserialize(data, _type, 0, data.length);
 }

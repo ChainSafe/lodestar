@@ -21,6 +21,7 @@ export function equals(value1: any, value2: any, type: AnySSZType): boolean {
   return _equals(value1, value2, _type);
 }
 
+/** @ignore */
 function _equals(value1: any, value2: any, type: FullSSZType): boolean {
   switch (type.type) {
     case Type.uint:

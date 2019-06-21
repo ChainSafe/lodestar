@@ -22,6 +22,9 @@ export function copyType(type: AnySSZType): AnySSZType {
   return JSON.parse(JSON.stringify(type));
 }
 
+/**
+ * Recursively expand an [[AnySSZType]] into a [[FullSSZType]]
+ */
 export function parseType(type: AnySSZType): FullSSZType {
   if(typeof type === "string") {
     if (type === "bool") {
@@ -133,8 +136,11 @@ export function isCompositeType(type: FullSSZType): boolean {
   ].includes(type.type);
 }
 
-// A "variable-size" type is a list and all types that contain a variable-size type.
-// All other types are said to be "fixed-size"
+/**
+ * A variable-size type is a list and all types that contain a variable-size type.
+ *
+ * All other types are said to be fixed-size
+ */
 export function isVariableSizeType(type: FullSSZType): boolean {
   switch (type.type) {
     case Type.bool:

@@ -25,6 +25,66 @@ import { parseType, isVariableSizeType } from "./util/types";
 import { assertValidValue } from "./assertValidValue";
 
 
+/**
+ * Serialize, according to the SSZ spec
+ *
+ * ```typescript
+ * let buf: Buffer;
+ *
+ * // serialize a number
+ * buf = serialize(
+ *   10,
+ *   "uint64" // "uintN", N == length in bits
+ * );
+ *
+ * // serialize a BN bignumber
+ * import BN from "bn.js";
+ * buf = serialize(new BN("1000000000000000000"), "uint64");
+ *
+ * // serialize a boolean
+ * buf = serialize(true, "bool");
+ *
+ * // serialize a variable-length byte array
+ * buf = serialize(Buffer.from("abcd", "hex"), "bytes");
+ *
+ * // serialize a fixed-length byte array
+ * buf = serialize(
+ *   Buffer.from("abcd", "hex"),
+ *   "bytes2" // "bytesN", N == length in bytes
+ * );
+ *
+ * // serialize a variable-length array
+ * buf = serialize(
+ *   [0, 1, 2, 3, 4, 5],
+ *   ["uint32"] // [elementType]
+ * );
+ *
+ * // serialize a fixed-length array
+ * buf = serialize(
+ *   [0, 1, 2, 3, 4, 5],
+ *   ["uint32", 6] // [elementType, arrayLength]
+ * );
+ *
+ * // serialize an object
+ * const myDataType: SimpleContainerType = {
+ *   name: "MyData",
+ *   fields: [
+ *     ["a", "uint16"], // [fieldName, fieldType]
+ *     ["b", "bool"],
+ *     ["c", "bytes96"],
+ *   ],
+ * };
+ * buf = serialize({a: 10, b: false, c: Buffer.alloc(96)}, myDataType);
+ * ```
+ */
+export function serialize(value: any, type: AnySSZType): Buffer {
+  const _type = parseType(type);
+  assertValidValue(value, _type);
+  const buf = Buffer.alloc(size(value, _type));
+  _serialize(value, _type, buf, 0);
+  return buf;
+}
+
 /** @ignore */
 function _serializeUint(value: Uint, type: UintType, output: Buffer, start: number): number {
   const offset = start + type.byteLength;
@@ -134,15 +194,4 @@ export function _serialize(value: SerializableValue, type: FullSSZType, output: 
     case Type.container:
       return _serializeObject(value as SerializableObject, type, output, start);
   }
-}
-
-/**
- * Serialize, according to the SSZ spec
- */
-export function serialize(value: any, type: AnySSZType): Buffer {
-  const _type = parseType(type);
-  assertValidValue(value, _type);
-  const buf = Buffer.alloc(size(value, _type));
-  _serialize(value, _type, buf, 0);
-  return buf;
 }
