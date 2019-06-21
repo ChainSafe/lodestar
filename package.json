@@ -46,7 +46,6 @@
     "@typescript-eslint/parser": "^1.4.2",
     "chai": "^4.2.0",
     "codecov": "^3.2.0",
-    "documentation": "^9.3.0",
     "eslint": "^5.14.1",
     "mocha": "^5.2.0",
     "nyc": "^13.3.0",
