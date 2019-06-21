@@ -19,7 +19,7 @@ import {
   Slot,
   ValidatorIndex,
   number64,
-  Gwei,
+  Gwei, uint64, Bytes32,
 } from "./primitive";
 
 import {SLOTS_PER_HISTORICAL_ROOT} from "../constants";
@@ -42,20 +42,25 @@ export const Fork: SimpleContainerType = {
 };
 
 export interface Crosslink {
-  // Epoch number
-  epoch: Epoch;
-  // Root of the previous crosslink
-  previousCrosslinkRoot: bytes32;
-  // Root of the crosslinked shard data since the previous crosslink
-  crosslinkDataRoot: bytes32;
+  //Shard number
+  shard: number64;
+  //Crosslinking data from epochs [start....end-1]
+  startEpoch: number64;
+  endEpoch: number64;
+  //Root of the previous crosslink
+  parentRoot: Bytes32;
+  //Root of the crosslinked shard data since the previous crosslink
+  dataRoot: Bytes32;
 }
 
 export const Crosslink: SimpleContainerType = {
   name: "Crosslink",
   fields: [
-    ["epoch", Epoch],
-    ["previousCrosslinkRoot", bytes32],
-    ["crosslinkDataRoot", bytes32],
+    ["shard", uint64],
+    ["startEpoch", uint64],
+    ["endEpoch", uint64],
+    ["parentRoot", Bytes32],
+    ["dataRoot", Bytes32],
   ],
 };
 
@@ -85,9 +90,7 @@ export interface AttestationData {
   targetEpoch: Epoch;
   targetRoot: bytes32;
   // Crosslink vote
-  shard: Shard;
-  previousCrosslinkRoot: bytes32;
-  crosslinkDataRoot: bytes32;
+  crosslink: Crosslink;
 }
 export const AttestationData: SimpleContainerType = {
   name: "AttestationData",
@@ -158,18 +161,18 @@ export const DepositData: SimpleContainerType = {
 
 export interface BeaconBlockHeader {
   slot: Slot;
-  previousBlockRoot: bytes32;
+  parentRoot: bytes32;
   stateRoot: bytes32;
-  blockBodyRoot: bytes32;
+  bodyRoot: bytes32;
   signature: BLSSignature;
 }
 export const BeaconBlockHeader: SimpleContainerType = {
   name: "BeaconBlockHeader",
   fields: [
     ["slot", Slot],
-    ["previousBlockRoot", bytes32],
+    ["parentRoot", bytes32],
     ["stateRoot", bytes32],
-    ["blockBodyRoot", bytes32],
+    ["bodyRoot", bytes32],
     ["signature", BLSSignature],
   ],
 };

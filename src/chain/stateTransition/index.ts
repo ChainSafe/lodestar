@@ -8,35 +8,30 @@ import {
 } from "../../types";
 
 import {processBlock} from "./block";
-import {processEpoch, shouldProcessEpoch} from "./epoch";
-import {advanceSlot, cacheState} from "./slot";
+import {processEpoch} from "./epoch";
+import {processSlots} from "./slot";
+import {hashTreeRoot} from "@chainsafe/ssz";
+import  assert from "assert";
+
 
 export {
-  advanceSlot,
-  cacheState,
   processBlock,
   processEpoch,
 };
 
-export function executeStateTransition(state: BeaconState, block: BeaconBlock | null, verifyStateRoot = true): BeaconState {
-
-  if (block) {
-    while(state.slot < block.slot) {
-      cacheState(state);
-      if (shouldProcessEpoch(state)) {
-        processEpoch(state);
-      }
-      advanceSlot(state);
-    }
-    processBlock(state, block, verifyStateRoot);
-  } else {
-    cacheState(state);
-    if (shouldProcessEpoch(state)) {
-      processEpoch(state);
-    }
-    advanceSlot(state);
+export function stateTransition(
+  state: BeaconState, block: BeaconBlock,
+  validateStateRoot = false
+): BeaconState {
+  // Process slots (including those with no blocks) since block
+  processSlots(state, block.slot);
+  // Process block
+  processBlock(state, block)
+  // Validate state root (`validate_state_root == True` in production)
+  if (validateStateRoot){
+    assert(block.stateRoot == hashTreeRoot(state, BeaconState));
   }
 
-
+  // Return post-state
   return state;
 }

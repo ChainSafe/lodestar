@@ -30,12 +30,12 @@ export async function assembleBlock(
     stateRoot: parentBlock.stateRoot,
     signature: parentBlock.signature,
     slot: parentBlock.slot,
-    previousBlockRoot: parentBlock.previousBlockRoot,
-    blockBodyRoot: hashTreeRoot(parentBlock.body, BeaconBlockBody),
+    parentRoot: parentBlock.parentRoot,
+    bodyRoot: hashTreeRoot(parentBlock.body, BeaconBlockBody),
   };
   const block: BeaconBlock = {
     slot,
-    previousBlockRoot: signingRoot(parentHeader, BeaconBlockHeader),
+    parentRoot: signingRoot(parentHeader, BeaconBlockHeader),
     signature: undefined,
     stateRoot: undefined,
     body: await assembleBody(opPool, currentState, randao),
@@ -43,7 +43,7 @@ export async function assembleBlock(
 
   //This will effectively copy state so we avoid modifying existing state
   const nextState = {...currentState};
-  processBlock(nextState, block, false);
+  processBlock(nextState, block);
 
   block.stateRoot = hashTreeRoot(nextState, BeaconState);
 

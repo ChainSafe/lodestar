@@ -73,7 +73,7 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
   }
   public async publishShardAttestation(attestation: Attestation): Promise<void> {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
-      shardSubnetAttestationTopic(attestation.data.shard), serialize(attestation, Attestation));
+      shardSubnetAttestationTopic(attestation.data.crosslink.shard), serialize(attestation, Attestation));
   }
   private handleIncomingBlock(msg: any): void {
     try {
@@ -92,7 +92,7 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
   private handleIncomingShardAttestation(msg: any): void {
     try {
       const attestation: Attestation = deserialize(msg.data, Attestation);
-      this.emit(shardAttestationTopic(attestation.data.shard), attestation);
+      this.emit(shardAttestationTopic(attestation.data.crosslink.shard), attestation);
     } catch (e) {
     }
   }

@@ -6,7 +6,6 @@ import assert from "assert";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
 import {
-  BeaconBlock,
   BeaconState,
   Crosslink,
   PendingAttestation,
@@ -14,7 +13,7 @@ import {
 } from "../../../types";
 
 import {
-  MAX_ATTESTATIONS,
+  MAX_EPOCHS_PER_CROSSLINK,
   MIN_ATTESTATION_INCLUSION_DELAY,
   SLOTS_PER_EPOCH,
   ZERO_HASH,
@@ -23,61 +22,84 @@ import {
 import {
   getCurrentEpoch,
   getPreviousEpoch,
-  verifyIndexedAttestation,
   convertToIndexed,
   getBeaconProposerIndex,
-  getAttestationDataSlot,
+  getAttestationDataSlot, validateIndexedAttestation,
 } from "../util";
 
+// SPEC 0.7
+// def process_attestation(state: BeaconState, attestation: Attestation) -> None:
+//   """
+// Process ``Attestation`` operation.
+// """
+// data = attestation.data
+// attestation_slot = get_attestation_data_slot(state, data)
+// assert attestation_slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= attestation_slot + SLOTS_PER_EPOCH
+//
+// pending_attestation = PendingAttestation(
+//   data=data,
+//   aggregation_bitfield=attestation.aggregation_bitfield,
+//   inclusion_delay=state.slot - attestation_slot,
+//   proposer_index=get_beacon_proposer_index(state),
+// )
+//
+// assert data.target_epoch in (get_previous_epoch(state), get_current_epoch(state))
+// if data.target_epoch == get_current_epoch(state):
+// ffg_data = (state.current_justified_epoch, state.current_justified_root, get_current_epoch(state))
+// parent_crosslink = state.current_crosslinks[data.crosslink.shard]
+// state.current_epoch_attestations.append(pending_attestation)
+// else:
+// ffg_data = (state.previous_justified_epoch, state.previous_justified_root, get_previous_epoch(state))
+// parent_crosslink = state.previous_crosslinks[data.crosslink.shard]
+// state.previous_epoch_attestations.append(pending_attestation)
+//
+// # Check FFG data, crosslink data, and signature
+// assert ffg_data == (data.source_epoch, data.source_root, data.target_epoch)
+// assert data.crosslink.start_epoch == parent_crosslink.end_epoch
+// assert data.crosslink.end_epoch == min(data.target_epoch, parent_crosslink.end_epoch + MAX_EPOCHS_PER_CROSSLINK)
+// assert data.crosslink.parent_root == hash_tree_root(parent_crosslink)
+// assert data.crosslink.data_root == ZERO_HASH  # [to be removed in phase 1]
+// validate_indexed_attestation(state, convert_to_indexed(state, attestation))
 
-export function processAttestation(state: BeaconState, attestation: Attestation): BeaconState {
+
+export default function processAttestation(state: BeaconState, attestation: Attestation): void {
   const currentEpoch = getCurrentEpoch(state);
   const previousEpoch = getPreviousEpoch(state);
   const data = attestation.data;
   const attestationSlot = getAttestationDataSlot(state, data);
+  let ffgData, parentCrosslink;
   assert(
     attestationSlot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot &&
     state.slot <= attestationSlot + SLOTS_PER_EPOCH
   );
 
-  // Check target epoch, source epoch, and source root
-  assert((
-    currentEpoch === data.targetEpoch &&
-    state.currentJustifiedEpoch === data.sourceEpoch &&
-    state.currentJustifiedRoot.equals(data.sourceRoot) &&
-    hashTreeRoot(state.currentCrosslinks[data.shard], Crosslink).equals(data.previousCrosslinkRoot)
-  ) || (
-    previousEpoch === data.targetEpoch &&
-    state.previousJustifiedEpoch === data.sourceEpoch &&
-    state.previousJustifiedRoot.equals(data.sourceRoot) &&
-    hashTreeRoot(state.previousCrosslinks[data.shard], Crosslink).equals(data.previousCrosslinkRoot)
-  ));
-
-  // Check crosslink data
-  assert(data.crosslinkDataRoot.equals(ZERO_HASH)); // TO BE REMOVED IN PHASE 1
-
-  // Check signature and bitfields
-  assert(verifyIndexedAttestation(state, convertToIndexed(state, attestation)));
+  assert([previousEpoch, currentEpoch].includes(data.targetEpoch));
 
   // Cache pending attestation
   const pendingAttestation: PendingAttestation = {
-    data,
+    data: data,
     aggregationBitfield: attestation.aggregationBitfield,
     inclusionDelay: state.slot - attestationSlot,
     proposerIndex: getBeaconProposerIndex(state),
   };
 
   if (data.targetEpoch === currentEpoch) {
+    ffgData = [state.currentJustifiedEpoch, state.currentJustifiedRoot, currentEpoch];
+    parentCrosslink = state.currentCrosslinks[data.crosslink.shard];
     state.currentEpochAttestations.push(pendingAttestation);
   } else {
+    ffgData = [state.previousJustifiedEpoch, state.previousJustifiedRoot, previousEpoch];
+    parentCrosslink = state.previousCrosslinks[data.crosslink.shard];
     state.previousEpochAttestations.push(pendingAttestation);
   }
-  return state;
-}
 
-export default function processAttestations(state: BeaconState, block: BeaconBlock): void {
-  assert(block.body.attestations.length <= MAX_ATTESTATIONS);
-  for (const attestation of block.body.attestations) {
-    processAttestation(state, attestation);
-  }
+
+  // Check FFG data, crosslink data, and signature
+  assert(ffgData === [data.sourceEpoch, data.sourceRoot, data.targetEpoch]);
+  assert(data.crosslink.startEpoch == parentCrosslink.endEpoch);
+  assert(data.crosslink.endEpoch ==
+    Math.min(data.targetEpoch, parentCrosslink.endEpoch + MAX_EPOCHS_PER_CROSSLINK));
+  assert(data.crosslink.parentRoot == hashTreeRoot(parentCrosslink, Crosslink));
+  assert(data.crosslink.dataRoot == ZERO_HASH);   // [to be removed in phase 1]
+  validateIndexedAttestation(state, convertToIndexed(state, attestation));
 }

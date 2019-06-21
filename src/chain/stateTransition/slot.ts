@@ -6,27 +6,47 @@ import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 
 import {
   BeaconState,
-  BeaconBlockHeader,
+  BeaconBlockHeader, Slot,
 } from "../../types";
 
 import {
+  SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT, ZERO_HASH,
 } from "../../constants";
 
+import  {processEpoch} from "./index";
+import assert from "assert";
 
-export function cacheState(state: BeaconState): void {
-  // Cache latest known state root (for previous slot)
-  const latestStateRoot = hashTreeRoot(state, BeaconState);
-  state.latestStateRoots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = latestStateRoot;
 
-  // Store latest known state root (for previous slot) in latest_block_header if it is empty
-  if (state.latestBlockHeader.stateRoot.equals(ZERO_HASH)) {
-    state.latestBlockHeader.stateRoot = latestStateRoot;
+export function processSlots(state: BeaconState, slot: Slot): void{
+  assert(state.slot <= slot);
+
+  while (state.slot < slot){
+    processSlot(state);
+    // Process epoch on the first slot of the next epoch
+    if ((state.slot + 1) % SLOTS_PER_EPOCH == 0){
+      processEpoch(state);
+    }
+    state.slot++;
   }
 
-  // Cache latest known block root (for previous slot)
-  state.latestBlockRoots[state.slot % SLOTS_PER_HISTORICAL_ROOT] =
-    signingRoot(state.latestBlockHeader, BeaconBlockHeader);
+
+}
+
+function processSlot(state: BeaconState): void {
+
+  // Cache state root
+  let previousStateRoot = hashTreeRoot(state, BeaconState);
+  state.latestStateRoots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previousStateRoot;
+
+  // Cache latest block header state root
+  if (state.latestBlockHeader.stateRoot == ZERO_HASH){
+    state.latestBlockHeader.stateRoot = previousStateRoot;
+  }
+
+  // Cache block root
+  let previousBlockRoot = signingRoot(state.latestBlockHeader, BeaconBlockHeader);
+  state.latestBlockRoots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previousBlockRoot;
 }
 
 export function advanceSlot(state: BeaconState): void {

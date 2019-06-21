@@ -5,7 +5,7 @@ import {expect} from "chai";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
-import {processProposerSlashing} from "../../../../src/chain/stateTransition/block/proposerSlashings";
+import processProposerSlashing from "../../../../src/chain/stateTransition/block/proposerSlashings";
 import {proposerSlashingFromYaml} from "../../../utils/proposerSlashing";
 
 describeSpecTest(

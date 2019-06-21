@@ -1,18 +1,23 @@
 import {Crosslink, Epoch} from "../../src/types";
-import {GENESIS_EPOCH, ZERO_HASH} from "../../src/constants";
+import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, GENESIS_START_SHARD, ZERO_HASH} from "../../src/constants";
+import {randBetween} from "./misc";
 
 export function generateEmptyCrosslink(epoch: Epoch = GENESIS_EPOCH): Crosslink {
   return {
-    epoch,
-    previousCrosslinkRoot: ZERO_HASH,
-    crosslinkDataRoot: ZERO_HASH,
+    startEpoch: epoch,
+    endEpoch: FAR_FUTURE_EPOCH,
+    parentRoot:ZERO_HASH,
+    dataRoot: ZERO_HASH,
+    shard: GENESIS_START_SHARD,
   };
 }
 
 export function crosslinkFromYaml(value: any): Crosslink {
   return {
-    epoch: value.epoch.toNumber(),
-    previousCrosslinkRoot: Buffer.from(value.previousCrosslinkRoot.slice(2), 'hex'),
-    crosslinkDataRoot: Buffer.from(value.crosslinkDataRoot.slice(2), 'hex'),
+    startEpoch: value.epoch.toNumber(),
+    endEpoch: value.epoch.toNumber(),
+    parentRoot: Buffer.from(value.previousCrosslinkRoot.slice(2), 'hex'),
+    dataRoot: Buffer.from(value.crosslinkDataRoot.slice(2), 'hex'),
+    shard: randBetween(0, 1024),
   };
 }

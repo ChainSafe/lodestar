@@ -7,14 +7,14 @@ import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import {blockFromYaml} from "../../../utils/block";
 import {BeaconBlock, BeaconState, Validator} from "../../../../src/types";
-import {executeStateTransition} from "../../../../src/chain/stateTransition";
+import {stateTransition} from "../../../../src/chain/stateTransition";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/sanity/blocks/blocksanity_s_mainnet.yaml"),
   (state: BeaconState, blocks: BeaconBlock[]) => {
     blocks.forEach((block) => {
-      executeStateTransition(state, block, false);
+      stateTransition(state, block, false);
     });
     return state;
   },

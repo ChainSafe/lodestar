@@ -13,7 +13,7 @@ import {attesterSlashingFromYaml} from "./attesterSlashing";
 export function generateEmptyBlock(): BeaconBlock {
   return {
     slot: 0,
-    previousBlockRoot: Buffer.alloc(32),
+    parentRoot: Buffer.alloc(32),
     stateRoot: ZERO_HASH,
     body: {
       randaoReveal: Buffer.alloc(96),
@@ -47,7 +47,7 @@ export function blockFromYaml(value: any): BeaconBlock {
       voluntaryExits: value.body.voluntaryExits.map(voluntaryExitsFromYaml),
       transfers: value.body.transfers.map(transfersFromYaml)
     },
-    previousBlockRoot: Buffer.from(value.previousBlockRoot.slice(2), 'hex'),
+    parentRoot: Buffer.from(value.parentRoot.slice(2), 'hex'),
     signature: Buffer.from(value.signature.slice(2), 'hex'),
     slot: value.slot.toNumber(),
     stateRoot: Buffer.from(value.stateRoot.slice(2), 'hex')
@@ -56,11 +56,11 @@ export function blockFromYaml(value: any): BeaconBlock {
 
 export function blockHeaderFromYaml(value: any): BeaconBlockHeader {
   return {
-    previousBlockRoot: Buffer.from(value.previousBlockRoot.slice(2), 'hex'),
+    parentRoot: Buffer.from(value.parentRoot.slice(2), 'hex'),
     signature: Buffer.from(value.signature.slice(2), 'hex'),
     slot: value.slot.toNumber(),
     stateRoot: Buffer.from(value.stateRoot.slice(2), 'hex'),
-    blockBodyRoot: Buffer.from(value.blockBodyRoot.slice(2), 'hex'),
+    bodyRoot: Buffer.from(value.blockBodyRoot.slice(2), 'hex'),
   };
 
 }

@@ -6,7 +6,7 @@ import assert from "assert";
 import xor from "buffer-xor";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {BeaconBlock, BeaconState, Epoch,} from "../../../types";
+import {BeaconBlock, BeaconBlockBody, BeaconState, Epoch,} from "../../../types";
 
 import {Domain, EMPTY_SIGNATURE, LATEST_RANDAO_MIXES_LENGTH, ZERO_HASH,} from "../../../constants";
 
@@ -17,7 +17,7 @@ import {hash} from "../../../util/crypto";
 import {getBeaconProposerIndex, getCurrentEpoch, getDomain, getRandaoMix,} from "../util";
 
 
-export default function processRandao(state: BeaconState, block: BeaconBlock): void {
+export default function processRandao(state: BeaconState, body: BeaconBlockBody): void {
   const currentEpoch = getCurrentEpoch(state);
   const proposer = state.validatorRegistry[getBeaconProposerIndex(state)];
   // Verify that the provided randao value is valid
@@ -25,18 +25,18 @@ export default function processRandao(state: BeaconState, block: BeaconBlock): v
     bls.verify(
       proposer.pubkey,
       hashTreeRoot(currentEpoch, Epoch),
-      block.body.randaoReveal,
+      body.randaoReveal,
       getDomain(state, Domain.RANDAO),
     )
     ||
     //empty block, it seems that empty stuff should be verified positively here
     (
       hashTreeRoot(currentEpoch, Epoch).equals(ZERO_HASH)
-      && block.body.randaoReveal.equals(EMPTY_SIGNATURE)
+      && body.randaoReveal.equals(EMPTY_SIGNATURE)
     );
   assert(randaoRevealVerified);
 
   // Mix it in
   state.latestRandaoMixes[currentEpoch % LATEST_RANDAO_MIXES_LENGTH] =
-    xor(getRandaoMix(state, currentEpoch), hash(block.body.randaoReveal));
+    xor(getRandaoMix(state, currentEpoch), hash(body.randaoReveal));
 }

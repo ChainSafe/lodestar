@@ -26,7 +26,7 @@ import {getDomain, increaseBalance,} from "../util";
 /**
  * Process an Eth1 deposit, registering a validator or increasing its balance.
  */
-export function processDeposit(state: BeaconState, deposit: Deposit): BeaconState {
+export  default function processDeposit(state: BeaconState, deposit: Deposit): BeaconState {
   // Verify the Merkle branch
   assert(verifyMerkleBranch(
     hashTreeRoot(deposit.data, DepositData),
@@ -74,13 +74,4 @@ export function processDeposit(state: BeaconState, deposit: Deposit): BeaconStat
     increaseBalance(state, validatorIndex, amount);
   }
   return state;
-}
-
-export default function processDeposits(state: BeaconState, block: BeaconBlock): void {
-  // Verify that outstanding deposits are processed up to the maximum number of deposits
-  assert(block.body.deposits.length ===
-    Math.min(MAX_DEPOSITS, state.latestEth1Data.depositCount - state.depositIndex));
-  for (const deposit of block.body.deposits) {
-    processDeposit(state, deposit);
-  }
 }

@@ -48,7 +48,7 @@ describe('process block', function () {
   });
 
   it('should process block - with verification', function () {
-    processBlock(generateState(), generateEmptyBlock(), true);
+    processBlock(generateState(), generateEmptyBlock());
     expect(processEth1Stub.calledOnce).to.be.true;
     expect(processBlockHeaderStub.calledOnce).to.be.true;
     expect(processAttestationsStub.calledOnce).to.be.true;
@@ -61,7 +61,7 @@ describe('process block', function () {
   });
 
   it('should process block - without verification', function () {
-    processBlock(generateState(), generateEmptyBlock(), false);
+    processBlock(generateState(), generateEmptyBlock());
     expect(processEth1Stub.calledOnce).to.be.true;
     expect(processBlockHeaderStub.calledOnce).to.be.true;
     expect(processAttestationsStub.calledOnce).to.be.true;

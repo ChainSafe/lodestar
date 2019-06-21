@@ -46,7 +46,7 @@ describe('process block - block header', function () {
     const state = generateState({slot: 5});
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.previousBlockRoot = Buffer.alloc(10, 1);
+    block.parentRoot = Buffer.alloc(10, 1);
     try {
       processBlockHeader(state, block);
       expect.fail();
@@ -58,7 +58,7 @@ describe('process block - block header', function () {
     state.validatorRegistry.push(generateValidator(0, 10, true));
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.previousBlockRoot = signingRoot(state.latestBlockHeader, BeaconBlockHeader);
+    block.parentRoot = signingRoot(state.latestBlockHeader, BeaconBlockHeader);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),
       slot: 5,
@@ -81,7 +81,7 @@ describe('process block - block header', function () {
     state.validatorRegistry.push(generateValidator(0, 10));
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.previousBlockRoot = signingRoot(state.latestBlockHeader, BeaconBlockHeader);
+    block.parentRoot = signingRoot(state.latestBlockHeader, BeaconBlockHeader);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),
       slot: 5,
@@ -106,7 +106,7 @@ describe('process block - block header', function () {
     state.validatorRegistry.push(generateValidator(0, 10));
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.previousBlockRoot = signingRoot(state.latestBlockHeader, BeaconBlockHeader);
+    block.parentRoot = signingRoot(state.latestBlockHeader, BeaconBlockHeader);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),
       slot: 5,
@@ -131,7 +131,7 @@ describe('process block - block header', function () {
     state.validatorRegistry.push(validator);
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.previousBlockRoot = signingRoot(state.latestBlockHeader, BeaconBlockHeader);
+    block.parentRoot = signingRoot(state.latestBlockHeader, BeaconBlockHeader);
     blsStub.verify.returns(true);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),

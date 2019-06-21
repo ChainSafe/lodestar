@@ -16,8 +16,12 @@ import {
   BeaconBlockHeader,
   BeaconBlockBody
 } from "../../src/types";
-import {GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD, LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
-  LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH, SHARD_COUNT, ZERO_HASH, SLOTS_PER_HISTORICAL_ROOT} from "../../src/constants";
+import {GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD,
+  LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
+  LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH, SHARD_COUNT,
+  ZERO_HASH, SLOTS_PER_HISTORICAL_ROOT
+} from "../../src/constants";
+
 import { intToBytes } from "../../src/util/bytes";
 import {randBetween, randBetweenBN} from "./misc";
 import {generateValidators, validatorFromYaml} from "./validator";
@@ -117,9 +121,9 @@ export function generateState(opts?: TestBeaconState): BeaconState {
     latestSlashedBalances: Array.from({length: LATEST_SLASHED_EXIT_LENGTH}, () => new BN(0)),
     latestBlockHeader: {
       slot: 0,
-      previousBlockRoot: Buffer.alloc(32),
+      parentRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
-      blockBodyRoot: hashTreeRoot(generateEmptyBlock().body, BeaconBlockBody),
+      bodyRoot: hashTreeRoot(generateEmptyBlock().body, BeaconBlockBody),
       signature: Buffer.alloc(96),
     },
     historicalRoots: [],
@@ -144,9 +148,11 @@ export function generateState(opts?: TestBeaconState): BeaconState {
  */
 export function generateRandomState(opts?: TestBeaconState): BeaconState {
   const initialCrosslinkRecord: Crosslink = {
-    epoch: randBetween(0, 1000),
-    previousCrosslinkRoot: ZERO_HASH,
-    crosslinkDataRoot: ZERO_HASH,
+    startEpoch: randBetween(0, 1000),
+    endEpoch: randBetween(0, 1000),
+    parentRoot: ZERO_HASH,
+    dataRoot: ZERO_HASH,
+    shard: GENESIS_START_SHARD,
   };
 
   const validatorNum: number = randBetween(0, 1000);
@@ -187,9 +193,9 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
     latestSlashedBalances: Array.from({length: LATEST_SLASHED_EXIT_LENGTH}, () => randBetweenBN(0, 1000)),
     latestBlockHeader: {
       slot: 0,
-      previousBlockRoot: Buffer.alloc(32),
+      parentRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
-      blockBodyRoot: Buffer.alloc(32),
+      bodyRoot: Buffer.alloc(32),
       signature: Buffer.alloc(96),
     },
     historicalRoots: Array.from({length: randBetween(0, 1000)}, () => Buffer.alloc(32)),
@@ -243,9 +249,9 @@ export function stateFromYaml(value: any): BeaconState {
     latestSlashedBalances: value.latestSlashedBalances,
     latestBlockHeader: {
       slot: value.latestBlockHeader.slot.toNumber(),
-      previousBlockRoot: Buffer.from(value.latestBlockHeader.previousBlockRoot.slice(2), 'hex'),
+      parentRoot: Buffer.from(value.latestBlockHeader.previousBlockRoot.slice(2), 'hex'),
       stateRoot: Buffer.from(value.latestBlockHeader.stateRoot.slice(2), 'hex'),
-      blockBodyRoot: Buffer.from(value.latestBlockHeader.blockBodyRoot.slice(2), 'hex'),
+      bodyRoot: Buffer.from(value.latestBlockHeader.blockBodyRoot.slice(2), 'hex'),
       signature: Buffer.from(value.latestBlockHeader.signature.slice(2), 'hex'),
     },
     historicalRoots: value.historicalRoots.map(value => Buffer.from(value.slice(2), 'hex')),

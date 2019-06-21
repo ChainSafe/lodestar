@@ -43,6 +43,7 @@ export const ETH1_FOLLOW_DISTANCE = 2 ** 10; // blocks || ~4 hours
 export const SLOTS_PER_HISTORICAL_ROOT = 2 ** 13; // slots || ~13 hours
 export const MIN_VALIDATOR_WITHDRAWAL_DELAY = 2 ** 8; // epochs || ~27 hours
 export const PERSISTENT_COMMITTEE_PERIOD = 2 ** 11; // epochs || 9 days
+export const MAX_EPOCHS_PER_CROSSLINK = 2**6; //epochs	|| ~7 hours
 
 // should be a small constant times SHARD_COUNT // SLOTS_PER_EPOCH
 export const MAX_CROSSLINK_EPOCHS = 2 ** 6; // 64

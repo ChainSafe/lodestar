@@ -1,5 +1,14 @@
-import {Attestation, AttestationData, Epoch, IndexedAttestation, PendingAttestation} from "../../src/types";
+import {
+  Attestation,
+  AttestationData,
+  bytes32,
+  Crosslink,
+  Epoch,
+  IndexedAttestation,
+  PendingAttestation
+} from "../../src/types";
 import {randBetween} from "./misc";
+import {FAR_FUTURE_EPOCH, GENESIS_EPOCH} from "../../src/constants";
 
 /**
  * Generates a fake attestation data for test purposes.
@@ -7,6 +16,7 @@ import {randBetween} from "./misc";
  * @param {number} justifiedEpochValue
  * @returns {AttestationData}
  */
+
 export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch): AttestationData {
   return {
     beaconBlockRoot: Buffer.alloc(32),
@@ -14,9 +24,14 @@ export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch):
     targetEpoch: targetEpoch,
     sourceRoot: Buffer.alloc(32),
     targetRoot: Buffer.alloc(32),
-    shard: randBetween(0, 1024),
-    previousCrosslinkRoot: Buffer.alloc(32),
-    crosslinkDataRoot: Buffer.alloc(32),
+    crosslink: {
+      shard: randBetween(0, 1024),
+      startEpoch:GENESIS_EPOCH,
+      endEpoch:FAR_FUTURE_EPOCH,
+      parentRoot:Buffer.alloc(32),
+      dataRoot: Buffer.alloc(32),
+    }
+    ,
   };
 }
 
@@ -29,9 +44,13 @@ export function generateEmptyAttestation(): Attestation {
       targetEpoch: 0,
       sourceRoot: Buffer.alloc(32),
       targetRoot: Buffer.alloc(32),
-      shard: randBetween(0, 1024),
-      previousCrosslinkRoot: Buffer.alloc(32),
-      crosslinkDataRoot: Buffer.alloc(32),
+      crosslink: {
+        shard: randBetween(0, 1024),
+        startEpoch:GENESIS_EPOCH,
+        endEpoch:FAR_FUTURE_EPOCH,
+        parentRoot:Buffer.alloc(32),
+        dataRoot: Buffer.alloc(32),
+      }
     },
     custodyBitfield: Buffer.alloc(32),
     signature: Buffer.alloc(96),
@@ -72,9 +91,13 @@ export function attestationDataFromYaml(value: any): AttestationData {
     beaconBlockRoot: Buffer.from(value.beaconBlockRoot.slice(2), 'hex'),
     targetRoot: Buffer.from(value.targetRoot.slice(2), 'hex'),
     sourceEpoch: value.sourceEpoch.toNumber(),
-    previousCrosslinkRoot: Buffer.from(value.previousCrosslinkRoot.slice(2), 'hex'),
+    crosslink: {
+      shard: value.shard.toNumber(),
+      startEpoch: GENESIS_EPOCH,
+      endEpoch: FAR_FUTURE_EPOCH,
+      parentRoot:Buffer.from(value.previousCrosslinkRoot.slice(2), 'hex'),
+      dataRoot: Buffer.from(value.crosslinkDataRoot.slice(2), 'hex'),
+    },
     sourceRoot: Buffer.from(value.sourceRoot.slice(2), 'hex'),
-    shard: value.shard.toNumber(),
-    crosslinkDataRoot: Buffer.from(value.crosslinkDataRoot.slice(2), 'hex')
   };
 }

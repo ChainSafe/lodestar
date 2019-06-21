@@ -10,7 +10,7 @@ import * as merkleUtil from "../../../../../src/util/merkleTree";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
-import processDeposits, {processDeposit} from "../../../../../src/chain/stateTransition/block/deposits";
+import processDeposit from "../../../../../src/chain/stateTransition/block/deposits";
 import {generateDeposit} from "../../../../utils/deposit";
 import {signingRoot} from "@chainsafe/ssz";
 import {DepositData} from "../../../../../src/types";
@@ -106,40 +106,5 @@ describe('process block - deposits', function () {
       expect.fail(e);
     }
   });
-
-  it('should fail process deposit from blocks - missing deposits', function () {
-    const state = generateState({depositIndex: 3});
-    state.latestEth1Data.depositCount = 5;
-    const deposit = generateDeposit(3);
-    const block = generateEmptyBlock();
-    block.body.deposits.push(deposit);
-    try {
-      processDeposits(state, block);
-    } catch (e) {
-
-    }
-  });
-
-  it('should process deposit from blocks', function () {
-    const state = generateState({depositIndex: 3});
-    state.latestEth1Data.depositCount = 4;
-    verifyMerkleTreeStub.returns(true);
-    const deposit = generateDeposit(3);
-    const validator = generateValidator();
-    state.validatorRegistry.push(validator);
-    state.balances.push(new BN(0));
-    deposit.data.pubkey = validator.pubkey;
-    const block = generateEmptyBlock();
-    block.body.deposits.push(deposit);
-    try {
-      processDeposits(state, block);
-      expect(verifyMerkleTreeStub.calledOnce).to.be.true;
-      expect(state.balances[0].toString()).to.be.equal(deposit.data.amount.toString());
-    } catch (e) {
-      expect.fail(e);
-    }
-  });
-
-
 
 });

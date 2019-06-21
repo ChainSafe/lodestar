@@ -30,6 +30,12 @@ export function processEpoch(state: BeaconState): BeaconState {
   // Validator Registry
   processRegistryUpdates(state);
 
+  // TODO
+  //processReveal_deadlines
+
+  // TODO
+  //processChallenge_deadlines
+
   // Slashings
   processSlashings(state);
 

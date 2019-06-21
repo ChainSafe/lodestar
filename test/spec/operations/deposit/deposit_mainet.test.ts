@@ -6,7 +6,7 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import {depositsFromYaml} from "../../../utils/deposit";
-import {processDeposit} from "../../../../src/chain/stateTransition/block/deposits";
+import processDeposit from "../../../../src/chain/stateTransition/block/deposits";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {Validator} from "../../../../src/types";
 

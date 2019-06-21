@@ -124,9 +124,9 @@ export function getChurnLimit(state: BeaconState): number {
 export function getTemporaryBlockHeader(block: BeaconBlock): BeaconBlockHeader {
   return {
     slot: block.slot,
-    previousBlockRoot: block.previousBlockRoot,
+    parentRoot: block.parentRoot,
     stateRoot: ZERO_HASH,
-    blockBodyRoot: hashTreeRoot(block.body, BeaconBlockBody),
+    bodyRoot: hashTreeRoot(block.body, BeaconBlockBody),
     signature: EMPTY_SIGNATURE,
   };
 }

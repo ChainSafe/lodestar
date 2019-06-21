@@ -4,7 +4,7 @@ import sinon from "sinon";
 import {MAX_PROPOSER_SLASHINGS, SLOTS_PER_EPOCH} from "../../../../../src/constants";
 import {generateValidator} from "../../../../utils/validator";
 import {generateEmptyProposerSlashing} from "../../../../utils/slashings";
-import processProposerSlashings, {processProposerSlashing} from "../../../../../src/chain/stateTransition/block/proposerSlashings";
+import processProposerSlashing from "../../../../../src/chain/stateTransition/block/proposerSlashings";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
@@ -118,43 +118,6 @@ describe('process block - proposer slashings', function () {
     blsStub.verify.returns(true);
     try {
       processProposerSlashing(state, proposerSlashing);
-      expect(isSlashableValidatorStub.calledOnce).to.be.true;
-      expect(slashValidatorStub.calledOnce).to.be.true;
-      expect(blsStub.verify.calledTwice).to.be.true;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
-  });
-
-  it('should fail to process from block - exceeds maximum', function () {
-    const state = generateState();
-    const block = generateEmptyBlock();
-    new Array({
-      length: MAX_PROPOSER_SLASHINGS + 1,
-      mapFn: () => {
-        block.body.proposerSlashings.push(generateEmptyProposerSlashing());
-      }
-    });
-    try {
-      processProposerSlashings(state, block);
-      expect.fail();
-    } catch (e) {
-
-    }
-  });
-
-  it('should process from block', function () {
-    const validator = generateValidator();
-    const state = generateState({validatorRegistry: [validator]});
-    const proposerSlashing = generateEmptyProposerSlashing();
-    proposerSlashing.header1.slot = 1;
-    proposerSlashing.header2.slot = 2;
-    isSlashableValidatorStub.returns(true);
-    const block = generateEmptyBlock();
-    blsStub.verify.returns(true);
-    block.body.proposerSlashings.push(proposerSlashing);
-    try {
-      processProposerSlashings(state, block);
       expect(isSlashableValidatorStub.calledOnce).to.be.true;
       expect(slashValidatorStub.calledOnce).to.be.true;
       expect(blsStub.verify.calledTwice).to.be.true;

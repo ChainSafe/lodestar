@@ -3,17 +3,16 @@
  */
 
 import assert from "assert";
-import {deserialize, serialize, hashTreeRoot} from "@chainsafe/ssz";
+import {deserialize, hashTreeRoot} from "@chainsafe/ssz";
 
 import {
   BeaconState, PendingAttestation,
-  Shard, ValidatorIndex, Gwei, Crosslink, Epoch, AttestationData,
+  Shard, ValidatorIndex, Gwei, Crosslink, Epoch,
   uint256,
 } from "../../../types";
 import {
   ZERO_HASH,
-  MAX_CROSSLINK_EPOCHS,
-  GENESIS_EPOCH
+  GENESIS_EPOCH, GENESIS_START_SHARD
 } from "../../../constants";
 
 import {
@@ -72,51 +71,58 @@ export function getAttestingBalance(state: BeaconState, attestations: PendingAtt
   return getTotalBalance(state, getUnslashedAttestingIndices(state, attestations));
 }
 
-export function getCrosslinkFromAttestationData(
-  state: BeaconState,
-  data: AttestationData
-): Crosslink {
-  return {
-    epoch: Math.min(
-      data.targetEpoch,
-      state.currentCrosslinks[data.shard].epoch + MAX_CROSSLINK_EPOCHS
-    ),
-    previousCrosslinkRoot: data.previousCrosslinkRoot,
-    crosslinkDataRoot: data.crosslinkDataRoot,
-  };
-}
+//SPEC 0.7
+// def get_winning_crosslink_and_attesting_indices(state: BeaconState,
+//   epoch: Epoch,
+//   shard: Shard) -> Tuple[Crosslink, List[ValidatorIndex]]:
+// attestations = [a for a in get_matching_source_attestations(state, epoch) if a.data.crosslink.shard == shard]
+// crosslinks = list(filter(
+//   lambda c: hash_tree_root(state.current_crosslinks[shard]) in (c.parent_root, hash_tree_root(c)),
+//   [a.data.crosslink for a in attestations]
+// ))
+// # Winning crosslink has the crosslink data root with the most balance voting for it (ties broken lexicographically)
+// winning_crosslink = max(crosslinks, key=lambda c: (
+//   get_attesting_balance(state, [a for a in attestations if a.data.crosslink == c]), c.data_root
+// ), default=Crosslink())
+// winning_attestations = [a for a in attestations if a.data.crosslink == winning_crosslink]
+// return winning_crosslink, get_unslashed_attesting_indices(state, winning_attestations)
+
 
 export function getWinningCrosslinkAndAttestingIndices(
   state: BeaconState,
   epoch: Epoch,
   shard: Shard
 ): [Crosslink, ValidatorIndex[]] {
-  const shardAttestations = getMatchingSourceAttestations(state, epoch)
-    .filter((a) => a.data.shard === shard);
-  const shardCrosslinks = shardAttestations
-    .map((a) => getCrosslinkFromAttestationData(state, a.data));
-  const currentCrosslinkRoot = hashTreeRoot(state.currentCrosslinks[shard], Crosslink); 
-  const candidateCrosslinks = shardCrosslinks.filter((c) => (
-    currentCrosslinkRoot.equals(c.previousCrosslinkRoot) ||
+
+  const attestations = getMatchingSourceAttestations(state, epoch)
+    .filter((a) => a.data.crosslink.shard === shard);
+
+  let output: Crosslink[];
+  attestations.forEach((a) => output.push(a.data.crosslink));
+
+  const currentCrosslinkRoot = hashTreeRoot(state.currentCrosslinks[shard], Crosslink);
+  const crosslinks = output.filter((c) => (
+    currentCrosslinkRoot.equals(c.parentRoot) ||
     currentCrosslinkRoot.equals(hashTreeRoot(c, Crosslink))
   ));
 
-  if (candidateCrosslinks.length === 0) {
-    return [{
-      epoch: GENESIS_EPOCH,
-      previousCrosslinkRoot: ZERO_HASH,
-      crosslinkDataRoot: ZERO_HASH,
-    }, []];
+  const defultCrossLink: Crosslink= {
+    shard: GENESIS_START_SHARD,
+    startEpoch: GENESIS_EPOCH,
+    endEpoch: GENESIS_EPOCH,
+    parentRoot: ZERO_HASH,
+    dataRoot: ZERO_HASH,
+  };
+
+  if (crosslinks.length === 0) {
+    return [defultCrossLink, []];
   }
-  
   const getAttestationsFor = (crosslink: Crosslink) => 
-    shardAttestations.filter((a) =>
-      serialize(getCrosslinkFromAttestationData(state, a.data), Crosslink)
-        .equals(serialize(crosslink, Crosslink)));
+    attestations.filter((a) => a.data.crosslink === crosslink);
 
   // Winning crosslink has the crosslink data root with the most balance voting
   // for it (ties broken lexicographically)
-  const winningCrosslink = candidateCrosslinks
+  const winningCrosslink = crosslinks
     .map((crosslink) => ({
       crosslink,
       balance: getAttestingBalance(
@@ -128,13 +134,15 @@ export function getWinningCrosslinkAndAttestingIndices(
       if (b.balance.gt(a.balance)) {
         return b;
       } else if (b.balance.eq(a.balance)) {
-        if ((deserialize(b.crosslink.crosslinkDataRoot, uint256) as uint256)
-          .gt(deserialize(a.crosslink.crosslinkDataRoot, uint256) as uint256)) {
+        if ((deserialize(b.crosslink.dataRoot, uint256) as uint256)
+          .gt(deserialize(a.crosslink.dataRoot, uint256) as uint256)) {
           return b;
         }
       }
       return a;
     }).crosslink;
-  return [winningCrosslink
-    , getUnslashedAttestingIndices(state, getAttestationsFor(winningCrosslink))];
+  const winningAttestation = attestations.filter((a) =>
+    a.data.crosslink === winningCrosslink
+  );
+  return [winningCrosslink, getUnslashedAttestingIndices(state, winningAttestation)];
 }

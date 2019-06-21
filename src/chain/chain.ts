@@ -16,7 +16,7 @@ import {ILogger} from "../logger";
 
 import {getEmptyBlock, getGenesisBeaconState} from "./genesis";
 
-import {executeStateTransition} from "./stateTransition";
+import {stateTransition} from "./stateTransition";
 
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 import {getAttestingIndices} from "./stateTransition/util";
@@ -106,7 +106,7 @@ export class BeaconChain extends EventEmitter {
     // forward processed block for additional processing
     this.emit('processedBlock', block);
 
-    this.forkChoice.addBlock(block.slot, hashTreeRoot(block, BeaconBlock), block.previousBlockRoot);
+    this.forkChoice.addBlock(block.slot, hashTreeRoot(block, BeaconBlock), block.parentRoot);
 
     return state;
   }
@@ -125,7 +125,7 @@ export class BeaconChain extends EventEmitter {
 
   public async isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean> {
     // The parent block with root block.previous_block_root has been processed and accepted.
-    const hasParent = await this.db.hasBlock(block.previousBlockRoot);
+    const hasParent = await this.db.hasBlock(block.parentRoot);
     if (!hasParent) {
       return false;
     }
@@ -142,7 +142,7 @@ export class BeaconChain extends EventEmitter {
   }
 
   private runStateTransition(block: BeaconBlock | null, state: BeaconState): BeaconState {
-    const newState = executeStateTransition(state, block);
+    const newState = stateTransition(state, block);
     // TODO any extra processing, eg post epoch
     // TODO update ffg checkpoints (requires updated state object)
     return newState;

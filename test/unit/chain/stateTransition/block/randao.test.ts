@@ -35,7 +35,7 @@ describe('process block - randao', function () {
     getBeaconProposerStub.returns(0);
     blsStub.verify.returns(false);
     try {
-      processRandao(state, block);
+      processRandao(state, block.body);
       expect.fail();
     } catch (e) {
       expect(getBeaconProposerStub.calledOnce).to.be.true;
@@ -50,7 +50,7 @@ describe('process block - randao', function () {
     getBeaconProposerStub.returns(0);
     blsStub.verify.returns(true);
     try {
-      processRandao(state, block);
+      processRandao(state, block.body);
       expect(getBeaconProposerStub.calledOnce).to.be.true;
       expect(blsStub.verify.calledOnce).to.be.true;
       expect(state.latestRandaoMixes[getCurrentEpoch(state) % LATEST_RANDAO_MIXES_LENGTH]).to.not.be.null;

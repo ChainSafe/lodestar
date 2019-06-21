@@ -32,7 +32,7 @@ describe('process block - eth1data', function () {
     });
     const block = generateEmptyBlock();
     block.body.eth1Data = vote;
-    processEth1Data(state, block);
+    processEth1Data(state, block.body);
     expect(serialize(state.latestEth1Data, Eth1Data).toString('hex'))
       .to.be.equal(serialize(vote, Eth1Data).toString('hex'));
   });
@@ -46,7 +46,7 @@ describe('process block - eth1data', function () {
     };
     const block = generateEmptyBlock();
     block.body.eth1Data = vote;
-    processEth1Data(state, block);
+    processEth1Data(state, block.body);
     expect(serialize(state.latestEth1Data, Eth1Data).toString('hex'))
       .to.not.be.equal(serialize(vote, Eth1Data).toString('hex'));
   });
