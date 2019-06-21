@@ -41,6 +41,18 @@ export const Fork: SimpleContainerType = {
   ],
 };
 
+//SPEC 0.7
+// class Crosslink(Container):
+// # Shard number
+// shard: uint64
+// # Crosslinking data from epochs [start....end-1]
+// start_epoch: uint64
+// end_epoch: uint64
+// # Root of the previous crosslink
+// parent_root: Bytes32
+// # Root of the crosslinked shard data since the previous crosslink
+// data_root: Bytes32
+
 export interface Crosslink {
   //Shard number
   shard: number64;
@@ -80,6 +92,20 @@ export const Eth1Data: SimpleContainerType = {
     ["blockHash", bytes32],
   ],
 };
+
+// SPEC 0.7
+// class AttestationData(Container):
+// # LMD GHOST vote
+// beacon_block_root: Bytes32
+//
+// # FFG vote
+// source_epoch: uint64
+// source_root: Bytes32
+// target_epoch: uint64
+// target_root: Bytes32
+//
+// # Crosslink vote
+// crosslink: Crosslink
 
 export interface AttestationData {
   // LMD GHOST vote
