@@ -68,9 +68,9 @@ export interface Crosslink {
 export const Crosslink: SimpleContainerType = {
   name: "Crosslink",
   fields: [
-    ["shard", uint64],
-    ["startEpoch", uint64],
-    ["endEpoch", uint64],
+    ["shard", number64],
+    ["startEpoch", number64],
+    ["endEpoch", number64],
     ["parentRoot", Bytes32],
     ["dataRoot", Bytes32],
   ],
@@ -126,9 +126,7 @@ export const AttestationData: SimpleContainerType = {
     ["sourceRoot", bytes32],
     ["targetEpoch", Epoch],
     ["targetRoot", bytes32],
-    ["shard", Shard],
-    ["previousCrosslinkRoot", bytes32],
-    ["crosslinkDataRoot", bytes32],
+    ["crosslink", Crosslink],
   ],
 };
 

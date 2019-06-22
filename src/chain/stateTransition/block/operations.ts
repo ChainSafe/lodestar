@@ -34,7 +34,7 @@ import {processTransfer} from "./transfers";
 // for operation in operations:
 // function(state, operation)
 
-export function processOperations(state: BeaconState, body: BeaconBlockBody): void {
+export default function processOperations(state: BeaconState, body: BeaconBlockBody): void {
   // Verify that outstanding deposits are processed up to the maximum number of deposits
   assert(body.deposits.length == Math.min(MAX_DEPOSITS,
     state.latestEth1Data.depositCount - state.depositIndex));

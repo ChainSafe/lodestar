@@ -9,6 +9,7 @@ export async function assembleAttestationData(
   headState: BeaconState,
   headBlock: BeaconBlock,
   shard: Shard): Promise<AttestationData> {
+
   const currentEpoch = getCurrentEpoch(headState);
   const epochStartSlot = getEpochStartSlot(currentEpoch);
   let epochBoundaryBlock: BeaconBlock;
@@ -17,13 +18,14 @@ export async function assembleAttestationData(
   } else {
     epochBoundaryBlock = await db.getBlock(getBlockRoot(headState, epochStartSlot));
   }
+
   return {
     crosslink: {
       startEpoch:GENESIS_EPOCH,
       endEpoch:FAR_FUTURE_EPOCH,
       dataRoot: ZERO_HASH,
       shard: shard,
-      parentRoot:  hashTreeRoot(headState.currentCrosslinks[shard], Crosslink),
+      parentRoot: hashTreeRoot(headState.currentCrosslinks[shard], Crosslink) //produces exceptions...
     },
     beaconBlockRoot: signingRoot(headBlock, BeaconBlock),
     sourceEpoch: headState.currentJustifiedEpoch,

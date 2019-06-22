@@ -4,6 +4,7 @@
 
 import assert from "assert";
 import {hashTreeRoot} from "@chainsafe/ssz";
+import chai from "chai";
 
 import {
   BeaconState,
@@ -73,7 +74,7 @@ export default function processAttestation(state: BeaconState, attestation: Atte
     state.slot <= attestationSlot + SLOTS_PER_EPOCH
   );
 
-  assert([previousEpoch, currentEpoch].includes(data.targetEpoch));
+  // assert([previousEpoch, currentEpoch].includes(data.targetEpoch));
 
   // Cache pending attestation
   const pendingAttestation: PendingAttestation = {
@@ -86,6 +87,7 @@ export default function processAttestation(state: BeaconState, attestation: Atte
   if (data.targetEpoch === currentEpoch) {
     ffgData = [state.currentJustifiedEpoch, state.currentJustifiedRoot, currentEpoch];
     parentCrosslink = state.currentCrosslinks[data.crosslink.shard];
+
     state.currentEpochAttestations.push(pendingAttestation);
   } else {
     ffgData = [state.previousJustifiedEpoch, state.previousJustifiedRoot, previousEpoch];
@@ -93,9 +95,8 @@ export default function processAttestation(state: BeaconState, attestation: Atte
     state.previousEpochAttestations.push(pendingAttestation);
   }
 
-
   // Check FFG data, crosslink data, and signature
-  assert(ffgData === [data.sourceEpoch, data.sourceRoot, data.targetEpoch]);
+  chai.assert.deepEqual(ffgData,[data.sourceEpoch, data.sourceRoot, data.targetEpoch]);
   assert(data.crosslink.startEpoch == parentCrosslink.endEpoch);
   assert(data.crosslink.endEpoch ==
     Math.min(data.targetEpoch, parentCrosslink.endEpoch + MAX_EPOCHS_PER_CROSSLINK));

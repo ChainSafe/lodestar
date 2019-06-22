@@ -3,7 +3,6 @@ import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 import {eth1DataFromYaml} from "./eth1Data";
 import {proposerSlashingFromYaml} from "./proposerSlashing";
 import {attestationFromYaml} from "./attestation";
-import voluntaryExits from "../../src/chain/stateTransition/block/voluntaryExits";
 import {transfersFromYaml} from "./transfer";
 import {voluntaryExitsFromYaml} from "./voluntaryExits";
 import {depositsFromYaml} from "./deposit";

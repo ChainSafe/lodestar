@@ -10,7 +10,7 @@ import {
 import processEth1Data from "./eth1Data";
 import processBlockHeader from "./blockHeader";
 import processRandao from "./randao";
-import {processOperations} from "./operations";
+import processOperations from "./operations";
 
 
 export function processBlock(state: BeaconState, block: BeaconBlock): void {

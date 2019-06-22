@@ -43,7 +43,11 @@ describe('process block - attester slashings', function () {
       processAttesterSlashing(state, attesterSlashing);
       expect.fail();
     } catch (e) {
-      expect(validateIndexedAttestationStub.calledOnceWith(state, attesterSlashing.attestation1)).to.be.true;
+      expect(validateIndexedAttestationStub.callCount).equals(2);
+      expect(validateIndexedAttestationStub.getCall(0)
+        .calledWithExactly(state, attesterSlashing.attestation1)).to.be.true;
+      expect(validateIndexedAttestationStub.getCall(1)
+        .calledWithExactly(state, attesterSlashing.attestation2)).to.be.true;
     }
   });
 
