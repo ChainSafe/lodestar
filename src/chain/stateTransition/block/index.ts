@@ -13,6 +13,13 @@ import processRandao from "./randao";
 import processOperations from "./operations";
 
 
+// SPEC 0.7.1
+// def process_block(state: BeaconState, block: BeaconBlock) -> None:
+//   process_block_header(state, block)
+// process_randao(state, block.body)
+// process_eth1_data(state, block.body)
+// process_operations(state, block.body)
+
 export function processBlock(state: BeaconState, block: BeaconBlock): void {
   // block header
   processBlockHeader(state, block);

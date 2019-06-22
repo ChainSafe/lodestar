@@ -4,8 +4,6 @@
 
 import assert from "assert";
 import {hashTreeRoot} from "@chainsafe/ssz";
-import chai from "chai";
-
 import {
   BeaconState,
   Crosslink,
@@ -96,7 +94,7 @@ export default function processAttestation(state: BeaconState, attestation: Atte
   }
 
   // Check FFG data, crosslink data, and signature
-  chai.assert.deepEqual(ffgData,[data.sourceEpoch, data.sourceRoot, data.targetEpoch]);
+  assert(ffgData === [data.sourceEpoch, data.sourceRoot, data.targetEpoch]);
   assert(data.crosslink.startEpoch == parentCrosslink.endEpoch);
   assert(data.crosslink.endEpoch ==
     Math.min(data.targetEpoch, parentCrosslink.endEpoch + MAX_EPOCHS_PER_CROSSLINK));
