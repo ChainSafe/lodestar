@@ -39,8 +39,9 @@ export function mostFrequent<T>(array: T[], type: AnySSZType): T[] {
   array.forEach((e, index) => {
     //We can optimize this by using faster hash like https://github.com/bevacqua/hash-sum
     const hash = hashTreeRoot(e, type).toString('hex');
-    if(hashMap.has(hash)) {
-      const desc = hashMap.get(hash);
+
+    const desc = hashMap.get(hash);
+    if(desc) {
       desc.count++;
       hashMap.set(hash, desc);
     } else {
