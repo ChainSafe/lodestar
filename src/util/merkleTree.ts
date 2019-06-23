@@ -3,7 +3,7 @@
  */
 
 import assert from "assert";
-import {bytes32, number64} from "../types";
+import {bytes, bytes32, number64} from "../types";
 import {hash} from "./crypto";
 import {intDiv} from "./math";
 import {serialize} from "@chainsafe/ssz";
@@ -14,12 +14,11 @@ export interface IProgressiveMerkleTree {
   depth(): number;
 
   /**
-   * Add a new item into the tree
-   *
-   * Return a proof to verify the item is in the tree
-   * @returns proof
+   * push new item into the tree
    */
   push(item: bytes32): void;
+
+  add(index: number64, item: bytes32): void;
 
   getProof(index: number64): bytes32[];
 
@@ -77,6 +76,11 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
   public push(item: bytes32): void {
     this._dirty = true;
     this._tree[0].push(item);
+  }
+
+  public add(index: number64, item: bytes32): void {
+    this._dirty = true;
+    this._tree[0][index] = item;
   }
 
   public getProof(index: number): bytes32[] {

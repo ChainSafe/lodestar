@@ -10,12 +10,22 @@ import {MerkleTree} from "../../../src/types";
 
 describe('util/merkleTree', function() {
   describe('ProgressiveMerkleTree', function() {
-    it("can add items", () => {
+    it("can push items", () => {
       const t = ProgressiveMerkleTree.empty(4);
       const buf = Buffer.alloc(32);
       for (let i = 1; i < 10; i++) {
         buf[0] = i;
         t.push(buf);
+      }
+      expect(true).true;
+    });
+
+    it("can add items", () => {
+      const t = ProgressiveMerkleTree.empty(4);
+      const buf = Buffer.alloc(32);
+      for (let i = 1; i < 10; i++) {
+        buf[0] = i;
+        t.add(i, buf);
       }
       expect(true).true;
     });
