@@ -2,14 +2,7 @@
  * @module chain/blockAssembly
  */
 
-import {
-  BeaconBlock,
-  BeaconBlockBody,
-  BeaconBlockHeader,
-  BeaconState,
-  bytes96,
-  Slot
-} from "../../../types";
+import {BeaconBlock, BeaconBlockBody, BeaconBlockHeader, BeaconState, bytes96, Slot} from "../../../types";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {BeaconDB} from "../../../db/api";
 import {OpPool} from "../../../opPool";
@@ -22,9 +15,10 @@ export async function assembleBlock(
   slot: Slot,
   randao: bytes96
 ): Promise<BeaconBlock> {
-  const [parentBlock, currentState] = await Promise.all([
+  const [parentBlock, currentState, merkleTree] = await Promise.all([
     db.getChainHead(),
     db.getState(),
+    db.getMerkleTree()
   ]);
   const parentHeader: BeaconBlockHeader = {
     stateRoot: parentBlock.stateRoot,
@@ -38,7 +32,7 @@ export async function assembleBlock(
     previousBlockRoot: signingRoot(parentHeader, BeaconBlockHeader),
     signature: undefined,
     stateRoot: undefined,
-    body: await assembleBody(opPool, currentState, randao),
+    body: await assembleBody(opPool, merkleTree, currentState, randao),
   };
 
   //This will effectively copy state so we avoid modifying existing state
