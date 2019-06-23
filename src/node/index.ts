@@ -51,7 +51,7 @@ class BeaconNode {
   public eth1: IEth1Notifier;
   public network: Service;
   public chain: Service;
-  public opPool: Service;
+  public opPool: OpPool;
   public rpc: Service;
   public sync: Service;
   private logger: ILogger;
@@ -84,7 +84,7 @@ class BeaconNode {
     this.eth1 = new EthersEth1Notifier(
       this.conf.eth1,
       {
-        db: this.db,
+        opPool: this.opPool,
         logger: this.logger
       }
     );

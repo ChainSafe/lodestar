@@ -12,15 +12,16 @@ import defaults from "../../../src/eth1/dev/defaults";
 import chaiAsPromised from "chai-as-promised";
 import {generateDeposit} from "../../utils/deposit";
 import {number64} from "../../../src/types";
-import {BeaconDB} from "../../../src/db/api";
 import {ILogger, WinstonLogger} from "../../../src/logger";
+import {OpPool} from "../../../src/opPool";
+import BN from "bn.js";
 
 
 chai.use(chaiAsPromised);
 describe("Eth1Notifier", () => {
   const ganacheProvider = ganache.provider();
   const provider = new ethers.providers.Web3Provider(ganacheProvider);
-  let db;
+  let opPool;
   let eth1;
   let sandbox;
   let logger: ILogger = new WinstonLogger();
@@ -28,13 +29,13 @@ describe("Eth1Notifier", () => {
   before(async function (): Promise<void> {
     logger.silent(true);
     sandbox = sinon.createSandbox();
-    db = sandbox.createStubInstance(BeaconDB);
+    opPool = sandbox.createStubInstance(OpPool);
     eth1 = new EthersEth1Notifier({
       depositContract: defaults,
       provider: provider
     },
     {
-      db: db,
+      opPool,
       logger: logger
     });
   });
@@ -83,7 +84,7 @@ describe("Eth1Notifier", () => {
         contract: stubContract
       },
       {
-        db: db,
+        opPool,
         logger: logger
       }
       );
@@ -111,7 +112,7 @@ describe("Eth1Notifier", () => {
       expect(stubProvider.on.withArgs('block', sinon.match.any).calledOnce).to.be.true;
       expect(stubContract.on.withArgs('Deposit', sinon.match.any).called).to.be.true;
       expect(stubContract.on.withArgs('Eth2Genesis', sinon.match.any).called).to.be.true;
-      expect(db.setDeposit.calledOnce).to.be.true;
+      expect(opPool.receiveDeposit.calledOnce).to.be.true;
     }
   );
 
@@ -146,7 +147,7 @@ describe("Eth1Notifier", () => {
         contract
       },
       {
-        db: db,
+        opPool,
         logger: logger
       });
 
@@ -169,7 +170,7 @@ describe("Eth1Notifier", () => {
         contract
       },
       {
-        db: db,
+        opPool,
         logger: logger
       });
       contract.removeAllListeners.returns(null);
@@ -188,7 +189,7 @@ describe("Eth1Notifier", () => {
     const amount = "0x" + serialize(32000000000, number64).toString("hex");
     const signature = "0x" + Buffer.alloc(94).toString("hex");
     const merkleTreeIndex = "0x" + serialize(0 , number64).toString("hex");
-    db.setDeposit.resolves(null);
+    opPool.receiveDeposit.resolves(null);
     await eth1.processDepositLog(pubKey, withdrawalCredentials, amount, signature, merkleTreeIndex);
     assert(cb.calledOnce, "deposit event did not fire");
   });
@@ -198,7 +199,7 @@ describe("Eth1Notifier", () => {
     eth1.on("eth2genesis", cb);
 
     const depositRootHex = "0x" + Buffer.alloc(32).toString("hex");
-    const depositCountHex = "0x0000000000000000";
+    const depositCountHex = "0x" + new BN(2).toBuffer('le', 6).toString('hex');
     const timeBuf = Buffer.alloc(8);
     const unixTimeNow = Math.floor(Date.now() / 1000);
     timeBuf.writeUInt32LE(unixTimeNow, 0);
@@ -208,8 +209,7 @@ describe("Eth1Notifier", () => {
       generateDeposit(0),
       generateDeposit(1),
     ];
-    db.getDeposits.resolves(genesisDeposits);
-    db.deleteDeposits.withArgs(genesisDeposits).resolves(null);
+    opPool.getDeposits.resolves(genesisDeposits);
     await eth1.processEth2GenesisLog(depositRootHex, depositCountHex, timeHex, event);
     assert(
       cb.withArgs(sinon.match.any, genesisDeposits, sinon.match.any).calledOnce,
@@ -248,7 +248,7 @@ describe("Eth1Notifier", () => {
       contract
     },
     {
-      db:db,
+      opPool,
       logger: logger
     });
     const testDepositRoot = Buffer.alloc(32);
