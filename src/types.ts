@@ -32,6 +32,12 @@ export interface SimpleContainerType {
   fields: [string, AnySSZType][];
 }
 
+/**
+ * A convenient interface for specifying types
+ *
+ * In most cases, types are specified by users in simple form.
+ * They will be parsed to a [[FullSSZType]] before any processing.
+ */
 export type SimpleSSZType = SimplePrimitiveType | SimpleListType | SimpleVectorType | SimpleContainerType;
 
 // Full types
@@ -88,6 +94,11 @@ export interface ContainerType {
   fields: [string, FullSSZType][];
 }
 
+/**
+ * A more consistent and verbose interface for specifying types
+ *
+ * Full types are used internally.
+ */
 export type FullSSZType = UintType | BoolType | BytesType | ArrayType | ContainerType;
 
 // simple + full types
