@@ -4,17 +4,15 @@
 
 import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
-import {deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
+import {deserialize} from "@chainsafe/ssz";
 
-import {bytes32, Deposit, Eth1Data, number64, Gwei, DepositData} from "../../types";
+import {bytes32, Deposit, Eth1Data, Gwei, number64} from "../../types";
 
 import {IEth1Notifier, IEth1Options} from "../interface";
 import {isValidAddress} from "../../util/address";
-import {BeaconDB} from "../../db";
 import {Log} from "ethers/providers";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants/minimal";
 import {ILogger} from "../../logger";
-import {IProgressiveMerkleTree, ProgressiveMerkleTree} from "../../util/merkleTree";
 import {OpPool} from "../../opPool";
 
 export interface EthersEth1Options extends IEth1Options {
