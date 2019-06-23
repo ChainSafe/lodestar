@@ -15,7 +15,11 @@ export class ReputationStore {
     this.reputations = new Map<string, Reputation>();
   }
   public add(peerId: string): Reputation {
-    const reputation = {latestHello: null, latestStatus: null, score: 0};
+    const reputation = {
+      latestHello: null,
+      latestStatus: null,
+      score: 0
+    };
     this.reputations.set(peerId, reputation);
     return reputation;
   }
