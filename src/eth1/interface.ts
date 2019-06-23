@@ -59,11 +59,6 @@ export interface IEth1Notifier extends EventEmitter {
   ): Promise<Deposit[]>;
 
   /**
-   * Return an array of deposits to process at genesis event
-   */
-  genesisDeposits(): Promise<Deposit[]>;
-
-  /**
    * Return the latest block hash
    */
   latestBlockHash(): bytes32;

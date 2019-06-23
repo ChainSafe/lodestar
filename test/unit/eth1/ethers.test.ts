@@ -111,7 +111,7 @@ describe("Eth1Notifier", () => {
       expect(stubProvider.on.withArgs('block', sinon.match.any).calledOnce).to.be.true;
       expect(stubContract.on.withArgs('Deposit', sinon.match.any).called).to.be.true;
       expect(stubContract.on.withArgs('Eth2Genesis', sinon.match.any).called).to.be.true;
-      expect(db.setGenesisDeposit.calledOnce).to.be.true;
+      expect(db.setDeposit.calledOnce).to.be.true;
     }
   );
 
@@ -188,7 +188,7 @@ describe("Eth1Notifier", () => {
     const amount = "0x" + serialize(32000000000, number64).toString("hex");
     const signature = "0x" + Buffer.alloc(94).toString("hex");
     const merkleTreeIndex = "0x" + serialize(0 , number64).toString("hex");
-    db.setGenesisDeposit.resolves(null);
+    db.setDeposit.resolves(null);
     await eth1.processDepositLog(pubKey, withdrawalCredentials, amount, signature, merkleTreeIndex);
     assert(cb.calledOnce, "deposit event did not fire");
   });
@@ -208,8 +208,8 @@ describe("Eth1Notifier", () => {
       generateDeposit(0),
       generateDeposit(1),
     ];
-    db.getGenesisDeposits.resolves(genesisDeposits);
-    db.deleteGenesisDeposits.withArgs(genesisDeposits).resolves(null);
+    db.getDeposits.resolves(genesisDeposits);
+    db.deleteDeposits.withArgs(genesisDeposits).resolves(null);
     await eth1.processEth2GenesisLog(depositRootHex, depositCountHex, timeHex, event);
     assert(
       cb.withArgs(sinon.match.any, genesisDeposits, sinon.match.any).calledOnce,
