@@ -1,8 +1,8 @@
 /**
  * @module rpc/api
  */
-import {BeaconChain} from "../../chain";
-import {BeaconDB} from "../../db/api";
+import {IBeaconChain} from "../../chain";
+import {IBeaconDb} from "../../db/api";
 import {IEth1Notifier} from "../../eth1";
 
 export interface IApi {
@@ -13,5 +13,5 @@ export interface IApi {
 }
 
 export interface IApiConstructor {
-  new(args, modules: {chain: BeaconChain; db: BeaconDB; eth1: IEth1Notifier}): IApi;
+  new(args, modules: {chain: IBeaconChain; db: IBeaconDb; eth1: IEth1Notifier}): IApi;
 }
