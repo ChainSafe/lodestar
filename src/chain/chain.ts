@@ -20,8 +20,9 @@ import {stateTransition} from "./stateTransition";
 
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 import {getAttestingIndices} from "./stateTransition/util";
+import {IBeaconChain} from "./interface";
 
-export class BeaconChain extends EventEmitter {
+export class BeaconChain extends EventEmitter implements IBeaconChain {
   public chain: string;
   public genesisTime: number64;
   public forkChoice: LMDGHOST;
@@ -91,9 +92,10 @@ export class BeaconChain extends EventEmitter {
     for (let i = 0; i < validators.length; i++) {
       this.forkChoice.addAttestation(attestation.data.beaconBlockRoot, validators[i], balances[i]);
     }
+    this.emit('processedAttestation', attestation);
   }
 
-  public async receiveBlock(block: BeaconBlock): Promise<BeaconState> {
+  public async receiveBlock(block: BeaconBlock): Promise<void> {
     let state = await this.db.getState();
     const isValidBlock = await this.isValidBlock(state, block);
     assert(isValidBlock);
@@ -103,12 +105,10 @@ export class BeaconChain extends EventEmitter {
 
     await this.db.setBlock(block);
 
+    this.forkChoice.addBlock(block.slot, hashTreeRoot(block, BeaconBlock), block.parentRoot);
+ 
     // forward processed block for additional processing
     this.emit('processedBlock', block);
-
-    this.forkChoice.addBlock(block.slot, hashTreeRoot(block, BeaconBlock), block.parentRoot);
-
-    return state;
   }
 
   public async applyForkChoiceRule(): Promise<void> {

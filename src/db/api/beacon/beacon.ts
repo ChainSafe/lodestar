@@ -159,6 +159,15 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
     return await this.db.get(encodeKey(Bucket.attestation, root));
   }
 
+  public async hasAttestation(root: bytes32): Promise<boolean> {
+    try {
+      await this.getAttestation(root);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   public async setAttestation(attestation: Attestation): Promise<void> {
     const attestationRoot = hashTreeRoot(attestation, Attestation);
     await this.db.put(
