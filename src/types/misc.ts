@@ -15,11 +15,10 @@ import {
   bytes4,
   bytes32,
   Epoch,
-  Shard,
   Slot,
   ValidatorIndex,
   number64,
-  Gwei, uint64, Bytes32,
+  Gwei,
 } from "./primitive";
 
 import {SLOTS_PER_HISTORICAL_ROOT} from "../constants";
@@ -60,9 +59,9 @@ export interface Crosslink {
   startEpoch: number64;
   endEpoch: number64;
   //Root of the previous crosslink
-  parentRoot: Bytes32;
+  parentRoot: bytes32;
   //Root of the crosslinked shard data since the previous crosslink
-  dataRoot: Bytes32;
+  dataRoot: bytes32;
 }
 
 export const Crosslink: SimpleContainerType = {
@@ -71,8 +70,8 @@ export const Crosslink: SimpleContainerType = {
     ["shard", number64],
     ["startEpoch", number64],
     ["endEpoch", number64],
-    ["parentRoot", Bytes32],
-    ["dataRoot", Bytes32],
+    ["parentRoot", bytes32],
+    ["dataRoot", bytes32],
   ],
 };
 

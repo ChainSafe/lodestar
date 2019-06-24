@@ -33,7 +33,7 @@ export function processSlots(state: BeaconState, slot: Slot): void{
   while (state.slot < slot){
     processSlot(state);
     // Process epoch on the first slot of the next epoch
-    if ((state.slot + 1) % SLOTS_PER_EPOCH == 0){
+    if ((state.slot + 1) % SLOTS_PER_EPOCH === 0){
       processEpoch(state);
     }
     state.slot++;
@@ -62,7 +62,7 @@ function processSlot(state: BeaconState): void {
   state.latestStateRoots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previousStateRoot;
 
   // Cache latest block header state root
-  if (state.latestBlockHeader.stateRoot == ZERO_HASH){
+  if (state.latestBlockHeader.stateRoot.equals(ZERO_HASH)) {
     state.latestBlockHeader.stateRoot = previousStateRoot;
   }
 
