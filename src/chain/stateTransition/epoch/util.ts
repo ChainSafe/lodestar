@@ -96,10 +96,7 @@ export function getWinningCrosslinkAndAttestingIndices(
 
   const attestations = getMatchingSourceAttestations(state, epoch)
     .filter((a) => a.data.crosslink.shard === shard);
-
-  let output: Crosslink[];
-  attestations.forEach((a) => output.push(a.data.crosslink));
-
+  const output = attestations.map((a) => a.data.crosslink)
   const currentCrosslinkRoot = hashTreeRoot(state.currentCrosslinks[shard], Crosslink);
   const crosslinks = output.filter((c) => (
     currentCrosslinkRoot.equals(c.parentRoot) ||
