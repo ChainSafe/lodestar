@@ -11,7 +11,7 @@ import {stateTransition} from "../../../../src/chain/stateTransition";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
 describeSpecTest(
-  join(__dirname, "../../test-cases/tests/sanity/slots/sanity_slots_mainnet.yaml.yaml"),
+  join(__dirname, "../../test-cases/tests/sanity/slots/sanity_slots_mainnet.yaml"),
   (state: BeaconState, slots: number64) => {
     for(let i = 0; i < slots; i++) {
       stateTransition(state, null, false);
