@@ -6,27 +6,26 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import {blockFromYaml} from "../../../utils/block";
-import {BeaconBlock, BeaconState, Validator} from "../../../../src/types";
+import {BeaconBlock, BeaconState, number64, Validator} from "../../../../src/types";
 import {stateTransition} from "../../../../src/chain/stateTransition";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
 describeSpecTest(
-  join(__dirname, "../../test-cases/tests/sanity/blocks/blocksanity_s_mainnet.yaml"),
-  (state: BeaconState, blocks: BeaconBlock[]) => {
-    blocks.forEach((block) => {
-      stateTransition(state, block, false);
-    });
+  join(__dirname, "../../test-cases/tests/sanity/slots/sanity_slots_mainnet.yaml.yaml"),
+  (state: BeaconState, slots: number64) => {
+    for(let i = 0; i < slots; i++) {
+      stateTransition(state, null, false);
+    }
     return state;
   },
   (input) => {
     if(input.bls_setting && input.bls_setting.toNumber() === 2) {
       rewire({
         verify: sinon.stub().returns(true),
-        verifyMultiple: sinon.stub().returns(true),
-        aggregatePubkeys: sinon.stub().returns(Buffer.alloc(48))
+        verifyMultiple: sinon.stub().returns(true)
       });
     }
-    return [stateFromYaml(input.pre), input.blocks.map(blockFromYaml)];
+    return [stateFromYaml(input.pre), input.slots.toNumber()];
   },
   (expected) => {
     return stateFromYaml(expected.post);
@@ -43,7 +42,7 @@ describeSpecTest(
       expected.validatorRegistry = expected.validatorRegistry.map(b => hashTreeRoot(b, Validator));
       actual.validatorRegistry = actual.validatorRegistry.map(b => hashTreeRoot(b, Validator));
     }
-    expect(expected.balances).to.be.deep.equal(actual.balances);
+    expect(expected).to.be.deep.equal(actual);
     restore();
   },
   0
