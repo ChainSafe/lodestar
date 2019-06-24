@@ -98,7 +98,7 @@ export default function processAttestation(state: BeaconState, attestation: Atte
   assert(data.crosslink.startEpoch == parentCrosslink.endEpoch);
   assert(data.crosslink.endEpoch ==
     Math.min(data.targetEpoch, parentCrosslink.endEpoch + MAX_EPOCHS_PER_CROSSLINK));
-  assert(data.crosslink.parentRoot == hashTreeRoot(parentCrosslink, Crosslink));
-  assert(data.crosslink.dataRoot == ZERO_HASH);   // [to be removed in phase 1]
+  assert(data.crosslink.parentRoot.equals( hashTreeRoot(parentCrosslink, Crosslink)));
+  assert(data.crosslink.dataRoot.equals(ZERO_HASH));   // [to be removed in phase 1]
   validateIndexedAttestation(state, convertToIndexed(state, attestation));
 }
