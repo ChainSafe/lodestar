@@ -3,7 +3,7 @@
  */
 
 import assert from "assert";
-import {deserialize, hashTreeRoot} from "@chainsafe/ssz";
+import {deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
 
 import {
   BeaconState, PendingAttestation,
@@ -96,7 +96,7 @@ export function getWinningCrosslinkAndAttestingIndices(
 
   const attestations = getMatchingSourceAttestations(state, epoch)
     .filter((a) => a.data.crosslink.shard === shard);
-  const output = attestations.map((a) => a.data.crosslink)
+  const output = attestations.map((a) => a.data.crosslink);
   const currentCrosslinkRoot = hashTreeRoot(state.currentCrosslinks[shard], Crosslink);
   const crosslinks = output.filter((c) => (
     currentCrosslinkRoot.equals(c.parentRoot) ||
@@ -115,7 +115,8 @@ export function getWinningCrosslinkAndAttestingIndices(
     return [defultCrossLink, []];
   }
   const getAttestationsFor = (crosslink: Crosslink) => 
-    attestations.filter((a) => a.data.crosslink === crosslink);
+    attestations.filter((a) =>
+      serialize(a.data.crosslink, Crosslink).equals(serialize(crosslink, Crosslink)));
 
   // Winning crosslink has the crosslink data root with the most balance voting
   // for it (ties broken lexicographically)
@@ -139,7 +140,6 @@ export function getWinningCrosslinkAndAttestingIndices(
       return a;
     }).crosslink;
   const winningAttestation = attestations.filter((a) =>
-    a.data.crosslink === winningCrosslink
-  );
+    serialize( a.data.crosslink, Crosslink).equals(serialize(winningCrosslink, Crosslink)));
   return [winningCrosslink, getUnslashedAttestingIndices(state, winningAttestation)];
 }
