@@ -148,6 +148,9 @@ export interface IBeaconDb {
    */
   getAttestation(attestationRoot: bytes32): Promise<Attestation>;
 
+
+  hasAttestation(attestationRoot: bytes32): Promise<boolean>;
+
   /**
    * Put an attestation into the db
    */
