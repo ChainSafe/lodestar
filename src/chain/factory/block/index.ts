@@ -43,7 +43,7 @@ export async function assembleBlock(
 
   //This will effectively copy state so we avoid modifying existing state
   const nextState = {...currentState};
-  processBlock(nextState, block);
+  processBlock(nextState, block, false);
 
   block.stateRoot = hashTreeRoot(nextState, BeaconState);
 

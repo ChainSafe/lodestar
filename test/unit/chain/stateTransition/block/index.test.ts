@@ -37,7 +37,7 @@ describe('process block', function () {
   });
 
   it('should process block', function () {
-    processBlock(generateState(), generateEmptyBlock());
+    processBlock(generateState(), generateEmptyBlock(), false);
     expect(processEth1Stub.calledOnce).to.be.true;
     expect(processBlockHeaderStub.calledOnce).to.be.true;
     expect(processRandaoStub.calledOnce).to.be.true;
