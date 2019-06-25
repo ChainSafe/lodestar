@@ -653,10 +653,10 @@
     chai "^4.2.0"
     js-yaml "^3.13.1"
 
-"@chainsafe/ssz@^0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.4.1.tgz#9d9fd6f99aceb7c6e3df9110ae451e6dec9ebbec"
-  integrity sha512-+lIE6do4R9E4y4Ls7eRxYuG/4vnB1PNLdtsK/PqPJfkL1S2mu7UXT6FqMwAVxEN71wpaGa5OhohTqEkv7HIz6w==
+"@chainsafe/ssz@^0.4.2":
+  version "0.4.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.4.2.tgz#052b985ec2ba61b42e6daceed63adcb218382256"
+  integrity sha512-COFojJn9r9aCBni5Ufa03yfnXVGGDh5tvojbD3N++7MfbNn1XQlJV5d+PrSwVDv+84BvAtOBzRMHlXUkhvPXyw==
   dependencies:
     "@types/bn.js" "^4.11.4"
     assert "^1.4.1"
