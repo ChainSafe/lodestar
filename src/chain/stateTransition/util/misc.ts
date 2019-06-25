@@ -41,7 +41,6 @@ import {getActiveValidatorIndices} from "./validator";
 import {generateSeed} from "./seed";
 
 import {hashTreeRoot} from "@chainsafe/ssz";
-import BN from "bn.js";
 import {BLSDomain} from "@chainsafe/bls-js/lib/types";
 
 

@@ -3,22 +3,30 @@
  */
 
 import assert from "assert";
-import {deserialize, serialize, hashTreeRoot} from "@chainsafe/ssz";
+import {deserialize, equals, hashTreeRoot} from "@chainsafe/ssz";
 
 import {
-  BeaconState, PendingAttestation,
-  Shard, ValidatorIndex, Gwei, Crosslink, Epoch, AttestationData,
+  AttestationData,
+  BeaconState,
+  Crosslink,
+  Epoch,
+  Gwei,
+  PendingAttestation,
+  Shard,
   uint256,
+  ValidatorIndex,
 } from "../../../types";
-import {
-  ZERO_HASH,
-  MAX_CROSSLINK_EPOCHS,
-  GENESIS_EPOCH
-} from "../../../constants";
+import {GENESIS_EPOCH, MAX_CROSSLINK_EPOCHS, ZERO_HASH} from "../../../constants";
 
 import {
-  getActiveValidatorIndices, getCurrentEpoch, getTotalBalance, getPreviousEpoch, getBlockRoot,
-  getBlockRootAtSlot, getAttestingIndices, getAttestationDataSlot
+  getActiveValidatorIndices,
+  getAttestationDataSlot,
+  getAttestingIndices,
+  getBlockRoot,
+  getBlockRootAtSlot,
+  getCurrentEpoch,
+  getPreviousEpoch,
+  getTotalBalance
 } from "../util";
 
 
@@ -95,7 +103,7 @@ export function getWinningCrosslinkAndAttestingIndices(
     .filter((a) => a.data.shard === shard);
   const shardCrosslinks = shardAttestations
     .map((a) => getCrosslinkFromAttestationData(state, a.data));
-  const currentCrosslinkRoot = hashTreeRoot(state.currentCrosslinks[shard], Crosslink); 
+  const currentCrosslinkRoot = hashTreeRoot(state.currentCrosslinks[shard], Crosslink);
   const candidateCrosslinks = shardCrosslinks.filter((c) => (
     currentCrosslinkRoot.equals(c.previousCrosslinkRoot) ||
     currentCrosslinkRoot.equals(hashTreeRoot(c, Crosslink))
@@ -108,11 +116,11 @@ export function getWinningCrosslinkAndAttestingIndices(
       crosslinkDataRoot: ZERO_HASH,
     }, []];
   }
-  
-  const getAttestationsFor = (crosslink: Crosslink) => 
+
+  const getAttestationsFor = (crosslink: Crosslink) =>
     shardAttestations.filter((a) =>
-      serialize(getCrosslinkFromAttestationData(state, a.data), Crosslink)
-        .equals(serialize(crosslink, Crosslink)));
+      equals(getCrosslinkFromAttestationData(state, a.data), crosslink, Crosslink)
+    );
 
   // Winning crosslink has the crosslink data root with the most balance voting
   // for it (ties broken lexicographically)

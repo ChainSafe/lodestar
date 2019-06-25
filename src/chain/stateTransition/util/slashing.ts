@@ -2,7 +2,7 @@
  * @module chain/stateTransition/util
  */
 
-import {serialize} from "@chainsafe/ssz";
+import {equals, serialize} from "@chainsafe/ssz";
 
 import {AttestationData,} from "../../../types";
 
@@ -15,7 +15,7 @@ export function isSlashableAttestationData(
 ): boolean {
   return (
     // Double vote
-    (!serialize(data1, AttestationData).equals(serialize(data2, AttestationData))
+    (!equals(data1, data2, AttestationData)
       && data1.targetEpoch === data2.targetEpoch) ||
     // Surround vote
     (data1.sourceEpoch < data2.sourceEpoch &&
