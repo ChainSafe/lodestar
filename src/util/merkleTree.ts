@@ -36,36 +36,26 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
   private _tree: bytes32[][];
   private _dirty: boolean;
 
-  protected constructor(depth: number, tree: bytes32[][], zeroHashes: bytes32[]) {
+  protected constructor(depth: number, tree: bytes32[][]) {
     assert(depth > 1 && depth <= 52, "tree depth must be between 1 and 53");
     this._depth = depth;
     this._tree = tree;
-    this._zerohashes = zeroHashes;
+    this._zerohashes = this.generateZeroHashes();
     this._dirty = false;
   }
 
   public static empty(depth: number): ProgressiveMerkleTree {
     const tree = Array.from({length: depth + 1}, () => []);
-    const zerohashes = Array.from({length: depth}, () => Buffer.alloc(32));
-    for (let i = 0; i < depth - 1; i++) {
-      zerohashes[i + 1] =
-        hash(Buffer.concat([
-          zerohashes[i],
-          zerohashes[i],
-        ]));
-    }
     return new ProgressiveMerkleTree(
       depth,
-      tree,
-      zerohashes
+      tree
     );
   }
 
   public static fromObject(value: MerkleTree): ProgressiveMerkleTree {
     return new ProgressiveMerkleTree(
       value.depth,
-      value.tree,
-      value.zeroHashes
+      value.tree
     );
   }
 
@@ -132,6 +122,18 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
       this._tree[i + 1] = parent;
     }
     this._dirty = false;
+  }
+
+  private generateZeroHashes(): bytes32[] {
+    const zerohashes = Array.from({length: this._depth}, () => Buffer.alloc(32));
+    for (let i = 0; i < this._depth - 1; i++) {
+      zerohashes[i + 1] =
+        hash(Buffer.concat([
+          zerohashes[i],
+          zerohashes[i],
+        ]));
+    }
+    return zerohashes;
   }
 
 }
