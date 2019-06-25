@@ -11,7 +11,7 @@ import {bytes32, Deposit, Eth1Data, number64, Gwei} from "../../types";
 import {IEth1Notifier, IEth1Options} from "../interface";
 import {isValidAddress} from "../../util/address";
 import {BeaconDB} from "../../db";
-import {Log} from "ethers/providers";
+import {Block, Log} from "ethers/providers";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants/minimal";
 import {ILogger} from "../../logger";
 
@@ -31,13 +31,11 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   private db: BeaconDB;
 
-  private _latestBlockHash: bytes32;
-
   private genesisBlockHash: number64;
 
-  private depositCount: number;
-
   private opts: EthersEth1Options;
+
+  private _depositCount: number;
 
   private logger: ILogger;
 
@@ -49,8 +47,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     this.provider = opts.provider;
     this.contract = opts.contract;
     this.db = db;
-    this.depositCount = 0;
-    this._latestBlockHash = null;
+    this._depositCount = 0;
     this.genesisBlockHash = null;
   }
 
@@ -86,7 +83,6 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
   public async processBlockHeadUpdate(blockNumber): Promise<void> {
     this.logger.debug(`Received eth1 block ${blockNumber}`);
     const block = await this.provider.getBlock(blockNumber);
-    this._latestBlockHash = Buffer.from(block.hash.substr(2), 'hex');
     this.emit('block', block);
   }
 
@@ -107,15 +103,15 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
       this.logger.info(
         `Received validator deposit event index=${deposit.index}`
       );
-      if (deposit.index !== this.depositCount) {
+      if (deposit.index !== this._depositCount) {
         this.logger.warn(
           `Validator deposit with index=${deposit.index} received out of order. 
-          (currentCount: ${this.depositCount})`
+          (currentCount: ${this._depositCount})`
         );
         // deposit processed out of order
         return;
       }
-      this.depositCount++;
+      this._depositCount++;
       //after genesis stop storing in genesisDeposit bucket
       if (!this.genesisBlockHash) {
         await this.db.setGenesisDeposit(deposit);
@@ -181,13 +177,22 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     return this.db.getGenesisDeposits();
   }
 
-  public latestBlockHash(): bytes32 {
-    return this._latestBlockHash;
+  public async getHead(): Promise<Block> {
+    return this.getBlock('latest');
   }
 
-  public async depositRoot(): Promise<bytes32> {
-    const depositRootHex = await this.contract.get_deposit_root();
+  public async getBlock(blockHashOrBlockNumber: string | number): Promise<Block> {
+    return this.provider.getBlock(blockHashOrBlockNumber, false);
+  }
+
+  public async depositRoot(block?: string | number): Promise<bytes32> {
+    const depositRootHex = await this.contract.get_deposit_root({blockTag: block || 'latest'});
     return Buffer.from(depositRootHex.substr(2), 'hex');
+  }
+
+  public async depositCount(block?: string | number): Promise<number> {
+    const depositCountHex = await this.contract.get_deposit_count({blockTag: block || 'latest'});
+    return Buffer.from(depositCountHex.substr(2), 'hex').readUIntLE(0, 6);
   }
 
   private async initContract(): Promise<void> {

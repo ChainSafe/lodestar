@@ -7,19 +7,20 @@ import {generateEmptyBlock} from "../../../../utils/block";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {expect} from "chai";
 import {BeaconDB} from "../../../../../src/db/api";
-import {generateValidator} from "../../../../utils/validator";
+import {EthersEth1Notifier} from "../../../../../src/eth1";
 
 describe('block assembly', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let assembleBodyStub, processBlockStub, opPool, beaconDB;
+  let assembleBodyStub, processBlockStub, opPool, beaconDB, eth1;
 
   beforeEach(() => {
     assembleBodyStub = sandbox.stub(blockBodyAssembly, 'assembleBody');
     processBlockStub = sandbox.stub(blockTransitions, 'processBlock');
     opPool = sandbox.createStubInstance(OpPool);
     beaconDB = sandbox.createStubInstance(BeaconDB);
+    eth1 = sandbox.createStubInstance(EthersEth1Notifier);
   });
 
   afterEach(() => {
@@ -31,7 +32,7 @@ describe('block assembly', function () {
     beaconDB.getChainHead.resolves(generateEmptyBlock());
     assembleBodyStub.resolves(generateEmptyBlock().body);
     try {
-      const result = await assembleBlock(beaconDB, opPool, 1, Buffer.alloc(96, 0));
+      const result = await assembleBlock(beaconDB, opPool, eth1, 1, Buffer.alloc(96, 0));
       expect(result).to.not.be.null;
       expect(result.slot).to.equal(1);
       expect(result.stateRoot).to.not.be.null;

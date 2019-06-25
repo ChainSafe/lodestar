@@ -1,6 +1,8 @@
 import { expect } from "chai";
 
-import { isPlainObject } from "../../../src/util/objects";
+import {isPlainObject, mostFrequent} from "../../../src/util/objects";
+import BN from "bn.js";
+import {uint64} from "../../../src/types";
 
 
 describe('Objects helper', () => {
@@ -17,6 +19,22 @@ describe('Objects helper', () => {
     expect(isPlainObject(['foo', 'bar'])).to.be.false;
     expect(isPlainObject([])).to.be.false;
     expect(isPlainObject(null)).to.be.false;
+  });
+
+  it('return most frequent objects', () => {
+    const obj1 = new BN(1);
+    const obj2 = new BN(2);
+    const obj3 = new BN(3);
+    const array = [];
+    array.push(obj1);
+    array.push(obj1);
+    array.push(obj3);
+    array.push(obj2);
+    array.push(obj3);
+    array.push(obj1);
+    array.push(obj3);
+    const result = mostFrequent<uint64>(array, uint64);
+    expect(result).to.be.deep.equal([obj1, obj3]);
   });
 
 });

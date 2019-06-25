@@ -15,10 +15,12 @@ import {BeaconDB} from "../../../db/api";
 import {OpPool} from "../../../opPool";
 import {assembleBody} from "./body";
 import {processBlock} from "../../stateTransition/block";
+import {IEth1Notifier} from "../../../eth1";
 
 export async function assembleBlock(
   db: BeaconDB,
   opPool: OpPool,
+  eth1: IEth1Notifier,
   slot: Slot,
   randao: bytes96
 ): Promise<BeaconBlock> {
@@ -38,7 +40,7 @@ export async function assembleBlock(
     previousBlockRoot: signingRoot(parentHeader, BeaconBlockHeader),
     signature: undefined,
     stateRoot: undefined,
-    body: await assembleBody(opPool, currentState, randao),
+    body: await assembleBody(opPool, eth1, currentState, randao),
   };
 
   //This will effectively copy state so we avoid modifying existing state
