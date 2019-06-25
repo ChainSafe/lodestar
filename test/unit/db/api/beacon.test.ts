@@ -25,7 +25,7 @@ import {generateEmptyTransfer} from "../../../utils/transfer";
 import {Transfer} from "../../../../src/types";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../utils/slashings";
 import {generateDeposit} from "../../../utils/deposit";
-import {ProgressiveMerkleTree} from "../../../../src/util/merkleTree";
+import {ProgressiveMerkleTree} from "../../../../src/util/merkleTree/merkleTree";
 
 chai.use(chaiAsPromised);
 

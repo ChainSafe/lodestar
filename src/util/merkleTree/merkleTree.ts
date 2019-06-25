@@ -3,32 +3,11 @@
  */
 
 import assert from "assert";
-import {bytes, bytes32, number64} from "../types";
-import {hash} from "./crypto";
-import {intDiv} from "./math";
+import {bytes32, MerkleTree, number64} from "../../types";
+import {hash} from "../crypto";
+import {intDiv} from "../math";
 import {serialize} from "@chainsafe/ssz";
-import {MerkleTree} from "../types";
-
-export interface IProgressiveMerkleTree {
-
-  depth(): number;
-
-  /**
-   * push new item into the tree
-   */
-  push(item: bytes32): void;
-
-  add(index: number64, item: bytes32): void;
-
-  getProof(index: number64): bytes32[];
-
-  /**
-   * The merkle root of the tree
-   */
-  root(): bytes32;
-
-  serialize(): Buffer;
-}
+import {IProgressiveMerkleTree} from "./interface";
 
 export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
   private readonly _depth: number;
@@ -138,24 +117,3 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
 
 }
 
-/**
- * Verify that the given ``leaf`` is on the merkle branch ``proof``
- * starting with the given ``root``.
- */
-export function verifyMerkleBranch(
-  leaf: bytes32,
-  proof: bytes32[],
-  depth: number,
-  index: number,
-  root: bytes32,
-): boolean {
-  let value = Buffer.from(leaf);
-  for (let i = 0; i < depth; i++) {
-    if (intDiv(index, 2**i) % 2) {
-      value = hash(Buffer.concat([proof[i], value]));
-    } else {
-      value = hash(Buffer.concat([value, proof[i]]));
-    }
-  }
-  return value.equals(root);
-}

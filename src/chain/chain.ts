@@ -31,7 +31,7 @@ import {executeStateTransition} from "./stateTransition";
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 import {getAttestingIndices} from "./stateTransition/util";
 import {IBeaconChain} from "./interface";
-import {ProgressiveMerkleTree} from "../util/merkleTree";
+import {ProgressiveMerkleTree} from "../util/merkleTree/merkleTree";
 import deposits from "./stateTransition/block/deposits";
 
 export class BeaconChain extends EventEmitter implements IBeaconChain {
