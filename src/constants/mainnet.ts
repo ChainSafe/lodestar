@@ -1,6 +1,7 @@
 /**
  * @module constants
  */
+import BN from "bn.js";
 
 // Misc
 export const SHARD_COUNT = 2 ** 10; // 1024 shards
@@ -16,19 +17,19 @@ export const DEPOSIT_CONTRACT_ADDRESS = "TBD";
 export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
 
 // Gwei Values
-export const MIN_DEPOSIT_AMOUNT = 2 ** 0 * 1e9; // 1,000,000,000 Gwei
-export const MAX_EFFECTIVE_BALANCE = 2 ** 5 * 1e9; // 32,000,000,000 Gwei
-export const EJECTION_BALANCE = 2 ** 4 * 1e9; // 16,000,000,000 Gwei
-export const EFFECTIVE_BALANCE_INCREMENT = 2 ** 0 * 1e9; // 1,000,000,000 Gwei
+export const MIN_DEPOSIT_AMOUNT = new BN(2 ** 0 * 1e9); // 1,000,000,000 Gwei
+export const MAX_EFFECTIVE_BALANCE = new BN(2 ** 5 * 1e9); // 32,000,000,000 Gwei
+export const EJECTION_BALANCE = new BN(2 ** 4 * 1e9); // 16,000,000,000 Gwei
+export const EFFECTIVE_BALANCE_INCREMENT = new BN(2 ** 0 * 1e9); // 1,000,000,000 Gwei
 
 // Initial values
 export const GENESIS_SLOT = 0;
 export const GENESIS_EPOCH = 0;
 export const FAR_FUTURE_EPOCH = Infinity;
-export const ZERO_HASH = Buffer.alloc(32);
-export const BLS_WITHDRAWAL_PREFIX_BYTE = Buffer.alloc(1);
-export const EMPTY_SIGNATURE = Buffer.alloc(96);
-export const GENESIS_FORK_VERSION = Buffer.alloc(4);
+export const ZERO_HASH = Buffer.alloc(32, 0);
+export const BLS_WITHDRAWAL_PREFIX_BYTE = Buffer.alloc(1, 0);
+export const EMPTY_SIGNATURE = Buffer.alloc(96, 0);
+export const GENESIS_FORK_VERSION = Buffer.alloc(4, 0);
 export const GENESIS_START_SHARD = 0;
 
 // Time parameters
@@ -56,7 +57,7 @@ export const LATEST_SLASHED_EXIT_LENGTH = 2 ** 13; // epochs || ~36 days
 export const BASE_REWARD_QUOTIENT = 2 ** 5; // 32
 export const WHISTLEBLOWING_REWARD_QUOTIENT = 2 ** 9; // 512
 export const PROPOSER_REWARD_QUOTIENT = 2 ** 3; // 8
-export const INACTIVITY_PENALTY_QUOTIENT = 2 ** 25; // 33,554,432
+export const INACTIVITY_PENALTY_QUOTIENT = new BN(2 ** 25); // 33,554,432
 export const MIN_SLASHING_PENALTY_QUOTIENT = 2 ** 5; // 32
 
 // Max operations per block

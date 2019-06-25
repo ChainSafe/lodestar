@@ -30,10 +30,11 @@ import {executeStateTransition} from "./stateTransition";
 
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 import {getAttestingIndices} from "./stateTransition/util";
+import {IBeaconChain} from "./interface";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
 import deposits from "./stateTransition/block/deposits";
 
-export class BeaconChain extends EventEmitter {
+export class BeaconChain extends EventEmitter implements IBeaconChain {
   public chain: string;
   public genesisTime: number64;
   public forkChoice: LMDGHOST;
@@ -115,29 +116,23 @@ export class BeaconChain extends EventEmitter {
     for (let i = 0; i < validators.length; i++) {
       this.forkChoice.addAttestation(attestation.data.beaconBlockRoot, validators[i], balances[i]);
     }
+    this.emit('processedAttestation', attestation);
   }
 
-  public async receiveBlock(block: BeaconBlock): Promise<BeaconState> {
+  public async receiveBlock(block: BeaconBlock): Promise<void> {
     let state = await this.db.getState();
     const isValidBlock = await this.isValidBlock(state, block);
     assert(isValidBlock);
-
-    // process skipped slots
-    for (let i = state.slot; i < block.slot - 1; i++) {
-      state = this.runStateTransition(null, state);
-    }
 
     // process current slot
     state = this.runStateTransition(block, state);
 
     await this.db.setBlock(block);
 
-    // forward processed block for additional processing
-    this.emit('processedBlock', block);
-
     this.forkChoice.addBlock(block.slot, hashTreeRoot(block, BeaconBlock), block.previousBlockRoot);
 
-    return state;
+    // forward processed block for additional processing
+    this.emit('processedBlock', block);
   }
 
   public async applyForkChoiceRule(): Promise<void> {

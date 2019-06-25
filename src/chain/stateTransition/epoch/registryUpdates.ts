@@ -15,7 +15,7 @@ import {
 import BN from "bn.js";
 
 
-export function processRegistryUpdates(state: BeaconState): void {
+export function processRegistryUpdates(state: BeaconState): BeaconState {
   const currentEpoch = getCurrentEpoch(state);
   // Process activation eligibility and ejections
   const maxBalance = new BN(MAX_EFFECTIVE_BALANCE);
@@ -43,4 +43,5 @@ export function processRegistryUpdates(state: BeaconState): void {
       validator.activationEpoch = getDelayedActivationExitEpoch(currentEpoch);
     }
   });
+  return state;
 }

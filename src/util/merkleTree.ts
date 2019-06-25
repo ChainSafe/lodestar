@@ -149,7 +149,7 @@ export function verifyMerkleBranch(
   index: number,
   root: bytes32,
 ): boolean {
-  let value = leaf;
+  let value = Buffer.from(leaf);
   for (let i = 0; i < depth; i++) {
     if (intDiv(index, 2**i) % 2) {
       value = hash(Buffer.concat([proof[i], value]));

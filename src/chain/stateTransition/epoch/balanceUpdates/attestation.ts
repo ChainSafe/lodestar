@@ -7,16 +7,21 @@ import BN from "bn.js";
 import {BeaconState, Gwei} from "../../../../types";
 
 import {
-  MIN_ATTESTATION_INCLUSION_DELAY, PROPOSER_REWARD_QUOTIENT,
-  MIN_EPOCHS_TO_INACTIVITY_PENALTY, BASE_REWARDS_PER_EPOCH,
+  BASE_REWARDS_PER_EPOCH,
   INACTIVITY_PENALTY_QUOTIENT,
+  MIN_ATTESTATION_INCLUSION_DELAY,
+  MIN_EPOCHS_TO_INACTIVITY_PENALTY,
+  PROPOSER_REWARD_QUOTIENT,
 } from "../../../../constants";
 
-import {isActiveValidator, getPreviousEpoch, getAttestingIndices} from "../../util";
+import {getAttestingIndices, getPreviousEpoch, isActiveValidator} from "../../util";
 
 import {
-  getAttestingBalance, getTotalActiveBalance, getMatchingSourceAttestations,
-  getMatchingTargetAttestations, getMatchingHeadAttestations,
+  getAttestingBalance,
+  getMatchingHeadAttestations,
+  getMatchingSourceAttestations,
+  getMatchingTargetAttestations,
+  getTotalActiveBalance,
   getUnslashedAttestingIndices,
 } from "../util";
 
@@ -55,7 +60,6 @@ export function getAttestationDeltas(state: BeaconState): [Gwei[], Gwei[]] {
         }
       });
     });
-
   // Proposer and inclusion delay micro-rewards
   getUnslashedAttestingIndices(state, matchingSourceAttestations).forEach((index) => {
     const earliestAttestation = matchingSourceAttestations
@@ -65,7 +69,7 @@ export function getAttestationDeltas(state: BeaconState): [Gwei[], Gwei[]] {
       .add(getBaseReward(state, index).divn(PROPOSER_REWARD_QUOTIENT));
     rewards[index] = rewards[index]
       .add(getBaseReward(state, index).muln(MIN_ATTESTATION_INCLUSION_DELAY)
-        .divn(earliestAttestation.inclusionDelay));
+        .div(new BN(earliestAttestation.inclusionDelay)));
   });
 
   // Inactivity penalty
@@ -79,7 +83,7 @@ export function getAttestationDeltas(state: BeaconState): [Gwei[], Gwei[]] {
       if (!matchingTargetAttestingIndices.includes(index)) {
         penalties[index] = penalties[index]
           .add(state.validatorRegistry[index].effectiveBalance.muln(finalityDelay)
-            .divn(INACTIVITY_PENALTY_QUOTIENT));
+            .div(INACTIVITY_PENALTY_QUOTIENT));
       }
     });
   }

@@ -56,7 +56,7 @@ export function initiateValidatorExit(state: BeaconState, index: ValidatorIndex)
   const exitQueueChurn = state.validatorRegistry
     .filter((v: Validator) => v.exitEpoch === exitQueueEpoch).length;
   if (exitQueueChurn >= getChurnLimit(state)) {
-    exitQueueEpoch += 2;
+    exitQueueEpoch += 1;
   }
 
   // Set validator exit epoch and withdrawable epoch
@@ -66,7 +66,7 @@ export function initiateValidatorExit(state: BeaconState, index: ValidatorIndex)
 
 /**
  * Slash the validator with index ``slashedIndex``.
- * 
+ *
  * Note that this function mutates ``state``.
  */
 export function slashValidator(

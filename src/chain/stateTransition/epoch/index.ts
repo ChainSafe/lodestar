@@ -2,10 +2,8 @@
  * @module chain/stateTransition/epoch
  */
 
-import assert from "assert";
-
 import {BeaconState} from "../../../types";
-import {SLOTS_PER_EPOCH, GENESIS_SLOT} from "../../../constants";
+import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "../../../constants";
 
 import {processRewardsAndPenalties} from "./balanceUpdates";
 import {processCrosslinks} from "./crosslinks";
@@ -19,7 +17,6 @@ export function shouldProcessEpoch(state: BeaconState): boolean {
 }
 
 export function processEpoch(state: BeaconState): BeaconState {
-  assert(shouldProcessEpoch(state));
 
   // Justification
   processJustificationAndFinalization(state);

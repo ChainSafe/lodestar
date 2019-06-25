@@ -52,7 +52,7 @@ export function getShuffledIndex(index: ValidatorIndex, indexCount: number, seed
       hash(Buffer.concat([seed, intToBytes(i, 1)]))
         .slice(0, 8)
     ).modn(indexCount);
-    const flip = (pivot - permuted) % indexCount;
+    const flip = (pivot + indexCount - permuted) % indexCount;
     const position = Math.max(permuted, flip);
     const source = hash(Buffer.concat([
       seed,

@@ -70,7 +70,6 @@ export class Eth1Wallet {
       await tx.wait();
       return tx.hash;
     } catch(e) {
-      console.log(e);
       this.logger.error(e.message);
     }
   }

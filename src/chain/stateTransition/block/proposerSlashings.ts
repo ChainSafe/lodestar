@@ -30,11 +30,12 @@ import {
 import bls from "@chainsafe/bls-js";
 
 
-export function processProposerSlashing(state: BeaconState, proposerSlashing: ProposerSlashing): void {
+export function processProposerSlashing(state: BeaconState, proposerSlashing: ProposerSlashing): BeaconState {
   const proposer = state.validatorRegistry[proposerSlashing.proposerIndex];
   // Verify that the epoch is the same
   assert(slotToEpoch(proposerSlashing.header1.slot) === slotToEpoch(proposerSlashing.header2.slot));
   // But the headers are different
+
   assert(!serialize(proposerSlashing.header1, BeaconBlockHeader).equals(
     serialize(proposerSlashing.header2, BeaconBlockHeader)));
   // Check proposer is slashable
@@ -55,6 +56,7 @@ export function processProposerSlashing(state: BeaconState, proposerSlashing: Pr
   );
   assert(proposalData2Verified);
   slashValidator(state, proposerSlashing.proposerIndex);
+  return state;
 }
 
 export default function processProposerSlashings(state: BeaconState, block: BeaconBlock): void {

@@ -33,7 +33,7 @@ import {
  *
  * Note that this function mutates ``state``.
  */
-export function processVoluntaryExit(state: BeaconState, exit: VoluntaryExit): void {
+export function processVoluntaryExit(state: BeaconState, exit: VoluntaryExit): BeaconState {
   const validator = state.validatorRegistry[exit.validatorIndex];
   const currentEpoch = getCurrentEpoch(state);
   // Verify the validator is active
@@ -53,6 +53,7 @@ export function processVoluntaryExit(state: BeaconState, exit: VoluntaryExit): v
   ));
   // Initiate exit
   initiateValidatorExit(state, exit.validatorIndex);
+  return state;
 }
 
 export default function processVoluntaryExits(state: BeaconState, block: BeaconBlock): void {
