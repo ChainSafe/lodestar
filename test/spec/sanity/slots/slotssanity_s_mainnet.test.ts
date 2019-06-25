@@ -8,7 +8,7 @@ import sinon from "sinon";
 import {blockFromYaml} from "../../../utils/block";
 import {BeaconBlock, BeaconState, number64, Validator} from "../../../../src/types";
 import {executeStateTransition} from "../../../../src/chain/stateTransition";
-import {hashTreeRoot} from "@chainsafe/ssz";
+import {equals, hashTreeRoot} from "@chainsafe/ssz";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/sanity/slots/slotsanity_s_mainnet.yaml"),
@@ -36,13 +36,7 @@ describeSpecTest(
   },
   () => false,
   (_1, _2, expected, actual) => {
-    if(expected && actual) {
-      expected.balances = expected.balances.map(b => b.toString());
-      actual.balances = actual.balances.map(b => b.toString());
-      expected.validatorRegistry = expected.validatorRegistry.map(b => hashTreeRoot(b, Validator));
-      actual.validatorRegistry = actual.validatorRegistry.map(b => hashTreeRoot(b, Validator));
-    }
-    expect(expected).to.be.deep.equal(actual);
+    expect(equals(expected, actual, BeaconState)).to.be.true;
     restore();
   },
   0

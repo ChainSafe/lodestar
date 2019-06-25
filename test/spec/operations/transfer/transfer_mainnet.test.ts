@@ -7,6 +7,8 @@ import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import {processTransfer} from "../../../../src/chain/stateTransition/block/transfers";
 import {transfersFromYaml} from "../../../utils/transfer";
+import {equals} from "@chainsafe/ssz";
+import {BeaconState} from "../../../../src/types";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/transfer/transfer_mainnet.yaml"),
@@ -29,10 +31,7 @@ describeSpecTest(
   },
   () => false,
   (_1, _2, expected, actual) => {
-    //chai hates BN
-    expected.balances = expected.balances.map(b => b.toString());
-    actual.balances = actual.balances.map(b => b.toString());
-    expect(expected).to.be.deep.equal(actual);
+    expect(equals(expected, actual, BeaconState)).to.be.true;
     restore();
   },
   0

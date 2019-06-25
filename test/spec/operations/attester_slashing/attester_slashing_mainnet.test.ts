@@ -7,6 +7,8 @@ import {processAttesterSlashing} from "../../../../src/chain/stateTransition/blo
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import {attesterSlashingFromYaml} from "../../../utils/attesterSlashing";
+import {equals} from "@chainsafe/ssz";
+import {BeaconState} from "../../../../src/types";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/attester_slashing/attester_slashing_mainnet.yaml"),
@@ -30,7 +32,7 @@ describeSpecTest(
   },
   () => false,
   (_1, _2, expected, actual) => {
-    expect(expected).to.be.deep.equal(actual);
+    expect(equals(expected, actual, BeaconState)).to.be.true;
     restore();
   },
   0

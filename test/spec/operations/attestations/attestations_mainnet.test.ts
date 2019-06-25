@@ -7,6 +7,8 @@ import {attestationFromYaml} from "../../../utils/attestation";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
+import {equals} from "@chainsafe/ssz";
+import {BeaconState} from "../../../../src/types";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/attestation/attestation_mainnet.yaml"),
@@ -30,7 +32,7 @@ describeSpecTest(
   },
   () => false,
   (_1, _2, expected, actual) => {
-    expect(expected).to.be.deep.equal(actual);
+    expect(equals(expected, actual, BeaconState)).to.be.true;
     restore();
   },
   0
