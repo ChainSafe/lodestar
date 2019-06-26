@@ -19,6 +19,7 @@ describe("equals", () => {
     {value1: 1, value2: 1, type: "uint8", expected: true},
     {value1: 0, value2: 1, type: "uint8", expected: false},
     {value1: 0, value2: 1, type: "uint8", expected: false},
+    {value1: 0, value2: 1, type: "uint8", expected: false},
     {value1: Infinity, value2: Infinity, type: "uint8", expected: true},
     {value1: new BN(1000), value2: 1000, type: "uint16", expected: true},
     {value1: true, value2: true, type: "bool", expected: true},
