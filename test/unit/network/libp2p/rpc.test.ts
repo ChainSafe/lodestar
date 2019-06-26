@@ -129,7 +129,7 @@ describe("[network] rpc", () => {
         bestSlot: 0,
       };
       const helloActual = await rpcA.sendRequest<Hello>(rpcA.getPeers()[0], Method.Hello, helloExpected);
-      assert.deepEqual(helloActual, helloExpected);
+      assert.deepEqual(JSON.stringify(helloActual), JSON.stringify(helloExpected));
     } catch (e) {
       assert.fail("hello not received");
     }
@@ -147,7 +147,7 @@ describe("[network] rpc", () => {
         bestSlot: 0,
       };
       const helloActual = await rpcB.sendRequest<Hello>(rpcB.getPeers()[0], Method.Hello, helloExpected);
-      assert.deepEqual(helloActual, helloExpected);
+      assert.deepEqual(JSON.stringify(helloActual), JSON.stringify(helloExpected));
     } catch (e) {
       assert.fail("hello not received");
     }
