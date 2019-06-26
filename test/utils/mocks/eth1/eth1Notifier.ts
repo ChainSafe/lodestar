@@ -1,8 +1,9 @@
 import {EventEmitter} from "events";
 
-import {bytes32, Deposit} from "../../../../src/types";
+import {bytes32, Deposit, number64} from "../../../../src/types";
 
-import {IEth1Notifier, IEth1Options} from "../../../../src/eth1/interface";
+import {IEth1Notifier, IEth1Options} from "../../../../src/eth1";
+import {Block} from "ethers/providers";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface MockEth1Options extends IEth1Options {
@@ -40,15 +41,23 @@ export class MockEth1Notifier extends EventEmitter implements IEth1Notifier {
     return [];
   }
 
-  public latestBlockHash(): bytes32 {
-    return Buffer.alloc(32);
-  }
-
   public async depositRoot(): Promise<bytes32> {
     return Buffer.alloc(32);
   }
 
   public async getContractDeposits(fromBlock: string | number, toBlock?: string | number): Promise<Deposit[]> {
     return [];
+  }
+
+  public async getBlock(blockHashOrBlockNumber: string | number): Promise<Block> {
+    return undefined;
+  }
+
+  public async getHead(): Promise<Block> {
+    return undefined;
+  }
+
+  public async depositCount(block?: string | number): Promise<number64> {
+    return undefined;
   }
 }

@@ -14,9 +14,11 @@ import {
 import {bestVoteData} from "./eth1Data";
 import {IProgressiveMerkleTree} from "../../../util/merkleTree";
 import {generateDeposits} from "./deposits";
+import {IEth1Notifier} from "../../../eth1";
 
 export async function assembleBody(
   opPool: OpPool,
+  eth1: IEth1Notifier,
   merkleTree: IProgressiveMerkleTree,
   currentState: BeaconState,
   randao: bytes96
@@ -26,7 +28,7 @@ export async function assembleBody(
     opPool.getAttesterSlashings().then(value => value.slice(0, MAX_ATTESTER_SLASHINGS)),
     opPool.getAttestations().then(value => value.slice(0, MAX_ATTESTATIONS)),
     opPool.getVoluntaryExits().then(value => value.slice(0, MAX_VOLUNTARY_EXITS)),
-    bestVoteData(currentState.eth1DataVotes)
+    bestVoteData(currentState, eth1)
   ]);
   const deposits = await generateDeposits(opPool, currentState, eth1Data, merkleTree);
   eth1Data.depositRoot = merkleTree.root();

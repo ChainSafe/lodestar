@@ -28,6 +28,7 @@ import {CommitteeAssignment} from "../../../validator/types";
 import {assembleBlock} from "../../../chain/factory/block";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {assembleValidatorDuty} from "../../../chain/factory/duties";
+import {IEth1Notifier} from "../../../eth1";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -35,16 +36,18 @@ export class ValidatorApi implements IValidatorApi {
   private chain: BeaconChain;
   private db: BeaconDB;
   private opPool: OpPool;
+  private eth1: IEth1Notifier;
 
-  public constructor(opts, {chain, db, opPool}) {
+  public constructor(opts, {chain, db, opPool, eth1}) {
     this.namespace = "validator";
     this.chain = chain;
     this.db = db;
     this.opPool = opPool;
+    this.eth1 = eth1;
   }
 
   public async produceBlock(slot: Slot, randaoReveal: bytes96): Promise<BeaconBlock> {
-    return await assembleBlock(this.db, this.opPool, slot, randaoReveal);
+    return await assembleBlock(this.db, this.opPool, this.eth1, slot, randaoReveal);
   }
 
   public async isProposer(index: ValidatorIndex, slot: Slot): Promise<boolean> {
