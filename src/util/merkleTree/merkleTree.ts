@@ -53,9 +53,7 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
   }
 
   public getProof(index: number): bytes32[] {
-    if(this._dirty) {
-      this.calculateBranches();
-    }
+    this.calculateBranchesIfNecessary();
     const proof: bytes32[] = [];
     for(let i = 0; i < this._depth; i++) {
       index = index % 2 === 1 ? index - 1 : index + 1;
@@ -69,10 +67,14 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
     return proof;
   }
 
-  public root(): bytes32 {
-    if(this._dirty) {
+  private calculateBranchesIfNecessary() {
+    if (this._dirty) {
       this.calculateBranches();
     }
+  }
+
+  public root(): bytes32 {
+    this.calculateBranchesIfNecessary();
     return this._tree[this._depth][0];
   }
 

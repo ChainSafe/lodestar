@@ -8,17 +8,17 @@ import {EventEmitter} from "events";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
 import {
+  Attestation,
   BeaconBlock,
   BeaconState,
   Deposit,
+  DepositData,
   Eth1Data,
   number64,
-  Attestation,
   uint16,
-  uint64,
-  DepositData
+  uint64
 } from "../types";
-import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT, MAX_DEPOSITS, SECONDS_PER_SLOT} from "../constants";
+import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT, SECONDS_PER_SLOT} from "../constants";
 
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
@@ -32,7 +32,7 @@ import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 import {getAttestingIndices} from "./stateTransition/util";
 import {IBeaconChain} from "./interface";
 import {ProgressiveMerkleTree} from "../util/merkleTree/merkleTree";
-import deposits from "./stateTransition/block/deposits";
+import {processSortedDeposits} from "../util/deposits";
 
 export class BeaconChain extends EventEmitter implements IBeaconChain {
   public chain: string;
@@ -45,7 +45,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
   private _latestBlock: BeaconBlock;
   private logger: ILogger;
 
-  public constructor(opts, {db, eth1, logger}: {db: IBeaconDb; eth1: IEth1Notifier; logger: ILogger}) {
+  public constructor(opts, {db, eth1, logger}: { db: IBeaconDb; eth1: IEth1Notifier; logger: ILogger }) {
     super();
     this.chain = opts.chain;
     this.db = db;
@@ -70,7 +70,8 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     }
   }
 
-  public async stop(): Promise<void> {}
+  public async stop(): Promise<void> {
+  }
 
   public async initializeChain(
     genesisTime: number64,
@@ -178,17 +179,15 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
       this.db.getDeposits(),
       this.db.getMerkleTree()
     ]);
-    deposits
-    //remove possible old deposits
-      .filter((deposit) => deposit.index >= newState.depositIndex)
-      //ensure deposit order
-      .sort((a, b) => a.index - b.index)
-      .slice(0, Math.min(MAX_DEPOSITS, newState.latestEth1Data.depositCount - newState.depositIndex))
-      //add all deposits to the tree before getting proof
-      .map((deposit) => {
+    processSortedDeposits(
+      deposits,
+      newState.depositIndex,
+      newState.latestEth1Data.depositCount,
+      deposit => {
         merkleTree.add(deposit.index, hashTreeRoot(deposit.data, DepositData));
         return deposit;
-      });
+      }
+    );
     //TODO: remove deposits with index <= newState.depositIndex
     await this.db.setMerkleTree(merkleTree);
   }

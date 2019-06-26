@@ -7,6 +7,7 @@ import {OpPool} from "../../../opPool";
 import {IProgressiveMerkleTree} from "../../../util/merkleTree";
 import {MAX_DEPOSITS} from "../../../constants";
 import {hashTreeRoot} from "@chainsafe/ssz";
+import {processSortedDeposits} from "../../../util/deposits";
 
 export async function generateDeposits(
   opPool: OpPool,
@@ -15,22 +16,19 @@ export async function generateDeposits(
   merkleTree: IProgressiveMerkleTree): Promise<Deposit[]> {
   if(eth1Data.depositCount > state.depositIndex) {
     let deposits = await opPool.getDeposits();
-    deposits = deposits
-      //remove possible old deposits
-      .filter((deposit) => deposit.index >= state.depositIndex)
-      //ensure deposit order
-      .sort((a, b) => a.index - b.index)
-      .slice(0, Math.min(MAX_DEPOSITS, eth1Data.depositCount - state.depositIndex))
-      //add all deposits to the tree before getting proof
-      .map((deposit) => {
+    //add all deposits to the tree before getting proof
+    return processSortedDeposits(
+      deposits,
+      state.depositIndex,
+      eth1Data.depositCount,
+      (deposit) => {
         merkleTree.add(deposit.index, hashTreeRoot(deposit.data, DepositData));
         return deposit;
-      })
-      .map((deposit) => {
-        deposit.proof = merkleTree.getProof(deposit.index);
-        return deposit;
-      });
-    return deposits;
+      }
+    ).map((deposit) => {
+      deposit.proof = merkleTree.getProof(deposit.index);
+      return deposit;
+    });
   }
   return [];
 }
