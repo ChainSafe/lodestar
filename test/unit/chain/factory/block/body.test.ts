@@ -22,7 +22,7 @@ describe('blockAssembly - body', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let opPool, generateDepositsStub, bestVoteStub;
+  let opPool, eth1, generateDepositsStub, bestVoteStub;
 
   beforeEach(() => {
     opPool = sandbox.createStubInstance(OpPool);
@@ -44,6 +44,7 @@ describe('blockAssembly - body', function () {
     bestVoteStub.resolves([]);
     const result = await assembleBody(
       opPool,
+      eth1,
       sandbox.createStubInstance(ProgressiveMerkleTree),
       generateState(),
       Buffer.alloc(96, 0)
@@ -68,6 +69,7 @@ describe('blockAssembly - body', function () {
     bestVoteStub.resolves([]);
     const result = await assembleBody(
       opPool,
+      eth1,
       sandbox.createStubInstance(ProgressiveMerkleTree),
       generateState(),
       Buffer.alloc(96, 0)
