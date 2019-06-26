@@ -84,7 +84,7 @@ class BeaconNode {
       logger: this.logger,
     });
     this.eth1 = new EthersEth1Notifier(this.conf.eth1, {
-      db: this.db,
+      opPool: this.opPool,
       logger: this.logger
     });
     this.chain = new BeaconChain(this.conf.chain, {

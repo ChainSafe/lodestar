@@ -7,8 +7,18 @@ import BN from "bn.js";
 import {EventEmitter} from "events";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {BeaconBlock, BeaconState, Deposit, Eth1Data, number64, Attestation, uint16, uint64} from "../types";
-import {GENESIS_SLOT, SECONDS_PER_SLOT} from "../constants";
+import {
+  Attestation,
+  BeaconBlock,
+  BeaconState,
+  Deposit,
+  DepositData,
+  Eth1Data,
+  number64,
+  uint16,
+  uint64
+} from "../types";
+import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT, SECONDS_PER_SLOT} from "../constants";
 
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
@@ -21,6 +31,8 @@ import {executeStateTransition} from "./stateTransition";
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 import {getAttestingIndices} from "./stateTransition/util";
 import {IBeaconChain} from "./interface";
+import {ProgressiveMerkleTree} from "../util/merkleTree/merkleTree";
+import {processSortedDeposits} from "../util/deposits";
 
 export class BeaconChain extends EventEmitter implements IBeaconChain {
   public chain: string;
@@ -33,7 +45,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
   private _latestBlock: BeaconBlock;
   private logger: ILogger;
 
-  public constructor(opts, {db, eth1, logger}: {db: IBeaconDb; eth1: IEth1Notifier; logger: ILogger}) {
+  public constructor(opts, {db, eth1, logger}: { db: IBeaconDb; eth1: IEth1Notifier; logger: ILogger }) {
     super();
     this.chain = opts.chain;
     this.db = db;
@@ -58,7 +70,8 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     }
   }
 
-  public async stop(): Promise<void> {}
+  public async stop(): Promise<void> {
+  }
 
   public async initializeChain(
     genesisTime: number64,
@@ -66,6 +79,17 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     genesisEth1Data: Eth1Data
   ): Promise<void> {
     this.logger.info('Initializing beacon chain.');
+    const merkleTree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
+    genesisDeposits = genesisDeposits
+      .sort((a, b) => a.index - b.index)
+      .map((deposit) => {
+        merkleTree.add(deposit.index, hashTreeRoot(deposit.data, DepositData));
+        return deposit;
+      })
+      .map((deposit) => {
+        deposit.proof = merkleTree.getProof(deposit.index);
+        return deposit;
+      });
     const genesisState = getGenesisBeaconState(genesisDeposits, genesisTime, genesisEth1Data);
     const genesisBlock = getEmptyBlock();
     genesisBlock.stateRoot = hashTreeRoot(genesisState, BeaconState);
@@ -77,6 +101,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
       this.db.setFinalizedBlock(genesisBlock),
       this.db.setJustifiedState(genesisState),
       this.db.setFinalizedState(genesisState),
+      this.db.setMerkleTree(merkleTree)
     ]);
     const genesisRoot = hashTreeRoot(genesisBlock, BeaconBlock);
     this.forkChoice.addBlock(genesisBlock.slot, genesisRoot, Buffer.alloc(32));
@@ -145,6 +170,25 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     const newState = executeStateTransition(state, block);
     // TODO any extra processing, eg post epoch
     // TODO update ffg checkpoints (requires updated state object)
+    this.updateDepositMerkleTree(newState);
     return newState;
+  }
+
+  private async updateDepositMerkleTree(newState: BeaconState): Promise<void> {
+    let [deposits, merkleTree] = await Promise.all([
+      this.db.getDeposits(),
+      this.db.getMerkleTree()
+    ]);
+    processSortedDeposits(
+      deposits,
+      newState.depositIndex,
+      newState.latestEth1Data.depositCount,
+      deposit => {
+        merkleTree.add(deposit.index, hashTreeRoot(deposit.data, DepositData));
+        return deposit;
+      }
+    );
+    //TODO: remove deposits with index <= newState.depositIndex
+    await this.db.setMerkleTree(merkleTree);
   }
 }

@@ -111,7 +111,7 @@ describe("[network] rpc request", () => {
       assert.deepEqual(actualEncoded, expectedEncoded);
       // decode
       const decodedBody = decodeRequestBody(method, body);
-      assert.deepEqual(decodedBody, msg);
+      assert.deepEqual(decodedBody.toString(), msg.toString());
     });
   }
 });
@@ -194,7 +194,7 @@ describe("[p2p] rpc response", () => {
       assert.deepEqual(actualEncoded, expectedEncoded);
       // decode
       const decodedBody = decodeResponseBody(method, result);
-      assert.deepEqual(decodedBody, msg);
+      assert.deepEqual(decodedBody.toString(), msg.toString());
     });
   }
 });

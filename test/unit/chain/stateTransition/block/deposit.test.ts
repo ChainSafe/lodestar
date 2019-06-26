@@ -1,20 +1,14 @@
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import * as utils from "../../../../../src/chain/stateTransition/util";
-import {
-  getBeaconProposerIndex,
-  getDomain,
-  getTemporaryBlockHeader
-} from "../../../../../src/chain/stateTransition/util";
+import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../../src/chain/stateTransition/util";
 import * as merkleUtil from "../../../../../src/util/merkleTree";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import processDeposits, {processDeposit} from "../../../../../src/chain/stateTransition/block/deposits";
 import {generateDeposit} from "../../../../utils/deposit";
-import {signingRoot} from "@chainsafe/ssz";
-import {DepositData} from "../../../../../src/types";
-import {Domain, MAX_EFFECTIVE_BALANCE} from "../../../../../src/constants";
+import {MAX_EFFECTIVE_BALANCE} from "../../../../../src/constants";
 import {generateValidator} from "../../../../utils/validator";
 import BN from "bn.js";
 import {generateEmptyBlock} from "../../../../utils/block";

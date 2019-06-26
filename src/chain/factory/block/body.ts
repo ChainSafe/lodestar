@@ -12,11 +12,14 @@ import {
   ZERO_HASH
 } from "../../../constants";
 import {bestVoteData} from "./eth1Data";
+import {IProgressiveMerkleTree} from "../../../util/merkleTree";
+import {generateDeposits} from "./deposits";
 import {IEth1Notifier} from "../../../eth1";
 
 export async function assembleBody(
   opPool: OpPool,
   eth1: IEth1Notifier,
+  merkleTree: IProgressiveMerkleTree,
   currentState: BeaconState,
   randao: bytes96
 ): Promise<BeaconBlockBody> {
@@ -27,6 +30,8 @@ export async function assembleBody(
     opPool.getVoluntaryExits().then(value => value.slice(0, MAX_VOLUNTARY_EXITS)),
     bestVoteData(currentState, eth1)
   ]);
+  const deposits = await generateDeposits(opPool, currentState, eth1Data, merkleTree);
+  eth1Data.depositRoot = merkleTree.root();
   return {
     randaoReveal: randao,
     eth1Data: eth1Data,
@@ -34,7 +39,8 @@ export async function assembleBody(
     proposerSlashings,
     attesterSlashings,
     attestations,
-    deposits: [],
+    //requires new eth1 data so it has to be done after above operations
+    deposits,
     voluntaryExits,
     transfers: [],
   };

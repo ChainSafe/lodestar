@@ -6,7 +6,7 @@ import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {deserialize} from "@chainsafe/ssz";
 
-import {bytes32, Deposit, Eth1Data, number64, Gwei} from "../../types";
+import {bytes32, Deposit, Eth1Data, Gwei, number64} from "../../types";
 
 import {IEth1Notifier, IEth1Options} from "../interface";
 import {isValidAddress} from "../../util/address";
@@ -14,6 +14,7 @@ import {BeaconDB} from "../../db";
 import {Block, Log} from "ethers/providers";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants/minimal";
 import {ILogger} from "../../logger";
+import {OpPool} from "../../opPool";
 
 export interface EthersEth1Options extends IEth1Options {
   provider: ethers.providers.BaseProvider;
@@ -29,7 +30,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   private contract: ethers.Contract;
 
-  private db: BeaconDB;
+  private opPool: OpPool;
 
   private genesisBlockHash: number64;
 
@@ -39,14 +40,13 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   private logger: ILogger;
 
-
-  public constructor(opts: EthersEth1Options, {db, logger}: {db: any; logger: ILogger}) {
+  public constructor(opts: EthersEth1Options, {opPool, logger}: {opPool: OpPool; logger: ILogger}) {
     super();
     this.logger = logger;
     this.opts = opts;
     this.provider = opts.provider;
     this.contract = opts.contract;
-    this.db = db;
+    this.opPool = opPool;
     this._depositCount = 0;
     this.genesisBlockHash = null;
   }
@@ -61,7 +61,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     } else {
       const pastDeposits = await this.getContractDeposits(this.opts.depositContract.deployedAt);
       await Promise.all(pastDeposits.map((pastDeposit) => {
-        return this.db.setGenesisDeposit(pastDeposit);
+        return this.opPool.receiveDeposit(pastDeposit);
       }));
       this.provider.on('block', this.processBlockHeadUpdate.bind(this));
       this.contract.on('Deposit', this.processDepositLog.bind(this));
@@ -114,7 +114,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
       this._depositCount++;
       //after genesis stop storing in genesisDeposit bucket
       if (!this.genesisBlockHash) {
-        await this.db.setGenesisDeposit(deposit);
+        await this.opPool.receiveDeposit(deposit);
       }
       this.emit('deposit', deposit);
     } catch (e) {
@@ -141,10 +141,8 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
         blockHash,
         depositCount,
       };
-      const genesisDeposits = await this.genesisDeposits();
+      const genesisDeposits = await this.genesisDeposits(depositCount);
       this.emit('eth2genesis', time, genesisDeposits, genesisEth1Data);
-      //from now on it will be kept in BeaconBlock
-      await this.db.deleteGenesisDeposits(genesisDeposits);
     } catch (e) {
       this.logger.error(`Failed to process genesis log. Error: ${e.message}`);
     }
@@ -173,8 +171,9 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     });
   }
 
-  public async genesisDeposits(): Promise<Deposit[]> {
-    return this.db.getGenesisDeposits();
+  private async genesisDeposits(depositCount: number64): Promise<Deposit[]> {
+    const deposits = await this.opPool.getDeposits();
+    return deposits.slice(0, depositCount);
   }
 
   public async getHead(): Promise<Block> {
