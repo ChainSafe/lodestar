@@ -12,12 +12,19 @@ jobs:
       script:
         - ./scripts/ci-install-spec-test-dependencies.sh
         - yarn test:spec
-before_deploy: yarn build:docs
+before_deploy: 
+  - yarn build:docs
+  - sh ./scripts/release.sh
 deploy:
-  provider: pages
-  skip_cleanup: true
-  github_token: $GH_PAGES_TOKEN
-  keep_history: true
-  local_dir: docs
-  on:
-    branch: master
+    - provider: pages
+      skip_cleanup: true
+      github_token: $GH_PAGES_TOKEN
+      keep_history: true
+      local_dir: docs
+      on:
+        branch: master
+    - provider: script
+      script: sh ./scripts/release.sh
+      on:
+        tags: true
+        branch: master
