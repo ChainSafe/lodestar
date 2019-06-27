@@ -6,7 +6,7 @@ import {parse, JsonMap, stringify} from "@iarna/toml";
 import {CliError} from "../cli/error";
 import fs from "fs";
 import path from "path";
-import defaults from "../node/defaults";
+import defaults from "../node/options";
 
 export interface IConfigFile extends JsonMap{
   db?: {name: string};
@@ -32,29 +32,14 @@ export function getTomlConfig(fileName: string): IConfigFile {
 }
 
 /**
- * Writes data to file, assuming content is in 
+ * Writes data to file, assuming content is in
  * @param {string} fileName path to file to write to
  * @returns {void}
  */
 export function writeTomlConfig(fileName: string): void {
-  const contentObject: IConfigFile = {
-    chain: {
-      chain: defaults.chain.chain
-    },
-    db: {
-      name: defaults.db.name
-    },
-    rpc: {
-      port: defaults.rpc.port
-    },
-    eth1: {
-      depositContract: {
-        address: defaults.eth1.depositContract.address
-      }
-    }
-  };
 
-  const content = stringify(contentObject);
+
+  const content = stringify(defaults as unknown as JsonMap);
 
   try {
     ensureDirectoryExistence(fileName);
