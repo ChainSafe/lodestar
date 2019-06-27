@@ -11,7 +11,7 @@
     "prebuild": "rm -rf lib && rm -rf dist",
     "build": "yarn build-lib && yarn build-web && yarn build-types",
     "build:docs": "typedoc --exclude src/index.ts,src/web.ts --out docs src",
-    "build-lib": "babel src -x .ts -d lib",
+    "build-lib": "babel src -x .ts -d lib --source-maps",
     "build-types": "tsc --incremental --declaration --outDir lib --emitDeclarationOnly",
     "build-web": "webpack --mode production --entry ./lib/web.js --output ./dist/ssz.min.js",
     "check-types": "tsc --incremental --noEmit",

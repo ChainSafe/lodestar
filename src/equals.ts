@@ -59,6 +59,9 @@ export function equals(value1: any, value2: any, type: AnySSZType): boolean {
 function _equals(value1: any, value2: any, type: FullSSZType): boolean {
   switch (type.type) {
     case Type.uint:
+      if(value1 === Infinity || value2 === Infinity) {
+        return value1 === value2;
+      }
       return (new BN(value1)).eq(new BN(value2));
     case Type.bool:
       return value1 === value2;
