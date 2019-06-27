@@ -5,12 +5,13 @@
 import {LevelUp} from "levelup";
 import {SearchOptions} from "../interface";
 import {Attestation} from "../../../types";
-import {DBOptions, IDatabaseController} from "../interface";
+import {IDatabaseController} from "../interface";
 import {EventEmitter} from "events";
 import level from "level";
 import {ILogger} from "../../../logger";
+import {IDatabaseOptions} from "../../options";
 
-export interface LevelDBOptions extends DBOptions {
+export interface LevelDBOptions extends IDatabaseOptions {
   db?: LevelUp;
 }
 

@@ -6,12 +6,14 @@ import {
   Attestation,
   AttesterSlashing,
   BeaconBlock,
-  BeaconState, BLSPubkey,
+  BeaconState,
+  BLSPubkey,
   bytes32,
-  Deposit, MerkleTree,
+  Deposit,
   ProposerSlashing,
   Slot,
-  Transfer, ValidatorIndex,
+  Transfer,
+  ValidatorIndex,
   VoluntaryExit,
 } from "../../../types";
 import {IProgressiveMerkleTree} from "../../../util/merkleTree";

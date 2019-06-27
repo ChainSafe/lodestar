@@ -4,10 +4,6 @@
 
 import {EventEmitter} from "events";
 
-export interface DBOptions {
-  name?: string;
-}
-
 export interface SearchOptions {
   gt: any;
   lt: any;
