@@ -8,16 +8,16 @@ import {deserialize} from "@chainsafe/ssz";
 
 import {bytes32, Deposit, Eth1Data, Gwei, number64} from "../../types";
 
-import {IEth1Notifier, IEth1Options} from "../interface";
+import {IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
 import {BeaconDB} from "../../db";
 import {Block, Log} from "ethers/providers";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants/minimal";
 import {ILogger} from "../../logger";
 import {OpPool} from "../../opPool";
+import {IEth1Options} from "../options";
 
 export interface EthersEth1Options extends IEth1Options {
-  provider: ethers.providers.BaseProvider;
   contract?: Contract;
 }
 
@@ -44,7 +44,14 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     super();
     this.logger = logger;
     this.opts = opts;
-    this.provider = opts.provider;
+    if(this.opts.providerInstance) {
+      this.provider = this.opts.providerInstance  ;
+    } else {
+      this.provider = new ethers.providers.JsonRpcProvider(
+        this.opts.provider.url,
+        this.opts.provider.network
+      );
+    }
     this.contract = opts.contract;
     this.opPool = opPool;
     this._depositCount = 0;

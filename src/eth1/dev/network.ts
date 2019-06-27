@@ -6,9 +6,16 @@ import ganache from "ganache-core";
 import {promisify} from "util";
 import * as utils from 'ethers/utils';
 import deepmerge from "deepmerge";
-import defaults, {networkOpts} from "./defaults";
 import * as ethers from "ethers/ethers";
 import {ILogger} from "../../logger";
+import devEth1Options from "./options";
+
+export const devNetworkOpts =  {
+  port: 8545,
+  networkId: 200,
+  defaultBalance: 1000,
+  host: '127.0.0.1'
+};
 
 export interface PrivateNetworkOpts {
   port?: number;
@@ -31,7 +38,7 @@ export class PrivateEth1Network {
   private logger: ILogger;
 
   public constructor(opts: PrivateNetworkOpts, {logger}: {logger: ILogger} ) {
-    this.opts = deepmerge(networkOpts, opts);
+    this.opts = deepmerge(devNetworkOpts, opts);
     this.logger = logger;
     this.server = ganache.server({
       ...this.opts,
@@ -83,8 +90,11 @@ export class PrivateEth1Network {
     const deployKey = this.blockchain.accounts[this.blockchain.coinbase].secretKey.toString('hex');
     const provider = new ethers.providers.Web3Provider(this.blockchain._provider);
     const deployWallet = new ethers.Wallet(deployKey, provider);
-    const factory =
-      new ethers.ContractFactory(defaults.abi, defaults.bytecode, deployWallet);
+    const factory = new ethers.ContractFactory(
+      devEth1Options.depositContract.abi,
+      devEth1Options.depositContract.bytecode,
+      deployWallet
+    );
     const contract = await factory.deploy();
     const address = contract.address;
     await contract.deployed();
