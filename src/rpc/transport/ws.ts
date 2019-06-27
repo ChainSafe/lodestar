@@ -6,6 +6,7 @@ import * as http from "http";
 import promisify from "promisify-es6";
 import WebSocket from "ws";
 import {LikeSocketServer} from "../protocol";
+import {ITransportOption} from "../options";
 
 export interface WSServerOpts {
   port: number;
@@ -16,7 +17,7 @@ export class WSServer implements LikeSocketServer {
   private httpServer: http.Server;
   private opts: WSServerOpts;
   public on: any;
-  public constructor(opts) {
+  public constructor(opts: ITransportOption) {
     this.opts = opts;
     this.httpServer = http.createServer();
     this.ws = new WebSocket.Server({server: this.httpServer});

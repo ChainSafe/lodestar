@@ -5,6 +5,7 @@
 import * as jsonRpc from "noice-json-rpc";
 
 import {IApi} from "../api/interface";
+import {IPublicApiOptions} from "../options";
 
 export interface LikeSocketServer extends jsonRpc.LikeSocketServer {
   start(): Promise<void>;
@@ -17,7 +18,10 @@ export interface LikeSocketServer extends jsonRpc.LikeSocketServer {
 export class JSONRPC {
   private transports: LikeSocketServer[] = [];
 
-  public constructor(opts, {transports, apis}: {transports: LikeSocketServer[]; apis: IApi[]}) {
+  public constructor(
+    opts: IPublicApiOptions,
+    {transports, apis}: {transports: LikeSocketServer[]; apis: IApi[]}
+  ) {
     transports.forEach((transport) => {
       // attach the json-rpc server to underlying transport
       const rpcServer = new jsonRpc.Server(transport);
