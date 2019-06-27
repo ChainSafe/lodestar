@@ -18,6 +18,7 @@ import {
 
 import {BeaconChain} from "../chain";
 import {BeaconDB} from "../db";
+import {IOpPoolOptions} from "./options";
 
 /**
  * Pool of operations not yet included on chain
@@ -25,7 +26,7 @@ import {BeaconDB} from "../db";
 export class OpPool extends EventEmitter {
   private chain: BeaconChain;
   private db: BeaconDB;
-  public constructor(opts, {chain, db}) {
+  public constructor(opts: IOpPoolOptions, {chain, db}) {
     super();
     this.chain = chain;
     this.db = db;
