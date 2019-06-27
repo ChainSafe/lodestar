@@ -249,9 +249,9 @@ export function stateFromYaml(value: any): BeaconState {
     latestSlashedBalances: value.latestSlashedBalances,
     latestBlockHeader: {
       slot: value.latestBlockHeader.slot.toNumber(),
-      parentRoot: Buffer.from(value.latestBlockHeader.previousBlockRoot.slice(2), 'hex'),
+      parentRoot: Buffer.from(value.latestBlockHeader.parentRoot.slice(2), 'hex'),
       stateRoot: Buffer.from(value.latestBlockHeader.stateRoot.slice(2), 'hex'),
-      bodyRoot: Buffer.from(value.latestBlockHeader.blockBodyRoot.slice(2), 'hex'),
+      bodyRoot: Buffer.from(value.latestBlockHeader.bodyRoot.slice(2), 'hex'),
       signature: Buffer.from(value.latestBlockHeader.signature.slice(2), 'hex'),
     },
     historicalRoots: value.historicalRoots.map(value => Buffer.from(value.slice(2), 'hex')),

@@ -87,17 +87,17 @@ export function indexedAttestationFromYaml(value: any): IndexedAttestation {
 
 export function attestationDataFromYaml(value: any): AttestationData {
   return {
-    targetEpoch: value.targetEpoch.toNumber(),
     beaconBlockRoot: Buffer.from(value.beaconBlockRoot.slice(2), 'hex'),
-    targetRoot: Buffer.from(value.targetRoot.slice(2), 'hex'),
     sourceEpoch: value.sourceEpoch.toNumber(),
-    crosslink: {
-      shard: value.shard.toNumber(),
-      startEpoch: GENESIS_EPOCH,
-      endEpoch: FAR_FUTURE_EPOCH,
-      parentRoot:Buffer.from(value.previousCrosslinkRoot.slice(2), 'hex'),
-      dataRoot: Buffer.from(value.crosslinkDataRoot.slice(2), 'hex'),
-    },
     sourceRoot: Buffer.from(value.sourceRoot.slice(2), 'hex'),
+    targetEpoch: value.targetEpoch.toNumber(),
+    targetRoot: Buffer.from(value.targetRoot.slice(2), 'hex'),
+    crosslink: {
+      shard: value.crosslink.shard.toNumber(),
+      startEpoch: value.crosslink.startEpoch.toNumber(),
+      endEpoch: value.crosslink.endEpoch.toNumber(),
+      parentRoot:Buffer.from(value.crosslink.parentRoot.slice(2), 'hex'),
+      dataRoot: Buffer.from(value.crosslink.parentRoot.slice(2), 'hex'),
+    },
   };
 }

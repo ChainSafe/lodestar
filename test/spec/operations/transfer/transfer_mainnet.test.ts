@@ -1,16 +1,20 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
-import {stateFromYaml} from "../../../utils/state";
 import {expect} from "chai";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
+
 import {processTransfer} from "../../../../src/chain/stateTransition/block/transfers";
-import {transfersFromYaml} from "../../../utils/transfer";
+import {BeaconState, Transfer} from "../../../../src/types";
+import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/transfer/transfer_mainnet.yaml"),
-  processTransfer,
+  (state, transfer) => {
+    processTransfer(state, transfer);
+    return state;
+  },
   (input) => {
     if(input.bls_setting && input.bls_setting.toNumber() === 2) {
       rewire({
@@ -18,10 +22,10 @@ describeSpecTest(
         verifyMultiple: sinon.stub().returns(true)
       });
     }
-    return [stateFromYaml(input.pre), transfersFromYaml(input.transfer)];
+    return [expandYamlValue(input.pre, BeaconState), expandYamlValue(input.transfer, Transfer)];
   },
   (expected) => {
-    return stateFromYaml(expected.post);
+    return expandYamlValue(expected.post, BeaconState);
   },
   result => result,
   (testCase) => {

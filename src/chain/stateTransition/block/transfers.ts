@@ -7,7 +7,6 @@ import BN from "bn.js";
 import {signingRoot} from "@chainsafe/ssz";
 
 import {
-  BeaconBlock,
   BeaconState,
   Transfer,
 } from "../../../types";
@@ -28,17 +27,14 @@ import {
   getBeaconProposerIndex,
   getCurrentEpoch,
   getDomain,
-  slotToEpoch,
   decreaseBalance,
   increaseBalance,
 } from "../util";
 
 /**
  * Process ``Transfer`` operation.
- *
- * Note that this function mutates ``state``.
  */
-export function processTransfer(state: BeaconState, transfer: Transfer): BeaconState {
+export function processTransfer(state: BeaconState, transfer: Transfer): void {
   // Verify the amount and fee aren't individually too big (for anti-overflow purposes)
   const senderBalance = state.balances[transfer.sender];
   assert(senderBalance.gte(transfer.amount));
@@ -61,7 +57,7 @@ export function processTransfer(state: BeaconState, transfer: Transfer): BeaconS
     transfer.pubkey,
     signingRoot(transfer, Transfer),
     transfer.signature,
-    getDomain(state, Domain.TRANSFER, slotToEpoch(transfer.slot)),
+    getDomain(state, Domain.TRANSFER),
   ));
   // Process the transfer
   decreaseBalance(state, transfer.sender, transfer.amount.add(transfer.fee));
@@ -76,14 +72,4 @@ export function processTransfer(state: BeaconState, transfer: Transfer): BeaconS
     (new BN(0)).lt(state.balances[transfer.recipient]) &&
     state.balances[transfer.recipient].lt(MIN_DEPOSIT_AMOUNT)
   ));
-  return state;
-}
-
-export default function processTransfers(state: BeaconState, block: BeaconBlock): void {
-  // Note: Transfers are a temporary functionality for phases 0 and 1, to be removed in phase 2.
-  // TODO: enable when configurable constants are implemented
-  // assert(block.body.transfers.length <= MAX_TRANSFERS);
-  for (const transfer of block.body.transfers) {
-    processTransfer(state, transfer);
-  }
 }

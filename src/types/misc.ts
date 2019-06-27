@@ -92,20 +92,6 @@ export const Eth1Data: SimpleContainerType = {
   ],
 };
 
-// SPEC 0.7
-// class AttestationData(Container):
-// # LMD GHOST vote
-// beacon_block_root: Bytes32
-//
-// # FFG vote
-// source_epoch: uint64
-// source_root: Bytes32
-// target_epoch: uint64
-// target_root: Bytes32
-//
-// # Crosslink vote
-// crosslink: Crosslink
-
 export interface AttestationData {
   // LMD GHOST vote
   beaconBlockRoot: bytes32;
@@ -126,6 +112,20 @@ export const AttestationData: SimpleContainerType = {
     ["targetEpoch", Epoch],
     ["targetRoot", bytes32],
     ["crosslink", Crosslink],
+  ],
+};
+
+export interface FFGData {
+  sourceEpoch: Epoch;
+  sourceRoot: bytes32;
+  targetEpoch: Epoch;
+}
+export const FFGData: SimpleContainerType = {
+  name: "FFGData",
+  fields: [
+    ["sourceEpoch", Epoch],
+    ["sourceRoot", bytes32],
+    ["targetEpoch", Epoch],
   ],
 };
 

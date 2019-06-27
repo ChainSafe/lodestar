@@ -1,16 +1,20 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
-import {stateFromYaml} from "../../../utils/state";
 import {expect} from "chai";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
+
 import processProposerSlashing from "../../../../src/chain/stateTransition/block/proposerSlashings";
-import {proposerSlashingFromYaml} from "../../../utils/proposerSlashing";
+import {BeaconState, ProposerSlashing} from "../../../../src/types";
+import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/proposer_slashing/proposer_slashing_mainnet.yaml"),
-  processProposerSlashing,
+  (state, proposerSlashing) => {
+    processProposerSlashing(state, proposerSlashing);
+    return state;
+  },
   (input) => {
     restore();
     if(input.bls_setting && input.bls_setting.toNumber() === 2) {
@@ -19,10 +23,10 @@ describeSpecTest(
         verifyMultiple: sinon.stub().returns(true)
       });
     }
-    return [stateFromYaml(input.pre), proposerSlashingFromYaml(input.proposerSlashing)];
+    return [expandYamlValue(input.pre, BeaconState), expandYamlValue(input.proposerSlashing, ProposerSlashing)];
   },
   (expected) => {
-    return stateFromYaml(expected.post);
+    return expandYamlValue(expected.post, BeaconState);
   },
   result => result,
   (testCase) => {
