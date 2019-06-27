@@ -10,7 +10,7 @@ import {Keypair} from "@chainsafe/bls-js/lib/keypair";
 import Validator from "../../validator";
 import defaults from "../../validator/defaults";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
-import {promptPassword} from "../../util/io";
+import {getKeyFromFileOrKeystore, promptPassword} from "../../util/io";
 import keystore from "../../validator/keystore";
 
 interface IValidatorCommandOptions {
@@ -64,12 +64,7 @@ export class ValidatorCommand implements CliCommand {
 
     let keypair: Keypair;
     if (options.key) {
-      if (fs.existsSync(options.key)) {
-        const password = await promptPassword("Enter password to decrypt the keystore: ");
-        keypair = keystore.getKeyFromKeyStore(options.key, password);
-      } else {
-        keypair = new Keypair(PrivateKey.fromHexString(options.key));
-      }
+      keypair = await getKeyFromFileOrKeystore(options.key);
     } else {
       throw new Error("Provide keystore file path or private key.");
     }

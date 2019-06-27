@@ -38,10 +38,11 @@ export interface BeaconNodeCtx {
   sync?: object;
   opPool?: object;
 
-  validator?: boolean;
-  key?: string;
-  password?: string;
-  dbValidator?: string;
+  validator?: {
+    key: string;
+    password?: string;
+    db?: string;
+  };
 }
 
 interface RpcCtx {
@@ -118,9 +119,9 @@ class BeaconNode {
 
     if (this.conf.validator) {
       this.validator = initValidator({
-        key: this.conf.key,
-        password: this.conf.password,
-        dbValidator: this.conf.dbValidator,
+        key: this.conf.validator.key,
+        password: this.conf.validator.password,
+        dbValidator: this.conf.validator.db,
         chain: this.chain,
         dbBeacon: this.db,
         opPool: this.opPool

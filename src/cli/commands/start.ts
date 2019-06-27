@@ -44,7 +44,8 @@ export class StartCommand implements CliCommand {
         // (unhandled promise rejections)
         try {
           let nodeCommand = new BeaconNodeCommand();
-          await nodeCommand.action({...options, validator: true}, logger);
+          await nodeCommand.action({...options,
+            validator: {key: options.key, db: options.dbValidator}}, logger);
         } catch (e) {
           logger.error(e.message + '\n' + e.stack);
         }

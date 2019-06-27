@@ -16,6 +16,7 @@ import {getTomlConfig, IConfigFile} from "../../util/file";
 import defaults from "../../node/defaults";
 import {ILogger} from "../../logger";
 import {promptPassword} from "../../util/io";
+import fs from "fs";
 
 interface IBeaconCommandOptions {
   db: string;
@@ -23,10 +24,11 @@ interface IBeaconCommandOptions {
   eth1RpcUrl: string;
   rpc: string;
   configFile: string;
-  validator: boolean;
-  key?: string;
-  dbValidator?: string;
   loggingLevel?: string;
+  validator?: {
+    key: string;
+    db?: string;
+  };
 }
 
 export class BeaconNodeCommand implements CliCommand {
@@ -77,7 +79,11 @@ export class BeaconNodeCommand implements CliCommand {
 
     let password: string;
     if(options.validator){
-      password = await promptPassword("Enter password to decrypt the keystore: ");
+      if (fs.existsSync(options.validator.key)) {
+        password = await promptPassword("Enter password to decrypt the keystore: ");
+      } else{
+        password = null;
+      }
     }
 
     let optionsMap: BeaconNodeCtx = {
@@ -95,10 +101,11 @@ export class BeaconNodeCommand implements CliCommand {
       rpc: {
         apis: this.setupRPC(options.rpc)
       },
-      validator: options.validator,
-      key: options.key,
-      password: password,
-      dbValidator: options.dbValidator
+      validator: {
+        key: options.validator.key,
+        password: password,
+        db: options.validator.db
+      },
     };
 
     if (options.configFile) {

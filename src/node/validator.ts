@@ -13,6 +13,7 @@ import {BeaconChain} from "../chain";
 import {ILogger} from "../logger";
 import {OpPool} from "../opPool";
 import keystore from "../validator/keystore";
+import {getKeyFromFileOrKeystoreWithPassword} from "../util/io";
 
 /*export interface ValidatorOptions {
   key?: string;
@@ -45,13 +46,9 @@ export function initValidator({key, password, dbValidator, chain, dbBeacon, opPo
 
   let keypair: Keypair;
   if (key) {
-    if (fs.existsSync(key)) {
-      keypair = keystore.getKeyFromKeyStore(key, password);
-    } else {
-      keypair = new Keypair(PrivateKey.fromHexString(key));
-    }
+    keypair = getKeyFromFileOrKeystoreWithPassword(key, password);
   } else {
-    throw new Error("Provide keystore file path or private key.");
+    throw new Error("Provide valid keystore file path or private key.");
   }
 
   let validatorCtx: ValidatorCtx = {
