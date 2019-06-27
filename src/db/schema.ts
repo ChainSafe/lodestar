@@ -18,6 +18,7 @@ export enum Bucket {
   attesterSlashing,
   lastProposedBlock,
   proposedAttestations,
+  merkleTree
 }
 
 export const Key = {
@@ -27,6 +28,7 @@ export const Key = {
   justifiedState: Buffer.from('justifiedState'),
   finalizedBlock: Buffer.from('finalizedBlock'),
   justifiedBlock: Buffer.from('justifiedBlock'),
+  progressiveMerkleTree: Buffer.from('progressiveMerkleTree'),
 };
 
 /**

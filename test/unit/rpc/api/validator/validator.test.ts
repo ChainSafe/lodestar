@@ -12,24 +12,26 @@ import {generateState} from "../../../../utils/state";
 import {StatefulDagLMDGHOST} from "../../../../../src/chain/forkChoice";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import * as dutyFactory from "../../../../../src/chain/factory/duties";
+import {EthersEth1Notifier} from "../../../../../src/eth1";
 
 describe('validator rpc api', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let validatorApi, dbStub, chainStub, opStub, forkChoiceStub;
+  let validatorApi, dbStub, chainStub, opStub, forkChoiceStub, eth1Stub;
 
   beforeEach(() => {
     dbStub = sandbox.createStubInstance(BeaconDB);
+    eth1Stub = sandbox.createStubInstance(EthersEth1Notifier);
     forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
     opStub = sandbox.createStubInstance(OpPool);
-    validatorApi = new ValidatorApi({}, {chain: chainStub, db: dbStub, opPool: opStub});
+    validatorApi = new ValidatorApi({}, {chain: chainStub, db: dbStub, opPool: opStub, eth1: eth1Stub});
   });
 
   afterEach(() => {
-    sandbox.restore()
+    sandbox.restore();
   });
 
   it('produce block', async function() {
@@ -39,7 +41,7 @@ describe('validator rpc api', function () {
     expect(result).to.be.not.null;
     expect(
       assembleBlockStub
-        .withArgs(dbStub, opStub, 1, Buffer.alloc(96, 0))
+        .withArgs(dbStub, opStub, eth1Stub, 1, Buffer.alloc(96, 0))
         .calledOnce
     ).to.be.true;
   });

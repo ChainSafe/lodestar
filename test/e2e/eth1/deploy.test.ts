@@ -8,6 +8,7 @@ import {PrivateEth1Network} from "../../../src/eth1/dev";
 import {BeaconDB} from "../../../src/db/api";
 import {PouchDbController} from "../../../src/db";
 import {ILogger, WinstonLogger} from "../../../src/logger";
+import {OpPool} from "../../../src/opPool";
 
 describe("Eth1Notifier - using deployed contract", () => {
 
@@ -46,7 +47,7 @@ describe("Eth1Notifier - using deployed contract", () => {
       provider,
     },
     {
-      db: db,
+      opPool: new OpPool(null, {db, chain: null}),
       logger: logger
     });
     await eth1Notifier.start();

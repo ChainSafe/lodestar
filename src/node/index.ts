@@ -84,7 +84,7 @@ class BeaconNode {
       logger: this.logger,
     });
     this.eth1 = new EthersEth1Notifier(this.conf.eth1, {
-      db: this.db,
+      opPool: this.opPool,
       logger: this.logger
     });
     this.chain = new BeaconChain(this.conf.chain, {
@@ -108,7 +108,7 @@ class BeaconNode {
     this.rpc = new JSONRPC(this.conf.rpc, {
       transports: [new WSServer(this.conf.rpc)],
       apis: this.conf.rpc.apis.map((Api) => {
-        return new Api(this.conf.rpc, {chain: this.chain, db: this.db});
+        return new Api(this.conf.rpc, {chain: this.chain, db: this.db, eth1: this.eth1});
       })
     });
 

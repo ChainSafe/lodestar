@@ -5,7 +5,7 @@
 // Each type exported here contains both a compile-time type
 // (a typescript interface) and a run-time ssz type (a javascript variable)
 // For more information, see ./index.ts
-import {SimpleContainerType} from "@chainsafe/ssz";
+import {SimpleContainerType, SimpleListType} from "@chainsafe/ssz";
 
 import {
   BLSSignature,
@@ -266,3 +266,15 @@ export const HistoricalBatch: SimpleContainerType = {
   ],
 };
 
+export interface MerkleTree {
+  depth: number64;
+  tree: bytes32[][];
+}
+
+export const MerkleTree: SimpleContainerType = {
+  name: "MerkleTree",
+  fields: [
+    ["depth", number64],
+    ["tree", [[bytes32]]]
+  ]
+};

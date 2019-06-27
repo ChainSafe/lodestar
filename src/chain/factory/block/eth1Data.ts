@@ -2,40 +2,69 @@
  * @module chain/blockAssembly
  */
 
-import {Eth1Data} from "../../../types";
+import {BeaconState, Eth1Data} from "../../../types";
 import {IEth1Notifier} from "../../../eth1";
 import {ETH1_FOLLOW_DISTANCE} from "../../../constants";
+import {Block} from "ethers/providers";
+import {mostFrequent} from "../../../util/objects";
 
-export async function bestVoteData(votes: Eth1Data[]): Promise<Eth1Data> {
-  const potentialVotes = votes.filter(vote => {
-    //TODO: check vote
-    /**
-     * vote.eth1_data.block_hash is the hash of an eth1.0 block that is
-     * (i) part of the canonical chain, (ii) >= ETH1_FOLLOW_DISTANCE blocks behind the head,
-     * and (iii) newer than state.latest_eth1_data.block_data.
-     *
-     * vote.eth1_data.deposit_count is the deposit count of the eth1.0 deposit contract
-     * at the block defined by vote.eth1_data.block_hash.
-     *
-     * vote.eth1_data.deposit_root is the deposit root of the eth1.0 deposit contract at
-     * the block defined by vote.eth1_data.block_hash.
-     */
-  });
+export async function bestVoteData(state: BeaconState, eth1: IEth1Notifier): Promise<Eth1Data> {
 
-  // if(potentialVotes.length === 0) {
-  //   const blockHash = await eth1.getAncestoreBlockHash(eth1.latestBlockHash(), ETH1_FOLLOW_DISTANCE);
-  //   return {
-  //     blockHash,
-  //     depositCount: await eth1.depositCount(blockHash),
-  //     depositRoot: await eth1.depositRoot(blockHash)
-  //   };
-  // }
+  const [head, latestStateBlock] = await Promise.all([
+    eth1.getHead(),
+    eth1.getBlock('0x' + state.latestEth1Data.blockHash.toString('hex'))
+  ]);
+  const validVotes = await filterValidVotes(state.eth1DataVotes, eth1, head, latestStateBlock);
 
-  //TODO: find Eth1Data with most votes(occurencies)
+  if(validVotes.length === 0) {
+    const requiredBlock = head.number - ETH1_FOLLOW_DISTANCE;
+    const blockHash = (await eth1.getBlock(requiredBlock)).hash;
+    const [depositCount, depositRoot] = await Promise.all([
+      eth1.depositCount(blockHash),
+      eth1.depositRoot(blockHash)
+    ]);
+    return {
+      blockHash: Buffer.from(blockHash.slice(2), 'hex'),
+      depositCount,
+      depositRoot
+    };
+  } else {
+    const frequentVotes = mostFrequent<Eth1Data>(validVotes, Eth1Data);
+    if(frequentVotes.length === 1) {
+      return frequentVotes[0];
+    } else {
+      const blockNumbers = await Promise.all(
+        frequentVotes.map(
+          (vote) =>
+            eth1.getBlock('0x' + vote.blockHash.toString('hex')).then(b => b.number)
+        )
+      );
+      return frequentVotes[blockNumbers.indexOf(Math.max(...blockNumbers))];
+    }
+  }
+}
 
-  return {
-    depositRoot: undefined,
-    depositCount: undefined,
-    blockHash: undefined
-  };
+export async function filterValidVotes(
+  votes: Eth1Data[],
+  eth1: IEth1Notifier,
+  head: Block,
+  latestStateBlock: Block): Promise<Eth1Data[]> {
+  const potentialVotes = [];
+  for(let i = 0; i < votes.length; i++) {
+    const vote = votes[i];
+    const block = await eth1.getBlock(vote.blockHash.toString('hex'));
+    if(block
+      && (head.number - block.number) >= ETH1_FOLLOW_DISTANCE
+      && block.number > latestStateBlock.number
+    ) {
+      const [depositCount, depositRoot] = await Promise.all([
+        eth1.depositCount(vote.blockHash.toString('hex')),
+        eth1.depositRoot(vote.blockHash.toString('hex'))
+      ]);
+      if(depositRoot.equals(vote.depositRoot) && depositCount === vote.depositCount) {
+        potentialVotes.push(vote);
+      }
+    }
+  }
+  return potentialVotes;
 }

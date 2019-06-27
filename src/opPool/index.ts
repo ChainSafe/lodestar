@@ -4,7 +4,16 @@
 
 import {EventEmitter} from "events";
 
-import {Attestation, AttesterSlashing, BeaconBlock, ProposerSlashing, Slot, Transfer, VoluntaryExit} from "../types";
+import {
+  Attestation,
+  AttesterSlashing,
+  BeaconBlock,
+  Deposit,
+  ProposerSlashing,
+  Slot,
+  Transfer,
+  VoluntaryExit
+} from "../types";
 
 import {BeaconChain} from "../chain";
 import {BeaconDB} from "../db";
@@ -105,6 +114,14 @@ export class OpPool extends EventEmitter {
     return await this.db.getAttesterSlashings();
   }
 
+  public async getDeposits(): Promise<Deposit[]> {
+    return await this.db.getDeposits();
+  }
+
+  public async receiveDeposit(deposit: Deposit): Promise<void> {
+    return await this.db.setDeposit(deposit);
+  }
+
   /**
    * Remove stored operations based on a newly processed block
    */
@@ -113,17 +130,20 @@ export class OpPool extends EventEmitter {
       this.removeAttestations(processedBlock.body.attestations),
       this.removeOldAttestations(processedBlock.slot),
       this.removeVoluntaryExits(processedBlock.body.voluntaryExits),
+      this.removeDeposits(processedBlock.body.deposits),
       this.removeOldTransfers(processedBlock.slot),
       this.removeProposerSlashings(processedBlock.body.proposerSlashings),
       this.removeAttesterSlashings(processedBlock.body.attesterSlashings),
     ];
-    for (const task of tasks) {
-      await task;
-    }
+    await Promise.all(tasks);
   }
 
   private async removeAttestations(attestations: Attestation[]): Promise<void> {
     await this.db.deleteAttestations(attestations);
+  }
+
+  private async removeDeposits(deposits: Deposit[]): Promise<void> {
+    await this.db.deleteDeposits(deposits);
   }
 
   private async removeOldAttestations(slot: Slot): Promise<void> {}
