@@ -4,22 +4,22 @@
 
 import deepmerge from "deepmerge";
 import {BeaconDB, LevelDbController} from "../db";
-import {EthersEth1Notifier, EthersEth1Options, IEth1Notifier} from "../eth1";
-import {Libp2pNetwork, INetworkOptions, NodejsNode, INetwork} from "../network";
+import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
+import {INetwork, Libp2pNetwork, NodejsNode} from "../network";
 
 
-import defaultConf from "./defaults";
+import defaultConf, {IBeaconNodeOptions} from "./options";
 import {isPlainObject} from "../util/objects";
 import {Sync} from "../sync";
 import {BeaconChain, IBeaconChain} from "../chain";
 import {OpPool} from "../opPool";
 import {JSONRPC} from "../rpc/protocol";
-import {WSServer} from "../rpc/transport";
-import {IApiConstructor} from "../rpc/api/interface";
-import {DBOptions} from '../db';
+import {TransportType, WSServer} from "../rpc/transport";
 import {createPeerId, initializePeerInfo} from "../network/libp2p/util";
 import {ILogger} from "../logger";
 import {ReputationStore} from "../sync/reputation";
+import HttpServer from "../rpc/transport/http";
+import Validator from "../validator";
 
 
 export interface Service {
@@ -28,26 +28,11 @@ export interface Service {
   stop(): Promise<void>;
 }
 
-// Temporarily have properties be optional until others portions of lodestar are ready
-export interface BeaconNodeCtx {
-  chain?: object;
-  db?: DBOptions;
-  eth1?: EthersEth1Options;
-  network?: INetworkOptions;
-  rpc?: RpcCtx;
-  sync?: object;
-  opPool?: object;
-}
-
-interface RpcCtx {
-  apis?: IApiConstructor[];
-}
-
 /**
  * Beacon Node configured for desktop (non-browser) use
  */
 class BeaconNode {
-  public conf: BeaconNodeCtx;
+  public conf: IBeaconNodeOptions;
   public db: BeaconDB;
   public eth1: IEth1Notifier;
   public network: INetwork;
@@ -56,9 +41,10 @@ class BeaconNode {
   public rpc: Service;
   public sync: Sync;
   public reps: ReputationStore;
+  public validator: Service;
   private logger: ILogger;
 
-  public constructor(opts: BeaconNodeCtx, {logger}: {logger: ILogger}) {
+  public constructor(opts: Partial<IBeaconNodeOptions>, {logger}: { logger: ILogger }) {
 
     this.conf = deepmerge(
       defaultConf,
@@ -105,13 +91,11 @@ class BeaconNode {
       reps: this.reps,
       logger: this.logger,
     });
-    this.rpc = new JSONRPC(this.conf.rpc, {
-      transports: [new WSServer(this.conf.rpc)],
-      apis: this.conf.rpc.apis.map((Api) => {
-        return new Api(this.conf.rpc, {chain: this.chain, db: this.db, eth1: this.eth1});
-      })
-    });
+    this.rpc = this.initRpc();
 
+    if (this.conf.validator) {
+      this.validator = new Validator(this.conf.validator, {logger: this.logger});
+    }
   }
 
   public async start(): Promise<void> {
@@ -123,6 +107,10 @@ class BeaconNode {
     await this.opPool.start();
     await this.sync.start();
     await this.rpc.start();
+
+    if (this.conf.validator) {
+      await this.validator.start();
+    }
   }
 
   public async stop(): Promise<void> {
@@ -134,6 +122,32 @@ class BeaconNode {
     await this.eth1.stop();
     await this.network.stop();
     await this.db.stop();
+
+    if (this.conf.validator){
+      await this.validator.stop();
+    }
+  }
+
+  private initRpc(): JSONRPC {
+    let transports = [];
+    this.conf.api.transports.forEach((transportOpt) => {
+      switch (transportOpt.type) {
+        case TransportType.HTTP: {
+          transports.push(new HttpServer(transportOpt, {logger: this.logger}));
+        }
+          break;
+        case TransportType.WS: {
+          new WSServer(transportOpt);
+        }
+          break;
+      }
+    });
+    return new JSONRPC(this.conf.api, {
+      transports,
+      apis: this.conf.api.apis.map((Api) => {
+        return new Api(this.conf.api, {chain: this.chain, db: this.db, eth1: this.eth1});
+      })
+    });
   }
 }
 
