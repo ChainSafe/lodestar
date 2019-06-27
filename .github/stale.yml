@@ -11,7 +11,7 @@ daysUntilClose: 7
 onlyLabels: []
 
 # Issues or Pull Requests with these labels will never be considered stale. Set to `[]` to disable
-# exemptLabels:
+exemptLabels:
    - "PR state: on-ice"
 #  - pinned
 #  - security
@@ -40,7 +40,7 @@ markComment: >
 # Your comment here
 
 # Comment to post when closing a stale Issue or Pull Request.
-# closeComment: >
+closeComment: >
    This issue or pull request has been automatically been closed due to inactivity.
 
 # Limit the number of actions per hour, from 1-30. Default is 30
