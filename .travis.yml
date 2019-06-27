@@ -12,9 +12,7 @@ jobs:
       script:
         - ./scripts/ci-install-spec-test-dependencies.sh
         - yarn test:spec
-before_deploy: 
-  - yarn build:docs
-  - sh ./scripts/release.sh
+before_deploy: yarn build:docs
 deploy:
     - provider: pages
       skip_cleanup: true
