@@ -12,10 +12,7 @@ import {SyncRpc} from "./rpc";
 import {RegularSync} from "./regular";
 import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
-
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface SyncOptions {
-}
+import {ISyncOptions} from "./options";
 
 interface SyncModules {
   chain: IBeaconChain;
@@ -32,7 +29,7 @@ interface SyncModules {
  * The strategy may differ depending on whether the chain is synced or not
  */
 export class Sync extends EventEmitter {
-  private opts: SyncOptions;
+  private opts: ISyncOptions;
   private chain: IBeaconChain;
   private network: INetwork;
   private opPool: OpPool;
@@ -43,7 +40,7 @@ export class Sync extends EventEmitter {
   private logger: ILogger;
   private syncer: RegularSync;
 
-  public constructor(opts: SyncOptions, {chain, db, eth1, network, opPool, reps, logger}: SyncModules) {
+  public constructor(opts: ISyncOptions, {chain, db, eth1, network, opPool, reps, logger}: SyncModules) {
     super();
     this.opts = opts;
     this.chain = chain;
