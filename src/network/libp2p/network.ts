@@ -13,10 +13,11 @@ import {Attestation, BeaconBlock, Shard, RequestBody, ResponseBody} from "../../
 import {
   Method, RequestId, BLOCK_TOPIC, ATTESTATION_TOPIC, SHARD_SUBNET_COUNT,
 } from "../../constants";
-import {INetwork, INetworkOptions} from "../interface";
+import {INetwork} from "../interface";
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {NetworkRpc} from "./rpc";
 import {ILogger} from "../../logger";
+import {INetworkOptions} from "../options";
 
 
 export class Libp2pNetwork extends EventEmitter implements INetwork {
