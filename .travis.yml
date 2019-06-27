@@ -22,7 +22,7 @@ deploy:
       on:
         branch: master
     - provider: script
-      script: sh ./scripts/release.sh
+      script: sh ./scripts/release-js.sh
       on:
         tags: true
         branch: master
