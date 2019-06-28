@@ -22,7 +22,7 @@ export async function generateDeposits(
       state.depositIndex,
       eth1Data.depositCount,
       (deposit, index) => {
-        merkleTree.add(index, hashTreeRoot(deposit.data, DepositData));
+        merkleTree.add(index + state.depositIndex, hashTreeRoot(deposit.data, DepositData));
         return deposit;
       }
     ).map((deposit, index) => {

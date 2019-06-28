@@ -183,7 +183,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
       newState.depositIndex,
       newState.latestEth1Data.depositCount,
       (deposit, index) => {
-        merkleTree.add(index, hashTreeRoot(deposit.data, DepositData));
+        merkleTree.add(index + newState.depositIndex, hashTreeRoot(deposit.data, DepositData));
         return deposit;
       }
     );
