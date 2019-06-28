@@ -1,11 +1,7 @@
 import {
   Attestation,
   AttestationData,
-  bytes32,
-  Crosslink,
   Epoch,
-  IndexedAttestation,
-  PendingAttestation
 } from "../../src/types";
 import {randBetween} from "./misc";
 import {FAR_FUTURE_EPOCH, GENESIS_EPOCH} from "../../src/constants";
@@ -54,50 +50,5 @@ export function generateEmptyAttestation(): Attestation {
     },
     custodyBitfield: Buffer.alloc(32),
     signature: Buffer.alloc(96),
-  };
-}
-
-export function pendingAttestationFromYaml(value: any): PendingAttestation {
-  return {
-    aggregationBitfield: Buffer.from(value.aggregationBitfield.slice(2), 'hex'),
-    data: attestationDataFromYaml(value.data),
-    inclusionDelay: value.inclusionDelay.toNumber(),
-    proposerIndex: value.proposerIndex.toNumber()
-  };
-}
-
-
-export function attestationFromYaml(value: any): Attestation {
-  return {
-    aggregationBitfield: Buffer.from(value.aggregationBitfield.slice(2), 'hex'),
-    signature: Buffer.from(value.signature.slice(2), 'hex'),
-    custodyBitfield: Buffer.from(value.custodyBitfield.slice(2), 'hex'),
-    data: attestationDataFromYaml(value.data)
-  };
-}
-
-export function indexedAttestationFromYaml(value: any): IndexedAttestation {
-  return {
-    custodyBit0Indices: value.custodyBit0Indices.map((value) => value.toNumber()),
-    custodyBit1Indices: value.custodyBit1Indices.map((value) => value.toNumber()),
-    data: attestationDataFromYaml(value.data),
-    signature: Buffer.from(value.signature.slice(2), 'hex')
-  };
-}
-
-export function attestationDataFromYaml(value: any): AttestationData {
-  return {
-    beaconBlockRoot: Buffer.from(value.beaconBlockRoot.slice(2), 'hex'),
-    sourceEpoch: value.sourceEpoch.toNumber(),
-    sourceRoot: Buffer.from(value.sourceRoot.slice(2), 'hex'),
-    targetEpoch: value.targetEpoch.toNumber(),
-    targetRoot: Buffer.from(value.targetRoot.slice(2), 'hex'),
-    crosslink: {
-      shard: value.crosslink.shard.toNumber(),
-      startEpoch: value.crosslink.startEpoch.toNumber(),
-      endEpoch: value.crosslink.endEpoch.toNumber(),
-      parentRoot:Buffer.from(value.crosslink.parentRoot.slice(2), 'hex'),
-      dataRoot: Buffer.from(value.crosslink.parentRoot.slice(2), 'hex'),
-    },
   };
 }

@@ -1,14 +1,14 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
-import {stateFromYaml} from "../../../utils/state";
 import {expect} from "chai";
+import {hashTreeRoot} from "@chainsafe/ssz";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
-import {blockFromYaml} from "../../../utils/block";
-import {BeaconBlock, BeaconState, number64, Validator} from "../../../../src/types";
+
 import {stateTransition} from "../../../../src/chain/stateTransition";
-import {hashTreeRoot} from "@chainsafe/ssz";
+import {BeaconState, number64, Validator} from "../../../../src/types";
+import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/sanity/slots/sanity_slots_mainnet.yaml"),
@@ -25,10 +25,10 @@ describeSpecTest(
         verifyMultiple: sinon.stub().returns(true)
       });
     }
-    return [stateFromYaml(input.pre), input.slots.toNumber()];
+    return [expandYamlValue(input.pre, BeaconState), input.slots.toNumber()];
   },
   (expected) => {
-    return stateFromYaml(expected.post);
+    return expandYamlValue(expected.post, BeaconState);
   },
   result => result,
   (testCase) => {
