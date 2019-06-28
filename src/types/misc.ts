@@ -40,18 +40,6 @@ export const Fork: SimpleContainerType = {
   ],
 };
 
-//SPEC 0.7
-// class Crosslink(Container):
-// # Shard number
-// shard: uint64
-// # Crosslinking data from epochs [start....end-1]
-// start_epoch: uint64
-// end_epoch: uint64
-// # Root of the previous crosslink
-// parent_root: Bytes32
-// # Root of the crosslinked shard data since the previous crosslink
-// data_root: Bytes32
-
 export interface Crosslink {
   //Shard number
   shard: number64;
