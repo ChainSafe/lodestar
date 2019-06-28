@@ -5,7 +5,7 @@ export function generateEmptyCrosslink(epoch: Epoch = GENESIS_EPOCH): Crosslink 
   return {
     shard: GENESIS_START_SHARD,
     startEpoch: epoch,
-    endEpoch: FAR_FUTURE_EPOCH,
+    endEpoch: epoch,
     parentRoot:ZERO_HASH,
     dataRoot: ZERO_HASH,
   };

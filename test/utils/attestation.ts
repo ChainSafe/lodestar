@@ -4,7 +4,7 @@ import {
   Epoch,
 } from "../../src/types";
 import {randBetween} from "./misc";
-import {FAR_FUTURE_EPOCH, GENESIS_EPOCH} from "../../src/constants";
+import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, GENESIS_START_SHARD} from "../../src/constants";
 
 /**
  * Generates a fake attestation data for test purposes.
@@ -23,7 +23,7 @@ export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch):
     crosslink: {
       shard: randBetween(0, 1024),
       startEpoch:GENESIS_EPOCH,
-      endEpoch:FAR_FUTURE_EPOCH,
+      endEpoch:GENESIS_EPOCH,
       parentRoot:Buffer.alloc(32),
       dataRoot: Buffer.alloc(32),
     }
@@ -41,9 +41,9 @@ export function generateEmptyAttestation(): Attestation {
       sourceRoot: Buffer.alloc(32),
       targetRoot: Buffer.alloc(32),
       crosslink: {
-        shard: randBetween(0, 1024),
+        shard: GENESIS_START_SHARD,
         startEpoch:GENESIS_EPOCH,
-        endEpoch:FAR_FUTURE_EPOCH,
+        endEpoch:GENESIS_EPOCH,
         parentRoot:Buffer.alloc(32),
         dataRoot: Buffer.alloc(32),
       }
