@@ -14,7 +14,6 @@ describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/deposit/deposit_mainnet.yaml"),
   (state, deposit) => {
     processDeposit(state, deposit);
-    console.dir(state)
     return state;
   },
   (input) => {
