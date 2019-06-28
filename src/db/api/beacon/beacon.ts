@@ -13,7 +13,8 @@ import {
   Slot,
   Transfer,
   uint64, ValidatorIndex,
-  VoluntaryExit
+  VoluntaryExit,
+  number64
 } from "../../../types";
 
 import {Bucket, encodeKey, Key} from "../../schema";
@@ -239,13 +240,14 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
     return await this.getAllData(Bucket.genesisDeposit, Deposit);
   }
 
-  public async setDeposit(deposit: Deposit): Promise<void> {
-    await this.db.put(encodeKey(Bucket.genesisDeposit, deposit.index), serialize(deposit, Deposit));
+  public async setDeposit(index: number, deposit: Deposit): Promise<void> {
+    await this.db.put(encodeKey(Bucket.genesisDeposit, index), serialize(deposit, Deposit));
   }
 
-  public async deleteDeposits(deposits: Deposit[]): Promise<void> {
-    const criteria: (Buffer | string)[] = deposits.map((deposit) => {
-      return encodeKey(Bucket.genesisDeposit, deposit.index);
+  public async deleteDeposits(): Promise<void> {
+    const deposits = await this.getDeposits()
+    const criteria: (Buffer | string)[] = (deposits || []).map((d, index) => {
+      return encodeKey(Bucket.genesisDeposit, index);
     });
     await this.db.batchDelete(criteria);
   }
@@ -255,7 +257,7 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
       gt: encodeKey(key, Buffer.alloc(0)),
       lt: encodeKey(key + 1, Buffer.alloc(0)),
     });
-    return data.map((data) => deserialize(data, type));
+    return (data || []).map((data) => deserialize(data, type));
   }
 
   private async deleteData(key: Bucket, type: AnySSZType, data: any[]): Promise<void> {

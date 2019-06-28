@@ -8,11 +8,3 @@ export function generateEth1Data(blockHash = ZERO_HASH, depositCount = 0, deposi
     depositRoot
   };
 }
-
-export function eth1DataFromYaml(value: any): Eth1Data {
-  return {
-    depositRoot: Buffer.from(value.depositRoot.slice(2), 'hex'),
-    blockHash: Buffer.from(value.blockHash.slice(2), 'hex'),
-    depositCount: value.depositCount.toNumber(),
-  };
-}

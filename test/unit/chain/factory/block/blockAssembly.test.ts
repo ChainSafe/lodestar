@@ -36,11 +36,11 @@ describe('block assembly', function () {
       expect(result).to.not.be.null;
       expect(result.slot).to.equal(1);
       expect(result.stateRoot).to.not.be.null;
-      expect(result.previousBlockRoot).to.not.be.null;
+      expect(result.parentRoot).to.not.be.null;
       expect(beaconDB.getState.calledOnce).to.be.true;
       expect(beaconDB.getChainHead.calledOnce).to.be.true;
       expect(assembleBodyStub.calledOnce).to.be.true;
-      expect(processBlockStub.withArgs(sinon.match.any, sinon.match.any, false).calledOnce).to.be.true;
+      expect(processBlockStub.withArgs(sinon.match.any, sinon.match.any).calledOnce).to.be.true;
     } catch (e) {
       expect.fail(e.stack);
     }

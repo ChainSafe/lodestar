@@ -1,20 +1,21 @@
+import BN from "bn.js";
 import chai, {assert, expect} from "chai";
+import chaiAsPromised from "chai-as-promised";
 import {Contract, ethers, Event} from "ethers";
 import ganache from "ganache-core";
 import sinon from "sinon";
-import bls from "@chainsafe/bls-js";
 import {Provider} from "ethers/providers";
 import promisify from "promisify-es6";
+import bls from "@chainsafe/bls-js";
 import {serialize} from "@chainsafe/ssz";
 
 import {EthersEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/defaults";
-import chaiAsPromised from "chai-as-promised";
-import {generateDeposit} from "../../utils/deposit";
 import {number64} from "../../../src/types";
 import {ILogger, WinstonLogger} from "../../../src/logger";
 import {OpPool} from "../../../src/opPool";
-import BN from "bn.js";
+
+import {generateDeposit} from "../../utils/deposit";
 
 
 chai.use(chaiAsPromised);
@@ -206,8 +207,8 @@ describe("Eth1Notifier", () => {
     const timeHex = "0x" + timeBuf.toString("hex");
     const event = {blockHash: "0x0000000000000000"} as Event;
     const genesisDeposits = [
-      generateDeposit(0),
-      generateDeposit(1),
+      generateDeposit(),
+      generateDeposit(),
     ];
     opPool.getDeposits.resolves(genesisDeposits);
     await eth1.processEth2GenesisLog(depositRootHex, depositCountHex, timeHex, event);

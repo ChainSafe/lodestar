@@ -1,35 +1,32 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
-import {stateFromYaml} from "../../../utils/state";
 import {expect} from "chai";
+import {hashTreeRoot} from "@chainsafe/ssz";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
-import {blockFromYaml} from "../../../utils/block";
-import {BeaconBlock, BeaconState, Validator} from "../../../../src/types";
-import {executeStateTransition} from "../../../../src/chain/stateTransition";
-import {hashTreeRoot} from "@chainsafe/ssz";
+
+import {processSlots} from "../../../../src/chain/stateTransition";
+import {BeaconState, number64, Validator} from "../../../../src/types";
+import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(
-  join(__dirname, "../../test-cases/tests/sanity/blocks/blocksanity_s_mainnet.yaml"),
-  (state: BeaconState, blocks: BeaconBlock[]) => {
-    blocks.forEach((block) => {
-      executeStateTransition(state, block, false);
-    });
+  join(__dirname, "../../test-cases/tests/sanity/slots/sanity_slots_mainnet.yaml"),
+  (state: BeaconState, slots: number64) => {
+    processSlots(state, state.slot + slots);
     return state;
   },
   (input) => {
     if(input.bls_setting && input.bls_setting.toNumber() === 2) {
       rewire({
         verify: sinon.stub().returns(true),
-        verifyMultiple: sinon.stub().returns(true),
-        aggregatePubkeys: sinon.stub().returns(Buffer.alloc(48))
+        verifyMultiple: sinon.stub().returns(true)
       });
     }
-    return [stateFromYaml(input.pre), input.blocks.map(blockFromYaml)];
+    return [expandYamlValue(input.pre, BeaconState), input.slots.toNumber()];
   },
   (expected) => {
-    return stateFromYaml(expected.post);
+    return expandYamlValue(expected.post, BeaconState);
   },
   result => result,
   (testCase) => {
@@ -43,7 +40,7 @@ describeSpecTest(
       expected.validatorRegistry = expected.validatorRegistry.map(b => hashTreeRoot(b, Validator));
       actual.validatorRegistry = actual.validatorRegistry.map(b => hashTreeRoot(b, Validator));
     }
-    expect(expected.balances).to.be.deep.equal(actual.balances);
+    expect(expected).to.be.deep.equal(actual);
     restore();
   },
   0

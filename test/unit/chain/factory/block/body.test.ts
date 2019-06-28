@@ -40,7 +40,7 @@ describe('blockAssembly - body', function () {
     opPool.getAttesterSlashings.resolves([generateEmptyAttesterSlashing()]);
     opPool.getAttestations.resolves([generateEmptyAttestation()]);
     opPool.getVoluntaryExits.resolves([generateEmptyVoluntaryExit()]);
-    generateDepositsStub.resolves([generateDeposit(1)]);
+    generateDepositsStub.resolves([generateDeposit()]);
     bestVoteStub.resolves([]);
     const result = await assembleBody(
       opPool,
@@ -65,7 +65,7 @@ describe('blockAssembly - body', function () {
     opPool.getAttesterSlashings.resolves(new Array(MAX_ATTESTER_SLASHINGS + 1).map(generateEmptyAttesterSlashing));
     opPool.getAttestations.resolves(new Array(MAX_ATTESTATIONS + 1).map(generateEmptyAttestation));
     opPool.getVoluntaryExits.resolves(new Array(MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit));
-    generateDepositsStub.resolves([generateDeposit(1)]);
+    generateDepositsStub.resolves([generateDeposit()]);
     bestVoteStub.resolves([]);
     const result = await assembleBody(
       opPool,

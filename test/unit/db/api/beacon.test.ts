@@ -448,7 +448,7 @@ describe('beacon db api', function() {
   it('test get deposits', async function() {
     encodeKeyStub.withArgs(Bucket.genesisDeposit, Buffer.alloc(0)).returns('lower');
     encodeKeyStub.withArgs(Bucket.genesisDeposit + 1, Buffer.alloc(0)).returns('higher');
-    dbStub.search.resolves([serialize(generateDeposit(1), Deposit)]);
+    dbStub.search.resolves([serialize(generateDeposit(), Deposit)]);
     const result = await beaconDB.getDeposits();
     expect(result.length).to.be.equal(1);
     expect(
@@ -466,7 +466,7 @@ describe('beacon db api', function() {
   it('test set deposits', async function() {
     encodeKeyStub.returns('genesisDepositKey');
     dbStub.put.resolves({});
-    await beaconDB.setDeposit(generateDeposit(2));
+    await beaconDB.setDeposit(1, generateDeposit());
     expect(
       dbStub.put.withArgs(
         "genesisDepositKey",
@@ -480,14 +480,12 @@ describe('beacon db api', function() {
     encodeKeyStub.returns('genesisDepositKey');
     let argForBatchDelete = ['genesisDepositKey','genesisDepositKey'];
     dbStub.batchDelete.resolves({});
-    await beaconDB.deleteDeposits(
-      [generateDeposit(1), generateDeposit(2)]
-    );
+    await beaconDB.deleteDeposits();
     expect(
-      encodeKeyStub.withArgs(Bucket.genesisDeposit, sinon.match.any).calledTwice
+      encodeKeyStub.withArgs(Bucket.genesisDeposit, sinon.match.any).calledOnce
     ).to.be.true;
     expect(
-      dbStub.batchDelete.calledWith(argForBatchDelete)
+      dbStub.batchDelete.calledOnce
     ).to.be.true;
   });
 

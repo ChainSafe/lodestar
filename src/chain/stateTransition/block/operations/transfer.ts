@@ -4,13 +4,13 @@
 
 import assert from "assert";
 import BN from "bn.js";
-import {signingRoot} from "@chainsafe/ssz";
+import {hash, signingRoot} from "@chainsafe/ssz";
+import bls from "@chainsafe/bls-js";
 
 import {
-  BeaconBlock,
   BeaconState,
   Transfer,
-} from "../../../types";
+} from "../../../../types";
 
 import {
   BLS_WITHDRAWAL_PREFIX_BYTE,
@@ -18,27 +18,22 @@ import {
   MIN_DEPOSIT_AMOUNT,
   FAR_FUTURE_EPOCH,
   MAX_EFFECTIVE_BALANCE,
-} from "../../../constants";
-
-import bls from "@chainsafe/bls-js";
-
-import {hash} from "../../../util/crypto";
+} from "../../../../constants";
 
 import {
   getBeaconProposerIndex,
   getCurrentEpoch,
   getDomain,
-  slotToEpoch,
   decreaseBalance,
   increaseBalance,
-} from "../util";
+} from "../../util";
+
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#transfers
 
 /**
  * Process ``Transfer`` operation.
- *
- * Note that this function mutates ``state``.
  */
-export function processTransfer(state: BeaconState, transfer: Transfer): BeaconState {
+export function processTransfer(state: BeaconState, transfer: Transfer): void {
   // Verify the amount and fee aren't individually too big (for anti-overflow purposes)
   const senderBalance = state.balances[transfer.sender];
   assert(senderBalance.gte(transfer.amount));
@@ -61,7 +56,7 @@ export function processTransfer(state: BeaconState, transfer: Transfer): BeaconS
     transfer.pubkey,
     signingRoot(transfer, Transfer),
     transfer.signature,
-    getDomain(state, Domain.TRANSFER, slotToEpoch(transfer.slot)),
+    getDomain(state, Domain.TRANSFER),
   ));
   // Process the transfer
   decreaseBalance(state, transfer.sender, transfer.amount.add(transfer.fee));
@@ -76,14 +71,4 @@ export function processTransfer(state: BeaconState, transfer: Transfer): BeaconS
     (new BN(0)).lt(state.balances[transfer.recipient]) &&
     state.balances[transfer.recipient].lt(MIN_DEPOSIT_AMOUNT)
   ));
-  return state;
-}
-
-export default function processTransfers(state: BeaconState, block: BeaconBlock): void {
-  // Note: Transfers are a temporary functionality for phases 0 and 1, to be removed in phase 2.
-  // TODO: enable when configurable constants are implemented
-  // assert(block.body.transfers.length <= MAX_TRANSFERS);
-  for (const transfer of block.body.transfers) {
-    processTransfer(state, transfer);
-  }
 }

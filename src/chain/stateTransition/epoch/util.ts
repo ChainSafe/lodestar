@@ -3,17 +3,16 @@
  */
 
 import assert from "assert";
-import {deserialize, serialize, hashTreeRoot} from "@chainsafe/ssz";
+import {deserialize, hashTreeRoot, equals} from "@chainsafe/ssz";
 
 import {
   BeaconState, PendingAttestation,
-  Shard, ValidatorIndex, Gwei, Crosslink, Epoch, AttestationData,
+  Shard, ValidatorIndex, Gwei, Crosslink, Epoch,
   uint256,
 } from "../../../types";
 import {
   ZERO_HASH,
-  MAX_CROSSLINK_EPOCHS,
-  GENESIS_EPOCH
+  GENESIS_EPOCH, GENESIS_START_SHARD
 } from "../../../constants";
 
 import {
@@ -72,69 +71,54 @@ export function getAttestingBalance(state: BeaconState, attestations: PendingAtt
   return getTotalBalance(state, getUnslashedAttestingIndices(state, attestations));
 }
 
-export function getCrosslinkFromAttestationData(
-  state: BeaconState,
-  data: AttestationData
-): Crosslink {
-  return {
-    epoch: Math.min(
-      data.targetEpoch,
-      state.currentCrosslinks[data.shard].epoch + MAX_CROSSLINK_EPOCHS
-    ),
-    previousCrosslinkRoot: data.previousCrosslinkRoot,
-    crosslinkDataRoot: data.crosslinkDataRoot,
-  };
-}
-
 export function getWinningCrosslinkAndAttestingIndices(
   state: BeaconState,
   epoch: Epoch,
   shard: Shard
 ): [Crosslink, ValidatorIndex[]] {
-  const shardAttestations = getMatchingSourceAttestations(state, epoch)
-    .filter((a) => a.data.shard === shard);
-  const shardCrosslinks = shardAttestations
-    .map((a) => getCrosslinkFromAttestationData(state, a.data));
-  const currentCrosslinkRoot = hashTreeRoot(state.currentCrosslinks[shard], Crosslink); 
-  const candidateCrosslinks = shardCrosslinks.filter((c) => (
-    currentCrosslinkRoot.equals(c.previousCrosslinkRoot) ||
-    currentCrosslinkRoot.equals(hashTreeRoot(c, Crosslink))
-  ));
 
-  if (candidateCrosslinks.length === 0) {
-    return [{
-      epoch: GENESIS_EPOCH,
-      previousCrosslinkRoot: ZERO_HASH,
-      crosslinkDataRoot: ZERO_HASH,
-    }, []];
+  const attestations = getMatchingSourceAttestations(state, epoch)
+    .filter((a) => a.data.crosslink.shard === shard);
+  const currentCrosslinkRoot = hashTreeRoot(state.currentCrosslinks[shard], Crosslink);
+  const crosslinks = attestations.filter((a) => (
+    currentCrosslinkRoot.equals(a.data.crosslink.parentRoot) ||
+    currentCrosslinkRoot.equals(hashTreeRoot(a.data.crosslink, Crosslink))
+  )).map((a) => a.data.crosslink);
+
+  const defaultCrossLink: Crosslink = {
+    shard: GENESIS_START_SHARD,
+    startEpoch: GENESIS_EPOCH,
+    endEpoch: GENESIS_EPOCH,
+    parentRoot: ZERO_HASH,
+    dataRoot: ZERO_HASH,
+  };
+
+  if (crosslinks.length === 0) {
+    return [defaultCrossLink, []];
   }
-  
-  const getAttestationsFor = (crosslink: Crosslink) => 
-    shardAttestations.filter((a) =>
-      serialize(getCrosslinkFromAttestationData(state, a.data), Crosslink)
-        .equals(serialize(crosslink, Crosslink)));
 
   // Winning crosslink has the crosslink data root with the most balance voting
   // for it (ties broken lexicographically)
-  const winningCrosslink = candidateCrosslinks
+  const winningCrosslink = crosslinks
     .map((crosslink) => ({
       crosslink,
       balance: getAttestingBalance(
         state,
-        getAttestationsFor(crosslink),
+        attestations.filter((a) => equals(a.data.crosslink, crosslink, Crosslink)),
       ),
     }))
     .reduce((a, b) => {
       if (b.balance.gt(a.balance)) {
         return b;
       } else if (b.balance.eq(a.balance)) {
-        if ((deserialize(b.crosslink.crosslinkDataRoot, uint256) as uint256)
-          .gt(deserialize(a.crosslink.crosslinkDataRoot, uint256) as uint256)) {
+        if ((deserialize(b.crosslink.dataRoot, uint256) as uint256)
+          .gt(deserialize(a.crosslink.dataRoot, uint256) as uint256)) {
           return b;
         }
       }
       return a;
     }).crosslink;
-  return [winningCrosslink
-    , getUnslashedAttestingIndices(state, getAttestationsFor(winningCrosslink))];
+  const winningAttestations = attestations.filter((a) =>
+    equals(a.data.crosslink, winningCrosslink, Crosslink));
+  return [winningCrosslink, getUnslashedAttestingIndices(state, winningAttestations)];
 }

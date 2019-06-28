@@ -60,8 +60,8 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
       this.provider.on('block', this.processBlockHeadUpdate.bind(this));
     } else {
       const pastDeposits = await this.getContractDeposits(this.opts.depositContract.deployedAt);
-      await Promise.all(pastDeposits.map((pastDeposit) => {
-        return this.opPool.receiveDeposit(pastDeposit);
+      await Promise.all(pastDeposits.map((pastDeposit, index) => {
+        return this.opPool.receiveDeposit(index, pastDeposit);
       }));
       this.provider.on('block', this.processBlockHeadUpdate.bind(this));
       this.contract.on('Deposit', this.processDepositLog.bind(this));
@@ -93,29 +93,29 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     merkleTreeIndex: string
   ): Promise<void> {
     try {
+      const index = deserialize(Buffer.from(merkleTreeIndex.substr(2), 'hex'), number64) as number64;
       const deposit = this.createDeposit(
         pubkey,
         withdrawalCredentials,
         amount,
         signature,
-        merkleTreeIndex
       );
       this.logger.info(
-        `Received validator deposit event index=${deposit.index}`
+        `Received validator deposit event index=${index}`
       );
-      if (deposit.index !== this._depositCount) {
+      if (index !== this._depositCount) {
         this.logger.warn(
-          `Validator deposit with index=${deposit.index} received out of order. 
+          `Validator deposit with index=${index} received out of order. 
           (currentCount: ${this._depositCount})`
         );
         // deposit processed out of order
         return;
       }
-      this._depositCount++;
       //after genesis stop storing in genesisDeposit bucket
       if (!this.genesisBlockHash) {
-        await this.opPool.receiveDeposit(deposit);
+        await this.opPool.receiveDeposit(index, deposit);
       }
+      this._depositCount++;
       this.emit('deposit', deposit);
     } catch (e) {
       this.logger.error(`Failed to process deposit log. Error: ${e.message}`);
@@ -166,7 +166,6 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
         logDescription.values.withdrawalCredentials,
         logDescription.values.amount,
         logDescription.values.signature,
-        logDescription.values.merkleTreeIndex
       );
     });
   }
@@ -232,15 +231,17 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     return await this.provider.getLogs(filter);
   }
 
+  /**
+   * Parse deposit log elements to a [[Deposit]]
+   */
   private createDeposit(
     pubkey: string,
     withdrawalCredentials: string,
     amount: string,
     signature: string,
-    merkleTreeIndex: string): Deposit {
+  ): Deposit {
     return {
       proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH}, () => Buffer.alloc(32)),
-      index: deserialize(Buffer.from(merkleTreeIndex.substr(2), 'hex'), number64) as number64,
       data: {
         pubkey: Buffer.from(pubkey.slice(2), 'hex'),
         withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), 'hex'),
