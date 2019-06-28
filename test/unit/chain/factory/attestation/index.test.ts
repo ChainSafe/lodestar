@@ -24,15 +24,15 @@ describe("assemble attestation", function () {
     sandbox.restore();
   });
 
-  // it('should produce attestation', async function () {
-  //   const state = generateState({slot: 1});
-  //   const attestationData = generateAttestationData(1, 3);
-  //   assembleAttestationDataStub.resolves(attestationData);
-  //   const result = await assembleAttestation(dbStub, state, generateEmptyBlock(), 4, 2);
-  //   //expect(result).to.not.be.null;
-  //   //expect(result.data).to.be.equal(attestationData);
-  //   //expect(state.slot).to.be.equal(4);
-  //   //expect(assembleAttestationDataStub.calledOnceWith(dbStub, state, generateEmptyBlock(), 2));
-  // });
+  it('should produce attestation', async function () {
+    const state = generateState({slot: 1});
+    const attestationData = generateAttestationData(1, 3);
+    assembleAttestationDataStub.resolves(attestationData);
+    const result = await assembleAttestation(dbStub, state, generateEmptyBlock(), 4, 2);
+    expect(result).to.not.be.null;
+    expect(result.data).to.be.equal(attestationData);
+    expect(state.slot).to.be.equal(4);
+    expect(assembleAttestationDataStub.calledOnceWith(dbStub, state, generateEmptyBlock(), 2));
+  });
 
 });

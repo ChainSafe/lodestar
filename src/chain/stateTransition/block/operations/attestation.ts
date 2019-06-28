@@ -42,8 +42,6 @@ export function processAttestation(state: BeaconState, attestation: Attestation)
     state.slot <= attestationSlot + SLOTS_PER_EPOCH
   );
 
-  // assert([previousEpoch, currentEpoch].includes(data.targetEpoch));
-
   // Cache pending attestation
   const pendingAttestation: PendingAttestation = {
     data: data,
