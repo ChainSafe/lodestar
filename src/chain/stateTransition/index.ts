@@ -2,6 +2,9 @@
  * @module chain/stateTransition
  */
 
+import assert from "assert";
+import {hashTreeRoot} from "@chainsafe/ssz";
+
 import {
   BeaconBlock,
   BeaconState,
@@ -10,27 +13,14 @@ import {
 import {processBlock} from "./block";
 import {processEpoch} from "./epoch";
 import {processSlots} from "./slot";
-import {hashTreeRoot} from "@chainsafe/ssz";
-import  assert from "assert";
-
 
 export {
+  processSlots,
   processBlock,
   processEpoch,
 };
 
-//SPEC 0.7
-// def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
-//   # Process slots (including those with no blocks) since block
-// process_slots(state, block.slot)
-// # Process block
-// process_block(state, block)
-// # Validate state root (`validate_state_root == True` in production)
-// if validate_state_root:
-// assert block.state_root == hash_tree_root(state)
-// # Return post-state
-// return state
-
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#beacon-chain-state-transition-function
 
 export function stateTransition(
   state: BeaconState, block: BeaconBlock,
@@ -42,7 +32,7 @@ export function stateTransition(
   processBlock(state, block);
   // Validate state root (`validate_state_root == True` in production)
   if (validateStateRoot){
-    assert(block.stateRoot.equals( hashTreeRoot(state, BeaconState)));
+    assert(block.stateRoot.equals(hashTreeRoot(state, BeaconState)));
   }
 
   // Return post-state

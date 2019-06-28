@@ -51,7 +51,7 @@ export const LATEST_ACTIVE_INDEX_ROOTS_LENGTH = 64; // CUSTOMIZED
 export const LATEST_SLASHED_EXIT_LENGTH = 64; // CUSTOMIZED
 
 // Reward and penalty quotients
-export const BASE_REWARD_QUOTIENT = 2 ** 5; // 32
+export const BASE_REWARD_FACTOR = 2 ** 5; // 32
 export const WHISTLEBLOWING_REWARD_QUOTIENT = 2 ** 9; // 512
 export const PROPOSER_REWARD_QUOTIENT = 2 ** 3; // 8
 export const INACTIVITY_PENALTY_QUOTIENT = 2 ** 25; // 33,554,432

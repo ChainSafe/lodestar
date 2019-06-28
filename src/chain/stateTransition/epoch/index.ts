@@ -3,7 +3,6 @@
  */
 
 import {BeaconState} from "../../../types";
-import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "../../../constants";
 
 import {processRewardsAndPenalties} from "./balanceUpdates";
 import {processCrosslinks} from "./crosslinks";
@@ -11,10 +10,6 @@ import {processFinalUpdates} from "./finalUpdates";
 import {processJustificationAndFinalization} from "./justification";
 import {processRegistryUpdates} from "./registryUpdates";
 import {processSlashings} from "./slashings";
-
-export function shouldProcessEpoch(state: BeaconState): boolean {
-  return state.slot > GENESIS_SLOT && (state.slot + 1) % SLOTS_PER_EPOCH === 0;
-}
 
 export function processEpoch(state: BeaconState): BeaconState {
 
@@ -30,17 +25,20 @@ export function processEpoch(state: BeaconState): BeaconState {
   // Validator Registry
   processRegistryUpdates(state);
 
-  // TODO
-  //processReveal_deadlines
+  // TODO Later Phase
+  // processRevealDeadlines
 
-  // TODO
-  //processChallenge_deadlines
+  // TODO Later Phase
+  // processChallengeDeadlines
 
   // Slashings
   processSlashings(state);
 
   // Final Updates
   processFinalUpdates(state);
+
+  // TODO Later Phase
+  // afterProcessFinalUpdates
 
   return state;
 }

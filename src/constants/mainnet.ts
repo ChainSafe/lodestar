@@ -55,7 +55,7 @@ export const LATEST_ACTIVE_INDEX_ROOTS_LENGTH = 2 ** 13; // epochs || ~36 days
 export const LATEST_SLASHED_EXIT_LENGTH = 2 ** 13; // epochs || ~36 days
 
 // Reward and penalty quotients
-export const BASE_REWARD_QUOTIENT = 2 ** 5; // 32
+export const BASE_REWARD_FACTOR = 2 ** 5; // 32
 export const WHISTLEBLOWING_REWARD_QUOTIENT = 2 ** 9; // 512
 export const PROPOSER_REWARD_QUOTIENT = 2 ** 3; // 8
 export const INACTIVITY_PENALTY_QUOTIENT = new BN(2 ** 25); // 33,554,432

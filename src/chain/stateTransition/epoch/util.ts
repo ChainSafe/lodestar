@@ -3,7 +3,7 @@
  */
 
 import assert from "assert";
-import {deserialize, hashTreeRoot, serialize, equals} from "@chainsafe/ssz";
+import {deserialize, hashTreeRoot, equals} from "@chainsafe/ssz";
 
 import {
   BeaconState, PendingAttestation,
