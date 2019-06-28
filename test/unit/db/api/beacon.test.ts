@@ -466,7 +466,7 @@ describe('beacon db api', function() {
   it('test set deposits', async function() {
     encodeKeyStub.returns('genesisDepositKey');
     dbStub.put.resolves({});
-    await beaconDB.setDeposit(generateDeposit());
+    await beaconDB.setDeposit(1, generateDeposit());
     expect(
       dbStub.put.withArgs(
         "genesisDepositKey",
@@ -480,14 +480,12 @@ describe('beacon db api', function() {
     encodeKeyStub.returns('genesisDepositKey');
     let argForBatchDelete = ['genesisDepositKey','genesisDepositKey'];
     dbStub.batchDelete.resolves({});
-    await beaconDB.deleteDeposits(
-      [generateDeposit(), generateDeposit()]
-    );
+    await beaconDB.deleteDeposits();
     expect(
-      encodeKeyStub.withArgs(Bucket.genesisDeposit, sinon.match.any).calledTwice
+      encodeKeyStub.withArgs(Bucket.genesisDeposit, sinon.match.any).calledOnce
     ).to.be.true;
     expect(
-      dbStub.batchDelete.calledWith(argForBatchDelete)
+      dbStub.batchDelete.calledOnce
     ).to.be.true;
   });
 

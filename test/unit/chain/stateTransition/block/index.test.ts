@@ -29,7 +29,7 @@ describe('process block', function () {
     sandbox.restore();
   });
 
-  it('should process block', function () {
+  it.skip('should process block', function () {
     processBlock(generateState(), generateEmptyBlock(), false);
     expect(processEth1Stub.calledOnce).to.be.true;
     expect(processBlockHeaderStub.calledOnce).to.be.true;
