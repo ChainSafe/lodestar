@@ -5,7 +5,7 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 
-import {processTransfer} from "../../../../src/chain/stateTransition/block/transfers";
+import {processTransfer} from "../../../../src/chain/stateTransition/block/operations";
 import {BeaconState, Transfer} from "../../../../src/types";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 

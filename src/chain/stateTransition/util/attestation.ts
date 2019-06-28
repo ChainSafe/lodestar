@@ -92,6 +92,16 @@ export function convertToIndexed(state: BeaconState, attestation: Attestation): 
   };
 }
 
+function isSorted(indices: number[]): boolean {
+  for (let i = 0, prevIndex = -1; i < indices.length; i++) {
+    if (indices[i] <= prevIndex) {
+      return false;
+    }
+    prevIndex = indices[i];
+  }
+  return true;
+}
+
 /**
  * Verify validity of ``indexed_attestation`` fields.
  */
@@ -105,22 +115,14 @@ export function validateIndexedAttestation(
   // Verify no index has custody bit equal to 1 [to be removed in phase 1]
   assert(bit1Indices.length == 0);
   // Verify max number of indices
-  assert((bit0Indices.length + bit1Indices.length) <= MAX_INDICES_PER_ATTESTATION);
+  assert(bit0Indices.length + bit1Indices.length <= MAX_INDICES_PER_ATTESTATION);
   //  Verify index sets are disjoint
-  const intersection = new Set();
-  for(let x of new Set(bit0Indices)) {
-    if(bit1Indices.includes(x)) {
-      intersection.add(x);
-    }
-  }
-  assert(intersection.size == 0);
+  const intersection = bit0Indices.filter((index) => bit1Indices.includes(index));
+  assert(intersection.length == 0);
   //  Verify indices are sorted
-  const sortedBit0Indices = bit0Indices.slice().sort((a, b) => a - b);
-  const sortedBit1Indices = bit1Indices.slice().sort((a, b) => a - b);
-  const isSortedBit0Indices = bit0Indices.every((index, i) => index === sortedBit0Indices[i]);
-  const isSortedBit1Indices = bit1Indices.every((index, i) => index === sortedBit1Indices[i]);
-  assert(isSortedBit0Indices && isSortedBit1Indices);
+  assert(isSorted(bit0Indices) && isSorted(bit1Indices));
   //  Verify aggregate signature
+  //console.log(JSON.stringify(indexedAttestation, null, 2));
   assert(bls.verifyMultiple(
     [
       bls.aggregatePubkeys(bit0Indices.map((i) => state.validatorRegistry[i].pubkey)),

@@ -22,8 +22,9 @@ import {
   getTemporaryBlockHeader,
 } from "../util";
 
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#block-header
 
-export default function processBlockHeader(state: BeaconState, block: BeaconBlock, verify: boolean = true): void {
+export function processBlockHeader(state: BeaconState, block: BeaconBlock, verify: boolean = true): void {
   // Verify that the slots match
   assert(block.slot === state.slot);
 

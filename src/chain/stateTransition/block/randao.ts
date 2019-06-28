@@ -16,8 +16,9 @@ import {hash} from "../../../util/crypto";
 
 import {getBeaconProposerIndex, getCurrentEpoch, getDomain, getRandaoMix,} from "../util";
 
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#randao
 
-export default function processRandao(state: BeaconState, body: BeaconBlockBody): void {
+export function processRandao(state: BeaconState, body: BeaconBlockBody): void {
   const currentEpoch = getCurrentEpoch(state);
   const proposer = state.validatorRegistry[getBeaconProposerIndex(state)];
   // Verify that the provided randao value is valid

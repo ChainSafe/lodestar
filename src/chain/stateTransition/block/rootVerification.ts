@@ -11,6 +11,6 @@ import {
 } from "../../../types";
 
 
-export default function verifyBlockStateRoot(state: BeaconState, block: BeaconBlock): void {
+export function verifyBlockStateRoot(state: BeaconState, block: BeaconBlock): void {
   assert(block.stateRoot.equals(hashTreeRoot(state, BeaconState)));
 }

@@ -23,7 +23,7 @@ import {
 
 import {getActiveValidatorIndices, getTemporaryBlockHeader} from "./stateTransition/util";
 
-import processDeposit from "./stateTransition/block/deposits";
+import {processDeposit} from "./stateTransition/block/operations";
 
 
 export function getEmptyBlockBody(): BeaconBlockBody {

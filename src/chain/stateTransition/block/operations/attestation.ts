@@ -4,20 +4,21 @@
 
 import assert from "assert";
 import {equals, hashTreeRoot} from "@chainsafe/ssz";
+
 import {
   BeaconState,
   Crosslink,
   PendingAttestation,
   Attestation,
   FFGData,
-} from "../../../types";
+} from "../../../../types";
 
 import {
   MAX_EPOCHS_PER_CROSSLINK,
   MIN_ATTESTATION_INCLUSION_DELAY,
   SLOTS_PER_EPOCH,
   ZERO_HASH,
-} from "../../../constants";
+} from "../../../../constants";
 
 import {
   getCurrentEpoch,
@@ -26,11 +27,11 @@ import {
   getBeaconProposerIndex,
   getAttestationDataSlot,
   validateIndexedAttestation,
-} from "../util";
+} from "../../util";
 
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#attestations
 
-export default function processAttestation(state: BeaconState, attestation: Attestation): void {
+export function processAttestation(state: BeaconState, attestation: Attestation): void {
   const currentEpoch = getCurrentEpoch(state);
   const previousEpoch = getPreviousEpoch(state);
   const data = attestation.data;

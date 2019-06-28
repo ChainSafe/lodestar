@@ -4,12 +4,13 @@
 
 import assert from "assert";
 import BN from "bn.js";
-import {signingRoot} from "@chainsafe/ssz";
+import {hash, signingRoot} from "@chainsafe/ssz";
+import bls from "@chainsafe/bls-js";
 
 import {
   BeaconState,
   Transfer,
-} from "../../../types";
+} from "../../../../types";
 
 import {
   BLS_WITHDRAWAL_PREFIX_BYTE,
@@ -17,11 +18,7 @@ import {
   MIN_DEPOSIT_AMOUNT,
   FAR_FUTURE_EPOCH,
   MAX_EFFECTIVE_BALANCE,
-} from "../../../constants";
-
-import bls from "@chainsafe/bls-js";
-
-import {hash} from "../../../util/crypto";
+} from "../../../../constants";
 
 import {
   getBeaconProposerIndex,
@@ -29,7 +26,9 @@ import {
   getDomain,
   decreaseBalance,
   increaseBalance,
-} from "../util";
+} from "../../util";
+
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#transfers
 
 /**
  * Process ``Transfer`` operation.

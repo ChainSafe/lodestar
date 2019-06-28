@@ -5,7 +5,7 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 
-import processProposerSlashing from "../../../../src/chain/stateTransition/block/proposerSlashings";
+import {processProposerSlashing} from "../../../../src/chain/stateTransition/block/operations";
 import {BeaconState, ProposerSlashing} from "../../../../src/types";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 

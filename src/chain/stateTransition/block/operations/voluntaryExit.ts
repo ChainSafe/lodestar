@@ -4,36 +4,32 @@
 
 import assert from "assert";
 import {signingRoot} from "@chainsafe/ssz";
+import bls from "@chainsafe/bls-js";
 
 import {
-  BeaconBlock,
   BeaconState,
   VoluntaryExit,
-} from "../../../types";
+} from "../../../../types";
 
 import {
   Domain,
-  MAX_VOLUNTARY_EXITS,
   FAR_FUTURE_EPOCH,
   PERSISTENT_COMMITTEE_PERIOD,
-} from "../../../constants";
+} from "../../../../constants";
 
-import bls from "@chainsafe/bls-js";
 
 import {
   getCurrentEpoch,
   getDomain,
   isActiveValidator,
   initiateValidatorExit,
-} from "../util";
+} from "../../util";
 
 
 /**
  * Process ``VoluntaryExit`` operation.
- *
- * Note that this function mutates ``state``.
  */
-export function processVoluntaryExit(state: BeaconState, exit: VoluntaryExit): BeaconState {
+export function processVoluntaryExit(state: BeaconState, exit: VoluntaryExit): void {
   const validator = state.validatorRegistry[exit.validatorIndex];
   const currentEpoch = getCurrentEpoch(state);
   // Verify the validator is active
@@ -53,12 +49,4 @@ export function processVoluntaryExit(state: BeaconState, exit: VoluntaryExit): B
   ));
   // Initiate exit
   initiateValidatorExit(state, exit.validatorIndex);
-  return state;
-}
-
-export default function processVoluntaryExits(state: BeaconState, block: BeaconBlock): void {
-  assert(block.body.voluntaryExits.length <= MAX_VOLUNTARY_EXITS);
-  for (const exit of block.body.voluntaryExits) {
-    processVoluntaryExit(state, exit);
-  }
 }

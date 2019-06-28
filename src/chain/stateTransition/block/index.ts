@@ -7,19 +7,13 @@ import {
   BeaconState,
 } from "../../../types";
 
-import processEth1Data from "./eth1Data";
-import processBlockHeader from "./blockHeader";
-import processRandao from "./randao";
-import processOperations from "./operations";
-import verifyBlockStateRoot from "./rootVerification";
+import {processEth1Data} from "./eth1Data";
+import {processBlockHeader} from "./blockHeader";
+import {processRandao} from "./randao";
+import {processOperations} from "./operations";
+import {verifyBlockStateRoot} from "./rootVerification";
 
-
-// SPEC 0.7.1
-// def process_block(state: BeaconState, block: BeaconBlock) -> None:
-//   process_block_header(state, block)
-// process_randao(state, block.body)
-// process_eth1_data(state, block.body)
-// process_operations(state, block.body)
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#block-processing
 
 export function processBlock(state: BeaconState, block: BeaconBlock, verify: boolean = true): void {
   // block header
@@ -32,13 +26,10 @@ export function processBlock(state: BeaconState, block: BeaconBlock, verify: boo
   processEth1Data(state, block.body);
 
   // Operations
-
   processOperations(state,block.body);
 
   if(verify) {
     // Verify block stateRoot
     verifyBlockStateRoot(state, block);
   }
-
-
 }

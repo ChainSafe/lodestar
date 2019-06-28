@@ -6,7 +6,7 @@ import assert from "assert";
 import {
   BeaconState,
   AttesterSlashing,
-} from "../../../types";
+} from "../../../../types";
 
 import {
   getCurrentEpoch,
@@ -14,14 +14,14 @@ import {
   isSlashableAttestationData,
   slashValidator,
   validateIndexedAttestation,
-} from "../util";
+} from "../../util";
 
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#attester-slashings
 
 /**
  * Process ``AttesterSlashing`` operation.
  */
-export default function processAttesterSlashing(
+export function processAttesterSlashing(
   state: BeaconState,
   attesterSlashing: AttesterSlashing
 ): void {

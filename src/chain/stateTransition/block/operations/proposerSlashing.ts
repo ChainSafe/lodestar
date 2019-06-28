@@ -3,29 +3,27 @@
  */
 
 import assert from "assert";
-
 import {serialize, signingRoot} from "@chainsafe/ssz";
-
+import bls from "@chainsafe/bls-js";
 
 import {
   BeaconState,
   ProposerSlashing,
   BeaconBlockHeader,
-} from "../../../types";
+} from "../../../../types";
 
-import {Domain} from "../../../constants";
+import {Domain} from "../../../../constants";
 
 import {
   getCurrentEpoch,
   isSlashableValidator,
   slotToEpoch,
   slashValidator, getDomainFromFork,
-} from "../util";
+} from "../../util";
 
-import bls from "@chainsafe/bls-js";
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#proposer-slashings
 
-
-export default function processProposerSlashing(
+export function processProposerSlashing(
   state: BeaconState,
   proposerSlashing: ProposerSlashing
 ): BeaconState {
