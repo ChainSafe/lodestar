@@ -10,3 +10,6 @@ lodestar-db
 lodestar-config.toml
 keys/
 test-db
+LodestarValidatorDB/
+yarn-error.log
+package-lock.json
