@@ -18,7 +18,8 @@ import {
   getCurrentEpoch,
   isSlashableValidator,
   slotToEpoch,
-  slashValidator, getDomainFromFork,
+  slashValidator,
+  getDomain,
 } from "../../util";
 
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#proposer-slashings
@@ -41,16 +42,14 @@ export function processProposerSlashing(
     proposer.pubkey,
     signingRoot(proposerSlashing.header1, BeaconBlockHeader),
     proposerSlashing.header1.signature,
-    getDomainFromFork(state.fork, slotToEpoch(proposerSlashing.header1.slot),
-      Domain.BEACON_PROPOSER),
+    getDomain(state, Domain.BEACON_PROPOSER, slotToEpoch(proposerSlashing.header1.slot)),
   );
   assert(proposalData1Verified);
   const proposalData2Verified = bls.verify(
     proposer.pubkey,
     signingRoot(proposerSlashing.header2, BeaconBlockHeader),
     proposerSlashing.header2.signature,
-    getDomainFromFork(state.fork, slotToEpoch(proposerSlashing.header2.slot),
-      Domain.BEACON_PROPOSER),
+    getDomain(state, Domain.BEACON_PROPOSER, slotToEpoch(proposerSlashing.header2.slot)),
   );
   assert(proposalData2Verified);
   slashValidator(state, proposerSlashing.proposerIndex);

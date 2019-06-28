@@ -26,7 +26,7 @@ export interface IBeaconDb {
   /**
    * Adds deposit to database
    */
-  setDeposit(deposit: Deposit): Promise<void>;
+  setDeposit(index: number, deposit: Deposit): Promise<void>;
 
   /**
    * Get all stored deposits sorted from oldest to newest.
@@ -38,7 +38,7 @@ export interface IBeaconDb {
   /**
    * Deletes all deposits.
    */
-  deleteDeposits(deposits: Deposit[]): Promise<void>;
+  deleteDeposits(): Promise<void>;
 
   setMerkleTree(merkleTree: IProgressiveMerkleTree): Promise<void>;
 

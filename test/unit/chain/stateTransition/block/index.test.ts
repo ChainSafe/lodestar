@@ -19,9 +19,9 @@ describe('process block', function () {
   ;
 
   beforeEach(() => {
-    processEth1Stub = sandbox.stub(processEth1Data);
     processBlockHeaderStub = sandbox.stub(processBlockHeader);
     processRandaoStub = sandbox.stub(processRandao);
+    processEth1Stub = sandbox.stub(processEth1Data);
     processOperationsStub = sandbox.stub(processOperations);
   });
 
