@@ -1,14 +1,16 @@
-import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
-import {Domain, LATEST_RANDAO_MIXES_LENGTH} from "../../../../../src/constants";
-import {generateValidator} from "../../../../utils/validator";
-import * as utils from "../../../../../src/chain/stateTransition/util";
-import {getCurrentEpoch, getDomain} from "../../../../../src/chain/stateTransition/util";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
+
+import {Domain, LATEST_RANDAO_MIXES_LENGTH} from "../../../../../src/constants";
+import {processRandao} from "../../../../../src/chain/stateTransition/block/randao";
+import * as utils from "../../../../../src/chain/stateTransition/util";
+
+import {getCurrentEpoch, getDomain} from "../../../../../src/chain/stateTransition/util";
 import {generateEmptyBlock} from "../../../../utils/block";
-import processRandao from "../../../../../src/chain/stateTransition/block/randao";
+import {generateState} from "../../../../utils/state";
+import {generateValidator} from "../../../../utils/validator";
 
 describe('process block - randao', function () {
 

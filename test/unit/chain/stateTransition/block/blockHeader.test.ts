@@ -1,15 +1,17 @@
-import {generateState} from "../../../../utils/state";
-import {generateEmptyBlock} from "../../../../utils/block";
-import {EMPTY_SIGNATURE} from "../../../../../src/constants";
-import {expect} from "chai";
-import * as utils from "../../../../../src/chain/stateTransition/util";
-import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../../src/chain/stateTransition/util";
 import sinon from "sinon";
+import {expect} from "chai";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import {signingRoot} from "@chainsafe/ssz";
+
 import {BeaconBlockHeader} from "../../../../../src/types";
-import processBlockHeader from "../../../../../src/chain/stateTransition/block/blockHeader";
+import {EMPTY_SIGNATURE} from "../../../../../src/constants";
+import * as utils from "../../../../../src/chain/stateTransition/util";
+import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../../src/chain/stateTransition/util";
+import {processBlockHeader} from "../../../../../src/chain/stateTransition/block/blockHeader";
+
+import {generateState} from "../../../../utils/state";
+import {generateEmptyBlock} from "../../../../utils/block";
 import {generateValidator} from "../../../../utils/validator";
 
 describe('process block - block header', function () {

@@ -6,16 +6,14 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 
-import {stateTransition} from "../../../../src/chain/stateTransition";
+import {processSlots} from "../../../../src/chain/stateTransition";
 import {BeaconState, number64, Validator} from "../../../../src/types";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/sanity/slots/sanity_slots_mainnet.yaml"),
   (state: BeaconState, slots: number64) => {
-    for(let i = 0; i < slots; i++) {
-      stateTransition(state, null, false);
-    }
+    processSlots(state, state.slot + slots);
     return state;
   },
   (input) => {

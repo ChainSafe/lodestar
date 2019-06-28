@@ -81,13 +81,12 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     this.logger.info('Initializing beacon chain.');
     const merkleTree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
     genesisDeposits = genesisDeposits
-      .sort((a, b) => a.index - b.index)
-      .map((deposit) => {
-        merkleTree.add(deposit.index, hashTreeRoot(deposit.data, DepositData));
+      .map((deposit, index) => {
+        merkleTree.add(index, hashTreeRoot(deposit.data, DepositData));
         return deposit;
       })
-      .map((deposit) => {
-        deposit.proof = merkleTree.getProof(deposit.index);
+      .map((deposit, index) => {
+        deposit.proof = merkleTree.getProof(index);
         return deposit;
       });
     const genesisState = getGenesisBeaconState(genesisDeposits, genesisTime, genesisEth1Data);
@@ -183,8 +182,8 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
       deposits,
       newState.depositIndex,
       newState.latestEth1Data.depositCount,
-      deposit => {
-        merkleTree.add(deposit.index, hashTreeRoot(deposit.data, DepositData));
+      (deposit, index) => {
+        merkleTree.add(index, hashTreeRoot(deposit.data, DepositData));
         return deposit;
       }
     );

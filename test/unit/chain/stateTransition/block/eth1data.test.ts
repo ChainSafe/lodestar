@@ -1,11 +1,13 @@
-import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
 import {serialize} from "@chainsafe/ssz";
+
 import {Eth1Data} from "../../../../../src/types";
 import {SLOTS_PER_ETH1_VOTING_PERIOD} from "../../../../../src/constants";
+import {processEth1Data} from "../../../../../src/chain/stateTransition/block/eth1Data";
+
 import {generateEmptyBlock} from "../../../../utils/block";
-import processEth1Data from "../../../../../src/chain/stateTransition/block/eth1Data";
+import {generateState} from "../../../../utils/state";
 
 describe('process block - eth1data', function () {
 

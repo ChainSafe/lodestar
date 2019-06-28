@@ -1,22 +1,24 @@
-import {generateState} from "../../../../utils/state";
+import BN from "bn.js";
 import {expect} from "chai";
 import sinon from "sinon";
+// @ts-ignore
+import {restore, rewire} from "@chainsafe/bls-js";
+import {hash} from "@chainsafe/ssz";
+
 import {
   BLS_WITHDRAWAL_PREFIX_BYTE,
   FAR_FUTURE_EPOCH,
   MAX_EFFECTIVE_BALANCE,
   MIN_DEPOSIT_AMOUNT
 } from "../../../../../src/constants";
-import {generateValidator} from "../../../../utils/validator";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {slotToEpoch} from "../../../../../src/chain/stateTransition/util";
-// @ts-ignore
-import {restore, rewire} from "@chainsafe/bls-js";
-import BN from "bn.js";
+import {processTransfer} from "../../../../../src/chain/stateTransition/block/operations";
+
 import {generateEmptyTransfer} from "../../../../utils/transfer";
-import processTransfers, {processTransfer} from "../../../../../src/chain/stateTransition/block/transfers";
-import {hash} from "../../../../../src/util/crypto";
+import {generateValidator} from "../../../../utils/validator";
 import {generateEmptyBlock} from "../../../../utils/block";
+import {generateState} from "../../../../utils/state";
 
 describe('process block - transfers', function () {
 
@@ -243,28 +245,4 @@ describe('process block - transfers', function () {
       expect.fail(e);
     }
   });
-
-  it('should  fail to process block transfers - exceeds max', function () {
-    const state = generateState();
-    const transfer = generateEmptyTransfer();
-    const block = generateEmptyBlock();
-    block.body.transfers.push(transfer);
-    try {
-      processTransfers(state, block);
-      expect.fail();
-    } catch (e) {
-
-    }
-  });
-
-  it('should  process block transfers', function () {
-    const state = generateState();
-    const block = generateEmptyBlock();
-    try {
-      processTransfers(state, block);
-    } catch (e) {
-      expect.fail(e.stack);
-    }
-  });
-
 });
