@@ -4,9 +4,10 @@
 
 import {hashTreeRoot} from "@chainsafe/ssz";
 import assert from "assert";
+import bls from "@chainsafe/bls-js";
+import {PublicKey} from "@chainsafe/bls-js/lib/publicKey";
 
 import {Domain, MAX_INDICES_PER_ATTESTATION} from "../../../constants";
-
 import {
   Attestation,
   AttestationData,
@@ -18,16 +19,12 @@ import {
   ValidatorIndex,
 } from "../../../types";
 
-import bls from "@chainsafe/bls-js";
-
 import {intDiv} from "../../../util/math";
+import {isSorted} from "../../../util/sort";
 
 import {slotToEpoch} from "./epoch";
-
 import {getCrosslinkCommittee} from "./crosslinkCommittee";
-
 import {getDomain} from "./misc";
-import {PublicKey} from "@chainsafe/bls-js/lib/publicKey";
 
 
 /**
@@ -90,16 +87,6 @@ export function convertToIndexed(state: BeaconState, attestation: Attestation): 
     data: attestation.data,
     signature: attestation.signature,
   };
-}
-
-function isSorted(indices: number[]): boolean {
-  for (let i = 0, prevIndex = -1; i < indices.length; i++) {
-    if (indices[i] <= prevIndex) {
-      return false;
-    }
-    prevIndex = indices[i];
-  }
-  return true;
 }
 
 /**
