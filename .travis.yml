@@ -14,10 +14,15 @@ jobs:
         - yarn test:spec
 before_deploy: yarn build:docs
 deploy:
-  provider: pages
-  skip_cleanup: true
-  github_token: $GH_PAGES_TOKEN
-  keep_history: true
-  local_dir: docs
-  on:
-    branch: master
+    - provider: pages
+      skip_cleanup: true
+      github_token: $GH_PAGES_TOKEN
+      keep_history: true
+      local_dir: docs
+      on:
+        branch: master
+    - provider: script
+      script: sh ./scripts/release-js.sh
+      on:
+        tags: true
+        branch: master
