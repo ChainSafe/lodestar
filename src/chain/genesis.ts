@@ -18,12 +18,12 @@ import {
 import {
   EMPTY_SIGNATURE, GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD,
   LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH,
-  SHARD_COUNT, ZERO_HASH, SLOTS_PER_HISTORICAL_ROOT, MAX_EFFECTIVE_BALANCE,
+  SHARD_COUNT, ZERO_HASH, SLOTS_PER_HISTORICAL_ROOT, MAX_EFFECTIVE_BALANCE, FAR_FUTURE_EPOCH,
 } from "../constants";
 
 import {getActiveValidatorIndices, getTemporaryBlockHeader} from "./stateTransition/util";
 
-import {processDeposit} from "./stateTransition/block/deposits";
+import {processDeposit} from "./stateTransition/block/operations";
 
 
 export function getEmptyBlockBody(): BeaconBlockBody {
@@ -50,7 +50,7 @@ export function getEmptyBlockBody(): BeaconBlockBody {
 export function getEmptyBlock(): BeaconBlock {
   return {
     slot: GENESIS_SLOT,
-    previousBlockRoot: ZERO_HASH,
+    parentRoot: ZERO_HASH,
     stateRoot: ZERO_HASH,
     body: getEmptyBlockBody(),
     signature: EMPTY_SIGNATURE,
@@ -96,14 +96,18 @@ export function getGenesisBeaconState(
 
     // Recent state
     currentCrosslinks: Array.from({length: SHARD_COUNT}, () => ({
-      epoch: GENESIS_EPOCH,
-      previousCrosslinkRoot: ZERO_HASH,
-      crosslinkDataRoot: ZERO_HASH,
+      shard: GENESIS_START_SHARD,
+      startEpoch: GENESIS_EPOCH,
+      endEpoch: FAR_FUTURE_EPOCH,
+      parentRoot: ZERO_HASH,
+      dataRoot: ZERO_HASH,
     })),
     previousCrosslinks: Array.from({length: SHARD_COUNT}, () => ({
-      epoch: GENESIS_EPOCH,
-      previousCrosslinkRoot: ZERO_HASH,
-      crosslinkDataRoot: ZERO_HASH,
+      shard: GENESIS_START_SHARD,
+      startEpoch: GENESIS_EPOCH,
+      endEpoch: FAR_FUTURE_EPOCH,
+      parentRoot: ZERO_HASH,
+      dataRoot: ZERO_HASH,
     })),
     latestBlockRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
     latestStateRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),

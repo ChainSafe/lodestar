@@ -39,11 +39,11 @@ describe('blockAssembly - deposits', function() {
   });
 
   it('return deposits with valid proofs', async function() {
-    const deposits = [generateDeposit(0), generateDeposit(1)];
+    const deposits = [generateDeposit(), generateDeposit()];
     opPool.getDeposits.resolves(deposits);
     const tree = ProgressiveMerkleTree.empty(4);
-    deposits.forEach((d) => {
-      tree.add(d.index, hashTreeRoot(d.data, DepositData));
+    deposits.forEach((d, index) => {
+      tree.add(index, hashTreeRoot(d.data, DepositData));
     });
     const eth1 = {
       depositCount: 2,
@@ -59,13 +59,13 @@ describe('blockAssembly - deposits', function() {
       tree
     );
     expect(result.length).to.be.equal(2);
-    result.forEach((deposit) => {
+    result.forEach((deposit, index) => {
       expect(
         verifyMerkleBranch(
           hashTreeRoot(deposit.data, DepositData),
           deposit.proof,
           4,
-          deposit.index,
+          index,
           eth1.depositRoot
         )
       ).to.be.true;

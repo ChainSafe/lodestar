@@ -1,16 +1,20 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
-import {stateFromYaml} from "../../../utils/state";
 import {expect} from "chai";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
-import {processVoluntaryExit} from "../../../../src/chain/stateTransition/block/voluntaryExits";
-import {voluntaryExitsFromYaml} from "../../../utils/voluntaryExits";
+
+import {processVoluntaryExit} from "../../../../src/chain/stateTransition/block/operations";
+import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {BeaconState, VoluntaryExit} from "../../../../src/types";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/voluntary_exit/voluntary_exit_mainnet.yaml"),
-  processVoluntaryExit,
+  (state, exit) => {
+    processVoluntaryExit(state, exit);
+    return state;
+  },
   (input) => {
     if(input.bls_setting && input.bls_setting.toNumber() === 2) {
       rewire({
@@ -18,10 +22,10 @@ describeSpecTest(
         verifyMultiple: sinon.stub().returns(true)
       });
     }
-    return [stateFromYaml(input.pre), voluntaryExitsFromYaml(input.voluntaryExit)];
+    return [expandYamlValue(input.pre, BeaconState), expandYamlValue(input.voluntaryExit, VoluntaryExit)];
   },
   (expected) => {
-    return stateFromYaml(expected.post);
+    return expandYamlValue(expected.post, BeaconState);
   },
   result => result,
   (testCase) => {

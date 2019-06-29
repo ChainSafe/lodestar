@@ -249,9 +249,9 @@ export class SyncRpc {
           const block = await this.db.getBlockBySlot(slot);
           const header: BeaconBlockHeader = {
             slot: block.slot,
-            previousBlockRoot: block.previousBlockRoot,
+            parentRoot: block.parentRoot,
             stateRoot: block.stateRoot,
-            blockBodyRoot: hashTreeRoot(block.body, BeaconBlockBody),
+            bodyRoot: hashTreeRoot(block.body, BeaconBlockBody),
             signature: block.signature,
           };
           response.headers.push(header);

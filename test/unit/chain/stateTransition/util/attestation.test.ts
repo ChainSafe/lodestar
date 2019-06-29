@@ -2,12 +2,9 @@ import BN from "bn.js";
 import { assert } from "chai";
 
 import {
-  getAttestingIndices,
   getBitfieldBit,
-  verifyBitfield,
-  convertToIndexed,
-  verifyIndexedAttestation,
-} from "../../../../../src/chain/stateTransition/util/attestation";
+  verifyBitfield
+} from "../../../../../src/chain/stateTransition/util";
 
 
 describe("getBitfieldBit", () => {

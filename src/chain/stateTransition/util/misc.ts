@@ -26,6 +26,7 @@ import {
   Fork,
   Slot,
   ValidatorIndex,
+  bytes4,
 } from "../../../types";
 
 import {getCrosslinkCommittee, getEpochCommitteeCount, getEpochStartShard} from "./crosslinkCommittee";
@@ -99,13 +100,17 @@ export function getDomain(
 
 export function getDomainFromFork(fork: Fork, epoch: Epoch, domainType: Domain): BLSDomain {
   const forkVersion = epoch < fork.epoch ? fork.previousVersion : fork.currentVersion;
+  return blsDomain(domainType, forkVersion);
+}
 
-  return bytesToBN(Buffer.concat(
-    [
-      forkVersion,
-      intToBytes(domainType, 4),
-    ]
-  )).toBuffer('be', 8);
+/**
+ * Return the bls domain given by the ``domain_type`` and 4 byte ``fork_version``
+ */
+export function blsDomain(domainType: Domain, forkVersion: bytes4): BLSDomain {
+  return bytesToBN(Buffer.concat([
+    intToBytes(domainType, 4),
+    forkVersion,
+  ])).toBuffer('be', 8);
 }
 
 /**
@@ -124,9 +129,9 @@ export function getChurnLimit(state: BeaconState): number {
 export function getTemporaryBlockHeader(block: BeaconBlock): BeaconBlockHeader {
   return {
     slot: block.slot,
-    previousBlockRoot: block.previousBlockRoot,
+    parentRoot: block.parentRoot,
     stateRoot: ZERO_HASH,
-    blockBodyRoot: hashTreeRoot(block.body, BeaconBlockBody),
+    bodyRoot: hashTreeRoot(block.body, BeaconBlockBody),
     signature: EMPTY_SIGNATURE,
   };
 }

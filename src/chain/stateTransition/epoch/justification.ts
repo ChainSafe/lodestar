@@ -13,11 +13,11 @@ import {GENESIS_EPOCH} from "../../../constants";
 
 
 export function processJustificationAndFinalization(state: BeaconState): void {
-  if(getCurrentEpoch(state) <= GENESIS_EPOCH + 1) {
+  const currentEpoch = getCurrentEpoch(state);
+  if(currentEpoch <= GENESIS_EPOCH + 1) {
     return;
   }
   const previousEpoch = getPreviousEpoch(state);
-  const currentEpoch = getCurrentEpoch(state);
   const oldPreviousJustifiedEpoch = state.previousJustifiedEpoch;
   const oldCurrentJustifiedEpoch = state.currentJustifiedEpoch;
 

@@ -2,7 +2,7 @@ import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
 import {
-  getAttestingBalance, getCrosslinkFromAttestationData,
+  getAttestingBalance,
   getMatchingHeadAttestations,
   getMatchingSourceAttestations,
   getMatchingTargetAttestations,
@@ -218,22 +218,4 @@ describe('process epoch - crosslinks', function () {
     }
 
   });
-
-  it('should get crosslink from attestation data', function () {
-
-    const state = generateState();
-    const attestationData = generateEmptyAttestation().data;
-    try {
-      const result = getCrosslinkFromAttestationData(state, attestationData);
-      expect(result).to.be.deep.equal({
-        epoch: attestationData.targetEpoch,
-        previousCrosslinkRoot: attestationData.previousCrosslinkRoot,
-        crosslinkDataRoot: attestationData.crosslinkDataRoot,
-      });
-    } catch (e) {
-      expect.fail(e.stack);
-    }
-
-  });
-
 });

@@ -113,7 +113,7 @@ export function getEpochStartShard(state: BeaconState, epoch: Epoch): Shard {
 export function getAttestationDataSlot(state: BeaconState, data: AttestationData): Slot {
   const epoch = data.targetEpoch;
   const committeeCount = getEpochCommitteeCount(state, epoch);
-  const offset = (data.shard + SHARD_COUNT - getEpochStartShard(state, epoch)) % SHARD_COUNT;
+  const offset = (data.crosslink.shard + SHARD_COUNT - getEpochStartShard(state, epoch)) % SHARD_COUNT;
   return intDiv(getEpochStartSlot(epoch) + offset, intDiv(committeeCount, SLOTS_PER_EPOCH));
 }
 

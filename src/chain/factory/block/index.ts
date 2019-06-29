@@ -26,12 +26,12 @@ export async function assembleBlock(
     stateRoot: parentBlock.stateRoot,
     signature: parentBlock.signature,
     slot: parentBlock.slot,
-    previousBlockRoot: parentBlock.previousBlockRoot,
-    blockBodyRoot: hashTreeRoot(parentBlock.body, BeaconBlockBody),
+    parentRoot: parentBlock.parentRoot,
+    bodyRoot: hashTreeRoot(parentBlock.body, BeaconBlockBody),
   };
   const block: BeaconBlock = {
     slot,
-    previousBlockRoot: signingRoot(parentHeader, BeaconBlockHeader),
+    parentRoot: signingRoot(parentHeader, BeaconBlockHeader),
     signature: undefined,
     stateRoot: undefined,
     body: await assembleBody(opPool, eth1, merkleTree, currentState, randao),

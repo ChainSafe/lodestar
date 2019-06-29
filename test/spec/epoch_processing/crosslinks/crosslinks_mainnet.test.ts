@@ -1,17 +1,19 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
-import {stateFromYaml} from "../../../utils/state";
 import {expect} from "chai";
+
 import {processCrosslinks} from "../../../../src/chain/stateTransition/epoch/crosslinks";
+import {BeaconState} from "../../../../src/types";
+import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/epoch_processing/crosslinks/crosslinks_mainnet.yaml"),
   processCrosslinks,
   (input) => {
-    return [stateFromYaml(input.pre)];
+    return [expandYamlValue(input.pre, BeaconState)];
   },
   (expected) => {
-    return stateFromYaml(expected.post);
+    return expandYamlValue(expected.post, BeaconState);
   },
   result => result,
   () => false,

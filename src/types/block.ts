@@ -55,7 +55,7 @@ export const BeaconBlockBody: SimpleContainerType = {
 export interface BeaconBlock {
   // Header
   slot: Slot;
-  previousBlockRoot: bytes32;
+  parentRoot: bytes32;
   stateRoot: bytes32;
   body: BeaconBlockBody;
   signature: BLSSignature;
@@ -64,7 +64,7 @@ export const BeaconBlock: SimpleContainerType = {
   name: "BeaconBlock",
   fields: [
     ["slot", Slot],
-    ["previousBlockRoot", bytes32],
+    ["parentRoot", bytes32],
     ["stateRoot", bytes32],
     ["body", BeaconBlockBody],
     ["signature", BLSSignature],

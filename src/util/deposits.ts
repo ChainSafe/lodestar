@@ -5,14 +5,11 @@ export function processSortedDeposits(
   deposits: Deposit[],
   from: number,
   to: number,
-  process: (d: Deposit) => Deposit): Deposit[] {
+  process: (d: Deposit, index: number) => Deposit): Deposit[] {
   return deposits
-    //remove possible old deposits
-    .filter((deposit) => deposit.index >= from)
-    //ensure deposit order
-    .sort((a, b) => a.index - b.index)
+    //assume deposit order
     .slice(0, Math.min(MAX_DEPOSITS, to - from))
-    .map((deposit) => {
-      return process(deposit);
-    })
+    .map((deposit, index) => {
+      return process(deposit, index + from);
+    });
 }

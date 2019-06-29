@@ -1,6 +1,9 @@
-import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
+// @ts-ignore
+import {restore, rewire} from "@chainsafe/bls-js";
+import {signingRoot} from "@chainsafe/ssz";
+
 import {
   Domain,
   FAR_FUTURE_EPOCH,
@@ -8,16 +11,15 @@ import {
   PERSISTENT_COMMITTEE_PERIOD,
   SLOTS_PER_EPOCH
 } from "../../../../../src/constants";
-import {generateValidator} from "../../../../utils/validator";
+import {VoluntaryExit} from "../../../../../src/types";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {getDomain, initiateValidatorExit} from "../../../../../src/chain/stateTransition/util";
-// @ts-ignore
-import {restore, rewire} from "@chainsafe/bls-js";
-import {signingRoot} from "@chainsafe/ssz";
-import {VoluntaryExit} from "../../../../../src/types";
-import processVoluntaryExits, {processVoluntaryExit} from "../../../../../src/chain/stateTransition/block/voluntaryExits";
+import {processVoluntaryExit} from "../../../../../src/chain/stateTransition/block/operations";
+
+import {generateValidator} from "../../../../utils/validator";
 import {generateEmptyVoluntaryExit} from "../../../../utils/voluntaryExits";
 import {generateEmptyBlock} from "../../../../utils/block";
+import {generateState} from "../../../../utils/state";
 
 describe('process block - voluntary exits', function () {
 
@@ -126,42 +128,4 @@ describe('process block - voluntary exits', function () {
       expect.fail(e.stack);
     }
   });
-
-  it('should fail to process block exits - exceeds max', function () {
-    const state = generateState();
-    const exit = generateEmptyVoluntaryExit();
-    const block = generateEmptyBlock();
-    new Array({
-      length: MAX_VOLUNTARY_EXITS + 1,
-      mapFn: () => block.body.voluntaryExits.push(exit)
-    });
-    try {
-      processVoluntaryExits(state, block);
-      expect.fail();
-    } catch (e) {
-
-    }
-  });
-
-
-  it('should process block exits', function () {
-    const validator = generateValidator(1, FAR_FUTURE_EPOCH);
-    const state = generateState({slot: (PERSISTENT_COMMITTEE_PERIOD + 1) * SLOTS_PER_EPOCH});
-    const exit = generateEmptyVoluntaryExit();
-    exit.epoch = 0;
-    state.validatorRegistry.push(validator);
-    isActiveValidatorStub.returns(true);
-    const block = generateEmptyBlock();
-    blsStub.verify.returns(true);
-    block.body.voluntaryExits.push(exit);
-    try {
-      processVoluntaryExits(state, block);
-      expect(isActiveValidatorStub.calledOnce).to.be.true;
-      expect(initiateValidatorExitStub.calledOnce).to.be.true;
-      expect(blsStub.verify.calledOnce).to.be.true;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
-  });
-
 });

@@ -26,7 +26,7 @@ import {ILogger} from "../logger";
 
 import {getEmptyBlock, getGenesisBeaconState} from "./genesis";
 
-import {executeStateTransition} from "./stateTransition";
+import {stateTransition} from "./stateTransition";
 
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 import {getAttestingIndices} from "./stateTransition/util";
@@ -81,13 +81,12 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     this.logger.info('Initializing beacon chain.');
     const merkleTree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
     genesisDeposits = genesisDeposits
-      .sort((a, b) => a.index - b.index)
-      .map((deposit) => {
-        merkleTree.add(deposit.index, hashTreeRoot(deposit.data, DepositData));
+      .map((deposit, index) => {
+        merkleTree.add(index, hashTreeRoot(deposit.data, DepositData));
         return deposit;
       })
-      .map((deposit) => {
-        deposit.proof = merkleTree.getProof(deposit.index);
+      .map((deposit, index) => {
+        deposit.proof = merkleTree.getProof(index);
         return deposit;
       });
     const genesisState = getGenesisBeaconState(genesisDeposits, genesisTime, genesisEth1Data);
@@ -130,8 +129,8 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
 
     await this.db.setBlock(block);
 
-    this.forkChoice.addBlock(block.slot, hashTreeRoot(block, BeaconBlock), block.previousBlockRoot);
-
+    this.forkChoice.addBlock(block.slot, hashTreeRoot(block, BeaconBlock), block.parentRoot);
+ 
     // forward processed block for additional processing
     this.emit('processedBlock', block);
   }
@@ -150,7 +149,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
 
   public async isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean> {
     // The parent block with root block.previous_block_root has been processed and accepted.
-    const hasParent = await this.db.hasBlock(block.previousBlockRoot);
+    const hasParent = await this.db.hasBlock(block.parentRoot);
     if (!hasParent) {
       return false;
     }
@@ -167,7 +166,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
   }
 
   private runStateTransition(block: BeaconBlock | null, state: BeaconState): BeaconState {
-    const newState = executeStateTransition(state, block);
+    const newState = stateTransition(state, block);
     // TODO any extra processing, eg post epoch
     // TODO update ffg checkpoints (requires updated state object)
     this.updateDepositMerkleTree(newState);
@@ -183,8 +182,8 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
       deposits,
       newState.depositIndex,
       newState.latestEth1Data.depositCount,
-      deposit => {
-        merkleTree.add(deposit.index, hashTreeRoot(deposit.data, DepositData));
+      (deposit, index) => {
+        merkleTree.add(index + newState.depositIndex, hashTreeRoot(deposit.data, DepositData));
         return deposit;
       }
     );
