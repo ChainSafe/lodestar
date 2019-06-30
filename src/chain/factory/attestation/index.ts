@@ -1,7 +1,7 @@
 import {BeaconBlock, BeaconState, IndexedAttestation, Shard, Slot} from "../../../types";
 import {BeaconDB} from "../../../db/api";
-import {advanceSlot} from "../../stateTransition";
 import {assembleAttestationData} from "./data";
+import {advanceSlot} from "../../stateTransition/slot";
 
 export async function assembleAttestation(
   db: BeaconDB,

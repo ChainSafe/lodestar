@@ -1,19 +1,21 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
-import {stateFromYaml} from "../../../utils/state";
 import {expect} from "chai";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
+import {hashTreeRoot} from "@chainsafe/ssz";
 import sinon from "sinon";
-import {depositsFromYaml} from "../../../utils/deposit";
-import {processDeposit} from "../../../../src/chain/stateTransition/block/deposits";
 import {equals, hashTreeRoot} from "@chainsafe/ssz";
-import {BeaconState, Validator} from "../../../../src/types";
-
+import {processDeposit} from "../../../../src/chain/stateTransition/block/operations";
+import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {BeaconState, Deposit, Validator} from "../../../../src/types";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/deposit/deposit_mainnet.yaml"),
-  processDeposit,
+  (state, deposit) => {
+    processDeposit(state, deposit);
+    return state;
+  },
   (input) => {
     if(input.bls_setting && input.bls_setting.toNumber() === 2) {
       rewire({
@@ -21,10 +23,10 @@ describeSpecTest(
         verifyMultiple: sinon.stub().returns(true)
       });
     }
-    return [stateFromYaml(input.pre), depositsFromYaml(input.deposit)];
+    return [expandYamlValue(input.pre, BeaconState), expandYamlValue(input.deposit, Deposit)];
   },
   (expected) => {
-    return stateFromYaml(expected.post);
+    return expandYamlValue(expected.post, BeaconState);
   },
   result => result,
   (testCase) => {

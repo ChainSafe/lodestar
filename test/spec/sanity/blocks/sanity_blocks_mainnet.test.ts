@@ -1,20 +1,20 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
-import {stateFromYaml} from "../../../utils/state";
 import {expect} from "chai";
+import {hashTreeRoot, equals} from "@chainsafe/ssz";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
-import {blockFromYaml} from "../../../utils/block";
+
+import {stateTransition} from "../../../../src/chain/stateTransition";
 import {BeaconBlock, BeaconState, Validator} from "../../../../src/types";
-import {executeStateTransition} from "../../../../src/chain/stateTransition";
-import {equals, hashTreeRoot} from "@chainsafe/ssz";
+import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(
-  join(__dirname, "../../test-cases/tests/sanity/blocks/blocksanity_s_mainnet.yaml"),
+  join(__dirname, "../../test-cases/tests/sanity/blocks/sanity_blocks_mainnet.yaml"),
   (state: BeaconState, blocks: BeaconBlock[]) => {
     blocks.forEach((block) => {
-      executeStateTransition(state, block, false);
+      stateTransition(state, block, false);
     });
     return state;
   },
@@ -26,10 +26,10 @@ describeSpecTest(
         aggregatePubkeys: sinon.stub().returns(Buffer.alloc(48))
       });
     }
-    return [stateFromYaml(input.pre), input.blocks.map(blockFromYaml)];
+    return [expandYamlValue(input.pre, BeaconState), input.blocks.map((b) => expandYamlValue(b, BeaconBlock))];
   },
   (expected) => {
-    return stateFromYaml(expected.post);
+    return expandYamlValue(expected.post, BeaconState);
   },
   result => result,
   (testCase) => {

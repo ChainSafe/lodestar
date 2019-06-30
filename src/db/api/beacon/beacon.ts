@@ -8,12 +8,13 @@ import {
   BeaconBlock,
   BeaconState,
   bytes32,
-  Deposit,
+  Deposit, MerkleTree,
   ProposerSlashing,
   Slot,
   Transfer,
   uint64, ValidatorIndex,
-  VoluntaryExit
+  VoluntaryExit,
+  number64
 } from "../../../types";
 
 import {Bucket, encodeKey, Key} from "../../schema";
@@ -21,6 +22,7 @@ import {Bucket, encodeKey, Key} from "../../schema";
 import {AnySSZType, deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
 import {DatabaseService, DatabaseApiOptions} from "../abstract";
 import {IBeaconDb} from "./interface";
+import {IProgressiveMerkleTree, ProgressiveMerkleTree} from "../../../util/merkleTree";
 
 export class BeaconDB extends DatabaseService implements IBeaconDb {
 
@@ -156,7 +158,7 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
   }
 
   public async getAttestation(root: bytes32): Promise<Attestation> {
-    return await this.db.get(encodeKey(Bucket.attestation, root));
+    return deserialize(await this.db.get(encodeKey(Bucket.attestation, root)), Attestation);
   }
 
   public async hasAttestation(root: bytes32): Promise<boolean> {
@@ -234,17 +236,18 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
     await this.deleteData(Bucket.attesterSlashing, AttesterSlashing, attesterSlashings);
   }
 
-  public async getGenesisDeposits(): Promise<Deposit[]> {
+  public async getDeposits(): Promise<Deposit[]> {
     return await this.getAllData(Bucket.genesisDeposit, Deposit);
   }
 
-  public async setGenesisDeposit(deposit: Deposit): Promise<void> {
-    await this.db.put(encodeKey(Bucket.genesisDeposit, deposit.index), serialize(deposit, Deposit));
+  public async setDeposit(index: number, deposit: Deposit): Promise<void> {
+    await this.db.put(encodeKey(Bucket.genesisDeposit, index), serialize(deposit, Deposit));
   }
 
-  public async deleteGenesisDeposits(deposits: Deposit[]): Promise<void> {
-    const criteria: (Buffer | string)[] = deposits.map((deposit) => {
-      return encodeKey(Bucket.genesisDeposit, deposit.index);
+  public async deleteDeposits(): Promise<void> {
+    const deposits = await this.getDeposits()
+    const criteria: (Buffer | string)[] = (deposits || []).map((d, index) => {
+      return encodeKey(Bucket.genesisDeposit, index);
     });
     await this.db.batchDelete(criteria);
   }
@@ -254,7 +257,7 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
       gt: encodeKey(key, Buffer.alloc(0)),
       lt: encodeKey(key + 1, Buffer.alloc(0)),
     });
-    return data.map((data) => deserialize(data, type));
+    return (data || []).map((data) => deserialize(data, type));
   }
 
   private async deleteData(key: Bucket, type: AnySSZType, data: any[]): Promise<void> {
@@ -269,6 +272,23 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
     const state = await this.getState();
     //TODO: cache this (hashmap)
     return state.validatorRegistry.findIndex(value => value.pubkey === publicKey);
+  }
+
+  public async getMerkleTree(): Promise<IProgressiveMerkleTree | null> {
+    const merkleTreeSerialized = await this.db.get(
+      encodeKey(Bucket.merkleTree, Key.progressiveMerkleTree)
+    );
+    if(merkleTreeSerialized) {
+      return ProgressiveMerkleTree.fromObject(deserialize(merkleTreeSerialized, MerkleTree));
+    }
+    return null;
+  }
+
+  public async setMerkleTree(merkleTree: IProgressiveMerkleTree): Promise<void> {
+    return this.db.put(
+      encodeKey(Bucket.merkleTree, Key.progressiveMerkleTree),
+      merkleTree.serialize()
+    );
   }
 
 }

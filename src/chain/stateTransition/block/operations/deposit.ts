@@ -4,40 +4,38 @@
 
 import assert from "assert";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
+import bls from "@chainsafe/bls-js";
 
-import {BeaconBlock, BeaconState, Deposit, DepositData, Validator,} from "../../../types";
+import {BeaconState, Deposit, DepositData, Validator} from "../../../../types";
 
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
   Domain,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
-  MAX_DEPOSITS,
   MAX_EFFECTIVE_BALANCE,
-} from "../../../constants";
-import {bnMin} from "../../../util/math";
-import {verifyMerkleBranch} from "../../../util/merkleTree";
+} from "../../../../constants";
+import {bnMin} from "../../../../util/math";
+import {verifyMerkleBranch} from "../../../../util/merkleTree";
 
-import bls from "@chainsafe/bls-js";
+import {getDomain, increaseBalance} from "../../util";
 
-import {getDomain, increaseBalance,} from "../util";
-
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#deposits
 
 /**
  * Process an Eth1 deposit, registering a validator or increasing its balance.
  */
-export function processDeposit(state: BeaconState, deposit: Deposit): BeaconState {
+export function processDeposit(state: BeaconState, deposit: Deposit): void {
   // Verify the Merkle branch
   assert(verifyMerkleBranch(
     hashTreeRoot(deposit.data, DepositData),
     deposit.proof,
     DEPOSIT_CONTRACT_TREE_DEPTH,
-    deposit.index,
+    state.depositIndex,
     state.latestEth1Data.depositRoot,
   ));
 
   // Deposits must be processed in order
-  assert(deposit.index === state.depositIndex);
   state.depositIndex += 1;
 
   const pubkey = deposit.data.pubkey;
@@ -51,7 +49,7 @@ export function processDeposit(state: BeaconState, deposit: Deposit): BeaconStat
       deposit.data.signature,
       getDomain(state, Domain.DEPOSIT),
     )) {
-      return state;
+      return;
     }
     // Add validator and balance entries
     const validator: Validator = {
@@ -72,15 +70,5 @@ export function processDeposit(state: BeaconState, deposit: Deposit): BeaconStat
   } else {
     // Increase balance by deposit amount
     increaseBalance(state, validatorIndex, amount);
-  }
-  return state;
-}
-
-export default function processDeposits(state: BeaconState, block: BeaconBlock): void {
-  // Verify that outstanding deposits are processed up to the maximum number of deposits
-  assert(block.body.deposits.length ===
-    Math.min(MAX_DEPOSITS, state.latestEth1Data.depositCount - state.depositIndex));
-  for (const deposit of block.body.deposits) {
-    processDeposit(state, deposit);
   }
 }

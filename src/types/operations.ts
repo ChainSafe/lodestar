@@ -83,8 +83,6 @@ export const Attestation: SimpleContainerType = {
 export interface Deposit {
   // Branch in the deposit tree
   proof: bytes32[];
-  // index in the deposit tree
-  index: number64;
   // Deposit data
   data: DepositData;
 }
@@ -92,7 +90,6 @@ export const Deposit: SimpleContainerType = {
   name: "Deposit",
   fields: [
     ["proof", [bytes32, DEPOSIT_CONTRACT_TREE_DEPTH]],
-    ["index", number64],
     ["data", DepositData],
   ],
 };

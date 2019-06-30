@@ -8,9 +8,8 @@ import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../src/constants/minimal";
  * @returns {Deposit}
  * @param index
  */
-export function generateDeposit(index: number): Deposit {
+export function generateDeposit(): Deposit {
   return {
-    index,
     proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH}, () => Buffer.alloc(32)),
     data: {
       amount: new BN(32).mul(new BN(10).muln(9)),
@@ -18,18 +17,5 @@ export function generateDeposit(index: number): Deposit {
       withdrawalCredentials: Buffer.alloc(32),
       signature: EMPTY_SIGNATURE,
     }
-  };
-}
-
-export function depositsFromYaml(value: any): Deposit {
-  return {
-    data: {
-      amount: value.data.amount,
-      pubkey: Buffer.from(value.data.pubkey.slice(2), 'hex'),
-      signature: Buffer.from(value.data.signature.slice(2), 'hex'),
-      withdrawalCredentials: Buffer.from(value.data.withdrawalCredentials.slice(2), 'hex'),
-    },
-    index: value.index.toNumber(),
-    proof: value.proof.map(value => Buffer.from(value.slice(2), 'hex'))
   };
 }
