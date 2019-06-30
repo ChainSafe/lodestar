@@ -2,13 +2,12 @@ import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 // @ts-ignore
-import {rewire, restore} from "@chainsafe/bls-js";
+import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import {equals} from "@chainsafe/ssz";
-import {BeaconState} from "../../../../src/types";
+import {BeaconBlock, BeaconState} from "../../../../src/types";
 
 import {processBlockHeader} from "../../../../src/chain/stateTransition/block/blockHeader";
-import {BeaconBlock, BeaconState} from "../../../../src/types";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(

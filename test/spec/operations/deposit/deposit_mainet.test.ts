@@ -3,12 +3,11 @@ import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
-import {hashTreeRoot} from "@chainsafe/ssz";
+import {equals} from "@chainsafe/ssz";
 import sinon from "sinon";
-import {equals, hashTreeRoot} from "@chainsafe/ssz";
 import {processDeposit} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
-import {BeaconState, Deposit, Validator} from "../../../../src/types";
+import {BeaconState, Deposit} from "../../../../src/types";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/deposit/deposit_mainnet.yaml"),
