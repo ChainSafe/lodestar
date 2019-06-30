@@ -636,7 +636,6 @@
 "@chainsafe/bls-js@^0.1.5":
   version "0.1.5"
   resolved "https://registry.yarnpkg.com/@chainsafe/bls-js/-/bls-js-0.1.5.tgz#00fed1ef879aa4668092e7010fa21f5bf19f569e"
-  integrity sha512-etAnBTthmeub8igCx08Ww3TQRkK93bwM8nUNE5LNE3W1s1tySka7qsYcdmOKICJNTa7ARV/MbVnBg1nAUwntZQ==
   dependencies:
     "@chainsafe/amcl" "0.1.0"
     assert "^1.4.1"
@@ -646,17 +645,15 @@
 "@chainsafe/eth2.0-spec-test-util@^0.3.5":
   version "0.3.5"
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2.0-spec-test-util/-/eth2.0-spec-test-util-0.3.5.tgz#bd0e6b5a7c0167687eb02f5c6f2914f324d9a1d9"
-  integrity sha512-xc2B+F9lVAe+yUlT1YQdj1eDsyu8NuIuxyT3OZdV2tpP9vssLnZ+bIp8x5flL10RgHN7eztalpm5+P2l+1KNUw==
   dependencies:
     bn.js "^4.11.8"
     camelcase "^5.3.1"
     chai "^4.2.0"
     js-yaml "^3.13.1"
 
-"@chainsafe/ssz@^0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.4.1.tgz#9d9fd6f99aceb7c6e3df9110ae451e6dec9ebbec"
-  integrity sha512-+lIE6do4R9E4y4Ls7eRxYuG/4vnB1PNLdtsK/PqPJfkL1S2mu7UXT6FqMwAVxEN71wpaGa5OhohTqEkv7HIz6w==
+"@chainsafe/ssz@^0.4.2":
+  version "0.4.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.4.2.tgz#052b985ec2ba61b42e6daceed63adcb218382256"
   dependencies:
     "@types/bn.js" "^4.11.4"
     assert "^1.4.1"
@@ -4639,7 +4636,6 @@ js-levenshtein@^1.1.3:
 js-sha256@^0.9.0:
   version "0.9.0"
   resolved "https://registry.yarnpkg.com/js-sha256/-/js-sha256-0.9.0.tgz#0b89ac166583e91ef9123644bd3c5334ce9d0966"
-  integrity sha512-sga3MHh9sgQN2+pJ9VYZ+1LPwXOxuBJBA5nrR5/ofPfuiJBE2hnjsaN8se8JznOmGLN2p49Pe5U/ttafcs/apA==
 
 js-sha3@0.5.7:
   version "0.5.7"
@@ -5102,7 +5098,6 @@ libp2p-crypto@~0.16.0, libp2p-crypto@~0.16.1:
 libp2p-floodsub@~0.15.8:
   version "0.15.8"
   resolved "https://registry.yarnpkg.com/libp2p-floodsub/-/libp2p-floodsub-0.15.8.tgz#ecfd94162825ed7b5431ccbe672f5bf58f7efab2"
-  integrity sha512-tsRTRRz9vg3iPqhSgkn4gotX635Hp/VMxPd4VQZlRvO8pZsfZwd61Qn9Vx8bES881RhRX0YpGM4Sa0izInHEWA==
   dependencies:
     async "^2.6.1"
     bs58 "^4.0.1"
@@ -5134,7 +5129,6 @@ libp2p-floodsub@~0.16.0:
 libp2p-gossipsub@^0.0.2:
   version "0.0.2"
   resolved "https://registry.yarnpkg.com/libp2p-gossipsub/-/libp2p-gossipsub-0.0.2.tgz#26a9bc03a9b56f236f77ffe03343cd0ccb86d58b"
-  integrity sha512-6FDYBilaYspw59Y7YJIBnNLbD57akm/29uYWcYSAqY5IzW05whnGAQdJPmYElm40lgluzjuwj2j/G7l6QEBqQg==
   dependencies:
     async "^2.6.2"
     err-code "^1.1.2"
@@ -5259,7 +5253,6 @@ libp2p-record@~0.6.2:
 libp2p-switch@~0.42.2:
   version "0.42.12"
   resolved "https://registry.yarnpkg.com/libp2p-switch/-/libp2p-switch-0.42.12.tgz#672ab3b249121e876231d9fef9a143a5ed2c41da"
-  integrity sha512-aNjJQpP9kSClXXKIliSqIowIoxAy0JQ8hnw6BoqOHUIG9Eov4GVyuOdU6lQKl1ym4uKMsnF2G49qpZJ47O01XA==
   dependencies:
     async "^2.6.2"
     bignumber.js "^8.1.1"
@@ -8340,7 +8333,6 @@ typescript@3.2.x:
 typescript@^3.5.1:
   version "3.5.1"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.5.1.tgz#ba72a6a600b2158139c5dd8850f700e231464202"
-  integrity sha512-64HkdiRv1yYZsSe4xC1WVgamNigVYjlssIoaH2HcZF0+ijsk5YK2g0G34w9wJkze8+5ow4STd22AynfO6ZYYLw==
 
 typewise-core@^1.2, typewise-core@^1.2.0:
   version "1.2.0"

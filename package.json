@@ -20,7 +20,7 @@
     "lint-fix": "eslint --ext .ts src/ --fix",
     "pretest": "yarn run check-types",
     "test:unit": "nyc --cache-dir .nyc_output/.cache -r lcov -e .ts mocha -r ts-node/register 'test/unit/**/*.test.ts' && nyc report",
-    "test:e2e": "mocha -r ./.babel-register 'test/e2e/**/*.test.ts'",
+    "test:e2e": "mocha --timeout 5000 -r ./.babel-register 'test/e2e/**/*.test.ts'",
     "test:spec": "mocha -r ./.babel-register 'test/spec/**/*.test.ts'",
     "test": "yarn test:unit && yarn test:spec && yarn test:e2e",
     "coverage": "codecov"
@@ -38,7 +38,7 @@
   ],
   "dependencies": {
     "@chainsafe/bls-js": "^0.1.5",
-    "@chainsafe/ssz": "^0.4.1",
+    "@chainsafe/ssz": "^0.4.2",
     "@iarna/toml": "^2.2.3",
     "@nodeutils/defaults-deep": "^1.1.0",
     "@polkadot/util-crypto": "^0.33.27",

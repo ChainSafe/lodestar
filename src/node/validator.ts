@@ -23,7 +23,7 @@ import {getKeyFromFileOrKeystoreWithPassword} from "../util/io";
   opPool: OpPool;
 }*/
 
-export function initValidator({key, password, dbValidator, chain, dbBeacon, opPool},
+export function initValidator({key, password, dbValidator, chain, dbBeacon, opPool, eth1},
   logger: ILogger): Validator {
   let dbName: string;
   if (dbValidator) {
@@ -41,7 +41,7 @@ export function initValidator({key, password, dbValidator, chain, dbBeacon, opPo
 
   const rpcClient = new RpcClientOverInstance({
     beacon: new BeaconApi({}, {chain: chain, db: dbBeacon}),
-    validator: new ValidatorApi({}, {chain: chain, db: dbBeacon, opPool: opPool})
+    validator: new ValidatorApi({}, {chain: chain, db: dbBeacon, opPool: opPool, eth1: eth1})
   });
 
   let keypair: Keypair;

@@ -8,12 +8,13 @@ import {
   BeaconBlock,
   BeaconState, BLSPubkey,
   bytes32,
-  Deposit,
+  Deposit, MerkleTree,
   ProposerSlashing,
   Slot,
   Transfer, ValidatorIndex,
   VoluntaryExit,
 } from "../../../types";
+import {IProgressiveMerkleTree} from "../../../util/merkleTree";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -25,19 +26,23 @@ export interface IBeaconDb {
   /**
    * Adds deposit to database
    */
-  setGenesisDeposit(deposit: Deposit): Promise<void>;
+  setDeposit(index: number, deposit: Deposit): Promise<void>;
 
   /**
    * Get all stored deposits sorted from oldest to newest.
    * It will only contain deposits until Eth2Genesis event.
    * After that, deposits will be kept in BeaconBlock
    */
-  getGenesisDeposits(): Promise<Deposit[]>;
+  getDeposits(): Promise<Deposit[]>;
 
   /**
    * Deletes all deposits.
    */
-  deleteGenesisDeposits(deposits: Deposit[]): Promise<void>;
+  deleteDeposits(): Promise<void>;
+
+  setMerkleTree(merkleTree: IProgressiveMerkleTree): Promise<void>;
+
+  getMerkleTree(): Promise<IProgressiveMerkleTree>;
 
   /**
    * Get the beacon chain state
@@ -147,6 +152,9 @@ export interface IBeaconDb {
    * Fetch an attestation by hash
    */
   getAttestation(attestationRoot: bytes32): Promise<Attestation>;
+
+
+  hasAttestation(attestationRoot: bytes32): Promise<boolean>;
 
   /**
    * Put an attestation into the db

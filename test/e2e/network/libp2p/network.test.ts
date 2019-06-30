@@ -106,7 +106,7 @@ describe("[network] network", () => {
     });
     await new Promise((resolve) => netB.once("gossipsub:heartbeat", resolve));
     const attestation = generateEmptyAttestation();
-    attestation.data.shard = shard;
+    attestation.data.crosslink.shard = shard;
     netB.publishShardAttestation(attestation);
     await received;
   });

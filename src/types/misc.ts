@@ -5,7 +5,7 @@
 // Each type exported here contains both a compile-time type
 // (a typescript interface) and a run-time ssz type (a javascript variable)
 // For more information, see ./index.ts
-import {SimpleContainerType} from "@chainsafe/ssz";
+import {SimpleContainerType, SimpleListType} from "@chainsafe/ssz";
 
 import {
   BLSSignature,
@@ -15,7 +15,6 @@ import {
   bytes4,
   bytes32,
   Epoch,
-  Shard,
   Slot,
   ValidatorIndex,
   number64,
@@ -42,20 +41,25 @@ export const Fork: SimpleContainerType = {
 };
 
 export interface Crosslink {
-  // Epoch number
-  epoch: Epoch;
-  // Root of the previous crosslink
-  previousCrosslinkRoot: bytes32;
-  // Root of the crosslinked shard data since the previous crosslink
-  crosslinkDataRoot: bytes32;
+  //Shard number
+  shard: number64;
+  //Crosslinking data from epochs [start....end-1]
+  startEpoch: number64;
+  endEpoch: number64;
+  //Root of the previous crosslink
+  parentRoot: bytes32;
+  //Root of the crosslinked shard data since the previous crosslink
+  dataRoot: bytes32;
 }
 
 export const Crosslink: SimpleContainerType = {
   name: "Crosslink",
   fields: [
-    ["epoch", Epoch],
-    ["previousCrosslinkRoot", bytes32],
-    ["crosslinkDataRoot", bytes32],
+    ["shard", number64],
+    ["startEpoch", number64],
+    ["endEpoch", number64],
+    ["parentRoot", bytes32],
+    ["dataRoot", bytes32],
   ],
 };
 
@@ -85,9 +89,7 @@ export interface AttestationData {
   targetEpoch: Epoch;
   targetRoot: bytes32;
   // Crosslink vote
-  shard: Shard;
-  previousCrosslinkRoot: bytes32;
-  crosslinkDataRoot: bytes32;
+  crosslink: Crosslink;
 }
 export const AttestationData: SimpleContainerType = {
   name: "AttestationData",
@@ -97,9 +99,21 @@ export const AttestationData: SimpleContainerType = {
     ["sourceRoot", bytes32],
     ["targetEpoch", Epoch],
     ["targetRoot", bytes32],
-    ["shard", Shard],
-    ["previousCrosslinkRoot", bytes32],
-    ["crosslinkDataRoot", bytes32],
+    ["crosslink", Crosslink],
+  ],
+};
+
+export interface FFGData {
+  sourceEpoch: Epoch;
+  sourceRoot: bytes32;
+  targetEpoch: Epoch;
+}
+export const FFGData: SimpleContainerType = {
+  name: "FFGData",
+  fields: [
+    ["sourceEpoch", Epoch],
+    ["sourceRoot", bytes32],
+    ["targetEpoch", Epoch],
   ],
 };
 
@@ -158,18 +172,18 @@ export const DepositData: SimpleContainerType = {
 
 export interface BeaconBlockHeader {
   slot: Slot;
-  previousBlockRoot: bytes32;
+  parentRoot: bytes32;
   stateRoot: bytes32;
-  blockBodyRoot: bytes32;
+  bodyRoot: bytes32;
   signature: BLSSignature;
 }
 export const BeaconBlockHeader: SimpleContainerType = {
   name: "BeaconBlockHeader",
   fields: [
     ["slot", Slot],
-    ["previousBlockRoot", bytes32],
+    ["parentRoot", bytes32],
     ["stateRoot", bytes32],
-    ["blockBodyRoot", bytes32],
+    ["bodyRoot", bytes32],
     ["signature", BLSSignature],
   ],
 };
@@ -240,3 +254,15 @@ export const HistoricalBatch: SimpleContainerType = {
   ],
 };
 
+export interface MerkleTree {
+  depth: number64;
+  tree: bytes32[][];
+}
+
+export const MerkleTree: SimpleContainerType = {
+  name: "MerkleTree",
+  fields: [
+    ["depth", number64],
+    ["tree", [[bytes32]]]
+  ]
+};

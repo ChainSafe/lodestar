@@ -7,10 +7,9 @@ import {Provider} from "ethers/providers";
 import {BigNumber} from "ethers/utils";
 import BN from "bn.js";
 import bls from "@chainsafe/bls-js";
+import {hash, signingRoot} from "@chainsafe/ssz";
 import {BLS_WITHDRAWAL_PREFIX_BYTE, Domain} from "../constants";
 import {DepositData} from "../types";
-import {signingRoot} from "@chainsafe/ssz";
-import {hash} from "../util/crypto";
 import {ILogger} from "../logger";
 
 
@@ -71,7 +70,6 @@ export class Eth1Wallet {
       await tx.wait();
       return tx.hash;
     } catch(e) {
-      console.log(e);
       this.logger.error(e.message);
     }
   }

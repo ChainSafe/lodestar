@@ -43,6 +43,7 @@ export const ETH1_FOLLOW_DISTANCE = 2 ** 10; // blocks || ~4 hours
 export const SLOTS_PER_HISTORICAL_ROOT = 2 ** 13; // slots || ~13 hours
 export const MIN_VALIDATOR_WITHDRAWAL_DELAY = 2 ** 8; // epochs || ~27 hours
 export const PERSISTENT_COMMITTEE_PERIOD = 2 ** 11; // epochs || 9 days
+export const MAX_EPOCHS_PER_CROSSLINK = 2**6; //epochs	|| ~7 hours
 
 // should be a small constant times SHARD_COUNT // SLOTS_PER_EPOCH
 export const MAX_CROSSLINK_EPOCHS = 2 ** 6; // 64
@@ -54,7 +55,7 @@ export const LATEST_ACTIVE_INDEX_ROOTS_LENGTH = 2 ** 13; // epochs || ~36 days
 export const LATEST_SLASHED_EXIT_LENGTH = 2 ** 13; // epochs || ~36 days
 
 // Reward and penalty quotients
-export const BASE_REWARD_QUOTIENT = 2 ** 5; // 32
+export const BASE_REWARD_FACTOR = 2 ** 5; // 32
 export const WHISTLEBLOWING_REWARD_QUOTIENT = 2 ** 9; // 512
 export const PROPOSER_REWARD_QUOTIENT = 2 ** 3; // 8
 export const INACTIVITY_PENALTY_QUOTIENT = new BN(2 ** 25); // 33,554,432
