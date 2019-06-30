@@ -47,6 +47,8 @@ export class Peer {
     const that = this;
     return new Promise((resolve, reject): void => {
       that.connection = net.createConnection({host: this.ip, port: this.port});
+      // Set to keep the connection alive
+      that.connection.setKeepAlive(true);
       that.connection.on('connect', ()=>{
         that.controller.logger.info("Connected with peer.");
       });
@@ -54,7 +56,6 @@ export class Peer {
       that.connection.on('data', (data) => {
         that.controller.onRequestResponse(that, data);
       });
-      that.connection.setKeepAlive(true);
       resolve();
     });
 
