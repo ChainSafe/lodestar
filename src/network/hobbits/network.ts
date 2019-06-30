@@ -1,29 +1,43 @@
 import {EventEmitter} from "events";
 import {INetwork, INetworkOptions} from "../interface";
-import {NetworkRpc} from "./rpc";
+import {HobbitsRpc} from "./rpc";
 import {ILogger} from "../../logger";
 import {Attestation, BeaconBlock} from "../../types";
+import net from "net";
+import PeerInfo from "peer-info";
+import NodeAddress = Multiaddr.NodeAddress;
+import {peerInfoToAddress} from "./util";
 
 export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
   public peerInfo: PeerInfo;
   private opts: INetworkOptions;
-  private rpc: NetworkRpc;
+  private rpc: HobbitsRpc;
   private inited: Promise<void>;
   private logger: ILogger;
+  private port: number;
+  private bootnodes: string[];
+  public running: boolean;
+
 
   public constructor(opts: INetworkOptions, {logger}: {logger: ILogger}) {
     super();
+    this.port = 9000;
+    this.bootnodes = opts.bootnodes || [];
+    this.running = false;
+
     this.opts = opts;
     this.logger = logger;
     // `libp2p` can be a promise as well as a libp2p object
     this.inited = new Promise((resolve) => {
-      this.rpc = new NetworkRpc(logger);
+      this.rpc = new HobbitsRpc(logger);
       resolve();
     });
   }
 
 
   public connect(peerInfo: PeerInfo): Promise<void> {
+    let nodeAddr = peerInfoToAddress(peerInfo);
+
     return undefined;
   }
 
@@ -57,14 +71,6 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
   public sendResponse(id: string, responseCode: number, result: Hello | Goodbye | Status | BeaconBlockRootsResponse | BeaconBlockHeadersResponse | BeaconBlockBodiesResponse | BeaconStatesResponse): void {
   }
 
-  public start(): Promise<void> {
-    return undefined;
-  }
-
-  public stop(): Promise<void> {
-    return undefined;
-  }
-
   public subscribeToAttestations(): void {
   }
 
@@ -81,6 +87,14 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
   }
 
   public unsubscribeToShardAttestations(shard: number): void {
+  }
+
+  public start(): Promise<void> {
+
+  }
+
+  public stop(): Promise<void> {
+    return undefined;
   }
 
 }

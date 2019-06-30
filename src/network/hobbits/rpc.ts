@@ -22,12 +22,13 @@ import {
 import {randomRequestId} from "../util";
 import {Peer} from "./peer";
 import {ILogger} from "../../logger";
+import net from "net";
 
 
 /**
  * The NetworkRpc module controls network-level resources and concerns of p2p connections
  */
-export class NetworkRpc extends EventEmitter {
+export class HobbitsRpc extends EventEmitter {
   private libp2p: LibP2p;
   /**
    * dials in progress
@@ -52,16 +53,19 @@ export class NetworkRpc extends EventEmitter {
    */
   private responses: Record<RequestId, {peer: Peer; method: Method}>;
 
-  private logger: ILogger;
+  private server: net.Server;
 
-  public constructor(libp2p: LibP2p, logger: ILogger) {
+  public logger: ILogger;
+
+  public constructor(logger: ILogger) {
     super();
     this.logger = logger;
-    this.libp2p = libp2p;
     this.requestTimeout = 5000;
     this.requests = {};
     this.responses = {};
     this.peers = new Map<string, Peer>();
+
+    this.server = net.createServer();
   }
 
   public addPeer(peerInfo: PeerInfo): Peer {
@@ -107,9 +111,6 @@ export class NetworkRpc extends EventEmitter {
   }
 
   public async dialForRpc(peerInfo: PeerInfo): Promise<void> {
-    if (!this.libp2p.isStarted()) {
-      return;
-    }
     const peerId = peerInfo.id.toB58String();
     if (this.peers.has(peerId)) {
       return;
@@ -119,10 +120,10 @@ export class NetworkRpc extends EventEmitter {
     }
     this.wipDials.add(peerId);
     try {
-      const conn = await promisify(this.libp2p.dialProtocol.bind(this.libp2p))(peerInfo, RPC_MULTICODEC);
       const peer = this.addPeer(peerInfo);
-      peer.setConnection(conn, false);
+      peer.connect();
     } catch (e) {
+      this.logger.error(e.stack);
     }
     this.wipDials.delete(peerId);
   }
@@ -206,13 +207,55 @@ export class NetworkRpc extends EventEmitter {
     }
   }
 
+
+  /**
+   * Connects to static peers
+   */
+  private connectStaticPeers = async (): Promise<void> => {
+    await Promise.all(this.bootnodes.map((bootnode: string): Promise<void> => {
+      return this.connect(bootnode);
+    }));
+    // console.log(`Connected to ${this.peers.length} static peers`);
+  };
+
+  private listenToPeers = (): void => {
+    this.peers.map((peer: Peer): void => {
+
+      peer.on(Events.Hello, (data): void => {
+        console.log(`Parent Received: ${data}`);
+      });
+
+      peer.start();
+    })
+  };
+
   public async start(): Promise<void> {
     this.wipDials = new Set();
     this.peers = new Map<string, Peer>();
 
-    this.libp2p.handle(RPC_MULTICODEC, this.onConnection.bind(this));
-    this.libp2p.on('peer:connect', this.dialForRpc.bind(this));
-    this.libp2p.on('peer:disconnect', this.removePeer.bind(this));
+    this.server.on("connection", (connection): void => {
+      const peerOpts: PeerOpts = {ip: connection.remoteAddress, port: connection.remotePort};
+      this.peers.push(new Peer(peerOpts));
+      console.log(`SERVER :: CONNECTED TO: ${connection.remoteAddress}:${connection.remotePort}`);
+      console.log(`SERVER :: TOTAL PEERS: ${this.peers.length}`);
+    });
+
+    this.server.on("close", (): void => {
+      // console.log("Closing server!");
+      this.running = false;
+    });
+
+    this.server.listen(this.port, (): void => {
+      // console.log("Server started!");
+      this.running = true;
+    });
+
+    this.connectStaticPeers();
+    this.listenToPeers();
+
+    // this.libp2p.handle(RPC_MULTICODEC, this.onConnection.bind(this));
+    // this.libp2p.on('peer:connect', this.dialForRpc.bind(this));
+    // this.libp2p.on('peer:disconnect', this.removePeer.bind(this));
     // dial any already connected peers
     await Promise.all(
       Object.values(this.libp2p.peerBook.getAll()).map((peer) => this.dialForRpc(peer))
