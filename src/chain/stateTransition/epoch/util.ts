@@ -79,10 +79,11 @@ export function getWinningCrosslinkAndAttestingIndices(
   const attestations = getMatchingSourceAttestations(state, epoch)
     .filter((a) => a.data.crosslink.shard === shard);
   const currentCrosslinkRoot = hashTreeRoot(state.currentCrosslinks[shard], Crosslink);
+  const currentCrosslink = state.currentCrosslinks[shard];
   const crosslinks = attestations.filter((a) => (
     currentCrosslinkRoot.equals(a.data.crosslink.parentRoot) ||
-    currentCrosslinkRoot.equals(hashTreeRoot(a.data.crosslink, Crosslink))
-  )).map((a) => a.data.crosslink);
+    equals(currentCrosslink, a.data.crosslink, Crosslink))
+  ).map((a) => a.data.crosslink);
 
   const defaultCrossLink: Crosslink = {
     shard: GENESIS_START_SHARD,
