@@ -5,6 +5,7 @@ import { deserialize } from "./deserialize";
 import { serialize } from "./serialize";
 import { signingRoot } from "./signingRoot";
 import { equals } from "./equals";
+import { clone } from "./clone";
 
 export * from "./util/types";
 export * from "./types";
@@ -16,4 +17,5 @@ export {
   hashTreeRoot,
   signingRoot,
   equals,
+  clone,
 };
