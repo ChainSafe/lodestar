@@ -18,7 +18,7 @@ export enum Bucket {
   transfer, // hash -> Transfer
   proposerSlashing, // hash -> ProposerSlashing
   attesterSlashing, // hash -> AttesterSlashing
-  merkleTree,
+  merkleTree, // depositIndex -> MerkleTree
   // validator
   lastProposedBlock,
   proposedAttestations,
