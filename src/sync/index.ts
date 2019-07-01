@@ -10,6 +10,7 @@ import {IEth1Notifier} from "../eth1";
 import {IBeaconDb} from "../db";
 import {SyncRpc} from "./rpc";
 import {RegularSync} from "./regular";
+import {InitialSync} from "./initial";
 import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
 
@@ -78,25 +79,26 @@ export class Sync extends EventEmitter {
   public async start(): Promise<void> {
     await this.rpc.start();
     await this.rpc.refreshPeerHellos();
-    if (await this.isSynced()) {
-      this.syncer = new RegularSync(this.opts, {
+    if (!await this.isSynced()) {
+      const initialSync = new InitialSync(this.opts, {
         db: this.db,
         chain: this.chain,
+        rpc: this.rpc,
         network: this.network,
-        opPool: this.opPool,
+        reps: this.reps,
         logger: this.logger,
       });
-      this.syncer.start();
-    } else {
-      /*
-      this.syncer = new InitialSync(this.opts, {
-        db: this.db,
-        chain: this.chain,
-        network: this.network,
-        opPool: this.opPool,
-      });
-       */
+      await initialSync.start();
+      await initialSync.stop();
     }
+    this.syncer = new RegularSync(this.opts, {
+      db: this.db,
+      chain: this.chain,
+      network: this.network,
+      opPool: this.opPool,
+      logger: this.logger,
+    });
+    this.syncer.start();
   }
 
   public async stop(): Promise<void> {
