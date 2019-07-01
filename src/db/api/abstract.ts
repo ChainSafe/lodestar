@@ -8,11 +8,9 @@ export interface DatabaseApiOptions {
 export abstract class DatabaseService implements Service{
 
   protected db: IDatabaseController;
-  protected cache: Record<any, any>;
 
   protected constructor(opts: DatabaseApiOptions) {
     this.db = opts.controller;
-    this.cache = {};
   }
 
   public async start(): Promise<void> {
