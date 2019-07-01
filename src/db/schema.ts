@@ -6,29 +6,34 @@ import BN from "bn.js";
 
 // Buckets are separate database namespaces
 export enum Bucket {
-  attestation,
-  block,
-  mainChain,
-  chainInfo,
+  // beacon chain
+  state, // hash -> BeaconState
+  attestation, // hash -> Attestation
+  block, // hash -> BeaconBlock
+  mainChain, // slot -> blockHash
+  chainInfo, // Key -> number64 | stateHash | blockHash
   validator,
-  genesisDeposit,
-  exit,
-  transfer,
-  proposerSlashing,
-  attesterSlashing,
+  genesisDeposit, // index -> Deposit
+  exit, // hash -> VoluntaryExit
+  transfer, // hash -> Transfer
+  proposerSlashing, // hash -> ProposerSlashing
+  attesterSlashing, // hash -> AttesterSlashing
+  merkleTree,
+  // validator
   lastProposedBlock,
   proposedAttestations,
-  merkleTree
 }
 
-export const Key = {
-  chainHeight: Buffer.from('chainHeight'),
-  state: Buffer.from('state'),
-  finalizedState: Buffer.from('finalizedState'),
-  justifiedState: Buffer.from('justifiedState'),
-  finalizedBlock: Buffer.from('finalizedBlock'),
-  justifiedBlock: Buffer.from('justifiedBlock'),
-  progressiveMerkleTree: Buffer.from('progressiveMerkleTree'),
+export enum Key {
+  chainHeight,
+
+  latestState,
+  finalizedState,
+  justifiedState,
+
+  finalizedBlock,
+  justifiedBlock,
+  progressiveMerkleTree,
 };
 
 /**

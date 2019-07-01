@@ -28,7 +28,7 @@ describe('block assembly', function () {
   });
 
   it('should assemble block', async function() {
-    beaconDB.getState.resolves(generateState({slot: 1}));
+    beaconDB.getLatestState.resolves(generateState({slot: 1}));
     beaconDB.getChainHead.resolves(generateEmptyBlock());
     assembleBodyStub.resolves(generateEmptyBlock().body);
     try {
@@ -37,7 +37,7 @@ describe('block assembly', function () {
       expect(result.slot).to.equal(1);
       expect(result.stateRoot).to.not.be.null;
       expect(result.parentRoot).to.not.be.null;
-      expect(beaconDB.getState.calledOnce).to.be.true;
+      expect(beaconDB.getLatestState.calledOnce).to.be.true;
       expect(beaconDB.getChainHead.calledOnce).to.be.true;
       expect(assembleBodyStub.calledOnce).to.be.true;
       expect(processBlockStub.withArgs(sinon.match.any, sinon.match.any).calledOnce).to.be.true;
