@@ -40,6 +40,7 @@ To view results:
 npm i -g ox
 0x --visualize-cpu-profile ./0\ -\ blocksanity-1561705313935.cpuprofile
 ```
+Open resulting html file in favorite browser.
 
 ## Usage
 1. If you haven't `yarn install`
