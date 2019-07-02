@@ -4,17 +4,11 @@
 
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import {isPlainObject} from "../../util/objects";
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import BeaconNode from "../../node";
-import {ethers} from "ethers";
-import {CliError} from "../error";
-import {IApiConstructor} from "../../rpc/api/interface";
-import * as RPCApis from "../../rpc/api";
 import deepmerge from "deepmerge";
 import {getTomlConfig} from "../../util/file";
-import {promptPassword} from "../../util/io";
-import {IBeaconNodeOptions} from "../../node/options";
+import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
 
 interface IBeaconCommandOptions {
   db: string;
@@ -38,6 +32,7 @@ export class BeaconNodeCommand implements CliCommand {
     commander
       .command("beacon")
       .description("Start lodestar node")
+      //TODO: generate cli options from BeaconNodeOptions
       .option("-d, --db [db_path]", "Path to file database")
       .option("-dc, --depositContract [address]", "Address of deposit contract")
       .option("-eth1, --eth1RpcUrl [url]", "Url to eth1 rpc node")
@@ -60,75 +55,17 @@ export class BeaconNodeCommand implements CliCommand {
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }
 
-    let config: IBeaconNodeOptions;
-    let parsedConfig;
-    if (options.configFile) {
-      parsedConfig = getTomlConfig(options.configFile);
-    }
-
-    let dbName: string;
-    if (options.db) {
-      dbName = options.db;
-    } else if (parsedConfig) {
-      dbName = parsedConfig.db.name;
-    } else {
-      dbName = defaults.db.name;
-    }
-
-    let password: string;
-    console.log(options);
-    if(options.validator){
-      password = await promptPassword("Enter password to decrypt the keystore: ");
-    }
-
-    let optionsMap: BeaconNodeCtx = {
-      db: {
-        name: dbName,
-      },
-      eth1: {
-        depositContract: {
-          deployedAt: defaults.eth1.depositContract.deployedAt,
-          address: options.depositContract,
-          abi: defaults.eth1.depositContract.abi
-        },
-        provider: await this.getProvider(options.eth1RpcUrl)
-      },
-      rpc: {
-        apis: this.setupRPC(options.rpc)
-      },
-      validator: options.validator,
-      key: options.key,
-      password: password,
-      dbValidator: options.dbValidator
-    };
+    let config: Partial<IBeaconNodeOptions> = {};
+    //TODO: generate config from IBeaconCommandOptions using BeaconNodeOptions as description
 
     if (options.configFile) {
-      optionsMap = deepmerge(parsedConfig, optionsMap, {isMergeableObject: isPlainObject});
+      let parsedConfig = getTomlConfig(options.configFile, BeaconNodeOptions);
+      //cli will override toml config options
+      config = deepmerge(parsedConfig, config);
     }
 
-    this.node = new BeaconNode(optionsMap, {logger});
+    this.node = new BeaconNode(config, {logger});
     await this.node.start();
   }
 
-  private setupRPC(rpc: string): IApiConstructor[] {
-    const args = rpc ? rpc.split(",").map((option: string) => option.trim()) : [];
-    return Object.values(RPCApis)
-      .filter((api) => api !== undefined)
-      .filter((api: IApiConstructor) => {
-        return args.some((option: string) => {
-          return api.name.toLowerCase().indexOf(option.toLowerCase()) > -1;
-        });
-      });
-  }
-
-  private async getProvider(eth1RpcUrl: string): Promise<ethers.providers.BaseProvider> {
-    try {
-      const provider =
-        eth1RpcUrl ? new ethers.providers.JsonRpcProvider(eth1RpcUrl) : ethers.getDefaultProvider();
-      await provider.getNetwork();
-      return provider;
-    } catch (e) {
-      throw new CliError('Failed to connect to eth1 rpc node.');
-    }
-  }
 }

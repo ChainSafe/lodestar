@@ -7,29 +7,22 @@ import {CliError} from "../cli/error";
 import fs from "fs";
 import path from "path";
 import defaults, {BeaconNodeOptions} from "../node/options";
-import {generateTomlConfig} from "./toml";
-
-export interface IConfigFile extends JsonMap{
-  db?: {name: string};
-  chain?: {chain: string};
-  rpc?: {port: number};
-  eth1?: {depositContract?: {address?: string}};
-}
+import {generateTomlConfig, validateConfig} from "./toml";
+import {IConfigurationModule} from "./config";
 
 /**
  * Reads data from file and parses it from toml format to IConfigFile
  * @param {string} fileName path to file to read from
- * @returns {IConfigFile}
+ * @param description
+ * @returns configuration object
  */
-export function getTomlConfig(fileName: string): IConfigFile {
-  let configObject: IConfigFile;
+export function getTomlConfig(fileName: string, description: IConfigurationModule): any {
   try {
     const data = fs.readFileSync(fileName);
-    configObject = parse(data.toString());
+    return validateConfig(parse(data.toString()), description);
   } catch {
     throw new CliError(`${fileName} could not be parsed.`);
   }
-  return configObject;
 }
 
 /**
