@@ -10,15 +10,15 @@ import {
   FAR_FUTURE_EPOCH,
   MAX_EFFECTIVE_BALANCE,
   MIN_DEPOSIT_AMOUNT
-} from "../../../../../src/constants";
-import * as utils from "../../../../../src/chain/stateTransition/util";
-import {slotToEpoch} from "../../../../../src/chain/stateTransition/util";
-import {processTransfer} from "../../../../../src/chain/stateTransition/block/operations";
+} from "../../../../../../src/constants";
+import * as utils from "../../../../../../src/chain/stateTransition/util";
+import {slotToEpoch} from "../../../../../../src/chain/stateTransition/util";
+import {processTransfer} from "../../../../../../src/chain/stateTransition/block/operations";
 
-import {generateEmptyTransfer} from "../../../../utils/transfer";
-import {generateValidator} from "../../../../utils/validator";
-import {generateEmptyBlock} from "../../../../utils/block";
-import {generateState} from "../../../../utils/state";
+import {generateEmptyTransfer} from "../../../../../utils/transfer";
+import {generateValidator} from "../../../../../utils/validator";
+import {generateEmptyBlock} from "../../../../../utils/block";
+import {generateState} from "../../../../../utils/state";
 
 describe('process block - transfers', function () {
 

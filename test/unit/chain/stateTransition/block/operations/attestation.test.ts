@@ -2,19 +2,19 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {Crosslink} from "../../../../../src/types";
-import {processAttestation} from "../../../../../src/chain/stateTransition/block/operations";
-import * as utils from "../../../../../src/chain/stateTransition/util";
+import {Crosslink} from "../../../../../../src/types";
+import {processAttestation} from "../../../../../../src/chain/stateTransition/block/operations";
+import * as utils from "../../../../../../src/chain/stateTransition/util";
 import {
   convertToIndexed,
   getBeaconProposerIndex,
   validateIndexedAttestation
-} from "../../../../../src/chain/stateTransition/util";
+} from "../../../../../../src/chain/stateTransition/util";
 
-import {generateState} from "../../../../utils/state";
-import {generateEmptyBlock} from "../../../../utils/block";
-import {MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "../../../../../src/constants";
-import {generateEmptyAttestation} from "../../../../utils/attestation";
+import {generateState} from "../../../../../utils/state";
+import {generateEmptyBlock} from "../../../../../utils/block";
+import {MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "../../../../../../src/constants";
+import {generateEmptyAttestation} from "../../../../../utils/attestation";
 
 describe('process block - attestation', function () {
 
