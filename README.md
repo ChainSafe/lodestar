@@ -30,6 +30,17 @@ You will need to go over the [specification](https://github.com/ethereum/eth2.0-
 
 Note: to run spec tests execute `git submodules foreach git lfs pull`
 
+#### Generating flame graphs from spec tests
+Example of cpu-profile generation of blocksanity tests in current directory
+
+`GEN_PROFILE_DIR=$PWD mocha -r ./.babel-register 'test/spec/sanity/blocks/blocksanity_s_mainnet.test.ts'`
+
+To view results:
+```bash
+npm i -g ox
+0x --visualize-cpu-profile ./0\ -\ blocksanity-1561705313935.cpuprofile
+```
+
 ## Usage
 1. If you haven't `yarn install`
 2. `yarn build`
