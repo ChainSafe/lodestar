@@ -1,6 +1,7 @@
 import {TransportType} from "./transport";
 import {number64} from "../types";
 import {IApiConstructor} from "./api/interface";
+import {IConfigurationModule} from "../util/config";
 
 export interface ITransportOption {
   host: string;
@@ -12,6 +13,11 @@ export interface IPublicApiOptions {
   transports: ITransportOption[];
   apis: IApiConstructor[];
 }
+
+export const PublicApiOptions: IConfigurationModule = {
+  name: 'api',
+  fields: []
+};
 
 //TODO: needs implementation
 // const config : IPublicApiOptions = {

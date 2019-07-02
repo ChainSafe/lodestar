@@ -1,4 +1,5 @@
 import {number64} from "../types";
+import {IConfigurationModule} from "../util/config";
 
 export interface INetworkOptions {
   maxPeers: number64;
@@ -8,6 +9,28 @@ export interface INetworkOptions {
   connectTimeout: number;
   disconnectTimeout: number;
 }
+
+export const NetworkOptions: IConfigurationModule = {
+  name: 'network',
+  fields: [
+    {
+      name: "maxPeers",
+      type: number64,
+      configurable: true,
+      cli: {
+        flag: "--maxPeers"
+      }
+    },
+    {
+      name: "bootnodes",
+      type: [String],
+      configurable: true,
+      cli: {
+        flag: "--bootnodes"
+      }
+    }
+  ]
+};
 
 const config: INetworkOptions = {
   maxPeers: 25,

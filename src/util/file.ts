@@ -6,7 +6,8 @@ import {parse, JsonMap, stringify} from "@iarna/toml";
 import {CliError} from "../cli/error";
 import fs from "fs";
 import path from "path";
-import defaults from "../node/options";
+import defaults, {BeaconNodeOptions} from "../node/options";
+import {generateTomlConfig} from "./toml";
 
 export interface IConfigFile extends JsonMap{
   db?: {name: string};
@@ -37,10 +38,7 @@ export function getTomlConfig(fileName: string): IConfigFile {
  * @returns {void}
  */
 export function writeTomlConfig(fileName: string): void {
-
-
-  const content = stringify(defaults as unknown as JsonMap);
-
+  const content = stringify(generateTomlConfig(defaults, BeaconNodeOptions));
   try {
     ensureDirectoryExistence(fileName);
     fs.writeFileSync(fileName, content);

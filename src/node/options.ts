@@ -2,14 +2,15 @@
  * @module node
  */
 
-import defaultChainOptions, {IChainOptions} from "../chain/options";
-import defaultDatabaseOptions, {IDatabaseOptions} from "../db/options";
-import defaultApiOptions, {IPublicApiOptions} from "../rpc/options";
-import defaultEth1Options, {IEth1Options} from "../eth1/options";
-import defaultNetworkOptions, {INetworkOptions} from "../network/options";
-import defaultOpPoolOptions, {IOpPoolOptions} from "../opPool/options";
-import defaultSyncOptions, {ISyncOptions} from "../sync/options";
-import {IValidatorOptions} from "../validator/options";
+import defaultChainOptions, {ChainOptions, IChainOptions} from "../chain/options";
+import defaultDatabaseOptions, {DatabaseOptions, IDatabaseOptions} from "../db/options";
+import defaultApiOptions, {IPublicApiOptions, PublicApiOptions} from "../rpc/options";
+import defaultEth1Options, {Eth1Options, IEth1Options} from "../eth1/options";
+import defaultNetworkOptions, {INetworkOptions, NetworkOptions} from "../network/options";
+import defaultOpPoolOptions, {IOpPoolOptions, OpPoolOptions} from "../opPool/options";
+import defaultSyncOptions, {ISyncOptions, SyncOptions} from "../sync/options";
+import {IValidatorOptions, ValidatorOptions} from "../validator/options";
+import {IConfigurationModule} from "../util/config";
 
 export interface IBeaconNodeOptions {
   chain: IChainOptions;
@@ -22,9 +23,19 @@ export interface IBeaconNodeOptions {
   validator?: IValidatorOptions;
 }
 
-export interface IConfigurableOptions {
-  chain: IChainOptions;
-}
+export const BeaconNodeOptions: IConfigurationModule = {
+  name: 'config',
+  fields: [
+    ChainOptions,
+    DatabaseOptions,
+    PublicApiOptions,
+    Eth1Options,
+    NetworkOptions,
+    OpPoolOptions,
+    SyncOptions,
+    ValidatorOptions
+  ]
+};
 
 const config: IBeaconNodeOptions = {
   chain: defaultChainOptions,

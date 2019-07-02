@@ -3,16 +3,14 @@
  */
 
 import {EventEmitter} from "events";
-import {serialize, deserialize} from "@chainsafe/ssz";
+import {deserialize, serialize} from "@chainsafe/ssz";
 import promisify from "promisify-es6";
 import LibP2p from "libp2p";
 import Gossipsub from "libp2p-gossipsub";
 import PeerInfo from "peer-info";
 
-import {Attestation, BeaconBlock, Shard, RequestBody, ResponseBody} from "../../types";
-import {
-  Method, RequestId, BLOCK_TOPIC, ATTESTATION_TOPIC, SHARD_SUBNET_COUNT,
-} from "../../constants";
+import {Attestation, BeaconBlock, RequestBody, ResponseBody, Shard} from "../../types";
+import {ATTESTATION_TOPIC, BLOCK_TOPIC, Method, RequestId, SHARD_SUBNET_COUNT,} from "../../constants";
 import {INetwork} from "../interface";
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {NetworkRpc} from "./rpc";
