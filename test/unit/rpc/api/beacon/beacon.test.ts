@@ -34,9 +34,9 @@ describe('beacon rpc api', function () {
         currentVersion: Buffer.from("2")
       }
     });
-    dbStub.getState.resolves(state);
+    dbStub.getLatestState.resolves(state);
     const fork = await beaconApi.getFork();
-    expect(dbStub.getState.calledOnce).to.be.true;
+    expect(dbStub.getLatestState.calledOnce).to.be.true;
     expect(fork).to.be.deep.equal(state.fork);
   });
 
@@ -53,9 +53,9 @@ describe('beacon rpc api', function () {
 
   it('should return state', async function() {
     const state = generateState();
-    dbStub.getState.resolves(state);
+    dbStub.getLatestState.resolves(state);
     const result = await beaconApi.getBeaconState();
-    expect(dbStub.getState.calledOnce).to.be.true;
+    expect(dbStub.getLatestState.calledOnce).to.be.true;
     expect(result).to.be.deep.equal(state);
   });
 

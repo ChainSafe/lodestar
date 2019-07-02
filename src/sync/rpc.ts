@@ -5,6 +5,8 @@
 import assert from "assert";
 import BN from "bn.js";
 import {hashTreeRoot} from "@chainsafe/ssz";
+import PeerInfo from "peer-info";
+
 import {
   bytes32, Slot, number64,
   BeaconBlockHeader, BeaconBlockBody,
@@ -67,7 +69,7 @@ export class SyncRpc {
       bestSlot = await this.db.getChainHeadSlot();
       const [bRoot, state] = await Promise.all([
         this.db.getBlockRoot(bestSlot),
-        this.db.getState(),
+        this.db.getLatestState(),
       ]);
       bestRoot = bRoot;
       latestFinalizedEpoch = state.finalizedEpoch;

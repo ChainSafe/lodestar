@@ -30,126 +30,153 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
     super(opts);
   }
 
-  public async getState(): Promise<BeaconState> {
-    const buf = await this.db.get(encodeKey(Bucket.chainInfo, Key.state));
-    return deserialize(buf, BeaconState);
-  }
-
-  public async setState(state: BeaconState): Promise<void> {
-    await this.db.put(encodeKey(Bucket.chainInfo, Key.state), serialize(state, BeaconState));
-  }
-
-  public async getFinalizedState(): Promise<BeaconState> {
-    const buf = await this.db.get(encodeKey(Bucket.chainInfo, Key.finalizedState));
-    return deserialize(buf, BeaconState);
-  }
-
-  public async setFinalizedState(state: BeaconState): Promise<void> {
-    await this.db.put(
-      encodeKey(Bucket.chainInfo, Key.finalizedState),
-      serialize(state, BeaconState)
-    );
-  }
-
-  public async setJustifiedState(state: BeaconState): Promise<void> {
-    await this.db.put(
-      encodeKey(Bucket.chainInfo, Key.justifiedState),
-      serialize(state, BeaconState)
-    );
-  }
-
-  public async getJustifiedState(): Promise<BeaconState> {
-    const buf = await this.db.get(encodeKey(Bucket.chainInfo, Key.justifiedState));
-    return deserialize(buf, BeaconState);
-  }
-
-  public async getBlock(blockRoot: bytes32): Promise<BeaconBlock> {
-    const buf = await this.db.get(encodeKey(Bucket.block, blockRoot));
-    return deserialize(buf, BeaconBlock);
-  }
-
-  public async hasBlock(blockHash: bytes32): Promise<boolean> {
+  public async getState(root: bytes32): Promise<BeaconState | null> {
     try {
-      await this.getBlock(blockHash);
-      return true;
+      const buf = await this.db.get(encodeKey(Bucket.state, root));
+      return deserialize(buf, BeaconState);
     } catch (e) {
-      return false;
+      return null;
     }
   }
 
-  public async getBlockRoot(slot: Slot): Promise<bytes32> {
-    return await this.db.get(encodeKey(Bucket.mainChain, slot));
+  public async setState(root: bytes32, state: BeaconState): Promise<void> {
+    await this.db.put(encodeKey(Bucket.state, root), serialize(state, BeaconState));
   }
 
-  public async getBlockBySlot(slot: Slot): Promise<BeaconBlock> {
-    const blockRoot = await this.getBlockRoot(slot);
-    return await this.getBlock(blockRoot);
+  /**
+   * Blocks and states can be referred to by root in the chain info bucket
+   */
+  private async getRefValue<T>(key: Key, getFn: (r: bytes32) => T | null): Promise<T | null> {
+    const root = await this.db.get(encodeKey(Bucket.chainInfo, key));
+    return await getFn(deserialize(root, bytes32));
   }
-
-  public async setBlock(block: BeaconBlock): Promise<void> {
-    const blockRoot = hashTreeRoot(block, BeaconBlock);
-    await this.db.put(encodeKey(Bucket.block, blockRoot), serialize(block, BeaconBlock));
-  }
-
-  public async getFinalizedBlock(): Promise<BeaconBlock> {
-    const buf = await this.db.get(encodeKey(Bucket.chainInfo, Key.finalizedBlock));
-    return deserialize(buf, BeaconBlock);
-  }
-
-  public async setFinalizedBlock(block: BeaconBlock): Promise<void> {
+  private async setRef(key: Key, root: bytes32): Promise<void> {
     await this.db.put(
-      encodeKey(Bucket.chainInfo, Key.finalizedBlock),
-      serialize(block, BeaconBlock)
+      encodeKey(Bucket.chainInfo, key),
+      serialize(root, bytes32)
     );
   }
 
-  public async getJustifiedBlock(): Promise<BeaconBlock> {
-    const buf = await this.db.get(encodeKey(Bucket.chainInfo, Key.justifiedBlock));
-    return deserialize(buf, BeaconBlock);
+  public async getLatestState(): Promise<BeaconState | null> {
+    return await this.getRefValue<BeaconState>(Key.latestState, this.getState.bind(this));
   }
 
-  public async setJustifiedBlock(block: BeaconBlock): Promise<void> {
-    await this.db.put(
-      encodeKey(Bucket.chainInfo, Key.justifiedBlock),
-      serialize(block, BeaconBlock)
-    );
+  public async setLatestStateRoot(root: bytes32, state?: BeaconState): Promise<void> {
+    return await this.setRef(Key.latestState, root);
   }
 
-  public async getChainHeadSlot(): Promise<Slot> {
-    const heightBuf = await this.db.get(encodeKey(Bucket.chainInfo, Key.chainHeight));
-    return deserialize(heightBuf, uint64) as Slot;
+  public async getFinalizedState(): Promise<BeaconState> {
+    return await this.getRefValue<BeaconState>(Key.finalizedState, this.getState.bind(this));
   }
 
-  public async getChainHeadRoot(): Promise<bytes32> {
+  public async setFinalizedStateRoot(root: bytes32, state?: BeaconState): Promise<void> {
+    return await this.setRef(Key.finalizedState, root);
+  }
+
+  public async getJustifiedState(): Promise<BeaconState> {
+    return await this.getRefValue<BeaconState>(Key.justifiedState, this.getState.bind(this));
+  }
+
+  public async setJustifiedStateRoot(root: bytes32, state?: BeaconState): Promise<void> {
+    return await this.setRef(Key.justifiedState, root);
+  }
+
+  public async getBlock(root: bytes32): Promise<BeaconBlock | null> {
+    try {
+      const buf = await this.db.get(encodeKey(Bucket.block, root));
+      return deserialize(buf, BeaconBlock);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  public async hasBlock(root: bytes32): Promise<boolean> {
+    return !!await this.getBlock(root);
+  }
+
+  public async setBlock(root: bytes32, block: BeaconBlock): Promise<void> {
+    await this.db.put(encodeKey(Bucket.block, root), serialize(block, BeaconBlock));
+  }
+
+  public async getFinalizedBlock(): Promise<BeaconBlock | null> {
+    return await this.getRefValue<BeaconBlock>(Key.finalizedBlock, this.getBlock.bind(this));
+  }
+
+  public async setFinalizedBlockRoot(root: bytes32, block?: BeaconBlock): Promise<void> {
+    return await this.setRef(Key.finalizedBlock, root);
+  }
+
+  public async getJustifiedBlock(): Promise<BeaconBlock | null> {
+    return await this.getRefValue<BeaconBlock>(Key.justifiedBlock, this.getBlock.bind(this));
+  }
+
+  public async setJustifiedBlockRoot(root: bytes32, block?: BeaconBlock): Promise<void> {
+    return await this.setRef(Key.justifiedBlock, root);
+  }
+
+  public async getBlockRoot(slot: Slot): Promise<bytes32 | null> {
+    try {
+      return await this.db.get(encodeKey(Bucket.mainChain, slot));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  public async getBlockBySlot(slot: Slot): Promise<BeaconBlock | null> {
+    const root = await this.getBlockRoot(slot);
+    if (root === null) {
+      return null;
+    }
+    return await this.getBlock(root);
+  }
+  public async getChainHeadSlot(): Promise<Slot | null> {
+    try {
+      const heightBuf = await this.db.get(encodeKey(Bucket.chainInfo, Key.chainHeight));
+      return deserialize(heightBuf, uint64) as Slot;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  public async getChainHeadRoot(): Promise<bytes32 | null> {
     const slot  = await this.getChainHeadSlot();
+    if (slot === null) {
+      return null;
+    }
     return await this.getBlockRoot(slot);
   }
 
   public async getChainHead(): Promise<BeaconBlock> {
-    const blockRoot = await this.getChainHeadRoot();
-    return await this.getBlock(blockRoot);
+    const root = await this.getChainHeadRoot();
+    if (root === null) {
+      return null;
+    }
+    return await this.getBlock(root);
   }
 
-  public async setChainHead(state: BeaconState, block: BeaconBlock): Promise<void> {
-    const blockRoot = hashTreeRoot(block, BeaconBlock);
-    const slot = block.slot;
+  public async setChainHeadRoots(blockRoot: bytes32, stateRoot: bytes32, block?: BeaconBlock, state?: BeaconState): Promise<void> {
+    const [storedBlock, storedState] = await Promise.all([
+      block ? block : this.getBlock(blockRoot),
+      state ? state : this.getState(stateRoot),
+    ]);
     // block should already be set
-    if(!await this.getBlock(blockRoot)) {
-      throw new Error("block should be saved already");
+    if(!storedBlock) {
+      throw new Error("unknown block root");
     }
-    await this.db.batchPut([
-      {
+    // state should already be set
+    if(!storedState) {
+      throw new Error("unknown state root");
+    }
+    const slot = block.slot;
+    await Promise.all([
+      this.setLatestStateRoot(block.stateRoot, storedState),
+      this.db.batchPut([{
         key: encodeKey(Bucket.mainChain, slot),
         value: blockRoot
-      },
-      {
+      }, {
         key: encodeKey(Bucket.chainInfo, Key.chainHeight),
         value: serialize(slot, uint64)
-      },
-      {
-        key: encodeKey(Bucket.chainInfo, Key.state),
-        value: serialize(state, BeaconState)
-      }
+      }]),
     ]);
   }
 
@@ -269,14 +296,14 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
   }
 
   public async getValidatorIndex(publicKey: Buffer): Promise<ValidatorIndex> {
-    const state = await this.getState();
+    const state = await this.getLatestState();
     //TODO: cache this (hashmap)
     return state.validatorRegistry.findIndex(value => value.pubkey === publicKey);
   }
 
-  public async getMerkleTree(): Promise<IProgressiveMerkleTree | null> {
+  public async getMerkleTree(index: number): Promise<IProgressiveMerkleTree | null> {
     const merkleTreeSerialized = await this.db.get(
-      encodeKey(Bucket.merkleTree, Key.progressiveMerkleTree)
+      encodeKey(Bucket.merkleTree, index)
     );
     if(merkleTreeSerialized) {
       return ProgressiveMerkleTree.fromObject(deserialize(merkleTreeSerialized, MerkleTree));
@@ -284,9 +311,9 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
     return null;
   }
 
-  public async setMerkleTree(merkleTree: IProgressiveMerkleTree): Promise<void> {
+  public async setMerkleTree(index: number, merkleTree: IProgressiveMerkleTree): Promise<void> {
     return this.db.put(
-      encodeKey(Bucket.merkleTree, Key.progressiveMerkleTree),
+      encodeKey(Bucket.merkleTree, index),
       merkleTree.serialize()
     );
   }

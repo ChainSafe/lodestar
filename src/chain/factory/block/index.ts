@@ -17,11 +17,11 @@ export async function assembleBlock(
   slot: Slot,
   randao: bytes96
 ): Promise<BeaconBlock> {
-  const [parentBlock, currentState, merkleTree] = await Promise.all([
+  const [parentBlock, currentState] = await Promise.all([
     db.getChainHead(),
-    db.getState(),
-    db.getMerkleTree()
+    db.getLatestState(),
   ]);
+  const merkleTree = await db.getMerkleTree(currentState.depositIndex);
   const parentHeader: BeaconBlockHeader = {
     stateRoot: parentBlock.stateRoot,
     signature: parentBlock.signature,

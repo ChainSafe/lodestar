@@ -45,7 +45,7 @@ export class RegularSync {
       return;
     }
     // skip attestation if its too old
-    const state = await this.db.getState();
+    const state = await this.db.getLatestState();
     if (attestation.data.targetEpoch < slotToEpoch(state.finalizedEpoch)) {
       return;
     }

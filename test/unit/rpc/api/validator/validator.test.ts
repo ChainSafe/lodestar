@@ -49,7 +49,7 @@ describe('validator rpc api', function () {
   it('is proposer', async function() {
     const isProposerStub = sandbox.stub(stateTransitionUtils, 'isProposerAtSlot');
     const state = generateState();
-    dbStub.getState.resolves(state);
+    dbStub.getLatestState.resolves(state);
     isProposerStub.returns(true);
     const result = await validatorApi.isProposer(1, 2);
     expect(result).to.be.true;
@@ -63,7 +63,7 @@ describe('validator rpc api', function () {
   it('get duties', async function() {
     const publicKey = Buffer.alloc(48, 1);
     const state = generateState();
-    dbStub.getState.resolves(state);
+    dbStub.getLatestState.resolves(state);
     dbStub.getValidatorIndex.resolves(5);
     const getProposerStub = sandbox.stub(stateTransitionUtils, 'getBeaconProposerIndex');
     getProposerStub.returns(4);
@@ -73,7 +73,7 @@ describe('validator rpc api', function () {
     expect(duties.length).to.be.equal(1);
     expect(duties[0].committeeIndex).to.be.null;
     expect(duties[0].blockProductionSlot).to.be.null;
-    expect(dbStub.getState.calledOnce).to.be.true;
+    expect(dbStub.getLatestState.calledOnce).to.be.true;
     expect(dbStub.getValidatorIndex.withArgs(publicKey).calledOnce).to.be.true;
     expect(getProposerStub.withArgs(state).calledOnce).to.be.true;
     expect(assembleValidatorDutyStub.calledOnceWith(publicKey, 5, state, 4)).to.be.true;
@@ -81,23 +81,23 @@ describe('validator rpc api', function () {
 
   it('get committee assignment', async function() {
     const state = generateState();
-    dbStub.getState.resolves(state);
+    dbStub.getLatestState.resolves(state);
     const commiteeAssignmentStub = sandbox.stub(stateTransitionUtils, 'getCommitteeAssignment');
     commiteeAssignmentStub.returns(null);
     const result = await validatorApi.getCommitteeAssignment(1, 2);
     expect(result).to.be.null;
-    expect(dbStub.getState.calledOnce).to.be.true;
+    expect(dbStub.getLatestState.calledOnce).to.be.true;
     expect(commiteeAssignmentStub.withArgs(state, 2, 1));
   });
 
   it('produceAttestation - missing slots', async function() {
     const state = generateState({slot: 1});
-    dbStub.getState.resolves(state);
+    dbStub.getLatestState.resolves(state);
     const block = generateEmptyBlock();
     dbStub.getBlock.resolves(block);
     const result = await validatorApi.produceAttestation(4, 2);
     expect(result).to.not.be.null;
-    expect(dbStub.getState.calledOnce).to.be.true;
+    expect(dbStub.getLatestState.calledOnce).to.be.true;
     expect(dbStub.getBlock.calledTwice).to.be.true;
   });
 

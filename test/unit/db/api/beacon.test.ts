@@ -32,6 +32,8 @@ chai.use(chaiAsPromised);
 describe('beacon db api', function() {
 
   const sandbox = sinon.createSandbox();
+  const objKey = Buffer.alloc(32, 10);
+  const objRoot = Buffer.alloc(32, 11);
 
   let encodeKeyStub, dbStub, beaconDB;
 
@@ -47,82 +49,91 @@ describe('beacon db api', function() {
     sandbox.restore();
   });
 
-  it('get state', async function() {
-    encodeKeyStub.withArgs(Bucket.chainInfo, Key.state).returns('stateKey');
-    dbStub.get.withArgs('stateKey').resolves(serialize(generateState(), BeaconState));
-    const result = await beaconDB.getState();
-    expect(encodeKeyStub.withArgs(Bucket.chainInfo, Key.state).calledOnce).to.be.true;
-    expect(dbStub.get.withArgs('stateKey').calledOnce).to.be.true;
+  it('get latest state', async function() {
+    encodeKeyStub.withArgs(Bucket.chainInfo, Key.latestState).returns(objKey);
+    encodeKeyStub.withArgs(Bucket.state, objRoot).returns(objRoot);
+    dbStub.get.withArgs(objKey).resolves(objRoot);
+    dbStub.get.withArgs(objRoot).resolves(serialize(generateState(), BeaconState));
+    const result = await beaconDB.getLatestState();
+    expect(encodeKeyStub.withArgs(Bucket.chainInfo, Key.latestState).calledOnce).to.be.true;
+    expect(dbStub.get.withArgs(objKey).calledOnce).to.be.true;
+    expect(dbStub.get.withArgs(objRoot).calledOnce).to.be.true;
     expect(result.slot)
       .to.be.equal(generateState().slot);
   });
 
-  it('set state', async function() {
-    encodeKeyStub.withArgs(Bucket.chainInfo, Key.state).returns('stateKey');
-    await beaconDB.setState(generateState());
-    expect(encodeKeyStub.withArgs(Bucket.chainInfo, Key.state).calledOnce).to.be.true;
-    expect(dbStub.put.withArgs('stateKey', sinon.match.any).calledOnce).to.be.true;
+  it('set latest state root', async function() {
+    encodeKeyStub.withArgs(Bucket.chainInfo, Key.latestState).returns(objKey);
+    await beaconDB.setLatestStateRoot(objKey, generateState());
+    expect(encodeKeyStub.withArgs(Bucket.chainInfo, Key.latestState).calledOnce).to.be.true;
+    expect(dbStub.put.withArgs(objKey, sinon.match.any).calledOnce).to.be.true;
   });
 
   it('get finalized state', async function() {
-    encodeKeyStub.withArgs(Bucket.chainInfo, Key.finalizedState).returns('stateKey');
-    dbStub.get.withArgs('stateKey').resolves(serialize(generateState(), BeaconState));
+    encodeKeyStub.withArgs(Bucket.chainInfo, Key.finalizedState).returns(objKey);
+    encodeKeyStub.withArgs(Bucket.state, objRoot).returns(objRoot);
+    dbStub.get.withArgs(objKey).resolves(objRoot);
+    dbStub.get.withArgs(objRoot).resolves(serialize(generateState(), BeaconState));
     const result = await beaconDB.getFinalizedState();
     expect(encodeKeyStub.withArgs(Bucket.chainInfo, Key.finalizedState).calledOnce).to.be.true;
-    expect(dbStub.get.withArgs('stateKey').calledOnce).to.be.true;
+    expect(dbStub.get.withArgs(objKey).calledOnce).to.be.true;
+    expect(dbStub.get.withArgs(objRoot).calledOnce).to.be.true;
     expect(result.slot)
       .to.be.equal(generateState().slot);
   });
 
   it('set finalized state', async function() {
-    encodeKeyStub.withArgs(Bucket.chainInfo, Key.finalizedState).returns('stateKey');
-    await beaconDB.setFinalizedState(generateState());
+    encodeKeyStub.withArgs(Bucket.chainInfo, Key.finalizedState).returns(objKey);
+    await beaconDB.setFinalizedStateRoot(objKey, generateState());
     expect(encodeKeyStub.withArgs(Bucket.chainInfo, Key.finalizedState).calledOnce).to.be.true;
-    expect(dbStub.put.withArgs('stateKey', sinon.match.any).calledOnce).to.be.true;
+    expect(dbStub.put.withArgs(objKey, sinon.match.any).calledOnce).to.be.true;
   });
 
   it('get justified state', async function() {
-    encodeKeyStub.withArgs(Bucket.chainInfo, Key.justifiedState).returns('stateKey');
-    dbStub.get.withArgs('stateKey').resolves(serialize(generateState(), BeaconState));
+    encodeKeyStub.withArgs(Bucket.chainInfo, Key.justifiedState).returns(objKey);
+    encodeKeyStub.withArgs(Bucket.state, objRoot).returns(objRoot);
+    dbStub.get.withArgs(objKey).resolves(objRoot);
+    dbStub.get.withArgs(objRoot).resolves(serialize(generateState(), BeaconState));
     const result = await beaconDB.getJustifiedState();
     expect(encodeKeyStub.withArgs(Bucket.chainInfo, Key.justifiedState).calledOnce).to.be.true;
-    expect(dbStub.get.withArgs('stateKey').calledOnce).to.be.true;
+    expect(dbStub.get.withArgs(objKey).calledOnce).to.be.true;
+    expect(dbStub.get.withArgs(objRoot).calledOnce).to.be.true;
     expect(result.slot)
       .to.be.equal(generateState().slot);
   });
 
   it('set justified state', async function() {
-    encodeKeyStub.withArgs(Bucket.chainInfo, Key.justifiedState).returns('stateKey');
-    await beaconDB.setJustifiedState(generateState());
+    encodeKeyStub.withArgs(Bucket.chainInfo, Key.justifiedState).returns(objKey);
+    await beaconDB.setJustifiedStateRoot(objKey, generateState());
     expect(encodeKeyStub.withArgs(Bucket.chainInfo, Key.justifiedState).calledOnce).to.be.true;
-    expect(dbStub.put.withArgs('stateKey', sinon.match.any).calledOnce).to.be.true;
+    expect(dbStub.put.withArgs(objKey, sinon.match.any).calledOnce).to.be.true;
   });
 
   it('get block', async function() {
-    encodeKeyStub.withArgs(Bucket.block, sinon.match.any).returns('blockId');
-    dbStub.get.withArgs('blockId').resolves(serialize(generateEmptyBlock(), BeaconBlock));
+    encodeKeyStub.withArgs(Bucket.block, sinon.match.any).returns(objRoot);
+    dbStub.get.withArgs(objRoot).resolves(serialize(generateEmptyBlock(), BeaconBlock));
     const result = await beaconDB.getBlock('blockHash');
     expect(encodeKeyStub.withArgs(Bucket.block, sinon.match.any).calledOnce).to.be.true;
-    expect(dbStub.get.withArgs('blockId').calledOnce).to.be.true;
+    expect(dbStub.get.withArgs(objRoot).calledOnce).to.be.true;
     expect(serialize(result, BeaconBlock).toString('hex'))
       .to.be.equal(serialize(generateEmptyBlock(), BeaconBlock).toString('hex'));
   });
 
   it('has block - false', async function() {
-    encodeKeyStub.withArgs(Bucket.block, sinon.match.any).returns('blockId');
-    dbStub.get.withArgs('blockId').resolves(null);
+    encodeKeyStub.withArgs(Bucket.block, sinon.match.any).returns(objRoot);
+    dbStub.get.withArgs(objRoot).resolves(null);
     const result = await beaconDB.hasBlock('blockHash');
     expect(encodeKeyStub.withArgs(Bucket.block, sinon.match.any).calledOnce).to.be.true;
-    expect(dbStub.get.withArgs('blockId').calledOnce).to.be.true;
+    expect(dbStub.get.withArgs(objRoot).calledOnce).to.be.true;
     expect(result).to.be.false;
   });
 
   it('has block - true', async function() {
-    encodeKeyStub.withArgs(Bucket.block, sinon.match.any).returns('blockId');
-    dbStub.get.withArgs('blockId').resolves(serialize(generateEmptyBlock(), BeaconBlock));
+    encodeKeyStub.withArgs(Bucket.block, sinon.match.any).returns(objRoot);
+    dbStub.get.withArgs(objRoot).resolves(serialize(generateEmptyBlock(), BeaconBlock));
     const result = await beaconDB.hasBlock('blockHash');
     expect(encodeKeyStub.withArgs(Bucket.block, sinon.match.any).calledOnce).to.be.true;
-    expect(dbStub.get.withArgs('blockId').calledOnce).to.be.true;
+    expect(dbStub.get.withArgs(objRoot).calledOnce).to.be.true;
     expect(result).to.be.true;
   });
 
@@ -143,7 +154,7 @@ describe('beacon db api', function() {
     encodeKeyStub
       .withArgs(Bucket.block, sinon.match.any)
       .returns('blockId');
-    await beaconDB.setBlock(generateEmptyBlock());
+    await beaconDB.setBlock(objRoot, generateEmptyBlock());
     expect(
       encodeKeyStub
         .withArgs(
@@ -154,11 +165,11 @@ describe('beacon db api', function() {
     expect(dbStub.put.withArgs('blockId', sinon.match.any).calledOnce).to.be.true;
   });
 
-  it('set finalized block', async function() {
+  it('set finalized block root', async function() {
     encodeKeyStub
       .withArgs(Bucket.chainInfo, Key.finalizedBlock)
       .returns('blockId');
-    await beaconDB.setFinalizedBlock(generateEmptyBlock());
+    await beaconDB.setFinalizedBlockRoot(objRoot, generateEmptyBlock());
     expect(
       encodeKeyStub
         .withArgs(Bucket.chainInfo, Key.finalizedBlock).calledOnce
@@ -167,20 +178,23 @@ describe('beacon db api', function() {
   });
 
   it('get finalized block', async function() {
-    encodeKeyStub.withArgs(Bucket.chainInfo, Key.finalizedBlock).returns('blockId');
-    dbStub.get.withArgs('blockId').resolves(serialize(generateEmptyBlock(), BeaconBlock));
-    const result = await beaconDB.getFinalizedBlock('blockHash');
+    encodeKeyStub.withArgs(Bucket.chainInfo, Key.finalizedBlock).returns(objKey);
+    encodeKeyStub.withArgs(Bucket.block, objRoot).returns(objRoot);
+    dbStub.get.withArgs(objKey).resolves(objRoot);
+    dbStub.get.withArgs(objRoot).resolves(serialize(generateEmptyBlock(), BeaconBlock));
+    const result = await beaconDB.getFinalizedBlock();
     expect(encodeKeyStub.withArgs(Bucket.chainInfo, Key.finalizedBlock).calledOnce).to.be.true;
-    expect(dbStub.get.withArgs('blockId').calledOnce).to.be.true;
+    expect(dbStub.get.withArgs(objKey).calledOnce).to.be.true;
+    expect(dbStub.get.withArgs(objRoot).calledOnce).to.be.true;
     expect(serialize(result, BeaconBlock).toString('hex'))
       .to.be.equal(serialize(generateEmptyBlock(), BeaconBlock).toString('hex'));
   });
 
-  it('set justified block', async function() {
+  it('set justified block root', async function() {
     encodeKeyStub
       .withArgs(Bucket.chainInfo, Key.justifiedBlock)
       .returns('blockId');
-    await beaconDB.setJustifiedBlock(generateEmptyBlock());
+    await beaconDB.setJustifiedBlockRoot(objRoot, generateEmptyBlock());
     expect(
       encodeKeyStub
         .withArgs(Bucket.chainInfo, Key.justifiedBlock).calledOnce
@@ -189,11 +203,14 @@ describe('beacon db api', function() {
   });
 
   it('get justified block', async function() {
-    encodeKeyStub.withArgs(Bucket.chainInfo, Key.justifiedBlock).returns('blockId');
-    dbStub.get.withArgs('blockId').resolves(serialize(generateEmptyBlock(), BeaconBlock));
-    const result = await beaconDB.getJustifiedBlock('blockHash');
+    encodeKeyStub.withArgs(Bucket.chainInfo, Key.justifiedBlock).returns(objKey);
+    encodeKeyStub.withArgs(Bucket.block, objRoot).returns(objRoot);
+    dbStub.get.withArgs(objKey).resolves(objRoot);
+    dbStub.get.withArgs(objRoot).resolves(serialize(generateEmptyBlock(), BeaconBlock));
+    const result = await beaconDB.getJustifiedBlock();
     expect(encodeKeyStub.withArgs(Bucket.chainInfo, Key.justifiedBlock).calledOnce).to.be.true;
-    expect(dbStub.get.withArgs('blockId').calledOnce).to.be.true;
+    expect(dbStub.get.withArgs(objKey).calledOnce).to.be.true;
+    expect(dbStub.get.withArgs(objRoot).calledOnce).to.be.true;
     expect(serialize(result, BeaconBlock).toString('hex'))
       .to.be.equal(serialize(generateEmptyBlock(), BeaconBlock).toString('hex'));
   });
@@ -213,19 +230,22 @@ describe('beacon db api', function() {
   it('set chain head', async function() {
     encodeKeyStub.withArgs(Bucket.chainInfo, Key.chainHeight).returns('chainHeightKey');
     beaconDB.getBlock = sandbox.stub().resolves(generateEmptyBlock());
-    await beaconDB.setChainHead(generateState(), generateEmptyBlock());
-    expect(beaconDB.getBlock.calledOnce).to.be.true;
+    const block = generateEmptyBlock();
+    block.stateRoot = objRoot;
+    await beaconDB.setChainHeadRoots(objRoot, objRoot, block, generateState());
     expect(encodeKeyStub.withArgs(Bucket.mainChain, 0).calledOnce).to.be.true;
     expect(encodeKeyStub.withArgs(Bucket.chainInfo, Key.chainHeight).calledOnce).to.be.true;
-    expect(encodeKeyStub.withArgs(Bucket.chainInfo, Key.state).calledOnce).to.be.true;
+    expect(encodeKeyStub.withArgs(Bucket.chainInfo, Key.latestState).calledOnce).to.be.true;
     expect(dbStub.batchPut.withArgs(sinon.match.array).calledOnce).to.be.true;
   });
 
   it('fail to set chain head (block missing)', async function() {
     encodeKeyStub.withArgs(Bucket.chainInfo, Key.chainHeight).returns('chainHeightKey');
     beaconDB.getBlock = sandbox.stub().resolves(null);
-    await expect(beaconDB.setChainHead(generateState(), generateEmptyBlock()))
-      .to.be.rejectedWith("block should be saved already");
+    const block = generateEmptyBlock();
+    block.stateRoot = objRoot;
+    await expect(beaconDB.setChainHeadRoots(objRoot, objRoot, null, generateState()))
+      .to.be.rejectedWith("unknown block root");
   });
 
   it('test get attestation', async function() {
@@ -492,16 +512,18 @@ describe('beacon db api', function() {
   it('store merkle tree', async function() {
     encodeKeyStub.returns('merkleTreeKey');
     dbStub.put.resolves();
-    await beaconDB.setMerkleTree(ProgressiveMerkleTree.empty(5));
-    expect(encodeKeyStub.calledOnceWith(Bucket.merkleTree, Key.progressiveMerkleTree)).to.be.true;
+    const index = 1;
+    await beaconDB.setMerkleTree(index, ProgressiveMerkleTree.empty(5));
+    expect(encodeKeyStub.calledOnceWith(Bucket.merkleTree, index)).to.be.true;
     expect(dbStub.put.calledOnceWith('merkleTreeKey', sinon.match.any)).to.be.true;
   });
 
   it('get merkle tree', async function() {
     encodeKeyStub.returns('merkleTreeKey');
     dbStub.get.resolves(ProgressiveMerkleTree.empty(5).serialize());
-    const tree = await beaconDB.getMerkleTree();
-    expect(encodeKeyStub.calledOnceWith(Bucket.merkleTree, Key.progressiveMerkleTree)).to.be.true;
+    const index = 1;
+    const tree = await beaconDB.getMerkleTree(index);
+    expect(encodeKeyStub.calledOnceWith(Bucket.merkleTree, index)).to.be.true;
     expect(dbStub.get.calledOnceWith('merkleTreeKey')).to.be.true;
     expect(tree).to.not.be.null;
   });
@@ -509,8 +531,9 @@ describe('beacon db api', function() {
   it('get merkle not found', async function() {
     encodeKeyStub.returns('merkleTreeKey');
     dbStub.get.resolves(null);
-    const tree = await beaconDB.getMerkleTree();
-    expect(encodeKeyStub.calledOnceWith(Bucket.merkleTree, Key.progressiveMerkleTree)).to.be.true;
+    const index = 1;
+    const tree = await beaconDB.getMerkleTree(index);
+    expect(encodeKeyStub.calledOnceWith(Bucket.merkleTree, index)).to.be.true;
     expect(dbStub.get.calledOnceWith('merkleTreeKey')).to.be.true;
     expect(tree).to.be.null;
   });
