@@ -3,22 +3,17 @@
  */
 
 import assert from "assert";
-import {
-  BeaconState,
-  Epoch, Slot,
-  Validator,
-  ValidatorIndex,
-} from "../../../types";
+import {BeaconState, Epoch, Slot, Validator, ValidatorIndex,} from "../../../types";
 import {
   getBeaconProposerIndex,
   getCrosslinkCommittee,
-  slotToEpoch,
   getEpochCommitteeCount,
-  getEpochStartShard
+  getEpochStartShard,
+  slotToEpoch
 } from "./index";
 import {CommitteeAssignment} from "../../../validator/types";
 import {getCurrentEpoch, getEpochStartSlot} from "./epoch";
-import {SLOTS_PER_EPOCH, SHARD_COUNT} from "../../../constants";
+import {SHARD_COUNT, SLOTS_PER_EPOCH} from "../../../constants";
 import {intDiv} from "../../../util/math";
 
 

@@ -2,11 +2,12 @@ import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 // @ts-ignore
-import {rewire, restore} from "@chainsafe/bls-js";
+import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
+import {equals} from "@chainsafe/ssz";
+import {BeaconBlock, BeaconState} from "../../../../src/types";
 
 import {processBlockHeader} from "../../../../src/chain/stateTransition/block/blockHeader";
-import {BeaconBlock, BeaconState} from "../../../../src/types";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(
@@ -33,7 +34,7 @@ describeSpecTest(
   },
   () => false,
   (_1, _2, expected, actual) => {
-    expect(expected).to.be.deep.equal(actual);
+    expect(equals(expected, actual, BeaconState)).to.be.true;
     restore();
   },
   0

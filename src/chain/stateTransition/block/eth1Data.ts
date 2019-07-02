@@ -2,7 +2,7 @@
  * @module chain/stateTransition/block
  */
 
-import {serialize} from "@chainsafe/ssz";
+import {equals} from "@chainsafe/ssz";
 
 import {
   BeaconBlockBody,
@@ -17,10 +17,9 @@ import {SLOTS_PER_ETH1_VOTING_PERIOD} from "../../../constants";
 export function processEth1Data(state: BeaconState, body: BeaconBlockBody): void {
   const blockEth1Data = body.eth1Data;
   state.eth1DataVotes.push(blockEth1Data);
-  const serializedBlockEth1Data = serialize(blockEth1Data, Eth1Data);
   let occurances = 0;
   state.eth1DataVotes.forEach((eth1Data) => {
-    if (serialize(eth1Data, Eth1Data).equals(serializedBlockEth1Data)) {
+    if (equals(blockEth1Data, eth1Data, Eth1Data)) {
       occurances++;
     }
   });
