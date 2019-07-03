@@ -10,6 +10,7 @@ import {processFinalUpdates} from "../../../../../src/chain/stateTransition/epoc
 // @ts-ignore
 import BN from "bn.js";
 import {SLOTS_PER_ETH1_VOTING_PERIOD} from "../../../../../src/constants";
+import {number64} from "../../../../../src/types";
 
 
 describe('process epoch - final updates', function () {
@@ -38,7 +39,7 @@ describe('process epoch - final updates', function () {
     const state = generateState();
     state.slot = SLOTS_PER_ETH1_VOTING_PERIOD - 1;
     state.validatorRegistry.push(generateValidator());
-    state.balances.push(new BN(10));
+    state.balances.push(new BN("fffffffff"));
 
     getCurrentEpochStub.returns(127);
     getShardDeltaStub.returns(1);
