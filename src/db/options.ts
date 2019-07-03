@@ -9,11 +9,12 @@ export const DatabaseOptions: IConfigurationModule = {
   fields: [
     {
       name: "name",
+      description: "Path to file database",
       configurable: true,
       type: String,
       cli: {
-        flag: '--db',
-        short: '-d'
+        flag: 'db',
+        short: 'd'
       }
     }
   ]

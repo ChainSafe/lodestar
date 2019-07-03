@@ -18,8 +18,8 @@ export const ChainOptions: IConfigurationModule = {
       type: number64,
       configurable: true,
       cli: {
-        flag: "--chain",
-        short: "-c"
+        flag: "chain",
+        short: "c"
       }
     }
   ]

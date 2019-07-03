@@ -17,16 +17,22 @@ export const NetworkOptions: IConfigurationModule = {
       name: "maxPeers",
       type: number64,
       configurable: true,
+      process: (input) => {
+        return parseInt(input);
+      },
       cli: {
-        flag: "--maxPeers"
+        flag: "maxPeers"
       }
     },
     {
       name: "bootnodes",
       type: [String],
       configurable: true,
+      process: (input: string) => {
+        return input.split(',').map((input) => input.trim());
+      },
       cli: {
-        flag: "--bootnodes"
+        flag: "bootnodes"
       }
     }
   ]

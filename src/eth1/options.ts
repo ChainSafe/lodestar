@@ -26,18 +26,20 @@ export const Eth1Options: IConfigurationModule = {
       fields: [
         {
           name: "url",
+          description: "Url to eth1 node with enabled rpc api",
           type: String,
           configurable: true,
           cli: {
-            flag: "--eth1RpcUrl"
+            flag: "eth1RpcUrl"
           }
         },
         {
           name: "network",
+          description: "Eth1 network id",
           type: number64,
           configurable: true,
           cli: {
-            flag: "--networkId"
+            flag: "networkId"
           }
         }
       ]
@@ -47,18 +49,20 @@ export const Eth1Options: IConfigurationModule = {
       fields: [
         {
           name: "deployedAt",
+          description: "Block number at which contract is deployed",
           type: number64,
           configurable: true,
           cli: {
-            flag: "--depositContractBlockNum"
+            flag: "depositContractBlockNum"
           }
         },
         {
           name: "address",
+          description: "Address of deposit contract",
           type: String,
           configurable: true,
           cli: {
-            flag: "--depositContract"
+            flag: "depositContract"
           }
         }
       ]

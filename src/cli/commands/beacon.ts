@@ -6,20 +6,15 @@ import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import BeaconNode from "../../node";
+import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
+import {generateCommanderOptions, optionsToConfig} from "../util";
 import deepmerge from "deepmerge";
 import {getTomlConfig} from "../../util/file";
-import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
 
 interface IBeaconCommandOptions {
-  db: string;
-  depositContract: string;
-  eth1RpcUrl: string;
-  rpc: string;
-  configFile: string;
-  validator: boolean;
-  key?: string;
-  dbValidator?: string;
+  configFile?: string;
   loggingLevel?: string;
+  [key: string]: string;
 }
 
 export class BeaconNodeCommand implements CliCommand {
@@ -29,40 +24,39 @@ export class BeaconNodeCommand implements CliCommand {
 
     const logger: ILogger = new WinstonLogger();
 
-    commander
+    const command = commander
       .command("beacon")
       .description("Start lodestar node")
-      //TODO: generate cli options from BeaconNodeOptions
-      .option("-d, --db [db_path]", "Path to file database")
-      .option("-dc, --depositContract [address]", "Address of deposit contract")
-      .option("-eth1, --eth1RpcUrl [url]", "Url to eth1 rpc node")
-      .option("--rpc [api]", "Exposes the selected RPC api, must be comma separated")
       .option("-c, --configFile [config_file]", "Config file path")
       .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
         try {
-          await this.action({...options, validator: false},logger);
+          await this.action(options, logger);
         } catch (e) {
           logger.error(e.message + '\n' + e.stack);
         }
       });
+    generateCommanderOptions(command, BeaconNodeOptions);
   }
 
   public async action(options: IBeaconCommandOptions, logger: ILogger): Promise<void> {
+    let config: Partial<IBeaconNodeOptions> = {};
+
     if (options.loggingLevel) {
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }
 
-    let config: Partial<IBeaconNodeOptions> = {};
-    //TODO: generate config from IBeaconCommandOptions using BeaconNodeOptions as description
-
+    //merge config file
     if (options.configFile) {
       let parsedConfig = getTomlConfig(options.configFile, BeaconNodeOptions);
       //cli will override toml config options
-      config = deepmerge(parsedConfig, config);
+      config = deepmerge(config, parsedConfig);
     }
+
+    //override current config with cli config
+    config = deepmerge(config, optionsToConfig(options, BeaconNodeOptions));
 
     this.node = new BeaconNode(config, {logger});
     await this.node.start();

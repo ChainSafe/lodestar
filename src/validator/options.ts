@@ -23,7 +23,7 @@ export const ValidatorOptions: IConfigurationModule = {
           type: String,
           configurable: true,
           cli: {
-            flag: "--validatorDb"
+            flag: "validatorDb"
           }
         }
       ]
@@ -33,7 +33,7 @@ export const ValidatorOptions: IConfigurationModule = {
       type: String,
       configurable: true,
       cli: {
-        flag: "--validatorKeystore"
+        flag: "validatorKeystore"
       }
     }
   ]
