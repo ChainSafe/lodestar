@@ -1,0 +1,22 @@
+{
+  "name": "@chainsafe/eth2-types",
+  "version": "0.1.0",
+  "description": "> TODO: description",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Gregory Markou <gregorymarkou@gmail.com>",
+  "license": "ISC",
+  "homepage": "",
+  "directories": {
+    "lib": "lib"
+  },
+  "files": [
+    "lib"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
