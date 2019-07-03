@@ -10,16 +10,16 @@ import {
   MAX_VOLUNTARY_EXITS,
   PERSISTENT_COMMITTEE_PERIOD,
   SLOTS_PER_EPOCH
-} from "../../../../../src/constants";
-import {VoluntaryExit} from "../../../../../src/types";
-import * as utils from "../../../../../src/chain/stateTransition/util";
-import {getDomain, initiateValidatorExit} from "../../../../../src/chain/stateTransition/util";
-import {processVoluntaryExit} from "../../../../../src/chain/stateTransition/block/operations";
+} from "../../../../../../src/constants";
+import {VoluntaryExit} from "../../../../../../src/types";
+import * as utils from "../../../../../../src/chain/stateTransition/util";
+import {getDomain, initiateValidatorExit} from "../../../../../../src/chain/stateTransition/util";
+import {processVoluntaryExit} from "../../../../../../src/chain/stateTransition/block/operations";
 
-import {generateValidator} from "../../../../utils/validator";
-import {generateEmptyVoluntaryExit} from "../../../../utils/voluntaryExits";
-import {generateEmptyBlock} from "../../../../utils/block";
-import {generateState} from "../../../../utils/state";
+import {generateValidator} from "../../../../../utils/validator";
+import {generateEmptyVoluntaryExit} from "../../../../../utils/voluntaryExits";
+import {generateEmptyBlock} from "../../../../../utils/block";
+import {generateState} from "../../../../../utils/state";
 
 describe('process block - voluntary exits', function () {
 

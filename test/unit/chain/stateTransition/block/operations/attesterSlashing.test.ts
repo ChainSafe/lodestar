@@ -1,9 +1,9 @@
-import {generateState} from "../../../../utils/state";
+import {generateState} from "../../../../../utils/state";
 import {expect} from "chai";
-import * as utils from "../../../../../src/chain/stateTransition/util";
+import * as utils from "../../../../../../src/chain/stateTransition/util";
 import sinon from "sinon";
-import {generateEmptyAttesterSlashing} from "../../../../utils/slashings";
-import {processAttesterSlashing} from "../../../../../src/chain/stateTransition/block/operations";
+import {generateEmptyAttesterSlashing} from "../../../../../utils/slashings";
+import {processAttesterSlashing} from "../../../../../../src/chain/stateTransition/block/operations";
 
 describe('process block - attester slashings', function () {
 

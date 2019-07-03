@@ -4,16 +4,16 @@ import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 
-import {MAX_EFFECTIVE_BALANCE} from "../../../../../src/constants";
-import * as utils from "../../../../../src/chain/stateTransition/util";
-import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../../src/chain/stateTransition/util";
-import {processDeposit} from "../../../../../src/chain/stateTransition/block/operations";
-import * as merkleUtil from "../../../../../src/util/merkleTree";
+import {MAX_EFFECTIVE_BALANCE} from "../../../../../../src/constants";
+import * as utils from "../../../../../../src/chain/stateTransition/util";
+import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../../../src/chain/stateTransition/util";
+import {processDeposit} from "../../../../../../src/chain/stateTransition/block/operations";
+import * as merkleUtil from "../../../../../../src/util/merkleTree";
 
-import {generateState} from "../../../../utils/state";
-import {generateDeposit} from "../../../../utils/deposit";
-import {generateValidator} from "../../../../utils/validator";
-import {generateEmptyBlock} from "../../../../utils/block";
+import {generateState} from "../../../../../utils/state";
+import {generateDeposit} from "../../../../../utils/deposit";
+import {generateValidator} from "../../../../../utils/validator";
+import {generateEmptyBlock} from "../../../../../utils/block";
 
 describe('process block - deposits', function () {
 
