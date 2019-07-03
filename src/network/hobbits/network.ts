@@ -6,7 +6,6 @@ import {Attestation, BeaconBlock} from "../../types";
 import net from "net";
 import PeerInfo from "peer-info";
 import NodeAddress = Multiaddr.NodeAddress;
-import {peerInfoToNodeAddress} from "./util";
 
 export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
   public peerInfo: PeerInfo;

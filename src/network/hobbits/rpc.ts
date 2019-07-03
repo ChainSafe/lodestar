@@ -9,7 +9,7 @@ import Connection from "interface-connection";
 import promisify from "es6-promisify";
 import {deserialize} from "@chainsafe/ssz";
 
-import {RequestBody, ResponseBody, WireResponse, WireRequest} from "../../types";
+import {RequestBody, ResponseBody, WireResponse, WireRequest} from "./rpc/messages";
 import {Method, RequestId, ResponseCode, RPC_MULTICODEC} from "../../constants";
 
 import {
@@ -23,6 +23,7 @@ import {randomRequestId} from "../util";
 import {Peer} from "./peer";
 import {ILogger} from "../../logger";
 import net from "net";
+import {HobbitsUri} from "./hobbitsUri";
 
 
 /**
@@ -68,50 +69,50 @@ export class HobbitsRpc extends EventEmitter {
     this.server = net.createServer();
   }
 
-  public addPeer(peerInfo: PeerInfo): Peer {
-    const peerId = peerInfo.id.toB58String();
+  public addPeer(hobbitsUri: HobbitsUri): Peer {
+    let peerId = hobbitsUri.toUri();
     let peer = this.peers.get(peerId);
     if (!peer) {
-      peer = new Peer(peerInfo, this);
+      peer = new Peer(hobbitsUri, this);
       this.peers.set(peerId, peer);
       // rpc peer connect
-      this.emit("peer:connect", peerInfo);
+      this.emit("peer:connect", hobbitsUri);
     }
     return peer;
   }
-  public removePeer(peerInfo: PeerInfo): void {
-    const peerId = peerInfo.id.toB58String();
+  public removePeer(hobbitsUri: HobbitsUri): void {
+    let peerId = hobbitsUri.toUri();
     const peer = this.peers.get(peerId);
     if (peer) {
       peer.close();
       this.peers.delete(peerId);
-      this.emit("peer:disconnect", peerInfo);
+      this.emit("peer:disconnect", hobbitsUri);
     }
   }
-  public getPeers(): PeerInfo[] {
-    return Array.from(this.peers.values()).map((p) => p.peerInfo);
+  public getPeers(): HobbitsUri[] {
+    return Array.from(this.peers.values()).map((p) => p.hobbitsUri);
   }
 
-  public hasPeer(peerInfo: PeerInfo): boolean {
-    const peerId = peerInfo.id.toB58String();
+  public hasPeer(hobbitsUri: HobbitsUri): boolean {
+    const peerId = hobbitsUri.toUri();
     return this.peers.has(peerId);
   }
 
-  public async onConnection(protocol: string, conn: Connection): Promise<void> {
+  /*public async onConnection(protocol: string, conn: Connection): Promise<void> {
     let peerInfo;
     while (!peerInfo) {
       peerInfo = await promisify(conn.getPeerInfo.bind(conn))();
     }
     const peer = this.addPeer(peerInfo);
     peer.setConnection(conn, true);
+  }*/
+
+  public onConnectionEnd(hobbitsUri: HobbitsUri): void {
+    this.removePeer(hobbitsUri);
   }
 
-  public onConnectionEnd(peerInfo: PeerInfo): void {
-    this.removePeer(peerInfo);
-  }
-
-  public async dialForRpc(peerInfo: PeerInfo): Promise<void> {
-    const peerId = peerInfo.id.toB58String();
+  public async dialForRpc(hobbitsUri: HobbitsUri): Promise<void> {
+    const peerId = hobbitsUri.toUri();
     if (this.peers.has(peerId)) {
       return;
     }
@@ -120,7 +121,7 @@ export class HobbitsRpc extends EventEmitter {
     }
     this.wipDials.add(peerId);
     try {
-      const peer = this.addPeer(peerInfo);
+      const peer = this.addPeer(hobbitsUri);
       peer.connect();
     } catch (e) {
       this.logger.error(e.stack);
@@ -128,8 +129,8 @@ export class HobbitsRpc extends EventEmitter {
     this.wipDials.delete(peerId);
   }
 
-  public async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T> {
-    const peerId = peerInfo.id.toB58String();
+  public async sendRequest<T extends ResponseBody>(hobbitsUri: HobbitsUri, method: Method, body: RequestBody): Promise<T> {
+    const peerId = hobbitsUri.toUri();
     const peer = this.peers.get(peerId);
     if (!peer) {
       throw new Error(`Peer does not exist: ${peerId}`);
@@ -177,6 +178,9 @@ export class HobbitsRpc extends EventEmitter {
       // bad data
       return;
     }
+    // Changed response
+
+
     const id = data.slice(0, 8).toString('hex');
     const method = this.requests[id];
     if (method === undefined) { // incoming request
@@ -184,7 +188,7 @@ export class HobbitsRpc extends EventEmitter {
         const request: WireRequest = deserialize(data, WireRequest);
         const decodedBody = decodeRequestBody(request.method, request.body);
         this.responses[id] = {peer, method: request.method};
-        this.emit("request", peer.peerInfo, request.method, id, decodedBody);
+        this.emit("request", peer.hobbitsUri, request.method, id, decodedBody);
       } catch (e) {
         this.logger.warn('unable to decode request', e.message);
       }

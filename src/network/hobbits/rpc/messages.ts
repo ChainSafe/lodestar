@@ -103,6 +103,9 @@ export type RequestBody =
   Hello | Goodbye | GetStatus |
   GetBlockHeaders | GetBlockBodies | BlockHeaders | BlockBodies;
 
+// May need to change or delete altogether
+export type ResponseBody = RequestBody;
+export type WireResponse = WireRequest;
 
 // Method ID: 0
 

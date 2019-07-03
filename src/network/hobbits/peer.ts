@@ -12,14 +12,14 @@ import {HobbitsUri} from "./hobbitsUri";
 
 
 export class Peer {
-  private hobbitsUri: HobbitsUri;
+  public hobbitsUri: HobbitsUri;
   public latestHello: Hello | null;
   public latestStatus: Status | null;
   private connection: net.Socket;
   private controller: HobbitsRpc;
 
-  public constructor (uriString: string, controller: HobbitsRpc) {
-    this.hobbitsUri = new HobbitsUri({uriString});
+  public constructor (hobbitsUri: HobbitsUri, controller: HobbitsRpc) {
+    this.hobbitsUri = hobbitsUri;
     this.controller = controller;
 
     this.latestHello = null;
@@ -28,9 +28,11 @@ export class Peer {
 
   public async connect(): Promise<void> {
     // Abort if already connected
+    // TODO: Properly check whether disconnected or not
     if(this.connection){
       return;
     }
+
     // Attempt to connect to peer, if connection refused remove the peer from bootnodes.
     const that = this;
     return new Promise((resolve, reject): void => {
