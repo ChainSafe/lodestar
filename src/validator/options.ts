@@ -7,7 +7,7 @@ import {IConfigurationModule} from "../util/config";
 
 export interface IValidatorOptions {
   db: IDatabaseOptions;
-  rpc: ITransportOption
+  rpc: ITransportOption;
   rpcInstance?: RpcClient;
   keypair: Keypair;
 }
