@@ -7,8 +7,8 @@ import {CliError} from "../cli/error";
 import fs from "fs";
 import path from "path";
 import defaults, {BeaconNodeOptions} from "../node/options";
-import {generateTomlConfig, validateConfig} from "./toml";
-import {IConfigurationModule} from "./config";
+import {generateTomlConfig} from "./toml";
+import {IConfigurationModule, validateConfig} from "./config";
 
 /**
  * Reads data from file and parses it from toml format to IConfigFile
@@ -16,10 +16,10 @@ import {IConfigurationModule} from "./config";
  * @param description
  * @returns configuration object
  */
-export function getTomlConfig<T>(fileName: string, description: IConfigurationModule): T {
+export function getTomlConfig<T>(fileName: string, description: IConfigurationModule): Partial<T> {
   try {
     const data = fs.readFileSync(fileName);
-    return validateConfig(parse(data.toString()), description);
+    return validateConfig<T>(parse(data.toString()), description);
   } catch {
     throw new CliError(`${fileName} could not be parsed.`);
   }
@@ -32,7 +32,6 @@ export function getTomlConfig<T>(fileName: string, description: IConfigurationMo
  */
 export function writeTomlConfig(fileName: string): void {
   const content = stringify(generateTomlConfig(defaults, BeaconNodeOptions));
-  console.log(content);
   try {
     ensureDirectoryExistence(fileName);
     fs.writeFileSync(fileName, content);

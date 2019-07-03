@@ -29,8 +29,8 @@ export function getCliFields(configuration: IConfigurationModule): IConfiguratio
   return cliFields;
 }
 
-export function validateConfig(config: object, description: IConfigurationModule): unknown {
-  const validatedConfiguration = {};
+export function validateConfig<T>(config: object, description: IConfigurationModule): Partial<T> {
+  const validatedConfiguration: Partial<T> = {};
   for (const prop in config) {
     if (config.hasOwnProperty(prop)) {
       const field = getField(description, prop);
