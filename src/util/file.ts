@@ -2,7 +2,7 @@
  * @module util/file
  */
 
-import {parse, JsonMap, stringify} from "@iarna/toml";
+import {parse, stringify} from "@iarna/toml";
 import {CliError} from "../cli/error";
 import fs from "fs";
 import path from "path";

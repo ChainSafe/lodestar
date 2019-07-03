@@ -1,6 +1,5 @@
 import {getCliFields, IConfigurationField, IConfigurationModule, isConfigurationModule} from "../util/config";
 import {Command} from "commander";
-import {number64} from "../types";
 
 export function generateCommanderOptions(command: Command, optionDescription: IConfigurationModule): void {
   const cliOptions = getCliFields(optionDescription);
@@ -21,21 +20,29 @@ export function generateCommanderOptions(command: Command, optionDescription: IC
   });
 }
 
-export function optionsToConfig(options: {[key: string]: string}, optionDescription: IConfigurationModule): unknown {
+/**
+ * This is awful,
+ * @param options
+ * @param optionDescription
+ */
+export function optionsToConfig<T>(options: {[key: string]: string}, optionDescription: IConfigurationModule): Partial<T> {
   const config = {};
   optionDescription.fields.forEach((field) => {
-    if(isConfigurationModule(field)) {
+    if (isConfigurationModule(field)) {
       const childConfig = optionsToConfig(options, field as IConfigurationModule);
-      if(Object.keys(childConfig).length > 0) {
+      if (Object.keys(childConfig).length > 0) {
         config[field.name] = childConfig;
       }
-    } else if(options[(field as IConfigurationField<unknown>).cli.flag]) {
-      let value: any = options[(field as IConfigurationField<unknown>).cli.flag];
-      if((field as IConfigurationField<unknown>).process) {
-        value = (field as IConfigurationField<any>).process(value);
-      }
-      if(!(field as IConfigurationField<unknown>).validation || (field as IConfigurationField<unknown>).validation(value)) {
-        config[field.name] = value;
+    } else {
+      field = field as IConfigurationField<unknown>;
+      if (field.cli && options[field.cli.flag]) {
+        let value: any = options[field.cli.flag];
+        if (field.process) {
+          value = field.process(value);
+        }
+        if (!field.validation || field.validation(value)) {
+          config[field.name] = value;
+        }
       }
     }
   });
