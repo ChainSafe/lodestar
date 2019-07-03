@@ -29,22 +29,31 @@ export function optionsToConfig<T>(options: {[key: string]: string}, optionDescr
   const config = {};
   optionDescription.fields.forEach((field) => {
     if (isConfigurationModule(field)) {
-      const childConfig = optionsToConfig(options, field as IConfigurationModule);
-      if (Object.keys(childConfig).length > 0) {
-        config[field.name] = childConfig;
-      }
+      processModule(options, field, config);
     } else {
-      field = field as IConfigurationField<unknown>;
-      if (field.cli && options[field.cli.flag]) {
-        let value: any = options[field.cli.flag];
-        if (field.process) {
-          value = field.process(value);
-        }
-        if (!field.validation || field.validation(value)) {
-          config[field.name] = value;
-        }
-      }
+      processField(field, options, config);
     }
   });
   return config;
+}
+
+function processModule(options: { [p: string]: string }, field, config) {
+  const childConfig = optionsToConfig(options, field as IConfigurationModule);
+  if (Object.keys(childConfig).length > 0) {
+    config[field.name] = childConfig;
+  }
+}
+
+function processField(field, options: { [p: string]: string }, config) {
+  field = field as IConfigurationField<unknown>;
+  if (field.cli && options[field.cli.flag]) {
+    let value: any = options[field.cli.flag];
+    if (field.process) {
+      value = field.process(value);
+    }
+    if (!field.validation || field.validation(value)) {
+      config[field.name] = value;
+    }
+  }
+  return field;
 }
