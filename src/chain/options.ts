@@ -13,7 +13,7 @@ export const ChainOptions: IConfigurationModule = {
       name: 'name',
       description: 'Chain preset. Supported values: mainnet, minimal',
       validation: (input) => {
-        return input === 'mainet' || input === 'minimal';
+        return input === 'mainnet' || input === 'minimal';
       },
       type: number64,
       configurable: true,

@@ -4,7 +4,7 @@
 
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import defaults from "../../eth1/defaults";
+import defaults from "../../eth1/options";
 import * as ethers from "ethers/ethers";
 import {Wallet} from "ethers/ethers";
 import  {LogLevel, WinstonLogger} from "../../logger";
@@ -89,7 +89,8 @@ export class DepositCommand implements CliCommand {
             `Successfully deposited ${options.value} ETH from ${wallet.address} 
             to deposit contract. Tx hash: ${hash}`
           );
-        } catch (e) {
+        }
+        catch (e) {
           throw new CliError(
             `Failed to make deposit for account ${wallet.address}. Reason: ${e.message}`
           );

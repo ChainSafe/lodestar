@@ -1,12 +1,13 @@
 import {expect} from "chai";
 
-import {Libp2pNetwork, INetworkOptions} from "../../../../src/network";
+import {Libp2pNetwork} from "../../../../src/network";
 import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../../../../src/constants";
 import {getEmptyBlock} from "../../../../src/chain/genesis";
 import {createNode} from "../../../unit/network/libp2p/util";
 import {generateEmptyAttestation} from "../../../utils/attestation";
 import {shardAttestationTopic} from "../../../../src/network/util";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
+import {INetworkOptions} from "../../../../src/network/options";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {

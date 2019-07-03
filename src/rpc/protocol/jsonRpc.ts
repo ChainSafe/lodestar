@@ -19,7 +19,7 @@ export class JSONRPC {
   private transports: LikeSocketServer[] = [];
 
   public constructor(
-    opts: IPublicApiOptions,
+    opts: Partial<IPublicApiOptions>,
     {transports, apis}: {transports: LikeSocketServer[]; apis: IApi[]}
   ) {
     transports.forEach((transport) => {

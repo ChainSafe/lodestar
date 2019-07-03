@@ -16,7 +16,7 @@ import {IConfigurationModule} from "./config";
  * @param description
  * @returns configuration object
  */
-export function getTomlConfig(fileName: string, description: IConfigurationModule): any {
+export function getTomlConfig<T>(fileName: string, description: IConfigurationModule): T {
   try {
     const data = fs.readFileSync(fileName);
     return validateConfig(parse(data.toString()), description);
@@ -32,6 +32,7 @@ export function getTomlConfig(fileName: string, description: IConfigurationModul
  */
 export function writeTomlConfig(fileName: string): void {
   const content = stringify(generateTomlConfig(defaults, BeaconNodeOptions));
+  console.log(content);
   try {
     ensureDirectoryExistence(fileName);
     fs.writeFileSync(fileName, content);

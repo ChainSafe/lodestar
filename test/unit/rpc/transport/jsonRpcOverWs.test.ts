@@ -1,17 +1,21 @@
-import { assert } from "chai";
+import {assert} from "chai";
 import * as jsonRpc from "noice-json-rpc";
 import Websocket from "ws";
-import {JSONRPC, IValidatorApi, WSServer, IBeaconApi} from "../../../../src/rpc";
-import { generateEmptyBlock } from "../../../utils/block";
+import {IBeaconApi, IValidatorApi, JSONRPC, TransportType, WSServer} from "../../../../src/rpc";
+import {generateEmptyBlock} from "../../../utils/block";
 import {MockValidatorApi} from "../../../utils/mocks/rpc/validator";
-import { generateEmptyAttestation } from "../../../utils/attestation";
+import {generateEmptyAttestation} from "../../../utils/attestation";
 import {MockBeaconApi} from "../../../utils/mocks/rpc/beacon";
 
 describe("Json RPC over WS", () => {
   const rpc = new JSONRPC(
     {},
     {
-      transports: [new WSServer({port: 32420})],
+      transports: [new WSServer({
+        host: '127.0.0.1',
+        port: 32420,
+        type: TransportType.WS
+      })],
       apis: [
         new MockBeaconApi(),
         new MockValidatorApi()
@@ -70,5 +74,5 @@ describe("Json RPC over WS", () => {
       await (clientApi.validator as any).foo();
       assert.fail('Unknown/undefined method should fail');
     } catch (e) {}
-  })
+  });
 });

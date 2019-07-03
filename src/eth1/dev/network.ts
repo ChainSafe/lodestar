@@ -49,7 +49,7 @@ export class PrivateEth1Network {
     });
   }
 
-  public async start() {
+  public async start(): Promise<void> {
     this.blockchain  =
       await promisify(this.server.listen.bind(this.server))(this.opts.port, this.opts.host);
     this.logger.info(`Started private network node on ${this.opts.host}:${this.opts.port}`);
@@ -63,6 +63,10 @@ export class PrivateEth1Network {
       this.logger.info(`${address}:0x${privateKey} - ${balance} ETH`);
     });
     await this.deployDepositContract();
+  }
+
+  public async stop(): Promise<void> {
+    await promisify(this.server.close)();
   }
 
   /**
@@ -80,10 +84,6 @@ export class PrivateEth1Network {
 
   public mnemonic(): string {
     return this.blockchain._provider.options.mnemonic;
-  }
-
-  public async stop() {
-    await promisify(this.server.close)();
   }
 
   public async deployDepositContract(): Promise<string> {
