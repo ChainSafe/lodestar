@@ -7,7 +7,7 @@
 // For more information, see ./index.ts
 import {SimpleContainerType} from "@chainsafe/ssz";
 
-import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../beaconChain/src/constants";
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../constants";
 
 import {
   bytes,

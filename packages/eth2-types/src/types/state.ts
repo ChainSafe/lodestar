@@ -13,7 +13,7 @@ import {
   LATEST_SLASHED_EXIT_LENGTH,
   SLOTS_PER_HISTORICAL_ROOT,
   SHARD_COUNT,
-} from "../../beaconChain/src/constants";
+} from "../constants";
 
 import {
   bytes32,

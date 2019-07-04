@@ -21,7 +21,7 @@ import {
   Gwei,
 } from "./primitive";
 
-import {SLOTS_PER_HISTORICAL_ROOT} from "../../beaconChain/src/constants";
+import {SLOTS_PER_HISTORICAL_ROOT} from "../constants";
 
 export interface Fork {
   // Previous fork version
