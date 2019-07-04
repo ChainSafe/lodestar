@@ -48,7 +48,7 @@ function processField(field, options: { [p: string]: string }, config) {
   field = field as IConfigurationField<unknown>;
   if (field.cli && options[field.cli.flag]) {
     let value: any = options[field.cli.flag];
-    if (field.process) {
+    if (field.process && typeof value === 'string') {
       value = field.process(value);
     }
     if (!field.validation || field.validation(value)) {

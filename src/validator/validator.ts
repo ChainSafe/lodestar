@@ -22,7 +22,7 @@ import {IValidatorDB, LevelDbController, ValidatorDB} from "../db";
 import {ILogger} from "../logger";
 import defaultValidatorOptions, {IValidatorOptions} from "./options";
 import deepmerge from "deepmerge";
-import {TransportType} from "../rpc/transport";
+import {getKeyFromFileOrKeystore} from "../util/io";
 
 /**
  * Main class for the Validator client.
@@ -36,8 +36,8 @@ class Validator {
   private genesisInfo: GenesisInfo;
   private db: IValidatorDB;
   private logger: ILogger;
-  public isActive: boolean;
-  public isRunning: boolean;
+  private isActive: boolean;
+  private isRunning: boolean;
 
 
   public constructor(opts: Partial<IValidatorOptions>, modules: {logger: ILogger}) {
@@ -47,23 +47,17 @@ class Validator {
     this.isRunning = false;
     this.db = new ValidatorDB({
       controller: new LevelDbController({
-        name: opts.db.name
+        name: this.opts.db.name
       }, {
         logger: this.logger
       })
     });
-    if(opts.rpcInstance) {
-      this.rpcClient = opts.rpcInstance;
-    } else if(opts.rpc) {
-      if(opts.rpc.type === TransportType.WS) {
-        this.rpcClient = new RpcClientOverWs({rpcUrl: opts.rpc.host + opts.rpc.port});
-      }
-      throw Error("Unsupported rpc transport");
+    if(this.opts.rpcInstance) {
+      this.rpcClient = this.opts.rpcInstance;
+    } else if(this.opts.rpc) {
+      this.rpcClient = new RpcClientOverWs({rpcUrl: this.opts.rpc});
     } else {
       throw new Error("Validator requires either RpcClient instance or rpc url as params");
-    }
-    if(!opts.keypair) {
-      throw new Error("Missing validator keypair");
     }
   }
 
@@ -89,6 +83,13 @@ class Validator {
    */
   public async setup(): Promise<void> {
     this.logger.info("Setting up validator client...");
+    if(!this.opts.keypair) {
+      if(this.opts.keystore) {
+        this.opts.keypair = await getKeyFromFileOrKeystore(this.opts.keystore);
+      } else {
+        throw new Error("Missing validator keypair");
+      }
+    }
 
     await this.setupRPC();
 
@@ -118,7 +119,7 @@ class Validator {
   private async setupRPC(): Promise<void> {
     this.logger.info("Setting up RPC connection...");
     await this.rpcClient.connect();
-    this.logger.info(`RPC connection successfully established: ${this.opts.rpc.host + this.opts.rpc.port || 'inmemory'}!`);
+    this.logger.info(`RPC connection successfully established: ${this.opts.rpc || 'inmemory'}!`);
   }
 
   /**
