@@ -25,7 +25,6 @@ describe("util/file", function() {
 
   it("should generate config from toml file", () => {
     const config = getTomlConfig<Partial<IBeaconNodeOptions>>(testFilePath, BeaconNodeOptions);
-    console.log(config);
     expect(config).to.not.be.undefined;
     assert.equal(config.chain.name, defaults.chain.name);
     assert.equal(config.db.name, defaults.db.name);

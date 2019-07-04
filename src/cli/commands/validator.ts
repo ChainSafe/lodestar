@@ -7,7 +7,6 @@ import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import Validator from "../../validator";
 import {generateCommanderOptions, optionsToConfig} from "../util";
 import {ValidatorOptions} from "../../validator/options";
-import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 
 interface IValidatorCommandOptions {
   loggingLevel?: string;

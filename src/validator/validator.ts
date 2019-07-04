@@ -23,6 +23,7 @@ import {ILogger} from "../logger";
 import defaultValidatorOptions, {IValidatorOptions} from "./options";
 import deepmerge from "deepmerge";
 import {getKeyFromFileOrKeystore} from "../util/io";
+import {isPlainObject} from "../util/objects";
 
 /**
  * Main class for the Validator client.
@@ -41,7 +42,7 @@ class Validator {
 
 
   public constructor(opts: Partial<IValidatorOptions>, modules: {logger: ILogger}) {
-    this.opts = deepmerge(defaultValidatorOptions, opts);
+    this.opts = deepmerge(defaultValidatorOptions, opts, {isMergeableObject: isPlainObject});
     this.logger = modules.logger;
     this.isActive = false;
     this.isRunning = false;
@@ -78,10 +79,7 @@ class Validator {
     await this.rpcClient.disconnect();
   }
 
-  /**
-   * Main method that starts a client.
-   */
-  public async setup(): Promise<void> {
+  private async setup(): Promise<void> {
     this.logger.info("Setting up validator client...");
     if(this.opts.keystore) {
       this.opts.keypair = await getKeyFromFileOrKeystore(this.opts.keystore);

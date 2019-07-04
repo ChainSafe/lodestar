@@ -2,6 +2,7 @@ import {TransportType} from "./transport";
 import {number64} from "../types";
 import {IApiConstructor} from "./api/interface";
 import {IConfigurationModule} from "../util/config";
+import {ValidatorApi, BeaconApi} from ".";
 
 export interface ITransportOption {
   host: string;
@@ -33,7 +34,7 @@ export const PublicApiOptions: IConfigurationModule = {
 
 const config: IPublicApiOptions = {
   transports: [],
-  apis: []
+  apis: [BeaconApi, ValidatorApi]
 };
 
 export default config;

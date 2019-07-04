@@ -5,11 +5,14 @@
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
-import BeaconNode from "../../node";
+import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
 import {generateCommanderOptions, optionsToConfig} from "../util";
 import deepmerge from "deepmerge";
 import {getTomlConfig} from "../../util/file";
+import Validator from "../../validator";
+import {RpcClientOverInstance} from "../../validator/rpc";
+import {BeaconApi, ValidatorApi} from "../../rpc";
 
 interface IBeaconCommandOptions {
   configFile?: string;
@@ -19,11 +22,13 @@ interface IBeaconCommandOptions {
 
 export class BeaconNodeCommand implements CliCommand {
   public node: BeaconNode;
+  public validator: Validator;
 
   public register(commander: CommanderStatic): void {
 
     const logger: ILogger = new WinstonLogger();
 
+    //TODO: when we switch cli library make this to run as default command "./bin/lodestar"
     const command = commander
       .command("beacon")
       .description("Start lodestar node")
@@ -59,6 +64,30 @@ export class BeaconNodeCommand implements CliCommand {
     config = deepmerge(config, optionsToConfig(options, BeaconNodeOptions));
 
     this.node = new BeaconNode(config, {logger});
+
+    if(config.validator && config.validator.keypair){
+      config.validator.rpcInstance = new RpcClientOverInstance({
+        validator: new ValidatorApi(
+          {},
+          {
+            chain: this.node.chain,
+            db: this.node.db,
+            opPool: this.node.opPool,
+            eth1: this.node.eth1
+          }
+        ),
+        beacon: new BeaconApi(
+          {},
+          {chain: this.node.chain, db: this.node.db}
+        ),
+      });
+      this.validator = new Validator(
+        config.validator,
+        {logger}
+      );
+      await this.validator.start();
+    }
+
     await this.node.start();
   }
 
