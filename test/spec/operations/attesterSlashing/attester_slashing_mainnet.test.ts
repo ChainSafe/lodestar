@@ -4,7 +4,7 @@ import {expect} from "chai";
 import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
-
+import {equals} from "@chainsafe/ssz";
 import {processAttesterSlashing} from "../../../../src/chain/stateTransition/block/operations";
 import {BeaconState, AttesterSlashing} from "../../../../src/types";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
@@ -34,7 +34,7 @@ describeSpecTest(
   },
   () => false,
   (_1, _2, expected, actual) => {
-    expect(expected).to.be.deep.equal(actual);
+    expect(equals(expected, actual, BeaconState)).to.be.true;
     restore();
   },
   0

@@ -5,6 +5,7 @@ import program from "commander";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 
+
 describe('[CLI] beacon', () => {
   let logger: ILogger = new WinstonLogger();
 

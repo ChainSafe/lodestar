@@ -3,14 +3,14 @@ import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 
-import {MAX_PROPOSER_SLASHINGS, SLOTS_PER_EPOCH} from "../../../../../src/constants";
-import {processProposerSlashing} from "../../../../../src/chain/stateTransition/block/operations";
-import * as utils from "../../../../../src/chain/stateTransition/util";
+import {MAX_PROPOSER_SLASHINGS, SLOTS_PER_EPOCH} from "../../../../../../src/constants";
+import {processProposerSlashing} from "../../../../../../src/chain/stateTransition/block/operations";
+import * as utils from "../../../../../../src/chain/stateTransition/util";
 
-import {generateEmptyProposerSlashing} from "../../../../utils/slashings";
-import {generateValidator} from "../../../../utils/validator";
-import {generateState} from "../../../../utils/state";
-import {generateEmptyBlock} from "../../../../utils/block";
+import {generateEmptyProposerSlashing} from "../../../../../utils/slashings";
+import {generateValidator} from "../../../../../utils/validator";
+import {generateState} from "../../../../../utils/state";
+import {generateEmptyBlock} from "../../../../../utils/block";
 
 describe('process block - proposer slashings', function () {
 

@@ -92,10 +92,6 @@ class BeaconNode {
       logger: this.logger,
     });
     this.rpc = this.initRpc();
-
-    if (this.conf.validator) {
-      this.validator = new Validator(this.conf.validator, {logger: this.logger});
-    }
   }
 
   public async start(): Promise<void> {
@@ -107,10 +103,6 @@ class BeaconNode {
     await this.opPool.start();
     await this.sync.start();
     await this.rpc.start();
-
-    if (this.conf.validator) {
-      await this.validator.start();
-    }
   }
 
   public async stop(): Promise<void> {
@@ -122,32 +114,6 @@ class BeaconNode {
     await this.eth1.stop();
     await this.network.stop();
     await this.db.stop();
-
-    if (this.conf.validator){
-      await this.validator.stop();
-    }
-  }
-
-  private initRpc(): JSONRPC {
-    let transports = [];
-    this.conf.api.transports.forEach((transportOpt) => {
-      switch (transportOpt.type) {
-        case TransportType.HTTP: {
-          transports.push(new HttpServer(transportOpt, {logger: this.logger}));
-        }
-          break;
-        case TransportType.WS: {
-          new WSServer(transportOpt);
-        }
-          break;
-      }
-    });
-    return new JSONRPC(this.conf.api, {
-      transports,
-      apis: this.conf.api.apis.map((Api) => {
-        return new Api(this.conf.api, {chain: this.chain, db: this.db, eth1: this.eth1});
-      })
-    });
   }
 }
 

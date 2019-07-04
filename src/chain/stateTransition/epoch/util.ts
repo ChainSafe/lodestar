@@ -3,21 +3,20 @@
  */
 
 import assert from "assert";
-import {deserialize, hashTreeRoot, equals} from "@chainsafe/ssz";
+import {deserialize, equals, hashTreeRoot} from "@chainsafe/ssz";
+
+import {BeaconState, Crosslink, Epoch, Gwei, PendingAttestation, Shard, uint256, ValidatorIndex,} from "../../../types";
+import {GENESIS_EPOCH, GENESIS_START_SHARD, ZERO_HASH} from "../../../constants";
 
 import {
-  BeaconState, PendingAttestation,
-  Shard, ValidatorIndex, Gwei, Crosslink, Epoch,
-  uint256,
-} from "../../../types";
-import {
-  ZERO_HASH,
-  GENESIS_EPOCH, GENESIS_START_SHARD
-} from "../../../constants";
-
-import {
-  getActiveValidatorIndices, getCurrentEpoch, getTotalBalance, getPreviousEpoch, getBlockRoot,
-  getBlockRootAtSlot, getAttestingIndices, getAttestationDataSlot
+  getActiveValidatorIndices,
+  getAttestationDataSlot,
+  getAttestingIndices,
+  getBlockRoot,
+  getBlockRootAtSlot,
+  getCurrentEpoch,
+  getPreviousEpoch,
+  getTotalBalance
 } from "../util";
 
 
@@ -80,10 +79,11 @@ export function getWinningCrosslinkAndAttestingIndices(
   const attestations = getMatchingSourceAttestations(state, epoch)
     .filter((a) => a.data.crosslink.shard === shard);
   const currentCrosslinkRoot = hashTreeRoot(state.currentCrosslinks[shard], Crosslink);
+  const currentCrosslink = state.currentCrosslinks[shard];
   const crosslinks = attestations.filter((a) => (
     currentCrosslinkRoot.equals(a.data.crosslink.parentRoot) ||
-    currentCrosslinkRoot.equals(hashTreeRoot(a.data.crosslink, Crosslink))
-  )).map((a) => a.data.crosslink);
+    equals(currentCrosslink, a.data.crosslink, Crosslink))
+  ).map((a) => a.data.crosslink);
 
   const defaultCrossLink: Crosslink = {
     shard: GENESIS_START_SHARD,

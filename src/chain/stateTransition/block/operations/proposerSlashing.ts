@@ -3,7 +3,7 @@
  */
 
 import assert from "assert";
-import {serialize, signingRoot} from "@chainsafe/ssz";
+import {equals, signingRoot} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls-js";
 
 import {
@@ -33,8 +33,7 @@ export function processProposerSlashing(
   assert(slotToEpoch(proposerSlashing.header1.slot) === slotToEpoch(proposerSlashing.header2.slot));
   // But the headers are different
 
-  assert(!serialize(proposerSlashing.header1, BeaconBlockHeader).equals(
-    serialize(proposerSlashing.header2, BeaconBlockHeader)));
+  assert(!equals(proposerSlashing.header1, proposerSlashing.header2, BeaconBlockHeader));
   // Check proposer is slashable
   assert(isSlashableValidator(proposer, getCurrentEpoch(state)));
   // Signatures are valid
