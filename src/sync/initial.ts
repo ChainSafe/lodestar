@@ -14,6 +14,15 @@ import {ILogger} from "../logger";
 import {SLOTS_PER_EPOCH} from "../constants";
 import {BeaconBlockHeadersResponse, BeaconBlockBodiesResponse, BeaconBlock} from "../types";
 
+interface InitialSyncModules {
+  db: IBeaconDb;
+  chain: IBeaconChain;
+  rpc: SyncRpc;
+  network: INetwork;
+  reps: ReputationStore;
+  logger: ILogger;
+}
+
 export class InitialSync {
   private db: IBeaconDb;
   private chain: IBeaconChain;
@@ -21,7 +30,7 @@ export class InitialSync {
   private network: INetwork;
   private reps: ReputationStore;
   private logger: ILogger;
-  public constructor(opts, {db, chain, rpc, network, reps, logger}) {
+  public constructor(opts, {db, chain, rpc, network, reps, logger}: InitialSyncModules) {
     this.db = db;
     this.chain = chain;
     this.rpc = rpc;
@@ -48,7 +57,7 @@ export class InitialSync {
         await this.syncToPeer(peer);
         break;
       } catch (e) {
-        this.logger.warn("Failed to sync with peer, trying next best peer", e);
+        this.logger.warn(`Failed to sync with peer ${peer.id.toB58String()}, trying next best peer`, e);
       }
     }
   }
