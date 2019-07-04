@@ -6,7 +6,7 @@ import {
   LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
   LATEST_RANDAO_MIXES_LENGTH,
   MIN_SEED_LOOKAHEAD,
-} from "../../../constants";
+} from "../../../../../eth2-types/src/constants";
 
 import {
   BeaconState,

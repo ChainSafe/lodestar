@@ -5,7 +5,7 @@ import {
   MAX_DEPOSITS,
   MAX_PROPOSER_SLASHINGS, MAX_TRANSFERS,
   MAX_VOLUNTARY_EXITS
-} from "../../../../constants";
+} from "../../../../../../eth2-types/src/constants";
 import {
   BeaconBlockBody, BeaconState, ProposerSlashing, AttesterSlashing, Attestation,
   Deposit, VoluntaryExit, Transfer,

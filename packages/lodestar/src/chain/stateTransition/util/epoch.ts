@@ -6,7 +6,7 @@ import {
   ACTIVATION_EXIT_DELAY,
   GENESIS_EPOCH,
   SLOTS_PER_EPOCH,
-} from "../../../constants";
+} from "../../../../../eth2-types/src/constants";
 
 import {
   BeaconState,

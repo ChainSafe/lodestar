@@ -1,5 +1,5 @@
 import {Shard} from "../../types";
-import {RequestId, SHARD_SUBNET_COUNT, SHARD_ATTESTATION_TOPIC} from "../constants";
+import {RequestId, SHARD_SUBNET_COUNT, SHARD_ATTESTATION_TOPIC} from "../../../eth2-types/src/constants";
 
 function randomNibble(): string {
   return Math.floor(Math.random() * 16).toString(16);

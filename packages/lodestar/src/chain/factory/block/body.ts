@@ -10,7 +10,7 @@ import {
   MAX_PROPOSER_SLASHINGS,
   MAX_VOLUNTARY_EXITS,
   ZERO_HASH
-} from "../../../constants";
+} from "../../../../../eth2-types/src/constants";
 import {bestVoteData} from "./eth1Data";
 import {IProgressiveMerkleTree} from "../../../util/merkleTree";
 import {generateDeposits} from "./deposits";

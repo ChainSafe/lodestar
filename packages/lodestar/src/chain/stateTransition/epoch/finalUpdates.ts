@@ -17,7 +17,7 @@ import {
   SLOTS_PER_EPOCH,
   SLOTS_PER_ETH1_VOTING_PERIOD,
   SLOTS_PER_HISTORICAL_ROOT
-} from "../../../constants";
+} from "../../../../../eth2-types/src/constants";
 
 import {bnMin, intDiv} from "../../../util/math";
 

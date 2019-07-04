@@ -3,7 +3,7 @@
  */
 
 import {BeaconState} from "../../../../types";
-import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE, EJECTION_BALANCE} from "../../../constants";
+import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE, EJECTION_BALANCE} from "../../../../../eth2-types/src/constants";
 
 import {
   getChurnLimit,

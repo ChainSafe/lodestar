@@ -11,7 +11,7 @@ import {
   BeaconBlockRootsResponse, BeaconBlockHeadersResponse, BeaconBlockBodiesResponse,
   BeaconStatesResponse, ResponseBody, WireResponse, WireRequest,
 } from "../../types";
-import {RequestId, Method} from "../constants";
+import {RequestId, Method} from "../../../eth2-types/src/constants";
 
 // Encode
 

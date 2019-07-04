@@ -3,7 +3,7 @@
  */
 
 import {ethers} from "ethers";
-import {DEPOSIT_CONTRACT_ADDRESS} from "../constants";
+import {DEPOSIT_CONTRACT_ADDRESS} from "../../../eth2-types/src/constants";
 
 export default {
   provider: ethers.getDefaultProvider(),

@@ -5,7 +5,7 @@
 import BN from "bn.js";
 
 import {BeaconState, Gwei} from "../../../../../types";
-import {SHARD_COUNT} from "../../../../constants";
+import {SHARD_COUNT} from "../../../../../../eth2-types/src/constants";
 
 import {
   getCrosslinkCommittee,

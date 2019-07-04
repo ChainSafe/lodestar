@@ -1,5 +1,5 @@
 import {Deposit} from "../../types";
-import {MAX_DEPOSITS} from "../constants";
+import {MAX_DEPOSITS} from "../../../eth2-types/src/constants";
 
 export function processSortedDeposits(
   deposits: Deposit[],

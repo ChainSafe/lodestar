@@ -10,7 +10,7 @@ import promisify from "es6-promisify";
 import {deserialize} from "@chainsafe/ssz";
 
 import {RequestBody, ResponseBody, WireResponse, WireRequest} from "../../../types";
-import {Method, RequestId, ResponseCode, RPC_MULTICODEC} from "../../constants";
+import {Method, RequestId, ResponseCode, RPC_MULTICODEC} from "../../../../eth2-types/src/constants";
 
 import {
   encodeRequest,

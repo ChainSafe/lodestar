@@ -19,7 +19,7 @@ import {
   SHUFFLE_ROUND_COUNT,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
-} from "../../../constants";
+} from "../../../../../eth2-types/src/constants";
 
 import {bytesToBN, intToBytes} from "../../../util/bytes";
 import {hash} from "../../../util/crypto";

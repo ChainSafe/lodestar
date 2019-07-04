@@ -18,7 +18,7 @@ import {
   MIN_DEPOSIT_AMOUNT,
   FAR_FUTURE_EPOCH,
   MAX_EFFECTIVE_BALANCE,
-} from "../../../../constants";
+} from "../../../../../../eth2-types/src/constants";
 
 import {
   getBeaconProposerIndex,

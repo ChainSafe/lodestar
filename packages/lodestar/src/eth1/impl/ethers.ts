@@ -12,7 +12,7 @@ import {IEth1Notifier, IEth1Options} from "../interface";
 import {isValidAddress} from "../../util/address";
 import {BeaconDB} from "../../db";
 import {Block, Log} from "ethers/providers";
-import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants/minimal";
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../../../eth2-types/src/constants/minimal";
 import {ILogger} from "../../logger";
 import {OpPool} from "../../opPool";
 

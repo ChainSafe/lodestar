@@ -14,7 +14,7 @@ import {
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
   MAX_EFFECTIVE_BALANCE,
-} from "../../../../constants";
+} from "../../../../../../eth2-types/src/constants";
 import {bnMin} from "../../../../util/math";
 import {verifyMerkleBranch} from "../../../../util/merkleTree";
 

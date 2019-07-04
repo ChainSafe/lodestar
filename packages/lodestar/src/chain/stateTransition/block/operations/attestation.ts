@@ -18,7 +18,7 @@ import {
   MIN_ATTESTATION_INCLUSION_DELAY,
   SLOTS_PER_EPOCH,
   ZERO_HASH,
-} from "../../../../constants";
+} from "../../../../../../eth2-types/src/constants";
 
 import {
   getCurrentEpoch,

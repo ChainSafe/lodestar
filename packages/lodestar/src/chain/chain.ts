@@ -18,7 +18,7 @@ import {
   uint16,
   uint64
 } from "../../types";
-import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT, SECONDS_PER_SLOT} from "../constants";
+import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT, SECONDS_PER_SLOT} from "../../../eth2-types/src/constants";
 
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";

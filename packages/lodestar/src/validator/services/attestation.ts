@@ -20,7 +20,7 @@ import {
 import {RpcClient} from "../rpc";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import {hashTreeRoot} from "@chainsafe/ssz";
-import {Domain} from "../../constants";
+import {Domain} from "../../../../eth2-types/src/constants";
 import {intDiv} from "../../util/math";
 import {IValidatorDB} from "../../db/api";
 import {ILogger} from "../../logger";

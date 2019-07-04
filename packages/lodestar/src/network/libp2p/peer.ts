@@ -11,7 +11,7 @@ import Abortable from "pull-abortable";
 import {
   Hello, Status, RequestBody, ResponseBody
 } from "../../../types";
-import {Method} from "../../constants";
+import {Method} from "../../../../eth2-types/src/constants";
 import {NetworkRpc} from "./rpc";
 
 

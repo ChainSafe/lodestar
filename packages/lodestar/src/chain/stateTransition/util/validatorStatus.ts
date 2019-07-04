@@ -15,7 +15,7 @@ import {
   FAR_FUTURE_EPOCH,
   WHISTLEBLOWING_REWARD_QUOTIENT,
   PROPOSER_REWARD_QUOTIENT,
-} from "../../../constants";
+} from "../../../../../eth2-types/src/constants";
 
 import {
   getCurrentEpoch,

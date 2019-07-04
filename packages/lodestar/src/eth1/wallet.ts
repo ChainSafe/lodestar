@@ -8,7 +8,7 @@ import {BigNumber} from "ethers/utils";
 import BN from "bn.js";
 import bls from "@chainsafe/bls-js";
 import {hash, signingRoot} from "@chainsafe/ssz";
-import {BLS_WITHDRAWAL_PREFIX_BYTE, Domain} from "../constants";
+import {BLS_WITHDRAWAL_PREFIX_BYTE, Domain} from "../../../eth2-types/src/constants";
 import {DepositData} from "../../types";
 import {ILogger} from "../logger";
 

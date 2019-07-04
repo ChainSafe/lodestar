@@ -13,7 +13,7 @@ import {
 } from "./index";
 import {CommitteeAssignment} from "../../../validator/types";
 import {getCurrentEpoch, getEpochStartSlot} from "./epoch";
-import {SHARD_COUNT, SLOTS_PER_EPOCH} from "../../../constants";
+import {SHARD_COUNT, SLOTS_PER_EPOCH} from "../../../../../eth2-types/src/constants";
 import {intDiv} from "../../../util/math";
 
 

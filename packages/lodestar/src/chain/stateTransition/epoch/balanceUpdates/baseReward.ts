@@ -4,7 +4,7 @@
 
 import {BeaconState, Gwei, ValidatorIndex} from "../../../../../types";
 
-import {BASE_REWARD_FACTOR, BASE_REWARDS_PER_EPOCH} from "../../../../constants";
+import {BASE_REWARD_FACTOR, BASE_REWARDS_PER_EPOCH} from "../../../../../../eth2-types/src/constants";
 
 import {bnSqrt} from "../../../../util/math";
 

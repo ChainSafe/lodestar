@@ -15,7 +15,7 @@ import {
   Domain,
   FAR_FUTURE_EPOCH,
   PERSISTENT_COMMITTEE_PERIOD,
-} from "../../../../constants";
+} from "../../../../../../eth2-types/src/constants";
 
 
 import {

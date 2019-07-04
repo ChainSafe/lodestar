@@ -3,7 +3,7 @@
  */
 
 import {BeaconState} from "../../../../../types";
-import {GENESIS_EPOCH} from "../../../../constants";
+import {GENESIS_EPOCH} from "../../../../../../eth2-types/src/constants";
 import {getCurrentEpoch, increaseBalance, decreaseBalance} from "../../util";
 import {getAttestationDeltas} from "./attestation";
 import {getCrosslinkDeltas} from "./crosslink";
