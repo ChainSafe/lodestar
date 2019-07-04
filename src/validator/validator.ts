@@ -83,12 +83,10 @@ class Validator {
    */
   public async setup(): Promise<void> {
     this.logger.info("Setting up validator client...");
-    if(!this.opts.keypair) {
-      if(this.opts.keystore) {
-        this.opts.keypair = await getKeyFromFileOrKeystore(this.opts.keystore);
-      } else {
-        throw new Error("Missing validator keypair");
-      }
+    if(this.opts.keystore) {
+      this.opts.keypair = await getKeyFromFileOrKeystore(this.opts.keystore);
+    } else if(!this.opts.keypair) {
+      throw new Error("Missing validator keypair");
     }
 
     await this.setupRPC();

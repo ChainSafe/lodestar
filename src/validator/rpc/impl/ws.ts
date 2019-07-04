@@ -19,13 +19,16 @@ export class RpcClientOverWs extends AbstractRpcClient {
 
   private socket: Websocket;
 
+  private rpcUrl: string;
+
   public constructor(opts: RpcClientOverWsOpts) {
     super();
-    this.socket = new Websocket(opts.rpcUrl);
+    this.rpcUrl = opts.rpcUrl;
   }
 
   public async connect(): Promise<void> {
     await super.connect();
+    this.socket = new Websocket(this.rpcUrl);
     const client = new jsonRpc.Client(this.socket);
     const clientApi = client.api();
     this.beacon = clientApi.beacon;
