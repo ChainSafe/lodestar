@@ -6,15 +6,14 @@ import assert from "assert";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls-js";
 
-import {BeaconState, Deposit, DepositData, Validator} from "../../../../types";
-
+import {BeaconState, Deposit, Validator} from "../../../../types";
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
   Domain,
-  EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
-  MAX_EFFECTIVE_BALANCE,
 } from "../../../../constants";
+import {BeaconConfig} from "../../../../config";
+
 import {bnMin} from "../../../../util/math";
 import {verifyMerkleBranch} from "../../../../util/merkleTree";
 
@@ -25,10 +24,14 @@ import {getDomain, increaseBalance} from "../../util";
 /**
  * Process an Eth1 deposit, registering a validator or increasing its balance.
  */
-export function processDeposit(state: BeaconState, deposit: Deposit): void {
+export function processDeposit(
+  config: BeaconConfig,
+  state: BeaconState,
+  deposit: Deposit
+): void {
   // Verify the Merkle branch
   assert(verifyMerkleBranch(
-    hashTreeRoot(deposit.data, DepositData),
+    hashTreeRoot(deposit.data, config.types.DepositData),
     deposit.proof,
     DEPOSIT_CONTRACT_TREE_DEPTH,
     state.depositIndex,
@@ -45,9 +48,9 @@ export function processDeposit(state: BeaconState, deposit: Deposit): void {
     // Verify the deposit signature (proof of possession)
     if (!bls.verify(
       pubkey,
-      signingRoot(deposit.data, DepositData),
+      signingRoot(deposit.data, config.types.DepositData),
       deposit.data.signature,
-      getDomain(state, Domain.DEPOSIT),
+      getDomain(config, state, Domain.DEPOSIT),
     )) {
       return;
     }
@@ -61,8 +64,8 @@ export function processDeposit(state: BeaconState, deposit: Deposit): void {
       withdrawableEpoch: FAR_FUTURE_EPOCH,
       slashed: false,
       effectiveBalance: bnMin(
-        amount.sub(amount.mod(EFFECTIVE_BALANCE_INCREMENT)),
-        MAX_EFFECTIVE_BALANCE
+        amount.sub(amount.mod(config.params.EFFECTIVE_BALANCE_INCREMENT)),
+        config.params.MAX_EFFECTIVE_BALANCE
       ),
     };
     state.validatorRegistry.push(validator);

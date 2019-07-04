@@ -6,22 +6,24 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 
 import {BeaconBlock, Attestation} from "../types";
 import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
+import {BeaconConfig} from "../config";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
 import {OpPool} from "../opPool";
 import {ILogger} from "../logger";
 
-import {slotToEpoch} from "../chain/stateTransition/util";
 
 export class RegularSync {
+  private config: BeaconConfig;
   private db: IBeaconDb;
   private chain: IBeaconChain;
   private network: INetwork;
   private opPool: OpPool;
   private logger: ILogger;
 
-  public constructor(opts, {db, chain, network, opPool, logger}) {
+  public constructor(opts, {config, db, chain, network, opPool, logger}) {
+    this.config = config;
     this.db = db;
     this.chain = chain;
     this.network = network;
@@ -32,7 +34,7 @@ export class RegularSync {
   public async receiveBlock(block: BeaconBlock): Promise<void> {
     // TODO: skip block if its a known bad block
     // skip block if it already exists
-    const root = hashTreeRoot(block, BeaconBlock);
+    const root = hashTreeRoot(block, this.config.types.BeaconBlock);
     if (!await this.db.hasBlock(root)) {
       await this.chain.receiveBlock(block);
     }
@@ -40,13 +42,13 @@ export class RegularSync {
 
   public async receiveAttestation(attestation: Attestation): Promise<void> {
     // skip attestation if it already exists
-    const root = hashTreeRoot(attestation, Attestation);
+    const root = hashTreeRoot(attestation, this.config.types.Attestation);
     if (await this.db.hasAttestation(root)) {
       return;
     }
     // skip attestation if its too old
     const state = await this.db.getLatestState();
-    if (attestation.data.targetEpoch < slotToEpoch(state.finalizedEpoch)) {
+    if (attestation.data.targetEpoch < state.finalizedEpoch) {
       return;
     }
     // send attestation on to other modules

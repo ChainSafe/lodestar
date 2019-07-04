@@ -1,11 +1,13 @@
-import * as utils from "../../../../../src/chain/stateTransition/util";
-import sinon from "sinon";
 import BN from "bn.js";
+import sinon from "sinon";
+import {expect} from "chai";
+
+import {config} from "../../../../../src/config/presets/mainnet";
+import * as utils from "../../../../../src/chain/stateTransition/util";
+import {FAR_FUTURE_EPOCH} from "../../../../../src/constants";
+import {processSlashings} from "../../../../../src/chain/stateTransition/epoch/slashings";
 import {generateState} from "../../../../utils/state";
 import {generateValidator} from "../../../../utils/validator";
-import {FAR_FUTURE_EPOCH, LATEST_SLASHED_EXIT_LENGTH} from "../../../../../src/constants";
-import {expect} from "chai";
-import {processSlashings} from "../../../../../src/chain/stateTransition/epoch/slashings";
 
 describe('process epoch - slashings', function () {
 
@@ -32,9 +34,9 @@ describe('process epoch - slashings', function () {
     getTotalBalanceStub.returns(new BN(2));
     const validator1 = generateValidator(0, FAR_FUTURE_EPOCH, false);
     const validator2 = generateValidator(0, FAR_FUTURE_EPOCH, true);
-    validator2.withdrawableEpoch = LATEST_SLASHED_EXIT_LENGTH;
+    validator2.withdrawableEpoch = config.params.LATEST_SLASHED_EXIT_LENGTH;
     const validator3 = generateValidator(0, FAR_FUTURE_EPOCH, true);
-    validator3.withdrawableEpoch = LATEST_SLASHED_EXIT_LENGTH + 2;
+    validator3.withdrawableEpoch = config.params.LATEST_SLASHED_EXIT_LENGTH + 2;
     const state = generateState({
       validatorRegistry: [
         validator1,
@@ -43,7 +45,7 @@ describe('process epoch - slashings', function () {
       ]
     });
     try {
-      processSlashings(state);
+      processSlashings(config, state);
       expect(decreaseBalanceStub.withArgs(sinon.match.any, 2, sinon.match.any).calledOnce).to.be.true;
     } catch (e) {
       expect.fail(e.stack);

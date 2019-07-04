@@ -13,13 +13,7 @@ import {
   ValidatorIndex,
   AttestationData,
 } from "../../../types";
-
-import {
-  SHARD_COUNT,
-  SHUFFLE_ROUND_COUNT,
-  SLOTS_PER_EPOCH,
-  TARGET_COMMITTEE_SIZE,
-} from "../../../constants";
+import {BeaconConfig} from "../../../config";
 
 import {bytesToBN, intToBytes} from "../../../util/bytes";
 import {hash} from "../../../util/crypto";
@@ -43,11 +37,16 @@ import {generateSeed} from "./seed";
  *
  * See the 'generalized domain' algorithm on page 3.
  */
-export function getShuffledIndex(index: ValidatorIndex, indexCount: number, seed: bytes32): number {
+export function getShuffledIndex(
+  config: BeaconConfig,
+  index: ValidatorIndex,
+  indexCount: number,
+  seed: bytes32
+): number {
   let permuted = index;
   assert(index < indexCount);
   assert(indexCount <= 2 ** 40);
-  for (let i = 0; i < SHUFFLE_ROUND_COUNT; i++) {
+  for (let i = 0; i < config.params.SHUFFLE_ROUND_COUNT; i++) {
     const pivot = bytesToBN(
       hash(Buffer.concat([seed, intToBytes(i, 1)]))
         .slice(0, 8)
@@ -77,44 +76,44 @@ export function getSplitOffset(listSize: number, chunks: number, index: number):
 /**
  * Return the number of committees in one epoch.
  */
-export function getEpochCommitteeCount(state: BeaconState, epoch: Epoch): number {
+export function getEpochCommitteeCount(config: BeaconConfig, state: BeaconState, epoch: Epoch): number {
   const activeValidatorIndices = getActiveValidatorIndices(state, epoch);
   return Math.max(
     1,
     Math.min(
-      intDiv(SHARD_COUNT, SLOTS_PER_EPOCH),
-      intDiv(intDiv(activeValidatorIndices.length, SLOTS_PER_EPOCH), TARGET_COMMITTEE_SIZE),
+      intDiv(config.params.SHARD_COUNT, config.params.SLOTS_PER_EPOCH),
+      intDiv(intDiv(activeValidatorIndices.length, config.params.SLOTS_PER_EPOCH), config.params.TARGET_COMMITTEE_SIZE),
     ),
-  ) * SLOTS_PER_EPOCH;
+  ) * config.params.SLOTS_PER_EPOCH;
 }
 
 /**
  * Return the number of shards to increment ``state.latest_start_shard`` during ``epoch``.
  */
-export function getShardDelta(state: BeaconState, epoch: Epoch): number {
+export function getShardDelta(config: BeaconConfig, state: BeaconState, epoch: Epoch): number {
   return Math.min(
-    getEpochCommitteeCount(state, epoch),
-    SHARD_COUNT - intDiv(SHARD_COUNT, SLOTS_PER_EPOCH),
+    getEpochCommitteeCount(config, state, epoch),
+    config.params.SHARD_COUNT - intDiv(config.params.SHARD_COUNT, config.params.SLOTS_PER_EPOCH),
   );
 }
 
-export function getEpochStartShard(state: BeaconState, epoch: Epoch): Shard {
-  const currentEpoch = getCurrentEpoch(state);
+export function getEpochStartShard(config: BeaconConfig, state: BeaconState, epoch: Epoch): Shard {
+  const currentEpoch = getCurrentEpoch(config, state);
   let checkEpoch = currentEpoch + 1;
   assert(epoch <= checkEpoch);
-  let shard = (state.latestStartShard + getShardDelta(state, currentEpoch)) % SHARD_COUNT;
+  let shard = (state.latestStartShard + getShardDelta(config, state, currentEpoch)) % config.params.SHARD_COUNT;
   while (checkEpoch > epoch) {
     checkEpoch -= 1;
-    shard = (shard + SHARD_COUNT - getShardDelta(state, checkEpoch)) % SHARD_COUNT;
+    shard = (shard + config.params.SHARD_COUNT - getShardDelta(config, state, checkEpoch)) % config.params.SHARD_COUNT;
   }
   return shard;
 }
 
-export function getAttestationDataSlot(state: BeaconState, data: AttestationData): Slot {
+export function getAttestationDataSlot(config: BeaconConfig, state: BeaconState, data: AttestationData): Slot {
   const epoch = data.targetEpoch;
-  const committeeCount = getEpochCommitteeCount(state, epoch);
-  const offset = (data.crosslink.shard + SHARD_COUNT - getEpochStartShard(state, epoch)) % SHARD_COUNT;
-  return intDiv(getEpochStartSlot(epoch) + offset, intDiv(committeeCount, SLOTS_PER_EPOCH));
+  const committeeCount = getEpochCommitteeCount(config, state, epoch);
+  const offset = (data.crosslink.shard + config.params.SHARD_COUNT - getEpochStartShard(config, state, epoch)) % config.params.SHARD_COUNT;
+  return intDiv(getEpochStartSlot(config, epoch) + offset, intDiv(committeeCount, config.params.SLOTS_PER_EPOCH));
 }
 
 /**
@@ -122,6 +121,7 @@ export function getAttestationDataSlot(state: BeaconState, data: AttestationData
  * using ``validator_indices`` and ``seed``.
  */
 export function computeCommittee(
+  config: BeaconConfig,
   indices: ValidatorIndex[],
   seed: bytes32,
   index: number,
@@ -131,21 +131,23 @@ export function computeCommittee(
   const end = intDiv(indices.length * (index + 1), count);
   return Array.from({length: end - start},
     (_, i) => i + start)
-    .map((i) => indices[getShuffledIndex(i, indices.length, seed)]);
+    .map((i) => indices[getShuffledIndex(config, i, indices.length, seed)]);
 }
 
 /**
  * Return the list of (committee, shard) acting as a tuple for the slot.
  */
 export function getCrosslinkCommittee(
+  config: BeaconConfig,
   state: BeaconState,
   epoch: Epoch,
   shard: Shard
 ): ValidatorIndex[] {
   return computeCommittee(
+    config,
     getActiveValidatorIndices(state, epoch),
-    generateSeed(state, epoch),
-    (shard + SHARD_COUNT - getEpochStartShard(state, epoch)) % SHARD_COUNT,
-    getEpochCommitteeCount(state, epoch)
+    generateSeed(config, state, epoch),
+    (shard + config.params.SHARD_COUNT - getEpochStartShard(config, state, epoch)) % config.params.SHARD_COUNT,
+    getEpochCommitteeCount(config, state, epoch)
   );
 }

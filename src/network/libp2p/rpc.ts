@@ -11,6 +11,8 @@ import {deserialize} from "@chainsafe/ssz";
 
 import {RequestBody, ResponseBody, WireResponse, WireRequest} from "../../types";
 import {Method, RequestId, ResponseCode, RPC_MULTICODEC} from "../../constants";
+import {BeaconConfig} from "../../config";
+import {ILogger} from "../../logger";
 
 import {
   encodeRequest,
@@ -21,7 +23,7 @@ import {
 } from "../codec";
 import {randomRequestId} from "../util";
 import {Peer} from "./peer";
-import {ILogger} from "../../logger";
+import {INetworkOptions} from "../options";
 
 
 /**
@@ -52,10 +54,12 @@ export class NetworkRpc extends EventEmitter {
    */
   private responses: Record<RequestId, {peer: Peer; method: Method}>;
 
+  private config: BeaconConfig;
   private logger: ILogger;
 
-  public constructor(libp2p: LibP2p, logger: ILogger) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger}: {config: BeaconConfig; libp2p: LibP2p; logger: ILogger}) {
     super();
+    this.config = config;
     this.logger = logger;
     this.libp2p = libp2p;
     this.requestTimeout = 5000;
@@ -135,7 +139,7 @@ export class NetworkRpc extends EventEmitter {
     }
     const id = randomRequestId();
     this.requests[id] = method;
-    const encodedRequest = encodeRequest(id, method, body);
+    const encodedRequest = encodeRequest(this.config, id, method, body);
     peer.write(encodedRequest);
     return await this.getResponse(id) as T;
   }
@@ -166,7 +170,7 @@ export class NetworkRpc extends EventEmitter {
       throw new Error('No request found');
     }
     const {peer, method} = request;
-    const encodedResponse = encodeResponse(id, method, responseCode, result);
+    const encodedResponse = encodeResponse(this.config, id, method, responseCode, result);
     delete this.responses[id];
     peer.write(encodedResponse);
   }
@@ -180,8 +184,8 @@ export class NetworkRpc extends EventEmitter {
     const method = this.requests[id];
     if (method === undefined) { // incoming request
       try {
-        const request: WireRequest = deserialize(data, WireRequest);
-        const decodedBody = decodeRequestBody(request.method, request.body);
+        const request: WireRequest = deserialize(data, this.config.types.WireRequest);
+        const decodedBody = decodeRequestBody(this.config, request.method, request.body);
         this.responses[id] = {peer, method: request.method};
         this.emit("request", peer.peerInfo, request.method, id, decodedBody);
       } catch (e) {
@@ -193,11 +197,11 @@ export class NetworkRpc extends EventEmitter {
         const {
           responseCode,
           result,
-        }: WireResponse = deserialize(data, WireResponse);
+        }: WireResponse = deserialize(data, this.config.types.WireResponse);
         if (responseCode !== ResponseCode.Success) {
           this.emit(event, new Error(`response code error ${responseCode}`), null);
         } else {
-          const decodedResult = decodeResponseBody(method, result);
+          const decodedResult = decodeResponseBody(this.config, method, result);
           this.emit(event, null, decodedResult);
         }
       } catch (e) {

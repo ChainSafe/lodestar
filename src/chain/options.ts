@@ -15,7 +15,7 @@ export const ChainOptions: IConfigurationModule = {
       validation: (input) => {
         return input === 'mainnet' || input === 'minimal';
       },
-      type: number64,
+      type: "string",
       configurable: true,
       cli: {
         flag: "chain",

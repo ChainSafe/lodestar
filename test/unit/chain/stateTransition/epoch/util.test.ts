@@ -1,6 +1,8 @@
-import {generateState} from "../../../../utils/state";
+import BN from "bn.js";
 import {expect} from "chai";
 import sinon from "sinon";
+
+import {config} from "../../../../../src/config/presets/mainnet";
 import {
   getAttestingBalance,
   getMatchingHeadAttestations,
@@ -10,11 +12,11 @@ import {
 } from "../../../../../src/chain/stateTransition/epoch/util";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {getAttestationDataSlot} from "../../../../../src/chain/stateTransition/util";
-import {FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "../../../../../src/constants";
+import {FAR_FUTURE_EPOCH} from "../../../../../src/constants";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {getAttestingIndices} from "../../../../../src/chain/stateTransition/util";
 import {generateValidator} from "../../../../utils/validator";
-import BN from "bn.js";
+import {generateState} from "../../../../utils/state";
 
 describe('process epoch - crosslinks', function () {
 
@@ -44,7 +46,7 @@ describe('process epoch - crosslinks', function () {
     const validatorIndices = [1, 2];
     getActiveValidatorIndicesStub.returns(validatorIndices);
     try {
-      getTotalActiveBalance(generateState());
+      getTotalActiveBalance(config, generateState());
       expect(getActiveValidatorIndicesStub.withArgs(sinon.match.any, 0).calledOnce).to.be.true;
       expect(getTotalBalanceStub.withArgs(sinon.match.any, validatorIndices).calledOnce).to.be.true;
     } catch (e) {
@@ -61,11 +63,11 @@ describe('process epoch - crosslinks', function () {
       }
     ];
     const state = generateState({
-      slot: SLOTS_PER_EPOCH,
+      slot: config.params.SLOTS_PER_EPOCH,
       currentEpochAttestations: pendingAttestations
     });
     try {
-      const result = getMatchingSourceAttestations(state, 1);
+      const result = getMatchingSourceAttestations(config, state, 1);
       expect(result).to.be.deep.equal(pendingAttestations);
     } catch (e) {
       expect.fail(e.stack);
@@ -89,12 +91,12 @@ describe('process epoch - crosslinks', function () {
       }
     ];
     const state = generateState({
-      slot: SLOTS_PER_EPOCH,
+      slot: config.params.SLOTS_PER_EPOCH,
       currentEpochAttestations: currentPendingAttestations,
       previousEpochAttestations: previousPendingAttestations
     });
     try {
-      const result = getMatchingSourceAttestations(state, 0);
+      const result = getMatchingSourceAttestations(config, state, 0);
       expect(result).to.be.deep.equal(previousPendingAttestations);
     } catch (e) {
       expect.fail(e.stack);
@@ -118,12 +120,12 @@ describe('process epoch - crosslinks', function () {
     ];
     currentPendingAttestations[0].data.targetRoot = blockRoot;
     const state = generateState({
-      slot: SLOTS_PER_EPOCH,
+      slot: config.params.SLOTS_PER_EPOCH,
       currentEpochAttestations: currentPendingAttestations
     });
     getBlockRootStub.returns(blockRoot);
     try {
-      const result = getMatchingTargetAttestations(state, 1);
+      const result = getMatchingTargetAttestations(config, state, 1);
       expect(getBlockRootStub.calledOnce).to.be.true;
       expect(result).to.be.deep.equal([currentPendingAttestations[0]]);
     } catch (e) {
@@ -148,15 +150,15 @@ describe('process epoch - crosslinks', function () {
     ];
     currentPendingAttestations[0].data.beaconBlockRoot = blockRoot;
     const state = generateState({
-      slot: SLOTS_PER_EPOCH,
+      slot: config.params.SLOTS_PER_EPOCH,
       currentEpochAttestations: currentPendingAttestations
     });
     getAttestationDataSlotStub.returns(1);
     getBlockRootAtSlotStub.returns(blockRoot);
     try {
-      const result = getMatchingHeadAttestations(state, 1);
+      const result = getMatchingHeadAttestations(config, state, 1);
       expect(getAttestationDataSlotStub.calledTwice).to.be.true;
-      expect(getBlockRootAtSlotStub.withArgs(sinon.match.any, 1).calledTwice).to.be.true;
+      expect(getBlockRootAtSlotStub.withArgs(config, sinon.match.any, 1).calledTwice).to.be.true;
       expect(result).to.be.deep.equal([currentPendingAttestations[0]]);
     } catch (e) {
       expect.fail(e.stack);
@@ -182,7 +184,7 @@ describe('process epoch - crosslinks', function () {
     const validator2 = generateValidator(0, FAR_FUTURE_EPOCH, false);
     const state = generateState({validatorRegistry: [validator1, validator2]});
     try {
-      const result = getUnslashedAttestingIndices(state, pendingAttestations);
+      const result = getUnslashedAttestingIndices(config, state, pendingAttestations);
       expect(result).to.be.deep.equal([1]);
       expect(getAttestingIndicesStub.calledTwice).to.be.true;
     } catch (e) {
@@ -210,7 +212,7 @@ describe('process epoch - crosslinks', function () {
     const state = generateState({validatorRegistry: [validator1, validator2]});
     getTotalBalanceStub.returns(new BN(1));
     try {
-      const result = getAttestingBalance(state, pendingAttestations);
+      const result = getAttestingBalance(config, state, pendingAttestations);
       expect(result.toString()).to.be.deep.equal(new BN(1).toString());
       expect(getTotalBalanceStub.withArgs(sinon.match.any, [1]).calledOnce).to.be.true;
     } catch (e) {

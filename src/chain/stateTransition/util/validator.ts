@@ -4,6 +4,7 @@
 
 import assert from "assert";
 import {BeaconState, Epoch, Slot, Validator, ValidatorIndex,} from "../../../types";
+import {BeaconConfig} from "../../../config";
 import {
   getBeaconProposerIndex,
   getCrosslinkCommittee,
@@ -13,7 +14,6 @@ import {
 } from "./index";
 import {CommitteeAssignment} from "../../../validator/types";
 import {getCurrentEpoch, getEpochStartSlot} from "./epoch";
-import {SHARD_COUNT, SLOTS_PER_EPOCH} from "../../../constants";
 import {intDiv} from "../../../util/math";
 
 
@@ -56,22 +56,23 @@ export function getActiveValidatorIndices(state: BeaconState, epoch: Epoch): Val
  * a beacon block at the assigned slot.
  */
 export function getCommitteeAssignment(
+  config: BeaconConfig,
   state: BeaconState,
   epoch: Epoch,
   validatorIndex: ValidatorIndex
 ): CommitteeAssignment {
 
-  const nextEpoch = getCurrentEpoch(state) + 1;
+  const nextEpoch = getCurrentEpoch(config, state) + 1;
   assert(epoch <= nextEpoch);
 
-  const committeesPerSlot = intDiv(getEpochCommitteeCount(state, epoch), SLOTS_PER_EPOCH);
-  const epochStartSlot = getEpochStartSlot(epoch);
-  for (let slot = epochStartSlot; slot < epochStartSlot + SLOTS_PER_EPOCH; slot++) {
+  const committeesPerSlot = intDiv(getEpochCommitteeCount(config, state, epoch), config.params.SLOTS_PER_EPOCH);
+  const epochStartSlot = getEpochStartSlot(config, epoch);
+  for (let slot = epochStartSlot; slot < epochStartSlot + config.params.SLOTS_PER_EPOCH; slot++) {
     const slotStartShard =
-      getEpochStartShard(state, epoch) + committeesPerSlot * (slot % SLOTS_PER_EPOCH);
+      getEpochStartShard(config, state, epoch) + committeesPerSlot * (slot % config.params.SLOTS_PER_EPOCH);
     for (let i = 0; i < committeesPerSlot; i++) {
-      const shard = (slotStartShard + i) % SHARD_COUNT;
-      const committee = getCrosslinkCommittee(state, epoch, shard);
+      const shard = (slotStartShard + i) % config.params.SHARD_COUNT;
+      const committee = getCrosslinkCommittee(config, state, epoch, shard);
       if (committee.includes(validatorIndex)) {
         return {
           validators: committee,
@@ -87,13 +88,14 @@ export function getCommitteeAssignment(
  * Checks if a validator is supposed to propose a block
  */
 export function isProposerAtSlot(
+  config: BeaconConfig,
   state: BeaconState,
   slot: Slot,
   validatorIndex: ValidatorIndex): boolean {
 
   state = {...state, slot};
-  const currentEpoch = getCurrentEpoch(state);
-  assert(slotToEpoch(slot) === currentEpoch);
+  const currentEpoch = getCurrentEpoch(config, state);
+  assert(slotToEpoch(config, slot) === currentEpoch);
 
-  return getBeaconProposerIndex(state) === validatorIndex;
+  return getBeaconProposerIndex(config, state) === validatorIndex;
 }

@@ -1,23 +1,24 @@
-import {BeaconDB, ValidatorDB} from "../../../../../src/db";
+import {expect} from "chai";
+import BN from "bn.js";
+import {hashTreeRoot} from "@chainsafe/ssz";
 import sinon from "sinon";
+import {Keypair} from "@chainsafe/bls-js/lib/keypair";
+
+import {config} from "../../../../../src/config/presets/mainnet";
+import {BeaconDB, ValidatorDB} from "../../../../../src/db";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
-import {Keypair} from "@chainsafe/bls-js/lib/keypair";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {OpPool} from "../../../../../src/opPool";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
-  ETH1_FOLLOW_DISTANCE,
-  FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE,
+  FAR_FUTURE_EPOCH,
   ZERO_HASH
 } from "../../../../../src/constants";
 import {getBeaconProposerIndex} from "../../../../../src/chain/stateTransition/util";
-import {hashTreeRoot} from "@chainsafe/ssz";
 import {BeaconBlockBody, BeaconBlockHeader, DepositData, ValidatorIndex} from "../../../../../src/types";
 import {stateTransition} from "../../../../../src/chain/stateTransition";
-import {expect} from "chai";
-import BN from "bn.js";
 import {generateValidator} from "../../../../utils/validator";
 import {ProgressiveMerkleTree} from "../../../../../src/util/merkleTree";
 import BlockProposingService from "../../../../../src/validator/services/block";
@@ -40,7 +41,7 @@ describe('produce block', function () {
     const validators = keypairs.map((keypair) => {
       const validator = generateValidator(0, FAR_FUTURE_EPOCH);
       validator.pubkey = keypair.publicKey.toBytesCompressed();
-      validator.effectiveBalance = MAX_EFFECTIVE_BALANCE;
+      validator.effectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
       return validator;
     });
     const balances = Array.from({length: validators.length}, () => new BN("10000000"));
@@ -52,7 +53,7 @@ describe('produce block', function () {
       signature: parentBlock.signature,
       slot: parentBlock.slot,
       parentRoot: parentBlock.parentRoot,
-      bodyRoot: hashTreeRoot(parentBlock.body, BeaconBlockBody),
+      bodyRoot: hashTreeRoot(parentBlock.body, config.types.BeaconBlockBody),
     };
     const state = generateState({
       validatorRegistry: validators,
@@ -60,7 +61,7 @@ describe('produce block', function () {
       latestBlockHeader: parentHeader
     });
     const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
-    tree.add(0, hashTreeRoot(generateDeposit().data, DepositData));
+    tree.add(0, hashTreeRoot(generateDeposit().data, config.types.DepositData));
     dbStub.getChainHead.resolves(parentBlock);
     dbStub.getLatestState.resolves(state);
     dbStub.getMerkleTree.resolves(tree);
@@ -74,14 +75,14 @@ describe('produce block', function () {
     // @ts-ignore
     eth1Stub.getHead.resolves({
       hash: '0x' + ZERO_HASH.toString('hex'),
-      number: ETH1_FOLLOW_DISTANCE + 1
+      number: config.params.ETH1_FOLLOW_DISTANCE + 1
     });
     // @ts-ignore
     eth1Stub.getBlock.resolves({
       hash: '0x' + ZERO_HASH.toString('hex'),
       number: 1
     });
-    const validatorIndex = getBeaconProposerIndex({...state, slot: 1});
+    const validatorIndex = getBeaconProposerIndex(config, {...state, slot: 1});
 
     const blockProposingService = getBlockProposingService(
       validatorIndex,
@@ -94,7 +95,7 @@ describe('produce block', function () {
     });
     const block = await blockProposingService.createAndPublishBlock(1, state.fork);
 
-    expect(() => stateTransition(state, block, false)).to.not.throw();
+    expect(() => stateTransition(config, state, block, false)).to.not.throw();
   });
 
   function getBlockProposingService(validatorIndex: ValidatorIndex, privateKey: PrivateKey): BlockProposingService {
@@ -102,6 +103,7 @@ describe('produce block', function () {
     rpcClientStub.validator = sinon.createStubInstance(ValidatorApi);
     const validatorDbStub = sinon.createStubInstance(ValidatorDB);
     return new BlockProposingService(
+      config,
       validatorIndex,
       rpcClientStub,
       privateKey,

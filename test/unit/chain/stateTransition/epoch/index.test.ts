@@ -1,6 +1,8 @@
-import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
+
+import {config} from "../../../../../src/config/presets/mainnet";
+import {GENESIS_SLOT} from "../../../../../src/constants";
 import {processEpoch} from "../../../../../src/chain/stateTransition/epoch";
 import * as justificationUtils from "../../../../../src/chain/stateTransition/epoch/justification";
 import {processJustificationAndFinalization} from "../../../../../src/chain/stateTransition/epoch/justification";
@@ -11,8 +13,8 @@ import * as registryUpdateUtils from "../../../../../src/chain/stateTransition/e
 import * as slashingUtils from "../../../../../src/chain/stateTransition/epoch/slashings";
 import * as finalUtils from "../../../../../src/chain/stateTransition/epoch/finalUpdates";
 import {processRegistryUpdates} from "../../../../../src/chain/stateTransition/epoch/registryUpdates";
-import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "../../../../../src/constants";
 import {processFinalUpdates} from "../../../../../src/chain/stateTransition/epoch/finalUpdates";
+import {generateState} from "../../../../utils/state";
 
 describe('process epoch - crosslinks', function () {
 
@@ -46,7 +48,7 @@ describe('process epoch - crosslinks', function () {
 
   it('should fail to process - genesis slot', function () {
     try {
-      processEpoch(generateState({slot: GENESIS_SLOT}));
+      processEpoch(config, generateState({slot: GENESIS_SLOT}));
       expect.fail();
     } catch (e) {
 
@@ -55,7 +57,7 @@ describe('process epoch - crosslinks', function () {
 
   it('should fail to process - not epoch', function () {
     try {
-      processEpoch(generateState({slot: 1}));
+      processEpoch(config, generateState({slot: 1}));
       expect.fail();
     } catch (e) {
 
@@ -64,7 +66,7 @@ describe('process epoch - crosslinks', function () {
 
   it('should process epoch', function () {
     try {
-      processEpoch(generateState({slot: SLOTS_PER_EPOCH - 1}));
+      processEpoch(config, generateState({slot: config.params.SLOTS_PER_EPOCH - 1}));
       expect(processJustificationAndFinalizationStub.calledOnce).to.be.true;
       expect(processCrosslinksStub.calledOnce).to.be.true;
       expect(processRewardsAndPenaltiesStub.calledOnce).to.be.true;

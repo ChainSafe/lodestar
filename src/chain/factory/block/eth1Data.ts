@@ -3,21 +3,25 @@
  */
 
 import {BeaconState, Eth1Data} from "../../../types";
+import {BeaconConfig} from "../../../config";
 import {IEth1Notifier} from "../../../eth1";
-import {ETH1_FOLLOW_DISTANCE} from "../../../constants";
 import {Block} from "ethers/providers";
 import {mostFrequent} from "../../../util/objects";
 
-export async function bestVoteData(state: BeaconState, eth1: IEth1Notifier): Promise<Eth1Data> {
+export async function bestVoteData(
+  config: BeaconConfig,
+  state: BeaconState,
+  eth1: IEth1Notifier
+): Promise<Eth1Data> {
 
   const [head, latestStateBlock] = await Promise.all([
     eth1.getHead(),
     eth1.getBlock('0x' + state.latestEth1Data.blockHash.toString('hex'))
   ]);
-  const validVotes = await filterValidVotes(state.eth1DataVotes, eth1, head, latestStateBlock);
+  const validVotes = await filterValidVotes(config, state.eth1DataVotes, eth1, head, latestStateBlock);
 
   if(validVotes.length === 0) {
-    const requiredBlock = head.number - ETH1_FOLLOW_DISTANCE;
+    const requiredBlock = head.number - config.params.ETH1_FOLLOW_DISTANCE;
     const blockHash = (await eth1.getBlock(requiredBlock)).hash;
     const [depositCount, depositRoot] = await Promise.all([
       eth1.depositCount(blockHash),
@@ -29,7 +33,7 @@ export async function bestVoteData(state: BeaconState, eth1: IEth1Notifier): Pro
       depositRoot
     };
   } else {
-    const frequentVotes = mostFrequent<Eth1Data>(validVotes, Eth1Data);
+    const frequentVotes = mostFrequent<Eth1Data>(validVotes, config.types.Eth1Data);
     if(frequentVotes.length === 1) {
       return frequentVotes[0];
     } else {
@@ -45,6 +49,7 @@ export async function bestVoteData(state: BeaconState, eth1: IEth1Notifier): Pro
 }
 
 export async function filterValidVotes(
+  config: BeaconConfig,
   votes: Eth1Data[],
   eth1: IEth1Notifier,
   head: Block,
@@ -54,7 +59,7 @@ export async function filterValidVotes(
     const vote = votes[i];
     const block = await eth1.getBlock(vote.blockHash.toString('hex'));
     if(block
-      && (head.number - block.number) >= ETH1_FOLLOW_DISTANCE
+      && (head.number - block.number) >= config.params.ETH1_FOLLOW_DISTANCE
       && block.number > latestStateBlock.number
     ) {
       const [depositCount, depositRoot] = await Promise.all([

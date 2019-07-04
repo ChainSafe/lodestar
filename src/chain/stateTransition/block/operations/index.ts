@@ -1,15 +1,9 @@
 import assert from "assert";
 import {
-  MAX_ATTESTATIONS,
-  MAX_ATTESTER_SLASHINGS,
-  MAX_DEPOSITS,
-  MAX_PROPOSER_SLASHINGS, MAX_TRANSFERS,
-  MAX_VOLUNTARY_EXITS
-} from "../../../../constants";
-import {
   BeaconBlockBody, BeaconState, ProposerSlashing, AttesterSlashing, Attestation,
   Deposit, VoluntaryExit, Transfer,
 } from "../../../../types";
+import {BeaconConfig} from "../../../../config";
 
 import {processProposerSlashing} from "./proposerSlashing";
 import {processAttesterSlashing} from "./attesterSlashing";
@@ -32,35 +26,40 @@ export {
 type Operation =
   ProposerSlashing | AttesterSlashing | Attestation | Deposit | VoluntaryExit | Transfer;
 
-export function processOperations(state: BeaconState, body: BeaconBlockBody): void {
+export function processOperations(
+  config: BeaconConfig,
+  state: BeaconState,
+  body: BeaconBlockBody
+): void {
   // Verify that outstanding deposits are processed up to the maximum number of deposits
-  assert(body.deposits.length == Math.min(MAX_DEPOSITS,
+  assert(body.deposits.length == Math.min(config.params.MAX_DEPOSITS,
     state.latestEth1Data.depositCount - state.depositIndex));
   // Verify that there are no duplicate transfers
+  // TODO this is not sufficient to determine duplicates
   assert(body.transfers.length == (new Set(body.transfers)).size);
   [{
     operations: body.proposerSlashings,
-    maxOperations: MAX_PROPOSER_SLASHINGS,
+    maxOperations: config.params.MAX_PROPOSER_SLASHINGS,
     func: processProposerSlashing
   }, {
     operations: body.attesterSlashings,
-    maxOperations:MAX_ATTESTER_SLASHINGS,
+    maxOperations: config.params.MAX_ATTESTER_SLASHINGS,
     func: processAttesterSlashing
   }, {
     operations: body.attestations,
-    maxOperations:MAX_ATTESTATIONS,
+    maxOperations: config.params.MAX_ATTESTATIONS,
     func: processAttestation
   }, {
     operations: body.deposits,
-    maxOperations: MAX_DEPOSITS,
+    maxOperations: config.params.MAX_DEPOSITS,
     func: processDeposit
   }, {
     operations: body.voluntaryExits,
-    maxOperations: MAX_VOLUNTARY_EXITS,
+    maxOperations: config.params.MAX_VOLUNTARY_EXITS,
     func: processVoluntaryExit
   }, {
     operations: body.transfers,
-    maxOperations: MAX_TRANSFERS,
+    maxOperations: config.params.MAX_TRANSFERS,
     func: processTransfer
   }].forEach(({
     operations,
@@ -69,11 +68,11 @@ export function processOperations(state: BeaconState, body: BeaconBlockBody): vo
   }: {
     operations: Operation[];
     maxOperations: number;
-    func: (state: BeaconState, operation: Operation) => void;
+    func: (config: BeaconConfig, state: BeaconState, operation: Operation) => void;
   })=>{
     assert(operations.length <= maxOperations);
     operations.forEach((operation) => {
-      func(state, operation);
+      func(config, state, operation);
     });
   });
 }

@@ -3,6 +3,7 @@
  */
 
 import {BeaconState} from "../../../types";
+import {BeaconConfig} from "../../../config";
 
 import {processRewardsAndPenalties} from "./balanceUpdates";
 import {processCrosslinks} from "./crosslinks";
@@ -11,19 +12,19 @@ import {processJustificationAndFinalization} from "./justification";
 import {processRegistryUpdates} from "./registryUpdates";
 import {processSlashings} from "./slashings";
 
-export function processEpoch(state: BeaconState): BeaconState {
+export function processEpoch(config: BeaconConfig, state: BeaconState): BeaconState {
 
   // Justification
-  processJustificationAndFinalization(state);
+  processJustificationAndFinalization(config, state);
 
   // Crosslinks
-  processCrosslinks(state);
+  processCrosslinks(config, state);
 
   // Rewards and penalties
-  processRewardsAndPenalties(state);
+  processRewardsAndPenalties(config, state);
 
   // Validator Registry
-  processRegistryUpdates(state);
+  processRegistryUpdates(config, state);
 
   // TODO Later Phase
   // processRevealDeadlines
@@ -32,10 +33,10 @@ export function processEpoch(state: BeaconState): BeaconState {
   // processChallengeDeadlines
 
   // Slashings
-  processSlashings(state);
+  processSlashings(config, state);
 
   // Final Updates
-  processFinalUpdates(state);
+  processFinalUpdates(config, state);
 
   // TODO Later Phase
   // afterProcessFinalUpdates

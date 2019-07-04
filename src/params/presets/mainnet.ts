@@ -1,5 +1,5 @@
 /**
- * @module constants
+ * @module params/presets/mainnet
  */
 import BN from "bn.js";
 
@@ -13,7 +13,7 @@ export const BASE_REWARDS_PER_EPOCH = 5;
 export const SHUFFLE_ROUND_COUNT = 90;
 
 // Deposit contract
-export const DEPOSIT_CONTRACT_ADDRESS = "TBD";
+export const DEPOSIT_CONTRACT_ADDRESS = 0;
 export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
 
 // Gwei Values
@@ -68,13 +68,3 @@ export const MAX_ATTESTATIONS = 2 ** 7; // 128
 export const MAX_DEPOSITS = 2 ** 4; // 16
 export const MAX_VOLUNTARY_EXITS = 2 ** 4; // 16
 export const MAX_TRANSFERS = 0;
-
-// Signature domains
-export enum Domain {
-  BEACON_PROPOSER = 0,
-  RANDAO = 1,
-  ATTESTATION = 2,
-  DEPOSIT = 3,
-  VOLUNTARY_EXIT = 4,
-  TRANSFER = 5,
-}

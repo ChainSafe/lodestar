@@ -1,11 +1,14 @@
+import BN from "bn.js";
 import {expect} from "chai";
 import sinon from "sinon";
+
+import {config} from "../../../../../../src/config/presets/mainnet";
 import * as utilsEpoch from "../../../../../../src/chain/stateTransition/epoch/util";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
 import * as baseReward
   from  "../../../../../../src/chain/stateTransition/epoch/balanceUpdates/baseReward";
+
 import {generateState} from "../../../../../utils/state";
-import BN from "bn.js";
 import {generateValidators} from "../../../../../utils/validator";
 import {getAttestationDeltas}
   from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates/attestation";
@@ -66,7 +69,7 @@ describe('process epoch - balance updates', function () {
     getAttestingIndicesStub.returns([0, 1]);
 
     try {
-      const result  = getAttestationDeltas(state);
+      const result  = getAttestationDeltas(config, state);
       const rewards = result[0];
       const penalties = result[1];
       rewards.forEach((value)=>{
@@ -99,7 +102,7 @@ describe('process epoch - balance updates', function () {
     getBaseRewardStub.returns(new BN(2));
     getAttestingIndicesStub.returns([2, 3]);
     try {
-      const result  = getAttestationDeltas(state);
+      const result  = getAttestationDeltas(config, state);
       const rewards = result[0];
       const penalties = result[1];
       penalties.forEach((value)=>{

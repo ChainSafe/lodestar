@@ -6,8 +6,16 @@ import assert from "assert";
 import {bytes32, MerkleTree, number64} from "../../types";
 import {hash} from "../crypto";
 import {intDiv} from "../math";
-import {serialize} from "@chainsafe/ssz";
+import {serialize, deserialize, AnySSZType, SimpleContainerType} from "@chainsafe/ssz";
 import {IProgressiveMerkleTree} from "./interface";
+
+const MerkleTreeType: SimpleContainerType = {
+  name: "MerkleTree",
+  fields: [
+    ["depth", "number64"],
+    ["tree", [[["byte", 32]]]],
+  ],
+};
 
 export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
   private readonly _depth: number;
@@ -28,13 +36,6 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
     return new ProgressiveMerkleTree(
       depth,
       tree
-    );
-  }
-
-  public static fromObject(value: MerkleTree): ProgressiveMerkleTree {
-    return new ProgressiveMerkleTree(
-      value.depth,
-      value.tree
     );
   }
 
@@ -78,6 +79,14 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
     return this._tree[this._depth][0];
   }
 
+  public static deserialize(data: Buffer): ProgressiveMerkleTree {
+    const value = deserialize(data, MerkleTreeType);
+    return new ProgressiveMerkleTree(
+      value.depth,
+      value.tree
+    );
+  }
+
   public serialize(): Buffer {
     return serialize(
       {
@@ -85,7 +94,7 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
         tree: this._tree,
         zeroHashes: this._zerohashes
       },
-      MerkleTree
+      MerkleTreeType,
     );
   }
 

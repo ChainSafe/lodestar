@@ -2,6 +2,7 @@ import {assert, expect} from "chai";
 import BN from "bn.js";
 import promisify from "promisify-es6";
 
+import {config} from "../../../../src/config/presets/mainnet";
 import {NetworkRpc} from "../../../../src/network/libp2p/rpc";
 
 import {createNode} from "./util";
@@ -26,8 +27,16 @@ describe("[network] rpc", () => {
       promisify(nodeA.start.bind(nodeA))(),
       promisify(nodeB.start.bind(nodeB))(),
     ]);
-    rpcA = new NetworkRpc(nodeA, logger);
-    rpcB = new NetworkRpc(nodeB, logger);
+    const networkOptions = {
+      maxPeers: 10,
+      multiaddrs: [],
+      bootnodes: [],
+      rpcTimeout: 5000,
+      connectTimeout: 5000,
+      disconnectTimeout: 5000,
+    };
+    rpcA = new NetworkRpc(networkOptions, {config, libp2p: nodeA, logger});
+    rpcB = new NetworkRpc(networkOptions, {config, libp2p: nodeB, logger});
     await Promise.all([
       rpcA.start(),
       rpcB.start(),

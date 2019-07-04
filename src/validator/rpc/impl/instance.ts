@@ -1,8 +1,10 @@
 import {IBeaconApi} from "../../../rpc/api/beacon";
 import {IValidatorApi} from "../../../rpc/api/validator";
 import {AbstractRpcClient} from "../abstract";
+import { BeaconConfig } from "../../../config";
 
 export interface RpcClientOverInstanceOpts {
+  config: BeaconConfig;
   beacon: IBeaconApi;
   validator: IValidatorApi;
 }
@@ -17,6 +19,7 @@ export class RpcClientOverInstance extends AbstractRpcClient {
     super();
     this.beacon = opts.beacon;
     this.validator = opts.validator;
+    this.config = opts.config;
   }
 
   public async connect(): Promise<void> {

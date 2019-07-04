@@ -1,4 +1,7 @@
 import sinon from "sinon";
+import {expect} from "chai";
+
+import {config} from "../../../../../src/config/presets/mainnet";
 import * as blockAssembly from "../../../../../src/chain/factory/block";
 import * as stateTransitionUtils from "../../../../../src/chain/stateTransition/util";
 import {getCommitteeAssignment} from "../../../../../src/chain/stateTransition/util";
@@ -6,13 +9,12 @@ import {ValidatorApi} from "../../../../../src/rpc/api/validator";
 import {BeaconDB} from "../../../../../src/db/api";
 import {BeaconChain} from "../../../../../src/chain";
 import {OpPool} from "../../../../../src/opPool";
-import {generateEmptyBlock} from "../../../../utils/block";
-import {expect} from "chai";
-import {generateState} from "../../../../utils/state";
 import {StatefulDagLMDGHOST} from "../../../../../src/chain/forkChoice";
-import {generateEmptyAttestation} from "../../../../utils/attestation";
 import * as dutyFactory from "../../../../../src/chain/factory/duties";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
+import {generateEmptyAttestation} from "../../../../utils/attestation";
+import {generateEmptyBlock} from "../../../../utils/block";
+import {generateState} from "../../../../utils/state";
 
 describe('validator rpc api', function () {
 
@@ -27,7 +29,7 @@ describe('validator rpc api', function () {
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
     opStub = sandbox.createStubInstance(OpPool);
-    validatorApi = new ValidatorApi({}, {chain: chainStub, db: dbStub, opPool: opStub, eth1: eth1Stub});
+    validatorApi = new ValidatorApi({}, {config, chain: chainStub, db: dbStub, opPool: opStub, eth1: eth1Stub});
   });
 
   afterEach(() => {
@@ -41,7 +43,7 @@ describe('validator rpc api', function () {
     expect(result).to.be.not.null;
     expect(
       assembleBlockStub
-        .withArgs(dbStub, opStub, eth1Stub, 1, Buffer.alloc(96, 0))
+        .withArgs(config, dbStub, opStub, eth1Stub, 1, Buffer.alloc(96, 0))
         .calledOnce
     ).to.be.true;
   });
@@ -55,7 +57,7 @@ describe('validator rpc api', function () {
     expect(result).to.be.true;
     expect(
       isProposerStub
-        .withArgs(state, 2, 1)
+        .withArgs(config, state, 2, 1)
         .calledOnce
     ).to.be.true;
   });
@@ -75,8 +77,8 @@ describe('validator rpc api', function () {
     expect(duties[0].blockProductionSlot).to.be.null;
     expect(dbStub.getLatestState.calledOnce).to.be.true;
     expect(dbStub.getValidatorIndex.withArgs(publicKey).calledOnce).to.be.true;
-    expect(getProposerStub.withArgs(state).calledOnce).to.be.true;
-    expect(assembleValidatorDutyStub.calledOnceWith(publicKey, 5, state, 4)).to.be.true;
+    expect(getProposerStub.withArgs(config, state).calledOnce).to.be.true;
+    expect(assembleValidatorDutyStub.calledOnceWith(config, publicKey, 5, state, 4)).to.be.true;
   });
 
   it('get committee assignment', async function() {
@@ -87,7 +89,7 @@ describe('validator rpc api', function () {
     const result = await validatorApi.getCommitteeAssignment(1, 2);
     expect(result).to.be.null;
     expect(dbStub.getLatestState.calledOnce).to.be.true;
-    expect(commiteeAssignmentStub.withArgs(state, 2, 1));
+    expect(commiteeAssignmentStub.withArgs(config, state, 2, 1));
   });
 
   it('produceAttestation - missing slots', async function() {

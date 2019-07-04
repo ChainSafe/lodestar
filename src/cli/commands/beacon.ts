@@ -4,11 +4,13 @@
 
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
+import deepmerge from "deepmerge";
+
+import {config} from "../../config/presets/mainnet";
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
 import {generateCommanderOptions, optionsToConfig} from "../util";
-import deepmerge from "deepmerge";
 import {getTomlConfig} from "../../util/file";
 import Validator from "../../validator";
 import {RpcClientOverInstance} from "../../validator/rpc";
@@ -47,7 +49,7 @@ export class BeaconNodeCommand implements CliCommand {
   }
 
   public async action(options: IBeaconCommandOptions, logger: ILogger): Promise<void> {
-    let config: Partial<IBeaconNodeOptions> = {};
+    let conf: Partial<IBeaconNodeOptions> = {};
 
     if (options.loggingLevel) {
       logger.setLogLevel(LogLevel[options.loggingLevel]);
@@ -57,19 +59,21 @@ export class BeaconNodeCommand implements CliCommand {
     if (options.configFile) {
       let parsedConfig = getTomlConfig(options.configFile, BeaconNodeOptions);
       //cli will override toml config options
-      config = deepmerge(config, parsedConfig);
+      conf = deepmerge(conf, parsedConfig);
     }
 
     //override current config with cli config
-    config = deepmerge(config, optionsToConfig(options, BeaconNodeOptions));
+    conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
 
-    this.node = new BeaconNode(config, {logger});
+    this.node = new BeaconNode(conf, {config, logger});
 
-    if(config.validator && config.validator.keypair){
-      config.validator.rpcInstance = new RpcClientOverInstance({
+    if(conf.validator && conf.validator.keypair){
+      conf.validator.rpcInstance = new RpcClientOverInstance({
+        config,
         validator: new ValidatorApi(
           {},
           {
+            config,
             chain: this.node.chain,
             db: this.node.db,
             opPool: this.node.opPool,
@@ -78,12 +82,12 @@ export class BeaconNodeCommand implements CliCommand {
         ),
         beacon: new BeaconApi(
           {},
-          {chain: this.node.chain, db: this.node.db}
+          {config, chain: this.node.chain, db: this.node.db}
         ),
       });
       this.validator = new Validator(
-        config.validator,
-        {logger}
+        conf.validator,
+        {config, logger}
       );
       await this.validator.start();
     }

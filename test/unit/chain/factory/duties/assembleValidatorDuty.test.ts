@@ -1,8 +1,10 @@
-import * as stateTransitionUtils from "../../../../../src/chain/stateTransition/util";
 import sinon from "sinon";
+import {expect} from "chai";
+
+import {config} from "../../../../../src/config/presets/mainnet";
+import * as stateTransitionUtils from "../../../../../src/chain/stateTransition/util";
 import {assembleValidatorDuty} from "../../../../../src/chain/factory/duties";
 import {generateState} from "../../../../utils/state";
-import {expect} from "chai";
 
 describe("assemble validator duty", function () {
 
@@ -22,7 +24,7 @@ describe("assemble validator duty", function () {
     const validatorIndex = 2;
     const state = generateState();
     committeeAssignmentStub.returns({shard: 2, slot: 1, validators: [1, validatorIndex, 5]});
-    const result = assembleValidatorDuty(publicKey, validatorIndex, state, validatorIndex);
+    const result = assembleValidatorDuty(config, publicKey, validatorIndex, state, validatorIndex);
     expect(result).to.not.be.null;
     expect(result.validatorPubkey).to.be.equal(publicKey);
     expect(result.blockProductionSlot).to.be.equal(state.slot);
@@ -36,7 +38,7 @@ describe("assemble validator duty", function () {
     const validatorIndex = 2;
     const state = generateState();
     committeeAssignmentStub.returns({shard: 2, slot: 1, validators: [1, validatorIndex, 5]});
-    const result = assembleValidatorDuty(publicKey, validatorIndex, state, 99);
+    const result = assembleValidatorDuty(config, publicKey, validatorIndex, state, 99);
     expect(result).to.not.be.null;
     expect(result.validatorPubkey).to.be.equal(publicKey);
     expect(result.blockProductionSlot).to.be.equal(null);
@@ -50,7 +52,7 @@ describe("assemble validator duty", function () {
     const validatorIndex = 2;
     const state = generateState();
     committeeAssignmentStub.returns(null);
-    const result = assembleValidatorDuty(publicKey, validatorIndex, state, 99);
+    const result = assembleValidatorDuty(config, publicKey, validatorIndex, state, 99);
     expect(result).to.not.be.null;
     expect(result.validatorPubkey).to.be.equal(publicKey);
     expect(result.blockProductionSlot).to.be.equal(null);

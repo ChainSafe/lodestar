@@ -3,17 +3,20 @@
  */
 
 import {BeaconState, Gwei, ValidatorIndex} from "../../../../types";
-
-import {BASE_REWARD_FACTOR, BASE_REWARDS_PER_EPOCH} from "../../../../constants";
+import {BeaconConfig} from "../../../../config";
 
 import {bnSqrt} from "../../../../util/math";
 
 import {getTotalActiveBalance} from "../util";
 
 
-export function getBaseReward(state: BeaconState, index: ValidatorIndex): Gwei {
-  const totalBalance = getTotalActiveBalance(state);
+export function getBaseReward(
+  config: BeaconConfig,
+  state: BeaconState,
+  index: ValidatorIndex
+): Gwei {
+  const totalBalance = getTotalActiveBalance(config, state);
   const effectiveBalance = state.validatorRegistry[index].effectiveBalance;
-  return effectiveBalance.muln(BASE_REWARD_FACTOR)
-    .div(bnSqrt(totalBalance)).divn(BASE_REWARDS_PER_EPOCH);
+  return effectiveBalance.muln(config.params.BASE_REWARD_FACTOR)
+    .div(bnSqrt(totalBalance)).divn(config.params.BASE_REWARDS_PER_EPOCH);
 }

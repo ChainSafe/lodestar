@@ -2,13 +2,14 @@ import {NewEpochCallback, NewSlotCallback, RpcClient} from "./interface";
 import {Slot} from "../../types";
 import {IValidatorApi} from "../../rpc/api/validator";
 import {intDiv} from "../../util/math";
-import {SECONDS_PER_SLOT} from "../../constants";
 import {slotToEpoch} from "../../chain/stateTransition/util";
 import {IBeaconApi} from "../../rpc/api/beacon";
+import { BeaconConfig } from "../../config";
 
 
 export abstract class AbstractRpcClient implements RpcClient {
 
+  protected config: BeaconConfig;
   private currentSlot: Slot;
 
   private currentEpoch: Slot;
@@ -34,9 +35,9 @@ export abstract class AbstractRpcClient implements RpcClient {
     this.running = true;
     const genesisTime = await this.beacon.getGenesisTime();
     const diffInSeconds = (Date.now() / 1000) - genesisTime;
-    this.currentSlot = intDiv(diffInSeconds, SECONDS_PER_SLOT);
+    this.currentSlot = intDiv(diffInSeconds, this.config.params.SECONDS_PER_SLOT);
     //update slot after remaining seconds until next slot
-    const diffTillNextSlot = (SECONDS_PER_SLOT - diffInSeconds % SECONDS_PER_SLOT) * 1000;
+    const diffTillNextSlot = (this.config.params.SECONDS_PER_SLOT - diffInSeconds % this.config.params.SECONDS_PER_SLOT) * 1000;
     //subscribe to new slots and notify upon new epoch
     this.onNewSlot(this.updateEpoch.bind(this));
     const that = this;
@@ -58,12 +59,12 @@ export abstract class AbstractRpcClient implements RpcClient {
     const that = this;
     setTimeout(
       that.updateSlot.bind(that),
-      SECONDS_PER_SLOT * 1000
+      this.config.params.SECONDS_PER_SLOT * 1000
     );
   }
 
   private updateEpoch(slot: Slot): void {
-    const epoch = slotToEpoch(slot);
+    const epoch = slotToEpoch(this.config, slot);
     if (epoch !== this.currentEpoch && epoch !== 0) {
       this.currentEpoch = epoch;
       this.newEpochCallbacks.forEach((cb) => {

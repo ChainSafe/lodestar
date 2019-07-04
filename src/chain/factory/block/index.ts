@@ -2,8 +2,9 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconBlock, BeaconBlockBody, BeaconBlockHeader, BeaconState, bytes96, Slot} from "../../../types";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
+import {BeaconBlock, BeaconBlockBody, BeaconBlockHeader, BeaconState, bytes96, Slot} from "../../../types";
+import {BeaconConfig} from "../../../config";
 import {BeaconDB} from "../../../db/api";
 import {OpPool} from "../../../opPool";
 import {assembleBody} from "./body";
@@ -11,6 +12,7 @@ import {IEth1Notifier} from "../../../eth1";
 import {stateTransition} from "../../stateTransition";
 
 export async function assembleBlock(
+  config: BeaconConfig,
   db: BeaconDB,
   opPool: OpPool,
   eth1: IEth1Notifier,
@@ -27,21 +29,21 @@ export async function assembleBlock(
     signature: parentBlock.signature,
     slot: parentBlock.slot,
     parentRoot: parentBlock.parentRoot,
-    bodyRoot: hashTreeRoot(parentBlock.body, BeaconBlockBody),
+    bodyRoot: hashTreeRoot(parentBlock.body, config.types.BeaconBlockBody),
   };
   const block: BeaconBlock = {
     slot,
-    parentRoot: signingRoot(parentHeader, BeaconBlockHeader),
+    parentRoot: signingRoot(parentHeader, config.types.BeaconBlockHeader),
     signature: undefined,
     stateRoot: undefined,
-    body: await assembleBody(opPool, eth1, merkleTree, currentState, randao),
+    body: await assembleBody(config, opPool, eth1, merkleTree, currentState, randao),
   };
 
   //This will effectively copy state so we avoid modifying existing state
   const nextState = {...currentState};
-  stateTransition(nextState, block, false, false);
+  stateTransition(config, nextState, block, false, false);
 
-  block.stateRoot = hashTreeRoot(nextState, BeaconState);
+  block.stateRoot = hashTreeRoot(nextState, config.types.BeaconState);
 
   return block;
 }

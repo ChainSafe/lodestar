@@ -1,5 +1,4 @@
 import {number64} from "../types";
-import {DEPOSIT_CONTRACT_ADDRESS} from "../constants";
 import {BaseProvider} from "ethers/providers";
 import {IConfigurationModule} from "../util/config";
 
@@ -36,7 +35,7 @@ export const Eth1Options: IConfigurationModule = {
         {
           name: "network",
           description: "Eth1 network id",
-          type: number64,
+          type: "number",
           configurable: true,
           cli: {
             flag: "networkId"
@@ -50,7 +49,7 @@ export const Eth1Options: IConfigurationModule = {
         {
           name: "deployedAt",
           description: "Block number at which contract is deployed",
-          type: number64,
+          type: "number",
           configurable: true,
           cli: {
             flag: "depositContractBlockNum"
@@ -78,7 +77,7 @@ const config: IEth1Options = {
   depositContract: {
     //block at which contract is deployed
     deployedAt: 0,
-    address: DEPOSIT_CONTRACT_ADDRESS,
+    address: "TBD",
     // eslint-disable-next-line max-len
     // taken from https://github.com/ethereum/deposit_contract/blob/master/deposit_contract/contracts/validator_registration.json
     // eslint-disable-next-line max-len

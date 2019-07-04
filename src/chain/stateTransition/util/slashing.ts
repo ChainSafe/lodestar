@@ -4,18 +4,20 @@
 
 import {equals, serialize} from "@chainsafe/ssz";
 
-import {AttestationData,} from "../../../types";
+import {AttestationData} from "../../../types";
+import {BeaconConfig} from "../../../config";
 
 /**
  * Check if data1 and data2 are slashable according to Casper FFG rules.
  */
 export function isSlashableAttestationData(
+  config: BeaconConfig,
   data1: AttestationData,
   data2: AttestationData
 ): boolean {
   return (
     // Double vote
-    (!equals(data1, data2, AttestationData)
+    (!equals(data1, data2, config.types.AttestationData)
       && data1.targetEpoch === data2.targetEpoch) ||
     // Surround vote
     (data1.sourceEpoch < data2.sourceEpoch &&
