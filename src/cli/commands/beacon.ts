@@ -15,6 +15,8 @@ import deepmerge from "deepmerge";
 import {getTomlConfig, IConfigFile} from "../../util/file";
 import defaults from "../../node/defaults";
 import {ILogger} from "../../logger";
+import {promptPassword} from "../../util/io";
+import fs from "fs";
 
 interface IBeaconCommandOptions {
   db: string;
@@ -22,10 +24,15 @@ interface IBeaconCommandOptions {
   eth1RpcUrl: string;
   rpc: string;
   configFile: string;
-  loggingLevel: string;
+  loggingLevel?: string;
+  validator?: {
+    key: string;
+    db?: string;
+  };
 }
 
 export class BeaconNodeCommand implements CliCommand {
+  public node: BeaconNode;
 
   public register(commander: CommanderStatic): void {
 
@@ -44,7 +51,7 @@ export class BeaconNodeCommand implements CliCommand {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
         try {
-          await this.action(options,logger);
+          await this.action({...options, validator: false},logger);
         } catch (e) {
           logger.error(e.message + '\n' + e.stack);
         }
@@ -70,6 +77,15 @@ export class BeaconNodeCommand implements CliCommand {
       dbName = defaults.db.name;
     }
 
+    let password: string;
+    if(options.validator){
+      if (fs.existsSync(options.validator.key)) {
+        password = await promptPassword("Enter password to decrypt the keystore: ");
+      } else{
+        password = null;
+      }
+    }
+
     let optionsMap: BeaconNodeCtx = {
       db: {
         name: dbName,
@@ -84,15 +100,20 @@ export class BeaconNodeCommand implements CliCommand {
       },
       rpc: {
         apis: this.setupRPC(options.rpc)
-      }
+      },
+      validator: {
+        key: options.validator.key,
+        password: password,
+        db: options.validator.db
+      },
     };
 
     if (options.configFile) {
       optionsMap = deepmerge(parsedConfig, optionsMap, {isMergeableObject: isPlainObject});
     }
 
-    const node = new BeaconNode(optionsMap, {logger});
-    await node.start();
+    this.node = new BeaconNode(optionsMap, {logger});
+    await this.node.start();
   }
 
   private setupRPC(rpc: string): IApiConstructor[] {

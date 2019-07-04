@@ -3,7 +3,7 @@
  */
 
 import deepmerge from "deepmerge";
-import {BeaconDB, LevelDbController} from "../db";
+import {BeaconDB, LevelDbController, ValidatorDB} from "../db";
 import {EthersEth1Notifier, EthersEth1Options, IEth1Notifier} from "../eth1";
 import {Libp2pNetwork, INetworkOptions, NodejsNode, INetwork} from "../network";
 
@@ -19,7 +19,9 @@ import {IApiConstructor} from "../rpc/api/interface";
 import {DBOptions} from '../db';
 import {createPeerId, initializePeerInfo} from "../network/libp2p/util";
 import {ILogger} from "../logger";
+import {initValidator} from "./validator";
 import {ReputationStore} from "../sync/reputation";
+import Validator from "../validator";
 
 
 export interface Service {
@@ -37,6 +39,12 @@ export interface BeaconNodeCtx {
   rpc?: RpcCtx;
   sync?: object;
   opPool?: object;
+
+  validator?: {
+    key: string;
+    password?: string;
+    db?: string;
+  };
 }
 
 interface RpcCtx {
@@ -54,11 +62,12 @@ class BeaconNode {
   public chain: IBeaconChain;
   public opPool: OpPool;
   public rpc: Service;
+  public validator: Validator;
   public sync: Sync;
   public reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: BeaconNodeCtx, {logger}: {logger: ILogger}) {
+  public constructor(opts: BeaconNodeCtx, {logger}: { logger: ILogger }) {
 
     this.conf = deepmerge(
       defaultConf,
@@ -112,6 +121,17 @@ class BeaconNode {
       })
     });
 
+    if (this.conf.validator) {
+      this.validator = initValidator({
+        key: this.conf.validator.key,
+        password: this.conf.validator.password,
+        dbValidator: this.conf.validator.db,
+        chain: this.chain,
+        dbBeacon: this.db,
+        opPool: this.opPool,
+        eth1: this.eth1
+      }, this.logger);
+    }
   }
 
   public async start(): Promise<void> {
@@ -123,6 +143,10 @@ class BeaconNode {
     await this.opPool.start();
     await this.sync.start();
     await this.rpc.start();
+
+    if(this.conf.validator){
+      await this.validator.start();
+    }
   }
 
   public async stop(): Promise<void> {
@@ -134,6 +158,10 @@ class BeaconNode {
     await this.eth1.stop();
     await this.network.stop();
     await this.db.stop();
+
+    if(this.conf.validator){
+      await this.validator.stop();
+    }
   }
 }
 

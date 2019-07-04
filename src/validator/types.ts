@@ -12,6 +12,7 @@ export interface ValidatorCtx {
   rpc?: RpcClient;
   keypair: Keypair;
   db?: IValidatorDB;
+  dbName?: string;
 }
 
 export interface CommitteeAssignment {

@@ -34,20 +34,20 @@ class Validator {
   private db: IValidatorDB;
   private logger: ILogger;
   public isActive: boolean;
+  public isRunning: boolean;
 
 
   public constructor(ctx: ValidatorCtx, logger: ILogger) {
     this.ctx = ctx;
     this.logger = logger;
     this.isActive = false;
+    this.isRunning = false;
     this.db = ctx.db ? ctx.db : new ValidatorDB({
       controller: new LevelDbController({
-        name: 'LodestarValidatorDB'
-      },
-      {
+        name: ctx.dbName
+      }, {
         logger: this.logger
-      }
-      )
+      })
     });
     if(ctx.rpc) {
       this.rpcClient = ctx.rpc;
@@ -59,9 +59,10 @@ class Validator {
   }
 
   /**
-   * Creates a new block proccessing service and starts it.
+   * Creates a new block processing service and starts it.
    */
-  private async start(): Promise<void> {
+  public async start(): Promise<void> {
+    this.isRunning = true;
     await this.setup();
     this.run();
   }
@@ -69,7 +70,10 @@ class Validator {
   /**
    * Stops all validator functions
    */
-  private async stop(): Promise<void> {}
+  public async stop(): Promise<void> {
+    this.isRunning = false;
+    await this.rpcClient.disconnect();
+  }
 
   /**
    * Main method that starts a client.
@@ -121,7 +125,9 @@ class Validator {
       this.logger.info("Chain start has occured!");
       return true;
     }
-    setTimeout(this.isChainLive, 1000);
+    if(this.isRunning) {
+      setTimeout(this.isChainLive, 1000);
+    }
   }
 
   /**
@@ -136,7 +142,9 @@ class Validator {
       this.logger.info("Validator has been processed!");
       return index;
     }
-    setTimeout(this.getValidatorIndex, 1000);
+    if(this.isRunning) {
+      setTimeout(this.getValidatorIndex, 1000);
+    }
   }
 
   private run(): void {
