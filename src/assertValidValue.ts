@@ -24,6 +24,7 @@ export function assertValidValue(value: any, type: FullSSZType): void {
       break;
     case Type.byteList:
       assert(value instanceof Uint8Array || value instanceof Buffer, 'Invalid byte array: not a Uint8Array/Buffer');
+      assert(value.length <= type.maxLength, 'Invalid byte array: longer than max length');
       break;
     case Type.byteVector:
       assert(value instanceof Uint8Array || value instanceof Buffer, 'Invalid byte array: not a Uint8Array/Buffer');
@@ -31,6 +32,7 @@ export function assertValidValue(value: any, type: FullSSZType): void {
       break;
     case Type.list:
       assert(Array.isArray(value), 'Invalid list: not an Array');
+      assert(value.length <= type.maxLength, 'Invalid list: longer than max length');
       value.forEach((element: any, i: number) => {
         try {
           assertValidValue(element, type.elementType);

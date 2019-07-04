@@ -8,9 +8,8 @@ export type Bool = boolean;
 export type Bytes = Buffer | Uint8Array;
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface SerializableArray extends Array<SerializableValue> {}
-export interface SerializableObject {
-  [field: string]: SerializableValue;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface SerializableObject extends Record<string, SerializableValue> {}
 export type SerializableValue = Uint | Bool | Bytes | SerializableArray | SerializableObject;
 
 // Simple types
@@ -18,17 +17,17 @@ export type SerializableValue = Uint | Bool | Bytes | SerializableArray | Serial
 
 export type SimplePrimitiveType = string;
 
-export interface SimpleListType extends Array<AnySSZType> {
-  0: AnySSZType;
+export interface SimpleListType {
+  elementType: AnySSZType;
+  maxLength: number;
 }
 
-export interface SimpleVectorType extends Array<AnySSZType | number> {
-  0: AnySSZType;
-  1: number;
+export interface SimpleVectorType {
+  elementType: AnySSZType;
+  length: number;
 }
 
 export interface SimpleContainerType {
-  name: string;
   fields: [string, AnySSZType][];
 }
 
@@ -56,7 +55,6 @@ export enum Type {
 export interface UintType {
   type: Type.uint;
   byteLength: number;
-  offset: number | BN;
   useNumber: boolean;
 }
 
@@ -64,8 +62,10 @@ export interface BoolType {
   type: Type.bool;
 }
 
+
 export interface ByteListType {
   type: Type.byteList;
+  maxLength: number;
 }
 
 export interface ByteVectorType {
@@ -78,6 +78,7 @@ export type BytesType = ByteListType | ByteVectorType;
 export interface ListType {
   type: Type.list;
   elementType: FullSSZType;
+  maxLength: number;
 }
 
 export interface VectorType {
@@ -90,7 +91,6 @@ export type ArrayType = ListType | VectorType;
 
 export interface ContainerType {
   type: Type.container;
-  name: string;
   fields: [string, FullSSZType][];
 }
 

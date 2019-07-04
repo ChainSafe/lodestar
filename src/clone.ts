@@ -23,12 +23,18 @@ import { parseType } from "./util/types";
  *
  * const buf: Buffer = clone(
  *   Buffer.from("abcd", "hex"),
- *   "bytes"
+ *   {
+ *     elementType: "byte",
+ *     maxLength: 10,
+ *   }
  * );
  *
  * const arr: number[] = clone(
  *   [0, 1, 2, 3, 4, 5],
- *   ["uint32"]
+ *   {
+ *     elementType: "uint32",
+ *     maxLength: 10,
+ *   }
  * );
  *
  * interface myData {
@@ -37,7 +43,6 @@ import { parseType } from "./util/types";
  *   c: Buffer;
  * }
  * const myDataType: SimpleContainerType = {
- *   name: "MyData",
  *   fields: [
  *     ["a", "uint16"],
  *     ["b", "bool"],
@@ -48,7 +53,7 @@ import { parseType } from "./util/types";
  *   {a: 10, b: false, c: Buffer.alloc(96)},
  *   myDataType
  * );
-  * ```
+ * ```
  */
 export function clone(value: any, type: AnySSZType): boolean {
   const _type = parseType(type);

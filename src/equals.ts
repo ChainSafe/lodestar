@@ -24,17 +24,22 @@ import { parseType } from "./util/types";
  * equals(
  *   Buffer.from("abcd", "hex"),
  *   Buffer.from("abcd", "hex"),
- *   "bytes"
+ *   {
+ *     elementType: "byte",
+ *     maxLength: 100,
+ *   }
  * );
  *
  * equals(
  *   [0, 1, 2, 3, 4, 5],
  *   [0, 1, 2, 3, 4, 5],
- *   ["uint32"]
+ *   {
+ *     elementType: "uint32",
+ *     maxLength: 10,
+ *   }
  * );
  *
  * const myDataType: SimpleContainerType = {
- *   name: "MyData",
  *   fields: [
  *     ["a", "uint16"],
  *     ["b", "bool"],

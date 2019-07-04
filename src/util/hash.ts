@@ -47,8 +47,8 @@ function nextPowerOf2 (n: number): number {
 }
 
 /** @ignore */
-export function merkleize(chunks: Buffer[]): Buffer {
-  const lengthToPad = nextPowerOf2(chunks.length) - chunks.length;
+export function merkleize(chunks: Buffer[], padFor: number = 0): Buffer {
+  const lengthToPad = nextPowerOf2(padFor || chunks.length) - chunks.length;
   if (lengthToPad) {
     // Add zeroed chunks as leaf nodes to create full binary tree
     const emptyChunk = Buffer.alloc(BYTES_PER_CHUNK);

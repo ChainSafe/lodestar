@@ -15,6 +15,7 @@ import {
   Uint,
   Bool,
   Bytes,
+  BytesType,
 } from "./types";
 
 import { BYTES_PER_LENGTH_PREFIX } from "./constants";
@@ -51,8 +52,11 @@ import { fixedSize } from "./size";
  * // deserialize a boolean
  * const b: boolean = deserialize(data, "bool");
  *
- * // deserialize a variable-length byte array
- * const buf1: Buffer = deserialize(data, "bytes");
+ * // deserialize a variable-length byte array, max-length required
+ * const buf1: Buffer = deserialize(data, {
+ *   elementType: "byte", // "byte", "uint8", or "number8"
+ *   maxLength: 10, // max number of bytes
+ * });
  *
  * // deserialize a fixed-length byte array
  * const buf2: Buffer = serialize(
@@ -60,17 +64,17 @@ import { fixedSize } from "./size";
  *   "bytes2" // "bytesN", N == length in bytes
  * );
  *
- * // deserialize a variable-length array
- * const arr1: number[] = deserialize(
- *   data,
- *   ["uint32"] // [elementType]
- * );
+ * // deserialize a variable-length array, max-length required
+ * const arr1: number[] = deserialize(data, {
+ *   elementType: "uint32",
+ *   maxLength: 10, // max number of elements
+ * });
  *
  * // deserialize a fixed-length array
- * const arr2: number[] = deserialize(
- *   [0, 1, 2, 3, 4, 5],
- *   ["uint32", 6] // [elementType, arrayLength]
- * );
+ * const arr2: number[] = deserialize([0, 1, 2, 3, 4, 5], {
+ *   elementType: "uint32",
+ *   length: 6,
+ * });
  *
  * // deserialize an object
  * interface myData {
@@ -79,7 +83,6 @@ import { fixedSize } from "./size";
  *   c: Buffer;
  * }
  * const myDataType: SimpleContainerType = {
- *   name: "MyData",
  *   fields: [
  *     ["a", "uint16"], // [fieldName, fieldType]
  *     ["b", "bool"],
@@ -97,6 +100,30 @@ export function deserialize(data: Buffer, type: AnySSZType): any {
   return _deserialize(data, _type, 0, data.length);
 }
 
+/**
+ * Low level deserialize
+ * @ignore
+ * @param type full ssz type
+ * @param start starting index
+ * @param end ending index
+ */
+export function _deserialize(data: Buffer, type: FullSSZType, start: number, end: number): SerializableValue {
+  switch (type.type) {
+    case Type.uint:
+      return _deserializeUint(data, type, start);
+    case Type.bool:
+      return _deserializeBool(data, start);
+    case Type.byteList:
+    case Type.byteVector:
+      return _deserializeByteArray(data, type, start, end);
+    case Type.list:
+    case Type.vector:
+      return _deserializeArray(data, type, start, end);
+    case Type.container:
+      return _deserializeObject(data, type, start, end);
+  }
+}
+
 /** @ignore */
 function _deserializeUint(data: Buffer, type: UintType, start: number): Uint {
   const offset = start + type.byteLength;
@@ -104,7 +131,7 @@ function _deserializeUint(data: Buffer, type: UintType, start: number): Uint {
   if (type.byteLength > 6 && type.useNumber && uintData.equals(Buffer.alloc(type.byteLength, 255))) {
     return Infinity;
   } else {
-    const bn = (new BN(uintData, 16, "le")).sub(new BN(type.offset));
+    const bn = new BN(uintData, 16, "le");
     return (type.useNumber || type.byteLength <= 6) ? bn.toNumber() : bn;
   }
 }
@@ -115,8 +142,11 @@ function _deserializeBool(data: Buffer, start: number): Bool {
 }
 
 /** @ignore */
-function _deserializeByteArray(data: Buffer, start: number, end: number): Bytes {
+function _deserializeByteArray(data: Buffer, type: BytesType, start: number, end: number): Bytes {
   const length = end - start;
+  if (type.type === Type.byteList) {
+    assert(length <= type.maxLength, 'Byte list length greater than max length');
+  }
   const value = Buffer.alloc(length);
   data.copy(value, 0, start, end);
   return value;
@@ -151,7 +181,7 @@ function _deserializeArray(data: Buffer, type: ArrayType, start: number, end: nu
       currentIndex = nextIndex;
       currentOffset = nextOffset;
     }
-    assert(firstOffset === currentIndex, "First offset skipping variable data");
+    assert(firstOffset === currentIndex, "First offset skips variable data");
   } else {
     // all elements fixed-sized
     let index = start;
@@ -167,6 +197,9 @@ function _deserializeArray(data: Buffer, type: ArrayType, start: number, end: nu
   }
   if (type.type === Type.vector) {
     assert(type.length === value.length, "Incorrect deserialized vector length");
+  }
+  if (type.type === Type.list) {
+    assert(type.maxLength >= value.length, "List length greater than max length");
   }
   return value;
 }
@@ -215,28 +248,4 @@ function _deserializeObject(data: Buffer, type: ContainerType, start: number, en
     assert(currentIndex === end, "Not all fixed bytes consumed");
   }
   return value;
-}
-
-/**
- * Low level deserialize
- * @ignore
- * @param type full ssz type
- * @param start starting index
- * @param end ending index
- */
-export function _deserialize(data: Buffer, type: FullSSZType, start: number, end: number): SerializableValue {
-  switch (type.type) {
-    case Type.uint:
-      return _deserializeUint(data, type, start);
-    case Type.bool:
-      return _deserializeBool(data, start);
-    case Type.byteList:
-    case Type.byteVector:
-      return _deserializeByteArray(data, start, end);
-    case Type.list:
-    case Type.vector:
-      return _deserializeArray(data, type, start, end);
-    case Type.container:
-      return _deserializeObject(data, type, start, end);
-  }
 }

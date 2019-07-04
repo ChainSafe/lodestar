@@ -27,7 +27,6 @@ import {
  *   c: Buffer; // <- signature
  * }
  * const myDataType: SimpleContainerType = {
- *   name: "MyData",
  *   fields: [
  *     ["a", "uint16"],
  *     ["b", "bool"],

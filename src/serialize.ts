@@ -44,8 +44,11 @@ import { assertValidValue } from "./assertValidValue";
  * // serialize a boolean
  * buf = serialize(true, "bool");
  *
- * // serialize a variable-length byte array
- * buf = serialize(Buffer.from("abcd", "hex"), "bytes");
+ * // serialize a variable-length byte array, max-length required
+ * buf = serialize(Buffer.from("abcd", "hex"), {
+ *   elementType: "byte", // "byte", "uint8", or "number8"
+ *   maxLength: 10, // max number of bytes
+ * });
  *
  * // serialize a fixed-length byte array
  * buf = serialize(
@@ -53,21 +56,20 @@ import { assertValidValue } from "./assertValidValue";
  *   "bytes2" // "bytesN", N == length in bytes
  * );
  *
- * // serialize a variable-length array
- * buf = serialize(
- *   [0, 1, 2, 3, 4, 5],
- *   ["uint32"] // [elementType]
- * );
+ * // serialize a variable-length array, max-length required
+ * buf = serialize([0, 1, 2, 3, 4, 5], {
+ *   elementType: "uint32",
+ *   maxLength: 10, // max number of elements
+ * });
  *
  * // serialize a fixed-length array
- * buf = serialize(
- *   [0, 1, 2, 3, 4, 5],
- *   ["uint32", 6] // [elementType, arrayLength]
- * );
+ * buf = serialize([0, 1, 2, 3, 4, 5], {
+ *   elementType: "uint32",
+ *   length: 6,
+ * });
  *
  * // serialize an object
  * const myDataType: SimpleContainerType = {
- *   name: "MyData",
  *   fields: [
  *     ["a", "uint16"], // [fieldName, fieldType]
  *     ["b", "bool"],
@@ -92,7 +94,7 @@ function _serializeUint(value: Uint, type: UintType, output: Buffer, start: numb
   if (type.byteLength > 6 && type.useNumber && value === Infinity) {
     bnValue = new BN(Buffer.alloc(type.byteLength, 255));
   } else {
-    bnValue = (new BN(value)).add(new BN(type.offset));
+    bnValue = new BN(value);
   }
   bnValue.toArrayLike(Buffer, "le", type.byteLength)
     .copy(output, start);
