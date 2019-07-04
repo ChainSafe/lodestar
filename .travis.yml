@@ -10,18 +10,29 @@ cache:
 jobs:
   include:
     - stage: Lint and Check types
-      name: Check types
+    - name: Lodestar
       script: yarn run check-types & yarn run lint
+    - name: Eth2.0 Types
+      script: yarn run
 
-    - stage: Tests
-      name: Unit
+
+    - stage: Unit Tests
+      name: Lodestar
       script: yarn run test:unit && yarn run codecov
-    -
-      name: e2e
+    - name: Eth2.0 Types
+      script: yarn run
+
+    - stage: e2e Tests
+      name: Lodestar
       script: yarn run test:e2e
-    -
-      name: spec
+    - name: Eth2.0 Types
+      script: yarn run
+
+    - stage: Spec Tests
+    - name: Lodestar
       script: yarn run test:spec
+    - name: Eth2.0 Types
+      script: yarn run
 
 before_deploy: yarn run build:docs
 
