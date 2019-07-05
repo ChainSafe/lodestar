@@ -1,0 +1,13 @@
+{
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "**/*mock*",
+    "**/stubs/*"
+  ],
+  "extensions": [
+    ".ts"
+  ],
+  "all": true
+}

@@ -1,0 +1,32 @@
+{
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  },
+  "plugins": ["@typescript-eslint"],
+  "extends": ["plugin:@typescript-eslint/recommended"],
+  "rules": {
+    "@typescript-eslint/indent": ["error", 2],
+    "@typescript-eslint/no-require-imports": "error",
+    "@typescript-eslint/interface-name-prefix": "off",
+    "@typescript-eslint/no-use-before-define": "off",
+    "@typescript-eslint/no-unused-vars": ["warn", {
+        "varsIgnorePattern": "^_"
+    }],
+    "@typescript-eslint/explicit-function-return-type": ["warn", {
+        "allowExpressions": true
+    }],
+    "new-parens": "error",
+    "no-caller": "error",
+    "no-bitwise": "off",
+    "no-conditional-assignment": true,
+    "no-consecutive-blank-lines": false,
+    "object-literal-sort-keys": false,
+    "no-console": "warn",
+    "semi": ["warn", "always"],
+    "max-len": ["warn", {
+        "code": 100
+    }],
+    "object-curly-spacing": ["warn", "never"]
+  }
+}

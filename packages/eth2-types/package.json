@@ -2,21 +2,22 @@
   "name": "@chainsafe/eth2-types",
   "version": "0.1.0",
   "description": "> TODO: description",
-  "main": "index.js",
+  "author": "ChainSafe Systems",
+  "license": "GPL-3.0",
+  "main": "lib/index.js",
+  "files": [
+    "lib"
+  ],
   "scripts": {
+    "build": "babel src -x .ts -d lib --source-maps",
     "check-types": "tsc --noEmit --incremental",
     "test": "nyc --cache-dir .nyc_output/.cache -r lcov -e .ts mocha -r ts-node/register 'test/**/*.test.ts' && nyc report"
   },
   "keywords": [],
-  "author": "Gregory Markou <gregorymarkou@gmail.com>",
-  "license": "ISC",
   "homepage": "",
   "directories": {
     "lib": "lib"
   },
-  "files": [
-    "lib"
-  ],
   "publishConfig": {
     "access": "public"
   },
@@ -25,5 +26,8 @@
     "mocha": "^6.1.4",
     "nyc": "^14.1.1",
     "ts-node": "^8.3.0"
+  },
+  "dependencies": {
+    "@babel/cli": "7.2.3"
   }
 }
