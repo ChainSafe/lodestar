@@ -1,3 +1,4 @@
+import {} from "mocha";
 import { assert } from "chai";
 import fs from "fs";
 import * as sszTypes from "../src/types";
