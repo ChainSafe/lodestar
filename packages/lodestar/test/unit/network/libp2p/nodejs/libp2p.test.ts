@@ -2,7 +2,7 @@ import {assert} from "chai";
 import promisify from "promisify-es6";
 
 import {NodejsNode} from "../../../../../src/network/libp2p/nodejs";
-import {createNode} from "../src/util";
+import {createNode} from "../util";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 

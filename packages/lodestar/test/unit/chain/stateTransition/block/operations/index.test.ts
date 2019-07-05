@@ -30,7 +30,7 @@ import {
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../../../utils/slashings";
 import {generateAttestationData, generateEmptyAttestation} from "../../../../../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../../../../../utils/voluntaryExits";
-import {MAX_TRANSFERS} from "@chainsafe/eth2-types/minimal";
+import {MAX_TRANSFERS} from "@chainsafe/eth2-types";
 
 
 describe('process block - process operations', function () {
