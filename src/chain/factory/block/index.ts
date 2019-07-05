@@ -7,8 +7,8 @@ import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {BeaconDB} from "../../../db/api";
 import {OpPool} from "../../../opPool";
 import {assembleBody} from "./body";
-import {processBlock} from "../../stateTransition/block";
 import {IEth1Notifier} from "../../../eth1";
+import {stateTransition} from "../../stateTransition";
 
 export async function assembleBlock(
   db: BeaconDB,
@@ -39,7 +39,7 @@ export async function assembleBlock(
 
   //This will effectively copy state so we avoid modifying existing state
   const nextState = {...currentState};
-  processBlock(nextState, block, false);
+  stateTransition(nextState, block, false, false);
 
   block.stateRoot = hashTreeRoot(nextState, BeaconState);
 
