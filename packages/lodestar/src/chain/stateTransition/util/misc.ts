@@ -14,9 +14,6 @@ import {
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
   ZERO_HASH,
-} from "../../../../../eth2-types/src/constants";
-
-import {
   BeaconBlock,
   BeaconBlockBody,
   BeaconBlockHeader,
@@ -27,7 +24,7 @@ import {
   Slot,
   ValidatorIndex,
   bytes4,
-} from "../../../../types";
+} from '@chainsafe/eth2-types';
 
 import {getCrosslinkCommittee, getEpochCommitteeCount, getEpochStartShard} from "./crosslinkCommittee";
 

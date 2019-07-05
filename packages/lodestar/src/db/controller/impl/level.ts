@@ -4,10 +4,10 @@
 
 import {LevelUp} from "levelup";
 import {SearchOptions} from "../interface";
-import {Attestation} from "../../../../types";
+import {Attestation} from "@chainsafe/eth2-types";
 import {DBOptions, IDatabaseController} from "../interface";
 import {EventEmitter} from "events";
-import level from "packages/beaconChain/src/db/controller/impl/level";
+import level from "level";
 import {ILogger} from "../../../logger";
 
 export interface LevelDBOptions extends DBOptions {

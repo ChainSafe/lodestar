@@ -5,11 +5,11 @@ import {
   MAX_DEPOSITS,
   MAX_PROPOSER_SLASHINGS, MAX_TRANSFERS,
   MAX_VOLUNTARY_EXITS
-} from "../../../../../../eth2-types/src/constants";
+} from "@chainsafe/eth2-types";
 import {
   BeaconBlockBody, BeaconState, ProposerSlashing, AttesterSlashing, Attestation,
   Deposit, VoluntaryExit, Transfer,
-} from "../../../../../types";
+} from "@chainsafe/eth2-types";
 
 import {processProposerSlashing} from "./proposerSlashing";
 import {processAttesterSlashing} from "./attesterSlashing";

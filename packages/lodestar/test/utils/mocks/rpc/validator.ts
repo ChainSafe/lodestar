@@ -13,12 +13,12 @@ import {
   Slot,
   ValidatorDuty,
   ValidatorIndex
-} from "../../../../../types";
+} from "@chainsafe/eth2-types";
 
-import {getEmptyBlock} from "../../../../chain/genesis";
+import {getEmptyBlock} from "../../../../src/chain/genesis";
 
-import {IValidatorApi} from "../../../../rpc/api/validator";
-import {CommitteeAssignment} from "../../../../validator/types";
+import {IValidatorApi} from "../../../../src/rpc/api/validator";
+import {CommitteeAssignment} from "@chainsafe/eth2-types";
 
 export interface MockValidatorAPIOpts {
   head?: BeaconBlock;

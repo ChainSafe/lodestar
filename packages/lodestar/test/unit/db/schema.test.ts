@@ -1,7 +1,7 @@
 import {assert} from "chai";
 import BN from "bn.js";
 
-import {Bucket, encodeKey} from "../../../db/schema";
+import {Bucket, encodeKey} from "../../../src/db/schema";
 
 
 describe("encodeKey", () => {

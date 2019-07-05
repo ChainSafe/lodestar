@@ -5,9 +5,9 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import {equals} from "@chainsafe/ssz";
-import {Attestation, BeaconState} from "../../../../../types";
+import {Attestation, BeaconState} from "@chainsafe/eth2-types";
 
-import {processAttestation} from "../../../../chain/stateTransition/block/operations";
+import {processAttestation} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(

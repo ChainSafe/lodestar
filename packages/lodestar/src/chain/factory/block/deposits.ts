@@ -3,7 +3,7 @@
  */
 
 import {hashTreeRoot} from "@chainsafe/ssz";
-import {BeaconState, Deposit, DepositData, Eth1Data} from "../../../../types";
+import {BeaconState, Deposit, DepositData, Eth1Data} from "@chainsafe/eth2-types";
 import {MAX_DEPOSITS} from "../../../../../eth2-types/src/constants";
 import {OpPool} from "../../../opPool";
 import {IProgressiveMerkleTree} from "../../../util/merkleTree";

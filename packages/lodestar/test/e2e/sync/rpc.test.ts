@@ -2,15 +2,15 @@ import {expect} from "chai";
 import sinon from "sinon";
 import BN from "bn.js";
 
-import {Method} from "../../../constants";
-import {SyncRpc} from "../../../sync/rpc";
-import {ReputationStore} from "../../../sync/reputation";
-import {Libp2pNetwork, INetworkOptions} from "../../../network";
-import {BeaconDB, LevelDbController} from "../../../db";
+import {Method} from "@chainsafe/eth2-types";
+import {SyncRpc} from "../../../src/sync/rpc";
+import {ReputationStore} from "../../../src/sync/reputation";
+import {Libp2pNetwork, INetworkOptions} from "../../../src/network";
+import {BeaconDB, LevelDbController} from "../../../src/db";
 
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../unit/network/libp2p/util";
-import {WinstonLogger} from "../../../logger";
+import {WinstonLogger} from "../../../src/logger";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {

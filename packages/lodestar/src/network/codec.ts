@@ -10,7 +10,7 @@ import {
   BeaconStatesRequest, RequestBody,
   BeaconBlockRootsResponse, BeaconBlockHeadersResponse, BeaconBlockBodiesResponse,
   BeaconStatesResponse, ResponseBody, WireResponse, WireRequest,
-} from "../../types";
+} from "@chainsafe/eth2-types";
 import {RequestId, Method} from "../../../eth2-types/src/constants";
 
 // Encode

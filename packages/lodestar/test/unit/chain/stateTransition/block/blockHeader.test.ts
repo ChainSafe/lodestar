@@ -4,11 +4,11 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import {signingRoot} from "@chainsafe/ssz";
 
-import {BeaconBlockHeader} from "../../../../../../types";
-import {EMPTY_SIGNATURE} from "../../../../../constants";
-import * as utils from "../../../../../chain/stateTransition/util";
-import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../../chain/stateTransition/util";
-import {processBlockHeader} from "../../../../../chain/stateTransition/block/blockHeader";
+import {BeaconBlockHeader} from "@chainsafe/eth2-types";
+import {EMPTY_SIGNATURE} from "@chainsafe/eth2-types";
+import * as utils from "../../../../../src/chain/stateTransition/util";
+import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../../src/chain/stateTransition/util";
+import {processBlockHeader} from "../../../../../src/chain/stateTransition/block/blockHeader";
 
 import {generateState} from "../../../../utils/state";
 import {generateEmptyBlock} from "../../../../utils/block";

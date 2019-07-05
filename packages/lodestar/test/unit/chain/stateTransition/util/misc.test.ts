@@ -1,11 +1,11 @@
 import BN from "bn.js";
 import { assert } from "chai";
 
-import { Fork } from "../../../../../../types";
+import { Fork } from "@chainsafe/eth2-types";
 import {
   GENESIS_SLOT,
   SLOTS_PER_HISTORICAL_ROOT,
-} from "../../../../../constants";
+} from "@chainsafe/eth2-types";
 
 import {
   getBeaconProposerIndex,
@@ -13,7 +13,7 @@ import {
   getBlockRoot,
   getDomain,
   getChurnLimit,
-} from "../../../../../chain/stateTransition/util/misc";
+} from "../../../../../src/chain/stateTransition/util/misc";
 
 import { generateState } from "../../../../utils/state";
 

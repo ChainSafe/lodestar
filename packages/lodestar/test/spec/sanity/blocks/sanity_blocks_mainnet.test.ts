@@ -6,8 +6,8 @@ import {hashTreeRoot, equals} from "@chainsafe/ssz";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 
-import {stateTransition} from "../../../../chain/stateTransition";
-import {BeaconBlock, BeaconState, Validator} from "../../../../../types";
+import {stateTransition} from "../../../../src/chain/stateTransition";
+import {BeaconBlock, BeaconState, Validator} from "@chainsafe/eth2-types";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(

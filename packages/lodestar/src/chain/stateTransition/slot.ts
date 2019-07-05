@@ -8,7 +8,7 @@ import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {
   BeaconState,
   BeaconBlockHeader, Slot,
-} from "../../../types";
+} from "@chainsafe/eth2-types";
 
 import {
   SLOTS_PER_EPOCH,

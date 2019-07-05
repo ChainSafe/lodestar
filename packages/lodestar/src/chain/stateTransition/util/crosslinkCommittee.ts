@@ -12,7 +12,7 @@ import {
   Slot,
   ValidatorIndex,
   AttestationData,
-} from "../../../../types";
+} from "@chainsafe/eth2-types";
 
 import {
   SHARD_COUNT,

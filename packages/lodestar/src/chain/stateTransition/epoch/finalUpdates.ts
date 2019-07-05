@@ -4,7 +4,7 @@
 
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {BeaconState, HistoricalBatch, ValidatorIndex} from "../../../../types";
+import {BeaconState, HistoricalBatch, ValidatorIndex} from "@chainsafe/eth2-types";
 
 import {
   ACTIVATION_EXIT_DELAY,

@@ -1,14 +1,14 @@
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
-import {RpcClientOverInstance} from "../../../../validator/rpc";
+import {RpcClientOverInstance} from "../../../../src/validator/rpc";
 import sinon from "sinon";
 import {generateFork} from "../../../utils/fork";
 import {expect} from "chai";
-import {ValidatorApi} from "../../../../rpc/api/validator";
+import {ValidatorApi} from "../../../../src/rpc/api/validator";
 import {generateAttestationData} from "../../../utils/attestation";
-import {AttestationService} from "../../../../validator/services/attestation";
-import {slotToEpoch} from "../../../../chain/stateTransition/util";
-import {ValidatorDB} from "../../../../db/api";
-import {ILogger, WinstonLogger} from "../../../../logger";
+import {AttestationService} from "../../../../src/validator/services/attestation";
+import {slotToEpoch} from "../../../../src/chain/stateTransition/util";
+import {ValidatorDB} from "../../../../src/db/api";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 describe('validator attestation service', function () {
 

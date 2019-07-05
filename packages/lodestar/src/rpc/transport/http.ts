@@ -4,7 +4,7 @@
 
 import {LikeSocketServer} from "../protocol";
 import {LikeSocket} from "noice-json-rpc";
-import http from "packages/beaconChain/src/rpc/transport/http";
+import http from "http";
 import promisify from "promisify-es6";
 import {ILogger} from "../../logger";
 

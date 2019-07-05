@@ -1,6 +1,6 @@
-import * as stateTransitionUtils from "../../../../../chain/stateTransition/util";
+import * as stateTransitionUtils from "../../../../../src/chain/stateTransition/util";
 import sinon from "sinon";
-import {assembleValidatorDuty} from "../../../../../chain/factory/duties";
+import {assembleValidatorDuty} from "../../../../../src/chain/factory/duties";
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 

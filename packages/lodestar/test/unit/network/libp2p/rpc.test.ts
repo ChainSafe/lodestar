@@ -2,15 +2,15 @@ import {assert, expect} from "chai";
 import BN from "bn.js";
 import promisify from "promisify-es6";
 
-import {NetworkRpc} from "../../../../network/libp2p/rpc";
+import {NetworkRpc} from "../../../../src/network/libp2p/rpc";
 
 import {createNode} from "./util";
-import {NodejsNode} from "../../../../network/libp2p/nodejs";
-import {Method} from "../../../../constants";
-import {Hello} from "../../../../../types";
-import {ILogger, WinstonLogger} from "../../../../logger";
+import {NodejsNode} from "../../../../src/network/libp2p/nodejs";
+import {Method} from "@chainsafe/eth2-types";
+import {Hello} from "@chainsafe/eth2-types";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
-import networkDefaults from "../../../../network/defaults";
+import networkDefaults from "../../../../src/network/defaults";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 

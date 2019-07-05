@@ -1,8 +1,8 @@
 import {assert} from "chai";
 
-import {BeaconState, Epoch, Slot} from "../../../../../../types";
+import {BeaconState, Epoch, Slot} from "@chainsafe/eth2-types";
 
-import {GENESIS_SLOT, ACTIVATION_EXIT_DELAY} from "../../../../../constants";
+import {GENESIS_SLOT, ACTIVATION_EXIT_DELAY} from "@chainsafe/eth2-types";
 
 import {
   getEpochStartSlot,
@@ -10,7 +10,7 @@ import {
   getCurrentEpoch,
   getDelayedActivationExitEpoch,
   slotToEpoch,
-} from "../../../../../chain/stateTransition/util/epoch";
+} from "../../../../../src/chain/stateTransition/util/epoch";
 
 import {generateState} from "../../../../utils/state";
 

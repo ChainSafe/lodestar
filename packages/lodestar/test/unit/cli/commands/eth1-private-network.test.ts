@@ -1,8 +1,8 @@
 import {expect} from 'chai';
-import {Eth1PrivateNetworkCommand} from "../../../../cli/commands";
+import {Eth1PrivateNetworkCommand} from "../../../../src/cli/commands";
 
 import program from "commander";
-import {ILogger, WinstonLogger} from "../../../../logger";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 
 describe('[CLI] eth1:dev', () => {

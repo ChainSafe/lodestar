@@ -4,11 +4,11 @@ import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 
-import {MAX_EFFECTIVE_BALANCE} from "../../../../../../constants";
-import * as utils from "../../../../../../chain/stateTransition/util";
-import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../../../chain/stateTransition/util";
-import {processDeposit} from "../../../../../../chain/stateTransition/block/operations";
-import * as merkleUtil from "../../../../../../util/merkleTree";
+import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/eth2-types";
+import * as utils from "../../../../../../src/chain/stateTransition/util";
+import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../../../src/chain/stateTransition/util";
+import {processDeposit} from "../../../../../../src/chain/stateTransition/block/operations";
+import * as merkleUtil from "../../../../../../src/util/merkleTree";
 
 import {generateState} from "../../../../../utils/state";
 import {generateDeposit} from "../../../../../utils/deposit";

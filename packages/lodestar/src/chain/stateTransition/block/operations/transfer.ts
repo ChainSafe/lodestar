@@ -10,7 +10,7 @@ import bls from "@chainsafe/bls-js";
 import {
   BeaconState,
   Transfer,
-} from "../../../../../types";
+} from "@chainsafe/eth2-types";
 
 import {
   BLS_WITHDRAWAL_PREFIX_BYTE,

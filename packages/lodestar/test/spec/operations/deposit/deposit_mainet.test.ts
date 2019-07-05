@@ -5,9 +5,9 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import {equals} from "@chainsafe/ssz";
 import sinon from "sinon";
-import {processDeposit} from "../../../../chain/stateTransition/block/operations";
+import {processDeposit} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
-import {BeaconState, Deposit} from "../../../../../types";
+import {BeaconState, Deposit} from "@chainsafe/eth2-types";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/deposit/deposit_mainnet.yaml"),

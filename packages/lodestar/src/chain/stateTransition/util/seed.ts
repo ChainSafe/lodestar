@@ -12,7 +12,7 @@ import {
   BeaconState,
   bytes32,
   Epoch,
-} from "../../../../types";
+} from "@chainsafe/eth2-types";
 
 
 import {intToBytes} from "../../../util/bytes";

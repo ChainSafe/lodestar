@@ -2,7 +2,7 @@
  * @module chain/stateTransition/epoch
  */
 
-import {BeaconState} from "../../../../types";
+import {BeaconState} from "@chainsafe/eth2-types";
 
 import {
   LATEST_SLASHED_EXIT_LENGTH, MIN_SLASHING_PENALTY_QUOTIENT,

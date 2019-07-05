@@ -7,12 +7,12 @@ import {
   getMatchingSourceAttestations,
   getMatchingTargetAttestations,
   getTotalActiveBalance, getUnslashedAttestingIndices
-} from "../../../../../chain/stateTransition/epoch/util";
-import * as utils from "../../../../../chain/stateTransition/util";
-import {getAttestationDataSlot} from "../../../../../chain/stateTransition/util";
-import {FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "../../../../../constants";
+} from "../../../../../src/chain/stateTransition/epoch/util";
+import * as utils from "../../../../../src/chain/stateTransition/util";
+import {getAttestationDataSlot} from "../../../../../src/chain/stateTransition/util";
+import {FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/eth2-types";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
-import {getAttestingIndices} from "../../../../../chain/stateTransition/util";
+import {getAttestingIndices} from "../../../../../src/chain/stateTransition/util";
 import {generateValidator} from "../../../../utils/validator";
 import BN from "bn.js";
 

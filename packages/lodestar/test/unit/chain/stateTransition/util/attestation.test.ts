@@ -4,7 +4,7 @@ import { assert } from "chai";
 import {
   getBitfieldBit,
   verifyBitfield
-} from "../../../../../chain/stateTransition/util";
+} from "../../../../../src/chain/stateTransition/util";
 
 
 describe("getBitfieldBit", () => {

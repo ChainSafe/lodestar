@@ -1,7 +1,7 @@
-import {Deposit} from "../../../types";
-import {EMPTY_SIGNATURE} from "../../constants";
+import {Deposit} from "@chainsafe/eth2-types";
+import {EMPTY_SIGNATURE} from "@chainsafe/eth2-types";
 import BN from "bn.js";
-import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants/minimal";
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "@chainsafe/eth2-types";
 
 /**
  * Generates a fake attestation data for test purposes.

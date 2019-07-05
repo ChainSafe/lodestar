@@ -2,9 +2,9 @@
  * @module rpc/transport
  */
 
-import * as http from "packages/beaconChain/src/rpc/transport/http";
+import * as http from "http";
 import promisify from "promisify-es6";
-import WebSocket from "packages/beaconChain/src/rpc/transport/ws";
+import WebSocket from "ws";
 import {LikeSocketServer} from "../protocol";
 
 export interface WSServerOpts {

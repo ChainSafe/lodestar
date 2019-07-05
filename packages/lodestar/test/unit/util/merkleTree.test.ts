@@ -3,10 +3,10 @@ import { assert, expect } from "chai";
 import {
   ProgressiveMerkleTree,
   verifyMerkleBranch,
-} from "../../../util/merkleTree";
+} from "../../../src/util/merkleTree";
 import {deserialize} from "@chainsafe/ssz";
-import {MerkleTree} from "../../../../types";
-import {LightProgressiveMerkleTree} from "../../../util/merkleTree/lightMerkleTree";
+import {MerkleTree} from "@chainsafe/eth2-types";
+import {LightProgressiveMerkleTree} from "../../../src/util/merkleTree/lightMerkleTree";
 
 
 describe('util/merkleTree', function() {

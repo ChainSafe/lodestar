@@ -3,10 +3,10 @@
  */
 
 import {EventEmitter} from "events";
-import {Contract, ethers} from "packages/beaconChain/src/eth1/impl/ethers";
+import {Contract, ethers} from "ethers";
 import {deserialize} from "@chainsafe/ssz";
 
-import {bytes32, Deposit, Eth1Data, Gwei, number64} from "../../../types";
+import {bytes32, Deposit, Eth1Data, Gwei, number64} from "@chainsafe/eth2-types";
 
 import {IEth1Notifier, IEth1Options} from "../interface";
 import {isValidAddress} from "../../util/address";

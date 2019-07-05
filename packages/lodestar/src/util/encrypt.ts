@@ -2,7 +2,7 @@
  * @module util/encrypt
  */
 
-import crypto from "packages/beaconChain/src/util/crypto";
+import crypto from "crypto";
 
 const algorithm = "aes256";
 const inputEncoding = "utf8";

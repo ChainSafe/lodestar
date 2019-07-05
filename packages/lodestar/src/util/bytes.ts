@@ -4,7 +4,7 @@
 
 import BN from "bn.js";
 
-import {bytes} from "../../types";
+import {bytes} from "@chainsafe/eth2-types";
 import {PrivateKey} from '@chainsafe/bls-js/lib/privateKey';
 
 /**

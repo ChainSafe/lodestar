@@ -1,8 +1,8 @@
-import {RpcClientOverInstance} from "../../../../validator/rpc";
+import {RpcClientOverInstance} from "../../../../src/validator/rpc";
 import {MockBeaconApi} from "../../../utils/mocks/rpc/beacon";
 import sinon from "sinon";
 import {expect} from "chai";
-import {SECONDS_PER_SLOT, SLOTS_PER_EPOCH} from "../../../../constants";
+import {SECONDS_PER_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/eth2-types";
 
 describe('RpcClientOverInstance test', function() {
 

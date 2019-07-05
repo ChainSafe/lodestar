@@ -1,16 +1,16 @@
-import BlockProposingService from "../../../../validator/services/block";
+import BlockProposingService from "../../../../src/validator/services/block";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
-import {RpcClientOverInstance} from "../../../../validator/rpc";
+import {RpcClientOverInstance} from "../../../../src/validator/rpc";
 import sinon from "sinon";
 import {generateFork} from "../../../utils/fork";
 import {expect} from "chai";
-import {ValidatorApi} from "../../../../rpc/api/validator";
+import {ValidatorApi} from "../../../../src/rpc/api/validator";
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
-import {BeaconApi} from "../../../../rpc/api/beacon";
-import {SLOTS_PER_EPOCH} from "../../../../constants";
-import {ValidatorDB} from "../../../../db/api";
-import {ILogger, WinstonLogger} from "../../../../logger";
+import {BeaconApi} from "../../../../src/rpc/api/beacon";
+import {SLOTS_PER_EPOCH} from "@chainsafe/eth2-types";
+import {ValidatorDB} from "../../../../src/db/api";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 describe('block proposing service', function () {
 

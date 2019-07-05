@@ -1,6 +1,6 @@
 import {assert, expect} from "chai";
 
-import {encryptKey, decryptKey} from "../../../util/encrypt";
+import {encryptKey, decryptKey} from "../../../src/util/encrypt";
 
 describe("util/encrypt", function() {
   const password = "testSecret";

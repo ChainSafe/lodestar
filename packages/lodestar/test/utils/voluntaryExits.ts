@@ -1,4 +1,4 @@
-import {VoluntaryExit} from "../../../types";
+import {VoluntaryExit} from "@chainsafe/eth2-types";
 
 export function generateEmptyVoluntaryExit(): VoluntaryExit {
   return {

@@ -5,8 +5,8 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import {equals} from "@chainsafe/ssz";
-import {processProposerSlashing} from "../../../../chain/stateTransition/block/operations";
-import {BeaconState, ProposerSlashing} from "../../../../../types";
+import {processProposerSlashing} from "../../../../src/chain/stateTransition/block/operations";
+import {BeaconState, ProposerSlashing} from "@chainsafe/eth2-types";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(

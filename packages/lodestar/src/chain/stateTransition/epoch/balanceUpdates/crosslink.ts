@@ -4,7 +4,7 @@
 
 import BN from "bn.js";
 
-import {BeaconState, Gwei} from "../../../../../types";
+import {BeaconState, Gwei} from "@chainsafe/eth2-types";
 import {SHARD_COUNT} from "../../../../../../eth2-types/src/constants";
 
 import {

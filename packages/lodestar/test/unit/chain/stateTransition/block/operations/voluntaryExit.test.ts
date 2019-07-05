@@ -10,11 +10,11 @@ import {
   MAX_VOLUNTARY_EXITS,
   PERSISTENT_COMMITTEE_PERIOD,
   SLOTS_PER_EPOCH
-} from "../../../../../../constants";
-import {VoluntaryExit} from "../../../../../../../types";
-import * as utils from "../../../../../../chain/stateTransition/util";
-import {getDomain, initiateValidatorExit} from "../../../../../../chain/stateTransition/util";
-import {processVoluntaryExit} from "../../../../../../chain/stateTransition/block/operations";
+} from "@chainsafe/eth2-types";
+import {VoluntaryExit} from "@chainsafe/eth2-types";
+import * as utils from "../../../../../../src/chain/stateTransition/util";
+import {getDomain, initiateValidatorExit} from "../../../../../../src/chain/stateTransition/util";
+import {processVoluntaryExit} from "../../../../../../src/chain/stateTransition/block/operations";
 
 import {generateValidator} from "../../../../../utils/validator";
 import {generateEmptyVoluntaryExit} from "../../../../../utils/voluntaryExits";

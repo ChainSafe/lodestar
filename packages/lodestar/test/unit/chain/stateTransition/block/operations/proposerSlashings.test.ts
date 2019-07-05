@@ -3,9 +3,9 @@ import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 
-import {MAX_PROPOSER_SLASHINGS, SLOTS_PER_EPOCH} from "../../../../../../constants";
-import {processProposerSlashing} from "../../../../../../chain/stateTransition/block/operations";
-import * as utils from "../../../../../../chain/stateTransition/util";
+import {MAX_PROPOSER_SLASHINGS, SLOTS_PER_EPOCH} from "@chainsafe/eth2-types";
+import {processProposerSlashing} from "../../../../../../src/chain/stateTransition/block/operations";
+import * as utils from "../../../../../../src/chain/stateTransition/util";
 
 import {generateEmptyProposerSlashing} from "../../../../../utils/slashings";
 import {generateValidator} from "../../../../../utils/validator";

@@ -1,5 +1,5 @@
 import {expect, assert} from "chai";
-import Keystore from "../../../../validator/keystore";
+import Keystore from "../../../../src/validator/keystore";
 import fs from "fs";
 
 describe("validator/keystore", function() {

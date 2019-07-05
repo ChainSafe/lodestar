@@ -6,7 +6,7 @@ import assert from "assert";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls-js";
 
-import {BeaconState, Deposit, DepositData, Validator} from "../../../../../types";
+import {BeaconState, Deposit, DepositData, Validator} from "@chainsafe/eth2-types";
 
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,

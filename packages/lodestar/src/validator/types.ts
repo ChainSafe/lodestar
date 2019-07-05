@@ -2,7 +2,7 @@
  * @module validator
  */
 
-import {Shard, Slot, ValidatorIndex} from "../../types";
+import {Shard, Slot, ValidatorIndex} from "@chainsafe/eth2-types";
 import {RpcClient} from "./rpc";
 import {Keypair} from "@chainsafe/bls-js/lib/keypair";
 import {IValidatorDB} from "../db/api/validator/interface";

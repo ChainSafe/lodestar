@@ -15,7 +15,7 @@ import {
   uint64, ValidatorIndex,
   VoluntaryExit,
   number64
-} from "../../../../types";
+} from "@chainsafe/eth2-types";
 
 import {Bucket, encodeKey, Key} from "../../schema";
 

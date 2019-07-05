@@ -2,7 +2,7 @@
  * @module chain/stateTransition/epoch
  */
 
-import {BeaconState} from "../../../../types";
+import {BeaconState} from "@chainsafe/eth2-types";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE, EJECTION_BALANCE} from "../../../../../eth2-types/src/constants";
 
 import {

@@ -14,7 +14,7 @@ import {
   Transfer,
   VoluntaryExit,
   BeaconBlockBody
-} from "../../types";
+} from "@chainsafe/eth2-types";
 
 import {BeaconChain} from "../chain";
 import {BeaconDB} from "../db";

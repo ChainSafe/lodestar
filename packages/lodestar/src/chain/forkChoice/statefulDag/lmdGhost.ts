@@ -10,7 +10,7 @@ import {
   Gwei,
   Slot,
   ValidatorIndex,
-} from "../../../../types";
+} from "@chainsafe/eth2-types";
 
 import {LMDGHOST} from "../interface";
 

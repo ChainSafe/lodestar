@@ -5,8 +5,8 @@ import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import {equals} from "@chainsafe/ssz";
-import {processAttesterSlashing} from "../../../../chain/stateTransition/block/operations";
-import {BeaconState, AttesterSlashing} from "../../../../../types";
+import {processAttesterSlashing} from "../../../../src/chain/stateTransition/block/operations";
+import {BeaconState, AttesterSlashing} from "@chainsafe/eth2-types";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(

@@ -1,9 +1,9 @@
 import sinon from "sinon";
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
-import {BeaconDB} from "../../../../../db/api";
+import {BeaconDB} from "../../../../../src/db/api";
 import {generateEmptyBlock} from "../../../../utils/block";
-import {assembleAttestationData} from "../../../../../chain/factory/attestation/data";
+import {assembleAttestationData} from "../../../../../src/chain/factory/attestation/data";
 
 describe("assemble attestation data", function () {
 

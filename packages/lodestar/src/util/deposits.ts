@@ -1,4 +1,4 @@
-import {Deposit} from "../../types";
+import {Deposit} from "@chainsafe/eth2-types";
 import {MAX_DEPOSITS} from "../../../eth2-types/src/constants";
 
 export function processSortedDeposits(

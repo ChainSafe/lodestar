@@ -12,7 +12,7 @@ import {
   BeaconBlock,
   BeaconState,
   BeaconBlockHeader,
-} from "../../../../types";
+} from "@chainsafe/eth2-types";
 
 import {Domain} from "../../../../../eth2-types/src/constants";
 

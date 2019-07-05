@@ -1,6 +1,6 @@
-import {AttesterSlashing, ProposerSlashing} from "../../../types";
+import {AttesterSlashing, ProposerSlashing} from "@chainsafe/eth2-types";
 import {generateEmptyBlock} from "./block";
-import {getTemporaryBlockHeader} from "../../chain/stateTransition/util";
+import {getTemporaryBlockHeader} from "../../src/chain/stateTransition/util";
 import {generateEmptyAttestation} from "./attestation";
 
 

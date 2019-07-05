@@ -5,13 +5,13 @@ import {
   GENESIS_SLOT,
   LATEST_RANDAO_MIXES_LENGTH,
   SLOTS_PER_EPOCH,
-} from "../../../../../constants";
+} from "@chainsafe/eth2-types";
 
 import {
   getRandaoMix,
   getActiveIndexRoot,
   generateSeed,
-} from "../../../../../chain/stateTransition/util/seed";
+} from "../../../../../src/chain/stateTransition/util/seed";
 
 import { generateState } from "../../../../utils/state";
 

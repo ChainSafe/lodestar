@@ -2,13 +2,13 @@ import {assert} from "chai";
 import {ethers} from "ethers";
 import sinon from "sinon";
 
-import {Eth1Wallet, EthersEth1Notifier} from "../../../eth1";
-import defaults from "../../../eth1/dev/defaults";
-import {PrivateEth1Network} from "../../../eth1/dev";
-import {BeaconDB} from "../../../db/api";
-import {PouchDbController} from "../../../db";
-import {ILogger, WinstonLogger} from "../../../logger";
-import {OpPool} from "../../../opPool";
+import {Eth1Wallet, EthersEth1Notifier} from "../../../src/eth1";
+import defaults from "../../../src/eth1/dev/defaults";
+import {PrivateEth1Network} from "../../../src/eth1/dev";
+import {BeaconDB} from "../../../src/db/api";
+import {PouchDbController} from "../../../src/db";
+import {ILogger, WinstonLogger} from "../../../src/logger";
+import {OpPool} from "../../../src/opPool";
 
 describe("Eth1Notifier - using deployed contract", () => {
 

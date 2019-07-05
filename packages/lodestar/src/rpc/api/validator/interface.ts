@@ -13,9 +13,9 @@ import {
   Slot,
   ValidatorDuty,
   ValidatorIndex
-} from "../../../../types";
+} from "@chainsafe/eth2-types";
 import {IApi} from "../interface";
-import {CommitteeAssignment} from "../../../validator/types";
+import {CommitteeAssignment} from "@chainsafe/eth2-types";
 
 /**
  * The API interface defines the calls that can be made from a Validator

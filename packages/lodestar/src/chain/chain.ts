@@ -17,8 +17,8 @@ import {
   number64,
   uint16,
   uint64
-} from "../../types";
-import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT, SECONDS_PER_SLOT} from "../../../eth2-types/src/constants";
+} from "@chainsafe/eth2-types";
+import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT, SECONDS_PER_SLOT} from "@chainsafe/eth2-types";
 
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
@@ -31,7 +31,7 @@ import {stateTransition} from "./stateTransition";
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 import {getAttestingIndices, slotToEpoch} from "./stateTransition/util";
 import {IBeaconChain} from "./interface";
-import {ProgressiveMerkleTree} from "../util/merkleTree/merkleTree";
+import {ProgressiveMerkleTree} from "../util/merkleTree";
 import {processSortedDeposits} from "../util/deposits";
 
 export class BeaconChain extends EventEmitter implements IBeaconChain {

@@ -2,9 +2,9 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {serialize} from "@chainsafe/ssz";
 
-import {Eth1Data} from "../../../../../../types";
-import {SLOTS_PER_ETH1_VOTING_PERIOD} from "../../../../../constants";
-import {processEth1Data} from "../../../../../chain/stateTransition/block/eth1Data";
+import {Eth1Data} from "@chainsafe/eth2-types";
+import {SLOTS_PER_ETH1_VOTING_PERIOD} from "@chainsafe/eth2-types";
+import {processEth1Data} from "../../../../../src/chain/stateTransition/block/eth1Data";
 
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";

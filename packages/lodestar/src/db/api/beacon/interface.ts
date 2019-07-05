@@ -13,7 +13,7 @@ import {
   Slot,
   Transfer, ValidatorIndex,
   VoluntaryExit,
-} from "../../../../types";
+} from "@chainsafe/eth2-types";
 import {IProgressiveMerkleTree} from "../../../util/merkleTree";
 
 /**

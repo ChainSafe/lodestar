@@ -1,18 +1,18 @@
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
-import {processEpoch} from "../../../../../chain/stateTransition/epoch";
-import * as justificationUtils from "../../../../../chain/stateTransition/epoch/justification";
-import {processJustificationAndFinalization} from "../../../../../chain/stateTransition/epoch/justification";
-import * as crosslinkUtils from "../../../../../chain/stateTransition/epoch/crosslinks";
-import * as balanceUpdateUtils from "../../../../../chain/stateTransition/epoch/balanceUpdates";
-import {processRewardsAndPenalties} from "../../../../../chain/stateTransition/epoch/balanceUpdates";
-import * as registryUpdateUtils from "../../../../../chain/stateTransition/epoch/registryUpdates";
-import * as slashingUtils from "../../../../../chain/stateTransition/epoch/slashings";
-import * as finalUtils from "../../../../../chain/stateTransition/epoch/finalUpdates";
-import {processRegistryUpdates} from "../../../../../chain/stateTransition/epoch/registryUpdates";
-import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "../../../../../constants";
-import {processFinalUpdates} from "../../../../../chain/stateTransition/epoch/finalUpdates";
+import {processEpoch} from "../../../../../src/chain/stateTransition/epoch";
+import * as justificationUtils from "../../../../../src/chain/stateTransition/epoch/justification";
+import {processJustificationAndFinalization} from "../../../../../src/chain/stateTransition/epoch/justification";
+import * as crosslinkUtils from "../../../../../src/chain/stateTransition/epoch/crosslinks";
+import * as balanceUpdateUtils from "../../../../../src/chain/stateTransition/epoch/balanceUpdates";
+import {processRewardsAndPenalties} from "../../../../../src/chain/stateTransition/epoch/balanceUpdates";
+import * as registryUpdateUtils from "../../../../../src/chain/stateTransition/epoch/registryUpdates";
+import * as slashingUtils from "../../../../../src/chain/stateTransition/epoch/slashings";
+import * as finalUtils from "../../../../../src/chain/stateTransition/epoch/finalUpdates";
+import {processRegistryUpdates} from "../../../../../src/chain/stateTransition/epoch/registryUpdates";
+import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/eth2-types";
+import {processFinalUpdates} from "../../../../../src/chain/stateTransition/epoch/finalUpdates";
 
 describe('process epoch - crosslinks', function () {
 

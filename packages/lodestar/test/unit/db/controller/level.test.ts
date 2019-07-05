@@ -1,9 +1,9 @@
 import {assert, expect} from "chai";
 import level from "level";
 import leveldown from "leveldown";
-import {LevelDbController} from "../../../../db/controller";
+import {LevelDbController} from "../../../../src/db/controller";
 import promisify from "promisify-es6";
-import {ILogger, WinstonLogger} from "../../../../logger";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 describe("LevelDB controller", () => {
   let logger: ILogger = new WinstonLogger();

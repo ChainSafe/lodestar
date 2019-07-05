@@ -14,7 +14,7 @@ import {
   Slot,
   ValidatorDuty,
   ValidatorIndex
-} from "../../../../types";
+} from "@chainsafe/eth2-types";
 import {BeaconDB} from "../../../db";
 import {BeaconChain} from "../../../chain";
 import {OpPool} from "../../../opPool";
@@ -24,7 +24,7 @@ import {
   getCommitteeAssignment,
   isProposerAtSlot
 } from "../../../chain/stateTransition/util";
-import {CommitteeAssignment} from "../../../validator/types";
+import {CommitteeAssignment} from "@chainsafe/eth2-types";
 import {assembleBlock} from "../../../chain/factory/block";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {assembleValidatorDuty} from "../../../chain/factory/duties";

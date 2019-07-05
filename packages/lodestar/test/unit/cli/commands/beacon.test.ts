@@ -1,8 +1,8 @@
 import {expect} from 'chai';
-import {BeaconNodeCommand} from "../../../../cli/commands";
+import {BeaconNodeCommand} from "../../../../src/cli/commands";
 
 import program from "commander";
-import {ILogger, WinstonLogger} from "../../../../logger";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 
 describe('[CLI] beacon', () => {

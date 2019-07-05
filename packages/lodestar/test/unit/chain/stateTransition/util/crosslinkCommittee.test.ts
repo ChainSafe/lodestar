@@ -7,7 +7,7 @@ import {
   getShardDelta,
   computeCommittee,
   getCrosslinkCommittee,
-} from "../../../../../chain/stateTransition/util/crosslinkCommittee";
+} from "../../../../../src/chain/stateTransition/util/crosslinkCommittee";
 
 
 /*

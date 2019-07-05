@@ -1,12 +1,12 @@
 import {generateEth1Data} from "../../../../utils/eth1Data";
 import sinon from "sinon";
-import {EthersEth1Notifier} from "../../../../../eth1";
-import {bestVoteData, filterValidVotes} from "../../../../../chain/factory/block/eth1Data";
+import {EthersEth1Notifier} from "../../../../../src/eth1";
+import {bestVoteData, filterValidVotes} from "../../../../../src/chain/factory/block/eth1Data";
 import {expect} from "chai";
-import {ETH1_FOLLOW_DISTANCE, ZERO_HASH} from "../../../../../constants";
+import {ETH1_FOLLOW_DISTANCE, ZERO_HASH} from "@chainsafe/eth2-types";
 import {Block} from "ethers/providers";
 import {generateState} from "../../../../utils/state";
-import {Eth1Data} from "../../../../../../types";
+import {Eth1Data} from "@chainsafe/eth2-types";
 
 describe('blockAssembly - eth1 data', function() {
 

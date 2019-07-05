@@ -1,13 +1,13 @@
 import sinon from "sinon";
-import {OpPool} from "../../../../../opPool";
-import {generateDeposits} from "../../../../../chain/factory/block/deposits";
+import {OpPool} from "../../../../../src/opPool";
+import {generateDeposits} from "../../../../../src/chain/factory/block/deposits";
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
-import {ProgressiveMerkleTree, verifyMerkleBranch} from "../../../../../util/merkleTree";
-import {ZERO_HASH} from "../../../../../constants";
+import {ProgressiveMerkleTree, verifyMerkleBranch} from "../../../../../src/util/merkleTree";
+import {ZERO_HASH} from "@chainsafe/eth2-types";
 import {generateDeposit} from "../../../../utils/deposit";
 import {hashTreeRoot} from "@chainsafe/ssz";
-import {Deposit, DepositData} from "../../../../../../types";
+import {Deposit, DepositData} from "@chainsafe/eth2-types";
 
 describe('blockAssembly - deposits', function() {
 

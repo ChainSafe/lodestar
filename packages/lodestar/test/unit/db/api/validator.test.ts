@@ -1,15 +1,15 @@
 import sinon from "sinon";
 
-import * as dbKeys from "../../../../db/schema";
-import {Bucket} from "../../../../db/schema";
-import {LevelDbController} from "../../../../db/controller";
-import {Attestation, BeaconBlock} from "../../../../../types";
+import * as dbKeys from "../../../../src/db/schema";
+import {Bucket} from "../../../../src/db/schema";
+import {LevelDbController} from "../../../../src/db/controller";
+import {Attestation, BeaconBlock} from "@chainsafe/eth2-types";
 import chai, {expect} from "chai";
 import {serialize} from "@chainsafe/ssz";
 import chaiAsPromised from 'chai-as-promised';
-import {ValidatorDB} from "../../../../db/api/validator/validator";
+import {ValidatorDB} from "../../../../src/db/api/validator/validator";
 import {generateEmptyBlock} from "../../../utils/block";
-import {IValidatorDB} from "../../../../db/api/validator/interface";
+import {IValidatorDB} from "../../../../src/db/api/validator/interface";
 import {generateEmptyAttestation} from "../../../utils/attestation";
 
 chai.use(chaiAsPromised);

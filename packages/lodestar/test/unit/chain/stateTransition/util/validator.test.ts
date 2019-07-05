@@ -1,12 +1,12 @@
 import {assert} from "chai";
 
-import {Validator} from "../../../../../../types";
+import {Validator} from "@chainsafe/eth2-types";
 
 import {
   getActiveValidatorIndices,
   isActiveValidator,
   isSlashableValidator,
-} from "../../../../../chain/stateTransition/util/validator";
+} from "../../../../../src/chain/stateTransition/util/validator";
 
 import {randBetween} from "../../../../utils/misc";
 import {generateValidator} from "../../../../utils/validator";

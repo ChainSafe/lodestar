@@ -3,11 +3,11 @@ import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 
-import {Domain, LATEST_RANDAO_MIXES_LENGTH} from "../../../../../constants";
-import {processRandao} from "../../../../../chain/stateTransition/block/randao";
-import * as utils from "../../../../../chain/stateTransition/util";
+import {Domain, LATEST_RANDAO_MIXES_LENGTH} from "@chainsafe/eth2-types";
+import {processRandao} from "../../../../../src/chain/stateTransition/block/randao";
+import * as utils from "../../../../../src/chain/stateTransition/util";
 
-import {getCurrentEpoch, getDomain} from "../../../../../chain/stateTransition/util";
+import {getCurrentEpoch, getDomain} from "../../../../../src/chain/stateTransition/util";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {generateValidator} from "../../../../utils/validator";

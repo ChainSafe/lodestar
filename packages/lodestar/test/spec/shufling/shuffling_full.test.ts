@@ -1,8 +1,8 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
-import {getShuffledIndex} from "../../../chain/stateTransition/util";
-import {bytes32} from "../../../../types";
+import {getShuffledIndex} from "../../../src/chain/stateTransition/util";
+import {bytes32} from "@chainsafe/eth2-types";
 
 describeSpecTest(
   join(__dirname, "../test-cases/tests/shuffling/core/shuffling_full.yaml"),

@@ -1,9 +1,9 @@
 import sinon from "sinon";
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
-import * as attestationDataProduction from "../../../../../chain/factory/attestation/data";
-import {BeaconDB} from "../../../../../db/api";
-import {assembleAttestation} from "../../../../../chain/factory/attestation";
+import * as attestationDataProduction from "../../../../../src/chain/factory/attestation/data";
+import {BeaconDB} from "../../../../../src/db/api";
+import {assembleAttestation} from "../../../../../src/chain/factory/attestation";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateAttestationData} from "../../../../utils/attestation";
 

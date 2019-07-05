@@ -2,11 +2,11 @@ import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
 import {generateEmptyBlock} from "../../../../utils/block";
-import * as processEth1Data from "../../../../../chain/stateTransition/block/eth1Data";
-import * as processBlockHeader from "../../../../../chain/stateTransition/block/blockHeader";
-import * as processRandao from "../../../../../chain/stateTransition/block/randao";
-import {processBlock} from "../../../../../chain/stateTransition";
-import * as processOperations from "../../../../../chain/stateTransition/block/operations";
+import * as processEth1Data from "../../../../../src/chain/stateTransition/block/eth1Data";
+import * as processBlockHeader from "../../../../../src/chain/stateTransition/block/blockHeader";
+import * as processRandao from "../../../../../src/chain/stateTransition/block/randao";
+import {processBlock} from "../../../../../src/chain/stateTransition";
+import * as processOperations from "../../../../../src/chain/stateTransition/block/operations";
 
 describe('process block', function () {
 

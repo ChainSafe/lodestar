@@ -2,7 +2,7 @@
  * @module chain/stateTransition/epoch
  */
 
-import {BeaconState, Gwei, ValidatorIndex} from "../../../../../types";
+import {BeaconState, Gwei, ValidatorIndex} from "@chainsafe/eth2-types";
 
 import {BASE_REWARD_FACTOR, BASE_REWARDS_PER_EPOCH} from "../../../../../../eth2-types/src/constants";
 

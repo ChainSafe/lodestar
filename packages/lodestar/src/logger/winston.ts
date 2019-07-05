@@ -2,7 +2,7 @@
  * @module logger
  */
 
-import {createLogger, Logger, transports, format} from 'packages/beaconChain/src/logger/winston';
+import {createLogger, Logger, transports, format} from 'winston';
 import {AbstractLogger, LogLevel} from "./abstract";
 
 export class WinstonLogger extends AbstractLogger {

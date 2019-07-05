@@ -2,7 +2,7 @@
  * @module chain/stateTransition/epoch
  */
 
-import {BeaconState} from "../../../../../types";
+import {BeaconState} from "@chainsafe/eth2-types";
 import {GENESIS_EPOCH} from "../../../../../../eth2-types/src/constants";
 import {getCurrentEpoch, increaseBalance, decreaseBalance} from "../../util";
 import {getAttestationDeltas} from "./attestation";

@@ -1,13 +1,13 @@
-import * as blockBodyAssembly from "../../../../../chain/factory/block/body";
-import * as blockTransitions from "../../../../../chain/stateTransition/block";
+import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
+import * as blockTransitions from "../../../../../src/chain/stateTransition/block";
 import sinon from "sinon";
-import {OpPool} from "../../../../../opPool";
+import {OpPool} from "../../../../../src/opPool";
 import {generateState} from "../../../../utils/state";
 import {generateEmptyBlock} from "../../../../utils/block";
-import {assembleBlock} from "../../../../../chain/factory/block";
+import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {expect} from "chai";
-import {BeaconDB} from "../../../../../db/api";
-import {EthersEth1Notifier} from "../../../../../eth1";
+import {BeaconDB} from "../../../../../src/db/api";
+import {EthersEth1Notifier} from "../../../../../src/eth1";
 
 describe('block assembly', function () {
 

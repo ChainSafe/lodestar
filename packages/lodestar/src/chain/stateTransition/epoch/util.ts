@@ -5,7 +5,7 @@
 import assert from "assert";
 import {deserialize, equals, hashTreeRoot} from "@chainsafe/ssz";
 
-import {BeaconState, Crosslink, Epoch, Gwei, PendingAttestation, Shard, uint256, ValidatorIndex,} from "../../../../types";
+import {BeaconState, Crosslink, Epoch, Gwei, PendingAttestation, Shard, uint256, ValidatorIndex,} from "@chainsafe/eth2-types";
 import {GENESIS_EPOCH, GENESIS_START_SHARD, ZERO_HASH} from "../../../../../eth2-types/src/constants";
 
 import {

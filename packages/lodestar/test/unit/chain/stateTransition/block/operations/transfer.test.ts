@@ -10,10 +10,10 @@ import {
   FAR_FUTURE_EPOCH,
   MAX_EFFECTIVE_BALANCE,
   MIN_DEPOSIT_AMOUNT
-} from "../../../../../../constants";
-import * as utils from "../../../../../../chain/stateTransition/util";
-import {slotToEpoch} from "../../../../../../chain/stateTransition/util";
-import {processTransfer} from "../../../../../../chain/stateTransition/block/operations";
+} from "@chainsafe/eth2-types";
+import * as utils from "../../../../../../src/chain/stateTransition/util";
+import {slotToEpoch} from "../../../../../../src/chain/stateTransition/util";
+import {processTransfer} from "../../../../../../src/chain/stateTransition/block/operations";
 
 import {generateEmptyTransfer} from "../../../../../utils/transfer";
 import {generateValidator} from "../../../../../utils/validator";

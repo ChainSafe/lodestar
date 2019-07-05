@@ -1,11 +1,11 @@
 import {assert} from "chai";
 import * as request from "supertest";
-import {JSONRPC} from "../../../../rpc";
+import {JSONRPC} from "../../../../src/rpc";
 import {MockValidatorApi} from "../../../utils/mocks/rpc/validator";
-import HttpServer from "../../../../rpc/transport/http";
+import HttpServer from "../../../../src/rpc/transport/http";
 import {generateRPCCall} from "../../../utils/rpcCall";
 import {MockBeaconApi} from "../../../utils/mocks/rpc/beacon";
-import {ILogger, WinstonLogger} from "../../../../logger";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 describe("Json RPC over http", () => {
   let rpc;

@@ -1,5 +1,5 @@
-import {Fork} from "../../../types";
-import {intToBytes} from "../../util/bytes";
+import {Fork} from "@chainsafe/eth2-types";
+import {intToBytes} from "../../src/util/bytes";
 
 /**
  * Generates a fake fork data test purposes.

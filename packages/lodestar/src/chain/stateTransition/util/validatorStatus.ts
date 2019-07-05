@@ -7,7 +7,7 @@ import {
   Epoch,
   ValidatorIndex,
   Validator,
-} from "../../../../types";
+} from "@chainsafe/eth2-types";
 
 import {
   LATEST_SLASHED_EXIT_LENGTH,

@@ -1,7 +1,7 @@
 import {assert} from "chai";
 import BN from "bn.js";
 
-import {StatefulDagLMDGHOST} from "../../../../chain/forkChoice/statefulDag/lmdGhost";
+import {StatefulDagLMDGHOST} from "../../../../src/chain/forkChoice/statefulDag/lmdGhost";
 
 describe("StatefulDagLMDGHOST", () => {
   const genesis = Buffer.from("genesis");

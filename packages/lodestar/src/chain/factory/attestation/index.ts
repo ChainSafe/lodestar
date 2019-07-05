@@ -1,4 +1,4 @@
-import {BeaconBlock, BeaconState, IndexedAttestation, Shard, Slot} from "../../../../types";
+import {BeaconBlock, BeaconState, IndexedAttestation, Shard, Slot} from "@chainsafe/eth2-types";
 import {BeaconDB} from "../../../db/api";
 import {assembleAttestationData} from "./data";
 import {advanceSlot} from "../../stateTransition/slot";

@@ -4,7 +4,7 @@
 
 import {equals, serialize} from "@chainsafe/ssz";
 
-import {AttestationData,} from "../../../../types";
+import {AttestationData,} from "@chainsafe/eth2-types";
 
 /**
  * Check if data1 and data2 are slashable according to Casper FFG rules.

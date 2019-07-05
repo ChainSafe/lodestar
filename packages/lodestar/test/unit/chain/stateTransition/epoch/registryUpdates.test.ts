@@ -1,12 +1,12 @@
-import * as utils from "../../../../../chain/stateTransition/util";
-import {initiateValidatorExit} from "../../../../../chain/stateTransition/util";
+import * as utils from "../../../../../src/chain/stateTransition/util";
+import {initiateValidatorExit} from "../../../../../src/chain/stateTransition/util";
 import sinon from "sinon";
 import BN from "bn.js";
 import {generateState} from "../../../../utils/state";
 import {generateValidator} from "../../../../utils/validator";
-import {MAX_EFFECTIVE_BALANCE} from "../../../../../constants";
+import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/eth2-types";
 import {expect} from "chai";
-import {processRegistryUpdates} from "../../../../../chain/stateTransition/epoch/registryUpdates";
+import {processRegistryUpdates} from "../../../../../src/chain/stateTransition/epoch/registryUpdates";
 
 describe('process epoch - slashings', function () {
 

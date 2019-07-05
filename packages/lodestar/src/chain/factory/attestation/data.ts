@@ -1,5 +1,5 @@
 import {BeaconDB} from "../../../db/api";
-import {AttestationData, BeaconBlock, BeaconState, Crosslink, Shard} from "../../../../types";
+import {AttestationData, BeaconBlock, BeaconState, Crosslink, Shard} from "@chainsafe/eth2-types";
 import {getBlockRoot, getCurrentEpoch, getEpochStartSlot} from "../../stateTransition/util";
 import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, ZERO_HASH} from "../../../../../eth2-types/src/constants";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";

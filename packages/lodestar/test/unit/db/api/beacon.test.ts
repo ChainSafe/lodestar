@@ -1,9 +1,9 @@
 import sinon from "sinon";
 
-import * as dbKeys from "../../../../db/schema";
-import {Bucket, Key} from "../../../../db/schema";
-import {BeaconDB} from "../../../../db/api";
-import {LevelDbController} from "../../../../db/controller";
+import * as dbKeys from "../../../../src/db/schema";
+import {Bucket, Key} from "../../../../src/db/schema";
+import {BeaconDB} from "../../../../src/db/api";
+import {LevelDbController} from "../../../../src/db/controller";
 import {
   Attestation,
   AttesterSlashing,
@@ -12,7 +12,7 @@ import {
   ProposerSlashing,
   uint64,
   VoluntaryExit
-} from "../../../../../types";
+} from "@chainsafe/eth2-types";
 import {generateState} from "../../../utils/state";
 import chai, {expect} from "chai";
 import {serialize} from "@chainsafe/ssz";
@@ -22,10 +22,10 @@ import chaiAsPromised from 'chai-as-promised';
 import {generateEmptyAttestation} from "../../../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../../../utils/voluntaryExits";
 import {generateEmptyTransfer} from "../../../utils/transfer";
-import {Transfer} from "../../../../../types";
+import {Transfer} from "@chainsafe/eth2-types";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../utils/slashings";
 import {generateDeposit} from "../../../utils/deposit";
-import {ProgressiveMerkleTree} from "../../../../util/merkleTree/merkleTree";
+import {ProgressiveMerkleTree} from "../../../../src/util/merkleTree/merkleTree";
 
 chai.use(chaiAsPromised);
 

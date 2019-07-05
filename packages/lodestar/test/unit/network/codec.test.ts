@@ -18,17 +18,17 @@ import {
   WireResponse,
   RequestBody,
   ResponseBody,
-} from "../../../../types";
+} from "@chainsafe/eth2-types";
 import {
   Method,
-} from "../../../constants";
+} from "@chainsafe/eth2-types";
 
 import {
   encodeRequest,
   encodeResponse,
   decodeRequestBody,
   decodeResponseBody,
-} from "../../../network/codec";
+} from "../../../src/network/codec";
 
 describe("[network] rpc request", () => {
   const testCases: {

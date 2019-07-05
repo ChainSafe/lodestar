@@ -13,7 +13,7 @@ import {
   number64,
   ValidatorIndex,
   BeaconBlockBody,
-} from "../../types";
+} from "@chainsafe/eth2-types";
 
 import {
   EMPTY_SIGNATURE, GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD,

@@ -1,5 +1,5 @@
-import {BeaconBlock} from "../../../types";
-import {EMPTY_SIGNATURE, ZERO_HASH} from "../../constants";
+import {BeaconBlock} from "@chainsafe/eth2-types";
+import {EMPTY_SIGNATURE, ZERO_HASH} from "@chainsafe/eth2-types";
 
 
 export function generateEmptyBlock(): BeaconBlock {

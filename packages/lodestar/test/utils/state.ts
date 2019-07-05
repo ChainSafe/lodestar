@@ -15,14 +15,14 @@ import {
   Shard,
   BeaconBlockHeader,
   BeaconBlockBody
-} from "../../../types";
+} from "@chainsafe/eth2-types";
 import {GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD,
   LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
   LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH, SHARD_COUNT,
   ZERO_HASH, SLOTS_PER_HISTORICAL_ROOT
-} from "../../constants";
+} from "@chainsafe/eth2-types";
 
-import {intToBytes} from "../../util/bytes";
+import {intToBytes} from "../../src/util/bytes";
 import {randBetween, randBetweenBN} from "./misc";
 import {generateValidators} from "./validator";
 import {hashTreeRoot} from "@chainsafe/ssz";

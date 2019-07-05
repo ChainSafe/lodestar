@@ -1,7 +1,7 @@
 import {expect, assert} from "chai";
 import fs from "fs";
-import {writeTomlConfig, getTomlConfig, ensureDirectoryExistence} from "../../../util/file";
-import defaults from "../../../node/defaults";
+import {writeTomlConfig, getTomlConfig, ensureDirectoryExistence} from "../../../src/util/file";
+import defaults from "../../../src/node/defaults";
 
 describe("util/file", function() {
   const testFilePath = "keys/toml/test_config.toml";

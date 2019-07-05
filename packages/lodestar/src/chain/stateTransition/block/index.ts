@@ -5,7 +5,7 @@
 import {
   BeaconBlock,
   BeaconState,
-} from "../../../../types";
+} from "@chainsafe/eth2-types";
 
 import {processEth1Data} from "./eth1Data";
 import {processBlockHeader} from "./blockHeader";

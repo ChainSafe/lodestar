@@ -2,7 +2,7 @@ import BN from "bn.js";
 import { assert } from "chai";
 import bls from '@chainsafe/bls-js';
 
-import { intToBytes, blsPrivateKeyToHex } from "../../../util/bytes";
+import { intToBytes, blsPrivateKeyToHex } from "../../../src/util/bytes";
 import { PrivateKey } from "@chainsafe/bls-js/lib/privateKey";
 
 describe("intToBytes", () => {

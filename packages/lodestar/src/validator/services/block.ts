@@ -2,7 +2,7 @@
  * @module validator
  */
 
-import {BeaconBlock, Fork, Slot, ValidatorIndex} from "../../../types";
+import {BeaconBlock, Fork, Slot, ValidatorIndex} from "@chainsafe/eth2-types";
 import {getDomainFromFork, getRandaoMix, slotToEpoch} from "../../chain/stateTransition/util";
 import {RpcClient} from "../rpc";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";

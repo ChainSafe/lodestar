@@ -1,10 +1,10 @@
 import {assert} from "chai";
 
-import {Epoch, Slot} from "../../../../../../types";
-import {SLOTS_PER_EPOCH} from "../../../../../constants";
+import {Epoch, Slot} from "@chainsafe/eth2-types";
+import {SLOTS_PER_EPOCH} from "@chainsafe/eth2-types";
 import {generateAttestationData} from "../../../../utils/attestation";
 import {randBetween} from "../../../../utils/misc";
-import {isSlashableAttestationData} from "../../../../../chain/stateTransition/util";
+import {isSlashableAttestationData} from "../../../../../src/chain/stateTransition/util";
 
 
 describe("isSlashableAttestationData", () => {

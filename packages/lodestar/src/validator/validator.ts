@@ -14,8 +14,8 @@
  * 6. Repeat step 5
  */
 import BlockProposingService from "./services/block";
-import {Epoch, Slot, ValidatorIndex} from "../../types";
-import {GenesisInfo, ValidatorCtx} from "./types";
+import {Epoch, Slot, ValidatorIndex} from "@chainsafe/eth2-types";
+import {GenesisInfo, ValidatorCtx} from "@chainsafe/eth2-types";
 import {RpcClient, RpcClientOverWs} from "./rpc";
 import {AttestationService} from "./services/attestation";
 import {ValidatorDB, IValidatorDB, LevelDbController} from "../db";

@@ -1,8 +1,8 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
-import {processCrosslinks} from "../../../../chain/stateTransition/epoch/crosslinks";
-import {BeaconState} from "../../../../../types";
+import {processCrosslinks} from "../../../../src/chain/stateTransition/epoch/crosslinks";
+import {BeaconState} from "@chainsafe/eth2-types";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {equals} from "@chainsafe/ssz";
 describeSpecTest(

@@ -1,17 +1,17 @@
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
-import * as utils from "../../../../../chain/stateTransition/util";
+import * as utils from "../../../../../src/chain/stateTransition/util";
 import {
   getCrosslinkCommittee,
   getEpochCommitteeCount,
   getEpochStartShard
-} from "../../../../../chain/stateTransition/util";
-import * as epochUtils from "../../../../../chain/stateTransition/epoch/util";
-import {getWinningCrosslinkAndAttestingIndices} from "../../../../../chain/stateTransition/epoch/util";
+} from "../../../../../src/chain/stateTransition/util";
+import * as epochUtils from "../../../../../src/chain/stateTransition/epoch/util";
+import {getWinningCrosslinkAndAttestingIndices} from "../../../../../src/chain/stateTransition/epoch/util";
 import sinon from "sinon";
 import {generateEmptyCrosslink} from "../../../../utils/crosslink";
 import BN from "bn.js";
-import {processCrosslinks} from "../../../../../chain/stateTransition/epoch/crosslinks";
+import {processCrosslinks} from "../../../../../src/chain/stateTransition/epoch/crosslinks";
 
 describe('process epoch - crosslinks', function () {
 

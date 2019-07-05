@@ -1,7 +1,7 @@
 import {IBeaconApi} from "../../../rpc/api/beacon";
 import {IValidatorApi} from "../../../rpc/api/validator";
 import * as jsonRpc from "noice-json-rpc";
-import Websocket from "packages/beaconChain/src/validator/rpc/impl/ws";
+import Websocket from "ws";
 import promisify from "promisify-es6";
 import {AbstractRpcClient} from "../abstract";
 

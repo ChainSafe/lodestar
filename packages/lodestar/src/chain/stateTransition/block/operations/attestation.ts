@@ -11,7 +11,7 @@ import {
   PendingAttestation,
   Attestation,
   FFGData,
-} from "../../../../../types";
+} from "@chainsafe/eth2-types";
 
 import {
   MAX_EPOCHS_PER_CROSSLINK,

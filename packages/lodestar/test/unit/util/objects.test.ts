@@ -1,8 +1,8 @@
 import { expect } from "chai";
 
-import {isPlainObject, mostFrequent} from "../../../util/objects";
+import {isPlainObject, mostFrequent} from "../../../src/util/objects";
 import BN from "bn.js";
-import {uint64} from "../../../../types";
+import {uint64} from "@chainsafe/eth2-types";
 
 
 describe('Objects helper', () => {

@@ -2,21 +2,21 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {Crosslink} from "../../../../../../../types";
+import {Crosslink} from "@chainsafe/eth2-types";
 import  * as processProposerSlashing
-  from "../../../../../../chain/stateTransition/block/operations/proposerSlashing";
+  from "../../../../../../src/chain/stateTransition/block/operations/proposerSlashing";
 import  * as processAttesterSlashing
-  from "../../../../../../chain/stateTransition/block/operations/attesterSlashing";
+  from "../../../../../../src/chain/stateTransition/block/operations/attesterSlashing";
 import  * as processAttestation
-  from "../../../../../../chain/stateTransition/block/operations/attestation";
+  from "../../../../../../src/chain/stateTransition/block/operations/attestation";
 import  * as processDeposit
-  from "../../../../../../chain/stateTransition/block/operations/deposit";
+  from "../../../../../../src/chain/stateTransition/block/operations/deposit";
 import  * as processVoluntaryExit
-  from "../../../../../../chain/stateTransition/block/operations/voluntaryExit";
+  from "../../../../../../src/chain/stateTransition/block/operations/voluntaryExit";
 import  * as processTransfer
-  from "../../../../../../chain/stateTransition/block/operations/transfer";
+  from "../../../../../../src/chain/stateTransition/block/operations/transfer";
 
-import {processOperations} from "../../../../../../chain/stateTransition/block/operations";
+import {processOperations} from "../../../../../../src/chain/stateTransition/block/operations";
 import {generateState} from "../../../../../utils/state";
 import {generateEmptyBlock} from "../../../../../utils/block";
 import {generateDeposit} from "../../../../../utils/deposit";
@@ -26,11 +26,11 @@ import {
   MAX_ATTESTER_SLASHINGS,
   MAX_DEPOSITS,
   MAX_PROPOSER_SLASHINGS, MAX_VOLUNTARY_EXITS
-} from "../../../../../../constants";
+} from "@chainsafe/eth2-types";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../../../utils/slashings";
 import {generateAttestationData, generateEmptyAttestation} from "../../../../../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../../../../../utils/voluntaryExits";
-import {MAX_TRANSFERS} from "../../../../../../constants/minimal";
+import {MAX_TRANSFERS} from "@chainsafe/eth2-types/minimal";
 
 
 describe('process block - process operations', function () {

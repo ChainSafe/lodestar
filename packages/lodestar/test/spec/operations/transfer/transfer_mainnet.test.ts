@@ -4,8 +4,8 @@ import {expect} from "chai";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
-import {processTransfer} from "../../../../chain/stateTransition/block/operations";
-import {BeaconState, Transfer} from "../../../../../types";
+import {processTransfer} from "../../../../src/chain/stateTransition/block/operations";
+import {BeaconState, Transfer} from "@chainsafe/eth2-types";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {equals} from "@chainsafe/ssz";
 

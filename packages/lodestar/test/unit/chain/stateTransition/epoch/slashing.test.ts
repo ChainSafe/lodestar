@@ -1,11 +1,11 @@
-import * as utils from "../../../../../chain/stateTransition/util";
+import * as utils from "../../../../../src/chain/stateTransition/util";
 import sinon from "sinon";
 import BN from "bn.js";
 import {generateState} from "../../../../utils/state";
 import {generateValidator} from "../../../../utils/validator";
-import {FAR_FUTURE_EPOCH, LATEST_SLASHED_EXIT_LENGTH} from "../../../../../constants";
+import {FAR_FUTURE_EPOCH, LATEST_SLASHED_EXIT_LENGTH} from "@chainsafe/eth2-types";
 import {expect} from "chai";
-import {processSlashings} from "../../../../../chain/stateTransition/epoch/slashings";
+import {processSlashings} from "../../../../../src/chain/stateTransition/epoch/slashings";
 
 describe('process epoch - slashings', function () {
 

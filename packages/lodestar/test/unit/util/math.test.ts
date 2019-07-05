@@ -3,7 +3,7 @@ import { assert } from "chai";
 import {
   intSqrt,
   bnMin, bnMax, intDiv, bnSqrt
-} from "../../../util/math";
+} from "../../../src/util/math";
 import BN from "bn.js";
 
 

@@ -3,7 +3,7 @@
  */
 
 import assert from "assert";
-import {BeaconState, Epoch, Slot, Validator, ValidatorIndex,} from "../../../../types";
+import {BeaconState, Epoch, Slot, Validator, ValidatorIndex,} from "@chainsafe/eth2-types";
 import {
   getBeaconProposerIndex,
   getCrosslinkCommittee,
@@ -11,9 +11,9 @@ import {
   getEpochStartShard,
   slotToEpoch
 } from "./index";
-import {CommitteeAssignment} from "../../../validator/types";
+import {CommitteeAssignment} from "@chainsafe/eth2-types";
+import {SHARD_COUNT, SLOTS_PER_EPOCH} from "@chainsafe/eth2-types";
 import {getCurrentEpoch, getEpochStartSlot} from "./epoch";
-import {SHARD_COUNT, SLOTS_PER_EPOCH} from "../../../../../eth2-types/src/constants";
 import {intDiv} from "../../../util/math";
 
 

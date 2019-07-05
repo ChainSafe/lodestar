@@ -1,6 +1,6 @@
 import BN from "bn.js";
-import {Validator} from "../../../types";
-import { FAR_FUTURE_EPOCH } from "../../constants";
+import {Validator} from "@chainsafe/eth2-types";
+import { FAR_FUTURE_EPOCH } from "@chainsafe/eth2-types";
 
 /**
  * Generates a single fake validator, for tests purposes only.

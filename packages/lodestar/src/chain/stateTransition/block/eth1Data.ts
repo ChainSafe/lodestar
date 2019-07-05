@@ -8,7 +8,7 @@ import {
   BeaconBlockBody,
   BeaconState,
   Eth1Data,
-} from "../../../../types";
+} from "@chainsafe/eth2-types";
 
 import {SLOTS_PER_ETH1_VOTING_PERIOD} from "../../../../../eth2-types/src/constants";
 

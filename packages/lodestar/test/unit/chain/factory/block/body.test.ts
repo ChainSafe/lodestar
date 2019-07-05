@@ -1,22 +1,22 @@
 import sinon from "sinon";
-import {OpPool} from "../../../../../opPool";
-import {assembleBody} from "../../../../../chain/factory/block/body";
-import * as depositUtils from "../../../../../chain/factory/block/deposits";
+import {OpPool} from "../../../../../src/opPool";
+import {assembleBody} from "../../../../../src/chain/factory/block/body";
+import * as depositUtils from "../../../../../src/chain/factory/block/deposits";
 import {generateState} from "../../../../utils/state";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../../../../utils/voluntaryExits";
-import * as eth1DataAssembly from "../../../../../chain/factory/block/eth1Data";
+import * as eth1DataAssembly from "../../../../../src/chain/factory/block/eth1Data";
 import {expect} from "chai";
 import {
   MAX_ATTESTATIONS,
   MAX_ATTESTER_SLASHINGS,
   MAX_PROPOSER_SLASHINGS,
   MAX_VOLUNTARY_EXITS
-} from "../../../../../constants";
-import {EthersEth1Notifier} from "../../../../../eth1";
+} from "@chainsafe/eth2-types";
+import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {generateDeposit} from "../../../../utils/deposit";
-import {ProgressiveMerkleTree} from "../../../../../util/merkleTree";
+import {ProgressiveMerkleTree} from "../../../../../src/util/merkleTree";
 
 describe('blockAssembly - body', function () {
 

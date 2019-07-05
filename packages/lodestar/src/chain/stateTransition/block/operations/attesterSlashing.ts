@@ -6,7 +6,7 @@ import assert from "assert";
 import {
   BeaconState,
   AttesterSlashing,
-} from "../../../../../types";
+} from "@chainsafe/eth2-types";
 
 import {
   getCurrentEpoch,

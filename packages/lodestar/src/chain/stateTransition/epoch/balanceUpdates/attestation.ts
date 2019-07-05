@@ -4,7 +4,7 @@
 
 import BN from "bn.js";
 
-import {BeaconState, Gwei} from "../../../../../types";
+import {BeaconState, Gwei} from "@chainsafe/eth2-types";
 
 import {
   BASE_REWARDS_PER_EPOCH,

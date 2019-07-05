@@ -12,7 +12,7 @@ import {
   BeaconState,
   Epoch,
   Slot,
-} from "../../../../types";
+} from "@chainsafe/eth2-types";
 
 /**
  * Return the epoch number of the given slot.

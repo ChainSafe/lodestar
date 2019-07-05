@@ -64,7 +64,6 @@ describe("types", () => {
       types[name] = t;
     }
   });
-    //
   // put runtime type variables into an object
   const vars = {};
   for (const name in sszTypes) {

@@ -1,7 +1,7 @@
 import { assert } from "chai";
 import * as jsonRpc from "noice-json-rpc";
 import Websocket from "ws";
-import {JSONRPC, IValidatorApi, WSServer, IBeaconApi} from "../../../../rpc";
+import {JSONRPC, IValidatorApi, WSServer, IBeaconApi} from "../../../../src/rpc";
 import { generateEmptyBlock } from "../../../utils/block";
 import {MockValidatorApi} from "../../../utils/mocks/rpc/validator";
 import { generateEmptyAttestation } from "../../../utils/attestation";

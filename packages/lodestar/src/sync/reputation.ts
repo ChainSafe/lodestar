@@ -1,7 +1,7 @@
 /**
  * @module sync
  */
-import {Hello, Status} from "../../types";
+import {Hello, Status} from "@chainsafe/eth2-types";
 
 export interface Reputation {
   latestHello: Hello | null;

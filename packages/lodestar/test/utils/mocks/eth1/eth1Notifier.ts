@@ -1,8 +1,8 @@
 import {EventEmitter} from "events";
 
-import {bytes32, Deposit, number64} from "../../../../../types";
+import {bytes32, Deposit, number64} from "@chainsafe/eth2-types";
 
-import {IEth1Notifier, IEth1Options} from "../../../../eth1";
+import {IEth1Notifier, IEth1Options} from "../../../../src/eth1";
 import {Block} from "ethers/providers";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface

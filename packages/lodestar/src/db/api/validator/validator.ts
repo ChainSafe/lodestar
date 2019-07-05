@@ -4,7 +4,7 @@
 
 import {DatabaseService, DatabaseApiOptions} from "../abstract";
 import {AttestationSearchOptions, IValidatorDB} from "./interface";
-import {Attestation, BeaconBlock, ValidatorIndex} from "../../../../types";
+import {Attestation, BeaconBlock, ValidatorIndex} from "@chainsafe/eth2-types";
 import {Bucket, encodeKey} from "../../schema";
 import {deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
 import deepmerge from "deepmerge";

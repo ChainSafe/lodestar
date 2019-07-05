@@ -5,9 +5,9 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import {equals} from "@chainsafe/ssz";
-import {processVoluntaryExit} from "../../../../chain/stateTransition/block/operations";
+import {processVoluntaryExit} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
-import {BeaconState, VoluntaryExit} from "../../../../../types";
+import {BeaconState, VoluntaryExit} from "@chainsafe/eth2-types";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/voluntary_exit/voluntary_exit_mainnet.yaml"),

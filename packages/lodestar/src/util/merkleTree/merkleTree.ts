@@ -3,7 +3,7 @@
  */
 
 import assert from "assert";
-import {bytes32, MerkleTree, number64} from "../../../types";
+import {bytes32, MerkleTree, number64} from "@chainsafe/eth2-types";
 import {hash} from "../crypto";
 import {intDiv} from "../math";
 import {serialize} from "@chainsafe/ssz";

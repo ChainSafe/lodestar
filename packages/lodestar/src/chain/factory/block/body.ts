@@ -3,7 +3,7 @@
  */
 
 import {OpPool} from "../../../opPool";
-import {BeaconBlockBody, BeaconState, bytes96} from "../../../../types";
+import {BeaconBlockBody, BeaconState, bytes96} from "@chainsafe/eth2-types";
 import {
   MAX_ATTESTATIONS,
   MAX_ATTESTER_SLASHINGS,

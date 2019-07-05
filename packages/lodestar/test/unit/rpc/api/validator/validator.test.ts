@@ -1,18 +1,18 @@
 import sinon from "sinon";
-import * as blockAssembly from "../../../../../chain/factory/block";
-import * as stateTransitionUtils from "../../../../../chain/stateTransition/util";
-import {getCommitteeAssignment} from "../../../../../chain/stateTransition/util";
-import {ValidatorApi} from "../../../../../rpc/api/validator";
-import {BeaconDB} from "../../../../../db/api";
-import {BeaconChain} from "../../../../../chain";
-import {OpPool} from "../../../../../opPool";
+import * as blockAssembly from "../../../../../src/chain/factory/block";
+import * as stateTransitionUtils from "../../../../../src/chain/stateTransition/util";
+import {getCommitteeAssignment} from "../../../../../src/chain/stateTransition/util";
+import {ValidatorApi} from "../../../../../src/rpc/api/validator";
+import {BeaconDB} from "../../../../../src/db/api";
+import {BeaconChain} from "../../../../../src/chain";
+import {OpPool} from "../../../../../src/opPool";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {expect} from "chai";
 import {generateState} from "../../../../utils/state";
-import {StatefulDagLMDGHOST} from "../../../../../chain/forkChoice";
+import {StatefulDagLMDGHOST} from "../../../../../src/chain/forkChoice";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
-import * as dutyFactory from "../../../../../chain/factory/duties";
-import {EthersEth1Notifier} from "../../../../../eth1";
+import * as dutyFactory from "../../../../../src/chain/factory/duties";
+import {EthersEth1Notifier} from "../../../../../src/eth1";
 
 describe('validator rpc api', function () {
 

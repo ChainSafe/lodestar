@@ -1,3 +1,4 @@
+import {} from "mocha";
 import BN from "bn.js";
 import chai, {assert, expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
@@ -9,11 +10,11 @@ import promisify from "promisify-es6";
 import bls from "@chainsafe/bls-js";
 import {serialize} from "@chainsafe/ssz";
 
-import {EthersEth1Notifier} from "../../../eth1";
-import defaults from "../../../eth1/dev/defaults";
-import {number64} from "../../../../types";
-import {ILogger, WinstonLogger} from "../../../logger";
-import {OpPool} from "../../../opPool";
+import {EthersEth1Notifier} from "../../../src/eth1";
+import defaults from "../../../src/eth1/dev/defaults";
+import {number64} from "@chainsafe/eth2-types";
+import {ILogger, WinstonLogger} from "../../../src/logger";
+import {OpPool} from "../../../src/opPool";
 
 import {generateDeposit} from "../../utils/deposit";
 

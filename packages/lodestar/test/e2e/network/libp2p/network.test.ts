@@ -1,12 +1,12 @@
 import {expect} from "chai";
 
-import {Libp2pNetwork, INetworkOptions} from "../../../../network";
-import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../../../../constants";
-import {getEmptyBlock} from "../../../../chain/genesis";
+import {Libp2pNetwork, INetworkOptions} from "../../../../src/network";
+import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "@chainsafe/eth2-types";
+import {getEmptyBlock} from "../../../../src/chain/genesis";
 import {createNode} from "../../../unit/network/libp2p/util";
 import {generateEmptyAttestation} from "../../../utils/attestation";
-import {shardAttestationTopic} from "../../../../network/util";
-import {ILogger, WinstonLogger} from "../../../../logger";
+import {shardAttestationTopic} from "../../../../src/network/util";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {

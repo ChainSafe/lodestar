@@ -1,9 +1,9 @@
 import {expect} from 'chai';
-import {ILogger, WinstonLogger} from "../../../../logger";
-import {CliError} from "../../../../cli/error";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
+import {CliError} from "../../../../src/cli/error";
 
 import program from "commander";
-import {CreateWalletCommand} from '../../../../cli/commands';
+import {CreateWalletCommand} from '../../../../src/cli/commands';
 
 
 describe('[CLI] wallet', () => {

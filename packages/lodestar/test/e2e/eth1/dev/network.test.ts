@@ -1,8 +1,8 @@
-import {PrivateEth1Network} from "../../../../eth1/dev";
+import {PrivateEth1Network} from "../../../../src/eth1/dev";
 import {Wallet} from "ethers";
 import * as ethers from "ethers/ethers";
 import {expect} from "chai";
-import {ILogger, WinstonLogger} from "../../../../logger";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 describe('Eth1 dev network', function () {
 

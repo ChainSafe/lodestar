@@ -1,11 +1,11 @@
-import {PrivateEth1Network} from "../../../../eth1/dev";
+import {PrivateEth1Network} from "../../../../src/eth1/dev";
 import chai, {expect} from 'chai';
-import {DepositCommand} from "../../../../cli/commands";
+import {DepositCommand} from "../../../../src/cli/commands";
 import chaiAsPromised from 'chai-as-promised';
-import {CliError} from "../../../../cli/error";
+import {CliError} from "../../../../src/cli/error";
 import {Wallet} from "ethers";
 import program from "commander";
-import {ILogger, WinstonLogger} from "../../../../logger";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 chai.use(chaiAsPromised);
 
