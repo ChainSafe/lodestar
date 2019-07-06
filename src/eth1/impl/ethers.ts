@@ -45,7 +45,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     this.logger = logger;
     this.opts = opts;
     if(this.opts.providerInstance) {
-      this.provider = this.opts.providerInstance  ;
+      this.provider = this.opts.providerInstance;
     } else {
       this.provider = new ethers.providers.JsonRpcProvider(
         this.opts.provider.url,

@@ -7,11 +7,10 @@ import {CommanderStatic} from "commander";
 import defaults from "../../eth1/options";
 import * as ethers from "ethers/ethers";
 import {Wallet} from "ethers/ethers";
-import  {LogLevel, WinstonLogger} from "../../logger";
+import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
 import {JsonRpcProvider} from "ethers/providers";
-import {ILogger} from "../../logger";
 
 interface IDepositCommandOptions {
   privateKey: string;
@@ -89,8 +88,7 @@ export class DepositCommand implements CliCommand {
             `Successfully deposited ${options.value} ETH from ${wallet.address} 
             to deposit contract. Tx hash: ${hash}`
           );
-        }
-        catch (e) {
+        } catch (e) {
           throw new CliError(
             `Failed to make deposit for account ${wallet.address}. Reason: ${e.message}`
           );

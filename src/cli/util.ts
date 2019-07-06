@@ -1,4 +1,10 @@
-import {getCliFields, IConfigurationField, IConfigurationModule, isConfigurationModule} from "../util/config";
+import {
+  getCliFields,
+  IConfigurationField,
+  IConfigurationModule,
+  isConfigurationModule,
+  validateConfig
+} from "../util/config";
 import {Command} from "commander";
 
 export function generateCommanderOptions(command: Command, optionDescription: IConfigurationModule): void {
@@ -26,14 +32,15 @@ export function generateCommanderOptions(command: Command, optionDescription: IC
  * @param optionDescription
  */
 export function optionsToConfig<T>(options: {[key: string]: string}, optionDescription: IConfigurationModule): Partial<T> {
-  const config = {};
+  let config = {};
   optionDescription.fields.forEach((field) => {
     if (isConfigurationModule(field)) {
       processModule(options, field, config);
     } else {
-      processField(field, options, config);
+      processField(field as IConfigurationField, options, config);
     }
   });
+  config = validateConfig(config, optionDescription);
   return config;
 }
 
@@ -44,16 +51,13 @@ function processModule(options: { [p: string]: string }, field, config) {
   }
 }
 
-function processField(field, options: { [p: string]: string }, config) {
-  field = field as IConfigurationField<unknown>;
+function processField(field: IConfigurationField, options: { [p: string]: string }, config) {
   if (field.cli && options[field.cli.flag]) {
     let value: any = options[field.cli.flag];
     if (field.process && typeof value === 'string') {
       value = field.process(value);
     }
-    if (!field.validation || field.validation(value)) {
-      config[field.name] = value;
-    }
+    config[field.name] = value;
   }
   return field;
 }

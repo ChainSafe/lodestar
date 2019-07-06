@@ -1,4 +1,4 @@
-export interface IConfigurationField<T> {
+export interface IConfigurationField<T = unknown> {
   name: string;
   type: T;
   description?: string;
@@ -33,14 +33,15 @@ export function validateConfig<T>(config: object, description: IConfigurationMod
   const validatedConfiguration: Partial<T> = {};
   for (const prop in config) {
     if (config.hasOwnProperty(prop)) {
-      const field = getField(description, prop);
+      let field = getField(description, prop);
       if (!field) continue;
       if (isConfigurationModule(field)) {
         validatedConfiguration[prop] = validateConfig(config[prop], field as IConfigurationModule);
       } else {
+        field = field as IConfigurationField;
         //TODO: do type conversion/processing
-        if (!(field as IConfigurationField<unknown>).validation
-          || (field as IConfigurationField<unknown>).validation(config[prop])) {
+        if (!field.validation
+          || field.validation(config[prop])) {
           validatedConfiguration[prop] = config[prop];
         }
       }
