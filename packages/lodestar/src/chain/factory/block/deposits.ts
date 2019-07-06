@@ -4,7 +4,7 @@
 
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {BeaconState, Deposit, DepositData, Eth1Data} from "@chainsafe/eth2-types";
-import {MAX_DEPOSITS} from "../../../../../eth2-types/src/constants";
+import {MAX_DEPOSITS} from "@chainsafe/eth2-types"
 import {OpPool} from "../../../opPool";
 import {IProgressiveMerkleTree} from "../../../util/merkleTree";
 import {processSortedDeposits} from "../../../util/deposits";

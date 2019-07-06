@@ -7,7 +7,7 @@ import assert from "assert";
 import bls from "@chainsafe/bls-js";
 import {PublicKey} from "@chainsafe/bls-js/lib/publicKey";
 
-import {Domain, MAX_INDICES_PER_ATTESTATION} from "../../../../../eth2-types/src/constants";
+import {Domain, MAX_INDICES_PER_ATTESTATION} from "@chainsafe/eth2-types"
 import {
   Attestation,
   AttestationData,

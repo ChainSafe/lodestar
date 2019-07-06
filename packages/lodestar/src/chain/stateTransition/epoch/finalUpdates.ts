@@ -17,7 +17,7 @@ import {
   SLOTS_PER_EPOCH,
   SLOTS_PER_ETH1_VOTING_PERIOD,
   SLOTS_PER_HISTORICAL_ROOT
-} from "../../../../../eth2-types/src/constants";
+} from "@chainsafe/eth2-types"
 
 import {bnMin, intDiv} from "../../../util/math";
 

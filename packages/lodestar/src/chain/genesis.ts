@@ -19,7 +19,7 @@ import {
   EMPTY_SIGNATURE, GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD,
   LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH,
   SHARD_COUNT, ZERO_HASH, SLOTS_PER_HISTORICAL_ROOT, MAX_EFFECTIVE_BALANCE, FAR_FUTURE_EPOCH,
-} from "../../../eth2-types/src/constants";
+} from "@chainsafe/eth2-types"
 
 import {getActiveValidatorIndices, getTemporaryBlockHeader} from "./stateTransition/util";
 

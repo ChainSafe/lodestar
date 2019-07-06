@@ -13,7 +13,7 @@ import {
 import {
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT, ZERO_HASH,
-} from "../../../../eth2-types/src/constants";
+} from "@chainsafe/eth2-types"
 
 import {processEpoch} from "./epoch";
 

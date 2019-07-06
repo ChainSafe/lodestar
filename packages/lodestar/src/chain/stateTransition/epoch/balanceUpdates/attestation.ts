@@ -12,7 +12,7 @@ import {
   MIN_ATTESTATION_INCLUSION_DELAY,
   MIN_EPOCHS_TO_INACTIVITY_PENALTY,
   PROPOSER_REWARD_QUOTIENT,
-} from "../../../../../../eth2-types/src/constants";
+} from "@chainsafe/eth2-types"
 
 import {getAttestingIndices, getPreviousEpoch, isActiveValidator} from "../../util";
 

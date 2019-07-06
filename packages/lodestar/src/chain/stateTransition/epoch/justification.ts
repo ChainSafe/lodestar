@@ -9,7 +9,7 @@ import {BeaconState} from "@chainsafe/eth2-types";
 import {getBlockRoot, getCurrentEpoch, getPreviousEpoch} from "../util";
 
 import {getAttestingBalance, getMatchingTargetAttestations, getTotalActiveBalance} from "./util";
-import {GENESIS_EPOCH} from "../../../../../eth2-types/src/constants";
+import {GENESIS_EPOCH} from "@chainsafe/eth2-types"
 
 
 export function processJustificationAndFinalization(state: BeaconState): void {

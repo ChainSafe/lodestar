@@ -12,7 +12,7 @@ import PeerInfo from "peer-info";
 import {Attestation, BeaconBlock, Shard, RequestBody, ResponseBody} from "@chainsafe/eth2-types";
 import {
   Method, RequestId, BLOCK_TOPIC, ATTESTATION_TOPIC, SHARD_SUBNET_COUNT,
-} from "../../../../eth2-types/src/constants";
+} from "@chainsafe/eth2-types"
 import {INetwork, INetworkOptions} from "../interface";
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {NetworkRpc} from "./rpc";

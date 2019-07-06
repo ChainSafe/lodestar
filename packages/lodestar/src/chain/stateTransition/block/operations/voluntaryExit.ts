@@ -15,7 +15,7 @@ import {
   Domain,
   FAR_FUTURE_EPOCH,
   PERSISTENT_COMMITTEE_PERIOD,
-} from "../../../../../../eth2-types/src/constants";
+} from "@chainsafe/eth2-types"
 
 
 import {

@@ -2,7 +2,7 @@ import {NewEpochCallback, NewSlotCallback, RpcClient} from "./interface";
 import {Slot} from "@chainsafe/eth2-types";
 import {IValidatorApi} from "../../rpc/api/validator";
 import {intDiv} from "../../util/math";
-import {SECONDS_PER_SLOT} from "../../../../eth2-types/src/constants";
+import {SECONDS_PER_SLOT} from "@chainsafe/eth2-types"
 import {slotToEpoch} from "../../chain/stateTransition/util";
 import {IBeaconApi} from "../../rpc/api/beacon";
 

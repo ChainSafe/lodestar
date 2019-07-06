@@ -12,7 +12,7 @@ import {
   BeaconBlockHeader,
 } from "@chainsafe/eth2-types";
 
-import {Domain} from "../../../../../../eth2-types/src/constants";
+import {Domain} from "@chainsafe/eth2-types"
 
 import {
   getCurrentEpoch,
