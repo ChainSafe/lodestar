@@ -27,7 +27,7 @@ import {WinstonLogger} from "../../../../../src/logger";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import {generateDeposit} from "../../../../utils/deposit";
 
-describe('produce blokc', function () {
+describe('produce block', function () {
   this.timeout(0);
 
   const dbStub = sinon.createStubInstance(BeaconDB);
