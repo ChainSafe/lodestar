@@ -13,15 +13,15 @@
     "lib"
   ],
   "scripts": {
-    "build": "babel packages/beaconChain -x .ts -d lib --source-maps",
-    "build:docs": "typedoc --exclude packages/beaconChain/index.ts --out docs src",
+    "build": "babel src -x .ts -d lib --source-maps",
+    "build:docs": "typedoc --exclude index.ts --out docs src",
     "check-types": "tsc --noEmit --incremental",
-    "lint": "eslint --ext .ts packages/beaconChain/",
-    "lint-fix": "eslint --ext .ts packages/beaconChain/ --fix",
+    "lint": "eslint --ext .ts src",
+    "lint-fix": "eslint --ext .ts src --fix",
     "pretest": "yarn run check-types",
-    "test:unit": "nyc --cache-dir .nyc_output/.cache -r lcov -e .ts mocha -r ts-node/register 'packages/beaconChain/test/unit/**/*.test.ts' && nyc report",
-    "test:e2e": "mocha --timeout 5000 -r ./.babel-register 'packages/beaconChain/test/e2e/**/*.test.ts'",
-    "test:spec": "mocha -r ./.babel-register 'packages/beaconChain/test/spec/**/*.test.ts'",
+    "test:unit": "nyc --cache-dir .nyc_output/.cache -r lcov -e .ts mocha -r ts-node/register 'src/test/unit/**/*.test.ts' && nyc report",
+    "test:e2e": "mocha --timeout 5000 -r ./.babel-register 'src/test/e2e/**/*.test.ts'",
+    "test:spec": "mocha -r ./.babel-register 'src/test/spec/**/*.test.ts'",
     "test": "yarn test:unit && yarn test:spec && yarn test:e2e",
     "coverage": "codecov"
   },
@@ -37,7 +37,6 @@
     "blockchain"
   ],
   "dependencies": {
-    "@babel/cli": "7.2.3",
     "@chainsafe/bls-js": "^0.1.5",
     "@chainsafe/eth2-types": "^0.1.0",
     "@chainsafe/ssz": "0.4.3",
