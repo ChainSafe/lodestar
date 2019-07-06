@@ -1,4 +1,5 @@
-import {} from "mocha";
+import "mocha";
+import path from "path";
 import { assert } from "chai";
 import fs from "fs";
 import * as sszTypes from "../src/types";
@@ -11,7 +12,7 @@ describe("types", () => {
   // put interfaces and types into objects
   const interfaces = {};
   const types = {};
-  const typesDir = __dirname + "/../src/";
+  const typesDir = path.join(__dirname, "/../src/");
   // Get all ts files in our types directory
   const typeFiles = fs.readdirSync(typesDir).filter((s) => s.endsWith(".ts"));
   typeFiles.map((file) => {

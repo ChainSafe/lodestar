@@ -11,7 +11,7 @@
   "scripts": {
     "build": "babel src -x .ts -d lib --source-maps",
     "check-types": "tsc --noEmit --incremental",
-    "test": "nyc --cache-dir .nyc_output/.cache -r lcov -e .ts mocha -r ts-node/register 'test/**/*.test.ts' && nyc report"
+    "test:unit": "nyc --cache-dir .nyc_output/.cache -r lcov -e .ts mocha -r ts-node/register 'test/**/*.test.ts' && nyc report"
   },
   "keywords": [],
   "homepage": "",

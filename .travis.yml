@@ -20,7 +20,7 @@ jobs:
       name: Lodestar
       script: lerna run --scope @chainsafe/lodestar test:unit && lerna run --scope @chainsafe/lodestar codecov
     - name: Eth2.0 Types
-      script: lerna run --scope @chainsafe/eth2-types test
+      script: lerna run --scope @chainsafe/eth2-types test:unit
 
     - stage: e2e Tests
     - name: Lodestar
