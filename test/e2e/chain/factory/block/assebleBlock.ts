@@ -34,7 +34,7 @@ describe('produce block', function () {
   const opPoolStub = sinon.createStubInstance(OpPool);
   const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
 
-  it('should produce valid block', async function () {
+  it('should produce valid block - state without valid eth1 votes', async function () {
 
     const keypairs: Keypair[] = Array.from({length: 64},  () => Keypair.generate());
     const validators = keypairs.map((keypair) => {
