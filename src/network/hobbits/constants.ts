@@ -18,4 +18,10 @@ export enum ResponseCode {
   ServerError = 40,
 }
 
-export const PROTOCOL_VERSION = 0.2;
+export const HOBBITS_VERSION = 2;
+
+export enum ProtocolType {
+  RPC = 0,
+  GOSSIP = 1,
+  PING = 2
+}

@@ -14,7 +14,7 @@ import {
   RequestBody,
 } from "../../../../src/network/hobbits/rpc/messages";
 import {
-  Method,
+  Method, ProtocolType,
 } from "../../../../src/network/hobbits/constants";
 
 import {
@@ -23,8 +23,8 @@ import {
 } from "../../../../src/network/hobbits/rpc/codec";
 
 import {
-  encodeMassage,
-  decodeMassage, protocolType,
+  encodeMessage,
+  decodeMessage,
 } from "../../../../src/network/hobbits/codec";
 import {DecodedMessage} from "../../../../src/network/hobbits/types";
 
@@ -45,9 +45,9 @@ describe("[hobbits] rpc protocol message", () => {
     const actualEncoded = encodeRequest(id, method, msg);
     assert.deepEqual(actualEncoded, expectedEncoded);
 
-    const encodedMessage = encodeMassage(protocolType.RPC, actualEncoded);
-    const decodedMessage: DecodedMessage = decodeMassage(encodedMessage);
-    // console.log(decodedMessage);
+    const encodedMessage = encodeMessage(ProtocolType.RPC, actualEncoded);
+    const decodedMessage: DecodedMessage = decodeMessage(encodedMessage);
+    console.log(decodedMessage);
 
     const decodedWireRequest: WireRequest = deserialize(decodedMessage.payload, WireRequest);
     // console.log(decodedWireRequest);

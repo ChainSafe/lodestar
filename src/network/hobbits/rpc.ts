@@ -4,26 +4,19 @@
 
 import {EventEmitter} from "events";
 import LibP2p from "libp2p";
-import PeerInfo from "peer-info";
-import Connection from "interface-connection";
-import promisify from "es6-promisify";
 import {deserialize} from "@chainsafe/ssz";
 
-import {RequestBody, ResponseBody, WireResponse, WireRequest} from "./rpc/messages";
-import {Method, RequestId, ResponseCode, RPC_MULTICODEC} from "../../constants";
+import {RequestBody, ResponseBody, WireRequest, WireResponse} from "./rpc/messages";
+import {RPC_MULTICODEC} from "../../constants";
+import {Method, ProtocolType, RequestId, ResponseCode} from "./constants";
 
-import {
-  encodeRequest,
-  encodeResponse,
-  sanityCheckData,
-  decodeResponseBody,
-  decodeRequestBody
-} from "../codec";
-import {randomRequestId} from "../util";
+import {decodeRequestBody, encodeRequest, sanityCheckData} from "./rpc/codec";
+import {randomRequestId} from "./util";
 import {Peer} from "./peer";
 import {ILogger} from "../../logger";
 import net from "net";
 import {HobbitsUri} from "./hobbitsUri";
+import {decodeMessage, encodeMessage, protocolType} from "./codec";
 
 
 /**
@@ -129,23 +122,28 @@ export class HobbitsRpc extends EventEmitter {
     this.wipDials.delete(peerId);
   }
 
-  public async sendRequest<T extends ResponseBody>(hobbitsUri: HobbitsUri, method: Method, body: RequestBody): Promise<T> {
+  public async sendRequest<T extends ResponseBody>(hobbitsUri: HobbitsUri, type: ProtocolType, method: Method, body: RequestBody): Promise<T> {
     const peerId = hobbitsUri.toUri();
     const peer = this.peers.get(peerId);
     if (!peer) {
       throw new Error(`Peer does not exist: ${peerId}`);
     }
+    let encodedRequest;
     const id = randomRequestId();
-    this.requests[id] = method;
-    const encodedRequest = encodeRequest(id, method, body);
-    peer.write(encodedRequest);
+    if (type == ProtocolType.RPC) {
+      this.requests[id] = method;
+      encodedRequest = encodeRequest(id, method, body);
+    }
+
+    const encodedMessage = encodeMessage(type, encodedRequest);
+    peer.write(encodedMessage);
     return await this.getResponse(id) as T;
   }
 
-  private async getResponse(id: string): Promise<ResponseBody> {
+  private async getResponse(id: RequestId): Promise<ResponseBody> {
     return new Promise<ResponseBody>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        this.removeAllListeners(id);
+        this.removeAllListeners(id+'');
         const method = this.requests[id];
         delete this.requests[id];
         reject(new Error(`request timeout, method ${method}, id ${id}`));
@@ -162,16 +160,16 @@ export class HobbitsRpc extends EventEmitter {
     });
   }
 
-  public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
-    const request = this.responses[id];
-    if (!request) {
-      throw new Error('No request found');
-    }
-    const {peer, method} = request;
-    const encodedResponse = encodeResponse(id, method, responseCode, result);
-    delete this.responses[id];
-    peer.write(encodedResponse);
-  }
+  // public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
+  //   const request = this.responses[id];
+  //   if (!request) {
+  //     throw new Error('No request found');
+  //   }
+  //   const {peer, method} = request;
+  //   const encodedResponse = encodeResponse(id, method, responseCode, result);
+  //   delete this.responses[id];
+  //   peer.write(encodedResponse);
+  // }
 
   public onRequestResponse(peer: Peer, data: Buffer): void {
     if(!sanityCheckData(data)) {
@@ -179,14 +177,23 @@ export class HobbitsRpc extends EventEmitter {
       return;
     }
     // Changed response
+    let decodedBody, request;
+    let decodedMessage = decodeMessage(data);
+    switch (decodedMessage.protocol) {
+      case ProtocolType.RPC:
+        request = deserialize(decodedMessage.payload, WireRequest);
+        decodedBody = decodeRequestBody(request.methodId, request.body);
+        break;
+      case ProtocolType.GOSSIP:
+        break;
+      case ProtocolType.PING:
+        break;
+    }
 
-
-    const id = data.slice(0, 8).toString('hex');
+    const id = request.id;
     const method = this.requests[id];
     if (method === undefined) { // incoming request
       try {
-        const request: WireRequest = deserialize(data, WireRequest);
-        const decodedBody = decodeRequestBody(request.method, request.body);
         this.responses[id] = {peer, method: request.method};
         this.emit("request", peer.hobbitsUri, request.method, id, decodedBody);
       } catch (e) {
@@ -195,16 +202,7 @@ export class HobbitsRpc extends EventEmitter {
     } else { // incoming response
       try {
         const event = `response ${id}`;
-        const {
-          responseCode,
-          result,
-        }: WireResponse = deserialize(data, WireResponse);
-        if (responseCode !== ResponseCode.Success) {
-          this.emit(event, new Error(`response code error ${responseCode}`), null);
-        } else {
-          const decodedResult = decodeResponseBody(method, result);
-          this.emit(event, null, decodedResult);
-        }
+        this.emit(event, null, decodedBody);
       } catch (e) {
         this.logger.warn('unable to decode response', e.message);
       }
@@ -219,7 +217,6 @@ export class HobbitsRpc extends EventEmitter {
     await Promise.all(this.bootnodes.map((bootnode: string): Promise<void> => {
       return this.connect(bootnode);
     }));
-    // console.log(`Connected to ${this.peers.length} static peers`);
   };
 
   private listenToPeers = (): void => {

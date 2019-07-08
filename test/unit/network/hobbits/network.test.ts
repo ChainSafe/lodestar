@@ -7,7 +7,7 @@ import {deserialize, serialize} from "@chainsafe/ssz";
 import {Goodbye, WireRequest} from "../../../../src/network/hobbits/rpc/messages";
 import {decodeRequestBody, encodeRequest} from "../../../../src/network/hobbits/rpc/codec";
 import {assert} from "chai";
-import {decodeMassage, encodeMassage, protocolType} from "../../../../src/network/hobbits/codec";
+import {decodeMessage, encodeMessage, protocolType} from "../../../../src/network/hobbits/codec";
 import {DecodedMessage} from "../../../../src/network/hobbits/types";
 
 describe("[hobbits] network", () => {
@@ -55,7 +55,7 @@ describe("[hobbits] network", () => {
     const id = 0;
     let method = Method.Goodbye;
     const actualEncoded = encodeRequest(id, method, msg);
-    const encodedMessage = encodeMassage(protocolType.RPC, actualEncoded);
+    const encodedMessage = encodeMessage(protocolType.RPC, actualEncoded);
 
     let server = net.createServer(socket => {
       socket.on('data', data => {
@@ -74,7 +74,7 @@ describe("[hobbits] network", () => {
     });
 
     client.on('data', data => {
-      const decodedMessage: DecodedMessage = decodeMassage(encodedMessage);
+      const decodedMessage: DecodedMessage = decodeMessage(encodedMessage);
       const decodedWireRequest: WireRequest = deserialize(decodedMessage.payload, WireRequest);
       // console.log(decodedWireRequest);
 

@@ -1,4 +1,4 @@
-import {number64} from "../../types";
+import {number64, uint8} from "../../types";
 
 export enum Events {
   Status = "STATUS",
@@ -7,9 +7,8 @@ export enum Events {
 }
 
 export interface DecodedMessage {
-  protocol: string;
-  version: number64;
-  command: string;
+  version: number;
+  protocol: number;
   header: Buffer;
   payload: Buffer;
 }
