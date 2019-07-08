@@ -8,26 +8,26 @@ cache:
 jobs:
   include:
     - stage: Lint and Check types
-    - node_js: "lts/*"
+      node_js: "lts/*"
     - name: Lodestar
       script: lerna run --scope @chainsafe/lodestar check-types & lerna run --scope @chainsafe/lodestar lint
     - name: Eth2.0 Types
       script: lerna run --scope @chainsafe/eth2-types check-types & lerna run --scope @chainsafe/eth2-types lint
 
     - stage: Unit Tests
-    - node_js: "lts/*"
+      node_js: "lts/*"
     - name: Lodestar
       script: lerna run --scope @chainsafe/lodestar test:unit && lerna run --scope @chainsafe/lodestar codecov
     - name: Eth2.0 Types
       script: lerna run --scope @chainsafe/eth2-types test:unit
 
     - stage: e2e Tests
-    - node_js: "lts/*"
+      node_js: "lts/*"
     - name: Lodestar
       script: lerna run --scope @chainsafe/lodestar test:e2e
 
     - stage: Spec Tests
-    - node_js: "lts/*"
+      node_js: "lts/*"
     - name: Lodestar
       script: lerna run --scope @chainsafe/lodestar test:spec
 
