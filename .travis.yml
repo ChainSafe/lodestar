@@ -34,7 +34,6 @@ jobs:
       node_js: "10"
       script: lerna run --scope @chainsafe/lodestar test:spec
 
-
 before_deploy: yarn run --scope @chainsafe/lodestar build:docs
 
 deploy:
