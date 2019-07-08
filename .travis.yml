@@ -15,7 +15,6 @@ jobs:
     - name: Eth2.0 Types
       script: lerna run --scope @chainsafe/eth2-types check-types & lerna run --scope @chainsafe/eth2-types lint
 
-
     - stage: Unit Tests
       name: Lodestar
       script: lerna run --scope @chainsafe/lodestar test:unit && lerna run --scope @chainsafe/lodestar codecov
