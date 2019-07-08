@@ -31,13 +31,13 @@ jobs:
       script: lerna run --scope @chainsafe/lodestar test:spec
 
 
-before_deploy: yarn run build:docs
+before_deploy: yarn run --scope @chainsafe/lodestar build:docs
 
 deploy:
   provider: pages
   skip_cleanup: true
   github_token: $GH_PAGES_TOKEN
   keep_history: true
-  local_dir: docs
+  local_dir: packages/lodestar/docs
   on:
     branch: master
