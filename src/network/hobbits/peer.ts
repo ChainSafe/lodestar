@@ -6,7 +6,7 @@ import {
   Hello, Status, RequestBody, ResponseBody
 } from "../../types";
 import {Method} from "../../constants";
-import {HobbitsRpc} from "./rpc";
+import {HobbitsConnectHandler} from "./hobbitsConnectHandler";
 import net from "net";
 import {HobbitsUri} from "./hobbitsUri";
 
@@ -16,9 +16,9 @@ export class Peer {
   public latestHello: Hello | null;
   public latestStatus: Status | null;
   private connection: net.Socket;
-  private controller: HobbitsRpc;
+  private controller: HobbitsConnectHandler;
 
-  public constructor (hobbitsUri: HobbitsUri, controller: HobbitsRpc) {
+  public constructor (hobbitsUri: HobbitsUri, controller: HobbitsConnectHandler) {
     this.hobbitsUri = hobbitsUri;
     this.controller = controller;
 

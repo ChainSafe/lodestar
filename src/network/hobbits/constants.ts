@@ -18,10 +18,11 @@ export enum ResponseCode {
   ServerError = 40,
 }
 
-export const HOBBITS_VERSION = 2;
-
 export enum ProtocolType {
   RPC = 0,
   GOSSIP = 1,
   PING = 2
 }
+
+export const HOBBITS_VERSION = 2;
+export  const HOBBITS_DEFAULT_PORT = 9000;
