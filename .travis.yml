@@ -7,6 +7,11 @@ cache:
   directories:
     - node_modules
 
+install:
+  - yarn
+  - lerna bootstrap
+  - lerna run --scope @chainsafe/eth2-types build # To ensure we run the latest version of eth2-types
+
 jobs:
   include:
     - stage: Lint and Check types
