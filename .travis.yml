@@ -14,27 +14,28 @@ install:
 
 jobs:
   include:
-    - stage: Lint and Check types
-      name: Lodestar
+
+    # Lodestar package scripts
+    - stage: Lodestar
+      name: Lint and Check types
       script: lerna run --scope @chainsafe/lodestar check-types & lerna run --scope @chainsafe/lodestar lint
     -
-      name: Eth2.0 Types
-      script: lerna run --scope @chainsafe/eth2-types check-types & lerna run --scope @chainsafe/eth2-types lint
-
-    - stage: Unit Tests
-      name: Lodestar
+      name: Unit Tests
       script: lerna run --scope @chainsafe/lodestar test:unit && lerna run --scope @chainsafe/lodestar codecov
     -
-      name: Eth2.0 Types
-      script: lerna run --scope @chainsafe/eth2-types test:unit
-
-    - stage: e2e Tests
-      name: Lodestar
+      name: E2e Tests
       script: lerna run --scope @chainsafe/lodestar test:e2e
-
-    - stage: Spec Tests
-      name: Lodestar
+    -
+      name: Spec Tests
       script: lerna run --scope @chainsafe/lodestar test:spec
+
+    # Eth2-types package scripts
+    - stage: Eth2.0 Types
+      name: Lint and Check types
+      script: lerna run --scope @chainsafe/eth2-types check-types & lerna run --scope @chainsafe/eth2-types lint
+    -
+      name: Unit Tests
+      script: lerna run --scope @chainsafe/eth2-types test:unit
 
 before_deploy: yarn run --scope @chainsafe/lodestar build:docs
 
