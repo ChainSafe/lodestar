@@ -19,7 +19,7 @@ import {
   SHUFFLE_ROUND_COUNT,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
-} from "@chainsafe/eth2-types"
+} from "@chainsafe/eth2-types";
 
 import {bytesToBN, intToBytes} from "../../../util/bytes";
 import {hash} from "../../../util/crypto";

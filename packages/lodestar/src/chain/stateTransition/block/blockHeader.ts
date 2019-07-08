@@ -14,7 +14,7 @@ import {
   BeaconBlockHeader,
 } from "@chainsafe/eth2-types";
 
-import {Domain} from "@chainsafe/eth2-types"
+import {Domain} from "@chainsafe/eth2-types";
 
 import {
   getBeaconProposerIndex,

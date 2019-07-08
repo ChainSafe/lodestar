@@ -4,7 +4,7 @@
 
 import {BeaconState, Gwei, ValidatorIndex} from "@chainsafe/eth2-types";
 
-import {BASE_REWARD_FACTOR, BASE_REWARDS_PER_EPOCH} from "@chainsafe/eth2-types"
+import {BASE_REWARD_FACTOR, BASE_REWARDS_PER_EPOCH} from "@chainsafe/eth2-types";
 
 import {bnSqrt} from "../../../../util/math";
 

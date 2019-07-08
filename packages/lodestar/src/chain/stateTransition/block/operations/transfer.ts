@@ -18,7 +18,7 @@ import {
   MIN_DEPOSIT_AMOUNT,
   FAR_FUTURE_EPOCH,
   MAX_EFFECTIVE_BALANCE,
-} from "@chainsafe/eth2-types"
+} from "@chainsafe/eth2-types";
 
 import {
   getBeaconProposerIndex,

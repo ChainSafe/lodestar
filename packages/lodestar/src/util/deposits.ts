@@ -1,5 +1,5 @@
 import {Deposit} from "@chainsafe/eth2-types";
-import {MAX_DEPOSITS} from "@chainsafe/eth2-types"
+import {MAX_DEPOSITS} from "@chainsafe/eth2-types";
 
 export function processSortedDeposits(
   deposits: Deposit[],

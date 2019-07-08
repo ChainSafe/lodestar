@@ -13,7 +13,7 @@ import {
 } from "../util";
 
 import {getWinningCrosslinkAndAttestingIndices} from "./util";
-import {SHARD_COUNT} from "@chainsafe/eth2-types"
+import {SHARD_COUNT} from "@chainsafe/eth2-types";
 
 
 export function processCrosslinks(state: BeaconState): BeaconState {

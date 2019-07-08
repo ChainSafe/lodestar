@@ -6,7 +6,7 @@ import {BeaconState} from "@chainsafe/eth2-types";
 
 import {
   LATEST_SLASHED_EXIT_LENGTH, MIN_SLASHING_PENALTY_QUOTIENT,
-} from "@chainsafe/eth2-types"
+} from "@chainsafe/eth2-types";
 
 import {bnMax, bnMin, intDiv} from "../../../util/math";
 

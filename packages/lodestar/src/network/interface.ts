@@ -7,7 +7,7 @@ import {EventEmitter} from "events";
 import {
   Attestation, BeaconBlock, Shard, ResponseBody, RequestBody,
 } from "@chainsafe/eth2-types";
-import {RequestId, Method} from "@chainsafe/eth2-types"
+import {RequestId, Method} from "@chainsafe/eth2-types";
 
 export interface INetworkOptions {
   maxPeers: number;

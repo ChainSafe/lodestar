@@ -10,7 +10,7 @@ import {
   MAX_PROPOSER_SLASHINGS,
   MAX_VOLUNTARY_EXITS,
   ZERO_HASH
-} from "@chainsafe/eth2-types"
+} from "@chainsafe/eth2-types";
 import {bestVoteData} from "./eth1Data";
 import {IProgressiveMerkleTree} from "../../../util/merkleTree";
 import {generateDeposits} from "./deposits";

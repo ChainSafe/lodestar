@@ -3,7 +3,7 @@
  */
 
 import {ethers} from "ethers";
-import {DEPOSIT_CONTRACT_ADDRESS} from "@chainsafe/eth2-types"
+import {DEPOSIT_CONTRACT_ADDRESS} from "@chainsafe/eth2-types";
 
 export default {
   provider: ethers.getDefaultProvider(),

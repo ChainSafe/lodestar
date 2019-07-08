@@ -9,7 +9,7 @@ import bls from "@chainsafe/bls-js";
 
 import {BeaconBlock, BeaconBlockBody, BeaconState, Epoch,} from "@chainsafe/eth2-types";
 
-import {Domain, EMPTY_SIGNATURE, LATEST_RANDAO_MIXES_LENGTH, ZERO_HASH,} from "@chainsafe/eth2-types"
+import {Domain, EMPTY_SIGNATURE, LATEST_RANDAO_MIXES_LENGTH, ZERO_HASH,} from "@chainsafe/eth2-types";
 
 import {getBeaconProposerIndex, getCurrentEpoch, getDomain, getRandaoMix,} from "../util";
 

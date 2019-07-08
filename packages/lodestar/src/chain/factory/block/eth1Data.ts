@@ -4,7 +4,7 @@
 
 import {BeaconState, Eth1Data} from "@chainsafe/eth2-types";
 import {IEth1Notifier} from "../../../eth1";
-import {ETH1_FOLLOW_DISTANCE} from "@chainsafe/eth2-types"
+import {ETH1_FOLLOW_DISTANCE} from "@chainsafe/eth2-types";
 import {Block} from "ethers/providers";
 import {mostFrequent} from "../../../util/objects";
 

@@ -15,7 +15,7 @@ import {
   FAR_FUTURE_EPOCH,
   WHISTLEBLOWING_REWARD_QUOTIENT,
   PROPOSER_REWARD_QUOTIENT,
-} from "@chainsafe/eth2-types"
+} from "@chainsafe/eth2-types";
 
 import {
   getCurrentEpoch,

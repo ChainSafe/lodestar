@@ -7,7 +7,7 @@ import {getDomainFromFork, getRandaoMix, slotToEpoch} from "../../chain/stateTra
 import {RpcClient} from "../rpc";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
-import {Domain} from "@chainsafe/eth2-types"
+import {Domain} from "@chainsafe/eth2-types";
 import {IValidatorDB} from "../../db";
 import {ILogger} from "../../logger";
 

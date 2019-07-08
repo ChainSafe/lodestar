@@ -10,7 +10,7 @@ import {
   Eth1Data,
 } from "@chainsafe/eth2-types";
 
-import {SLOTS_PER_ETH1_VOTING_PERIOD} from "@chainsafe/eth2-types"
+import {SLOTS_PER_ETH1_VOTING_PERIOD} from "@chainsafe/eth2-types";
 
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#eth1-data
 

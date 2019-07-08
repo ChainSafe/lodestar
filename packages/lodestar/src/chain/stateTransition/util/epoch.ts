@@ -6,7 +6,7 @@ import {
   ACTIVATION_EXIT_DELAY,
   GENESIS_EPOCH,
   SLOTS_PER_EPOCH,
-} from "@chainsafe/eth2-types"
+} from "@chainsafe/eth2-types";
 
 import {
   BeaconState,

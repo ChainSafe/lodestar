@@ -11,7 +11,7 @@ import {
   BeaconBlockRootsResponse, BeaconBlockHeadersResponse, BeaconBlockBodiesResponse,
   BeaconStatesResponse, ResponseBody, WireResponse, WireRequest,
 } from "@chainsafe/eth2-types";
-import {RequestId, Method} from "@chainsafe/eth2-types"
+import {RequestId, Method} from "@chainsafe/eth2-types";
 
 // Encode
 
