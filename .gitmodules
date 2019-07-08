@@ -1,4 +1,4 @@
 [submodule "test/spec/test-cases"]
-	path = test/spec/test-cases
+	path = packages/lodestar/test/spec/test-cases
 	url = https://github.com/ChainSafe/eth2.0-spec-tests.git
 	branch = master
