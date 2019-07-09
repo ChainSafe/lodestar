@@ -2,8 +2,8 @@
  * @module validator
  */
 
-import {BeaconBlock, Fork, Slot, ValidatorIndex} from "../../types";
-import {getDomainFromFork, getRandaoMix, slotToEpoch} from "../../chain/stateTransition/util";
+import {BeaconBlock, Epoch, Fork, Slot, ValidatorIndex} from "../../types";
+import {getDomainFromFork, slotToEpoch} from "../../chain/stateTransition/util";
 import {RpcClient} from "../rpc";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
@@ -42,10 +42,10 @@ export default class BlockProposingService {
     }
     const block = await this.provider.validator.produceBlock(
       slot,
-      getRandaoMix(
-        await this.provider.beacon.getBeaconState(),
-        slotToEpoch(slot)
-      )
+      this.privateKey.signMessage(
+        hashTreeRoot(slotToEpoch(slot), Epoch),
+        getDomainFromFork(fork, slotToEpoch(slot), Domain.RANDAO)
+      ).toBytesCompressed()
     );
     block.signature = this.privateKey.signMessage(
       signingRoot(block, BeaconBlock),
@@ -57,6 +57,10 @@ export default class BlockProposingService {
       `[Validator] Proposed block with hash 0x${hashTreeRoot(block, BeaconBlock).toString('hex')}`
     );
     return block;
+  }
+
+  public getRpcClient(): RpcClient {
+    return this.provider;
   }
 
   private async hasProposedAlready(slot: Slot): Promise<boolean> {

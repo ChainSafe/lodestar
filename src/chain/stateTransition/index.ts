@@ -24,12 +24,13 @@ export {
 
 export function stateTransition(
   state: BeaconState, block: BeaconBlock,
-  validateStateRoot = false
+  validateStateRoot = false,
+  verifySignatures = true
 ): BeaconState {
   // Process slots (including those with no blocks) since block
   processSlots(state, block.slot);
   // Process block
-  processBlock(state, block);
+  processBlock(state, block, verifySignatures);
   // Validate state root (`validate_state_root == True` in production)
   if (validateStateRoot){
     assert(block.stateRoot.equals(hashTreeRoot(state, BeaconState)));

@@ -30,6 +30,7 @@ export async function assembleBody(
     opPool.getVoluntaryExits().then(value => value.slice(0, MAX_VOLUNTARY_EXITS)),
     bestVoteData(currentState, eth1)
   ]);
+  //requires new eth1 data so it has to be done after above operations
   const deposits = await generateDeposits(opPool, currentState, eth1Data, merkleTree);
   eth1Data.depositRoot = merkleTree.root();
   return {
@@ -39,7 +40,6 @@ export async function assembleBody(
     proposerSlashings,
     attesterSlashings,
     attestations,
-    //requires new eth1 data so it has to be done after above operations
     deposits,
     voluntaryExits,
     transfers: [],

@@ -91,6 +91,7 @@ export function isProposerAtSlot(
   slot: Slot,
   validatorIndex: ValidatorIndex): boolean {
 
+  state = {...state, slot};
   const currentEpoch = getCurrentEpoch(state);
   assert(slotToEpoch(slot) === currentEpoch);
 
