@@ -12,7 +12,7 @@ describe("types", () => {
   // put interfaces and types into objects
   const interfaces = {};
   const types = {};
-  const typesDir = path.join(__dirname, "/../src/");
+  const typesDir = path.join(__dirname, "/../src/types/");
   // Get all ts files in our types directory
   const typeFiles = fs.readdirSync(typesDir).filter((s) => s.endsWith(".ts"));
   typeFiles.map((file) => {
