@@ -7,14 +7,6 @@ import {EventEmitter} from "events";
 import {bytes32, Deposit, number64} from "../types";
 import {Block} from "ethers/providers";
 
-export interface IEth1Options {
-  depositContract: {
-    deployedAt: number;
-    address: string;
-    abi: any[];
-  };
-}
-
 /**
  * The IEth1Notifier service watches the Eth1.0 chain for relevant events
  */

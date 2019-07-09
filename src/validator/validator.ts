@@ -15,17 +15,21 @@
  */
 import BlockProposingService from "./services/block";
 import {Epoch, Slot, ValidatorIndex} from "../types";
-import {GenesisInfo, ValidatorCtx} from "./types";
+import {GenesisInfo} from "./types";
 import {RpcClient, RpcClientOverWs} from "./rpc";
 import {AttestationService} from "./services/attestation";
-import {ValidatorDB, IValidatorDB, LevelDbController} from "../db";
+import {IValidatorDB, LevelDbController, ValidatorDB} from "../db";
 import {ILogger} from "../logger";
+import defaultValidatorOptions, {IValidatorOptions} from "./options";
+import deepmerge from "deepmerge";
+import {getKeyFromFileOrKeystore} from "../util/io";
+import {isPlainObject} from "../util/objects";
 
 /**
  * Main class for the Validator client.
  */
 class Validator {
-  private ctx: ValidatorCtx;
+  private opts: IValidatorOptions;
   private rpcClient: RpcClient;
   private validatorIndex: ValidatorIndex;
   private blockService: BlockProposingService;
@@ -33,26 +37,26 @@ class Validator {
   private genesisInfo: GenesisInfo;
   private db: IValidatorDB;
   private logger: ILogger;
-  public isActive: boolean;
-  public isRunning: boolean;
+  private isActive: boolean;
+  private isRunning: boolean;
 
 
-  public constructor(ctx: ValidatorCtx, logger: ILogger) {
-    this.ctx = ctx;
-    this.logger = logger;
+  public constructor(opts: Partial<IValidatorOptions>, modules: {logger: ILogger}) {
+    this.opts = deepmerge(defaultValidatorOptions, opts, {isMergeableObject: isPlainObject});
+    this.logger = modules.logger;
     this.isActive = false;
     this.isRunning = false;
-    this.db = ctx.db ? ctx.db : new ValidatorDB({
+    this.db = new ValidatorDB({
       controller: new LevelDbController({
-        name: ctx.dbName
+        name: this.opts.db.name
       }, {
         logger: this.logger
       })
     });
-    if(ctx.rpc) {
-      this.rpcClient = ctx.rpc;
-    } else if(ctx.rpcUrl) {
-      this.rpcClient = new RpcClientOverWs({rpcUrl: ctx.rpcUrl});
+    if(this.opts.rpcInstance) {
+      this.rpcClient = this.opts.rpcInstance;
+    } else if(this.opts.rpc) {
+      this.rpcClient = new RpcClientOverWs({rpcUrl: this.opts.rpc});
     } else {
       throw new Error("Validator requires either RpcClient instance or rpc url as params");
     }
@@ -75,11 +79,13 @@ class Validator {
     await this.rpcClient.disconnect();
   }
 
-  /**
-   * Main method that starts a client.
-   */
-  public async setup(): Promise<void> {
+  private async setup(): Promise<void> {
     this.logger.info("Setting up validator client...");
+    if(this.opts.keystore) {
+      this.opts.keypair = await getKeyFromFileOrKeystore(this.opts.keystore);
+    } else if(!this.opts.keypair) {
+      throw new Error("Missing validator keypair");
+    }
 
     await this.setupRPC();
 
@@ -90,14 +96,14 @@ class Validator {
     this.blockService = new BlockProposingService(
       this.validatorIndex,
       this.rpcClient,
-      this.ctx.keypair.privateKey,
+      this.opts.keypair.privateKey,
       this.db, this.logger
     );
 
     this.attestationService = new AttestationService(
       this.validatorIndex,
       this.rpcClient,
-      this.ctx.keypair.privateKey,
+      this.opts.keypair.privateKey,
       this.db,
       this.logger
     );
@@ -109,7 +115,7 @@ class Validator {
   private async setupRPC(): Promise<void> {
     this.logger.info("Setting up RPC connection...");
     await this.rpcClient.connect();
-    this.logger.info(`RPC connection successfully established: ${this.ctx.rpcUrl || 'inmemory'}!`);
+    this.logger.info(`RPC connection successfully established: ${this.opts.rpc || 'inmemory'}!`);
   }
 
   /**
@@ -136,7 +142,7 @@ class Validator {
   private async getValidatorIndex(): Promise<ValidatorIndex> {
     this.logger.info("Checking if validator has been processed...");
     const index = await this.rpcClient.validator.getIndex(
-      this.ctx.keypair.publicKey.toBytesCompressed()
+      this.opts.keypair.publicKey.toBytesCompressed()
     );
     if (index) {
       this.logger.info("Validator has been processed!");
@@ -155,7 +161,7 @@ class Validator {
   private async checkDuties(slot: Slot): Promise<void> {
     const validatorDuty =
       (await this.rpcClient.validator.getDuties([
-        this.ctx.keypair.publicKey.toBytesCompressed()
+        this.opts.keypair.publicKey.toBytesCompressed()
       ]))[0];
     const currentVersion = await this.rpcClient.beacon.getFork();
     const isAttester = validatorDuty.attestationSlot === slot;

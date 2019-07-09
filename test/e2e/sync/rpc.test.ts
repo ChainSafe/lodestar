@@ -5,12 +5,13 @@ import BN from "bn.js";
 import {Method} from "../../../src/constants";
 import {SyncRpc} from "../../../src/sync/rpc";
 import {ReputationStore} from "../../../src/sync/reputation";
-import {Libp2pNetwork, INetworkOptions} from "../../../src/network";
+import {Libp2pNetwork} from "../../../src/network";
 import {BeaconDB, LevelDbController} from "../../../src/db";
 
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../unit/network/libp2p/util";
 import {WinstonLogger} from "../../../src/logger";
+import {INetworkOptions} from "../../../src/network/options";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {

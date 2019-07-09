@@ -9,22 +9,6 @@ import {
 } from "../types";
 import {RequestId, Method} from "../constants";
 
-export interface INetworkOptions {
-  maxPeers: number;
-  /**
-   * Multiaddrs to listen on
-   */
-  multiaddrs: string[];
-  bootnodes: string[];
-  /**
-   * RPC request timeout in milliseconds
-   */
-  rpcTimeout: number;
-
-  connectTimeout: number;
-  disconnectTimeout: number;
-}
-
 export interface INetwork extends EventEmitter {
   peerInfo: PeerInfo;
   // Service

@@ -4,14 +4,13 @@
 
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import defaults from "../../eth1/defaults";
+import defaults from "../../eth1/options";
 import * as ethers from "ethers/ethers";
 import {Wallet} from "ethers/ethers";
-import  {LogLevel, WinstonLogger} from "../../logger";
+import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
 import {JsonRpcProvider} from "ethers/providers";
-import {ILogger} from "../../logger";
 
 interface IDepositCommandOptions {
   privateKey: string;

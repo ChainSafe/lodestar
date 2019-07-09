@@ -2,15 +2,11 @@ import {EventEmitter} from "events";
 
 import {bytes32, Deposit, number64} from "../../../../src/types";
 
-import {IEth1Notifier, IEth1Options} from "../../../../src/eth1";
+import {IEth1Notifier, EthersEth1Options} from "../../../../src/eth1";
 import {Block} from "ethers/providers";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface MockEth1Options extends IEth1Options {
-}
-
 export class MockEth1Notifier extends EventEmitter implements IEth1Notifier {
-  public constructor(opts: MockEth1Options) {
+  public constructor(opts: EthersEth1Options) {
     super();
   }
 

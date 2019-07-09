@@ -7,10 +7,7 @@ import {LikeSocket} from "noice-json-rpc";
 import http from "http";
 import promisify from "promisify-es6";
 import {ILogger} from "../../logger";
-
-export interface HttpServerOpts {
-  port: number;
-}
+import {ITransportOption} from "../options";
 
 class MessageRequest implements LikeSocket {
 
@@ -69,13 +66,13 @@ export default class HttpServer implements LikeSocketServer{
 
   public server: http.Server;
 
-  private opts: HttpServerOpts;
+  private opts: ITransportOption;
 
   private connectionCallback: Function;
 
   private logger: ILogger;
 
-  public constructor(opts: HttpServerOpts, {logger}: {logger: ILogger}) {
+  public constructor(opts: ITransportOption, {logger}: {logger: ILogger}) {
     this.opts = opts;
     this.logger = logger;
     this.server = http.createServer(async (req, resp) => {

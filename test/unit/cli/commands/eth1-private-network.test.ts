@@ -5,7 +5,8 @@ import program from "commander";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 
-describe('[CLI] eth1:dev', () => {
+describe('[CLI] eth1:dev', function () {
+  this.timeout(4000);
 
   let logger: ILogger = new WinstonLogger();
 

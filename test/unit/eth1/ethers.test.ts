@@ -10,7 +10,7 @@ import bls from "@chainsafe/bls-js";
 import {serialize} from "@chainsafe/ssz";
 
 import {EthersEth1Notifier} from "../../../src/eth1";
-import defaults from "../../../src/eth1/dev/defaults";
+import defaults from "../../../src/eth1/dev/options";
 import {number64} from "../../../src/types";
 import {ILogger, WinstonLogger} from "../../../src/logger";
 import {OpPool} from "../../../src/opPool";
@@ -32,8 +32,8 @@ describe("Eth1Notifier", () => {
     sandbox = sinon.createSandbox();
     opPool = sandbox.createStubInstance(OpPool);
     eth1 = new EthersEth1Notifier({
-      depositContract: defaults,
-      provider: provider
+      ...defaults,
+      providerInstance: provider
     },
     {
       opPool,
@@ -78,9 +78,9 @@ describe("Eth1Notifier", () => {
         parseLog: sandbox.stub()
       };
       const notifier = new EthersEth1Notifier({
-        depositContract: defaults,
+        ...defaults,
         // @ts-ignore
-        provider: stubProvider,
+        providerInstance: stubProvider,
         // @ts-ignore
         contract: stubContract
       },
@@ -141,9 +141,9 @@ describe("Eth1Notifier", () => {
       ]);
 
       const notifier = new EthersEth1Notifier({
-        depositContract: defaults,
+        ...defaults,
         // @ts-ignore
-        provider: stubProvider,
+        providerInstance: stubProvider,
         // @ts-ignore
         contract
       },
@@ -165,8 +165,8 @@ describe("Eth1Notifier", () => {
     async function (): Promise<void> {
       const contract = sinon.createStubInstance(Contract);
       const notifier = new EthersEth1Notifier({
-        depositContract: defaults,
-        provider,
+        ...defaults,
+        providerInstance: provider,
         // @ts-ignore
         contract
       },
@@ -205,6 +205,7 @@ describe("Eth1Notifier", () => {
     const unixTimeNow = Math.floor(Date.now() / 1000);
     timeBuf.writeUInt32LE(unixTimeNow, 0);
     const timeHex = "0x" + timeBuf.toString("hex");
+    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
     const event = {blockHash: "0x0000000000000000"} as Event;
     const genesisDeposits = [
       generateDeposit(),
@@ -252,8 +253,8 @@ describe("Eth1Notifier", () => {
       get_deposit_root: spy
     };
     const notifier = new EthersEth1Notifier({
-      depositContract: defaults,
-      provider,
+      ...defaults,
+      providerInstance: provider,
       contract
     },
     {
