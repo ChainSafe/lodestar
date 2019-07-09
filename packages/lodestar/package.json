@@ -19,9 +19,9 @@
     "lint": "eslint --ext .ts src",
     "lint-fix": "eslint --ext .ts src --fix",
     "pretest": "yarn run check-types",
-    "test:unit": "nyc --cache-dir .nyc_output/.cache -r lcov -e .ts mocha -r ts-node/register 'test/unit/**/*.test.ts' && nyc report",
-    "test:e2e": "mocha --timeout 5000 -r ./.babel-register 'test/e2e/**/*.test.ts'",
-    "test:spec": "mocha -r ./.babel-register 'test/spec/**/*.test.ts'",
+    "test:unit": "nyc --cache-dir .nyc_output/.cache -r lcov -e .ts mocha --colors -r ts-node/register 'test/unit/**/*.test.ts' && nyc report",
+    "test:e2e": "mocha  --colors --timeout 5000 -r ./.babel-register 'test/e2e/**/*.test.ts'",
+    "test:spec": "mocha  --colors -r ./.babel-register 'test/spec/**/*.test.ts'",
     "test": "yarn test:unit && yarn test:spec && yarn test:e2e",
     "coverage": "codecov"
   },
