@@ -6,7 +6,8 @@ cache:
   yarn: true
   directories:
     - node_modules
-    - packages/**/node_modules
+    - packages/lodestar/node_modules
+    - packages/eth2-types/node_modules
 
 install:
   - yarn
