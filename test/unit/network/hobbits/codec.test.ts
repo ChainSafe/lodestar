@@ -56,7 +56,6 @@ describe("[hobbits] rpc protocol message", () => {
       decodedWireRequest.body);
     // console.log(decodedRequestBody);
 
-    assert.equal(decodedMessage.command, "RPC");
     assert.deepEqual(actualEncoded, decodedMessage.payload);
     assert.deepEqual(msg, decodedRequestBody);
 

@@ -11,13 +11,13 @@ export function encodeMessage(type: ProtocolType, message: Buffer): Buffer {
   let requestLine = `EWP ${HOBBITS_VERSION} `;
   switch (type) {
     case ProtocolType.RPC:
-      requestLine += `${type}  0 ${message.length}\n`;
+      requestLine += `${type} 0 ${message.length}\n`;
       break;
     case ProtocolType.GOSSIP:
-      requestLine += "GOSSIP";
+      requestLine += `${type}`;
       break;
     case ProtocolType.PING:
-      requestLine += "PING";
+      requestLine += `${type}`;
       break;
   }
 
@@ -46,7 +46,7 @@ export function decodeMessage(message: Buffer): DecodedMessage {
   const headerLength = parseInt(segments[3]);
   const bodyLength = parseInt(segments[4]);
 
-  // console.log("command: " + command + " headerLength: " + headerLength + " bodyLength: " + bodyLength);
+  console.log("protocol: " + protocol + " headerLength: " + headerLength + " bodyLength: " + bodyLength);
 
   let payloadStartedAT = requestLineBytes.length + headerLength;
   let header = message.slice(requestLineBytes.length, payloadStartedAT);
