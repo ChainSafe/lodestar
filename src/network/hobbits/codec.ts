@@ -1,19 +1,27 @@
+/**
+ * @module network/hobbits
+ */
+
 import {bytes, bytes32} from "../../types";
 import {HOBBITS_VERSION, ProtocolType} from "./constants";
 import {DecodedMessage} from "./types";
 
 
 export function encodeMessage(type: ProtocolType, message: Buffer): Buffer {
-  let requestLine: string = "EWP " + HOBBITS_VERSION+" ";
-  if (type == ProtocolType.RPC) {
-    requestLine += type+ " 0 "+ message.length + "\n";
-  } else if (type == ProtocolType.GOSSIP) {
-    requestLine += "GOSSIP";
-  } else if (type == ProtocolType.PING) {
-    requestLine += "PING";
+  let requestLine = `EWP ${HOBBITS_VERSION} `;
+  switch (type) {
+    case ProtocolType.RPC:
+      requestLine += `${type}  0 ${message.length}\n`;
+      break;
+    case ProtocolType.GOSSIP:
+      requestLine += "GOSSIP";
+      break;
+    case ProtocolType.PING:
+      requestLine += "PING";
+      break;
   }
 
-  let buf = Buffer.from(requestLine, 'utf8');
+  const buf = Buffer.from(requestLine, 'utf8');
   return Buffer.concat([buf, message]);
 }
 
@@ -32,11 +40,11 @@ export function decodeMessage(message: Buffer): DecodedMessage {
 
   let requestLine = requestLineBytes.toString();
 
-  let segments = requestLine.split(" ");
-  let version = parseFloat(segments[1]);
-  let protocol = segments[2];
-  let headerLength = parseInt(segments[3]);
-  let bodyLength = parseInt(segments[4]);
+  const segments = requestLine.split(" ");
+  const version = parseFloat(segments[1]);
+  const protocol = parseInt(segments[2]);
+  const headerLength = parseInt(segments[3]);
+  const bodyLength = parseInt(segments[4]);
 
   // console.log("command: " + command + " headerLength: " + headerLength + " bodyLength: " + bodyLength);
 

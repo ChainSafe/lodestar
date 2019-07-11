@@ -1,3 +1,7 @@
+/**
+ * @module network/hobbits
+ */
+
 import {number64, uint8} from "../../types";
 
 export enum Events {

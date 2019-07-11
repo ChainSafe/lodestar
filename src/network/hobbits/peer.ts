@@ -1,12 +1,12 @@
 /**
- * @module network/libp2p
+ * @module network/hobbits
  */
 
 import {
   Hello, Status, RequestBody, ResponseBody
 } from "../../types";
 import {Method} from "../../constants";
-import {HobbitsConnectHandler} from "./hobbitsConnectHandler";
+import {HobbitsConnectionHandler} from "./hobbitsConnectionHandler";
 import net from "net";
 import {HobbitsUri} from "./hobbitsUri";
 
@@ -16,9 +16,9 @@ export class Peer {
   public latestHello: Hello | null;
   public latestStatus: Status | null;
   private connection: net.Socket;
-  private controller: HobbitsConnectHandler;
+  private controller: HobbitsConnectionHandler;
 
-  public constructor (hobbitsUri: HobbitsUri, controller: HobbitsConnectHandler) {
+  public constructor (hobbitsUri: HobbitsUri, controller: HobbitsConnectionHandler) {
     this.hobbitsUri = hobbitsUri;
     this.controller = controller;
 

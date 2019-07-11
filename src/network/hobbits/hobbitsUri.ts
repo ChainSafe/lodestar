@@ -1,7 +1,12 @@
+/**
+ * @module network/hobbits
+ */
+
 import PeerInfo from "peer-info";
 import {peerInfoToAddress} from "./util";
 import {promisify} from "util";
 import {add} from "winston";
+import {match} from "minimatch";
 
 export interface IHobbitsUriOpts {
   scheme?: string;
@@ -18,16 +23,12 @@ export class HobbitsUri {
   public port: number;
   public constructor(opts?: IHobbitsUriOpts) {
     if(opts.uriString) {
-      // TODO: More validation on identity, host, port
-      let regx = /^hob\+(tcp|udp):\/\/(?:([0-9a-f]*)@)?([a-zA-Z0-9.]*):([0-9]+)$/g;
-      let match = regx.exec(opts.uriString);
-      if (match) {
-        this.scheme = match[1];
-        if (match[2]) {
-          this.identity = match[2];
-        }
-        this.host = match[3];
-        this.port = parseInt(match[4]);
+      const parsedUri = HobbitsUri.validateHobbitsUri(opts.uriString);
+      if (parsedUri) {
+        this.scheme = parsedUri.scheme;
+        this.identity = parsedUri.identity;
+        this.host = parsedUri.host;
+        this.port = parsedUri.port;
       }
     }
     else {
@@ -36,6 +37,21 @@ export class HobbitsUri {
       this.host = opts.host;
       this.port = opts.port;
     }
+  }
+
+  public static validateHobbitsUri(uriString: string){
+    // TODO: More validation on identity, host, port
+    let regx = /^hob\+(tcp|udp):\/\/(?:([0-9a-f]*)@)?([a-zA-Z0-9.]*):([0-9]+)$/g;
+    let match = regx.exec(uriString);
+    if (match) {
+      return {
+        scheme: match[1],
+        identity: match[2],
+        host: match[3],
+        port: parseInt(match[4])
+      };
+    }
+    return null;
   }
 
   public toUri(): string{

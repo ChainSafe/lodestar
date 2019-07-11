@@ -1,5 +1,5 @@
 /**
- * @module network
+ * @module network/hobbits/rpc
  */
 
 import {deserialize, serialize} from "@chainsafe/ssz";

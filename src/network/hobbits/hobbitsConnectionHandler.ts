@@ -1,5 +1,5 @@
 /**
- * @module network/libp2p
+ * @module network/hobbits
  */
 
 import {EventEmitter} from "events";
@@ -21,7 +21,7 @@ import {decodeMessage, encodeMessage} from "./codec";
 /**
  * The NetworkRpc module controls network-level resources and concerns of p2p connections
  */
-export class HobbitsConnectHandler extends EventEmitter {
+export class HobbitsConnectionHandler extends EventEmitter {
   /**
    * dials in progress
    */
@@ -142,7 +142,7 @@ export class HobbitsConnectHandler extends EventEmitter {
   private async getResponse(id: RequestId): Promise<ResponseBody> {
     return new Promise<ResponseBody>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        this.removeAllListeners(id+'');
+        this.removeAllListeners(id.toString());
         const method = this.requests[id];
         delete this.requests[id];
         reject(new Error(`request timeout, method ${method}, id ${id}`));
@@ -177,37 +177,33 @@ export class HobbitsConnectHandler extends EventEmitter {
     }
     // Changed response
     let decodedBody, request;
-    let decodedMessage = decodeMessage(data);
-    switch (decodedMessage.protocol) {
-      case ProtocolType.RPC:
-        request = deserialize(decodedMessage.payload, WireRequest);
-        decodedBody = decodeRequestBody(request.methodId, request.body);
-        break;
-      case ProtocolType.GOSSIP:
-        break;
-      case ProtocolType.PING:
-        break;
+    try {
+      let decodedMessage = decodeMessage(data);
+      switch (decodedMessage.protocol) {
+        case ProtocolType.RPC:
+          request = deserialize(decodedMessage.payload, WireRequest);
+          decodedBody = decodeRequestBody(request.methodId, request.body);
+          break;
+        case ProtocolType.GOSSIP:
+          break;
+        case ProtocolType.PING:
+          break;
+      }
+    } catch (e) {
+      this.logger.warn('unable to decode request', e.message);
+      return;
     }
 
     const id = request.id;
     const method = this.requests[id];
     if (method === undefined) { // incoming request
-      try {
-        this.responses[id] = {peer, method: request.method};
-        this.emit("request", peer.hobbitsUri, request.method, id, decodedBody);
-      } catch (e) {
-        this.logger.warn('unable to decode request', e.message);
-      }
+      this.responses[id] = {peer, method: request.method};
+      this.emit("request", peer.hobbitsUri, request.method, id, decodedBody);
     } else { // incoming response
-      try {
-        const event = `response ${id}`;
-        this.emit(event, null, decodedBody);
-      } catch (e) {
-        this.logger.warn('unable to decode response', e.message);
-      }
+      const event = `response ${id}`;
+      this.emit(event, null, decodedBody);
     }
   }
-
 
   /**
    * Connects to static peers
@@ -216,7 +212,6 @@ export class HobbitsConnectHandler extends EventEmitter {
     await Promise.all(this.bootnodes.map((bootnode: string): Promise<void> => {
       return this.dialForRpc(new HobbitsUri({uriString: bootnode}));
     }));
-
   };
 
   public async start(): Promise<void> {
@@ -234,12 +229,12 @@ export class HobbitsConnectHandler extends EventEmitter {
     });
 
     this.server.on("close", (): void => {
-      this.logger.info("Closing server!");
+      this.logger.info("Closing hobbits server!");
       // this.running = false;
     });
 
     this.server.listen(HOBBITS_DEFAULT_PORT, (): void => {
-      this.logger.info("Server started!");
+      this.logger.info("Hobbits server started!");
       // this.running = true;
     });
 
@@ -258,6 +253,7 @@ export class HobbitsConnectHandler extends EventEmitter {
     this.wipDials = new Set();
     this.peers.forEach((peer) => peer.close());
     this.peers = new Map<string, Peer>();
+    this.server.close();
 
     // this.libp2p.unhandle(RPC_MULTICODEC);
     // this.libp2p.removeListener('peer:connect', this.dialForRpc.bind(this));

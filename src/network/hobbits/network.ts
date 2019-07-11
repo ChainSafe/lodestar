@@ -1,6 +1,10 @@
+/**
+ * @module network/hobbits
+ */
+
 import {EventEmitter} from "events";
 import {INetwork, INetworkOptions} from "../interface";
-import {HobbitsConnectHandler} from "./hobbitsConnectHandler";
+import {HobbitsConnectionHandler} from "./hobbitsConnectionHandler";
 import {ILogger} from "../../logger";
 import {Attestation, BeaconBlock, Shard} from "../../types";
 import net from "net";
@@ -14,7 +18,7 @@ import {HobbitsUri} from "./hobbitsUri";
 export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
   public peerInfo: PeerInfo;
   private opts: INetworkOptions;
-  private rpc: HobbitsConnectHandler;
+  private rpc: HobbitsConnectionHandler;
   private inited: Promise<void>;
   private logger: ILogger;
   private port: number;
@@ -32,7 +36,7 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
     this.logger = logger;
     // `libp2p` can be a promise as well as a libp2p object
     this.inited = new Promise((resolve) => {
-      this.rpc = new HobbitsConnectHandler(this.bootnodes, logger);
+      this.rpc = new HobbitsConnectionHandler(this.bootnodes, logger);
       resolve();
     });
   }

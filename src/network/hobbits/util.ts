@@ -1,3 +1,7 @@
+/**
+ * @module network/hobbits
+ */
+
 import PeerInfo from "peer-info";
 import {Multiaddr} from "multiaddr";
 import {RequestId} from "./constants";

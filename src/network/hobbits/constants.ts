@@ -1,3 +1,7 @@
+/**
+ * @module network/hobbits
+ */
+
 export type RequestId = number;
 
 export enum Method {

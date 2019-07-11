@@ -19,13 +19,14 @@ describe("[hobbits] Uri", ()=>{
     let uriString = "hob+tcp://10.0.0.1:9000";
     let hobbitsUri = new HobbitsUri({uriString: uriString});
     let peerInfo = await HobbitsUri.hobbitsUriToPeerInfo(hobbitsUri);
-    console.log(peerInfo);
+    // console.log(peerInfo);
 
     let reverseUri = HobbitsUri.peerInfoToHobbitsUri(peerInfo);
     delete reverseUri.identity; // removed generated id
+    delete hobbitsUri.identity;
 
-    console.log(hobbitsUri);
-    console.log(reverseUri);
+    // console.log(hobbitsUri);
+    // console.log(reverseUri);
     expect(reverseUri).to.deep.equal(hobbitsUri);
   });
 });
