@@ -62,7 +62,6 @@ export interface BoolType {
   type: Type.bool;
 }
 
-
 export interface ByteListType {
   type: Type.byteList;
   maxLength: number;
