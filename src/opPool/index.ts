@@ -133,7 +133,7 @@ export class OpPool extends EventEmitter {
       this.removeOldAttestations(processedBlock.slot),
       this.removeVoluntaryExits(processedBlock.body.voluntaryExits),
       this.removeAllDeposits(),
-      this.removeOldTransfers(processedBlock.slot),
+      this.removeOldTransfers(processedBlock.body.transfers),
       this.removeProposerSlashings(processedBlock.body.proposerSlashings),
       this.removeAttesterSlashings(processedBlock.body.attesterSlashings),
     ];
@@ -154,7 +154,9 @@ export class OpPool extends EventEmitter {
     await this.db.deleteVoluntaryExits(exits);
   }
 
-  private async removeOldTransfers(slot: Slot): Promise<void> {}
+  private async removeOldTransfers(transfers: Transfer[]): Promise<void> {
+    await this.db.deleteTransfers(transfers);
+  }
 
   private async removeProposerSlashings(proposerSlashings: ProposerSlashing[]): Promise<void> {
     await this.db.deleteProposerSlashings(proposerSlashings);
