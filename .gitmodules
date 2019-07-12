@@ -1,3 +1,4 @@
 [submodule "test/spec-tests"]
 	path = tests/spec/spec-tests
 	url = https://github.com/chainsafe/eth2.0-spec-tests.git
+	branch = v0.8.0
