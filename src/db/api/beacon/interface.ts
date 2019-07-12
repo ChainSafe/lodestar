@@ -38,9 +38,9 @@ export interface IBeaconDb {
   getDeposits(): Promise<Deposit[]>;
 
   /**
-   * Deletes all deposits.
+   * Deletes all deposits up to given index (not included).
    */
-  deleteDeposits(): Promise<void>;
+  deleteDeposits(index: number): Promise<void>;
 
   setMerkleTree(index: number, merkleTree: IProgressiveMerkleTree): Promise<void>;
 

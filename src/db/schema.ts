@@ -13,7 +13,7 @@ export enum Bucket {
   mainChain, // slot -> blockHash
   chainInfo, // Key -> number64 | stateHash | blockHash
   validator,
-  genesisDeposit, // index -> Deposit
+  deposit, // index -> Deposit
   exit, // hash -> VoluntaryExit
   transfer, // hash -> Transfer
   proposerSlashing, // hash -> ProposerSlashing

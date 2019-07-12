@@ -13,7 +13,7 @@ import {
   Slot,
   Transfer,
   VoluntaryExit,
-  BeaconBlockBody
+  BeaconBlockBody, number64
 } from "../types";
 
 import {BeaconChain} from "../chain";
@@ -132,7 +132,7 @@ export class OpPool extends EventEmitter {
       this.removeAttestations(processedBlock.body.attestations),
       this.removeOldAttestations(processedBlock.slot),
       this.removeVoluntaryExits(processedBlock.body.voluntaryExits),
-      this.removeAllDeposits(),
+      this.removeOldDeposits(processedBlock.body.eth1Data.depositCount),
       this.removeOldTransfers(processedBlock.body.transfers),
       this.removeProposerSlashings(processedBlock.body.proposerSlashings),
       this.removeAttesterSlashings(processedBlock.body.attesterSlashings),
@@ -144,8 +144,8 @@ export class OpPool extends EventEmitter {
     await this.db.deleteAttestations(attestations);
   }
 
-  private async removeAllDeposits(): Promise<void> {
-    await this.db.deleteDeposits();
+  private async removeOldDeposits(depositCount: number64): Promise<void> {
+    await this.db.deleteDeposits(depositCount);
   }
 
   private async removeOldAttestations(slot: Slot): Promise<void> {}

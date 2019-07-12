@@ -264,18 +264,20 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
   }
 
   public async getDeposits(): Promise<Deposit[]> {
-    return await this.getAllData(Bucket.genesisDeposit, Deposit);
+    return await this.getAllData(Bucket.deposit, Deposit);
   }
 
   public async setDeposit(index: number, deposit: Deposit): Promise<void> {
-    await this.db.put(encodeKey(Bucket.genesisDeposit, index), serialize(deposit, Deposit));
+    await this.db.put(encodeKey(Bucket.deposit, index), serialize(deposit, Deposit));
   }
 
-  public async deleteDeposits(): Promise<void> {
-    const deposits = await this.getDeposits();
-    const criteria: (Buffer | string)[] = (deposits || []).map((d, index) => {
-      return encodeKey(Bucket.genesisDeposit, index);
-    });
+  public async deleteDeposits(index: number): Promise<void> {
+    const criteria = Array.from(
+      {length: index},
+      (_, index) => {
+        return encodeKey(Bucket.deposit, index);
+      }
+    );
     await this.db.batchDelete(criteria);
   }
 

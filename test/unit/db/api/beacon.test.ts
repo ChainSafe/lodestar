@@ -466,8 +466,8 @@ describe('beacon db api', function() {
   });
 
   it('test get deposits', async function() {
-    encodeKeyStub.withArgs(Bucket.genesisDeposit, Buffer.alloc(0)).returns('lower');
-    encodeKeyStub.withArgs(Bucket.genesisDeposit + 1, Buffer.alloc(0)).returns('higher');
+    encodeKeyStub.withArgs(Bucket.deposit, Buffer.alloc(0)).returns('lower');
+    encodeKeyStub.withArgs(Bucket.deposit + 1, Buffer.alloc(0)).returns('higher');
     dbStub.search.resolves([serialize(generateDeposit(), Deposit)]);
     const result = await beaconDB.getDeposits();
     expect(result.length).to.be.equal(1);
@@ -477,9 +477,9 @@ describe('beacon db api', function() {
           .and(sinon.match.has('gt', 'lower'))
       ).calledOnce
     ).to.be.true;
-    expect(encodeKeyStub.withArgs(Bucket.genesisDeposit, Buffer.alloc(0)).calledOnce).to.be.true;
+    expect(encodeKeyStub.withArgs(Bucket.deposit, Buffer.alloc(0)).calledOnce).to.be.true;
     expect(
-      encodeKeyStub.withArgs(Bucket.genesisDeposit + 1, Buffer.alloc(0)).calledOnce
+      encodeKeyStub.withArgs(Bucket.deposit + 1, Buffer.alloc(0)).calledOnce
     ).to.be.true;
   });
 
@@ -493,7 +493,7 @@ describe('beacon db api', function() {
         sinon.match.any
       ).calledOnce
     ).to.be.true;
-    expect(encodeKeyStub.withArgs(Bucket.genesisDeposit, sinon.match.any).calledOnce).to.be.true;
+    expect(encodeKeyStub.withArgs(Bucket.deposit, sinon.match.any).calledOnce).to.be.true;
   });
 
   it('test delete deposits', async function() {
@@ -502,7 +502,7 @@ describe('beacon db api', function() {
     dbStub.batchDelete.resolves({});
     await beaconDB.deleteDeposits();
     expect(
-      encodeKeyStub.withArgs(Bucket.genesisDeposit, sinon.match.any).calledOnce
+      encodeKeyStub.withArgs(Bucket.deposit, sinon.match.any).calledOnce
     ).to.be.true;
     expect(
       dbStub.batchDelete.calledOnce
