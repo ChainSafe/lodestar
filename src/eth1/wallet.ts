@@ -11,7 +11,7 @@ import {hash, signingRoot} from "@chainsafe/ssz";
 import {Domain} from "../constants";
 import {DepositData} from "../types";
 import {ILogger} from "../logger";
-import {BeaconConfig} from "../config";
+import {IBeaconConfig} from "../config";
 
 
 export class Eth1Wallet {
@@ -20,11 +20,11 @@ export class Eth1Wallet {
 
   private contractAbi;
 
-  private config: BeaconConfig;
+  private config: IBeaconConfig;
 
   private logger: ILogger;
 
-  public constructor(privateKey: string, contractAbi: any, config: BeaconConfig, logger: ILogger, provider?: Provider) {
+  public constructor(privateKey: string, contractAbi: any, config: IBeaconConfig, logger: ILogger, provider?: Provider) {
     this.config = config;
     this.logger = logger;
     if(!provider) {

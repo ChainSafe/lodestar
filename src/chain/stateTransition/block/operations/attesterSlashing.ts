@@ -7,7 +7,7 @@ import {
   BeaconState,
   AttesterSlashing,
 } from "../../../../types";
-import {BeaconConfig} from "../../../../config";
+import {IBeaconConfig} from "../../../../config";
 
 import {
   getCurrentEpoch,
@@ -23,7 +23,7 @@ import {
  * Process ``AttesterSlashing`` operation.
  */
 export function processAttesterSlashing(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   attesterSlashing: AttesterSlashing
 ): void {

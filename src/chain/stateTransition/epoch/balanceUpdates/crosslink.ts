@@ -5,7 +5,7 @@
 import BN from "bn.js";
 
 import {BeaconState, Gwei} from "../../../../types";
-import {BeaconConfig} from "../../../../config";
+import {IBeaconConfig} from "../../../../config";
 
 import {
   getCrosslinkCommittee,
@@ -19,7 +19,7 @@ import {getWinningCrosslinkAndAttestingIndices} from "../util";
 import {getBaseReward} from "./baseReward";
 
 
-export function getCrosslinkDeltas(config: BeaconConfig, state: BeaconState): [Gwei[], Gwei[]] {
+export function getCrosslinkDeltas(config: IBeaconConfig, state: BeaconState): [Gwei[], Gwei[]] {
   const rewards = Array.from({length: state.validatorRegistry.length}, () => new BN(0));
   const penalties = Array.from({length: state.validatorRegistry.length}, () => new BN(0));
   const previousEpoch = getPreviousEpoch(config, state);

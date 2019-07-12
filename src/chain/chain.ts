@@ -22,7 +22,7 @@ import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "../constants";
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
 import {ILogger} from "../logger";
-import {BeaconConfig} from "../config";
+import {IBeaconConfig} from "../config";
 
 import {getEmptyBlock, getGenesisBeaconState} from "./genesis";
 
@@ -40,13 +40,13 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
   public forkChoice: LMDGHOST;
   public chainId: uint16;
   public networkId: uint64;
-  private config: BeaconConfig;
+  private config: IBeaconConfig;
   private db: IBeaconDb;
   private eth1: IEth1Notifier;
   private _latestBlock: BeaconBlock;
   private logger: ILogger;
 
-  public constructor(opts, {config, db, eth1, logger}: { config: BeaconConfig; db: IBeaconDb; eth1: IEth1Notifier; logger: ILogger }) {
+  public constructor(opts, {config, db, eth1, logger}: { config: IBeaconConfig; db: IBeaconDb; eth1: IEth1Notifier; logger: ILogger }) {
     super();
     this.chain = opts.chain;
     this.config = config;

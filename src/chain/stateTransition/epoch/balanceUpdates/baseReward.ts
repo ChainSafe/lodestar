@@ -3,7 +3,7 @@
  */
 
 import {BeaconState, Gwei, ValidatorIndex} from "../../../../types";
-import {BeaconConfig} from "../../../../config";
+import {IBeaconConfig} from "../../../../config";
 
 import {bnSqrt} from "../../../../util/math";
 
@@ -11,7 +11,7 @@ import {getTotalActiveBalance} from "../util";
 
 
 export function getBaseReward(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   index: ValidatorIndex
 ): Gwei {

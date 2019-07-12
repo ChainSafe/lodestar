@@ -4,7 +4,7 @@
 
 import assert from "assert";
 import {BeaconState, Epoch, Slot, Validator, ValidatorIndex,} from "../../../types";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 import {
   getBeaconProposerIndex,
   getCrosslinkCommittee,
@@ -56,7 +56,7 @@ export function getActiveValidatorIndices(state: BeaconState, epoch: Epoch): Val
  * a beacon block at the assigned slot.
  */
 export function getCommitteeAssignment(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   epoch: Epoch,
   validatorIndex: ValidatorIndex
@@ -88,7 +88,7 @@ export function getCommitteeAssignment(
  * Checks if a validator is supposed to propose a block
  */
 export function isProposerAtSlot(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   slot: Slot,
   validatorIndex: ValidatorIndex): boolean {

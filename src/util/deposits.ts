@@ -1,8 +1,8 @@
 import {Deposit} from "../types";
-import {BeaconConfig} from "../config";
+import {IBeaconConfig} from "../config";
 
 export function processSortedDeposits(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   deposits: Deposit[],
   from: number,
   to: number,

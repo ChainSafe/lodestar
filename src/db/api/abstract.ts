@@ -1,15 +1,15 @@
 import {IDatabaseController} from "../controller";
-import {BeaconConfig} from "../../config";
+import {IBeaconConfig} from "../../config";
 import {Service} from "../../node";
 
 export interface DatabaseApiOptions {
-  config: BeaconConfig;
+  config: IBeaconConfig;
   controller: IDatabaseController;
 }
 
 export abstract class DatabaseService implements Service{
 
-  protected config: BeaconConfig;
+  protected config: IBeaconConfig;
   protected db: IDatabaseController;
 
   protected constructor(opts: DatabaseApiOptions) {

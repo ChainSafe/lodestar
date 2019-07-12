@@ -8,12 +8,12 @@ import {
   BeaconBlockBody,
   BeaconState,
 } from "../../../types";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#eth1-data
 
 export function processEth1Data(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   body: BeaconBlockBody
 ): void {

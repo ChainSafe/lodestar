@@ -6,7 +6,7 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import assert from "assert";
 import bls from "@chainsafe/bls-js";
 
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 import {Domain} from "../../../constants";
 import {
   Attestation,
@@ -28,7 +28,7 @@ import {getDomain} from "./misc";
  * Return the sorted attesting indices corresponding to ``attestation_data`` and ``bitfield``.
  */
 export function getAttestingIndices(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   attestationData: AttestationData,
   bitfield: bytes
@@ -73,7 +73,7 @@ export function verifyBitfield(bitfield: bytes, committeeSize: number): boolean 
  * Convert ``attestation`` to (almost) indexed-verifiable form.
  */
 export function convertToIndexed(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   attestation: Attestation
 ): IndexedAttestation {
@@ -95,7 +95,7 @@ export function convertToIndexed(
  * Verify validity of ``indexed_attestation`` fields.
  */
 export function validateIndexedAttestation(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   indexedAttestation: IndexedAttestation
 ): void {

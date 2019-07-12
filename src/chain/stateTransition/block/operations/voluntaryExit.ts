@@ -14,7 +14,7 @@ import {
   Domain,
   FAR_FUTURE_EPOCH,
 } from "../../../../constants";
-import {BeaconConfig} from "../../../../config";
+import {IBeaconConfig} from "../../../../config";
 
 
 import {
@@ -29,7 +29,7 @@ import {
  * Process ``VoluntaryExit`` operation.
  */
 export function processVoluntaryExit(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   exit: VoluntaryExit
 ): void {

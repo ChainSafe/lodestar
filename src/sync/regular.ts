@@ -6,7 +6,7 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 
 import {BeaconBlock, Attestation} from "../types";
 import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
-import {BeaconConfig} from "../config";
+import {IBeaconConfig} from "../config";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
@@ -15,7 +15,7 @@ import {ILogger} from "../logger";
 
 
 export class RegularSync {
-  private config: BeaconConfig;
+  private config: IBeaconConfig;
   private db: IBeaconDb;
   private chain: IBeaconChain;
   private network: INetwork;

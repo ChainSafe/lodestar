@@ -6,7 +6,7 @@ import assert from "assert";
 import PeerInfo from "peer-info";
 
 import {BeaconBlockHeadersResponse, BeaconBlockBodiesResponse, BeaconBlock} from "../types";
-import {BeaconConfig} from "../config";
+import {IBeaconConfig} from "../config";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {SyncRpc} from "./rpc";
@@ -15,7 +15,7 @@ import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
 
 interface InitialSyncModules {
-  config: BeaconConfig;
+  config: IBeaconConfig;
   db: IBeaconDb;
   chain: IBeaconChain;
   rpc: SyncRpc;
@@ -25,7 +25,7 @@ interface InitialSyncModules {
 }
 
 export class InitialSync {
-  private config: BeaconConfig;
+  private config: IBeaconConfig;
   private db: IBeaconDb;
   private chain: IBeaconChain;
   private rpc: SyncRpc;

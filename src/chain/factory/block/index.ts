@@ -4,7 +4,7 @@
 
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {BeaconBlock, BeaconBlockBody, BeaconBlockHeader, BeaconState, bytes96, Slot} from "../../../types";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 import {BeaconDB} from "../../../db/api";
 import {OpPool} from "../../../opPool";
 import {assembleBody} from "./body";
@@ -12,7 +12,7 @@ import {IEth1Notifier} from "../../../eth1";
 import {stateTransition} from "../../stateTransition";
 
 export async function assembleBlock(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   db: BeaconDB,
   opPool: OpPool,
   eth1: IEth1Notifier,

@@ -22,7 +22,7 @@ import {
   GENESIS_START_SHARD,
   ZERO_HASH,
 } from "../constants";
-import {BeaconConfig} from "../config";
+import {IBeaconConfig} from "../config";
 
 import {getActiveValidatorIndices, getTemporaryBlockHeader} from "./stateTransition/util";
 
@@ -64,7 +64,7 @@ export function getEmptyBlock(): BeaconBlock {
  * Generate the initial beacon chain state.
  */
 export function getGenesisBeaconState(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   genesisValidatorDeposits: Deposit[],
   genesisTime: number64,
   genesisEth1Data: Eth1Data,

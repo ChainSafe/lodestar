@@ -1,9 +1,9 @@
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 import {BLSPubkey, ValidatorDuty, ValidatorIndex} from "../../../types";
 import {getCommitteeAssignment, slotToEpoch} from "../../stateTransition/util";
 
 export function assembleValidatorDuty(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   validatorPublicKey: BLSPubkey,
   validatorIndex: ValidatorIndex,
   state,

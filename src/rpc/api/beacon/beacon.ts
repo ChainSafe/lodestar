@@ -2,7 +2,7 @@
  * @module rpc/api
  */
 
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "../../../types";
 import {IBeaconApi} from "./interface";
 import {BeaconChain} from "../../../chain";
@@ -12,7 +12,7 @@ export class BeaconApi implements IBeaconApi {
 
   public namespace: string;
 
-  private config: BeaconConfig;
+  private config: IBeaconConfig;
   private chain: BeaconChain;
   private db: BeaconDB;
 

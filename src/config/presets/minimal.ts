@@ -1,8 +1,8 @@
 import * as params from "../../params/presets/minimal";
 import {types} from "../../sszTypes/presets/minimal";
-import {BeaconConfig}  from "../interface";
+import {IBeaconConfig}  from "../interface";
 
-export const config: BeaconConfig = {
+export const config: IBeaconConfig = {
   params,
   types,
 };

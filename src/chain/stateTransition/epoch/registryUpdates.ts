@@ -6,7 +6,7 @@ import BN from "bn.js";
 
 import {BeaconState} from "../../../types";
 import {FAR_FUTURE_EPOCH} from "../../../constants";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 
 import {
   getChurnLimit,
@@ -17,7 +17,7 @@ import {
 } from "../util";
 
 
-export function processRegistryUpdates(config: BeaconConfig, state: BeaconState): BeaconState {
+export function processRegistryUpdates(config: IBeaconConfig, state: BeaconState): BeaconState {
   const currentEpoch = getCurrentEpoch(config, state);
   // Process activation eligibility and ejections
   const maxBalance = new BN(config.params.MAX_EFFECTIVE_BALANCE);

@@ -11,7 +11,7 @@ import {deserialize} from "@chainsafe/ssz";
 
 import {RequestBody, ResponseBody, WireResponse, WireRequest} from "../../types";
 import {Method, RequestId, ResponseCode, RPC_MULTICODEC} from "../../constants";
-import {BeaconConfig} from "../../config";
+import {IBeaconConfig} from "../../config";
 import {ILogger} from "../../logger";
 
 import {
@@ -54,10 +54,10 @@ export class NetworkRpc extends EventEmitter {
    */
   private responses: Record<RequestId, {peer: Peer; method: Method}>;
 
-  private config: BeaconConfig;
+  private config: IBeaconConfig;
   private logger: ILogger;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, logger}: {config: BeaconConfig; libp2p: LibP2p; logger: ILogger}) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger}: {config: IBeaconConfig; libp2p: LibP2p; logger: ILogger}) {
     super();
     this.config = config;
     this.logger = logger;

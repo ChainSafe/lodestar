@@ -6,12 +6,12 @@ import {deserialize, serialize} from "@chainsafe/ssz";
 
 import {RequestBody, ResponseBody, WireRequest, WireResponse} from "../types";
 import {RequestId, Method} from "../constants";
-import {BeaconConfig} from "../config";
+import {IBeaconConfig} from "../config";
 
 // Encode
 
 export function encodeRequest(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   id: RequestId,
   method: Method,
   body: RequestBody
@@ -51,7 +51,7 @@ export function encodeRequest(
 }
 
 export function encodeResponse(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   id: RequestId,
   method: Method,
   responseCode: number,
@@ -95,7 +95,7 @@ export function encodeResponse(
 
 // Decode
 
-export function decodeRequestBody(config: BeaconConfig, method: Method, body: Buffer): RequestBody {
+export function decodeRequestBody(config: IBeaconConfig, method: Method, body: Buffer): RequestBody {
   switch (method) {
     case Method.Hello:
       return deserialize(body, config.types.Hello);
@@ -116,7 +116,7 @@ export function decodeRequestBody(config: BeaconConfig, method: Method, body: Bu
   }
 }
 
-export function decodeResponseBody(config: BeaconConfig, method: Method, result: Buffer): ResponseBody {
+export function decodeResponseBody(config: IBeaconConfig, method: Method, result: Buffer): ResponseBody {
   switch (method) {
     case Method.Hello:
       return deserialize(result, config.types.Hello);

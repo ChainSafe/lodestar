@@ -5,7 +5,7 @@
 import BN from "bn.js";
 
 import {BeaconState, Gwei} from "../../../../types";
-import {BeaconConfig} from "../../../../config";
+import {IBeaconConfig} from "../../../../config";
 
 import {getAttestingIndices, getPreviousEpoch, isActiveValidator} from "../../util";
 
@@ -21,7 +21,7 @@ import {
 import {getBaseReward} from "./baseReward";
 
 
-export function getAttestationDeltas(config: BeaconConfig, state: BeaconState): [Gwei[], Gwei[]] {
+export function getAttestationDeltas(config: IBeaconConfig, state: BeaconState): [Gwei[], Gwei[]] {
   const previousEpoch = getPreviousEpoch(config, state);
   const totalBalance = getTotalActiveBalance(config, state);
   const rewards = Array.from({length: state.validatorRegistry.length}, () => new BN(0));

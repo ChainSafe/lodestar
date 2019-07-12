@@ -13,7 +13,7 @@ import {
   FFGData,
 } from "../../../../types";
 import {ZERO_HASH} from "../../../../constants";
-import {BeaconConfig} from "../../../../config";
+import {IBeaconConfig} from "../../../../config";
 
 import {
   getCurrentEpoch,
@@ -27,7 +27,7 @@ import {
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#attestations
 
 export function processAttestation(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   attestation: Attestation
 ): void {

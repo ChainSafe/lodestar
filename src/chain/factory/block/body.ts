@@ -4,7 +4,7 @@
 
 import {BeaconBlockBody, BeaconState, bytes96} from "../../../types";
 import {ZERO_HASH} from "../../../constants";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 import {OpPool} from "../../../opPool";
 import {IEth1Notifier} from "../../../eth1";
 import {IProgressiveMerkleTree} from "../../../util/merkleTree";
@@ -12,7 +12,7 @@ import {bestVoteData} from "./eth1Data";
 import {generateDeposits} from "./deposits";
 
 export async function assembleBody(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   opPool: OpPool,
   eth1: IEth1Notifier,
   merkleTree: IProgressiveMerkleTree,

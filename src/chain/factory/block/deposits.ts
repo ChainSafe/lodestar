@@ -4,13 +4,13 @@
 
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {BeaconState, Deposit, Eth1Data} from "../../../types";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 import {OpPool} from "../../../opPool";
 import {IProgressiveMerkleTree} from "../../../util/merkleTree";
 import {processSortedDeposits} from "../../../util/deposits";
 
 export async function generateDeposits(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   opPool: OpPool,
   state: BeaconState,
   eth1Data: Eth1Data,

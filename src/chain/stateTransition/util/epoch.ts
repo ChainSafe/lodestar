@@ -10,19 +10,19 @@ import {
   Epoch,
   Slot,
 } from "../../../types";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 
 /**
  * Return the epoch number of the given slot.
  */
-export function slotToEpoch(config: BeaconConfig, slot: Slot): Epoch {
+export function slotToEpoch(config: IBeaconConfig, slot: Slot): Epoch {
   return Math.floor(slot / config.params.SLOTS_PER_EPOCH);
 }
 
 /**
  * Return the previous epoch of the given state.
  */
-export function getPreviousEpoch(config: BeaconConfig, state: BeaconState): Epoch {
+export function getPreviousEpoch(config: IBeaconConfig, state: BeaconState): Epoch {
   const currentEpoch = getCurrentEpoch(config, state);
   if (currentEpoch === GENESIS_EPOCH) {
     return GENESIS_EPOCH;
@@ -33,20 +33,20 @@ export function getPreviousEpoch(config: BeaconConfig, state: BeaconState): Epoc
 /**
  * Return the current epoch of the given state.
  */
-export function getCurrentEpoch(config: BeaconConfig, state: BeaconState): Epoch {
+export function getCurrentEpoch(config: IBeaconConfig, state: BeaconState): Epoch {
   return slotToEpoch(config, state.slot);
 }
 
 /**
  * Return the starting slot of the given epoch.
  */
-export function getEpochStartSlot(config: BeaconConfig, epoch: Epoch): Slot {
+export function getEpochStartSlot(config: IBeaconConfig, epoch: Epoch): Slot {
   return epoch * config.params.SLOTS_PER_EPOCH;
 }
 
 /**
  * Return the epoch at which an activation or exit triggered in ``epoch`` takes effect.
  */
-export function getDelayedActivationExitEpoch(config: BeaconConfig, epoch: Epoch): Epoch {
+export function getDelayedActivationExitEpoch(config: IBeaconConfig, epoch: Epoch): Epoch {
   return epoch + 1 + config.params.ACTIVATION_EXIT_DELAY;
 }

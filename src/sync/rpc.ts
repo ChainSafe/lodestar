@@ -24,7 +24,7 @@ import {INetwork} from "../network";
 import {getEmptyBlockBody} from "../chain/genesis";
 import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
-import { BeaconConfig } from "../config";
+import { IBeaconConfig } from "../config";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface SyncOptions {
@@ -36,7 +36,7 @@ interface SyncOptions {
  */
 export class SyncRpc {
   private opts: SyncOptions;
-  private config: BeaconConfig;
+  private config: IBeaconConfig;
   private db: IBeaconDb;
   private chain: IBeaconChain;
   private network: INetwork;
@@ -45,7 +45,7 @@ export class SyncRpc {
 
   public constructor(opts: SyncOptions,
     {config, db, chain, network, reps, logger}:
-    {config: BeaconConfig; db: IBeaconDb; chain: IBeaconChain; network: INetwork; reps: ReputationStore; logger: ILogger} )
+    {config: IBeaconConfig; db: IBeaconDb; chain: IBeaconChain; network: INetwork; reps: ReputationStore; logger: ILogger} )
   {
     this.config = config;
     this.logger = logger;

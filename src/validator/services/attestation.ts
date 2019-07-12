@@ -13,7 +13,7 @@ import {
   Slot,
   ValidatorIndex
 } from "../../types";
-import {BeaconConfig} from "../../config";
+import {IBeaconConfig} from "../../config";
 
 import {
   getDomainFromFork,
@@ -30,7 +30,7 @@ import {ILogger} from "../../logger";
 
 export class AttestationService {
 
-  private config: BeaconConfig;
+  private config: IBeaconConfig;
   private validatorIndex: ValidatorIndex;
   private rpcClient: RpcClient;
   private privateKey: PrivateKey;
@@ -38,7 +38,7 @@ export class AttestationService {
   private logger: ILogger;
 
   public constructor(
-    config: BeaconConfig,
+    config: IBeaconConfig,
     validatorIndex: ValidatorIndex,
     rpcClient: RpcClient,
     privateKey: PrivateKey,

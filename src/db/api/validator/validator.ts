@@ -5,7 +5,7 @@
 import {deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
 import deepmerge from "deepmerge";
 import {Attestation, BeaconBlock, ValidatorIndex} from "../../../types";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 import {DatabaseService, DatabaseApiOptions} from "../abstract";
 import {AttestationSearchOptions, IValidatorDB} from "./interface";
 import {Bucket, encodeKey} from "../../schema";

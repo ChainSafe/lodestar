@@ -7,7 +7,7 @@ import {deserialize, equals, hashTreeRoot} from "@chainsafe/ssz";
 
 import {BeaconState, Crosslink, Epoch, Gwei, PendingAttestation, Shard, uint256, ValidatorIndex,} from "../../../types";
 import {GENESIS_EPOCH, GENESIS_START_SHARD, ZERO_HASH} from "../../../constants";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 
 import {
   getActiveValidatorIndices,
@@ -21,12 +21,12 @@ import {
 } from "../util";
 
 
-export function getTotalActiveBalance(config: BeaconConfig, state: BeaconState): Gwei {
+export function getTotalActiveBalance(config: IBeaconConfig, state: BeaconState): Gwei {
   return getTotalBalance(state, getActiveValidatorIndices(state, getCurrentEpoch(config, state)));
 }
 
 export function getMatchingSourceAttestations(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   epoch: Epoch
 ): PendingAttestation[] {
@@ -38,7 +38,7 @@ export function getMatchingSourceAttestations(
 }
 
 export function getMatchingTargetAttestations(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   epoch: Epoch
 ): PendingAttestation[] {
@@ -48,7 +48,7 @@ export function getMatchingTargetAttestations(
 }
 
 export function getMatchingHeadAttestations(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   epoch: Epoch
 ): PendingAttestation[] {
@@ -58,7 +58,7 @@ export function getMatchingHeadAttestations(
 }
 
 export function getUnslashedAttestingIndices(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   attestations: PendingAttestation[]
 ): ValidatorIndex[] {
@@ -71,12 +71,12 @@ export function getUnslashedAttestingIndices(
     .sort();
 }
 
-export function getAttestingBalance(config: BeaconConfig, state: BeaconState, attestations: PendingAttestation[]): Gwei {
+export function getAttestingBalance(config: IBeaconConfig, state: BeaconState, attestations: PendingAttestation[]): Gwei {
   return getTotalBalance(state, getUnslashedAttestingIndices(config, state, attestations));
 }
 
 export function getWinningCrosslinkAndAttestingIndices(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   epoch: Epoch,
   shard: Shard

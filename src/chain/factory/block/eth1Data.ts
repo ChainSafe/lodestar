@@ -3,13 +3,13 @@
  */
 
 import {BeaconState, Eth1Data} from "../../../types";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 import {IEth1Notifier} from "../../../eth1";
 import {Block} from "ethers/providers";
 import {mostFrequent} from "../../../util/objects";
 
 export async function bestVoteData(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   eth1: IEth1Notifier
 ): Promise<Eth1Data> {
@@ -49,7 +49,7 @@ export async function bestVoteData(
 }
 
 export async function filterValidVotes(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   votes: Eth1Data[],
   eth1: IEth1Notifier,
   head: Block,

@@ -6,7 +6,7 @@ import {
   BeaconBlock,
   BeaconState,
 } from "../../../types";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 
 import {processEth1Data} from "./eth1Data";
 import {processBlockHeader} from "./blockHeader";
@@ -16,7 +16,7 @@ import {processOperations} from "./operations";
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#block-processing
 
 export function processBlock(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   block: BeaconBlock,
   verify: boolean = true

@@ -3,10 +3,10 @@ import {BeaconDB} from "../../../db/api";
 import {AttestationData, BeaconBlock, BeaconState, Shard} from "../../../types";
 import {getBlockRoot, getCurrentEpoch, getEpochStartSlot} from "../../stateTransition/util";
 import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, ZERO_HASH} from "../../../constants";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 
 export async function assembleAttestationData(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   db: BeaconDB,
   headState: BeaconState,
   headBlock: BeaconBlock,

@@ -3,7 +3,7 @@
  */
 
 import {EventEmitter} from "events";
-import {BeaconConfig} from "../config";
+import {IBeaconConfig} from "../config";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
 import {OpPool} from "../opPool";
@@ -17,7 +17,7 @@ import {ILogger} from "../logger";
 import {ISyncOptions} from "./options";
 
 interface SyncModules {
-  config: BeaconConfig;
+  config: IBeaconConfig;
   chain: IBeaconChain;
   db: IBeaconDb;
   eth1: IEth1Notifier;
@@ -33,7 +33,7 @@ interface SyncModules {
  */
 export class Sync extends EventEmitter {
   private opts: ISyncOptions;
-  private config: BeaconConfig;
+  private config: IBeaconConfig;
   private chain: IBeaconChain;
   private network: INetwork;
   private opPool: OpPool;

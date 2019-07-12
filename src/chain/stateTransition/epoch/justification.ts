@@ -6,7 +6,7 @@ import BN from "bn.js";
 
 import {BeaconState} from "../../../types";
 import {GENESIS_EPOCH} from "../../../constants";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 
 import {getBlockRoot, getCurrentEpoch, getPreviousEpoch} from "../util";
 
@@ -14,7 +14,7 @@ import {getAttestingBalance, getMatchingTargetAttestations, getTotalActiveBalanc
 
 
 export function processJustificationAndFinalization(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState
 ): void {
   const currentEpoch = getCurrentEpoch(config, state);

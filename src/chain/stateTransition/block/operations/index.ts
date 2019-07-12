@@ -3,7 +3,7 @@ import {
   BeaconBlockBody, BeaconState, ProposerSlashing, AttesterSlashing, Attestation,
   Deposit, VoluntaryExit, Transfer,
 } from "../../../../types";
-import {BeaconConfig} from "../../../../config";
+import {IBeaconConfig} from "../../../../config";
 
 import {processProposerSlashing} from "./proposerSlashing";
 import {processAttesterSlashing} from "./attesterSlashing";
@@ -27,7 +27,7 @@ type Operation =
   ProposerSlashing | AttesterSlashing | Attestation | Deposit | VoluntaryExit | Transfer;
 
 export function processOperations(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   body: BeaconBlockBody
 ): void {
@@ -68,7 +68,7 @@ export function processOperations(
   }: {
     operations: Operation[];
     maxOperations: number;
-    func: (config: BeaconConfig, state: BeaconState, operation: Operation) => void;
+    func: (config: IBeaconConfig, state: BeaconState, operation: Operation) => void;
   })=>{
     assert(operations.length <= maxOperations);
     operations.forEach((operation) => {

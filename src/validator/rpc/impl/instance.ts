@@ -1,10 +1,10 @@
 import {IBeaconApi} from "../../../rpc/api/beacon";
 import {IValidatorApi} from "../../../rpc/api/validator";
 import {AbstractRpcClient} from "../abstract";
-import { BeaconConfig } from "../../../config";
+import { IBeaconConfig } from "../../../config";
 
 export interface RpcClientOverInstanceOpts {
-  config: BeaconConfig;
+  config: IBeaconConfig;
   beacon: IBeaconApi;
   validator: IValidatorApi;
 }

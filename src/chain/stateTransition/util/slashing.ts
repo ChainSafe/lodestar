@@ -5,13 +5,13 @@
 import {equals, serialize} from "@chainsafe/ssz";
 
 import {AttestationData} from "../../../types";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 
 /**
  * Check if data1 and data2 are slashable according to Casper FFG rules.
  */
 export function isSlashableAttestationData(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   data1: AttestationData,
   data2: AttestationData
 ): boolean {

@@ -15,7 +15,7 @@ import {
   Domain,
   FAR_FUTURE_EPOCH,
 } from "../../../../constants";
-import {BeaconConfig} from "../../../../config";
+import {IBeaconConfig} from "../../../../config";
 
 import {
   getBeaconProposerIndex,
@@ -31,7 +31,7 @@ import {
  * Process ``Transfer`` operation.
  */
 export function processTransfer(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   transfer: Transfer
 ): void {

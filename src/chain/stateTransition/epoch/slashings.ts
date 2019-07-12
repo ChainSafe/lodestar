@@ -3,7 +3,7 @@
  */
 
 import {BeaconState} from "../../../types";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 
 import {bnMax, bnMin, intDiv} from "../../../util/math";
 
@@ -18,7 +18,7 @@ import {
  *
  * Note that this function mutates ``state``.
  */
-export function processSlashings(config: BeaconConfig, state: BeaconState): void {
+export function processSlashings(config: IBeaconConfig, state: BeaconState): void {
   const currentEpoch = getCurrentEpoch(config, state);
   const activeValidatorIndices = getActiveValidatorIndices(state, currentEpoch);
   const totalBalance = getTotalBalance(state, activeValidatorIndices);

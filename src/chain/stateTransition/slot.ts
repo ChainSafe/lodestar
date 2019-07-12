@@ -10,14 +10,14 @@ import {
   BeaconBlockHeader, Slot,
 } from "../../types";
 import {ZERO_HASH} from "../../constants";
-import {BeaconConfig} from "../../config";
+import {IBeaconConfig} from "../../config";
 
 import {processEpoch} from "./epoch";
 
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#beacon-chain-state-transition-function
 
 export function processSlots(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   slot: Slot
 ): void{
@@ -33,7 +33,7 @@ export function processSlots(
   }
 }
 
-function processSlot(config: BeaconConfig, state: BeaconState): void {
+function processSlot(config: IBeaconConfig, state: BeaconState): void {
   // Cache state root
   const previousStateRoot = hashTreeRoot(state, config.types.BeaconState);
   state.latestStateRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousStateRoot;

@@ -27,7 +27,7 @@ import {
   getBeaconProposerIndex,
   getChurnLimit,
 } from "./misc";
-import { BeaconConfig } from "../../../config";
+import { IBeaconConfig } from "../../../config";
 
 
 /**
@@ -35,7 +35,7 @@ import { BeaconConfig } from "../../../config";
  *
  * Note: that this function mutates state.
  */
-export function initiateValidatorExit(config: BeaconConfig, state: BeaconState, index: ValidatorIndex): void {
+export function initiateValidatorExit(config: IBeaconConfig, state: BeaconState, index: ValidatorIndex): void {
   const validator = state.validatorRegistry[index];
 
   // Return if validator already initiated exit
@@ -67,7 +67,7 @@ export function initiateValidatorExit(config: BeaconConfig, state: BeaconState, 
  * Note that this function mutates ``state``.
  */
 export function slashValidator(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   slashedIndex: ValidatorIndex,
   whistleblowerIndex: ValidatorIndex | null = null

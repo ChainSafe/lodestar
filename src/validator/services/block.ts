@@ -6,7 +6,7 @@ import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 
 import {BeaconBlock, Epoch, Fork, Slot, ValidatorIndex} from "../../types";
-import {BeaconConfig} from "../../config";
+import {IBeaconConfig} from "../../config";
 import {getDomainFromFork, slotToEpoch} from "../../chain/stateTransition/util";
 import {RpcClient} from "../rpc";
 import {Domain} from "../../constants";
@@ -14,7 +14,7 @@ import {IValidatorDB} from "../../db";
 import {ILogger} from "../../logger";
 
 export default class BlockProposingService {
-  private config: BeaconConfig;
+  private config: IBeaconConfig;
   private validatorIndex: ValidatorIndex;
   private provider: RpcClient;
   private privateKey: PrivateKey;
@@ -22,7 +22,7 @@ export default class BlockProposingService {
   private logger: ILogger;
 
   public constructor(
-    config: BeaconConfig,
+    config: IBeaconConfig,
     index: ValidatorIndex,
     provider: RpcClient,
     privateKey: PrivateKey,

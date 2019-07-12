@@ -12,7 +12,7 @@ import {
   Domain,
   FAR_FUTURE_EPOCH,
 } from "../../../../constants";
-import {BeaconConfig} from "../../../../config";
+import {IBeaconConfig} from "../../../../config";
 
 import {bnMin} from "../../../../util/math";
 import {verifyMerkleBranch} from "../../../../util/merkleTree";
@@ -25,7 +25,7 @@ import {getDomain, increaseBalance} from "../../util";
  * Process an Eth1 deposit, registering a validator or increasing its balance.
  */
 export function processDeposit(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   deposit: Deposit
 ): void {

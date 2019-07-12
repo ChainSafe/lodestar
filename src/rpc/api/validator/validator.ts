@@ -15,7 +15,7 @@ import {
   ValidatorDuty,
   ValidatorIndex
 } from "../../../types";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 import {BeaconDB} from "../../../db";
 import {BeaconChain} from "../../../chain";
 import {OpPool} from "../../../opPool";
@@ -34,7 +34,7 @@ import {IEth1Notifier} from "../../../eth1";
 export class ValidatorApi implements IValidatorApi {
 
   public namespace: string;
-  private config: BeaconConfig;
+  private config: IBeaconConfig;
   private chain: BeaconChain;
   private db: BeaconDB;
   private opPool: OpPool;

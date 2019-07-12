@@ -15,7 +15,7 @@
  */
 import BlockProposingService from "./services/block";
 import {Epoch, Slot, ValidatorIndex} from "../types";
-import {BeaconConfig} from "../config";
+import {IBeaconConfig} from "../config";
 import {GenesisInfo} from "./types";
 import {RpcClient, RpcClientOverWs} from "./rpc";
 import {AttestationService} from "./services/attestation";
@@ -31,7 +31,7 @@ import {isPlainObject} from "../util/objects";
  */
 class Validator {
   private opts: IValidatorOptions;
-  private config: BeaconConfig;
+  private config: IBeaconConfig;
   private rpcClient: RpcClient;
   private validatorIndex: ValidatorIndex;
   private blockService: BlockProposingService;
@@ -43,7 +43,7 @@ class Validator {
   private isRunning: boolean;
 
 
-  public constructor(opts: Partial<IValidatorOptions>, modules: {config: BeaconConfig; logger: ILogger}) {
+  public constructor(opts: Partial<IValidatorOptions>, modules: {config: IBeaconConfig; logger: ILogger}) {
     this.opts = deepmerge(defaultValidatorOptions, opts, {isMergeableObject: isPlainObject});
     this.config = modules.config;
     this.logger = modules.logger;

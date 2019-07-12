@@ -8,7 +8,7 @@ import {deserialize} from "@chainsafe/ssz";
 
 import {bytes32, Deposit, Eth1Data, Gwei, number64} from "../../types";
 
-import {BeaconConfig} from "../../config";
+import {IBeaconConfig} from "../../config";
 import {IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
 import {BeaconDB} from "../../db";
@@ -31,7 +31,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   private contract: ethers.Contract;
 
-  private config: BeaconConfig;
+  private config: IBeaconConfig;
 
   private opPool: OpPool;
 
@@ -43,7 +43,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   private logger: ILogger;
 
-  public constructor(opts: EthersEth1Options, {config, opPool, logger}: {config: BeaconConfig; opPool: OpPool; logger: ILogger}) {
+  public constructor(opts: EthersEth1Options, {config, opPool, logger}: {config: IBeaconConfig; opPool: OpPool; logger: ILogger}) {
     super();
     this.logger = logger;
     this.config = config;

@@ -13,7 +13,7 @@ import {Attestation, BeaconBlock, Shard, RequestBody, ResponseBody} from "../../
 import {
   Method, RequestId, BLOCK_TOPIC, ATTESTATION_TOPIC, SHARD_SUBNET_COUNT,
 } from "../../constants";
-import {BeaconConfig} from "../../config";
+import {IBeaconConfig} from "../../config";
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {NetworkRpc} from "./rpc";
 import {ILogger} from "../../logger";
@@ -24,14 +24,14 @@ import {INetwork} from "../interface";
 export class Libp2pNetwork extends EventEmitter implements INetwork {
   public peerInfo: PeerInfo;
   private opts: INetworkOptions;
-  private config: BeaconConfig;
+  private config: IBeaconConfig;
   private libp2p: LibP2p;
   private pubsub: Gossipsub;
   private rpc: NetworkRpc;
   private inited: Promise<void>;
   private logger: ILogger;
 
-  public constructor(opts: INetworkOptions, {config, libp2p,logger}: {config: BeaconConfig; libp2p: any; logger: ILogger}) {
+  public constructor(opts: INetworkOptions, {config, libp2p,logger}: {config: IBeaconConfig; libp2p: any; logger: ILogger}) {
     super();
     this.opts = opts;
     this.config = config;

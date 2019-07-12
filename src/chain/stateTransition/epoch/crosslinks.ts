@@ -3,7 +3,7 @@
  */
 
 import {BeaconState} from "../../../types";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 
 import {
   getCurrentEpoch,
@@ -16,7 +16,7 @@ import {
 import {getWinningCrosslinkAndAttestingIndices} from "./util";
 
 
-export function processCrosslinks(config: BeaconConfig, state: BeaconState): BeaconState {
+export function processCrosslinks(config: IBeaconConfig, state: BeaconState): BeaconState {
   state.previousCrosslinks = state.currentCrosslinks.slice();
 
   const currentEpoch = getCurrentEpoch(config, state);

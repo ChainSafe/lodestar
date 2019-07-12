@@ -6,14 +6,14 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import BN from "bn.js";
 
 import {BeaconState, HistoricalBatch, ValidatorIndex} from "../../../types";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 
 import {bnMin, intDiv} from "../../../util/math";
 
 import {getActiveValidatorIndices, getCurrentEpoch, getRandaoMix, getShardDelta} from "../util";
 
 
-export function processFinalUpdates(config: BeaconConfig, state: BeaconState): void {
+export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): void {
   const currentEpoch = getCurrentEpoch(config, state);
   const nextEpoch = currentEpoch + 1;
   // Reset eth1 data votes

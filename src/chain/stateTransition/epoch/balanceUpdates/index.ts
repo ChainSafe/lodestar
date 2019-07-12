@@ -4,12 +4,12 @@
 
 import {BeaconState} from "../../../../types";
 import {GENESIS_EPOCH} from "../../../../constants";
-import {BeaconConfig} from "../../../../config";
+import {IBeaconConfig} from "../../../../config";
 import {getCurrentEpoch, increaseBalance, decreaseBalance} from "../../util";
 import {getAttestationDeltas} from "./attestation";
 import {getCrosslinkDeltas} from "./crosslink";
 
-export function processRewardsAndPenalties(config: BeaconConfig, state: BeaconState): void {
+export function processRewardsAndPenalties(config: IBeaconConfig, state: BeaconState): void {
   if (getCurrentEpoch(config, state) == GENESIS_EPOCH) {
     return;
   }

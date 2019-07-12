@@ -24,7 +24,7 @@ import {
   ValidatorIndex,
   bytes4,
 } from "../../../types";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 
 import {intDiv} from "../../../util/math";
 import {hash} from "../../../util/crypto";
@@ -40,7 +40,7 @@ import {generateSeed} from "./seed";
 /**
  * Return the block root at a recent ``slot``.
  */
-export function getBlockRootAtSlot(config: BeaconConfig, state: BeaconState, slot: Slot): bytes32 {
+export function getBlockRootAtSlot(config: IBeaconConfig, state: BeaconState, slot: Slot): bytes32 {
   assert(slot < state.slot);
   assert(state.slot <= slot + config.params.SLOTS_PER_HISTORICAL_ROOT);
   return state.latestBlockRoots[slot % config.params.SLOTS_PER_HISTORICAL_ROOT];
@@ -49,14 +49,14 @@ export function getBlockRootAtSlot(config: BeaconConfig, state: BeaconState, slo
 /**
  * Return the block root at a recent ``epoch``.
  */
-export function getBlockRoot(config: BeaconConfig, state: BeaconState, epoch: Epoch): bytes32 {
+export function getBlockRoot(config: IBeaconConfig, state: BeaconState, epoch: Epoch): bytes32 {
   return getBlockRootAtSlot(config, state, getEpochStartSlot(config, epoch));
 }
 
 /**
  * Return the beacon proposer index at ``state.slot``.
  */
-export function getBeaconProposerIndex(config: BeaconConfig, state: BeaconState): ValidatorIndex {
+export function getBeaconProposerIndex(config: IBeaconConfig, state: BeaconState): ValidatorIndex {
   const currentEpoch = getCurrentEpoch(config, state);
   const committeesPerSlot = intDiv(getEpochCommitteeCount(config, state, currentEpoch), config.params.SLOTS_PER_EPOCH);
   const offset = committeesPerSlot * (state.slot % config.params.SLOTS_PER_EPOCH);
@@ -81,7 +81,7 @@ export function getBeaconProposerIndex(config: BeaconConfig, state: BeaconState)
  * Return the signature domain (fork version concatenated with domain type) of a message.
  */
 export function getDomain(
-  config: BeaconConfig,
+  config: IBeaconConfig,
   state: BeaconState,
   domainType: number,
   messageEpoch: Epoch | null = null
@@ -108,7 +108,7 @@ export function blsDomain(domainType: Domain, forkVersion: bytes4): BLSDomain {
 /**
  * Return the churn limit based on the active validator count.
  */
-export function getChurnLimit(config: BeaconConfig, state: BeaconState): number {
+export function getChurnLimit(config: IBeaconConfig, state: BeaconState): number {
   return Math.max(
     config.params.MIN_PER_EPOCH_CHURN_LIMIT,
     intDiv(getActiveValidatorIndices(state, getCurrentEpoch(config, state)).length, config.params.CHURN_LIMIT_QUOTIENT),
@@ -118,7 +118,7 @@ export function getChurnLimit(config: BeaconConfig, state: BeaconState): number 
 /**
  * Return the block header corresponding to a block with ``state_root`` set to ``ZERO_HASH``.
  */
-export function getTemporaryBlockHeader(config: BeaconConfig, block: BeaconBlock): BeaconBlockHeader {
+export function getTemporaryBlockHeader(config: IBeaconConfig, block: BeaconBlock): BeaconBlockHeader {
   return {
     slot: block.slot,
     parentRoot: block.parentRoot,

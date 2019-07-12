@@ -3,7 +3,7 @@
  */
 
 import {BeaconState} from "../../../types";
-import {BeaconConfig} from "../../../config";
+import {IBeaconConfig} from "../../../config";
 
 import {processRewardsAndPenalties} from "./balanceUpdates";
 import {processCrosslinks} from "./crosslinks";
@@ -12,7 +12,7 @@ import {processJustificationAndFinalization} from "./justification";
 import {processRegistryUpdates} from "./registryUpdates";
 import {processSlashings} from "./slashings";
 
-export function processEpoch(config: BeaconConfig, state: BeaconState): BeaconState {
+export function processEpoch(config: IBeaconConfig, state: BeaconState): BeaconState {
 
   // Justification
   processJustificationAndFinalization(config, state);
