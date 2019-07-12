@@ -4,7 +4,7 @@
 
 import {SimpleContainerType} from "@chainsafe/ssz";
 
-import {BeaconParams} from "../../params";
+import {IBeaconParams} from "../../params";
 import {BeaconSSZTypes} from "../interface";
 
 export const Fork = (ssz: BeaconSSZTypes): SimpleContainerType => ({
@@ -111,7 +111,7 @@ export const PendingAttestation = (ssz: BeaconSSZTypes): SimpleContainerType => 
   ],
 });
 
-export const HistoricalBatch = (ssz: BeaconSSZTypes, params: BeaconParams): SimpleContainerType => ({
+export const HistoricalBatch = (ssz: BeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
   name: "HistoricalBatch",
   fields: [
     ["blockRoots", [ssz.bytes32, params.SLOTS_PER_HISTORICAL_ROOT]],

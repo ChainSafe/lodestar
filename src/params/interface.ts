@@ -5,7 +5,7 @@ import BN from "bn.js";
 
 import {Epoch, Gwei, Slot, Shard} from "../types";
 
-export interface BeaconParams {
+export interface IBeaconParams {
   // Misc
   SHARD_COUNT: number;
   TARGET_COMMITTEE_SIZE: number;
