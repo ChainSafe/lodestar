@@ -26,12 +26,13 @@ import {ValidatorApi} from "../../../../../src/rpc";
 import {WinstonLogger} from "../../../../../src/logger";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import {generateDeposit} from "../../../../utils/deposit";
+import {BeaconChain} from "../../../../../src/chain";
 
 describe('produce block', function () {
   this.timeout(0);
 
   const dbStub = sinon.createStubInstance(BeaconDB);
-  const opPoolStub = sinon.createStubInstance(OpPool);
+  const opPoolStub = new OpPool({}, {db: dbStub, chain: sinon.createStubInstance(BeaconChain)});
   const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
 
   it('should produce valid block - state without valid eth1 votes', async function () {
@@ -64,11 +65,11 @@ describe('produce block', function () {
     dbStub.getChainHead.resolves(parentBlock);
     dbStub.getLatestState.resolves(state);
     dbStub.getMerkleTree.resolves(tree);
-    opPoolStub.getProposerSlashings.resolves([]);
-    opPoolStub.getAttestations.resolves([]);
-    opPoolStub.getAttesterSlashings.resolves([]);
-    opPoolStub.getVoluntaryExits.resolves([]);
-    opPoolStub.getDeposits.resolves([]);
+    dbStub.getProposerSlashings.resolves([]);
+    dbStub.getAttestations.resolves([]);
+    dbStub.getAttesterSlashings.resolves([]);
+    dbStub.getVoluntaryExits.resolves([]);
+    dbStub.getDeposits.resolves([]);
     eth1Stub.depositCount.resolves(1);
     eth1Stub.depositRoot.resolves(tree.root());
     // @ts-ignore

@@ -1,5 +1,5 @@
 import sinon from "sinon";
-import {OpPool} from "../../../../../src/opPool";
+import {AttestationOperations, OpPool} from "../../../../../src/opPool";
 import {assembleBody} from "../../../../../src/chain/factory/block/body";
 import * as depositUtils from "../../../../../src/chain/factory/block/deposits";
 import {generateState} from "../../../../utils/state";
@@ -17,15 +17,26 @@ import {
 import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {generateDeposit} from "../../../../utils/deposit";
 import {ProgressiveMerkleTree} from "../../../../../src/util/merkleTree";
+import {VoluntaryExitOperations} from "../../../../../src/opPool/modules/voluntaryExit";
+import {DepositsOperations} from "../../../../../src/opPool/modules/deposit";
+import {ProposerSlashingOperations} from "../../../../../src/opPool/modules/proposerSlashing";
+import {TransferOperations} from "../../../../../src/opPool/modules/transfer";
 
 describe('blockAssembly - body', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let opPool, eth1, generateDepositsStub, bestVoteStub;
+  let opPool: OpPool, eth1, generateDepositsStub, bestVoteStub;
 
   beforeEach(() => {
-    opPool = sandbox.createStubInstance(OpPool);
+    opPool = {
+      attestations: sandbox.createStubInstance(AttestationOperations),
+      voluntaryExits: sandbox.createStubInstance(VoluntaryExitOperations),
+      deposits: sandbox.createStubInstance(DepositsOperations),
+      transfers: sandbox.createStubInstance(TransferOperations),
+      proposerSlashings: sandbox.createStubInstance(ProposerSlashingOperations),
+      attesterSlashings: sandbox.createStubInstance(AttestationOperations),
+    } as unknown as OpPool;
     generateDepositsStub = sandbox.stub(depositUtils, "generateDeposits");
     eth1 = sandbox.createStubInstance(EthersEth1Notifier);
     bestVoteStub = sandbox.stub(eth1DataAssembly, "bestVoteData");
@@ -36,10 +47,14 @@ describe('blockAssembly - body', function () {
   });
 
   it('should generate block body', async function() {
-    opPool.getProposerSlashings.resolves([generateEmptyProposerSlashing()]);
-    opPool.getAttesterSlashings.resolves([generateEmptyAttesterSlashing()]);
-    opPool.getAttestations.resolves([generateEmptyAttestation()]);
-    opPool.getVoluntaryExits.resolves([generateEmptyVoluntaryExit()]);
+    // @ts-ignore
+    opPool.proposerSlashings.all.resolves([generateEmptyProposerSlashing()]);
+    // @ts-ignore
+    opPool.attesterSlashings.all.resolves([generateEmptyAttesterSlashing()]);
+    // @ts-ignore
+    opPool.attestations.all.resolves([generateEmptyAttestation()]);
+    // @ts-ignore
+    opPool.voluntaryExits.all.resolves([generateEmptyVoluntaryExit()]);
     generateDepositsStub.resolves([generateDeposit()]);
     bestVoteStub.resolves([]);
     const result = await assembleBody(
@@ -61,10 +76,14 @@ describe('blockAssembly - body', function () {
   });
 
   it('should generate block body with max respective field lengths', async function() {
-    opPool.getProposerSlashings.resolves(new Array(MAX_PROPOSER_SLASHINGS + 1).map(generateEmptyProposerSlashing));
-    opPool.getAttesterSlashings.resolves(new Array(MAX_ATTESTER_SLASHINGS + 1).map(generateEmptyAttesterSlashing));
-    opPool.getAttestations.resolves(new Array(MAX_ATTESTATIONS + 1).map(generateEmptyAttestation));
-    opPool.getVoluntaryExits.resolves(new Array(MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit));
+    // @ts-ignore
+    opPool.proposerSlashings.all.resolves(new Array(MAX_PROPOSER_SLASHINGS + 1).map(generateEmptyProposerSlashing));
+    // @ts-ignore
+    opPool.attesterSlashings.all.resolves(new Array(MAX_ATTESTER_SLASHINGS + 1).map(generateEmptyAttesterSlashing));
+    // @ts-ignore
+    opPool.attestations.all.resolves(new Array(MAX_ATTESTATIONS + 1).map(generateEmptyAttestation));
+    // @ts-ignore
+    opPool.voluntaryExits.all.resolves(new Array(MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit));
     generateDepositsStub.resolves([generateDeposit()]);
     bestVoteStub.resolves([]);
     const result = await assembleBody(

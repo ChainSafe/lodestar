@@ -92,7 +92,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
-    await this.opPool.receiveAttestation(attestation);
+    await this.opPool.attestations.receive(attestation);
   }
 
   public async getIndex(validatorPublicKey: BLSPubkey): Promise<ValidatorIndex> {

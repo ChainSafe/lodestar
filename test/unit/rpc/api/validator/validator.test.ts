@@ -5,7 +5,7 @@ import {getCommitteeAssignment} from "../../../../../src/chain/stateTransition/u
 import {ValidatorApi} from "../../../../../src/rpc/api/validator";
 import {BeaconDB} from "../../../../../src/db/api";
 import {BeaconChain} from "../../../../../src/chain";
-import {OpPool} from "../../../../../src/opPool";
+import {AttestationOperations, OpPool} from "../../../../../src/opPool";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {expect} from "chai";
 import {generateState} from "../../../../utils/state";
@@ -27,6 +27,7 @@ describe('validator rpc api', function () {
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
     opStub = sandbox.createStubInstance(OpPool);
+    opStub.attestations = sandbox.createStubInstance(AttestationOperations);
     validatorApi = new ValidatorApi({}, {chain: chainStub, db: dbStub, opPool: opStub, eth1: eth1Stub});
   });
 
@@ -110,7 +111,7 @@ describe('validator rpc api', function () {
   it('publish attestation', async function() {
     const attestation = generateEmptyAttestation();
     await validatorApi.publishAttestation(attestation);
-    expect(opStub.receiveAttestation.withArgs(attestation).calledOnce).to.be.true;
+    expect(opStub.attestations.receive.withArgs(attestation).calledOnce).to.be.true;
   });
 
   it('get validator index', async function() {

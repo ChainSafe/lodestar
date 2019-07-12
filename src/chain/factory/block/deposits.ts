@@ -15,7 +15,8 @@ export async function generateDeposits(
   eth1Data: Eth1Data,
   merkleTree: IProgressiveMerkleTree): Promise<Deposit[]> {
   if(eth1Data.depositCount > state.depositIndex) {
-    let deposits = await opPool.getDeposits();
+    //TODO: fetch only required
+    let deposits = await opPool.deposits.all();
     //add all deposits to the tree before getting proof
     return processSortedDeposits(
       deposits,

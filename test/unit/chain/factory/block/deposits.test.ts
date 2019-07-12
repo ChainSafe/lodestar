@@ -8,6 +8,7 @@ import {ZERO_HASH} from "../../../../../src/constants";
 import {generateDeposit} from "../../../../utils/deposit";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {Deposit, DepositData} from "../../../../../src/types";
+import {DepositsOperations} from "../../../../../src/opPool/modules/deposit";
 
 describe('blockAssembly - deposits', function() {
 
@@ -17,6 +18,7 @@ describe('blockAssembly - deposits', function() {
 
   beforeEach(() => {
     opPool = sandbox.createStubInstance(OpPool);
+    opPool.deposits = sandbox.createStubInstance(DepositsOperations);
   });
 
   afterEach(() => {
@@ -40,7 +42,7 @@ describe('blockAssembly - deposits', function() {
 
   it('return deposits with valid proofs', async function() {
     const deposits = [generateDeposit(), generateDeposit()];
-    opPool.getDeposits.resolves(deposits);
+    opPool.deposits.all.resolves(deposits);
     const tree = ProgressiveMerkleTree.empty(4);
     deposits.forEach((d, index) => {
       tree.add(index, hashTreeRoot(d.data, DepositData));
