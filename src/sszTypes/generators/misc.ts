@@ -5,9 +5,9 @@
 import {SimpleContainerType} from "@chainsafe/ssz";
 
 import {IBeaconParams} from "../../params";
-import {BeaconSSZTypes} from "../interface";
+import {IBeaconSSZTypes} from "../interface";
 
-export const Fork = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const Fork = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "Fork",
   fields: [
     ["previousVersion", ssz.bytes4],
@@ -16,7 +16,7 @@ export const Fork = (ssz: BeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const Crosslink = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const Crosslink = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "Crosslink",
   fields: [
     ["shard", ssz.number64],
@@ -27,7 +27,7 @@ export const Crosslink = (ssz: BeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const Eth1Data = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const Eth1Data = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "Eth1Data",
   fields: [
     ["depositRoot", ssz.bytes32],
@@ -36,7 +36,7 @@ export const Eth1Data = (ssz: BeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const AttestationData = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const AttestationData = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "AttestationData",
   fields: [
     ["beaconBlockRoot", ssz.bytes32],
@@ -48,7 +48,7 @@ export const AttestationData = (ssz: BeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const AttestationDataAndCustodyBit = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const AttestationDataAndCustodyBit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "AttestationDataAndCustodyBit",
   fields: [
     ["data", ssz.AttestationData],
@@ -56,7 +56,7 @@ export const AttestationDataAndCustodyBit = (ssz: BeaconSSZTypes): SimpleContain
   ],
 });
 
-export const IndexedAttestation = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const IndexedAttestation = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "IndexedAttestation",
   fields: [
     ["custodyBit0Indices", [ssz.ValidatorIndex]],
@@ -66,7 +66,7 @@ export const IndexedAttestation = (ssz: BeaconSSZTypes): SimpleContainerType => 
   ],
 });
 
-export const DepositData = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const DepositData = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "DepositData",
   fields: [
     ["pubkey", ssz.BLSPubkey],
@@ -76,7 +76,7 @@ export const DepositData = (ssz: BeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const BeaconBlockHeader = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const BeaconBlockHeader = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "BeaconBlockHeader",
   fields: [
     ["slot", ssz.Slot],
@@ -87,7 +87,7 @@ export const BeaconBlockHeader = (ssz: BeaconSSZTypes): SimpleContainerType => (
   ],
 });
 
-export const Validator = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const Validator = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "Validator",
   fields: [
     ["pubkey", ssz.BLSPubkey],
@@ -101,7 +101,7 @@ export const Validator = (ssz: BeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const PendingAttestation = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const PendingAttestation = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "PendingAttestation",
   fields: [
     ["aggregationBitfield", ssz.bytes],
@@ -111,7 +111,7 @@ export const PendingAttestation = (ssz: BeaconSSZTypes): SimpleContainerType => 
   ],
 });
 
-export const HistoricalBatch = (ssz: BeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
+export const HistoricalBatch = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
   name: "HistoricalBatch",
   fields: [
     ["blockRoots", [ssz.bytes32, params.SLOTS_PER_HISTORICAL_ROOT]],
@@ -119,7 +119,7 @@ export const HistoricalBatch = (ssz: BeaconSSZTypes, params: IBeaconParams): Sim
   ],
 });
 
-export const FFGData = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const FFGData = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "FFGData",
   fields: [
     ["sourceEpoch", ssz.Epoch],
@@ -128,7 +128,7 @@ export const FFGData = (ssz: BeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const MerkleTree = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const MerkleTree = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "MerkleTree",
   fields: [
     ["depth", ssz.number64],

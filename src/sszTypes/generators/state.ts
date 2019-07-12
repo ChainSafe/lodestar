@@ -5,9 +5,9 @@
 import {SimpleContainerType} from "@chainsafe/ssz";
 
 import {IBeaconParams} from "../../params";
-import {BeaconSSZTypes} from "../interface";
+import {IBeaconSSZTypes} from "../interface";
 
-export const BeaconState = (ssz: BeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
+export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
   name: "BeaconState",
   fields: [
     // Misc

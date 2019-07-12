@@ -4,9 +4,9 @@
 
 import {SimpleContainerType} from "@chainsafe/ssz";
 
-import {BeaconSSZTypes} from "../interface";
+import {IBeaconSSZTypes} from "../interface";
 
-export const BeaconBlockBody = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const BeaconBlockBody = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "BeaconBlockBody",
   fields: [
     ["randaoReveal", ssz.bytes96],
@@ -21,7 +21,7 @@ export const BeaconBlockBody = (ssz: BeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const BeaconBlock = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const BeaconBlock = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "BeaconBlock",
   fields: [
     ["slot", ssz.Slot],

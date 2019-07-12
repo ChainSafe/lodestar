@@ -1,7 +1,7 @@
 import {IBeaconParams} from "../params";
-import {BeaconSSZTypes} from "../sszTypes";
+import {IBeaconSSZTypes} from "../sszTypes";
 
 export interface IBeaconConfig {
   params: IBeaconParams;
-  types: BeaconSSZTypes;
+  types: IBeaconSSZTypes;
 }

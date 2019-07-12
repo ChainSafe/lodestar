@@ -6,9 +6,9 @@ import {SimpleContainerType} from "@chainsafe/ssz";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 
-import {BeaconSSZTypes} from "../interface";
+import {IBeaconSSZTypes} from "../interface";
 
-export const ProposerSlashing = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const ProposerSlashing = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "ProposerSlashing",
   fields: [
     ["proposerIndex", ssz.ValidatorIndex],
@@ -17,7 +17,7 @@ export const ProposerSlashing = (ssz: BeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const AttesterSlashing = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const AttesterSlashing = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "AttesterSlashing",
   fields: [
     ["attestation1", ssz.IndexedAttestation],
@@ -25,7 +25,7 @@ export const AttesterSlashing = (ssz: BeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const Attestation = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const Attestation = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "Attestation",
   fields: [
     ["aggregationBitfield", ssz.bytes],
@@ -35,7 +35,7 @@ export const Attestation = (ssz: BeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const Deposit = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const Deposit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "Deposit",
   fields: [
     ["proof", [ssz.bytes32, DEPOSIT_CONTRACT_TREE_DEPTH]],
@@ -43,7 +43,7 @@ export const Deposit = (ssz: BeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const VoluntaryExit = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const VoluntaryExit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "VoluntaryExit",
   fields: [
     ["epoch", ssz.Epoch],
@@ -52,7 +52,7 @@ export const VoluntaryExit = (ssz: BeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const Transfer = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const Transfer = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "Transfer",
   fields: [
     ["sender", ssz.ValidatorIndex],

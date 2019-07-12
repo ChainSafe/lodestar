@@ -10,7 +10,7 @@ import * as validator from "./validator";
 import * as wire from "./wire";
 
 import {IBeaconParams} from "../../params";
-import {BeaconSSZTypes, typeNames} from "../interface";
+import {IBeaconSSZTypes, typeNames} from "../interface";
 
 const allGenerators = {
   ...misc,
@@ -21,9 +21,9 @@ const allGenerators = {
   ...wire,
 }
 
-export function createBeaconSSZTypes(params: IBeaconParams): BeaconSSZTypes {
+export function createIBeaconSSZTypes(params: IBeaconParams): IBeaconSSZTypes {
   // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-  const types: BeaconSSZTypes = {} as BeaconSSZTypes;
+  const types: IBeaconSSZTypes = {} as IBeaconSSZTypes;
   // primitive types (don't need generators)
   for (const type in primitive) {
     types[type] = primitive[type];

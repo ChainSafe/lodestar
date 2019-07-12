@@ -1,6 +1,6 @@
 import {AnyContainerType, AnySSZType} from "@chainsafe/ssz";
 
-export interface BeaconSSZTypes {
+export interface IBeaconSSZTypes {
   // primitive
   bool: AnySSZType;
   bytes: AnySSZType;
@@ -65,7 +65,7 @@ export interface BeaconSSZTypes {
   BeaconStatesResponse: AnyContainerType;
 }
 
-export const typeNames: (keyof BeaconSSZTypes)[] = [
+export const typeNames: (keyof IBeaconSSZTypes)[] = [
   // primitive
   /*
   "bool",

@@ -4,9 +4,9 @@
 
 import {SimpleContainerType} from "@chainsafe/ssz";
 
-import {BeaconSSZTypes} from "../interface";
+import {IBeaconSSZTypes} from "../interface";
 
-export const ValidatorDuty = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const ValidatorDuty = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "ValidatorDuty",
   fields: [
     ["validatorPubkey", ssz.bytes48],
@@ -17,7 +17,7 @@ export const ValidatorDuty = (ssz: BeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const SyncingStatus = (ssz: BeaconSSZTypes): SimpleContainerType => ({
+export const SyncingStatus = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "SyncingStatus",
   fields: [
     ["startingBlock", ssz.uint64],
