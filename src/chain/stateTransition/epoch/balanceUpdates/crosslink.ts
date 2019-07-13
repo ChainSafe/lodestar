@@ -5,7 +5,7 @@
 import BN from "bn.js";
 
 import {BeaconState, Gwei} from "../../../../types";
-import {SHARD_COUNT} from "../../../../constants";
+import {IBeaconConfig} from "../../../../config";
 
 import {
   getCrosslinkCommittee,
@@ -19,20 +19,20 @@ import {getWinningCrosslinkAndAttestingIndices} from "../util";
 import {getBaseReward} from "./baseReward";
 
 
-export function getCrosslinkDeltas(state: BeaconState): [Gwei[], Gwei[]] {
+export function getCrosslinkDeltas(config: IBeaconConfig, state: BeaconState): [Gwei[], Gwei[]] {
   const rewards = Array.from({length: state.validatorRegistry.length}, () => new BN(0));
   const penalties = Array.from({length: state.validatorRegistry.length}, () => new BN(0));
-  const previousEpoch = getPreviousEpoch(state);
-  const comitteeCount = getEpochCommitteeCount(state, previousEpoch);
+  const previousEpoch = getPreviousEpoch(config, state);
+  const comitteeCount = getEpochCommitteeCount(config, state, previousEpoch);
   for (let offset = 0; offset < comitteeCount; offset++) {
-    const shard = (getEpochStartShard(state, previousEpoch) + offset) % SHARD_COUNT;
-    const crosslinkCommittee = getCrosslinkCommittee(state, previousEpoch, shard);
+    const shard = (getEpochStartShard(config, state, previousEpoch) + offset) % config.params.SHARD_COUNT;
+    const crosslinkCommittee = getCrosslinkCommittee(config, state, previousEpoch, shard);
     const [_, attestingIndices] =
-      getWinningCrosslinkAndAttestingIndices(state, previousEpoch, shard);
+      getWinningCrosslinkAndAttestingIndices(config, state, previousEpoch, shard);
     const attestingBalance = getTotalBalance(state, attestingIndices);
     const committeeBalance = getTotalBalance(state, crosslinkCommittee);
     crosslinkCommittee.forEach((index) => {
-      const baseReward = getBaseReward(state, index);
+      const baseReward = getBaseReward(config, state, index);
       if (attestingIndices.includes(index)) {
         rewards[index] = rewards[index]
           .add(baseReward.mul(attestingBalance).div(committeeBalance));

@@ -1,12 +1,14 @@
+import BN from "bn.js";
 import sinon from "sinon";
 import {expect} from "chai";
+import * as hashTreeRoot from "@chainsafe/ssz";
+
+import {config} from "../../../../../src/config/presets/mainnet";
 import * as utils from "../../../../../src/chain/stateTransition/util";
+import {processFinalUpdates} from "../../../../../src/chain/stateTransition/epoch/finalUpdates";
+
 import {generateState} from "../../../../utils/state";
 import {generateValidator} from "../../../../utils/validator";
-import * as hashTreeRoot from "@chainsafe/ssz";
-import {processFinalUpdates} from "../../../../../src/chain/stateTransition/epoch/finalUpdates";
-import BN from "bn.js";
-import {SLOTS_PER_ETH1_VOTING_PERIOD} from "../../../../../src/constants";
 
 describe('process epoch - final updates', function () {
 
@@ -32,7 +34,7 @@ describe('process epoch - final updates', function () {
 
   it('should make required final updates', function () {
     const state = generateState();
-    state.slot = SLOTS_PER_ETH1_VOTING_PERIOD - 1;
+    state.slot = config.params.SLOTS_PER_ETH1_VOTING_PERIOD - 1;
     state.validatorRegistry.push(generateValidator());
     state.balances.push(new BN("fffffffff"));
 
@@ -43,11 +45,11 @@ describe('process epoch - final updates', function () {
     hashTreeRootStub.returns(Buffer.from("1010"));
 
     try {
-      processFinalUpdates(state);
-      expect(getCurrentEpochStub.calledOnceWith(state)).to.be.true;
-      expect(getShardDeltaStub.calledOnceWith(state, sinon.match.number)).to.be.true;
+      processFinalUpdates(config, state);
+      expect(getCurrentEpochStub.calledOnceWith(config, state)).to.be.true;
+      expect(getShardDeltaStub.calledOnceWith(config, state, sinon.match.number)).to.be.true;
       expect(getActiveValidatorIndicesStub.calledOnceWith(state, sinon.match.number)).to.be.true;
-      expect(getRandaoMixStub.calledOnceWith(state, sinon.match.number)).to.be.true;
+      expect(getRandaoMixStub.calledOnceWith(config, state, sinon.match.number)).to.be.true;
 
     }catch (e) {
       expect.fail(e.stack);

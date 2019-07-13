@@ -1,6 +1,8 @@
 import sinon from "sinon";
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
+
+import {config} from "../../../../../src/config/presets/mainnet";
 import * as attestationDataProduction from "../../../../../src/chain/factory/attestation/data";
 import {BeaconDB} from "../../../../../src/db/api";
 import {assembleAttestation} from "../../../../../src/chain/factory/attestation";
@@ -28,7 +30,7 @@ describe("assemble attestation", function () {
     const state = generateState({slot: 1});
     const attestationData = generateAttestationData(1, 3);
     assembleAttestationDataStub.resolves(attestationData);
-    const result = await assembleAttestation(dbStub, state, generateEmptyBlock(), 4, 2);
+    const result = await assembleAttestation(config, dbStub, state, generateEmptyBlock(), 4, 2);
     expect(result).to.not.be.null;
     expect(result.data).to.be.equal(attestationData);
     expect(state.slot).to.be.equal(4);

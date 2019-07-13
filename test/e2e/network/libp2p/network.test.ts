@@ -1,5 +1,6 @@
 import {expect} from "chai";
 
+import {config} from "../../../../src/config/presets/mainnet";
 import {Libp2pNetwork} from "../../../../src/network";
 import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../../../../src/constants";
 import {getEmptyBlock} from "../../../../src/chain/genesis";
@@ -25,8 +26,8 @@ describe("[network] network", () => {
   const logger: ILogger = new WinstonLogger();
 
   beforeEach(async () => {
-    netA = new Libp2pNetwork(opts, {libp2p: createNode(multiaddr), logger: logger});
-    netB = new Libp2pNetwork(opts, {libp2p: createNode(multiaddr), logger: logger});
+    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger});
+    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger});
     await Promise.all([
       netA.start(),
       netB.start(),

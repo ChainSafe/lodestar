@@ -2,6 +2,7 @@ import {assert} from "chai";
 import {ethers} from "ethers";
 import sinon from "sinon";
 
+import {config} from "../../../src/config/presets/mainnet";
 import {Eth1Wallet, EthersEth1Notifier, IEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
 import {PrivateEth1Network} from "../../../src/eth1/dev";
@@ -18,6 +19,7 @@ describe("Eth1Notifier - using deployed contract", () => {
   let provider;
   let logger: ILogger = new WinstonLogger();
   const db = new BeaconDB({
+    config,
     controller: new PouchDbController(
       {name: 'testDb'}
     )
@@ -45,6 +47,7 @@ describe("Eth1Notifier - using deployed contract", () => {
     eth1Notifier = new EthersEth1Notifier(
       opts,
       {
+        config,
         opPool: new OpPool(null, {db, chain: null}),
         logger: logger
       });
@@ -62,6 +65,7 @@ describe("Eth1Notifier - using deployed contract", () => {
     const wallet = new Eth1Wallet(
       eth1Network.accounts()[0],
       defaults.depositContract.abi,
+      config,
       logger,
       provider
     );
@@ -84,7 +88,7 @@ describe("Eth1Notifier - using deployed contract", () => {
       eth1Network
         .accounts()
         .map((account) =>
-          (new Eth1Wallet(account, defaults.depositContract.abi, logger, provider))
+          (new Eth1Wallet(account, defaults.depositContract.abi, config, logger, provider))
             .createValidatorDeposit(
               depositContractAddress,
               ethers.utils.parseEther('32.0')

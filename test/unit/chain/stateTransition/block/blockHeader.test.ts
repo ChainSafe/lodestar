@@ -4,6 +4,7 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import {signingRoot} from "@chainsafe/ssz";
 
+import {config} from "../../../../../src/config/presets/mainnet";
 import {BeaconBlockHeader} from "../../../../../src/types";
 import {EMPTY_SIGNATURE} from "../../../../../src/constants";
 import * as utils from "../../../../../src/chain/stateTransition/util";
@@ -39,7 +40,7 @@ describe('process block - block header', function () {
     const block = generateEmptyBlock();
     block.slot = 4;
     try {
-      processBlockHeader(state, block);
+      processBlockHeader(config, state, block);
       expect.fail();
     } catch (e) {}
   });
@@ -50,7 +51,7 @@ describe('process block - block header', function () {
     block.slot = 5;
     block.parentRoot = Buffer.alloc(10, 1);
     try {
-      processBlockHeader(state, block);
+      processBlockHeader(config, state, block);
       expect.fail();
     } catch (e) {}
   });
@@ -60,7 +61,7 @@ describe('process block - block header', function () {
     state.validatorRegistry.push(generateValidator(0, 10, true));
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.parentRoot = signingRoot(state.latestBlockHeader, BeaconBlockHeader);
+    block.parentRoot = signingRoot(state.latestBlockHeader, config.types.BeaconBlockHeader);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),
       slot: 5,
@@ -70,11 +71,11 @@ describe('process block - block header', function () {
     });
     getBeaconProposeIndexStub.returns(0);
     try {
-      processBlockHeader(state, block);
+      processBlockHeader(config, state, block);
       expect.fail();
     } catch (e) {
       expect(getTemporaryBlockHeaderStub.calledOnce).to.be.true;
-      expect(getBeaconProposeIndexStub.calledOnceWith(state)).to.be.true;
+      expect(getBeaconProposeIndexStub.calledOnceWith(config, state)).to.be.true;
     }
   });
 
@@ -83,7 +84,7 @@ describe('process block - block header', function () {
     state.validatorRegistry.push(generateValidator(0, 10));
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.parentRoot = signingRoot(state.latestBlockHeader, BeaconBlockHeader);
+    block.parentRoot = signingRoot(state.latestBlockHeader, config.types.BeaconBlockHeader);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),
       slot: 5,
@@ -94,11 +95,11 @@ describe('process block - block header', function () {
     blsStub.verify.returns(false);
     getBeaconProposeIndexStub.returns(0);
     try {
-      processBlockHeader(state, block);
+      processBlockHeader(config, state, block);
       expect.fail();
     } catch (e) {
       expect(getTemporaryBlockHeaderStub.calledOnce).to.be.true;
-      expect(getBeaconProposeIndexStub.calledOnceWith(state)).to.be.true;
+      expect(getBeaconProposeIndexStub.calledOnceWith(config, state)).to.be.true;
       expect(blsStub.verify.calledOnce).to.be.true;
     }
   });
@@ -108,7 +109,7 @@ describe('process block - block header', function () {
     state.validatorRegistry.push(generateValidator(0, 10));
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.parentRoot = signingRoot(state.latestBlockHeader, BeaconBlockHeader);
+    block.parentRoot = signingRoot(state.latestBlockHeader, config.types.BeaconBlockHeader);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),
       slot: 5,
@@ -118,9 +119,9 @@ describe('process block - block header', function () {
     });
     getBeaconProposeIndexStub.returns(0);
     try {
-      processBlockHeader(state, block, false);
+      processBlockHeader(config, state, block, false);
       expect(getTemporaryBlockHeaderStub.calledOnce).to.be.true;
-      expect(getBeaconProposeIndexStub.calledOnceWith(state)).to.be.true;
+      expect(getBeaconProposeIndexStub.calledOnceWith(config, state)).to.be.true;
 
     } catch (e) {
       expect.fail(e.message);
@@ -133,7 +134,7 @@ describe('process block - block header', function () {
     state.validatorRegistry.push(validator);
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.parentRoot = signingRoot(state.latestBlockHeader, BeaconBlockHeader);
+    block.parentRoot = signingRoot(state.latestBlockHeader, config.types.BeaconBlockHeader);
     blsStub.verify.returns(true);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),
@@ -144,9 +145,9 @@ describe('process block - block header', function () {
     });
     getBeaconProposeIndexStub.returns(0);
     try {
-      processBlockHeader(state, block, true);
+      processBlockHeader(config, state, block, true);
       expect(getTemporaryBlockHeaderStub.calledOnce).to.be.true;
-      expect(getBeaconProposeIndexStub.calledOnceWith(state)).to.be.true;
+      expect(getBeaconProposeIndexStub.calledOnceWith(config, state)).to.be.true;
       expect(blsStub.verify.calledOnce).to.be.true;
     } catch (e) {
       expect.fail(e.stack);

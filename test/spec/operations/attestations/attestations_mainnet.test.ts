@@ -5,15 +5,16 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import {equals} from "@chainsafe/ssz";
-import {Attestation, BeaconState} from "../../../../src/types";
 
+import {Attestation, BeaconState} from "../../../../src/types";
+import {config} from "../../../../src/config/presets/mainnet";
 import {processAttestation} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/attestation/attestation_mainnet.yaml"),
   (state: BeaconState, attestation: Attestation): BeaconState => {
-    processAttestation(state, attestation);
+    processAttestation(config, state, attestation);
     return state;
   },
   (input) => {
@@ -24,10 +25,10 @@ describeSpecTest(
         aggregatePubkeys: sinon.stub().returns(Buffer.alloc(48))
       });
     }
-    return [expandYamlValue(input.pre, BeaconState), expandYamlValue(input.attestation, Attestation)];
+    return [expandYamlValue(input.pre, config.types.BeaconState), expandYamlValue(input.attestation, config.types.Attestation)];
   },
   (expected) => {
-    return expandYamlValue(expected.post, BeaconState);
+    return expandYamlValue(expected.post, config.types.BeaconState);
   },
   result => result,
   (testCase) => {
@@ -35,7 +36,7 @@ describeSpecTest(
   },
   () => false,
   (_1, _2, expected, actual) => {
-    expect(equals(expected, actual, BeaconState)).to.be.true;
+    expect(equals(expected, actual, config.types.BeaconState)).to.be.true;
     restore();
   },
   0

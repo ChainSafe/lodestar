@@ -1,9 +1,8 @@
 import {assert} from "chai";
 
+import {config} from "../../../../../src/config/presets/mainnet";
 import {BeaconState, Epoch, Slot} from "../../../../../src/types";
-
-import {GENESIS_SLOT, ACTIVATION_EXIT_DELAY} from "../../../../../src/constants";
-
+import {GENESIS_SLOT} from "../../../../../src/constants";
 import {
   getEpochStartSlot,
   getPreviousEpoch,
@@ -28,7 +27,7 @@ describe("slotToEpoch", () => {
   ];
   for (const pair of pairs) {
     it(`Slot ${pair.test} should map to epoch ${pair.expected}`, () => {
-      const result: Epoch = slotToEpoch(pair.test);
+      const result: Epoch = slotToEpoch(config, pair.test);
       assert.equal(result, pair.expected);
     });
   }
@@ -47,7 +46,7 @@ describe("getEpochStartSlot", () => {
   ];
   for (const pair of pairs) {
     it(`Epoch ${pair.test} should map to slot ${pair.expected}`, () => {
-      const result: Slot = getEpochStartSlot(pair.test);
+      const result: Slot = getEpochStartSlot(config, pair.test);
       assert.equal(result, pair.expected);
     });
   }
@@ -58,21 +57,21 @@ describe("getPreviousEpoch", () => {
   it("epoch should return previous epoch", () => {
     const state: BeaconState = generateState({slot: 512});
     const expected: Epoch = 7;
-    const result = getPreviousEpoch(state);
+    const result = getPreviousEpoch(config, state);
     assert.equal(result, expected);
   });
 
   it("epoch should return previous epoch", () => {
     const state: BeaconState = generateState({slot: 256});
     const expected: Epoch = 3;
-    const result = getPreviousEpoch(state);
+    const result = getPreviousEpoch(config, state);
     assert.equal(result, expected);
   });
 
   it("epoch should return genesis epoch", () => {
     const state: BeaconState = generateState({slot: GENESIS_SLOT});
-    const expected: Epoch = slotToEpoch(GENESIS_SLOT);
-    const result = getPreviousEpoch(state);
+    const expected: Epoch = slotToEpoch(config, GENESIS_SLOT);
+    const result = getPreviousEpoch(config, state);
     assert.equal(result, expected);
   });
 });
@@ -80,7 +79,7 @@ describe("getPreviousEpoch", () => {
 describe("getDelayedActivationExitEpoch", () => {
   it("epoch is always equal to the epoch after the exit delay", () => {
     for (let e: Epoch = 0; e < 1000; e++) {
-      assert.equal(getDelayedActivationExitEpoch(e), e + 1 + ACTIVATION_EXIT_DELAY);
+      assert.equal(getDelayedActivationExitEpoch(config, e), e + 1 + config.params.ACTIVATION_EXIT_DELAY);
     }
   });
 });

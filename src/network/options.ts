@@ -15,7 +15,7 @@ export const NetworkOptions: IConfigurationModule = {
   fields: [
     {
       name: "maxPeers",
-      type: number64,
+      type: "number",
       configurable: true,
       process: (input) => {
         return parseInt(input);

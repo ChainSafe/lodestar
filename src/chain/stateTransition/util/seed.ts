@@ -3,16 +3,11 @@
  */
 
 import {
-  LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
-  LATEST_RANDAO_MIXES_LENGTH,
-  MIN_SEED_LOOKAHEAD,
-} from "../../../constants";
-
-import {
   BeaconState,
   bytes32,
   Epoch,
 } from "../../../types";
+import {IBeaconConfig} from "../../../config";
 
 
 import {intToBytes} from "../../../util/bytes";
@@ -26,8 +21,8 @@ import {hash} from "../../../util/crypto";
  * (current_epoch - LATEST_ACTIVE_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY
  * , current_epoch + ACTIVATION_EXIT_DELAY].
  */
-export function getRandaoMix(state: BeaconState, epoch: Epoch): bytes32 {
-  return state.latestRandaoMixes[epoch % LATEST_RANDAO_MIXES_LENGTH];
+export function getRandaoMix(config: IBeaconConfig, state: BeaconState, epoch: Epoch): bytes32 {
+  return state.latestRandaoMixes[epoch % config.params.LATEST_RANDAO_MIXES_LENGTH];
 }
 
 /**
@@ -37,17 +32,17 @@ export function getRandaoMix(state: BeaconState, epoch: Epoch): bytes32 {
  * (current_epoch - LATEST_ACTIVE_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY
  * , current_epoch + ACTIVATION_EXIT_DELAY].
  */
-export function getActiveIndexRoot(state: BeaconState, epoch: Epoch): bytes32 {
-  return state.latestActiveIndexRoots[epoch % LATEST_ACTIVE_INDEX_ROOTS_LENGTH];
+export function getActiveIndexRoot(config: IBeaconConfig, state: BeaconState, epoch: Epoch): bytes32 {
+  return state.latestActiveIndexRoots[epoch % config.params.LATEST_ACTIVE_INDEX_ROOTS_LENGTH];
 }
 
 /**
  * Generate a seed for the given epoch.
  */
-export function generateSeed(state: BeaconState, epoch: Epoch): bytes32 {
+export function generateSeed(config: IBeaconConfig, state: BeaconState, epoch: Epoch): bytes32 {
   return hash(Buffer.concat([
-    getRandaoMix(state, epoch + LATEST_RANDAO_MIXES_LENGTH - MIN_SEED_LOOKAHEAD),
-    getActiveIndexRoot(state, epoch),
+    getRandaoMix(config, state, epoch + config.params.LATEST_RANDAO_MIXES_LENGTH - config.params.MIN_SEED_LOOKAHEAD),
+    getActiveIndexRoot(config, state, epoch),
     intToBytes(epoch, 32),
   ]));
 }

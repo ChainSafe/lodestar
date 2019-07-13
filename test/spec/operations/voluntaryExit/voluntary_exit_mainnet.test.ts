@@ -5,14 +5,16 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import {equals} from "@chainsafe/ssz";
+
+import {BeaconState, VoluntaryExit} from "../../../../src/types";
+import {config} from "../../../../src/config/presets/mainnet";
 import {processVoluntaryExit} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
-import {BeaconState, VoluntaryExit} from "../../../../src/types";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/voluntary_exit/voluntary_exit_mainnet.yaml"),
   (state, exit) => {
-    processVoluntaryExit(state, exit);
+    processVoluntaryExit(config, state, exit);
     return state;
   },
   (input) => {
@@ -22,10 +24,10 @@ describeSpecTest(
         verifyMultiple: sinon.stub().returns(true)
       });
     }
-    return [expandYamlValue(input.pre, BeaconState), expandYamlValue(input.voluntaryExit, VoluntaryExit)];
+    return [expandYamlValue(input.pre, config.types.BeaconState), expandYamlValue(input.voluntaryExit, config.types.VoluntaryExit)];
   },
   (expected) => {
-    return expandYamlValue(expected.post, BeaconState);
+    return expandYamlValue(expected.post, config.types.BeaconState);
   },
   result => result,
   (testCase) => {
@@ -33,7 +35,7 @@ describeSpecTest(
   },
   () => false,
   (_1, _2, expected, actual) => {
-    expect(equals(expected, actual, BeaconState)).to.be.true;
+    expect(equals(expected, actual, config.types.BeaconState)).to.be.true;
     restore();
   },
   0

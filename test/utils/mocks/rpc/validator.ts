@@ -77,7 +77,7 @@ export class MockValidatorApi implements IValidatorApi {
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
-    this.attestations.push(Attestation);
+    this.attestations.push(attestation);
   }
 
 }

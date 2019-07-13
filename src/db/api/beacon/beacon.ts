@@ -33,14 +33,14 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
   public async getState(root: bytes32): Promise<BeaconState | null> {
     try {
       const buf = await this.db.get(encodeKey(Bucket.state, root));
-      return deserialize(buf, BeaconState);
+      return deserialize(buf, this.config.types.BeaconState);
     } catch (e) {
       return null;
     }
   }
 
   public async setState(root: bytes32, state: BeaconState): Promise<void> {
-    await this.db.put(encodeKey(Bucket.state, root), serialize(state, BeaconState));
+    await this.db.put(encodeKey(Bucket.state, root), serialize(state, this.config.types.BeaconState));
   }
 
   /**
@@ -48,12 +48,12 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
    */
   private async getRefValue<T>(key: Key, getFn: (r: bytes32) => T | null): Promise<T | null> {
     const root = await this.db.get(encodeKey(Bucket.chainInfo, key));
-    return await getFn(deserialize(root, bytes32));
+    return await getFn(deserialize(root, this.config.types.bytes32));
   }
   private async setRef(key: Key, root: bytes32): Promise<void> {
     await this.db.put(
       encodeKey(Bucket.chainInfo, key),
-      serialize(root, bytes32)
+      serialize(root, this.config.types.bytes32)
     );
   }
 
@@ -84,7 +84,7 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
   public async getBlock(root: bytes32): Promise<BeaconBlock | null> {
     try {
       const buf = await this.db.get(encodeKey(Bucket.block, root));
-      return deserialize(buf, BeaconBlock);
+      return deserialize(buf, this.config.types.BeaconBlock);
     } catch (e) {
       return null;
     }
@@ -95,7 +95,7 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
   }
 
   public async setBlock(root: bytes32, block: BeaconBlock): Promise<void> {
-    await this.db.put(encodeKey(Bucket.block, root), serialize(block, BeaconBlock));
+    await this.db.put(encodeKey(Bucket.block, root), serialize(block, this.config.types.BeaconBlock));
   }
 
   public async getFinalizedBlock(): Promise<BeaconBlock | null> {
@@ -132,7 +132,7 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
   public async getChainHeadSlot(): Promise<Slot | null> {
     try {
       const heightBuf = await this.db.get(encodeKey(Bucket.chainInfo, Key.chainHeight));
-      return deserialize(heightBuf, uint64) as Slot;
+      return deserialize(heightBuf, this.config.types.uint64) as Slot;
     } catch (e) {
       return null;
     }
@@ -175,17 +175,17 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
         value: blockRoot
       }, {
         key: encodeKey(Bucket.chainInfo, Key.chainHeight),
-        value: serialize(slot, uint64)
+        value: serialize(slot, this.config.types.uint64)
       }]),
     ]);
   }
 
   public async getAttestations(): Promise<Attestation[]> {
-    return await this.getAllData(Bucket.attestation, Attestation);
+    return await this.getAllData(Bucket.attestation, this.config.types.Attestation);
   }
 
   public async getAttestation(root: bytes32): Promise<Attestation> {
-    return deserialize(await this.db.get(encodeKey(Bucket.attestation, root)), Attestation);
+    return deserialize(await this.db.get(encodeKey(Bucket.attestation, root)), this.config.types.Attestation);
   }
 
   public async hasAttestation(root: bytes32): Promise<boolean> {
@@ -198,77 +198,77 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
   }
 
   public async setAttestation(attestation: Attestation): Promise<void> {
-    const attestationRoot = hashTreeRoot(attestation, Attestation);
+    const attestationRoot = hashTreeRoot(attestation, this.config.types.Attestation);
     await this.db.put(
       encodeKey(Bucket.attestation, attestationRoot),
-      serialize(attestation, Attestation)
+      serialize(attestation, this.config.types.Attestation)
     );
   }
 
   public async deleteAttestations(attestations: Attestation[]): Promise<void> {
-    return await this.deleteData(Bucket.attestation, Attestation, attestations);
+    return await this.deleteData(Bucket.attestation, this.config.types.Attestation, attestations);
   }
 
   public async getVoluntaryExits(): Promise<VoluntaryExit[]> {
-    return await this.getAllData(Bucket.exit, VoluntaryExit);
+    return await this.getAllData(Bucket.exit, this.config.types.VoluntaryExit);
   }
 
   public async setVoluntaryExit(exit: VoluntaryExit): Promise<void> {
-    const exitRoot = hashTreeRoot(exit, VoluntaryExit);
-    await this.db.put(encodeKey(Bucket.exit, exitRoot), serialize(exit, VoluntaryExit));
+    const exitRoot = hashTreeRoot(exit, this.config.types.VoluntaryExit);
+    await this.db.put(encodeKey(Bucket.exit, exitRoot), serialize(exit, this.config.types.VoluntaryExit));
   }
 
   public async deleteVoluntaryExits(exits: VoluntaryExit[]): Promise<void> {
-    await this.deleteData(Bucket.exit, VoluntaryExit, exits);
+    await this.deleteData(Bucket.exit, this.config.types.VoluntaryExit, exits);
   }
 
   public async getTransfers(): Promise<Transfer[]> {
-    return await this.getAllData(Bucket.transfer, Transfer);
+    return await this.getAllData(Bucket.transfer, this.config.types.Transfer);
   }
 
   public async setTransfer(transfer: Transfer): Promise<void> {
-    const transferRoot = hashTreeRoot(transfer, Transfer);
-    await this.db.put(encodeKey(Bucket.transfer, transferRoot), serialize(transfer, Transfer));
+    const transferRoot = hashTreeRoot(transfer, this.config.types.Transfer);
+    await this.db.put(encodeKey(Bucket.transfer, transferRoot), serialize(transfer, this.config.types.Transfer));
   }
 
   public async deleteTransfers(transfers: Transfer[]): Promise<void> {
-    await this.deleteData(Bucket.transfer, Transfer, transfers);
+    await this.deleteData(Bucket.transfer, this.config.types.Transfer, transfers);
   }
 
   public async getProposerSlashings(): Promise<ProposerSlashing[]> {
-    return await this.getAllData(Bucket.proposerSlashing, ProposerSlashing);
+    return await this.getAllData(Bucket.proposerSlashing, this.config.types.ProposerSlashing);
   }
 
   public async setProposerSlashing(proposerSlashing: ProposerSlashing): Promise<void> {
-    const proposerSlashingRoot = hashTreeRoot(proposerSlashing, ProposerSlashing);
+    const proposerSlashingRoot = hashTreeRoot(proposerSlashing, this.config.types.ProposerSlashing);
     await this.db.put(encodeKey(Bucket.proposerSlashing, proposerSlashingRoot),
-      serialize(proposerSlashing, ProposerSlashing));
+      serialize(proposerSlashing, this.config.types.ProposerSlashing));
   }
 
   public async deleteProposerSlashings(proposerSlashings: ProposerSlashing[]): Promise<void> {
-    await this.deleteData(Bucket.proposerSlashing, ProposerSlashing, proposerSlashings);
+    await this.deleteData(Bucket.proposerSlashing, this.config.types.ProposerSlashing, proposerSlashings);
   }
 
   public async getAttesterSlashings(): Promise<AttesterSlashing[]> {
-    return await this.getAllData(Bucket.attesterSlashing, AttesterSlashing);
+    return await this.getAllData(Bucket.attesterSlashing, this.config.types.AttesterSlashing);
   }
 
   public async setAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<void> {
-    const attesterSlashingRoot = hashTreeRoot(attesterSlashing, AttesterSlashing);
+    const attesterSlashingRoot = hashTreeRoot(attesterSlashing, this.config.types.AttesterSlashing);
     await this.db.put(encodeKey(Bucket.attesterSlashing, attesterSlashingRoot),
-      serialize(attesterSlashing, AttesterSlashing));
+      serialize(attesterSlashing, this.config.types.AttesterSlashing));
   }
 
   public async deleteAttesterSlashings(attesterSlashings: AttesterSlashing[]): Promise<void> {
-    await this.deleteData(Bucket.attesterSlashing, AttesterSlashing, attesterSlashings);
+    await this.deleteData(Bucket.attesterSlashing, this.config.types.AttesterSlashing, attesterSlashings);
   }
 
   public async getDeposits(): Promise<Deposit[]> {
-    return await this.getAllData(Bucket.genesisDeposit, Deposit);
+    return await this.getAllData(Bucket.genesisDeposit, this.config.types.Deposit);
   }
 
   public async setDeposit(index: number, deposit: Deposit): Promise<void> {
-    await this.db.put(encodeKey(Bucket.genesisDeposit, index), serialize(deposit, Deposit));
+    await this.db.put(encodeKey(Bucket.genesisDeposit, index), serialize(deposit, this.config.types.Deposit));
   }
 
   public async deleteDeposits(): Promise<void> {
@@ -306,7 +306,7 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
       encodeKey(Bucket.merkleTree, index)
     );
     if(merkleTreeSerialized) {
-      return ProgressiveMerkleTree.fromObject(deserialize(merkleTreeSerialized, MerkleTree));
+      return ProgressiveMerkleTree.deserialize(merkleTreeSerialized);
     }
     return null;
   }

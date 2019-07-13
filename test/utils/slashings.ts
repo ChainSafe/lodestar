@@ -1,3 +1,4 @@
+import {config} from "../../src/config/presets/mainnet";
 import {AttesterSlashing, ProposerSlashing} from "../../src/types";
 import {generateEmptyBlock} from "./block";
 import {getTemporaryBlockHeader} from "../../src/chain/stateTransition/util";
@@ -7,8 +8,8 @@ import {generateEmptyAttestation} from "./attestation";
 export function generateEmptyProposerSlashing(): ProposerSlashing {
 
   return {
-    header1: getTemporaryBlockHeader(generateEmptyBlock()),
-    header2: getTemporaryBlockHeader(generateEmptyBlock()),
+    header1: getTemporaryBlockHeader(config, generateEmptyBlock()),
+    header2: getTemporaryBlockHeader(config, generateEmptyBlock()),
     proposerIndex: 0
   };
 }

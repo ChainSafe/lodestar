@@ -5,14 +5,16 @@ import {hashTreeRoot, equals} from "@chainsafe/ssz";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
-import {processSlots} from "../../../../src/chain/stateTransition";
+
+import {config} from "../../../../src/config/presets/mainnet";
 import {BeaconState, number64, Validator} from "../../../../src/types";
+import {processSlots} from "../../../../src/chain/stateTransition";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/sanity/slots/sanity_slots_mainnet.yaml"),
   (state: BeaconState, slots: number64) => {
-    processSlots(state, state.slot + slots);
+    processSlots(config, state, state.slot + slots);
     return state;
   },
   (input) => {
@@ -22,10 +24,10 @@ describeSpecTest(
         verifyMultiple: sinon.stub().returns(true)
       });
     }
-    return [expandYamlValue(input.pre, BeaconState), input.slots.toNumber()];
+    return [expandYamlValue(input.pre, config.types.BeaconState), input.slots.toNumber()];
   },
   (expected) => {
-    return expandYamlValue(expected.post, BeaconState);
+    return expandYamlValue(expected.post, config.types.BeaconState);
   },
   result => result,
   (testCase) => {
@@ -33,7 +35,7 @@ describeSpecTest(
   },
   () => false,
   (_1, _2, expected, actual) => {
-    expect(equals(expected, actual, BeaconState)).to.be.true;
+    expect(equals(expected, actual, config.types.BeaconState)).to.be.true;
     restore();
   },
   0

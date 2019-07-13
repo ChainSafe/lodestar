@@ -1,10 +1,10 @@
 import { assert, expect } from "chai";
+import {deserialize} from "@chainsafe/ssz";
 
 import {
   ProgressiveMerkleTree,
   verifyMerkleBranch,
 } from "../../../src/util/merkleTree";
-import {deserialize} from "@chainsafe/ssz";
 import {MerkleTree} from "../../../src/types";
 import {LightProgressiveMerkleTree} from "../../../src/util/merkleTree/lightMerkleTree";
 
@@ -55,7 +55,7 @@ describe('util/merkleTree', function() {
       }
       const rootBefore = t.root();
       const serialized = t.serialize();
-      const t2 = ProgressiveMerkleTree.fromObject(deserialize(serialized, MerkleTree));
+      const t2 = ProgressiveMerkleTree.deserialize(serialized);
       expect(t2.root()).to.be.deep.equal(rootBefore);
     });
   });

@@ -1,15 +1,18 @@
+import {IBeaconConfig} from "../../../config";
 import {BLSPubkey, ValidatorDuty, ValidatorIndex} from "../../../types";
 import {getCommitteeAssignment, slotToEpoch} from "../../stateTransition/util";
 
 export function assembleValidatorDuty(
+  config: IBeaconConfig,
   validatorPublicKey: BLSPubkey,
   validatorIndex: ValidatorIndex,
   state,
   blockProposerIndex: ValidatorIndex): ValidatorDuty  {
   let duty: ValidatorDuty = this.generateEmptyValidatorDuty(validatorPublicKey);
   const committeeAsignment = getCommitteeAssignment(
+    config,
     state,
-    slotToEpoch(state.slot),
+    slotToEpoch(config, state.slot),
     validatorIndex
   );
   if (committeeAsignment) {

@@ -1,8 +1,10 @@
 /**
  * @module cli/commands
  */
-import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
+
+import {config} from "../../config/presets/mainnet";
+import {CliCommand} from "./interface";
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import Validator from "../../validator";
 import {generateCommanderOptions, optionsToConfig} from "../util";
@@ -39,9 +41,9 @@ export class ValidatorCommand implements CliCommand {
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }
 
-    const config = optionsToConfig(options, ValidatorOptions);
+    const conf = optionsToConfig(options, ValidatorOptions);
 
-    let validator = new Validator(config, {logger});
+    let validator = new Validator(conf, {config, logger});
     await validator.start();
   }
 

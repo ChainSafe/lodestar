@@ -5,16 +5,17 @@
 import assert from "assert";
 import PeerInfo from "peer-info";
 
+import {BeaconBlockHeadersResponse, BeaconBlockBodiesResponse, BeaconBlock} from "../types";
+import {IBeaconConfig} from "../config";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {SyncRpc} from "./rpc";
 import {INetwork} from "../network";
 import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
-import {SLOTS_PER_EPOCH} from "../constants";
-import {BeaconBlockHeadersResponse, BeaconBlockBodiesResponse, BeaconBlock} from "../types";
 
 interface InitialSyncModules {
+  config: IBeaconConfig;
   db: IBeaconDb;
   chain: IBeaconChain;
   rpc: SyncRpc;
@@ -24,13 +25,15 @@ interface InitialSyncModules {
 }
 
 export class InitialSync {
+  private config: IBeaconConfig;
   private db: IBeaconDb;
   private chain: IBeaconChain;
   private rpc: SyncRpc;
   private network: INetwork;
   private reps: ReputationStore;
   private logger: ILogger;
-  public constructor(opts, {db, chain, rpc, network, reps, logger}: InitialSyncModules) {
+  public constructor(opts, {config, db, chain, rpc, network, reps, logger}: InitialSyncModules) {
+    this.config = config;
     this.db = db;
     this.chain = chain;
     this.rpc = rpc;
@@ -74,7 +77,7 @@ export class InitialSync {
       this.db.setJustifiedStateRoot(finalizedRoot, state),
     ]);
     // fetch recent blocks and push into the chain
-    const latestFinalizedSlot = peerLatestHello.latestFinalizedEpoch * SLOTS_PER_EPOCH;
+    const latestFinalizedSlot = peerLatestHello.latestFinalizedEpoch * this.config.params.SLOTS_PER_EPOCH;
     const slotCountToSync = peerLatestHello.bestSlot - latestFinalizedSlot;
     const blockRootsResponse = await this.rpc.getBeaconBlockRoots(peerInfo, latestFinalizedSlot, slotCountToSync);
     assert(blockRootsResponse.roots.length > 0);

@@ -1,6 +1,9 @@
 /**
  * @module validator/attestation
  */
+import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
+import {hashTreeRoot} from "@chainsafe/ssz";
+
 import {
   Attestation,
   AttestationData,
@@ -10,6 +13,7 @@ import {
   Slot,
   ValidatorIndex
 } from "../../types";
+import {IBeaconConfig} from "../../config";
 
 import {
   getDomainFromFork,
@@ -18,8 +22,7 @@ import {
 } from "../../chain/stateTransition/util";
 
 import {RpcClient} from "../rpc";
-import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
-import {hashTreeRoot} from "@chainsafe/ssz";
+
 import {Domain} from "../../constants";
 import {intDiv} from "../../util/math";
 import {IValidatorDB} from "../../db/api";
@@ -27,6 +30,7 @@ import {ILogger} from "../../logger";
 
 export class AttestationService {
 
+  private config: IBeaconConfig;
   private validatorIndex: ValidatorIndex;
   private rpcClient: RpcClient;
   private privateKey: PrivateKey;
@@ -34,12 +38,14 @@ export class AttestationService {
   private logger: ILogger;
 
   public constructor(
+    config: IBeaconConfig,
     validatorIndex: ValidatorIndex,
     rpcClient: RpcClient,
     privateKey: PrivateKey,
     db: IValidatorDB,
     logger: ILogger
   ) {
+    this.config = config;
     this.validatorIndex = validatorIndex;
     this.rpcClient = rpcClient;
     this.privateKey = privateKey;
@@ -56,7 +62,7 @@ export class AttestationService {
     if (await this.isConflictingAttestation(indexedAttestation.data)) {
       this.logger.warn(
         `[Validator] Avoided signing conflicting attestation! `
-        + `Source epoch: ${indexedAttestation.data.sourceEpoch}, Target epoch: ${slotToEpoch(slot)}`
+        + `Source epoch: ${indexedAttestation.data.sourceEpoch}, Target epoch: ${slotToEpoch(this.config, slot)}`
       );
       return null;
     }
@@ -75,7 +81,7 @@ export class AttestationService {
     const potentialAttestationConflicts =
       await this.db.getAttestations(this.validatorIndex, {gt: other.targetEpoch - 1});
     return potentialAttestationConflicts.some((attestation => {
-      return isSlashableAttestationData(attestation.data, other);
+      return isSlashableAttestationData(this.config, attestation.data, other);
     }));
   }
 
@@ -94,15 +100,15 @@ export class AttestationService {
     slot: Slot
   ): Promise<Attestation> {
     const signature = this.privateKey.signMessage(
-      hashTreeRoot(attestationDataAndCustodyBit, AttestationDataAndCustodyBit),
+      hashTreeRoot(attestationDataAndCustodyBit, this.config.types.AttestationDataAndCustodyBit),
       getDomainFromFork(
         fork,
-        slotToEpoch(slot),
+        slotToEpoch(this.config, slot),
         Domain.ATTESTATION
       )
     ).toBytesCompressed();
     const committeeAssignment =
-      await this.rpcClient.validator.getCommitteeAssignment(this.validatorIndex, slotToEpoch(slot));
+      await this.rpcClient.validator.getCommitteeAssignment(this.validatorIndex, slotToEpoch(this.config, slot));
     const indexInCommittee =
       committeeAssignment.validators
         .findIndex(value => value === this.validatorIndex);

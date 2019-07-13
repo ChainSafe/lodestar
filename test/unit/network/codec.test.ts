@@ -2,6 +2,7 @@ import {assert} from "chai";
 import BN from "bn.js";
 import {AnyContainerType, serialize} from "@chainsafe/ssz";
 
+import {config} from "../../../src/config/presets/mainnet";
 import {
   Hello,
   Goodbye,
@@ -46,14 +47,14 @@ describe("[network] rpc request", () => {
         bestSlot: 0,
       },
       method: Method.Hello,
-      type: Hello,
+      type: config.types.Hello,
     },
     {
       msg: {
         reason: new BN(0),
       },
       method: Method.Goodbye,
-      type: Goodbye,
+      type: config.types.Goodbye,
     },
     {
       msg: {
@@ -62,7 +63,7 @@ describe("[network] rpc request", () => {
         timestamp: 0,
       },
       method: Method.Status,
-      type: Status,
+      type: config.types.Status,
     },
     {
       msg: {
@@ -70,7 +71,7 @@ describe("[network] rpc request", () => {
         count: 0,
       },
       method: Method.BeaconBlockRoots,
-      type: BeaconBlockRootsRequest,
+      type: config.types.BeaconBlockRootsRequest,
     },
     {
       msg: {
@@ -80,21 +81,21 @@ describe("[network] rpc request", () => {
         skipSlots: 0,
       },
       method: Method.BeaconBlockHeaders,
-      type: BeaconBlockHeadersRequest,
+      type: config.types.BeaconBlockHeadersRequest,
     },
     {
       msg: {
         blockRoots: [],
       },
       method: Method.BeaconBlockBodies,
-      type: BeaconBlockBodiesRequest,
+      type: config.types.BeaconBlockBodiesRequest,
     },
     {
       msg: {
         hashes: [],
       },
       method: Method.BeaconStates,
-      type: BeaconStatesRequest,
+      type: config.types.BeaconStatesRequest,
     },
   ];
   for (const {msg, method, type} of testCases) {
@@ -106,11 +107,11 @@ describe("[network] rpc request", () => {
         id: Buffer.from(idHex, "hex"),
         method,
         body,
-      }, WireRequest);
-      const actualEncoded = encodeRequest(idHex, method, msg);
+      }, config.types.WireRequest);
+      const actualEncoded = encodeRequest(config, idHex, method, msg);
       assert.deepEqual(actualEncoded, expectedEncoded);
       // decode
-      const decodedBody = decodeRequestBody(method, body);
+      const decodedBody = decodeRequestBody(config, method, body);
       assert.deepEqual(decodedBody.toString(), msg.toString());
     });
   }
@@ -132,14 +133,14 @@ describe("[p2p] rpc response", () => {
         bestSlot: 0,
       },
       method: Method.Hello,
-      type: Hello,
+      type: config.types.Hello,
     },
     {
       msg: {
         reason: new BN(0),
       },
       method: Method.Goodbye,
-      type: Goodbye,
+      type: config.types.Goodbye,
     },
     {
       msg: {
@@ -148,35 +149,35 @@ describe("[p2p] rpc response", () => {
         timestamp: 0,
       },
       method: Method.Status,
-      type: Status,
+      type: config.types.Status,
     },
     {
       msg: {
         roots: [],
       },
       method: Method.BeaconBlockRoots,
-      type: BeaconBlockRootsResponse,
+      type: config.types.BeaconBlockRootsResponse,
     },
     {
       msg: {
         headers: []
       },
       method: Method.BeaconBlockHeaders,
-      type: BeaconBlockHeadersResponse,
+      type: config.types.BeaconBlockHeadersResponse,
     },
     {
       msg: {
         blockBodies: [],
       },
       method: Method.BeaconBlockBodies,
-      type: BeaconBlockBodiesResponse,
+      type: config.types.BeaconBlockBodiesResponse,
     },
     {
       msg: {
         states: [],
       },
       method: Method.BeaconStates,
-      type: BeaconStatesResponse,
+      type: config.types.BeaconStatesResponse,
     },
   ];
   for (const {msg, method, type} of testCases) {
@@ -189,11 +190,11 @@ describe("[p2p] rpc response", () => {
         id: Buffer.from(idHex, "hex"),
         responseCode,
         result,
-      }, WireResponse);
-      const actualEncoded = encodeResponse(idHex, method, responseCode, msg);
+      }, config.types.WireResponse);
+      const actualEncoded = encodeResponse(config, idHex, method, responseCode, msg);
       assert.deepEqual(actualEncoded, expectedEncoded);
       // decode
-      const decodedBody = decodeResponseBody(method, result);
+      const decodedBody = decodeResponseBody(config, method, result);
       assert.deepEqual(decodedBody.toString(), msg.toString());
     });
   }

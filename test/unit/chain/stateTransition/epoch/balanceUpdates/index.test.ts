@@ -1,16 +1,18 @@
+import BN from "bn.js";
 import {expect} from "chai";
 import sinon from "sinon";
+
+import {config} from "../../../../../../src/config/presets/mainnet";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
-import {generateState} from "../../../../../utils/state";
-import {GENESIS_EPOCH} from "../../../../../../src/constants/minimal";
+import {GENESIS_EPOCH} from "../../../../../../src/constants";
 import {processRewardsAndPenalties}
   from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates";
 import * as attestationDeltas
   from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates/attestation";
 import * as crosslinkDeltas
   from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates/crosslink";
-import BN from "bn.js";
 import {generateValidator} from "../../../../../utils/validator";
+import {generateState} from "../../../../../utils/state";
 
 describe('process epoch - balance updates', function () {
 
@@ -38,7 +40,7 @@ describe('process epoch - balance updates', function () {
     getCurrentEpochStub.returns(GENESIS_EPOCH);
 
     try {
-      processRewardsAndPenalties(state);
+      processRewardsAndPenalties(config, state);
       expect(getAttestationDeltasStub.called).to.be.false;
     }catch (e) {
       expect.fail(e.stack);
@@ -55,7 +57,7 @@ describe('process epoch - balance updates', function () {
     getCrosslinkDeltasStub.returns([[reward], [penalty]]);
 
     try {
-      processRewardsAndPenalties(state);
+      processRewardsAndPenalties(config, state);
       expect(increaseBalanceStub.calledOnceWith(state, 0, reward.add(reward)));
       expect(decreaseBalanceStub.calledOnceWith(state, 0, penalty.add(penalty)));
     }catch (e) {

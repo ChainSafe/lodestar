@@ -3,6 +3,7 @@
  */
 
 import deepmerge from "deepmerge";
+import {IBeaconConfig} from "../config";
 import {BeaconDB, LevelDbController} from "../db";
 import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
 import {INetwork, Libp2pNetwork, NodejsNode} from "../network";
@@ -30,6 +31,7 @@ export interface Service {
  */
 export class BeaconNode {
   public conf: IBeaconNodeOptions;
+  public config: IBeaconConfig;
   public db: BeaconDB;
   public eth1: IEth1Notifier;
   public network: INetwork;
@@ -40,7 +42,7 @@ export class BeaconNode {
   public reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: Partial<IBeaconNodeOptions>, {logger}: { logger: ILogger }) {
+  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger}: {config: IBeaconConfig; logger: ILogger}) {
 
     this.conf = deepmerge(
       defaultConf,
@@ -50,10 +52,12 @@ export class BeaconNode {
         isMergeableObject: isPlainObject
       }
     );
+    this.config = config;
     this.logger = logger;
 
     this.reps = new ReputationStore();
     this.db = new BeaconDB({
+      config,
       controller: new LevelDbController(this.conf.db, {
         logger: this.logger,
       }),
@@ -62,14 +66,17 @@ export class BeaconNode {
       .then((peerId) => initializePeerInfo(peerId, this.conf.network.multiaddrs))
       .then((peerInfo) => new NodejsNode({peerInfo}));
     this.network = new Libp2pNetwork(this.conf.network, {
+      config,
       libp2p: libp2p,
       logger: this.logger,
     });
     this.eth1 = new EthersEth1Notifier(this.conf.eth1, {
+      config,
       opPool: this.opPool,
       logger: this.logger
     });
     this.chain = new BeaconChain(this.conf.chain, {
+      config,
       db: this.db,
       eth1: this.eth1,
       logger: this.logger
@@ -79,6 +86,7 @@ export class BeaconNode {
       chain: this.chain,
     });
     this.sync = new Sync(this.conf.sync, {
+      config,
       db: this.db,
       eth1: this.eth1,
       chain: this.chain,
@@ -91,7 +99,7 @@ export class BeaconNode {
     this.rpc = new JSONRPC(this.conf.api, {
       transports: [new WSServer(this.conf.api.transports[0])],
       apis: this.conf.api.apis.map((Api) => {
-        return new Api({}, {chain: this.chain, db: this.db, eth1: this.eth1});
+        return new Api({}, {config, chain: this.chain, db: this.db, eth1: this.eth1});
       })
     });
 
