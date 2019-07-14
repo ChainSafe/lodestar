@@ -7,7 +7,7 @@ export class DepositsOperations extends OperationsModule {
     return await this.db.setDeposit(index, deposit);
   }
 
-  public async all(): Promise<Deposit[]> {
+  public async getAll(): Promise<Deposit[]> {
     return await this.db.getDeposits();
   }
 

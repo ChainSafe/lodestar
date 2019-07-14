@@ -213,7 +213,7 @@ describe("Eth1Notifier", () => {
       generateDeposit(),
       generateDeposit(),
     ];
-    opPool.deposits.all.resolves(genesisDeposits);
+    opPool.deposits.getAll.resolves(genesisDeposits);
     await eth1.processEth2GenesisLog(depositRootHex, depositCountHex, timeHex, event);
     assert(
       cb.withArgs(sinon.match.any, genesisDeposits, sinon.match.any).calledOnce,

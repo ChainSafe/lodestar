@@ -13,7 +13,7 @@ export class AttesterSlashingOperations extends OperationsModule {
   /**
    * Return all stored attester slashings
    */
-  public async all(): Promise<AttesterSlashing[]> {
+  public async getAll(): Promise<AttesterSlashing[]> {
     return await this.db.getAttesterSlashings();
   }
 

@@ -13,7 +13,7 @@ export class ProposerSlashingOperations extends OperationsModule {
   /**
    * Return all stored proposer slashings
    */
-  public async all(): Promise<ProposerSlashing[]> {
+  public async getAll(): Promise<ProposerSlashing[]> {
     return await this.db.getProposerSlashings();
   }
 

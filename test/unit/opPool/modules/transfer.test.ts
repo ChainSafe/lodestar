@@ -32,7 +32,7 @@ describe("opPool - transfers", function () {
     const data = [generateEmptyTransfer()];
 
     dbStub.getTransfers.resolves(data);
-    let result = await service.all();
+    let result = await service.getAll();
     expect(dbStub.getTransfers.calledOnce).to.be.true;
     expect(result).to.be.deep.equal(data);
   });

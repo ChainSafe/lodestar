@@ -13,7 +13,7 @@ export class VoluntaryExitOperations extends OperationsModule {
   /**
    * Return all stored voluntary exits
    */
-  public async all(): Promise<VoluntaryExit[]> {
+  public async getAll(): Promise<VoluntaryExit[]> {
     return await this.db.getVoluntaryExits();
   }
 

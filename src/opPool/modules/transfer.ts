@@ -13,7 +13,7 @@ export class TransferOperations extends OperationsModule {
   /**
    * Return all stored transfers
    */
-  public async all(): Promise<Transfer[]> {
+  public async getAll(): Promise<Transfer[]> {
     return this.db.getTransfers();
   }
 

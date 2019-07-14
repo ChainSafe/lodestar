@@ -48,13 +48,13 @@ describe('blockAssembly - body', function () {
 
   it('should generate block body', async function() {
     // @ts-ignore
-    opPool.proposerSlashings.all.resolves([generateEmptyProposerSlashing()]);
+    opPool.proposerSlashings.getAll.resolves([generateEmptyProposerSlashing()]);
     // @ts-ignore
-    opPool.attesterSlashings.all.resolves([generateEmptyAttesterSlashing()]);
+    opPool.attesterSlashings.getAll.resolves([generateEmptyAttesterSlashing()]);
     // @ts-ignore
-    opPool.attestations.all.resolves([generateEmptyAttestation()]);
+    opPool.attestations.getAll.resolves([generateEmptyAttestation()]);
     // @ts-ignore
-    opPool.voluntaryExits.all.resolves([generateEmptyVoluntaryExit()]);
+    opPool.voluntaryExits.getAll.resolves([generateEmptyVoluntaryExit()]);
     generateDepositsStub.resolves([generateDeposit()]);
     bestVoteStub.resolves([]);
     const result = await assembleBody(
@@ -77,13 +77,13 @@ describe('blockAssembly - body', function () {
 
   it('should generate block body with max respective field lengths', async function() {
     // @ts-ignore
-    opPool.proposerSlashings.all.resolves(new Array(MAX_PROPOSER_SLASHINGS + 1).map(generateEmptyProposerSlashing));
+    opPool.proposerSlashings.getAll.resolves(new Array(MAX_PROPOSER_SLASHINGS + 1).map(generateEmptyProposerSlashing));
     // @ts-ignore
-    opPool.attesterSlashings.all.resolves(new Array(MAX_ATTESTER_SLASHINGS + 1).map(generateEmptyAttesterSlashing));
+    opPool.attesterSlashings.getAll.resolves(new Array(MAX_ATTESTER_SLASHINGS + 1).map(generateEmptyAttesterSlashing));
     // @ts-ignore
-    opPool.attestations.all.resolves(new Array(MAX_ATTESTATIONS + 1).map(generateEmptyAttestation));
+    opPool.attestations.getAll.resolves(new Array(MAX_ATTESTATIONS + 1).map(generateEmptyAttestation));
     // @ts-ignore
-    opPool.voluntaryExits.all.resolves(new Array(MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit));
+    opPool.voluntaryExits.getAll.resolves(new Array(MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit));
     generateDepositsStub.resolves([generateDeposit()]);
     bestVoteStub.resolves([]);
     const result = await assembleBody(

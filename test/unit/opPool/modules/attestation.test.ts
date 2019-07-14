@@ -36,7 +36,7 @@ describe("opPool - attestations", function () {
     };
 
     dbStub.getAttestations.resolves(attestation);
-    let result = await service.all();
+    let result = await service.getAll();
     expect(dbStub.getAttestations.calledOnce).to.be.true;
     expect(result).to.be.deep.equal(attestation);
   });

@@ -32,7 +32,7 @@ describe("opPool - deposits", function () {
     const data = [generateDeposit()];
 
     dbStub.getDeposits.resolves(data);
-    let result = await service.all();
+    let result = await service.getAll();
     expect(dbStub.getDeposits.calledOnce).to.be.true;
     expect(result).to.be.deep.equal(data);
   });

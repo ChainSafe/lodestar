@@ -13,7 +13,7 @@ export class AttestationOperations extends OperationsModule {
   /**
    * Return all stored attestations
    */
-  public async all(): Promise<Attestation[]> {
+  public async getAll(): Promise<Attestation[]> {
     return await this.db.getAttestations();
   }
 

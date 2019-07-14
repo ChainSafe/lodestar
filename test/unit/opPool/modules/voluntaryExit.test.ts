@@ -32,7 +32,7 @@ describe("opPool - voluntaryExits", function () {
     const data = [generateEmptyVoluntaryExit()];
 
     dbStub.getVoluntaryExits.resolves(data);
-    let result = await service.all();
+    let result = await service.getAll();
     expect(dbStub.getVoluntaryExits.calledOnce).to.be.true;
     expect(result).to.be.deep.equal(data);
   });

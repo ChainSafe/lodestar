@@ -32,7 +32,7 @@ describe("opPool - AttesterSlashings", function () {
     const data = [generateEmptyAttesterSlashing()];
 
     dbStub.getAttesterSlashings.resolves(data);
-    let result = await service.all();
+    let result = await service.getAll();
     expect(dbStub.getAttesterSlashings.calledOnce).to.be.true;
     expect(result).to.be.deep.equal(data);
   });

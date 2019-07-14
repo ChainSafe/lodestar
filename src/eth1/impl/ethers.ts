@@ -178,7 +178,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   private async genesisDeposits(depositCount: number64): Promise<Deposit[]> {
     //TODO: fetch only required
-    const deposits = await this.opPool.deposits.all();
+    const deposits = await this.opPool.deposits.getAll();
     return deposits.slice(0, depositCount);
   }
 

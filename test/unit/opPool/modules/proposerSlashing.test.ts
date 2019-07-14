@@ -32,7 +32,7 @@ describe("opPool - proposerSlashings", function () {
     const data = [generateEmptyProposerSlashing()];
 
     dbStub.getProposerSlashings.resolves(data);
-    let result = await service.all();
+    let result = await service.getAll();
     expect(dbStub.getProposerSlashings.calledOnce).to.be.true;
     expect(result).to.be.deep.equal(data);
   });
