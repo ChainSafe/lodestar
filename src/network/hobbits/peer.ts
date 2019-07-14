@@ -9,17 +9,18 @@ import {Method} from "../../constants";
 import {HobbitsConnectionHandler} from "./hobbitsConnectionHandler";
 import net from "net";
 import {HobbitsUri} from "./hobbitsUri";
+import {peerInfoToAddress} from "./util";
 
 
 export class Peer {
-  public hobbitsUri: HobbitsUri;
+  public peerInfo: PeerInfo;
   public latestHello: Hello | null;
   public latestStatus: Status | null;
   private connection: net.Socket;
   private controller: HobbitsConnectionHandler;
 
-  public constructor (hobbitsUri: HobbitsUri, controller: HobbitsConnectionHandler) {
-    this.hobbitsUri = hobbitsUri;
+  public constructor (peerInfo: PeerInfo, controller: HobbitsConnectionHandler) {
+    this.peerInfo = peerInfo;
     this.controller = controller;
 
     this.latestHello = null;
@@ -36,15 +37,18 @@ export class Peer {
     // Attempt to connect to peer, if connection refused remove the peer from bootnodes.
     const that = this;
     return new Promise((resolve, reject): void => {
+      const nodeAddress = peerInfoToAddress(this.peerInfo).nodeAddress();
       that.connection = net.createConnection({
-        host: this.hobbitsUri.host, port: this.hobbitsUri.port
+        host: nodeAddress.address, port: parseInt(nodeAddress.port)
       });
       // Set to keep the connection alive
       that.connection.setKeepAlive(true);
       that.connection.on('connect', ()=>{
         that.controller.logger.info("Connected with peer.");
       });
-      that.connection.on('error', reject);
+      that.connection.on('error', () =>{
+        that.controller.onConnectionEnd(that.peerInfo);
+      });
       that.connection.on('data', (data) => {
         that.controller.onRequestResponse(that, data);
       });

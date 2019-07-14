@@ -28,7 +28,6 @@ export function encodeMessage(type: ProtocolType, message: Buffer): Buffer {
 export function decodeMessage(message: Buffer): DecodedMessage {
   let requestLineBytes: bytes = null;
   for (let i =0; i<message.length; i++){
-    // process.stdout.write(String.fromCharCode(message[i]));
     if(String.fromCharCode(message[i]) == "\n"){
       requestLineBytes = message.slice(0, i+1);
       break;

@@ -3,10 +3,8 @@
  */
 
 import PeerInfo from "peer-info";
-import {peerInfoToAddress} from "./util";
+import {peerInfoToAddress, validateHobbitsUri} from "./util";
 import {promisify} from "util";
-import {add} from "winston";
-import {match} from "minimatch";
 
 export interface IHobbitsUriOpts {
   scheme?: string;
@@ -23,7 +21,7 @@ export class HobbitsUri {
   public port: number;
   public constructor(opts?: IHobbitsUriOpts) {
     if(opts.uriString) {
-      const parsedUri = HobbitsUri.validateHobbitsUri(opts.uriString);
+      const parsedUri = validateHobbitsUri(opts.uriString);
       if (parsedUri) {
         this.scheme = parsedUri.scheme;
         this.identity = parsedUri.identity;
@@ -39,27 +37,12 @@ export class HobbitsUri {
     }
   }
 
-  public static validateHobbitsUri(uriString: string){
-    // TODO: More validation on identity, host, port
-    let regx = /^hob\+(tcp|udp):\/\/(?:([0-9a-f]*)@)?([a-zA-Z0-9.]*):([0-9]+)$/g;
-    let match = regx.exec(uriString);
-    if (match) {
-      return {
-        scheme: match[1],
-        identity: match[2],
-        host: match[3],
-        port: parseInt(match[4])
-      };
-    }
-    return null;
-  }
-
   public toUri(): string{
     if(this.scheme){
       if(this.identity){
-        return "hob+" + this.scheme + "://" + this.identity + "@" + this.host + ":" + this.port;
+        return `hob+${this.scheme}://${this.identity}@${this.host}:${this.port}`;
       } else {
-        return "hob+" + this.scheme + "://" + this.host + ":" + this.port;
+        return `hob+${this.scheme}://${this.host}:${this.port}`;
       }
     }
     return null;
@@ -78,7 +61,7 @@ export class HobbitsUri {
 
   public static async hobbitsUriToPeerInfo(hobbitsUri: HobbitsUri): Promise<PeerInfo> {
     let peerInfo: PeerInfo;
-    let addr = "/ip4/" + hobbitsUri.host + "/" + hobbitsUri.scheme + "/" + hobbitsUri.port;
+    let addr = `/ip4/${hobbitsUri.host}/${hobbitsUri.scheme}/${hobbitsUri.port}`;
     if(hobbitsUri.identity){
       let peerId = PeerId.createFromHexString(hobbitsUri.identity);
       peerInfo = await promisify(PeerInfo.create.bind(this))(peerId);

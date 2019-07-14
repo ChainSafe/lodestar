@@ -10,7 +10,7 @@ import {RPC_MULTICODEC} from "../../constants";
 import {HOBBITS_DEFAULT_PORT, Method, ProtocolType, RequestId, ResponseCode} from "./constants";
 
 import {decodeRequestBody, encodeRequest, sanityCheckData} from "./rpc/codec";
-import {randomRequestId} from "./util";
+import {hobbitsUriToPeerInfo, randomRequestId, socketConnectionToPeerInfo} from "./util";
 import {Peer} from "./peer";
 import {ILogger} from "../../logger";
 import net from "net";
@@ -61,32 +61,32 @@ export class HobbitsConnectionHandler extends EventEmitter {
     this.server = net.createServer();
   }
 
-  public addPeer(hobbitsUri: HobbitsUri): Peer {
-    let peerId = hobbitsUri.toUri();
+  public addPeer(peerInfo: PeerInfo): Peer {
+    let peerId = peerInfo.id.toB58String();
     let peer = this.peers.get(peerId);
     if (!peer) {
-      peer = new Peer(hobbitsUri, this);
+      peer = new Peer(peerInfo, this);
       this.peers.set(peerId, peer);
       // rpc peer connect
-      this.emit("peer:connect", hobbitsUri);
+      this.emit("peer:connect", peerInfo);
     }
     return peer;
   }
-  public removePeer(hobbitsUri: HobbitsUri): void {
-    let peerId = hobbitsUri.toUri();
+  public removePeer(peerInfo: PeerInfo): void {
+    let peerId = peerInfo.id.toB58String();
     const peer = this.peers.get(peerId);
     if (peer) {
       peer.close();
       this.peers.delete(peerId);
-      this.emit("peer:disconnect", hobbitsUri);
+      this.emit("peer:disconnect", peerInfo);
     }
   }
-  public getPeers(): HobbitsUri[] {
-    return Array.from(this.peers.values()).map((p) => p.hobbitsUri);
+  public getPeers(): PeerInfo[] {
+    return Array.from(this.peers.values()).map((p) => p.peerInfo);
   }
 
-  public hasPeer(hobbitsUri: HobbitsUri): boolean {
-    const peerId = hobbitsUri.toUri();
+  public hasPeer(peerInfo: PeerInfo): boolean {
+    const peerId = peerInfo.id.toB58String();
     return this.peers.has(peerId);
   }
 
@@ -99,12 +99,12 @@ export class HobbitsConnectionHandler extends EventEmitter {
     peer.setConnection(conn, true);
   }*/
 
-  public onConnectionEnd(hobbitsUri: HobbitsUri): void {
-    this.removePeer(hobbitsUri);
+  public onConnectionEnd(peerInfo: PeerInfo): void {
+    this.removePeer(peerInfo);
   }
 
-  public async dialForRpc(hobbitsUri: HobbitsUri): Promise<void> {
-    const peerId = hobbitsUri.toUri();
+  public async dialForRpc(peerInfo: PeerInfo): Promise<void> {
+    const peerId = peerInfo.id.toB58String();
     if (this.peers.has(peerId)) {
       return;
     }
@@ -113,7 +113,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
     }
     this.wipDials.add(peerId);
     try {
-      const peer = this.addPeer(hobbitsUri);
+      const peer = this.addPeer(peerInfo);
       peer.connect();
     } catch (e) {
       this.logger.error(e.stack);
@@ -121,8 +121,8 @@ export class HobbitsConnectionHandler extends EventEmitter {
     this.wipDials.delete(peerId);
   }
 
-  public async sendRequest<T extends ResponseBody>(hobbitsUri: HobbitsUri, type: ProtocolType, method: Method, body: RequestBody): Promise<T> {
-    const peerId = hobbitsUri.toUri();
+  public async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, type: ProtocolType, method: Method, body: RequestBody): Promise<T> {
+    const peerId = peerInfo.id.toB58String();
     const peer = this.peers.get(peerId);
     if (!peer) {
       throw new Error(`Peer does not exist: ${peerId}`);
@@ -198,7 +198,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
     const method = this.requests[id];
     if (method === undefined) { // incoming request
       this.responses[id] = {peer, method: request.method};
-      this.emit("request", peer.hobbitsUri, request.method, id, decodedBody);
+      this.emit("request", peer.peerInfo, request.method, id, decodedBody);
     } else { // incoming response
       const event = `response ${id}`;
       this.emit(event, null, decodedBody);
@@ -208,9 +208,12 @@ export class HobbitsConnectionHandler extends EventEmitter {
   /**
    * Connects to static peers
    */
-  private connectStaticPeers = async (): Promise<void> => {
-    await Promise.all(this.bootnodes.map((bootnode: string): Promise<void> => {
-      return this.dialForRpc(new HobbitsUri({uriString: bootnode}));
+  private async connectStaticPeers(): Promise<void> {
+    await Promise.all(this.bootnodes.map(async (bootnode: string): Promise<void> => {
+      let peerInfo = await hobbitsUriToPeerInfo(bootnode);
+      if (peerInfo) {
+        return this.dialForRpc(peerInfo);
+      }
     }));
   };
 
@@ -218,27 +221,23 @@ export class HobbitsConnectionHandler extends EventEmitter {
     this.wipDials = new Set();
     this.peers = new Map<string, Peer>();
 
-    this.server.on("connection", (connection): void => {
-      let hobbitsUri = new HobbitsUri({
-        host: connection.remoteAddress,
-        port: connection.remotePort,
-        scheme: "tcp",
-      });
-      this.addPeer(hobbitsUri);
-      this.logger.info(`SERVER :: CONNECTED TO: ${hobbitsUri}`);
+    this.server.on("connection", async (connection): Promise<void> => {
+      const peerInfo = await socketConnectionToPeerInfo(connection);
+      this.addPeer(peerInfo);
+      this.logger.info(`Hobbits :: connected to: ${peerInfo.id.toB58String()}.`);
     });
 
     this.server.on("close", (): void => {
-      this.logger.info("Closing hobbits server!");
+      this.logger.info("Hobbits :: server closed.");
       // this.running = false;
     });
 
     this.server.listen(HOBBITS_DEFAULT_PORT, (): void => {
-      this.logger.info("Hobbits server started!");
+      this.logger.info("Hobbits :: server started.");
       // this.running = true;
     });
 
-    this.connectStaticPeers();
+    await this.connectStaticPeers();
 
     // this.libp2p.handle(RPC_MULTICODEC, this.onConnection.bind(this));
     // this.libp2p.on('peer:connect', this.dialForRpc.bind(this));

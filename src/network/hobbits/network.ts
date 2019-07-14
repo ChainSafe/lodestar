@@ -100,19 +100,17 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
 
   // rpc
   public getPeers(): PeerInfo[] {
-    return this.rpc.getPeers().map(hobbitaUri => {
-      return HobbitsUri.hobbitsUriToPeerInfo(hobbitaUri);
-    });
+    return this.rpc.getPeers();
   }
 
   public hasPeer(peerInfo: PeerInfo): boolean {
-    return this.rpc.hasPeer(HobbitsUri.peerInfoToHobbitsUri(peerInfo));
+    return this.rpc.hasPeer(peerInfo);
   }
   public async connect(peerInfo: PeerInfo): Promise<void> {
-    await this.rpc.dialForRpc(HobbitsUri.peerInfoToHobbitsUri(peerInfo));
+    await this.rpc.dialForRpc(peerInfo);
   }
   public async disconnect(peerInfo: PeerInfo): Promise<void> {
-    await this.rpc.removePeer(HobbitsUri.peerInfoToHobbitsUri(peerInfo));
+    await this.rpc.removePeer(peerInfo);
   }
   // public async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T> {
   //   return await this.rpc.sendRequest<T>(peerInfo, method, body);
