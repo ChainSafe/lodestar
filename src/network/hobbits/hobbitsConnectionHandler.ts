@@ -159,16 +159,16 @@ export class HobbitsConnectionHandler extends EventEmitter {
     });
   }
 
-  // public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
-  //   const request = this.responses[id];
-  //   if (!request) {
-  //     throw new Error('No request found');
-  //   }
-  //   const {peer, method} = request;
-  //   const encodedResponse = encodeResponse(id, method, responseCode, result);
-  //   delete this.responses[id];
-  //   peer.write(encodedResponse);
-  // }
+  public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
+    const request = this.responses[id];
+    if (!request) {
+      throw new Error('No request found');
+    }
+    const {peer, method} = request;
+    const encodedResponse = encodeResponse(id, method, responseCode, result);
+    delete this.responses[id];
+    peer.write(encodedResponse);
+  }
 
   public onRequestResponse(peer: Peer, data: Buffer): void {
     if(!sanityCheckData(data)) {
@@ -179,6 +179,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
     let decodedBody, request;
     try {
       let decodedMessage = decodeMessage(data);
+      // only RPC requests/ responses should be passed here.
       switch (decodedMessage.protocol) {
         case ProtocolType.RPC:
           request = deserialize(decodedMessage.payload, WireRequest);

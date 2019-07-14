@@ -44,10 +44,11 @@ export class Peer {
       // Set to keep the connection alive
       that.connection.setKeepAlive(true);
       that.connection.on('connect', ()=>{
-        that.controller.logger.info("Connected with peer.");
+        that.controller.logger.info(`Hobbits :: connected to: ${that.peerInfo.id.toB58String()}.`);
       });
       that.connection.on('error', () =>{
         that.controller.onConnectionEnd(that.peerInfo);
+        reject()
       });
       that.connection.on('data', (data) => {
         that.controller.onRequestResponse(that, data);

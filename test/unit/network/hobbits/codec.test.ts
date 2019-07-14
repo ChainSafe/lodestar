@@ -10,7 +10,8 @@ import {
   BlockHeaders,
   GetBlockBodies,
   BlockBodies,
-  WireRequest,
+  WireRequestHeader,
+  WireRequestBody,
   RequestBody,
 } from "../../../../src/network/hobbits/rpc/messages";
 import {
@@ -37,28 +38,34 @@ describe("[hobbits] rpc protocol message", () => {
     let method = Method.Goodbye;
     // encode
     const body = serialize(msg, Goodbye);
-    const expectedEncoded = serialize({
-      id: id,
+    const expectedEncodedHeader = serialize({
       methodId: method,
+      id: id,
+    }, WireRequestHeader);
+
+    const expectedEncodedBody = serialize({
       body: body,
-    }, WireRequest);
+    }, WireRequestBody);
+
     const actualEncoded = encodeRequest(id, method, msg);
-    assert.deepEqual(actualEncoded, expectedEncoded);
+    assert.deepEqual(actualEncoded.header, expectedEncodedHeader);
+    assert.deepEqual(actualEncoded.body, expectedEncodedBody);
 
-    const encodedMessage = encodeMessage(ProtocolType.RPC, actualEncoded);
+    const encodedMessage = encodeMessage(ProtocolType.RPC, actualEncoded.header, actualEncoded.body);
     const decodedMessage: DecodedMessage = decodeMessage(encodedMessage);
-    console.log(decodedMessage);
+    // console.log(decodedMessage);
 
-    const decodedWireRequest: WireRequest = deserialize(decodedMessage.payload, WireRequest);
+    const decodedWireRequest = deserialize(decodedMessage.payload, WireRequestBody);
     // console.log(decodedWireRequest);
 
     const decodedRequestBody = decodeRequestBody(decodedWireRequest.methodId,
       decodedWireRequest.body);
     // console.log(decodedRequestBody);
 
-    assert.deepEqual(actualEncoded, decodedMessage.payload);
+    assert.deepEqual(actualEncoded.body, decodedMessage.payload);
     assert.deepEqual(msg, decodedRequestBody);
 
   });
+
 });
 

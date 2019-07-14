@@ -9,31 +9,41 @@ import {Slot, bytes32, bytes, uint16, uint64, bytes8, Epoch, number64, uint8} fr
 import {BeaconBlock, BeaconBlockBody} from "../../../types/block";
 import {BeaconBlockHeader} from "../../../types/misc";
 import {BeaconState} from "../../../types/state";
+import {Attestation} from "../../../types";
 
 
-export interface WireRequest {
-  methodId: uint16;
-  id: uint16;
+export interface WireRequestHeader {
+  method_id: uint16;
+  id: number;
+}
+
+export const WireRequestHeader: SimpleContainerType = {
+  name: "WireRequestHeader",
+  fields: [
+    ["method_id", uint16],
+    ["id", number64],
+  ],
+};
+
+export interface WireRequestBody {
   body: bytes;
 }
 
-export const WireRequest: SimpleContainerType = {
-  name: "WireRequest",
+export const WireRequestBody: SimpleContainerType = {
+  name: "WireRequestBody",
   fields: [
-    ["methodId", uint16],
-    ["id", uint16],
     ["body", bytes],
   ],
 };
 
 
 export type RequestBody =
-  Hello | Goodbye | GetStatus |
-  GetBlockHeaders | GetBlockBodies | BlockHeaders | BlockBodies;
+  Hello | Goodbye | GetStatus | GetBlockHeaders | GetBlockBodies
+  | BlockHeaders | BlockBodies | GetAttestation | AttestationResponse;
 
 // May need to change or delete altogether
 export type ResponseBody = RequestBody;
-export type WireResponse = WireRequest;
+// export type WireResponse = WireRequest;
 
 // Method ID: 0
 
@@ -48,12 +58,12 @@ export interface Hello {
 export const Hello: SimpleContainerType = {
   name: "Hello",
   fields: [
-    ["networkId", number64],
-    ["chainId", uint16],
-    ["latestFinalizedRoot", bytes32],
-    ["latestFinalizedEpoch", Epoch],
-    ["bestRoot", bytes32],
-    ["bestSlot", Slot],
+    ["network_id", number64],
+    ["chain_id", uint16],
+    ["latest_finalized_root", bytes32],
+    ["latest_finalized_epoch", Epoch],
+    ["best_root", bytes32],
+    ["best_slot", Slot],
   ],
 };
 
@@ -78,7 +88,7 @@ export interface GetStatus {
 export const GetStatus: SimpleContainerType = {
   name: "GetStatus",
   fields: [
-    ["userAgent", bytes],
+    ["user_agent", bytes],
     ["timestamp", number64],
   ],
 };
@@ -96,8 +106,8 @@ export interface GetBlockHeaders {
 export const GetBlockHeaders: SimpleContainerType = {
   name: "GetBlockHeaders",
   fields: [
-    ["startRoot", bytes32],
-    ["startSlot", Slot],
+    ["start_root", bytes32],
+    ["start_slot", Slot],
     ["max", number64],
     ["skip", number64],
     ["direction", uint8],
@@ -128,8 +138,8 @@ export interface GetBlockBodies {
 export const GetBlockBodies: SimpleContainerType = {
   name: "GetBlockBodies",
   fields: [
-    ["startRoot", bytes32],
-    ["startSlot", Slot],
+    ["start_root", bytes32],
+    ["start_slot", Slot],
     ["max", number64],
     ["skip", number64],
     ["direction", uint8],
@@ -148,3 +158,26 @@ export const BlockBodies: SimpleContainerType = {
   ],
 };
 
+// Method ID: 14
+
+export interface GetAttestation {
+  signature: bytes;
+}
+export const GetAttestation: SimpleContainerType = {
+  name: "GetAttestation",
+  fields: [
+    ["signature", bytes],
+  ],
+};
+
+// Method ID: 15
+
+export interface AttestationResponse {
+  attestation: Attestation;
+}
+export const AttestationResponse: SimpleContainerType = {
+  name: "AttestationResponse",
+  fields: [
+    ["attestation", Attestation],
+  ],
+};

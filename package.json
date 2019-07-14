@@ -47,6 +47,7 @@
     "bignumber.js": "^7.2.1",
     "blakejs": "^1.1.0",
     "bn.js": "^4.11.8",
+    "bson": "^4.0.2",
     "buffer-xor": "^2.0.2",
     "commander": "^2.19.0",
     "deepmerge": "^3.2.0",
@@ -68,9 +69,9 @@
     "promisify-es6": "^1.0.3",
     "pull-abortable": "^4.1.1",
     "pull-pushable": "^2.2.0",
+    "snappyjs": "^0.6.0",
     "winston": "^3.2.1",
-    "ws": "^6.2.1",
-    "snappyjs": "^0.6.0"
+    "ws": "^6.2.1"
   },
   "bin": {
     "lodestar": "./bin/lodestar",

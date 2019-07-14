@@ -2,6 +2,8 @@
  * @module network/hobbits
  */
 
+import {Attestation} from "../../types";
+
 export type RequestId = number;
 
 export enum Method {
@@ -12,6 +14,8 @@ export enum Method {
   BlockHeaders = 11,
   GetBlockBodies = 12,
   BlockBodies = 13,
+  GetAttestation = 14,
+  AttestationResponse = 15,
 }
 
 export enum ResponseCode {

@@ -5,13 +5,25 @@
 import {deserialize, serialize} from "@chainsafe/ssz";
 
 import {
-  Hello, Goodbye, RequestBody, WireRequest, GetStatus, GetBlockHeaders, BlockBodies, GetBlockBodies, BlockHeaders,
+  Hello,
+  Goodbye,
+  RequestBody,
+  WireRequestHeader,
+  WireRequestBody,
+  GetStatus,
+  GetBlockHeaders,
+  BlockBodies,
+  GetBlockBodies,
+  BlockHeaders,
+  GetAttestation,
+  AttestationResponse
 } from "./messages";
 import {RequestId, Method} from "../constants";
 
 // Encode
 
-export function encodeRequest(id: RequestId, method: Method, body: RequestBody): Buffer {
+export function encodeRequest(id: RequestId, method: Method, body: RequestBody):
+{ header: Buffer; body: Buffer } {
   let encodedBody: Buffer;
   switch (method) {
     case Method.Hello:
@@ -35,15 +47,29 @@ export function encodeRequest(id: RequestId, method: Method, body: RequestBody):
     case Method.BlockBodies:
       encodedBody = serialize(body, BlockBodies);
       break;
+    case Method.GetAttestation:
+      encodedBody = serialize(body, GetAttestation);
+      break;
+    case Method.AttestationResponse:
+      encodedBody = serialize(body, AttestationResponse);
+      break;
+
     default:
       throw new Error(`Invalid method ${method}`);
   }
-  const request: WireRequest = {
-    methodId: method,
+  const requestHeader: WireRequestHeader = {
+    method_id: method,
     id: id,
+  };
+
+  const requestBody: WireRequestBody = {
     body: encodedBody,
   };
-  return serialize(request, WireRequest);
+
+  return {
+    header: serialize(requestHeader, WireRequestHeader),
+    body: serialize(requestBody, WireRequestBody)
+  };
 }
 
 // Decode
@@ -64,6 +90,10 @@ export function decodeRequestBody(method: Method, body: Buffer): RequestBody {
       return deserialize(body, GetBlockBodies);
     case Method.BlockBodies:
       return deserialize(body, BlockBodies);
+    case Method.GetAttestation:
+      return deserialize(body, GetAttestation);
+    case Method.AttestationResponse:
+      return deserialize(body, AttestationResponse);
     default:
       throw new Error(`Invalid method ${method}`);
   }
