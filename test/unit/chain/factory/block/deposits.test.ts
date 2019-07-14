@@ -1,8 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
 import {hashTreeRoot} from "@chainsafe/ssz";
-
-import {Deposit, DepositData} from "../../../../../src/types";
 import {config} from "../../../../../src/config/presets/mainnet";
 import {ZERO_HASH} from "../../../../../src/constants";
 import {OpPool} from "../../../../../src/opPool";
@@ -10,9 +8,7 @@ import {ProgressiveMerkleTree, verifyMerkleBranch} from "../../../../../src/util
 import {generateDeposits} from "../../../../../src/chain/factory/block/deposits";
 import {generateState} from "../../../../utils/state";
 import {generateDeposit} from "../../../../utils/deposit";
-import {hashTreeRoot} from "@chainsafe/ssz";
-import {Deposit, DepositData} from "../../../../../src/types";
-import {DepositsOperations} from "../../../../../src/opPool/modules/deposit";
+import {DepositsOperations} from "../../../../../src/opPool/modules";
 
 describe('blockAssembly - deposits', function() {
 

@@ -2,8 +2,14 @@ import sinon from "sinon";
 import {expect} from "chai";
 
 import {config} from "../../../../../src/config/presets/mainnet";
-import {OpPool} from "../../../../../src/opPool";
-import {AttestationOperations, OpPool} from "../../../../../src/opPool";
+import {
+  AttestationOperations,
+  DepositsOperations,
+  OpPool,
+  ProposerSlashingOperations,
+  TransferOperations,
+  VoluntaryExitOperations
+} from "../../../../../src/opPool";
 import {assembleBody} from "../../../../../src/chain/factory/block/body";
 import * as depositUtils from "../../../../../src/chain/factory/block/deposits";
 import * as eth1DataAssembly from "../../../../../src/chain/factory/block/eth1Data";
@@ -14,11 +20,6 @@ import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../.
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../../../../utils/voluntaryExits";
 import {generateDeposit} from "../../../../utils/deposit";
-import {ProgressiveMerkleTree} from "../../../../../src/util/merkleTree";
-import {VoluntaryExitOperations} from "../../../../../src/opPool";
-import {DepositsOperations} from "../../../../../src/opPool";
-import {ProposerSlashingOperations} from "../../../../../src/opPool";
-import {TransferOperations} from "../../../../../src/opPool";
 
 describe('blockAssembly - body', function () {
 

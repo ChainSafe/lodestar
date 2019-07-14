@@ -8,17 +8,13 @@ import {getCommitteeAssignment} from "../../../../../src/chain/stateTransition/u
 import {ValidatorApi} from "../../../../../src/rpc/api/validator";
 import {BeaconDB} from "../../../../../src/db/api";
 import {BeaconChain} from "../../../../../src/chain";
-import {OpPool} from "../../../../../src/opPool";
 import {AttestationOperations, OpPool} from "../../../../../src/opPool";
 import {generateEmptyBlock} from "../../../../utils/block";
-import {expect} from "chai";
 import {generateState} from "../../../../utils/state";
 import {StatefulDagLMDGHOST} from "../../../../../src/chain/forkChoice";
 import * as dutyFactory from "../../../../../src/chain/factory/duties";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
-import {generateEmptyBlock} from "../../../../utils/block";
-import {generateState} from "../../../../utils/state";
 
 describe('validator rpc api', function () {
 
