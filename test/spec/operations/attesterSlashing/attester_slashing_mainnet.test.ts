@@ -5,14 +5,16 @@ import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import {equals} from "@chainsafe/ssz";
-import {processAttesterSlashing} from "../../../../src/chain/stateTransition/block/operations";
+
 import {BeaconState, AttesterSlashing} from "../../../../src/types";
+import {config} from "../../../../src/config/presets/mainnet";
+import {processAttesterSlashing} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/attester_slashing/attester_slashing_mainnet.yaml"),
   (state, attesterSlashing) => {
-    processAttesterSlashing(state, attesterSlashing);
+    processAttesterSlashing(config, state, attesterSlashing);
     return state;
   },
   (input) => {
@@ -23,10 +25,10 @@ describeSpecTest(
         aggregatePubkeys: sinon.stub().returns(Buffer.alloc(48))
       });
     }
-    return [expandYamlValue(input.pre, BeaconState), expandYamlValue(input.attesterSlashing, AttesterSlashing)];
+    return [expandYamlValue(input.pre, config.types.BeaconState), expandYamlValue(input.attesterSlashing, config.types.AttesterSlashing)];
   },
   (expected) => {
-    return expandYamlValue(expected.post, BeaconState);
+    return expandYamlValue(expected.post, config.types.BeaconState);
   },
   result => result,
   (testCase) => {
@@ -34,7 +36,7 @@ describeSpecTest(
   },
   () => false,
   (_1, _2, expected, actual) => {
-    expect(equals(expected, actual, BeaconState)).to.be.true;
+    expect(equals(expected, actual, config.types.BeaconState)).to.be.true;
     restore();
   },
   0

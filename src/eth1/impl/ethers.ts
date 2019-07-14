@@ -8,10 +8,11 @@ import {deserialize} from "@chainsafe/ssz";
 
 import {bytes32, Deposit, Eth1Data, Gwei, number64} from "../../types";
 
+import {IBeaconConfig} from "../../config";
 import {IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
 import {Block, Log} from "ethers/providers";
-import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants/minimal";
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 import {ILogger} from "../../logger";
 import {OpPool} from "../../opPool";
 import {IEth1Options} from "../options";
@@ -29,6 +30,8 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   private contract: ethers.Contract;
 
+  private config: IBeaconConfig;
+
   private opPool: OpPool;
 
   private genesisBlockHash: number64;
@@ -39,9 +42,10 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   private logger: ILogger;
 
-  public constructor(opts: EthersEth1Options, {opPool, logger}: {opPool: OpPool; logger: ILogger}) {
+  public constructor(opts: EthersEth1Options, {config, opPool, logger}: {config: IBeaconConfig; opPool: OpPool; logger: ILogger}) {
     super();
     this.logger = logger;
+    this.config = config;
     this.opts = opts;
     if(this.opts.providerInstance) {
       this.provider = this.opts.providerInstance;
@@ -99,7 +103,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     merkleTreeIndex: string
   ): Promise<void> {
     try {
-      const index = deserialize(Buffer.from(merkleTreeIndex.substr(2), 'hex'), number64) as number64;
+      const index = deserialize(Buffer.from(merkleTreeIndex.substr(2), 'hex'), this.config.types.number64) as number64;
       const deposit = this.createDeposit(
         pubkey,
         withdrawalCredentials,
@@ -252,7 +256,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
       data: {
         pubkey: Buffer.from(pubkey.slice(2), 'hex'),
         withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), 'hex'),
-        amount: deserialize(Buffer.from(amount.slice(2), 'hex'), Gwei) as Gwei,
+        amount: deserialize(Buffer.from(amount.slice(2), 'hex'), this.config.types.Gwei) as Gwei,
         signature: Buffer.from(signature.slice(2), 'hex'),
       },
     };

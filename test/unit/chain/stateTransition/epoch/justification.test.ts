@@ -1,11 +1,13 @@
+import BN from "bn.js";
 import sinon from "sinon";
 import {expect} from "chai";
+
+import {config} from "../../../../../src/config/presets/mainnet";
 import * as utils1 from "../../../../../src/chain/stateTransition/util";
 import * as utils2 from "../../../../../src/chain/stateTransition/epoch/util";
 import {generateState} from "../../../../utils/state";
 import {processJustificationAndFinalization}
   from "../../../../../src/chain/stateTransition/epoch/justification";
-import BN from "bn.js";
 
 describe('process epoch - justification and finalization', function () {
 
@@ -41,34 +43,34 @@ describe('process epoch - justification and finalization', function () {
     state.justificationBitfield = new BN(7);
 
     getCurrentEpochStub.returns(1);
-    processJustificationAndFinalization(state);
-    expect(getCurrentEpochStub.calledOnceWith(state)).to.be.true;
+    processJustificationAndFinalization(config, state);
+    expect(getCurrentEpochStub.calledOnceWith(config, state)).to.be.true;
 
     // hit 1st if condition of finalization
     state.previousJustifiedEpoch = previousJustifiedEpoch = 0;
     getBlockRootStub.returns(Buffer.alloc(32));
     getCurrentEpochStub.returns(3);
     getPreviousEpochStub.returns(1);
-    processJustificationAndFinalization(state);
+    processJustificationAndFinalization(config, state);
     expect(state.finalizedEpoch).to.be.equal(previousJustifiedEpoch);
 
     // hit 2nd if condition of finalization
     getCurrentEpochStub.returns(2);
     state.previousJustifiedEpoch = previousJustifiedEpoch = 0;
-    processJustificationAndFinalization(state);
+    processJustificationAndFinalization(config, state);
     expect(state.finalizedEpoch).to.be.equal(previousJustifiedEpoch);
 
     // hit 3rd if condition of finalization
     state.currentJustifiedEpoch = currentJustifiedEpoch = 0;
     getCurrentEpochStub.returns(2);
-    processJustificationAndFinalization(state);
+    processJustificationAndFinalization(config, state);
     expect(state.finalizedEpoch).to.be.equal(currentJustifiedEpoch);
 
     // hit 4th if condition of finalization
     getCurrentEpochStub.returns(2);
     state.previousJustifiedEpoch = 1;
     state.currentJustifiedEpoch = currentJustifiedEpoch = 1;
-    processJustificationAndFinalization(state);
+    processJustificationAndFinalization(config, state);
     expect(state.finalizedEpoch).to.be.equal(currentJustifiedEpoch);
 
     expect(getPreviousEpochStub.callCount).to.be.equal(4);

@@ -1,7 +1,8 @@
+import BN from "bn.js";
+
 import {Deposit} from "../../src/types";
 import {EMPTY_SIGNATURE} from "../../src/constants";
-import BN from "bn.js";
-import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../src/constants/minimal";
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../src/constants";
 
 /**
  * Generates a fake attestation data for test purposes.

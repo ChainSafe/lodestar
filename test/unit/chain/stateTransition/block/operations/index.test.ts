@@ -2,6 +2,7 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
+import {config} from "./../../../../../../src/config/presets/mainnet";
 import {Crosslink} from "../../../../../../src/types";
 import  * as processProposerSlashing
   from "../../../../../../src/chain/stateTransition/block/operations/proposerSlashing";
@@ -15,22 +16,15 @@ import  * as processVoluntaryExit
   from "../../../../../../src/chain/stateTransition/block/operations/voluntaryExit";
 import  * as processTransfer
   from "../../../../../../src/chain/stateTransition/block/operations/transfer";
-
 import {processOperations} from "../../../../../../src/chain/stateTransition/block/operations";
+
 import {generateState} from "../../../../../utils/state";
 import {generateEmptyBlock} from "../../../../../utils/block";
 import {generateDeposit} from "../../../../../utils/deposit";
 import {generateEmptyTransfer} from "../../../../../utils/transfer";
-import {
-  MAX_ATTESTATIONS,
-  MAX_ATTESTER_SLASHINGS,
-  MAX_DEPOSITS,
-  MAX_PROPOSER_SLASHINGS, MAX_VOLUNTARY_EXITS
-} from "../../../../../../src/constants";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../../../utils/slashings";
 import {generateAttestationData, generateEmptyAttestation} from "../../../../../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../../../../../utils/voluntaryExits";
-import {MAX_TRANSFERS} from "../../../../../../src/constants/minimal";
 
 
 describe('process block - process operations', function () {
@@ -62,7 +56,7 @@ describe('process block - process operations', function () {
     const body = generateEmptyBlock().body;
     body.deposits.push(generateDeposit());
     try {
-      processOperations(state, body);
+      processOperations(config, state, body);
       expect.fail();
     }catch (e) {
 
@@ -76,7 +70,7 @@ describe('process block - process operations', function () {
     body.transfers.push(generateEmptyTransfer());
     body.transfers.push(generateEmptyTransfer());
     try {
-      processOperations(state, body);
+      processOperations(config, state, body);
       expect.fail();
     }catch (e) {
 
@@ -86,9 +80,9 @@ describe('process block - process operations', function () {
   it('should fail to process operations - proposerSlashings length  exceed maxProposerSlashings ', function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
-    body.proposerSlashings.length = MAX_PROPOSER_SLASHINGS + 1;
+    body.proposerSlashings.length = config.params.MAX_PROPOSER_SLASHINGS + 1;
     try {
-      processOperations(state, body);
+      processOperations(config, state, body);
       expect.fail();
     } catch (e) {
 
@@ -99,10 +93,10 @@ describe('process block - process operations', function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
     processProposerSlashingStub.returns(0);
-    body.attesterSlashings.length = MAX_ATTESTER_SLASHINGS + 1;
+    body.attesterSlashings.length = config.params.MAX_ATTESTER_SLASHINGS + 1;
     body.proposerSlashings.push(generateEmptyProposerSlashing());
     try {
-      processOperations(state, body);
+      processOperations(config, state, body);
       expect.fail();
     } catch (e) {
       expect(processProposerSlashingStub.calledOnce).to.be.true;
@@ -114,12 +108,12 @@ describe('process block - process operations', function () {
     const body = generateEmptyBlock().body;
     processProposerSlashingStub.returns(0);
     processAttesterSlashingStub.returns(0);
-    body.attestations.length = MAX_ATTESTATIONS + 1;
+    body.attestations.length = config.params.MAX_ATTESTATIONS + 1;
     body.proposerSlashings.push(generateEmptyProposerSlashing());
     body.attesterSlashings.push(generateEmptyAttesterSlashing());
 
     try {
-      processOperations(state, body);
+      processOperations(config, state, body);
       expect.fail();
     } catch (e) {
       expect(processProposerSlashingStub.calledOnce).to.be.true;
@@ -131,10 +125,10 @@ describe('process block - process operations', function () {
   it('should fail to process operations - deposit length  exceed maxDeposit', function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
-    body.deposits.length = MAX_DEPOSITS + 1;
+    body.deposits.length = config.params.MAX_DEPOSITS + 1;
 
     try {
-      processOperations(state, body);
+      processOperations(config, state, body);
       expect.fail();
     } catch (e) {
     }
@@ -148,7 +142,7 @@ describe('process block - process operations', function () {
     processAttesterSlashingStub.returns(0);
     processAttestationStub.returns(0);
     processDepositStub.returns(0);
-    body.voluntaryExits.length = MAX_VOLUNTARY_EXITS + 1;
+    body.voluntaryExits.length = config.params.MAX_VOLUNTARY_EXITS + 1;
     body.proposerSlashings.push(generateEmptyProposerSlashing());
     body.attesterSlashings.push(generateEmptyAttesterSlashing());
     body.attestations.push(generateEmptyAttestation());
@@ -156,7 +150,7 @@ describe('process block - process operations', function () {
     state.latestEth1Data.depositCount++;
 
     try {
-      processOperations(state, body);
+      processOperations(config, state, body);
       expect.fail();
     } catch (e) {
       expect(processProposerSlashingStub.calledOnce).to.be.true;
@@ -174,7 +168,7 @@ describe('process block - process operations', function () {
     processAttestationStub.returns(0);
     processDepositStub.returns(0);
     processVoluntaryExitStub.returns(0);
-    body.transfers.length = MAX_TRANSFERS + 1;
+    body.transfers.length = config.params.MAX_TRANSFERS + 1;
     body.proposerSlashings.push(generateEmptyProposerSlashing());
     body.attesterSlashings.push(generateEmptyAttesterSlashing());
     body.attestations.push(generateEmptyAttestation());
@@ -183,7 +177,7 @@ describe('process block - process operations', function () {
     body.voluntaryExits.push(generateEmptyVoluntaryExit());
 
     try {
-      processOperations(state, body);
+      processOperations(config, state, body);
       expect.fail();
     } catch (e) {
       expect(processProposerSlashingStub.calledOnce).to.be.true;
@@ -209,7 +203,7 @@ describe('process block - process operations', function () {
     state.latestEth1Data.depositCount++;
     body.voluntaryExits.push(generateEmptyVoluntaryExit());
     try {
-      processOperations(state, body);
+      processOperations(config, state, body);
       expect.fail();
     } catch (e) {
       expect(processProposerSlashingStub.calledOnce).to.be.true;

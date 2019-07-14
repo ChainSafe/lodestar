@@ -9,6 +9,7 @@ import promisify from "promisify-es6";
 import bls from "@chainsafe/bls-js";
 import {serialize} from "@chainsafe/ssz";
 
+import {config} from "../../../src/config/presets/mainnet";
 import {EthersEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
 import {number64} from "../../../src/types";
@@ -38,6 +39,7 @@ describe("Eth1Notifier", () => {
       providerInstance: provider
     },
     {
+      config,
       opPool,
       logger: logger
     });
@@ -87,6 +89,7 @@ describe("Eth1Notifier", () => {
         contract: stubContract
       },
       {
+        config,
         opPool,
         logger: logger
       }
@@ -97,9 +100,9 @@ describe("Eth1Notifier", () => {
         values: {
           pubkey: '0x' + Buffer.alloc(48, 0).toString('hex'),
           withdrawalCredentials: '0x' + Buffer.alloc(48, 0).toString('hex'),
-          amount: '0x' + serialize(10, number64).toString('hex'),
+          amount: '0x' + serialize(10, config.types.number64).toString('hex'),
           signature: '0x' + Buffer.alloc(96, 0).toString('hex'),
-          merkleTreeIndex: '0x' + serialize(12, number64).toString('hex')
+          merkleTreeIndex: '0x' + serialize(12, config.types.number64).toString('hex')
         }
       });
       stubProvider.getLogs.withArgs(sinon.match.hasNested('topics[0]', 'genesisHash')).resolves([]);
@@ -189,9 +192,9 @@ describe("Eth1Notifier", () => {
 
     const pubKey = bls.generateKeyPair().publicKey.toBytesCompressed();
     const withdrawalCredentials = "0x" + Buffer.alloc(32).toString("hex");
-    const amount = "0x" + serialize(32000000000, number64).toString("hex");
+    const amount = "0x" + serialize(32000000000, config.types.number64).toString("hex");
     const signature = "0x" + Buffer.alloc(94).toString("hex");
-    const merkleTreeIndex = "0x" + serialize(0 , number64).toString("hex");
+    const merkleTreeIndex = "0x" + serialize(0 , config.types.number64).toString("hex");
     opPool.deposits.receive.resolves(null);
     await eth1.processDepositLog(pubKey, withdrawalCredentials, amount, signature, merkleTreeIndex);
     assert(cb.calledOnce, "deposit event did not fire");
@@ -260,6 +263,7 @@ describe("Eth1Notifier", () => {
       contract
     },
     {
+      config,
       opPool,
       logger: logger
     });

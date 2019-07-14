@@ -1,13 +1,15 @@
+import sinon from "sinon";
+import {expect} from "chai";
+
+import {config} from "../../../../../src/config/presets/mainnet";
 import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
 import * as blockTransitions from "../../../../../src/chain/stateTransition/block";
-import sinon from "sinon";
 import {OpPool} from "../../../../../src/opPool";
-import {generateState} from "../../../../utils/state";
-import {generateEmptyBlock} from "../../../../utils/block";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
-import {expect} from "chai";
 import {BeaconDB} from "../../../../../src/db/api";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
+import {generateState} from "../../../../utils/state";
+import {generateEmptyBlock} from "../../../../utils/block";
 
 describe('block assembly', function () {
 
@@ -32,7 +34,7 @@ describe('block assembly', function () {
     beaconDB.getChainHead.resolves(generateEmptyBlock());
     assembleBodyStub.resolves(generateEmptyBlock().body);
     try {
-      const result = await assembleBlock(beaconDB, opPool, eth1, 1, Buffer.alloc(96, 0));
+      const result = await assembleBlock(config, beaconDB, opPool, eth1, 1, Buffer.alloc(96, 0));
       expect(result).to.not.be.null;
       expect(result.slot).to.equal(1);
       expect(result.stateRoot).to.not.be.null;

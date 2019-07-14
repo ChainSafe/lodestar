@@ -3,6 +3,7 @@
  */
 
 import {EventEmitter} from "events";
+import {IBeaconConfig} from "../config";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
 import {OpPool} from "../opPool";
@@ -16,6 +17,7 @@ import {ILogger} from "../logger";
 import {ISyncOptions} from "./options";
 
 interface SyncModules {
+  config: IBeaconConfig;
   chain: IBeaconChain;
   db: IBeaconDb;
   eth1: IEth1Notifier;
@@ -31,6 +33,7 @@ interface SyncModules {
  */
 export class Sync extends EventEmitter {
   private opts: ISyncOptions;
+  private config: IBeaconConfig;
   private chain: IBeaconChain;
   private network: INetwork;
   private opPool: OpPool;
@@ -41,9 +44,10 @@ export class Sync extends EventEmitter {
   private logger: ILogger;
   private syncer: RegularSync;
 
-  public constructor(opts: ISyncOptions, {chain, db, eth1, network, opPool, reps, logger}: SyncModules) {
+  public constructor(opts: ISyncOptions, {config, chain, db, eth1, network, opPool, reps, logger}: SyncModules) {
     super();
     this.opts = opts;
+    this.config = config;
     this.chain = chain;
     this.db = db;
     this.eth1 = eth1;
@@ -51,7 +55,7 @@ export class Sync extends EventEmitter {
     this.opPool = opPool;
     this.reps = reps;
     this.logger = logger;
-    this.rpc = new SyncRpc(opts, {db, chain, network, reps, logger});
+    this.rpc = new SyncRpc(opts, {config, db, chain, network, reps, logger});
   }
 
   public async isSynced(): Promise<boolean> {
@@ -78,6 +82,7 @@ export class Sync extends EventEmitter {
     await this.rpc.refreshPeerHellos();
     if (!await this.isSynced()) {
       const initialSync = new InitialSync(this.opts, {
+        config: this.config,
         db: this.db,
         chain: this.chain,
         rpc: this.rpc,
@@ -89,6 +94,7 @@ export class Sync extends EventEmitter {
       await initialSync.stop();
     }
     this.syncer = new RegularSync(this.opts, {
+      config: this.config,
       db: this.db,
       chain: this.chain,
       network: this.network,

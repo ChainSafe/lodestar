@@ -5,14 +5,16 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import {equals} from "@chainsafe/ssz";
-import {processProposerSlashing} from "../../../../src/chain/stateTransition/block/operations";
+
 import {BeaconState, ProposerSlashing} from "../../../../src/types";
+import {config} from "../../../../src/config/presets/mainnet";
+import {processProposerSlashing} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/proposer_slashing/proposer_slashing_mainnet.yaml"),
   (state, proposerSlashing) => {
-    processProposerSlashing(state, proposerSlashing);
+    processProposerSlashing(config, state, proposerSlashing);
     return state;
   },
   (input) => {
@@ -23,10 +25,10 @@ describeSpecTest(
         verifyMultiple: sinon.stub().returns(true)
       });
     }
-    return [expandYamlValue(input.pre, BeaconState), expandYamlValue(input.proposerSlashing, ProposerSlashing)];
+    return [expandYamlValue(input.pre, config.types.BeaconState), expandYamlValue(input.proposerSlashing, config.types.ProposerSlashing)];
   },
   (expected) => {
-    return expandYamlValue(expected.post, BeaconState);
+    return expandYamlValue(expected.post, config.types.BeaconState);
   },
   result => result,
   (testCase) => {
@@ -34,7 +36,7 @@ describeSpecTest(
   },
   () => false,
   (_1, _2, expected, actual) => {
-    expect(equals(expected, actual, BeaconState)).to.be.true;
+    expect(equals(expected, actual, config.types.BeaconState)).to.be.true;
     restore();
   },
   0

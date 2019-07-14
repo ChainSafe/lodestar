@@ -2,15 +2,15 @@
  * @module db/api/validator
  */
 
-import {DatabaseService, DatabaseApiOptions} from "../abstract";
-import {AttestationSearchOptions, IValidatorDB} from "./interface";
-import {Attestation, BeaconBlock, ValidatorIndex} from "../../../types";
-import {Bucket, encodeKey} from "../../schema";
 import {deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
 import deepmerge from "deepmerge";
+import {Attestation, BeaconBlock, ValidatorIndex} from "../../../types";
+import {IBeaconConfig} from "../../../config";
+import {DatabaseService, DatabaseApiOptions} from "../abstract";
+import {AttestationSearchOptions, IValidatorDB} from "./interface";
+import {Bucket, encodeKey} from "../../schema";
 
 export class ValidatorDB extends DatabaseService implements IValidatorDB {
-
   public constructor(opts: DatabaseApiOptions) {
     super(opts);
   }
@@ -19,13 +19,13 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
     const data = await this.db.get(
       encodeKey(Bucket.lastProposedBlock, index)
     );
-    return deserialize(data, BeaconBlock);
+    return deserialize(data, this.config.types.BeaconBlock);
   }
 
   public async setBlock(index: ValidatorIndex, block: BeaconBlock): Promise<void> {
     await this.db.put(
       encodeKey(Bucket.lastProposedBlock, index),
-      serialize(block, BeaconBlock)
+      serialize(block, this.config.types.BeaconBlock)
     );
   }
 
@@ -37,13 +37,13 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
       gt: encodeKey(Bucket.proposedAttestations, "" + index + options.gt),
       lt: encodeKey(Bucket.proposedAttestations, "" + index + options.lt)
     });
-    return data.map((data) => deserialize(data, Attestation));
+    return data.map((data) => deserialize(data, this.config.types.Attestation));
   }
 
   public async setAttestation(index: ValidatorIndex, attestation: Attestation): Promise<void> {
     await this.db.put(
       encodeKey(Bucket.proposedAttestations, "" + index + attestation.data.targetEpoch),
-      serialize(attestation, Attestation)
+      serialize(attestation, this.config.types.Attestation)
     );
   }
 

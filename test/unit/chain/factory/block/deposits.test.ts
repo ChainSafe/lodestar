@@ -1,10 +1,14 @@
 import sinon from "sinon";
+import {expect} from "chai";
+import {hashTreeRoot} from "@chainsafe/ssz";
+
+import {Deposit, DepositData} from "../../../../../src/types";
+import {config} from "../../../../../src/config/presets/mainnet";
+import {ZERO_HASH} from "../../../../../src/constants";
 import {OpPool} from "../../../../../src/opPool";
+import {ProgressiveMerkleTree, verifyMerkleBranch} from "../../../../../src/util/merkleTree";
 import {generateDeposits} from "../../../../../src/chain/factory/block/deposits";
 import {generateState} from "../../../../utils/state";
-import {expect} from "chai";
-import {ProgressiveMerkleTree, verifyMerkleBranch} from "../../../../../src/util/merkleTree";
-import {ZERO_HASH} from "../../../../../src/constants";
 import {generateDeposit} from "../../../../utils/deposit";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {Deposit, DepositData} from "../../../../../src/types";
@@ -27,6 +31,7 @@ describe('blockAssembly - deposits', function() {
 
   it('return empty array if no pending deposits', async function() {
     const result = await generateDeposits(
+      config,
       opPool,
       generateState({
         depositIndex: 1,
@@ -45,7 +50,7 @@ describe('blockAssembly - deposits', function() {
     opPool.deposits.getAll.resolves(deposits);
     const tree = ProgressiveMerkleTree.empty(4);
     deposits.forEach((d, index) => {
-      tree.add(index, hashTreeRoot(d.data, DepositData));
+      tree.add(index, hashTreeRoot(d.data, config.types.DepositData));
     });
     const eth1 = {
       depositCount: 2,
@@ -53,6 +58,7 @@ describe('blockAssembly - deposits', function() {
       depositRoot: tree.root()
     };
     const result = await generateDeposits(
+      config,
       opPool,
       generateState({
         depositIndex: 0,
@@ -64,7 +70,7 @@ describe('blockAssembly - deposits', function() {
     result.forEach((deposit, index) => {
       expect(
         verifyMerkleBranch(
-          hashTreeRoot(deposit.data, DepositData),
+          hashTreeRoot(deposit.data, config.types.DepositData),
           deposit.proof,
           4,
           index,
@@ -73,5 +79,4 @@ describe('blockAssembly - deposits', function() {
       ).to.be.true;
     });
   });
-
 });

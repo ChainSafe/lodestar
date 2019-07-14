@@ -4,12 +4,10 @@ import sinon from "sinon";
 import {restore, rewire} from "@chainsafe/bls-js";
 import {signingRoot} from "@chainsafe/ssz";
 
+import {config} from "../../../../../../src/config/presets/mainnet";
 import {
   Domain,
   FAR_FUTURE_EPOCH,
-  MAX_VOLUNTARY_EXITS,
-  PERSISTENT_COMMITTEE_PERIOD,
-  SLOTS_PER_EPOCH
 } from "../../../../../../src/constants";
 import {VoluntaryExit} from "../../../../../../src/types";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
@@ -47,7 +45,7 @@ describe('process block - voluntary exits', function () {
     state.validatorRegistry.push(generateValidator());
     isActiveValidatorStub.returns(false);
     try {
-      processVoluntaryExit(state, exit);
+      processVoluntaryExit(config, state, exit);
       expect.fail();
     } catch (e) {
       expect(isActiveValidatorStub.calledOnce).to.be.true;
@@ -60,7 +58,7 @@ describe('process block - voluntary exits', function () {
     state.validatorRegistry.push(generateValidator(0, 1));
     isActiveValidatorStub.returns(true);
     try {
-      processVoluntaryExit(state, exit);
+      processVoluntaryExit(config, state, exit);
       expect.fail();
     } catch (e) {
       expect(isActiveValidatorStub.calledOnce).to.be.true;
@@ -70,11 +68,11 @@ describe('process block - voluntary exits', function () {
   it('should fail - not valid', function () {
     const state = generateState({slot: 0});
     const exit = generateEmptyVoluntaryExit();
-    exit.epoch = SLOTS_PER_EPOCH * 2;
+    exit.epoch = config.params.SLOTS_PER_EPOCH * 2;
     state.validatorRegistry.push(generateValidator(0, FAR_FUTURE_EPOCH));
     isActiveValidatorStub.returns(true);
     try {
-      processVoluntaryExit(state, exit);
+      processVoluntaryExit(config, state, exit);
       expect.fail();
     } catch (e) {
       expect(isActiveValidatorStub.calledOnce).to.be.true;
@@ -82,13 +80,13 @@ describe('process block - voluntary exits', function () {
   });
 
   it('should fail - validator not enough active', function () {
-    const state = generateState({slot: SLOTS_PER_EPOCH * 2});
+    const state = generateState({slot: config.params.SLOTS_PER_EPOCH * 2});
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = 0;
     state.validatorRegistry.push(generateValidator(0, FAR_FUTURE_EPOCH));
     isActiveValidatorStub.returns(true);
     try {
-      processVoluntaryExit(state, exit);
+      processVoluntaryExit(config, state, exit);
       expect.fail();
     } catch (e) {
       expect(isActiveValidatorStub.calledOnce).to.be.true;
@@ -96,14 +94,14 @@ describe('process block - voluntary exits', function () {
   });
 
   it('should fail - invalid signature', function () {
-    const state = generateState({slot: (PERSISTENT_COMMITTEE_PERIOD + 1) * SLOTS_PER_EPOCH});
+    const state = generateState({slot: (config.params.PERSISTENT_COMMITTEE_PERIOD + 1) * config.params.SLOTS_PER_EPOCH});
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = 0;
     state.validatorRegistry.push(generateValidator(0, FAR_FUTURE_EPOCH));
     isActiveValidatorStub.returns(true);
     blsStub.verify.returns(false);
     try {
-      processVoluntaryExit(state, exit);
+      processVoluntaryExit(config, state, exit);
       expect.fail();
     } catch (e) {
       expect(isActiveValidatorStub.calledOnce).to.be.true;
@@ -113,14 +111,14 @@ describe('process block - voluntary exits', function () {
 
   it('should process exit', function () {
     const validator = generateValidator(1, FAR_FUTURE_EPOCH);
-    const state = generateState({slot: (PERSISTENT_COMMITTEE_PERIOD + 1) * SLOTS_PER_EPOCH});
+    const state = generateState({slot: (config.params.PERSISTENT_COMMITTEE_PERIOD + 1) * config.params.SLOTS_PER_EPOCH});
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = 0;
     blsStub.verify.returns(true);
     state.validatorRegistry.push(validator);
     isActiveValidatorStub.returns(true);
     try {
-      processVoluntaryExit(state, exit);
+      processVoluntaryExit(config, state, exit);
       expect(isActiveValidatorStub.calledOnce).to.be.true;
       expect(initiateValidatorExitStub.calledOnce).to.be.true;
       expect(blsStub.verify.calledOnce).to.be.true;

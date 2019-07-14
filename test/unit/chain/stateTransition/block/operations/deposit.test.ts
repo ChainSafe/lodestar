@@ -4,7 +4,7 @@ import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 
-import {MAX_EFFECTIVE_BALANCE} from "../../../../../../src/constants";
+import {config} from "../../../../../../src/config/presets/mainnet";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
 import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../../../src/chain/stateTransition/util";
 import {processDeposit} from "../../../../../../src/chain/stateTransition/block/operations";
@@ -40,7 +40,7 @@ describe('process block - deposits', function () {
     const state = generateState();
     verifyMerkleTreeStub.returns(false);
     try {
-      processDeposit(state, generateDeposit());
+      processDeposit(config, state, generateDeposit());
     } catch (e) {
       expect(verifyMerkleTreeStub.calledOnce).to.be.true;
     }
@@ -50,7 +50,7 @@ describe('process block - deposits', function () {
     const state = generateState({depositIndex: 3});
     verifyMerkleTreeStub.returns(true);
     try {
-      processDeposit(state, generateDeposit());
+      processDeposit(config, state, generateDeposit());
     } catch (e) {
       expect(verifyMerkleTreeStub.calledOnce).to.be.true;
     }
@@ -61,7 +61,7 @@ describe('process block - deposits', function () {
     verifyMerkleTreeStub.returns(true);
     const deposit = generateDeposit();
     try {
-      processDeposit(state, deposit);
+      processDeposit(config, state, deposit);
     } catch (e) {
       expect(verifyMerkleTreeStub.calledOnce).to.be.true;
       expect(state.validatorRegistry.length).to.be.equal(0);
@@ -73,10 +73,10 @@ describe('process block - deposits', function () {
     const state = generateState({depositIndex: 3});
     verifyMerkleTreeStub.returns(true);
     const deposit = generateDeposit();
-    deposit.data.amount = new BN(MAX_EFFECTIVE_BALANCE);
+    deposit.data.amount = new BN(config.params.MAX_EFFECTIVE_BALANCE);
     blsStub.verify.returns(true);
     try {
-      processDeposit(state, deposit);
+      processDeposit(config, state, deposit);
       expect(verifyMerkleTreeStub.calledOnce).to.be.true;
       expect(state.validatorRegistry.length).to.be.equal(1);
       expect(state.balances.length).to.be.equal(1);
@@ -95,7 +95,7 @@ describe('process block - deposits', function () {
     state.balances.push(new BN(0));
     deposit.data.pubkey = validator.pubkey;
     try {
-      processDeposit(state, deposit);
+      processDeposit(config, state, deposit);
       expect(verifyMerkleTreeStub.calledOnce).to.be.true;
       expect(state.balances[0].toString()).to.be.equal(deposit.data.amount.toString());
     } catch (e) {

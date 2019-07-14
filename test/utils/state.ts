@@ -2,25 +2,9 @@ import BN from "bn.js";
 
 import {
   BeaconState,
-  bytes32,
   Crosslink,
-  Eth1Data,
-  Fork,
-  PendingAttestation,
-  uint64,
-  Validator,
-  Slot,
-  number64,
-  Epoch,
-  Shard,
-  BeaconBlockHeader,
-  BeaconBlockBody
 } from "../../src/types";
-import {GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD,
-  LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
-  LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH, SHARD_COUNT,
-  ZERO_HASH, SLOTS_PER_HISTORICAL_ROOT
-} from "../../src/constants";
+import {GENESIS_EPOCH, GENESIS_SLOT, GENESIS_START_SHARD, ZERO_HASH} from "../../src/constants";
 
 import {intToBytes} from "../../src/util/bytes";
 import {randBetween, randBetweenBN} from "./misc";
@@ -28,6 +12,8 @@ import {generateValidators} from "./validator";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {generateEmptyBlock} from "./block";
 import {generateEmptyCrosslink} from "./crosslink";
+
+import {config} from "../../src/config/presets/mainnet";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -48,8 +34,8 @@ export function generateState(opts?: TestBeaconState): BeaconState {
     slot: GENESIS_SLOT,
     genesisTime: Math.floor(Date.now() / 1000),
     fork: {
-      previousVersion: GENESIS_FORK_VERSION,
-      currentVersion: GENESIS_FORK_VERSION,
+      previousVersion: config.params.GENESIS_FORK_VERSION,
+      currentVersion: config.params.GENESIS_FORK_VERSION,
       epoch: GENESIS_EPOCH,
     },
     // Validator registry
@@ -57,7 +43,7 @@ export function generateState(opts?: TestBeaconState): BeaconState {
     balances: [],
 
     // Randomness and committees
-    latestRandaoMixes: Array.from({length: LATEST_RANDAO_MIXES_LENGTH}, () => ZERO_HASH),
+    latestRandaoMixes: Array.from({length: config.params.LATEST_RANDAO_MIXES_LENGTH}, () => ZERO_HASH),
     latestStartShard: GENESIS_START_SHARD,
 
     // Finality
@@ -72,17 +58,17 @@ export function generateState(opts?: TestBeaconState): BeaconState {
     finalizedRoot: Buffer.alloc(32),
 
     // Recent state
-    currentCrosslinks: Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
-    previousCrosslinks: Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
-    latestBlockRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
-    latestStateRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
-    latestActiveIndexRoots: Array.from({length: LATEST_ACTIVE_INDEX_ROOTS_LENGTH}, () => ZERO_HASH),
-    latestSlashedBalances: Array.from({length: LATEST_SLASHED_EXIT_LENGTH}, () => new BN(0)),
+    currentCrosslinks: Array.from({length: config.params.SHARD_COUNT}, () => initialCrosslinkRecord),
+    previousCrosslinks: Array.from({length: config.params.SHARD_COUNT}, () => initialCrosslinkRecord),
+    latestBlockRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
+    latestStateRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
+    latestActiveIndexRoots: Array.from({length: config.params.LATEST_ACTIVE_INDEX_ROOTS_LENGTH}, () => ZERO_HASH),
+    latestSlashedBalances: Array.from({length: config.params.LATEST_SLASHED_EXIT_LENGTH}, () => new BN(0)),
     latestBlockHeader: {
       slot: 0,
       parentRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
-      bodyRoot: hashTreeRoot(generateEmptyBlock().body, BeaconBlockBody),
+      bodyRoot: hashTreeRoot(generateEmptyBlock().body, config.types.BeaconBlockBody),
       signature: Buffer.alloc(96),
     },
     historicalRoots: [],
@@ -144,12 +130,12 @@ export function generateRandomState(opts?: TestBeaconState): BeaconState {
     finalizedEpoch: randBetween(0, 1000),
     finalizedRoot: Buffer.alloc(32),
 
-    currentCrosslinks: Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
-    previousCrosslinks: Array.from({length: SHARD_COUNT}, () => initialCrosslinkRecord),
-    latestBlockRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => Buffer.alloc(32)),
-    latestStateRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => Buffer.alloc(32)),
-    latestActiveIndexRoots: Array.from({length: LATEST_ACTIVE_INDEX_ROOTS_LENGTH}, () => Buffer.alloc(32)),
-    latestSlashedBalances: Array.from({length: LATEST_SLASHED_EXIT_LENGTH}, () => randBetweenBN(0, 1000)),
+    currentCrosslinks: Array.from({length: config.params.SHARD_COUNT}, () => initialCrosslinkRecord),
+    previousCrosslinks: Array.from({length: config.params.SHARD_COUNT}, () => initialCrosslinkRecord),
+    latestBlockRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => Buffer.alloc(32)),
+    latestStateRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => Buffer.alloc(32)),
+    latestActiveIndexRoots: Array.from({length: config.params.LATEST_ACTIVE_INDEX_ROOTS_LENGTH}, () => Buffer.alloc(32)),
+    latestSlashedBalances: Array.from({length: config.params.LATEST_SLASHED_EXIT_LENGTH}, () => randBetweenBN(0, 1000)),
     latestBlockHeader: {
       slot: 0,
       parentRoot: Buffer.alloc(32),

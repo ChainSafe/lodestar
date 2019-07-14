@@ -15,6 +15,7 @@
  */
 import BlockProposingService from "./services/block";
 import {Epoch, Slot, ValidatorIndex} from "../types";
+import {IBeaconConfig} from "../config";
 import {GenesisInfo} from "./types";
 import {RpcClient, RpcClientOverWs} from "./rpc";
 import {AttestationService} from "./services/attestation";
@@ -30,6 +31,7 @@ import {isPlainObject} from "../util/objects";
  */
 class Validator {
   private opts: IValidatorOptions;
+  private config: IBeaconConfig;
   private rpcClient: RpcClient;
   private validatorIndex: ValidatorIndex;
   private blockService: BlockProposingService;
@@ -41,12 +43,14 @@ class Validator {
   private isRunning: boolean;
 
 
-  public constructor(opts: Partial<IValidatorOptions>, modules: {logger: ILogger}) {
+  public constructor(opts: Partial<IValidatorOptions>, modules: {config: IBeaconConfig; logger: ILogger}) {
     this.opts = deepmerge(defaultValidatorOptions, opts, {isMergeableObject: isPlainObject});
+    this.config = modules.config;
     this.logger = modules.logger;
     this.isActive = false;
     this.isRunning = false;
     this.db = new ValidatorDB({
+      config: this.config,
       controller: new LevelDbController({
         name: this.opts.db.name
       }, {
@@ -56,7 +60,7 @@ class Validator {
     if(this.opts.rpcInstance) {
       this.rpcClient = this.opts.rpcInstance;
     } else if(this.opts.rpc) {
-      this.rpcClient = new RpcClientOverWs({rpcUrl: this.opts.rpc});
+      this.rpcClient = new RpcClientOverWs({rpcUrl: this.opts.rpc}, {config: this.config});
     } else {
       throw new Error("Validator requires either RpcClient instance or rpc url as params");
     }
@@ -94,6 +98,7 @@ class Validator {
     this.validatorIndex = await this.getValidatorIndex();
 
     this.blockService = new BlockProposingService(
+      this.config,
       this.validatorIndex,
       this.rpcClient,
       this.opts.keypair.privateKey,
@@ -101,6 +106,7 @@ class Validator {
     );
 
     this.attestationService = new AttestationService(
+      this.config,
       this.validatorIndex,
       this.rpcClient,
       this.opts.keypair.privateKey,

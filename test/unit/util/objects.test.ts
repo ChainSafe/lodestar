@@ -1,8 +1,9 @@
+import BN from "bn.js";
 import { expect } from "chai";
 
-import {isPlainObject, mostFrequent} from "../../../src/util/objects";
-import BN from "bn.js";
 import {uint64} from "../../../src/types";
+import {config} from "../../../src/config/presets/mainnet";
+import {isPlainObject, mostFrequent} from "../../../src/util/objects";
 
 
 describe('Objects helper', () => {
@@ -33,7 +34,7 @@ describe('Objects helper', () => {
     array.push(obj3);
     array.push(obj1);
     array.push(obj3);
-    const result = mostFrequent<uint64>(array, uint64);
+    const result = mostFrequent<uint64>(array, config.types.uint64);
     expect(result).to.be.deep.equal([obj1, obj3]);
   });
 

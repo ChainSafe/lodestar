@@ -3,7 +3,7 @@ import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 
-import {MAX_PROPOSER_SLASHINGS, SLOTS_PER_EPOCH} from "../../../../../../src/constants";
+import {config} from "../../../../../../src/config/presets/mainnet";
 import {processProposerSlashing} from "../../../../../../src/chain/stateTransition/block/operations";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
 
@@ -36,9 +36,9 @@ describe('process block - proposer slashings', function () {
     const state = generateState({validatorRegistry: [generateValidator()]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
-    proposerSlashing.header2.slot = SLOTS_PER_EPOCH + 1;
+    proposerSlashing.header2.slot = config.params.SLOTS_PER_EPOCH + 1;
     try {
-      processProposerSlashing(state, proposerSlashing);
+      processProposerSlashing(config, state, proposerSlashing);
       expect.fail();
     } catch (e) {
     }
@@ -50,7 +50,7 @@ describe('process block - proposer slashings', function () {
     proposerSlashing.header1.slot = 1;
     proposerSlashing.header2.slot = proposerSlashing.header1.slot;
     try {
-      processProposerSlashing(state, proposerSlashing);
+      processProposerSlashing(config, state, proposerSlashing);
       expect.fail();
     } catch (e) {
     }
@@ -63,7 +63,7 @@ describe('process block - proposer slashings', function () {
     proposerSlashing.header2.slot = 2;
     isSlashableValidatorStub.returns(false);
     try {
-      processProposerSlashing(state, proposerSlashing);
+      processProposerSlashing(config, state, proposerSlashing);
       expect.fail();
     } catch (e) {
       expect(isSlashableValidatorStub.calledOnce).to.be.true;
@@ -78,7 +78,7 @@ describe('process block - proposer slashings', function () {
     isSlashableValidatorStub.returns(true);
     blsStub.verify.returns(false);
     try {
-      processProposerSlashing(state, proposerSlashing);
+      processProposerSlashing(config, state, proposerSlashing);
       expect.fail();
     } catch (e) {
       expect(blsStub.verify.calledOnce).to.be.true;
@@ -102,7 +102,7 @@ describe('process block - proposer slashings', function () {
       .withArgs(sinon.match.any, sinon.match.any, proposerSlashing.header2.signature, sinon.match.any)
       .returns(false);
     try {
-      processProposerSlashing(state, proposerSlashing);
+      processProposerSlashing(config, state, proposerSlashing);
       expect.fail();
     } catch (e) {
       expect(blsStub.verify.calledTwice).to.be.true;
@@ -119,7 +119,7 @@ describe('process block - proposer slashings', function () {
     isSlashableValidatorStub.returns(true);
     blsStub.verify.returns(true);
     try {
-      processProposerSlashing(state, proposerSlashing);
+      processProposerSlashing(config, state, proposerSlashing);
       expect(isSlashableValidatorStub.calledOnce).to.be.true;
       expect(slashValidatorStub.calledOnce).to.be.true;
       expect(blsStub.verify.calledTwice).to.be.true;

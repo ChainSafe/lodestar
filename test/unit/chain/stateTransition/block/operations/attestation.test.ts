@@ -2,6 +2,7 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
+import {config} from "../../../../../../src/config/presets/mainnet";
 import {Crosslink} from "../../../../../../src/types";
 import {processAttestation} from "../../../../../../src/chain/stateTransition/block/operations";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
@@ -13,7 +14,6 @@ import {
 
 import {generateState} from "../../../../../utils/state";
 import {generateEmptyBlock} from "../../../../../utils/block";
-import {MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "../../../../../../src/constants";
 import {generateEmptyAttestation} from "../../../../../utils/attestation";
 
 describe('process block - attestation', function () {
@@ -37,29 +37,29 @@ describe('process block - attestation', function () {
   });
 
   it('fail to process attestation - exceeds inclusion delay', function () {
-    const state = generateState({slot: MIN_ATTESTATION_INCLUSION_DELAY + 1});
+    const state = generateState({slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1});
     const attestation = generateEmptyAttestation();
     attestationSlotStub.returns(0);
-    expect(() => processAttestation(state, attestation)).to.throw;
+    expect(() => processAttestation(config, state, attestation)).to.throw;
   });
 
   it('fail to process attestation - future epoch', function () {
     const state = generateState({slot: 0});
     const attestation = generateEmptyAttestation();
-    attestationSlotStub.returns(SLOTS_PER_EPOCH + 1);
-    expect(() => processAttestation(state, attestation)).to.throw;
+    attestationSlotStub.returns(config.params.SLOTS_PER_EPOCH + 1);
+    expect(() => processAttestation(config, state, attestation)).to.throw;
   });
 
   it('fail to process attestation - crosslink not zerohash', function () {
     const state = generateState({slot: 0});
     const attestation = generateEmptyAttestation();
     attestation.data.crosslink.dataRoot = Buffer.alloc(32, 1);
-    attestationSlotStub.returns(SLOTS_PER_EPOCH + 1);
-    expect(() => processAttestation(state, attestation)).to.throw;
+    attestationSlotStub.returns(config.params.SLOTS_PER_EPOCH + 1);
+    expect(() => processAttestation(config, state, attestation)).to.throw;
   });
 
   it('should process attestation - currentEpoch === data.targetEpoch', function () {
-    const state = generateState({slot: MIN_ATTESTATION_INCLUSION_DELAY + 1, currentJustifiedEpoch: 1});
+    const state = generateState({slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1, currentJustifiedEpoch: 1});
     currentEpochStub.returns(1);
     previousEpochStub.returns(0);
     validateIndexedAttestationStub.returns(true);
@@ -69,16 +69,16 @@ describe('process block - attestation', function () {
     attestation.data.sourceEpoch = 1;
     attestation.data.sourceRoot = state.currentJustifiedRoot;
     attestation.data.crosslink.parentRoot =
-      hashTreeRoot(state.currentCrosslinks[attestation.data.crosslink.shard], Crosslink);
+      hashTreeRoot(state.currentCrosslinks[attestation.data.crosslink.shard], config.types.Crosslink);
     attestation.data.crosslink.endEpoch = 1;
     attestationSlotStub.returns(1);
-    expect(processAttestation(state, attestation)).to.not.throw;
+    expect(processAttestation(config, state, attestation)).to.not.throw;
     expect(state.currentEpochAttestations.length).to.be.equal(1);
     expect(state.previousEpochAttestations.length).to.be.equal(0);
   });
 
   it('should process attestation - previousEpoch === data.targetEpoch', function () {
-    const state = generateState({slot: MIN_ATTESTATION_INCLUSION_DELAY + 1, currentJustifiedEpoch: 1});
+    const state = generateState({slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1, currentJustifiedEpoch: 1});
     currentEpochStub.returns(1);
     previousEpochStub.returns(0);
     validateIndexedAttestationStub.returns(true);
@@ -88,9 +88,9 @@ describe('process block - attestation', function () {
     attestation.data.sourceEpoch = 0;
     attestation.data.sourceRoot = state.previousJustifiedRoot;
     attestation.data.crosslink.parentRoot =
-      hashTreeRoot(state.currentCrosslinks[attestation.data.crosslink.shard], Crosslink);
+      hashTreeRoot(state.currentCrosslinks[attestation.data.crosslink.shard], config.types.Crosslink);
     attestationSlotStub.returns(1);
-    expect(processAttestation(state, attestation)).to.not.throw;
+    expect(processAttestation(config, state, attestation)).to.not.throw;
     expect(state.currentEpochAttestations.length).to.be.equal(0);
     expect(state.previousEpochAttestations.length).to.be.equal(1);
   });

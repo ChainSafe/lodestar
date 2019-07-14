@@ -1,5 +1,6 @@
 import sinon from "sinon";
 
+import {config} from "../../../../src/config/presets/mainnet";
 import * as dbKeys from "../../../../src/db/schema";
 import {Bucket} from "../../../../src/db/schema";
 import {LevelDbController} from "../../../../src/db/controller";
@@ -24,6 +25,7 @@ describe('beacon db api', function () {
     encodeKeyStub = sandbox.stub(dbKeys, 'encodeKey');
     dbStub = sandbox.createStubInstance(LevelDbController);
     validatorDB = new ValidatorDB({
+      config,
       controller: dbStub
     });
   });
@@ -34,7 +36,7 @@ describe('beacon db api', function () {
 
   it('get validator block', async function () {
     encodeKeyStub.returns('blockKey');
-    dbStub.get.withArgs('blockKey').resolves(serialize(generateEmptyBlock(), BeaconBlock));
+    dbStub.get.withArgs('blockKey').resolves(serialize(generateEmptyBlock(), config.types.BeaconBlock));
     await validatorDB.getBlock(1);
     expect(encodeKeyStub.withArgs(Bucket.lastProposedBlock, 1).calledOnce).to.be.true;
     expect(dbStub.get.withArgs('blockKey').calledOnce).to.be.true;
@@ -50,7 +52,7 @@ describe('beacon db api', function () {
 
   it('get validator attestation', async function () {
     encodeKeyStub.returns('attestationKey');
-    dbStub.search.resolves([serialize(generateEmptyAttestation(), Attestation)]);
+    dbStub.search.resolves([serialize(generateEmptyAttestation(), config.types.Attestation)]);
     await validatorDB.getAttestations(1, {gt: 0, lt: 3});
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, "10").calledOnce).to.be.true;
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, "13").calledOnce).to.be.true;
@@ -59,7 +61,7 @@ describe('beacon db api', function () {
 
   it('get validator attestation - just lower constraint', async function () {
     encodeKeyStub.returns('attestationKey');
-    dbStub.search.resolves([serialize(generateEmptyAttestation(), Attestation)]);
+    dbStub.search.resolves([serialize(generateEmptyAttestation(), config.types.Attestation)]);
     await validatorDB.getAttestations(1, {gt: 0});
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, "10").calledOnce).to.be.true;
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, "1" + Number.MAX_SAFE_INTEGER).calledOnce).to.be.true;
@@ -85,6 +87,5 @@ describe('beacon db api', function () {
       ).calledOnce
     ).to.be.true;
   });
-
 
 });

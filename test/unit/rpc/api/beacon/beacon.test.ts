@@ -1,8 +1,11 @@
 import sinon from "sinon";
+import {expect} from "chai";
+
+import {config} from "../../../../../src/config/presets/mainnet";
 import {BeaconApi} from "../../../../../src/rpc/api/beacon";
 import {BeaconDB} from "../../../../../src/db/api";
 import {BeaconChain} from "../../../../../src/chain";
-import {expect} from "chai";
+
 import {generateState} from "../../../../utils/state";
 import {generateEmptyBlock} from "../../../../utils/block";
 
@@ -16,6 +19,7 @@ describe('beacon rpc api', function () {
     dbStub = sandbox.createStubInstance(BeaconDB);
     chainStub = sandbox.createStubInstance(BeaconChain);
     beaconApi = new BeaconApi({}, {
+      config,
       chain: chainStub,
       db: dbStub
     });

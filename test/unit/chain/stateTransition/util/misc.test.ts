@@ -1,12 +1,11 @@
 import BN from "bn.js";
 import { assert } from "chai";
 
-import { Fork } from "../../../../../src/types";
+import {config} from "../../../../../src/config/presets/mainnet";
+import {Fork} from "../../../../../src/types";
 import {
   GENESIS_SLOT,
-  SLOTS_PER_HISTORICAL_ROOT,
 } from "../../../../../src/constants";
-
 import {
   getBeaconProposerIndex,
   getBlockRootAtSlot,
@@ -28,17 +27,17 @@ describe("getDomain", () => {
   state.fork = fork;
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
-    const result = getDomain(state, 4, 8);
+    const result = getDomain(config, state, 4, 8);
     assert.equal(result.toString('hex'), '0000000400000004');
   });
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
-    const result = getDomain(state, 5, 13);
+    const result = getDomain(config, state, 5, 13);
     assert.equal(result.toString('hex'), '0000000500000005');
   });
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
-    const result = getDomain(state, 5, 12);
+    const result = getDomain(config, state, 5, 12);
     assert.equal(result.toString('hex'), '0000000500000005');
   });
 });
@@ -47,18 +46,18 @@ describe("getBlockRoot", () => {
   it("should return first block root for genesis slot", () => {
     const state = generateState({
       slot:  GENESIS_SLOT + 1,
-      latestBlockRoots: Array.from({ length: SLOTS_PER_HISTORICAL_ROOT }, () => Buffer.from([0xAB])),
+      latestBlockRoots: Array.from({ length: config.params.SLOTS_PER_HISTORICAL_ROOT }, () => Buffer.from([0xAB])),
     });
-    const res = getBlockRoot(state, GENESIS_SLOT);
+    const res = getBlockRoot(config, state, GENESIS_SLOT);
     assert((new BN(res)).eq(new BN(0xAB)),
       `got: ${new BN(res)}, expected: ${0xAB}`);
   });
   it("should fail if slot is current slot", () => {
     const state = generateState({ slot: GENESIS_SLOT });
-    assert.throws(() => getBlockRoot(state, GENESIS_SLOT), "");
+    assert.throws(() => getBlockRoot(config, state, GENESIS_SLOT), "");
   });
   it("should fail if slot is not within SLOTS_PER_HISTORICAL_ROOT of current slot", () => {
-    const state = generateState({ slot: GENESIS_SLOT + SLOTS_PER_HISTORICAL_ROOT + 1 });
-    assert.throws(() => getBlockRoot(state, GENESIS_SLOT), "");
+    const state = generateState({ slot: GENESIS_SLOT + config.params.SLOTS_PER_HISTORICAL_ROOT + 1 });
+    assert.throws(() => getBlockRoot(config, state, GENESIS_SLOT), "");
   });
 });

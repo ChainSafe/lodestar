@@ -2,6 +2,7 @@ import {expect} from "chai";
 import sinon from "sinon";
 import BN from "bn.js";
 
+import {config} from "../../../src/config/presets/mainnet";
 import {Method} from "../../../src/constants";
 import {SyncRpc} from "../../../src/sync/rpc";
 import {ReputationStore} from "../../../src/sync/reputation";
@@ -30,15 +31,17 @@ describe("[sync] rpc", () => {
   let rpcA: SyncRpc,netA: Libp2pNetwork, repsA: ReputationStore;
   let rpcB: SyncRpc, netB: Libp2pNetwork, repsB: ReputationStore;
   beforeEach(async () => {
-    netA = new Libp2pNetwork(opts, {libp2p: createNode(multiaddr), logger: logger});
-    netB = new Libp2pNetwork(opts, {libp2p: createNode(multiaddr), logger: logger});
+    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger});
+    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger});
     await Promise.all([
       netA.start(),
       netB.start(),
     ]);
     repsA = new ReputationStore();
     rpcA = new SyncRpc({}, {
+      config,
       db: new BeaconDB({
+        config,
         controller: sandbox.createStubInstance(LevelDbController),
       }),
       chain: new MockBeaconChain({
@@ -52,7 +55,9 @@ describe("[sync] rpc", () => {
     });
     repsB = new ReputationStore();
     rpcB = new SyncRpc({}, {
+      config,
       db: new BeaconDB({
+        config,
         controller: sandbox.createStubInstance(LevelDbController),
       }),
       chain: new MockBeaconChain({
