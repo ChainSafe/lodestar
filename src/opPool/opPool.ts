@@ -9,12 +9,14 @@ import {BeaconBlock} from "../types";
 import {BeaconChain} from "../chain";
 import {BeaconDB} from "../db";
 import {IOpPoolOptions} from "./options";
-import {AttestationOperations} from "./modules";
-import {VoluntaryExitOperations} from "./modules/voluntaryExit";
-import {DepositsOperations} from "./modules/deposit";
-import {TransferOperations} from "./modules/transfer";
-import {ProposerSlashingOperations} from "./modules/proposerSlashing";
-import {AttesterSlashingOperations} from "./modules/attesterSlashing";
+import {
+  AttestationOperations,
+  AttesterSlashingOperations,
+  DepositsOperations,
+  ProposerSlashingOperations,
+  TransferOperations,
+  VoluntaryExitOperations
+} from "./modules";
 
 /**
  * Pool of operations not yet included on chain
