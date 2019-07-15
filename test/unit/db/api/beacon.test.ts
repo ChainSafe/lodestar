@@ -361,7 +361,7 @@ describe('beacon db api', function() {
     expect(encodeKeyStub.withArgs(Bucket.transfer, sinon.match.any).calledOnce).to.be.true;
   });
 
-  it('test delete voluntary exists', async function() {
+  it('test delete transfers', async function() {
     encodeKeyStub.returns('transferKey');
     dbStub.batchDelete.resolves({});
     await beaconDB.deleteTransfers([generateEmptyTransfer(), generateEmptyTransfer()]);
@@ -468,8 +468,8 @@ describe('beacon db api', function() {
   });
 
   it('test get deposits', async function() {
-    encodeKeyStub.withArgs(Bucket.genesisDeposit, Buffer.alloc(0)).returns('lower');
-    encodeKeyStub.withArgs(Bucket.genesisDeposit + 1, Buffer.alloc(0)).returns('higher');
+    encodeKeyStub.withArgs(Bucket.deposit, Buffer.alloc(0)).returns('lower');
+    encodeKeyStub.withArgs(Bucket.deposit + 1, Buffer.alloc(0)).returns('higher');
     dbStub.search.resolves([serialize(generateDeposit(), config.types.Deposit)]);
     const result = await beaconDB.getDeposits();
     expect(result.length).to.be.equal(1);
@@ -479,9 +479,9 @@ describe('beacon db api', function() {
           .and(sinon.match.has('gt', 'lower'))
       ).calledOnce
     ).to.be.true;
-    expect(encodeKeyStub.withArgs(Bucket.genesisDeposit, Buffer.alloc(0)).calledOnce).to.be.true;
+    expect(encodeKeyStub.withArgs(Bucket.deposit, Buffer.alloc(0)).calledOnce).to.be.true;
     expect(
-      encodeKeyStub.withArgs(Bucket.genesisDeposit + 1, Buffer.alloc(0)).calledOnce
+      encodeKeyStub.withArgs(Bucket.deposit + 1, Buffer.alloc(0)).calledOnce
     ).to.be.true;
   });
 
@@ -495,19 +495,19 @@ describe('beacon db api', function() {
         sinon.match.any
       ).calledOnce
     ).to.be.true;
-    expect(encodeKeyStub.withArgs(Bucket.genesisDeposit, sinon.match.any).calledOnce).to.be.true;
+    expect(encodeKeyStub.withArgs(Bucket.deposit, sinon.match.any).calledOnce).to.be.true;
   });
 
   it('test delete deposits', async function() {
     encodeKeyStub.returns('genesisDepositKey');
     let argForBatchDelete = ['genesisDepositKey','genesisDepositKey'];
     dbStub.batchDelete.resolves({});
-    await beaconDB.deleteDeposits();
+    await beaconDB.deleteDeposits(2);
     expect(
-      encodeKeyStub.withArgs(Bucket.genesisDeposit, sinon.match.any).calledOnce
+      encodeKeyStub.withArgs(Bucket.deposit, sinon.match.any).calledTwice
     ).to.be.true;
     expect(
-      dbStub.batchDelete.calledOnce
+      dbStub.batchDelete.withArgs(argForBatchDelete).calledOnce
     ).to.be.true;
   });
 

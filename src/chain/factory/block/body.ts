@@ -20,10 +20,10 @@ export async function assembleBody(
   randao: bytes96
 ): Promise<BeaconBlockBody> {
   const [proposerSlashings, attesterSlashings, attestations, voluntaryExits, eth1Data] = await Promise.all([
-    opPool.getProposerSlashings().then(value => value.slice(0, config.params.MAX_PROPOSER_SLASHINGS)),
-    opPool.getAttesterSlashings().then(value => value.slice(0, config.params.MAX_ATTESTER_SLASHINGS)),
-    opPool.getAttestations().then(value => value.slice(0, config.params.MAX_ATTESTATIONS)),
-    opPool.getVoluntaryExits().then(value => value.slice(0, config.params.MAX_VOLUNTARY_EXITS)),
+    opPool.proposerSlashings.getAll().then(value => value.slice(0, config.params.MAX_PROPOSER_SLASHINGS)),
+    opPool.attesterSlashings.getAll().then(value => value.slice(0, config.params.MAX_ATTESTER_SLASHINGS)),
+    opPool.attestations.getAll().then(value => value.slice(0, config.params.MAX_ATTESTATIONS)),
+    opPool.voluntaryExits.getAll().then(value => value.slice(0, config.params.MAX_VOLUNTARY_EXITS)),
     bestVoteData(config, currentState, eth1)
   ]);
   //requires new eth1 data so it has to be done after above operations

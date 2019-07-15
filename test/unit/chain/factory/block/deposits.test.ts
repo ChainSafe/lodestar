@@ -1,8 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
 import {hashTreeRoot} from "@chainsafe/ssz";
-
-import {Deposit, DepositData} from "../../../../../src/types";
 import {config} from "../../../../../src/config/presets/mainnet";
 import {ZERO_HASH} from "../../../../../src/constants";
 import {OpPool} from "../../../../../src/opPool";
@@ -10,6 +8,7 @@ import {ProgressiveMerkleTree, verifyMerkleBranch} from "../../../../../src/util
 import {generateDeposits} from "../../../../../src/chain/factory/block/deposits";
 import {generateState} from "../../../../utils/state";
 import {generateDeposit} from "../../../../utils/deposit";
+import {DepositsOperations} from "../../../../../src/opPool/modules";
 
 describe('blockAssembly - deposits', function() {
 
@@ -19,6 +18,7 @@ describe('blockAssembly - deposits', function() {
 
   beforeEach(() => {
     opPool = sandbox.createStubInstance(OpPool);
+    opPool.deposits = sandbox.createStubInstance(DepositsOperations);
   });
 
   afterEach(() => {
@@ -43,7 +43,7 @@ describe('blockAssembly - deposits', function() {
 
   it('return deposits with valid proofs', async function() {
     const deposits = [generateDeposit(), generateDeposit()];
-    opPool.getDeposits.resolves(deposits);
+    opPool.deposits.getAll.resolves(deposits);
     const tree = ProgressiveMerkleTree.empty(4);
     deposits.forEach((d, index) => {
       tree.add(index, hashTreeRoot(d.data, config.types.DepositData));

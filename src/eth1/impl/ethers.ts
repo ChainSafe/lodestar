@@ -11,7 +11,6 @@ import {bytes32, Deposit, Eth1Data, Gwei, number64} from "../../types";
 import {IBeaconConfig} from "../../config";
 import {IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
-import {BeaconDB} from "../../db";
 import {Block, Log} from "ethers/providers";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 import {ILogger} from "../../logger";
@@ -72,7 +71,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     } else {
       const pastDeposits = await this.getContractDeposits(this.opts.depositContract.deployedAt);
       await Promise.all(pastDeposits.map((pastDeposit, index) => {
-        return this.opPool.receiveDeposit(index, pastDeposit);
+        return this.opPool.deposits.receive(index, pastDeposit);
       }));
       this.provider.on('block', this.processBlockHeadUpdate.bind(this));
       this.contract.on('Deposit', this.processDepositLog.bind(this));
@@ -124,7 +123,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
       }
       //after genesis stop storing in genesisDeposit bucket
       if (!this.genesisBlockHash) {
-        await this.opPool.receiveDeposit(index, deposit);
+        await this.opPool.deposits.receive(index, deposit);
       }
       this._depositCount++;
       this.emit('deposit', deposit);
@@ -182,7 +181,8 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
   }
 
   private async genesisDeposits(depositCount: number64): Promise<Deposit[]> {
-    const deposits = await this.opPool.getDeposits();
+    //TODO: fetch only required
+    const deposits = await this.opPool.deposits.getAll();
     return deposits.slice(0, depositCount);
   }
 

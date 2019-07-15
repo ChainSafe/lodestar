@@ -2,7 +2,14 @@ import sinon from "sinon";
 import {expect} from "chai";
 
 import {config} from "../../../../../src/config/presets/mainnet";
-import {OpPool} from "../../../../../src/opPool";
+import {
+  AttestationOperations,
+  DepositsOperations,
+  OpPool,
+  ProposerSlashingOperations,
+  TransferOperations,
+  VoluntaryExitOperations
+} from "../../../../../src/opPool";
 import {assembleBody} from "../../../../../src/chain/factory/block/body";
 import * as depositUtils from "../../../../../src/chain/factory/block/deposits";
 import * as eth1DataAssembly from "../../../../../src/chain/factory/block/eth1Data";
@@ -18,10 +25,17 @@ describe('blockAssembly - body', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let opPool, eth1, generateDepositsStub, bestVoteStub;
+  let opPool: OpPool, eth1, generateDepositsStub, bestVoteStub;
 
   beforeEach(() => {
-    opPool = sandbox.createStubInstance(OpPool);
+    opPool = {
+      attestations: sandbox.createStubInstance(AttestationOperations),
+      voluntaryExits: sandbox.createStubInstance(VoluntaryExitOperations),
+      deposits: sandbox.createStubInstance(DepositsOperations),
+      transfers: sandbox.createStubInstance(TransferOperations),
+      proposerSlashings: sandbox.createStubInstance(ProposerSlashingOperations),
+      attesterSlashings: sandbox.createStubInstance(AttestationOperations),
+    } as unknown as OpPool;
     generateDepositsStub = sandbox.stub(depositUtils, "generateDeposits");
     eth1 = sandbox.createStubInstance(EthersEth1Notifier);
     bestVoteStub = sandbox.stub(eth1DataAssembly, "bestVoteData");
@@ -32,10 +46,14 @@ describe('blockAssembly - body', function () {
   });
 
   it('should generate block body', async function() {
-    opPool.getProposerSlashings.resolves([generateEmptyProposerSlashing()]);
-    opPool.getAttesterSlashings.resolves([generateEmptyAttesterSlashing()]);
-    opPool.getAttestations.resolves([generateEmptyAttestation()]);
-    opPool.getVoluntaryExits.resolves([generateEmptyVoluntaryExit()]);
+    // @ts-ignore
+    opPool.proposerSlashings.getAll.resolves([generateEmptyProposerSlashing()]);
+    // @ts-ignore
+    opPool.attesterSlashings.getAll.resolves([generateEmptyAttesterSlashing()]);
+    // @ts-ignore
+    opPool.attestations.getAll.resolves([generateEmptyAttestation()]);
+    // @ts-ignore
+    opPool.voluntaryExits.getAll.resolves([generateEmptyVoluntaryExit()]);
     generateDepositsStub.resolves([generateDeposit()]);
     bestVoteStub.resolves([]);
     const result = await assembleBody(
@@ -58,10 +76,14 @@ describe('blockAssembly - body', function () {
   });
 
   it('should generate block body with max respective field lengths', async function() {
-    opPool.getProposerSlashings.resolves(new Array(config.params.MAX_PROPOSER_SLASHINGS + 1).map(generateEmptyProposerSlashing));
-    opPool.getAttesterSlashings.resolves(new Array(config.params.MAX_ATTESTER_SLASHINGS + 1).map(generateEmptyAttesterSlashing));
-    opPool.getAttestations.resolves(new Array(config.params.MAX_ATTESTATIONS + 1).map(generateEmptyAttestation));
-    opPool.getVoluntaryExits.resolves(new Array(config.params.MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit));
+    // @ts-ignore
+    opPool.proposerSlashings.getAll.resolves(new Array(config.params.MAX_PROPOSER_SLASHINGS + 1).map(generateEmptyProposerSlashing));
+    // @ts-ignore
+    opPool.attesterSlashings.getAll.resolves(new Array(config.params.MAX_ATTESTER_SLASHINGS + 1).map(generateEmptyAttesterSlashing));
+    // @ts-ignore
+    opPool.attestations.getAll.resolves(new Array(config.params.MAX_ATTESTATIONS + 1).map(generateEmptyAttestation));
+    // @ts-ignore
+    opPool.voluntaryExits.getAll.resolves(new Array(config.params.MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit));
     generateDepositsStub.resolves([generateDeposit()]);
     bestVoteStub.resolves([]);
     const result = await assembleBody(

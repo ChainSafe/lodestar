@@ -53,7 +53,7 @@ export class RegularSync {
     }
     // send attestation on to other modules
     await Promise.all([
-      this.opPool.receiveAttestation(attestation),
+      this.opPool.attestations.receive(attestation),
       this.chain.receiveAttestation(attestation),
     ]);
   }
