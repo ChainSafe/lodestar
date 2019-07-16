@@ -15,7 +15,7 @@ import {
   ValidatorIndex
 } from "../../../../src/types";
 
-import {getEmptyBlock} from "../../../../src/chain/genesis";
+import {getEmptyBlock} from "../../../../src/chain/genesis/genesis";
 
 import {IValidatorApi} from "../../../../src/rpc/api/validator";
 import {CommitteeAssignment} from "../../../../src/validator/types";

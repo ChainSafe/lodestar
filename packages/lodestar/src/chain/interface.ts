@@ -24,15 +24,6 @@ export interface IBeaconChain extends EventEmitter {
   stop(): Promise<void>;
 
   /**
-   * Initialize the beacon chain with a genesis beacon state / block
-   */
-  initializeChain(
-    genesisTime: number64,
-    genesisDeposits: Deposit[],
-    genesisEth1Data: Eth1Data
-  ): Promise<void>;
-
-  /**
    * Add attestation to the fork-choice rule
    */
   receiveAttestation(attestation: Attestation): Promise<void>;
