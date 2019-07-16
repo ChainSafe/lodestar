@@ -59,9 +59,9 @@ export class Sync extends EventEmitter {
   }
 
   public async isSynced(): Promise<boolean> {
-    if (!await this.eth1.isAfterEth2Genesis()) {
-      return true;
-    }
+    // if (!await this.eth1.isAfterEth2Genesis()) {
+    //   return true;
+    // }
     try {
       const bestSlot = await this.db.getChainHeadSlot();
       const bestSlotByPeers = this.network.getPeers()

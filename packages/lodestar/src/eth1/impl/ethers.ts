@@ -61,7 +61,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     }
     this.logger.info("Fetching old deposits...");
     this.provider.on('block', this.processBlockHeadUpdate.bind(this));
-    this.contract.on('Deposit', this.processDepositLog.bind(this));
+    this.contract.on('DepositEvent', this.processDepositLog.bind(this));
     this.logger.info(
       `Started listening on eth1 events on chain ${(await this.provider.getNetwork()).chainId}`
     );
@@ -71,7 +71,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   public async stop(): Promise<void> {
     this.provider.removeAllListeners('block');
-    this.contract.removeAllListeners('Deposit');
+    this.contract.removeAllListeners('DepositEvent');
   }
 
   public async processBlockHeadUpdate(blockNumber): Promise<void> {
@@ -188,7 +188,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     signature: string,
   ): Deposit {
     return {
-      proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH + 1}, () => Buffer.alloc(32)),
+      proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH}, () => Buffer.alloc(32)),
       data: {
         pubkey: Buffer.from(pubkey.slice(2), 'hex'),
         withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), 'hex'),

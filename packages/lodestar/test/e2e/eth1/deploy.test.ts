@@ -27,7 +27,7 @@ describe("Eth1Notifier - using deployed contract", () => {
 
   beforeEach(async function () {
     this.timeout(0);
-    logger.silent(true);
+    logger.silent(false);
     // deploy deposit contract
     eth1Network = new PrivateEth1Network({
       host: '127.0.0.1',
@@ -36,8 +36,7 @@ describe("Eth1Notifier - using deployed contract", () => {
     {
       logger: logger
     });
-    await eth1Network.start();
-    depositContractAddress = await eth1Network.deployDepositContract();
+    depositContractAddress = await eth1Network.start();
     provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:34569');
     provider.pollingInterval = 1;
     provider.polling = true;
@@ -77,25 +76,6 @@ describe("Eth1Notifier - using deployed contract", () => {
     await wallet.createValidatorDeposit(depositContractAddress, ethers.utils.parseEther('32.0'));
 
     assert(cb.calledOnce, "deposit event did not fire");
-  });
-
-  it("should process a Eth2Genesis log", async function () {
-    this.timeout(0);
-
-    const cb = sinon.spy();
-    eth1Notifier.on('eth2genesis', cb);
-    await Promise.all(
-      eth1Network
-        .accounts()
-        .map((account) =>
-          (new Eth1Wallet(account, defaults.depositContract.abi, config, logger, provider))
-            .createValidatorDeposit(
-              depositContractAddress,
-              ethers.utils.parseEther('32.0')
-            )
-        )
-    );
-    assert(cb.called, "eth2genesis event did not fire");
   });
 
 });

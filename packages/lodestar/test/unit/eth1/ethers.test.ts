@@ -94,7 +94,7 @@ describe("Eth1Notifier", () => {
       });
       await notifier.start();
       expect(stubProvider.on.withArgs('block', sinon.match.any).calledOnce).to.be.true;
-      expect(stubContract.on.withArgs('Deposit', sinon.match.any).called).to.be.true;
+      expect(stubContract.on.withArgs('DepositEvent', sinon.match.any).called).to.be.true;
     }
   );
 
@@ -114,7 +114,7 @@ describe("Eth1Notifier", () => {
       });
       contract.removeAllListeners.returns(null);
       await notifier.stop();
-      expect(contract.removeAllListeners.withArgs('Deposit').calledOnce).to.be.true;
+      expect(contract.removeAllListeners.withArgs('DepositEvent').calledOnce).to.be.true;
     }
   );
 
