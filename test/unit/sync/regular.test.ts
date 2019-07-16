@@ -9,10 +9,6 @@ import {RegularSync} from "../../../src/sync/regular";
 import {generateState} from "../../utils/state";
 import {generateEmptyBlock} from "../../utils/block";
 import {generateEmptyAttestation} from "../../utils/attestation";
-import {slotToEpoch} from "../../../src/chain/stateTransition/util";
-import {BeaconBlock} from "../../../src/sszTypes/generators/block";
-import {Attestation} from "../../../src/sszTypes/generators/operations";
-import * as hashTreeRoot  from "@chainsafe/ssz";
 import {config} from "../../../src/config/presets/mainnet";
 
 describe("syncing", function () {
