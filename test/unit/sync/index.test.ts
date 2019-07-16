@@ -10,6 +10,7 @@ import {WinstonLogger} from "../../../src/logger";
 import {RegularSync} from "../../../src/sync/regular";
 import {Sync} from "../../../src/sync";
 import PeerId from "peer-id";
+import {config} from "../../../src/config/presets/mainnet";
 
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();
@@ -28,7 +29,9 @@ describe("syncing", function () {
     syncerStub = sandbox.createStubInstance(RegularSync);
     logger.silent(true);
 
+
     sync = new Sync({}, {
+      config,
       chain: chainStub,
       db: dbStub,
       eth1: eth1Stub,

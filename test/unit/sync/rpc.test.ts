@@ -23,6 +23,7 @@ import {ReputationStore} from "../../../src/sync/reputation";
 import PeerInfo from "peer-info";
 import PeerId from "peer-id";
 import {generateEmptyBlock} from "../../utils/block";
+import {config} from "../../../src/config/presets/mainnet";
 
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();
@@ -38,6 +39,7 @@ describe("syncing", function () {
     logger.silent(true);
 
     syncRpc = new SyncRpc({}, {
+      config,
       db: dbStub,
       chain: chainStub,
       network: networkStub,

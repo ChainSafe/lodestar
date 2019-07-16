@@ -2,7 +2,7 @@ import sinon from "sinon";
 import {expect} from  "chai";
 import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
-import {OpPool} from "../../../src/opPool";
+import {OpPool, AttestationOperations} from "../../../src/opPool";
 import {BeaconDB} from "../../../src/db/api";
 import {WinstonLogger} from "../../../src/logger";
 import {RegularSync} from "../../../src/sync/regular";
@@ -10,26 +10,29 @@ import {generateState} from "../../utils/state";
 import {generateEmptyBlock} from "../../utils/block";
 import {generateEmptyAttestation} from "../../utils/attestation";
 import {slotToEpoch} from "../../../src/chain/stateTransition/util";
-
+import {BeaconBlock} from "../../../src/sszTypes/generators/block";
+import {Attestation} from "../../../src/sszTypes/generators/operations";
+import * as hashTreeRoot  from "@chainsafe/ssz";
+import {config} from "../../../src/config/presets/mainnet";
 
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();
   let regularSync: RegularSync;
-  let chainStub, networkStub, dbStub, opPool, logger;
+  let chainStub, networkStub, dbStub, opPoolStub, logger, hashTreeRootStub;
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     dbStub = sandbox.createStubInstance(BeaconDB);
-    opPool = sandbox.createStubInstance(OpPool);
+    opPoolStub = sandbox.createStubInstance(OpPool);
     logger = new WinstonLogger();
     logger.silent(true);
-
     regularSync = new RegularSync({}, {
+      config,
       db: dbStub,
       chain: chainStub,
       network: networkStub,
-      opPool: opPool,
+      opPool: opPoolStub,
       logger: logger,
     });
   });
@@ -66,13 +69,12 @@ describe("syncing", function () {
   it('should skip attestation - too old', async function () {
     let attestation = generateEmptyAttestation();
     let state = generateState();
-    state.finalizedEpoch = 128;
+    state.finalizedEpoch = 2;
     attestation.data.targetEpoch = 1;
     dbStub.hasAttestation.resolves(false);
     dbStub.getLatestState.resolves(state);
     try {
       await regularSync.receiveAttestation(attestation);
-      expect(slotToEpoch(state.finalizedEpoch)).gt(attestation.data.targetEpoch);
     }catch (e) {
       expect.fail(e.stack);
     }
@@ -81,15 +83,15 @@ describe("syncing", function () {
   it('should receive attestation', async function () {
     let attestation = generateEmptyAttestation();
     let state = generateState();
-    state.finalizedEpoch = 64;
-    attestation.data.targetEpoch = 1;
+    state.finalizedEpoch = 1;
+    attestation.data.targetEpoch = 2;
     dbStub.hasAttestation.resolves(false);
     dbStub.getLatestState.resolves(state);
-    opPool.receiveAttestation.resolves(0);
+    opPoolStub.attestations = new AttestationOperations(dbStub);
+    dbStub.setAttestation.resolves(0);
     chainStub.receiveAttestation.resolves(0);
     try {
       await regularSync.receiveAttestation(attestation);
-      expect(opPool.receiveAttestation.calledOnceWith(attestation)).to.be.true;
       expect(chainStub.receiveAttestation.calledOnceWith(attestation)).to.be.true;
     }catch (e) {
       expect.fail(e.stack);

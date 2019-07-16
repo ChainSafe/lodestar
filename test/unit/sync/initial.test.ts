@@ -10,7 +10,7 @@ import {InitialSync} from "../../../src/sync/initial";
 import {generateState} from "../../utils/state";
 import PeerInfo from "peer-info";
 import PeerId from "peer-id";
-
+import {config} from "../../../src/config/presets/mainnet";
 
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();
@@ -28,6 +28,7 @@ describe("syncing", function () {
     logger.silent(true);
 
     initialSync = new InitialSync({}, {
+      config,
       db: dbStub,
       chain: chainStub,
       rpc: rpcStub,
