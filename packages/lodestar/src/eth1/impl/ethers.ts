@@ -34,11 +34,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   private opPool: OpPool;
 
-  private genesisBlockHash: number64;
-
   private opts: EthersEth1Options;
-
-  private _depositCount: number;
 
   private logger: ILogger;
 
@@ -57,29 +53,18 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     }
     this.contract = opts.contract;
     this.opPool = opPool;
-    this._depositCount = 0;
-    this.genesisBlockHash = null;
   }
 
   public async start(): Promise<void> {
     if(!this.contract) {
       await this.initContract();
     }
-    if(await this.isAfterEth2Genesis()) {
-      this.logger.info('Eth2Genesis event exits, started listening on eth1 block updates');
-      this.provider.on('block', this.processBlockHeadUpdate.bind(this));
-    } else {
-      const pastDeposits = await this.getContractDeposits(this.opts.depositContract.deployedAt);
-      await Promise.all(pastDeposits.map((pastDeposit, index) => {
-        return this.opPool.deposits.receive(index, pastDeposit);
-      }));
-      this.provider.on('block', this.processBlockHeadUpdate.bind(this));
-      this.contract.on('Deposit', this.processDepositLog.bind(this));
-      this.contract.on('Eth2Genesis', this.processEth2GenesisLog.bind(this));
-      this.logger.info(
-        `Started listening on eth1 events on chain ${(await this.provider.getNetwork()).chainId}`
-      );
-    }
+    this.logger.info("Fetching old deposits...");
+    this.provider.on('block', this.processBlockHeadUpdate.bind(this));
+    this.contract.on('Deposit', this.processDepositLog.bind(this));
+    this.logger.info(
+      `Started listening on eth1 events on chain ${(await this.provider.getNetwork()).chainId}`
+    );
 
 
   }
@@ -87,7 +72,6 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
   public async stop(): Promise<void> {
     this.provider.removeAllListeners('block');
     this.contract.removeAllListeners('Deposit');
-    this.contract.removeAllListeners('Eth2Genesis');
   }
 
   public async processBlockHeadUpdate(blockNumber): Promise<void> {
@@ -113,63 +97,23 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
       this.logger.info(
         `Received validator deposit event index=${index}`
       );
-      if (index !== this._depositCount) {
-        this.logger.warn(
-          `Validator deposit with index=${index} received out of order. 
-          (currentCount: ${this._depositCount})`
-        );
-        // deposit processed out of order
-        return;
-      }
-      //after genesis stop storing in genesisDeposit bucket
-      if (!this.genesisBlockHash) {
-        await this.opPool.deposits.receive(index, deposit);
-      }
-      this._depositCount++;
+      await this.opPool.deposits.receive(index, deposit);
       this.emit('deposit', deposit);
     } catch (e) {
       this.logger.error(`Failed to process deposit log. Error: ${e.message}`);
     }
   }
 
-  public async processEth2GenesisLog(
-    depositRootHex: string,
-    depositCountHex: string,
-    timeHex: string,
-    event: ethers.Event
-  ): Promise<void> {
-    try {
-      const depositRoot = Buffer.from(depositRootHex.substr(2), 'hex');
-      const depositCount = Buffer.from(depositCountHex.substr(2), 'hex').readUIntLE(0, 6);
-      const time: number64 = parseInt(timeHex, 16);
-      const blockHash = Buffer.from(event.blockHash.substr(2), 'hex');
-      this.genesisBlockHash = event.blockNumber;
-      this.logger.info(`Received Eth2Genesis event. blockNumber=${event.blockNumber}, time=${time}`);
-
-      const genesisEth1Data: Eth1Data = {
-        depositRoot,
-        blockHash,
-        depositCount,
-      };
-      const genesisDeposits = await this.genesisDeposits(depositCount);
-      this.emit('eth2genesis', time, genesisDeposits, genesisEth1Data);
-    } catch (e) {
-      this.logger.error(`Failed to process genesis log. Error: ${e.message}`);
-    }
-
-  }
-
-
-  public async getContractDeposits(
+  public async processPastDeposits(
     fromBlock: string | number  = this.opts.depositContract.deployedAt,
     toBlock?: string | number
-  ): Promise<Deposit[]> {
+  ): Promise<void> {
     const logs = await this.getContractPastLogs(
       [this.contract.interface.events.Deposit.topic],
       fromBlock,
       toBlock
     );
-    return logs.map((log) => {
+    const pastDeposits = logs.map((log) => {
       const logDescription = this.contract.interface.parseLog(log);
       return this.createDeposit(
         logDescription.values.pubkey,
@@ -178,12 +122,9 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
         logDescription.values.signature,
       );
     });
-  }
-
-  private async genesisDeposits(depositCount: number64): Promise<Deposit[]> {
-    //TODO: fetch only required
-    const deposits = await this.opPool.deposits.getAll();
-    return deposits.slice(0, depositCount);
+    await Promise.all(pastDeposits.map((pastDeposit, index) => {
+      return this.opPool.deposits.receive(index, pastDeposit);
+    }));
   }
 
   public async getHead(): Promise<Block> {
@@ -195,7 +136,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
   }
 
   public async depositRoot(block?: string | number): Promise<bytes32> {
-    const depositRootHex = await this.contract.get_deposit_root({blockTag: block || 'latest'});
+    const depositRootHex = await this.contract.get_hash_tree_root({blockTag: block || 'latest'});
     return Buffer.from(depositRootHex.substr(2), 'hex');
   }
 
@@ -223,11 +164,6 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     return !(!code || code === '0x');
   }
 
-  public async isAfterEth2Genesis(): Promise<boolean> {
-    const logs = await this.getContractPastLogs([this.contract.interface.events.Eth2Genesis.topic]);
-    return logs.length > 0;
-  }
-
   private async getContractPastLogs(
     topics: string[],
     fromBlock: number64 | string = this.opts.depositContract.deployedAt,
@@ -252,7 +188,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     signature: string,
   ): Deposit {
     return {
-      proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH}, () => Buffer.alloc(32)),
+      proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH + 1}, () => Buffer.alloc(32)),
       data: {
         pubkey: Buffer.from(pubkey.slice(2), 'hex'),
         withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), 'hex'),
