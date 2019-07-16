@@ -75,15 +75,16 @@ export class BeaconNode {
       opPool: this.opPool,
       logger: this.logger
     });
+    this.opPool = new OpPool(this.conf.opPool, {
+      db: this.db,
+      chain: this.chain,
+    });
     this.chain = new BeaconChain(this.conf.chain, {
       config,
       db: this.db,
       eth1: this.eth1,
-      logger: this.logger
-    });
-    this.opPool = new OpPool(this.conf.opPool, {
-      db: this.db,
-      chain: this.chain,
+      logger: this.logger,
+      opPool: this.opPool
     });
     this.sync = new Sync(this.conf.sync, {
       config,

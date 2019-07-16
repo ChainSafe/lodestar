@@ -38,7 +38,7 @@ export interface IBeaconChainModules {
 export class BeaconChain extends EventEmitter implements IBeaconChain {
 
   public chain: string;
-  public genesisTime: number64;
+  public genesisTime: number64 = null;
   public forkChoice: LMDGHOST;
   public chainId: uint16;
   public networkId: uint64;
@@ -64,11 +64,13 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
   }
 
   public async start(): Promise<void> {
+    const state = await this.db.getLatestState();
     // if state doesn't exist in the db, the chain maybe hasn't started
-    if(!await this.db.getLatestState()) {
+    if(!state) {
       // check every block if genesis
       this.eth1.on('block', this.checkGenesis.bind(this));
     }
+    this.genesisTime = state.genesisTime;
   }
 
   public async stop(): Promise<void> {
@@ -233,5 +235,9 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     this.forkChoice.addBlock(genesisBlock.slot, blockRoot, Buffer.alloc(32));
     this.forkChoice.setJustified(blockRoot);
     this.forkChoice.setFinalized(blockRoot);
+  }
+
+  public isInitialized(): boolean {
+    return !!this.genesisTime;
   }
 }

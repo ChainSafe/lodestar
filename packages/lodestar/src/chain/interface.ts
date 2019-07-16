@@ -42,4 +42,6 @@ export interface IBeaconChain extends EventEmitter {
    * Ensure that the block is compliant with block processing validity conditions
    */
   isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean>;
+
+  isInitialized(): boolean;
 }
