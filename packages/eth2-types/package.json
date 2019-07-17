@@ -1,0 +1,40 @@
+{
+  "name": "@chainsafe/eth2-types",
+  "version": "0.1.0",
+  "description": "Eth2 type interfaces and ssz descriptors.",
+  "keywords": [
+    "eth2",
+    "beacon",
+    "serenity",
+    "types",
+    "tooling"
+  ],
+  "author": "ChainSafe Systems",
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
+  "license": "GPL-3.0",
+  "main": "lib/index.js",
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "build": "babel src -x .ts -d lib --source-maps",
+    "build:docs": "typedoc --exclude src/index.ts --out docs src",
+    "check-types": "tsc --noEmit --incremental",
+    "lint": "eslint --ext .ts src/",
+    "lint-fix": "eslint --ext .ts src/ --fix",
+    "pretest": "yarn run check-types",
+    "test:unit": "nyc mocha --colors -r ts-node/register 'test/unit/**/*.test.ts'",
+    "test": "yarn test:unit && yarn test:spec && yarn test:e2e",
+    "coverage": "codecov"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChainSafe/lodestar.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ChainSafe/lodestar/issues"
+  }
+}
