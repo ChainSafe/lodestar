@@ -51,7 +51,7 @@
     "buffer-xor": "^2.0.2",
     "commander": "^2.19.0",
     "deepmerge": "^3.2.0",
-    "es6-promisify": "^6.0.1",
+    "es6-promisify": "5.0.0",
     "ethers": "^4.0.27",
     "interface-connection": "^0.3.3",
     "level": "^5.0.1",
