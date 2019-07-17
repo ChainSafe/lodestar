@@ -8,7 +8,7 @@ import {
   FullSSZType,
   Type,
 } from "./types";
-import { assertValidValue } from "./assertValidValue";
+import { _assertValidValue } from "./assertValidValue";
 import { parseType } from "./util/types";
 
 
@@ -58,7 +58,7 @@ import { parseType } from "./util/types";
  */
 export function clone(value: any, type: AnySSZType): boolean {
   const _type = parseType(type);
-  assertValidValue(value, _type);
+  _assertValidValue(value, _type);
   return _clone(value, _type);
 }
 

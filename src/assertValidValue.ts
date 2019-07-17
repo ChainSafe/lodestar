@@ -4,13 +4,47 @@ import BN from "bn.js";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 
 import {
+  AnySSZType,
   FullSSZType,
   Type,
 } from "./types";
 
+import {parseType} from "./util/types";
+
+
+/**
+ * Assert that value is valid for the type.
+ *
+ * Throws an [[Error]] if the value is invalid.
+ *
+ * ```typescript
+ * const myDataType: SimpleContainerType = {
+ *   fields: [
+ *     ["a", "uint16"],
+ *     ["b", "bool"],
+ *     ["c", "bytes96"],
+ *   ],
+ * };
+ *
+ * assertValidValue({
+ *   a: 10,
+ *   b: true,
+ *   c: Buffer.alloc(96),
+ * }, myDataType); // no error
+ *
+ * assertValidValue({
+ *   a: 10,
+ *   b: true,
+ *   c: 10, // errors, expects Buffer, length 96
+ * }, myDataType); // error because of `c`
+ * ```
+ */
+export function assertValidValue(value: any, type: AnySSZType): void {
+  _assertValidValue(value, parseType(type));
+}
 
 /** @ignore */
-export function assertValidValue(value: any, type: FullSSZType): void {
+export function _assertValidValue(value: any, type: FullSSZType): void {
   switch (type.type) {
     case Type.uint:
       assert(BN.isBN(value) || value === Number(value), 'Invalid uint: not a uint');
@@ -44,7 +78,7 @@ export function assertValidValue(value: any, type: FullSSZType): void {
       assert(value.length <= type.maxLength, 'Invalid list: longer than max length');
       value.forEach((element: any, i: number) => {
         try {
-          assertValidValue(element, type.elementType);
+          _assertValidValue(element, type.elementType);
         } catch (e) {
           throw new Error(`Invalid list, element ${i}: ${e.message}`);
         }
@@ -55,7 +89,7 @@ export function assertValidValue(value: any, type: FullSSZType): void {
       assert(value.length === type.length, 'Invalid vector: incorrect length');
       value.forEach((element: any, i: number) => {
         try {
-          assertValidValue(element, type.elementType);
+          _assertValidValue(element, type.elementType);
         } catch (e) {
           throw new Error(`Invalid vector, element ${i}: ${e.message}`);
         }
@@ -66,7 +100,7 @@ export function assertValidValue(value: any, type: FullSSZType): void {
       type.fields.forEach(([fieldName, fieldType]) => {
         try {
           assert(value[fieldName] !== undefined, "field does not exist");
-          assertValidValue(value[fieldName], fieldType);
+          _assertValidValue(value[fieldName], fieldType);
         } catch (e) {
           throw new Error(`Invalid container, field ${fieldName}: ${e.message}`);
         }
