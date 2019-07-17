@@ -4,7 +4,7 @@
 
 import {EventEmitter} from "events";
 import {deserialize, serialize} from "@chainsafe/ssz";
-import promisify from "es6-promisify";
+import promisify from "promisify-es6";
 import LibP2p from "libp2p";
 import Gossipsub from "libp2p-gossipsub";
 import PeerInfo from "peer-info";

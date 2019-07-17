@@ -2,6 +2,7 @@
  * @module eth1/dev
  */
 
+// eslint-disable-next-line import/no-extraneous-dependencies
 import ganache from "ganache-core";
 import {promisify} from "util";
 import * as utils from 'ethers/utils';

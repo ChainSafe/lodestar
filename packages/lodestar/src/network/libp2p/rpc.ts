@@ -6,7 +6,7 @@ import {EventEmitter} from "events";
 import LibP2p from "libp2p";
 import PeerInfo from "peer-info";
 import Connection from "interface-connection";
-import promisify from "promisify-es6";
+import promisify from "es6-promisify";
 import {deserialize} from "@chainsafe/ssz";
 
 import {RequestBody, ResponseBody, WireResponse, WireRequest} from "@chainsafe/eth2-types";
