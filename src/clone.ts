@@ -74,9 +74,8 @@ function _clone(value: any, type: FullSSZType): any {
     case Type.bool:
       return value;
     case Type.bitList:
-      return BitList.deserialize((value as BitList).serialize());
     case Type.bitVector:
-      return BitVector.fromBitfield((value as BitVector).toBitfield(), (value as BitVector).bitLength);
+      return value.clone();
     case Type.byteList:
     case Type.byteVector:
       return (value as Buffer).slice();
