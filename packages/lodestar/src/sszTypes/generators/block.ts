@@ -4,29 +4,46 @@
 
 import {SimpleContainerType} from "@chainsafe/ssz";
 
+import {IBeaconParams} from "../../params";
 import {IBeaconSSZTypes} from "../interface";
 
-export const BeaconBlockBody = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "BeaconBlockBody",
+export const BeaconBlockBody = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
   fields: [
-    ["randaoReveal", ssz.bytes96],
+    ["randaoReveal", ssz.BLSSignature],
     ["eth1Data", ssz.Eth1Data],
     ["graffiti", ssz.bytes32],
-    ["proposerSlashings", [ssz.ProposerSlashing]],
-    ["attesterSlashings", [ssz.AttesterSlashing]],
-    ["attestations", [ssz.Attestation]],
-    ["deposits", [ssz.Deposit]],
-    ["voluntaryExits", [ssz.VoluntaryExit]],
-    ["transfers", [ssz.Transfer]],
+    ["proposerSlashings", {
+      elementType: ssz.ProposerSlashing,
+      maxLength: params.MAX_PROPOSER_SLASHINGS,
+    }],
+    ["attesterSlashings", {
+      elementType: ssz.AttesterSlashing,
+      maxLength: params.MAX_ATTESTER_SLASHINGS,
+    }],
+    ["attestations", {
+      elementType: ssz.Attestation,
+      maxLength: params.MAX_ATTESTATIONS,
+    }],
+    ["deposits", {
+      elementType: ssz.Deposit,
+      maxLength: params.MAX_DEPOSITS,
+    }],
+    ["voluntaryExits", {
+      elementType: ssz.VoluntaryExit,
+      maxLength: params.MAX_VOLUNTARY_EXITS,
+    }],
+    ["transfers", {
+      elementType: ssz.Transfer,
+      maxLength: params.MAX_TRANSFERS,
+    }],
   ],
 });
 
 export const BeaconBlock = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "BeaconBlock",
   fields: [
     ["slot", ssz.Slot],
-    ["parentRoot", ssz.bytes32],
-    ["stateRoot", ssz.bytes32],
+    ["parentRoot", ssz.Hash],
+    ["stateRoot", ssz.Hash],
     ["body", ssz.BeaconBlockBody],
     ["signature", ssz.BLSSignature],
   ],

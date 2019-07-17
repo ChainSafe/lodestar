@@ -3,7 +3,6 @@ import {AnyContainerType, AnySSZType} from "@chainsafe/ssz";
 export interface IBeaconSSZTypes {
   // primitive
   bool: AnySSZType;
-  bytes: AnySSZType;
   bytes4: AnySSZType;
   bytes8: AnySSZType;
   bytes32: AnySSZType;
@@ -20,20 +19,24 @@ export interface IBeaconSSZTypes {
   Shard: AnySSZType;
   ValidatorIndex: AnySSZType;
   Gwei: AnySSZType;
+  Hash: AnySSZType;
+  Version: AnySSZType;
   BLSPubkey: AnySSZType;
   BLSSignature: AnySSZType;
   // misc
   Fork: AnyContainerType;
+  Checkpoint: AnyContainerType;
+  Validator: AnyContainerType;
   Crosslink: AnyContainerType;
-  Eth1Data: AnyContainerType;
   AttestationData: AnyContainerType;
   AttestationDataAndCustodyBit: AnyContainerType;
   IndexedAttestation: AnyContainerType;
-  DepositData: AnyContainerType;
-  BeaconBlockHeader: AnyContainerType;
-  Validator: AnyContainerType;
   PendingAttestation: AnyContainerType;
+  Eth1Data: AnyContainerType;
   HistoricalBatch: AnyContainerType;
+  DepositData: AnyContainerType;
+  CompactCommittee: AnyContainerType;
+  BeaconBlockHeader: AnyContainerType;
   FFGData: AnyContainerType;
   MerkleTree: AnyContainerType;
   // operations
@@ -91,16 +94,18 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
    */
   // misc
   "Fork",
+  "Checkpoint",
+  "Validator",
   "Crosslink",
-  "Eth1Data",
   "AttestationData",
   "AttestationDataAndCustodyBit",
   "IndexedAttestation",
-  "DepositData",
-  "BeaconBlockHeader",
-  "Validator",
   "PendingAttestation",
+  "Eth1Data",
   "HistoricalBatch",
+  "DepositData",
+  "CompactCommittee",
+  "BeaconBlockHeader",
   "FFGData",
   "MerkleTree",
   // operations

@@ -2,18 +2,20 @@
  * @module types
  */
 
+import {BitVector} from "@chainsafe/bit-utils";
+
 import {
   bytes32,
+  Gwei,
+  Hash,
   number64,
-  uint64,
-  Epoch,
   Shard,
   Slot,
-  Gwei,
 } from "./primitive";
 
 import {
   BeaconBlockHeader,
+  Checkpoint,
   Crosslink,
   Eth1Data,
   Fork,
@@ -24,41 +26,45 @@ import {
 
 export interface BeaconState {
   // Misc
-  slot: Slot;
   genesisTime: number64;
+  slot: Slot;
   fork: Fork; // For versioning hard forks
 
-  // Validator registry
-  validatorRegistry: Validator[];
+  // History
+  latestBlockHeader: BeaconBlockHeader;
+  blockRoots: Hash[];
+  stateRoots: Hash[];
+  historicalRoots: Hash[];
+  
+  // Eth1
+  eth1Data: Eth1Data;
+  eth1DataVotes: Eth1Data[];
+  eth1DepositIndex: number64;
+  
+  // Registry
+  validators: Validator[];
   balances: Gwei[];
 
-  // Randomness and committees
-  latestRandaoMixes: bytes32[];
-  latestStartShard: Shard;
+  // Shuffling
+  startShard: Shard;
+  randaoMixes: Hash[];
+  activeIndexRoots: bytes32[];
+  compactCommitteesRoots: Hash[];
 
-  // Finality
+  // Slashings
+  slashings: Gwei[]; // Balances penalized at every withdrawal period
+  
+  // Attestations
   previousEpochAttestations: PendingAttestation[];
   currentEpochAttestations: PendingAttestation[];
-  previousJustifiedEpoch: Epoch;
-  currentJustifiedEpoch: Epoch;
-  previousJustifiedRoot: bytes32;
-  currentJustifiedRoot: bytes32;
-  justificationBitfield: uint64;
-  finalizedEpoch: Epoch;
-  finalizedRoot: bytes32;
 
-  // Recent state
+  // Crosslinks
   currentCrosslinks: Crosslink[];
   previousCrosslinks: Crosslink[];
-  latestBlockRoots: bytes32[];
-  latestStateRoots: bytes32[];
-  latestActiveIndexRoots: bytes32[];
-  latestSlashedBalances: Gwei[]; // Balances penalized at every withdrawal period
-  latestBlockHeader: BeaconBlockHeader; // `latest_block_header.state_root == ZERO_HASH` temporarily
-  historicalRoots: bytes32[];
 
-  // Ethereum 1.0 deposit root
-  latestEth1Data: Eth1Data;
-  eth1DataVotes: Eth1Data[];
-  depositIndex: number64;
+  // Finality
+  justificationBits: BitVector;
+  previousJustifiedCheckpoint: Checkpoint;
+  currentJustifiedCheckpoint: Checkpoint;
+  finalizedCheckpoint: Checkpoint;
 }

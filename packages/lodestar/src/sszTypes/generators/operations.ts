@@ -5,11 +5,10 @@
 import {SimpleContainerType} from "@chainsafe/ssz";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
-
+import {IBeaconParams} from "../../params";
 import {IBeaconSSZTypes} from "../interface";
 
 export const ProposerSlashing = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "ProposerSlashing",
   fields: [
     ["proposerIndex", ssz.ValidatorIndex],
     ["header1", ssz.BeaconBlockHeader],
@@ -18,33 +17,38 @@ export const ProposerSlashing = (ssz: IBeaconSSZTypes): SimpleContainerType => (
 });
 
 export const AttesterSlashing = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "AttesterSlashing",
   fields: [
     ["attestation1", ssz.IndexedAttestation],
     ["attestation2", ssz.IndexedAttestation],
   ],
 });
 
-export const Attestation = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "Attestation",
+export const Attestation = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
   fields: [
-    ["aggregationBitfield", ssz.bytes],
+    ["aggregationBits", {
+      elementType: ssz.bool,
+      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
+    }],
     ["data", ssz.AttestationData],
-    ["custodyBitfield", ssz.bytes],
+    ["custodyBits", {
+      elementType: ssz.bool,
+      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
+    }],
     ["signature", ssz.BLSSignature],
   ],
 });
 
 export const Deposit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "Deposit",
   fields: [
-    ["proof", [ssz.bytes32, DEPOSIT_CONTRACT_TREE_DEPTH]],
+    ["proof", {
+      elementType: ssz.Hash,
+      length: DEPOSIT_CONTRACT_TREE_DEPTH + 1,
+    }],
     ["data", ssz.DepositData],
   ],
 });
 
 export const VoluntaryExit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "VoluntaryExit",
   fields: [
     ["epoch", ssz.Epoch],
     ["validatorIndex", ssz.ValidatorIndex],
@@ -53,7 +57,6 @@ export const VoluntaryExit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
 });
 
 export const Transfer = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "Transfer",
   fields: [
     ["sender", ssz.ValidatorIndex],
     ["recipient", ssz.ValidatorIndex],
