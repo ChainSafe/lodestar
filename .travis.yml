@@ -17,15 +17,15 @@ jobs:
   include:
     - stage: Lint and Check types
       name: Check types
-      script:
-        - lerna run check-types
-        - lerna run lint
+      script: >-
+        lerna run check-types &&
+        lerna run lint
 
     - stage: Tests
       name: Unit
-      script:
-        - lerna run test:unit
-        - lerna run coverage
+      script: >-
+        lerna run test:unit &&
+        lerna run coverage
     -
       name: e2e
       script: lerna run test:e2e
