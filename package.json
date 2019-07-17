@@ -18,7 +18,7 @@
     "lint": "eslint --ext .ts src/ test/",
     "pretest": "yarn check-types",
     "prepublishOnly": "yarn build",
-    "test:spec": "nyc -r lcov -e .ts mocha -r ./.babel-register \"test/spec/**/*.test.ts\" && nyc report",
+    "test:spec": "nyc -r lcov -e .ts mocha --timeout 4000 -r ./.babel-register \"test/spec/**/*.test.ts\" && nyc report",
     "test:unit": "nyc -r lcov -e .ts mocha -r ./.babel-register \"test/unit/**/*.test.ts\" && nyc report"
   },
   "homepage": "https://github.com/chainsafe/ssz-js",
