@@ -55,7 +55,7 @@ describe("hashTreeRoot", () => {
     {value: {v:3, subV:{v:6}}, type: OuterObject, expected: ""},
     {value: {v: [{b:2,a:1}, {b:4,a:3}]}, type: ArrayObject, expected: ""},
     {value: [{v:3, subV:{v:6}}, {v:5, subV:{v:7}}], type: {elementType: OuterObject, maxLength: 100}, expected: ""},
-    {value: [], type: {elementType: "bool", maxLength: 100}, expected: ""},
+    {value: [], type: {elementType: "uint16", maxLength: 100}, expected: ""},
     {value: [], type: {elementType: OuterObject, maxLength: 100}, expected: ""},
   ];
   for (const {value, type, expected} of testCases) {
