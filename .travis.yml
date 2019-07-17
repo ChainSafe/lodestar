@@ -20,7 +20,7 @@ jobs:
 
     - stage: Tests
       name: Unit
-      script: lerna run test:unit && lerna run codecov
+      script: lerna run test:unit && lerna run coverage
     -
       name: e2e
       script: lerna run test:e2e
