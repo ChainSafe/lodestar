@@ -70,6 +70,8 @@ function _equals(value1: any, value2: any, type: FullSSZType): boolean {
       return (new BN(value1)).eq(new BN(value2));
     case Type.bool:
       return value1 === value2;
+    case Type.bitList:
+    case Type.bitVector:
     case Type.byteList:
     case Type.byteVector:
       return value1.equals(value2);

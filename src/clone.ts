@@ -1,6 +1,7 @@
 /** @module ssz */
 import assert from "assert";
 import BN from "bn.js";
+import {BitList, BitVector} from "@chainsafe/bit-utils";
 
 import {
   AnySSZType,
@@ -72,6 +73,10 @@ function _clone(value: any, type: FullSSZType): any {
       }
     case Type.bool:
       return value;
+    case Type.bitList:
+      return BitList.deserialize((value as BitList).serialize());
+    case Type.bitVector:
+      return BitVector.fromBitfield((value as BitVector).toBitfield(), (value as BitVector).bitLength);
     case Type.byteList:
     case Type.byteVector:
       return (value as Buffer).slice();

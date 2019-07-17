@@ -1,4 +1,6 @@
 /** @module ssz */
+import {BitList} from "@chainsafe/bit-utils";
+
 import {
   Bytes,
   FullSSZType,
@@ -24,6 +26,8 @@ export function fixedSize(type: FullSSZType): number {
       return type.byteLength;
     case Type.bool:
       return 1;
+    case Type.bitVector:
+      return Math.ceil(type.length / 8);
     case Type.byteVector:
       return type.length;
     case Type.vector:
@@ -42,6 +46,8 @@ export function fixedSize(type: FullSSZType): number {
 /** @ignore */
 export function variableSize(value: SerializableValue, type: FullSSZType): number {
   switch (type.type) {
+    case Type.bitList:
+      return Math.ceil(((value as BitList).bitLength + 1) / 8);
     case Type.byteList:
       return (value as Bytes).length;
     case Type.list:

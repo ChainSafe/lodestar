@@ -1,16 +1,18 @@
 /** @module ssz */
 import BN from "bn.js";
+import {BitList, BitVector} from "@chainsafe/bit-utils";
 
 // Serializable values
 
 export type Uint = number | BN;
 export type Bool = boolean;
+export type Bits = BitList | BitVector;
 export type Bytes = Buffer | Uint8Array;
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface SerializableArray extends Array<SerializableValue> {}
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface SerializableObject extends Record<string, SerializableValue> {}
-export type SerializableValue = Uint | Bool | Bytes | SerializableArray | SerializableObject;
+export type SerializableValue = Uint | Bool | Bits | Bytes | SerializableArray | SerializableObject;
 
 // Simple types
 // These types are supplied to provide a convenient interface with which to specify types
@@ -45,6 +47,8 @@ export type SimpleSSZType = SimplePrimitiveType | SimpleListType | SimpleVectorT
 export enum Type {
   uint,
   bool,
+  bitList,
+  bitVector,
   byteList,
   byteVector,
   list,
@@ -61,6 +65,18 @@ export interface UintType {
 export interface BoolType {
   type: Type.bool;
 }
+
+export interface BitListType {
+  type: Type.bitList;
+  maxLength: number;
+}
+
+export interface BitVectorType {
+  type: Type.bitVector;
+  length: number;
+}
+
+export type BitsType = BitListType | BitVectorType;
 
 export interface ByteListType {
   type: Type.byteList;
@@ -98,7 +114,7 @@ export interface ContainerType {
  *
  * Full types are used internally.
  */
-export type FullSSZType = UintType | BoolType | BytesType | ArrayType | ContainerType;
+export type FullSSZType = UintType | BoolType | BitsType | BytesType | ArrayType | ContainerType;
 
 // simple + full types
 

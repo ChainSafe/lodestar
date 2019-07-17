@@ -1,9 +1,12 @@
 /** @module ssz */
 import BN from "bn.js";
+import {BitList, BitVector} from "@chainsafe/bit-utils";
 
 import {
   AnySSZType,
   ArrayType,
+  BitListType,
+  BitVectorType,
   Bool,
   Bytes,
   BytesType,
@@ -44,6 +47,20 @@ import { assertValidValue } from "./assertValidValue";
  * // serialize a boolean
  * buf = serialize(true, "bool");
  *
+ * // serialize a bit list
+ * import {BitList} from "@chainsafe/bit-utils";
+ * buf = serialize(BitList.fromBitfield(Buffer.alloc(1), 8), {
+ *   elementType: "bool",
+ *   maxLength: 10, // max number of bits
+ * });
+ *
+ * // serialize a bit vector
+ * import {BitVector} from "@chainsafe/bit-utils";
+ * buf = serialize(BitVector.fromBitfield(Buffer.alloc(1), 8), {
+ *   elementType: "bool",
+ *   length: 8, // length in bits
+ * });
+ *
  * // serialize a variable-length byte array, max-length required
  * buf = serialize(Buffer.from("abcd", "hex"), {
  *   elementType: "byte", // "byte", "uint8", or "number8"
@@ -79,6 +96,7 @@ import { assertValidValue } from "./assertValidValue";
  * buf = serialize({a: 10, b: false, c: Buffer.alloc(96)}, myDataType);
  * ```
  */
+
 export function serialize(value: any, type: AnySSZType): Buffer {
   const _type = parseType(type);
   assertValidValue(value, _type);
@@ -109,6 +127,22 @@ function _serializeBool(value: Bool, output: Buffer, start: number): number {
   } else {
     output.writeUInt8(0, start);
   }
+  return offset;
+}
+
+/** @ignore */
+function _serializeBitList(value: BitList, type: BitListType, output: Buffer, start: number): number {
+  const serialized = Buffer.from(value.serialize());
+  const offset = start + serialized.length;
+  serialized.copy(output, start);
+  return offset;
+}
+
+/** @ignore */
+function _serializeBitVector(value: BitVector, type: BitVectorType, output: Buffer, start: number): number {
+  const serialized = Buffer.from(value.toBitfield());
+  const offset = start + serialized.length;
+  serialized.copy(output, start);
   return offset;
 }
 
@@ -170,7 +204,6 @@ function _serializeObject(value: SerializableObject, type: ContainerType, output
       fixedIndex = _serialize(value[fieldName], fieldType, output, fixedIndex);
     }
   }
-
   return currentOffsetIndex;
 }
 
@@ -187,6 +220,10 @@ export function _serialize(value: SerializableValue, type: FullSSZType, output: 
       return _serializeBool(value as Bool, output, start);
     case Type.uint:
       return _serializeUint(value as Uint, type, output, start);
+    case Type.bitList:
+      return _serializeBitList(value as BitList, type, output, start);
+    case Type.bitVector:
+      return _serializeBitVector(value as BitVector, type, output, start);
     case Type.byteList:
     case Type.byteVector:
       return _serializeByteArray(value as Bytes, type, output, start);

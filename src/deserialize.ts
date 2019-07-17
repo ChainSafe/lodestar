@@ -1,6 +1,7 @@
 /** @module ssz */
 import assert from "assert";
 import BN from "bn.js";
+import {BitList, BitVector} from "@chainsafe/bit-utils";
 
 import {
   AnySSZType,
@@ -16,6 +17,8 @@ import {
   Bool,
   Bytes,
   BytesType,
+  BitListType,
+  BitVectorType,
 } from "./types";
 
 import { BYTES_PER_LENGTH_PREFIX } from "./constants";
@@ -51,6 +54,20 @@ import { fixedSize } from "./size";
  *
  * // deserialize a boolean
  * const b: boolean = deserialize(data, "bool");
+ *
+ * // deserialize a bit list
+ * import {BitList} from "@chainsafe/bit-utils";
+ * const bl: BitList = deserialize(data, {
+ *   elementType: "bool",
+ *   maxLength: 10, // max number of bits
+ * });
+ *
+ * // deserialize a bit vector
+ * import {BitVector} from "@chainsafe/bit-utils";
+ * const bv: BitVector = deserialize(data, {
+ *   elementType: "bool",
+ *   length: 10, // length in bits
+ * });
  *
  * // deserialize a variable-length byte array, max-length required
  * const buf1: Buffer = deserialize(data, {
@@ -113,6 +130,10 @@ export function _deserialize(data: Buffer, type: FullSSZType, start: number, end
       return _deserializeUint(data, type, start);
     case Type.bool:
       return _deserializeBool(data, start);
+    case Type.bitList:
+      return _deserializeBitList(data, type, start, end);
+    case Type.bitVector:
+      return _deserializeBitVector(data, type, start, end);
     case Type.byteList:
     case Type.byteVector:
       return _deserializeByteArray(data, type, start, end);
@@ -139,6 +160,18 @@ function _deserializeUint(data: Buffer, type: UintType, start: number): Uint {
 /** @ignore */
 function _deserializeBool(data: Buffer, start: number): Bool {
   return data[start] ? true : false;
+}
+
+/** @ignore */
+function _deserializeBitList(data: Buffer, type: BitListType, start: number, end: number): BitList {
+  const bitlist = BitList.deserialize(data.slice(start, end));
+  assert(bitlist.bitLength <= type.maxLength, 'BitList length greater than max length');
+  return bitlist;
+}
+
+/** @ignore */
+function _deserializeBitVector(data: Buffer, type: BitVectorType, start: number, end: number): BitVector {
+  return BitVector.fromBitfield(data.slice(start, end), type.length);
 }
 
 /** @ignore */

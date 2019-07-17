@@ -1,4 +1,6 @@
 /** @module ssz */
+import {BitList, BitVector} from "@chainsafe/bit-utils";
+
 import {
   AnySSZType,
   Bytes,
@@ -19,6 +21,7 @@ import { assertValidValue } from "./assertValidValue";
 import { fixedSize } from "./size";
 
 import {
+  chunkify,
   merkleize,
   mixInLength,
   pack,
@@ -48,6 +51,20 @@ import {
  *
  * // merkleize a boolean
  * buf = hashTreeRoot(true, "bool");
+ *
+ * // merkleize a bit list
+ * import {BitList} from "@chainsafe/bit-utils";
+ * buf = hashTreeRoot(BitList.fromBitfield(Buffer.alloc(1), 8), {
+ *   elementType: "bool",
+ *   maxLength: 10, // max number of bits
+ * });
+ *
+ * // merkleize a bit vector
+ * import {BitVector} from "@chainsafe/bit-utils";
+ * buf = hashTreeRoot(BitVector.fromBitfield(Buffer.alloc(1), 8), {
+ *   elementType: "bool",
+ *   length: 8, // length in bits
+ * });
  *
  * // merkleize a variable-length byte array, max-length required
  * buf = hashTreeRoot(Buffer.from("abcd", "hex"), {
@@ -101,6 +118,13 @@ export function _hashTreeRoot(value: SerializableValue, type: FullSSZType): Buff
     case Type.bool:
     case Type.byteVector:
       return merkleize(pack([value], type));
+    case Type.bitVector:
+      return merkleize(chunkify(Buffer.from((value as BitVector).toBitfield())), Math.floor((type.length + 255) / 256));
+    case Type.bitList:
+      return mixInLength(
+        merkleize(chunkify(Buffer.from((value as BitList).toBitfield())), Math.floor((type.maxLength + 255) / 256)),
+        (value as BitList).bitLength
+      );
     case Type.byteList:
       return mixInLength(
         merkleize(pack([value], type), type.maxLength * 8 / BYTES_PER_CHUNK),
@@ -113,7 +137,7 @@ export function _hashTreeRoot(value: SerializableValue, type: FullSSZType): Buff
           value.length);
       } else {
         return mixInLength(
-          merkleize(value.map((v) => hashTreeRoot(v, (type as ListType).elementType)), type.maxLength),
+          merkleize(value.map((v,i) => hashTreeRoot(v, (type as ListType).elementType)), type.maxLength),
           value.length);
       }
     case Type.vector:

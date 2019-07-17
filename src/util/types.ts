@@ -69,7 +69,12 @@ export function parseType(type: AnySSZType): FullSSZType {
       type = type as SimpleListType;
       const elementType = parseType(type.elementType);
       const maxLength = type.maxLength;
-      if (elementType.type === Type.uint && elementType.byteLength === 1) {
+      if (elementType.type === Type.bool) {
+        return {
+          type: Type.bitList,
+          maxLength,
+        };
+      } else if (elementType.type === Type.uint && elementType.byteLength === 1) {
         return {
           type: Type.byteList,
           maxLength,
@@ -85,7 +90,12 @@ export function parseType(type: AnySSZType): FullSSZType {
       type = type as SimpleVectorType;
       const elementType = parseType(type.elementType);
       const length = type.length;
-      if (elementType.type === Type.uint && elementType.byteLength === 1) {
+      if (elementType.type === Type.bool) {
+        return {
+          type: Type.bitVector,
+          length,
+        };
+      } else if (elementType.type === Type.uint && elementType.byteLength === 1) {
         return {
           type: Type.byteVector,
           length,
@@ -108,7 +118,7 @@ export function parseType(type: AnySSZType): FullSSZType {
       }
     }
   }
-  throw new Error(`Invalid type: ${type}`);
+  throw new Error(`Invalid type: ${JSON.stringify(type)}`);
 }
 
 export function isFullSSZType(type: AnySSZType): boolean {
@@ -124,6 +134,8 @@ export function isBasicType(type: FullSSZType): boolean {
 
 export function isCompositeType(type: FullSSZType): boolean {
   return [
+    Type.bitList,
+    Type.bitVector,
     Type.byteList,
     Type.byteVector,
     Type.list,
@@ -141,8 +153,10 @@ export function isVariableSizeType(type: FullSSZType): boolean {
   switch (type.type) {
     case Type.bool:
     case Type.uint:
+    case Type.bitVector:
     case Type.byteVector:
       return false;
+    case Type.bitList:
     case Type.byteList:
     case Type.list:
       return true;

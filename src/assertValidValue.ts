@@ -1,6 +1,7 @@
 /** @module ssz */
 import assert from "assert";
 import BN from "bn.js";
+import {BitList, BitVector} from "@chainsafe/bit-utils";
 
 import {
   FullSSZType,
@@ -21,6 +22,14 @@ export function assertValidValue(value: any, type: FullSSZType): void {
       break;
     case Type.bool:
       assert(value === true || value === false, 'Invalid boolean: not a boolean');
+      break;
+    case Type.bitList:
+      assert(value instanceof BitList, 'Invalid BitList: not a BitList');
+      assert(value.bitLength <= type.maxLength, 'Invalid BitList: longer than max length');
+      break;
+    case Type.bitVector:
+      assert(value instanceof BitVector, 'Invalid BitVector: not a BitVector');
+      assert(value.bitLength === type.length, 'Invalid BitVector: incorrect length');
       break;
     case Type.byteList:
       assert(value instanceof Uint8Array || value instanceof Buffer, 'Invalid byte array: not a Uint8Array/Buffer');
