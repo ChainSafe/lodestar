@@ -23,7 +23,7 @@
     "test:e2e": "mocha --colors --timeout 5000 -r ./.babel-register 'test/e2e/**/*.test.ts'",
     "test:spec": "mocha --colors -r ./.babel-register 'test/spec/**/*.test.ts'",
     "test": "yarn test:unit && yarn test:spec && yarn test:e2e",
-    "coverage": "codecov -F @chainsafe/lodestar"
+    "coverage": "codecov -F lodestar"
   },
   "repository": {
     "type": "git",
