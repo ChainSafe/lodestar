@@ -6,7 +6,7 @@ import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {deserialize} from "@chainsafe/ssz";
 
-import {bytes32, Deposit, Eth1Data, Gwei, number64} from "../../types";
+import {bytes32, Deposit, Eth1Data, Gwei, number64} from "@chainsafe/eth2-types";
 
 import {IBeaconConfig} from "../../config";
 import {IEth1Notifier} from "../interface";

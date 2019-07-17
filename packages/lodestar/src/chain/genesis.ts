@@ -12,10 +12,10 @@ import {
   Eth1Data,
   number64,
   BeaconBlockBody,
-} from "../types";
+} from "@chainsafe/eth2-types";
 
 import {
-  EMPTY_SIGNATURE, 
+  EMPTY_SIGNATURE,
   FAR_FUTURE_EPOCH,
   GENESIS_SLOT,
   GENESIS_EPOCH,

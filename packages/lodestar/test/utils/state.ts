@@ -1,9 +1,6 @@
 import BN from "bn.js";
 
-import {
-  BeaconState,
-  Crosslink,
-} from "../../src/types";
+import {BeaconState, Crosslink,} from "@chainsafe/eth2-types";
 import {GENESIS_EPOCH, GENESIS_SLOT, GENESIS_START_SHARD, ZERO_HASH} from "../../src/constants";
 
 import {intToBytes} from "../../src/util/bytes";
@@ -12,8 +9,10 @@ import {generateValidators} from "./validator";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {generateEmptyBlock} from "./block";
 import {generateEmptyCrosslink} from "./crosslink";
+import {createIBeaconConfig} from "../../src/config";
+import * as mainnetParams from "../../src/params/presets/mainnet";
 
-import {config} from "../../src/config/presets/mainnet";
+let config = createIBeaconConfig(mainnetParams);
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.

@@ -1,4 +1,4 @@
-import {bytes32} from "../../types";
+import {bytes32} from "@chainsafe/eth2-types";
 import {intDiv} from "../math";
 import {hash} from "../crypto";
 

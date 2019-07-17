@@ -3,21 +3,15 @@ import BN from "bn.js";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import sinon from "sinon";
 import {Keypair} from "@chainsafe/bls-js/lib/keypair";
-
-import {config} from "../../../../../src/config/presets/mainnet";
 import {BeaconDB, ValidatorDB} from "../../../../../src/db";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {OpPool} from "../../../../../src/opPool";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
-import {
-  DEPOSIT_CONTRACT_TREE_DEPTH,
-  FAR_FUTURE_EPOCH,
-  ZERO_HASH
-} from "../../../../../src/constants";
+import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {getBeaconProposerIndex} from "../../../../../src/chain/stateTransition/util";
-import {BeaconBlockBody, BeaconBlockHeader, DepositData, ValidatorIndex} from "../../../../../src/types";
+import {BeaconBlockHeader, ValidatorIndex} from "@chainsafe/eth2-types";
 import {stateTransition} from "../../../../../src/chain/stateTransition";
 import {generateValidator} from "../../../../utils/validator";
 import {ProgressiveMerkleTree} from "../../../../../src/util/merkleTree";
@@ -28,6 +22,8 @@ import {WinstonLogger} from "../../../../../src/logger";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import {generateDeposit} from "../../../../utils/deposit";
 import {BeaconChain} from "../../../../../src/chain";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainetParams from "../../../../../src/params/presets/mainnet";
 
 describe('produce block', function () {
   this.timeout(0);
@@ -35,6 +31,7 @@ describe('produce block', function () {
   const dbStub = sinon.createStubInstance(BeaconDB);
   const opPoolStub = new OpPool({}, {db: dbStub, chain: sinon.createStubInstance(BeaconChain)});
   const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
+  let config = createIBeaconConfig(mainetParams);
 
   it('should produce valid block - state without valid eth1 votes', async function () {
 

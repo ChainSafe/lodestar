@@ -1,18 +1,12 @@
-import { assert } from "chai";
+import {assert} from "chai";
+import {GENESIS_EPOCH, GENESIS_SLOT,} from "../../../../../src/constants";
+import {getRandaoMix,} from "../../../../../src/chain/stateTransition/util";
 
-import {config} from "../../../../../src/config/presets/mainnet";
-import {
-  GENESIS_EPOCH,
-  GENESIS_SLOT,
-} from "../../../../../src/constants";
-import {
-  getRandaoMix,
-  getActiveIndexRoot,
-  generateSeed,
-} from "../../../../../src/chain/stateTransition/util/seed";
+import {generateState} from "../../../../utils/state";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
-import { generateState } from "../../../../utils/state";
-
+let config = createIBeaconConfig(mainnetParams);
 
 describe("getRandaoMix", () => {
   it("should return first randao mix for GENESIS_EPOCH", () => {

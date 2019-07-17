@@ -13,7 +13,7 @@ import {
   Slot,
   ValidatorDuty,
   ValidatorIndex
-} from "../../../types";
+} from "@chainsafe/eth2-types";
 import {IApi} from "../interface";
 import {CommitteeAssignment} from "../../../validator/types";
 

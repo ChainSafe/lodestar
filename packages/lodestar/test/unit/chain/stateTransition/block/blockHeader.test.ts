@@ -3,9 +3,6 @@ import {expect} from "chai";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import {signingRoot} from "@chainsafe/ssz";
-
-import {config} from "../../../../../src/config/presets/mainnet";
-import {BeaconBlockHeader} from "../../../../../src/types";
 import {EMPTY_SIGNATURE} from "../../../../../src/constants";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../../src/chain/stateTransition/util";
@@ -14,11 +11,13 @@ import {processBlockHeader} from "../../../../../src/chain/stateTransition/block
 import {generateState} from "../../../../utils/state";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateValidator} from "../../../../utils/validator";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
 describe('process block - block header', function () {
 
   const sandbox = sinon.createSandbox();
-
+  let config = createIBeaconConfig(mainnetParams);
   let getTemporaryBlockHeaderStub, getBeaconProposeIndexStub, blsStub;
 
   beforeEach(() => {

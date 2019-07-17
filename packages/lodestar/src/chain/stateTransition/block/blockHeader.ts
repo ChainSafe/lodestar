@@ -11,7 +11,7 @@ import bls from "@chainsafe/bls-js";
 import {
   BeaconBlock,
   BeaconState,
-} from "../../../types";
+} from "@chainsafe/eth2-types";
 import {IBeaconConfig} from "../../../config";
 import {Domain} from "../../../constants";
 

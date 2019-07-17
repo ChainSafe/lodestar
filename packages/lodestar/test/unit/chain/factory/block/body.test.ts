@@ -1,7 +1,5 @@
 import sinon from "sinon";
 import {expect} from "chai";
-
-import {config} from "../../../../../src/config/presets/mainnet";
 import {
   AttestationOperations,
   DepositsOperations,
@@ -20,11 +18,13 @@ import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../.
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../../../../utils/voluntaryExits";
 import {generateDeposit} from "../../../../utils/deposit";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
 describe('blockAssembly - body', function () {
 
   const sandbox = sinon.createSandbox();
-
+  let config = createIBeaconConfig(mainnetParams);
   let opPool: OpPool, eth1, generateDepositsStub, bestVoteStub;
 
   beforeEach(() => {

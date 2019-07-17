@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 
-import {BeaconBlock, BeaconState, Deposit, Eth1Data, number64, Attestation, uint16, uint64} from "../../../../src/types";
+import {BeaconBlock, BeaconState, Deposit, Eth1Data, number64, Attestation, uint16, uint64} from "@chainsafe/eth2-types";
 import {IBeaconChain, LMDGHOST} from "../../../../src/chain";
 
 export class MockBeaconChain extends EventEmitter implements IBeaconChain {

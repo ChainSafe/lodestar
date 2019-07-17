@@ -4,7 +4,7 @@
 
 import BN from "bn.js";
 
-import {BeaconState} from "../../../types";
+import {BeaconState} from "@chainsafe/eth2-types";
 import {FAR_FUTURE_EPOCH} from "../../../constants";
 import {IBeaconConfig} from "../../../config";
 

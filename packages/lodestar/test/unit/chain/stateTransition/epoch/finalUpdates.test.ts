@@ -2,17 +2,18 @@ import BN from "bn.js";
 import sinon from "sinon";
 import {expect} from "chai";
 import * as hashTreeRoot from "@chainsafe/ssz";
-
-import {config} from "../../../../../src/config/presets/mainnet";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {processFinalUpdates} from "../../../../../src/chain/stateTransition/epoch/finalUpdates";
 
 import {generateState} from "../../../../utils/state";
 import {generateValidator} from "../../../../utils/validator";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
 describe('process epoch - final updates', function () {
 
   const sandbox = sinon.createSandbox();
+  let config = createIBeaconConfig(mainnetParams);
 
   let getActiveValidatorIndicesStub,
     getCurrentEpochStub,

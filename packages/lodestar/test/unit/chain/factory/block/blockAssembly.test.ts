@@ -1,7 +1,5 @@
 import sinon from "sinon";
 import {expect} from "chai";
-
-import {config} from "../../../../../src/config/presets/mainnet";
 import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
 import * as blockTransitions from "../../../../../src/chain/stateTransition/block";
 import {OpPool} from "../../../../../src/opPool";
@@ -10,11 +8,13 @@ import {BeaconDB} from "../../../../../src/db/api";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {generateState} from "../../../../utils/state";
 import {generateEmptyBlock} from "../../../../utils/block";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
 describe('block assembly', function () {
 
   const sandbox = sinon.createSandbox();
-
+  let config = createIBeaconConfig(mainnetParams);
   let assembleBodyStub, processBlockStub, opPool, beaconDB, eth1;
 
   beforeEach(() => {

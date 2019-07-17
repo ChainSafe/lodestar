@@ -1,5 +1,5 @@
 import {TransportType} from "./transport";
-import {number64} from "../types";
+import {number64} from "@chainsafe/eth2-types";
 import {IApiConstructor} from "./api/interface";
 import {IConfigurationModule} from "../util/config";
 import {ValidatorApi, BeaconApi} from ".";

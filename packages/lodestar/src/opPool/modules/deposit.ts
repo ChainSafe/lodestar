@@ -1,5 +1,5 @@
 import {OperationsModule} from "./abstract";
-import {Deposit, number64} from "../../types";
+import {Deposit, number64} from "@chainsafe/eth2-types";
 
 export class DepositsOperations extends OperationsModule {
 

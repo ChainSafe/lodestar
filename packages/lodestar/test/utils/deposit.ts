@@ -1,6 +1,6 @@
 import BN from "bn.js";
 
-import {Deposit} from "../../src/types";
+import {Deposit} from "@chainsafe/eth2-types";
 import {EMPTY_SIGNATURE} from "../../src/constants";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../src/constants";
 

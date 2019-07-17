@@ -1,17 +1,18 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {serialize} from "@chainsafe/ssz";
-
-import {config} from "../../../../../src/config/presets/mainnet";
-import {Eth1Data} from "../../../../../src/types";
+import {Eth1Data} from "@chainsafe/eth2-types";
 import {processEth1Data} from "../../../../../src/chain/stateTransition/block/eth1Data";
 
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
 describe('process block - eth1data', function () {
 
   const sandbox = sinon.createSandbox();
+  let config = createIBeaconConfig(mainnetParams);
 
   beforeEach(() => {
   });

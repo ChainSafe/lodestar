@@ -7,7 +7,7 @@ import {
   Gwei,
   Slot,
   ValidatorIndex,
-} from "../../types";
+} from "@chainsafe/eth2-types";
 
 
 export interface LMDGHOST {

@@ -1,11 +1,12 @@
 import {assert} from "chai";
-
-import {config} from "../../../../../src/config/presets/mainnet";
-import {Epoch, Slot} from "../../../../../src/types";
+import {Epoch, Slot} from "@chainsafe/eth2-types";
 import {randBetween} from "../../../../utils/misc";
 import {isSlashableAttestationData} from "../../../../../src/chain/stateTransition/util";
 import {generateAttestationData} from "../../../../utils/attestation";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
+let config = createIBeaconConfig(mainnetParams);
 
 describe("isSlashableAttestationData", () => {
   it("Attestation data with the same target epoch should return true", () => {

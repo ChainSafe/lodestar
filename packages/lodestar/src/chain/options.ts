@@ -1,5 +1,5 @@
 import {IConfigurationModule} from "../util/config";
-import {number64} from "../types";
+import {number64} from "@chainsafe/eth2-types";
 
 export interface IChainOptions {
   name: string;

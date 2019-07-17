@@ -4,15 +4,15 @@
 
 import {CommanderStatic} from "commander";
 import {JsonRpcProvider} from "ethers/providers";
+import * as ethers from "ethers/ethers";
 import {Wallet} from "ethers/ethers";
-
-import {config} from "../../config/presets/mainnet";
 import {CliCommand} from "./interface";
 import defaults from "../../eth1/options";
-import * as ethers from "ethers/ethers";
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
+import {createIBeaconConfig} from "../../config";
+import * as mainetParams from "../../params/presets/mainnet";
 
 interface IDepositCommandOptions {
   privateKey: string;
@@ -79,6 +79,9 @@ export class DepositCommand implements CliCommand {
     } else {
       throw new CliError('You have to submit either privateKey or mnemonic. Check --help');
     }
+
+    // TODO: improve this somewhere else so it can be auto merged with default conf
+    let config = createIBeaconConfig(mainetParams);
 
     await Promise.all(
       wallets.map(async wallet => {

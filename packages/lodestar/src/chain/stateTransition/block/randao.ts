@@ -7,7 +7,7 @@ import xor from "buffer-xor";
 import {hashTreeRoot, hash} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls-js";
 
-import {BeaconBlockBody, BeaconState} from "../../../types";
+import {BeaconBlockBody, BeaconState} from "@chainsafe/eth2-types";
 import {Domain} from "../../../constants";
 import {IBeaconConfig} from "../../../config";
 

@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 
-import {Attestation, BeaconBlock, BeaconState, Deposit, Eth1Data, number64, uint16, uint64} from "../types";
+import {Attestation, BeaconBlock, BeaconState, Deposit, Eth1Data, number64, uint16, uint64} from "@chainsafe/eth2-types";
 
 import {LMDGHOST} from "./forkChoice";
 

@@ -5,8 +5,6 @@
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
-
-import {config} from "../../config/presets/mainnet";
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
@@ -15,6 +13,9 @@ import {getTomlConfig} from "../../util/file";
 import Validator from "../../validator";
 import {RpcClientOverInstance} from "../../validator/rpc";
 import {BeaconApi, ValidatorApi} from "../../rpc";
+import {createIBeaconConfig, IBeaconConfig} from "../../config";
+import * as minimalParams from "../../params/presets/minimal";
+import * as mainetParams from "../../params/presets/mainnet";
 
 interface IBeaconCommandOptions {
   configFile?: string;
@@ -65,6 +66,13 @@ export class BeaconNodeCommand implements CliCommand {
     //override current config with cli config
     conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
 
+    // TODO: improve this somewhere else so it can be auto merged with default conf
+    let config: IBeaconConfig;
+    if(conf.chain.name === 'minimal') {
+      config = createIBeaconConfig(minimalParams);
+    } else {
+      config = createIBeaconConfig(mainetParams);
+    }
     this.node = new BeaconNode(conf, {config, logger});
 
     if(conf.validator && conf.validator.keypair){

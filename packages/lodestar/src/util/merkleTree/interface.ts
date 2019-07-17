@@ -1,4 +1,4 @@
-import {bytes32, number64} from "../../types";
+import {bytes32, number64} from "@chainsafe/eth2-types";
 
 export interface IProgressiveMerkleTree {
 

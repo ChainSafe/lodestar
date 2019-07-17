@@ -1,15 +1,17 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
-import {hashTreeRoot, equals} from "@chainsafe/ssz";
+import {equals} from "@chainsafe/ssz";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
-
-import {config} from "../../../../src/config/presets/mainnet";
-import {BeaconState, number64, Validator} from "../../../../src/types";
+import {BeaconState, number64} from "@chainsafe/eth2-types";
 import {processSlots} from "../../../../src/chain/stateTransition";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {createIBeaconConfig} from "../../../../src/config";
+import * as mainnetParams from "../../../../src/params/presets/mainnet";
+
+let config = createIBeaconConfig(mainnetParams);
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/sanity/slots/sanity_slots_mainnet.yaml"),

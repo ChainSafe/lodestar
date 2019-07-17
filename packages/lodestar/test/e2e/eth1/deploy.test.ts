@@ -1,8 +1,6 @@
 import {assert} from "chai";
 import {ethers} from "ethers";
 import sinon from "sinon";
-
-import {config} from "../../../src/config/presets/mainnet";
 import {Eth1Wallet, EthersEth1Notifier, IEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
 import {PrivateEth1Network} from "../../../src/eth1/dev";
@@ -10,6 +8,8 @@ import {BeaconDB} from "../../../src/db/api";
 import {PouchDbController} from "../../../src/db";
 import {ILogger, WinstonLogger} from "../../../src/logger";
 import {OpPool} from "../../../src/opPool";
+import {createIBeaconConfig} from "../../../src/config";
+import * as mainetParams from "../../../src/params/presets/mainnet";
 
 describe("Eth1Notifier - using deployed contract", () => {
 
@@ -18,6 +18,8 @@ describe("Eth1Notifier - using deployed contract", () => {
   let depositContractAddress;
   let provider;
   let logger: ILogger = new WinstonLogger();
+  let config = createIBeaconConfig(mainetParams);
+
   const db = new BeaconDB({
     config,
     controller: new PouchDbController(

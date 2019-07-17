@@ -9,7 +9,7 @@ import bls from "@chainsafe/bls-js";
 import {
   BeaconState,
   ProposerSlashing,
-} from "../../../../types";
+} from "@chainsafe/eth2-types";
 import {Domain} from "../../../../constants";
 import {IBeaconConfig} from "../../../../config";
 

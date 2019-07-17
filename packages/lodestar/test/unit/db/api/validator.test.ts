@@ -1,17 +1,16 @@
 import sinon from "sinon";
-
-import {config} from "../../../../src/config/presets/mainnet";
 import * as dbKeys from "../../../../src/db/schema";
 import {Bucket} from "../../../../src/db/schema";
 import {LevelDbController} from "../../../../src/db/controller";
-import {Attestation, BeaconBlock} from "../../../../src/types";
 import chai, {expect} from "chai";
 import {serialize} from "@chainsafe/ssz";
 import chaiAsPromised from 'chai-as-promised';
-import {ValidatorDB} from "../../../../src/db/api/validator/validator";
+import {ValidatorDB} from "../../../../src/db/api";
 import {generateEmptyBlock} from "../../../utils/block";
-import {IValidatorDB} from "../../../../src/db/api/validator/interface";
+import {IValidatorDB} from "../../../../src/db/api";
 import {generateEmptyAttestation} from "../../../utils/attestation";
+import {createIBeaconConfig} from "../../../../src/config";
+import * as mainnetParams from "../../../../src/params/presets/mainnet";
 
 chai.use(chaiAsPromised);
 
@@ -19,6 +18,7 @@ describe('beacon db api', function () {
 
   const sandbox = sinon.createSandbox();
 
+  let config = createIBeaconConfig(mainnetParams);
   let encodeKeyStub, dbStub, validatorDB: IValidatorDB;
 
   beforeEach(() => {

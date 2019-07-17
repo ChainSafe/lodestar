@@ -3,7 +3,7 @@
  */
 
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
-import {BeaconBlock, BeaconBlockBody, BeaconBlockHeader, BeaconState, bytes96, Slot} from "../../../types";
+import {BeaconBlock, BeaconBlockHeader, bytes96, Slot} from "@chainsafe/eth2-types";
 import {IBeaconConfig} from "../../../config";
 import {BeaconDB} from "../../../db/api";
 import {OpPool} from "../../../opPool";

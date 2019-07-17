@@ -2,7 +2,7 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconState, Eth1Data} from "../../../types";
+import {BeaconState, Eth1Data} from "@chainsafe/eth2-types";
 import {IBeaconConfig} from "../../../config";
 import {IEth1Notifier} from "../../../eth1";
 import {Block} from "ethers/providers";

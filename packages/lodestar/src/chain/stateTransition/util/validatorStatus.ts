@@ -7,7 +7,7 @@ import {
   Epoch,
   ValidatorIndex,
   Validator,
-} from "../../../types";
+} from "@chainsafe/eth2-types";
 
 import {
   FAR_FUTURE_EPOCH,
@@ -27,7 +27,7 @@ import {
   getBeaconProposerIndex,
   getChurnLimit,
 } from "./misc";
-import { IBeaconConfig } from "../../../config";
+import {IBeaconConfig} from "../../../config";
 
 
 /**

@@ -6,7 +6,7 @@ import {EventEmitter} from "events";
 
 import {
   Attestation, BeaconBlock, Shard, ResponseBody, RequestBody,
-} from "../types";
+} from "@chainsafe/eth2-types";
 import {RequestId, Method} from "../constants";
 
 export interface INetwork extends EventEmitter {

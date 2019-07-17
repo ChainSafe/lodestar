@@ -2,7 +2,7 @@
  * @module chain/stateTransition/epoch
  */
 
-import {BeaconState} from "../../../types";
+import {BeaconState} from "@chainsafe/eth2-types";
 import {IBeaconConfig} from "../../../config";
 
 import {bnMax, bnMin, intDiv} from "../../../util/math";

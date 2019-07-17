@@ -1,8 +1,6 @@
 import BN from "bn.js";
 import {expect} from "chai";
 import sinon from "sinon";
-
-import {config} from "../../../../../src/config/presets/mainnet";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {
   getCrosslinkCommittee,
@@ -14,10 +12,13 @@ import {getWinningCrosslinkAndAttestingIndices} from "../../../../../src/chain/s
 import {processCrosslinks} from "../../../../../src/chain/stateTransition/epoch/crosslinks";
 import {generateEmptyCrosslink} from "../../../../utils/crosslink";
 import {generateState} from "../../../../utils/state";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
 describe('process epoch - crosslinks', function () {
 
   const sandbox = sinon.createSandbox();
+  let config = createIBeaconConfig(mainnetParams);
 
   let getCurrentEpochStub,
     getPreviousEpochStub,

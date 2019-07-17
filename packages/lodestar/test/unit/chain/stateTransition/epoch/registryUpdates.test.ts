@@ -1,17 +1,18 @@
 import sinon from "sinon";
 import BN from "bn.js";
 import {expect} from "chai";
-
-import {config} from "../../../../../src/config/presets/mainnet";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {initiateValidatorExit} from "../../../../../src/chain/stateTransition/util";
 import {processRegistryUpdates} from "../../../../../src/chain/stateTransition/epoch/registryUpdates";
 import {generateState} from "../../../../utils/state";
 import {generateValidator} from "../../../../utils/validator";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
 describe('process epoch - slashings', function () {
 
   const sandbox = sinon.createSandbox();
+  let config = createIBeaconConfig(mainnetParams);
 
   let getCurrentEpochStub,
     isActiveValidatorStub,

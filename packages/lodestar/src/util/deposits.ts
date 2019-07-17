@@ -1,4 +1,4 @@
-import {Deposit} from "../types";
+import {Deposit} from "@chainsafe/eth2-types";
 import {IBeaconConfig} from "../config";
 
 export function processSortedDeposits(

@@ -4,7 +4,7 @@
 
 import BN from "bn.js";
 
-import {bytes} from "../types";
+import {bytes} from "@chainsafe/eth2-types";
 import {PrivateKey} from '@chainsafe/bls-js/lib/privateKey';
 
 /**
@@ -29,7 +29,7 @@ export function bytesToBN(value: bytes): BN {
 
 /**
  * Converts PrivateKey to hex string
- * @param {PrivateKey} privateKey 
+ * @param {PrivateKey} privateKey
  * @returns {string} hex representation of bls key
  */
 export function blsPrivateKeyToHex(privateKey: PrivateKey): string {

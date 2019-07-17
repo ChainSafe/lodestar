@@ -2,7 +2,7 @@
  * @module validator
  */
 
-import {Shard, Slot, ValidatorIndex} from "../types";
+import {Shard, Slot, ValidatorIndex} from "@chainsafe/eth2-types";
 
 export interface CommitteeAssignment {
   validators: ValidatorIndex[];

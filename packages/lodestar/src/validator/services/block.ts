@@ -5,7 +5,7 @@
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 
-import {BeaconBlock, Epoch, Fork, Slot, ValidatorIndex} from "../../types";
+import {BeaconBlock, Fork, Slot, ValidatorIndex} from "@chainsafe/eth2-types";
 import {IBeaconConfig} from "../../config";
 import {getDomainFromFork, slotToEpoch} from "../../chain/stateTransition/util";
 import {RpcClient} from "../rpc";

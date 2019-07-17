@@ -16,7 +16,7 @@ import {
   number64,
   uint16,
   uint64
-} from "../types";
+} from "@chainsafe/eth2-types";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "../constants";
 
 import {IBeaconDb} from "../db";
@@ -128,7 +128,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
 
     // process current slot
     await this.runStateTransition(block, state);
- 
+
     // forward processed block for additional processing
     this.emit('processedBlock', block);
   }

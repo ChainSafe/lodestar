@@ -12,7 +12,7 @@ import {
   Slot,
   ValidatorIndex,
   AttestationData,
-} from "../../../types";
+} from "@chainsafe/eth2-types";
 import {IBeaconConfig} from "../../../config";
 
 import {bytesToBN, intToBytes} from "../../../util/bytes";

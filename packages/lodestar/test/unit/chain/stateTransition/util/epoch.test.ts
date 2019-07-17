@@ -1,20 +1,22 @@
 import {assert} from "chai";
 
-import {config} from "../../../../../src/config/presets/mainnet";
-import {BeaconState, Epoch, Slot} from "../../../../../src/types";
+import {BeaconState, Epoch, Slot} from "@chainsafe/eth2-types";
 import {GENESIS_SLOT} from "../../../../../src/constants";
 import {
+  getDelayedActivationExitEpoch,
   getEpochStartSlot,
   getPreviousEpoch,
-  getCurrentEpoch,
-  getDelayedActivationExitEpoch,
   slotToEpoch,
-} from "../../../../../src/chain/stateTransition/util/epoch";
+} from "../../../../../src/chain/stateTransition/util";
 
 import {generateState} from "../../../../utils/state";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
+let config = createIBeaconConfig(mainnetParams);
 
 describe("slotToEpoch", () => {
+
   const pairs = [
     {test: 0, expected: 0},
     {test: 1, expected: 0},

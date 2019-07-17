@@ -1,5 +1,5 @@
 import {OperationsModule} from "./abstract";
-import {VoluntaryExit} from "../../types";
+import {VoluntaryExit} from "@chainsafe/eth2-types";
 
 export class VoluntaryExitOperations extends OperationsModule {
 

@@ -3,8 +3,6 @@ import {expect} from "chai";
 import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
-
-import {config} from "../../../../../../src/config/presets/mainnet";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
 import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../../../src/chain/stateTransition/util";
 import {processDeposit} from "../../../../../../src/chain/stateTransition/block/operations";
@@ -13,11 +11,13 @@ import * as merkleUtil from "../../../../../../src/util/merkleTree";
 import {generateState} from "../../../../../utils/state";
 import {generateDeposit} from "../../../../../utils/deposit";
 import {generateValidator} from "../../../../../utils/validator";
-import {generateEmptyBlock} from "../../../../../utils/block";
+import {createIBeaconConfig} from "../../../../../../src/config";
+import * as mainnetParams from "../../../../../../src/params/presets/mainnet";
 
 describe('process block - deposits', function () {
 
   const sandbox = sinon.createSandbox();
+  let config = createIBeaconConfig(mainnetParams);
 
   let getTemporaryBlockHeaderStub, getBeaconProposeIndexStub, verifyMerkleTreeStub, blsStub;
 

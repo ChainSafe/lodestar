@@ -1,14 +1,14 @@
 import {expect} from "chai";
-
-import {config} from "../../../../src/config/presets/mainnet";
 import {Libp2pNetwork} from "../../../../src/network";
-import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../../../../src/constants";
+import {ATTESTATION_TOPIC, BLOCK_TOPIC} from "../../../../src/constants";
 import {getEmptyBlock} from "../../../../src/chain/genesis";
 import {createNode} from "../../../unit/network/libp2p/util";
 import {generateEmptyAttestation} from "../../../utils/attestation";
 import {shardAttestationTopic} from "../../../../src/network/util";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
 import {INetworkOptions} from "../../../../src/network/options";
+import {createIBeaconConfig} from "../../../../src/config";
+import * as mainnetParams from "../../../../src/params/presets/mainnet";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -24,6 +24,7 @@ describe("[network] network", () => {
 
   let netA: Libp2pNetwork, netB: Libp2pNetwork;
   const logger: ILogger = new WinstonLogger();
+  let config = createIBeaconConfig(mainnetParams);
 
   beforeEach(async () => {
     netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger});

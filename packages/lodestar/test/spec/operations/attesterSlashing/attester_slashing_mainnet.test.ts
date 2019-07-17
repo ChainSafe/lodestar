@@ -5,11 +5,12 @@ import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import {equals} from "@chainsafe/ssz";
-
-import {BeaconState, AttesterSlashing} from "../../../../src/types";
-import {config} from "../../../../src/config/presets/mainnet";
 import {processAttesterSlashing} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {createIBeaconConfig} from "../../../../src/config";
+import * as mainnetParams from "../../../../src/params/presets/mainnet";
+
+let config = createIBeaconConfig(mainnetParams);
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/attester_slashing/attester_slashing_mainnet.yaml"),

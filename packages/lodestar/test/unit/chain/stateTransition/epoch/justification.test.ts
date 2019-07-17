@@ -1,17 +1,17 @@
 import BN from "bn.js";
 import sinon from "sinon";
 import {expect} from "chai";
-
-import {config} from "../../../../../src/config/presets/mainnet";
 import * as utils1 from "../../../../../src/chain/stateTransition/util";
 import * as utils2 from "../../../../../src/chain/stateTransition/epoch/util";
 import {generateState} from "../../../../utils/state";
-import {processJustificationAndFinalization}
-  from "../../../../../src/chain/stateTransition/epoch/justification";
+import {processJustificationAndFinalization} from "../../../../../src/chain/stateTransition/epoch/justification";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
 describe('process epoch - justification and finalization', function () {
 
   const sandbox = sinon.createSandbox();
+  let config = createIBeaconConfig(mainnetParams);
 
   let getBlockRootStub,
     getCurrentEpochStub,

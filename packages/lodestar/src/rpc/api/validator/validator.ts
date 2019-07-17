@@ -14,7 +14,7 @@ import {
   Slot,
   ValidatorDuty,
   ValidatorIndex
-} from "../../../types";
+} from "@chainsafe/eth2-types";
 import {IBeaconConfig} from "../../../config";
 import {BeaconDB} from "../../../db";
 import {BeaconChain} from "../../../chain";

@@ -1,5 +1,5 @@
 import {IBeaconParams} from "../params";
-import {IBeaconSSZTypes} from "../sszTypes";
+import {IBeaconSSZTypes} from "@chainsafe/eth2-types";
 
 export interface IBeaconConfig {
   params: IBeaconParams;

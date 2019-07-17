@@ -1,9 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {hashTreeRoot} from "@chainsafe/ssz";
-
-import {config} from "../../../../../../src/config/presets/mainnet";
-import {Crosslink} from "../../../../../../src/types";
 import {processAttestation} from "../../../../../../src/chain/stateTransition/block/operations";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
 import {
@@ -13,12 +10,14 @@ import {
 } from "../../../../../../src/chain/stateTransition/util";
 
 import {generateState} from "../../../../../utils/state";
-import {generateEmptyBlock} from "../../../../../utils/block";
 import {generateEmptyAttestation} from "../../../../../utils/attestation";
+import {createIBeaconConfig} from "../../../../../../src/config";
+import * as mainnetParams from "../../../../../../src/params/presets/mainnet";
 
 describe('process block - attestation', function () {
 
   const sandbox = sinon.createSandbox();
+  let config = createIBeaconConfig(mainnetParams);
 
   let attestationSlotStub, currentEpochStub, previousEpochStub, validateIndexedAttestationStub,
     getBeaconProposerIndexStub;

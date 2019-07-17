@@ -1,13 +1,14 @@
 import sinon from "sinon";
 import {expect} from "chai";
-
-import {config} from "../../../../src/config/presets/mainnet";
 import {RpcClientOverInstance} from "../../../../src/validator/rpc";
 import {MockBeaconApi} from "../../../utils/mocks/rpc/beacon";
+import {createIBeaconConfig} from "../../../../src/config";
+import * as mainnetParams from "../../../../src/params/presets/mainnet";
 
 describe('RpcClientOverInstance test', function() {
 
   let clock, sandbox;
+  let config = createIBeaconConfig(mainnetParams);
 
   before(() => {
     sandbox = sinon.createSandbox();

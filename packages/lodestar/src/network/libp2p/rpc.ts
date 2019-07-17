@@ -6,10 +6,10 @@ import {EventEmitter} from "events";
 import LibP2p from "libp2p";
 import PeerInfo from "peer-info";
 import Connection from "interface-connection";
-import promisify from "es6-promisify";
+import promisify from "promisify-es6";
 import {deserialize} from "@chainsafe/ssz";
 
-import {RequestBody, ResponseBody, WireResponse, WireRequest} from "../../types";
+import {RequestBody, ResponseBody, WireResponse, WireRequest} from "@chainsafe/eth2-types";
 import {Method, RequestId, ResponseCode, RPC_MULTICODEC} from "../../constants";
 import {IBeaconConfig} from "../../config";
 import {ILogger} from "../../logger";

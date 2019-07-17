@@ -5,10 +5,7 @@
 import assert from "assert";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 
-import {
-  BeaconState,
-  BeaconBlockHeader, Slot,
-} from "../../types";
+import {BeaconState, Slot,} from "@chainsafe/eth2-types";
 import {ZERO_HASH} from "../../constants";
 import {IBeaconConfig} from "../../config";
 

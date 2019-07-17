@@ -6,7 +6,7 @@ import {
   BeaconState,
   bytes32,
   Epoch,
-} from "../../../types";
+} from "@chainsafe/eth2-types";
 import {IBeaconConfig} from "../../../config";
 
 

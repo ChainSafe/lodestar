@@ -1,19 +1,18 @@
-import {assert, expect} from "chai";
+import {assert} from "chai";
 import BN from "bn.js";
 import promisify from "promisify-es6";
-
-import {config} from "../../../../src/config/presets/mainnet";
 import {NetworkRpc} from "../../../../src/network/libp2p/rpc";
 
 import {createNode} from "./util";
 import {NodejsNode} from "../../../../src/network/libp2p/nodejs";
 import {Method} from "../../../../src/constants";
-import {Hello} from "../../../../src/types";
+import {Hello} from "@chainsafe/eth2-types";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
-
-import networkDefaults from "../../../../src/network/defaults";
+import {createIBeaconConfig} from "../../../../src/config";
+import * as mainnetParams from "../../../../src/params/presets/mainnet";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
+let config = createIBeaconConfig(mainnetParams);
 
 describe("[network] rpc", () => {
   let nodeA: NodejsNode, nodeB: NodejsNode,

@@ -2,11 +2,10 @@
  * @module db/api/validator
  */
 
-import {deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
+import {deserialize, serialize} from "@chainsafe/ssz";
 import deepmerge from "deepmerge";
-import {Attestation, BeaconBlock, ValidatorIndex} from "../../../types";
-import {IBeaconConfig} from "../../../config";
-import {DatabaseService, DatabaseApiOptions} from "../abstract";
+import {Attestation, BeaconBlock, ValidatorIndex} from "@chainsafe/eth2-types";
+import {DatabaseApiOptions, DatabaseService} from "../abstract";
 import {AttestationSearchOptions, IValidatorDB} from "./interface";
 import {Bucket, encodeKey} from "../../schema";
 

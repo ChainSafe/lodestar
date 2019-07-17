@@ -5,11 +5,12 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import {equals} from "@chainsafe/ssz";
-
-import {BeaconState, VoluntaryExit} from "../../../../src/types";
-import {config} from "../../../../src/config/presets/mainnet";
 import {processVoluntaryExit} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {createIBeaconConfig} from "../../../../src/config";
+import * as mainnetParams from "../../../../src/params/presets/mainnet";
+
+let config = createIBeaconConfig(mainnetParams);
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/voluntary_exit/voluntary_exit_mainnet.yaml"),

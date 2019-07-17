@@ -4,12 +4,12 @@
 
 import {EventEmitter} from "events";
 import {deserialize, serialize} from "@chainsafe/ssz";
-import promisify from "promisify-es6";
+import promisify from "es6-promisify";
 import LibP2p from "libp2p";
 import Gossipsub from "libp2p-gossipsub";
 import PeerInfo from "peer-info";
 
-import {Attestation, BeaconBlock, Shard, RequestBody, ResponseBody} from "../../types";
+import {Attestation, BeaconBlock, Shard, RequestBody, ResponseBody} from "@chainsafe/eth2-types";
 import {
   Method, RequestId, BLOCK_TOPIC, ATTESTATION_TOPIC, SHARD_SUBNET_COUNT,
 } from "../../constants";

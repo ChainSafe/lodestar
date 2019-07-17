@@ -4,7 +4,7 @@
 
 import {equals, serialize} from "@chainsafe/ssz";
 
-import {AttestationData} from "../../../types";
+import {AttestationData} from "@chainsafe/eth2-types";
 import {IBeaconConfig} from "../../../config";
 
 /**

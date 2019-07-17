@@ -5,11 +5,12 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import {equals} from "@chainsafe/ssz";
 import sinon from "sinon";
-
-import {BeaconState, Deposit} from "../../../../src/types";
-import {config} from "../../../../src/config/presets/mainnet";
 import {processDeposit} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {createIBeaconConfig} from "../../../../src/config";
+import * as mainnetParams from "../../../../src/params/presets/mainnet";
+
+let config = createIBeaconConfig(mainnetParams);
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/deposit/deposit_mainnet.yaml"),
@@ -18,7 +19,7 @@ describeSpecTest(
     return state;
   },
   (input) => {
-    if(input.bls_setting && input.bls_setting.toNumber() === 2) {
+    if (input.bls_setting && input.bls_setting.toNumber() === 2) {
       rewire({
         verify: sinon.stub().returns(true),
         verifyMultiple: sinon.stub().returns(true)

@@ -1,16 +1,17 @@
 import {expect} from "chai";
 import {Keypair} from "@chainsafe/bls-js/lib/keypair";
-
-import {config} from "../../../src/config/presets/mainnet";
 import Validator from "../../../src/validator";
 import {RpcClientOverInstance} from "../../../src/validator/rpc";
 import {MockBeaconApi} from "../../utils/mocks/rpc/beacon";
 import {MockValidatorApi} from "../../utils/mocks/rpc/validator";
 import {ILogger, WinstonLogger} from "../../../src/logger";
 import {IValidatorOptions} from "../../../src/validator/options";
+import {createIBeaconConfig} from "../../../src/config";
+import * as mainnetParams from "../../../src/params/presets/mainnet";
 
 describe('Validator', () => {
   let logger: ILogger = new WinstonLogger();
+  let config = createIBeaconConfig(mainnetParams);
 
 
   before(async () => {

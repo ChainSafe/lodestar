@@ -4,24 +4,22 @@ import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import {hash} from "@chainsafe/ssz";
-
-import {config} from "../../../../../../src/config/presets/mainnet";
-import {
-  FAR_FUTURE_EPOCH,
-} from "../../../../../../src/constants";
+import {FAR_FUTURE_EPOCH,} from "../../../../../../src/constants";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
 import {slotToEpoch} from "../../../../../../src/chain/stateTransition/util";
 import {processTransfer} from "../../../../../../src/chain/stateTransition/block/operations";
 
 import {generateEmptyTransfer} from "../../../../../utils/transfer";
 import {generateValidator} from "../../../../../utils/validator";
-import {generateEmptyBlock} from "../../../../../utils/block";
 import {generateState} from "../../../../../utils/state";
+import {createIBeaconConfig} from "../../../../../../src/config";
+import * as mainnetParams from "../../../../../../src/params/presets/mainnet";
 
 describe('process block - transfers', function () {
 
   const sandbox = sinon.createSandbox();
 
+  let config = createIBeaconConfig(mainnetParams);
   let increaseBalanceStub, decreaseBalanceStub, getBeaconProposerIndexStub, blsStub;
 
   beforeEach(() => {

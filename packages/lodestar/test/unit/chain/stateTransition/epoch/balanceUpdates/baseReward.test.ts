@@ -1,18 +1,19 @@
 import BN from "bn.js";
 import {expect} from "chai";
 import sinon from "sinon";
-
-import {config} from "../../../../../../src/config/presets/mainnet";
 import * as utilsEpoch from "../../../../../../src/chain/stateTransition/epoch/util";
 import {bnSqrt} from "../../../../../../src/util/math";
 import {generateState} from "../../../../../utils/state";
 import {generateValidators} from "../../../../../utils/validator";
 import {getBaseReward} from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates/baseReward";
+import {createIBeaconConfig} from "../../../../../../src/config";
+import * as mainnetParams from "../../../../../../src/params/presets/mainnet";
 
 describe('process epoch - balance updates', function () {
 
   const sandbox = sinon.createSandbox();
   let getTotalActiveBalanceStub;
+  let config = createIBeaconConfig(mainnetParams);
 
   beforeEach(() => {
     getTotalActiveBalanceStub = sandbox.stub(utilsEpoch, "getTotalActiveBalance");

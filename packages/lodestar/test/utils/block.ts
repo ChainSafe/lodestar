@@ -1,4 +1,4 @@
-import {BeaconBlock} from "../../src/types";
+import {BeaconBlock} from "@chainsafe/eth2-types";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 
 

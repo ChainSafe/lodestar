@@ -1,10 +1,6 @@
-import BN from "bn.js";
-import { assert } from "chai";
+import {assert} from "chai";
 
-import {
-  getBitfieldBit,
-  verifyBitfield
-} from "../../../../../src/chain/stateTransition/util";
+import {getBitfieldBit, verifyBitfield} from "../../../../../src/chain/stateTransition/util";
 
 
 describe("getBitfieldBit", () => {

@@ -1,7 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
 import {hashTreeRoot} from "@chainsafe/ssz";
-import {config} from "../../../../../src/config/presets/mainnet";
 import {ZERO_HASH} from "../../../../../src/constants";
 import {OpPool} from "../../../../../src/opPool";
 import {ProgressiveMerkleTree, verifyMerkleBranch} from "../../../../../src/util/merkleTree";
@@ -9,11 +8,13 @@ import {generateDeposits} from "../../../../../src/chain/factory/block/deposits"
 import {generateState} from "../../../../utils/state";
 import {generateDeposit} from "../../../../utils/deposit";
 import {DepositsOperations} from "../../../../../src/opPool/modules";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
 describe('blockAssembly - deposits', function() {
 
   const sandbox = sinon.createSandbox();
-
+  let config = createIBeaconConfig(mainnetParams);
   let opPool;
 
   beforeEach(() => {

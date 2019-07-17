@@ -15,7 +15,7 @@ import {
   bytes,
   IndexedAttestation,
   ValidatorIndex,
-} from "../../../types";
+} from "@chainsafe/eth2-types";
 
 import {intDiv} from "../../../util/math";
 import {isSorted} from "../../../util/sort";

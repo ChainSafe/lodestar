@@ -3,10 +3,10 @@
  */
 
 import assert from "assert";
-import {bytes32, MerkleTree, number64} from "../../types";
+import {bytes32, number64} from "@chainsafe/eth2-types";
 import {hash} from "../crypto";
 import {intDiv} from "../math";
-import {serialize, deserialize, AnySSZType, SimpleContainerType} from "@chainsafe/ssz";
+import {deserialize, serialize, SimpleContainerType} from "@chainsafe/ssz";
 import {IProgressiveMerkleTree} from "./interface";
 
 const MerkleTreeType: SimpleContainerType = {

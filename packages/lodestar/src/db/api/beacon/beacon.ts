@@ -8,19 +8,18 @@ import {
   BeaconBlock,
   BeaconState,
   bytes32,
-  Deposit, MerkleTree,
+  Deposit,
   ProposerSlashing,
   Slot,
   Transfer,
-  uint64, ValidatorIndex,
-  VoluntaryExit,
-  number64
-} from "../../../types";
+  ValidatorIndex,
+  VoluntaryExit
+} from "@chainsafe/eth2-types";
 
 import {Bucket, encodeKey, Key} from "../../schema";
 
 import {AnySSZType, deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
-import {DatabaseService, DatabaseApiOptions} from "../abstract";
+import {DatabaseApiOptions, DatabaseService} from "../abstract";
 import {IBeaconDb} from "./interface";
 import {IProgressiveMerkleTree, ProgressiveMerkleTree} from "../../../util/merkleTree";
 

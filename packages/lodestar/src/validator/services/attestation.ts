@@ -12,7 +12,7 @@ import {
   Shard,
   Slot,
   ValidatorIndex
-} from "../../types";
+} from "@chainsafe/eth2-types";
 import {IBeaconConfig} from "../../config";
 
 import {

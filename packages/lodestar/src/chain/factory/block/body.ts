@@ -2,7 +2,7 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconBlockBody, BeaconState, bytes96} from "../../../types";
+import {BeaconBlockBody, BeaconState, bytes96} from "@chainsafe/eth2-types";
 import {ZERO_HASH} from "../../../constants";
 import {IBeaconConfig} from "../../../config";
 import {OpPool} from "../../../opPool";

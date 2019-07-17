@@ -6,24 +6,19 @@ import assert from "assert";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {BLSDomain} from "@chainsafe/bls-js/lib/types";
 
-import {
-  Domain,
-  EMPTY_SIGNATURE,
-  ZERO_HASH,
-} from "../../../constants";
+import {Domain, EMPTY_SIGNATURE, ZERO_HASH,} from "../../../constants";
 
 import {
   BeaconBlock,
-  BeaconBlockBody,
   BeaconBlockHeader,
   BeaconState,
   bytes32,
+  bytes4,
   Epoch,
   Fork,
   Slot,
   ValidatorIndex,
-  bytes4,
-} from "../../../types";
+} from "@chainsafe/eth2-types";
 import {IBeaconConfig} from "../../../config";
 
 import {intDiv} from "../../../util/math";
@@ -34,7 +29,6 @@ import {getCrosslinkCommittee, getEpochCommitteeCount, getEpochStartShard} from 
 import {getCurrentEpoch, getEpochStartSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
 import {generateSeed} from "./seed";
-
 
 
 /**

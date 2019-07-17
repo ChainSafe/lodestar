@@ -7,8 +7,6 @@ import {IBeaconConfig} from "../config";
 import {BeaconDB, LevelDbController} from "../db";
 import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
 import {INetwork, Libp2pNetwork, NodejsNode} from "../network";
-
-
 import defaultConf, {IBeaconNodeOptions} from "./options";
 import {isPlainObject} from "../util/objects";
 import {Sync} from "../sync";
@@ -42,7 +40,7 @@ export class BeaconNode {
   public reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger}: {config: IBeaconConfig; logger: ILogger}) {
+  public constructor(opts: Partial<IBeaconNodeOptions>, {logger, config}: {config: IBeaconConfig; logger: ILogger}) {
 
     this.conf = deepmerge(
       defaultConf,
@@ -52,7 +50,6 @@ export class BeaconNode {
         isMergeableObject: isPlainObject
       }
     );
-    this.config = config;
     this.logger = logger;
 
     this.reps = new ReputationStore();

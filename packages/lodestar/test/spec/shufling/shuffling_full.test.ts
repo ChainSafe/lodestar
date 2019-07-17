@@ -1,10 +1,12 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
-
-import {config} from "../../../src/config/presets/mainnet";
 import {getShuffledIndex} from "../../../src/chain/stateTransition/util";
-import {bytes32} from "../../../src/types";
+import {bytes32} from "@chainsafe/eth2-types";
+import {createIBeaconConfig} from "../../../src/config";
+import * as mainnetParams from "../../../src/params/presets/mainnet";
+
+let config = createIBeaconConfig(mainnetParams);
 
 describeSpecTest(
   join(__dirname, "../test-cases/tests/shuffling/core/shuffling_full.yaml"),

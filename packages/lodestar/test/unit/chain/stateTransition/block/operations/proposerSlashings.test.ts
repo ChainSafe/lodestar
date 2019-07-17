@@ -2,20 +2,20 @@ import {expect} from "chai";
 import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
-
-import {config} from "../../../../../../src/config/presets/mainnet";
 import {processProposerSlashing} from "../../../../../../src/chain/stateTransition/block/operations";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
 
 import {generateEmptyProposerSlashing} from "../../../../../utils/slashings";
 import {generateValidator} from "../../../../../utils/validator";
 import {generateState} from "../../../../../utils/state";
-import {generateEmptyBlock} from "../../../../../utils/block";
+import {createIBeaconConfig} from "../../../../../../src/config";
+import * as mainnetParams from "../../../../../../src/params/presets/mainnet";
 
 describe('process block - proposer slashings', function () {
 
   const sandbox = sinon.createSandbox();
 
+  let config = createIBeaconConfig(mainnetParams);
   let isSlashableValidatorStub, slashValidatorStub, blsStub;
 
   beforeEach(() => {

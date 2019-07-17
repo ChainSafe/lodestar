@@ -1,26 +1,27 @@
 import BN from "bn.js";
 import {expect} from "chai";
 import sinon from "sinon";
-
-import {config} from "../../../../../src/config/presets/mainnet";
 import {
   getAttestingBalance,
   getMatchingHeadAttestations,
   getMatchingSourceAttestations,
   getMatchingTargetAttestations,
-  getTotalActiveBalance, getUnslashedAttestingIndices
+  getTotalActiveBalance,
+  getUnslashedAttestingIndices
 } from "../../../../../src/chain/stateTransition/epoch/util";
 import * as utils from "../../../../../src/chain/stateTransition/util";
-import {getAttestationDataSlot} from "../../../../../src/chain/stateTransition/util";
+import {getAttestationDataSlot, getAttestingIndices} from "../../../../../src/chain/stateTransition/util";
 import {FAR_FUTURE_EPOCH} from "../../../../../src/constants";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
-import {getAttestingIndices} from "../../../../../src/chain/stateTransition/util";
 import {generateValidator} from "../../../../utils/validator";
 import {generateState} from "../../../../utils/state";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
 describe('process epoch - crosslinks', function () {
 
   const sandbox = sinon.createSandbox();
+  let config = createIBeaconConfig(mainnetParams);
 
   let getActiveValidatorIndicesStub,
     getTotalBalanceStub,

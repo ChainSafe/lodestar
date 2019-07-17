@@ -1,22 +1,20 @@
 import BN from "bn.js";
 import {expect} from "chai";
 import sinon from "sinon";
-
-import {config} from "../../../../../../src/config/presets/mainnet";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
 import {GENESIS_EPOCH} from "../../../../../../src/constants";
-import {processRewardsAndPenalties}
-  from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates";
-import * as attestationDeltas
-  from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates/attestation";
-import * as crosslinkDeltas
-  from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates/crosslink";
+import {processRewardsAndPenalties} from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates";
+import * as attestationDeltas from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates/attestation";
+import * as crosslinkDeltas from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates/crosslink";
 import {generateValidator} from "../../../../../utils/validator";
 import {generateState} from "../../../../../utils/state";
+import {createIBeaconConfig} from "../../../../../../src/config";
+import * as mainnetParams from "../../../../../../src/params/presets/mainnet";
 
 describe('process epoch - balance updates', function () {
 
   const sandbox = sinon.createSandbox();
+  let config = createIBeaconConfig(mainnetParams);
   let getCurrentEpochStub,
     getAttestationDeltasStub,
     getCrosslinkDeltasStub,

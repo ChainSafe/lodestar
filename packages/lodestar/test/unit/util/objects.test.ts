@@ -1,12 +1,15 @@
 import BN from "bn.js";
-import { expect } from "chai";
+import {expect} from "chai";
 
-import {uint64} from "../../../src/types";
-import {config} from "../../../src/config/presets/mainnet";
+import {uint64} from "@chainsafe/eth2-types";
 import {isPlainObject, mostFrequent} from "../../../src/util/objects";
+import {createIBeaconConfig} from "../../../src/config";
+import * as mainnetParams from "../../../src/params/presets/mainnet";
 
 
 describe('Objects helper', () => {
+
+  let config = createIBeaconConfig(mainnetParams);
 
   it('should be plain object', () => {
     expect(isPlainObject(Object.create({}))).to.be.true;

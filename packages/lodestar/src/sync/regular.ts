@@ -4,7 +4,7 @@
 
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {BeaconBlock, Attestation} from "../types";
+import {BeaconBlock, Attestation} from "@chainsafe/eth2-types";
 import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
 import {IBeaconConfig} from "../config";
 import {IBeaconDb} from "../db";

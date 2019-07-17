@@ -2,27 +2,22 @@ import {expect} from "chai";
 import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
-import {signingRoot} from "@chainsafe/ssz";
-
-import {config} from "../../../../../../src/config/presets/mainnet";
-import {
-  Domain,
-  FAR_FUTURE_EPOCH,
-} from "../../../../../../src/constants";
-import {VoluntaryExit} from "../../../../../../src/types";
+import {FAR_FUTURE_EPOCH,} from "../../../../../../src/constants";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
-import {getDomain, initiateValidatorExit} from "../../../../../../src/chain/stateTransition/util";
+import {initiateValidatorExit} from "../../../../../../src/chain/stateTransition/util";
 import {processVoluntaryExit} from "../../../../../../src/chain/stateTransition/block/operations";
 
 import {generateValidator} from "../../../../../utils/validator";
 import {generateEmptyVoluntaryExit} from "../../../../../utils/voluntaryExits";
-import {generateEmptyBlock} from "../../../../../utils/block";
 import {generateState} from "../../../../../utils/state";
+import {createIBeaconConfig} from "../../../../../../src/config";
+import * as mainnetParams from "../../../../../../src/params/presets/mainnet";
 
 describe('process block - voluntary exits', function () {
 
   const sandbox = sinon.createSandbox();
 
+  let config = createIBeaconConfig(mainnetParams);
   let isActiveValidatorStub, initiateValidatorExitStub, blsStub;
 
   beforeEach(() => {

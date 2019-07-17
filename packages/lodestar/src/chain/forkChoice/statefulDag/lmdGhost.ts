@@ -10,7 +10,7 @@ import {
   Gwei,
   Slot,
   ValidatorIndex,
-} from "../../../types";
+} from "@chainsafe/eth2-types";
 
 import {LMDGHOST} from "../interface";
 
@@ -244,7 +244,7 @@ export class StatefulDagLMDGHOST implements LMDGHOST {
       if (!agg.prevWeight.eq(agg.weight)) {
         const delta = agg.weight.sub(agg.prevWeight);
         agg.prevWeight = agg.weight;
-        
+
         this.nodes[agg.target].propagateWeightChange(delta);
       }
     });

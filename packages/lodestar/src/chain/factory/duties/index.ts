@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "../../../config";
-import {BLSPubkey, ValidatorDuty, ValidatorIndex} from "../../../types";
+import {BLSPubkey, ValidatorDuty, ValidatorIndex} from "@chainsafe/eth2-types";
 import {getCommitteeAssignment, slotToEpoch} from "../../stateTransition/util";
 
 export function assembleValidatorDuty(

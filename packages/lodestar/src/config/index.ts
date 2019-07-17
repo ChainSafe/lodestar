@@ -1,6 +1,6 @@
 import {IBeaconParams} from "../params";
 import {IBeaconConfig} from "./interface";
-import {createIBeaconSSZTypes} from "../sszTypes";
+import {createIBeaconSSZTypes} from "@chainsafe/eth2-types";
 
 export * from "./interface";
 

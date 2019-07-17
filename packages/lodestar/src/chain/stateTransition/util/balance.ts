@@ -8,7 +8,7 @@ import {
   BeaconState,
   Gwei,
   ValidatorIndex,
-} from "../../../types";
+} from "@chainsafe/eth2-types";
 
 
 /**

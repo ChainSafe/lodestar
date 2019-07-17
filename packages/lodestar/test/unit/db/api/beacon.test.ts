@@ -1,19 +1,8 @@
 import sinon from "sinon";
-
-import {config} from "../../../../src/config/presets/mainnet";
 import * as dbKeys from "../../../../src/db/schema";
 import {Bucket, Key} from "../../../../src/db/schema";
 import {BeaconDB} from "../../../../src/db/api";
 import {LevelDbController} from "../../../../src/db/controller";
-import {
-  Attestation,
-  AttesterSlashing,
-  BeaconBlock,
-  BeaconState, Deposit,
-  ProposerSlashing,
-  uint64,
-  VoluntaryExit
-} from "../../../../src/types";
 import {generateState} from "../../../utils/state";
 import chai, {expect} from "chai";
 import {serialize} from "@chainsafe/ssz";
@@ -23,16 +12,19 @@ import chaiAsPromised from 'chai-as-promised';
 import {generateEmptyAttestation} from "../../../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../../../utils/voluntaryExits";
 import {generateEmptyTransfer} from "../../../utils/transfer";
-import {Transfer} from "../../../../src/types";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../utils/slashings";
 import {generateDeposit} from "../../../utils/deposit";
 import {ProgressiveMerkleTree} from "../../../../src/util/merkleTree/merkleTree";
+import {createIBeaconConfig} from "../../../../src/config";
+import * as mainnetParams from "../../../../src/params/presets/mainnet";
 
 chai.use(chaiAsPromised);
 
 describe('beacon db api', function() {
 
   const sandbox = sinon.createSandbox();
+
+  let config = createIBeaconConfig(mainnetParams);
   const objKey = Buffer.alloc(32, 10);
   const objRoot = Buffer.alloc(32, 11);
 

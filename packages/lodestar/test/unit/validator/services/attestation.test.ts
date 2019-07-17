@@ -1,8 +1,6 @@
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import sinon from "sinon";
 import {expect} from "chai";
-
-import {config} from "../../../../src/config/presets/mainnet";
 import {RpcClientOverInstance} from "../../../../src/validator/rpc";
 import {ValidatorApi} from "../../../../src/rpc/api/validator";
 import {AttestationService} from "../../../../src/validator/services/attestation";
@@ -11,10 +9,13 @@ import {ValidatorDB} from "../../../../src/db/api";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
 import {generateFork} from "../../../utils/fork";
 import {generateAttestationData} from "../../../utils/attestation";
+import {createIBeaconConfig} from "../../../../src/config";
+import * as mainnetParams from "../../../../src/params/presets/mainnet";
 
 describe('validator attestation service', function () {
 
   const sandbox = sinon.createSandbox();
+  let config = createIBeaconConfig(mainnetParams);
 
   let rpcClientStub, dbStub;
   let logger: ILogger = new WinstonLogger();

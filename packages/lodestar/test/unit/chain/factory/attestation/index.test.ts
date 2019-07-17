@@ -1,18 +1,19 @@
 import sinon from "sinon";
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
-
-import {config} from "../../../../../src/config/presets/mainnet";
 import * as attestationDataProduction from "../../../../../src/chain/factory/attestation/data";
 import {BeaconDB} from "../../../../../src/db/api";
 import {assembleAttestation} from "../../../../../src/chain/factory/attestation";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateAttestationData} from "../../../../utils/attestation";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
 describe("assemble attestation", function () {
 
   const sandbox = sinon.createSandbox();
   let assembleAttestationDataStub, dbStub;
+  let config = createIBeaconConfig(mainnetParams);
 
   beforeEach(() => {
     assembleAttestationDataStub = sandbox.stub(

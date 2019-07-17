@@ -2,22 +2,21 @@ import {expect} from "chai";
 import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
-
-import {config} from "../../../../../src/config/presets/mainnet";
-import {Domain} from "../../../../../src/constants";
 import {processRandao} from "../../../../../src/chain/stateTransition/block/randao";
 import * as utils from "../../../../../src/chain/stateTransition/util";
-
-import {getCurrentEpoch, getDomain} from "../../../../../src/chain/stateTransition/util";
+import {getCurrentEpoch} from "../../../../../src/chain/stateTransition/util";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {generateValidator} from "../../../../utils/validator";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
 describe('process block - randao', function () {
 
   const sandbox = sinon.createSandbox();
 
   let getBeaconProposerStub, blsStub;
+  let config = createIBeaconConfig(mainnetParams);
 
   beforeEach(() => {
     getBeaconProposerStub = sandbox.stub(utils, "getBeaconProposerIndex");

@@ -8,22 +8,23 @@ import {Provider} from "ethers/providers";
 import promisify from "promisify-es6";
 import bls from "@chainsafe/bls-js";
 import {serialize} from "@chainsafe/ssz";
-
-import {config} from "../../../src/config/presets/mainnet";
 import {EthersEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
-import {number64} from "../../../src/types";
 import {ILogger, WinstonLogger} from "../../../src/logger";
 import {OpPool} from "../../../src/opPool";
 
 import {generateDeposit} from "../../utils/deposit";
 import {DepositsOperations} from "../../../src/opPool/modules/deposit";
+import {createIBeaconConfig} from "../../../src/config";
+import * as mainnetParams from "../../../src/params/presets/mainnet";
 
 
 chai.use(chaiAsPromised);
 describe("Eth1Notifier", () => {
   const ganacheProvider = ganache.provider();
   const provider = new ethers.providers.Web3Provider(ganacheProvider);
+
+  let config = createIBeaconConfig(mainnetParams);
   let opPool;
   let eth1;
   let sandbox;

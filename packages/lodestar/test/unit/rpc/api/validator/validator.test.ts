@@ -1,7 +1,5 @@
 import sinon from "sinon";
 import {expect} from "chai";
-
-import {config} from "../../../../../src/config/presets/mainnet";
 import * as blockAssembly from "../../../../../src/chain/factory/block";
 import * as stateTransitionUtils from "../../../../../src/chain/stateTransition/util";
 import {getCommitteeAssignment} from "../../../../../src/chain/stateTransition/util";
@@ -15,10 +13,13 @@ import {StatefulDagLMDGHOST} from "../../../../../src/chain/forkChoice";
 import * as dutyFactory from "../../../../../src/chain/factory/duties";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
 describe('validator rpc api', function () {
 
   const sandbox = sinon.createSandbox();
+  let config = createIBeaconConfig(mainnetParams);
 
   let validatorApi, dbStub, chainStub, opStub, forkChoiceStub, eth1Stub;
 

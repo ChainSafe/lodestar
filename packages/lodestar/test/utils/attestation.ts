@@ -2,7 +2,7 @@ import {
   Attestation,
   AttestationData,
   Epoch,
-} from "../../src/types";
+} from "@chainsafe/eth2-types";
 import {randBetween} from "./misc";
 import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, GENESIS_START_SHARD} from "../../src/constants";
 

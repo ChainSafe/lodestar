@@ -1,15 +1,16 @@
 import sinon from "sinon";
 import {expect} from "chai";
-
-import {config} from "../../../../../src/config/presets/mainnet";
 import * as stateTransitionUtils from "../../../../../src/chain/stateTransition/util";
 import {assembleValidatorDuty} from "../../../../../src/chain/factory/duties";
 import {generateState} from "../../../../utils/state";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
 describe("assemble validator duty", function () {
 
   const sandbox = sinon.createSandbox();
   let committeeAssignmentStub;
+  let config = createIBeaconConfig(mainnetParams);
 
   beforeEach(() => {
     committeeAssignmentStub = sandbox.stub(stateTransitionUtils, 'getCommitteeAssignment');

@@ -9,7 +9,7 @@ import BN from "bn.js";
 import bls from "@chainsafe/bls-js";
 import {hash, signingRoot} from "@chainsafe/ssz";
 import {Domain} from "../constants";
-import {DepositData} from "../types";
+import {DepositData} from "@chainsafe/eth2-types";
 import {ILogger} from "../logger";
 import {IBeaconConfig} from "../config";
 

@@ -1,9 +1,11 @@
-import {config} from "../../src/config/presets/mainnet";
-import {AttesterSlashing, ProposerSlashing} from "../../src/types";
+import {AttesterSlashing, ProposerSlashing} from "@chainsafe/eth2-types";
 import {generateEmptyBlock} from "./block";
 import {getTemporaryBlockHeader} from "../../src/chain/stateTransition/util";
 import {generateEmptyAttestation} from "./attestation";
+import {createIBeaconConfig} from "../../src/config";
+import * as mainnetParams from "../../src/params/presets/mainnet";
 
+let config = createIBeaconConfig(mainnetParams);
 
 export function generateEmptyProposerSlashing(): ProposerSlashing {
 

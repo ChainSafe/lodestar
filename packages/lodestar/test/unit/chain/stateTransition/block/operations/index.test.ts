@@ -1,21 +1,13 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {hashTreeRoot} from "@chainsafe/ssz";
-
-import {config} from "./../../../../../../src/config/presets/mainnet";
-import {Crosslink} from "../../../../../../src/types";
-import  * as processProposerSlashing
+import * as processProposerSlashing
   from "../../../../../../src/chain/stateTransition/block/operations/proposerSlashing";
-import  * as processAttesterSlashing
+import * as processAttesterSlashing
   from "../../../../../../src/chain/stateTransition/block/operations/attesterSlashing";
-import  * as processAttestation
-  from "../../../../../../src/chain/stateTransition/block/operations/attestation";
-import  * as processDeposit
-  from "../../../../../../src/chain/stateTransition/block/operations/deposit";
-import  * as processVoluntaryExit
-  from "../../../../../../src/chain/stateTransition/block/operations/voluntaryExit";
-import  * as processTransfer
-  from "../../../../../../src/chain/stateTransition/block/operations/transfer";
+import * as processAttestation from "../../../../../../src/chain/stateTransition/block/operations/attestation";
+import * as processDeposit from "../../../../../../src/chain/stateTransition/block/operations/deposit";
+import * as processVoluntaryExit from "../../../../../../src/chain/stateTransition/block/operations/voluntaryExit";
+import * as processTransfer from "../../../../../../src/chain/stateTransition/block/operations/transfer";
 import {processOperations} from "../../../../../../src/chain/stateTransition/block/operations";
 
 import {generateState} from "../../../../../utils/state";
@@ -23,13 +15,16 @@ import {generateEmptyBlock} from "../../../../../utils/block";
 import {generateDeposit} from "../../../../../utils/deposit";
 import {generateEmptyTransfer} from "../../../../../utils/transfer";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../../../utils/slashings";
-import {generateAttestationData, generateEmptyAttestation} from "../../../../../utils/attestation";
+import {generateEmptyAttestation} from "../../../../../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../../../../../utils/voluntaryExits";
+import {createIBeaconConfig} from "../../../../../../src/config";
+import * as mainnetParams from "../../../../../../src/params/presets/mainnet";
 
 
 describe('process block - process operations', function () {
 
   const sandbox = sinon.createSandbox();
+  let config = createIBeaconConfig(mainnetParams);
 
   let processProposerSlashingStub,
     processAttesterSlashingStub,

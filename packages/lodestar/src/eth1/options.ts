@@ -1,4 +1,4 @@
-import {number64} from "../types";
+import {number64} from "@chainsafe/eth2-types";
 import {BaseProvider} from "ethers/providers";
 import {IConfigurationModule} from "../util/config";
 

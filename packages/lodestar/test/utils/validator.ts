@@ -1,5 +1,5 @@
 import BN from "bn.js";
-import {Validator} from "../../src/types";
+import {Validator} from "@chainsafe/eth2-types";
 import { FAR_FUTURE_EPOCH } from "../../src/constants";
 
 /**

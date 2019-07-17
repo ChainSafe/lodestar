@@ -3,7 +3,7 @@
  */
 
 import assert from "assert";
-import {BeaconState, Epoch, Slot, Validator, ValidatorIndex,} from "../../../types";
+import {BeaconState, Epoch, Slot, Validator, ValidatorIndex,} from "@chainsafe/eth2-types";
 import {IBeaconConfig} from "../../../config";
 import {
   getBeaconProposerIndex,

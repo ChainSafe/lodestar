@@ -4,7 +4,7 @@
 
 import {EventEmitter} from "events";
 
-import {BeaconBlock} from "../types";
+import {BeaconBlock} from "@chainsafe/eth2-types";
 
 import {BeaconChain} from "../chain";
 import {BeaconDB} from "../db";

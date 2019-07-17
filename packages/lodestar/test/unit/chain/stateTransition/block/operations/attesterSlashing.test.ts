@@ -1,15 +1,16 @@
 import {generateState} from "../../../../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
-
-import {config} from "../../../../../../src/config/presets/mainnet";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
 import {processAttesterSlashing} from "../../../../../../src/chain/stateTransition/block/operations";
 import {generateEmptyAttesterSlashing} from "../../../../../utils/slashings";
+import {createIBeaconConfig} from "../../../../../../src/config";
+import * as mainnetParams from "../../../../../../src/params/presets/mainnet";
 
 describe('process block - attester slashings', function () {
 
   const sandbox = sinon.createSandbox();
+  let config = createIBeaconConfig(mainnetParams);
 
   let isSlashableAttestationStub,
     validateIndexedAttestationStub,

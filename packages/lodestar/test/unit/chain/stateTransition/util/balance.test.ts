@@ -1,13 +1,13 @@
 import BN from "bn.js";
 import {assert} from "chai";
 
-import {BeaconState, Gwei, Validator, ValidatorIndex} from "../../../../../src/types";
+import {BeaconState, Gwei, Validator, ValidatorIndex} from "@chainsafe/eth2-types";
 
 import {
-  increaseBalance,
   decreaseBalance,
   getTotalBalance,
-} from "../../../../../src/chain/stateTransition/util/balance";
+  increaseBalance,
+} from "../../../../../src/chain/stateTransition/util";
 
 import {generateValidators} from "../../../../utils/validator";
 import {generateState} from "../../../../utils/state";

@@ -1,8 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import BN from "bn.js";
-
-import {config} from "../../../src/config/presets/mainnet";
 import {Method} from "../../../src/constants";
 import {SyncRpc} from "../../../src/sync/rpc";
 import {ReputationStore} from "../../../src/sync/reputation";
@@ -13,6 +11,8 @@ import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../unit/network/libp2p/util";
 import {WinstonLogger} from "../../../src/logger";
 import {INetworkOptions} from "../../../src/network/options";
+import {createIBeaconConfig} from "../../../src/config";
+import * as mainnetParams from "../../../src/params/presets/mainnet";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -27,6 +27,7 @@ const opts: INetworkOptions = {
 describe("[sync] rpc", () => {
   const sandbox = sinon.createSandbox();
   let logger = new WinstonLogger();
+  let config = createIBeaconConfig(mainnetParams);
 
   let rpcA: SyncRpc,netA: Libp2pNetwork, repsA: ReputationStore;
   let rpcB: SyncRpc, netB: Libp2pNetwork, repsB: ReputationStore;

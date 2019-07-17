@@ -8,7 +8,7 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import {
   BeaconBlock,
   BeaconState,
-} from "../../types";
+} from "@chainsafe/eth2-types";
 import {IBeaconConfig} from "../../config";
 
 import {processBlock} from "./block";

@@ -2,13 +2,13 @@
  * @module cli/commands
  */
 import {CommanderStatic} from "commander";
-
-import {config} from "../../config/presets/mainnet";
 import {CliCommand} from "./interface";
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import Validator from "../../validator";
 import {generateCommanderOptions, optionsToConfig} from "../util";
 import {ValidatorOptions} from "../../validator/options";
+import {createIBeaconConfig} from "../../config";
+import * as mainetParams from "../../params/presets/mainnet";
 
 interface IValidatorCommandOptions {
   loggingLevel?: string;
@@ -42,6 +42,9 @@ export class ValidatorCommand implements CliCommand {
     }
 
     const conf = optionsToConfig(options, ValidatorOptions);
+
+    // TODO: improve this somewhere else so it can be auto merged with default conf
+    let config = createIBeaconConfig(mainetParams);
 
     let validator = new Validator(conf, {config, logger});
     await validator.start();

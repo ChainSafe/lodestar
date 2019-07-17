@@ -1,5 +1,5 @@
 import {OperationsModule} from "./abstract";
-import {ProposerSlashing} from "../../types";
+import {ProposerSlashing} from "@chainsafe/eth2-types";
 
 export class ProposerSlashingOperations extends OperationsModule {
 

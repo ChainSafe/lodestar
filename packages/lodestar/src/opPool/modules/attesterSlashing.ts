@@ -1,5 +1,5 @@
 import {OperationsModule} from "./abstract";
-import {AttesterSlashing} from "../../types";
+import {AttesterSlashing} from "@chainsafe/eth2-types";
 
 export class AttesterSlashingOperations extends OperationsModule {
 

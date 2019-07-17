@@ -8,15 +8,25 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import PeerInfo from "peer-info";
 
 import {
-  bytes32, Slot, number64,
-  BeaconBlockHeader, BeaconBlockBody,
-  RequestBody, Hello, Goodbye, Status,
-  BeaconBlockRootsRequest, BeaconBlockRootsResponse,
-  BeaconBlockHeadersRequest, BeaconBlockHeadersResponse,
-  BeaconBlockBodiesRequest, BeaconBlockBodiesResponse,
-  BeaconStatesRequest, BeaconStatesResponse, Epoch,
-} from "../types";
-import {ZERO_HASH, Method, RequestId, ResponseCode} from "../constants";
+  BeaconBlockBodiesRequest,
+  BeaconBlockBodiesResponse,
+  BeaconBlockHeader,
+  BeaconBlockHeadersRequest,
+  BeaconBlockHeadersResponse,
+  BeaconBlockRootsRequest,
+  BeaconBlockRootsResponse,
+  BeaconStatesRequest,
+  BeaconStatesResponse,
+  bytes32,
+  Epoch,
+  Goodbye,
+  Hello,
+  number64,
+  RequestBody,
+  Slot,
+  Status,
+} from "@chainsafe/eth2-types";
+import {Method, RequestId, ResponseCode, ZERO_HASH} from "../constants";
 import {intDiv} from "../util/math";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
@@ -24,7 +34,7 @@ import {INetwork} from "../network";
 import {getEmptyBlockBody} from "../chain/genesis";
 import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
-import { IBeaconConfig } from "../config";
+import {IBeaconConfig} from "../config";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface SyncOptions {

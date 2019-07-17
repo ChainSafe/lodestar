@@ -1,35 +1,14 @@
 import {assert} from "chai";
 import BN from "bn.js";
 import {AnyContainerType, serialize} from "@chainsafe/ssz";
+import {RequestBody, ResponseBody,} from "@chainsafe/eth2-types";
+import {Method,} from "../../../src/constants";
 
-import {config} from "../../../src/config/presets/mainnet";
-import {
-  Hello,
-  Goodbye,
-  Status,
-  BeaconBlockRootsRequest,
-  BeaconBlockHeadersRequest,
-  BeaconBlockBodiesRequest,
-  BeaconStatesRequest,
-  BeaconBlockRootsResponse,
-  BeaconBlockHeadersResponse,
-  BeaconBlockBodiesResponse,
-  BeaconStatesResponse,
-  WireRequest,
-  WireResponse,
-  RequestBody,
-  ResponseBody,
-} from "../../../src/types";
-import {
-  Method,
-} from "../../../src/constants";
+import {decodeRequestBody, decodeResponseBody, encodeRequest, encodeResponse,} from "../../../src/network/codec";
+import {createIBeaconConfig} from "../../../src/config";
+import * as mainnetParams from "../../../src/params/presets/mainnet";
 
-import {
-  encodeRequest,
-  encodeResponse,
-  decodeRequestBody,
-  decodeResponseBody,
-} from "../../../src/network/codec";
+let config = createIBeaconConfig(mainnetParams);
 
 describe("[network] rpc request", () => {
   const testCases: {

@@ -1,23 +1,22 @@
 import BN from "bn.js";
 import {expect} from "chai";
 import sinon from "sinon";
-
-import {config} from "../../../../../../src/config/presets/mainnet";
 import * as utilsEpoch from "../../../../../../src/chain/stateTransition/epoch/util";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
-import * as baseReward
-  from  "../../../../../../src/chain/stateTransition/epoch/balanceUpdates/baseReward";
+import * as baseReward from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates/baseReward";
 
 import {generateState} from "../../../../../utils/state";
 import {generateValidators} from "../../../../../utils/validator";
-import {getAttestationDeltas}
-  from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates/attestation";
+import {getAttestationDeltas} from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates/attestation";
 import {generateEmptyAttestation} from "../../../../../utils/attestation";
+import {createIBeaconConfig} from "../../../../../../src/config";
+import * as mainnetParams from "../../../../../../src/params/presets/mainnet";
 
 
 describe('process epoch - balance updates', function () {
 
   const sandbox = sinon.createSandbox();
+  let config = createIBeaconConfig(mainnetParams);
 
   let getAttestingBalanceStub,
     getMatchingHeadAttestationsStub,

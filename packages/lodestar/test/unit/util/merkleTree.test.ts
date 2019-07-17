@@ -5,7 +5,7 @@ import {
   ProgressiveMerkleTree,
   verifyMerkleBranch,
 } from "../../../src/util/merkleTree";
-import {MerkleTree} from "../../../src/types";
+import {MerkleTree} from "@chainsafe/eth2-types";
 import {LightProgressiveMerkleTree} from "../../../src/util/merkleTree/lightMerkleTree";
 
 

@@ -1,4 +1,4 @@
-import {Attestation, Epoch} from "../../types";
+import {Attestation, Epoch} from "@chainsafe/eth2-types";
 import {OperationsModule} from "./abstract";
 
 export class AttestationOperations extends OperationsModule {

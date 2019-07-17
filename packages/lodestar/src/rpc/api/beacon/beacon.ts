@@ -3,7 +3,7 @@
  */
 
 import {IBeaconConfig} from "../../../config";
-import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "../../../types";
+import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "@chainsafe/eth2-types";
 import {IBeaconApi} from "./interface";
 import {BeaconChain} from "../../../chain";
 import {BeaconDB} from "../../../db";

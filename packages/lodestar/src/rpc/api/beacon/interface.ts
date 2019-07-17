@@ -3,7 +3,7 @@
  */
 
 import {IApi} from "../interface";
-import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "../../../types";
+import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "@chainsafe/eth2-types";
 
 export interface IBeaconApi extends IApi{
 

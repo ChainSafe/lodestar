@@ -1,5 +1,5 @@
 import {OperationsModule} from "./abstract";
-import {Transfer} from "../../types";
+import {Transfer} from "@chainsafe/eth2-types";
 
 export class TransferOperations extends OperationsModule {
 

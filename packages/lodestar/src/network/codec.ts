@@ -4,7 +4,7 @@
 
 import {deserialize, serialize} from "@chainsafe/ssz";
 
-import {RequestBody, ResponseBody, WireRequest, WireResponse} from "../types";
+import {RequestBody, ResponseBody, WireRequest, WireResponse} from "@chainsafe/eth2-types";
 import {RequestId, Method} from "../constants";
 import {IBeaconConfig} from "../config";
 

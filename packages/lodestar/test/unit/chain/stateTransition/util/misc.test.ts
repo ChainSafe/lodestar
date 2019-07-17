@@ -1,21 +1,14 @@
 import BN from "bn.js";
-import { assert } from "chai";
+import {assert} from "chai";
+import {Fork} from "@chainsafe/eth2-types";
+import {GENESIS_SLOT,} from "../../../../../src/constants";
+import {getBlockRoot, getDomain,} from "../../../../../src/chain/stateTransition/util";
 
-import {config} from "../../../../../src/config/presets/mainnet";
-import {Fork} from "../../../../../src/types";
-import {
-  GENESIS_SLOT,
-} from "../../../../../src/constants";
-import {
-  getBeaconProposerIndex,
-  getBlockRootAtSlot,
-  getBlockRoot,
-  getDomain,
-  getChurnLimit,
-} from "../../../../../src/chain/stateTransition/util/misc";
+import {generateState} from "../../../../utils/state";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
-import { generateState } from "../../../../utils/state";
-
+let config = createIBeaconConfig(mainnetParams);
 
 describe("getDomain", () => {
   const state = generateState();

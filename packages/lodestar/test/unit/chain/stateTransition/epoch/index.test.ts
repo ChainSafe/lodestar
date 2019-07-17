@@ -1,7 +1,5 @@
 import {expect} from "chai";
 import sinon from "sinon";
-
-import {config} from "../../../../../src/config/presets/mainnet";
 import {GENESIS_SLOT} from "../../../../../src/constants";
 import {processEpoch} from "../../../../../src/chain/stateTransition/epoch";
 import * as justificationUtils from "../../../../../src/chain/stateTransition/epoch/justification";
@@ -10,15 +8,18 @@ import * as crosslinkUtils from "../../../../../src/chain/stateTransition/epoch/
 import * as balanceUpdateUtils from "../../../../../src/chain/stateTransition/epoch/balanceUpdates";
 import {processRewardsAndPenalties} from "../../../../../src/chain/stateTransition/epoch/balanceUpdates";
 import * as registryUpdateUtils from "../../../../../src/chain/stateTransition/epoch/registryUpdates";
+import {processRegistryUpdates} from "../../../../../src/chain/stateTransition/epoch/registryUpdates";
 import * as slashingUtils from "../../../../../src/chain/stateTransition/epoch/slashings";
 import * as finalUtils from "../../../../../src/chain/stateTransition/epoch/finalUpdates";
-import {processRegistryUpdates} from "../../../../../src/chain/stateTransition/epoch/registryUpdates";
 import {processFinalUpdates} from "../../../../../src/chain/stateTransition/epoch/finalUpdates";
 import {generateState} from "../../../../utils/state";
+import {createIBeaconConfig} from "../../../../../src/config";
+import * as mainnetParams from "../../../../../src/params/presets/mainnet";
 
 describe('process epoch - crosslinks', function () {
 
   const sandbox = sinon.createSandbox();
+  let config = createIBeaconConfig(mainnetParams);
 
   let processJustificationAndFinalizationStub,
     processCrosslinksStub,
