@@ -25,7 +25,7 @@
     "pretest": "yarn run check-types",
     "test:unit": "nyc mocha --colors -r ts-node/register 'test/unit/**/*.test.ts'",
     "test": "yarn test:unit && yarn test:spec && yarn test:e2e",
-    "coverage": "codecov"
+    "coverage": "codecov -F eth2types"
   },
   "publishConfig": {
     "access": "public"
@@ -36,5 +36,12 @@
   },
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
+  },
+  "devDependencies": {
+    "eslint-plugin-import": "^2.18.0"
+  },
+  "dependencies": {
+    "@chainsafe/ssz": "^0.4.3",
+    "bn.js": "^5.0.0"
   }
 }

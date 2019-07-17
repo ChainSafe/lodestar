@@ -1,0 +1,8 @@
+export interface ISSZBeaconParams {
+  SLOTS_PER_HISTORICAL_ROOT: number;
+  DEPOSIT_CONTRACT_TREE_DEPTH: number;
+  LATEST_RANDAO_MIXES_LENGTH: number;
+  SHARD_COUNT: number;
+  LATEST_ACTIVE_INDEX_ROOTS_LENGTH: number;
+  LATEST_SLASHED_EXIT_LENGTH: number;
+}
