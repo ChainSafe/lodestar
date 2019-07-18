@@ -5,12 +5,13 @@ import {
   AnySSZType,
   FullSSZType,
   SimpleContainerType,
+  SimpleListType,
   SimpleVectorType,
   Type,
 } from "../types";
 
-// regex to identify a bytes type
-const bytesPattern = /^bytes\d*$/;
+// regex to identify a bytesN type
+const bytesPattern = /^bytes\d+$/;
 // regex to identify digits
 const digitsPattern = /\d+$/;
 // regex to identify a uint type
@@ -29,25 +30,30 @@ export function parseType(type: AnySSZType): FullSSZType {
   if (isFullSSZType(type)) {
     return type as FullSSZType;
   }
-  if(typeof type === "string") {
-    if (type === "bool") {
+  if(typeof type === 'string') {
+    // bit
+    if (type === 'bool') {
       return {
         type: Type.bool,
       };
     }
+    // bytesN
     if (type.match(bytesPattern)) {
       const length = parseInt(type.match(digitsPattern) as unknown as string);
-      if (isNaN(length)) {
-        return {
-          type: Type.byteList,
-        };
-      } else {
-        return {
-          type: Type.byteVector,
-          length,
-        };
-      }
+      return {
+        type: Type.byteVector,
+        length,
+      };
     }
+    // uint
+    if (type === 'byte') {
+      return {
+        type: Type.uint,
+        byteLength: 1,
+        useNumber: true,
+      };
+    }
+    // uint
     if (type.match(uintPattern)) {
       const useNumber = Array.isArray(type.match(numberPattern));
       const bits = parseInt(type.match(digitsPattern) as unknown as string);
@@ -55,36 +61,41 @@ export function parseType(type: AnySSZType): FullSSZType {
       return {
         type: Type.uint,
         byteLength: bits / 8,
-        offset: 0,
         useNumber,
       };
     }
-    if (type === "byte") {
-      return {
-        type: Type.uint,
-        byteLength: 1,
-        offset: 0,
-        useNumber: true,
-      };
-    }
-  } if (Array.isArray(type)) {
-    if (type.length === 1) {
-      const elementType = parseType(type[0]);
-      if (elementType.type === Type.uint && elementType.byteLength === 1) {
+  } else if (type === Object(type)) {
+    if (Number.isSafeInteger((type as SimpleListType).maxLength)) {
+      type = type as SimpleListType;
+      const elementType = parseType(type.elementType);
+      const maxLength = type.maxLength;
+      if (elementType.type === Type.bool) {
+        return {
+          type: Type.bitList,
+          maxLength,
+        };
+      } else if (elementType.type === Type.uint && elementType.byteLength === 1) {
         return {
           type: Type.byteList,
+          maxLength,
         };
       } else {
         return {
           type: Type.list,
           elementType,
+          maxLength,
         };
       }
-    } else if (type.length === 2) {
-      const elementType = parseType(type[0]);
-      const length = (type as SimpleVectorType)[1] as number;
-      assert(Number.isInteger(length), "Vector length must be an integer")
-      if (elementType.type === Type.uint && elementType.byteLength === 1) {
+    } else if (Number.isSafeInteger((type as SimpleVectorType).length)) {
+      type = type as SimpleVectorType;
+      const elementType = parseType(type.elementType);
+      const length = type.length;
+      if (elementType.type === Type.bool) {
+        return {
+          type: Type.bitVector,
+          length,
+        };
+      } else if (elementType.type === Type.uint && elementType.byteLength === 1) {
         return {
           type: Type.byteVector,
           length,
@@ -96,22 +107,18 @@ export function parseType(type: AnySSZType): FullSSZType {
           length,
         };
       }
-    }
-    assert.fail("Array length must be 1 or 2");
-  } else if (type === Object(type)) {
-    type = type as SimpleContainerType;
-    assert(typeof type.name === "string", "Container must have a name");
-    assert(Array.isArray(type.fields), "Container must have fields specified as an array");
-    return {
-      type: Type.container,
-      name: type.name,
-      fields: type.fields.map(([fieldName, fieldType]: [string, any]) => {
-        assert(typeof fieldName === "string", "Container field name must be a string");
-        return [fieldName, parseType(fieldType)];
-      }) as [string, FullSSZType][],
+    } else if (Array.isArray((type as SimpleContainerType).fields)) {
+      type = type as SimpleContainerType;
+      return {
+        type: Type.container,
+        fields: type.fields.map(([fieldName, fieldType]: [string, any]) => {
+          assert(typeof fieldName === "string", "Container field name must be a string");
+          return [fieldName, parseType(fieldType)];
+        }) as [string, FullSSZType][],
+      }
     }
   }
-  throw new Error(`Invalid type: ${type}`);
+  throw new Error(`Invalid type: ${JSON.stringify(type)}`);
 }
 
 export function isFullSSZType(type: AnySSZType): boolean {
@@ -127,6 +134,8 @@ export function isBasicType(type: FullSSZType): boolean {
 
 export function isCompositeType(type: FullSSZType): boolean {
   return [
+    Type.bitList,
+    Type.bitVector,
     Type.byteList,
     Type.byteVector,
     Type.list,
@@ -144,8 +153,10 @@ export function isVariableSizeType(type: FullSSZType): boolean {
   switch (type.type) {
     case Type.bool:
     case Type.uint:
+    case Type.bitVector:
     case Type.byteVector:
       return false;
+    case Type.bitList:
     case Type.byteList:
     case Type.list:
       return true;

@@ -1,4 +1,6 @@
 /** @module ssz */
+import {BitList, BitVector} from "@chainsafe/bit-utils";
+
 import {
   AnySSZType,
   Bytes,
@@ -12,9 +14,14 @@ import {
   VectorType,
 } from "./types";
 
+import { BYTES_PER_CHUNK } from "./constants";
+
 import { assertValidValue } from "./assertValidValue";
 
+import { fixedSize } from "./size";
+
 import {
+  chunkify,
   merkleize,
   mixInLength,
   pack,
@@ -45,8 +52,25 @@ import {
  * // merkleize a boolean
  * buf = hashTreeRoot(true, "bool");
  *
- * // merkleize a variable-length byte array
- * buf = hashTreeRoot(Buffer.from("abcd", "hex"), "bytes");
+ * // merkleize a bit list
+ * import {BitList} from "@chainsafe/bit-utils";
+ * buf = hashTreeRoot(BitList.fromBitfield(Buffer.alloc(1), 8), {
+ *   elementType: "bool",
+ *   maxLength: 10, // max number of bits
+ * });
+ *
+ * // merkleize a bit vector
+ * import {BitVector} from "@chainsafe/bit-utils";
+ * buf = hashTreeRoot(BitVector.fromBitfield(Buffer.alloc(1), 8), {
+ *   elementType: "bool",
+ *   length: 8, // length in bits
+ * });
+ *
+ * // merkleize a variable-length byte array, max-length required
+ * buf = hashTreeRoot(Buffer.from("abcd", "hex"), {
+ *   elementType: "byte", // "byte", "uint8", or "number8"
+ *   maxLength: 10, // max number of bytes
+ * });
  *
  * // merkleize a fixed-length byte array
  * buf = hashTreeRoot(
@@ -54,21 +78,20 @@ import {
  *   "bytes2" // "bytesN", N == length in bytes
  * );
  *
- * // merkleize a variable-length array
- * buf = hashTreeRoot(
- *   [0, 1, 2, 3, 4, 5],
- *   ["uint32"] // [elementType]
- * );
+ * // merkleize a variable-length array, max-length required
+ * buf = hashTreeRoot([0, 1, 2, 3, 4, 5], {
+ *   elementType: "uint32",
+ *   maxLength: 10, // max number of elements
+ * });
  *
  * // merkleize a fixed-length array
- * buf = hashTreeRoot(
- *   [0, 1, 2, 3, 4, 5],
- *   ["uint32", 6] // [elementType, arrayLength]
- * );
+ * buf = hashTreeRoot([0, 1, 2, 3, 4, 5], {
+ *   elementType: "uint32",
+ *   length: 6,
+ * });
  *
  * // merkleize an object
  * const myDataType: SimpleContainerType = {
- *   name: "MyData",
  *   fields: [
  *     ["a", "uint16"], // [fieldName, fieldType]
  *     ["b", "bool"],
@@ -92,24 +115,29 @@ export function hashTreeRoot(value: any, type: AnySSZType): Buffer {
 export function _hashTreeRoot(value: SerializableValue, type: FullSSZType): Buffer {
   switch (type.type) {
     case Type.uint:
-      return merkleize(pack([value], type));
     case Type.bool:
-      return merkleize(pack([value], type));
-    case Type.byteList:
-      return mixInLength(
-        merkleize(pack([value], type)),
-        (value as Bytes).length);
     case Type.byteVector:
       return merkleize(pack([value], type));
+    case Type.bitVector:
+      return merkleize(chunkify(Buffer.from((value as BitVector).toBitfield())), Math.floor((type.length + 255) / 256));
+    case Type.bitList:
+      return mixInLength(
+        merkleize(chunkify(Buffer.from((value as BitList).toBitfield())), Math.floor((type.maxLength + 255) / 256)),
+        (value as BitList).bitLength
+      );
+    case Type.byteList:
+      return mixInLength(
+        merkleize(pack([value], type), type.maxLength * 8 / BYTES_PER_CHUNK),
+        (value as Bytes).length);
     case Type.list:
       value = value as SerializableArray;
       if (isBasicType(type.elementType)) {
         return mixInLength(
-          merkleize(pack(value, (type as ListType).elementType)),
+          merkleize(pack(value, (type as ListType).elementType), type.maxLength * fixedSize(type.elementType) / BYTES_PER_CHUNK),
           value.length);
       } else {
         return mixInLength(
-          merkleize(value.map((v) => hashTreeRoot(v, (type as ListType).elementType))),
+          merkleize(value.map((v,i) => hashTreeRoot(v, (type as ListType).elementType)), type.maxLength),
           value.length);
       }
     case Type.vector:

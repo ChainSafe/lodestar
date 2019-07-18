@@ -1,10 +1,10 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
 
-import {deserialize, serialize, hashTreeRoot, signingRoot} from "../../src";
-import * as types from "../../../lodestar/src/types";
+import {deserialize, serialize, hashTreeRoot, signingRoot, equals, hash} from "../../src";
+import {types} from "../../../lodestar/src/sszTypes/presets/mainnet";
 
-import {hydrateType, hydrateValue, eq, getTestType, getTestValue} from "./util";
+import {hydrateType, hydrateValue, getTestType, getTestValue} from "./util";
 
 // Serialize
 
@@ -49,7 +49,7 @@ describeSpecTest(
   (testCase, expect, expected, actual) => {
     const typeName = getTestType(testCase);
     const type = hydrateType((types as any)[typeName]);
-    expect(eq(type, expected, actual)).to.equal(true);
+    expect(equals(expected, actual, type)).to.equal(true);
   },
 );
 

@@ -24,17 +24,22 @@ import { parseType } from "./util/types";
  * equals(
  *   Buffer.from("abcd", "hex"),
  *   Buffer.from("abcd", "hex"),
- *   "bytes"
+ *   {
+ *     elementType: "byte",
+ *     maxLength: 100,
+ *   }
  * );
  *
  * equals(
  *   [0, 1, 2, 3, 4, 5],
  *   [0, 1, 2, 3, 4, 5],
- *   ["uint32"]
+ *   {
+ *     elementType: "uint32",
+ *     maxLength: 10,
+ *   }
  * );
  *
  * const myDataType: SimpleContainerType = {
- *   name: "MyData",
  *   fields: [
  *     ["a", "uint16"],
  *     ["b", "bool"],
@@ -65,6 +70,8 @@ function _equals(value1: any, value2: any, type: FullSSZType): boolean {
       return (new BN(value1)).eq(new BN(value2));
     case Type.bool:
       return value1 === value2;
+    case Type.bitList:
+    case Type.bitVector:
     case Type.byteList:
     case Type.byteVector:
       return value1.equals(value2);

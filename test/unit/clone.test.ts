@@ -20,10 +20,10 @@ describe("clone", () => {
     {value: new BN(1000), type: "uint16", expected: true},
     {value: true, type: "bool", expected: true},
     {value: false, type: "bool", expected: true},
-    {value: Buffer.from("abcd", "hex"), type: "bytes", expected: true},
+    {value: Buffer.from("abcd", "hex"), type: {elementType: "byte", maxLength: 100}, expected: true},
     {value: Buffer.from("abcd", "hex"), type: "bytes2", expected: true},
-    {value: [0,1,2,3,4,5], type: ["uint16"], expected: true},
-    {value: [0,1,2,3,4,5], type: ["uint16", 6], expected: true},
+    {value: [0,1,2,3,4,5], type: {elementType: "uint16", maxLength: 100}, expected: true},
+    {value: [0,1,2,3,4,5], type: {elementType: "uint16", length: 6}, expected: true},
     {value: {v:[{b:2,a:1},{b:4,a:3}]}, type: ArrayObject, expected: true},
     {value: {v:[{a:1,b:2},{b:4,a:3}]}, type: ArrayObject, expected: true},
   ];

@@ -614,6 +614,10 @@
     lodash "^4.17.11"
     to-fast-properties "^2.0.0"
 
+"@chainsafe/bit-utils@^0.1.1":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.1.tgz#87cbc360e76a6e19e4b0f00672f6184436ff4628"
+
 "@chainsafe/eth2.0-spec-test-util@^0.3.0":
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2.0-spec-test-util/-/eth2.0-spec-test-util-0.3.0.tgz#6d53539400c7cad87c417a91d40c677a21a0193f"

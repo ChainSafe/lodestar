@@ -1,34 +1,35 @@
 /** @module ssz */
 import BN from "bn.js";
+import {BitList, BitVector} from "@chainsafe/bit-utils";
 
 // Serializable values
 
 export type Uint = number | BN;
 export type Bool = boolean;
+export type Bits = BitList | BitVector;
 export type Bytes = Buffer | Uint8Array;
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface SerializableArray extends Array<SerializableValue> {}
-export interface SerializableObject {
-  [field: string]: SerializableValue;
-}
-export type SerializableValue = Uint | Bool | Bytes | SerializableArray | SerializableObject;
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface SerializableObject extends Record<string, SerializableValue> {}
+export type SerializableValue = Uint | Bool | Bits | Bytes | SerializableArray | SerializableObject;
 
 // Simple types
 // These types are supplied to provide a convenient interface with which to specify types
 
 export type SimplePrimitiveType = string;
 
-export interface SimpleListType extends Array<AnySSZType> {
-  0: AnySSZType;
+export interface SimpleListType {
+  elementType: AnySSZType;
+  maxLength: number;
 }
 
-export interface SimpleVectorType extends Array<AnySSZType | number> {
-  0: AnySSZType;
-  1: number;
+export interface SimpleVectorType {
+  elementType: AnySSZType;
+  length: number;
 }
 
 export interface SimpleContainerType {
-  name: string;
   fields: [string, AnySSZType][];
 }
 
@@ -46,6 +47,8 @@ export type SimpleSSZType = SimplePrimitiveType | SimpleListType | SimpleVectorT
 export enum Type {
   uint,
   bool,
+  bitList,
+  bitVector,
   byteList,
   byteVector,
   list,
@@ -56,7 +59,6 @@ export enum Type {
 export interface UintType {
   type: Type.uint;
   byteLength: number;
-  offset: number | BN;
   useNumber: boolean;
 }
 
@@ -64,8 +66,21 @@ export interface BoolType {
   type: Type.bool;
 }
 
+export interface BitListType {
+  type: Type.bitList;
+  maxLength: number;
+}
+
+export interface BitVectorType {
+  type: Type.bitVector;
+  length: number;
+}
+
+export type BitsType = BitListType | BitVectorType;
+
 export interface ByteListType {
   type: Type.byteList;
+  maxLength: number;
 }
 
 export interface ByteVectorType {
@@ -78,6 +93,7 @@ export type BytesType = ByteListType | ByteVectorType;
 export interface ListType {
   type: Type.list;
   elementType: FullSSZType;
+  maxLength: number;
 }
 
 export interface VectorType {
@@ -90,7 +106,6 @@ export type ArrayType = ListType | VectorType;
 
 export interface ContainerType {
   type: Type.container;
-  name: string;
   fields: [string, FullSSZType][];
 }
 
@@ -99,7 +114,7 @@ export interface ContainerType {
  *
  * Full types are used internally.
  */
-export type FullSSZType = UintType | BoolType | BytesType | ArrayType | ContainerType;
+export type FullSSZType = UintType | BoolType | BitsType | BytesType | ArrayType | ContainerType;
 
 // simple + full types
 
