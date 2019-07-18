@@ -52,7 +52,7 @@ describe("[hobbits] network", () => {
     const id = 0;
     let method = Method.Goodbye;
     const actualEncoded = encodeRequest(id, method, msg);
-    const encodedMessage = encodeMessage(ProtocolType.RPC, actualEncoded);
+    const encodedMessage = encodeMessage(ProtocolType.RPC, null, actualEncoded);
 
     let server = net.createServer(socket => {
       socket.on('data', data => {

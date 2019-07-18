@@ -62,7 +62,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
   }
 
   public addPeer(peerInfo: PeerInfo): Peer {
-    let peerId = peerInfo.id.toB58String();
+    const peerId = peerInfo.id.toB58String();
     let peer = this.peers.get(peerId);
     if (!peer) {
       peer = new Peer(peerInfo, this);
@@ -73,7 +73,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
     return peer;
   }
   public removePeer(peerInfo: PeerInfo): void {
-    let peerId = peerInfo.id.toB58String();
+    const peerId = peerInfo.id.toB58String();
     const peer = this.peers.get(peerId);
     if (peer) {
       peer.close();
@@ -116,7 +116,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
       const peer = this.addPeer(peerInfo);
       peer.connect();
     } catch (e) {
-      this.logger.error(e.stack);
+      this.logger.error(`Fail to dial rpc for peer ${peerId}. Reason: ${e.message}`);
     }
     this.wipDials.delete(peerId);
   }
@@ -233,7 +233,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
       // this.running = false;
     });
 
-    this.server.listen(HOBBITS_DEFAULT_PORT, (): void => {
+    this.server.listen(this., (): void => {
       this.logger.info("Hobbits :: server started.");
       // this.running = true;
     });

@@ -2,6 +2,8 @@ import PeerInfo from "peer-info";
 import waterfall from "async/waterfall";
 import promisify from "es6-promisify";
 import {peerInfoToAddress} from "../../../../src/network/hobbits/util";
+import _ from "lodash";
+import {intToBytes} from "../../../../src/util/bytes";
 
 describe("[hobbits] network", () => {
   it('should get port and url from PeerInfo - callback', function () {
@@ -35,5 +37,19 @@ describe("[hobbits] network", () => {
 
     let nodeAddress = peerInfoToAddress(peerInfo);
     console.log(nodeAddress);
+  });
+
+  it('should convert camelCase to underscored', function () {
+    let obj = {
+      method_id: intToBytes(12, 2, "be"),
+      body: null
+    };
+    const obj2 = _.mapKeys(obj, (v, k) => _.camelCase(k));
+
+    console.log(obj);
+    console.log(obj2);
+
+    const obj3 = _.mapKeys(obj2, (v, k) => _.snakeCase(k));
+    console.log(obj3);
   });
 });

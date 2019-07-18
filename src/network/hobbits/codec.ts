@@ -7,15 +7,7 @@ import {HOBBITS_VERSION, ProtocolType} from "./constants";
 import {DecodedMessage} from "./types";
 
 
-export function encodeMessage(type: ProtocolType, header: Buffer, message: Buffer): Buffer {
-  // create empty header and message if null passed
-  if(header == null){
-    header = new Buffer(0);
-  }
-  if(message == null){
-    message = new Buffer(0);
-  }
-
+export function encodeMessage(type: ProtocolType, header: Buffer = new Buffer(0), message: Buffer = new Buffer(0)): Buffer {
   let requestLine = `EWP ${HOBBITS_VERSION} `;
   switch (type) {
     case ProtocolType.RPC:
@@ -32,13 +24,7 @@ export function encodeMessage(type: ProtocolType, header: Buffer, message: Buffe
 }
 
 export function decodeMessage(message: Buffer): DecodedMessage {
-  let requestLineBytes: bytes = null;
-  for (let i =0; i<message.length; i++){
-    if(String.fromCharCode(message[i]) == "\n"){
-      requestLineBytes = message.slice(0, i+1);
-      break;
-    }
-  }
+  const requestLineBytes = message.slice(0, message.indexOf(Buffer.from("\n")) + 1);
   if (requestLineBytes == null) {
     return null;
   }
