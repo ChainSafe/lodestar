@@ -31,7 +31,7 @@ packages/lodestar/src
 
 ## Module Definitions
 - **Chain:** The chain module contains the ETH2.0 consensus rules. This isn't used by the Light Client, but because the spec is frozen, and we are already at the latest version v0.8 there is very little to change here.
-- **CLI:** The CLI is the command line interface, there is a little overlap surrounding ETH1.x deposits. The added overhead of mainting it is low regardless, since all the main commands already exist.
+- **CLI:** The CLI is the command line interface. There is a little overlap surrounding ETH1.x deposits. The added overhead of maintaining it is low regardless, since all the main commands already exist.
 - **Config:** Config contians the blockchain configurations that allow us to customize the chain for both testing and production needs, the Light Client will need to use these.
 - **Constants:** Similar to config it contains the required constants from the ETH2.0 specification that will be needed in the Light Client
 - **DB:** The db is the chain database, it is used to store information about the blockchain. The Light Client will be utilizing a subset of this package.
