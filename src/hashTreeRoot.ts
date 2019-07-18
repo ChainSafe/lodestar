@@ -16,7 +16,7 @@ import {
 
 import { BYTES_PER_CHUNK } from "./constants";
 
-import { assertValidValue } from "./assertValidValue";
+import { _assertValidValue } from "./assertValidValue";
 
 import { fixedSize } from "./size";
 
@@ -103,7 +103,7 @@ import {
   */
 export function hashTreeRoot(value: any, type: AnySSZType): Buffer {
   const _type = parseType(type);
-  assertValidValue(value, _type);
+  _assertValidValue(value, _type);
   return _hashTreeRoot(value, _type);
 }
 

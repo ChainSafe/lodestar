@@ -25,7 +25,7 @@ import { BYTES_PER_LENGTH_PREFIX } from "./constants";
 import { size, fixedSize } from "./size";
 
 import { parseType, isVariableSizeType } from "./util/types";
-import { assertValidValue } from "./assertValidValue";
+import { _assertValidValue } from "./assertValidValue";
 
 
 /**
@@ -99,7 +99,7 @@ import { assertValidValue } from "./assertValidValue";
 
 export function serialize(value: any, type: AnySSZType): Buffer {
   const _type = parseType(type);
-  assertValidValue(value, _type);
+  _assertValidValue(value, _type);
   const buf = Buffer.alloc(size(value, _type));
   _serialize(value, _type, buf, 0);
   return buf;

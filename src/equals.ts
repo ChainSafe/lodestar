@@ -7,7 +7,7 @@ import {
   FullSSZType,
   Type,
 } from "./types";
-import { assertValidValue } from "./assertValidValue";
+import { _assertValidValue } from "./assertValidValue";
 import { parseType } from "./util/types";
 
 
@@ -55,8 +55,8 @@ import { parseType } from "./util/types";
  */
 export function equals(value1: any, value2: any, type: AnySSZType): boolean {
   const _type = parseType(type);
-  assertValidValue(value1, _type);
-  assertValidValue(value2, _type);
+  _assertValidValue(value1, _type);
+  _assertValidValue(value2, _type);
   return _equals(value1, value2, _type);
 }
 
