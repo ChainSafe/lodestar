@@ -38,7 +38,7 @@ export interface IBeaconChainModules {
 export class BeaconChain extends EventEmitter implements IBeaconChain {
 
   public chain: string;
-  public genesisTime: number64 = null;
+  public latestState: BeaconState = null;
   public forkChoice: LMDGHOST;
   public chainId: uint16;
   public networkId: uint64;
@@ -70,7 +70,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
       // check every block if genesis
       this.eth1.on('block', this.checkGenesis.bind(this));
     }
-    this.genesisTime = state.genesisTime;
+    this.latestState = state;
   }
 
   public async stop(): Promise<void> {
@@ -79,10 +79,9 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
 
 
   public async receiveAttestation(attestation: Attestation): Promise<void> {
-    const state = await this.db.getLatestState();
     const validators = getAttestingIndices(
-      this.config, state, attestation.data, attestation.aggregationBitfield);
-    const balances = validators.map((index) => state.balances[index]);
+      this.config, this.latestState, attestation.data, attestation.aggregationBitfield);
+    const balances = validators.map((index) => this.latestState.balances[index]);
     for (let i = 0; i < validators.length; i++) {
       this.forkChoice.addAttestation(attestation.data.beaconBlockRoot, validators[i], balances[i]);
     }
@@ -90,12 +89,11 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
   }
 
   public async receiveBlock(block: BeaconBlock): Promise<void> {
-    const state = await this.db.getLatestState();
-    const isValidBlock = await this.isValidBlock(state, block);
+    const isValidBlock = await this.isValidBlock(this.latestState, block);
     assert(isValidBlock);
 
     // process current slot
-    await this.runStateTransition(block, state);
+    await this.runStateTransition(block, this.latestState);
 
     // forward processed block for additional processing
     this.emit('processedBlock', block);
@@ -115,7 +113,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     const stateRoot = hashTreeRoot(genesisState, this.config.types.BeaconState);
     genesisBlock.stateRoot = stateRoot;
     const blockRoot = hashTreeRoot(genesisBlock, this.config.types.BeaconBlock);
-    this.genesisTime = genesisState.genesisTime;
+    this.latestState = genesisState;
     await Promise.all([
       this.db.setBlock(blockRoot, genesisBlock),
       this.db.setState(stateRoot, genesisState),
@@ -242,6 +240,6 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
   }
 
   public isInitialized(): boolean {
-    return !!this.genesisTime;
+    return !!this.latestState;
   }
 }

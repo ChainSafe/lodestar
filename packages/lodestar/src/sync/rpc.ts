@@ -63,7 +63,7 @@ export class SyncRpc {
       bestRoot: bytes32,
       latestFinalizedEpoch: Epoch,
       latestFinalizedRoot: bytes32;
-    if (!this.chain.genesisTime) {
+    if (!this.chain.isInitialized()) {
       bestSlot = 0;
       bestRoot = ZERO_HASH;
       latestFinalizedEpoch = 0;

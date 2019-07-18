@@ -45,9 +45,9 @@ describe('beacon rpc api', function () {
   });
 
   it('should return genesis time', async function() {
-    chainStub.genesisTime = Date.now();
+    chainStub.latestState = generateState({genesisTime: Date.now()});
     const genesisTime = await beaconApi.getGenesisTime();
-    expect(genesisTime).to.be.equal(chainStub.genesisTime);
+    expect(genesisTime).to.be.equal(chainStub.latestState.genesisTime);
   });
 
   it('should return syncing status', async function() {

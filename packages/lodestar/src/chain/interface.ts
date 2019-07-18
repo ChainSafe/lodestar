@@ -10,7 +10,7 @@ import {ProgressiveMerkleTree} from "../util/merkleTree";
  * and applying the fork choice rule to update the chain head
  */
 export interface IBeaconChain extends EventEmitter {
-  genesisTime: number64;
+  latestState: BeaconState;
   forkChoice: LMDGHOST;
   chainId: uint16;
   networkId: uint64;
