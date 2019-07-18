@@ -24,7 +24,7 @@ import {INetwork} from "../network";
 import {getEmptyBlockBody} from "../chain/genesis/genesis";
 import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
-import { IBeaconConfig } from "../config";
+import {IBeaconConfig} from "../config";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface SyncOptions {

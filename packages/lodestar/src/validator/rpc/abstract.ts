@@ -4,7 +4,7 @@ import {IValidatorApi} from "../../rpc/api/validator";
 import {intDiv} from "../../util/math";
 import {slotToEpoch} from "../../chain/stateTransition/util";
 import {IBeaconApi} from "../../rpc/api/beacon";
-import { IBeaconConfig } from "../../config";
+import {IBeaconConfig} from "../../config";
 
 
 export abstract class AbstractRpcClient implements RpcClient {

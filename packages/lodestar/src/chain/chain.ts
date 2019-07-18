@@ -32,7 +32,7 @@ export interface IBeaconChainModules {
   opPool: OpPool;
   db: IBeaconDb;
   eth1: IEth1Notifier;
-  logger: ILogger
+  logger: ILogger;
 }
 
 export class BeaconChain extends EventEmitter implements IBeaconChain {

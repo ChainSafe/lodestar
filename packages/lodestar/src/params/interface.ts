@@ -13,8 +13,8 @@ export interface IBeaconParams {
   MIN_PER_EPOCH_CHURN_LIMIT: number;
   CHURN_LIMIT_QUOTIENT: number;
   SHUFFLE_ROUND_COUNT: number;
-  MIN_GENESIS_TIME: number,
-  MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: number,
+  MIN_GENESIS_TIME: number;
+  MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: number;
 
   // Deposit contract
   DEPOSIT_CONTRACT_ADDRESS: number;
