@@ -6,7 +6,7 @@ import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {deserialize} from "@chainsafe/ssz";
 
-import {bytes32, Deposit, Eth1Data, Gwei, number64} from "../../types";
+import {bytes32, Deposit, Gwei, number64} from "../../types";
 
 import {IBeaconConfig} from "../../config";
 import {IEth1Notifier} from "../interface";
@@ -14,7 +14,6 @@ import {isValidAddress} from "../../util/address";
 import {Block, Log} from "ethers/providers";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 import {ILogger} from "../../logger";
-import {OpPool} from "../../opPool";
 import {IEth1Options} from "../options";
 
 export interface EthersEth1Options extends IEth1Options {
@@ -32,13 +31,11 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   private config: IBeaconConfig;
 
-  private opPool: OpPool;
-
   private opts: EthersEth1Options;
 
   private logger: ILogger;
 
-  public constructor(opts: EthersEth1Options, {config, opPool, logger}: {config: IBeaconConfig; opPool: OpPool; logger: ILogger}) {
+  public constructor(opts: EthersEth1Options, {config, logger}: {config: IBeaconConfig; logger: ILogger}) {
     super();
     this.logger = logger;
     this.config = config;
@@ -52,7 +49,6 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
       );
     }
     this.contract = opts.contract;
-    this.opPool = opPool;
   }
 
   public async start(): Promise<void> {
@@ -97,8 +93,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
       this.logger.info(
         `Received validator deposit event index=${index}`
       );
-      await this.opPool.deposits.receive(index, deposit);
-      this.emit('deposit', deposit);
+      this.emit('deposit', index, deposit);
     } catch (e) {
       this.logger.error(`Failed to process deposit log. Error: ${e.message}`);
     }
@@ -122,9 +117,9 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
         logDescription.values.signature,
       );
     });
-    await Promise.all(pastDeposits.map((pastDeposit, index) => {
-      return this.opPool.deposits.receive(index, pastDeposit);
-    }));
+    pastDeposits.forEach((pastDeposit, index) => {
+      this.emit("deposit", index, pastDeposit);
+    });
   }
 
   public async getHead(): Promise<Block> {

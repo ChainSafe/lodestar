@@ -94,6 +94,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
 
     // process current slot
     await this.runStateTransition(block, this.latestState);
+    await this.opPool.processBlockOperations(block);
 
     // forward processed block for additional processing
     this.emit('processedBlock', block);

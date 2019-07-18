@@ -72,12 +72,11 @@ export class BeaconNode {
     });
     this.eth1 = new EthersEth1Notifier(this.conf.eth1, {
       config,
-      opPool: this.opPool,
       logger: this.logger
     });
     this.opPool = new OpPool(this.conf.opPool, {
-      db: this.db,
-      chain: this.chain,
+      eth1: this.eth1,
+      db: this.db
     });
     this.chain = new BeaconChain(this.conf.chain, {
       config,

@@ -36,7 +36,6 @@ describe("Eth1Notifier", () => {
     },
     {
       config,
-      opPool,
       logger: logger
     });
   });
@@ -82,7 +81,6 @@ describe("Eth1Notifier", () => {
       },
       {
         config,
-        opPool,
         logger: logger
       }
       );
@@ -172,7 +170,6 @@ describe("Eth1Notifier", () => {
     },
     {
       config,
-      opPool,
       logger: logger
     });
     const testDepositRoot = Buffer.alloc(32);

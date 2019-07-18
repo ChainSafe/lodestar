@@ -17,6 +17,7 @@ import {
   TransferOperations,
   VoluntaryExitOperations
 } from "./modules";
+import {IEth1Notifier} from "../eth1";
 
 /**
  * Pool of operations not yet included on chain
@@ -30,12 +31,12 @@ export class OpPool extends EventEmitter {
   public proposerSlashings: ProposerSlashingOperations;
   public attesterSlashings: AttesterSlashingOperations;
 
-  private readonly chain: BeaconChain;
+  private readonly eth1: IEth1Notifier;
   private readonly db: BeaconDB;
 
-  public constructor(opts: IOpPoolOptions, {chain, db}) {
+  public constructor(opts: IOpPoolOptions, {eth1, db}) {
     super();
-    this.chain = chain;
+    this.eth1 = eth1;
     this.db = db;
     this.attestations = new AttestationOperations(this.db);
     this.voluntaryExits = new VoluntaryExitOperations(this.db);
@@ -49,20 +50,20 @@ export class OpPool extends EventEmitter {
    * Start operation processing
    */
   public async start(): Promise<void> {
-    this.chain.on('processedBlock', this.removeOperations.bind(this));
+    this.eth1.on('deposit', this.deposits.receive.bind(this.deposits));
   }
 
   /**
    * Stop operation processing
    */
   public async stop(): Promise<void> {
-    this.chain.removeListener('processedBlock', this.removeOperations.bind(this));
+    this.removeListener('deposit', this.deposits.receive.bind(this.deposits));
   }
 
   /**
    * Remove stored operations based on a newly processed block
    */
-  public async removeOperations(processedBlock: BeaconBlock): Promise<void> {
+  public async processBlockOperations(processedBlock: BeaconBlock): Promise<void> {
     const tasks = [
       this.voluntaryExits.remove(processedBlock.body.voluntaryExits),
       this.deposits.removeOld(processedBlock.body.eth1Data.depositCount),

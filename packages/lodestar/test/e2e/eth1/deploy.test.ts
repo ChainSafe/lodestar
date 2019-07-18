@@ -47,7 +47,6 @@ describe("Eth1Notifier - using deployed contract", () => {
       opts,
       {
         config,
-        opPool: new OpPool(null, {db, chain: null}),
         logger: logger
       });
     await eth1Notifier.start();
