@@ -36,6 +36,7 @@ export class RegularSync {
 
     // skip block if its a known bad block
     if (await this.db.isBadBlockRoot(root)){
+      this.logger.warn("Found bad block, skipping");
       return ;
     }
     // skip block if it already exists
