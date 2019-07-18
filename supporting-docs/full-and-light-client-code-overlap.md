@@ -45,5 +45,5 @@ packages/lodestar/src
 - **sszTypes:** Similar to config, params and constants this contains necessary variables that will be utilized across the entire ETH2.0 Javascript ecosystem.
 - **Sync:** This contains the Full Client sync strategy, since the Light Client uses a different sync strategy this module will not be used directly. Although the interfaces may be used to maintin a consistency in the 
 - **Types:** Similar to config, sszTypes, params and constants this contains necessary variables that will be utilized across the entire ETH2.0 Javascript ecosystem.
-- **Util:** This module contains random functions that don't quite have a home in any specific module and are shared across the entire proejct. Theres a good chance that wwe will be utilising some of these within the Light Client.
+- **Util:** This module contains random functions that don't quite have a home in any specific module and are shared across the entire project. There is a good chance that we will utilize some of these within the Light Client.
 - **Validator:** This contains the code for running an ETH2.0 validator, its primarily finished, and shares a good amount of code from the rest of the Lodestar packages discussed. It will not be used by the Light Client
