@@ -1,19 +1,22 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
-import {stateFromYaml} from "../../../utils/state";
 import {expect} from "chai";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
+import {equals} from "@chainsafe/ssz";
 import sinon from "sinon";
-import {depositsFromYaml} from "../../../utils/deposit";
-import {processDeposit} from "../../../../src/chain/stateTransition/block/deposits";
-import {hashTreeRoot} from "@chainsafe/ssz";
-import {Validator} from "../../../../src/types";
 
+import {BeaconState, Deposit} from "../../../../src/types";
+import {config} from "../../../../src/config/presets/mainnet";
+import {processDeposit} from "../../../../src/chain/stateTransition/block/operations";
+import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/deposit/deposit_mainnet.yaml"),
-  processDeposit,
+  (state, deposit) => {
+    processDeposit(config, state, deposit);
+    return state;
+  },
   (input) => {
     if(input.bls_setting && input.bls_setting.toNumber() === 2) {
       rewire({
@@ -21,10 +24,10 @@ describeSpecTest(
         verifyMultiple: sinon.stub().returns(true)
       });
     }
-    return [stateFromYaml(input.pre), depositsFromYaml(input.deposit)];
+    return [expandYamlValue(input.pre, config.types.BeaconState), expandYamlValue(input.deposit, config.types.Deposit)];
   },
   (expected) => {
-    return stateFromYaml(expected.post);
+    return expandYamlValue(expected.post, config.types.BeaconState);
   },
   result => result,
   (testCase) => {
@@ -32,13 +35,7 @@ describeSpecTest(
   },
   () => false,
   (_1, _2, expected, actual) => {
-    if(expected && actual) {
-      expected.balances = expected.balances.map(b => b.toString());
-      actual.balances = actual.balances.map(b => b.toString());
-      expected.validatorRegistry = expected.validatorRegistry.map(b => hashTreeRoot(b, Validator));
-      actual.validatorRegistry = actual.validatorRegistry.map(b => hashTreeRoot(b, Validator));
-    }
-    expect(expected).to.be.deep.equal(actual);
+    expect(equals(expected, actual, config.types.BeaconState)).to.be.true;
     restore();
   },
   0

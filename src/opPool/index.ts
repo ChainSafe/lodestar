@@ -4,10 +4,21 @@
 
 import {EventEmitter} from "events";
 
-import {Attestation, AttesterSlashing, BeaconBlock, ProposerSlashing, Slot, Transfer, VoluntaryExit} from "../types";
+import {
+  Attestation,
+  AttesterSlashing,
+  BeaconBlock,
+  Deposit,
+  ProposerSlashing,
+  Slot,
+  Transfer,
+  VoluntaryExit,
+  BeaconBlockBody
+} from "../types";
 
 import {BeaconChain} from "../chain";
 import {BeaconDB} from "../db";
+import {IOpPoolOptions} from "./options";
 
 /**
  * Pool of operations not yet included on chain
@@ -15,7 +26,7 @@ import {BeaconDB} from "../db";
 export class OpPool extends EventEmitter {
   private chain: BeaconChain;
   private db: BeaconDB;
-  public constructor(opts, {chain, db}) {
+  public constructor(opts: IOpPoolOptions, {chain, db}) {
     super();
     this.chain = chain;
     this.db = db;
@@ -105,6 +116,14 @@ export class OpPool extends EventEmitter {
     return await this.db.getAttesterSlashings();
   }
 
+  public async getDeposits(): Promise<Deposit[]> {
+    return await this.db.getDeposits();
+  }
+
+  public async receiveDeposit(index: number, deposit: Deposit): Promise<void> {
+    return await this.db.setDeposit(index, deposit);
+  }
+
   /**
    * Remove stored operations based on a newly processed block
    */
@@ -113,17 +132,20 @@ export class OpPool extends EventEmitter {
       this.removeAttestations(processedBlock.body.attestations),
       this.removeOldAttestations(processedBlock.slot),
       this.removeVoluntaryExits(processedBlock.body.voluntaryExits),
+      this.removeAllDeposits(),
       this.removeOldTransfers(processedBlock.slot),
       this.removeProposerSlashings(processedBlock.body.proposerSlashings),
       this.removeAttesterSlashings(processedBlock.body.attesterSlashings),
     ];
-    for (const task of tasks) {
-      await task;
-    }
+    await Promise.all(tasks);
   }
 
   private async removeAttestations(attestations: Attestation[]): Promise<void> {
     await this.db.deleteAttestations(attestations);
+  }
+
+  private async removeAllDeposits(): Promise<void> {
+    await this.db.deleteDeposits();
   }
 
   private async removeOldAttestations(slot: Slot): Promise<void> {}

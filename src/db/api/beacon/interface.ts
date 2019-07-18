@@ -6,14 +6,17 @@ import {
   Attestation,
   AttesterSlashing,
   BeaconBlock,
-  BeaconState, BLSPubkey,
+  BeaconState,
+  BLSPubkey,
   bytes32,
   Deposit,
   ProposerSlashing,
   Slot,
-  Transfer, ValidatorIndex,
+  Transfer,
+  ValidatorIndex,
   VoluntaryExit,
 } from "../../../types";
+import {IProgressiveMerkleTree} from "../../../util/merkleTree";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -25,118 +28,132 @@ export interface IBeaconDb {
   /**
    * Adds deposit to database
    */
-  setGenesisDeposit(deposit: Deposit): Promise<void>;
+  setDeposit(index: number, deposit: Deposit): Promise<void>;
 
   /**
    * Get all stored deposits sorted from oldest to newest.
    * It will only contain deposits until Eth2Genesis event.
    * After that, deposits will be kept in BeaconBlock
    */
-  getGenesisDeposits(): Promise<Deposit[]>;
+  getDeposits(): Promise<Deposit[]>;
 
   /**
    * Deletes all deposits.
    */
-  deleteGenesisDeposits(deposits: Deposit[]): Promise<void>;
+  deleteDeposits(): Promise<void>;
+
+  setMerkleTree(index: number, merkleTree: IProgressiveMerkleTree): Promise<void>;
+
+  getMerkleTree(index: number): Promise<IProgressiveMerkleTree | null>;
 
   /**
-   * Get the beacon chain state
+   * Get a beacon chain state by hash
    */
-  getState(): Promise<BeaconState>;
+  getState(root: bytes32): Promise<BeaconState | null>;
 
   /**
-   * Set the beacon chain state
+   * Set a beacon chain state
    */
-  setState(state: BeaconState): Promise<void>;
+  setState(root: bytes32, state: BeaconState): Promise<void>;
+
+  /**
+   * Get the latest beacon chain state
+   */
+  getLatestState(): Promise<BeaconState | null>;
+
+  /**
+   * Set the latest beacon chain state
+   */
+  setLatestStateRoot(root: bytes32, state?: BeaconState): Promise<void>;
+
+  /**
+   * Get the last finalized state
+   */
+  getFinalizedState(): Promise<BeaconState | null>;
+
+  /**
+   * Set the last finalized state
+   */
+  setFinalizedStateRoot(root: bytes32, state?: BeaconState): Promise<void>;
+
+  /**
+   * Get the last justified state
+   */
+  getJustifiedState(): Promise<BeaconState | null>;
+
+  /**
+   * Set the last justified state
+   */
+  setJustifiedStateRoot(root: bytes32, state?: BeaconState): Promise<void>;
 
   /**
    * Returns validator index coresponding to validator
    * public key in registry,
    * @param publicKey
    */
-  getValidatorIndex(publicKey: BLSPubkey): Promise<ValidatorIndex>;
-
-  /**
-   * Get the last finalized state
-   */
-  getFinalizedState(): Promise<BeaconState>;
-
-  /**
-   * Set the last justified state
-   */
-  setJustifiedState(state: BeaconState): Promise<void>;
-
-  /**
-   * Get the last justified state
-   */
-  getJustifiedState(): Promise<BeaconState>;
-
-  /**
-   * Set the last finalized state
-   */
-  setFinalizedState(state: BeaconState): Promise<void>;
+  getValidatorIndex(publicKey: BLSPubkey): Promise<ValidatorIndex | null>;
 
   /**
    * Get a block by block hash
    */
-  getBlock(blockRoot: bytes32): Promise<BeaconBlock>;
+  getBlock(blockRoot: bytes32): Promise<BeaconBlock | null>;
 
   hasBlock(blockHash: bytes32): Promise<boolean>;
 
   /**
    * Get a block root by slot
    */
-  getBlockRoot(slot: Slot): Promise<bytes32>;
+  getBlockRoot(slot: Slot): Promise<bytes32 | null>;
 
   /**
    * Get a block by slot
    */
-  getBlockBySlot(slot: Slot): Promise<BeaconBlock>;
+  getBlockBySlot(slot: Slot): Promise<BeaconBlock | null>;
 
   /**
    * Put a block into the db
    */
-  setBlock(block: BeaconBlock): Promise<void>;
+  setBlock(root: bytes32, block: BeaconBlock): Promise<void>;
 
   /**
    * Get the latest finalized block
    */
-  getFinalizedBlock(): Promise<BeaconBlock>;
+  getFinalizedBlock(): Promise<BeaconBlock | null>;
 
   /**
    * Set the latest finalized block
    */
-  setFinalizedBlock(block: BeaconBlock): Promise<void>;
+  setFinalizedBlockRoot(root: bytes32, block?: BeaconBlock): Promise<void>;
 
   /**
    * Get the latest justified block
    */
-  getJustifiedBlock(): Promise<BeaconBlock>;
+  getJustifiedBlock(): Promise<BeaconBlock | null>;
 
   /**
    * Set the latest justified block
    */
-  setJustifiedBlock(block: BeaconBlock): Promise<void>;
+  setJustifiedBlockRoot(root: bytes32, block?: BeaconBlock): Promise<void>;
 
   /**
    * Get the slot of the head of the chain
    */
-  getChainHeadSlot(): Promise<Slot>;
+  getChainHeadSlot(): Promise<Slot | null>;
 
   /**
    * Get the root of the head of the chain
    */
-  getChainHeadRoot(): Promise<bytes32>;
+  getChainHeadRoot(): Promise<bytes32 | null>;
 
   /**
    * Get the head of the chain
    */
-  getChainHead(): Promise<BeaconBlock>;
+  getChainHead(): Promise<BeaconBlock | null>;
 
   /**
    * Set the head of the chain
    */
-  setChainHead(state: BeaconState, block: BeaconBlock): Promise<void>;
+  setChainHeadRoots(blockRoot: bytes32, stateRoot: bytes32, block?: BeaconBlock, state?: BeaconState): Promise<void>;
 
   /**
    * Fetch all attestations
@@ -146,7 +163,7 @@ export interface IBeaconDb {
   /**
    * Fetch an attestation by hash
    */
-  getAttestation(attestationRoot: bytes32): Promise<Attestation>;
+  getAttestation(attestationRoot: bytes32): Promise<Attestation | null>;
 
 
   hasAttestation(attestationRoot: bytes32): Promise<boolean>;

@@ -1,7 +1,8 @@
-import {assert} from "chai";
+import {assert, expect} from "chai";
 import BN from "bn.js";
 import promisify from "promisify-es6";
 
+import {config} from "../../../../src/config/presets/mainnet";
 import {NetworkRpc} from "../../../../src/network/libp2p/rpc";
 
 import {createNode} from "./util";
@@ -9,6 +10,8 @@ import {NodejsNode} from "../../../../src/network/libp2p/nodejs";
 import {Method} from "../../../../src/constants";
 import {Hello} from "../../../../src/types";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
+
+import networkDefaults from "../../../../src/network/defaults";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -24,8 +27,16 @@ describe("[network] rpc", () => {
       promisify(nodeA.start.bind(nodeA))(),
       promisify(nodeB.start.bind(nodeB))(),
     ]);
-    rpcA = new NetworkRpc(nodeA, logger);
-    rpcB = new NetworkRpc(nodeB, logger);
+    const networkOptions = {
+      maxPeers: 10,
+      multiaddrs: [],
+      bootnodes: [],
+      rpcTimeout: 5000,
+      connectTimeout: 5000,
+      disconnectTimeout: 5000,
+    };
+    rpcA = new NetworkRpc(networkOptions, {config, libp2p: nodeA, logger});
+    rpcB = new NetworkRpc(networkOptions, {config, libp2p: nodeB, logger});
     await Promise.all([
       rpcA.start(),
       rpcB.start(),
@@ -42,6 +53,20 @@ describe("[network] rpc", () => {
       promisify(nodeB.stop.bind(nodeB))(),
     ]);
   });
+
+  //prevents tests from exiting
+  // it('default props should work', async function() {
+  //   try {
+  //     for(let i = 0; i < networkDefaults.multiaddrs.length; i++) {
+  //       const node = await createNode(networkDefaults.multiaddrs[i]);
+  //     }
+  //     expect(networkDefaults.maxPeers).to.be.greaterThan(0);
+  //     expect(networkDefaults.rpcTimeout).to.be.greaterThan(0);
+  //   } catch (e) {
+  //     expect.fail(e);
+  //   }
+  // });
+
   it("creates a peer when when new libp2p peers are added", async function () {
     this.timeout(3000);
     await promisify(nodeA.dial.bind(nodeA))(nodeB.peerInfo);
@@ -129,7 +154,7 @@ describe("[network] rpc", () => {
         bestSlot: 0,
       };
       const helloActual = await rpcA.sendRequest<Hello>(rpcA.getPeers()[0], Method.Hello, helloExpected);
-      assert.deepEqual(helloActual, helloExpected);
+      assert.deepEqual(JSON.stringify(helloActual), JSON.stringify(helloExpected));
     } catch (e) {
       assert.fail("hello not received");
     }
@@ -147,7 +172,7 @@ describe("[network] rpc", () => {
         bestSlot: 0,
       };
       const helloActual = await rpcB.sendRequest<Hello>(rpcB.getPeers()[0], Method.Hello, helloExpected);
-      assert.deepEqual(helloActual, helloExpected);
+      assert.deepEqual(JSON.stringify(helloActual), JSON.stringify(helloExpected));
     } catch (e) {
       assert.fail("hello not received");
     }

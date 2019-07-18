@@ -4,8 +4,9 @@
 
 import PouchDB from "pouchdb-core";
 import MemoryAdapter from "pouchdb-adapter-memory";
-import {DBOptions, IDatabaseController, SearchOptions} from "../interface";
+import {IDatabaseController, SearchOptions} from "../interface";
 import {EventEmitter} from "events";
+import {IDatabaseOptions} from "../../options";
 
 PouchDB.plugin(MemoryAdapter);
 
@@ -15,7 +16,7 @@ export class PouchDbController extends EventEmitter implements IDatabaseControll
 
   private db: PouchDB.Database;
 
-  public constructor(opts: DBOptions) {
+  public constructor(opts: IDatabaseOptions) {
     super();
     this.db = new PouchDB(
       opts.name || 'lodestar-beaconchain',

@@ -4,6 +4,7 @@ import * as jsonRpc from "noice-json-rpc";
 import Websocket from "ws";
 import promisify from "promisify-es6";
 import {AbstractRpcClient} from "../abstract";
+import { IBeaconConfig } from "../../../config";
 
 export interface RpcClientOverWsOpts {
 
@@ -19,13 +20,17 @@ export class RpcClientOverWs extends AbstractRpcClient {
 
   private socket: Websocket;
 
-  public constructor(opts: RpcClientOverWsOpts) {
+  private rpcUrl: string;
+
+  public constructor(opts: RpcClientOverWsOpts, {config}: {config: IBeaconConfig}) {
     super();
-    this.socket = new Websocket(opts.rpcUrl);
+    this.rpcUrl = opts.rpcUrl;
+    this.config = config;
   }
 
   public async connect(): Promise<void> {
     await super.connect();
+    this.socket = new Websocket(this.rpcUrl);
     const client = new jsonRpc.Client(this.socket);
     const clientApi = client.api();
     this.beacon = clientApi.beacon;

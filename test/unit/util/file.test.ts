@@ -1,7 +1,7 @@
-import {expect, assert} from "chai";
+import {assert, expect} from "chai";
 import fs from "fs";
-import {writeTomlConfig, getTomlConfig, ensureDirectoryExistence} from "../../../src/util/file";
-import defaults from "../../../src/node/defaults";
+import {ensureDirectoryExistence, getTomlConfig, writeTomlConfig} from "../../../src/util/file";
+import defaults, {BeaconNodeOptions, IBeaconNodeOptions} from "../../../src/node/options";
 
 describe("util/file", function() {
   const testFilePath = "keys/toml/test_config.toml";
@@ -24,11 +24,10 @@ describe("util/file", function() {
   });
 
   it("should generate config from toml file", () => {
-    const config = getTomlConfig(testFilePath);
+    const config = getTomlConfig<Partial<IBeaconNodeOptions>>(testFilePath, BeaconNodeOptions);
     expect(config).to.not.be.undefined;
-    assert.equal(config.chain.chain, defaults.chain.chain);
+    assert.equal(config.chain.name, defaults.chain.name);
     assert.equal(config.db.name, defaults.db.name);
     assert.equal(config.eth1.depositContract.address, defaults.eth1.depositContract.address);
-    assert.equal(config.rpc.port, defaults.rpc.port);
   });
 });

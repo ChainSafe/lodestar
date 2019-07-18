@@ -1,11 +1,13 @@
-import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
 import {serialize} from "@chainsafe/ssz";
+
+import {config} from "../../../../../src/config/presets/mainnet";
 import {Eth1Data} from "../../../../../src/types";
-import {SLOTS_PER_ETH1_VOTING_PERIOD} from "../../../../../src/constants";
+import {processEth1Data} from "../../../../../src/chain/stateTransition/block/eth1Data";
+
 import {generateEmptyBlock} from "../../../../utils/block";
-import processEth1Data from "../../../../../src/chain/stateTransition/block/eth1Data";
+import {generateState} from "../../../../utils/state";
 
 describe('process block - eth1data', function () {
 
@@ -26,15 +28,15 @@ describe('process block - eth1data', function () {
       depositRoot: Buffer.alloc(32),
     };
     state.eth1DataVotes = new Array(
-      SLOTS_PER_ETH1_VOTING_PERIOD * 2
+      config.params.SLOTS_PER_ETH1_VOTING_PERIOD * 2
     ).fill(undefined).map(() => {
       return vote;
     });
     const block = generateEmptyBlock();
     block.body.eth1Data = vote;
-    processEth1Data(state, block);
-    expect(serialize(state.latestEth1Data, Eth1Data).toString('hex'))
-      .to.be.equal(serialize(vote, Eth1Data).toString('hex'));
+    processEth1Data(config, state, block.body);
+    expect(serialize(state.latestEth1Data, config.types.Eth1Data).toString('hex'))
+      .to.be.equal(serialize(vote, config.types.Eth1Data).toString('hex'));
   });
 
   it('should not set latest eth1 data', function () {
@@ -46,8 +48,8 @@ describe('process block - eth1data', function () {
     };
     const block = generateEmptyBlock();
     block.body.eth1Data = vote;
-    processEth1Data(state, block);
-    expect(serialize(state.latestEth1Data, Eth1Data).toString('hex'))
-      .to.not.be.equal(serialize(vote, Eth1Data).toString('hex'));
+    processEth1Data(config, state, block.body);
+    expect(serialize(state.latestEth1Data, config.types.Eth1Data).toString('hex'))
+      .to.not.be.equal(serialize(vote, config.types.Eth1Data).toString('hex'));
   });
 });

@@ -2,50 +2,48 @@
  * @module chain/blockAssembly
  */
 
-import {
-  BeaconBlock,
-  BeaconBlockBody,
-  BeaconBlockHeader,
-  BeaconState,
-  bytes96,
-  Slot
-} from "../../../types";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
+import {BeaconBlock, BeaconBlockBody, BeaconBlockHeader, BeaconState, bytes96, Slot} from "../../../types";
+import {IBeaconConfig} from "../../../config";
 import {BeaconDB} from "../../../db/api";
 import {OpPool} from "../../../opPool";
 import {assembleBody} from "./body";
-import {processBlock} from "../../stateTransition/block";
+import {IEth1Notifier} from "../../../eth1";
+import {stateTransition} from "../../stateTransition";
 
 export async function assembleBlock(
+  config: IBeaconConfig,
   db: BeaconDB,
   opPool: OpPool,
+  eth1: IEth1Notifier,
   slot: Slot,
   randao: bytes96
 ): Promise<BeaconBlock> {
   const [parentBlock, currentState] = await Promise.all([
     db.getChainHead(),
-    db.getState(),
+    db.getLatestState(),
   ]);
+  const merkleTree = await db.getMerkleTree(currentState.depositIndex);
   const parentHeader: BeaconBlockHeader = {
     stateRoot: parentBlock.stateRoot,
     signature: parentBlock.signature,
     slot: parentBlock.slot,
-    previousBlockRoot: parentBlock.previousBlockRoot,
-    blockBodyRoot: hashTreeRoot(parentBlock.body, BeaconBlockBody),
+    parentRoot: parentBlock.parentRoot,
+    bodyRoot: hashTreeRoot(parentBlock.body, config.types.BeaconBlockBody),
   };
   const block: BeaconBlock = {
     slot,
-    previousBlockRoot: signingRoot(parentHeader, BeaconBlockHeader),
+    parentRoot: signingRoot(parentHeader, config.types.BeaconBlockHeader),
     signature: undefined,
     stateRoot: undefined,
-    body: await assembleBody(opPool, currentState, randao),
+    body: await assembleBody(config, opPool, eth1, merkleTree, currentState, randao),
   };
 
   //This will effectively copy state so we avoid modifying existing state
   const nextState = {...currentState};
-  processBlock(nextState, block, false);
+  stateTransition(config, nextState, block, false, false);
 
-  block.stateRoot = hashTreeRoot(nextState, BeaconState);
+  block.stateRoot = hashTreeRoot(nextState, config.types.BeaconState);
 
   return block;
 }

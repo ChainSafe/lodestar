@@ -1,16 +1,22 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
-import {stateFromYaml} from "../../../utils/state";
 import {expect} from "chai";
-import {processAttestation} from "../../../../src/chain/stateTransition/block/attestations";
-import {attestationFromYaml} from "../../../utils/attestation";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
+import {equals} from "@chainsafe/ssz";
+
+import {Attestation, BeaconState} from "../../../../src/types";
+import {config} from "../../../../src/config/presets/mainnet";
+import {processAttestation} from "../../../../src/chain/stateTransition/block/operations";
+import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/attestation/attestation_mainnet.yaml"),
-  processAttestation,
+  (state: BeaconState, attestation: Attestation): BeaconState => {
+    processAttestation(config, state, attestation);
+    return state;
+  },
   (input) => {
     if(input.bls_setting && input.bls_setting.toNumber() === 2) {
       rewire({
@@ -19,10 +25,10 @@ describeSpecTest(
         aggregatePubkeys: sinon.stub().returns(Buffer.alloc(48))
       });
     }
-    return [stateFromYaml(input.pre), attestationFromYaml(input.attestation)];
+    return [expandYamlValue(input.pre, config.types.BeaconState), expandYamlValue(input.attestation, config.types.Attestation)];
   },
   (expected) => {
-    return stateFromYaml(expected.post);
+    return expandYamlValue(expected.post, config.types.BeaconState);
   },
   result => result,
   (testCase) => {
@@ -30,7 +36,7 @@ describeSpecTest(
   },
   () => false,
   (_1, _2, expected, actual) => {
-    expect(expected).to.be.deep.equal(actual);
+    expect(equals(expected, actual, config.types.BeaconState)).to.be.true;
     restore();
   },
   0

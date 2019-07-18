@@ -2,28 +2,30 @@
  * @module chain/stateTransition/block
  */
 
-import {serialize} from "@chainsafe/ssz";
+import {equals} from "@chainsafe/ssz";
 
 import {
-  BeaconBlock,
+  BeaconBlockBody,
   BeaconState,
-  Eth1Data,
 } from "../../../types";
+import {IBeaconConfig} from "../../../config";
 
-import {SLOTS_PER_ETH1_VOTING_PERIOD} from "../../../constants";
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#eth1-data
 
-
-export default function processEth1Data(state: BeaconState, block: BeaconBlock): void {
-  const blockEth1Data = block.body.eth1Data;
+export function processEth1Data(
+  config: IBeaconConfig,
+  state: BeaconState,
+  body: BeaconBlockBody
+): void {
+  const blockEth1Data = body.eth1Data;
   state.eth1DataVotes.push(blockEth1Data);
-  const serializedBlockEth1Data = serialize(blockEth1Data, Eth1Data);
   let occurances = 0;
   state.eth1DataVotes.forEach((eth1Data) => {
-    if (serialize(eth1Data, Eth1Data).equals(serializedBlockEth1Data)) {
+    if (equals(blockEth1Data, eth1Data, config.types.Eth1Data)) {
       occurances++;
     }
   });
-  if (occurances * 2 > SLOTS_PER_ETH1_VOTING_PERIOD) {
-    state.latestEth1Data = block.body.eth1Data;
+  if (occurances * 2 > config.params.SLOTS_PER_ETH1_VOTING_PERIOD) {
+    state.latestEth1Data = body.eth1Data;
   }
 }

@@ -1,8 +1,11 @@
 import sinon from "sinon";
+import {expect} from "chai";
+
+import {config} from "../../../../../src/config/presets/mainnet";
 import {BeaconApi} from "../../../../../src/rpc/api/beacon";
 import {BeaconDB} from "../../../../../src/db/api";
 import {BeaconChain} from "../../../../../src/chain";
-import {expect} from "chai";
+
 import {generateState} from "../../../../utils/state";
 import {generateEmptyBlock} from "../../../../utils/block";
 
@@ -16,6 +19,7 @@ describe('beacon rpc api', function () {
     dbStub = sandbox.createStubInstance(BeaconDB);
     chainStub = sandbox.createStubInstance(BeaconChain);
     beaconApi = new BeaconApi({}, {
+      config,
       chain: chainStub,
       db: dbStub
     });
@@ -34,9 +38,9 @@ describe('beacon rpc api', function () {
         currentVersion: Buffer.from("2")
       }
     });
-    dbStub.getState.resolves(state);
+    dbStub.getLatestState.resolves(state);
     const fork = await beaconApi.getFork();
-    expect(dbStub.getState.calledOnce).to.be.true;
+    expect(dbStub.getLatestState.calledOnce).to.be.true;
     expect(fork).to.be.deep.equal(state.fork);
   });
 
@@ -53,9 +57,9 @@ describe('beacon rpc api', function () {
 
   it('should return state', async function() {
     const state = generateState();
-    dbStub.getState.resolves(state);
+    dbStub.getLatestState.resolves(state);
     const result = await beaconApi.getBeaconState();
-    expect(dbStub.getState.calledOnce).to.be.true;
+    expect(dbStub.getLatestState.calledOnce).to.be.true;
     expect(result).to.be.deep.equal(state);
   });
 

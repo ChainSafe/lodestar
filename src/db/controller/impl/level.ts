@@ -5,12 +5,13 @@
 import {LevelUp} from "levelup";
 import {SearchOptions} from "../interface";
 import {Attestation} from "../../../types";
-import {DBOptions, IDatabaseController} from "../interface";
+import {IDatabaseController} from "../interface";
 import {EventEmitter} from "events";
 import level from "level";
 import {ILogger} from "../../../logger";
+import {IDatabaseOptions} from "../../options";
 
-export interface LevelDBOptions extends DBOptions {
+export interface LevelDBOptions extends IDatabaseOptions {
   db?: LevelUp;
 }
 
@@ -47,7 +48,7 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
     await this.db.close();
   }
 
-  public async get(key: any): Promise<any> {
+  public async get(key: any): Promise<Buffer> {
     try {
       return await this.db.get(key);
     } catch (e) {

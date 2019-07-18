@@ -4,39 +4,32 @@
 
 import assert from "assert";
 import xor from "buffer-xor";
-import {hashTreeRoot} from "@chainsafe/ssz";
-
-import {BeaconBlock, BeaconState, Epoch,} from "../../../types";
-
-import {Domain, EMPTY_SIGNATURE, LATEST_RANDAO_MIXES_LENGTH, ZERO_HASH,} from "../../../constants";
-
+import {hashTreeRoot, hash} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls-js";
 
-import {hash} from "../../../util/crypto";
+import {BeaconBlockBody, BeaconState} from "../../../types";
+import {Domain} from "../../../constants";
+import {IBeaconConfig} from "../../../config";
 
 import {getBeaconProposerIndex, getCurrentEpoch, getDomain, getRandaoMix,} from "../util";
 
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#randao
 
-export default function processRandao(state: BeaconState, block: BeaconBlock): void {
-  const currentEpoch = getCurrentEpoch(state);
-  const proposer = state.validatorRegistry[getBeaconProposerIndex(state)];
+export function processRandao(
+  config: IBeaconConfig,
+  state: BeaconState,
+  body: BeaconBlockBody
+): void {
+  const currentEpoch = getCurrentEpoch(config, state);
+  const proposer = state.validatorRegistry[getBeaconProposerIndex(config, state)];
   // Verify that the provided randao value is valid
-  const randaoRevealVerified =
-    bls.verify(
-      proposer.pubkey,
-      hashTreeRoot(currentEpoch, Epoch),
-      block.body.randaoReveal,
-      getDomain(state, Domain.RANDAO),
-    )
-    ||
-    //empty block, it seems that empty stuff should be verified positively here
-    (
-      hashTreeRoot(currentEpoch, Epoch).equals(ZERO_HASH)
-      && block.body.randaoReveal.equals(EMPTY_SIGNATURE)
-    );
-  assert(randaoRevealVerified);
-
+  assert(bls.verify(
+    proposer.pubkey,
+    hashTreeRoot(currentEpoch, config.types.Epoch),
+    body.randaoReveal,
+    getDomain(config, state, Domain.RANDAO),
+  ));
   // Mix it in
-  state.latestRandaoMixes[currentEpoch % LATEST_RANDAO_MIXES_LENGTH] =
-    xor(getRandaoMix(state, currentEpoch), hash(block.body.randaoReveal));
+  state.latestRandaoMixes[currentEpoch % config.params.LATEST_RANDAO_MIXES_LENGTH] =
+    xor(getRandaoMix(config, state, currentEpoch), hash(body.randaoReveal));
 }

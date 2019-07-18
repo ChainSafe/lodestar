@@ -7,11 +7,11 @@ import {Provider} from "ethers/providers";
 import {BigNumber} from "ethers/utils";
 import BN from "bn.js";
 import bls from "@chainsafe/bls-js";
-import {BLS_WITHDRAWAL_PREFIX_BYTE, Domain} from "../constants";
+import {hash, signingRoot} from "@chainsafe/ssz";
+import {Domain} from "../constants";
 import {DepositData} from "../types";
-import {signingRoot} from "@chainsafe/ssz";
-import {hash} from "../util/crypto";
 import {ILogger} from "../logger";
+import {IBeaconConfig} from "../config";
 
 
 export class Eth1Wallet {
@@ -20,9 +20,12 @@ export class Eth1Wallet {
 
   private contractAbi;
 
+  private config: IBeaconConfig;
+
   private logger: ILogger;
 
-  public constructor(privateKey: string, contractAbi: any, logger: ILogger, provider?: Provider) {
+  public constructor(privateKey: string, contractAbi: any, config: IBeaconConfig, logger: ILogger, provider?: Provider) {
+    this.config = config;
     this.logger = logger;
     if(!provider) {
       provider = ethers.getDefaultProvider();
@@ -44,7 +47,7 @@ export class Eth1Wallet {
     const privateKey = hash(Buffer.from(address, 'hex'));
     const pubkey = bls.generatePublicKey(privateKey);
     const withdrawalCredentials = Buffer.concat([
-      BLS_WITHDRAWAL_PREFIX_BYTE,
+      this.config.params.BLS_WITHDRAWAL_PREFIX_BYTE,
       hash(pubkey).slice(1),
     ]);
 
@@ -58,7 +61,7 @@ export class Eth1Wallet {
 
     const signature = bls.sign(
       privateKey,
-      signingRoot(depositData, DepositData),
+      signingRoot(depositData, this.config.types.DepositData),
       Buffer.from([0, 0, 0, Domain.DEPOSIT])
     );
     // Send TX
@@ -71,7 +74,6 @@ export class Eth1Wallet {
       await tx.wait();
       return tx.hash;
     } catch(e) {
-      console.log(e);
       this.logger.error(e.message);
     }
   }

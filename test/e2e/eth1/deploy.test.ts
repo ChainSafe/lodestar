@@ -2,27 +2,30 @@ import {assert} from "chai";
 import {ethers} from "ethers";
 import sinon from "sinon";
 
-import {Eth1Wallet, EthersEth1Notifier} from "../../../src/eth1";
-import defaults from "../../../src/eth1/dev/defaults";
+import {config} from "../../../src/config/presets/mainnet";
+import {Eth1Wallet, EthersEth1Notifier, IEth1Notifier} from "../../../src/eth1";
+import defaults from "../../../src/eth1/dev/options";
 import {PrivateEth1Network} from "../../../src/eth1/dev";
 import {BeaconDB} from "../../../src/db/api";
 import {PouchDbController} from "../../../src/db";
 import {ILogger, WinstonLogger} from "../../../src/logger";
+import {OpPool} from "../../../src/opPool";
 
 describe("Eth1Notifier - using deployed contract", () => {
 
-  let eth1Notifier;
-  let eth1Network;
+  let eth1Notifier: IEth1Notifier;
+  let eth1Network: PrivateEth1Network;
   let depositContractAddress;
   let provider;
   let logger: ILogger = new WinstonLogger();
   const db = new BeaconDB({
+    config,
     controller: new PouchDbController(
       {name: 'testDb'}
     )
   });
 
-  before(async function () {
+  beforeEach(async function () {
     this.timeout(0);
     logger.silent(true);
     // deploy deposit contract
@@ -38,21 +41,20 @@ describe("Eth1Notifier - using deployed contract", () => {
     provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:34569');
     provider.pollingInterval = 1;
     provider.polling = true;
-    eth1Notifier = new EthersEth1Notifier({
-      depositContract: {
-        ...defaults,
-        address: depositContractAddress,
-      },
-      provider,
-    },
-    {
-      db: db,
-      logger: logger
-    });
+    const opts = defaults;
+    opts.depositContract.address = depositContractAddress;
+    opts.providerInstance = provider;
+    eth1Notifier = new EthersEth1Notifier(
+      opts,
+      {
+        config,
+        opPool: new OpPool(null, {db, chain: null}),
+        logger: logger
+      });
     await eth1Notifier.start();
   });
 
-  after(async () => {
+  afterEach(async () => {
     await eth1Notifier.stop();
     await eth1Network.stop();
     logger.silent(false);
@@ -60,7 +62,13 @@ describe("Eth1Notifier - using deployed contract", () => {
 
   it("should process a Deposit log", async function () {
     this.timeout(0);
-    const wallet = new Eth1Wallet(eth1Network.accounts()[0], defaults.abi,logger, provider);
+    const wallet = new Eth1Wallet(
+      eth1Network.accounts()[0],
+      defaults.depositContract.abi,
+      config,
+      logger,
+      provider
+    );
 
     const cb = sinon.spy();
     eth1Notifier.on('deposit', cb);
@@ -80,7 +88,7 @@ describe("Eth1Notifier - using deployed contract", () => {
       eth1Network
         .accounts()
         .map((account) =>
-          (new Eth1Wallet(account, defaults.abi, logger, provider))
+          (new Eth1Wallet(account, defaults.depositContract.abi, config, logger, provider))
             .createValidatorDeposit(
               depositContractAddress,
               ethers.utils.parseEther('32.0')

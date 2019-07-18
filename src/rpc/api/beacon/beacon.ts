@@ -2,8 +2,9 @@
  * @module rpc/api
  */
 
-import {IBeaconApi} from "./interface";
+import {IBeaconConfig} from "../../../config";
 import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "../../../types";
+import {IBeaconApi} from "./interface";
 import {BeaconChain} from "../../../chain";
 import {BeaconDB} from "../../../db";
 
@@ -11,11 +12,13 @@ export class BeaconApi implements IBeaconApi {
 
   public namespace: string;
 
+  private config: IBeaconConfig;
   private chain: BeaconChain;
   private db: BeaconDB;
 
-  public constructor(opts, {chain, db}) {
+  public constructor(opts, {config, chain, db}) {
     this.namespace = 'beacon';
+    this.config = config;
     this.db = db;
     this.chain = chain;
   }
@@ -26,7 +29,7 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getFork(): Promise<Fork> {
-    const state: BeaconState = await this.db.getState();
+    const state: BeaconState = await this.db.getLatestState();
     return state.fork;
   }
 
@@ -41,7 +44,7 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getBeaconState(): Promise<BeaconState> {
-    return await this.db.getState();
+    return await this.db.getLatestState();
   }
 
   public async getChainHead(): Promise<BeaconBlock> {

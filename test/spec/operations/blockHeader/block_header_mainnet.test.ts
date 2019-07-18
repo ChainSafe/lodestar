@@ -1,16 +1,22 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
-import {stateFromYaml} from "../../../utils/state";
 import {expect} from "chai";
-import processBlockHeader from "../../../../src/chain/stateTransition/block/blockHeader";
-import {blockFromYaml} from "../../../utils/block";
 // @ts-ignore
-import {rewire, restore} from "@chainsafe/bls-js";
+import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
+import {equals} from "@chainsafe/ssz";
+
+import {BeaconBlock, BeaconState} from "../../../../src/types";
+import {config} from "../../../../src/config/presets/mainnet";
+import {processBlockHeader} from "../../../../src/chain/stateTransition/block/blockHeader";
+import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(
   join(__dirname, "../../test-cases/tests/operations/block_header/block_header_mainnet.yaml"),
-  processBlockHeader,
+  (state, block) => {
+    processBlockHeader(config, state, block);
+    return state;
+  },
   (input) => {
     if(input.bls_setting && input.bls_setting.toNumber() === 2) {
       rewire({
@@ -18,10 +24,10 @@ describeSpecTest(
         verifyMultiple: sinon.stub().returns(true)
       });
     }
-    return [stateFromYaml(input.pre), blockFromYaml(input.block)];
+    return [expandYamlValue(input.pre, config.types.BeaconState), expandYamlValue(input.block, config.types.BeaconBlock)];
   },
   (expected) => {
-    return stateFromYaml(expected.post);
+    return expandYamlValue(expected.post, config.types.BeaconState);
   },
   result => result,
   (testCase) => {
@@ -29,7 +35,7 @@ describeSpecTest(
   },
   () => false,
   (_1, _2, expected, actual) => {
-    expect(expected).to.be.deep.equal(actual);
+    expect(equals(expected, actual, config.types.BeaconState)).to.be.true;
     restore();
   },
   0

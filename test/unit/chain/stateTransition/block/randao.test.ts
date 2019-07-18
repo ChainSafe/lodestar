@@ -1,14 +1,17 @@
-import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
-import {Domain, LATEST_RANDAO_MIXES_LENGTH} from "../../../../../src/constants";
-import {generateValidator} from "../../../../utils/validator";
-import * as utils from "../../../../../src/chain/stateTransition/util";
-import {getCurrentEpoch, getDomain} from "../../../../../src/chain/stateTransition/util";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
+
+import {config} from "../../../../../src/config/presets/mainnet";
+import {Domain} from "../../../../../src/constants";
+import {processRandao} from "../../../../../src/chain/stateTransition/block/randao";
+import * as utils from "../../../../../src/chain/stateTransition/util";
+
+import {getCurrentEpoch, getDomain} from "../../../../../src/chain/stateTransition/util";
 import {generateEmptyBlock} from "../../../../utils/block";
-import processRandao from "../../../../../src/chain/stateTransition/block/randao";
+import {generateState} from "../../../../utils/state";
+import {generateValidator} from "../../../../utils/validator";
 
 describe('process block - randao', function () {
 
@@ -35,7 +38,7 @@ describe('process block - randao', function () {
     getBeaconProposerStub.returns(0);
     blsStub.verify.returns(false);
     try {
-      processRandao(state, block);
+      processRandao(config, state, block.body);
       expect.fail();
     } catch (e) {
       expect(getBeaconProposerStub.calledOnce).to.be.true;
@@ -50,10 +53,10 @@ describe('process block - randao', function () {
     getBeaconProposerStub.returns(0);
     blsStub.verify.returns(true);
     try {
-      processRandao(state, block);
+      processRandao(config, state, block.body);
       expect(getBeaconProposerStub.calledOnce).to.be.true;
       expect(blsStub.verify.calledOnce).to.be.true;
-      expect(state.latestRandaoMixes[getCurrentEpoch(state) % LATEST_RANDAO_MIXES_LENGTH]).to.not.be.null;
+      expect(state.latestRandaoMixes[getCurrentEpoch(config, state) % config.params.LATEST_RANDAO_MIXES_LENGTH]).to.not.be.null;
     } catch (e) {
       expect.fail(e.stack);
     }

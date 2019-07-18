@@ -3,13 +3,14 @@ import chai, {expect} from 'chai';
 import {DepositCommand} from "../../../../src/cli/commands";
 import chaiAsPromised from 'chai-as-promised';
 import {CliError} from "../../../../src/cli/error";
-import {Wallet} from "ethers";
 import program from "commander";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 chai.use(chaiAsPromised);
 
 describe('[CLI] deposit', function() {
+
+  this.timeout(4000);
 
   let eth1Network: PrivateEth1Network;
   let logger: ILogger = new WinstonLogger();
@@ -93,23 +94,6 @@ describe('[CLI] deposit', function() {
       )
     ).to.be.rejectedWith(Error, 'invalid mnemonic');
   });
-  //
-  // it('Should throw error if contract doesn\'t exist', async () => {
-  //   const command = new DepositCommand();
-  //   await expect(
-  //     command.action(
-  //       {
-  //         privateKey: eth1Network.accounts()[0],
-  //         loggingLevel: null,
-  //         mnemonic: null,
-  //         node: eth1Network.rpcUrl(),
-  //         value: '32',
-  //         contract: Wallet.createRandom().address,
-  //         accounts: 10
-  //       }
-  //     )
-  //   ).to.be.rejectedWith(Error, 'contract not deployed');
-  // });
 
 
 });

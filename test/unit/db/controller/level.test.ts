@@ -13,7 +13,7 @@ describe("LevelDB controller", () => {
       keyEncoding: 'binary',
       valueEncoding: 'binary',
     });
-  const db = new LevelDbController({db: testDb}, {logger: logger});
+  const db = new LevelDbController({db: testDb, name: dbLocation}, {logger: logger});
 
 
   before(async () => {

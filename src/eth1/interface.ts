@@ -5,14 +5,7 @@
 import {EventEmitter} from "events";
 
 import {bytes32, Deposit, number64} from "../types";
-
-export interface IEth1Options {
-  depositContract: {
-    deployedAt: number;
-    address: string;
-    abi: any[];
-  };
-}
+import {Block} from "ethers/providers";
 
 /**
  * The IEth1Notifier service watches the Eth1.0 chain for relevant events
@@ -59,14 +52,15 @@ export interface IEth1Notifier extends EventEmitter {
   ): Promise<Deposit[]>;
 
   /**
-   * Return an array of deposits to process at genesis event
+   * Return the latest block
    */
-  genesisDeposits(): Promise<Deposit[]>;
+  getHead(): Promise<Block>;
 
   /**
-   * Return the latest block hash
+   * Returns block by block hash or number
+   * @param blockHashOrBlockNumber
    */
-  latestBlockHash(): bytes32;
+  getBlock(blockHashOrBlockNumber: string | number): Promise<Block>;
 
   /**
    * Return true if the eth2 genesis log has occurred
@@ -75,6 +69,12 @@ export interface IEth1Notifier extends EventEmitter {
   /**
    * Return the merkle root of the deposits
    */
-  depositRoot(): Promise<bytes32>;
+  depositRoot(block?: string | number): Promise<bytes32>;
+
+  /**
+   * Retruns deposit count
+   * @param block
+   */
+  depositCount(block?: string | number): Promise<number64>;
 
 }

@@ -2,16 +2,17 @@
  * @module cli/commands
  */
 
-import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import defaults from "../../eth1/defaults";
-import * as ethers from "ethers/ethers";
+import {JsonRpcProvider} from "ethers/providers";
 import {Wallet} from "ethers/ethers";
-import  {LogLevel, WinstonLogger} from "../../logger";
+
+import {config} from "../../config/presets/mainnet";
+import {CliCommand} from "./interface";
+import defaults from "../../eth1/options";
+import * as ethers from "ethers/ethers";
+import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
-import {JsonRpcProvider} from "ethers/providers";
-import {ILogger} from "../../logger";
 
 interface IDepositCommandOptions {
   privateKey: string;
@@ -83,7 +84,7 @@ export class DepositCommand implements CliCommand {
       wallets.map(async wallet => {
         try {
           const hash =
-            await (new Eth1Wallet(wallet.privateKey, defaults.depositContract.abi,logger, provider))
+            await (new Eth1Wallet(wallet.privateKey, defaults.depositContract.abi, config, logger, provider))
               .createValidatorDeposit(options.contract, ethers.utils.parseEther(options.value));
           logger.info(
             `Successfully deposited ${options.value} ETH from ${wallet.address} 

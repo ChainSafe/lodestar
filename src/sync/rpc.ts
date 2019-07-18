@@ -5,6 +5,8 @@
 import assert from "assert";
 import BN from "bn.js";
 import {hashTreeRoot} from "@chainsafe/ssz";
+import PeerInfo from "peer-info";
+
 import {
   bytes32, Slot, number64,
   BeaconBlockHeader, BeaconBlockBody,
@@ -22,6 +24,7 @@ import {INetwork} from "../network";
 import {getEmptyBlockBody} from "../chain/genesis";
 import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
+import { IBeaconConfig } from "../config";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface SyncOptions {
@@ -33,6 +36,7 @@ interface SyncOptions {
  */
 export class SyncRpc {
   private opts: SyncOptions;
+  private config: IBeaconConfig;
   private db: IBeaconDb;
   private chain: IBeaconChain;
   private network: INetwork;
@@ -40,9 +44,10 @@ export class SyncRpc {
   private logger: ILogger;
 
   public constructor(opts: SyncOptions,
-    {db, chain, network, reps, logger}:
-    {db: IBeaconDb; chain: IBeaconChain; network: INetwork; reps: ReputationStore; logger: ILogger} )
+    {config, db, chain, network, reps, logger}:
+    {config: IBeaconConfig; db: IBeaconDb; chain: IBeaconChain; network: INetwork; reps: ReputationStore; logger: ILogger} )
   {
+    this.config = config;
     this.logger = logger;
     this.opts = opts;
     this.db = db;
@@ -67,7 +72,7 @@ export class SyncRpc {
       bestSlot = await this.db.getChainHeadSlot();
       const [bRoot, state] = await Promise.all([
         this.db.getBlockRoot(bestSlot),
-        this.db.getState(),
+        this.db.getLatestState(),
       ]);
       bestRoot = bRoot;
       latestFinalizedEpoch = state.finalizedEpoch;
@@ -249,9 +254,9 @@ export class SyncRpc {
           const block = await this.db.getBlockBySlot(slot);
           const header: BeaconBlockHeader = {
             slot: block.slot,
-            previousBlockRoot: block.previousBlockRoot,
+            parentRoot: block.parentRoot,
             stateRoot: block.stateRoot,
-            blockBodyRoot: hashTreeRoot(block.body, BeaconBlockBody),
+            bodyRoot: hashTreeRoot(block.body, this.config.types.BeaconBlockBody),
             signature: block.signature,
           };
           response.headers.push(header);

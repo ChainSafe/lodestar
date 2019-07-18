@@ -1,5 +1,8 @@
-import {generateState} from "../../../../utils/state";
+import BN from "bn.js";
 import {expect} from "chai";
+import sinon from "sinon";
+
+import {config} from "../../../../../src/config/presets/mainnet";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {
   getCrosslinkCommittee,
@@ -8,10 +11,9 @@ import {
 } from "../../../../../src/chain/stateTransition/util";
 import * as epochUtils from "../../../../../src/chain/stateTransition/epoch/util";
 import {getWinningCrosslinkAndAttestingIndices} from "../../../../../src/chain/stateTransition/epoch/util";
-import sinon from "sinon";
-import {generateEmptyCrosslink} from "../../../../utils/crosslink";
-import BN from "bn.js";
 import {processCrosslinks} from "../../../../../src/chain/stateTransition/epoch/crosslinks";
+import {generateEmptyCrosslink} from "../../../../utils/crosslink";
+import {generateState} from "../../../../utils/state";
 
 describe('process epoch - crosslinks', function () {
 
@@ -55,7 +57,7 @@ describe('process epoch - crosslinks', function () {
     ]);
     getTotalBalanceStub.returns(new BN(1));
     try {
-      processCrosslinks(state);
+      processCrosslinks(config, state);
       expect(getCurrentEpochStub.calledOnce).to.be.true;
       expect(getPreviousEpochStub.calledOnce).to.be.true;
       expect(getPreviousEpochStub.calledOnce).to.be.true;
@@ -87,7 +89,7 @@ describe('process epoch - crosslinks', function () {
     getTotalBalanceStub.withArgs(sinon.match.any, [4, 5, 6]).returns(new BN(1));
     getTotalBalanceStub.withArgs(sinon.match.any, [1, 2, 3]).returns(new BN(5));
     try {
-      processCrosslinks(state);
+      processCrosslinks(config, state);
       expect(getCurrentEpochStub.calledOnce).to.be.true;
       expect(getPreviousEpochStub.calledOnce).to.be.true;
       expect(getPreviousEpochStub.calledOnce).to.be.true;

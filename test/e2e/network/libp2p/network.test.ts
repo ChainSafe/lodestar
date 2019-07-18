@@ -1,12 +1,14 @@
 import {expect} from "chai";
 
-import {Libp2pNetwork, INetworkOptions} from "../../../../src/network";
+import {config} from "../../../../src/config/presets/mainnet";
+import {Libp2pNetwork} from "../../../../src/network";
 import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../../../../src/constants";
 import {getEmptyBlock} from "../../../../src/chain/genesis";
 import {createNode} from "../../../unit/network/libp2p/util";
 import {generateEmptyAttestation} from "../../../utils/attestation";
 import {shardAttestationTopic} from "../../../../src/network/util";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
+import {INetworkOptions} from "../../../../src/network/options";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -24,8 +26,8 @@ describe("[network] network", () => {
   const logger: ILogger = new WinstonLogger();
 
   beforeEach(async () => {
-    netA = new Libp2pNetwork(opts, {libp2p: createNode(multiaddr), logger: logger});
-    netB = new Libp2pNetwork(opts, {libp2p: createNode(multiaddr), logger: logger});
+    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger});
+    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger});
     await Promise.all([
       netA.start(),
       netB.start(),
@@ -106,7 +108,7 @@ describe("[network] network", () => {
     });
     await new Promise((resolve) => netB.once("gossipsub:heartbeat", resolve));
     const attestation = generateEmptyAttestation();
-    attestation.data.shard = shard;
+    attestation.data.crosslink.shard = shard;
     netB.publishShardAttestation(attestation);
     await received;
   });

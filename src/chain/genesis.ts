@@ -11,19 +11,22 @@ import {
   Deposit,
   Eth1Data,
   number64,
-  ValidatorIndex,
   BeaconBlockBody,
 } from "../types";
 
 import {
-  EMPTY_SIGNATURE, GENESIS_EPOCH, GENESIS_FORK_VERSION, GENESIS_SLOT, GENESIS_START_SHARD,
-  LATEST_ACTIVE_INDEX_ROOTS_LENGTH, LATEST_RANDAO_MIXES_LENGTH, LATEST_SLASHED_EXIT_LENGTH,
-  SHARD_COUNT, ZERO_HASH, SLOTS_PER_HISTORICAL_ROOT, MAX_EFFECTIVE_BALANCE,
+  EMPTY_SIGNATURE, 
+  FAR_FUTURE_EPOCH,
+  GENESIS_SLOT,
+  GENESIS_EPOCH,
+  GENESIS_START_SHARD,
+  ZERO_HASH,
 } from "../constants";
+import {IBeaconConfig} from "../config";
 
 import {getActiveValidatorIndices, getTemporaryBlockHeader} from "./stateTransition/util";
 
-import {processDeposit} from "./stateTransition/block/deposits";
+import {processDeposit} from "./stateTransition/block/operations";
 
 
 export function getEmptyBlockBody(): BeaconBlockBody {
@@ -50,7 +53,7 @@ export function getEmptyBlockBody(): BeaconBlockBody {
 export function getEmptyBlock(): BeaconBlock {
   return {
     slot: GENESIS_SLOT,
-    previousBlockRoot: ZERO_HASH,
+    parentRoot: ZERO_HASH,
     stateRoot: ZERO_HASH,
     body: getEmptyBlockBody(),
     signature: EMPTY_SIGNATURE,
@@ -61,17 +64,19 @@ export function getEmptyBlock(): BeaconBlock {
  * Generate the initial beacon chain state.
  */
 export function getGenesisBeaconState(
+  config: IBeaconConfig,
   genesisValidatorDeposits: Deposit[],
   genesisTime: number64,
-  genesisEth1Data: Eth1Data): BeaconState {
+  genesisEth1Data: Eth1Data,
+): BeaconState {
 
   const state: BeaconState = {
     // MISC
     slot: GENESIS_SLOT,
     genesisTime,
     fork: {
-      previousVersion: GENESIS_FORK_VERSION,
-      currentVersion: GENESIS_FORK_VERSION,
+      previousVersion: config.params.GENESIS_FORK_VERSION,
+      currentVersion: config.params.GENESIS_FORK_VERSION,
       epoch: GENESIS_EPOCH,
     },
 
@@ -80,8 +85,8 @@ export function getGenesisBeaconState(
     balances: [],
 
     // Randomness and committees
-    latestRandaoMixes: Array.from({length: LATEST_RANDAO_MIXES_LENGTH}, () => ZERO_HASH),
-    latestStartShard: GENESIS_START_SHARD,
+    latestRandaoMixes: Array.from({length: config.params.LATEST_RANDAO_MIXES_LENGTH}, () => ZERO_HASH),
+    latestStartShard: config.params.GENESIS_START_SHARD,
 
     // Finality
     previousEpochAttestations: [],
@@ -95,21 +100,25 @@ export function getGenesisBeaconState(
     finalizedRoot: ZERO_HASH,
 
     // Recent state
-    currentCrosslinks: Array.from({length: SHARD_COUNT}, () => ({
-      epoch: GENESIS_EPOCH,
-      previousCrosslinkRoot: ZERO_HASH,
-      crosslinkDataRoot: ZERO_HASH,
+    currentCrosslinks: Array.from({length: config.params.SHARD_COUNT}, () => ({
+      shard: GENESIS_START_SHARD,
+      startEpoch: GENESIS_EPOCH,
+      endEpoch: FAR_FUTURE_EPOCH,
+      parentRoot: ZERO_HASH,
+      dataRoot: ZERO_HASH,
     })),
-    previousCrosslinks: Array.from({length: SHARD_COUNT}, () => ({
-      epoch: GENESIS_EPOCH,
-      previousCrosslinkRoot: ZERO_HASH,
-      crosslinkDataRoot: ZERO_HASH,
+    previousCrosslinks: Array.from({length: config.params.SHARD_COUNT}, () => ({
+      shard: GENESIS_START_SHARD,
+      startEpoch: GENESIS_EPOCH,
+      endEpoch: FAR_FUTURE_EPOCH,
+      parentRoot: ZERO_HASH,
+      dataRoot: ZERO_HASH,
     })),
-    latestBlockRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
-    latestStateRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
-    latestActiveIndexRoots: Array.from({length: LATEST_ACTIVE_INDEX_ROOTS_LENGTH}, () => ZERO_HASH),
-    latestSlashedBalances: Array.from({length: LATEST_SLASHED_EXIT_LENGTH}, () => new BN(0)),
-    latestBlockHeader: getTemporaryBlockHeader(getEmptyBlock()),
+    latestBlockRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
+    latestStateRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
+    latestActiveIndexRoots: Array.from({length: config.params.LATEST_ACTIVE_INDEX_ROOTS_LENGTH}, () => ZERO_HASH),
+    latestSlashedBalances: Array.from({length: config.params.LATEST_SLASHED_EXIT_LENGTH}, () => new BN(0)),
+    latestBlockHeader: getTemporaryBlockHeader(config, getEmptyBlock()),
     historicalRoots: [],
 
     // Ethereum 1.0 chain data
@@ -120,19 +129,19 @@ export function getGenesisBeaconState(
 
   // Process genesis deposists
   genesisValidatorDeposits.forEach((deposit) =>
-    processDeposit(state, deposit));
+    processDeposit(config, state, deposit));
 
   // Process genesis activations
   state.validatorRegistry.forEach((validator) => {
-    if (validator.effectiveBalance.gte(MAX_EFFECTIVE_BALANCE)) {
+    if (validator.effectiveBalance.gte(config.params.MAX_EFFECTIVE_BALANCE)) {
       validator.activationEligibilityEpoch = GENESIS_EPOCH;
       validator.activationEpoch = GENESIS_EPOCH;
     }
   });
 
   const genesisActiveIndexRoot =
-    hashTreeRoot(getActiveValidatorIndices(state, GENESIS_EPOCH), [ValidatorIndex]);
-  for (let i = 0; i < LATEST_ACTIVE_INDEX_ROOTS_LENGTH; i++) {
+    hashTreeRoot(getActiveValidatorIndices(state, GENESIS_EPOCH), [config.types.ValidatorIndex]);
+  for (let i = 0; i < config.params.LATEST_ACTIVE_INDEX_ROOTS_LENGTH; i++) {
     state.latestActiveIndexRoots[i] = genesisActiveIndexRoot;
   }
   return state;

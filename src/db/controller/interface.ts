@@ -4,10 +4,6 @@
 
 import {EventEmitter} from "events";
 
-export interface DBOptions {
-  name?: string;
-}
-
 export interface SearchOptions {
   gt: any;
   lt: any;
@@ -15,7 +11,7 @@ export interface SearchOptions {
 
 export interface IDatabaseController extends EventEmitter{
 
-  get(key: any): Promise<any>;
+  get(key: any): Promise<Buffer>;
 
   batchPut(items: { key: any; value: any }[]): Promise<any>;
 

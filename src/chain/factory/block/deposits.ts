@@ -2,12 +2,35 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconState, Deposit} from "../../../types";
+import {hashTreeRoot} from "@chainsafe/ssz";
+import {BeaconState, Deposit, Eth1Data} from "../../../types";
+import {IBeaconConfig} from "../../../config";
 import {OpPool} from "../../../opPool";
+import {IProgressiveMerkleTree} from "../../../util/merkleTree";
+import {processSortedDeposits} from "../../../util/deposits";
 
-export async function blockDeposits(opPool: OpPool, state: BeaconState): Promise<Deposit[]> {
-  if(state.latestEth1Data.depositCount > state.depositIndex) {
-    //TODO: get pending deposits (starting with state.depositIndex) and return to be included in block
+export async function generateDeposits(
+  config: IBeaconConfig,
+  opPool: OpPool,
+  state: BeaconState,
+  eth1Data: Eth1Data,
+  merkleTree: IProgressiveMerkleTree): Promise<Deposit[]> {
+  if(eth1Data.depositCount > state.depositIndex) {
+    let deposits = await opPool.getDeposits();
+    //add all deposits to the tree before getting proof
+    return processSortedDeposits(
+      config,
+      deposits,
+      state.depositIndex,
+      eth1Data.depositCount,
+      (deposit, index) => {
+        merkleTree.add(index + state.depositIndex, hashTreeRoot(deposit.data, config.types.DepositData));
+        return deposit;
+      }
+    ).map((deposit, index) => {
+      deposit.proof = merkleTree.getProof(index + state.depositIndex);
+      return deposit;
+    });
   }
   return [];
 }

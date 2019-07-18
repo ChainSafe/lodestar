@@ -3,7 +3,7 @@
  */
 
 import {EventEmitter} from "events";
-import {serialize, deserialize} from "@chainsafe/ssz";
+import {deserialize, serialize} from "@chainsafe/ssz";
 import promisify from "promisify-es6";
 import LibP2p from "libp2p";
 import Gossipsub from "libp2p-gossipsub";
@@ -13,24 +13,28 @@ import {Attestation, BeaconBlock, Shard, RequestBody, ResponseBody} from "../../
 import {
   Method, RequestId, BLOCK_TOPIC, ATTESTATION_TOPIC, SHARD_SUBNET_COUNT,
 } from "../../constants";
-import {INetwork, INetworkOptions} from "../interface";
+import {IBeaconConfig} from "../../config";
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {NetworkRpc} from "./rpc";
 import {ILogger} from "../../logger";
+import {INetworkOptions} from "../options";
+import {INetwork} from "../interface";
 
 
 export class Libp2pNetwork extends EventEmitter implements INetwork {
   public peerInfo: PeerInfo;
   private opts: INetworkOptions;
+  private config: IBeaconConfig;
   private libp2p: LibP2p;
   private pubsub: Gossipsub;
   private rpc: NetworkRpc;
   private inited: Promise<void>;
   private logger: ILogger;
 
-  public constructor(opts: INetworkOptions, {libp2p,logger}: {libp2p: any; logger: ILogger}) {
+  public constructor(opts: INetworkOptions, {config, libp2p,logger}: {config: IBeaconConfig; libp2p: any; logger: ILogger}) {
     super();
     this.opts = opts;
+    this.config = config;
     this.logger = logger;
     // `libp2p` can be a promise as well as a libp2p object
     this.inited = new Promise((resolve) => {
@@ -38,7 +42,7 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
         this.peerInfo = libp2p.peerInfo;
         this.libp2p = libp2p;
         this.pubsub = new Gossipsub(libp2p);
-        this.rpc = new NetworkRpc(libp2p,logger);
+        this.rpc = new NetworkRpc(opts, {config, libp2p, logger});
         resolve();
       });
     });
@@ -65,34 +69,34 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
   }
   public async publishBlock(block: BeaconBlock): Promise<void> {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
-      BLOCK_TOPIC, serialize(block, BeaconBlock));
+      BLOCK_TOPIC, serialize(block, this.config.types.BeaconBlock));
   }
   public async publishAttestation(attestation: Attestation): Promise<void> {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
-      ATTESTATION_TOPIC, serialize(attestation, Attestation));
+      ATTESTATION_TOPIC, serialize(attestation, this.config.types.Attestation));
   }
   public async publishShardAttestation(attestation: Attestation): Promise<void> {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
-      shardSubnetAttestationTopic(attestation.data.shard), serialize(attestation, Attestation));
+      shardSubnetAttestationTopic(attestation.data.crosslink.shard), serialize(attestation, this.config.types.Attestation));
   }
   private handleIncomingBlock(msg: any): void {
     try {
-      const block: BeaconBlock = deserialize(msg.data, BeaconBlock);
+      const block: BeaconBlock = deserialize(msg.data, this.config.types.BeaconBlock);
       this.emit(BLOCK_TOPIC, block);
     } catch (e) {
     }
   }
   private handleIncomingAttestation(msg: any): void {
     try {
-      const attestation: Attestation = deserialize(msg.data, Attestation);
+      const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
       this.emit(ATTESTATION_TOPIC, attestation);
     } catch (e) {
     }
   }
   private handleIncomingShardAttestation(msg: any): void {
     try {
-      const attestation: Attestation = deserialize(msg.data, Attestation);
-      this.emit(shardAttestationTopic(attestation.data.shard), attestation);
+      const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
+      this.emit(shardAttestationTopic(attestation.data.crosslink.shard), attestation);
     } catch (e) {
     }
   }
