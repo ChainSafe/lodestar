@@ -8,9 +8,9 @@ coverage/**
 beaconchain
 lodestar-db
 lodestar-config.toml
+validator-db
 keys/
 test-db
 yarn-error.log
 package-lock.json
 LodestarValidatorDB/
-*.log

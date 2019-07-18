@@ -1,13 +1,17 @@
 {
-  "include": [
-    "src/**/*.ts"
-  ],
-  "exclude": [
-    "**/*mock*",
-    "**/stubs/*"
-  ],
-  "extensions": [
+  "cache": false,
+  "extension": [
     ".ts"
   ],
-  "all": true
+  "exclude": [
+    "**/*.d.ts",
+    "coverage/**",
+    "test/**",
+    "**/node_modules/**"
+  ],
+  "all": "true",
+  "reporter": [
+    "text",
+    "lcov"
+  ]
 }
