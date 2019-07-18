@@ -32,9 +32,13 @@ export class RegularSync {
   }
 
   public async receiveBlock(block: BeaconBlock): Promise<void> {
-    // TODO: skip block if its a known bad block
-    // skip block if it already exists
     const root = hashTreeRoot(block, this.config.types.BeaconBlock);
+
+    // skip block if its a known bad block
+    if (await this.db.isBadBlockRoot(root)){
+      return ;
+    }
+    // skip block if it already exists
     if (!await this.db.hasBlock(root)) {
       await this.chain.receiveBlock(block);
     }

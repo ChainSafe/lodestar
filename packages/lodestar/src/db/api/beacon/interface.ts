@@ -17,6 +17,8 @@ import {
   VoluntaryExit,
 } from "../../../types";
 import {IProgressiveMerkleTree} from "../../../util/merkleTree";
+import {Bucket, encodeKey} from "../../schema";
+import {serialize} from "@chainsafe/ssz";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -237,4 +239,14 @@ export interface IBeaconDb {
    * Delete attester slashings from the db
    */
   deleteAttesterSlashings(attesterSlashings: AttesterSlashing[]): Promise<void>;
+
+  /**
+   * add Bad block root in db
+   */
+  setBadBlockRoot(root: bytes32): Promise<void>;
+
+  /**
+   *  check whether the block root is from bad block
+   */
+  isBadBlockRoot(root: bytes32): Promise<boolean> ;
 }

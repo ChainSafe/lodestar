@@ -126,8 +126,14 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     const isValidBlock = await this.isValidBlock(state, block);
     assert(isValidBlock);
 
-    // process current slot
-    await this.runStateTransition(block, state);
+    try{
+      // process current slot
+      await this.runStateTransition(block, state);
+    }catch (e) {
+      // store in db as a bad block
+      const blockRoot = hashTreeRoot(block, this.config.types.BeaconBlock);
+      await this.db.setBadBlockRoot(blockRoot);
+    }
  
     // forward processed block for additional processing
     this.emit('processedBlock', block);

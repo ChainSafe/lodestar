@@ -320,4 +320,17 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
     );
   }
 
+  public async setBadBlockRoot(root: bytes32): Promise<void> {
+    return await this.db.put(encodeKey(Bucket.invalidBlock, root),
+      serialize(root, this.config.types.bytes32));
+  }
+  public async isBadBlockRoot(root: bytes32): Promise<boolean> {
+    try {
+      await this.db.get(encodeKey(Bucket.invalidBlock, root));
+      return true;
+    }catch (e) {
+      return false;
+    }
+  }
+
 }
