@@ -1,7 +1,9 @@
-import {Slot, bytes32, bytes, uint16, uint64, bytes8, Epoch, number64} from "./primitive";
+import {Slot, bytes32, bytes, uint16, uint64, bytes8, Epoch, number64, uint8} from "./primitive";
 import {BeaconBlockBody} from "./block";
 import {BeaconBlockHeader} from "./misc";
 import {BeaconState} from "./state";
+import {SimpleContainerType} from "@chainsafe/ssz";
+import {Attestation} from "./operations";
 
 export interface BlockRootSlot {
   blockRoot: bytes32;
@@ -35,7 +37,8 @@ export interface RpcResponse {
 export type RequestBody =
   Hello | Goodbye | Status |
   BeaconBlockRootsRequest | BeaconBlockHeadersRequest | BeaconBlockBodiesRequest |
-  BeaconStatesRequest;
+  BeaconStatesRequest | HobbitsGetBlockBodies| HobbitsGetAttestation |
+  HobbitsAttestation;
 
 export type ResponseBody =
   Hello | Goodbye | Status |
@@ -62,7 +65,7 @@ export interface Goodbye {
 // Method ID: 2
 
 export interface Status {
-  sha: bytes32;
+  sha?: bytes32;  // for libp2p
   userAgent: bytes;
   timestamp: number64;
 }
@@ -83,8 +86,13 @@ export interface BeaconBlockRootsResponse {
 export interface BeaconBlockHeadersRequest {
   startRoot: bytes32; 
   startSlot: Slot;
-  maxHeaders: number64;
-  skipSlots: number64;
+  // for libp2p
+  maxHeaders?: number64;
+  skipSlots?: number64;
+  // for hobbits
+  direction?: uint8;
+  max?: uint64;
+  skip?: uint64;
 }
 
 export interface BeaconBlockHeadersResponse {
@@ -98,7 +106,9 @@ export interface BeaconBlockBodiesRequest {
 } 
 
 export interface BeaconBlockBodiesResponse {
-  blockBodies: BeaconBlockBody[];
+  blockBodies?: BeaconBlockBody[];
+  // for hobbits
+  bodies?: BeaconBlockBody[];
 }
 
 // Method ID: 13
@@ -109,4 +119,23 @@ export interface BeaconStatesRequest {
 
 export interface BeaconStatesResponse {
   states: BeaconState[];
+}
+
+
+
+// for hobbits
+export interface HobbitsGetBlockBodies {
+  startRoot: bytes32;
+  startSlot: Slot;
+  direction: uint8;
+  max: uint64;
+  skip: uint64;
+}
+
+export interface HobbitsGetAttestation {
+  signature: bytes;
+}
+
+export interface HobbitsAttestation {
+  attestation: Attestation;
 }

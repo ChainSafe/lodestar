@@ -18,14 +18,6 @@ export enum Method {
   AttestationResponse = 15,
 }
 
-export enum ResponseCode {
-  Success = 0,
-  ParseError = 10,
-  InvalidRequest = 20,
-  MethodNotFound = 30,
-  ServerError = 40,
-}
-
 export enum ProtocolType {
   RPC = 0,
   GOSSIP = 1,

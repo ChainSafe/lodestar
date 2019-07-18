@@ -35,6 +35,6 @@
     "typedoc-plugin-external-module-name": "^2.1.0",
     "typedoc-plugin-internal-external": "^2.0.2",
     "typedoc-plugin-markdown": "^2.0.6",
-    "bson": "^4.0.2",
+    "bson": "^4.0.2"
   }
 }

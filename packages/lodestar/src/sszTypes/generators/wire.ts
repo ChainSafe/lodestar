@@ -132,3 +132,77 @@ export const BeaconStatesResponse = (ssz: IBeaconSSZTypes): SimpleContainerType 
     ["states", [ssz.BeaconState]],
   ],
 });
+
+
+
+// for hobbits
+export const HobbitsHello = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+  name: "Hello",
+  fields: [
+    ["networkId", ssz.uint8],
+    ["chainId", ssz.uint8],
+    ["latestFinalizedRoot", ssz.bytes32],
+    ["latestFinalizedEpoch", ssz.uint64],
+    ["bestRoot", ssz.bytes32],
+    ["bestSlot", ssz.uint64],
+  ],
+});
+
+export const HobbitsStatus = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+  name: "Status",
+  fields: [
+    ["userAgent", ssz.bytes],
+    ["timestamp", ssz.uint64],
+  ],
+});
+
+export const HobbitsGetBlockHeaders = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+  name: "BeaconBlockHeadersRequest",
+  fields: [
+    ["startRoot", ssz.bytes32],
+    ["startSlot", ssz.uint64],
+    ["max", ssz.uint64],
+    ["skip", ssz.uint64],
+    ["direction", ssz.uint8],
+  ],
+});
+
+
+export const HobbitsGetBlockBodies = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+  name: "HobbitsGetBlockBodies",
+  fields: [
+    ["startRoot", ssz.bytes32],
+    ["startSlot", ssz.uint64],
+    ["max", ssz.uint64],
+    ["skip", ssz.uint64],
+    ["direction", ssz.uint8],
+  ],
+});
+
+export const HobbitsBlockBodies = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+  name: "BeaconBlockBodiesResponse",
+  fields: [
+    ["bodies", [ssz.BeaconBlockBody]],
+  ],
+});
+
+
+export const HobbitsGetAttestation = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+  name: "HobbitsGetAttestation",
+  fields: [
+    ["hash", [ssz.bytes]],
+  ],
+});
+
+
+export const HobbitsAttestation = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+  name: "HobbitsAttestation",
+  fields: [
+    ["attestation", [ssz.Attestation]],
+  ],
+});
+
+
+
+
+

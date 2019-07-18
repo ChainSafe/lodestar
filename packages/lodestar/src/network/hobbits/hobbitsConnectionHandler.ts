@@ -5,18 +5,18 @@
 import {EventEmitter} from "events";
 import {deserialize} from "@chainsafe/ssz";
 
-import {RequestBody, ResponseBody, WireRequest, WireResponse} from "./rpc/messages";
-import {RPC_MULTICODEC} from "../../constants";
-import {HOBBITS_DEFAULT_PORT, Method, ProtocolType, RequestId, ResponseCode} from "./constants";
+import {Method, ProtocolType, RequestId} from "./constants";
 
-import {decodeRequestBody, encodeRequest, sanityCheckData} from "./rpc/codec";
+import {decodeRequestBody, encodeRequestBody, sanityCheckData} from "./rpc/codec";
 import {hobbitsUriToPeerInfo, randomRequestId, socketConnectionToPeerInfo} from "./util";
 import {Peer} from "./peer";
 import {ILogger} from "../../logger";
 import net from "net";
-import {HobbitsUri} from "./hobbitsUri";
 import {decodeMessage, encodeMessage} from "./codec";
-
+import {INetworkOptions} from "../options";
+import {IBeaconConfig} from "../../config";
+import {RequestBody, ResponseBody} from "../../types";
+import BSON from "bson";
 
 /**
  * The NetworkRpc module controls network-level resources and concerns of p2p connections
@@ -45,15 +45,18 @@ export class HobbitsConnectionHandler extends EventEmitter {
    */
   private responses: Record<RequestId, {peer: Peer; method: Method}>;
 
+  private opts: INetworkOptions;
+  private config: IBeaconConfig;
+
   private server: net.Server;
   public logger: ILogger;
-  private bootnodes: string[];
 
-  public constructor(bootnodes: string[], logger: ILogger) {
+  public constructor(opts: INetworkOptions, {config, logger}: {config: IBeaconConfig;logger: ILogger}) {
     super();
-    this.bootnodes = bootnodes;
+    this.opts = opts;
+    this.config = config;
+    this.requestTimeout = opts.rpcTimeout;
     this.logger = logger;
-    this.requestTimeout = 5000;
     this.requests = {};
     this.responses = {};
     this.peers = new Map<string, Peer>();
@@ -116,7 +119,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
       const peer = this.addPeer(peerInfo);
       peer.connect();
     } catch (e) {
-      this.logger.error(`Fail to dial rpc for peer ${peerId}. Reason: ${e.message}`);
+      this.logger.error(`Hobbits :: Fail to dial rpc for peer ${peerId}. Reason: ${e.message}`);
     }
     this.wipDials.delete(peerId);
   }
@@ -125,16 +128,16 @@ export class HobbitsConnectionHandler extends EventEmitter {
     const peerId = peerInfo.id.toB58String();
     const peer = this.peers.get(peerId);
     if (!peer) {
-      throw new Error(`Peer does not exist: ${peerId}`);
+      throw new Error(`Hobbits :: Peer does not exist: ${peerId}`);
     }
     let encodedRequest;
     const id = randomRequestId();
     if (type == ProtocolType.RPC) {
       this.requests[id] = method;
-      encodedRequest = encodeRequest(id, method, body);
+      encodedRequest = encodeRequestBody(this.config, id, method, body);
     }
 
-    const encodedMessage = encodeMessage(type, encodedRequest);
+    const encodedMessage = encodeMessage(type, method, id, encodedRequest);
     peer.write(encodedMessage);
     return await this.getResponse(id) as T;
   }
@@ -145,7 +148,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
         this.removeAllListeners(id.toString());
         const method = this.requests[id];
         delete this.requests[id];
-        reject(new Error(`request timeout, method ${method}, id ${id}`));
+        reject(new Error(`Hobbits :: request timeout, method ${method}, id ${id}`));
       }, this.requestTimeout);
       this.once(`response ${id}`, (err, data) => {
         clearTimeout(timeout);
@@ -162,12 +165,13 @@ export class HobbitsConnectionHandler extends EventEmitter {
   public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
     const request = this.responses[id];
     if (!request) {
-      throw new Error('No request found');
+      throw new Error('Hobbits :: No request found');
     }
     const {peer, method} = request;
-    const encodedResponse = encodeResponse(id, method, responseCode, result);
+    const encodedResponse = encodeRequestBody(this.config, id, method, result);
+    const encodedMessage = encodeMessage(ProtocolType.RPC, id, method, encodedResponse);
     delete this.responses[id];
-    peer.write(encodedResponse);
+    peer.write(encodedMessage);
   }
 
   public onRequestResponse(peer: Peer, data: Buffer): void {
@@ -176,14 +180,15 @@ export class HobbitsConnectionHandler extends EventEmitter {
       return;
     }
     // Changed response
-    let decodedBody, request;
+    let decodedBody, requestHeader, requestBody;
     try {
       let decodedMessage = decodeMessage(data);
       // only RPC requests/ responses should be passed here.
       switch (decodedMessage.protocol) {
         case ProtocolType.RPC:
-          request = deserialize(decodedMessage.payload, WireRequest);
-          decodedBody = decodeRequestBody(request.methodId, request.body);
+          requestHeader = decodedMessage.requestHeader;
+          requestBody = decodedMessage.requestBody;
+          decodedBody = decodeRequestBody(this.config, requestHeader.methodId, requestBody.body);
           break;
         case ProtocolType.GOSSIP:
           break;
@@ -191,15 +196,15 @@ export class HobbitsConnectionHandler extends EventEmitter {
           break;
       }
     } catch (e) {
-      this.logger.warn('unable to decode request', e.message);
+      this.logger.warn('Hobbits :: unable to decode request', e.message);
       return;
     }
 
-    const id = request.id;
+    const id = requestHeader.id;
     const method = this.requests[id];
     if (method === undefined) { // incoming request
-      this.responses[id] = {peer, method: request.method};
-      this.emit("request", peer.peerInfo, request.method, id, decodedBody);
+      this.responses[id] = {peer, method: requestHeader.methodId};
+      this.emit("request", peer.peerInfo, requestHeader.methodId, id, decodedBody);
     } else { // incoming response
       const event = `response ${id}`;
       this.emit(event, null, decodedBody);
@@ -210,7 +215,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
    * Connects to static peers
    */
   private async connectStaticPeers(): Promise<void> {
-    await Promise.all(this.bootnodes.map(async (bootnode: string): Promise<void> => {
+    await Promise.all(this.opts.bootnodes.map(async (bootnode: string): Promise<void> => {
       let peerInfo = await hobbitsUriToPeerInfo(bootnode);
       if (peerInfo) {
         return this.dialForRpc(peerInfo);
@@ -233,7 +238,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
       // this.running = false;
     });
 
-    this.server.listen(this., (): void => {
+    this.server.listen(this.opts.port, (): void => {
       this.logger.info("Hobbits :: server started.");
       // this.running = true;
     });

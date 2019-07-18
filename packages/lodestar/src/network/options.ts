@@ -8,6 +8,7 @@ export interface INetworkOptions {
   rpcTimeout: number64;
   connectTimeout: number;
   disconnectTimeout: number;
+  port?: number;
 }
 
 export const NetworkOptions: IConfigurationModule = {
@@ -44,7 +45,8 @@ const config: INetworkOptions = {
   bootnodes: [],
   rpcTimeout: 5000,
   connectTimeout: 3000,
-  disconnectTimeout: 3000
+  disconnectTimeout: 3000,
+  port: 9000
 };
 
 export default config;

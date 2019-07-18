@@ -63,6 +63,15 @@ export interface IBeaconSSZTypes {
   BeaconBlockBodiesResponse: AnyContainerType;
   BeaconStatesRequest: AnyContainerType;
   BeaconStatesResponse: AnyContainerType;
+  // for hobbits
+  HobbitsHello: AnyContainerType;
+  HobbitsStatus: AnyContainerType;
+  HobbitsGetBlockHeaders: AnyContainerType;
+  HobbitsGetBlockBodies: AnyContainerType;
+  HobbitsBlockBodies: AnyContainerType;
+  HobbitsGetAttestation: AnyContainerType;
+  HobbitsAttestation: AnyContainerType;
+
 }
 
 export const typeNames: (keyof IBeaconSSZTypes)[] = [
@@ -130,4 +139,12 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "BeaconBlockBodiesResponse",
   "BeaconStatesRequest",
   "BeaconStatesResponse",
-]
+  // for hobbits
+  "HobbitsHello",
+  "HobbitsStatus",
+  "HobbitsGetBlockHeaders",
+  "HobbitsGetBlockBodies",
+  "HobbitsBlockBodies",
+  "HobbitsGetAttestation",
+  "HobbitsAttestation"
+];

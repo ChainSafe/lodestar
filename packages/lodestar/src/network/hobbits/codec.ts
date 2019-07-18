@@ -3,15 +3,30 @@
  */
 
 import {bytes} from "../../types";
-import {HOBBITS_VERSION, ProtocolType} from "./constants";
-import {DecodedMessage} from "./types";
+import {HOBBITS_VERSION, Method, ProtocolType, RequestId} from "./constants";
+import {DecodedMessage, WireRequestBody, WireRequestHeader} from "./types";
+import {toCamelCase, toSnakeCase} from "./util";
+import BSON from 'bson';
 
+export function encodeMessage(
+  type: ProtocolType, id: RequestId, method: Method, encodedBody: Buffer = new Buffer(0)
+): Buffer {
+  const requestHeader: WireRequestHeader = {
+    methodId: method,
+    id: id,
+  };
+  const requestBody: WireRequestBody = {
+    body: encodedBody
+  };
 
-export function encodeMessage(type: ProtocolType, header: Buffer = new Buffer(0), message: Buffer = new Buffer(0)): Buffer {
+  // bson encoding
+  const header = BSON.serialize(toSnakeCase(requestHeader));
+  const body = BSON.serialize(requestBody);
+
   let requestLine = `EWP ${HOBBITS_VERSION} `;
   switch (type) {
     case ProtocolType.RPC:
-      requestLine += `${type} ${header.length} ${message.length}\n`;
+      requestLine += `${type} ${header.length} ${body.length}\n`;
       break;
     case ProtocolType.GOSSIP:
       break;
@@ -20,7 +35,7 @@ export function encodeMessage(type: ProtocolType, header: Buffer = new Buffer(0)
   }
 
   const buf = Buffer.from(requestLine, 'utf8');
-  return Buffer.concat([buf, header, message]);
+  return Buffer.concat([buf, header, body]);
 }
 
 export function decodeMessage(message: Buffer): DecodedMessage {
@@ -41,12 +56,16 @@ export function decodeMessage(message: Buffer): DecodedMessage {
 
   let payloadStartedAT = requestLineBytes.length + headerLength;
   let header = message.slice(requestLineBytes.length, payloadStartedAT);
-  let payload = message.slice(payloadStartedAT, payloadStartedAT+bodyLength+1);
+  let body = message.slice(payloadStartedAT, payloadStartedAT+bodyLength+1);
+
+  // bson decoding
+  const requestHeader: WireRequestHeader = toCamelCase(BSON.deserialize(header));
+  const requestBody: WireRequestBody = BSON.deserialize(body);
 
   return {
     version,
     protocol,
-    header,
-    payload
+    requestHeader,
+    requestBody
   };
 }

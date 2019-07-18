@@ -3,7 +3,7 @@
  */
 
 import {EventEmitter} from "events";
-import {INetwork, INetworkOptions} from "../interface";
+import {INetwork} from "../interface";
 import {HobbitsConnectionHandler} from "./hobbitsConnectionHandler";
 import {ILogger} from "../../logger";
 import {Attestation, BeaconBlock, Shard} from "../../types";
@@ -14,29 +14,28 @@ import {deserialize} from "@chainsafe/ssz";
 import {ATTESTATION_TOPIC, BLOCK_TOPIC} from "../../constants";
 import {shardAttestationTopic} from "../util";
 import {HobbitsUri} from "./hobbitsUri";
+import {INetworkOptions} from "../options";
+import {IBeaconConfig} from "../../config";
 
 export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
   public peerInfo: PeerInfo;
   private opts: INetworkOptions;
+  private config: IBeaconConfig;
   private rpc: HobbitsConnectionHandler;
   private inited: Promise<void>;
   private logger: ILogger;
-  private port: number;
-  private bootnodes: string[];
   public running: boolean;
 
 
-  public constructor(opts: INetworkOptions, {logger}: {logger: ILogger}) {
+  public constructor(opts: INetworkOptions, {config, logger}: {config: IBeaconConfig;logger: ILogger}) {
     super();
-    this.port = 9000;
-    this.bootnodes = opts.bootnodes || [];
     this.running = false;
-
     this.opts = opts;
+    this.config = config;
     this.logger = logger;
     // `libp2p` can be a promise as well as a libp2p object
     this.inited = new Promise((resolve) => {
-      this.rpc = new HobbitsConnectionHandler(this.bootnodes, logger);
+      this.rpc = new HobbitsConnectionHandler(opts,{config, logger});
       resolve();
     });
   }
@@ -75,22 +74,22 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
   }
   private handleIncomingBlock(msg: any): void {
     try {
-      const block: BeaconBlock = deserialize(msg.data, BeaconBlock);
+      const block: BeaconBlock = deserialize(msg.data, this.config.types.BeaconBlock);
       this.emit(BLOCK_TOPIC, block);
     } catch (e) {
     }
   }
   private handleIncomingAttestation(msg: any): void {
     try {
-      const attestation: Attestation = deserialize(msg.data, Attestation);
+      const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
       this.emit(ATTESTATION_TOPIC, attestation);
     } catch (e) {
     }
   }
   private handleIncomingShardAttestation(msg: any): void {
     try {
-      const attestation: Attestation = deserialize(msg.data, Attestation);
-      this.emit(shardAttestationTopic(attestation.data.shard), attestation);
+      const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
+      this.emit(shardAttestationTopic(attestation.data.crosslink.shard), attestation);
     } catch (e) {
     }
   }
@@ -102,7 +101,6 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
   public getPeers(): PeerInfo[] {
     return this.rpc.getPeers();
   }
-
   public hasPeer(peerInfo: PeerInfo): boolean {
     return this.rpc.hasPeer(peerInfo);
   }
@@ -154,7 +152,7 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
     // }
     // this.pubsub.removeListener("gossipsub:heartbeat", this.emitGossipHeartbeat.bind(this));
     // this.rpc.removeListener("request", this.emitRequest.bind(this));
-    // this.rpc.removeListener("peer:connect", this.emitPeerConnect.bind(this));
+    this.rpc.removeListener("peer:connect", this.emitPeerConnect.bind(this));
     this.rpc.removeListener("peer:disconnect", this.emitPeerDisconnect.bind(this));
   }
 

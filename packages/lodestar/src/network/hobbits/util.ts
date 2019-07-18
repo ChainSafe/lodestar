@@ -7,6 +7,7 @@ import {Multiaddr} from "multiaddr";
 import {RequestId} from "./constants";
 import {promisify} from "util";
 import * as net from "net";
+import _ from "lodash";
 
 function randomNibble(): string {
   return Math.floor(Math.random() * 16).toString(16);
@@ -67,4 +68,13 @@ export async function socketConnectionToPeerInfo(connection: net.Socket): Promis
   peerInfo = await promisify(PeerInfo.create.bind(this))();
   peerInfo.multiaddrs.add(addr);
   return peerInfo;
+}
+
+
+export function toSnakeCase(obj: any): any{
+  _.mapKeys(obj, (v, k) => _.camelCase(k));
+}
+
+export function toCamelCase(obj: any): any{
+  _.mapKeys(obj, (v, k) => _.camelCase(k));
 }

@@ -12,31 +12,32 @@ import {BeaconState} from "../../../types/state";
 import {Attestation} from "../../../types";
 
 
-export interface WireRequestHeader {
-  method_id: uint16;
+/*export interface WireRequestHeader {
+  methodId: uint16;
   id: number;
 }
 
-export const WireRequestHeader: SimpleContainerType = {
-  name: "WireRequestHeader",
-  fields: [
-    ["method_id", uint16],
-    ["id", number64],
-  ],
-};
+// export const WireRequestHeader: SimpleContainerType = {
+//   name: "WireRequestHeader",
+//   fields: [
+//     ["method_id", uint16],
+//     ["id", number64],
+//   ],
+// };
 
 export interface WireRequestBody {
   body: bytes;
-}
+}*/
 
-export const WireRequestBody: SimpleContainerType = {
-  name: "WireRequestBody",
-  fields: [
-    ["body", bytes],
-  ],
-};
+// export const WireRequestBody: SimpleContainerType = {
+//   name: "WireRequestBody",
+//   fields: [
+//     ["body", bytes],
+//   ],
+// };
 
 
+/*
 export type RequestBody =
   Hello | Goodbye | GetStatus | GetBlockHeaders | GetBlockBodies
   | BlockHeaders | BlockBodies | GetAttestation | AttestationResponse;
@@ -180,4 +181,4 @@ export const AttestationResponse: SimpleContainerType = {
   fields: [
     ["attestation", Attestation],
   ],
-};
+};*/
