@@ -2,7 +2,6 @@
  * @module network/hobbits
  */
 
-import {Attestation} from "../../types";
 
 export type RequestId = number;
 
@@ -24,5 +23,4 @@ export enum ProtocolType {
   PING = 2
 }
 
-export const HOBBITS_VERSION = 2;
-export  const HOBBITS_DEFAULT_PORT = 9000;
+export const HOBBITS_VERSION = 3;

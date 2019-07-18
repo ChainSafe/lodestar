@@ -45,15 +45,15 @@ export class Peer {
       that.connection.setKeepAlive(true);
       that.connection.on('connect', ()=>{
         that.controller.logger.info(`Hobbits :: connected to: ${that.peerInfo.id.toB58String()}.`);
+        resolve();
       });
       that.connection.on('error', () =>{
         that.controller.onConnectionEnd(that.peerInfo);
-        reject()
+        reject();
       });
       that.connection.on('data', (data) => {
         that.controller.onRequestResponse(that, data);
       });
-      resolve();
     });
 
     // this.stream = pushable();

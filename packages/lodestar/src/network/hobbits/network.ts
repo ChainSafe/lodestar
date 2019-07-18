@@ -6,12 +6,12 @@ import {EventEmitter} from "events";
 import {INetwork} from "../interface";
 import {HobbitsConnectionHandler} from "./hobbitsConnectionHandler";
 import {ILogger} from "../../logger";
-import {Attestation, BeaconBlock, Shard} from "../../types";
+import {Attestation, BeaconBlock, RequestBody, ResponseBody, Shard} from "../../types";
 import net from "net";
 import PeerInfo from "peer-info";
 import NodeAddress = Multiaddr.NodeAddress;
 import {deserialize} from "@chainsafe/ssz";
-import {ATTESTATION_TOPIC, BLOCK_TOPIC} from "../../constants";
+import {ATTESTATION_TOPIC, BLOCK_TOPIC, Method, RequestId} from "../../constants";
 import {shardAttestationTopic} from "../util";
 import {HobbitsUri} from "./hobbitsUri";
 import {INetworkOptions} from "../options";
@@ -110,15 +110,18 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
   public async disconnect(peerInfo: PeerInfo): Promise<void> {
     await this.rpc.removePeer(peerInfo);
   }
-  // public async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T> {
-  //   return await this.rpc.sendRequest<T>(peerInfo, method, body);
-  // }
-  // public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
-  //   this.rpc.sendResponse(id, responseCode, result);
-  // }
-  // private emitRequest(peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody): void {
-  //   this.emit("request", peerInfo, method, id, body);
-  // }
+  public async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T> {
+    // the imported method is not correct
+    return await this.rpc.sendRequest<T>(peerInfo, method, body);
+  }
+  public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
+    // convert id from string to uint64
+    // ignoring the response code
+    this.rpc.sendResponse(parseInt(id), result);
+  }
+  private emitRequest(peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody): void {
+    this.emit("request", peerInfo, method, id, body);
+  }
   private emitPeerConnect(peerInfo: PeerInfo): void {
     this.emit("peer:connect", peerInfo);
   }

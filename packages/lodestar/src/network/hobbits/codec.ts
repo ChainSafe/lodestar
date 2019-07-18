@@ -2,7 +2,6 @@
  * @module network/hobbits
  */
 
-import {bytes} from "../../types";
 import {HOBBITS_VERSION, Method, ProtocolType, RequestId} from "./constants";
 import {DecodedMessage, WireRequestBody, WireRequestHeader} from "./types";
 import {toCamelCase, toSnakeCase} from "./util";

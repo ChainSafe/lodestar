@@ -117,27 +117,24 @@ export class HobbitsConnectionHandler extends EventEmitter {
     this.wipDials.add(peerId);
     try {
       const peer = this.addPeer(peerInfo);
-      peer.connect();
+      await peer.connect();
     } catch (e) {
       this.logger.error(`Hobbits :: Fail to dial rpc for peer ${peerId}. Reason: ${e.message}`);
     }
     this.wipDials.delete(peerId);
   }
 
-  public async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, type: ProtocolType, method: Method, body: RequestBody): Promise<T> {
+  public async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T> {
     const peerId = peerInfo.id.toB58String();
     const peer = this.peers.get(peerId);
     if (!peer) {
       throw new Error(`Hobbits :: Peer does not exist: ${peerId}`);
     }
-    let encodedRequest;
+    // encode the request
     const id = randomRequestId();
-    if (type == ProtocolType.RPC) {
-      this.requests[id] = method;
-      encodedRequest = encodeRequestBody(this.config, id, method, body);
-    }
+    const encodedRequest = encodeRequestBody(this.config, id, method, body);
 
-    const encodedMessage = encodeMessage(type, method, id, encodedRequest);
+    const encodedMessage = encodeMessage(ProtocolType.RPC, method, id, encodedRequest);
     peer.write(encodedMessage);
     return await this.getResponse(id) as T;
   }
@@ -162,7 +159,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
     });
   }
 
-  public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
+  public sendResponse(id: RequestId, result: ResponseBody): void {
     const request = this.responses[id];
     if (!request) {
       throw new Error('Hobbits :: No request found');
@@ -216,7 +213,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
    */
   private async connectStaticPeers(): Promise<void> {
     await Promise.all(this.opts.bootnodes.map(async (bootnode: string): Promise<void> => {
-      let peerInfo = await hobbitsUriToPeerInfo(bootnode);
+      const peerInfo = await hobbitsUriToPeerInfo(bootnode);
       if (peerInfo) {
         return this.dialForRpc(peerInfo);
       }
