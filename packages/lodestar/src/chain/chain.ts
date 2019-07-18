@@ -110,6 +110,30 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     }
   }
 
+  public async initializeBeaconChain(genesisState: BeaconState, merkleTree: ProgressiveMerkleTree): Promise<void> {
+    const genesisBlock = getEmptyBlock();
+    const stateRoot = hashTreeRoot(genesisState, this.config.types.BeaconState);
+    genesisBlock.stateRoot = stateRoot;
+    const blockRoot = hashTreeRoot(genesisBlock, this.config.types.BeaconBlock);
+    this.genesisTime = genesisState.genesisTime;
+    await Promise.all([
+      this.db.setBlock(blockRoot, genesisBlock),
+      this.db.setState(stateRoot, genesisState),
+    ]);
+    await Promise.all([
+      this.db.setChainHeadRoots(blockRoot, stateRoot, genesisBlock, genesisState),
+      this.db.setJustifiedBlockRoot(blockRoot, genesisBlock),
+      this.db.setFinalizedBlockRoot(blockRoot, genesisBlock),
+      this.db.setLatestStateRoot(stateRoot, genesisState),
+      this.db.setJustifiedStateRoot(stateRoot, genesisState),
+      this.db.setFinalizedStateRoot(stateRoot, genesisState),
+      this.db.setMerkleTree(genesisState.depositIndex, merkleTree)
+    ]);
+    this.forkChoice.addBlock(genesisBlock.slot, blockRoot, Buffer.alloc(32));
+    this.forkChoice.setJustified(blockRoot);
+    this.forkChoice.setFinalized(blockRoot);
+  }
+
   public async isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean> {
     // The parent block with root block.previous_block_root has been processed and accepted.
     const hasParent = await this.db.hasBlock(block.parentRoot);
@@ -213,28 +237,8 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     if(!isValidGenesisState(this.config, genesisState)) {
       this.logger.info(`Eth1 block ${eth1Block.hash} is NOT forming valid genesis state`);
     }
+    await this.initializeBeaconChain(genesisState, merkleTree);
     this.logger.info(`Initializing beacon chain with eth1 block ${eth1Block.hash}`);
-    const genesisBlock = getEmptyBlock();
-    const stateRoot = hashTreeRoot(genesisState, this.config.types.BeaconState);
-    genesisBlock.stateRoot = stateRoot;
-    const blockRoot = hashTreeRoot(genesisBlock, this.config.types.BeaconBlock);
-    this.genesisTime = genesisState.genesisTime;
-    await Promise.all([
-      this.db.setBlock(blockRoot, genesisBlock),
-      this.db.setState(stateRoot, genesisState),
-    ]);
-    await Promise.all([
-      this.db.setChainHeadRoots(blockRoot, stateRoot, genesisBlock, genesisState),
-      this.db.setJustifiedBlockRoot(blockRoot, genesisBlock),
-      this.db.setFinalizedBlockRoot(blockRoot, genesisBlock),
-      this.db.setLatestStateRoot(stateRoot, genesisState),
-      this.db.setJustifiedStateRoot(stateRoot, genesisState),
-      this.db.setFinalizedStateRoot(stateRoot, genesisState),
-      this.db.setMerkleTree(genesisState.depositIndex, merkleTree)
-    ]);
-    this.forkChoice.addBlock(genesisBlock.slot, blockRoot, Buffer.alloc(32));
-    this.forkChoice.setJustified(blockRoot);
-    this.forkChoice.setFinalized(blockRoot);
   }
 
   public isInitialized(): boolean {

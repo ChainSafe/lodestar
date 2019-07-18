@@ -3,6 +3,7 @@ import {EventEmitter} from "events";
 import {Attestation, BeaconBlock, BeaconState, Deposit, Eth1Data, number64, uint16, uint64} from "../types";
 
 import {LMDGHOST} from "./forkChoice";
+import {ProgressiveMerkleTree} from "../util/merkleTree";
 
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
@@ -42,6 +43,14 @@ export interface IBeaconChain extends EventEmitter {
    * Ensure that the block is compliant with block processing validity conditions
    */
   isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean>;
+
+  /**
+   * Used for starting beacon chain with fake genesis state (dev, test, interop).
+   * Note: Invoke this before {@link start}
+   * @param genesisState
+   * @param merkleTree
+   */
+  initializeBeaconChain(genesisState: BeaconState, merkleTree: ProgressiveMerkleTree): Promise<void>;
 
   isInitialized(): boolean;
 }
