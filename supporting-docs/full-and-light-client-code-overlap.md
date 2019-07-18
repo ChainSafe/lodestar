@@ -31,7 +31,7 @@ packages/lodestar/src
 
 ## Module Definitions
 - **Chain:** The chain module contains the ETH2.0 consensus rules. This isn't used by the Light Client, but because the spec is frozen, and we are already at the latest version v0.8, there is very little to change here.
-- **CLI:** The CLI is the command line interface, there is a little overlap surrounding ETH1.x deposits. The added overhead of mainting it is low regardless, since all the main commands already exist.
+- **CLI:** The CLI is the command line interface. There is a little overlap surrounding ETH1.x deposits. The added overhead of maintaining it is low regardless, since all the main commands already exist.
 - **Config:** Config contains the blockchain configurations that allow us to customize the chain for both testing and production needs. The Light Client will need to use these.
 - **Constants:** Similar to config, it contains the required constants from the ETH2.0 specification that will be needed in the Light Client
 - **DB:** The db is the chain database, it is used to store information about the blockchain. The Light Client will utilize a subset of this package.
@@ -43,7 +43,7 @@ packages/lodestar/src
 - **Params:** Similar to config and constants, this contains necessary variables that will be utilized across the entire ETH2.0 Javascript ecosystem.
 - **RPC:** RPC stands for remote procedure calls. These are used to help facilitate communications between Full Clients, Validators and Light Clients. They will be used in the Light Client.
 - **sszTypes:** Similar to config, params and constants this contains necessary variables that will be utilized across the entire ETH2.0 Javascript ecosystem.
-- **Sync:** This contains the Full Client sync strategy. Since the Light Client uses a different sync strategy, this module will not be used directly. Although the interfaces may be used to maintain a consistency in the....!!!!!!! in the what???
-- **Types:** Similar to config, sszTypes, params and constants this contains necessary variables that will be utilized across the entire ETH2.0 Javascript ecosystem.
-- **Util:** This module contains random functions that don't quite have a home in any specific module and are shared across the entire proejct. Theres a good chance that wwe will be utilising some of these within the Light Client.
-- **Validator:** This contains the code for running an ETH2.0 validator, its primarily finished, and shares a good amount of code from the rest of the Lodestar packages discussed. It will not be used by the Light Client
+- **Sync:** This contains the Full Client sync strategy, since the Light Client uses a different sync strategy this module will not be used directly. Although the interfaces may be used to maintain consistency in the Light Client
+- **Types:** Similar to config, sszTypes, params and constants, this contains necessary variables that will be utilized across the entire ETH2.0 Javascript ecosystem.
+- **Util:** This module contains random functions that don't quite have a home in any specific module and are shared across the entire project. There is a good chance that we will utilize some of these within the Light Client.
+- **Validator:** This contains the code for running an ETH2.0 validator. It is primarily finished, and shares a significant amount of code from the rest of the Lodestar packages discussed. It will not be used by the Light Client
