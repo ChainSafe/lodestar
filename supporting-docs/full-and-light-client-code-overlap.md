@@ -1,3 +1,5 @@
+Last edited: 18/07/19
+
 # Lodestar Full Client <> Light Client Architecture
 
 ## Abstract
