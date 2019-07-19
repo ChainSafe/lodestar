@@ -6,10 +6,8 @@ import {config} from "../../../src/config/presets/mainnet";
 import {Eth1Wallet, EthersEth1Notifier, IEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
 import {PrivateEth1Network} from "../../../src/eth1/dev";
-import {BeaconDB} from "../../../src/db/api";
-import {PouchDbController} from "../../../src/db";
 import {ILogger, WinstonLogger} from "../../../src/logger";
-import {OpPool} from "../../../src/opPool";
+import {sleep} from "../../utils/sleep";
 
 describe("Eth1Notifier - using deployed contract", () => {
 
@@ -18,16 +16,10 @@ describe("Eth1Notifier - using deployed contract", () => {
   let depositContractAddress;
   let provider;
   let logger: ILogger = new WinstonLogger();
-  const db = new BeaconDB({
-    config,
-    controller: new PouchDbController(
-      {name: 'testDb'}
-    )
-  });
 
   beforeEach(async function () {
     this.timeout(0);
-    logger.silent(false);
+    logger.silent(true);
     // deploy deposit contract
     eth1Network = new PrivateEth1Network({
       host: '127.0.0.1',
@@ -73,7 +65,7 @@ describe("Eth1Notifier - using deployed contract", () => {
 
 
     await wallet.createValidatorDeposit(depositContractAddress, ethers.utils.parseEther('32.0'));
-
+    sleep(300);
     assert(cb.calledOnce, "deposit event did not fire");
   });
 
