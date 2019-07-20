@@ -12,6 +12,8 @@ export const MIN_PER_EPOCH_CHURN_LIMIT = 2 ** 2; // 4
 export const CHURN_LIMIT_QUOTIENT = 2 ** 16; // 65536
 export const BASE_REWARDS_PER_EPOCH = 5;
 export const SHUFFLE_ROUND_COUNT = 10; // CUSTOMIZED
+export const MIN_GENESIS_TIME = 1578009600;
+export const MIN_GENESIS_ACTIVE_VALIDATOR_COUNT = 64;
 
 // Deposit contract
 export const DEPOSIT_CONTRACT_ADDRESS = 0;

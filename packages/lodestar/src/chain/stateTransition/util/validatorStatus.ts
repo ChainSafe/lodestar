@@ -27,7 +27,7 @@ import {
   getBeaconProposerIndex,
   getChurnLimit,
 } from "./misc";
-import { IBeaconConfig } from "../../../config";
+import {IBeaconConfig} from "../../../config";
 
 
 /**

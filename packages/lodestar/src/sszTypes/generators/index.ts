@@ -19,7 +19,7 @@ const allGenerators = {
   ...state,
   ...validator,
   ...wire,
-}
+};
 
 export function createIBeaconSSZTypes(params: IBeaconParams): IBeaconSSZTypes {
   // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion

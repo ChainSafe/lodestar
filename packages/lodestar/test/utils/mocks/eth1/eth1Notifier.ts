@@ -56,4 +56,8 @@ export class MockEth1Notifier extends EventEmitter implements IEth1Notifier {
   public async depositCount(block?: string | number): Promise<number64> {
     return undefined;
   }
+
+  public async processPastDeposits(fromBlock: string | number, toBlock?: string | number): Promise<void> {
+    return undefined;
+  }
 }

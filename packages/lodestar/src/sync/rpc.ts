@@ -21,10 +21,10 @@ import {intDiv} from "../util/math";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
-import {getEmptyBlockBody} from "../chain/genesis";
+import {getEmptyBlockBody} from "../chain/genesis/genesis";
 import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
-import { IBeaconConfig } from "../config";
+import {IBeaconConfig} from "../config";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface SyncOptions {
@@ -63,7 +63,7 @@ export class SyncRpc {
       bestRoot: bytes32,
       latestFinalizedEpoch: Epoch,
       latestFinalizedRoot: bytes32;
-    if (!this.chain.genesisTime) {
+    if (!this.chain.isInitialized()) {
       bestSlot = 0;
       bestRoot = ZERO_HASH;
       latestFinalizedEpoch = 0;
