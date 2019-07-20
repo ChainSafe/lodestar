@@ -1,9 +1,11 @@
 /** @module ssz */
-import { sha256 } from "js-sha256";
+import SHA256 from "bcrypto/lib/sha256";
+
+const sha256 = new SHA256();
 
 /**
  * Hash used for hashTreeRoot
  */
 export function hash(...inputs: Buffer[]): Buffer {
-  return Buffer.from(inputs.reduce((acc, i) => acc.update(i), sha256.create()).arrayBuffer());
+  return inputs.reduce((acc, i) => acc.update(i), sha256.init()).final();
 }
