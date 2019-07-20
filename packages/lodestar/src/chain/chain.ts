@@ -235,9 +235,10 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     );
     if(!isValidGenesisState(this.config, genesisState)) {
       this.logger.info(`Eth1 block ${eth1Block.hash} is NOT forming valid genesis state`);
+      return;
     }
-    await this.initializeBeaconChain(genesisState, merkleTree);
     this.logger.info(`Initializing beacon chain with eth1 block ${eth1Block.hash}`);
+    await this.initializeBeaconChain(genesisState, merkleTree);
   }
 
   public isInitialized(): boolean {
