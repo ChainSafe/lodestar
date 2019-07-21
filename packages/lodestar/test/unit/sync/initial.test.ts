@@ -11,6 +11,7 @@ import {generateState} from "../../utils/state";
 import PeerInfo from "peer-info";
 import PeerId from "peer-id";
 import {config} from "../../../src/config/presets/mainnet";
+import {generateEmptyBlock} from "../../utils/block";
 
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();
@@ -52,9 +53,7 @@ describe("syncing", function () {
         latestFinalizedRoot: null,
       }
     });
-    rpcStub.getBeaconStates.resolves({
-      states :  []
-    });
+    rpcStub.getBeaconStates.resolves([]);
 
     let peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.alloc(32)));
     try {
@@ -63,92 +62,6 @@ describe("syncing", function () {
     }catch (e) {
       expect(repsStub.get.calledOnce).to.be.true;
       expect(rpcStub.getBeaconStates.calledOnce).to.be.true;
-    }
-  });
-
-  it('should fail to sync - root length zero ', async function () {
-
-    repsStub.get.returns({
-      latestHello: {
-        latestFinalizedRoot: null,
-      }
-    });
-    rpcStub.getBeaconStates.resolves({
-      states :  [generateState()]
-    });
-
-    let peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.alloc(32)));
-    dbStub.setLatestStateRoot.resolves(0);
-    dbStub.setFinalizedStateRoot.resolves(0);
-    dbStub.setJustifiedStateRoot.resolves(0);
-    rpcStub.getBeaconBlockRoots.resolves({
-      roots: []
-    });
-
-    try {
-      await initialSync.syncToPeer(peerInfo);
-      expect.fail();
-    }catch (e) {
-      expect(rpcStub.getBeaconBlockRoots.calledOnce).to.be.true;
-    }
-  });
-
-
-  it('should fail to sync - invalid states length ', async function () {
-
-    repsStub.get.returns({
-      latestHello: {
-        latestFinalizedRoot: null,
-      }
-    });
-    rpcStub.getBeaconStates.resolves({
-      states :  []
-    });
-
-    let peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.alloc(32)));
-    try {
-      await initialSync.syncToPeer(peerInfo);
-      expect.fail();
-    }catch (e) {
-      expect(repsStub.get.calledOnce).to.be.true;
-      expect(rpcStub.getBeaconStates.calledOnce).to.be.true;
-    }
-  });
-
-  it('should fail to sync - headers length mismatch with blockBodies length ', async function () {
-
-    repsStub.get.returns({
-      latestHello: {
-        latestFinalizedRoot: null,
-      }
-    });
-    rpcStub.getBeaconStates.resolves({
-      states :  [generateState()]
-    });
-
-    let peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.alloc(32)));
-    dbStub.setLatestStateRoot.resolves(0);
-    dbStub.setFinalizedStateRoot.resolves(0);
-    dbStub.setJustifiedStateRoot.resolves(0);
-    rpcStub.getBeaconBlockRoots.resolves({
-      roots: [{
-        blockRoot: Buffer.alloc(32),
-        slot: 1
-      }]
-    });
-
-    rpcStub.getBeaconBlockHeaders.resolves({
-      headers: []
-    });
-    rpcStub.getBeaconBlockBodies.resolves({
-      blockBodies: [{},{}]
-    });
-    try {
-      await initialSync.syncToPeer(peerInfo);
-      expect.fail();
-    }catch (e) {
-      expect(rpcStub.getBeaconBlockHeaders.calledOnce).to.be.true;
-      expect(rpcStub.getBeaconBlockHeaders.calledOnce).to.be.true;
     }
   });
 
@@ -160,27 +73,13 @@ describe("syncing", function () {
         latestFinalizedRoot: null,
       }
     });
-    rpcStub.getBeaconStates.resolves({
-      states :  [generateState()]
-    });
+    rpcStub.getBeaconStates.resolves([generateState()]);
 
     let peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.alloc(32)));
     dbStub.setLatestStateRoot.resolves(0);
     dbStub.setFinalizedStateRoot.resolves(0);
     dbStub.setJustifiedStateRoot.resolves(0);
-    rpcStub.getBeaconBlockRoots.resolves({
-      roots: [{
-        blockRoot: Buffer.alloc(32),
-        slot: 1
-      }]
-    });
-
-    rpcStub.getBeaconBlockHeaders.resolves({
-      headers: [{}]
-    });
-    rpcStub.getBeaconBlockBodies.resolves({
-      blockBodies: [{}]
-    });
+    rpcStub.getBeaconBlocks.resolves([generateEmptyBlock()]);
     chainStub.receiveBlock.resolves(0);
 
     await initialSync.syncToPeer(peerInfo);
@@ -195,28 +94,14 @@ describe("syncing", function () {
         latestFinalizedRoot: null,
       }
     });
-    rpcStub.getBeaconStates.resolves({
-      states :  [generateState()]
-    });
+    rpcStub.getBeaconStates.resolves([generateState()]);
 
     let peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.alloc(32)));
     networkStub.getPeers.returns([peerInfo, peerInfo]);
     dbStub.setLatestStateRoot.resolves(0);
     dbStub.setFinalizedStateRoot.resolves(0);
     dbStub.setJustifiedStateRoot.resolves(0);
-    rpcStub.getBeaconBlockRoots.resolves({
-      roots: [{
-        blockRoot: Buffer.alloc(32),
-        slot: 1
-      }]
-    });
-
-    rpcStub.getBeaconBlockHeaders.resolves({
-      headers: [{}]
-    });
-    rpcStub.getBeaconBlockBodies.resolves({
-      blockBodies: [{}]
-    });
+    rpcStub.getBeaconBlocks.resolves([generateEmptyBlock()]);
     chainStub.receiveBlock.resolves(0);
 
     try {
