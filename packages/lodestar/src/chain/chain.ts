@@ -172,7 +172,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
       // store block root in db and terminate
       const blockRoot = hashTreeRoot(block, this.config.types.BeaconBlock);
       await this.db.setBadBlockRoot(blockRoot);
-      this.logger.warn( "bad block" + e.message + '\n' + e.stack);
+      this.logger.warn( `Found bad block, block root: ${blockRoot} ` + e.message + '\n' );
       return;
     }
 
