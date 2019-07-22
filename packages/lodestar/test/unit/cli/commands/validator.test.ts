@@ -28,7 +28,7 @@ describe('[CLI] validator', () => {
     await expect(
       command.action({
         key:keyString
-      }, logger)
+      })
     ).not.throw;
   });
 

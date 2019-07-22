@@ -3,8 +3,13 @@
  */
 
 
-import {LogLevel} from "./abstract";
+import {LogLevel, Module} from "./abstract";
 
+
+export interface ILoggingOptions {
+  loggingLevel: LogLevel;
+  module: Module;
+}
 
 export interface ILogger {
   info(message: string|object, context?: object): void;

@@ -4,11 +4,11 @@
 
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import  {LogLevel, WinstonLogger} from "../../logger";
+import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import fs from "fs";
 import {CliError} from "../error";
 import {writeTomlConfig} from "../../util/file";
-import {ILogger} from "../../logger";
+import {Module} from "../../logger/abstract";
 
 interface ICreateConfigOptions {
   loggingLevel: string;

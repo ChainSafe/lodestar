@@ -6,12 +6,17 @@ import Validator from "../../../src/validator";
 import {RpcClientOverInstance} from "../../../src/validator/rpc";
 import {MockBeaconApi} from "../../utils/mocks/rpc/beacon";
 import {MockValidatorApi} from "../../utils/mocks/rpc/validator";
-import {ILogger, WinstonLogger} from "../../../src/logger";
+import {ILogger, LogLevel, WinstonLogger} from "../../../src/logger";
 import {IValidatorOptions} from "../../../src/validator/options";
+import {Module} from "../../../src/logger/abstract";
 
 describe('Validator', () => {
-  let logger: ILogger = new WinstonLogger();
 
+  let logger: ILogger = new WinstonLogger();
+  let loggingOptions = {
+    loggingLevel: LogLevel.INFO,
+    module: Module.VALIDATOR,
+  };
 
   before(async () => {
     logger.silent(true);
@@ -35,7 +40,7 @@ describe('Validator', () => {
       keypair: Keypair.generate(),
     };
 
-    let validator = new Validator(validatorCtx, {config, logger});
+    let validator = new Validator(validatorCtx, {config, loggingOptions});
     await expect(validator.start()).to.not.throw;
     await validator.stop();
   });
