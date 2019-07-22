@@ -58,11 +58,11 @@ export function _assertValidValue(value: any, type: FullSSZType): void {
       assert(value === true || value === false, 'Invalid boolean: not a boolean');
       break;
     case Type.bitList:
-      assert(value instanceof BitList, 'Invalid BitList: not a BitList');
+      assert(BitList.isBitList(value), 'Invalid BitList: not a BitList');
       assert(value.bitLength <= type.maxLength, 'Invalid BitList: longer than max length');
       break;
     case Type.bitVector:
-      assert(value instanceof BitVector, 'Invalid BitVector: not a BitVector');
+      assert(BitVector.isBitVector(value), 'Invalid BitVector: not a BitVector');
       assert(value.bitLength === type.length, 'Invalid BitVector: incorrect length');
       break;
     case Type.byteList:
