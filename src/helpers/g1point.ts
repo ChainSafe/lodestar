@@ -1,4 +1,5 @@
-import {BIG, ECP} from "@chainsafe/amcl/ctx";
+import {BIG} from "@chainsafe/milagro-crypto-js/src/big";
+import {ECP} from "@chainsafe/milagro-crypto-js/src/ecp";
 import ctx from "../ctx";
 import {bytes48} from "../types";
 import assert from "assert";

@@ -1,3 +1,3 @@
-import {CTX} from "@chainsafe/amcl/ctx";
+import CTX from "@chainsafe/milagro-crypto-js";
 
-export default new CTX('BLS381');
+export default new CTX("BLS381");

@@ -1,5 +1,5 @@
 import assert from "assert";
-import {BIG} from "@chainsafe/amcl/ctx";
+import {BIG} from "@chainsafe/milagro-crypto-js/src/big";
 import ctx from "../ctx";
 
 /**
