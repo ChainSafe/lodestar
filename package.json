@@ -33,7 +33,7 @@
     "coverage": "codecov"
   },
   "dependencies": {
-    "@chainsafe/amcl": "0.1.0",
+    "@chainsafe/milagro-crypto-js": "0.1.3",
     "assert": "^1.4.1",
     "js-sha256": "^0.9.0",
     "secure-random": "^1.1.1"

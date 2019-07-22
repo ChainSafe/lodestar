@@ -1,4 +1,4 @@
-import {BIG} from "@chainsafe/amcl/ctx";
+import {BIG} from "@chainsafe/milagro-crypto-js/src/big";
 import {FP_POINT_LENGTH, SECRET_KEY_LENGTH} from "./constants";
 import assert from "assert";
 import ctx from "./ctx";

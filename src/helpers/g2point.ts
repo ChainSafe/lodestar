@@ -1,4 +1,5 @@
-import {BIG, ECP2} from "@chainsafe/amcl/ctx";
+import {BIG} from "@chainsafe/milagro-crypto-js/src/big";
+import {ECP2} from "@chainsafe/milagro-crypto-js/src/ecp2";
 import {BLSDomain, bytes32, bytes96} from "../types";
 import { sha256 } from 'js-sha256';
 import ctx from "../ctx";
