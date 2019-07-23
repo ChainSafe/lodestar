@@ -37,6 +37,7 @@
     "blockchain"
   ],
   "dependencies": {
+    "@chainsafe/bit-utils": "^0.1.2",
     "@chainsafe/bls-js": "^0.1.5",
     "@chainsafe/ssz": "0.4.3",
     "@iarna/toml": "^2.2.3",

@@ -3,11 +3,13 @@
  */
 
 export * from "./epoch";
+export * from "./domain";
+export * from "./blockRoot";
 export * from "./validator";
-export * from "./validatorStatus";
-export * from "./balance";
 export * from "./seed";
-export * from "./slashing";
-export * from "./crosslinkCommittee";
-export * from "./misc";
+export * from "./committee";
 export * from "./attestation";
+export * from "./proposer";
+export * from "./balance";
+export * from "./validatorStatus";
+export * from "./duties";

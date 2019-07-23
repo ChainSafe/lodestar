@@ -29,6 +29,7 @@ import {getTemporaryBlockHeader, getActiveValidatorIndices} from "../stateTransi
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {processDeposit} from "../stateTransition/block/operations";
 import {bnMin} from "../../util/math";
+import {createValue} from "../../util/createValue";
 
 export function initializeBeaconStateFromEth1(
   config: IBeaconConfig,
@@ -53,12 +54,12 @@ export function initializeBeaconStateFromEth1(
   const leaves = deposits.map((deposit) => deposit.data);
   deposits.forEach((deposit, index) => {
     const depositDataList = leaves.slice(0, index + 1);
-    state.latestEth1Data.depositRoot = hashTreeRoot(depositDataList, config.types.DepositData);
+    state.eth1Data.depositRoot = hashTreeRoot(depositDataList, config.types.DepositData);
     processDeposit(config, state, deposit);
   });
 
   // Process activations
-  state.validatorRegistry.forEach((validator, index) => {
+  state.validators.forEach((validator, index) => {
     const balance = state.balances[index];
     validator.effectiveBalance = bnMin(
       balance.sub(balance.div(config.params.EFFECTIVE_BALANCE_INCREMENT)),
@@ -98,7 +99,7 @@ export function getGenesisBeaconState(
   latestBlockHeader: BeaconBlockHeader
 ): BeaconState {
 
-  return {
+  return createValue(config.types.BeaconState, {
     // MISC
     slot: GENESIS_SLOT,
     genesisTime,
@@ -109,23 +110,9 @@ export function getGenesisBeaconState(
     },
 
     // Validator registry
-    validatorRegistry: [],
-    balances: [],
 
     // Randomness and committees
-    latestRandaoMixes: Array.from({length: config.params.LATEST_RANDAO_MIXES_LENGTH}, () => ZERO_HASH),
-    latestStartShard: config.params.GENESIS_START_SHARD,
-
-    // Finality
-    previousEpochAttestations: [],
-    currentEpochAttestations: [],
-    previousJustifiedEpoch: GENESIS_EPOCH - 1,
-    currentJustifiedEpoch: GENESIS_EPOCH,
-    previousJustifiedRoot: ZERO_HASH,
-    currentJustifiedRoot: ZERO_HASH,
-    justificationBitfield: new BN(0),
-    finalizedEpoch: GENESIS_EPOCH,
-    finalizedRoot: ZERO_HASH,
+    startShard: config.params.GENESIS_START_SHARD,
 
     // Recent state
     currentCrosslinks: Array.from({length: config.params.SHARD_COUNT}, () => ({
@@ -142,18 +129,11 @@ export function getGenesisBeaconState(
       parentRoot: ZERO_HASH,
       dataRoot: ZERO_HASH,
     })),
-    latestBlockRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
-    latestStateRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
-    latestActiveIndexRoots: Array.from({length: config.params.LATEST_ACTIVE_INDEX_ROOTS_LENGTH}, () => ZERO_HASH),
-    latestSlashedBalances: Array.from({length: config.params.LATEST_SLASHED_EXIT_LENGTH}, () => new BN(0)),
     latestBlockHeader: latestBlockHeader,
-    historicalRoots: [],
 
     // Ethereum 1.0 chain data
-    latestEth1Data: genesisEth1Data,
-    eth1DataVotes: [],
-    depositIndex: 0,
-  };
+    eth1Data: genesisEth1Data,
+  });
 }
 
 export function getEmptyBlockBody(): BeaconBlockBody {

@@ -15,21 +15,21 @@ export async function generateDeposits(
   state: BeaconState,
   eth1Data: Eth1Data,
   merkleTree: IProgressiveMerkleTree): Promise<Deposit[]> {
-  if(eth1Data.depositCount > state.depositIndex) {
+  if(eth1Data.depositCount > state.eth1DepositIndex) {
     //TODO: fetch only required
     let deposits = await opPool.deposits.getAll();
     //add all deposits to the tree before getting proof
     return processSortedDeposits(
       config,
       deposits,
-      state.depositIndex,
+      state.eth1DepositIndex,
       eth1Data.depositCount,
       (deposit, index) => {
-        merkleTree.add(index + state.depositIndex, hashTreeRoot(deposit.data, config.types.DepositData));
+        merkleTree.add(index + state.eth1DepositIndex, hashTreeRoot(deposit.data, config.types.DepositData));
         return deposit;
       }
     ).map((deposit, index) => {
-      deposit.proof = merkleTree.getProof(index + state.depositIndex);
+      deposit.proof = merkleTree.getProof(index + state.eth1DepositIndex);
       return deposit;
     });
   }

@@ -9,8 +9,8 @@ import {IBeaconConfig} from "../../../../config";
 
 import {
   getCrosslinkCommittee,
-  getEpochCommitteeCount,
-  getEpochStartShard,
+  getCommitteeCount,
+  getStartShard,
   getPreviousEpoch,
   getTotalBalance,
 } from "../../util";
@@ -20,12 +20,13 @@ import {getBaseReward} from "./baseReward";
 
 
 export function getCrosslinkDeltas(config: IBeaconConfig, state: BeaconState): [Gwei[], Gwei[]] {
-  const rewards = Array.from({length: state.validatorRegistry.length}, () => new BN(0));
-  const penalties = Array.from({length: state.validatorRegistry.length}, () => new BN(0));
+  const rewards = Array.from({length: state.validators.length}, () => new BN(0));
+  const penalties = Array.from({length: state.validators.length}, () => new BN(0));
   const previousEpoch = getPreviousEpoch(config, state);
-  const comitteeCount = getEpochCommitteeCount(config, state, previousEpoch);
-  for (let offset = 0; offset < comitteeCount; offset++) {
-    const shard = (getEpochStartShard(config, state, previousEpoch) + offset) % config.params.SHARD_COUNT;
+  const committeeCount = getCommitteeCount(config, state, previousEpoch);
+  const startShard = getStartShard(config, state, previousEpoch);
+  for (let offset = 0; offset < committeeCount; offset++) {
+    const shard = (startShard + offset) % config.params.SHARD_COUNT;
     const crosslinkCommittee = getCrosslinkCommittee(config, state, previousEpoch, shard);
     const [_, attestingIndices] =
       getWinningCrosslinkAndAttestingIndices(config, state, previousEpoch, shard);

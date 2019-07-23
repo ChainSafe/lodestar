@@ -7,7 +7,7 @@ import {
   increaseBalance,
   decreaseBalance,
   getTotalBalance,
-} from "../../../../../src/chain/stateTransition/util/balance";
+} from "../../../../../src/chain/stateTransition/util";
 
 import {generateValidators} from "../../../../utils/validator";
 import {generateState} from "../../../../utils/state";
@@ -21,7 +21,7 @@ describe("getTotalBalance", () => {
       v.effectiveBalance = new BN(500);
       return v;
     });
-    const state: BeaconState = generateState({validatorRegistry: validators});
+    const state: BeaconState = generateState({validators: validators});
     const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
     const result = getTotalBalance(state, validatorIndices);
@@ -33,11 +33,11 @@ describe("getTotalBalance", () => {
     const num = 5;
     const validators: Validator[] = generateValidators(num);
     const balances: Gwei[] = Array.from({length: num}, () => new BN(0));
-    const state: BeaconState = generateState({validatorRegistry: validators, balances});
+    const state: BeaconState = generateState({validators: validators, balances});
     const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
     const result = getTotalBalance(state, validatorIndices);
-    const expected = new BN(num).muln(0);
+    const expected = new BN(1);
     assert(result.eq(expected), `Expected: ${expected} :: Result: ${result}`);
   });
 });
@@ -45,7 +45,7 @@ describe("getTotalBalance", () => {
 describe("increaseBalance", () => {
   it("should add to a validators balance", () => {
     const state = generateState();
-    state.validatorRegistry = generateValidators(1);
+    state.validators = generateValidators(1);
     state.balances = [new BN(0)];
     const delta = new BN(5);
     for (let i = 1; i < 10; i++) {
@@ -58,7 +58,7 @@ describe("increaseBalance", () => {
 describe("decreaseBalance", () => {
   it("should subtract from a validators balance", () => {
     const state = generateState();
-    state.validatorRegistry = generateValidators(1);
+    state.validators = generateValidators(1);
     const initial = new BN(100);
     state.balances = [initial];
     const delta = new BN(5);
@@ -69,7 +69,7 @@ describe("decreaseBalance", () => {
   });
   it("should not make a validators balance < 0", () => {
     const state = generateState();
-    state.validatorRegistry = generateValidators(1);
+    state.validators = generateValidators(1);
     const initial = new BN(10);
     state.balances = [initial];
     const delta = new BN(11);
