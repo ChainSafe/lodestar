@@ -15,17 +15,17 @@ import {
   BeaconBlockHeadersRequest, BeaconBlockHeadersResponse,
   BeaconBlockBodiesRequest, BeaconBlockBodiesResponse,
   BeaconStatesRequest, BeaconStatesResponse, Epoch, BeaconState, BeaconBlock,
-} from "../types";
-import {ZERO_HASH, Method, RequestId, ResponseCode} from "../constants";
-import {intDiv} from "../util/math";
-import {IBeaconDb} from "../db";
-import {IBeaconChain} from "../chain";
-import {INetwork} from "../network";
-import {getEmptyBlockBody} from "../chain/genesis";
-import {ReputationStore} from "./reputation";
-import {ILogger} from "../logger";
-import { IBeaconConfig } from "../config";
-import {ISyncRpc} from "./rpc/interface";
+} from "../../types";
+import {ZERO_HASH, Method, RequestId, ResponseCode} from "../../constants";
+import {intDiv} from "../../util/math";
+import {IBeaconDb} from "../../db";
+import {IBeaconChain} from "../../chain";
+import {INetwork} from "../index";
+import {getEmptyBlockBody} from "../../chain/genesis";
+import {ReputationStore} from "../../sync/reputation";
+import {ILogger} from "../../logger";
+import { IBeaconConfig } from "../../config";
+import {ISyncRpc} from "../../sync/rpc/interface";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface SyncOptions {

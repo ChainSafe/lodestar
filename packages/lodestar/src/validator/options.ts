@@ -33,7 +33,7 @@ export const ValidatorOptions: IConfigurationModule = {
       ]
     },
     {
-      name: "rpc",
+      name: "syncRpc.ts",
       type: String,
       configurable: true,
       description: "Url to beacon node ws rpc",

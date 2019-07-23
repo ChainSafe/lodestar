@@ -21,6 +21,9 @@ export interface ISyncOptions {
  * fetching state from the chain and database as needed.
  */
 export interface ISyncRpc {
+  start: () => Promise<void>;
+
+  stop: () => Promise<void>;
 
   refreshPeerHellos: () => Promise<void>;
 

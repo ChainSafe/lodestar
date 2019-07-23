@@ -9,16 +9,17 @@ import {BeaconBlockHeadersResponse, BeaconBlockBodiesResponse, BeaconBlock} from
 import {IBeaconConfig} from "../config";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
-import {SyncRpc} from "./rpc";
+import {SyncRpc} from "../network/libp2p/syncRpc";
 import {INetwork} from "../network";
 import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
+import {ISyncRpc} from "./rpc/interface";
 
 interface InitialSyncModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   chain: IBeaconChain;
-  rpc: SyncRpc;
+  rpc: ISyncRpc;
   network: INetwork;
   reps: ReputationStore;
   logger: ILogger;
@@ -28,7 +29,7 @@ export class InitialSync {
   private config: IBeaconConfig;
   private db: IBeaconDb;
   private chain: IBeaconChain;
-  private rpc: SyncRpc;
+  private rpc: ISyncRpc;
   private network: INetwork;
   private reps: ReputationStore;
   private logger: ILogger;

@@ -5,7 +5,7 @@ import {Libp2pNetwork} from "../../../src/network";
 import {BeaconDB} from "../../../src/db/api";
 import {WinstonLogger} from "../../../src/logger";
 import {generateState} from "../../utils/state";
-import {SyncRpc} from "../../../src/sync/rpc";
+import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
 import {EMPTY_SIGNATURE, Method, ZERO_HASH} from "../../../src/constants";
 import BN from "bn.js";
 import {
