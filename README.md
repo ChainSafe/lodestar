@@ -66,7 +66,7 @@ You will see deposit contract address in console if you used `./bin/lodestar eth
 This will trigger 10 deposits to deposit contract which will trigger beacon chain initialization. Make sure to use same mnemonic which you used to start eth1 network.
 
 ## Contributors
-If you would like to contribute, please submit an issue or talk to us on our [gitter](https://gitter.im/chainsafe/lodestar-chain).
+If you would like to contribute, please submit an issue or talk to us on our [discord](https://discord.gg/yjyvFRP).
 
 ## Donations
 We are a local group of Toronto open source developers. As such, all of our open source work is funded by grants. We all take the time out of our hectic lives to contribute to the Ethereum ecosystem.
