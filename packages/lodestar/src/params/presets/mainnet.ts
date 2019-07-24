@@ -6,13 +6,13 @@ import BN from "bn.js";
 // Misc
 export const SHARD_COUNT = 2 ** 10; // 1024 shards
 export const TARGET_COMMITTEE_SIZE = 2 ** 7; // 128 validators
-export const MAX_INDICES_PER_ATTESTATION = 2 ** 12; // 4096
+export const MAX_VALIDATORS_PER_COMMITTEE = 2 ** 12; // 4096
 export const MIN_PER_EPOCH_CHURN_LIMIT = 2 ** 2; // 4
 export const CHURN_LIMIT_QUOTIENT = 2 ** 16; // 65536
 export const BASE_REWARDS_PER_EPOCH = 5;
 export const SHUFFLE_ROUND_COUNT = 90;
+export const MIN_GENESIS_ACTIVE_VALIDATOR_COUNT = 2 ** 16;
 export const MIN_GENESIS_TIME = 1578009600;
-export const MIN_GENESIS_ACTIVE_VALIDATOR_COUNT = 2**16;
 
 // Deposit contract
 export const DEPOSIT_CONTRACT_ADDRESS = 0;
@@ -27,16 +27,13 @@ export const EFFECTIVE_BALANCE_INCREMENT = new BN(2 ** 0 * 1e9); // 1,000,000,00
 // Initial values
 export const GENESIS_SLOT = 0;
 export const GENESIS_EPOCH = 0;
-export const FAR_FUTURE_EPOCH = Infinity;
-export const ZERO_HASH = Buffer.alloc(32, 0);
 export const BLS_WITHDRAWAL_PREFIX_BYTE = Buffer.alloc(1, 0);
-export const EMPTY_SIGNATURE = Buffer.alloc(96, 0);
 export const GENESIS_FORK_VERSION = Buffer.alloc(4, 0);
 export const GENESIS_START_SHARD = 0;
 
 // Time parameters
 export const SECONDS_PER_SLOT = 6;
-export const MIN_ATTESTATION_INCLUSION_DELAY = 2 ** 2; // slots || 24 seconds
+export const MIN_ATTESTATION_INCLUSION_DELAY = 2 ** 0; // slots || 6 seconds
 export const SLOTS_PER_EPOCH = 2 ** 6; // slots || 6.4 minutes
 export const MIN_SEED_LOOKAHEAD = 2 ** 0; // epochs || 6.4 minutes
 export const ACTIVATION_EXIT_DELAY = 2 ** 2; // epochs || 25.6 minutes
@@ -52,12 +49,13 @@ export const MAX_CROSSLINK_EPOCHS = 2 ** 6; // 64
 export const MIN_EPOCHS_TO_INACTIVITY_PENALTY = 2 ** 2; // 25.6 minutes
 
 // State list lengths
-export const LATEST_RANDAO_MIXES_LENGTH = 2 ** 13; // epochs || ~36 days
-export const LATEST_ACTIVE_INDEX_ROOTS_LENGTH = 2 ** 13; // epochs || ~36 days
-export const LATEST_SLASHED_EXIT_LENGTH = 2 ** 13; // epochs || ~36 days
+export const EPOCHS_PER_HISTORICAL_VECTOR = 2 ** 16;
+export const EPOCHS_PER_SLASHINGS_VECTOR = 2 ** 13;
+export const HISTORICAL_ROOTS_LIMIT = 2 ** 24;
+export const VALIDATOR_REGISTRY_LIMIT = 2 ** 40;
 
 // Reward and penalty quotients
-export const BASE_REWARD_FACTOR = 2 ** 5; // 32
+export const BASE_REWARD_FACTOR = 2 ** 6; // 32
 export const WHISTLEBLOWING_REWARD_QUOTIENT = 2 ** 9; // 512
 export const PROPOSER_REWARD_QUOTIENT = 2 ** 3; // 8
 export const INACTIVITY_PENALTY_QUOTIENT = new BN(2 ** 25); // 33,554,432

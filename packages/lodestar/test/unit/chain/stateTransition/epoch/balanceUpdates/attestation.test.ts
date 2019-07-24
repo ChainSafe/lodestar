@@ -35,7 +35,7 @@ describe('process epoch - balance updates', function () {
     getMatchingHeadAttestationsStub = sandbox.stub(utilsEpoch, "getMatchingHeadAttestations");
     getMatchingSourceAttestationsStub = sandbox.stub(utilsEpoch, "getMatchingSourceAttestations");
     getMatchingTargetAttestationsStub = sandbox.stub(utilsEpoch, "getMatchingTargetAttestations");
-    getTotalActiveBalanceStub = sandbox.stub(utilsEpoch, "getTotalActiveBalance");
+    getTotalActiveBalanceStub = sandbox.stub(utils, "getTotalActiveBalance");
     getUnslashedAttestingIndicesStub = sandbox.stub(utilsEpoch, "getUnslashedAttestingIndices");
     getBaseRewardStub = sandbox.stub(baseReward, "getBaseReward");
     getAttestingIndicesStub = sandbox.stub(utils, "getAttestingIndices");
@@ -49,7 +49,7 @@ describe('process epoch - balance updates', function () {
 
   it('should return rewards', function () {
     const state  = generateState();
-    state.validatorRegistry = generateValidators(2);
+    state.validators = generateValidators(2);
     getPreviousEpochStub.returns(5);
     getTotalActiveBalanceStub.returns(new BN(32));
     isActiveValidatorStub.returns(true);
@@ -83,7 +83,7 @@ describe('process epoch - balance updates', function () {
 
   it('should return penalties', function () {
     const state  = generateState();
-    state.validatorRegistry = generateValidators(4);
+    state.validators = generateValidators(4);
     getPreviousEpochStub.returns(5);
     getTotalActiveBalanceStub.returns(new BN(100));
     isActiveValidatorStub.returns(true);
@@ -107,9 +107,6 @@ describe('process epoch - balance updates', function () {
       const penalties = result[1];
       penalties.forEach((value)=>{
         expect(value.gt(new BN(0))).to.be.true;
-      });
-      rewards.forEach((value)=>{
-        expect(value.eq(new BN(0))).to.be.true;
       });
     }catch (e) {
       expect.fail(e.stack);

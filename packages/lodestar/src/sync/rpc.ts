@@ -75,8 +75,8 @@ export class SyncRpc {
         this.db.getLatestState(),
       ]);
       bestRoot = bRoot;
-      latestFinalizedEpoch = state.finalizedEpoch;
-      latestFinalizedRoot = state.finalizedRoot;
+      latestFinalizedEpoch = state.finalizedCheckpoint.epoch;
+      latestFinalizedRoot = state.finalizedCheckpoint.root;
     }
     return {
       networkId: this.chain.networkId,

@@ -7,7 +7,7 @@ import {IBeaconConfig} from "../../../../config";
 
 import {bnSqrt} from "../../../../util/math";
 
-import {getTotalActiveBalance} from "../util";
+import {getTotalActiveBalance} from "../../util";
 
 
 export function getBaseReward(
@@ -16,7 +16,7 @@ export function getBaseReward(
   index: ValidatorIndex
 ): Gwei {
   const totalBalance = getTotalActiveBalance(config, state);
-  const effectiveBalance = state.validatorRegistry[index].effectiveBalance;
+  const effectiveBalance = state.validators[index].effectiveBalance;
   return effectiveBalance.muln(config.params.BASE_REWARD_FACTOR)
     .div(bnSqrt(totalBalance)).divn(config.params.BASE_REWARDS_PER_EPOCH);
 }

@@ -21,10 +21,6 @@ import {
 } from "../util";
 
 
-export function getTotalActiveBalance(config: IBeaconConfig, state: BeaconState): Gwei {
-  return getTotalBalance(state, getActiveValidatorIndices(state, getCurrentEpoch(config, state)));
-}
-
 export function getMatchingSourceAttestations(
   config: IBeaconConfig,
   state: BeaconState,
@@ -44,7 +40,7 @@ export function getMatchingTargetAttestations(
 ): PendingAttestation[] {
   const blockRoot = getBlockRoot(config, state, epoch);
   return getMatchingSourceAttestations(config, state, epoch)
-    .filter((a) => a.data.targetRoot.equals(blockRoot));
+    .filter((a) => a.data.target.root.equals(blockRoot));
 }
 
 export function getMatchingHeadAttestations(
@@ -64,14 +60,16 @@ export function getUnslashedAttestingIndices(
 ): ValidatorIndex[] {
   const output: Set<ValidatorIndex> = new Set();
   attestations.forEach((a) =>
-    getAttestingIndices(config, state, a.data, a.aggregationBitfield).forEach((index) =>
+    getAttestingIndices(config, state, a.data, a.aggregationBits).forEach((index) =>
       output.add(index)));
-  return Array.from(output)
-    .filter((index) => !state.validatorRegistry[index].slashed)
-    .sort();
+  return Array.from(output).filter((index) => !state.validators[index].slashed).sort();
 }
 
-export function getAttestingBalance(config: IBeaconConfig, state: BeaconState, attestations: PendingAttestation[]): Gwei {
+export function getAttestingBalance(
+  config: IBeaconConfig,
+  state: BeaconState,
+  attestations: PendingAttestation[]
+): Gwei {
   return getTotalBalance(state, getUnslashedAttestingIndices(config, state, attestations));
 }
 

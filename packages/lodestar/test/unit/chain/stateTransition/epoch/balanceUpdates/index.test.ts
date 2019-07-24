@@ -51,7 +51,7 @@ describe('process epoch - balance updates', function () {
     const state = generateState();
     const reward = new BN(10);
     const penalty = new BN(0);
-    state.validatorRegistry.push(generateValidator());
+    state.validators.push(generateValidator());
     getCurrentEpochStub.returns(10);
     getAttestationDeltasStub.returns([[reward], [penalty]]);
     getCrosslinkDeltasStub.returns([[reward], [penalty]]);

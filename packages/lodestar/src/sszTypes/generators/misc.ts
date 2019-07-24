@@ -4,134 +4,160 @@
 
 import {SimpleContainerType} from "@chainsafe/ssz";
 
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 import {IBeaconParams} from "../../params";
 import {IBeaconSSZTypes} from "../interface";
 
 export const Fork = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "Fork",
   fields: [
-    ["previousVersion", ssz.bytes4],
-    ["currentVersion", ssz.bytes4],
+    ["previousVersion", ssz.Version],
+    ["currentVersion", ssz.Version],
     ["epoch", ssz.Epoch],
   ],
 });
 
-export const Crosslink = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "Crosslink",
+export const Checkpoint = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
-    ["shard", ssz.number64],
-    ["startEpoch", ssz.number64],
-    ["endEpoch", ssz.number64],
-    ["parentRoot", ssz.bytes32],
-    ["dataRoot", ssz.bytes32],
+    ["epoch", ssz.Epoch],
+    ["root", ssz.Hash],
   ],
 });
 
-export const Eth1Data = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "Eth1Data",
+export const Validator = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
-    ["depositRoot", ssz.bytes32],
-    ["depositCount", ssz.number64],
-    ["blockHash", ssz.bytes32],
+    ["pubkey", ssz.BLSPubkey],
+    ["withdrawalCredentials", ssz.Hash],
+    ["effectiveBalance", ssz.Gwei],
+    ["slashed", ssz.bool],
+    ["activationEligibilityEpoch", ssz.Epoch],
+    ["activationEpoch", ssz.Epoch],
+    ["exitEpoch", ssz.Epoch],
+    ["withdrawableEpoch", ssz.Epoch],
+  ],
+});
+
+export const Crosslink = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+  fields: [
+    ["shard", ssz.Shard],
+    ["parentRoot", ssz.Hash],
+    ["startEpoch", ssz.Epoch],
+    ["endEpoch", ssz.Epoch],
+    ["dataRoot", ssz.Hash],
   ],
 });
 
 export const AttestationData = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "AttestationData",
   fields: [
-    ["beaconBlockRoot", ssz.bytes32],
-    ["sourceEpoch", ssz.Epoch],
-    ["sourceRoot", ssz.bytes32],
-    ["targetEpoch", ssz.Epoch],
-    ["targetRoot", ssz.bytes32],
+    ["beaconBlockRoot", ssz.Hash],
+    ["source", ssz.Checkpoint],
+    ["target", ssz.Checkpoint],
     ["crosslink", ssz.Crosslink],
   ],
 });
 
 export const AttestationDataAndCustodyBit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "AttestationDataAndCustodyBit",
   fields: [
     ["data", ssz.AttestationData],
     ["custodyBit", ssz.bool],
   ],
 });
 
-export const IndexedAttestation = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "IndexedAttestation",
+export const IndexedAttestation = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
   fields: [
-    ["custodyBit0Indices", [ssz.ValidatorIndex]],
-    ["custodyBit1Indices", [ssz.ValidatorIndex]],
+    ["custodyBit0Indices", {
+      elementType: ssz.ValidatorIndex,
+      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
+    }],
+    ["custodyBit1Indices", {
+      elementType: ssz.ValidatorIndex,
+      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
+    }],
     ["data", ssz.AttestationData],
     ["signature", ssz.BLSSignature],
   ],
 });
 
+export const PendingAttestation = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
+  fields: [
+    ["aggregationBits", {
+      elementType: ssz.bool,
+      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
+    }],
+    ["data", ssz.AttestationData],
+    ["inclusionDelay", ssz.Slot],
+    ["proposerIndex", ssz.ValidatorIndex],
+  ],
+});
+
+export const Eth1Data = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+  fields: [
+    ["depositRoot", ssz.Hash],
+    ["depositCount", ssz.number64],
+    ["blockHash", ssz.Hash],
+  ],
+});
+
+export const HistoricalBatch = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
+  fields: [
+    ["blockRoots", {
+      elementType: ssz.bytes32,
+      length: params.SLOTS_PER_HISTORICAL_ROOT,
+    }],
+    ["stateRoots", {
+      elementType: ssz.bytes32,
+      length: params.SLOTS_PER_HISTORICAL_ROOT,
+    }],
+  ],
+});
+
 export const DepositData = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "DepositData",
   fields: [
     ["pubkey", ssz.BLSPubkey],
-    ["withdrawalCredentials", ssz.bytes32],
+    ["withdrawalCredentials", ssz.Hash],
     ["amount", ssz.Gwei],
     ["signature", ssz.BLSSignature],
   ],
 });
 
+export const CompactCommittee = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
+  fields: [
+    ["pubkeys", {
+      elementType: ssz.BLSPubkey,
+      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
+    }],
+    ["compactValidators", {
+      elementType: ssz.uint64,
+      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
+    }],
+  ],
+});
+
 export const BeaconBlockHeader = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "BeaconBlockHeader",
   fields: [
     ["slot", ssz.Slot],
-    ["parentRoot", ssz.bytes32],
-    ["stateRoot", ssz.bytes32],
-    ["bodyRoot", ssz.bytes32],
+    ["parentRoot", ssz.Hash],
+    ["stateRoot", ssz.Hash],
+    ["bodyRoot", ssz.Hash],
     ["signature", ssz.BLSSignature],
   ],
 });
 
-export const Validator = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "Validator",
-  fields: [
-    ["pubkey", ssz.BLSPubkey],
-    ["withdrawalCredentials", ssz.bytes32],
-    ["activationEligibilityEpoch", ssz.Epoch],
-    ["activationEpoch", ssz.Epoch],
-    ["exitEpoch", ssz.Epoch],
-    ["withdrawableEpoch", ssz.Epoch],
-    ["slashed", ssz.bool],
-    ["effectiveBalance", ssz.Gwei],
-  ],
-});
-
-export const PendingAttestation = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "PendingAttestation",
-  fields: [
-    ["aggregationBitfield", ssz.bytes],
-    ["data", ssz.AttestationData],
-    ["inclusionDelay", ssz.number64],
-    ["proposerIndex", ssz.ValidatorIndex],
-  ],
-});
-
-export const HistoricalBatch = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
-  name: "HistoricalBatch",
-  fields: [
-    ["blockRoots", [ssz.bytes32, params.SLOTS_PER_HISTORICAL_ROOT]],
-    ["stateRoots", [ssz.bytes32, params.SLOTS_PER_HISTORICAL_ROOT]],
-  ],
-});
-
 export const FFGData = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "FFGData",
   fields: [
-    ["sourceEpoch", ssz.Epoch],
-    ["sourceRoot", ssz.bytes32],
-    ["targetEpoch", ssz.Epoch],
+    ["source", ssz.Checkpoint],
+    ["target", ssz.Checkpoint],
   ],
 });
 
 export const MerkleTree = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  name: "MerkleTree",
   fields: [
     ["depth", ssz.number64],
-    ["tree", [[ssz.bytes32]]]
+    ["tree", {
+      elementType: {
+        elementType: ssz.Hash,
+        maxLength: DEPOSIT_CONTRACT_TREE_DEPTH,
+      },
+      maxLength: DEPOSIT_CONTRACT_TREE_DEPTH,
+    }]
   ]
 });

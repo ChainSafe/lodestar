@@ -20,7 +20,7 @@ import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from 
 import {stateTransition} from "./stateTransition";
 
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
-import {getAttestingIndices, slotToEpoch} from "./stateTransition/util";
+import {getAttestingIndices, computeEpochOfSlot} from "./stateTransition/util";
 import {IBeaconChain} from "./interface";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
 import {processSortedDeposits} from "../util/deposits";
@@ -80,7 +80,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
 
   public async receiveAttestation(attestation: Attestation): Promise<void> {
     const validators = getAttestingIndices(
-      this.config, this.latestState, attestation.data, attestation.aggregationBitfield);
+      this.config, this.latestState, attestation.data, attestation.aggregationBits);
     const balances = validators.map((index) => this.latestState.balances[index]);
     for (let i = 0; i < validators.length; i++) {
       this.forkChoice.addAttestation(attestation.data.beaconBlockRoot, validators[i], balances[i]);
@@ -126,7 +126,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
       this.db.setLatestStateRoot(stateRoot, genesisState),
       this.db.setJustifiedStateRoot(stateRoot, genesisState),
       this.db.setFinalizedStateRoot(stateRoot, genesisState),
-      this.db.setMerkleTree(genesisState.depositIndex, merkleTree)
+      this.db.setMerkleTree(genesisState.eth1DepositIndex, merkleTree)
     ]);
     this.forkChoice.addBlock(genesisBlock.slot, blockRoot, Buffer.alloc(32));
     this.forkChoice.setJustified(blockRoot);
@@ -153,8 +153,8 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
 
   private async runStateTransition(block: BeaconBlock, state: BeaconState): Promise<BeaconState> {
     const preSlot = state.slot;
-    const preFinalizedEpoch = state.finalizedEpoch;
-    const preJustifiedEpoch = state.currentJustifiedEpoch;
+    const preFinalizedEpoch = state.finalizedCheckpoint.epoch;
+    const preJustifiedEpoch = state.currentJustifiedCheckpoint.epoch;
     // Run the state transition
     const newState = stateTransition(this.config, state, block, true);
 
@@ -169,11 +169,11 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     this.updateDepositMerkleTree(newState);
 
     // Post-epoch processing
-    if (slotToEpoch(this.config, preSlot) < slotToEpoch(this.config, newState.slot)) {
+    if (computeEpochOfSlot(this.config, preSlot) < computeEpochOfSlot(this.config, newState.slot)) {
       // Update FFG Checkpoints
       // Newly justified epoch
-      if (preJustifiedEpoch < newState.currentJustifiedEpoch) {
-        const justifiedBlock = await this.db.getBlock(newState.currentJustifiedRoot);
+      if (preJustifiedEpoch < newState.currentJustifiedCheckpoint.epoch) {
+        const justifiedBlock = await this.db.getBlock(newState.currentJustifiedCheckpoint.root);
         const [justifiedState] = await Promise.all([
           this.db.getState(justifiedBlock.stateRoot),
           this.db.setJustifiedBlockRoot(blockRoot, block),
@@ -182,8 +182,8 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
         this.forkChoice.setJustified(blockRoot);
       }
       // Newly finalized epoch
-      if (preFinalizedEpoch < newState.finalizedEpoch) {
-        const finalizedBlock = await this.db.getBlock(newState.finalizedRoot);
+      if (preFinalizedEpoch < newState.finalizedCheckpoint.epoch) {
+        const finalizedBlock = await this.db.getBlock(newState.finalizedCheckpoint.root);
         const [finalizedState] = await Promise.all([
           this.db.getState(finalizedBlock.stateRoot),
           this.db.setFinalizedBlockRoot(blockRoot, block),
@@ -198,20 +198,20 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
   private async updateDepositMerkleTree(newState: BeaconState): Promise<void> {
     let [deposits, merkleTree] = await Promise.all([
       this.db.getDeposits(),
-      this.db.getMerkleTree(newState.depositIndex - newState.latestEth1Data.depositCount)
+      this.db.getMerkleTree(newState.eth1DepositIndex - newState.eth1Data.depositCount)
     ]);
     processSortedDeposits(
       this.config,
       deposits,
-      newState.depositIndex,
-      newState.latestEth1Data.depositCount,
+      newState.eth1DepositIndex,
+      newState.eth1Data.depositCount,
       (deposit, index) => {
-        merkleTree.add(index + newState.depositIndex, hashTreeRoot(deposit.data, this.config.types.DepositData));
+        merkleTree.add(index + newState.eth1DepositIndex, hashTreeRoot(deposit.data, this.config.types.DepositData));
         return deposit;
       }
     );
     //TODO: remove deposits with index <= newState.depositIndex
-    await this.db.setMerkleTree(newState.depositIndex, merkleTree);
+    await this.db.setMerkleTree(newState.eth1DepositIndex, merkleTree);
   }
 
   private async checkGenesis(eth1Block: Block): Promise<void> {

@@ -8,7 +8,8 @@ import {BigNumber} from "ethers/utils";
 import BN from "bn.js";
 import bls from "@chainsafe/bls-js";
 import {hash, signingRoot} from "@chainsafe/ssz";
-import {Domain} from "../constants";
+
+import {DomainType} from "../constants";
 import {DepositData} from "../types";
 import {ILogger} from "../logger";
 import {IBeaconConfig} from "../config";
@@ -62,7 +63,7 @@ export class Eth1Wallet {
     const signature = bls.sign(
       privateKey,
       signingRoot(depositData, this.config.types.DepositData),
-      Buffer.from([0, 0, 0, Domain.DEPOSIT])
+      Buffer.from([0, 0, 0, DomainType.DEPOSIT])
     );
     // Send TX
     try {

@@ -220,7 +220,7 @@ describe('beacon db api', function() {
   it('get chain head', async function() {
     encodeKeyStub.withArgs(Bucket.chainInfo, Key.chainHeight).returns('chainHeightKey');
     dbStub.get.withArgs('chainHeightKey').resolves(serialize(10, config.types.uint64));
-    encodeKeyStub.withArgs(Bucket.mainChain, new BN(10)).returns('blockRootKey');
+    encodeKeyStub.withArgs(Bucket.mainChain, sinon.match.any).returns('blockRootKey');
     dbStub.get.withArgs('blockRootKey').resolves('blockroot');
     encodeKeyStub.withArgs(Bucket.block, 'blockroot').returns('blockId');
     dbStub.get.withArgs('blockId').resolves(serialize(generateEmptyBlock(), config.types.BeaconBlock));
