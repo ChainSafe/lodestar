@@ -41,15 +41,25 @@ export class ValidatorCommand implements CliCommand {
     if (options.loggingLevel) {
       loggingOptions = {
         loggingLevel: LogLevel[options.loggingLevel],
+        loggingModule: Module.VALIDATOR,
       };
     }else {
       loggingOptions = {
-        loggingLevel: LogLevel.INFO,
+        loggingLevel: LogLevel.DEFAULT,
+        loggingModule: Module.VALIDATOR
       };
     }
     const conf = optionsToConfig(options, ValidatorOptions);
 
-    let validator = new Validator(conf, {config, loggingOptions});
+    let validator = new Validator(
+      conf,
+      {
+        config: config,
+        logger: new WinstonLogger(loggingOptions) ,
+        loggingOptions: loggingOptions
+      }
+    );
+
     await validator.start();
   }
 

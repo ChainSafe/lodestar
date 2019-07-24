@@ -15,7 +15,7 @@ describe('Validator', () => {
   let logger: ILogger = new WinstonLogger();
   let loggingOptions = {
     loggingLevel: LogLevel.INFO,
-    module: Module.VALIDATOR,
+    loggingModule: Module.VALIDATOR,
   };
 
   before(async () => {
@@ -40,7 +40,7 @@ describe('Validator', () => {
       keypair: Keypair.generate(),
     };
 
-    let validator = new Validator(validatorCtx, {config, loggingOptions});
+    let validator = new Validator(validatorCtx, {config, logger, loggingOptions});
     await expect(validator.start()).to.not.throw;
     await validator.stop();
   });

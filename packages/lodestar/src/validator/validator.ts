@@ -41,17 +41,17 @@ class Validator {
   private genesisInfo: GenesisInfo;
   private db: IValidatorDB;
   private logger: ILogger;
+  private loggingOptions: ILoggingOptions;
   private isActive: boolean;
   private isRunning: boolean;
 
 
-  public constructor(opts: Partial<IValidatorOptions>, modules: {config: IBeaconConfig; loggingOptions: ILoggingOptions}) {
+
+  public constructor(opts: Partial<IValidatorOptions>, modules: {config: IBeaconConfig; logger: ILogger; loggingOptions: ILoggingOptions}) {
     this.opts = deepmerge(defaultValidatorOptions, opts, {isMergeableObject: isPlainObject});
     this.config = modules.config;
-    this.logger = new WinstonLogger({
-      loggingLevel: modules.loggingOptions.loggingLevel,
-      module: Module.VALIDATOR,
-    });
+    this.logger = modules.logger;
+    this.loggingOptions = modules.loggingOptions;
     this.isActive = false;
     this.isRunning = false;
     this.db = new ValidatorDB({
@@ -60,8 +60,8 @@ class Validator {
         name: this.opts.db.name
       }, {
         logger: new WinstonLogger({
-          loggingLevel: modules.loggingOptions.loggingLevel,
-          module: Module.DATABASE,
+          loggingLevel: this.loggingOptions.loggingLevel,
+          loggingModule: Module.DATABASE,
         }),
       })
     });

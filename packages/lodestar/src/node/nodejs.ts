@@ -47,8 +47,8 @@ export class BeaconNode {
   private loggingOptions: ILoggingOptions;
   private logger: ILogger;
 
-  public constructor(opts: Partial<IBeaconNodeOptions>, {config, loggingOptions}:
-  {config: IBeaconConfig; loggingOptions: ILoggingOptions}) {
+  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger,  loggingOptions}:
+  {config: IBeaconConfig; logger: ILogger; loggingOptions: ILoggingOptions}) {
 
     this.conf = deepmerge(
       defaultConf,
@@ -59,19 +59,17 @@ export class BeaconNode {
       }
     );
     this.config = config;
+
+    this.logger = logger;
     this.loggingOptions = loggingOptions;
 
-    this.logger = new WinstonLogger({
-      loggingLevel: this.loggingOptions.loggingLevel,
-      module: Module.DEFAULT,
-    });
     this.reps = new ReputationStore();
     this.db = new BeaconDB({
       config,
       controller: new LevelDbController(this.conf.db, {
         logger: new WinstonLogger({
           loggingLevel: this.loggingOptions.loggingLevel,
-          module: Module.DATABASE,
+          loggingModule: Module.DATABASE,
         }),
       }),
     });
@@ -89,7 +87,7 @@ export class BeaconNode {
       libp2p: libp2p,
       logger: new WinstonLogger({
         loggingLevel: this.loggingOptions.loggingLevel,
-        module: Module.NETWORK,
+        loggingModule: Module.NETWORK,
       }),
     });
     this.eth1 = new EthersEth1Notifier(this.conf.eth1, {
@@ -97,7 +95,7 @@ export class BeaconNode {
       opPool: this.opPool,
       logger: new WinstonLogger({
         loggingLevel: this.loggingOptions.loggingLevel,
-        module: Module.ETH1,
+        loggingModule: Module.ETH1,
       }),
     });
     this.chain = new BeaconChain(this.conf.chain, {
@@ -106,7 +104,7 @@ export class BeaconNode {
       eth1: this.eth1,
       logger: new WinstonLogger({
         loggingLevel: this.loggingOptions.loggingLevel,
-        module: Module.CHAIN,
+        loggingModule: Module.CHAIN,
       }),
     });
     this.opPool = new OpPool(this.conf.opPool, {
@@ -125,7 +123,7 @@ export class BeaconNode {
       rpc,
       logger: new WinstonLogger({
         loggingLevel: this.loggingOptions.loggingLevel,
-        module: Module.SYNC,
+        loggingModule: Module.SYNC,
       }),
     });
     //TODO: needs to be moved to Rpc class and initialized from opts
