@@ -11,7 +11,7 @@ There is a lot of work being done that are core infrastructural pieces for Eth2.
 |-- [Gossipsub](https://github.com/ChainSafe/gossipsub-js)<br />
 
 [![](https://img.shields.io/travis/com/ChainSafe/lodestar/master.svg?label=master&logo=travis "Master Branch (Travis)")](https://travis-ci.com/ChainSafe/lodestar)
-[![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/CtYHME)
+[![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 [![codecov](https://codecov.io/gh/ChainSafe/lodestar/branch/master/graph/badge.svg)](https://codecov.io/gh/ChainSafe/lodestar)
 [![Maintainability](https://api.codeclimate.com/v1/badges/678099476c401e1af503/maintainability)](https://codeclimate.com/github/ChainSafe/lodestar/maintainability)
 ![ETH2.0_Spec_Version 0.7.1](https://img.shields.io/badge/ETH2.0_Spec_Version-0.7.1-2e86c1.svg)
