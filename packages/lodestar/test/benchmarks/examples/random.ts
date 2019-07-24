@@ -8,7 +8,7 @@ const bench = (dir: string) => {
 
   // Set the function test
   const FUNCTION_NAME = "example"; // PLEASE FILL THIS OUT
-  const FILE_TO_WRITE = dir + FUNCTION_NAME;
+  const FILE_TO_WRITE = dir + FUNCTION_NAME + ".txt";
 
   // Add tests
   suite
