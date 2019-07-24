@@ -9,20 +9,23 @@ import {ILoggingOptions} from "./interface";
 export class WinstonLogger extends AbstractLogger {
 
   private winston: Logger;
-  private loggingOptions: ILoggingOptions;
+  private loggingModule;
+  private loggingLevel;
 
   public constructor(loggingOptions?: ILoggingOptions ) {
     super();
-    // this.loggingOptions = loggingOptions;
-    // if (!this.loggingOptions) {
-    //   this.loggingOptions = {
-    //     loggingLevel: LogLevel.DEFAULT,
-    //     module: Module.DEFAULT,
-    //   };
-    // }
+
+    if (!loggingOptions) {
+      this.loggingModule = Module.DEFAULT;
+      this.loggingLevel = LogLevel.DEFAULT;
+    }
+    else {
+      this.loggingModule = loggingOptions.loggingModule;
+      this.loggingLevel = loggingOptions.loggingLevel;
+    }
 
     this.winston = createLogger({
-      level: LogLevel.INFO,
+      level: this.loggingLevel,
       transports: [
         new transports.Console({
           format: format.combine(
@@ -31,7 +34,7 @@ export class WinstonLogger extends AbstractLogger {
               format: 'YYYY-MM-DD HH:mm:ss'
             }),
             format.printf(
-              info => `${info.timestamp} ${info.level}: ${info.message}`
+              info => `${info.timestamp} ${this.loggingModule} ${info.level}: ${info.message}`
             )
           ),
           handleExceptions: true
@@ -68,6 +71,10 @@ export class WinstonLogger extends AbstractLogger {
 
   public setLogLevel(level: LogLevel): void {
     this.winston.level = level;
+  }
+
+  public setLoggingModule(loggingModule: Module): void{
+    this.loggingModule = loggingModule;
   }
 
   public silent(silent: boolean): void {

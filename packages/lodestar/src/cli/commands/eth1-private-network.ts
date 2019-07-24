@@ -8,6 +8,7 @@ import {CommanderStatic} from "commander";
 import {LogLevel, WinstonLogger} from "../../logger";
 import {ILogger} from "../../logger";
 import {Module} from "../../logger/abstract";
+import {ILoggingOptions} from "../../logger/interface";
 
 interface IEth1CommandOptions {
   host: string;
@@ -38,7 +39,7 @@ export class Eth1PrivateNetworkCommand implements CliCommand {
       )
       .action(async (options) => {
         try {
-          await this.action(options);
+          await this.action(options, logger);
         } catch (e) {
           logger.error(e.message + '\n' + e.stack);
         }
@@ -46,19 +47,23 @@ export class Eth1PrivateNetworkCommand implements CliCommand {
       });
   }
 
-  public async action(options: IEth1CommandOptions): Promise<PrivateEth1Network> {
-    let loggingOptions;
+  public async action(options: IEth1CommandOptions, logger): Promise<PrivateEth1Network> {
+    let loggingOptions: ILoggingOptions;
     if (options.loggingLevel) {
       loggingOptions = {
         loggingLevel: LogLevel[options.loggingLevel],
-        module: Module.ETH1,
+        loggingModule: Module.ETH1,
       };
     }else {
       loggingOptions = {
-        loggingLevel: LogLevel.INFO,
-        module: Module.ETH1,
+        loggingLevel: LogLevel.DEFAULT,
+        loggingModule: Module.ETH1,
       };
     }
+
+    logger.setLogLevel(loggingOptions.loggingLevel);
+    logger.setLoggingModule(loggingOptions.loggingModule);
+
     const privateNetwork = new PrivateEth1Network({
       port: options.port,
       host: options.host,
@@ -67,7 +72,7 @@ export class Eth1PrivateNetworkCommand implements CliCommand {
       dbPath: options.database
     },
     {
-      logger: new WinstonLogger(loggingOptions),
+      logger,
     }
     );
     await privateNetwork.start();

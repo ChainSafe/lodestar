@@ -42,7 +42,7 @@ export class BeaconNodeCommand implements CliCommand {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
         try {
-          await this.action(options);
+          await this.action(options, logger);
         } catch (e) {
           logger.error(e.message + '\n' + e.stack);
         }
@@ -50,7 +50,7 @@ export class BeaconNodeCommand implements CliCommand {
     generateCommanderOptions(command, BeaconNodeOptions);
   }
 
-  public async action(options: IBeaconCommandOptions): Promise<void> {
+  public async action(options: IBeaconCommandOptions, logger: ILogger): Promise<void> {
     let conf: Partial<IBeaconNodeOptions> = {};
     let loggingOptions;
 
@@ -60,9 +60,10 @@ export class BeaconNodeCommand implements CliCommand {
       };
     }else {
       loggingOptions = {
-        loggingLevel: LogLevel.INFO,
+        loggingLevel: LogLevel.DEFAULT,
       };
     }
+    logger.setLogLevel(loggingOptions.loggingLevel);
 
     //merge config file
     if (options.configFile) {
@@ -74,7 +75,7 @@ export class BeaconNodeCommand implements CliCommand {
     //override current config with cli config
     conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
 
-    this.node = new BeaconNode(conf, {config, loggingOptions});
+    this.node = new BeaconNode(conf, {config, logger, loggingOptions});
 
     if(conf.validator && conf.validator.keypair){
       conf.validator.rpcInstance = new RpcClientOverInstance({
@@ -94,9 +95,16 @@ export class BeaconNodeCommand implements CliCommand {
           {config, chain: this.node.chain, db: this.node.db}
         ),
       });
+
       this.validator = new Validator(
-        conf.validator,
-        {config, loggingOptions}
+        conf.validator, {
+          config: config,
+          logger: new WinstonLogger({
+            loggingLevel: loggingOptions.loggingLevel,
+            loggingModule: Module.VALIDATOR,
+          }),
+          loggingOptions: loggingOptions,
+        }
       );
       await this.validator.start();
     }
