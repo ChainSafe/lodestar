@@ -637,6 +637,10 @@
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.2.tgz#89165bfa24e308f84fa37a39b232bd2a2e533245"
 
+"@chainsafe/bit-utils@^0.1.3":
+  version "0.1.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.3.tgz#d29a69c161526fda8bf0880da3d62a4a7100e169"
+
 "@chainsafe/bls-js@^0.1.5":
   version "0.1.5"
   resolved "https://registry.yarnpkg.com/@chainsafe/bls-js/-/bls-js-0.1.5.tgz#00fed1ef879aa4668092e7010fa21f5bf19f569e"
@@ -656,14 +660,15 @@
     js-yaml "^3.13.1"
     v8-profiler-next "^1.1.0"
 
-"@chainsafe/ssz@0.4.3":
-  version "0.4.3"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.4.3.tgz#89ca43695fdf4e9f87d4cff1983249f3c281bd89"
+"@chainsafe/ssz@0.5.1":
+  version "0.5.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.5.1.tgz#5d8fa0d00ee7d91fc5de914a843bd47125213c6a"
   dependencies:
+    "@chainsafe/bit-utils" "^0.1.3"
     "@types/bn.js" "^4.11.4"
     assert "^1.4.1"
+    bcrypto "^4.1.0"
     bn.js "^4.11.8"
-    js-sha256 "^0.9.0"
 
 "@evocateur/libnpmaccess@^3.1.0":
   version "3.1.1"
@@ -2784,6 +2789,15 @@ bcrypt-pbkdf@^1.0.0:
   dependencies:
     tweetnacl "^0.14.3"
 
+bcrypto@^4.1.0:
+  version "4.1.0"
+  resolved "https://registry.yarnpkg.com/bcrypto/-/bcrypto-4.1.0.tgz#04fd2ec095e4eba121412e287b9c542cd7230a57"
+  dependencies:
+    bsert "~0.0.10"
+    bufio "~1.0.6"
+    loady "~0.0.1"
+    nan "^2.13.2"
+
 before-after-hook@^2.0.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/before-after-hook/-/before-after-hook-2.1.0.tgz#b6c03487f44e24200dd30ca5e6a1979c5d2fb635"
@@ -3011,6 +3025,10 @@ bs58check@^2.1.2:
     create-hash "^1.1.0"
     safe-buffer "^5.1.2"
 
+bsert@~0.0.10:
+  version "0.0.10"
+  resolved "https://registry.yarnpkg.com/bsert/-/bsert-0.0.10.tgz#231ac82873a1418c6ade301ab5cd9ae385895597"
+
 btoa-lite@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/btoa-lite/-/btoa-lite-1.0.0.tgz#337766da15801210fdd956c22e9c6891ab9d0337"
@@ -3072,6 +3090,10 @@ buffer@^5.0.5, buffer@^5.2.1:
   dependencies:
     base64-js "^1.0.2"
     ieee754 "^1.1.4"
+
+bufio@~1.0.6:
+  version "1.0.6"
+  resolved "https://registry.yarnpkg.com/bufio/-/bufio-1.0.6.tgz#e0eb6d70b2efcc997b6f8872173540967f90fa4d"
 
 builtins@^1.0.3:
   version "1.0.3"
@@ -6891,6 +6913,10 @@ load-json-file@^4.0.0:
     parse-json "^4.0.0"
     pify "^3.0.0"
     strip-bom "^3.0.0"
+
+loady@~0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/loady/-/loady-0.0.1.tgz#24a99c14cfed9cd0bffed365b1836035303f7e5d"
 
 locate-path@^2.0.0:
   version "2.0.0"
