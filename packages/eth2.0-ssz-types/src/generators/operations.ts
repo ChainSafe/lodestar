@@ -2,10 +2,10 @@
  * @module sszTypes/generators
  */
 
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "@chainsafe/eth2.0-constants";
+import {IBeaconParams} from "@chainsafe/eth2.0-params";
 import {SimpleContainerType} from "@chainsafe/ssz";
 
-import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
-import {IBeaconParams} from "../../params";
 import {IBeaconSSZTypes} from "../interface";
 
 export const ProposerSlashing = (ssz: IBeaconSSZTypes): SimpleContainerType => ({

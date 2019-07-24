@@ -2,9 +2,9 @@
  * @module sszTypes/generators
  */
 
+import {IBeaconParams} from "@chainsafe/eth2.0-params";
 import {SimpleContainerType} from "@chainsafe/ssz";
 
-import {IBeaconParams} from "../../params";
 import {IBeaconSSZTypes} from "../interface";
 
 export const BeaconBlockBody = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({

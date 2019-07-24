@@ -1,7 +1,9 @@
 /**
  * @module sszTypes/generators
  */
+import {IBeaconParams} from "@chainsafe/eth2.0-params";
 import {parseType, ContainerType} from "@chainsafe/ssz";
+
 import * as primitive from "./primitive";
 import * as misc from "./misc";
 import * as operations from "./operations";
@@ -10,7 +12,6 @@ import * as state from "./state";
 import * as validator from "./validator";
 import * as wire from "./wire";
 
-import {IBeaconParams} from "../../params";
 import {IBeaconSSZTypes, typeNames} from "../interface";
 
 const allGenerators = {
