@@ -11,12 +11,13 @@ import {RegularSync} from "../../../src/sync/regular";
 import {Sync} from "../../../src/sync";
 import PeerId from "peer-id";
 import {config} from "../../../src/config/presets/mainnet";
+import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
 
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();
   let sync: Sync;
   let chainStub, networkStub, opPoolStub, eth1Stub, dbStub,
-    repsStub, logger, syncerStub;
+    repsStub, rpcStub, logger, syncerStub;
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
@@ -25,6 +26,7 @@ describe("syncing", function () {
     eth1Stub = sandbox.createStubInstance(EthersEth1Notifier);
     dbStub = sandbox.createStubInstance(BeaconDB);
     repsStub = sandbox.createStubInstance(ReputationStore);
+    rpcStub = sandbox.createStubInstance(SyncRpc);
     logger = new WinstonLogger();
     syncerStub = sandbox.createStubInstance(RegularSync);
     logger.silent(true);
@@ -38,6 +40,7 @@ describe("syncing", function () {
       network: networkStub,
       opPool: opPoolStub,
       reps: repsStub,
+      rpc: rpcStub,
       logger: logger,
     }
     );
