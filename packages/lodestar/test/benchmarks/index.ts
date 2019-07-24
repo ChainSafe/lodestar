@@ -1,12 +1,12 @@
-import {createReportFile} from "./utils"
+import {createReportDir} from "./utils"
 
 // Import benchmarks
 import * as benchmarks from "./imports";
 
 // Create file
-const file = createReportFile();
+const directory: string = createReportDir();
 
 // Run benchmarks
 for (let bench in benchmarks) {
-    benchmarks[bench](file);
+    benchmarks[bench](directory);
 }

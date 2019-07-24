@@ -1,29 +1,24 @@
 import fs from "fs";
+import { BENCH_DIR } from "../constant";
 
-export const createReportFile = (): string => {
+export const createReportDir = (): string => {
     const curDate: string = new Date().toISOString();
-    const dir: string = "./benchmark-reports/";
-    const filename: string = dir + curDate + ".txt";
+    const dir: string = BENCH_DIR + `${curDate}/`;
 
     // If benchmark directory doesn't exist create it
-    if (!fs.existsSync(dir)){
-        fs.mkdirSync(dir);
+    if (!fs.existsSync(BENCH_DIR)) {
+        fs.mkdirSync(BENCH_DIR);
     }
 
-    // Generate file and write to it
-    fs.writeFile(filename, `Benchmarks for ${curDate}\r\n`, 'ascii', (err) => {
-        if (err) throw err;
-    })
-    return filename;
+    // Create the current benchmark folder
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir)
+    }
+    return dir;
 }
 
-export const appendReport = (file: string, data: string, end?: boolean) => {
+export const writeReport = (file: string, data: string) => {
     fs.appendFile(file, `\r\n${data}`, 'ascii', (err) => {
         if (err) throw err;
-        if (end) {
-            fs.appendFile(file, "\r\n-------------", 'ascii', (err) => {
-                if (err) throw err;
-            })
-        }
     })
 }
