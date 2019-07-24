@@ -1,6 +1,7 @@
+import {MerkleTree} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {BulkRepository} from "../repository";
-import {MerkleTree} from "../../../../types";
-import {IBeaconConfig} from "../../../../config";
 import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../../schema";
 import {IProgressiveMerkleTree, ProgressiveMerkleTree} from "../../../../util/merkleTree";

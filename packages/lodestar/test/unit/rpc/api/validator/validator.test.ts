@@ -1,7 +1,7 @@
 import sinon from "sinon";
 import {expect} from "chai";
 
-import {config} from "../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as blockAssembly from "../../../../../src/chain/factory/block";
 import * as stateTransitionUtils from "../../../../../src/chain/stateTransition/util";
 import {getCommitteeAssignment} from "../../../../../src/chain/stateTransition/util";

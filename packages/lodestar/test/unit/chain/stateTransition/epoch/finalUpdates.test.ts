@@ -3,7 +3,7 @@ import sinon from "sinon";
 import {expect} from "chai";
 import * as hashTreeRoot from "@chainsafe/ssz";
 
-import {config} from "../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {processFinalUpdates} from "../../../../../src/chain/stateTransition/epoch/finalUpdates";
 

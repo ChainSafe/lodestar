@@ -9,10 +9,10 @@ import BN from "bn.js";
 import bls from "@chainsafe/bls-js";
 import {hash, signingRoot} from "@chainsafe/ssz";
 
-import {DomainType} from "../constants";
-import {DepositData} from "../types";
+import {DomainType} from "@chainsafe/eth2.0-constants";
+import {DepositData} from "@chainsafe/eth2.0-types";
 import {ILogger} from "../logger";
-import {IBeaconConfig} from "../config";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 
 export class Eth1Wallet {

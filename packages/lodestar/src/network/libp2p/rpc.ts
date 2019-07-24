@@ -9,9 +9,9 @@ import Connection from "interface-connection";
 import promisify from "es6-promisify";
 import {deserialize} from "@chainsafe/ssz";
 
-import {RequestBody, ResponseBody, WireResponse, WireRequest} from "../../types";
-import {Method, RequestId, ResponseCode, RPC_MULTICODEC} from "../../constants";
-import {IBeaconConfig} from "../../config";
+import {RequestBody, ResponseBody, WireResponse, WireRequest} from "@chainsafe/eth2.0-types";
+import {Method, RequestId, ResponseCode, RPC_MULTICODEC} from "@chainsafe/eth2.0-constants";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ILogger} from "../../logger";
 
 import {

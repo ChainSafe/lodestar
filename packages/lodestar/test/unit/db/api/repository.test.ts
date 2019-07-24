@@ -1,26 +1,27 @@
-import {bool, bytes32} from "../../../../src/sszTypes/generators/primitive";
-import {bytes} from "../../../../src/types";
-import {BulkRepository} from "../../../../src/db/api/beacon/repository";
-import {IDatabaseController, LevelDbController} from "../../../../src/db/controller";
-import {Bucket} from "../../../../src/db/schema";
-import {config} from "../../../../src/config/presets/mainnet";
-import {serialize, SimpleContainerType} from "@chainsafe/ssz";
 import sinon from "sinon";
 import chai, {expect} from "chai";
 import chaiAsPromised from 'chai-as-promised';
+
+import {serialize, SimpleContainerType} from "@chainsafe/ssz";
+import {bytes32} from "@chainsafe/eth2.0-types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+
+import {BulkRepository} from "../../../../src/db/api/beacon/repository";
+import {IDatabaseController, LevelDbController} from "../../../../src/db/controller";
+import {Bucket} from "../../../../src/db/schema";
 
 chai.use(chaiAsPromised);
 
 const TestSSZType: SimpleContainerType = {
   fields: [
-    ["bool", bool],
-    ["bytes", bytes32],
+    ["bool", config.types.bool],
+    ["bytes", config.types.bytes32],
   ],
 };
 
 interface TestType {
   bool: boolean;
-  bytes: bytes;
+  bytes: bytes32;
 }
 
 class TestRepository extends BulkRepository<TestType> {

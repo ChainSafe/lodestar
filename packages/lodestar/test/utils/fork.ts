@@ -1,4 +1,4 @@
-import {Fork} from "../../src/types";
+import {Fork} from "@chainsafe/eth2.0-types";
 import {intToBytes} from "../../src/util/bytes";
 
 /**

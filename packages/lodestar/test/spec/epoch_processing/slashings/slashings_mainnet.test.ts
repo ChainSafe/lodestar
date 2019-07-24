@@ -3,7 +3,7 @@ import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 import {equals} from "@chainsafe/ssz";
 
-import {config} from "../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processSlashings} from "../../../../src/chain/stateTransition/epoch/slashings";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 

@@ -4,7 +4,7 @@ import * as jsonRpc from "noice-json-rpc";
 import Websocket from "ws";
 import promisify from "promisify-es6";
 import {AbstractRpcClient} from "../abstract";
-import {IBeaconConfig} from "../../../config";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 export interface RpcClientOverWsOpts {
 

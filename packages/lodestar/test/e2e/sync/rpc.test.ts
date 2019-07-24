@@ -1,9 +1,9 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import BN from "bn.js";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {Method} from "@chainsafe/eth2.0-constants";
 
-import {config} from "../../../src/config/presets/mainnet";
-import {Method} from "../../../src/constants";
 import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
 import {ReputationStore} from "../../../src/sync/reputation";
 import {Libp2pNetwork} from "../../../src/network";

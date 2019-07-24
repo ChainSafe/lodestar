@@ -8,9 +8,9 @@ import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {
   BeaconState,
   BeaconBlockHeader, Slot,
-} from "../../types";
-import {ZERO_HASH} from "../../constants";
-import {IBeaconConfig} from "../../config";
+} from "@chainsafe/eth2.0-types";
+import {ZERO_HASH} from "@chainsafe/eth2.0-constants";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {processEpoch} from "./epoch";
 

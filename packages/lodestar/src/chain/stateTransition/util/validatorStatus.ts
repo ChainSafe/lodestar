@@ -7,9 +7,9 @@ import {
   Epoch,
   Validator,
   ValidatorIndex,
-} from "../../../types";
-import {FAR_FUTURE_EPOCH} from "../../../constants";
-import {IBeaconConfig} from "../../../config";
+} from "@chainsafe/eth2.0-types";
+import {FAR_FUTURE_EPOCH} from "@chainsafe/eth2.0-constants";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {computeActivationExitEpoch, getCurrentEpoch} from "./epoch";
 import {getValidatorChurnLimit} from "./validator";

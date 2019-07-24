@@ -2,9 +2,9 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {config} from "../../../../../../src/config/presets/mainnet";
-import {Crosslink} from "../../../../../../src/types";
-import {ZERO_HASH} from "../../../../../../src/constants";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {Crosslink} from "@chainsafe/eth2.0-types";
+import {ZERO_HASH} from "@chainsafe/eth2.0-constants";
 import {processAttestation} from "../../../../../../src/chain/stateTransition/block/operations";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
 import {

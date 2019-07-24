@@ -2,8 +2,8 @@
  * @module chain/stateTransition/epoch
  */
 
-import {BeaconState, Gwei, ValidatorIndex} from "../../../../types";
-import {IBeaconConfig} from "../../../../config";
+import {BeaconState, Gwei, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {bnSqrt} from "../../../../util/math";
 

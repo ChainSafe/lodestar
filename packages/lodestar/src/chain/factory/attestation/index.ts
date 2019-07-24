@@ -1,5 +1,6 @@
-import {BeaconBlock, BeaconState, IndexedAttestation, Shard, Slot} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+import {BeaconBlock, BeaconState, IndexedAttestation, Shard, Slot} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {BeaconDb} from "../../../db/api";
 import {assembleAttestationData} from "./data";
 

@@ -4,7 +4,7 @@
 
 import BN from "bn.js";
 
-import {Gwei, Slot, ValidatorIndex} from "../../../types";
+import {Gwei, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
 
 
 /**

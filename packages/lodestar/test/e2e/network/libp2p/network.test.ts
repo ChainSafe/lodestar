@@ -1,8 +1,8 @@
 import {expect} from "chai";
 
-import {config} from "../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {Libp2pNetwork} from "../../../../src/network";
-import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../../../../src/constants";
+import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "@chainsafe/eth2.0-constants";
 import {getEmptyBlock} from "../../../../src/chain/genesis/genesis";
 import {createNode} from "../../../unit/network/libp2p/util";
 import {generateEmptyAttestation} from "../../../utils/attestation";

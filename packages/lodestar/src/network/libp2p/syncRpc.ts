@@ -4,9 +4,8 @@
 
 import assert from "assert";
 import BN from "bn.js";
-import {hashTreeRoot} from "@chainsafe/ssz";
 import PeerInfo from "peer-info";
-
+import {hashTreeRoot} from "@chainsafe/ssz";
 import {
   bytes32, Slot, number64,
   BeaconBlockHeader, BeaconBlockBody,
@@ -15,8 +14,10 @@ import {
   BeaconBlockHeadersRequest, BeaconBlockHeadersResponse,
   BeaconBlockBodiesRequest, BeaconBlockBodiesResponse,
   BeaconStatesRequest, BeaconStatesResponse, Epoch, BeaconState, BeaconBlock,
-} from "../../types";
-import {ZERO_HASH, Method, RequestId, ResponseCode} from "../../constants";
+} from "@chainsafe/eth2.0-types";
+import {ZERO_HASH, Method, RequestId, ResponseCode} from "@chainsafe/eth2.0-constants";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {intDiv} from "../../util/math";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
@@ -24,7 +25,6 @@ import {INetwork} from "../index";
 import {getEmptyBlockBody} from "../../chain/genesis/genesis";
 import {ReputationStore} from "../../sync/reputation";
 import {ILogger} from "../../logger";
-import {IBeaconConfig} from "../../config";
 import {ISyncRpc} from "../../sync/rpc/interface";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface

@@ -8,9 +8,9 @@ import {
   Epoch,
   Version,
   BeaconState,
-} from "../../../types";
-import {DomainType} from "../../../constants";
-import {IBeaconConfig} from "../../../config";
+} from "@chainsafe/eth2.0-types";
+import {DomainType} from "@chainsafe/eth2.0-constants";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {bytesToBN, intToBytes} from "../../../util/bytes";
 

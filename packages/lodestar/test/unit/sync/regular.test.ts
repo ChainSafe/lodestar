@@ -1,5 +1,7 @@
 import sinon from "sinon";
 import {expect} from "chai";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+
 import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {AttestationOperations, OpPool} from "../../../src/opPool";
@@ -8,7 +10,6 @@ import {RegularSync} from "../../../src/sync/regular";
 import {generateState} from "../../utils/state";
 import {generateEmptyBlock} from "../../utils/block";
 import {generateEmptyAttestation} from "../../utils/attestation";
-import {config} from "../../../src/config/presets/mainnet";
 import {AttestationRepository, BlockRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
 
 describe("syncing", function () {

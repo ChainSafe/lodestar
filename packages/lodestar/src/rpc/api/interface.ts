@@ -1,7 +1,7 @@
 /**
  * @module rpc/api
  */
-import {IBeaconConfig} from "../../config";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db/api";
 import {IEth1Notifier} from "../../eth1";

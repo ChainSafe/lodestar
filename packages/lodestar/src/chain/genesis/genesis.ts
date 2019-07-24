@@ -14,7 +14,7 @@ import {
   Eth1Data,
   number64,
   Hash,
-} from "../../types";
+} from "@chainsafe/eth2.0-types";
 
 import {
   EMPTY_SIGNATURE,
@@ -23,8 +23,8 @@ import {
   GENESIS_SLOT,
   GENESIS_START_SHARD,
   ZERO_HASH,
-} from "../../constants";
-import {IBeaconConfig} from "../../config";
+} from "@chainsafe/eth2.0-constants";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {getTemporaryBlockHeader, getActiveValidatorIndices, getCompactCommitteesRoot} from "../stateTransition/util";
 import {hashTreeRoot} from "@chainsafe/ssz";

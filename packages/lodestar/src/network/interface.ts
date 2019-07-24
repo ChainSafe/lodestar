@@ -6,8 +6,8 @@ import {EventEmitter} from "events";
 
 import {
   Attestation, BeaconBlock, Shard, ResponseBody, RequestBody,
-} from "../types";
-import {RequestId, Method} from "../constants";
+} from "@chainsafe/eth2.0-types";
+import {RequestId, Method} from "@chainsafe/eth2.0-constants";
 
 export interface INetwork extends EventEmitter {
   peerInfo: PeerInfo;

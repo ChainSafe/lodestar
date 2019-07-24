@@ -2,8 +2,8 @@ import assert from "assert";
 import {
   BeaconBlockBody, BeaconState, ProposerSlashing, AttesterSlashing, Attestation,
   Deposit, VoluntaryExit, Transfer,
-} from "../../../../types";
-import {IBeaconConfig} from "../../../../config";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {processProposerSlashing} from "./proposerSlashing";
 import {processAttesterSlashing} from "./attesterSlashing";

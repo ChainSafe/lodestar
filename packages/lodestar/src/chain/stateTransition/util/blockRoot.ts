@@ -8,7 +8,7 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import {
   EMPTY_SIGNATURE,
   ZERO_HASH,
-} from "../../../constants";
+} from "@chainsafe/eth2.0-constants";
 import {
   BeaconBlock,
   BeaconBlockHeader,
@@ -16,8 +16,8 @@ import {
   Epoch,
   Hash,
   Slot,
-} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {computeStartSlotOfEpoch} from "./epoch";
 

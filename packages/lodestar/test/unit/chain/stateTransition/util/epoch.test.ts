@@ -1,8 +1,8 @@
 import {assert} from "chai";
 
-import {config} from "../../../../../src/config/presets/mainnet";
-import {BeaconState, Epoch, Slot} from "../../../../../src/types";
-import {GENESIS_SLOT} from "../../../../../src/constants";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {BeaconState, Epoch, Slot} from "@chainsafe/eth2.0-types";
+import {GENESIS_SLOT} from "@chainsafe/eth2.0-constants";
 import {
   computeStartSlotOfEpoch,
   getPreviousEpoch,

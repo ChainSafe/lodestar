@@ -6,13 +6,13 @@ import assert from "assert";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls-js";
 
-import {BeaconState, Deposit, Validator} from "../../../../types";
+import {BeaconState, Deposit, Validator} from "@chainsafe/eth2.0-types";
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
   DomainType,
   FAR_FUTURE_EPOCH,
-} from "../../../../constants";
-import {IBeaconConfig} from "../../../../config";
+} from "@chainsafe/eth2.0-constants";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {bnMin} from "../../../../util/math";
 import {verifyMerkleBranch} from "../../../../util/merkleTree";

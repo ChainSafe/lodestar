@@ -10,8 +10,8 @@ import {
   Validator,
   ValidatorIndex,
   uint64,
-} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {intDiv} from "../../../util/math";
 

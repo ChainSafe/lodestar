@@ -5,7 +5,7 @@ import {expect} from "chai";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 import {equals} from "@chainsafe/ssz";
-import {config} from "../../../../src/config/presets/minimal";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {processBlockHeader} from "../../../../src/chain/stateTransition/block/blockHeader";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 

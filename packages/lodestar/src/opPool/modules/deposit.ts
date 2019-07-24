@@ -1,4 +1,5 @@
-import {Deposit, number64} from "../../types";
+import {Deposit, number64} from "@chainsafe/eth2.0-types";
+
 import {DepositRepository} from "../../db/api/beacon/repositories";
 
 export class DepositsOperations {

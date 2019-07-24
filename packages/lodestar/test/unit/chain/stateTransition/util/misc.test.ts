@@ -1,11 +1,11 @@
 import BN from "bn.js";
 import { assert } from "chai";
 
-import {config} from "../../../../../src/config/presets/mainnet";
-import {Fork} from "../../../../../src/types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {Fork} from "@chainsafe/eth2.0-types";
 import {
   GENESIS_SLOT,
-} from "../../../../../src/constants";
+} from "@chainsafe/eth2.0-constants";
 import {
   getBeaconProposerIndex,
   getBlockRootAtSlot,

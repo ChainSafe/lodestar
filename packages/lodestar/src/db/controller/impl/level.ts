@@ -4,7 +4,7 @@
 
 import {LevelUp} from "levelup";
 import {SearchOptions} from "../interface";
-import {Attestation} from "../../../types";
+import {Attestation} from "@chainsafe/eth2.0-types";
 import {IDatabaseController} from "../interface";
 import {EventEmitter} from "events";
 import level from "level";

@@ -1,8 +1,9 @@
-import {IBeaconConfig} from "../../../config";
-import {IDatabaseController} from "../../controller";
-import {Bucket, encodeKey} from "../../schema";
 import BN from "bn.js";
 import {AnySSZType, deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
+import {IDatabaseController} from "../../controller";
+import {Bucket, encodeKey} from "../../schema";
 
 export type Id = Buffer | string | number | BN;
 

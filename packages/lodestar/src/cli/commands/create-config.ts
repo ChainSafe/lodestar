@@ -21,7 +21,7 @@ export class CreateConfigCommand implements CliCommand {
     const logger: ILogger = new WinstonLogger();
 
     commander
-      .command("create-config")
+      .command("@chainsafe/eth2.0-config")
       .description("Create default config file")
       .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
       .option("-o, --outputFile [output_file]"

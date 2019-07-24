@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 
-import {bytes32, Deposit, number64} from "../../../../src/types";
+import {bytes32, Deposit, number64} from "@chainsafe/eth2.0-types";
 
 import {IEth1Notifier, EthersEth1Options} from "../../../../src/eth1";
 import {Block} from "ethers/providers";

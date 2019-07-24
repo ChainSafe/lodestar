@@ -14,8 +14,8 @@ import {
   Slot,
   ValidatorIndex,
   BeaconState
-} from "../../types";
-import {IBeaconConfig} from "../../config";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {
   isSlashableAttestationData,
@@ -25,7 +25,7 @@ import {
 
 import {RpcClient} from "../rpc";
 
-import {DomainType} from "../../constants";
+import {DomainType} from "@chainsafe/eth2.0-constants";
 import {intDiv} from "../../util/math";
 import {IValidatorDB} from "../../db/api";
 import {ILogger} from "../../logger";

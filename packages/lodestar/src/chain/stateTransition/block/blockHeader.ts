@@ -9,9 +9,9 @@ import bls from "@chainsafe/bls-js";
 import {
   BeaconBlock,
   BeaconState,
-} from "../../../types";
-import {IBeaconConfig} from "../../../config";
-import {DomainType} from "../../../constants";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {DomainType} from "@chainsafe/eth2.0-constants";
 
 import {
   getBeaconProposerIndex,

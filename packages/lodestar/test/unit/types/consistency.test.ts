@@ -1,8 +1,8 @@
 import { assert } from "chai";
 import fs from "fs";
-import * as sszTypes from "../../../src/types";
+import * as sszTypes from "@chainsafe/eth2.0-types";
 
-describe("types", () => {
+describe("@chainsafe/eth2.0-types", () => {
   // interfaces are not available at run time, so we must parse our interface
   // files ourselves in order to retrieve their information
 

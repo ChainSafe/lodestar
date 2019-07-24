@@ -3,13 +3,15 @@
  */
 
 import PeerInfo from "peer-info";
-
+import {
+  Method, RequestId,
+} from "@chainsafe/eth2.0-constants";
 import {
   bytes32, Slot, number64,
   Hello, Goodbye, Status,
   BeaconBlock, BeaconState,
-  Method, RequestId, RequestBody,
-} from "../../types";
+  RequestBody,
+} from "@chainsafe/eth2.0-types";
 
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface

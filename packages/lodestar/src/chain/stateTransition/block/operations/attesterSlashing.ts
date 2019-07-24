@@ -6,8 +6,8 @@ import assert from "assert";
 import {
   BeaconState,
   AttesterSlashing,
-} from "../../../../types";
-import {IBeaconConfig} from "../../../../config";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {
   getCurrentEpoch,

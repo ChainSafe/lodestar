@@ -9,7 +9,7 @@ import {BitList} from "@chainsafe/bit-utils";
 
 import {
   DomainType,
-} from "../../../constants";
+} from "@chainsafe/eth2.0-constants";
 import {
   Attestation,
   AttestationData,
@@ -17,8 +17,8 @@ import {
   IndexedAttestation,
   Slot,
   ValidatorIndex,
-} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {intDiv} from "../../../util/math";
 import {isSorted} from "../../../util/sort";

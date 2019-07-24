@@ -4,9 +4,9 @@
 
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {BeaconBlock, Attestation} from "../types";
-import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
-import {IBeaconConfig} from "../config";
+import {BeaconBlock, Attestation} from "@chainsafe/eth2.0-types";
+import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "@chainsafe/eth2.0-constants";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";

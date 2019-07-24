@@ -6,8 +6,8 @@ import sinon from "sinon";
 import {restore, rewire} from "@chainsafe/bls-js";
 import {equals} from "@chainsafe/ssz";
 
-import {BeaconState, AttesterSlashing} from "../../../../src/types";
-import {config} from "../../../../src/config/presets/mainnet";
+import {BeaconState, AttesterSlashing} from "@chainsafe/eth2.0-types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processAttesterSlashing} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 

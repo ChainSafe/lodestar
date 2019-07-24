@@ -5,8 +5,8 @@
 import assert from "assert";
 import PeerInfo from "peer-info";
 
-import {BeaconBlockHeadersResponse, BeaconBlockBodiesResponse, BeaconBlock} from "../types";
-import {IBeaconConfig} from "../config";
+import {BeaconBlockHeadersResponse, BeaconBlockBodiesResponse, BeaconBlock} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {SyncRpc} from "../network/libp2p/syncRpc";

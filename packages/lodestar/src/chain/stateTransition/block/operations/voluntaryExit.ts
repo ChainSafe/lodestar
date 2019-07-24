@@ -9,12 +9,12 @@ import bls from "@chainsafe/bls-js";
 import {
   BeaconState,
   VoluntaryExit,
-} from "../../../../types";
+} from "@chainsafe/eth2.0-types";
 import {
   DomainType,
   FAR_FUTURE_EPOCH,
-} from "../../../../constants";
-import {IBeaconConfig} from "../../../../config";
+} from "@chainsafe/eth2.0-constants";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 
 import {

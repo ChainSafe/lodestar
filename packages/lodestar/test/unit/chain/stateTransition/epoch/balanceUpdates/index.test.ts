@@ -2,9 +2,9 @@ import BN from "bn.js";
 import {expect} from "chai";
 import sinon from "sinon";
 
-import {config} from "../../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
-import {GENESIS_EPOCH} from "../../../../../../src/constants";
+import {GENESIS_EPOCH} from "@chainsafe/eth2.0-constants";
 import {processRewardsAndPenalties}
   from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates";
 import * as attestationDeltas

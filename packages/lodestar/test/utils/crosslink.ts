@@ -1,5 +1,5 @@
-import {Crosslink, Epoch} from "../../src/types";
-import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, GENESIS_START_SHARD, ZERO_HASH} from "../../src/constants";
+import {Crosslink, Epoch} from "@chainsafe/eth2.0-types";
+import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, GENESIS_START_SHARD, ZERO_HASH} from "@chainsafe/eth2.0-constants";
 
 export function generateEmptyCrosslink(epoch: Epoch = GENESIS_EPOCH): Crosslink {
   return {

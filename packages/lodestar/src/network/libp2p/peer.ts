@@ -10,8 +10,8 @@ import Abortable from "pull-abortable";
 
 import {
   Hello, Status, RequestBody, ResponseBody
-} from "../../types";
-import {Method} from "../../constants";
+} from "@chainsafe/eth2.0-types";
+import {Method} from "@chainsafe/eth2.0-constants";
 import {NetworkRpc} from "./rpc";
 
 

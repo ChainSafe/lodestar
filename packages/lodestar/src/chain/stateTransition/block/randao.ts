@@ -7,9 +7,9 @@ import xor from "buffer-xor";
 import {hashTreeRoot, hash} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls-js";
 
-import {BeaconBlockBody, BeaconState} from "../../../types";
-import {DomainType} from "../../../constants";
-import {IBeaconConfig} from "../../../config";
+import {BeaconBlockBody, BeaconState} from "@chainsafe/eth2.0-types";
+import {DomainType} from "@chainsafe/eth2.0-constants";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {getBeaconProposerIndex, getCurrentEpoch, getDomain, getRandaoMix,} from "../util";
 

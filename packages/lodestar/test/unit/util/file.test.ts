@@ -18,7 +18,7 @@ describe("util/file", function() {
     assert.isTrue(ensureDirectoryExistence("src"));
   });
 
-  it("should write toml config", () => {
+  it("@chainsafe/eth2.0-config", () => {
     writeTomlConfig(testFilePath);
     assert.isTrue(fs.existsSync(testFilePath));
   });

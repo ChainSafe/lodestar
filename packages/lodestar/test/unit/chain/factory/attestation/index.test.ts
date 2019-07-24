@@ -2,7 +2,7 @@ import sinon from "sinon";
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 
-import {config} from "../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as attestationDataProduction from "../../../../../src/chain/factory/attestation/data";
 import {BeaconDb} from "../../../../../src/db/api";
 import {assembleAttestation} from "../../../../../src/chain/factory/attestation";

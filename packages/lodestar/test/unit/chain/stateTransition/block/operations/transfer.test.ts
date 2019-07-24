@@ -5,10 +5,10 @@ import sinon from "sinon";
 import {restore, rewire} from "@chainsafe/bls-js";
 import {hash} from "@chainsafe/ssz";
 
-import {config} from "../../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   FAR_FUTURE_EPOCH,
-} from "../../../../../../src/constants";
+} from "@chainsafe/eth2.0-constants";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
 import {computeEpochOfSlot} from "../../../../../../src/chain/stateTransition/util";
 import {processTransfer} from "../../../../../../src/chain/stateTransition/block/operations";

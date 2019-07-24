@@ -1,5 +1,5 @@
 import {IBeaconApi} from "../../../../src/rpc/api/beacon";
-import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "../../../../src/types";
+import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "@chainsafe/eth2.0-types";
 import {getEmptyBlock} from "../../../../src/chain/genesis/genesis";
 
 export interface MockBeaconApiOpts {

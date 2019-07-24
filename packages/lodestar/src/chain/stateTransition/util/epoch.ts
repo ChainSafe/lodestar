@@ -6,9 +6,9 @@ import {
   Epoch,
   Slot,
   BeaconState,
-} from "../../../types";
-import {GENESIS_EPOCH} from "../../../constants";
-import {IBeaconConfig} from "../../../config";
+} from "@chainsafe/eth2.0-types";
+import {GENESIS_EPOCH} from "@chainsafe/eth2.0-constants";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 
 /**
