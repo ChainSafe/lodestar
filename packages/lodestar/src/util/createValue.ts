@@ -5,6 +5,11 @@ import {BitList, BitVector} from "@chainsafe/bit-utils";
 
 import {intDiv} from "./math";
 
+/**
+ * Given an ssz type, create an empty value, optionally filled in with a default value
+ *
+ * The default value can be only partially specified.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createValue(type: AnySSZType, defaultValue: any = null): any {
   return _createValue(parseType(type), defaultValue);
