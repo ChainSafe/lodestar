@@ -13,6 +13,7 @@ import {
   Deposit,
   Eth1Data,
   number64,
+  Hash,
 } from "../../types";
 
 import {
@@ -25,7 +26,7 @@ import {
 } from "../../constants";
 import {IBeaconConfig} from "../../config";
 
-import {getTemporaryBlockHeader, getActiveValidatorIndices} from "../stateTransition/util";
+import {getTemporaryBlockHeader, getActiveValidatorIndices, getCompactCommitteesRoot} from "../stateTransition/util";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {processDeposit} from "../stateTransition/block/operations";
 import {bnMin} from "../../util/math";
@@ -33,7 +34,7 @@ import {createValue} from "../../util/createValue";
 
 export function initializeBeaconStateFromEth1(
   config: IBeaconConfig,
-  eth1BlockHash: bytes32,
+  eth1BlockHash: Hash,
   eth1Timestamp: number64,
   deposits: Deposit[]): BeaconState {
   const state = getGenesisBeaconState(
@@ -71,11 +72,14 @@ export function initializeBeaconStateFromEth1(
     }
   });
 
-  //Populate active_index_roots and compact_committees_roots
+  // Populate active_index_roots and compact_committees_roots
   const indices = getActiveValidatorIndices(state, config.params.GENESIS_EPOCH);
   const activeIndexRoot = hashTreeRoot(indices, config.types.ValidatorIndex);
-  //TODO: finish whith rest of 0.8 types and methods
-
+  const committeeRoot = getCompactCommitteesRoot(config, state, config.params.GENESIS_EPOCH);
+  for (let index = 0; index < config.params.EPOCHS_PER_HISTORICAL_VECTOR; index++) {
+    state.activeIndexRoots[index] = activeIndexRoot;
+    state.compactCommitteesRoots[index] = committeeRoot;
+  }
   return state;
 }
 
