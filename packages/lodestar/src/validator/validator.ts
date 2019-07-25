@@ -20,11 +20,13 @@ import {GenesisInfo} from "./types";
 import {RpcClient, RpcClientOverWs} from "./rpc";
 import {AttestationService} from "./services/attestation";
 import {IValidatorDB, LevelDbController, ValidatorDB} from "../db";
-import {ILogger} from "../logger";
+import {ILogger, WinstonLogger} from "../logger";
 import defaultValidatorOptions, {IValidatorOptions} from "./options";
 import deepmerge from "deepmerge";
 import {getKeyFromFileOrKeystore} from "../util/io";
 import {isPlainObject} from "../util/objects";
+import {ILoggingOptions} from "../logger/interface";
+import {Module} from "../logger/abstract";
 
 /**
  * Main class for the Validator client.
@@ -43,10 +45,13 @@ class Validator {
   private isRunning: boolean;
 
 
-  public constructor(opts: Partial<IValidatorOptions>, modules: {config: IBeaconConfig; logger: ILogger}) {
+  public constructor(opts: Partial<IValidatorOptions>, modules: {config: IBeaconConfig; loggingOptions: ILoggingOptions}) {
     this.opts = deepmerge(defaultValidatorOptions, opts, {isMergeableObject: isPlainObject});
     this.config = modules.config;
-    this.logger = modules.logger;
+    this.logger = new WinstonLogger({
+      loggingLevel: modules.loggingOptions.loggingLevel,
+      module: Module.VALIDATOR,
+    });
     this.isActive = false;
     this.isRunning = false;
     this.db = new ValidatorDB({
@@ -54,7 +59,10 @@ class Validator {
       controller: new LevelDbController({
         name: this.opts.db.name
       }, {
-        logger: this.logger
+        logger: new WinstonLogger({
+          loggingLevel: modules.loggingOptions.loggingLevel,
+          module: Module.DATABASE,
+        }),
       })
     });
     if(this.opts.rpcInstance) {

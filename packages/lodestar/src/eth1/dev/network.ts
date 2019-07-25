@@ -7,8 +7,10 @@ import {promisify} from "util";
 import * as utils from 'ethers/utils';
 import deepmerge from "deepmerge";
 import * as ethers from "ethers/ethers";
-import {ILogger} from "../../logger";
+import {ILogger, WinstonLogger} from "../../logger";
 import devEth1Options from "./options";
+import {ILoggingOptions} from "../../logger/interface";
+import {Module} from "../../logger/abstract";
 
 export const devNetworkOpts =  {
   port: 8545,

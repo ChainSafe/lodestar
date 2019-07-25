@@ -2,15 +2,25 @@
  * @module logger
  */
 
-import {createLogger, Logger, transports, format} from 'winston';
-import {AbstractLogger, LogLevel} from "./abstract";
+import {createLogger, format, Logger, transports} from 'winston';
+import {AbstractLogger, LogLevel, Module} from "./abstract";
+import {ILoggingOptions} from "./interface";
 
 export class WinstonLogger extends AbstractLogger {
 
   private winston: Logger;
+  private loggingOptions: ILoggingOptions;
 
-  public constructor() {
+  public constructor(loggingOptions?: ILoggingOptions ) {
     super();
+    // this.loggingOptions = loggingOptions;
+    // if (!this.loggingOptions) {
+    //   this.loggingOptions = {
+    //     loggingLevel: LogLevel.DEFAULT,
+    //     module: Module.DEFAULT,
+    //   };
+    // }
+
     this.winston = createLogger({
       level: LogLevel.INFO,
       transports: [
@@ -20,7 +30,9 @@ export class WinstonLogger extends AbstractLogger {
             format.timestamp({
               format: 'YYYY-MM-DD HH:mm:ss'
             }),
-            format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`)
+            format.printf(
+              info => `${info.timestamp} ${info.level}: ${info.message}`
+            )
           ),
           handleExceptions: true
         }),

@@ -10,7 +10,18 @@ export enum LogLevel {
   INFO = 'info',
   WARN = 'warn',
   ERROR = 'error',
-  NONE = 'none'
+  NONE = 'none',
+  DEFAULT = 'info'
+}
+
+export enum Module {
+  CHAIN = '[CHAIN]',
+  NETWORK = '[NETWORK]',
+  DATABASE = '[DATABASE]',
+  ETH1 = '[ETH1]',
+  SYNC = '[SYNC]',
+  VALIDATOR = '[VALIDATOR]',
+  DEFAULT = ""
 }
 
 export abstract class AbstractLogger implements ILogger{

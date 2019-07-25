@@ -15,6 +15,8 @@ import {getTomlConfig} from "../../util/file";
 import Validator from "../../validator";
 import {RpcClientOverInstance} from "../../validator/rpc";
 import {BeaconApi, ValidatorApi} from "../../rpc";
+import {ILoggingOptions} from "../../logger/interface";
+import {Module} from "../../logger/abstract";
 
 interface IBeaconCommandOptions {
   configFile?: string;
@@ -40,7 +42,7 @@ export class BeaconNodeCommand implements CliCommand {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
         try {
-          await this.action(options, logger);
+          await this.action(options);
         } catch (e) {
           logger.error(e.message + '\n' + e.stack);
         }
@@ -48,11 +50,18 @@ export class BeaconNodeCommand implements CliCommand {
     generateCommanderOptions(command, BeaconNodeOptions);
   }
 
-  public async action(options: IBeaconCommandOptions, logger: ILogger): Promise<void> {
+  public async action(options: IBeaconCommandOptions): Promise<void> {
     let conf: Partial<IBeaconNodeOptions> = {};
+    let loggingOptions;
 
     if (options.loggingLevel) {
-      logger.setLogLevel(LogLevel[options.loggingLevel]);
+      loggingOptions = {
+        loggingLevel: LogLevel[options.loggingLevel],
+      };
+    }else {
+      loggingOptions = {
+        loggingLevel: LogLevel.INFO,
+      };
     }
 
     //merge config file
@@ -65,7 +74,7 @@ export class BeaconNodeCommand implements CliCommand {
     //override current config with cli config
     conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
 
-    this.node = new BeaconNode(conf, {config, logger});
+    this.node = new BeaconNode(conf, {config, loggingOptions});
 
     if(conf.validator && conf.validator.keypair){
       conf.validator.rpcInstance = new RpcClientOverInstance({
@@ -87,7 +96,7 @@ export class BeaconNodeCommand implements CliCommand {
       });
       this.validator = new Validator(
         conf.validator,
-        {config, logger}
+        {config, loggingOptions}
       );
       await this.validator.start();
     }
