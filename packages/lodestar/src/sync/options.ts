@@ -1,8 +1,8 @@
 import {IConfigurationModule} from "../util/config";
+import {ILoggingOptions} from "../logger/interface";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface ISyncOptions {
-
+  loggingOptions?: ILoggingOptions;
 }
 
 export const SyncOptions: IConfigurationModule = {

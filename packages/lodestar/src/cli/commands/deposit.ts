@@ -13,7 +13,6 @@ import * as ethers from "ethers/ethers";
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
-import {Module} from "../../logger/abstract";
 
 interface IDepositCommandOptions {
   privateKey: string;

@@ -8,35 +8,45 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import PeerInfo from "peer-info";
 
 import {
-  bytes32, Slot, number64,
-  BeaconBlockHeader, BeaconBlockBody,
-  RequestBody, Hello, Goodbye, Status,
-  BeaconBlockRootsRequest, BeaconBlockRootsResponse,
-  BeaconBlockHeadersRequest, BeaconBlockHeadersResponse,
-  BeaconBlockBodiesRequest, BeaconBlockBodiesResponse,
-  BeaconStatesRequest, BeaconStatesResponse, Epoch, BeaconState, BeaconBlock,
+  BeaconBlock,
+  BeaconBlockBodiesRequest,
+  BeaconBlockBodiesResponse,
+  BeaconBlockHeader,
+  BeaconBlockHeadersRequest,
+  BeaconBlockHeadersResponse,
+  BeaconBlockRootsRequest,
+  BeaconBlockRootsResponse,
+  BeaconState,
+  BeaconStatesRequest,
+  BeaconStatesResponse,
+  bytes32,
+  Epoch,
+  Goodbye,
+  Hello,
+  number64,
+  RequestBody,
+  Slot,
+  Status,
 } from "../../types";
-import {ZERO_HASH, Method, RequestId, ResponseCode} from "../../constants";
+import {Method, RequestId, ResponseCode, ZERO_HASH} from "../../constants";
 import {intDiv} from "../../util/math";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../index";
 import {getEmptyBlockBody} from "../../chain/genesis";
 import {ReputationStore} from "../../sync/reputation";
-import {ILogger} from "../../logger";
-import { IBeaconConfig } from "../../config";
+import {ILogger, WinstonLogger} from "../../logger";
+import {IBeaconConfig} from "../../config";
+import {Module} from "../../logger/abstract";
 import {ISyncRpc} from "../../sync/rpc/interface";
-
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-interface SyncOptions {
-}
+import {ISyncOptions} from "../../sync/options";
 
 /**
  * The SyncRpc module handles app-level requests / responses from other peers,
  * fetching state from the chain and database as needed.
  */
 export class SyncRpc implements ISyncRpc {
-  private opts: SyncOptions;
+  private opts: ISyncOptions;
   private config: IBeaconConfig;
   private db: IBeaconDb;
   private chain: IBeaconChain;
@@ -44,11 +54,10 @@ export class SyncRpc implements ISyncRpc {
   private reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: SyncOptions,
-    {config, db, chain, network, reps, logger}:
-    { config: IBeaconConfig; db: IBeaconDb; chain: IBeaconChain; network: INetwork; reps: ReputationStore; logger: ILogger }) {
+  public constructor(opts: ISyncOptions, {config, db, chain, network, reps, logger}:
+  {config: IBeaconConfig; db: IBeaconDb; chain: IBeaconChain; network: INetwork; reps: ReputationStore; logger?: ILogger}) {
     this.config = config;
-    this.logger = logger;
+    this.logger = logger || new WinstonLogger(opts.loggingOptions, Module.NETWORK);
     this.opts = opts;
     this.db = db;
     this.chain = chain;

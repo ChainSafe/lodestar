@@ -8,7 +8,6 @@ import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import fs from "fs";
 import {CliError} from "../error";
 import {writeTomlConfig} from "../../util/file";
-import {Module} from "../../logger/abstract";
 
 interface ICreateConfigOptions {
   loggingLevel: string;
@@ -41,6 +40,7 @@ export class CreateConfigCommand implements CliCommand {
     if (options.loggingLevel) {
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }
+
     if (fs.existsSync(options.outputFile)) {
       throw new CliError(`${options.outputFile} already exists`);
     }

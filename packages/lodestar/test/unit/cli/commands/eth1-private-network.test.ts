@@ -4,7 +4,6 @@ import {Eth1PrivateNetworkCommand} from "../../../../src/cli/commands/index";
 import program from "commander";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
 
-
 describe('[CLI] eth1:dev', function () {
   this.timeout(4000);
 
@@ -36,7 +35,7 @@ describe('[CLI] eth1:dev', function () {
       network: null,
       mnemonic: null,
       database:null
-    }, logger);
+    });
     expect(network).to.not.be.null;
     await network.stop();
   });

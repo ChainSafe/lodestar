@@ -6,6 +6,8 @@ import {TransportType} from "../rpc/transport";
 import {IConfigurationModule} from "../util/config";
 import {IValidatorDB} from "../db/api";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
+import {ILoggingOptions} from "../logger/interface";
+import {parseLoggingLevel} from "../util/parse";
 
 export interface IValidatorOptions {
   db: IDatabaseOptions;
@@ -14,6 +16,7 @@ export interface IValidatorOptions {
   rpcInstance?: RpcClient;
   keypair: Keypair;
   keystore?: string;
+  loggingOptions?: ILoggingOptions;
 }
 
 export const ValidatorOptions: IConfigurationModule = {
@@ -60,8 +63,23 @@ export const ValidatorOptions: IConfigurationModule = {
       type: String,
       description: "Path to keystore file",
       configurable: true,
+      process: (loggingLevel) => {
+        const loggingOptions: ILoggingOptions = {
+          loggingLevel: parseLoggingLevel(loggingLevel),
+        };
+        return loggingLevel;
+      },
       cli: {
         flag: "validatorKeystore"
+      }
+    },
+    {
+      name: "loggingOptions",
+      type: String,
+      description: "Logging Level for different module",
+      configurable: true,
+      cli: {
+        flag: "loggingLevel"
       }
     }
   ]

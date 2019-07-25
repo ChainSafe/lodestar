@@ -34,7 +34,7 @@ describe("Eth1Notifier - using deployed contract", () => {
       port: 34569
     },
     {
-      logger: logger
+      logger,
     });
     await eth1Network.start();
     depositContractAddress = await eth1Network.deployDepositContract();
@@ -49,7 +49,7 @@ describe("Eth1Notifier - using deployed contract", () => {
       {
         config,
         opPool: new OpPool(null, {db, chain: null}),
-        logger: logger
+        logger,
       });
     await eth1Notifier.start();
   });

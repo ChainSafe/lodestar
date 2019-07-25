@@ -15,13 +15,13 @@ export enum LogLevel {
 }
 
 export enum Module {
-  CHAIN = '[CHAIN]',
-  NETWORK = '[NETWORK]',
-  DATABASE = '[DATABASE]',
-  ETH1 = '[ETH1]',
-  SYNC = '[SYNC]',
-  VALIDATOR = '[VALIDATOR]',
-  DEFAULT = ""
+  CHAIN = 'chain',
+  NETWORK = 'network',
+  DATABASE = 'database',
+  ETH1 = 'eth1',
+  SYNC = 'sync',
+  VALIDATOR = 'validator',
+  DEFAULT = ''
 }
 
 export abstract class AbstractLogger implements ILogger{

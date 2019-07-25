@@ -1,5 +1,6 @@
 import {number64} from "../types";
 import {IConfigurationModule} from "../util/config";
+import {ILoggingOptions} from "../logger/interface";
 
 export interface INetworkOptions {
   maxPeers: number64;
@@ -8,6 +9,7 @@ export interface INetworkOptions {
   rpcTimeout: number64;
   connectTimeout: number;
   disconnectTimeout: number;
+  loggingOptions?: ILoggingOptions;
 }
 
 export const NetworkOptions: IConfigurationModule = {

@@ -19,7 +19,7 @@ describe('[CLI] deposit', function() {
       port: 32567
     },
     {
-      logger: logger
+      logger,
     }
     );
     await eth1Network.start();

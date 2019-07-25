@@ -44,7 +44,7 @@ describe("syncing", function () {
       chain: chainStub,
       network: networkStub,
       reps: repsStub,
-      logger: logger,
+      logger,
     });
   });
 

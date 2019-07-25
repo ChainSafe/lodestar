@@ -26,7 +26,7 @@ describe('Eth1 dev network', () => {
     }
     ,
     {
-      logger: logger
+      logger,
     });
     await network.start();
     const accountBalance = await new Wallet(
@@ -47,7 +47,7 @@ describe('Eth1 dev network', () => {
       defaultBalance: 1400
     },
     {
-      logger: logger
+      logger,
     });
     await network.start();
     const address = await network.deployDepositContract();

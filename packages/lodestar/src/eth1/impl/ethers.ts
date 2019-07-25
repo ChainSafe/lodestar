@@ -13,12 +13,15 @@ import {IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
 import {Block, Log} from "ethers/providers";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
-import {ILogger} from "../../logger";
+import {ILogger, WinstonLogger} from "../../logger";
 import {OpPool} from "../../opPool";
 import {IEth1Options} from "../options";
+import {ILoggingOptions} from "../../logger/interface";
+import {Module} from "../../logger/abstract";
 
 export interface EthersEth1Options extends IEth1Options {
   contract?: Contract;
+  loggingOptions?: ILoggingOptions;
 }
 
 /**
@@ -42,9 +45,10 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   private logger: ILogger;
 
-  public constructor(opts: EthersEth1Options, {config, opPool, logger}: {config: IBeaconConfig; opPool: OpPool; logger: ILogger}) {
+  public constructor(opts: EthersEth1Options, {config, opPool, logger}:
+  {config: IBeaconConfig; opPool: OpPool; logger?: ILogger}) {
     super();
-    this.logger = logger;
+    this.logger = logger || new WinstonLogger(opts.loggingOptions, Module.ETH1);
     this.config = config;
     this.opts = opts;
     if(this.opts.providerInstance) {

@@ -12,16 +12,13 @@ export class WinstonLogger extends AbstractLogger {
   private loggingModule;
   private loggingLevel;
 
-  public constructor(loggingOptions?: ILoggingOptions ) {
+  public constructor(loggingOptions?: ILoggingOptions, loggingModule?: Module ) {
     super();
-
-    if (!loggingOptions) {
-      this.loggingModule = Module.DEFAULT;
+    this.loggingModule = loggingModule || Module.DEFAULT;
+    if (loggingOptions) {
+      this.loggingLevel = (loggingOptions).loggingLevel.get(this.loggingModule) || LogLevel.DEFAULT;
+    }else {
       this.loggingLevel = LogLevel.DEFAULT;
-    }
-    else {
-      this.loggingModule = loggingOptions.loggingModule;
-      this.loggingLevel = loggingOptions.loggingLevel;
     }
 
     this.winston = createLogger({
@@ -34,12 +31,13 @@ export class WinstonLogger extends AbstractLogger {
               format: 'YYYY-MM-DD HH:mm:ss'
             }),
             format.printf(
-              info => `${info.timestamp} ${this.loggingModule} ${info.level}: ${info.message}`
+              info => {
+                return `${info.timestamp} [${this.loggingModule.toUpperCase()}] ${info.level}: ${info.message}`;
+              }
             )
           ),
           handleExceptions: true
         }),
-
       ],
       exitOnError: false
     });
@@ -61,7 +59,7 @@ export class WinstonLogger extends AbstractLogger {
     this.createLogEntry(LogLevel.WARN, message, context);
   }
 
-  private createLogEntry(level: LogLevel, message: string | object, context: object = {}): void {
+  public createLogEntry(level: LogLevel, message: string | object, context: object = {}): void {
     if (typeof message === 'object') {
       this.winston.log(level, JSON.stringify(message));
     } else {
@@ -71,10 +69,6 @@ export class WinstonLogger extends AbstractLogger {
 
   public setLogLevel(level: LogLevel): void {
     this.winston.level = level;
-  }
-
-  public setLoggingModule(loggingModule: Module): void{
-    this.loggingModule = loggingModule;
   }
 
   public silent(silent: boolean): void {

@@ -10,6 +10,8 @@ import Validator from "../../validator";
 import {generateCommanderOptions, optionsToConfig} from "../util";
 import {ValidatorOptions} from "../../validator/options";
 import {Module} from "../../logger/abstract";
+import {ILoggingOptions} from "../../logger/interface";
+import {parseLoggingLevel} from "../../util/parse";
 
 interface IValidatorCommandOptions {
   loggingLevel?: string;
@@ -23,7 +25,8 @@ export class ValidatorCommand implements CliCommand {
     const command = commander
       .command("validator")
       .description("Start lodestar validator")
-      .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
+      .option("-l, --loggingLevel [chain=debug, network=trace, database=warn]",
+        "Logging level with module")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
@@ -37,26 +40,13 @@ export class ValidatorCommand implements CliCommand {
   }
 
   public async action(options: IValidatorCommandOptions): Promise<void> {
-    let loggingOptions;
-    if (options.loggingLevel) {
-      loggingOptions = {
-        loggingLevel: LogLevel[options.loggingLevel],
-        loggingModule: Module.VALIDATOR,
-      };
-    }else {
-      loggingOptions = {
-        loggingLevel: LogLevel.DEFAULT,
-        loggingModule: Module.VALIDATOR
-      };
-    }
-    const conf = optionsToConfig(options, ValidatorOptions);
 
+    const conf = optionsToConfig(options, ValidatorOptions);
+    console.log(conf);
     let validator = new Validator(
       conf,
       {
         config: config,
-        logger: new WinstonLogger(loggingOptions) ,
-        loggingOptions: loggingOptions
       }
     );
 

@@ -41,7 +41,7 @@ describe("syncing", function () {
       opPool: opPoolStub,
       reps: repsStub,
       rpc: rpcStub,
-      logger: logger,
+      logger,
     }
     );
   });

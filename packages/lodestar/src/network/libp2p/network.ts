@@ -9,16 +9,15 @@ import LibP2p from "libp2p";
 import Gossipsub from "libp2p-gossipsub";
 import PeerInfo from "peer-info";
 
-import {Attestation, BeaconBlock, Shard, RequestBody, ResponseBody} from "../../types";
-import {
-  Method, RequestId, BLOCK_TOPIC, ATTESTATION_TOPIC, SHARD_SUBNET_COUNT,
-} from "../../constants";
+import {Attestation, BeaconBlock, RequestBody, ResponseBody, Shard} from "../../types";
+import {ATTESTATION_TOPIC, BLOCK_TOPIC, Method, RequestId, SHARD_SUBNET_COUNT,} from "../../constants";
 import {IBeaconConfig} from "../../config";
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {NetworkRpc} from "./rpc";
-import {ILogger} from "../../logger";
+import {ILogger, WinstonLogger} from "../../logger";
 import {INetworkOptions} from "../options";
 import {INetwork} from "../interface";
+import {Module} from "../../logger/abstract";
 
 
 export class Libp2pNetwork extends EventEmitter implements INetwork {
@@ -31,18 +30,19 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
   private inited: Promise<void>;
   private logger: ILogger;
 
-  public constructor(opts: INetworkOptions, {config, libp2p,logger}: {config: IBeaconConfig; libp2p: any; logger: ILogger}) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger}:
+  {config: IBeaconConfig; libp2p: any; logger?: ILogger}) {
     super();
     this.opts = opts;
     this.config = config;
-    this.logger = logger;
+    this.logger = logger || new WinstonLogger(opts.loggingOptions, Module.NETWORK);
     // `libp2p` can be a promise as well as a libp2p object
     this.inited = new Promise((resolve) => {
       Promise.resolve(libp2p).then((libp2p) => {
         this.peerInfo = libp2p.peerInfo;
         this.libp2p = libp2p;
         this.pubsub = new Gossipsub(libp2p);
-        this.rpc = new NetworkRpc(opts, {config, libp2p, logger});
+        this.rpc = new NetworkRpc(opts, {config, libp2p, logger: this.logger});
         resolve();
       });
     });

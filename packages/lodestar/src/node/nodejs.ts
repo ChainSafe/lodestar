@@ -19,10 +19,6 @@ import {ILogger, WinstonLogger} from "../logger";
 import {ReputationStore} from "../sync/reputation";
 import {JSONRPC, WSServer} from "../rpc";
 import {SyncRpc} from "../network/libp2p/syncRpc";
-import {ILoggingOptions} from "../logger/interface";
-import {Module} from "../logger/abstract";
-
-
 
 export interface Service {
   start(): Promise<void>;
@@ -44,11 +40,10 @@ export class BeaconNode {
   public rpc: Service;
   public sync: Sync;
   public reps: ReputationStore;
-  private loggingOptions: ILoggingOptions;
   private logger: ILogger;
 
-  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger,  loggingOptions}:
-  {config: IBeaconConfig; logger: ILogger; loggingOptions: ILoggingOptions}) {
+  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger}:
+  {config: IBeaconConfig; logger?: ILogger}) {
 
     this.conf = deepmerge(
       defaultConf,
@@ -59,53 +54,37 @@ export class BeaconNode {
       }
     );
     this.config = config;
-
-    this.logger = logger;
-    this.loggingOptions = loggingOptions;
-
+    this.logger = logger || new WinstonLogger(opts.loggingOptions);
     this.reps = new ReputationStore();
     this.db = new BeaconDB({
       config,
-      controller: new LevelDbController(this.conf.db, {
-        logger: new WinstonLogger({
-          loggingLevel: this.loggingOptions.loggingLevel,
-          loggingModule: Module.DATABASE,
-        }),
-      }),
+      controller: new LevelDbController(this.conf.db, {logger}),
     });
     // initialize for network type
     const libp2p = createPeerId()
       .then((peerId) => initializePeerInfo(peerId, this.conf.network.multiaddrs))
       .then((peerInfo) => new NodejsNode({peerInfo}));
 
-    const rpc = new SyncRpc(opts, {
-      config, db: this.db, chain: this.chain, network: this.network, reps: this.reps, logger: this.logger
+    const rpc = new SyncRpc(this.conf.sync, {
+      config,
+      db: this.db,
+      chain: this.chain,
+      network: this.network,
+      reps: this.reps,
     });
-
     this.network = new Libp2pNetwork(this.conf.network, {
       config,
       libp2p: libp2p,
-      logger: new WinstonLogger({
-        loggingLevel: this.loggingOptions.loggingLevel,
-        loggingModule: Module.NETWORK,
-      }),
     });
     this.eth1 = new EthersEth1Notifier(this.conf.eth1, {
       config,
       opPool: this.opPool,
-      logger: new WinstonLogger({
-        loggingLevel: this.loggingOptions.loggingLevel,
-        loggingModule: Module.ETH1,
-      }),
+      logger
     });
     this.chain = new BeaconChain(this.conf.chain, {
       config,
       db: this.db,
       eth1: this.eth1,
-      logger: new WinstonLogger({
-        loggingLevel: this.loggingOptions.loggingLevel,
-        loggingModule: Module.CHAIN,
-      }),
     });
     this.opPool = new OpPool(this.conf.opPool, {
       db: this.db,
@@ -121,10 +100,6 @@ export class BeaconNode {
       network: this.network,
       reps: this.reps,
       rpc,
-      logger: new WinstonLogger({
-        loggingLevel: this.loggingOptions.loggingLevel,
-        loggingModule: Module.SYNC,
-      }),
     });
     //TODO: needs to be moved to Rpc class and initialized from opts
     this.rpc = new JSONRPC(this.conf.api, {

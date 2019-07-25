@@ -7,8 +7,7 @@ import {LogLevel, Module} from "./abstract";
 
 
 export interface ILoggingOptions {
-  loggingLevel: LogLevel;
-  loggingModule: Module;
+  loggingLevel: Map<Module, LogLevel>;
 }
 
 export interface ILogger {

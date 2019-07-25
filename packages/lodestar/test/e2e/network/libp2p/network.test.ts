@@ -26,8 +26,8 @@ describe("[network] network", () => {
   const logger: ILogger = new WinstonLogger();
 
   beforeEach(async () => {
-    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger});
-    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger});
+    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger});
+    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger});
     await Promise.all([
       netA.start(),
       netB.start(),

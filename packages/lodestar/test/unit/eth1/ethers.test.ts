@@ -41,7 +41,7 @@ describe("Eth1Notifier", () => {
     {
       config,
       opPool,
-      logger: logger
+      logger,
     });
   });
 
@@ -265,7 +265,7 @@ describe("Eth1Notifier", () => {
     {
       config,
       opPool,
-      logger: logger
+      logger,
     });
     const testDepositRoot = Buffer.alloc(32);
     spy.resolves('0x' + testDepositRoot.toString('hex'));

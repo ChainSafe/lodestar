@@ -3,16 +3,18 @@
  */
 
 import {LevelUp} from "levelup";
-import {SearchOptions} from "../interface";
+import {IDatabaseController, SearchOptions} from "../interface";
 import {Attestation} from "../../../types";
-import {IDatabaseController} from "../interface";
 import {EventEmitter} from "events";
 import level from "level";
-import {ILogger} from "../../../logger";
+import {ILogger, WinstonLogger} from "../../../logger";
 import {IDatabaseOptions} from "../../options";
+import {ILoggingOptions} from "../../../logger/interface";
+import {Module} from "../../../logger/abstract";
 
 export interface LevelDBOptions extends IDatabaseOptions {
   db?: LevelUp;
+  loggingOptions?: ILoggingOptions;
 }
 
 /**
@@ -26,10 +28,10 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
 
   private logger: ILogger;
 
-  public constructor(opts: LevelDBOptions, {logger}: {logger: ILogger}) {
+  public constructor(opts: LevelDBOptions,  {logger}: {logger?: ILogger}) {
     super();
     this.opts = opts;
-    this.logger = logger;
+    this.logger = logger || new WinstonLogger(this.opts.loggingOptions, Module.DATABASE);
     this.db =
       opts.db
       ||

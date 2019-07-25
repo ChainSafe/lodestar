@@ -1,8 +1,10 @@
 import {IConfigurationModule} from "../util/config";
 import {number64} from "../types";
+import {ILoggingOptions} from "../logger/interface";
 
 export interface IChainOptions {
   name: string;
+  loggingOptions?: ILoggingOptions;
 }
 
 export const ChainOptions: IConfigurationModule = {

@@ -9,13 +9,14 @@ import {INetwork} from "../network";
 import {OpPool} from "../opPool";
 import {IEth1Notifier} from "../eth1";
 import {IBeaconDb} from "../db";
-import {SyncRpc} from "../network/libp2p/syncRpc";
 import {RegularSync} from "./regular";
 import {InitialSync} from "./initial";
 import {ReputationStore} from "./reputation";
-import {ILogger} from "../logger";
+import {ILogger, WinstonLogger} from "../logger";
 import {ISyncOptions} from "./options";
 import {ISyncRpc} from "./rpc/interface";
+import {Module} from "../logger/abstract";
+import {ILoggingOptions} from "../logger/interface";
 
 interface SyncModules {
   config: IBeaconConfig;
@@ -26,7 +27,7 @@ interface SyncModules {
   opPool: OpPool;
   reps: ReputationStore;
   rpc: ISyncRpc;
-  logger: ILogger;
+  logger?: ILogger;
 }
 
 /**
@@ -56,7 +57,7 @@ export class Sync extends EventEmitter {
     this.network = network;
     this.opPool = opPool;
     this.reps = reps;
-    this.logger = logger;
+    this.logger = logger || new WinstonLogger(this.opts.loggingOptions, Module.SYNC);
     this.rpc = rpc;
   }
 
@@ -103,7 +104,7 @@ export class Sync extends EventEmitter {
       opPool: this.opPool,
       logger: this.logger,
     });
-    this.syncer.start();
+    await this.syncer.start();
   }
 
   public async stop(): Promise<void> {

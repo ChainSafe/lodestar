@@ -27,6 +27,7 @@ export interface PrivateNetworkOpts {
   dbPath?: string;
   blockTime?: number;
   mnemonic?: string;
+  loggingOptions?: ILoggingOptions;
 }
 
 export class PrivateEth1Network {
@@ -39,9 +40,9 @@ export class PrivateEth1Network {
 
   private logger: ILogger;
 
-  public constructor(opts: PrivateNetworkOpts, {logger}: {logger: ILogger} ) {
+  public constructor(opts: PrivateNetworkOpts, {logger}: {logger?: ILogger} ) {
     this.opts = deepmerge(devNetworkOpts, opts);
-    this.logger = logger;
+    this.logger = logger || new WinstonLogger(this.opts.loggingOptions, Module.ETH1);
     this.server = ganache.server({
       ...this.opts,
       // eslint-disable-next-line  @typescript-eslint/camelcase

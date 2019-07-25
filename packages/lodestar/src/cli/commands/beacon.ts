@@ -7,7 +7,7 @@ import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
 
 import {config} from "../../config/presets/mainnet";
-import {ILogger, LogLevel, WinstonLogger} from "../../logger";
+import {ILogger, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
 import {generateCommanderOptions, optionsToConfig} from "../util";
@@ -17,6 +17,7 @@ import {RpcClientOverInstance} from "../../validator/rpc";
 import {BeaconApi, ValidatorApi} from "../../rpc";
 import {ILoggingOptions} from "../../logger/interface";
 import {Module} from "../../logger/abstract";
+import {parseLoggingLevel} from "../../util/parse";
 
 interface IBeaconCommandOptions {
   configFile?: string;
@@ -37,12 +38,13 @@ export class BeaconNodeCommand implements CliCommand {
       .command("beacon")
       .description("Start lodestar node")
       .option("-c, --configFile [config_file]", "Config file path")
-      .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
+      .option("-l, --loggingLevel [chain=debug, network=trace, database=warn]",
+        "Logging level with module")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
         try {
-          await this.action(options, logger);
+          await this.action(options);
         } catch (e) {
           logger.error(e.message + '\n' + e.stack);
         }
@@ -50,24 +52,16 @@ export class BeaconNodeCommand implements CliCommand {
     generateCommanderOptions(command, BeaconNodeOptions);
   }
 
-  public async action(options: IBeaconCommandOptions, logger: ILogger): Promise<void> {
+  public async action(options: IBeaconCommandOptions,): Promise<void> {
     let conf: Partial<IBeaconNodeOptions> = {};
-    let loggingOptions;
-
-    if (options.loggingLevel) {
-      loggingOptions = {
-        loggingLevel: LogLevel[options.loggingLevel],
-      };
-    }else {
-      loggingOptions = {
-        loggingLevel: LogLevel.DEFAULT,
-      };
-    }
-    logger.setLogLevel(loggingOptions.loggingLevel);
+    const loggingOptions: ILoggingOptions = {
+      loggingLevel: parseLoggingLevel(options.loggingLevel),
+    };
 
     //merge config file
     if (options.configFile) {
       let parsedConfig = getTomlConfig(options.configFile, BeaconNodeOptions);
+      console.log(parsedConfig);
       //cli will override toml config options
       conf = deepmerge(conf, parsedConfig);
     }
@@ -75,7 +69,7 @@ export class BeaconNodeCommand implements CliCommand {
     //override current config with cli config
     conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
 
-    this.node = new BeaconNode(conf, {config, logger, loggingOptions});
+    this.node = new BeaconNode(conf, {config});
 
     if(conf.validator && conf.validator.keypair){
       conf.validator.rpcInstance = new RpcClientOverInstance({
@@ -99,11 +93,6 @@ export class BeaconNodeCommand implements CliCommand {
       this.validator = new Validator(
         conf.validator, {
           config: config,
-          logger: new WinstonLogger({
-            loggingLevel: loggingOptions.loggingLevel,
-            loggingModule: Module.VALIDATOR,
-          }),
-          loggingOptions: loggingOptions,
         }
       );
       await this.validator.start();
@@ -111,5 +100,5 @@ export class BeaconNodeCommand implements CliCommand {
 
     await this.node.start();
   }
-
 }
+

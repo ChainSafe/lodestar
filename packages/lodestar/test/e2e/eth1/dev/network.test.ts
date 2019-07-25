@@ -24,7 +24,7 @@ describe('Eth1 dev network', function () {
       defaultBalance: 1400
     },
     {
-      logger: logger
+      logger,
     }
     );
     await network.start();
@@ -47,7 +47,7 @@ describe('Eth1 dev network', function () {
       defaultBalance: 1400
     },
     {
-      logger: logger
+      logger,
     }
     );
     await network.start();
