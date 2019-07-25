@@ -7,12 +7,12 @@ import sinon from "sinon";
 import {equals} from "@chainsafe/ssz";
 
 import {BeaconState, Transfer} from "../../../../src/types";
-import {config} from "../../../../src/config/presets/mainnet";
+import {config} from "../../../../src/config/presets/minimal";
 import {processTransfer} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 
 describeSpecTest(
-  join(__dirname, "../../test-cases/tests/operations/transfer/transfer_mainnet.yaml"),
+  join(__dirname, "../../test-cases/tests/operations/transfer/transfer_minimal.yaml"),
   (state, transfer) => {
     processTransfer(config, state, transfer);
     return state;

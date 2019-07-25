@@ -65,8 +65,8 @@ describe("syncing", function () {
   it('should skip attestation - too old', async function () {
     let attestation = generateEmptyAttestation();
     let state = generateState();
-    state.finalizedEpoch = 2;
-    attestation.data.targetEpoch = 1;
+    state.finalizedCheckpoint.epoch = 2;
+    attestation.data.target.epoch = 1;
     dbStub.hasAttestation.resolves(false);
     dbStub.getLatestState.resolves(state);
     try {
@@ -79,8 +79,8 @@ describe("syncing", function () {
   it('should receive attestation', async function () {
     let attestation = generateEmptyAttestation();
     let state = generateState();
-    state.finalizedEpoch = 1;
-    attestation.data.targetEpoch = 2;
+    state.finalizedCheckpoint.epoch = 1;
+    attestation.data.target.epoch = 2;
     dbStub.hasAttestation.resolves(false);
     dbStub.getLatestState.resolves(state);
     opPoolStub.attestations = new AttestationOperations(dbStub);

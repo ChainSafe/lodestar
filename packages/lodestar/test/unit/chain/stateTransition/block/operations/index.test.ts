@@ -147,7 +147,7 @@ describe('process block - process operations', function () {
     body.attesterSlashings.push(generateEmptyAttesterSlashing());
     body.attestations.push(generateEmptyAttestation());
     body.deposits.push(generateDeposit());
-    state.latestEth1Data.depositCount++;
+    state.eth1Data.depositCount++;
 
     try {
       processOperations(config, state, body);
@@ -173,7 +173,7 @@ describe('process block - process operations', function () {
     body.attesterSlashings.push(generateEmptyAttesterSlashing());
     body.attestations.push(generateEmptyAttestation());
     body.deposits.push(generateDeposit());
-    state.latestEth1Data.depositCount++;
+    state.eth1Data.depositCount++;
     body.voluntaryExits.push(generateEmptyVoluntaryExit());
 
     try {
@@ -200,7 +200,7 @@ describe('process block - process operations', function () {
     body.attesterSlashings.push(generateEmptyAttesterSlashing());
     body.attestations.push(generateEmptyAttestation());
     body.deposits.push(generateDeposit());
-    state.latestEth1Data.depositCount++;
+    state.eth1Data.depositCount++;
     body.voluntaryExits.push(generateEmptyVoluntaryExit());
     try {
       processOperations(config, state, body);

@@ -6,7 +6,7 @@ import {config} from "../../../../src/config/presets/mainnet";
 import {RpcClientOverInstance} from "../../../../src/validator/rpc";
 import {ValidatorApi} from "../../../../src/rpc/api/validator";
 import {AttestationService} from "../../../../src/validator/services/attestation";
-import {slotToEpoch} from "../../../../src/chain/stateTransition/util";
+import {computeEpochOfSlot} from "../../../../src/chain/stateTransition/util";
 import {ValidatorDB} from "../../../../src/db/api";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
 import {generateFork} from "../../../utils/fork";
@@ -61,7 +61,7 @@ describe('validator attestation service', function () {
     const attestationData = generateAttestationData(slot, 1);
     rpcClientStub.validator = sandbox.createStubInstance(ValidatorApi);
     rpcClientStub.validator.produceAttestation.withArgs(slot, shard).resolves({data: attestationData});
-    rpcClientStub.validator.getCommitteeAssignment.withArgs(0, slotToEpoch(config, slot)).resolves({
+    rpcClientStub.validator.getCommitteeAssignment.withArgs(0, computeEpochOfSlot(config, slot)).resolves({
       validators: [0]
     });
     dbStub.getAttestations.resolves([]);
@@ -75,7 +75,7 @@ describe('validator attestation service', function () {
         .and(sinon.match.has('signature', sinon.match.defined))
     ).calledOnce).to.be.true;
     expect(
-      rpcClientStub.validator.getCommitteeAssignment.withArgs(0, slotToEpoch(config, slot)).calledOnce
+      rpcClientStub.validator.getCommitteeAssignment.withArgs(0, computeEpochOfSlot(config, slot)).calledOnce
     ).to.be.true;
   });
 

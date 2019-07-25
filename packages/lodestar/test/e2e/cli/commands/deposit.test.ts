@@ -7,12 +7,12 @@ import {ILogger, WinstonLogger} from "../../../../src/logger";
 chai.use(chaiAsPromised);
 
 describe('[CLI] deposit', function() {
+  this.timeout(10000);
 
   let eth1Network: PrivateEth1Network;
   const logger: ILogger = new WinstonLogger();
 
   before(async function() {
-    this.timeout(0);
     logger.silent(true);
     eth1Network = new PrivateEth1Network({
       host: '127.0.0.1',

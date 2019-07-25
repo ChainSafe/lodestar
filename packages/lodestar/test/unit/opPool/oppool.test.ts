@@ -2,22 +2,21 @@ import sinon from "sinon";
 import {expect} from "chai";
 import {OpPool} from "../../../src/opPool";
 import {BeaconDB} from "../../../src/db";
-import {BeaconChain} from "../../../src/chain";
-import {generateDeposit} from "../../utils/deposit";
 import {generateEmptyBlock} from "../../utils/block";
+import {EthersEth1Notifier} from "../../../src/eth1";
 
 
 describe("operation pool", function () {
   let sandbox = sinon.createSandbox();
   let opPool: OpPool;
-  let chainStub, dbStub;
+  let eth1Stub, dbStub;
 
   beforeEach(()=>{
     dbStub = sandbox.createStubInstance(BeaconDB);
-    chainStub = sandbox.createStubInstance(BeaconChain);
+    eth1Stub = sandbox.createStubInstance(EthersEth1Notifier);
     opPool = new OpPool({}, {
       db: dbStub,
-      chain: chainStub
+      eth1: eth1Stub
     });
   });
 
@@ -37,7 +36,7 @@ describe("operation pool", function () {
     dbStub.deleteVoluntaryExits.resolves();
     dbStub.deleteProposerSlashings.resolves();
     dbStub.deleteAttesterSlashings.resolves();
-    await opPool.removeOperations(block);
+    await opPool.processBlockOperations(block);
     expect(dbStub.deleteDeposits.calledOnce).to.be.true;
     expect(dbStub.deleteVoluntaryExits.calledOnce).to.be.true;
     expect(dbStub.deleteProposerSlashings.calledOnce).to.be.true;

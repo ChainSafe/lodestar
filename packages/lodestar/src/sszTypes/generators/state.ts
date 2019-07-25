@@ -4,44 +4,90 @@
 
 import {SimpleContainerType} from "@chainsafe/ssz";
 
+import {JUSTIFICATION_BITS_LENGTH} from "../../constants";
 import {IBeaconParams} from "../../params";
 import {IBeaconSSZTypes} from "../interface";
 
 export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
-  name: "BeaconState",
   fields: [
     // Misc
-    ["slot", ssz.Slot],
     ["genesisTime", ssz.number64],
+    ["slot", ssz.Slot],
     ["fork", ssz.Fork],
-    // Validator Registry
-    ["validatorRegistry", [ssz.Validator]],
-    ["balances", [ssz.Gwei]],
-    // Randomness and committees
-    ["latestRandaoMixes", [ssz.bytes32, params.LATEST_RANDAO_MIXES_LENGTH]],
-    ["latestStartShard", ssz.Shard],
-    // Finality
-    ["previousEpochAttestations", [ssz.PendingAttestation]],
-    ["currentEpochAttestations", [ssz.PendingAttestation]],
-    ["previousJustifiedEpoch", ssz.Epoch],
-    ["currentJustifiedEpoch", ssz.Epoch],
-    ["previousJustifiedRoot", ssz.bytes32],
-    ["currentJustifiedRoot", ssz.bytes32],
-    ["justificationBitfield", ssz.uint64],
-    ["finalizedEpoch", ssz.Epoch],
-    ["finalizedRoot", ssz.bytes32],
-    // Recent State
-    ["currentCrosslinks", [ssz.Crosslink, params.SHARD_COUNT]],
-    ["previousCrosslinks", [ssz.Crosslink, params.SHARD_COUNT]],
-    ["latestBlockRoots", [ssz.bytes32, params.SLOTS_PER_HISTORICAL_ROOT]],
-    ["latestStateRoots", [ssz.bytes32, params.SLOTS_PER_HISTORICAL_ROOT]],
-    ["latestActiveIndexRoots", [ssz.bytes32, params.LATEST_ACTIVE_INDEX_ROOTS_LENGTH]],
-    ["latestSlashedBalances", [ssz.Gwei, params.LATEST_SLASHED_EXIT_LENGTH]],
+    // History
     ["latestBlockHeader", ssz.BeaconBlockHeader],
-    ["historicalRoots", [ssz.bytes32]],
+    ["blockRoots", {
+      elementType: ssz.Hash,
+      length: params.SLOTS_PER_HISTORICAL_ROOT,
+    }],
+    ["stateRoots", {
+      elementType: ssz.Hash,
+      length: params.SLOTS_PER_HISTORICAL_ROOT,
+    }],
+    ["historicalRoots", {
+      elementType: ssz.Hash,
+      maxLength: params.HISTORICAL_ROOTS_LIMIT,
+    }],
     // Eth1
-    ["latestEth1Data", ssz.Eth1Data],
-    ["eth1DataVotes", [ssz.Eth1Data]],
-    ["depositIndex", ssz.number64],
+    ["eth1Data", ssz.Eth1Data],
+    ["eth1DataVotes", {
+      elementType: ssz.Eth1Data,
+      maxLength: params.SLOTS_PER_ETH1_VOTING_PERIOD,
+    }],
+    ["eth1DepositIndex", ssz.number64],
+    // Registry
+    ["validators", {
+      elementType: ssz.Validator,
+      maxLength: params.VALIDATOR_REGISTRY_LIMIT,
+    }],
+    ["balances", {
+      elementType: ssz.Gwei,
+      maxLength: params.VALIDATOR_REGISTRY_LIMIT,
+    }],
+    // Shuffling
+    ["startShard", ssz.Shard],
+    ["randaoMixes", {
+      elementType: ssz.Hash,
+      length: params.EPOCHS_PER_HISTORICAL_VECTOR,
+    }],
+    ["activeIndexRoots", {
+      elementType: ssz.Hash,
+      length: params.EPOCHS_PER_HISTORICAL_VECTOR,
+    }],
+    ["compactCommitteesRoots", {
+      elementType: ssz.Hash,
+      length: params.EPOCHS_PER_HISTORICAL_VECTOR,
+    }],
+    // Slashings
+    ["slashings", {
+      elementType: ssz.Gwei,
+      length: params.EPOCHS_PER_SLASHINGS_VECTOR,
+    }],
+    // Attestations
+    ["previousEpochAttestations", {
+      elementType: ssz.PendingAttestation,
+      maxLength: params.MAX_ATTESTATIONS * params.SLOTS_PER_EPOCH,
+    }],
+    ["currentEpochAttestations", {
+      elementType: ssz.PendingAttestation,
+      maxLength: params.MAX_ATTESTATIONS * params.SLOTS_PER_EPOCH,
+    }],
+    // Crosslinks
+    ["previousCrosslinks", {
+      elementType: ssz.Crosslink,
+      length: params.SHARD_COUNT,
+    }],
+    ["currentCrosslinks", {
+      elementType: ssz.Crosslink,
+      length: params.SHARD_COUNT,
+    }],
+    // Finality
+    ["justificationBits", {
+      elementType: ssz.bool,
+      length: JUSTIFICATION_BITS_LENGTH,
+    }],
+    ["previousJustifiedCheckpoint", ssz.Checkpoint],
+    ["currentJustifiedCheckpoint", ssz.Checkpoint],
+    ["finalizedCheckpoint", ssz.Checkpoint],
   ],
 });

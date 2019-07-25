@@ -1,13 +1,12 @@
 import { assert } from "chai";
 
 import {
-  getShuffledIndex,
-  getSplitOffset,
-  getEpochCommitteeCount,
+  computeShuffledIndex,
+  getCommitteeCount,
   getShardDelta,
   computeCommittee,
   getCrosslinkCommittee,
-} from "../../../../../src/chain/stateTransition/util/crosslinkCommittee";
+} from "../../../../../src/chain/stateTransition/util";
 
 
 /*

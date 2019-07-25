@@ -19,9 +19,9 @@
     "lint": "eslint --ext .ts src/",
     "lint-fix": "eslint --ext .ts src/ --fix",
     "pretest": "yarn run check-types",
-    "test:unit": "nyc mocha --colors -r ts-node/register 'test/unit/**/*.test.ts'",
-    "test:e2e": "mocha --colors --timeout 5000 -r ./.babel-register 'test/e2e/**/*.test.ts'",
-    "test:spec": "mocha --colors -r ./.babel-register 'test/spec/**/*.test.ts'",
+    "test:unit": "nyc --cache-dir .nyc_output/.cache -r lcov -e .ts mocha -r ts-node/register 'test/unit/**/*.test.ts' && nyc report",
+    "test:e2e": "mocha --timeout 5000 -r ./.babel-register 'test/e2e/**/*.test.ts'",
+    "test:spec": "mocha --max-old-space-size=7168 -r ./.babel-register 'test/spec/**/*.test.ts'",
     "test": "yarn test:unit && yarn test:spec && yarn test:e2e",
     "coverage": "codecov -F lodestar"
   },
@@ -37,8 +37,9 @@
     "blockchain"
   ],
   "dependencies": {
+    "@chainsafe/bit-utils": "^0.1.2",
     "@chainsafe/bls-js": "^0.1.5",
-    "@chainsafe/ssz": "0.4.3",
+    "@chainsafe/ssz": "0.5.1",
     "@iarna/toml": "^2.2.3",
     "@nodeutils/defaults-deep": "^1.1.0",
     "@polkadot/util-crypto": "^0.93.1",

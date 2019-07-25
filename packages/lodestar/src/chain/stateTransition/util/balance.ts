@@ -9,7 +9,31 @@ import {
   Gwei,
   ValidatorIndex,
 } from "../../../types";
+import {IBeaconConfig} from "../../../config";
 
+import {bnMax} from "../../../util/math";
+
+import {getCurrentEpoch} from "./epoch";
+import {getActiveValidatorIndices} from "./validator";
+
+
+/**
+ * Return the combined effective balance of the [[indices]]. (1 Gwei minimum to avoid divisions by zero.)
+ */
+export function getTotalBalance(state: BeaconState, indices: ValidatorIndex[]): Gwei {
+  return bnMax(
+    new BN(1),
+    indices.reduce((total: Gwei, index: ValidatorIndex): Gwei =>
+      total.add(state.validators[index].effectiveBalance), new BN(0))
+  );
+}
+
+/**
+ * Return the combined effective balance of the active validators.
+ */
+export function getTotalActiveBalance(config: IBeaconConfig, state: BeaconState): Gwei {
+  return getTotalBalance(state, getActiveValidatorIndices(state, getCurrentEpoch(config, state)));
+}
 
 /**
  * Increase the balance for a validator with the given ``index`` by ``delta``.
@@ -28,12 +52,4 @@ export function decreaseBalance(state: BeaconState, index: ValidatorIndex, delta
   state.balances[index] = delta.gt(currentBalance)
     ? new BN(0)
     : currentBalance.sub(delta);
-}
-
-/**
- * Return the combined effective balance of an array of validators.
- */
-export function getTotalBalance(state: BeaconState, indices: ValidatorIndex[]): Gwei {
-  return indices.reduce((total: Gwei, index: ValidatorIndex): Gwei =>
-    total.add(state.validatorRegistry[index].effectiveBalance), new BN(0));
 }

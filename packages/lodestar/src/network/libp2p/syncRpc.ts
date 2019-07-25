@@ -21,7 +21,7 @@ import {intDiv} from "../../util/math";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../index";
-import {getEmptyBlockBody} from "../../chain/genesis";
+import {getEmptyBlockBody} from "../../chain/genesis/genesis";
 import {ReputationStore} from "../../sync/reputation";
 import {ILogger} from "../../logger";
 import { IBeaconConfig } from "../../config";
@@ -63,7 +63,7 @@ export class SyncRpc implements ISyncRpc {
       bestRoot: bytes32,
       latestFinalizedEpoch: Epoch,
       latestFinalizedRoot: bytes32;
-    if (!this.chain.genesisTime) {
+    if (!this.chain.isInitialized()) {
       bestSlot = 0;
       bestRoot = ZERO_HASH;
       latestFinalizedEpoch = 0;
@@ -75,8 +75,8 @@ export class SyncRpc implements ISyncRpc {
         this.db.getLatestState(),
       ]);
       bestRoot = bRoot;
-      latestFinalizedEpoch = state.finalizedEpoch;
-      latestFinalizedRoot = state.finalizedRoot;
+      latestFinalizedEpoch = state.finalizedCheckpoint.epoch;
+      latestFinalizedRoot = state.finalizedCheckpoint.root;
     }
     return {
       networkId: this.chain.networkId,

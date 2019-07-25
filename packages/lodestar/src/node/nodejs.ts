@@ -78,18 +78,18 @@ export class BeaconNode {
     });
     this.eth1 = new EthersEth1Notifier(this.conf.eth1, {
       config,
-      opPool: this.opPool,
       logger: this.logger
+    });
+    this.opPool = new OpPool(this.conf.opPool, {
+      eth1: this.eth1,
+      db: this.db
     });
     this.chain = new BeaconChain(this.conf.chain, {
       config,
       db: this.db,
       eth1: this.eth1,
-      logger: this.logger
-    });
-    this.opPool = new OpPool(this.conf.opPool, {
-      db: this.db,
-      chain: this.chain,
+      logger: this.logger,
+      opPool: this.opPool
     });
 
     this.sync = new Sync(this.conf.sync, {

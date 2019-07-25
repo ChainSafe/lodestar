@@ -4,7 +4,7 @@
 
 import {
   bytes32,
-  bytes96,
+  Hash,
   Slot,
   BLSSignature,
 } from "./primitive";
@@ -22,7 +22,7 @@ import {
 
 
 export interface BeaconBlockBody {
-  randaoReveal: bytes96;
+  randaoReveal: BLSSignature;
   eth1Data: Eth1Data;
   graffiti: bytes32;
   proposerSlashings: ProposerSlashing[];
@@ -36,8 +36,8 @@ export interface BeaconBlockBody {
 export interface BeaconBlock {
   // Header
   slot: Slot;
-  parentRoot: bytes32;
-  stateRoot: bytes32;
+  parentRoot: Hash;
+  stateRoot: Hash;
   body: BeaconBlockBody;
   signature: BLSSignature;
 }
