@@ -14,17 +14,18 @@ import {
   BeaconBlockRootsRequest, BeaconBlockRootsResponse,
   BeaconBlockHeadersRequest, BeaconBlockHeadersResponse,
   BeaconBlockBodiesRequest, BeaconBlockBodiesResponse,
-  BeaconStatesRequest, BeaconStatesResponse, Epoch,
-} from "../types";
-import {ZERO_HASH, Method, RequestId, ResponseCode} from "../constants";
-import {intDiv} from "../util/math";
-import {IBeaconDb} from "../db";
-import {IBeaconChain} from "../chain";
-import {INetwork} from "../network";
-import {getEmptyBlockBody} from "../chain/genesis";
-import {ReputationStore} from "./reputation";
-import {ILogger} from "../logger";
-import { IBeaconConfig } from "../config";
+  BeaconStatesRequest, BeaconStatesResponse, Epoch, BeaconState, BeaconBlock,
+} from "../../types";
+import {ZERO_HASH, Method, RequestId, ResponseCode} from "../../constants";
+import {intDiv} from "../../util/math";
+import {IBeaconDb} from "../../db";
+import {IBeaconChain} from "../../chain";
+import {INetwork} from "../index";
+import {getEmptyBlockBody} from "../../chain/genesis";
+import {ReputationStore} from "../../sync/reputation";
+import {ILogger} from "../../logger";
+import { IBeaconConfig } from "../../config";
+import {ISyncRpc} from "../../sync/rpc/interface";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface SyncOptions {
@@ -34,7 +35,7 @@ interface SyncOptions {
  * The SyncRpc module handles app-level requests / responses from other peers,
  * fetching state from the chain and database as needed.
  */
-export class SyncRpc {
+export class SyncRpc implements ISyncRpc {
   private opts: SyncOptions;
   private config: IBeaconConfig;
   private db: IBeaconDb;
@@ -45,8 +46,7 @@ export class SyncRpc {
 
   public constructor(opts: SyncOptions,
     {config, db, chain, network, reps, logger}:
-    {config: IBeaconConfig; db: IBeaconDb; chain: IBeaconChain; network: INetwork; reps: ReputationStore; logger: ILogger} )
-  {
+    { config: IBeaconConfig; db: IBeaconDb; chain: IBeaconChain; network: INetwork; reps: ReputationStore; logger: ILogger }) {
     this.config = config;
     this.logger = logger;
     this.opts = opts;
@@ -105,13 +105,15 @@ export class SyncRpc {
       this.network.hasPeer(peerInfo) &&
       !this.reps.get(peerInfo.id.toB58String()).latestHello
     ) {
-      await this.getHello(peerInfo).catch((e) => {});
+      await this.getHello(peerInfo).catch((e) => {
+      });
     }
   }
 
   public async refreshPeerHellos(): Promise<void> {
     await this.network.getPeers().map((peerInfo) =>
-      this.getHello(peerInfo).catch((e) => {}));
+      this.getHello(peerInfo).catch((e) => {
+      }));
   }
 
   public async getHello(peerInfo: PeerInfo): Promise<Hello> {
@@ -162,9 +164,10 @@ export class SyncRpc {
   public async getBeaconStates(
     peerInfo: PeerInfo,
     hashes: bytes32[]
-  ): Promise<BeaconStatesResponse> {
-    return await this.network.sendRequest<BeaconStatesResponse>(
+  ): Promise<BeaconState[]> {
+    const stateResponse = await this.network.sendRequest<BeaconStatesResponse>(
       peerInfo, Method.BeaconStates, {hashes});
+    return stateResponse.states;
   }
 
   // handle incoming requests
@@ -301,6 +304,35 @@ export class SyncRpc {
 
   public async stop(): Promise<void> {
     this.network.removeListener("peer:connect", this.handshake.bind(this));
-    this.network.getPeers().map((p) => this.getGoodbye(p).catch((e) => {}));
+    this.network.getPeers().map((p) => this.getGoodbye(p).catch((e) => {
+    }));
+  }
+
+  public async getBeaconBlocks(
+    peerInfo: PeerInfo, startSlot: Slot, count: number64, backward: boolean
+  ): Promise<BeaconBlock[]> {
+    // startSlot = latestFinalizedSlot & count = slotCountToSync
+    const blockRootsResponse = await this.getBeaconBlockRoots(peerInfo, startSlot, count);
+    assert(blockRootsResponse.roots.length > 0);
+    const blockRoots = blockRootsResponse.roots;
+    const [
+      blockHeadersResponse,
+      blockBodiesResponse
+    ]: [BeaconBlockHeadersResponse, BeaconBlockBodiesResponse] = await Promise.all([
+      this.getBeaconBlockHeaders(peerInfo, blockRoots[0].blockRoot, blockRoots[0].slot, blockRoots[blockRoots.length - 1].slot, 0),
+      this.getBeaconBlockBodies(peerInfo, blockRoots.map((b) => b.blockRoot)),
+    ]);
+    assert(blockHeadersResponse.headers.length === blockBodiesResponse.blockBodies.length);
+    const blocks = blockHeadersResponse.headers.map((header, index) => {
+      delete header.bodyRoot;
+      const body = blockBodiesResponse.blockBodies[index];
+      const block: BeaconBlock = {
+        ...header,
+        body,
+      };
+      return block;
+    });
+
+    return blocks;
   }
 }

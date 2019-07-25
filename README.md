@@ -11,7 +11,7 @@ There is a lot of work being done that are core infrastructural pieces for Eth2.
 |-- [Gossipsub](https://github.com/ChainSafe/gossipsub-js)<br />
 
 [![](https://img.shields.io/travis/com/ChainSafe/lodestar/master.svg?label=master&logo=travis "Master Branch (Travis)")](https://travis-ci.com/ChainSafe/lodestar)
-[![](https://badges.gitter.im/chainsafe/lodestar.svg)](https://gitter.im/chainsafe/lodestar?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 [![codecov](https://codecov.io/gh/ChainSafe/lodestar/branch/master/graph/badge.svg)](https://codecov.io/gh/ChainSafe/lodestar)
 [![Maintainability](https://api.codeclimate.com/v1/badges/678099476c401e1af503/maintainability)](https://codeclimate.com/github/ChainSafe/lodestar/maintainability)
 ![ETH2.0_Spec_Version 0.7.1](https://img.shields.io/badge/ETH2.0_Spec_Version-0.7.1-2e86c1.svg)
@@ -66,7 +66,7 @@ You will see deposit contract address in console if you used `./bin/lodestar eth
 This will trigger 10 deposits to deposit contract which will trigger beacon chain initialization. Make sure to use same mnemonic which you used to start eth1 network.
 
 ## Contributors
-If you would like to contribute, please submit an issue or talk to us on our [gitter](https://gitter.im/chainsafe/lodestar-chain).
+If you would like to contribute, please submit an issue or talk to us on our [discord](https://discord.gg/yjyvFRP).
 
 ## Donations
 We are a local group of Toronto open source developers. As such, all of our open source work is funded by grants. We all take the time out of our hectic lives to contribute to the Ethereum ecosystem.

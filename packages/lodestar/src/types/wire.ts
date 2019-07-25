@@ -5,6 +5,9 @@ import {BeaconState} from "./state";
 import {SimpleContainerType} from "@chainsafe/ssz";
 import {Attestation} from "./operations";
 
+export type RequestId = string;
+export type Method = number;
+
 export interface BlockRootSlot {
   blockRoot: bytes32;
   slot: Slot;

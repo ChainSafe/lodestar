@@ -18,6 +18,7 @@ import {createPeerId, initializePeerInfo} from "../network/libp2p/util";
 import {ILogger} from "../logger";
 import {ReputationStore} from "../sync/reputation";
 import {JSONRPC, WSServer} from "../rpc";
+import {SyncRpc} from "../network/libp2p/syncRpc";
 
 
 export interface Service {
@@ -62,9 +63,14 @@ export class BeaconNode {
         logger: this.logger,
       }),
     });
+    // initialize for network type
     const libp2p = createPeerId()
       .then((peerId) => initializePeerInfo(peerId, this.conf.network.multiaddrs))
       .then((peerInfo) => new NodejsNode({peerInfo}));
+    const rpc = new SyncRpc(opts, {
+      config, db: this.db, chain: this.chain, network: this.network, reps: this.reps, logger
+    });
+
     this.network = new Libp2pNetwork(this.conf.network, {
       config,
       libp2p: libp2p,
@@ -85,6 +91,7 @@ export class BeaconNode {
       db: this.db,
       chain: this.chain,
     });
+
     this.sync = new Sync(this.conf.sync, {
       config,
       db: this.db,
@@ -93,6 +100,7 @@ export class BeaconNode {
       opPool: this.opPool,
       network: this.network,
       reps: this.reps,
+      rpc,
       logger: this.logger,
     });
     //TODO: needs to be moved to Rpc class and initialized from opts

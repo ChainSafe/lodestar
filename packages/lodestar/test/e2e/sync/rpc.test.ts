@@ -4,7 +4,7 @@ import BN from "bn.js";
 
 import {config} from "../../../src/config/presets/mainnet";
 import {Method} from "../../../src/constants";
-import {SyncRpc} from "../../../src/sync/rpc";
+import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
 import {ReputationStore} from "../../../src/sync/reputation";
 import {Libp2pNetwork} from "../../../src/network";
 import {BeaconDB, LevelDbController} from "../../../src/db";
