@@ -156,10 +156,18 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     const preFinalizedEpoch = state.finalizedCheckpoint.epoch;
     const preJustifiedEpoch = state.currentJustifiedCheckpoint.epoch;
     // Run the state transition
-    const newState = stateTransition(this.config, state, block, true);
+    let newState: BeaconState;
+    try {
+      newState = stateTransition(this.config, state, block, true);
+    }catch (e) {
+      // store block root in db and terminate
+      const blockRoot = hashTreeRoot(block, this.config.types.BeaconBlock);
+      await this.db.setBadBlockRoot(blockRoot);
+      this.logger.warn( `Found bad block, block root: ${blockRoot} ` + e.message + '\n' );
+      return;
+    }
 
     // On successful transition, update system state
-
     const blockRoot = hashTreeRoot(block, this.config.types.BeaconBlock);
     await Promise.all([
       this.db.setBlock(blockRoot, block),
