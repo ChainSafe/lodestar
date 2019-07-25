@@ -5,7 +5,7 @@
 import {HOBBITS_VERSION, Method, ProtocolType, RequestId} from "./constants";
 import {DecodedMessage, WireRequestBody, WireRequestHeader} from "./types";
 import {toCamelCase, toSnakeCase} from "./util";
-import BSON from 'bson';
+import BSON from "bson";
 
 export function encodeMessage(
   type: ProtocolType, id: RequestId, method: Method, encodedBody: Buffer = new Buffer(0)

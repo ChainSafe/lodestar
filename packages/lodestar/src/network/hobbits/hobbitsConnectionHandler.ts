@@ -16,7 +16,7 @@ import {decodeMessage, encodeMessage} from "./codec";
 import {INetworkOptions} from "../options";
 import {IBeaconConfig} from "../../config";
 import {RequestBody, ResponseBody} from "../../types";
-import BSON from "bson";
+import {promisify} from "util";
 
 /**
  * The NetworkRpc module controls network-level resources and concerns of p2p connections
@@ -174,6 +174,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
   public onRequestResponse(peer: Peer, data: Buffer): void {
     if(!sanityCheckData(data)) {
       // bad data
+      this.logger.warn(`Hobbits :: peer ${peer.peerInfo.id.toB58String()} sent wrong data.`);
       return;
     }
     // Changed response
@@ -193,7 +194,8 @@ export class HobbitsConnectionHandler extends EventEmitter {
           break;
       }
     } catch (e) {
-      this.logger.warn('Hobbits :: unable to decode request', e.message);
+      this.logger.warn(`Hobbits :: unable to decode request sent by 
+      ${peer.peerInfo.id.toB58String()}: ${e.message}`);
       return;
     }
 
@@ -227,17 +229,15 @@ export class HobbitsConnectionHandler extends EventEmitter {
     this.server.on("connection", async (connection): Promise<void> => {
       const peerInfo = await socketConnectionToPeerInfo(connection);
       this.addPeer(peerInfo);
-      this.logger.info(`Hobbits :: connected to: ${peerInfo.id.toB58String()}.`);
+      this.logger.debug(`Hobbits :: connected to: ${peerInfo.id.toB58String()}.`);
     });
 
     this.server.on("close", (): void => {
       this.logger.info("Hobbits :: server closed.");
-      // this.running = false;
     });
 
     this.server.listen(this.opts.port, (): void => {
       this.logger.info("Hobbits :: server started.");
-      // this.running = true;
     });
 
     await this.connectStaticPeers();
@@ -255,7 +255,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
     this.wipDials = new Set();
     this.peers.forEach((peer) => peer.close());
     this.peers = new Map<string, Peer>();
-    this.server.close();
+    await promisify(this.server.close.bind(this.server)());
 
     // this.libp2p.unhandle(RPC_MULTICODEC);
     // this.libp2p.removeListener('peer:connect', this.dialForRpc.bind(this));

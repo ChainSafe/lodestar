@@ -67,9 +67,6 @@ export class BeaconNode {
     const libp2p = createPeerId()
       .then((peerId) => initializePeerInfo(peerId, this.conf.network.multiaddrs))
       .then((peerInfo) => new NodejsNode({peerInfo}));
-    const rpc = new SyncRpc(opts, {
-      config, db: this.db, chain: this.chain, network: this.network, reps: this.reps, logger
-    });
 
     this.network = new Libp2pNetwork(this.conf.network, {
       config,
@@ -92,6 +89,9 @@ export class BeaconNode {
       chain: this.chain,
     });
 
+    const rpc = new SyncRpc(opts, {
+      config, db: this.db, chain: this.chain, network: this.network, reps: this.reps, logger
+    });
     this.sync = new Sync(this.conf.sync, {
       config,
       db: this.db,

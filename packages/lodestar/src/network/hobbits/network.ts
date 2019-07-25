@@ -110,7 +110,7 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
   public async disconnect(peerInfo: PeerInfo): Promise<void> {
     await this.rpc.removePeer(peerInfo);
   }
-  public async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T> {
+  public async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: number, body: RequestBody): Promise<T> {
     // the imported method is not correct
     return await this.rpc.sendRequest<T>(peerInfo, method, body);
   }

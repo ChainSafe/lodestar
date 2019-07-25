@@ -7,7 +7,7 @@ import {EventEmitter} from "events";
 import {
   Attestation, BeaconBlock, Shard, ResponseBody, RequestBody,
 } from "../types";
-import {RequestId, Method} from "../constants";
+import {RequestId} from "../constants";
 
 export interface INetwork extends EventEmitter {
   peerInfo: PeerInfo;
@@ -27,7 +27,7 @@ export interface INetwork extends EventEmitter {
   // Rpc/peer
   getPeers(): PeerInfo[];
   hasPeer(peerInfo: PeerInfo): boolean;
-  sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T>;
+  sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: number, body: RequestBody): Promise<T>;
   sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void;
   connect(peerInfo: PeerInfo): Promise<void>;
   disconnect(peerInfo: PeerInfo): void;

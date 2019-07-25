@@ -45,7 +45,12 @@ export function encodeRequestBody(
     case Method.AttestationResponse:
       encodedBody = serialize(body, config.types.HobbitsAttestation);
       break;
-
+    case Method.GetBeaconStates:
+      encodedBody = serialize(body, config.types.BeaconStatesRequest);
+      break;
+    case Method.BeaconStates:
+      encodedBody = serialize(body, config.types.BeaconStatesResponse);
+      break;
     default:
       throw new Error(`Invalid method ${method}`);
   }
@@ -77,6 +82,10 @@ export function decodeRequestBody(
       return deserialize(body, config.types.HobbitsGetAttestation);
     case Method.AttestationResponse:
       return deserialize(body, config.types.HobbitsAttestation);
+    case Method.GetBeaconStates:
+      return deserialize(body, config.types.BeaconStatesRequest);
+    case Method.BeaconStates:
+      return deserialize(body, config.types.BeaconStatesResponse);
     default:
       throw new Error(`Invalid method ${method}`);
   }

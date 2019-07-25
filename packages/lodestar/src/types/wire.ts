@@ -46,7 +46,7 @@ export type RequestBody =
 export type ResponseBody =
   Hello | Goodbye | Status |
   BeaconBlockRootsResponse | BeaconBlockHeadersResponse | BeaconBlockBodiesResponse |
-  BeaconStatesResponse;
+  BeaconStatesResponse | HobbitsAttestation;
 
 // Method ID: 0
 
@@ -136,7 +136,7 @@ export interface HobbitsGetBlockBodies {
 }
 
 export interface HobbitsGetAttestation {
-  signature: bytes;
+  hash: bytes;
 }
 
 export interface HobbitsAttestation {
