@@ -54,12 +54,12 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async isProposer(index: ValidatorIndex, slot: Slot): Promise<boolean> {
-    const state: BeaconState = await this.db.getLatestState();
+    const state: BeaconState = await this.db.state.getLatest();
     return isProposerAtSlot(this.config, state, slot, index);
   }
 
   public async getDuties(validatorPublicKeys: Buffer[]): Promise<ValidatorDuty[]> {
-    const state = await this.db.getLatestState();
+    const state = await this.db.state.getLatest();
 
     const validatorIndexes = await Promise.all(validatorPublicKeys.map(async publicKey => {
       return  await this.db.getValidatorIndex(publicKey);
@@ -78,14 +78,14 @@ export class ValidatorApi implements IValidatorApi {
   public async getCommitteeAssignment(
     index: ValidatorIndex,
     epoch: Epoch): Promise<CommitteeAssignment> {
-    const state: BeaconState = await this.db.getLatestState();
+    const state: BeaconState = await this.db.state.getLatest();
     return getCommitteeAssignment(this.config, state, epoch, index);
   }
 
   public async produceAttestation(slot: Slot, shard: Shard): Promise<IndexedAttestation> {
     const [headState, headBlock] = await Promise.all([
-      this.db.getLatestState(),
-      this.db.getBlock(this.chain.forkChoice.head())
+      this.db.state.getLatest(),
+      this.db.block.get(this.chain.forkChoice.head())
     ]);
     return await assembleAttestation(this.config, this.db, headState, headBlock, shard, slot);
   }

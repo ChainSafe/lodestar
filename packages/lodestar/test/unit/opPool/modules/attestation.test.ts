@@ -41,13 +41,4 @@ describe("opPool - attestations", function () {
     expect(result).to.be.deep.equal(attestation);
   });
 
-  it.skip('should remove  attestations', async function () {
-    const attestations = [
-      generateEmptyAttestation()
-    ];
-    dbStub.deleteAttestations.resolves();
-    await service.remove(0);
-    expect(dbStub.deleteAttestations.withArgs(attestations).calledOnce).to.be.true;
-  });
-
 });

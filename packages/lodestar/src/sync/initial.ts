@@ -72,9 +72,10 @@ export class InitialSync {
     assert(stateResponse.states.length === 1);
     const state = stateResponse.states[0];
     await Promise.all([
-      this.db.setLatestStateRoot(finalizedRoot, state),
-      this.db.setFinalizedStateRoot(finalizedRoot, state),
-      this.db.setJustifiedStateRoot(finalizedRoot, state),
+      this.db.state.store(finalizedRoot, state),
+      this.db.chain.setLatestStateRoot(finalizedRoot),
+      this.db.chain.setFinalizedStateRoot(finalizedRoot),
+      this.db.chain.setJustifiedStateRoot(finalizedRoot),
     ]);
     // fetch recent blocks and push into the chain
     const latestFinalizedSlot = peerLatestHello.latestFinalizedEpoch * this.config.params.SLOTS_PER_EPOCH;

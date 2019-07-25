@@ -5,19 +5,15 @@ import sinon from "sinon";
 import {Keypair} from "@chainsafe/bls-js/lib/keypair";
 
 import {config} from "../../../../../src/config/presets/mainnet";
-import {BeaconDB, ValidatorDB} from "../../../../../src/db";
+import {ValidatorDB} from "../../../../../src/db";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {OpPool} from "../../../../../src/opPool";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
-import {
-  DEPOSIT_CONTRACT_TREE_DEPTH,
-  FAR_FUTURE_EPOCH,
-  ZERO_HASH
-} from "../../../../../src/constants";
+import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {getBeaconProposerIndex} from "../../../../../src/chain/stateTransition/util";
-import {BeaconBlockBody, BeaconBlockHeader, DepositData, ValidatorIndex} from "../../../../../src/types";
+import {BeaconBlockHeader, ValidatorIndex} from "../../../../../src/types";
 import {stateTransition} from "../../../../../src/chain/stateTransition";
 import {generateValidator} from "../../../../utils/validator";
 import {ProgressiveMerkleTree} from "../../../../../src/util/merkleTree";
@@ -28,11 +24,32 @@ import {WinstonLogger} from "../../../../../src/logger";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import {generateDeposit} from "../../../../utils/deposit";
 import {BeaconChain} from "../../../../../src/chain";
+import {
+  AttestationRepository,
+  AttesterSlashingRepository,
+  BlockRepository,
+  ChainRepository,
+  DepositRepository,
+  MerkleTreeRepository,
+  ProposerSlashingRepository,
+  StateRepository,
+  VoluntaryExitRepository
+} from "../../../../../src/db/api/beacon/repositories";
 
 describe('produce block', function () {
   this.timeout(0);
 
-  const dbStub = sinon.createStubInstance(BeaconDB);
+  const dbStub = {
+    chain: sinon.createStubInstance(ChainRepository),
+    block: sinon.createStubInstance(BlockRepository),
+    state: sinon.createStubInstance(StateRepository),
+    merkleTree: sinon.createStubInstance(MerkleTreeRepository),
+    proposerSlashing: sinon.createStubInstance(ProposerSlashingRepository),
+    attesterSlashing: sinon.createStubInstance(AttesterSlashingRepository),
+    attestation: sinon.createStubInstance(AttestationRepository),
+    voluntaryExit: sinon.createStubInstance(VoluntaryExitRepository),
+    deposit: sinon.createStubInstance(DepositRepository),
+  };
   const opPoolStub = new OpPool({}, {db: dbStub, chain: sinon.createStubInstance(BeaconChain)});
   const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
 
@@ -63,14 +80,14 @@ describe('produce block', function () {
     });
     const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
     tree.add(0, hashTreeRoot(generateDeposit().data, config.types.DepositData));
-    dbStub.getChainHead.resolves(parentBlock);
-    dbStub.getLatestState.resolves(state);
-    dbStub.getMerkleTree.resolves(tree);
-    dbStub.getProposerSlashings.resolves([]);
-    dbStub.getAttestations.resolves([]);
-    dbStub.getAttesterSlashings.resolves([]);
-    dbStub.getVoluntaryExits.resolves([]);
-    dbStub.getDeposits.resolves([]);
+    dbStub.block.getChainHead.resolves(parentBlock);
+    dbStub.state.getLatest.resolves(state);
+    dbStub.merkleTree.getProgressiveMerkleTree.resolves(tree);
+    dbStub.proposerSlashing.getAll.resolves([]);
+    dbStub.attestation.getAll.resolves([]);
+    dbStub.attesterSlashing.getAll.resolves([]);
+    dbStub.voluntaryExit.getAll.resolves([]);
+    dbStub.deposit.getAll.resolves([]);
     eth1Stub.depositCount.resolves(1);
     eth1Stub.depositRoot.resolves(tree.root());
     // @ts-ignore
@@ -92,7 +109,7 @@ describe('produce block', function () {
     // @ts-ignore
     blockProposingService.getRpcClient().validator.produceBlock.callsFake(async(slot, randao) => {
       // @ts-ignore
-      return await assembleBlock(dbStub, opPoolStub, eth1Stub, slot, randao);
+      return await assembleBlock(config, dbStub, opPoolStub, eth1Stub, slot, randao);
     });
     const block = await blockProposingService.createAndPublishBlock(1, state.fork);
 

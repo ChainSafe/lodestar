@@ -63,11 +63,13 @@ export class PouchDbController extends EventEmitter implements IDatabaseControll
     return Promise.all(additions);
   }
 
-  public async get(key: any): Promise<any> {
+  public async get(key: any): Promise<Buffer | null> {
     if(typeof key !== 'string') {
       key = key.toString('hex');
     }
-    return  Buffer.from((await this.db.get(key)).value.data);
+    const result = await this.db.get(key);
+    if(!result) return null;
+    return  Buffer.from(result.value.data);
   }
 
   public put(key: any, value: any): Promise<any> {
@@ -93,5 +95,13 @@ export class PouchDbController extends EventEmitter implements IDatabaseControll
     });
     return data.rows.map(item => Buffer.from(item.doc.value.data));
   }
+
+  public async delete(key: any): Promise<void> {
+    if(typeof key !== 'string') {
+      key = key.toString('hex');
+    }
+    await this.db.remove(key);
+  }
+
 
 }

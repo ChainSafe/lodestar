@@ -18,7 +18,7 @@ export async function assembleAttestationData(
   if (epochStartSlot === headState.slot) {
     epochBoundaryBlock = headBlock;
   } else {
-    epochBoundaryBlock = await db.getBlock(getBlockRoot(config, headState, epochStartSlot));
+    epochBoundaryBlock = await db.block.get(getBlockRoot(config, headState, epochStartSlot));
   }
 
   return {

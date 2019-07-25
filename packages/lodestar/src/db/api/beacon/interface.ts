@@ -2,23 +2,20 @@
  * @module db/api/beacon
  */
 
+import {BeaconBlock, BeaconState, BLSPubkey, bytes32, ValidatorIndex,} from "../../../types";
 import {
-  Attestation,
-  AttesterSlashing,
-  BeaconBlock,
-  BeaconState,
-  BLSPubkey,
-  bytes32,
-  Deposit,
-  ProposerSlashing,
-  Slot,
-  Transfer,
-  ValidatorIndex,
-  VoluntaryExit,
-} from "../../../types";
-import {IProgressiveMerkleTree} from "../../../util/merkleTree";
-import {Bucket, encodeKey} from "../../schema";
-import {serialize} from "@chainsafe/ssz";
+  AttestationRepository,
+  AttesterSlashingRepository,
+  BlockRepository,
+  ChainRepository,
+  DepositRepository,
+  MerkleTreeRepository,
+  ProposerSlashingRepository,
+  StateRepository,
+  TransfersRepository,
+  VoluntaryExitRepository
+} from "./repositories";
+
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -27,66 +24,25 @@ import {serialize} from "@chainsafe/ssz";
  */
 export interface IBeaconDb {
 
-  /**
-   * Adds deposit to database
-   */
-  setDeposit(index: number, deposit: Deposit): Promise<void>;
+  chain: ChainRepository;
 
-  /**
-   * Get all stored deposits sorted from oldest to newest.
-   * It will only contain deposits until Eth2Genesis event.
-   * After that, deposits will be kept in BeaconBlock
-   */
-  getDeposits(): Promise<Deposit[]>;
+  state: StateRepository;
 
-  /**
-   * Deletes all deposits up to given index (not included).
-   */
-  deleteDeposits(index: number): Promise<void>;
+  block: BlockRepository;
 
-  setMerkleTree(index: number, merkleTree: IProgressiveMerkleTree): Promise<void>;
+  attestation: AttestationRepository;
 
-  getMerkleTree(index: number): Promise<IProgressiveMerkleTree | null>;
+  voluntaryExit: VoluntaryExitRepository;
 
-  /**
-   * Get a beacon chain state by hash
-   */
-  getState(root: bytes32): Promise<BeaconState | null>;
+  transfer: TransfersRepository;
 
-  /**
-   * Set a beacon chain state
-   */
-  setState(root: bytes32, state: BeaconState): Promise<void>;
+  proposerSlashing: ProposerSlashingRepository;
 
-  /**
-   * Get the latest beacon chain state
-   */
-  getLatestState(): Promise<BeaconState | null>;
+  attesterSlashing: AttesterSlashingRepository;
 
-  /**
-   * Set the latest beacon chain state
-   */
-  setLatestStateRoot(root: bytes32, state?: BeaconState): Promise<void>;
+  deposit: DepositRepository;
 
-  /**
-   * Get the last finalized state
-   */
-  getFinalizedState(): Promise<BeaconState | null>;
-
-  /**
-   * Set the last finalized state
-   */
-  setFinalizedStateRoot(root: bytes32, state?: BeaconState): Promise<void>;
-
-  /**
-   * Get the last justified state
-   */
-  getJustifiedState(): Promise<BeaconState | null>;
-
-  /**
-   * Set the last justified state
-   */
-  setJustifiedStateRoot(root: bytes32, state?: BeaconState): Promise<void>;
+  merkleTree: MerkleTreeRepository;
 
   /**
    * Returns validator index coresponding to validator
@@ -96,157 +52,13 @@ export interface IBeaconDb {
   getValidatorIndex(publicKey: BLSPubkey): Promise<ValidatorIndex | null>;
 
   /**
-   * Get a block by block hash
-   */
-  getBlock(blockRoot: bytes32): Promise<BeaconBlock | null>;
-
-  hasBlock(blockHash: bytes32): Promise<boolean>;
-
-  /**
-   * Get a block root by slot
-   */
-  getBlockRoot(slot: Slot): Promise<bytes32 | null>;
-
-  /**
-   * Get a block by slot
-   */
-  getBlockBySlot(slot: Slot): Promise<BeaconBlock | null>;
-
-  /**
-   * Put a block into the db
-   */
-  setBlock(root: bytes32, block: BeaconBlock): Promise<void>;
-
-  /**
-   * Get the latest finalized block
-   */
-  getFinalizedBlock(): Promise<BeaconBlock | null>;
-
-  /**
-   * Set the latest finalized block
-   */
-  setFinalizedBlockRoot(root: bytes32, block?: BeaconBlock): Promise<void>;
-
-  /**
-   * Get the latest justified block
-   */
-  getJustifiedBlock(): Promise<BeaconBlock | null>;
-
-  /**
-   * Set the latest justified block
-   */
-  setJustifiedBlockRoot(root: bytes32, block?: BeaconBlock): Promise<void>;
-
-  /**
-   * Get the slot of the head of the chain
-   */
-  getChainHeadSlot(): Promise<Slot | null>;
-
-  /**
-   * Get the root of the head of the chain
-   */
-  getChainHeadRoot(): Promise<bytes32 | null>;
-
-  /**
-   * Get the head of the chain
-   */
-  getChainHead(): Promise<BeaconBlock | null>;
-
-  /**
    * Set the head of the chain
    */
-  setChainHeadRoots(blockRoot: bytes32, stateRoot: bytes32, block?: BeaconBlock, state?: BeaconState): Promise<void>;
+  setChainHeadRoots(
+    blockRoot: bytes32,
+    stateRoot: bytes32,
+    block?: BeaconBlock,
+    state?: BeaconState
+  ): Promise<void>;
 
-  /**
-   * Fetch all attestations
-   */
-  getAttestations(): Promise<Attestation[]>;
-
-  /**
-   * Fetch an attestation by hash
-   */
-  getAttestation(attestationRoot: bytes32): Promise<Attestation | null>;
-
-
-  hasAttestation(attestationRoot: bytes32): Promise<boolean>;
-
-  /**
-   * Put an attestation into the db
-   */
-  setAttestation(attestation: Attestation): Promise<void>;
-
-  /**
-   * Delete attestations from the db
-   */
-  deleteAttestations(attestations: Attestation[]): Promise<void>;
-
-  /**
-   * Fetch all voluntary exits
-   */
-  getVoluntaryExits(): Promise<VoluntaryExit[]>;
-
-  /**
-   * Put a voluntary exit into the db
-   */
-  setVoluntaryExit(exit: VoluntaryExit): Promise<void>;
-
-  /**
-   * Delete voluntary exits from the db
-   */
-  deleteVoluntaryExits(exits: VoluntaryExit[]): Promise<void>;
-
-  /**
-   * Fetch all transfers
-   */
-  getTransfers(): Promise<Transfer[]>;
-
-  /**
-   * Put a transfer into the db
-   */
-  setTransfer(transfer: Transfer): Promise<void>;
-
-  /**
-   * Delete transfers from the db
-   */
-  deleteTransfers(transfers: Transfer[]): Promise<void>;
-
-  /**
-   * Fetch all proposer slashings
-   */
-  getProposerSlashings(): Promise<ProposerSlashing[]>;
-
-  /**
-   * Put a proposer slashing into the db
-   */
-  setProposerSlashing(proposerSlashing: ProposerSlashing): Promise<void>;
-
-  /**
-   * Delete attestations from the db
-   */
-  deleteProposerSlashings(proposerSlashings: ProposerSlashing[]): Promise<void>;
-
-  /**
-   * Fetch all attester slashings
-   */
-  getAttesterSlashings(): Promise<AttesterSlashing[]>;
-
-  /**
-   * Put an attester slashing into the db
-   */
-  setAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<void>;
-
-  /**
-   * Delete attester slashings from the db
-   */
-  deleteAttesterSlashings(attesterSlashings: AttesterSlashing[]): Promise<void>;
-
-  /**
-   * add Bad block root in db
-   */
-  setBadBlockRoot(root: bytes32): Promise<void>;
-
-  /**
-   *  check whether the block root is from bad block
-   */
-  isBadBlockRoot(root: bytes32): Promise<boolean> ;
 }

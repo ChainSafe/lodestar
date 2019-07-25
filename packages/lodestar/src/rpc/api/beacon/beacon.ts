@@ -29,7 +29,7 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getFork(): Promise<Fork> {
-    const state: BeaconState = await this.db.getLatestState();
+    const state: BeaconState = await this.db.state.getLatest();
     return state.fork;
   }
 
@@ -44,11 +44,11 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getBeaconState(): Promise<BeaconState> {
-    return await this.db.getLatestState();
+    return await this.db.state.getLatest();
   }
 
   public async getChainHead(): Promise<BeaconBlock> {
-    return await this.db.getChainHead();
+    return await this.db.block.getChainHead();
   }
 
 }

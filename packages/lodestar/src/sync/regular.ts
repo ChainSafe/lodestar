@@ -35,12 +35,12 @@ export class RegularSync {
     const root = hashTreeRoot(block, this.config.types.BeaconBlock);
 
     // skip block if its a known bad block
-    if (await this.db.isBadBlockRoot(root)){
+    if (await this.db.block.isBadBlock(root)){
       this.logger.warn(`Received bad block, block root : ${root} `);
       return ;
     }
     // skip block if it already exists
-    if (!await this.db.hasBlock(root)) {
+    if (!await this.db.block.has(root)) {
       await this.chain.receiveBlock(block);
     }
   }
@@ -48,11 +48,11 @@ export class RegularSync {
   public async receiveAttestation(attestation: Attestation): Promise<void> {
     // skip attestation if it already exists
     const root = hashTreeRoot(attestation, this.config.types.Attestation);
-    if (await this.db.hasAttestation(root)) {
+    if (await this.db.attestation.has(root)) {
       return;
     }
     // skip attestation if its too old
-    const state = await this.db.getLatestState();
+    const state = await this.db.state.getLatest();
     if (attestation.data.targetEpoch < state.finalizedEpoch) {
       return;
     }

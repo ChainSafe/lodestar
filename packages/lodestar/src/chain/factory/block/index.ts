@@ -20,10 +20,10 @@ export async function assembleBlock(
   randao: bytes96
 ): Promise<BeaconBlock> {
   const [parentBlock, currentState] = await Promise.all([
-    db.getChainHead(),
-    db.getLatestState(),
+    db.block.getChainHead(),
+    db.state.getLatest(),
   ]);
-  const merkleTree = await db.getMerkleTree(currentState.depositIndex);
+  const merkleTree = await db.merkleTree.getProgressiveMerkleTree(currentState.depositIndex);
   const parentHeader: BeaconBlockHeader = {
     stateRoot: parentBlock.stateRoot,
     signature: parentBlock.signature,
