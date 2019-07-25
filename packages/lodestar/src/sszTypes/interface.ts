@@ -130,4 +130,4 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "BeaconBlockBodiesResponse",
   "BeaconStatesRequest",
   "BeaconStatesResponse",
-]
+];

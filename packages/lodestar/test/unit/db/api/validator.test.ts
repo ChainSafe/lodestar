@@ -4,7 +4,6 @@ import {config} from "../../../../src/config/presets/mainnet";
 import * as dbKeys from "../../../../src/db/schema";
 import {Bucket} from "../../../../src/db/schema";
 import {LevelDbController} from "../../../../src/db/controller";
-import {Attestation, BeaconBlock} from "../../../../src/types";
 import chai, {expect} from "chai";
 import {serialize} from "@chainsafe/ssz";
 import chaiAsPromised from 'chai-as-promised';
