@@ -7,7 +7,6 @@ cache:
   directories:
     - node_modules
     - packages/lodestar/node_modules
-    - .git/lfs
 
 install:
     - yarn
@@ -37,6 +36,9 @@ jobs:
     -
       name: spec
       script: git submodule foreach git lfs pull && lerna run test:spec
+      cache:
+        directories:
+          - .git/lfs
       git:
         submodules: true
 
