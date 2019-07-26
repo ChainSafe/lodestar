@@ -1,7 +1,5 @@
-import {OperationsModule} from "./abstract";
 import {Deposit, number64} from "../../types";
 import {DepositRepository} from "../../db/api/beacon/repositories";
-import {FullDatabaseRepository} from "../../db/api/beacon/repository";
 
 export class DepositsOperations {
 

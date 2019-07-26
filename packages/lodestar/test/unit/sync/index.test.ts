@@ -12,6 +12,7 @@ import {Sync} from "../../../src/sync";
 import PeerId from "peer-id";
 import {config} from "../../../src/config/presets/mainnet";
 import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
+import {ChainRepository} from "../../../src/db/api/beacon/repositories";
 
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();
@@ -24,7 +25,9 @@ describe("syncing", function () {
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     opPoolStub = sandbox.createStubInstance(OpPool);
     eth1Stub = sandbox.createStubInstance(EthersEth1Notifier);
-    dbStub = sandbox.createStubInstance(BeaconDB);
+    dbStub = {
+      chain: sandbox.createStubInstance(ChainRepository)
+    };
     repsStub = sandbox.createStubInstance(ReputationStore);
     rpcStub = sandbox.createStubInstance(SyncRpc);
     logger = new WinstonLogger();
@@ -61,7 +64,7 @@ describe("syncing", function () {
 
     //2nd case
     chainStub.isInitialized.resolves(true);
-    dbStub.getChainHeadSlot.resolves(10);
+    dbStub.chain.getChainHeadSlot.resolves(10);
     repsStub.get.returns({
       latestHello: {bestSlot: 5},
     });
@@ -84,7 +87,7 @@ describe("syncing", function () {
   it('should return false - chain synced ', async function () {
     //first case
     chainStub.isInitialized.resolves(true);
-    dbStub.getChainHeadSlot.resolves(2);
+    dbStub.chain.getChainHeadSlot.resolves(2);
     repsStub.get.returns({
       latestHello: {
         bestSlot: 5,
@@ -106,7 +109,7 @@ describe("syncing", function () {
 
     //2nd case
     chainStub.isInitialized.resolves(true);
-    dbStub.getChainHeadSlot.resolves(10);
+    dbStub.chain.getChainHeadSlot.resolves(10);
     repsStub.get.returns({
       latestHello: {
         bestSlot: 5,
@@ -122,7 +125,7 @@ describe("syncing", function () {
   it('should start an stop syncing', async function () {
 
     chainStub.isInitialized.resolves(true);
-    dbStub.getChainHeadSlot.resolves(-1);
+    dbStub.chain.getChainHeadSlot.resolves(-1);
     repsStub.get.returns({
       latestHello: {
         bestSlot: 0,
