@@ -9,7 +9,7 @@ import {EventEmitter} from "events";
 import level from "level";
 import {ILogger, WinstonLogger} from "../../../logger";
 import {IDatabaseOptions} from "../../options";
-import {ILoggingOptions} from "../../../logger/interface";
+import {ILoggingOptions} from "../../../logger/option";
 import {Module} from "../../../logger/abstract";
 
 export interface LevelDBOptions extends IDatabaseOptions {

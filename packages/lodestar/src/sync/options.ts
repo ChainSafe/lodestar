@@ -1,5 +1,6 @@
 import {IConfigurationModule} from "../util/config";
-import {ILoggingOptions} from "../logger/interface";
+import {ILoggingOptions} from "../logger/option";
+import {LoggingOptions} from "../logger/option";
 
 export interface ISyncOptions {
   loggingOptions?: ILoggingOptions;
@@ -7,7 +8,7 @@ export interface ISyncOptions {
 
 export const SyncOptions: IConfigurationModule = {
   name: 'sync',
-  fields: []
+  fields: [LoggingOptions]
 };
 
 const config: ISyncOptions = {};

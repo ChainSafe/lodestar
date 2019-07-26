@@ -16,7 +16,6 @@ import {ILogger, WinstonLogger} from "../logger";
 import {ISyncOptions} from "./options";
 import {ISyncRpc} from "./rpc/interface";
 import {Module} from "../logger/abstract";
-import {ILoggingOptions} from "../logger/interface";
 
 interface SyncModules {
   config: IBeaconConfig;

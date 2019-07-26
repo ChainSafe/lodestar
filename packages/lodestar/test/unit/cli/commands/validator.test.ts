@@ -27,8 +27,9 @@ describe('[CLI] validator', () => {
     const command = new ValidatorCommand();
     await expect(
       command.action({
-        key:keyString
-      })
+        key:keyString,
+        loggingLevel: null,
+      },logger)
     ).not.throw;
   });
 

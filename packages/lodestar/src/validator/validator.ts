@@ -25,7 +25,6 @@ import defaultValidatorOptions, {IValidatorOptions} from "./options";
 import deepmerge from "deepmerge";
 import {getKeyFromFileOrKeystore} from "../util/io";
 import {isPlainObject} from "../util/objects";
-import {ILoggingOptions} from "../logger/interface";
 import {Module} from "../logger/abstract";
 
 /**

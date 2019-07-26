@@ -1,13 +1,11 @@
-import {IDatabaseOptions} from "../db/options";
-import {ITransportOption} from "../rpc/options";
+import {DatabaseOptions, IDatabaseOptions} from "../db/options";
 import {RpcClient} from "./rpc";
 import {Keypair} from "@chainsafe/bls-js/lib/keypair";
-import {TransportType} from "../rpc/transport";
 import {IConfigurationModule} from "../util/config";
 import {IValidatorDB} from "../db/api";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
-import {ILoggingOptions} from "../logger/interface";
-import {parseLoggingLevel} from "../util/parse";
+import {ILoggingOptions} from "../logger/option";
+import {LoggingOptions} from "../logger/option";
 
 export interface IValidatorOptions {
   db: IDatabaseOptions;
@@ -22,19 +20,7 @@ export interface IValidatorOptions {
 export const ValidatorOptions: IConfigurationModule = {
   name: 'validator',
   fields: [
-    {
-      name: "db",
-      fields: [
-        {
-          name: "name",
-          type: String,
-          configurable: true,
-          cli: {
-            flag: "validatorDb"
-          }
-        }
-      ]
-    },
+    DatabaseOptions,
     {
       name: "syncRpc.ts",
       type: String,
@@ -63,25 +49,11 @@ export const ValidatorOptions: IConfigurationModule = {
       type: String,
       description: "Path to keystore file",
       configurable: true,
-      process: (loggingLevel) => {
-        const loggingOptions: ILoggingOptions = {
-          loggingLevel: parseLoggingLevel(loggingLevel),
-        };
-        return loggingLevel;
-      },
       cli: {
         flag: "validatorKeystore"
       }
     },
-    {
-      name: "loggingOptions",
-      type: String,
-      description: "Logging Level for different module",
-      configurable: true,
-      cli: {
-        flag: "loggingLevel"
-      }
-    }
+    LoggingOptions
   ]
 };
 

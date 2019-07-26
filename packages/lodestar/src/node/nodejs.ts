@@ -54,7 +54,7 @@ export class BeaconNode {
       }
     );
     this.config = config;
-    this.logger = logger || new WinstonLogger(opts.loggingOptions);
+    this.logger = logger || new WinstonLogger();
     this.reps = new ReputationStore();
     this.db = new BeaconDB({
       config,
@@ -71,20 +71,23 @@ export class BeaconNode {
       chain: this.chain,
       network: this.network,
       reps: this.reps,
+      logger,
     });
     this.network = new Libp2pNetwork(this.conf.network, {
       config,
       libp2p: libp2p,
+      logger,
     });
     this.eth1 = new EthersEth1Notifier(this.conf.eth1, {
       config,
       opPool: this.opPool,
-      logger
+      logger,
     });
     this.chain = new BeaconChain(this.conf.chain, {
       config,
       db: this.db,
       eth1: this.eth1,
+      logger,
     });
     this.opPool = new OpPool(this.conf.opPool, {
       db: this.db,
@@ -100,6 +103,7 @@ export class BeaconNode {
       network: this.network,
       reps: this.reps,
       rpc,
+      logger,
     });
     //TODO: needs to be moved to Rpc class and initialized from opts
     this.rpc = new JSONRPC(this.conf.api, {

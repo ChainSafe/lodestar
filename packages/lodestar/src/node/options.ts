@@ -11,7 +11,8 @@ import defaultOpPoolOptions, {IOpPoolOptions, OpPoolOptions} from "../opPool/opt
 import defaultSyncOptions, {ISyncOptions, SyncOptions} from "../sync/options";
 import {IValidatorOptions, ValidatorOptions} from "../validator/options";
 import {IConfigurationModule} from "../util/config";
-import {ILoggingOptions} from "../logger/interface";
+import {ILoggingOptions} from "../logger/option";
+import {LoggingOptions} from "../logger/option";
 
 export interface IBeaconNodeOptions {
   chain: IChainOptions;
@@ -35,7 +36,8 @@ export const BeaconNodeOptions: IConfigurationModule = {
     NetworkOptions,
     OpPoolOptions,
     SyncOptions,
-    ValidatorOptions
+    ValidatorOptions,
+    LoggingOptions
   ]
 };
 

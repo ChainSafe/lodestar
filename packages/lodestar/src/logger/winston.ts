@@ -4,7 +4,7 @@
 
 import {createLogger, format, Logger, transports} from 'winston';
 import {AbstractLogger, LogLevel, Module} from "./abstract";
-import {ILoggingOptions} from "./interface";
+import {ILoggingOptions} from "./option";
 
 export class WinstonLogger extends AbstractLogger {
 
@@ -16,11 +16,10 @@ export class WinstonLogger extends AbstractLogger {
     super();
     this.loggingModule = loggingModule || Module.DEFAULT;
     if (loggingOptions) {
-      this.loggingLevel = (loggingOptions).loggingLevel.get(this.loggingModule) || LogLevel.DEFAULT;
+      this.loggingLevel = loggingOptions.loggingLevel.get(this.loggingModule) || LogLevel.DEFAULT;
     }else {
       this.loggingLevel = LogLevel.DEFAULT;
     }
-
     this.winston = createLogger({
       level: this.loggingLevel,
       transports: [

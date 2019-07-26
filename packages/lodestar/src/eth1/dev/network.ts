@@ -9,14 +9,14 @@ import deepmerge from "deepmerge";
 import * as ethers from "ethers/ethers";
 import {ILogger, WinstonLogger} from "../../logger";
 import devEth1Options from "./options";
-import {ILoggingOptions} from "../../logger/interface";
+import {ILoggingOptions} from "../../logger/option";
 import {Module} from "../../logger/abstract";
 
 export const devNetworkOpts =  {
   port: 8545,
   networkId: 200,
   defaultBalance: 1000,
-  host: '127.0.0.1'
+  host: '127.0.0.1',
 };
 
 export interface PrivateNetworkOpts {
@@ -42,7 +42,7 @@ export class PrivateEth1Network {
 
   public constructor(opts: PrivateNetworkOpts, {logger}: {logger?: ILogger} ) {
     this.opts = deepmerge(devNetworkOpts, opts);
-    this.logger = logger || new WinstonLogger(this.opts.loggingOptions, Module.ETH1);
+    this.logger = logger || new WinstonLogger(opts.loggingOptions, Module.ETH1);
     this.server = ganache.server({
       ...this.opts,
       // eslint-disable-next-line  @typescript-eslint/camelcase

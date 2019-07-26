@@ -24,6 +24,9 @@ describe('[CLI] beacon', () => {
       command.register(program)
     ).to.not.throw;
     expect(program.commands.length).to.be.equal(commandCount + 1);
+    command.action({
+      loggingLevel: "chain = debug",
+    });
   });
 
 });

@@ -1,5 +1,7 @@
 import {IConfigurationModule} from "../util/config";
-import {ILoggingOptions} from "../logger/interface";
+import {ILoggingOptions} from "../logger/option";
+import {parseLoggingLevel} from "../util/parse";
+import {LoggingOptions} from "../logger/option";
 
 export interface IDatabaseOptions {
   name: string;
@@ -18,7 +20,8 @@ export const DatabaseOptions: IConfigurationModule = {
         flag: 'db',
         short: 'd'
       }
-    }
+    },
+    LoggingOptions
   ]
 };
 

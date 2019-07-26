@@ -15,9 +15,6 @@ import {getTomlConfig} from "../../util/file";
 import Validator from "../../validator";
 import {RpcClientOverInstance} from "../../validator/rpc";
 import {BeaconApi, ValidatorApi} from "../../rpc";
-import {ILoggingOptions} from "../../logger/interface";
-import {Module} from "../../logger/abstract";
-import {parseLoggingLevel} from "../../util/parse";
 
 interface IBeaconCommandOptions {
   configFile?: string;
@@ -52,16 +49,11 @@ export class BeaconNodeCommand implements CliCommand {
     generateCommanderOptions(command, BeaconNodeOptions);
   }
 
-  public async action(options: IBeaconCommandOptions,): Promise<void> {
+  public async action(options: IBeaconCommandOptions, logger?: ILogger): Promise<void> {
     let conf: Partial<IBeaconNodeOptions> = {};
-    const loggingOptions: ILoggingOptions = {
-      loggingLevel: parseLoggingLevel(options.loggingLevel),
-    };
-
     //merge config file
     if (options.configFile) {
       let parsedConfig = getTomlConfig(options.configFile, BeaconNodeOptions);
-      console.log(parsedConfig);
       //cli will override toml config options
       conf = deepmerge(conf, parsedConfig);
     }
@@ -69,7 +61,7 @@ export class BeaconNodeCommand implements CliCommand {
     //override current config with cli config
     conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
 
-    this.node = new BeaconNode(conf, {config});
+    this.node = new BeaconNode(conf, {config,logger});
 
     if(conf.validator && conf.validator.keypair){
       conf.validator.rpcInstance = new RpcClientOverInstance({
@@ -93,6 +85,7 @@ export class BeaconNodeCommand implements CliCommand {
       this.validator = new Validator(
         conf.validator, {
           config: config,
+          logger,
         }
       );
       await this.validator.start();

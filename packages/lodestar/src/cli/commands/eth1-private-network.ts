@@ -4,11 +4,8 @@
 
 import {CliCommand} from "./interface";
 import {PrivateEth1Network} from "../../eth1/dev";
-import {CommanderStatic} from "commander";
-import {LogLevel, WinstonLogger} from "../../logger";
-import {ILogger} from "../../logger";
-import {Module} from "../../logger/abstract";
-import {ILoggingOptions} from "../../logger/interface";
+import {CommanderStatic} from "commander";;
+import {ILogger, WinstonLogger} from "../../logger";
 import {parseLoggingLevel} from "../../util/parse";
 
 interface IEth1CommandOptions {
@@ -49,20 +46,18 @@ export class Eth1PrivateNetworkCommand implements CliCommand {
       });
   }
 
-  public async action(options: IEth1CommandOptions): Promise<PrivateEth1Network> {
-    const loggingOptions: ILoggingOptions = {
-      loggingLevel: parseLoggingLevel(options.loggingLevel),
-    };
-
+  public async action(options: IEth1CommandOptions, logger?: ILogger): Promise<PrivateEth1Network> {
     const privateNetwork = new PrivateEth1Network({
       port: options.port,
       host: options.host,
       mnemonic: options.mnemonic,
       networkId: options.network,
       dbPath: options.database,
-      loggingOptions: loggingOptions,
+      loggingOptions: {
+        loggingLevel: parseLoggingLevel(options.loggingLevel),
+      }
     },
-    {}
+    {logger}
     );
     await privateNetwork.start();
     return privateNetwork;

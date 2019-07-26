@@ -16,8 +16,8 @@ import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 import {ILogger, WinstonLogger} from "../../logger";
 import {OpPool} from "../../opPool";
 import {IEth1Options} from "../options";
-import {ILoggingOptions} from "../../logger/interface";
 import {Module} from "../../logger/abstract";
+import {ILoggingOptions} from "../../logger/option";
 
 export interface EthersEth1Options extends IEth1Options {
   contract?: Contract;

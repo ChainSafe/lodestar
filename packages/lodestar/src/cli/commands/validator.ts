@@ -8,10 +8,7 @@ import {CliCommand} from "./interface";
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import Validator from "../../validator";
 import {generateCommanderOptions, optionsToConfig} from "../util";
-import {ValidatorOptions} from "../../validator/options";
-import {Module} from "../../logger/abstract";
-import {ILoggingOptions} from "../../logger/interface";
-import {parseLoggingLevel} from "../../util/parse";
+import {IValidatorOptions, ValidatorOptions} from "../../validator/options";
 
 interface IValidatorCommandOptions {
   loggingLevel?: string;
@@ -39,14 +36,14 @@ export class ValidatorCommand implements CliCommand {
     generateCommanderOptions(command, ValidatorOptions);
   }
 
-  public async action(options: IValidatorCommandOptions): Promise<void> {
+  public async action(options: IValidatorCommandOptions, logger?: ILogger): Promise<void> {
 
-    const conf = optionsToConfig(options, ValidatorOptions);
-    console.log(conf);
+    const conf: Partial<IValidatorOptions> = optionsToConfig(options, ValidatorOptions);
     let validator = new Validator(
       conf,
       {
         config: config,
+        logger,
       }
     );
 
