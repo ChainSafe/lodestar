@@ -33,6 +33,8 @@ jobs:
     -
       name: spec
       script: lerna run test:spec
+      git:
+        submodules: true
 
 before_deploy: lerna run --scope @chainsafe/lodestar build:docs
 
