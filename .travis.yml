@@ -35,7 +35,9 @@ jobs:
         submodules: false
     -
       name: spec
-      script: git submodule foreach git lfs pull && lerna run test:spec
+      script:
+        - git submodule foreach git lfs pull
+        - lerna run test:spec
       cache:
         directories:
           - .git/lfs
