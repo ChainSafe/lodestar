@@ -9,16 +9,17 @@ import {BeaconBlockHeadersResponse, BeaconBlockBodiesResponse, BeaconBlock} from
 import {IBeaconConfig} from "../config";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
-import {SyncRpc} from "./rpc";
+import {SyncRpc} from "../network/libp2p/syncRpc";
 import {INetwork} from "../network";
 import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
+import {ISyncRpc} from "./rpc/interface";
 
 interface InitialSyncModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   chain: IBeaconChain;
-  rpc: SyncRpc;
+  rpc: ISyncRpc;
   network: INetwork;
   reps: ReputationStore;
   logger: ILogger;
@@ -28,7 +29,7 @@ export class InitialSync {
   private config: IBeaconConfig;
   private db: IBeaconDb;
   private chain: IBeaconChain;
-  private rpc: SyncRpc;
+  private rpc: ISyncRpc;
   private network: INetwork;
   private reps: ReputationStore;
   private logger: ILogger;
@@ -68,9 +69,10 @@ export class InitialSync {
     const peerLatestHello = this.reps.get(peerInfo.id.toB58String()).latestHello;
     // Set latest finalized state
     const finalizedRoot = peerLatestHello.latestFinalizedRoot;
-    const stateResponse = await this.rpc.getBeaconStates(peerInfo, [peerLatestHello.latestFinalizedRoot]);
-    assert(stateResponse.states.length === 1);
-    const state = stateResponse.states[0];
+    const states = await this.rpc.getBeaconStates(peerInfo, [peerLatestHello.latestFinalizedRoot]);
+    assert(states.length === 1);
+    const state = states[0];
+
     await Promise.all([
       this.db.state.store(finalizedRoot, state),
       this.db.chain.setLatestStateRoot(finalizedRoot),
@@ -80,27 +82,13 @@ export class InitialSync {
     // fetch recent blocks and push into the chain
     const latestFinalizedSlot = peerLatestHello.latestFinalizedEpoch * this.config.params.SLOTS_PER_EPOCH;
     const slotCountToSync = peerLatestHello.bestSlot - latestFinalizedSlot;
-    const blockRootsResponse = await this.rpc.getBeaconBlockRoots(peerInfo, latestFinalizedSlot, slotCountToSync);
-    assert(blockRootsResponse.roots.length > 0);
-    const blockRoots = blockRootsResponse.roots;
-    const [
-      blockHeadersResponse,
-      blockBodiesResponse
-    ]: [BeaconBlockHeadersResponse, BeaconBlockBodiesResponse] = await Promise.all([
-      this.rpc.getBeaconBlockHeaders(peerInfo, blockRoots[0].blockRoot, blockRoots[0].slot, blockRoots[blockRoots.length - 1].slot, 0),
-      this.rpc.getBeaconBlockBodies(peerInfo, blockRoots.map((b) => b.blockRoot)),
-    ]);
-    assert(blockHeadersResponse.headers.length === blockBodiesResponse.blockBodies.length);
-    for (let i = 0; i < blockHeadersResponse.headers.length; i++) {
-      const header = blockHeadersResponse.headers[i];
-      delete header.bodyRoot;
-      const body = blockBodiesResponse.blockBodies[i];
-      const block: BeaconBlock = {
-        ...header,
-        body,
-      };
+    const blocks = await this.rpc.getBeaconBlocks(
+      peerInfo, latestFinalizedSlot, slotCountToSync, false
+    );
+    blocks.forEach(async (block) => {
       await this.chain.receiveBlock(block);
-    }
+    });
+
   }
   public async start(): Promise<void> {
     await this.syncToPeers();

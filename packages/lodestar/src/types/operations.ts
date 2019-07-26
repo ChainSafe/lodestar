@@ -2,16 +2,16 @@
  * @module types
  */
 
+import {BitList} from "@chainsafe/bit-utils";
+
 import {
-  bytes,
-  bytes32,
-  number64,
+  BLSPubkey,
+  BLSSignature,
   Epoch,
+  Gwei,
+  Hash,
   Slot,
   ValidatorIndex,
-  BLSSignature,
-  Gwei,
-  BLSPubkey,
 } from "./primitive";
 
 import {
@@ -40,18 +40,18 @@ export interface AttesterSlashing {
 
 export interface Attestation {
   // Attester participation bitfield
-  aggregationBitfield: bytes;
+  aggregationBits: BitList;
   // Attestation data
   data: AttestationData;
   // Proof of custody bitfield
-  custodyBitfield: bytes;
+  custodyBits: BitList;
   // BLS aggregate signature
   signature: BLSSignature;
 }
 
 export interface Deposit {
   // Branch in the deposit tree
-  proof: bytes32[];
+  proof: Hash[];
   // Deposit data
   data: DepositData;
 }
@@ -74,7 +74,7 @@ export interface Transfer {
   amount: Gwei;
   // Fee in Gwei for block proposer
   fee: Gwei;
-  // Inclusion slot
+  // Slot at which transfer must be processed
   slot: Slot;
   // Sender withdrawal pubkey
   pubkey: BLSPubkey;

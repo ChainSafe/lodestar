@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {config} from "../../../../src/config/presets/mainnet";
 import {Libp2pNetwork} from "../../../../src/network";
 import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../../../../src/constants";
-import {getEmptyBlock} from "../../../../src/chain/genesis";
+import {getEmptyBlock} from "../../../../src/chain/genesis/genesis";
 import {createNode} from "../../../unit/network/libp2p/util";
 import {generateEmptyAttestation} from "../../../utils/attestation";
 import {shardAttestationTopic} from "../../../../src/network/util";

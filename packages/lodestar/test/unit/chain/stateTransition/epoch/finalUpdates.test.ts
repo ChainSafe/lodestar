@@ -18,6 +18,7 @@ describe('process epoch - final updates', function () {
     getCurrentEpochStub,
     getRandaoMixStub,
     getShardDeltaStub,
+    getCompactCommitteesRootStub,
     hashTreeRootStub;
 
   beforeEach(() => {
@@ -25,6 +26,7 @@ describe('process epoch - final updates', function () {
     getCurrentEpochStub = sandbox.stub(utils, "getCurrentEpoch");
     getRandaoMixStub = sandbox.stub(utils, "getRandaoMix");
     getShardDeltaStub = sandbox.stub(utils, "getShardDelta");
+    getCompactCommitteesRootStub = sandbox.stub(utils, "getCompactCommitteesRoot");
     hashTreeRootStub = sandbox.stub(hashTreeRoot, "hashTreeRoot");
   });
 
@@ -35,13 +37,14 @@ describe('process epoch - final updates', function () {
   it('should make required final updates', function () {
     const state = generateState();
     state.slot = config.params.SLOTS_PER_ETH1_VOTING_PERIOD - 1;
-    state.validatorRegistry.push(generateValidator());
+    state.validators.push(generateValidator());
     state.balances.push(new BN("fffffffff"));
 
     getCurrentEpochStub.returns(127);
     getShardDeltaStub.returns(1);
     getActiveValidatorIndicesStub.returns([1,2,3,4]);
     getRandaoMixStub.returns(0);
+    getCompactCommitteesRootStub.returns(Buffer.alloc(32));
     hashTreeRootStub.returns(Buffer.from("1010"));
 
     try {

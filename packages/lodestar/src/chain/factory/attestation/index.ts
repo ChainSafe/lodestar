@@ -2,7 +2,6 @@ import {BeaconBlock, BeaconState, IndexedAttestation, Shard, Slot} from "../../.
 import {IBeaconConfig} from "../../../config";
 import {BeaconDB} from "../../../db/api";
 import {assembleAttestationData} from "./data";
-import {advanceSlot} from "../../stateTransition/slot";
 
 export async function assembleAttestation(
   config: IBeaconConfig,
@@ -13,7 +12,7 @@ export async function assembleAttestation(
   shard: Shard): Promise<IndexedAttestation> {
 
   while(state.slot < slot) {
-    advanceSlot(state);
+    state.slot++;
   }
 
   return {

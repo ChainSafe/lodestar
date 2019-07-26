@@ -116,7 +116,7 @@ describe('blockAssembly - eth1 data', function() {
         config,
         generateState({
           eth1DataVotes: votes,
-          latestEth1Data: {blockHash: Buffer.alloc(32, 9)} as Eth1Data}
+          eth1Data: {blockHash: Buffer.alloc(32, 9)} as Eth1Data}
         ),
         eth1Stub
       );
@@ -141,7 +141,7 @@ describe('blockAssembly - eth1 data', function() {
         config,
         generateState({
           eth1DataVotes: votes,
-          latestEth1Data: {blockHash: Buffer.alloc(32, 9)} as Eth1Data}
+          eth1Data: {blockHash: Buffer.alloc(32, 9)} as Eth1Data}
         ),
         eth1Stub
       );

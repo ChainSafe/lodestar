@@ -5,14 +5,14 @@ import {Libp2pNetwork} from "../../../src/network";
 import {BeaconDB} from "../../../src/db/api";
 import {WinstonLogger} from "../../../src/logger";
 import {generateState} from "../../utils/state";
-import {SyncRpc} from "../../../src/sync/rpc";
+import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
 import {EMPTY_SIGNATURE, Method, ZERO_HASH} from "../../../src/constants";
 import BN from "bn.js";
 import {
   BeaconBlockBodiesRequest,
   BeaconBlockBodiesResponse, BeaconBlockHeadersRequest,
   BeaconBlockHeadersResponse, BeaconBlockRootsRequest,
-  BeaconBlockRootsResponse, BeaconStatesRequest,
+  BeaconBlockRootsResponse, BeaconState, BeaconStatesRequest,
   BeaconStatesResponse,
   Goodbye,
   Hello,
@@ -82,8 +82,8 @@ describe("syncing", function () {
     dbStub.getChainHeadSlot.resolves(1);
     dbStub.getBlockRoot.resolves(ZERO_HASH);
     const state = generateState();
-    state.finalizedEpoch = 1;
-    state.finalizedRoot = ZERO_HASH;
+    state.finalizedCheckpoint.epoch = 1;
+    state.finalizedCheckpoint.root = ZERO_HASH;
 
     dbStub.getLatestState.resolves(state);
 
@@ -91,9 +91,9 @@ describe("syncing", function () {
       networkId: chainStub.networkId,
       chainId: chainStub.chainId,
       latestFinalizedRoot: ZERO_HASH ,
-      latestFinalizedEpoch: 1,
+      latestFinalizedEpoch: 0,
       bestRoot: ZERO_HASH,
-      bestSlot: 1,
+      bestSlot: 0,
     };
 
     try {
@@ -265,10 +265,10 @@ describe("syncing", function () {
 
   it('should return beacon states', async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
-    const expected: BeaconStatesResponse = {
+    const expected: BeaconState[] = [];
+    networkStub.sendRequest.resolves({
       states: []
-    };
-    networkStub.sendRequest.resolves(expected);
+    });
     try {
       const  result =  await syncRpc.getBeaconStates(peerInfo, [Buffer.alloc(32)]);
       expect(result).deep.equal(expected);
@@ -479,5 +479,63 @@ describe("syncing", function () {
       expect.fail(e.stack);
     }
   });
+
+  it('should fail to sync - root length zero ', async function () {
+    const getBeaconBlockRootsStub = sinon.stub(syncRpc, "getBeaconBlockRoots");
+
+    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
+    repsStub.get.returns({
+      latestStatus: null,
+    });
+    networkStub.sendResponse.resolves(0);
+    dbStub.getBlockRoot.resolves(Buffer.alloc(32));
+    getBeaconBlockRootsStub.resolves({
+      roots: []
+    });
+
+    try {
+      await syncRpc.getBeaconBlocks(peerInfo, 0, 1, false);
+      expect.fail();
+    }catch (e) {
+      expect(getBeaconBlockRootsStub.calledOnce).to.be.true;
+    }
+
+  });
+
+
+  it('should fail to sync - headers length mismatch with blockBodies length ', async function () {
+    const getBeaconBlockRootsStub = sinon.stub(syncRpc, "getBeaconBlockRoots");
+    const getBeaconBlockHeadersStub = sinon.stub(syncRpc, "getBeaconBlockHeaders");
+    const getBeaconBlockBodiesStub = sinon.stub(syncRpc, "getBeaconBlockBodies");
+
+    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
+    repsStub.get.returns({
+      latestStatus: null,
+    });
+    networkStub.sendResponse.resolves(0);
+    dbStub.getBlockRoot.resolves(Buffer.alloc(32));
+    getBeaconBlockRootsStub.resolves({
+      roots: [{
+        blockRoot: Buffer.alloc(32),
+        slot: 1
+      }]
+    });
+    getBeaconBlockHeadersStub.resolves({
+      headers: []
+    });
+    getBeaconBlockBodiesStub.resolves({
+      blockBodies: [generateEmptyBlock().body, generateEmptyBlock().body]
+    });
+
+    try {
+      await syncRpc.getBeaconBlocks(peerInfo, 0, 1, false);
+      expect.fail();
+    }catch (e) {
+      expect(getBeaconBlockHeadersStub.calledOnce).to.be.true;
+      expect(getBeaconBlockHeadersStub.calledOnce).to.be.true;
+    }
+
+  });
+
 
 });

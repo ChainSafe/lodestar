@@ -8,6 +8,7 @@ import {FAR_FUTURE_EPOCH} from "../../../../../src/constants";
 import {processSlashings} from "../../../../../src/chain/stateTransition/epoch/slashings";
 import {generateState} from "../../../../utils/state";
 import {generateValidator} from "../../../../utils/validator";
+import { intDiv } from "../../../../../src/util/math";
 
 describe('process epoch - slashings', function () {
 
@@ -34,11 +35,11 @@ describe('process epoch - slashings', function () {
     getTotalBalanceStub.returns(new BN(2));
     const validator1 = generateValidator(0, FAR_FUTURE_EPOCH, false);
     const validator2 = generateValidator(0, FAR_FUTURE_EPOCH, true);
-    validator2.withdrawableEpoch = config.params.LATEST_SLASHED_EXIT_LENGTH;
+    validator2.withdrawableEpoch = config.params.EPOCHS_PER_SLASHINGS_VECTOR;
     const validator3 = generateValidator(0, FAR_FUTURE_EPOCH, true);
-    validator3.withdrawableEpoch = config.params.LATEST_SLASHED_EXIT_LENGTH + 2;
+    validator3.withdrawableEpoch = intDiv(config.params.EPOCHS_PER_SLASHINGS_VECTOR, 2) + 1;
     const state = generateState({
-      validatorRegistry: [
+      validators: [
         validator1,
         validator2,
         validator3

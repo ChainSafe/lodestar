@@ -74,7 +74,7 @@ describe('produce block', function () {
       bodyRoot: hashTreeRoot(parentBlock.body, config.types.BeaconBlockBody),
     };
     const state = generateState({
-      validatorRegistry: validators,
+      validators: validators,
       balances,
       latestBlockHeader: parentHeader
     });

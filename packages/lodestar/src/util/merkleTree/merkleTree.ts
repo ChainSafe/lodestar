@@ -10,10 +10,18 @@ import {serialize, deserialize, AnySSZType, SimpleContainerType} from "@chainsaf
 import {IProgressiveMerkleTree} from "./interface";
 
 const MerkleTreeType: SimpleContainerType = {
-  name: "MerkleTree",
   fields: [
     ["depth", "number64"],
-    ["tree", [[["byte", 32]]]],
+    ["tree", {
+      elementType: {
+        elementType: {
+          elementType: "byte",
+          maxLength: 32,
+        },
+        maxLength: 32,
+      },
+      maxLength: 32,
+    }],
   ],
 };
 

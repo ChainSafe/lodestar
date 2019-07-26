@@ -58,7 +58,7 @@ describe('process block - block header', function () {
 
   it('fail to process header - proposerSlashed', function () {
     const state = generateState({slot: 5});
-    state.validatorRegistry.push(generateValidator(0, 10, true));
+    state.validators.push(generateValidator(0, 10, true));
     const block = generateEmptyBlock();
     block.slot = 5;
     block.parentRoot = signingRoot(state.latestBlockHeader, config.types.BeaconBlockHeader);
@@ -81,7 +81,7 @@ describe('process block - block header', function () {
 
   it('fail to process header - invalid signature', function () {
     const state = generateState({slot: 5});
-    state.validatorRegistry.push(generateValidator(0, 10));
+    state.validators.push(generateValidator(0, 10));
     const block = generateEmptyBlock();
     block.slot = 5;
     block.parentRoot = signingRoot(state.latestBlockHeader, config.types.BeaconBlockHeader);
@@ -106,7 +106,7 @@ describe('process block - block header', function () {
 
   it('should process block - without signature verification', function () {
     const state = generateState({slot: 5});
-    state.validatorRegistry.push(generateValidator(0, 10));
+    state.validators.push(generateValidator(0, 10));
     const block = generateEmptyBlock();
     block.slot = 5;
     block.parentRoot = signingRoot(state.latestBlockHeader, config.types.BeaconBlockHeader);
@@ -131,7 +131,7 @@ describe('process block - block header', function () {
   it('should process block - with signature verification', function () {
     const validator = generateValidator();
     const state = generateState({slot: 5});
-    state.validatorRegistry.push(validator);
+    state.validators.push(validator);
     const block = generateEmptyBlock();
     block.slot = 5;
     block.parentRoot = signingRoot(state.latestBlockHeader, config.types.BeaconBlockHeader);

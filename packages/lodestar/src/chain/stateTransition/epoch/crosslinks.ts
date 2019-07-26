@@ -9,22 +9,22 @@ import {
   getCurrentEpoch,
   getPreviousEpoch,
   getTotalBalance,
-  getEpochCommitteeCount,
-  getEpochStartShard,
+  getCommitteeCount,
+  getStartShard,
   getCrosslinkCommittee,
 } from "../util";
 import {getWinningCrosslinkAndAttestingIndices} from "./util";
 
 
-export function processCrosslinks(config: IBeaconConfig, state: BeaconState): BeaconState {
+export function processCrosslinks(config: IBeaconConfig, state: BeaconState): void {
   state.previousCrosslinks = state.currentCrosslinks.slice();
 
   const currentEpoch = getCurrentEpoch(config, state);
   const previousEpoch = getPreviousEpoch(config, state);
   [previousEpoch, currentEpoch].forEach((epoch) => {
-    const comitteeCount = getEpochCommitteeCount(config, state, epoch);
+    const comitteeCount = getCommitteeCount(config, state, epoch);
     for (let offset = 0; offset < comitteeCount; offset++) {
-      const shard = (getEpochStartShard(config, state, epoch) + offset) % config.params.SHARD_COUNT;
+      const shard = (getStartShard(config, state, epoch) + offset) % config.params.SHARD_COUNT;
       const crosslinkCommittee = getCrosslinkCommittee(config, state, epoch, shard);
       const [winningCrosslink, attestingIndices] =
         getWinningCrosslinkAndAttestingIndices(config, state, epoch, shard);
@@ -34,5 +34,4 @@ export function processCrosslinks(config: IBeaconConfig, state: BeaconState): Be
       }
     }
   });
-  return state;
 }

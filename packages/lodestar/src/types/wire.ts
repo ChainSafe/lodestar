@@ -3,6 +3,9 @@ import {BeaconBlockBody} from "./block";
 import {BeaconBlockHeader} from "./misc";
 import {BeaconState} from "./state";
 
+export type RequestId = string;
+export type Method = number;
+
 export interface BlockRootSlot {
   blockRoot: bytes32;
   slot: Slot;

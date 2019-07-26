@@ -1,6 +1,7 @@
 /**
  * @module sszTypes/generators
  */
+import {parseType, ContainerType} from "@chainsafe/ssz";
 import * as primitive from "./primitive";
 import * as misc from "./misc";
 import * as operations from "./operations";
@@ -19,18 +20,18 @@ const allGenerators = {
   ...state,
   ...validator,
   ...wire,
-}
+};
 
 export function createIBeaconSSZTypes(params: IBeaconParams): IBeaconSSZTypes {
   // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
   const types: IBeaconSSZTypes = {} as IBeaconSSZTypes;
   // primitive types (don't need generators)
   for (const type in primitive) {
-    types[type] = primitive[type];
+    types[type] = parseType(primitive[type]);
   }
   // relies on list of typenames in dependency order
   typeNames.forEach((type) => {
-    types[type] = allGenerators[type](types, params);
+    types[type] = parseType(allGenerators[type](types, params)) as ContainerType;
   });
   /* or if we can separate out types w/ dependencies into files
   for (const type in misc) {

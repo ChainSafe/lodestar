@@ -15,7 +15,7 @@ describeSpecTest(
   join(__dirname, "../../test-cases/tests/sanity/blocks/sanity_blocks_mainnet.yaml"),
   (state: BeaconState, blocks: BeaconBlock[]) => {
     blocks.forEach((block) => {
-      stateTransition(config, state, block, false);
+      stateTransition(config, state, block, true);
     });
     return state;
   },

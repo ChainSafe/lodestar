@@ -10,7 +10,7 @@ import {
   FAR_FUTURE_EPOCH,
 } from "../../../../../../src/constants";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
-import {slotToEpoch} from "../../../../../../src/chain/stateTransition/util";
+import {computeEpochOfSlot} from "../../../../../../src/chain/stateTransition/util";
 import {processTransfer} from "../../../../../../src/chain/stateTransition/block/operations";
 
 import {generateEmptyTransfer} from "../../../../../utils/transfer";
@@ -96,11 +96,11 @@ describe('process block - transfers', function () {
   it('should fail to process transfer - balance over MAX_EFFECTIVE_BALANCE', function () {
     const validator = generateValidator();
     validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
-    validator.withdrawableEpoch = slotToEpoch(config, 1);
+    validator.withdrawableEpoch = computeEpochOfSlot(config, 1);
     const state = generateState({
       balances: [new BN(4)],
       slot: 1,
-      validatorRegistry: [validator]
+      validators: [validator]
     });
     const transfer = generateEmptyTransfer();
     transfer.amount = new BN(2);
@@ -117,11 +117,11 @@ describe('process block - transfers', function () {
   it('should fail to process transfer - invalid pubkey', function () {
     const validator = generateValidator();
     validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
-    validator.withdrawableEpoch = slotToEpoch(config, 1);
+    validator.withdrawableEpoch = computeEpochOfSlot(config, 1);
     const state = generateState({
       balances: [new BN(5).add(new BN(config.params.MAX_EFFECTIVE_BALANCE))],
       slot: 1,
-      validatorRegistry: [validator]
+      validators: [validator]
     });
     const transfer = generateEmptyTransfer();
     transfer.amount = new BN(2);
@@ -138,12 +138,12 @@ describe('process block - transfers', function () {
   it('should fail to process transfer - invalid signature', function () {
     const validator = generateValidator();
     validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
-    validator.withdrawableEpoch = slotToEpoch(config, 1);
+    validator.withdrawableEpoch = computeEpochOfSlot(config, 1);
     validator.withdrawalCredentials = Buffer.concat([config.params.BLS_WITHDRAWAL_PREFIX_BYTE, hash(validator.pubkey).slice(1)]);
     const state = generateState({
       balances: [new BN(5).add(new BN(config.params.MAX_EFFECTIVE_BALANCE))],
       slot: 1,
-      validatorRegistry: [validator]});
+      validators: [validator]});
     const transfer = generateEmptyTransfer();
     transfer.amount = new BN(2);
     transfer.fee = new BN(2);
@@ -161,12 +161,12 @@ describe('process block - transfers', function () {
   it('should fail to process transfer - sender balance is dust', function () {
     const validator = generateValidator();
     validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
-    validator.withdrawableEpoch = slotToEpoch(config, 1);
+    validator.withdrawableEpoch = computeEpochOfSlot(config, 1);
     validator.withdrawalCredentials = Buffer.concat([config.params.BLS_WITHDRAWAL_PREFIX_BYTE, hash(validator.pubkey).slice(1)]);
     const state = generateState({
       balances: [new BN(5).add(new BN(config.params.MAX_EFFECTIVE_BALANCE))],
       slot: 1,
-      validatorRegistry: [validator]});
+      validators: [validator]});
     const transfer = generateEmptyTransfer();
     transfer.amount = new BN(2);
     transfer.fee = new BN(2);
@@ -191,12 +191,12 @@ describe('process block - transfers', function () {
   it('should fail to process transfer - recipient balance is dust', function () {
     const validator = generateValidator();
     validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
-    validator.withdrawableEpoch = slotToEpoch(config, 1);
+    validator.withdrawableEpoch = computeEpochOfSlot(config, 1);
     validator.withdrawalCredentials = Buffer.concat([config.params.BLS_WITHDRAWAL_PREFIX_BYTE, hash(validator.pubkey).slice(1)]);
     const state = generateState({
       balances: [new BN(5).add(new BN(config.params.MAX_EFFECTIVE_BALANCE)), new BN(0)],
       slot: 1,
-      validatorRegistry: [validator]});
+      validators: [validator]});
     const transfer = generateEmptyTransfer();
     transfer.amount = new BN(2);
     transfer.fee = new BN(2);
@@ -219,12 +219,12 @@ describe('process block - transfers', function () {
   it('should process transfer', function () {
     const validator = generateValidator();
     validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
-    validator.withdrawableEpoch = slotToEpoch(config, 1);
+    validator.withdrawableEpoch = computeEpochOfSlot(config, 1);
     validator.withdrawalCredentials = Buffer.concat([config.params.BLS_WITHDRAWAL_PREFIX_BYTE, hash(validator.pubkey).slice(1)]);
     const state = generateState({
       balances: [new BN(5).add(new BN(config.params.MAX_EFFECTIVE_BALANCE)), new BN(config.params.MIN_DEPOSIT_AMOUNT)],
       slot: 1,
-      validatorRegistry: [validator]});
+      validators: [validator]});
     const transfer = generateEmptyTransfer();
     transfer.amount = new BN(2);
     transfer.fee = new BN(2);

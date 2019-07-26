@@ -3,16 +3,18 @@
  */
 import BN from "bn.js";
 
-import {Epoch, Gwei, Slot, Shard} from "../types";
+import {Epoch, Gwei, Slot, Shard, number64} from "../types";
 
 export interface IBeaconParams {
   // Misc
   SHARD_COUNT: number;
   TARGET_COMMITTEE_SIZE: number;
-  MAX_INDICES_PER_ATTESTATION: number;
+  MAX_VALIDATORS_PER_COMMITTEE: number;
   MIN_PER_EPOCH_CHURN_LIMIT: number;
   CHURN_LIMIT_QUOTIENT: number;
   SHUFFLE_ROUND_COUNT: number;
+  MIN_GENESIS_TIME: number;
+  MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: number;
 
   // Deposit contract
   DEPOSIT_CONTRACT_ADDRESS: number;
@@ -43,14 +45,13 @@ export interface IBeaconParams {
   PERSISTENT_COMMITTEE_PERIOD: number;
   MAX_EPOCHS_PER_CROSSLINK: number;
 
-  // should be a small constant times SHARD_COUNT // SLOTS_PER_EPOCH
-  MAX_CROSSLINK_EPOCHS: number;
   MIN_EPOCHS_TO_INACTIVITY_PENALTY: number;
 
   // State list lengths
-  LATEST_RANDAO_MIXES_LENGTH: number;
-  LATEST_ACTIVE_INDEX_ROOTS_LENGTH: number;
-  LATEST_SLASHED_EXIT_LENGTH: number;
+  EPOCHS_PER_HISTORICAL_VECTOR: number;
+  EPOCHS_PER_SLASHINGS_VECTOR: number;
+  HISTORICAL_ROOTS_LIMIT: number;
+  VALIDATOR_REGISTRY_LIMIT: number;
 
   // Reward and penalty quotients
   BASE_REWARD_FACTOR: number;

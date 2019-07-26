@@ -16,7 +16,7 @@ export async function bestVoteData(
 
   const [head, latestStateBlock] = await Promise.all([
     eth1.getHead(),
-    eth1.getBlock('0x' + state.latestEth1Data.blockHash.toString('hex'))
+    eth1.getBlock('0x' + state.eth1Data.blockHash.toString('hex'))
   ]);
   const validVotes = await filterValidVotes(config, state.eth1DataVotes, eth1, head, latestStateBlock);
 

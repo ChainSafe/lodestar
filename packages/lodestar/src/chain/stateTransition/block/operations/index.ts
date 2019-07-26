@@ -21,7 +21,7 @@ export {
   processTransfer,
 };
 
-// See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#operations
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#operations
 
 type Operation =
   ProposerSlashing | AttesterSlashing | Attestation | Deposit | VoluntaryExit | Transfer;
@@ -32,8 +32,9 @@ export function processOperations(
   body: BeaconBlockBody
 ): void {
   // Verify that outstanding deposits are processed up to the maximum number of deposits
-  assert(body.deposits.length == Math.min(config.params.MAX_DEPOSITS,
-    state.latestEth1Data.depositCount - state.depositIndex));
+  assert(body.deposits.length == Math.min(
+    config.params.MAX_DEPOSITS,
+    state.eth1Data.depositCount - state.eth1DepositIndex));
   // Verify that there are no duplicate transfers
   // TODO this is not sufficient to determine duplicates
   assert(body.transfers.length == (new Set(body.transfers)).size);

@@ -9,12 +9,13 @@ import {INetwork} from "../network";
 import {OpPool} from "../opPool";
 import {IEth1Notifier} from "../eth1";
 import {IBeaconDb} from "../db";
-import {SyncRpc} from "./rpc";
+import {SyncRpc} from "../network/libp2p/syncRpc";
 import {RegularSync} from "./regular";
 import {InitialSync} from "./initial";
 import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
 import {ISyncOptions} from "./options";
+import {ISyncRpc} from "./rpc/interface";
 
 interface SyncModules {
   config: IBeaconConfig;
@@ -24,6 +25,7 @@ interface SyncModules {
   network: INetwork;
   opPool: OpPool;
   reps: ReputationStore;
+  rpc: ISyncRpc;
   logger: ILogger;
 }
 
@@ -39,12 +41,12 @@ export class Sync extends EventEmitter {
   private opPool: OpPool;
   private eth1: IEth1Notifier;
   private db: IBeaconDb;
-  private rpc: SyncRpc;
+  private rpc: ISyncRpc;
   private reps: ReputationStore;
   private logger: ILogger;
   private syncer: RegularSync;
 
-  public constructor(opts: ISyncOptions, {config, chain, db, eth1, network, opPool, reps, logger}: SyncModules) {
+  public constructor(opts: ISyncOptions, {config, chain, db, eth1, network, opPool, reps, rpc, logger}: SyncModules) {
     super();
     this.opts = opts;
     this.config = config;
@@ -55,11 +57,11 @@ export class Sync extends EventEmitter {
     this.opPool = opPool;
     this.reps = reps;
     this.logger = logger;
-    this.rpc = new SyncRpc(opts, {config, db, chain, network, reps, logger});
+    this.rpc = rpc;
   }
 
   public async isSynced(): Promise<boolean> {
-    if (!await this.eth1.isAfterEth2Genesis()) {
+    if (!await this.chain.isInitialized()) {
       return true;
     }
     try {

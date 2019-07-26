@@ -6,8 +6,8 @@ import {config} from "../../../../../src/config/presets/mainnet";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {
   getCrosslinkCommittee,
-  getEpochCommitteeCount,
-  getEpochStartShard
+  getCommitteeCount,
+  getStartShard
 } from "../../../../../src/chain/stateTransition/util";
 import * as epochUtils from "../../../../../src/chain/stateTransition/epoch/util";
 import {getWinningCrosslinkAndAttestingIndices} from "../../../../../src/chain/stateTransition/epoch/util";
@@ -30,8 +30,8 @@ describe('process epoch - crosslinks', function () {
   beforeEach(() => {
     getCurrentEpochStub = sandbox.stub(utils, "getCurrentEpoch");
     getPreviousEpochStub = sandbox.stub(utils, "getPreviousEpoch");
-    getEpochStartShardStub = sandbox.stub(utils, "getEpochStartShard");
-    getEpochCommitteeCountStub = sandbox.stub(utils, "getEpochCommitteeCount");
+    getEpochStartShardStub = sandbox.stub(utils, "getStartShard");
+    getEpochCommitteeCountStub = sandbox.stub(utils, "getCommitteeCount");
     getCrosslinkCommitteeStub = sandbox.stub(utils, "getCrosslinkCommittee");
     getTotalBalanceStub = sandbox.stub(utils, "getTotalBalance");
     getWinningCrosslinkAndAttestingIndicesStub =
