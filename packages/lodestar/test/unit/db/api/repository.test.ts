@@ -12,7 +12,6 @@ import chaiAsPromised from 'chai-as-promised';
 chai.use(chaiAsPromised);
 
 const TestSSZType: SimpleContainerType = {
-  name: "BeaconBlockBody",
   fields: [
     ["bool", bool],
     ["bytes", bytes32],

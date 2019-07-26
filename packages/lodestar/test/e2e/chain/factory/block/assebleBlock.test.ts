@@ -23,7 +23,6 @@ import {ValidatorApi} from "../../../../../src/rpc";
 import {WinstonLogger} from "../../../../../src/logger";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import {generateDeposit} from "../../../../utils/deposit";
-import {BeaconChain} from "../../../../../src/chain";
 import {
   AttestationRepository,
   AttesterSlashingRepository,
@@ -50,7 +49,7 @@ describe('produce block', function () {
     voluntaryExit: sinon.createStubInstance(VoluntaryExitRepository),
     deposit: sinon.createStubInstance(DepositRepository),
   };
-  const opPoolStub = new OpPool({}, {db: dbStub, chain: sinon.createStubInstance(BeaconChain)});
+  const opPoolStub = new OpPool({}, {db: dbStub, eth1: sinon.createStubInstance(EthersEth1Notifier)});
   const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
 
   it('should produce valid block - state without valid eth1 votes', async function () {

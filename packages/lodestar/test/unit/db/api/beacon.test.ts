@@ -68,15 +68,15 @@ describe('beacon db api', function() {
   });
 
   it('should get validator index', async function () {
-    const state = generateState({validatorRegistry: [generateValidator()]});
+    const state = generateState({validators: [generateValidator()]});
     db.state.getLatest.resolves(state);
-    const index = await db.getValidatorIndex(state.validatorRegistry[0].pubkey);
+    const index = await db.getValidatorIndex(state.validators[0].pubkey);
     expect(index).to.be.equal(0);
     expect(db.state.getLatest.calledOnce).to.be.true;
   });
 
   it('should get validator index- not found', async function () {
-    const state = generateState({validatorRegistry: [generateValidator()]});
+    const state = generateState({validators: [generateValidator()]});
     db.state.getLatest.resolves(state);
     const index = await db.getValidatorIndex(Buffer.alloc(48, 123));
     expect(index).to.be.equal(-1);
