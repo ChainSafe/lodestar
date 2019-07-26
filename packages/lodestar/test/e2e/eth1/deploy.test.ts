@@ -29,7 +29,8 @@ describe("Eth1Notifier - using deployed contract", () => {
       logger: logger
     });
     depositContractAddress = await eth1Network.start();
-    provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:34569');
+    await sleep(300);
+    provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:34569', 999);
     provider.pollingInterval = 1;
     provider.polling = true;
     const opts = defaults;
@@ -65,7 +66,7 @@ describe("Eth1Notifier - using deployed contract", () => {
 
 
     await wallet.createValidatorDeposit(depositContractAddress, ethers.utils.parseEther('32.0'));
-    sleep(300);
+    await sleep(300);
     assert(cb.calledOnce, "deposit event did not fire");
   });
 
