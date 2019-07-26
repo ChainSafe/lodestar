@@ -12,9 +12,6 @@ install:
     - yarn
     - lerna bootstrap
 
-git:
-  lfs_skip_smudge: true
-
 jobs:
   include:
     - stage: Lint and Check types
@@ -43,6 +40,7 @@ jobs:
           - .git/lfs
       git:
         submodules: true
+        lfs_skip_smudge: true
 
 before_deploy: lerna run --scope @chainsafe/lodestar build:docs
 
