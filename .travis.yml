@@ -7,10 +7,14 @@ cache:
   directories:
     - node_modules
     - packages/lodestar/node_modules
+    - .git/lfs
 
 install:
     - yarn
     - lerna bootstrap
+
+git:
+  lfs_skip_smudge: true
 
 jobs:
   include:
@@ -32,7 +36,7 @@ jobs:
         submodules: false
     -
       name: spec
-      script: lerna run test:spec
+      script: git submodule foreach git lfs pull && lerna run test:spec
       git:
         submodules: true
 
