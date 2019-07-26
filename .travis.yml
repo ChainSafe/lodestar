@@ -37,7 +37,7 @@ jobs:
         - lerna run test:spec
       cache:
         directories:
-          - .git/lfs
+          - .git/modules/spect-test-cases/lfs
       git:
         submodules: true
         lfs_skip_smudge: true
