@@ -6,7 +6,7 @@ import {IBeaconConfig} from "../../../config";
 import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "../../../types";
 import {IBeaconApi} from "./interface";
 import {BeaconChain} from "../../../chain";
-import {BeaconDB} from "../../../db";
+import {BeaconDb} from "../../../db";
 
 export class BeaconApi implements IBeaconApi {
 
@@ -14,7 +14,7 @@ export class BeaconApi implements IBeaconApi {
 
   private config: IBeaconConfig;
   private chain: BeaconChain;
-  private db: BeaconDB;
+  private db: BeaconDb;
 
   public constructor(opts, {config, chain, db}) {
     this.namespace = 'beacon';

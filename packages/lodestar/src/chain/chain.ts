@@ -113,15 +113,15 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     const blockRoot = hashTreeRoot(genesisBlock, this.config.types.BeaconBlock);
     this.latestState = genesisState;
     await Promise.all([
-      this.db.state.store(stateRoot, genesisState),
-      this.db.block.store(blockRoot, genesisBlock),
+      this.db.state.set(stateRoot, genesisState),
+      this.db.block.set(blockRoot, genesisBlock),
       this.db.setChainHeadRoots(blockRoot, stateRoot, genesisBlock, genesisState),
       this.db.chain.setJustifiedBlockRoot(blockRoot),
       this.db.chain.setFinalizedBlockRoot(blockRoot),
       this.db.chain.setLatestStateRoot(stateRoot),
       this.db.chain.setJustifiedStateRoot(stateRoot),
       this.db.chain.setFinalizedStateRoot(stateRoot),
-      this.db.merkleTree.store(genesisState.eth1DepositIndex, merkleTree.toObject())
+      this.db.merkleTree.set(genesisState.eth1DepositIndex, merkleTree.toObject())
     ]);
     this.forkChoice.addBlock(genesisBlock.slot, blockRoot, Buffer.alloc(32));
     this.forkChoice.setJustified(blockRoot);
@@ -161,8 +161,8 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
 
     // On successful transition, update system state
     await Promise.all([
-      this.db.block.store(blockRoot, block),
-      this.db.state.store(block.stateRoot, newState),
+      this.db.block.set(blockRoot, block),
+      this.db.state.set(block.stateRoot, newState),
     ]);
     this.forkChoice.addBlock(block.slot, blockRoot, block.parentRoot);
     this.updateDepositMerkleTree(newState);
@@ -213,7 +213,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
       }
     );
     //TODO: remove deposits with index <= newState.depositIndex
-    await this.db.merkleTree.store(newState.eth1DepositIndex, merkleTree.toObject());
+    await this.db.merkleTree.set(newState.eth1DepositIndex, merkleTree.toObject());
   }
 
   private async checkGenesis(eth1Block: Block): Promise<void> {

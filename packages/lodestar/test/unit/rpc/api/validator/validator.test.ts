@@ -6,7 +6,7 @@ import * as blockAssembly from "../../../../../src/chain/factory/block";
 import * as stateTransitionUtils from "../../../../../src/chain/stateTransition/util";
 import {getCommitteeAssignment} from "../../../../../src/chain/stateTransition/util";
 import {ValidatorApi} from "../../../../../src/rpc/api/validator";
-import {BeaconDB} from "../../../../../src/db/api";
+import {BeaconDb} from "../../../../../src/db/api";
 import {BeaconChain} from "../../../../../src/chain";
 import {AttestationOperations, OpPool} from "../../../../../src/opPool";
 import {generateEmptyBlock} from "../../../../utils/block";
@@ -24,7 +24,7 @@ describe('validator rpc api', function () {
   let validatorApi, dbStub, chainStub, opStub, forkChoiceStub, eth1Stub;
 
   beforeEach(() => {
-    dbStub = sandbox.createStubInstance(BeaconDB);
+    dbStub = sandbox.createStubInstance(BeaconDb);
     dbStub.state =sandbox.createStubInstance(StateRepository);
     dbStub.block =sandbox.createStubInstance(BlockRepository);
     eth1Stub = sandbox.createStubInstance(EthersEth1Notifier);

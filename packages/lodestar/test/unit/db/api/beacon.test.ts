@@ -1,7 +1,7 @@
 import sinon from "sinon";
 import chai, {expect} from "chai";
 import chaiAsPromised from 'chai-as-promised';
-import {BeaconDB} from "../../../../src/db/api";
+import {BeaconDb} from "../../../../src/db/api";
 import {LevelDbController} from "../../../../src/db/controller";
 import {config} from "../../../../src/config/presets/mainnet";
 import {BlockRepository, ChainRepository, StateRepository} from "../../../../src/db/api/beacon/repositories";
@@ -19,7 +19,7 @@ describe('beacon db api', function() {
 
   beforeEach(function () {
     controller = sandbox.createStubInstance<LevelDbController>(LevelDbController);
-    db = new BeaconDB({controller, config});
+    db = new BeaconDb({controller, config});
     db.block = sandbox.createStubInstance(BlockRepository);
     db.state = sandbox.createStubInstance(StateRepository);
     db.chain = sandbox.createStubInstance(ChainRepository);

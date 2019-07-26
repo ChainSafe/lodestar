@@ -10,7 +10,7 @@ export class DepositsOperations {
   }
 
   public async receive(index: number, value: Deposit): Promise<void> {
-    await this.db.store(index, value);
+    await this.db.set(index, value);
   }
 
   public async getAll(): Promise<Deposit[]> {

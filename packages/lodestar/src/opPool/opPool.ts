@@ -7,7 +7,7 @@ import {EventEmitter} from "events";
 import {BeaconBlock} from "../types";
 
 import {BeaconChain} from "../chain";
-import {BeaconDB} from "../db";
+import {BeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
 import {
   AttestationOperations,
@@ -32,7 +32,7 @@ export class OpPool extends EventEmitter {
   public attesterSlashings: AttesterSlashingOperations;
 
   private readonly eth1: IEth1Notifier;
-  private readonly db: BeaconDB;
+  private readonly db: BeaconDb;
 
   public constructor(opts: IOpPoolOptions, {eth1, db}) {
     super();

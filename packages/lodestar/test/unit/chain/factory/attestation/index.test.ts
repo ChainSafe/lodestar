@@ -4,7 +4,7 @@ import {expect} from "chai";
 
 import {config} from "../../../../../src/config/presets/mainnet";
 import * as attestationDataProduction from "../../../../../src/chain/factory/attestation/data";
-import {BeaconDB} from "../../../../../src/db/api";
+import {BeaconDb} from "../../../../../src/db/api";
 import {assembleAttestation} from "../../../../../src/chain/factory/attestation";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateAttestationData} from "../../../../utils/attestation";
@@ -19,7 +19,7 @@ describe("assemble attestation", function () {
       attestationDataProduction,
       'assembleAttestationData'
     );
-    dbStub = sandbox.createStubInstance(BeaconDB);
+    dbStub = sandbox.createStubInstance(BeaconDb);
   });
 
   afterEach(() => {

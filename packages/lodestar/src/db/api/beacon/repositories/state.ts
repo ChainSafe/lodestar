@@ -1,11 +1,11 @@
-import {DatabaseRepository} from "../repository";
+import {Repository} from "../repository";
 import {BeaconState} from "../../../../types";
 import {IBeaconConfig} from "../../../../config";
 import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../../schema";
 import {ChainRepository} from "./chain";
 
-export class StateRepository extends DatabaseRepository<BeaconState> {
+export class StateRepository extends Repository<BeaconState> {
 
   private chain: ChainRepository;
 

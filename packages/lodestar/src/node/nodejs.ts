@@ -4,7 +4,7 @@
 
 import deepmerge from "deepmerge";
 import {IBeaconConfig} from "../config";
-import {BeaconDB, LevelDbController} from "../db";
+import {BeaconDb, LevelDbController} from "../db";
 import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
 import {INetwork, Libp2pNetwork, NodejsNode} from "../network";
 
@@ -33,7 +33,7 @@ export interface Service {
 export class BeaconNode {
   public conf: IBeaconNodeOptions;
   public config: IBeaconConfig;
-  public db: BeaconDB;
+  public db: BeaconDb;
   public eth1: IEth1Notifier;
   public network: INetwork;
   public chain: IBeaconChain;
@@ -57,7 +57,7 @@ export class BeaconNode {
     this.logger = logger;
 
     this.reps = new ReputationStore();
-    this.db = new BeaconDB({
+    this.db = new BeaconDb({
       config,
       controller: new LevelDbController(this.conf.db, {
         logger: this.logger,

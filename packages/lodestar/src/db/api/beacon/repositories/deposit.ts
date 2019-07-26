@@ -1,10 +1,10 @@
-import {FullDatabaseRepository} from "../repository";
+import {BulkRepository} from "../repository";
 import {Deposit} from "../../../../types";
 import {IBeaconConfig} from "../../../../config";
 import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../../schema";
 
-export class DepositRepository extends FullDatabaseRepository<Deposit> {
+export class DepositRepository extends BulkRepository<Deposit> {
 
   public constructor(
     config: IBeaconConfig,

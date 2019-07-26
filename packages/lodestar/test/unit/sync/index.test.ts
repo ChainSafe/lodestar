@@ -4,7 +4,7 @@ import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {OpPool} from "../../../src/opPool";
 import {EthersEth1Notifier} from "../../../src/eth1";
-import {BeaconDB} from "../../../src/db/api";
+import {BeaconDb} from "../../../src/db/api";
 import {ReputationStore} from "../../../src/sync/reputation";
 import {WinstonLogger} from "../../../src/logger";
 import {RegularSync} from "../../../src/sync/regular";

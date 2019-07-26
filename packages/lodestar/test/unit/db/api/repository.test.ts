@@ -1,6 +1,6 @@
 import {bool, bytes32} from "../../../../src/sszTypes/generators/primitive";
 import {bytes} from "../../../../src/types";
-import {FullDatabaseRepository} from "../../../../src/db/api/beacon/repository";
+import {BulkRepository} from "../../../../src/db/api/beacon/repository";
 import {IDatabaseController, LevelDbController} from "../../../../src/db/controller";
 import {Bucket} from "../../../../src/db/schema";
 import {config} from "../../../../src/config/presets/mainnet";
@@ -23,7 +23,7 @@ interface TestType {
   bytes: bytes;
 }
 
-class TestRepository extends FullDatabaseRepository<TestType> {
+class TestRepository extends BulkRepository<TestType> {
 
   public constructor(db: IDatabaseController) {
     super(config, db, Bucket.deposit, TestSSZType);
@@ -74,13 +74,13 @@ describe('database repository', function () {
 
   it('should store with hashTreeRoot as id', async function() {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    await expect(repository.storeUnderRoot(item)).to.not.be.rejected;
+    await expect(repository.setUnderRoot(item)).to.not.be.rejected;
     expect(controller.put.calledOnce).to.be.true;
   });
 
   it('should store with given id', async function() {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    await expect(repository.store(1, item)).to.not.be.rejected;
+    await expect(repository.set(1, item)).to.not.be.rejected;
     expect(controller.put.calledOnce).to.be.true;
   });
 

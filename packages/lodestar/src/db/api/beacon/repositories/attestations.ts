@@ -1,10 +1,10 @@
-import {FullDatabaseRepository} from "../repository";
+import {BulkRepository} from "../repository";
 import {Attestation} from "../../../../types";
 import {IBeaconConfig} from "../../../../config";
 import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../../schema";
 
-export class AttestationRepository extends FullDatabaseRepository<Attestation> {
+export class AttestationRepository extends BulkRepository<Attestation> {
 
   public constructor(
     config: IBeaconConfig,

@@ -2,7 +2,7 @@
  * @module db/api/beacon
  */
 
-import {BeaconBlock, BeaconState, bytes32, ValidatorIndex} from "../../../types";
+import {BeaconBlock, BeaconState, bytes32, bytes48, Hash, ValidatorIndex} from "../../../types";
 
 import {Bucket, encodeKey, Key} from "../../schema";
 
@@ -22,7 +22,7 @@ import {
   VoluntaryExitRepository
 } from "./repositories";
 
-export class BeaconDB extends DatabaseService implements IBeaconDb {
+export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   public chain: ChainRepository;
 
@@ -59,8 +59,8 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
   }
 
   public async setChainHeadRoots(
-    blockRoot: bytes32,
-    stateRoot: bytes32,
+    blockRoot: Hash,
+    stateRoot: Hash,
     block?: BeaconBlock,
     state?: BeaconState): Promise<void> {
     const [storedBlock, storedState] = await Promise.all([
@@ -88,7 +88,7 @@ export class BeaconDB extends DatabaseService implements IBeaconDb {
     ]);
   }
 
-  public async getValidatorIndex(publicKey: Buffer): Promise<ValidatorIndex> {
+  public async getValidatorIndex(publicKey: bytes48): Promise<ValidatorIndex> {
     const state = await this.state.getLatest();
     //TODO: cache this (hashmap)
     return state.validators.findIndex(value => value.pubkey === publicKey);

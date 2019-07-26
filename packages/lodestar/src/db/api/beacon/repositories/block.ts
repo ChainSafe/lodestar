@@ -1,12 +1,12 @@
-import {DatabaseRepository} from "../repository";
-import {BeaconBlock, bytes32, Slot} from "../../../../types";
+import {Repository} from "../repository";
+import {BeaconBlock, bytes32, Hash, Slot} from "../../../../types";
 import {ChainRepository} from "./chain";
 import {IBeaconConfig} from "../../../../config";
 import {IDatabaseController} from "../../../controller";
 import {Bucket, encodeKey} from "../../../schema";
 import {serialize} from "@chainsafe/ssz";
 
-export class BlockRepository extends DatabaseRepository<BeaconBlock> {
+export class BlockRepository extends Repository<BeaconBlock> {
 
   private chain: ChainRepository;
 
@@ -42,15 +42,15 @@ export class BlockRepository extends DatabaseRepository<BeaconBlock> {
     return await this.get(root);
   }
 
-  public async storeBadBlock(root: bytes32): Promise<void> {
+  public async storeBadBlock(root: Hash): Promise<void> {
     return await this.db.put(
       encodeKey(Bucket.invalidBlock, root),
       serialize(true, this.config.types.bool)
     );
   }
 
-  public async isBadBlock(root: bytes32): Promise<boolean> {
-    return !!this.db.get(encodeKey(Bucket.invalidBlock, root));
+  public async isBadBlock(root: Hash): Promise<boolean> {
+    return !! await this.db.get(encodeKey(Bucket.invalidBlock, root));
   }
 
 }

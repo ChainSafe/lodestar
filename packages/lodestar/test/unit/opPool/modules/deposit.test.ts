@@ -24,9 +24,9 @@ describe("opPool - deposits", function () {
   it('should receive', async function () {
     const data = generateDeposit();
 
-    dbStub.deposit.store.resolves();
+    dbStub.deposit.set.resolves();
     await service.receive(0, data);
-    expect(dbStub.deposit.store.calledOnce).to.be.true;
+    expect(dbStub.deposit.set.calledOnce).to.be.true;
   });
 
 

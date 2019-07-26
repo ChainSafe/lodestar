@@ -6,7 +6,7 @@ import {AnySSZType, deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
 
 export type Id = Buffer | string | number | BN;
 
-export abstract class DatabaseRepository<T> {
+export abstract class Repository<T> {
   protected config: IBeaconConfig;
 
   protected db: IDatabaseController;
@@ -35,14 +35,14 @@ export abstract class DatabaseRepository<T> {
   }
 
   public async has(id: Id): Promise<boolean> {
-    return !! await this.get(id);
+    return await this.get(id) !== null;
   }
 
-  public async storeUnderRoot(value: T): Promise<void> {
-    await this.store(hashTreeRoot(value, this.type), value);
+  public async setUnderRoot(value: T): Promise<void> {
+    await this.set(hashTreeRoot(value, this.type), value);
   }
 
-  public async store(id: Id, value: T): Promise<void> {
+  public async set(id: Id, value: T): Promise<void> {
     await this.db.put(encodeKey(this.bucket, id), serialize(value, this.type));
   }
 
@@ -52,7 +52,7 @@ export abstract class DatabaseRepository<T> {
 
 }
 
-export abstract class FullDatabaseRepository<T> extends DatabaseRepository<T> {
+export abstract class BulkRepository<T> extends Repository<T> {
 
   public async getAll(): Promise<T[]> {
     const data = await this.db.search({

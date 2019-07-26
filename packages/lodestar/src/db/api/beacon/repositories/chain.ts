@@ -1,5 +1,5 @@
 import {IDatabaseController} from "../../../controller";
-import {BeaconBlock, bytes32, Slot} from "../../../../types";
+import {BeaconBlock, bytes32, Hash, Slot} from "../../../../types";
 import {Key, Bucket, encodeKey} from "../../../schema";
 import {deserialize, serialize} from "@chainsafe/ssz";
 import {IBeaconConfig} from "../../../../config";
@@ -15,56 +15,56 @@ export class ChainRepository {
     this.config = config;
   }
 
-  public getLatestStateRoot(): Promise<bytes32> {
+  public getLatestStateRoot(): Promise<Hash> {
     return this.db.get(this.getKey(Key.latestState));
   }
 
-  public async setLatestStateRoot(root: bytes32): Promise<void> {
+  public async setLatestStateRoot(root: Hash): Promise<void> {
     await this.db.put(
       this.getKey(Key.latestState),
       serialize(root, this.config.types.bytes32)
     );
   }
 
-  public getJustifiedStateRoot(): Promise<bytes32> {
+  public getJustifiedStateRoot(): Promise<Hash> {
     return this.db.get(this.getKey(Key.justifiedState));
   }
 
-  public async setJustifiedStateRoot(root: bytes32): Promise<void> {
+  public async setJustifiedStateRoot(root: Hash): Promise<void> {
     await this.db.put(
       this.getKey(Key.justifiedState),
       serialize(root, this.config.types.bytes32)
     );
   }
 
-  public getFinalizedStateRoot(): Promise<bytes32> {
+  public getFinalizedStateRoot(): Promise<Hash> {
     return this.db.get(this.getKey(Key.finalizedState));
   }
 
-  public async setFinalizedStateRoot(root: bytes32): Promise<void> {
+  public async setFinalizedStateRoot(root: Hash): Promise<void> {
     await this.db.put(
       this.getKey(Key.finalizedState),
       serialize(root, this.config.types.bytes32)
     );
   }
 
-  public getFinalizedBlockRoot(): Promise<bytes32> {
+  public getFinalizedBlockRoot(): Promise<Hash> {
     return this.db.get(this.getKey(Key.finalizedBlock));
   }
 
-  public async setFinalizedBlockRoot(root: bytes32): Promise<void> {
+  public async setFinalizedBlockRoot(root: Hash): Promise<void> {
     return await this.db.put(this.getKey(Key.finalizedBlock), root);
   }
 
-  public getJustifiedBlockRoot(): Promise<bytes32> {
+  public getJustifiedBlockRoot(): Promise<Hash> {
     return this.db.get(this.getKey(Key.justifiedBlock));
   }
 
-  public async setJustifiedBlockRoot(root: bytes32): Promise<void> {
+  public async setJustifiedBlockRoot(root: Hash): Promise<void> {
     return await this.db.put(this.getKey(Key.justifiedBlock), root);
   }
 
-  public async getBlockRoot(slot: Slot): Promise<bytes32 | null> {
+  public async getBlockRoot(slot: Slot): Promise<Hash | null> {
     try {
       return await this.db.get(encodeKey(Bucket.mainChain, slot));
     } catch (e) {
@@ -81,7 +81,7 @@ export class ChainRepository {
     }
   }
 
-  public async getChainHeadRoot(): Promise<bytes32 | null> {
+  public async getChainHeadRoot(): Promise<Hash | null> {
     const slot  = await this.getChainHeadSlot();
     if (slot === null) {
       return null;

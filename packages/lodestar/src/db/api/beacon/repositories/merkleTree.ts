@@ -1,11 +1,11 @@
-import {FullDatabaseRepository} from "../repository";
+import {BulkRepository} from "../repository";
 import {MerkleTree} from "../../../../types";
 import {IBeaconConfig} from "../../../../config";
 import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../../schema";
 import {IProgressiveMerkleTree, ProgressiveMerkleTree} from "../../../../util/merkleTree";
 
-export class MerkleTreeRepository extends FullDatabaseRepository<MerkleTree> {
+export class MerkleTreeRepository extends BulkRepository<MerkleTree> {
 
   public constructor(
     config: IBeaconConfig,

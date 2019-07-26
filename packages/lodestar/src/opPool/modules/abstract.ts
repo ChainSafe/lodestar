@@ -1,15 +1,15 @@
-import {FullDatabaseRepository} from "../../db/api/beacon/repository";
+import {BulkRepository} from "../../db/api/beacon/repository";
 
 export abstract class OperationsModule<T> {
 
-  protected readonly db: FullDatabaseRepository<T>;
+  protected readonly db: BulkRepository<T>;
 
-  public constructor(db: FullDatabaseRepository<T>) {
+  public constructor(db: BulkRepository<T>) {
     this.db = db;
   }
 
   public async receive(value: T): Promise<void> {
-    await this.db.storeUnderRoot(value);
+    await this.db.setUnderRoot(value);
   }
 
   public async getAll(): Promise<T[]> {
