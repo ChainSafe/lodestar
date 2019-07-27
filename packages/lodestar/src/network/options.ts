@@ -1,7 +1,6 @@
 import {number64} from "../types";
 import {IConfigurationModule} from "../util/config";
-import {ILoggingOptions} from "../logger/option";
-import {LoggingOptions} from "../logger/option";
+import {LogLevel} from "../logger";
 
 export interface INetworkOptions {
   maxPeers: number64;
@@ -10,7 +9,7 @@ export interface INetworkOptions {
   rpcTimeout: number64;
   connectTimeout: number;
   disconnectTimeout: number;
-  loggingOptions?: ILoggingOptions;
+  loggingLevel?: LogLevel;
 }
 
 export const NetworkOptions: IConfigurationModule = {
@@ -38,7 +37,6 @@ export const NetworkOptions: IConfigurationModule = {
         flag: "bootnodes"
       }
     },
-    LoggingOptions
   ]
 };
 

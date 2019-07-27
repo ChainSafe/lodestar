@@ -18,6 +18,8 @@ import {ILogger, WinstonLogger} from "../../logger";
 import {INetworkOptions} from "../options";
 import {INetwork} from "../interface";
 import {Module} from "../../logger/abstract";
+import deepmerge from "deepmerge";
+import defaultNetworkOptions from "../options";
 
 
 export class Libp2pNetwork extends EventEmitter implements INetwork {
@@ -33,9 +35,9 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
   public constructor(opts: INetworkOptions, {config, libp2p, logger}:
   {config: IBeaconConfig; libp2p: any; logger?: ILogger}) {
     super();
-    this.opts = opts;
+    this.opts = deepmerge(defaultNetworkOptions, opts);
     this.config = config;
-    this.logger = logger || new WinstonLogger(opts.loggingOptions, Module.NETWORK);
+    this.logger = logger || new WinstonLogger(this.opts.loggingLevel, Module.NETWORK);
     // `libp2p` can be a promise as well as a libp2p object
     this.inited = new Promise((resolve) => {
       Promise.resolve(libp2p).then((libp2p) => {

@@ -39,7 +39,8 @@ import {ILogger, WinstonLogger} from "../../logger";
 import {IBeaconConfig} from "../../config";
 import {Module} from "../../logger/abstract";
 import {ISyncRpc} from "../../sync/rpc/interface";
-import {ISyncOptions} from "../../sync/options";
+import defaultSyncOptions, {ISyncOptions} from "../../sync/options";
+import deepmerge from "deepmerge";
 
 /**
  * The SyncRpc module handles app-level requests / responses from other peers,
@@ -56,13 +57,14 @@ export class SyncRpc implements ISyncRpc {
 
   public constructor(opts: ISyncOptions, {config, db, chain, network, reps, logger}:
   {config: IBeaconConfig; db: IBeaconDb; chain: IBeaconChain; network: INetwork; reps: ReputationStore; logger?: ILogger}) {
+    this.opts = deepmerge(defaultSyncOptions, opts);
     this.config = config;
-    this.logger = logger || new WinstonLogger(opts.loggingOptions, Module.NETWORK);
     this.opts = opts;
     this.db = db;
     this.chain = chain;
     this.network = network;
     this.reps = reps;
+    this.logger = logger || new WinstonLogger(this.opts.loggingLevel, Module.NETWORK);
   }
 
   // create common requests

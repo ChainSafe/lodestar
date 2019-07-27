@@ -7,9 +7,8 @@ import {promisify} from "util";
 import * as utils from 'ethers/utils';
 import deepmerge from "deepmerge";
 import * as ethers from "ethers/ethers";
-import {ILogger, WinstonLogger} from "../../logger";
+import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import devEth1Options from "./options";
-import {ILoggingOptions} from "../../logger/option";
 import {Module} from "../../logger/abstract";
 
 export const devNetworkOpts =  {
@@ -27,7 +26,7 @@ export interface PrivateNetworkOpts {
   dbPath?: string;
   blockTime?: number;
   mnemonic?: string;
-  loggingOptions?: ILoggingOptions;
+  loggingLevel?: LogLevel;
 }
 
 export class PrivateEth1Network {
@@ -42,7 +41,7 @@ export class PrivateEth1Network {
 
   public constructor(opts: PrivateNetworkOpts, {logger}: {logger?: ILogger} ) {
     this.opts = deepmerge(devNetworkOpts, opts);
-    this.logger = logger || new WinstonLogger(opts.loggingOptions, Module.ETH1);
+    this.logger = logger || new WinstonLogger(opts.loggingLevel, Module.ETH1);
     this.server = ganache.server({
       ...this.opts,
       // eslint-disable-next-line  @typescript-eslint/camelcase

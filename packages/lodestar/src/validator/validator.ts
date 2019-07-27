@@ -43,18 +43,18 @@ class Validator {
   private isActive: boolean;
   private isRunning: boolean;
 
-
-
   public constructor(opts: Partial<IValidatorOptions>, modules: {config: IBeaconConfig; logger?: ILogger}) {
     this.opts = deepmerge(defaultValidatorOptions, opts, {isMergeableObject: isPlainObject});
     this.config = modules.config;
-    this.logger = modules.logger || new WinstonLogger(this.opts.loggingOptions, Module.VALIDATOR);
+    this.logger = modules.logger || new WinstonLogger(this.opts.loggingLevel, Module.VALIDATOR);
     this.isActive = false;
     this.isRunning = false;
     this.db = new ValidatorDB({
       config: this.config,
-      controller: new LevelDbController(this.opts.db, {
-        logger: modules.logger,
+      controller: new LevelDbController({
+        name: this.opts.db.name
+      }, {
+        logger: this.logger
       })
     });
     if(this.opts.rpcInstance) {

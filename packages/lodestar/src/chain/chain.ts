@@ -25,10 +25,11 @@ import {IBeaconChain} from "./interface";
 import {ProgressiveMerkleTree} from "../util/merkleTree/merkleTree";
 import {processSortedDeposits} from "../util/deposits";
 import {Module} from "../logger/abstract";
-import {IChainOptions} from "./options";
+import defaultChainOption, {IChainOptions} from "./options";
+import deepmerge from "deepmerge";
 
 export class BeaconChain extends EventEmitter implements IBeaconChain {
-  public chain: IChainOptions;
+  public chain: string;
   public genesisTime: number64;
   public forkChoice: LMDGHOST;
   public chainId: uint16;
@@ -38,15 +39,17 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
   private eth1: IEth1Notifier;
   private _latestBlock: BeaconBlock;
   private logger: ILogger;
+  private opts: IChainOptions;
 
-  public constructor(opts, {config, db, eth1, logger}:
+  public constructor(opts: IChainOptions, {config, db, eth1, logger}:
   { config: IBeaconConfig; db: IBeaconDb; eth1: IEth1Notifier; logger?: ILogger }) {
     super();
-    this.chain = opts.chain;
+    this.opts = deepmerge(defaultChainOption, opts);
+    this.chain = opts.name;
     this.config = config;
     this.db = db;
     this.eth1 = eth1;
-    this.logger = logger || new WinstonLogger(this.chain.loggingOptions, Module.CHAIN);
+    this.logger = logger || new WinstonLogger(this.opts.loggingLevel, Module.CHAIN);
     this.forkChoice = new StatefulDagLMDGHOST();
     this.chainId = 0; // TODO make this real
     this.networkId = new BN(0); // TODO make this real

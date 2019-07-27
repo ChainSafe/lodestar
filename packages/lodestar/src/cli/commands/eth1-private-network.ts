@@ -5,7 +5,7 @@
 import {CliCommand} from "./interface";
 import {PrivateEth1Network} from "../../eth1/dev";
 import {CommanderStatic} from "commander";;
-import {ILogger, WinstonLogger} from "../../logger";
+import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import {parseLoggingLevel} from "../../util/parse";
 
 interface IEth1CommandOptions {
@@ -28,8 +28,7 @@ export class Eth1PrivateNetworkCommand implements CliCommand {
       .description('Start private eth1 chain with deposit contract and 10 accounts with balance')
       .option("-p, --port [port]", 'Port on which private network node should start', 8545)
       .option("-h, --host [host]", 'Host on which node will be', '127.0.0.1')
-      .option("-l, --loggingLevel [chain=debug, network=trace, database=warn]",
-        "Logging level with module")
+      .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
       .option("-m, --mnemonic [mnemonic]", 'mnemonic string to be used for generating account')
       .option("-n, --network [networkId]", "Id of eth1 chain", 200)
       .option(
@@ -53,9 +52,7 @@ export class Eth1PrivateNetworkCommand implements CliCommand {
       mnemonic: options.mnemonic,
       networkId: options.network,
       dbPath: options.database,
-      loggingOptions: {
-        loggingLevel: parseLoggingLevel(options.loggingLevel),
-      }
+      loggingLevel: options.loggingLevel as LogLevel
     },
     {logger}
     );

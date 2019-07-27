@@ -6,9 +6,8 @@ import Validator from "../../../src/validator";
 import {RpcClientOverInstance} from "../../../src/validator/rpc";
 import {MockBeaconApi} from "../../utils/mocks/rpc/beacon";
 import {MockValidatorApi} from "../../utils/mocks/rpc/validator";
-import {ILogger, LogLevel, WinstonLogger} from "../../../src/logger";
+import {ILogger, WinstonLogger} from "../../../src/logger";
 import {IValidatorOptions} from "../../../src/validator/options";
-import {Module} from "../../../src/logger/abstract";
 
 describe('Validator', () => {
 

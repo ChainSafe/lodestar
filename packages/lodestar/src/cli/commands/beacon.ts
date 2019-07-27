@@ -35,8 +35,6 @@ export class BeaconNodeCommand implements CliCommand {
       .command("beacon")
       .description("Start lodestar node")
       .option("-c, --configFile [config_file]", "Config file path")
-      .option("-l, --loggingLevel [chain=debug, network=trace, database=warn]",
-        "Logging level with module")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
@@ -57,7 +55,6 @@ export class BeaconNodeCommand implements CliCommand {
       //cli will override toml config options
       conf = deepmerge(conf, parsedConfig);
     }
-
     //override current config with cli config
     conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
 

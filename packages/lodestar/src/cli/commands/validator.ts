@@ -22,8 +22,7 @@ export class ValidatorCommand implements CliCommand {
     const command = commander
       .command("validator")
       .description("Start lodestar validator")
-      .option("-l, --loggingLevel [chain=debug, network=trace, database=warn]",
-        "Logging level with module")
+      .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
@@ -39,14 +38,17 @@ export class ValidatorCommand implements CliCommand {
   public async action(options: IValidatorCommandOptions, logger?: ILogger): Promise<void> {
 
     const conf: Partial<IValidatorOptions> = optionsToConfig(options, ValidatorOptions);
+
     let validator = new Validator(
-      conf,
+      {...conf,
+        loggingLevel: options.loggingLevel as LogLevel,
+      }
+      ,
       {
         config: config,
         logger,
       }
     );
-
     await validator.start();
   }
 

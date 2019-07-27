@@ -21,7 +21,7 @@ export enum Module {
   ETH1 = 'eth1',
   SYNC = 'sync',
   VALIDATOR = 'validator',
-  DEFAULT = ''
+  DEFAULT = '',
 }
 
 export abstract class AbstractLogger implements ILogger{

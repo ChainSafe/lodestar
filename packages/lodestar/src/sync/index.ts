@@ -13,9 +13,10 @@ import {RegularSync} from "./regular";
 import {InitialSync} from "./initial";
 import {ReputationStore} from "./reputation";
 import {ILogger, WinstonLogger} from "../logger";
-import {ISyncOptions} from "./options";
+import defaultSyncOptions, {ISyncOptions} from "./options";
 import {ISyncRpc} from "./rpc/interface";
 import {Module} from "../logger/abstract";
+import deepmerge from "deepmerge";
 
 interface SyncModules {
   config: IBeaconConfig;
@@ -48,7 +49,7 @@ export class Sync extends EventEmitter {
 
   public constructor(opts: ISyncOptions, {config, chain, db, eth1, network, opPool, reps, rpc, logger}: SyncModules) {
     super();
-    this.opts = opts;
+    this.opts = deepmerge(defaultSyncOptions, opts);
     this.config = config;
     this.chain = chain;
     this.db = db;
@@ -56,7 +57,7 @@ export class Sync extends EventEmitter {
     this.network = network;
     this.opPool = opPool;
     this.reps = reps;
-    this.logger = logger || new WinstonLogger(this.opts.loggingOptions, Module.SYNC);
+    this.logger = logger || new WinstonLogger(this.opts.loggingLevel, Module.SYNC);
     this.rpc = rpc;
   }
 

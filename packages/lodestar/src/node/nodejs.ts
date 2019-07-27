@@ -19,6 +19,7 @@ import {ILogger, WinstonLogger} from "../logger";
 import {ReputationStore} from "../sync/reputation";
 import {JSONRPC, WSServer} from "../rpc";
 import {SyncRpc} from "../network/libp2p/syncRpc";
+import {Module} from "../logger/abstract";
 
 export interface Service {
   start(): Promise<void>;
@@ -44,7 +45,6 @@ export class BeaconNode {
 
   public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger}:
   {config: IBeaconConfig; logger?: ILogger}) {
-
     this.conf = deepmerge(
       defaultConf,
       opts,
@@ -58,14 +58,21 @@ export class BeaconNode {
     this.reps = new ReputationStore();
     this.db = new BeaconDB({
       config,
-      controller: new LevelDbController(this.conf.db, {logger}),
+      controller: new LevelDbController(
+        {
+          ...this.conf.db,
+          loggingLevel: this.conf.loggingOptions[Module.DATABASE],
+        },
+        {logger}),
     });
     // initialize for network type
     const libp2p = createPeerId()
       .then((peerId) => initializePeerInfo(peerId, this.conf.network.multiaddrs))
       .then((peerInfo) => new NodejsNode({peerInfo}));
-
-    const rpc = new SyncRpc(this.conf.sync, {
+    const rpc = new SyncRpc({
+      ...this.conf.sync,
+      loggingLevel: this.conf.loggingOptions[Module.NETWORK],
+    }, {
       config,
       db: this.db,
       chain: this.chain,
@@ -73,28 +80,41 @@ export class BeaconNode {
       reps: this.reps,
       logger,
     });
-    this.network = new Libp2pNetwork(this.conf.network, {
+    this.network = new Libp2pNetwork({
+      ...this.conf.network,
+      loggingLevel: this.conf.loggingOptions[Module.NETWORK],
+    }, {
       config,
       libp2p: libp2p,
       logger,
     });
-    this.eth1 = new EthersEth1Notifier(this.conf.eth1, {
-      config,
-      opPool: this.opPool,
-      logger,
-    });
-    this.chain = new BeaconChain(this.conf.chain, {
-      config,
-      db: this.db,
-      eth1: this.eth1,
-      logger,
-    });
+    this.eth1 = new EthersEth1Notifier(
+      {
+        ...this.conf.eth1,
+        loggingLevel: this.conf.loggingOptions[Module.ETH1],
+      }, {
+        config,
+        opPool: this.opPool,
+        logger,
+      });
+    this.chain = new BeaconChain(
+      {
+        ...this.conf.chain,
+        loggingLevel: this.conf.loggingOptions[Module.CHAIN],
+      }, {
+        config,
+        db: this.db,
+        eth1: this.eth1,
+        logger,
+      });
     this.opPool = new OpPool(this.conf.opPool, {
       db: this.db,
       chain: this.chain,
     });
-
-    this.sync = new Sync(this.conf.sync, {
+    this.sync = new Sync({
+      ...this.conf.sync,
+      loggingLevel: this.conf.loggingOptions[Module.SYNC],
+    }, {
       config,
       db: this.db,
       eth1: this.eth1,

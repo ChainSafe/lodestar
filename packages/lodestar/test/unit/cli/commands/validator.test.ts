@@ -30,6 +30,7 @@ describe('[CLI] validator', () => {
         key:keyString,
         loggingLevel: null,
       },logger)
+
     ).not.throw;
   });
 

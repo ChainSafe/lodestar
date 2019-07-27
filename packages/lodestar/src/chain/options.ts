@@ -1,11 +1,9 @@
 import {IConfigurationModule} from "../util/config";
-import {number64} from "../types";
-import {ILoggingOptions} from "../logger/option";
-import {LoggingOptions} from "../logger/option";
+import {LogLevel} from "../logger";
 
 export interface IChainOptions {
   name: string;
-  loggingOptions?: ILoggingOptions;
+  loggingLevel?: LogLevel;
 }
 
 export const ChainOptions: IConfigurationModule = {
@@ -25,7 +23,6 @@ export const ChainOptions: IConfigurationModule = {
         short: "c"
       }
     },
-    LoggingOptions
   ]
 };
 

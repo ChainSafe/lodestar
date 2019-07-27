@@ -5,6 +5,10 @@
 
 import {LogLevel} from "./abstract";
 
+export interface ILoggingOptions {
+  loggingLevel: LogLevel;
+}
+
 export interface ILogger {
   info(message: string|object, context?: object): void;
   warn(message: string|object, context?: object): void;

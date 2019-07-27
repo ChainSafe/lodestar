@@ -1,11 +1,12 @@
-import {DatabaseOptions, IDatabaseOptions} from "../db/options";
+import {IDatabaseOptions} from "../db/options";
+import {ITransportOption} from "../rpc/options";
 import {RpcClient} from "./rpc";
 import {Keypair} from "@chainsafe/bls-js/lib/keypair";
+import {TransportType} from "../rpc/transport";
 import {IConfigurationModule} from "../util/config";
 import {IValidatorDB} from "../db/api";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
-import {ILoggingOptions} from "../logger/option";
-import {LoggingOptions} from "../logger/option";
+import {LogLevel} from "../logger";
 
 export interface IValidatorOptions {
   db: IDatabaseOptions;
@@ -14,13 +15,25 @@ export interface IValidatorOptions {
   rpcInstance?: RpcClient;
   keypair: Keypair;
   keystore?: string;
-  loggingOptions?: ILoggingOptions;
+  loggingLevel?: LogLevel;
 }
 
 export const ValidatorOptions: IConfigurationModule = {
   name: 'validator',
   fields: [
-    DatabaseOptions,
+    {
+      name: "db",
+      fields: [
+        {
+          name: "name",
+          type: String,
+          configurable: true,
+          cli: {
+            flag: "validatorDb"
+          }
+        }
+      ]
+    },
     {
       name: "syncRpc.ts",
       type: String,
@@ -52,8 +65,7 @@ export const ValidatorOptions: IConfigurationModule = {
       cli: {
         flag: "validatorKeystore"
       }
-    },
-    LoggingOptions
+    }
   ]
 };
 
