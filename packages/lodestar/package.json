@@ -22,7 +22,7 @@
     "test:unit": "nyc --cache-dir .nyc_output/.cache -r lcov -e .ts mocha -r ts-node/register 'test/unit/**/*.test.ts' && nyc report",
     "test:e2e": "mocha --timeout 5000 -r ./.babel-register 'test/e2e/**/*.test.ts'",
     "test:spec-main": "mocha --max-old-space-size=7168 -r ./.babel-register 'test/spec/**/*mainnet.test.ts'",
-    "test:spec-min": "mocha --max-old-space-size=7168 -r ./.babel-register 'test/spec/**/*minimal.test.ts'",
+    "test:spec-min": "mocha -r ./.babel-register 'test/spec/**/*minimal.test.ts'",
     "test:spec": "mocha --max-old-space-size=7168 -r ./.babel-register 'test/spec/**/*.test.ts'",
     "test": "yarn test:unit && yarn test:spec && yarn test:e2e",
     "coverage": "codecov -F lodestar",
