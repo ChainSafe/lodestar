@@ -6,7 +6,7 @@ import {
   getActiveValidatorIndices,
   isActiveValidator,
   isSlashableValidator,
-} from "../../../../../src/chain/stateTransition/util/validator";
+} from "../../../../../src/chain/stateTransition/util";
 
 import {randBetween} from "../../../../utils/misc";
 import {generateValidator} from "../../../../utils/validator";
@@ -21,9 +21,9 @@ describe("getActiveValidatorIndices", () => {
     const state = generateState();
     const activationEpoch = 1;
     const exitEpoch = 10;
-    state.validatorRegistry = Array.from({length: 10},
+    state.validators = Array.from({length: 10},
       () => generateValidator(activationEpoch, exitEpoch));
-    const allActiveIndices = state.validatorRegistry.map((_, i) => i);
+    const allActiveIndices = state.validators.map((_, i) => i);
     const allInactiveIndices = [];
     assert.deepEqual(getActiveValidatorIndices(state, activationEpoch), allActiveIndices);
     assert.deepEqual(getActiveValidatorIndices(state, exitEpoch), allInactiveIndices);

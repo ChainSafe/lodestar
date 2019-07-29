@@ -99,7 +99,7 @@ describe("[network] rpc request", () => {
     },
   ];
   for (const {msg, method, type} of testCases) {
-    it(`should properly encode/decode ${type.name}`, () => {
+    it(`should properly encode/decode ${type}`, () => {
       const idHex = "FFFFFFFFFFFFFFFF";
       // encode
       const body = serialize(msg, type);
@@ -181,7 +181,7 @@ describe("[p2p] rpc response", () => {
     },
   ];
   for (const {msg, method, type} of testCases) {
-    it(`should properly encode/decode ${type.name}`, () => {
+    it(`should properly encode/decode ${type}`, () => {
       const idHex = "FFFFFFFFFFFFFFFF";
       const responseCode = 0;
       // encode

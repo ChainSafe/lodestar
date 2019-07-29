@@ -62,7 +62,7 @@ export class Sync extends EventEmitter {
   }
 
   public async isSynced(): Promise<boolean> {
-    if (!await this.eth1.isAfterEth2Genesis()) {
+    if (!await this.chain.isInitialized()) {
       return true;
     }
     try {

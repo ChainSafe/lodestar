@@ -30,7 +30,7 @@ describe('blockAssembly - deposits', function() {
       config,
       opPool,
       generateState({
-        depositIndex: 1,
+        eth1DepositIndex: 1,
       }),
       {
         depositCount: 1,
@@ -57,7 +57,7 @@ describe('blockAssembly - deposits', function() {
       config,
       opPool,
       generateState({
-        depositIndex: 0,
+        eth1DepositIndex: 0,
       }),
       eth1,
       tree

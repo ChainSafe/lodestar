@@ -3,7 +3,7 @@ import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 
 import {config} from "../../../src/config/presets/mainnet";
-import {getShuffledIndex} from "../../../src/chain/stateTransition/util";
+import {computeShuffledIndex} from "../../../src/chain/stateTransition/util";
 import {bytes32} from "../../../src/types";
 
 describeSpecTest(
@@ -11,7 +11,7 @@ describeSpecTest(
   (seed: bytes32, count: number) => {
     const output = [];
     for(let i = 0; i < count; i++) {
-      output[i] = getShuffledIndex(
+      output[i] = computeShuffledIndex(
         config,
         i,
         count,

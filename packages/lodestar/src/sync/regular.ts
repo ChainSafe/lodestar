@@ -53,7 +53,7 @@ export class RegularSync {
     }
     // skip attestation if its too old
     const state = await this.db.getLatestState();
-    if (attestation.data.targetEpoch < state.finalizedEpoch) {
+    if (attestation.data.target.epoch < state.finalizedCheckpoint.epoch) {
       return;
     }
     // send attestation on to other modules

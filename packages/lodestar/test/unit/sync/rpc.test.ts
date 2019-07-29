@@ -82,8 +82,8 @@ describe("syncing", function () {
     dbStub.getChainHeadSlot.resolves(1);
     dbStub.getBlockRoot.resolves(ZERO_HASH);
     const state = generateState();
-    state.finalizedEpoch = 1;
-    state.finalizedRoot = ZERO_HASH;
+    state.finalizedCheckpoint.epoch = 1;
+    state.finalizedCheckpoint.root = ZERO_HASH;
 
     dbStub.getLatestState.resolves(state);
 
@@ -91,9 +91,9 @@ describe("syncing", function () {
       networkId: chainStub.networkId,
       chainId: chainStub.chainId,
       latestFinalizedRoot: ZERO_HASH ,
-      latestFinalizedEpoch: 1,
+      latestFinalizedEpoch: 0,
       bestRoot: ZERO_HASH,
-      bestSlot: 1,
+      bestSlot: 0,
     };
 
     try {

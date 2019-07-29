@@ -7,8 +7,6 @@ import {IBeaconConfig} from "../config";
 import {BeaconDB, LevelDbController} from "../db";
 import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
 import {INetwork, Libp2pNetwork, NodejsNode} from "../network";
-
-
 import defaultConf, {IBeaconNodeOptions} from "./options";
 import {isPlainObject} from "../util/objects";
 import {Sync} from "../sync";

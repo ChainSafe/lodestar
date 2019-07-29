@@ -21,8 +21,8 @@ describe('process epoch - slashings', function () {
     getCurrentEpochStub = sandbox.stub(utils, "getCurrentEpoch");
     isActiveValidatorStub = sandbox.stub(utils, "isActiveValidator");
     initiateValidatorExitStub = sandbox.stub(utils, "initiateValidatorExit");
-    sandbox.stub(utils, "getDelayedActivationExitEpoch").returns(1);
-    sandbox.stub(utils, "getChurnLimit").returns(1);
+    sandbox.stub(utils, "computeActivationExitEpoch").returns(1);
+    sandbox.stub(utils, "getValidatorChurnLimit").returns(1);
   });
 
   afterEach(() => {
@@ -37,11 +37,11 @@ describe('process epoch - slashings', function () {
     const validatorToExit = generateValidator(1);
     validatorToExit.effectiveBalance = new BN("1");
     isActiveValidatorStub.withArgs(sinon.match.any, sinon.match.any).returns(true);
-    const state = generateState({validatorRegistry: [validatorEligble, validatorToExit]});
+    const state = generateState({validators: [validatorEligble, validatorToExit]});
     try {
       processRegistryUpdates(config, state);
       expect(initiateValidatorExitStub.calledOnceWith(sinon.match.any, sinon.match.any, 1)).to.be.true;
-      expect(state.validatorRegistry[0].activationEligibilityEpoch).to.be.equal(1);
+      expect(state.validators[0].activationEligibilityEpoch).to.be.equal(1);
     } catch (e) {
       expect.fail(e.stack);
     }

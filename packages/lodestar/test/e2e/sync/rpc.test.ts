@@ -28,7 +28,7 @@ describe("[sync] rpc", () => {
   const sandbox = sinon.createSandbox();
   let logger = new WinstonLogger();
 
-  let rpcA: SyncRpc,netA: Libp2pNetwork, repsA: ReputationStore;
+  let rpcA: SyncRpc, netA: Libp2pNetwork, repsA: ReputationStore;
   let rpcB: SyncRpc, netB: Libp2pNetwork, repsB: ReputationStore;
   beforeEach(async () => {
     netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger});
@@ -38,17 +38,19 @@ describe("[sync] rpc", () => {
       netB.start(),
     ]);
     repsA = new ReputationStore();
+    const chain = new MockBeaconChain({
+      genesisTime: 0,
+      chainId: 0,
+      networkId: new BN(0),
+    });
+    chain.latestState = null;
     rpcA = new SyncRpc({}, {
       config,
       db: new BeaconDB({
         config,
         controller: sandbox.createStubInstance(LevelDbController),
       }),
-      chain: new MockBeaconChain({
-        genesisTime: 0,
-        chainId: 0,
-        networkId: new BN(0),
-      }),
+      chain,
       network: netA,
       reps: repsA,
       logger,
@@ -60,15 +62,12 @@ describe("[sync] rpc", () => {
         config,
         controller: sandbox.createStubInstance(LevelDbController),
       }),
-      chain: new MockBeaconChain({
-        genesisTime: 0,
-        chainId: 0,
-        networkId: new BN(0),
-      }),
+      chain,
       network: netB,
       reps: repsB,
-      logger
-    });
+      logger: logger
+    })
+    ;
     netA.on("request", rpcA.onRequest.bind(rpcA));
     netB.on("request", rpcB.onRequest.bind(rpcB));
     await Promise.all([
@@ -89,7 +88,7 @@ describe("[sync] rpc", () => {
     netB.removeListener("request", rpcB.onRequest.bind(rpcB));
   });
 
-  it("hello handshake on peer connect", async function() {
+  it("hello handshake on peer connect", async function () {
     this.timeout(6000);
     await netA.connect(netB.peerInfo);
     await Promise.all([
@@ -107,7 +106,7 @@ describe("[sync] rpc", () => {
     expect(repsB.get(netA.peerInfo.id.toB58String()).latestHello).to.not.equal(null);
   });
 
-  it("goodbye on rpc stop", async function() {
+  it("goodbye on rpc stop", async function () {
     this.timeout(6000);
     await netA.connect(netB.peerInfo);
     await Promise.all([

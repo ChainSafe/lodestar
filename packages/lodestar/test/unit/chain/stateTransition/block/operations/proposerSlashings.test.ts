@@ -33,7 +33,7 @@ describe('process block - proposer slashings', function () {
   });
 
   it('should fail to process - different epoch', function () {
-    const state = generateState({validatorRegistry: [generateValidator()]});
+    const state = generateState({validators: [generateValidator()]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
     proposerSlashing.header2.slot = config.params.SLOTS_PER_EPOCH + 1;
@@ -45,7 +45,7 @@ describe('process block - proposer slashings', function () {
   });
 
   it('should fail to process - same headers', function () {
-    const state = generateState({validatorRegistry: [generateValidator()]});
+    const state = generateState({validators: [generateValidator()]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
     proposerSlashing.header2.slot = proposerSlashing.header1.slot;
@@ -57,7 +57,7 @@ describe('process block - proposer slashings', function () {
   });
 
   it('should fail to process - same headers', function () {
-    const state = generateState({validatorRegistry: [generateValidator()]});
+    const state = generateState({validators: [generateValidator()]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
     proposerSlashing.header2.slot = 2;
@@ -71,7 +71,7 @@ describe('process block - proposer slashings', function () {
   });
 
   it('should fail to process - invalid signature 1', function () {
-    const state = generateState({validatorRegistry: [generateValidator()]});
+    const state = generateState({validators: [generateValidator()]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
     proposerSlashing.header2.slot = 2;
@@ -88,7 +88,7 @@ describe('process block - proposer slashings', function () {
 
   it('should fail to process - invalid signature 2', function () {
     const validator = generateValidator();
-    const state = generateState({validatorRegistry: [validator]});
+    const state = generateState({validators: [validator]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
     proposerSlashing.header1.signature = Buffer.alloc(96, 1);
@@ -112,7 +112,7 @@ describe('process block - proposer slashings', function () {
 
   it('should process', function () {
     const validator = generateValidator();
-    const state = generateState({validatorRegistry: [validator]});
+    const state = generateState({validators: [validator]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
     proposerSlashing.header2.slot = 2;

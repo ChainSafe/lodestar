@@ -51,7 +51,7 @@ export class PrivateEth1Network {
     });
   }
 
-  public async start(): Promise<void> {
+  public async start(): Promise<string> {
     this.blockchain  =
       await promisify(this.server.listen.bind(this.server))(this.opts.port, this.opts.host);
     this.logger.info(`Started private network node on ${this.opts.host}:${this.opts.port}`);
@@ -64,7 +64,7 @@ export class PrivateEth1Network {
       const balance = utils.formatEther(this.blockchain.accounts[address].account.balance);
       this.logger.info(`${address}:0x${privateKey} - ${balance} ETH`);
     });
-    await this.deployDepositContract();
+    return await this.deployDepositContract();
   }
 
   public async stop(): Promise<void> {

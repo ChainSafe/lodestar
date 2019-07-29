@@ -4,17 +4,17 @@ import {config} from "../../../../../src/config/presets/mainnet";
 import {BeaconState, Epoch, Slot} from "../../../../../src/types";
 import {GENESIS_SLOT} from "../../../../../src/constants";
 import {
-  getEpochStartSlot,
+  computeStartSlotOfEpoch,
   getPreviousEpoch,
   getCurrentEpoch,
-  getDelayedActivationExitEpoch,
-  slotToEpoch,
-} from "../../../../../src/chain/stateTransition/util/epoch";
+  computeActivationExitEpoch,
+  computeEpochOfSlot,
+} from "../../../../../src/chain/stateTransition/util";
 
 import {generateState} from "../../../../utils/state";
 
 
-describe("slotToEpoch", () => {
+describe("computeEpochOfSlot", () => {
   const pairs = [
     {test: 0, expected: 0},
     {test: 1, expected: 0},
@@ -27,13 +27,13 @@ describe("slotToEpoch", () => {
   ];
   for (const pair of pairs) {
     it(`Slot ${pair.test} should map to epoch ${pair.expected}`, () => {
-      const result: Epoch = slotToEpoch(config, pair.test);
+      const result: Epoch = computeEpochOfSlot(config, pair.test);
       assert.equal(result, pair.expected);
     });
   }
 });
 
-describe("getEpochStartSlot", () => {
+describe("computeStartSlotOfEpoch", () => {
   const pairs = [
     {test: 0, expected: 0},
     {test: 1, expected: 64},
@@ -46,7 +46,7 @@ describe("getEpochStartSlot", () => {
   ];
   for (const pair of pairs) {
     it(`Epoch ${pair.test} should map to slot ${pair.expected}`, () => {
-      const result: Slot = getEpochStartSlot(config, pair.test);
+      const result: Slot = computeStartSlotOfEpoch(config, pair.test);
       assert.equal(result, pair.expected);
     });
   }
@@ -70,16 +70,16 @@ describe("getPreviousEpoch", () => {
 
   it("epoch should return genesis epoch", () => {
     const state: BeaconState = generateState({slot: GENESIS_SLOT});
-    const expected: Epoch = slotToEpoch(config, GENESIS_SLOT);
+    const expected: Epoch = computeEpochOfSlot(config, GENESIS_SLOT);
     const result = getPreviousEpoch(config, state);
     assert.equal(result, expected);
   });
 });
 
-describe("getDelayedActivationExitEpoch", () => {
+describe("computeActivationExitEpoch", () => {
   it("epoch is always equal to the epoch after the exit delay", () => {
     for (let e: Epoch = 0; e < 1000; e++) {
-      assert.equal(getDelayedActivationExitEpoch(config, e), e + 1 + config.params.ACTIVATION_EXIT_DELAY);
+      assert.equal(computeActivationExitEpoch(config, e), e + 1 + config.params.ACTIVATION_EXIT_DELAY);
     }
   });
 });

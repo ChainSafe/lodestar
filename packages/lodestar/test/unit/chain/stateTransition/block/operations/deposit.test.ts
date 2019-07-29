@@ -47,7 +47,7 @@ describe('process block - deposits', function () {
   });
 
   it('should fail to process deposit - invalid deposit index', function () {
-    const state = generateState({depositIndex: 3});
+    const state = generateState({eth1DepositIndex: 3});
     verifyMerkleTreeStub.returns(true);
     try {
       processDeposit(config, state, generateDeposit());
@@ -57,20 +57,20 @@ describe('process block - deposits', function () {
   });
 
   it('should process deposit - new validator - invalid signature', function () {
-    const state = generateState({depositIndex: 3});
+    const state = generateState({eth1DepositIndex: 3});
     verifyMerkleTreeStub.returns(true);
     const deposit = generateDeposit();
     try {
       processDeposit(config, state, deposit);
     } catch (e) {
       expect(verifyMerkleTreeStub.calledOnce).to.be.true;
-      expect(state.validatorRegistry.length).to.be.equal(0);
+      expect(state.validators.length).to.be.equal(0);
       expect(state.balances.length).to.be.equal(0);
     }
   });
 
   it('should process deposit - new validator', function () {
-    const state = generateState({depositIndex: 3});
+    const state = generateState({eth1DepositIndex: 3});
     verifyMerkleTreeStub.returns(true);
     const deposit = generateDeposit();
     deposit.data.amount = new BN(config.params.MAX_EFFECTIVE_BALANCE);
@@ -78,7 +78,7 @@ describe('process block - deposits', function () {
     try {
       processDeposit(config, state, deposit);
       expect(verifyMerkleTreeStub.calledOnce).to.be.true;
-      expect(state.validatorRegistry.length).to.be.equal(1);
+      expect(state.validators.length).to.be.equal(1);
       expect(state.balances.length).to.be.equal(1);
       expect(blsStub.verify.calledOnce).to.be.true;
     } catch (e) {
@@ -87,11 +87,11 @@ describe('process block - deposits', function () {
   });
 
   it('should process deposit - increase deposit', function () {
-    const state = generateState({depositIndex: 3});
+    const state = generateState({eth1DepositIndex: 3});
     verifyMerkleTreeStub.returns(true);
     const deposit = generateDeposit();
     const validator = generateValidator();
-    state.validatorRegistry.push(validator);
+    state.validators.push(validator);
     state.balances.push(new BN(0));
     deposit.data.pubkey = validator.pubkey;
     try {
