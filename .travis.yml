@@ -32,11 +32,11 @@ jobs:
         submodules: false
     -
       name: spec-minimal
-      if: branch != master
+      if: branch != master || type = pull_request
       script: lerna run test:spec-min
     -
       name: spec-full
-      if: branch = master
+      if: branch = master AND type != pull_request
       script: lerna run test:spec
 
 before_deploy: lerna run --scope @chainsafe/lodestar build:docs
