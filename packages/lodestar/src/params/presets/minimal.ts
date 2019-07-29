@@ -60,7 +60,7 @@ export const BASE_REWARD_FACTOR = 64;
 export const WHISTLEBLOWING_REWARD_QUOTIENT = 512; // 512
 export const PROPOSER_REWARD_QUOTIENT = 8; // 8
 export const INACTIVITY_PENALTY_QUOTIENT = new BN(2 ** 25); // 33,554,432
-export const MIN_SLASHING_PENALTY_QUOTIENT = 32; // 32
+export const MIN_SLASHING_PENALTY_QUOTIENT = 32; // 3EPOCHS_PER_SLASHINGS_VECTOR2
 
 // Max operations per block
 export const MAX_PROPOSER_SLASHINGS = 2 ** 4; // 16
