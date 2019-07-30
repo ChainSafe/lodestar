@@ -33,11 +33,25 @@ jobs:
     -
       name: spec-minimal
       if: branch != master || type = pull_request
-      script: lerna run test:spec-min
+      script:
+        - git submodule foreach git lfs pull
+        - lerna run test:spec-min
+      cache:
+        directories:
+          - node_modules
+          - packages/lodestar/node_modules
+          - .git/modules/spect-test-cases/lfs
     -
       name: spec-full
       if: branch = master AND type != pull_request
-      script: lerna run test:spec
+      script:
+        - git submodule foreach git lfs pull
+        - lerna run test:spec
+      cache:
+        directories:
+          - node_modules
+          - packages/lodestar/node_modules
+          - .git/modules/spect-test-cases/lfs
 
 before_deploy: lerna run --scope @chainsafe/lodestar build:docs
 
