@@ -103,5 +103,4 @@ export class PouchDbController extends EventEmitter implements IDatabaseControll
     await this.db.remove(key);
   }
 
-
 }
