@@ -7,7 +7,6 @@ import {PrivateEth1Network} from "../../eth1/dev";
 import {CommanderStatic} from "commander";;
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 
-
 interface IEth1CommandOptions {
   host: string;
   port: number;
