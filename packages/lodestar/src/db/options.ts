@@ -24,6 +24,7 @@ export const DatabaseOptions: IConfigurationModule = {
 
 const config: IDatabaseOptions = {
   name: "./lodestar-db",
+  loggingLevel: LogLevel.DEFAULT
 };
 
 export default config;

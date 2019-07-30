@@ -46,6 +46,15 @@ import deepmerge from "deepmerge";
  * The SyncRpc module handles app-level requests / responses from other peers,
  * fetching state from the chain and database as needed.
  */
+export interface SyncModule {
+  config: IBeaconConfig;
+  db: IBeaconDb;
+  chain: IBeaconChain;
+  network: INetwork;
+  reps: ReputationStore;
+  logger?: ILogger;
+}
+
 export class SyncRpc implements ISyncRpc {
   private opts: ISyncOptions;
   private config: IBeaconConfig;
@@ -55,8 +64,7 @@ export class SyncRpc implements ISyncRpc {
   private reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: ISyncOptions, {config, db, chain, network, reps, logger}:
-  {config: IBeaconConfig; db: IBeaconDb; chain: IBeaconChain; network: INetwork; reps: ReputationStore; logger?: ILogger}) {
+  public constructor(opts: Partial<ISyncOptions>, {config, db, chain, network, reps, logger}: SyncModule) {
     this.opts = deepmerge(defaultSyncOptions, opts);
     this.config = config;
     this.opts = opts;

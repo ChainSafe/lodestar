@@ -32,7 +32,7 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
   private inited: Promise<void>;
   private logger: ILogger;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, logger}:
+  public constructor(opts: Partial<INetworkOptions>, {config, libp2p, logger}:
   {config: IBeaconConfig; libp2p: any; logger?: ILogger}) {
     super();
     this.opts = deepmerge(defaultNetworkOptions, opts);

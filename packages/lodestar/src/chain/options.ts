@@ -27,7 +27,8 @@ export const ChainOptions: IConfigurationModule = {
 };
 
 const config: IChainOptions = {
-  name: "mainnet"
+  name: "mainnet",
+  loggingLevel: LogLevel.DEFAULT
 };
 
 export default config;

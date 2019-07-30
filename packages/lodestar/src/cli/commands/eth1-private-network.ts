@@ -6,7 +6,7 @@ import {CliCommand} from "./interface";
 import {PrivateEth1Network} from "../../eth1/dev";
 import {CommanderStatic} from "commander";;
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
-import {parseLoggingLevel} from "../../util/parse";
+
 
 interface IEth1CommandOptions {
   host: string;

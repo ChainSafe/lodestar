@@ -104,7 +104,7 @@ export class Sync extends EventEmitter {
       opPool: this.opPool,
       logger: this.logger,
     });
-    await this.syncer.start();
+    this.syncer.start();
   }
 
   public async stop(): Promise<void> {

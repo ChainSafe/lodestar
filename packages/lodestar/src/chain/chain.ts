@@ -34,7 +34,7 @@ export interface IBeaconChainModules {
   opPool: OpPool;
   db: IBeaconDb;
   eth1: IEth1Notifier;
-  logger: ILogger;
+  logger?: ILogger;
 }
 
 export class BeaconChain extends EventEmitter implements IBeaconChain {
@@ -52,7 +52,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
   private logger: ILogger;
   private opts: IChainOptions;
   
-  public constructor(opts, {config, db, eth1, opPool, logger}: IBeaconChainModules) {
+  public constructor(opts: Partial<IChainOptions>, {config, db, eth1, opPool, logger}: IBeaconChainModules) {
     super();
     this.opts = deepmerge(defaultChainOption, opts);
     this.chain = opts.name;

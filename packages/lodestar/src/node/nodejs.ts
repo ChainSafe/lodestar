@@ -41,8 +41,7 @@ export class BeaconNode {
   public reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger}:
-  {config: IBeaconConfig; logger?: ILogger}) {
+  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger}: {config: IBeaconConfig; logger?: ILogger}) {
     this.conf = deepmerge(
       defaultConf,
       opts,
@@ -59,9 +58,9 @@ export class BeaconNode {
       controller: new LevelDbController(
         {
           ...this.conf.db,
-          loggingLevel: this.conf.loggingOptions[Module.DATABASE],
+          loggingLevel: this.conf.loggingOptions.get(Module.DATABASE),
         },
-        {logger}),
+        {}),
     });
     // initialize for network type
     const libp2p = createPeerId()
@@ -69,49 +68,45 @@ export class BeaconNode {
       .then((peerInfo) => new NodejsNode({peerInfo}));
     const rpc = new SyncRpc({
       ...this.conf.sync,
-      loggingLevel: this.conf.loggingOptions[Module.NETWORK],
+      loggingLevel: this.conf.loggingOptions.get(Module.NETWORK),
     }, {
       config,
       db: this.db,
       chain: this.chain,
       network: this.network,
       reps: this.reps,
-      logger,
     });
     this.network = new Libp2pNetwork({
       ...this.conf.network,
-      loggingLevel: this.conf.loggingOptions[Module.NETWORK],
+      loggingLevel: this.conf.loggingOptions.get(Module.NETWORK),
     }, {
       config,
       libp2p: libp2p,
-      logger,
     });
     this.eth1 = new EthersEth1Notifier(
       {
         ...this.conf.eth1,
-        loggingLevel: this.conf.loggingOptions[Module.ETH1],
+        loggingLevel: this.conf.loggingOptions.get(Module.ETH1),
       }, {
         config,
-        opPool: this.opPool,
-        logger,
       });
+    this.opPool = new OpPool(this.conf.opPool, {
+      eth1: this.eth1,
+      db: this.db
+    });
     this.chain = new BeaconChain(
       {
         ...this.conf.chain,
-        loggingLevel: this.conf.loggingOptions[Module.CHAIN],
+        loggingLevel: this.conf.loggingOptions.get(Module.CHAIN),
       }, {
         config,
         db: this.db,
         eth1: this.eth1,
-        logger,
+        opPool: this.opPool
       });
-    this.opPool = new OpPool(this.conf.opPool, {
-      db: this.db,
-      chain: this.chain,
-    });
     this.sync = new Sync({
       ...this.conf.sync,
-      loggingLevel: this.conf.loggingOptions[Module.SYNC],
+      loggingLevel: this.conf.loggingOptions.get(Module.SYNC),
     }, {
       config,
       db: this.db,
@@ -121,7 +116,6 @@ export class BeaconNode {
       network: this.network,
       reps: this.reps,
       rpc,
-      logger,
     });
     //TODO: needs to be moved to Rpc class and initialized from opts
     this.rpc = new JSONRPC(this.conf.api, {

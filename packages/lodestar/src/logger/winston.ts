@@ -11,10 +11,10 @@ export class WinstonLogger extends AbstractLogger {
   private loggingModule;
   private loggingLevel;
 
-  public constructor(loggingLevel?: LogLevel, loggingModule?: Module ) {
+  public constructor(loggingLevel: LogLevel = LogLevel.DEFAULT, loggingModule: Module = Module.DEFAULT ) {
     super();
-    this.loggingModule = loggingModule || Module.DEFAULT;
-    this.loggingLevel = loggingLevel || LogLevel.DEFAULT;
+    this.loggingModule = loggingModule;
+    this.loggingLevel = loggingLevel;
 
     this.winston = createLogger({
       level: this.loggingLevel,

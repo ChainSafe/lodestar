@@ -46,7 +46,8 @@ const config: INetworkOptions = {
   bootnodes: [],
   rpcTimeout: 5000,
   connectTimeout: 3000,
-  disconnectTimeout: 3000
+  disconnectTimeout: 3000,
+  loggingLevel: LogLevel.DEFAULT,
 };
 
 export default config;

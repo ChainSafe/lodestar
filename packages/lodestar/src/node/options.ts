@@ -11,8 +11,9 @@ import defaultOpPoolOptions, {IOpPoolOptions, OpPoolOptions} from "../opPool/opt
 import defaultSyncOptions, {ISyncOptions, SyncOptions} from "../sync/options";
 import {IValidatorOptions, ValidatorOptions} from "../validator/options";
 import {IConfigurationModule} from "../util/config";
-import {parseLoggingLevel} from "../util/parse";
+import {parseLoggingLevels} from "../util/parse";
 import {LogLevel} from "../logger";
+import {Module} from "../logger/abstract";
 
 export interface IBeaconNodeOptions {
   chain: IChainOptions;
@@ -23,7 +24,7 @@ export interface IBeaconNodeOptions {
   opPool: IOpPoolOptions;
   sync: ISyncOptions;
   validator?: IValidatorOptions;
-  loggingOptions?: LogLevel[];
+  loggingOptions?: Map<Module, LogLevel>;
 
 }
 
@@ -43,11 +44,11 @@ export const BeaconNodeOptions: IConfigurationModule = {
       type: String,
       configurable: true,
       cli: {
-        flag: "loggingOptions",
+        flag: "loggingLevels",
         short: "l"
       },
       process: (loggingLevel) => {
-        return parseLoggingLevel(loggingLevel);
+        return parseLoggingLevels(loggingLevel);
       }
     }
   ]
