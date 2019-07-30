@@ -30,4 +30,8 @@ COPY --from=0 /usr/app/yarn.lock /app/yarn.lock
 
 RUN yarn install --frozen-lockfile --production && yarn cache clean && apk del git python g++ gcc make
 
+RUN chown -R node: .
+
+USER node
+
 ENTRYPOINT ["/app/bin/lodestar"]
