@@ -15,6 +15,7 @@ import {computeActivationExitEpoch, getCurrentEpoch} from "./epoch";
 import {getValidatorChurnLimit} from "./validator";
 import {decreaseBalance, increaseBalance} from "./balance";
 import {getBeaconProposerIndex} from "./proposer";
+import {bnMax} from "../../../util/math";
 
 
 /**
@@ -63,8 +64,11 @@ export function slashValidator(
 
   initiateValidatorExit(config, state, slashedIndex);
   state.validators[slashedIndex].slashed = true;
-  state.validators[slashedIndex].withdrawableEpoch =
-    currentEpoch + config.params.EPOCHS_PER_SLASHINGS_VECTOR;
+  state.validators[slashedIndex].withdrawableEpoch = Math.max(
+    state.validators[slashedIndex].withdrawableEpoch,
+    currentEpoch + config.params.EPOCHS_PER_SLASHINGS_VECTOR
+  );
+
   const slashedBalance = state.validators[slashedIndex].effectiveBalance;
   state.slashings[currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] =
     state.slashings[currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR].add(slashedBalance);

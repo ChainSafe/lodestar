@@ -7,7 +7,7 @@ import {Method} from "../../../src/constants";
 import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
 import {ReputationStore} from "../../../src/sync/reputation";
 import {Libp2pNetwork} from "../../../src/network";
-import {BeaconDB, LevelDbController} from "../../../src/db";
+import {BeaconDb, LevelDbController} from "../../../src/db";
 
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../unit/network/libp2p/util";
@@ -46,7 +46,7 @@ describe("[sync] rpc", () => {
     chain.latestState = null;
     rpcA = new SyncRpc({}, {
       config,
-      db: new BeaconDB({
+      db: new BeaconDb({
         config,
         controller: sandbox.createStubInstance(LevelDbController),
       }),
@@ -58,7 +58,7 @@ describe("[sync] rpc", () => {
     repsB = new ReputationStore();
     rpcB = new SyncRpc({}, {
       config,
-      db: new BeaconDB({
+      db: new BeaconDb({
         config,
         controller: sandbox.createStubInstance(LevelDbController),
       }),

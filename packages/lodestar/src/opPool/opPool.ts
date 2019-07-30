@@ -7,7 +7,7 @@ import {EventEmitter} from "events";
 import {BeaconBlock} from "../types";
 
 import {BeaconChain} from "../chain";
-import {BeaconDB} from "../db";
+import {BeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
 import {
   AttestationOperations,
@@ -32,18 +32,18 @@ export class OpPool extends EventEmitter {
   public attesterSlashings: AttesterSlashingOperations;
 
   private readonly eth1: IEth1Notifier;
-  private readonly db: BeaconDB;
+  private readonly db: BeaconDb;
 
   public constructor(opts: IOpPoolOptions, {eth1, db}) {
     super();
     this.eth1 = eth1;
     this.db = db;
-    this.attestations = new AttestationOperations(this.db);
-    this.voluntaryExits = new VoluntaryExitOperations(this.db);
-    this.deposits = new DepositsOperations(this.db);
-    this.transfers = new TransferOperations(this.db);
-    this.proposerSlashings = new ProposerSlashingOperations(this.db);
-    this.attesterSlashings = new AttesterSlashingOperations(this.db);
+    this.attestations = new AttestationOperations(this.db.attestation);
+    this.voluntaryExits = new VoluntaryExitOperations(this.db.voluntaryExit);
+    this.deposits = new DepositsOperations(this.db.deposit);
+    this.transfers = new TransferOperations(this.db.transfer);
+    this.proposerSlashings = new ProposerSlashingOperations(this.db.proposerSlashing);
+    this.attesterSlashings = new AttesterSlashingOperations(this.db.attesterSlashing);
   }
 
   /**

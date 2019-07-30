@@ -1,4 +1,4 @@
-import {bytes32, number64} from "../../types";
+import {bytes32, MerkleTree, number64} from "../../types";
 
 export interface IProgressiveMerkleTree {
 
@@ -18,5 +18,5 @@ export interface IProgressiveMerkleTree {
    */
   root(): bytes32;
 
-  serialize(): Buffer;
+  toObject(): MerkleTree;
 }

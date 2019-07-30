@@ -66,7 +66,7 @@ export class Sync extends EventEmitter {
       return true;
     }
     try {
-      const bestSlot = await this.db.getChainHeadSlot();
+      const bestSlot = await this.db.chain.getChainHeadSlot();
       const bestSlotByPeers = this.network.getPeers()
         .map((peerInfo) => this.reps.get(peerInfo.id.toB58String()))
         .map((reputation) => reputation.latestHello ? reputation.latestHello.bestSlot : 0)

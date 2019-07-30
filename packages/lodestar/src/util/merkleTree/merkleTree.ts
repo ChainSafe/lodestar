@@ -31,7 +31,7 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
   private _tree: bytes32[][];
   private _dirty: boolean;
 
-  protected constructor(depth: number, tree: bytes32[][]) {
+  public constructor(depth: number, tree: bytes32[][]) {
     assert(depth > 1 && depth <= 52, "tree depth must be between 1 and 53");
     this._depth = depth;
     this._tree = tree;
@@ -95,15 +95,11 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
     );
   }
 
-  public serialize(): Buffer {
-    return serialize(
-      {
-        depth: this._depth,
-        tree: this._tree,
-        zeroHashes: this._zerohashes
-      },
-      MerkleTreeType,
-    );
+  public toObject(): MerkleTree {
+    return {
+      depth: this._depth,
+      tree: this._tree
+    };
   }
 
 

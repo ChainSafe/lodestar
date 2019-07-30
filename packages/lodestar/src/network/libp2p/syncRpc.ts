@@ -88,10 +88,10 @@ export class SyncRpc implements ISyncRpc {
       latestFinalizedEpoch = 0;
       latestFinalizedRoot = ZERO_HASH;
     } else {
-      bestSlot = await this.db.getChainHeadSlot();
+      bestSlot = await this.db.chain.getChainHeadSlot();
       const [bRoot, state] = await Promise.all([
-        this.db.getBlockRoot(bestSlot),
-        this.db.getLatestState(),
+        this.db.chain.getBlockRoot(bestSlot),
+        this.db.state.getLatest(),
       ]);
       bestRoot = bRoot;
       latestFinalizedEpoch = state.finalizedCheckpoint.epoch;
@@ -245,7 +245,7 @@ export class SyncRpc implements ISyncRpc {
     };
     for (let slot = request.startSlot; slot < request.startSlot + request.count; slot++) {
       try {
-        const blockRoot = await this.db.getBlockRoot(slot);
+        const blockRoot = await this.db.chain.getBlockRoot(slot);
         response.roots.push({
           slot,
           blockRoot,
@@ -265,7 +265,7 @@ export class SyncRpc implements ISyncRpc {
       const response: BeaconBlockHeadersResponse = {
         headers: [],
       };
-      const blockRoot = await this.db.getBlockRoot(request.startSlot);
+      const blockRoot = await this.db.chain.getBlockRoot(request.startSlot);
       assert(blockRoot.equals(request.startRoot));
       for (
         let slot = request.startSlot;
@@ -273,7 +273,7 @@ export class SyncRpc implements ISyncRpc {
         slot += request.skipSlots
       ) {
         try {
-          const block = await this.db.getBlockBySlot(slot);
+          const block = await this.db.block.getBlockBySlot(slot);
           const header: BeaconBlockHeader = {
             slot: block.slot,
             parentRoot: block.parentRoot,
@@ -300,7 +300,7 @@ export class SyncRpc implements ISyncRpc {
     };
     for (const root of request.blockRoots) {
       try {
-        const block = await this.db.getBlock(root);
+        const block = await this.db.block.get(root);
         response.blockBodies.push(block.body);
       } catch (e) {
         response.blockBodies.push(getEmptyBlockBody());

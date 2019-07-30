@@ -44,10 +44,13 @@ export class PrivateEth1Network {
     this.logger = logger || new WinstonLogger(opts.loggingLevel, Module.ETH1);
     this.server = ganache.server({
       ...this.opts,
+
       // eslint-disable-next-line  @typescript-eslint/camelcase
       default_balance_ether: this.opts.defaultBalance,
       // eslint-disable-next-line  @typescript-eslint/camelcase
-      db_path: this.opts.dbPath
+      db_path: this.opts.dbPath,
+      // eslint-disable-next-line @typescript-eslint/camelcase
+      network_id: 999
     });
   }
 
