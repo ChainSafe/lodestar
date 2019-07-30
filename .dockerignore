@@ -1,0 +1,9 @@
+supporting-docs
+.github
+**/.nyc_output
+**/coverage
+**/node_modules
+**/test
+**/lib
+**/dist
+**/*-db
