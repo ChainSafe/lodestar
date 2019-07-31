@@ -66,13 +66,13 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     // if state doesn't exist in the db, the chain maybe hasn't started
     if(!state) {
       // check every block if genesis
-      this.eth1.on('block', this.checkGenesis.bind(this));
+      this.eth1.on('block', this.checkGenesis);
     }
     this.latestState = state;
   }
 
   public async stop(): Promise<void> {
-    this.eth1.removeListener('block', this.checkGenesis.bind(this));
+    this.eth1.removeListener('block', this.checkGenesis);
   }
 
 
@@ -217,7 +217,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     await this.db.merkleTree.set(newState.eth1DepositIndex, merkleTree.toObject());
   }
 
-  private async checkGenesis(eth1Block: Block): Promise<void> {
+  private checkGenesis = async (eth1Block: Block): Promise<void> => {
     this.logger.info(`Checking if block ${eth1Block.hash} will form valid genesis state`);
     const deposits = await this.opPool.deposits.getAll();
     const merkleTree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
@@ -242,7 +242,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     }
     this.logger.info(`Initializing beacon chain with eth1 block ${eth1Block.hash}`);
     await this.initializeBeaconChain(genesisState, merkleTree);
-  }
+  };
 
   public isInitialized(): boolean {
     return !!this.latestState;

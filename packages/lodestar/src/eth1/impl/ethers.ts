@@ -72,7 +72,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     this.contract.removeAllListeners('DepositEvent');
   }
 
-  public async processBlockHeadUpdate(blockNumber): Promise<void> {
+  public async processBlockHeadUpdate(blockNumber: number): Promise<void> {
     this.logger.debug(`Received eth1 block ${blockNumber}`);
     const block = await this.provider.getBlock(blockNumber);
     this.emit('block', block);
