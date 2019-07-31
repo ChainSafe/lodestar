@@ -40,7 +40,6 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/eth2.0-constants": "0.1.0",
     "@chainsafe/eth2.0-params": "0.1.0",
     "@chainsafe/ssz": "0.5.1"
   },

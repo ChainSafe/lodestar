@@ -6,10 +6,6 @@ import assert from "assert";
 import {hashTreeRoot, equals} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls-js";
 import {BitList} from "@chainsafe/bit-utils";
-
-import {
-  DomainType,
-} from "@chainsafe/eth2.0-constants";
 import {
   Attestation,
   AttestationData,
@@ -20,6 +16,9 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
+import {
+  DomainType,
+} from "../../../constants";
 import {intDiv} from "../../../util/math";
 import {isSorted} from "../../../util/sort";
 

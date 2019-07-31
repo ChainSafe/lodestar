@@ -12,9 +12,9 @@ import {
   Attestation,
   FFGData,
 } from "@chainsafe/eth2.0-types";
-import {ZERO_HASH} from "@chainsafe/eth2.0-constants";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
+import {ZERO_HASH} from "../../../../constants";
 import {
   getCurrentEpoch,
   getIndexedAttestation,

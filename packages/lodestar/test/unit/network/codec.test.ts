@@ -20,10 +20,10 @@ import {
   RequestBody,
   ResponseBody,
 } from "@chainsafe/eth2.0-types";
+
 import {
   Method,
-} from "@chainsafe/eth2.0-constants";
-
+} from "../../../src/constants";
 import {
   encodeRequest,
   encodeResponse,

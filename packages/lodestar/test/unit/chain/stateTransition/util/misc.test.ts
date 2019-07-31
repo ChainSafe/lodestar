@@ -5,7 +5,7 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {Fork} from "@chainsafe/eth2.0-types";
 import {
   GENESIS_SLOT,
-} from "@chainsafe/eth2.0-constants";
+} from "../../../../../src/constants";
 import {
   getBeaconProposerIndex,
   getBlockRootAtSlot,

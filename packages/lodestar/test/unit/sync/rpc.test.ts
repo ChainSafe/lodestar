@@ -3,7 +3,6 @@ import sinon from "sinon";
 import {expect} from "chai";
 import PeerInfo from "peer-info";
 import PeerId from "peer-id";
-import {EMPTY_SIGNATURE, Method, ZERO_HASH} from "@chainsafe/eth2.0-constants";
 import {
   BeaconBlockBodiesRequest,
   BeaconBlockBodiesResponse,
@@ -19,6 +18,7 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 
+import {EMPTY_SIGNATURE, Method, ZERO_HASH} from "../../../src/constants";
 import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {WinstonLogger} from "../../../src/logger";

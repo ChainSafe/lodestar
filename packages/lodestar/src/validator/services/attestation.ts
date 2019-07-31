@@ -25,7 +25,7 @@ import {
 
 import {RpcClient} from "../rpc";
 
-import {DomainType} from "@chainsafe/eth2.0-constants";
+import {DomainType} from "../../constants";
 import {intDiv} from "../../util/math";
 import {IValidatorDB} from "../../db/api";
 import {ILogger} from "../../logger";

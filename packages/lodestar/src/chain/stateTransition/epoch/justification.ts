@@ -5,9 +5,9 @@
 import BN from "bn.js";
 
 import {BeaconState} from "@chainsafe/eth2.0-types";
-import {GENESIS_EPOCH} from "@chainsafe/eth2.0-constants";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
+import {GENESIS_EPOCH} from "../../../constants";
 import {getBlockRoot, getCurrentEpoch, getPreviousEpoch, getTotalActiveBalance} from "../util";
 
 import {getAttestingBalance, getMatchingTargetAttestations} from "./util";

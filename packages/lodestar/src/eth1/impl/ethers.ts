@@ -4,15 +4,14 @@
 
 import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
+import {Block, Log} from "ethers/providers";
 import {deserialize} from "@chainsafe/ssz";
-
 import {bytes32, Deposit, Gwei, number64} from "@chainsafe/eth2.0-types";
-
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
-import {Block, Log} from "ethers/providers";
-import {DEPOSIT_CONTRACT_TREE_DEPTH} from "@chainsafe/eth2.0-constants";
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 import {ILogger} from "../../logger";
 import {IEth1Options} from "../options";
 

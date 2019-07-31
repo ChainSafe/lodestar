@@ -9,7 +9,7 @@ import {BeaconBlock, Epoch, Fork, Slot, ValidatorIndex, BeaconState} from "@chai
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {getDomain, computeEpochOfSlot} from "../../chain/stateTransition/util";
 import {RpcClient} from "../rpc";
-import {DomainType} from "@chainsafe/eth2.0-constants";
+import {DomainType} from "../../constants";
 import {IValidatorDB} from "../../db";
 import {ILogger} from "../../logger";
 

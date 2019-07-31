@@ -1,8 +1,8 @@
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {AttestationData, BeaconBlock, BeaconState, Shard} from "@chainsafe/eth2.0-types";
-import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, ZERO_HASH} from "@chainsafe/eth2.0-constants";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
+import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, ZERO_HASH} from "../../../constants";
 import {BeaconDb} from "../../../db/api";
 import {getBlockRoot, getCurrentEpoch, computeStartSlotOfEpoch} from "../../stateTransition/util";
 

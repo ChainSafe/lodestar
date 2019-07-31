@@ -4,7 +4,7 @@ import sinon from "sinon";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
-import {GENESIS_EPOCH} from "@chainsafe/eth2.0-constants";
+import {GENESIS_EPOCH} from "../../../../../../src/constants";
 import {processRewardsAndPenalties}
   from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates";
 import * as attestationDeltas

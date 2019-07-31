@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon from "sinon";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {GENESIS_SLOT} from "@chainsafe/eth2.0-constants";
+import {GENESIS_SLOT} from "../../../../../src/constants";
 import {processEpoch} from "../../../../../src/chain/stateTransition/epoch";
 import * as justificationUtils from "../../../../../src/chain/stateTransition/epoch/justification";
 import {processJustificationAndFinalization} from "../../../../../src/chain/stateTransition/epoch/justification";

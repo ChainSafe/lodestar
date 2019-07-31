@@ -4,7 +4,7 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   GENESIS_EPOCH,
   GENESIS_SLOT,
-} from "@chainsafe/eth2.0-constants";
+} from "../../../../../src/constants";
 import {
   getRandaoMix,
   getSeed,

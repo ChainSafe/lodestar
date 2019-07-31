@@ -7,9 +7,9 @@ import BN from "bn.js";
 import {EventEmitter} from "events";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {Attestation, BeaconBlock, BeaconState, number64, uint16, uint64} from "@chainsafe/eth2.0-types";
-import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "@chainsafe/eth2.0-constants";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
+import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "../constants";
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
 import {ILogger} from "../logger";

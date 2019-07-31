@@ -4,7 +4,7 @@ import {Block} from "ethers/providers";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {Eth1Data} from "@chainsafe/eth2.0-types";
-import {ZERO_HASH} from "@chainsafe/eth2.0-constants";
+import {ZERO_HASH} from "../../../../../src/constants";
 import {bestVoteData, filterValidVotes} from "../../../../../src/chain/factory/block/eth1Data";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {generateState} from "../../../../utils/state";

@@ -3,8 +3,9 @@
  */
 
 import {BeaconState} from "@chainsafe/eth2.0-types";
-import {GENESIS_EPOCH} from "@chainsafe/eth2.0-constants";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
+import {GENESIS_EPOCH} from "../../../../constants";
 import {getCurrentEpoch, increaseBalance, decreaseBalance} from "../../util";
 import {getAttestationDeltas} from "./attestation";
 import {getCrosslinkDeltas} from "./crosslink";

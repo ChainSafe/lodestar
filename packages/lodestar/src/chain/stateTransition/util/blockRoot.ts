@@ -4,11 +4,6 @@
 
 import assert from "assert";
 import {hashTreeRoot} from "@chainsafe/ssz";
-
-import {
-  EMPTY_SIGNATURE,
-  ZERO_HASH,
-} from "@chainsafe/eth2.0-constants";
 import {
   BeaconBlock,
   BeaconBlockHeader,
@@ -19,6 +14,10 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
+import {
+  EMPTY_SIGNATURE,
+  ZERO_HASH,
+} from "../../../constants";
 import {computeStartSlotOfEpoch} from "./epoch";
 
 

@@ -11,12 +11,12 @@ import {
   BeaconState,
   Transfer,
 } from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {
   DomainType,
   FAR_FUTURE_EPOCH,
-} from "@chainsafe/eth2.0-constants";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
+} from "../../../../constants";
 import {
   getBeaconProposerIndex,
   getCurrentEpoch,

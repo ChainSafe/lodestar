@@ -7,9 +7,9 @@ import {
   Slot,
   BeaconState,
 } from "@chainsafe/eth2.0-types";
-import {GENESIS_EPOCH} from "@chainsafe/eth2.0-constants";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
+import {GENESIS_EPOCH} from "../../../constants";
 
 /**
  * Return the epoch number of the given slot.

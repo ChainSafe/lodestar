@@ -12,7 +12,7 @@ import {
 } from "../../../../../src/chain/stateTransition/epoch/util";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {getAttestationDataSlot} from "../../../../../src/chain/stateTransition/util";
-import {FAR_FUTURE_EPOCH} from "@chainsafe/eth2.0-constants";
+import {FAR_FUTURE_EPOCH} from "../../../../../src/constants";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {getAttestingIndices} from "../../../../../src/chain/stateTransition/util";
 import {generateValidator} from "../../../../utils/validator";

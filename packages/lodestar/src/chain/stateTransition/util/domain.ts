@@ -3,15 +3,14 @@
  */
 
 import {BLSDomain} from "@chainsafe/bls-js/lib/types";
-
 import {
   Epoch,
   Version,
   BeaconState,
 } from "@chainsafe/eth2.0-types";
-import {DomainType} from "@chainsafe/eth2.0-constants";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
+import {DomainType} from "../../../constants";
 import {bytesToBN, intToBytes} from "../../../util/bytes";
 
 import {getCurrentEpoch} from "./epoch";

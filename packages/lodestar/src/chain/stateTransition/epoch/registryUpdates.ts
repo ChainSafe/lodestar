@@ -5,9 +5,9 @@
 import BN from "bn.js";
 
 import {BeaconState} from "@chainsafe/eth2.0-types";
-import {FAR_FUTURE_EPOCH} from "@chainsafe/eth2.0-constants";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
+import {FAR_FUTURE_EPOCH} from "../../../constants";
 import {
   computeActivationExitEpoch,
   getValidatorChurnLimit,

@@ -8,11 +8,11 @@ import {BigNumber} from "ethers/utils";
 import BN from "bn.js";
 import bls from "@chainsafe/bls-js";
 import {hash, signingRoot} from "@chainsafe/ssz";
-
-import {DomainType} from "@chainsafe/eth2.0-constants";
 import {DepositData} from "@chainsafe/eth2.0-types";
-import {ILogger} from "../logger";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
+import {DomainType} from "../constants";
+import {ILogger} from "../logger";
 
 
 export class Eth1Wallet {

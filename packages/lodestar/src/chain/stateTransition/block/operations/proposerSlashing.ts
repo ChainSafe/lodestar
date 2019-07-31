@@ -10,9 +10,9 @@ import {
   BeaconState,
   ProposerSlashing,
 } from "@chainsafe/eth2.0-types";
-import {DomainType} from "@chainsafe/eth2.0-constants";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
+import {DomainType} from "../../../../constants";
 import {
   computeEpochOfSlot,
   getCurrentEpoch,

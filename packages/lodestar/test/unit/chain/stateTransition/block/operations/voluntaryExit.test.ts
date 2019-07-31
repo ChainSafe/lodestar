@@ -6,7 +6,7 @@ import {restore, rewire} from "@chainsafe/bls-js";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   FAR_FUTURE_EPOCH,
-} from "@chainsafe/eth2.0-constants";
+} from "../../../../../../src/constants";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
 import {processVoluntaryExit} from "../../../../../../src/chain/stateTransition/block/operations";
 

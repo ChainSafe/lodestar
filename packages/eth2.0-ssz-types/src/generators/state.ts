@@ -2,10 +2,10 @@
  * @module sszTypes/generators
  */
 
-import {JUSTIFICATION_BITS_LENGTH} from "@chainsafe/eth2.0-constants";
 import {IBeaconParams} from "@chainsafe/eth2.0-params";
 import {SimpleContainerType} from "@chainsafe/ssz";
 
+import {JUSTIFICATION_BITS_LENGTH} from "../constants";
 import {IBeaconSSZTypes} from "../interface";
 
 export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({

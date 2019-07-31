@@ -4,8 +4,8 @@ import {
   BeaconState,
   Crosslink,
 } from "@chainsafe/eth2.0-types";
-import {GENESIS_EPOCH, GENESIS_SLOT, GENESIS_START_SHARD, ZERO_HASH} from "@chainsafe/eth2.0-constants";
 
+import {GENESIS_EPOCH, GENESIS_SLOT, GENESIS_START_SHARD, ZERO_HASH} from "../../src/constants";
 import {intToBytes} from "../../src/util/bytes";
 import {randBetween, randBetweenBN} from "./misc";
 import {generateValidators} from "./validator";

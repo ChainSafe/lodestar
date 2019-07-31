@@ -11,8 +11,8 @@ import {
   BeaconState,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {DomainType} from "@chainsafe/eth2.0-constants";
 
+import {DomainType} from "../../../constants";
 import {
   getBeaconProposerIndex,
   getDomain,

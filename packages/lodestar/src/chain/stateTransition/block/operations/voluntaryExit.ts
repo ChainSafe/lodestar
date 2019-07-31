@@ -10,13 +10,13 @@ import {
   BeaconState,
   VoluntaryExit,
 } from "@chainsafe/eth2.0-types";
-import {
-  DomainType,
-  FAR_FUTURE_EPOCH,
-} from "@chainsafe/eth2.0-constants";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 
+import {
+  DomainType,
+  FAR_FUTURE_EPOCH,
+} from "../../../../constants";
 import {
   getCurrentEpoch,
   getDomain,

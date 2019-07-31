@@ -15,9 +15,9 @@ import {
   BeaconBlockBodiesRequest, BeaconBlockBodiesResponse,
   BeaconStatesRequest, BeaconStatesResponse, Epoch, BeaconState, BeaconBlock,
 } from "@chainsafe/eth2.0-types";
-import {ZERO_HASH, Method, RequestId, ResponseCode} from "@chainsafe/eth2.0-constants";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
+import {ZERO_HASH, Method, RequestId, ResponseCode} from "../../constants";
 import {intDiv} from "../../util/math";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
