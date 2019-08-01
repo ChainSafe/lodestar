@@ -8,6 +8,7 @@
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.3.3",
     "@babel/plugin-proposal-class-properties": "^7.3.3",
+    "@babel/plugin-proposal-export-default-from": "^7.5.2",
     "@babel/plugin-proposal-object-rest-spread": "^7.3.2",
     "@babel/plugin-transform-runtime": "^7.3.4",
     "@babel/preset-env": "^7.3.1",
@@ -24,6 +25,7 @@
     "chai-as-promised": "^7.1.1",
     "codecov": "^3.1.0",
     "eslint": "^5.14.1",
+    "eslint-plugin-import": "^2.18.2",
     "lerna": "^3.15.0",
     "mocha": "^6.1.4",
     "nyc": "^14.1.1",
@@ -37,7 +39,5 @@
     "typescript": "^3.5.1"
   },
   "dependencies": {
-    "@babel/plugin-proposal-export-default-from": "^7.5.2",
-    "eslint-plugin-import": "^2.18.2"
   }
 }
