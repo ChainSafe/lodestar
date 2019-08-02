@@ -1,5 +1,6 @@
 {
   "name": "@chainsafe/lodestar",
+  "private": true,
   "version": "0.1.0",
   "description": "A Typescript implementation of the beacon chain and validator client",
   "author": "ChainSafe Systems",
