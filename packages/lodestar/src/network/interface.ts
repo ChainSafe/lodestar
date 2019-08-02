@@ -9,7 +9,18 @@ import {
 
 import {RequestId, Method} from "../constants";
 
-export interface INetwork extends EventEmitter {
+export type NetworkEventEmitter = StrictEventEmitter<EventEmitter, INetworkEvents>;
+
+interface INetworkEvents {
+    [BLOCK_TOPIC]: (block: BeaconBlock) => void;
+    [ATTESTATION_TOPIC]: (attestation: Attestation) => void;
+    ["gossipsub:heartbeat"]: void;
+    request: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => void;
+    ["peer:connect"]: (peerInfo: PeerInfo) => void;
+    ["peer:disconnect"]: (peerInfo: PeerInfo) => void;
+}
+
+export interface INetwork extends NetworkEventEmitter {
   peerInfo: PeerInfo;
   // Service
   start(): Promise<void>;
