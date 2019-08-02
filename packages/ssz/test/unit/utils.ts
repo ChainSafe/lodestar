@@ -12,7 +12,7 @@ export function stringifyType (type: SimpleSSZType): string {
       return `[${stringifyType(type[0] as SimpleSSZType)}, ${type[1]}]`;
     }
   } else if (type === Object(type)) {
-    return type.name;
+    return JSON.stringify(type);
   }
   return "";
 }

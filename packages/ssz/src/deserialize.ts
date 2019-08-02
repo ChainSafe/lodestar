@@ -245,7 +245,8 @@ function _deserializeObject(data: Buffer, type: ContainerType, start: number, en
   // Since variable-sized values can be interspersed with fixed-sized values, we precalculate
   // the offset indices so we can more easily deserialize the fields in one pass
   // first we get the fixed sizes
-  const fixedSizes = type.fields.map(([_, fieldType]) => !isVariableSizeType(fieldType) && fixedSize(fieldType));
+  const fixedSizes: (number | false)[] = type.fields.map(([_, fieldType]) =>
+    !isVariableSizeType(fieldType) && fixedSize(fieldType));
   // with the fixed sizes, we can read the offsets, and store for later
   let offsets: number[] = [];
   const fixedEnd = fixedSizes.reduce((index: number, size) => {

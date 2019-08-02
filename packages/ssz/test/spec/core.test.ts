@@ -1,8 +1,8 @@
 import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
+import {types} from "@chainsafe/eth2.0-ssz-types/lib/presets/mainnet";
 
 import {deserialize, serialize, hashTreeRoot, signingRoot, equals, hash} from "../../src";
-import {types} from "../../../lodestar/src/sszTypes/presets/mainnet";
 
 import {hydrateType, hydrateValue, getTestType, getTestValue} from "./util";
 
