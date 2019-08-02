@@ -8,7 +8,7 @@ export abstract class OperationsModule<T> {
     this.db = db;
   }
 
-  public async receive(value: T): Promise<void> {
+    public async receive(value: T): Promise<void> {
     await this.db.setUnderRoot(value);
   }
 
