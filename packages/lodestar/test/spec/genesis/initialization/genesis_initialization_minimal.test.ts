@@ -4,7 +4,7 @@ import {expect} from "chai";
 // @ts-ignore
 import {equals} from "@chainsafe/ssz";
 
-import {config} from "../../../../src/config/presets/minimal";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {initializeBeaconStateFromEth1} from "../../../../src/chain/genesis/genesis";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 

@@ -7,11 +7,10 @@ import Connection from "interface-connection";
 import pull from "pull-stream";
 import pushable, {Pushable} from "pull-pushable";
 import Abortable from "pull-abortable";
-
 import {
   Hello, Status, RequestBody, ResponseBody
-} from "../../types";
-import {Method} from "../../constants";
+} from "@chainsafe/eth2.0-types";
+
 import {NetworkRpc} from "./rpc";
 
 

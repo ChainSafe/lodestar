@@ -8,7 +8,7 @@ import promisify from "promisify-es6";
 import bls from "@chainsafe/bls-js";
 import {serialize} from "@chainsafe/ssz";
 
-import {config} from "../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {EthersEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
 import {ILogger, WinstonLogger} from "../../../src/logger";

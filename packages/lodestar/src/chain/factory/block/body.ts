@@ -2,9 +2,10 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconBlockBody, BeaconState, bytes96} from "../../../types";
+import {BeaconBlockBody, BeaconState, bytes96} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {ZERO_HASH} from "../../../constants";
-import {IBeaconConfig} from "../../../config";
 import {OpPool} from "../../../opPool";
 import {IEth1Notifier} from "../../../eth1";
 import {IProgressiveMerkleTree} from "../../../util/merkleTree";

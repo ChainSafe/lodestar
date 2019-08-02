@@ -1,8 +1,8 @@
 import BN from "bn.js";
 import { expect } from "chai";
 
-import {uint64} from "../../../src/types";
-import {config} from "../../../src/config/presets/mainnet";
+import {uint64} from "@chainsafe/eth2.0-types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {isPlainObject, mostFrequent} from "../../../src/util/objects";
 
 

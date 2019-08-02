@@ -8,8 +8,8 @@ import {
   Epoch,
   Slot,
   ValidatorIndex,
-} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {CommitteeAssignment} from "../../../validator/types";
 import {intDiv} from "../../../util/math";

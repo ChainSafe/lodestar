@@ -6,8 +6,8 @@ import {restore, rewire} from "@chainsafe/bls-js";
 import {equals} from "@chainsafe/ssz";
 import sinon from "sinon";
 
-import {BeaconState, Deposit} from "../../../../src/types";
-import {config} from "../../../../src/config/presets/mainnet";
+import {BeaconState, Deposit} from "@chainsafe/eth2.0-types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processDeposit} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 

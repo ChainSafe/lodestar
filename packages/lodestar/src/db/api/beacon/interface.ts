@@ -2,7 +2,14 @@
  * @module db/api/beacon
  */
 
-import {BeaconBlock, BeaconState, BLSPubkey, bytes32, ValidatorIndex,} from "../../../types";
+import {
+  BeaconBlock,
+  BeaconState,
+  BLSPubkey,
+  bytes32,
+  ValidatorIndex,
+} from "@chainsafe/eth2.0-types";
+
 import {
   AttestationRepository,
   AttesterSlashingRepository,
@@ -15,7 +22,6 @@ import {
   TransfersRepository,
   VoluntaryExitRepository
 } from "./repositories";
-
 
 /**
  * The DB service manages the data layer of the beacon chain

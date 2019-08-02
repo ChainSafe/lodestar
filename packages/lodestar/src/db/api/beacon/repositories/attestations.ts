@@ -1,6 +1,7 @@
+import {Attestation} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {BulkRepository} from "../repository";
-import {Attestation} from "../../../../types";
-import {IBeaconConfig} from "../../../../config";
 import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../../schema";
 

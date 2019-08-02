@@ -1,6 +1,6 @@
 import { assert } from "chai";
 
-import {config} from "../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   GENESIS_EPOCH,
   GENESIS_SLOT,

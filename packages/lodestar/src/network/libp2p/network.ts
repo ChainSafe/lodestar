@@ -8,12 +8,12 @@ import promisify from "promisify-es6";
 import LibP2p from "libp2p";
 import Gossipsub from "libp2p-gossipsub";
 import PeerInfo from "peer-info";
+import {Attestation, BeaconBlock, Shard, RequestBody, ResponseBody} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {Attestation, BeaconBlock, Shard, RequestBody, ResponseBody} from "../../types";
 import {
   Method, RequestId, BLOCK_TOPIC, ATTESTATION_TOPIC, SHARD_SUBNET_COUNT,
 } from "../../constants";
-import {IBeaconConfig} from "../../config";
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {NetworkRpc} from "./rpc";
 import {ILogger} from "../../logger";

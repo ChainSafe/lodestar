@@ -4,7 +4,7 @@
   "parserOptions": {
     "project": "./tsconfig.json"
   },
-  "plugins": ["@typescript-eslint"],
+  "plugins": ["@typescript-eslint", "eslint-plugin-import"],
   "extends": ["plugin:@typescript-eslint/recommended"],
   "rules": {
     "@typescript-eslint/indent": ["error", 2],
@@ -28,6 +28,11 @@
     "max-len": ["warn", {
         "code": 100
     }],
-    "object-curly-spacing": ["warn", "never"]
+    "object-curly-spacing": ["warn", "never"],
+    "import/no-extraneous-dependencies": ["error", {
+        "devDependencies": false,
+        "optionalDependencies": false,
+        "peerDependencies": false
+    }]
   }
 }

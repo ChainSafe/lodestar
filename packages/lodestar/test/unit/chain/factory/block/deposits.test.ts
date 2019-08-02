@@ -1,7 +1,7 @@
 import sinon from "sinon";
 import {expect} from "chai";
 import {hashTreeRoot} from "@chainsafe/ssz";
-import {config} from "../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ZERO_HASH} from "../../../../../src/constants";
 import {OpPool} from "../../../../../src/opPool";
 import {ProgressiveMerkleTree, verifyMerkleBranch} from "../../../../../src/util/merkleTree";

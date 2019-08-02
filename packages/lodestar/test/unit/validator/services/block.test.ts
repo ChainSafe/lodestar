@@ -2,7 +2,7 @@ import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import sinon from "sinon";
 import {expect} from "chai";
 
-import {config} from "../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import BlockProposingService from "../../../../src/validator/services/block";
 import {RpcClientOverInstance} from "../../../../src/validator/rpc";
 import {ValidatorApi} from "../../../../src/rpc/api/validator";

@@ -2,8 +2,8 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {serialize} from "@chainsafe/ssz";
 
-import {config} from "../../../../../src/config/presets/mainnet";
-import {Eth1Data} from "../../../../../src/types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {Eth1Data} from "@chainsafe/eth2.0-types";
 import {processEth1Data} from "../../../../../src/chain/stateTransition/block/eth1Data";
 
 import {generateEmptyBlock} from "../../../../utils/block";

@@ -3,9 +3,9 @@ import BN from "bn.js";
 import {
   BeaconState,
   Crosslink,
-} from "../../src/types";
-import {GENESIS_EPOCH, GENESIS_SLOT, GENESIS_START_SHARD, ZERO_HASH} from "../../src/constants";
+} from "@chainsafe/eth2.0-types";
 
+import {GENESIS_EPOCH, GENESIS_SLOT, GENESIS_START_SHARD, ZERO_HASH} from "../../src/constants";
 import {intToBytes} from "../../src/util/bytes";
 import {randBetween, randBetweenBN} from "./misc";
 import {generateValidators} from "./validator";
@@ -13,7 +13,7 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import {generateEmptyBlock} from "./block";
 import {generateEmptyCrosslink} from "./crosslink";
 
-import {config} from "../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import { BitVector } from "@chainsafe/bit-utils";
 
 /**

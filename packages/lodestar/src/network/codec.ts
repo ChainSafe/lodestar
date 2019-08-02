@@ -3,10 +3,10 @@
  */
 
 import {deserialize, serialize} from "@chainsafe/ssz";
+import {RequestBody, ResponseBody, WireRequest, WireResponse} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {RequestBody, ResponseBody, WireRequest, WireResponse} from "../types";
 import {RequestId, Method} from "../constants";
-import {IBeaconConfig} from "../config";
 
 // Encode
 

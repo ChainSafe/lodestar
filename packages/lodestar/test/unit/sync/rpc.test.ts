@@ -1,12 +1,8 @@
+import BN from "bn.js";
 import sinon from "sinon";
 import {expect} from "chai";
-import {BeaconChain} from "../../../src/chain";
-import {Libp2pNetwork} from "../../../src/network";
-import {WinstonLogger} from "../../../src/logger";
-import {generateState} from "../../utils/state";
-import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
-import {EMPTY_SIGNATURE, Method, ZERO_HASH} from "../../../src/constants";
-import BN from "bn.js";
+import PeerInfo from "peer-info";
+import PeerId from "peer-id";
 import {
   BeaconBlockBodiesRequest,
   BeaconBlockBodiesResponse,
@@ -19,13 +15,18 @@ import {
   Goodbye,
   Hello,
   Status,
-} from "../../../src/types";
+} from "@chainsafe/eth2.0-types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+
+import {EMPTY_SIGNATURE, Method, ZERO_HASH} from "../../../src/constants";
+import {BeaconChain} from "../../../src/chain";
+import {Libp2pNetwork} from "../../../src/network";
+import {WinstonLogger} from "../../../src/logger";
+import {generateState} from "../../utils/state";
+import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
 import {intDiv} from "../../../src/util/math";
 import {ReputationStore} from "../../../src/sync/reputation";
-import PeerInfo from "peer-info";
-import PeerId from "peer-id";
 import {generateEmptyBlock} from "../../utils/block";
-import {config} from "../../../src/config/presets/mainnet";
 import {BlockRepository, ChainRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
 
 describe("syncing", function () {

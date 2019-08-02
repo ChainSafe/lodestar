@@ -11,6 +11,7 @@ cache:
 install:
     - yarn
     - lerna bootstrap
+    - lerna run build
 
 jobs:
   include:

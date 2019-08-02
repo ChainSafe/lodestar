@@ -2,7 +2,7 @@ import {assert} from "chai";
 import {ethers} from "ethers";
 import sinon from "sinon";
 
-import {config} from "../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {Eth1Wallet, EthersEth1Notifier, IEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
 import {PrivateEth1Network} from "../../../src/eth1/dev";

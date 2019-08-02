@@ -5,7 +5,7 @@ import sinon from "sinon";
 import {restore, rewire} from "@chainsafe/bls-js";
 import {hash} from "@chainsafe/ssz";
 
-import {config} from "../../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   FAR_FUTURE_EPOCH,
 } from "../../../../../../src/constants";

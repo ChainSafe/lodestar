@@ -9,10 +9,10 @@ import bls from "@chainsafe/bls-js";
 import {
   BeaconState,
   ProposerSlashing,
-} from "../../../../types";
-import {DomainType} from "../../../../constants";
-import {IBeaconConfig} from "../../../../config";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
+import {DomainType} from "../../../../constants";
 import {
   computeEpochOfSlot,
   getCurrentEpoch,

@@ -13,7 +13,7 @@ import {
   Slot,
   ValidatorDuty,
   ValidatorIndex
-} from "../../../../src/types";
+} from "@chainsafe/eth2.0-types";
 
 import {getEmptyBlock} from "../../../../src/chain/genesis/genesis";
 

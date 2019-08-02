@@ -2,8 +2,8 @@
  * @module chain/stateTransition/epoch
  */
 
-import {BeaconState} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+import {BeaconState} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {processRewardsAndPenalties} from "./balanceUpdates";
 import {processCrosslinks} from "./crosslinks";

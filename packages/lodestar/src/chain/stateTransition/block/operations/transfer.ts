@@ -10,13 +10,13 @@ import bls from "@chainsafe/bls-js";
 import {
   BeaconState,
   Transfer,
-} from "../../../../types";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {
   DomainType,
   FAR_FUTURE_EPOCH,
 } from "../../../../constants";
-import {IBeaconConfig} from "../../../../config";
-
 import {
   getBeaconProposerIndex,
   getCurrentEpoch,

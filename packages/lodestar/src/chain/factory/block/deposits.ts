@@ -3,8 +3,8 @@
  */
 
 import {hashTreeRoot} from "@chainsafe/ssz";
-import {BeaconState, Deposit, Eth1Data} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+import {BeaconState, Deposit, Eth1Data} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {OpPool} from "../../../opPool";
 import {IProgressiveMerkleTree} from "../../../util/merkleTree";
 import {processSortedDeposits} from "../../../util/deposits";

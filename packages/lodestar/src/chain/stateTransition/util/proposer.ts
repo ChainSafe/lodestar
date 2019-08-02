@@ -7,8 +7,8 @@ import {hash} from "@chainsafe/ssz";
 import {
   BeaconState,
   ValidatorIndex,
-} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {intDiv} from "../../../util/math";
 import {intToBytes} from "../../../util/bytes";

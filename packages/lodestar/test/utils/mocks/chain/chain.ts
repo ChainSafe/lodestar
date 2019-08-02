@@ -9,7 +9,7 @@ import {
   number64,
   uint16,
   uint64
-} from "../../../../src/types";
+} from "@chainsafe/eth2.0-types";
 import {IBeaconChain, LMDGHOST} from "../../../../src/chain";
 import {generateState} from "../../state";
 import {ProgressiveMerkleTree} from "../../../../src/util/merkleTree";

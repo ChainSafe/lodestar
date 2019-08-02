@@ -2,9 +2,10 @@
  * @module chain/blockAssembly
  */
 
+import {BeaconBlock, BeaconBlockBody, BeaconBlockHeader, BeaconState, bytes96, Slot} from "@chainsafe/eth2.0-types";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
-import {BeaconBlock, BeaconBlockBody, BeaconBlockHeader, BeaconState, bytes96, Slot} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {BeaconDb} from "../../../db/api";
 import {OpPool} from "../../../opPool";
 import {assembleBody} from "./body";

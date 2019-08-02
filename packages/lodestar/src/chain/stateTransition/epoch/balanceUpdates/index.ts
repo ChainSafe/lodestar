@@ -2,9 +2,10 @@
  * @module chain/stateTransition/epoch
  */
 
-import {BeaconState} from "../../../../types";
+import {BeaconState} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {GENESIS_EPOCH} from "../../../../constants";
-import {IBeaconConfig} from "../../../../config";
 import {getCurrentEpoch, increaseBalance, decreaseBalance} from "../../util";
 import {getAttestationDeltas} from "./attestation";
 import {getCrosslinkDeltas} from "./crosslink";

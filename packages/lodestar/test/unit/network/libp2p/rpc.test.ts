@@ -2,13 +2,15 @@ import {assert, expect} from "chai";
 import BN from "bn.js";
 import promisify from "promisify-es6";
 
-import {config} from "../../../../src/config/presets/mainnet";
+import {Hello} from "@chainsafe/eth2.0-types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+
 import {NetworkRpc} from "../../../../src/network/libp2p/rpc";
 
 import {createNode} from "./util";
 import {NodejsNode} from "../../../../src/network/libp2p/nodejs";
+
 import {Method} from "../../../../src/constants";
-import {Hello} from "../../../../src/types";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 import networkDefaults from "../../../../src/network/defaults";
