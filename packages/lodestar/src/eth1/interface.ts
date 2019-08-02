@@ -9,7 +9,7 @@ import {Block} from "ethers/providers";
 import StrictEventEmitter from "strict-event-emitter-types";
 
 interface IEth1Events {
-  block: (block: Block) => void,
+  block: (block: Block) => void;
   deposit: (index: number64, deposit: Deposit) => void;
 }
 
