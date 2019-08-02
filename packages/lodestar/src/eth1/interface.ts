@@ -8,12 +8,12 @@ import {bytes32, Deposit, number64} from "@chainsafe/eth2.0-types";
 import {Block} from "ethers/providers";
 import StrictEventEmitter from "strict-event-emitter-types";
 
-interface Eth1Events {
+interface IEth1Events {
   block: (block: Block) => void,
   deposit: (index: number64, deposit: Deposit) => void;
 }
 
-export type Eth1EventEmitter = StrictEventEmitter<EventEmitter, Eth1Events>;
+export type Eth1EventEmitter = StrictEventEmitter<EventEmitter, IEth1Events>;
 
 /**
  * The IEth1Notifier service watches the Eth1.0 chain for relevant events
