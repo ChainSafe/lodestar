@@ -28,7 +28,7 @@ import StrictEventEmitter from "strict-event-emitter-types";
 interface INetworkRpcEvents {
   ["peer:connect"]: (peerInfo: PeerInfo) => void;
   ["peer:disconnect"]: (peerInfo: PeerInfo) => void;
-  request: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => void
+  request: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => void;
 }
 
 export type NetworkRpcEventEmitter = StrictEventEmitter<EventEmitter, INetworkRpcEvents>;
