@@ -1,54 +1,51 @@
 # Introduction
 
->First off, thank you for considering contributing to the Lodestar Chain. It's people like you that push the Ethereum ecosystem forward.
+> Thanks for your contribution to Lodestar. It's people like you that push the Ethereum ecosystem forward.
 
-We are currently converting our project from JavaScript to TypeScript, if you are interested in contributing please message us on [gitter](https://gitter.im/chainsafe/lodestar-chain).
+# First-time Contributor?
+Unsure where to begin contributing to Lodestar? Here are some ideas!
 
-# Your First Contribution
-> Unsure where to begin contributing to the Lodestar Chain? You can start by looking through these beginner and help-wanted issues:
-> Beginner issues - issues which should only require a few lines of code, and a test or two.
-> Help wanted issues - issues which should be a bit more involved than beginner issues.
-> Both issue lists are sorted by total number of comments. While not perfect, number of comments is a reasonable proxy for impact a given change will have.
+- See any typos? See any verbiage that should be changed or updated? Go for it! Github makes it easy to make contributions right from the browser.
+- Look through our [outstanding unassigned issues](https://github.com/ChainSafe/lodestar/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee).
+- Join our [discord chat](https://discord.gg/aMxzVcr)!
 
-> At this point, you're ready to make your changes! Feel free to ask for help; everyone is a beginner at first.
->
-> If a maintainer asks you to "rebase" your PR, they're saying that a lot of code has changed, and that you need to update your branch so it's easier to merge.
+# Reporting a bug?
+[Create a new issue!](https://github.com/ChainSafe/lodestar/issues/new/choose) Select the type of issue that best fits, and please fill out as much of the information as you can.
 
-# Typescript
+# Contribution process
 
-> If you're new to typescript, don't worry, so are we! For the more experienced typescript developers, if you notice any inconsistencies please make an issue so we can address it early!
-> We chose typescript to stay consistent with the ethereum-js team, as they are moving towards typescript. It also helps while developing, as it points out obvious errors, such as trying to itterate over a string (oops!).
+1. Make sure you're familiar with our contribution guidelines (this document!)
+2. Create your [own fork](https://github.com/ChainSafe/lodestar/fork) of this repo
+3. Make your changes in your local fork
+4. If you've made a code change, make sure to lint and test your changes (`yarn lint` and `yarn test:unit`)
+5. Make a pull request! We review PRs on a regular basis.
+6. You may be asked to sign a Contributor License Agreement (CLA). We make it relatively painless with CLA-bot.
 
-We're trying to follow a few rules (the linter should catch most of these):
-1. Functions and variables should be camel case.
-2. All functions should have paramters properly decalred with respective types, and they should contain a return type.
-3. If a function accepts/returns `any`, commonly found in the spec, please use a [generic](https://www.typescriptlang.org/docs/handbook/generics.html) instead.
-4. All declared variables should have a corresponding type.
+# Lodestar Monorepo
 
-# Getting started
->1. Create your own fork of the code
->2. Do the changes in your fork
->3. If you like the change and think the project could use it:
-    * Be sure you have followed the code style for the project.
-    * run the linter within lodestar (yarn run lint) and fix any issues if they arrise.
-    * Send a pull request.
+We're currently experimenting with hosting the majority of lodestar packages and support packages in this repository as a [monorepo](https://en.wikipedia.org/wiki/Monorepo). We're using [Lerna](https://lerna.js.org/) to manage the packages.
+See [packages/](https://github.com/ChainSafe/lodestar/tree/master/packages) for a list of packages hosted in this repo.
 
-> Small contributions such as fixing spelling errors, where the content is small enough to not be considered intellectual property, can be submitted by a contributor as a patch, without a CLA.
->
->As a rule of thumb, changes are obvious fixes if they do not introduce any new functionality or creative thinking. As long as the change does not affect functionality, some likely examples include the following:
->* Spelling / grammar fixes
->* Typo correction, white space and formatting changes
->* Comment clean up
->* Bug fixes that change default return values or error codes stored in constants
->* Adding logging messages or debugging output
->* Changes to ‘metadata’ files like Gemfile, .gitignore, build scripts, etc.
->* Moving source files from one directory or package to another
+# Style Guide
 
-# How to report a bug
-A few issue templates have been created, please fill out all the information so we can better diagnose your issue.
-
-# Code review process
-> The core team looks at Pull Requests on a regular basis. 
+- Functions and variables should be [`camelCase`](https://en.wikipedia.org/wiki/Camel_case), classes should be [`PascalCase`](http://wiki.c2.com/?PascalCase), constants should be `UPPERCASE_WITH_UNDERSCORES`.
+- Use `"` instead of `'`
+- All functions should have types declared for all parameters and return value
+- All interfaces should be prefixed with a `I`
+  - eg: `IMyInterface`
+- You probably shouldn't be using Typescript's `any`
+- PRs should only update a single package (in our monorepo) at a time
+- Private class properties need not be prefixed with a `_`
+  - eg: `private dirty;`, not `private _dirty;`
+- Many module class constructors have the following signature: `(options, modules)`
+  - eg: `public constructor(opts: IExampleOptions, {db, logger}: IExampleModules)`
+- Make sure your code is properly linted
+  - run `yarn lint` from the command line and use an IDE that will help
+- Make sure that your code is properly type checked: 
+  - run `yarn check-types` from the command line and use an IDE that will help
+- Make sure that the tests are still passing: 
+  - run `yarn test:unit` from the command line
 
 # Community
-> You can chat with the core team on https://gitter.im/chainsafe/lodestar-chain. 
+
+Come chat with us on [discord](https://discord.gg/aMxzVcr)!
