@@ -1,5 +1,5 @@
 {
-  "name": "@chainsafe/bls-js",
+  "name": "@chainsafe/bls",
   "version": "0.1.6",
   "description": "Implementation of bls signature verification for ethereum 2.0",
   "main": "lib/index.js",
