@@ -115,7 +115,7 @@ export function parseType(type: AnySSZType): FullSSZType {
           assert(typeof fieldName === "string", "Container field name must be a string");
           return [fieldName, parseType(fieldType)];
         }) as [string, FullSSZType][],
-      }
+      };
     }
   }
   throw new Error(`Invalid type: ${JSON.stringify(type)}`);

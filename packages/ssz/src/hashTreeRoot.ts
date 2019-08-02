@@ -14,11 +14,11 @@ import {
   VectorType,
 } from "./types";
 
-import { BYTES_PER_CHUNK } from "./constants";
+import {BYTES_PER_CHUNK} from "./constants";
 
-import { _assertValidValue } from "./assertValidValue";
+import {_assertValidValue} from "./assertValidValue";
 
-import { fixedSize } from "./size";
+import {fixedSize} from "./size";
 
 import {
   chunkify,

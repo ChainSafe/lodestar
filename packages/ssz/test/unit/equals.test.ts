@@ -1,13 +1,13 @@
 import BN from "bn.js";
-import { expect } from "chai";
+import {expect} from "chai";
 
-import { equals } from "../../src";
+import {equals} from "../../src";
 
 import {
   ArrayObject,
 } from "./objects";
 
-import { stringifyType } from "./utils";
+import {stringifyType} from "./utils";
 
 describe("equals", () => {
   const testCases: {

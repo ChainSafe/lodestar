@@ -1,4 +1,4 @@
-import { assert } from "chai";
+import {assert} from "chai";
 
 import BN from "bn.js";
 
@@ -14,7 +14,7 @@ import {
   SimpleObject,
 } from "./objects";
 
-import { stringifyType } from "./utils";
+import {stringifyType} from "./utils";
 
 describe("deserialize", () => {
   const testCases: {

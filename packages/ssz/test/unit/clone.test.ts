@@ -1,13 +1,13 @@
 import BN from "bn.js";
-import { expect } from "chai";
+import {expect} from "chai";
 
-import { clone, equals } from "../../src";
+import {clone, equals} from "../../src";
 
 import {
   ArrayObject,
 } from "./objects";
 
-import { stringifyType } from "./utils";
+import {stringifyType} from "./utils";
 
 describe("clone", () => {
   const testCases: {

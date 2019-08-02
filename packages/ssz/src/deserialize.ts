@@ -21,10 +21,10 @@ import {
   BitVectorType,
 } from "./types";
 
-import { BYTES_PER_LENGTH_PREFIX } from "./constants";
+import {BYTES_PER_LENGTH_PREFIX} from "./constants";
 
-import { parseType, isVariableSizeType } from "./util/types";
-import { fixedSize } from "./size";
+import {parseType, isVariableSizeType} from "./util/types";
+import {fixedSize} from "./size";
 
 
 /**

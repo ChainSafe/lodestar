@@ -6,20 +6,20 @@ export const SimpleObject = {
     ['b', 'uint16'],
     ['a', 'uint8'],
   ],
-}
+};
 
 export const InnerObject = {
   fields: [
     ['v', 'uint16'],
   ],
-}
+};
 
 export const OuterObject = {
   fields: [
     ['v', 'uint8'],
     ['subV', InnerObject],
   ],
-}
+};
 
 export const ArrayObject = {
   fields: [
@@ -28,4 +28,4 @@ export const ArrayObject = {
       maxLength: 100,
     }],
   ],
-}
+};

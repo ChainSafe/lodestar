@@ -3,10 +3,10 @@ import {
   FullSSZType,
   SerializableValue,
 } from "../types";
-import { BYTES_PER_CHUNK } from "../constants";
-import { size } from "../size";
-import { _serialize } from "../serialize";
-import { hash } from "../hash";
+import {BYTES_PER_CHUNK} from "../constants";
+import {size} from "../size";
+import {_serialize} from "../serialize";
+import {hash} from "../hash";
 
 // create array of "zero hashes", successively hashed zero chunks
 const zeroHashes = [Buffer.alloc(BYTES_PER_CHUNK)];
@@ -33,7 +33,7 @@ export function pack (input: SerializableValue[], type: FullSSZType): Buffer[] {
 export function chunkify (input: Buffer): Buffer[] {
   const chunkLength = Math.max(Math.ceil(input.length / BYTES_PER_CHUNK), 1);
   // Chop buffer into chunks
-  const chunks = Array.from({ length: chunkLength },
+  const chunks = Array.from({length: chunkLength},
     (_, i) => input.slice(i * BYTES_PER_CHUNK, i * BYTES_PER_CHUNK + BYTES_PER_CHUNK));
   const lastChunk = chunks[chunkLength - 1];
   if (lastChunk.length < BYTES_PER_CHUNK) {
@@ -73,7 +73,7 @@ export function merkleize(chunks: Buffer[], padFor: number = 0): Buffer {
       chunks.push(zeroHashes[layer]);
     }
     if (chunks.length == 1) {
-      break
+      break;
     }
     for (let i = 0; i < chunks.length; i += 2) {
       chunks[i / 2] = hash(chunks[i], chunks[i + 1]);

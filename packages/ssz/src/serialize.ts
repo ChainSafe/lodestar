@@ -20,12 +20,12 @@ import {
   UintType,
 } from "./types";
 
-import { BYTES_PER_LENGTH_PREFIX } from "./constants";
+import {BYTES_PER_LENGTH_PREFIX} from "./constants";
 
-import { size, fixedSize } from "./size";
+import {size, fixedSize} from "./size";
 
-import { parseType, isVariableSizeType } from "./util/types";
-import { _assertValidValue } from "./assertValidValue";
+import {parseType, isVariableSizeType} from "./util/types";
+import {_assertValidValue} from "./assertValidValue";
 
 
 /**
@@ -167,7 +167,7 @@ function _serializeArray(value: SerializableArray, type: ArrayType, output: Buff
       // write serialized element to variable section
       nextOffsetIndex = _serialize(v, type.elementType, output, currentOffsetIndex);
       // write offset
-      output.writeUIntLE(currentOffsetIndex - start, fixedIndex, BYTES_PER_LENGTH_PREFIX)
+      output.writeUIntLE(currentOffsetIndex - start, fixedIndex, BYTES_PER_LENGTH_PREFIX);
       // update offset
       currentOffsetIndex = nextOffsetIndex;
       fixedIndex += BYTES_PER_LENGTH_PREFIX;
@@ -187,7 +187,7 @@ function _serializeObject(value: SerializableObject, type: ContainerType, output
   let fixedIndex = start;
   let fixedLength = type.fields
     .map(([_, fieldType]) => isVariableSizeType(fieldType) ? BYTES_PER_LENGTH_PREFIX : fixedSize(fieldType))
-    .reduce((a, b) => a + b, 0)
+    .reduce((a, b) => a + b, 0);
   let currentOffsetIndex = start + fixedLength;
   let nextOffsetIndex = currentOffsetIndex;
   for (const [fieldName, fieldType] of type.fields) {
@@ -196,7 +196,7 @@ function _serializeObject(value: SerializableObject, type: ContainerType, output
       // write serialized element to variable section
       nextOffsetIndex = _serialize(value[fieldName], fieldType, output, currentOffsetIndex);
       // write offset
-      output.writeUIntLE(currentOffsetIndex - start, fixedIndex, BYTES_PER_LENGTH_PREFIX)
+      output.writeUIntLE(currentOffsetIndex - start, fixedIndex, BYTES_PER_LENGTH_PREFIX);
       // update offset
       currentOffsetIndex = nextOffsetIndex;
       fixedIndex += BYTES_PER_LENGTH_PREFIX;

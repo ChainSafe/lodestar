@@ -1,4 +1,5 @@
 import {BitList, BitVector} from "@chainsafe/bit-utils";
+// eslint-disable-next-line import/no-extraneous-dependencies
 import camelCase from "camelcase";
 import {
   FullSSZType,
@@ -24,7 +25,7 @@ function _hydrateType(type: FullSSZType) {
       type.fields = type.fields.map(([fieldName, fieldType]): [string, FullSSZType] => ([fieldName, _hydrateType(fieldType)]));
       break;
   }
-  return type
+  return type;
 }
 
 export function hydrateValue(obj: any, type: any): any {

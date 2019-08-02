@@ -1,4 +1,4 @@
-import { assert } from "chai";
+import {assert} from "chai";
 
 import {
   signingRoot,
@@ -12,7 +12,7 @@ import {
   SimpleObject,
 } from "./objects";
 
-import { stringifyType } from "./utils";
+import {stringifyType} from "./utils";
 
 describe("signedRoot", () => {
   const testCases: {

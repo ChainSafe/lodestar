@@ -7,7 +7,7 @@ import {
   Type,
 } from "./types";
 
-import { hashTreeRoot } from "./hashTreeRoot";
+import {hashTreeRoot} from "./hashTreeRoot";
 
 import {
   copyType,

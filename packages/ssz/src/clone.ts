@@ -8,8 +8,8 @@ import {
   FullSSZType,
   Type,
 } from "./types";
-import { _assertValidValue } from "./assertValidValue";
-import { parseType } from "./util/types";
+import {_assertValidValue} from "./assertValidValue";
+import {parseType} from "./util/types";
 
 
 /**

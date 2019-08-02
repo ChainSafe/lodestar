@@ -12,9 +12,9 @@ import {
   SerializableValue,
 } from "./types";
 
-import { BYTES_PER_LENGTH_PREFIX } from "./constants";
+import {BYTES_PER_LENGTH_PREFIX} from "./constants";
 
-import { isVariableSizeType } from "./util/types";
+import {isVariableSizeType} from "./util/types";
 
 
 // Return the size of a fixed-sized type
@@ -31,7 +31,7 @@ export function fixedSize(type: FullSSZType): number {
     case Type.byteVector:
       return type.length;
     case Type.vector:
-      return fixedSize(type.elementType) * type.length
+      return fixedSize(type.elementType) * type.length;
     case Type.container:
       return type.fields
         .map(([_, fieldType]) => fixedSize(fieldType))
@@ -69,7 +69,7 @@ export function variableSize(value: SerializableValue, type: FullSSZType): numbe
           (isVariableSizeType(fieldType) ? BYTES_PER_LENGTH_PREFIX : 0))
         .reduce((a, b) => a + b, 0);
     default:
-      throw new Error('variableSize: invalid type')
+      throw new Error('variableSize: invalid type');
   }
 }
 
