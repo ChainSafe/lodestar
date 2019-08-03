@@ -4,8 +4,8 @@
 
 import {EventEmitter} from "events";
 
-import {BeaconBlock, BeaconBlockHeader, Epoch, ProposerSlashing, Slot, ValidatorIndex} from "../types";
-
+import {BeaconBlock, BeaconBlockHeader, BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex} from "../types";
+import {getBeaconProposerIndex} from "../chain/stateTransition/util";
 import {IBeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
 import {
@@ -88,7 +88,8 @@ export class OpPool extends EventEmitter {
   public async checkDuplicateProposer(config, block: BeaconBlock): Promise<void> {
     const epoch: Epoch = computeEpochOfSlot(config, block.slot);
     const proposers: Map<ValidatorIndex, Slot> = this.proposers.get(epoch);
-    const proposerIndex: ValidatorIndex = await this.db.getValidatorIndex(block.signature);
+    const state: BeaconState = await this.db.state.getLatest();
+    const proposerIndex: ValidatorIndex = await getBeaconProposerIndex(config, state);
 
     // Check if proposer already exists
     if (proposers.get(proposerIndex)) {
