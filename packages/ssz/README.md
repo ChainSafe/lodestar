@@ -1,5 +1,5 @@
 # ssz
-[![Build Status](https://travis-ci.com/ChainSafe/ssz-js.svg?branch=master)](https://travis-ci.com/ChainSafe/ssz-js)
+[![Build Status](https://travis-ci.com/ChainSafe/lodestar.svg?branch=master)](https://travis-ci.com/ChainSafe/lodestar)
 
 Simple Serialize (SSZ)
 
