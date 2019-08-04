@@ -12,12 +12,14 @@ import {RequestId, Method} from "../constants";
 export type NetworkEventEmitter = StrictEventEmitter<EventEmitter, INetworkEvents>;
 
 interface INetworkEvents {
-    [BLOCK_TOPIC]: (block: BeaconBlock) => void;
-    [ATTESTATION_TOPIC]: (attestation: Attestation) => void;
-    ["gossipsub:heartbeat"]: void;
-    request: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => void;
-    ["peer:connect"]: (peerInfo: PeerInfo) => void;
-    ["peer:disconnect"]: (peerInfo: PeerInfo) => void;
+  [BLOCK_TOPIC]: (block: BeaconBlock) => void;
+  [ATTESTATION_TOPIC]: (attestation: Attestation) => void;
+  ["gossipsub:heartbeat"]: void;
+  request: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => void;
+  ["peer:connect"]: (peerInfo: PeerInfo) => void;
+  ["peer:disconnect"]: (peerInfo: PeerInfo) => void;
+  // shard attestation topic is generated string so we cannot typehint it
+  //[{shard}]: (attestation: Attestation) => void;
 }
 
 export interface INetwork extends NetworkEventEmitter {

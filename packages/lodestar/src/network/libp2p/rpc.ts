@@ -29,6 +29,8 @@ interface INetworkRpcEvents {
   ["peer:connect"]: (peerInfo: PeerInfo) => void;
   ["peer:disconnect"]: (peerInfo: PeerInfo) => void;
   request: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => void;
+  // we cannot typehint dynamic keys
+  //[response ${id}]: (err: Error|null, data: ResponseBody) => void
 }
 
 export type NetworkRpcEventEmitter = StrictEventEmitter<EventEmitter, INetworkRpcEvents>;
