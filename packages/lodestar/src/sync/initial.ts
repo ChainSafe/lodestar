@@ -85,9 +85,9 @@ export class InitialSync {
     const blocks = await this.rpc.getBeaconBlocks(
       peerInfo, latestFinalizedSlot, slotCountToSync, false
     );
-    blocks.forEach(async (block) => {
+    for(const block of blocks) {
       await this.chain.receiveBlock(block);
-    });
+    }
 
   }
   public async start(): Promise<void> {
