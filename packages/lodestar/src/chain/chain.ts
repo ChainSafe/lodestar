@@ -19,7 +19,7 @@ import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from 
 import {stateTransition} from "./stateTransition";
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 import {computeEpochOfSlot, getAttestingIndices} from "./stateTransition/util";
-import {ChainEventEmmitter, IBeaconChain} from "./interface";
+import {ChainEventEmitter, IBeaconChain} from "./interface";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
 import {processSortedDeposits} from "../util/deposits";
 import {OpPool} from "../opPool";
@@ -33,7 +33,7 @@ export interface IBeaconChainModules {
   logger: ILogger;
 }
 
-export class BeaconChain extends (EventEmitter as { new(): ChainEventEmmitter }) implements IBeaconChain {
+export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) implements IBeaconChain {
 
   public chain: string;
   public latestState: BeaconState = null;

@@ -11,13 +11,13 @@ interface IChainEvents {
   processedAttestation: (attestation: Attestation) => void;
 }
 
-export type ChainEventEmmitter = StrictEventEmitter<EventEmitter, IChainEvents>;
+export type ChainEventEmitter = StrictEventEmitter<EventEmitter, IChainEvents>;
 
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
  * and applying the fork choice rule to update the chain head
  */
-export interface IBeaconChain extends ChainEventEmmitter {
+export interface IBeaconChain extends ChainEventEmitter {
   latestState: BeaconState;
   forkChoice: LMDGHOST;
   chainId: uint16;
