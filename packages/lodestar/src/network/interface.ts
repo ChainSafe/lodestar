@@ -7,7 +7,8 @@ import {
   Attestation, BeaconBlock, Shard, ResponseBody, RequestBody,
 } from "@chainsafe/eth2.0-types";
 
-import {RequestId, Method} from "../constants";
+import {RequestId, Method, BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
+import StrictEventEmitter from "strict-event-emitter-types";
 
 export type NetworkEventEmitter = StrictEventEmitter<EventEmitter, INetworkEvents>;
 

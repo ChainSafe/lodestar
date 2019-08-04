@@ -2,7 +2,7 @@ import {assert} from "chai";
 import BN from "bn.js";
 import promisify from "promisify-es6";
 
-import {Hello} from "@chainsafe/eth2.0-types";
+import {Hello, ResponseBody} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 
 import {NetworkRpc} from "../../../../src/network/libp2p/rpc";
