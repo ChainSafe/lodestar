@@ -4,7 +4,7 @@
   "description": "Implementation of bls signature verification for ethereum 2.0",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
-  "homepage": "https://github.com/chainsafe/bls-js",
+  "homepage": "https://github.com/chainsafe/lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
   "files": [
@@ -27,10 +27,10 @@
     "lint-fix": "eslint --ext .ts src/ --fix",
     "pretest": "yarn check-types",
     "prepublishOnly": "yarn build",
-    "test:unit": "mocha -r ./.babel-register \"test/unit/**/*.test.ts\"",
-    "test:spec": "mocha -r ./.babel-register \"test/spec/**/*.test.ts\"",
-    "test": "nyc -r lcov -e .ts -x \"*.test.ts\" mocha -r ./.babel-register \"test/**/*.test.ts\" && nyc report",
-    "coverage": "codecov"
+    "test:unit": "nyc --cache-dir .nyc_output/.cache -r lcov -e .ts mocha -r ./.babel-register 'test/unit/**/*.test.ts' && nyc report",
+    "test:spec": "mocha -r ./.babel-register 'test/spec/**/*.test.ts'",
+    "test": "yarn test:unit && yarn test:spec",
+    "coverage": "codecov -F bls"
   },
   "dependencies": {
     "@chainsafe/milagro-crypto-js": "0.1.3",
