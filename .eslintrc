@@ -30,7 +30,7 @@
     }],
     "object-curly-spacing": ["warn", "never"],
     "import/no-extraneous-dependencies": ["error", {
-        "devDependencies": false,
+        "devDependencies": ["test/**"],
         "optionalDependencies": false,
         "peerDependencies": false
     }]
