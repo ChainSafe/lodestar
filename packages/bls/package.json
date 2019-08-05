@@ -27,9 +27,9 @@
     "lint-fix": "eslint --ext .ts src/ --fix",
     "pretest": "yarn check-types",
     "prepublishOnly": "yarn build",
-    "test:unit": "mocha -r ./.babel-register \"tests/unit/**/*.test.ts\"",
-    "test:spec": "mocha -r ./.babel-register \"tests/spec/**/*.test.ts\"",
-    "test": "nyc -r lcov -e .ts -x \"*.test.ts\" mocha -r ./.babel-register \"tests/**/*.test.ts\" && nyc report",
+    "test:unit": "mocha -r ./.babel-register \"test/unit/**/*.test.ts\"",
+    "test:spec": "mocha -r ./.babel-register \"test/spec/**/*.test.ts\"",
+    "test": "nyc -r lcov -e .ts -x \"*.test.ts\" mocha -r ./.babel-register \"test/**/*.test.ts\" && nyc report",
     "coverage": "codecov"
   },
   "dependencies": {
