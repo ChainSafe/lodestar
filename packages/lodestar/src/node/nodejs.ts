@@ -24,6 +24,7 @@ export interface Service {
   stop(): Promise<void>;
 }
 
+// TODO move into src/node/beacon
 /**
  * Beacon Node configured for desktop (non-browser) use
  */

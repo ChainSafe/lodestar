@@ -21,8 +21,7 @@ import {computeEpochOfSlot, getAttestingIndices} from "./stateTransition/util";
 import {IBeaconChain} from "./interface";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
 import {processSortedDeposits} from "../util/deposits";
-import defaultChainOption, {IChainOptions} from "./options";
-import deepmerge from "deepmerge";
+import {IChainOptions} from "./options";
 import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
 
