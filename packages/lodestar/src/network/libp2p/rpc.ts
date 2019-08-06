@@ -57,7 +57,7 @@ export class NetworkRpc extends EventEmitter {
   private config: IBeaconConfig;
   private logger: ILogger;
 
-  public constructor(opts: Partial<INetworkOptions>, {config, libp2p, logger}: {config: IBeaconConfig; libp2p: LibP2p; logger: ILogger}) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger}: {config: IBeaconConfig; libp2p: LibP2p; logger: ILogger}) {
     super();
     this.config = config;
     this.logger = logger;

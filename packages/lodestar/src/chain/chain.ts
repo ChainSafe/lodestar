@@ -51,6 +51,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
   
   public constructor(opts: IChainOptions, {config, db, eth1, opPool, logger}: IBeaconChainModules) {
     super();
+    this.opts = opts;
     this.chain = opts.name;
     this.config = config;
     this.db = db;

@@ -63,8 +63,7 @@ export class SyncRpc implements ISyncRpc {
   private reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: Partial<ISyncOptions>, {config, db, chain, network, reps, logger}: SyncModule) {
-    this.opts = deepmerge(defaultSyncOptions, opts);
+  public constructor(opts: ISyncOptions, {config, db, chain, network, reps, logger}: SyncModule) {
     this.config = config;
     this.opts = opts;
     this.db = db;

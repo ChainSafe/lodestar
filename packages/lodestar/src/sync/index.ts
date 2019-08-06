@@ -13,9 +13,8 @@ import {RegularSync} from "./regular";
 import {InitialSync} from "./initial";
 import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
-import defaultSyncOptions, {ISyncOptions} from "./options";
+import {ISyncOptions} from "./options";
 import {ISyncRpc} from "./rpc/interface";
-import deepmerge from "deepmerge";
 
 interface SyncModules {
   config: IBeaconConfig;
@@ -48,7 +47,7 @@ export class Sync extends EventEmitter {
 
   public constructor(opts: ISyncOptions, {config, chain, db, eth1, network, opPool, reps, rpc, logger}: SyncModules) {
     super();
-    this.opts = deepmerge(defaultSyncOptions, opts);
+    this.opts = opts;
     this.config = config;
     this.chain = chain;
     this.db = db;

@@ -12,7 +12,7 @@ export class WinstonLogger implements ILogger {
     options = {
       level: LogLevel.DEFAULT,
       module: "",
-      ...options
+      ...options,
     };
     this.winston = createLogger({
       level: options.level,

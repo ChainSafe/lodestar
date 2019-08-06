@@ -25,7 +25,7 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
 
   private logger: ILogger;
 
-  public constructor(opts: LevelDBOptions,  {logger}: {logger: ILogger}) {
+  public constructor(opts: LevelDBOptions, {logger}: {logger: ILogger}) {
     super();
     this.opts = opts;
     this.logger = logger;
