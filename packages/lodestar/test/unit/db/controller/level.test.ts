@@ -17,7 +17,7 @@ describe("LevelDB controller", () => {
 
 
   before(async () => {
-    logger.silent(true);
+    logger.silent = true;
     await db.start();
   });
 
@@ -25,7 +25,7 @@ describe("LevelDB controller", () => {
     await db.stop();
     await promisify(leveldown.destroy)(dbLocation, function () {
     });
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('test put', async () => {

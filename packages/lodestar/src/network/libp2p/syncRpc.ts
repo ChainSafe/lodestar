@@ -35,9 +35,8 @@ import {IBeaconChain} from "../../chain";
 import {INetwork} from "../index";
 import {getEmptyBlockBody} from "../../chain/genesis/genesis";
 import {ReputationStore} from "../../sync/reputation";
-import {ILogger, WinstonLogger} from "../../logger";
+import {ILogger} from "../../logger";
 import {IBeaconConfig} from "../../config";
-import {Module} from "../../logger/abstract";
 import {ISyncRpc} from "../../sync/rpc/interface";
 import defaultSyncOptions, {ISyncOptions} from "../../sync/options";
 import deepmerge from "deepmerge";
@@ -52,7 +51,7 @@ export interface SyncModule {
   chain: IBeaconChain;
   network: INetwork;
   reps: ReputationStore;
-  logger?: ILogger;
+  logger: ILogger;
 }
 
 export class SyncRpc implements ISyncRpc {
@@ -72,7 +71,7 @@ export class SyncRpc implements ISyncRpc {
     this.chain = chain;
     this.network = network;
     this.reps = reps;
-    this.logger = logger || new WinstonLogger(this.opts.loggingLevel, Module.NETWORK);
+    this.logger = logger;
   }
 
   // create common requests

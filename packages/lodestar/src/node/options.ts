@@ -9,11 +9,9 @@ import defaultEth1Options, {Eth1Options, IEth1Options} from "../eth1/options";
 import defaultNetworkOptions, {INetworkOptions, NetworkOptions} from "../network/options";
 import defaultOpPoolOptions, {IOpPoolOptions, OpPoolOptions} from "../opPool/options";
 import defaultSyncOptions, {ISyncOptions, SyncOptions} from "../sync/options";
+import defaultLoggerOptions, {IBeaconLoggerOptions, BeaconLoggerOptions} from "./loggerOptions";
 import {IValidatorOptions, ValidatorOptions} from "../validator/options";
 import {IConfigurationModule} from "../util/config";
-import {parseLoggingLevels} from "../util/parse";
-import {LogLevel} from "../logger";
-import {Module} from "../logger/abstract";
 
 export interface IBeaconNodeOptions {
   chain: IChainOptions;
@@ -23,9 +21,8 @@ export interface IBeaconNodeOptions {
   network: INetworkOptions;
   opPool: IOpPoolOptions;
   sync: ISyncOptions;
+  logger: IBeaconLoggerOptions;
   validator?: IValidatorOptions;
-  loggingOptions?: Map<Module, LogLevel>;
-
 }
 
 export const BeaconNodeOptions: IConfigurationModule = {
@@ -38,19 +35,8 @@ export const BeaconNodeOptions: IConfigurationModule = {
     NetworkOptions,
     OpPoolOptions,
     SyncOptions,
+    BeaconLoggerOptions,
     ValidatorOptions,
-    {
-      name: "loggingOptions",
-      type: String,
-      configurable: true,
-      cli: {
-        flag: "loggingLevels",
-        short: "l"
-      },
-      process: (loggingLevel) => {
-        return parseLoggingLevels(loggingLevel);
-      }
-    }
   ]
 };
 
@@ -62,6 +48,7 @@ const config: IBeaconNodeOptions = {
   network: defaultNetworkOptions,
   opPool: defaultOpPoolOptions,
   sync: defaultSyncOptions,
+  logger: defaultLoggerOptions,
 };
 
 export default config;

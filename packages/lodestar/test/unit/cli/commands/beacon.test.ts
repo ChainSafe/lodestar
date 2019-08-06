@@ -10,11 +10,11 @@ describe('[CLI] beacon', () => {
   let logger: ILogger = new WinstonLogger();
 
   before(async () => {
-    logger.silent(true);
+    logger.silent = true;
   });
 
   after(async () => {
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('Should be able to register', async () => {

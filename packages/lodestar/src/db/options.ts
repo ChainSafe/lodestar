@@ -1,9 +1,7 @@
 import {IConfigurationModule} from "../util/config";
-import {LogLevel} from "../logger";
 
 export interface IDatabaseOptions {
   name: string;
-  loggingLevel?: LogLevel;
 }
 
 export const DatabaseOptions: IConfigurationModule = {
@@ -24,7 +22,6 @@ export const DatabaseOptions: IConfigurationModule = {
 
 const config: IDatabaseOptions = {
   name: "./lodestar-db",
-  loggingLevel: LogLevel.DEFAULT
 };
 
 export default config;

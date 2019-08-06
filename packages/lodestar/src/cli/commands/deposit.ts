@@ -13,11 +13,10 @@ import * as ethers from "ethers/ethers";
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
-import {Module} from "../../logger/abstract";
 
 interface IDepositCommandOptions {
   privateKey: string;
-  loggingLevel: string;
+  logLevel: string;
   mnemonic: string;
   node: string;
   value: string;
@@ -29,13 +28,11 @@ export class DepositCommand implements CliCommand {
 
   public register(commander: CommanderStatic): void {
 
-    const logger: ILogger = new WinstonLogger();
-
     commander
       .command('deposit')
       .description('Start private network with deposit contract and 10 accounts with balance')
       .option("-k, --privateKey [privateKey]", 'Private key of account that will make deposit')
-      .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
+      .option(`-l, --logLevel [${Object.values(LogLevel).join("|")}]`, "Log level")
       .option(
         "-m, --mnemonic [mnemonic]",
         'If mnemonic is submitted, first 10 accounts will make deposit'
@@ -52,18 +49,19 @@ export class DepositCommand implements CliCommand {
         //library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
         try {
-          await this.action(options, logger);
+          await this.action(options);
         } catch (e) {
-          logger.error(e.message + '\n' + e.stack);
+          // eslint-disable-next-line no-console
+          console.error(e.message + '\n' + e.stack);
         }
-
       });
   }
 
-  public async action(options: IDepositCommandOptions, logger: ILogger): Promise<void> {
-    if (options.loggingLevel) {
-      logger.setLogLevel(LogLevel[options.loggingLevel]);
-    }
+  public async action(options: IDepositCommandOptions): Promise<void> {
+    const logger: ILogger = new WinstonLogger({
+      level: options.logLevel as LogLevel || LogLevel.DEFAULT,
+      module: "deposit",
+    });
     const provider = new JsonRpcProvider(options.node);
     try {
       //check if we can connect to node

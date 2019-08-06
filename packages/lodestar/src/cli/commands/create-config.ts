@@ -10,37 +10,37 @@ import {CliError} from "../error";
 import {writeTomlConfig} from "../../util/file";
 
 interface ICreateConfigOptions {
-  loggingLevel: string;
+  logLevel: string;
   outputFile: string;
 }
 
 export class CreateConfigCommand implements CliCommand {
   public register(commander: CommanderStatic): void {
 
-    const logger: ILogger = new WinstonLogger();
 
     commander
       .command("create-config")
       .description("Create default config file")
-      .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
+      .option(`-l, --logLevel [${Object.values(LogLevel).join("|")}]`, "Log level")
       .option("-o, --outputFile [output_file]"
         , "Path to output file destination", "lodestar-config.toml")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation 
         // (unhandled promise rejections)
         try {
-          await this.action(options, logger);
+          await this.action(options);
         } catch (e) {
-          logger.error(e.message + '\n' + e.stack);
+          // eslint-disable-next-line no-console
+          console.error(e.message + '\n' + e.stack);
         }
       });
   }
 
-  public async action(options: ICreateConfigOptions, logger: ILogger): Promise<void> {
-    if (options.loggingLevel) {
-      logger.setLogLevel(LogLevel[options.loggingLevel]);
-    }
-
+  public async action(options: ICreateConfigOptions): Promise<void> {
+    const logger: ILogger = new WinstonLogger({
+      level: options.logLevel as LogLevel || LogLevel.DEFAULT,
+      module: "create-config"
+    });
     if (fs.existsSync(options.outputFile)) {
       throw new CliError(`${options.outputFile} already exists`);
     }

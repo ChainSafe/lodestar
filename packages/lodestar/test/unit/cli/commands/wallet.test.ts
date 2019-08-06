@@ -11,11 +11,11 @@ describe('[CLI] wallet', () => {
   let logger: ILogger = new WinstonLogger();
 
   before(() => {
-    logger.silent(true);
+    logger.silent = true;
   });
 
   after(() => {
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('Should be able to register', async () => {
@@ -28,7 +28,7 @@ describe('[CLI] wallet', () => {
   it('Should throw error if output file exists', async () => {
     const command = new CreateWalletCommand();
     await expect(
-      command.action({outputFile: "src"}, logger)
+      command.action({outputFile: "src"})
     ).to.be.rejectedWith(CliError, 'src already exists');
   });
 });

@@ -7,13 +7,13 @@ describe("PouchDB controller", () => {
   let logger = new WinstonLogger();
 
   before(async () => {
-    logger.silent(true);
+    logger.silent = true;
     await db.start();
   });
 
   after(async () => {
     await db.stop();
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('test put', async () => {

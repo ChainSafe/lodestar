@@ -25,7 +25,6 @@ import defaultValidatorOptions, {IValidatorOptions} from "./options";
 import deepmerge from "deepmerge";
 import {getKeyFromFileOrKeystore} from "../util/io";
 import {isPlainObject} from "../util/objects";
-import {Module} from "../logger/abstract";
 
 /**
  * Main class for the Validator client.
@@ -46,7 +45,7 @@ class Validator {
   public constructor(opts: Partial<IValidatorOptions>, modules: {config: IBeaconConfig; logger?: ILogger}) {
     this.opts = deepmerge(defaultValidatorOptions, opts, {isMergeableObject: isPlainObject});
     this.config = modules.config;
-    this.logger = modules.logger || new WinstonLogger(this.opts.loggingLevel, Module.VALIDATOR);
+    this.logger = modules.logger || new WinstonLogger(this.opts.logger);
     this.isActive = false;
     this.isRunning = false;
     this.db = new ValidatorDB({

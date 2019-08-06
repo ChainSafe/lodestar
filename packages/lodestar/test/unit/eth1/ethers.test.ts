@@ -26,7 +26,7 @@ describe("Eth1Notifier", () => {
   let logger: ILogger = new WinstonLogger();
 
   before(async function (): Promise<void> {
-    logger.silent(true);
+    logger.silent = true;
     sandbox = sinon.createSandbox();
     opPool = sandbox.createStubInstance(OpPool);
     opPool.deposits = sandbox.createStubInstance(DepositsOperations);
@@ -43,7 +43,7 @@ describe("Eth1Notifier", () => {
   after(async () => {
     sandbox.restore();
     await promisify(ganacheProvider.close)();
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it(

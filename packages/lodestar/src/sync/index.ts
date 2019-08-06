@@ -12,10 +12,9 @@ import {IBeaconDb} from "../db";
 import {RegularSync} from "./regular";
 import {InitialSync} from "./initial";
 import {ReputationStore} from "./reputation";
-import {ILogger, WinstonLogger} from "../logger";
+import {ILogger} from "../logger";
 import defaultSyncOptions, {ISyncOptions} from "./options";
 import {ISyncRpc} from "./rpc/interface";
-import {Module} from "../logger/abstract";
 import deepmerge from "deepmerge";
 
 interface SyncModules {
@@ -27,7 +26,7 @@ interface SyncModules {
   opPool: OpPool;
   reps: ReputationStore;
   rpc: ISyncRpc;
-  logger?: ILogger;
+  logger: ILogger;
 }
 
 /**
@@ -57,7 +56,7 @@ export class Sync extends EventEmitter {
     this.network = network;
     this.opPool = opPool;
     this.reps = reps;
-    this.logger = logger || new WinstonLogger(this.opts.loggingLevel, Module.SYNC);
+    this.logger = logger;
     this.rpc = rpc;
   }
 

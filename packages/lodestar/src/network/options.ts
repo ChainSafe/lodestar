@@ -1,6 +1,5 @@
 import {number64} from "../types";
 import {IConfigurationModule} from "../util/config";
-import {LogLevel} from "../logger";
 
 export interface INetworkOptions {
   maxPeers: number64;
@@ -9,7 +8,6 @@ export interface INetworkOptions {
   rpcTimeout: number64;
   connectTimeout: number;
   disconnectTimeout: number;
-  loggingLevel?: LogLevel;
 }
 
 export const NetworkOptions: IConfigurationModule = {
@@ -47,7 +45,6 @@ const config: INetworkOptions = {
   rpcTimeout: 5000,
   connectTimeout: 3000,
   disconnectTimeout: 3000,
-  loggingLevel: LogLevel.DEFAULT,
 };
 
 export default config;

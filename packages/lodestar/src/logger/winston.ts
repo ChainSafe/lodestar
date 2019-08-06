@@ -3,21 +3,22 @@
  */
 
 import {createLogger, format, Logger, transports} from 'winston';
-import {AbstractLogger, LogLevel, Module} from "./abstract";
+import {LogLevel, ILogger, ILoggerOptions} from "./interface";
 
-export class WinstonLogger extends AbstractLogger {
-
+export class WinstonLogger implements ILogger {
   private winston: Logger;
-  private loggingModule;
-  private loggingLevel;
 
-  public constructor(loggingLevel: LogLevel = LogLevel.DEFAULT, loggingModule: Module = Module.DEFAULT ) {
-    super();
-    this.loggingModule = loggingModule;
-    this.loggingLevel = loggingLevel;
-
+  public constructor(options?: Partial<ILoggerOptions>) {
+    options = {
+      level: LogLevel.DEFAULT,
+      module: "",
+      ...options
+    };
     this.winston = createLogger({
-      level: this.loggingLevel,
+      level: options.level,
+      defaultMeta: {
+        module: options.module,
+      },
       transports: [
         new transports.Console({
           format: format.combine(
@@ -26,10 +27,7 @@ export class WinstonLogger extends AbstractLogger {
               format: 'YYYY-MM-DD HH:mm:ss'
             }),
             format.printf(
-              info => {
-                return `${info.timestamp} [${this.loggingModule.toUpperCase()}] ${info.level}: ${info.message}`;
-              }
-
+              info => `${info.timestamp} [${info.module.toUpperCase()}] ${info.level}: ${info.message}`
             )
           ),
           handleExceptions: true
@@ -55,7 +53,7 @@ export class WinstonLogger extends AbstractLogger {
     this.createLogEntry(LogLevel.WARN, message, context);
   }
 
-  public createLogEntry(level: LogLevel, message: string | object, context: object = {}): void {
+  private createLogEntry(level: LogLevel, message: string | object, context: object = {}): void {
     if (typeof message === 'object') {
       this.winston.log(level, JSON.stringify(message));
     } else {
@@ -63,16 +61,17 @@ export class WinstonLogger extends AbstractLogger {
     }
   }
 
-  public setLogLevel(level: LogLevel): void {
+  public set level(level: LogLevel) {
     this.winston.level = level;
   }
-
-  public setLoggingModule(loggingModule: Module): void{
-    this.loggingModule = loggingModule;
+  public get level(): LogLevel {
+    return this.winston.level as LogLevel;
   }
 
-  public silent(silent: boolean): void {
+  public set silent(silent: boolean) {
     this.winston.silent = silent;
   }
-
+  public get silent(): boolean {
+    return this.winston.silent;
+  }
 }

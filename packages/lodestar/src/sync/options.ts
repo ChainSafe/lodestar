@@ -1,9 +1,7 @@
 import {IConfigurationModule} from "../util/config";
-import {LogLevel} from "../logger";
 
-export interface ISyncOptions {
-  loggingLevel?: LogLevel;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface ISyncOptions {}
 
 
 export const SyncOptions: IConfigurationModule = {
@@ -12,7 +10,6 @@ export const SyncOptions: IConfigurationModule = {
 };
 
 const config: ISyncOptions = {
-  loggingLevel: LogLevel.DEFAULT,
 };
 
 export default config;

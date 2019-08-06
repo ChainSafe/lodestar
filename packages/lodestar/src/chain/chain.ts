@@ -10,7 +10,7 @@ import {Attestation, BeaconBlock, BeaconState, uint16, uint64} from "../types";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "../constants";
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
-import {ILogger, WinstonLogger} from "../logger";
+import {ILogger} from "../logger";
 import {IBeaconConfig} from "../config";
 
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
@@ -21,7 +21,6 @@ import {computeEpochOfSlot, getAttestingIndices} from "./stateTransition/util";
 import {IBeaconChain} from "./interface";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
 import {processSortedDeposits} from "../util/deposits";
-import {Module} from "../logger/abstract";
 import defaultChainOption, {IChainOptions} from "./options";
 import deepmerge from "deepmerge";
 import {OpPool} from "../opPool";
@@ -32,7 +31,7 @@ export interface IBeaconChainModules {
   opPool: OpPool;
   db: IBeaconDb;
   eth1: IEth1Notifier;
-  logger?: ILogger;
+  logger: ILogger;
 }
 
 export class BeaconChain extends EventEmitter implements IBeaconChain {
@@ -58,7 +57,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     this.db = db;
     this.eth1 = eth1;
     this.opPool = opPool;
-    this.logger = logger || new WinstonLogger(this.opts.loggingLevel, Module.CHAIN);
+    this.logger = logger;
     this.forkChoice = new StatefulDagLMDGHOST();
     this.chainId = 0; // TODO make this real
     this.networkId = new BN(0); // TODO make this real

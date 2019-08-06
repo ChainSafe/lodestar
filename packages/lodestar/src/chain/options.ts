@@ -1,9 +1,7 @@
 import {IConfigurationModule} from "../util/config";
-import {LogLevel} from "../logger";
 
 export interface IChainOptions {
   name: string;
-  loggingLevel?: LogLevel;
 }
 
 export const ChainOptions: IConfigurationModule = {
@@ -28,7 +26,6 @@ export const ChainOptions: IConfigurationModule = {
 
 const config: IChainOptions = {
   name: "mainnet",
-  loggingLevel: LogLevel.DEFAULT
 };
 
 export default config;

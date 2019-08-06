@@ -10,11 +10,11 @@ describe('[CLI] eth1:dev', function () {
   let logger: ILogger = new WinstonLogger();
 
   before(async () => {
-    logger.silent(true);
+    logger.silent = true;
   });
 
   after(async () => {
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('Should be able to register', async () => {
@@ -31,11 +31,11 @@ describe('[CLI] eth1:dev', function () {
     const network = await command.action({
       host:'127.0.0.1',
       port:33323,
-      loggingLevel: null,
+      logLevel: "error",
       network: null,
       mnemonic: null,
       database:null
-    }, logger);
+    });
     expect(network).to.not.be.null;
     await network.stop();
   });

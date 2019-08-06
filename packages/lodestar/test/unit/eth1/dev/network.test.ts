@@ -10,11 +10,11 @@ describe('Eth1 dev network', () => {
   let logger: WinstonLogger = new WinstonLogger();
 
   before(() => {
-    logger.silent(true);
+    logger.silent = true;
   });
 
   after(() => {
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('should start as configured', async () => {

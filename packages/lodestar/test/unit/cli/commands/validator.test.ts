@@ -8,11 +8,11 @@ describe('[CLI] validator', () => {
   let logger: ILogger = new WinstonLogger();
 
   before(async () => {
-    logger.silent(true);
+    logger.silent = true;
   });
 
   after(() => {
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('Should be able to register', async () => {
@@ -29,7 +29,7 @@ describe('[CLI] validator', () => {
       command.action({
         key:keyString,
         loggingLevel: null,
-      },logger)
+      })
 
     ).not.throw;
   });

@@ -14,10 +14,9 @@ import {ATTESTATION_TOPIC, BLOCK_TOPIC, Method, RequestId, SHARD_SUBNET_COUNT,} 
 import {IBeaconConfig} from "../../config";
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {NetworkRpc} from "./rpc";
-import {ILogger, WinstonLogger} from "../../logger";
+import {ILogger} from "../../logger";
 import {INetworkOptions} from "../options";
 import {INetwork} from "../interface";
-import {Module} from "../../logger/abstract";
 import deepmerge from "deepmerge";
 import defaultNetworkOptions from "../options";
 
@@ -33,11 +32,11 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
   private logger: ILogger;
 
   public constructor(opts: Partial<INetworkOptions>, {config, libp2p, logger}:
-  {config: IBeaconConfig; libp2p: any; logger?: ILogger}) {
+  {config: IBeaconConfig; libp2p: any; logger: ILogger}) {
     super();
     this.opts = deepmerge(defaultNetworkOptions, opts);
     this.config = config;
-    this.logger = logger || new WinstonLogger(this.opts.loggingLevel, Module.NETWORK);
+    this.logger = logger;
     // `libp2p` can be a promise as well as a libp2p object
     this.inited = new Promise((resolve) => {
       Promise.resolve(libp2p).then((libp2p) => {
