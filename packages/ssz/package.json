@@ -32,7 +32,11 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "@chainsafe/eth2.0-spec-test-util": "^0.3.0",
-    "@chainsafe/eth2.0-ssz-types": "^0.1.0"
+    "@chainsafe/eth2.0-ssz-types": "^0.1.0",
+    "@types/chai": "^4.1.7",
+    "@types/mocha": "^5.2.7",
+    "chai": "^4.2.0",
+    "mocha": "^6.2.0"
   },
   "dependencies": {
     "@chainsafe/bit-utils": "^0.1.3",

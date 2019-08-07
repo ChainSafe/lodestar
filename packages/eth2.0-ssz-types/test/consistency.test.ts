@@ -1,5 +1,6 @@
 import { assert } from "chai";
 import fs from "fs";
+import {describe, it} from "mocha";
 import * as sszTypes from "@chainsafe/eth2.0-types";
 
 describe("@chainsafe/eth2.0-types", () => {
