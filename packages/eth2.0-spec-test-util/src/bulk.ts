@@ -10,6 +10,10 @@ export interface BaseCase {
   description: string;
 }
 
+/**
+ * TestSpec - represent structure of yaml file containing spec test cases
+ * TestCase - single test case, usually under test_cases property in yaml file
+ */
 interface TestSpec<TestCase extends BaseCase> {
   title: string;
   summary: string;
