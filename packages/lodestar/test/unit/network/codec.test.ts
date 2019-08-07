@@ -2,7 +2,7 @@ import {assert} from "chai";
 import BN from "bn.js";
 import {AnyContainerType, serialize} from "@chainsafe/ssz";
 
-import {config} from "../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   Hello,
   Goodbye,
@@ -19,11 +19,11 @@ import {
   WireResponse,
   RequestBody,
   ResponseBody,
-} from "../../../src/types";
+} from "@chainsafe/eth2.0-types";
+
 import {
   Method,
 } from "../../../src/constants";
-
 import {
   encodeRequest,
   encodeResponse,

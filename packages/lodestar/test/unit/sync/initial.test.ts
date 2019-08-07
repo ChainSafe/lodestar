@@ -1,5 +1,9 @@
 import sinon from "sinon";
 import {expect} from "chai";
+import PeerInfo from "peer-info";
+import PeerId from "peer-id";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+
 import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {ReputationStore} from "../../../src/sync/reputation";
@@ -7,9 +11,6 @@ import {WinstonLogger} from "../../../src/logger";
 import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
 import {InitialSync} from "../../../src/sync/initial";
 import {generateState} from "../../utils/state";
-import PeerInfo from "peer-info";
-import PeerId from "peer-id";
-import {config} from "../../../src/config/presets/mainnet";
 import {generateEmptyBlock} from "../../utils/block";
 import {ChainRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
 

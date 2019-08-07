@@ -2,8 +2,8 @@
  * @module rpc/api
  */
 
-import {IBeaconConfig} from "../../../config";
-import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "../../../types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "@chainsafe/eth2.0-types";
 import {IBeaconApi} from "./interface";
 import {BeaconChain} from "../../../chain";
 import {BeaconDb} from "../../../db";

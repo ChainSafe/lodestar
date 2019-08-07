@@ -2,7 +2,7 @@
  * @module db/api/validator
  */
 
-import {Attestation, BeaconBlock, Epoch, ValidatorIndex} from "../../../types";
+import {Attestation, BeaconBlock, Epoch, ValidatorIndex} from "@chainsafe/eth2.0-types";
 
 export interface AttestationSearchOptions {
   gt?: Epoch;

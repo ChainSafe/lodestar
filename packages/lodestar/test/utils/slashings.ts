@@ -1,5 +1,5 @@
-import {config} from "../../src/config/presets/mainnet";
-import {AttesterSlashing, ProposerSlashing} from "../../src/types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {AttesterSlashing, ProposerSlashing} from "@chainsafe/eth2.0-types";
 import {generateEmptyBlock} from "./block";
 import {getTemporaryBlockHeader} from "../../src/chain/stateTransition/util";
 import {generateEmptyAttestation} from "./attestation";

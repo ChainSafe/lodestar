@@ -6,10 +6,6 @@ import assert from "assert";
 import {hashTreeRoot, equals} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls-js";
 import {BitList} from "@chainsafe/bit-utils";
-
-import {
-  DomainType,
-} from "../../../constants";
 import {
   Attestation,
   AttestationData,
@@ -17,9 +13,12 @@ import {
   IndexedAttestation,
   Slot,
   ValidatorIndex,
-} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
+import {
+  DomainType,
+} from "../../../constants";
 import {intDiv} from "../../../util/math";
 import {isSorted} from "../../../util/sort";
 

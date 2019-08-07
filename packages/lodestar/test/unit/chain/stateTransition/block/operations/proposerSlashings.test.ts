@@ -3,7 +3,7 @@ import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 
-import {config} from "../../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processProposerSlashing} from "../../../../../../src/chain/stateTransition/block/operations";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
 

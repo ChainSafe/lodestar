@@ -6,7 +6,7 @@ import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
 
-import {config} from "../../config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ILogger, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";

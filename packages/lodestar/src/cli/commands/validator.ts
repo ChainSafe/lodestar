@@ -3,7 +3,7 @@
  */
 import {CommanderStatic} from "commander";
 
-import {config} from "../../config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {CliCommand} from "./interface";
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import Validator from "../../validator";

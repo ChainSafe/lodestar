@@ -1,8 +1,9 @@
+import {VoluntaryExit} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {BulkRepository} from "../repository";
-import {IBeaconConfig} from "../../../../config";
 import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../../schema";
-import {VoluntaryExit} from "../../../../types";
 
 export class VoluntaryExitRepository extends BulkRepository<VoluntaryExit> {
 

@@ -6,8 +6,8 @@ import {hashTreeRoot, equals} from "@chainsafe/ssz";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 
-import {config} from "../../../../src/config/presets/mainnet";
-import {BeaconState, number64, Validator} from "../../../../src/types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {BeaconState, number64, Validator} from "@chainsafe/eth2.0-types";
 import {processSlots} from "../../../../src/chain/stateTransition";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 

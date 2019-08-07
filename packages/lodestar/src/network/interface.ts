@@ -3,13 +3,27 @@
  */
 import PeerInfo from "peer-info";
 import {EventEmitter} from "events";
-
 import {
   Attestation, BeaconBlock, Shard, ResponseBody, RequestBody,
-} from "../types";
-import {RequestId, Method} from "../constants";
+} from "@chainsafe/eth2.0-types";
 
-export interface INetwork extends EventEmitter {
+import {RequestId, Method, BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
+import StrictEventEmitter from "strict-event-emitter-types";
+
+export type NetworkEventEmitter = StrictEventEmitter<EventEmitter, INetworkEvents>;
+
+interface INetworkEvents {
+  [BLOCK_TOPIC]: (block: BeaconBlock) => void;
+  [ATTESTATION_TOPIC]: (attestation: Attestation) => void;
+  ["gossipsub:heartbeat"]: void;
+  request: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => void;
+  ["peer:connect"]: (peerInfo: PeerInfo) => void;
+  ["peer:disconnect"]: (peerInfo: PeerInfo) => void;
+  // shard attestation topic is generated string so we cannot typehint it
+  //[{shard}]: (attestation: Attestation) => void;
+}
+
+export interface INetwork extends NetworkEventEmitter {
   peerInfo: PeerInfo;
   // Service
   start(): Promise<void>;

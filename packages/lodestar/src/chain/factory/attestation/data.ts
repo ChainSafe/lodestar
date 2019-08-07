@@ -1,9 +1,10 @@
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
-import {BeaconDb} from "../../../db/api";
-import {AttestationData, BeaconBlock, BeaconState, Shard} from "../../../types";
-import {getBlockRoot, getCurrentEpoch, computeStartSlotOfEpoch} from "../../stateTransition/util";
+import {AttestationData, BeaconBlock, BeaconState, Shard} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, ZERO_HASH} from "../../../constants";
-import {IBeaconConfig} from "../../../config";
+import {BeaconDb} from "../../../db/api";
+import {getBlockRoot, getCurrentEpoch, computeStartSlotOfEpoch} from "../../stateTransition/util";
 
 export async function assembleAttestationData(
   config: IBeaconConfig,

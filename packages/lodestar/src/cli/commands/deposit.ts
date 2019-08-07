@@ -6,7 +6,7 @@ import {CommanderStatic} from "commander";
 import {JsonRpcProvider} from "ethers/providers";
 import {Wallet} from "ethers/ethers";
 
-import {config} from "../../config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {CliCommand} from "./interface";
 import defaults from "../../eth1/options";
 import * as ethers from "ethers/ethers";

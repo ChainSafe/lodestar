@@ -1,4 +1,4 @@
-import {Transfer} from "../../src/types";
+import {Transfer} from "@chainsafe/eth2.0-types";
 import BN from "bn.js";
 import {EMPTY_SIGNATURE} from "../../src/constants";
 

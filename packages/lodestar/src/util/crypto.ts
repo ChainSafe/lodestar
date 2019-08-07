@@ -2,7 +2,7 @@
  * @module util/crypto
  */
 
-import {bytes, bytes32,} from "../types";
+import {bytes, bytes32,} from "@chainsafe/eth2.0-types";
 import {hash as hash256} from "@chainsafe/ssz";
 
 export function hash(value: bytes): bytes32 {

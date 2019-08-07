@@ -2,7 +2,7 @@ import BN from "bn.js";
 import sinon from "sinon";
 import {expect} from "chai";
 
-import {config} from "../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {FAR_FUTURE_EPOCH} from "../../../../../src/constants";
 import {processSlashings} from "../../../../../src/chain/stateTransition/epoch/slashings";

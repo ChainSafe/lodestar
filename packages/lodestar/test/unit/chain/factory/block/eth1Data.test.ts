@@ -2,8 +2,8 @@ import sinon from "sinon";
 import {expect} from "chai";
 import {Block} from "ethers/providers";
 
-import {config} from "../../../../../src/config/presets/mainnet";
-import {Eth1Data} from "../../../../../src/types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {Eth1Data} from "@chainsafe/eth2.0-types";
 import {ZERO_HASH} from "../../../../../src/constants";
 import {bestVoteData, filterValidVotes} from "../../../../../src/chain/factory/block/eth1Data";
 import {EthersEth1Notifier} from "../../../../../src/eth1";

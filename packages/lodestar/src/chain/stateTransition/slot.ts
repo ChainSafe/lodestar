@@ -4,13 +4,13 @@
 
 import assert from "assert";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
-
 import {
   BeaconState,
   BeaconBlockHeader, Slot,
-} from "../../types";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {ZERO_HASH} from "../../constants";
-import {IBeaconConfig} from "../../config";
 
 import {processEpoch} from "./epoch";
 

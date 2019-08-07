@@ -4,7 +4,7 @@
 
 import {EventEmitter} from "events";
 
-import {BeaconBlock} from "../types";
+import {BeaconBlock} from "@chainsafe/eth2.0-types";
 
 import {BeaconChain} from "../chain";
 import {BeaconDb} from "../db";
@@ -50,28 +50,27 @@ export class OpPool extends EventEmitter {
    * Start operation processing
    */
   public async start(): Promise<void> {
-    this.eth1.on('deposit', this.deposits.receive.bind(this.deposits));
+    this.eth1.on('deposit', this.deposits.receive);
   }
 
   /**
    * Stop operation processing
    */
   public async stop(): Promise<void> {
-    this.removeListener('deposit', this.deposits.receive.bind(this.deposits));
+    this.eth1.removeListener('deposit', this.deposits.receive);
   }
 
   /**
    * Remove stored operations based on a newly processed block
    */
   public async processBlockOperations(processedBlock: BeaconBlock): Promise<void> {
-    const tasks = [
+    await Promise.all([
       this.voluntaryExits.remove(processedBlock.body.voluntaryExits),
       this.deposits.removeOld(processedBlock.body.eth1Data.depositCount),
       this.transfers.remove(processedBlock.body.transfers),
       this.proposerSlashings.remove(processedBlock.body.proposerSlashings),
       this.attesterSlashings.remove(processedBlock.body.attesterSlashings),
       //TODO: remove old attestations
-    ];
-    await Promise.all(tasks);
+    ]);
   }
 }

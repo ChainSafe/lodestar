@@ -2,7 +2,7 @@ import sinon from "sinon";
 import BN from "bn.js";
 import {expect} from "chai";
 
-import {config} from "../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {initiateValidatorExit} from "../../../../../src/chain/stateTransition/util";
 import {processRegistryUpdates} from "../../../../../src/chain/stateTransition/epoch/registryUpdates";

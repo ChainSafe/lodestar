@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig",
+  "compilerOptions": {
+    "typeRoots": [
+      "../../node_modules/@types"
+    ]
+  }
+}

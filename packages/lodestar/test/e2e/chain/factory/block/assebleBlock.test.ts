@@ -3,17 +3,18 @@ import BN from "bn.js";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import sinon from "sinon";
 import {Keypair} from "@chainsafe/bls-js/lib/keypair";
+import {BeaconBlockHeader, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 
-import {config} from "../../../../../src/config/presets/mainnet";
+import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {ValidatorDB} from "../../../../../src/db";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {OpPool} from "../../../../../src/opPool";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
-import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {getBeaconProposerIndex} from "../../../../../src/chain/stateTransition/util";
-import {BeaconBlockHeader, ValidatorIndex} from "../../../../../src/types";
 import {stateTransition} from "../../../../../src/chain/stateTransition";
 import {generateValidator} from "../../../../utils/validator";
 import {ProgressiveMerkleTree} from "../../../../../src/util/merkleTree";
@@ -21,7 +22,6 @@ import BlockProposingService from "../../../../../src/validator/services/block";
 import {RpcClientOverInstance} from "../../../../../src/validator/rpc";
 import {ValidatorApi} from "../../../../../src/rpc";
 import {WinstonLogger} from "../../../../../src/logger";
-import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 import {generateDeposit} from "../../../../utils/deposit";
 import {
   AttestationRepository,

@@ -1,0 +1,43 @@
+{
+  "name": "@chainsafe/eth2.0-types",
+  "version": "0.1.0",
+  "description": "Typescript types required for eth2.0",
+  "author": "ChainSafe Systems",
+  "license": "LGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/ChainSafe/lodestar/issues"
+  },
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
+  "main": "",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "prebuild": "rm -rf lib",
+    "build": "tsc --declaration --outDir lib --emitDeclarationOnly",
+    "build:docs": "typedoc --exclude src/index.ts --out docs src",
+    "check-types": "tsc --noEmit --incremental",
+    "lint": "eslint --ext .ts src/",
+    "lint-fix": "eslint --ext .ts src/ --fix",
+    "prepublishOnly": "yarn build",
+    "test": "yarn run check-types"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com:ChainSafe/lodestar.git"
+  },
+  "keywords": [
+    "ethereum",
+    "beacon",
+    "typescript",
+    "blockchain"
+  ],
+  "dependencies": {
+    "@chainsafe/bit-utils": "^0.1.2",
+    "@types/bn.js": "^4.11.4",
+    "bn.js": "^4.11.8"
+  },
+  "devDependencies": {
+  }
+}

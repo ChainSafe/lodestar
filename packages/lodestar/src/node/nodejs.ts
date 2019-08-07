@@ -3,7 +3,8 @@
  */
 
 import deepmerge from "deepmerge";
-import {IBeaconConfig} from "../config";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {BeaconDb, LevelDbController} from "../db";
 import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
 import {INetwork, Libp2pNetwork, NodejsNode} from "../network";

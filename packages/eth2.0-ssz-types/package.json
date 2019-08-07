@@ -1,0 +1,48 @@
+{
+  "name": "@chainsafe/eth2.0-ssz-types",
+  "version": "0.1.0",
+  "description": "SSZ types required for eth2.0",
+  "author": "ChainSafe Systems",
+  "license": "LGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/ChainSafe/lodestar/issues"
+  },
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "prebuild": "rm -rf lib",
+    "build": "yarn build:lib && yarn build:types",
+    "build:types": "tsc --declaration --outDir lib --emitDeclarationOnly",
+    "build:lib": "babel src -x .ts -d lib --source-maps",
+    "build:docs": "typedoc --exclude src/index.ts --out docs src",
+    "check-types": "tsc --noEmit --incremental",
+    "lint": "eslint --ext .ts src/",
+    "lint-fix": "eslint --ext .ts src/ --fix",
+    "prepublishOnly": "yarn build",
+    "pretest": "yarn run check-types",
+    "test:unit": "mocha -r ./.babel-register 'test/**/*.test.ts'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com:ChainSafe/lodestar.git"
+  },
+  "keywords": [
+    "ethereum",
+    "eth2.0",
+    "simple",
+    "serialize",
+    "ssz",
+    "beacon",
+    "blockchain"
+  ],
+  "dependencies": {
+    "@chainsafe/eth2.0-params": "0.1.0",
+    "@chainsafe/ssz": "0.5.1"
+  },
+  "devDependencies": {
+  }
+}

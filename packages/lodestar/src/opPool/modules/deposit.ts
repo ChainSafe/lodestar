@@ -1,4 +1,5 @@
-import {Deposit, number64} from "../../types";
+import {Deposit, number64} from "@chainsafe/eth2.0-types";
+
 import {DepositRepository} from "../../db/api/beacon/repositories";
 
 export class DepositsOperations {
@@ -9,9 +10,9 @@ export class DepositsOperations {
     this.db = db;
   }
 
-  public async receive(index: number, value: Deposit): Promise<void> {
+  public receive = async (index: number, value: Deposit): Promise<void> => {
     await this.db.set(index, value);
-  }
+  };
 
   public async getAll(): Promise<Deposit[]> {
     return await this.db.getAll();

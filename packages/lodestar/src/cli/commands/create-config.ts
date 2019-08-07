@@ -19,7 +19,7 @@ export class CreateConfigCommand implements CliCommand {
 
 
     commander
-      .command("create-config")
+      .command("@chainsafe/eth2.0-config")
       .description("Create default config file")
       .option(`-l, --logLevel [${Object.values(LogLevel).join("|")}]`, "Log level")
       .option("-o, --outputFile [output_file]"

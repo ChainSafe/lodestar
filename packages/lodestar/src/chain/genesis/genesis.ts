@@ -9,12 +9,12 @@ import {
   BeaconBlockBody,
   BeaconBlockHeader,
   BeaconState,
-  bytes32,
   Deposit,
   Eth1Data,
   number64,
   Hash,
-} from "../../types";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {
   EMPTY_SIGNATURE,
@@ -24,7 +24,6 @@ import {
   GENESIS_START_SHARD,
   ZERO_HASH,
 } from "../../constants";
-import {IBeaconConfig} from "../../config";
 
 import {getTemporaryBlockHeader, getActiveValidatorIndices, getCompactCommitteesRoot} from "../stateTransition/util";
 import {hashTreeRoot} from "@chainsafe/ssz";

@@ -8,20 +8,18 @@ import promisify from "promisify-es6";
 import LibP2p from "libp2p";
 import Gossipsub from "libp2p-gossipsub";
 import PeerInfo from "peer-info";
+import {Attestation, BeaconBlock, Shard, RequestBody, ResponseBody} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {Attestation, BeaconBlock, RequestBody, ResponseBody, Shard} from "../../types";
 import {ATTESTATION_TOPIC, BLOCK_TOPIC, Method, RequestId, SHARD_SUBNET_COUNT,} from "../../constants";
-import {IBeaconConfig} from "../../config";
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {NetworkRpc} from "./rpc";
 import {ILogger} from "../../logger";
 import {INetworkOptions} from "../options";
-import {INetwork} from "../interface";
-import deepmerge from "deepmerge";
-import defaultNetworkOptions from "../options";
+import {INetwork, NetworkEventEmitter} from "../interface";
 
 
-export class Libp2pNetwork extends EventEmitter implements INetwork {
+export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter }) implements INetwork {
   public peerInfo: PeerInfo;
   private opts: INetworkOptions;
   private config: IBeaconConfig;
@@ -31,10 +29,10 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
   private inited: Promise<void>;
   private logger: ILogger;
 
-  public constructor(opts: Partial<INetworkOptions>, {config, libp2p, logger}:
+  public constructor(opts: INetworkOptions, {config, libp2p, logger}:
   {config: IBeaconConfig; libp2p: any; logger: ILogger}) {
     super();
-    this.opts = deepmerge(defaultNetworkOptions, opts);
+    this.opts = opts;
     this.config = config;
     this.logger = logger;
     // `libp2p` can be a promise as well as a libp2p object
@@ -80,30 +78,32 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
       shardSubnetAttestationTopic(attestation.data.crosslink.shard), serialize(attestation, this.config.types.Attestation));
   }
-  private handleIncomingBlock(msg: any): void {
+  private handleIncomingBlock = (msg: any): void => {
     try {
       const block: BeaconBlock = deserialize(msg.data, this.config.types.BeaconBlock);
       this.emit(BLOCK_TOPIC, block);
     } catch (e) {
     }
-  }
-  private handleIncomingAttestation(msg: any): void {
+  };
+  private handleIncomingAttestation = (msg: any): void => {
     try {
       const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
       this.emit(ATTESTATION_TOPIC, attestation);
     } catch (e) {
     }
-  }
-  private handleIncomingShardAttestation(msg: any): void {
+  };
+  private handleIncomingShardAttestation = (msg: any): void => {
     try {
       const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
+      // @ts-ignore
+      // we cannot type hint this
       this.emit(shardAttestationTopic(attestation.data.crosslink.shard), attestation);
     } catch (e) {
     }
-  }
-  private emitGossipHeartbeat(): void {
+  };
+  private emitGossipHeartbeat = (): void => {
     this.emit("gossipsub:heartbeat");
-  }
+  };
 
   // rpc
   public getPeers(): PeerInfo[] {
@@ -124,15 +124,15 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
   public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
     this.rpc.sendResponse(id, responseCode, result);
   }
-  private emitRequest(peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody): void {
+  private emitRequest = (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody): void => {
     this.emit("request", peerInfo, method, id, body);
-  }
-  private emitPeerConnect(peerInfo: PeerInfo): void {
+  };
+  private emitPeerConnect = (peerInfo: PeerInfo): void => {
     this.emit("peer:connect", peerInfo);
-  }
-  private emitPeerDisconnect(peerInfo: PeerInfo): void {
+  };
+  private emitPeerDisconnect = (peerInfo: PeerInfo): void => {
     this.emit("peer:disconnect", peerInfo);
-  }
+  };
 
   // service
   public async start(): Promise<void> {
@@ -140,31 +140,31 @@ export class Libp2pNetwork extends EventEmitter implements INetwork {
     await promisify(this.libp2p.start.bind(this.libp2p))();
     await promisify(this.pubsub.start.bind(this.pubsub))();
     await this.rpc.start();
-    this.pubsub.on(BLOCK_TOPIC, this.handleIncomingBlock.bind(this));
-    this.pubsub.on(ATTESTATION_TOPIC, this.handleIncomingAttestation.bind(this));
+    this.pubsub.on(BLOCK_TOPIC, this.handleIncomingBlock);
+    this.pubsub.on(ATTESTATION_TOPIC, this.handleIncomingAttestation);
     for (let shard = 0; shard < SHARD_SUBNET_COUNT; shard++) {
       this.pubsub.on(shardSubnetAttestationTopic(shard),
-        this.handleIncomingShardAttestation.bind(this));
+        this.handleIncomingShardAttestation);
     }
-    this.pubsub.on("gossipsub:heartbeat", this.emitGossipHeartbeat.bind(this));
-    this.rpc.on("request", this.emitRequest.bind(this));
-    this.rpc.on("peer:connect", this.emitPeerConnect.bind(this));
-    this.rpc.on("peer:disconnect", this.emitPeerDisconnect.bind(this));
+    this.pubsub.on("gossipsub:heartbeat", this.emitGossipHeartbeat);
+    this.rpc.on("request", this.emitRequest);
+    this.rpc.on("peer:connect", this.emitPeerConnect);
+    this.rpc.on("peer:disconnect", this.emitPeerDisconnect);
   }
   public async stop(): Promise<void> {
     await this.inited;
     await this.rpc.stop();
     await promisify(this.pubsub.stop.bind(this.pubsub))();
     await promisify(this.libp2p.stop.bind(this.libp2p))();
-    this.pubsub.removeListener(BLOCK_TOPIC, this.handleIncomingBlock.bind(this));
-    this.pubsub.removeListener(ATTESTATION_TOPIC, this.handleIncomingAttestation.bind(this));
+    this.pubsub.removeListener(BLOCK_TOPIC, this.handleIncomingBlock);
+    this.pubsub.removeListener(ATTESTATION_TOPIC, this.handleIncomingAttestation);
     for (let shard = 0; shard < SHARD_SUBNET_COUNT; shard++) {
       this.pubsub.removeListener(shardSubnetAttestationTopic(shard),
-        this.handleIncomingShardAttestation.bind(this));
+        this.handleIncomingShardAttestation);
     }
-    this.pubsub.removeListener("gossipsub:heartbeat", this.emitGossipHeartbeat.bind(this));
-    this.rpc.removeListener("request", this.emitRequest.bind(this));
-    this.rpc.removeListener("peer:connect", this.emitPeerConnect.bind(this));
-    this.rpc.removeListener("peer:disconnect", this.emitPeerDisconnect.bind(this));
+    this.pubsub.removeListener("gossipsub:heartbeat", this.emitGossipHeartbeat);
+    this.rpc.removeListener("request", this.emitRequest);
+    this.rpc.removeListener("peer:connect", this.emitPeerConnect);
+    this.rpc.removeListener("peer:disconnect", this.emitPeerDisconnect);
   }
 }

@@ -3,7 +3,7 @@
  */
 
 import {EventEmitter} from "events";
-import {IBeaconConfig} from "../config";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
 import {OpPool} from "../opPool";

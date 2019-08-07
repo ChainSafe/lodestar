@@ -1,6 +1,6 @@
 import {assert} from "chai";
 
-import {Validator} from "../../../../../src/types";
+import {Validator} from "@chainsafe/eth2.0-types";
 
 import {
   getActiveValidatorIndices,

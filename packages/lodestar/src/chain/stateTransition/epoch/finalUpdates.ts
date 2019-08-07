@@ -5,8 +5,8 @@
 import {hashTreeRoot} from "@chainsafe/ssz";
 import BN from "bn.js";
 
-import {BeaconState, HistoricalBatch, ValidatorIndex} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+import {BeaconState, HistoricalBatch, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {bnMin, intDiv} from "../../../util/math";
 

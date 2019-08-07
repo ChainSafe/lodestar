@@ -8,7 +8,7 @@ import promisify from "promisify-es6";
 import bls from "@chainsafe/bls-js";
 import {serialize} from "@chainsafe/ssz";
 
-import {config} from "../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {EthersEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
 import {ILogger, WinstonLogger} from "../../../src/logger";
@@ -125,7 +125,6 @@ describe("Eth1Notifier", () => {
     const amount = "0x" + serialize(32000000000, config.types.number64).toString("hex");
     const signature = "0x" + Buffer.alloc(94).toString("hex");
     const merkleTreeIndex = "0x" + serialize(0 , config.types.number64).toString("hex");
-    opPool.deposits.receive.resolves(null);
     await eth1.processDepositLog(pubKey, withdrawalCredentials, amount, signature, merkleTreeIndex);
     assert(cb.calledOnce, "deposit event did not fire");
   });

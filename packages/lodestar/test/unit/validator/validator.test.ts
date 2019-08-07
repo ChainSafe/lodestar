@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {Keypair} from "@chainsafe/bls-js/lib/keypair";
 
-import {config} from "../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import Validator from "../../../src/validator";
 import {RpcClientOverInstance} from "../../../src/validator/rpc";
 import {MockBeaconApi} from "../../utils/mocks/rpc/beacon";

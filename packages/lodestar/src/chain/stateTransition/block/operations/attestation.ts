@@ -11,10 +11,10 @@ import {
   PendingAttestation,
   Attestation,
   FFGData,
-} from "../../../../types";
-import {ZERO_HASH} from "../../../../constants";
-import {IBeaconConfig} from "../../../../config";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
+import {ZERO_HASH} from "../../../../constants";
 import {
   getCurrentEpoch,
   getIndexedAttestation,

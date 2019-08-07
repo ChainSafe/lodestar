@@ -4,7 +4,7 @@
 
 import {LevelUp} from "levelup";
 import {IDatabaseController, SearchOptions} from "../interface";
-import {Attestation} from "../../../types";
+import {Attestation} from "@chainsafe/eth2.0-types";
 import {EventEmitter} from "events";
 import level from "level";
 import {ILogger} from "../../../logger";

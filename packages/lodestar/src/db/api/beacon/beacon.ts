@@ -2,7 +2,13 @@
  * @module db/api/beacon
  */
 
-import {BeaconBlock, BeaconState, bytes32, bytes48, Hash, ValidatorIndex} from "../../../types";
+import {
+  BeaconBlock,
+  BeaconState,
+  bytes48,
+  Hash,
+  ValidatorIndex,
+} from "@chainsafe/eth2.0-types";
 
 import {Bucket, encodeKey, Key} from "../../schema";
 

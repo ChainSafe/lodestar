@@ -9,8 +9,8 @@ import {
   ValidatorIndex,
   BeaconState,
   Hash,
-} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {bytesToBN, intToBytes} from "../../../util/bytes";
 import {hash} from "../../../util/crypto";

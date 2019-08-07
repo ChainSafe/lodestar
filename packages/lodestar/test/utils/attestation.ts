@@ -2,10 +2,10 @@ import {
   Attestation,
   AttestationData,
   Epoch,
-} from "../../src/types";
+} from "@chainsafe/eth2.0-types";
+import { BitList } from "@chainsafe/bit-utils";
 import {randBetween} from "./misc";
 import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, GENESIS_START_SHARD} from "../../src/constants";
-import { BitList } from "@chainsafe/bit-utils";
 
 /**
  * Generates a fake attestation data for test purposes.

@@ -7,8 +7,8 @@ import {equals} from "@chainsafe/ssz";
 import {
   BeaconBlockBody,
   BeaconState,
-} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#eth1-data
 

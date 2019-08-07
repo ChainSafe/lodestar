@@ -2,7 +2,7 @@ import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 
-import {config} from "../../../../src/config/presets/minimal";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {isValidGenesisState} from "../../../../src/chain/genesis/genesis";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 

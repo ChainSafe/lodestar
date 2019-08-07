@@ -6,8 +6,8 @@ import {equals} from "@chainsafe/ssz";
 import {restore, rewire} from "@chainsafe/bls-js";
 import sinon from "sinon";
 
-import {BeaconBlock, BeaconState} from "../../../../src/types";
-import {config} from "../../../../src/config/presets/minimal";
+import {BeaconBlock, BeaconState} from "@chainsafe/eth2.0-types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {stateTransition} from "../../../../src/chain/stateTransition";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 

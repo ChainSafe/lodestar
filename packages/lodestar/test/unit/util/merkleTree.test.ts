@@ -1,6 +1,9 @@
 import {assert, expect} from "chai";
 
-import {ProgressiveMerkleTree, verifyMerkleBranch,} from "../../../src/util/merkleTree";
+import {
+  ProgressiveMerkleTree,
+  verifyMerkleBranch,
+} from "../../../src/util/merkleTree";
 import {LightProgressiveMerkleTree} from "../../../src/util/merkleTree/lightMerkleTree";
 
 

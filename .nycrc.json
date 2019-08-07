@@ -5,8 +5,12 @@
   ],
   "exclude": [
     "**/*.d.ts",
-    "coverage/**",
-    "test/**",
+    "**/*.js",
+    "**/lib/**",
+    "**/coverage/**",
+    "**/scripts/**",
+    "**/test/**",
+    "**/types/**",
     "**/node_modules/**"
   ],
   "all": "true",

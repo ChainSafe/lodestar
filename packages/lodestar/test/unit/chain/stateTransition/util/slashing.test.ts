@@ -1,7 +1,7 @@
 import {assert} from "chai";
 
-import {config} from "../../../../../src/config/presets/mainnet";
-import {Epoch, Slot} from "../../../../../src/types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {Epoch, Slot} from "@chainsafe/eth2.0-types";
 import {randBetween} from "../../../../utils/misc";
 import {isSlashableAttestationData} from "../../../../../src/chain/stateTransition/util";
 import {generateAttestationData} from "../../../../utils/attestation";

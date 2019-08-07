@@ -2,8 +2,8 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {config} from "./../../../../../../src/config/presets/mainnet";
-import {Crosslink} from "../../../../../../src/types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {Crosslink} from "@chainsafe/eth2.0-types";
 import  * as processProposerSlashing
   from "../../../../../../src/chain/stateTransition/block/operations/proposerSlashing";
 import  * as processAttesterSlashing

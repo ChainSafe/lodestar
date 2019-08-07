@@ -6,19 +6,20 @@ import assert from "assert";
 import BN from "bn.js";
 import {EventEmitter} from "events";
 import {hashTreeRoot} from "@chainsafe/ssz";
-import {Attestation, BeaconBlock, BeaconState, uint16, uint64} from "../types";
+import {Attestation, BeaconBlock, BeaconState, number64, uint16, uint64} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "../constants";
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
 import {ILogger} from "../logger";
-import {IBeaconConfig} from "../config";
 
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
 
 import {stateTransition} from "./stateTransition";
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 import {computeEpochOfSlot, getAttestingIndices} from "./stateTransition/util";
-import {IBeaconChain} from "./interface";
+import {ChainEventEmitter, IBeaconChain} from "./interface";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
 import {processSortedDeposits} from "../util/deposits";
 import {IChainOptions} from "./options";
@@ -33,7 +34,7 @@ export interface IBeaconChainModules {
   logger: ILogger;
 }
 
-export class BeaconChain extends EventEmitter implements IBeaconChain {
+export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) implements IBeaconChain {
 
   public chain: string;
   public latestState: BeaconState = null;
@@ -68,13 +69,13 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     // if state doesn't exist in the db, the chain maybe hasn't started
     if(!state) {
       // check every block if genesis
-      this.eth1.on('block', this.checkGenesis.bind(this));
+      this.eth1.on('block', this.checkGenesis);
     }
     this.latestState = state;
   }
 
   public async stop(): Promise<void> {
-    this.eth1.removeListener('block', this.checkGenesis.bind(this));
+    this.eth1.removeListener('block', this.checkGenesis);
   }
 
 
@@ -219,7 +220,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     await this.db.merkleTree.set(newState.eth1DepositIndex, merkleTree.toObject());
   }
 
-  private async checkGenesis(eth1Block: Block): Promise<void> {
+  private checkGenesis = async (eth1Block: Block): Promise<void> => {
     this.logger.info(`Checking if block ${eth1Block.hash} will form valid genesis state`);
     const deposits = await this.opPool.deposits.getAll();
     const merkleTree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
@@ -244,7 +245,7 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
     }
     this.logger.info(`Initializing beacon chain with eth1 block ${eth1Block.hash}`);
     await this.initializeBeaconChain(genesisState, merkleTree);
-  }
+  };
 
   public isInitialized(): boolean {
     return !!this.latestState;

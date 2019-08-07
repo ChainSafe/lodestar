@@ -1,5 +1,5 @@
-import {Deposit} from "../types";
-import {IBeaconConfig} from "../config";
+import {Deposit} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 export function processSortedDeposits(
   config: IBeaconConfig,

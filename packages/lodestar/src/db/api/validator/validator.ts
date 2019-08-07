@@ -4,8 +4,8 @@
 
 import {deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
 import deepmerge from "deepmerge";
-import {Attestation, BeaconBlock, ValidatorIndex} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+import {Attestation, BeaconBlock, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {DatabaseService, DatabaseApiOptions} from "../abstract";
 import {AttestationSearchOptions, IValidatorDB} from "./interface";
 import {Bucket, encodeKey} from "../../schema";

@@ -4,7 +4,7 @@ import sinon from "sinon";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
 
-import {config} from "../../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
 import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../../../src/chain/stateTransition/util";
 import {processDeposit} from "../../../../../../src/chain/stateTransition/block/operations";
