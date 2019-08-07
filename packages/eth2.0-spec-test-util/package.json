@@ -1,5 +1,5 @@
 {
-  "name": "@chainsafe/eth2.0-spec-test-utils",
+  "name": "@chainsafe/eth2.0-spec-test-util",
   "version": "0.4.0",
   "description": "Spec test suite generator from yaml test files",
   "author": "ChainSafe Systems",
@@ -16,7 +16,7 @@
   "scripts": {
     "prebuild": "rm -rf lib",
     "build": "yarn build:lib && yarn build:types",
-    "build:types": "tsc --declaration --outDir lib --emitDeclarationOnly",
+    "build:types": "tsc --declaration --emitDeclarationOnly",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:docs": "typedoc --out docs src",
     "check-types": "tsc --noEmit --incremental",
@@ -33,16 +33,27 @@
   "keywords": [
     "ethereum",
     "eth2.0",
-    "simple",
-    "serialize",
-    "ssz",
+    "tests",
+    "spec-test",
+    "yaml-test",
     "beacon",
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/eth2.0-params": "0.1.0",
-    "@chainsafe/ssz": "0.5.1"
+    "bn.js": "^5.0.0",
+    "camelcase": "^5.3.1",
+    "js-yaml": "^3.13.1",
+    "v8-profiler-next": "^1.1.1"
   },
   "devDependencies": {
+    "@types/bn.js": "^4.11.5",
+    "@types/camelcase": "^5.2.0",
+    "@types/chai": "^4.1.7",
+    "@types/js-yaml": "^3.12.1",
+    "@types/mocha": "^5.2.7"
+  },
+  "peerDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^6.2.0"
   }
 }
