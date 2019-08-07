@@ -23,12 +23,22 @@ import {
 import {randomRequestId} from "../util";
 import {Peer} from "./peer";
 import {INetworkOptions} from "../options";
+import StrictEventEmitter from "strict-event-emitter-types";
 
+interface INetworkRpcEvents {
+  ["peer:connect"]: (peerInfo: PeerInfo) => void;
+  ["peer:disconnect"]: (peerInfo: PeerInfo) => void;
+  request: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => void;
+  // we cannot typehint dynamic keys
+  //[response ${id}]: (err: Error|null, data: ResponseBody) => void
+}
+
+export type NetworkRpcEventEmitter = StrictEventEmitter<EventEmitter, INetworkRpcEvents>;
 
 /**
  * The NetworkRpc module controls network-level resources and concerns of p2p connections
  */
-export class NetworkRpc extends EventEmitter {
+export class NetworkRpc extends (EventEmitter as { new(): NetworkRpcEventEmitter }) implements NetworkRpcEventEmitter{
   private libp2p: LibP2p;
   /**
    * dials in progress
@@ -151,6 +161,7 @@ export class NetworkRpc extends EventEmitter {
         delete this.requests[id];
         reject(new Error(`request timeout, method ${method}, id ${id}`));
       }, this.requestTimeout);
+      // @ts-ignore
       this.once(`response ${id}`, (err, data) => {
         clearTimeout(timeout);
         delete this.requests[id];
@@ -198,9 +209,11 @@ export class NetworkRpc extends EventEmitter {
           result,
         }: WireResponse = deserialize(data, this.config.types.WireResponse);
         if (responseCode !== ResponseCode.Success) {
+          // @ts-ignore
           this.emit(event, new Error(`response code error ${responseCode}`), null);
         } else {
           const decodedResult = decodeResponseBody(this.config, method, result);
+          // @ts-ignore
           this.emit(event, null, decodedResult);
         }
       } catch (e) {

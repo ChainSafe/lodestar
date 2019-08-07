@@ -125,7 +125,6 @@ describe("Eth1Notifier", () => {
     const amount = "0x" + serialize(32000000000, config.types.number64).toString("hex");
     const signature = "0x" + Buffer.alloc(94).toString("hex");
     const merkleTreeIndex = "0x" + serialize(0 , config.types.number64).toString("hex");
-    opPool.deposits.receive.resolves(null);
     await eth1.processDepositLog(pubKey, withdrawalCredentials, amount, signature, merkleTreeIndex);
     assert(cb.calledOnce, "deposit event did not fire");
   });
