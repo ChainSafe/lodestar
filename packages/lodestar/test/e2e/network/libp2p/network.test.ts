@@ -104,6 +104,7 @@ describe("[network] network", () => {
     ]);
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
+      // @ts-ignore
       netA.on(topic, resolve);
     });
     await new Promise((resolve) => netB.once("gossipsub:heartbeat", resolve));

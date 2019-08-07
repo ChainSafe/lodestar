@@ -1,8 +1,8 @@
-import {assert, expect} from "chai";
+import {assert} from "chai";
 import BN from "bn.js";
 import promisify from "promisify-es6";
 
-import {Hello} from "@chainsafe/eth2.0-types";
+import {Hello, ResponseBody} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 
 import {NetworkRpc} from "../../../../src/network/libp2p/rpc";
@@ -12,8 +12,6 @@ import {NodejsNode} from "../../../../src/network/libp2p/nodejs";
 
 import {Method} from "../../../../src/constants";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
-
-import networkDefaults from "../../../../src/network/defaults";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -144,7 +142,7 @@ describe("[network] rpc", () => {
     }
     // send hello from A to B, await hello response
     rpcB.once("request", (peerInfo, method, id, body) => {
-      rpcB.sendResponse(id, 0, body)
+      rpcB.sendResponse(id, 0, body as ResponseBody);
     });
     try {
       const helloExpected: Hello = {
@@ -162,7 +160,7 @@ describe("[network] rpc", () => {
     }
     // send hello from B to A, await hello response
     rpcA.once("request", (peerInfo, method, id, body) => {
-      rpcA.sendResponse(id, 0, body)
+      rpcA.sendResponse(id, 0, body as ResponseBody);
     });
     try {
       const helloExpected: Hello = {

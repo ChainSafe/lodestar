@@ -8,8 +8,7 @@ import {Block, Log} from "ethers/providers";
 import {deserialize} from "@chainsafe/ssz";
 import {bytes32, Deposit, Gwei, number64} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
-import {IEth1Notifier} from "../interface";
+import {Eth1EventEmitter, IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 import {ILogger} from "../../logger";
@@ -22,7 +21,7 @@ export interface EthersEth1Options extends IEth1Options {
 /**
  * Watch the Eth1.0 chain using Ethers
  */
-export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
+export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitter }) implements IEth1Notifier {
 
   private provider: ethers.providers.BaseProvider;
 
@@ -69,7 +68,7 @@ export class EthersEth1Notifier extends EventEmitter implements IEth1Notifier {
     this.contract.removeAllListeners('DepositEvent');
   }
 
-  public async processBlockHeadUpdate(blockNumber): Promise<void> {
+  public async processBlockHeadUpdate(blockNumber: number): Promise<void> {
     this.logger.debug(`Received eth1 block ${blockNumber}`);
     const block = await this.provider.getBlock(blockNumber);
     this.emit('block', block);
