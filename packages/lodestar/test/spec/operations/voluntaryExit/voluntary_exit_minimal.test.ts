@@ -1,5 +1,5 @@
 import {join} from "path";
-import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
+import {describeBulkTests} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
@@ -8,8 +8,10 @@ import {equals} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {processVoluntaryExit} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {VoluntaryExitCase} from "../../../utils/specTestTypes/beaconStateComparison";
+import {BeaconState} from "@chainsafe/eth2.0-types";
 
-describeSpecTest(
+describeBulkTests<VoluntaryExitCase, BeaconState>(
   join(__dirname, "../../test-cases/tests/operations/voluntary_exit/voluntary_exit_minimal.yaml"),
   (state, exit) => {
     processVoluntaryExit(config, state, exit);

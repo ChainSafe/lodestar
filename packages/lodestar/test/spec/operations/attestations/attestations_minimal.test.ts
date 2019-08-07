@@ -1,5 +1,5 @@
 import {join} from "path";
-import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
+import {describeBulkTests} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
@@ -10,8 +10,9 @@ import {Attestation, BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {processAttestation} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {AttestationCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
-describeSpecTest(
+describeBulkTests<AttestationCase, BeaconState>(
   join(__dirname, "../../test-cases/tests/operations/attestation/attestation_minimal.yaml"),
   (state: BeaconState, attestation: Attestation): BeaconState => {
     processAttestation(config, state, attestation);

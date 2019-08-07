@@ -1,5 +1,5 @@
 import {join} from "path";
-import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
+import {describeBulkTests} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 import {equals} from "@chainsafe/ssz";
 // @ts-ignore
@@ -10,8 +10,9 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {BeaconState, number64} from "@chainsafe/eth2.0-types";
 import {processSlots} from "../../../../src/chain/stateTransition";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {SlotSanityCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
-describeSpecTest(
+describeBulkTests<SlotSanityCase, BeaconState>(
   join(__dirname, "../../test-cases/tests/sanity/slots/sanity_slots_minimal.yaml"),
   (state: BeaconState, slots: number64) => {
     processSlots(config, state, state.slot + slots);
