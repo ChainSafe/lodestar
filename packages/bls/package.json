@@ -20,7 +20,7 @@
     "prebuild": "rm -rf lib && rm -rf dist",
     "build": "yarn build-lib && yarn build-web && yarn build-types",
     "build-lib": "babel src -x .ts -d lib",
-    "build-types": "tsc --declaration --emitDeclarationOnly",
+    "build-types": "tsc --declaration --outDir lib --emitDeclarationOnly",
     "build-web": "webpack --mode production --entry ./lib/web.js --output ./dist/bls.min.js",
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts src/",
