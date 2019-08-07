@@ -3,7 +3,6 @@
  */
 
 import PeerId from "peer-id";
-import promisify from "promisify-es6";
 
 /**
  * Save a peer id to disk

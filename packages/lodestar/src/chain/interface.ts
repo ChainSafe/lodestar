@@ -1,15 +1,23 @@
 import {EventEmitter} from "events";
 
-import {Attestation, BeaconBlock, BeaconState, Deposit, Eth1Data, number64, uint16, uint64} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BeaconState, uint16, uint64} from "@chainsafe/eth2.0-types";
 
 import {LMDGHOST} from "./forkChoice";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
+import StrictEventEmitter from "strict-event-emitter-types";
+
+interface IChainEvents {
+  processedBlock: (block: BeaconBlock) => void;
+  processedAttestation: (attestation: Attestation) => void;
+}
+
+export type ChainEventEmitter = StrictEventEmitter<EventEmitter, IChainEvents>;
 
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
  * and applying the fork choice rule to update the chain head
  */
-export interface IBeaconChain extends EventEmitter {
+export interface IBeaconChain extends ChainEventEmitter {
   latestState: BeaconState;
   forkChoice: LMDGHOST;
   chainId: uint16;
