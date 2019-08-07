@@ -47,10 +47,10 @@ const env = process.env;
  */
 export function describeBulkTests<TestCase extends BaseCase, Result>(
   testYamlPath: string,
-  testFunc: (...args: any) => Result,
+  testFunc: (...args: any) => any,
   getInput: (testCase: TestCase) => any,
   getExpected: (testCase: TestCase) => any,
-  getActual: (result: Result) => any,
+  getActual: (result: any) => Result,
   shouldError = (testCase: TestCase, index: number) => false,
   shouldSkip = (testCase: TestCase, index: number) => false,
   expectFunc = (testCase, expect, expected, actual) => expect(actual).to.be.equal(expected),

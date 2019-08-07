@@ -665,17 +665,6 @@
     js-sha256 "^0.9.0"
     secure-random "^1.1.1"
 
-"@chainsafe/eth2.0-spec-test-util@^0.3.0":
-  version "0.3.6"
-  resolved "https://registry.yarnpkg.com/@chainsafe/eth2.0-spec-test-util/-/eth2.0-spec-test-util-0.3.6.tgz#cdf6c74e003ee4abf19aed3e1bc572b2ff14804d"
-  integrity sha512-7gGIEOuXBVBisncEMq39xv2O+1BdEaduL8yUvvBsmAdLlvnengsBLnhQRe9/NyBtrT7iBYFQ2hDeF3jj4LcbyA==
-  dependencies:
-    bn.js "^4.11.8"
-    camelcase "^5.3.1"
-    chai "^4.2.0"
-    js-yaml "^3.13.1"
-    v8-profiler-next "^1.1.0"
-
 "@evocateur/libnpmaccess@^3.1.2":
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/@evocateur/libnpmaccess/-/libnpmaccess-3.1.2.tgz#ecf7f6ce6b004e9f942b098d92200be4a4b1c845"
@@ -11201,7 +11190,7 @@ uuid@^3.0.1, uuid@^3.2.2, uuid@^3.3.2:
   version "3.3.2"
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-3.3.2.tgz#1b4af4955eb3077c501c23872fc6513811587131"
 
-v8-profiler-next@^1.1.0, v8-profiler-next@^1.1.1:
+v8-profiler-next@^1.1.1:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/v8-profiler-next/-/v8-profiler-next-1.1.1.tgz#0392ea43dbe8bed56fbafc1c97cf1e23e883cd3d"
   integrity sha512-3le7iCCriwUvX4Wq+iSU89Oe72QRyRrylhv7IjUK5sdjPLZNNmXyhQJwIuLJgc0jGJVmdUBTaMGjMmRsaWaRTA==
