@@ -92,7 +92,6 @@ export function describeBulkTests<TestCase extends BaseCase, Result>(
             const directory = env.GEN_PROFILE_DIR || __dirname;
             profile.export((error, result) => {
               if (error) {
-                //console.log(error);
                 return;
               }
               writeFile(`${directory}/${profileId}`, result, () => {
