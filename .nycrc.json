@@ -14,7 +14,7 @@
     "**/bin/**",
     "**/node_modules/**"
   ],
-  "all": "false",
+  "all": false,
   "reporter": [
     "text",
     "lcov"

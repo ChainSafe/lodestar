@@ -30,9 +30,17 @@
     }],
     "object-curly-spacing": ["warn", "never"],
     "import/no-extraneous-dependencies": ["error", {
-        "devDependencies": ["**/test/**/*.ts"],
+        "devDependencies": false,
         "optionalDependencies": false,
         "peerDependencies": true
     }]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["**/test/**/*.ts"],
+      "rules": {
+        "import/no-extraneous-dependencies": "off"
+      }
+    }
+  ]
 }
