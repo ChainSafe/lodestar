@@ -105,7 +105,7 @@ export class OpPool extends EventEmitter {
         header1: blockToHeader(this.config, prevBlock),
         header2: blockToHeader(this.config, block)
       };
-      this.proposerSlashings.receive(slashing); 
+      await this.proposerSlashings.receive(slashing); 
     } else {
       proposers.set(proposerIndex, block.slot);
     }
