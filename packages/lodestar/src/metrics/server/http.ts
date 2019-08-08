@@ -19,11 +19,11 @@ export class HttpMetricsServer implements IMetricsServer {
   }
   private onRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
     if (req.method === "GET" && url.parse(req.url, true).pathname === "/metrics") {
-      res
-        .writeHead(200, {"content-type": this.metrics.registry.contentType})
-        .end(this.metrics.registry.metrics());
+      res.writeHead(200, {"content-type": this.metrics.registry.contentType});
+      res.end(this.metrics.registry.metrics());
     } else {
-      res.writeHead(404).end();
+      res.writeHead(404);
+      res.end();
     }
   }
   public async start(): Promise<void> {
