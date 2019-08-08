@@ -4,7 +4,9 @@
 
 import {EventEmitter} from "events";
 
-import {BeaconBlock, BeaconBlockHeader, BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex} from "../types";
+import {BeaconBlock, BeaconBlockHeader, BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex} from "@chainsafe/eth2.0-ssz-types"
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {getBeaconProposerIndex} from "../chain/stateTransition/util";
 import {IBeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
@@ -81,43 +83,42 @@ export class OpPool extends EventEmitter {
       this.transfers.remove(processedBlock.body.transfers),
       this.proposerSlashings.remove(processedBlock.body.proposerSlashings),
       this.attesterSlashings.remove(processedBlock.body.attesterSlashings),
-      this.attestations.remove(processedBlock.body.attestations)
+      this.attestations.remove(processedBlock.body.attestations),
+      this.checkDuplicateProposer(processedBlock)
     ]);
   }
 
-  public async checkDuplicateProposer(config, block: BeaconBlock): Promise<void> {
-    const epoch: Epoch = computeEpochOfSlot(config, block.slot);
+  public async checkDuplicateProposer(block: BeaconBlock): Promise<void> {
+    const epoch: Epoch = computeEpochOfSlot(this.config, block.slot);
     const proposers: Map<ValidatorIndex, Slot> = this.proposers.get(epoch);
     const state: BeaconState = await this.db.state.getLatest();
-    const proposerIndex: ValidatorIndex = await getBeaconProposerIndex(config, state);
+    const proposerIndex: ValidatorIndex = await getBeaconProposerIndex(this.config, state);
 
     // Check if proposer already exists
-    if (proposers.get(proposerIndex)) {
+    if (proposers.has(proposerIndex)) {
       const existingSlot: Slot = this.proposers.get(epoch).get(proposerIndex);
       const prevBlock: BeaconBlock = await this.db.block.getBlockBySlot(existingSlot);
 
       // Create slashing
       const slashing: ProposerSlashing = {
         proposerIndex: proposerIndex,
-        header1: {
-          stateRoot: prevBlock.stateRoot,
-          signature: prevBlock.signature,
-          slot: prevBlock.slot,
-          parentRoot: prevBlock.parentRoot,
-          bodyRoot: hashTreeRoot(prevBlock.body, config.types.BeaconBlockBody),
-        },
-        header2: {
-          stateRoot: block.stateRoot,
-          signature: block.signature,
-          slot: block.slot,
-          parentRoot: block.parentRoot,
-          bodyRoot: hashTreeRoot(block.body, config.types.BeaconBlockBody),
-        }
+        header1: this.blockToHeader(prevBlock),
+        header2: this.blockToHeader(block)
       };
-      this.db.proposerSlashing.set(proposerIndex, slashing);
+      this.db.proposerSlashing.receive(slashing);
     } else {
       proposers.set(proposerIndex, block.slot);
     }
     // TODO Prune map every so often
+  }
+
+  public async blockToHeader(block) {
+    return {
+      stateRoot: block.stateRoot,
+      signature: block.signature,
+      slot: block.slot,
+      parentRoot: block.parentRoot,
+      bodyRoot: hashTreeRoot(block.body, this.config.types.BeaconBlockBody),
+    }
   }
 }

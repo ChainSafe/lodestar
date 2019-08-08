@@ -278,9 +278,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
     this.metrics.currentSlot.inc(1);
 
-      // check for duplicate proposal
-      await this.opPool.checkDuplicateProposer(this.config, block);
-
       // forward processed block for additional processing
     this.emit("processedBlock", block);
   };
