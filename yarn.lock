@@ -539,7 +539,7 @@
     "@babel/helper-regex" "^7.4.4"
     regexpu-core "^4.5.4"
 
-"@babel/preset-env@^7.3.1", "@babel/preset-env@^7.3.4":
+"@babel/preset-env@^7.3.1", "@babel/preset-env@^7.3.4", "@babel/preset-env@^7.4.4":
   version "7.5.5"
   resolved "https://registry.yarnpkg.com/@babel/preset-env/-/preset-env-7.5.5.tgz#bc470b53acaa48df4b8db24a570d6da1fef53c9a"
   dependencies:
@@ -612,13 +612,13 @@
     pirates "^4.0.0"
     source-map-support "^0.5.9"
 
-"@babel/runtime@^7.4.5":
+"@babel/runtime@^7.4.4", "@babel/runtime@^7.4.5":
   version "7.5.5"
   resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.5.5.tgz#74fba56d35efbeca444091c7850ccd494fd2f132"
   dependencies:
     regenerator-runtime "^0.13.2"
 
-"@babel/template@^7.1.0", "@babel/template@^7.4.0", "@babel/template@^7.4.4":
+"@babel/template@7", "@babel/template@^7.1.0", "@babel/template@^7.4.0", "@babel/template@^7.4.4":
   version "7.4.4"
   resolved "https://registry.yarnpkg.com/@babel/template/-/template-7.4.4.tgz#f4b88d1225689a08f5bc3a17483545be9e4ed237"
   dependencies:
@@ -674,6 +674,19 @@
     chai "^4.2.0"
     js-yaml "^3.13.1"
     v8-profiler-next "^1.1.0"
+
+"@chainsafe/eth2.0-spec-test-util@^0.2.3":
+  version "0.2.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/eth2.0-spec-test-util/-/eth2.0-spec-test-util-0.2.3.tgz#f9223de4d61774f2483932fb608fc0da29eb04a0"
+  dependencies:
+    bn.js "^4.11.8"
+    camelcase "^5.3.1"
+    chai "^4.2.0"
+    js-yaml "^3.13.1"
+
+"@chainsafe/milagro-crypto-js@0.1.3":
+  version "0.1.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/milagro-crypto-js/-/milagro-crypto-js-0.1.3.tgz#0813b5991f53e9573174637ce9ec96576218a09b"
 
 "@evocateur/libnpmaccess@^3.1.2":
   version "3.1.2"
@@ -1751,6 +1764,10 @@
   version "5.0.1"
   resolved "https://registry.yarnpkg.com/@types/abstract-leveldown/-/abstract-leveldown-5.0.1.tgz#3c7750d0186b954c7f2d2f6acc8c3c7ba0c3412e"
 
+"@types/assert@^1.4.2":
+  version "1.4.3"
+  resolved "https://registry.yarnpkg.com/@types/assert/-/assert-1.4.3.tgz#c3b68c062a2375647d1b9efc41e57f8286bb30fe"
+
 "@types/bip39@^2.4.2":
   version "2.4.2"
   resolved "https://registry.yarnpkg.com/@types/bip39/-/bip39-2.4.2.tgz#f5d6617212be496bb998d3969f657f77a10c5287"
@@ -2335,7 +2352,7 @@ arraybuffer.slice@~0.0.7:
   version "0.0.7"
   resolved "https://registry.yarnpkg.com/arraybuffer.slice/-/arraybuffer.slice-0.0.7.tgz#3bbc4275dd584cc1b10809b89d4e8b63a69e7675"
 
-arrify@^1.0.1:
+arrify@^1.0.0, arrify@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/arrify/-/arrify-1.0.1.tgz#898508da2226f380df904728456849c1501a4b0d"
 
@@ -2618,6 +2635,12 @@ babel-plugin-dynamic-import-node@^2.3.0:
   resolved "https://registry.yarnpkg.com/babel-plugin-dynamic-import-node/-/babel-plugin-dynamic-import-node-2.3.0.tgz#f00f507bdaa3c3e3ff6e7e5e98d90a7acab96f7f"
   dependencies:
     object.assign "^4.1.0"
+
+babel-plugin-rewire-exports@^1.1.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/babel-plugin-rewire-exports/-/babel-plugin-rewire-exports-1.2.0.tgz#a1680b55cb1332cde38cf29e1e1fa317ef76ddcc"
+  dependencies:
+    "@babel/template" "7"
 
 babel-plugin-syntax-async-functions@^6.8.0:
   version "6.13.0"
@@ -3270,7 +3293,7 @@ buffer-from@1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/buffer-from/-/buffer-from-1.1.0.tgz#87fcaa3a298358e0ade6e442cfce840740d1ad04"
 
-buffer-from@^1.0.0:
+buffer-from@^1.0.0, buffer-from@^1.1.0:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/buffer-from/-/buffer-from-1.1.1.tgz#32713bc028f75c02fdb710d7c7bcec1f2c6070ef"
 
@@ -4334,7 +4357,7 @@ diagnostics@^1.1.1:
     enabled "1.0.x"
     kuler "1.0.x"
 
-diff@3.5.0, diff@^3.5.0:
+diff@3.5.0, diff@^3.1.0, diff@^3.5.0:
   version "3.5.0"
   resolved "https://registry.yarnpkg.com/diff/-/diff-3.5.0.tgz#800c0dd1e0a8bfbc95835c202ad220fe317e5a12"
 
@@ -10913,6 +10936,19 @@ triple-beam@^1.2.0, triple-beam@^1.3.0:
   version "1.3.0"
   resolved "https://registry.yarnpkg.com/triple-beam/-/triple-beam-1.3.0.tgz#a595214c7298db8339eeeee083e4d10bd8cb8dd9"
 
+ts-node@^7.0.1:
+  version "7.0.1"
+  resolved "https://registry.yarnpkg.com/ts-node/-/ts-node-7.0.1.tgz#9562dc2d1e6d248d24bc55f773e3f614337d9baf"
+  dependencies:
+    arrify "^1.0.0"
+    buffer-from "^1.1.0"
+    diff "^3.1.0"
+    make-error "^1.1.1"
+    minimist "^1.2.0"
+    mkdirp "^0.5.1"
+    source-map-support "^0.5.6"
+    yn "^2.0.0"
+
 ts-node@^8.3.0:
   version "8.3.0"
   resolved "https://registry.yarnpkg.com/ts-node/-/ts-node-8.3.0.tgz#e4059618411371924a1fb5f3b125915f324efb57"
@@ -11028,7 +11064,7 @@ typescript@3.2.x:
   version "3.2.4"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.2.4.tgz#c585cb952912263d915b462726ce244ba510ef3d"
 
-typescript@^3.5.1:
+typescript@^3.2.1, typescript@^3.5.1:
   version "3.5.3"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.5.3.tgz#c830f657f93f1ea846819e929092f5fe5983e977"
 
@@ -11544,7 +11580,7 @@ webidl-conversions@^4.0.2:
   version "4.0.2"
   resolved "https://registry.yarnpkg.com/webidl-conversions/-/webidl-conversions-4.0.2.tgz#a855980b1f0b6b359ba1d5d9fb39ae941faa63ad"
 
-webpack-cli@^3.2.3:
+webpack-cli@^3.2.3, webpack-cli@^3.3.2:
   version "3.3.6"
   resolved "https://registry.yarnpkg.com/webpack-cli/-/webpack-cli-3.3.6.tgz#2c8c399a2642133f8d736a359007a052e060032c"
   dependencies:
@@ -11567,7 +11603,7 @@ webpack-sources@^1.4.0, webpack-sources@^1.4.1:
     source-list-map "^2.0.0"
     source-map "~0.6.1"
 
-webpack@^4.29.6:
+webpack@^4.29.6, webpack@^4.30.0:
   version "4.39.1"
   resolved "https://registry.yarnpkg.com/webpack/-/webpack-4.39.1.tgz#60ed9fb2b72cd60f26ea526c404d2a4cc97a1bd8"
   dependencies:
@@ -11961,6 +11997,10 @@ yauzl@^2.4.2:
 yeast@0.1.2:
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/yeast/-/yeast-0.1.2.tgz#008e06d8094320c372dbc2f8ed76a0ca6c8ac419"
+
+yn@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/yn/-/yn-2.0.0.tgz#e5adabc8acf408f6385fc76495684c88e6af689a"
 
 yn@^3.0.0:
   version "3.1.0"
