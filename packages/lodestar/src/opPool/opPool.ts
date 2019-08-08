@@ -21,7 +21,7 @@ import {
 import {IEth1Notifier} from "../eth1";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {computeEpochOfSlot} from "../chain/stateTransition/util";
-import {hashTreeRoot} from "@chainsafe/ssz";
+import { blockToHeader } from "../chain/stateTransition/util/block";
 
 interface IOpPoolModules {
   config: IBeaconConfig;
@@ -102,23 +102,13 @@ export class OpPool extends EventEmitter {
       // Create slashing
       const slashing: ProposerSlashing = {
         proposerIndex: proposerIndex,
-        header1: this.blockToHeader(prevBlock),
-        header2: this.blockToHeader(block)
+        header1: blockToHeader(this.config, prevBlock),
+        header2: blockToHeader(this.config, block)
       };
-      this.db.proposerSlashing.receive(slashing);
+      this.proposerSlashings.receive(slashing); 
     } else {
       proposers.set(proposerIndex, block.slot);
     }
     // TODO Prune map every so often
-  }
-
-  public async blockToHeader(block) {
-    return {
-      stateRoot: block.stateRoot,
-      signature: block.signature,
-      slot: block.slot,
-      parentRoot: block.parentRoot,
-      bodyRoot: hashTreeRoot(block.body, this.config.types.BeaconBlockBody),
-    }
   }
 }
