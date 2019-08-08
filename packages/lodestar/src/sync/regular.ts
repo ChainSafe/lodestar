@@ -32,21 +32,21 @@ export class RegularSync {
     this.logger = logger;
   }
 
-  public async receiveBlock(block: BeaconBlock): Promise<void> {
+  public receiveBlock = async (block: BeaconBlock): Promise<void> => {
     const root = hashTreeRoot(block, this.config.types.BeaconBlock);
 
     // skip block if its a known bad block
-    if (await this.db.block.isBadBlock(root)){
+    if (await this.db.block.isBadBlock(root)) {
       this.logger.warn(`Received bad block, block root : ${root} `);
-      return ;
+      return;
     }
     // skip block if it already exists
     if (!await this.db.block.has(root)) {
       await this.chain.receiveBlock(block);
     }
-  }
+  };
 
-  public async receiveAttestation(attestation: Attestation): Promise<void> {
+  public receiveAttestation = async (attestation: Attestation): Promise<void> => {
     // skip attestation if it already exists
     const root = hashTreeRoot(attestation, this.config.types.Attestation);
     if (await this.db.attestation.has(root)) {
@@ -62,22 +62,31 @@ export class RegularSync {
       this.opPool.attestations.receive(attestation),
       this.chain.receiveAttestation(attestation),
     ]);
-  }
+  };
+
+  private onProcessedBlock = (block: BeaconBlock): void => {
+    this.network.publishBlock(block);
+  };
+
+  private onProcessedAttestation = (attestation: Attestation): void => {
+    this.network.publishAttestation(attestation);
+  };
 
   public async start(): Promise<void> {
     this.network.subscribeToBlocks();
     this.network.subscribeToAttestations();
-    this.network.on(BLOCK_TOPIC, this.receiveBlock.bind(this));
-    this.network.on(ATTESTATION_TOPIC, this.receiveAttestation.bind(this));
-    this.chain.on('processedBlock', this.network.publishBlock.bind(this.network));
-    this.chain.on('processedAttestation', this.network.publishAttestation.bind(this.network));
+    this.network.on(BLOCK_TOPIC, this.receiveBlock);
+    this.network.on(ATTESTATION_TOPIC, this.receiveAttestation);
+    this.chain.on('processedBlock', this.onProcessedBlock);
+    this.chain.on('processedAttestation', this.onProcessedAttestation);
   }
+
   public async stop(): Promise<void> {
     this.network.unsubscribeToBlocks();
     this.network.unsubscribeToAttestations();
-    this.network.removeListener(BLOCK_TOPIC, this.receiveBlock.bind(this));
-    this.network.removeListener(ATTESTATION_TOPIC, this.receiveAttestation.bind(this));
-    this.chain.removeListener('processedBlock', this.network.publishBlock.bind(this.network));
-    this.chain.removeListener('processedAttestation', this.network.publishAttestation.bind(this.network));
+    this.network.removeListener(BLOCK_TOPIC, this.receiveBlock);
+    this.network.removeListener(ATTESTATION_TOPIC, this.receiveAttestation);
+    this.chain.removeListener('processedBlock', this.onProcessedBlock);
+    this.chain.removeListener('processedAttestation', this.onProcessedAttestation);
   }
 }

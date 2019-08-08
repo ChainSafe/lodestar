@@ -1,6 +1,7 @@
-import { assert } from "chai";
+import {assert} from "chai";
 import fs from "fs";
-import * as sszTypes from "@chainsafe/eth2.0-types";
+import path from "path";
+import {types as sszTypes} from "../../src/presets/mainnet";
 
 describe("@chainsafe/eth2.0-types", () => {
   // interfaces are not available at run time, so we must parse our interface
@@ -10,7 +11,7 @@ describe("@chainsafe/eth2.0-types", () => {
   // put interfaces and types into objects
   const interfaces = {};
   const types = {};
-  const typesDir = __dirname + "/../../../src/types/";
+  const typesDir = path.join(__dirname, "/../../../eth2.0-types/src/");
   // Get all ts files in our types directory
   const typeFiles = fs.readdirSync(typesDir).filter((s) => s.endsWith(".ts"));
   typeFiles.map((file) => {
@@ -63,7 +64,7 @@ describe("@chainsafe/eth2.0-types", () => {
       types[name] = t;
     }
   });
-    //
+  //
   // put runtime type variables into an object
   const vars = {};
   for (const name in sszTypes) {

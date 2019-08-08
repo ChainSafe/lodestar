@@ -13,7 +13,7 @@
     "**/types/**",
     "**/node_modules/**"
   ],
-  "all": "true",
+  "all": false,
   "reporter": [
     "text",
     "lcov"
