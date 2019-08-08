@@ -1,5 +1,5 @@
 import {join} from "path";
-import {describeBulkTests} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 import {equals} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
@@ -8,7 +8,7 @@ import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {BeaconStateComparisonCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
-describeBulkTests<BeaconStateComparisonCase, BeaconState>(
+describeMultiSpec<BeaconStateComparisonCase, BeaconState>(
   join(__dirname, "../../test-cases/tests/epoch_processing/crosslinks/crosslinks_mainnet.yaml"),
   (state) => {
     processCrosslinks(config, state);

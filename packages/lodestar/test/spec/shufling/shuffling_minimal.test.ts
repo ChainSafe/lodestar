@@ -1,5 +1,5 @@
 import {join} from "path";
-import {describeBulkTests} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
@@ -7,7 +7,7 @@ import {computeShuffledIndex} from "../../../src/chain/stateTransition/util";
 import {bytes32} from "@chainsafe/eth2.0-types";
 import {ShufflingCase} from "../../utils/specTestTypes/shufflingCase";
 
-describeBulkTests<ShufflingCase, number[]>(
+describeMultiSpec<ShufflingCase, number[]>(
   join(__dirname, "../test-cases/tests/shuffling/core/shuffling_minimal.yaml"),
   (seed: bytes32, count: number) => {
     const output = [];

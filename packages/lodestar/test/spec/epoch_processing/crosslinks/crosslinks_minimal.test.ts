@@ -7,9 +7,9 @@ import {processCrosslinks} from "../../../../src/chain/stateTransition/epoch/cro
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {BeaconStateComparisonCase} from "../../../utils/specTestTypes/beaconStateComparison";
 import {BeaconState} from "@chainsafe/eth2.0-types";
-import {describeBulkTests} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 
-describeBulkTests<BeaconStateComparisonCase, BeaconState>(
+describeMultiSpec<BeaconStateComparisonCase, BeaconState>(
   join(__dirname, "../../test-cases/tests/epoch_processing/crosslinks/crosslinks_minimal.yaml"),
   (state) => {
     processCrosslinks(config, state);

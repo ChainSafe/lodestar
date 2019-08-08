@@ -1,5 +1,5 @@
 import {join} from "path";
-import {describeBulkTests} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import BN from "bn.js";
 
 import {deserialize, serialize} from "../../src";
@@ -7,7 +7,7 @@ import {UintCase} from "../util/specTypes/uint";
 
 // uint bounds
 
-describeBulkTests<UintCase, string>(
+describeMultiSpec<UintCase, string>(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_bounds.yaml"),
   serialize,
   ({value, type}) => ([new BN(value), type]),
@@ -16,7 +16,7 @@ describeBulkTests<UintCase, string>(
   ({valid}) => !valid,
 );
 
-describeBulkTests<UintCase, string>(
+describeMultiSpec<UintCase, string>(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_bounds.yaml"),
   deserialize,
   ({ssz, type}) => ([Buffer.from(ssz.slice(2), 'hex'), type]),
@@ -28,7 +28,7 @@ describeBulkTests<UintCase, string>(
 
 // uint random
 
-describeBulkTests<UintCase, string>(
+describeMultiSpec<UintCase, string>(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_random.yaml"),
   serialize,
   ({value, type}) => ([new BN(value), type]),
@@ -37,7 +37,7 @@ describeBulkTests<UintCase, string>(
   ({valid}) => !valid,
 );
 
-describeBulkTests<UintCase, string>(
+describeMultiSpec<UintCase, string>(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_random.yaml"),
   deserialize,
   ({ssz, type}) => ([Buffer.from(ssz.slice(2), 'hex'), type]),
@@ -49,7 +49,7 @@ describeBulkTests<UintCase, string>(
 
 // uint wrong length
 
-describeBulkTests<UintCase, string>(
+describeMultiSpec<UintCase, string>(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_wrong_length.yaml"),
   deserialize,
   ({ssz, type}) => ([Buffer.from(ssz.slice(2), 'hex'), type]),

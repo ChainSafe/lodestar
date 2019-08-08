@@ -1,5 +1,5 @@
 import {join} from "path";
-import {describeBulkTests} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
@@ -12,7 +12,7 @@ import {processVoluntaryExit} from "../../../../src/chain/stateTransition/block/
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {VoluntaryExitCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
-describeBulkTests<VoluntaryExitCase, BeaconState>(
+describeMultiSpec<VoluntaryExitCase, BeaconState>(
   join(__dirname, "../../test-cases/tests/operations/voluntary_exit/voluntary_exit_mainnet.yaml"),
   (state, exit) => {
     processVoluntaryExit(config, state, exit);

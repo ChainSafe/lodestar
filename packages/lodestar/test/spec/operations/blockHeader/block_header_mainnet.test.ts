@@ -1,5 +1,5 @@
 import {join} from "path";
-import {describeBulkTests} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
@@ -12,7 +12,7 @@ import {processBlockHeader} from "../../../../src/chain/stateTransition/block/bl
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {BlockHeaderCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
-describeBulkTests<BlockHeaderCase, BeaconState>(
+describeMultiSpec<BlockHeaderCase, BeaconState>(
   join(__dirname, "../../test-cases/tests/operations/block_header/block_header_mainnet.yaml"),
   (state, block) => {
     processBlockHeader(config, state, block);

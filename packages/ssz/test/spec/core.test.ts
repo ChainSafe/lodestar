@@ -1,5 +1,5 @@
 import {join} from "path";
-import {describeBulkTests} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {types} from "@chainsafe/eth2.0-ssz-types/lib/presets/mainnet";
 
 import {deserialize, equals, hashTreeRoot, serialize, signingRoot} from "../../src";
@@ -8,7 +8,7 @@ import {getTestType, getTestValue, hydrateType, hydrateValue} from "./util";
 
 // Serialize
 
-describeBulkTests(
+describeMultiSpec(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_static/core/ssz_mainnet_random.yaml"),
   serialize,
   (testCase) => {
@@ -27,7 +27,7 @@ describeBulkTests(
 
 // Deserialize
 
-describeBulkTests(
+describeMultiSpec(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_static/core/ssz_mainnet_random.yaml"),
   deserialize,
   (testCase) => {
@@ -55,7 +55,7 @@ describeBulkTests(
 
 // hashTreeRoot
 
-describeBulkTests(
+describeMultiSpec(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_static/core/ssz_mainnet_random.yaml"),
   hashTreeRoot,
   (testCase) => {
@@ -74,7 +74,7 @@ describeBulkTests(
 
 // signingRoot
 
-describeBulkTests(
+describeMultiSpec(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_static/core/ssz_mainnet_random.yaml"),
   signingRoot,
   (testCase) => {

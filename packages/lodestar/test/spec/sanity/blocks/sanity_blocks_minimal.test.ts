@@ -1,5 +1,5 @@
 import {join} from "path";
-import {describeBulkTests} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 import {equals} from "@chainsafe/ssz";
 // @ts-ignore
@@ -12,7 +12,7 @@ import {stateTransition} from "../../../../src/chain/stateTransition";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {BlockSanityCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
-describeBulkTests<BlockSanityCase, BeaconState>(
+describeMultiSpec<BlockSanityCase, BeaconState>(
   join(__dirname, "../../test-cases/tests/sanity/blocks/sanity_blocks_minimal.yaml"),
   (state: BeaconState, blocks: BeaconBlock[]) => {
     blocks.forEach((block) => {

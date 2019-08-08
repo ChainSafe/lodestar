@@ -1,5 +1,5 @@
 import {join} from "path";
-import {describeBulkTests} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 // @ts-ignore
 import {restore, rewire} from "@chainsafe/bls-js";
@@ -12,7 +12,7 @@ import {processTransfer} from "../../../../src/chain/stateTransition/block/opera
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {TransferCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
-describeBulkTests<TransferCase, BeaconState>(
+describeMultiSpec<TransferCase, BeaconState>(
   join(__dirname, "../../test-cases/tests/operations/transfer/transfer_minimal.yaml"),
   (state, transfer) => {
     processTransfer(config, state, transfer);

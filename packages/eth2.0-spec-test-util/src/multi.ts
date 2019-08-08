@@ -28,7 +28,7 @@ interface TestSpec<TestCase extends BaseCase> {
 const env = process.env;
 
 /**
- * Run yaml Eth2.0 bulk spec tests for a certain function
+ * Run yaml Eth2.0 bulk spec tests (m) for a certain function
  * Compares actual vs expected for all test cases
  * @param {string} testYamlPath - path to yaml spec test
  * @param {Function} testFunc - function to use to generate output
@@ -45,7 +45,7 @@ const env = process.env;
  *   and actual output
  * @param timeout - how long to wait before marking tests as failed (default 2000ms). Set to 0 to wait infinitely
  */
-export function describeBulkTests<TestCase extends BaseCase, Result>(
+export function describeMultiSpec<TestCase extends BaseCase, Result>(
   testYamlPath: string,
   testFunc: (...args: any) => any,
   getInput: (testCase: TestCase) => any,

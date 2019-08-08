@@ -1,5 +1,5 @@
 import {join} from "path";
-import {describeBulkTests} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 import {equals} from "@chainsafe/ssz";
 
@@ -9,7 +9,7 @@ import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {BeaconStateComparisonCase} from "../../../utils/specTestTypes/beaconStateComparison";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 
-describeBulkTests<BeaconStateComparisonCase, BeaconState>(
+describeMultiSpec<BeaconStateComparisonCase, BeaconState>(
   join(__dirname, "../../test-cases/tests/epoch_processing/justification_and_finalization/justification_and_finalization_minimal.yaml"),
   (state) => {
     processJustificationAndFinalization(config, state);
