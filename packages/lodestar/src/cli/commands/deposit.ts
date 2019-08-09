@@ -55,7 +55,6 @@ export class DepositCommand implements CliCommand {
         try {
           await this.action(options, logger);
         } catch (e) {
-          // eslint-disable-next-line no-console
           console.error(e.message + '\n' + e.stack);
         }
       });

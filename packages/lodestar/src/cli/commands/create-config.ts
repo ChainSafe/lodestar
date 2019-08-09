@@ -34,7 +34,6 @@ export class CreateConfigCommand implements CliCommand {
         try {
           await this.action(options, logger);
         } catch (e) {
-          // eslint-disable-next-line no-console
           logger.error(e.message + '\n' + e.stack);
         }
       });
