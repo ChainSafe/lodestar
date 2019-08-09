@@ -35,7 +35,7 @@ describe('[CLI] eth1:dev', function () {
       network: null,
       mnemonic: null,
       database:null
-    });
+    }, logger);
     expect(network).to.not.be.null;
     await network.stop();
   });

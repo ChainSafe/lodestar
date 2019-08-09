@@ -4,7 +4,7 @@ import {Keypair} from "@chainsafe/bls-js/lib/keypair";
 import {IConfigurationModule} from "../util/config";
 import {IValidatorDB} from "../db/api";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
-import {ILoggerOptions, LogLevel} from "../logger";
+import {ILoggerOptions, LogLevel, defaultLogLevel} from "../logger";
 
 export interface IValidatorOptions {
   db: IDatabaseOptions;
@@ -74,7 +74,7 @@ const config: IValidatorOptions = {
   keypair: Keypair.generate(),
   keystore: null,
   logger: {
-    level: LogLevel.DEFAULT,
+    level: LogLevel[defaultLogLevel],
     module: "validator",
   },
 };

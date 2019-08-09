@@ -2,21 +2,24 @@
  * @module logger
  */
 
-
 export enum LogLevel {
-  ERROR = 'error',
-  WARN = 'warn',
-  INFO = 'info',
-  HTTP = 'http',
-  VERBOSE = 'verbose',
-  DEBUG = 'debug',
-  SILLY = 'debug',
-  NONE = 'none',
-  DEFAULT = 'info'
+  error,
+  warn,
+  info,
+  debug,
 }
 
+export const LogLevels = [
+  "error",
+  "warn",
+  "info",
+  "debug",
+];
+
+export const defaultLogLevel = LogLevel.info;
+
 export interface ILoggerOptions {
-  level: LogLevel;
+  level: typeof LogLevel[number];
   module: string;
 }
 
@@ -28,4 +31,6 @@ export interface ILogger {
   warn(message: string|object, context?: object): void;
   error(message: string|object, context?: object): void;
   debug(message: string|object, context?: object): void;
+
+  child(options: ILoggerOptions): ILogger;
 }

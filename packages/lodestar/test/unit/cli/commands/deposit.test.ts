@@ -53,7 +53,7 @@ describe('[CLI] deposit', function() {
           value: '32',
           contract:'0x',
           accounts: 10
-        },
+        }, logger
       )
     ).to.be.rejectedWith(CliError, 'JSON RPC node (http://worong_host:123) not available.');
   });
@@ -70,7 +70,7 @@ describe('[CLI] deposit', function() {
           value: '32',
           contract:'0x',
           accounts: 10
-        },
+        }, logger
       )
     ).to.be.rejectedWith(CliError, 'You have to submit either privateKey or mnemonic.');
   });
@@ -87,7 +87,7 @@ describe('[CLI] deposit', function() {
           value: '32',
           contract:'0x',
           accounts: 10
-        },
+        }, logger
       )
     ).to.be.rejectedWith(Error, 'invalid mnemonic');
   });

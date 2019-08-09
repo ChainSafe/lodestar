@@ -1,6 +1,6 @@
 import {IConfigurationModule} from "../util/config";
 
-import {LogLevel, ILoggerOptions} from "../logger/interface";
+import {LogLevel, ILoggerOptions, defaultLogLevel} from "../logger/interface";
 
 export interface IBeaconLoggerOptions {
   chain: ILoggerOptions;
@@ -102,31 +102,31 @@ export const BeaconLoggerOptions: IConfigurationModule = {
 
 const config: IBeaconLoggerOptions = {
   chain: {
-    level: LogLevel.DEFAULT,
+    level: LogLevel[defaultLogLevel],
     module: "chain",
   },
   db: {
-    level: LogLevel.DEFAULT,
+    level: LogLevel[defaultLogLevel],
     module: "db",
   },
   eth1: {
-    level: LogLevel.DEFAULT,
+    level: LogLevel[defaultLogLevel],
     module: "eth1",
   },
   node: {
-    level: LogLevel.DEFAULT,
+    level: LogLevel[defaultLogLevel],
     module: "node",
   },
   network: {
-    level: LogLevel.DEFAULT,
+    level: LogLevel[defaultLogLevel],
     module: "network",
   },
   opPool: {
-    level: LogLevel.DEFAULT,
+    level: LogLevel[defaultLogLevel],
     module: "opPool",
   },
   sync: {
-    level: LogLevel.DEFAULT,
+    level: LogLevel[defaultLogLevel],
     module: "sync",
   },
 };

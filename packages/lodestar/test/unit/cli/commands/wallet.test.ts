@@ -28,7 +28,7 @@ describe('[CLI] wallet', () => {
   it('Should throw error if output file exists', async () => {
     const command = new CreateWalletCommand();
     await expect(
-      command.action({outputFile: "src"})
+      command.action({outputFile: "src"}, logger)
     ).to.be.rejectedWith(CliError, 'src already exists');
   });
 });

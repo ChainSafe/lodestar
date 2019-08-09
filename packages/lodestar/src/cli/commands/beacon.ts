@@ -28,6 +28,7 @@ export class BeaconNodeCommand implements CliCommand {
 
   public register(commander: CommanderStatic): void {
 
+    const logger = new WinstonLogger();
     //TODO: when we switch cli library make this to run as default command "./bin/lodestar"
     const command = commander
       .command("beacon")
@@ -37,15 +38,15 @@ export class BeaconNodeCommand implements CliCommand {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
         try {
-          await this.action(options);
+          await this.action(options, logger);
         } catch (e) {
-          console.error(e.message + '\n' + e.stack);
+          logger.error(e.message + '\n' + e.stack);
         }
       });
     generateCommanderOptions(command, BeaconNodeOptions);
   }
 
-  public async action(options: IBeaconCommandOptions): Promise<void> {
+  public async action(options: IBeaconCommandOptions, logger: ILogger): Promise<void> {
     let conf: Partial<IBeaconNodeOptions> = {};
     //merge config file
     if (options.configFile) {
@@ -56,7 +57,7 @@ export class BeaconNodeCommand implements CliCommand {
     //override current config with cli config
     conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
 
-    this.node = new BeaconNode(conf, {config});
+    this.node = new BeaconNode(conf, {config, logger});
 
     if(conf.validator && conf.validator.keypair){
       conf.validator.rpcInstance = new RpcClientOverInstance({
@@ -77,7 +78,7 @@ export class BeaconNodeCommand implements CliCommand {
         ),
       });
 
-      this.validator = new Validator(conf.validator, {config});
+      this.validator = new Validator(conf.validator, {config, logger});
       await this.validator.start();
     }
 

@@ -32,7 +32,7 @@ describe('[CLI] create-config', () => {
       command.action({
         outputFile: "src",
         logLevel: null,
-      })
+      }, logger)
     ).to.be.rejectedWith(CliError, 'src already exists');
   });
 });

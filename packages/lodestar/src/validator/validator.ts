@@ -20,7 +20,7 @@ import {GenesisInfo} from "./types";
 import {RpcClient, RpcClientOverWs} from "./rpc";
 import {AttestationService} from "./services/attestation";
 import {IValidatorDB, LevelDbController, ValidatorDB} from "../db";
-import {ILogger, WinstonLogger} from "../logger";
+import {ILogger} from "../logger";
 import defaultValidatorOptions, {IValidatorOptions} from "./options";
 import deepmerge from "deepmerge";
 import {getKeyFromFileOrKeystore} from "../util/io";
@@ -42,10 +42,10 @@ class Validator {
   private isActive: boolean;
   private isRunning: boolean;
 
-  public constructor(opts: Partial<IValidatorOptions>, modules: {config: IBeaconConfig; logger?: ILogger}) {
+  public constructor(opts: Partial<IValidatorOptions>, modules: {config: IBeaconConfig; logger: ILogger}) {
     this.opts = deepmerge(defaultValidatorOptions, opts, {isMergeableObject: isPlainObject});
     this.config = modules.config;
-    this.logger = modules.logger || new WinstonLogger(this.opts.logger);
+    this.logger = modules.logger.child(this.opts.logger);
     this.isActive = false;
     this.isRunning = false;
     this.db = new ValidatorDB({

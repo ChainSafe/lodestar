@@ -43,7 +43,7 @@ describe('[CLI] deposit', function() {
           value:'32',
           contract:contractAddress,
           accounts: 10
-        },
+        }, logger
       )
     ).to.not.be.rejected;
   });
@@ -62,7 +62,7 @@ describe('[CLI] deposit', function() {
           value:'32',
           contract:contractAddress,
           accounts: 10
-        },
+        }, logger
       )
     ).to.not.be.rejected;
   });
