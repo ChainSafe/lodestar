@@ -4,7 +4,7 @@
 
 import {EventEmitter} from "events";
 
-import {BeaconBlock, BeaconBlockHeader, BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex} from "@chainsafe/eth2.0-ssz-types"
+import {BeaconBlock, BeaconBlockHeader, BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex} from "@chainsafe/eth2.0-ssz-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {getBeaconProposerIndex} from "../chain/stateTransition/util";
@@ -21,7 +21,7 @@ import {
 import {IEth1Notifier} from "../eth1";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {computeEpochOfSlot} from "../chain/stateTransition/util";
-import { blockToHeader } from "../chain/stateTransition/util/blockRoot";
+import {blockToHeader} from "../chain/stateTransition/util/blockRoot";
 
 interface IOpPoolModules {
   config: IBeaconConfig;

@@ -12,7 +12,7 @@ import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {OpPool} from "../../../../../src/opPool";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
-import {getBeaconProposerIndex} from "../../../../../src/chain/stateTransition/util";
+import {getBeaconProposerIndex, blockToHeader} from "../../../../../src/chain/stateTransition/util";
 import {stateTransition} from "../../../../../src/chain/stateTransition";
 import {generateValidator} from "../../../../utils/validator";
 import BlockProposingService from "../../../../../src/validator/services/block";
@@ -33,6 +33,7 @@ import {
   StateRepository,
   VoluntaryExitRepository
 } from "../../../../../src/db/api/beacon/repositories";
+import { createIBeaconConfig } from "@chainsafe/eth2.0-config";
 import {ValidatorApi} from "../../../../../src/api/rpc/api/validator";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "../../../../../src/util/serialization";
@@ -52,6 +53,8 @@ describe("produce block", function () {
   }; // missing transfer
   // @ts-ignore
   const opPoolStub = new OpPool({}, {config:config, db: dbStub, eth1: sinon.createStubInstance(EthersEth1Notifier)});
+  };
+  const configStub = sinon.createStubInstance(createIBeaconConfig);
   const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
   const chainStub = sinon.createStubInstance(BeaconChain);
   chainStub.forkChoice = sinon.createStubInstance(StatefulDagLMDGHOST);
@@ -68,13 +71,7 @@ describe("produce block", function () {
     const parentBlock = generateEmptyBlock();
     //if zero hash it get changed
     parentBlock.stateRoot = Buffer.alloc(32, 1);
-    const parentHeader: BeaconBlockHeader = {
-      stateRoot: parentBlock.stateRoot,
-      signature: parentBlock.signature,
-      slot: parentBlock.slot,
-      parentRoot: parentBlock.parentRoot,
-      bodyRoot: hashTreeRoot(parentBlock.body, config.types.BeaconBlockBody),
-    };
+    const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock);
     const state = generateState({
       validators: validators,
       balances,
