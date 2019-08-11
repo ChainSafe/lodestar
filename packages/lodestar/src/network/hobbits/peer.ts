@@ -10,7 +10,8 @@ import {HobbitsConnectionHandler} from "./hobbitsConnectionHandler";
 import net from "net";
 import {HobbitsUri} from "./hobbitsUri";
 import {peerInfoToAddress} from "./util";
-
+import PeerInfo from "peer-info";
+import {promisify} from "util";
 
 export class Peer {
   public peerInfo: PeerInfo;
@@ -41,19 +42,16 @@ export class Peer {
       that.connection = net.createConnection({
         host: nodeAddress.address, port: parseInt(nodeAddress.port)
       });
-      // Set to keep the connection alive
-      that.connection.setKeepAlive(true);
       that.connection.on('connect', ()=>{
         that.controller.logger.info(`Hobbits :: connected to: ${that.peerInfo.id.toB58String()}.`);
         resolve();
       });
-      that.connection.on('error', () =>{
+      that.connection.on('error', () => {
+        that.controller.logger.info(`Hobbits :: error connection of : ${that.peerInfo.id.toB58String()}.`);
         that.controller.onConnectionEnd(that.peerInfo);
         reject();
       });
-      that.connection.on('data', (data) => {
-        that.controller.onRequestResponse(that, data);
-      });
+      that.setEventListeners(that);
     });
 
     // this.stream = pushable();
@@ -81,7 +79,39 @@ export class Peer {
     this.connection.write(msg);
   }
 
-  public close(): void {
-    this.connection.destroy();
+  public async close(): Promise<void> {
+    try {
+      await promisify(this.connection.end.bind(this.connection))();
+    } catch (e) {
+      console.log(e);
+    }
+    // try {
+    //   console.log(this.connection.destroyed);
+    // } catch (e) {
+    //   console.log(e);
+    // }
+  }
+
+  public setConnection(connection: net.Socket) {
+    this.connection = connection;
+    this.setEventListeners(this);
+  }
+
+  public setEventListeners(that: Peer){
+    // Set to keep the connection alive
+    that.connection.setKeepAlive(true);
+
+    that.connection.on('data', (data) => {
+      that.controller.onRequestResponse(that, data);
+    });
+
+    // that.connection.on('close', () => {
+    //   that.controller.logger.info(`Hobbits :: closed connection of : ${that.peerInfo.id.toB58String()}.`);
+    //   that.controller.onConnectionEnd(that.peerInfo);
+    // });
+    that.connection.on('end', () => {
+      that.controller.logger.info(`Hobbits :: ended connection of : ${that.peerInfo.id.toB58String()}.`);
+      that.controller.onConnectionEnd(that.peerInfo);
+    });
   }
 }

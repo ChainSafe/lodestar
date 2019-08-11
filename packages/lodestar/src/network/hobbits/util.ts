@@ -19,7 +19,7 @@ export function randomRequestId(): RequestId {
 }
 
 export function peerInfoToAddress(peerInfo: PeerInfo): Multiaddr {
-  let addrs = peerInfo.multiaddrs.toArray();
+  const addrs = peerInfo.multiaddrs.toArray();
   if(addrs.length == 0){
     throw Error("Invalid PeerInfo instance");
   }
@@ -28,8 +28,8 @@ export function peerInfoToAddress(peerInfo: PeerInfo): Multiaddr {
 
 export function validateHobbitsUri(uriString: string): HobbitsValidatedUri {
   // TODO: More validation on identity, host, port
-  let regx = /^hob\+(tcp|udp):\/\/(?:([0-9a-f]*)@)?([a-zA-Z0-9.]*):([0-9]+)$/g;
-  let match = regx.exec(uriString);
+  const regx = /^hob\+(tcp|udp):\/\/(?:([0-9a-f]*)@)?([a-zA-Z0-9.]*):([0-9]+)$/g;
+  const match = regx.exec(uriString);
   if (match) {
     return {
       scheme: match[1],
@@ -47,9 +47,9 @@ export async function hobbitsUriToPeerInfo(uriString: string): Promise<PeerInfo>
   if (parsedUri) {
     // generate peerInfo from parsed data
     let peerInfo: PeerInfo;
-    let addr = `/ip4/${parsedUri.host}/${parsedUri.scheme}/${parsedUri.port}`;
+    const addr = `/ip4/${parsedUri.host}/${parsedUri.scheme}/${parsedUri.port}`;
     if (parsedUri.identity) {
-      let peerId = PeerId.createFromHexString(parsedUri.identity);
+      const peerId = PeerId.createFromHexString(parsedUri.identity);
       peerInfo = await promisify(PeerInfo.create.bind(this))(peerId);
     } else {
       peerInfo = await promisify(PeerInfo.create.bind(this))();
@@ -65,9 +65,15 @@ export async function hobbitsUriToPeerInfo(uriString: string): Promise<PeerInfo>
 
 export async function socketConnectionToPeerInfo(connection: net.Socket): Promise<PeerInfo> {
   let peerInfo: PeerInfo;
-  let addr = `/ip4/${connection.remoteAddress}/tcp/${connection.remotePort}`;
-  peerInfo = await promisify(PeerInfo.create.bind(this))();
-  peerInfo.multiaddrs.add(addr);
+  try {
+    const addr = `/ip4/${connection.remoteAddress}/tcp/${connection.remotePort}`;
+    console.log(connection.remoteAddress);
+    console.log(addr);
+    peerInfo = await promisify(PeerInfo.create.bind(this))();
+    peerInfo.multiaddrs.add(addr);
+  } catch (e) {
+    console.log(e);
+  }
   return peerInfo;
 }
 

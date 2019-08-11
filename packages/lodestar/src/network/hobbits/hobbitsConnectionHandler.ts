@@ -17,6 +17,7 @@ import {INetworkOptions} from "../options";
 import {IBeaconConfig} from "../../config";
 import {RequestBody, ResponseBody} from "../../types";
 import {promisify} from "util";
+import PeerInfo from "peer-info";
 
 /**
  * The NetworkRpc module controls network-level resources and concerns of p2p connections
@@ -50,6 +51,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
 
   private server: net.Server;
   public logger: ILogger;
+  private peerInfo: PeerInfo;
 
   public constructor(opts: INetworkOptions, {config, logger}: {config: IBeaconConfig;logger: ILogger}) {
     super();
@@ -64,14 +66,21 @@ export class HobbitsConnectionHandler extends EventEmitter {
     this.server = net.createServer();
   }
 
-  public addPeer(peerInfo: PeerInfo): Peer {
+  public getPeerInfo(): PeerInfo {
+    return this.peerInfo;
+  }
+
+  public addPeer(peerInfo: PeerInfo, emitEvent: boolean): Peer {
     const peerId = peerInfo.id.toB58String();
     let peer = this.peers.get(peerId);
     if (!peer) {
       peer = new Peer(peerInfo, this);
       this.peers.set(peerId, peer);
       // rpc peer connect
-      this.emit("peer:connect", peerInfo);
+      if(emitEvent) {
+        console.log(`Emitting peer connect in ${this.opts.port}`);
+        this.emit("peer:connect", peerInfo);
+      }
     }
     return peer;
   }
@@ -116,8 +125,10 @@ export class HobbitsConnectionHandler extends EventEmitter {
     }
     this.wipDials.add(peerId);
     try {
-      const peer = this.addPeer(peerInfo);
+      const peer = this.addPeer(peerInfo, false);
       await peer.connect();
+      // emitting event after connection succeeded
+      this.emit("peer:connect", peerInfo);
     } catch (e) {
       this.logger.error(`Hobbits :: Fail to dial rpc for peer ${peerId}. Reason: ${e.message}`);
     }
@@ -228,19 +239,26 @@ export class HobbitsConnectionHandler extends EventEmitter {
 
     this.server.on("connection", async (connection): Promise<void> => {
       const peerInfo = await socketConnectionToPeerInfo(connection);
-      this.addPeer(peerInfo);
-      this.logger.debug(`Hobbits :: connected to: ${peerInfo.id.toB58String()}.`);
+      const peer = this.addPeer(peerInfo, true);
+      // save the connection
+      peer.setConnection(connection);
+      this.logger.info(`Hobbits :: connected to peer: ${peerInfo.id.toB58String()}.`);
     });
 
     this.server.on("close", (): void => {
-      this.logger.info("Hobbits :: server closed.");
+      this.logger.info(`Hobbits :: server closed on port: ${this.opts.port}.`);
     });
 
-    this.server.listen(this.opts.port, (): void => {
-      this.logger.info("Hobbits :: server started.");
+    this.server.listen(this.opts.port, '0.0.0.0', (): void => {
+      this.logger.info(`Hobbits :: server started on port: ${this.opts.port}.`);
     });
 
     await this.connectStaticPeers();
+
+    // initialize the peerInfo
+    const addr = `/ip4/127.0.0.1/tcp/${this.opts.port}`;
+    this.peerInfo = await promisify(PeerInfo.create.bind(this))();
+    this.peerInfo.multiaddrs.add(addr);
 
     // this.libp2p.handle(RPC_MULTICODEC, this.onConnection.bind(this));
     // this.libp2p.on('peer:connect', this.dialForRpc.bind(this));
@@ -253,10 +271,13 @@ export class HobbitsConnectionHandler extends EventEmitter {
 
   public async stop(): Promise<void> {
     this.wipDials = new Set();
-    this.peers.forEach((peer) => peer.close());
-    this.peers.forEach(async (peer) => await promisify(peer.close.bind(peer)()));
+    this.peers.forEach(async (peer) => {
+      console.log(`Trying to close from port: ${this.opts.port}`);
+      await peer.close();
+    });
+    // this.peers.forEach(async (peer) => await promisify(peer.close.bind(peer)()));
     this.peers = new Map<string, Peer>();
-    await promisify(this.server.close.bind(this.server)());
+    await promisify(this.server.close.bind(this.server))();
 
     // this.libp2p.unhandle(RPC_MULTICODEC);
     // this.libp2p.removeListener('peer:connect', this.dialForRpc.bind(this));
