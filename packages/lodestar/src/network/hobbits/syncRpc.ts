@@ -32,7 +32,6 @@ import {intDiv} from "../../util/math";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../index";
-import {getEmptyBlockBody} from "../../chain/genesis";
 import {ReputationStore} from "../../sync/reputation";
 import {ILogger} from "../../logger";
 import { IBeaconConfig } from "../../config";
@@ -162,7 +161,13 @@ export class SyncRpc implements ISyncRpc {
     direction: boolean
   ): Promise<BeaconBlockHeadersResponse> {
     return await this.network.sendRequest<BeaconBlockHeadersResponse>(
-      peerInfo, Method.GetBlockHeaders, {startRoot, startSlot, max, skip, direction});
+      peerInfo, Method.GetBlockHeaders, {
+        startRoot,
+        startSlot,
+        max: new BN(max),
+        skip: new BN(skip),
+        direction: (direction? 1:0)
+      });
   }
 
   public async getBeaconBlockBodies(
@@ -174,7 +179,13 @@ export class SyncRpc implements ISyncRpc {
     direction: boolean
   ): Promise<BeaconBlockBodiesResponse> {
     return await this.network.sendRequest<BeaconBlockBodiesResponse>(
-      peerInfo, Method.GetBlockBodies, {startRoot, startSlot, max, skip, direction});
+      peerInfo, Method.GetBlockHeaders, {
+        startRoot,
+        startSlot,
+        max: new BN(max),
+        skip: new BN(skip),
+        direction: (direction? 1:0)
+      });
   }
 
   public async getAttestation(
@@ -363,10 +374,6 @@ export class SyncRpc implements ISyncRpc {
   public async getBeaconBlocks(
     peerInfo: PeerInfo, startRoot: bytes32, startSlot: Slot, count: number64, backward: boolean
   ): Promise<BeaconBlock[]> {
-    // startSlot = latestFinalizedSlot & count = slotCountToSync
-    // const blockRootsResponse = await this.getBeaconBlockRoots(peerInfo, startSlot, count);
-    // assert(blockRootsResponse.roots.length > 0);
-    // const blockRoots = blockRootsResponse.roots;
     const [
       blockHeadersResponse,
       blockBodiesResponse

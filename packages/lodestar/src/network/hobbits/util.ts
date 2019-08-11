@@ -8,6 +8,7 @@ import {RequestId} from "./constants";
 import {promisify} from "util";
 import * as net from "net";
 import _ from "lodash";
+import {HobbitsValidatedUri} from "./types";
 
 function randomNibble(): string {
   return Math.floor(Math.random() * 16).toString(16);
@@ -25,7 +26,7 @@ export function peerInfoToAddress(peerInfo: PeerInfo): Multiaddr {
   return addrs[0];
 }
 
-export function validateHobbitsUri(uriString: string){
+export function validateHobbitsUri(uriString: string): HobbitsValidatedUri {
   // TODO: More validation on identity, host, port
   let regx = /^hob\+(tcp|udp):\/\/(?:([0-9a-f]*)@)?([a-zA-Z0-9.]*):([0-9]+)$/g;
   let match = regx.exec(uriString);

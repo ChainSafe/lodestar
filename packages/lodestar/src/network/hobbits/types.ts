@@ -2,7 +2,7 @@
  * @module network/hobbits
  */
 
-import {bytes, number64, uint16, uint8} from "../../types";
+import {bytes, uint16} from "../../types";
 
 export enum Events {
   Status = "STATUS",
@@ -25,4 +25,11 @@ export interface WireRequestHeader {
 
 export interface WireRequestBody {
   body: bytes;
+}
+
+export interface HobbitsValidatedUri {
+  scheme: string;
+  identity: string;
+  host: string;
+  port: number;
 }
