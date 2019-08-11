@@ -132,7 +132,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
     }
     // encode the request
     const id = randomRequestId();
-    const encodedRequest = encodeRequestBody(this.config, id, method, body);
+    const encodedRequest = encodeRequestBody(this.config, method, body);
 
     const encodedMessage = encodeMessage(ProtocolType.RPC, method, id, encodedRequest);
     peer.write(encodedMessage);
@@ -165,7 +165,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
       throw new Error('Hobbits :: No request found');
     }
     const {peer, method} = request;
-    const encodedResponse = encodeRequestBody(this.config, id, method, result);
+    const encodedResponse = encodeRequestBody(this.config, method, result);
     const encodedMessage = encodeMessage(ProtocolType.RPC, id, method, encodedResponse);
     delete this.responses[id];
     peer.write(encodedMessage);

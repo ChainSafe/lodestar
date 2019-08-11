@@ -3,7 +3,7 @@
  */
 
 import {deserialize, serialize} from "@chainsafe/ssz";
-import {RequestId, Method} from "../constants";
+import {Method} from "../constants";
 import {RequestBody, ResponseBody} from "../../../types";
 import {IBeaconConfig} from "../../../config";
 
@@ -12,7 +12,6 @@ import {IBeaconConfig} from "../../../config";
 
 export function encodeRequestBody(
   config: IBeaconConfig,
-  id: RequestId,
   method: Method,
   body: RequestBody | ResponseBody
 ): Buffer {

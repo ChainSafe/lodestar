@@ -5,6 +5,14 @@
 
 export type RequestId = number;
 
+export enum ProtocolType {
+  RPC = 0,
+  GOSSIP = 1,
+  PING = 2
+}
+
+export const HOBBITS_VERSION = 3;
+
 export enum Method {
   Hello = 0,
   Goodbye = 1,
@@ -18,15 +26,6 @@ export enum Method {
   GetBeaconStates = 16,
   BeaconStates = 17
 }
-
-export enum ProtocolType {
-  RPC = 0,
-  GOSSIP = 1,
-  PING = 2
-}
-
-export const HOBBITS_VERSION = 3;
-
 
 /*
 export enum Method {

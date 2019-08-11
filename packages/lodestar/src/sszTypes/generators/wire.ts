@@ -190,7 +190,7 @@ export const HobbitsBlockBodies = (ssz: IBeaconSSZTypes): SimpleContainerType =>
 export const HobbitsGetAttestation = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "HobbitsGetAttestation",
   fields: [
-    ["hash", [ssz.bytes]],
+    ["hash", ssz.bytes],
   ],
 });
 
@@ -198,7 +198,7 @@ export const HobbitsGetAttestation = (ssz: IBeaconSSZTypes): SimpleContainerType
 export const HobbitsAttestation = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   name: "HobbitsAttestation",
   fields: [
-    ["attestation", [ssz.Attestation]],
+    ["attestation", ssz.Attestation],
   ],
 });
 

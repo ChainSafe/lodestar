@@ -73,9 +73,9 @@ export async function socketConnectionToPeerInfo(connection: net.Socket): Promis
 
 
 export function toSnakeCase(obj: any): any{
-  _.mapKeys(obj, (v, k) => _.camelCase(k));
+  return _.mapKeys(obj, (v, k) => _.snakeCase(k));
 }
 
 export function toCamelCase(obj: any): any{
-  _.mapKeys(obj, (v, k) => _.camelCase(k));
+  return _.mapKeys(obj, (v, k) => _.camelCase(k));
 }

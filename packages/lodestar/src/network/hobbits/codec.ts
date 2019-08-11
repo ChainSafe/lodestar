@@ -5,7 +5,7 @@
 import {HOBBITS_VERSION, Method, ProtocolType, RequestId} from "./constants";
 import {DecodedMessage, WireRequestBody, WireRequestHeader} from "./types";
 import {toCamelCase, toSnakeCase} from "./util";
-import BSON from "bson";
+import BSON from 'bson';
 
 export function encodeMessage(
   type: ProtocolType, id: RequestId, method: Method, encodedBody: Buffer = new Buffer(0)
@@ -19,6 +19,8 @@ export function encodeMessage(
   };
 
   // bson encoding
+  console.log(requestHeader);
+  console.log(toSnakeCase(requestHeader));
   const header = BSON.serialize(toSnakeCase(requestHeader));
   const body = BSON.serialize(requestBody);
 
@@ -58,8 +60,8 @@ export function decodeMessage(message: Buffer): DecodedMessage {
   let body = message.slice(payloadStartedAT, payloadStartedAT+bodyLength+1);
 
   // bson decoding
-  const requestHeader: WireRequestHeader = toCamelCase(BSON.deserialize(header));
-  const requestBody: WireRequestBody = BSON.deserialize(body);
+  const requestHeader: WireRequestHeader = toCamelCase(BSON.deserialize(header, {promoteBuffers: true}));
+  const requestBody: WireRequestBody = BSON.deserialize(body, {promoteBuffers: true});
 
   return {
     version,
