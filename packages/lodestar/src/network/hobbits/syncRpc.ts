@@ -157,9 +157,9 @@ export class SyncRpc implements ISyncRpc {
     peerInfo: PeerInfo,
     startRoot: bytes32,
     startSlot: Slot,
-    max: uint64,
-    skip: uint64,
-    direction: uint8
+    max: number64,
+    skip: number,
+    direction: boolean
   ): Promise<BeaconBlockHeadersResponse> {
     return await this.network.sendRequest<BeaconBlockHeadersResponse>(
       peerInfo, Method.GetBlockHeaders, {startRoot, startSlot, max, skip, direction});
@@ -169,9 +169,9 @@ export class SyncRpc implements ISyncRpc {
     peerInfo: PeerInfo,
     startRoot: bytes32,
     startSlot: Slot,
-    max: uint64,
-    skip: uint64,
-    direction: uint8
+    max: number64,
+    skip: number,
+    direction: boolean
   ): Promise<BeaconBlockBodiesResponse> {
     return await this.network.sendRequest<BeaconBlockBodiesResponse>(
       peerInfo, Method.GetBlockBodies, {startRoot, startSlot, max, skip, direction});
@@ -361,18 +361,18 @@ export class SyncRpc implements ISyncRpc {
   }
 
   public async getBeaconBlocks(
-    peerInfo: PeerInfo, startSlot: Slot, count: number64, backward: boolean
+    peerInfo: PeerInfo, startRoot: bytes32, startSlot: Slot, count: number64, backward: boolean
   ): Promise<BeaconBlock[]> {
     // startSlot = latestFinalizedSlot & count = slotCountToSync
-    const blockRootsResponse = await this.getBeaconBlockRoots(peerInfo, startSlot, count);
-    assert(blockRootsResponse.roots.length > 0);
-    const blockRoots = blockRootsResponse.roots;
+    // const blockRootsResponse = await this.getBeaconBlockRoots(peerInfo, startSlot, count);
+    // assert(blockRootsResponse.roots.length > 0);
+    // const blockRoots = blockRootsResponse.roots;
     const [
       blockHeadersResponse,
       blockBodiesResponse
     ]: [BeaconBlockHeadersResponse, BeaconBlockBodiesResponse] = await Promise.all([
-      this.getBeaconBlockHeaders(peerInfo, blockRoots[0].blockRoot, blockRoots[0].slot, blockRoots[blockRoots.length - 1].slot, 0),
-      this.getBeaconBlockBodies(peerInfo, blockRoots.map((b) => b.blockRoot)),
+      this.getBeaconBlockHeaders(peerInfo, startRoot, startSlot, count, 0, backward),
+      this.getBeaconBlockBodies(peerInfo, startRoot, startSlot, count, 0, backward),
     ]);
     assert(blockHeadersResponse.headers.length === blockBodiesResponse.blockBodies.length);
     const blocks = blockHeadersResponse.headers.map((header, index) => {

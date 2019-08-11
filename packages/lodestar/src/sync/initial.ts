@@ -82,7 +82,7 @@ export class InitialSync {
     const latestFinalizedSlot = peerLatestHello.latestFinalizedEpoch * this.config.params.SLOTS_PER_EPOCH;
     const slotCountToSync = peerLatestHello.bestSlot - latestFinalizedSlot;
     const blocks = await this.rpc.getBeaconBlocks(
-      peerInfo, latestFinalizedSlot, slotCountToSync, false
+      peerInfo, finalizedRoot, latestFinalizedSlot, slotCountToSync, false
     );
     blocks.forEach(async (block) => {
       await this.chain.receiveBlock(block);

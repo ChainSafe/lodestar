@@ -8,7 +8,7 @@ import {
   bytes32, Slot, number64,
   Hello, Goodbye, Status,
   BeaconBlock, BeaconState,
-  Method, RequestId, RequestBody,
+  Method, RequestId, RequestBody, bytes,
 } from "../../types";
 
 
@@ -33,7 +33,7 @@ export interface ISyncRpc {
 
   getStatus: (peerInfo: PeerInfo) => Promise<Status>;
 
-  getBeaconBlocks: (peerInfo: PeerInfo, startSlot: Slot, count: number64, backward: boolean) => Promise<BeaconBlock[]>;
+  getBeaconBlocks: (peerInfo: PeerInfo, startRoot: bytes32, startSlot: Slot, count: number64, backward: boolean) => Promise<BeaconBlock[]>;
 
   getBeaconStates: (peerInfo: PeerInfo, hashes: bytes32[]) => Promise<BeaconState[]>;
 

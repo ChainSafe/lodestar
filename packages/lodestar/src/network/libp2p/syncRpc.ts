@@ -309,7 +309,7 @@ export class SyncRpc implements ISyncRpc {
   }
 
   public async getBeaconBlocks(
-    peerInfo: PeerInfo, startSlot: Slot, count: number64, backward: boolean
+    peerInfo: PeerInfo, startRoot: bytes32, startSlot: Slot, count: number64, backward: boolean
   ): Promise<BeaconBlock[]> {
     // startSlot = latestFinalizedSlot & count = slotCountToSync
     const blockRootsResponse = await this.getBeaconBlockRoots(peerInfo, startSlot, count);

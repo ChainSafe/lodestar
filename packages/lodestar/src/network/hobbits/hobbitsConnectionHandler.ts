@@ -254,6 +254,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
   public async stop(): Promise<void> {
     this.wipDials = new Set();
     this.peers.forEach((peer) => peer.close());
+    this.peers.forEach(async (peer) => await promisify(peer.close.bind(peer)()));
     this.peers = new Map<string, Peer>();
     await promisify(this.server.close.bind(this.server)());
 
