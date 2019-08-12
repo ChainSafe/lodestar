@@ -16,90 +16,6 @@ export interface IValidatorLoggerOptions {
   validator: ILoggerOptions;
 }
 
-export const BeaconLoggerOptions: IConfigurationModule = {
-  name: "beacon-logger",
-  description: "beacon chain logger options",
-  fields: [
-    {
-      name: "chain",
-      fields: [
-        {
-          name: "level",
-          description: "log level",
-          type: "string",
-          configurable: true,
-        }
-      ],
-    },
-    {
-      name: "db",
-      fields: [
-        {
-          name: "level",
-          description: "log level",
-          type: "string",
-          configurable: true,
-        }
-      ],
-    },
-    {
-      name: "eth1",
-      fields: [
-        {
-          name: "level",
-          description: "log level",
-          type: "string",
-          configurable: true,
-        }
-      ],
-    },
-    {
-      name: "node",
-      fields: [
-        {
-          name: "level",
-          description: "log level",
-          type: "string",
-          configurable: true,
-        }
-      ],
-    },
-    {
-      name: "network",
-      fields: [
-        {
-          name: "level",
-          description: "log level",
-          type: "string",
-          configurable: true,
-        }
-      ],
-    },
-    {
-      name: "opPool",
-      fields: [
-        {
-          name: "level",
-          description: "log level",
-          type: "string",
-          configurable: true,
-        }
-      ],
-    },
-    {
-      name: "sync",
-      fields: [
-        {
-          name: "level",
-          description: "log level",
-          type: "string",
-          configurable: true,
-        }
-      ],
-    },
-  ],
-};
-
 const config: IBeaconLoggerOptions = {
   chain: {
     level: LogLevel[defaultLogLevel],
@@ -132,3 +48,28 @@ const config: IBeaconLoggerOptions = {
 };
 
 export default config;
+
+export const BeaconLoggerOptions: IConfigurationModule = {
+  name: "logger",
+  description: "log level",
+  configurable: true,
+  process: (input: string): IBeaconLoggerOptions => {
+    // input is in the following format:
+    //   module=level,module=level
+    //   eg: db=info,sync=debug
+    // convert input into {module: level} object
+    const logLevels = input.split(",")
+      .map((kv) => kv.split("="))
+      .reduce((obj, kv) => ({...obj, [kv[0]]: kv[1]}), {});
+    // mix in user input with defaults
+    const _config = config;
+    Object.keys(_config)
+      .filter((module) => logLevels[module])
+      .forEach((module) => _config[module].level = logLevels[module]);
+    return _config;
+  },
+  cli: {
+    flag: "logLevel"
+  }
+};
+
