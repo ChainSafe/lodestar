@@ -1,12 +1,12 @@
 import {BIG} from "@chainsafe/milagro-crypto-js/src/big";
 import {ECP2} from "@chainsafe/milagro-crypto-js/src/ecp2";
-import {BLSDomain, bytes32, bytes96} from "../types";
 import { sha256 } from 'js-sha256';
 import ctx from "../ctx";
 import * as random from "secure-random";
 import {calculateYFlag, getModulus, padLeft} from "./utils";
 import assert from "assert";
 import {FP_POINT_LENGTH, G2_HASH_PADDING} from "../constants";
+import {bytes32, bytes48, Domain} from "@chainsafe/eth2.0-types";
 
 export class G2point {
 
@@ -37,7 +37,7 @@ export class G2point {
     return this.point;
   }
 
-  public toBytesCompressed(): Buffer {
+  public toBytesCompressed(): bytes48 {
     const xReBytes = Buffer.alloc(FP_POINT_LENGTH, 0);
     const xImBytes = Buffer.alloc(FP_POINT_LENGTH, 0);
     this.point.getX().getA().tobytearray(xReBytes, 0);
@@ -58,7 +58,7 @@ export class G2point {
     ]);
   }
 
-  public static hashToG2(message: bytes32, domain: BLSDomain): G2point {
+  public static hashToG2(message: bytes32, domain: Domain): G2point {
     const padding = Buffer.alloc(G2_HASH_PADDING, 0);
     const xReBytes = Buffer.concat([
       padding,
@@ -94,7 +94,7 @@ export class G2point {
     return new G2point(G2point.scaleWithCofactor(G2point.normaliseY(point)));
   }
 
-  public static fromCompressedBytes(value: bytes96): G2point {
+  public static fromCompressedBytes(value: bytes48): G2point {
     assert(value.length === 2 * FP_POINT_LENGTH, 'Expected signature of 96 bytes');
     value = Buffer.from(value);
     const xImBytes = value.slice(0, FP_POINT_LENGTH);
