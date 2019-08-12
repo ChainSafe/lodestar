@@ -14,12 +14,17 @@ export interface IApiModules {
     eth1: IEth1Notifier;
 }
 
+export interface IApiConstructor {
+
+    new(opts: Partial<IApiOptions>, modules: IApiModules): IApi;
+
+}
+
 export interface IApi {
 
     /**
      * Name space for API commands
      */
     namespace: string;
-    
-    new(opts: Partial<IApiOptions>, modules: IApiModules): IApi;
+
 }

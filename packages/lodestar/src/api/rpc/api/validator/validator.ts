@@ -1,5 +1,5 @@
 /**
- * @module rpc/api
+ * @module api/rpc
  */
 
 import {
@@ -17,20 +17,20 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {BeaconDb} from "../../../db";
-import {BeaconChain} from "../../../chain";
-import {OpPool} from "../../../opPool";
+import {BeaconDb} from "../../../../db";
+import {BeaconChain} from "../../../../chain";
+import {OpPool} from "../../../../opPool";
 import {IValidatorApi} from "./interface";
 import {
   getBeaconProposerIndex,
   getCommitteeAssignment,
   isProposerAtSlot
-} from "../../../chain/stateTransition/util";
-import {CommitteeAssignment} from "../../../validator/types";
-import {assembleBlock} from "../../../chain/factory/block";
-import {assembleAttestation} from "../../../chain/factory/attestation";
-import {assembleValidatorDuty} from "../../../chain/factory/duties";
-import {IEth1Notifier} from "../../../eth1";
+} from "../../../../chain/stateTransition/util";
+import {CommitteeAssignment} from "../../../../validator/types";
+import {assembleBlock} from "../../../../chain/factory/block";
+import {assembleAttestation} from "../../../../chain/factory/attestation";
+import {assembleValidatorDuty} from "../../../../chain/factory/duties";
+import {IEth1Notifier} from "../../../../eth1";
 
 export class ValidatorApi implements IValidatorApi {
 

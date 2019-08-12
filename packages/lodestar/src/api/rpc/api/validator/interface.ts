@@ -1,7 +1,6 @@
 /**
- * @module rpc/api
+ * @module api/rpc
  */
-
 import {
   Attestation,
   BeaconBlock,
@@ -14,8 +13,8 @@ import {
   ValidatorDuty,
   ValidatorIndex
 } from "@chainsafe/eth2.0-types";
-import {IApi} from "../interface";
-import {CommitteeAssignment} from "../../../validator/types";
+import {IApi} from "../../../interface";
+import {CommitteeAssignment} from "../../../../validator/types";
 
 /**
  * The API interface defines the calls that can be made from a Validator

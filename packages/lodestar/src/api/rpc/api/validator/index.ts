@@ -1,5 +1,5 @@
 /**
- * @module rpc/api
+ * @module api/rpc
  */
 
 import {ValidatorApi} from "./validator";

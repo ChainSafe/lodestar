@@ -1,11 +1,11 @@
 /**
- * @module rpc/api
+ * @module api/rpc
  */
 
-import {IApi} from "../interface";
+import {IApi} from "../../../interface";
 import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "@chainsafe/eth2.0-types";
 
-export interface IBeaconApi extends IApi{
+export interface IBeaconApi extends IApi {
 
   /**
    * Requests that the BeaconNode identify information about its

@@ -1,26 +1,28 @@
 /**
- * @module rpc/api
+ * @module api/rpc
  */
 
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "@chainsafe/eth2.0-types";
 import {IBeaconApi} from "./interface";
-import {BeaconChain} from "../../../chain";
-import {BeaconDb} from "../../../db";
+import {IBeaconChain} from "../../../../chain";
+import {IBeaconDb} from "../../../../db";
+import {IApiOptions} from "../../../options";
+import {IApiModules} from "../../../interface";
 
 export class BeaconApi implements IBeaconApi {
 
   public namespace: string;
 
   private config: IBeaconConfig;
-  private chain: BeaconChain;
-  private db: BeaconDb;
+  private chain: IBeaconChain;
+  private db: IBeaconDb;
 
-  public constructor(opts, {config, chain, db}) {
+  public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
     this.namespace = 'beacon';
-    this.config = config;
-    this.db = db;
-    this.chain = chain;
+    this.config = modules.config;
+    this.db = modules.db;
+    this.chain = modules.chain;
   }
 
 
