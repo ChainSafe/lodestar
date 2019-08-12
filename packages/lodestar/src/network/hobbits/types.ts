@@ -14,7 +14,7 @@ export enum Events {
 export interface DecodedMessage {
   version: number;
   protocol: number;
-  requestHeader: WireRequestHeader;
+  requestHeader: WireResponseHeader;
   requestBody: Buffer;
 }
 
@@ -26,6 +26,12 @@ export interface HobbitsValidatedUri {
 }
 
 export type WireRequestHeader = RPCHeader | GossipHeader;
+
+export interface WireResponseHeader {
+  rpcHeader?: RPCHeader;
+  gossipHeader?: GossipHeader;
+}
+
 export type WireRequestBody = RPCBody | BeaconBlock | Attestation;
 
 export interface RPCHeader {

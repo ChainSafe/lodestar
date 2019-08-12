@@ -11,11 +11,13 @@ import net from "net";
 import PeerInfo from "peer-info";
 import NodeAddress = Multiaddr.NodeAddress;
 import {deserialize} from "@chainsafe/ssz";
-import {ATTESTATION_TOPIC, BLOCK_TOPIC, Method, RequestId} from "../../constants";
-import {shardAttestationTopic} from "../util";
+import {ATTESTATION_TOPIC, BLOCK_TOPIC, Method, RequestId, SHARD_SUBNET_COUNT} from "../../constants";
+import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {HobbitsUri} from "./hobbitsUri";
 import {INetworkOptions} from "../options";
 import {IBeaconConfig} from "../../config";
+import {Peer} from "./peer";
+import {GossipTopic} from "./constants";
 
 export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
   public peerInfo: PeerInfo;
@@ -26,6 +28,8 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
   private logger: ILogger;
   public running: boolean;
 
+  // subscriptions
+  private subscriptions: Map<string, boolean>;
 
   public constructor(opts: INetworkOptions, {config, logger}: {config: IBeaconConfig;logger: ILogger}) {
     super();
@@ -43,55 +47,68 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
 
   // pubsub
   public subscribeToBlocks(): void {
-    // this.pubsub.subscribe(BLOCK_TOPIC);
+    this.subscriptions[BLOCK_TOPIC] = true;
   }
   public subscribeToAttestations(): void {
-    // this.pubsub.subscribe(ATTESTATION_TOPIC);
+    this.subscriptions[ATTESTATION_TOPIC] = true;
   }
   public subscribeToShardAttestations(shard: Shard): void {
-    // this.pubsub.subscribe(shardSubnetAttestationTopic(shard));
+    this.subscriptions[shardSubnetAttestationTopic(shard)] = true;
   }
   public unsubscribeToBlocks(): void {
-    // this.pubsub.unsubscribe(BLOCK_TOPIC);
+    this.subscriptions[BLOCK_TOPIC] = false;
   }
   public unsubscribeToAttestations(): void {
-    // this.pubsub.unsubscribe(ATTESTATION_TOPIC);
+    this.subscriptions[ATTESTATION_TOPIC] = false;
   }
   public unsubscribeToShardAttestations(shard: Shard): void {
-    // this.pubsub.unsubscribe(shardSubnetAttestationTopic(shard));
+    this.subscriptions[shardSubnetAttestationTopic(shard)] = false;
   }
+
+  // handle publishing of gossip messages
   public async publishBlock(block: BeaconBlock): Promise<void> {
-    // await promisify(this.pubsub.publish.bind(this.pubsub))(
-    //     BLOCK_TOPIC, serialize(block, BeaconBlock));
+    this.rpc.publishBlock(block);
   }
   public async publishAttestation(attestation: Attestation): Promise<void> {
-    // await promisify(this.pubsub.publish.bind(this.pubsub))(
-    //     ATTESTATION_TOPIC, serialize(attestation, Attestation));
+    this.rpc.publishAttestation(attestation);
   }
   public async publishShardAttestation(attestation: Attestation): Promise<void> {
-    // await promisify(this.pubsub.publish.bind(this.pubsub))(
-    //     shardSubnetAttestationTopic(attestation.data.shard), serialize(attestation, Attestation));
+    this.rpc.publishShardAttestation(attestation);
   }
+
   private handleIncomingBlock(msg: any): void {
+    // check subscription
+    if(!this.subscriptions[BLOCK_TOPIC]){
+      // drop
+      return;
+    }
+
     try {
-      const block: BeaconBlock = deserialize(msg.data, this.config.types.BeaconBlock);
+      const block: BeaconBlock = deserialize(msg.requestBody, this.config.types.BeaconBlock);
       this.emit(BLOCK_TOPIC, block);
     } catch (e) {
     }
   }
   private handleIncomingAttestation(msg: any): void {
+    // check subscription
+    if(!this.subscriptions[ATTESTATION_TOPIC]){
+      // drop
+      return;
+    }
+
     try {
-      const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
+      const attestation: Attestation = deserialize(msg.requestBody, this.config.types.Attestation);
       this.emit(ATTESTATION_TOPIC, attestation);
     } catch (e) {
     }
   }
+  // this method won't be called
   private handleIncomingShardAttestation(msg: any): void {
-    try {
-      const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
-      this.emit(shardAttestationTopic(attestation.data.crosslink.shard), attestation);
-    } catch (e) {
-    }
+    // try {
+    //   const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
+    //   this.emit(shardAttestationTopic(attestation.data.crosslink.shard), attestation);
+    // } catch (e) {
+    // }
   }
   private emitGossipHeartbeat(): void {
     // this.emit("gossipsub:heartbeat");
@@ -140,7 +157,11 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
     //       this.handleIncomingShardAttestation.bind(this));
     // }
     // this.pubsub.on("gossipsub:heartbeat", this.emitGossipHeartbeat.bind(this));
-    // this.rpc.on("request", this.emitRequest.bind(this));
+
+    this.rpc.on(`gossip:${GossipTopic.Block}`, this.handleIncomingBlock.bind(this));
+    this.rpc.on(`gossip:${GossipTopic.Attestation}`, this.handleIncomingAttestation.bind(this));
+
+    this.rpc.on("request", this.emitRequest.bind(this));
     this.rpc.on("peer:connect", this.emitPeerConnect.bind(this));
     this.rpc.on("peer:disconnect", this.emitPeerDisconnect.bind(this));
   }
@@ -154,7 +175,11 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
     //       this.handleIncomingShardAttestation.bind(this));
     // }
     // this.pubsub.removeListener("gossipsub:heartbeat", this.emitGossipHeartbeat.bind(this));
-    // this.rpc.removeListener("request", this.emitRequest.bind(this));
+
+    this.rpc.removeListener(`gossip:${GossipTopic.Block}`, this.handleIncomingBlock.bind(this));
+    this.rpc.removeListener(`gossip:${GossipTopic.Attestation}`, this.handleIncomingAttestation.bind(this));
+
+    this.rpc.removeListener("request", this.emitRequest.bind(this));
     this.rpc.removeListener("peer:connect", this.emitPeerConnect.bind(this));
     this.rpc.removeListener("peer:disconnect", this.emitPeerDisconnect.bind(this));
   }

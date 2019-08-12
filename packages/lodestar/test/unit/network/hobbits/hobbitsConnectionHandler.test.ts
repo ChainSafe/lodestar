@@ -5,9 +5,11 @@ import promisify from "promisify-es6";
 import {config} from "../../../../src/config/presets/mainnet";
 import {HobbitsConnectionHandler} from "../../../../src/network/hobbits/hobbitsConnectionHandler";
 
-import {Method} from "../../../../src/network/hobbits/constants";
-import {Hello} from "../../../../src/types";
+import {GossipTopic, Method} from "../../../../src/network/hobbits/constants";
+import {BeaconBlock, Hello} from "../../../../src/types";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
+import {generateEmptyBlock} from "../../../utils/block";
+import {deserialize} from "@chainsafe/ssz";
 
 
 describe("[hobbits] HobbitsConnectionHandler", () => {
@@ -152,5 +154,47 @@ describe("[hobbits] HobbitsConnectionHandler", () => {
       assert.fail("hello not received");
     }
   });
+
+  it("can send/receive gossip messages from connected peers", async function () {
+    this.timeout(6000);
+    try {
+      new Promise((resolve, reject) => {
+        const t = setTimeout(reject, 2000);
+        rpcB.once("peer:connect", () => {
+          clearTimeout(t);
+          resolve();
+        });
+      });
+    } catch (e) {
+      assert.fail(e, null, "connection event not triggered");
+    }
+
+    await rpcA.dialForRpc(rpcB.getPeerInfo());
+    assert.equal(rpcA.getPeers().length, 1);
+    // send hello from A to B, await hello response
+
+    let blockReceived;
+    try {
+      let p = new Promise((resolve, reject) => {
+        const t = setTimeout(reject, 2000);
+        rpcB.once(`gossip:${GossipTopic.Block}`, decodedMessage => {
+          // console.log("Block received: "+ decodedMessage);
+          const body = decodedMessage.requestBody;
+          blockReceived = deserialize(body, config.types.BeaconBlock);
+          clearTimeout(t);
+          resolve();
+        });
+      });
+      const blockExpected: BeaconBlock = generateEmptyBlock();
+      await rpcA.publishBlock(blockExpected);
+      await p;
+      assert.deepEqual(blockReceived, blockExpected);
+    } catch (e) {
+      console.log(e);
+      assert.fail("Block could not be published");
+    }
+  });
+
+
 
 });

@@ -3,7 +3,15 @@
  */
 
 import {GossipTopic, HOBBITS_VERSION, Method, ProtocolType, RequestId} from "./constants";
-import {DecodedMessage, GossipHeader, RPCBody, RPCHeader, WireRequestBody, WireRequestHeader} from "./types";
+import {
+  DecodedMessage,
+  GossipHeader,
+  RPCBody,
+  RPCHeader,
+  WireRequestBody,
+  WireRequestHeader,
+  WireResponseHeader
+} from "./types";
 import {toCamelCase, toSnakeCase} from "./util";
 import BSON from 'bson';
 import {bytes32} from "../../types";
@@ -53,7 +61,6 @@ export function generateRPCHeader(id: RequestId, method: number): WireRequestHea
 export function generateGossipHeader(
   method: number, topic: GossipTopic, messageHash: bytes32, hash: bytes32
 ): WireRequestHeader {
-  // const attestationRoot = hashTreeRoot(attestation, this.config.types.Attestation);
   return {
     methodId: method,
     topic,
@@ -84,17 +91,23 @@ export function decodeMessage(message: Buffer): DecodedMessage {
   const body = message.slice(payloadStartedAT, payloadStartedAT+bodyLength+1);
 
   // bson decoding
-  const requestHeader: WireRequestHeader = toCamelCase(BSON.deserialize(header, {promoteBuffers: true}));
 
-  let requestBody;
+  let requestBody: Buffer, requestHeader: WireResponseHeader;
   switch (protocol) {
     case ProtocolType.RPC:
       // bson decoding
+      requestHeader = {
+        rpcHeader: toCamelCase(BSON.deserialize(header, {promoteBuffers: true}))
+      };
       const decodedBody: RPCBody = BSON.deserialize(body, {promoteBuffers: true});
       requestBody = decodedBody.body;
       break;
 
     case ProtocolType.GOSSIP:
+      // bson decoding
+      requestHeader = {
+        gossipHeader: toCamelCase(BSON.deserialize(header, {promoteBuffers: true}))
+      };
       requestBody = body;
       break;
 

@@ -3,22 +3,23 @@
  */
 
 import {EventEmitter} from "events";
-import {deserialize} from "@chainsafe/ssz";
+import {hashTreeRoot, serialize} from "@chainsafe/ssz";
 
-import {Method, ProtocolType, RequestId} from "./constants";
+import {GossipMethod, GossipTopic, Method, ProtocolType, RequestId} from "./constants";
 
 import {decodeRequestBody, encodeRequestBody, sanityCheckData} from "./rpc/codec";
 import {hobbitsUriToPeerInfo, randomRequestId, socketConnectionToPeerInfo} from "./util";
 import {Peer} from "./peer";
 import {ILogger} from "../../logger";
 import net from "net";
-import {decodeMessage, encodeMessage, generateRPCHeader} from "./codec";
+import {decodeMessage, encodeMessage, generateGossipHeader, generateRPCHeader} from "./codec";
 import {INetworkOptions} from "../options";
 import {IBeaconConfig} from "../../config";
-import {RequestBody, ResponseBody} from "../../types";
+import {Attestation, BeaconBlock, RequestBody, ResponseBody} from "../../types";
 import {promisify} from "util";
 import PeerInfo from "peer-info";
-import {DecodedMessage} from "./types";
+import {DecodedMessage, GossipHeader} from "./types";
+import {keccak256} from "ethers/utils";
 
 /**
  * The NetworkRpc module controls network-level resources and concerns of p2p connections
@@ -198,11 +199,11 @@ export class HobbitsConnectionHandler extends EventEmitter {
     let decodedBody, requestHeader, requestBody;
     try {
       const decodedMessage: DecodedMessage = decodeMessage(data);
-      // console.log(decodedMessage);
+      console.log(decodedMessage);
       // only RPC requests/ responses should be passed here.
       switch (decodedMessage.protocol) {
         case ProtocolType.RPC:
-          requestHeader = decodedMessage.requestHeader;
+          requestHeader = decodedMessage.requestHeader.rpcHeader;
           requestBody = decodedMessage.requestBody;
           decodedBody = decodeRequestBody(this.config, requestHeader.methodId, requestBody);
           break;
@@ -234,9 +235,42 @@ export class HobbitsConnectionHandler extends EventEmitter {
 
   // process the gossip message
   private processGossipMessage(decodedMessage: DecodedMessage): void {
-    const requestHeader = decodedMessage.requestHeader;
-    const requestBody = decodedMessage.requestBody;
+    const requestHeader: GossipHeader = decodedMessage.requestHeader.gossipHeader;
+    // emit event depending on the type
+    this.emit(`gossip:${requestHeader.topic}`, decodedMessage);
+  }
 
+  public async publishBlock(block: BeaconBlock): Promise<void> {
+    // generate gossip message
+    const encodedBody = serialize(block, this.config.types.BeaconBlock);
+    const messageHash = Buffer.from(keccak256(encodedBody), "hex");
+    const hash = hashTreeRoot(block, this.config.types.BeaconBlock);
+    const requestHeader = generateGossipHeader(GossipMethod.GOSSIP, GossipTopic.Block, messageHash, hash);
+    const encodedMessage = encodeMessage(ProtocolType.GOSSIP, requestHeader, encodedBody);
+
+    // send to all the active peers
+    this.peers.forEach(async (peer) => {
+      peer.write(encodedMessage);
+    });
+  }
+
+  public async publishAttestation(attestation: Attestation): Promise<void> {
+    // generate gossip message
+    const encodedBody = serialize(attestation, this.config.types.Attestation);
+    const messageHash = Buffer.from(keccak256(encodedBody), "hex");
+    const hash = hashTreeRoot(attestation, this.config.types.Attestation);
+    const requestHeader = generateGossipHeader(GossipMethod.GOSSIP, GossipTopic.Attestation, messageHash, hash);
+    const encodedMessage = encodeMessage(ProtocolType.GOSSIP, requestHeader, encodedBody);
+
+    // send to all the active peers
+    this.peers.forEach(async (peer) => {
+      peer.write(encodedMessage);
+    });
+  }
+
+  public async publishShardAttestation(attestation: Attestation): Promise<void> {
+    // await promisify(this.pubsub.publish.bind(this.pubsub))(
+    //     shardSubnetAttestationTopic(attestation.data.shard), serialize(attestation, Attestation));
   }
 
   /**
