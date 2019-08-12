@@ -2,7 +2,7 @@ import {IDatabaseOptions} from "../db/options";
 import {ITransportOption} from "../rpc/options";
 import {RpcClient} from "./rpc";
 import {Keypair} from "@chainsafe/bls-js/lib/keypair";
-import {TransportType} from "../rpc/transport";
+import {TransportType} from "../api/rpc/transport";
 import {IConfigurationModule} from "../util/config";
 import {IValidatorDB} from "../db/api";
 import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
