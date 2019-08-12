@@ -648,22 +648,9 @@
     lodash "^4.17.13"
     to-fast-properties "^2.0.0"
 
-"@chainsafe/amcl@0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/amcl/-/amcl-0.1.0.tgz#8a49445402561e3dcf9d536b78e2dc225b159b22"
-
 "@chainsafe/bit-utils@^0.1.2", "@chainsafe/bit-utils@^0.1.3":
   version "0.1.3"
   resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.3.tgz#d29a69c161526fda8bf0880da3d62a4a7100e169"
-
-"@chainsafe/bls-js@^0.1.5":
-  version "0.1.5"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bls-js/-/bls-js-0.1.5.tgz#00fed1ef879aa4668092e7010fa21f5bf19f569e"
-  dependencies:
-    "@chainsafe/amcl" "0.1.0"
-    assert "^1.4.1"
-    js-sha256 "^0.9.0"
-    secure-random "^1.1.1"
 
 "@chainsafe/eth2.0-spec-test-util@0.3.6", "@chainsafe/eth2.0-spec-test-util@^0.3.0":
   version "0.3.6"
