@@ -11,7 +11,7 @@ import _ from "lodash";
 import {HobbitsValidatedUri} from "./types";
 
 function randomNibble(): string {
-  return Math.floor(Math.random() * 16).toString(16);
+  return Math.floor(Math.random() * 10).toString(10);
 }
 
 export function randomRequestId(): RequestId {

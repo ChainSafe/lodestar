@@ -78,7 +78,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
       this.peers.set(peerId, peer);
       // rpc peer connect
       if(emitEvent) {
-        console.log(`Emitting peer connect in ${this.opts.port}`);
+        // console.log(`Emitting peer connect in ${this.opts.port}`);
         this.emit("peer:connect", peerInfo);
       }
     }
@@ -93,6 +93,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
       this.emit("peer:disconnect", peerInfo);
     }
   }
+
   public getPeers(): PeerInfo[] {
     return Array.from(this.peers.values()).map((p) => p.peerInfo);
   }
@@ -135,7 +136,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
     this.wipDials.delete(peerId);
   }
 
-  public async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T> {
+  public async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: number, body: RequestBody): Promise<T> {
     const peerId = peerInfo.id.toB58String();
     const peer = this.peers.get(peerId);
     if (!peer) {
@@ -143,10 +144,12 @@ export class HobbitsConnectionHandler extends EventEmitter {
     }
     // encode the request
     const id = randomRequestId();
+    // console.log("SendReq: method -"+ id);
+    this.requests[id] = method;
     const encodedRequest = encodeRequestBody(this.config, method, body);
-
-    const encodedMessage = encodeMessage(ProtocolType.RPC, method, id, encodedRequest);
+    const encodedMessage = encodeMessage(ProtocolType.RPC, id, method, encodedRequest);
     peer.write(encodedMessage);
+
     return await this.getResponse(id) as T;
   }
 
@@ -191,7 +194,8 @@ export class HobbitsConnectionHandler extends EventEmitter {
     // Changed response
     let decodedBody, requestHeader, requestBody;
     try {
-      let decodedMessage = decodeMessage(data);
+      const decodedMessage = decodeMessage(data);
+      // console.log(decodedMessage);
       // only RPC requests/ responses should be passed here.
       switch (decodedMessage.protocol) {
         case ProtocolType.RPC:
@@ -272,7 +276,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
   public async stop(): Promise<void> {
     this.wipDials = new Set();
     this.peers.forEach(async (peer) => {
-      console.log(`Trying to close from port: ${this.opts.port}`);
+      // console.log(`Trying to close from port: ${this.opts.port}`);
       await peer.close();
     });
     // this.peers.forEach(async (peer) => await promisify(peer.close.bind(peer)()));

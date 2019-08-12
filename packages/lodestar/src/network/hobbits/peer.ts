@@ -31,7 +31,7 @@ export class Peer {
   public async connect(): Promise<void> {
     // Abort if already connected
     // TODO: Properly check whether disconnected or not
-    if(this.connection){
+    if(this.connection && !this.connection.destroyed){
       return;
     }
 
@@ -83,21 +83,16 @@ export class Peer {
     try {
       await promisify(this.connection.end.bind(this.connection))();
     } catch (e) {
-      console.log(e);
+      this.controller.logger.error(e);
     }
-    // try {
-    //   console.log(this.connection.destroyed);
-    // } catch (e) {
-    //   console.log(e);
-    // }
   }
 
-  public setConnection(connection: net.Socket) {
+  public setConnection(connection: net.Socket): void {
     this.connection = connection;
     this.setEventListeners(this);
   }
 
-  public setEventListeners(that: Peer){
+  public setEventListeners(that: Peer): void {
     // Set to keep the connection alive
     that.connection.setKeepAlive(true);
 
@@ -105,10 +100,6 @@ export class Peer {
       that.controller.onRequestResponse(that, data);
     });
 
-    // that.connection.on('close', () => {
-    //   that.controller.logger.info(`Hobbits :: closed connection of : ${that.peerInfo.id.toB58String()}.`);
-    //   that.controller.onConnectionEnd(that.peerInfo);
-    // });
     that.connection.on('end', () => {
       that.controller.logger.info(`Hobbits :: ended connection of : ${that.peerInfo.id.toB58String()}.`);
       that.controller.onConnectionEnd(that.peerInfo);

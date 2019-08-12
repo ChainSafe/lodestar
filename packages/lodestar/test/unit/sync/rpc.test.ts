@@ -494,7 +494,7 @@ describe("syncing", function () {
     });
 
     try {
-      await syncRpc.getBeaconBlocks(peerInfo, 0, 1, false);
+      await syncRpc.getBeaconBlocks(peerInfo, null, 0, 1, false);
       expect.fail();
     }catch (e) {
       expect(getBeaconBlockRootsStub.calledOnce).to.be.true;
@@ -528,7 +528,7 @@ describe("syncing", function () {
     });
 
     try {
-      await syncRpc.getBeaconBlocks(peerInfo, 0, 1, false);
+      await syncRpc.getBeaconBlocks(peerInfo, null, 0, 1, false);
       expect.fail();
     }catch (e) {
       expect(getBeaconBlockHeadersStub.calledOnce).to.be.true;

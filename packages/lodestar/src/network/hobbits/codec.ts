@@ -8,7 +8,7 @@ import {toCamelCase, toSnakeCase} from "./util";
 import BSON from 'bson';
 
 export function encodeMessage(
-  type: ProtocolType, id: RequestId, method: Method, encodedBody: Buffer = new Buffer(0)
+  type: ProtocolType, id: RequestId, method: number, encodedBody: Buffer = new Buffer(0)
 ): Buffer {
   const requestHeader: WireRequestHeader = {
     methodId: method,
@@ -18,9 +18,9 @@ export function encodeMessage(
     body: encodedBody
   };
 
+  console.log(method);
+
   // bson encoding
-  console.log(requestHeader);
-  console.log(toSnakeCase(requestHeader));
   const header = BSON.serialize(toSnakeCase(requestHeader));
   const body = BSON.serialize(requestBody);
 
@@ -55,9 +55,9 @@ export function decodeMessage(message: Buffer): DecodedMessage {
 
   // console.log("protocol: " + protocol + " headerLength: " + headerLength + " bodyLength: " + bodyLength);
 
-  let payloadStartedAT = requestLineBytes.length + headerLength;
-  let header = message.slice(requestLineBytes.length, payloadStartedAT);
-  let body = message.slice(payloadStartedAT, payloadStartedAT+bodyLength+1);
+  const payloadStartedAT = requestLineBytes.length + headerLength;
+  const header = message.slice(requestLineBytes.length, payloadStartedAT);
+  const body = message.slice(payloadStartedAT, payloadStartedAT+bodyLength+1);
 
   // bson decoding
   const requestHeader: WireRequestHeader = toCamelCase(BSON.deserialize(header, {promoteBuffers: true}));
