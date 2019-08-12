@@ -53,13 +53,15 @@ jobs:
           - packages/lodestar/node_modules
           - .git/modules/spect-test-cases/lfs
 
-before_deploy: lerna run --scope @chainsafe/lodestar build:docs
+before_deploy:
+    - lerna run build:docs
+    - node scripts/collect-docs.js
 
 deploy:
   provider: pages
   skip_cleanup: true
   github_token: $GH_PAGES_TOKEN
   keep_history: true
-  local_dir: packages/lodestar/docs
+  local_dir: docs
   on:
     branch: master
