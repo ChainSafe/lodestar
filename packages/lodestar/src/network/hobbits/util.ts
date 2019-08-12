@@ -62,21 +62,13 @@ export async function hobbitsUriToPeerInfo(uriString: string): Promise<PeerInfo>
   return null;
 }
 
-
 export async function socketConnectionToPeerInfo(connection: net.Socket): Promise<PeerInfo> {
   let peerInfo: PeerInfo;
-  try {
-    const addr = `/ip4/${connection.remoteAddress}/tcp/${connection.remotePort}`;
-    console.log(connection.remoteAddress);
-    console.log(addr);
-    peerInfo = await promisify(PeerInfo.create.bind(this))();
-    peerInfo.multiaddrs.add(addr);
-  } catch (e) {
-    console.log(e);
-  }
+  const addr = `/ip4/${connection.remoteAddress}/tcp/${connection.remotePort}`;
+  peerInfo = await promisify(PeerInfo.create.bind(this))();
+  peerInfo.multiaddrs.add(addr);
   return peerInfo;
 }
-
 
 export function toSnakeCase(obj: any): any{
   return _.mapKeys(obj, (v, k) => _.snakeCase(k));

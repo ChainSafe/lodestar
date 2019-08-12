@@ -20,6 +20,7 @@ import {promisify} from "util";
 import PeerInfo from "peer-info";
 import {DecodedMessage, GossipHeader} from "./types";
 import {keccak256} from "ethers/utils";
+import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
 
 /**
  * The NetworkRpc module controls network-level resources and concerns of p2p connections
@@ -80,7 +81,6 @@ export class HobbitsConnectionHandler extends EventEmitter {
       this.peers.set(peerId, peer);
       // rpc peer connect
       if(emitEvent) {
-        // console.log(`Emitting peer connect in ${this.opts.port}`);
         this.emit("peer:connect", peerInfo);
       }
     }
@@ -146,7 +146,6 @@ export class HobbitsConnectionHandler extends EventEmitter {
     }
     // encode the request
     const id = randomRequestId();
-    // console.log("SendReq: method -"+ id);
     this.requests[id] = method;
     const encodedRequest = encodeRequestBody(this.config, method, body);
     const requestHeader = generateRPCHeader(id, method);
@@ -199,7 +198,7 @@ export class HobbitsConnectionHandler extends EventEmitter {
     let decodedBody, requestHeader, requestBody;
     try {
       const decodedMessage: DecodedMessage = decodeMessage(data);
-      console.log(decodedMessage);
+      // console.log(decodedMessage);
       // only RPC requests/ responses should be passed here.
       switch (decodedMessage.protocol) {
         case ProtocolType.RPC:
@@ -207,14 +206,15 @@ export class HobbitsConnectionHandler extends EventEmitter {
           requestBody = decodedMessage.requestBody;
           decodedBody = decodeRequestBody(this.config, requestHeader.methodId, requestBody);
           break;
+
         case ProtocolType.GOSSIP:
           this.processGossipMessage(decodedMessage);
-
           // return after processing gossip message
           return;
 
         case ProtocolType.PING:
-          break;
+          this.processPingMessage(peer, decodedMessage);
+          return;
       }
     } catch (e) {
       this.logger.warn(`Hobbits :: unable to decode request sent by 
@@ -238,6 +238,19 @@ export class HobbitsConnectionHandler extends EventEmitter {
     const requestHeader: GossipHeader = decodedMessage.requestHeader.gossipHeader;
     // emit event depending on the type
     this.emit(`gossip:${requestHeader.topic}`, decodedMessage);
+  }
+
+  // process the ping message
+  private processPingMessage(peer: Peer, decodedMessage: DecodedMessage): void {
+    const requestHeader: string = decodedMessage.requestHeader.pingHeader;
+    if(requestHeader == "pong"){
+      // emit event
+      this.emit(`pong:${peer.peerInfo.id.toB58String()}`, decodedMessage.requestBody);
+      return;
+    }
+    // ping message send reply
+    const encodedMessage = encodeMessage(ProtocolType.PING, "pong", decodedMessage.requestBody);
+    peer.write(encodedMessage);
   }
 
   public async publishBlock(block: BeaconBlock): Promise<void> {
@@ -268,10 +281,41 @@ export class HobbitsConnectionHandler extends EventEmitter {
     });
   }
 
-  public async publishShardAttestation(attestation: Attestation): Promise<void> {
-    // await promisify(this.pubsub.publish.bind(this.pubsub))(
-    //     shardSubnetAttestationTopic(attestation.data.shard), serialize(attestation, Attestation));
+
+  public async pingPeer(peerInfo: PeerInfo): Promise<void> {
+    const peerId = peerInfo.id.toB58String();
+    const peer = this.peers.get(peerId);
+
+    if(!peer){
+      return;
+    }
+    // encode
+    const actualBody = PrivateKey.random().toBytes();
+    const encodedMessage = encodeMessage(ProtocolType.PING, "ping", actualBody);
+
+    // send to the peer
+    peer.write(encodedMessage);
+
+    return await this.getPongResponse(peerId, actualBody);
   }
+
+  private async getPongResponse(id: string, expected: Buffer): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.removeAllListeners(`pong:${id}`);
+        reject(new Error(`Hobbits :: request timeout, of ping sent to: ${id}`));
+      }, this.requestTimeout);
+      this.once(`pong:${id}`, (received) => {
+        clearTimeout(timeout);
+        if (!Buffer.compare(received, expected)) { // compare returns 0 if equal
+          resolve();
+        } else {
+          reject();
+        }
+      });
+    });
+  }
+
 
   /**
    * Connects to static peers
@@ -311,28 +355,14 @@ export class HobbitsConnectionHandler extends EventEmitter {
     const addr = `/ip4/127.0.0.1/tcp/${this.opts.port}`;
     this.peerInfo = await promisify(PeerInfo.create.bind(this))();
     this.peerInfo.multiaddrs.add(addr);
-
-    // this.libp2p.handle(RPC_MULTICODEC, this.onConnection.bind(this));
-    // this.libp2p.on('peer:connect', this.dialForRpc.bind(this));
-    // this.libp2p.on('peer:disconnect', this.removePeer.bind(this));
-    // dial any already connected peers
-    // await Promise.all(
-    //   Object.values(this.libp2p.peerBook.getAll()).map((peer) => this.dialForRpc(peer))
-    // );
   }
 
   public async stop(): Promise<void> {
     this.wipDials = new Set();
     this.peers.forEach(async (peer) => {
-      // console.log(`Trying to close from port: ${this.opts.port}`);
       await peer.close();
     });
-    // this.peers.forEach(async (peer) => await promisify(peer.close.bind(peer)()));
     this.peers = new Map<string, Peer>();
     await promisify(this.server.close.bind(this.server))();
-
-    // this.libp2p.unhandle(RPC_MULTICODEC);
-    // this.libp2p.removeListener('peer:connect', this.dialForRpc.bind(this));
-    // this.libp2p.removeListener('peer:disconnect', this.removePeer.bind(this));
   }
 }

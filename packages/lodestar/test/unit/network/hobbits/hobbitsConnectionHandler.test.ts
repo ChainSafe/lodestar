@@ -17,6 +17,7 @@ describe("[hobbits] HobbitsConnectionHandler", () => {
   let logger: ILogger = new WinstonLogger();
   beforeEach(async () => {
     // setup
+    logger.silent(true);
     const networkOptions = {
       maxPeers: 10,
       multiaddrs: [],
@@ -41,6 +42,7 @@ describe("[hobbits] HobbitsConnectionHandler", () => {
       rpcB.stop(),
     ]);
 
+    logger.silent(false);
   });
 
   it("creates a peer after dialing for a new peer.", async function () {
@@ -49,7 +51,7 @@ describe("[hobbits] HobbitsConnectionHandler", () => {
       new Promise((resolve, reject) => {
         const t = setTimeout(reject, 2000);
         rpcA.once("peer:connect", (peerInfo) => {
-          console.log(`Got peer connect in rpcA`);
+          // console.log(`Got peer connect in rpcA`);
           clearTimeout(t);
           resolve();
         });
@@ -116,7 +118,7 @@ describe("[hobbits] HobbitsConnectionHandler", () => {
 
     // send hello from A to B, await hello response
     rpcB.once("request", (peerInfo, method, id, body) => {
-      console.log(body);
+      // console.log(body);
       rpcB.sendResponse(id, body);
     });
 
@@ -171,14 +173,13 @@ describe("[hobbits] HobbitsConnectionHandler", () => {
 
     await rpcA.dialForRpc(rpcB.getPeerInfo());
     assert.equal(rpcA.getPeers().length, 1);
-    // send hello from A to B, await hello response
 
+    // send hello from A to B, await hello response
     let blockReceived;
     try {
       let p = new Promise((resolve, reject) => {
         const t = setTimeout(reject, 2000);
         rpcB.once(`gossip:${GossipTopic.Block}`, decodedMessage => {
-          // console.log("Block received: "+ decodedMessage);
           const body = decodedMessage.requestBody;
           blockReceived = deserialize(body, config.types.BeaconBlock);
           clearTimeout(t);
@@ -196,5 +197,29 @@ describe("[hobbits] HobbitsConnectionHandler", () => {
   });
 
 
+  it("can send/receive ping messages from connected peers", async function () {
+    this.timeout(6000);
+    try {
+      new Promise((resolve, reject) => {
+        const t = setTimeout(reject, 2000);
+        rpcB.once("peer:connect", () => {
+          clearTimeout(t);
+          resolve();
+        });
+      });
+    } catch (e) {
+      assert.fail(e, null, "connection event not triggered");
+    }
+
+    await rpcA.dialForRpc(rpcB.getPeerInfo());
+    assert.equal(rpcA.getPeers().length, 1);
+
+    // send hello from A to B, await hello response
+    try {
+      await rpcA.pingPeer(rpcA.getPeers()[0]);
+    } catch (e) {
+      assert.fail(e, "Block could not be published");
+    }
+  });
 
 });

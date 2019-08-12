@@ -32,7 +32,7 @@ describe("[hobbits] test network transfer", () => {
 
     const serverListener = socket => {
       socket.on('data', data => {
-        console.log('Server Received: ' + data);
+        // console.log('Server Received: ' + data);
       });
       // socket.pipe(socket);
       reply(socket);
@@ -42,14 +42,14 @@ describe("[hobbits] test network transfer", () => {
     server.listen(1337, '127.0.0.1');
 
     client.connect(1337, '127.0.0.1', () => {
-      console.log('Connected');
+      // console.log('Connected');
       client.write('Hello, server!');
     });
 
     let counter = 0;
     client.on('data', data => {
       counter ++;
-      console.log('Client Received: '+ counter + data);
+      // console.log('Client Received: '+ counter + data);
     });
 
   });

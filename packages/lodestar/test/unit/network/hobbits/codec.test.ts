@@ -1,9 +1,10 @@
 import {assert} from "chai";
 import BN from "bn.js";
-import {AnyContainerType, deserialize, serialize} from "@chainsafe/ssz";
+import {AnyContainerType, deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
 import {config} from "../../../../src/config/presets/mainnet";
 
 import {
+  GossipMethod, GossipTopic,
   Method, ProtocolType,
 } from "../../../../src/network/hobbits/constants";
 
@@ -14,9 +15,12 @@ import {
 
 import {
   encodeMessage,
-  decodeMessage, generateRPCHeader,
+  decodeMessage, generateRPCHeader, generateGossipHeader,
 } from "../../../../src/network/hobbits/codec";
 import {DecodedMessage, RPCBody} from "../../../../src/network/hobbits/types";
+import {keccak256} from "ethers/utils";
+import {BeaconBlock} from "../../../../src/types";
+import {generateEmptyBlock} from "../../../utils/block";
 
 describe("[hobbits] protocol messages", () => {
   it(`rpc - should properly encode/decode`, () => {
@@ -42,6 +46,26 @@ describe("[hobbits] protocol messages", () => {
     assert.deepEqual(actualEncoded, body);
     assert.deepEqual(requestBody, actualEncoded);
     assert.deepEqual(decodedBody, msg);
+  });
+
+  it(`gossip - should properly encode/decode`, () => {
+    // encode
+    const block: BeaconBlock = generateEmptyBlock();
+    const encodedBody = serialize(block, config.types.BeaconBlock);
+    const messageHash = Buffer.from(keccak256(encodedBody), "hex");
+    const hash = hashTreeRoot(block, config.types.BeaconBlock);
+    const requestHeader = generateGossipHeader(GossipMethod.GOSSIP, GossipTopic.Block, messageHash, hash);
+    const encodedMessage = encodeMessage(ProtocolType.GOSSIP, requestHeader, encodedBody);
+
+    // decode
+
+    const decodedMessage: DecodedMessage = decodeMessage(encodedMessage);
+    // console.log(decodedMessage);
+    const body = decodedMessage.requestBody;
+    const blockReceived = deserialize(body, config.types.BeaconBlock);
+
+    // compare
+    assert.deepEqual(blockReceived, block);
   });
 
   it(`ping - should properly encode/decode`, () => {

@@ -11,12 +11,10 @@ import net from "net";
 import PeerInfo from "peer-info";
 import NodeAddress = Multiaddr.NodeAddress;
 import {deserialize} from "@chainsafe/ssz";
-import {ATTESTATION_TOPIC, BLOCK_TOPIC, Method, RequestId, SHARD_SUBNET_COUNT} from "../../constants";
-import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
-import {HobbitsUri} from "./hobbitsUri";
+import {ATTESTATION_TOPIC, BLOCK_TOPIC, Method, RequestId} from "../../constants";
+import {shardSubnetAttestationTopic} from "../util";
 import {INetworkOptions} from "../options";
 import {IBeaconConfig} from "../../config";
-import {Peer} from "./peer";
 import {GossipTopic} from "./constants";
 
 export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
@@ -37,6 +35,7 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
     this.opts = opts;
     this.config = config;
     this.logger = logger;
+    this.subscriptions = new Map<string, boolean> ();
     // `libp2p` can be a promise as well as a libp2p object
     this.inited = new Promise((resolve) => {
       this.rpc = new HobbitsConnectionHandler(opts,{config, logger});
@@ -44,45 +43,45 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
     });
   }
 
-
-  // pubsub
+  // subscription related methods
   public subscribeToBlocks(): void {
-    this.subscriptions[BLOCK_TOPIC] = true;
+    this.subscriptions.set(BLOCK_TOPIC, true);
   }
   public subscribeToAttestations(): void {
-    this.subscriptions[ATTESTATION_TOPIC] = true;
+    this.subscriptions.set(ATTESTATION_TOPIC, true);
   }
   public subscribeToShardAttestations(shard: Shard): void {
-    this.subscriptions[shardSubnetAttestationTopic(shard)] = true;
+    this.subscriptions.set(shardSubnetAttestationTopic(shard), true);
   }
   public unsubscribeToBlocks(): void {
-    this.subscriptions[BLOCK_TOPIC] = false;
+    this.subscriptions.set(BLOCK_TOPIC, false);
   }
   public unsubscribeToAttestations(): void {
-    this.subscriptions[ATTESTATION_TOPIC] = false;
+    this.subscriptions.set(ATTESTATION_TOPIC, false);
   }
   public unsubscribeToShardAttestations(shard: Shard): void {
-    this.subscriptions[shardSubnetAttestationTopic(shard)] = false;
+    this.subscriptions.set(shardSubnetAttestationTopic(shard), false);
   }
 
-  // handle publishing of gossip messages
+  // handles publishing of gossip messages
   public async publishBlock(block: BeaconBlock): Promise<void> {
     this.rpc.publishBlock(block);
   }
   public async publishAttestation(attestation: Attestation): Promise<void> {
     this.rpc.publishAttestation(attestation);
   }
+  // can not filtering using shard
   public async publishShardAttestation(attestation: Attestation): Promise<void> {
-    this.rpc.publishShardAttestation(attestation);
+    // this.rpc.publishShardAttestation(attestation);
+    this.rpc.publishAttestation(attestation);
   }
 
   private handleIncomingBlock(msg: any): void {
     // check subscription
-    if(!this.subscriptions[BLOCK_TOPIC]){
+    if(!this.subscriptions.get(BLOCK_TOPIC)){
       // drop
       return;
     }
-
     try {
       const block: BeaconBlock = deserialize(msg.requestBody, this.config.types.BeaconBlock);
       this.emit(BLOCK_TOPIC, block);
@@ -91,24 +90,20 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
   }
   private handleIncomingAttestation(msg: any): void {
     // check subscription
-    if(!this.subscriptions[ATTESTATION_TOPIC]){
+    if(!this.subscriptions.get(ATTESTATION_TOPIC)){
       // drop
       return;
     }
-
     try {
       const attestation: Attestation = deserialize(msg.requestBody, this.config.types.Attestation);
       this.emit(ATTESTATION_TOPIC, attestation);
     } catch (e) {
     }
   }
+
   // this method won't be called
   private handleIncomingShardAttestation(msg: any): void {
-    // try {
-    //   const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
-    //   this.emit(shardAttestationTopic(attestation.data.crosslink.shard), attestation);
-    // } catch (e) {
-    // }
+
   }
   private emitGossipHeartbeat(): void {
     // this.emit("gossipsub:heartbeat");
@@ -128,7 +123,6 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
     await this.rpc.removePeer(peerInfo);
   }
   public async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: number, body: RequestBody): Promise<T> {
-    // the imported method is not correct
     return await this.rpc.sendRequest<T>(peerInfo, method, body);
   }
   public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
@@ -150,14 +144,7 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
   public async start(): Promise<void> {
     await this.inited;
     await this.rpc.start();
-    // this.pubsub.on(BLOCK_TOPIC, this.handleIncomingBlock.bind(this));
-    // this.pubsub.on(ATTESTATION_TOPIC, this.handleIncomingAttestation.bind(this));
-    // for (let shard = 0; shard < SHARD_SUBNET_COUNT; shard++) {
-    //   this.pubsub.on(shardSubnetAttestationTopic(shard),
-    //       this.handleIncomingShardAttestation.bind(this));
-    // }
     // this.pubsub.on("gossipsub:heartbeat", this.emitGossipHeartbeat.bind(this));
-
     this.rpc.on(`gossip:${GossipTopic.Block}`, this.handleIncomingBlock.bind(this));
     this.rpc.on(`gossip:${GossipTopic.Attestation}`, this.handleIncomingAttestation.bind(this));
 
@@ -168,14 +155,7 @@ export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {
   public async stop(): Promise<void> {
     await this.inited;
     await this.rpc.stop();
-    // this.pubsub.removeListener(BLOCK_TOPIC, this.handleIncomingBlock.bind(this));
-    // this.pubsub.removeListener(ATTESTATION_TOPIC, this.handleIncomingAttestation.bind(this));
-    // for (let shard = 0; shard < SHARD_SUBNET_COUNT; shard++) {
-    //   this.pubsub.removeListener(shardSubnetAttestationTopic(shard),
-    //       this.handleIncomingShardAttestation.bind(this));
-    // }
     // this.pubsub.removeListener("gossipsub:heartbeat", this.emitGossipHeartbeat.bind(this));
-
     this.rpc.removeListener(`gossip:${GossipTopic.Block}`, this.handleIncomingBlock.bind(this));
     this.rpc.removeListener(`gossip:${GossipTopic.Attestation}`, this.handleIncomingAttestation.bind(this));
 
