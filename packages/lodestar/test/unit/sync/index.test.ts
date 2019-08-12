@@ -1,17 +1,19 @@
 import sinon from "sinon";
 import {expect} from  "chai";
+import PeerId from "peer-id";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+
 import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {OpPool} from "../../../src/opPool";
 import {EthersEth1Notifier} from "../../../src/eth1";
-import {BeaconDB} from "../../../src/db/api";
+import {BeaconDb} from "../../../src/db/api";
 import {ReputationStore} from "../../../src/sync/reputation";
 import {WinstonLogger} from "../../../src/logger";
 import {RegularSync} from "../../../src/sync/regular";
 import {Sync} from "../../../src/sync";
-import PeerId from "peer-id";
-import {config} from "../../../src/config/presets/mainnet";
 import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
+import {ChainRepository} from "../../../src/db/api/beacon/repositories";
 
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();
@@ -24,7 +26,9 @@ describe("syncing", function () {
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     opPoolStub = sandbox.createStubInstance(OpPool);
     eth1Stub = sandbox.createStubInstance(EthersEth1Notifier);
-    dbStub = sandbox.createStubInstance(BeaconDB);
+    dbStub = {
+      chain: sandbox.createStubInstance(ChainRepository)
+    };
     repsStub = sandbox.createStubInstance(ReputationStore);
     rpcStub = sandbox.createStubInstance(SyncRpc);
     logger = new WinstonLogger();
@@ -55,13 +59,13 @@ describe("syncing", function () {
   it('should return true - chain synced ', async function () {
 
     //first case
-    eth1Stub.isAfterEth2Genesis.resolves(false);
+    chainStub.isInitialized.resolves(false);
     let result = await sync.isSynced();
     expect(result).to.be.deep.equal(true);
 
     //2nd case
-    eth1Stub.isAfterEth2Genesis.resolves(true);
-    dbStub.getChainHeadSlot.resolves(10);
+    chainStub.isInitialized.resolves(true);
+    dbStub.chain.getChainHeadSlot.resolves(10);
     repsStub.get.returns({
       latestHello: {bestSlot: 5},
     });
@@ -83,8 +87,8 @@ describe("syncing", function () {
 
   it('should return false - chain synced ', async function () {
     //first case
-    eth1Stub.isAfterEth2Genesis.resolves(true);
-    dbStub.getChainHeadSlot.resolves(2);
+    chainStub.isInitialized.resolves(true);
+    dbStub.chain.getChainHeadSlot.resolves(2);
     repsStub.get.returns({
       latestHello: {
         bestSlot: 5,
@@ -105,8 +109,8 @@ describe("syncing", function () {
     expect(result).to.be.deep.equal(false);
 
     //2nd case
-    eth1Stub.isAfterEth2Genesis.resolves(true);
-    dbStub.getChainHeadSlot.resolves(10);
+    chainStub.isInitialized.resolves(true);
+    dbStub.chain.getChainHeadSlot.resolves(10);
     repsStub.get.returns({
       latestHello: {
         bestSlot: 5,
@@ -121,8 +125,8 @@ describe("syncing", function () {
 
   it('should start an stop syncing', async function () {
 
-    eth1Stub.isAfterEth2Genesis.resolves(true);
-    dbStub.getChainHeadSlot.resolves(-1);
+    chainStub.isInitialized.resolves(true);
+    dbStub.chain.getChainHeadSlot.resolves(-1);
     repsStub.get.returns({
       latestHello: {
         bestSlot: 0,

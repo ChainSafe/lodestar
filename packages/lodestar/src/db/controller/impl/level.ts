@@ -4,7 +4,7 @@
 
 import {LevelUp} from "levelup";
 import {SearchOptions} from "../interface";
-import {Attestation} from "../../../types";
+import {Attestation} from "@chainsafe/eth2.0-types";
 import {IDatabaseController} from "../interface";
 import {EventEmitter} from "events";
 import level from "level";
@@ -48,7 +48,7 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
     await this.db.close();
   }
 
-  public async get(key: any): Promise<Buffer> {
+  public async get(key: any): Promise<Buffer | null> {
     try {
       return await this.db.get(key);
     } catch (e) {
@@ -73,6 +73,10 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
     const batch = this.db.batch();
     items.forEach(item => batch.del(item));
     await batch.write();
+  }
+
+  public async delete(key: any): Promise<void> {
+    await this.db.del(key);
   }
 
   public search(opts: SearchOptions): Promise<any> {

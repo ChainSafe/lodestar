@@ -1,4 +1,4 @@
-import {number64} from "../types";
+import {number64} from "@chainsafe/eth2.0-types";
 import {IConfigurationModule} from "../util/config";
 
 export interface INetworkOptions {

@@ -2,14 +2,12 @@ import {assert} from "chai";
 import {ethers} from "ethers";
 import sinon from "sinon";
 
-import {config} from "../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {Eth1Wallet, EthersEth1Notifier, IEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
 import {PrivateEth1Network} from "../../../src/eth1/dev";
-import {BeaconDB} from "../../../src/db/api";
-import {PouchDbController} from "../../../src/db";
 import {ILogger, WinstonLogger} from "../../../src/logger";
-import {OpPool} from "../../../src/opPool";
+import {sleep} from "../../utils/sleep";
 
 describe("Eth1Notifier - using deployed contract", () => {
 
@@ -18,12 +16,6 @@ describe("Eth1Notifier - using deployed contract", () => {
   let depositContractAddress;
   let provider;
   let logger: ILogger = new WinstonLogger();
-  const db = new BeaconDB({
-    config,
-    controller: new PouchDbController(
-      {name: 'testDb'}
-    )
-  });
 
   beforeEach(async function () {
     this.timeout(0);
@@ -36,9 +28,9 @@ describe("Eth1Notifier - using deployed contract", () => {
     {
       logger: logger
     });
-    await eth1Network.start();
-    depositContractAddress = await eth1Network.deployDepositContract();
-    provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:34569');
+    depositContractAddress = await eth1Network.start();
+    await sleep(300);
+    provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:34569', 999);
     provider.pollingInterval = 1;
     provider.polling = true;
     const opts = defaults;
@@ -48,7 +40,6 @@ describe("Eth1Notifier - using deployed contract", () => {
       opts,
       {
         config,
-        opPool: new OpPool(null, {db, chain: null}),
         logger: logger
       });
     await eth1Notifier.start();
@@ -75,27 +66,8 @@ describe("Eth1Notifier - using deployed contract", () => {
 
 
     await wallet.createValidatorDeposit(depositContractAddress, ethers.utils.parseEther('32.0'));
-
+    await sleep(300);
     assert(cb.calledOnce, "deposit event did not fire");
-  });
-
-  it("should process a Eth2Genesis log", async function () {
-    this.timeout(0);
-
-    const cb = sinon.spy();
-    eth1Notifier.on('eth2genesis', cb);
-    await Promise.all(
-      eth1Network
-        .accounts()
-        .map((account) =>
-          (new Eth1Wallet(account, defaults.depositContract.abi, config, logger, provider))
-            .createValidatorDeposit(
-              depositContractAddress,
-              ethers.utils.parseEther('32.0')
-            )
-        )
-    );
-    assert(cb.called, "eth2genesis event did not fire");
   });
 
 });

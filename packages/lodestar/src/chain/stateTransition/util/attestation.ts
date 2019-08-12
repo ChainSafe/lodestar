@@ -2,121 +2,92 @@
  * @module chain/stateTransition/util
  */
 
-import {hashTreeRoot} from "@chainsafe/ssz";
 import assert from "assert";
-import bls from "@chainsafe/bls-js";
-
-import {IBeaconConfig} from "../../../config";
-import {Domain} from "../../../constants";
+import {hashTreeRoot, equals} from "@chainsafe/ssz";
+import bls from "@chainsafe/bls";
+import {BitList} from "@chainsafe/bit-utils";
 import {
   Attestation,
   AttestationData,
   BeaconState,
-  bytes,
   IndexedAttestation,
+  Slot,
   ValidatorIndex,
-} from "../../../types";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
+import {
+  DomainType,
+} from "../../../constants";
 import {intDiv} from "../../../util/math";
 import {isSorted} from "../../../util/sort";
 
-import {getCrosslinkCommittee} from "./crosslinkCommittee";
-import {getDomain} from "./misc";
+import {computeStartSlotOfEpoch} from "./epoch";
+import {getDomain} from "./domain";
+import {getCommitteeCount, getStartShard, getCrosslinkCommittee} from "./committee";
 
 
 /**
- * Return the sorted attesting indices corresponding to ``attestation_data`` and ``bitfield``.
+ * Return the slot corresponding to the attestation [[data]].
  */
-export function getAttestingIndices(
+export function getAttestationDataSlot(config: IBeaconConfig, state: BeaconState, data: AttestationData): Slot {
+  const epoch = data.target.epoch;
+  const committeeCount = getCommitteeCount(config, state, epoch);
+  const offset = (data.crosslink.shard + config.params.SHARD_COUNT - getStartShard(config, state, epoch)) % config.params.SHARD_COUNT;
+  return intDiv(computeStartSlotOfEpoch(config, epoch) + offset, intDiv(committeeCount, config.params.SLOTS_PER_EPOCH));
+}
+
+/**
+ * Check if [[data1]] and [[data2]] are slashable according to Casper FFG rules.
+ */
+export function isSlashableAttestationData(
   config: IBeaconConfig,
-  state: BeaconState,
-  attestationData: AttestationData,
-  bitfield: bytes
-): ValidatorIndex[] {
-  const committee = getCrosslinkCommittee(
-    config, state, attestationData.targetEpoch, attestationData.crosslink.shard);
-  assert(verifyBitfield(bitfield, committee.length));
-
-  // Find the participating attesters in the committee
-  return committee
-    .filter((_, i) =>  getBitfieldBit(bitfield, i) === 1)
-    .sort((a, b) => a - b);
+  data1: AttestationData,
+  data2: AttestationData
+): boolean {
+  return (
+    // Double vote
+    (!equals(data1, data2, config.types.AttestationData)
+      && data1.target.epoch === data2.target.epoch) ||
+    // Surround vote
+    (data1.source.epoch < data2.source.epoch &&
+      data2.target.epoch < data1.target.epoch)
+  );
 }
 
 /**
- * Returns the ith bit in bitfield
+ * Check if [[indexedAttestation]] has valid indices and signature.
  */
-export function getBitfieldBit(bitfield: bytes, i: number): number {
-  const bit = i % 8;
-  const byte = intDiv(i,  8);
-  return (bitfield[byte] >> bit) % 2;
-}
-
-/**
- * Verify ``bitfield`` against the ``committee_size``.
- */
-export function verifyBitfield(bitfield: bytes, committeeSize: number): boolean {
-  if (bitfield.length !== intDiv(committeeSize + 7, 8)) {
-    return false;
-  }
-
-  // Check `bitfield` is padded with zero bits only
-  for (let i = committeeSize; i < bitfield.length * 8; i++) {
-    if (getBitfieldBit(bitfield, i) === 0b1) {
-      return false;
-    }
-  }
-  return true;
-}
-
-/**
- * Convert ``attestation`` to (almost) indexed-verifiable form.
- */
-export function convertToIndexed(
-  config: IBeaconConfig,
-  state: BeaconState,
-  attestation: Attestation
-): IndexedAttestation {
-  const attestingIndices =
-    getAttestingIndices(config, state, attestation.data, attestation.aggregationBitfield);
-  const custodyBit1Indices =
-    getAttestingIndices(config, state, attestation.data, attestation.custodyBitfield);
-  const custodyBit0Indices = attestingIndices.filter((i) => !custodyBit1Indices.includes(i));
-
-  return {
-    custodyBit0Indices,
-    custodyBit1Indices,
-    data: attestation.data,
-    signature: attestation.signature,
-  };
-}
-
-/**
- * Verify validity of ``indexed_attestation`` fields.
- */
-export function validateIndexedAttestation(
+export function isValidIndexedAttestation(
   config: IBeaconConfig,
   state: BeaconState,
   indexedAttestation: IndexedAttestation
-): void {
+): boolean {
   const bit0Indices = indexedAttestation.custodyBit0Indices;
   const bit1Indices = indexedAttestation.custodyBit1Indices;
 
   // Verify no index has custody bit equal to 1 [to be removed in phase 1]
-  assert(bit1Indices.length == 0);
+  if (!(bit1Indices.length == 0)) {
+    return false;
+  }
   // Verify max number of indices
-  assert(bit0Indices.length + bit1Indices.length <= config.params.MAX_INDICES_PER_ATTESTATION);
+  if (!(bit0Indices.length + bit1Indices.length <= config.params.MAX_VALIDATORS_PER_COMMITTEE)) {
+    return false;
+  }
   //  Verify index sets are disjoint
   const intersection = bit0Indices.filter((index) => bit1Indices.includes(index));
-  assert(intersection.length == 0);
+  if (!(intersection.length == 0)) {
+    return false;
+  }
   //  Verify indices are sorted
-  assert(isSorted(bit0Indices) && isSorted(bit1Indices));
+  if (!(isSorted(bit0Indices) && isSorted(bit1Indices))) {
+    return false;
+  }
   //  Verify aggregate signature
-  //console.log(JSON.stringify(indexedAttestation, null, 2));
-  assert(bls.verifyMultiple(
+  if (!(bls.verifyMultiple(
     [
-      bls.aggregatePubkeys(bit0Indices.map((i) => state.validatorRegistry[i].pubkey)),
-      bls.aggregatePubkeys(bit1Indices.map((i) => state.validatorRegistry[i].pubkey)),
+      bls.aggregatePubkeys(bit0Indices.map((i) => state.validators[i].pubkey)),
+      bls.aggregatePubkeys(bit1Indices.map((i) => state.validators[i].pubkey)),
     ], [
       hashTreeRoot({
         data: indexedAttestation.data,
@@ -128,6 +99,47 @@ export function validateIndexedAttestation(
       }, config.types.AttestationDataAndCustodyBit),
     ],
     indexedAttestation.signature,
-    getDomain(config, state, Domain.ATTESTATION, indexedAttestation.data.targetEpoch),
-  ));
+    getDomain(config, state, DomainType.ATTESTATION, indexedAttestation.data.target.epoch),
+  ))) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Return the sorted attesting indices corresponding to [[data]] and [[bits]].
+ */
+export function getAttestingIndices(
+  config: IBeaconConfig,
+  state: BeaconState,
+  data: AttestationData,
+  bits: BitList
+): ValidatorIndex[] {
+  const committee = getCrosslinkCommittee(config, state, data.target.epoch, data.crosslink.shard);
+  assert(bits.bitLength === committee.length);
+
+  // Find the participating attesters in the committee
+  return committee.filter((_, i) => bits.getBit(i)).sort((a, b) => a - b);
+}
+
+/**
+ * Return the indexed attestation corresponding to [[attestation]].
+ */
+export function getIndexedAttestation(
+  config: IBeaconConfig,
+  state: BeaconState,
+  attestation: Attestation
+): IndexedAttestation {
+  const attestingIndices =
+    getAttestingIndices(config, state, attestation.data, attestation.aggregationBits);
+  const custodyBit1Indices =
+    getAttestingIndices(config, state, attestation.data, attestation.custodyBits);
+  const custodyBit0Indices = attestingIndices.filter((i) => !custodyBit1Indices.includes(i));
+
+  return {
+    custodyBit0Indices,
+    custodyBit1Indices,
+    data: attestation.data,
+    signature: attestation.signature,
+  };
 }

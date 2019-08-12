@@ -6,12 +6,13 @@ import {ContractTransaction, ethers, Wallet} from "ethers";
 import {Provider} from "ethers/providers";
 import {BigNumber} from "ethers/utils";
 import BN from "bn.js";
-import bls from "@chainsafe/bls-js";
+import bls from "@chainsafe/bls";
 import {hash, signingRoot} from "@chainsafe/ssz";
-import {Domain} from "../constants";
-import {DepositData} from "../types";
+import {DepositData} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
+import {DomainType} from "../constants";
 import {ILogger} from "../logger";
-import {IBeaconConfig} from "../config";
 
 
 export class Eth1Wallet {
@@ -62,7 +63,7 @@ export class Eth1Wallet {
     const signature = bls.sign(
       privateKey,
       signingRoot(depositData, this.config.types.DepositData),
-      Buffer.from([0, 0, 0, Domain.DEPOSIT])
+      Buffer.from([0, 0, 0, DomainType.DEPOSIT])
     );
     // Send TX
     try {

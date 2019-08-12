@@ -2,11 +2,11 @@
  * @module rpc/api
  */
 
-import {IBeaconConfig} from "../../../config";
-import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "../../../types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "@chainsafe/eth2.0-types";
 import {IBeaconApi} from "./interface";
 import {BeaconChain} from "../../../chain";
-import {BeaconDB} from "../../../db";
+import {BeaconDb} from "../../../db";
 
 export class BeaconApi implements IBeaconApi {
 
@@ -14,7 +14,7 @@ export class BeaconApi implements IBeaconApi {
 
   private config: IBeaconConfig;
   private chain: BeaconChain;
-  private db: BeaconDB;
+  private db: BeaconDb;
 
   public constructor(opts, {config, chain, db}) {
     this.namespace = 'beacon';
@@ -29,12 +29,12 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getFork(): Promise<Fork> {
-    const state: BeaconState = await this.db.getLatestState();
+    const state: BeaconState = await this.db.state.getLatest();
     return state.fork;
   }
 
   public async getGenesisTime(): Promise<number64> {
-    return await this.chain.genesisTime;
+    return await this.chain.latestState.genesisTime;
   }
 
   public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
@@ -44,11 +44,11 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getBeaconState(): Promise<BeaconState> {
-    return await this.db.getLatestState();
+    return await this.db.state.getLatest();
   }
 
   public async getChainHead(): Promise<BeaconBlock> {
-    return await this.db.getChainHead();
+    return await this.db.block.getChainHead();
   }
 
 }

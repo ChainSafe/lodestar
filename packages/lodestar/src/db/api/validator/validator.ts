@@ -4,8 +4,8 @@
 
 import {deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
 import deepmerge from "deepmerge";
-import {Attestation, BeaconBlock, ValidatorIndex} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+import {Attestation, BeaconBlock, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {DatabaseService, DatabaseApiOptions} from "../abstract";
 import {AttestationSearchOptions, IValidatorDB} from "./interface";
 import {Bucket, encodeKey} from "../../schema";
@@ -42,7 +42,7 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
 
   public async setAttestation(index: ValidatorIndex, attestation: Attestation): Promise<void> {
     await this.db.put(
-      encodeKey(Bucket.proposedAttestations, "" + index + attestation.data.targetEpoch),
+      encodeKey(Bucket.proposedAttestations, "" + index + attestation.data.target.epoch),
       serialize(attestation, this.config.types.Attestation)
     );
   }
@@ -50,7 +50,7 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
   public async deleteAttestations(index: ValidatorIndex, attestations: Attestation[]): Promise<void> {
     const criteria: any[] = [];
     attestations.forEach((attestation) =>
-      criteria.push(encodeKey(Bucket.proposedAttestations, "" + index + attestation.data.targetEpoch))
+      criteria.push(encodeKey(Bucket.proposedAttestations, "" + index + attestation.data.target.epoch))
     );
     await this.db.batchDelete(criteria);
   }

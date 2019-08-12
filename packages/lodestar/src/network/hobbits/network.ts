@@ -6,15 +6,13 @@ import {EventEmitter} from "events";
 import {INetwork} from "../interface";
 import {HobbitsConnectionHandler} from "./hobbitsConnectionHandler";
 import {ILogger} from "../../logger";
-import {Attestation, BeaconBlock, RequestBody, ResponseBody, Shard} from "../../types";
-import net from "net";
+import {Attestation, BeaconBlock, RequestBody, ResponseBody, Shard} from "@chainsafe/eth2.0-types";
 import PeerInfo from "peer-info";
-import NodeAddress = Multiaddr.NodeAddress;
 import {deserialize} from "@chainsafe/ssz";
 import {ATTESTATION_TOPIC, BLOCK_TOPIC, Method, RequestId} from "../../constants";
 import {shardSubnetAttestationTopic} from "../util";
 import {INetworkOptions} from "../options";
-import {IBeaconConfig} from "../../config";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {GossipTopic} from "./constants";
 
 export  class HobbitsP2PNetwork extends EventEmitter implements INetwork {

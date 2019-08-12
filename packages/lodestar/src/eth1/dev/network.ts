@@ -42,14 +42,17 @@ export class PrivateEth1Network {
     this.logger = logger;
     this.server = ganache.server({
       ...this.opts,
+
       // eslint-disable-next-line  @typescript-eslint/camelcase
       default_balance_ether: this.opts.defaultBalance,
       // eslint-disable-next-line  @typescript-eslint/camelcase
-      db_path: this.opts.dbPath
+      db_path: this.opts.dbPath,
+      // eslint-disable-next-line @typescript-eslint/camelcase
+      network_id: 999
     });
   }
 
-  public async start(): Promise<void> {
+  public async start(): Promise<string> {
     this.blockchain  =
       await promisify(this.server.listen.bind(this.server))(this.opts.port, this.opts.host);
     this.logger.info(`Started private network node on ${this.opts.host}:${this.opts.port}`);
@@ -62,7 +65,7 @@ export class PrivateEth1Network {
       const balance = utils.formatEther(this.blockchain.accounts[address].account.balance);
       this.logger.info(`${address}:0x${privateKey} - ${balance} ETH`);
     });
-    await this.deployDepositContract();
+    return await this.deployDepositContract();
   }
 
   public async stop(): Promise<void> {

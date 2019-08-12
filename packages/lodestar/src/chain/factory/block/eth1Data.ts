@@ -2,8 +2,8 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconState, Eth1Data} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+import {BeaconState, Eth1Data} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IEth1Notifier} from "../../../eth1";
 import {Block} from "ethers/providers";
 import {mostFrequent} from "../../../util/objects";
@@ -16,7 +16,7 @@ export async function bestVoteData(
 
   const [head, latestStateBlock] = await Promise.all([
     eth1.getHead(),
-    eth1.getBlock('0x' + state.latestEth1Data.blockHash.toString('hex'))
+    eth1.getBlock('0x' + state.eth1Data.blockHash.toString('hex'))
   ]);
   const validVotes = await filterValidVotes(config, state.eth1DataVotes, eth1, head, latestStateBlock);
 

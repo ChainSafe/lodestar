@@ -1,7 +1,7 @@
 import sinon from "sinon";
 import {expect} from "chai";
 import {hashTreeRoot} from "@chainsafe/ssz";
-import {config} from "../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ZERO_HASH} from "../../../../../src/constants";
 import {OpPool} from "../../../../../src/opPool";
 import {ProgressiveMerkleTree, verifyMerkleBranch} from "../../../../../src/util/merkleTree";
@@ -30,7 +30,7 @@ describe('blockAssembly - deposits', function() {
       config,
       opPool,
       generateState({
-        depositIndex: 1,
+        eth1DepositIndex: 1,
       }),
       {
         depositCount: 1,
@@ -57,7 +57,7 @@ describe('blockAssembly - deposits', function() {
       config,
       opPool,
       generateState({
-        depositIndex: 0,
+        eth1DepositIndex: 0,
       }),
       eth1,
       tree

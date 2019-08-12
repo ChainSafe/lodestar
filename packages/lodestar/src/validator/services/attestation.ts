@@ -1,8 +1,9 @@
 /**
  * @module validator/attestation
  */
-import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
+import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 import {hashTreeRoot} from "@chainsafe/ssz";
+import {BitList} from "@chainsafe/bit-utils";
 
 import {
   Attestation,
@@ -11,19 +12,20 @@ import {
   Fork,
   Shard,
   Slot,
-  ValidatorIndex
-} from "../../types";
-import {IBeaconConfig} from "../../config";
+  ValidatorIndex,
+  BeaconState
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {
-  getDomainFromFork,
   isSlashableAttestationData,
-  slotToEpoch
+  computeEpochOfSlot,
+  getDomain,
 } from "../../chain/stateTransition/util";
 
 import {RpcClient} from "../rpc";
 
-import {Domain} from "../../constants";
+import {DomainType} from "../../constants";
 import {intDiv} from "../../util/math";
 import {IValidatorDB} from "../../db/api";
 import {ILogger} from "../../logger";
@@ -62,7 +64,7 @@ export class AttestationService {
     if (await this.isConflictingAttestation(indexedAttestation.data)) {
       this.logger.warn(
         `[Validator] Avoided signing conflicting attestation! `
-        + `Source epoch: ${indexedAttestation.data.sourceEpoch}, Target epoch: ${slotToEpoch(this.config, slot)}`
+        + `Source epoch: ${indexedAttestation.data.source.epoch}, Target epoch: ${computeEpochOfSlot(this.config, slot)}`
       );
       return null;
     }
@@ -79,7 +81,7 @@ export class AttestationService {
 
   private async isConflictingAttestation(other: AttestationData): Promise<boolean> {
     const potentialAttestationConflicts =
-      await this.db.getAttestations(this.validatorIndex, {gt: other.targetEpoch - 1});
+      await this.db.getAttestations(this.validatorIndex, {gt: other.target.epoch - 1});
     return potentialAttestationConflicts.some((attestation => {
       return isSlashableAttestationData(this.config, attestation.data, other);
     }));
@@ -90,7 +92,7 @@ export class AttestationService {
 
     //cleanup
     const unusedAttestations =
-      await this.db.getAttestations(this.validatorIndex, {gt: 0, lt: attestation.data.targetEpoch});
+      await this.db.getAttestations(this.validatorIndex, {gt: 0, lt: attestation.data.target.epoch});
     await this.db.deleteAttestations(this.validatorIndex, unusedAttestations);
   }
 
@@ -101,24 +103,27 @@ export class AttestationService {
   ): Promise<Attestation> {
     const signature = this.privateKey.signMessage(
       hashTreeRoot(attestationDataAndCustodyBit, this.config.types.AttestationDataAndCustodyBit),
-      getDomainFromFork(
-        fork,
-        slotToEpoch(this.config, slot),
-        Domain.ATTESTATION
+      getDomain(
+        this.config,
+        {fork} as BeaconState, // eslint-disable-line @typescript-eslint/no-object-literal-type-assertion
+        DomainType.ATTESTATION,
+        computeEpochOfSlot(this.config, slot),
       )
     ).toBytesCompressed();
     const committeeAssignment =
-      await this.rpcClient.validator.getCommitteeAssignment(this.validatorIndex, slotToEpoch(this.config, slot));
+      await this.rpcClient.validator.getCommitteeAssignment(this.validatorIndex, computeEpochOfSlot(this.config, slot));
     const indexInCommittee =
       committeeAssignment.validators
         .findIndex(value => value === this.validatorIndex);
-    const aggregationBitfield = Buffer.alloc(committeeAssignment.validators.length + 7, 0);
-    aggregationBitfield[intDiv(indexInCommittee, 8)] = Math.pow(2, indexInCommittee % 8);
+    const committeeLength = committeeAssignment.validators.length;
+    const aggregationBits = BitList.fromBitfield(Buffer.alloc(intDiv(committeeLength + 7, 8)), committeeLength);
+    aggregationBits.setBit(indexInCommittee, true);
+    const custodyBits = BitList.fromBitfield(Buffer.alloc(intDiv(committeeLength + 7, 8)), committeeLength);
     return {
       data: attestationDataAndCustodyBit.data,
       signature,
-      custodyBitfield: Buffer.alloc(committeeAssignment.validators.length + 7, 0),
-      aggregationBitfield
+      custodyBits,
+      aggregationBits,
     };
   }
 }

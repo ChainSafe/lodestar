@@ -1,7 +1,7 @@
 import {assert} from "chai";
 import BN from "bn.js";
-import {AnyContainerType, deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
-import {config} from "../../../../src/config/presets/mainnet";
+import {deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 
 import {
   GossipMethod, GossipTopic,
@@ -19,7 +19,7 @@ import {
 } from "../../../../src/network/hobbits/codec";
 import {DecodedMessage, RPCBody} from "../../../../src/network/hobbits/types";
 import {keccak256} from "ethers/utils";
-import {BeaconBlock} from "../../../../src/types";
+import {BeaconBlock} from "@chainsafe/eth2.0-types";
 import {generateEmptyBlock} from "../../../utils/block";
 
 describe("[hobbits] protocol messages", () => {
@@ -45,7 +45,7 @@ describe("[hobbits] protocol messages", () => {
     // compare
     assert.deepEqual(actualEncoded, body);
     assert.deepEqual(requestBody, actualEncoded);
-    assert.deepEqual(decodedBody, msg);
+    assert.deepEqual(decodedBody.toString(), msg.toString());
   });
 
   it(`gossip - should properly encode/decode`, () => {

@@ -3,11 +3,11 @@ import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 import {hashTreeRoot, equals} from "@chainsafe/ssz";
 // @ts-ignore
-import {restore, rewire} from "@chainsafe/bls-js";
+import {restore, rewire} from "@chainsafe/bls";
 import sinon from "sinon";
 
-import {BeaconBlock, BeaconState, Validator} from "../../../../src/types";
-import {config} from "../../../../src/config/presets/mainnet";
+import {BeaconBlock, BeaconState, Validator} from "@chainsafe/eth2.0-types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {stateTransition} from "../../../../src/chain/stateTransition";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 
@@ -15,7 +15,7 @@ describeSpecTest(
   join(__dirname, "../../test-cases/tests/sanity/blocks/sanity_blocks_mainnet.yaml"),
   (state: BeaconState, blocks: BeaconBlock[]) => {
     blocks.forEach((block) => {
-      stateTransition(config, state, block, false);
+      stateTransition(config, state, block, true);
     });
     return state;
   },

@@ -2,7 +2,7 @@
  * @module network/hobbits
  */
 
-import {Attestation, BeaconBlock, bytes, bytes32, uint16, uint64} from "../../types";
+import {Attestation, BeaconBlock, bytes, bytes32, uint16, uint64} from "@chainsafe/eth2.0-types";
 import {GossipTopic} from "./constants";
 
 export enum Events {

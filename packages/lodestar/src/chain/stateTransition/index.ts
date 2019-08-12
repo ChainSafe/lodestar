@@ -8,8 +8,8 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import {
   BeaconBlock,
   BeaconState,
-} from "../../types";
-import {IBeaconConfig} from "../../config";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {processBlock} from "./block";
 import {processEpoch} from "./epoch";
@@ -21,7 +21,7 @@ export {
   processEpoch,
 };
 
-// See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#beacon-chain-state-transition-function
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#beacon-chain-state-transition-function
 
 export function stateTransition(
   config: IBeaconConfig,

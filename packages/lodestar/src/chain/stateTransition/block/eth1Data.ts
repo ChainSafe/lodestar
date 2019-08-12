@@ -7,10 +7,10 @@ import {equals} from "@chainsafe/ssz";
 import {
   BeaconBlockBody,
   BeaconState,
-} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-// See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#eth1-data
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#eth1-data
 
 export function processEth1Data(
   config: IBeaconConfig,
@@ -26,6 +26,6 @@ export function processEth1Data(
     }
   });
   if (occurances * 2 > config.params.SLOTS_PER_ETH1_VOTING_PERIOD) {
-    state.latestEth1Data = body.eth1Data;
+    state.eth1Data = body.eth1Data;
   }
 }

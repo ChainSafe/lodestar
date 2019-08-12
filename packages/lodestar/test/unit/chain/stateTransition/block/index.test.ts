@@ -2,7 +2,7 @@ import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
 
-import {config} from "../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as processEth1Data from "../../../../../src/chain/stateTransition/block/eth1Data";
 import * as processBlockHeader from "../../../../../src/chain/stateTransition/block/blockHeader";
 import * as processRandao from "../../../../../src/chain/stateTransition/block/randao";

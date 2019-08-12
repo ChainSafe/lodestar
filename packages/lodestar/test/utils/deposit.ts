@@ -1,8 +1,7 @@
 import BN from "bn.js";
 
-import {Deposit} from "../../src/types";
-import {EMPTY_SIGNATURE} from "../../src/constants";
-import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../src/constants";
+import {Deposit} from "@chainsafe/eth2.0-types";
+import {DEPOSIT_CONTRACT_TREE_DEPTH, EMPTY_SIGNATURE} from "../../src/constants";
 
 /**
  * Generates a fake attestation data for test purposes.
@@ -11,7 +10,7 @@ import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../src/constants";
  */
 export function generateDeposit(): Deposit {
   return {
-    proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH}, () => Buffer.alloc(32)),
+    proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH + 1}, () => Buffer.alloc(32)),
     data: {
       amount: new BN(32).mul(new BN(10).muln(9)),
       pubkey: Buffer.alloc(48),

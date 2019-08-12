@@ -7,7 +7,7 @@ import {intToBytes} from "../../../../src/util/bytes";
 import {assert} from "chai";
 
 describe("[hobbits] network", () => {
-  it.skip('should get port and url from PeerInfo - callback', function () {
+  /*it.skip('should get port and url from PeerInfo - callback', function () {
     let addr;
     waterfall([
       (cb) => PeerInfo.create(cb),
@@ -38,7 +38,7 @@ describe("[hobbits] network", () => {
 
     let nodeAddress = peerInfoToAddress(peerInfo);
     // console.log(nodeAddress);
-  });
+  });*/
 
   it('should convert camelCase to underscored', function () {
     let obj = {

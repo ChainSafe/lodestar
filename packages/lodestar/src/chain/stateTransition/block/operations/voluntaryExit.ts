@@ -4,19 +4,19 @@
 
 import assert from "assert";
 import {signingRoot} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls-js";
+import bls from "@chainsafe/bls";
 
 import {
   BeaconState,
   VoluntaryExit,
-} from "../../../../types";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
+
 import {
-  Domain,
+  DomainType,
   FAR_FUTURE_EPOCH,
 } from "../../../../constants";
-import {IBeaconConfig} from "../../../../config";
-
-
 import {
   getCurrentEpoch,
   getDomain,
@@ -33,7 +33,7 @@ export function processVoluntaryExit(
   state: BeaconState,
   exit: VoluntaryExit
 ): void {
-  const validator = state.validatorRegistry[exit.validatorIndex];
+  const validator = state.validators[exit.validatorIndex];
   const currentEpoch = getCurrentEpoch(config, state);
   // Verify the validator is active
   assert(isActiveValidator(validator, currentEpoch));
@@ -42,13 +42,13 @@ export function processVoluntaryExit(
   // Exits must specify an epoch when they become valid; they are not valid before then
   assert(currentEpoch >= exit.epoch);
   // Verify the validator has been active long enough
-  assert(currentEpoch - validator.activationEpoch >= config.params.PERSISTENT_COMMITTEE_PERIOD);
+  assert(currentEpoch >= validator.activationEpoch + config.params.PERSISTENT_COMMITTEE_PERIOD);
   // Verify signature
   assert(bls.verify(
     validator.pubkey,
     signingRoot(exit, config.types.VoluntaryExit),
     exit.signature,
-    getDomain(config, state, Domain.VOLUNTARY_EXIT, exit.epoch),
+    getDomain(config, state, DomainType.VOLUNTARY_EXIT, exit.epoch),
   ));
   // Initiate exit
   initiateValidatorExit(config, state, exit.validatorIndex);

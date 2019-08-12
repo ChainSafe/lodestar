@@ -5,29 +5,17 @@
 import {
   BeaconState,
   Epoch,
-  ValidatorIndex,
   Validator,
-} from "../../../types";
+  ValidatorIndex,
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {
-  FAR_FUTURE_EPOCH,
-} from "../../../constants";
-
-import {
-  getCurrentEpoch,
-  getDelayedActivationExitEpoch,
-} from "./epoch";
-
-import {
-  increaseBalance,
-  decreaseBalance,
-} from "./balance";
-
-import {
-  getBeaconProposerIndex,
-  getChurnLimit,
-} from "./misc";
-import { IBeaconConfig } from "../../../config";
+import {FAR_FUTURE_EPOCH} from "../../../constants";
+import {computeActivationExitEpoch, getCurrentEpoch} from "./epoch";
+import {getValidatorChurnLimit} from "./validator";
+import {decreaseBalance, increaseBalance} from "./balance";
+import {getBeaconProposerIndex} from "./proposer";
+import {bnMax} from "../../../util/math";
 
 
 /**
@@ -36,7 +24,7 @@ import { IBeaconConfig } from "../../../config";
  * Note: that this function mutates state.
  */
 export function initiateValidatorExit(config: IBeaconConfig, state: BeaconState, index: ValidatorIndex): void {
-  const validator = state.validatorRegistry[index];
+  const validator = state.validators[index];
 
   // Return if validator already initiated exit
   if (validator.exitEpoch !== FAR_FUTURE_EPOCH) {
@@ -44,15 +32,15 @@ export function initiateValidatorExit(config: IBeaconConfig, state: BeaconState,
   }
 
   // Compute exit queue epoch
-  let exitQueueEpoch = state.validatorRegistry.reduce((epoch: Epoch, v: Validator) => {
+  let exitQueueEpoch = state.validators.reduce((epoch: Epoch, v: Validator) => {
     if (v.exitEpoch !== FAR_FUTURE_EPOCH) {
       return Math.max(v.exitEpoch, epoch);
     }
     return epoch;
-  }, getDelayedActivationExitEpoch(config, getCurrentEpoch(config, state)));
-  const exitQueueChurn = state.validatorRegistry
+  }, computeActivationExitEpoch(config, getCurrentEpoch(config, state)));
+  const exitQueueChurn = state.validators
     .filter((v: Validator) => v.exitEpoch === exitQueueEpoch).length;
-  if (exitQueueChurn >= getChurnLimit(config, state)) {
+  if (exitQueueChurn >= getValidatorChurnLimit(config, state)) {
     exitQueueEpoch += 1;
   }
 
@@ -75,12 +63,20 @@ export function slashValidator(
   const currentEpoch = getCurrentEpoch(config, state);
 
   initiateValidatorExit(config, state, slashedIndex);
-  state.validatorRegistry[slashedIndex].slashed = true;
-  state.validatorRegistry[slashedIndex].withdrawableEpoch =
-    currentEpoch + config.params.LATEST_SLASHED_EXIT_LENGTH;
-  const slashedBalance = state.validatorRegistry[slashedIndex].effectiveBalance;
-  state.latestSlashedBalances[currentEpoch % config.params.LATEST_SLASHED_EXIT_LENGTH] =
-    state.latestSlashedBalances[currentEpoch % config.params.LATEST_SLASHED_EXIT_LENGTH].add(slashedBalance);
+  state.validators[slashedIndex].slashed = true;
+  state.validators[slashedIndex].withdrawableEpoch = Math.max(
+    state.validators[slashedIndex].withdrawableEpoch,
+    currentEpoch + config.params.EPOCHS_PER_SLASHINGS_VECTOR
+  );
+
+  const slashedBalance = state.validators[slashedIndex].effectiveBalance;
+  state.slashings[currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] =
+    state.slashings[currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR].add(slashedBalance);
+  decreaseBalance(
+    state,
+    slashedIndex,
+    state.validators[slashedIndex].effectiveBalance.divn(config.params.MIN_SLASHING_PENALTY_QUOTIENT));
+
 
   const proposerIndex = getBeaconProposerIndex(config, state);
   if (whistleblowerIndex === undefined || whistleblowerIndex === null) {
@@ -90,5 +86,4 @@ export function slashValidator(
   const proposerReward = whistleblowingReward.divn(config.params.PROPOSER_REWARD_QUOTIENT);
   increaseBalance(state, proposerIndex, proposerReward);
   increaseBalance(state, whistleblowerIndex, whistleblowingReward.sub(proposerReward));
-  decreaseBalance(state, slashedIndex, whistleblowingReward);
 }

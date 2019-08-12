@@ -1,11 +1,9 @@
-import { assert, expect } from "chai";
-import {deserialize} from "@chainsafe/ssz";
+import {assert, expect} from "chai";
 
 import {
   ProgressiveMerkleTree,
   verifyMerkleBranch,
 } from "../../../src/util/merkleTree";
-import {MerkleTree} from "../../../src/types";
 import {LightProgressiveMerkleTree} from "../../../src/util/merkleTree/lightMerkleTree";
 
 
@@ -44,20 +42,6 @@ describe('util/merkleTree', function() {
       }
     });
 
-
-    it("is able to serialize and recreate", () => {
-      const depth = 4;
-      const t = ProgressiveMerkleTree.empty(depth);
-      for (let i = 0; i < 10; i++) {
-        let buf = Buffer.alloc(32);
-        buf[0] = 10;
-        t.push(buf);
-      }
-      const rootBefore = t.root();
-      const serialized = t.serialize();
-      const t2 = ProgressiveMerkleTree.deserialize(serialized);
-      expect(t2.root()).to.be.deep.equal(rootBefore);
-    });
   });
 
   describe('LightProgressiveMerkleTree', function() {

@@ -14,13 +14,13 @@ import {ILogger} from "../../logger";
 import net from "net";
 import {decodeMessage, encodeMessage, generateGossipHeader, generateRPCHeader} from "./codec";
 import {INetworkOptions} from "../options";
-import {IBeaconConfig} from "../../config";
-import {Attestation, BeaconBlock, RequestBody, ResponseBody} from "../../types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {Attestation, BeaconBlock, RequestBody, ResponseBody} from "@chainsafe/eth2.0-types";
 import {promisify} from "util";
 import PeerInfo from "peer-info";
 import {DecodedMessage, GossipHeader} from "./types";
 import {keccak256} from "ethers/utils";
-import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
+import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 
 /**
  * The NetworkRpc module controls network-level resources and concerns of p2p connections

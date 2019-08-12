@@ -1,17 +1,18 @@
 import sinon from "sinon";
-import {expect} from  "chai";
+import {expect} from "chai";
+import PeerInfo from "peer-info";
+import PeerId from "peer-id";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+
 import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
-import {BeaconDB} from "../../../src/db/api";
 import {ReputationStore} from "../../../src/sync/reputation";
 import {WinstonLogger} from "../../../src/logger";
 import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
 import {InitialSync} from "../../../src/sync/initial";
 import {generateState} from "../../utils/state";
-import PeerInfo from "peer-info";
-import PeerId from "peer-id";
-import {config} from "../../../src/config/presets/mainnet";
 import {generateEmptyBlock} from "../../utils/block";
+import {ChainRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
 
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();
@@ -22,7 +23,10 @@ describe("syncing", function () {
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
-    dbStub = sandbox.createStubInstance(BeaconDB);
+    dbStub = {
+      chain: sandbox.createStubInstance(ChainRepository),
+      state: sandbox.createStubInstance(StateRepository)
+    };
     repsStub = sandbox.createStubInstance(ReputationStore);
     rpcStub = sandbox.createStubInstance(SyncRpc);
     logger = new WinstonLogger();
@@ -76,9 +80,9 @@ describe("syncing", function () {
     rpcStub.getBeaconStates.resolves([generateState()]);
 
     let peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.alloc(32)));
-    dbStub.setLatestStateRoot.resolves(0);
-    dbStub.setFinalizedStateRoot.resolves(0);
-    dbStub.setJustifiedStateRoot.resolves(0);
+    dbStub.chain.setLatestStateRoot.resolves(0);
+    dbStub.chain.setFinalizedStateRoot.resolves(0);
+    dbStub.chain.setJustifiedStateRoot.resolves(0);
     rpcStub.getBeaconBlocks.resolves([generateEmptyBlock()]);
     chainStub.receiveBlock.resolves(0);
 
@@ -98,9 +102,9 @@ describe("syncing", function () {
 
     let peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.alloc(32)));
     networkStub.getPeers.returns([peerInfo, peerInfo]);
-    dbStub.setLatestStateRoot.resolves(0);
-    dbStub.setFinalizedStateRoot.resolves(0);
-    dbStub.setJustifiedStateRoot.resolves(0);
+    dbStub.chain.setLatestStateRoot.resolves(0);
+    dbStub.chain.setFinalizedStateRoot.resolves(0);
+    dbStub.chain.setJustifiedStateRoot.resolves(0);
     rpcStub.getBeaconBlocks.resolves([generateEmptyBlock()]);
     chainStub.receiveBlock.resolves(0);
 

@@ -26,7 +26,7 @@ import {
   BeaconBlock,
   HobbitsGetBlockBodies,
   HobbitsGetAttestation, HobbitsAttestation, uint8, uint64, bytes,
-} from "../../types";
+} from "@chainsafe/eth2.0-types";
 import {ZERO_HASH, ResponseCode, RequestId} from "../../constants";
 import {intDiv} from "../../util/math";
 import {IBeaconDb} from "../../db";
@@ -34,7 +34,7 @@ import {IBeaconChain} from "../../chain";
 import {INetwork} from "../index";
 import {ReputationStore} from "../../sync/reputation";
 import {ILogger} from "../../logger";
-import { IBeaconConfig } from "../../config";
+import { IBeaconConfig } from "@chainsafe/eth2.0-config";
 import {ISyncRpc} from "../../sync/rpc/interface";
 import {Method} from "./constants";
 
@@ -74,20 +74,20 @@ export class SyncRpc implements ISyncRpc {
       bestRoot: bytes32,
       latestFinalizedEpoch: Epoch,
       latestFinalizedRoot: bytes32;
-    if (!this.chain.genesisTime) {
+    if (!this.chain.isInitialized()) {
       bestSlot = 0;
       bestRoot = ZERO_HASH;
       latestFinalizedEpoch = 0;
       latestFinalizedRoot = ZERO_HASH;
     } else {
-      bestSlot = await this.db.getChainHeadSlot();
+      bestSlot = await this.db.chain.getChainHeadSlot();
       const [bRoot, state] = await Promise.all([
-        this.db.getBlockRoot(bestSlot),
-        this.db.getLatestState(),
+        this.db.chain.getBlockRoot(bestSlot),
+        this.db.state.getLatest(),
       ]);
       bestRoot = bRoot;
-      latestFinalizedEpoch = state.finalizedEpoch;
-      latestFinalizedRoot = state.finalizedRoot;
+      latestFinalizedEpoch = state.finalizedCheckpoint.epoch;
+      latestFinalizedRoot = state.finalizedCheckpoint.root;
     }
     return {
       networkId: this.chain.networkId,
@@ -209,7 +209,7 @@ export class SyncRpc implements ISyncRpc {
 
   public async onRequest(
     peerInfo: PeerInfo,
-    method: Method,
+    method: number,
     id: RequestId,
     body: RequestBody,
   ): Promise<void> {
@@ -283,7 +283,7 @@ export class SyncRpc implements ISyncRpc {
       const response: BeaconBlockHeadersResponse = {
         headers: [],
       };
-      const blockRoot = await this.db.getBlockRoot(request.startSlot);
+      const blockRoot = await this.db.chain.getBlockRoot(request.startSlot);
       assert(blockRoot.equals(request.startRoot));
       for (
         let slot = request.startSlot;
@@ -291,7 +291,7 @@ export class SyncRpc implements ISyncRpc {
         slot += request.skipSlots
       ) {
         try {
-          const block = await this.db.getBlockBySlot(slot);
+          const block = await this.db.block.getBlockBySlot(slot);
           const header: BeaconBlockHeader = {
             slot: block.slot,
             parentRoot: block.parentRoot,
@@ -320,7 +320,7 @@ export class SyncRpc implements ISyncRpc {
       const response: BeaconBlockBodiesResponse = {
         bodies: [],
       };
-      const blockRoot = await this.db.getBlockRoot(request.startSlot);
+      const blockRoot = await this.db.chain.getBlockRoot(request.startSlot);
       assert(blockRoot.equals(request.startRoot));
       for (
         let slot = new BN(request.startSlot);
@@ -328,7 +328,7 @@ export class SyncRpc implements ISyncRpc {
         slot = slot.add(request.skip)
       ) {
         try {
-          const block = await this.db.getBlockBySlot(slot.toNumber());
+          const block = await this.db.block.getBlockBySlot(slot.toNumber());
           response.bodies.push(block.body);
         } catch (e) {
         }
@@ -347,7 +347,7 @@ export class SyncRpc implements ISyncRpc {
     request: HobbitsGetAttestation
   ): Promise<void> {
     const response: HobbitsAttestation = {
-      attestation: await this.db.getAttestation(request.hash),
+      attestation: await this.db.attestation.get(request.hash),
     };
 
     this.network.sendResponse(id, ResponseCode.Success, response);

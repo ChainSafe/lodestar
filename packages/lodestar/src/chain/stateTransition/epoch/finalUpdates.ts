@@ -5,12 +5,12 @@
 import {hashTreeRoot} from "@chainsafe/ssz";
 import BN from "bn.js";
 
-import {BeaconState, HistoricalBatch, ValidatorIndex} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+import {BeaconState, HistoricalBatch, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {bnMin, intDiv} from "../../../util/math";
 
-import {getActiveValidatorIndices, getCurrentEpoch, getRandaoMix, getShardDelta} from "../util";
+import {getActiveValidatorIndices, getCurrentEpoch, getRandaoMix, getShardDelta, getCompactCommitteesRoot} from "../util";
 
 
 export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): void {
@@ -21,35 +21,43 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
     state.eth1DataVotes = [];
   }
   // Update effective balances with hysteresis
-  state.validatorRegistry.forEach((validator, index) => {
+  state.validators.forEach((validator, index) => {
     const balance = state.balances[index];
-    // TODO probably unsafe
-    const HALF_INCREMENT = config.params.EFFECTIVE_BALANCE_INCREMENT.divRound(new BN(2));
-    if (balance.lt(validator.effectiveBalance) || validator.effectiveBalance
-      .add(HALF_INCREMENT.muln(3)).lt(balance)) {
+    const HALF_INCREMENT = config.params.EFFECTIVE_BALANCE_INCREMENT.div(new BN(2));
+    if (
+      balance.lt(validator.effectiveBalance) ||
+      validator.effectiveBalance.add(HALF_INCREMENT.muln(3)).lt(balance)
+    ) {
       validator.effectiveBalance = bnMin(
         balance.sub(balance.mod(config.params.EFFECTIVE_BALANCE_INCREMENT)),
         config.params.MAX_EFFECTIVE_BALANCE);
     }
   });
   // Update start shard
-  state.latestStartShard =
-    (state.latestStartShard + getShardDelta(config, state, currentEpoch)) % config.params.SHARD_COUNT;
+  state.startShard =
+    (state.startShard + getShardDelta(config, state, currentEpoch)) % config.params.SHARD_COUNT;
   // Set active index root
-  const indexRootPosition = (nextEpoch + config.params.ACTIVATION_EXIT_DELAY) % config.params.LATEST_ACTIVE_INDEX_ROOTS_LENGTH;
-  state.latestActiveIndexRoots[indexRootPosition] = hashTreeRoot(
-    getActiveValidatorIndices(state, nextEpoch + config.params.ACTIVATION_EXIT_DELAY), [config.types.ValidatorIndex]);
-  // Set total slashed balances
-  state.latestSlashedBalances[nextEpoch % config.params.LATEST_SLASHED_EXIT_LENGTH] =
-    state.latestSlashedBalances[currentEpoch % config.params.LATEST_SLASHED_EXIT_LENGTH];
+  const indexEpoch = nextEpoch + config.params.ACTIVATION_EXIT_DELAY;
+  const indexRootPosition = indexEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR;
+  state.activeIndexRoots[indexRootPosition] = hashTreeRoot(
+    getActiveValidatorIndices(state, indexEpoch), {
+      elementType: config.types.ValidatorIndex,
+      maxLength: config.params.VALIDATOR_REGISTRY_LIMIT,
+    }
+  );
+  // Set committees root
+  state.compactCommitteesRoots[nextEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] =
+    getCompactCommitteesRoot(config, state, nextEpoch);
+  // Reset slashings
+  state.slashings[nextEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] = new BN(0);
   // Set randao mix
-  state.latestRandaoMixes[nextEpoch % config.params.LATEST_RANDAO_MIXES_LENGTH] =
+  state.randaoMixes[nextEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR] =
     getRandaoMix(config, state, currentEpoch);
   // Set historical root accumulator
   if (nextEpoch % intDiv(config.params.SLOTS_PER_HISTORICAL_ROOT, config.params.SLOTS_PER_EPOCH) === 0) {
     const historicalBatch: HistoricalBatch = {
-      blockRoots: state.latestBlockRoots,
-      stateRoots: state.latestStateRoots,
+      blockRoots: state.blockRoots,
+      stateRoots: state.stateRoots,
     };
     state.historicalRoots.push(hashTreeRoot(historicalBatch, config.types.HistoricalBatch));
   }

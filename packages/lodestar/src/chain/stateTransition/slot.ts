@@ -4,17 +4,17 @@
 
 import assert from "assert";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
-
 import {
   BeaconState,
   BeaconBlockHeader, Slot,
-} from "../../types";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {ZERO_HASH} from "../../constants";
-import {IBeaconConfig} from "../../config";
 
 import {processEpoch} from "./epoch";
 
-// See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#beacon-chain-state-transition-function
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#beacon-chain-state-transition-function
 
 export function processSlots(
   config: IBeaconConfig,
@@ -36,7 +36,7 @@ export function processSlots(
 function processSlot(config: IBeaconConfig, state: BeaconState): void {
   // Cache state root
   const previousStateRoot = hashTreeRoot(state, config.types.BeaconState);
-  state.latestStateRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousStateRoot;
+  state.stateRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousStateRoot;
 
   // Cache latest block header state root
   if (state.latestBlockHeader.stateRoot.equals(ZERO_HASH)) {
@@ -45,9 +45,5 @@ function processSlot(config: IBeaconConfig, state: BeaconState): void {
 
   // Cache block root
   const previousBlockRoot = signingRoot(state.latestBlockHeader, config.types.BeaconBlockHeader);
-  state.latestBlockRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousBlockRoot;
-}
-
-export function advanceSlot(state: BeaconState): void {
-  state.slot++;
+  state.blockRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousBlockRoot;
 }

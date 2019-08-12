@@ -1,4 +1,4 @@
-import {config} from "../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 
 // import SnappyJS from 'snappyjs';
 import {deserialize, serialize} from "@chainsafe/ssz";

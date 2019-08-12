@@ -1,24 +1,4 @@
 import {OperationsModule} from "./abstract";
-import {AttesterSlashing} from "../../types";
+import {AttesterSlashing} from "@chainsafe/eth2.0-types";
 
-export class AttesterSlashingOperations extends OperationsModule {
-
-  /**
-   * Process incoming attester slashing
-   */
-  public async receive(attesterSlashing: AttesterSlashing): Promise<void> {
-    await this.db.setAttesterSlashing(attesterSlashing);
-  }
-
-  /**
-   * Return all stored attester slashings
-   */
-  public async getAll(): Promise<AttesterSlashing[]> {
-    return await this.db.getAttesterSlashings();
-  }
-
-  public async remove(attesterSlashings: AttesterSlashing[]): Promise<void> {
-    await this.db.deleteAttesterSlashings(attesterSlashings);
-  }
-
-}
+export class AttesterSlashingOperations extends OperationsModule<AttesterSlashing> {}

@@ -2,7 +2,7 @@ import BN from "bn.js";
 import {expect} from "chai";
 import sinon from "sinon";
 
-import {config} from "../../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
 import {GENESIS_EPOCH} from "../../../../../../src/constants";
 import {processRewardsAndPenalties}
@@ -51,7 +51,7 @@ describe('process epoch - balance updates', function () {
     const state = generateState();
     const reward = new BN(10);
     const penalty = new BN(0);
-    state.validatorRegistry.push(generateValidator());
+    state.validators.push(generateValidator());
     getCurrentEpochStub.returns(10);
     getAttestationDeltasStub.returns([[reward], [penalty]]);
     getCrosslinkDeltasStub.returns([[reward], [penalty]]);

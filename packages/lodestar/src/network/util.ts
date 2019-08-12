@@ -1,4 +1,5 @@
-import {Shard} from "../types";
+import {Shard} from "@chainsafe/eth2.0-types";
+
 import {RequestId, SHARD_SUBNET_COUNT, SHARD_ATTESTATION_TOPIC} from "../constants";
 
 function randomNibble(): string {

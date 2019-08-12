@@ -5,18 +5,18 @@
 import assert from "assert";
 import BN from "bn.js";
 import {hash, signingRoot} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls-js";
+import bls from "@chainsafe/bls";
 
 import {
   BeaconState,
   Transfer,
-} from "../../../../types";
+} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {
-  Domain,
+  DomainType,
   FAR_FUTURE_EPOCH,
 } from "../../../../constants";
-import {IBeaconConfig} from "../../../../config";
-
 import {
   getBeaconProposerIndex,
   getCurrentEpoch,
@@ -25,7 +25,7 @@ import {
   increaseBalance,
 } from "../../util";
 
-// See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#transfers
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#transfers
 
 /**
  * Process ``Transfer`` operation.
@@ -35,29 +35,29 @@ export function processTransfer(
   state: BeaconState,
   transfer: Transfer
 ): void {
-  // Verify the amount and fee aren't individually too big (for anti-overflow purposes)
+  // Verify the balance the covers amount and fee
   const senderBalance = state.balances[transfer.sender];
-  assert(senderBalance.gte(transfer.amount));
-  assert(senderBalance.gte(transfer.fee));
+  assert(senderBalance.gte(transfer.amount.add(transfer.fee)));
   // A transfer is valid in only one slot
   assert(state.slot === transfer.slot);
-  // Sender must be not yet eligible for activation, withdrawn, or transfer
-  // balance over MAX_EFFECTIVE_BALANCE
+  // Sender must satisfy at least one of the following:
   assert(
-    state.validatorRegistry[transfer.sender].activationEligibilityEpoch === FAR_FUTURE_EPOCH ||
-    getCurrentEpoch(config, state) >= state.validatorRegistry[transfer.sender].withdrawableEpoch ||
-    transfer.amount.add(transfer.fee).add(new BN(config.params.MAX_EFFECTIVE_BALANCE))
-      .lte(state.balances[transfer.sender])
+    // Never have been eligible for activation
+    state.validators[transfer.sender].activationEligibilityEpoch === FAR_FUTURE_EPOCH ||
+    // Be withdrawable
+    getCurrentEpoch(config, state) >= state.validators[transfer.sender].withdrawableEpoch ||
+    // Have a balance of at least MAX_EFFECTIVE_BALANCE after the transfer
+    senderBalance.gte(transfer.amount.add(transfer.fee).add(new BN(config.params.MAX_EFFECTIVE_BALANCE)))
   );
   // Verify that the pubkey is valid
-  assert(state.validatorRegistry[transfer.sender].withdrawalCredentials.equals(
+  assert(state.validators[transfer.sender].withdrawalCredentials.equals(
     Buffer.concat([config.params.BLS_WITHDRAWAL_PREFIX_BYTE, hash(transfer.pubkey).slice(1)])));
   // Verify that the signature is valid
   assert(bls.verify(
     transfer.pubkey,
     signingRoot(transfer, config.types.Transfer),
     transfer.signature,
-    getDomain(config, state, Domain.TRANSFER),
+    getDomain(config, state, DomainType.TRANSFER),
   ));
   // Process the transfer
   decreaseBalance(state, transfer.sender, transfer.amount.add(transfer.fee));

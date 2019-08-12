@@ -4,8 +4,8 @@
 
 import {deserialize, serialize} from "@chainsafe/ssz";
 import {Method} from "../constants";
-import {RequestBody, ResponseBody} from "../../../types";
-import {IBeaconConfig} from "../../../config";
+import {RequestBody, ResponseBody} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 
 // Encode

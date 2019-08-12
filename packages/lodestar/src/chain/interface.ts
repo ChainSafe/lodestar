@@ -1,15 +1,24 @@
 import {EventEmitter} from "events";
 
-import {Attestation, BeaconBlock, BeaconState, Deposit, Eth1Data, number64, uint16, uint64} from "../types";
+import {Attestation, BeaconBlock, BeaconState, uint16, uint64} from "@chainsafe/eth2.0-types";
 
 import {LMDGHOST} from "./forkChoice";
+import {ProgressiveMerkleTree} from "../util/merkleTree";
+import StrictEventEmitter from "strict-event-emitter-types";
+
+interface IChainEvents {
+  processedBlock: (block: BeaconBlock) => void;
+  processedAttestation: (attestation: Attestation) => void;
+}
+
+export type ChainEventEmitter = StrictEventEmitter<EventEmitter, IChainEvents>;
 
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
  * and applying the fork choice rule to update the chain head
  */
-export interface IBeaconChain extends EventEmitter {
-  genesisTime: number64;
+export interface IBeaconChain extends ChainEventEmitter {
+  latestState: BeaconState;
   forkChoice: LMDGHOST;
   chainId: uint16;
   networkId: uint64;
@@ -22,15 +31,6 @@ export interface IBeaconChain extends EventEmitter {
    * Stop beacon chain processing
    */
   stop(): Promise<void>;
-
-  /**
-   * Initialize the beacon chain with a genesis beacon state / block
-   */
-  initializeChain(
-    genesisTime: number64,
-    genesisDeposits: Deposit[],
-    genesisEth1Data: Eth1Data
-  ): Promise<void>;
 
   /**
    * Add attestation to the fork-choice rule
@@ -51,4 +51,14 @@ export interface IBeaconChain extends EventEmitter {
    * Ensure that the block is compliant with block processing validity conditions
    */
   isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean>;
+
+  /**
+   * Used for starting beacon chain with fake genesis state (dev, test, interop).
+   * Note: Invoke this before {@link start}
+   * @param genesisState
+   * @param merkleTree
+   */
+  initializeBeaconChain(genesisState: BeaconState, merkleTree: ProgressiveMerkleTree): Promise<void>;
+
+  isInitialized(): boolean;
 }

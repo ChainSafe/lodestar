@@ -2,7 +2,7 @@ import {assert} from "chai";
 import BN from "bn.js";
 import {AnyContainerType, serialize} from "@chainsafe/ssz";
 
-import {config} from "../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   Hello,
   Goodbye,
@@ -19,11 +19,11 @@ import {
   WireResponse,
   RequestBody,
   ResponseBody,
-} from "../../../src/types";
+} from "@chainsafe/eth2.0-types";
+
 import {
   Method,
 } from "../../../src/constants";
-
 import {
   encodeRequest,
   encodeResponse,
@@ -99,7 +99,7 @@ describe("[network] rpc request", () => {
     },
   ];
   for (const {msg, method, type} of testCases) {
-    it(`should properly encode/decode ${type.name}`, () => {
+    it(`should properly encode/decode ${type}`, () => {
       const idHex = "FFFFFFFFFFFFFFFF";
       // encode
       const body = serialize(msg, type);
@@ -181,7 +181,7 @@ describe("[p2p] rpc response", () => {
     },
   ];
   for (const {msg, method, type} of testCases) {
-    it(`should properly encode/decode ${type.name}`, () => {
+    it(`should properly encode/decode ${type}`, () => {
       const idHex = "FFFFFFFFFFFFFFFF";
       const responseCode = 0;
       // encode

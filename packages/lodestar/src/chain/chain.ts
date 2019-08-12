@@ -6,53 +6,59 @@ import assert from "assert";
 import BN from "bn.js";
 import {EventEmitter} from "events";
 import {hashTreeRoot} from "@chainsafe/ssz";
+import {Attestation, BeaconBlock, BeaconState, number64, uint16, uint64} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {
-  Attestation,
-  BeaconBlock,
-  BeaconState,
-  Deposit,
-  Eth1Data,
-  number64,
-  uint16,
-  uint64
-} from "../types";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "../constants";
-
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
 import {ILogger} from "../logger";
-import {IBeaconConfig} from "../config";
+import {IBeaconMetrics} from "../metrics";
 
-import {getEmptyBlock, getGenesisBeaconState} from "./genesis";
+import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
 
 import {stateTransition} from "./stateTransition";
-
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
-import {getAttestingIndices, slotToEpoch} from "./stateTransition/util";
-import {IBeaconChain} from "./interface";
-import {ProgressiveMerkleTree} from "../util/merkleTree/merkleTree";
+import {getAttestingIndices, computeEpochOfSlot, isActiveValidator} from "./stateTransition/util";
+import {ChainEventEmitter, IBeaconChain} from "./interface";
+import {ProgressiveMerkleTree} from "../util/merkleTree";
 import {processSortedDeposits} from "../util/deposits";
+import {OpPool} from "../opPool";
+import {Block} from "ethers/providers";
 
-export class BeaconChain extends EventEmitter implements IBeaconChain {
+export interface IBeaconChainModules {
+  config: IBeaconConfig;
+  opPool: OpPool;
+  db: IBeaconDb;
+  eth1: IEth1Notifier;
+  logger: ILogger;
+  metrics: IBeaconMetrics;
+}
+
+export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) implements IBeaconChain {
+
   public chain: string;
-  public genesisTime: number64;
+  public latestState: BeaconState = null;
   public forkChoice: LMDGHOST;
   public chainId: uint16;
   public networkId: uint64;
-  private config: IBeaconConfig;
-  private db: IBeaconDb;
-  private eth1: IEth1Notifier;
-  private _latestBlock: BeaconBlock;
-  private logger: ILogger;
 
-  public constructor(opts, {config, db, eth1, logger}: { config: IBeaconConfig; db: IBeaconDb; eth1: IEth1Notifier; logger: ILogger }) {
+  private readonly config: IBeaconConfig;
+  private db: IBeaconDb;
+  private opPool: OpPool;
+  private eth1: IEth1Notifier;
+  private logger: ILogger;
+  private metrics: IBeaconMetrics;
+
+  public constructor(opts, {config, db, eth1, opPool, logger, metrics}: IBeaconChainModules) {
     super();
     this.chain = opts.chain;
     this.config = config;
     this.db = db;
     this.eth1 = eth1;
+    this.opPool = opPool;
     this.logger = logger;
+    this.metrics = metrics;
     this.forkChoice = new StatefulDagLMDGHOST();
     this.chainId = 0; // TODO make this real
     this.networkId = new BN(0); // TODO make this real
@@ -60,61 +66,24 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
   }
 
   public async start(): Promise<void> {
+    const state = await this.db.state.getLatest();
     // if state doesn't exist in the db, the chain maybe hasn't started
-    if(!await this.db.getLatestState()) {
-      // listen for eth1 Eth2Genesis event
-      this.eth1.once('eth2genesis', this.initializeChain.bind(this));
+    if(!state) {
+      // check every block if genesis
+      this.eth1.on('block', this.checkGenesis);
     }
+    this.latestState = state;
   }
 
   public async stop(): Promise<void> {
+    this.eth1.removeListener('block', this.checkGenesis);
   }
 
-  public async initializeChain(
-    genesisTime: number64,
-    genesisDeposits: Deposit[],
-    genesisEth1Data: Eth1Data
-  ): Promise<void> {
-    this.logger.info('Initializing beacon chain.');
-    const merkleTree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
-    genesisDeposits = genesisDeposits
-      .map((deposit, index) => {
-        merkleTree.add(index, hashTreeRoot(deposit.data, this.config.types.DepositData));
-        return deposit;
-      })
-      .map((deposit, index) => {
-        deposit.proof = merkleTree.getProof(index);
-        return deposit;
-      });
-    const genesisState = getGenesisBeaconState(this.config, genesisDeposits, genesisTime, genesisEth1Data);
-    const genesisBlock = getEmptyBlock();
-    const stateRoot = hashTreeRoot(genesisState, this.config.types.BeaconState);
-    genesisBlock.stateRoot = stateRoot;
-    const blockRoot = hashTreeRoot(genesisBlock, this.config.types.BeaconBlock);
-    this.genesisTime = genesisTime;
-    await Promise.all([
-      this.db.setBlock(blockRoot, genesisBlock),
-      this.db.setState(stateRoot, genesisState),
-    ]);
-    await Promise.all([
-      this.db.setChainHeadRoots(blockRoot, stateRoot, genesisBlock, genesisState),
-      this.db.setJustifiedBlockRoot(blockRoot, genesisBlock),
-      this.db.setFinalizedBlockRoot(blockRoot, genesisBlock),
-      this.db.setLatestStateRoot(stateRoot, genesisState),
-      this.db.setJustifiedStateRoot(stateRoot, genesisState),
-      this.db.setFinalizedStateRoot(stateRoot, genesisState),
-      this.db.setMerkleTree(genesisState.depositIndex, merkleTree)
-    ]);
-    this.forkChoice.addBlock(genesisBlock.slot, blockRoot, Buffer.alloc(32));
-    this.forkChoice.setJustified(blockRoot);
-    this.forkChoice.setFinalized(blockRoot);
-  }
 
   public async receiveAttestation(attestation: Attestation): Promise<void> {
-    const state = await this.db.getLatestState();
     const validators = getAttestingIndices(
-      this.config, state, attestation.data, attestation.aggregationBitfield);
-    const balances = validators.map((index) => state.balances[index]);
+      this.config, this.latestState, attestation.data, attestation.aggregationBits);
+    const balances = validators.map((index) => this.latestState.balances[index]);
     for (let i = 0; i < validators.length; i++) {
       this.forkChoice.addAttestation(attestation.data.beaconBlockRoot, validators[i], balances[i]);
     }
@@ -122,29 +91,51 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
   }
 
   public async receiveBlock(block: BeaconBlock): Promise<void> {
-    const state = await this.db.getLatestState();
-    const isValidBlock = await this.isValidBlock(state, block);
+    const isValidBlock = await this.isValidBlock(this.latestState, block);
     assert(isValidBlock);
 
     // process current slot
-    await this.runStateTransition(block, state);
- 
+    await this.runStateTransition(block, this.latestState);
+    await this.opPool.processBlockOperations(block);
+
     // forward processed block for additional processing
     this.emit('processedBlock', block);
   }
 
   public async applyForkChoiceRule(): Promise<void> {
-    const currentRoot = await this.db.getChainHeadRoot();
+    const currentRoot = await this.db.chain.getChainHeadRoot();
     const headRoot = this.forkChoice.head();
     if (!currentRoot.equals(headRoot)) {
-      const block = await this.db.getBlock(headRoot);
+      const block = await this.db.block.get(headRoot);
       await this.db.setChainHeadRoots(currentRoot, block.stateRoot, block);
     }
   }
 
+  public async initializeBeaconChain(genesisState: BeaconState, merkleTree: ProgressiveMerkleTree): Promise<void> {
+    const genesisBlock = getEmptyBlock();
+    const stateRoot = hashTreeRoot(genesisState, this.config.types.BeaconState);
+    genesisBlock.stateRoot = stateRoot;
+    const blockRoot = hashTreeRoot(genesisBlock, this.config.types.BeaconBlock);
+    this.latestState = genesisState;
+    await Promise.all([
+      this.db.state.set(stateRoot, genesisState),
+      this.db.block.set(blockRoot, genesisBlock),
+      this.db.setChainHeadRoots(blockRoot, stateRoot, genesisBlock, genesisState),
+      this.db.chain.setJustifiedBlockRoot(blockRoot),
+      this.db.chain.setFinalizedBlockRoot(blockRoot),
+      this.db.chain.setLatestStateRoot(stateRoot),
+      this.db.chain.setJustifiedStateRoot(stateRoot),
+      this.db.chain.setFinalizedStateRoot(stateRoot),
+      this.db.merkleTree.set(genesisState.eth1DepositIndex, merkleTree.toObject())
+    ]);
+    this.forkChoice.addBlock(genesisBlock.slot, blockRoot, Buffer.alloc(32));
+    this.forkChoice.setJustified(blockRoot);
+    this.forkChoice.setFinalized(blockRoot);
+  }
+
   public async isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean> {
     // The parent block with root block.previous_block_root has been processed and accepted.
-    const hasParent = await this.db.hasBlock(block.parentRoot);
+    const hasParent = await this.db.block.has(block.parentRoot);
     if (!hasParent) {
       return false;
     }
@@ -154,80 +145,117 @@ export class BeaconChain extends EventEmitter implements IBeaconChain {
 
     // The node's Unix time is greater than or equal to state.
     const stateSlotTime = state.genesisTime + ((block.slot - GENESIS_SLOT) * this.config.params.SECONDS_PER_SLOT);
-    if (Math.floor(Date.now() / 1000) < stateSlotTime) {
-      return false;
-    }
-    return true;
+    return Math.floor(Date.now() / 1000) >= stateSlotTime;
   }
 
   private async runStateTransition(block: BeaconBlock, state: BeaconState): Promise<BeaconState> {
     const preSlot = state.slot;
-    const preFinalizedEpoch = state.finalizedEpoch;
-    const preJustifiedEpoch = state.currentJustifiedEpoch;
+    const preFinalizedEpoch = state.finalizedCheckpoint.epoch;
+    const preJustifiedEpoch = state.currentJustifiedCheckpoint.epoch;
     // Run the state transition
     let newState: BeaconState;
+    const blockRoot = hashTreeRoot(block, this.config.types.BeaconBlock);
     try {
       newState = stateTransition(this.config, state, block, true);
-    }catch (e) {
+    } catch (e) {
       // store block root in db and terminate
-      const blockRoot = hashTreeRoot(block, this.config.types.BeaconBlock);
-      await this.db.setBadBlockRoot(blockRoot);
-      this.logger.warn( `Found bad block, block root: ${blockRoot} ` + e.message + '\n' );
+      await this.db.block.storeBadBlock(blockRoot);
+      this.logger.warn(`Found bad block, block root: ${blockRoot} ` + e.message + '\n');
       return;
     }
 
     // On successful transition, update system state
-    const blockRoot = hashTreeRoot(block, this.config.types.BeaconBlock);
     await Promise.all([
-      this.db.setBlock(blockRoot, block),
-      this.db.setState(block.stateRoot, newState),
+      this.db.block.set(blockRoot, block),
+      this.db.state.set(block.stateRoot, newState),
     ]);
     this.forkChoice.addBlock(block.slot, blockRoot, block.parentRoot);
     this.updateDepositMerkleTree(newState);
+    // update metrics
+    this.metrics.currentSlot.set(block.slot);
 
     // Post-epoch processing
-    if (slotToEpoch(this.config, preSlot) < slotToEpoch(this.config, newState.slot)) {
+    const currentEpoch = computeEpochOfSlot(this.config, newState.slot);
+    if (computeEpochOfSlot(this.config, preSlot) < currentEpoch) {
       // Update FFG Checkpoints
       // Newly justified epoch
-      if (preJustifiedEpoch < newState.currentJustifiedEpoch) {
-        const justifiedBlock = await this.db.getBlock(newState.currentJustifiedRoot);
-        const [justifiedState] = await Promise.all([
-          this.db.getState(justifiedBlock.stateRoot),
-          this.db.setJustifiedBlockRoot(blockRoot, block),
+      if (preJustifiedEpoch < newState.currentJustifiedCheckpoint.epoch) {
+        const justifiedBlock = await this.db.block.get(newState.currentJustifiedCheckpoint.root);
+        await Promise.all([
+          this.db.chain.setJustifiedStateRoot(justifiedBlock.stateRoot),
+          this.db.chain.setJustifiedBlockRoot(blockRoot),
         ]);
-        await this.db.setJustifiedStateRoot(justifiedBlock.stateRoot, justifiedState);
         this.forkChoice.setJustified(blockRoot);
       }
       // Newly finalized epoch
-      if (preFinalizedEpoch < newState.finalizedEpoch) {
-        const finalizedBlock = await this.db.getBlock(newState.finalizedRoot);
-        const [finalizedState] = await Promise.all([
-          this.db.getState(finalizedBlock.stateRoot),
-          this.db.setFinalizedBlockRoot(blockRoot, block),
+      if (preFinalizedEpoch < newState.finalizedCheckpoint.epoch) {
+        const finalizedBlock = await this.db.block.get(newState.finalizedCheckpoint.root);
+        await Promise.all([
+          this.db.chain.setFinalizedStateRoot(finalizedBlock.stateRoot),
+          this.db.chain.setFinalizedBlockRoot(blockRoot),
         ]);
-        await this.db.setFinalizedStateRoot(finalizedBlock.stateRoot, finalizedState);
         this.forkChoice.setFinalized(blockRoot);
       }
+      this.metrics.previousJustifiedEpoch.set(newState.previousJustifiedCheckpoint.epoch);
+      this.metrics.currentJustifiedEpoch.set(newState.currentJustifiedCheckpoint.epoch);
+      this.metrics.currentFinalizedEpoch.set(newState.finalizedCheckpoint.epoch);
+      this.metrics.currentEpochLiveValidators.set(newState.validators.filter((v) => isActiveValidator(v, currentEpoch)).length);
     }
     return newState;
   }
 
   private async updateDepositMerkleTree(newState: BeaconState): Promise<void> {
     let [deposits, merkleTree] = await Promise.all([
-      this.db.getDeposits(),
-      this.db.getMerkleTree(newState.depositIndex - newState.latestEth1Data.depositCount)
+      this.db.deposit.getAll(),
+      this.db.merkleTree.getProgressiveMerkleTree(
+        newState.eth1DepositIndex - newState.eth1Data.depositCount
+      )
     ]);
     processSortedDeposits(
       this.config,
       deposits,
-      newState.depositIndex,
-      newState.latestEth1Data.depositCount,
+      newState.eth1DepositIndex,
+      newState.eth1Data.depositCount,
       (deposit, index) => {
-        merkleTree.add(index + newState.depositIndex, hashTreeRoot(deposit.data, this.config.types.DepositData));
+        merkleTree.add(
+          index + newState.eth1DepositIndex,
+          hashTreeRoot(deposit.data, this.config.types.DepositData)
+        );
         return deposit;
       }
     );
     //TODO: remove deposits with index <= newState.depositIndex
-    await this.db.setMerkleTree(newState.depositIndex, merkleTree);
+    await this.db.merkleTree.set(newState.eth1DepositIndex, merkleTree.toObject());
+  }
+
+  private checkGenesis = async (eth1Block: Block): Promise<void> => {
+    this.logger.info(`Checking if block ${eth1Block.hash} will form valid genesis state`);
+    const deposits = await this.opPool.deposits.getAll();
+    const merkleTree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
+    const depositsWithProof = deposits
+      .map((deposit, index) => {
+        merkleTree.add(index, hashTreeRoot(deposit.data, this.config.types.DepositData));
+        return deposit;
+      })
+      .map((deposit, index) => {
+        deposit.proof = merkleTree.getProof(index);
+        return deposit;
+      });
+    const genesisState = initializeBeaconStateFromEth1 (
+      this.config,
+      Buffer.from(eth1Block.hash.replace("0x", ""), "hex"),
+      eth1Block.timestamp,
+      depositsWithProof
+    );
+    if(!isValidGenesisState(this.config, genesisState)) {
+      this.logger.info(`Eth1 block ${eth1Block.hash} is NOT forming valid genesis state`);
+      return;
+    }
+    this.logger.info(`Initializing beacon chain with eth1 block ${eth1Block.hash}`);
+    await this.initializeBeaconChain(genesisState, merkleTree);
+  };
+
+  public isInitialized(): boolean {
+    return !!this.latestState;
   }
 }

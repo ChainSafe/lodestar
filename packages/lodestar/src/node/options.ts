@@ -9,6 +9,7 @@ import defaultEth1Options, {Eth1Options, IEth1Options} from "../eth1/options";
 import defaultNetworkOptions, {INetworkOptions, NetworkOptions} from "../network/options";
 import defaultOpPoolOptions, {IOpPoolOptions, OpPoolOptions} from "../opPool/options";
 import defaultSyncOptions, {ISyncOptions, SyncOptions} from "../sync/options";
+import defaultMetricsOptions, {IMetricsOptions} from "../metrics/options";
 import {IValidatorOptions, ValidatorOptions} from "../validator/options";
 import {IConfigurationModule} from "../util/config";
 
@@ -20,6 +21,7 @@ export interface IBeaconNodeOptions {
   network: INetworkOptions;
   opPool: IOpPoolOptions;
   sync: ISyncOptions;
+  metrics: IMetricsOptions;
   validator?: IValidatorOptions;
 }
 
@@ -45,6 +47,7 @@ const config: IBeaconNodeOptions = {
   network: defaultNetworkOptions,
   opPool: defaultOpPoolOptions,
   sync: defaultSyncOptions,
+  metrics: defaultMetricsOptions,
 };
 
 export default config;

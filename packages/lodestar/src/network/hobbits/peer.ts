@@ -4,7 +4,7 @@
 
 import {
   Hello, Status, RequestBody, ResponseBody
-} from "../../types";
+} from "@chainsafe/eth2.0-types";
 import {Method} from "../../constants";
 import {HobbitsConnectionHandler} from "./hobbitsConnectionHandler";
 import net from "net";
@@ -101,7 +101,7 @@ export class Peer {
     });
 
     that.connection.on('end', () => {
-      that.controller.logger.info(`Hobbits :: ended connection of : ${that.peerInfo.id.toB58String()}.`);
+      // that.controller.logger.info(`Hobbits :: ended connection of : ${that.peerInfo.id.toB58String()}.`);
       that.controller.onConnectionEnd(that.peerInfo);
     });
   }

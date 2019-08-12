@@ -2,12 +2,12 @@ import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 // @ts-ignore
-import {restore, rewire} from "@chainsafe/bls-js";
+import {restore, rewire} from "@chainsafe/bls";
 import sinon from "sinon";
 import {equals} from "@chainsafe/ssz";
 
-import {Attestation, BeaconState} from "../../../../src/types";
-import {config} from "../../../../src/config/presets/mainnet";
+import {Attestation, BeaconState} from "@chainsafe/eth2.0-types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processAttestation} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 

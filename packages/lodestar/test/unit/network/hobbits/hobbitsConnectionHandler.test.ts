@@ -2,11 +2,11 @@ import {assert, expect} from "chai";
 import BN from "bn.js";
 import promisify from "promisify-es6";
 
-import {config} from "../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {HobbitsConnectionHandler} from "../../../../src/network/hobbits/hobbitsConnectionHandler";
 
 import {GossipTopic, Method} from "../../../../src/network/hobbits/constants";
-import {BeaconBlock, Hello} from "../../../../src/types";
+import {BeaconBlock, Hello} from "@chainsafe/eth2.0-types";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
 import {generateEmptyBlock} from "../../../utils/block";
 import {deserialize} from "@chainsafe/ssz";

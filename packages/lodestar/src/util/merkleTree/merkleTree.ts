@@ -3,17 +3,25 @@
  */
 
 import assert from "assert";
-import {bytes32, MerkleTree, number64} from "../../types";
+import {bytes32, MerkleTree, number64} from "@chainsafe/eth2.0-types";
 import {hash} from "../crypto";
 import {intDiv} from "../math";
 import {serialize, deserialize, AnySSZType, SimpleContainerType} from "@chainsafe/ssz";
 import {IProgressiveMerkleTree} from "./interface";
 
 const MerkleTreeType: SimpleContainerType = {
-  name: "MerkleTree",
   fields: [
     ["depth", "number64"],
-    ["tree", [[["byte", 32]]]],
+    ["tree", {
+      elementType: {
+        elementType: {
+          elementType: "byte",
+          maxLength: 32,
+        },
+        maxLength: 32,
+      },
+      maxLength: 32,
+    }],
   ],
 };
 
@@ -23,7 +31,7 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
   private _tree: bytes32[][];
   private _dirty: boolean;
 
-  protected constructor(depth: number, tree: bytes32[][]) {
+  public constructor(depth: number, tree: bytes32[][]) {
     assert(depth > 1 && depth <= 52, "tree depth must be between 1 and 53");
     this._depth = depth;
     this._tree = tree;
@@ -87,15 +95,11 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
     );
   }
 
-  public serialize(): Buffer {
-    return serialize(
-      {
-        depth: this._depth,
-        tree: this._tree,
-        zeroHashes: this._zerohashes
-      },
-      MerkleTreeType,
-    );
+  public toObject(): MerkleTree {
+    return {
+      depth: this._depth,
+      tree: this._tree
+    };
   }
 
 

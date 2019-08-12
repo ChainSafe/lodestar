@@ -1,5 +1,5 @@
 import {IDatabaseController} from "../controller";
-import {IBeaconConfig} from "../../config";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {Service} from "../../node";
 
 export interface DatabaseApiOptions {

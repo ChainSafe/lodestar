@@ -1,22 +1,17 @@
 import {expect} from "chai";
 import sinon from "sinon";
 // @ts-ignore
-import {restore, rewire} from "@chainsafe/bls-js";
-import {signingRoot} from "@chainsafe/ssz";
+import {restore, rewire} from "@chainsafe/bls";
 
-import {config} from "../../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
-  Domain,
   FAR_FUTURE_EPOCH,
 } from "../../../../../../src/constants";
-import {VoluntaryExit} from "../../../../../../src/types";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
-import {getDomain, initiateValidatorExit} from "../../../../../../src/chain/stateTransition/util";
 import {processVoluntaryExit} from "../../../../../../src/chain/stateTransition/block/operations";
 
 import {generateValidator} from "../../../../../utils/validator";
 import {generateEmptyVoluntaryExit} from "../../../../../utils/voluntaryExits";
-import {generateEmptyBlock} from "../../../../../utils/block";
 import {generateState} from "../../../../../utils/state";
 
 describe('process block - voluntary exits', function () {
@@ -42,7 +37,7 @@ describe('process block - voluntary exits', function () {
   it('should fail - validator not active', function () {
     const state = generateState();
     const exit = generateEmptyVoluntaryExit();
-    state.validatorRegistry.push(generateValidator());
+    state.validators.push(generateValidator());
     isActiveValidatorStub.returns(false);
     try {
       processVoluntaryExit(config, state, exit);
@@ -55,7 +50,7 @@ describe('process block - voluntary exits', function () {
   it('should fail - already exited', function () {
     const state = generateState();
     const exit = generateEmptyVoluntaryExit();
-    state.validatorRegistry.push(generateValidator(0, 1));
+    state.validators.push(generateValidator(0, 1));
     isActiveValidatorStub.returns(true);
     try {
       processVoluntaryExit(config, state, exit);
@@ -69,7 +64,7 @@ describe('process block - voluntary exits', function () {
     const state = generateState({slot: 0});
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = config.params.SLOTS_PER_EPOCH * 2;
-    state.validatorRegistry.push(generateValidator(0, FAR_FUTURE_EPOCH));
+    state.validators.push(generateValidator(0, FAR_FUTURE_EPOCH));
     isActiveValidatorStub.returns(true);
     try {
       processVoluntaryExit(config, state, exit);
@@ -83,7 +78,7 @@ describe('process block - voluntary exits', function () {
     const state = generateState({slot: config.params.SLOTS_PER_EPOCH * 2});
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = 0;
-    state.validatorRegistry.push(generateValidator(0, FAR_FUTURE_EPOCH));
+    state.validators.push(generateValidator(0, FAR_FUTURE_EPOCH));
     isActiveValidatorStub.returns(true);
     try {
       processVoluntaryExit(config, state, exit);
@@ -97,7 +92,7 @@ describe('process block - voluntary exits', function () {
     const state = generateState({slot: (config.params.PERSISTENT_COMMITTEE_PERIOD + 1) * config.params.SLOTS_PER_EPOCH});
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = 0;
-    state.validatorRegistry.push(generateValidator(0, FAR_FUTURE_EPOCH));
+    state.validators.push(generateValidator(0, FAR_FUTURE_EPOCH));
     isActiveValidatorStub.returns(true);
     blsStub.verify.returns(false);
     try {
@@ -115,7 +110,7 @@ describe('process block - voluntary exits', function () {
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = 0;
     blsStub.verify.returns(true);
-    state.validatorRegistry.push(validator);
+    state.validators.push(validator);
     isActiveValidatorStub.returns(true);
     try {
       processVoluntaryExit(config, state, exit);

@@ -2,13 +2,13 @@ import BN from "bn.js";
 import {expect} from "chai";
 import sinon from "sinon";
 
-import {config} from "../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   getAttestingBalance,
   getMatchingHeadAttestations,
   getMatchingSourceAttestations,
   getMatchingTargetAttestations,
-  getTotalActiveBalance, getUnslashedAttestingIndices
+  getUnslashedAttestingIndices
 } from "../../../../../src/chain/stateTransition/epoch/util";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 import {getAttestationDataSlot} from "../../../../../src/chain/stateTransition/util";
@@ -46,9 +46,7 @@ describe('process epoch - crosslinks', function () {
     const validatorIndices = [1, 2];
     getActiveValidatorIndicesStub.returns(validatorIndices);
     try {
-      getTotalActiveBalance(config, generateState());
-      expect(getActiveValidatorIndicesStub.withArgs(sinon.match.any, 0).calledOnce).to.be.true;
-      expect(getTotalBalanceStub.withArgs(sinon.match.any, validatorIndices).calledOnce).to.be.true;
+      utils.getTotalActiveBalance(config, generateState());
     } catch (e) {
       expect.fail(e.stack);
     }
@@ -118,7 +116,7 @@ describe('process epoch - crosslinks', function () {
         proposerIndex: 1
       }
     ];
-    currentPendingAttestations[0].data.targetRoot = blockRoot;
+    currentPendingAttestations[0].data.target.root = blockRoot;
     const state = generateState({
       slot: config.params.SLOTS_PER_EPOCH,
       currentEpochAttestations: currentPendingAttestations
@@ -182,7 +180,7 @@ describe('process epoch - crosslinks', function () {
     getAttestingIndicesStub.returns([0, 1]);
     const validator1 = generateValidator(0, FAR_FUTURE_EPOCH, true);
     const validator2 = generateValidator(0, FAR_FUTURE_EPOCH, false);
-    const state = generateState({validatorRegistry: [validator1, validator2]});
+    const state = generateState({validators: [validator1, validator2]});
     try {
       const result = getUnslashedAttestingIndices(config, state, pendingAttestations);
       expect(result).to.be.deep.equal([1]);
@@ -209,7 +207,7 @@ describe('process epoch - crosslinks', function () {
     getAttestingIndicesStub.returns([0, 1]);
     const validator1 = generateValidator(0, FAR_FUTURE_EPOCH, true);
     const validator2 = generateValidator(0, FAR_FUTURE_EPOCH, false);
-    const state = generateState({validatorRegistry: [validator1, validator2]});
+    const state = generateState({validators: [validator1, validator2]});
     getTotalBalanceStub.returns(new BN(1));
     try {
       const result = getAttestingBalance(config, state, pendingAttestations);

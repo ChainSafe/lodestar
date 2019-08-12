@@ -14,7 +14,7 @@ import {
 } from "./types";
 import {toCamelCase, toSnakeCase} from "./util";
 import BSON from 'bson';
-import {bytes32} from "../../types";
+import {bytes32} from "@chainsafe/eth2.0-types";
 import {intDiv} from "../../util/math";
 import BN from "bn.js";
 

@@ -2,8 +2,8 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {config} from "./../../../../../../src/config/presets/mainnet";
-import {Crosslink} from "../../../../../../src/types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {Crosslink} from "@chainsafe/eth2.0-types";
 import  * as processProposerSlashing
   from "../../../../../../src/chain/stateTransition/block/operations/proposerSlashing";
 import  * as processAttesterSlashing
@@ -147,7 +147,7 @@ describe('process block - process operations', function () {
     body.attesterSlashings.push(generateEmptyAttesterSlashing());
     body.attestations.push(generateEmptyAttestation());
     body.deposits.push(generateDeposit());
-    state.latestEth1Data.depositCount++;
+    state.eth1Data.depositCount++;
 
     try {
       processOperations(config, state, body);
@@ -173,7 +173,7 @@ describe('process block - process operations', function () {
     body.attesterSlashings.push(generateEmptyAttesterSlashing());
     body.attestations.push(generateEmptyAttestation());
     body.deposits.push(generateDeposit());
-    state.latestEth1Data.depositCount++;
+    state.eth1Data.depositCount++;
     body.voluntaryExits.push(generateEmptyVoluntaryExit());
 
     try {
@@ -200,7 +200,7 @@ describe('process block - process operations', function () {
     body.attesterSlashings.push(generateEmptyAttesterSlashing());
     body.attestations.push(generateEmptyAttestation());
     body.deposits.push(generateDeposit());
-    state.latestEth1Data.depositCount++;
+    state.eth1Data.depositCount++;
     body.voluntaryExits.push(generateEmptyVoluntaryExit());
     try {
       processOperations(config, state, body);

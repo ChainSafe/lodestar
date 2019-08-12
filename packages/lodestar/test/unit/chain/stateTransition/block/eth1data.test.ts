@@ -2,8 +2,8 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {serialize} from "@chainsafe/ssz";
 
-import {config} from "../../../../../src/config/presets/mainnet";
-import {Eth1Data} from "../../../../../src/types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {Eth1Data} from "@chainsafe/eth2.0-types";
 import {processEth1Data} from "../../../../../src/chain/stateTransition/block/eth1Data";
 
 import {generateEmptyBlock} from "../../../../utils/block";
@@ -35,7 +35,7 @@ describe('process block - eth1data', function () {
     const block = generateEmptyBlock();
     block.body.eth1Data = vote;
     processEth1Data(config, state, block.body);
-    expect(serialize(state.latestEth1Data, config.types.Eth1Data).toString('hex'))
+    expect(serialize(state.eth1Data, config.types.Eth1Data).toString('hex'))
       .to.be.equal(serialize(vote, config.types.Eth1Data).toString('hex'));
   });
 
@@ -49,7 +49,7 @@ describe('process block - eth1data', function () {
     const block = generateEmptyBlock();
     block.body.eth1Data = vote;
     processEth1Data(config, state, block.body);
-    expect(serialize(state.latestEth1Data, config.types.Eth1Data).toString('hex'))
+    expect(serialize(state.eth1Data, config.types.Eth1Data).toString('hex'))
       .to.not.be.equal(serialize(vote, config.types.Eth1Data).toString('hex'));
   });
 });

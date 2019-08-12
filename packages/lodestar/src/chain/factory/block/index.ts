@@ -2,10 +2,11 @@
  * @module chain/blockAssembly
  */
 
+import {BeaconBlock, BeaconBlockBody, BeaconBlockHeader, BeaconState, bytes96, Slot} from "@chainsafe/eth2.0-types";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
-import {BeaconBlock, BeaconBlockBody, BeaconBlockHeader, BeaconState, bytes96, Slot} from "../../../types";
-import {IBeaconConfig} from "../../../config";
-import {BeaconDB} from "../../../db/api";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
+import {BeaconDb} from "../../../db/api";
 import {OpPool} from "../../../opPool";
 import {assembleBody} from "./body";
 import {IEth1Notifier} from "../../../eth1";
@@ -13,17 +14,17 @@ import {stateTransition} from "../../stateTransition";
 
 export async function assembleBlock(
   config: IBeaconConfig,
-  db: BeaconDB,
+  db: BeaconDb,
   opPool: OpPool,
   eth1: IEth1Notifier,
   slot: Slot,
   randao: bytes96
 ): Promise<BeaconBlock> {
   const [parentBlock, currentState] = await Promise.all([
-    db.getChainHead(),
-    db.getLatestState(),
+    db.block.getChainHead(),
+    db.state.getLatest(),
   ]);
-  const merkleTree = await db.getMerkleTree(currentState.depositIndex);
+  const merkleTree = await db.merkleTree.getProgressiveMerkleTree(currentState.eth1DepositIndex);
   const parentHeader: BeaconBlockHeader = {
     stateRoot: parentBlock.stateRoot,
     signature: parentBlock.signature,

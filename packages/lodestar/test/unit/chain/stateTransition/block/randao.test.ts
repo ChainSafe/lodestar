@@ -1,14 +1,13 @@
 import {expect} from "chai";
 import sinon from "sinon";
 // @ts-ignore
-import {restore, rewire} from "@chainsafe/bls-js";
+import {restore, rewire} from "@chainsafe/bls";
 
-import {config} from "../../../../../src/config/presets/mainnet";
-import {Domain} from "../../../../../src/constants";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processRandao} from "../../../../../src/chain/stateTransition/block/randao";
 import * as utils from "../../../../../src/chain/stateTransition/util";
 
-import {getCurrentEpoch, getDomain} from "../../../../../src/chain/stateTransition/util";
+import {getCurrentEpoch} from "../../../../../src/chain/stateTransition/util";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {generateValidator} from "../../../../utils/validator";
@@ -33,7 +32,7 @@ describe('process block - randao', function () {
   });
 
   it('should fail to process - invalid randao signature', function () {
-    const state = generateState({validatorRegistry: [generateValidator()]});
+    const state = generateState({validators: [generateValidator()]});
     const block = generateEmptyBlock();
     getBeaconProposerStub.returns(0);
     blsStub.verify.returns(false);
@@ -48,7 +47,7 @@ describe('process block - randao', function () {
 
   it('should process randao', function () {
     const validator = generateValidator();
-    const state = generateState({validatorRegistry: [validator]});
+    const state = generateState({validators: [validator]});
     const block = generateEmptyBlock();
     getBeaconProposerStub.returns(0);
     blsStub.verify.returns(true);
@@ -56,7 +55,7 @@ describe('process block - randao', function () {
       processRandao(config, state, block.body);
       expect(getBeaconProposerStub.calledOnce).to.be.true;
       expect(blsStub.verify.calledOnce).to.be.true;
-      expect(state.latestRandaoMixes[getCurrentEpoch(config, state) % config.params.LATEST_RANDAO_MIXES_LENGTH]).to.not.be.null;
+      expect(state.randaoMixes[getCurrentEpoch(config, state) % config.params.EPOCHS_PER_HISTORICAL_VECTOR]).to.not.be.null;
     } catch (e) {
       expect.fail(e.stack);
     }

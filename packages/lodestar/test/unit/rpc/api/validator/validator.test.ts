@@ -1,12 +1,12 @@
 import sinon from "sinon";
 import {expect} from "chai";
 
-import {config} from "../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as blockAssembly from "../../../../../src/chain/factory/block";
 import * as stateTransitionUtils from "../../../../../src/chain/stateTransition/util";
 import {getCommitteeAssignment} from "../../../../../src/chain/stateTransition/util";
 import {ValidatorApi} from "../../../../../src/rpc/api/validator";
-import {BeaconDB} from "../../../../../src/db/api";
+import {BeaconDb} from "../../../../../src/db/api";
 import {BeaconChain} from "../../../../../src/chain";
 import {AttestationOperations, OpPool} from "../../../../../src/opPool";
 import {generateEmptyBlock} from "../../../../utils/block";
@@ -15,6 +15,7 @@ import {StatefulDagLMDGHOST} from "../../../../../src/chain/forkChoice";
 import * as dutyFactory from "../../../../../src/chain/factory/duties";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
+import {BlockRepository, StateRepository} from "../../../../../src/db/api/beacon/repositories";
 
 describe('validator rpc api', function () {
 
@@ -23,7 +24,9 @@ describe('validator rpc api', function () {
   let validatorApi, dbStub, chainStub, opStub, forkChoiceStub, eth1Stub;
 
   beforeEach(() => {
-    dbStub = sandbox.createStubInstance(BeaconDB);
+    dbStub = sandbox.createStubInstance(BeaconDb);
+    dbStub.state =sandbox.createStubInstance(StateRepository);
+    dbStub.block =sandbox.createStubInstance(BlockRepository);
     eth1Stub = sandbox.createStubInstance(EthersEth1Notifier);
     forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
     chainStub = sandbox.createStubInstance(BeaconChain);
@@ -52,7 +55,7 @@ describe('validator rpc api', function () {
   it('is proposer', async function() {
     const isProposerStub = sandbox.stub(stateTransitionUtils, 'isProposerAtSlot');
     const state = generateState();
-    dbStub.getLatestState.resolves(state);
+    dbStub.state.getLatest.resolves(state);
     isProposerStub.returns(true);
     const result = await validatorApi.isProposer(1, 2);
     expect(result).to.be.true;
@@ -66,7 +69,7 @@ describe('validator rpc api', function () {
   it('get duties', async function() {
     const publicKey = Buffer.alloc(48, 1);
     const state = generateState();
-    dbStub.getLatestState.resolves(state);
+    dbStub.state.getLatest.resolves(state);
     dbStub.getValidatorIndex.resolves(5);
     const getProposerStub = sandbox.stub(stateTransitionUtils, 'getBeaconProposerIndex');
     getProposerStub.returns(4);
@@ -76,7 +79,7 @@ describe('validator rpc api', function () {
     expect(duties.length).to.be.equal(1);
     expect(duties[0].committeeIndex).to.be.null;
     expect(duties[0].blockProductionSlot).to.be.null;
-    expect(dbStub.getLatestState.calledOnce).to.be.true;
+    expect(dbStub.state.getLatest.calledOnce).to.be.true;
     expect(dbStub.getValidatorIndex.withArgs(publicKey).calledOnce).to.be.true;
     expect(getProposerStub.withArgs(config, state).calledOnce).to.be.true;
     expect(assembleValidatorDutyStub.calledOnceWith(config, publicKey, 5, state, 4)).to.be.true;
@@ -84,24 +87,24 @@ describe('validator rpc api', function () {
 
   it('get committee assignment', async function() {
     const state = generateState();
-    dbStub.getLatestState.resolves(state);
+    dbStub.state.getLatest.resolves(state);
     const commiteeAssignmentStub = sandbox.stub(stateTransitionUtils, 'getCommitteeAssignment');
     commiteeAssignmentStub.returns(null);
     const result = await validatorApi.getCommitteeAssignment(1, 2);
     expect(result).to.be.null;
-    expect(dbStub.getLatestState.calledOnce).to.be.true;
+    expect(dbStub.state.getLatest.calledOnce).to.be.true;
     expect(commiteeAssignmentStub.withArgs(config, state, 2, 1));
   });
 
   it('produceAttestation - missing slots', async function() {
     const state = generateState({slot: 1});
-    dbStub.getLatestState.resolves(state);
+    dbStub.state.getLatest.resolves(state);
     const block = generateEmptyBlock();
-    dbStub.getBlock.resolves(block);
+    dbStub.block.get.resolves(block);
     const result = await validatorApi.produceAttestation(4, 2);
     expect(result).to.not.be.null;
-    expect(dbStub.getLatestState.calledOnce).to.be.true;
-    expect(dbStub.getBlock.calledTwice).to.be.true;
+    expect(dbStub.state.getLatest.calledOnce).to.be.true;
+    expect(dbStub.block.get.calledTwice).to.be.true;
   });
 
   it('publish block', async function() {

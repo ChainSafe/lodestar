@@ -3,14 +3,16 @@
  */
 
 import PeerInfo from "peer-info";
-
 import {
   bytes32, Slot, number64,
   Hello, Goodbye, Status,
   BeaconBlock, BeaconState,
-  Method, RequestId, RequestBody, bytes,
-} from "../../types";
+  RequestBody, bytes
+} from "@chainsafe/eth2.0-types";
 
+import {
+  RequestId,
+} from "../../constants";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface ISyncOptions {
@@ -37,5 +39,5 @@ export interface ISyncRpc {
 
   getBeaconStates: (peerInfo: PeerInfo, hashes: bytes32[]) => Promise<BeaconState[]>;
 
-  onRequest: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => Promise<void>;
+  onRequest: (peerInfo: PeerInfo, method: number, id: RequestId, body: RequestBody) => Promise<void>;
 }

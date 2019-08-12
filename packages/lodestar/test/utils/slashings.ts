@@ -1,5 +1,5 @@
-import {config} from "../../src/config/presets/mainnet";
-import {AttesterSlashing, ProposerSlashing} from "../../src/types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {AttesterSlashing, ProposerSlashing} from "@chainsafe/eth2.0-types";
 import {generateEmptyBlock} from "./block";
 import {getTemporaryBlockHeader} from "../../src/chain/stateTransition/util";
 import {generateEmptyAttestation} from "./attestation";
@@ -20,13 +20,13 @@ export function generateEmptyAttesterSlashing(): AttesterSlashing {
     attestation1: {
       data: generateEmptyAttestation().data,
       signature: generateEmptyAttestation().signature,
-      custodyBit1Indices: [0],
+      custodyBit1Indices: [],
       custodyBit0Indices: [0],
     },
     attestation2: {
       data: generateEmptyAttestation().data,
       signature: generateEmptyAttestation().signature,
-      custodyBit1Indices: [0],
+      custodyBit1Indices: [],
       custodyBit0Indices: [0],
     },
   };

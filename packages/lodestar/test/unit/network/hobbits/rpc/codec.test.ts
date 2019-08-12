@@ -4,11 +4,11 @@ import {assert} from "chai";
 import BN from "bn.js";
 import {AnyContainerType, serialize} from "@chainsafe/ssz";
 
-import {config} from "../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   RequestBody,
   ResponseBody,
-} from "../../../../../src/types";
+} from "@chainsafe/eth2.0-types";
 import {
   Method,
 } from "../../../../../src/network/hobbits/constants";
@@ -90,7 +90,7 @@ describe("[hobbits] rpc request", () => {
     },
   ];
   for (const {msg, method, type} of testCases) {
-    it(`should properly encode/decode ${type.name}`, () => {
+    it(`should properly encode/decode ${type}`, () => {
       // encode
       const body = serialize(msg, type);
       const actualEncoded = encodeRequestBody(config, method, msg);
@@ -138,7 +138,7 @@ describe("[hobbits] rpc response", () => {
     },
   ];
   for (const {msg, method, type} of testCases) {
-    it(`should properly encode/decode ${type.name}`, () => {
+    it(`should properly encode/decode ${type}`, () => {
       // encode
       const body = serialize(msg, type);
       const actualEncoded = encodeRequestBody(config, method, msg);

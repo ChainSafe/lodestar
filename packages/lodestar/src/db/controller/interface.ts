@@ -11,7 +11,7 @@ export interface SearchOptions {
 
 export interface IDatabaseController extends EventEmitter{
 
-  get(key: any): Promise<Buffer>;
+  get(key: any): Promise<Buffer | null>;
 
   batchPut(items: { key: any; value: any }[]): Promise<any>;
 
@@ -29,6 +29,8 @@ export interface IDatabaseController extends EventEmitter{
    * @param value
    */
   put(key: any, value: any): Promise<any>;
+
+  delete(key: any): Promise<void>;
 
   start(): Promise<void>;
 

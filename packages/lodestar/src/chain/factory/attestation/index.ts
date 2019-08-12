@@ -1,19 +1,19 @@
-import {BeaconBlock, BeaconState, IndexedAttestation, Shard, Slot} from "../../../types";
-import {IBeaconConfig} from "../../../config";
-import {BeaconDB} from "../../../db/api";
+import {BeaconBlock, BeaconState, IndexedAttestation, Shard, Slot} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
+import {BeaconDb} from "../../../db/api";
 import {assembleAttestationData} from "./data";
-import {advanceSlot} from "../../stateTransition/slot";
 
 export async function assembleAttestation(
   config: IBeaconConfig,
-  db: BeaconDB,
+  db: BeaconDb,
   state: BeaconState,
   headBlock: BeaconBlock,
   slot: Slot,
   shard: Shard): Promise<IndexedAttestation> {
 
   while(state.slot < slot) {
-    advanceSlot(state);
+    state.slot++;
   }
 
   return {

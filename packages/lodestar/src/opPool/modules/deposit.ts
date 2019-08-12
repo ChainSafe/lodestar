@@ -1,14 +1,21 @@
-import {OperationsModule} from "./abstract";
-import {Deposit, number64} from "../../types";
+import {Deposit, number64} from "@chainsafe/eth2.0-types";
 
-export class DepositsOperations extends OperationsModule {
+import {DepositRepository} from "../../db/api/beacon/repositories";
 
-  public async receive(index: number, deposit: Deposit): Promise<void> {
-    return await this.db.setDeposit(index, deposit);
+export class DepositsOperations {
+
+  protected readonly db: DepositRepository;
+
+  public constructor(db: DepositRepository) {
+    this.db = db;
   }
 
+  public receive = async (index: number, value: Deposit): Promise<void> => {
+    await this.db.set(index, value);
+  };
+
   public async getAll(): Promise<Deposit[]> {
-    return await this.db.getDeposits();
+    return await this.db.getAll();
   }
 
   /**
@@ -16,7 +23,7 @@ export class DepositsOperations extends OperationsModule {
    * @param depositCount
    */
   public async removeOld(depositCount: number64): Promise<void> {
-    await this.db.deleteDeposits(depositCount);
+    await this.db.deleteOld(depositCount);
   }
 
 }

@@ -1,13 +1,13 @@
 import sinon from "sinon";
 import {expect} from "chai";
 
-import {config} from "../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {BeaconApi} from "../../../../../src/rpc/api/beacon";
-import {BeaconDB} from "../../../../../src/db/api";
 import {BeaconChain} from "../../../../../src/chain";
 
 import {generateState} from "../../../../utils/state";
 import {generateEmptyBlock} from "../../../../utils/block";
+import {BlockRepository, StateRepository} from "../../../../../src/db/api/beacon/repositories";
 
 describe('beacon rpc api', function () {
 
@@ -16,7 +16,10 @@ describe('beacon rpc api', function () {
   let beaconApi: BeaconApi, chainStub, dbStub;
 
   beforeEach(() => {
-    dbStub = sandbox.createStubInstance(BeaconDB);
+    dbStub = {
+      state: sandbox.createStubInstance(StateRepository),
+      block: sandbox.createStubInstance(BlockRepository)
+    };
     chainStub = sandbox.createStubInstance(BeaconChain);
     beaconApi = new BeaconApi({}, {
       config,
@@ -25,12 +28,12 @@ describe('beacon rpc api', function () {
     });
   });
 
-  it('should return client version', async function() {
+  it('should return client version', async function () {
     const version = await beaconApi.getClientVersion();
     expect(version).to.not.be.null;
   });
 
-  it('should return fork from state', async function() {
+  it('should return fork from state', async function () {
     const state = generateState({
       fork: {
         epoch: 2,
@@ -38,36 +41,36 @@ describe('beacon rpc api', function () {
         currentVersion: Buffer.from("2")
       }
     });
-    dbStub.getLatestState.resolves(state);
+    dbStub.state.getLatest.resolves(state);
     const fork = await beaconApi.getFork();
-    expect(dbStub.getLatestState.calledOnce).to.be.true;
+    expect(dbStub.state.getLatest.calledOnce).to.be.true;
     expect(fork).to.be.deep.equal(state.fork);
   });
 
-  it('should return genesis time', async function() {
-    chainStub.genesisTime = Date.now();
+  it('should return genesis time', async function () {
+    chainStub.latestState = generateState({genesisTime: Date.now()});
     const genesisTime = await beaconApi.getGenesisTime();
-    expect(genesisTime).to.be.equal(chainStub.genesisTime);
+    expect(genesisTime).to.be.equal(chainStub.latestState.genesisTime);
   });
 
-  it('should return syncing status', async function() {
+  it('should return syncing status', async function () {
     const status = await beaconApi.getSyncingStatus();
     expect(status).to.be.false;
   });
 
-  it('should return state', async function() {
+  it('should return state', async function () {
     const state = generateState();
-    dbStub.getLatestState.resolves(state);
+    dbStub.state.getLatest.resolves(state);
     const result = await beaconApi.getBeaconState();
-    expect(dbStub.getLatestState.calledOnce).to.be.true;
+    expect(dbStub.state.getLatest.calledOnce).to.be.true;
     expect(result).to.be.deep.equal(state);
   });
 
-  it('should return chain head', async function() {
+  it('should return chain head', async function () {
     const block = generateEmptyBlock();
-    dbStub.getChainHead.resolves(block);
+    dbStub.block.getChainHead.resolves(block);
     const result = await beaconApi.getChainHead();
-    expect(dbStub.getChainHead.calledOnce).to.be.true;
+    expect(dbStub.block.getChainHead.calledOnce).to.be.true;
     expect(result).to.be.deep.equal(block);
   });
 

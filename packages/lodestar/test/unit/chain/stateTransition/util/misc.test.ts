@@ -1,8 +1,8 @@
 import BN from "bn.js";
 import { assert } from "chai";
 
-import {config} from "../../../../../src/config/presets/mainnet";
-import {Fork} from "../../../../../src/types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {Fork} from "@chainsafe/eth2.0-types";
 import {
   GENESIS_SLOT,
 } from "../../../../../src/constants";
@@ -11,8 +11,8 @@ import {
   getBlockRootAtSlot,
   getBlockRoot,
   getDomain,
-  getChurnLimit,
-} from "../../../../../src/chain/stateTransition/util/misc";
+  getValidatorChurnLimit,
+} from "../../../../../src/chain/stateTransition/util";
 
 import { generateState } from "../../../../utils/state";
 
@@ -46,7 +46,7 @@ describe("getBlockRoot", () => {
   it("should return first block root for genesis slot", () => {
     const state = generateState({
       slot:  GENESIS_SLOT + 1,
-      latestBlockRoots: Array.from({ length: config.params.SLOTS_PER_HISTORICAL_ROOT }, () => Buffer.from([0xAB])),
+      blockRoots: Array.from({ length: config.params.SLOTS_PER_HISTORICAL_ROOT }, () => Buffer.from([0xAB])),
     });
     const res = getBlockRoot(config, state, GENESIS_SLOT);
     assert((new BN(res)).eq(new BN(0xAB)),

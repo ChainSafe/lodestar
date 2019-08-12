@@ -1,15 +1,14 @@
 import { assert } from "chai";
 
-import {config} from "../../../../../src/config/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   GENESIS_EPOCH,
   GENESIS_SLOT,
 } from "../../../../../src/constants";
 import {
   getRandaoMix,
-  getActiveIndexRoot,
-  generateSeed,
-} from "../../../../../src/chain/stateTransition/util/seed";
+  getSeed,
+} from "../../../../../src/chain/stateTransition/util";
 
 import { generateState } from "../../../../utils/state";
 
@@ -19,7 +18,7 @@ describe("getRandaoMix", () => {
     // Empty state in 2nd epoch
     const state = generateState({
       slot: GENESIS_SLOT + config.params.SLOTS_PER_EPOCH,
-      latestRandaoMixes: [Buffer.from([0xAB]), Buffer.from([0xCD])]
+      randaoMixes: [Buffer.from([0xAB]), Buffer.from([0xCD])]
     });
     const res = getRandaoMix(config, state, GENESIS_EPOCH);
     assert(res.equals(Uint8Array.from([0xAB])));
@@ -28,7 +27,7 @@ describe("getRandaoMix", () => {
     // Empty state in 2nd epoch
     const state = generateState({
       slot: GENESIS_SLOT + config.params.SLOTS_PER_EPOCH * 2,
-      latestRandaoMixes: [Buffer.from([0xAB]), Buffer.from([0xCD]), Buffer.from([0xEF])]
+      randaoMixes: [Buffer.from([0xAB]), Buffer.from([0xCD]), Buffer.from([0xEF])]
     });
     const res = getRandaoMix(config, state, GENESIS_EPOCH + 1);
     assert(res.equals(Uint8Array.from([0xCD])));

@@ -4,22 +4,22 @@
 
 import assert from "assert";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls-js";
+import bls from "@chainsafe/bls";
 
-import {BeaconState, Deposit, Validator} from "../../../../types";
+import {BeaconState, Deposit, Validator} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
-  Domain,
+  DomainType,
   FAR_FUTURE_EPOCH,
 } from "../../../../constants";
-import {IBeaconConfig} from "../../../../config";
-
 import {bnMin} from "../../../../util/math";
 import {verifyMerkleBranch} from "../../../../util/merkleTree";
 
-import {getDomain, increaseBalance} from "../../util";
+import {computeDomain, increaseBalance} from "../../util";
 
-// See https://github.com/ethereum/eth2.0-specs/blob/v0.7.1/specs/core/0_beacon-chain.md#deposits
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#deposits
 
 /**
  * Process an Eth1 deposit, registering a validator or increasing its balance.
@@ -33,24 +33,26 @@ export function processDeposit(
   assert(verifyMerkleBranch(
     hashTreeRoot(deposit.data, config.types.DepositData),
     deposit.proof,
-    DEPOSIT_CONTRACT_TREE_DEPTH,
-    state.depositIndex,
-    state.latestEth1Data.depositRoot,
+    DEPOSIT_CONTRACT_TREE_DEPTH + 1,
+    state.eth1DepositIndex,
+    state.eth1Data.depositRoot,
   ));
 
   // Deposits must be processed in order
-  state.depositIndex += 1;
+  state.eth1DepositIndex += 1;
 
   const pubkey = deposit.data.pubkey;
   const amount = deposit.data.amount;
-  const validatorIndex = state.validatorRegistry.findIndex((v) => v.pubkey.equals(pubkey));
+  const validatorIndex = state.validators.findIndex((v) => v.pubkey.equals(pubkey));
   if (validatorIndex === -1) {
     // Verify the deposit signature (proof of possession)
+    // Note: The deposit contract does not check signatures.
+    // Note: Deposits are valid across forks, thus the deposit domain is retrieved directly from `computeDomain`.
     if (!bls.verify(
       pubkey,
       signingRoot(deposit.data, config.types.DepositData),
       deposit.data.signature,
-      getDomain(config, state, Domain.DEPOSIT),
+      computeDomain(DomainType.DEPOSIT),
     )) {
       return;
     }
@@ -68,7 +70,7 @@ export function processDeposit(
         config.params.MAX_EFFECTIVE_BALANCE
       ),
     };
-    state.validatorRegistry.push(validator);
+    state.validators.push(validator);
     state.balances.push(amount);
   } else {
     // Increase balance by deposit amount

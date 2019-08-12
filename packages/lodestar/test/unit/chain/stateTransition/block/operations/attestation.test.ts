@@ -2,14 +2,15 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {config} from "../../../../../../src/config/presets/mainnet";
-import {Crosslink} from "../../../../../../src/types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {Crosslink} from "@chainsafe/eth2.0-types";
+import {ZERO_HASH} from "../../../../../../src/constants";
 import {processAttestation} from "../../../../../../src/chain/stateTransition/block/operations";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
 import {
-  convertToIndexed,
+  getIndexedAttestation,
   getBeaconProposerIndex,
-  validateIndexedAttestation
+  isValidIndexedAttestation
 } from "../../../../../../src/chain/stateTransition/util";
 
 import {generateState} from "../../../../../utils/state";
@@ -27,9 +28,9 @@ describe('process block - attestation', function () {
     attestationSlotStub = sandbox.stub(utils, 'getAttestationDataSlot');
     currentEpochStub = sandbox.stub(utils, 'getCurrentEpoch');
     previousEpochStub = sandbox.stub(utils, 'getPreviousEpoch');
-    validateIndexedAttestationStub = sandbox.stub(utils, 'validateIndexedAttestation');
+    validateIndexedAttestationStub = sandbox.stub(utils, 'isValidIndexedAttestation');
     getBeaconProposerIndexStub = sandbox.stub(utils, 'getBeaconProposerIndex');
-    sandbox.stub(utils, 'convertToIndexed');
+    sandbox.stub(utils, 'getIndexedAttestation');
   });
 
   afterEach(() => {
@@ -59,15 +60,15 @@ describe('process block - attestation', function () {
   });
 
   it('should process attestation - currentEpoch === data.targetEpoch', function () {
-    const state = generateState({slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1, currentJustifiedEpoch: 1});
+    const state = generateState({slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1, currentJustifiedCheckpoint: {epoch: 1, root: ZERO_HASH}});
     currentEpochStub.returns(1);
     previousEpochStub.returns(0);
     validateIndexedAttestationStub.returns(true);
     getBeaconProposerIndexStub.returns(2);
     const attestation = generateEmptyAttestation();
-    attestation.data.targetEpoch = 1;
-    attestation.data.sourceEpoch = 1;
-    attestation.data.sourceRoot = state.currentJustifiedRoot;
+    attestation.data.target.epoch = 1;
+    attestation.data.source.epoch = 1;
+    attestation.data.source.root = state.currentJustifiedCheckpoint.root;
     attestation.data.crosslink.parentRoot =
       hashTreeRoot(state.currentCrosslinks[attestation.data.crosslink.shard], config.types.Crosslink);
     attestation.data.crosslink.endEpoch = 1;
@@ -78,15 +79,15 @@ describe('process block - attestation', function () {
   });
 
   it('should process attestation - previousEpoch === data.targetEpoch', function () {
-    const state = generateState({slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1, currentJustifiedEpoch: 1});
+    const state = generateState({slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1, currentJustifiedCheckpoint: {epoch: 1, root: ZERO_HASH}});
     currentEpochStub.returns(1);
     previousEpochStub.returns(0);
     validateIndexedAttestationStub.returns(true);
     getBeaconProposerIndexStub.returns(2);
     const attestation = generateEmptyAttestation();
-    attestation.data.targetEpoch = 0;
-    attestation.data.sourceEpoch = 0;
-    attestation.data.sourceRoot = state.previousJustifiedRoot;
+    attestation.data.target.epoch = 0;
+    attestation.data.source.epoch = 0;
+    attestation.data.source.root = state.previousJustifiedCheckpoint.root;
     attestation.data.crosslink.parentRoot =
       hashTreeRoot(state.currentCrosslinks[attestation.data.crosslink.shard], config.types.Crosslink);
     attestationSlotStub.returns(1);

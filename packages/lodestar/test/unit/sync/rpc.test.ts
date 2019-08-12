@@ -1,29 +1,33 @@
+import BN from "bn.js";
 import sinon from "sinon";
 import {expect} from "chai";
-import {BeaconChain} from "../../../src/chain";
-import {Libp2pNetwork} from "../../../src/network";
-import {BeaconDB} from "../../../src/db/api";
-import {WinstonLogger} from "../../../src/logger";
-import {generateState} from "../../utils/state";
-import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
-import {EMPTY_SIGNATURE, Method, ZERO_HASH} from "../../../src/constants";
-import BN from "bn.js";
+import PeerInfo from "peer-info";
+import PeerId from "peer-id";
 import {
   BeaconBlockBodiesRequest,
-  BeaconBlockBodiesResponse, BeaconBlockHeadersRequest,
-  BeaconBlockHeadersResponse, BeaconBlockRootsRequest,
-  BeaconBlockRootsResponse, BeaconState, BeaconStatesRequest,
-  BeaconStatesResponse,
+  BeaconBlockBodiesResponse,
+  BeaconBlockHeadersRequest,
+  BeaconBlockHeadersResponse,
+  BeaconBlockRootsRequest,
+  BeaconBlockRootsResponse,
+  BeaconState,
+  BeaconStatesRequest,
   Goodbye,
   Hello,
   Status,
-} from "../../../src/types";
+} from "@chainsafe/eth2.0-types";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+
+import {EMPTY_SIGNATURE, Method, ZERO_HASH} from "../../../src/constants";
+import {BeaconChain} from "../../../src/chain";
+import {Libp2pNetwork} from "../../../src/network";
+import {WinstonLogger} from "../../../src/logger";
+import {generateState} from "../../utils/state";
+import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
 import {intDiv} from "../../../src/util/math";
 import {ReputationStore} from "../../../src/sync/reputation";
-import PeerInfo from "peer-info";
-import PeerId from "peer-id";
 import {generateEmptyBlock} from "../../utils/block";
-import {config} from "../../../src/config/presets/mainnet";
+import {BlockRepository, ChainRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
 
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();
@@ -33,7 +37,11 @@ describe("syncing", function () {
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
-    dbStub = sandbox.createStubInstance(BeaconDB);
+    dbStub = {
+      chain: sandbox.createStubInstance(ChainRepository),
+      state: sandbox.createStubInstance(StateRepository),
+      block: sandbox.createStubInstance(BlockRepository),
+    };
     repsStub = sandbox.createStubInstance(ReputationStore);
     logger = new WinstonLogger();
     logger.silent(true);
@@ -79,21 +87,21 @@ describe("syncing", function () {
     chainStub.genesisTime = 10;
     chainStub.networkId = new BN(1);
     chainStub.chainId = 1;
-    dbStub.getChainHeadSlot.resolves(1);
-    dbStub.getBlockRoot.resolves(ZERO_HASH);
+    dbStub.chain.getChainHeadSlot.resolves(1);
+    dbStub.chain.getBlockRoot.resolves(ZERO_HASH);
     const state = generateState();
-    state.finalizedEpoch = 1;
-    state.finalizedRoot = ZERO_HASH;
+    state.finalizedCheckpoint.epoch = 1;
+    state.finalizedCheckpoint.root = ZERO_HASH;
 
-    dbStub.getLatestState.resolves(state);
+    dbStub.state.getLatest.resolves(state);
 
     const expected: Hello = {
       networkId: chainStub.networkId,
       chainId: chainStub.chainId,
       latestFinalizedRoot: ZERO_HASH ,
-      latestFinalizedEpoch: 1,
+      latestFinalizedEpoch: 0,
       bestRoot: ZERO_HASH,
-      bestSlot: 1,
+      bestSlot: 0,
     };
 
     try {
@@ -364,7 +372,7 @@ describe("syncing", function () {
       latestStatus: null,
     });
     networkStub.sendResponse.resolves(0);
-    dbStub.getBlockRoot.resolves(Buffer.alloc(32));
+    dbStub.chain.getBlockRoot.resolves(Buffer.alloc(32));
     try {
       await syncRpc.onRequest(peerInfo, Method.BeaconBlockRoots, "beaconBlockRoots", beaconBlockRootsRequest);
       expect(networkStub.sendResponse.calledOnce).to.be.true;
@@ -383,7 +391,7 @@ describe("syncing", function () {
       latestStatus: null,
     });
     networkStub.sendResponse.resolves(0);
-    dbStub.getBlockRoot.throws("block root not found");
+    dbStub.chain.getBlockRoot.throws("block root not found");
     try {
       await syncRpc.onRequest(peerInfo, Method.BeaconBlockRoots, "beaconBlockRoots", beaconBlockRootsRequest);
       expect(networkStub.sendResponse.calledOnce).to.be.true;
@@ -401,8 +409,8 @@ describe("syncing", function () {
       skipSlots: 1,
     };
     networkStub.sendResponse.resolves(0);
-    dbStub.getBlockRoot.resolves(Buffer.from("BeaconBlockHeaders"));
-    dbStub.getBlockBySlot.resolves(generateEmptyBlock());
+    dbStub.chain.getBlockRoot.resolves(Buffer.from("BeaconBlockHeaders"));
+    dbStub.block.getBlockBySlot.resolves(generateEmptyBlock());
     try {
       await syncRpc.onRequest(peerInfo, Method.BeaconBlockHeaders, "beaconBlockHeaders", beaconBlockHeadersRequest);
       expect(networkStub.sendResponse.calledOnce).to.be.true;
@@ -420,8 +428,8 @@ describe("syncing", function () {
       skipSlots: 1,
     };
     networkStub.sendResponse.throws("server error");
-    dbStub.getBlockRoot.resolves(Buffer.from("BeaconBlockHeaders"));
-    dbStub.getBlockBySlot.throws("block not found");
+    dbStub.chain.getBlockRoot.resolves(Buffer.from("BeaconBlockHeaders"));
+    dbStub.block.getBlockBySlot.throws("block not found");
     try {
       await syncRpc.onRequest(peerInfo, Method.BeaconBlockHeaders, "beaconBlockHeaders", beaconBlockHeadersRequest);
     }catch (e) {
@@ -435,7 +443,7 @@ describe("syncing", function () {
       blockRoots: [Buffer.from("BeaconBlockBodies")],
     };
     networkStub.sendResponse.resolves(0);
-    dbStub.getBlock.resolves(generateEmptyBlock());
+    dbStub.block.get.resolves(generateEmptyBlock());
     try {
       await syncRpc.onRequest(peerInfo, Method.BeaconBlockBodies, "beaconBlockBodies", beaconBlockBodiesRequest);
       expect(networkStub.sendResponse.calledOnce).to.be.true;
@@ -450,7 +458,7 @@ describe("syncing", function () {
       blockRoots: [Buffer.from("BeaconBlockBodies")],
     };
     networkStub.sendResponse.resolves(0);
-    dbStub.getBlock.throws("block not found");
+    dbStub.block.get.throws("block not found");
     try {
       await syncRpc.onRequest(peerInfo, Method.BeaconBlockBodies, "beaconBlockBodies", beaconBlockBodiesRequest);
       expect(networkStub.sendResponse.calledOnce).to.be.true;
@@ -488,7 +496,7 @@ describe("syncing", function () {
       latestStatus: null,
     });
     networkStub.sendResponse.resolves(0);
-    dbStub.getBlockRoot.resolves(Buffer.alloc(32));
+    dbStub.chain.getBlockRoot.resolves(Buffer.alloc(32));
     getBeaconBlockRootsStub.resolves({
       roots: []
     });
@@ -513,7 +521,7 @@ describe("syncing", function () {
       latestStatus: null,
     });
     networkStub.sendResponse.resolves(0);
-    dbStub.getBlockRoot.resolves(Buffer.alloc(32));
+    dbStub.chain.getBlockRoot.resolves(Buffer.alloc(32));
     getBeaconBlockRootsStub.resolves({
       roots: [{
         blockRoot: Buffer.alloc(32),
