@@ -1,6 +1,7 @@
 /**
- * @module rpc/transport
+ * @module api/rpc/transport
  */
+
 
 export * from "./ws";
 export * from "./http";

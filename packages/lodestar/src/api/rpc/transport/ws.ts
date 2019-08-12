@@ -1,12 +1,13 @@
 /**
- * @module rpc/transport
+ * @module api/rpc/transport
  */
 
-import * as http from "http";
+
+import http from "http";
 import promisify from "promisify-es6";
+import {LikeSocketServer} from "../../../rpc/protocol";
+import {ITransportOption} from "../../../rpc/options";
 import WebSocket from "ws";
-import {LikeSocketServer} from "../protocol";
-import {ITransportOption} from "../options";
 
 export interface WSServerOpts {
   port: number;

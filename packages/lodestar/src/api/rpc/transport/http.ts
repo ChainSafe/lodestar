@@ -1,13 +1,13 @@
 /**
- * @module rpc/transport
+ * @module api/rpc/transport
  */
 
-import {LikeSocketServer} from "../protocol";
+import {LikeSocketServer} from "../../../rpc/protocol";
 import {LikeSocket} from "noice-json-rpc";
-import http from "http";
 import promisify from "promisify-es6";
-import {ILogger} from "../../logger";
-import {ITransportOption} from "../options";
+import {ILogger} from "../../../logger";
+import {ITransportOption} from "../../../rpc/options";
+import http from "http";
 
 class MessageRequest implements LikeSocket {
 
