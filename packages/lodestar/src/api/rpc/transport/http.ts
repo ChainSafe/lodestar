@@ -2,12 +2,18 @@
  * @module api/rpc/transport
  */
 
-import {LikeSocketServer} from "../../../rpc/protocol";
-import {LikeSocket} from "noice-json-rpc";
+import {LikeSocket, LikeSocketServer} from "noice-json-rpc";
 import promisify from "promisify-es6";
 import {ILogger} from "../../../logger";
-import {ITransportOption} from "../../../rpc/options";
 import http from "http";
+import {Service} from "../../../node";
+import {IRpcServer} from "./index";
+
+export interface IHttpServerOpts {
+  host: string,
+  port: number,
+  cors: string,
+}
 
 class MessageRequest implements LikeSocket {
 
@@ -62,17 +68,17 @@ class MessageRequest implements LikeSocket {
 }
 
 
-export default class HttpServer implements LikeSocketServer{
+export default class HttpServer implements IRpcServer {
 
   public server: http.Server;
 
-  private opts: ITransportOption;
+  private opts: IHttpServerOpts;
 
   private connectionCallback: Function;
 
   private logger: ILogger;
 
-  public constructor(opts: ITransportOption, {logger}: {logger: ILogger}) {
+  public constructor(opts: IHttpServerOpts, {logger}: {logger: ILogger}) {
     this.opts = opts;
     this.logger = logger;
     this.server = http.createServer(async (req, resp) => {
@@ -96,14 +102,14 @@ export default class HttpServer implements LikeSocketServer{
 
   public async start(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.server.listen(this.opts.port)
+      this.server.listen(this.opts.port, this.opts.host)
         .on('listening', () => {
-          this.logger.info(`JSON RPC HTTP server started on port ${this.opts.port}`);
+          this.logger.info(`JSON RPC HTTP server started on ${this.opts.host}:${this.opts.port}`);
           resolve();
         })
         .on('error', e => {
           this.logger.error(
-            `Failed to start JSON RPC HTTP server on port ${this.opts.port}. Reason: ${e.message}`
+            `Failed to start JSON RPC HTTP server on ${this.opts.host}:${this.opts.port}. Reason: ${e.message}`
           );
           reject(e);
         });
