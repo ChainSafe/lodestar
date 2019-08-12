@@ -36,7 +36,7 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getGenesisTime(): Promise<number64> {
-    return await this.chain.latestState.genesisTime;
+    return this.chain.latestState.genesisTime;
   }
 
   public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
