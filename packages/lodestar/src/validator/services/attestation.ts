@@ -1,7 +1,7 @@
 /**
  * @module validator/attestation
  */
-import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
+import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {BitList} from "@chainsafe/bit-utils";
 
