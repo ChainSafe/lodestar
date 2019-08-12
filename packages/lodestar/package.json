@@ -72,6 +72,8 @@
     "libp2p-mplex": "^0.8.5",
     "libp2p-tcp": "^0.13.0",
     "libp2p-webrtc-star": "^0.16.1",
+    "lodash": "^4.17.15",
+    "multiaddr": "^6.1.0",
     "noice-json-rpc": "^1.2.0",
     "peer-book": "^0.9.1",
     "peer-id": "^0.12.2",
