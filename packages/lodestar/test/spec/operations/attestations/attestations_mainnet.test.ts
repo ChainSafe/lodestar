@@ -2,7 +2,7 @@ import {join} from "path";
 import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 // @ts-ignore
-import {restore, rewire} from "@chainsafe/bls-js";
+import {restore, rewire} from "@chainsafe/bls";
 import sinon from "sinon";
 import {equals} from "@chainsafe/ssz";
 

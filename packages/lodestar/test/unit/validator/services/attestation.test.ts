@@ -1,4 +1,4 @@
-import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
+import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 import sinon from "sinon";
 import {expect} from "chai";
 
