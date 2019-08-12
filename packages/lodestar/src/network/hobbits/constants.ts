@@ -42,3 +42,14 @@ export enum Method {
   BeaconStates = 17  // response :  BeaconStatesResponse : BeaconStatesResponse
 }
 */
+
+
+export enum GossipMethod {
+  GOSSIP = 0
+}
+
+export enum GossipTopic {
+  Block = "BLOCK",
+  Attestation = "ATTESTATION"
+}
+

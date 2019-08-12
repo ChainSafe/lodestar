@@ -12,12 +12,13 @@ import {hobbitsUriToPeerInfo, randomRequestId, socketConnectionToPeerInfo} from 
 import {Peer} from "./peer";
 import {ILogger} from "../../logger";
 import net from "net";
-import {decodeMessage, encodeMessage} from "./codec";
+import {decodeMessage, encodeMessage, generateRPCHeader} from "./codec";
 import {INetworkOptions} from "../options";
 import {IBeaconConfig} from "../../config";
 import {RequestBody, ResponseBody} from "../../types";
 import {promisify} from "util";
 import PeerInfo from "peer-info";
+import {DecodedMessage} from "./types";
 
 /**
  * The NetworkRpc module controls network-level resources and concerns of p2p connections
@@ -147,7 +148,8 @@ export class HobbitsConnectionHandler extends EventEmitter {
     // console.log("SendReq: method -"+ id);
     this.requests[id] = method;
     const encodedRequest = encodeRequestBody(this.config, method, body);
-    const encodedMessage = encodeMessage(ProtocolType.RPC, id, method, encodedRequest);
+    const requestHeader = generateRPCHeader(id, method);
+    const encodedMessage = encodeMessage(ProtocolType.RPC, requestHeader, encodedRequest);
     peer.write(encodedMessage);
 
     return await this.getResponse(id) as T;
@@ -180,7 +182,8 @@ export class HobbitsConnectionHandler extends EventEmitter {
     }
     const {peer, method} = request;
     const encodedResponse = encodeRequestBody(this.config, method, result);
-    const encodedMessage = encodeMessage(ProtocolType.RPC, id, method, encodedResponse);
+    const responseHeader = generateRPCHeader(id, method);
+    const encodedMessage = encodeMessage(ProtocolType.RPC, responseHeader, encodedResponse);
     delete this.responses[id];
     peer.write(encodedMessage);
   }
@@ -194,17 +197,21 @@ export class HobbitsConnectionHandler extends EventEmitter {
     // Changed response
     let decodedBody, requestHeader, requestBody;
     try {
-      const decodedMessage = decodeMessage(data);
+      const decodedMessage: DecodedMessage = decodeMessage(data);
       // console.log(decodedMessage);
       // only RPC requests/ responses should be passed here.
       switch (decodedMessage.protocol) {
         case ProtocolType.RPC:
           requestHeader = decodedMessage.requestHeader;
           requestBody = decodedMessage.requestBody;
-          decodedBody = decodeRequestBody(this.config, requestHeader.methodId, requestBody.body);
+          decodedBody = decodeRequestBody(this.config, requestHeader.methodId, requestBody);
           break;
         case ProtocolType.GOSSIP:
-          break;
+          this.processGossipMessage(decodedMessage);
+
+          // return after processing gossip message
+          return;
+
         case ProtocolType.PING:
           break;
       }
@@ -223,6 +230,13 @@ export class HobbitsConnectionHandler extends EventEmitter {
       const event = `response ${id}`;
       this.emit(event, null, decodedBody);
     }
+  }
+
+  // process the gossip message
+  private processGossipMessage(decodedMessage: DecodedMessage): void {
+    const requestHeader = decodedMessage.requestHeader;
+    const requestBody = decodedMessage.requestBody;
+
   }
 
   /**

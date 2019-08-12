@@ -14,9 +14,9 @@ import {
 
 import {
   encodeMessage,
-  decodeMessage,
+  decodeMessage, generateRPCHeader,
 } from "../../../../src/network/hobbits/codec";
-import {DecodedMessage} from "../../../../src/network/hobbits/types";
+import {DecodedMessage, RPCBody} from "../../../../src/network/hobbits/types";
 
 describe("[hobbits] rpc protocol message", () => {
   it(`should properly encode/decode`, () => {
@@ -28,18 +28,19 @@ describe("[hobbits] rpc protocol message", () => {
     // encode
     const body = serialize(msg, config.types.Goodbye);
     const actualEncoded = encodeRequestBody(config, method, msg);
-    const encodedMessage = encodeMessage(ProtocolType.RPC, id, method, actualEncoded);
+    let requestHeader = generateRPCHeader(id, method);
+    const encodedMessage = encodeMessage(ProtocolType.RPC, requestHeader, actualEncoded);
 
     // decode
     const decodedMessage: DecodedMessage = decodeMessage(encodedMessage);
     // console.log(decodedMessage);
-    const requestHeader = decodedMessage.requestHeader;
+    requestHeader = decodedMessage.requestHeader;
     const requestBody = decodedMessage.requestBody;
-    const decodedBody = decodeRequestBody(config, requestHeader.methodId, requestBody.body);
+    const decodedBody = decodeRequestBody(config, requestHeader.methodId, requestBody);
 
     // compare
     assert.deepEqual(actualEncoded, body);
-    assert.deepEqual(requestBody.body, actualEncoded);
+    assert.deepEqual(requestBody, actualEncoded);
     assert.deepEqual(decodedBody, msg);
   });
 

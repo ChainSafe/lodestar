@@ -3,7 +3,7 @@ import {Method, ProtocolType} from "../../../../src/network/hobbits/constants";
 import {serialize} from "@chainsafe/ssz";
 import {decodeRequestBody, encodeRequestBody} from "../../../../src/network/hobbits/rpc/codec";
 import {assert} from "chai";
-import {decodeMessage, encodeMessage} from "../../../../src/network/hobbits/codec";
+import {decodeMessage, encodeMessage, generateRPCHeader} from "../../../../src/network/hobbits/codec";
 import {DecodedMessage} from "../../../../src/network/hobbits/types";
 import {config} from "../../../../src/config/presets/mainnet";
 import BN from "bn.js";
@@ -66,7 +66,8 @@ describe("[hobbits] test network transfer", () => {
     // encode
     const body = serialize(msg, config.types.Goodbye);
     const actualEncoded = encodeRequestBody(config, method, msg);
-    const encodedMessage = encodeMessage(ProtocolType.RPC, id, method, actualEncoded);
+    let requestHeader = generateRPCHeader(id, method);
+    const encodedMessage = encodeMessage(ProtocolType.RPC, requestHeader, actualEncoded);
 
     const serverListener = socket => {
       socket.on('data', data => {
@@ -90,7 +91,7 @@ describe("[hobbits] test network transfer", () => {
       // console.log(decodedMessage);
       const requestHeader = decodedMessage.requestHeader;
       const requestBody = decodedMessage.requestBody;
-      const decodedBody = decodeRequestBody(config, requestHeader.methodId, requestBody.body);
+      const decodedBody = decodeRequestBody(config, requestHeader.methodId, requestBody);
       // compare
       assert.deepEqual(decodedBody, msg);
     });
