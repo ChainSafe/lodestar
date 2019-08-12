@@ -25,11 +25,12 @@ export interface HobbitsValidatedUri {
   port: number;
 }
 
-export type WireRequestHeader = RPCHeader | GossipHeader;
+export type WireRequestHeader = RPCHeader | GossipHeader | string;
 
 export interface WireResponseHeader {
   rpcHeader?: RPCHeader;
   gossipHeader?: GossipHeader;
+  pingHeader?: string;
 }
 
 export type WireRequestBody = RPCBody | BeaconBlock | Attestation;

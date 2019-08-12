@@ -32,19 +32,22 @@ export function encodeMessage(
         body: encodedBody
       };
       // bson encoding
+      header = BSON.serialize(toSnakeCase(requestHeader));
       body = BSON.serialize(requestBody);
       break;
 
     case ProtocolType.GOSSIP:
+      // bson encoding
+      header = BSON.serialize(toSnakeCase(requestHeader));
       body = encodedBody;
       break;
 
     case ProtocolType.PING:
+      header = Buffer.from(requestHeader.toString(), 'utf8');
+      body = encodedBody;
       break;
   }
 
-  // bson encoding
-  header = BSON.serialize(toSnakeCase(requestHeader));
 
   requestLine += `${type} ${header.length} ${body.length}\n`;
   const buf = Buffer.from(requestLine, 'utf8');
@@ -112,6 +115,10 @@ export function decodeMessage(message: Buffer): DecodedMessage {
       break;
 
     case ProtocolType.PING:
+      requestHeader = {
+        pingHeader : header.toString('utf8')
+      };
+      requestBody = body;
       break;
   }
 

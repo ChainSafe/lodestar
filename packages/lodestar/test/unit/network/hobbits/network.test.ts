@@ -89,7 +89,7 @@ describe("[hobbits] test network transfer", () => {
       // decode
       const decodedMessage: DecodedMessage = decodeMessage(encodedMessage);
       // console.log(decodedMessage);
-      const requestHeader = decodedMessage.requestHeader;
+      const requestHeader = decodedMessage.requestHeader.rpcHeader;
       const requestBody = decodedMessage.requestBody;
       const decodedBody = decodeRequestBody(config, requestHeader.methodId, requestBody);
       // compare

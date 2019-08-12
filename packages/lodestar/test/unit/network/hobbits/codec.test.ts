@@ -18,8 +18,8 @@ import {
 } from "../../../../src/network/hobbits/codec";
 import {DecodedMessage, RPCBody} from "../../../../src/network/hobbits/types";
 
-describe("[hobbits] rpc protocol message", () => {
-  it(`should properly encode/decode`, () => {
+describe("[hobbits] protocol messages", () => {
+  it(`rpc - should properly encode/decode`, () => {
     const msg = {
       reason: new BN(3)
     };
@@ -34,7 +34,7 @@ describe("[hobbits] rpc protocol message", () => {
     // decode
     const decodedMessage: DecodedMessage = decodeMessage(encodedMessage);
     // console.log(decodedMessage);
-    requestHeader = decodedMessage.requestHeader;
+    requestHeader = decodedMessage.requestHeader.rpcHeader;
     const requestBody = decodedMessage.requestBody;
     const decodedBody = decodeRequestBody(config, requestHeader.methodId, requestBody);
 
@@ -42,6 +42,22 @@ describe("[hobbits] rpc protocol message", () => {
     assert.deepEqual(actualEncoded, body);
     assert.deepEqual(requestBody, actualEncoded);
     assert.deepEqual(decodedBody, msg);
+  });
+
+  it(`ping - should properly encode/decode`, () => {
+    // encode
+    const actualBody = Buffer.alloc(32);
+    const encodedMessage = encodeMessage(ProtocolType.PING, "ping", actualBody);
+
+    // decode
+    const decodedMessage: DecodedMessage = decodeMessage(encodedMessage);
+    // console.log(decodedMessage);
+    const requestHeader = decodedMessage.requestHeader.pingHeader;
+    const requestBody = decodedMessage.requestBody;
+
+    // compare
+    assert.deepEqual(requestBody, actualBody);
+    assert.equal(requestHeader, "ping");
   });
 
 });
