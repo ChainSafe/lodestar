@@ -1,6 +1,6 @@
 import {G1point} from "./helpers/g1point";
 import {PrivateKey} from "./privateKey";
-import {BLSPubkey} from "./types";
+import {BLSPubkey} from "@chainsafe/eth2.0-types";
 
 export class PublicKey {
 
