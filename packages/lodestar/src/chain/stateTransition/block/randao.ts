@@ -5,7 +5,7 @@
 import assert from "assert";
 import xor from "buffer-xor";
 import {hashTreeRoot, hash} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls-js";
+import bls from "@chainsafe/bls";
 
 import {BeaconBlockBody, BeaconState} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";

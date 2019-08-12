@@ -3,7 +3,7 @@ import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 import sinon from "sinon";
 // @ts-ignore
-import {restore, rewire} from "@chainsafe/bls-js";
+import {restore, rewire} from "@chainsafe/bls";
 import {equals} from "@chainsafe/ssz";
 
 import {BeaconState, AttesterSlashing} from "@chainsafe/eth2.0-types";

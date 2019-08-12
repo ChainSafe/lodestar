@@ -1,11 +1,3 @@
-import {
-  BLSDomain,
-  BLSSecretKey,
-  BLSPubkey,
-  BLSSignature,
-  bytes32,
-  bytes8
-} from "./types";
 import {Keypair} from "./keypair";
 import {PrivateKey} from "./privateKey";
 import {G2point} from "./helpers/g2point";
@@ -14,11 +6,14 @@ import {PublicKey} from "./publicKey";
 import {Signature} from "./signature";
 import {ElipticCurvePairing} from "./helpers/ec-pairing";
 import ctx from "./ctx";
+import {BLSPubkey, BLSSecretKey, BLSSignature, bytes32, Domain} from "@chainsafe/eth2.0-types";
+
+export {Keypair, PrivateKey, PublicKey, Signature};
 
 /**
  * Generates new secret and public key
  */
-function generateKeyPair(): Keypair {
+export function generateKeyPair(): Keypair {
   return Keypair.generate();
 }
 
@@ -26,7 +21,7 @@ function generateKeyPair(): Keypair {
  * Generates public key from given secret.
  * @param {BLSSecretKey} secretKey
  */
-function generatePublicKey(secretKey: BLSSecretKey): BLSPubkey {
+export function generatePublicKey(secretKey: BLSSecretKey): BLSPubkey {
   const keypair = new Keypair(PrivateKey.fromBytes(secretKey));
   return keypair.publicKey.toBytesCompressed();
 }
@@ -37,7 +32,7 @@ function generatePublicKey(secretKey: BLSSecretKey): BLSPubkey {
  * @param messageHash
  * @param domain
  */
-function sign(secretKey: BLSSecretKey, messageHash: bytes32, domain: BLSDomain): BLSSignature {
+export function sign(secretKey: BLSSecretKey, messageHash: bytes32, domain: Domain): BLSSignature {
   const privateKey = PrivateKey.fromBytes(secretKey);
   const hash = G2point.hashToG2(messageHash, domain);
   return privateKey.sign(hash).toBytesCompressed();
@@ -47,9 +42,9 @@ function sign(secretKey: BLSSecretKey, messageHash: bytes32, domain: BLSDomain):
  * Compines all given signature into one.
  * @param signatures
  */
-function aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
+export function aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
   return signatures.map((signature): Signature => {
-    return Signature.fromCompressedBytes(signature)
+    return Signature.fromCompressedBytes(signature);
   }).reduce((previousValue, currentValue): Signature => {
     return previousValue.add(currentValue);
   }).toBytesCompressed();
@@ -59,12 +54,12 @@ function aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
  * Combines all given public keys into single one
  * @param publicKeys
  */
-function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
+export function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
   if(publicKeys.length === 0) {
     return new G1point(new ctx.ECP()).toBytesCompressed();
   }
   return publicKeys.map((publicKey): G1point => {
-    return G1point.fromBytesCompressed(publicKey)
+    return G1point.fromBytesCompressed(publicKey);
   }).reduce((previousValue, currentValue): G1point => {
     return previousValue.add(currentValue);
   }).toBytesCompressed();
@@ -77,7 +72,7 @@ function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
  * @param signature
  * @param domain
  */
-function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BLSSignature, domain: bytes8): boolean {
+export function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BLSSignature, domain: Domain): boolean {
   try {
     const key = PublicKey.fromBytes(publicKey);
     const sig = Signature.fromCompressedBytes(signature);
@@ -98,7 +93,7 @@ function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BLSSignat
  * @param signature
  * @param domain
  */
-function verifyMultiple(publicKeys: BLSPubkey[], messageHashes: bytes32[], signature: BLSSignature, domain: bytes8): boolean {
+export function verifyMultiple(publicKeys: BLSPubkey[], messageHashes: bytes32[], signature: BLSSignature, domain: Domain): boolean {
   if(publicKeys.length === 0 || publicKeys.length != messageHashes.length) {
     return false;
   }
@@ -129,4 +124,4 @@ export default {
   aggregatePubkeys,
   verify,
   verifyMultiple
-}
+};
