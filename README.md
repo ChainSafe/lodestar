@@ -47,6 +47,13 @@ Beacon chain configuration
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-config)
 
+### [@chainsafe/eth2.0-spec-test-util](/packages/eth2.0-spec-test-util)
+Ethereum 2.0 spec test utilities
+
+[![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-spec-test-util)](https://www.npmjs.com/package/@chainsafe/eth2.0-spec-test-util)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-spec-test-util)
+
 ### [@chainsafe/lodestar](/packages/lodestar)
 Beacon chain implementation
 
