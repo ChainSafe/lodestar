@@ -31,8 +31,6 @@
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@chainsafe/eth2.0-spec-test-util": "0.4.0",
-    "@chainsafe/eth2.0-ssz-types": "^0.1.0",
     "@types/chai": "^4.1.7",
     "@types/mocha": "^5.2.7",
     "chai": "^4.2.0",
