@@ -8,52 +8,52 @@ import {JsonRpc} from "./rpc";
 
 export * from "./interface";
 
-export enum ApiNamespace {
-    BEACON = "beacon",
-    VALIDATOR = "validator"
+export const enum ApiNamespace {
+  BEACON = "beacon",
+  VALIDATOR = "validator"
 }
 
 export class ApiService implements Service {
 
-    private opts: IApiOptions;
+  private opts: IApiOptions;
 
-    private rpc: Service;
+  private rpc: Service;
 
-    private rest: Service;
+  private rest: Service;
 
-    public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
-        this.opts = deepmerge(defaultOptions, opts);
-        if(this.opts.rest.enabled) {
-            this.setupRestApi(modules);
-        }
-        if(this.opts.rpc.transports.length) {
-            this.setupRpc(modules);
-        }
+  public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
+    this.opts = deepmerge(defaultOptions, opts);
+    if(this.opts.rest.enabled) {
+      this.setupRestApi(modules);
     }
-
-    public async start(): Promise<void> {
-        if(this.rpc) {
-            await this.rpc.start();
-        }
-        if(this.rest) {
-            await this.rest.start();
-        }
+    if(this.opts.rpc.transports.length) {
+      this.setupRpc(modules);
     }
+  }
 
-    public async stop(): Promise<void> {
-        if(this.rpc) {
-            await this.rpc.stop();
-        }
-        if(this.rest) {
-            await this.rest.stop();
-        }
+  public async start(): Promise<void> {
+    if(this.rpc) {
+      await this.rpc.start();
     }
-
-    private setupRpc(modules: IApiModules) {
-        this.rpc = new JsonRpc(this.opts.rpc, modules);
+    if(this.rest) {
+      await this.rest.start();
     }
+  }
 
-    private setupRestApi(modules: IApiModules) {
-
+  public async stop(): Promise<void> {
+    if(this.rpc) {
+      await this.rpc.stop();
     }
+    if(this.rest) {
+      await this.rest.stop();
+    }
+  }
+
+  private setupRpc(modules: IApiModules) {
+    this.rpc = new JsonRpc(this.opts.rpc, modules);
+  }
+
+  private setupRestApi(modules: IApiModules) {
+
+  }
 }
