@@ -42,7 +42,7 @@
   ],
   "dependencies": {
     "@chainsafe/bit-utils": "^0.1.2",
-    "@chainsafe/bls-js": "^0.1.5",
+    "@chainsafe/bls": "0.1.6",
     "@chainsafe/eth2.0-config": "^0.1.0",
     "@chainsafe/eth2.0-params": "^0.1.0",
     "@chainsafe/eth2.0-types": "^0.1.0",
@@ -77,6 +77,8 @@
     "peer-info": "^0.15.1",
     "pouchdb-adapter-memory": "^7.0.0",
     "pouchdb-core": "^7.0.0",
+    "prom-client": "^11.5.3",
+    "prometheus-gc-stats": "^0.6.2",
     "promisify-es6": "^1.0.3",
     "pull-abortable": "^4.1.1",
     "pull-pushable": "^2.2.0",

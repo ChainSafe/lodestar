@@ -4,7 +4,7 @@
 
 import assert from "assert";
 import {hashTreeRoot, equals} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls-js";
+import bls from "@chainsafe/bls";
 import {BitList} from "@chainsafe/bit-utils";
 import {
   Attestation,

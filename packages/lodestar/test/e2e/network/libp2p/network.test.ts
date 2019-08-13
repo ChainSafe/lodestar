@@ -9,6 +9,7 @@ import {generateEmptyAttestation} from "../../../utils/attestation";
 import {shardAttestationTopic} from "../../../../src/network/util";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
 import {INetworkOptions} from "../../../../src/network/options";
+import {BeaconMetrics} from "../../../../src/metrics";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -24,10 +25,11 @@ describe("[network] network", () => {
 
   let netA: Libp2pNetwork, netB: Libp2pNetwork;
   const logger: ILogger = new WinstonLogger();
+  const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false});
 
   beforeEach(async () => {
-    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger});
-    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger});
+    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger, metrics});
+    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger, metrics});
     await Promise.all([
       netA.start(),
       netB.start(),

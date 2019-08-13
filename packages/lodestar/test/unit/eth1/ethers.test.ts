@@ -5,7 +5,7 @@ import ganache from "ganache-core";
 import sinon from "sinon";
 import {Provider} from "ethers/providers";
 import promisify from "promisify-es6";
-import bls from "@chainsafe/bls-js";
+import bls from "@chainsafe/bls";
 import {serialize} from "@chainsafe/ssz";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
