@@ -1,14 +1,14 @@
 import {join} from "path";
-import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {types} from "@chainsafe/eth2.0-ssz-types/lib/presets/mainnet";
 
-import {deserialize, serialize, hashTreeRoot, signingRoot, equals, hash} from "../../src";
+import {deserialize, equals, hashTreeRoot, serialize, signingRoot} from "../../src";
 
-import {hydrateType, hydrateValue, getTestType, getTestValue} from "./util";
+import {getTestType, getTestValue, hydrateType, hydrateValue} from "./util";
 
 // Serialize
 
-describeSpecTest(
+describeMultiSpec(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_static/core/ssz_mainnet_random.yaml"),
   serialize,
   (testCase) => {
@@ -27,7 +27,7 @@ describeSpecTest(
 
 // Deserialize
 
-describeSpecTest(
+describeMultiSpec(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_static/core/ssz_mainnet_random.yaml"),
   deserialize,
   (testCase) => {
@@ -55,7 +55,7 @@ describeSpecTest(
 
 // hashTreeRoot
 
-describeSpecTest(
+describeMultiSpec(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_static/core/ssz_mainnet_random.yaml"),
   hashTreeRoot,
   (testCase) => {
@@ -74,7 +74,7 @@ describeSpecTest(
 
 // signingRoot
 
-describeSpecTest(
+describeMultiSpec(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_static/core/ssz_mainnet_random.yaml"),
   signingRoot,
   (testCase) => {

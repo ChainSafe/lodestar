@@ -1,5 +1,5 @@
 import {join} from "path";
-import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 // @ts-ignore
 import {equals} from "@chainsafe/ssz";
@@ -7,8 +7,10 @@ import {equals} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {initializeBeaconStateFromEth1} from "../../../../src/chain/genesis/genesis";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {BeaconState} from "@chainsafe/eth2.0-types";
+import {GenesisInitCase} from "../../../utils/specTestTypes/genesis";
 
-describeSpecTest(
+describeMultiSpec<GenesisInitCase, BeaconState>(
   join(__dirname, "../../test-cases/tests/genesis/initialization/genesis_initialization_minimal.yaml"),
   (blockHash, timestamp, deposits) => {
     return initializeBeaconStateFromEth1(config, blockHash, timestamp, deposits);
