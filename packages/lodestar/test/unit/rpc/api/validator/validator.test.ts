@@ -5,7 +5,7 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as blockAssembly from "../../../../../src/chain/factory/block";
 import * as stateTransitionUtils from "../../../../../src/chain/stateTransition/util";
 import {getCommitteeAssignment} from "../../../../../src/chain/stateTransition/util";
-import {ValidatorApi} from "../../../../../src/rpc/api/validator";
+import {ValidatorApi} from "../../../../../src/api/rpc/api/validator";
 import {BeaconDb} from "../../../../../src/db/api";
 import {BeaconChain} from "../../../../../src/chain";
 import {AttestationOperations, OpPool} from "../../../../../src/opPool";

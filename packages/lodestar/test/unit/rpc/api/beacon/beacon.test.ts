@@ -2,7 +2,7 @@ import sinon from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {BeaconApi} from "../../../../../src/rpc/api/beacon";
+import {BeaconApi} from "../../../../../src/api/rpc/api/beacon";
 import {BeaconChain} from "../../../../../src/chain";
 
 import {generateState} from "../../../../utils/state";

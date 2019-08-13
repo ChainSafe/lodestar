@@ -17,7 +17,7 @@ import {
 
 import {getEmptyBlock} from "../../../../src/chain/genesis/genesis";
 
-import {IValidatorApi} from "../../../../src/rpc/api/validator";
+import {IValidatorApi} from "../../../../src/api/rpc/api/validator";
 import {CommitteeAssignment} from "../../../../src/validator/types";
 
 export interface MockValidatorAPIOpts {

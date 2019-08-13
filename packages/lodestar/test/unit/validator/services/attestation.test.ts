@@ -4,7 +4,7 @@ import {expect} from "chai";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {RpcClientOverInstance} from "../../../../src/validator/rpc";
-import {ValidatorApi} from "../../../../src/rpc/api/validator";
+import {ValidatorApi} from "../../../../src/api/rpc/api/validator";
 import {AttestationService} from "../../../../src/validator/services/attestation";
 import {computeEpochOfSlot} from "../../../../src/chain/stateTransition/util";
 import {ValidatorDB} from "../../../../src/db/api";
