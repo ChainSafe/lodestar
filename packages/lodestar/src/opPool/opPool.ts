@@ -51,7 +51,7 @@ export class OpPool extends EventEmitter {
     this.config = config;
     this.eth1 = eth1;
     this.db = db;
-    this.proposers = new Map;
+    this.proposers = new Map();
     this.attestations = new AttestationOperations(this.db.attestation, {config});
     this.voluntaryExits = new VoluntaryExitOperations(this.db.voluntaryExit);
     this.deposits = new DepositsOperations(this.db.deposit);
