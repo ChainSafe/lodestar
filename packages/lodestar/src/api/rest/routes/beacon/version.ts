@@ -1,8 +1,9 @@
-import {FastifyServer} from "../../index";
+import {IFastifyServer} from "../../index";
 import * as fastify from "fastify";
+import {IApiModules} from "../../../interface";
 
-export const registerVersionEndpoint = (fastify: FastifyServer): void => {
+export const registerVersionEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
   fastify.get<fastify.DefaultQuery, {}, unknown>('/version', {}, (request, reply) => {
-    reply.code(200).send({});
+    reply.code(200).type('application/json').send("Lodestar x.x.x");
   });
 };

@@ -8,26 +8,28 @@ import {IEth1Notifier} from "../eth1";
 import {IApiOptions} from "./options";
 import {ApiNamespace} from "./index";
 import {ILogger} from "../logger";
+import {Sync} from "../sync";
 
 export interface IApiModules {
-    config: IBeaconConfig;
-    logger: ILogger;
-    chain: IBeaconChain;
-    db: IBeaconDb;
-    eth1: IEth1Notifier;
+  config: IBeaconConfig;
+  logger: ILogger;
+  chain: IBeaconChain;
+  sync: Sync;
+  db: IBeaconDb;
+  eth1: IEth1Notifier;
 }
 
 export interface IApiConstructor {
 
-    new(opts: Partial<IApiOptions>, modules: IApiModules): IApi;
+  new(opts: Partial<IApiOptions>, modules: IApiModules): IApi;
 
 }
 
 export interface IApi {
 
-    /**
+  /**
      * Name space for API commands
      */
-    namespace: ApiNamespace;
+  namespace: ApiNamespace;
 
 }

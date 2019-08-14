@@ -5,12 +5,16 @@ import {IApiModules} from "../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
 import {ILogger} from "../../logger";
 import * as routes from "./routes";
+import {IBeaconChain} from "../../chain";
 
-export type FastifyServer = fastify.FastifyInstance<Server, IncomingMessage, ServerResponse>
+export interface IFastifyServer extends fastify.FastifyInstance<Server, IncomingMessage, ServerResponse> {
+  logger: ILogger;
+  chain: IBeaconChain;
+}
 
 export class RestApi implements Service {
 
-  public server: FastifyServer;
+  public server: IFastifyServer;
 
   private opts: IRestApiOptions;
   private logger: ILogger;
@@ -35,19 +39,15 @@ export class RestApi implements Service {
     await this.server.close();
   }
 
-  private  setupServer(modules: IApiModules): FastifyServer {
-    const server = fastify.default({
+  private  setupServer(modules: IApiModules): IFastifyServer {
+    let server = fastify.default({
       //TODO: somehow pass winston here
       logger: false
-    });
+    }) as IFastifyServer;
 
-    server.register((fastify, opts, done) => {
-      fastify.decorate('logger', modules.logger);
-      done();
-    });
+    server.register(routes.beacon, {prefix: '/node', modules});
 
-    server.register(routes.beacon, {prefix: '/node'});
-
+    // @ts-ignore
     return server;
   }
 }
