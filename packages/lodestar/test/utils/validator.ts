@@ -29,6 +29,6 @@ export function generateValidator(activation?: number, exit?: number, slashed: b
  * @param {number} n
  * @returns {Validator[]}
  */
-export function generateValidators(n: number): Validator[] {
-  return Array.from({ length: n }, () => generateValidator());
+export function generateValidators(n: number, ...opts): Validator[] {
+  return Array.from({ length: n }, () => generateValidator(...opts));
 }

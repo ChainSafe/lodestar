@@ -1,4 +1,5 @@
 import sinon from "sinon";
+import {describe} from "mocha";
 import {expect} from "chai";
 import {OpPool} from "../../../src/opPool";
 import {generateEmptyBlock} from "../../utils/block";
@@ -8,9 +9,11 @@ import {
   AttesterSlashingRepository,
   DepositRepository,
   ProposerSlashingRepository, TransfersRepository,
-  VoluntaryExitRepository, AttestationRepository
+  VoluntaryExitRepository, AttestationRepository,
+  StateRepository
 } from "../../../src/db/api/beacon/repositories";
-
+import { generateState } from "../../utils/state";
+import { generateValidators } from "../../utils/validator";
 
 describe("operation pool", function () {
   let sandbox = sinon.createSandbox();
@@ -27,9 +30,18 @@ describe("operation pool", function () {
       transfer: sandbox.createStubInstance(TransfersRepository),
       // @ts-ignore
       attestation: sandbox.createStubInstance(AttestationRepository),
+      state: sandbox.createStubInstance(StateRepository)
     };
 
     eth1Stub = sandbox.createStubInstance(EthersEth1Notifier);
+
+    // Add to state
+    dbStub.state.getLatest.resolves(generateState(
+      {
+        validators: generateValidators(100, 0)
+      }
+    ));
+
     opPool = new OpPool({}, {
       config: config,
       db: dbStub,

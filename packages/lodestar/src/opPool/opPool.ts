@@ -93,6 +93,7 @@ export class OpPool extends EventEmitter {
     const epoch: Epoch = computeEpochOfSlot(this.config, block.slot);
     const proposers: Map<ValidatorIndex, Slot> = this.proposers.get(epoch);
     const state: BeaconState = await this.db.state.getLatest();
+
     const proposerIndex: ValidatorIndex = await getBeaconProposerIndex(this.config, state);
 
     // Check if proposer already exists
@@ -106,7 +107,7 @@ export class OpPool extends EventEmitter {
         header1: blockToHeader(this.config, prevBlock),
         header2: blockToHeader(this.config, block)
       };
-      await this.proposerSlashings.receive(slashing); 
+      await this.proposerSlashings.receive(slashing);
     } else {
       proposers.set(proposerIndex, block.slot);
     }
