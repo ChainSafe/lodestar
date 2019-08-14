@@ -4,7 +4,7 @@
 
 # Getting Started
 - Run `lerna bootstrap` or `yarn install` to install dependencies
-- To run spec tests, execute `git submodules foreach git lfs pull`
+- To run spec tests, execute `git submodule update --init --recursive` to install the spec test submodule
   - NOTE: The spec tests submodule is HUGE, uses ~5GB
 - Run `lerna run test` to run tests
 
