@@ -84,6 +84,7 @@
     "pull-abortable": "^4.1.1",
     "pull-pushable": "^2.2.0",
     "pull-stream": "^3.6.13",
+    "qs": "^6.7.0",
     "strict-event-emitter-types": "^2.0.0",
     "winston": "^3.2.1",
     "ws": "^7.0.1"

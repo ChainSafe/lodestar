@@ -21,20 +21,18 @@ import {BeaconDb} from "../../../../db";
 import {BeaconChain} from "../../../../chain";
 import {OpPool} from "../../../../opPool";
 import {IValidatorApi} from "./interface";
-import {
-  getBeaconProposerIndex,
-  getCommitteeAssignment,
-  isProposerAtSlot
-} from "../../../../chain/stateTransition/util";
+import {getCommitteeAssignment, isProposerAtSlot} from "../../../../chain/stateTransition/util";
 import {CommitteeAssignment} from "../../../../validator/types";
 import {assembleBlock} from "../../../../chain/factory/block";
 import {assembleAttestation} from "../../../../chain/factory/attestation";
-import {assembleValidatorDuty} from "../../../../chain/factory/duties";
 import {IEth1Notifier} from "../../../../eth1";
+import {getValidatorDuties} from "../../../impl/validator";
+import {ApiNamespace} from "../../../index";
 
 export class ValidatorApi implements IValidatorApi {
 
-  public namespace: string;
+  public namespace: ApiNamespace;
+
   private config: IBeaconConfig;
   private chain: BeaconChain;
   private db: BeaconDb;
@@ -42,7 +40,7 @@ export class ValidatorApi implements IValidatorApi {
   private eth1: IEth1Notifier;
 
   public constructor(opts, {config, chain, db, opPool, eth1}) {
-    this.namespace = "validator";
+    this.namespace = ApiNamespace.VALIDATOR;
     this.config = config;
     this.chain = chain;
     this.db = db;
@@ -59,21 +57,8 @@ export class ValidatorApi implements IValidatorApi {
     return isProposerAtSlot(this.config, state, slot, index);
   }
 
-  public async getDuties(validatorPublicKeys: Buffer[]): Promise<ValidatorDuty[]> {
-    const state = await this.db.state.getLatest();
-
-    const validatorIndexes = await Promise.all(validatorPublicKeys.map(async publicKey => {
-      return  await this.db.getValidatorIndex(publicKey);
-    }));
-
-    const blockProposerIndex = getBeaconProposerIndex(this.config, state);
-
-    return validatorPublicKeys.map(
-      (validatorPublicKey, index) => {
-        const validatorIndex = validatorIndexes[index];
-        return assembleValidatorDuty(this.config, validatorPublicKey, validatorIndex, state, blockProposerIndex);
-      }
-    );
+  public async getDuties(validatorPublicKeys: BLSPubkey[], epoch: Epoch): Promise<ValidatorDuty[]> {
+    return getValidatorDuties(this.config, this.db, validatorPublicKeys, epoch);
   }
 
   public async getCommitteeAssignment(

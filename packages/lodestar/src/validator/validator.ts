@@ -25,6 +25,7 @@ import defaultValidatorOptions, {IValidatorOptions} from "./options";
 import deepmerge from "deepmerge";
 import {getKeyFromFileOrKeystore} from "../util/io";
 import {isPlainObject} from "../util/objects";
+import {computeEpochOfSlot} from "../chain/stateTransition/util";
 
 /**
  * Main class for the Validator client.
@@ -166,9 +167,10 @@ class Validator {
 
   private async checkDuties(slot: Slot): Promise<void> {
     const validatorDuty =
-      (await this.rpcClient.validator.getDuties([
-        this.opts.keypair.publicKey.toBytesCompressed()
-      ]))[0];
+      (await this.rpcClient.validator.getDuties(
+        [this.opts.keypair.publicKey.toBytesCompressed()],
+        computeEpochOfSlot(this.config, slot))
+      )[0];
     const currentVersion = await this.rpcClient.beacon.getFork();
     const isAttester = validatorDuty.attestationSlot === slot;
     const isProposer = validatorDuty.blockProductionSlot === slot;

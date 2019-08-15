@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {BLSPubkey, ValidatorDuty, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {BLSPubkey, Epoch, ValidatorDuty, ValidatorIndex} from "@chainsafe/eth2.0-types";
 import {getCommitteeAssignment, computeEpochOfSlot} from "../../stateTransition/util";
 
 export function assembleValidatorDuty(
@@ -7,12 +7,13 @@ export function assembleValidatorDuty(
   validatorPublicKey: BLSPubkey,
   validatorIndex: ValidatorIndex,
   state,
+  epoch: Epoch,
   blockProposerIndex: ValidatorIndex): ValidatorDuty  {
   let duty: ValidatorDuty = this.generateEmptyValidatorDuty(validatorPublicKey);
   const committeeAsignment = getCommitteeAssignment(
     config,
     state,
-    computeEpochOfSlot(config, state.slot),
+    epoch,
     validatorIndex
   );
   if (committeeAsignment) {
@@ -32,12 +33,12 @@ export function assembleValidatorDuty(
   return duty;
 }
 
-export function generateEmptyValidatorDuty(publicKey: BLSPubkey): ValidatorDuty {
+export function generateEmptyValidatorDuty(publicKey: BLSPubkey, duty?: Partial<ValidatorDuty>): ValidatorDuty {
   return {
     validatorPubkey: publicKey,
-    blockProductionSlot: null,
-    attestationShard: null,
-    attestationSlot: null,
-    committeeIndex: null
+    blockProductionSlot: duty.blockProductionSlot || null,
+    attestationShard: duty.attestationShard || null,
+    attestationSlot: duty.attestationSlot || null,
+    committeeIndex: duty.committeeIndex || null
   };
 }

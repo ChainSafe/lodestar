@@ -34,7 +34,8 @@ export interface IValidatorApi extends IApi {
    * and to ensure that the currently connected BeaconNode is properly synchronised.
    */
   getDuties(
-    validatorPublicKeys: BLSPubkey[]
+    validatorPublicKeys: BLSPubkey[],
+    epoch: Epoch,
   ): Promise<ValidatorDuty[]>;
 
   /**

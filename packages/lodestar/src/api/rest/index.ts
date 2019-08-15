@@ -6,6 +6,7 @@ import {IncomingMessage, Server, ServerResponse} from "http";
 import {ILogger} from "../../logger";
 import * as routes from "./routes";
 import {IBeaconChain} from "../../chain";
+import qs from "qs";
 
 export interface IFastifyServer extends fastify.FastifyInstance<Server, IncomingMessage, ServerResponse> {
   logger: ILogger;
@@ -42,12 +43,13 @@ export class RestApi implements Service {
   private  setupServer(modules: IApiModules): IFastifyServer {
     let server = fastify.default({
       //TODO: somehow pass winston here
-      logger: false
+      logger: false,
+      querystringParser: qs.parse
     }) as IFastifyServer;
 
     server.register(routes.beacon, {prefix: '/node', modules});
+    server.register(routes.validator, {prefix: '/validator', modules});
 
-    // @ts-ignore
     return server;
   }
 }

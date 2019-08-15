@@ -16,7 +16,6 @@ import {OpPool} from "../opPool";
 import {createPeerId, initializePeerInfo} from "../network/libp2p/util";
 import {ILogger} from "../logger";
 import {ReputationStore} from "../sync/reputation";
-import {JSONRPC, WSServer} from "../rpc";
 import {SyncRpc} from "../network/libp2p/syncRpc";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 
@@ -109,12 +108,12 @@ export class BeaconNode {
       logger: this.logger,
     });
     //TODO: needs to be moved to Rpc class and initialized from opts
-    this.rpc = new JSONRPC(this.conf.api, {
-      transports: [new WSServer(this.conf.api.transports[0])],
-      apis: this.conf.api.apis.map((Api) => {
-        return new Api({}, {config, chain: this.chain, db: this.db, eth1: this.eth1});
-      })
-    });
+    // this.rpc = new JSONRPC(this.conf.api, {
+    //   transports: [new WSServer(this.conf.api.transports[0])],
+    //   apis: this.conf.api.apis.map((Api) => {
+    //     return new Api({}, {config, chain: this.chain, db: this.db, eth1: this.eth1});
+    //   })
+    // });
 
   }
 

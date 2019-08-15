@@ -1,16 +1,16 @@
 import {describe} from "mocha";
-import {RestApi} from "../../../../src/api/rest";
-import {ApiNamespace} from "../../../../src/api";
+import {RestApi} from "../../../../../src/api/rest";
+import {ApiNamespace} from "../../../../../src/api";
 import sinon from "sinon";
-import {WinstonLogger} from "../../../../src/logger";
-import {BeaconChain} from "../../../../src/chain";
-import {BeaconDb} from "../../../../src/db/api";
+import {WinstonLogger} from "../../../../../src/logger";
+import {BeaconChain} from "../../../../../src/chain";
+import {BeaconDb} from "../../../../../src/db/api";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import {EthersEth1Notifier} from "../../../../src/eth1";
+import {EthersEth1Notifier} from "../../../../../src/eth1";
 import supertest from "supertest";
 import {expect} from "chai";
-import {generateState} from "../../../utils/state";
-import {Sync} from "../../../../src/sync";
+import {generateState} from "../../../../utils/state";
+import {Sync} from "../../../../../src/sync";
 
 describe('Test rest api server', function () {
   this.timeout(10000);

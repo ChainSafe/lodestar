@@ -9,17 +9,18 @@ import {IBeaconChain} from "../../../../chain";
 import {IBeaconDb} from "../../../../db";
 import {IApiOptions} from "../../../options";
 import {IApiModules} from "../../../interface";
+import {ApiNamespace} from "../../../index";
 
 export class BeaconApi implements IBeaconApi {
 
-  public namespace: string;
+  public namespace: ApiNamespace;
 
   private config: IBeaconConfig;
   private chain: IBeaconChain;
   private db: IBeaconDb;
 
   public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
-    this.namespace = 'beacon';
+    this.namespace = ApiNamespace.BEACON;
     this.config = modules.config;
     this.db = modules.db;
     this.chain = modules.chain;

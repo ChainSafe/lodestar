@@ -14,7 +14,8 @@ import {generateCommanderOptions, optionsToConfig} from "../util";
 import {getTomlConfig} from "../../util/file";
 import Validator from "../../validator";
 import {RpcClientOverInstance} from "../../validator/rpc";
-import {BeaconApi, ValidatorApi} from "../../rpc";
+import {ValidatorApi} from "../../api/rpc/api/validator";
+import {BeaconApi} from "../../api/rpc/api/beacon";
 
 interface IBeaconCommandOptions {
   configFile?: string;
@@ -82,7 +83,14 @@ export class BeaconNodeCommand implements CliCommand {
         ),
         beacon: new BeaconApi(
           {},
-          {config, chain: this.node.chain, db: this.node.db}
+          {
+            config,
+            logger: new WinstonLogger(),
+            sync: this.node.sync,
+            eth1: this.node.eth1,
+            chain: this.node.chain,
+            db: this.node.db
+          }
         ),
       });
       this.validator = new Validator(
