@@ -16,8 +16,9 @@ import {toHex} from "../../../../../src/util/bytes";
 import {generateEmptyBlock} from "../../../../utils/block";
 import * as blockUtils from "../../../../../src/chain/factory/block";
 import {toRestJson} from "../../../../../src/api/rest/utils";
-import {generateAttestationData} from "../../../../utils/attestation";
+import {generateAttestationData, generateEmptyAttestation} from "../../../../utils/attestation";
 import {IndexedAttestation} from "@chainsafe/eth2.0-types";
+import {AttestationOperations, OpPool} from "../../../../../src/opPool";
 
 describe('Test validator rest API', function () {
   this.timeout(10000);
@@ -25,6 +26,10 @@ describe('Test validator rest API', function () {
   let restApi, getDutiesStub, assembleBlockStub, produceAttestationStub;
 
   const chain = sinon.createStubInstance(BeaconChain);
+  const opPool = sinon.createStubInstance(OpPool);
+  const attestationOperations = sinon.createStubInstance(AttestationOperations);
+  // @ts-ignore
+  opPool.attestations = attestationOperations;
   const sync = sinon.createStubInstance(Sync);
   const sandbox = sinon.createSandbox();
 
@@ -40,6 +45,8 @@ describe('Test validator rest API', function () {
       chain,
       // @ts-ignore
       sync,
+      // @ts-ignore
+      opPool,
       db: sinon.createStubInstance(BeaconDb),
       config,
       eth1: sinon.createStubInstance(EthersEth1Notifier),
@@ -154,6 +161,22 @@ describe('Test validator rest API', function () {
       .expect(200)
       .expect('Content-Type', 'application/json; charset=utf-8');
     expect(produceAttestationStub.withArgs(sinon.match.any, sinon.match.any, sinon.match.any, 3, 2).calledOnce).to.be.true;
+  });
+
+
+  it('should publish attestation', async function () {
+    const attestation = generateEmptyAttestation();
+    attestationOperations.receive.resolves();
+    await supertest(restApi.server.server)
+      .post(
+        '/validator/attestation',
+      )
+      .send({
+        "attestation": toRestJson(attestation)
+      })
+      .expect(200)
+      .expect('Content-Type', 'application/json');
+    expect(attestationOperations.receive.calledOnce).to.be.true;
   });
 
 });
