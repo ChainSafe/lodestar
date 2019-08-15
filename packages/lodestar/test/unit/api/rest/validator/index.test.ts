@@ -15,6 +15,7 @@ import {expect} from "chai";
 import {toHex} from "../../../../../src/util/bytes";
 import {generateEmptyBlock} from "../../../../utils/block";
 import * as blockUtils from "../../../../../src/chain/factory/block";
+import {toRestJson} from "../../../../../src/api/rest/utils";
 
 describe('Test validator rest API', function () {
   this.timeout(10000);
@@ -112,6 +113,21 @@ describe('Test validator rest API', function () {
       .expect(200)
       .expect('Content-Type', 'application/json; charset=utf-8');
     expect(response.body.parent_root).to.not.be.null;
+  });
+
+  it('should publish block', async function () {
+    const block = generateEmptyBlock();
+    chain.receiveBlock.resolves();
+    await supertest(restApi.server.server)
+      .post(
+        '/validator/block',
+      )
+      .send({
+        "beacon_block": toRestJson(block)
+      })
+      .expect(200)
+      .expect('Content-Type', 'application/json');
+    expect(chain.receiveBlock.calledOnce).to.be.true;
   });
 
 });
