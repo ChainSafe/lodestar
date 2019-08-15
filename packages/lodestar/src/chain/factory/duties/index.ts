@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BLSPubkey, Epoch, ValidatorDuty, ValidatorIndex} from "@chainsafe/eth2.0-types";
-import {getCommitteeAssignment, computeEpochOfSlot} from "../../stateTransition/util";
+import {getCommitteeAssignment} from "../../stateTransition/util";
 
 export function assembleValidatorDuty(
   config: IBeaconConfig,
@@ -27,7 +27,7 @@ export function assembleValidatorDuty(
   if (validatorIndex === blockProposerIndex) {
     duty = {
       ...duty,
-      blockProductionSlot: state.slot
+      blockProposalSlot: state.slot
     };
   }
   return duty;
@@ -36,7 +36,7 @@ export function assembleValidatorDuty(
 export function generateEmptyValidatorDuty(publicKey: BLSPubkey, duty?: Partial<ValidatorDuty>): ValidatorDuty {
   return {
     validatorPubkey: publicKey,
-    blockProductionSlot: duty.blockProductionSlot || null,
+    blockProposalSlot: duty.blockProposalSlot || null,
     attestationShard: duty.attestationShard || null,
     attestationSlot: duty.attestationSlot || null,
     committeeIndex: duty.committeeIndex || null

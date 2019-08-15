@@ -173,7 +173,7 @@ class Validator {
       )[0];
     const currentVersion = await this.rpcClient.beacon.getFork();
     const isAttester = validatorDuty.attestationSlot === slot;
-    const isProposer = validatorDuty.blockProductionSlot === slot;
+    const isProposer = validatorDuty.blockProposalSlot === slot;
     this.logger.info(
       `[Validator] Slot: ${slot}, Fork: ${currentVersion}, 
       isProposer: ${isProposer}, isAttester: ${isAttester}`

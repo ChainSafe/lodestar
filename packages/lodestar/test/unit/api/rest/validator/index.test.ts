@@ -13,11 +13,13 @@ import * as validatorImpl from "../../../../../src/api/impl/validator";
 import {generateEmptyValidatorDuty} from "../../../../../src/chain/factory/duties";
 import {expect} from "chai";
 import {toHex} from "../../../../../src/util/bytes";
+import {generateEmptyBlock} from "../../../../utils/block";
+import * as blockUtils from "../../../../../src/chain/factory/block";
 
 describe('Test validator rest API', function () {
   this.timeout(10000);
 
-  let restApi, getDutiesStub;
+  let restApi, getDutiesStub, assembleBlockStub;
 
   const chain = sinon.createStubInstance(BeaconChain);
   const sync = sinon.createStubInstance(Sync);
@@ -48,6 +50,7 @@ describe('Test validator rest API', function () {
 
   beforeEach(function () {
     getDutiesStub = sandbox.stub(validatorImpl, "getValidatorDuties");
+    assembleBlockStub = sandbox.stub(blockUtils, "assembleBlock");
   });
 
   afterEach(function () {
@@ -63,9 +66,9 @@ describe('Test validator rest API', function () {
 
   it('should return duties', async function () {
     const duty = generateEmptyValidatorDuty(
-      Buffer.alloc(48),
+      Buffer.alloc(48, 1),
       {
-        blockProductionSlot: 2,
+        blockProposalSlot: 2,
         attestationShard: 2,
         attestationSlot: 2
       }
@@ -86,6 +89,29 @@ describe('Test validator rest API', function () {
     expect(response.body[0].attestation_slot).to.be.equal(2);
     expect(response.body[0].attestation_shard).to.be.equal(2);
     expect(response.body[0].block_proposal_slot).to.be.equal(2);
+  });
+
+  it('should throw error on invalid request for block production', async function () {
+    await supertest(restApi.server.server)
+      .get('/validator/block')
+      .expect(400)
+      .expect('Content-Type', 'application/json; charset=utf-8');
+  });
+
+  it('should return new block', async function () {
+    const block = generateEmptyBlock();
+    assembleBlockStub.resolves(block);
+    const response = await supertest(restApi.server.server)
+      .get(
+        '/validator/block',
+      )
+      .query({
+        "randao_reveal": toHex(Buffer.alloc(32)),
+        slot: 2
+      })
+      .expect(200)
+      .expect('Content-Type', 'application/json; charset=utf-8');
+    expect(response.body.parent_root).to.not.be.null;
   });
 
 });

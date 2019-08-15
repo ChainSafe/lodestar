@@ -45,7 +45,7 @@
     "@chainsafe/bls-js": "^0.1.5",
     "@chainsafe/eth2.0-config": "^0.1.0",
     "@chainsafe/eth2.0-params": "^0.1.0",
-    "@chainsafe/eth2.0-types": "^0.1.0",
+    "@chainsafe/eth2.0-types": "^0.1.1",
     "@chainsafe/ssz": "0.5.1",
     "@iarna/toml": "^2.2.3",
     "@nodeutils/defaults-deep": "^1.1.0",
@@ -85,6 +85,7 @@
     "pull-pushable": "^2.2.0",
     "pull-stream": "^3.6.13",
     "qs": "^6.7.0",
+    "snake-case": "^2.1.0",
     "strict-event-emitter-types": "^2.0.0",
     "winston": "^3.2.1",
     "ws": "^7.0.1"

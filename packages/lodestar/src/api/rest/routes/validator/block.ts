@@ -1,13 +1,13 @@
 import {IFastifyServer} from "../../index";
 import fastify, {DefaultQuery} from "fastify";
 import {IApiModules} from "../../../interface";
-import {getValidatorDuties} from "../../../impl/validator";
 import {IncomingMessage, Server, ServerResponse} from "http";
+import {assembleBlock} from "../../../../chain/factory/block";
 import {toRestJson} from "../../utils";
 
 interface Query extends DefaultQuery {
-  validator_pubkeys: string[];
-  epoch: number;
+  slot: number;
+  randao_reveal: string;
 }
 
 
@@ -15,39 +15,37 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   schema: {
     querystring: {
       type: 'object',
-      required: ["validator_pubkeys", "epoch"],
+      required: ["slot", "randao_reveal"],
       properties: {
-        "validator_pubkeys": {
-          type: 'array',
-          maxItems: 5,
-          items: {
-            types: "string"
-          }
-        },
-        epoch: {
+        slot: {
           type: "integer",
           minimum: 0
+        },
+        "randao_reveal": {
+          type: "string"
         }
       }
     },
   }
 };
 
-export const registerDutiesEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
+export const registerBlockProductionEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
   fastify.get<Query>(
-    '/duties',
+    '/block',
     opts,
     async (request, reply) => {
-      const duties = (await getValidatorDuties(
+      const block = await assembleBlock(
         modules.config,
         modules.db,
-        request.query.validator_pubkeys.map(key => Buffer.from(key, 'hex')),
-        request.query.epoch
-      )).map(toRestJson);
+        modules.opPool,
+        modules.eth1,
+        request.query.slot,
+        Buffer.from(request.query.randao_reveal)
+      );
       reply
         .code(200)
         .type('application/json')
-        .send(duties);
+        .send(toRestJson(block));
     }
   );
 };
