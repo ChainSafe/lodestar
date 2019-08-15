@@ -16,11 +16,13 @@ import {toHex} from "../../../../../src/util/bytes";
 import {generateEmptyBlock} from "../../../../utils/block";
 import * as blockUtils from "../../../../../src/chain/factory/block";
 import {toRestJson} from "../../../../../src/api/rest/utils";
+import {generateAttestationData} from "../../../../utils/attestation";
+import {IndexedAttestation} from "@chainsafe/eth2.0-types";
 
 describe('Test validator rest API', function () {
   this.timeout(10000);
 
-  let restApi, getDutiesStub, assembleBlockStub;
+  let restApi, getDutiesStub, assembleBlockStub, produceAttestationStub;
 
   const chain = sinon.createStubInstance(BeaconChain);
   const sync = sinon.createStubInstance(Sync);
@@ -52,6 +54,7 @@ describe('Test validator rest API', function () {
   beforeEach(function () {
     getDutiesStub = sandbox.stub(validatorImpl, "getValidatorDuties");
     assembleBlockStub = sandbox.stub(blockUtils, "assembleBlock");
+    produceAttestationStub = sandbox.stub(validatorImpl, "produceAttestation");
   });
 
   afterEach(function () {
@@ -128,6 +131,29 @@ describe('Test validator rest API', function () {
       .expect(200)
       .expect('Content-Type', 'application/json');
     expect(chain.receiveBlock.calledOnce).to.be.true;
+  });
+
+  it('should produce attestation', async function () {
+    const attestation: IndexedAttestation = {
+      custodyBit0Indices: [],
+      custodyBit1Indices: [],
+      data: generateAttestationData(0, 1),
+      signature: null
+    };
+    produceAttestationStub.resolves(attestation);
+    await supertest(restApi.server.server)
+      .get(
+        '/validator/attestation',
+      )
+      .query({
+        "validator_pubkey": toHex(Buffer.alloc(48)),
+        "poc_bit": 1,
+        "shard": 3,
+        "slot": 2
+      })
+      .expect(200)
+      .expect('Content-Type', 'application/json; charset=utf-8');
+    expect(produceAttestationStub.withArgs(sinon.match.any, sinon.match.any, sinon.match.any, 3, 2).calledOnce).to.be.true;
   });
 
 });

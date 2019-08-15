@@ -28,6 +28,7 @@ import {assembleAttestation} from "../../../../chain/factory/attestation";
 import {IEth1Notifier} from "../../../../eth1";
 import {getValidatorDuties} from "../../../impl/validator";
 import {ApiNamespace} from "../../../index";
+import {produceAttestation} from "../../../impl/validator/produceAttestation";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -69,11 +70,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async produceAttestation(slot: Slot, shard: Shard): Promise<IndexedAttestation> {
-    const [headState, headBlock] = await Promise.all([
-      this.db.state.getLatest(),
-      this.db.block.get(this.chain.forkChoice.head())
-    ]);
-    return await assembleAttestation(this.config, this.db, headState, headBlock, shard, slot);
+    return produceAttestation(this.config, this.db, this.chain, shard, slot);
   }
 
   public async publishBlock(block: BeaconBlock): Promise<void> {

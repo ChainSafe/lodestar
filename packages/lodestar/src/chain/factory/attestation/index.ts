@@ -1,12 +1,12 @@
 import {BeaconBlock, BeaconState, IndexedAttestation, Shard, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {BeaconDb} from "../../../db/api";
+import {BeaconDb, IBeaconDb} from "../../../db/api";
 import {assembleAttestationData} from "./data";
 
 export async function assembleAttestation(
   config: IBeaconConfig,
-  db: BeaconDb,
+  db: IBeaconDb,
   state: BeaconState,
   headBlock: BeaconBlock,
   slot: Slot,
