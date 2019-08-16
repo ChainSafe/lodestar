@@ -7,6 +7,8 @@ import {
   SerializableValue,
   Type,
 } from "../../src";
+import { AnySSZType } from "../../src/types";
+
 
 import {
   ArrayObject,
@@ -64,6 +66,43 @@ describe("hashTreeRoot", () => {
       assert(actual);
     });
   }
+
+  it("should be able to hash inner object as list of basic object", () => {
+    const accountBalances = {
+      balances: []
+    };
+    const count = 2;
+    for (let i = 0; i < count; i++) {
+      accountBalances.balances.push(new BN("32000000000"));
+    }
+    const accountBalancesType: AnySSZType = {
+      fields: [["balances", { elementType: "uint64", maxLength: count }]]
+    };
+    const hash = hashTreeRoot(accountBalances, accountBalancesType).toString("hex");
+    assert(hash);
+  });
+
+  it("should have the same result to Prysmatic ssz unit test", () => {
+    const previousVersionBuf = Buffer.from("9f41bd5b", "hex");
+    const previousVersion = Uint8Array.from(previousVersionBuf);
+    const curVersionBuf = Buffer.from("cbb0f1d7", "hex");
+    const curVersion = Uint8Array.from(curVersionBuf);
+    const fork = {
+      previousVersion,
+      curVersion,
+      epoch: new BN("11971467576204192310")
+    };
+    const forkType: AnySSZType = {
+      fields: [
+        ["previousVersion", { elementType: "byte", length: 4 }],
+        ["curVersion", { elementType: "byte", length: 4 }],
+        ["epoch", "uint64"]
+      ]
+    };
+    const finalHash = hashTreeRoot(fork, forkType).toString("hex");
+    const want = "3ad1264c33bc66b43a49b1258b88f34b8dbfa1649f17e6df550f589650d34992";
+    assert.strictEqual(finalHash, want, "finalHash does not match");
+  });
 
   const failCases: {
     value: SerializableValue;
