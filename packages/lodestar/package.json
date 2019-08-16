@@ -108,7 +108,7 @@
     "@types/ws": "^6.0.1",
     "babel-plugin-const-enum": "^0.0.2",
     "benchmark": "^2.1.4",
-    "supertest": "^4.0.2"
+    "supertest": "^4.0.2",
     "chai": "^4.2.0",
     "mocha": "^6.2.0"
   }
