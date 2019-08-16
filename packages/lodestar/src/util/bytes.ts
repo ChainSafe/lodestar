@@ -5,7 +5,7 @@
 import BN from "bn.js";
 
 import {bytes} from "@chainsafe/eth2.0-types";
-import {PrivateKey} from '@chainsafe/bls-js/lib/privateKey';
+import {PrivateKey} from '@chainsafe/bls/lib/privateKey';
 
 /**
  * Return a byte array from a number or BN

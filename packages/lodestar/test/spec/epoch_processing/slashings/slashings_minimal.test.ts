@@ -1,13 +1,15 @@
 import {join} from "path";
-import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 import {equals} from "@chainsafe/ssz";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {processSlashings} from "../../../../src/chain/stateTransition/epoch/slashings";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {BeaconStateComparisonCase} from "../../../utils/specTestTypes/beaconStateComparison";
+import {BeaconState} from "@chainsafe/eth2.0-types";
 
-describeSpecTest(
+describeMultiSpec<BeaconStateComparisonCase, BeaconState>(
   join(__dirname, "../../test-cases/tests/epoch_processing/slashings/slashings_minimal.yaml"),
   (state) => {
     processSlashings(config, state);

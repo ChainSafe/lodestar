@@ -2,7 +2,7 @@
  * @module validator
  */
 
-import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
+import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 
 import {BeaconBlock, Epoch, Fork, Slot, ValidatorIndex, BeaconState} from "@chainsafe/eth2.0-types";

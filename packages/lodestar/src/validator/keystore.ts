@@ -2,14 +2,14 @@
  * @module validator/keystore
  */
 
-import bls from "@chainsafe/bls-js";
+import bls from "@chainsafe/bls";
 import fs from "fs";
 
 import {blsPrivateKeyToHex} from "../util/bytes";
 import {encryptKey, decryptKey} from "../util/encrypt";
 import {ensureDirectoryExistence} from "../util/file";
-import {Keypair} from "@chainsafe/bls-js/lib/keypair";
-import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
+import {Keypair} from "@chainsafe/bls/lib/keypair";
+import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 
 export interface IKeystoreObject {
   encryptedPrivateKey: string;

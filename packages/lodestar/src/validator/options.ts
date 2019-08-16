@@ -1,9 +1,10 @@
 import {IDatabaseOptions} from "../db/options";
 import {RpcClient} from "./rpc";
-import {Keypair} from "@chainsafe/bls-js/lib/keypair";
+import {Keypair} from "@chainsafe/bls/lib/keypair";
+import {TransportType} from "../rpc/transport";
 import {IConfigurationModule} from "../util/config";
 import {IValidatorDB} from "../db/api";
-import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
+import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 
 export interface IValidatorOptions {
   db: IDatabaseOptions;

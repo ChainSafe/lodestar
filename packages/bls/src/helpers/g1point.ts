@@ -1,11 +1,11 @@
 import {BIG} from "@chainsafe/milagro-crypto-js/src/big";
 import {ECP} from "@chainsafe/milagro-crypto-js/src/ecp";
 import ctx from "../ctx";
-import {bytes48} from "../types";
 import assert from "assert";
 import {calculateYFlag, getModulus} from "./utils";
 import * as random from "secure-random";
 import {FP_POINT_LENGTH} from "../constants";
+import {bytes48} from "@chainsafe/eth2.0-types";
 
 export class G1point {
 
