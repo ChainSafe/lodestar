@@ -136,26 +136,30 @@ function loadInputFiles<TestCase, Result>(
     })
     .forEach((file) => {
       const inputName = basename(file).replace(".ssz", "").replace(".yaml", "");
-      if(file.endsWith(InputType.SSZ)) {
-        testCase[inputName] = deserialize(readFileSync(file), options.sszTypes[inputName]);
-      } else {
-        testCase[inputName] = objectToCamelCase(
-          load(
-            readFileSync(
-              file,
-              'utf8'
-            ),
-            {
-              schema,
-            }
-          )
-        );
-      }
+      testCase[inputName] = deserializeTestCase(file, inputName, options);
       if(options.inputProcessing[inputName]) {
         testCase[inputName] = options.inputProcessing[inputName](testCase[inputName]);
       }
     });
   return testCase as TestCase;
+}
+
+function deserializeTestCase<TestCase, Result>(file, inputName, options: ISpecTestOptions<TestCase, Result>): object {
+  if (file.endsWith(InputType.SSZ)) {
+    return deserialize(readFileSync(file), options.sszTypes[inputName]);
+  } else {
+    return  objectToCamelCase(
+        load(
+            readFileSync(
+                file,
+                'utf8'
+            ),
+            {
+              schema,
+            }
+        )
+    );
+  }
 }
 
 function generateProfileReport(profile, directory, profileId: string): void {
