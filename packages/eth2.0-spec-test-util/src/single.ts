@@ -61,7 +61,7 @@ export function describeDirectorySpecTest<TestCase, Result>(
   name: string,
   testCaseDirectoryPath: string,
   testFunction: (testCase: TestCase) => Result,
-  options: ISpecTestOptions<TestCase, Result>
+  options: Partial<ISpecTestOptions<TestCase, Result>>
 ): void {
   // @ts-ignore
   options = deepMerge(defaultOptions, options);
@@ -105,14 +105,15 @@ function generateTestCase<TestCase, Result>(
       expect(testFunction.bind(null, testCase)).to.throw;
     } else {
       const profileId = `${name}-${Date.now()}.profile`;
-      if (process.env.GEN_PROFILE_DIR) {
+      const profilingDirectory = process.env.GEN_PROFILE_DIR;
+      if (profilingDirectory) {
         profiler.startProfiling(profileId);
       }
       const result = testFunction(testCase);
-      if (process.env.GEN_PROFILE_DIR) {
+      if (profilingDirectory) {
         const profile = profiler.stopProfiling(profileId);
-        const directory = process.env.GEN_PROFILE_DIR || __dirname;
-        generateProfileReport(profile, directory, profileId);
+
+        generateProfileReport(profile, profilingDirectory, profileId);
       }
       const expected = options.getExpected(testCase);
       options.expectFunc(testCase, expected, result);
