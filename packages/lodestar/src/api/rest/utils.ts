@@ -8,14 +8,11 @@ import {BitList, BitVector} from "@chainsafe/bit-utils";
 export function toRestJson(o: object): object {
   o = {...o};
   for(let key in o) {
-    if(o.hasOwnProperty(key)) {
-      const value = o[key] !== null ? serializeToRestValue(o[key]): null;
       const newKey = snakeCase(key);
-      o[newKey] = value;
+      o[newKey] =  o[key] !== null ? serializeToRestValue(o[key]): null;
       if(newKey !== key) {
         delete o[key];
       }
-    }
   }
   return o;
 }
@@ -27,16 +24,16 @@ export function serializeToRestValue(value: any): any {
   if (BN.isBN(value)) {
     return  value.toString();
   }
-  if(value && BitVector.isBitVector(value)) {
+  if(BitVector.isBitVector(value)) {
     return  Buffer.from((value as BitVector).toBitfield()).toString('hex');
   }
-  if(value && BitList.isBitList(value)) {
+  if(BitList.isBitList(value)) {
     return  Buffer.from((value as BitList).serialize()).toString('hex');
   }
   if(Array.isArray(value)) {
     return value.map(toRestJson);
   }
-  if (typeof value  === 'object' && value != null) {
+  if (typeof value  === 'object') {
     return toRestJson(value);
   }
   return value;

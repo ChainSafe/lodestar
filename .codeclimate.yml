@@ -23,7 +23,7 @@ checks:
       threshold: 4
   return-statements:
     config:
-      threshold: 4
+      threshold: 10
   similar-code:
     config:
       threshold: 80
