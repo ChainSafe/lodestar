@@ -8,11 +8,11 @@ import {BitList, BitVector} from "@chainsafe/bit-utils";
 export function toRestJson(o: object): object {
   o = {...o};
   for(let key in o) {
-      const newKey = snakeCase(key);
-      o[newKey] =  o[key] !== null ? serializeToRestValue(o[key]): null;
-      if(newKey !== key) {
-        delete o[key];
-      }
+    const newKey = snakeCase(key);
+    o[newKey] =  o[key] !== null ? serializeToRestValue(o[key]): null;
+    if(newKey !== key) {
+      delete o[key];
+    }
   }
   return o;
 }

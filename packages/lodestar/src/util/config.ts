@@ -26,7 +26,7 @@ export function booleanOption(name: string, flag: string, description: string = 
     cli: {
       flag
     }
-  }
+  };
 }
 
 export function getCliFields(configuration: IConfigurationModule): IConfigurationField<unknown>[] {
