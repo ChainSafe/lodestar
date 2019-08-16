@@ -13,9 +13,9 @@ export function toRestJson(o: object): object {
         o[snakeCase(key)] = toHex(o[key]);
       } else if (BN.isBN(o[key])) {
         o[snakeCase(key)] = o[key].toString();
-      } else if(BitVector.isBitVector(o[key])) {
+      } else if(o[key] && BitVector.isBitVector(o[key])) {
         o[snakeCase(key)] = Buffer.from((o[key] as BitVector).toBitfield()).toString('hex');
-      } else if(BitList.isBitList(o[key])) {
+      } else if(o[key] && BitList.isBitList(o[key])) {
         o[snakeCase(key)] = Buffer.from((o[key] as BitList).serialize()).toString('hex');
       } else if(Array.isArray(o[key])) {
         o[snakeCase(key)] = o[key].map(toRestJson);

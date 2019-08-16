@@ -1,9 +1,7 @@
-import {DatabaseService} from "../db/api/abstract";
 import {Service} from "../node";
 import defaultOptions, {IApiOptions} from "./options";
 import {IApiModules} from "./interface";
 import deepmerge from "deepmerge";
-import asRaw from "@polkadot/util-crypto/xxhash/xxhash64/asRaw";
 import {JsonRpc} from "./rpc";
 
 export * from "./interface";

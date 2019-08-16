@@ -2,12 +2,13 @@ import sinon from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {BeaconApi} from "../../../../../src/api/rpc/api/beacon";
-import {BeaconChain} from "../../../../../src/chain";
+import {BeaconApi} from "../../../../../../src/api/rpc/api/beacon";
+import {BeaconChain} from "../../../../../../src/chain";
 
-import {generateState} from "../../../../utils/state";
-import {generateEmptyBlock} from "../../../../utils/block";
-import {BlockRepository, StateRepository} from "../../../../../src/db/api/beacon/repositories";
+import {generateState} from "../../../../../utils/state";
+import {generateEmptyBlock} from "../../../../../utils/block";
+import {BlockRepository, StateRepository} from "../../../../../../src/db/api/beacon/repositories";
+import {describe} from "mocha";
 
 describe('beacon rpc api', function () {
 
@@ -21,6 +22,7 @@ describe('beacon rpc api', function () {
       block: sandbox.createStubInstance(BlockRepository)
     };
     chainStub = sandbox.createStubInstance(BeaconChain);
+    // @ts-ignore
     beaconApi = new BeaconApi({}, {
       config,
       chain: chainStub,

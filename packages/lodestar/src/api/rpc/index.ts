@@ -10,20 +10,21 @@ import {IRpcServer, TransportType, WSServer} from "./transport";
 import HttpServer from "./transport/http";
 import * as jsonRpc from "noice-json-rpc";
 import * as apis from "./api";
-import {ApiNamespace} from "../index";
+import deepmerge from "deepmerge";
+import defaultOptions from "./options";
 
 export * from "./api";
 
 export class JsonRpc implements Service {
 
-  private transports: IRpcServer[] = [];
+  public transports: IRpcServer[] = [];
 
   private opts: IRpcOptions;
 
   private logger: ILogger;
 
-  constructor(opts: IRpcOptions, modules: IApiModules) {
-    this.opts = opts;
+  public constructor(opts: Partial<IRpcOptions>, modules: IApiModules) {
+    this.opts = deepmerge(defaultOptions, opts);
     this.logger = modules.logger;
     this.setupTransports(modules);
     this.setupAPIs(modules);

@@ -36,9 +36,9 @@ export function assembleValidatorDuty(
 export function generateEmptyValidatorDuty(publicKey: BLSPubkey, duty?: Partial<ValidatorDuty>): ValidatorDuty {
   return {
     validatorPubkey: publicKey,
-    blockProposalSlot: duty.blockProposalSlot || null,
-    attestationShard: duty.attestationShard || null,
-    attestationSlot: duty.attestationSlot || null,
-    committeeIndex: duty.committeeIndex || null
+    blockProposalSlot: (duty && duty.blockProposalSlot) || null,
+    attestationShard: (duty && duty.attestationShard) || null,
+    attestationSlot: (duty && duty.attestationSlot) || null,
+    committeeIndex: (duty && duty.committeeIndex) || null
   };
 }

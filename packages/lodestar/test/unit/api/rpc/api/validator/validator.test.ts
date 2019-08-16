@@ -1,27 +1,28 @@
 import sinon from "sinon";
 import {expect} from "chai";
-
+import {describe} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import * as blockAssembly from "../../../../../src/chain/factory/block";
-import * as stateTransitionUtils from "../../../../../src/chain/stateTransition/util";
-import {getCommitteeAssignment} from "../../../../../src/chain/stateTransition/util";
-import {ValidatorApi} from "../../../../../src/api/rpc/api/validator";
-import {BeaconDb} from "../../../../../src/db/api";
-import {BeaconChain} from "../../../../../src/chain";
-import {AttestationOperations, OpPool} from "../../../../../src/opPool";
-import {generateEmptyBlock} from "../../../../utils/block";
-import {generateState} from "../../../../utils/state";
-import {StatefulDagLMDGHOST} from "../../../../../src/chain/forkChoice";
-import * as dutyFactory from "../../../../../src/chain/factory/duties";
-import {EthersEth1Notifier} from "../../../../../src/eth1";
-import {generateEmptyAttestation} from "../../../../utils/attestation";
-import {BlockRepository, StateRepository} from "../../../../../src/db/api/beacon/repositories";
+import * as blockAssembly from "../../../../../../src/chain/factory/block";
+import * as stateTransitionUtils from "../../../../../../src/chain/stateTransition/util";
+import {getCommitteeAssignment} from "../../../../../../src/chain/stateTransition/util";
+import {ValidatorApi} from "../../../../../../src/api/rpc/api/validator";
+import {BeaconDb} from "../../../../../../src/db/api";
+import {BeaconChain} from "../../../../../../src/chain";
+import {AttestationOperations, OpPool} from "../../../../../../src/opPool";
+import {generateEmptyBlock} from "../../../../../utils/block";
+import {generateState} from "../../../../../utils/state";
+import {StatefulDagLMDGHOST} from "../../../../../../src/chain/forkChoice";
+import * as dutyFactory from "../../../../../../src/chain/factory/duties";
+import {EthersEth1Notifier} from "../../../../../../src/eth1";
+import {generateEmptyAttestation} from "../../../../../utils/attestation";
+import {BlockRepository, StateRepository} from "../../../../../../src/db/api/beacon/repositories";
+import * as validatorImpl from "../../../../../../src/api/impl/validator";
 
 describe('validator rpc api', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let validatorApi, dbStub, chainStub, opStub, forkChoiceStub, eth1Stub;
+  let validatorApi, dbStub, chainStub, opStub, forkChoiceStub, eth1Stub, getDutiesStub;
 
   beforeEach(() => {
     dbStub = sandbox.createStubInstance(BeaconDb);
@@ -29,6 +30,7 @@ describe('validator rpc api', function () {
     dbStub.block =sandbox.createStubInstance(BlockRepository);
     eth1Stub = sandbox.createStubInstance(EthersEth1Notifier);
     forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
+    getDutiesStub = sandbox.stub(validatorImpl, "getValidatorDuties");
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
     opStub = sandbox.createStubInstance(OpPool);
@@ -68,21 +70,12 @@ describe('validator rpc api', function () {
 
   it('get duties', async function() {
     const publicKey = Buffer.alloc(48, 1);
-    const state = generateState();
-    dbStub.state.getLatest.resolves(state);
-    dbStub.getValidatorIndex.resolves(5);
-    const getProposerStub = sandbox.stub(stateTransitionUtils, 'getBeaconProposerIndex');
-    getProposerStub.returns(4);
-    const assembleValidatorDutyStub = sandbox.stub(dutyFactory, 'assembleValidatorDuty');
-    assembleValidatorDutyStub.returns(dutyFactory.generateEmptyValidatorDuty(publicKey));
-    const duties = await validatorApi.getDuties([publicKey]);
+    getDutiesStub.resolves([dutyFactory.generateEmptyValidatorDuty(publicKey)]);
+    const duties = await validatorApi.getDuties([publicKey], 2);
     expect(duties.length).to.be.equal(1);
     expect(duties[0].committeeIndex).to.be.null;
-    expect(duties[0].blockProductionSlot).to.be.null;
-    expect(dbStub.state.getLatest.calledOnce).to.be.true;
-    expect(dbStub.getValidatorIndex.withArgs(publicKey).calledOnce).to.be.true;
-    expect(getProposerStub.withArgs(config, state).calledOnce).to.be.true;
-    expect(assembleValidatorDutyStub.calledOnceWith(config, publicKey, 5, state, 4)).to.be.true;
+    expect(duties[0].blockProposalSlot).to.be.null;
+    expect(getDutiesStub.calledOnce).to.be.true;
   });
 
   it('get committee assignment', async function() {

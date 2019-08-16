@@ -19,6 +19,7 @@ import {getEmptyBlock} from "../../../../src/chain/genesis/genesis";
 
 import {IValidatorApi} from "../../../../src/api/rpc/api/validator";
 import {CommitteeAssignment} from "../../../../src/validator/types";
+import {ApiNamespace} from "../../../../src/api";
 
 export interface MockValidatorAPIOpts {
   head?: BeaconBlock;
@@ -31,14 +32,14 @@ export interface MockValidatorAPIOpts {
 }
 
 export class MockValidatorApi implements IValidatorApi {
-  public namespace: string;
+  public namespace: ApiNamespace;
   private chainId: number64;
   private validatorIndex: ValidatorIndex;
   private attestations;
   private head: BeaconBlock;
 
   public constructor(opts?: MockValidatorAPIOpts) {
-    this.namespace = "validator";
+    this.namespace = ApiNamespace.VALIDATOR;
     this.attestations = opts && opts.pendingAttestations || [];
     this.head = opts && opts.head || getEmptyBlock();
     this.chainId = opts && opts.chainId || 0;

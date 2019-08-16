@@ -6,7 +6,7 @@ import {LMDGHOST} from "./forkChoice";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
 import StrictEventEmitter from "strict-event-emitter-types";
 
-interface IChainEvents {
+export interface IChainEvents {
   processedBlock: (block: BeaconBlock) => void;
   processedAttestation: (attestation: Attestation) => void;
 }

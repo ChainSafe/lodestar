@@ -24,11 +24,9 @@ import {IValidatorApi} from "./interface";
 import {getCommitteeAssignment, isProposerAtSlot} from "../../../../chain/stateTransition/util";
 import {CommitteeAssignment} from "../../../../validator/types";
 import {assembleBlock} from "../../../../chain/factory/block";
-import {assembleAttestation} from "../../../../chain/factory/attestation";
 import {IEth1Notifier} from "../../../../eth1";
-import {getValidatorDuties} from "../../../impl/validator";
+import {getValidatorDuties, produceAttestation} from "../../../impl/validator";
 import {ApiNamespace} from "../../../index";
-import {produceAttestation} from "../../../impl/validator/produceAttestation";
 
 export class ValidatorApi implements IValidatorApi {
 

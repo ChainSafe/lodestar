@@ -14,14 +14,16 @@
     "lib"
   ],
   "scripts": {
-    "build": "babel src -x .ts -d lib --source-maps",
+    "build": "yarn run build:lib && yarn run build:types && yarn run build:docs",
+    "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:docs": "typedoc --exclude src/index.ts --out docs src",
+    "build:types": "tsc --declaration --outDir lib --emitDeclarationOnly",
     "check-types": "tsc --noEmit --incremental",
     "lint": "eslint --color --ext .ts src/",
     "lint-fix": "eslint --color --ext .ts src/ --fix",
     "pretest": "yarn run check-types",
-    "test:unit": "nyc --cache-dir .nyc_output/.cache -r lcov -e .ts mocha  --colors -r ts-node/register 'test/unit/**/*.test.ts' && nyc report",
-    "test:e2e": "mocha --colors --timeout 5000 -r ./.babel-register 'test/e2e/**/*.test.ts'",
+    "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha  --colors -r ts-node/register 'test/unit/**/*.test.ts'",
+    "test:e2e": "mocha --colors --timeout 5000 -r ts-node/register 'test/e2e/**/*.test.ts'",
     "test:spec-main": "mocha  --colors --max-old-space-size=7168 -r ./.babel-register 'test/spec/**/*mainnet.test.ts'",
     "test:spec-min": "mocha  --colors -r ./.babel-register 'test/spec/**/*minimal.test.ts'",
     "test:spec": "mocha  --colors --max-old-space-size=7168 -r ./.babel-register 'test/spec/**/*.test.ts'",
@@ -103,6 +105,7 @@
     "@types/levelup": "^3.1.0",
     "@types/supertest": "^2.0.8",
     "@types/ws": "^6.0.1",
+    "babel-plugin-const-enum": "^0.0.2",
     "benchmark": "^2.1.4",
     "supertest": "^4.0.2"
   }
