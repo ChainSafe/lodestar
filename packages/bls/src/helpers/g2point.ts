@@ -1,7 +1,7 @@
 import {BIG} from "@chainsafe/milagro-crypto-js/src/big";
 import {ECP2} from "@chainsafe/milagro-crypto-js/src/ecp2";
 import {BLSDomain, bytes32, bytes96} from "../types";
-import { sha256 } from 'js-sha256';
+import {sha256} from 'js-sha256';
 import ctx from "../ctx";
 import * as random from "secure-random";
 import {calculateYFlag, getModulus, padLeft} from "./utils";
@@ -89,7 +89,7 @@ export class G2point {
       xRe.add(one);
       xRe.norm();
       point = new ctx.ECP2();
-      point.setx(new ctx.FP2(xRe, xIm))
+      point.setx(new ctx.FP2(xRe, xIm));
     }
     return new G2point(G2point.scaleWithCofactor(G2point.normaliseY(point)));
   }
@@ -189,7 +189,7 @@ export class G2point {
             0
           )
         )
-      )
+      );
     } while (point.is_infinity());
     return new G2point(point);
   }
@@ -240,7 +240,7 @@ export class G2point {
     ) {
       const newPoint = new ctx.ECP2();
       newPoint.setxy(point.getX(), yNeg);
-      return newPoint
+      return newPoint;
     } else {
       return point;
     }

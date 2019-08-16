@@ -48,7 +48,7 @@ export class PrivateKey {
         ),
         0
       )
-    )
+    );
   }
 
   public static fromHexString(value: string): PrivateKey {

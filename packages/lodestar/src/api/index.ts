@@ -9,6 +9,7 @@ export * from "./interface";
 export const enum ApiNamespace {
   BEACON = "beacon",
   VALIDATOR = "validator"
+
 }
 
 export class ApiService implements Service {

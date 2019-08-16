@@ -10,9 +10,9 @@ import {Service} from "../../../node";
 import {IRpcServer} from "./index";
 
 export interface IHttpServerOpts {
-  host: string,
-  port: number,
-  cors: string,
+  host: string;
+  port: number;
+  cors: string;
 }
 
 class MessageRequest implements LikeSocket {

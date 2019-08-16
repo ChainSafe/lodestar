@@ -96,7 +96,7 @@ export class G1point {
       const x = new ctx.FP(point.getX());
       const yneg = new ctx.FP(point.getY());
       yneg.neg();
-      point.setxy(x.redc(), yneg.redc())
+      point.setxy(x.redc(), yneg.redc());
     }
 
     return new G1point(point);
@@ -115,7 +115,7 @@ export class G1point {
           random.randomBuffer(FP_POINT_LENGTH),
           0
         )
-      )
+      );
     } while (ecp.is_infinity());
     return new G1point(ecp);
   }

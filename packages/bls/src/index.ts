@@ -49,7 +49,7 @@ function sign(secretKey: BLSSecretKey, messageHash: bytes32, domain: BLSDomain):
  */
 function aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
   return signatures.map((signature): Signature => {
-    return Signature.fromCompressedBytes(signature)
+    return Signature.fromCompressedBytes(signature);
   }).reduce((previousValue, currentValue): Signature => {
     return previousValue.add(currentValue);
   }).toBytesCompressed();
@@ -64,7 +64,7 @@ function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
     return new G1point(new ctx.ECP()).toBytesCompressed();
   }
   return publicKeys.map((publicKey): G1point => {
-    return G1point.fromBytesCompressed(publicKey)
+    return G1point.fromBytesCompressed(publicKey);
   }).reduce((previousValue, currentValue): G1point => {
     return previousValue.add(currentValue);
   }).toBytesCompressed();
@@ -129,4 +129,4 @@ export default {
   aggregatePubkeys,
   verify,
   verifyMultiple
-}
+};
