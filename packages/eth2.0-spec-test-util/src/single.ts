@@ -149,15 +149,15 @@ function deserializeTestCase<TestCase, Result>(file, inputName, options: ISpecTe
     return deserialize(readFileSync(file), options.sszTypes[inputName]);
   } else {
     return  objectToCamelCase(
-        load(
-            readFileSync(
-                file,
-                'utf8'
-            ),
-            {
-              schema,
-            }
-        )
+      load(
+        readFileSync(
+          file,
+          'utf8'
+        ),
+        {
+          schema,
+        }
+      )
     );
   }
 }
