@@ -4,7 +4,7 @@
 
 import {IHttpServerOpts, IWsServerOpts, TransportType} from "./transport";
 import {ApiNamespace} from "../index";
-import {IConfigurationModule} from "../../util/config";
+import {booleanOption, IConfigurationModule} from "../../util/config";
 import {processApiNamespaces} from "../utils";
 
 export interface IRpcOptions {
@@ -31,14 +31,7 @@ export default {
 export const RpcOptions: IConfigurationModule = {
   name: "rpc",
   fields: [
-    {
-      name: 'enabled',
-      type: "boolean",
-      configurable: true,
-      cli: {
-        flag: "--rpc"
-      }
-    },
+    booleanOption("enabled", "--rpc"),
     {
       name: 'api',
       type: "string",

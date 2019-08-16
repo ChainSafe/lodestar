@@ -1,5 +1,5 @@
 import {ApiNamespace} from "../index";
-import {IConfigurationModule} from "../../util/config";
+import {booleanOption, IConfigurationModule} from "../../util/config";
 import {processApiNamespaces} from "../utils";
 
 export interface IRestApiOptions {
@@ -22,14 +22,7 @@ export const RestOptions: IConfigurationModule = {
   name: "rest",
   description: "Options to configure rest api server",
   fields: [
-    {
-      name: 'enabled',
-      type: "boolean",
-      configurable: true,
-      cli: {
-        flag: "--rest"
-      }
-    },
+    booleanOption("enabled", "--rest"),
     {
       name: 'api',
       type: "string",
