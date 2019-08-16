@@ -132,26 +132,22 @@ export function _hashTreeRoot(value: SerializableValue, type: FullSSZType): Buff
         merkleize(pack([value], type), chunkCount), (value as Bytes).length);
     case Type.list:
       value = value as SerializableArray;
-      let listHash: Buffer;
       if (isBasicType(type.elementType)) {
         const chunkCount = Math.floor(type.maxLength * fixedSize(type.elementType) + 31 / BYTES_PER_CHUNK);
-        listHash = mixInLength(
+        return mixInLength(
           merkleize(pack(value, (type as ListType).elementType), chunkCount), value.length);
       } else {
-        listHash = mixInLength(
+        return mixInLength(
           merkleize(value.map((v,i) => hashTreeRoot(v, (type as ListType).elementType)), type.maxLength),
           value.length);
       }
-      return listHash;
     case Type.vector:
       value = value as SerializableArray;
-      let vectorHash: Buffer;
       if (isBasicType(type.elementType)) {
-        vectorHash = merkleize(pack(value, (type as VectorType).elementType));
+        return merkleize(pack(value, (type as VectorType).elementType));
       } else {
-        vectorHash = merkleize(value.map((v) => hashTreeRoot(v, (type as VectorType).elementType)));
+        return merkleize(value.map((v) => hashTreeRoot(v, (type as VectorType).elementType)));
       }
-      return vectorHash;
     case Type.container:
       type = type as ContainerType;
       return merkleize(type.fields
