@@ -18,8 +18,10 @@ export async function getValidatorDuties(config: IBeaconConfig, db: IBeaconDb, v
       const validatorIndex = validatorIndexes[index];
       return assembleValidatorDuty(
         this.config,
-        validatorPublicKey,
-        validatorIndex,
+        {
+          publicKey: validatorPublicKey,
+          index: validatorIndex
+        },
         state,
         epoch,
         blockProposerIndex

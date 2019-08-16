@@ -29,8 +29,8 @@ export default {
 };
 
 export const RpcOptions: IConfigurationModule = {
-  name: "rest",
-  description: "Chain specific configurations",
+  name: "rpc",
+  description: "Configuration for rpc server",
   fields: [
     {
       name: 'enabled',

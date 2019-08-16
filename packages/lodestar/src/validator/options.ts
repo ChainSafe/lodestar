@@ -1,7 +1,6 @@
 import {IDatabaseOptions} from "../db/options";
 import {RpcClient} from "./rpc";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
-import {TransportType} from "../rpc/transport";
 import {IConfigurationModule} from "../util/config";
 import {IValidatorDB} from "../db/api";
 import {PrivateKey} from "@chainsafe/bls/lib/privateKey";

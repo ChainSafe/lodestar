@@ -4,27 +4,26 @@ import {getCommitteeAssignment} from "../../stateTransition/util";
 
 export function assembleValidatorDuty(
   config: IBeaconConfig,
-  validatorPublicKey: BLSPubkey,
-  validatorIndex: ValidatorIndex,
+  validator: {publicKey: BLSPubkey; index: ValidatorIndex},
   state,
   epoch: Epoch,
   blockProposerIndex: ValidatorIndex): ValidatorDuty  {
-  let duty: ValidatorDuty = this.generateEmptyValidatorDuty(validatorPublicKey);
+  let duty: ValidatorDuty = this.generateEmptyValidatorDuty(validator.publicKey);
   const committeeAsignment = getCommitteeAssignment(
     config,
     state,
     epoch,
-    validatorIndex
+    validator.index
   );
   if (committeeAsignment) {
     duty = {
       ...duty,
       attestationShard: committeeAsignment.shard,
       attestationSlot: committeeAsignment.slot,
-      committeeIndex: committeeAsignment.validators.indexOf(validatorIndex)
+      committeeIndex: committeeAsignment.validators.indexOf(validator.index)
     };
   }
-  if (validatorIndex === blockProposerIndex) {
+  if (validator.index === blockProposerIndex) {
     duty = {
       ...duty,
       blockProposalSlot: state.slot
@@ -36,9 +35,10 @@ export function assembleValidatorDuty(
 export function generateEmptyValidatorDuty(publicKey: BLSPubkey, duty?: Partial<ValidatorDuty>): ValidatorDuty {
   return {
     validatorPubkey: publicKey,
-    blockProposalSlot: (duty && duty.blockProposalSlot) || null,
-    attestationShard: (duty && duty.attestationShard) || null,
-    attestationSlot: (duty && duty.attestationSlot) || null,
-    committeeIndex: (duty && duty.committeeIndex) || null
+    blockProposalSlot: null,
+    attestationShard: null,
+    attestationSlot: null,
+    committeeIndex: null,
+    ...duty
   };
 }
