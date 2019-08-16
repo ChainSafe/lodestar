@@ -30,7 +30,6 @@ export default {
 
 export const RpcOptions: IConfigurationModule = {
   name: "rpc",
-  description: "Configuration for rpc server",
   fields: [
     {
       name: 'enabled',

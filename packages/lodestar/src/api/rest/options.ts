@@ -20,7 +20,7 @@ export default {
 
 export const RestOptions: IConfigurationModule = {
   name: "rest",
-  description: "Configuration for rest api server",
+  description: "Options to configure rest api server",
   fields: [
     {
       name: 'enabled',
