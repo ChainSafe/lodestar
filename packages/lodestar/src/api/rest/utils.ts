@@ -9,27 +9,37 @@ export function toRestJson(o: object): object {
   o = {...o};
   for(let key in o) {
     if(o.hasOwnProperty(key)) {
-      if(Buffer.isBuffer(o[key])) {
-        o[snakeCase(key)] = toHex(o[key]);
-      } else if (BN.isBN(o[key])) {
-        o[snakeCase(key)] = o[key].toString();
-      } else if(o[key] && BitVector.isBitVector(o[key])) {
-        o[snakeCase(key)] = Buffer.from((o[key] as BitVector).toBitfield()).toString('hex');
-      } else if(o[key] && BitList.isBitList(o[key])) {
-        o[snakeCase(key)] = Buffer.from((o[key] as BitList).serialize()).toString('hex');
-      } else if(Array.isArray(o[key])) {
-        o[snakeCase(key)] = o[key].map(toRestJson);
-      } else if (typeof o[key]  === 'object' && o[key] != null) {
-        o[snakeCase(key)] = toRestJson(o[key]);
-      } else {
-        o[snakeCase(key)] = o[key];
-      }
-      if(snakeCase(key) !== key) {
+      const value = o[key] !== null ? serializeToRestValue(o[key]): null;
+      const newKey = snakeCase(key);
+      o[newKey] = value;
+      if(newKey !== key) {
         delete o[key];
       }
     }
   }
   return o;
+}
+
+export function serializeToRestValue(value: any): any {
+  if(Buffer.isBuffer(value)) {
+    return toHex(value);
+  }
+  if (BN.isBN(value)) {
+    return  value.toString();
+  }
+  if(value && BitVector.isBitVector(value)) {
+    return  Buffer.from((value as BitVector).toBitfield()).toString('hex');
+  }
+  if(value && BitList.isBitList(value)) {
+    return  Buffer.from((value as BitList).serialize()).toString('hex');
+  }
+  if(Array.isArray(value)) {
+    return value.map(toRestJson);
+  }
+  if (typeof value  === 'object' && value != null) {
+    return toRestJson(value);
+  }
+  return value;
 }
 
 export function fromRestJson<T>(value: object, type: AnySSZType): T {
