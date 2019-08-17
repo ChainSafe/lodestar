@@ -1,6 +1,6 @@
 import {BIG} from "@chainsafe/milagro-crypto-js/src/big";
 import {ECP2} from "@chainsafe/milagro-crypto-js/src/ecp2";
-import {sha256} from 'js-sha256';
+import { sha256 } from 'js-sha256';
 import ctx from "../ctx";
 import * as random from "secure-random";
 import {calculateYFlag, getModulus, padLeft} from "./utils";
