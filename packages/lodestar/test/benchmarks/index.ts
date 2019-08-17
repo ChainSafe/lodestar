@@ -1,14 +1,10 @@
-import Benchmark from "benchmark";
-import {createReportDir, writeReport, runSuite} from "./utils"
-
 // Import benchmarks
 import * as benchmarks from "./imports";
-import { BenchSuite } from "./examples";
-
+import {createReportDir, runSuite} from "@chainsafe/benchmark-utils";
 // Create file
 const directory: string = createReportDir();
 
 // Run benchmarks
 for (let bench in benchmarks) {
-    runSuite(benchmarks[bench](directory));
+  runSuite(benchmarks[bench](directory));
 }
