@@ -127,13 +127,13 @@ export function _hashTreeRoot(value: SerializableValue, type: FullSSZType): Buff
       );
     case Type.byteList:
       const sizeOfByte = 1;
-      const chunkCount = Math.floor(type.maxLength * sizeOfByte + 31 / BYTES_PER_CHUNK);
+      const chunkCount = Math.floor((type.maxLength * sizeOfByte + 31) / BYTES_PER_CHUNK);
       return mixInLength(
         merkleize(pack([value], type), chunkCount), (value as Bytes).length);
     case Type.list:
       value = value as SerializableArray;
       if (isBasicType(type.elementType)) {
-        const chunkCount = Math.floor(type.maxLength * fixedSize(type.elementType) + 31 / BYTES_PER_CHUNK);
+        const chunkCount = Math.floor((type.maxLength * fixedSize(type.elementType) + 31) / BYTES_PER_CHUNK);
         return mixInLength(
           merkleize(pack(value, (type as ListType).elementType), chunkCount), value.length);
       } else {

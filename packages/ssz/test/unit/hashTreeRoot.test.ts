@@ -67,6 +67,22 @@ describe("hashTreeRoot", () => {
     });
   }
 
+  it("should hash active validation indexes correctly as in final_updates_minimal.yalm", () => {
+    const validatorIndexes = [];
+    for (let i = 0; i < 64; i++) {
+      validatorIndexes.push(i);
+    }
+    const type: AnySSZType = {
+      elementType: {type:0, byteLength:8, useNumber:true},
+      // VALIDATOR_REGISTRY_LIMIT
+      maxLength: 1099511627776
+    }
+    // This is the logic to calculate activeIndexRoots in processFinalUpdates
+    const hash = hashTreeRoot(validatorIndexes, type).toString("hex");
+    const want = "ba1031ba1a5daab0d49597cfa8664ce2b4c9b4db6ca69fbef51e0a9a325a3b63";
+    assert.strictEqual(hash, want, "hash does not match");
+  });
+
   it("should be able to hash inner object as list of basic object", () => {
     const accountBalances = {
       balances: []
