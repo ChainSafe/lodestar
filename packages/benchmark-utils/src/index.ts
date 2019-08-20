@@ -35,7 +35,7 @@ export const writeReport = (file: string, data: string) => {
 export const runSuite = (bench: BenchSuite, name?: string) => {
   let suite = new Benchmark.Suite(name);
   bench.testFunctions.forEach((func) => {
-    suite = suite.add(func.name, func, {setup: bench.setup, teardown: bench.teardown});
+    suite = suite.add(func.name, func, {setup: bench.setup, teardown: bench.teardown, minSamples: 2});
   });
   // add listeners
   suite.on('cycle', (event) => {
@@ -43,9 +43,18 @@ export const runSuite = (bench: BenchSuite, name?: string) => {
   })
   // Scoping issue requires function decleration
     .on('complete', function() {
-      const msg: string = 'Fastest is ' + this.filter('fastest').map('name');
-      writeReport(bench.file, msg);
+      for (const suite in this) {
+        if(this.hasOwnProperty(suite) && !isNaN(parseInt(suite))) {
+          const mean = (this[suite].stats.mean * 1000).toFixed(2);
+          const msg = `${this[suite].name} took ${mean} ms on average`;
+          writeReport(bench.file, msg);
+        }
+      }
+      if(bench.testFunctions.length > 1) {
+        const msg: string = 'Fastest is ' + this.filter('fastest').map('name');
+        writeReport(bench.file, msg);
+      }
     })
   // run async
-    .run({'async': true});
+    .run();
 };
