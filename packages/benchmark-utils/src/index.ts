@@ -3,10 +3,13 @@ import {BENCH_DIR} from "./constant";
 import Benchmark from "benchmark";
 
 export interface BenchSuite {
+  //to compare multiple function implementation speed, add array of implementations here
+  //to check speed of different functions create multiple BenchSuites
   testFunctions: Function[];
   file: string;
   setup?: Function;
   teardown?: Function;
+  profile?: boolean;
 }
 
 export const createReportDir = (): string => {
