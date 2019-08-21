@@ -4,9 +4,15 @@
 
 # Getting Started
 - Run `lerna bootstrap` or `yarn install` to install dependencies
+
+# Tests
 - To run spec tests, you will need [git lfs](https://git-lfs.github.com/) installed, then execute `git submodule foreach git lfs pull` to download the spec tests submodule
   - NOTE: The spec tests submodule is HUGE, uses ~5GB
-- Run `lerna run test` to run tests
+- Run `lerna run test:spec-min` for minimal spec tests
+- Run `lerna run test:spec-main` for mainnet spec tests
+- Run `lerna run test:unit` for unit tests
+- Run `lerna run test:e2e` for end-to-end tests
+- Run `lerna run test` to run all tests
 
 # First-time Contributor?
 Unsure where to begin contributing to Lodestar? Here are some ideas!
