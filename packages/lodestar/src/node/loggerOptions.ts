@@ -1,4 +1,4 @@
-import {IConfigurationModule} from "../util/config";
+import {IConfigurationField} from "../util/config";
 
 import {LogLevel, ILoggerOptions, defaultLogLevel} from "../logger/interface";
 
@@ -49,9 +49,10 @@ const config: IBeaconLoggerOptions = {
 
 export default config;
 
-export const BeaconLoggerOptions: IConfigurationModule = {
+export const BeaconLoggerOptions: IConfigurationField = {
   name: "logger",
   description: "log level",
+  type: "string",
   configurable: true,
   process: (input: string): IBeaconLoggerOptions => {
     // input is in the following format:
@@ -70,6 +71,5 @@ export const BeaconLoggerOptions: IConfigurationModule = {
   },
   cli: {
     flag: "logLevel"
-  }
+  },
 };
-
