@@ -11,9 +11,10 @@
     "**/scripts/**",
     "**/test/**",
     "**/types/**",
+    "**/bin/**",
     "**/node_modules/**"
   ],
-  "all": "true",
+  "all": false,
   "reporter": [
     "text",
     "lcov"

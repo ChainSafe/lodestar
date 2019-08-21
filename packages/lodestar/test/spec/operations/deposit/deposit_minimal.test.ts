@@ -1,15 +1,17 @@
 import {join} from "path";
-import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 // @ts-ignore
-import {restore, rewire} from "@chainsafe/bls-js";
+import {restore, rewire} from "@chainsafe/bls";
 import {equals} from "@chainsafe/ssz";
 import sinon from "sinon";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {processDeposit} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {DepositCase} from "../../../utils/specTestTypes/beaconStateComparison";
+import {BeaconState} from "@chainsafe/eth2.0-types";
 
-describeSpecTest(
+describeMultiSpec<DepositCase, BeaconState>(
   join(__dirname, "../../test-cases/tests/operations/deposit/deposit_minimal.yaml"),
   (state, deposit) => {
     processDeposit(config, state, deposit);

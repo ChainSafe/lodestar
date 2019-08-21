@@ -15,8 +15,16 @@ import {ATTESTATION_TOPIC, BLOCK_TOPIC, Method, RequestId, SHARD_SUBNET_COUNT,} 
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {NetworkRpc} from "./rpc";
 import {ILogger} from "../../logger";
+import {IBeaconMetrics} from "../../metrics";
 import {INetworkOptions} from "../options";
 import {INetwork, NetworkEventEmitter} from "../interface";
+
+interface Libp2pModules {
+  config: IBeaconConfig;
+  libp2p: any;
+  logger: ILogger;
+  metrics: IBeaconMetrics;
+}
 
 
 export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter }) implements INetwork {
@@ -28,13 +36,14 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   private rpc: NetworkRpc;
   private inited: Promise<void>;
   private logger: ILogger;
+  private metrics: IBeaconMetrics;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, logger}:
-  {config: IBeaconConfig; libp2p: any; logger: ILogger}) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger, metrics}: Libp2pModules) {
     super();
     this.opts = opts;
     this.config = config;
     this.logger = logger;
+    this.metrics = metrics;
     // `libp2p` can be a promise as well as a libp2p object
     this.inited = new Promise((resolve) => {
       Promise.resolve(libp2p).then((libp2p) => {
@@ -128,9 +137,11 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     this.emit("request", peerInfo, method, id, body);
   };
   private emitPeerConnect = (peerInfo: PeerInfo): void => {
+    this.metrics.peers.inc();
     this.emit("peer:connect", peerInfo);
   };
   private emitPeerDisconnect = (peerInfo: PeerInfo): void => {
+    this.metrics.peers.dec();
     this.emit("peer:disconnect", peerInfo);
   };
 

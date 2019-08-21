@@ -6,9 +6,9 @@ import deepmerge from "deepmerge";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {BeaconDb, LevelDbController} from "../db";
+import defaultConf, {IBeaconNodeOptions} from "./options";
 import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
 import {INetwork, Libp2pNetwork, NodejsNode} from "../network";
-import defaultConf, {IBeaconNodeOptions} from "./options";
 import {isPlainObject} from "../util/objects";
 import {Sync} from "../sync";
 import {BeaconChain, IBeaconChain} from "../chain";
@@ -18,6 +18,7 @@ import {ILogger} from "../logger";
 import {ReputationStore} from "../sync/reputation";
 import {JSONRPC, WSServer} from "../rpc";
 import {SyncRpc} from "../network/libp2p/syncRpc";
+import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 
 export interface Service {
   start(): Promise<void>;
@@ -38,6 +39,8 @@ export class BeaconNode {
   public conf: IBeaconNodeOptions;
   public config: IBeaconConfig;
   public db: BeaconDb;
+  public metrics: BeaconMetrics;
+  public metricsServer: HttpMetricsServer;
   public eth1: IEth1Notifier;
   public network: INetwork;
   public chain: IBeaconChain;
@@ -58,6 +61,8 @@ export class BeaconNode {
     );
     this.config = config;
     this.logger = logger.child(this.conf.logger.node);
+    this.metrics = new BeaconMetrics(this.conf.metrics);
+    this.metricsServer = new HttpMetricsServer(this.conf.metrics, {metrics: this.metrics});
     this.reps = new ReputationStore();
     this.db = new BeaconDb({
       config,
@@ -70,18 +75,12 @@ export class BeaconNode {
     const libp2p = createPeerId()
       .then((peerId) => initializePeerInfo(peerId, this.conf.network.multiaddrs))
       .then((peerInfo) => new NodejsNode({peerInfo}));
-    const rpc = new SyncRpc(this.conf.sync, {
-      config,
-      db: this.db,
-      chain: this.chain,
-      network: this.network,
-      reps: this.reps,
-      logger: logger.child(this.conf.logger.network),
-    });
+
     this.network = new Libp2pNetwork(this.conf.network, {
       config,
       libp2p: libp2p,
       logger: logger.child(this.conf.logger.network),
+      metrics: this.metrics,
     });
     this.eth1 = new EthersEth1Notifier(this.conf.eth1, {
       config,
@@ -97,6 +96,16 @@ export class BeaconNode {
       eth1: this.eth1,
       opPool: this.opPool,
       logger: logger.child(this.conf.logger.chain),
+      metrics: this.metrics,
+    });
+
+    const rpc = new SyncRpc(this.conf.sync, {
+      config,
+      db: this.db,
+      chain: this.chain,
+      network: this.network,
+      reps: this.reps,
+      logger: logger.child(this.conf.logger.network),
     });
     this.sync = new Sync(this.conf.sync, {
       config,
@@ -121,6 +130,8 @@ export class BeaconNode {
 
   public async start(): Promise<void> {
     this.logger.info('Starting eth2 beacon node - LODESTAR!');
+    await this.metrics.start();
+    await this.metricsServer.start();
     await this.db.start();
     await this.network.start();
     await this.eth1.start();
@@ -139,6 +150,8 @@ export class BeaconNode {
     await this.eth1.stop();
     await this.network.stop();
     await this.db.stop();
+    await this.metricsServer.stop();
+    await this.metrics.stop();
   }
 }
 

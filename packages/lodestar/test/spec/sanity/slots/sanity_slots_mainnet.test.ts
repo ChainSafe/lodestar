@@ -1,17 +1,18 @@
 import {join} from "path";
-import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
-import {hashTreeRoot, equals} from "@chainsafe/ssz";
+import {equals} from "@chainsafe/ssz";
 // @ts-ignore
-import {restore, rewire} from "@chainsafe/bls-js";
+import {restore, rewire} from "@chainsafe/bls";
 import sinon from "sinon";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {BeaconState, number64, Validator} from "@chainsafe/eth2.0-types";
+import {BeaconState, number64} from "@chainsafe/eth2.0-types";
 import {processSlots} from "../../../../src/chain/stateTransition";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {SlotSanityCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
-describeSpecTest(
+describeMultiSpec<SlotSanityCase, BeaconState>(
   join(__dirname, "../../test-cases/tests/sanity/slots/sanity_slots_mainnet.yaml"),
   (state: BeaconState, slots: number64) => {
     processSlots(config, state, state.slot + slots);

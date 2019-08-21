@@ -5,7 +5,7 @@
 import assert from "assert";
 import BN from "bn.js";
 import {hash, signingRoot} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls-js";
+import bls from "@chainsafe/bls";
 
 import {
   BeaconState,

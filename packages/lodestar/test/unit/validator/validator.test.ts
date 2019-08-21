@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {Keypair} from "@chainsafe/bls-js/lib/keypair";
+import {Keypair} from "@chainsafe/bls/lib/keypair";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import Validator from "../../../src/validator";

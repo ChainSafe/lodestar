@@ -1,17 +1,18 @@
 import {join} from "path";
-import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 import {equals} from "@chainsafe/ssz";
 // @ts-ignore
-import {restore, rewire} from "@chainsafe/bls-js";
+import {restore, rewire} from "@chainsafe/bls";
 import sinon from "sinon";
 
 import {BeaconBlock, BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {stateTransition} from "../../../../src/chain/stateTransition";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {BlockSanityCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
-describeSpecTest(
+describeMultiSpec<BlockSanityCase, BeaconState>(
   join(__dirname, "../../test-cases/tests/sanity/blocks/sanity_blocks_minimal.yaml"),
   (state: BeaconState, blocks: BeaconBlock[]) => {
     blocks.forEach((block) => {

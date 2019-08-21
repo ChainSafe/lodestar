@@ -2,6 +2,12 @@
 
 > Thanks for your contribution to Lodestar. It's people like you that push the Ethereum ecosystem forward.
 
+# Getting Started
+- Run `lerna bootstrap` or `yarn install` to install dependencies
+- To run spec tests, execute `git submodules foreach git lfs pull`
+  - NOTE: The spec tests submodule is HUGE, uses ~5GB
+- Run `lerna run test` to run tests
+
 # First-time Contributor?
 Unsure where to begin contributing to Lodestar? Here are some ideas!
 

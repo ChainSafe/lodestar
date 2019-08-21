@@ -13,6 +13,7 @@ import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../unit/network/libp2p/util";
 import {WinstonLogger} from "../../../src/logger";
 import {INetworkOptions} from "../../../src/network/options";
+import {BeaconMetrics} from "../../../src/metrics";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -27,12 +28,13 @@ const opts: INetworkOptions = {
 describe("[sync] rpc", () => {
   const sandbox = sinon.createSandbox();
   let logger = new WinstonLogger();
+  const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false});
 
   let rpcA: SyncRpc, netA: Libp2pNetwork, repsA: ReputationStore;
   let rpcB: SyncRpc, netB: Libp2pNetwork, repsB: ReputationStore;
   beforeEach(async () => {
-    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger});
-    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger});
+    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger, metrics});
+    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger, metrics});
     await Promise.all([
       netA.start(),
       netB.start(),

@@ -4,7 +4,7 @@
 
 import assert from "assert";
 import {signingRoot} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls-js";
+import bls from "@chainsafe/bls";
 
 import {
   BeaconBlock,
