@@ -42,4 +42,3 @@ export function getBeaconProposerIndex(config: IBeaconConfig, state: BeaconState
     i += 1;
   }
 }
-

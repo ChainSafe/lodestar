@@ -20,7 +20,7 @@ export function generateValidator(activation?: number, exit?: number, slashed: b
     exitEpoch: exit || randNum(),
     withdrawableEpoch: randNum(),
     slashed,
-    effectiveBalance: new BN(0),
+    effectiveBalance: new BN(2 ** 5 * 1e9)
   };
 }
 
