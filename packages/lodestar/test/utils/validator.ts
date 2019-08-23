@@ -2,6 +2,13 @@ import BN from "bn.js";
 import {Validator} from "@chainsafe/eth2.0-types";
 import {FAR_FUTURE_EPOCH} from "../../src/constants";
 
+export interface ValidatorGeneratorOpts {
+  activation?: number;
+  exit?: number;
+  slashed?: boolean;
+  balance?: BN;
+}
+
 /**
  * Generates a single fake validator, for tests purposes only.
  * @param {number} activation
@@ -9,18 +16,18 @@ import {FAR_FUTURE_EPOCH} from "../../src/constants";
  * @param {boolean} slashed
  * @returns {Validator}
  */
-export function generateValidator(activation?: number, exit?: number, slashed: boolean = false): Validator {
+export function generateValidator(opts: ValidatorGeneratorOpts = {}): Validator {
   const randNum = () =>  Math.floor(Math.random() * Math.floor(4));
-  const activationEpoch = (activation || activation === 0) ? activation : FAR_FUTURE_EPOCH;
+  const activationEpoch = (opts.activation || opts.activation === 0) ? opts.activation : FAR_FUTURE_EPOCH;
   return {
     pubkey: Buffer.alloc(48),
     withdrawalCredentials: Buffer.alloc(32),
     activationEpoch,
     activationEligibilityEpoch: activationEpoch,
-    exitEpoch: exit || randNum(),
+    exitEpoch: opts.exit || randNum(),
     withdrawableEpoch: randNum(),
-    slashed,
-    effectiveBalance: new BN(2 ** 5 * 1e9)
+    slashed: opts.slashed || false,
+    effectiveBalance: opts.balance || new BN(0)
   };
 }
 
@@ -29,6 +36,6 @@ export function generateValidator(activation?: number, exit?: number, slashed: b
  * @param {number} n
  * @returns {Validator[]}
  */
-export function generateValidators(n: number, ...opts): Validator[] {
-  return Array.from({ length: n }, () => generateValidator(...opts));
+export function generateValidators(n: number, opts?: ValidatorGeneratorOpts): Validator[] {
+  return Array.from({ length: n }, () => generateValidator(opts));
 }

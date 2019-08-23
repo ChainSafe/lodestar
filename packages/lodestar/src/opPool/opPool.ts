@@ -91,13 +91,13 @@ export class OpPool extends EventEmitter {
 
   public async checkDuplicateProposer(block: BeaconBlock): Promise<void> {
     const epoch: Epoch = computeEpochOfSlot(this.config, block.slot);
-    const proposers: Map<ValidatorIndex, Slot> = this.proposers.get(epoch);
+    const existingProposers: Map<ValidatorIndex, Slot> = this.proposers.get(epoch);
     const state: BeaconState = await this.db.state.getLatest();
 
     const proposerIndex: ValidatorIndex = await getBeaconProposerIndex(this.config, state);
 
     // Check if proposer already exists
-    if (proposers.has(proposerIndex)) {
+    if (existingProposers && existingProposers.has(proposerIndex)) {
       const existingSlot: Slot = this.proposers.get(epoch).get(proposerIndex);
       const prevBlock: BeaconBlock = await this.db.block.getBlockBySlot(existingSlot);
 
@@ -109,7 +109,9 @@ export class OpPool extends EventEmitter {
       };
       await this.proposerSlashings.receive(slashing);
     } else {
+      const proposers: Map<ValidatorIndex, Slot> = new Map();
       proposers.set(proposerIndex, block.slot);
+      this.proposers.set(epoch, proposers);
     }
     // TODO Prune map every so often
   }

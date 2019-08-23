@@ -62,7 +62,7 @@ describe("produce block", function () {
   it('should produce valid block - state without valid eth1 votes', async function () {
     const keypairs: Keypair[] = Array.from({length: 64},  () => Keypair.generate());
     const validators = keypairs.map((keypair) => {
-      const validator = generateValidator(0, FAR_FUTURE_EPOCH);
+      const validator = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH});
       validator.pubkey = keypair.publicKey.toBytesCompressed();
       validator.effectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
       return validator;
