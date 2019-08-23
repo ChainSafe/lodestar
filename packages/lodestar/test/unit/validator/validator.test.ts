@@ -10,15 +10,14 @@ import {ILogger, WinstonLogger} from "../../../src/logger";
 import {IValidatorOptions} from "../../../src/validator/options";
 
 describe('Validator', () => {
+
   let logger: ILogger = new WinstonLogger();
-
-
   before(async () => {
-    logger.silent(true);
+    logger.silent = true;
   });
 
   after(async () => {
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('Should be able to connect with the beacon chain', async () => {

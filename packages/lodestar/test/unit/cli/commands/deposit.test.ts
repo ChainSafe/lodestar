@@ -16,20 +16,20 @@ describe('[CLI] deposit', function() {
   let logger: ILogger = new WinstonLogger();
 
   before(async () => {
-    logger.silent(true);
+    logger.silent = true;
     eth1Network = new PrivateEth1Network({
       host: '127.0.0.1',
       port: 32567
     },
     {
-      logger: logger
+      logger,
     });
     await eth1Network.start();
   });
 
   after(async () => {
     await eth1Network.stop();
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('Should be able to register', async () => {
@@ -47,14 +47,13 @@ describe('[CLI] deposit', function() {
       command.action(
         {
           privateKey: eth1Network.accounts()[0],
-          loggingLevel: null,
+          logLevel: null,
           mnemonic: null,
           node:'http://worong_host:123',
           value: '32',
           contract:'0x',
           accounts: 10
-        },
-        logger
+        }, logger
       )
     ).to.be.rejectedWith(CliError, 'JSON RPC node (http://worong_host:123) not available.');
   });
@@ -65,14 +64,13 @@ describe('[CLI] deposit', function() {
       command.action(
         {
           privateKey: null,
-          loggingLevel: null,
+          logLevel: null,
           mnemonic: null,
           node: eth1Network.rpcUrl(),
           value: '32',
           contract:'0x',
           accounts: 10
-        },
-        logger
+        }, logger
       )
     ).to.be.rejectedWith(CliError, 'You have to submit either privateKey or mnemonic.');
   });
@@ -83,14 +81,13 @@ describe('[CLI] deposit', function() {
       command.action(
         {
           privateKey: null,
-          loggingLevel: null,
+          logLevel: null,
           mnemonic: 'invalid mnemonic',
           node: eth1Network.rpcUrl(),
           value: '32',
           contract:'0x',
           accounts: 10
-        },
-        logger
+        }, logger
       )
     ).to.be.rejectedWith(Error, 'invalid mnemonic');
   });

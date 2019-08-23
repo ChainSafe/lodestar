@@ -11,11 +11,11 @@ describe('[CLI] wallet', () => {
   let logger: ILogger = new WinstonLogger();
 
   before(() => {
-    logger.silent(true);
+    logger.silent = true;
   });
 
   after(() => {
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('Should be able to register', async () => {

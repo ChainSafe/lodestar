@@ -30,7 +30,7 @@ describe("syncing", function () {
     repsStub = sandbox.createStubInstance(ReputationStore);
     rpcStub = sandbox.createStubInstance(SyncRpc);
     logger = new WinstonLogger();
-    logger.silent(true);
+    logger.silent = true;
 
     initialSync = new InitialSync({}, {
       config,
@@ -46,7 +46,7 @@ describe("syncing", function () {
 
   afterEach(() => {
     sandbox.restore();
-    logger.silent(false);
+    logger.silent = false;
   });
 
 

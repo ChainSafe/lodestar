@@ -12,6 +12,7 @@ import {Eth1EventEmitter, IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 import {ILogger} from "../../logger";
+import {OpPool} from "../../opPool";
 import {IEth1Options} from "../options";
 
 export interface EthersEth1Options extends IEth1Options {
@@ -35,9 +36,9 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
 
   public constructor(opts: EthersEth1Options, {config, logger}: {config: IBeaconConfig; logger: ILogger}) {
     super();
-    this.logger = logger;
     this.config = config;
     this.opts = opts;
+    this.logger = logger;
     if(this.opts.providerInstance) {
       this.provider = this.opts.providerInstance;
     } else {

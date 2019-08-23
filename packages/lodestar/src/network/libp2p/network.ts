@@ -11,9 +11,7 @@ import PeerInfo from "peer-info";
 import {Attestation, BeaconBlock, Shard, RequestBody, ResponseBody} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {
-  Method, RequestId, BLOCK_TOPIC, ATTESTATION_TOPIC, SHARD_SUBNET_COUNT,
-} from "../../constants";
+import {ATTESTATION_TOPIC, BLOCK_TOPIC, Method, RequestId, SHARD_SUBNET_COUNT,} from "../../constants";
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {NetworkRpc} from "./rpc";
 import {ILogger} from "../../logger";
@@ -52,7 +50,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
         this.peerInfo = libp2p.peerInfo;
         this.libp2p = libp2p;
         this.pubsub = new Gossipsub(libp2p);
-        this.rpc = new NetworkRpc(opts, {config, libp2p, logger});
+        this.rpc = new NetworkRpc(opts, {config, libp2p, logger: this.logger});
         resolve();
       });
     });

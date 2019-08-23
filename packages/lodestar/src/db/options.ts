@@ -21,7 +21,7 @@ export const DatabaseOptions: IConfigurationModule = {
 };
 
 const config: IDatabaseOptions = {
-  name: "./lodestar-db"
+  name: "./lodestar-db",
 };
 
 export default config;

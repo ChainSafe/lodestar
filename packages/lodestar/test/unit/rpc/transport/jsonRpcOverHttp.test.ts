@@ -13,7 +13,7 @@ describe("Json RPC over http", () => {
   let logger: ILogger = new WinstonLogger();
 
   before(async () => {
-    logger.silent(true);
+    logger.silent = true;
     const rpcServer = new HttpServer({
       host: '127.0.0.1',
       port: 32421,
@@ -36,7 +36,7 @@ describe("Json RPC over http", () => {
 
   after(async () => {
     await rpc.stop();
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it("should get the beacon api version", (done) => {

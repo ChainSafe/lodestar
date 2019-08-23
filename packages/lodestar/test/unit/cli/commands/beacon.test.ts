@@ -10,11 +10,11 @@ describe('[CLI] beacon', () => {
   let logger: ILogger = new WinstonLogger();
 
   before(async () => {
-    logger.silent(true);
+    logger.silent = true;
   });
 
   after(async () => {
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('Should be able to register', async () => {
@@ -24,6 +24,9 @@ describe('[CLI] beacon', () => {
       command.register(program)
     ).to.not.throw;
     expect(program.commands.length).to.be.equal(commandCount + 1);
+    // command.action({
+    //   loggingLevel: "chain = debug",
+    // });
   });
 
 });

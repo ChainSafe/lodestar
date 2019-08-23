@@ -20,13 +20,18 @@ import {JSONRPC, WSServer} from "../rpc";
 import {SyncRpc} from "../network/libp2p/syncRpc";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 
-
 export interface Service {
   start(): Promise<void>;
 
   stop(): Promise<void>;
 }
 
+interface BeaconNodeModules {
+  config: IBeaconConfig;
+  logger: ILogger;
+}
+
+// TODO move into src/node/beacon
 /**
  * Beacon Node configured for desktop (non-browser) use
  */
@@ -45,8 +50,7 @@ export class BeaconNode {
   public reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger}: {config: IBeaconConfig; logger: ILogger}) {
-
+  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger}: BeaconNodeModules) {
     this.conf = deepmerge(
       defaultConf,
       opts,
@@ -56,16 +60,17 @@ export class BeaconNode {
       }
     );
     this.config = config;
-    this.logger = logger;
+    this.logger = logger.child(this.conf.logger.node);
     this.metrics = new BeaconMetrics(this.conf.metrics);
     this.metricsServer = new HttpMetricsServer(this.conf.metrics, {metrics: this.metrics});
     this.reps = new ReputationStore();
     this.db = new BeaconDb({
       config,
       controller: new LevelDbController(this.conf.db, {
-        logger: this.logger,
+        logger: logger.child(this.conf.logger.db),
       }),
     });
+    // TODO initialize outside node
     // initialize for network type
     const libp2p = createPeerId()
       .then((peerId) => initializePeerInfo(peerId, this.conf.network.multiaddrs))
@@ -74,12 +79,12 @@ export class BeaconNode {
     this.network = new Libp2pNetwork(this.conf.network, {
       config,
       libp2p: libp2p,
-      logger: this.logger,
+      logger: logger.child(this.conf.logger.network),
       metrics: this.metrics,
     });
     this.eth1 = new EthersEth1Notifier(this.conf.eth1, {
       config,
-      logger: this.logger
+      logger: logger.child(this.conf.logger.eth1),
     });
     this.opPool = new OpPool(this.conf.opPool, {
       eth1: this.eth1,
@@ -90,12 +95,17 @@ export class BeaconNode {
       db: this.db,
       eth1: this.eth1,
       opPool: this.opPool,
-      logger: this.logger,
+      logger: logger.child(this.conf.logger.chain),
       metrics: this.metrics,
     });
 
-    const syncRpc = new SyncRpc(opts, {
-      config, db: this.db, chain: this.chain, network: this.network, reps: this.reps, logger
+    const rpc = new SyncRpc(this.conf.sync, {
+      config,
+      db: this.db,
+      chain: this.chain,
+      network: this.network,
+      reps: this.reps,
+      logger: logger.child(this.conf.logger.network),
     });
     this.sync = new Sync(this.conf.sync, {
       config,
@@ -105,8 +115,8 @@ export class BeaconNode {
       opPool: this.opPool,
       network: this.network,
       reps: this.reps,
-      rpc: syncRpc,
-      logger: this.logger,
+      rpc,
+      logger: logger.child(this.conf.logger.sync),
     });
     //TODO: needs to be moved to Rpc class and initialized from opts
     this.rpc = new JSONRPC(this.conf.api, {

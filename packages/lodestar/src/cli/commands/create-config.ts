@@ -4,29 +4,31 @@
 
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import  {LogLevel, WinstonLogger} from "../../logger";
+import {ILogger, LogLevels, WinstonLogger, LogLevel, defaultLogLevel} from "../../logger";
 import fs from "fs";
 import {CliError} from "../error";
 import {writeTomlConfig} from "../../util/file";
-import {ILogger} from "../../logger";
 
 interface ICreateConfigOptions {
-  loggingLevel: string;
+  logLevel: string;
   outputFile: string;
 }
 
 export class CreateConfigCommand implements CliCommand {
   public register(commander: CommanderStatic): void {
 
-    const logger: ILogger = new WinstonLogger();
 
     commander
       .command("@chainsafe/eth2.0-config")
       .description("Create default config file")
-      .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
+      .option(`-l, --logLevel [${LogLevels.join("|")}]`, "Log level")
       .option("-o, --outputFile [output_file]"
         , "Path to output file destination", "lodestar-config.toml")
       .action(async (options) => {
+        const logger: ILogger = new WinstonLogger({
+          level: options.logLevel || LogLevel[defaultLogLevel],
+          module: "create-config"
+        });
         // library is not awaiting this method so don't allow error propagation 
         // (unhandled promise rejections)
         try {
@@ -38,9 +40,6 @@ export class CreateConfigCommand implements CliCommand {
   }
 
   public async action(options: ICreateConfigOptions, logger: ILogger): Promise<void> {
-    if (options.loggingLevel) {
-      logger.setLogLevel(LogLevel[options.loggingLevel]);
-    }
     if (fs.existsSync(options.outputFile)) {
       throw new CliError(`${options.outputFile} already exists`);
     }
