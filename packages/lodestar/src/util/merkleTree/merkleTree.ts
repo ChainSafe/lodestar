@@ -73,6 +73,7 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
       }
       index = intDiv(index, 2);
     }
+    proof.push(serialize(this._tree[0].length, "uint256"));
     return proof;
   }
 

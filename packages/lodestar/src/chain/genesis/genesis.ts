@@ -23,6 +23,7 @@ import {
   GENESIS_SLOT,
   GENESIS_START_SHARD,
   ZERO_HASH,
+  DEPOSIT_CONTRACT_TREE_DEPTH,
 } from "../../constants";
 
 import {getTemporaryBlockHeader, getActiveValidatorIndices, getCompactCommitteesRoot} from "../stateTransition/util";
@@ -54,7 +55,10 @@ export function initializeBeaconStateFromEth1(
   const leaves = deposits.map((deposit) => deposit.data);
   deposits.forEach((deposit, index) => {
     const depositDataList = leaves.slice(0, index + 1);
-    state.eth1Data.depositRoot = hashTreeRoot(depositDataList, config.types.DepositData);
+    state.eth1Data.depositRoot = hashTreeRoot(depositDataList, {
+      elementType: config.types.DepositData,
+      maxLength: Math.pow(2, DEPOSIT_CONTRACT_TREE_DEPTH),
+    });
     processDeposit(config, state, deposit);
   });
 
@@ -73,7 +77,10 @@ export function initializeBeaconStateFromEth1(
 
   // Populate active_index_roots and compact_committees_roots
   const indices = getActiveValidatorIndices(state, config.params.GENESIS_EPOCH);
-  const activeIndexRoot = hashTreeRoot(indices, config.types.ValidatorIndex);
+  const activeIndexRoot = hashTreeRoot(indices, {
+    elementType: config.types.ValidatorIndex,
+    maxLength: config.params.VALIDATOR_REGISTRY_LIMIT,
+  });
   const committeeRoot = getCompactCommitteesRoot(config, state, config.params.GENESIS_EPOCH);
   for (let index = 0; index < config.params.EPOCHS_PER_HISTORICAL_VECTOR; index++) {
     state.activeIndexRoots[index] = activeIndexRoot;

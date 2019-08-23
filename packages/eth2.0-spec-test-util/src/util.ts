@@ -1,4 +1,7 @@
 import camelcase from "camelcase";
+import {load} from "js-yaml";
+import {readFileSync} from "fs";
+import {schema} from "./yaml/schema";
 
 export function objectToCamelCase(obj: object): object {
   if (Object(obj) === obj) {
@@ -16,4 +19,13 @@ export function objectToCamelCase(obj: object): object {
     }
   }
   return obj;
+}
+
+export function loadYamlFile(path: string): object {
+  return objectToCamelCase(
+    load(
+      readFileSync(path, "utf8"),
+      {schema}
+    )
+  );
 }

@@ -6,7 +6,8 @@ import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
 
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {ILogger, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
@@ -15,10 +16,14 @@ import {getTomlConfig} from "../../util/file";
 import Validator from "../../validator";
 import {RpcClientOverInstance} from "../../validator/rpc";
 import {BeaconApi, ValidatorApi} from "../../rpc";
+import {quickStartOptionToState} from "../../interop/cli";
+import {ProgressiveMerkleTree} from "../../util/merkleTree";
 
 interface IBeaconCommandOptions {
   configFile?: string;
   loggingLevel?: string;
+  quickStart?: string;
+  preset: string;
   [key: string]: string;
 }
 
@@ -34,6 +39,8 @@ export class BeaconNodeCommand implements CliCommand {
       .command("beacon")
       .description("Start lodestar node")
       .option("-c, --configFile [config_file]", "Config file path")
+      .option("-q, --quickStart [params]", "Start chain from known state")
+      .option("-p, --preset [preset]", "Minimal/mainnet", "mainnet")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
@@ -57,7 +64,15 @@ export class BeaconNodeCommand implements CliCommand {
     //override current config with cli config
     conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
 
+    const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
+
     this.node = new BeaconNode(conf, {config, logger});
+
+    if (options.quickStart) {
+      const state = quickStartOptionToState(config, options.quickStart);
+      this.node.chain.initializeBeaconChain(state, ProgressiveMerkleTree.empty(32));
+    }
+
 
     if(conf.validator && conf.validator.keypair){
       conf.validator.rpcInstance = new RpcClientOverInstance({
