@@ -178,8 +178,8 @@ describe('process epoch - crosslinks', function () {
       }
     ];
     getAttestingIndicesStub.returns([0, 1]);
-    const validator1 = generateValidator(0, FAR_FUTURE_EPOCH, true);
-    const validator2 = generateValidator(0, FAR_FUTURE_EPOCH, false);
+    const validator1 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: true});
+    const validator2 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: false});
     const state = generateState({validators: [validator1, validator2]});
     try {
       const result = getUnslashedAttestingIndices(config, state, pendingAttestations);
@@ -205,8 +205,8 @@ describe('process epoch - crosslinks', function () {
       }
     ];
     getAttestingIndicesStub.returns([0, 1]);
-    const validator1 = generateValidator(0, FAR_FUTURE_EPOCH, true);
-    const validator2 = generateValidator(0, FAR_FUTURE_EPOCH, false);
+    const validator1 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: true});
+    const validator2 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: false});
     const state = generateState({validators: [validator1, validator2]});
     getTotalBalanceStub.returns(new BN(1));
     try {
