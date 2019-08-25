@@ -1,4 +1,5 @@
 import camelcase from "camelcase";
+import {lstatSync, readdirSync} from "fs";
 
 export function objectToCamelCase(obj: object): object {
   if (Object(obj) === obj) {
@@ -16,4 +17,8 @@ export function objectToCamelCase(obj: object): object {
     }
   }
   return obj;
+}
+
+export function isDirectory(path: string): boolean {
+  return lstatSync(path).isDirectory();
 }
