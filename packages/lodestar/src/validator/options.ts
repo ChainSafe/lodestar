@@ -1,8 +1,7 @@
 import {IDatabaseOptions} from "../db/options";
-import {ITransportOption} from "../rpc/options";
 import {RpcClient} from "./rpc";
+import {ILoggerOptions, LogLevel, defaultLogLevel} from "../logger";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
-import {TransportType} from "../rpc/transport";
 import {IConfigurationModule} from "../util/config";
 import {IValidatorDB} from "../db/api";
 import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
@@ -14,6 +13,7 @@ export interface IValidatorOptions {
   rpcInstance?: RpcClient;
   keypair: Keypair;
   keystore?: string;
+  logger: ILoggerOptions;
 }
 
 export const ValidatorOptions: IConfigurationModule = {
@@ -47,7 +47,6 @@ export const ValidatorOptions: IConfigurationModule = {
       description: "Private key",
       configurable: true,
       process: (privateKey) => {
-        console.log(privateKey);
         const pk = PrivateKey.fromHexString(privateKey);
         return new Keypair(pk);
       },
@@ -73,7 +72,11 @@ const config: IValidatorOptions = {
   },
   rpc: "http://localhost:8545",
   keypair: Keypair.generate(),
-  keystore: null
+  keystore: null,
+  logger: {
+    level: LogLevel[defaultLogLevel],
+    module: "validator",
+  },
 };
 
 export default config;

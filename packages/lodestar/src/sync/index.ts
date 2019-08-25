@@ -9,7 +9,6 @@ import {INetwork} from "../network";
 import {OpPool} from "../opPool";
 import {IEth1Notifier} from "../eth1";
 import {IBeaconDb} from "../db";
-import {SyncRpc} from "../network/libp2p/syncRpc";
 import {RegularSync} from "./regular";
 import {InitialSync} from "./initial";
 import {ReputationStore} from "./reputation";

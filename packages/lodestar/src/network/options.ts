@@ -34,7 +34,7 @@ export const NetworkOptions: IConfigurationModule = {
       cli: {
         flag: "bootnodes"
       }
-    }
+    },
   ]
 };
 
@@ -44,7 +44,7 @@ const config: INetworkOptions = {
   bootnodes: [],
   rpcTimeout: 5000,
   connectTimeout: 3000,
-  disconnectTimeout: 3000
+  disconnectTimeout: 3000,
 };
 
 export default config;

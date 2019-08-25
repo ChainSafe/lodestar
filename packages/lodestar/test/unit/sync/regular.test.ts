@@ -27,7 +27,7 @@ describe("syncing", function () {
     };
     opPoolStub = sandbox.createStubInstance(OpPool);
     logger = new WinstonLogger();
-    logger.silent(true);
+    logger.silent = true;
     regularSync = new RegularSync({}, {
       config,
       db: dbStub,
@@ -40,7 +40,7 @@ describe("syncing", function () {
 
   afterEach(() => {
     sandbox.restore();
-    logger.silent(false);
+    logger.silent = false;
   });
 
 

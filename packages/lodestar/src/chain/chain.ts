@@ -23,6 +23,7 @@ import {getAttestingIndices, computeEpochOfSlot, isActiveValidator} from "./stat
 import {ChainEventEmitter, IBeaconChain} from "./interface";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
 import {processSortedDeposits} from "../util/deposits";
+import {IChainOptions} from "./options";
 import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
 
@@ -49,10 +50,12 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   private eth1: IEth1Notifier;
   private logger: ILogger;
   private metrics: IBeaconMetrics;
-
-  public constructor(opts, {config, db, eth1, opPool, logger, metrics}: IBeaconChainModules) {
+  private opts: IChainOptions;
+  
+  public constructor(opts: IChainOptions, {config, db, eth1, opPool, logger, metrics}: IBeaconChainModules) {
     super();
-    this.chain = opts.chain;
+    this.opts = opts;
+    this.chain = opts.name;
     this.config = config;
     this.db = db;
     this.eth1 = eth1;

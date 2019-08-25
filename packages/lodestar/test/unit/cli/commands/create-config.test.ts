@@ -10,11 +10,11 @@ describe('[CLI] create-config', () => {
 
   let logger: ILogger = new WinstonLogger();
   before(async () => {
-    logger.silent(true);
+    logger.silent = true;
   });
 
   after(async () => {
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('Should be able to register', async () => {
@@ -31,7 +31,7 @@ describe('[CLI] create-config', () => {
     await expect(
       command.action({
         outputFile: "src",
-        loggingLevel: null,
+        logLevel: null,
       }, logger)
     ).to.be.rejectedWith(CliError, 'src already exists');
   });

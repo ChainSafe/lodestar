@@ -33,8 +33,8 @@ describe("[sync] rpc", () => {
   let rpcA: SyncRpc, netA: Libp2pNetwork, repsA: ReputationStore;
   let rpcB: SyncRpc, netB: Libp2pNetwork, repsB: ReputationStore;
   beforeEach(async () => {
-    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger, metrics});
-    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger, metrics});
+    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger, metrics});
+    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger, metrics});
     await Promise.all([
       netA.start(),
       netB.start(),
@@ -55,7 +55,7 @@ describe("[sync] rpc", () => {
       chain,
       network: netA,
       reps: repsA,
-      logger: logger
+      logger,
     });
     repsB = new ReputationStore();
     rpcB = new SyncRpc({}, {

@@ -44,7 +44,7 @@ describe("syncing", function () {
     };
     repsStub = sandbox.createStubInstance(ReputationStore);
     logger = new WinstonLogger();
-    logger.silent(true);
+    logger.silent = true;
 
     syncRpc = new SyncRpc({}, {
       config,
@@ -52,13 +52,13 @@ describe("syncing", function () {
       chain: chainStub,
       network: networkStub,
       reps: repsStub,
-      logger: logger,
+      logger,
     });
   });
 
   afterEach(() => {
     sandbox.restore();
-    logger.silent(false);
+    logger.silent = false;
   });
 
 
