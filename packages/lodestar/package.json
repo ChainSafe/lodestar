@@ -52,6 +52,7 @@
     "@polkadot/util-crypto": "^0.93.1",
     "assert": "^2.0.0",
     "await-to-js": "^2.1.1",
+    "axios": "^0.19.0",
     "bignumber.js": "^9.0.0",
     "blakejs": "^1.1.0",
     "bn.js": "^4.11.8",
@@ -101,6 +102,7 @@
     "@types/levelup": "^3.1.0",
     "@types/mocha": "^5.2.7",
     "@types/ws": "^6.0.1",
+    "axios-mock-adapter": "^1.17.0",
     "chai": "^4.2.0",
     "mocha": "^6.2.0"
   }
