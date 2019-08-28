@@ -9,20 +9,20 @@ import {deserialize, serialize} from "../../src";
 describeSpecTest(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_bounds.yaml"),
   serialize,
-  ({value, type}) => ([new BN(value), type]),
-  ({ssz}) => ssz.slice(2),
-  (result) => result.toString('hex'),
-  ({valid}) => !valid,
+  ({value, type}: any) => ([new BN(value), type]),
+  ({ssz}: any) => ssz.slice(2),
+  (result: any) => result.toString("hex"),
+  ({valid}: any) => !valid,
 );
 
 describeSpecTest(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_bounds.yaml"),
   deserialize,
-  ({ssz, type}) => ([Buffer.from(ssz.slice(2), 'hex'), type]),
-  ({value}) => (new BN(value)).toArrayLike(Buffer, 'le', 256).toString('hex'),
-  (result) => (new BN(result)).toArrayLike(Buffer, 'le', 256).toString('hex'),
+  ({ssz, type}: any) => ([Buffer.from(ssz.slice(2), "hex"), type]),
+  ({value}: any) => (new BN(value)).toArrayLike(Buffer, "le", 256).toString("hex"),
+  (result: any) => (new BN(result)).toArrayLike(Buffer, "le", 256).toString("hex"),
   () => false,
-  ({valid}) => !valid,
+  ({valid}: any) => !valid,
 );
 
 // uint random
@@ -30,20 +30,20 @@ describeSpecTest(
 describeSpecTest(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_random.yaml"),
   serialize,
-  ({value, type}) => ([new BN(value), type]),
-  ({ssz}) => ssz.slice(2),
-  (result) => result.toString('hex'),
-  ({valid}) => !valid,
+  ({value, type}: any) => ([new BN(value), type]),
+  ({ssz}: any) => ssz.slice(2),
+  (result: any) => result.toString("hex"),
+  ({valid}: any) => !valid,
 );
 
 describeSpecTest(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_random.yaml"),
   deserialize,
-  ({ssz, type}) => ([Buffer.from(ssz.slice(2), 'hex'), type]),
-  ({value}) => (new BN(value)).toArrayLike(Buffer, 'le', 256).toString('hex'),
-  (result) => (new BN(result)).toArrayLike(Buffer, 'le', 256).toString('hex'),
+  ({ssz, type}: any) => ([Buffer.from(ssz.slice(2), "hex"), type]),
+  ({value}: any) => (new BN(value)).toArrayLike(Buffer, "le", 256).toString("hex"),
+  (result: any) => (new BN(result)).toArrayLike(Buffer, "le", 256).toString("hex"),
   () => false,
-  ({valid}) => !valid,
+  ({valid}: any) => !valid,
 );
 
 // uint wrong length
@@ -51,8 +51,8 @@ describeSpecTest(
 describeSpecTest(
   join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_wrong_length.yaml"),
   deserialize,
-  ({ssz, type}) => ([Buffer.from(ssz.slice(2), 'hex'), type]),
-  ({value}) => (new BN(value)).toArrayLike(Buffer, 'le', 256).toString('hex'),
-  (result) => (new BN(result)).toArrayLike(Buffer, 'le', 256).toString('hex'),
-  ({valid}) => !valid,
+  ({ssz, type}: any) => ([Buffer.from(ssz.slice(2), "hex"), type]),
+  ({value}: any) => (new BN(value)).toArrayLike(Buffer, "le", 256).toString("hex"),
+  (result: any) => (new BN(result)).toArrayLike(Buffer, "le", 256).toString("hex"),
+  ({valid}: any) => !valid,
 );

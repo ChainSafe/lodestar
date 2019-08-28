@@ -3,27 +3,27 @@
 
 export const SimpleObject = {
   fields: [
-    ['b', 'uint16'],
-    ['a', 'uint8'],
+    ["b", "uint16"],
+    ["a", "uint8"],
   ],
 };
 
 export const InnerObject = {
   fields: [
-    ['v', 'uint16'],
+    ["v", "uint16"],
   ],
 };
 
 export const OuterObject = {
   fields: [
-    ['v', 'uint8'],
-    ['subV', InnerObject],
+    ["v", "uint8"],
+    ["subV", InnerObject],
   ],
 };
 
 export const ArrayObject = {
   fields: [
-    ['v', {
+    ["v", {
       elementType: SimpleObject,
       maxLength: 100,
     }],

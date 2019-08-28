@@ -69,5 +69,14 @@ module.exports = {
     "prefer-const": "error",
     "quotes": ["error", "double"],
     "semi": "off"
-  }
-}
+  },
+  "overrides": [
+    {
+      "files": ["**/test/**/*.ts"],
+      "rules": {
+        "import/no-extraneous-dependencies": "off",
+        "@typescript-eslint/no-explicit-any": "off"
+      }
+    }
+  ]
+};
