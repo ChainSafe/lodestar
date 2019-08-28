@@ -23,7 +23,7 @@ export function verifyValidAggregatedSignature(dir: string): BenchSuite {
   const FUNCTION_NAME = "verifyValidAggregatedSignature"; // PLEASE FILL THIS OUT
 
   const verifyValidAggregatedSignature = function (): void {
-    global.verify(global.publicKeys, global.messages, global.signature, global.domain);
+    console.log(global.verify(global.publicKeys, global.messages, global.signature, global.domain));
   };
 
   return {
@@ -43,6 +43,8 @@ export function verifyValidAggregatedSignature(dir: string): BenchSuite {
       global.signature = aggregateSignatures(signatures);
       global.publicKeys.map(() => message);
     },
-    file: dir + FUNCTION_NAME + ".txt"
+    file: dir + FUNCTION_NAME + ".txt",
+    // profile: true,
+    name: FUNCTION_NAME,
   };
 }
