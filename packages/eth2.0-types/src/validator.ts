@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/interface-name-prefix */
 /**
  * @module types
  */
 
-import {BLSPubkey, bytes48, number64, Shard, Slot, uint64} from "./primitive";
+import {BLSPubkey, number64, Shard, Slot, uint64} from "./primitive";
 
 export interface ValidatorDuty {
   // The validator's public key, uniquely identifying them

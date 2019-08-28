@@ -1,4 +1,6 @@
-import {Slot, bytes32, bytes, uint16, uint64, bytes8, Epoch, number64} from "./primitive";
+/* eslint-disable @typescript-eslint/interface-name-prefix */
+
+import {bytes, bytes32, bytes8, Epoch, number64, Slot, uint16, uint64} from "./primitive";
 import {BeaconBlockBody} from "./block";
 import {BeaconBlockHeader} from "./misc";
 import {BeaconState} from "./state";
