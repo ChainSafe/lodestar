@@ -5,7 +5,7 @@ import assert from "assert";
 import {calculateYFlag, getModulus} from "./utils";
 import * as random from "secure-random";
 import {FP_POINT_LENGTH} from "../constants";
-import {bytes48} from "@chainsafe/eth2.0-types";
+import {BLSPubkey, bytes48} from "@chainsafe/eth2.0-types";
 
 export class G1point {
 
@@ -26,6 +26,10 @@ export class G1point {
     sum.add(other.point);
     sum.affine();
     return new G1point(sum);
+  }
+
+  public addRaW(other: bytes48): G1point {
+    return this.add(G1point.fromBytesCompressed(other));
   }
 
   public equal(other: G1point): boolean {
@@ -100,6 +104,14 @@ export class G1point {
     }
 
     return new G1point(point);
+  }
+
+  public static aggregate(values: bytes48[]): G1point {
+    return values.map((value) => {
+      return G1point.fromBytesCompressed(value);
+    }).reduce((previousValue, currentValue): G1point => {
+      return previousValue.add(currentValue);
+    });
   }
 
   public static generator(): G1point {

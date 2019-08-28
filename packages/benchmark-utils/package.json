@@ -40,7 +40,8 @@
   ],
   "dependencies": {
     "benchmark": "^2.1.4",
-    "microtime": "^3.0.0"
+    "microtime": "^3.0.0",
+    "v8-profiler-next": "^1.1.1"
   },
   "devDependencies": {
     "@types/benchmark": "^1.0.31",
