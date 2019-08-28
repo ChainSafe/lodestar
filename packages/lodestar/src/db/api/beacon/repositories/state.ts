@@ -18,16 +18,28 @@ export class StateRepository extends Repository<BeaconState> {
     this.chain = chain;
   }
 
-  public async getLatest(): Promise<BeaconState | null> {
-    return await this.get(await this.chain.getLatestStateRoot());
+  public async getLatest(): Promise<BeaconState> {
+    const state = await this.get(await this.chain.getLatestStateRoot());
+    if(!state) {
+      throw new Error("Missing latest state, chain might not be started!");
+    }
+    return state;
   }
 
   public async getFinalized(): Promise<BeaconState> {
-    return await this.get(await this.chain.getFinalizedStateRoot());
+    const finalized = await this.get(await this.chain.getFinalizedStateRoot());
+    if(!finalized) {
+      throw new Error("Missing finalized state");
+    }
+    return finalized;
   }
 
   public async getJustified(): Promise<BeaconState> {
-    return await this.get(await this.chain.getJustifiedStateRoot());
+    const justified = await this.get(await this.chain.getJustifiedStateRoot());
+    if(!justified) {
+      throw new Error("Missing finalized state");
+    }
+    return justified;
   }
 
 }

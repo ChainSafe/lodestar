@@ -5,9 +5,7 @@
 import {EventEmitter} from "events";
 
 import {BeaconBlock} from "@chainsafe/eth2.0-types";
-
-import {BeaconChain} from "../chain";
-import {BeaconDb} from "../db";
+import {BeaconDb, IBeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
 import {
   AttestationOperations,
@@ -32,9 +30,9 @@ export class OpPool extends EventEmitter {
   public attesterSlashings: AttesterSlashingOperations;
 
   private readonly eth1: IEth1Notifier;
-  private readonly db: BeaconDb;
+  private readonly db: IBeaconDb;
 
-  public constructor(opts: IOpPoolOptions, {eth1, db}) {
+  public constructor(opts: IOpPoolOptions, {eth1, db}: {eth1: IEth1Notifier; db: IBeaconDb}) {
     super();
     this.eth1 = eth1;
     this.db = db;
@@ -50,14 +48,14 @@ export class OpPool extends EventEmitter {
    * Start operation processing
    */
   public async start(): Promise<void> {
-    this.eth1.on('deposit', this.deposits.receive);
+    this.eth1.on("deposit", this.deposits.receive);
   }
 
   /**
    * Stop operation processing
    */
   public async stop(): Promise<void> {
-    this.eth1.removeListener('deposit', this.deposits.receive);
+    this.eth1.removeListener("deposit", this.deposits.receive);
   }
 
   /**
