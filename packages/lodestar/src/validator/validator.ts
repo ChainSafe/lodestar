@@ -17,7 +17,7 @@ import BlockProposingService from "./services/block";
 import {Epoch, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {GenesisInfo} from "./types";
-import {RpcClient, RpcClientOverWs} from "./rpc";
+import {IRpcClient, RpcClientOverWs} from "./rpc";
 import {AttestationService} from "./services/attestation";
 import {IValidatorDB, LevelDbController, ValidatorDB} from "../db";
 import {ILogger} from "../logger";
@@ -32,11 +32,11 @@ import {isPlainObject} from "../util/objects";
 class Validator {
   private opts: IValidatorOptions;
   private config: IBeaconConfig;
-  private rpcClient: RpcClient;
-  private validatorIndex: ValidatorIndex;
-  private blockService: BlockProposingService;
-  private attestationService: AttestationService;
-  private genesisInfo: GenesisInfo;
+  private rpcClient: IRpcClient;
+  private validatorIndex!: ValidatorIndex;
+  private blockService!: BlockProposingService;
+  private attestationService!: AttestationService;
+  private genesisInfo!: GenesisInfo;
   private db: IValidatorDB;
   private logger: ILogger;
   private isActive: boolean;
@@ -94,7 +94,10 @@ class Validator {
     await this.setupRPC();
 
     // Wait for the ChainStart log and grab validator index
-    this.isActive = await this.isChainLive();
+    await this.waitChain();
+    this.isActive = true;
+
+    // @ts-ignore
     this.validatorIndex = await this.getValidatorIndex();
 
     this.blockService = new BlockProposingService(
@@ -121,7 +124,7 @@ class Validator {
   private async setupRPC(): Promise<void> {
     this.logger.info("Setting up RPC connection...");
     await this.rpcClient.connect();
-    this.logger.info(`RPC connection successfully established: ${this.opts.rpc || 'inmemory'}!`);
+    this.logger.info(`RPC connection successfully established: ${this.opts.rpc || "inmemory"}!`);
   }
 
   /**
@@ -134,18 +137,16 @@ class Validator {
       this.genesisInfo = {
         startTime: genesisTime,
       };
-      this.logger.info("Chain start has occured!");
+      this.logger.info("Chain start has occurred!");
       return true;
     }
-    if(this.isRunning) {
-      setTimeout(this.isChainLive, 1000);
-    }
+    return false;
   }
 
   /**
    * Checks to see if the validator has been processed on the beacon chain.
    */
-  private async getValidatorIndex(): Promise<ValidatorIndex> {
+  private async getValidatorIndex(): Promise<ValidatorIndex | null> {
     this.logger.info("Checking if validator has been processed...");
     const index = await this.rpcClient.validator.getIndex(
       this.opts.keypair.publicKey.toBytesCompressed()
@@ -154,15 +155,13 @@ class Validator {
       this.logger.info("Validator has been processed!");
       return index;
     }
-    if(this.isRunning) {
-      setTimeout(this.getValidatorIndex, 1000);
-    }
+    return null;
   }
 
   private run(): void {
     this.rpcClient.onNewSlot(this.checkDuties);
     this.rpcClient.onNewEpoch(this.lookAhead);
-  };
+  }
 
   private async checkDuties(slot: Slot): Promise<void> {
     const validatorDuty =
@@ -188,8 +187,14 @@ class Validator {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private async lookAhead(currentEpoch: Epoch): Promise<void> {
     //in phase 1, it should obtain duties for next epoch and trigger required shard sync
+  }
+
+  private async waitChain(): Promise<void> {
+    if(await this.isChainLive()) return;
+    setTimeout(this.waitChain, 1000);
   }
 }
 

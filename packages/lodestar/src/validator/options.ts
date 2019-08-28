@@ -1,23 +1,21 @@
 import {IDatabaseOptions} from "../db/options";
-import {ITransportOption} from "../rpc/options";
-import {RpcClient} from "./rpc";
-import {Keypair} from "@chainsafe/bls-js/lib/keypair";
-import {TransportType} from "../rpc/transport";
+import {IRpcClient} from "./rpc";
+import {Keypair} from "@chainsafe/bls/lib/keypair";
 import {IConfigurationModule} from "../util/config";
 import {IValidatorDB} from "../db/api";
-import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
+import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 
 export interface IValidatorOptions {
   db: IDatabaseOptions;
   dbInstance?: IValidatorDB;
   rpc: string;
-  rpcInstance?: RpcClient;
+  rpcInstance?: IRpcClient;
   keypair: Keypair;
   keystore?: string;
 }
 
 export const ValidatorOptions: IConfigurationModule = {
-  name: 'validator',
+  name: "validator",
   fields: [
     {
       name: "db",
@@ -73,7 +71,7 @@ const config: IValidatorOptions = {
   },
   rpc: "http://localhost:8545",
   keypair: Keypair.generate(),
-  keystore: null
+  keystore: undefined
 };
 
 export default config;

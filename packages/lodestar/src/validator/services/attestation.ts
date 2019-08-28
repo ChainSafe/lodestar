@@ -1,7 +1,7 @@
 /**
  * @module validator/attestation
  */
-import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
+import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {BitList} from "@chainsafe/bit-utils";
 
@@ -9,21 +9,17 @@ import {
   Attestation,
   AttestationData,
   AttestationDataAndCustodyBit,
+  BeaconState,
   Fork,
   Shard,
   Slot,
-  ValidatorIndex,
-  BeaconState
+  ValidatorIndex
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {
-  isSlashableAttestationData,
-  computeEpochOfSlot,
-  getDomain,
-} from "../../chain/stateTransition/util";
+import {computeEpochOfSlot, getDomain, isSlashableAttestationData,} from "../../chain/stateTransition/util";
 
-import {RpcClient} from "../rpc";
+import {IRpcClient} from "../rpc";
 
 import {DomainType} from "../../constants";
 import {intDiv} from "../../util/math";
@@ -34,7 +30,7 @@ export class AttestationService {
 
   private config: IBeaconConfig;
   private validatorIndex: ValidatorIndex;
-  private rpcClient: RpcClient;
+  private rpcClient: IRpcClient;
   private privateKey: PrivateKey;
   private db: IValidatorDB;
   private logger: ILogger;
@@ -42,7 +38,7 @@ export class AttestationService {
   public constructor(
     config: IBeaconConfig,
     validatorIndex: ValidatorIndex,
-    rpcClient: RpcClient,
+    rpcClient: IRpcClient,
     privateKey: PrivateKey,
     db: IValidatorDB,
     logger: ILogger
@@ -59,12 +55,13 @@ export class AttestationService {
   public async createAndPublishAttestation(
     slot: Slot,
     shard: Shard,
-    fork: Fork): Promise<Attestation> {
+    fork: Fork): Promise<Attestation|null> {
     const indexedAttestation = await this.rpcClient.validator.produceAttestation(slot, shard);
     if (await this.isConflictingAttestation(indexedAttestation.data)) {
       this.logger.warn(
-        `[Validator] Avoided signing conflicting attestation! `
-        + `Source epoch: ${indexedAttestation.data.source.epoch}, Target epoch: ${computeEpochOfSlot(this.config, slot)}`
+        "[Validator] Avoided signing conflicting attestation! "
+        + `Source epoch: ${indexedAttestation.data.source.epoch}, `
+          + `Target epoch: ${computeEpochOfSlot(this.config, slot)}`
       );
       return null;
     }
@@ -75,7 +72,7 @@ export class AttestationService {
     const attestation = await this.createAttestation(attestationDataAndCustodyBit, fork, slot);
     await this.storeAttestation(attestation);
     await this.rpcClient.validator.publishAttestation(attestation);
-    this.logger.info(`[Validator] Signed and publish new attestation`);
+    this.logger.info("[Validator] Signed and publish new attestation");
     return attestation;
   }
 

@@ -2,13 +2,13 @@
  * @module validator
  */
 
-import {PrivateKey} from "@chainsafe/bls-js/lib/privateKey";
+import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 
-import {BeaconBlock, Epoch, Fork, Slot, ValidatorIndex, BeaconState} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconState, Fork, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {getDomain, computeEpochOfSlot} from "../../chain/stateTransition/util";
-import {RpcClient} from "../rpc";
+import {computeEpochOfSlot, getDomain} from "../../chain/stateTransition/util";
+import {IRpcClient} from "../rpc";
 import {DomainType} from "../../constants";
 import {IValidatorDB} from "../../db";
 import {ILogger} from "../../logger";
@@ -16,7 +16,7 @@ import {ILogger} from "../../logger";
 export default class BlockProposingService {
   private config: IBeaconConfig;
   private validatorIndex: ValidatorIndex;
-  private provider: RpcClient;
+  private provider: IRpcClient;
   private privateKey: PrivateKey;
   private db: IValidatorDB;
   private logger: ILogger;
@@ -24,7 +24,7 @@ export default class BlockProposingService {
   public constructor(
     config: IBeaconConfig,
     index: ValidatorIndex,
-    provider: RpcClient,
+    provider: IRpcClient,
     privateKey: PrivateKey,
     db: IValidatorDB,
     logger: ILogger
@@ -40,7 +40,7 @@ export default class BlockProposingService {
   /**
    * IFF a validator is selected construct a block to propose.
    */
-  public async createAndPublishBlock(slot: Slot, fork: Fork): Promise<BeaconBlock> {
+  public async createAndPublishBlock(slot: Slot, fork: Fork): Promise<BeaconBlock | null> {
     if(await this.hasProposedAlready(slot)) {
       this.logger.info(`[Validator] Already proposed block in current epoch: ${computeEpochOfSlot(this.config, slot)}`);
       return null;
@@ -61,19 +61,21 @@ export default class BlockProposingService {
     await this.storeBlock(block);
     await this.provider.validator.publishBlock(block);
     this.logger.info(
-      `[Validator] Proposed block with hash 0x${hashTreeRoot(block, this.config.types.BeaconBlock).toString('hex')}`
+      `[Validator] Proposed block with hash 0x${hashTreeRoot(block, this.config.types.BeaconBlock).toString("hex")}`
     );
     return block;
   }
 
-  public getRpcClient(): RpcClient {
+  public getRpcClient(): IRpcClient {
     return this.provider;
   }
 
   private async hasProposedAlready(slot: Slot): Promise<boolean> {
     const lastProposedBlock = await this.db.getBlock(this.validatorIndex);
     // get last proposed block from database and check if belongs in same epoch
-    return lastProposedBlock && computeEpochOfSlot(this.config, lastProposedBlock.slot) === computeEpochOfSlot(this.config, slot);
+    return lastProposedBlock
+        &&
+        computeEpochOfSlot(this.config, lastProposedBlock.slot) === computeEpochOfSlot(this.config, slot);
   }
 
   private async storeBlock(block: BeaconBlock): Promise<void> {

@@ -1,15 +1,15 @@
 import {IBeaconApi, IValidatorApi} from "../../rpc/api";
 import {Epoch, Slot} from "@chainsafe/eth2.0-types";
 
-export interface NewSlotCallback {
+export interface INewSlotCallback {
   (slot: Slot): void;
 }
 
-export interface NewEpochCallback {
+export interface INewEpochCallback {
   (slot: Epoch): void;
 }
 
-export interface RpcClient {
+export interface IRpcClient {
 
   beacon: IBeaconApi;
 
@@ -30,7 +30,7 @@ export interface RpcClient {
    * Depending on implementation it will poll for new slot or getting notified(Websockets)
    * @param cb
    */
-  onNewSlot(cb: NewSlotCallback): void;
+  onNewSlot(cb: INewSlotCallback): void;
 
 
   /**
@@ -38,6 +38,6 @@ export interface RpcClient {
    * Depending on implementation it will poll for new epoch or getting notified(Websockets)
    * @param cb
    */
-  onNewEpoch(cb: NewEpochCallback): void;
+  onNewEpoch(cb: INewEpochCallback): void;
 
 }
