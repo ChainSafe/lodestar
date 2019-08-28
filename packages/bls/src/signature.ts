@@ -11,6 +11,14 @@ export class Signature {
     this.point = point;
   }
 
+  public static fromCompressedBytes(signature: BLSSignature): Signature {
+    assert(
+      signature.length === 2 * FP_POINT_LENGTH,
+      `Signature must have ${2 * FP_POINT_LENGTH} bytes`
+    );
+    return new Signature(G2point.fromCompressedBytes(signature));
+  }
+
   public add(other: Signature): Signature {
     return new Signature(
       this.point.add(other.point)
@@ -23,13 +31,5 @@ export class Signature {
 
   public toBytesCompressed(): BLSSignature {
     return this.point.toBytesCompressed();
-  }
-
-  public static fromCompressedBytes(signature: BLSSignature): Signature {
-    assert(
-      signature.length === 2 * FP_POINT_LENGTH,
-      `Signature must have ${2 * FP_POINT_LENGTH} bytes`
-    );
-    return new Signature(G2point.fromCompressedBytes(signature));
   }
 }

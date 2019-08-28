@@ -24,7 +24,7 @@
     "build-web": "webpack --mode production --entry ./lib/web.js --output ./dist/bls.min.js",
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts src/",
-    "lint-fix": "eslint --ext .ts src/ --fix",
+    "lint:fix": "eslint --ext .ts src/ --fix",
     "pretest": "yarn check-types",
     "prepublishOnly": "yarn build",
     "test:unit": "nyc --cache-dir .nyc_output/.cache -r lcov -e .ts mocha -r ./.babel-register 'test/unit/**/*.test.ts' && nyc report",

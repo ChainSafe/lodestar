@@ -15,6 +15,31 @@ export class PrivateKey {
     this.value = value;
   }
 
+
+  public static fromBytes(bytes: Uint8Array): PrivateKey {
+    assert(bytes.length === SECRET_KEY_LENGTH, "Private key should have 32 bytes");
+    const value = Buffer.from(bytes);
+    return new PrivateKey(
+      ctx.BIG.frombytearray(
+        padLeft(
+          value,
+          48
+        ),
+        0
+      )
+    );
+  }
+
+  public static fromHexString(value: string): PrivateKey {
+    return PrivateKey.fromBytes(
+      Buffer.from(value.replace("0x", ""), "hex")
+    );
+  }
+
+  public static random(): PrivateKey {
+    return PrivateKey.fromBytes(random.randomBuffer(SECRET_KEY_LENGTH));
+  }
+
   public getValue(): BIG {
     return this.value;
   }
@@ -34,31 +59,7 @@ export class PrivateKey {
   }
 
   public toHexString(): string {
-    return `0x${this.toBytes().toString('hex')}`;
-  }
-
-  public static fromBytes(bytes: Uint8Array): PrivateKey {
-    assert(bytes.length === SECRET_KEY_LENGTH, 'Private key should have 32 bytes');
-    const value = Buffer.from(bytes);
-    return new PrivateKey(
-      ctx.BIG.frombytearray(
-        padLeft(
-          value,
-          48
-        ),
-        0
-      )
-    )
-  }
-
-  public static fromHexString(value: string): PrivateKey {
-    return PrivateKey.fromBytes(
-      Buffer.from(value.replace('0x', ''), 'hex')
-    );
-  }
-
-  public static random(): PrivateKey {
-    return PrivateKey.fromBytes(random.randomBuffer(SECRET_KEY_LENGTH));
+    return `0x${this.toBytes().toString("hex")}`;
   }
 
 }

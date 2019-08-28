@@ -9,19 +9,7 @@ export class PublicKey {
   public constructor(point: G1point) {
     this.point = point;
   }
-
-  public getPoint(): G1point {
-    return this.point;
-  }
-
-  public toBytesCompressed(): BLSPubkey {
-    return  this.point.toBytesCompressed();
-  }
-
-  public toHexString(): string {
-    return `0x${this.toBytesCompressed().toString('hex')}`;
-  }
-
+  
   public static fromPrivateKey(privateKey: PrivateKey): PublicKey {
     return new PublicKey(
       G1point.generator().mul(privateKey.getValue())
@@ -32,5 +20,17 @@ export class PublicKey {
     return new PublicKey(
       G1point.fromBytesCompressed(publicKey)
     );
+  }
+
+  public getPoint(): G1point {
+    return this.point;
+  }
+
+  public toBytesCompressed(): BLSPubkey {
+    return  this.point.toBytesCompressed();
+  }
+
+  public toHexString(): string {
+    return `0x${this.toBytesCompressed().toString("hex")}`;
   }
 }

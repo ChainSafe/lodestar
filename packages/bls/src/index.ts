@@ -49,7 +49,7 @@ function sign(secretKey: BLSSecretKey, messageHash: bytes32, domain: BLSDomain):
  */
 function aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
   return signatures.map((signature): Signature => {
-    return Signature.fromCompressedBytes(signature)
+    return Signature.fromCompressedBytes(signature);
   }).reduce((previousValue, currentValue): Signature => {
     return previousValue.add(currentValue);
   }).toBytesCompressed();
@@ -64,7 +64,7 @@ function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
     return new G1point(new ctx.ECP()).toBytesCompressed();
   }
   return publicKeys.map((publicKey): G1point => {
-    return G1point.fromBytesCompressed(publicKey)
+    return G1point.fromBytesCompressed(publicKey);
   }).reduce((previousValue, currentValue): G1point => {
     return previousValue.add(currentValue);
   }).toBytesCompressed();
@@ -98,7 +98,12 @@ function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BLSSignat
  * @param signature
  * @param domain
  */
-function verifyMultiple(publicKeys: BLSPubkey[], messageHashes: bytes32[], signature: BLSSignature, domain: bytes8): boolean {
+function verifyMultiple(
+  publicKeys: BLSPubkey[],
+  messageHashes: bytes32[],
+  signature: BLSSignature,
+  domain: bytes8
+): boolean {
   if(publicKeys.length === 0 || publicKeys.length != messageHashes.length) {
     return false;
   }
@@ -129,4 +134,4 @@ export default {
   aggregatePubkeys,
   verify,
   verifyMultiple
-}
+};
