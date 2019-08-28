@@ -18,7 +18,7 @@ export interface IBeaconApi extends IApi{
   /**
    * Requests the BeaconNode to provide which fork version it is currently on.
    */
-  getFork(): Promise<Fork>;
+  getFork(): Promise<Fork|null>;
 
   /**
    * Requests the genesis_time parameter from the BeaconNode,
@@ -45,6 +45,6 @@ export interface IBeaconApi extends IApi{
   /**
    * Returns latest beacon state
    */
-  getBeaconState(): Promise<BeaconState>;
+  getBeaconState(): Promise<BeaconState|null>;
 
 }

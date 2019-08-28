@@ -14,5 +14,5 @@ export interface IApi {
 }
 
 export interface IApiConstructor {
-  new(args, modules: {config: IBeaconConfig; chain: IBeaconChain; db: IBeaconDb; eth1: IEth1Notifier}): IApi;
+  new(args: {}, modules: {config: IBeaconConfig; chain: IBeaconChain; db: IBeaconDb; eth1: IEth1Notifier}): IApi;
 }

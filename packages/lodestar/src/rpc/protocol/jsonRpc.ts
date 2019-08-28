@@ -7,7 +7,7 @@ import * as jsonRpc from "noice-json-rpc";
 import {IApi} from "../api/interface";
 import {IPublicApiOptions} from "../options";
 
-export interface LikeSocketServer extends jsonRpc.LikeSocketServer {
+export interface ILikeSocketServer extends jsonRpc.LikeSocketServer {
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -16,11 +16,11 @@ export interface LikeSocketServer extends jsonRpc.LikeSocketServer {
  * JSON-RPC over some transport
  */
 export class JSONRPC {
-  private transports: LikeSocketServer[] = [];
+  private transports: ILikeSocketServer[] = [];
 
   public constructor(
     opts: Partial<IPublicApiOptions>,
-    {transports, apis}: {transports: LikeSocketServer[]; apis: IApi[]}
+    {transports, apis}: {transports: ILikeSocketServer[]; apis: IApi[]}
   ) {
     transports.forEach((transport) => {
       // attach the json-rpc server to underlying transport
@@ -29,8 +29,10 @@ export class JSONRPC {
       apis.forEach((api) => {
         // collect the api methods into an enumerable object for rpc exposure
         const methods = {};
-        for (let name of Object.getOwnPropertyNames(Object.getPrototypeOf(api))) {
-          if (name !== 'constructor' && typeof api[name] === 'function') {
+        for (const name of Object.getOwnPropertyNames(Object.getPrototypeOf(api))) {
+          // @ts-ignore
+          if (name !== "constructor" && typeof api[name] === "function") {
+            // @ts-ignore
             methods[name] = api[name].bind(api);
           }
         }

@@ -2,7 +2,7 @@
  * @module rpc/transport
  */
 
-import {LikeSocketServer} from "../protocol";
+import {ILikeSocketServer} from "../protocol";
 import {LikeSocket} from "noice-json-rpc";
 import http from "http";
 import promisify from "promisify-es6";
@@ -62,7 +62,7 @@ class MessageRequest implements LikeSocket {
 }
 
 
-export default class HttpServer implements LikeSocketServer{
+export default class HttpServer implements ILikeSocketServer{
 
   public server: http.Server;
 

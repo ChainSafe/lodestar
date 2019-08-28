@@ -5,14 +5,14 @@
 import * as http from "http";
 import promisify from "promisify-es6";
 import WebSocket from "ws";
-import {LikeSocketServer} from "../protocol";
+import {ILikeSocketServer} from "../protocol";
 import {ITransportOption} from "../options";
 
 export interface WSServerOpts {
   port: number;
 }
 
-export class WSServer implements LikeSocketServer {
+export class WSServer implements ILikeSocketServer {
   private ws: WebSocket.Server;
   private httpServer: http.Server;
   private opts: WSServerOpts;

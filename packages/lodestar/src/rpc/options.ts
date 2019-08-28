@@ -16,7 +16,7 @@ export interface IPublicApiOptions {
 }
 
 export const PublicApiOptions: IConfigurationModule = {
-  name: 'api',
+  name: "api",
   fields: []
 };
 

@@ -17,31 +17,35 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {BeaconDb} from "../../../db";
-import {BeaconChain} from "../../../chain";
+import {IBeaconDb} from "../../../db";
+import {IBeaconChain} from "../../../chain";
 import {OpPool} from "../../../opPool";
 import {IValidatorApi} from "./interface";
-import {
-  getBeaconProposerIndex,
-  getCommitteeAssignment,
-  isProposerAtSlot
-} from "../../../chain/stateTransition/util";
+import {getBeaconProposerIndex, getCommitteeAssignment, isProposerAtSlot} from "../../../chain/stateTransition/util";
 import {CommitteeAssignment} from "../../../validator/types";
 import {assembleBlock} from "../../../chain/factory/block";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {assembleValidatorDuty} from "../../../chain/factory/duties";
 import {IEth1Notifier} from "../../../eth1";
 
+export interface IValidatorApiModules {
+  config: IBeaconConfig;
+  chain: IBeaconChain;
+  db: IBeaconDb;
+  opPool: OpPool;
+  eth1: IEth1Notifier;
+}
+
 export class ValidatorApi implements IValidatorApi {
 
   public namespace: string;
   private config: IBeaconConfig;
-  private chain: BeaconChain;
-  private db: BeaconDb;
+  private chain: IBeaconChain;
+  private db: IBeaconDb;
   private opPool: OpPool;
   private eth1: IEth1Notifier;
 
-  public constructor(opts, {config, chain, db, opPool, eth1}) {
+  public constructor(opts: {}, {config, chain, db, opPool, eth1}: IValidatorApiModules) {
     this.namespace = "validator";
     this.config = config;
     this.chain = chain;
@@ -55,7 +59,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async isProposer(index: ValidatorIndex, slot: Slot): Promise<boolean> {
-    const state: BeaconState = await this.db.state.getLatest();
+    const state = await this.db.state.getLatest();
     return isProposerAtSlot(this.config, state, slot, index);
   }
 
@@ -71,9 +75,10 @@ export class ValidatorApi implements IValidatorApi {
     return validatorPublicKeys.map(
       (validatorPublicKey, index) => {
         const validatorIndex = validatorIndexes[index];
+        if(!validatorIndex) return null;
         return assembleValidatorDuty(this.config, validatorPublicKey, validatorIndex, state, blockProposerIndex);
       }
-    );
+    ).filter((duty) => !!duty) as ValidatorDuty[];
   }
 
   public async getCommitteeAssignment(
@@ -99,7 +104,7 @@ export class ValidatorApi implements IValidatorApi {
     await this.opPool.attestations.receive(attestation);
   }
 
-  public async getIndex(validatorPublicKey: BLSPubkey): Promise<ValidatorIndex> {
+  public async getIndex(validatorPublicKey: BLSPubkey): Promise<ValidatorIndex|null> {
     return await this.db.getValidatorIndex(validatorPublicKey);
   }
 }

@@ -25,7 +25,7 @@ export interface IValidatorApi extends IApi {
   /**
    * Obtains validator index attached to his public key
    */
-  getIndex(validatorPublicKey: BLSPubkey): Promise<ValidatorIndex>;
+  getIndex(validatorPublicKey: BLSPubkey): Promise<ValidatorIndex|null>;
 
   /**
    * Requests the BeaconNode to provide a set of “duties”,
