@@ -96,7 +96,7 @@ export class LightProgressiveMerkleTree {
 
   private _proof(): bytes32[] {
     let size = this._count;
-    let proof = this._branch.slice();
+    const proof = this._branch.slice();
     for (let i = 0; i < this._depth; i++) {
       if (size % 2 === 0) {
         proof[i] = this._zerohashes[i];

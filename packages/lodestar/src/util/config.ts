@@ -18,12 +18,12 @@ export interface IConfigurationModule {
 }
 
 export function getCliFields(configuration: IConfigurationModule): IConfigurationField<unknown>[] {
-  const cliFields = [];
+  const cliFields: IConfigurationField<unknown>[] = [];
   configuration.fields.forEach((field) => {
     if(isConfigurationModule(field)) {
       cliFields.push(...getCliFields(field as IConfigurationModule));
     } else if((field as IConfigurationField<unknown>).cli) {
-      cliFields.push(field);
+      cliFields.push(field as IConfigurationField);
     }
   });
   return cliFields;
@@ -36,12 +36,14 @@ export function validateConfig<T>(config: object, description: IConfigurationMod
       let field = getField(description, prop);
       if (!field) continue;
       if (isConfigurationModule(field)) {
+        // @ts-ignore
         validatedConfiguration[prop] = validateConfig(config[prop], field as IConfigurationModule);
       } else {
         field = field as IConfigurationField;
         //TODO: do type conversion/processing
-        if (!field.validation
-          || field.validation(config[prop])) {
+        // @ts-ignore
+        if (!field.validation || field.validation(config[prop])) {
+          // @ts-ignore
           validatedConfiguration[prop] = config[prop];
         }
       }
@@ -50,12 +52,15 @@ export function validateConfig<T>(config: object, description: IConfigurationMod
   return validatedConfiguration;
 }
 
-export function getField(description: IConfigurationModule, name: string): IConfigurationModule | IConfigurationField<unknown> {
+export function getField(
+  description: IConfigurationModule,
+  name: string
+): IConfigurationModule | IConfigurationField<unknown> | undefined {
   return description.fields.find((field) => {
     return field.name === name;
   });
 }
 
 export function isConfigurationModule(field: IConfigurationModule | IConfigurationField<unknown>): boolean {
-  return field && !field.hasOwnProperty('type');
+  return field && !field.hasOwnProperty("type");
 }

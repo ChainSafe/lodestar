@@ -1,6 +1,6 @@
 import BN from "bn.js";
 import assert from "assert";
-import {AnySSZType, FullSSZType, Type, parseType, assertValidValue} from "@chainsafe/ssz";
+import {AnySSZType, assertValidValue, FullSSZType, parseType, Type} from "@chainsafe/ssz";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 
 import {intDiv} from "./math";
@@ -26,6 +26,7 @@ function _createValue(type: FullSSZType, defaultValue: any = null): any {
       return defaultValue;
     }
   }
+  const obj = {};
   switch(type.type) {
     case Type.uint:
       if (type.byteLength <= 4 || type.useNumber) {
@@ -59,8 +60,8 @@ function _createValue(type: FullSSZType, defaultValue: any = null): any {
       } else {
         defaultValue = {};
       }
-      let obj = {};
       type.fields.forEach(([fieldName, fieldType]) => {
+        // @ts-ignore
         obj[fieldName] = _createValue(fieldType, defaultValue[fieldName]);
       });
       return obj;
