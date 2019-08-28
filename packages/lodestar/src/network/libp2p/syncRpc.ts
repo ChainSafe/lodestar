@@ -23,7 +23,7 @@ import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../index";
 import {getEmptyBlockBody} from "../../chain/genesis/genesis";
-import {ReputationStore} from "../../sync/reputation";
+import {ReputationStore} from "../../sync/IReputation";
 import {ILogger} from "../../logger";
 import {ISyncRpc} from "../../sync/rpc/interface";
 

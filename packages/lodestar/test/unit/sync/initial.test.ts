@@ -6,7 +6,7 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 
 import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
-import {ReputationStore} from "../../../src/sync/reputation";
+import {ReputationStore} from "../../../src/sync/IReputation";
 import {WinstonLogger} from "../../../src/logger";
 import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
 import {InitialSync} from "../../../src/sync/initial";

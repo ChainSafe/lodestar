@@ -17,7 +17,7 @@ import {BeaconChain, IBeaconChain} from "../chain";
 import {OpPool} from "../opPool";
 import {createPeerId, initializePeerInfo} from "../network/libp2p/util";
 import {ILogger} from "../logger";
-import {ReputationStore} from "../sync/reputation";
+import {ReputationStore} from "../sync/IReputation";
 import {JSONRPC, WSServer} from "../rpc";
 import {SyncRpc} from "../network/libp2p/syncRpc";
 

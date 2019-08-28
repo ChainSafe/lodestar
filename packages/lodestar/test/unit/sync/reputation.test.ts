@@ -1,6 +1,6 @@
 import sinon from "sinon";
 import {expect} from  "chai";
-import {Reputation, ReputationStore} from "../../../src/sync/reputation";
+import {IReputation, ReputationStore} from "../../../src/sync/IReputation";
 
 
 describe("syncing", function () {
@@ -17,7 +17,7 @@ describe("syncing", function () {
 
 
   it('should able to add reputation', async function () {
-    const expected: Reputation = {
+    const expected: IReputation = {
       latestHello: null,
       latestStatus: null,
       score: 0,
@@ -32,7 +32,7 @@ describe("syncing", function () {
   });
 
   it('should able to remove reputation', async function () {
-    const expected: Reputation = {
+    const expected: IReputation = {
       latestHello: null,
       latestStatus: null,
       score: 0,

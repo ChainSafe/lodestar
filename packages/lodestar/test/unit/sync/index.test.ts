@@ -8,7 +8,7 @@ import {Libp2pNetwork} from "../../../src/network";
 import {OpPool} from "../../../src/opPool";
 import {EthersEth1Notifier} from "../../../src/eth1";
 import {BeaconDb} from "../../../src/db/api";
-import {ReputationStore} from "../../../src/sync/reputation";
+import {ReputationStore} from "../../../src/sync/IReputation";
 import {WinstonLogger} from "../../../src/logger";
 import {RegularSync} from "../../../src/sync/regular";
 import {Sync} from "../../../src/sync";

@@ -5,7 +5,7 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 
 import {Method} from "../../../src/constants";
 import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
-import {ReputationStore} from "../../../src/sync/reputation";
+import {ReputationStore} from "../../../src/sync/IReputation";
 import {Libp2pNetwork} from "../../../src/network";
 import {BeaconDb, LevelDbController} from "../../../src/db";
 

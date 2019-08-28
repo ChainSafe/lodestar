@@ -6,7 +6,7 @@ export interface ISyncOptions {
 }
 
 export const SyncOptions: IConfigurationModule = {
-  name: 'sync',
+  name: "sync",
   fields: []
 };
 

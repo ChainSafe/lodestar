@@ -25,7 +25,7 @@ import {WinstonLogger} from "../../../src/logger";
 import {generateState} from "../../utils/state";
 import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
 import {intDiv} from "../../../src/util/math";
-import {ReputationStore} from "../../../src/sync/reputation";
+import {ReputationStore} from "../../../src/sync/IReputation";
 import {generateEmptyBlock} from "../../utils/block";
 import {BlockRepository, ChainRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
 

@@ -4,17 +4,16 @@
 
 import assert from "assert";
 import PeerInfo from "peer-info";
-
-import {BeaconBlockHeadersResponse, BeaconBlockBodiesResponse, BeaconBlock} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
-import {ReputationStore} from "./reputation";
+import {ReputationStore} from "./IReputation";
 import {ILogger} from "../logger";
 import {ISyncRpc} from "./rpc/interface";
+import {ISyncOptions} from "./options";
 
-interface InitialSyncModules {
+interface IInitialSyncModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   chain: IBeaconChain;
@@ -32,7 +31,7 @@ export class InitialSync {
   private network: INetwork;
   private reps: ReputationStore;
   private logger: ILogger;
-  public constructor(opts, {config, db, chain, rpc, network, reps, logger}: InitialSyncModules) {
+  public constructor(opts: ISyncOptions, {config, db, chain, rpc, network, reps, logger}: IInitialSyncModules) {
     this.config = config;
     this.db = db;
     this.chain = chain;
@@ -66,6 +65,9 @@ export class InitialSync {
   }
   public async syncToPeer(peerInfo: PeerInfo): Promise<void> {
     const peerLatestHello = this.reps.get(peerInfo.id.toB58String()).latestHello;
+    if(!peerLatestHello) {
+      return;
+    }
     // Set latest finalized state
     const finalizedRoot = peerLatestHello.latestFinalizedRoot;
     const states = await this.rpc.getBeaconStates(peerInfo, [peerLatestHello.latestFinalizedRoot]);
@@ -95,9 +97,3 @@ export class InitialSync {
   public async stop(): Promise<void> {
   }
 }
-
-function generatePreset(name: string) {
-
-}
-
-export const mainnet = generatePreset("mainnet");

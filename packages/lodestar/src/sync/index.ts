@@ -9,15 +9,14 @@ import {INetwork} from "../network";
 import {OpPool} from "../opPool";
 import {IEth1Notifier} from "../eth1";
 import {IBeaconDb} from "../db";
-import {SyncRpc} from "../network/libp2p/syncRpc";
 import {RegularSync} from "./regular";
 import {InitialSync} from "./initial";
-import {ReputationStore} from "./reputation";
+import {ReputationStore} from "./IReputation";
 import {ILogger} from "../logger";
 import {ISyncOptions} from "./options";
 import {ISyncRpc} from "./rpc/interface";
 
-interface SyncModules {
+interface ISyncModules {
   config: IBeaconConfig;
   chain: IBeaconChain;
   db: IBeaconDb;
@@ -44,9 +43,9 @@ export class Sync extends EventEmitter {
   private rpc: ISyncRpc;
   private reps: ReputationStore;
   private logger: ILogger;
-  private syncer: RegularSync;
+  private syncer!: RegularSync;
 
-  public constructor(opts: ISyncOptions, {config, chain, db, eth1, network, opPool, reps, rpc, logger}: SyncModules) {
+  public constructor(opts: ISyncOptions, {config, chain, db, eth1, network, opPool, reps, rpc, logger}: ISyncModules) {
     super();
     this.opts = opts;
     this.config = config;
@@ -70,7 +69,7 @@ export class Sync extends EventEmitter {
         .map((peerInfo) => this.reps.get(peerInfo.id.toB58String()))
         .map((reputation) => reputation.latestHello ? reputation.latestHello.bestSlot : 0)
         .reduce((a, b) => Math.max(a, b), 0);
-      if (bestSlot >= bestSlotByPeers) {
+      if (bestSlot && bestSlot >= bestSlotByPeers) {
         return true;
       }
     } catch (e) {
@@ -103,7 +102,7 @@ export class Sync extends EventEmitter {
       opPool: this.opPool,
       logger: this.logger,
     });
-    this.syncer.start();
+    await this.syncer.start();
   }
 
   public async stop(): Promise<void> {

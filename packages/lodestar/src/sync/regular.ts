@@ -4,16 +4,27 @@
 
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {BeaconBlock, Attestation} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
+import {ATTESTATION_TOPIC, BLOCK_TOPIC} from "../constants";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
 import {OpPool} from "../opPool";
 import {ILogger} from "../logger";
+import {ISyncOptions} from "./options";
+import {ISyncRpc} from "./rpc/interface";
 
+interface IRegularSyncModules {
+  config: IBeaconConfig;
+  db: IBeaconDb;
+  chain: IBeaconChain;
+  rpc: ISyncRpc;
+  network: INetwork;
+  opPool: OpPool;
+  logger: ILogger;
+}
 
 export class RegularSync {
   private config: IBeaconConfig;
@@ -23,13 +34,31 @@ export class RegularSync {
   private opPool: OpPool;
   private logger: ILogger;
 
-  public constructor(opts, {config, db, chain, network, opPool, logger}) {
+  public constructor(opts: ISyncOptions, {config, db, chain, network, opPool, logger}: IRegularSyncModules) {
     this.config = config;
     this.db = db;
     this.chain = chain;
     this.network = network;
     this.opPool = opPool;
     this.logger = logger;
+  }
+
+  public async start(): Promise<void> {
+    this.network.subscribeToBlocks();
+    this.network.subscribeToAttestations();
+    this.network.on(BLOCK_TOPIC, this.receiveBlock);
+    this.network.on(ATTESTATION_TOPIC, this.receiveAttestation);
+    this.chain.on("processedBlock", this.onProcessedBlock);
+    this.chain.on("processedAttestation", this.onProcessedAttestation);
+  }
+
+  public async stop(): Promise<void> {
+    this.network.unsubscribeToBlocks();
+    this.network.unsubscribeToAttestations();
+    this.network.removeListener(BLOCK_TOPIC, this.receiveBlock);
+    this.network.removeListener(ATTESTATION_TOPIC, this.receiveAttestation);
+    this.chain.removeListener("processedBlock", this.onProcessedBlock);
+    this.chain.removeListener("processedAttestation", this.onProcessedAttestation);
   }
 
   public receiveBlock = async (block: BeaconBlock): Promise<void> => {
@@ -54,7 +83,7 @@ export class RegularSync {
     }
     // skip attestation if its too old
     const state = await this.db.state.getLatest();
-    if (attestation.data.target.epoch < state.finalizedCheckpoint.epoch) {
+    if (state && attestation.data.target.epoch < state.finalizedCheckpoint.epoch) {
       return;
     }
     // send attestation on to other modules
@@ -71,22 +100,4 @@ export class RegularSync {
   private onProcessedAttestation = (attestation: Attestation): void => {
     this.network.publishAttestation(attestation);
   };
-
-  public async start(): Promise<void> {
-    this.network.subscribeToBlocks();
-    this.network.subscribeToAttestations();
-    this.network.on(BLOCK_TOPIC, this.receiveBlock);
-    this.network.on(ATTESTATION_TOPIC, this.receiveAttestation);
-    this.chain.on('processedBlock', this.onProcessedBlock);
-    this.chain.on('processedAttestation', this.onProcessedAttestation);
-  }
-
-  public async stop(): Promise<void> {
-    this.network.unsubscribeToBlocks();
-    this.network.unsubscribeToAttestations();
-    this.network.removeListener(BLOCK_TOPIC, this.receiveBlock);
-    this.network.removeListener(ATTESTATION_TOPIC, this.receiveAttestation);
-    this.chain.removeListener('processedBlock', this.onProcessedBlock);
-    this.chain.removeListener('processedAttestation', this.onProcessedAttestation);
-  }
 }
