@@ -22,7 +22,7 @@ import {JSONRPC, WSServer} from "../rpc";
 import {SyncRpc} from "../network/libp2p/syncRpc";
 
 
-export interface Service {
+export interface IService {
   start(): Promise<void>;
 
   stop(): Promise<void>;
@@ -39,7 +39,7 @@ export class BeaconNode {
   public network: INetwork;
   public chain: IBeaconChain;
   public opPool: OpPool;
-  public rpc: Service;
+  public rpc: IService;
   public sync: Sync;
   public reps: ReputationStore;
   private logger: ILogger;
@@ -64,14 +64,12 @@ export class BeaconNode {
         logger: this.logger,
       }),
     });
+
     // initialize for network type
     const libp2p = createPeerId()
       .then((peerId) => initializePeerInfo(peerId, this.conf.network.multiaddrs))
       .then((peerInfo) => new NodejsNode({peerInfo}));
-    const rpc = new SyncRpc(opts, {
-      config, db: this.db, chain: this.chain, network: this.network, reps: this.reps, logger
-    });
-
+    
     this.network = new Libp2pNetwork(this.conf.network, {
       config,
       libp2p: libp2p,
@@ -91,6 +89,10 @@ export class BeaconNode {
       eth1: this.eth1,
       logger: this.logger,
       opPool: this.opPool
+    });
+
+    const rpc = new SyncRpc(opts, {
+      config, db: this.db, chain: this.chain, network: this.network, reps: this.reps, logger
     });
 
     this.sync = new Sync(this.conf.sync, {
@@ -115,7 +117,7 @@ export class BeaconNode {
   }
 
   public async start(): Promise<void> {
-    this.logger.info('Starting eth2 beacon node - LODESTAR!');
+    this.logger.info("Starting eth2 beacon node - LODESTAR!");
     await this.db.start();
     await this.network.start();
     await this.eth1.start();
