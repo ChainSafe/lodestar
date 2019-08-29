@@ -1,19 +1,20 @@
+/* eslint-disable @typescript-eslint/no-explicit-any,no-empty */
 /**
  * @module network/libp2p
  */
 
 import {EventEmitter} from "events";
 import {deserialize, serialize} from "@chainsafe/ssz";
+// @ts-ignore
 import promisify from "promisify-es6";
 import LibP2p from "libp2p";
+// @ts-ignore
 import Gossipsub from "libp2p-gossipsub";
 import PeerInfo from "peer-info";
-import {Attestation, BeaconBlock, Shard, RequestBody, ResponseBody} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, RequestBody, ResponseBody, Shard} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {
-  Method, RequestId, BLOCK_TOPIC, ATTESTATION_TOPIC, SHARD_SUBNET_COUNT,
-} from "../../constants";
+import {ATTESTATION_TOPIC, BLOCK_TOPIC, Method, RequestId, SHARD_SUBNET_COUNT,} from "../../constants";
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
 import {NetworkRpc} from "./rpc";
 import {ILogger} from "../../logger";
@@ -22,16 +23,23 @@ import {INetwork, NetworkEventEmitter} from "../interface";
 
 
 export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter }) implements INetwork {
+  // @ts-ignore
   public peerInfo: PeerInfo;
   private opts: INetworkOptions;
   private config: IBeaconConfig;
+  // @ts-ignore
   private libp2p: LibP2p;
   private pubsub: Gossipsub;
+  // @ts-ignore
   private rpc: NetworkRpc;
   private inited: Promise<void>;
   private logger: ILogger;
 
-  public constructor(opts: INetworkOptions, {config, libp2p,logger}: {config: IBeaconConfig; libp2p: any; logger: ILogger}) {
+  public constructor(
+    opts: INetworkOptions,
+    {config, libp2p,logger}: {config: IBeaconConfig; libp2p: LibP2p; logger: ILogger})
+  {
+    // eslint-disable-next-line constructor-super
     super();
     this.opts = opts;
     this.config = config;
@@ -46,6 +54,41 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
         resolve();
       });
     });
+  }
+
+  // service
+  public async start(): Promise<void> {
+    await this.inited;
+    await promisify(this.libp2p.start.bind(this.libp2p))();
+    await promisify(this.pubsub.start.bind(this.pubsub))();
+    await this.rpc.start();
+    this.pubsub.on(BLOCK_TOPIC, this.handleIncomingBlock);
+    this.pubsub.on(ATTESTATION_TOPIC, this.handleIncomingAttestation);
+    for (let shard = 0; shard < SHARD_SUBNET_COUNT; shard++) {
+      this.pubsub.on(shardSubnetAttestationTopic(shard),
+        this.handleIncomingShardAttestation);
+    }
+    this.pubsub.on("gossipsub:heartbeat", this.emitGossipHeartbeat);
+    this.rpc.on("request", this.emitRequest);
+    this.rpc.on("peer:connect", this.emitPeerConnect);
+    this.rpc.on("peer:disconnect", this.emitPeerDisconnect);
+  }
+
+  public async stop(): Promise<void> {
+    await this.inited;
+    await this.rpc.stop();
+    await promisify(this.pubsub.stop.bind(this.pubsub))();
+    await promisify(this.libp2p.stop.bind(this.libp2p))();
+    this.pubsub.removeListener(BLOCK_TOPIC, this.handleIncomingBlock);
+    this.pubsub.removeListener(ATTESTATION_TOPIC, this.handleIncomingAttestation);
+    for (let shard = 0; shard < SHARD_SUBNET_COUNT; shard++) {
+      this.pubsub.removeListener(shardSubnetAttestationTopic(shard),
+        this.handleIncomingShardAttestation);
+    }
+    this.pubsub.removeListener("gossipsub:heartbeat", this.emitGossipHeartbeat);
+    this.rpc.removeListener("request", this.emitRequest);
+    this.rpc.removeListener("peer:connect", this.emitPeerConnect);
+    this.rpc.removeListener("peer:disconnect", this.emitPeerDisconnect);
   }
 
   // pubsub
@@ -77,34 +120,15 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   }
   public async publishShardAttestation(attestation: Attestation): Promise<void> {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
-      shardSubnetAttestationTopic(attestation.data.crosslink.shard), serialize(attestation, this.config.types.Attestation));
+      shardSubnetAttestationTopic(
+        attestation.data.crosslink.shard
+      ),
+      serialize(
+        attestation,
+        this.config.types.Attestation
+      )
+    );
   }
-  private handleIncomingBlock = (msg: any): void => {
-    try {
-      const block: BeaconBlock = deserialize(msg.data, this.config.types.BeaconBlock);
-      this.emit(BLOCK_TOPIC, block);
-    } catch (e) {
-    }
-  };
-  private handleIncomingAttestation = (msg: any): void => {
-    try {
-      const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
-      this.emit(ATTESTATION_TOPIC, attestation);
-    } catch (e) {
-    }
-  };
-  private handleIncomingShardAttestation = (msg: any): void => {
-    try {
-      const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
-      // @ts-ignore
-      // we cannot type hint this
-      this.emit(shardAttestationTopic(attestation.data.crosslink.shard), attestation);
-    } catch (e) {
-    }
-  };
-  private emitGossipHeartbeat = (): void => {
-    this.emit("gossipsub:heartbeat");
-  };
 
   // rpc
   public getPeers(): PeerInfo[] {
@@ -125,6 +149,34 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
     this.rpc.sendResponse(id, responseCode, result);
   }
+
+  private handleIncomingBlock = (msg: any): void => {
+    try {
+      const block: BeaconBlock = deserialize(msg.data, this.config.types.BeaconBlock);
+      this.emit(BLOCK_TOPIC, block);
+    } catch (e) {
+    }
+  };
+  private handleIncomingAttestation = (msg: any): void => {
+    try {
+      const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
+      this.emit(ATTESTATION_TOPIC, attestation);
+    } catch (e) {
+
+    }
+  };
+  private handleIncomingShardAttestation = (msg: any): void => {
+    try {
+      const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
+      // @ts-ignore
+      // we cannot type hint this
+      this.emit(shardAttestationTopic(attestation.data.crosslink.shard), attestation);
+    } catch (e) {
+    }
+  };
+  private emitGossipHeartbeat = (): void => {
+    this.emit("gossipsub:heartbeat");
+  };
   private emitRequest = (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody): void => {
     this.emit("request", peerInfo, method, id, body);
   };
@@ -134,38 +186,4 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   private emitPeerDisconnect = (peerInfo: PeerInfo): void => {
     this.emit("peer:disconnect", peerInfo);
   };
-
-  // service
-  public async start(): Promise<void> {
-    await this.inited;
-    await promisify(this.libp2p.start.bind(this.libp2p))();
-    await promisify(this.pubsub.start.bind(this.pubsub))();
-    await this.rpc.start();
-    this.pubsub.on(BLOCK_TOPIC, this.handleIncomingBlock);
-    this.pubsub.on(ATTESTATION_TOPIC, this.handleIncomingAttestation);
-    for (let shard = 0; shard < SHARD_SUBNET_COUNT; shard++) {
-      this.pubsub.on(shardSubnetAttestationTopic(shard),
-        this.handleIncomingShardAttestation);
-    }
-    this.pubsub.on("gossipsub:heartbeat", this.emitGossipHeartbeat);
-    this.rpc.on("request", this.emitRequest);
-    this.rpc.on("peer:connect", this.emitPeerConnect);
-    this.rpc.on("peer:disconnect", this.emitPeerDisconnect);
-  }
-  public async stop(): Promise<void> {
-    await this.inited;
-    await this.rpc.stop();
-    await promisify(this.pubsub.stop.bind(this.pubsub))();
-    await promisify(this.libp2p.stop.bind(this.libp2p))();
-    this.pubsub.removeListener(BLOCK_TOPIC, this.handleIncomingBlock);
-    this.pubsub.removeListener(ATTESTATION_TOPIC, this.handleIncomingAttestation);
-    for (let shard = 0; shard < SHARD_SUBNET_COUNT; shard++) {
-      this.pubsub.removeListener(shardSubnetAttestationTopic(shard),
-        this.handleIncomingShardAttestation);
-    }
-    this.pubsub.removeListener("gossipsub:heartbeat", this.emitGossipHeartbeat);
-    this.rpc.removeListener("request", this.emitRequest);
-    this.rpc.removeListener("peer:connect", this.emitPeerConnect);
-    this.rpc.removeListener("peer:disconnect", this.emitPeerDisconnect);
-  }
 }

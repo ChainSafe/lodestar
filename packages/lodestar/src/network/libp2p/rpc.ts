@@ -5,21 +5,17 @@
 import {EventEmitter} from "events";
 import LibP2p from "libp2p";
 import PeerInfo from "peer-info";
+// @ts-ignore
 import Connection from "interface-connection";
+// @ts-ignore
 import promisify from "es6-promisify";
 import {deserialize} from "@chainsafe/ssz";
-import {RequestBody, ResponseBody, WireResponse, WireRequest} from "@chainsafe/eth2.0-types";
+import {RequestBody, ResponseBody, WireRequest, WireResponse} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {Method, RequestId, ResponseCode, RPC_MULTICODEC} from "../../constants";
 import {ILogger} from "../../logger";
-import {
-  encodeRequest,
-  encodeResponse,
-  sanityCheckData,
-  decodeResponseBody,
-  decodeRequestBody
-} from "../codec";
+import {decodeRequestBody, decodeResponseBody, encodeRequest, encodeResponse, sanityCheckData} from "../codec";
 import {randomRequestId} from "../util";
 import {Peer} from "./peer";
 import {INetworkOptions} from "../options";
@@ -66,7 +62,11 @@ export class NetworkRpc extends (EventEmitter as { new(): NetworkRpcEventEmitter
   private config: IBeaconConfig;
   private logger: ILogger;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, logger}: {config: IBeaconConfig; libp2p: LibP2p; logger: ILogger}) {
+  public constructor(
+    opts: INetworkOptions,
+    {config, libp2p, logger}: {config: IBeaconConfig; libp2p: LibP2p; logger: ILogger}
+  ) {
+    // eslint-disable-next-line constructor-super
     super();
     this.config = config;
     this.logger = logger;
@@ -75,6 +75,78 @@ export class NetworkRpc extends (EventEmitter as { new(): NetworkRpcEventEmitter
     this.requests = {};
     this.responses = {};
     this.peers = new Map<string, Peer>();
+    this.wipDials = new Set<string>();
+  }
+
+  public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
+    const request = this.responses[id];
+    if (!request) {
+      throw new Error("No request found");
+    }
+    const {peer, method} = request;
+    const encodedResponse = encodeResponse(this.config, id, method, responseCode, result);
+    delete this.responses[id];
+    peer.write(encodedResponse);
+  }
+
+  public onRequestResponse(peer: Peer, data: Buffer): void {
+    if(!sanityCheckData(data)) {
+      // bad data
+      return;
+    }
+    const id = data.slice(0, 8).toString("hex");
+    const method = this.requests[id];
+    if (method === undefined) { // incoming request
+      try {
+        const request: WireRequest = deserialize(data, this.config.types.WireRequest);
+        const decodedBody = decodeRequestBody(this.config, request.method, request.body);
+        this.responses[id] = {peer, method: request.method};
+        this.emit("request", peer.peerInfo, request.method, id, decodedBody);
+      } catch (e) {
+        this.logger.warn("unable to decode request", e.message);
+      }
+    } else { // incoming response
+      try {
+        const event = `response ${id}`;
+        const {
+          responseCode,
+          result,
+        }: WireResponse = deserialize(data, this.config.types.WireResponse);
+        if (responseCode !== ResponseCode.Success) {
+          // @ts-ignore
+          this.emit(event, new Error(`response code error ${responseCode}`), null);
+        } else {
+          const decodedResult = decodeResponseBody(this.config, method, result);
+          // @ts-ignore
+          this.emit(event, null, decodedResult);
+        }
+      } catch (e) {
+        this.logger.warn("unable to decode response", e.message);
+      }
+    }
+  }
+
+  public async start(): Promise<void> {
+    this.wipDials = new Set();
+    this.peers = new Map<string, Peer>();
+
+    this.libp2p.handle(RPC_MULTICODEC, this.onConnection.bind(this));
+    this.libp2p.on("peer:connect", this.dialForRpc.bind(this));
+    this.libp2p.on("peer:disconnect", this.removePeer.bind(this));
+    // dial any already connected peers
+    await Promise.all(
+      Object.values(this.libp2p.peerBook.getAll()).map((peer) => this.dialForRpc(peer))
+    );
+  }
+
+  public async stop(): Promise<void> {
+    this.wipDials = new Set();
+    this.peers.forEach((peer) => peer.close());
+    this.peers = new Map<string, Peer>();
+
+    this.libp2p.unhandle(RPC_MULTICODEC);
+    this.libp2p.removeListener("peer:connect", this.dialForRpc.bind(this));
+    this.libp2p.removeListener("peer:disconnect", this.removePeer.bind(this));
   }
 
   public addPeer(peerInfo: PeerInfo): Peer {
@@ -112,7 +184,7 @@ export class NetworkRpc extends (EventEmitter as { new(): NetworkRpcEventEmitter
       peerInfo = await promisify(conn.getPeerInfo.bind(conn))();
     }
     const peer = this.addPeer(peerInfo);
-    peer.setConnection(conn, true);
+    await peer.setConnection(conn, true);
   }
 
   public onConnectionEnd(peerInfo: PeerInfo): void {
@@ -134,8 +206,9 @@ export class NetworkRpc extends (EventEmitter as { new(): NetworkRpcEventEmitter
     try {
       const conn = await promisify(this.libp2p.dialProtocol.bind(this.libp2p))(peerInfo, RPC_MULTICODEC);
       const peer = this.addPeer(peerInfo);
-      peer.setConnection(conn, false);
+      await peer.setConnection(conn, false);
     } catch (e) {
+      this.logger.error(e.message);
     }
     this.wipDials.delete(peerId);
   }
@@ -172,76 +245,5 @@ export class NetworkRpc extends (EventEmitter as { new(): NetworkRpcEventEmitter
         }
       });
     });
-  }
-
-  public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
-    const request = this.responses[id];
-    if (!request) {
-      throw new Error('No request found');
-    }
-    const {peer, method} = request;
-    const encodedResponse = encodeResponse(this.config, id, method, responseCode, result);
-    delete this.responses[id];
-    peer.write(encodedResponse);
-  }
-
-  public onRequestResponse(peer: Peer, data: Buffer): void {
-    if(!sanityCheckData(data)) {
-      // bad data
-      return;
-    }
-    const id = data.slice(0, 8).toString('hex');
-    const method = this.requests[id];
-    if (method === undefined) { // incoming request
-      try {
-        const request: WireRequest = deserialize(data, this.config.types.WireRequest);
-        const decodedBody = decodeRequestBody(this.config, request.method, request.body);
-        this.responses[id] = {peer, method: request.method};
-        this.emit("request", peer.peerInfo, request.method, id, decodedBody);
-      } catch (e) {
-        this.logger.warn('unable to decode request', e.message);
-      }
-    } else { // incoming response
-      try {
-        const event = `response ${id}`;
-        const {
-          responseCode,
-          result,
-        }: WireResponse = deserialize(data, this.config.types.WireResponse);
-        if (responseCode !== ResponseCode.Success) {
-          // @ts-ignore
-          this.emit(event, new Error(`response code error ${responseCode}`), null);
-        } else {
-          const decodedResult = decodeResponseBody(this.config, method, result);
-          // @ts-ignore
-          this.emit(event, null, decodedResult);
-        }
-      } catch (e) {
-        this.logger.warn('unable to decode response', e.message);
-      }
-    }
-  }
-
-  public async start(): Promise<void> {
-    this.wipDials = new Set();
-    this.peers = new Map<string, Peer>();
-
-    this.libp2p.handle(RPC_MULTICODEC, this.onConnection.bind(this));
-    this.libp2p.on('peer:connect', this.dialForRpc.bind(this));
-    this.libp2p.on('peer:disconnect', this.removePeer.bind(this));
-    // dial any already connected peers
-    await Promise.all(
-      Object.values(this.libp2p.peerBook.getAll()).map((peer) => this.dialForRpc(peer))
-    );
-  }
-
-  public async stop(): Promise<void> {
-    this.wipDials = new Set();
-    this.peers.forEach((peer) => peer.close());
-    this.peers = new Map<string, Peer>();
-
-    this.libp2p.unhandle(RPC_MULTICODEC);
-    this.libp2p.removeListener('peer:connect', this.dialForRpc.bind(this));
-    this.libp2p.removeListener('peer:disconnect', this.removePeer.bind(this));
   }
 }

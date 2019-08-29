@@ -42,7 +42,7 @@ export interface INetwork extends NetworkEventEmitter {
   getPeers(): PeerInfo[];
   hasPeer(peerInfo: PeerInfo): boolean;
   sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T>;
-  sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void;
+  sendResponse(id: RequestId, responseCode: number, result: ResponseBody|null): void;
   connect(peerInfo: PeerInfo): Promise<void>;
   disconnect(peerInfo: PeerInfo): void;
 }

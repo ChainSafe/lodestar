@@ -1,13 +1,13 @@
 import {Shard} from "@chainsafe/eth2.0-types";
 
-import {RequestId, SHARD_SUBNET_COUNT, SHARD_ATTESTATION_TOPIC} from "../constants";
+import {RequestId, SHARD_ATTESTATION_TOPIC, SHARD_SUBNET_COUNT} from "../constants";
 
 function randomNibble(): string {
   return Math.floor(Math.random() * 16).toString(16);
 }
 
 export function randomRequestId(): RequestId {
-  return Array.from({length: 16}, () => randomNibble()).join('');
+  return Array.from({length: 16}, () => randomNibble()).join("");
 }
 
 export function shardSubnetAttestationTopic(shard: Shard): string {

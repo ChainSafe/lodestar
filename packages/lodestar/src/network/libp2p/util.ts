@@ -3,6 +3,7 @@
  */
 import PeerId from "peer-id";
 import PeerInfo from "peer-info";
+// @ts-ignore
 import promisify from "promisify-es6";
 
 /**

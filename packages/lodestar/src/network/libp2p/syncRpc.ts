@@ -7,17 +7,29 @@ import BN from "bn.js";
 import PeerInfo from "peer-info";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {
-  bytes32, Slot, number64,
-  BeaconBlockHeader, BeaconBlockBody,
-  RequestBody, Hello, Goodbye, Status,
-  BeaconBlockRootsRequest, BeaconBlockRootsResponse,
-  BeaconBlockHeadersRequest, BeaconBlockHeadersResponse,
-  BeaconBlockBodiesRequest, BeaconBlockBodiesResponse,
-  BeaconStatesRequest, BeaconStatesResponse, Epoch, BeaconState, BeaconBlock,
+  BeaconBlock,
+  BeaconBlockBodiesRequest,
+  BeaconBlockBodiesResponse,
+  BeaconBlockHeader,
+  BeaconBlockHeadersRequest,
+  BeaconBlockHeadersResponse,
+  BeaconBlockRootsRequest,
+  BeaconBlockRootsResponse,
+  BeaconState,
+  BeaconStatesRequest,
+  BeaconStatesResponse,
+  bytes32,
+  Epoch,
+  Goodbye, Hash,
+  Hello,
+  number64,
+  RequestBody,
+  Slot,
+  Status,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {ZERO_HASH, Method, RequestId, ResponseCode} from "../../constants";
+import {Method, RequestId, ResponseCode, ZERO_HASH} from "../../constants";
 import {intDiv} from "../../util/math";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
@@ -28,7 +40,16 @@ import {ILogger} from "../../logger";
 import {ISyncRpc} from "../../sync/rpc/interface";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
-interface SyncOptions {
+interface ISyncOptions {
+}
+
+interface ISyncRpcModules {
+  config: IBeaconConfig;
+  db: IBeaconDb;
+  chain: IBeaconChain;
+  network: INetwork;
+  reps: ReputationStore;
+  logger: ILogger;
 }
 
 /**
@@ -36,7 +57,7 @@ interface SyncOptions {
  * fetching state from the chain and database as needed.
  */
 export class SyncRpc implements ISyncRpc {
-  private opts: SyncOptions;
+  private opts: ISyncOptions;
   private config: IBeaconConfig;
   private db: IBeaconDb;
   private chain: IBeaconChain;
@@ -44,9 +65,9 @@ export class SyncRpc implements ISyncRpc {
   private reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: SyncOptions,
-    {config, db, chain, network, reps, logger}:
-    { config: IBeaconConfig; db: IBeaconDb; chain: IBeaconChain; network: INetwork; reps: ReputationStore; logger: ILogger }) {
+  public constructor(opts: ISyncOptions,
+    {config, db, chain, network, reps, logger}: ISyncRpcModules
+  ) {
     this.config = config;
     this.logger = logger;
     this.opts = opts;
@@ -69,12 +90,12 @@ export class SyncRpc implements ISyncRpc {
       latestFinalizedEpoch = 0;
       latestFinalizedRoot = ZERO_HASH;
     } else {
-      bestSlot = await this.db.chain.getChainHeadSlot();
+      bestSlot = (await this.db.chain.getChainHeadSlot() as Slot);
       const [bRoot, state] = await Promise.all([
         this.db.chain.getBlockRoot(bestSlot),
         this.db.state.getLatest(),
       ]);
-      bestRoot = bRoot;
+      bestRoot = bRoot as Hash;
       latestFinalizedEpoch = state.finalizedCheckpoint.epoch;
       latestFinalizedRoot = state.finalizedCheckpoint.root;
     }
@@ -98,21 +119,10 @@ export class SyncRpc implements ISyncRpc {
 
   // send outgoing requests
 
-  private async handshake(peerInfo: PeerInfo): Promise<void> {
-    const randomDelay = Math.floor(Math.random() * 5000);
-    await new Promise((resolve) => setTimeout(resolve, randomDelay));
-    if (
-      this.network.hasPeer(peerInfo) &&
-      !this.reps.get(peerInfo.id.toB58String()).latestHello
-    ) {
-      await this.getHello(peerInfo).catch((e) => {
-      });
-    }
-  }
-
   public async refreshPeerHellos(): Promise<void> {
     await this.network.getPeers().map((peerInfo) =>
       this.getHello(peerInfo).catch((e) => {
+        this.logger.error(e.message);
       }));
   }
 
@@ -211,6 +221,7 @@ export class SyncRpc implements ISyncRpc {
     // TODO handle incorrect networkId / chainId
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
     this.network.disconnect(peerInfo);
   }
@@ -227,11 +238,15 @@ export class SyncRpc implements ISyncRpc {
     for (let slot = request.startSlot; slot < request.startSlot + request.count; slot++) {
       try {
         const blockRoot = await this.db.chain.getBlockRoot(slot);
+        if(!blockRoot) {
+          throw new Error(`Missing block root for slot ${slot}`);
+        }
         response.roots.push({
           slot,
           blockRoot,
         });
       } catch (e) {
+        this.logger.error(e.message);
       }
     }
     // send a response even if fewer block roots get sent
@@ -247,7 +262,7 @@ export class SyncRpc implements ISyncRpc {
         headers: [],
       };
       const blockRoot = await this.db.chain.getBlockRoot(request.startSlot);
-      assert(blockRoot.equals(request.startRoot));
+      assert(blockRoot && blockRoot.equals(request.startRoot));
       for (
         let slot = request.startSlot;
         slot < request.startSlot + request.maxHeaders;
@@ -255,6 +270,9 @@ export class SyncRpc implements ISyncRpc {
       ) {
         try {
           const block = await this.db.block.getBlockBySlot(slot);
+          if(!block) {
+            throw new Error(`Missing block for slot ${slot}`);
+          }
           const header: BeaconBlockHeader = {
             slot: block.slot,
             parentRoot: block.parentRoot,
@@ -264,6 +282,7 @@ export class SyncRpc implements ISyncRpc {
           };
           response.headers.push(header);
         } catch (e) {
+          this.logger.error(e.message);
         }
       }
       this.network.sendResponse(id, ResponseCode.Success, response);
@@ -282,8 +301,12 @@ export class SyncRpc implements ISyncRpc {
     for (const root of request.blockRoots) {
       try {
         const block = await this.db.block.get(root);
+        if(!block) {
+          throw new Error(`Missing block for root ${root.toString("hex")}`);
+        }
         response.blockBodies.push(block.body);
       } catch (e) {
+        this.logger.warn(e.message);
         response.blockBodies.push(getEmptyBlockBody());
       }
     }
@@ -294,6 +317,7 @@ export class SyncRpc implements ISyncRpc {
     id: RequestId,
     request: BeaconStatesRequest
   ): Promise<void> {
+    this.logger.debug(`new beacon state requests ${id}, ${request}`);
   }
 
   // service
@@ -305,10 +329,12 @@ export class SyncRpc implements ISyncRpc {
   public async stop(): Promise<void> {
     this.network.removeListener("peer:connect", this.handshake.bind(this));
     this.network.getPeers().map((p) => this.getGoodbye(p).catch((e) => {
+      this.logger.warn(e.message);
     }));
   }
 
   public async getBeaconBlocks(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     peerInfo: PeerInfo, startSlot: Slot, count: number64, backward: boolean
   ): Promise<BeaconBlock[]> {
     // startSlot = latestFinalizedSlot & count = slotCountToSync
@@ -319,7 +345,13 @@ export class SyncRpc implements ISyncRpc {
       blockHeadersResponse,
       blockBodiesResponse
     ]: [BeaconBlockHeadersResponse, BeaconBlockBodiesResponse] = await Promise.all([
-      this.getBeaconBlockHeaders(peerInfo, blockRoots[0].blockRoot, blockRoots[0].slot, blockRoots[blockRoots.length - 1].slot, 0),
+      this.getBeaconBlockHeaders(
+        peerInfo,
+        blockRoots[0].blockRoot,
+        blockRoots[0].slot,
+        blockRoots[blockRoots.length - 1].slot,
+        0
+      ),
       this.getBeaconBlockBodies(peerInfo, blockRoots.map((b) => b.blockRoot)),
     ]);
     assert(blockHeadersResponse.headers.length === blockBodiesResponse.blockBodies.length);
@@ -334,5 +366,18 @@ export class SyncRpc implements ISyncRpc {
     });
 
     return blocks;
+  }
+
+  private async handshake(peerInfo: PeerInfo): Promise<void> {
+    const randomDelay = Math.floor(Math.random() * 5000);
+    await new Promise((resolve) => setTimeout(resolve, randomDelay));
+    if (
+      this.network.hasPeer(peerInfo) &&
+        !this.reps.get(peerInfo.id.toB58String()).latestHello
+    ) {
+      await this.getHello(peerInfo).catch((e) => {
+        this.logger.warn(e.message);
+      });
+    }
   }
 }

@@ -6,7 +6,7 @@ import {deserialize, serialize} from "@chainsafe/ssz";
 import {RequestBody, ResponseBody, WireRequest, WireResponse} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {RequestId, Method} from "../constants";
+import {Method, RequestId} from "../constants";
 
 // Encode
 
@@ -43,7 +43,7 @@ export function encodeRequest(
       throw new Error(`Invalid method ${method}`);
   }
   const request: WireRequest = {
-    id: Buffer.from(id, 'hex'),
+    id: Buffer.from(id, "hex"),
     method: method,
     body: encodedBody,
   };
@@ -58,7 +58,7 @@ export function encodeResponse(
   result: ResponseBody
 ): Buffer {
   const response: WireResponse = {
-    id: Buffer.from(id, 'hex'),
+    id: Buffer.from(id, "hex"),
     responseCode,
     result: Buffer.alloc(0),
   };

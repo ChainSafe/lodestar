@@ -3,13 +3,13 @@
  */
 
 import PeerInfo from "peer-info";
+// @ts-ignore
 import Connection from "interface-connection";
 import pull from "pull-stream";
 import pushable, {Pushable} from "pull-pushable";
+// @ts-ignore
 import Abortable from "pull-abortable";
-import {
-  Hello, Status, RequestBody, ResponseBody
-} from "@chainsafe/eth2.0-types";
+import {Hello, Status} from "@chainsafe/eth2.0-types";
 
 import {NetworkRpc} from "./rpc";
 
@@ -21,7 +21,9 @@ export class Peer {
   private conn: Connection;
   private stream: Pushable;
   private controller: NetworkRpc;
+  // @ts-ignore
   private pull;
+  // @ts-ignore
   private pullAbort;
 
   public constructor (peerInfo: PeerInfo, controller: NetworkRpc) {
@@ -39,7 +41,7 @@ export class Peer {
       return;
     }
     if (this.pull) {
-      this.pullAbort.abort(new Error('aborted'));
+      this.pullAbort.abort(new Error("aborted"));
       await this.pull;
     }
     this.stream = pushable();
@@ -52,7 +54,7 @@ export class Peer {
         pull.drain(
           (data) => this.controller.onRequestResponse(this, data),
           (err) => {
-            if (err && err.message !== 'aborted') {
+            if (err && err.message !== "aborted") {
               this.controller.onConnectionEnd(this.peerInfo);
             }
             return true;
@@ -67,13 +69,12 @@ export class Peer {
     this.stream.push(msg);
   }
 
-  private _close(): void {
-    this.conn = null;
-    this.stream = null;
-  }
-
   public close(): void {
     this.stream.end();
     this._close();
+  }
+
+  private _close(): void {
+    this.conn = null;
   }
 }
