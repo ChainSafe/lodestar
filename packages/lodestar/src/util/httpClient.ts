@@ -52,8 +52,3 @@ const handleError = (error: AxiosError) => {
 
   throw new Error(message.toString());
 }
-
-export interface HttpError {
-  status: number;
-  message?: string;
-}
