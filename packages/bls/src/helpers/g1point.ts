@@ -28,7 +28,7 @@ export class G1point {
     return new G1point(sum);
   }
 
-  public addRaW(other: bytes48): G1point {
+  public addRaw(other: bytes48): G1point {
     return this.add(G1point.fromBytesCompressed(other));
   }
 

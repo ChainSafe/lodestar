@@ -106,7 +106,7 @@ export function verifyMultiple(publicKeys: BLSPubkey[], messageHashes: bytes32[]
         return {
           hash: previous.hash,
           publicKey: previous.publicKey ?
-            previous.publicKey.addRaW(publicKeys[index])
+            previous.publicKey.addRaw(publicKeys[index])
             :
             G1point.fromBytesCompressed(publicKeys[index]),
         };
@@ -139,7 +139,6 @@ export function verifyMultiple(publicKeys: BLSPubkey[], messageHashes: bytes32[]
     const e2 = ElipticCurvePairing.pair(G1point.generator(), sig);
     return e2.equals(eCombined);
   } catch (e) {
-    console.log(e);
     return false;
   }
 }
