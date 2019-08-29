@@ -14,7 +14,7 @@ import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 import {ILogger} from "../../logger";
 import {IEth1Options} from "../options";
 
-export interface EthersEth1Options extends IEth1Options {
+export interface IEthersEth1Options extends IEth1Options {
   contract?: Contract;
 }
 
@@ -29,11 +29,12 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
 
   private config: IBeaconConfig;
 
-  private opts: EthersEth1Options;
+  private opts: IEthersEth1Options;
 
   private logger: ILogger;
 
-  public constructor(opts: EthersEth1Options, {config, logger}: {config: IBeaconConfig; logger: ILogger}) {
+  public constructor(opts: IEthersEth1Options, {config, logger}: {config: IBeaconConfig; logger: ILogger}) {
+    // eslint-disable-next-line constructor-super
     super();
     this.logger = logger;
     this.config = config;
@@ -46,6 +47,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
         this.opts.provider.network
       );
     }
+    // @ts-ignore
     this.contract = opts.contract;
   }
 
@@ -54,8 +56,8 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       await this.initContract();
     }
     this.logger.info("Fetching old deposits...");
-    this.provider.on('block', this.processBlockHeadUpdate.bind(this));
-    this.contract.on('DepositEvent', this.processDepositLog.bind(this));
+    this.provider.on("block", this.processBlockHeadUpdate.bind(this));
+    this.contract.on("DepositEvent", this.processDepositLog.bind(this));
     this.logger.info(
       `Started listening on eth1 events on chain ${(await this.provider.getNetwork()).chainId}`
     );
@@ -64,14 +66,14 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   }
 
   public async stop(): Promise<void> {
-    this.provider.removeAllListeners('block');
-    this.contract.removeAllListeners('DepositEvent');
+    this.provider.removeAllListeners("block");
+    this.contract.removeAllListeners("DepositEvent");
   }
 
   public async processBlockHeadUpdate(blockNumber: number): Promise<void> {
     this.logger.debug(`Received eth1 block ${blockNumber}`);
     const block = await this.provider.getBlock(blockNumber);
-    this.emit('block', block);
+    this.emit("block", block);
   }
 
   public async processDepositLog(
@@ -81,7 +83,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     merkleTreeIndex: string
   ): Promise<void> {
     try {
-      const index = deserialize(Buffer.from(merkleTreeIndex.substr(2), 'hex'), this.config.types.number64) as number64;
+      const index = deserialize(Buffer.from(merkleTreeIndex.substr(2), "hex"), this.config.types.number64) as number64;
       const deposit = this.createDeposit(
         pubkey,
         withdrawalCredentials,
@@ -91,7 +93,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       this.logger.info(
         `Received validator deposit event index=${index}`
       );
-      this.emit('deposit', index, deposit);
+      this.emit("deposit", index, deposit);
     } catch (e) {
       this.logger.error(`Failed to process deposit log. Error: ${e.message}`);
     }
@@ -121,7 +123,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   }
 
   public async getHead(): Promise<Block> {
-    return this.getBlock('latest');
+    return this.getBlock("latest");
   }
 
   public async getBlock(blockHashOrBlockNumber: string | number): Promise<Block> {
@@ -129,13 +131,13 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   }
 
   public async depositRoot(block?: string | number): Promise<bytes32> {
-    const depositRootHex = await this.contract.get_hash_tree_root({blockTag: block || 'latest'});
-    return Buffer.from(depositRootHex.substr(2), 'hex');
+    const depositRootHex = await this.contract.get_hash_tree_root({blockTag: block || "latest"});
+    return Buffer.from(depositRootHex.substr(2), "hex");
   }
 
   public async depositCount(block?: string | number): Promise<number> {
-    const depositCountHex = await this.contract.get_deposit_count({blockTag: block || 'latest'});
-    return Buffer.from(depositCountHex.substr(2), 'hex').readUIntLE(0, 6);
+    const depositCountHex = await this.contract.get_deposit_count({blockTag: block || "latest"});
+    return Buffer.from(depositCountHex.substr(2), "hex").readUIntLE(0, 6);
   }
 
   private async initContract(): Promise<void> {
@@ -147,20 +149,20 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     try {
       this.contract = new ethers.Contract(address, abi, this.provider);
     } catch (e) {
-      throw new Error('Eth1 deposit contract not found! Probably wrong eth1 rpc url');
+      throw new Error("Eth1 deposit contract not found! Probably wrong eth1 rpc url");
     }
   }
 
-  private async contractExists(address: string) {
+  private async contractExists(address: string): Promise<boolean> {
     if (!isValidAddress(address)) return false;
     const code = await this.provider.getCode(address);
-    return !(!code || code === '0x');
+    return !(!code || code === "0x");
   }
 
   private async getContractPastLogs(
     topics: string[],
     fromBlock: number64 | string = this.opts.depositContract.deployedAt,
-    toBlock: number64 | string = null
+    toBlock: number64 | string | null = null
   ): Promise<Log[]> {
     const filter = {
       fromBlock,
@@ -183,10 +185,10 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     return {
       proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH}, () => Buffer.alloc(32)),
       data: {
-        pubkey: Buffer.from(pubkey.slice(2), 'hex'),
-        withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), 'hex'),
-        amount: deserialize(Buffer.from(amount.slice(2), 'hex'), this.config.types.Gwei) as Gwei,
-        signature: Buffer.from(signature.slice(2), 'hex'),
+        pubkey: Buffer.from(pubkey.slice(2), "hex"),
+        withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), "hex"),
+        amount: deserialize(Buffer.from(amount.slice(2), "hex"), this.config.types.Gwei) as Gwei,
+        signature: Buffer.from(signature.slice(2), "hex"),
       },
     };
   }

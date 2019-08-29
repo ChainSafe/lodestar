@@ -4,9 +4,9 @@
 
 import {ContractTransaction, ethers, Wallet} from "ethers";
 import {Provider} from "ethers/providers";
-import {BigNumber} from "ethers/utils";
+import {BigNumber, ParamType} from "ethers/utils";
 import BN from "bn.js";
-import bls from "@chainsafe/bls-js";
+import bls from "@chainsafe/bls";
 import {hash, signingRoot} from "@chainsafe/ssz";
 import {DepositData} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -19,13 +19,19 @@ export class Eth1Wallet {
 
   private wallet: Wallet;
 
-  private contractAbi;
+  private contractAbi: string|ParamType[];
 
   private config: IBeaconConfig;
 
   private logger: ILogger;
 
-  public constructor(privateKey: string, contractAbi: any, config: IBeaconConfig, logger: ILogger, provider?: Provider) {
+  public constructor(
+    privateKey: string,
+    contractAbi: string|ParamType[],
+    config: IBeaconConfig,
+    logger: ILogger,
+    provider?: Provider
+  ) {
     this.config = config;
     this.logger = logger;
     if(!provider) {
@@ -44,8 +50,8 @@ export class Eth1Wallet {
   public async createValidatorDeposit(address: string, value: BigNumber): Promise<string> {
     const amount = new BN(value.toString()).div(new BN(1000000000));
 
-    let contract = new ethers.Contract(address, this.contractAbi, this.wallet);
-    const privateKey = hash(Buffer.from(address, 'hex'));
+    const contract = new ethers.Contract(address, this.contractAbi, this.wallet);
+    const privateKey = hash(Buffer.from(address, "hex"));
     const pubkey = bls.generatePublicKey(privateKey);
     const withdrawalCredentials = Buffer.concat([
       this.config.params.BLS_WITHDRAWAL_PREFIX_BYTE,
@@ -73,9 +79,10 @@ export class Eth1Wallet {
         signature,
         {value});
       await tx.wait();
-      return tx.hash;
+      return tx.hash || "";
     } catch(e) {
       this.logger.error(e.message);
+      return "";
     }
   }
 

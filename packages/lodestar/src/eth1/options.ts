@@ -17,8 +17,8 @@ export interface IEth1Options {
 }
 
 export const Eth1Options: IConfigurationModule = {
-  name: 'eth1',
-  description: 'Eth 1.x options',
+  name: "eth1",
+  description: "Eth 1.x options",
   fields: [
     {
       name: "provider",
