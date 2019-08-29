@@ -4,16 +4,12 @@
 
 import assert from "assert";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls-js";
+import bls from "@chainsafe/bls";
 
 import {BeaconState, Deposit, Validator} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {
-  DEPOSIT_CONTRACT_TREE_DEPTH,
-  DomainType,
-  FAR_FUTURE_EPOCH,
-} from "../../../../constants";
+import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH,} from "../../../../constants";
 import {bnMin} from "../../../../util/math";
 import {verifyMerkleBranch} from "../../../../util/merkleTree";
 

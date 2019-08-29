@@ -10,6 +10,7 @@ import deepmerge from "deepmerge";
 import * as ethers from "ethers/ethers";
 import {ILogger} from "../../logger";
 import devEth1Options from "./options";
+import net from "net";
 
 export const devNetworkOpts =  {
   port: 8545,
@@ -18,7 +19,7 @@ export const devNetworkOpts =  {
   host: "127.0.0.1"
 };
 
-export interface PrivateNetworkOpts {
+export interface IPrivateNetworkOpts {
   port?: number;
   host?: string;
   networkId?: number;
@@ -30,31 +31,33 @@ export interface PrivateNetworkOpts {
 
 export class PrivateEth1Network {
 
-  private server: any;
+  private server: net.Server;
 
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   private blockchain: any;
 
-  private opts: PrivateNetworkOpts;
+  private opts: IPrivateNetworkOpts;
 
   private logger: ILogger;
 
-  public constructor(opts: PrivateNetworkOpts, {logger}: {logger: ILogger} ) {
+  public constructor(opts: IPrivateNetworkOpts, {logger}: {logger: ILogger} ) {
     this.opts = deepmerge(devNetworkOpts, opts);
     this.logger = logger;
     this.server = ganache.server({
       ...this.opts,
 
-      // eslint-disable-next-line  @typescript-eslint/camelcase
+      // eslint-disable-next-line  @typescript-eslint/camelcase,camelcase
       default_balance_ether: this.opts.defaultBalance,
-      // eslint-disable-next-line  @typescript-eslint/camelcase
+      // eslint-disable-next-line  @typescript-eslint/camelcase,camelcase
       db_path: this.opts.dbPath,
-      // eslint-disable-next-line @typescript-eslint/camelcase
+      // eslint-disable-next-line @typescript-eslint/camelcase,camelcase
       network_id: 999
     });
   }
 
   public async start(): Promise<string> {
     this.blockchain  =
+      // @ts-ignore
       await promisify(this.server.listen.bind(this.server))(this.opts.port, this.opts.host);
     this.logger.info(`Started private network node on ${this.opts.host}:${this.opts.port}`);
     this.logger.info(
@@ -78,7 +81,7 @@ export class PrivateEth1Network {
    */
   public accounts(): string[] {
     return Object
-      .values(this.blockchain.accounts as any[])
+      .values(this.blockchain.accounts as {secretKey: string}[])
       .map(account => account.secretKey);
   }
 

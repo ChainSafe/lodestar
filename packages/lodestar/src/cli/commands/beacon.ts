@@ -85,7 +85,7 @@ export class BeaconNodeCommand implements ICliCommand {
         ),
         beacon: new BeaconApi(
           {},
-          {config, chain: this.node.chain, db: this.node.db}
+          {config, chain: this.node.chain, eth1: this.node.eth1, opPool: this.node.opPool, db: this.node.db}
         ),
       });
       this.validator = new Validator(

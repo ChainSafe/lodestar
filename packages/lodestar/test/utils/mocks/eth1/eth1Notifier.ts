@@ -20,7 +20,7 @@ export class MockEth1Notifier extends EventEmitter implements IEth1Notifier {
     return true;
   }
 
-  public async processBlockHeadUpdate(blockNumber): Promise<void> {
+  public async processBlockHeadUpdate(blockNumber: string|number): Promise<void> {
   }
 
   public async processDepositLog(dataHex: string, indexHex: string): Promise<void> {
@@ -46,14 +46,17 @@ export class MockEth1Notifier extends EventEmitter implements IEth1Notifier {
   }
 
   public async getBlock(blockHashOrBlockNumber: string | number): Promise<Block> {
+    // @ts-ignore
     return undefined;
   }
 
   public async getHead(): Promise<Block> {
+    // @ts-ignore
     return undefined;
   }
 
   public async depositCount(block?: string | number): Promise<number64> {
+    // @ts-ignore
     return undefined;
   }
 

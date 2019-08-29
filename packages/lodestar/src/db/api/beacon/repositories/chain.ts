@@ -1,9 +1,9 @@
-import {BeaconBlock, bytes32, Hash, Slot} from "@chainsafe/eth2.0-types";
+import {Hash, Slot} from "@chainsafe/eth2.0-types";
 import {deserialize, serialize} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {IDatabaseController} from "../../../controller";
-import {Key, Bucket, encodeKey} from "../../../schema";
+import {Bucket, encodeKey, Key} from "../../../schema";
 
 export class ChainRepository {
 

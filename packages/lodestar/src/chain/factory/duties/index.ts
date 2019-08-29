@@ -1,14 +1,14 @@
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {BLSPubkey, ValidatorDuty, ValidatorIndex} from "@chainsafe/eth2.0-types";
-import {getCommitteeAssignment, computeEpochOfSlot} from "../../stateTransition/util";
+import {BeaconState, BLSPubkey, ValidatorDuty, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {computeEpochOfSlot, getCommitteeAssignment} from "../../stateTransition/util";
 
 export function assembleValidatorDuty(
   config: IBeaconConfig,
   validatorPublicKey: BLSPubkey,
   validatorIndex: ValidatorIndex,
-  state,
+  state: BeaconState,
   blockProposerIndex: ValidatorIndex): ValidatorDuty  {
-  let duty: ValidatorDuty = this.generateEmptyValidatorDuty(validatorPublicKey);
+  let duty: Partial<ValidatorDuty> = generateEmptyValidatorDuty(validatorPublicKey);
   const committeeAsignment = getCommitteeAssignment(
     config,
     state,
@@ -29,15 +29,11 @@ export function assembleValidatorDuty(
       blockProductionSlot: state.slot
     };
   }
-  return duty;
+  return duty as ValidatorDuty;
 }
 
-export function generateEmptyValidatorDuty(publicKey: BLSPubkey): ValidatorDuty {
+export function generateEmptyValidatorDuty(publicKey: BLSPubkey): Partial<ValidatorDuty> {
   return {
-    validatorPubkey: publicKey,
-    blockProductionSlot: null,
-    attestationShard: null,
-    attestationSlot: null,
-    committeeIndex: null
+    validatorPubkey: publicKey
   };
 }

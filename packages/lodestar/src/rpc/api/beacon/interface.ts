@@ -40,7 +40,7 @@ export interface IBeaconApi extends IApi{
   /**
    * Return the current chain head
    */
-  getChainHead(): Promise<BeaconBlock>;
+  getChainHead(): Promise<BeaconBlock|null>;
 
   /**
    * Returns latest beacon state

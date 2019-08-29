@@ -14,13 +14,11 @@ import {INetwork} from "../network";
 import {OpPool} from "../opPool";
 import {ILogger} from "../logger";
 import {ISyncOptions} from "./options";
-import {ISyncRpc} from "./rpc/interface";
 
 interface IRegularSyncModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   chain: IBeaconChain;
-  rpc: ISyncRpc;
   network: INetwork;
   opPool: OpPool;
   logger: ILogger;

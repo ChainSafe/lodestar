@@ -2,8 +2,6 @@
  * @module chain/genesis
  */
 
-import BN from "bn.js";
-
 import {
   BeaconBlock,
   BeaconBlockBody,
@@ -11,8 +9,8 @@ import {
   BeaconState,
   Deposit,
   Eth1Data,
-  number64,
   Hash,
+  number64,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -25,7 +23,7 @@ import {
   ZERO_HASH,
 } from "../../constants";
 
-import {getTemporaryBlockHeader, getActiveValidatorIndices, getCompactCommitteesRoot} from "../stateTransition/util";
+import {getActiveValidatorIndices, getCompactCommitteesRoot, getTemporaryBlockHeader} from "../stateTransition/util";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {processDeposit} from "../stateTransition/block/operations";
 import {bnMin} from "../../util/math";
@@ -82,14 +80,14 @@ export function initializeBeaconStateFromEth1(
   return state;
 }
 
-export function isValidGenesisState(config: IBeaconConfig, state: BeaconState) {
+export function isValidGenesisState(config: IBeaconConfig, state: BeaconState): boolean {
   if(state.genesisTime < config.params.MIN_GENESIS_TIME) {
     return false;
   }
-  if(getActiveValidatorIndices(state, config.params.GENESIS_EPOCH).length < config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT) {
-    return false;
-  }
-  return true;
+  return getActiveValidatorIndices(state, config.params.GENESIS_EPOCH).length
+      >=
+      config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT;
+
 }
 
 /**
@@ -98,7 +96,7 @@ export function isValidGenesisState(config: IBeaconConfig, state: BeaconState) {
 export function getGenesisBeaconState(
   config: IBeaconConfig,
   genesisTime: number64,
-  genesisEth1Data: Eth1Data,
+  genesisEth1Data: Partial<Eth1Data>,
   latestBlockHeader: BeaconBlockHeader
 ): BeaconState {
 

@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/interface-name-prefix */
 /**
  * @module chain/forkChoice
  */
 
 import BN from "bn.js";
 
-import {Gwei, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {Gwei, Slot, ValidatorIndex, Hash} from "@chainsafe/eth2.0-types";
 
 
 /**
@@ -51,23 +52,12 @@ export class AttestationAggregator {
   /**
    * Rather than storing the slot on every attestation, a lookup function is required
    */
-  private slotLookup: (Root) => Slot | null;
+  private slotLookup: (Root: Hash|string) => Slot | null;
 
-  public constructor(slotLookup: (Root) => Slot | null) {
+  public constructor(slotLookup: (Root: Hash|string) => Slot | null) {
     this.latestAggregates = {};
     this.latestAttestations = {};
     this.slotLookup = slotLookup;
-  }
-
-  private ensureAggregate(target: Root): AggregatedAttestation {
-    if (!this.latestAggregates[target]) {
-      this.latestAggregates[target] = {
-        target,
-        weight: new BN(0),
-        prevWeight: new BN(0),
-      };
-    }
-    return this.latestAggregates[target];
   }
 
   /**
@@ -115,5 +105,16 @@ export class AttestationAggregator {
         delete this.latestAggregates[agg.target];
       }
     });
+  }
+
+  private ensureAggregate(target: Root): AggregatedAttestation {
+    if (!this.latestAggregates[target]) {
+      this.latestAggregates[target] = {
+        target,
+        weight: new BN(0),
+        prevWeight: new BN(0),
+      };
+    }
+    return this.latestAggregates[target];
   }
 }

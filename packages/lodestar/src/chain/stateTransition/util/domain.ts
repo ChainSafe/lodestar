@@ -2,12 +2,8 @@
  * @module chain/stateTransition/util
  */
 
-import {BLSDomain} from "@chainsafe/bls-js/lib/types";
-import {
-  Epoch,
-  Version,
-  BeaconState,
-} from "@chainsafe/eth2.0-types";
+import {BLSDomain} from "@chainsafe/bls/lib/types";
+import {BeaconState, Epoch, Version,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {DomainType} from "../../../constants";
@@ -22,7 +18,7 @@ export function computeDomain(domainType: DomainType, forkVersion: Version = Buf
   return bytesToBN(Buffer.concat([
     intToBytes(domainType, 4),
     forkVersion,
-  ])).toBuffer('be', 8);
+  ])).toBuffer("be", 8);
 }
 
 /**

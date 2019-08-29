@@ -27,14 +27,7 @@ import {assembleBlock} from "../../../chain/factory/block";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {assembleValidatorDuty} from "../../../chain/factory/duties";
 import {IEth1Notifier} from "../../../eth1";
-
-export interface IValidatorApiModules {
-  config: IBeaconConfig;
-  chain: IBeaconChain;
-  db: IBeaconDb;
-  opPool: OpPool;
-  eth1: IEth1Notifier;
-}
+import {IApiModules} from "../interface";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -45,7 +38,7 @@ export class ValidatorApi implements IValidatorApi {
   private opPool: OpPool;
   private eth1: IEth1Notifier;
 
-  public constructor(opts: {}, {config, chain, db, opPool, eth1}: IValidatorApiModules) {
+  public constructor(opts: {}, {config, chain, db, opPool, eth1}: IApiModules) {
     this.namespace = "validator";
     this.config = config;
     this.chain = chain;
@@ -54,7 +47,7 @@ export class ValidatorApi implements IValidatorApi {
     this.eth1 = eth1;
   }
 
-  public async produceBlock(slot: Slot, randaoReveal: bytes96): Promise<BeaconBlock> {
+  public async produceBlock(slot: Slot, randaoReveal: bytes96): Promise<BeaconBlock|null> {
     return await assembleBlock(this.config, this.db, this.opPool, this.eth1, slot, randaoReveal);
   }
 
@@ -93,7 +86,7 @@ export class ValidatorApi implements IValidatorApi {
       this.db.state.getLatest(),
       this.db.block.get(this.chain.forkChoice.head())
     ]);
-    return await assembleAttestation(this.config, this.db, headState, headBlock, shard, slot);
+    return await assembleAttestation(this.config, this.db, headState, headBlock as BeaconBlock, shard, slot);
   }
 
   public async publishBlock(block: BeaconBlock): Promise<void> {

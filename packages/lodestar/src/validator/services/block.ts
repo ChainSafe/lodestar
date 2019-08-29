@@ -53,6 +53,9 @@ export default class BlockProposingService {
         getDomain(this.config, {fork} as BeaconState, DomainType.RANDAO, computeEpochOfSlot(this.config, slot))
       ).toBytesCompressed()
     );
+    if(!block) {
+      return null;
+    }
     block.signature = this.privateKey.signMessage(
       signingRoot(block, this.config.types.BeaconBlock),
       // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
@@ -72,10 +75,9 @@ export default class BlockProposingService {
 
   private async hasProposedAlready(slot: Slot): Promise<boolean> {
     const lastProposedBlock = await this.db.getBlock(this.validatorIndex);
+    if(!lastProposedBlock) return  false;
     // get last proposed block from database and check if belongs in same epoch
-    return lastProposedBlock
-        &&
-        computeEpochOfSlot(this.config, lastProposedBlock.slot) === computeEpochOfSlot(this.config, slot);
+    return computeEpochOfSlot(this.config, lastProposedBlock.slot) === computeEpochOfSlot(this.config, slot);
   }
 
   private async storeBlock(block: BeaconBlock): Promise<void> {

@@ -7,6 +7,7 @@ import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "
 import {IBeaconApi} from "./interface";
 import {IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db";
+import {IApiModules} from "../interface";
 
 export class BeaconApi implements IBeaconApi {
 
@@ -16,7 +17,7 @@ export class BeaconApi implements IBeaconApi {
   private chain: IBeaconChain;
   private db: IBeaconDb;
 
-  public constructor(opts: {}, {config, chain, db}: {config: IBeaconConfig; chain: IBeaconChain; db: IBeaconDb}) {
+  public constructor(opts: {}, {config, chain, db}: IApiModules) {
     this.namespace = "beacon";
     this.config = config;
     this.db = db;
@@ -34,7 +35,11 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getGenesisTime(): Promise<number64> {
-    return await this.chain.latestState.genesisTime;
+    if(this.chain.latestState) {
+      return this.chain.latestState.genesisTime;
+    } else {
+      return 0;
+    }
   }
 
   public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
@@ -47,7 +52,7 @@ export class BeaconApi implements IBeaconApi {
     return await this.db.state.getLatest();
   }
 
-  public async getChainHead(): Promise<BeaconBlock> {
+  public async getChainHead(): Promise<BeaconBlock|null> {
     return await this.db.block.getChainHead();
   }
 

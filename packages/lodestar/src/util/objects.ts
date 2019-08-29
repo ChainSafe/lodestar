@@ -7,7 +7,7 @@ function isObjectObject(val: unknown): boolean {
   return val != null && typeof val === "object" && Array.isArray(val) === false;
 }
 
-export function isPlainObject(o: Object): boolean {
+export function isPlainObject(o: Record<string, unknown>): boolean {
 
   if (isObjectObject(o) === false) return false;
 

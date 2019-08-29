@@ -65,7 +65,11 @@ export function getRandaoMix(config: IBeaconConfig, state: BeaconState, epoch: E
  */
 export function getSeed(config: IBeaconConfig, state: BeaconState, epoch: Epoch): Hash {
   return hash(Buffer.concat([
-    getRandaoMix(config, state, epoch + config.params.EPOCHS_PER_HISTORICAL_VECTOR - config.params.MIN_SEED_LOOKAHEAD - 1),
+    getRandaoMix(
+      config,
+      state,
+      epoch + config.params.EPOCHS_PER_HISTORICAL_VECTOR - config.params.MIN_SEED_LOOKAHEAD - 1
+    ),
     state.activeIndexRoots[epoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR],
     intToBytes(epoch, 32),
   ]));

@@ -85,8 +85,9 @@ export class DepositCommand implements ICliCommand {
       wallets.map(async wallet => {
         try {
           const hash =
-            await (new Eth1Wallet(wallet.privateKey, defaults.depositContract.abi, config, logger, provider))
-              .createValidatorDeposit(options.contract, ethers.utils.parseEther(options.value));
+              // @ts-ignore
+              await (new Eth1Wallet(wallet.privateKey, defaults.depositContract.abi, config, logger, provider))
+                .createValidatorDeposit(options.contract, ethers.utils.parseEther(options.value));
           logger.info(
             `Successfully deposited ${options.value} ETH from ${wallet.address} 
             to deposit contract. Tx hash: ${hash}`

@@ -3,12 +3,12 @@ import {AttestationData, BeaconBlock, BeaconState, Shard} from "@chainsafe/eth2.
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, ZERO_HASH} from "../../../constants";
-import {BeaconDb} from "../../../db/api";
-import {getBlockRoot, getCurrentEpoch, computeStartSlotOfEpoch} from "../../stateTransition/util";
+import {IBeaconDb} from "../../../db/api";
+import {computeStartSlotOfEpoch, getBlockRoot, getCurrentEpoch} from "../../stateTransition/util";
 
 export async function assembleAttestationData(
   config: IBeaconConfig,
-  db: BeaconDb,
+  db: IBeaconDb,
   headState: BeaconState,
   headBlock: BeaconBlock,
   shard: Shard): Promise<AttestationData> {
@@ -19,7 +19,7 @@ export async function assembleAttestationData(
   if (epochStartSlot === headState.slot) {
     epochBoundaryBlock = headBlock;
   } else {
-    epochBoundaryBlock = await db.block.get(getBlockRoot(config, headState, epochStartSlot));
+    epochBoundaryBlock = (await db.block.get(getBlockRoot(config, headState, epochStartSlot))) as BeaconBlock;
   }
 
   return {

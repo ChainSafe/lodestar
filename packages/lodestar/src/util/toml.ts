@@ -17,7 +17,7 @@ export function generateTomlConfig(config: object, description: IConfigurationMo
         // @ts-ignore
         json[field.name] = content;
       }
-    } else if ((field as IConfigurationField<any>).configurable) {
+    } else if ((field as IConfigurationField<unknown>).configurable) {
       // @ts-ignore
       json[field.name] = config[field.name];
     }

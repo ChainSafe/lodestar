@@ -29,6 +29,7 @@ export function getBeaconProposerIndex(config: IBeaconConfig, state: BeaconState
   const firstCommittee = getCrosslinkCommittee(config, state, currentEpoch, shard);
   const seed = getSeed(config, state, currentEpoch);
   let i = 0;
+  /* eslint-disable-next-line no-constant-condition */
   while (true) {
     const candidateIndex = firstCommittee[(currentEpoch + i) % firstCommittee.length];
     const randByte = hash(Buffer.concat([

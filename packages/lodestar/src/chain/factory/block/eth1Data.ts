@@ -16,7 +16,7 @@ export async function bestVoteData(
 
   const [head, latestStateBlock] = await Promise.all([
     eth1.getHead(),
-    eth1.getBlock('0x' + state.eth1Data.blockHash.toString('hex'))
+    eth1.getBlock("0x" + state.eth1Data.blockHash.toString("hex"))
   ]);
   const validVotes = await filterValidVotes(config, state.eth1DataVotes, eth1, head, latestStateBlock);
 
@@ -28,7 +28,7 @@ export async function bestVoteData(
       eth1.depositRoot(blockHash)
     ]);
     return {
-      blockHash: Buffer.from(blockHash.slice(2), 'hex'),
+      blockHash: Buffer.from(blockHash.slice(2), "hex"),
       depositCount,
       depositRoot
     };
@@ -40,7 +40,7 @@ export async function bestVoteData(
       const blockNumbers = await Promise.all(
         frequentVotes.map(
           (vote) =>
-            eth1.getBlock('0x' + vote.blockHash.toString('hex')).then(b => b.number)
+            eth1.getBlock("0x" + vote.blockHash.toString("hex")).then(b => b.number)
         )
       );
       return frequentVotes[blockNumbers.indexOf(Math.max(...blockNumbers))];
@@ -57,14 +57,14 @@ export async function filterValidVotes(
   const potentialVotes = [];
   for(let i = 0; i < votes.length; i++) {
     const vote = votes[i];
-    const block = await eth1.getBlock(vote.blockHash.toString('hex'));
+    const block = await eth1.getBlock(vote.blockHash.toString("hex"));
     if(block
       && (head.number - block.number) >= config.params.ETH1_FOLLOW_DISTANCE
       && block.number > latestStateBlock.number
     ) {
       const [depositCount, depositRoot] = await Promise.all([
-        eth1.depositCount(vote.blockHash.toString('hex')),
-        eth1.depositRoot(vote.blockHash.toString('hex'))
+        eth1.depositCount(vote.blockHash.toString("hex")),
+        eth1.depositRoot(vote.blockHash.toString("hex"))
       ]);
       if(depositRoot.equals(vote.depositRoot) && depositCount === vote.depositCount) {
         potentialVotes.push(vote);

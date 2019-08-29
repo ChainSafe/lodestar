@@ -5,12 +5,12 @@
 import {deserialize, serialize} from "@chainsafe/ssz";
 import deepmerge from "deepmerge";
 import {Attestation, BeaconBlock, ValidatorIndex} from "@chainsafe/eth2.0-types";
-import {DatabaseApiOptions, DatabaseService} from "../abstract";
+import {IDatabaseApiOptions, DatabaseService} from "../abstract";
 import {IAttestationSearchOptions, IValidatorDB} from "./interface";
 import {Bucket, encodeKey} from "../../schema";
 
 export class ValidatorDB extends DatabaseService implements IValidatorDB {
-  public constructor(opts: DatabaseApiOptions) {
+  public constructor(opts: IDatabaseApiOptions) {
     super(opts);
   }
 

@@ -20,6 +20,7 @@ import {ILogger} from "../logger";
 import {ReputationStore} from "../sync/IReputation";
 import {JSONRPC, WSServer} from "../rpc";
 import {SyncRpc} from "../network/libp2p/syncRpc";
+import LibP2p from "libp2p";
 
 
 export interface IService {
@@ -72,7 +73,7 @@ export class BeaconNode {
     
     this.network = new Libp2pNetwork(this.conf.network, {
       config,
-      libp2p: libp2p,
+      libp2p: libp2p as unknown as LibP2p,
       logger: this.logger,
     });
     this.eth1 = new EthersEth1Notifier(this.conf.eth1, {
@@ -110,7 +111,7 @@ export class BeaconNode {
     this.rpc = new JSONRPC(this.conf.api, {
       transports: [new WSServer(this.conf.api.transports[0])],
       apis: this.conf.api.apis.map((Api) => {
-        return new Api({}, {config, chain: this.chain, db: this.db, eth1: this.eth1});
+        return new Api({}, {config, chain: this.chain, opPool: this.opPool, db: this.db, eth1: this.eth1});
       })
     });
 

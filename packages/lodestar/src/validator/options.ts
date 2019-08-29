@@ -45,7 +45,6 @@ export const ValidatorOptions: IConfigurationModule = {
       description: "Private key",
       configurable: true,
       process: (privateKey) => {
-        console.log(privateKey);
         const pk = PrivateKey.fromHexString(privateKey);
         return new Keypair(pk);
       },

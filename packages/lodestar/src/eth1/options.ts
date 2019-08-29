@@ -1,6 +1,7 @@
 import {number64} from "@chainsafe/eth2.0-types";
 import {BaseProvider} from "ethers/providers";
 import {IConfigurationModule} from "../util/config";
+import {Interface, ParamType} from "ethers/utils";
 
 export interface IEth1Options {
   provider: {
@@ -11,7 +12,7 @@ export interface IEth1Options {
   depositContract: {
     deployedAt: number64;
     address: string;
-    abi: any[];
+    abi: (string | ParamType)[] | string | Interface;
     bytecode: string;
   };
 }
@@ -83,6 +84,7 @@ const config: IEth1Options = {
     // eslint-disable-next-line max-len
     abi: [{
       "name": "DepositEvent",
+      // @ts-ignore
       "inputs": [{"type": "bytes", "name": "pubkey", "indexed": false}, {
         "type": "bytes",
         "name": "withdrawal_credentials",

@@ -14,7 +14,7 @@
  * 6. Repeat step 5
  */
 import BlockProposingService from "./services/block";
-import {Epoch, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {Epoch, Fork, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {GenesisInfo} from "./types";
 import {IRpcClient, RpcClientOverWs} from "./rpc";
@@ -179,11 +179,11 @@ class Validator {
       this.attestationService.createAndPublishAttestation(
         slot,
         validatorDuty.attestationShard,
-        currentVersion
+        currentVersion as Fork
       );
     }
     if (isProposer) {
-      this.blockService.createAndPublishBlock(slot, currentVersion);
+      this.blockService.createAndPublishBlock(slot, currentVersion as Fork);
     }
   }
 

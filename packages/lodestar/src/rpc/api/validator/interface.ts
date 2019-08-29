@@ -55,7 +55,7 @@ export interface IValidatorApi extends IApi {
    * @returns {Promise<BeaconBlock>} A proposed BeaconBlock object,
    * but with the signature field left blank.
    */
-  produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock>;
+  produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock|null>;
 
   /**
    * Requests that the BeaconNode produce an IndexedAttestation,

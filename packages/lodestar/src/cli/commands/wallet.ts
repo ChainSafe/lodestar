@@ -4,12 +4,12 @@
 
 import {ICliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import {WinstonLogger} from "../../logger";
+import {WinstonLogger,ILogger} from "../../logger";
 import fs from "fs";
 import {CliError} from "../error";
 import Keystore from "../../validator/keystore";
 import {promptPassword} from "../../util/io";
-import {ILogger} from "../../logger";
+
 
 interface IWalletCommandOptions {
   outputFile: string;

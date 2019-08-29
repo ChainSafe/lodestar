@@ -5,7 +5,7 @@
 import {EventEmitter} from "events";
 
 import {BeaconBlock} from "@chainsafe/eth2.0-types";
-import {BeaconDb, IBeaconDb} from "../db";
+import {IBeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
 import {
   AttestationOperations,

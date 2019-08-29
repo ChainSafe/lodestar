@@ -31,6 +31,8 @@ module.exports = {
     }
   },
   rules: {
+    //doesnt work, it reports false errors
+    "constructor-super": "off",
     "@typescript-eslint/class-name-casing": "error",
     "@typescript-eslint/explicit-function-return-type": ["error", {
       "allowExpressions": true

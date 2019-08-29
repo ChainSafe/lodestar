@@ -3,20 +3,23 @@
  */
 
 import * as http from "http";
+// @ts-ignore
 import promisify from "promisify-es6";
 import WebSocket from "ws";
 import {ILikeSocketServer} from "../protocol";
 import {ITransportOption} from "../options";
 
-export interface WSServerOpts {
+export interface IWSServerOpts {
   port: number;
 }
 
 export class WSServer implements ILikeSocketServer {
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  public on: any;
   private ws: WebSocket.Server;
   private httpServer: http.Server;
-  private opts: WSServerOpts;
-  public on: any;
+  private opts: IWSServerOpts;
+
   public constructor(opts: ITransportOption) {
     this.opts = opts;
     this.httpServer = http.createServer();

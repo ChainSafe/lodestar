@@ -5,7 +5,6 @@
 
 import {LevelUp} from "levelup";
 import {IDatabaseController, ISearchOptions} from "../interface";
-import {Attestation} from "@chainsafe/eth2.0-types";
 import {EventEmitter} from "events";
 // @ts-ignore
 import level from "level";

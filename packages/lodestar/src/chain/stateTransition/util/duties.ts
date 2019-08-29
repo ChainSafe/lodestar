@@ -35,6 +35,7 @@ export function getCommitteeAssignment(
   state: BeaconState,
   epoch: Epoch,
   validatorIndex: ValidatorIndex
+  // @ts-ignore
 ): CommitteeAssignment {
 
   const nextEpoch = getCurrentEpoch(config, state) + 1;
