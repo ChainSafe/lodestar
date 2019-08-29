@@ -1,0 +1,40 @@
+{
+  "name": "@chainsafe/ssz-cli",
+  "version": "0.1.0",
+  "description": "Simple Serialize CLI",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "bin": {
+    "ssz-serialize": "lib/serialize.js",
+    "ssz-deserialize": "lib/deserialize.js"
+  },
+  "scripts": {
+    "prebuild": "rm -rf lib && rm -rf dist",
+    "build": "babel src -x .ts -d lib --source-maps",
+    "build:docs": "typedoc --exclude src/index.ts --out docs src",
+    "check-types": "tsc --incremental --noEmit",
+    "lint": "eslint --ext .ts src/ test/",
+    "pretest": "yarn check-types",
+    "prepublishOnly": "yarn build",
+    "test": "echo 'No available tests'",
+  },
+  "homepage": "https://github.com/chainsafe/lodestar/packages/ssz-cli",
+  "keywords": [
+    "ethereum",
+    "serenity",
+    "simple serialize",
+    "ssz",
+    "cli"
+  ],
+  "author": "ChainSafe Systems",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@chainsafe/eth2.0-spec-test-util": "^0.4.1",
+    "@chainsafe/eth2.0-ssz-types": "^0.1.0",
+    "@chainsafe/ssz": "^0.5.1",
+    "yargs": "^14.0.0"
+  }
+}
