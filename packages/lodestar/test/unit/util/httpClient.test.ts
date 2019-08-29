@@ -6,7 +6,7 @@ import { HttpClient, HttpClientOptions } from "../../../src/util/httpClient";
 import { ILogger, WinstonLogger, LogLevel } from "../../../src/logger";
 
 interface User {
-  id: number;
+  id?: number;
   name: string;
 }
 
@@ -30,7 +30,7 @@ describe("httpClient test", () => {
 
   it("should handle successful POST request correctly", async () => {
     mock.onPost("/users", {name: "New comer"}).reply(200, "The user 'New comer' was saved successfully");
-    let result = await httpClient.post("/users", {name: "New comer"});
+    let result: string = await httpClient.post<User, string>("/users", {name: "New comer"});
     assert.equal(result, "The user 'New comer' was saved successfully");
   });
 
