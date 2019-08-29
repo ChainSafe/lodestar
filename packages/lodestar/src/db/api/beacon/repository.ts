@@ -29,7 +29,9 @@ export abstract class Repository<T> {
 
   public async get(id: Id): Promise<T | null> {
     try {
-      return deserialize(await this.db.get(encodeKey(this.bucket, id)), this.type);
+      const value = await this.db.get(encodeKey(this.bucket, id));
+      if(!value) return null;
+      return deserialize(value, this.type);
     } catch (e) {
       return null;
     }

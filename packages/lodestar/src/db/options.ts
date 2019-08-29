@@ -13,8 +13,8 @@ export const DatabaseOptions: IConfigurationModule = {
       configurable: true,
       type: String,
       cli: {
-        flag: 'db',
-        short: 'd'
+        flag: "db",
+        short: "d"
       }
     }
   ]

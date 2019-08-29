@@ -1,4 +1,4 @@
-import {BeaconBlock, bytes32, Hash, Slot} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, Hash, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {serialize} from "@chainsafe/ssz";
 
@@ -35,7 +35,7 @@ export class BlockRepository extends Repository<BeaconBlock> {
     return await this.get(root);
   }
 
-  public async getChainHead(): Promise<BeaconBlock> {
+  public async getChainHead(): Promise<BeaconBlock|null> {
     const root = await this.chain.getChainHeadRoot();
     if (root === null) {
       return null;

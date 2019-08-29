@@ -4,7 +4,7 @@
 
 import {Attestation, BeaconBlock, Epoch, ValidatorIndex} from "@chainsafe/eth2.0-types";
 
-export interface AttestationSearchOptions {
+export interface IAttestationSearchOptions {
   gt?: Epoch;
   lt?: Epoch;
 }
@@ -15,7 +15,7 @@ export interface IValidatorDB {
    * Obtains last proposed beacon block
    * by validator with given index
    */
-  getBlock(index: ValidatorIndex): Promise<BeaconBlock>;
+  getBlock(index: ValidatorIndex): Promise<BeaconBlock|null>;
 
   /**
    * Stores beacon block proposed by validator with given index
@@ -27,7 +27,7 @@ export interface IValidatorDB {
    * @param index index of validator in registry
    * @param options object contains lower and higher target epoch to search
    */
-  getAttestations(index: ValidatorIndex, options?: AttestationSearchOptions): Promise<Attestation[]>;
+  getAttestations(index: ValidatorIndex, options?: IAttestationSearchOptions): Promise<Attestation[]>;
 
   /**
    * Stores attestation proposed by validator with given index

@@ -2,12 +2,11 @@
  * @module db/api/validator
  */
 
-import {deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
+import {deserialize, serialize} from "@chainsafe/ssz";
 import deepmerge from "deepmerge";
 import {Attestation, BeaconBlock, ValidatorIndex} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {DatabaseService, DatabaseApiOptions} from "../abstract";
-import {AttestationSearchOptions, IValidatorDB} from "./interface";
+import {DatabaseApiOptions, DatabaseService} from "../abstract";
+import {IAttestationSearchOptions, IValidatorDB} from "./interface";
 import {Bucket, encodeKey} from "../../schema";
 
 export class ValidatorDB extends DatabaseService implements IValidatorDB {
@@ -15,10 +14,13 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
     super(opts);
   }
 
-  public async getBlock(index: ValidatorIndex): Promise<BeaconBlock> {
+  public async getBlock(index: ValidatorIndex): Promise<BeaconBlock|null> {
     const data = await this.db.get(
       encodeKey(Bucket.lastProposedBlock, index)
     );
+    if(!data) {
+      return null;
+    }
     return deserialize(data, this.config.types.BeaconBlock);
   }
 
@@ -31,7 +33,7 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
 
   public async getAttestations(
     index: ValidatorIndex,
-    options: AttestationSearchOptions): Promise<Attestation[]> {
+    options: IAttestationSearchOptions): Promise<Attestation[]> {
     options = deepmerge({gt: 0, lt: Number.MAX_SAFE_INTEGER}, options);
     const data = await this.db.search({
       gt: encodeKey(Bucket.proposedAttestations, "" + index + options.gt),
@@ -48,7 +50,7 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
   }
 
   public async deleteAttestations(index: ValidatorIndex, attestations: Attestation[]): Promise<void> {
-    const criteria: any[] = [];
+    const criteria: (Buffer|string)[] = [];
     attestations.forEach((attestation) =>
       criteria.push(encodeKey(Bucket.proposedAttestations, "" + index + attestation.data.target.epoch))
     );

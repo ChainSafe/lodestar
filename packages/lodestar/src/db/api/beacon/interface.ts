@@ -5,16 +5,16 @@
 import {BeaconBlock, BeaconState, BLSPubkey, bytes32, ValidatorIndex,} from "@chainsafe/eth2.0-types";
 
 import {
-    AttestationRepository,
-    AttesterSlashingRepository,
-    BlockRepository,
-    ChainRepository,
-    DepositRepository,
-    MerkleTreeRepository,
-    ProposerSlashingRepository,
-    StateRepository,
-    TransfersRepository,
-    VoluntaryExitRepository
+  AttestationRepository,
+  AttesterSlashingRepository,
+  BlockRepository,
+  ChainRepository,
+  DepositRepository,
+  MerkleTreeRepository,
+  ProposerSlashingRepository,
+  StateRepository,
+  TransfersRepository,
+  VoluntaryExitRepository
 } from "./repositories";
 
 /**
