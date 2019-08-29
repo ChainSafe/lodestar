@@ -16,7 +16,7 @@ describe("httpClient test", () => {
   beforeEach(() => {
     mock = new MockAdapter(Axios);
     const logger: ILogger = new WinstonLogger({level: LogLevel.debug.toString()});
-    httpClient = new HttpClient({}, logger);
+    httpClient = new HttpClient({}, {logger});
   });
 
   it("should handle successful GET request correctly", async () => {
@@ -38,7 +38,7 @@ describe("httpClient test", () => {
     try {
       await httpClient.get<User>("/wrong_url");
     } catch(e) {
-      assert.equal(e.status, 404);
+      assert.equal(e.message, "404");
     }
   });
 
@@ -49,8 +49,7 @@ describe("httpClient test", () => {
     try {
       await httpClient.get<User>("/users/!");
     } catch(e) {
-      assert.equal(e.status, 500);
-      assert.equal(e.message, "internal server error");
+      assert.equal(e.message, "500");
     }
   });
 })
