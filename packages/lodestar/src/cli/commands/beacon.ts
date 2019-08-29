@@ -2,7 +2,7 @@
  * @module cli/commands
  */
 
-import {CliCommand} from "./interface";
+import {ICliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
 
@@ -17,13 +17,15 @@ import {RpcClientOverInstance} from "../../validator/rpc";
 import {BeaconApi, ValidatorApi} from "../../rpc";
 
 interface IBeaconCommandOptions {
-  configFile?: string;
-  loggingLevel?: string;
+  configFile: string;
+  loggingLevel: string;
   [key: string]: string;
 }
 
-export class BeaconNodeCommand implements CliCommand {
+export class BeaconNodeCommand implements ICliCommand {
+  // @ts-ignore
   public node: BeaconNode;
+  // @ts-ignore
   public validator: Validator;
 
   public register(commander: CommanderStatic): void {
@@ -42,7 +44,7 @@ export class BeaconNodeCommand implements CliCommand {
         try {
           await this.action(options, logger);
         } catch (e) {
-          logger.error(e.message + '\n' + e.stack);
+          logger.error(e.message + "\n" + e.stack);
         }
       });
     generateCommanderOptions(command, BeaconNodeOptions);
@@ -52,14 +54,15 @@ export class BeaconNodeCommand implements CliCommand {
     let conf: Partial<IBeaconNodeOptions> = {};
 
     if (options.loggingLevel) {
+      // @ts-ignore
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }
 
     //merge config file
     if (options.configFile) {
-      let parsedConfig = getTomlConfig(options.configFile, BeaconNodeOptions);
+      const parsedConfig = getTomlConfig(options.configFile, BeaconNodeOptions);
       //cli will override toml config options
-      conf = deepmerge(conf, parsedConfig);
+      conf = deepmerge(conf, parsedConfig) as Partial<IBeaconNodeOptions>;
     }
 
     //override current config with cli config

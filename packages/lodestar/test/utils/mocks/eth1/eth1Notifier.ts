@@ -2,11 +2,11 @@ import {EventEmitter} from "events";
 
 import {bytes32, Deposit, number64} from "@chainsafe/eth2.0-types";
 
-import {IEth1Notifier, EthersEth1Options} from "../../../../src/eth1";
+import {IEth1Notifier, IEthersEth1Options} from "../../../../src/eth1";
 import {Block} from "ethers/providers";
 
 export class MockEth1Notifier extends EventEmitter implements IEth1Notifier {
-  public constructor(opts: EthersEth1Options) {
+  public constructor(opts: IEthersEth1Options) {
     super();
   }
 

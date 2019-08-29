@@ -20,11 +20,15 @@ export class BlockRepository extends Repository<BeaconBlock> {
   }
 
   public async getFinalizedBlock(): Promise<BeaconBlock | null> {
-    return await this.get(await this.chain.getFinalizedBlockRoot());
+    const root = await this.chain.getFinalizedBlockRoot();
+    if(!root) return null;
+    return await this.get(root);
   }
 
   public async getJustifiedBlock(): Promise<BeaconBlock | null> {
-    return await this.get(await this.chain.getJustifiedBlockRoot());
+    const root = await this.chain.getJustifiedBlockRoot();
+    if(!root) return null;
+    return await this.get(root);
   }
 
   public async getBlockBySlot(slot: Slot): Promise<BeaconBlock | null> {

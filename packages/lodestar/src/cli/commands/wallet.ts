@@ -2,21 +2,21 @@
  * @module cli/commands
  */
 
-import {CliCommand} from "./interface";
+import {ICliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import  {WinstonLogger} from "../../logger";
+import {WinstonLogger} from "../../logger";
 import fs from "fs";
 import {CliError} from "../error";
 import Keystore from "../../validator/keystore";
 import {promptPassword} from "../../util/io";
-import {ILogger} from "../../logger/interface";
+import {ILogger} from "../../logger";
 
 interface IWalletCommandOptions {
   outputFile: string;
 }
 
 
-export class CreateWalletCommand implements CliCommand {
+export class CreateWalletCommand implements ICliCommand {
   public register(commander: CommanderStatic): void {
 
     const logger: ILogger = new WinstonLogger();

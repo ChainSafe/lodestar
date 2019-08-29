@@ -4,18 +4,18 @@
 import {CommanderStatic} from "commander";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {CliCommand} from "./interface";
+import {ICliCommand} from "./interface";
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import Validator from "../../validator";
 import {generateCommanderOptions, optionsToConfig} from "../util";
 import {ValidatorOptions} from "../../validator/options";
 
 interface IValidatorCommandOptions {
-  loggingLevel?: string;
+  loggingLevel: string;
   [key: string]: string;
 }
 
-export class ValidatorCommand implements CliCommand {
+export class ValidatorCommand implements ICliCommand {
 
   public register(commander: CommanderStatic): void {
     const logger: ILogger = new WinstonLogger();
@@ -30,7 +30,7 @@ export class ValidatorCommand implements CliCommand {
         try {
           await this.action(options, logger);
         } catch (e) {
-          logger.error(e.message + '\n' + e.stack);
+          logger.error(e.message + "\n" + e.stack);
         }
       });
     generateCommanderOptions(command, ValidatorOptions);
@@ -38,12 +38,13 @@ export class ValidatorCommand implements CliCommand {
 
   public async action(options: IValidatorCommandOptions, logger: ILogger): Promise<void> {
     if (options.loggingLevel) {
+      // @ts-ignore
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }
 
     const conf = optionsToConfig(options, ValidatorOptions);
 
-    let validator = new Validator(conf, {config, logger});
+    const validator = new Validator(conf, {config, logger});
     await validator.start();
   }
 

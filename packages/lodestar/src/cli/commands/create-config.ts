@@ -2,20 +2,19 @@
  * @module cli/commands
  */
 
-import {CliCommand} from "./interface";
+import {ICliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import  {LogLevel, WinstonLogger} from "../../logger";
+import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import fs from "fs";
 import {CliError} from "../error";
 import {writeTomlConfig} from "../../util/file";
-import {ILogger} from "../../logger";
 
 interface ICreateConfigOptions {
   loggingLevel: string;
   outputFile: string;
 }
 
-export class CreateConfigCommand implements CliCommand {
+export class CreateConfigCommand implements ICliCommand {
   public register(commander: CommanderStatic): void {
 
     const logger: ILogger = new WinstonLogger();
@@ -32,13 +31,14 @@ export class CreateConfigCommand implements CliCommand {
         try {
           await this.action(options, logger);
         } catch (e) {
-          logger.error(e.message + '\n' + e.stack);
+          logger.error(e.message + "\n" + e.stack);
         }
       });
   }
 
   public async action(options: ICreateConfigOptions, logger: ILogger): Promise<void> {
     if (options.loggingLevel) {
+      // @ts-ignore
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }
     if (fs.existsSync(options.outputFile)) {

@@ -4,12 +4,12 @@
 
 import {CommanderStatic} from "commander";
 import {JsonRpcProvider} from "ethers/providers";
+import * as ethers from "ethers/ethers";
 import {Wallet} from "ethers/ethers";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {CliCommand} from "./interface";
+import {ICliCommand} from "./interface";
 import defaults from "../../eth1/options";
-import * as ethers from "ethers/ethers";
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
@@ -24,26 +24,26 @@ interface IDepositCommandOptions {
   accounts: number;
 }
 
-export class DepositCommand implements CliCommand {
+export class DepositCommand implements ICliCommand {
 
   public register(commander: CommanderStatic): void {
 
     const logger: ILogger = new WinstonLogger();
 
     commander
-      .command('deposit')
-      .description('Start private network with deposit contract and 10 accounts with balance')
-      .option("-k, --privateKey [privateKey]", 'Private key of account that will make deposit')
+      .command("deposit")
+      .description("Start private network with deposit contract and 10 accounts with balance")
+      .option("-k, --privateKey [privateKey]", "Private key of account that will make deposit")
       .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
       .option(
         "-m, --mnemonic [mnemonic]",
-        'If mnemonic is submitted, first 10 accounts will make deposit'
+        "If mnemonic is submitted, first 10 accounts will make deposit"
       )
-      .option("-n, --node [node]", 'Url of eth1 node', 'http://127.0.0.1:8545')
-      .option("-v, --value [value]", 'Amount of ether to deposit', "32")
+      .option("-n, --node [node]", "Url of eth1 node", "http://127.0.0.1:8545")
+      .option("-v, --value [value]", "Amount of ether to deposit", "32")
       .option(
         "-c, --contract [contract]",
-        'Address of deposit contract',
+        "Address of deposit contract",
         defaults.depositContract.address
       )
       .option("-a, --accounts [accounts]","Number of accounts to generate at startup", 10)
@@ -53,7 +53,7 @@ export class DepositCommand implements CliCommand {
         try {
           await this.action(options, logger);
         } catch (e) {
-          logger.error(e.message + '\n' + e.stack);
+          logger.error(e.message + "\n" + e.stack);
         }
 
       });
@@ -61,6 +61,7 @@ export class DepositCommand implements CliCommand {
 
   public async action(options: IDepositCommandOptions, logger: ILogger): Promise<void> {
     if (options.loggingLevel) {
+      // @ts-ignore
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }
     const provider = new JsonRpcProvider(options.node);
@@ -77,7 +78,7 @@ export class DepositCommand implements CliCommand {
     } else if (options.privateKey) {
       wallets.push(new Wallet(options.privateKey, provider));
     } else {
-      throw new CliError('You have to submit either privateKey or mnemonic. Check --help');
+      throw new CliError("You have to submit either privateKey or mnemonic. Check --help");
     }
 
     await Promise.all(
