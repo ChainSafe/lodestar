@@ -2,7 +2,7 @@
  * @module logger
  */
 
-import {createLogger, Logger, transports, format} from 'winston';
+import {createLogger, format, Logger, transports} from "winston";
 import {AbstractLogger, LogLevel} from "./abstract";
 
 export class WinstonLogger extends AbstractLogger {
@@ -18,7 +18,7 @@ export class WinstonLogger extends AbstractLogger {
           format: format.combine(
             format.colorize(),
             format.timestamp({
-              format: 'YYYY-MM-DD HH:mm:ss'
+              format: "YYYY-MM-DD HH:mm:ss"
             }),
             format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`)
           ),
@@ -46,14 +46,6 @@ export class WinstonLogger extends AbstractLogger {
     this.createLogEntry(LogLevel.WARN, message, context);
   }
 
-  private createLogEntry(level: LogLevel, message: string | object, context: object = {}): void {
-    if (typeof message === 'object') {
-      this.winston.log(level, JSON.stringify(message));
-    } else {
-      this.winston.log(level, message, context);
-    }
-  }
-
   public setLogLevel(level: LogLevel): void {
     this.winston.level = level;
   }
@@ -62,4 +54,11 @@ export class WinstonLogger extends AbstractLogger {
     this.winston.silent = silent;
   }
 
+  private createLogEntry(level: LogLevel, message: string | object, context: object = {}): void {
+    if (typeof message === "object") {
+      this.winston.log(level, JSON.stringify(message));
+    } else {
+      this.winston.log(level, message, context);
+    }
+  }
 }
