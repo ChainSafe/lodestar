@@ -3,7 +3,7 @@ import {assert} from "chai";
 import Axios from "axios";
 import MockAdapter from "axios-mock-adapter";
 import { HttpClient, HttpClientOptions } from "../../../src/util/httpClient";
-import { ILogger, WinstonLogger } from "../../../src/logger";
+import { ILogger, WinstonLogger, LogLevel } from "../../../src/logger";
 
 interface User {
   id: number;
@@ -15,9 +15,8 @@ describe("httpClient test", () => {
   let httpClient: HttpClient
   beforeEach(() => {
     mock = new MockAdapter(Axios);
-    const opt: HttpClientOptions = {};
-    const logger: ILogger = new WinstonLogger();
-    httpClient = new HttpClient(opt, logger);
+    const logger: ILogger = new WinstonLogger({level: LogLevel.debug.toString()});
+    httpClient = new HttpClient({}, logger);
   });
 
   it("should handle successful GET request correctly", async () => {
@@ -30,9 +29,9 @@ describe("httpClient test", () => {
   });
 
   it("should handle successful POST request correctly", async () => {
-    mock.onPost("/users").reply(200, "The user was saved successfully");
+    mock.onPost("/users", {name: "New comer"}).reply(200, "The user 'New comer' was saved successfully");
     let result = await httpClient.post("/users", {name: "New comer"});
-    assert.equal(result, "The user was saved successfully");
+    assert.equal(result, "The user 'New comer' was saved successfully");
   });
 
   it("should handle http status code 404 correctly", async () => {
