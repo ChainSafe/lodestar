@@ -2,7 +2,8 @@ import {assert} from "chai";
 
 import Axios from "axios";
 import MockAdapter from "axios-mock-adapter";
-import { HttpClient } from "../../../src/util/httpClient";
+import { HttpClient, HttpClientOptions } from "../../../src/util/httpClient";
+import { ILogger, WinstonLogger } from "../../../src/logger";
 
 interface User {
   id: number;
@@ -14,7 +15,9 @@ describe("httpClient test", () => {
   let httpClient: HttpClient
   beforeEach(() => {
     mock = new MockAdapter(Axios);
-    httpClient = new HttpClient("");
+    const opt: HttpClientOptions = {};
+    const logger: ILogger = new WinstonLogger();
+    httpClient = new HttpClient(opt, logger);
   });
 
   it("should handle successful GET request correctly", async () => {
