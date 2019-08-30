@@ -8,7 +8,7 @@ import {bytes32, Deposit, number64} from "@chainsafe/eth2.0-types";
 import {Block} from "ethers/providers";
 import StrictEventEmitter from "strict-event-emitter-types";
 
-interface IEth1Events {
+export interface IEth1Events {
   block: (block: Block) => void;
   deposit: (index: number64, deposit: Deposit) => void;
 }

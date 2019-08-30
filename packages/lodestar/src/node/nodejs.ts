@@ -29,6 +29,7 @@ export interface Service {
 interface BeaconNodeModules {
   config: IBeaconConfig;
   logger: ILogger;
+  eth1?: IEth1Notifier;
 }
 
 // TODO move into src/node/beacon
@@ -50,7 +51,7 @@ export class BeaconNode {
   public reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger}: BeaconNodeModules) {
+  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, eth1}: BeaconNodeModules) {
     this.conf = deepmerge(
       defaultConf,
       opts,
@@ -82,7 +83,7 @@ export class BeaconNode {
       logger: logger.child(this.conf.logger.network),
       metrics: this.metrics,
     });
-    this.eth1 = new EthersEth1Notifier(this.conf.eth1, {
+    this.eth1 = eth1 || new EthersEth1Notifier(this.conf.eth1, {
       config,
       logger: logger.child(this.conf.logger.eth1),
     });

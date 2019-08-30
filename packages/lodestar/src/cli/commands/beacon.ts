@@ -18,6 +18,7 @@ import {RpcClientOverInstance} from "../../validator/rpc";
 import {BeaconApi, ValidatorApi} from "../../rpc";
 import {quickStartOptionToState} from "../../interop/cli";
 import {ProgressiveMerkleTree} from "../../util/merkleTree";
+import {InteropEth1Notifier} from "../../eth1/impl/interop";
 
 interface IBeaconCommandOptions {
   configFile?: string;
@@ -66,11 +67,14 @@ export class BeaconNodeCommand implements CliCommand {
 
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
 
-    this.node = new BeaconNode(conf, {config, logger});
+
 
     if (options.quickStart) {
+      this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier({})});
       const state = quickStartOptionToState(config, options.quickStart);
-      this.node.chain.initializeBeaconChain(state, ProgressiveMerkleTree.empty(32));
+      await this.node.chain.initializeBeaconChain(state, ProgressiveMerkleTree.empty(32));
+    } else {
+      this.node = new BeaconNode(conf, {config, logger});
     }
 
 
