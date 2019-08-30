@@ -13,10 +13,12 @@ export function quickStartState(
   validatorCount: number,
 ): BeaconState {
   const deposits = interopDeposits(config, validatorCount);
-  return initializeBeaconStateFromEth1(
+  const state = initializeBeaconStateFromEth1(
     config,
     INTEROP_BLOCK_HASH,
     INTEROP_TIMESTAMP,
-    deposits
+    deposits,
   );
+  state.genesisTime = genesisTime;
+  return state;
 }

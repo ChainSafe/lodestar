@@ -16,7 +16,7 @@ export function interopKeypairs(validatorCount: number): IKeypair[] {
   return Array.from({length: validatorCount}, (_, i) => {
     const privkey = bytesToBN(hash(intToBytes(i, 32)))
       .mod(CURVE_ORDER)
-      .toArrayLike(Buffer, 'be');
+      .toArrayLike(Buffer, 'be', 32);
     const pubkey = generatePublicKey(privkey);
     return {
       privkey,
