@@ -11,13 +11,14 @@ import PeerInfo from "peer-info";
 import {Attestation, BeaconBlock, Shard, RequestBody, ResponseBody} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {ATTESTATION_TOPIC, BLOCK_TOPIC, Method, RequestId, SHARD_SUBNET_COUNT,} from "../../constants";
-import {shardAttestationTopic, shardSubnetAttestationTopic} from "../util";
+import {ATTESTATION_TOPIC, BLOCK_TOPIC, Method, RequestId, SHARD_SUBNET_COUNT,} from "../constants";
+import {ILogger} from "../logger";
+import {IBeaconMetrics} from "../metrics";
+
+import {shardAttestationTopic, shardSubnetAttestationTopic} from "./util";
 import {NetworkRpc} from "./rpc";
-import {ILogger} from "../../logger";
-import {IBeaconMetrics} from "../../metrics";
-import {INetworkOptions} from "../options";
-import {INetwork, NetworkEventEmitter} from "../interface";
+import {INetworkOptions} from "./options";
+import {INetwork, NetworkEventEmitter} from "./interface";
 
 interface Libp2pModules {
   config: IBeaconConfig;
@@ -50,7 +51,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
         this.peerInfo = libp2p.peerInfo;
         this.libp2p = libp2p;
         this.pubsub = new Gossipsub(libp2p);
-        this.rpc = new NetworkRpc(opts, {config, libp2p, logger: this.logger});
+        this.rpc = new NetworkRpc(opts, {config, libp2p, logger: this.logger}); 
         resolve();
       });
     });
@@ -116,10 +117,10 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
 
   // rpc
   public getPeers(): PeerInfo[] {
-    return this.rpc.getPeers();
+    return this.libp2p.peerBook.getAllArray();
   }
   public hasPeer(peerInfo: PeerInfo): boolean {
-    return this.rpc.hasPeer(peerInfo);
+    return this.libp2p.peerBook.has(peerInfo);
   }
   public async connect(peerInfo: PeerInfo): Promise<void> {
     await promisify(this.libp2p.dial.bind(this.libp2p))(peerInfo);
@@ -127,11 +128,11 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   public async disconnect(peerInfo: PeerInfo): Promise<void> {
     await promisify(this.libp2p.hangUp.bind(this.libp2p))(peerInfo);
   }
-  public async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T> {
-    return await this.rpc.sendRequest<T>(peerInfo, method, body);
+  public async sendRequest(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<ResponseBody> {
+    return await this.rpc.sendRequest(peerInfo, method, body);
   }
-  public sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void {
-    this.rpc.sendResponse(id, responseCode, result);
+  public sendResponse(id: RequestId, err: Error, result: ResponseBody): void {
+    this.rpc.sendResponse(id, err, result);
   }
   private emitRequest = (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody): void => {
     this.emit("request", peerInfo, method, id, body);
@@ -159,8 +160,8 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     }
     this.pubsub.on("gossipsub:heartbeat", this.emitGossipHeartbeat);
     this.rpc.on("request", this.emitRequest);
-    this.rpc.on("peer:connect", this.emitPeerConnect);
-    this.rpc.on("peer:disconnect", this.emitPeerDisconnect);
+    this.libp2p.on("peer:connect", this.emitPeerConnect);
+    this.libp2p.on("peer:disconnect", this.emitPeerDisconnect);
   }
   public async stop(): Promise<void> {
     await this.inited;
@@ -175,7 +176,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     }
     this.pubsub.removeListener("gossipsub:heartbeat", this.emitGossipHeartbeat);
     this.rpc.removeListener("request", this.emitRequest);
-    this.rpc.removeListener("peer:connect", this.emitPeerConnect);
-    this.rpc.removeListener("peer:disconnect", this.emitPeerDisconnect);
+    this.libp2p.removeListener("peer:connect", this.emitPeerConnect);
+    this.libp2p.removeListener("peer:disconnect", this.emitPeerDisconnect);
   }
 }

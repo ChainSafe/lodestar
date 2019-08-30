@@ -12,7 +12,7 @@ import StrictEventEmitter from "strict-event-emitter-types";
 
 export type NetworkEventEmitter = StrictEventEmitter<EventEmitter, INetworkEvents>;
 
-interface INetworkEvents {
+export interface INetworkEvents {
   [BLOCK_TOPIC]: (block: BeaconBlock) => void;
   [ATTESTATION_TOPIC]: (attestation: Attestation) => void;
   ["gossipsub:heartbeat"]: void;
@@ -20,7 +20,7 @@ interface INetworkEvents {
   ["peer:connect"]: (peerInfo: PeerInfo) => void;
   ["peer:disconnect"]: (peerInfo: PeerInfo) => void;
   // shard attestation topic is generated string so we cannot typehint it
-  //[{shard}]: (attestation: Attestation) => void;
+  //[shard{shardNumber % SHARD_SUBNET_COUNT}_beacon_attestation]: (attestation: Attestation) => void;
 }
 
 export interface INetwork extends NetworkEventEmitter {
@@ -38,11 +38,12 @@ export interface INetwork extends NetworkEventEmitter {
   unsubscribeToBlocks(): void;
   unsubscribeToAttestations(): void;
   unsubscribeToShardAttestations(shard: Shard): void;
-  // Rpc/peer
+  // rpc
+  sendRequest(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<ResponseBody>;
+  sendResponse(id: RequestId, err: Error, result: ResponseBody): void;
+  // peer
   getPeers(): PeerInfo[];
   hasPeer(peerInfo: PeerInfo): boolean;
-  sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T>;
-  sendResponse(id: RequestId, responseCode: number, result: ResponseBody): void;
   connect(peerInfo: PeerInfo): Promise<void>;
   disconnect(peerInfo: PeerInfo): void;
 }
