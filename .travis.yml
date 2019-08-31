@@ -40,7 +40,8 @@ jobs:
         directories:
           - node_modules
           - packages/lodestar/node_modules
-          - .git/modules/spect-test-cases/lfs
+          - .git/modules/spec-test-cases/lfs
+          - .git/modules/test/spec-tests/lfs
     -
       name: spec-full
       if: branch = master AND type != pull_request
@@ -51,7 +52,8 @@ jobs:
         directories:
           - node_modules
           - packages/lodestar/node_modules
-          - .git/modules/spect-test-cases/lfs
+          - .git/modules/spec-test-cases/lfs
+          - .git/modules/test/spec-tests/lfs
 
 before_deploy:
     - lerna run build:docs
