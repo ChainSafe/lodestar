@@ -60,15 +60,13 @@ export class ValidatorApi implements IValidatorApi {
     return getValidatorDuties(this.config, this.db, validatorPublicKeys, epoch);
   }
 
-  public async getCommitteeAssignment(
-    index: ValidatorIndex,
-    epoch: Epoch): Promise<CommitteeAssignment> {
-    const state: BeaconState = await this.db.state.getLatest();
-    return getCommitteeAssignment(this.config, state, epoch, index);
-  }
-
-  public async produceAttestation(slot: Slot, shard: Shard): Promise<IndexedAttestation> {
-    return produceAttestation(this.config, this.db, this.chain, shard, slot);
+  public async produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, slot: Slot, shard: Shard): Promise<IndexedAttestation> {
+    return produceAttestation(
+      {config: this.config, chain: this.chain, db: this.db},
+      validatorPubKey,
+      shard,
+      slot
+    );
   }
 
   public async publishBlock(block: BeaconBlock): Promise<void> {
@@ -79,7 +77,4 @@ export class ValidatorApi implements IValidatorApi {
     await this.opPool.attestations.receive(attestation);
   }
 
-  public async getIndex(validatorPublicKey: BLSPubkey): Promise<ValidatorIndex> {
-    return await this.db.getValidatorIndex(validatorPublicKey);
-  }
 }
