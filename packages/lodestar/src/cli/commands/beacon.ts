@@ -70,7 +70,7 @@ export class BeaconNodeCommand implements CliCommand {
 
 
     if (options.quickStart) {
-      this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier({})});
+      this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier()});
       const state = quickStartOptionToState(config, options.quickStart);
       await this.node.chain.initializeBeaconChain(state, ProgressiveMerkleTree.empty(32));
     } else {
