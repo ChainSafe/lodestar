@@ -1,8 +1,8 @@
 import {IFastifyServer} from "../../index";
-import * as fastify from "fastify";
 import {IApiModules} from "../../../interface";
+import fastify from "fastify";
 
-export const registerSyncingeEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
+export const registerSyncingEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
   fastify.get<fastify.DefaultQuery, {}, unknown>('/syncing', {}, async (request, reply) => {
     reply
       .code(200)
