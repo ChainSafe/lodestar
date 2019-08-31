@@ -14,6 +14,8 @@ export const FAR_FUTURE_EPOCH = Infinity;
 export const ZERO_HASH = Buffer.alloc(32, 0);
 export const EMPTY_SIGNATURE = Buffer.alloc(96, 0);
 
+export const SECONDS_PER_DAY = 86400;
+
 // Signature domains
 export enum DomainType {
   BEACON_PROPOSER = 0,

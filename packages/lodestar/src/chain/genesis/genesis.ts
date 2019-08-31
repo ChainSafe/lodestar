@@ -2,8 +2,6 @@
  * @module chain/genesis
  */
 
-import BN from "bn.js";
-
 import {
   BeaconBlock,
   BeaconBlockBody,
@@ -11,25 +9,25 @@ import {
   BeaconState,
   Deposit,
   Eth1Data,
-  number64,
   Hash,
+  number64,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {
+  DEPOSIT_CONTRACT_TREE_DEPTH,
   EMPTY_SIGNATURE,
   FAR_FUTURE_EPOCH,
   GENESIS_EPOCH,
   GENESIS_SLOT,
-  GENESIS_START_SHARD,
+  GENESIS_START_SHARD, SECONDS_PER_DAY,
   ZERO_HASH,
-  DEPOSIT_CONTRACT_TREE_DEPTH,
 } from "../../constants";
 
-import {getTemporaryBlockHeader, getActiveValidatorIndices, getCompactCommitteesRoot} from "../stateTransition/util";
+import {getActiveValidatorIndices, getCompactCommitteesRoot, getTemporaryBlockHeader} from "../stateTransition/util";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {processDeposit} from "../stateTransition/block/operations";
-import {bnMin} from "../../util/math";
+import {bnMin, intDiv} from "../../util/math";
 import {createValue} from "../../util/createValue";
 
 export function initializeBeaconStateFromEth1(
@@ -39,7 +37,7 @@ export function initializeBeaconStateFromEth1(
   deposits: Deposit[]): BeaconState {
   const state = getGenesisBeaconState(
     config,
-    eth1Timestamp,
+    eth1Timestamp - eth1Timestamp % SECONDS_PER_DAY + 2 * SECONDS_PER_DAY,
     {
       depositCount: deposits.length,
       depositRoot: undefined,
@@ -66,7 +64,7 @@ export function initializeBeaconStateFromEth1(
   state.validators.forEach((validator, index) => {
     const balance = state.balances[index];
     validator.effectiveBalance = bnMin(
-      balance.sub(balance.div(config.params.EFFECTIVE_BALANCE_INCREMENT)),
+      balance.sub(balance.mod(config.params.EFFECTIVE_BALANCE_INCREMENT)),
       config.params.MAX_EFFECTIVE_BALANCE
     );
     if(validator.effectiveBalance.eq(config.params.MAX_EFFECTIVE_BALANCE)) {
@@ -128,14 +126,14 @@ export function getGenesisBeaconState(
     currentCrosslinks: Array.from({length: config.params.SHARD_COUNT}, () => ({
       shard: GENESIS_START_SHARD,
       startEpoch: GENESIS_EPOCH,
-      endEpoch: FAR_FUTURE_EPOCH,
+      endEpoch: 0,
       parentRoot: ZERO_HASH,
       dataRoot: ZERO_HASH,
     })),
     previousCrosslinks: Array.from({length: config.params.SHARD_COUNT}, () => ({
       shard: GENESIS_START_SHARD,
       startEpoch: GENESIS_EPOCH,
-      endEpoch: FAR_FUTURE_EPOCH,
+      endEpoch: 0,
       parentRoot: ZERO_HASH,
       dataRoot: ZERO_HASH,
     })),
