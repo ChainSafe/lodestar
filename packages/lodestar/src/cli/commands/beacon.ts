@@ -67,8 +67,6 @@ export class BeaconNodeCommand implements CliCommand {
 
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
 
-
-
     if (options.quickStart) {
       this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier()});
       const state = quickStartOptionToState(config, options.quickStart);
@@ -76,7 +74,6 @@ export class BeaconNodeCommand implements CliCommand {
     } else {
       this.node = new BeaconNode(conf, {config, logger});
     }
-
 
     if(conf.validator && conf.validator.keypair){
       conf.validator.rpcInstance = new RpcClientOverInstance({
