@@ -160,7 +160,7 @@ describe('Test validator rest API', function () {
       })
       .expect(200)
       .expect('Content-Type', 'application/json; charset=utf-8');
-    expect(produceAttestationStub.withArgs(sinon.match.any, sinon.match.any, sinon.match.any, 3, 2).calledOnce).to.be.true;
+    expect(produceAttestationStub.withArgs(sinon.match.any, sinon.match.any, 3, 2).calledOnce).to.be.true;
   });
 
 

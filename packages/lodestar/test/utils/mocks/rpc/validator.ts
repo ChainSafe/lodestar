@@ -46,10 +46,6 @@ export class MockValidatorApi implements IValidatorApi {
     this.validatorIndex = opts && opts.validatorIndex || 1;
   }
 
-  public async getIndex(validatorPublicKey: BLSPubkey): Promise<ValidatorIndex> {
-    return this.validatorIndex;
-  }
-
   public async getDuties(validatorPublicKeys: BLSPubkey[]): Promise<ValidatorDuty[]> {
     return [];
   }
@@ -59,26 +55,16 @@ export class MockValidatorApi implements IValidatorApi {
     return {} as BeaconBlock;
   }
 
-  public async produceAttestation(slot: Slot, shard: Shard): Promise<IndexedAttestation> {
-    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as IndexedAttestation;
-  }
-
-  public async isProposer(index: ValidatorIndex, slot: Slot): Promise<boolean> {
-    return true;
-  }
-
-  public async getCommitteeAssignment(index: ValidatorIndex, epoch: Epoch): Promise<CommitteeAssignment> {
-    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as CommitteeAssignment;
-  }
-
   public async publishBlock(block: BeaconBlock): Promise<void> {
     this.head = block;
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
     this.attestations.push(attestation);
+  }
+
+  public produceAttestation(validatorPubKey: Buffer, pocBit: boolean, slot: number, shard: number): Promise<Attestation> {
+    return undefined;
   }
 
 }

@@ -68,12 +68,12 @@ export default class BlockProposingService {
   }
 
   private async hasProposedAlready(slot: Slot): Promise<boolean> {
-    const lastProposedBlock = await this.db.getBlock(this.validatorIndex);
+    const lastProposedBlock = await this.db.getBlock(this.keypair.publicKey.toBytesCompressed());
     // get last proposed block from database and check if belongs in same epoch
     return lastProposedBlock && computeEpochOfSlot(this.config, lastProposedBlock.slot) === computeEpochOfSlot(this.config, slot);
   }
 
   private async storeBlock(block: BeaconBlock): Promise<void> {
-    await this.db.setBlock(this.validatorIndex, block);
+    await this.db.setBlock(this.keypair.publicKey.toBytesCompressed(), block);
   }
 }

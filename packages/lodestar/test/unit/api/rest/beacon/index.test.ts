@@ -12,7 +12,7 @@ import {expect} from "chai";
 import {generateState} from "../../../../utils/state";
 import {Sync} from "../../../../../src/sync";
 
-describe('Test rest api server', function () {
+describe('Test beacon rest api', function () {
   this.timeout(10000);
 
   let restApi;
@@ -48,7 +48,7 @@ describe('Test rest api server', function () {
       .get('/node/version')
       .expect(200)
       .expect('Content-Type', 'application/json; charset=utf-8');
-    expect(response.body).to.be.equal("Lodestar x.x.x");
+    expect(response.body).to.be.equal(`lodestar-${process.env.npm_package_version}`);
   });
 
   it('should return genesis time', async function () {

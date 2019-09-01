@@ -17,6 +17,7 @@ import {EthersEth1Notifier} from "../../../../../../src/eth1";
 import {generateEmptyAttestation} from "../../../../../utils/attestation";
 import {BlockRepository, StateRepository} from "../../../../../../src/db/api/beacon/repositories";
 import * as validatorImpl from "../../../../../../src/api/impl/validator";
+import {Keypair} from "@chainsafe/bls";
 
 describe('validator rpc api', function () {
 
@@ -54,20 +55,6 @@ describe('validator rpc api', function () {
     ).to.be.true;
   });
 
-  it('is proposer', async function() {
-    const isProposerStub = sandbox.stub(stateTransitionUtils, 'isProposerAtSlot');
-    const state = generateState();
-    dbStub.state.getLatest.resolves(state);
-    isProposerStub.returns(true);
-    const result = await validatorApi.isProposer(1, 2);
-    expect(result).to.be.true;
-    expect(
-      isProposerStub
-        .withArgs(config, state, 2, 1)
-        .calledOnce
-    ).to.be.true;
-  });
-
   it('get duties', async function() {
     const publicKey = Buffer.alloc(48, 1);
     getDutiesStub.resolves([dutyFactory.generateEmptyValidatorDuty(publicKey)]);
@@ -78,23 +65,13 @@ describe('validator rpc api', function () {
     expect(getDutiesStub.calledOnce).to.be.true;
   });
 
-  it('get committee assignment', async function() {
-    const state = generateState();
-    dbStub.state.getLatest.resolves(state);
-    const commiteeAssignmentStub = sandbox.stub(stateTransitionUtils, 'getCommitteeAssignment');
-    commiteeAssignmentStub.returns(null);
-    const result = await validatorApi.getCommitteeAssignment(1, 2);
-    expect(result).to.be.null;
-    expect(dbStub.state.getLatest.calledOnce).to.be.true;
-    expect(commiteeAssignmentStub.withArgs(config, state, 2, 1));
-  });
-
   it('produceAttestation - missing slots', async function() {
     const state = generateState({slot: 1});
     dbStub.state.getLatest.resolves(state);
     const block = generateEmptyBlock();
     dbStub.block.get.resolves(block);
-    const result = await validatorApi.produceAttestation(4, 2);
+    dbStub.getValidatorIndex.resolves(0);
+    const result = await validatorApi.produceAttestation(Keypair.generate().publicKey.toBytesCompressed(), false, 4, 2);
     expect(result).to.not.be.null;
     expect(dbStub.state.getLatest.calledOnce).to.be.true;
     expect(dbStub.block.get.calledTwice).to.be.true;
@@ -110,14 +87,6 @@ describe('validator rpc api', function () {
     const attestation = generateEmptyAttestation();
     await validatorApi.publishAttestation(attestation);
     expect(opStub.attestations.receive.withArgs(attestation).calledOnce).to.be.true;
-  });
-
-  it('get validator index', async function() {
-    const publicKey = Buffer.alloc(48, 1);
-    dbStub.getValidatorIndex.resolves(4);
-    const result = await validatorApi.getIndex(publicKey);
-    expect(result).to.be.equal(4);
-    expect(dbStub.getValidatorIndex.withArgs(publicKey).calledOnce).to.be.true;
   });
 
 });
