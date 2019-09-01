@@ -8,7 +8,7 @@ import {Attestation, BeaconBlock, BLSPubkey} from "@chainsafe/eth2.0-types";
 import {DatabaseApiOptions, DatabaseService} from "../abstract";
 import {AttestationSearchOptions, IValidatorDB} from "./interface";
 import {Bucket, encodeKey} from "../../schema";
-import BN = require("bn.js");
+import BN from "bn.js";
 
 export class ValidatorDB extends DatabaseService implements IValidatorDB {
   public constructor(opts: DatabaseApiOptions) {

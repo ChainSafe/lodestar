@@ -101,7 +101,7 @@ class Validator {
       this.opts.keypair,
       this.rpcClient,
       this.db,
-        this.logger
+      this.logger
     );
 
     this.attestationService = new AttestationService(
