@@ -3,6 +3,7 @@ import defaultOptions, {IApiOptions} from "./options";
 import {IApiModules} from "./interface";
 import deepmerge from "deepmerge";
 import {JsonRpc} from "./rpc";
+import {RestApi} from "./rest";
 
 export * from "./interface";
 
@@ -23,10 +24,10 @@ export class ApiService implements Service {
   public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
     this.opts = deepmerge(defaultOptions, opts);
     if(this.opts.rest.enabled) {
-      this.setupRestApi(modules);
+      this.rest = this.setupRestApi(modules);
     }
     if(this.opts.rpc.transports.length) {
-      this.setupRpc(modules);
+      this.rpc = this.setupRpc(modules);
     }
   }
 
@@ -48,11 +49,11 @@ export class ApiService implements Service {
     }
   }
 
-  private setupRpc(modules: IApiModules) {
-    this.rpc = new JsonRpc(this.opts.rpc, modules);
+  private setupRpc(modules: IApiModules): JsonRpc {
+    return new JsonRpc(this.opts.rpc, modules);
   }
 
   private setupRestApi(modules: IApiModules) {
-
+    return new RestApi(this.opts.rest, modules);
   }
 }

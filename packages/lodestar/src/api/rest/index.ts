@@ -7,6 +7,7 @@ import {ILogger} from "../../logger";
 import * as routes from "./routes";
 import {IBeaconChain} from "../../chain";
 import qs from "qs";
+import {ApiNamespace} from "../index";
 
 export interface IFastifyServer extends fastify.FastifyInstance<Server, IncomingMessage, ServerResponse> {
   logger: ILogger;
@@ -47,8 +48,12 @@ export class RestApi implements Service {
       querystringParser: qs.parse
     }) as IFastifyServer;
 
-    server.register(routes.beacon, {prefix: '/node', modules});
-    server.register(routes.validator, {prefix: '/validator', modules});
+    if(this.opts.api.includes(ApiNamespace.BEACON)) {
+      server.register(routes.beacon, {prefix: '/node', modules});
+    }
+    if(this.opts.api.includes(ApiNamespace.VALIDATOR)) {
+      server.register(routes.validator, {prefix: '/validator', modules});
+    }
 
     return server;
   }
