@@ -1,20 +1,8 @@
 /**
  * @module api/rpc
  */
-import {
-  Attestation,
-  BeaconBlock,
-  BLSPubkey,
-  bytes,
-  Epoch,
-  IndexedAttestation,
-  Shard,
-  Slot,
-  ValidatorDuty,
-  ValidatorIndex
-} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BLSPubkey, bytes, Epoch, Shard, Slot, ValidatorDuty} from "@chainsafe/eth2.0-types";
 import {IApi} from "../../../interface";
-import {CommitteeAssignment} from "../../../../validator/types";
 
 /**
  * The API interface defines the calls that can be made from a Validator
@@ -34,11 +22,6 @@ export interface IValidatorApi extends IApi {
   ): Promise<ValidatorDuty[]>;
 
   /**
-   * Requests to check if a validator should propose for a given slot.
-   */
-  isProposer(index: ValidatorIndex, slot: Slot): Promise<boolean>;
-
-  /**
    * Requests a BeaconNode to produce a valid block,
    * which can then be signed by a ValidatorClient.
    * @returns {Promise<BeaconBlock>} A proposed BeaconBlock object,
@@ -50,7 +33,7 @@ export interface IValidatorApi extends IApi {
    * Requests that the BeaconNode produce an IndexedAttestation,
    * with a blank signature field, which the ValidatorClient will then sign.
    */
-  produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, slot: Slot, shard: Shard): Promise<IndexedAttestation>;
+  produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, slot: Slot, shard: Shard): Promise<Attestation>;
 
   /**
    * Instructs the BeaconNode to publish a newly signed beacon block

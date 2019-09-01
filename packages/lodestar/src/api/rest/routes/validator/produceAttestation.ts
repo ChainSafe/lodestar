@@ -19,7 +19,7 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
       type: 'object',
       required: ["validator_pubkey", "poc_bit", "slot", "shard"],
       properties: {
-        "randvalidator_pubkeyao_reveal": {
+        "validator_pubkey": {
           type: "string"
         },
         "poc_bit": {
@@ -45,9 +45,8 @@ export const registerAttestationProductionEndpoint = (fastify: IFastifyServer, m
     opts,
     async (request, reply) => {
       const attestation = await produceAttestation(
-        modules.config,
-        modules.db,
-        modules.chain,
+        {db: modules.db, chain: modules.chain, config: modules.config},
+        Buffer.from(request.query.validator_pubkey.replace('0x', ''), 'hex'),
         request.query.shard,
         request.query.slot
       );

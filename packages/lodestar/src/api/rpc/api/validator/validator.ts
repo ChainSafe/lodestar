@@ -51,16 +51,11 @@ export class ValidatorApi implements IValidatorApi {
     return await assembleBlock(this.config, this.db, this.opPool, this.eth1, slot, randaoReveal);
   }
 
-  public async isProposer(index: ValidatorIndex, slot: Slot): Promise<boolean> {
-    const state: BeaconState = await this.db.state.getLatest();
-    return isProposerAtSlot(this.config, state, slot, index);
-  }
-
   public async getDuties(validatorPublicKeys: BLSPubkey[], epoch: Epoch): Promise<ValidatorDuty[]> {
     return getValidatorDuties(this.config, this.db, validatorPublicKeys, epoch);
   }
 
-  public async produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, slot: Slot, shard: Shard): Promise<IndexedAttestation> {
+  public async produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, slot: Slot, shard: Shard): Promise<Attestation> {
     return produceAttestation(
       {config: this.config, chain: this.chain, db: this.db},
       validatorPubKey,
