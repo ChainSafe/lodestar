@@ -2,37 +2,34 @@
  * @module validator
  */
 
-import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 
-import {BeaconBlock, Epoch, Fork, Slot, ValidatorIndex, BeaconState} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconState, Fork, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {getDomain, computeEpochOfSlot} from "../../chain/stateTransition/util";
+import {computeEpochOfSlot, getDomain} from "../../chain/stateTransition/util";
 import {RpcClient} from "../rpc";
 import {DomainType} from "../../constants";
 import {IValidatorDB} from "../../db";
 import {ILogger} from "../../logger";
+import {Keypair} from "@chainsafe/bls";
 
 export default class BlockProposingService {
   private config: IBeaconConfig;
-  private validatorIndex: ValidatorIndex;
   private provider: RpcClient;
-  private privateKey: PrivateKey;
+  private keypair: Keypair;
   private db: IValidatorDB;
   private logger: ILogger;
 
   public constructor(
     config: IBeaconConfig,
-    index: ValidatorIndex,
+    keypair: Keypair,
     provider: RpcClient,
-    privateKey: PrivateKey,
     db: IValidatorDB,
     logger: ILogger
   ) {
     this.config = config;
-    this.validatorIndex = index;
+    this.keypair = keypair;
     this.provider = provider;
-    this.privateKey = privateKey;
     this.db = db;
     this.logger = logger;
   }
@@ -47,13 +44,13 @@ export default class BlockProposingService {
     }
     const block = await this.provider.validator.produceBlock(
       slot,
-      this.privateKey.signMessage(
+      this.keypair.privateKey.signMessage(
         hashTreeRoot(computeEpochOfSlot(this.config, slot), this.config.types.Epoch),
         // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
         getDomain(this.config, {fork} as BeaconState, DomainType.RANDAO, computeEpochOfSlot(this.config, slot))
       ).toBytesCompressed()
     );
-    block.signature = this.privateKey.signMessage(
+    block.signature = this.keypair.privateKey.signMessage(
       signingRoot(block, this.config.types.BeaconBlock),
       // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
       getDomain(this.config, {fork} as BeaconState, DomainType.BEACON_PROPOSER, computeEpochOfSlot(this.config, slot))

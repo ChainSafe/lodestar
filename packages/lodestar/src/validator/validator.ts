@@ -34,7 +34,6 @@ class Validator {
   private opts: IValidatorOptions;
   private config: IBeaconConfig;
   private rpcClient: RpcClient;
-  private validatorIndex: ValidatorIndex;
   private blockService: BlockProposingService;
   private attestationService: AttestationService;
   private genesisInfo: GenesisInfo;
@@ -96,21 +95,19 @@ class Validator {
 
     // Wait for the ChainStart log and grab validator index
     this.isActive = await this.isChainLive();
-    this.validatorIndex = await this.getValidatorIndex();
 
     this.blockService = new BlockProposingService(
       this.config,
-      this.validatorIndex,
+      this.opts.keypair,
       this.rpcClient,
-      this.opts.keypair.privateKey,
-      this.db, this.logger
+      this.db,
+        this.logger
     );
 
     this.attestationService = new AttestationService(
       this.config,
-      this.validatorIndex,
+      this.opts.keypair,
       this.rpcClient,
-      this.opts.keypair.privateKey,
       this.db,
       this.logger
     );
@@ -140,23 +137,6 @@ class Validator {
     }
     if(this.isRunning) {
       setTimeout(this.isChainLive, 1000);
-    }
-  }
-
-  /**
-   * Checks to see if the validator has been processed on the beacon chain.
-   */
-  private async getValidatorIndex(): Promise<ValidatorIndex> {
-    this.logger.info("Checking if validator has been processed...");
-    const index = await this.rpcClient.validator.getIndex(
-      this.opts.keypair.publicKey.toBytesCompressed()
-    );
-    if (index) {
-      this.logger.info("Validator has been processed!");
-      return index;
-    }
-    if(this.isRunning) {
-      setTimeout(this.getValidatorIndex, 1000);
     }
   }
 

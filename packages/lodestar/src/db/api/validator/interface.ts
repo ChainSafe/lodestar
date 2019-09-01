@@ -2,7 +2,7 @@
  * @module db/api/validator
  */
 
-import {Attestation, BeaconBlock, BLSPubkey, Epoch, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BLSPubkey, Epoch} from "@chainsafe/eth2.0-types";
 
 export interface AttestationSearchOptions {
   gt?: Epoch;
@@ -15,12 +15,12 @@ export interface IValidatorDB {
    * Obtains last proposed beacon block
    * by validator with given index
    */
-  getBlock(index: ValidatorIndex): Promise<BeaconBlock>;
+  getBlock(pubKey: BLSPubkey): Promise<BeaconBlock>;
 
   /**
    * Stores beacon block proposed by validator with given index
    */
-  setBlock(index: ValidatorIndex, block: BeaconBlock): Promise<void>;
+  setBlock(pubKey: BLSPubkey, block: BeaconBlock): Promise<void>;
 
   /**
    * Searches proposed attestations based on target epoch and validator index

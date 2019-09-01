@@ -19,11 +19,18 @@ export async function assembleAttestation(
     state.slot++;
   }
 
-  const aggregationBits = BitList.fromBitfield(
-    Buffer.alloc(intDiv(config.params.MAX_VALIDATORS_PER_COMMITTEE + 7, 8)),
-    config.params.MAX_VALIDATORS_PER_COMMITTEE
-  );
-  const custodyBits = aggregationBits.clone();
+  const aggregationBits = getAggregationBits(config, state, slot, shard, validatorIndex);
+  const custodyBits = getEmptyAttestationBitList(config);
+  return {
+    aggregationBits,
+    custodyBits,
+    data: await assembleAttestationData(config, db, state, headBlock, shard),
+    signature: undefined
+  };
+}
+
+export function getAggregationBits(config: IBeaconConfig, state: BeaconState, slot: Slot, shard: Shard, validatorIndex: ValidatorIndex): BitList {
+  const aggregationBits = getEmptyAttestationBitList(config);
   const comittee = getCrosslinkCommittee(config, state, computeEpochOfSlot(config, slot), shard);
   comittee.some((commiteeValidator, index) => {
     if(commiteeValidator === validatorIndex) {
@@ -32,12 +39,12 @@ export async function assembleAttestation(
     }
     return false;
   });
+  return aggregationBits;
+}
 
-  return {
-    aggregationBits,
-    custodyBits,
-    data: await assembleAttestationData(config, db, state, headBlock, shard),
-    signature: undefined
-  };
-
+export function getEmptyAttestationBitList(config: IBeaconConfig) {
+  return BitList.fromBitfield(
+    Buffer.alloc(intDiv(config.params.MAX_VALIDATORS_PER_COMMITTEE + 7, 8)),
+    config.params.MAX_VALIDATORS_PER_COMMITTEE
+  );
 }
