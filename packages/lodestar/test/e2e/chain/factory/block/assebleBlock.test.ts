@@ -102,8 +102,7 @@ describe('produce block', function () {
     const validatorIndex = getBeaconProposerIndex(config, {...state, slot: 1});
 
     const blockProposingService = getBlockProposingService(
-      validatorIndex,
-      keypairs[validatorIndex].privateKey
+      keypairs[validatorIndex]
     );
     // @ts-ignore
     blockProposingService.getRpcClient().validator.produceBlock.callsFake(async(slot, randao) => {
@@ -115,15 +114,14 @@ describe('produce block', function () {
     expect(() => stateTransition(config, state, block, false)).to.not.throw();
   });
 
-  function getBlockProposingService(validatorIndex: ValidatorIndex, privateKey: PrivateKey): BlockProposingService {
+  function getBlockProposingService(keypair: Keypair): BlockProposingService {
     const rpcClientStub = sinon.createStubInstance(RpcClientOverInstance);
     rpcClientStub.validator = sinon.createStubInstance(ValidatorApi);
     const validatorDbStub = sinon.createStubInstance(ValidatorDB);
     return new BlockProposingService(
       config,
-      validatorIndex,
+      keypair,
       rpcClientStub,
-      privateKey,
       validatorDbStub,
       sinon.createStubInstance(WinstonLogger)
     );
