@@ -1,4 +1,4 @@
-import {BaseCase, describeMultiSpec} from "../../../src/multi";
+import {BaseCase, describeMultiSpec} from "../../../src";
 import path from "path";
 
 interface BulkTestCase extends BaseCase {
@@ -7,7 +7,7 @@ interface BulkTestCase extends BaseCase {
 }
 
 describeMultiSpec<BulkTestCase, string>(
-  path.join(__dirname, '../_test_files/bulk/bulk.yml'),
+  path.join(__dirname, '../_test_files/multi/bulk.yml'),
   (input) => input,
   (testCase => [testCase.input]),
   (testCase => testCase.output),

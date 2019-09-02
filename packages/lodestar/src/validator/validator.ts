@@ -42,11 +42,10 @@ class Validator {
   private isActive: boolean;
   private isRunning: boolean;
 
-
   public constructor(opts: Partial<IValidatorOptions>, modules: {config: IBeaconConfig; logger: ILogger}) {
     this.opts = deepmerge(defaultValidatorOptions, opts, {isMergeableObject: isPlainObject});
     this.config = modules.config;
-    this.logger = modules.logger;
+    this.logger = modules.logger.child(this.opts.logger);
     this.isActive = false;
     this.isRunning = false;
     this.db = new ValidatorDB({

@@ -55,7 +55,7 @@ function bitLength (n: number): number {
 
 /** @ignore */
 function nextPowerOf2 (n: number): number {
-  return n === 0 ? 1 : Math.pow(2, bitLength(n - 1));
+  return n <= 0 ? 1 : Math.pow(2, bitLength(n - 1));
 }
 
 /** @ignore */

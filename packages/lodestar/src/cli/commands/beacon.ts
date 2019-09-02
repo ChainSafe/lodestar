@@ -7,7 +7,7 @@ import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {ILogger, LogLevel, WinstonLogger} from "../../logger";
+import {ILogger, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
 import {generateCommanderOptions, optionsToConfig} from "../util";
@@ -29,14 +29,12 @@ export class BeaconNodeCommand implements CliCommand {
 
   public register(commander: CommanderStatic): void {
 
-    const logger: ILogger = new WinstonLogger();
-
+    const logger = new WinstonLogger();
     //TODO: when we switch cli library make this to run as default command "./bin/lodestar"
     const command = commander
       .command("beacon")
       .description("Start lodestar node")
       .option("-c, --configFile [config_file]", "Config file path")
-      .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
@@ -51,18 +49,12 @@ export class BeaconNodeCommand implements CliCommand {
 
   public async action(options: IBeaconCommandOptions, logger: ILogger): Promise<void> {
     let conf: Partial<IBeaconNodeOptions> = {};
-
-    if (options.loggingLevel) {
-      logger.setLogLevel(LogLevel[options.loggingLevel]);
-    }
-
     //merge config file
     if (options.configFile) {
       let parsedConfig = getTomlConfig(options.configFile, BeaconNodeOptions);
       //cli will override toml config options
       conf = deepmerge(conf, parsedConfig);
     }
-
     //override current config with cli config
     conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
 
@@ -94,14 +86,12 @@ export class BeaconNodeCommand implements CliCommand {
           }
         ),
       });
-      this.validator = new Validator(
-        conf.validator,
-        {config, logger}
-      );
+
+      this.validator = new Validator(conf.validator, {config, logger});
       await this.validator.start();
     }
 
     await this.node.start();
   }
-
 }
+

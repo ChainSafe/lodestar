@@ -33,7 +33,7 @@ describe("syncing", function () {
     rpcStub = sandbox.createStubInstance(SyncRpc);
     logger = new WinstonLogger();
     syncerStub = sandbox.createStubInstance(RegularSync);
-    logger.silent(true);
+    logger.silent = true;
 
 
     sync = new Sync({}, {
@@ -45,14 +45,14 @@ describe("syncing", function () {
       opPool: opPoolStub,
       reps: repsStub,
       rpc: rpcStub,
-      logger: logger,
+      logger,
     }
     );
   });
 
   afterEach(() => {
     sandbox.restore();
-    logger.silent(false);
+    logger.silent = false;
   });
 
 

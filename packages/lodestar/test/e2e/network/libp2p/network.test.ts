@@ -28,8 +28,8 @@ describe("[network] network", () => {
   const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false});
 
   beforeEach(async () => {
-    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger, metrics});
-    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger: logger, metrics});
+    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger, metrics});
+    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger, metrics});
     await Promise.all([
       netA.start(),
       netB.start(),

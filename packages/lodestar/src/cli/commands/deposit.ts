@@ -10,13 +10,13 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {CliCommand} from "./interface";
 import defaults from "../../eth1/options";
 import * as ethers from "ethers/ethers";
-import {ILogger, LogLevel, WinstonLogger} from "../../logger";
+import {ILogger, LogLevel, WinstonLogger, LogLevels} from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
 
 interface IDepositCommandOptions {
   privateKey: string;
-  loggingLevel: string;
+  logLevel: string;
   mnemonic: string;
   node: string;
   value: string;
@@ -28,13 +28,11 @@ export class DepositCommand implements CliCommand {
 
   public register(commander: CommanderStatic): void {
 
-    const logger: ILogger = new WinstonLogger();
-
     commander
       .command('deposit')
       .description('Start private network with deposit contract and 10 accounts with balance')
       .option("-k, --privateKey [privateKey]", 'Private key of account that will make deposit')
-      .option(`-l, --loggingLevel [${Object.values(LogLevel).join("|")}]`, "Logging level")
+      .option(`-l, --logLevel [${LogLevels.join("|")}]`, "Log level")
       .option(
         "-m, --mnemonic [mnemonic]",
         'If mnemonic is submitted, first 10 accounts will make deposit'
@@ -48,21 +46,21 @@ export class DepositCommand implements CliCommand {
       )
       .option("-a, --accounts [accounts]","Number of accounts to generate at startup", 10)
       .action( async (options) => {
+        const logger: ILogger = new WinstonLogger({
+          level: options.logLevel,
+          module: "deposit",
+        });
         //library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
         try {
           await this.action(options, logger);
         } catch (e) {
-          logger.error(e.message + '\n' + e.stack);
+          console.error(e.message + '\n' + e.stack);
         }
-
       });
   }
 
   public async action(options: IDepositCommandOptions, logger: ILogger): Promise<void> {
-    if (options.loggingLevel) {
-      logger.setLogLevel(LogLevel[options.loggingLevel]);
-    }
     const provider = new JsonRpcProvider(options.node);
     try {
       //check if we can connect to node

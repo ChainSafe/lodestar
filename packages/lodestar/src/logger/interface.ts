@@ -2,28 +2,35 @@
  * @module logger
  */
 
+export enum LogLevel {
+  error,
+  warn,
+  info,
+  debug,
+}
 
-import {LogLevel} from "./abstract";
+export const LogLevels = [
+  "error",
+  "warn",
+  "info",
+  "debug",
+];
 
+export const defaultLogLevel = LogLevel.info;
+
+export interface ILoggerOptions {
+  level: typeof LogLevel[number];
+  module: string;
+}
 
 export interface ILogger {
+  level: LogLevel;
+  silent: boolean;
+
   info(message: string|object, context?: object): void;
   warn(message: string|object, context?: object): void;
   error(message: string|object, context?: object): void;
   debug(message: string|object, context?: object): void;
 
-  /**
-   * Should change which log levels are recorded.
-   * @param level
-   */
-  setLogLevel(level: LogLevel): void;
-
-  /**
-   * Disables all logging. Setting it to true is same as setting {@link setLogLevel}
-   * with {@link LogLevel.NONE}
-   * @param silent
-   */
-
-  silent(silent: boolean): void;
-
+  child(options: ILoggerOptions): ILogger;
 }

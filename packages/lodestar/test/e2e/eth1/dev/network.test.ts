@@ -9,11 +9,11 @@ describe('Eth1 dev network', function () {
   const logger: ILogger = new WinstonLogger();
 
   before(() => {
-    logger.silent(true);
+    logger.silent = true;
   });
 
   after(() => {
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('should start as configured', async () => {
@@ -24,7 +24,7 @@ describe('Eth1 dev network', function () {
       defaultBalance: 1400
     },
     {
-      logger: logger
+      logger,
     }
     );
     await network.start();
@@ -47,7 +47,7 @@ describe('Eth1 dev network', function () {
       defaultBalance: 1400
     },
     {
-      logger: logger
+      logger,
     }
     );
     await network.start();
