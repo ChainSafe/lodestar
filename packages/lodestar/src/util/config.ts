@@ -17,6 +17,18 @@ export interface IConfigurationModule {
   fields: (IConfigurationModule | IConfigurationField<unknown>)[];
 }
 
+export function booleanOption(name: string, flag: string, description: string = ""): IConfigurationField {
+  return {
+    name,
+    description,
+    type: 'boolean',
+    configurable: true,
+    cli: {
+      flag
+    }
+  };
+}
+
 export function getCliFields(configuration: IConfigurationModule): IConfigurationField<unknown>[] {
   const cliFields = [];
   configuration.fields.forEach((field) => {

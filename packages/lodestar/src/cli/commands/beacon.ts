@@ -90,7 +90,15 @@ export class BeaconNodeCommand implements CliCommand {
         ),
         beacon: new BeaconApi(
           {},
-          {config, chain: this.node.chain, db: this.node.db}
+          {
+            config,
+            logger: new WinstonLogger(),
+            sync: this.node.sync,
+            eth1: this.node.eth1,
+            opPool: this.node.opPool,
+            chain: this.node.chain,
+            db: this.node.db
+          }
         ),
       });
 

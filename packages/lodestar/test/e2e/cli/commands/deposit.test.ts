@@ -1,5 +1,6 @@
 import {PrivateEth1Network} from "../../../../src/eth1/dev";
 import chai, {expect} from 'chai';
+import {describe} from "mocha";
 import {DepositCommand} from "../../../../src/cli/commands";
 import chaiAsPromised from 'chai-as-promised';
 import {ILogger, WinstonLogger, LogLevel} from "../../../../src/logger";
