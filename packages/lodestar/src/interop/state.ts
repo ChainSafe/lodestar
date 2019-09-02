@@ -3,6 +3,7 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {initializeBeaconStateFromEth1} from "../chain/genesis/genesis";
 import {interopDeposits} from "./deposits";
+import {intDiv} from "../util/math";
 
 const INTEROP_BLOCK_HASH = Buffer.alloc(32, 'B');
 const INTEROP_TIMESTAMP = Math.pow(2, 40);
@@ -20,5 +21,7 @@ export function quickStartState(
     deposits,
   );
   state.genesisTime = genesisTime;
+  const diffInSeconds = (Date.now() / 1000) - genesisTime;
+  state.slot = intDiv(diffInSeconds, config.params.SECONDS_PER_SLOT);
   return state;
 }

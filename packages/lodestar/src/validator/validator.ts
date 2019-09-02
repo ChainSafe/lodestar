@@ -118,7 +118,7 @@ class Validator {
   private async setupRPC(): Promise<void> {
     this.logger.info("Setting up RPC connection...");
     await this.rpcClient.connect();
-    this.logger.info(`RPC connection successfully established: ${this.opts.rpc || 'inmemory'}!`);
+    this.logger.info(`RPC connection successfully established: ${this.rpcClient.url}!`);
   }
 
   /**
@@ -150,22 +150,21 @@ class Validator {
         [this.opts.keypair.publicKey.toBytesCompressed()],
         computeEpochOfSlot(this.config, slot))
       )[0];
-    const currentVersion = await this.rpcClient.beacon.getFork();
+    const fork = await this.rpcClient.beacon.getFork();
     const isAttester = validatorDuty.attestationSlot === slot;
     const isProposer = validatorDuty.blockProposalSlot === slot;
     this.logger.info(
-      `[Validator] Slot: ${slot}, Fork: ${currentVersion}, 
-      isProposer: ${isProposer}, isAttester: ${isAttester}`
+      `Check duties - Slot: ${slot}, isProposer: ${isProposer}, isAttester: ${isAttester}, Fork: (current: ${fork.currentVersion.toString('hex')}, prev: ${fork.previousVersion.toString('hex')})`
     );
     if (isAttester) {
       this.attestationService.createAndPublishAttestation(
         slot,
         validatorDuty.attestationShard,
-        currentVersion
+        fork
       );
     }
     if (isProposer) {
-      this.blockService.createAndPublishBlock(slot, currentVersion);
+      this.blockService.createAndPublishBlock(slot, fork);
     }
   }
 

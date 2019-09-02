@@ -1,7 +1,17 @@
 /**
  * @module api/rpc
  */
-import {Attestation, BeaconBlock, BLSPubkey, bytes, Epoch, Shard, Slot, ValidatorDuty} from "@chainsafe/eth2.0-types";
+import {
+  Attestation,
+  BeaconBlock,
+  BLSPubkey,
+  bytes,
+  Epoch,
+  Shard,
+  Slot,
+  ValidatorDuty,
+  ValidatorIndex
+} from "@chainsafe/eth2.0-types";
 import {IApi} from "../../../interface";
 
 /**
@@ -20,6 +30,8 @@ export interface IValidatorApi extends IApi {
     validatorPublicKeys: BLSPubkey[],
     epoch: Epoch,
   ): Promise<ValidatorDuty[]>;
+
+  getValidatorIndex(pubKey: BLSPubkey): Promise<ValidatorIndex>;
 
   /**
    * Requests a BeaconNode to produce a valid block,

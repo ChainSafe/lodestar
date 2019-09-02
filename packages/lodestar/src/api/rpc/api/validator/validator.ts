@@ -72,4 +72,8 @@ export class ValidatorApi implements IValidatorApi {
     await this.opPool.attestations.receive(attestation);
   }
 
+  public async getValidatorIndex(pubKey: BLSPubkey): Promise<number> {
+    return this.db.getValidatorIndex(pubKey);
+  }
+
 }

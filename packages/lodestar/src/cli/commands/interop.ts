@@ -23,6 +23,8 @@ import {interopKeypair} from "../../interop/keypairs";
 import {RpcClientOverInstance} from "../../validator/rpc";
 import {ValidatorApi} from "../../api/rpc/api/validator";
 import {BeaconApi} from "../../api/rpc/api/beacon";
+import asRaw from "@polkadot/util-crypto/xxhash/xxhash64/asRaw";
+import {existsSync, mkdirSync} from "fs";
 
 interface IInteropCommandOptions {
   loggingLevel?: string;
@@ -83,7 +85,6 @@ export class InteropCommand implements CliCommand {
     }
 
     await this.node.start();
-
     if(options.validators) {
       if(options.validators.includes(",")) {
         const rangeParts = options.validators.split(",");
@@ -96,7 +97,11 @@ export class InteropCommand implements CliCommand {
     }
   }
 
-  private startValidators(from: number, to: number, node: BeaconNode): void {
+  private async startValidators(from: number, to: number, node: BeaconNode): Promise<void> {
+    const validatorDir = './validators';
+    if(!existsSync(validatorDir)) {
+      mkdirSync(validatorDir);
+    }
     for(let i = from; i < to; i++) {
       const modules = {
         config: node.config,
@@ -113,7 +118,10 @@ export class InteropCommand implements CliCommand {
         beacon: new BeaconApi({}, modules),
       });
       const keypair = new Keypair(PrivateKey.fromBytes(interopKeypair(i).privkey));
-      const validator = new Validator({keypair, rpcInstance}, {config: node.config, logger: new WinstonLogger({module: "Validator #"})});
+      const index = await node.db.getValidatorIndex(keypair.publicKey.toBytesCompressed());
+      const validator = new Validator(
+        {keypair, rpcInstance, db: {name: validatorDir + '/validator-db-' + index}},
+        {config: node.config, logger: new WinstonLogger({module: `Validator #${index}`})});
       validator.start();
     }
   }

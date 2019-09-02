@@ -10,6 +10,8 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 export abstract class AbstractRpcClient implements RpcClient {
 
   protected config: IBeaconConfig;
+
+  public abstract url: string;
   private currentSlot: Slot;
 
   private currentEpoch: Slot;

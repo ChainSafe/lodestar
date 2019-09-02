@@ -15,5 +15,5 @@ export async function produceAttestation(
     db.block.get(chain.forkChoice.head()),
     db.getValidatorIndex(validatorPubKey)
   ]);
-  return  await assembleAttestation({config, db}, headState, headBlock, validatorIndex, shard, slot);
+  return await assembleAttestation({config, db}, headState, headBlock, validatorIndex, shard, slot);
 }
