@@ -60,6 +60,7 @@ export class JsonRpc implements Service {
       const rpcServer = new jsonRpc.Server(transport);
       const jsonRpcApi = rpcServer.api();
       Object.values(apis).forEach((api) => {
+        if (api.name.startsWith("I")) return;
         const apiInstance = new (api as IApiConstructor)(null, modules);
         // collect the api methods into an enumerable object for rpc exposure
         const methods = {};
