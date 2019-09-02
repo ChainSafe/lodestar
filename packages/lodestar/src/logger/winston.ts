@@ -29,7 +29,7 @@ export class WinstonLogger implements ILogger {
               format: 'YYYY-MM-DD HH:mm:ss'
             }),
             format.printf(
-              info => `${info.timestamp} [${info.module.toUpperCase()}] ${info.level}: ${info.message}`
+              info => `${info.timestamp} [${(info.module || info.namespace).toUpperCase()}] ${info.level}: ${info.message}`
             )
           ),
           handleExceptions: true
@@ -87,10 +87,12 @@ export class WinstonLogger implements ILogger {
 
   public child(options: ILoggerOptions): WinstonLogger {
     const logger = Object.create(WinstonLogger.prototype);
+    const winston = this.winston.child({namespace: options.module});
     return Object.assign(logger, {
-      winston: this.winston.child({module: options.module}),
+      winston,
       _level: options.level,
       _silent: false,
+
     });
   }
 }
