@@ -144,7 +144,7 @@ class Validator {
     this.rpcClient.onNewEpoch(this.lookAhead);
   };
 
-  private async checkDuties(slot: Slot): Promise<void> {
+  private checkDuties = async (slot: Slot): Promise<void> => {
     const validatorDuty =
       (await this.rpcClient.validator.getDuties(
         [this.opts.keypair.publicKey.toBytesCompressed()],
@@ -169,7 +169,7 @@ class Validator {
     }
   }
 
-  private async lookAhead(currentEpoch: Epoch): Promise<void> {
+  private lookAhead = async (currentEpoch: Epoch): Promise<void> => {
     //in phase 1, it should obtain duties for next epoch and trigger required shard sync
   }
 }

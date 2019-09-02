@@ -8,19 +8,19 @@ export function assembleValidatorDuty(
   state,
   epoch: Epoch,
   blockProposerIndex: ValidatorIndex): ValidatorDuty  {
-  let duty: ValidatorDuty = this.generateEmptyValidatorDuty(validator.publicKey);
-  const committeeAsignment = getCommitteeAssignment(
+  let duty: ValidatorDuty = generateEmptyValidatorDuty(validator.publicKey);
+  const committeeAssignment = getCommitteeAssignment(
     config,
     state,
     epoch,
     validator.index
   );
-  if (committeeAsignment) {
+  if (committeeAssignment) {
     duty = {
       ...duty,
-      attestationShard: committeeAsignment.shard,
-      attestationSlot: committeeAsignment.slot,
-      committeeIndex: committeeAsignment.validators.indexOf(validator.index)
+      attestationShard: committeeAssignment.shard,
+      attestationSlot: committeeAssignment.slot,
+      committeeIndex: committeeAssignment.validators.indexOf(validator.index)
     };
   }
   if (validator.index === blockProposerIndex) {

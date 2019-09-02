@@ -11,13 +11,13 @@ export async function getValidatorDuties(config: IBeaconConfig, db: IBeaconDb, v
     return  await db.getValidatorIndex(publicKey);
   }));
 
-  const blockProposerIndex = getBeaconProposerIndex(this.config, state);
+  const blockProposerIndex = getBeaconProposerIndex(config, state);
 
   return validatorPublicKeys.map(
     (validatorPublicKey, index) => {
       const validatorIndex = validatorIndexes[index];
       return assembleValidatorDuty(
-        this.config,
+        config,
         {
           publicKey: validatorPublicKey,
           index: validatorIndex
