@@ -72,6 +72,7 @@ export class WinstonLogger implements ILogger {
     this.winston.level = LogLevel[level];
     this._level = level;
   }
+
   public get level(): LogLevel {
     return this._level;
   }
@@ -79,6 +80,7 @@ export class WinstonLogger implements ILogger {
   public set silent(silent: boolean) {
     this._silent = silent;
   }
+
   public get silent(): boolean {
     return this._silent;
   }

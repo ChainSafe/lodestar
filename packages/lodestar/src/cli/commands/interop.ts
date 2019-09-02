@@ -7,35 +7,38 @@ import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
 
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import {ILogger, WinstonLogger} from "../../logger";
+import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
 import {generateCommanderOptions, optionsToConfig} from "../util";
 import {getTomlConfig} from "../../util/file";
 import Validator from "../../validator";
-import {RpcClientOverInstance} from "../../validator/rpc";
-import {ValidatorApi} from "../../api/rpc/api/validator";
-import {BeaconApi} from "../../api/rpc/api/beacon";
+import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {InteropEth1Notifier} from "../../eth1/impl/interop";
+import {quickStartOptionToState} from "../../interop/cli";
+import {ProgressiveMerkleTree} from "../../util/merkleTree";
 
-interface IBeaconCommandOptions {
-  configFile?: string;
+interface IInteropCommandOptions {
   loggingLevel?: string;
+  quickStart: string;
+  preset: string;
   [key: string]: string;
 }
 
-export class BeaconNodeCommand implements CliCommand {
+export class InteropCommand implements CliCommand {
   public node: BeaconNode;
   public validator: Validator;
 
   public register(commander: CommanderStatic): void {
 
-    const logger = new WinstonLogger();
+    const logger: ILogger = new WinstonLogger();
+
     //TODO: when we switch cli library make this to run as default command "./bin/lodestar"
     const command = commander
-      .command("beacon")
-      .description("Start lodestar node")
-      .option("-c, --configFile [config_file]", "Config file path")
+      .command("interop")
+      .description("Start lodestar beacon node and certain amount of validator nodes")
+      .option("-q, --quickStart [params]", "Start chain from known state")
+      .option("-p, --preset [preset]", "Minimal/mainnet", "mainnet")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
@@ -48,52 +51,30 @@ export class BeaconNodeCommand implements CliCommand {
     generateCommanderOptions(command, BeaconNodeOptions);
   }
 
-  public async action(options: IBeaconCommandOptions, logger: ILogger): Promise<void> {
+  public async action(options: IInteropCommandOptions, logger: ILogger): Promise<void> {
     let conf: Partial<IBeaconNodeOptions> = {};
+
     //merge config file
     if (options.configFile) {
       let parsedConfig = getTomlConfig(options.configFile, BeaconNodeOptions);
       //cli will override toml config options
       conf = deepmerge(conf, parsedConfig);
     }
+
     //override current config with cli config
     conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
 
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
 
-    this.node = new BeaconNode(conf, {config, logger});
-
-    if(conf.validator && conf.validator.keypair){
-      conf.validator.rpcInstance = new RpcClientOverInstance({
-        config,
-        validator: new ValidatorApi(
-          {},
-          {
-            config,
-            chain: this.node.chain,
-            db: this.node.db,
-            opPool: this.node.opPool,
-            eth1: this.node.eth1
-          }
-        ),
-        beacon: new BeaconApi(
-          {},
-          {
-            config,
-            logger: new WinstonLogger(),
-            sync: this.node.sync,
-            eth1: this.node.eth1,
-            opPool: this.node.opPool,
-            chain: this.node.chain,
-            db: this.node.db
-          }
-        ),
-      });
-
-      this.validator = new Validator(conf.validator, {config, logger});
-      await this.validator.start();
+    if (options.quickStart) {
+      this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier()});
+      const state = quickStartOptionToState(config, options.quickStart);
+      await this.node.chain.initializeBeaconChain(state, ProgressiveMerkleTree.empty(32));
+    } else {
+      throw new Error("Missing --quickstart flag");
     }
 
     await this.node.start();
   }
+
 }
