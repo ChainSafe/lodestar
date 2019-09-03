@@ -29,6 +29,7 @@ export interface Service {
 interface BeaconNodeModules {
   config: IBeaconConfig;
   logger: ILogger;
+  eth1?: IEth1Notifier;
 }
 
 // TODO move into src/node/beacon
@@ -50,7 +51,7 @@ export class BeaconNode {
   public reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger}: BeaconNodeModules) {
+  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, eth1}: BeaconNodeModules) {
     this.conf = deepmerge(
       defaultConf,
       opts,
@@ -82,7 +83,7 @@ export class BeaconNode {
       logger: logger.child(this.conf.logger.network),
       metrics: this.metrics,
     });
-    this.eth1 = new EthersEth1Notifier(this.conf.eth1, {
+    this.eth1 = eth1 || new EthersEth1Notifier(this.conf.eth1, {
       config,
       logger: logger.child(this.conf.logger.eth1),
     });
@@ -118,13 +119,13 @@ export class BeaconNode {
       rpc,
       logger: logger.child(this.conf.logger.sync),
     });
-    //TODO: needs to be moved to Rpc class and initialized from opts
-    this.rpc = new JSONRPC(this.conf.api, {
-      transports: [new WSServer(this.conf.api.transports[0])],
-      apis: this.conf.api.apis.map((Api) => {
-        return new Api({}, {config, chain: this.chain, db: this.db, eth1: this.eth1});
-      })
-    });
+    // //TODO: needs to be moved to Rpc class and initialized from opts
+    // this.rpc = new JSONRPC(this.conf.api, {
+    //   transports: [new WSServer(this.conf.api.transports[0])],
+    //   apis: this.conf.api.apis.map((Api) => {
+    //     return new Api({}, {config, chain: this.chain, db: this.db, eth1: this.eth1});
+    //   })
+    // });
 
   }
 
@@ -138,11 +139,11 @@ export class BeaconNode {
     await this.chain.start();
     await this.opPool.start();
     await this.sync.start();
-    await this.rpc.start();
+    // await this.rpc.start();
   }
 
   public async stop(): Promise<void> {
-    await this.rpc.stop();
+    // await this.rpc.stop();
     await this.sync.stop();
     await this.opPool.stop();
 

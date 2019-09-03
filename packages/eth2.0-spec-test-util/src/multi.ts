@@ -1,10 +1,9 @@
-import {load} from "js-yaml";
-import {readFileSync, writeFile} from "fs";
-import {schema} from "./yaml/schema";
+import {writeFile} from "fs";
 import {describe} from "mocha";
-import {objectToCamelCase} from "./util";
 import {expect} from "chai";
 import profiler from "v8-profiler-next";
+
+import {loadYamlFile} from "./util";
 
 export interface BaseCase {
   description: string;
@@ -56,17 +55,7 @@ export function describeMultiSpec<TestCase extends BaseCase, Result>(
   expectFunc = (testCase, expect, expected, actual) => expect(actual).to.be.equal(expected),
   timeout = 2000
 ): void {
-  const testSpec = objectToCamelCase(
-    load(
-      readFileSync(
-        testYamlPath,
-        'utf8'
-      ),
-      {
-        schema,
-      }
-    )
-  ) as TestSpec<TestCase>;
+  const testSpec = loadYamlFile(testYamlPath) as TestSpec<TestCase>;
 
   const testSuiteName = `${testSpec.runner} - ${testSpec.handler} - ${testSpec.title} - ${testSpec.config}`;
 
