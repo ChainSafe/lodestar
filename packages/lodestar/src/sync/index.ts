@@ -14,8 +14,7 @@ import {InitialSync} from "./initial";
 import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
 import {ISyncOptions} from "./options";
-import {ISyncReqResp} from "./reqResp/interface";
-import { SyncReqResp } from "./reqResp/syncReqResp";
+import {ISyncReqResp, SyncReqResp} from "./reqResp";
 
 interface SyncModules {
   config: IBeaconConfig;

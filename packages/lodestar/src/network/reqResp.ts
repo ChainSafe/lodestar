@@ -1,3 +1,6 @@
+/**
+ * @module network
+ */
 import {EventEmitter} from "events";
 import LibP2p from "libp2p";
 import LibP2pConnection from "interface-connection";
