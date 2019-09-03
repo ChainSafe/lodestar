@@ -63,6 +63,19 @@ export abstract class BulkRepository<T> extends Repository<T> {
     return (data || []).map((data) => deserialize(data, this.type));
   }
 
+  public async getAllBetween(lowerLimit: number, upperLimit: number): Promise<T[]> {
+    let data = await this.db.search({
+      gt: encodeKey(this.bucket, Buffer.alloc(0)),
+      lt: encodeKey(this.bucket + 1, Buffer.alloc(0)),
+    });
+    if (!data) {
+      data = [];
+    } else {
+      data = data.slice(lowerLimit, upperLimit);
+    }
+    return (data || []).map((data) => deserialize(data, this.type));
+  }
+
   public async deleteMany(ids: Id[]): Promise<void> {
     const criteria: (Buffer | string)[] = [];
     ids.forEach((id) =>
