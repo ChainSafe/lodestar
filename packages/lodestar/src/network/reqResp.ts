@@ -54,10 +54,7 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
       this.libp2p.handle(
         createRpcProtocol(method, this.encoding),
         async (protocol: string, conn: LibP2pConnection) => {
-          let peerInfo;
-          while (!peerInfo) {
-            peerInfo = await promisify(conn.getPeerInfo.bind(conn))();
-          }
+          const peerInfo = await promisify(conn.getPeerInfo.bind(conn))();
           pull(
             conn,
             this.handleRequest(peerInfo, method),
@@ -159,7 +156,7 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
     ]);
   }
   private encodeResponseError(err: Error): Buffer {
-    const b = Buffer.from("\255" + err.message);
+    const b = Buffer.from("c" + err.message);
     b[0] = err.message === ERR_INVALID_REQ ? 1 : 2;
     return b;
   }
@@ -212,7 +209,11 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
   private async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T> {
     const protocol = createRpcProtocol(method, this.encoding);
     return await new Promise((resolve, reject) => {
-      this.libp2p.dialProtocol(peerInfo, protocol, (conn) => {
+      this.libp2p.dialProtocol(peerInfo, protocol, (err, conn) => {
+        if (err) {
+          return reject(err);
+        }
+        // @ts-ignore
         pull(
           pull.values([this.encodeRequest(method, body)]),
           conn,
@@ -220,7 +221,7 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
             try {
               resolve(this.decodeResponse(method, data) as T);
             } catch (e) {
-              reject(e);
+              //reject(e);
             }
           }),
         );

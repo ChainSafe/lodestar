@@ -1,5 +1,5 @@
 /**
- * @module network/libp2p/nodejs
+ * @module network/nodejs
  */
 
 import PeerId from "peer-id";
