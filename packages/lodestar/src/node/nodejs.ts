@@ -16,9 +16,9 @@ import {OpPool} from "../opPool";
 import {createPeerId, initializePeerInfo} from "../network/libp2p/util";
 import {ILogger} from "../logger";
 import {ReputationStore} from "../sync/reputation";
-import {JSONRPC, WSServer} from "../rpc";
 import {SyncRpc} from "../network/libp2p/syncRpc";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
+import {ApiService} from "../api";
 
 export interface Service {
   start(): Promise<void>;
@@ -46,7 +46,7 @@ export class BeaconNode {
   public network: INetwork;
   public chain: IBeaconChain;
   public opPool: OpPool;
-  public rpc: Service;
+  public api: Service;
   public sync: Sync;
   public reps: ReputationStore;
   private logger: ILogger;
@@ -119,13 +119,18 @@ export class BeaconNode {
       rpc,
       logger: logger.child(this.conf.logger.sync),
     });
-    // //TODO: needs to be moved to Rpc class and initialized from opts
-    // this.rpc = new JSONRPC(this.conf.api, {
-    //   transports: [new WSServer(this.conf.api.transports[0])],
-    //   apis: this.conf.api.apis.map((Api) => {
-    //     return new Api({}, {config, chain: this.chain, db: this.db, eth1: this.eth1});
-    //   })
-    // });
+    this.api = new ApiService(
+      this.conf.api,
+      {
+        config,
+        logger: this.logger,
+        opPool: this.opPool,
+        db: this.db,
+        sync: this.sync,
+        chain: this.chain,
+        eth1: this.eth1
+      }
+    );
 
   }
 
@@ -139,11 +144,11 @@ export class BeaconNode {
     await this.chain.start();
     await this.opPool.start();
     await this.sync.start();
-    // await this.rpc.start();
+    await this.api.start();
   }
 
   public async stop(): Promise<void> {
-    // await this.rpc.stop();
+    await this.api.stop();
     await this.sync.stop();
     await this.opPool.stop();
 

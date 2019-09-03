@@ -12,7 +12,7 @@ import StrictEventEmitter from "strict-event-emitter-types";
 
 export type NetworkEventEmitter = StrictEventEmitter<EventEmitter, INetworkEvents>;
 
-interface INetworkEvents {
+export interface INetworkEvents {
   [BLOCK_TOPIC]: (block: BeaconBlock) => void;
   [ATTESTATION_TOPIC]: (attestation: Attestation) => void;
   ["gossipsub:heartbeat"]: void;
