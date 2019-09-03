@@ -6,9 +6,9 @@ import {Keypair} from "@chainsafe/bls/lib/keypair";
 import {BeaconBlockHeader, ValidatorIndex} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
-
+import {describe, it} from "mocha";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
-import {ValidatorDB} from "../../../../../src/db";
+import {IValidatorDB, ValidatorDB} from "../../../../../src/db";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
@@ -89,6 +89,7 @@ describe('produce block', function () {
     dbStub.deposit.getAll.resolves([]);
     eth1Stub.depositCount.resolves(1);
     eth1Stub.depositRoot.resolves(tree.root());
+    eth1Stub.getEth1Data.resolves({depositCount: 1, depositRoot: tree.root(), blockHash: Buffer.alloc(32)});
     // @ts-ignore
     eth1Stub.getHead.resolves({
       hash: '0x' + ZERO_HASH.toString('hex'),
@@ -124,7 +125,7 @@ describe('produce block', function () {
       validatorIndex,
       rpcClientStub,
       privateKey,
-      validatorDbStub,
+      validatorDbStub as unknown as IValidatorDB,
       sinon.createStubInstance(WinstonLogger)
     );
   }
