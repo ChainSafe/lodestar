@@ -10,6 +10,7 @@ import {
   number64,
   Shard,
   Slot,
+  ValidatorIndex,
 } from "./primitive";
 
 import {
@@ -38,7 +39,7 @@ export interface BeaconState {
   // Eth1
   eth1Data: Eth1Data;
   eth1DataVotes: Eth1Data[];
-  eth1DepositIndex: number64;
+  eth1DepositIndex: ValidatorIndex; // Check this
   
   // Registry
   validators: Validator[];

@@ -2,13 +2,13 @@
  * @module types
  */
 
-import {BLSPubkey, number64, Shard, Slot, uint64} from "./primitive";
+import {BLSPubkey, Shard, Slot, uint64, ValidatorIndex} from "./primitive";
 
 export interface ValidatorDuty {
   // The validator's public key, uniquely identifying them
   validatorPubkey: BLSPubkey;
   // The index of the validator in the committee
-  committeeIndex: number64;
+  committeeIndex: ValidatorIndex;
   // The slot at which the validator must attest
   attestationSlot: Slot;
   // The shard in which the validator must attest
