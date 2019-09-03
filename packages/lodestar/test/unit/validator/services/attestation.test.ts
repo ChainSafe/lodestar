@@ -1,16 +1,17 @@
 import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 import sinon from "sinon";
 import {expect} from "chai";
-
+import {describe, it} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {RpcClientOverInstance} from "../../../../src/validator/rpc";
-import {ValidatorApi} from "../../../../src/rpc/api/validator";
+import {ValidatorApi} from "../../../../src/api/rpc/api/validator";
 import {AttestationService} from "../../../../src/validator/services/attestation";
 import {computeEpochOfSlot} from "../../../../src/chain/stateTransition/util";
 import {ValidatorDB} from "../../../../src/db/api";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
 import {generateFork} from "../../../utils/fork";
 import {generateAttestationData} from "../../../utils/attestation";
+import {Keypair} from "@chainsafe/bls";
 
 describe('validator attestation service', function () {
 
@@ -41,7 +42,7 @@ describe('validator attestation service', function () {
     const shard = 1;
     const attestationData = generateAttestationData(slot, 1);
     rpcClientStub.validator = sandbox.createStubInstance(ValidatorApi);
-    rpcClientStub.validator.produceAttestation.withArgs(slot, shard).resolves({data: attestationData});
+    rpcClientStub.validator.produceAttestation.withArgs(sinon.match.any, false, slot, shard).resolves({data: attestationData});
 
     dbStub.getAttestations.resolves([
       {
@@ -49,7 +50,7 @@ describe('validator attestation service', function () {
       }
     ]);
     const service = new AttestationService(
-      config, 0, rpcClientStub, PrivateKey.random(), dbStub, logger
+      config, Keypair.generate(), rpcClientStub, dbStub, logger
     );
     const result = await service.createAndPublishAttestation(slot, shard, generateFork());
     expect(result).to.be.null;
@@ -60,13 +61,10 @@ describe('validator attestation service', function () {
     const shard = 1;
     const attestationData = generateAttestationData(slot, 1);
     rpcClientStub.validator = sandbox.createStubInstance(ValidatorApi);
-    rpcClientStub.validator.produceAttestation.withArgs(slot, shard).resolves({data: attestationData});
-    rpcClientStub.validator.getCommitteeAssignment.withArgs(0, computeEpochOfSlot(config, slot)).resolves({
-      validators: [0]
-    });
+    rpcClientStub.validator.produceAttestation.withArgs(sinon.match.any, false, slot, shard).resolves({data: attestationData});
     dbStub.getAttestations.resolves([]);
     const service = new AttestationService(
-      config, 0, rpcClientStub, PrivateKey.random(), dbStub, logger
+      config, Keypair.generate(), rpcClientStub, dbStub, logger
     );
     const result = await service.createAndPublishAttestation(slot, shard, generateFork());
     expect(result).to.not.be.null;
@@ -74,9 +72,6 @@ describe('validator attestation service', function () {
       sinon.match.has('data', attestationData)
         .and(sinon.match.has('signature', sinon.match.defined))
     ).calledOnce).to.be.true;
-    expect(
-      rpcClientStub.validator.getCommitteeAssignment.withArgs(0, computeEpochOfSlot(config, slot)).calledOnce
-    ).to.be.true;
   });
 
 });

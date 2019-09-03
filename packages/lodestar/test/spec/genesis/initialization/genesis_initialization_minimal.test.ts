@@ -9,6 +9,7 @@ import {initializeBeaconStateFromEth1} from "../../../../src/chain/genesis/genes
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {GenesisInitCase} from "../../../utils/specTestTypes/genesis";
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "@chainsafe/eth2.0-params/lib/presets/minimal";
 
 describeMultiSpec<GenesisInitCase, BeaconState>(
   join(__dirname, "../../test-cases/tests/genesis/initialization/genesis_initialization_minimal.yaml"),
@@ -21,19 +22,19 @@ describeMultiSpec<GenesisInitCase, BeaconState>(
       expandYamlValue(input.eth1Timestamp, config.types.number64),
       expandYamlValue(input.deposits, {
         elementType: config.types.Deposit,
-        maxLength: 100000,
+        maxLength: 2 ^ DEPOSIT_CONTRACT_TREE_DEPTH,
       }),
     ];
   },
   (expected) => {
-    return expandYamlValue(expected.post, config.types.BeaconState);
+    return expandYamlValue(expected.state, config.types.BeaconState);
   },
   result => result,
   (testCase) => {
-    return !testCase.post;
+    return !testCase.state;
   },
   () => false,
-  (_1, _2, expected, actual) => {
+  (_1, _2, expected: BeaconState, actual: BeaconState) => {
     expect(equals(expected, actual, config.types.BeaconState)).to.be.true;
   },
   0

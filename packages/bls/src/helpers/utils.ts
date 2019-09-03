@@ -23,7 +23,7 @@ export function getModulus(): BIG {
       'hex'
     ),
     0
-  )
+  );
 }
 
 export function calculateYFlag(yIm: BIG): boolean {

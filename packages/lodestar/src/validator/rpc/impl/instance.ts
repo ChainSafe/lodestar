@@ -1,5 +1,5 @@
-import {IBeaconApi} from "../../../rpc/api/beacon";
-import {IValidatorApi} from "../../../rpc/api/validator";
+import {IBeaconApi} from "../../../api/rpc/api/beacon";
+import {IValidatorApi} from "../../../api/rpc/api/validator";
 import {AbstractRpcClient} from "../abstract";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
