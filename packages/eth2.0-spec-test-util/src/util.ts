@@ -1,5 +1,8 @@
+import {lstatSync, readFileSync} from "fs";
 import camelcase from "camelcase";
-import {lstatSync, readdirSync} from "fs";
+import {load} from "js-yaml";
+
+import {schema} from "./yaml/schema";
 
 export function objectToCamelCase(obj: object): object {
   if (Object(obj) === obj) {
@@ -17,6 +20,15 @@ export function objectToCamelCase(obj: object): object {
     }
   }
   return obj;
+}
+
+export function loadYamlFile(path: string): object {
+  return objectToCamelCase(
+    load(
+      readFileSync(path, "utf8"),
+      {schema}
+    )
+  );
 }
 
 export function isDirectory(path: string): boolean {

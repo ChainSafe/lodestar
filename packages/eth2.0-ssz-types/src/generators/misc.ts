@@ -155,9 +155,9 @@ export const MerkleTree = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
     ["tree", {
       elementType: {
         elementType: ssz.Hash,
-        maxLength: DEPOSIT_CONTRACT_TREE_DEPTH,
+        maxLength: DEPOSIT_CONTRACT_TREE_DEPTH + 1,
       },
-      maxLength: DEPOSIT_CONTRACT_TREE_DEPTH,
+      maxLength: DEPOSIT_CONTRACT_TREE_DEPTH + 1,
     }]
   ]
 });
