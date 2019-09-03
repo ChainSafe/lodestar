@@ -64,3 +64,4 @@ typings/
 
 dist/
 lib/
+benchmark-reports

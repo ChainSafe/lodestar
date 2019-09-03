@@ -1,6 +1,6 @@
 import bls from "../../src";
 import {Keypair} from "../../src/keypair";
-import { sha256 } from 'js-sha256';
+import {sha256} from 'js-sha256';
 import {G2point} from "../../src/helpers/g2point";
 import {expect} from "chai";
 
@@ -65,7 +65,7 @@ describe('test bls', function () {
     it('should fail verify signature of different message', () => {
       const keypair = Keypair.generate();
       const messageHash = Buffer.from(sha256.arrayBuffer("Test message"));
-      const messageHash2 = Buffer.from(sha256.arrayBuffer("Test message2"))
+      const messageHash2 = Buffer.from(sha256.arrayBuffer("Test message2"));
       const domain = Buffer.from("01", 'hex');
       const signature = keypair.privateKey.sign(
         G2point.hashToG2(messageHash, domain)
@@ -117,7 +117,7 @@ describe('test bls', function () {
   describe('verify multiple', function() {
 
     it('should verify aggregated signatures', function () {
-      this.timeout(5000)
+      this.timeout(5000);
 
 
       const domain = Buffer.alloc(8, 0);
@@ -162,8 +162,48 @@ describe('test bls', function () {
       expect(result).to.be.true;
     });
 
+    it('should verify aggregated signatures - same message', function () {
+      this.timeout(5000);
+
+
+      const domain = Buffer.alloc(8, 0);
+
+      const keypair1 = Keypair.generate();
+      const keypair2 = Keypair.generate();
+      const keypair3 = Keypair.generate();
+      const keypair4 = Keypair.generate();
+
+      const message = Buffer.from("Test1", 'utf-8');
+
+      const signature1 = keypair1.privateKey.signMessage(message, domain);
+      const signature2 = keypair2.privateKey.signMessage(message, domain);
+      const signature3 = keypair3.privateKey.signMessage(message, domain);
+      const signature4 = keypair4.privateKey.signMessage(message, domain);
+
+      const aggregateSignature = bls.aggregateSignatures([
+        signature1.toBytesCompressed(),
+        signature2.toBytesCompressed(),
+        signature3.toBytesCompressed(),
+        signature4.toBytesCompressed(),
+      ]);
+
+      const result = bls.verifyMultiple(
+        [
+          keypair1.publicKey.toBytesCompressed(),
+          keypair2.publicKey.toBytesCompressed(),
+          keypair3.publicKey.toBytesCompressed(),
+          keypair4.publicKey.toBytesCompressed()
+        ],
+        [message, message, message, message],
+        aggregateSignature,
+        domain
+      );
+
+      expect(result).to.be.true;
+    });
+
     it('should fail to verify aggregated signatures - swapped messages', function () {
-      this.timeout(5000)
+      this.timeout(5000);
 
       const domain = Buffer.alloc(8, 0);
 
