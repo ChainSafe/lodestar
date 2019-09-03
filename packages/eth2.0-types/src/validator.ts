@@ -14,7 +14,7 @@ export interface ValidatorDuty {
   // The shard in which the validator must attest
   attestationShard: Shard;
   // The slot in which a validator must propose a block, this field can be Null
-  blockProductionSlot: Slot;
+  blockProposalSlot: Slot;
 }
 
 export interface SyncingStatus {

@@ -58,11 +58,7 @@ export function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
   if(publicKeys.length === 0) {
     return new G1point(new ctx.ECP()).toBytesCompressed();
   }
-  return publicKeys.map((publicKey): G1point => {
-    return G1point.fromBytesCompressed(publicKey);
-  }).reduce((previousValue, currentValue): G1point => {
-    return previousValue.add(currentValue);
-  }).toBytesCompressed();
+  return G1point.aggregate(publicKeys).toBytesCompressed();
 }
 
 /**
@@ -77,6 +73,8 @@ export function verify(publicKey: BLSPubkey, messageHash: Hash, signature: BLSSi
     const key = PublicKey.fromBytes(publicKey);
     const sig = Signature.fromCompressedBytes(signature);
 
+    key.getPoint().getPoint().affine();
+    sig.getPoint().getPoint().affine();
     const g1Generated = G1point.generator();
     const e1 = ElipticCurvePairing.pair(key.getPoint(), G2point.hashToG2(messageHash, domain));
     const e2 = ElipticCurvePairing.pair(g1Generated, sig.getPoint());
@@ -98,18 +96,47 @@ export function verifyMultiple(publicKeys: BLSPubkey[], messageHashes: Hash[], s
     return false;
   }
   try {
-    const g1Generated = G1point.generator();
+    const sig = Signature.fromCompressedBytes(signature).getPoint();
+    sig.getPoint().affine();
+
     const eCombined = new ctx.FP12(1);
-    publicKeys.forEach((publicKey, index): void => {
-      const g2 = G2point.hashToG2(messageHashes[index], domain);
-      eCombined.mul(
-        ElipticCurvePairing.pair(
-          PublicKey.fromBytes(publicKey).getPoint(),
-          g2
-        )
-      );
-    });
-    const e2 = ElipticCurvePairing.pair(g1Generated, Signature.fromCompressedBytes(signature).getPoint());
+
+    const reduction = messageHashes.reduce((previous, current, index) => {
+      if(previous.hash && current.equals(previous.hash)) {
+        return {
+          hash: previous.hash,
+          publicKey: previous.publicKey ?
+            previous.publicKey.addRaw(publicKeys[index])
+            :
+            G1point.fromBytesCompressed(publicKeys[index]),
+        };
+      } else if(!!previous.hash) {
+        const g2 = G2point.hashToG2(previous.hash, domain);
+        eCombined.mul(
+          ElipticCurvePairing.pair(
+            previous.publicKey,
+            g2
+          )
+        );
+        return {hash: current, publicKey: G1point.fromBytesCompressed(publicKeys[index])};
+      } else {
+        return {
+          hash: current,
+          publicKey: G1point.fromBytesCompressed(publicKeys[index])
+        };
+      }
+    }, {hash: null, publicKey: null});
+
+    const g2Final = G2point.hashToG2(reduction.hash, domain);
+    const keyFinal = reduction.publicKey;
+    eCombined.mul(
+      ElipticCurvePairing.pair(
+        keyFinal,
+        g2Final
+      )
+    );
+
+    const e2 = ElipticCurvePairing.pair(G1point.generator(), sig);
     return e2.equals(eCombined);
   } catch (e) {
     return false;
