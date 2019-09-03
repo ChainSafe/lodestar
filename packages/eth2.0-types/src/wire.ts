@@ -26,9 +26,9 @@ export interface ErrorResponse {
 
 export interface Hello {
   forkVersion: Version;
-  finalizedRoot: bytes32;
+  finalizedRoot: Hash;
   finalizedEpoch: Epoch;
-  headRoot: bytes32;
+  headRoot: Hash;
   headSlot: Slot;
 }
 
@@ -39,7 +39,6 @@ export interface Goodbye {
 export interface BeaconBlocksRequest {
   headBlockRoot: Hash; 
   startSlot: Slot;
-  maxHeaders: number64;
   count: number64;
   step: number64;
 }

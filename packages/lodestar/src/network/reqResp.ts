@@ -5,7 +5,7 @@ import promisify from "promisify-es6";
 import pull from "pull-stream";
 import varint from "varint";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {RequestBody, ResponseBody} from "@chainsafe/eth2.0-types";
+import {RequestBody, ResponseBody, Hello, BeaconBlocksResponse, BeaconBlocksRequest, Goodbye, RecentBeaconBlocksResponse, RecentBeaconBlocksRequest} from "@chainsafe/eth2.0-types";
 import {serialize, deserialize} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -14,37 +14,32 @@ import {
   ERR_INVALID_REQ, ERR_RESP_TIMEOUT,
   REQ_RESP_MAX_SIZE, TTFB_TIMEOUT, RESP_TIMEOUT,
 } from "../constants";
+import {ILogger} from "../logger";
 import {
   createRpcProtocol,
   createResponseEvent,
   randomRequestId,
 } from "./util";
-import { ILogger } from "../logger";
 
-interface INetworkRpcEvents {
-  request: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => void;
-  // we cannot typehint dynamic keys
-  // [createResponseEvent(id: RequestId)]: (err: Error, data: ResponseBody) => void
+import {IReqResp, ReqRespEventEmitter} from "./interface";
+
+interface ReqRespEventEmitterClass {
+  new(): ReqRespEventEmitter;
 }
 
-type NetworkRpcEventEmitter = StrictEventEmitter<EventEmitter, INetworkRpcEvents>;
-interface NetworkRpcEventEmitterClass {
-  new(): NetworkRpcEventEmitter;
-}
-
-interface NetworkRpcModules {
+interface ReqRespModules {
   config: IBeaconConfig;
   libp2p: any;
   logger: ILogger;
 }
 
-export class NetworkRpc extends (EventEmitter as NetworkRpcEventEmitterClass) implements NetworkRpcEventEmitter {
+export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implements IReqResp {
   private config: IBeaconConfig;
   private libp2p: LibP2p;
   private logger: ILogger;
   private encoding: Encoding;
 
-  public constructor(opts, {config, libp2p, logger}: NetworkRpcModules) {
+  public constructor(opts, {config, libp2p, logger}: ReqRespModules) {
     super();
     this.config = config;
     this.libp2p = libp2p;
@@ -85,7 +80,16 @@ export class NetworkRpc extends (EventEmitter as NetworkRpcEventEmitterClass) im
             const request = this.decodeRequest(method, data);
             const requestId = randomRequestId();
             this.emit("request", peerInfo, method, requestId, request);
+            this.logger.debug("request", {
+              peer: peerInfo.id.toB58String(),
+              method,
+              requestId,
+            });
             const responseListener = (err, output): void => {
+              this.logger.debug("response", {
+                method,
+                requestId,
+              });
               if (err) return cb(null, this.encodeResponseError(err));
               cb(null, this.encodeResponse(method, output));
             };
@@ -93,6 +97,10 @@ export class NetworkRpc extends (EventEmitter as NetworkRpcEventEmitterClass) im
             // @ts-ignore
             this.once(responseEvent, responseListener);
             setTimeout(() => {
+              this.logger.debug("response timeout", {
+                method,
+                requestId,
+              });
               // @ts-ignore
               this.removeListener(responseEvent, responseListener);
               cb(null, this.encodeResponseError(new Error(ERR_RESP_TIMEOUT)));
@@ -185,10 +193,7 @@ export class NetworkRpc extends (EventEmitter as NetworkRpcEventEmitterClass) im
     }
     data = data.slice(bytes + 1);
     if (code !== 0) {
-      return {
-        code,
-        reason: data.toString("utf8"),
-      };
+      throw new Error(data.toString("utf8"));
     }
     switch (method) {
       case Method.Hello:
@@ -201,21 +206,39 @@ export class NetworkRpc extends (EventEmitter as NetworkRpcEventEmitterClass) im
         return deserialize(data, this.config.types.RecentBeaconBlocksRequest);
     }
   }
-  public sendResponse(id: RequestId, err: Error, body: ResponseBody): void {
-    // @ts-ignore
-    this.emit(`response ${id}`, err, body);
-  }
-  public async sendRequest(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<ResponseBody> {
+  private async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T> {
     const protocol = createRpcProtocol(method, this.encoding);
     return await new Promise((resolve, reject) => {
       this.libp2p.dialProtocol(peerInfo, protocol, (conn) => {
         pull(
           pull.values([this.encodeRequest(method, body)]),
           conn,
-          pull.drain((data) => resolve(this.decodeResponse(method, data))),
+          pull.drain((data) => {
+            try {
+              resolve(this.decodeResponse(method, data) as T);
+            } catch (e) {
+              reject(e);
+            }
+          }),
         );
       });
       setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
     });
+  }
+  public sendResponse(id: RequestId, err: Error, body: ResponseBody): void {
+    // @ts-ignore
+    this.emit(`response ${id}`, err, body);
+  }
+  public async hello(peerInfo: PeerInfo, request: Hello): Promise<Hello> {
+    return await this.sendRequest<Hello>(peerInfo, Method.Hello, request);
+  }
+  public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
+    await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request);
+  }
+  public async beaconBlocks(peerInfo: PeerInfo, request: BeaconBlocksRequest): Promise<BeaconBlocksResponse> {
+    return await this.sendRequest<BeaconBlocksResponse>(peerInfo, Method.BeaconBlocks, request);
+  }
+  public async recentBeaconBlocks(peerInfo: PeerInfo, request: RecentBeaconBlocksRequest): Promise<RecentBeaconBlocksResponse> {
+    return await this.sendRequest<RecentBeaconBlocksResponse>(peerInfo, Method.RecentBeaconBlocks, request);
   }
 }

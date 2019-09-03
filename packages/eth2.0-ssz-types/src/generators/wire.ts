@@ -25,7 +25,6 @@ export const BeaconBlocksRequest = (ssz: IBeaconSSZTypes): SimpleContainerType =
   fields: [
     ["headBlockRoot", ssz.Hash],
     ["startSlot", ssz.Slot],
-    ["maxHeaders", ssz.number64],
     ["count", ssz.number64],
     ["step", ssz.number64],
   ],

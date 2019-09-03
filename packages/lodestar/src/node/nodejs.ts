@@ -8,16 +8,16 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BeaconDb, LevelDbController} from "../db";
 import defaultConf, {IBeaconNodeOptions} from "./options";
 import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
-import {INetwork, Libp2pNetwork, NodejsNode} from "../network";
+import {INetwork, Libp2pNetwork} from "../network";
+import {NodejsNode} from "../network/nodejs";
+import {createPeerId, initializePeerInfo} from "../network/util";
 import {isPlainObject} from "../util/objects";
 import {Sync} from "../sync";
 import {BeaconChain, IBeaconChain} from "../chain";
 import {OpPool} from "../opPool";
-import {createPeerId, initializePeerInfo} from "../network/libp2p/util";
 import {ILogger} from "../logger";
 import {ReputationStore} from "../sync/reputation";
 import {JSONRPC, WSServer} from "../rpc";
-import {SyncRpc} from "../network/libp2p/syncRpc";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 
 export interface Service {
@@ -99,14 +99,6 @@ export class BeaconNode {
       metrics: this.metrics,
     });
 
-    const rpc = new SyncRpc(this.conf.sync, {
-      config,
-      db: this.db,
-      chain: this.chain,
-      network: this.network,
-      reps: this.reps,
-      logger: logger.child(this.conf.logger.network),
-    });
     this.sync = new Sync(this.conf.sync, {
       config,
       db: this.db,
@@ -115,7 +107,6 @@ export class BeaconNode {
       opPool: this.opPool,
       network: this.network,
       reps: this.reps,
-      rpc,
       logger: logger.child(this.conf.logger.sync),
     });
     //TODO: needs to be moved to Rpc class and initialized from opts
