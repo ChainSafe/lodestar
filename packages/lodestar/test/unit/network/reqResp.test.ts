@@ -116,8 +116,6 @@ describe("[network] rpc", () => {
       const helloActual = await rpcB.hello(nodeA.peerInfo, helloExpected);
       assert.deepEqual(JSON.stringify(helloActual), JSON.stringify(helloExpected));
     } catch (e) {
-      console.log(2)
-      console.log(e)
       assert.fail("hello not received");
     }
   });
