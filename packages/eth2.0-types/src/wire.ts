@@ -16,13 +16,7 @@ export type ResponseBody =
   Hello |
   Goodbye |
   BeaconBlocksResponse |
-  RecentBeaconBlocksResponse |
-  ErrorResponse;
-
-export interface ErrorResponse {
-  code: number;
-  reason: string;
-}
+  RecentBeaconBlocksResponse;
 
 export interface Hello {
   forkVersion: Version;
