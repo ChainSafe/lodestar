@@ -55,7 +55,8 @@ describe("produce block", function () {
   const opPoolStub = new OpPool({}, {config:config, db: dbStub, eth1: sinon.createStubInstance(EthersEth1Notifier)});
   };
   const configStub = sinon.createStubInstance(createIBeaconConfig);
-  const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
+const opPoolStub = new OpPool({}, {config: configStub, db: dbStub, eth1: sinon.createStubInstance(EthersEth1Notifier)});
+const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
   const chainStub = sinon.createStubInstance(BeaconChain);
   chainStub.forkChoice = sinon.createStubInstance(StatefulDagLMDGHOST);
 
@@ -71,7 +72,7 @@ describe("produce block", function () {
     const parentBlock = generateEmptyBlock();
     //if zero hash it get changed
     parentBlock.stateRoot = Buffer.alloc(32, 1);
-    const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock);
+    const parentHeader: BeaconBlockHeader = blockToHeader(minconfig, parentBlock);
     const state = generateState({
       validators: validators,
       balances,
