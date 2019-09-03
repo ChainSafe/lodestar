@@ -19,6 +19,5 @@ export interface ISyncReqResp {
   start: () => Promise<void>;
   stop: () => Promise<void>;
 
-  createHello: () => Promise<Hello>;
   onRequest: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => Promise<void>;
 }

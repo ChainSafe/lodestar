@@ -20,10 +20,6 @@ import {ReputationStore} from "../reputation";
 import {ILogger} from "../../logger";
 import {ISyncReqResp, ISyncOptions} from "./interface";
 
-/**
- * The SyncRpc module handles app-level requests / responses from other peers,
- * fetching state from the chain and database as needed.
- */
 export interface SyncReqRespModules {
   config: IBeaconConfig;
   db: IBeaconDb;
@@ -33,6 +29,10 @@ export interface SyncReqRespModules {
   logger: ILogger;
 }
 
+/**
+ * The SyncReqResp module handles app-level requests / responses from other peers,
+ * fetching state from the chain and database as needed.
+ */
 export class SyncReqResp implements ISyncReqResp {
   private opts: ISyncOptions;
   private config: IBeaconConfig;
@@ -52,7 +52,7 @@ export class SyncReqResp implements ISyncReqResp {
     this.logger = logger;
   }
 
-  public async createHello(): Promise<Hello> {
+  private async createHello(): Promise<Hello> {
     let headSlot: Slot,
       headRoot: Hash,
       finalizedEpoch: Epoch,
