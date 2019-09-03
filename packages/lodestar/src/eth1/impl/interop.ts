@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 
-import {bytes32, number64} from "@chainsafe/eth2.0-types";
+import {Hash, number64} from "@chainsafe/eth2.0-types";
 
 import {IEth1Notifier} from "../";
 import {Block} from "ethers/providers";
@@ -22,7 +22,7 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   public async processDepositLog(dataHex: string, indexHex: string): Promise<void> {
   }
 
-  public async depositRoot(): Promise<bytes32> {
+  public async depositRoot(): Promise<Hash> {
     return Buffer.alloc(32);
   }
 

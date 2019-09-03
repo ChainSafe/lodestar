@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 
-import {bytes32, Deposit, number64} from "@chainsafe/eth2.0-types";
+import {Hash, Deposit, number64} from "@chainsafe/eth2.0-types";
 
 import {IEth1Notifier, EthersEth1Options} from "../../../../src/eth1";
 import {Block} from "ethers/providers";
@@ -37,7 +37,7 @@ export class MockEth1Notifier extends EventEmitter implements IEth1Notifier {
     return [];
   }
 
-  public async depositRoot(): Promise<bytes32> {
+  public async depositRoot(): Promise<Hash> {
     return Buffer.alloc(32);
   }
 
