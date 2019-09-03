@@ -9,7 +9,7 @@ import Bootstrap from "libp2p-bootstrap";
 import PeerInfo from "peer-info";
 import deepmerge from "deepmerge";
 
-import {isPlainObject} from "../../../util/objects";
+import {isPlainObject} from "../../util/objects";
 
 export interface Libp2pOptions {
   peerInfo: PeerInfo;
