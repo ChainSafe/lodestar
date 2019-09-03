@@ -102,7 +102,7 @@ const config: IEth1Options = {
       "type": "constructor"
     }, {
       "name": "get_hash_tree_root",
-      "outputs": [{"type": "Hash", "name": "out"}],
+      "outputs": [{"type": "bytes32", "name": "out"}],
       "inputs": [],
       "constant": true,
       "payable": false,
