@@ -6,7 +6,7 @@ import {PublicKey} from "./publicKey";
 import {Signature} from "./signature";
 import {ElipticCurvePairing} from "./helpers/ec-pairing";
 import ctx from "./ctx";
-import {BLSPubkey, BLSSecretKey, BLSSignature, bytes32, Domain} from "@chainsafe/eth2.0-types";
+import {BLSPubkey, BLSSecretKey, BLSSignature, Domain, Hash} from "@chainsafe/eth2.0-types";
 
 export {Keypair, PrivateKey, PublicKey, Signature};
 
@@ -32,7 +32,7 @@ export function generatePublicKey(secretKey: BLSSecretKey): BLSPubkey {
  * @param messageHash
  * @param domain
  */
-export function sign(secretKey: BLSSecretKey, messageHash: bytes32, domain: Domain): BLSSignature {
+export function sign(secretKey: BLSSecretKey, messageHash: Hash, domain: Domain): BLSSignature {
   const privateKey = PrivateKey.fromBytes(secretKey);
   const hash = G2point.hashToG2(messageHash, domain);
   return privateKey.sign(hash).toBytesCompressed();
@@ -68,7 +68,7 @@ export function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
  * @param signature
  * @param domain
  */
-export function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BLSSignature, domain: Domain): boolean {
+export function verify(publicKey: BLSPubkey, messageHash: Hash, signature: BLSSignature, domain: Domain): boolean {
   try {
     const key = PublicKey.fromBytes(publicKey);
     const sig = Signature.fromCompressedBytes(signature);
@@ -91,7 +91,7 @@ export function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BL
  * @param signature
  * @param domain
  */
-export function verifyMultiple(publicKeys: BLSPubkey[], messageHashes: bytes32[], signature: BLSSignature, domain: Domain): boolean {
+export function verifyMultiple(publicKeys: BLSPubkey[], messageHashes: Hash[], signature: BLSSignature, domain: Domain): boolean {
   if(publicKeys.length === 0 || publicKeys.length != messageHashes.length) {
     return false;
   }

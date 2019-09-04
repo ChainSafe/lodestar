@@ -40,7 +40,7 @@ export const Hello = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
     ["networkId", ssz.uint64],
     ["chainId", ssz.uint16],
-    ["latestFinalizedRoot", ssz.bytes32],
+    ["latestFinalizedRoot", ssz.Hash],
     ["latestFinalizedEpoch", ssz.Epoch],
     ["bestRoot", ssz.Hash],
     ["bestSlot", ssz.Slot],
@@ -59,7 +59,7 @@ export const Goodbye = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
 
 export const Status = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
-    ["sha", ssz.bytes32],
+    ["sha", ssz.Hash],
     ["userAgent", {
       elementType: ssz.uint8,
       maxLength: 32000,
