@@ -13,7 +13,7 @@ import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {VoluntaryExitCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
 describeMultiSpec<VoluntaryExitCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/operations/voluntary_exit/voluntary_exit_mainnet.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/operations/voluntary_exit/voluntary_exit_mainnet.yaml"),
   (state, exit) => {
     processVoluntaryExit(config, state, exit);
     return state;
