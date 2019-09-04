@@ -52,7 +52,6 @@ describe('block proposing service', function () {
     rpcClientStub.validator = sandbox.createStubInstance(ValidatorApi);
     rpcClientStub.beacon = sandbox.createStubInstance(BeaconApi);
     rpcClientStub.validator.produceBlock.withArgs(slot, sinon.match.any).resolves(generateEmptyBlock());
-    rpcClientStub.beacon.getBeaconState.resolves(generateState({slot: config.params.SLOTS_PER_EPOCH * 2}));
     dbStub.getBlock.resolves(null);
     const service = new BlockProposingService(
       config, Keypair.generate(), rpcClientStub, dbStub, logger
@@ -67,7 +66,6 @@ describe('block proposing service', function () {
     rpcClientStub.validator = sandbox.createStubInstance(ValidatorApi);
     rpcClientStub.beacon = sandbox.createStubInstance(BeaconApi);
     rpcClientStub.validator.produceBlock.withArgs(slot, sinon.match.any).resolves(generateEmptyBlock());
-    rpcClientStub.beacon.getBeaconState.resolves(generateState({slot: config.params.SLOTS_PER_EPOCH * 2}));
     dbStub.getBlock.resolves(generateEmptyBlock());
     const service = new BlockProposingService(
       config, Keypair.generate(), rpcClientStub, dbStub, logger
