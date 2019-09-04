@@ -26,6 +26,7 @@ import deepmerge from "deepmerge";
 import {getKeyFromFileOrKeystore} from "../util/io";
 import {isPlainObject} from "../util/objects";
 import {computeEpochOfSlot} from "../chain/stateTransition/util";
+import { RpcClientOverRest } from "./rest/rpcClient";
 
 /**
  * Main class for the Validator client.
@@ -60,6 +61,8 @@ class Validator {
       this.rpcClient = this.opts.rpcInstance;
     } else if(this.opts.rpc) {
       this.rpcClient = new RpcClientOverWs({rpcUrl: this.opts.rpc}, {config: this.config});
+    } else if(this.opts.restUrl) {
+      this.rpcClient = new RpcClientOverRest(this.opts.restUrl, this.logger);
     } else {
       throw new Error("Validator requires either RpcClient instance or rpc url as params");
     }
