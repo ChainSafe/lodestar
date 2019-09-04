@@ -29,14 +29,4 @@ export class RestBeaconApi implements IBeaconApi {
   public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
     return this.client.get<boolean | SyncingStatus>("/syncing")
   }
-
-  public async getChainHead(): Promise<BeaconBlock> {
-    // not used in validator and not part of Rest API spec, remove this from IValidatorApi?
-    return Promise.reject();
-  }
-
-  public async getBeaconState(): Promise<BeaconState> {
-    // not used in validator and not part of Rest API spec, remove this from IValidatorApi?
-    return Promise.reject();
-  }
 }

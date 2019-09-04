@@ -24,8 +24,7 @@ export class RestValidatorApi implements IValidatorApi {
   }
 
   public async produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, slot: Slot, shard: Shard): Promise<Attestation> {
-    // validator_pubkey and poc_bit are not needed at this time
-    const url = `/attestation?slot=${slot}&shard=${shard}`;
+    const url = `/attestation?slot=${slot}&shard=${shard}&validator_pubkey=${validatorPubKey.toString("hex")}`;
     return this.client.get<Attestation>(url);
   }
 

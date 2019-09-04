@@ -4,7 +4,7 @@ import { RestValidatorApi } from "./validator/validator";
 import { RestBeaconApi } from "./beacon/beacon";
 import { ILogger } from "../../logger";
 
-export class RpcClientOverRest extends AbstractRpcClient {
+export class ApiClientOverRest extends AbstractRpcClient {
   public beacon: IBeaconApi;
 
   public validator: IValidatorApi;

@@ -36,15 +36,4 @@ export interface IBeaconApi extends IApi {
    * or a SyncingStatus object if it is.
    */
   getSyncingStatus(): Promise<boolean | SyncingStatus>;
-
-  /**
-   * Return the current chain head
-   */
-  getChainHead(): Promise<BeaconBlock>;
-
-  /**
-   * Returns latest beacon state
-   */
-  getBeaconState(): Promise<BeaconState>;
-
 }
