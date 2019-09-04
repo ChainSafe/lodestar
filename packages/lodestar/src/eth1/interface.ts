@@ -4,11 +4,11 @@
 
 import {EventEmitter} from "events";
 
-import {bytes32, Deposit, number64} from "@chainsafe/eth2.0-types";
+import {Hash, Deposit, number64} from "@chainsafe/eth2.0-types";
 import {Block} from "ethers/providers";
 import StrictEventEmitter from "strict-event-emitter-types";
 
-interface IEth1Events {
+export interface IEth1Events {
   block: (block: Block) => void;
   deposit: (index: number64, deposit: Deposit) => void;
 }
@@ -66,7 +66,7 @@ export interface IEth1Notifier extends Eth1EventEmitter {
   /**
    * Return the merkle root of the deposits
    */
-  depositRoot(block?: string | number): Promise<bytes32>;
+  depositRoot(block?: string | number): Promise<Hash>;
 
   /**
    * Retruns deposit count

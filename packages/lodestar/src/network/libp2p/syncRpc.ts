@@ -7,8 +7,8 @@ import BN from "bn.js";
 import PeerInfo from "peer-info";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {
-  bytes32, Slot, number64,
-  BeaconBlockHeader, BeaconBlockBody,
+  Hash, Slot, number64,
+  BeaconBlockHeader,
   RequestBody, Hello, Goodbye, Status,
   BeaconBlockRootsRequest, BeaconBlockRootsResponse,
   BeaconBlockHeadersRequest, BeaconBlockHeadersResponse,
@@ -63,9 +63,9 @@ export class SyncRpc implements ISyncRpc {
 
   public async createHello(): Promise<Hello> {
     let bestSlot: Slot,
-      bestRoot: bytes32,
+      bestRoot: Hash,
       latestFinalizedEpoch: Epoch,
-      latestFinalizedRoot: bytes32;
+      latestFinalizedRoot: Hash;
     if (!this.chain.isInitialized()) {
       bestSlot = 0;
       bestRoot = ZERO_HASH;
@@ -147,7 +147,7 @@ export class SyncRpc implements ISyncRpc {
 
   public async getBeaconBlockHeaders(
     peerInfo: PeerInfo,
-    startRoot: bytes32,
+    startRoot: Hash,
     startSlot: Slot,
     maxHeaders: number64,
     skipSlots: number64
@@ -158,7 +158,7 @@ export class SyncRpc implements ISyncRpc {
 
   public async getBeaconBlockBodies(
     peerInfo: PeerInfo,
-    blockRoots: bytes32[]
+    blockRoots: Hash[]
   ): Promise<BeaconBlockBodiesResponse> {
     return await this.network.sendRequest<BeaconBlockBodiesResponse>(
       peerInfo, Method.BeaconBlockBodies, {blockRoots});
@@ -166,7 +166,7 @@ export class SyncRpc implements ISyncRpc {
 
   public async getBeaconStates(
     peerInfo: PeerInfo,
-    hashes: bytes32[]
+    hashes: Hash[]
   ): Promise<BeaconState[]> {
     const stateResponse = await this.network.sendRequest<BeaconStatesResponse>(
       peerInfo, Method.BeaconStates, {hashes});

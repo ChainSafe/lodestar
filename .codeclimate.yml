@@ -23,10 +23,10 @@ checks:
       threshold: 4
   return-statements:
     config:
-      threshold: 4
+      threshold: 10
   similar-code:
     config:
-      threshold: 70
+      threshold: 80
   identical-code:
     config:
-      threshold: 90
+      threshold: 95

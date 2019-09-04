@@ -6,7 +6,7 @@ import {Keypair} from "@chainsafe/bls/lib/keypair";
 import {BeaconBlockHeader, ValidatorIndex} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
-
+import {describe} from "mocha";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {ValidatorDB} from "../../../../../src/db";
 import {generateEmptyBlock} from "../../../../utils/block";
@@ -20,7 +20,6 @@ import {generateValidator} from "../../../../utils/validator";
 import {ProgressiveMerkleTree} from "../../../../../src/util/merkleTree";
 import BlockProposingService from "../../../../../src/validator/services/block";
 import {RpcClientOverInstance} from "../../../../../src/validator/rpc";
-import {ValidatorApi} from "../../../../../src/rpc";
 import {WinstonLogger} from "../../../../../src/logger";
 import {generateDeposit} from "../../../../utils/deposit";
 import {
@@ -34,6 +33,7 @@ import {
   StateRepository,
   VoluntaryExitRepository
 } from "../../../../../src/db/api/beacon/repositories";
+import {ValidatorApi} from "../../../../../src/api/rpc/api/validator";
 
 describe('produce block', function () {
   this.timeout(0);
@@ -102,8 +102,7 @@ describe('produce block', function () {
     const validatorIndex = getBeaconProposerIndex(config, {...state, slot: 1});
 
     const blockProposingService = getBlockProposingService(
-      validatorIndex,
-      keypairs[validatorIndex].privateKey
+      keypairs[validatorIndex]
     );
     // @ts-ignore
     blockProposingService.getRpcClient().validator.produceBlock.callsFake(async(slot, randao) => {
@@ -115,15 +114,14 @@ describe('produce block', function () {
     expect(() => stateTransition(config, state, block, false)).to.not.throw();
   });
 
-  function getBlockProposingService(validatorIndex: ValidatorIndex, privateKey: PrivateKey): BlockProposingService {
+  function getBlockProposingService(keypair: Keypair): BlockProposingService {
     const rpcClientStub = sinon.createStubInstance(RpcClientOverInstance);
     rpcClientStub.validator = sinon.createStubInstance(ValidatorApi);
     const validatorDbStub = sinon.createStubInstance(ValidatorDB);
     return new BlockProposingService(
       config,
-      validatorIndex,
+      keypair,
       rpcClientStub,
-      privateKey,
       validatorDbStub,
       sinon.createStubInstance(WinstonLogger)
     );

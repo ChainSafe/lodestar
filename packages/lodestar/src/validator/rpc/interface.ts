@@ -1,4 +1,4 @@
-import {IBeaconApi, IValidatorApi} from "../../rpc/api";
+import {IBeaconApi, IValidatorApi} from "../../api/rpc/api";
 import {Epoch, Slot} from "@chainsafe/eth2.0-types";
 
 export interface NewSlotCallback {

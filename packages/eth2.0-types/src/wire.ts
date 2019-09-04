@@ -1,4 +1,4 @@
-import {Slot, bytes32, bytes, uint16, uint64, bytes8, Epoch, number64} from "./primitive";
+import {Slot, Hash, bytes, uint16, uint64, bytes8, Epoch, number64} from "./primitive";
 import {BeaconBlockBody} from "./block";
 import {BeaconBlockHeader} from "./misc";
 import {BeaconState} from "./state";
@@ -7,7 +7,7 @@ export type RequestId = string;
 export type Method = number;
 
 export interface BlockRootSlot {
-  blockRoot: bytes32;
+  blockRoot: Hash;
   slot: Slot;
 }
 
@@ -50,9 +50,9 @@ export type ResponseBody =
 export interface Hello {
   networkId: uint64;
   chainId: uint16;
-  latestFinalizedRoot: bytes32;
+  latestFinalizedRoot: Hash;
   latestFinalizedEpoch: Epoch;
-  bestRoot: bytes32;
+  bestRoot: Hash;
   bestSlot: Slot;
 }
 
@@ -65,7 +65,7 @@ export interface Goodbye {
 // Method ID: 2
 
 export interface Status {
-  sha: bytes32;
+  sha: Hash;
   userAgent: bytes;
   timestamp: number64;
 }
@@ -84,7 +84,7 @@ export interface BeaconBlockRootsResponse {
 // Method ID: 11
 
 export interface BeaconBlockHeadersRequest {
-  startRoot: bytes32; 
+  startRoot: Hash; 
   startSlot: Slot;
   maxHeaders: number64;
   skipSlots: number64;
@@ -97,7 +97,7 @@ export interface BeaconBlockHeadersResponse {
 // Method ID: 12
 
 export interface BeaconBlockBodiesRequest {
-  blockRoots: bytes32[];
+  blockRoots: Hash[];
 } 
 
 export interface BeaconBlockBodiesResponse {
@@ -107,7 +107,7 @@ export interface BeaconBlockBodiesResponse {
 // Method ID: 13
 
 export interface BeaconStatesRequest {
-  hashes: bytes32[];
+  hashes: Hash[];
 }
 
 export interface BeaconStatesResponse {

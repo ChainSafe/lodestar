@@ -2,7 +2,7 @@
  * @module types
  */
 
-import {BLSPubkey, bytes48, number64, Shard, Slot, uint64} from "./primitive";
+import {BLSPubkey, Shard, Slot, uint64, number64} from "./primitive";
 
 export interface ValidatorDuty {
   // The validator's public key, uniquely identifying them
@@ -14,7 +14,7 @@ export interface ValidatorDuty {
   // The shard in which the validator must attest
   attestationShard: Shard;
   // The slot in which a validator must propose a block, this field can be Null
-  blockProductionSlot: Slot;
+  blockProposalSlot: Slot;
 }
 
 export interface SyncingStatus {

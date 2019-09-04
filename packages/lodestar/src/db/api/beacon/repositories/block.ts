@@ -1,4 +1,4 @@
-import {BeaconBlock, bytes32, Hash, Slot} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, Hash, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {serialize} from "@chainsafe/ssz";
 
@@ -15,7 +15,7 @@ export class BlockRepository extends Repository<BeaconBlock> {
     config: IBeaconConfig,
     db: IDatabaseController,
     chain: ChainRepository) {
-    super(config, db, Bucket.state, config.types.BeaconState);
+    super(config, db, Bucket.state, config.types.BeaconBlock);
     this.chain = chain;
   }
 

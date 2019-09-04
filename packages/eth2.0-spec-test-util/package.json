@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/eth2.0-spec-test-util",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Spec test suite generator from yaml test files",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",

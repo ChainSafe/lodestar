@@ -4,7 +4,7 @@
 
 import PeerInfo from "peer-info";
 import {
-  bytes32, Slot, number64,
+  Hash, Slot, number64,
   Hello, Goodbye, Status,
   BeaconBlock, BeaconState,
   RequestBody,
@@ -37,7 +37,7 @@ export interface ISyncRpc {
 
   getBeaconBlocks: (peerInfo: PeerInfo, startSlot: Slot, count: number64, backward: boolean) => Promise<BeaconBlock[]>;
 
-  getBeaconStates: (peerInfo: PeerInfo, hashes: bytes32[]) => Promise<BeaconState[]>;
+  getBeaconStates: (peerInfo: PeerInfo, hashes: Hash[]) => Promise<BeaconState[]>;
 
   onRequest: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => Promise<void>;
 }

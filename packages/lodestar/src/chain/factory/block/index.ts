@@ -2,11 +2,11 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconBlock, BeaconBlockBody, BeaconBlockHeader, BeaconState, bytes96, Slot} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconBlockHeader, bytes96, Slot} from "@chainsafe/eth2.0-types";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {BeaconDb} from "../../../db/api";
+import {IBeaconDb} from "../../../db/api";
 import {OpPool} from "../../../opPool";
 import {assembleBody} from "./body";
 import {IEth1Notifier} from "../../../eth1";
@@ -14,7 +14,7 @@ import {stateTransition} from "../../stateTransition";
 
 export async function assembleBlock(
   config: IBeaconConfig,
-  db: BeaconDb,
+  db: IBeaconDb,
   opPool: OpPool,
   eth1: IEth1Notifier,
   slot: Slot,

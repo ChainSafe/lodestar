@@ -6,7 +6,7 @@ import assert from "assert";
 import BN from "bn.js";
 import {EventEmitter} from "events";
 import {hashTreeRoot} from "@chainsafe/ssz";
-import {Attestation, BeaconBlock, BeaconState, number64, uint16, uint64} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BeaconState, uint16, uint64} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "../constants";
@@ -73,9 +73,11 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     // if state doesn't exist in the db, the chain maybe hasn't started
     if(!state) {
       // check every block if genesis
+      this.logger.info("Chain not started, listening for genesis block");
       this.eth1.on('block', this.checkGenesis);
     }
     this.latestState = state;
+    this.logger.info("Chain started, waiting blocks and attestations");
   }
 
   public async stop(): Promise<void> {
@@ -115,6 +117,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   public async initializeBeaconChain(genesisState: BeaconState, merkleTree: ProgressiveMerkleTree): Promise<void> {
+    this.logger.info(`Initializing beacon chain with genesisTime ${genesisState.genesisTime}`);
     const genesisBlock = getEmptyBlock();
     const stateRoot = hashTreeRoot(genesisState, this.config.types.BeaconState);
     genesisBlock.stateRoot = stateRoot;
@@ -134,6 +137,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.forkChoice.addBlock(genesisBlock.slot, blockRoot, Buffer.alloc(32));
     this.forkChoice.setJustified(blockRoot);
     this.forkChoice.setFinalized(blockRoot);
+    this.logger.info(`Beacon chain initialized`);
   }
 
   public async isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean> {

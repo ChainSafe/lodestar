@@ -1,9 +1,9 @@
 import {NewEpochCallback, NewSlotCallback, RpcClient} from "./interface";
-import {Slot} from "@chainsafe/eth2.0-types";
-import {IValidatorApi} from "../../rpc/api/validator";
+import {Slot, Epoch} from "@chainsafe/eth2.0-types";
+import {IValidatorApi} from "../../api/rpc/api/validator";
 import {intDiv} from "../../util/math";
 import {computeEpochOfSlot} from "../../chain/stateTransition/util";
-import {IBeaconApi} from "../../rpc/api/beacon";
+import {IBeaconApi} from "../../api/rpc/api/beacon";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 
@@ -12,7 +12,7 @@ export abstract class AbstractRpcClient implements RpcClient {
   protected config: IBeaconConfig;
   private currentSlot: Slot;
 
-  private currentEpoch: Slot;
+  private currentEpoch: Epoch;
 
   private newSlotCallbacks: NewSlotCallback[] = [];
   private newEpochCallbacks: NewEpochCallback[] = [];

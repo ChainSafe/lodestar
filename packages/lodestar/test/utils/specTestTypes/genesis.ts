@@ -1,8 +1,7 @@
 import {BaseCase} from "@chainsafe/eth2.0-spec-test-util";
 
 export interface GenesisInitCase extends BaseCase {
-  pre: any;
-  post: any;
+  state: any;
   eth1BlockHash: any;
   eth1Timestamp: any;
   deposits: any;

@@ -3,7 +3,7 @@
  */
 
 import {
-  bytes32,
+  Hash,
   Gwei,
   Slot,
   ValidatorIndex,
@@ -11,9 +11,9 @@ import {
 
 
 export interface LMDGHOST {
-  addBlock(slot: Slot, blockRootBuf: bytes32, parentRootBuf: bytes32): void;
-  addAttestation(blockRootBuf: bytes32, attester: ValidatorIndex, weight: Gwei): void;
-  setFinalized(blockRoot: bytes32): void;
-  setJustified(blockRoot: bytes32): void;
-  head(): bytes32;
+  addBlock(slot: Slot, blockRootBuf: Hash, parentRootBuf: Hash): void;
+  addAttestation(blockRootBuf: Hash, attester: ValidatorIndex, weight: Gwei): void;
+  setFinalized(blockRoot: Hash): void;
+  setJustified(blockRoot: Hash): void;
+  head(): Hash;
 }
