@@ -6,7 +6,7 @@ import assert from "assert";
 import BN from "bn.js";
 
 import {
-  bytes32,
+  Hash,
   Gwei,
   Slot,
   ValidatorIndex,
@@ -186,7 +186,7 @@ export class StatefulDagLMDGHOST implements LMDGHOST {
     this.synced = true;
   }
 
-  public addBlock(slot: Slot, blockRootBuf: bytes32, parentRootBuf: bytes32): void {
+  public addBlock(slot: Slot, blockRootBuf: Hash, parentRootBuf: Hash): void {
     this.synced = false;
     const blockRoot = blockRootBuf.toString('hex');
     const parentRoot = parentRootBuf.toString('hex');
@@ -206,7 +206,7 @@ export class StatefulDagLMDGHOST implements LMDGHOST {
     }
   }
 
-  public addAttestation(blockRootBuf: bytes32, attester: ValidatorIndex, weight: Gwei): void {
+  public addAttestation(blockRootBuf: Hash, attester: ValidatorIndex, weight: Gwei): void {
     this.synced = false;
     this.aggregator.addAttestation({
       target: blockRootBuf.toString('hex'),
@@ -215,7 +215,7 @@ export class StatefulDagLMDGHOST implements LMDGHOST {
     });
   }
 
-  public setFinalized(blockRoot: bytes32): void {
+  public setFinalized(blockRoot: Hash): void {
     this.synced = false;
     const rootHex = blockRoot.toString('hex');
     this.finalized = this.nodes[rootHex];
@@ -223,7 +223,7 @@ export class StatefulDagLMDGHOST implements LMDGHOST {
     this.aggregator.prune();
   }
 
-  public setJustified(blockRoot: bytes32): void {
+  public setJustified(blockRoot: Hash): void {
     const rootHex = blockRoot.toString('hex');
     this.justified = this.nodes[rootHex];
   }
@@ -252,7 +252,7 @@ export class StatefulDagLMDGHOST implements LMDGHOST {
     this.synced = true;
   }
 
-  public head(): bytes32 {
+  public head(): Hash {
     assert(this.justified);
     if (!this.synced) {
       this.syncChanges();

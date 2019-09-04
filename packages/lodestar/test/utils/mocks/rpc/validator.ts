@@ -7,7 +7,7 @@ import {
   Deposit,
   Epoch,
   Eth1Data,
-  Fork, IndexedAttestation,
+  IndexedAttestation,
   number64,
   Shard,
   Slot,

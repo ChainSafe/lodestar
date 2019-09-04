@@ -6,7 +6,7 @@ import * as random from "secure-random";
 import {calculateYFlag, getModulus, padLeft} from "./utils";
 import assert from "assert";
 import {FP_POINT_LENGTH, G2_HASH_PADDING} from "../constants";
-import {bytes32, bytes48, Domain} from "@chainsafe/eth2.0-types";
+import {bytes48, Domain, Hash} from "@chainsafe/eth2.0-types";
 
 export class G2point {
 
@@ -58,7 +58,7 @@ export class G2point {
     ]);
   }
 
-  public static hashToG2(message: bytes32, domain: Domain): G2point {
+  public static hashToG2(message: Hash, domain: Domain): G2point {
     const padding = Buffer.alloc(G2_HASH_PADDING, 0);
     const xReBytes = Buffer.concat([
       padding,

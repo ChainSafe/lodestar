@@ -1,6 +1,5 @@
 import {
-  Slot, bytes32, bytes, uint16, uint64,
-  bytes8, Epoch, number64, Version, Hash,
+  Slot, Epoch, Hash, number64, Version, uint64,
 } from "./primitive";
 import {BeaconBlock} from "./block";
 
