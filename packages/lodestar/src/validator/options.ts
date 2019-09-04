@@ -9,6 +9,7 @@ import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 export interface IValidatorOptions {
   db: IDatabaseOptions;
   dbInstance?: IValidatorDB;
+  restUrl: string;
   rpc: string;
   rpcInstance?: RpcClient;
   keypair: Keypair;
@@ -70,6 +71,7 @@ const config: IValidatorOptions = {
   db: {
     name: "./validator-db"
   },
+  restUrl: "",
   rpc: "http://localhost:8545",
   keypair: Keypair.generate(),
   keystore: null,

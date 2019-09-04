@@ -59,22 +59,5 @@ describe('beacon rpc api', function () {
     const status = await beaconApi.getSyncingStatus();
     expect(status).to.be.false;
   });
-
-  it('should return state', async function () {
-    const state = generateState();
-    dbStub.state.getLatest.resolves(state);
-    const result = await beaconApi.getBeaconState();
-    expect(dbStub.state.getLatest.calledOnce).to.be.true;
-    expect(result).to.be.deep.equal(state);
-  });
-
-  it('should return chain head', async function () {
-    const block = generateEmptyBlock();
-    dbStub.block.getChainHead.resolves(block);
-    const result = await beaconApi.getChainHead();
-    expect(dbStub.block.getChainHead.calledOnce).to.be.true;
-    expect(result).to.be.deep.equal(block);
-  });
-
 });
 
