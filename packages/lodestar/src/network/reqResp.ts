@@ -221,7 +221,7 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
             try {
               resolve(this.decodeResponse(method, data) as T);
             } catch (e) {
-              //reject(e);
+              reject(e);
             }
           }),
         );
