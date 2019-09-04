@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/bls",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Implementation of bls signature verification for ethereum 2.0",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -27,8 +27,9 @@
     "lint-fix": "eslint --ext .ts src/ --fix",
     "pretest": "yarn check-types",
     "prepublishOnly": "yarn build",
-    "test:unit": "nyc --cache-dir .nyc_output/.cache -r lcov -e .ts mocha -r ./.babel-register 'test/unit/**/*.test.ts' && nyc report",
-    "test:spec": "mocha -r ./.babel-register 'test/spec/**/*.test.ts'",
+    "test:unit": "nyc --cache-dir .nyc_output/.cache -r lcov -e .ts mocha --colors -r ./.babel-register 'test/unit/**/*.test.ts' && nyc report",
+    "test:spec": "mocha --colors -r ./.babel-register 'test/spec/**/*.test.ts'",
+    "test:spec-min": "yarn run test:spec",
     "test": "yarn test:unit && yarn test:spec",
     "coverage": "codecov -F bls",
     "benchmark": "node -r ./.babel-register test/benchmarks"

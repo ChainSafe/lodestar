@@ -13,7 +13,7 @@ import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {ProposerSlashingCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
 describeMultiSpec<ProposerSlashingCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/operations/proposer_slashing/proposer_slashing_mainnet.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/operations/proposer_slashing/proposer_slashing_mainnet.yaml"),
   (state, proposerSlashing) => {
     processProposerSlashing(config, state, proposerSlashing);
     return state;

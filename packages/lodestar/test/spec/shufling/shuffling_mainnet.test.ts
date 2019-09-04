@@ -8,7 +8,7 @@ import {bytes32} from "@chainsafe/eth2.0-types";
 import {ShufflingCase} from "../../utils/specTestTypes/shufflingCase";
 
 describeMultiSpec<ShufflingCase, number[]>(
-  join(__dirname, "../test-cases/tests/shuffling/core/shuffling_full.yaml"),
+  join(__dirname, "../../../../spec-test-cases/tests/shuffling/core/shuffling_full.yaml"),
   (seed: bytes32, count: number) => {
     const output = [];
     for(let i = 0; i < count; i++) {

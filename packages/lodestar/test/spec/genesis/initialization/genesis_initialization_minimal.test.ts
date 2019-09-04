@@ -12,7 +12,7 @@ import {GenesisInitCase} from "../../../utils/specTestTypes/genesis";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "@chainsafe/eth2.0-params/lib/presets/minimal";
 
 describeMultiSpec<GenesisInitCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/genesis/initialization/genesis_initialization_minimal.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/genesis/initialization/genesis_initialization_minimal.yaml"),
   (blockHash, timestamp, deposits) => {
     return initializeBeaconStateFromEth1(config, blockHash, timestamp, deposits);
   },

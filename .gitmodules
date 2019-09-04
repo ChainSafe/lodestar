@@ -1,8 +1,4 @@
-[submodule "spec-test-cases"]
-	path = packages/lodestar/test/spec/test-cases
+[submodule "spec-test-cases-module"]
+	path = packages/spec-test-cases
 	url = https://github.com/ChainSafe/eth2.0-spec-tests.git
 	branch = v0.8.1
-[submodule "test/spec-tests"]
-	path = packages/bls/test/spec/spec-tests
-	url = https://github.com/chainsafe/eth2.0-spec-tests.git
-	branch = v0.8.0
