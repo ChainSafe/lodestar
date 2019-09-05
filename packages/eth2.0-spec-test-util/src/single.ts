@@ -8,6 +8,7 @@ import {schema} from "./yaml/schema";
 import {expect} from 'chai';
 import deepMerge from "deepmerge";
 import profiler from "v8-profiler-next";
+import path from "path";
 
 
 export enum InputType {
@@ -34,7 +35,7 @@ export interface ISpecTestOptions<TestCase, Result> {
    * Optionally pass function to transform loaded values
    * (values from input files)
    */
-  inputProcessing?: {[K in keyof TestCase]: (value: any) => any};
+  inputProcessing?: {[K: string]: (value: any) => any};
 
   shouldError?: (testCase: TestCase) => boolean;
 
@@ -131,7 +132,7 @@ function loadInputFiles<TestCase, Result>(
       if(isDirectory(file)) {
         return false;
       }
-      const extension = options.inputTypes[basename(file)] || InputType.SSZ;
+      const extension = options.inputTypes[path.parse(file).name] || InputType.SSZ;
       return file.endsWith(extension);
     })
     .forEach((file) => {
