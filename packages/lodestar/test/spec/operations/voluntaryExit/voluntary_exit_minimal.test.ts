@@ -12,7 +12,7 @@ import {VoluntaryExitCase} from "../../../utils/specTestTypes/beaconStateCompari
 import {BeaconState} from "@chainsafe/eth2.0-types";
 
 describeMultiSpec<VoluntaryExitCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/operations/voluntary_exit/voluntary_exit_minimal.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/operations/voluntary_exit/voluntary_exit_minimal.yaml"),
   (state, exit) => {
     processVoluntaryExit(config, state, exit);
     return state;

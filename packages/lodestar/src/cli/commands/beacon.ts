@@ -15,10 +15,11 @@ import {generateCommanderOptions, optionsToConfig} from "../util";
 import {getTomlConfig} from "../../util/file";
 import Validator from "../../validator";
 import {RpcClientOverInstance} from "../../validator/rpc";
-import {BeaconApi, ValidatorApi} from "../../rpc";
 import {quickStartOptionToState} from "../../interop/cli";
 import {ProgressiveMerkleTree} from "../../util/merkleTree";
 import {InteropEth1Notifier} from "../../eth1/impl/interop";
+import {ValidatorApi} from "../../api/rpc/api/validator";
+import {BeaconApi} from "../../api/rpc/api/beacon";
 
 interface IBeaconCommandOptions {
   configFile?: string;
@@ -90,7 +91,15 @@ export class BeaconNodeCommand implements CliCommand {
         ),
         beacon: new BeaconApi(
           {},
-          {config, chain: this.node.chain, db: this.node.db}
+          {
+            config,
+            logger: new WinstonLogger(),
+            sync: this.node.sync,
+            eth1: this.node.eth1,
+            opPool: this.node.opPool,
+            chain: this.node.chain,
+            db: this.node.db
+          }
         ),
       });
 

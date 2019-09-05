@@ -13,7 +13,7 @@ import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {SlotSanityCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
 describeMultiSpec<SlotSanityCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/sanity/slots/sanity_slots_minimal.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/sanity/slots/sanity_slots_minimal.yaml"),
   (state: BeaconState, slots: number64) => {
     processSlots(config, state, state.slot + slots);
     return state;

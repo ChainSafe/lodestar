@@ -5,7 +5,7 @@ import ctx from "./ctx";
 import {padLeft} from "./helpers/utils";
 import {G2point} from "./helpers/g2point";
 import * as random from "secure-random";
-import {BLSSecretKey, bytes32, Domain} from "@chainsafe/eth2.0-types";
+import {BLSSecretKey, Hash, Domain} from "@chainsafe/eth2.0-types";
 
 export class PrivateKey {
 
@@ -23,7 +23,7 @@ export class PrivateKey {
     return message.mul(this.value);
   }
 
-  public signMessage(message: bytes32, domain: Domain): G2point {
+  public signMessage(message: Hash, domain: Domain): G2point {
     return G2point.hashToG2(message, domain).mul(this.value);
   }
 

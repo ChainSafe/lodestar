@@ -6,7 +6,7 @@ import {
   BeaconBlock,
   BeaconState,
   BLSPubkey,
-  bytes32,
+  Hash,
   ValidatorIndex,
 } from "@chainsafe/eth2.0-types";
 
@@ -61,8 +61,8 @@ export interface IBeaconDb {
    * Set the head of the chain
    */
   setChainHeadRoots(
-    blockRoot: bytes32,
-    stateRoot: bytes32,
+    blockRoot: Hash,
+    stateRoot: Hash,
     block?: BeaconBlock,
     state?: BeaconState
   ): Promise<void>;

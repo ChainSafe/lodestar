@@ -12,7 +12,7 @@ import {BlockHeaderCase} from "../../../utils/specTestTypes/beaconStateCompariso
 import {BeaconState} from "@chainsafe/eth2.0-types";
 
 describeMultiSpec<BlockHeaderCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/operations/block_header/block_header_minimal.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/operations/block_header/block_header_minimal.yaml"),
   (state, block) => {
     processBlockHeader(config, state, block);
     return state;

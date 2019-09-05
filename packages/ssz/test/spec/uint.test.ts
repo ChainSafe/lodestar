@@ -8,7 +8,7 @@ import {UintCase} from "../util/specTypes/uint";
 // uint bounds
 
 describeMultiSpec<UintCase, string>(
-  join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_bounds.yaml"),
+  join(__dirname, "../../../spec-test-cases/tests/ssz_generic/uint/uint_bounds.yaml"),
   serialize,
   ({value, type}) => ([new BN(value), type]),
   ({ssz}) => ssz.slice(2),
@@ -17,7 +17,7 @@ describeMultiSpec<UintCase, string>(
 );
 
 describeMultiSpec<UintCase, string>(
-  join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_bounds.yaml"),
+  join(__dirname, "../../../spec-test-cases/tests/ssz_generic/uint/uint_bounds.yaml"),
   deserialize,
   ({ssz, type}) => ([Buffer.from(ssz.slice(2), 'hex'), type]),
   ({value}) => (new BN(value)).toArrayLike(Buffer, 'le', 256).toString('hex'),
@@ -29,7 +29,7 @@ describeMultiSpec<UintCase, string>(
 // uint random
 
 describeMultiSpec<UintCase, string>(
-  join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_random.yaml"),
+  join(__dirname, "../../../spec-test-cases/tests/ssz_generic/uint/uint_random.yaml"),
   serialize,
   ({value, type}) => ([new BN(value), type]),
   ({ssz}) => ssz.slice(2),
@@ -38,7 +38,7 @@ describeMultiSpec<UintCase, string>(
 );
 
 describeMultiSpec<UintCase, string>(
-  join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_random.yaml"),
+  join(__dirname, "../../../spec-test-cases/tests/ssz_generic/uint/uint_random.yaml"),
   deserialize,
   ({ssz, type}) => ([Buffer.from(ssz.slice(2), 'hex'), type]),
   ({value}) => (new BN(value)).toArrayLike(Buffer, 'le', 256).toString('hex'),
@@ -50,7 +50,7 @@ describeMultiSpec<UintCase, string>(
 // uint wrong length
 
 describeMultiSpec<UintCase, string>(
-  join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_wrong_length.yaml"),
+  join(__dirname, "../../../spec-test-cases/tests/ssz_generic/uint/uint_wrong_length.yaml"),
   deserialize,
   ({ssz, type}) => ([Buffer.from(ssz.slice(2), 'hex'), type]),
   ({value}) => (new BN(value)).toArrayLike(Buffer, 'le', 256).toString('hex'),

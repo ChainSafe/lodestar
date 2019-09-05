@@ -12,7 +12,7 @@ import {ProposerSlashingCase} from "../../../utils/specTestTypes/beaconStateComp
 import {BeaconState} from "@chainsafe/eth2.0-types";
 
 describeMultiSpec<ProposerSlashingCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/operations/proposer_slashing/proposer_slashing_minimal.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/operations/proposer_slashing/proposer_slashing_minimal.yaml"),
   (state, proposerSlashing) => {
     processProposerSlashing(config, state, proposerSlashing);
     return state;

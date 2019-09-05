@@ -1,6 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
-
+import {describe} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {RpcClientOverInstance} from "../../../../src/validator/rpc";
 import {MockBeaconApi} from "../../../utils/mocks/rpc/beacon";

@@ -9,7 +9,7 @@ import {BeaconState} from "@chainsafe/eth2.0-types";
 import {BeaconStateComparisonCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
 describeMultiSpec<BeaconStateComparisonCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/epoch_processing/crosslinks/crosslinks_mainnet.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/epoch_processing/crosslinks/crosslinks_mainnet.yaml"),
   (state) => {
     processCrosslinks(config, state);
     return state;
