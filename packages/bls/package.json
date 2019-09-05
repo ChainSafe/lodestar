@@ -52,7 +52,7 @@
     "@babel/register": "^7.0.0",
     "@babel/runtime": "^7.4.4",
     "@chainsafe/benchmark-utils": "^0.1.0",
-    "@chainsafe/eth2.0-spec-test-util": "^0.2.3",
+    "@chainsafe/eth2.0-spec-test-util": "0.4.1",
     "@types/assert": "^1.4.2",
     "@types/chai": "^4.1.7",
     "@types/mocha": "^5.2.5",
