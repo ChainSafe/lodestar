@@ -1,6 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
-
+import {describe, it} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {assembleAttestationData} from "../../../../../src/chain/factory/attestation/data";
 import {generateState} from "../../../../utils/state";

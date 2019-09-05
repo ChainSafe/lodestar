@@ -25,6 +25,8 @@ import defaultValidatorOptions, {IValidatorOptions} from "./options";
 import deepmerge from "deepmerge";
 import {getKeyFromFileOrKeystore} from "../util/io";
 import {isPlainObject} from "../util/objects";
+import {computeEpochOfSlot} from "../chain/stateTransition/util";
+import { ApiClientOverRest } from "./rest/apiClient";
 
 /**
  * Main class for the Validator client.
@@ -32,8 +34,7 @@ import {isPlainObject} from "../util/objects";
 class Validator {
   private opts: IValidatorOptions;
   private config: IBeaconConfig;
-  private rpcClient: RpcClient;
-  private validatorIndex: ValidatorIndex;
+  private apiClient: RpcClient;
   private blockService: BlockProposingService;
   private attestationService: AttestationService;
   private genesisInfo: GenesisInfo;
@@ -56,10 +57,16 @@ class Validator {
         logger: this.logger
       })
     });
+    this.initApiClient();
+  }
+
+  private initApiClient(): void {
     if(this.opts.rpcInstance) {
-      this.rpcClient = this.opts.rpcInstance;
+      this.apiClient = this.opts.rpcInstance;
     } else if(this.opts.rpc) {
-      this.rpcClient = new RpcClientOverWs({rpcUrl: this.opts.rpc}, {config: this.config});
+      this.apiClient = new RpcClientOverWs({rpcUrl: this.opts.rpc}, {config: this.config});
+    } else if(this.opts.restUrl) {
+      this.apiClient = new ApiClientOverRest(this.opts.restUrl, this.logger);
     } else {
       throw new Error("Validator requires either RpcClient instance or rpc url as params");
     }
@@ -79,7 +86,7 @@ class Validator {
    */
   public async stop(): Promise<void> {
     this.isRunning = false;
-    await this.rpcClient.disconnect();
+    await this.apiClient.disconnect();
   }
 
   private async setup(): Promise<void> {
@@ -94,21 +101,19 @@ class Validator {
 
     // Wait for the ChainStart log and grab validator index
     this.isActive = await this.isChainLive();
-    this.validatorIndex = await this.getValidatorIndex();
 
     this.blockService = new BlockProposingService(
       this.config,
-      this.validatorIndex,
-      this.rpcClient,
-      this.opts.keypair.privateKey,
-      this.db, this.logger
+      this.opts.keypair,
+      this.apiClient,
+      this.db,
+      this.logger
     );
 
     this.attestationService = new AttestationService(
       this.config,
-      this.validatorIndex,
-      this.rpcClient,
-      this.opts.keypair.privateKey,
+      this.opts.keypair,
+      this.apiClient,
       this.db,
       this.logger
     );
@@ -119,7 +124,7 @@ class Validator {
    */
   private async setupRPC(): Promise<void> {
     this.logger.info("Setting up RPC connection...");
-    await this.rpcClient.connect();
+    await this.apiClient.connect();
     this.logger.info(`RPC connection successfully established: ${this.opts.rpc || 'inmemory'}!`);
   }
 
@@ -128,7 +133,7 @@ class Validator {
    */
   private async isChainLive(): Promise<boolean> {
     this.logger.info("Checking if chain has started...");
-    const genesisTime =  await this.rpcClient.beacon.getGenesisTime();
+    const genesisTime =  await this.apiClient.beacon.getGenesisTime();
     if (genesisTime) {
       this.genesisInfo = {
         startTime: genesisTime,
@@ -141,36 +146,20 @@ class Validator {
     }
   }
 
-  /**
-   * Checks to see if the validator has been processed on the beacon chain.
-   */
-  private async getValidatorIndex(): Promise<ValidatorIndex> {
-    this.logger.info("Checking if validator has been processed...");
-    const index = await this.rpcClient.validator.getIndex(
-      this.opts.keypair.publicKey.toBytesCompressed()
-    );
-    if (index) {
-      this.logger.info("Validator has been processed!");
-      return index;
-    }
-    if(this.isRunning) {
-      setTimeout(this.getValidatorIndex, 1000);
-    }
-  }
-
   private run(): void {
-    this.rpcClient.onNewSlot(this.checkDuties);
-    this.rpcClient.onNewEpoch(this.lookAhead);
+    this.apiClient.onNewSlot(this.checkDuties);
+    this.apiClient.onNewEpoch(this.lookAhead);
   };
 
   private async checkDuties(slot: Slot): Promise<void> {
     const validatorDuty =
-      (await this.rpcClient.validator.getDuties([
-        this.opts.keypair.publicKey.toBytesCompressed()
-      ]))[0];
-    const currentVersion = await this.rpcClient.beacon.getFork();
+      (await this.apiClient.validator.getDuties(
+        [this.opts.keypair.publicKey.toBytesCompressed()],
+        computeEpochOfSlot(this.config, slot))
+      )[0];
+    const currentVersion = await this.apiClient.beacon.getFork();
     const isAttester = validatorDuty.attestationSlot === slot;
-    const isProposer = validatorDuty.blockProductionSlot === slot;
+    const isProposer = validatorDuty.blockProposalSlot === slot;
     this.logger.info(
       `[Validator] Slot: ${slot}, Fork: ${currentVersion}, 
       isProposer: ${isProposer}, isAttester: ${isAttester}`

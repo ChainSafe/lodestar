@@ -12,7 +12,7 @@ import {DepositCase} from "../../../utils/specTestTypes/beaconStateComparison";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 
 describeMultiSpec<DepositCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/operations/deposit/deposit_minimal.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/operations/deposit/deposit_minimal.yaml"),
   (state, deposit) => {
     processDeposit(config, state, deposit);
     return state;

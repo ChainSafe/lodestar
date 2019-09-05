@@ -13,7 +13,7 @@ import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {DepositCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
 describeMultiSpec<DepositCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/operations/deposit/deposit_mainnet.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/operations/deposit/deposit_mainnet.yaml"),
   (state, deposit) => {
     processDeposit(config, state, deposit);
     return state;

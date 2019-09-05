@@ -13,7 +13,7 @@ import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {BlockSanityCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
 describeMultiSpec<BlockSanityCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/sanity/blocks/sanity_blocks_mainnet.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/sanity/blocks/sanity_blocks_mainnet.yaml"),
   (state: BeaconState, blocks: BeaconBlock[]) => {
     blocks.forEach((block) => {
       stateTransition(config, state, block, true);

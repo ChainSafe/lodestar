@@ -13,7 +13,7 @@ import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {AttestationCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
 describeMultiSpec<AttestationCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/operations/attestation/attestation_mainnet.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/operations/attestation/attestation_mainnet.yaml"),
   (state: BeaconState, attestation: Attestation): BeaconState => {
     processAttestation(config, state, attestation);
     return state;

@@ -10,7 +10,7 @@ import {BeaconState} from "@chainsafe/eth2.0-types";
 import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 
 describeMultiSpec<BeaconStateComparisonCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/epoch_processing/crosslinks/crosslinks_minimal.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/epoch_processing/crosslinks/crosslinks_minimal.yaml"),
   (state) => {
     processCrosslinks(config, state);
     return state;

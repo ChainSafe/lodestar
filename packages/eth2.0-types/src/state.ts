@@ -5,7 +5,6 @@
 import {BitVector} from "@chainsafe/bit-utils";
 
 import {
-  bytes32,
   Gwei,
   Hash,
   number64,
@@ -48,7 +47,7 @@ export interface BeaconState {
   // Shuffling
   startShard: Shard;
   randaoMixes: Hash[];
-  activeIndexRoots: bytes32[];
+  activeIndexRoots: Hash[];
   compactCommitteesRoots: Hash[];
 
   // Slashings
