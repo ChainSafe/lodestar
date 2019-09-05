@@ -2,7 +2,6 @@
 
 import yargs from "yargs";
 import {hashTreeRoot} from "@chainsafe/ssz";
-import {expandYamlValue} from "@chainsafe/lodestar/src/util/expandYamlValue";
 
 import {readInput, writeOutput} from "./io";
 import {inputParsers, outputParsers} from "./parse";
@@ -37,17 +36,17 @@ import {presetNames, presets} from "./types";
     },
   }).argv;
   try {
-    // process input
-    let input = await readInput(argv.i);
-    // parse input
-    const inputParser = "yaml";
-    const parsedInput = inputParsers[inputParser].parse(input);
     // process config
     const config = presets[argv.config];
     // process type
     const type = config[argv.t];
+    // process input
+    let input = await readInput(argv.i);
+    // parse input
+    const inputParser = "yaml";
+    const parsedInput = inputParsers[inputParser].parse(input, type);
     // perform action
-    const output = hashTreeRoot(expandYamlValue(parsedInput,type), type);
+    const output = hashTreeRoot(parsedInput, type);
     // parse output
     const outputParser = "hex";
     const parsedOutput = outputParsers[outputParser].dump(output);

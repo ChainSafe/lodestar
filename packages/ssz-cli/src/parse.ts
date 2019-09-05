@@ -1,4 +1,5 @@
 import {loadYaml, dumpYaml} from "@chainsafe/eth2.0-spec-test-util";
+import {expandYamlValue} from "@chainsafe/lodestar/src/util/expandYamlValue";
 
 function fromHexString(input: string): Buffer {
   return Buffer.from(input.replace("0x", ""), "hex");
@@ -21,14 +22,14 @@ export const outputParsers: Record<string, OutputParser> = {
 };
 
 interface InputParser {
-  parse: (string) => any;
-  dump: (any) => string;
+  parse: (string, AnySSZType) => any;
+  dump: (any, AnySSZType) => string;
 }
 
 
 export const inputParsers: Record<string, InputParser> = {
   yaml: {
-    parse: loadYaml,
-    dump: dumpYaml,
+    parse: (input, type) => expandYamlValue(loadYaml(input), type),
+    dump: (value, type) => dumpYaml(value),
   },
 };

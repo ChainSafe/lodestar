@@ -36,20 +36,20 @@ import {presetNames, presets} from "./types";
     },
   }).argv;
   try {
+    // process config
+    const config = presets[argv.config];
+    // process type
+    const type = config[argv.t];
     // process input
     const input = await readInput(argv.i);
     // parse input
     const inputParser = "hex";
     const parsedInput = outputParsers[inputParser].parse(input);
-    // process config
-    const config = presets[argv.config];
-    // process type
-    const type = config[argv.t];
     // perform action
     const output = deserialize(parsedInput, type);
     // parse output
     const outputParser = "yaml";
-    const parsedOutput = inputParsers[outputParser].dump(output);
+    const parsedOutput = inputParsers[outputParser].dump(output, type);
     // write output
     await writeOutput(parsedOutput, argv.o);
   } catch (e) {
