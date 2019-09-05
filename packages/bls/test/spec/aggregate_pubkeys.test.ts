@@ -1,4 +1,4 @@
-import bls, {PublicKey} from "../../src";
+import bls from "../../src";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import path from "path";
 
