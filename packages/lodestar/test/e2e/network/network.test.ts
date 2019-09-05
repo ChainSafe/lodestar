@@ -1,15 +1,15 @@
 import {expect} from "chai";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {Libp2pNetwork} from "../../../../src/network";
-import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../../../../src/constants";
-import {getEmptyBlock} from "../../../../src/chain/genesis/genesis";
-import {createNode} from "../../../unit/network/libp2p/util";
-import {generateEmptyAttestation} from "../../../utils/attestation";
-import {shardAttestationTopic} from "../../../../src/network/util";
-import {ILogger, WinstonLogger} from "../../../../src/logger";
-import {INetworkOptions} from "../../../../src/network/options";
-import {BeaconMetrics} from "../../../../src/metrics";
+import {Libp2pNetwork} from "../../../src/network";
+import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../../../src/constants";
+import {getEmptyBlock} from "../../../src/chain/genesis/genesis";
+import {createNode} from "../../unit/network/util";
+import {generateEmptyAttestation} from "../../utils/attestation";
+import {shardAttestationTopic} from "../../../src/network/util";
+import {ILogger, WinstonLogger} from "../../../src/logger";
+import {INetworkOptions} from "../../../src/network/options";
+import {BeaconMetrics} from "../../../src/metrics";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -42,20 +42,22 @@ describe("[network] network", () => {
     ]);
   });
   it("should create a peer on connect", async function () {
-    await netA.connect(netB.peerInfo);
-    await Promise.all([
+    const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
+    await netA.connect(netB.peerInfo);
+    await connected;
     expect(netA.getPeers().length).to.equal(1);
     expect(netB.getPeers().length).to.equal(1);
   });
   it("should delete a peer on disconnect", async function () {
-    await netA.connect(netB.peerInfo);
-    await Promise.all([
+    const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
+    await netA.connect(netB.peerInfo);
+    await connected;
     const disconnection = Promise.all([
       new Promise((resolve) => netA.on("peer:disconnect", resolve)),
       new Promise((resolve) => netB.on("peer:disconnect", resolve)),
@@ -66,53 +68,56 @@ describe("[network] network", () => {
     expect(netB.getPeers().length).to.equal(0);
   });
   it("should receive blocks on subscription", async function () {
-    netA.subscribeToBlocks();
-    await netA.connect(netB.peerInfo);
-    await Promise.all([
+    netA.gossip.subscribeToBlocks();
+    const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
+    await netA.connect(netB.peerInfo);
+    await connected;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
-      netA.on(BLOCK_TOPIC, resolve);
+      netA.gossip.on(BLOCK_TOPIC, resolve);
     });
-    await new Promise((resolve) => netB.once("gossipsub:heartbeat", resolve));
-    netB.publishBlock(getEmptyBlock());
+    await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
+    netB.gossip.publishBlock(getEmptyBlock());
     await received;
   });
   it("should receive attestations on subscription", async function () {
-    netA.subscribeToAttestations();
-    await netA.connect(netB.peerInfo);
-    await Promise.all([
+    netA.gossip.subscribeToAttestations();
+    const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
+    await netA.connect(netB.peerInfo);
+    await connected;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
-      netA.on(ATTESTATION_TOPIC, resolve);
+      netA.gossip.on(ATTESTATION_TOPIC, resolve);
     });
-    await new Promise((resolve) => netB.once("gossipsub:heartbeat", resolve));
-    netB.publishAttestation(generateEmptyAttestation());
+    await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
+    netB.gossip.publishAttestation(generateEmptyAttestation());
     await received;
   });
   it("should receive shard attestations on subscription", async function () {
     const shard = 10;
-    netA.subscribeToShardAttestations(shard);
+    netA.gossip.subscribeToShardAttestations(shard);
     const topic = shardAttestationTopic(shard);
-    await netA.connect(netB.peerInfo);
-    await Promise.all([
+    const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
+    await netA.connect(netB.peerInfo);
+    await connected;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
       // @ts-ignore
-      netA.on(topic, resolve);
+      netA.gossip.on(topic, resolve);
     });
-    await new Promise((resolve) => netB.once("gossipsub:heartbeat", resolve));
+    await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     const attestation = generateEmptyAttestation();
     attestation.data.crosslink.shard = shard;
-    netB.publishShardAttestation(attestation);
+    netB.gossip.publishShardAttestation(attestation);
     await received;
   });
 });

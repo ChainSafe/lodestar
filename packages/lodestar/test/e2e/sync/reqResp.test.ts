@@ -4,16 +4,18 @@ import BN from "bn.js";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 
 import {Method} from "../../../src/constants";
-import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
+import {SyncReqResp} from "../../../src/sync/reqResp";
 import {ReputationStore} from "../../../src/sync/reputation";
 import {Libp2pNetwork} from "../../../src/network";
 import {BeaconDb, LevelDbController} from "../../../src/db";
 
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
-import {createNode} from "../../unit/network/libp2p/util";
+import {createNode} from "../../unit/network/util";
 import {WinstonLogger} from "../../../src/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
+import {generateState} from "../../utils/state";
+import { StateRepository, ChainRepository, BlockRepository } from "../../../src/db/api/beacon/repositories";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -30,8 +32,8 @@ describe("[sync] rpc", () => {
   let logger = new WinstonLogger();
   const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false});
 
-  let rpcA: SyncRpc, netA: Libp2pNetwork, repsA: ReputationStore;
-  let rpcB: SyncRpc, netB: Libp2pNetwork, repsB: ReputationStore;
+  let rpcA: SyncReqResp, netA: Libp2pNetwork, repsA: ReputationStore;
+  let rpcB: SyncReqResp, netB: Libp2pNetwork, repsB: ReputationStore;
   beforeEach(async () => {
     netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger, metrics});
     netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger, metrics});
@@ -45,33 +47,40 @@ describe("[sync] rpc", () => {
       chainId: 0,
       networkId: new BN(0),
     });
-    chain.latestState = null;
-    rpcA = new SyncRpc({}, {
+    const state = generateState();
+    // @ts-ignore
+    const db = {
+      state: sandbox.createStubInstance(StateRepository),
+      chain: sandbox.createStubInstance(ChainRepository),
+      block: sandbox.createStubInstance(BlockRepository),
+    } as BeaconDb;
+    // @ts-ignore
+    db.state.getLatest.resolves(state);
+    // @ts-ignore
+    db.chain.getBlockRoot.resolves(Buffer.alloc(32));
+    // @ts-ignore
+    db.chain.getChainHeadSlot.resolves(0);
+    chain.latestState = state;
+    rpcA = new SyncReqResp({}, {
       config,
-      db: new BeaconDb({
-        config,
-        controller: sandbox.createStubInstance(LevelDbController),
-      }),
+      db,
       chain,
       network: netA,
       reps: repsA,
       logger,
     });
     repsB = new ReputationStore();
-    rpcB = new SyncRpc({}, {
+    rpcB = new SyncReqResp({}, {
       config,
-      db: new BeaconDb({
-        config,
-        controller: sandbox.createStubInstance(LevelDbController),
-      }),
+      db,
       chain,
       network: netB,
       reps: repsB,
       logger: logger
     })
     ;
-    netA.on("request", rpcA.onRequest.bind(rpcA));
-    netB.on("request", rpcB.onRequest.bind(rpcB));
+    netA.reqResp.on("request", rpcA.onRequest.bind(rpcA));
+    netB.reqResp.on("request", rpcB.onRequest.bind(rpcB));
     await Promise.all([
       rpcA.start(),
       rpcB.start(),
@@ -86,22 +95,23 @@ describe("[sync] rpc", () => {
       rpcA.stop(),
       rpcB.stop(),
     ]);
-    netA.removeListener("request", rpcA.onRequest.bind(rpcA));
-    netB.removeListener("request", rpcB.onRequest.bind(rpcB));
+    netA.reqResp.removeListener("request", rpcA.onRequest.bind(rpcA));
+    netB.reqResp.removeListener("request", rpcB.onRequest.bind(rpcB));
   });
 
   it("hello handshake on peer connect", async function () {
     this.timeout(6000);
-    await netA.connect(netB.peerInfo);
-    await Promise.all([
+    const connected = Promise.all([
       new Promise((resolve) => netA.once("peer:connect", resolve)),
       new Promise((resolve) => netB.once("peer:connect", resolve)),
     ]);
+    await netA.connect(netB.peerInfo);
+    await connected;
     expect(netA.hasPeer(netB.peerInfo)).to.equal(true);
     expect(netB.hasPeer(netA.peerInfo)).to.equal(true);
     await new Promise((resolve) => {
-      netA.once("request", resolve);
-      netB.once("request", resolve);
+      netA.reqResp.once("request", resolve);
+      netB.reqResp.once("request", resolve);
     });
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(repsA.get(netB.peerInfo.id.toB58String()).latestHello).to.not.equal(null);
@@ -110,17 +120,18 @@ describe("[sync] rpc", () => {
 
   it("goodbye on rpc stop", async function () {
     this.timeout(6000);
-    await netA.connect(netB.peerInfo);
-    await Promise.all([
+    const connected = Promise.all([
       new Promise((resolve) => netA.once("peer:connect", resolve)),
       new Promise((resolve) => netB.once("peer:connect", resolve)),
     ]);
+    await netA.connect(netB.peerInfo);
+    await connected;
     await new Promise((resolve) => {
-      netA.once("request", resolve);
-      netB.once("request", resolve);
+      netA.reqResp.once("request", resolve);
+      netB.reqResp.once("request", resolve);
     });
     await new Promise((resolve) => setTimeout(resolve, 200));
-    const goodbyeEvent = new Promise((resolve) => netB.once("request", (_, method) => resolve(method)));
+    const goodbyeEvent = new Promise((resolve) => netB.reqResp.once("request", (_, method) => resolve(method)));
     await rpcA.stop();
     const goodbye = await goodbyeEvent;
     expect(goodbye).to.equal(Method.Goodbye);
