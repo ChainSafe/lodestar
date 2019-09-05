@@ -3,4 +3,5 @@
  */
 
 export * from "./interface";
-export * from "./libp2p";
+export * from "./network";
+export * from "./util";

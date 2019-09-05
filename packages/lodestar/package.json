@@ -92,7 +92,7 @@
     "qs": "^6.7.0",
     "snake-case": "^2.1.0",
     "strict-event-emitter-types": "^2.0.0",
-    "webpack": "^4.39.1",
+    "varint": "^5.0.0",
     "winston": "^3.2.1",
     "ws": "^7.0.1"
   },
@@ -114,6 +114,7 @@
     "supertest": "^4.0.2",
     "axios-mock-adapter": "^1.17.0",
     "chai": "^4.2.0",
-    "mocha": "^6.2.0"
+    "mocha": "^6.2.0",
+    "webpack": "^4.39.1"
   }
 }

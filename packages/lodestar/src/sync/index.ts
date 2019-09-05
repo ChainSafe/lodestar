@@ -14,7 +14,7 @@ import {InitialSync} from "./initial";
 import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
 import {ISyncOptions} from "./options";
-import {ISyncRpc} from "./rpc/interface";
+import {ISyncReqResp, SyncReqResp} from "./reqResp";
 
 interface SyncModules {
   config: IBeaconConfig;
@@ -24,7 +24,6 @@ interface SyncModules {
   network: INetwork;
   opPool: OpPool;
   reps: ReputationStore;
-  rpc: ISyncRpc;
   logger: ILogger;
 }
 
@@ -40,12 +39,12 @@ export class Sync extends EventEmitter {
   private opPool: OpPool;
   private eth1: IEth1Notifier;
   private db: IBeaconDb;
-  private rpc: ISyncRpc;
+  private reqResp: ISyncReqResp;
   private reps: ReputationStore;
   private logger: ILogger;
   private syncer: RegularSync;
 
-  public constructor(opts: ISyncOptions, {config, chain, db, eth1, network, opPool, reps, rpc, logger}: SyncModules) {
+  public constructor(opts: ISyncOptions, {config, chain, db, eth1, network, opPool, reps, logger}: SyncModules) {
     super();
     this.opts = opts;
     this.config = config;
@@ -56,7 +55,7 @@ export class Sync extends EventEmitter {
     this.opPool = opPool;
     this.reps = reps;
     this.logger = logger;
-    this.rpc = rpc;
+    this.reqResp = new SyncReqResp(opts, {config, db, chain, network, reps, logger});
   }
 
   public async isSynced(): Promise<boolean> {
@@ -67,7 +66,7 @@ export class Sync extends EventEmitter {
       const bestSlot = await this.db.chain.getChainHeadSlot();
       const bestSlotByPeers = this.network.getPeers()
         .map((peerInfo) => this.reps.get(peerInfo.id.toB58String()))
-        .map((reputation) => reputation.latestHello ? reputation.latestHello.bestSlot : 0)
+        .map((reputation) => reputation.latestHello ? reputation.latestHello.headSlot : 0)
         .reduce((a, b) => Math.max(a, b), 0);
       if (bestSlot >= bestSlotByPeers) {
         return true;
@@ -79,14 +78,12 @@ export class Sync extends EventEmitter {
   }
 
   public async start(): Promise<void> {
-    await this.rpc.start();
-    await this.rpc.refreshPeerHellos();
+    await this.reqResp.start();
     if (!await this.isSynced()) {
       const initialSync = new InitialSync(this.opts, {
         config: this.config,
         db: this.db,
         chain: this.chain,
-        rpc: this.rpc,
         network: this.network,
         reps: this.reps,
         logger: this.logger,
@@ -106,7 +103,7 @@ export class Sync extends EventEmitter {
   }
 
   public async stop(): Promise<void> {
-    await this.rpc.stop();
+    await this.reqResp.stop();
     await this.syncer.stop();
   }
 }

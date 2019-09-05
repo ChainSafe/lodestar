@@ -7,30 +7,30 @@ import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {OpPool} from "../../../src/opPool";
 import {EthersEth1Notifier} from "../../../src/eth1";
-import {BeaconDb} from "../../../src/db/api";
 import {ReputationStore} from "../../../src/sync/reputation";
 import {WinstonLogger} from "../../../src/logger";
 import {RegularSync} from "../../../src/sync/regular";
 import {Sync} from "../../../src/sync";
-import {SyncRpc} from "../../../src/network/libp2p/syncRpc";
-import {ChainRepository} from "../../../src/db/api/beacon/repositories";
+import {ChainRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
+import {ReqResp} from "../../../src/network/reqResp";
 
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();
   let sync: Sync;
   let chainStub, networkStub, opPoolStub, eth1Stub, dbStub,
-    repsStub, rpcStub, logger, syncerStub;
+    repsStub, logger, syncerStub;
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
+    networkStub.reqResp = sandbox.createStubInstance(ReqResp);
     opPoolStub = sandbox.createStubInstance(OpPool);
     eth1Stub = sandbox.createStubInstance(EthersEth1Notifier);
     dbStub = {
-      chain: sandbox.createStubInstance(ChainRepository)
+      chain: sandbox.createStubInstance(ChainRepository),
+      state: sandbox.createStubInstance(StateRepository)
     };
     repsStub = sandbox.createStubInstance(ReputationStore);
-    rpcStub = sandbox.createStubInstance(SyncRpc);
     logger = new WinstonLogger();
     syncerStub = sandbox.createStubInstance(RegularSync);
     logger.silent = true;
@@ -44,10 +44,8 @@ describe("syncing", function () {
       network: networkStub,
       opPool: opPoolStub,
       reps: repsStub,
-      rpc: rpcStub,
       logger,
-    }
-    );
+    });
   });
 
   afterEach(() => {
@@ -67,7 +65,9 @@ describe("syncing", function () {
     chainStub.isInitialized.resolves(true);
     dbStub.chain.getChainHeadSlot.resolves(10);
     repsStub.get.returns({
-      latestHello: {bestSlot: 5},
+      latestHello: {
+        headSlot: 5
+      },
     });
 
     let peerId: PeerId = new PeerId(Buffer.alloc(32));
@@ -91,7 +91,7 @@ describe("syncing", function () {
     dbStub.chain.getChainHeadSlot.resolves(2);
     repsStub.get.returns({
       latestHello: {
-        bestSlot: 5,
+        headSlot: 5,
       },
     });
 
@@ -113,7 +113,7 @@ describe("syncing", function () {
     dbStub.chain.getChainHeadSlot.resolves(10);
     repsStub.get.returns({
       latestHello: {
-        bestSlot: 5,
+        headSlot: 5,
       },
     });
 
@@ -122,34 +122,4 @@ describe("syncing", function () {
     expect(result).to.be.deep.equal(false);
 
   });
-
-  it('should start an stop syncing', async function () {
-
-    chainStub.isInitialized.resolves(true);
-    dbStub.chain.getChainHeadSlot.resolves(-1);
-    repsStub.get.returns({
-      latestHello: {
-        bestSlot: 0,
-      },
-    });
-    let peerId: PeerId = new PeerId(Buffer.alloc(32));
-
-    networkStub.getPeers.returns([
-      {
-        id: peerId,
-      },
-      {
-        id: peerId,
-      }
-    ]);
-
-    syncerStub.start.resolves(null);
-    try {
-      await sync.start();
-      await sync.stop();
-    }catch (e) {
-      expect.fail(e.stack);
-    }
-  });
-
 });
