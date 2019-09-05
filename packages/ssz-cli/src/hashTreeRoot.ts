@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 
 import yargs from "yargs";
-import {types as mainnetTypes} from "@chainsafe/eth2.0-ssz-types/lib/presets/mainnet";
-import {types as minimalTypes} from "@chainsafe/eth2.0-ssz-types/lib/presets/minimal";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {expandYamlValue} from "@chainsafe/lodestar/src/util/expandYamlValue";
 
 import {readInput, writeOutput} from "./io";
 import {inputParsers, outputParsers} from "./parse";
+import {presetNames, presets} from "./types";
 
 (async function() {
   
@@ -25,14 +24,14 @@ import {inputParsers, outputParsers} from "./parse";
     c: {
       alias: "config",
       description: "Chain configuration for ssz encoding",
-      default: "mainnet",
-      choices: ["mainnet", "minimal"],
+      default: presetNames[0],
+      choices: presetNames,
       type: "string",
     },
     t: {
       alias: "type",
       description: "Eth2.0 data type",
-      choices: Object.keys(mainnetTypes),
+      choices: Object.keys(presets[presetNames[0]]),
       demand: true,
       type: "string",
     },
@@ -43,15 +42,8 @@ import {inputParsers, outputParsers} from "./parse";
     // parse input
     const inputParser = "yaml";
     const parsedInput = inputParsers[inputParser].parse(input);
-
     // process config
-    let config;
-    if (argv.config === "mainnet") {
-      config = mainnetTypes;
-    }
-    if (argv.config === "minimal") {
-      config = minimalTypes;
-    }
+    const config = presets[argv.config];
     // process type
     const type = config[argv.t];
     // perform action
