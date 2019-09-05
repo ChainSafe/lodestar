@@ -32,12 +32,12 @@ export function processOperations(
   body: BeaconBlockBody
 ): void {
   // Verify that outstanding deposits are processed up to the maximum number of deposits
-  assert(body.deposits.length == Math.min(
+  assert.equal(body.deposits.length, Math.min(
     config.params.MAX_DEPOSITS,
     state.eth1Data.depositCount - state.eth1DepositIndex));
   // Verify that there are no duplicate transfers
   // TODO this is not sufficient to determine duplicates
-  assert(body.transfers.length == (new Set(body.transfers)).size);
+  assert.equal(body.transfers.length, new Set(body.transfers).size);
   [{
     operations: body.proposerSlashings,
     maxOperations: config.params.MAX_PROPOSER_SLASHINGS,

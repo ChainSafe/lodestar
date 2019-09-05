@@ -65,7 +65,7 @@ export abstract class BulkRepository<T> extends Repository<T> {
 
   public async getAllBetween(lowerLimit: number, upperLimit: number): Promise<T[]> {
     const data = await this.db.search({
-      gt: encodeKey(this.bucket, lowerLimit),
+      gt: encodeKey(this.bucket, lowerLimit || Buffer.alloc(0)),
       lt: encodeKey(this.bucket, upperLimit),
     });
     return (data || []).map((data) => deserialize(data, this.type));
