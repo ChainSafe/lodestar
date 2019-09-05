@@ -19,7 +19,7 @@
     "lint": "eslint --ext .ts src/ test/",
     "pretest": "yarn check-types",
     "prepublishOnly": "yarn build",
-    "test": "echo 'No available tests'",
+    "test": "echo 'No available tests'"
   },
   "homepage": "https://github.com/chainsafe/lodestar/packages/ssz-cli",
   "keywords": [
