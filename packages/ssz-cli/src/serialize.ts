@@ -4,6 +4,7 @@ import yargs from "yargs";
 import {types as mainnetTypes} from "@chainsafe/eth2.0-ssz-types/lib/presets/mainnet";
 import {types as minimalTypes} from "@chainsafe/eth2.0-ssz-types/lib/presets/minimal";
 import {serialize} from "@chainsafe/ssz";
+import {expandYamlValue} from "@chainsafe/lodestar/src/util/expandYamlValue";
 
 import {readInput, writeOutput} from "./io";
 import {inputParsers, outputParsers} from "./parse";
@@ -57,7 +58,7 @@ import {inputParsers, outputParsers} from "./parse";
     // process type
     const type = config[argv.t];
     // perform action
-    const output = serialize(parsedInput, type);
+    const output = serialize(expandYamlValue(parsedInput,type), type);
     // parse output
     const outputParser = "hex";
     const parsedOutput = outputParsers[outputParser].dump(output);
