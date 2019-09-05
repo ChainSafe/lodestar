@@ -1,11 +1,9 @@
 import fs from "fs";
 import process from "process";
 
-export async function readInput(inputFile: string, inputRaw: string): Promise<string> {
+export async function readInput(inputFile: string): Promise<string> {
   if (inputFile) {
     return fs.readFileSync(inputFile, "utf8");
-  } else if (inputRaw) {
-    return inputRaw;
   } else {
     return await readStdin();
   }

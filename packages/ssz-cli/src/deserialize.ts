@@ -16,10 +16,6 @@ import {inputParsers, outputParsers} from "./parse";
       description: "Input file, will read from stdin if no input specified",
       type: "string",
     },
-    "raw-input": {
-      description: "Raw input data",
-      type: "string",
-    },
     o: {
       alias: "output",
       description: "Output file, will write to stdout if not specified",
@@ -42,7 +38,7 @@ import {inputParsers, outputParsers} from "./parse";
   }).argv;
   try {
     // process input
-    const input = await readInput(argv.i, argv["raw-input"]);
+    const input = await readInput(argv.i);
     // parse input
     const inputParser = "hex";
     const parsedInput = outputParsers[inputParser].parse(input);
