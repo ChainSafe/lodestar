@@ -42,6 +42,7 @@ describeDirectorySpecTest<GenesisInitSpecTest, BeaconState>(
       state: config.types.BeaconState,
       ...generateDepositSSZTypeMapping(64, config)
     },
+    timeout: 60000,
     getExpected: (testCase => testCase.state),
     expectFunc: (testCase, expected, actual) => {
       expect(equals(actual, expected, config.types.BeaconState)).to.be.true;
