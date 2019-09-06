@@ -9,8 +9,8 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-
 import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 
 describeDirectorySpecTest<StateTestCase, BeaconState>(
-  "justification and finalization",
-  join(__dirname, "../../../../../spec-test-cases/tests/minimal/phase0/epoch_processing/justification_and_finalization/pyspec_tests"),
+  "epoch justification and finalization mainnet",
+  join(__dirname, "../../../../../spec-test-cases/tests/mainnet/phase0/epoch_processing/justification_and_finalization/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     processJustificationAndFinalization(config, state);

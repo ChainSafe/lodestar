@@ -9,8 +9,8 @@ import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 import {processSlashings} from "../../../../src/chain/stateTransition/epoch/slashings";
 
 describeDirectorySpecTest<StateTestCase, BeaconState>(
-  "slashings",
-  join(__dirname, "../../../../../spec-test-cases/tests/minimal/phase0/epoch_processing/slashings/pyspec_tests"),
+  "epoch slashings mainnet",
+  join(__dirname, "../../../../../spec-test-cases/tests/mainnet/phase0/epoch_processing/slashings/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     processSlashings(config, state);

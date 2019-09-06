@@ -9,7 +9,7 @@ import {expect} from "chai";
 import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 
 describeDirectorySpecTest<StateTestCase, BeaconState>(
-  "epoch_croslinks",
+  "epoch_croslinks minimal",
   join(__dirname, "../../../../../spec-test-cases/tests/minimal/phase0/epoch_processing/crosslinks/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;

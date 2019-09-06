@@ -9,7 +9,7 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-
 import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 
 describeDirectorySpecTest<StateTestCase, BeaconState>(
-  "slashings min",
+  "epoch slashings minimal",
   join(__dirname, "../../../../../spec-test-cases/tests/minimal/phase0/epoch_processing/slashings/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;

@@ -9,8 +9,8 @@ import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 import {processRegistryUpdates} from "../../../../src/chain/stateTransition/epoch/registryUpdates";
 
 describeDirectorySpecTest<StateTestCase, BeaconState>(
-  "registry updates",
-  join(__dirname, "../../../../../spec-test-cases/tests/minimal/phase0/epoch_processing/registry_updates/pyspec_tests"),
+  "epoch registry updates mainnet",
+  join(__dirname, "../../../../../spec-test-cases/tests/mainnet/phase0/epoch_processing/registry_updates/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     processRegistryUpdates(config, state);

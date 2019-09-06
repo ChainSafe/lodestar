@@ -1,5 +1,5 @@
 import {join} from "path";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processCrosslinks} from "../../../../src/chain/stateTransition/epoch/crosslinks";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
@@ -8,8 +8,8 @@ import {expect} from "chai";
 import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 
 describeDirectorySpecTest<StateTestCase, BeaconState>(
-  "epoch_croslinks",
-  join(__dirname, "../../../../../spec-test-cases/tests/minimal/phase0/epoch_processing/crosslinks/pyspec_tests"),
+  "epoch_croslinks mainnet",
+  join(__dirname, "../../../../../spec-test-cases/tests/mainnet/phase0/epoch_processing/crosslinks/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     processCrosslinks(config, state);

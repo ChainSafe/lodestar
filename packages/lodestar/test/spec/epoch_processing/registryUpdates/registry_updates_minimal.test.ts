@@ -9,7 +9,7 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-
 import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 
 describeDirectorySpecTest<StateTestCase, BeaconState>(
-  "registry updates min",
+  "epoch registry updates minimal",
   join(__dirname, "../../../../../spec-test-cases/tests/minimal/phase0/epoch_processing/registry_updates/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
