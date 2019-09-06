@@ -13,7 +13,7 @@ import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {TransferCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
 describeMultiSpec<TransferCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/operations/transfer/transfer_minimal.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/operations/transfer/transfer_minimal.yaml"),
   (state, transfer) => {
     processTransfer(config, state, transfer);
     return state;

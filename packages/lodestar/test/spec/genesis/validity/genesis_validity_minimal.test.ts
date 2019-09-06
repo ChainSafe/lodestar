@@ -8,7 +8,7 @@ import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {GenesisValidityCase} from "../../../utils/specTestTypes/genesis";
 
 describeMultiSpec<GenesisValidityCase, boolean>(
-  join(__dirname, "../../test-cases/tests/genesis/validity/genesis_validity_minimal.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/genesis/validity/genesis_validity_minimal.yaml"),
   (state) => {
     return isValidGenesisState(config, state);
   },

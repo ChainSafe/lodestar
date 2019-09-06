@@ -12,7 +12,7 @@ import {AttesterSlashingCase} from "../../../utils/specTestTypes/beaconStateComp
 import {BeaconState} from "@chainsafe/eth2.0-types";
 
 describeMultiSpec<AttesterSlashingCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/operations/attester_slashing/attester_slashing_minimal.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/operations/attester_slashing/attester_slashing_minimal.yaml"),
   (state, attesterSlashing) => {
     processAttesterSlashing(config, state, attesterSlashing);
     return state;
