@@ -21,9 +21,9 @@ export interface ISpecTestOptions<TestCase, Result> {
    * If directory contains both ssz or yaml file version,
    * you can choose which one to use. Default is ssz.
    */
-  inputTypes?: {[K in keyof TestCase]: InputType};
+  inputTypes?: {[K in keyof NonNullable<TestCase>]: InputType};
 
-  sszTypes?: {[K in keyof TestCase]: AnySSZType};
+  sszTypes?: {[K in keyof NonNullable<TestCase>]: AnySSZType};
 
   /**
    * Optionally
