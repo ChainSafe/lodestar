@@ -1,47 +1,51 @@
 import {join} from "path";
-import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 import {equals} from "@chainsafe/ssz";
 // @ts-ignore
-import {restore, rewire} from "@chainsafe/bls";
-import sinon from "sinon";
 
 import {BeaconBlock, BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {stateTransition} from "../../../../src/chain/stateTransition";
-import {expandYamlValue} from "../../../utils/expandYamlValue";
-import {BlockSanityCase} from "../../../utils/specTestTypes/beaconStateComparison";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import {BlockSanityTestCase} from "./type";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-describeMultiSpec<BlockSanityCase, BeaconState>(
-  join(__dirname, "../../../../../spec-test-cases/tests/sanity/blocks/sanity_blocks_mainnet.yaml"),
-  (state: BeaconState, blocks: BeaconBlock[]) => {
-    blocks.forEach((block) => {
-      stateTransition(config, state, block, true);
-    });
+describeDirectorySpecTest<BlockSanityTestCase, BeaconState>(
+  "block sanity minimal",
+  join(__dirname, "../../../../../spec-test-cases/tests/mainnet/phase0/sanity/blocks/pyspec_tests"),
+  (testcase) => {
+    const state = testcase.pre;
+    for(let i = 0; i < testcase.meta.blocksCount.toNumber(); i++) {
+      stateTransition(config, state, testcase[`blocks_${i}`] as BeaconBlock, true, true);
+    }
     return state;
   },
-  (input) => {
-    if(input.bls_setting && input.bls_setting.toNumber() === 2) {
-      rewire({
-        verify: sinon.stub().returns(true),
-        verifyMultiple: sinon.stub().returns(true),
-        aggregatePubkeys: sinon.stub().returns(Buffer.alloc(48))
-      });
+  {
+    // @ts-ignore
+    inputTypes: {
+      meta: InputType.YAML
+    },
+    // @ts-ignore
+    sszTypes: {
+      pre: config.types.BeaconState,
+      post: config.types.BeaconState,
+      ...generateBlocksSZZTypeMapping(99, config)
+    },
+    shouldError: (testCase => {
+      return !testCase.post;
+    }),
+    timeout: 10000000,
+    getExpected: (testCase => testCase.post),
+    expectFunc: (testCase, expected, actual) => {
+      expect(equals(actual, expected, config.types.BeaconState)).to.be.true;
     }
-    return [expandYamlValue(input.pre, config.types.BeaconState), input.blocks.map((b) => expandYamlValue(b, config.types.BeaconBlock))];
-  },
-  (expected) => {
-    return expandYamlValue(expected.post, config.types.BeaconState);
-  },
-  result => result,
-  (testCase) => {
-    return !testCase.post;
-  },
-  () => false,
-  (_1, _2, expected, actual) => {
-    expect(equals(expected, actual, config.types.BeaconState)).to.be.true;
-    restore();
-  },
-  0
+  }
 );
 
+function generateBlocksSZZTypeMapping(n: number, config: IBeaconConfig): object {
+  const blocksMapping = {};
+  for(let i = 0; i<n; i++) {
+    blocksMapping[`blocks_${i}`] = config.types.BeaconBlock;
+  }
+  return blocksMapping;
+}
