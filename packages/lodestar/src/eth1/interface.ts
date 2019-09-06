@@ -4,9 +4,10 @@
 
 import {EventEmitter} from "events";
 
-import {Hash, Deposit, number64} from "@chainsafe/eth2.0-types";
+import {BeaconState, bytes32, Deposit, Epoch, Eth1Data, Hash, number64} from "@chainsafe/eth2.0-types";
 import {Block} from "ethers/providers";
 import StrictEventEmitter from "strict-event-emitter-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 export interface IEth1Events {
   block: (block: Block) => void;
@@ -74,4 +75,5 @@ export interface IEth1Notifier extends Eth1EventEmitter {
    */
   depositCount(block?: string | number): Promise<number64>;
 
+  getEth1Data(config: IBeaconConfig, state: BeaconState, currentEpoh: Epoch): Promise<Eth1Data>;
 }

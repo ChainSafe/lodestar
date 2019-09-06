@@ -1,9 +1,13 @@
 import {EventEmitter} from "events";
 
-import {Hash, number64} from "@chainsafe/eth2.0-types";
+import {BeaconState, bytes32, Epoch, Eth1Data, Hash, number64} from "@chainsafe/eth2.0-types";
 
 import {IEth1Notifier} from "../";
 import {Block} from "ethers/providers";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {intDiv} from "../../util/math";
+import {hash} from "../../util/crypto";
+import {intToBytes} from "../../util/bytes";
 
 export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   public constructor() {
@@ -40,5 +44,16 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   public async processPastDeposits(fromBlock: string | number, toBlock?: string | number): Promise<void> {
     return undefined;
+  }
+
+  public async getEth1Data(config: IBeaconConfig, state: BeaconState, currentEpoch: Epoch): Promise<Eth1Data> {
+    const epochsPerPeriod = intDiv(config.params.SLOTS_PER_ETH1_VOTING_PERIOD, config.params.SLOTS_PER_EPOCH);
+    const votingPeriod = intDiv(currentEpoch, epochsPerPeriod);
+    const depositRoot = hash(intToBytes(votingPeriod, 32));
+    return {
+      depositRoot,
+      depositCount: state.eth1DepositIndex,
+      blockHash: hash(depositRoot)
+    };
   }
 }
