@@ -1,12 +1,24 @@
-import { IValidatorApi } from "../../../api/rpc";
-import { HttpClient } from "../../../util/httpClient";
-import { BeaconBlock, Attestation, ValidatorDuty, Slot, Epoch, bytes96, Shard, BLSPubkey } from "@chainsafe/eth2.0-types";
-import { ILogger } from "../../../logger";
-import { ApiNamespace } from "../../../api";
+import {IValidatorApi} from "../../../api/rpc";
+import {HttpClient} from "../../../util/httpClient";
+import {
+  Attestation,
+  BeaconBlock,
+  BLSPubkey,
+  bytes96,
+  Epoch,
+  Shard,
+  Slot,
+  ValidatorDuty,
+  ValidatorIndex
+} from "@chainsafe/eth2.0-types";
+import {ILogger} from "../../../logger";
+import {ApiNamespace} from "../../../api";
 
 export class RestValidatorApi implements IValidatorApi {
+
   public namespace: ApiNamespace;
   private client: HttpClient;
+
   public constructor(restUrl: string, logger: ILogger) {
     this.namespace = ApiNamespace.VALIDATOR;
     this.client = new HttpClient({urlPrefix: `${restUrl}/validator`}, {logger});
@@ -34,5 +46,9 @@ export class RestValidatorApi implements IValidatorApi {
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
     return this.client.post("/attestation", attestation);
+  }
+
+  public async getValidatorIndex(pubKey: BLSPubkey): Promise<ValidatorIndex> {
+    throw new Error("Method not implemented.");
   }
 }

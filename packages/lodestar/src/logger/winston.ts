@@ -19,7 +19,7 @@ export class WinstonLogger implements ILogger {
     this.winston = createLogger({
       level: LogLevel[LogLevel.debug], // log level switching handled in `createLogEntry`
       defaultMeta: {
-        module: options.module,
+        module: options.module || "",
       },
       transports: [
         new transports.Console({
@@ -29,7 +29,7 @@ export class WinstonLogger implements ILogger {
               format: 'YYYY-MM-DD HH:mm:ss'
             }),
             format.printf(
-              info => `${info.timestamp} [${(info.module || info.namespace).toUpperCase()}] ${info.level}: ${info.message}`
+              info => `${info.timestamp} [${(info.module || info.namespace || "").toUpperCase()}] ${info.level}: ${info.message}`
             )
           ),
           handleExceptions: true

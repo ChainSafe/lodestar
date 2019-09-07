@@ -1,8 +1,8 @@
-import { IBeaconApi } from "../../../api/rpc";
-import { HttpClient } from "../../../util/httpClient";
-import { bytes32, Fork, SyncingStatus, BeaconBlock, BeaconState, number64 } from "@chainsafe/eth2.0-types";
-import { ILogger } from "../../../logger";
-import { ApiNamespace } from "../../../api";
+import {IBeaconApi} from "../../../api/rpc";
+import {HttpClient} from "../../../util/httpClient";
+import {bytes32, Fork, SyncingStatus, BeaconBlock, BeaconState, number64} from "@chainsafe/eth2.0-types";
+import {ILogger} from "../../../logger";
+import {ApiNamespace} from "../../../api";
 
 export class RestBeaconApi implements IBeaconApi {
   public namespace: ApiNamespace;
@@ -27,6 +27,13 @@ export class RestBeaconApi implements IBeaconApi {
   }
 
   public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
-    return this.client.get<boolean | SyncingStatus>("/syncing")
+    return this.client.get<boolean | SyncingStatus>("/syncing");
+  }
+
+  public async getChainHead(): Promise<BeaconBlock> {
+    throw new Error("Method not implemented.");
+  }
+  public async getBeaconState(): Promise<BeaconState> {
+    throw new Error("Method not implemented.");
   }
 }
