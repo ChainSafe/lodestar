@@ -2,31 +2,18 @@
  * @module api/rpc
  */
 
-import {
-  Attestation,
-  BeaconBlock,
-  BeaconState,
-  BLSPubkey,
-  bytes96,
-  Epoch,
-  IndexedAttestation,
-  Shard,
-  Slot,
-  ValidatorDuty,
-  ValidatorIndex
-} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BLSPubkey, bytes96, Epoch, Shard, Slot, ValidatorDuty} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {BeaconDb} from "../../../../db";
 import {BeaconChain} from "../../../../chain";
 import {OpPool} from "../../../../opPool";
 import {IValidatorApi} from "./interface";
-import {getCommitteeAssignment, isProposerAtSlot} from "../../../../chain/stateTransition/util";
-import {CommitteeAssignment} from "../../../../validator/types";
 import {assembleBlock} from "../../../../chain/factory/block";
 import {IEth1Notifier} from "../../../../eth1";
 import {getValidatorDuties, produceAttestation} from "../../../impl/validator";
 import {ApiNamespace} from "../../../index";
+import {ILogger} from "../../../../logger";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -37,12 +24,14 @@ export class ValidatorApi implements IValidatorApi {
   private db: BeaconDb;
   private opPool: OpPool;
   private eth1: IEth1Notifier;
+  private logger: ILogger;
 
-  public constructor(opts, {config, chain, db, opPool, eth1}) {
+  public constructor(opts, {config, chain, db, opPool, eth1, logger}) {
     this.namespace = ApiNamespace.VALIDATOR;
     this.config = config;
     this.chain = chain;
     this.db = db;
+    this.logger = logger;
     this.opPool = opPool;
     this.eth1 = eth1;
   }
@@ -56,12 +45,16 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, slot: Slot, shard: Shard): Promise<Attestation> {
-    return produceAttestation(
-      {config: this.config, chain: this.chain, db: this.db},
-      validatorPubKey,
-      shard,
-      slot
-    );
+    try {
+      return await produceAttestation(
+        {config: this.config, chain: this.chain, db: this.db},
+        validatorPubKey,
+        shard,
+        slot
+      );
+    } catch (e) {
+      this.logger.warn(`Failed to produce attestation because: ${e.message}`);
+    }
   }
 
   public async publishBlock(block: BeaconBlock): Promise<void> {

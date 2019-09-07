@@ -9,11 +9,15 @@ export async function produceAttestation(
   validatorPubKey: BLSPubkey,
   shard: Shard,
   slot: Slot
-): Promise<Attestation> {
-  const [headState, headBlock, validatorIndex] = await Promise.all([
-    db.state.getLatest(),
-    db.block.get(chain.forkChoice.head()),
-    db.getValidatorIndex(validatorPubKey)
-  ]);
-  return await assembleAttestation({config, db}, headState, headBlock, validatorIndex, shard, slot);
+): Promise<Attestation|null> {
+  try {
+    const [headState, headBlock, validatorIndex] = await Promise.all([
+      chain.latestState,
+      db.block.get(chain.forkChoice.head()),
+      db.getValidatorIndex(validatorPubKey)
+    ]);
+    return await assembleAttestation({config, db}, {...headState}, headBlock, validatorIndex, shard, slot);
+  } catch (e) {
+    throw e;
+  }
 }

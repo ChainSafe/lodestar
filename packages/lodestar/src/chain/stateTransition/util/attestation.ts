@@ -2,8 +2,7 @@
  * @module chain/stateTransition/util
  */
 
-import assert from "assert";
-import {hashTreeRoot, equals} from "@chainsafe/ssz";
+import {equals, hashTreeRoot} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 import {BitList} from "@chainsafe/bit-utils";
 import {
@@ -16,15 +15,13 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {
-  DomainType,
-} from "../../../constants";
+import {DomainType,} from "../../../constants";
 import {intDiv} from "../../../util/math";
 import {isSorted} from "../../../util/sort";
 
 import {computeStartSlotOfEpoch} from "./epoch";
 import {getDomain} from "./domain";
-import {getCommitteeCount, getStartShard, getCrosslinkCommittee} from "./committee";
+import {getCommitteeCount, getCrosslinkCommittee, getStartShard} from "./committee";
 
 
 /**
@@ -116,10 +113,8 @@ export function getAttestingIndices(
   bits: BitList
 ): ValidatorIndex[] {
   const committee = getCrosslinkCommittee(config, state, data.target.epoch, data.crosslink.shard);
-  assert(bits.bitLength === committee.length);
-
   // Find the participating attesters in the committee
-  return committee.filter((_, i) => bits.getBit(i)).sort((a, b) => a - b);
+  return committee.filter((_, i) => {return bits.getBit(i);}).sort((a, b) => a - b);
 }
 
 /**

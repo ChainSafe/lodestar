@@ -12,8 +12,8 @@ export async function assembleAttestation(
   state: BeaconState,
   headBlock: BeaconBlock,
   validatorIndex: ValidatorIndex,
-  slot: Slot,
-  shard: Shard): Promise<Attestation> {
+  shard: Shard,
+  slot: Slot): Promise<Attestation> {
 
   while(state.slot < slot) {
     state.slot++;
@@ -21,23 +21,27 @@ export async function assembleAttestation(
 
   const aggregationBits = getAggregationBits(config, state, slot, shard, validatorIndex);
   const custodyBits = getEmptyAttestationBitList(config);
-  return {
-    aggregationBits,
-    custodyBits,
-    data: await assembleAttestationData(config, db, state, headBlock, shard),
-    signature: undefined
-  };
+  try {
+    const data  = await assembleAttestationData(config, db, state, headBlock, shard);
+    return {
+      aggregationBits,
+      custodyBits,
+      data,
+      signature: undefined
+    };
+  } catch (e) {
+    throw e;
+  }
 }
 
 export function getAggregationBits(config: IBeaconConfig, state: BeaconState, slot: Slot, shard: Shard, validatorIndex: ValidatorIndex): BitList {
   const aggregationBits = getEmptyAttestationBitList(config);
   const comittee = getCrosslinkCommittee(config, state, computeEpochOfSlot(config, slot), shard);
-  comittee.some((commiteeValidator, index) => {
+  console.log(comittee);
+  comittee.forEach((commiteeValidator, index) => {
     if(commiteeValidator === validatorIndex) {
       aggregationBits.setBit(index, true);
-      return true;
     }
-    return false;
   });
   return aggregationBits;
 }
