@@ -25,6 +25,7 @@ import {ValidatorApi} from "../../api/rpc/api/validator";
 import {BeaconApi} from "../../api/rpc/api/beacon";
 import asRaw from "@polkadot/util-crypto/xxhash/xxhash64/asRaw";
 import {existsSync, mkdirSync} from "fs";
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 
 interface IInteropCommandOptions {
   loggingLevel?: string;
@@ -78,8 +79,10 @@ export class InteropCommand implements CliCommand {
 
     if (options.quickStart) {
       this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier()});
-      const state = quickStartOptionToState(config, options.quickStart);
-      await this.node.chain.initializeBeaconChain(state, ProgressiveMerkleTree.empty(32));
+      const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
+      const state = quickStartOptionToState(config, tree, options.quickStart);
+      await this.node.chain.initializeBeaconChain(state, tree);
+      console.log(state.eth1DepositIndex, tree.root());
     } else {
       throw new Error("Missing --quickstart flag");
     }

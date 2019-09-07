@@ -96,11 +96,15 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   public async receiveBlock(block: BeaconBlock): Promise<void> {
+    const blockHash = hashTreeRoot(block, this.config.types.BeaconBlock);
+    this.logger.info(`Received block with hash 0x${blockHash.toString('hex')}`)
     const isValidBlock = await this.isValidBlock(this.latestState, block);
     assert(isValidBlock);
+    this.logger.info(`0x${blockHash.toString('hex')} is valid, running state transition...`);
 
     // process current slot
     await this.runStateTransition(block, this.latestState);
+    this.logger.info(`0x${blockHash.toString('hex')} passed state transition`);
     await this.opPool.processBlockOperations(block);
 
     // forward processed block for additional processing
@@ -142,10 +146,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   public async isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean> {
     // The parent block with root block.previous_block_root has been processed and accepted.
-    const hasParent = await this.db.block.has(block.parentRoot);
-    if (!hasParent) {
-      return false;
-    }
+    // const hasParent = await this.db.block.has(block.parentRoot);
+    // if (!hasParent) {
+    //   return false;
+    // }
     // An Ethereum 1.0 block pointed to by the state.
     // latest_eth1_data.block_hash has been processed and accepted.
     // TODO: implement
@@ -167,7 +171,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     } catch (e) {
       // store block root in db and terminate
       await this.db.block.storeBadBlock(blockRoot);
-      this.logger.warn(`Found bad block, block root: ${blockRoot} ` + e.message + '\n');
+      this.logger.warn(`Found bad block, block root: 0x${blockRoot.toString('hex')} ` + e.message + '\n');
       return;
     }
 
@@ -193,6 +197,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
           this.db.chain.setJustifiedBlockRoot(blockRoot),
         ]);
         this.forkChoice.setJustified(blockRoot);
+        this.logger.info(`0x${newState.currentJustifiedCheckpoint.root.toString('hex')} is justified!`);
       }
       // Newly finalized epoch
       if (preFinalizedEpoch < newState.finalizedCheckpoint.epoch) {
@@ -202,6 +207,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
           this.db.chain.setFinalizedBlockRoot(blockRoot),
         ]);
         this.forkChoice.setFinalized(blockRoot);
+        this.logger.info(`0x${newState.finalizedCheckpoint.root.toString('hex')} is finalized!`);
       }
       this.metrics.previousJustifiedEpoch.set(newState.previousJustifiedCheckpoint.epoch);
       this.metrics.currentJustifiedEpoch.set(newState.currentJustifiedCheckpoint.epoch);

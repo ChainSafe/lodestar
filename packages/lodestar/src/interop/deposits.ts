@@ -1,15 +1,14 @@
 import {Deposit, DepositData} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {hash, signingRoot, hashTreeRoot} from "@chainsafe/ssz";
+import {hash, hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {sign} from "@chainsafe/bls";
 
-import {DomainType, DEPOSIT_CONTRACT_TREE_DEPTH} from "../constants";
-import {ProgressiveMerkleTree} from "../util/merkleTree";
+import {DomainType} from "../constants";
+import {IProgressiveMerkleTree} from "../util/merkleTree";
 import {interopKeypairs} from "./keypairs";
 import {computeDomain} from "../chain/stateTransition/util";
 
-export function interopDeposits(config: IBeaconConfig, validatorCount: number): Deposit[] {
-  const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
+export function interopDeposits(config: IBeaconConfig, tree: IProgressiveMerkleTree, validatorCount: number): Deposit[] {
   return interopKeypairs(validatorCount).map(({pubkey, privkey}, i) => {
     // create DepositData
     const data: DepositData = {
