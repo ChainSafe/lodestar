@@ -52,20 +52,12 @@ export interface IBeaconSSZTypes {
   // state
   BeaconState: AnyContainerType;
   // wire
-  BlockRootSlot: AnyContainerType;
-  WireRequest: AnyContainerType;
-  WireResponse: AnyContainerType;
   Hello: AnyContainerType;
   Goodbye: AnyContainerType;
-  Status: AnyContainerType;
-  BeaconBlockRootsRequest: AnyContainerType;
-  BeaconBlockRootsResponse: AnyContainerType;
-  BeaconBlockHeadersRequest: AnyContainerType;
-  BeaconBlockHeadersResponse: AnyContainerType;
-  BeaconBlockBodiesRequest: AnyContainerType;
-  BeaconBlockBodiesResponse: AnyContainerType;
-  BeaconStatesRequest: AnyContainerType;
-  BeaconStatesResponse: AnyContainerType;
+  BeaconBlocksRequest: AnyContainerType;
+  BeaconBlocksResponse: AnyContainerType;
+  RecentBeaconBlocksRequest: AnyContainerType;
+  RecentBeaconBlocksResponse: AnyContainerType;
 }
 
 export const typeNames: (keyof IBeaconSSZTypes)[] = [
@@ -121,18 +113,10 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   // state
   "BeaconState",
   // wire
-  "BlockRootSlot",
-  "WireRequest",
-  "WireResponse",
   "Hello",
   "Goodbye",
-  "Status",
-  "BeaconBlockRootsRequest",
-  "BeaconBlockRootsResponse",
-  "BeaconBlockHeadersRequest",
-  "BeaconBlockHeadersResponse",
-  "BeaconBlockBodiesRequest",
-  "BeaconBlockBodiesResponse",
-  "BeaconStatesRequest",
-  "BeaconStatesResponse",
+  "BeaconBlocksRequest",
+  "BeaconBlocksResponse",
+  "RecentBeaconBlocksRequest",
+  "RecentBeaconBlocksResponse",
 ];

@@ -1,4 +1,4 @@
-import {BeaconBlock, bytes32, Hash, Slot} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, Hash, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {serialize} from "@chainsafe/ssz";
 

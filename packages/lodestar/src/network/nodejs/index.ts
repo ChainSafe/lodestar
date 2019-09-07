@@ -1,5 +1,5 @@
 /**
- * @module network/libp2p/nodejs
+ * @module network/nodejs
  */
 export * from "./bundle";
 export * from "./util";

@@ -13,7 +13,7 @@ import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {BlockHeaderCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
 describeMultiSpec<BlockHeaderCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/operations/block_header/block_header_mainnet.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/operations/block_header/block_header_mainnet.yaml"),
   (state, block) => {
     processBlockHeader(config, state, block);
     return state;

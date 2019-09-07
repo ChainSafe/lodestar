@@ -1,5 +1,5 @@
 import {NewEpochCallback, NewSlotCallback, RpcClient} from "./interface";
-import {Slot} from "@chainsafe/eth2.0-types";
+import {Slot, Epoch} from "@chainsafe/eth2.0-types";
 import {IValidatorApi} from "../../api/rpc/api/validator";
 import {intDiv} from "../../util/math";
 import {computeEpochOfSlot} from "../../chain/stateTransition/util";
@@ -14,7 +14,7 @@ export abstract class AbstractRpcClient implements RpcClient {
   public abstract url: string;
   private currentSlot: Slot;
 
-  private currentEpoch: Slot;
+  private currentEpoch: Epoch;
 
   private newSlotCallbacks: NewSlotCallback[] = [];
   private newEpochCallbacks: NewEpochCallback[] = [];

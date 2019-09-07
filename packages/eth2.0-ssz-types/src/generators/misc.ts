@@ -100,11 +100,11 @@ export const Eth1Data = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
 export const HistoricalBatch = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
   fields: [
     ["blockRoots", {
-      elementType: ssz.bytes32,
+      elementType: ssz.Hash,
       length: params.SLOTS_PER_HISTORICAL_ROOT,
     }],
     ["stateRoots", {
-      elementType: ssz.bytes32,
+      elementType: ssz.Hash,
       length: params.SLOTS_PER_HISTORICAL_ROOT,
     }],
   ],

@@ -12,7 +12,7 @@ import {
 } from "../../../../../src/opPool";
 import {assembleBody} from "../../../../../src/chain/factory/block/body";
 import * as depositUtils from "../../../../../src/chain/factory/block/deposits";
-import * as eth1DataAssembly from "../../../../../src/chain/factory/block/eth1Data";
+import {describe, it} from "mocha";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {ProgressiveMerkleTree} from "../../../../../src/util/merkleTree";
 import {generateState} from "../../../../utils/state";
@@ -38,7 +38,6 @@ describe('blockAssembly - body', function () {
     } as unknown as OpPool;
     generateDepositsStub = sandbox.stub(depositUtils, "generateDeposits");
     eth1 = sandbox.createStubInstance(EthersEth1Notifier);
-    bestVoteStub = sandbox.stub(eth1DataAssembly, "bestVoteData");
   });
 
   afterEach(() => {
@@ -55,7 +54,7 @@ describe('blockAssembly - body', function () {
     // @ts-ignore
     opPool.voluntaryExits.getAll.resolves([generateEmptyVoluntaryExit()]);
     generateDepositsStub.resolves([generateDeposit()]);
-    bestVoteStub.resolves([]);
+    eth1.getEth1Data.resolves([]);
     const result = await assembleBody(
       config,
       opPool,
@@ -72,7 +71,7 @@ describe('blockAssembly - body', function () {
     expect(result.proposerSlashings.length).to.be.equal(1);
     expect(result.deposits.length).to.be.equal(1);
     expect(result.transfers.length).to.be.equal(0);
-    expect(bestVoteStub.calledOnce).to.be.true;
+    expect(eth1.getEth1Data.calledOnce).to.be.true;
   });
 
   it('should generate block body with max respective field lengths', async function() {
@@ -85,7 +84,7 @@ describe('blockAssembly - body', function () {
     // @ts-ignore
     opPool.voluntaryExits.getAll.resolves(new Array(config.params.MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit));
     generateDepositsStub.resolves([generateDeposit()]);
-    bestVoteStub.resolves([]);
+    eth1.getEth1Data.resolves([]);
     const result = await assembleBody(
       config,
       opPool,
@@ -102,6 +101,6 @@ describe('blockAssembly - body', function () {
     expect(result.proposerSlashings.length).to.be.equal(config.params.MAX_PROPOSER_SLASHINGS);
     expect(result.deposits.length).to.be.equal(1);
     expect(result.transfers.length).to.be.equal(0);
-    expect(bestVoteStub.calledOnce).to.be.true;
+    expect(eth1.getEth1Data.calledOnce).to.be.true;
   });
 });

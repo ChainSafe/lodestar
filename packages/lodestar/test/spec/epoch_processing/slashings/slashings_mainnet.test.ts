@@ -10,7 +10,7 @@ import {BeaconStateComparisonCase} from "../../../utils/specTestTypes/beaconStat
 import {BeaconState} from "@chainsafe/eth2.0-types";
 
 describeMultiSpec<BeaconStateComparisonCase, BeaconState>(
-  join(__dirname, "../../test-cases/tests/epoch_processing/slashings/slashings_mainnet.yaml"),
+  join(__dirname, "../../../../../spec-test-cases/tests/epoch_processing/slashings/slashings_mainnet.yaml"),
   (state) => {
     processSlashings(config, state);
     return state;

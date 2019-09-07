@@ -9,7 +9,7 @@ import {getTestType, getTestValue, hydrateType, hydrateValue} from "./util";
 // Serialize
 
 describeMultiSpec(
-  join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_static/core/ssz_mainnet_random.yaml"),
+  join(__dirname, "../../../spec-test-cases/tests/ssz_static/core/ssz_mainnet_random.yaml"),
   serialize,
   (testCase) => {
     const typeName = getTestType(testCase);
@@ -28,7 +28,7 @@ describeMultiSpec(
 // Deserialize
 
 describeMultiSpec(
-  join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_static/core/ssz_mainnet_random.yaml"),
+  join(__dirname, "../../../spec-test-cases/tests/ssz_static/core/ssz_mainnet_random.yaml"),
   deserialize,
   (testCase) => {
     const typeName = getTestType(testCase);
@@ -56,7 +56,7 @@ describeMultiSpec(
 // hashTreeRoot
 
 describeMultiSpec(
-  join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_static/core/ssz_mainnet_random.yaml"),
+  join(__dirname, "../../../spec-test-cases/tests/ssz_static/core/ssz_mainnet_random.yaml"),
   hashTreeRoot,
   (testCase) => {
     const typeName = getTestType(testCase);
@@ -75,7 +75,7 @@ describeMultiSpec(
 // signingRoot
 
 describeMultiSpec(
-  join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_static/core/ssz_mainnet_random.yaml"),
+  join(__dirname, "../../../spec-test-cases/tests/ssz_static/core/ssz_mainnet_random.yaml"),
   signingRoot,
   (testCase) => {
     const typeName = getTestType(testCase);

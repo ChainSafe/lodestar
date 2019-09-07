@@ -45,13 +45,4 @@ export class BeaconApi implements IBeaconApi {
     // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
     return false;
   }
-
-  public async getBeaconState(): Promise<BeaconState> {
-    return await this.db.state.getLatest();
-  }
-
-  public async getChainHead(): Promise<BeaconBlock> {
-    return await this.db.block.getChainHead();
-  }
-
 }

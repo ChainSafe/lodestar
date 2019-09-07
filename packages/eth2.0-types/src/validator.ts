@@ -2,7 +2,7 @@
  * @module types
  */
 
-import {BLSPubkey, number64, Shard, Slot, uint64} from "./primitive";
+import {BLSPubkey, Shard, Slot, uint64, number64} from "./primitive";
 
 export interface ValidatorDuty {
   // The validator's public key, uniquely identifying them

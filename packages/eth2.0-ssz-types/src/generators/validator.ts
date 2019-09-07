@@ -8,7 +8,7 @@ import {IBeaconSSZTypes} from "../interface";
 
 export const ValidatorDuty = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
-    ["validatorPubkey", ssz.bytes48],
+    ["validatorPubkey", ssz.BLSPubkey],
     ["committeeIndex", ssz.number64],
     ["attestationSlot", ssz.Slot],
     ["attestationShard", ssz.Shard],

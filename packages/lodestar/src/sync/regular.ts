@@ -65,27 +65,27 @@ export class RegularSync {
   };
 
   private onProcessedBlock = (block: BeaconBlock): void => {
-    this.network.publishBlock(block);
+    this.network.gossip.publishBlock(block);
   };
 
   private onProcessedAttestation = (attestation: Attestation): void => {
-    this.network.publishAttestation(attestation);
+    this.network.gossip.publishAttestation(attestation);
   };
 
   public async start(): Promise<void> {
-    this.network.subscribeToBlocks();
-    this.network.subscribeToAttestations();
-    this.network.on(BLOCK_TOPIC, this.receiveBlock);
-    this.network.on(ATTESTATION_TOPIC, this.receiveAttestation);
+    this.network.gossip.subscribeToBlocks();
+    this.network.gossip.subscribeToAttestations();
+    this.network.gossip.on(BLOCK_TOPIC, this.receiveBlock);
+    this.network.gossip.on(ATTESTATION_TOPIC, this.receiveAttestation);
     this.chain.on('processedBlock', this.onProcessedBlock);
     this.chain.on('processedAttestation', this.onProcessedAttestation);
   }
 
   public async stop(): Promise<void> {
-    this.network.unsubscribeToBlocks();
-    this.network.unsubscribeToAttestations();
-    this.network.removeListener(BLOCK_TOPIC, this.receiveBlock);
-    this.network.removeListener(ATTESTATION_TOPIC, this.receiveAttestation);
+    this.network.gossip.unsubscribeToBlocks();
+    this.network.gossip.unsubscribeToAttestations();
+    this.network.gossip.removeListener(BLOCK_TOPIC, this.receiveBlock);
+    this.network.gossip.removeListener(ATTESTATION_TOPIC, this.receiveAttestation);
     this.chain.removeListener('processedBlock', this.onProcessedBlock);
     this.chain.removeListener('processedAttestation', this.onProcessedAttestation);
   }

@@ -3,7 +3,7 @@ import chaiAsPromised from "chai-as-promised";
 import {Contract, ethers} from "ethers";
 import ganache from "ganache-core";
 import sinon from "sinon";
-import {Provider} from "ethers/providers";
+import {BaseProvider, Block, Provider} from "ethers/providers";
 import promisify from "promisify-es6";
 import bls from "@chainsafe/bls";
 import {serialize} from "@chainsafe/ssz";
@@ -14,6 +14,12 @@ import defaults from "../../../src/eth1/dev/options";
 import {ILogger, WinstonLogger} from "../../../src/logger";
 import {OpPool} from "../../../src/opPool";
 import {DepositsOperations} from "../../../src/opPool/modules";
+import {describe, it} from "mocha";
+import {generateEth1Data} from "../../utils/eth1Data";
+import {ZERO_HASH} from "../../../src/constants";
+import {filterValidVotes} from "../../../lib/chain/factory/block/eth1Data";
+import {generateState} from "../../utils/state";
+import {Eth1Data} from "@chainsafe/eth2.0-types";
 
 
 chai.use(chaiAsPromised);
@@ -179,4 +185,146 @@ describe("Eth1Notifier", () => {
 
   });
 
+  //TODO: fix those tests
+
+  // describe("et1h votes filter", function () {
+  //
+  //   let eth1Notifier, providerStub;
+  //
+  //   beforeEach(function () {
+  //     providerStub = sinon.createStubInstance(BaseProvider);
+  //     eth1Notifier = new EthersEth1Notifier({
+  //       ...defaults,
+  //       providerInstance: providerStub
+  //     },
+  //     {
+  //       config,
+  //       logger: logger
+  //     });
+  //   });
+  //
+  //   it('should filter non cannonical vote', async function () {
+  //     eth1Stub.getBlock.returns(null);
+  //     const votes = [generateEth1Data()];
+  //     const valid = await filterValidVotes(config, votes, eth1Stub, null, null);
+  //     expect(valid.length).to.be.equal(0);
+  //   });
+  //
+  //   it('should filter too young vote', async function () {
+  //     eth1.provider =
+  //         eth1Stub.getBlock.returns({number: 0});
+  //     const votes = [generateEth1Data(ZERO_HASH)];
+  //     const valid = await filterValidVotes(config, votes, eth1Stub, {number: config.params.ETH1_FOLLOW_DISTANCE - 1} as Block, null);
+  //     expect(valid.length).to.be.equal(0);
+  //   });
+  //
+  //   it('should filter vote older than state', async function () {
+  //     eth1Stub.getBlock.returns({number: 0});
+  //     const votes = [generateEth1Data(ZERO_HASH)];
+  //     const valid = await filterValidVotes(config, votes, eth1Stub, {number: config.params.ETH1_FOLLOW_DISTANCE} as Block, {number: 1} as Block);
+  //     expect(valid.length).to.be.equal(0);
+  //   });
+  //
+  //   it('should filter vote because malformed deposit count', async function () {
+  //     eth1Stub.getBlock.returns({number: 2});
+  //     eth1Stub.depositCount.returns(1);
+  //     eth1Stub.depositRoot.returns(ZERO_HASH);
+  //     const votes = [generateEth1Data(ZERO_HASH)];
+  //     const valid = await filterValidVotes(config, votes, eth1Stub, {number: config.params.ETH1_FOLLOW_DISTANCE + 2} as Block, {number: 1} as Block);
+  //     expect(valid.length).to.be.equal(0);
+  //     expect(eth1Stub.depositCount.calledOnce).to.be.true;
+  //     expect(eth1Stub.depositRoot.calledOnce).to.be.true;
+  //   });
+  //
+  //   it('should filter vote because malformed deposit root', async function () {
+  //     eth1Stub.getBlock.returns({number: 2});
+  //     eth1Stub.depositCount.returns(0);
+  //     eth1Stub.depositRoot.returns(Buffer.alloc(32, 1));
+  //     const votes = [generateEth1Data(ZERO_HASH)];
+  //     const valid = await filterValidVotes(config, votes, eth1Stub, {number: config.params.ETH1_FOLLOW_DISTANCE + 2} as Block, {number: 1} as Block);
+  //     expect(valid.length).to.be.equal(0);
+  //     expect(eth1Stub.depositCount.calledOnce).to.be.true;
+  //     expect(eth1Stub.depositRoot.calledOnce).to.be.true;
+  //   });
+  //
+  //   it('should not filter valid vote', async function () {
+  //     eth1Stub.getBlock.returns({number: 2});
+  //     eth1Stub.depositCount.returns(0);
+  //     eth1Stub.depositRoot.returns(ZERO_HASH);
+  //     const votes = [generateEth1Data(ZERO_HASH)];
+  //     const valid = await filterValidVotes(config, votes, eth1Stub, {number: config.params.ETH1_FOLLOW_DISTANCE + 2} as Block, {number: 1} as Block);
+  //     expect(valid.length).to.be.equal(1);
+  //     expect(eth1Stub.depositCount.calledOnce).to.be.true;
+  //     expect(eth1Stub.depositRoot.calledOnce).to.be.true;
+  //   });
+  //
+  // });
+
+  // describe('best vote', function () {
+  //
+  //   it('no valid votes', async function () {
+  //     eth1Stub.getBlock.returns({number: 0});
+  //     const hash = Buffer.alloc(32, 4).toString('hex');
+  //     eth1Stub.getBlock.withArgs(1).returns({
+  //       hash
+  //     });
+  //     eth1Stub.depositRoot.withArgs(hash).returns(Buffer.alloc(32, 1));
+  //     eth1Stub.depositCount.withArgs(hash).returns(2);
+  //     eth1Stub.getHead.returns({number: config.params.ETH1_FOLLOW_DISTANCE + 1});
+  //     const bestVote = await bestVoteData(config, generateState({eth1DataVotes: [generateEth1Data()]}), eth1Stub);
+  //     expect(bestVote.blockHash).to.be.deep.equal(Buffer.from(hash.slice(2), 'hex'));
+  //     expect(bestVote.depositCount).to.be.deep.equal(2);
+  //     expect(bestVote.depositRoot).to.be.deep.equal(Buffer.alloc(32, 1));
+  //   });
+  //
+  //   it('single most frequent valid vote', async function () {
+  //     eth1Stub.getHead.returns({number: config.params.ETH1_FOLLOW_DISTANCE + 2});
+  //     //latest eth block
+  //     eth1Stub.getBlock.withArgs('0x' + Buffer.alloc(32, 9).toString('hex')).returns({number: 1});
+  //     eth1Stub.getBlock.returns({number: 2});
+  //     eth1Stub.depositCount.returns(0);
+  //     eth1Stub.depositRoot.returns(ZERO_HASH);
+  //
+  //     const votes = [
+  //       generateEth1Data(ZERO_HASH),
+  //       generateEth1Data(ZERO_HASH),
+  //       generateEth1Data(Buffer.alloc(32, 1))
+  //     ];
+  //     const bestVote = await bestVoteData(
+  //         config,
+  //         generateState({
+  //           eth1DataVotes: votes,
+  //           eth1Data: {blockHash: Buffer.alloc(32, 9)} as Eth1Data}
+  //         ),
+  //         eth1Stub
+  //     );
+  //     expect(bestVote).to.be.deep.equal(generateEth1Data(ZERO_HASH));
+  //   });
+  //
+  //   it('multiple tied most frequent valid vote', async function () {
+  //     eth1Stub.getHead.returns({number: config.params.ETH1_FOLLOW_DISTANCE + 2});
+  //     //latest eth block
+  //     eth1Stub.getBlock.withArgs('0x' + Buffer.alloc(32, 9).toString('hex')).resolves({number: 1});
+  //     eth1Stub.getBlock.resolves({number: 2});
+  //     eth1Stub.depositCount.returns(0);
+  //     eth1Stub.depositRoot.returns(ZERO_HASH);
+  //
+  //     const votes = [
+  //       generateEth1Data(ZERO_HASH),
+  //       generateEth1Data(ZERO_HASH),
+  //       generateEth1Data(Buffer.alloc(32, 1)),
+  //       generateEth1Data(Buffer.alloc(32, 1))
+  //     ];
+  //     const bestVote = await bestVoteData(
+  //         config,
+  //         generateState({
+  //           eth1DataVotes: votes,
+  //           eth1Data: {blockHash: Buffer.alloc(32, 9)} as Eth1Data}
+  //         ),
+  //         eth1Stub
+  //     );
+  //     expect(bestVote).to.be.deep.equal(generateEth1Data(ZERO_HASH));
+  //   });
+  //
+  // });
 });
