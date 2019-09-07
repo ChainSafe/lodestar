@@ -1,3 +1,4 @@
+import {describe} from "mocha";
 import {PrivateEth1Network} from "../../../../src/eth1/dev";
 import chai, {expect} from 'chai';
 import {DepositCommand} from "../../../../src/cli/commands";
@@ -14,9 +15,9 @@ describe('[CLI] deposit', function() {
 
   let eth1Network: PrivateEth1Network;
   let logger: ILogger = new WinstonLogger();
+  logger.silent = true;
 
   before(async () => {
-    logger.silent = true;
     eth1Network = new PrivateEth1Network({
       host: '127.0.0.1',
       port: 32567
@@ -29,7 +30,6 @@ describe('[CLI] deposit', function() {
 
   after(async () => {
     await eth1Network.stop();
-    logger.silent = false;
   });
 
   it('Should be able to register', async () => {
