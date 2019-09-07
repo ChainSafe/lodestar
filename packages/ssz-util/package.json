@@ -1,0 +1,34 @@
+{
+  "name": "@chainsafe/ssz-util",
+  "version": "0.0.1",
+  "description": "SSZ utilities for eth2.0",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "prebuild": "rm -rf lib && rm -rf dist",
+    "build": "babel src -x .ts -d lib --source-maps",
+    "build:docs": "typedoc --exclude src/index.ts --out docs src",
+    "check-types": "tsc --incremental --noEmit",
+    "lint": "eslint --ext .ts src/ test/",
+    "pretest": "yarn check-types",
+    "prepublishOnly": "yarn build",
+    "test": "echo 'No available tests'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChainSafe/lodestar.git"
+  },
+  "keywords": [
+    "ssz",
+    "ethereum",
+    "serenity",
+    "simple serialize",
+    "ssz"
+  ],
+  "author": "ChainSafe Systems",
+  "license": "LGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/ChainSafe/lodestar/issues"
+  },
+  "homepage": "https://github.com/ChainSafe/lodestar#readme"
+}
