@@ -76,13 +76,12 @@ export class InteropCommand implements CliCommand {
     conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
 
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
-
+    config.params.SECONDS_PER_SLOT = 12;
     if (options.quickStart) {
       this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier()});
       const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
       const state = quickStartOptionToState(config, tree, options.quickStart);
       await this.node.chain.initializeBeaconChain(state, tree);
-      console.log(state.eth1DepositIndex, tree.root());
     } else {
       throw new Error("Missing --quickstart flag");
     }

@@ -5,7 +5,7 @@
 import assert from "assert";
 import BN from "bn.js";
 import {EventEmitter} from "events";
-import {hashTreeRoot} from "@chainsafe/ssz";
+import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {Attestation, BeaconBlock, BeaconState, uint16, uint64} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -97,7 +97,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   public async receiveBlock(block: BeaconBlock): Promise<void> {
     const blockHash = hashTreeRoot(block, this.config.types.BeaconBlock);
-    this.logger.info(`Received block with hash 0x${blockHash.toString('hex')}`)
+    this.logger.info(`Received block with hash 0x${blockHash.toString('hex')}`);
     const isValidBlock = await this.isValidBlock(this.latestState, block);
     assert(isValidBlock);
     this.logger.info(`0x${blockHash.toString('hex')} is valid, running state transition...`);
@@ -171,15 +171,17 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     } catch (e) {
       // store block root in db and terminate
       await this.db.block.storeBadBlock(blockRoot);
-      this.logger.warn(`Found bad block, block root: 0x${blockRoot.toString('hex')} ` + e.message + '\n');
+      this.logger.warn(`Found bad block, block root: 0x${blockRoot.toString('hex')} ` + e.message);
+      console.log(e);
       return;
     }
-
+    this.latestState = newState;
     // On successful transition, update system state
     await Promise.all([
       this.db.block.set(blockRoot, block),
       this.db.state.set(block.stateRoot, newState),
     ]);
+    await this.db.setChainHeadRoots(blockRoot, block.stateRoot);
     this.forkChoice.addBlock(block.slot, blockRoot, block.parentRoot);
     this.updateDepositMerkleTree(newState);
     // update metrics
@@ -221,7 +223,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     let [deposits, merkleTree] = await Promise.all([
       this.db.deposit.getAll(),
       this.db.merkleTree.getProgressiveMerkleTree(
-        newState.eth1DepositIndex - newState.eth1Data.depositCount
+        newState.eth1DepositIndex
       )
     ]);
     processSortedDeposits(

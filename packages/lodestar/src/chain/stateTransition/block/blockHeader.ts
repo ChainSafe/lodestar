@@ -33,7 +33,6 @@ export function processBlockHeader(
   assert(block.parentRoot.equals(signingRoot(state.latestBlockHeader, config.types.BeaconBlockHeader)));
   // Save current block as the new latest block
   state.latestBlockHeader = getTemporaryBlockHeader(config, block);
-
   // Verify proposer is not slashed
   const proposer = state.validators[getBeaconProposerIndex(config, state)];
   assert(!proposer.slashed);
