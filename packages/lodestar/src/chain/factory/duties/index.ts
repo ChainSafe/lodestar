@@ -7,7 +7,7 @@ export function assembleValidatorDuty(
   validator: {publicKey: BLSPubkey; index: ValidatorIndex},
   state,
   epoch: Epoch,
-  blockProposerIndex: ValidatorIndex): ValidatorDuty  {
+  proposerSlotMapping: {[k: number]: number}): ValidatorDuty  {
   let duty: ValidatorDuty = generateEmptyValidatorDuty(validator.publicKey);
   const committeeAssignment = getCommitteeAssignment(
     config,
@@ -23,12 +23,13 @@ export function assembleValidatorDuty(
       committeeIndex: committeeAssignment.validators.indexOf(validator.index)
     };
   }
-  if (validator.index === blockProposerIndex) {
+  if (proposerSlotMapping[validator.index] && proposerSlotMapping[validator.index] !== 0) {
     duty = {
       ...duty,
-      blockProposalSlot: state.slot
+      blockProposalSlot: proposerSlotMapping[validator.index]
     };
   }
+
   return duty;
 }
 

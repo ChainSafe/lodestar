@@ -15,10 +15,13 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
     super(opts);
   }
 
-  public async getBlock(pubKey: BLSPubkey): Promise<BeaconBlock> {
+  public async getBlock(pubKey: BLSPubkey): Promise<BeaconBlock|null> {
     const data = await this.db.get(
       encodeKey(Bucket.lastProposedBlock, pubKey.toString('hex'))
     );
+    if(!data) {
+      return null;
+    }
     return deserialize(data, this.config.types.BeaconBlock);
   }
 

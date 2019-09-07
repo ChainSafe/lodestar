@@ -1,4 +1,4 @@
-import {getBeaconProposerIndex} from "../../../chain/stateTransition/util";
+import {computeStartSlotOfEpoch, getBeaconProposerIndex} from "../../../chain/stateTransition/util";
 import {assembleValidatorDuty} from "../../../chain/factory/duties";
 import {BLSPubkey, Epoch, ValidatorDuty} from "@chainsafe/eth2.0-types";
 import {IBeaconDb} from "../../../db/api";
@@ -11,7 +11,14 @@ export async function getValidatorDuties(config: IBeaconConfig, db: IBeaconDb, v
     return  await db.getValidatorIndex(publicKey);
   }));
 
-  const blockProposerIndex = getBeaconProposerIndex(config, state);
+  const startSlot = computeStartSlotOfEpoch(config, epoch);
+
+  const slotProposerMapping = {};
+
+  for(let slot = startSlot; slot < startSlot + config.params.SLOTS_PER_EPOCH; slot ++) {
+    const blockProposerIndex = getBeaconProposerIndex(config, {...state, slot});
+    slotProposerMapping[blockProposerIndex] = slot;
+  }
 
   return validatorPublicKeys.map(
     (validatorPublicKey, index) => {
@@ -24,7 +31,7 @@ export async function getValidatorDuties(config: IBeaconConfig, db: IBeaconDb, v
         },
         state,
         epoch,
-        blockProposerIndex
+        slotProposerMapping
       );
     }
   );

@@ -45,6 +45,5 @@ export async function assembleBlock(
   stateTransition(config, nextState, block, false, false);
 
   block.stateRoot = hashTreeRoot(nextState, config.types.BeaconState);
-
   return block;
 }
