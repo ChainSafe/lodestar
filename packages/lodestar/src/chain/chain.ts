@@ -86,18 +86,20 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
 
   public async receiveAttestation(attestation: Attestation): Promise<void> {
+    this.logger.info(`Received attestation for source ${attestation.data.source.root.toString("hex")} and target ${attestation.data.target.root.toString("hex")}`);
     const validators = getAttestingIndices(
       this.config, this.latestState, attestation.data, attestation.aggregationBits);
     const balances = validators.map((index) => this.latestState.balances[index]);
     for (let i = 0; i < validators.length; i++) {
       this.forkChoice.addAttestation(attestation.data.beaconBlockRoot, validators[i], balances[i]);
     }
+    this.logger.info("Attestation passed to fork choice");
     this.emit('processedAttestation', attestation);
   }
 
   public async receiveBlock(block: BeaconBlock): Promise<void> {
     const blockHash = hashTreeRoot(block, this.config.types.BeaconBlock);
-    this.logger.info(`Received block with hash 0x${blockHash.toString('hex')}`);
+    this.logger.info(`Received block with hash 0x${blockHash.toString('hex')} at slot ${block.slot}`);
     const isValidBlock = await this.isValidBlock(this.latestState, block);
     assert(isValidBlock);
     this.logger.info(`0x${blockHash.toString('hex')} is valid, running state transition...`);
@@ -116,7 +118,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const headRoot = this.forkChoice.head();
     if (!currentRoot.equals(headRoot)) {
       const block = await this.db.block.get(headRoot);
-      await this.db.setChainHeadRoots(currentRoot, block.stateRoot, block);
+      await this.db.setChainHeadRoots(headRoot, block.stateRoot);
+      this.logger.info(`Fork choice changed head to 0x${headRoot.toString('hex')}`);
     }
   }
 
@@ -183,7 +186,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     ]);
     await this.db.setChainHeadRoots(blockRoot, block.stateRoot);
     this.forkChoice.addBlock(block.slot, blockRoot, block.parentRoot);
-    this.updateDepositMerkleTree(newState);
+    // await this.applyForkChoiceRule();
+    await this.updateDepositMerkleTree(newState);
     // update metrics
     this.metrics.currentSlot.set(block.slot);
 

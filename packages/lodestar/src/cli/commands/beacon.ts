@@ -76,7 +76,8 @@ export class BeaconNodeCommand implements CliCommand {
             chain: this.node.chain,
             db: this.node.db,
             opPool: this.node.opPool,
-            eth1: this.node.eth1
+            eth1: this.node.eth1,
+            logger
           }
         ),
         beacon: new BeaconApi(

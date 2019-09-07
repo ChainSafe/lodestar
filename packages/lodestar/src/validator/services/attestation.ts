@@ -57,9 +57,13 @@ export class AttestationService {
       slot,
       shard
     );
+    if(!attestation) {
+      this.logger.warn(`Failed to obtain attestation from beacon node at slot ${slot} and shard ${shard}`);
+      return null;
+    }
     if (await this.isConflictingAttestation(attestation.data)) {
       this.logger.warn(
-        `[Validator] Avoided signing conflicting attestation! `
+        `Avoided signing conflicting attestation! `
         + `Source epoch: ${attestation.data.source.epoch}, Target epoch: ${computeEpochOfSlot(this.config, slot)}`
       );
       return null;
@@ -74,12 +78,12 @@ export class AttestationService {
         this.config,
         {fork} as BeaconState, // eslint-disable-line @typescript-eslint/no-object-literal-type-assertion
         DomainType.ATTESTATION,
-        computeEpochOfSlot(this.config, slot),
+        attestation.data.target.epoch,
       )
     ).toBytesCompressed();
     await this.storeAttestation(attestation);
     await this.rpcClient.validator.publishAttestation(attestation);
-    this.logger.info(`[Validator] Signed and publish new attestation`);
+    this.logger.info(`Signed and publish new attestation for block ${attestation.data.target.root.toString('hex')} and shard ${shard} at slot ${slot}`);
     return attestation;
   }
 
