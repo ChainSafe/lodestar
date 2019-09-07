@@ -11,8 +11,23 @@ export interface IMetricsOptions {
   gatewayUrl?: string;
 }
 
+export const MetricsOptions: IConfigurationModule = {
+  name: "metrics",
+  fields: [
+    {
+      name: "serverPort",
+      type: "number",
+      configurable: true,
+      process: (input) => parseInt(input),
+      cli: {
+        flag: "metricsPort",
+      },
+    }
+  ],
+};
+
 const config: IMetricsOptions = {
-  enabled: true,
+  enabled: false,
   timeout: 5000,
   pushGateway: false,
   serverPort: 5000,

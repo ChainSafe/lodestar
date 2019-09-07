@@ -7,6 +7,7 @@ import TCP from "libp2p-tcp";
 import Mplex from "libp2p-mplex";
 import SECIO from "libp2p-secio";
 import Bootstrap from "libp2p-bootstrap";
+import MDNS from "libp2p-mdns";
 import PeerInfo from "peer-info";
 import deepmerge from "deepmerge";
 
@@ -20,22 +21,27 @@ export interface Libp2pOptions {
 export class NodejsNode extends LibP2p {
   public constructor(options: Libp2pOptions) {
     const defaults = {
+      peerInfo: options.peerInfo,
       modules: {
         connEncryption: [SECIO],
         transport: [TCP],
         streamMuxer: [Mplex],
-        peerDiscovery: [Bootstrap],
+        peerDiscovery: [Bootstrap, MDNS],
       },
       config: {
         peerDiscovery: {
+          autoDial: true,
+          mdns: {
+          },
           bootstrap: {
             interval: 2000,
             enabled: true,
-            list: [],
+            list: (options.bootnodes || []) as any[],
           }
         }
       }
     };
-    super(deepmerge(defaults, options, {isMergeableObject: isPlainObject}));
+    // @ts-ignore
+    super(defaults);
   }
 }

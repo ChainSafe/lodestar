@@ -75,7 +75,7 @@ export class BeaconNode {
     // initialize for network type
     const libp2p = createPeerId()
       .then((peerId) => initializePeerInfo(peerId, this.conf.network.multiaddrs))
-      .then((peerInfo) => new NodejsNode({peerInfo}));
+      .then((peerInfo) => new NodejsNode({peerInfo, bootnodes: this.conf.network.bootnodes}));
 
     this.network = new Libp2pNetwork(this.conf.network, {
       config,

@@ -94,8 +94,6 @@ export class InteropCommand implements CliCommand {
       } else {
         this.startValidators(0, parseInt(options.validators), this.node);
       }
-    } else {
-      this.startValidators(0, 5, this.node);
     }
   }
 

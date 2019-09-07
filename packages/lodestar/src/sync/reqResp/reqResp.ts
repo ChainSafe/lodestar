@@ -97,12 +97,12 @@ export class SyncReqResp implements ISyncReqResp {
     }
   }
 
-  public async onRequest(
+  public onRequest = async (
     peerInfo: PeerInfo,
     method: Method,
     id: RequestId,
     body: RequestBody,
-  ): Promise<void> {
+  ): Promise<void> => {
     switch (method) {
       case Method.Hello:
         return await this.onHello(peerInfo, id, body as Hello);
@@ -115,7 +115,7 @@ export class SyncReqResp implements ISyncReqResp {
       default:
         this.logger.error(`Invalid request method ${method} from ${peerInfo.id.toB58String()}`);
     }
-  }
+  };
 
   public async onHello(peerInfo: PeerInfo, id: RequestId, request: Hello): Promise<void> {
     // set hello on peer
@@ -173,6 +173,7 @@ export class SyncReqResp implements ISyncReqResp {
 
   public async start(): Promise<void> {
     this.network.on("peer:connect", this.handshake);
+    this.network.reqResp.on("request", this.onRequest)
     await Promise.all(
       this.network.getPeers().map(async (peerInfo) =>
         this.network.reqResp.hello(peerInfo, await this.createHello())));
@@ -180,6 +181,7 @@ export class SyncReqResp implements ISyncReqResp {
 
   public async stop(): Promise<void> {
     this.network.removeListener("peer:connect", this.handshake);
+    this.network.reqResp.removeListener("request", this.onRequest)
     await Promise.all(
       this.network.getPeers().map((peerInfo) =>
         this.network.reqResp.goodbye(peerInfo, {reason: new BN(0)})));

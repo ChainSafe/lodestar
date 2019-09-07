@@ -35,6 +35,17 @@ export const NetworkOptions: IConfigurationModule = {
         flag: "bootnodes"
       }
     },
+    {
+      name: "multiaddrs",
+      type: [String],
+      configurable: true,
+      process: (input: string) => {
+        return input.split(',').map((input) => input.trim());
+      },
+      cli: {
+        flag: "multiaddrs"
+      }
+    },
   ]
 };
 

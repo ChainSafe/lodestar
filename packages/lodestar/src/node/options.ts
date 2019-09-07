@@ -10,7 +10,7 @@ import defaultNetworkOptions, {INetworkOptions, NetworkOptions} from "../network
 import defaultOpPoolOptions, {IOpPoolOptions, OpPoolOptions} from "../opPool/options";
 import defaultSyncOptions, {ISyncOptions, SyncOptions} from "../sync/options";
 import defaultLoggerOptions, {IBeaconLoggerOptions, BeaconLoggerOptions} from "./loggerOptions";
-import defaultMetricsOptions, {IMetricsOptions} from "../metrics/options";
+import defaultMetricsOptions, {IMetricsOptions, MetricsOptions} from "../metrics/options";
 import {IValidatorOptions, ValidatorOptions} from "../validator/options";
 import {IConfigurationModule} from "../util/config";
 
@@ -39,6 +39,7 @@ export const BeaconNodeOptions: IConfigurationModule = {
     SyncOptions,
     BeaconLoggerOptions,
     ValidatorOptions,
+    MetricsOptions,
   ]
 };
 

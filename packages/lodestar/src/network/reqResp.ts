@@ -80,33 +80,23 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
             const request = this.decodeRequest(method, data);
             const requestId = randomRequestId();
             this.emit("request", peerInfo, method, requestId, request);
-            this.logger.debug("request", {
-              peer: peerInfo.id.toB58String(),
-              method,
-              requestId,
-            });
+            this.logger.debug(`${requestId} - receive ${method} request from ${peerInfo.id.toB58String()}`);
             if (!requestOnly) {
               const responseEvent = createResponseEvent(requestId);
               let responseListener;
               const responseTimer = setTimeout(() => {
-                this.logger.debug("response timeout", {
-                  method,
-                  requestId,
-                });
+                this.logger.debug(`${requestId} - send ${method} response timeout`);
                 // @ts-ignore
                 this.removeListener(responseEvent, responseListener);
                 cb(null, this.encodeResponseError(new Error(ERR_RESP_TIMEOUT)));
               }, RESP_TIMEOUT);
               responseListener = (err, output): void => {
-                this.logger.debug("response", {
-                  method,
-                  requestId,
-                });
                 // @ts-ignore
                 this.removeListener(responseEvent, responseListener);
                 clearTimeout(responseTimer);
                 if (err) return cb(null, this.encodeResponseError(err));
                 cb(null, this.encodeResponse(method, output));
+                this.logger.debug(`${requestId} - send ${method} response`);
               };
               // @ts-ignore
               this.once(responseEvent, responseListener);
@@ -223,6 +213,7 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
         if (err) {
           return reject(err);
         }
+        this.logger.debug(`send ${method} request to ${peerInfo.id.toB58String()}`);
         // @ts-ignore
         const responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
         // pull-stream through that will resolve after the request is sent
@@ -245,6 +236,7 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
           conn,
           pull.drain((data) => {
             clearTimeout(responseTimer);
+            this.logger.debug(`receive ${method} response from ${peerInfo.id.toB58String()}`);
             try {
               resolve(this.decodeResponse(method, data) as T);
             } catch (e) {

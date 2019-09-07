@@ -27,9 +27,13 @@ export class HttpMetricsServer implements IMetricsServer {
     }
   }
   public async start(): Promise<void> {
-    await promisify(this.http.listen.bind(this.http))(this.opts.serverPort);
+    if (this.opts.enabled) {
+      await promisify(this.http.listen.bind(this.http))(this.opts.serverPort);
+    }
   }
   public async stop(): Promise<void> {
-    await promisify(this.http.close.bind(this.http))();
+    if (this.opts.enabled) {
+      await promisify(this.http.close.bind(this.http))();
+    }
   }
 }
