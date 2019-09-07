@@ -164,11 +164,11 @@ class Validator {
       `Check duties - Slot: ${slot}, isProposer: ${isProposer}, isAttester: ${isAttester}, Fork: (current: ${fork.currentVersion.toString('hex')}, prev: ${fork.previousVersion.toString('hex')})`
     );
     if (isAttester) {
-      this.attestationService.createAndPublishAttestation(
-        slot,
-        validatorDuty.attestationShard,
-        fork
-      );
+      // this.attestationService.createAndPublishAttestation(
+      //   slot,
+      //   validatorDuty.attestationShard,
+      //   fork
+      // );
     }
     if (isProposer) {
       this.blockService.createAndPublishBlock(slot, fork);
