@@ -47,6 +47,10 @@ export interface ISpecTestOptions<TestCase, Result> {
 
 }
 
+export interface ITestCaseMeta {
+  directoryName: string;
+}
+
 const defaultOptions: ISpecTestOptions<any, any> = {
   inputTypes: {},
   inputProcessing: {},
@@ -61,7 +65,7 @@ const defaultOptions: ISpecTestOptions<any, any> = {
 export function describeDirectorySpecTest<TestCase, Result>(
   name: string,
   testCaseDirectoryPath: string,
-  testFunction: (testCase: TestCase) => Result,
+  testFunction: (testCase: TestCase, directoryName: string) => Result,
   options: Partial<ISpecTestOptions<TestCase, Result>>
 ): void {
   // @ts-ignore
@@ -103,14 +107,14 @@ function generateTestCase<TestCase, Result>(
       return this.skip();
     }
     if(options.shouldError && options.shouldError(testCase)) {
-      expect(testFunction.bind(null, testCase)).to.throw;
+      expect(testFunction.bind(null, testCase, basename(testCaseDirectoryPath))).to.throw;
     } else {
       const profileId = `${name}-${Date.now()}.profile`;
       const profilingDirectory = process.env.GEN_PROFILE_DIR;
       if (profilingDirectory) {
         profiler.startProfiling(profileId);
       }
-      const result = testFunction(testCase);
+      const result = testFunction(testCase, basename(testCaseDirectoryPath));
       if (profilingDirectory) {
         const profile = profiler.stopProfiling(profileId);
 
@@ -138,6 +142,9 @@ function loadInputFiles<TestCase, Result>(
     .forEach((file) => {
       const inputName = basename(file).replace(".ssz", "").replace(".yaml", "");
       testCase[inputName] = deserializeTestCase(file, inputName, options);
+      if (file.endsWith(InputType.SSZ)) {
+        testCase[`${inputName}_raw`] = readFileSync(file);
+      }
       if(options.inputProcessing[inputName]) {
         testCase[inputName] = options.inputProcessing[inputName](testCase[inputName]);
       }
