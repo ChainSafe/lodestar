@@ -6,7 +6,7 @@ import {equals} from "@chainsafe/ssz";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {initializeBeaconStateFromEth1} from "../../../../src/chain/genesis/genesis";
-import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {expandYamlValue} from "@chainsafe/ssz-util";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {GenesisInitCase} from "../../../utils/specTestTypes/genesis";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "@chainsafe/eth2.0-params/lib/presets/minimal";

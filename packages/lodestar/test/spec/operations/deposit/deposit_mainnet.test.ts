@@ -9,7 +9,7 @@ import sinon from "sinon";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processDeposit} from "../../../../src/chain/stateTransition/block/operations";
-import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {expandYamlValue} from "@chainsafe/ssz-util";
 import {DepositCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
 describeMultiSpec<DepositCase, BeaconState>(

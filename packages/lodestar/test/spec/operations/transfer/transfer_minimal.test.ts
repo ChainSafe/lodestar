@@ -9,7 +9,7 @@ import {equals} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {processTransfer} from "../../../../src/chain/stateTransition/block/operations";
-import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {expandYamlValue} from "@chainsafe/ssz-util";
 import {TransferCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
 describeMultiSpec<TransferCase, BeaconState>(

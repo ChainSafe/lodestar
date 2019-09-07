@@ -4,7 +4,7 @@ import {BeaconState} from "@chainsafe/eth2.0-types";
 import {deserialize} from "@chainsafe/ssz";
 import {loadYamlFile} from "@chainsafe/eth2.0-spec-test-util";
 
-import {expandYamlValue} from "../util/expandYamlValue";
+import {expandYamlValue} from "@chainsafe/ssz-util";
 import {quickStartState} from "./state";
 
 // either "genesisTime,validatorCount" or "genesisState.fileext"

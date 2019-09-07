@@ -9,7 +9,7 @@ import {equals} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processBlockHeader} from "../../../../src/chain/stateTransition/block/blockHeader";
-import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {expandYamlValue} from "@chainsafe/ssz-util";
 import {BlockHeaderCase} from "../../../utils/specTestTypes/beaconStateComparison";
 
 describeMultiSpec<BlockHeaderCase, BeaconState>(

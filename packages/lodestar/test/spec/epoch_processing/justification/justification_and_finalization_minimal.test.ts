@@ -5,7 +5,7 @@ import {equals} from "@chainsafe/ssz";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {processJustificationAndFinalization} from "../../../../src/chain/stateTransition/epoch/justification";
-import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {expandYamlValue} from "@chainsafe/ssz-util";
 import {BeaconStateComparisonCase} from "../../../utils/specTestTypes/beaconStateComparison";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 

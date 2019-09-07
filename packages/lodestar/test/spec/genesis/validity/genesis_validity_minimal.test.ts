@@ -4,7 +4,7 @@ import {expect} from "chai";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {isValidGenesisState} from "../../../../src/chain/genesis/genesis";
-import {expandYamlValue} from "../../../utils/expandYamlValue";
+import {expandYamlValue} from "@chainsafe/ssz-util";
 import {GenesisValidityCase} from "../../../utils/specTestTypes/genesis";
 
 describeMultiSpec<GenesisValidityCase, boolean>(
