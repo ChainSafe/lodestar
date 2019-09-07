@@ -47,8 +47,8 @@
     "@chainsafe/bls": "0.1.7",
     "@chainsafe/eth2.0-config": "^0.1.1",
     "@chainsafe/eth2.0-params": "^0.1.0",
-    "@chainsafe/eth2.0-types": "^0.1.1",
     "@chainsafe/eth2.0-spec-test-util": "0.4.1",
+    "@chainsafe/eth2.0-types": "^0.1.1",
     "@chainsafe/ssz": "0.5.1",
     "@iarna/toml": "^2.2.3",
     "@nodeutils/defaults-deep": "^1.1.0",
@@ -75,6 +75,7 @@
     "libp2p-gossipsub": "^0.0.2",
     "libp2p-kad-dht": "^0.15.2",
     "libp2p-mplex": "^0.8.5",
+    "libp2p-secio": "^0.11.1",
     "libp2p-tcp": "^0.13.0",
     "libp2p-webrtc-star": "^0.16.1",
     "noice-json-rpc": "^1.2.0",
@@ -109,12 +110,12 @@
     "@types/mocha": "^5.2.7",
     "@types/supertest": "^2.0.8",
     "@types/ws": "^6.0.1",
+    "axios-mock-adapter": "^1.17.0",
     "babel-plugin-const-enum": "^0.0.2",
     "benchmark": "^2.1.4",
-    "supertest": "^4.0.2",
-    "axios-mock-adapter": "^1.17.0",
     "chai": "^4.2.0",
     "mocha": "^6.2.0",
+    "supertest": "^4.0.2",
     "webpack": "^4.39.1"
   }
 }
