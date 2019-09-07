@@ -57,7 +57,7 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
           const peerInfo = await promisify(conn.getPeerInfo.bind(conn))();
           pull(
             conn,
-            this.handleRequest(peerInfo, method),
+            this.handleRequest(peerInfo, method, method === Method.Goodbye),
             conn,
           );
         });
@@ -71,7 +71,7 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
   /**
    * Return a "through" pull-stream that processes a request and waits for/returns a response
    */
-  private handleRequest = (peerInfo: PeerInfo, method: Method) => {
+  private handleRequest = (peerInfo: PeerInfo, method: Method, requestOnly?: boolean) => {
     return (read) => {
       return (end, cb) => {
         read(end, (end, data) => {
@@ -85,28 +85,38 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
               method,
               requestId,
             });
-            const responseListener = (err, output): void => {
-              this.logger.debug("response", {
-                method,
-                requestId,
-              });
-              if (err) return cb(null, this.encodeResponseError(err));
-              cb(null, this.encodeResponse(method, output));
-            };
-            const responseEvent = createResponseEvent(requestId);
-            // @ts-ignore
-            this.once(responseEvent, responseListener);
-            setTimeout(() => {
-              this.logger.debug("response timeout", {
-                method,
-                requestId,
-              });
+            if (!requestOnly) {
+              const responseEvent = createResponseEvent(requestId);
+              let responseListener;
+              const responseTimer = setTimeout(() => {
+                this.logger.debug("response timeout", {
+                  method,
+                  requestId,
+                });
+                // @ts-ignore
+                this.removeListener(responseEvent, responseListener);
+                cb(null, this.encodeResponseError(new Error(ERR_RESP_TIMEOUT)));
+              }, RESP_TIMEOUT);
+              responseListener = (err, output): void => {
+                this.logger.debug("response", {
+                  method,
+                  requestId,
+                });
+                // @ts-ignore
+                this.removeListener(responseEvent, responseListener);
+                clearTimeout(responseTimer);
+                if (err) return cb(null, this.encodeResponseError(err));
+                cb(null, this.encodeResponse(method, output));
+              };
               // @ts-ignore
-              this.removeListener(responseEvent, responseListener);
-              cb(null, this.encodeResponseError(new Error(ERR_RESP_TIMEOUT)));
-            }, RESP_TIMEOUT);
+              this.once(responseEvent, responseListener);
+            } else {
+              cb(true);
+            }
           } catch (e) {
-            cb(null, this.encodeResponseError(e));
+            if (!requestOnly) {
+              cb(null, this.encodeResponseError(e));
+            }
           }
         });
       };
@@ -206,7 +216,7 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
         return deserialize(data, this.config.types.RecentBeaconBlocksRequest);
     }
   }
-  private async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T> {
+  private async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody, requestOnly?: boolean): Promise<T> {
     const protocol = createRpcProtocol(method, this.encoding);
     return await new Promise((resolve, reject) => {
       this.libp2p.dialProtocol(peerInfo, protocol, (err, conn) => {
@@ -214,10 +224,27 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
           return reject(err);
         }
         // @ts-ignore
+        const responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
+        // pull-stream through that will resolve after the request is sent
+        const requestOnlyThrough =(read) => {
+          return (end, cb) => {
+            read(end, (end, data) => {
+              if (end) {
+                cb(end);
+                clearTimeout(responseTimer);
+                return resolve();
+              }
+              cb(null, data);
+            });
+          };
+        };
+        // @ts-ignore
         pull(
           pull.values([this.encodeRequest(method, body)]),
+          requestOnly && requestOnlyThrough,
           conn,
           pull.drain((data) => {
+            clearTimeout(responseTimer);
             try {
               resolve(this.decodeResponse(method, data) as T);
             } catch (e) {
@@ -226,7 +253,6 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
           }),
         );
       });
-      setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
     });
   }
   public sendResponse(id: RequestId, err: Error, body: ResponseBody): void {
@@ -237,7 +263,7 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
     return await this.sendRequest<Hello>(peerInfo, Method.Hello, request);
   }
   public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
-    await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request);
+    await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request, true);
   }
   public async beaconBlocks(peerInfo: PeerInfo, request: BeaconBlocksRequest): Promise<BeaconBlocksResponse> {
     return await this.sendRequest<BeaconBlocksResponse>(peerInfo, Method.BeaconBlocks, request);

@@ -57,10 +57,14 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   }
 
   public getPeers(): PeerInfo[] {
-    return this.libp2p.peerBook.getAllArray();
+    return this.libp2p.peerBook.getAllArray().filter((peerInfo) => peerInfo.isConnected());
   }
   public hasPeer(peerInfo: PeerInfo): boolean {
-    return this.libp2p.peerBook.has(peerInfo);
+    const peer = this.libp2p.peerBook.get(peerInfo);
+    if (!peer) {
+      return false;
+    }
+    return Boolean(peer.isConnected());
   }
   public async connect(peerInfo: PeerInfo): Promise<void> {
     await promisify(this.libp2p.dial.bind(this.libp2p))(peerInfo);
