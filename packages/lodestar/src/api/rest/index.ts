@@ -1,4 +1,5 @@
 import * as fastify from "fastify";
+import fastifyCors from "fastify-cors";
 import {Service} from "../../node";
 import {IRestApiOptions} from "./options";
 import {IApiModules} from "../interface";
@@ -47,6 +48,13 @@ export class RestApi implements Service {
       logger: false,
       querystringParser: qs.parse
     }) as IFastifyServer;
+
+    if(this.opts.cors) {
+      const corsArr = this.opts.cors.split(",");
+      server.register(fastifyCors, {
+        origin: corsArr
+      });
+    }
 
     if(this.opts.api.includes(ApiNamespace.BEACON)) {
       server.register(routes.beacon, {prefix: '/node', modules});

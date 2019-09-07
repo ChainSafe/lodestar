@@ -40,7 +40,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.config = config;
     this.libp2p = libp2p;
     this.logger = logger;
-    this.pubsub = new Gossipsub(libp2p);
+    this.pubsub = new Gossipsub(libp2p, {gossipIncoming: false});
   }
 
   public subscribeToBlocks(): void {

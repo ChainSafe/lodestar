@@ -89,7 +89,11 @@ export class SyncReqResp implements ISyncReqResp {
       !this.reps.get(peerInfo.id.toB58String()).latestHello
     ) {
       const request = await this.createHello();
-      await this.network.reqResp.hello(peerInfo, request).catch((e) => {});
+      try {
+        const response = await this.network.reqResp.hello(peerInfo, request);
+        this.reps.get(peerInfo.id.toB58String()).latestHello = request;
+      } catch (e) {
+      }
     }
   }
 
@@ -127,7 +131,7 @@ export class SyncReqResp implements ISyncReqResp {
   }
 
   public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
-    this.network.disconnect(peerInfo);
+    await this.network.disconnect(peerInfo);
   }
 
   public async onBeaconBlocks(id: RequestId, request: BeaconBlocksRequest): Promise<void> {
