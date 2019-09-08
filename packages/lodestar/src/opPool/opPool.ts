@@ -69,7 +69,7 @@ export class OpPool extends EventEmitter {
       this.transfers.remove(processedBlock.body.transfers),
       this.proposerSlashings.remove(processedBlock.body.proposerSlashings),
       this.attesterSlashings.remove(processedBlock.body.attesterSlashings),
-      //TODO: remove old attestations
+      this.attestations.remove(processedBlock.body.attestations)
     ]);
   }
 }
