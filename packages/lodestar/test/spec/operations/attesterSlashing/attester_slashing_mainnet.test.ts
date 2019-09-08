@@ -11,35 +11,30 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processAttesterSlashing} from "../../../../src/chain/stateTransition/block/operations";
 import {expandYamlValue} from "../../../utils/expandYamlValue";
 import {AttesterSlashingCase} from "../../../utils/specTestTypes/beaconStateComparison";
+import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import {ProcessAttesterSlashingTestCase} from "./type";
 
-describeMultiSpec<AttesterSlashingCase, BeaconState>(
-  join(__dirname, "../../../../../spec-test-cases/tests/operations/attester_slashing/attester_slashing_mainnet.yaml"),
-  (state, attesterSlashing) => {
-    processAttesterSlashing(config, state, attesterSlashing);
+describeDirectorySpecTest<ProcessAttesterSlashingTestCase, BeaconState>(
+  "process attester slashing mainnet",
+  join(__dirname, "../../../../../spec-test-cases/tests/mainnet/phase0/operations/attester_slashing/pyspec_tests"),
+  (testcase) => {
+    const state = testcase.pre;
+    processAttesterSlashing(config, state, testcase.attester_slashing);
     return state;
   },
-  (input) => {
-    if(input.bls_setting && input.bls_setting.toNumber() === 2) {
-      rewire({
-        verify: sinon.stub().returns(true),
-        verifyMultiple: sinon.stub().returns(true),
-        aggregatePubkeys: sinon.stub().returns(Buffer.alloc(48))
-      });
+  {
+    sszTypes: {
+      pre: config.types.BeaconState,
+      post: config.types.BeaconState,
+      // eslint-disable-next-line @typescript-eslint/camelcase
+      attester_slashing: config.types.AttesterSlashing,
+    },
+    timeout: 100000000,
+    shouldError: testCase => !testCase.post,
+    getExpected: (testCase => testCase.post),
+    expectFunc: (testCase, expected, actual) => {
+      expect(equals(actual, expected, config.types.BeaconState)).to.be.true;
     }
-    return [expandYamlValue(input.pre, config.types.BeaconState), expandYamlValue(input.attesterSlashing, config.types.AttesterSlashing)];
-  },
-  (expected) => {
-    return expandYamlValue(expected.post, config.types.BeaconState);
-  },
-  result => result,
-  (testCase) => {
-    return !testCase.post;
-  },
-  () => false,
-  (_1, _2, expected, actual) => {
-    expect(equals(expected, actual, config.types.BeaconState)).to.be.true;
-    restore();
-  },
-  0
+  }
 );
 
