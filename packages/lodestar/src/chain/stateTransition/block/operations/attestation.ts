@@ -14,7 +14,7 @@ import {
   getBeaconProposerIndex,
   getCurrentEpoch,
   getIndexedAttestation,
-  getPreviousEpoch,
+  getPreviousEpoch, isValidAttestationSlot,
   isValidIndexedAttestation,
 } from "../../util";
 
@@ -32,10 +32,7 @@ export function processAttestation(
   assert(data.target.epoch === previousEpoch || data.target.epoch === currentEpoch);
 
   const attestationSlot = getAttestationDataSlot(config, state, data);
-  assert(
-    attestationSlot + config.params.MIN_ATTESTATION_INCLUSION_DELAY <= state.slot &&
-    state.slot <= attestationSlot + config.params.SLOTS_PER_EPOCH
-  );
+  assert(isValidAttestationSlot(config, attestationSlot, state.slot));
 
   // Cache pending attestation
   const pendingAttestation: PendingAttestation = {

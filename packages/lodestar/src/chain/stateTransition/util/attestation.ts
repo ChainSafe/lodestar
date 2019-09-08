@@ -138,3 +138,14 @@ export function getIndexedAttestation(
     signature: attestation.signature,
   };
 }
+
+export function isValidAttestationSlot(
+  config: IBeaconConfig,
+  attestationSlot: Slot,
+  currentSlot: Slot
+): boolean {
+  return (
+    attestationSlot + config.params.MIN_ATTESTATION_INCLUSION_DELAY <= currentSlot &&
+    currentSlot <= attestationSlot + config.params.SLOTS_PER_EPOCH
+  );
+}
