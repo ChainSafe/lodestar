@@ -230,7 +230,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       // Newly justified epoch
       if (preJustifiedEpoch < newState.currentJustifiedCheckpoint.epoch) {
         const justfiedBlockRoot = newState.currentJustifiedCheckpoint.root;
-        this.logger.info(`0x${justfiedBlockRoot} is justified!`);
+        this.logger.info(`0x${justfiedBlockRoot.toString("hex")} is justified!`);
         const justifiedBlock = await this.db.block.get(justfiedBlockRoot);
         await Promise.all([
           this.db.chain.setJustifiedStateRoot(justifiedBlock.stateRoot),
