@@ -9,6 +9,7 @@ import {expect} from 'chai';
 import deepMerge from "deepmerge";
 import profiler from "v8-profiler-next";
 import path from "path";
+import {transformType} from "./transform";
 
 
 export enum InputType {
@@ -154,7 +155,7 @@ function loadInputFiles<TestCase, Result>(
 
 function deserializeTestCase<TestCase, Result>(file, inputName, options: ISpecTestOptions<TestCase, Result>): object {
   if (file.endsWith(InputType.SSZ)) {
-    return deserialize(readFileSync(file), options.sszTypes[inputName]);
+    return deserialize(readFileSync(file), transformType(options.sszTypes[inputName]));
   } else {
     return  objectToCamelCase(
       load(
