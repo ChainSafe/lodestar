@@ -31,15 +31,13 @@ export class OpPool extends EventEmitter {
   public proposerSlashings: ProposerSlashingOperations;
   public attesterSlashings: AttesterSlashingOperations;
 
-  private config: IBeaconConfig;
   private readonly eth1: IEth1Notifier;
   private readonly db: BeaconDb;
 
-  public constructor(opts: IOpPoolOptions, {config, eth1, db}) {
+  public constructor(opts: IOpPoolOptions, {eth1, db}) {
     super();
     this.eth1 = eth1;
     this.db = db;
-    this.config
     this.attestations = new AttestationOperations(this.db.attestation);
     this.voluntaryExits = new VoluntaryExitOperations(this.db.voluntaryExit);
     this.deposits = new DepositsOperations(this.db.deposit);
@@ -52,8 +50,6 @@ export class OpPool extends EventEmitter {
    * Start operation processing
    */
   public async start(): Promise<void> {
-    const currentState = await this.db.state.getLatest();
-    await this.attestations.pruneInvalid(currentState, this.config);
     this.eth1.on('deposit', this.deposits.receive);
   }
 

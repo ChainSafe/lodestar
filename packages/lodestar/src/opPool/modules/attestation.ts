@@ -18,7 +18,7 @@ export class AttestationOperations extends OperationsModule<Attestation> {
     const attestations: Attestation[] = await this.getAll();
     const invalidAttestations: Attestation[] = attestations.filter((a: Attestation) => {
       const attestationSlot: Slot = getAttestationDataSlot(config, state, a.data);
-      return !isValidAttestationSlot(config, attestationSlot, state.slot)
+      return state.slot >= attestationSlot + config.params.SLOTS_PER_EPOCH;
     });
     await this.db.deleteManyByValue(invalidAttestations);
   }
