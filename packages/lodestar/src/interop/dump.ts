@@ -18,6 +18,7 @@ export function dumpQuickStartState(
   fs.writeFileSync(output, serialize(state, BeaconState));
 }
 
+// eslint-disable-next-line
 import yargs from "yargs";
 const args = yargs.parse()._;
 dumpQuickStartState(args[0], args[1], args[2]);
