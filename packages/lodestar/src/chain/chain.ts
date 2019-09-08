@@ -5,7 +5,7 @@
 import assert from "assert";
 import BN from "bn.js";
 import {EventEmitter} from "events";
-import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
+import {clone, hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {Attestation, BeaconBlock, BeaconState, Hash, uint16, uint64} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -107,7 +107,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   private processAttestation = async (attestation: Attestation) => {
     const validators = getAttestingIndices(
-      this.config, this.latestState, attestation.data, attestation.aggregationBits);
+      this.config, clone(this.latestState, this.config.types.BeaconState), attestation.data, attestation.aggregationBits);
     const balances = validators.map((index) => this.latestState.balances[index]);
     for (let i = 0; i < validators.length; i++) {
       this.forkChoice.addAttestation(attestation.data.beaconBlockRoot, validators[i], balances[i]);
@@ -130,7 +130,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.info(`0x${blockHash.toString('hex')} is valid, running state transition...`);
 
     // process current slot
-    await this.runStateTransition(block, this.latestState);
+    await this.runStateTransition(block, clone(this.latestState, this.config.types.BeaconState));
     block.body.attestations.map(async (attestation) => {
       await this.receiveAttestation(attestation);
     });
