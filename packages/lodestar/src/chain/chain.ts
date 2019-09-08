@@ -85,7 +85,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     }
     this.latestState = state;
     this.processingQueue.start((error => {
-      this.logger.error("Failed processing block or attestation. Reason: " + error);
+      this.logger.error("Failed to start the attestation queue. Reason: " + error);
     }));
     this.logger.info("Chain started, waiting blocks and attestations");
   }
