@@ -6,7 +6,7 @@ import assert from "assert";
 import BN from "bn.js";
 import {EventEmitter} from "events";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
-import {Attestation, BeaconBlock, BeaconState, uint16, uint64} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BeaconState, Hash, uint16, uint64} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "../constants";
@@ -26,6 +26,7 @@ import {processSortedDeposits} from "../util/deposits";
 import {IChainOptions} from "./options";
 import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
+import Queue, {QueueWorkerCallback} from "queue";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -51,6 +52,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   private logger: ILogger;
   private metrics: IBeaconMetrics;
   private opts: IChainOptions;
+  private processingQueue: Queue;
   
   public constructor(opts: IChainOptions, {config, db, eth1, opPool, logger, metrics}: IBeaconChainModules) {
     super();
@@ -65,7 +67,12 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.forkChoice = new StatefulDagLMDGHOST();
     this.chainId = 0; // TODO make this real
     this.networkId = new BN(0); // TODO make this real
-
+    this.processingQueue = new Queue({
+      concurrency: 1,
+      autostart: true,
+      results: [],
+      timeout: config.params.SECONDS_PER_SLOT * 1000}
+    );
   }
 
   public async start(): Promise<void> {
@@ -77,16 +84,26 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.eth1.on('block', this.checkGenesis);
     }
     this.latestState = state;
+    this.processingQueue.start((error => {
+      this.logger.error("Failed processing block or attestation. Reason: " + error);
+    }));
     this.logger.info("Chain started, waiting blocks and attestations");
   }
 
   public async stop(): Promise<void> {
     this.eth1.removeListener('block', this.checkGenesis);
+    this.processingQueue.stop();
   }
 
 
   public async receiveAttestation(attestation: Attestation): Promise<void> {
     this.logger.info(`Received attestation for source ${attestation.data.source.root.toString("hex")} and target ${attestation.data.target.root.toString("hex")}`);
+    this.processingQueue.push(async () => {
+      return this.processAttestation(attestation);
+    });
+  }
+
+  private processAttestation = async (attestation: Attestation) => {
     const validators = getAttestingIndices(
       this.config, this.latestState, attestation.data, attestation.aggregationBits);
     const balances = validators.map((index) => this.latestState.balances[index]);
@@ -95,11 +112,17 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     }
     this.logger.info("Attestation passed to fork choice");
     this.emit('processedAttestation', attestation);
-  }
+  };
 
   public async receiveBlock(block: BeaconBlock): Promise<void> {
     const blockHash = hashTreeRoot(block, this.config.types.BeaconBlock);
     this.logger.info(`Received block with hash 0x${blockHash.toString('hex')} at slot ${block.slot}`);
+    this.processingQueue.push(async () => {
+      return this.processBlock(block, blockHash);
+    });
+  }
+
+  private processBlock = async (block: BeaconBlock, blockHash: Hash) => {
     const isValidBlock = await this.isValidBlock(this.latestState, block);
     assert(isValidBlock);
     this.logger.info(`0x${blockHash.toString('hex')} is valid, running state transition...`);
@@ -112,10 +135,13 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
     this.logger.info(`0x${blockHash.toString('hex')} passed state transition`);
     await this.opPool.processBlockOperations(block);
+    block.body.attestations.forEach((attestation) => {
+      this.receiveAttestation(attestation);
+    });
 
     // forward processed block for additional processing
     this.emit('processedBlock', block);
-  }
+  };
 
   public async applyForkChoiceRule(): Promise<void> {
     const currentRoot = await this.db.chain.getChainHeadRoot();
