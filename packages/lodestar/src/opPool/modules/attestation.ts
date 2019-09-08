@@ -13,4 +13,13 @@ export class AttestationOperations extends OperationsModule<Attestation> {
       return isValidAttestationSlot(config, attestationSlot, state.slot);
     });
   }
+
+  public async pruneInvalid(state: BeaconState, config: IBeaconConfig): Promise<void> {
+    const attestations: Attestation[] = await this.getAll();
+    const invalidAttestations: Attestation[] = attestations.filter((a: Attestation) => {
+      const attestationSlot: Slot = getAttestationDataSlot(config, state, a.data);
+      return !isValidAttestationSlot(config, attestationSlot, state.slot)
+    });
+    await this.db.deleteManyByValue(invalidAttestations);
+  }
 }
