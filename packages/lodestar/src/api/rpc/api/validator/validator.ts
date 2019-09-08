@@ -63,15 +63,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
-    const state = await this.db.state.getLatest();
-    state.slot++;
-    try {
-      processAttestation(this.config, state, attestation);
-      await this.opPool.attestations.receive(attestation);
-    } catch (e) {
-      this.logger.warn(`Received attestation is invalid. Reason: ${e.message}`);
-      return null;
-    }
+    await this.opPool.attestations.receive(attestation);
   }
 
   public async getValidatorIndex(pubKey: BLSPubkey): Promise<number> {
