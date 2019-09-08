@@ -1,5 +1,5 @@
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
-import {AttestationData, BeaconBlock, BeaconState, Crosslink, Epoch, Shard} from "@chainsafe/eth2.0-types";
+import {AttestationData, BeaconBlock, BeaconState, Crosslink, Epoch, Shard, Hash} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {ZERO_HASH} from "../../../constants";
@@ -16,13 +16,13 @@ export async function assembleAttestationData(
   const currentEpoch = getCurrentEpoch(config, headState);
   const epochStartSlot = computeStartSlotOfEpoch(config, currentEpoch);
 
-  let epochBoundaryBlock: BeaconBlock;
+  let epochBoundaryBlockRoot: Hash;
   if (epochStartSlot === headState.slot) {
-    epochBoundaryBlock = signingRoot(headBlock, config.types.BeaconBlock);
+    epochBoundaryBlockRoot = signingRoot(headBlock, config.types.BeaconBlock);
   } else {
-    epochBoundaryBlock = getBlockRootAtSlot(config, headState, epochStartSlot);
+    epochBoundaryBlockRoot = getBlockRootAtSlot(config, headState, epochStartSlot);
   }
-  if(!epochBoundaryBlock) {
+  if(!epochBoundaryBlockRoot) {
     throw new Error(`Missing target block at slot ${epochStartSlot} for attestation`);
   }
 
@@ -32,7 +32,7 @@ export async function assembleAttestationData(
     source: headState.currentJustifiedCheckpoint,
     target: {
       epoch: currentEpoch,
-      root: epochBoundaryBlock,
+      root: epochBoundaryBlockRoot,
     },
   };
 }
