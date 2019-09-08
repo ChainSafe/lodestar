@@ -227,23 +227,25 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       // Update FFG Checkpoints
       // Newly justified epoch
       if (preJustifiedEpoch < newState.currentJustifiedCheckpoint.epoch) {
-        const justifiedBlock = await this.db.block.get(newState.currentJustifiedCheckpoint.root);
+        const justfiedBlockRoot = newState.currentJustifiedCheckpoint.root;
+        this.logger.info(`0x${justfiedBlockRoot} is justified!`);
+        const justifiedBlock = await this.db.block.get(justfiedBlockRoot);
         await Promise.all([
           this.db.chain.setJustifiedStateRoot(justifiedBlock.stateRoot),
-          this.db.chain.setJustifiedBlockRoot(blockRoot),
+          this.db.chain.setJustifiedBlockRoot(justfiedBlockRoot),
         ]);
-        this.forkChoice.setJustified(blockRoot);
-        this.logger.info(`0x${newState.currentJustifiedCheckpoint.root.toString('hex')} is justified!`);
+        this.forkChoice.setJustified(justfiedBlockRoot);
       }
       // Newly finalized epoch
       if (preFinalizedEpoch < newState.finalizedCheckpoint.epoch) {
-        const finalizedBlock = await this.db.block.get(newState.finalizedCheckpoint.root);
+        const finalizedBlockRoot = newState.finalizedCheckpoint.root;
+        this.logger.info(`0x${finalizedBlockRoot.toString('hex')} is finalized!`);
+        const finalizedBlock = await this.db.block.get(finalizedBlockRoot);
         await Promise.all([
           this.db.chain.setFinalizedStateRoot(finalizedBlock.stateRoot),
-          this.db.chain.setFinalizedBlockRoot(blockRoot),
+          this.db.chain.setFinalizedBlockRoot(finalizedBlockRoot),
         ]);
-        this.forkChoice.setFinalized(blockRoot);
-        this.logger.info(`0x${newState.finalizedCheckpoint.root.toString('hex')} is finalized!`);
+        this.forkChoice.setFinalized(finalizedBlockRoot);
       }
       this.metrics.previousJustifiedEpoch.set(newState.previousJustifiedCheckpoint.epoch);
       this.metrics.currentJustifiedEpoch.set(newState.currentJustifiedCheckpoint.epoch);
