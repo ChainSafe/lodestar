@@ -62,7 +62,7 @@ export class InitialSync {
     const peerLatestHello = this.reps.get(peerInfo.id.toB58String()).latestHello;
     // fetch recent blocks and push into the chain
     const startSlot = this.chain.latestState.slot;
-    const {blocks} = await this.network.reqResp.beaconBlocks(peerInfo, {
+    const blocks = await this.network.reqResp.beaconBlocksByRange(peerInfo, {
       headBlockRoot: peerLatestHello.headRoot,
       startSlot,
       count: peerLatestHello.headSlot - startSlot,

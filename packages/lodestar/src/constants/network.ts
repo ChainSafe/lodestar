@@ -12,8 +12,8 @@ export type RequestId = string;
 export enum Method {
   Hello = "hello",
   Goodbye = "goodbye",
-  BeaconBlocks = "beacon_blocks",
-  RecentBeaconBlocks = "recent_beacon_blocks",
+  BeaconBlocksByRange = "beacon_blocks_by_range",
+  BeaconBlocksByRoot = "beacon_blocks_by_root",
 }
 
 export enum Encoding {

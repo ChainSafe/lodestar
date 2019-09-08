@@ -8,7 +8,12 @@ import promisify from "promisify-es6";
 import pull from "pull-stream";
 import varint from "varint";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {RequestBody, ResponseBody, Hello, BeaconBlocksResponse, BeaconBlocksRequest, Goodbye, RecentBeaconBlocksResponse, RecentBeaconBlocksRequest} from "@chainsafe/eth2.0-types";
+import {
+  RequestBody, ResponseBody,
+  Hello, Goodbye,
+  BeaconBlocksByRangeRequest, BeaconBlocksByRangeResponse,
+  BeaconBlocksByRootRequest, BeaconBlocksByRootResponse,
+} from "@chainsafe/eth2.0-types";
 import {serialize, deserialize} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -131,11 +136,11 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
       case Method.Goodbye:
         output = serialize(body, this.config.types.Goodbye);
         break;
-      case Method.BeaconBlocks:
-        output = serialize(body, this.config.types.BeaconBlocksRequest);
+      case Method.BeaconBlocksByRange:
+        output = serialize(body, this.config.types.BeaconBlocksByRangeRequest);
         break;
-      case Method.RecentBeaconBlocks:
-        output = serialize(body, this.config.types.RecentBeaconBlocksRequest);
+      case Method.BeaconBlocksByRoot:
+        output = serialize(body, this.config.types.BeaconBlocksByRootRequest);
         break;
     }
     return Buffer.concat([
@@ -152,11 +157,11 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
       case Method.Goodbye:
         output = serialize(body, this.config.types.Goodbye);
         break;
-      case Method.BeaconBlocks:
-        output = serialize(body, this.config.types.BeaconBlocksResponse);
+      case Method.BeaconBlocksByRange:
+        output = serialize(body, this.config.types.BeaconBlocksByRangeResponse);
         break;
-      case Method.RecentBeaconBlocks:
-        output = serialize(body, this.config.types.RecentBeaconBlocksResponse);
+      case Method.BeaconBlocksByRoot:
+        output = serialize(body, this.config.types.BeaconBlocksByRootResponse);
         break;
     }
     return Buffer.concat([
@@ -185,10 +190,10 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
         return deserialize(data, this.config.types.Hello);
       case Method.Goodbye:
         return deserialize(data, this.config.types.Goodbye);
-      case Method.BeaconBlocks:
-        return deserialize(data, this.config.types.BeaconBlocksRequest);
-      case Method.RecentBeaconBlocks:
-        return deserialize(data, this.config.types.RecentBeaconBlocksRequest);
+      case Method.BeaconBlocksByRange:
+        return deserialize(data, this.config.types.BeaconBlocksByRangeRequest);
+      case Method.BeaconBlocksByRoot:
+        return deserialize(data, this.config.types.BeaconBlocksByRootRequest);
     }
   }
   private decodeResponse(method: Method, data: Buffer): ResponseBody {
@@ -210,10 +215,10 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
         return deserialize(data, this.config.types.Hello);
       case Method.Goodbye:
         return deserialize(data, this.config.types.Goodbye);
-      case Method.BeaconBlocks:
-        return deserialize(data, this.config.types.BeaconBlocksRequest);
-      case Method.RecentBeaconBlocks:
-        return deserialize(data, this.config.types.RecentBeaconBlocksRequest);
+      case Method.BeaconBlocksByRange:
+        return deserialize(data, this.config.types.BeaconBlocksByRangeRequest);
+      case Method.BeaconBlocksByRoot:
+        return deserialize(data, this.config.types.BeaconBlocksByRootRequest);
     }
   }
   private async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody, requestOnly?: boolean): Promise<T> {
@@ -265,10 +270,10 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
   public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
     await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request, true);
   }
-  public async beaconBlocks(peerInfo: PeerInfo, request: BeaconBlocksRequest): Promise<BeaconBlocksResponse> {
-    return await this.sendRequest<BeaconBlocksResponse>(peerInfo, Method.BeaconBlocks, request);
+  public async beaconBlocksByRange(peerInfo: PeerInfo, request: BeaconBlocksByRangeRequest): Promise<BeaconBlocksByRangeResponse> {
+    return await this.sendRequest<BeaconBlocksByRangeResponse>(peerInfo, Method.BeaconBlocksByRange, request);
   }
-  public async recentBeaconBlocks(peerInfo: PeerInfo, request: RecentBeaconBlocksRequest): Promise<RecentBeaconBlocksResponse> {
-    return await this.sendRequest<RecentBeaconBlocksResponse>(peerInfo, Method.RecentBeaconBlocks, request);
+  public async beaconBlocksByRoot(peerInfo: PeerInfo, request: BeaconBlocksByRootRequest): Promise<BeaconBlocksByRootResponse> {
+    return await this.sendRequest<BeaconBlocksByRootResponse>(peerInfo, Method.BeaconBlocksByRoot, request);
   }
 }

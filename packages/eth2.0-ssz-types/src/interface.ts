@@ -54,10 +54,10 @@ export interface IBeaconSSZTypes {
   // wire
   Hello: AnyContainerType;
   Goodbye: AnyContainerType;
-  BeaconBlocksRequest: AnyContainerType;
-  BeaconBlocksResponse: AnyContainerType;
-  RecentBeaconBlocksRequest: AnyContainerType;
-  RecentBeaconBlocksResponse: AnyContainerType;
+  BeaconBlocksByRangeRequest: AnyContainerType;
+  BeaconBlocksByRangeResponse: AnyContainerType;
+  BeaconBlocksByRootRequest: AnyContainerType;
+  BeaconBlocksByRootResponse: AnyContainerType;
 }
 
 export const typeNames: (keyof IBeaconSSZTypes)[] = [
@@ -115,8 +115,8 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   // wire
   "Hello",
   "Goodbye",
-  "BeaconBlocksRequest",
-  "BeaconBlocksResponse",
-  "RecentBeaconBlocksRequest",
-  "RecentBeaconBlocksResponse",
+  "BeaconBlocksByRangeRequest",
+  "BeaconBlocksByRangeResponse",
+  "BeaconBlocksByRootRequest",
+  "BeaconBlocksByRootResponse",
 ];
