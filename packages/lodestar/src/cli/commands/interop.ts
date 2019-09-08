@@ -7,7 +7,7 @@ import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
 
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {ILogger, LogLevel, WinstonLogger} from "../../logger";
+import {ILogger, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
 import {generateCommanderOptions, optionsToConfig} from "../util";
@@ -17,15 +17,15 @@ import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/mini
 import {InteropEth1Notifier} from "../../eth1/impl/interop";
 import {quickStartOptionToState} from "../../interop/cli";
 import {ProgressiveMerkleTree} from "../../util/merkleTree";
-import {fr} from "ethers/wordlists";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {interopKeypair} from "../../interop/keypairs";
 import {RpcClientOverInstance} from "../../validator/rpc";
 import {ValidatorApi} from "../../api/rpc/api/validator";
 import {BeaconApi} from "../../api/rpc/api/beacon";
-import asRaw from "@polkadot/util-crypto/xxhash/xxhash64/asRaw";
 import {existsSync, mkdirSync} from "fs";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
+import {intDiv} from "../../util/math";
+import {signingRoot} from "@chainsafe/ssz";
 
 interface IInteropCommandOptions {
   loggingLevel?: string;
@@ -76,11 +76,14 @@ export class InteropCommand implements CliCommand {
     conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
 
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
-    config.params.SECONDS_PER_SLOT = 12;
     if (options.quickStart) {
       this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier()});
       const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
       const state = quickStartOptionToState(config, tree, options.quickStart);
+      const diffInSeconds = (Date.now() / 1000) - state.genesisTime;
+      if(diffInSeconds > 0) {
+        state.slot = intDiv(diffInSeconds, config.params.SECONDS_PER_SLOT);
+      }
       await this.node.chain.initializeBeaconChain(state, tree);
     } else {
       throw new Error("Missing --quickstart flag");

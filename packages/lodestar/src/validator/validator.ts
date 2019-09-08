@@ -134,7 +134,7 @@ class Validator {
   private async isChainLive(): Promise<boolean> {
     this.logger.info("Checking if chain has started...");
     const genesisTime =  await this.apiClient.beacon.getGenesisTime();
-    if (genesisTime) {
+    if (genesisTime && (Date.now() / 1000) > genesisTime) {
       this.genesisInfo = {
         startTime: genesisTime,
       };

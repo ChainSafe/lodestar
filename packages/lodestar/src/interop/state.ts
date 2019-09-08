@@ -23,7 +23,5 @@ export function quickStartState(
     deposits,
   );
   state.genesisTime = genesisTime;
-  const diffInSeconds = (Date.now() / 1000) - genesisTime;
-  state.slot = intDiv(diffInSeconds, config.params.SECONDS_PER_SLOT);
   return state;
 }
