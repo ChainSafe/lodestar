@@ -49,7 +49,7 @@
     "@chainsafe/eth2.0-params": "^0.1.0",
     "@chainsafe/eth2.0-spec-test-util": "0.4.1",
     "@chainsafe/eth2.0-types": "^0.1.1",
-    "@chainsafe/ssz": "0.5.1",
+    "@chainsafe/ssz": "0.5.2",
     "@iarna/toml": "^2.2.3",
     "@nodeutils/defaults-deep": "^1.1.0",
     "@polkadot/util-crypto": "^0.93.1",

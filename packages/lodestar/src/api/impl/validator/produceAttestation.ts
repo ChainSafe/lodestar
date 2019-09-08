@@ -13,11 +13,11 @@ export async function produceAttestation(
 ): Promise<Attestation|null> {
   try {
     const [headState, headBlock, validatorIndex] = await Promise.all([
-      clone(chain.latestState, config.types.BeaconState),
+      clone(chain.latestState, config.types.BeaconState) as BeaconState,
       db.block.get(chain.forkChoice.head()),
       db.getValidatorIndex(validatorPubKey)
     ]);
-    return await assembleAttestation({config, db}, headState as unknown as BeaconState, headBlock, validatorIndex, shard, slot);
+    return await assembleAttestation({config, db}, headState, headBlock, validatorIndex, shard, slot);
   } catch (e) {
     throw e;
   }
