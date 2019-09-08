@@ -24,6 +24,10 @@ import {IValidatorDB} from "../../db/api";
 import {ILogger} from "../../logger";
 import {Keypair} from "@chainsafe/bls";
 
+export function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export class AttestationService {
 
   private config: IBeaconConfig;
@@ -82,6 +86,7 @@ export class AttestationService {
       )
     ).toBytesCompressed();
     await this.storeAttestation(attestation);
+    await sleep(this.config.params.SECONDS_PER_SLOT * 0.5 * 1000);
     await this.rpcClient.validator.publishAttestation(attestation);
     this.logger.info(`Signed and publish new attestation for block ${attestation.data.target.root.toString('hex')} and shard ${shard} at slot ${slot}`);
     return attestation;
