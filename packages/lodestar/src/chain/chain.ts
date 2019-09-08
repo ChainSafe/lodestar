@@ -160,7 +160,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const genesisBlock = getEmptyBlock();
     const stateRoot = hashTreeRoot(genesisState, this.config.types.BeaconState);
     genesisBlock.stateRoot = stateRoot;
-    const blockRoot = hashTreeRoot(genesisBlock, this.config.types.BeaconBlock);
+    const blockRoot = signingRoot(genesisBlock, this.config.types.BeaconBlock);
     this.latestState = genesisState;
     await Promise.all([
       this.db.state.set(stateRoot, genesisState),
@@ -200,14 +200,13 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const preJustifiedEpoch = state.currentJustifiedCheckpoint.epoch;
     // Run the state transition
     let newState: BeaconState;
-    const blockRoot = hashTreeRoot(block, this.config.types.BeaconBlock);
+    const blockRoot = signingRoot(block, this.config.types.BeaconBlock);
     try {
       newState = stateTransition(this.config, state, block, true);
     } catch (e) {
       // store block root in db and terminate
       await this.db.block.storeBadBlock(blockRoot);
       this.logger.warn(`Found bad block, block root: 0x${blockRoot.toString('hex')} ` + e.message);
-      console.log(e);
       return;
     }
     this.latestState = newState;
@@ -229,14 +228,14 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       // Update FFG Checkpoints
       // Newly justified epoch
       if (preJustifiedEpoch < newState.currentJustifiedCheckpoint.epoch) {
-        const justfiedBlockRoot = newState.currentJustifiedCheckpoint.root;
-        this.logger.info(`0x${justfiedBlockRoot.toString("hex")} is justified!`);
-        const justifiedBlock = await this.db.block.get(justfiedBlockRoot);
+        const justifiedBlockRoot = newState.currentJustifiedCheckpoint.root;
+        this.logger.info(`0x${justifiedBlockRoot.toString("hex")} is justified!`);
+        const justifiedBlock = await this.db.block.get(justifiedBlockRoot);
         await Promise.all([
           this.db.chain.setJustifiedStateRoot(justifiedBlock.stateRoot),
-          this.db.chain.setJustifiedBlockRoot(justfiedBlockRoot),
+          this.db.chain.setJustifiedBlockRoot(justifiedBlockRoot),
         ]);
-        this.forkChoice.setJustified(justfiedBlockRoot);
+        this.forkChoice.setJustified(justifiedBlockRoot);
       }
       // Newly finalized epoch
       if (preFinalizedEpoch < newState.finalizedCheckpoint.epoch) {
