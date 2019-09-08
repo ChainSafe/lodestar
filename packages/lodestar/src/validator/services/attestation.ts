@@ -55,6 +55,7 @@ export class AttestationService {
     slot: Slot,
     shard: Shard,
     fork: Fork): Promise<Attestation> {
+    await sleep(this.config.params.SECONDS_PER_SLOT * 0.5 * 1000);
     const attestation = await this.rpcClient.validator.produceAttestation(
       this.keypair.publicKey.toBytesCompressed(),
       false,
@@ -86,7 +87,6 @@ export class AttestationService {
       )
     ).toBytesCompressed();
     await this.storeAttestation(attestation);
-    await sleep(this.config.params.SECONDS_PER_SLOT * 0.5 * 1000);
     await this.rpcClient.validator.publishAttestation(attestation);
     this.logger.info(`Signed and publish new attestation for block ${attestation.data.target.root.toString('hex')} and shard ${shard} at slot ${slot}`);
     return attestation;
