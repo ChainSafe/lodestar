@@ -7,8 +7,8 @@ import PeerInfo from "peer-info";
 import {
   Epoch, Hash, Slot,
   RequestBody, Hello, Goodbye,
-  BeaconBlocksRequest, BeaconBlocksResponse,
-  RecentBeaconBlocksRequest, RecentBeaconBlocksResponse,
+  BeaconBlocksByRangeRequest, BeaconBlocksByRangeResponse,
+  BeaconBlocksByRootRequest, BeaconBlocksByRootResponse,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -73,7 +73,7 @@ export class SyncReqResp implements ISyncReqResp {
       finalizedRoot = state.finalizedCheckpoint.root;
     }
     return {
-      forkVersion: this.chain.latestState.fork.currentVersion,
+      headForkVersion: this.chain.latestState.fork.currentVersion,
       finalizedRoot,
       finalizedEpoch,
       headRoot,
@@ -108,10 +108,10 @@ export class SyncReqResp implements ISyncReqResp {
         return await this.onHello(peerInfo, id, body as Hello);
       case Method.Goodbye:
         return await this.onGoodbye(peerInfo, id, body as Goodbye);
-      case Method.BeaconBlocks:
-        return await this.onBeaconBlocks(id, body as BeaconBlocksRequest);
-      case Method.RecentBeaconBlocks:
-        return await this.onRecentBeaconBlocks(id, body as RecentBeaconBlocksRequest);
+      case Method.BeaconBlocksByRange:
+        return await this.onBeaconBlocksByRange(id, body as BeaconBlocksByRangeRequest);
+      case Method.BeaconBlocksByRoot:
+        return await this.onBeaconBlocksByRoot(id, body as BeaconBlocksByRootRequest);
       default:
         this.logger.error(`Invalid request method ${method} from ${peerInfo.id.toB58String()}`);
     }
@@ -134,15 +134,16 @@ export class SyncReqResp implements ISyncReqResp {
     await this.network.disconnect(peerInfo);
   }
 
-  public async onBeaconBlocks(id: RequestId, request: BeaconBlocksRequest): Promise<void> {
+  public async onBeaconBlocksByRange(
+    id: RequestId,
+    request: BeaconBlocksByRangeRequest
+  ): Promise<void> {
     try {
-      const response: BeaconBlocksResponse = {
-        blocks: [],
-      };
+      const response: BeaconBlocksByRangeResponse = [];
       for (let slot = request.startSlot; slot < request.startSlot + request.count; slot++) {
         const block = await this.db.block.getBlockBySlot(slot);
         if (block) {
-          response.blocks.push(block);
+          response.push(block);
         }
       }
       this.network.reqResp.sendResponse(id, null, response);
@@ -151,17 +152,15 @@ export class SyncReqResp implements ISyncReqResp {
     }
   }
 
-  public async onRecentBeaconBlocks(
+  public async onBeaconBlocksByRoot(
     id: RequestId,
-    request: RecentBeaconBlocksRequest
+    request: BeaconBlocksByRootRequest
   ): Promise<void> {
     try {
-      const response: RecentBeaconBlocksResponse = {
-        blocks: [],
-      };
-      for (const blockRoot of request.blockRoots) {
+      const response: BeaconBlocksByRootResponse = [];
+      for (const blockRoot of request) {
         const block = await this.db.block.get(blockRoot);
-        response.blocks.push(block);
+        response.push(block);
       }
       this.network.reqResp.sendResponse(id, null, response);
     } catch (e) {
@@ -184,6 +183,6 @@ export class SyncReqResp implements ISyncReqResp {
     this.network.reqResp.removeListener("request", this.onRequest)
     await Promise.all(
       this.network.getPeers().map((peerInfo) =>
-        this.network.reqResp.goodbye(peerInfo, {reason: new BN(0)})));
+        this.network.reqResp.goodbye(peerInfo, new BN(0))));
   }
 }
