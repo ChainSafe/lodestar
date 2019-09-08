@@ -57,6 +57,7 @@ export function getCommitteeAssignment(
       }
     }
   }
+  return null;
 }
 
 /**

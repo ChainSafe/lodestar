@@ -165,7 +165,7 @@ class Validator {
     );
     if (isAttester) {
       this.attestationService.createAndPublishAttestation(
-        slot,
+        validatorDuty.attestationSlot,
         validatorDuty.attestationShard,
         fork
       );

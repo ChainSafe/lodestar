@@ -5,7 +5,7 @@
 import {Attestation, BeaconBlock, BLSPubkey, bytes96, Epoch, Shard, Slot, ValidatorDuty} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {BeaconDb} from "../../../../db";
+import {BeaconDb, IBeaconDb} from "../../../../db";
 import {BeaconChain} from "../../../../chain";
 import {OpPool} from "../../../../opPool";
 import {IValidatorApi} from "./interface";
@@ -14,6 +14,7 @@ import {IEth1Notifier} from "../../../../eth1";
 import {getValidatorDuties, produceAttestation} from "../../../impl/validator";
 import {ApiNamespace} from "../../../index";
 import {ILogger} from "../../../../logger";
+import {processAttestation} from "../../../../chain/stateTransition/block/operations";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -21,7 +22,7 @@ export class ValidatorApi implements IValidatorApi {
 
   private config: IBeaconConfig;
   private chain: BeaconChain;
-  private db: BeaconDb;
+  private db: IBeaconDb;
   private opPool: OpPool;
   private eth1: IEth1Notifier;
   private logger: ILogger;
@@ -62,7 +63,15 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
-    await this.opPool.attestations.receive(attestation);
+    const state = await this.db.state.getLatest();
+    state.slot++;
+    try {
+      processAttestation(this.config, state, attestation);
+      await this.opPool.attestations.receive(attestation);
+    } catch (e) {
+      this.logger.warn(`Received attestation is invalid. Reason: ${e.message}`);
+      return null;
+    }
   }
 
   public async getValidatorIndex(pubKey: BLSPubkey): Promise<number> {
