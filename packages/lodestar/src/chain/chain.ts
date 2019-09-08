@@ -84,8 +84,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.eth1.on('block', this.checkGenesis);
     }
     this.latestState = state;
-    this.processingQueue.start((error => {
-      this.logger.error("Failed to start the attestation queue. Reason: " + error);
+    this.processingQueue.start((err => {
+      if (err) {
+        this.logger.error("Failed to start the attestation queue. Reason: " + err);
+      }
     }));
     this.logger.info("Chain started, waiting blocks and attestations");
   }
