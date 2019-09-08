@@ -131,7 +131,7 @@ class Validator {
   /**
    * Recursively checks for the chain start log event from the ETH1.x deposit contract
    */
-  private async isChainLive(): Promise<boolean> {
+  private isChainLive = async (): Promise<boolean> => {
     this.logger.info("Checking if chain has started...");
     const genesisTime =  await this.apiClient.beacon.getGenesisTime();
     if (genesisTime && (Date.now() / 1000) > genesisTime) {
