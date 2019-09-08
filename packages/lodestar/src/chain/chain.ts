@@ -119,6 +119,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public async receiveBlock(block: BeaconBlock): Promise<void> {
     const blockHash = hashTreeRoot(block, this.config.types.BeaconBlock);
     this.logger.info(`Received block with hash 0x${blockHash.toString('hex')} at slot ${block.slot}`);
+    if(block.slot <= this.latestState.slot) {
+      this.logger.debug(`Ignored block ${blockHash.toString("hex")} as it predates latest state`);
+      return;
+    }
     this.processingQueue.push(async () => {
       return this.processBlock(block, blockHash);
     });
