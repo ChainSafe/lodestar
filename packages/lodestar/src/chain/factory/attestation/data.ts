@@ -18,9 +18,9 @@ export async function assembleAttestationData(
 
   let epochBoundaryBlock: BeaconBlock;
   if (epochStartSlot === headState.slot) {
-    epochBoundaryBlock = headBlock;
+    epochBoundaryBlock = signingRoot(headBlock, config.types.BeaconBlock);
   } else {
-    epochBoundaryBlock = await db.block.get(getBlockRootAtSlot(config, headState, epochStartSlot));
+    epochBoundaryBlock = getBlockRootAtSlot(config, headState, epochStartSlot);
   }
   if(!epochBoundaryBlock) {
     throw new Error(`Missing target block at slot ${epochStartSlot} for attestation`);
@@ -32,7 +32,7 @@ export async function assembleAttestationData(
     source: headState.currentJustifiedCheckpoint,
     target: {
       epoch: currentEpoch,
-      root: signingRoot(epochBoundaryBlock, config.types.BeaconBlock),
+      root: epochBoundaryBlock,
     },
   };
 }
