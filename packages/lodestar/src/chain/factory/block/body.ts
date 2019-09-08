@@ -23,7 +23,7 @@ export async function assembleBody(
   const [proposerSlashings, attesterSlashings, attestations, voluntaryExits, eth1Data] = await Promise.all([
     opPool.proposerSlashings.getAll().then(value => value.slice(0, config.params.MAX_PROPOSER_SLASHINGS)),
     opPool.attesterSlashings.getAll().then(value => value.slice(0, config.params.MAX_ATTESTER_SLASHINGS)),
-    opPool.attestations.getAll().then(value => value.slice(0, config.params.MAX_ATTESTATIONS)),
+    opPool.attestations.getValid(currentState, config).then(value => value.slice(0, config.params.MAX_ATTESTATIONS)),
     opPool.voluntaryExits.getAll().then(value => value.slice(0, config.params.MAX_VOLUNTARY_EXITS)),
     eth1.getEth1Data(config, currentState, computeEpochOfSlot(config, currentState.slot))
   ]);
