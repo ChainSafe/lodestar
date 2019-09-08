@@ -4,6 +4,7 @@ import {BeaconState} from "@chainsafe/eth2.0-types";
 import {deserialize} from "@chainsafe/ssz";
 import {loadYamlFile} from "@chainsafe/eth2.0-spec-test-util";
 
+import {interopDeposits} from "./deposits";
 import {expandYamlValue} from "../util/expandYamlValue";
 import {quickStartState} from "./state";
 import {IProgressiveMerkleTree} from "../util/merkleTree";
@@ -24,7 +25,9 @@ export function quickStartOptionToState(config: IBeaconConfig, tree: IProgressiv
     throw new Error("invalid quick start options");
   }
   if (fileExt[1] === "ssz") {
-    return deserialize(readFileSync(option), config.types.BeaconState);
+    let deserialized = deserialize(readFileSync(option), config.types.BeaconState);
+    interopDeposits(config, tree, deserialized.validators.length);  
+    return deserialized;
   } else {
     return expandYamlValue(loadYamlFile(option), config.types.BeaconState);
   }
