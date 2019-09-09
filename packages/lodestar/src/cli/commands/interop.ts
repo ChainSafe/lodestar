@@ -88,7 +88,6 @@ export class InteropCommand implements CliCommand {
     } else {
       throw new Error("Missing --quickstart flag");
     }
-
     await this.node.start();
     if(options.validators) {
       if(options.validators.includes(",")) {

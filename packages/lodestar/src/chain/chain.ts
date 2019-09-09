@@ -265,8 +265,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       // Newly justified epoch
       if (preJustifiedEpoch < newState.currentJustifiedCheckpoint.epoch) {
         const justifiedBlockRoot = newState.currentJustifiedCheckpoint.root;
-        this.logger.info(`0x${justifiedBlockRoot.toString("hex")} is justified!`);
         const justifiedBlock = await this.db.block.get(justifiedBlockRoot);
+        this.logger.info(`Epoch ${computeEpochOfSlot(this.config, justifiedBlock.slot)} is justified!`);
         await Promise.all([
           this.db.chain.setJustifiedStateRoot(justifiedBlock.stateRoot),
           this.db.chain.setJustifiedBlockRoot(justifiedBlockRoot),
@@ -276,8 +276,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       // Newly finalized epoch
       if (preFinalizedEpoch < newState.finalizedCheckpoint.epoch) {
         const finalizedBlockRoot = newState.finalizedCheckpoint.root;
-        this.logger.info(`0x${finalizedBlockRoot.toString('hex')} is finalized!`);
         const finalizedBlock = await this.db.block.get(finalizedBlockRoot);
+        this.logger.info(`Epoch ${computeEpochOfSlot(this.config, finalizedBlock.slot)} is finalized!`);
         await Promise.all([
           this.db.chain.setFinalizedStateRoot(finalizedBlock.stateRoot),
           this.db.chain.setFinalizedBlockRoot(finalizedBlockRoot),
