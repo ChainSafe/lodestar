@@ -59,6 +59,7 @@ export class InitialSync {
     }
   }
   public async syncToPeer(peerInfo: PeerInfo): Promise<void> {
+    this.logger.info(`attempting initial sync with ${peerInfo.id.toB58String()}`);
     const peerLatestHello = this.reps.get(peerInfo.id.toB58String()).latestHello;
     // fetch recent blocks and push into the chain
     const startSlot = this.chain.latestState.slot;
@@ -74,8 +75,10 @@ export class InitialSync {
 
   }
   public async start(): Promise<void> {
+    this.logger.info("initial sync start");
     await this.syncToPeers();
   }
   public async stop(): Promise<void> {
+    this.logger.info("initial sync stop");
   }
 }
