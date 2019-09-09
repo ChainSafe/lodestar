@@ -115,7 +115,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   private processAttestation = async (attestation: Attestation) => {
     const validators = getAttestingIndices(
-      this.config, clone(this.latestState, this.config.types.BeaconState), attestation.data, attestation.aggregationBits);
+      this.config, this.latestState, attestation.data, attestation.aggregationBits);
     const balances = validators.map((index) => this.latestState.balances[index]);
     for (let i = 0; i < validators.length; i++) {
       this.forkChoice.addAttestation(attestation.data.beaconBlockRoot, validators[i], balances[i]);
@@ -145,7 +145,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     assert(isValidBlock);
     this.logger.info(`0x${blockHash.toString('hex')} is valid, running state transition...`);
 
-    const pre = clone(this.latestState, this.config.types.BeaconState);
+    const pre = this.latestState;
     // process current slot
     const post = await this.runStateTransition(block, pre);
     block.body.attestations.map(async (attestation) => {
