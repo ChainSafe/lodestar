@@ -28,9 +28,12 @@ export class WinstonLogger implements ILogger {
             format.timestamp({
               format: 'YYYY-MM-DD HH:mm:ss'
             }),
-            format.printf(
-              // @es-lint disable
-              info => `${info.timestamp}  [${(info.module || info.namespace || "").toUpperCase()}] ${info.level.padStart(30 - (info.module || info.namespace || "").length)}: ${info.message}`
+            format.printf((info) => {
+              const infoString = (info.module || info.namespace || "");
+              const infoPad = 30 - infoString.length;
+              
+              return `${info.timestamp}  [${infoString.toUpperCase()}] ${info.level.padStart(infoPad)}: ${info.message}`
+              }
             )
           ),
           handleExceptions: true
