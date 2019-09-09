@@ -5,7 +5,7 @@
 import assert from "assert";
 import BN from "bn.js";
 import {EventEmitter} from "events";
-import {clone, hashTreeRoot, signingRoot} from "@chainsafe/ssz";
+import {clone, hashTreeRoot, serialize, signingRoot} from "@chainsafe/ssz";
 import {Attestation, BeaconBlock, BeaconState, Hash, uint16, uint64} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -27,6 +27,7 @@ import {IChainOptions} from "./options";
 import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
 import Queue, {QueueWorkerCallback} from "queue";
+import fs from "fs";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -53,7 +54,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   private metrics: IBeaconMetrics;
   private opts: IChainOptions;
   private processingQueue: Queue;
-  
+
   public constructor(opts: IChainOptions, {config, db, eth1, opPool, logger, metrics}: IBeaconChainModules) {
     super();
     this.opts = opts;
@@ -145,9 +146,33 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.receiveAttestation(attestation);
     });
 
+    this.dumpState(block);
+
     // forward processed block for additional processing
     this.emit('processedBlock', block);
   };
+
+  public dumpState(block: BeaconBlock): void {
+    const baseDir = "./state-dumps/";
+    const curDir = this.latestState.slot;
+    const full = baseDir + curDir;
+    if (!fs.existsSync(baseDir)) {
+      fs.mkdirSync(baseDir);
+    }
+
+    fs.mkdirSync(baseDir + curDir);
+
+    const sblock = serialize(block, this.config.types.BeaconBlock);
+    const sState = serialize(this.latestState, this.config.types.BeaconState);
+
+    fs.writeFile(full + "/block.ssz", sblock, (e) => {
+      if (e) throw e;
+    });
+    fs.writeFile(full + "/state.ssz", sState, (e) => {
+      if (e) throw e;
+    });
+  };
+
 
   public async applyForkChoiceRule(): Promise<void> {
     const currentRoot = await this.db.chain.getChainHeadRoot();
