@@ -134,7 +134,7 @@ export class BeaconNode {
     await this.eth1.start();
     await this.chain.start();
     await this.opPool.start();
-    await this.sync.start();
+    this.sync.start();
     await this.api.start();
   }
 
