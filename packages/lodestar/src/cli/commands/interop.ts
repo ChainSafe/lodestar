@@ -5,12 +5,14 @@
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
+import fs from "fs";
 
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ILogger, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
-import {generateCommanderOptions, optionsToConfig} from "../util";
+import {generateCommanderOptions, optionsToConfig, } from "../util";
+import {rmDir} from "../../util/file";
 import {getTomlConfig} from "../../util/file";
 import Validator from "../../validator";
 import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
@@ -50,6 +52,7 @@ export class InteropCommand implements CliCommand {
       .option("-q, --quickStart [params]", "Start chain from known state")
       .option("-v, --validators [range]", "Start validators, single number - validators 0-number, x,y - validators between x and y", 0)
       .option("-p, --preset [preset]", "Minimal/mainnet", "mainnet")
+      .option("-r, --resetDb", "Reset the database", true)
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
@@ -74,6 +77,13 @@ export class InteropCommand implements CliCommand {
 
     //override current config with cli config
     conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
+    
+    if (options.resetDb) {
+      const dir = "./" + options.db;
+      if (fs.existsSync("./" + options.db)) {
+        rmDir(dir);
+      }
+    }
 
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
     if (options.quickStart) {
