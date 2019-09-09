@@ -84,7 +84,6 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
           try {
             const request = this.decodeRequest(method, data);
             const requestId = randomRequestId();
-            this.emit("request", peerInfo, method, requestId, request);
             this.logger.debug(`${requestId} - receive ${method} request from ${peerInfo.id.toB58String()}`);
             if (!requestOnly) {
               const responseEvent = createResponseEvent(requestId);
@@ -108,6 +107,7 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
             } else {
               cb(true);
             }
+            this.emit("request", peerInfo, method, requestId, request);
           } catch (e) {
             if (!requestOnly) {
               cb(null, this.encodeResponseError(e));
@@ -254,7 +254,7 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
   }
   public sendResponse(id: RequestId, err: Error, body: ResponseBody): void {
     // @ts-ignore
-    this.emit(`response ${id}`, err, body);
+    this.emit(createResponseEvent(id), err, body);
   }
   public async hello(peerInfo: PeerInfo, request: Hello): Promise<Hello> {
     return await this.sendRequest<Hello>(peerInfo, Method.Hello, request);
