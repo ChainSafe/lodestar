@@ -64,7 +64,9 @@ export class Sync extends EventEmitter {
     }
     try {
       const bestSlot = await this.db.chain.getChainHeadSlot();
-      const bestSlotByPeers = this.network.getPeers()
+      const peers = this.network.getPeers();
+      this.logger.debug(`Checking if synced with other ${peers.length} peers`);
+      const bestSlotByPeers = peers
         .map((peerInfo) => this.reps.get(peerInfo.id.toB58String()))
         .map((reputation) => reputation.latestHello ? reputation.latestHello.headSlot : 0)
         .reduce((a, b) => Math.max(a, b), 0);
