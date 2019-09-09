@@ -53,7 +53,7 @@ export async function createPeerInfo(peerId: PeerId): Promise<PeerInfo> {
  * Return a fresh PeerId instance
  */
 export async function createPeerId(): Promise<PeerId> {
-  return await promisify(PeerId.create)({bits: 2048});
+  return await promisify(PeerId.create)({bits: 256, keyType: "secp256k1"});
 }
 
 export async function initializePeerInfo(peerId: PeerId, multiaddrs: string[]): Promise<PeerInfo> {
