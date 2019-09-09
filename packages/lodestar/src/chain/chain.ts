@@ -134,8 +134,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     assert(isValidBlock);
     this.logger.info(`0x${blockHash.toString('hex')} is valid, running state transition...`);
 
+    const pre = clone(this.latestState, this.config.types.BeaconState);
     // process current slot
-    await this.runStateTransition(block, clone(this.latestState, this.config.types.BeaconState));
+    const post = await this.runStateTransition(block, pre);
     block.body.attestations.map(async (attestation) => {
       await this.receiveAttestation(attestation);
     });
@@ -146,13 +147,15 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.receiveAttestation(attestation);
     });
 
-    this.dumpState(block);
+    if (this.opts.dumpState) {
+      this.dumpState(block, pre, post);
+    }
 
     // forward processed block for additional processing
     this.emit('processedBlock', block);
   };
 
-  public dumpState(block: BeaconBlock): void {
+  public dumpState(block: BeaconBlock, pre: BeaconState, post: BeaconState): void {
     const baseDir = "./state-dumps/";
     const curDir = this.latestState.slot;
     const full = baseDir + curDir;
@@ -163,12 +166,16 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     fs.mkdirSync(baseDir + curDir);
 
     const sblock = serialize(block, this.config.types.BeaconBlock);
-    const sState = serialize(this.latestState, this.config.types.BeaconState);
+    const sPre = serialize(pre, this.config.types.BeaconState);
+    const sPost = serialize(post, this.config.types.BeaconState);
 
     fs.writeFile(full + "/block.ssz", sblock, (e) => {
       if (e) throw e;
     });
-    fs.writeFile(full + "/state.ssz", sState, (e) => {
+    fs.writeFile(full + "/pre.ssz", sPre, (e) => {
+      if (e) throw e;
+    });
+    fs.writeFile(full + "/post.ssz", sPost, (e) => {
       if (e) throw e;
     });
   };
