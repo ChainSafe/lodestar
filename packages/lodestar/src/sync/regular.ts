@@ -73,6 +73,7 @@ export class RegularSync {
   };
 
   public async start(): Promise<void> {
+    this.logger.debug("regular sync start");
     this.network.gossip.subscribeToBlocks();
     this.network.gossip.subscribeToAttestations();
     this.network.gossip.on(BLOCK_TOPIC, this.receiveBlock);
@@ -82,6 +83,7 @@ export class RegularSync {
   }
 
   public async stop(): Promise<void> {
+    this.logger.debug("regular sync stop");
     this.network.gossip.unsubscribeToBlocks();
     this.network.gossip.unsubscribeToAttestations();
     this.network.gossip.removeListener(BLOCK_TOPIC, this.receiveBlock);
