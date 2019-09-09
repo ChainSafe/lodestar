@@ -30,7 +30,7 @@ export class WinstonLogger implements ILogger {
             }),
             format.printf(
               // @es-lint disable
-              info => `${info.timestamp}  [${(info.module || info.namespace || "").toUpperCase()}] ${info.level.padStart(22 - (info.module.length || info.namespace.length))}: ${info.message}`
+              info => `${info.timestamp}  [${(info.module || info.namespace || "").toUpperCase()}] ${info.level.padStart(30 - (info.module || info.namespace || "").length)}: ${info.message}`
             )
           ),
           handleExceptions: true
