@@ -41,7 +41,7 @@ export interface IBeaconChainModules {
 export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) implements IBeaconChain {
 
   public chain: string;
-  public latestState: BeaconState = null;
+  public _latestState: BeaconState = null;
   public forkChoice: LMDGHOST;
   public chainId: uint16;
   public networkId: uint64;
@@ -98,6 +98,13 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.processingQueue.stop();
   }
 
+  public get latestState(): BeaconState {
+    return clone(this._latestState, this.config.types.BeaconState);
+  }
+
+  public set latestState(state: BeaconState) {
+    this._latestState = state;
+  }
 
   public async receiveAttestation(attestation: Attestation): Promise<void> {
     this.logger.info(`Received attestation for source ${attestation.data.source.root.toString("hex")} and target ${attestation.data.target.root.toString("hex")}`);
