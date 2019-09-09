@@ -10,7 +10,7 @@ import {IBeaconDb} from "../../../db/api";
 import {OpPool} from "../../../opPool";
 import {assembleBody} from "./body";
 import {IEth1Notifier} from "../../../eth1";
-import {stateTransition} from "../../stateTransition";
+import {processSlots, stateTransition} from "../../stateTransition";
 
 export async function assembleBlock(
   config: IBeaconConfig,
@@ -24,6 +24,9 @@ export async function assembleBlock(
     db.block.getChainHead(),
     db.state.getLatest(),
   ]);
+  if(slot > currentState.slot) {
+    processSlots(config, currentState, slot);
+  }
   const merkleTree = await db.merkleTree.getProgressiveMerkleTree(currentState.eth1DepositIndex);
   const parentHeader: BeaconBlockHeader = {
     stateRoot: parentBlock.stateRoot,

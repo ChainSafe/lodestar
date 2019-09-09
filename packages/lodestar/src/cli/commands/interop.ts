@@ -90,10 +90,6 @@ export class InteropCommand implements CliCommand {
       this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier()});
       const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
       const state = quickStartOptionToState(config, tree, options.quickStart);
-      const diffInSeconds = (Date.now() / 1000) - state.genesisTime;
-      if(diffInSeconds > 0) {
-        state.slot = intDiv(diffInSeconds, config.params.SECONDS_PER_SLOT);
-      }
       await this.node.chain.initializeBeaconChain(state, tree);
     } else {
       throw new Error("Missing --quickstart flag");
