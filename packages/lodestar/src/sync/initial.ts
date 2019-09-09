@@ -54,7 +54,7 @@ export class InitialSync {
         await this.syncToPeer(peer);
         break;
       } catch (e) {
-        this.logger.warn(`Failed to sync with peer ${peer.id.toB58String()}, trying next best peer`, e);
+        this.logger.warn(`Failed to sync with peer ${peer.id.toB58String()}, trying next best peer `, e);
       }
     }
   }
