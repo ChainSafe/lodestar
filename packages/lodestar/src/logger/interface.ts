@@ -28,6 +28,7 @@ export interface ILogger {
   silent: boolean;
 
   info(message: string|object, context?: object): void;
+  important(message: string|object, context?: object): void;
   warn(message: string|object, context?: object): void;
   error(message: string|object, context?: object): void;
   debug(message: string|object, context?: object): void;

@@ -4,6 +4,7 @@
 
 import {createLogger, format, Logger, transports} from 'winston';
 import {defaultLogLevel, LogLevel, LogLevels, ILogger, ILoggerOptions} from "./interface";
+import chalk from "chalk";
 
 export class WinstonLogger implements ILogger {
   private winston: Logger;
@@ -48,6 +49,10 @@ export class WinstonLogger implements ILogger {
 
   public info(message: string | object, context?: object): void {
     this.createLogEntry(LogLevel.info, message, context);
+  }
+
+  public important(message: string | object, context?: object): void {
+    this.createLogEntry(LogLevel.info, chalk.red(message as string), context);
   }
 
   public error(message: string | object, context?: object): void {
