@@ -131,6 +131,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.logger.debug(`Ignored block ${blockHash.toString("hex")} as it predates latest state`);
       return;
     }
+    if(!await this.db.block.has(block.parentRoot)) {
+      // @ts-ignore
+      this.emit("unknownBlockRoot", block.parentRoot);
+    }
     this.processingQueue.push(async () => {
       return this.processBlock(block, blockHash);
     });
