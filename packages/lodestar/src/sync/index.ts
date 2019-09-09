@@ -78,6 +78,7 @@ export class Sync extends EventEmitter {
   }
 
   public async start(): Promise<void> {
+    await new Promise((resolve) => this.network.once("peer:connect", resolve));
     await this.reqResp.start();
     if (!await this.isSynced()) {
       const initialSync = new InitialSync(this.opts, {
