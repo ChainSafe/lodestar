@@ -9,13 +9,14 @@ VALIDATOR_ARRAY=(${range//,/ })
 VALIDATOR_ARRAY_LENGTH=${#VALIDATOR_ARRAY[@]}
 
 # Check for LAN
-if [ $WWW -eq "true" ]; then
+if [ $WWW == "true" ]; then
     echo "Using BASE_URL 0.0.0.0"
     BASE_URL="0.0.0.0"
 else
     echo "Using BASE_URL 127.0.0.1"
     BASE_URL="127.0.0.1"
 fi
+exit
 
 # Sum the validator configuration
 v_count=0
