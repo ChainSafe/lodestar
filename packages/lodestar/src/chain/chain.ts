@@ -6,7 +6,7 @@ import assert from "assert";
 import BN from "bn.js";
 import {EventEmitter} from "events";
 import {clone, hashTreeRoot, serialize, signingRoot} from "@chainsafe/ssz";
-import {Attestation, BeaconBlock, BeaconState, Hash, uint16, uint64} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BeaconState, Hash, Slot, uint16, uint64} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "../constants";
@@ -19,7 +19,12 @@ import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from 
 
 import {stateTransition} from "./stateTransition";
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
-import {computeEpochOfSlot, getAttestingIndices, isActiveValidator} from "./stateTransition/util";
+import {
+  computeEpochOfSlot,
+  getAttestationDataSlot,
+  getAttestingIndices,
+  isActiveValidator
+} from "./stateTransition/util";
 import {ChainEventEmitter, IBeaconChain} from "./interface";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
 import {processSortedDeposits} from "../util/deposits";
@@ -108,20 +113,30 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   public async receiveAttestation(attestation: Attestation): Promise<void> {
-    this.logger.info(`Received attestation for source ${attestation.data.source.root.toString("hex")} and target ${attestation.data.target.root.toString("hex")}`);
+    const attestationHash = hashTreeRoot(attestation, this.config.types.Attestation);
+    this.logger.info(`Received attestation ${attestationHash.toString("hex")}`);
+    try {
+      const attestationSlot: Slot = getAttestationDataSlot(this.config, this.latestState, attestation.data);
+      if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < this.latestState.slot) {
+        this.logger.debug(`Attestation ${attestationHash.toString("hex")} is too old. Ignored.`);
+        return;
+      }
+    } catch (e) {
+      return;
+    }
     this.processingQueue.push(async () => {
-      return this.processAttestation(attestation);
+      return this.processAttestation(attestation, attestationHash);
     });
   }
 
-  private processAttestation = async (attestation: Attestation) => {
+  private processAttestation = async (attestation: Attestation, attestationHash: Hash) => {
     const validators = getAttestingIndices(
       this.config, this.latestState, attestation.data, attestation.aggregationBits);
     const balances = validators.map((index) => this.latestState.balances[index]);
     for (let i = 0; i < validators.length; i++) {
       this.forkChoice.addAttestation(attestation.data.beaconBlockRoot, validators[i], balances[i]);
     }
-    this.logger.info("Attestation passed to fork choice");
+    this.logger.info(`Attestation ${attestationHash.toString("hex")} passed to fork choice`);
     this.emit('processedAttestation', attestation);
   };
 
