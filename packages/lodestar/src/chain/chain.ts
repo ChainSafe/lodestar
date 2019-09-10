@@ -148,9 +148,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const pre = this.latestState;
     // process current slot
     const post = await this.runStateTransition(block, pre);
-    block.body.attestations.map(async (attestation) => {
-      await this.receiveAttestation(attestation);
-    });
 
     this.logger.info(`Slot ${block.slot} Block 0x${blockHash.toString('hex')} passed state transition`);
     await this.opPool.processBlockOperations(block);
