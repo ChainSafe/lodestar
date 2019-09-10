@@ -28,6 +28,7 @@ import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
 import Queue from "queue";
 import fs from "fs";
+import {sleep} from "../validator/services/attestation";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -149,6 +150,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       if(!block.parentRoot.equals(signingRoot(latestBlock, this.config.types.BeaconBlock))){
         //block processed too early
         this.logger.warn(`Block ${blockHash.toString("hex")} tried to be processed too early. Requeue...`);
+        //wait a bit to give new block a chance
+        await sleep(500);
         this.processingQueue.push(async () => {
           return this.processBlock(block, blockHash);
         });
