@@ -160,10 +160,8 @@ class Validator {
     const fork = await this.apiClient.beacon.getFork();
     const isAttester = validatorDuty.attestationSlot === slot;
     const isProposer = validatorDuty.blockProposalSlot === slot;
-    this.logger.info(
-      `Check duties - Slot: ${slot}, isProposer: ${isProposer}, isAttester: ${isAttester}, Fork: (current: ${fork.currentVersion.toString('hex')}, prev: ${fork.previousVersion.toString('hex')})`
-    );
     if (isAttester) {
+      this.logger.info(`Validator is attester at slot ${slot} and shard ${validatorDuty.attestationShard}`);
       this.attestationService.createAndPublishAttestation(
         validatorDuty.attestationSlot,
         validatorDuty.attestationShard,
@@ -171,6 +169,7 @@ class Validator {
       );
     }
     if (isProposer) {
+      this.logger.info(`Validator is proposer at slot ${slot}`);
       this.blockService.createAndPublishBlock(slot, fork);
     }
   };
