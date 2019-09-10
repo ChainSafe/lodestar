@@ -12,6 +12,11 @@ You will need to go over the [specification](https://github.com/ethereum/eth2.0-
 
 ` ./bin/lodestar interop -q 1,8 -v 8 -p minimal`
 
+#### Using start-multi.sh
+
+`sh ./start-multi.sh <number_of_beacon_nodes> <total_validators> <validator_distribution_per_node>`
+`sh ./start-multi.sh 4 8 8,0,0,0`
+
 #### Generating flame graphs from spec tests
 Example of cpu-profile generation of blocksanity tests in current directory
 
