@@ -4,7 +4,7 @@
 
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {BeaconBlock, Attestation, Hash} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, Attestation, Hash, Checkpoint} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
@@ -85,6 +85,10 @@ export class RegularSync {
     }
   }
 
+  private onFinalizedCheckpoint = async (checkpoint: Checkpoint): Promise<void> => {
+    await this.opPool.attestations.removeOld(this.chain.latestState);
+  }
+
   public async start(): Promise<void> {
     this.logger.debug("regular sync start");
     this.network.gossip.subscribeToBlocks();
@@ -94,6 +98,7 @@ export class RegularSync {
     this.chain.on('processedBlock', this.onProcessedBlock);
     this.chain.on('processedAttestation', this.onProcessedAttestation);
     this.chain.on("unknownBlockRoot", this.onUnknownBlockRoot);
+    this.chain.on("finalizedCheckpoint", this.onFinalizedCheckpoint);
   }
 
   public async stop(): Promise<void> {
@@ -105,5 +110,6 @@ export class RegularSync {
     this.chain.removeListener('processedBlock', this.onProcessedBlock);
     this.chain.removeListener('processedAttestation', this.onProcessedAttestation);
     this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
+    this.chain.removeListener("finalizedCheckpoint", this.onFinalizedCheckpoint);
   }
 }

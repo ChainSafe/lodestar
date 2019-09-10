@@ -28,6 +28,8 @@ import {existsSync, mkdirSync} from "fs";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 import {intDiv} from "../../util/math";
 import {signingRoot} from "@chainsafe/ssz";
+import { OperationsModule } from "../../opPool/modules/abstract";
+import { parse } from "url";
 
 interface IInteropCommandOptions {
   loggingLevel?: string;
@@ -83,8 +85,18 @@ export class InteropCommand implements CliCommand {
       if (fs.existsSync(lodestarDir)) {
         rmDir(lodestarDir);
       }
-      if (fs.existsSync("./validators")) {
-        rmDir("./validators");
+      if (options.validators && fs.existsSync("./validators")) {
+        let start = 0, end = 0;
+        if(options.validators.includes(",")) {
+          const parts = options.validators.split(",");
+          start = parseInt(parts[0]);
+          end = parseInt(parts[1]);
+        } else {
+          end = parseInt(options.validators)
+        }
+        for (let i = start; i < end; i++) {
+          rmDir(`./validators/validator-db-${i}`)
+        }
       }
     }
 
