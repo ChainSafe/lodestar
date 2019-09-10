@@ -3,6 +3,7 @@ import {assembleValidatorDuty} from "../../../chain/factory/duties";
 import {BLSPubkey, Epoch, ValidatorDuty} from "@chainsafe/eth2.0-types";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {processSlots} from "../../../chain/stateTransition";
 
 export async function getValidatorDuties(config: IBeaconConfig, db: IBeaconDb, validatorPublicKeys: BLSPubkey[], epoch: Epoch): Promise<ValidatorDuty[]> {
   const state = await db.state.getLatest();
@@ -12,7 +13,9 @@ export async function getValidatorDuties(config: IBeaconConfig, db: IBeaconDb, v
   }));
 
   const startSlot = computeStartSlotOfEpoch(config, epoch);
-
+  if(state.slot < startSlot) {
+      processSlots(config, state, startSlot);
+  }
   const slotProposerMapping = {};
 
   for(let slot = startSlot; slot < startSlot + config.params.SLOTS_PER_EPOCH; slot ++) {

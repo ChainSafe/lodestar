@@ -4,7 +4,7 @@
 
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {BeaconBlock, Attestation} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, Attestation, Hash} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
@@ -72,6 +72,19 @@ export class RegularSync {
     this.network.gossip.publishAttestation(attestation);
   };
 
+  private onUnknownBlockRoot = async (root: Hash): Promise<void> => {
+    for (const peer of this.network.getPeers()) {
+      try {
+        this.logger.debug(`Attempting to fetch block ${root.toString("hex")} from ${peer.id.toB58String()}`)
+        const [block] = await this.network.reqResp.beaconBlocksByRoot(peer, [root]);
+        await this.chain.receiveBlock(block);
+        break;
+      } catch (e) {
+        this.logger.debug(`Unable to fetch block ${root.toString("hex")}: ${e}`)
+      }
+    }
+  }
+
   public async start(): Promise<void> {
     this.logger.debug("regular sync start");
     this.network.gossip.subscribeToBlocks();
@@ -80,6 +93,7 @@ export class RegularSync {
     this.network.gossip.on(ATTESTATION_TOPIC, this.receiveAttestation);
     this.chain.on('processedBlock', this.onProcessedBlock);
     this.chain.on('processedAttestation', this.onProcessedAttestation);
+    this.chain.on("unknownBlockRoot", this.onUnknownBlockRoot);
   }
 
   public async stop(): Promise<void> {
@@ -90,5 +104,6 @@ export class RegularSync {
     this.network.gossip.removeListener(ATTESTATION_TOPIC, this.receiveAttestation);
     this.chain.removeListener('processedBlock', this.onProcessedBlock);
     this.chain.removeListener('processedAttestation', this.onProcessedAttestation);
+    this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
   }
 }

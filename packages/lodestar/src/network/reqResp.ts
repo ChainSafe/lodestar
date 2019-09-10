@@ -206,9 +206,9 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
       case Method.Goodbye:
         return deserialize(data, this.config.types.Goodbye);
       case Method.BeaconBlocksByRange:
-        return deserialize(data, this.config.types.BeaconBlocksByRangeRequest);
+        return deserialize(data, this.config.types.BeaconBlocksByRangeResponse);
       case Method.BeaconBlocksByRoot:
-        return deserialize(data, this.config.types.BeaconBlocksByRootRequest);
+        return deserialize(data, this.config.types.BeaconBlocksByRootResponse);
     }
   }
   private async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody, requestOnly?: boolean): Promise<T> {

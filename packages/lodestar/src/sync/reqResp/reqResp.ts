@@ -160,7 +160,9 @@ export class SyncReqResp implements ISyncReqResp {
       const response: BeaconBlocksByRootResponse = [];
       for (const blockRoot of request) {
         const block = await this.db.block.get(blockRoot);
-        response.push(block);
+        if (block) {
+          response.push(block);
+        }
       }
       this.network.reqResp.sendResponse(id, null, response);
     } catch (e) {
