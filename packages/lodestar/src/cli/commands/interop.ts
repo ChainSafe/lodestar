@@ -79,9 +79,12 @@ export class InteropCommand implements CliCommand {
     conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
     
     if (options.resetDb) {
-      const dir = "./" + options.db;
-      if (fs.existsSync("./" + options.db)) {
-        rmDir(dir);
+      const lodestarDir = "./" + options.db;
+      if (fs.existsSync(lodestarDir)) {
+        rmDir(lodestarDir);
+      }
+      if (fs.existsSync("./validators")) {
+        rmDir("./validators");
       }
     }
 
