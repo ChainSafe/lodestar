@@ -6,7 +6,7 @@ import assert from "assert";
 import BN from "bn.js";
 import {EventEmitter} from "events";
 import {clone, hashTreeRoot, serialize, signingRoot} from "@chainsafe/ssz";
-import {Attestation, BeaconBlock, BeaconState, Hash, uint16, uint64} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BeaconState, Hash, Slot, uint16, uint64} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "../constants";
@@ -19,15 +19,21 @@ import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from 
 
 import {stateTransition} from "./stateTransition";
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
-import {getAttestingIndices, computeEpochOfSlot, isActiveValidator} from "./stateTransition/util";
+import {
+  computeEpochOfSlot,
+  getAttestationDataSlot,
+  getAttestingIndices,
+  isActiveValidator
+} from "./stateTransition/util";
 import {ChainEventEmitter, IBeaconChain} from "./interface";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
 import {processSortedDeposits} from "../util/deposits";
 import {IChainOptions} from "./options";
 import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
-import Queue, {QueueWorkerCallback} from "queue";
+import Queue from "queue";
 import fs from "fs";
+import {sleep} from "../validator/services/attestation";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -107,30 +113,37 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   public async receiveAttestation(attestation: Attestation): Promise<void> {
-    this.logger.info(`Received attestation for source ${attestation.data.source.root.toString("hex")} and target ${attestation.data.target.root.toString("hex")}`);
+    const attestationHash = hashTreeRoot(attestation, this.config.types.Attestation);
+    this.logger.info(`Received attestation ${attestationHash.toString("hex")}`);
+    try {
+      const attestationSlot: Slot = getAttestationDataSlot(this.config, this.latestState, attestation.data);
+      if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < this.latestState.slot) {
+        this.logger.debug(`Attestation ${attestationHash.toString("hex")} is too old. Ignored.`);
+        return;
+      }
+    } catch (e) {
+      return;
+    }
     this.processingQueue.push(async () => {
-      return this.processAttestation(attestation);
+      return this.processAttestation(attestation, attestationHash);
     });
   }
 
-  private processAttestation = async (attestation: Attestation) => {
+  private processAttestation = async (attestation: Attestation, attestationHash: Hash) => {
     const validators = getAttestingIndices(
       this.config, this.latestState, attestation.data, attestation.aggregationBits);
     const balances = validators.map((index) => this.latestState.balances[index]);
     for (let i = 0; i < validators.length; i++) {
       this.forkChoice.addAttestation(attestation.data.beaconBlockRoot, validators[i], balances[i]);
     }
-    this.logger.info("Attestation passed to fork choice");
+    this.logger.info(`Attestation ${attestationHash.toString("hex")} passed to fork choice`);
     this.emit('processedAttestation', attestation);
   };
 
   public async receiveBlock(block: BeaconBlock): Promise<void> {
     const blockHash = signingRoot(block, this.config.types.BeaconBlock);
-    this.logger.info(`Received block with hash 0x${blockHash.toString('hex')} at slot ${block.slot}`);
-    // if(block.slot <= this.latestState.slot) {
-    //   this.logger.debug(`Ignored block ${blockHash.toString("hex")} as it predates latest state`);
-    //   return;
-    // }
+    this.logger.debug(`Received block with hash 0x${blockHash.toString('hex')} at slot ${block.slot}. Current state slot ${this.latestState.slot}`);
+
     if(!await this.db.block.has(block.parentRoot)) {
       // @ts-ignore
       this.emit("unknownBlockRoot", block.parentRoot);
@@ -141,6 +154,26 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   private processBlock = async (block: BeaconBlock, blockHash: Hash) => {
+    if(block.slot <= this.latestState.slot) {
+      this.logger.warn(`Block ${blockHash.toString("hex")} is in past. Probably fork choice/double propose/processed block. Ignored for now.`);
+      return;
+    }
+
+    if(block.slot > this.latestState.slot) {
+      //either block came too early or we are suppose to skip some slots
+      const latestBlock = await this.db.block.getChainHead();
+      if(!block.parentRoot.equals(signingRoot(latestBlock, this.config.types.BeaconBlock))){
+        //block processed too early
+        this.logger.warn(`Block ${blockHash.toString("hex")} tried to be processed too early. Requeue...`);
+        //wait a bit to give new block a chance
+        await sleep(500);
+        this.processingQueue.push(async () => {
+          return this.processBlock(block, blockHash);
+        });
+        return;
+      }
+    }
+
     const isValidBlock = await this.isValidBlock(this.latestState, block);
     assert(isValidBlock);
     this.logger.info(`0x${blockHash.toString('hex')} is valid, running state transition...`);
