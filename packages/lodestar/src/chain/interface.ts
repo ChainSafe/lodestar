@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 
-import {Attestation, BeaconBlock, BeaconState, uint16, uint64, Hash} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BeaconState, Checkpoint, Hash, uint16, uint64} from "@chainsafe/eth2.0-types";
 
 import {LMDGHOST} from "./forkChoice";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
@@ -10,6 +10,8 @@ export interface IChainEvents {
   unknownBlockRoot: (root: Hash) => void;
   processedBlock: (block: BeaconBlock) => void;
   processedAttestation: (attestation: Attestation) => void;
+  justifiedCheckpoint: (checkpoint: Checkpoint) => void;
+  finalizedCheckpoint: (checkpoint: Checkpoint) => void;
 }
 
 export type ChainEventEmitter = StrictEventEmitter<EventEmitter, IChainEvents>;

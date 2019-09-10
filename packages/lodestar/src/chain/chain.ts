@@ -145,7 +145,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.debug(`Received block with hash 0x${blockHash.toString('hex')} at slot ${block.slot}. Current state slot ${this.latestState.slot}`);
 
     if(!await this.db.block.has(block.parentRoot)) {
-      // @ts-ignore
       this.emit("unknownBlockRoot", block.parentRoot);
     }
     this.processingQueue.push(async () => {
@@ -313,6 +312,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
           this.db.chain.setJustifiedBlockRoot(justifiedBlockRoot),
         ]);
         this.forkChoice.setJustified(justifiedBlockRoot);
+        this.emit("justifiedCheckpoint", newState.currentJustifiedCheckpoint);
       }
       // Newly finalized epoch
       if (preFinalizedEpoch < newState.finalizedCheckpoint.epoch) {
@@ -324,6 +324,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
           this.db.chain.setFinalizedBlockRoot(finalizedBlockRoot),
         ]);
         this.forkChoice.setFinalized(finalizedBlockRoot);
+        this.emit("finalizedCheckpoint", newState.finalizedCheckpoint);
       }
       this.metrics.previousJustifiedEpoch.set(newState.previousJustifiedCheckpoint.epoch);
       this.metrics.currentJustifiedEpoch.set(newState.currentJustifiedCheckpoint.epoch);
