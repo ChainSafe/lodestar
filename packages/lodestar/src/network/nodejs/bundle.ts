@@ -29,6 +29,13 @@ export class NodejsNode extends LibP2p {
         peerDiscovery: [Bootstrap, MDNS],
       },
       config: {
+        relay: {
+          enabled: false,
+          hop: {
+            enabled: false,
+            active: false
+          }
+        },
         peerDiscovery: {
           autoDial: true,
           mdns: {
