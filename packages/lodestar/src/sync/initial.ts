@@ -60,7 +60,10 @@ export class InitialSync {
   }
   public async syncToPeer(peerInfo: PeerInfo): Promise<void> {
     // fetch recent blocks and push into the chain
-    const startSlot = await this.db.chain.getChainHeadSlot();
+    let startSlot = await this.db.chain.getChainHeadSlot();
+    if(startSlot ===  0) {
+      startSlot += 1;
+    }
     const peerLatestHello = this.reps.get(peerInfo.id.toB58String()).latestHello;
     this.logger.info(`attempting initial sync with ${peerInfo.id.toB58String()}, slot ${startSlot} through ${peerLatestHello.headSlot}`);
     const blocks = await this.network.reqResp.beaconBlocksByRange(peerInfo, {

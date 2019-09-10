@@ -19,14 +19,14 @@ import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from 
 
 import {stateTransition} from "./stateTransition";
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
-import {getAttestingIndices, computeEpochOfSlot, isActiveValidator} from "./stateTransition/util";
+import {computeEpochOfSlot, getAttestingIndices, isActiveValidator} from "./stateTransition/util";
 import {ChainEventEmitter, IBeaconChain} from "./interface";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
 import {processSortedDeposits} from "../util/deposits";
 import {IChainOptions} from "./options";
 import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
-import Queue, {QueueWorkerCallback} from "queue";
+import Queue from "queue";
 import fs from "fs";
 
 export interface IBeaconChainModules {
@@ -126,11 +126,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   public async receiveBlock(block: BeaconBlock): Promise<void> {
     const blockHash = signingRoot(block, this.config.types.BeaconBlock);
-    this.logger.info(`Received block with hash 0x${blockHash.toString('hex')} at slot ${block.slot}`);
-    // if(block.slot <= this.latestState.slot) {
-    //   this.logger.debug(`Ignored block ${blockHash.toString("hex")} as it predates latest state`);
-    //   return;
-    // }
+    this.logger.debug(`Received block with hash 0x${blockHash.toString('hex')} at slot ${block.slot}. Current state slot ${this.latestState.slot}`);
+
     if(!await this.db.block.has(block.parentRoot)) {
       // @ts-ignore
       this.emit("unknownBlockRoot", block.parentRoot);
@@ -141,6 +138,24 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   private processBlock = async (block: BeaconBlock, blockHash: Hash) => {
+    if(block.slot <= this.latestState.slot) {
+      this.logger.warn(`Block ${blockHash.toString("hex")} is in past. Probably fork choice/double propose/processed block. Ignored for now.`);
+      return;
+    }
+
+    if(block.slot > this.latestState.slot) {
+      //either block came too early or we are suppose to skip some slots
+      const latestBlock = await this.db.block.getChainHead();
+      if(!block.parentRoot.equals(signingRoot(latestBlock, this.config.types.BeaconBlock))){
+        //block processed too early
+        this.logger.warn(`Block ${blockHash.toString("hex")} tried to be processed too early. Requeue...`);
+        this.processingQueue.push(async () => {
+          return this.processBlock(block, blockHash);
+        });
+        return;
+      }
+    }
+
     const isValidBlock = await this.isValidBlock(this.latestState, block);
     assert(isValidBlock);
     this.logger.info(`0x${blockHash.toString('hex')} is valid, running state transition...`);

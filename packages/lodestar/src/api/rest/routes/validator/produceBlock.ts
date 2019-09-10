@@ -36,6 +36,7 @@ export const registerBlockProductionEndpoint = (fastify: IFastifyServer, modules
     async (request, reply) => {
       const block = await assembleBlock(
         modules.config,
+        modules.chain,
         modules.db,
         modules.opPool,
         modules.eth1,
