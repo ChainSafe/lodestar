@@ -13,5 +13,5 @@ export const registerSyncingMiddleware = (fastify: IFastifyServer, modules: IApi
     next();
   }
 
-  fastify.use(syncingMiddleware);
+  fastify.use("/validator/*", syncingMiddleware);
 };
