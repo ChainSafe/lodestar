@@ -11,9 +11,11 @@ import {OpPool} from "../../../opPool";
 import {assembleBody} from "./body";
 import {IEth1Notifier} from "../../../eth1";
 import {processSlots, stateTransition} from "../../stateTransition";
+import {IBeaconChain} from "../../interface";
 
 export async function assembleBlock(
   config: IBeaconConfig,
+  chain: IBeaconChain,
   db: IBeaconDb,
   opPool: OpPool,
   eth1: IEth1Notifier,
@@ -21,7 +23,7 @@ export async function assembleBlock(
   randao: bytes96
 ): Promise<BeaconBlock> {
   const [parentBlock, currentState] = await Promise.all([
-    db.block.getChainHead(),
+    db.block.get(chain.forkChoice.head()),
     db.state.getLatest(),
   ]);
   if(slot > currentState.slot) {
