@@ -90,6 +90,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     await this.gossip.start();
     this.libp2p.on("peer:connect", this.emitPeerConnect);
     this.libp2p.on("peer:disconnect", this.emitPeerDisconnect);
+    this.logger.important(`PeerId ${this.libp2p.peerInfo.id.toB58String()}`);
   }
   public async stop(): Promise<void> {
     await this.inited;
