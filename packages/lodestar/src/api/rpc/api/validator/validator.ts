@@ -38,7 +38,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async produceBlock(slot: Slot, randaoReveal: bytes96): Promise<BeaconBlock> {
-    return await assembleBlock(this.config, this.db, this.opPool, this.eth1, slot, randaoReveal);
+    return await assembleBlock(this.config, this.chain, this.db, this.opPool, this.eth1, slot, randaoReveal);
   }
 
   public async getDuties(validatorPublicKeys: BLSPubkey[], epoch: Epoch): Promise<ValidatorDuty[]> {
