@@ -43,7 +43,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/bit-utils": "^0.1.2",
+    "@chainsafe/bit-utils": "^0.1.4",
     "@chainsafe/bls": "0.1.7",
     "@chainsafe/eth2.0-config": "^0.1.1",
     "@chainsafe/eth2.0-params": "^0.1.0",
