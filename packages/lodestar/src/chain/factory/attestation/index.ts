@@ -18,10 +18,11 @@ export async function assembleAttestation(
     state.slot++;
   }
 
-  const aggregationBits = getAggregationBits(config, state, slot, shard, validatorIndex);
-  const custodyBits = getEmptyAttestationBitList(config);
+  const committee = getCrosslinkCommittee(config, state, computeEpochOfSlot(config, slot), shard);
+  const aggregationBits = getAggregationBits(committee, validatorIndex);
+  const custodyBits = getEmptyBitList(committee.length);
   try {
-    const data  = await assembleAttestationData(config, db, state, headBlock, shard);
+    const data = await assembleAttestationData(config, db, state, headBlock, shard);
     return {
       aggregationBits,
       custodyBits,
@@ -33,20 +34,19 @@ export async function assembleAttestation(
   }
 }
 
-export function getAggregationBits(config: IBeaconConfig, state: BeaconState, slot: Slot, shard: Shard, validatorIndex: ValidatorIndex): BitList {
-  const aggregationBits = getEmptyAttestationBitList(config);
-  const comittee = getCrosslinkCommittee(config, state, computeEpochOfSlot(config, slot), shard);
-  comittee.forEach((commiteeValidator, index) => {
-    if(commiteeValidator === validatorIndex) {
+export function getAggregationBits(committee: ValidatorIndex[], validatorIndex: ValidatorIndex): BitList {
+  const aggregationBits = getEmptyBitList(committee.length);
+  committee.forEach((committeeValidator, index) => {
+    if(committeeValidator === validatorIndex) {
       aggregationBits.setBit(index, true);
     }
   });
   return aggregationBits;
 }
 
-export function getEmptyAttestationBitList(config: IBeaconConfig) {
+export function getEmptyBitList(length: number) {
   return BitList.fromBitfield(
-    Buffer.alloc(intDiv(config.params.MAX_VALIDATORS_PER_COMMITTEE + 7, 8)),
-    config.params.MAX_VALIDATORS_PER_COMMITTEE
+    Buffer.alloc(intDiv(length + 7, 8)),
+    length
   );
 }
