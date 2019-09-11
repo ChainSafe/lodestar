@@ -91,8 +91,9 @@ export class SyncReqResp implements ISyncReqResp {
       const request = await this.createHello();
       try {
         const response = await this.network.reqResp.hello(peerInfo, request);
-        this.reps.get(peerInfo.id.toB58String()).latestHello = request;
+        this.reps.get(peerInfo.id.toB58String()).latestHello = response;
       } catch (e) {
+        this.logger.error(e);
       }
     }
   }
