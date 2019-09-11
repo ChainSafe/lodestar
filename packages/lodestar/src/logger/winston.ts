@@ -78,7 +78,7 @@ export class WinstonLogger implements ILogger {
   }
 
   public trace(message: string | object, context?: object): void {
-    this.createLogEntry(LogLevel.trace, chalk.magentaBright(message as string), context);
+    this.createLogEntry(LogLevel.info, chalk.magentaBright(message as string), context);
   }
 
   private createLogEntry(level: LogLevel, message: string | object, context: object = {}): void {

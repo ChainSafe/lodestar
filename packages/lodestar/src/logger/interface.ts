@@ -7,7 +7,6 @@ export enum LogLevel {
   warn,
   info,
   debug,
-  trace
 }
 
 export const LogLevels = [
@@ -15,7 +14,6 @@ export const LogLevels = [
   "warn",
   "info",
   "debug",
-  "trace"
 ];
 
 export const defaultLogLevel = LogLevel.info;
