@@ -30,6 +30,7 @@ interface BeaconNodeModules {
   config: IBeaconConfig;
   logger: ILogger;
   eth1?: IEth1Notifier;
+  libp2p?: LibP2p;
 }
 
 // TODO move into src/node/beacon
@@ -51,7 +52,7 @@ export class BeaconNode {
   public reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, eth1}: BeaconNodeModules) {
+  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, eth1, libp2p}: BeaconNodeModules) {
     this.conf = deepmerge(
       defaultConf,
       opts,
@@ -71,15 +72,9 @@ export class BeaconNode {
         logger: logger.child(this.conf.logger.db),
       }),
     });
-    // TODO initialize outside node
-    // initialize for network type
-    const libp2p = createPeerId()
-      .then((peerId) => initializePeerInfo(peerId, this.conf.network.multiaddrs))
-      .then((peerInfo) => new NodejsNode({peerInfo, bootnodes: this.conf.network.bootnodes}));
-
     this.network = new Libp2pNetwork(this.conf.network, {
       config,
-      libp2p: libp2p,
+      libp2p,
       logger: logger.child(this.conf.logger.network),
       metrics: this.metrics,
     });

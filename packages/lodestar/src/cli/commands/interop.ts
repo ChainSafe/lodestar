@@ -30,6 +30,8 @@ import {intDiv} from "../../util/math";
 import {signingRoot} from "@chainsafe/ssz";
 import { OperationsModule } from "../../opPool/modules/abstract";
 import { parse } from "url";
+import { loadPeerId, NodejsNode } from "../../network/nodejs";
+import { initializePeerInfo } from "../../network";
 
 interface IInteropCommandOptions {
   loggingLevel?: string;
@@ -105,7 +107,10 @@ export class InteropCommand implements CliCommand {
 
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
     if (options.quickStart) {
-      this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier()});
+      const libp2p = await loadPeerId("./peerId.json")
+        .then((peerId) => initializePeerInfo(peerId, conf.network.multiaddrs))
+        .then((peerInfo) => new NodejsNode({peerInfo, bootnodes: conf.network.bootnodes}));
+      this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier(), libp2p});
       const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
       const state = quickStartOptionToState(config, tree, options.quickStart);
       await this.node.chain.initializeBeaconChain(state, tree);
