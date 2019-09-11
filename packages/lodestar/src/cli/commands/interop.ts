@@ -92,10 +92,13 @@ export class InteropCommand implements CliCommand {
           start = parseInt(parts[0]);
           end = parseInt(parts[1]);
         } else {
-          end = parseInt(options.validators)
+          end = parseInt(options.validators);
         }
         for (let i = start; i < end; i++) {
-          rmDir(`./validators/validator-db-${i}`)
+          const validatorPath = `./validators/validator-db-${i}`;
+          if(fs.existsSync(validatorPath)) {
+            rmDir(validatorPath);
+          }
         }
       }
     }
