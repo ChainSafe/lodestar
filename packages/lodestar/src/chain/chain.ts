@@ -115,9 +115,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public async receiveAttestation(attestation: Attestation): Promise<void> {
     const attestationHash = hashTreeRoot(attestation, this.config.types.Attestation);
     this.logger.info(`Received attestation ${attestationHash.toString("hex")}`);
+    const latestState = this.latestState;
     try {
-      const attestationSlot: Slot = getAttestationDataSlot(this.config, this.latestState, attestation.data);
-      if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < this.latestState.slot) {
+      const attestationSlot: Slot = getAttestationDataSlot(this.config, latestState, attestation.data);
+      if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < latestState.slot) {
         this.logger.debug(`Attestation ${attestationHash.toString("hex")} is too old. Ignored.`);
         return;
       }
@@ -125,14 +126,14 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       return;
     }
     this.processingQueue.push(async () => {
-      return this.processAttestation(attestation, attestationHash);
+      return this.processAttestation(latestState, attestation, attestationHash);
     });
   }
 
-  private processAttestation = async (attestation: Attestation, attestationHash: Hash) => {
+  private processAttestation = async (latestState: BeaconState, attestation: Attestation, attestationHash: Hash) => {
     const validators = getAttestingIndices(
-      this.config, this.latestState, attestation.data, attestation.aggregationBits);
-    const balances = validators.map((index) => this.latestState.balances[index]);
+      this.config, latestState, attestation.data, attestation.aggregationBits);
+    const balances = validators.map((index) => latestState.balances[index]);
     for (let i = 0; i < validators.length; i++) {
       this.forkChoice.addAttestation(attestation.data.beaconBlockRoot, validators[i], balances[i]);
     }
