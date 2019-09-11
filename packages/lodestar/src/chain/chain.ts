@@ -142,7 +142,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   public async receiveBlock(block: BeaconBlock): Promise<void> {
     const blockHash = signingRoot(block, this.config.types.BeaconBlock);
-    this.logger.debug(`Received block with hash 0x${blockHash.toString('hex')} at slot ${block.slot}. Current state slot ${this.latestState.slot}`);
+    this.logger.info(`Received block with hash 0x${blockHash.toString('hex')} at slot ${block.slot}. Current state slot ${this.latestState.slot}`);
 
     if(!await this.db.block.has(block.parentRoot)) {
       this.emit("unknownBlockRoot", block.parentRoot);

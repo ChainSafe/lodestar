@@ -7,6 +7,7 @@ export enum LogLevel {
   warn,
   info,
   debug,
+  trace
 }
 
 export const LogLevels = [
@@ -14,6 +15,7 @@ export const LogLevels = [
   "warn",
   "info",
   "debug",
+  "trace"
 ];
 
 export const defaultLogLevel = LogLevel.info;
@@ -32,6 +34,6 @@ export interface ILogger {
   warn(message: string|object, context?: object): void;
   error(message: string|object, context?: object): void;
   debug(message: string|object, context?: object): void;
-
+  trace(message: string|object, context?: object): void;
   child(options: ILoggerOptions): ILogger;
 }

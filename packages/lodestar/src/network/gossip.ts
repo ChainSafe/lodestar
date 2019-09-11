@@ -76,26 +76,33 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   private handleIncomingBlock = (msg: any): void => {
     try {
       const block: BeaconBlock = deserialize(msg.data, this.config.types.BeaconBlock);
+      this.logger.trace(`[GOSSIP] Incoming block at slot: ${block.slot}`);
       this.emit(BLOCK_TOPIC, block);
     } catch (e) {
+      this.logger.warn(`[GOSSIP] Incoming block error`, e);
     }
   };
   private handleIncomingAttestation = (msg: any): void => {
     try {
       const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
+      this.logger.trace(`[GOSSIP] Incoming attestation for beacon block root: ${attestation.data.beaconBlockRoot}`);
       this.emit(ATTESTATION_TOPIC, attestation);
     } catch (e) {
+      this.logger.warn(`[GOSSIP] Incoming attestation error`, e)
     }
   };
   private handleIncomingShardAttestation = (msg: any): void => {
     try {
       const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
+      this.logger.trace(`[GOSSIP] Incoming shard attestation for beacon block root: ${attestation.data.beaconBlockRoot}`);
       // @ts-ignore
       // we cannot type hint this
       this.emit(shardAttestationTopic(attestation.data.crosslink.shard), attestation);
     } catch (e) {
+      this.logger.warn(`[GOSSIP] Incoming attestation error`, e)
     }
   };
+
   private emitGossipHeartbeat = (): void => {
     this.emit("gossipsub:heartbeat");
   };
