@@ -54,6 +54,7 @@
     "@nodeutils/defaults-deep": "^1.1.0",
     "@polkadot/util-crypto": "^0.93.1",
     "assert": "^2.0.0",
+    "async": "^3.1.0",
     "await-to-js": "^2.1.1",
     "axios": "^0.19.0",
     "bignumber.js": "^9.0.0",

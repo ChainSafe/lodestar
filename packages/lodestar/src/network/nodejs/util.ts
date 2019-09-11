@@ -10,6 +10,7 @@ import promisify from "promisify-es6";
  * Save a peer id to disk
  */
 export async function savePeerId(path: string, peerId: PeerId): Promise<void> {
+  await promisify(fs.writeFile)(path, JSON.stringify(peerId.toJSON(), null, 2));
 }
 
 /**
