@@ -31,9 +31,9 @@ import {processSortedDeposits} from "../util/deposits";
 import {IChainOptions} from "./options";
 import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
-import Queue from "queue";
 import fs from "fs";
 import {sleep} from "../validator/services/attestation";
+import {priorityQueue, queue} from "async";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -59,7 +59,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   private logger: ILogger;
   private metrics: IBeaconMetrics;
   private opts: IChainOptions;
-  private processingQueue: Queue;
+  private attestationProcessingQueue;
+  private blockProcessingQueue; //sort by slot number
 
   public constructor(opts: IChainOptions, {config, db, eth1, opPool, logger, metrics}: IBeaconChainModules) {
     super();
@@ -74,12 +75,12 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.forkChoice = new StatefulDagLMDGHOST();
     this.chainId = 0; // TODO make this real
     this.networkId = new BN(0); // TODO make this real
-    this.processingQueue = new Queue({
-      concurrency: 1,
-      autostart: true,
-      results: [],
-      timeout: config.params.SECONDS_PER_SLOT * 1000}
-    );
+    this.attestationProcessingQueue = queue(async (task: Function) => {
+      await task();
+    }, 1);
+    this.blockProcessingQueue = priorityQueue(async (task: Function) => {
+      await task();
+    }, 1);
   }
 
   public async start(): Promise<void> {
@@ -91,17 +92,11 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.eth1.on('block', this.checkGenesis);
     }
     this.latestState = state;
-    this.processingQueue.start((err => {
-      if (err) {
-        this.logger.error("Failed to start the attestation queue. Reason: " + err);
-      }
-    }));
     this.logger.info("Chain started, waiting blocks and attestations");
   }
 
   public async stop(): Promise<void> {
     this.eth1.removeListener('block', this.checkGenesis);
-    this.processingQueue.stop();
   }
 
   public get latestState(): BeaconState {
@@ -125,7 +120,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     } catch (e) {
       return;
     }
-    this.processingQueue.push(async () => {
+    this.attestationProcessingQueue.push(async () => {
       return this.processAttestation(latestState, attestation, attestationHash);
     });
   }
@@ -148,9 +143,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     if(!await this.db.block.has(block.parentRoot)) {
       this.emit("unknownBlockRoot", block.parentRoot);
     }
-    this.processingQueue.push(async () => {
-      return this.processBlock(block, blockHash);
-    });
+    this.blockProcessingQueue.push(async () =>{
+      return this.processBlock(block, blockHash)
+    }, block.slot);
   }
 
   private processBlock = async (block: BeaconBlock, blockHash: Hash) => {
@@ -167,9 +162,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
         this.logger.warn(`Block ${blockHash.toString("hex")} tried to be processed too early. Requeue...`);
         //wait a bit to give new block a chance
         await sleep(500);
-        this.processingQueue.push(async () => {
-          return this.processBlock(block, blockHash);
-        });
+
+        this.blockProcessingQueue.push(async () =>{
+          return this.processBlock(block, blockHash)
+        }, block.slot);
         return;
       }
     }
