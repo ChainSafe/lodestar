@@ -31,7 +31,7 @@ import {signingRoot} from "@chainsafe/ssz";
 import { OperationsModule } from "../../opPool/modules/abstract";
 import { parse } from "url";
 import { loadPeerId, NodejsNode } from "../../network/nodejs";
-import { initializePeerInfo } from "../../network";
+import { initializePeerInfo, createPeerId } from "../../network";
 
 interface IInteropCommandOptions {
   loggingLevel?: string;
@@ -57,6 +57,7 @@ export class InteropCommand implements CliCommand {
       .option("-v, --validators [range]", "Start validators, single number - validators 0-number, x,y - validators between x and y", 0)
       .option("-p, --preset [preset]", "Minimal/mainnet", "mainnet")
       .option("-r, --resetDb", "Reset the database", true)
+      .option("--peer-id [peerId]","peer id json file")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
@@ -105,11 +106,17 @@ export class InteropCommand implements CliCommand {
       }
     }
 
+    let peerId;
+    if (options["peerId"]) {
+      peerId = loadPeerId(options["peerId"]);
+    } else {
+      peerId = createPeerId();
+    }
+    const libp2p = await peerId
+      .then((peerId) => initializePeerInfo(peerId, conf.network.multiaddrs))
+      .then((peerInfo) => new NodejsNode({peerInfo, bootnodes: conf.network.bootnodes}));
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
     if (options.quickStart) {
-      const libp2p = await loadPeerId("./peerId.json")
-        .then((peerId) => initializePeerInfo(peerId, conf.network.multiaddrs))
-        .then((peerInfo) => new NodejsNode({peerInfo, bootnodes: conf.network.bootnodes}));
       this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier(), libp2p});
       const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
       const state = quickStartOptionToState(config, tree, options.quickStart);
