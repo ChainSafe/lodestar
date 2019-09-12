@@ -114,7 +114,7 @@ export class InteropCommand implements CliCommand {
 
     let peerId;
     if (options["peerId"]) {
-      peerId = await promisify(PeerId.createFromPrivKey)(Buffer.from(options["peerId"].slice(2)))
+      peerId = await promisify(PeerId.createFromHexString)(options["peerId"])
     } else if (options["peerIdFile"]) {
       peerId = loadPeerId(options["peerId"]);
     } else {
