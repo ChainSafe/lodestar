@@ -75,7 +75,7 @@ do
     shift
 done
 
-./bin/lodestar \
+/lodestar/packages/bin/lodestar \
  	interop \
 	-p minimal \
 	--db l1 \
