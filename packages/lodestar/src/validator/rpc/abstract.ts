@@ -5,6 +5,7 @@ import {intDiv} from "../../util/math";
 import {computeEpochOfSlot} from "../../chain/stateTransition/util";
 import {IBeaconApi} from "../../api/rpc/api/beacon";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {getCurrentSlot} from "../../chain/stateTransition/util/genesis";
 
 
 export abstract class AbstractRpcClient implements RpcClient {
@@ -37,7 +38,7 @@ export abstract class AbstractRpcClient implements RpcClient {
     this.running = true;
     const genesisTime = await this.beacon.getGenesisTime();
     const diffInSeconds = (Date.now() / 1000) - genesisTime;
-    this.currentSlot = intDiv(diffInSeconds, this.config.params.SECONDS_PER_SLOT);
+    this.currentSlot = getCurrentSlot(this.config, genesisTime);
     //update slot after remaining seconds until next slot
     const diffTillNextSlot = (this.config.params.SECONDS_PER_SLOT - diffInSeconds % this.config.params.SECONDS_PER_SLOT) * 1000;
     //subscribe to new slots and notify upon new epoch

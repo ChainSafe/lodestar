@@ -9,12 +9,12 @@ export async function getValidatorDuties(config: IBeaconConfig, db: IBeaconDb, v
   const state = await db.state.getLatest();
 
   const validatorIndexes = await Promise.all(validatorPublicKeys.map(async publicKey => {
-    return  await db.getValidatorIndex(publicKey);
+    return  state.validators.findIndex((v) => v.pubkey.equals(publicKey));
   }));
 
   const startSlot = computeStartSlotOfEpoch(config, epoch);
   if(state.slot < startSlot) {
-      processSlots(config, state, startSlot);
+    processSlots(config, state, startSlot);
   }
   const slotProposerMapping = {};
 
