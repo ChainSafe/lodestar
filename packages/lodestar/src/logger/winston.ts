@@ -3,7 +3,7 @@
  */
 
 import {createLogger, format, Logger, transports} from 'winston';
-import {defaultLogLevel, LogLevel, LogLevels, ILogger, ILoggerOptions} from "./interface";
+import {defaultLogLevel, LogLevel, LogLevels, ILogger, ILoggerOptions, customColors} from "./interface";
 import chalk from "chalk";
 
 export class WinstonLogger implements ILogger {
@@ -18,7 +18,7 @@ export class WinstonLogger implements ILogger {
       ...options,
     };
     this.winston = createLogger({
-      level: LogLevel[LogLevel.debug], // log level switching handled in `createLogEntry`
+      level: LogLevel[LogLevel.verbose], // log level switching handled in `createLogEntry`
       defaultMeta: {
         module: options.module || "",
       },
@@ -41,7 +41,7 @@ export class WinstonLogger implements ILogger {
               // if (info.message.length + paddingPreMsg > screenSize) {
               //   const max = screenSize - paddingPreMsg;
               //   const p2 = info.message.length - max;
-              //   const msgs = [info.message.substring(0, max), info.message.substring(max)]; 
+              //   const msgs = [info.message.substring(0, max), info.message.substring(max)];
               //   return (`${info.timestamp}  [${infoString.toUpperCase()}] ${info.level.padStart(infoPad)}: ${msgs[0]}\n${msgs[1].padStart(paddingPreMsg + 2)}`)
               // } else {
                 return `${info.timestamp}  [${infoString.toUpperCase()}] ${info.level.padStart(infoPad)}: ${info.message}`
@@ -75,10 +75,6 @@ export class WinstonLogger implements ILogger {
 
   public warn(message: string | object, context?: object): void {
     this.createLogEntry(LogLevel.warn, message, context);
-  }
-
-  public trace(message: string | object, context?: object): void {
-    this.createLogEntry(LogLevel.info, chalk.magentaBright(message as string), context);
   }
 
   private createLogEntry(level: LogLevel, message: string | object, context: object = {}): void {

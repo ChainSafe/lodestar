@@ -75,12 +75,12 @@ export class RegularSync {
   private onUnknownBlockRoot = async (root: Hash): Promise<void> => {
     for (const peer of this.network.getPeers()) {
       try {
-        this.logger.debug(`Attempting to fetch block ${root.toString("hex")} from ${peer.id.toB58String()}`)
+        this.logger.verbose(`Attempting to fetch block ${root.toString("hex")} from ${peer.id.toB58String()}`)
         const [block] = await this.network.reqResp.beaconBlocksByRoot(peer, [root]);
         await this.chain.receiveBlock(block);
         break;
       } catch (e) {
-        this.logger.debug(`Unable to fetch block ${root.toString("hex")}: ${e}`)
+        this.logger.verbose(`Unable to fetch block ${root.toString("hex")}: ${e}`)
       }
     }
   }
@@ -90,7 +90,7 @@ export class RegularSync {
   }
 
   public async start(): Promise<void> {
-    this.logger.debug("regular sync start");
+    this.logger.verbose("regular sync start");
     this.network.gossip.subscribeToBlocks();
     this.network.gossip.subscribeToAttestations();
     this.network.gossip.on(BLOCK_TOPIC, this.receiveBlock);
@@ -102,7 +102,7 @@ export class RegularSync {
   }
 
   public async stop(): Promise<void> {
-    this.logger.debug("regular sync stop");
+    this.logger.verbose("regular sync stop");
     this.network.gossip.unsubscribeToBlocks();
     this.network.gossip.unsubscribeToAttestations();
     this.network.gossip.removeListener(BLOCK_TOPIC, this.receiveBlock);
