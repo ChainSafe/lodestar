@@ -114,13 +114,13 @@ export class InteropCommand implements CliCommand {
 
     let peerId;
     if (options["peerId"]) {
-      peerId = await promisify(PeerId.createFromHexString)(options["peerId"])
+      peerId = PeerId.createFromHexString(options["peerId"])
     } else if (options["peerIdFile"]) {
       peerId = loadPeerId(options["peerId"]);
     } else {
       peerId = createPeerId();
     }
-    const libp2p = await peerId
+    const libp2p = await Promise.resolve(peerId)
       .then((peerId) => initializePeerInfo(peerId, conf.network.multiaddrs))
       .then((peerInfo) => new NodejsNode({peerInfo, bootnodes: conf.network.bootnodes}));
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
