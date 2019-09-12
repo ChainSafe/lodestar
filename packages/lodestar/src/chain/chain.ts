@@ -17,7 +17,7 @@ import {IBeaconMetrics} from "../metrics";
 
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
 
-import {stateTransition} from "./stateTransition";
+import {processSlots, stateTransition} from "./stateTransition";
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 import {
   computeEpochOfSlot,
@@ -34,6 +34,7 @@ import {Block} from "ethers/providers";
 import Queue from "queue";
 import fs from "fs";
 import {sleep} from "../validator/services/attestation";
+import {getCurrentSlot} from "./stateTransition/util/genesis";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -83,7 +84,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   public async start(): Promise<void> {
-    const state = await this.db.state.getLatest();
+    const state = this.latestState || await this.db.state.getLatest();
     // if state doesn't exist in the db, the chain maybe hasn't started
     if(!state) {
       // check every block if genesis
@@ -220,6 +221,17 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     });
   };
 
+  public async advanceState(slot?: Slot): Promise<void> {
+    const targetSlot = slot || getCurrentSlot(this.config, this.latestState.genesisTime);
+
+    const state = this.latestState;
+
+    processSlots(this.config, state, targetSlot);
+
+    this.latestState = state;
+    await this.db.state.setUnderRoot(state);
+    await this.db.chain.setLatestStateRoot(hashTreeRoot(state, this.config.types.BeaconState));
+  }
 
   public async applyForkChoiceRule(): Promise<void> {
     const currentRoot = await this.db.chain.getChainHeadRoot();

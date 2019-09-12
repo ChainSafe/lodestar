@@ -11,7 +11,7 @@ import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/main
 import {ILogger, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
-import {generateCommanderOptions, optionsToConfig, } from "../util";
+import {generateCommanderOptions, optionsToConfig,} from "../util";
 import {rmDir} from "../../util/file";
 import {getTomlConfig} from "../../util/file";
 import Validator from "../../validator";
@@ -28,8 +28,11 @@ import {existsSync, mkdirSync} from "fs";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 import {intDiv} from "../../util/math";
 import {signingRoot} from "@chainsafe/ssz";
-import { OperationsModule } from "../../opPool/modules/abstract";
-import { parse } from "url";
+import {OperationsModule} from "../../opPool/modules/abstract";
+import {parse} from "url";
+import {computeEpochOfSlot, computeStartSlotOfEpoch, getCurrentEpoch} from "../../chain/stateTransition/util";
+import {getCurrentSlot} from "../../chain/stateTransition/util/genesis";
+import Queue from "queue";
 
 interface IInteropCommandOptions {
   loggingLevel?: string;
@@ -109,6 +112,8 @@ export class InteropCommand implements CliCommand {
       const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
       const state = quickStartOptionToState(config, tree, options.quickStart);
       await this.node.chain.initializeBeaconChain(state, tree);
+      const targetSlot = computeStartSlotOfEpoch(config, computeEpochOfSlot(config, getCurrentSlot(config, state.genesisTime)));
+      await this.node.chain.advanceState(targetSlot);
     } else {
       throw new Error("Missing --quickstart flag");
     }
