@@ -28,6 +28,10 @@ import {existsSync, mkdirSync} from "fs";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 import {intDiv} from "../../util/math";
 import {signingRoot} from "@chainsafe/ssz";
+import { OperationsModule } from "../../opPool/modules/abstract";
+import { parse } from "url";
+import { loadPeerId, NodejsNode } from "../../network/nodejs";
+import { initializePeerInfo, createPeerId } from "../../network";
 import {OperationsModule} from "../../opPool/modules/abstract";
 import {parse} from "url";
 import {computeEpochOfSlot, computeStartSlotOfEpoch, getCurrentEpoch} from "../../chain/stateTransition/util";
@@ -58,6 +62,7 @@ export class InteropCommand implements CliCommand {
       .option("-v, --validators [range]", "Start validators, single number - validators 0-number, x,y - validators between x and y", 0)
       .option("-p, --preset [preset]", "Minimal/mainnet", "mainnet")
       .option("-r, --resetDb", "Reset the database", true)
+      .option("--peer-id [peerId]","peer id json file")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
@@ -106,9 +111,18 @@ export class InteropCommand implements CliCommand {
       }
     }
 
+    let peerId;
+    if (options["peerId"]) {
+      peerId = loadPeerId(options["peerId"]);
+    } else {
+      peerId = createPeerId();
+    }
+    const libp2p = await peerId
+      .then((peerId) => initializePeerInfo(peerId, conf.network.multiaddrs))
+      .then((peerInfo) => new NodejsNode({peerInfo, bootnodes: conf.network.bootnodes}));
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
     if (options.quickStart) {
-      this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier()});
+      this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier(), libp2p});
       const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
       const state = quickStartOptionToState(config, tree, options.quickStart);
       await this.node.chain.initializeBeaconChain(state, tree);
