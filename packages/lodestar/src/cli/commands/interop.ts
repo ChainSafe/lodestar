@@ -7,6 +7,10 @@ import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
 import fs from "fs";
 
+import PeerId from "peer-id";
+import promisify from "promisify-es6";
+// eslint-disable-next-line
+import yaml from "js-yaml";
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ILogger, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
@@ -57,7 +61,9 @@ export class InteropCommand implements CliCommand {
       .option("-v, --validators [range]", "Start validators, single number - validators 0-number, x,y - validators between x and y", 0)
       .option("-p, --preset [preset]", "Minimal/mainnet", "mainnet")
       .option("-r, --resetDb", "Reset the database", true)
-      .option("--peer-id [peerId]","peer id json file")
+      .option("--peer-id-file [peerIdFile]","peer id json file")
+      .option("--peer-id [peerId]","peer id hex string")
+      .option("--validators-from-yaml-key-file [validatorsYamlFile]", "validator keys")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
@@ -108,6 +114,8 @@ export class InteropCommand implements CliCommand {
 
     let peerId;
     if (options["peerId"]) {
+      peerId = await promisify(PeerId.createFromPrivKey)(Buffer.from(options["peerId"].slice(2)))
+    } else if (options["peerIdFile"]) {
       peerId = loadPeerId(options["peerId"]);
     } else {
       peerId = createPeerId();
@@ -132,38 +140,44 @@ export class InteropCommand implements CliCommand {
       } else {
         this.startValidators(0, parseInt(options.validators), this.node);
       }
+    } else if (options.validatorsYamlFile) {
+      const privkeys = yaml.load(options.validatorsYamlFile);
+      for (const privkey of privkeys) {
+        this.startValidator(Buffer.from(privkey.slice(2), "hex"), this.node);
+      }
     }
   }
+
+  private validatorDir = './validators';
 
   private async startValidators(from: number, to: number, node: BeaconNode): Promise<void> {
-    const validatorDir = './validators';
-    if(!existsSync(validatorDir)) {
-      mkdirSync(validatorDir);
+    if(!existsSync(this.validatorDir)) {
+      mkdirSync(this.validatorDir);
     }
     for(let i = from; i < to; i++) {
-      const modules = {
-        config: node.config,
-        sync: node.sync,
-        eth1: node.eth1,
-        opPool: node.opPool,
-        logger: new WinstonLogger({module: "API"}),
-        chain: node.chain,
-        db: node.db
-      };
-      const rpcInstance = new RpcClientOverInstance({
-        config: node.config,
-        validator: new ValidatorApi({}, modules),
-        beacon: new BeaconApi({}, modules),
-      });
-      const keypair = new Keypair(PrivateKey.fromBytes(interopKeypair(i).privkey));
-      const index = await node.db.getValidatorIndex(keypair.publicKey.toBytesCompressed());
-      const validator = new Validator(
-        {keypair, rpcInstance, db: {name: validatorDir + '/validator-db-' + index}},
-        {config: node.config, logger: new WinstonLogger({module: `Validator #${index}`})});
-      validator.start();
+      this.startValidator(interopKeypair(i).privkey, node);
     }
   }
-
-
-
+  private async startValidator(privkey: Buffer, node): Promise<void> {
+    const modules = {
+      config: node.config,
+      sync: node.sync,
+      eth1: node.eth1,
+      opPool: node.opPool,
+      logger: new WinstonLogger({module: "API"}),
+      chain: node.chain,
+      db: node.db
+    };
+    const rpcInstance = new RpcClientOverInstance({
+      config: node.config,
+      validator: new ValidatorApi({}, modules),
+      beacon: new BeaconApi({}, modules),
+    });
+    const keypair = new Keypair(PrivateKey.fromBytes(privkey));
+    const index = await node.db.getValidatorIndex(keypair.publicKey.toBytesCompressed());
+    const validator = new Validator(
+      {keypair, rpcInstance, db: {name: this.validatorDir + '/validator-db-' + index}},
+      {config: node.config, logger: new WinstonLogger({module: `Validator #${index}`})});
+    validator.start();
+  }
 }
