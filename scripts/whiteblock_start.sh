@@ -77,7 +77,7 @@ done
 
 # wrap hex strings in quotes
 REAL_VALIDATOR_KEYS=/tmp/keys.yaml
-sed 's/0x/\"0x/g' keys.yaml | sed 's/$/"/g' > $REAL_VALIDATOR_KEYS
+sed 's/0x/\"0x/g' $VALIDATOR_KEYS | sed 's/$/"/g' > $REAL_VALIDATOR_KEYS
 
 /lodestar/packages/lodestar/bin/lodestar \
  	interop \
