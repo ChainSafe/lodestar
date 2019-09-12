@@ -34,7 +34,7 @@ import {Block} from "ethers/providers";
 import fs from "fs";
 import {sleep} from "../validator/services/attestation";
 import {priorityQueue, queue} from "async";
-import {FastPriorityQueue} from "fastpriorityqueue";
+import FastPriorityQueue from "fastpriorityqueue";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -82,7 +82,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     // this.blockProcessingQueue = priorityQueue(async (task: Function) => {
     //   await task();
     // }, 1);
-    this.blockProcessingQueue = FastPriorityQueue((a: BeaconBlock, b: BeaconBlock) => {
+    this.blockProcessingQueue = new FastPriorityQueue((a: BeaconBlock, b: BeaconBlock) => {
       return a.slot < b.slot;
     });
   }
@@ -174,8 +174,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     }
     
     await this.processBlock(block, blockHash);
-    let nextBlockInQueue = this.blockProcessingQueue.peek(); 
-    while (!nextBlockInQueue){
+    let nextBlockInQueue = this.blockProcessingQueue.peek();
+    while (nextBlockInQueue) {
       const latestBlock = await this.db.block.getChainHead();
       if (nextBlockInQueue.parentRoot.equals(signingRoot(latestBlock, this.config.types.BeaconBlock))) {
         await this.processBlock(nextBlockInQueue, signingRoot(nextBlockInQueue, this.config.types.BeaconBlock))
