@@ -79,10 +79,10 @@ done
  	interop \
 	-p minimal \
 	--db l1 \
-	-r
-	--multiaddrs /ip4/0.0.0.0/tcp/$PORT
-	--peer-id $IDENTITY
-	 -q $GEN_STATE
+	-r \
+	--multiaddrs /ip4/0.0.0.0/tcp/$PORT \
+	--peer-id $IDENTITY \
+	 -q $GEN_STATE \
 	--validators-from-yaml-key-file $VALIDATOR_KEYS
 
 trap 'trap - SIGTERM && kill 0' SIGINT SIGTERM EXIT
