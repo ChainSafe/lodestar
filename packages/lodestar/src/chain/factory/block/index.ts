@@ -45,10 +45,8 @@ export async function assembleBlock(
     body: await assembleBody(config, opPool, eth1, merkleTree, currentState, randao),
   };
 
-  //This will effectively copy state so we avoid modifying existing state
-  const nextState = {...currentState};
-  stateTransition(config, nextState, block, false, false);
+  stateTransition(config, currentState, block, false, false);
 
-  block.stateRoot = hashTreeRoot(nextState, config.types.BeaconState);
+  block.stateRoot = hashTreeRoot(currentState, config.types.BeaconState);
   return block;
 }
