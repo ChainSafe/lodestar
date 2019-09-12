@@ -5,15 +5,14 @@
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
-import fs from "fs";
+import fs, {existsSync, mkdirSync} from "fs";
 
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ILogger, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
 import {generateCommanderOptions, optionsToConfig,} from "../util";
-import {rmDir} from "../../util/file";
-import {getTomlConfig} from "../../util/file";
+import {getTomlConfig, rmDir} from "../../util/file";
 import Validator from "../../validator";
 import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {InteropEth1Notifier} from "../../eth1/impl/interop";
@@ -24,19 +23,11 @@ import {interopKeypair} from "../../interop/keypairs";
 import {RpcClientOverInstance} from "../../validator/rpc";
 import {ValidatorApi} from "../../api/rpc/api/validator";
 import {BeaconApi} from "../../api/rpc/api/beacon";
-import {existsSync, mkdirSync} from "fs";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
-import {intDiv} from "../../util/math";
-import {signingRoot} from "@chainsafe/ssz";
-import { OperationsModule } from "../../opPool/modules/abstract";
-import { parse } from "url";
-import { loadPeerId, NodejsNode } from "../../network/nodejs";
-import { initializePeerInfo, createPeerId } from "../../network";
-import {OperationsModule} from "../../opPool/modules/abstract";
-import {parse} from "url";
-import {computeEpochOfSlot, computeStartSlotOfEpoch, getCurrentEpoch} from "../../chain/stateTransition/util";
+import {loadPeerId, NodejsNode} from "../../network/nodejs";
+import {createPeerId, initializePeerInfo} from "../../network";
+import {computeEpochOfSlot, computeStartSlotOfEpoch} from "../../chain/stateTransition/util";
 import {getCurrentSlot} from "../../chain/stateTransition/util/genesis";
-import Queue from "queue";
 
 interface IInteropCommandOptions {
   loggingLevel?: string;
