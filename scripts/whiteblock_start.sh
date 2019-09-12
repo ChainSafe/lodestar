@@ -85,6 +85,7 @@ sed 's/0x/\"0x/g' $VALIDATOR_KEYS | sed 's/$/"/g' > $REAL_VALIDATOR_KEYS
 	--db l1 \
 	-r \
 	--multiaddrs /ip4/0.0.0.0/tcp/$PORT \
+    --bootnodes $PEERS \
 	--peer-id $IDENTITY \
 	 -q $GEN_STATE \
 	--validators-from-yaml-key-file $REAL_VALIDATOR_KEYS >> /tmp/beacon.log
