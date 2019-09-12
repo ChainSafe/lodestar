@@ -140,9 +140,10 @@ export class InteropCommand implements CliCommand {
       } else {
         this.startValidators(0, parseInt(options.validators), this.node);
       }
-    } else if (options.validatorsYamlFile) {
-      const privkeys = yaml.load(options.validatorsYamlFile);
-      for (const privkey of privkeys) {
+    } else if (options.validatorsFromYamlKeyFile) {
+      // @ts-ignore
+      const keys = yaml.load(fs.readFileSync(options.validatorsFromYamlKeyFile));
+      for (const {privkey} of keys) {
         this.startValidator(Buffer.from(privkey.slice(2), "hex"), this.node);
       }
     }
