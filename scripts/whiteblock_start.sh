@@ -87,7 +87,7 @@ sed 's/0x/\"0x/g' keys.yaml | sed 's/$/"/g' > $REAL_VALIDATOR_KEYS
 	--multiaddrs /ip4/0.0.0.0/tcp/$PORT \
 	--peer-id $IDENTITY \
 	 -q $GEN_STATE \
-	--validators-from-yaml-key-file $REAL_VALIDATOR_KEYS
+	--validators-from-yaml-key-file $REAL_VALIDATOR_KEYS >> /tmp/beacon.log
 
 trap 'trap - SIGTERM && kill 0' SIGINT SIGTERM EXIT
 
