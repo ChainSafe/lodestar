@@ -178,7 +178,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     // process current slot
     const post = await this.runStateTransition(block, pre);
 
-    this.logger.info(`Slot ${block.slot} Block 0x${blockHash.toString('hex')} passed state transition`);
+    this.logger.info(`Slot ${block.slot} Block 0x${blockHash.toString('hex')} ${hashTreeRoot(post, this.config.types.BeaconState).toString('hex')} passed state transition`);
     await this.opPool.processBlockOperations(block);
     block.body.attestations.forEach((attestation) => {
       this.receiveAttestation(attestation);
