@@ -220,7 +220,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   public async advanceState(slot?: Slot): Promise<void> {
     const targetSlot = slot || getCurrentSlot(this.config, this.latestState.genesisTime);
-
+    this.logger.info(`Manually advancing slot from state slot ${this.latestState.slot} to ${targetSlot} `);
     const state = this.latestState;
 
     processSlots(this.config, state, targetSlot);
