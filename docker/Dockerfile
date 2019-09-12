@@ -1,37 +1,19 @@
-FROM node:10.16-alpine
+FROM gcr.io/whiteblock/base:ubuntu1804
 
-WORKDIR /usr/app
+RUN apt-get update
+RUN apt-get install -y python g++ linux-headers-$(uname -r) paxctl gcc musl-dev
+RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
+RUN apt-get update && apt-get install -f -y nodejs
+RUN npm install -g yarn
 
-RUN apk add --update git python make g++ linux-headers paxctl gcc && \
-  rm -rf /tmp/* /var/cache/apk/*
-
-COPY lerna.json .
-COPY package.json .
-COPY packages/lodestar/package.json ./packages/lodestar/package.json
-COPY yarn.lock .
+RUN git clone https://github.com/ChainSafe/lodestar.git
+WORKDIR /lodestar
+RUN git checkout interop
 
 RUN yarn install --frozen-lockfile && node_modules/.bin/lerna bootstrap && yarn cache clean
 
-COPY . .
+RUN mkdir /launch
 
-RUN node_modules/.bin/lerna run build
+RUN cp /lodestar/scripts/whiteblock_start.sh /launch/start.sh
 
-FROM node:10.16-alpine
-
-RUN apk add --update git python make g++ linux-headers paxctl gcc && \
-  rm -rf /tmp/* /var/cache/apk/*
-
-WORKDIR /app
-
-COPY --from=0 /usr/app/packages/lodestar/lib /app/lib
-COPY --from=0 /usr/app/packages/lodestar/bin /app/bin
-COPY --from=0 /usr/app/packages/lodestar/package.json /app/package.json
-COPY --from=0 /usr/app/yarn.lock /app/yarn.lock
-
-RUN yarn install --frozen-lockfile --production && yarn cache clean && apk del git python g++ gcc make
-
-RUN chown -R node: .
-
-USER node
-
-ENTRYPOINT ["/app/bin/lodestar"]
+ENTRYPOINT ["/bin/bash"]
