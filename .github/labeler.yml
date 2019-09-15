@@ -1,15 +1,15 @@
 BeaconChain:
-- packages/lodestar
+- packages/lodestar/**/*
 
 SSZ:
-- packages/ssz
+- packages/ssz/**/*
 
 Validator:
-- packages/lodestar/validator
+- packages/lodestar/validator/**/*
 
 BLS:
-- packages/bls
+- packages/bls/**/*
 
 Benchmarks:
-- packages/benchmark-utils
-- packages/lodestar/test/benchmarks
+- packages/benchmark-utils/**/*
+- packages/lodestar/test/benchmarks/**/*
