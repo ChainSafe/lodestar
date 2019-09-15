@@ -63,8 +63,13 @@ export class BeaconNode {
     );
     this.config = config;
     this.logger = logger.child(this.conf.logger.node);
-    this.metrics = new BeaconMetrics(this.conf.metrics);
-    this.metricsServer = new HttpMetricsServer(this.conf.metrics, {metrics: this.metrics});
+    this.metrics = new BeaconMetrics(this.conf.metrics, {
+      logger: logger.child(this.conf.logger.metrics),
+    });
+    this.metricsServer = new HttpMetricsServer(this.conf.metrics, {
+      metrics: this.metrics,
+      logger: logger.child(this.conf.logger.metrics)
+    });
     this.reps = new ReputationStore();
     this.db = new BeaconDb({
       config,

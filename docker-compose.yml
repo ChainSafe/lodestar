@@ -1,0 +1,17 @@
+version: '2'
+services:
+    prometheus:
+        image: prom/prometheus:v2.9.2
+        volumes:
+            - ./prometheus.yml:/etc/prometheus/prometheus.yml
+        ports:
+            - '9090:9090'
+    lodestar:
+        build:
+            context: .
+            dockerfile: docker/Dockerfile
+        volumes:
+            - ./:/root/lodestar
+            - node_modules:/root/lodestar/node_modules
+volumes:
+  node_modules:

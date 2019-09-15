@@ -1,19 +1,16 @@
-FROM gcr.io/whiteblock/base:ubuntu1804
+FROM node:10
 
-RUN apt-get update
-RUN apt-get install -y python g++ linux-headers-$(uname -r) paxctl gcc musl-dev
-RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
-RUN apt-get update && apt-get install -f -y nodejs
 RUN npm install -g yarn
 
-RUN git clone https://github.com/ChainSafe/lodestar.git
-WORKDIR /lodestar
-RUN git checkout interop
+COPY . /root/lodestar
 
-RUN yarn install --frozen-lockfile && node_modules/.bin/lerna bootstrap && yarn cache clean
+WORKDIR /root/lodestar
 
-RUN mkdir /launch
+RUN yarn
 
-RUN cp /lodestar/scripts/whiteblock_start.sh /launch/start.sh
+#ENTRYPOINT ["./packages/lodestar/bin/lodestar"]
+CMD ./packages/lodestar/bin/lodestar interop -p minimal --db l1 -q 1568584956,8 --multiaddrs /ip4/127.0.0.1/tcp/30607 -r -v 8
 
-ENTRYPOINT ["/bin/bash"]
+
+
+

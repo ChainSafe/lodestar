@@ -22,6 +22,14 @@ export const MetricsOptions: IConfigurationModule = {
       cli: {
         flag: "metricsPort",
       },
+    },
+    {
+      name: "boolean",
+      type: "bool",
+      configurable: true,
+      cli: {
+        flag: "metricsEnabled"
+      }
     }
   ],
 };
