@@ -52,7 +52,7 @@ describe('validator rpc api', function () {
     expect(result).to.be.not.null;
     expect(
       assembleBlockStub
-        .withArgs(config, dbStub, opStub, eth1Stub, 1, Buffer.alloc(96, 0))
+        .withArgs(config, chainStub, dbStub, opStub, eth1Stub, 1, Buffer.alloc(96, 0))
         .calledOnce
     ).to.be.true;
   });
