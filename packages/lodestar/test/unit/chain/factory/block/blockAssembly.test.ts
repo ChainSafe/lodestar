@@ -8,6 +8,8 @@ import {OpPool} from "../../../../../src/opPool";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {generateState} from "../../../../utils/state";
+import {StatefulDagLMDGHOST} from "../../../../../../lodestar/src/chain/forkChoice";
+import {BeaconChain} from "../../../../../../lodestar/src/chain";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {BlockRepository, MerkleTreeRepository, StateRepository} from "../../../../../src/db/api/beacon/repositories";
 import {ProgressiveMerkleTree} from "../../../../../src/util/merkleTree";
@@ -16,11 +18,15 @@ describe('block assembly', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let assembleBodyStub, processBlockStub, opPool, beaconDB, eth1;
+  let assembleBodyStub, chainStub, forkChoiceStub, processBlockStub, opPool, beaconDB, eth1;
 
   beforeEach(() => {
     assembleBodyStub = sandbox.stub(blockBodyAssembly, 'assembleBody');
     processBlockStub = sandbox.stub(blockTransitions, 'processBlock');
+
+    forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
+    chainStub = sandbox.createStubInstance(BeaconChain);
+    chainStub.forkChoice = forkChoiceStub;
     opPool = sandbox.createStubInstance(OpPool);
     beaconDB = {
       block: sandbox.createStubInstance(BlockRepository),
@@ -40,7 +46,7 @@ describe('block assembly', function () {
     beaconDB.merkleTree.getProgressiveMerkleTree.resolves(ProgressiveMerkleTree.empty(32));
     assembleBodyStub.resolves(generateEmptyBlock().body);
     try {
-      const result = await assembleBlock(config, beaconDB, opPool, eth1, 1, Buffer.alloc(96, 0));
+      const result = await assembleBlock(config, chainStub, beaconDB, opPool, eth1, 1, Buffer.alloc(96, 0));
       expect(result).to.not.be.null;
       expect(result.slot).to.equal(1);
       expect(result.stateRoot).to.not.be.null;

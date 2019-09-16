@@ -88,7 +88,7 @@ describe("[network] rpc", () => {
     });
     try {
       const helloExpected: Hello = {
-        forkVersion: Buffer.alloc(4),
+        headForkVersion: Buffer.alloc(4),
         finalizedRoot: Buffer.alloc(32),
         finalizedEpoch: 0,
         headRoot: Buffer.alloc(32),
@@ -107,7 +107,7 @@ describe("[network] rpc", () => {
     });
     try {
       const helloExpected: Hello = {
-        forkVersion: Buffer.alloc(4),
+        headForkVersion: Buffer.alloc(4),
         finalizedRoot: Buffer.alloc(32),
         finalizedEpoch: 0,
         headRoot: Buffer.alloc(32),
