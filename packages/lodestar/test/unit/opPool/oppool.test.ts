@@ -3,6 +3,7 @@ import {expect} from "chai";
 import {OpPool} from "../../../src/opPool";
 import {generateEmptyBlock} from "../../utils/block";
 import {EthersEth1Notifier} from "../../../src/eth1";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   AttesterSlashingRepository,
   DepositRepository,
@@ -26,6 +27,7 @@ describe("operation pool", function () {
     };
     eth1Stub = sandbox.createStubInstance(EthersEth1Notifier);
     opPool = new OpPool({}, {
+      config: config,
       db: dbStub,
       eth1: eth1Stub
     });

@@ -88,7 +88,7 @@ describe("syncing", function () {
     attestation.data.target.epoch = 2;
     dbStub.attestation.has.resolves(false);
     dbStub.state.getLatest.resolves(state);
-    opPoolStub.attestations = new AttestationOperations(dbStub.attestation);
+    opPoolStub.attestations = new AttestationOperations(dbStub.attestation, {config});
     dbStub.attestation.setUnderRoot.resolves(0);
     chainStub.receiveAttestation.resolves(0);
     try {
