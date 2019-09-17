@@ -119,7 +119,9 @@ export function _hashTreeRoot(value: SerializableValue, type: FullSSZType): Buff
         (value as BitList).bitLength
       );
     case Type.byteList:
+      // eslint-disable-next-line no-case-declarations
       const sizeOfByte = 1;
+      // eslint-disable-next-line no-case-declarations
       const chunkCount = Math.floor((type.maxLength * sizeOfByte + 31) / BYTES_PER_CHUNK);
       return mixInLength(
         merkleize(pack([value], type), chunkCount), (value as Bytes).length);

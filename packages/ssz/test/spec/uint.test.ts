@@ -3,11 +3,11 @@ import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import BN from "bn.js";
 
 import {deserialize, serialize} from "../../src";
-import {UintCase} from "../util/specTypes/uint";
+import {IUintCase} from "../util/specTypes/uint";
 
 // uint bounds
 
-describeMultiSpec<UintCase, string>(
+describeMultiSpec<IUintCase, string>(
   join(__dirname, "../../../spec-test-cases/tests/ssz_generic/uint/uint_bounds.yaml"),
   serialize,
   ({value, type}: any) => ([new BN(value), type]),
@@ -16,7 +16,7 @@ describeMultiSpec<UintCase, string>(
   ({valid}: any) => !valid,
 );
 
-describeMultiSpec<UintCase, string>(
+describeMultiSpec<IUintCase, string>(
   join(__dirname, "../../../spec-test-cases/tests/ssz_generic/uint/uint_bounds.yaml"),
   deserialize,
   ({ssz, type}: any) => ([Buffer.from(ssz.slice(2), "hex"), type]),
@@ -28,7 +28,7 @@ describeMultiSpec<UintCase, string>(
 
 // uint random
 
-describeMultiSpec<UintCase, string>(
+describeMultiSpec<IUintCase, string>(
   join(__dirname, "../../../spec-test-cases/tests/ssz_generic/uint/uint_random.yaml"),
   serialize,
   ({value, type}: any) => ([new BN(value), type]),
@@ -37,7 +37,7 @@ describeMultiSpec<UintCase, string>(
   ({valid}: any) => !valid,
 );
 
-describeMultiSpec<UintCase, string>(
+describeMultiSpec<IUintCase, string>(
   join(__dirname, "../../../spec-test-cases/tests/ssz_generic/uint/uint_random.yaml"),
   deserialize,
   ({ssz, type}: any) => ([Buffer.from(ssz.slice(2), "hex"), type]),
@@ -49,7 +49,7 @@ describeMultiSpec<UintCase, string>(
 
 // uint wrong length
 
-describeMultiSpec<UintCase, string>(
+describeMultiSpec<IUintCase, string>(
   join(__dirname, "../../../spec-test-cases/tests/ssz_generic/uint/uint_wrong_length.yaml"),
   deserialize,
   ({ssz, type}: any) => ([Buffer.from(ssz.slice(2), "hex"), type]),
