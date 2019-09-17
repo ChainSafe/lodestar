@@ -25,7 +25,7 @@ export function createResponseEvent(id: RequestId): string {
 }
 
 const REQ_PROTOCOL = "/eth2/beacon_chain/req/{method}/{version}/{encoding}";
-export function createRpcProtocol(method: string, encoding: string, version: number = 1) {
+export function createRpcProtocol(method: string, encoding: string, version: number = 1): string {
   return REQ_PROTOCOL
     .replace("{method}", method)
     .replace("{encoding}", encoding)

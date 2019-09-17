@@ -1,7 +1,7 @@
-import {BaseCase, describeMultiSpec} from "../../../src";
+import {IBaseCase, describeMultiSpec} from "../../../src";
 import path from "path";
 
-interface BulkTestCase extends BaseCase {
+interface BulkTestCase extends IBaseCase {
   input: string;
   output: string;
 }

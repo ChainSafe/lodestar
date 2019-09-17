@@ -49,7 +49,12 @@ export class ValidatorApi implements IValidatorApi {
     return getValidatorDuties(this.config, this.db, validatorPublicKeys, epoch);
   }
 
-  public async produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, slot: Slot, shard: Shard): Promise<Attestation> {
+  public async produceAttestation(
+    validatorPubKey: BLSPubkey,
+    pocBit: boolean,
+    slot: Slot,
+    shard: Shard
+  ): Promise<Attestation> {
     return produceAttestation(
       {config: this.config, chain: this.chain, db: this.db},
       validatorPubKey,

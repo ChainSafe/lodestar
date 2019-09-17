@@ -53,7 +53,7 @@ export class ApiService implements IService {
     return new JsonRpc(this.opts.rpc, modules);
   }
 
-  private setupRestApi(modules: IApiModules) {
+  private setupRestApi(modules: IApiModules): RestApi {
     return new RestApi(this.opts.rest, modules);
   }
 }

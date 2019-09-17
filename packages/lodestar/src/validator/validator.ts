@@ -14,7 +14,7 @@
  * 6. Repeat step 5
  */
 import BlockProposingService from "./services/block";
-import {Epoch, Slot} from "@chainsafe/eth2.0-types";
+import {Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {GenesisInfo} from "./types";
 import {IRpcClient, RpcClientOverWs} from "./rpc";
@@ -64,18 +64,6 @@ class Validator {
     this.initApiClient();
   }
 
-  private initApiClient(): void {
-    if(this.opts.rpcInstance) {
-      this.apiClient = this.opts.rpcInstance;
-    } else if(this.opts.rpc) {
-      this.apiClient = new RpcClientOverWs({rpcUrl: this.opts.rpc}, {config: this.config});
-    } else if(this.opts.restUrl) {
-      this.apiClient = new ApiClientOverRest(this.opts.restUrl, this.logger);
-    } else {
-      throw new Error("Validator requires either RpcClient instance or rpc url as params");
-    }
-  }
-
   /**
    * Creates a new block processing service and starts it.
    */
@@ -91,6 +79,18 @@ class Validator {
   public async stop(): Promise<void> {
     this.isRunning = false;
     await this.apiClient.disconnect();
+  }
+
+  private initApiClient(): void {
+    if(this.opts.rpcInstance) {
+      this.apiClient = this.opts.rpcInstance;
+    } else if(this.opts.rpc) {
+      this.apiClient = new RpcClientOverWs({rpcUrl: this.opts.rpc}, {config: this.config});
+    } else if(this.opts.restUrl) {
+      this.apiClient = new ApiClientOverRest(this.opts.restUrl, this.logger);
+    } else {
+      throw new Error("Validator requires either RpcClient instance or rpc url as params");
+    }
   }
 
   private async setup(): Promise<void> {
@@ -129,7 +129,7 @@ class Validator {
   private async setupRPC(): Promise<void> {
     this.logger.info("Setting up RPC connection...");
     await this.apiClient.connect();
-    this.logger.info(`RPC connection successfully established: ${this.opts.rpc || 'inmemory'}!`);
+    this.logger.info(`RPC connection successfully established: ${this.opts.rpc || "inmemory"}!`);
   }
 
   /**
@@ -154,7 +154,7 @@ class Validator {
   private run(): void {
     this.apiClient.onNewSlot(this.checkDuties);
     this.apiClient.onNewEpoch(this.lookAhead);
-  };
+  }
 
   private async checkDuties(slot: Slot): Promise<void> {
     const validatorDuty =
@@ -181,9 +181,9 @@ class Validator {
     }
   }
 
-  private async lookAhead(currentEpoch: Epoch): Promise<void> {
-    //in phase 1, it should obtain duties for next epoch and trigger required shard sync
-  }
+  // private async lookAhead(currentEpoch: Epoch): Promise<void> {
+  //   //in phase 1, it should obtain duties for next epoch and trigger required shard sync
+  // }
 }
 
 export default Validator;

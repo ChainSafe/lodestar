@@ -1,7 +1,7 @@
-import Axios, {AxiosResponse, AxiosInstance, AxiosError} from "axios";
-import { ILogger } from "../logger";
+import Axios, {AxiosError, AxiosInstance, AxiosResponse} from "axios";
+import {ILogger} from "../logger";
 
-export interface HttpClientOptions {
+export interface IHttpClientOptions {
   // Add more options if needed
   urlPrefix: string;
 }
@@ -10,7 +10,7 @@ export class HttpClient {
   private client: AxiosInstance;
   private logger: ILogger;
 
-  public constructor(opt: Partial<HttpClientOptions>, {logger}: {logger: ILogger}) {
+  public constructor(opt: Partial<IHttpClientOptions>, {logger}: {logger: ILogger}) {
     this.client = Axios.create({
       baseURL: opt.urlPrefix || ""
     });
@@ -30,7 +30,7 @@ export class HttpClient {
 
   public async post<T, T2>(url: string, data: T): Promise<T2> {
     try {
-      const result: AxiosResponse<any> = await this.client.post(url, data);
+      const result: AxiosResponse<T2> = await this.client.post(url, data);
       this.logger.debug(`HttpClient POST url=${url} result=${JSON.stringify(result)}`);
       return result.data;
     } catch(reason) {
@@ -40,7 +40,7 @@ export class HttpClient {
   }
 }
 
-const handleError = (error: AxiosError) : Error => {
+const handleError = (error: AxiosError): Error => {
   let message: string | number;
   if (error.response) {
     message = error.response.status;

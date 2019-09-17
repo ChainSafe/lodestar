@@ -49,7 +49,7 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
   }
 
   public async deleteAttestations(pubKey: BLSPubkey, attestations: Attestation[]): Promise<void> {
-    const criteria: any[] = [];
+    const criteria: ReturnType<typeof encodeKey>[] = [];
     attestations.forEach((attestation) =>
       criteria.push(encodeKey(Bucket.proposedAttestations, "" + pubKey.toString("hex") + attestation.data.target.epoch))
     );

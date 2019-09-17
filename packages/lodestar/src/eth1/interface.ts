@@ -4,7 +4,7 @@
 
 import {EventEmitter} from "events";
 
-import {BeaconState, bytes32, Deposit, Epoch, Eth1Data, Hash, number64} from "@chainsafe/eth2.0-types";
+import {BeaconState, Deposit, Epoch, Eth1Data, Hash, number64} from "@chainsafe/eth2.0-types";
 import {Block} from "ethers/providers";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";

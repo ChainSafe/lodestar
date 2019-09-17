@@ -220,23 +220,12 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     this.justified = this.nodes[rootHex];
   }
 
-  private prune(): void {
-    if (this.finalized) {
-      Object.values(this.nodes).forEach((n) => {
-        if (n.slot < this.finalized.slot) {
-          delete this.nodes[n.blockRoot];
-        }
-      });
-      this.finalized.parent = null;
-    }
-  }
-
   public syncChanges(): void {
     Object.values(this.aggregator.latestAggregates).forEach((agg) => {
       if (!agg.prevWeight.eq(agg.weight)) {
         const delta = agg.weight.sub(agg.prevWeight);
         agg.prevWeight = agg.weight;
-        
+
         this.nodes[agg.target].propagateWeightChange(delta);
       }
     });
@@ -251,5 +240,16 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     }
     //@ts-ignore
     return Buffer.from(this.justified.bestTarget.blockRoot, "hex");
+  }
+
+  private prune(): void {
+    if (this.finalized) {
+      Object.values(this.nodes).forEach((n) => {
+        if (n.slot < this.finalized.slot) {
+          delete this.nodes[n.blockRoot];
+        }
+      });
+      this.finalized.parent = null;
+    }
   }
 }

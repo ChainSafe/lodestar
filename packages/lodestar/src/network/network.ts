@@ -59,6 +59,24 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     });
   }
 
+
+  public async start(): Promise<void> {
+    await this.inited;
+    await promisify(this.libp2p.start.bind(this.libp2p))();
+    await this.reqResp.start();
+    await this.gossip.start();
+    this.libp2p.on("peer:connect", this.emitPeerConnect);
+    this.libp2p.on("peer:disconnect", this.emitPeerDisconnect);
+  }
+  public async stop(): Promise<void> {
+    await this.inited;
+    await this.gossip.stop();
+    await this.reqResp.stop();
+    await promisify(this.libp2p.stop.bind(this.libp2p))();
+    this.libp2p.removeListener("peer:connect", this.emitPeerConnect);
+    this.libp2p.removeListener("peer:disconnect", this.emitPeerDisconnect);
+  }
+
   public getPeers(): PeerInfo[] {
     return this.libp2p.peerBook.getAllArray().filter((peerInfo) => peerInfo.isConnected());
   }
@@ -83,21 +101,4 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     this.metrics.peers.dec();
     this.emit("peer:disconnect", peerInfo);
   };
-
-  public async start(): Promise<void> {
-    await this.inited;
-    await promisify(this.libp2p.start.bind(this.libp2p))();
-    await this.reqResp.start();
-    await this.gossip.start();
-    this.libp2p.on("peer:connect", this.emitPeerConnect);
-    this.libp2p.on("peer:disconnect", this.emitPeerDisconnect);
-  }
-  public async stop(): Promise<void> {
-    await this.inited;
-    await this.gossip.stop();
-    await this.reqResp.stop();
-    await promisify(this.libp2p.stop.bind(this.libp2p))();
-    this.libp2p.removeListener("peer:connect", this.emitPeerConnect);
-    this.libp2p.removeListener("peer:disconnect", this.emitPeerDisconnect);
-  }
 }

@@ -1,6 +1,5 @@
 import {IConfigurationField} from "../util/config";
-import {LogLevel, ILoggerOptions, defaultLogLevel} from "../logger";
-import {LogDescription} from "ethers/utils";
+import {defaultLogLevel, ILoggerOptions, LogLevel} from "../logger";
 
 export interface IBeaconLoggerOptions {
   chain: ILoggerOptions;

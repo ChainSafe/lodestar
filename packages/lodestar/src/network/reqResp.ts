@@ -43,7 +43,7 @@ interface IReqRespEventEmitterClass {
 
 interface IReqRespModules {
   config: IBeaconConfig;
-  libp2p: any;
+  libp2p: LibP2p;
   logger: ILogger;
 }
 
@@ -79,6 +79,27 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
       this.libp2p.unhandle(createRpcProtocol(method, this.encoding));
     });
   }
+
+  public sendResponse(id: RequestId, err: Error, body: ResponseBody): void {
+    // @ts-ignore
+    this.emit(`response ${id}`, err, body);
+  }
+  public async hello(peerInfo: PeerInfo, request: Hello): Promise<Hello> {
+    return await this.sendRequest<Hello>(peerInfo, Method.Hello, request);
+  }
+  public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
+    await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request, true);
+  }
+  public async beaconBlocks(peerInfo: PeerInfo, request: BeaconBlocksRequest): Promise<BeaconBlocksResponse> {
+    return await this.sendRequest<BeaconBlocksResponse>(peerInfo, Method.BeaconBlocks, request);
+  }
+  public async recentBeaconBlocks(
+    peerInfo: PeerInfo,
+    request: RecentBeaconBlocksRequest
+  ): Promise<RecentBeaconBlocksResponse> {
+    return await this.sendRequest<RecentBeaconBlocksResponse>(peerInfo, Method.RecentBeaconBlocks, request);
+  }
+
   /**
    * Return a "through" pull-stream that processes a request and waits for/returns a response
    */
@@ -138,7 +159,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     };
   };
   private encodeRequest(method: Method, body: RequestBody): Buffer {
-    let output = Buffer.alloc(0);;
+    let output = Buffer.alloc(0);
     switch (method) {
       case Method.Hello:
         output = serialize(body, this.config.types.Hello);
@@ -239,7 +260,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
   ): Promise<T> {
     const protocol = createRpcProtocol(method, this.encoding);
     return await new Promise((resolve, reject) => {
-      this.libp2p.dialProtocol(peerInfo, protocol, (err, conn) => {
+      this.libp2p.dialProtocol(peerInfo, protocol, (err, conn): unknown => {
         if (err) {
           return reject(err);
         }
@@ -247,7 +268,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
         const responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
         // pull-stream through that will resolve after the request is sent
         // @ts-ignore
-        const requestOnlyThrough =(read) => {
+        const requestOnlyThrough =(read): unknown => {
           // @ts-ignore
           return (end, cb) => {
             // @ts-ignore
@@ -277,21 +298,5 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
         );
       });
     });
-  }
-  public sendResponse(id: RequestId, err: Error, body: ResponseBody): void {
-    // @ts-ignore
-    this.emit(`response ${id}`, err, body);
-  }
-  public async hello(peerInfo: PeerInfo, request: Hello): Promise<Hello> {
-    return await this.sendRequest<Hello>(peerInfo, Method.Hello, request);
-  }
-  public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
-    await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request, true);
-  }
-  public async beaconBlocks(peerInfo: PeerInfo, request: BeaconBlocksRequest): Promise<BeaconBlocksResponse> {
-    return await this.sendRequest<BeaconBlocksResponse>(peerInfo, Method.BeaconBlocks, request);
-  }
-  public async recentBeaconBlocks(peerInfo: PeerInfo, request: RecentBeaconBlocksRequest): Promise<RecentBeaconBlocksResponse> {
-    return await this.sendRequest<RecentBeaconBlocksResponse>(peerInfo, Method.RecentBeaconBlocks, request);
   }
 }

@@ -17,17 +17,17 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
   EMPTY_SIGNATURE,
-  FAR_FUTURE_EPOCH,
   GENESIS_EPOCH,
   GENESIS_SLOT,
-  GENESIS_START_SHARD, SECONDS_PER_DAY,
+  GENESIS_START_SHARD,
+  SECONDS_PER_DAY,
   ZERO_HASH,
 } from "../../constants";
 
 import {getActiveValidatorIndices, getCompactCommitteesRoot, getTemporaryBlockHeader} from "../stateTransition/util";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {processDeposit} from "../stateTransition/block/operations";
-import {bnMin, intDiv} from "../../util/math";
+import {bnMin} from "../../util/math";
 import {createValue} from "../../util/createValue";
 
 export function initializeBeaconStateFromEth1(

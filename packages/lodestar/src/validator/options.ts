@@ -18,7 +18,7 @@ export interface IValidatorOptions {
 }
 
 export const ValidatorOptions: IConfigurationModule = {
-  name: 'validator',
+  name: "validator",
   fields: [
     {
       name: "db",

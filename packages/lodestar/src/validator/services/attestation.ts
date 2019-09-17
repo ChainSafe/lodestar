@@ -58,7 +58,7 @@ export class AttestationService {
     );
     if (await this.isConflictingAttestation(attestation.data)) {
       this.logger.warn(
-        `[Validator] Avoided signing conflicting attestation! `
+        "Avoided signing conflicting attestation! "
         + `Source epoch: ${attestation.data.source.epoch}, Target epoch: ${computeEpochOfSlot(this.config, slot)}`
       );
       return null;
@@ -78,7 +78,7 @@ export class AttestationService {
     ).toBytesCompressed();
     await this.storeAttestation(attestation);
     await this.rpcClient.validator.publishAttestation(attestation);
-    this.logger.info(`[Validator] Signed and publish new attestation`);
+    this.logger.info("[Validator] Signed and publish new attestation");
     return attestation;
   }
 
@@ -95,7 +95,10 @@ export class AttestationService {
 
     //cleanup
     const unusedAttestations =
-      await this.db.getAttestations(this.keypair.publicKey.toBytesCompressed(), {gt: 0, lt: attestation.data.target.epoch});
+      await this.db.getAttestations(
+        this.keypair.publicKey.toBytesCompressed(),
+        {gt: 0, lt: attestation.data.target.epoch}
+      );
     await this.db.deleteAttestations(this.keypair.publicKey.toBytesCompressed(), unusedAttestations);
   }
 }

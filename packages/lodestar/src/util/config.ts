@@ -21,7 +21,7 @@ export function booleanOption(name: string, flag: string, description: string = 
   return {
     name,
     description,
-    type: 'boolean',
+    type: "boolean",
     configurable: true,
     cli: {
       flag

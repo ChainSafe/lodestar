@@ -6,7 +6,7 @@ import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {Block, Log} from "ethers/providers";
 import {deserialize} from "@chainsafe/ssz";
-import {BeaconState, bytes32, Deposit, Epoch, Eth1Data, Gwei, Hash, number64} from "@chainsafe/eth2.0-types";
+import {BeaconState, Deposit, Epoch, Eth1Data, Gwei, Hash, number64} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {Eth1EventEmitter, IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
@@ -132,7 +132,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   }
 
   public async depositRoot(block?: string | number): Promise<Hash> {
-    const depositRootHex = await this.contract.get_hash_tree_root({blockTag: block || 'latest'});
+    const depositRootHex = await this.contract.get_hash_tree_root({blockTag: block || "latest"});
     return Buffer.from(depositRootHex.substr(2), "hex");
   }
 
@@ -141,10 +141,11 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     return Buffer.from(depositCountHex.substr(2), "hex").readUIntLE(0, 6);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async getEth1Data(config: IBeaconConfig, state: BeaconState, currentEpoch: Epoch): Promise<Eth1Data> {
     const [head, latestStateBlock] = await Promise.all([
       this.getHead(),
-      this.getBlock('0x' + state.eth1Data.blockHash.toString('hex'))
+      this.getBlock("0x" + state.eth1Data.blockHash.toString("hex"))
     ]);
     const validVotes = await this.filterValidVotes(config, state.eth1DataVotes, head, latestStateBlock);
 
@@ -156,7 +157,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
         this.depositRoot(blockHash)
       ]);
       return {
-        blockHash: Buffer.from(blockHash.slice(2), 'hex'),
+        blockHash: Buffer.from(blockHash.slice(2), "hex"),
         depositCount,
         depositRoot
       };
@@ -168,7 +169,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
         const blockNumbers = await Promise.all(
           frequentVotes.map(
             (vote) =>
-              this.getBlock('0x' + vote.blockHash.toString('hex')).then(b => b.number)
+              this.getBlock("0x" + vote.blockHash.toString("hex")).then(b => b.number)
           )
         );
         return frequentVotes[blockNumbers.indexOf(Math.max(...blockNumbers))];
@@ -237,14 +238,14 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     const potentialVotes = [];
     for(let i = 0; i < votes.length; i++) {
       const vote = votes[i];
-      const block = await this.getBlock(vote.blockHash.toString('hex'));
+      const block = await this.getBlock(vote.blockHash.toString("hex"));
       if(block
           && (head.number - block.number) >= config.params.ETH1_FOLLOW_DISTANCE
           && block.number > latestStateBlock.number
       ) {
         const [depositCount, depositRoot] = await Promise.all([
-          this.depositCount(vote.blockHash.toString('hex')),
-          this.depositRoot(vote.blockHash.toString('hex'))
+          this.depositCount(vote.blockHash.toString("hex")),
+          this.depositRoot(vote.blockHash.toString("hex"))
         ]);
         if(depositRoot.equals(vote.depositRoot) && depositCount === vote.depositCount) {
           potentialVotes.push(vote);

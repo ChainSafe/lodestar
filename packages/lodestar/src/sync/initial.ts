@@ -12,7 +12,7 @@ import {ILogger} from "../logger";
 import {ISyncOptions} from "./options";
 import {ReputationStore} from "./IReputation";
 
-interface InitialSyncModules {
+interface IInitialSyncModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   chain: IBeaconChain;
@@ -28,7 +28,7 @@ export class InitialSync {
   private network: INetwork;
   private reps: ReputationStore;
   private logger: ILogger;
-  public constructor(opts: ISyncOptions, {config, db, chain, network, reps, logger}: InitialSyncModules) {
+  public constructor(opts: ISyncOptions, {config, db, chain, network, reps, logger}: IInitialSyncModules) {
     this.config = config;
     this.db = db;
     this.chain = chain;
@@ -60,7 +60,7 @@ export class InitialSync {
     }
   }
   public async syncToPeer(peerInfo: PeerInfo): Promise<void> {
-    const peerLatestHello = this.reps.get(peerInfo.id.toB58String()).latestHello
+    const peerLatestHello = this.reps.get(peerInfo.id.toB58String()).latestHello;
     if(!peerLatestHello) {
       return;
     }

@@ -1,11 +1,11 @@
 import readline from "readline";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
-import Keystore from "../validator/keystore";
+import keystore from "../validator/keystore";
 import fs from "fs";
 import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
-import keystore from "../validator/keystore";
 
 interface IHiddenReadlineInterface extends readline.Interface {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   output?: any;
   _writeToOutput?(stringToWrite: string): void;
 }

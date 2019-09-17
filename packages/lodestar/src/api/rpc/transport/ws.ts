@@ -16,12 +16,15 @@ export interface IWsServerOpts {
 }
 
 export class WSServer implements IRpcServer {
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public on: any;
+
   private ws: WebSocket.Server;
   private httpServer: http.Server;
   private opts: IWsServerOpts;
   private logger: ILogger;
 
-  public on: any;
   public constructor(opts: IWsServerOpts, {logger}: {logger: ILogger}) {
     this.opts = opts;
     this.logger = logger;

@@ -8,7 +8,7 @@ import deepmerge from "deepmerge";
 
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import {ILogger, WinstonLogger} from "../../logger";
+import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
 import {generateCommanderOptions, optionsToConfig} from "../util";

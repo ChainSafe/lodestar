@@ -5,6 +5,7 @@ import Benchmark from "benchmark";
 import profiler from "v8-profiler-next";
 import {dirname} from "path";
 
+// eslint-disable-next-line @typescript-eslint/interface-name-prefix
 export interface BenchSuite {
   //to compare multiple function implementation speed, add array of implementations here
   //to check speed of different functions create multiple BenchSuites
@@ -32,25 +33,26 @@ export const createReportDir = (): string => {
   return dir;
 };
 
-export const writeReport = (file: string, data: string) => {
+export const writeReport = (file: string, data: string): void => {
+  // eslint-disable-next-line no-console
   console.log(data);
-  fs.appendFile(file, `\r\n${data}`, 'ascii', (err) => {
+  fs.appendFile(file, `\r\n${data}`, "ascii", (err) => {
     if (err) throw err;
   });
 };
 
-export const runSuite = (bench: BenchSuite, name?: string) => {
+export const runSuite = (bench: BenchSuite, name?: string): void => {
   let suite = new Benchmark.Suite(name);
   const profileId = `${bench.name} - ${Date.now()}.profile`;
   bench.testFunctions.forEach((func) => {
     suite = suite.add(func.name, func, {setup: bench.setup, teardown: bench.teardown, minSamples: 2});
   });
-  suite.on('start', function () {
+  suite.on("start", function () {
     if(bench.profile) {
       profiler.startProfiling(profileId);
     }
   });
-  suite.on('complete', function () {
+  suite.on("complete", function () {
     if(bench.profile) {
       const profile = profiler.stopProfiling(profileId);
       profile.export((error: Error, result: string) => {
@@ -64,11 +66,11 @@ export const runSuite = (bench: BenchSuite, name?: string) => {
     }
   });
   // add listeners
-  suite.on('cycle', (event: Event) => {
+  suite.on("cycle", (event: Event) => {
     writeReport(bench.file, String(event.target));
   })
   // Scoping issue requires function decleration
-    .on('complete', function() {
+    .on("complete", function() {
       //@ts-ignore
       for (const suite in this) {
         //@ts-ignore
@@ -82,7 +84,7 @@ export const runSuite = (bench: BenchSuite, name?: string) => {
       }
       if(bench.testFunctions.length > 1) {
         //@ts-ignore
-        const msg: string = 'Fastest is ' + this.filter('fastest').map('name');
+        const msg: string = "Fastest is " + this.filter("fastest").map("name");
         writeReport(bench.file, msg);
       }
     })

@@ -11,7 +11,7 @@ import {IRpcClient} from "../rpc";
 import {DomainType} from "../../constants";
 import {IValidatorDB} from "../../db";
 import {ILogger} from "../../logger";
-import {Keypair, PrivateKey} from "@chainsafe/bls";
+import {Keypair} from "@chainsafe/bls";
 
 export default class BlockProposingService {
   private config: IBeaconConfig;

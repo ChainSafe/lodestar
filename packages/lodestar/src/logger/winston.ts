@@ -42,6 +42,15 @@ export class WinstonLogger implements ILogger {
     this._silent = false;
   }
 
+  public child(options: ILoggerOptions): WinstonLogger {
+    const logger = Object.create(WinstonLogger.prototype);
+    return Object.assign(logger, {
+      winston: this.winston.child({module: options.module}),
+      _level: options.level,
+      _silent: false,
+    });
+  }
+
   public debug(message: string | object, context?: object): void {
     this.createLogEntry(LogLevel.debug, message, context);
   }
@@ -82,14 +91,5 @@ export class WinstonLogger implements ILogger {
   }
   public get silent(): boolean {
     return this._silent;
-  }
-
-  public child(options: ILoggerOptions): WinstonLogger {
-    const logger = Object.create(WinstonLogger.prototype);
-    return Object.assign(logger, {
-      winston: this.winston.child({module: options.module}),
-      _level: options.level,
-      _silent: false,
-    });
   }
 }

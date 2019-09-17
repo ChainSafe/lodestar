@@ -4,6 +4,7 @@ import {toHex} from "../../util/bytes";
 import BN from "bn.js";
 import {AnySSZType, FullSSZType, parseType, Type} from "@chainsafe/ssz";
 //@ts-ignore
+// eslint-disable-next-line import/default
 import camelcaseKeys from "camelcase-keys";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 

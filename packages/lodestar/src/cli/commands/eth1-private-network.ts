@@ -4,8 +4,8 @@
 
 import {ICliCommand} from "./interface";
 import {PrivateEth1Network} from "../../eth1/dev";
-import {CommanderStatic} from "commander";;
-import {ILogger, LogLevel, WinstonLogger, LogLevels} from "../../logger";
+import {CommanderStatic} from "commander";
+import {ILogger, LogLevels, WinstonLogger} from "../../logger";
 
 interface IEth1CommandOptions {
   host: string;
@@ -20,12 +20,12 @@ export class Eth1PrivateNetworkCommand implements ICliCommand {
 
   public register(commander: CommanderStatic): void {
     commander
-      .command('eth1:dev')
-      .description('Start private eth1 chain with deposit contract and 10 accounts with balance')
-      .option("-p, --port [port]", 'Port on which private network node should start', 8545)
-      .option("-h, --host [host]", 'Host on which node will be', '127.0.0.1')
+      .command("eth1:dev")
+      .description("Start private eth1 chain with deposit contract and 10 accounts with balance")
+      .option("-p, --port [port]", "Port on which private network node should start", 8545)
+      .option("-h, --host [host]", "Host on which node will be", "127.0.0.1")
       .option(`-l, --logLevel [${LogLevels.join("|")}]`, "Log level")
-      .option("-m, --mnemonic [mnemonic]", 'mnemonic string to be used for generating account')
+      .option("-m, --mnemonic [mnemonic]", "mnemonic string to be used for generating account")
       .option("-n, --network [networkId]", "Id of eth1 chain", 200)
       .option(
         "-d, --database [database]",

@@ -11,7 +11,6 @@ import {ILogger, LogLevels, WinstonLogger} from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
 import * as ethers from "ethers/ethers";
-import {Wallet} from "ethers/ethers";
 
 interface IDepositCommandOptions {
   privateKey: string;
@@ -54,7 +53,7 @@ export class DepositCommand implements ICliCommand {
         try {
           await this.action(options, logger);
         } catch (e) {
-          console.error(e.message + "\n" + e.stack);
+          logger.error(e.message + "\n" + e.stack);
         }
       });
   }
