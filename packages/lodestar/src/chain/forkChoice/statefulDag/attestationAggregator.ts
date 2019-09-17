@@ -52,9 +52,9 @@ export class AttestationAggregator {
   /**
    * Rather than storing the slot on every attestation, a lookup function is required
    */
-  private slotLookup: (Root: Hash|string) => Slot | null;
+  private slotLookup: (Root: string) => Slot | null;
 
-  public constructor(slotLookup: (Root: Hash|string) => Slot | null) {
+  public constructor(slotLookup: (Root: string) => Slot | null) {
     this.latestAggregates = {};
     this.latestAttestations = {};
     this.slotLookup = slotLookup;

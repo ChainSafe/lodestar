@@ -2,8 +2,8 @@
  * @module logger
  */
 
-import {createLogger, format, Logger, transports} from 'winston';
-import {defaultLogLevel, LogLevel, LogLevels, ILogger, ILoggerOptions} from "./interface";
+import {createLogger, format, Logger, transports} from "winston";
+import {defaultLogLevel, ILogger, ILoggerOptions, LogLevel} from "./interface";
 
 export class WinstonLogger implements ILogger {
   private winston: Logger;
@@ -26,7 +26,7 @@ export class WinstonLogger implements ILogger {
           format: format.combine(
             format.colorize(),
             format.timestamp({
-              format: 'YYYY-MM-DD HH:mm:ss'
+              format: "YYYY-MM-DD HH:mm:ss"
             }),
             format.printf(
               info => `${info.timestamp} [${info.module.toUpperCase()}] ${info.level}: ${info.message}`
@@ -37,6 +37,7 @@ export class WinstonLogger implements ILogger {
       ],
       exitOnError: false
     });
+    //@ts-ignore
     this._level = LogLevel[options.level];
     this._silent = false;
   }
@@ -61,7 +62,7 @@ export class WinstonLogger implements ILogger {
     if (this.silent || level > this._level) {
       return;
     }
-    if (typeof message === 'object') {
+    if (typeof message === "object") {
       this.winston.log(LogLevel[level], JSON.stringify(message));
     } else {
       this.winston.log(LogLevel[level], message, context);

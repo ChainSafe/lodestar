@@ -4,10 +4,10 @@
 
 
 import http from "http";
+//@ts-ignore
 import promisify from "promisify-es6";
 import WebSocket from "ws";
 import {ILogger} from "../../../logger";
-import {LikeSocketServer} from "noice-json-rpc";
 import {IRpcServer} from "./index";
 
 export interface IWsServerOpts {

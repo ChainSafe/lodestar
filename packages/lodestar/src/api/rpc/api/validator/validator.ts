@@ -2,43 +2,33 @@
  * @module api/rpc
  */
 
-import {
-  Attestation,
-  BeaconBlock,
-  BeaconState,
-  BLSPubkey,
-  bytes96,
-  Epoch,
-  IndexedAttestation,
-  Shard,
-  Slot,
-  ValidatorDuty,
-  ValidatorIndex
-} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BLSPubkey, bytes96, Epoch, Shard, Slot, ValidatorDuty} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {BeaconDb} from "../../../../db";
-import {BeaconChain} from "../../../../chain";
+import {IBeaconDb} from "../../../../db";
+import {IBeaconChain} from "../../../../chain";
 import {OpPool} from "../../../../opPool";
 import {IValidatorApi} from "./interface";
-import {getCommitteeAssignment, isProposerAtSlot} from "../../../../chain/stateTransition/util";
-import {CommitteeAssignment} from "../../../../validator/types";
 import {assembleBlock} from "../../../../chain/factory/block";
 import {IEth1Notifier} from "../../../../eth1";
 import {getValidatorDuties, produceAttestation} from "../../../impl/validator";
-import {ApiNamespace} from "../../../index";
+import {ApiNamespace, IApiModules} from "../../../index";
+import {IApiOptions} from "../../../options";
 
 export class ValidatorApi implements IValidatorApi {
 
   public namespace: ApiNamespace;
 
   private config: IBeaconConfig;
-  private chain: BeaconChain;
-  private db: BeaconDb;
+  private chain: IBeaconChain;
+  private db: IBeaconDb;
   private opPool: OpPool;
   private eth1: IEth1Notifier;
 
-  public constructor(opts, {config, chain, db, opPool, eth1}) {
+  public constructor(
+    opts: Partial<IApiOptions>,
+    {config, chain, db, opPool, eth1}: Pick<IApiModules, "config"|"chain"|"db"|"opPool"|"eth1">
+  ) {
     this.namespace = ApiNamespace.VALIDATOR;
     this.config = config;
     this.chain = chain;
@@ -48,7 +38,11 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async produceBlock(slot: Slot, randaoReveal: bytes96): Promise<BeaconBlock> {
-    return await assembleBlock(this.config, this.db, this.opPool, this.eth1, slot, randaoReveal);
+    const block = await assembleBlock(this.config, this.db, this.opPool, this.eth1, slot, randaoReveal);
+    if(!block) {
+      throw new Error("Failed to produce block");
+    }
+    return block;
   }
 
   public async getDuties(validatorPublicKeys: BLSPubkey[], epoch: Epoch): Promise<ValidatorDuty[]> {

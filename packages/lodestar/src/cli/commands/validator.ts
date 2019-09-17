@@ -4,18 +4,18 @@
 import {CommanderStatic} from "commander";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {CliCommand} from "./interface";
-import {ILogger, WinstonLogger, LogLevels} from "../../logger";
+import {ICliCommand} from "./interface";
+import {ILogger, LogLevels, WinstonLogger} from "../../logger";
 import Validator from "../../validator";
 import {generateCommanderOptions, optionsToConfig} from "../util";
 import {IValidatorOptions, ValidatorOptions} from "../../validator/options";
 
 interface IValidatorCommandOptions {
-  logLevel?: string;
+  logLevel: string;
   [key: string]: string;
 }
 
-export class ValidatorCommand implements CliCommand {
+export class ValidatorCommand implements ICliCommand {
 
   public register(commander: CommanderStatic): void {
     const logger = new WinstonLogger();
@@ -29,7 +29,7 @@ export class ValidatorCommand implements CliCommand {
         try {
           await this.action(options, logger);
         } catch (e) {
-          logger.error(e.message + '\n' + e.stack);
+          logger.error(e.message + "\n" + e.stack);
         }
       });
     generateCommanderOptions(command, ValidatorOptions);

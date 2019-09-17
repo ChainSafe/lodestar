@@ -1,16 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * @module db/controller/impl
  */
 
 import {LevelUp} from "levelup";
-import {IDatabaseController, SearchOptions} from "../interface";
-import {Attestation} from "@chainsafe/eth2.0-types";
+import {IDatabaseController, ISearchOptions} from "../interface";
 import {EventEmitter} from "events";
+//@ts-ignore
 import level from "level";
 import {ILogger} from "../../../logger";
 import {IDatabaseOptions} from "../../options";
 
-export interface LevelDBOptions extends IDatabaseOptions {
+export interface ILevelDBOptions extends IDatabaseOptions {
   db?: LevelUp;
 }
 
@@ -21,11 +22,11 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
 
   private db: LevelUp;
 
-  private opts: LevelDBOptions;
+  private opts: ILevelDBOptions;
 
   private logger: ILogger;
 
-  public constructor(opts: LevelDBOptions, {logger}: {logger: ILogger}) {
+  public constructor(opts: ILevelDBOptions, {logger}: {logger: ILogger}) {
     super();
     this.opts = opts;
     this.logger = logger;
@@ -33,8 +34,8 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
       opts.db
       ||
       level(
-        opts.name || 'beaconchain',
-        {keyEncoding: 'binary', valueEncoding: 'binary'}
+        opts.name || "beaconchain",
+        {keyEncoding: "binary", valueEncoding: "binary"}
       );
   }
 
@@ -78,17 +79,17 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
     await this.db.del(key);
   }
 
-  public search(opts: SearchOptions): Promise<any> {
-    return new Promise<Attestation[]>((resolve, reject) => {
-      const searchData = [];
+  public search(opts: ISearchOptions): Promise<any> {
+    return new Promise<any[]>((resolve) => {
+      const searchData: any[] = [];
       this.db.createValueStream({
         gt: opts.gt,
         lt: opts.lt,
-      }).on('data', function (data) {
+      }).on("data", function (data) {
         searchData.push(data);
-      }).on('close', function () {
+      }).on("close", function () {
         resolve(searchData);
-      }).on('end', function () {
+      }).on("end", function () {
         resolve(searchData);
       });
     });

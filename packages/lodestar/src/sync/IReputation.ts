@@ -14,7 +14,7 @@ export class ReputationStore {
     this.reputations = new Map<string, IReputation>();
   }
   public add(peerId: string): IReputation {
-    const reputation = {
+    const reputation: IReputation = {
       latestHello: null,
       score: 0
     };

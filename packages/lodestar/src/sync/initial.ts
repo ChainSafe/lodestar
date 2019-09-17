@@ -8,8 +8,9 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
-import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
+import {ISyncOptions} from "./options";
+import {ReputationStore} from "./IReputation";
 
 interface InitialSyncModules {
   config: IBeaconConfig;
@@ -27,7 +28,7 @@ export class InitialSync {
   private network: INetwork;
   private reps: ReputationStore;
   private logger: ILogger;
-  public constructor(opts, {config, db, chain, network, reps, logger}: InitialSyncModules) {
+  public constructor(opts: ISyncOptions, {config, db, chain, network, reps, logger}: InitialSyncModules) {
     this.config = config;
     this.db = db;
     this.chain = chain;
@@ -59,9 +60,12 @@ export class InitialSync {
     }
   }
   public async syncToPeer(peerInfo: PeerInfo): Promise<void> {
-    const peerLatestHello = this.reps.get(peerInfo.id.toB58String()).latestHello;
+    const peerLatestHello = this.reps.get(peerInfo.id.toB58String()).latestHello
+    if(!peerLatestHello) {
+      return;
+    }
     // fetch recent blocks and push into the chain
-    const startSlot = this.chain.latestState.slot;
+    const startSlot = this.chain.latestState ? this.chain.latestState.slot : 0;
     const {blocks} = await this.network.reqResp.beaconBlocks(peerInfo, {
       headBlockRoot: peerLatestHello.headRoot,
       startSlot,

@@ -18,15 +18,14 @@ import {IBeaconMetrics} from "../metrics";
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
 
 import {stateTransition} from "./stateTransition";
-import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
-import {getAttestingIndices, computeEpochOfSlot, isActiveValidator} from "./stateTransition/util";
+import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
+import {computeEpochOfSlot, getAttestingIndices, isActiveValidator} from "./stateTransition/util";
 import {ChainEventEmitter, IBeaconChain} from "./interface";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
 import {processSortedDeposits} from "../util/deposits";
 import {IChainOptions} from "./options";
 import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
-import {IChainOptions} from "./options";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -142,7 +141,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.forkChoice.addBlock(genesisBlock.slot, blockRoot, Buffer.alloc(32));
     this.forkChoice.setJustified(blockRoot);
     this.forkChoice.setFinalized(blockRoot);
-    this.logger.info(`Beacon chain initialized`);
+    this.logger.info("Beacon chain initialized");
   }
 
   public async isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean> {

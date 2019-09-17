@@ -1,6 +1,7 @@
 import fs, {writeFile} from "fs";
 import {BENCH_DIR} from "./constant";
 import Benchmark from "benchmark";
+//@ts-ignore
 import profiler from "v8-profiler-next";
 import {dirname} from "path";
 
@@ -52,7 +53,7 @@ export const runSuite = (bench: BenchSuite, name?: string) => {
   suite.on('complete', function () {
     if(bench.profile) {
       const profile = profiler.stopProfiling(profileId);
-      profile.export((error, result) => {
+      profile.export((error: Error, result: string) => {
         if (error) {
           return;
         }
@@ -63,19 +64,24 @@ export const runSuite = (bench: BenchSuite, name?: string) => {
     }
   });
   // add listeners
-  suite.on('cycle', (event) => {
+  suite.on('cycle', (event: Event) => {
     writeReport(bench.file, String(event.target));
   })
   // Scoping issue requires function decleration
     .on('complete', function() {
+      //@ts-ignore
       for (const suite in this) {
+        //@ts-ignore
         if(this.hasOwnProperty(suite) && !isNaN(parseInt(suite))) {
+          //@ts-ignore
           const mean = (this[suite].stats.mean * 1000).toFixed(2);
+          //@ts-ignore
           const msg = `${this[suite].name} took ${mean} ms on average`;
           writeReport(bench.file, msg);
         }
       }
       if(bench.testFunctions.length > 1) {
+        //@ts-ignore
         const msg: string = 'Fastest is ' + this.filter('fastest').map('name');
         writeReport(bench.file, msg);
       }

@@ -5,20 +5,27 @@
 import BN from "bn.js";
 import PeerInfo from "peer-info";
 import {
-  Epoch, Hash, Slot,
-  RequestBody, Hello, Goodbye,
-  BeaconBlocksRequest, BeaconBlocksResponse,
-  RecentBeaconBlocksRequest, RecentBeaconBlocksResponse,
+  BeaconBlock,
+  BeaconBlocksRequest,
+  BeaconBlocksResponse,
+  Epoch,
+  Goodbye,
+  Hash,
+  Hello,
+  RecentBeaconBlocksRequest,
+  RecentBeaconBlocksResponse,
+  RequestBody,
+  Slot,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {ZERO_HASH, Method, RequestId} from "../../constants";
+import {Method, RequestId, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
-import {ReputationStore} from "../reputation";
 import {ILogger} from "../../logger";
-import {ISyncReqResp, ISyncOptions} from "./interface";
+import {ISyncOptions, ISyncReqResp} from "./interface";
+import {ReputationStore} from "../IReputation";
 
 export interface SyncReqRespModules {
   config: IBeaconConfig;
@@ -63,17 +70,17 @@ export class SyncReqResp implements ISyncReqResp {
       finalizedEpoch = 0;
       finalizedRoot = ZERO_HASH;
     } else {
-      headSlot = await this.db.chain.getChainHeadSlot();
+      headSlot = await this.db.chain.getChainHeadSlot() as Slot;
       const [bRoot, state] = await Promise.all([
         this.db.chain.getBlockRoot(headSlot),
         this.db.state.getLatest(),
       ]);
-      headRoot = bRoot;
+      headRoot = bRoot as Hash;
       finalizedEpoch = state.finalizedCheckpoint.epoch;
       finalizedRoot = state.finalizedCheckpoint.root;
     }
     return {
-      forkVersion: this.chain.latestState.fork.currentVersion,
+      forkVersion: this.chain.latestState ? this.chain.latestState.fork.currentVersion : Buffer.alloc(0),
       finalizedRoot,
       finalizedEpoch,
       headRoot,
@@ -160,8 +167,8 @@ export class SyncReqResp implements ISyncReqResp {
         blocks: [],
       };
       for (const blockRoot of request.blockRoots) {
-        const block = await this.db.block.get(blockRoot);
-        response.blocks.push(block);
+        const block = await this.db.block.get(blockRoot as Buffer);
+        response.blocks.push(block as BeaconBlock);
       }
       this.network.reqResp.sendResponse(id, null, response);
     } catch (e) {

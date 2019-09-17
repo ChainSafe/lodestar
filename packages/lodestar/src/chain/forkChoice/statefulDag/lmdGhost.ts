@@ -5,19 +5,11 @@
 import assert from "assert";
 import BN from "bn.js";
 
-import {
-  Hash,
-  Gwei,
-  Slot,
-  ValidatorIndex,
-} from "@chainsafe/eth2.0-types";
+import {Gwei, Hash, Slot, ValidatorIndex,} from "@chainsafe/eth2.0-types";
 
-import {LMDGHOST} from "../interface";
+import {ILMDGHOST} from "../interface";
 
-import {
-  AttestationAggregator,
-  Root,
-} from "./attestationAggregator";
+import {AttestationAggregator, Root,} from "./attestationAggregator";
 
 
 /**
@@ -37,7 +29,7 @@ class Node {
   /**
    * Parent node, the previous block
    */
-  public parent: Node;
+  public parent: Node|null;
 
   /**
    * Child node with the most weight
@@ -155,7 +147,7 @@ class Node {
  *
  * See https://github.com/protolambda/lmd-ghost#state-ful-dag
  */
-export class StatefulDagLMDGHOST implements LMDGHOST {
+export class StatefulDagLMDGHOST implements ILMDGHOST {
   /**
    * Aggregated attestations
    */
@@ -169,17 +161,17 @@ export class StatefulDagLMDGHOST implements LMDGHOST {
   /**
    * Last finalized block
    */
-  private finalized: Node;
+  private finalized: Node|null;
 
   /**
    * Last justified block
    */
-  private justified: Node;
+  private justified: Node|null;
   private synced: boolean;
 
   public constructor() {
     this.aggregator =
-      new AttestationAggregator((hex) => this.nodes[hex] ? this.nodes[hex].slot : null);
+      new AttestationAggregator((hex: string) => this.nodes[hex] ? this.nodes[hex].slot : null);
     this.nodes = {};
     this.finalized = null;
     this.justified = null;
@@ -188,8 +180,8 @@ export class StatefulDagLMDGHOST implements LMDGHOST {
 
   public addBlock(slot: Slot, blockRootBuf: Hash, parentRootBuf: Hash): void {
     this.synced = false;
-    const blockRoot = blockRootBuf.toString('hex');
-    const parentRoot = parentRootBuf.toString('hex');
+    const blockRoot = blockRootBuf.toString("hex");
+    const parentRoot = parentRootBuf.toString("hex");
     // ensure blockRoot exists
     const node: Node = this.nodes[blockRoot] || new Node({
       slot,
@@ -209,7 +201,7 @@ export class StatefulDagLMDGHOST implements LMDGHOST {
   public addAttestation(blockRootBuf: Hash, attester: ValidatorIndex, weight: Gwei): void {
     this.synced = false;
     this.aggregator.addAttestation({
-      target: blockRootBuf.toString('hex'),
+      target: blockRootBuf.toString("hex"),
       attester,
       weight,
     });
@@ -217,14 +209,14 @@ export class StatefulDagLMDGHOST implements LMDGHOST {
 
   public setFinalized(blockRoot: Hash): void {
     this.synced = false;
-    const rootHex = blockRoot.toString('hex');
+    const rootHex = blockRoot.toString("hex");
     this.finalized = this.nodes[rootHex];
     this.prune();
     this.aggregator.prune();
   }
 
   public setJustified(blockRoot: Hash): void {
-    const rootHex = blockRoot.toString('hex');
+    const rootHex = blockRoot.toString("hex");
     this.justified = this.nodes[rootHex];
   }
 
@@ -257,6 +249,7 @@ export class StatefulDagLMDGHOST implements LMDGHOST {
     if (!this.synced) {
       this.syncChanges();
     }
-    return Buffer.from(this.justified.bestTarget.blockRoot, 'hex');
+    //@ts-ignore
+    return Buffer.from(this.justified.bestTarget.blockRoot, "hex");
   }
 }

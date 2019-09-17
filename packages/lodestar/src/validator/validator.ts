@@ -14,10 +14,10 @@
  * 6. Repeat step 5
  */
 import BlockProposingService from "./services/block";
-import {Epoch, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {Epoch, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {GenesisInfo} from "./types";
-import {RpcClient, RpcClientOverWs} from "./rpc";
+import {IRpcClient, RpcClientOverWs} from "./rpc";
 import {AttestationService} from "./services/attestation";
 import {IValidatorDB, LevelDbController, ValidatorDB} from "../db";
 import {ILogger} from "../logger";
@@ -26,7 +26,7 @@ import deepmerge from "deepmerge";
 import {getKeyFromFileOrKeystore} from "../util/io";
 import {isPlainObject} from "../util/objects";
 import {computeEpochOfSlot} from "../chain/stateTransition/util";
-import { ApiClientOverRest } from "./rest/apiClient";
+import {ApiClientOverRest} from "./rest/apiClient";
 
 /**
  * Main class for the Validator client.
@@ -34,9 +34,13 @@ import { ApiClientOverRest } from "./rest/apiClient";
 class Validator {
   private opts: IValidatorOptions;
   private config: IBeaconConfig;
-  private apiClient: RpcClient;
+  // @ts-ignore
+  private apiClient: IRpcClient;
+  // @ts-ignore
   private blockService: BlockProposingService;
+  // @ts-ignore
   private attestationService: AttestationService;
+  // @ts-ignore
   private genesisInfo: GenesisInfo;
   private db: IValidatorDB;
   private logger: ILogger;
@@ -144,6 +148,7 @@ class Validator {
     if(this.isRunning) {
       setTimeout(this.isChainLive, 1000);
     }
+    return false;
   }
 
   private run(): void {

@@ -101,19 +101,25 @@ export function verifyMultiple(publicKeys: BLSPubkey[], messageHashes: Hash[], s
 
     const eCombined = new ctx.FP12(1);
 
+    // @ts-ignore
     const reduction = messageHashes.reduce((previous, current, index) => {
+      // @ts-ignore
       if(previous.hash && current.equals(previous.hash)) {
         return {
           hash: previous.hash,
+          // @ts-ignore
           publicKey: previous.publicKey ?
+            // @ts-ignore
             previous.publicKey.addRaw(publicKeys[index])
             :
             G1point.fromBytesCompressed(publicKeys[index]),
         };
-      } else if(!!previous.hash) {
+      } else if(previous.hash) {
+        // @ts-ignore
         const g2 = G2point.hashToG2(previous.hash, domain);
         eCombined.mul(
           ElipticCurvePairing.pair(
+            // @ts-ignore
             previous.publicKey,
             g2
           )

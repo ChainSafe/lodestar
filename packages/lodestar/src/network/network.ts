@@ -3,6 +3,7 @@
  */
 
 import {EventEmitter} from "events";
+// @ts-ignore
 import promisify from "promisify-es6";
 import LibP2p from "libp2p";
 import PeerInfo from "peer-info";
@@ -14,31 +15,33 @@ import {IBeaconMetrics} from "../metrics";
 import {ReqResp} from "./reqResp";
 import {Gossip} from "./gossip";
 import {INetworkOptions} from "./options";
-import {
-  INetwork, NetworkEventEmitter,
-} from "./interface";
+import {INetwork, NetworkEventEmitter,} from "./interface";
 
-interface Libp2pModules {
+interface ILibp2pModules {
   config: IBeaconConfig;
-  libp2p: any;
+  libp2p: LibP2p;
   logger: ILogger;
   metrics: IBeaconMetrics;
 }
 
 
 export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter }) implements INetwork {
+  // @ts-ignore
+  public peerInfo: PeerInfo;
+  // @ts-ignore
+  public reqResp: ReqResp;
+  // @ts-ignore
+  public gossip: Gossip;
+
   private opts: INetworkOptions;
   private config: IBeaconConfig;
+  // @ts-ignore
   private libp2p: LibP2p;
   private inited: Promise<void>;
   private logger: ILogger;
   private metrics: IBeaconMetrics;
 
-  public peerInfo: PeerInfo;
-  public reqResp: ReqResp;
-  public gossip: Gossip;
-
-  public constructor(opts: INetworkOptions, {config, libp2p, logger, metrics}: Libp2pModules) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger, metrics}: ILibp2pModules) {
     super();
     this.opts = opts;
     this.config = config;

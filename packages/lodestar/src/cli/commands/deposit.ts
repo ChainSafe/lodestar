@@ -7,10 +7,11 @@ import {JsonRpcProvider} from "ethers/providers";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ICliCommand} from "./interface";
 import defaults from "../../eth1/options";
-import {ILogger, LogLevel, WinstonLogger, LogLevels} from "../../logger";
+import {ILogger, LogLevels, WinstonLogger} from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
 import * as ethers from "ethers/ethers";
+import {Wallet} from "ethers/ethers";
 
 interface IDepositCommandOptions {
   privateKey: string;
@@ -27,9 +28,9 @@ export class DepositCommand implements ICliCommand {
   public register(commander: CommanderStatic): void {
 
     commander
-      .command('deposit')
-      .description('Start private network with deposit contract and 10 accounts with balance')
-      .option("-k, --privateKey [privateKey]", 'Private key of account that will make deposit')
+      .command("deposit")
+      .description("Start private network with deposit contract and 10 accounts with balance")
+      .option("-k, --privateKey [privateKey]", "Private key of account that will make deposit")
       .option(`-l, --logLevel [${LogLevels.join("|")}]`, "Log level")
       .option(
         "-m, --mnemonic [mnemonic]",
@@ -53,7 +54,7 @@ export class DepositCommand implements ICliCommand {
         try {
           await this.action(options, logger);
         } catch (e) {
-          console.error(e.message + "\n"" + e.stack);
+          console.error(e.message + "\n" + e.stack);
         }
       });
   }

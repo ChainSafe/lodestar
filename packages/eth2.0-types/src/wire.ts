@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/interface-name-prefix */
 import {
   Slot, Epoch, Hash, number64, Version, uint64,
 } from "./primitive";

@@ -3,46 +3,57 @@
  */
 import {EventEmitter} from "events";
 import LibP2p from "libp2p";
+//@ts-ignore
 import LibP2pConnection from "interface-connection";
+//@ts-ignore
 import promisify from "promisify-es6";
 import pull from "pull-stream";
-import varint from "varint";
-import StrictEventEmitter from "strict-event-emitter-types";
-import {RequestBody, ResponseBody, Hello, BeaconBlocksResponse, BeaconBlocksRequest, Goodbye, RecentBeaconBlocksResponse, RecentBeaconBlocksRequest} from "@chainsafe/eth2.0-types";
-import {serialize, deserialize} from "@chainsafe/ssz";
+import * as varint from "varint";
+import {
+  BeaconBlocksRequest,
+  BeaconBlocksResponse,
+  Goodbye,
+  Hello,
+  RecentBeaconBlocksRequest,
+  RecentBeaconBlocksResponse,
+  RequestBody,
+  ResponseBody
+} from "@chainsafe/eth2.0-types";
+import {deserialize, serialize} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {
-  Encoding, Method, RequestId,
-  ERR_INVALID_REQ, ERR_RESP_TIMEOUT,
-  REQ_RESP_MAX_SIZE, TTFB_TIMEOUT, RESP_TIMEOUT,
+  Encoding,
+  ERR_INVALID_REQ,
+  ERR_RESP_TIMEOUT,
+  Method,
+  REQ_RESP_MAX_SIZE,
+  RequestId,
+  RESP_TIMEOUT,
 } from "../constants";
 import {ILogger} from "../logger";
-import {
-  createRpcProtocol,
-  createResponseEvent,
-  randomRequestId,
-} from "./util";
+import {createResponseEvent, createRpcProtocol, randomRequestId,} from "./util";
 
 import {IReqResp, ReqRespEventEmitter} from "./interface";
+import {INetworkOptions} from "./options";
 
-interface ReqRespEventEmitterClass {
+interface IReqRespEventEmitterClass {
   new(): ReqRespEventEmitter;
 }
 
-interface ReqRespModules {
+interface IReqRespModules {
   config: IBeaconConfig;
   libp2p: any;
   logger: ILogger;
 }
 
-export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implements IReqResp {
+export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) implements IReqResp {
   private config: IBeaconConfig;
   private libp2p: LibP2p;
   private logger: ILogger;
   private encoding: Encoding;
 
-  public constructor(opts, {config, libp2p, logger}: ReqRespModules) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger}: IReqRespModules) {
     super();
     this.config = config;
     this.libp2p = libp2p;
@@ -72,8 +83,11 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
    * Return a "through" pull-stream that processes a request and waits for/returns a response
    */
   private handleRequest = (peerInfo: PeerInfo, method: Method, requestOnly?: boolean) => {
+    //@ts-ignore
     return (read) => {
+      //@ts-ignore
       return (end, cb) => {
+        //@ts-ignore
         read(end, (end, data) => {
           if (end) return cb(end);
           try {
@@ -87,7 +101,8 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
             });
             if (!requestOnly) {
               const responseEvent = createResponseEvent(requestId);
-              let responseListener;
+              // eslint-disable-next-line
+              let responseListener: any;
               const responseTimer = setTimeout(() => {
                 this.logger.debug("response timeout", {
                   method,
@@ -97,7 +112,7 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
                 this.removeListener(responseEvent, responseListener);
                 cb(null, this.encodeResponseError(new Error(ERR_RESP_TIMEOUT)));
               }, RESP_TIMEOUT);
-              responseListener = (err, output): void => {
+              responseListener = (err: Error|null, output: ResponseBody): void => {
                 this.logger.debug("response", {
                   method,
                   requestId,
@@ -121,9 +136,9 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
         });
       };
     };
-  }
+  };
   private encodeRequest(method: Method, body: RequestBody): Buffer {
-    let output: Buffer;
+    let output = Buffer.alloc(0);;
     switch (method) {
       case Method.Hello:
         output = serialize(body, this.config.types.Hello);
@@ -144,7 +159,7 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
     ]);
   }
   private encodeResponse(method: Method, body: ResponseBody): Buffer {
-    let output: Buffer;
+    let output= Buffer.alloc(0);
     switch (method) {
       case Method.Hello:
         output = serialize(body, this.config.types.Hello);
@@ -216,7 +231,12 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
         return deserialize(data, this.config.types.RecentBeaconBlocksRequest);
     }
   }
-  private async sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody, requestOnly?: boolean): Promise<T> {
+  private async sendRequest<T extends ResponseBody>(
+    peerInfo: PeerInfo,
+    method: Method,
+    body: RequestBody,
+    requestOnly?: boolean
+  ): Promise<T> {
     const protocol = createRpcProtocol(method, this.encoding);
     return await new Promise((resolve, reject) => {
       this.libp2p.dialProtocol(peerInfo, protocol, (err, conn) => {
@@ -226,8 +246,11 @@ export class ReqResp extends (EventEmitter as ReqRespEventEmitterClass) implemen
         // @ts-ignore
         const responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
         // pull-stream through that will resolve after the request is sent
+        // @ts-ignore
         const requestOnlyThrough =(read) => {
+          // @ts-ignore
           return (end, cb) => {
+            // @ts-ignore
             read(end, (end, data) => {
               if (end) {
                 cb(end);

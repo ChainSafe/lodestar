@@ -11,12 +11,13 @@ import {IEth1Notifier} from "../eth1";
 import {IBeaconDb} from "../db";
 import {RegularSync} from "./regular";
 import {InitialSync} from "./initial";
-import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
 import {ISyncOptions} from "./options";
 import {ISyncReqResp, SyncReqResp} from "./reqResp";
+import {ReputationStore} from "./IReputation";
+import {Slot} from "@chainsafe/eth2.0-types";
 
-interface SyncModules {
+export interface ISyncModules {
   config: IBeaconConfig;
   chain: IBeaconChain;
   db: IBeaconDb;
@@ -42,20 +43,21 @@ export class Sync extends EventEmitter {
   private reqResp: ISyncReqResp;
   private reps: ReputationStore;
   private logger: ILogger;
+  //@ts-ignore
   private syncer: RegularSync;
 
-  public constructor(opts: ISyncOptions, {config, chain, db, eth1, network, opPool, reps, logger}: SyncModules) {
+  public constructor(opts: ISyncOptions, modules: ISyncModules) {
     super();
     this.opts = opts;
-    this.config = config;
-    this.chain = chain;
-    this.db = db;
-    this.eth1 = eth1;
-    this.network = network;
-    this.opPool = opPool;
-    this.reps = reps;
-    this.logger = logger;
-    this.reqResp = new SyncReqResp(opts, {config, db, chain, network, reps, logger});
+    this.config = modules.config;
+    this.chain = modules.chain;
+    this.db = modules.db;
+    this.eth1 = modules.eth1;
+    this.network = modules.network;
+    this.opPool = modules.opPool;
+    this.reps = modules.reps;
+    this.logger = modules.logger;
+    this.reqResp = new SyncReqResp(opts, modules);
   }
 
   public async isSynced(): Promise<boolean> {
@@ -63,7 +65,7 @@ export class Sync extends EventEmitter {
       return true;
     }
     try {
-      const bestSlot = await this.db.chain.getChainHeadSlot();
+      const bestSlot = await this.db.chain.getChainHeadSlot() as Slot;
       const bestSlotByPeers = this.network.getPeers()
         .map((peerInfo) => this.reps.get(peerInfo.id.toB58String()))
         .map((reputation) => reputation.latestHello ? reputation.latestHello.headSlot : 0)

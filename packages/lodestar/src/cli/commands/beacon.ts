@@ -22,9 +22,9 @@ import {ValidatorApi} from "../../api/rpc/api/validator";
 import {BeaconApi} from "../../api/rpc/api/beacon";
 
 interface IBeaconCommandOptions {
-  configFile?: string;
-  loggingLevel?: string;
-  quickStart?: string;
+  configFile: string;
+  loggingLevel: string;
+  quickStart: string;
   preset: string;
   [key: string]: string;
 }
@@ -61,6 +61,7 @@ export class BeaconNodeCommand implements ICliCommand {
     let conf: Partial<IBeaconNodeOptions> = {};
 
     if (options.loggingLevel) {
+      // eslint-disable-next-line no-undef
       // @ts-ignore
       logger.setLogLevel(LogLevel[options.loggingLevel]);
     }

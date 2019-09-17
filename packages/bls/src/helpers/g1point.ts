@@ -5,7 +5,7 @@ import assert from "assert";
 import {calculateYFlag, getModulus} from "./utils";
 import * as random from "secure-random";
 import {FP_POINT_LENGTH} from "../constants";
-import {BLSPubkey, bytes48} from "@chainsafe/eth2.0-types";
+import {bytes48} from "@chainsafe/eth2.0-types";
 
 export class G1point {
 
@@ -26,10 +26,6 @@ export class G1point {
     sum.add(other.point);
     sum.affine();
     return new G1point(sum);
-  }
-
-  public addRaw(other: bytes48): G1point {
-    return this.add(G1point.fromBytesCompressed(other));
   }
 
   public equal(other: G1point): boolean {
@@ -130,45 +126,5 @@ export class G1point {
       );
     } while (ecp.is_infinity());
     return new G1point(ecp);
-  }
-
-  public mul(value: BIG): G1point {
-    const newPoint = this.point.mul(value);
-    return new G1point(newPoint);
-  }
-
-  public add(other: G1point): G1point {
-    const sum = new ctx.ECP();
-    sum.add(this.point);
-    sum.add(other.point);
-    sum.affine();
-    return new G1point(sum);
-  }
-
-  public equal(other: G1point): boolean {
-    return this.point.equals(other.point);
-  }
-
-  public toBytes(): bytes48 {
-    const buffer = Buffer.alloc(FP_POINT_LENGTH, 0);
-    this.point.getX().tobytearray(buffer, 0);
-    return buffer;
-  }
-
-  public getPoint(): ECP {
-    return this.point;
-  }
-
-  public toBytesCompressed(): bytes48 {
-    const output = this.toBytes();
-    const c = true;
-    const b = this.point.is_infinity();
-    const a = !b && calculateYFlag(this.point.getY());
-
-    const flags = ((a ? 1 << 5 : 0) | (b ? 1 << 6 : 0) | (c ? 1 << 7 : 0));
-    const mask =  31;
-    output[0] &= mask;
-    output[0] |= flags;
-    return output;
   }
 }

@@ -1,16 +1,20 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import snakeCase from "snake-case";
 import {toHex} from "../../util/bytes";
 import BN from "bn.js";
 import {AnySSZType, FullSSZType, parseType, Type} from "@chainsafe/ssz";
+//@ts-ignore
 import camelcaseKeys from "camelcase-keys";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 
 export function toRestJson(o: object): object {
   o = {...o};
-  for(let key in o) {
+  for(const key in o) {
     const newKey = snakeCase(key);
+    //@ts-ignore
     o[newKey] =  o[key] !== null ? serializeToRestValue(o[key]): null;
     if(newKey !== key) {
+      //@ts-ignore
       delete o[key];
     }
   }
@@ -25,15 +29,15 @@ export function serializeToRestValue(value: any): any {
     return  value.toString();
   }
   if(BitVector.isBitVector(value)) {
-    return  Buffer.from((value as BitVector).toBitfield()).toString('hex');
+    return  Buffer.from((value as BitVector).toBitfield()).toString("hex");
   }
   if(BitList.isBitList(value)) {
-    return  Buffer.from((value as BitList).serialize()).toString('hex');
+    return  Buffer.from((value as BitList).serialize()).toString("hex");
   }
   if(Array.isArray(value)) {
     return value.map(toRestJson);
   }
-  if (typeof value  === 'object') {
+  if (typeof value  === "object") {
     return toRestJson(value);
   }
   return value;
@@ -54,15 +58,15 @@ function expandJsonValue(value: any, type: FullSSZType): any {
     case Type.bool:
       return value;
     case Type.bitList:
-      return BitList.deserialize(Buffer.from(value.slice(2), 'hex'));
+      return BitList.deserialize(Buffer.from(value.slice(2), "hex"));
     case Type.bitVector:
-      return BitVector.fromBitfield(Buffer.from(value.slice(2), 'hex'), type.length);
+      return BitVector.fromBitfield(Buffer.from(value.slice(2), "hex"), type.length);
     case Type.byteList:
     case Type.byteVector:
-      return Buffer.from(value.slice(2), 'hex');
+      return Buffer.from(value.slice(2), "hex");
     case Type.list:
     case Type.vector:
-      return value.map((element) => expandJsonValue(element, type.elementType));
+      return value.map((element: any) => expandJsonValue(element, type.elementType));
     case Type.container:
       type.fields.forEach(([fieldName, fieldType]) => {
         value[fieldName] = expandJsonValue(value[fieldName], fieldType);

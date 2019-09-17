@@ -7,15 +7,16 @@ import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {BeaconBlock, BeaconState, Fork, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {computeEpochOfSlot, getDomain} from "../../chain/stateTransition/util";
-import {RpcClient} from "../rpc";
+import {IRpcClient} from "../rpc";
 import {DomainType} from "../../constants";
 import {IValidatorDB} from "../../db";
 import {ILogger} from "../../logger";
-import {Keypair} from "@chainsafe/bls";
+import {Keypair, PrivateKey} from "@chainsafe/bls";
 
 export default class BlockProposingService {
   private config: IBeaconConfig;
-  private provider: RpcClient;
+  // @ts-ignore
+  private provider: IRpcClient;
   private keypair: Keypair;
   private db: IValidatorDB;
   private logger: ILogger;
@@ -23,7 +24,7 @@ export default class BlockProposingService {
   public constructor(
     config: IBeaconConfig,
     keypair: Keypair,
-    provider: RpcClient,
+    provider: IRpcClient,
     db: IValidatorDB,
     logger: ILogger
   ) {
@@ -50,11 +51,10 @@ export default class BlockProposingService {
         getDomain(this.config, {fork} as BeaconState, DomainType.RANDAO, computeEpochOfSlot(this.config, slot))
       ).toBytesCompressed()
     );
-    block.signature = this.keypair.privateKey.signMessage(
     if(!block) {
       return null;
     }
-    block.signature = this.privateKey.signMessage(
+    block.signature = this.keypair.privateKey.signMessage(
       signingRoot(block, this.config.types.BeaconBlock),
       // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
       getDomain(this.config, {fork} as BeaconState, DomainType.BEACON_PROPOSER, computeEpochOfSlot(this.config, slot))
@@ -72,9 +72,9 @@ export default class BlockProposingService {
   }
 
   private async hasProposedAlready(slot: Slot): Promise<boolean> {
-    if(!lastProposedBlock) return  false;
-    const lastProposedBlock = await this.db.getBlock(this.keypair.publicKey.toBytesCompressed());
     // get last proposed block from database and check if belongs in same epoch
+    const lastProposedBlock = await this.db.getBlock(this.keypair.publicKey.toBytesCompressed());
+    if(!lastProposedBlock) return  false;
     return computeEpochOfSlot(this.config, lastProposedBlock.slot) === computeEpochOfSlot(this.config, slot);
   }
 

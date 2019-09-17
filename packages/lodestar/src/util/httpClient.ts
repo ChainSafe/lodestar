@@ -21,10 +21,10 @@ export class HttpClient {
     try {
       const result: AxiosResponse<T> = await this.client.get<T>(url);
       this.logger.debug(`HttpClient GET url=${url} result=${JSON.stringify(result)}`);
-      return Promise.resolve(result.data);
+      return result.data;
     } catch(reason) {
       this.logger.debug(`HttpClient GET error url=${url} reason=${JSON.stringify(reason)}`);
-      handleError(reason);
+      throw handleError(reason);
     }
   }
 
@@ -32,15 +32,15 @@ export class HttpClient {
     try {
       const result: AxiosResponse<any> = await this.client.post(url, data);
       this.logger.debug(`HttpClient POST url=${url} result=${JSON.stringify(result)}`);
-      return Promise.resolve(result.data);
+      return result.data;
     } catch(reason) {
       this.logger.debug(`HttpClient POST error url=${url} reason=${JSON.stringify(reason)}`);
-      handleError(reason);
+      throw handleError(reason);
     }
   }
 }
 
-const handleError = (error: AxiosError) => {
+const handleError = (error: AxiosError) : Error => {
   let message: string | number;
   if (error.response) {
     message = error.response.status;
@@ -50,5 +50,5 @@ const handleError = (error: AxiosError) => {
     message = error.message;
   }
 
-  throw new Error(message.toString());
-}
+  return new Error(message.toString());
+};

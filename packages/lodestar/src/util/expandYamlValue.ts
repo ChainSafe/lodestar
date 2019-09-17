@@ -22,7 +22,7 @@ function _expandYamlValue(value: any, type: FullSSZType): any {
       return Buffer.from(value.slice(2), 'hex');
     case Type.list:
     case Type.vector:
-      return value.map((element) => _expandYamlValue(element, type.elementType));
+      return value.map((element: any) => _expandYamlValue(element, type.elementType));
     case Type.container:
       type.fields.forEach(([fieldName, fieldType]) => {
         value[fieldName] = _expandYamlValue(value[fieldName], fieldType);

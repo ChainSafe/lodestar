@@ -9,7 +9,6 @@ import {
   AttestationDataAndCustodyBit,
   BeaconState,
   Fork,
-  IndexedAttestation,
   Shard,
   Slot
 } from "@chainsafe/eth2.0-types";
@@ -27,7 +26,7 @@ import {Keypair} from "@chainsafe/bls";
 export class AttestationService {
 
   private config: IBeaconConfig;
-  private rpcClient: RpcClient;
+  private rpcClient: IRpcClient;
   private keypair: Keypair;
   private db: IValidatorDB;
   private logger: ILogger;
@@ -35,7 +34,7 @@ export class AttestationService {
   public constructor(
     config: IBeaconConfig,
     keypair: Keypair,
-    rpcClient: RpcClient,
+    rpcClient: IRpcClient,
     db: IValidatorDB,
     logger: ILogger
   ) {
@@ -50,7 +49,7 @@ export class AttestationService {
   public async createAndPublishAttestation(
     slot: Slot,
     shard: Shard,
-    fork: Fork): Promise<Attestation> {
+    fork: Fork): Promise<Attestation|null> {
     const attestation = await this.rpcClient.validator.produceAttestation(
       this.keypair.publicKey.toBytesCompressed(),
       false,

@@ -31,6 +31,7 @@ export class NodejsNode extends LibP2p {
           bootstrap: {
             interval: 2000,
             enabled: true,
+            //@ts-ignore
             list: [],
           }
         }

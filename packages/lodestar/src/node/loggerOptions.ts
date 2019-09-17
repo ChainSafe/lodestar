@@ -1,6 +1,6 @@
 import {IConfigurationField} from "../util/config";
-
-import {LogLevel, ILoggerOptions, defaultLogLevel} from "../logger/interface";
+import {LogLevel, ILoggerOptions, defaultLogLevel} from "../logger";
+import {LogDescription} from "ethers/utils";
 
 export interface IBeaconLoggerOptions {
   chain: ILoggerOptions;
@@ -65,7 +65,9 @@ export const BeaconLoggerOptions: IConfigurationField = {
     // mix in user input with defaults
     const _config = config;
     Object.keys(_config)
+      //@ts-ignore
       .filter((module) => logLevels[module])
+      //@ts-ignore
       .forEach((module) => _config[module].level = logLevels[module]);
     return _config;
   },

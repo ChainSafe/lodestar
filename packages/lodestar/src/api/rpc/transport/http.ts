@@ -2,11 +2,11 @@
  * @module api/rpc/transport
  */
 
-import {LikeSocket, LikeSocketServer} from "noice-json-rpc";
+import {LikeSocket} from "noice-json-rpc";
+//@ts-ignore
 import promisify from "promisify-es6";
 import {ILogger} from "../../../logger";
 import http from "http";
-import {Service} from "../../../node";
 import {IRpcServer} from "./index";
 
 export interface IHttpServerOpts {
@@ -106,7 +106,7 @@ export default class HttpServer implements IRpcServer {
   public async start(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.server.listen(this.opts.port, this.opts.host)
-        .on('listening', () => {
+        .on("listening", () => {
           this.logger.info(`JSON RPC HTTP server started on ${this.opts.host}:${this.opts.port}`);
           resolve();
         })

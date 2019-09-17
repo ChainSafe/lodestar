@@ -6,7 +6,7 @@ import {
   SerializableValue,
   Type,
 } from "../../src";
-import { AnySSZType } from "../../src/types";
+import {AnySSZType} from "../../src/types";
 
 
 import {ArrayObject, OuterObject, SimpleObject,} from "./objects";
@@ -77,7 +77,7 @@ describe("hashTreeRoot", () => {
       elementType: {type:0, byteLength:8, useNumber:true},
       // VALIDATOR_REGISTRY_LIMIT
       maxLength: 1099511627776
-    }
+    };
     // This is the logic to calculate activeIndexRoots in processFinalUpdates
     const hash = hashTreeRoot(validatorIndexes, type).toString("hex");
     const want = "ba1031ba1a5daab0d49597cfa8664ce2b4c9b4db6ca69fbef51e0a9a325a3b63";
@@ -93,7 +93,7 @@ describe("hashTreeRoot", () => {
       accountBalances.balances.push(new BN("32000000000"));
     }
     const accountBalancesType: AnySSZType = {
-      fields: [["balances", { elementType: "uint64", maxLength: count }]]
+      fields: [["balances", {elementType: "uint64", maxLength: count}]]
     };
     const hash = hashTreeRoot(accountBalances, accountBalancesType).toString("hex");
     assert(hash);
@@ -111,8 +111,8 @@ describe("hashTreeRoot", () => {
     };
     const forkType: AnySSZType = {
       fields: [
-        ["previousVersion", { elementType: "byte", length: 4 }],
-        ["curVersion", { elementType: "byte", length: 4 }],
+        ["previousVersion", {elementType: "byte", length: 4}],
+        ["curVersion", {elementType: "byte", length: 4}],
         ["epoch", "uint64"]
       ]
     };
