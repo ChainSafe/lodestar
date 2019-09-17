@@ -4,15 +4,13 @@
 
 import {CommanderStatic} from "commander";
 import {JsonRpcProvider} from "ethers/providers";
-import * as ethers from "ethers/ethers";
-import {Wallet} from "ethers/ethers";
-
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ICliCommand} from "./interface";
 import defaults from "../../eth1/options";
 import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
+import * as ethers from "ethers/ethers";
 
 interface IDepositCommandOptions {
   privateKey: string;
@@ -76,7 +74,7 @@ export class DepositCommand implements ICliCommand {
     if(options.mnemonic) {
       wallets.push(...this.fromMnemonic(options.mnemonic, provider, options.accounts));
     } else if (options.privateKey) {
-      wallets.push(new Wallet(options.privateKey, provider));
+      wallets.push(new ethers.Wallet(options.privateKey, provider));
     } else {
       throw new CliError("You have to submit either privateKey or mnemonic. Check --help");
     }
@@ -111,7 +109,7 @@ export class DepositCommand implements ICliCommand {
   private fromMnemonic(mnemonic: string, provider: JsonRpcProvider, n: number): Wallet[] {
     const wallets = [];
     for (let i = 0; i < n; i++) {
-      let wallet = Wallet.fromMnemonic(mnemonic, `m/44'/60'/0'/0/${i}`);
+      let wallet = ethers.Wallet.fromMnemonic(mnemonic, `m/44'/60'/0'/0/${i}`);
       wallet = wallet.connect(provider);
       wallets.push(wallet);
     }
