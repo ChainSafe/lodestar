@@ -1,11 +1,3 @@
-import {
-  BLSDomain,
-  BLSSecretKey,
-  BLSPubkey,
-  BLSSignature,
-  bytes32,
-  bytes8
-} from "./types";
 import {Keypair} from "./keypair";
 import {PrivateKey} from "./privateKey";
 import {G2point} from "./helpers/g2point";
@@ -14,11 +6,14 @@ import {PublicKey} from "./publicKey";
 import {Signature} from "./signature";
 import {ElipticCurvePairing} from "./helpers/ec-pairing";
 import ctx from "./ctx";
+import {BLSPubkey, BLSSecretKey, BLSSignature, Domain, Hash} from "@chainsafe/eth2.0-types";
+
+export {Keypair, PrivateKey, PublicKey, Signature};
 
 /**
  * Generates new secret and public key
  */
-function generateKeyPair(): Keypair {
+export function generateKeyPair(): Keypair {
   return Keypair.generate();
 }
 
@@ -26,7 +21,7 @@ function generateKeyPair(): Keypair {
  * Generates public key from given secret.
  * @param {BLSSecretKey} secretKey
  */
-function generatePublicKey(secretKey: BLSSecretKey): BLSPubkey {
+export function generatePublicKey(secretKey: BLSSecretKey): BLSPubkey {
   const keypair = new Keypair(PrivateKey.fromBytes(secretKey));
   return keypair.publicKey.toBytesCompressed();
 }
@@ -37,7 +32,7 @@ function generatePublicKey(secretKey: BLSSecretKey): BLSPubkey {
  * @param messageHash
  * @param domain
  */
-function sign(secretKey: BLSSecretKey, messageHash: bytes32, domain: BLSDomain): BLSSignature {
+export function sign(secretKey: BLSSecretKey, messageHash: Hash, domain: Domain): BLSSignature {
   const privateKey = PrivateKey.fromBytes(secretKey);
   const hash = G2point.hashToG2(messageHash, domain);
   return privateKey.sign(hash).toBytesCompressed();
@@ -47,7 +42,7 @@ function sign(secretKey: BLSSecretKey, messageHash: bytes32, domain: BLSDomain):
  * Compines all given signature into one.
  * @param signatures
  */
-function aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
+export function aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
   return signatures.map((signature): Signature => {
     return Signature.fromCompressedBytes(signature);
   }).reduce((previousValue, currentValue): Signature => {
@@ -59,15 +54,11 @@ function aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
  * Combines all given public keys into single one
  * @param publicKeys
  */
-function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
+export function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
   if(publicKeys.length === 0) {
     return new G1point(new ctx.ECP()).toBytesCompressed();
   }
-  return publicKeys.map((publicKey): G1point => {
-    return G1point.fromBytesCompressed(publicKey);
-  }).reduce((previousValue, currentValue): G1point => {
-    return previousValue.add(currentValue);
-  }).toBytesCompressed();
+  return G1point.aggregate(publicKeys).toBytesCompressed();
 }
 
 /**
@@ -77,11 +68,13 @@ function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
  * @param signature
  * @param domain
  */
-function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BLSSignature, domain: bytes8): boolean {
+export function verify(publicKey: BLSPubkey, messageHash: Hash, signature: BLSSignature, domain: Domain): boolean {
   try {
     const key = PublicKey.fromBytes(publicKey);
     const sig = Signature.fromCompressedBytes(signature);
 
+    key.getPoint().getPoint().affine();
+    sig.getPoint().getPoint().affine();
     const g1Generated = G1point.generator();
     const e1 = ElipticCurvePairing.pair(key.getPoint(), G2point.hashToG2(messageHash, domain));
     const e2 = ElipticCurvePairing.pair(g1Generated, sig.getPoint());
@@ -98,28 +91,52 @@ function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BLSSignat
  * @param signature
  * @param domain
  */
-function verifyMultiple(
-  publicKeys: BLSPubkey[],
-  messageHashes: bytes32[],
-  signature: BLSSignature,
-  domain: bytes8
-): boolean {
+export function verifyMultiple(publicKeys: BLSPubkey[], messageHashes: Hash[], signature: BLSSignature, domain: Domain): boolean {
   if(publicKeys.length === 0 || publicKeys.length != messageHashes.length) {
     return false;
   }
   try {
-    const g1Generated = G1point.generator();
+    const sig = Signature.fromCompressedBytes(signature).getPoint();
+    sig.getPoint().affine();
+
     const eCombined = new ctx.FP12(1);
-    publicKeys.forEach((publicKey, index): void => {
-      const g2 = G2point.hashToG2(messageHashes[index], domain);
-      eCombined.mul(
-        ElipticCurvePairing.pair(
-          PublicKey.fromBytes(publicKey).getPoint(),
-          g2
-        )
-      );
-    });
-    const e2 = ElipticCurvePairing.pair(g1Generated, Signature.fromCompressedBytes(signature).getPoint());
+
+    const reduction = messageHashes.reduce((previous, current, index) => {
+      if(previous.hash && current.equals(previous.hash)) {
+        return {
+          hash: previous.hash,
+          publicKey: previous.publicKey ?
+            previous.publicKey.addRaw(publicKeys[index])
+            :
+            G1point.fromBytesCompressed(publicKeys[index]),
+        };
+      } else if(!!previous.hash) {
+        const g2 = G2point.hashToG2(previous.hash, domain);
+        eCombined.mul(
+          ElipticCurvePairing.pair(
+            previous.publicKey,
+            g2
+          )
+        );
+        return {hash: current, publicKey: G1point.fromBytesCompressed(publicKeys[index])};
+      } else {
+        return {
+          hash: current,
+          publicKey: G1point.fromBytesCompressed(publicKeys[index])
+        };
+      }
+    }, {hash: null, publicKey: null});
+
+    const g2Final = G2point.hashToG2(reduction.hash, domain);
+    const keyFinal = reduction.publicKey;
+    eCombined.mul(
+      ElipticCurvePairing.pair(
+        keyFinal,
+        g2Final
+      )
+    );
+
+    const e2 = ElipticCurvePairing.pair(G1point.generator(), sig);
     return e2.equals(eCombined);
   } catch (e) {
     return false;

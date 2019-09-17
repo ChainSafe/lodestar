@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/eth2.0-config",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Chain configuration required for eth2.0",
   "author": "ChainSafe Systems",
   "license": "LGPL-3.0",
@@ -38,8 +38,12 @@
   ],
   "dependencies": {
     "@chainsafe/eth2.0-params": "0.1.0",
-    "@chainsafe/eth2.0-ssz-types": "0.1.0"
+    "@chainsafe/eth2.0-ssz-types": "0.1.1"
   },
   "devDependencies": {
+    "@types/chai": "^4.1.7",
+    "@types/mocha": "^5.2.7",
+    "chai": "^4.2.0",
+    "mocha": "^6.2.0"
   }
 }

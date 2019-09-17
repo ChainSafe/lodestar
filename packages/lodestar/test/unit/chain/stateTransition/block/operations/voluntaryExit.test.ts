@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
 // @ts-ignore
-import {restore, rewire} from "@chainsafe/bls-js";
+import {restore, rewire} from "@chainsafe/bls";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {

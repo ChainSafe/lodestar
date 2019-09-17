@@ -10,11 +10,11 @@ describe('Eth1 dev network', () => {
   let logger: WinstonLogger = new WinstonLogger();
 
   before(() => {
-    logger.silent(true);
+    logger.silent = true;
   });
 
   after(() => {
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('should start as configured', async () => {
@@ -26,7 +26,7 @@ describe('Eth1 dev network', () => {
     }
     ,
     {
-      logger: logger
+      logger,
     });
     await network.start();
     const accountBalance = await new Wallet(
@@ -47,7 +47,7 @@ describe('Eth1 dev network', () => {
       defaultBalance: 1400
     },
     {
-      logger: logger
+      logger,
     });
     await network.start();
     const address = await network.deployDepositContract();

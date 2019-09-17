@@ -4,22 +4,26 @@
 
 import defaultChainOptions, {ChainOptions, IChainOptions} from "../chain/options";
 import defaultDatabaseOptions, {DatabaseOptions, IDatabaseOptions} from "../db/options";
-import defaultApiOptions, {IPublicApiOptions, PublicApiOptions} from "../rpc/options";
+import defaultApiOptions, {IApiOptions} from "../api/options";
 import defaultEth1Options, {Eth1Options, IEth1Options} from "../eth1/options";
 import defaultNetworkOptions, {INetworkOptions, NetworkOptions} from "../network/options";
 import defaultOpPoolOptions, {IOpPoolOptions, OpPoolOptions} from "../opPool/options";
 import defaultSyncOptions, {ISyncOptions, SyncOptions} from "../sync/options";
+import defaultLoggerOptions, {IBeaconLoggerOptions, BeaconLoggerOptions} from "./loggerOptions";
+import defaultMetricsOptions, {IMetricsOptions} from "../metrics/options";
 import {IValidatorOptions, ValidatorOptions} from "../validator/options";
 import {IConfigurationModule} from "../util/config";
 
 export interface IBeaconNodeOptions {
   chain: IChainOptions;
   db: IDatabaseOptions;
-  api: IPublicApiOptions;
+  api: IApiOptions;
   eth1: IEth1Options;
   network: INetworkOptions;
   opPool: IOpPoolOptions;
   sync: ISyncOptions;
+  logger: IBeaconLoggerOptions;
+  metrics: IMetricsOptions;
   validator?: IValidatorOptions;
 }
 
@@ -28,12 +32,13 @@ export const BeaconNodeOptions: IConfigurationModule = {
   fields: [
     ChainOptions,
     DatabaseOptions,
-    PublicApiOptions,
+    // PublicApiOptions,
     Eth1Options,
     NetworkOptions,
     OpPoolOptions,
     SyncOptions,
-    ValidatorOptions
+    BeaconLoggerOptions,
+    ValidatorOptions,
   ]
 };
 
@@ -45,6 +50,8 @@ const config: IBeaconNodeOptions = {
   network: defaultNetworkOptions,
   opPool: defaultOpPoolOptions,
   sync: defaultSyncOptions,
+  logger: defaultLoggerOptions,
+  metrics: defaultMetricsOptions,
 };
 
 export default config;

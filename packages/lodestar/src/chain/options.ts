@@ -20,12 +20,12 @@ export const ChainOptions: IConfigurationModule = {
         flag: "chain",
         short: "c"
       }
-    }
+    },
   ]
 };
 
 const config: IChainOptions = {
-  name: "mainnet"
+  name: "mainnet",
 };
 
 export default config;

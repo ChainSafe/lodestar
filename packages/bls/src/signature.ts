@@ -1,7 +1,7 @@
 import {G2point} from "./helpers/g2point";
-import {BLSSignature} from "./types";
 import assert from "assert";
 import {FP_POINT_LENGTH} from "./constants";
+import {BLSSignature} from "@chainsafe/eth2.0-types";
 
 export class Signature {
 

@@ -13,15 +13,17 @@ import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "../constants";
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
 import {ILogger} from "../logger";
+import {IBeaconMetrics} from "../metrics";
 
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
 
 import {stateTransition} from "./stateTransition";
-import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
-import {computeEpochOfSlot, getAttestingIndices} from "./stateTransition/util";
+import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
+import {getAttestingIndices, computeEpochOfSlot, isActiveValidator} from "./stateTransition/util";
 import {ChainEventEmitter, IBeaconChain} from "./interface";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
 import {processSortedDeposits} from "../util/deposits";
+import {IChainOptions} from "./options";
 import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
 import {IChainOptions} from "./options";
@@ -32,6 +34,7 @@ export interface IBeaconChainModules {
   db: IBeaconDb;
   eth1: IEth1Notifier;
   logger: ILogger;
+  metrics: IBeaconMetrics;
 }
 
 export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) implements IBeaconChain {
@@ -47,15 +50,19 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   private opPool: OpPool;
   private eth1: IEth1Notifier;
   private logger: ILogger;
+  private metrics: IBeaconMetrics;
+  private opts: IChainOptions;
 
-  public constructor(opts: IChainOptions, {config, db, eth1, opPool, logger}: IBeaconChainModules) {
+  public constructor(opts: IChainOptions, {config, db, eth1, opPool, logger, metrics}: IBeaconChainModules) {
     super();
+    this.opts = opts;
     this.chain = opts.name;
     this.config = config;
     this.db = db;
     this.eth1 = eth1;
     this.opPool = opPool;
     this.logger = logger;
+    this.metrics = metrics;
     this.forkChoice = new StatefulDagLMDGHOST();
     this.chainId = 0; // TODO make this real
     this.networkId = new BN(0); // TODO make this real
@@ -67,9 +74,11 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     // if state doesn't exist in the db, the chain maybe hasn't started
     if(!state) {
       // check every block if genesis
+      this.logger.info("Chain not started, listening for genesis block");
       this.eth1.on("block", this.checkGenesis);
     }
     this.latestState = state;
+    this.logger.info("Chain started, waiting blocks and attestations");
   }
 
   public async stop(): Promise<void> {
@@ -113,6 +122,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   public async initializeBeaconChain(genesisState: BeaconState, merkleTree: ProgressiveMerkleTree): Promise<void> {
+    this.logger.info(`Initializing beacon chain with genesisTime ${genesisState.genesisTime}`);
     const genesisBlock = getEmptyBlock();
     const stateRoot = hashTreeRoot(genesisState, this.config.types.BeaconState);
     genesisBlock.stateRoot = stateRoot;
@@ -132,6 +142,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.forkChoice.addBlock(genesisBlock.slot, blockRoot, Buffer.alloc(32));
     this.forkChoice.setJustified(blockRoot);
     this.forkChoice.setFinalized(blockRoot);
+    this.logger.info(`Beacon chain initialized`);
   }
 
   public async isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean> {
@@ -172,9 +183,12 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     ]);
     this.forkChoice.addBlock(block.slot, blockRoot, block.parentRoot);
     this.updateDepositMerkleTree(newState);
+    // update metrics
+    this.metrics.currentSlot.set(block.slot);
 
     // Post-epoch processing
-    if (computeEpochOfSlot(this.config, preSlot) < computeEpochOfSlot(this.config, newState.slot)) {
+    const currentEpoch = computeEpochOfSlot(this.config, newState.slot);
+    if (computeEpochOfSlot(this.config, preSlot) < currentEpoch) {
       // Update FFG Checkpoints
       // Newly justified epoch
       if (preJustifiedEpoch < newState.currentJustifiedCheckpoint.epoch) {
@@ -198,6 +212,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
           this.forkChoice.setFinalized(blockRoot);
         }
       }
+      this.metrics.previousJustifiedEpoch.set(newState.previousJustifiedCheckpoint.epoch);
+      this.metrics.currentJustifiedEpoch.set(newState.currentJustifiedCheckpoint.epoch);
+      this.metrics.currentFinalizedEpoch.set(newState.finalizedCheckpoint.epoch);
+      this.metrics.currentEpochLiveValidators.set(newState.validators.filter((v) => isActiveValidator(v, currentEpoch)).length);
     }
     return newState;
   }

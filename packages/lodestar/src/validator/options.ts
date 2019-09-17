@@ -1,5 +1,6 @@
 import {IDatabaseOptions} from "../db/options";
-import {IRpcClient} from "./rpc";
+import {RpcClient} from "./rpc";
+import {ILoggerOptions, LogLevel, defaultLogLevel} from "../logger";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
 import {IConfigurationModule} from "../util/config";
 import {IValidatorDB} from "../db/api";
@@ -8,14 +9,16 @@ import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 export interface IValidatorOptions {
   db: IDatabaseOptions;
   dbInstance?: IValidatorDB;
+  restUrl: string;
   rpc: string;
-  rpcInstance?: IRpcClient;
+  rpcInstance?: RpcClient;
   keypair: Keypair;
   keystore?: string;
+  logger: ILoggerOptions;
 }
 
 export const ValidatorOptions: IConfigurationModule = {
-  name: "validator",
+  name: 'validator',
   fields: [
     {
       name: "db",
@@ -68,9 +71,14 @@ const config: IValidatorOptions = {
   db: {
     name: "./validator-db"
   },
+  restUrl: "",
   rpc: "http://localhost:8545",
   keypair: Keypair.generate(),
-  keystore: undefined
+  keystore: null,
+  logger: {
+    level: LogLevel[defaultLogLevel],
+    module: "validator",
+  },
 };
 
 export default config;

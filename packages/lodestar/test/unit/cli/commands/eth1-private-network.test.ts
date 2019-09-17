@@ -4,18 +4,17 @@ import {Eth1PrivateNetworkCommand} from "../../../../src/cli/commands/index";
 import program from "commander";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
 
-
 describe('[CLI] eth1:dev', function () {
   this.timeout(4000);
 
   let logger: ILogger = new WinstonLogger();
 
   before(async () => {
-    logger.silent(true);
+    logger.silent = true;
   });
 
   after(async () => {
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('Should be able to register', async () => {
@@ -32,12 +31,11 @@ describe('[CLI] eth1:dev', function () {
     const network = await command.action({
       host:'127.0.0.1',
       port:33323,
-      loggingLevel: null,
+      logLevel: "error",
       network: null,
       mnemonic: null,
       database:null
-    },
-    logger);
+    }, logger);
     expect(network).to.not.be.null;
     await network.stop();
   });

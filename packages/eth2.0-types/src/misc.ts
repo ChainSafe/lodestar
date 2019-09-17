@@ -13,6 +13,7 @@ import {
   Gwei,
   Hash,
   number64,
+  Shard,
   Slot,
   ValidatorIndex,
   Version,
@@ -54,7 +55,7 @@ export interface Validator {
 
 export interface Crosslink {
   //Shard number
-  shard: number64;
+  shard: Shard;
   //Root of the previous crosslink
   parentRoot: Hash;
   //Crosslinking data from epochs [start....end-1]

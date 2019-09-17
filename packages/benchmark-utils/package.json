@@ -1,0 +1,51 @@
+{
+  "name": "@chainsafe/benchmark-utils",
+  "version": "0.1.0",
+  "description": "Utils for assembling of benchmark suites",
+  "author": "ChainSafe Systems",
+  "license": "Apache-2.0",
+  "private": true,
+  "bugs": {
+    "url": "https://github.com/ChainSafe/lodestar/issues"
+  },
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "prebuild": "rm -rf lib",
+    "build": "yarn build:lib && yarn build:types",
+    "build:types": "tsc --declaration --emitDeclarationOnly",
+    "build:lib": "babel src -x .ts -d lib --source-maps",
+    "build:docs": "typedoc --out docs src",
+    "check-types": "tsc --noEmit --incremental",
+    "lint": "eslint --ext .ts src/",
+    "lint-fix": "eslint --ext .ts src/ --fix",
+    "prepublishOnly": "yarn build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com:ChainSafe/lodestar.git"
+  },
+  "keywords": [
+    "ethereum",
+    "eth2.0",
+    "tests",
+    "spec-test",
+    "yaml-test",
+    "beacon",
+    "blockchain"
+  ],
+  "dependencies": {
+    "benchmark": "^2.1.4",
+    "microtime": "^3.0.0",
+    "v8-profiler-next": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/benchmark": "^1.0.31",
+    "@types/node": "^12.7.2",
+    "typescript": "^3.5.3"
+  }
+}

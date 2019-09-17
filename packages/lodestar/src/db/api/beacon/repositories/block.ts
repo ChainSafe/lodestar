@@ -15,7 +15,7 @@ export class BlockRepository extends Repository<BeaconBlock> {
     config: IBeaconConfig,
     db: IDatabaseController,
     chain: ChainRepository) {
-    super(config, db, Bucket.state, config.types.BeaconState);
+    super(config, db, Bucket.state, config.types.BeaconBlock);
     this.chain = chain;
   }
 

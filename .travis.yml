@@ -40,7 +40,7 @@ jobs:
         directories:
           - node_modules
           - packages/lodestar/node_modules
-          - .git/modules/spect-test-cases/lfs
+          - .git/modules/spec-test-cases-module/lfs
     -
       name: spec-full
       if: branch = master AND type != pull_request
@@ -51,15 +51,17 @@ jobs:
         directories:
           - node_modules
           - packages/lodestar/node_modules
-          - .git/modules/spect-test-cases/lfs
+          - .git/modules/spec-test-cases-module/lfs
 
-before_deploy: lerna run --scope @chainsafe/lodestar build:docs
+before_deploy:
+    - lerna run build:docs
+    - node scripts/collect-docs.js
 
 deploy:
   provider: pages
   skip_cleanup: true
   github_token: $GH_PAGES_TOKEN
   keep_history: true
-  local_dir: packages/lodestar/docs
+  local_dir: docs
   on:
     branch: master

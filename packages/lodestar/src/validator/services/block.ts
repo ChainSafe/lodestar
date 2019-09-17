@@ -2,37 +2,34 @@
  * @module validator
  */
 
-import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 
-import {BeaconBlock, BeaconState, Fork, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconState, Fork, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {computeEpochOfSlot, getDomain} from "../../chain/stateTransition/util";
-import {IRpcClient} from "../rpc";
+import {RpcClient} from "../rpc";
 import {DomainType} from "../../constants";
 import {IValidatorDB} from "../../db";
 import {ILogger} from "../../logger";
+import {Keypair} from "@chainsafe/bls";
 
 export default class BlockProposingService {
   private config: IBeaconConfig;
-  private validatorIndex: ValidatorIndex;
-  private provider: IRpcClient;
-  private privateKey: PrivateKey;
+  private provider: RpcClient;
+  private keypair: Keypair;
   private db: IValidatorDB;
   private logger: ILogger;
 
   public constructor(
     config: IBeaconConfig,
-    index: ValidatorIndex,
-    provider: IRpcClient,
-    privateKey: PrivateKey,
+    keypair: Keypair,
+    provider: RpcClient,
     db: IValidatorDB,
     logger: ILogger
   ) {
     this.config = config;
-    this.validatorIndex = index;
+    this.keypair = keypair;
     this.provider = provider;
-    this.privateKey = privateKey;
     this.db = db;
     this.logger = logger;
   }
@@ -47,12 +44,13 @@ export default class BlockProposingService {
     }
     const block = await this.provider.validator.produceBlock(
       slot,
-      this.privateKey.signMessage(
+      this.keypair.privateKey.signMessage(
         hashTreeRoot(computeEpochOfSlot(this.config, slot), this.config.types.Epoch),
         // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
         getDomain(this.config, {fork} as BeaconState, DomainType.RANDAO, computeEpochOfSlot(this.config, slot))
       ).toBytesCompressed()
     );
+    block.signature = this.keypair.privateKey.signMessage(
     if(!block) {
       return null;
     }
@@ -74,13 +72,13 @@ export default class BlockProposingService {
   }
 
   private async hasProposedAlready(slot: Slot): Promise<boolean> {
-    const lastProposedBlock = await this.db.getBlock(this.validatorIndex);
     if(!lastProposedBlock) return  false;
+    const lastProposedBlock = await this.db.getBlock(this.keypair.publicKey.toBytesCompressed());
     // get last proposed block from database and check if belongs in same epoch
     return computeEpochOfSlot(this.config, lastProposedBlock.slot) === computeEpochOfSlot(this.config, slot);
   }
 
   private async storeBlock(block: BeaconBlock): Promise<void> {
-    await this.db.setBlock(this.validatorIndex, block);
+    await this.db.setBlock(this.keypair.publicKey.toBytesCompressed(), block);
   }
 }

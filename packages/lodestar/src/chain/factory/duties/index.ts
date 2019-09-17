@@ -1,39 +1,44 @@
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {BeaconState, BLSPubkey, ValidatorDuty, ValidatorIndex} from "@chainsafe/eth2.0-types";
-import {computeEpochOfSlot, getCommitteeAssignment} from "../../stateTransition/util";
+import {BLSPubkey, Epoch, ValidatorDuty, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {getCommitteeAssignment} from "../../stateTransition/util";
 
 export function assembleValidatorDuty(
   config: IBeaconConfig,
-  validatorPublicKey: BLSPubkey,
-  validatorIndex: ValidatorIndex,
-  state: BeaconState,
+  validator: {publicKey: BLSPubkey; index: ValidatorIndex},
+  state,
+  epoch: Epoch,
   blockProposerIndex: ValidatorIndex): ValidatorDuty  {
-  let duty: Partial<ValidatorDuty> = generateEmptyValidatorDuty(validatorPublicKey);
+  let duty: ValidatorDuty = this.generateEmptyValidatorDuty(validator.publicKey);
   const committeeAsignment = getCommitteeAssignment(
     config,
     state,
-    computeEpochOfSlot(config, state.slot),
-    validatorIndex
+    epoch,
+    validator.index
   );
   if (committeeAsignment) {
     duty = {
       ...duty,
       attestationShard: committeeAsignment.shard,
       attestationSlot: committeeAsignment.slot,
-      committeeIndex: committeeAsignment.validators.indexOf(validatorIndex)
+      committeeIndex: committeeAsignment.validators.indexOf(validator.index)
     };
   }
-  if (validatorIndex === blockProposerIndex) {
+  if (validator.index === blockProposerIndex) {
     duty = {
       ...duty,
-      blockProductionSlot: state.slot
+      blockProposalSlot: state.slot
     };
   }
-  return duty as ValidatorDuty;
+  return duty;
 }
 
-export function generateEmptyValidatorDuty(publicKey: BLSPubkey): Partial<ValidatorDuty> {
+export function generateEmptyValidatorDuty(publicKey: BLSPubkey, duty?: Partial<ValidatorDuty>): ValidatorDuty {
   return {
-    validatorPubkey: publicKey
+    validatorPubkey: publicKey,
+    blockProposalSlot: null,
+    attestationShard: null,
+    attestationSlot: null,
+    committeeIndex: null,
+    ...duty
   };
 }

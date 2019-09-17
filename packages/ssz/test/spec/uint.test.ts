@@ -1,13 +1,14 @@
 import {join} from "path";
-import {describeSpecTest} from "@chainsafe/eth2.0-spec-test-util";
+import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import BN from "bn.js";
 
 import {deserialize, serialize} from "../../src";
+import {UintCase} from "../util/specTypes/uint";
 
 // uint bounds
 
-describeSpecTest(
-  join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_bounds.yaml"),
+describeMultiSpec<UintCase, string>(
+  join(__dirname, "../../../spec-test-cases/tests/ssz_generic/uint/uint_bounds.yaml"),
   serialize,
   ({value, type}: any) => ([new BN(value), type]),
   ({ssz}: any) => ssz.slice(2),
@@ -15,8 +16,8 @@ describeSpecTest(
   ({valid}: any) => !valid,
 );
 
-describeSpecTest(
-  join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_bounds.yaml"),
+describeMultiSpec<UintCase, string>(
+  join(__dirname, "../../../spec-test-cases/tests/ssz_generic/uint/uint_bounds.yaml"),
   deserialize,
   ({ssz, type}: any) => ([Buffer.from(ssz.slice(2), "hex"), type]),
   ({value}: any) => (new BN(value)).toArrayLike(Buffer, "le", 256).toString("hex"),
@@ -27,8 +28,8 @@ describeSpecTest(
 
 // uint random
 
-describeSpecTest(
-  join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_random.yaml"),
+describeMultiSpec<UintCase, string>(
+  join(__dirname, "../../../spec-test-cases/tests/ssz_generic/uint/uint_random.yaml"),
   serialize,
   ({value, type}: any) => ([new BN(value), type]),
   ({ssz}: any) => ssz.slice(2),
@@ -36,8 +37,8 @@ describeSpecTest(
   ({valid}: any) => !valid,
 );
 
-describeSpecTest(
-  join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_random.yaml"),
+describeMultiSpec<UintCase, string>(
+  join(__dirname, "../../../spec-test-cases/tests/ssz_generic/uint/uint_random.yaml"),
   deserialize,
   ({ssz, type}: any) => ([Buffer.from(ssz.slice(2), "hex"), type]),
   ({value}: any) => (new BN(value)).toArrayLike(Buffer, "le", 256).toString("hex"),
@@ -48,8 +49,8 @@ describeSpecTest(
 
 // uint wrong length
 
-describeSpecTest(
-  join(__dirname, "../../../eth2.0-spec-tests/tests/ssz_generic/uint/uint_wrong_length.yaml"),
+describeMultiSpec<UintCase, string>(
+  join(__dirname, "../../../spec-test-cases/tests/ssz_generic/uint/uint_wrong_length.yaml"),
   deserialize,
   ({ssz, type}: any) => ([Buffer.from(ssz.slice(2), "hex"), type]),
   ({value}: any) => (new BN(value)).toArrayLike(Buffer, "le", 256).toString("hex"),

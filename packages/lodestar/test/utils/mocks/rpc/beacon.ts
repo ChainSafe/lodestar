@@ -1,6 +1,7 @@
-import {IBeaconApi} from "../../../../src/rpc/api/beacon";
+import {IBeaconApi} from "../../../../src/api/rpc/api/beacon";
 import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "@chainsafe/eth2.0-types";
 import {getEmptyBlock} from "../../../../src/chain/genesis/genesis";
+import {ApiNamespace} from "../../../../src/api";
 
 export interface MockBeaconApiOpts {
   version?: bytes32;
@@ -11,14 +12,14 @@ export interface MockBeaconApiOpts {
 
 export class MockBeaconApi implements IBeaconApi {
 
-  public namespace: string;
+  public namespace: ApiNamespace;
   private version: bytes32;
   private fork: Fork;
   private head: BeaconBlock;
   private genesisTime: number64;
 
   public constructor(opts?: MockBeaconApiOpts) {
-    this.namespace = 'beacon';
+    this.namespace = ApiNamespace.BEACON;
     this.version = opts && opts.version || Buffer.alloc(0);
     this.fork = opts && opts.fork
       || {previousVersion: Buffer.alloc(0), currentVersion: Buffer.alloc(0), epoch: 0};

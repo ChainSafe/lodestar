@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {Keypair} from "@chainsafe/bls-js/lib/keypair";
-
+import {Keypair} from "@chainsafe/bls/lib/keypair";
+import {describe, it} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import Validator from "../../../src/validator";
 import {RpcClientOverInstance} from "../../../src/validator/rpc";
@@ -10,15 +10,14 @@ import {ILogger, WinstonLogger} from "../../../src/logger";
 import {IValidatorOptions} from "../../../src/validator/options";
 
 describe('Validator', () => {
+
   let logger: ILogger = new WinstonLogger();
-
-
   before(async () => {
-    logger.silent(true);
+    logger.silent = true;
   });
 
   after(async () => {
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('Should be able to connect with the beacon chain', async () => {

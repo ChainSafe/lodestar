@@ -13,11 +13,11 @@ describe("LevelDB controller", () => {
       keyEncoding: 'binary',
       valueEncoding: 'binary',
     });
-  const db = new LevelDbController({db: testDb, name: dbLocation}, {logger: logger});
+  const db = new LevelDbController({db: testDb, name: dbLocation}, {logger});
 
 
   before(async () => {
-    logger.silent(true);
+    logger.silent = true;
     await db.start();
   });
 
@@ -25,7 +25,7 @@ describe("LevelDB controller", () => {
     await db.stop();
     await promisify(leveldown.destroy)(dbLocation, function () {
     });
-    logger.silent(false);
+    logger.silent = false;
   });
 
   it('test put', async () => {

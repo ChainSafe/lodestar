@@ -2,24 +2,22 @@
  * @module cli/commands
  */
 
-import {ICliCommand} from "./interface";
+import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import {WinstonLogger,ILogger} from "../../logger";
+import  {WinstonLogger} from "../../logger";
 import fs from "fs";
 import {CliError} from "../error";
 import Keystore from "../../validator/keystore";
 import {promptPassword} from "../../util/io";
-
+import {ILogger, LogLevel, defaultLogLevel} from "../../logger/interface";
 
 interface IWalletCommandOptions {
   outputFile: string;
 }
 
 
-export class CreateWalletCommand implements ICliCommand {
+export class CreateWalletCommand implements CliCommand {
   public register(commander: CommanderStatic): void {
-
-    const logger: ILogger = new WinstonLogger();
 
     commander
       .command("wallet")
@@ -30,6 +28,10 @@ export class CreateWalletCommand implements ICliCommand {
         "keys/validator/bls.json"
       )
       .action(async (options) => {
+        const logger: ILogger = new WinstonLogger({
+          level: LogLevel[defaultLogLevel],
+          module: "wallet",
+        });
         // library is not awaiting this method so don't allow error propagation 
         // (unhandled promise rejections)
         try {

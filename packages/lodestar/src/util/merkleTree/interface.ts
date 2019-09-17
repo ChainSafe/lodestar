@@ -1,4 +1,4 @@
-import {bytes32, MerkleTree, number64} from "@chainsafe/eth2.0-types";
+import {Hash, MerkleTree, number64} from "@chainsafe/eth2.0-types";
 
 export interface IProgressiveMerkleTree {
 
@@ -7,16 +7,16 @@ export interface IProgressiveMerkleTree {
   /**
    * push new item into the tree
    */
-  push(item: bytes32): void;
+  push(item: Hash): void;
 
-  add(index: number64, item: bytes32): void;
+  add(index: number64, item: Hash): void;
 
-  getProof(index: number64): bytes32[];
+  getProof(index: number64): Hash[];
 
   /**
    * The merkle root of the tree
    */
-  root(): bytes32;
+  root(): Hash;
 
   toObject(): MerkleTree;
 }

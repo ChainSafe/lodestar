@@ -1,9 +1,9 @@
 import BN from "bn.js";
 import { assert } from "chai";
-import bls from '@chainsafe/bls-js';
+import bls from '@chainsafe/bls';
 
 import { intToBytes, blsPrivateKeyToHex } from "../../../src/util/bytes";
-import { PrivateKey } from "@chainsafe/bls-js/lib/privateKey";
+import { PrivateKey } from "@chainsafe/bls/lib/privateKey";
 
 describe("intToBytes", () => {                                    
   const zeroedArray = (length) => Array.from({ length }, () => 0);                              
