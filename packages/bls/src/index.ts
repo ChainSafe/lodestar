@@ -91,7 +91,12 @@ export function verify(publicKey: BLSPubkey, messageHash: Hash, signature: BLSSi
  * @param signature
  * @param domain
  */
-export function verifyMultiple(publicKeys: BLSPubkey[], messageHashes: Hash[], signature: BLSSignature, domain: Domain): boolean {
+export function verifyMultiple(
+  publicKeys: BLSPubkey[],
+  messageHashes: Hash[],
+  signature: BLSSignature,
+  domain: Domain
+): boolean {
   if(publicKeys.length === 0 || publicKeys.length != messageHashes.length) {
     return false;
   }

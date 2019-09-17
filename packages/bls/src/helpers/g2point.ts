@@ -16,47 +16,6 @@ export class G2point {
     this.point = point;
   }
 
-  public add(other: G2point): G2point {
-    const sum = new ctx.ECP2();
-    sum.add(this.point);
-    sum.add(other.point);
-    sum.affine();
-    return new G2point(sum);
-  }
-
-  public mul(value: BIG): G2point {
-    const newPoint = this.point.mul(value);
-    return new G2point(newPoint);
-  }
-
-  public equal(other: G2point): boolean {
-    return this.point.equals(other.point);
-  }
-
-  public getPoint(): ECP2 {
-    return this.point;
-  }
-
-  public toBytesCompressed(): Buffer {
-    const xReBytes = Buffer.alloc(FP_POINT_LENGTH, 0);
-    const xImBytes = Buffer.alloc(FP_POINT_LENGTH, 0);
-    this.point.getX().getA().tobytearray(xReBytes, 0);
-    this.point.getX().getB().tobytearray(xImBytes, 0);
-    const c1 = true;
-    const b1 = this.point.is_infinity();
-    const a1 = !b1 && calculateYFlag(this.point.getY().getB());
-
-    const flags = ((a1 ? 1 << 5 : 0) | (b1 ? 1 << 6 : 0) | (c1 ? 1 << 7 : 0));
-    const mask = 31;
-    xImBytes[0] &= mask;
-    xImBytes[0] |= flags;
-    xReBytes[0] &= mask;
-
-    return Buffer.concat([
-      xImBytes,
-      xReBytes
-    ]);
-  }
 
   public static hashToG2(message: Hash, domain: Domain): G2point {
     const padding = Buffer.alloc(G2_HASH_PADDING, 0);
@@ -244,6 +203,48 @@ export class G2point {
     } else {
       return point;
     }
+  }
+
+  public add(other: G2point): G2point {
+    const sum = new ctx.ECP2();
+    sum.add(this.point);
+    sum.add(other.point);
+    sum.affine();
+    return new G2point(sum);
+  }
+
+  public mul(value: BIG): G2point {
+    const newPoint = this.point.mul(value);
+    return new G2point(newPoint);
+  }
+
+  public equal(other: G2point): boolean {
+    return this.point.equals(other.point);
+  }
+
+  public getPoint(): ECP2 {
+    return this.point;
+  }
+
+  public toBytesCompressed(): Buffer {
+    const xReBytes = Buffer.alloc(FP_POINT_LENGTH, 0);
+    const xImBytes = Buffer.alloc(FP_POINT_LENGTH, 0);
+    this.point.getX().getA().tobytearray(xReBytes, 0);
+    this.point.getX().getB().tobytearray(xImBytes, 0);
+    const c1 = true;
+    const b1 = this.point.is_infinity();
+    const a1 = !b1 && calculateYFlag(this.point.getY().getB());
+
+    const flags = ((a1 ? 1 << 5 : 0) | (b1 ? 1 << 6 : 0) | (c1 ? 1 << 7 : 0));
+    const mask = 31;
+    xImBytes[0] &= mask;
+    xImBytes[0] |= flags;
+    xReBytes[0] &= mask;
+
+    return Buffer.concat([
+      xImBytes,
+      xReBytes
+    ]);
   }
 
 }
