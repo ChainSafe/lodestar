@@ -5,7 +5,7 @@ import sinon from "sinon";
 import {WinstonLogger} from "../../../../../src/logger";
 import {BeaconChain} from "../../../../../src/chain";
 import {BeaconDb} from "../../../../../src/db/api";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
 import supertest from "supertest";
 import {expect} from "chai";
@@ -19,6 +19,7 @@ describe('Test beacon rest api', function () {
 
   const chain = sinon.createStubInstance(BeaconChain);
   const sync = sinon.createStubInstance(Sync);
+
 
   before(async function () {
     restApi = new RestApi({
@@ -36,6 +37,9 @@ describe('Test beacon rest api', function () {
       config,
       eth1: sinon.createStubInstance(EthersEth1Notifier),
     });
+    // @ts-ignore
+    chain.config = config;
+    sync.isSynced = sinon.stub()
     return await restApi.start();
   });
 
