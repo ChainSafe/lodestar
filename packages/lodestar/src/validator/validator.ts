@@ -153,7 +153,7 @@ class Validator {
 
   private run(): void {
     this.apiClient.onNewSlot(this.checkDuties);
-    this.apiClient.onNewEpoch(this.lookAhead);
+    // this.apiClient.onNewEpoch(this.lookAhead);
   }
 
   private async checkDuties(slot: Slot): Promise<void> {

@@ -1,11 +1,11 @@
-import {expect} from 'chai';
+import {expect} from "chai";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
-
+import {describe, it, before, after} from "mocha";
 import program from "commander";
-import {ValidatorCommand} from '../../../../src/cli/commands';
+import {ValidatorCommand} from "../../../../src/cli/commands";
 
-describe('[CLI] validator', () => {
-  let logger: ILogger = new WinstonLogger();
+describe("[CLI] validator", () => {
+  const logger: ILogger = new WinstonLogger();
 
   before(async () => {
     logger.silent = true;
@@ -15,20 +15,20 @@ describe('[CLI] validator', () => {
     logger.silent = false;
   });
 
-  it('Should be able to register', async () => {
+  it("Should be able to register", async () => {
     const command = new ValidatorCommand();
     const commandCount = program.commands.length;
     await expect(command.register(program)).to.not.throw;
     expect(program.commands.length).to.be.equal(commandCount + 1);
   });
 
-  it.skip('Should be able to run', async () => {
-    let keyString = "0xce19243b40ececffe739ddd6b2306be0d8dbd2be0b7dff9bacb419bfbacfa7a7";
+  it.skip("Should be able to run", async () => {
+    const keyString = "0xce19243b40ececffe739ddd6b2306be0d8dbd2be0b7dff9bacb419bfbacfa7a7";
     const command = new ValidatorCommand();
     await expect(
       command.action({
         key:keyString,
-        loggingLevel: null,
+        logLevel: "info",
       }, logger)
 
     ).not.throw;

@@ -4,7 +4,7 @@ import {IncomingMessage, ServerResponse} from "http";
 
 
 export const registerSyncingMiddleware = (fastify: IFastifyServer, modules: IApiModules): void => {
-  const syncingMiddleware = async (request: IncomingMessage, response: ServerResponse, next: Function): void => {
+  const syncingMiddleware = async (request: IncomingMessage, response: ServerResponse, next: Function): Promise<void> => {
     if (!await modules.sync.isSynced()) {
       response.statusCode = 503;
       response.end("Beacon node is currently syncing, try again later.");

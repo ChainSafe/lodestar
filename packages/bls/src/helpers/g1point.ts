@@ -101,6 +101,10 @@ export class G1point {
     return new G1point(sum);
   }
 
+  public addRaw(other: bytes48): G1point {
+    return this.add(G1point.fromBytesCompressed(other));
+  }
+
   public equal(other: G1point): boolean {
     return this.point.equals(other.point);
   }
