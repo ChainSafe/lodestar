@@ -36,7 +36,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/eth2.0-types": "^0.1.0",
+    "@chainsafe/eth2.0-types": "^0.1.1",
     "@types/bn.js": "^4.11.4",
     "bn.js": "^4.11.8"
   },

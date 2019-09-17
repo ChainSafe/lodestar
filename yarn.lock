@@ -1600,6 +1600,11 @@
     npmlog "^4.1.2"
     write-file-atomic "^2.3.0"
 
+"@mpetrunic/eslint-import-resolver-lerna@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@mpetrunic/eslint-import-resolver-lerna/-/eslint-import-resolver-lerna-1.0.0.tgz#b6459779dfdb654314cbcffc34f9f0d7f16bf7ab"
+  integrity sha512-kTgyRCd+QM1/T4BIbZke07eG1GTxEXSMWCRxgM+ZGPMHvDknGBp/T+4W8+DQNLLG2w/V6XeZM8Fk07Aph36OYw==
+
 "@mrmlnc/readdir-enhanced@^2.2.1":
   version "2.2.1"
   resolved "https://registry.yarnpkg.com/@mrmlnc/readdir-enhanced/-/readdir-enhanced-2.2.1.tgz#524af240d1a360527b730475ecfa1344aa540dde"
@@ -4756,11 +4761,6 @@ escape-html@~1.0.3:
 escape-string-regexp@1.0.5, escape-string-regexp@^1.0.2, escape-string-regexp@^1.0.5:
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/escape-string-regexp/-/escape-string-regexp-1.0.5.tgz#1b61c0562190a8dff6ae3bb2cf0200ca130b86d4"
-
-eslint-import-resolver-lerna@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/eslint-import-resolver-lerna/-/eslint-import-resolver-lerna-1.1.0.tgz#4069a41742651de953ea1063a455aec952388a69"
-  integrity sha512-4olD03ngUo7Q7yRuOF5Gb9WxOc+CLEnw+rt95TnjUWQJ4pn0h9XWSybAr2gswOhre0NHXwwhAhPE8CAiwISFyw==
 
 eslint-import-resolver-node@^0.3.2:
   version "0.3.2"

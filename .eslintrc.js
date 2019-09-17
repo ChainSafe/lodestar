@@ -1,4 +1,4 @@
-const path = require('path')
+const path = require('path');
 
 module.exports = {
   root: true,
@@ -25,7 +25,7 @@ module.exports = {
   ],
   settings: {
     "import/resolver": {
-      "eslint-import-resolver-lerna": {
+      "@mpetrunic/eslint-import-resolver-lerna": {
         packages: path.resolve(__dirname, "packages")
       }
     }
