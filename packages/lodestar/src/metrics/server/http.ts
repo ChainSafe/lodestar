@@ -7,13 +7,16 @@ import promisify from "promisify-es6";
 
 import {IMetrics, IMetricsServer} from "../interface";
 import {IMetricsOptions} from "../options";
+import {ILogger} from "../../logger";
 
 export class HttpMetricsServer implements IMetricsServer {
   private opts: IMetricsOptions;
   private metrics: IMetrics;
   private http: http.Server;
-  public constructor(opts: IMetricsOptions, {metrics}: {metrics: IMetrics}) {
+  private logger: ILogger;
+  public constructor(opts: IMetricsOptions, {metrics, logger}: {metrics: IMetrics; logger: ILogger}) {
     this.opts = opts;
+    this.logger = logger;
     this.metrics = metrics;
     this.http = http.createServer(this.onRequest.bind(this));
   }
@@ -28,6 +31,7 @@ export class HttpMetricsServer implements IMetricsServer {
   }
   public async start(): Promise<void> {
     if (this.opts.enabled) {
+      this.logger.info("Starting prometheus...");
       await promisify(this.http.listen.bind(this.http))(this.opts.serverPort);
     }
   }

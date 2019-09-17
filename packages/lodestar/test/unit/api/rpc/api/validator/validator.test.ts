@@ -18,12 +18,14 @@ import {generateEmptyAttestation} from "../../../../../utils/attestation";
 import {BlockRepository, StateRepository} from "../../../../../../src/db/api/beacon/repositories";
 import * as validatorImpl from "../../../../../../src/api/impl/validator";
 import {Keypair} from "@chainsafe/bls";
+import {ILogger, WinstonLogger} from "../../../../../../src/logger"
 
 describe('validator rpc api', function () {
 
   const sandbox = sinon.createSandbox();
 
   let validatorApi, dbStub, chainStub, opStub, forkChoiceStub, eth1Stub, getDutiesStub;
+  let logger: ILogger = new WinstonLogger();
 
   beforeEach(() => {
     dbStub = sandbox.createStubInstance(BeaconDb);
@@ -36,7 +38,7 @@ describe('validator rpc api', function () {
     chainStub.forkChoice = forkChoiceStub;
     opStub = sandbox.createStubInstance(OpPool);
     opStub.attestations = sandbox.createStubInstance(AttestationOperations);
-    validatorApi = new ValidatorApi({}, {config, chain: chainStub, db: dbStub, opPool: opStub, eth1: eth1Stub});
+    validatorApi = new ValidatorApi({}, {config, chain: chainStub, db: dbStub, opPool: opStub, eth1: eth1Stub, logger: logger}); // need to add logger in here
   });
 
   afterEach(() => {
@@ -50,7 +52,7 @@ describe('validator rpc api', function () {
     expect(result).to.be.not.null;
     expect(
       assembleBlockStub
-        .withArgs(config, dbStub, opStub, eth1Stub, 1, Buffer.alloc(96, 0))
+        .withArgs(config, chainStub, dbStub, opStub, eth1Stub, 1, Buffer.alloc(96, 0))
         .calledOnce
     ).to.be.true;
   });

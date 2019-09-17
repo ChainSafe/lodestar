@@ -58,7 +58,7 @@ export default class BlockProposingService {
     await this.storeBlock(block);
     await this.provider.validator.publishBlock(block);
     this.logger.info(
-      `Proposed block with hash 0x${hashTreeRoot(block, this.config.types.BeaconBlock).toString('hex')}`
+      `Proposed block with hash 0x${signingRoot(block, this.config.types.BeaconBlock).toString('hex')}`
     );
     return block;
   }

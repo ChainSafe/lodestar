@@ -5,15 +5,18 @@
 import {CliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
-import fs from "fs";
+import fs, {existsSync, mkdirSync} from "fs";
 
+import PeerId from "peer-id";
+import promisify from "promisify-es6";
+// eslint-disable-next-line
+import yaml from "js-yaml";
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ILogger, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
-import {generateCommanderOptions, optionsToConfig, } from "../util";
-import {rmDir} from "../../util/file";
-import {getTomlConfig} from "../../util/file";
+import {generateCommanderOptions, optionsToConfig,} from "../util";
+import {getTomlConfig, rmDir} from "../../util/file";
 import Validator from "../../validator";
 import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {InteropEth1Notifier} from "../../eth1/impl/interop";
@@ -24,14 +27,11 @@ import {interopKeypair} from "../../interop/keypairs";
 import {RpcClientOverInstance} from "../../validator/rpc";
 import {ValidatorApi} from "../../api/rpc/api/validator";
 import {BeaconApi} from "../../api/rpc/api/beacon";
-import {existsSync, mkdirSync} from "fs";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
-import {intDiv} from "../../util/math";
-import {signingRoot} from "@chainsafe/ssz";
-import { OperationsModule } from "../../opPool/modules/abstract";
-import { parse } from "url";
-import { loadPeerId, NodejsNode } from "../../network/nodejs";
-import { initializePeerInfo, createPeerId } from "../../network";
+import {loadPeerId, NodejsNode} from "../../network/nodejs";
+import {createPeerId, initializePeerInfo} from "../../network";
+import {computeEpochOfSlot, computeStartSlotOfEpoch} from "../../chain/stateTransition/util";
+import {getCurrentSlot} from "../../chain/stateTransition/util/genesis";
 
 interface IInteropCommandOptions {
   loggingLevel?: string;
@@ -57,7 +57,9 @@ export class InteropCommand implements CliCommand {
       .option("-v, --validators [range]", "Start validators, single number - validators 0-number, x,y - validators between x and y", 0)
       .option("-p, --preset [preset]", "Minimal/mainnet", "mainnet")
       .option("-r, --resetDb", "Reset the database", true)
-      .option("--peer-id [peerId]","peer id json file")
+      .option("--peer-id-file [peerIdFile]","peer id json file")
+      .option("--peer-id [peerId]","peer id hex string")
+      .option("--validators-from-yaml-key-file [validatorsYamlFile]", "validator keys")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
@@ -108,11 +110,13 @@ export class InteropCommand implements CliCommand {
 
     let peerId;
     if (options["peerId"]) {
+      peerId = PeerId.createFromHexString(options["peerId"])
+    } else if (options["peerIdFile"]) {
       peerId = loadPeerId(options["peerId"]);
     } else {
       peerId = createPeerId();
     }
-    const libp2p = await peerId
+    const libp2p = await Promise.resolve(peerId)
       .then((peerId) => initializePeerInfo(peerId, conf.network.multiaddrs))
       .then((peerInfo) => new NodejsNode({peerInfo, bootnodes: conf.network.bootnodes}));
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
@@ -121,6 +125,8 @@ export class InteropCommand implements CliCommand {
       const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
       const state = quickStartOptionToState(config, tree, options.quickStart);
       await this.node.chain.initializeBeaconChain(state, tree);
+      const targetSlot = computeStartSlotOfEpoch(config, computeEpochOfSlot(config, getCurrentSlot(config, state.genesisTime)));
+      await this.node.chain.advanceState(targetSlot);
     } else {
       throw new Error("Missing --quickstart flag");
     }
@@ -132,38 +138,45 @@ export class InteropCommand implements CliCommand {
       } else {
         this.startValidators(0, parseInt(options.validators), this.node);
       }
+    } else if (options.validatorsFromYamlKeyFile) {
+      // @ts-ignore
+      const keys = yaml.load(fs.readFileSync(options.validatorsFromYamlKeyFile));
+      for (const {privkey} of keys) {
+        this.startValidator(Buffer.from(privkey.slice(2), "hex"), this.node);
+      }
     }
   }
+
+  private validatorDir = './validators';
 
   private async startValidators(from: number, to: number, node: BeaconNode): Promise<void> {
-    const validatorDir = './validators';
-    if(!existsSync(validatorDir)) {
-      mkdirSync(validatorDir);
+    if(!existsSync(this.validatorDir)) {
+      mkdirSync(this.validatorDir);
     }
     for(let i = from; i < to; i++) {
-      const modules = {
-        config: node.config,
-        sync: node.sync,
-        eth1: node.eth1,
-        opPool: node.opPool,
-        logger: new WinstonLogger({module: "API"}),
-        chain: node.chain,
-        db: node.db
-      };
-      const rpcInstance = new RpcClientOverInstance({
-        config: node.config,
-        validator: new ValidatorApi({}, modules),
-        beacon: new BeaconApi({}, modules),
-      });
-      const keypair = new Keypair(PrivateKey.fromBytes(interopKeypair(i).privkey));
-      const index = await node.db.getValidatorIndex(keypair.publicKey.toBytesCompressed());
-      const validator = new Validator(
-        {keypair, rpcInstance, db: {name: validatorDir + '/validator-db-' + index}},
-        {config: node.config, logger: new WinstonLogger({module: `Validator #${index}`})});
-      validator.start();
+      this.startValidator(interopKeypair(i).privkey, node);
     }
   }
-
-
-
+  private async startValidator(privkey: Buffer, node): Promise<void> {
+    const modules = {
+      config: node.config,
+      sync: node.sync,
+      eth1: node.eth1,
+      opPool: node.opPool,
+      logger: new WinstonLogger({module: "API"}),
+      chain: node.chain,
+      db: node.db
+    };
+    const rpcInstance = new RpcClientOverInstance({
+      config: node.config,
+      validator: new ValidatorApi({}, modules),
+      beacon: new BeaconApi({}, modules),
+    });
+    const keypair = new Keypair(PrivateKey.fromBytes(privkey));
+    const index = await node.db.getValidatorIndex(keypair.publicKey.toBytesCompressed());
+    const validator = new Validator(
+      {keypair, rpcInstance, db: {name: this.validatorDir + '/validator-db-' + index}},
+      {config: node.config, logger: new WinstonLogger({module: `Validator #${index}`})});
+    validator.start();
+  }
 }

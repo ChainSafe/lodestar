@@ -17,7 +17,7 @@ import {IBeaconMetrics} from "../metrics";
 
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
 
-import {stateTransition, processBlock} from "./stateTransition";
+import {processSlots, stateTransition} from "./stateTransition";
 import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 import {
   computeEpochOfSlot,
@@ -35,6 +35,7 @@ import fs from "fs";
 import {sleep} from "../validator/services/attestation";
 import {priorityQueue, queue} from "async";
 import FastPriorityQueue from "fastpriorityqueue";
+import {getCurrentSlot} from "./stateTransition/util/genesis";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -79,16 +80,13 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.attestationProcessingQueue = queue(async (task: Function) => {
       await task();
     }, 1);
-    // this.blockProcessingQueue = priorityQueue(async (task: Function) => {
-    //   await task();
-    // }, 1);
     this.blockProcessingQueue = new FastPriorityQueue((a: BeaconBlock, b: BeaconBlock) => {
       return a.slot < b.slot;
     });
   }
 
   public async start(): Promise<void> {
-    const state = await this.db.state.getLatest();
+    const state = this.latestState || await this.db.state.getLatest();
     // if state doesn't exist in the db, the chain maybe hasn't started
     if(!state) {
       // check every block if genesis
@@ -147,12 +145,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     if(!await this.db.block.has(block.parentRoot)) {
       this.emit("unknownBlockRoot", block.parentRoot);
     }
-    // old code
-    // this.blockProcessingQueue.push(async () =>{
-    //   return this.processBlock(block, blockHash)
-    // }, block.slot);
-
-    //new shit
 
     if(block.slot <= this.latestState.slot) {
       this.logger.warn(`Block ${blockHash.toString("hex")} is in past. Probably fork choice/double propose/processed block. Ignored for now.`);
@@ -196,7 +188,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     // process current slot
     const post = await this.runStateTransition(block, pre);
 
-    this.logger.info(`Slot ${block.slot} Block 0x${blockHash.toString('hex')} passed state transition`);
+    this.logger.info(`Slot ${block.slot} Block 0x${blockHash.toString('hex')} ${hashTreeRoot(post, this.config.types.BeaconState).toString('hex')} passed state transition`);
     await this.opPool.processBlockOperations(block);
     block.body.attestations.forEach((attestation) => {
       this.receiveAttestation(attestation);
@@ -205,6 +197,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     if (this.opts.dumpState) {
       this.dumpState(block, pre, post);
     }
+
+    this.metrics.currentSlot.inc(1);
 
     // forward processed block for additional processing
     this.emit('processedBlock', block);
@@ -235,6 +229,20 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     });
   };
 
+  public async advanceState(slot?: Slot): Promise<void> {
+    const targetSlot = slot || getCurrentSlot(this.config, this.latestState.genesisTime);
+    this.logger.info(`Manually advancing slot from state slot ${this.latestState.slot} to ${targetSlot} `);
+    const state = this.latestState;
+
+    try {
+      processSlots(this.config, state, targetSlot);
+    } catch (e) {
+      this.logger.warn(`Failed to advance slot mannually because ${e.message}`);
+    }
+    this.latestState = state;
+    await this.db.state.setUnderRoot(state);
+    await this.db.chain.setLatestStateRoot(hashTreeRoot(state, this.config.types.BeaconState));
+  }
 
   public async applyForkChoiceRule(): Promise<void> {
     const currentRoot = await this.db.chain.getChainHeadRoot();

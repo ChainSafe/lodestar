@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 
-import {Attestation, BeaconBlock, BeaconState, Checkpoint, Hash, uint16, uint64} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BeaconState, Checkpoint, Hash, Slot, uint16, uint64} from "@chainsafe/eth2.0-types";
 
 import {LMDGHOST} from "./forkChoice";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
@@ -54,6 +54,8 @@ export interface IBeaconChain extends ChainEventEmitter {
    * Ensure that the block is compliant with block processing validity conditions
    */
   isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean>;
+
+  advanceState(slot?: Slot): Promise<void>;
 
   /**
    * Used for starting beacon chain with fake genesis state (dev, test, interop).
