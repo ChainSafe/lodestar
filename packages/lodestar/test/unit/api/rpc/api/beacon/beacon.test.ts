@@ -22,6 +22,7 @@ describe('beacon rpc api', function () {
       block: sandbox.createStubInstance(BlockRepository)
     };
     chainStub = sandbox.createStubInstance(BeaconChain);
+    chainStub.config = config;
     // @ts-ignore
     beaconApi = new BeaconApi({}, {
       config,
