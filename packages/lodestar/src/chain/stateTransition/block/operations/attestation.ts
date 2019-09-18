@@ -5,23 +5,17 @@
 import assert from "assert";
 import {equals, hashTreeRoot} from "@chainsafe/ssz";
 
-import {
-  BeaconState,
-  Crosslink,
-  PendingAttestation,
-  Attestation,
-  FFGData,
-} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconState, Crosslink, PendingAttestation,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {ZERO_HASH} from "../../../../constants";
 import {
+  getAttestationDataSlot,
+  getBeaconProposerIndex,
   getCurrentEpoch,
   getIndexedAttestation,
-  getBeaconProposerIndex,
-  getAttestationDataSlot,
-  isValidIndexedAttestation,
   getPreviousEpoch,
+  isValidIndexedAttestation,
 } from "../../util";
 
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#attestations

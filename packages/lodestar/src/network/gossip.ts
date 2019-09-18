@@ -1,28 +1,26 @@
+/* eslint-disable no-empty,@typescript-eslint/no-explicit-any */
 /**
  * @module network
  */
 
 import {EventEmitter} from "events";
 import {deserialize, serialize} from "@chainsafe/ssz";
+//@ts-ignore
 import promisify from "promisify-es6";
 import LibP2p from "libp2p";
+//@ts-ignore
 import Gossipsub from "libp2p-gossipsub";
 import {Attestation, BeaconBlock, Shard} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
 import {ATTESTATION_TOPIC, BLOCK_TOPIC, SHARD_SUBNET_COUNT} from "../constants";
 import {ILogger} from "../logger";
-import {IBeaconMetrics} from "../metrics";
-
 import {shardAttestationTopic, shardSubnetAttestationTopic} from "./util";
 import {INetworkOptions} from "./options";
-import {
-  IGossip, GossipEventEmitter,
-} from "./interface";
+import {GossipEventEmitter, IGossip,} from "./interface";
 
-interface GossipModules {
+interface IGossipModules {
   config: IBeaconConfig;
-  libp2p: any;
+  libp2p: LibP2p;
   logger: ILogger;
 }
 
@@ -34,7 +32,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   private pubsub: Gossipsub;
   private logger: ILogger;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, logger}: GossipModules) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger}: IGossipModules) {
     super();
     this.opts = opts;
     this.config = config;
@@ -43,6 +41,32 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.pubsub = new Gossipsub(libp2p, {gossipIncoming: false});
   }
 
+
+  // service
+  public async start(): Promise<void> {
+    await promisify(this.pubsub.start.bind(this.pubsub))();
+    this.pubsub.on(BLOCK_TOPIC, this.handleIncomingBlock);
+    this.pubsub.on(ATTESTATION_TOPIC, this.handleIncomingAttestation);
+    for (let shard = 0; shard < SHARD_SUBNET_COUNT; shard++) {
+      this.pubsub.on(
+        shardSubnetAttestationTopic(shard),
+        this.handleIncomingShardAttestation
+      );
+    }
+    this.pubsub.on("gossipsub:heartbeat", this.emitGossipHeartbeat);
+  }
+  public async stop(): Promise<void> {
+    await promisify(this.pubsub.stop.bind(this.pubsub))();
+    this.pubsub.removeListener(BLOCK_TOPIC, this.handleIncomingBlock);
+    this.pubsub.removeListener(ATTESTATION_TOPIC, this.handleIncomingAttestation);
+    for (let shard = 0; shard < SHARD_SUBNET_COUNT; shard++) {
+      this.pubsub.removeListener(
+        shardSubnetAttestationTopic(shard),
+        this.handleIncomingShardAttestation
+      );
+    }
+    this.pubsub.removeListener("gossipsub:heartbeat", this.emitGossipHeartbeat);
+  }
   public subscribeToBlocks(): void {
     this.pubsub.subscribe(BLOCK_TOPIC);
   }
@@ -71,7 +95,9 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   }
   public async publishShardAttestation(attestation: Attestation): Promise<void> {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
-      shardSubnetAttestationTopic(attestation.data.crosslink.shard), serialize(attestation, this.config.types.Attestation));
+      shardSubnetAttestationTopic(attestation.data.crosslink.shard),
+      serialize(attestation, this.config.types.Attestation)
+    );
   }
   private handleIncomingBlock = (msg: any): void => {
     try {
@@ -99,26 +125,4 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   private emitGossipHeartbeat = (): void => {
     this.emit("gossipsub:heartbeat");
   };
-
-  // service
-  public async start(): Promise<void> {
-    await promisify(this.pubsub.start.bind(this.pubsub))();
-    this.pubsub.on(BLOCK_TOPIC, this.handleIncomingBlock);
-    this.pubsub.on(ATTESTATION_TOPIC, this.handleIncomingAttestation);
-    for (let shard = 0; shard < SHARD_SUBNET_COUNT; shard++) {
-      this.pubsub.on(shardSubnetAttestationTopic(shard),
-        this.handleIncomingShardAttestation);
-    }
-    this.pubsub.on("gossipsub:heartbeat", this.emitGossipHeartbeat);
-  }
-  public async stop(): Promise<void> {
-    await promisify(this.pubsub.stop.bind(this.pubsub))();
-    this.pubsub.removeListener(BLOCK_TOPIC, this.handleIncomingBlock);
-    this.pubsub.removeListener(ATTESTATION_TOPIC, this.handleIncomingAttestation);
-    for (let shard = 0; shard < SHARD_SUBNET_COUNT; shard++) {
-      this.pubsub.removeListener(shardSubnetAttestationTopic(shard),
-        this.handleIncomingShardAttestation);
-    }
-    this.pubsub.removeListener("gossipsub:heartbeat", this.emitGossipHeartbeat);
-  }
 }

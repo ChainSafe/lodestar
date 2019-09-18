@@ -28,10 +28,13 @@ export function createIBeaconSSZTypes(params: IBeaconParams): IBeaconSSZTypes {
   const types: IBeaconSSZTypes = {} as IBeaconSSZTypes;
   // primitive types (don't need generators)
   for (const type in primitive) {
+    // @ts-ignore
+    // eslint-disable-next-line import/namespace
     types[type] = parseType(primitive[type]);
   }
   // relies on list of typenames in dependency order
   typeNames.forEach((type) => {
+    // @ts-ignore
     types[type] = parseType(allGenerators[type](types, params)) as ContainerType;
   });
   /* or if we can separate out types w/ dependencies into files

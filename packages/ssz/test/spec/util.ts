@@ -1,18 +1,14 @@
 import {BitList, BitVector} from "@chainsafe/bit-utils";
-// eslint-disable-next-line import/no-extraneous-dependencies
+// eslint-disable-next-line import/default
 import camelCase from "camelcase";
-import {
-  FullSSZType,
-  parseType,
-  Type,
-} from "../../src";
+import {FullSSZType, parseType, Type,} from "../../src";
 
 // remove all 'number' uint types, yaml spec tests convert all numbers to BN
 export function hydrateType(type: any): FullSSZType {
   return _hydrateType(parseType(type));
 }
 
-function _hydrateType(type: FullSSZType) {
+function _hydrateType(type: FullSSZType): any {
   switch (type.type) {
     case Type.uint:
       type.useNumber = false;
@@ -22,7 +18,10 @@ function _hydrateType(type: FullSSZType) {
       type.elementType = _hydrateType(type.elementType);
       break;
     case Type.container:
-      type.fields = type.fields.map(([fieldName, fieldType]): [string, FullSSZType] => ([fieldName, _hydrateType(fieldType)]));
+      type.fields =
+          type.fields.map(
+            ([fieldName, fieldType]): [string, FullSSZType] =>
+              ([fieldName, _hydrateType(fieldType)]));
       break;
   }
   return type;
@@ -39,12 +38,12 @@ function _hydrateValue(obj: any, type: FullSSZType): any {
     case Type.bool:
       return obj;
     case Type.bitList:
-      return BitList.deserialize(Buffer.from(obj.slice(2), 'hex'));
+      return BitList.deserialize(Buffer.from(obj.slice(2), "hex"));
     case Type.bitVector:
-      return BitVector.fromBitfield(Buffer.from(obj.slice(2), 'hex'), type.length);
+      return BitVector.fromBitfield(Buffer.from(obj.slice(2), "hex"), type.length);
     case Type.byteList:
     case Type.byteVector:
-      return Buffer.from(obj.slice(2), 'hex');
+      return Buffer.from(obj.slice(2), "hex");
     case Type.list:
     case Type.vector:
       return obj.map((element: any) => hydrateValue(element, type.elementType));
@@ -60,6 +59,7 @@ export function getTestType(o: any): string {
   return camelCase(Object.keys(o)[0], {pascalCase: true});
 }
 
-export function getTestValue(o: any, value: string) {
+export function getTestValue(o: any, value: string): any {
+  // @ts-ignore
   return Object.values(o)[0][value];
 }

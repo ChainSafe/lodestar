@@ -3,7 +3,7 @@
  */
 import BN from "bn.js";
 
-import {Epoch, Gwei, Slot, Shard} from "@chainsafe/eth2.0-types";
+import {Epoch, Gwei, Shard, Slot} from "@chainsafe/eth2.0-types";
 
 export interface IBeaconParams {
   // Misc

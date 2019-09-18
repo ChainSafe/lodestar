@@ -2,20 +2,19 @@
  * @module api/rpc
  */
 
-import {Service} from "../../node";
+import {IService} from "../../node";
 import {IApiConstructor, IApiModules} from "../interface";
-import {IRpcOptions} from "./options";
+import defaultOptions, {IRpcOptions} from "./options";
 import {ILogger} from "../../logger";
 import {IRpcServer, TransportType, WSServer} from "./transport";
 import HttpServer from "./transport/http";
 import * as jsonRpc from "noice-json-rpc";
 import * as apis from "./api";
 import deepmerge from "deepmerge";
-import defaultOptions from "./options";
 
 export * from "./api";
 
-export class JsonRpc implements Service {
+export class JsonRpc implements IService {
 
   public transports: IRpcServer[] = [];
 
@@ -64,8 +63,10 @@ export class JsonRpc implements Service {
         const apiInstance = new (api as IApiConstructor)(null, modules);
         // collect the api methods into an enumerable object for rpc exposure
         const methods = {};
-        for (let name of Object.getOwnPropertyNames(Object.getPrototypeOf(apiInstance))) {
-          if (name !== 'constructor' && typeof apiInstance[name] === 'function') {
+        for (const name of Object.getOwnPropertyNames(Object.getPrototypeOf(apiInstance))) {
+          //@ts-ignore
+          if (name !== "constructor" && typeof apiInstance[name] === "function") {
+            //@ts-ignore
             methods[name] = apiInstance[name].bind(apiInstance);
           }
         }

@@ -1,9 +1,7 @@
-import {
-  SimpleSSZType,
-} from "../../src";
+import {SimpleSSZType,} from "../../src";
 
 export function stringifyType (type: SimpleSSZType): string {
-  if (typeof type === 'string') {
+  if (typeof type === "string") {
     return type;
   } else if (Array.isArray(type)) {
     if (type.length === 1) {

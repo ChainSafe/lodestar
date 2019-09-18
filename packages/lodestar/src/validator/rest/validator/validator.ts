@@ -1,8 +1,8 @@
-import { IValidatorApi } from "../../../api/rpc";
-import { HttpClient } from "../../../util/httpClient";
-import { BeaconBlock, Attestation, ValidatorDuty, Slot, Epoch, bytes96, Shard, BLSPubkey } from "@chainsafe/eth2.0-types";
-import { ILogger } from "../../../logger";
-import { ApiNamespace } from "../../../api";
+import {IValidatorApi} from "../../../api/rpc";
+import {HttpClient} from "../../../util/httpClient";
+import {BeaconBlock, Attestation, ValidatorDuty, Slot, Epoch, bytes96, Shard, BLSPubkey} from "@chainsafe/eth2.0-types";
+import {ILogger} from "../../../logger";
+import {ApiNamespace} from "../../../api";
 
 export class RestValidatorApi implements IValidatorApi {
   public namespace: ApiNamespace;
@@ -23,7 +23,12 @@ export class RestValidatorApi implements IValidatorApi {
     return this.client.get<BeaconBlock>(url);
   }
 
-  public async produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, slot: Slot, shard: Shard): Promise<Attestation> {
+  public async produceAttestation(
+    validatorPubKey: BLSPubkey,
+    pocBit: boolean,
+    slot: Slot,
+    shard: Shard
+  ): Promise<Attestation> {
     const url = `/attestation?slot=${slot}&shard=${shard}&validator_pubkey=${validatorPubKey.toString("hex")}`;
     return this.client.get<Attestation>(url);
   }

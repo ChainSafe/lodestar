@@ -1,16 +1,8 @@
 import {assert} from "chai";
+import {describe, it} from "mocha";
+import {SerializableObject, SerializableValue, signingRoot,} from "../../src";
 
-import {
-  signingRoot,
-  SerializableObject,
-  SerializableValue,
-} from "../../src";
-
-import {
-  ArrayObject,
-  OuterObject,
-  SimpleObject,
-} from "./objects";
+import {ArrayObject, OuterObject, SimpleObject,} from "./objects";
 
 import {stringifyType} from "./utils";
 
@@ -25,9 +17,9 @@ describe("signedRoot", () => {
     {value: {v:3, subV:{v:6}}, type: OuterObject, expected: ""},
     {value: {v: [{b:2,a:1}, {b:4,a:3}]}, type: ArrayObject, expected: ""},
   ];
-  for (const {value, type, expected} of testCases) {
+  for (const {value, type} of testCases) {
     it(`should correctly hash ${stringifyType(type)}`, () => {
-      const actual = signingRoot(value, type).toString('hex');
+      const actual = signingRoot(value, type).toString("hex");
       assert(actual);
     });
   }

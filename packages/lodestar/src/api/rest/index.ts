@@ -1,6 +1,6 @@
 import * as fastify from "fastify";
 import fastifyCors from "fastify-cors";
-import {Service} from "../../node";
+import {IService} from "../../node";
 import {IRestApiOptions} from "./options";
 import {IApiModules} from "../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
@@ -15,7 +15,7 @@ export interface IFastifyServer extends fastify.FastifyInstance<Server, Incoming
   chain: IBeaconChain;
 }
 
-export class RestApi implements Service {
+export class RestApi implements IService {
 
   public server: IFastifyServer;
 
@@ -43,7 +43,7 @@ export class RestApi implements Service {
   }
 
   private  setupServer(modules: IApiModules): IFastifyServer {
-    let server = fastify.default({
+    const server = fastify.default({
       //TODO: somehow pass winston here
       logger: false,
       querystringParser: qs.parse
@@ -57,10 +57,12 @@ export class RestApi implements Service {
     }
 
     if(this.opts.api.includes(ApiNamespace.BEACON)) {
-      server.register(routes.beacon, {prefix: '/node', modules});
+      //@ts-ignore
+      server.register(routes.beacon, {prefix: "/node", modules});
     }
     if(this.opts.api.includes(ApiNamespace.VALIDATOR)) {
-      server.register(routes.validator, {prefix: '/validator', modules});
+      //@ts-ignore
+      server.register(routes.validator, {prefix: "/validator", modules});
     }
 
     return server;

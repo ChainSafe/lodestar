@@ -1,4 +1,5 @@
 import {lstatSync, readFileSync} from "fs";
+// eslint-disable-next-line import/default
 import camelcase from "camelcase";
 import {load} from "js-yaml";
 

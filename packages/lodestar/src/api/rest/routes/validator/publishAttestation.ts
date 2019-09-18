@@ -5,15 +5,16 @@ import {IncomingMessage, Server, ServerResponse} from "http";
 import {fromRestJson} from "../../utils";
 import {Attestation} from "@chainsafe/eth2.0-types";
 
-interface Body extends DefaultBody {
+interface IBody extends DefaultBody {
   attestation: object;
 }
 
 
-const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerResponse, DefaultQuery, DefaultParams, DefaultHeaders, Body> = {
+const opts: fastify.RouteShorthandOptions<
+Server, IncomingMessage, ServerResponse, DefaultQuery, DefaultParams, DefaultHeaders, IBody> = {
   schema: {
     body: {
-      type: 'object',
+      type: "object",
       required: ["attestation"],
       properties: {
         attestation: {
@@ -25,8 +26,8 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
 };
 
 export const registerAttestationPublishEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
-  fastify.post<DefaultQuery, DefaultParams, DefaultQuery, Body>(
-    '/attestation',
+  fastify.post<DefaultQuery, DefaultParams, DefaultQuery, IBody>(
+    "/attestation",
     opts,
     async (request, reply) => {
       try {
@@ -41,7 +42,7 @@ export const registerAttestationPublishEndpoint = (fastify: IFastifyServer, modu
       }
       reply
         .code(200)
-        .type('application/json')
+        .type("application/json")
         .send();
     }
   );

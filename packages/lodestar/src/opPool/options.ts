@@ -6,7 +6,7 @@ export interface IOpPoolOptions {
 }
 
 export const OpPoolOptions: IConfigurationModule = {
-  name: 'opPool',
+  name: "opPool",
   fields: []
 };
 

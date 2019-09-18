@@ -1600,6 +1600,11 @@
     npmlog "^4.1.2"
     write-file-atomic "^2.3.0"
 
+"@mpetrunic/eslint-import-resolver-lerna@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@mpetrunic/eslint-import-resolver-lerna/-/eslint-import-resolver-lerna-1.0.0.tgz#b6459779dfdb654314cbcffc34f9f0d7f16bf7ab"
+  integrity sha512-kTgyRCd+QM1/T4BIbZke07eG1GTxEXSMWCRxgM+ZGPMHvDknGBp/T+4W8+DQNLLG2w/V6XeZM8Fk07Aph36OYw==
+
 "@mrmlnc/readdir-enhanced@^2.2.1":
   version "2.2.1"
   resolved "https://registry.yarnpkg.com/@mrmlnc/readdir-enhanced/-/readdir-enhanced-2.2.1.tgz#524af240d1a360527b730475ecfa1344aa540dde"
@@ -1774,6 +1779,13 @@
   dependencies:
     "@types/node" "*"
 
+"@types/buffer-xor@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@types/buffer-xor/-/buffer-xor-2.0.0.tgz#15738051e0720b68120cd2cc3f204aa4dc16bab1"
+  integrity sha512-NEJkIKUE/xboduuIAJmdtUvbXgUOfMkjOo6lWsiBVUIWBC5fVWGT+50yEw9W1Xp4ga76khg57pHELXw5Xm3Y+A==
+  dependencies:
+    "@types/node" "*"
+
 "@types/camelcase@^5.2.0":
   version "5.2.0"
   resolved "https://registry.yarnpkg.com/@types/camelcase/-/camelcase-5.2.0.tgz#5c139f8618a126827129587cce9ee904f9a79863"
@@ -1907,6 +1919,11 @@
   dependencies:
     "@types/node" "*"
 
+"@types/qs@^6.5.3":
+  version "6.5.3"
+  resolved "https://registry.yarnpkg.com/@types/qs/-/qs-6.5.3.tgz#1c3b71b091eaeaf5924538006b7f70603ce63d38"
+  integrity sha512-Jugo5V/1bS0fRhy2z8+cUAHEyWOATaz4rbyLVvcFs7+dXp5HfwpEwzF1Q11bB10ApUqHf+yTauxI0UXQDwGrbA==
+
 "@types/secp256k1@^3.5.0":
   version "3.5.0"
   resolved "https://registry.yarnpkg.com/@types/secp256k1/-/secp256k1-3.5.0.tgz#0f3baf16b07488c6da2633a63b4160bcf8d0fd5b"
@@ -1938,6 +1955,13 @@
   integrity sha512-wcax7/ip4XSSJRLbNzEIUVy2xjcBIZZAuSd2vtltQfRK7kxhx5WMHbLHkYdxN3wuQCrwpYrg86/9byDjPXoGMA==
   dependencies:
     "@types/superagent" "*"
+
+"@types/varint@^5.0.0":
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/@types/varint/-/varint-5.0.0.tgz#f667321775101a92d5c401f87a04274282538202"
+  integrity sha512-dIJiYqeDnYQ5Bc4mv+E5prqFIQlUTM1yDzwC5VQfL29pcYlm/5q1shY/MjbBT1FQAU5gzKE10DdGbu8B2EoFQg==
+  dependencies:
+    "@types/node" "*"
 
 "@types/ws@^6.0.1":
   version "6.0.1"
@@ -3590,6 +3614,7 @@ chai-checkmark@^1.0.1:
 chai@^4.2.0:
   version "4.2.0"
   resolved "https://registry.yarnpkg.com/chai/-/chai-4.2.0.tgz#760aa72cf20e3795e84b12877ce0e83737aa29e5"
+  integrity sha512-XQU3bhBukrOsQCuwZndwGcCVQHyZi53fQ6Ys1Fym7E4olpIqqZZhhoFJoaKVvV17lWQoXYwgWN2nF5crA8J2jw==
   dependencies:
     assertion-error "^1.1.0"
     check-error "^1.0.2"

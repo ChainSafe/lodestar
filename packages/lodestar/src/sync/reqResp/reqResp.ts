@@ -5,22 +5,29 @@
 import BN from "bn.js";
 import PeerInfo from "peer-info";
 import {
-  Epoch, Hash, Slot,
-  RequestBody, Hello, Goodbye,
-  BeaconBlocksRequest, BeaconBlocksResponse,
-  RecentBeaconBlocksRequest, RecentBeaconBlocksResponse,
+  BeaconBlock,
+  BeaconBlocksRequest,
+  BeaconBlocksResponse,
+  Epoch,
+  Goodbye,
+  Hash,
+  Hello,
+  RecentBeaconBlocksRequest,
+  RecentBeaconBlocksResponse,
+  RequestBody,
+  Slot,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {ZERO_HASH, Method, RequestId} from "../../constants";
+import {Method, RequestId, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
-import {ReputationStore} from "../reputation";
 import {ILogger} from "../../logger";
-import {ISyncReqResp, ISyncOptions} from "./interface";
+import {ISyncOptions, ISyncReqResp} from "./interface";
+import {ReputationStore} from "../IReputation";
 
-export interface SyncReqRespModules {
+export interface ISyncReqRespModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   chain: IBeaconChain;
@@ -42,7 +49,7 @@ export class SyncReqResp implements ISyncReqResp {
   private reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: ISyncOptions, {config, db, chain, network, reps, logger}: SyncReqRespModules) {
+  public constructor(opts: ISyncOptions, {config, db, chain, network, reps, logger}: ISyncReqRespModules) {
     this.config = config;
     this.opts = opts;
     this.db = db;
@@ -50,51 +57,6 @@ export class SyncReqResp implements ISyncReqResp {
     this.network = network;
     this.reps = reps;
     this.logger = logger;
-  }
-
-  private async createHello(): Promise<Hello> {
-    let headSlot: Slot,
-      headRoot: Hash,
-      finalizedEpoch: Epoch,
-      finalizedRoot: Hash;
-    if (!this.chain.isInitialized()) {
-      headSlot = 0;
-      headRoot = ZERO_HASH;
-      finalizedEpoch = 0;
-      finalizedRoot = ZERO_HASH;
-    } else {
-      headSlot = await this.db.chain.getChainHeadSlot();
-      const [bRoot, state] = await Promise.all([
-        this.db.chain.getBlockRoot(headSlot),
-        this.db.state.getLatest(),
-      ]);
-      headRoot = bRoot;
-      finalizedEpoch = state.finalizedCheckpoint.epoch;
-      finalizedRoot = state.finalizedCheckpoint.root;
-    }
-    return {
-      forkVersion: this.chain.latestState.fork.currentVersion,
-      finalizedRoot,
-      finalizedEpoch,
-      headRoot,
-      headSlot,
-    };
-  }
-
-  private handshake = async (peerInfo: PeerInfo): Promise<void> => {
-    const randomDelay = Math.floor(Math.random() * 5000);
-    await new Promise((resolve) => setTimeout(resolve, randomDelay));
-    if (
-      this.network.hasPeer(peerInfo) &&
-      !this.reps.get(peerInfo.id.toB58String()).latestHello
-    ) {
-      const request = await this.createHello();
-      try {
-        const response = await this.network.reqResp.hello(peerInfo, request);
-        this.reps.get(peerInfo.id.toB58String()).latestHello = request;
-      } catch (e) {
-      }
-    }
   }
 
   public async onRequest(
@@ -130,6 +92,7 @@ export class SyncReqResp implements ISyncReqResp {
     // TODO handle incorrect forkVersion or disjoint finalizedCheckpoint
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
     await this.network.disconnect(peerInfo);
   }
@@ -160,8 +123,8 @@ export class SyncReqResp implements ISyncReqResp {
         blocks: [],
       };
       for (const blockRoot of request.blockRoots) {
-        const block = await this.db.block.get(blockRoot);
-        response.blocks.push(block);
+        const block = await this.db.block.get(blockRoot as Buffer);
+        response.blocks.push(block as BeaconBlock);
       }
       this.network.reqResp.sendResponse(id, null, response);
     } catch (e) {
@@ -184,4 +147,50 @@ export class SyncReqResp implements ISyncReqResp {
       this.network.getPeers().map((peerInfo) =>
         this.network.reqResp.goodbye(peerInfo, {reason: new BN(0)})));
   }
+
+  private async createHello(): Promise<Hello> {
+    let headSlot: Slot,
+      headRoot: Hash,
+      finalizedEpoch: Epoch,
+      finalizedRoot: Hash;
+    if (!this.chain.isInitialized()) {
+      headSlot = 0;
+      headRoot = ZERO_HASH;
+      finalizedEpoch = 0;
+      finalizedRoot = ZERO_HASH;
+    } else {
+      headSlot = await this.db.chain.getChainHeadSlot() as Slot;
+      const [bRoot, state] = await Promise.all([
+        this.db.chain.getBlockRoot(headSlot),
+        this.db.state.getLatest(),
+      ]);
+      headRoot = bRoot as Hash;
+      finalizedEpoch = state.finalizedCheckpoint.epoch;
+      finalizedRoot = state.finalizedCheckpoint.root;
+    }
+    return {
+      forkVersion: this.chain.latestState ? this.chain.latestState.fork.currentVersion : Buffer.alloc(0),
+      finalizedRoot,
+      finalizedEpoch,
+      headRoot,
+      headSlot,
+    };
+  }
+
+  private handshake = async (peerInfo: PeerInfo): Promise<void> => {
+    const randomDelay = Math.floor(Math.random() * 5000);
+    await new Promise((resolve) => setTimeout(resolve, randomDelay));
+    if (
+      this.network.hasPeer(peerInfo) &&
+        !this.reps.get(peerInfo.id.toB58String()).latestHello
+    ) {
+      const request = await this.createHello();
+      try {
+        await this.network.reqResp.hello(peerInfo, request);
+        this.reps.get(peerInfo.id.toB58String()).latestHello = request;
+      } catch (e) {
+        this.logger.warn(`Handshake failed because ${e.message}`);
+      }
+    }
+  };
 }

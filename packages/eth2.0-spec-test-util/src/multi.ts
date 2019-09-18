@@ -1,11 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/no-unused-vars */
 import {writeFile} from "fs";
-import {describe} from "mocha";
+import {describe, it} from "mocha";
 import {expect} from "chai";
 import profiler from "v8-profiler-next";
 
 import {loadYamlFile} from "./util";
 
-export interface BaseCase {
+export interface IBaseCase {
   description: string;
 }
 
@@ -13,7 +14,8 @@ export interface BaseCase {
  * TestSpec - represent structure of yaml file containing spec test cases
  * TestCase - single test case, usually under test_cases property in yaml file
  */
-interface TestSpec<TestCase extends BaseCase> {
+// eslint-disable-next-line @typescript-eslint/interface-name-prefix
+interface TestSpec<TestCase extends IBaseCase> {
   title: string;
   summary: string;
   forksTimeline: string;
@@ -44,7 +46,7 @@ const env = process.env;
  *   and actual output
  * @param timeout - how long to wait before marking tests as failed (default 2000ms). Set to 0 to wait infinitely
  */
-export function describeMultiSpec<TestCase extends BaseCase, Result>(
+export function describeMultiSpec<TestCase extends IBaseCase, Result>(
   testYamlPath: string,
   testFunc: (...args: any) => any,
   getInput: (testCase: TestCase) => any,
@@ -65,7 +67,7 @@ export function describeMultiSpec<TestCase extends BaseCase, Result>(
       if (shouldSkip(testCase, index)) {
         return;
       }
-      const description = index + (testCase.description ? ' - ' + testCase.description : '');
+      const description = index + (testCase.description ? " - " + testCase.description : "");
       it(description, function () {
         const inputs = getInput(testCase);
         if (shouldError(testCase, index)) {

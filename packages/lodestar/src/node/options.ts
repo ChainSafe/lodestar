@@ -28,7 +28,7 @@ export interface IBeaconNodeOptions {
 }
 
 export const BeaconNodeOptions: IConfigurationModule = {
-  name: 'config',
+  name: "config",
   fields: [
     ChainOptions,
     DatabaseOptions,

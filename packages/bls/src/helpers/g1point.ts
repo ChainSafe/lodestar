@@ -5,7 +5,7 @@ import assert from "assert";
 import {calculateYFlag, getModulus} from "./utils";
 import * as random from "secure-random";
 import {FP_POINT_LENGTH} from "../constants";
-import {BLSPubkey, bytes48} from "@chainsafe/eth2.0-types";
+import {bytes48} from "@chainsafe/eth2.0-types";
 
 export class G1point {
 
@@ -13,6 +13,79 @@ export class G1point {
 
   public constructor(point: ECP) {
     this.point = point;
+  }
+
+  public static fromBytesCompressed(value: bytes48): G1point {
+    assert(value.length === FP_POINT_LENGTH, `Expected g1 compressed input to have ${FP_POINT_LENGTH} bytes`);
+    value = Buffer.from(value);
+    const aIn = (value[0] & (1 << 5)) != 0;
+    const bIn = (value[0] & (1 << 6)) != 0;
+    const cIn = (value[0] & (1 << 7)) != 0;
+    value[0] &=  31;
+
+    if (!cIn) {
+      throw new Error("The serialised input does not have the C flag set.");
+    }
+
+    const x = ctx.BIG.frombytearray(value, 0);
+    if (bIn) {
+      if (!aIn && x.iszilch()) {
+        // This is a correctly formed serialisation of infinity
+        return new G1point(new ctx.ECP());
+      } else {
+        // The input is malformed
+        throw new Error(
+          "The serialised input has B flag set, but A flag is set, or X is non-zero.");
+      }
+    }
+    const modulus = getModulus();
+    if (ctx.BIG.comp(modulus, x) <= 0) {
+      throw new Error("X coordinate is too large.");
+    }
+
+    const point = new ctx.ECP();
+    point.setx(x);
+
+    if (point.is_infinity()) {
+      throw new Error("X coordinate is not on the curve.");
+    }
+
+    // Did we get the right branch of the sqrt?
+    if (!point.is_infinity() && aIn != calculateYFlag(point.getY())) {
+      // We didn't: so choose the other branch of the sqrt.
+      const x = new ctx.FP(point.getX());
+      const yneg = new ctx.FP(point.getY());
+      yneg.neg();
+      point.setxy(x.redc(), yneg.redc());
+    }
+
+    return new G1point(point);
+  }
+
+  public static aggregate(values: bytes48[]): G1point {
+    return values.map((value) => {
+      return G1point.fromBytesCompressed(value);
+    }).reduce((previousValue, currentValue): G1point => {
+      return previousValue.add(currentValue);
+    });
+  }
+
+  public static generator(): G1point {
+    return new G1point(ctx.ECP.generator());
+  }
+
+  public static random(): G1point {
+    let ecp: ECP;
+    do {
+      ecp = new ctx.ECP();
+      ecp.setx(
+        ctx.BIG.frombytearray(
+          random.randomBuffer(FP_POINT_LENGTH),
+          0
+        )
+      );
+    } while (ecp.is_infinity());
+    return new G1point(ecp);
   }
 
   public mul(value: BIG): G1point {
@@ -57,78 +130,5 @@ export class G1point {
     output[0] &= mask;
     output[0] |= flags;
     return output;
-  }
-
-  public static fromBytesCompressed(value: bytes48): G1point {
-    assert(value.length === FP_POINT_LENGTH, `Expected g1 compressed input to have ${FP_POINT_LENGTH} bytes`);
-    value = Buffer.from(value);
-    const aIn = (value[0] & (1 << 5)) != 0;
-    const bIn = (value[0] & (1 << 6)) != 0;
-    const cIn = (value[0] & (1 << 7)) != 0;
-    value[0] &=  31;
-
-    if (!cIn) {
-      throw new Error("The serialised input does not have the C flag set.");
-    }
-
-    const x = ctx.BIG.frombytearray(value, 0);
-    if (bIn) {
-      if (!aIn && x.iszilch()) {
-        // This is a correctly formed serialisation of infinity
-        return new G1point(new ctx.ECP());
-      } else {
-        // The input is malformed
-        throw new Error(
-          "The serialised input has B flag set, but A flag is set, or X is non-zero.");
-      }
-    }
-    const modulus = getModulus();
-    if (ctx.BIG.comp(modulus, x) <= 0) {
-      throw new Error("X coordinate is too large.");
-    }
-
-    let point = new ctx.ECP();
-    point.setx(x);
-
-    if (point.is_infinity()) {
-      throw new Error("X coordinate is not on the curve.");
-    }
-
-    // Did we get the right branch of the sqrt?
-    if (!point.is_infinity() && aIn != calculateYFlag(point.getY())) {
-      // We didn't: so choose the other branch of the sqrt.
-      const x = new ctx.FP(point.getX());
-      const yneg = new ctx.FP(point.getY());
-      yneg.neg();
-      point.setxy(x.redc(), yneg.redc());
-    }
-
-    return new G1point(point);
-  }
-
-  public static aggregate(values: bytes48[]): G1point {
-    return values.map((value) => {
-      return G1point.fromBytesCompressed(value);
-    }).reduce((previousValue, currentValue): G1point => {
-      return previousValue.add(currentValue);
-    });
-  }
-
-  public static generator(): G1point {
-    return new G1point(ctx.ECP.generator());
-  }
-
-  public static random(): G1point {
-    let ecp: ECP;
-    do {
-      ecp = new ctx.ECP();
-      ecp.setx(
-        ctx.BIG.frombytearray(
-          random.randomBuffer(FP_POINT_LENGTH),
-          0
-        )
-      );
-    } while (ecp.is_infinity());
-    return new G1point(ecp);
   }
 }

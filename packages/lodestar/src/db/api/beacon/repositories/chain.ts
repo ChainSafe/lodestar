@@ -3,7 +3,7 @@ import {deserialize, serialize} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {IDatabaseController} from "../../../controller";
-import {Key, Bucket, encodeKey} from "../../../schema";
+import {Bucket, encodeKey, Key} from "../../../schema";
 
 export class ChainRepository {
 
@@ -16,7 +16,7 @@ export class ChainRepository {
     this.config = config;
   }
 
-  public getLatestStateRoot(): Promise<Hash> {
+  public getLatestStateRoot(): Promise<Hash|null> {
     return this.db.get(this.getKey(Key.latestState));
   }
 
@@ -27,7 +27,7 @@ export class ChainRepository {
     );
   }
 
-  public getJustifiedStateRoot(): Promise<Hash> {
+  public getJustifiedStateRoot(): Promise<Hash|null> {
     return this.db.get(this.getKey(Key.justifiedState));
   }
 
@@ -38,7 +38,7 @@ export class ChainRepository {
     );
   }
 
-  public getFinalizedStateRoot(): Promise<Hash> {
+  public getFinalizedStateRoot(): Promise<Hash|null> {
     return this.db.get(this.getKey(Key.finalizedState));
   }
 
@@ -49,7 +49,7 @@ export class ChainRepository {
     );
   }
 
-  public getFinalizedBlockRoot(): Promise<Hash> {
+  public getFinalizedBlockRoot(): Promise<Hash|null> {
     return this.db.get(this.getKey(Key.finalizedBlock));
   }
 
@@ -57,7 +57,7 @@ export class ChainRepository {
     return await this.db.put(this.getKey(Key.finalizedBlock), root);
   }
 
-  public getJustifiedBlockRoot(): Promise<Hash> {
+  public getJustifiedBlockRoot(): Promise<Hash|null> {
     return this.db.get(this.getKey(Key.justifiedBlock));
   }
 
@@ -76,6 +76,9 @@ export class ChainRepository {
   public async getChainHeadSlot(): Promise<Slot | null> {
     try {
       const heightBuf = await this.db.get(this.getKey(Key.chainHeight));
+      if(!heightBuf) {
+        throw new Error("Missing chain height");
+      }
       return deserialize(heightBuf, this.config.types.Slot) as Slot;
     } catch (e) {
       return null;

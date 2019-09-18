@@ -4,7 +4,7 @@
 
 
 import {LikeSocketServer} from "noice-json-rpc";
-import {Service} from "../../../node";
+import {IService} from "../../../node";
 
 export * from "./ws";
 export * from "./http";
@@ -13,6 +13,6 @@ export enum TransportType {
   HTTP= "http"
 }
 
-export interface IRpcServer extends LikeSocketServer, Service {
+export interface IRpcServer extends LikeSocketServer, IService {
 
 }

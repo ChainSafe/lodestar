@@ -3,10 +3,10 @@
  */
 
 import assert from "assert";
-import {MerkleTree, Hash, number64} from "@chainsafe/eth2.0-types";
+import {Hash, MerkleTree, number64} from "@chainsafe/eth2.0-types";
 import {hash} from "../crypto";
 import {intDiv} from "../math";
-import {serialize, deserialize, SimpleContainerType} from "@chainsafe/ssz";
+import {deserialize, serialize, SimpleContainerType} from "@chainsafe/ssz";
 import {IProgressiveMerkleTree} from "./interface";
 
 const MerkleTreeType: SimpleContainerType = {
@@ -37,6 +37,14 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
     this._tree = tree;
     this._zerohashes = this.generateZeroHashes();
     this._dirty = false;
+  }
+
+  public static deserialize(data: Buffer): ProgressiveMerkleTree {
+    const value = deserialize(data, MerkleTreeType);
+    return new ProgressiveMerkleTree(
+      value.depth,
+      value.tree
+    );
   }
 
   public static empty(depth: number): ProgressiveMerkleTree {
@@ -77,23 +85,9 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
     return proof;
   }
 
-  private calculateBranchesIfNecessary() {
-    if (this._dirty) {
-      this.calculateBranches();
-    }
-  }
-
   public root(): Hash {
     this.calculateBranchesIfNecessary();
     return this._tree[this._depth][0];
-  }
-
-  public static deserialize(data: Buffer): ProgressiveMerkleTree {
-    const value = deserialize(data, MerkleTreeType);
-    return new ProgressiveMerkleTree(
-      value.depth,
-      value.tree
-    );
   }
 
   public toObject(): MerkleTree {
@@ -103,6 +97,11 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
     };
   }
 
+  private calculateBranchesIfNecessary(): void {
+    if (this._dirty) {
+      this.calculateBranches();
+    }
+  }
 
   private calculateBranches(): void {
     for(let i = 0; i < this._depth; i++) {

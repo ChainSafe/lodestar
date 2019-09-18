@@ -1,10 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any,camelcase */
 /**
  * @module eth1/dev
  */
 
+//@ts-ignore
 import ganache from "ganache-core";
 import {promisify} from "util";
-import * as utils from 'ethers/utils';
+import * as utils from "ethers/utils";
 import deepmerge from "deepmerge";
 import * as ethers from "ethers/ethers";
 import {ILogger} from "../../logger";
@@ -14,10 +16,10 @@ export const devNetworkOpts =  {
   port: 8545,
   networkId: 200,
   defaultBalance: 1000,
-  host: '127.0.0.1',
+  host: "127.0.0.1",
 };
 
-export interface PrivateNetworkOpts {
+export interface IPrivateNetworkOpts {
   port?: number;
   host?: string;
   networkId?: number;
@@ -33,11 +35,11 @@ export class PrivateEth1Network {
 
   private blockchain: any;
 
-  private opts: PrivateNetworkOpts;
+  private opts: IPrivateNetworkOpts;
 
   private logger: ILogger;
 
-  public constructor(opts: PrivateNetworkOpts, {logger}: {logger: ILogger} ) {
+  public constructor(opts: IPrivateNetworkOpts, {logger}: {logger: ILogger} ) {
     this.opts = deepmerge(devNetworkOpts, opts);
     this.logger = logger;
     this.server = ganache.server({
@@ -59,9 +61,9 @@ export class PrivateEth1Network {
     this.logger.info(
       `Generating accounts with mnemonic: ${this.blockchain._provider.options.mnemonic}`
     );
-    this.logger.info('List of accounts with eth balance (<address>:<privateKey>-<balance>):');
+    this.logger.info("List of accounts with eth balance (<address>:<privateKey>-<balance>):");
     Object.keys(this.blockchain.accounts).forEach((address) => {
-      const privateKey = this.blockchain.accounts[address].secretKey.toString('hex');
+      const privateKey = this.blockchain.accounts[address].secretKey.toString("hex");
       const balance = utils.formatEther(this.blockchain.accounts[address].account.balance);
       this.logger.info(`${address}:0x${privateKey} - ${balance} ETH`);
     });
@@ -90,7 +92,7 @@ export class PrivateEth1Network {
   }
 
   public async deployDepositContract(): Promise<string> {
-    const deployKey = this.blockchain.accounts[this.blockchain.coinbase].secretKey.toString('hex');
+    const deployKey = this.blockchain.accounts[this.blockchain.coinbase].secretKey.toString("hex");
     const provider = new ethers.providers.Web3Provider(this.blockchain._provider);
     const deployWallet = new ethers.Wallet(deployKey, provider);
     const factory = new ethers.ContractFactory(

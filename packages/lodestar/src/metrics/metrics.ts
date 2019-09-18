@@ -10,7 +10,7 @@ import {IMetricsOptions} from "./options";
 export class Metrics implements IMetrics {
   public registry: Registry;
 
-  private defaultInterval;
+  private defaultInterval: NodeJS.Timeout|null = null;
   private opts: IMetricsOptions;
 
   public constructor(opts: IMetricsOptions) {
@@ -22,10 +22,10 @@ export class Metrics implements IMetrics {
     this.defaultInterval = collectDefaultMetrics({
       register: this.registry,
       timeout: this.opts.timeout,
-    });
+    }) as NodeJS.Timeout;
   }
 
   public async stop(): Promise<void> {
-    clearInterval(this.defaultInterval);
+    clearInterval(this.defaultInterval as NodeJS.Timeout);
   }
 }

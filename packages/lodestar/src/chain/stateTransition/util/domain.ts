@@ -20,7 +20,7 @@ export function computeDomain(domainType: DomainType, forkVersion: Version = Buf
   return bytesToBN(Buffer.concat([
     intToBytes(domainType, 4),
     forkVersion,
-  ])).toBuffer('be', 8);
+  ])).toBuffer("be", 8);
 }
 
 /**

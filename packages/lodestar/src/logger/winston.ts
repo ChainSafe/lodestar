@@ -2,8 +2,8 @@
  * @module logger
  */
 
-import {createLogger, format, Logger, transports} from 'winston';
-import {defaultLogLevel, LogLevel, LogLevels, ILogger, ILoggerOptions} from "./interface";
+import {createLogger, format, Logger, transports} from "winston";
+import {defaultLogLevel, ILogger, ILoggerOptions, LogLevel} from "./interface";
 
 export class WinstonLogger implements ILogger {
   private winston: Logger;
@@ -26,7 +26,7 @@ export class WinstonLogger implements ILogger {
           format: format.combine(
             format.colorize(),
             format.timestamp({
-              format: 'YYYY-MM-DD HH:mm:ss'
+              format: "YYYY-MM-DD HH:mm:ss"
             }),
             format.printf(
               info => `${info.timestamp} [${info.module.toUpperCase()}] ${info.level}: ${info.message}`
@@ -37,8 +37,18 @@ export class WinstonLogger implements ILogger {
       ],
       exitOnError: false
     });
+    //@ts-ignore
     this._level = LogLevel[options.level];
     this._silent = false;
+  }
+
+  public child(options: ILoggerOptions): WinstonLogger {
+    const logger = Object.create(WinstonLogger.prototype);
+    return Object.assign(logger, {
+      winston: this.winston.child({module: options.module}),
+      _level: options.level,
+      _silent: false,
+    });
   }
 
   public debug(message: string | object, context?: object): void {
@@ -61,7 +71,7 @@ export class WinstonLogger implements ILogger {
     if (this.silent || level > this._level) {
       return;
     }
-    if (typeof message === 'object') {
+    if (typeof message === "object") {
       this.winston.log(LogLevel[level], JSON.stringify(message));
     } else {
       this.winston.log(LogLevel[level], message, context);
@@ -81,14 +91,5 @@ export class WinstonLogger implements ILogger {
   }
   public get silent(): boolean {
     return this._silent;
-  }
-
-  public child(options: ILoggerOptions): WinstonLogger {
-    const logger = Object.create(WinstonLogger.prototype);
-    return Object.assign(logger, {
-      winston: this.winston.child({module: options.module}),
-      _level: options.level,
-      _silent: false,
-    });
   }
 }

@@ -3,7 +3,7 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "@chainsafe/eth2.0-types";
+import {bytes32, Fork, number64, SyncingStatus} from "@chainsafe/eth2.0-types";
 import {IBeaconApi} from "./interface";
 import {IBeaconChain} from "../../../../chain";
 import {IBeaconDb} from "../../../../db";
@@ -28,16 +28,27 @@ export class BeaconApi implements IBeaconApi {
 
 
   public async getClientVersion(): Promise<bytes32> {
-    return Buffer.from(`lodestar-${process.env.npm_package_version}`, 'utf-8');
+    return Buffer.from(`lodestar-${process.env.npm_package_version}`, "utf-8");
   }
 
   public async getFork(): Promise<Fork> {
-    const state: BeaconState = await this.db.state.getLatest();
-    return state.fork;
+    const state = await this.db.state.getLatest();
+    if(state) {
+      return state.fork;
+    } else {
+      return {
+        previousVersion: Buffer.alloc(4),
+        currentVersion: Buffer.alloc(4),
+        epoch: 0
+      };
+    }
   }
 
   public async getGenesisTime(): Promise<number64> {
-    return this.chain.latestState.genesisTime;
+    if (this.chain.latestState) {
+      return this.chain.latestState.genesisTime;
+    }
+    return 0;
   }
 
   public async getSyncingStatus(): Promise<boolean | SyncingStatus> {

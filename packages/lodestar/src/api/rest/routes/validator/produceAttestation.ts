@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import {IFastifyServer} from "../../index";
 import fastify, {DefaultQuery} from "fastify";
 import {IApiModules} from "../../../interface";
@@ -5,7 +6,7 @@ import {IncomingMessage, Server, ServerResponse} from "http";
 import {toRestJson} from "../../utils";
 import {produceAttestation} from "../../../impl/validator";
 
-interface Query extends DefaultQuery {
+interface IQuery extends DefaultQuery {
   validator_pubkey: string;
   poc_bit: number;
   slot: number;
@@ -13,10 +14,10 @@ interface Query extends DefaultQuery {
 }
 
 
-const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerResponse, Query> = {
+const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerResponse, IQuery> = {
   schema: {
     querystring: {
-      type: 'object',
+      type: "object",
       required: ["validator_pubkey", "poc_bit", "slot", "shard"],
       properties: {
         "validator_pubkey": {
@@ -40,19 +41,19 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
 };
 
 export const registerAttestationProductionEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
-  fastify.get<Query>(
-    '/attestation',
+  fastify.get<IQuery>(
+    "/attestation",
     opts,
     async (request, reply) => {
       const attestation = await produceAttestation(
         {db: modules.db, chain: modules.chain, config: modules.config},
-        Buffer.from(request.query.validator_pubkey.replace('0x', ''), 'hex'),
+        Buffer.from(request.query.validator_pubkey.replace("0x", ""), "hex"),
         request.query.shard,
         request.query.slot
       );
       reply
         .code(200)
-        .type('application/json')
+        .type("application/json")
         .send(toRestJson(attestation));
     }
   );

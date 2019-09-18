@@ -3,18 +3,18 @@
  */
 import {Hello} from "@chainsafe/eth2.0-types";
 
-export interface Reputation {
+export interface IReputation {
   latestHello: Hello | null;
   score: number;
 }
 
 export class ReputationStore {
-  private reputations: Map<string, Reputation>;
+  private reputations: Map<string, IReputation>;
   public constructor() {
-    this.reputations = new Map<string, Reputation>();
+    this.reputations = new Map<string, IReputation>();
   }
-  public add(peerId: string): Reputation {
-    const reputation = {
+  public add(peerId: string): IReputation {
+    const reputation: IReputation = {
       latestHello: null,
       score: 0
     };
@@ -24,7 +24,7 @@ export class ReputationStore {
   public remove(peerId: string): void {
     this.reputations.delete(peerId);
   }
-  public get(peerId: string): Reputation {
+  public get(peerId: string): IReputation {
     return this.reputations.get(peerId) || this.add(peerId);
   }
 }

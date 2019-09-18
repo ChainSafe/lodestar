@@ -9,7 +9,6 @@ import {
   AttestationDataAndCustodyBit,
   BeaconState,
   Fork,
-  IndexedAttestation,
   Shard,
   Slot
 } from "@chainsafe/eth2.0-types";
@@ -17,7 +16,7 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {computeEpochOfSlot, getDomain, isSlashableAttestationData,} from "../../chain/stateTransition/util";
 
-import {RpcClient} from "../rpc";
+import {IRpcClient} from "../rpc";
 
 import {DomainType} from "../../constants";
 import {IValidatorDB} from "../../db/api";
@@ -27,7 +26,7 @@ import {Keypair} from "@chainsafe/bls";
 export class AttestationService {
 
   private config: IBeaconConfig;
-  private rpcClient: RpcClient;
+  private rpcClient: IRpcClient;
   private keypair: Keypair;
   private db: IValidatorDB;
   private logger: ILogger;
@@ -35,7 +34,7 @@ export class AttestationService {
   public constructor(
     config: IBeaconConfig,
     keypair: Keypair,
-    rpcClient: RpcClient,
+    rpcClient: IRpcClient,
     db: IValidatorDB,
     logger: ILogger
   ) {
@@ -50,7 +49,7 @@ export class AttestationService {
   public async createAndPublishAttestation(
     slot: Slot,
     shard: Shard,
-    fork: Fork): Promise<Attestation> {
+    fork: Fork): Promise<Attestation|null> {
     const attestation = await this.rpcClient.validator.produceAttestation(
       this.keypair.publicKey.toBytesCompressed(),
       false,
@@ -59,7 +58,7 @@ export class AttestationService {
     );
     if (await this.isConflictingAttestation(attestation.data)) {
       this.logger.warn(
-        `[Validator] Avoided signing conflicting attestation! `
+        "Avoided signing conflicting attestation! "
         + `Source epoch: ${attestation.data.source.epoch}, Target epoch: ${computeEpochOfSlot(this.config, slot)}`
       );
       return null;
@@ -79,7 +78,7 @@ export class AttestationService {
     ).toBytesCompressed();
     await this.storeAttestation(attestation);
     await this.rpcClient.validator.publishAttestation(attestation);
-    this.logger.info(`[Validator] Signed and publish new attestation`);
+    this.logger.info("[Validator] Signed and publish new attestation");
     return attestation;
   }
 
@@ -96,7 +95,10 @@ export class AttestationService {
 
     //cleanup
     const unusedAttestations =
-      await this.db.getAttestations(this.keypair.publicKey.toBytesCompressed(), {gt: 0, lt: attestation.data.target.epoch});
+      await this.db.getAttestations(
+        this.keypair.publicKey.toBytesCompressed(),
+        {gt: 0, lt: attestation.data.target.epoch}
+      );
     await this.db.deleteAttestations(this.keypair.publicKey.toBytesCompressed(), unusedAttestations);
   }
 }

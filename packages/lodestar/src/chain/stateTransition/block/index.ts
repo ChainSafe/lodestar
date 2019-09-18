@@ -2,10 +2,7 @@
  * @module chain/stateTransition/block
  */
 
-import {
-  BeaconBlock,
-  BeaconState,
-} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconState,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {processEth1Data} from "./eth1Data";

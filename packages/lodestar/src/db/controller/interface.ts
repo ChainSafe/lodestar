@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * @module db/controller
  */
 
 import {EventEmitter} from "events";
 
-export interface SearchOptions {
+export interface ISearchOptions {
   gt: any;
   lt: any;
 }
@@ -21,7 +22,7 @@ export interface IDatabaseController extends EventEmitter{
    * Should return items which has key prefix >= opts.gt && prefix < opt.lt
    * @param opts
    */
-  search(opts: SearchOptions): Promise<any[]>;
+  search(opts: ISearchOptions): Promise<any[]>;
 
   /**
    * Should insert or update

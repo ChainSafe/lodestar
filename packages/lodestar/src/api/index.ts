@@ -1,4 +1,4 @@
-import {Service} from "../node";
+import {IService} from "../node";
 import defaultOptions, {IApiOptions} from "./options";
 import {IApiModules} from "./interface";
 import deepmerge from "deepmerge";
@@ -13,13 +13,13 @@ export const enum ApiNamespace {
 
 }
 
-export class ApiService implements Service {
+export class ApiService implements IService {
 
   private opts: IApiOptions;
 
-  private rpc: Service;
+  private rpc: IService;
 
-  private rest: Service;
+  private rest: IService;
 
   public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
     this.opts = deepmerge(defaultOptions, opts);
@@ -53,7 +53,7 @@ export class ApiService implements Service {
     return new JsonRpc(this.opts.rpc, modules);
   }
 
-  private setupRestApi(modules: IApiModules) {
+  private setupRestApi(modules: IApiModules): RestApi {
     return new RestApi(this.opts.rest, modules);
   }
 }

@@ -16,15 +16,13 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {
-  DomainType,
-} from "../../../constants";
+import {DomainType,} from "../../../constants";
 import {intDiv} from "../../../util/math";
 import {isSorted} from "../../../util/sort";
 
 import {computeStartSlotOfEpoch} from "./epoch";
 import {getDomain} from "./domain";
-import {getCommitteeCount, getStartShard, getCrosslinkCommittee} from "./committee";
+import {getCommitteeCount, getCrosslinkCommittee, getStartShard} from "./committee";
 
 
 /**
@@ -33,7 +31,10 @@ import {getCommitteeCount, getStartShard, getCrosslinkCommittee} from "./committ
 export function getAttestationDataSlot(config: IBeaconConfig, state: BeaconState, data: AttestationData): Slot {
   const epoch = data.target.epoch;
   const committeeCount = getCommitteeCount(config, state, epoch);
-  const offset = (data.crosslink.shard + config.params.SHARD_COUNT - getStartShard(config, state, epoch)) % config.params.SHARD_COUNT;
+  const offset =
+      (data.crosslink.shard + config.params.SHARD_COUNT - getStartShard(config, state, epoch))
+      %
+      config.params.SHARD_COUNT;
   return intDiv(computeStartSlotOfEpoch(config, epoch) + offset, intDiv(committeeCount, config.params.SLOTS_PER_EPOCH));
 }
 

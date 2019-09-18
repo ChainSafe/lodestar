@@ -13,7 +13,7 @@ import {
 import {Bucket, encodeKey, Key} from "../../schema";
 
 import {serialize} from "@chainsafe/ssz";
-import {DatabaseApiOptions, DatabaseService} from "../abstract";
+import {IDatabaseApiOptions, DatabaseService} from "../abstract";
 import {IBeaconDb} from "./interface";
 import {
   AttestationRepository,
@@ -50,7 +50,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   public merkleTree: MerkleTreeRepository;
 
-  public constructor(opts: DatabaseApiOptions) {
+  public constructor(opts: IDatabaseApiOptions) {
     super(opts);
     this.chain = new ChainRepository(this.config, this.db);
     this.state = new StateRepository(this.config, this.db, this.chain);

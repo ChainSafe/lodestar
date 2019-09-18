@@ -19,11 +19,14 @@ export async function assembleBlock(
   eth1: IEth1Notifier,
   slot: Slot,
   randao: bytes96
-): Promise<BeaconBlock> {
+): Promise<BeaconBlock|null> {
   const [parentBlock, currentState] = await Promise.all([
     db.block.getChainHead(),
     db.state.getLatest(),
   ]);
+  if(!parentBlock) {
+    return null;
+  }
   const merkleTree = await db.merkleTree.getProgressiveMerkleTree(currentState.eth1DepositIndex);
   const parentHeader: BeaconBlockHeader = {
     stateRoot: parentBlock.stateRoot,
@@ -35,7 +38,9 @@ export async function assembleBlock(
   const block: BeaconBlock = {
     slot,
     parentRoot: signingRoot(parentHeader, config.types.BeaconBlockHeader),
+    // @ts-ignore
     signature: undefined,
+    // @ts-ignore
     stateRoot: undefined,
     body: await assembleBody(config, opPool, eth1, merkleTree, currentState, randao),
   };
