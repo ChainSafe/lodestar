@@ -40,8 +40,8 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/eth2.0-params": "0.1.0",
-    "@chainsafe/ssz": "0.5.1"
+    "@chainsafe/as-sha256": "^0.1.2",
+    "@chainsafe/eth2.0-types": "^0.1.1"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",
