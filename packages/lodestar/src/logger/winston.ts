@@ -77,6 +77,14 @@ export class WinstonLogger implements ILogger {
     this.createLogEntry(LogLevel.warn, message, context);
   }
 
+  public verbose(message: string | object, context?: object): void {
+    this.createLogEntry(LogLevel.verbose, message, context);
+  }
+
+  public silly(message: string | object, context?: object): void {
+    this.createLogEntry(LogLevel.silly, message, context);
+  }
+
   private createLogEntry(level: LogLevel, message: string | object, context: object = {}): void {
     if (this.silent || level > this._level) {
       return;
