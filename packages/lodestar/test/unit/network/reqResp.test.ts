@@ -42,8 +42,9 @@ describe("[network] rpc", () => {
       rpcB.start(),
     ]);
   });
-  afterEach(async () => {
+  afterEach(async function () {
     // teardown
+    this.timeout(10000)
     await Promise.all([
       rpcA.stop(),
       rpcB.stop(),
