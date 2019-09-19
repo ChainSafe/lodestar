@@ -62,7 +62,7 @@ describe("syncing", function () {
     dbStub.chain.setLatestStateRoot.resolves(0);
     dbStub.chain.setFinalizedStateRoot.resolves(0);
     dbStub.chain.setJustifiedStateRoot.resolves(0);
-    reqRespStub.beaconBlocks.resolves({blocks: [generateEmptyBlock()]});
+    reqRespStub.beaconBlocksByRange.resolves([generateEmptyBlock()]);
     chainStub.receiveBlock.resolves(0);
     await initialSync.syncToPeer(peerInfo); // breaking
     expect(chainStub.receiveBlock.calledOnce).to.be.true;
