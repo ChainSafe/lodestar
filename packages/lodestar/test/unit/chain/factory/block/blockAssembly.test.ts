@@ -27,7 +27,7 @@ describe('block assembly', function () {
     forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
-    chainStub.config = config;
+
     opPool = sandbox.createStubInstance(OpPool);
     beaconDB = {
       block: sandbox.createStubInstance(BlockRepository),
