@@ -70,13 +70,12 @@ describe('validator rpc api', function () {
 
   it('produceAttestation - missing slots', async function() {
     const state = generateState({slot: 1});
-    dbStub.state.getLatest.resolves(state);
+    sandbox.stub(chainStub, "latestState").get(() => state);
     const block = generateEmptyBlock();
     dbStub.block.get.resolves(block);
     dbStub.getValidatorIndex.resolves(0);
     const result = await validatorApi.produceAttestation(Keypair.generate().publicKey.toBytesCompressed(), false, 4, 2);
     expect(result).to.not.be.null;
-    expect(dbStub.state.getLatest.calledOnce).to.be.true;
     expect(dbStub.block.get.calledOnce).to.be.true;
   });
 
