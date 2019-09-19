@@ -39,7 +39,7 @@ describe('validator rpc api', function () {
     chainStub.config = config;
     opStub = sandbox.createStubInstance(OpPool);
     opStub.attestations = sandbox.createStubInstance(AttestationOperations);
-    validatorApi = new ValidatorApi({}, {config, chain: chainStub, db: dbStub, opPool: opStub, eth1: eth1Stub, logger: logger}); // need to add logger in here
+    validatorApi = new ValidatorApi({}, {config, chain: chainStub, db: dbStub, opPool: opStub, eth1: eth1Stub, logger: logger});
   });
 
   afterEach(() => {
