@@ -1,7 +1,7 @@
 import sinon from "sinon";
 import {expect} from "chai";
 
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
 import * as blockTransitions from "../../../../../src/chain/stateTransition/block";
 import {OpPool} from "../../../../../src/opPool";
@@ -27,6 +27,7 @@ describe('block assembly', function () {
     forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
+    chainStub.config = config;
     opPool = sandbox.createStubInstance(OpPool);
     beaconDB = {
       block: sandbox.createStubInstance(BlockRepository),
@@ -43,8 +44,10 @@ describe('block assembly', function () {
   it('should assemble block', async function() {
     beaconDB.state.getLatest.resolves(generateState({slot: 1}));
     beaconDB.block.getChainHead.resolves(generateEmptyBlock());
+    beaconDB.block.get.returns(generateEmptyBlock())
     beaconDB.merkleTree.getProgressiveMerkleTree.resolves(ProgressiveMerkleTree.empty(32));
     assembleBodyStub.resolves(generateEmptyBlock().body);
+
     try {
       const result = await assembleBlock(config, chainStub, beaconDB, opPool, eth1, 1, Buffer.alloc(96, 0));
       expect(result).to.not.be.null;

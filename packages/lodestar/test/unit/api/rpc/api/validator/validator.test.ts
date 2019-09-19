@@ -29,13 +29,14 @@ describe('validator rpc api', function () {
 
   beforeEach(() => {
     dbStub = sandbox.createStubInstance(BeaconDb);
-    dbStub.state =sandbox.createStubInstance(StateRepository);
-    dbStub.block =sandbox.createStubInstance(BlockRepository);
+    dbStub.state = sandbox.createStubInstance(StateRepository);
+    dbStub.block = sandbox.createStubInstance(BlockRepository);
     eth1Stub = sandbox.createStubInstance(EthersEth1Notifier);
     forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
     getDutiesStub = sandbox.stub(validatorImpl, "getValidatorDuties");
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
+    chainStub.config = config;
     opStub = sandbox.createStubInstance(OpPool);
     opStub.attestations = sandbox.createStubInstance(AttestationOperations);
     validatorApi = new ValidatorApi({}, {config, chain: chainStub, db: dbStub, opPool: opStub, eth1: eth1Stub, logger: logger}); // need to add logger in here
@@ -76,7 +77,7 @@ describe('validator rpc api', function () {
     const result = await validatorApi.produceAttestation(Keypair.generate().publicKey.toBytesCompressed(), false, 4, 2);
     expect(result).to.not.be.null;
     expect(dbStub.state.getLatest.calledOnce).to.be.true;
-    expect(dbStub.block.get.calledTwice).to.be.true;
+    expect(dbStub.block.get.calledOnce).to.be.true;
   });
 
   it('publish block', async function() {

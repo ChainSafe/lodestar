@@ -28,6 +28,7 @@ describe("syncing", function () {
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.latestState = generateState();
+    chainStub.config = config;
     reqRespStub = sandbox.createStubInstance(ReqResp);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     networkStub.reqResp = reqRespStub;
