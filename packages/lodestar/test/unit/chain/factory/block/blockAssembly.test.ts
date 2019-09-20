@@ -27,6 +27,7 @@ describe('block assembly', function () {
     forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
+
     opPool = sandbox.createStubInstance(OpPool);
     beaconDB = {
       block: sandbox.createStubInstance(BlockRepository),
@@ -42,7 +43,8 @@ describe('block assembly', function () {
 
   it('should assemble block', async function() {
     beaconDB.state.getLatest.resolves(generateState({slot: 1}));
-    beaconDB.block.getChainHead.resolves(generateEmptyBlock());
+    const head = chainStub.forkChoice.head()
+    beaconDB.block.get.withArgs(head).returns(generateEmptyBlock())
     beaconDB.merkleTree.getProgressiveMerkleTree.resolves(ProgressiveMerkleTree.empty(32));
     assembleBodyStub.resolves(generateEmptyBlock().body);
     try {
@@ -52,7 +54,7 @@ describe('block assembly', function () {
       expect(result.stateRoot).to.not.be.null;
       expect(result.parentRoot).to.not.be.null;
       expect(beaconDB.state.getLatest.calledOnce).to.be.true;
-      expect(beaconDB.block.getChainHead.calledOnce).to.be.true;
+      expect(beaconDB.block.get.calledOnceWith(head))
       expect(assembleBodyStub.calledOnce).to.be.true;
       expect(processBlockStub.withArgs(sinon.match.any, sinon.match.any).calledOnce).to.be.true;
     } catch (e) {

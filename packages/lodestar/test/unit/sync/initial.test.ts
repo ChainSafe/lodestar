@@ -24,6 +24,7 @@ describe("syncing", function () {
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.latestState = generateState();
     reqRespStub = sandbox.createStubInstance(ReqResp);
+    reqRespStub.beaconBlocks = sinon.stub();
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     networkStub.reqResp = reqRespStub;
     dbStub = {
@@ -61,10 +62,9 @@ describe("syncing", function () {
     dbStub.chain.setLatestStateRoot.resolves(0);
     dbStub.chain.setFinalizedStateRoot.resolves(0);
     dbStub.chain.setJustifiedStateRoot.resolves(0);
-    reqRespStub.beaconBlocks.resolves({blocks: [generateEmptyBlock()]});
+    reqRespStub.beaconBlocksByRange.resolves([generateEmptyBlock()]);
     chainStub.receiveBlock.resolves(0);
-
-    await initialSync.syncToPeer(peerInfo);
+    await initialSync.syncToPeer(peerInfo); // breaking
     expect(chainStub.receiveBlock.calledOnce).to.be.true;
 
   });
