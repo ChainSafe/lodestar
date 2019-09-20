@@ -49,6 +49,15 @@ describe('beacon rpc api', function () {
     expect(fork).to.be.deep.equal(state.fork);
   });
 
+  it('should be able to get fork when chain didnt start', async function () {
+    // When chain didn't start, latest state is null
+    dbStub.state.getLatest.resolves(null);
+    const {fork} = await beaconApi.getFork();
+    expect(fork.previousVersion.compare(Buffer.alloc(4))).to.be.equal(0);
+    expect(fork.currentVersion.compare(Buffer.alloc(4))).to.be.equal(0);
+    expect(fork.epoch).to.be.equal(0);
+  });
+
   it('should return genesis time', async function () {
     chainStub.latestState = generateState({genesisTime: Date.now()});
     const genesisTime = await beaconApi.getGenesisTime();
