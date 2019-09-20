@@ -2,7 +2,7 @@
 import {writeFile} from "fs";
 import {expect} from "chai";
 import profiler from "v8-profiler-next";
-
+import {describe, it} from "mocha";
 import {loadYamlFile} from "./util";
 
 export interface IBaseCase {

@@ -1,7 +1,7 @@
 import {assert} from "chai";
 
 import BN from "bn.js";
-
+import {describe, it} from "mocha";
 import {deserialize, SerializableValue,} from "../../src";
 
 import {ArrayObject, OuterObject, SimpleObject,} from "./objects";

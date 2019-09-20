@@ -12,7 +12,7 @@ import {
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {getCurrentEpoch} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
-import { bnMax } from "@chainsafe/eth2.0-utils";
+import {bnMax} from "@chainsafe/eth2.0-utils";
 
 
 /**

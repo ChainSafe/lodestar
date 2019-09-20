@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig",
   "include": ["src"],
+  "exclude": ["test"],
   "compilerOptions": {
     "typeRoots": [
       "../../node_modules/@types",
