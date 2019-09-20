@@ -4,12 +4,12 @@ import {BitList} from "@chainsafe/bit-utils";
 import {
   Bytes,
   FullSSZType,
+  ListType,
   SerializableArray,
   SerializableObject,
+  SerializableValue,
   Type,
   VectorType,
-  ListType,
-  SerializableValue,
 } from "./types";
 
 import {BYTES_PER_LENGTH_PREFIX} from "./constants";
@@ -34,10 +34,10 @@ export function fixedSize(type: FullSSZType): number {
       return fixedSize(type.elementType) * type.length;
     case Type.container:
       return type.fields
-        .map(([_, fieldType]) => fixedSize(fieldType))
+        .map(([, fieldType]) => fixedSize(fieldType))
         .reduce((a, b) => a + b, 0);
     default:
-      throw new Error('fixedSize: invalid type');
+      throw new Error("fixedSize: invalid type");
   }
 }
 
@@ -69,7 +69,7 @@ export function variableSize(value: SerializableValue, type: FullSSZType): numbe
           (isVariableSizeType(fieldType) ? BYTES_PER_LENGTH_PREFIX : 0))
         .reduce((a, b) => a + b, 0);
     default:
-      throw new Error('variableSize: invalid type');
+      throw new Error("variableSize: invalid type");
   }
 }
 

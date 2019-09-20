@@ -2,7 +2,8 @@
   "extends": "../../tsconfig",
   "compilerOptions": {
     "typeRoots": [
-      "../../node_modules/@types"
+      "../../node_modules/@types",
+      "./src/types"
     ],
     "outDir": "lib",
     /* Redirect output structure to the directory. */

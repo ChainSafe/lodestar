@@ -1,7 +1,6 @@
 /**
  * @module metrics
  */
-import {IConfigurationModule} from "../util/config";
 
 export interface IMetricsOptions {
   enabled: boolean;

@@ -2,27 +2,24 @@ import {IBeaconApi} from "../../../api/rpc/api/beacon";
 import {IValidatorApi} from "../../../api/rpc/api/validator";
 import * as jsonRpc from "noice-json-rpc";
 import Websocket from "ws";
+// @ts-ignore
 import promisify from "promisify-es6";
 import {AbstractRpcClient} from "../abstract";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-export interface RpcClientOverWsOpts {
-
+export interface IRpcClientOverWsOpts {
   rpcUrl: string;
-
 }
 
 export class RpcClientOverWs extends AbstractRpcClient {
 
   public url: string;
-
-  public beacon: IBeaconApi;
-
-  public validator: IValidatorApi;
-
+  public beacon!: IBeaconApi;
+  public validator!: IValidatorApi;
+  // @ts-ignore
   private socket: Websocket;
 
-  public constructor(opts: RpcClientOverWsOpts, {config}: {config: IBeaconConfig}) {
+  public constructor(opts: IRpcClientOverWsOpts, {config}: {config: IBeaconConfig}) {
     super();
     this.url = opts.rpcUrl;
     this.config = config;
@@ -40,7 +37,7 @@ export class RpcClientOverWs extends AbstractRpcClient {
   public async disconnect(): Promise<void> {
     await super.disconnect();
     this.socket.terminate();
-    return await promisify(this.socket.on.bind(this.socket))('close');
+    return await promisify(this.socket.on.bind(this.socket))("close");
   }
 
 }

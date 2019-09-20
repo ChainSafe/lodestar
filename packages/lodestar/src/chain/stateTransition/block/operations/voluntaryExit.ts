@@ -6,23 +6,12 @@ import assert from "assert";
 import {signingRoot} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 
-import {
-  BeaconState,
-  VoluntaryExit,
-} from "@chainsafe/eth2.0-types";
+import {BeaconState, VoluntaryExit,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 
-import {
-  DomainType,
-  FAR_FUTURE_EPOCH,
-} from "../../../../constants";
-import {
-  getCurrentEpoch,
-  getDomain,
-  isActiveValidator,
-  initiateValidatorExit,
-} from "../../util";
+import {DomainType, FAR_FUTURE_EPOCH,} from "../../../../constants";
+import {getCurrentEpoch, getDomain, initiateValidatorExit, isActiveValidator,} from "../../util";
 
 
 /**

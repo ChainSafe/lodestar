@@ -6,7 +6,7 @@ import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {Block, Log} from "ethers/providers";
 import {deserialize} from "@chainsafe/ssz";
-import {BeaconState, bytes32, Deposit, Epoch, Eth1Data, Gwei, Hash, number64} from "@chainsafe/eth2.0-types";
+import {BeaconState, Deposit, Epoch, Eth1Data, Gwei, Hash, number64} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {Eth1EventEmitter, IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
@@ -15,7 +15,7 @@ import {ILogger} from "../../logger";
 import {IEth1Options} from "../options";
 import {mostFrequent} from "../../util/objects";
 
-export interface EthersEth1Options extends IEth1Options {
+export interface IEthersEth1Options extends IEth1Options {
   contract?: Contract;
 }
 
@@ -30,11 +30,12 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
 
   private config: IBeaconConfig;
 
-  private opts: EthersEth1Options;
+  private opts: IEthersEth1Options;
 
   private logger: ILogger;
 
-  public constructor(opts: EthersEth1Options, {config, logger}: {config: IBeaconConfig; logger: ILogger}) {
+  public constructor(opts: IEthersEth1Options, {config, logger}: {config: IBeaconConfig; logger: ILogger}) {
+    // eslint-disable-next-line constructor-super
     super();
     this.config = config;
     this.opts = opts;
@@ -47,6 +48,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
         this.opts.provider.network
       );
     }
+    // @ts-ignore
     this.contract = opts.contract;
   }
 
@@ -55,8 +57,8 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       await this.initContract();
     }
     this.logger.info("Fetching old deposits...");
-    this.provider.on('block', this.processBlockHeadUpdate.bind(this));
-    this.contract.on('DepositEvent', this.processDepositLog.bind(this));
+    this.provider.on("block", this.processBlockHeadUpdate.bind(this));
+    this.contract.on("DepositEvent", this.processDepositLog.bind(this));
     this.logger.info(
       `Started listening on eth1 events on chain ${(await this.provider.getNetwork()).chainId}`
     );
@@ -65,14 +67,14 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   }
 
   public async stop(): Promise<void> {
-    this.provider.removeAllListeners('block');
-    this.contract.removeAllListeners('DepositEvent');
+    this.provider.removeAllListeners("block");
+    this.contract.removeAllListeners("DepositEvent");
   }
 
   public async processBlockHeadUpdate(blockNumber: number): Promise<void> {
     this.logger.verbose(`Received eth1 block ${blockNumber}`);
     const block = await this.provider.getBlock(blockNumber);
-    this.emit('block', block);
+    this.emit("block", block);
   }
 
   public async processDepositLog(
@@ -82,7 +84,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     merkleTreeIndex: string
   ): Promise<void> {
     try {
-      const index = deserialize(Buffer.from(merkleTreeIndex.substr(2), 'hex'), this.config.types.number64) as number64;
+      const index = deserialize(Buffer.from(merkleTreeIndex.substr(2), "hex"), this.config.types.number64) as number64;
       const deposit = this.createDeposit(
         pubkey,
         withdrawalCredentials,
@@ -92,7 +94,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       this.logger.info(
         `Received validator deposit event index=${index}`
       );
-      this.emit('deposit', index, deposit);
+      this.emit("deposit", index, deposit);
     } catch (e) {
       this.logger.error(`Failed to process deposit log. Error: ${e.message}`);
     }
@@ -122,7 +124,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   }
 
   public async getHead(): Promise<Block> {
-    return this.getBlock('latest');
+    return this.getBlock("latest");
   }
 
   public async getBlock(blockHashOrBlockNumber: string | number): Promise<Block> {
@@ -130,19 +132,20 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   }
 
   public async depositRoot(block?: string | number): Promise<Hash> {
-    const depositRootHex = await this.contract.get_hash_tree_root({blockTag: block || 'latest'});
-    return Buffer.from(depositRootHex.substr(2), 'hex');
+    const depositRootHex = await this.contract.get_hash_tree_root({blockTag: block || "latest"});
+    return Buffer.from(depositRootHex.substr(2), "hex");
   }
 
   public async depositCount(block?: string | number): Promise<number> {
-    const depositCountHex = await this.contract.get_deposit_count({blockTag: block || 'latest'});
-    return Buffer.from(depositCountHex.substr(2), 'hex').readUIntLE(0, 6);
+    const depositCountHex = await this.contract.get_deposit_count({blockTag: block || "latest"});
+    return Buffer.from(depositCountHex.substr(2), "hex").readUIntLE(0, 6);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async getEth1Data(config: IBeaconConfig, state: BeaconState, currentEpoch: Epoch): Promise<Eth1Data> {
     const [head, latestStateBlock] = await Promise.all([
       this.getHead(),
-      this.getBlock('0x' + state.eth1Data.blockHash.toString('hex'))
+      this.getBlock("0x" + state.eth1Data.blockHash.toString("hex"))
     ]);
     const validVotes = await this.filterValidVotes(config, state.eth1DataVotes, head, latestStateBlock);
 
@@ -154,7 +157,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
         this.depositRoot(blockHash)
       ]);
       return {
-        blockHash: Buffer.from(blockHash.slice(2), 'hex'),
+        blockHash: Buffer.from(blockHash.slice(2), "hex"),
         depositCount,
         depositRoot
       };
@@ -166,7 +169,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
         const blockNumbers = await Promise.all(
           frequentVotes.map(
             (vote) =>
-              this.getBlock('0x' + vote.blockHash.toString('hex')).then(b => b.number)
+              this.getBlock("0x" + vote.blockHash.toString("hex")).then(b => b.number)
           )
         );
         return frequentVotes[blockNumbers.indexOf(Math.max(...blockNumbers))];
@@ -183,20 +186,20 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     try {
       this.contract = new ethers.Contract(address, abi, this.provider);
     } catch (e) {
-      throw new Error('Eth1 deposit contract not found! Probably wrong eth1 rpc url');
+      throw new Error("Eth1 deposit contract not found! Probably wrong eth1 rpc url");
     }
   }
 
-  private async contractExists(address: string) {
+  private async contractExists(address: string): Promise<boolean> {
     if (!isValidAddress(address)) return false;
     const code = await this.provider.getCode(address);
-    return !(!code || code === '0x');
+    return !(!code || code === "0x");
   }
 
   private async getContractPastLogs(
     topics: string[],
     fromBlock: number64 | string = this.opts.depositContract.deployedAt,
-    toBlock: number64 | string = null
+    toBlock: number64 | string | null = null
   ): Promise<Log[]> {
     const filter = {
       fromBlock,
@@ -219,10 +222,10 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     return {
       proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH}, () => Buffer.alloc(32)),
       data: {
-        pubkey: Buffer.from(pubkey.slice(2), 'hex'),
-        withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), 'hex'),
-        amount: deserialize(Buffer.from(amount.slice(2), 'hex'), this.config.types.Gwei) as Gwei,
-        signature: Buffer.from(signature.slice(2), 'hex'),
+        pubkey: Buffer.from(pubkey.slice(2), "hex"),
+        withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), "hex"),
+        amount: deserialize(Buffer.from(amount.slice(2), "hex"), this.config.types.Gwei) as Gwei,
+        signature: Buffer.from(signature.slice(2), "hex"),
       },
     };
   }
@@ -235,14 +238,14 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     const potentialVotes = [];
     for(let i = 0; i < votes.length; i++) {
       const vote = votes[i];
-      const block = await this.getBlock(vote.blockHash.toString('hex'));
+      const block = await this.getBlock(vote.blockHash.toString("hex"));
       if(block
           && (head.number - block.number) >= config.params.ETH1_FOLLOW_DISTANCE
           && block.number > latestStateBlock.number
       ) {
         const [depositCount, depositRoot] = await Promise.all([
-          this.depositCount(vote.blockHash.toString('hex')),
-          this.depositRoot(vote.blockHash.toString('hex'))
+          this.depositCount(vote.blockHash.toString("hex")),
+          this.depositRoot(vote.blockHash.toString("hex"))
         ]);
         if(depositRoot.equals(vote.depositRoot) && depositCount === vote.depositCount) {
           potentialVotes.push(vote);

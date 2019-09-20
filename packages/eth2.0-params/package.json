@@ -21,7 +21,7 @@
     "build:docs": "typedoc --exclude src/index.ts --out docs src",
     "check-types": "tsc --noEmit --incremental",
     "lint": "eslint --ext .ts src/",
-    "lint-fix": "eslint --ext .ts src/ --fix",
+    "lint:fix": "eslint --ext .ts src/ --fix",
     "prepublishOnly": "yarn build",
     "test": "yarn run check-types"
   },
@@ -36,7 +36,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/eth2.0-types": "^0.1.0",
+    "@chainsafe/eth2.0-types": "^0.1.1",
     "@types/bn.js": "^4.11.4",
     "bn.js": "^4.11.8"
   },

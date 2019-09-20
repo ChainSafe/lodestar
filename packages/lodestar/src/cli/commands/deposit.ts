@@ -4,15 +4,13 @@
 
 import {CommanderStatic} from "commander";
 import {JsonRpcProvider} from "ethers/providers";
-import {Wallet} from "ethers/ethers";
-
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {CliCommand} from "./interface";
+import {ICliCommand} from "./interface";
 import defaults from "../../eth1/options";
-import * as ethers from "ethers/ethers";
-import {ILogger, LogLevel, WinstonLogger, LogLevels} from "../../logger";
+import {ILogger, LogLevels, WinstonLogger} from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
+import * as ethers from "ethers/ethers";
 
 interface IDepositCommandOptions {
   privateKey: string;
@@ -24,24 +22,24 @@ interface IDepositCommandOptions {
   accounts: number;
 }
 
-export class DepositCommand implements CliCommand {
+export class DepositCommand implements ICliCommand {
 
   public register(commander: CommanderStatic): void {
 
     commander
-      .command('deposit')
-      .description('Start private network with deposit contract and 10 accounts with balance')
-      .option("-k, --privateKey [privateKey]", 'Private key of account that will make deposit')
+      .command("deposit")
+      .description("Start private network with deposit contract and 10 accounts with balance")
+      .option("-k, --privateKey [privateKey]", "Private key of account that will make deposit")
       .option(`-l, --logLevel [${LogLevels.join("|")}]`, "Log level")
       .option(
         "-m, --mnemonic [mnemonic]",
-        'If mnemonic is submitted, first 10 accounts will make deposit'
+        "If mnemonic is submitted, first 10 accounts will make deposit"
       )
-      .option("-n, --node [node]", 'Url of eth1 node', 'http://127.0.0.1:8545')
-      .option("-v, --value [value]", 'Amount of ether to deposit', "32")
+      .option("-n, --node [node]", "Url of eth1 node", "http://127.0.0.1:8545")
+      .option("-v, --value [value]", "Amount of ether to deposit", "32")
       .option(
         "-c, --contract [contract]",
-        'Address of deposit contract',
+        "Address of deposit contract",
         defaults.depositContract.address
       )
       .option("-a, --accounts [accounts]","Number of accounts to generate at startup", 10)
@@ -55,7 +53,7 @@ export class DepositCommand implements CliCommand {
         try {
           await this.action(options, logger);
         } catch (e) {
-          console.error(e.message + '\n' + e.stack);
+          logger.error(e.message + "\n" + e.stack);
         }
       });
   }
@@ -73,17 +71,18 @@ export class DepositCommand implements CliCommand {
     if(options.mnemonic) {
       wallets.push(...this.fromMnemonic(options.mnemonic, provider, options.accounts));
     } else if (options.privateKey) {
-      wallets.push(new Wallet(options.privateKey, provider));
+      wallets.push(new ethers.Wallet(options.privateKey, provider));
     } else {
-      throw new CliError('You have to submit either privateKey or mnemonic. Check --help');
+      throw new CliError("You have to submit either privateKey or mnemonic. Check --help");
     }
 
     await Promise.all(
       wallets.map(async wallet => {
         try {
           const hash =
-            await (new Eth1Wallet(wallet.privateKey, defaults.depositContract.abi, config, logger, provider))
-              .createValidatorDeposit(options.contract, ethers.utils.parseEther(options.value));
+              // @ts-ignore
+              await (new Eth1Wallet(wallet.privateKey, defaults.depositContract.abi, config, logger, provider))
+                .createValidatorDeposit(options.contract, ethers.utils.parseEther(options.value));
           logger.info(
             `Successfully deposited ${options.value} ETH from ${wallet.address} 
             to deposit contract. Tx hash: ${hash}`
@@ -104,10 +103,10 @@ export class DepositCommand implements CliCommand {
    * @param provider
    * @param n number of wallets to retrieve
    */
-  private fromMnemonic(mnemonic: string, provider: JsonRpcProvider, n: number): Wallet[] {
+  private fromMnemonic(mnemonic: string, provider: JsonRpcProvider, n: number): ethers.Wallet[] {
     const wallets = [];
     for (let i = 0; i < n; i++) {
-      let wallet = Wallet.fromMnemonic(mnemonic, `m/44'/60'/0'/0/${i}`);
+      let wallet = ethers.Wallet.fromMnemonic(mnemonic, `m/44'/60'/0'/0/${i}`);
       wallet = wallet.connect(provider);
       wallets.push(wallet);
     }

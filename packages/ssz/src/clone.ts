@@ -1,13 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
-import assert from "assert";
 import BN from "bn.js";
-import {BitList, BitVector} from "@chainsafe/bit-utils";
 
-import {
-  AnySSZType,
-  FullSSZType,
-  Type,
-} from "./types";
+import {AnySSZType, FullSSZType, Type,} from "./types";
 import {_assertValidValue} from "./assertValidValue";
 import {parseType} from "./util/types";
 
@@ -64,6 +59,7 @@ export function clone(value: any, type: AnySSZType): any {
 
 /** @ignore */
 function _clone(value: any, type: FullSSZType): any {
+  const obj: any = {};
   switch (type.type) {
     case Type.uint:
       if (BN.isBN(value)) {
@@ -83,7 +79,6 @@ function _clone(value: any, type: FullSSZType): any {
     case Type.vector:
       return value.map((element: any) => clone(element, type.elementType));
     case Type.container:
-      const obj: any = {};
       type.fields.forEach(([fieldName, fieldType]) => {
         obj[fieldName] = clone(value[fieldName], fieldType);
       });

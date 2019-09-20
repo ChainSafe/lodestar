@@ -6,6 +6,6 @@ export {
   LevelDbController,
   PouchDbController,
   IDatabaseController,
-  SearchOptions,
+  ISearchOptions,
 } from "./controller";
 export {BeaconDb, IBeaconDb, ValidatorDB, IValidatorDB} from "./api";

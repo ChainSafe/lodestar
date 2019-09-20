@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 
@@ -8,8 +9,8 @@ import {
   FullSSZType,
   ListType,
   SerializableArray,
-  SerializableValue,
   SerializableObject,
+  SerializableValue,
   Type,
   VectorType,
 } from "./types";
@@ -20,17 +21,9 @@ import {_assertValidValue} from "./assertValidValue";
 
 import {fixedSize} from "./size";
 
-import {
-  chunkify,
-  merkleize,
-  mixInLength,
-  pack,
-} from "./util/hash";
+import {chunkify, merkleize, mixInLength, pack,} from "./util/hash";
 
-import {
-  isBasicType,
-  parseType,
-} from "./util/types";
+import {isBasicType, parseType,} from "./util/types";
 
 
 /**
@@ -126,7 +119,9 @@ export function _hashTreeRoot(value: SerializableValue, type: FullSSZType): Buff
         (value as BitList).bitLength
       );
     case Type.byteList:
+      // eslint-disable-next-line no-case-declarations
       const sizeOfByte = 1;
+      // eslint-disable-next-line no-case-declarations
       const chunkCount = Math.floor((type.maxLength * sizeOfByte + 31) / BYTES_PER_CHUNK);
       return mixInLength(
         merkleize(pack([value], type), chunkCount), (value as Bytes).length);
@@ -138,7 +133,7 @@ export function _hashTreeRoot(value: SerializableValue, type: FullSSZType): Buff
           merkleize(pack(value, (type as ListType).elementType), chunkCount), value.length);
       } else {
         return mixInLength(
-          merkleize(value.map((v,i) => hashTreeRoot(v, (type as ListType).elementType)), type.maxLength),
+          merkleize(value.map((v) => hashTreeRoot(v, (type as ListType).elementType)), type.maxLength),
           value.length);
       }
     case Type.vector:

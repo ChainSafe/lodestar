@@ -1,11 +1,12 @@
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {BLSPubkey, Epoch, ValidatorDuty, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {BLSPubkey, Epoch, ValidatorDuty, ValidatorIndex,BeaconState} from "@chainsafe/eth2.0-types";
 import {getCommitteeAssignment} from "../../stateTransition/util";
+
 
 export function assembleValidatorDuty(
   config: IBeaconConfig,
   validator: {publicKey: BLSPubkey; index: ValidatorIndex},
-  state,
+  state: BeaconState,
   epoch: Epoch,
   proposerSlotMapping: {[k: number]: number}): ValidatorDuty  {
   let duty: ValidatorDuty = generateEmptyValidatorDuty(validator.publicKey);

@@ -2,7 +2,7 @@
  * @module cli/commands
  */
 
-import {CliCommand} from "./interface";
+import {ICliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import {ILogger, LogLevels, WinstonLogger, LogLevel, defaultLogLevel} from "../../logger";
 import fs from "fs";
@@ -14,7 +14,7 @@ interface ICreateConfigOptions {
   outputFile: string;
 }
 
-export class CreateConfigCommand implements CliCommand {
+export class CreateConfigCommand implements ICliCommand {
   public register(commander: CommanderStatic): void {
 
 
@@ -29,12 +29,12 @@ export class CreateConfigCommand implements CliCommand {
           level: options.logLevel || LogLevel[defaultLogLevel],
           module: "create-config"
         });
-        // library is not awaiting this method so don't allow error propagation 
+        // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
         try {
           await this.action(options, logger);
         } catch (e) {
-          logger.error(e.message + '\n' + e.stack);
+          logger.error(e.message + "\n" + e.stack);
         }
       });
   }

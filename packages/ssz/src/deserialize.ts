@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
 import assert from "assert";
 import BN from "bn.js";
@@ -165,7 +166,7 @@ function _deserializeBool(data: Buffer, start: number): Bool {
 /** @ignore */
 function _deserializeBitList(data: Buffer, type: BitListType, start: number, end: number): BitList {
   const bitlist = BitList.deserialize(data.slice(start, end));
-  assert(bitlist.bitLength <= type.maxLength, 'BitList length greater than max length');
+  assert(bitlist.bitLength <= type.maxLength, "BitList length greater than max length");
   return bitlist;
 }
 
@@ -178,7 +179,7 @@ function _deserializeBitVector(data: Buffer, type: BitVectorType, start: number,
 function _deserializeByteArray(data: Buffer, type: BytesType, start: number, end: number): Bytes {
   const length = end - start;
   if (type.type === Type.byteList) {
-    assert(length <= type.maxLength, 'Byte list length greater than max length');
+    assert(length <= type.maxLength, "Byte list length greater than max length");
   }
   const value = Buffer.alloc(length);
   data.copy(value, 0, start, end);
@@ -245,10 +246,10 @@ function _deserializeObject(data: Buffer, type: ContainerType, start: number, en
   // Since variable-sized values can be interspersed with fixed-sized values, we precalculate
   // the offset indices so we can more easily deserialize the fields in one pass
   // first we get the fixed sizes
-  const fixedSizes: (number | false)[] = type.fields.map(([_, fieldType]) =>
+  const fixedSizes: (number | false)[] = type.fields.map(([, fieldType]) =>
     !isVariableSizeType(fieldType) && fixedSize(fieldType));
   // with the fixed sizes, we can read the offsets, and store for later
-  let offsets: number[] = [];
+  const offsets: number[] = [];
   const fixedEnd = fixedSizes.reduce((index: number, size) => {
     if (size === false) {
       offsets.push(start + data.readUIntLE(index, BYTES_PER_LENGTH_PREFIX));

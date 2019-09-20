@@ -1,6 +1,6 @@
 import {ApiNamespace} from "./index";
 
-export const processApiNamespaces = (input: string) => {
+export const processApiNamespaces = (input: string): ApiNamespace[] => {
   return input
     .split(",")
     .map(((api: string) => {

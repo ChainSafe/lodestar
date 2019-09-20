@@ -4,6 +4,7 @@
 
 import PeerId from "peer-id";
 import PeerInfo from "peer-info";
+//@ts-ignore
 import promisify from "promisify-es6";
 import {Shard} from "@chainsafe/eth2.0-types";
 
@@ -16,7 +17,7 @@ function randomNibble(): string {
 }
 
 export function randomRequestId(): RequestId {
-  return Array.from({length: 16}, () => randomNibble()).join('');
+  return Array.from({length: 16}, () => randomNibble()).join("");
 }
 
 export function createResponseEvent(id: RequestId): string {
@@ -24,7 +25,7 @@ export function createResponseEvent(id: RequestId): string {
 }
 
 const REQ_PROTOCOL = "/eth2/beacon_chain/req/{method}/{version}/{encoding}";
-export function createRpcProtocol(method: string, encoding: string, version: number = 1) {
+export function createRpcProtocol(method: string, encoding: string, version: number = 1): string {
   return REQ_PROTOCOL
     .replace("{method}", method)
     .replace("{encoding}", encoding)

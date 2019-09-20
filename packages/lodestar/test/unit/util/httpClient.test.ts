@@ -2,7 +2,7 @@ import {assert} from "chai";
 
 import Axios from "axios";
 import MockAdapter from "axios-mock-adapter";
-import { HttpClient, HttpClientOptions } from "../../../src/util/httpClient";
+import { HttpClient, IHttpClientOptions } from "../../../src/util/httpClient";
 import { ILogger, WinstonLogger, LogLevel } from "../../../src/logger";
 
 interface User {

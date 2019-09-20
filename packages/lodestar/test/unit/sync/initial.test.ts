@@ -6,7 +6,7 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 
 import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
-import {ReputationStore} from "../../../src/sync/reputation";
+import {ReputationStore} from "../../../src/sync/IReputation";
 import {WinstonLogger} from "../../../src/logger";
 import {InitialSync} from "../../../src/sync/initial";
 import {generateState} from "../../utils/state";
@@ -15,7 +15,7 @@ import {ChainRepository, StateRepository} from "../../../src/db/api/beacon/repos
 import {ReqResp} from "../../../src/network/reqResp";
 
 describe("syncing", function () {
-  let sandbox = sinon.createSandbox();
+  const sandbox = sinon.createSandbox();
   let initialSync: InitialSync;
   let chainStub, rpcStub, networkStub, reqRespStub, dbStub,
     repsStub, logger;
@@ -50,7 +50,7 @@ describe("syncing", function () {
     logger.silent = false;
   });
 
-  it('should able to sync to peer', async function () {
+  it("should able to sync to peer", async function () {
 
     repsStub.get.returns({
       latestHello: {
@@ -58,7 +58,7 @@ describe("syncing", function () {
       }
     });
 
-    let peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.alloc(32)));
+    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.alloc(32)));
     dbStub.chain.setLatestStateRoot.resolves(0);
     dbStub.chain.setFinalizedStateRoot.resolves(0);
     dbStub.chain.setJustifiedStateRoot.resolves(0);
@@ -69,7 +69,7 @@ describe("syncing", function () {
 
   });
 
-  it('should process sync to peers', async function () {
+  it("should process sync to peers", async function () {
 
     repsStub.get.returns({
       latestHello: {
@@ -77,7 +77,7 @@ describe("syncing", function () {
       }
     });
 
-    let peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.alloc(32)));
+    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.alloc(32)));
     networkStub.getPeers.returns([peerInfo, peerInfo]);
     dbStub.chain.setLatestStateRoot.resolves(0);
     dbStub.chain.setFinalizedStateRoot.resolves(0);

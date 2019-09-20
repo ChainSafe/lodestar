@@ -5,20 +5,21 @@ import {getValidatorDuties} from "../../../impl/validator";
 import {IncomingMessage, Server, ServerResponse} from "http";
 import {toRestJson} from "../../utils";
 
-interface Query extends DefaultQuery {
+interface IQuery extends DefaultQuery {
+  // eslint-disable-next-line camelcase
   validator_pubkeys: string[];
   epoch: number;
 }
 
 
-const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerResponse, Query> = {
+const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerResponse, IQuery> = {
   schema: {
     querystring: {
-      type: 'object',
+      type: "object",
       required: ["validator_pubkeys", "epoch"],
       properties: {
         "validator_pubkeys": {
-          type: 'array',
+          type: "array",
           maxItems: 5,
           items: {
             types: "string"
@@ -34,19 +35,19 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
 };
 
 export const registerDutiesEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
-  fastify.get<Query>(
-    '/duties',
+  fastify.get<IQuery>(
+    "/duties",
     opts,
     async (request, reply) => {
       const duties = (await getValidatorDuties(
         modules.config,
         modules.db,
-        request.query.validator_pubkeys.map(key => Buffer.from(key, 'hex')),
+        request.query.validator_pubkeys.map(key => Buffer.from(key, "hex")),
         request.query.epoch
       )).map(toRestJson);
       reply
         .code(200)
-        .type('application/json')
+        .type("application/json")
         .send(duties);
     }
   );

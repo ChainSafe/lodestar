@@ -1,6 +1,6 @@
 import {BIG} from "@chainsafe/milagro-crypto-js/src/big";
 import {ECP2} from "@chainsafe/milagro-crypto-js/src/ecp2";
-import {sha256} from 'js-sha256';
+import {sha256} from "js-sha256";
 import ctx from "../ctx";
 import * as random from "secure-random";
 import {calculateYFlag, getModulus, padLeft} from "./utils";
@@ -16,47 +16,6 @@ export class G2point {
     this.point = point;
   }
 
-  public add(other: G2point): G2point {
-    const sum = new ctx.ECP2();
-    sum.add(this.point);
-    sum.add(other.point);
-    sum.affine();
-    return new G2point(sum);
-  }
-
-  public mul(value: BIG): G2point {
-    const newPoint = this.point.mul(value);
-    return new G2point(newPoint);
-  }
-
-  public equal(other: G2point): boolean {
-    return this.point.equals(other.point);
-  }
-
-  public getPoint(): ECP2 {
-    return this.point;
-  }
-
-  public toBytesCompressed(): bytes48 {
-    const xReBytes = Buffer.alloc(FP_POINT_LENGTH, 0);
-    const xImBytes = Buffer.alloc(FP_POINT_LENGTH, 0);
-    this.point.getX().getA().tobytearray(xReBytes, 0);
-    this.point.getX().getB().tobytearray(xImBytes, 0);
-    const c1 = true;
-    const b1 = this.point.is_infinity();
-    const a1 = !b1 && calculateYFlag(this.point.getY().getB());
-
-    const flags = ((a1 ? 1 << 5 : 0) | (b1 ? 1 << 6 : 0) | (c1 ? 1 << 7 : 0));
-    const mask = 31;
-    xImBytes[0] &= mask;
-    xImBytes[0] |= flags;
-    xReBytes[0] &= mask;
-
-    return Buffer.concat([
-      xImBytes,
-      xReBytes
-    ]);
-  }
 
   public static hashToG2(message: Hash, domain: Domain): G2point {
     const padding = Buffer.alloc(G2_HASH_PADDING, 0);
@@ -66,7 +25,7 @@ export class G2point {
         Buffer.concat([
           message,
           padLeft(domain, 8),
-          Buffer.from('01', 'hex')
+          Buffer.from("01", "hex")
         ])
       ))
     ]);
@@ -76,7 +35,7 @@ export class G2point {
         Buffer.concat([
           message,
           padLeft(domain, 8),
-          Buffer.from('02', 'hex')
+          Buffer.from("02", "hex")
         ])
       ))
     ]);
@@ -95,7 +54,7 @@ export class G2point {
   }
 
   public static fromCompressedBytes(value: bytes48): G2point {
-    assert(value.length === 2 * FP_POINT_LENGTH, 'Expected signature of 96 bytes');
+    assert(value.length === 2 * FP_POINT_LENGTH, "Expected signature of 96 bytes");
     value = Buffer.from(value);
     const xImBytes = value.slice(0, FP_POINT_LENGTH);
     const xReBytes = value.slice(FP_POINT_LENGTH);
@@ -114,8 +73,8 @@ export class G2point {
     const xRe = ctx.BIG.frombytearray(xReBytes, 0);
     if (bIn) {
       if (!aIn
-                && xIm.iszilch()
-                && xRe.iszilch() ) {
+          && xIm.iszilch()
+          && xRe.iszilch() ) {
         // This is a correctly formed serialisation of infinity
         return new G2point(new ctx.ECP2());
       } else {
@@ -131,7 +90,7 @@ export class G2point {
         "The deserialised X real or imaginary coordinate is too large.");
     }
 
-    let point = new ctx.ECP2();
+    const point = new ctx.ECP2();
     point.setx(new ctx.FP2(xRe, xIm));
     if(point.is_infinity()) {
       throw new Error("X coordinate is not on the curve.");
@@ -235,8 +194,8 @@ export class G2point {
     const yNeg = new ctx.FP2(y);
     yNeg.neg();
     if (ctx.BIG.comp(y.getB(), yNeg.getB()) < 0
-            || ((ctx.BIG.comp(y.getB(), yNeg.getB()) == 0)
-                && ctx.BIG.comp(y.getA(), yNeg.getA()) < 0)
+        || ((ctx.BIG.comp(y.getB(), yNeg.getB()) == 0)
+            && ctx.BIG.comp(y.getA(), yNeg.getA()) < 0)
     ) {
       const newPoint = new ctx.ECP2();
       newPoint.setxy(point.getX(), yNeg);
@@ -245,4 +204,47 @@ export class G2point {
       return point;
     }
   }
+
+  public add(other: G2point): G2point {
+    const sum = new ctx.ECP2();
+    sum.add(this.point);
+    sum.add(other.point);
+    sum.affine();
+    return new G2point(sum);
+  }
+
+  public mul(value: BIG): G2point {
+    const newPoint = this.point.mul(value);
+    return new G2point(newPoint);
+  }
+
+  public equal(other: G2point): boolean {
+    return this.point.equals(other.point);
+  }
+
+  public getPoint(): ECP2 {
+    return this.point;
+  }
+
+  public toBytesCompressed(): Buffer {
+    const xReBytes = Buffer.alloc(FP_POINT_LENGTH, 0);
+    const xImBytes = Buffer.alloc(FP_POINT_LENGTH, 0);
+    this.point.getX().getA().tobytearray(xReBytes, 0);
+    this.point.getX().getB().tobytearray(xImBytes, 0);
+    const c1 = true;
+    const b1 = this.point.is_infinity();
+    const a1 = !b1 && calculateYFlag(this.point.getY().getB());
+
+    const flags = ((a1 ? 1 << 5 : 0) | (b1 ? 1 << 6 : 0) | (c1 ? 1 << 7 : 0));
+    const mask = 31;
+    xImBytes[0] &= mask;
+    xImBytes[0] |= flags;
+    xReBytes[0] &= mask;
+
+    return Buffer.concat([
+      xImBytes,
+      xReBytes
+    ]);
+  }
+
 }

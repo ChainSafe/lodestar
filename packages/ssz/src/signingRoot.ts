@@ -1,18 +1,11 @@
 /** @module ssz */
 import assert from "assert";
 
-import {
-  AnyContainerType,
-  ContainerType,
-  Type,
-} from "./types";
+import {AnyContainerType, ContainerType, Type,} from "./types";
 
 import {hashTreeRoot} from "./hashTreeRoot";
 
-import {
-  copyType,
-  parseType,
-} from "./util/types";
+import {copyType, parseType,} from "./util/types";
 
 /**
  * [[hashTreeRoot]] an SSZ object w/o its last field
@@ -49,6 +42,7 @@ import {
  * verify(publicKey, signingRoot(d, myDataType), d.c); // hypothetical `verify` function
  * ```
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function signingRoot(value: any, type: AnyContainerType): Buffer {
   const _type = parseType(type);
   assert(_type.type === Type.container);

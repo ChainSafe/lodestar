@@ -23,7 +23,7 @@ export type ReqRespEventEmitter = StrictEventEmitter<EventEmitter, IReqRespEvent
 
 export interface IReqResp extends ReqRespEventEmitter {
   // sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T>;
-  sendResponse(id: RequestId, err: Error, result: ResponseBody): void;
+  sendResponse(id: RequestId, err: Error|null, result: ResponseBody|null): void;
 
   hello(peerInfo: PeerInfo, request: Hello): Promise<Hello>;
   goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void>;

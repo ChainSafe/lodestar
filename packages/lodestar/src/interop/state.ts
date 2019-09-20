@@ -6,7 +6,7 @@ import {interopDeposits} from "./deposits";
 import {intDiv} from "../util/math";
 import {IProgressiveMerkleTree} from "../util/merkleTree";
 
-const INTEROP_BLOCK_HASH = Buffer.alloc(32, 'B');
+const INTEROP_BLOCK_HASH = Buffer.alloc(32, "B");
 const INTEROP_TIMESTAMP = Math.pow(2, 40);
 
 export function quickStartState(

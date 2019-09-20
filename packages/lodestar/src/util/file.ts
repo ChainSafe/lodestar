@@ -45,7 +45,7 @@ export function writeTomlConfig(fileName: string): void {
  * @param {string} filePath
  */
 export function ensureDirectoryExistence(filePath: string): boolean {
-  var dirname = path.dirname(filePath);
+  const dirname = path.dirname(filePath);
   if (fs.existsSync(dirname)) {
     return true;
   }

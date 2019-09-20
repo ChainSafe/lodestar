@@ -15,14 +15,14 @@ describe("Eth1Notifier - using deployed contract", () => {
   let eth1Network: PrivateEth1Network;
   let depositContractAddress;
   let provider;
-  let logger: ILogger = new WinstonLogger();
+  const logger: ILogger = new WinstonLogger();
 
   beforeEach(async function () {
     this.timeout(0);
     logger.silent = true;
     // deploy deposit contract
     eth1Network = new PrivateEth1Network({
-      host: '127.0.0.1',
+      host: "127.0.0.1",
       port: 34569
     },
     {
@@ -30,7 +30,7 @@ describe("Eth1Notifier - using deployed contract", () => {
     });
     depositContractAddress = await eth1Network.start();
     await sleep(300);
-    provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:34569', 999);
+    provider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:34569", 999);
     provider.pollingInterval = 1;
     provider.polling = true;
     const opts = defaults;
@@ -55,6 +55,7 @@ describe("Eth1Notifier - using deployed contract", () => {
     this.timeout(0);
     const wallet = new Eth1Wallet(
       eth1Network.accounts()[0],
+      //@ts-ignore
       defaults.depositContract.abi,
       config,
       logger,
@@ -62,10 +63,10 @@ describe("Eth1Notifier - using deployed contract", () => {
     );
 
     const cb = sinon.spy();
-    eth1Notifier.on('deposit', cb);
+    eth1Notifier.on("deposit", cb);
 
 
-    await wallet.createValidatorDeposit(depositContractAddress, ethers.utils.parseEther('32.0'));
+    await wallet.createValidatorDeposit(depositContractAddress, ethers.utils.parseEther("32.0"));
     await sleep(300);
     assert(cb.calledOnce, "deposit event did not fire");
   });

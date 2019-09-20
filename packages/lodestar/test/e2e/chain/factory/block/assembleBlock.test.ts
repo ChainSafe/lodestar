@@ -3,9 +3,8 @@ import BN from "bn.js";
 import {hashTreeRoot, clone} from "@chainsafe/ssz";
 import sinon from "sinon";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
-import {BeaconBlockHeader, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {BeaconBlockHeader} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 import {describe, it} from "mocha";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {IValidatorDB, ValidatorDB} from "../../../../../src/db";
@@ -38,7 +37,7 @@ import {
 } from "../../../../../src/db/api/beacon/repositories";
 import {ValidatorApi} from "../../../../../src/api/rpc/api/validator";
 
-describe('produce block', function () {
+describe("produce block", function () {
   this.timeout(0);
   const dbStub = {
     chain: sinon.createStubInstance(ChainRepository),
@@ -51,6 +50,7 @@ describe('produce block', function () {
     voluntaryExit: sinon.createStubInstance(VoluntaryExitRepository),
     deposit: sinon.createStubInstance(DepositRepository),
   }; // missing transfer
+  // @ts-ignore
   const opPoolStub = new OpPool({}, {config:config, db: dbStub, eth1: sinon.createStubInstance(EthersEth1Notifier)});
   const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
   const chainStub = sinon.createStubInstance(BeaconChain);
@@ -96,12 +96,12 @@ describe('produce block', function () {
     eth1Stub.getEth1Data.resolves({depositCount: 1, depositRoot: tree.root(), blockHash: Buffer.alloc(32)});
     // @ts-ignore
     eth1Stub.getHead.resolves({
-      hash: '0x' + ZERO_HASH.toString('hex'),
+      hash: "0x" + ZERO_HASH.toString("hex"),
       number: config.params.ETH1_FOLLOW_DISTANCE + 1
     });
     // @ts-ignore
     eth1Stub.getBlock.resolves({
-      hash: '0x' + ZERO_HASH.toString('hex'),
+      hash: "0x" + ZERO_HASH.toString("hex"),
       number: 1
     });
     const validatorIndex = getBeaconProposerIndex(config, {...state, slot: 1});

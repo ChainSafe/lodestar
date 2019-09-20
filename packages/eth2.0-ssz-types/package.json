@@ -21,7 +21,7 @@
     "build:docs": "typedoc --exclude src/index.ts --out docs src",
     "check-types": "tsc --noEmit --incremental",
     "lint": "eslint --ext .ts src/",
-    "lint-fix": "eslint --ext .ts src/ --fix",
+    "lint:fix": "eslint --ext .ts src/ --fix",
     "prepublishOnly": "yarn build",
     "pretest": "yarn run check-types",
     "test:unit": "mocha -r ./.babel-register 'test/**/*.test.ts'"

@@ -24,7 +24,7 @@ Example of cpu-profile generation of blocksanity tests in current directory
 
 To view results:
 ```bash
-npm i -g ox
+npm i -g 0x
 0x --visualize-cpu-profile ./0\ -\ blocksanity-1561705313935.cpuprofile
 ```
 Open resulting html file in favorite browser.

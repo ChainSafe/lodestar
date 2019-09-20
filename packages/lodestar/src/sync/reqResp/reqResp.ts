@@ -12,15 +12,15 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {ZERO_HASH, Method, RequestId} from "../../constants";
+import {Method, RequestId, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
-import {ReputationStore} from "../reputation";
 import {ILogger} from "../../logger";
-import {ISyncReqResp, ISyncOptions} from "./interface";
+import {ISyncOptions, ISyncReqResp} from "./interface";
+import {ReputationStore} from "../IReputation";
 
-export interface SyncReqRespModules {
+export interface ISyncReqRespModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   chain: IBeaconChain;
@@ -42,7 +42,7 @@ export class SyncReqResp implements ISyncReqResp {
   private reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: ISyncOptions, {config, db, chain, network, reps, logger}: SyncReqRespModules) {
+  public constructor(opts: ISyncOptions, {config, db, chain, network, reps, logger}: ISyncReqRespModules) {
     this.config = config;
     this.opts = opts;
     this.db = db;
@@ -131,6 +131,7 @@ export class SyncReqResp implements ISyncReqResp {
     // TODO handle incorrect forkVersion or disjoint finalizedCheckpoint
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
     await this.network.disconnect(peerInfo);
   }

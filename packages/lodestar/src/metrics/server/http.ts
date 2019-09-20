@@ -3,6 +3,7 @@
  */
 import http from "http";
 import url from "url";
+//@ts-ignore
 import promisify from "promisify-es6";
 
 import {IMetrics, IMetricsServer} from "../interface";
@@ -20,8 +21,9 @@ export class HttpMetricsServer implements IMetricsServer {
     this.metrics = metrics;
     this.http = http.createServer(this.onRequest.bind(this));
   }
+
   private onRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
-    if (req.method === "GET" && url.parse(req.url, true).pathname === "/metrics") {
+    if (req.method === "GET" && url.parse(req.url as string, true).pathname === "/metrics") {
       res.writeHead(200, {"content-type": this.metrics.registry.contentType});
       res.end(this.metrics.registry.metrics());
     } else {
@@ -29,6 +31,7 @@ export class HttpMetricsServer implements IMetricsServer {
       res.end();
     }
   }
+
   public async start(): Promise<void> {
     if (this.opts.enabled) {
       this.logger.info("Starting prometheus...");

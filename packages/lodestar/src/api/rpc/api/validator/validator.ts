@@ -6,13 +6,14 @@ import {Attestation, BeaconBlock, BLSPubkey, bytes96, Epoch, Shard, Slot, Valida
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {BeaconDb, IBeaconDb} from "../../../../db";
-import {BeaconChain} from "../../../../chain";
+import {IBeaconChain} from "../../../../chain";
 import {OpPool} from "../../../../opPool";
 import {IValidatorApi} from "./interface";
 import {assembleBlock} from "../../../../chain/factory/block";
 import {IEth1Notifier} from "../../../../eth1";
 import {getValidatorDuties, produceAttestation} from "../../../impl/validator";
-import {ApiNamespace} from "../../../index";
+import {ApiNamespace, IApiModules} from "../../../index";
+import {IApiOptions} from "../../../options";
 import {ILogger} from "../../../../logger";
 import {processAttestation} from "../../../../chain/stateTransition/block/operations";
 
@@ -21,13 +22,16 @@ export class ValidatorApi implements IValidatorApi {
   public namespace: ApiNamespace;
 
   private config: IBeaconConfig;
-  private chain: BeaconChain;
+  private chain: IBeaconChain;
   private db: IBeaconDb;
   private opPool: OpPool;
   private eth1: IEth1Notifier;
   private logger: ILogger;
 
-  public constructor(opts, {config, chain, db, opPool, eth1, logger}) {
+  public constructor(
+    opts: Partial<IApiOptions>,
+    {config, chain, db, opPool, eth1, logger}: Pick<IApiModules, "config"|"chain"|"db"|"opPool"|"eth1"|"logger">
+  ) {
     this.namespace = ApiNamespace.VALIDATOR;
     this.config = config;
     this.chain = chain;

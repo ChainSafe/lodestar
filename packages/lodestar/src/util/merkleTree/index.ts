@@ -1,3 +1,3 @@
-export * from './interface';
-export * from './merkleTree';
-export * from './utils';
+export * from "./interface";
+export * from "./merkleTree";
+export * from "./utils";

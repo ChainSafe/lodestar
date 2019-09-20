@@ -4,17 +4,15 @@
 
 import assert from "assert";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
-import {
-  BeaconState,
-  BeaconBlockHeader, Slot,
-} from "@chainsafe/eth2.0-types";
+import {BeaconState, Slot,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {ZERO_HASH} from "../../constants";
 
 import {processEpoch} from "./epoch";
 
-// See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#beacon-chain-state-transition-function
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/
+// specs/core/0_beacon-chain.md#beacon-chain-state-transition-function
 
 export function processSlots(
   config: IBeaconConfig,

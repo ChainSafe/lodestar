@@ -33,7 +33,7 @@ export const RpcOptions: IConfigurationModule = {
   fields: [
     booleanOption("enabled", "--rpc"),
     {
-      name: 'api',
+      name: "api",
       type: "string",
       process: processApiNamespaces,
       configurable: true,
@@ -42,7 +42,7 @@ export const RpcOptions: IConfigurationModule = {
       }
     },
     {
-      name: 'host',
+      name: "host",
       type: "string",
       configurable: true,
       cli: {
@@ -50,7 +50,7 @@ export const RpcOptions: IConfigurationModule = {
       }
     },
     {
-      name: 'port',
+      name: "port",
       type: "number",
       configurable: true,
       cli: {
@@ -58,7 +58,7 @@ export const RpcOptions: IConfigurationModule = {
       }
     },
     {
-      name: 'cors',
+      name: "cors",
       type: "string",
       configurable: true,
       cli: {

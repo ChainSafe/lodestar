@@ -5,16 +5,17 @@ import {IncomingMessage, Server, ServerResponse} from "http";
 import {assembleBlock} from "../../../../chain/factory/block";
 import {toRestJson} from "../../utils";
 
-interface Query extends DefaultQuery {
+interface IQuery extends DefaultQuery {
   slot: number;
+  // eslint-disable-next-line camelcase
   randao_reveal: string;
 }
 
 
-const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerResponse, Query> = {
+const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerResponse, IQuery> = {
   schema: {
     querystring: {
-      type: 'object',
+      type: "object",
       required: ["slot", "randao_reveal"],
       properties: {
         slot: {
@@ -30,8 +31,8 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
 };
 
 export const registerBlockProductionEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
-  fastify.get<Query>(
-    '/block',
+  fastify.get<IQuery>(
+    "/block",
     opts,
     async (request, reply) => {
       const block = await assembleBlock(
@@ -45,7 +46,7 @@ export const registerBlockProductionEndpoint = (fastify: IFastifyServer, modules
       );
       reply
         .code(200)
-        .type('application/json')
+        .type("application/json")
         .send(toRestJson(block));
     }
   );

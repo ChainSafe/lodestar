@@ -13,13 +13,13 @@ import deepmerge from "deepmerge";
 
 import {isPlainObject} from "../../util/objects";
 
-export interface Libp2pOptions {
+export interface ILibp2pOptions {
   peerInfo: PeerInfo;
   bootnodes?: string[];
 }
 
 export class NodejsNode extends LibP2p {
-  public constructor(options: Libp2pOptions) {
+  public constructor(options: ILibp2pOptions) {
     const defaults = {
       peerInfo: options.peerInfo,
       modules: {

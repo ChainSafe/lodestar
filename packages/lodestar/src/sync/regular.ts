@@ -7,13 +7,16 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import {BeaconBlock, Attestation, Hash, Checkpoint} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
+import {ATTESTATION_TOPIC, BLOCK_TOPIC} from "../constants";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
 import {OpPool} from "../opPool";
 import {ILogger} from "../logger";
+import {ISyncModules} from "./index";
+import {ISyncOptions} from "./options";
 
+export type IRegularSyncModules = Pick<ISyncModules, "config"|"db"|"chain"|"opPool"|"network"|"logger">;
 
 export class RegularSync {
   private config: IBeaconConfig;
@@ -23,13 +26,13 @@ export class RegularSync {
   private opPool: OpPool;
   private logger: ILogger;
 
-  public constructor(opts, {config, db, chain, network, opPool, logger}) {
-    this.config = config;
-    this.db = db;
-    this.chain = chain;
-    this.network = network;
-    this.opPool = opPool;
-    this.logger = logger;
+  public constructor(opts: ISyncOptions, modules: IRegularSyncModules) {
+    this.config = modules.config;
+    this.db = modules.db;
+    this.chain = modules.chain;
+    this.network = modules.network;
+    this.opPool = modules.opPool;
+    this.logger = modules.logger;
   }
 
   public receiveBlock = async (block: BeaconBlock): Promise<void> => {
@@ -41,7 +44,7 @@ export class RegularSync {
       return;
     }
     // skip block if it already exists
-    if (!await this.db.block.has(root)) {
+    if (!await this.db.block.has(root as Buffer)) {
       await this.chain.receiveBlock(block);
     }
   };
@@ -49,7 +52,7 @@ export class RegularSync {
   public receiveAttestation = async (attestation: Attestation): Promise<void> => {
     // skip attestation if it already exists
     const root = hashTreeRoot(attestation, this.config.types.Attestation);
-    if (await this.db.attestation.has(root)) {
+    if (await this.db.attestation.has(root as Buffer)) {
       return;
     }
     // skip attestation if its too old

@@ -5,17 +5,17 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 
 import {Method} from "../../../src/constants";
 import {SyncReqResp} from "../../../src/sync/reqResp";
-import {ReputationStore} from "../../../src/sync/reputation";
+import {ReputationStore} from "../../../src/sync/IReputation";
 import {Libp2pNetwork} from "../../../src/network";
-import {BeaconDb, LevelDbController} from "../../../src/db";
-
+import {BeaconDb} from "../../../src/db";
+import Libp2p from "libp2p";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../unit/network/util";
 import {WinstonLogger} from "../../../src/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {generateState} from "../../utils/state";
-import { StateRepository, ChainRepository, BlockRepository } from "../../../src/db/api/beacon/repositories";
+import {BlockRepository, ChainRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -37,8 +37,8 @@ describe("[sync] rpc", function () {
   let rpcA: SyncReqResp, netA: Libp2pNetwork, repsA: ReputationStore;
   let rpcB: SyncReqResp, netB: Libp2pNetwork, repsB: ReputationStore;
   beforeEach(async () => {
-    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger, metrics});
-    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger, metrics});
+    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics});
+    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics});
     await Promise.all([
       netA.start(),
       netB.start(),

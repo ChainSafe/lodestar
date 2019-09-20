@@ -2,8 +2,6 @@
  * @module chain/stateTransition/epoch
  */
 
-import BN from "bn.js";
-
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 

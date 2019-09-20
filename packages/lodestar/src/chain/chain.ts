@@ -18,7 +18,7 @@ import {IBeaconMetrics} from "../metrics";
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
 
 import {processSlots, stateTransition} from "./stateTransition";
-import {LMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
+import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 import {
   computeEpochOfSlot,
   getAttestationDataSlot,
@@ -33,7 +33,7 @@ import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
 import fs from "fs";
 import {sleep} from "../validator/services/attestation";
-import {priorityQueue, queue} from "async";
+import {queue} from "async";
 import FastPriorityQueue from "fastpriorityqueue";
 import {getCurrentSlot} from "./stateTransition/util/genesis";
 
@@ -50,7 +50,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   public chain: string;
   public _latestState: BeaconState = null;
-  public forkChoice: LMDGHOST;
+  public forkChoice: ILMDGHOST;
   public chainId: uint16;
   public networkId: uint64;
 
@@ -91,14 +91,14 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     if(!state) {
       // check every block if genesis
       this.logger.info("Chain not started, listening for genesis block");
-      this.eth1.on('block', this.checkGenesis);
+      this.eth1.on("block", this.checkGenesis);
     }
     this.latestState = state;
     this.logger.info("Chain started, waiting blocks and attestations");
   }
 
   public async stop(): Promise<void> {
-    this.eth1.removeListener('block', this.checkGenesis);
+    this.eth1.removeListener("block", this.checkGenesis);
   }
 
   public get latestState(): BeaconState {
@@ -107,6 +107,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   public set latestState(state: BeaconState) {
     this._latestState = state;
+  }
+
+  public isInitialized(): boolean {
+    return !!this.latestState;
   }
 
   public async receiveAttestation(attestation: Attestation): Promise<void> {
@@ -247,7 +251,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public async applyForkChoiceRule(): Promise<void> {
     const currentRoot = await this.db.chain.getChainHeadRoot();
     const headRoot = this.forkChoice.head();
-    if (!currentRoot.equals(headRoot)) {
+    if (currentRoot && !currentRoot.equals(headRoot)) {
       const block = await this.db.block.get(headRoot);
       await this.db.setChainHeadRoots(headRoot, block.stateRoot);
       this.logger.info(`Fork choice changed head to 0x${headRoot.toString('hex')}`);
@@ -275,7 +279,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.forkChoice.addBlock(genesisBlock.slot, blockRoot, Buffer.alloc(32));
     this.forkChoice.setJustified(blockRoot);
     this.forkChoice.setFinalized(blockRoot);
-    this.logger.info(`Beacon chain initialized`);
+    this.logger.info("Beacon chain initialized");
   }
 
   public async isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean> {
@@ -293,7 +297,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     return Math.floor(Date.now() / 1000) >= stateSlotTime;
   }
 
-  private async runStateTransition(block: BeaconBlock, state: BeaconState): Promise<BeaconState> {
+  private async runStateTransition(block: BeaconBlock, state: BeaconState): Promise<BeaconState|null> {
     const preSlot = state.slot;
     const preFinalizedEpoch = state.finalizedCheckpoint.epoch;
     const preJustifiedEpoch = state.currentJustifiedCheckpoint.epoch;
@@ -352,13 +356,15 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.metrics.previousJustifiedEpoch.set(newState.previousJustifiedCheckpoint.epoch);
       this.metrics.currentJustifiedEpoch.set(newState.currentJustifiedCheckpoint.epoch);
       this.metrics.currentFinalizedEpoch.set(newState.finalizedCheckpoint.epoch);
-      this.metrics.currentEpochLiveValidators.set(newState.validators.filter((v) => isActiveValidator(v, currentEpoch)).length);
+      this.metrics.currentEpochLiveValidators.set(
+        newState.validators.filter((v) => isActiveValidator(v, currentEpoch)).length
+      );
     }
     return newState;
   }
 
   private async updateDepositMerkleTree(newState: BeaconState): Promise<void> {
-    let [deposits, merkleTree] = await Promise.all([
+    const [deposits, merkleTree] = await Promise.all([
       this.db.deposit.getAll(),
       this.db.merkleTree.getProgressiveMerkleTree(
         newState.eth1DepositIndex
@@ -394,7 +400,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
         deposit.proof = merkleTree.getProof(index);
         return deposit;
       });
-    const genesisState = initializeBeaconStateFromEth1 (
+    const genesisState = initializeBeaconStateFromEth1(
       this.config,
       Buffer.from(eth1Block.hash.replace("0x", ""), "hex"),
       eth1Block.timestamp,
@@ -407,8 +413,4 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.info(`Initializing beacon chain with eth1 block ${eth1Block.hash}`);
     await this.initializeBeaconChain(genesisState, merkleTree);
   };
-
-  public isInitialized(): boolean {
-    return !!this.latestState;
-  }
 }

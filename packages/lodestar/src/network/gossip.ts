@@ -1,11 +1,14 @@
+/* eslint-disable no-empty,@typescript-eslint/no-explicit-any */
 /**
  * @module network
  */
 
 import {EventEmitter} from "events";
 import {deserialize, serialize} from "@chainsafe/ssz";
+//@ts-ignore
 import promisify from "promisify-es6";
 import LibP2p from "libp2p";
+//@ts-ignore
 import Gossipsub from "libp2p-gossipsub";
 import {Attestation, BeaconBlock, Shard} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -16,13 +19,11 @@ import {IBeaconMetrics} from "../metrics";
 
 import {shardAttestationTopic, shardSubnetAttestationTopic, blockTopic, attestationTopic} from "./util";
 import {INetworkOptions} from "./options";
-import {
-  IGossip, GossipEventEmitter,
-} from "./interface";
+import {GossipEventEmitter, IGossip,} from "./interface";
 
-interface GossipModules {
+interface IGossipModules {
   config: IBeaconConfig;
-  libp2p: any;
+  libp2p: LibP2p;
   logger: ILogger;
 }
 
@@ -34,7 +35,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   private pubsub: Gossipsub;
   private logger: ILogger;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, logger}: GossipModules) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger}: IGossipModules) {
     super();
     this.opts = opts;
     this.config = config;

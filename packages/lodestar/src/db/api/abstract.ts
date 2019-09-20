@@ -1,18 +1,18 @@
 import {IDatabaseController} from "../controller";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {Service} from "../../node";
+import {IService} from "../../node";
 
-export interface DatabaseApiOptions {
+export interface IDatabaseApiOptions {
   config: IBeaconConfig;
   controller: IDatabaseController;
 }
 
-export abstract class DatabaseService implements Service{
+export abstract class DatabaseService implements IService{
 
   protected config: IBeaconConfig;
   protected db: IDatabaseController;
 
-  protected constructor(opts: DatabaseApiOptions) {
+  protected constructor(opts: IDatabaseApiOptions) {
     this.config = opts.config;
     this.db = opts.controller;
   }

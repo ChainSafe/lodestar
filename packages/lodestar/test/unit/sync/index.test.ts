@@ -2,20 +2,20 @@ import sinon from "sinon";
 import {expect} from  "chai";
 import PeerId from "peer-id";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-
+import {describe, it, beforeEach, afterEach} from "mocha";
 import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {OpPool} from "../../../src/opPool";
 import {EthersEth1Notifier} from "../../../src/eth1";
-import {ReputationStore} from "../../../src/sync/reputation";
 import {WinstonLogger} from "../../../src/logger";
 import {RegularSync} from "../../../src/sync/regular";
 import {Sync} from "../../../src/sync";
 import {ChainRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
 import {ReqResp} from "../../../src/network/reqResp";
+import {ReputationStore} from "../../../src/sync/IReputation";
 
 describe("syncing", function () {
-  let sandbox = sinon.createSandbox();
+  const sandbox = sinon.createSandbox();
   let sync: Sync;
   let chainStub, networkStub, opPoolStub, eth1Stub, dbStub,
     repsStub, logger, syncerStub;
@@ -54,7 +54,7 @@ describe("syncing", function () {
   });
 
 
-  it('should return true - chain synced ', async function () {
+  it("should return true - chain synced ", async function () {
 
     //first case
     chainStub.isInitialized.resolves(false);
@@ -70,7 +70,7 @@ describe("syncing", function () {
       },
     });
 
-    let peerId: PeerId = new PeerId(Buffer.alloc(32));
+    const peerId: PeerId = new PeerId(Buffer.alloc(32));
 
     networkStub.getPeers.returns([
       {
@@ -85,7 +85,7 @@ describe("syncing", function () {
 
   });
 
-  it('should return false - chain synced ', async function () {
+  it("should return false - chain synced ", async function () {
     //first case
     chainStub.isInitialized.resolves(true);
     dbStub.chain.getChainHeadSlot.resolves(2);
@@ -95,7 +95,7 @@ describe("syncing", function () {
       },
     });
 
-    let peerId: PeerId = new PeerId(Buffer.alloc(32));
+    const peerId: PeerId = new PeerId(Buffer.alloc(32));
 
     networkStub.getPeers.returns([
       {

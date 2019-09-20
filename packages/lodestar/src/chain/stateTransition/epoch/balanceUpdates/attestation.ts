@@ -4,19 +4,18 @@
 
 import BN from "bn.js";
 
-import {BeaconState, Gwei} from "@chainsafe/eth2.0-types";
+import {BeaconState, Gwei, ValidatorIndex} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {
   getAttestingIndices,
   getPreviousEpoch,
   getTotalActiveBalance,
-  isActiveValidator,
   getTotalBalance,
+  isActiveValidator,
 } from "../../util";
 
 import {
-  getAttestingBalance,
   getMatchingHeadAttestations,
   getMatchingSourceAttestations,
   getMatchingTargetAttestations,
@@ -32,7 +31,7 @@ export function getAttestationDeltas(config: IBeaconConfig, state: BeaconState):
   const rewards = Array.from({length: state.validators.length}, () => new BN(0));
   const penalties = Array.from({length: state.validators.length}, () => new BN(0));
   const eligibleValidatorIndices = state.validators
-    .reduce((indices, v, index) => {
+    .reduce((indices: ValidatorIndex[], v, index) => {
       if (isActiveValidator(v, previousEpoch)
         || (v.slashed && previousEpoch + 1 < v.withdrawableEpoch)) {
         indices.push(index);
