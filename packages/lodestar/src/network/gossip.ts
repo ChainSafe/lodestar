@@ -64,17 +64,17 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   public async publishBlock(block: BeaconBlock): Promise<void> {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
       blockTopic(), serialize(block, this.config.types.BeaconBlock));
-    this.logger.trace(`[GOSSIP] Publishing block at slot: ${block.slot}`);
+    this.logger.verbose(`[GOSSIP] Publishing block at slot: ${block.slot}`);
   }
   public async publishAttestation(attestation: Attestation): Promise<void> {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
       attestationTopic(), serialize(attestation, this.config.types.Attestation));
-    this.logger.trace(`[GOSSIP] Publishing attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`);
+    this.logger.verbose(`[GOSSIP] Publishing attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`);
   }
   public async publishShardAttestation(attestation: Attestation): Promise<void> {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
       shardSubnetAttestationTopic(attestation.data.crosslink.shard), serialize(attestation, this.config.types.Attestation));
-    this.logger.trace(`[GOSSIP] Publishing shard attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`);
+    this.logger.verbose(`[GOSSIP] Publishing shard attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`);
   }
   private handleIncomingBlock = (msg: any): void => {
     try {
