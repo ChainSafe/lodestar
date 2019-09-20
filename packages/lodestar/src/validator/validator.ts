@@ -162,7 +162,7 @@ class Validator {
         [this.opts.keypair.publicKey.toBytesCompressed()],
         computeEpochOfSlot(this.config, slot))
       )[0];
-    const currentVersion = await this.apiClient.beacon.getFork();
+    const {fork: currentVersion} = await this.apiClient.beacon.getFork();
     const isAttester = validatorDuty.attestationSlot === slot;
     const isProposer = validatorDuty.blockProposalSlot === slot;
     this.logger.info(
