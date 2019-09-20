@@ -33,8 +33,9 @@ import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
 import fs from "fs";
 import {sleep} from "../validator/services/attestation";
-import {getCurrentSlot} from "./stateTransition/util/genesis";
 import {priorityQueue, queue} from "async";
+import FastPriorityQueue from "fastpriorityqueue";
+import {getCurrentSlot} from "./stateTransition/util/genesis";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -79,9 +80,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.attestationProcessingQueue = queue(async (task: Function) => {
       await task();
     }, 1);
-    this.blockProcessingQueue = priorityQueue(async (task: Function) => {
-      await task();
-    }, 1);
+    this.blockProcessingQueue = new FastPriorityQueue((a: BeaconBlock, b: BeaconBlock) => {
+      return a.slot < b.slot;
+    });
   }
 
   public async start(): Promise<void> {
@@ -144,12 +145,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     if(!await this.db.block.has(block.parentRoot)) {
       this.emit("unknownBlockRoot", block.parentRoot);
     }
-    this.blockProcessingQueue.push(async () =>{
-      return this.processBlock(block, blockHash)
-    }, block.slot);
-  }
 
-  private processBlock = async (block: BeaconBlock, blockHash: Hash) => {
     if(block.slot <= this.latestState.slot) {
       this.logger.warn(`Block ${blockHash.toString("hex")} is in past. Probably fork choice/double propose/processed block. Ignored for now.`);
       return;
@@ -163,13 +159,26 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
         this.logger.warn(`Block ${blockHash.toString("hex")} tried to be processed too early. Requeue...`);
         //wait a bit to give new block a chance
         await sleep(500);
-
-        this.blockProcessingQueue.push(async () =>{
-          return this.processBlock(block, blockHash)
-        }, block.slot);
+        // add to priority queue
+        this.blockProcessingQueue.add(block)
         return;
       }
     }
+    
+    await this.processBlock(block, blockHash);
+    let nextBlockInQueue = this.blockProcessingQueue.peek();
+    while (nextBlockInQueue) {
+      const latestBlock = await this.db.block.getChainHead();
+      if (nextBlockInQueue.parentRoot.equals(signingRoot(latestBlock, this.config.types.BeaconBlock))) {
+        await this.processBlock(nextBlockInQueue, signingRoot(nextBlockInQueue, this.config.types.BeaconBlock))
+        this.blockProcessingQueue.poll();
+      } else{
+        return;
+      }
+    }
+  }
+
+  private processBlock = async (block: BeaconBlock, blockHash: Hash) => {
 
     const isValidBlock = await this.isValidBlock(this.latestState, block);
     assert(isValidBlock);
