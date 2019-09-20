@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import BN from "bn.js";
-import {hashTreeRoot} from "@chainsafe/ssz";
+import {hashTreeRoot, clone} from "@chainsafe/ssz";
 import sinon from "sinon";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
 import {BeaconBlockHeader, ValidatorIndex} from "@chainsafe/eth2.0-types";
@@ -24,6 +24,7 @@ import {WinstonLogger} from "../../../../../src/logger";
 import {generateDeposit} from "../../../../utils/deposit";
 import {BeaconChain} from "../../../../../../lodestar/src/chain";
 import {StatefulDagLMDGHOST} from "../../../../../src/chain/forkChoice";
+
 import {
   AttestationRepository,
   AttesterSlashingRepository,
@@ -54,8 +55,8 @@ describe('produce block', function () {
   const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
   const chainStub = sinon.createStubInstance(BeaconChain);
   chainStub.forkChoice = sinon.createStubInstance(StatefulDagLMDGHOST);
-  it('should produce valid block - state without valid eth1 votes', async function () {
 
+  it('should produce valid block - state without valid eth1 votes', async function () {
     const keypairs: Keypair[] = Array.from({length: 64},  () => Keypair.generate());
     const validators = keypairs.map((keypair) => {
       const validator = generateValidator(0, FAR_FUTURE_EPOCH);
@@ -82,7 +83,7 @@ describe('produce block', function () {
     const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
     tree.add(0, hashTreeRoot(generateDeposit().data, config.types.DepositData));
     dbStub.block.getChainHead.resolves(parentBlock);
-    dbStub.state.getLatest.resolves(state);
+    dbStub.state.getLatest.resolves(clone(state, config.types.BeaconState));
     dbStub.block.get.withArgs(chainStub.forkChoice.head()).resolves(parentBlock)
     dbStub.merkleTree.getProgressiveMerkleTree.resolves(tree);
     dbStub.proposerSlashing.getAll.resolves([]);
@@ -114,7 +115,6 @@ describe('produce block', function () {
       return await assembleBlock(config, chainStub, dbStub, opPoolStub, eth1Stub, slot, randao);
     });
     const block = await blockProposingService.createAndPublishBlock(1, state.fork);
-    console.log("rum")
     stateTransition(config, state, block, false)
     //expect(() => stateTransition(config, state, block, false)).to.not.throw();
   });
