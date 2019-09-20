@@ -1,6 +1,6 @@
-import { Fork, uint64, BeaconState } from "@chainsafe/eth2.0-types";
-import { IBeaconDb } from "../../../db";
-import { IBeaconChain } from "../../../chain";
+import {Fork, uint64, BeaconState} from "@chainsafe/eth2.0-types";
+import {IBeaconDb} from "../../../db";
+import {IBeaconChain} from "../../../chain";
 
 
 export async function getFork(db: IBeaconDb, chain: IBeaconChain): Promise<{fork: Fork; chainId: uint64}> {
