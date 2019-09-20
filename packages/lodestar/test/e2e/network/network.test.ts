@@ -21,11 +21,11 @@ const opts: INetworkOptions = {
   multiaddrs: [],
 };
 
-describe("[network] network", () => {
-
+describe("[network] network", function () {
+  this.timeout(5000)
   let netA: Libp2pNetwork, netB: Libp2pNetwork;
   const logger: ILogger = new WinstonLogger();
-  const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false});
+  const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
 
   beforeEach(async () => {
     netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr), logger, metrics});
@@ -62,6 +62,8 @@ describe("[network] network", () => {
       new Promise((resolve) => netA.on("peer:disconnect", resolve)),
       new Promise((resolve) => netB.on("peer:disconnect", resolve)),
     ]);
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     await netA.disconnect(netB.peerInfo);
     await disconnection;
     expect(netA.getPeers().length).to.equal(0);
