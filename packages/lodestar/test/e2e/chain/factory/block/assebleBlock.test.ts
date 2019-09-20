@@ -22,6 +22,8 @@ import BlockProposingService from "../../../../../src/validator/services/block";
 import {RpcClientOverInstance} from "../../../../../src/validator/rpc";
 import {WinstonLogger} from "../../../../../src/logger";
 import {generateDeposit} from "../../../../utils/deposit";
+import {BeaconChain} from "../../../../../../lodestar/src/chain";
+import {StatefulDagLMDGHOST} from "../../../../../src/chain/forkChoice";
 import {
   AttestationRepository,
   AttesterSlashingRepository,
@@ -37,7 +39,6 @@ import {ValidatorApi} from "../../../../../src/api/rpc/api/validator";
 
 describe('produce block', function () {
   this.timeout(0);
-
   const dbStub = {
     chain: sinon.createStubInstance(ChainRepository),
     block: sinon.createStubInstance(BlockRepository),
@@ -48,10 +49,11 @@ describe('produce block', function () {
     attestation: sinon.createStubInstance(AttestationRepository),
     voluntaryExit: sinon.createStubInstance(VoluntaryExitRepository),
     deposit: sinon.createStubInstance(DepositRepository),
-  };
-  const opPoolStub = new OpPool({}, {db: dbStub, eth1: sinon.createStubInstance(EthersEth1Notifier)});
+  }; // missing transfer
+  const opPoolStub = new OpPool({}, {config:config, db: dbStub, eth1: sinon.createStubInstance(EthersEth1Notifier)});
   const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
-
+  const chainStub = sinon.createStubInstance(BeaconChain);
+  chainStub.forkChoice = sinon.createStubInstance(StatefulDagLMDGHOST);
   it('should produce valid block - state without valid eth1 votes', async function () {
 
     const keypairs: Keypair[] = Array.from({length: 64},  () => Keypair.generate());
@@ -81,6 +83,7 @@ describe('produce block', function () {
     tree.add(0, hashTreeRoot(generateDeposit().data, config.types.DepositData));
     dbStub.block.getChainHead.resolves(parentBlock);
     dbStub.state.getLatest.resolves(state);
+    dbStub.block.get.withArgs(chainStub.forkChoice.head()).resolves(parentBlock)
     dbStub.merkleTree.getProgressiveMerkleTree.resolves(tree);
     dbStub.proposerSlashing.getAll.resolves([]);
     dbStub.attestation.getAll.resolves([]);
@@ -108,11 +111,12 @@ describe('produce block', function () {
     // @ts-ignore
     blockProposingService.getRpcClient().validator.produceBlock.callsFake(async(slot, randao) => {
       // @ts-ignore
-      return await assembleBlock(config, dbStub, opPoolStub, eth1Stub, slot, randao);
+      return await assembleBlock(config, chainStub, dbStub, opPoolStub, eth1Stub, slot, randao);
     });
     const block = await blockProposingService.createAndPublishBlock(1, state.fork);
-
-    expect(() => stateTransition(config, state, block, false)).to.not.throw();
+    console.log("rum")
+    stateTransition(config, state, block, false)
+    //expect(() => stateTransition(config, state, block, false)).to.not.throw();
   });
 
   function getBlockProposingService(keypair: Keypair): BlockProposingService {
