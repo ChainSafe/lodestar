@@ -73,12 +73,12 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     await promisify(this.libp2p.hangUp.bind(this.libp2p))(peerInfo);
   }
   private emitPeerConnect = (peerInfo: PeerInfo): void => {
-    this.logger.debug("peer connected " + peerInfo.id.toB58String())
+    this.logger.verbose("peer connected " + peerInfo.id.toB58String())
     this.metrics.peers.inc();
     this.emit("peer:connect", peerInfo);
   };
   private emitPeerDisconnect = (peerInfo: PeerInfo): void => {
-    this.logger.debug("peer disconnected " + peerInfo.id.toB58String())
+    this.logger.verbose("peer disconnected " + peerInfo.id.toB58String())
     this.metrics.peers.dec();
     this.emit("peer:disconnect", peerInfo);
   };
