@@ -27,10 +27,12 @@ const opts: INetworkOptions = {
   multiaddrs: [],
 };
 
-describe("[sync] rpc", () => {
+describe("[sync] rpc", function () {
+  this.timeout(20000)
   const sandbox = sinon.createSandbox();
   let logger = new WinstonLogger();
-  const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false});
+  logger.silent = true;
+  const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false}, {logger});
 
   let rpcA: SyncReqResp, netA: Libp2pNetwork, repsA: ReputationStore;
   let rpcB: SyncReqResp, netB: Libp2pNetwork, repsB: ReputationStore;
