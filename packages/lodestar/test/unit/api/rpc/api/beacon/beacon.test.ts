@@ -44,7 +44,7 @@ describe('beacon rpc api', function () {
       }
     });
     dbStub.state.getLatest.resolves(state);
-    const fork = await beaconApi.getFork();
+    const {fork} = await beaconApi.getFork();
     expect(dbStub.state.getLatest.calledOnce).to.be.true;
     expect(fork).to.be.deep.equal(state.fork);
   });

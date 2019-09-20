@@ -3,13 +3,14 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {bytes32, Fork, number64, SyncingStatus} from "@chainsafe/eth2.0-types";
+import {bytes32, Fork, number64, SyncingStatus, uint64} from "@chainsafe/eth2.0-types";
 import {IBeaconApi} from "./interface";
 import {IBeaconChain} from "../../../../chain";
 import {IBeaconDb} from "../../../../db";
 import {IApiOptions} from "../../../options";
 import {IApiModules} from "../../../interface";
 import {ApiNamespace} from "../../../index";
+import {getFork} from "../../../impl/beacon/fork";
 
 export class BeaconApi implements IBeaconApi {
 
@@ -31,17 +32,8 @@ export class BeaconApi implements IBeaconApi {
     return Buffer.from(`lodestar-${process.env.npm_package_version}`, "utf-8");
   }
 
-  public async getFork(): Promise<Fork> {
-    const state = await this.db.state.getLatest();
-    if(state) {
-      return state.fork;
-    } else {
-      return {
-        previousVersion: Buffer.alloc(4),
-        currentVersion: Buffer.alloc(4),
-        epoch: 0
-      };
-    }
+  public async getFork(): Promise<{fork: Fork; chainId: uint64}> {
+    return getFork(this.db, this.chain);
   }
 
   public async getGenesisTime(): Promise<number64> {

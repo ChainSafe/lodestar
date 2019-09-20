@@ -3,7 +3,7 @@
  */
 
 import {IApi} from "../../../interface";
-import {bytes32, Fork, number64, SyncingStatus} from "@chainsafe/eth2.0-types";
+import {bytes32, Fork, number64, SyncingStatus, uint64} from "@chainsafe/eth2.0-types";
 
 export interface IBeaconApi extends IApi {
 
@@ -18,7 +18,7 @@ export interface IBeaconApi extends IApi {
   /**
    * Requests the BeaconNode to provide which fork version it is currently on.
    */
-  getFork(): Promise<Fork>;
+  getFork(): Promise<{fork: Fork; chainId: uint64}>;
 
   /**
    * Requests the genesis_time parameter from the BeaconNode,
