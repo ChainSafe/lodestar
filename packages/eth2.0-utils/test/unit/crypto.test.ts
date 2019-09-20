@@ -1,4 +1,3 @@
-import {describe, it} from "mocha";
 import {Hash, hash} from "../../src/crypto";
 import {expect} from "chai";
 

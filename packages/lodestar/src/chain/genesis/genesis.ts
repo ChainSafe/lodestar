@@ -23,12 +23,11 @@ import {
   SECONDS_PER_DAY,
   ZERO_HASH,
 } from "../../constants";
-
 import {getActiveValidatorIndices, getCompactCommitteesRoot, getTemporaryBlockHeader} from "../stateTransition/util";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {processDeposit} from "../stateTransition/block/operations";
-import {bnMin} from "../../util/math";
 import {createValue} from "../../util/createValue";
+import {bnMin} from "@chainsafe/eth2.0-utils";
 
 export function initializeBeaconStateFromEth1(
   config: IBeaconConfig,

@@ -2,7 +2,6 @@
 import {readdirSync, readFileSync, writeFile} from "fs";
 import {isDirectory, objectToCamelCase} from "./util";
 import {basename, join} from "path";
-import {describe, it} from "mocha";
 import {AnySSZType, deserialize} from "@chainsafe/ssz";
 import {load} from "js-yaml";
 import {schema} from "./yaml/schema";

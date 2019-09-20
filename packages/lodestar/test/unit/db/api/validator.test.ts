@@ -3,7 +3,6 @@ import chaiAsPromised from 'chai-as-promised';
 import sinon from "sinon";
 import {serialize} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {describe} from "mocha";
 import * as dbKeys from "../../../../src/db/schema";
 import {Bucket} from "../../../../src/db/schema";
 import {LevelDbController} from "../../../../src/db/controller";

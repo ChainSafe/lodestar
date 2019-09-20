@@ -1,6 +1,5 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {describe} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as stateTransitionUtils from "../../../../../src/chain/stateTransition/util";
 import {assembleValidatorDuty} from "../../../../../src/chain/factory/duties";

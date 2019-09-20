@@ -1,10 +1,10 @@
 import {Epoch, Slot} from "@chainsafe/eth2.0-types";
 import {IValidatorApi} from "../../api/rpc/api/validator";
-import {intDiv} from "../../util/math";
 import {computeEpochOfSlot} from "../../chain/stateTransition/util";
 import {IBeaconApi} from "../../api/rpc/api/beacon";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {INewEpochCallback, INewSlotCallback, IRpcClient} from "./interface";
+import {intDiv} from "@chainsafe/eth2.0-utils";
 
 
 export abstract class AbstractRpcClient implements IRpcClient {

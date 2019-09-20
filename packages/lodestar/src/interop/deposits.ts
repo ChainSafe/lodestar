@@ -4,9 +4,9 @@ import {hash, signingRoot, hashTreeRoot} from "@chainsafe/ssz";
 import {sign} from "@chainsafe/bls";
 
 import {DomainType, DEPOSIT_CONTRACT_TREE_DEPTH} from "../constants";
-import {ProgressiveMerkleTree} from "../util/merkleTree";
 import {interopKeypairs} from "./keypairs";
 import {computeDomain} from "../chain/stateTransition/util";
+import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 
 export function interopDeposits(config: IBeaconConfig, validatorCount: number): Deposit[] {
   const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);

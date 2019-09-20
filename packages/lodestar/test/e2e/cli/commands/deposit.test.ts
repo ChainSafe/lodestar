@@ -1,13 +1,12 @@
 import {PrivateEth1Network} from "../../../../src/eth1/dev";
-import chai, {expect} from 'chai';
-import {describe} from "mocha";
+import chai, {expect} from "chai";
 import {DepositCommand} from "../../../../src/cli/commands";
-import chaiAsPromised from 'chai-as-promised';
-import {ILogger, WinstonLogger, LogLevel} from "../../../../src/logger";
+import chaiAsPromised from "chai-as-promised";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 
 chai.use(chaiAsPromised);
 
-describe('[CLI] deposit', function() {
+describe("[CLI] deposit", function() {
   this.timeout(10000);
 
   let eth1Network: PrivateEth1Network;
@@ -16,7 +15,7 @@ describe('[CLI] deposit', function() {
   before(async function() {
     logger.silent = true;
     eth1Network = new PrivateEth1Network({
-      host: '127.0.0.1',
+      host: "127.0.0.1",
       port: 32567
     },
     {
@@ -31,7 +30,7 @@ describe('[CLI] deposit', function() {
     logger.silent = false;
   });
 
-  it('Should make a deposit for single private key', async () => {
+  it("Should make a deposit for single private key", async () => {
     const contractAddress = await eth1Network.deployDepositContract();
     const command = new DepositCommand();
     await expect(
@@ -41,7 +40,7 @@ describe('[CLI] deposit', function() {
           logLevel:null,
           mnemonic:null,
           node:eth1Network.rpcUrl(),
-          value:'32',
+          value:"32",
           contract:contractAddress,
           accounts: 10
         }, logger
@@ -49,7 +48,7 @@ describe('[CLI] deposit', function() {
     ).to.not.be.rejected;
   });
 
-  it('Should make a deposit for 10 accounts derived from mnemonic', async function() {
+  it("Should make a deposit for 10 accounts derived from mnemonic", async function() {
     this.timeout(0);
     const contractAddress = await eth1Network.deployDepositContract();
     const command = new DepositCommand();
@@ -60,7 +59,7 @@ describe('[CLI] deposit', function() {
           logLevel:null,
           mnemonic:eth1Network.mnemonic(),
           node:eth1Network.rpcUrl(),
-          value:'32',
+          value:"32",
           contract:contractAddress,
           accounts: 10
         }, logger

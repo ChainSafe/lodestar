@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/no-unused-vars */
 import {writeFile} from "fs";
-import {describe, it} from "mocha";
 import {expect} from "chai";
 import profiler from "v8-profiler-next";
 

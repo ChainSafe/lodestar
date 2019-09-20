@@ -21,11 +21,11 @@ import {stateTransition} from "./stateTransition";
 import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 import {computeEpochOfSlot, getAttestingIndices, isActiveValidator} from "./stateTransition/util";
 import {ChainEventEmitter, IBeaconChain} from "./interface";
-import {ProgressiveMerkleTree} from "../util/merkleTree";
 import {processSortedDeposits} from "../util/deposits";
 import {IChainOptions} from "./options";
 import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
+import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;

@@ -10,17 +10,17 @@ import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {generateState} from "../../../../utils/state";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {BlockRepository, MerkleTreeRepository, StateRepository} from "../../../../../src/db/api/beacon/repositories";
-import {ProgressiveMerkleTree} from "../../../../../src/util/merkleTree";
+import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 
-describe('block assembly', function () {
+describe("block assembly", function () {
 
   const sandbox = sinon.createSandbox();
 
   let assembleBodyStub, processBlockStub, opPool, beaconDB, eth1;
 
   beforeEach(() => {
-    assembleBodyStub = sandbox.stub(blockBodyAssembly, 'assembleBody');
-    processBlockStub = sandbox.stub(blockTransitions, 'processBlock');
+    assembleBodyStub = sandbox.stub(blockBodyAssembly, "assembleBody");
+    processBlockStub = sandbox.stub(blockTransitions, "processBlock");
     opPool = sandbox.createStubInstance(OpPool);
     beaconDB = {
       block: sandbox.createStubInstance(BlockRepository),
@@ -34,7 +34,7 @@ describe('block assembly', function () {
     sandbox.restore();
   });
 
-  it('should assemble block', async function() {
+  it("should assemble block", async function() {
     beaconDB.state.getLatest.resolves(generateState({slot: 1}));
     beaconDB.block.getChainHead.resolves(generateEmptyBlock());
     beaconDB.merkleTree.getProgressiveMerkleTree.resolves(ProgressiveMerkleTree.empty(32));

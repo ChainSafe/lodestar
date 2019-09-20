@@ -7,7 +7,6 @@ import {deserialize, SerializableValue,} from "../../src";
 import {ArrayObject, OuterObject, SimpleObject,} from "./objects";
 
 import {stringifyType} from "./utils";
-import {describe, it} from "mocha";
 
 describe("deserialize", () => {
   const testCases: {

@@ -16,10 +16,10 @@ import {getTomlConfig} from "../../util/file";
 import Validator from "../../validator";
 import {RpcClientOverInstance} from "../../validator/rpc";
 import {quickStartOptionToState} from "../../interop/cli";
-import {ProgressiveMerkleTree} from "../../util/merkleTree";
 import {InteropEth1Notifier} from "../../eth1/impl/interop";
 import {ValidatorApi} from "../../api/rpc/api/validator";
 import {BeaconApi} from "../../api/rpc/api/beacon";
+import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 
 interface IBeaconCommandOptions {
   configFile: string;

@@ -2,8 +2,7 @@ import BN from "bn.js";
 import assert from "assert";
 import {AnySSZType, assertValidValue, FullSSZType, parseType, Type} from "@chainsafe/ssz";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
-
-import {intDiv} from "./math";
+import {intDiv} from "@chainsafe/eth2.0-utils";
 
 /**
  * Given an ssz type, create an empty value, optionally filled in with a default value

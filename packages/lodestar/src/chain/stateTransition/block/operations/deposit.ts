@@ -4,16 +4,12 @@
 
 import assert from "assert";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls";
-
+import {verify} from "@chainsafe/bls";
 import {BeaconState, Deposit, Validator} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
 import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH,} from "../../../../constants";
-import {bnMin} from "../../../../util/math";
-import {verifyMerkleBranch} from "../../../../util/merkleTree";
-
 import {computeDomain, increaseBalance} from "../../util";
+import {bnMin, verifyMerkleBranch} from "@chainsafe/eth2.0-utils";
 
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#deposits
 
@@ -44,7 +40,7 @@ export function processDeposit(
     // Verify the deposit signature (proof of possession)
     // Note: The deposit contract does not check signatures.
     // Note: Deposits are valid across forks, thus the deposit domain is retrieved directly from `computeDomain`.
-    if (!bls.verify(
+    if (!verify(
       pubkey,
       signingRoot(deposit.data, config.types.DepositData),
       deposit.data.signature,

@@ -1,5 +1,4 @@
 import {assert, expect} from "chai";
-import {describe, it} from "mocha";
 import {ProgressiveMerkleTree, verifyMerkleBranch} from "../../src/merkleTree";
 import {LightProgressiveMerkleTree} from "../../src/merkleTree/lightMerkleTree";
 
