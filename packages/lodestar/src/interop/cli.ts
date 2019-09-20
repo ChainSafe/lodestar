@@ -2,10 +2,8 @@ import {readFileSync} from "fs";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {deserialize} from "@chainsafe/ssz";
-import {loadYamlFile} from "@chainsafe/eth2.0-spec-test-util";
-
-import {expandYamlValue} from "../util/expandYamlValue";
 import {quickStartState} from "./state";
+import {loadYamlFile, expandYamlValue} from "@chainsafe/eth2.0-utils";
 
 // either "genesisTime,validatorCount" or "genesisState.fileext"
 export function quickStartOptionToState(config: IBeaconConfig, option: string): BeaconState {

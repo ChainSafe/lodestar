@@ -41,11 +41,15 @@
   ],
   "dependencies": {
     "@chainsafe/as-sha256": "^0.1.2",
+    "@chainsafe/bit-utils": "^0.1.4",
     "@chainsafe/eth2.0-types": "^0.1.1",
     "@chainsafe/ssz": "^0.5.1",
-    "bn.js": "^5.0.0"
+    "bn.js": "^5.0.0",
+    "camelcase": "^5.3.1",
+    "js-yaml": "^3.13.1"
   },
   "devDependencies": {
+    "@types/camelcase": "^5.2.0",
     "@types/chai": "^4.1.7",
     "@types/mocha": "^5.2.7",
     "chai": "^4.2.0",

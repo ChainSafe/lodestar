@@ -659,6 +659,11 @@
   version "0.1.3"
   resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.3.tgz#d29a69c161526fda8bf0880da3d62a4a7100e169"
 
+"@chainsafe/bit-utils@^0.1.4":
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.4.tgz#c7fcc20f8ea916b7767b82ce6fad389db675bd4e"
+  integrity sha512-pT+XpjJKoO3+Zt3w0vVJftKzYPnW4ObtkXFQ49eZHlLbmJbZ0aSM1jxU1RjFmOyMYjDSMVlaPR311c8K7lXGJQ==
+
 "@chainsafe/eth2.0-spec-test-util@^0.2.3":
   version "0.2.3"
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2.0-spec-test-util/-/eth2.0-spec-test-util-0.2.3.tgz#f9223de4d61774f2483932fb608fc0da29eb04a0"
