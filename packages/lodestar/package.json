@@ -101,7 +101,8 @@
     "strict-event-emitter-types": "^2.0.0",
     "varint": "^5.0.0",
     "winston": "^3.2.1",
-    "ws": "^7.0.1"
+    "ws": "^7.0.1",
+    "yargs": "^14.0.0"
   },
   "bin": {
     "lodestar": "./bin/lodestar",

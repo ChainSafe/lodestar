@@ -44,7 +44,7 @@ export class WinstonLogger implements ILogger {
               //   const msgs = [info.message.substring(0, max), info.message.substring(max)];
               //   return (`${info.timestamp}  [${infoString.toUpperCase()}] ${info.level.padStart(infoPad)}: ${msgs[0]}\n${msgs[1].padStart(paddingPreMsg + 2)}`)
               // } else {
-                return `${info.timestamp}  [${infoString.toUpperCase()}] ${info.level.padStart(infoPad)}: ${info.message}`
+              return `${info.timestamp}  [${infoString.toUpperCase()}] ${info.level.padStart(infoPad)}: ${info.message}`
               // }
             })
           ),
