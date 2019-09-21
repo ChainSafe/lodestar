@@ -5,7 +5,7 @@
 import {Attestation, BeaconBlock, BLSPubkey, bytes96, Epoch, Shard, Slot, ValidatorDuty} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {BeaconDb, IBeaconDb} from "../../../../db";
+import {IBeaconDb} from "../../../../db";
 import {IBeaconChain} from "../../../../chain";
 import {OpPool} from "../../../../opPool";
 import {IValidatorApi} from "./interface";
@@ -15,7 +15,6 @@ import {getValidatorDuties, produceAttestation} from "../../../impl/validator";
 import {ApiNamespace, IApiModules} from "../../../index";
 import {IApiOptions} from "../../../options";
 import {ILogger} from "../../../../logger";
-import {processAttestation} from "../../../../chain/stateTransition/block/operations";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -49,7 +48,12 @@ export class ValidatorApi implements IValidatorApi {
     return getValidatorDuties(this.config, this.db, validatorPublicKeys, epoch);
   }
 
-  public async produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, slot: Slot, shard: Shard): Promise<Attestation> {
+  public async produceAttestation(
+    validatorPubKey: BLSPubkey,
+    pocBit: boolean,
+    slot: Slot,
+    shard: Shard
+  ): Promise<Attestation> {
     try {
       return await produceAttestation(
         {config: this.config, chain: this.chain, db: this.db},

@@ -55,10 +55,10 @@ export function ensureDirectoryExistence(filePath: string): boolean {
 }
 
 export function rmDir(dir: string): void {
-  var list = fs.readdirSync(dir);
-  for(var i = 0; i < list.length; i++) {
-    var filename = path.join(dir, list[i]);
-    var stat = fs.statSync(filename);
+  const list = fs.readdirSync(dir);
+  for(let i = 0; i < list.length; i++) {
+    const filename = path.join(dir, list[i]);
+    const stat = fs.statSync(filename);
                 
     if(filename == "." || filename == "..") {
       // pass these files
@@ -71,5 +71,5 @@ export function rmDir(dir: string): void {
     }
   }
   fs.rmdirSync(dir);
-};
+}
 

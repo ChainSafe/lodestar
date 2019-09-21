@@ -14,7 +14,7 @@
  * 6. Repeat step 5
  */
 import BlockProposingService from "./services/block";
-import {Slot, Epoch} from "@chainsafe/eth2.0-types";
+import {Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {GenesisInfo} from "./types";
 import {IRpcClient, RpcClientOverWs} from "./rpc";
@@ -149,7 +149,7 @@ class Validator {
       setTimeout(this.isChainLive, 1000);
     }
     return false;
-  }
+  };
 
   private run(): void {
     this.apiClient.onNewSlot(this.checkDuties);
@@ -178,10 +178,6 @@ class Validator {
       this.blockService.createAndPublishBlock(slot, fork);
     }
   };
-
-  private lookAhead = async (currentEpoch: Epoch): Promise<void> => {
-    //in phase 1, it should obtain duties for next epoch and trigger required shard sync
-  }
 }
 
 export default Validator;

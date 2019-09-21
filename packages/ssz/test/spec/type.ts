@@ -1,4 +1,4 @@
-export interface BaseSSZStaticTestCase<T> {
+export interface IBaseSSZStaticTestCase<T> {
   roots: {
     root: string;
     signingRoot: string;

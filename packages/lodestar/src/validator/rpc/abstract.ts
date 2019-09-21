@@ -1,6 +1,5 @@
 import {Epoch, Slot} from "@chainsafe/eth2.0-types";
 import {IValidatorApi} from "../../api/rpc/api/validator";
-import {intDiv} from "../../util/math";
 import {computeEpochOfSlot} from "../../chain/stateTransition/util";
 import {IBeaconApi} from "../../api/rpc/api/beacon";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -10,20 +9,13 @@ import {INewEpochCallback, INewSlotCallback, IRpcClient} from "./interface";
 
 export abstract class AbstractRpcClient implements IRpcClient {
 
-  // @ts-ignore
   protected config: IBeaconConfig;
 
-  public abstract url: string;
   private currentSlot: Slot = 0;
-
   private currentEpoch: Epoch = 0;
-
   private newSlotCallbacks: INewSlotCallback[] = [];
   private newEpochCallbacks: INewEpochCallback[] = [];
-
   private running = false;
-
-
 
   public onNewEpoch(cb: INewEpochCallback): void {
     if (cb) {
@@ -88,6 +80,7 @@ export abstract class AbstractRpcClient implements IRpcClient {
     }
   }
 
+  public abstract url: string;
   abstract beacon: IBeaconApi;
   abstract validator: IValidatorApi;
 

@@ -5,7 +5,7 @@
 import {hash} from "@chainsafe/ssz";
 
 import {
-  BeaconState, Epoch,
+  BeaconState,
   ValidatorIndex,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";

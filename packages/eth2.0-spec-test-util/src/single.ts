@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {readdirSync, readFileSync, writeFile} from "fs";
 import {isDirectory, objectToCamelCase} from "./util";
-import {basename, join} from "path";
+import {basename, parse, join} from "path";
 import {describe, it} from "mocha";
 import {AnySSZType, deserialize} from "@chainsafe/ssz";
 import {load} from "js-yaml";
@@ -9,7 +9,6 @@ import {schema} from "./yaml/schema";
 import {expect} from "chai";
 import deepMerge from "deepmerge";
 import profiler from "v8-profiler-next";
-import path from "path";
 import {transformType} from "./transform";
 
 
@@ -138,7 +137,7 @@ function loadInputFiles<TestCase, Result>(
       if(isDirectory(file)) {
         return false;
       }
-      const extension = options.inputTypes[path.parse(file).name] || InputType.SSZ;
+      const extension = options.inputTypes[parse(file).name] || InputType.SSZ;
       return file.endsWith(extension);
     })
     .forEach((file) => {

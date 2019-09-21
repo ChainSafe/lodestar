@@ -44,7 +44,7 @@ export function getAggregationBits(committee: ValidatorIndex[], validatorIndex: 
   return aggregationBits;
 }
 
-export function getEmptyBitList(length: number) {
+export function getEmptyBitList(length: number): BitList {
   return BitList.fromBitfield(
     Buffer.alloc(intDiv(length + 7, 8)),
     length

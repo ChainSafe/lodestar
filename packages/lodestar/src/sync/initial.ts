@@ -66,7 +66,9 @@ export class InitialSync {
       startSlot += 1;
     }
     const peerLatestHello = this.reps.get(peerInfo.id.toB58String()).latestHello;
-    this.logger.info(`attempting initial sync with ${peerInfo.id.toB58String()}, slot ${startSlot} through ${peerLatestHello.headSlot}`);
+    this.logger.info(
+      `attempting initial sync with ${peerInfo.id.toB58String()}, slot ${startSlot} through ${peerLatestHello.headSlot}`
+    );
     const blocks = await this.network.reqResp.beaconBlocksByRange(peerInfo, {
       headBlockRoot: peerLatestHello.headRoot,
       startSlot,

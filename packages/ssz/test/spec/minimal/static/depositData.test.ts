@@ -1,12 +1,12 @@
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
-import {CompactCommittee, Deposit, DepositData, Hash} from "@chainsafe/eth2.0-types";
+import {DepositData, Hash} from "@chainsafe/eth2.0-types";
 import {join} from "path";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {expect} from "chai";
-import {BaseSSZStaticTestCase} from "../../type";
+import {IBaseSSZStaticTestCase} from "../../type";
 import {hashTreeRoot, serialize, signingRoot} from "../../../../src";
 
-interface Result {
+interface IResult {
   root: Hash;
   signing: Hash;
   serialized: Buffer;
@@ -14,7 +14,7 @@ interface Result {
 
 ["ssz_lengthy", "ssz_max", "ssz_nil", "ssz_one", "ssz_random", "ssz_random_chaos", "ssz_zero"].forEach((caseName) => {
 
-  describeDirectorySpecTest<BaseSSZStaticTestCase<DepositData>, Result>(
+  describeDirectorySpecTest<IBaseSSZStaticTestCase<DepositData>, IResult>(
     `deposit data ${caseName} minimal`,
     join(__dirname, `../../../../../spec-test-cases/tests/minimal/phase0/ssz_static/DepositData/${caseName}`),
     (testcase) => {

@@ -9,7 +9,7 @@ import {
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {DomainType} from "../../../constants";
-import {bytesToBN, intToBytes} from "../../../util/bytes";
+import {intToBytes} from "../../../util/bytes";
 
 import {getCurrentEpoch} from "./epoch";
 

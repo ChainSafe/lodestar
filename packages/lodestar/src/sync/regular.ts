@@ -35,6 +35,30 @@ export class RegularSync {
     this.logger = modules.logger;
   }
 
+  public async start(): Promise<void> {
+    this.logger.verbose("regular sync start");
+    this.network.gossip.subscribeToBlocks();
+    this.network.gossip.subscribeToAttestations();
+    this.network.gossip.on(BLOCK_TOPIC, this.receiveBlock);
+    this.network.gossip.on(ATTESTATION_TOPIC, this.receiveAttestation);
+    this.chain.on("processedBlock", this.onProcessedBlock);
+    this.chain.on("processedAttestation", this.onProcessedAttestation);
+    this.chain.on("unknownBlockRoot", this.onUnknownBlockRoot);
+    this.chain.on("finalizedCheckpoint", this.onFinalizedCheckpoint);
+  }
+
+  public async stop(): Promise<void> {
+    this.logger.verbose("regular sync stop");
+    this.network.gossip.unsubscribeToBlocks();
+    this.network.gossip.unsubscribeToAttestations();
+    this.network.gossip.removeListener(BLOCK_TOPIC, this.receiveBlock);
+    this.network.gossip.removeListener(ATTESTATION_TOPIC, this.receiveAttestation);
+    this.chain.removeListener("processedBlock", this.onProcessedBlock);
+    this.chain.removeListener("processedAttestation", this.onProcessedAttestation);
+    this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
+    this.chain.removeListener("finalizedCheckpoint", this.onFinalizedCheckpoint);
+  }
+
   public receiveBlock = async (block: BeaconBlock): Promise<void> => {
     const root = hashTreeRoot(block, this.config.types.BeaconBlock);
 
@@ -78,41 +102,18 @@ export class RegularSync {
   private onUnknownBlockRoot = async (root: Hash): Promise<void> => {
     for (const peer of this.network.getPeers()) {
       try {
-        this.logger.verbose(`Attempting to fetch block ${root.toString("hex")} from ${peer.id.toB58String()}`)
+        this.logger.verbose(`Attempting to fetch block ${root.toString("hex")} from ${peer.id.toB58String()}`);
         const [block] = await this.network.reqResp.beaconBlocksByRoot(peer, [root]);
         await this.chain.receiveBlock(block);
         break;
       } catch (e) {
-        this.logger.verbose(`Unable to fetch block ${root.toString("hex")}: ${e}`)
+        this.logger.verbose(`Unable to fetch block ${root.toString("hex")}: ${e}`);
       }
     }
-  }
+  };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private onFinalizedCheckpoint = async (checkpoint: Checkpoint): Promise<void> => {
     await this.opPool.attestations.removeOld(this.chain.latestState);
-  }
-
-  public async start(): Promise<void> {
-    this.logger.verbose("regular sync start");
-    this.network.gossip.subscribeToBlocks();
-    this.network.gossip.subscribeToAttestations();
-    this.network.gossip.on(BLOCK_TOPIC, this.receiveBlock);
-    this.network.gossip.on(ATTESTATION_TOPIC, this.receiveAttestation);
-    this.chain.on('processedBlock', this.onProcessedBlock);
-    this.chain.on('processedAttestation', this.onProcessedAttestation);
-    this.chain.on("unknownBlockRoot", this.onUnknownBlockRoot);
-    this.chain.on("finalizedCheckpoint", this.onFinalizedCheckpoint);
-  }
-
-  public async stop(): Promise<void> {
-    this.logger.verbose("regular sync stop");
-    this.network.gossip.unsubscribeToBlocks();
-    this.network.gossip.unsubscribeToAttestations();
-    this.network.gossip.removeListener(BLOCK_TOPIC, this.receiveBlock);
-    this.network.gossip.removeListener(ATTESTATION_TOPIC, this.receiveAttestation);
-    this.chain.removeListener('processedBlock', this.onProcessedBlock);
-    this.chain.removeListener('processedAttestation', this.onProcessedAttestation);
-    this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
-    this.chain.removeListener("finalizedCheckpoint", this.onFinalizedCheckpoint);
-  }
+  };
 }

@@ -23,7 +23,7 @@ import {IValidatorDB} from "../../db/api";
 import {ILogger} from "../../logger";
 import {Keypair} from "@chainsafe/bls";
 
-export function sleep(ms: number) {
+export function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
@@ -67,7 +67,7 @@ export class AttestationService {
     }
     if (await this.isConflictingAttestation(attestation.data)) {
       this.logger.warn(
-        `Avoided signing conflicting attestation! `
+        "Avoided signing conflicting attestation! "
         + `Source epoch: ${attestation.data.source.epoch}, Target epoch: ${computeEpochOfSlot(this.config, slot)}`
       );
       return null;
@@ -87,7 +87,10 @@ export class AttestationService {
     ).toBytesCompressed();
     await this.storeAttestation(attestation);
     await this.rpcClient.validator.publishAttestation(attestation);
-    this.logger.info(`Signed and publish new attestation for block ${attestation.data.target.root.toString('hex')} and shard ${shard} at slot ${slot}`);
+    this.logger.info(
+      `Signed and publish new attestation for block ${attestation.data.target.root.toString("hex")} ` +
+      `and shard ${shard} at slot ${slot}`
+    );
     return attestation;
   }
 

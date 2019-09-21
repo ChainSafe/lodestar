@@ -10,7 +10,11 @@ import {quickStartState} from "./state";
 import {IProgressiveMerkleTree} from "../util/merkleTree";
 
 // either "genesisTime,validatorCount" or "genesisState.fileext"
-export function quickStartOptionToState(config: IBeaconConfig, tree: IProgressiveMerkleTree, option: string): BeaconState {
+export function quickStartOptionToState(
+  config: IBeaconConfig,
+  tree: IProgressiveMerkleTree,
+  option: string
+): BeaconState {
   const quickStartOpts = option.split(",");
   if (quickStartOpts.length === 2) {
     return quickStartState(
@@ -25,7 +29,7 @@ export function quickStartOptionToState(config: IBeaconConfig, tree: IProgressiv
     throw new Error("invalid quick start options");
   }
   if (fileExt[1] === "ssz") {
-    let deserialized = deserialize(readFileSync(option), config.types.BeaconState);
+    const deserialized = deserialize(readFileSync(option), config.types.BeaconState);
     interopDeposits(config, tree, deserialized.validators.length);  
     return deserialized;
   } else {

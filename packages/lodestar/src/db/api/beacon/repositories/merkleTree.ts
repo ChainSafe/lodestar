@@ -15,7 +15,7 @@ export class MerkleTreeRepository extends BulkRepository<MerkleTree> {
     super(config, db, Bucket.merkleTree, config.types.MerkleTree);
   }
 
-  public async getProgressiveMerkleTree(index: number, depth?: number): Promise<IProgressiveMerkleTree> {
+  public async getProgressiveMerkleTree(index: number): Promise<IProgressiveMerkleTree> {
     const tree = await this.get(index);
     if(!tree) {
       return ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);

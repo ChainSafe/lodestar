@@ -8,8 +8,6 @@ import deepmerge from "deepmerge";
 import fs, {existsSync, mkdirSync} from "fs";
 
 import PeerId from "peer-id";
-// @ts-ignore
-import promisify from "promisify-es6";
 // eslint-disable-next-line
 import yaml from "js-yaml";
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
@@ -46,6 +44,8 @@ export class InteropCommand implements ICliCommand {
   public node: BeaconNode;
   public validator: Validator;
 
+  private validatorDir = "./validators";
+
   public register(commander: CommanderStatic): void {
 
     const logger: ILogger = new WinstonLogger();
@@ -55,6 +55,7 @@ export class InteropCommand implements ICliCommand {
       .command("interop")
       .description("Start lodestar beacon node and certain amount of validator nodes")
       .option("-q, --quickStart [params]", "Start chain from known state")
+      // eslint-disable-next-line max-len
       .option("-v, --validators [range]", "Start validators, single number - validators 0-number, x,y - validators between x and y", 0)
       .option("-p, --preset [preset]", "Minimal/mainnet", "mainnet")
       .option("-r, --resetDb", "Reset the database", true)
@@ -67,7 +68,7 @@ export class InteropCommand implements ICliCommand {
         try {
           await this.action(options, logger);
         } catch (e) {
-          logger.error(e.message + '\n' + e.stack);
+          logger.error(e.message + "\n" + e.stack);
         }
       });
     generateCommanderOptions(command, BeaconNodeOptions);
@@ -78,14 +79,14 @@ export class InteropCommand implements ICliCommand {
 
     //merge config file
     if (options.configFile) {
-      let parsedConfig = getTomlConfig(options.configFile, BeaconNodeOptions);
+      const parsedConfig = getTomlConfig(options.configFile, BeaconNodeOptions);
       //cli will override toml config options
       conf = deepmerge(conf, parsedConfig);
     }
 
     //override current config with cli config
     conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
-    
+
     if (options.resetDb) {
       const lodestarDir = "./" + options.db;
       if (fs.existsSync(lodestarDir)) {
@@ -111,7 +112,7 @@ export class InteropCommand implements ICliCommand {
 
     let peerId;
     if (options["peerId"]) {
-      peerId = PeerId.createFromHexString(options["peerId"])
+      peerId = PeerId.createFromHexString(options["peerId"]);
     } else if (options["peerIdFile"]) {
       peerId = loadPeerId(options["peerId"]);
     } else {
@@ -126,7 +127,10 @@ export class InteropCommand implements ICliCommand {
       const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
       const state = quickStartOptionToState(config, tree, options.quickStart);
       await this.node.chain.initializeBeaconChain(state, tree);
-      const targetSlot = computeStartSlotOfEpoch(config, computeEpochOfSlot(config, getCurrentSlot(config, state.genesisTime)));
+      const targetSlot = computeStartSlotOfEpoch(
+        config,
+        computeEpochOfSlot(config, getCurrentSlot(config, state.genesisTime))
+      );
       await this.node.chain.advanceState(targetSlot);
     } else {
       throw new Error("Missing --quickstart flag");
@@ -147,8 +151,6 @@ export class InteropCommand implements ICliCommand {
       }
     }
   }
-
-  private validatorDir = './validators';
 
   private async startValidators(from: number, to: number, node: BeaconNode): Promise<void> {
     if(!existsSync(this.validatorDir)) {
@@ -176,7 +178,7 @@ export class InteropCommand implements ICliCommand {
     const keypair = new Keypair(PrivateKey.fromBytes(privkey));
     const index = await node.db.getValidatorIndex(keypair.publicKey.toBytesCompressed());
     const validator = new Validator(
-      {keypair, rpcInstance, db: {name: this.validatorDir + '/validator-db-' + index}},
+      {keypair, rpcInstance, db: {name: this.validatorDir + "/validator-db-" + index}},
       {config: node.config, logger: new WinstonLogger({module: `Validator #${index}`})});
     validator.start();
   }

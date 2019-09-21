@@ -40,7 +40,7 @@ export const NetworkOptions: IConfigurationModule = {
       type: [String],
       configurable: true,
       process: (input: string) => {
-        return input.split(',').map((input) => input.trim());
+        return input.split(",").map((input) => input.trim());
       },
       cli: {
         flag: "multiaddrs"

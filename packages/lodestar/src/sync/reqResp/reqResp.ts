@@ -52,50 +52,20 @@ export class SyncReqResp implements ISyncReqResp {
     this.logger = logger;
   }
 
-  private async createHello(): Promise<Hello> {
-    let headSlot: Slot,
-      headRoot: Hash,
-      finalizedEpoch: Epoch,
-      finalizedRoot: Hash;
-    if (!this.chain.isInitialized()) {
-      headSlot = 0;
-      headRoot = ZERO_HASH;
-      finalizedEpoch = 0;
-      finalizedRoot = ZERO_HASH;
-    } else {
-      headSlot = await this.db.chain.getChainHeadSlot();
-      const [bRoot, state] = await Promise.all([
-        this.db.chain.getBlockRoot(headSlot),
-        this.db.state.getLatest(),
-      ]);
-      headRoot = bRoot;
-      finalizedEpoch = state.finalizedCheckpoint.epoch;
-      finalizedRoot = state.finalizedCheckpoint.root;
-    }
-    return {
-      headForkVersion: this.chain.latestState.fork.currentVersion,
-      finalizedRoot,
-      finalizedEpoch,
-      headRoot,
-      headSlot,
-    };
+  public async start(): Promise<void> {
+    this.network.on("peer:connect", this.handshake);
+    this.network.reqResp.on("request", this.onRequest);
+    await Promise.all(
+      this.network.getPeers().map(async (peerInfo) =>
+        this.network.reqResp.hello(peerInfo, await this.createHello())));
   }
 
-  private handshake = async (peerInfo: PeerInfo): Promise<void> => {
-    const randomDelay = Math.floor(Math.random() * 5000);
-    await new Promise((resolve) => setTimeout(resolve, randomDelay));
-    if (
-      this.network.hasPeer(peerInfo) &&
-      !this.reps.get(peerInfo.id.toB58String()).latestHello
-    ) {
-      const request = await this.createHello();
-      try {
-        const response = await this.network.reqResp.hello(peerInfo, request);
-        this.reps.get(peerInfo.id.toB58String()).latestHello = response;
-      } catch (e) {
-        this.logger.error(e);
-      }
-    }
+  public async stop(): Promise<void> {
+    this.network.removeListener("peer:connect", this.handshake);
+    this.network.reqResp.removeListener("request", this.onRequest);
+    await Promise.all(
+      this.network.getPeers().map((peerInfo) =>
+        this.network.reqResp.goodbye(peerInfo, new BN(0))));
   }
 
   public onRequest = async (
@@ -172,21 +142,49 @@ export class SyncReqResp implements ISyncReqResp {
     }
   }
 
-  // service
-
-  public async start(): Promise<void> {
-    this.network.on("peer:connect", this.handshake);
-    this.network.reqResp.on("request", this.onRequest)
-    await Promise.all(
-      this.network.getPeers().map(async (peerInfo) =>
-        this.network.reqResp.hello(peerInfo, await this.createHello())));
+  private async createHello(): Promise<Hello> {
+    let headSlot: Slot,
+      headRoot: Hash,
+      finalizedEpoch: Epoch,
+      finalizedRoot: Hash;
+    if (!this.chain.isInitialized()) {
+      headSlot = 0;
+      headRoot = ZERO_HASH;
+      finalizedEpoch = 0;
+      finalizedRoot = ZERO_HASH;
+    } else {
+      headSlot = await this.db.chain.getChainHeadSlot();
+      const [bRoot, state] = await Promise.all([
+        this.db.chain.getBlockRoot(headSlot),
+        this.db.state.getLatest(),
+      ]);
+      headRoot = bRoot;
+      finalizedEpoch = state.finalizedCheckpoint.epoch;
+      finalizedRoot = state.finalizedCheckpoint.root;
+    }
+    return {
+      headForkVersion: this.chain.latestState.fork.currentVersion,
+      finalizedRoot,
+      finalizedEpoch,
+      headRoot,
+      headSlot,
+    };
   }
 
-  public async stop(): Promise<void> {
-    this.network.removeListener("peer:connect", this.handshake);
-    this.network.reqResp.removeListener("request", this.onRequest)
-    await Promise.all(
-      this.network.getPeers().map((peerInfo) =>
-        this.network.reqResp.goodbye(peerInfo, new BN(0))));
-  }
+  private handshake = async (peerInfo: PeerInfo): Promise<void> => {
+    const randomDelay = Math.floor(Math.random() * 5000);
+    await new Promise((resolve) => setTimeout(resolve, randomDelay));
+    if (
+      this.network.hasPeer(peerInfo) &&
+      !this.reps.get(peerInfo.id.toB58String()).latestHello
+    ) {
+      const request = await this.createHello();
+      try {
+        const response = await this.network.reqResp.hello(peerInfo, request);
+        this.reps.get(peerInfo.id.toB58String()).latestHello = response;
+      } catch (e) {
+        this.logger.error(e);
+      }
+    }
+  };
 }

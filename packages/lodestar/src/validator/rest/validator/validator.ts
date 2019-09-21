@@ -53,6 +53,7 @@ export class RestValidatorApi implements IValidatorApi {
     return this.client.post("/attestation", attestation);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async getValidatorIndex(pubKey: BLSPubkey): Promise<ValidatorIndex> {
     throw new Error("Method not implemented.");
   }

@@ -15,7 +15,6 @@ import {ILogger} from "../logger";
 import {ISyncOptions} from "./options";
 import {ISyncReqResp, SyncReqResp} from "./reqResp";
 import {ReputationStore} from "./IReputation";
-import {Slot} from "@chainsafe/eth2.0-types";
 
 export interface ISyncModules {
   config: IBeaconConfig;
@@ -69,7 +68,7 @@ export class Sync extends EventEmitter {
       const bestSlotByPeers = this.network.getPeers()
         .map((peerInfo) => this.reps.get(peerInfo.id.toB58String()))
         .map((reputation) => {
-          return reputation.latestHello ? reputation.latestHello.headSlot : 0
+          return reputation.latestHello ? reputation.latestHello.headSlot : 0;
         })
         .reduce((a, b) => Math.max(a, b), 0);
       if (bestSlot >= bestSlotByPeers) {
@@ -79,7 +78,7 @@ export class Sync extends EventEmitter {
       return false;
     }
     return false;
-  }
+  };
 
   public async start(): Promise<void> {
     //await new Promise((resolve) => this.network.once("peer:connect", resolve));

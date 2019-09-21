@@ -1,7 +1,6 @@
 import fs from "fs";
-import {hashTreeRoot, serialize, deserialize, equals} from "@chainsafe/ssz";
+import {serialize} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import assert from "assert";
 
 import {quickStartState} from "./state";
 import {ProgressiveMerkleTree} from "../util/merkleTree";

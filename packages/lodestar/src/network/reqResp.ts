@@ -76,6 +76,29 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     });
   }
 
+  public sendResponse(id: RequestId, err: Error, body: ResponseBody): void {
+    // @ts-ignore
+    this.emit(createResponseEvent(id), err, body);
+  }
+  public async hello(peerInfo: PeerInfo, request: Hello): Promise<Hello> {
+    return await this.sendRequest<Hello>(peerInfo, Method.Hello, request);
+  }
+  public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
+    await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request, true);
+  }
+  public async beaconBlocksByRange(
+    peerInfo: PeerInfo,
+    request: BeaconBlocksByRangeRequest
+  ): Promise<BeaconBlocksByRangeResponse> {
+    return await this.sendRequest<BeaconBlocksByRangeResponse>(peerInfo, Method.BeaconBlocksByRange, request);
+  }
+  public async beaconBlocksByRoot(
+    peerInfo: PeerInfo,
+    request: BeaconBlocksByRootRequest
+  ): Promise<BeaconBlocksByRootResponse> {
+    return await this.sendRequest<BeaconBlocksByRootResponse>(peerInfo, Method.BeaconBlocksByRoot, request);
+  }
+
   /**
    * Return a "through" pull-stream that processes a request and waits for/returns a response
    */
@@ -266,21 +289,5 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
         );
       });
     });
-  }
-  public sendResponse(id: RequestId, err: Error, body: ResponseBody): void {
-    // @ts-ignore
-    this.emit(createResponseEvent(id), err, body);
-  }
-  public async hello(peerInfo: PeerInfo, request: Hello): Promise<Hello> {
-    return await this.sendRequest<Hello>(peerInfo, Method.Hello, request);
-  }
-  public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
-    await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request, true);
-  }
-  public async beaconBlocksByRange(peerInfo: PeerInfo, request: BeaconBlocksByRangeRequest): Promise<BeaconBlocksByRangeResponse> {
-    return await this.sendRequest<BeaconBlocksByRangeResponse>(peerInfo, Method.BeaconBlocksByRange, request);
-  }
-  public async beaconBlocksByRoot(peerInfo: PeerInfo, request: BeaconBlocksByRootRequest): Promise<BeaconBlocksByRootResponse> {
-    return await this.sendRequest<BeaconBlocksByRootResponse>(peerInfo, Method.BeaconBlocksByRoot, request);
   }
 }
