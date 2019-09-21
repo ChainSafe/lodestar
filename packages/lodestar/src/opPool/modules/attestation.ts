@@ -8,7 +8,7 @@ import {BulkRepository} from "../../db/api/beacon/repository";
 export class AttestationOperations extends OperationsModule<Attestation> {
   private readonly config: IBeaconConfig;
 
-  public constructor(db: BulkRepository<Attestation>, {config}) {
+  public constructor(db: BulkRepository<Attestation>, {config}: {config: IBeaconConfig}) {
     super(db);
     this.config = config;
   }

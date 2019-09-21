@@ -33,7 +33,7 @@ import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
 import fs from "fs";
 import {sleep} from "../validator/services/attestation";
-import {queue} from "async";
+import {AsyncQueue, queue} from "async";
 import FastPriorityQueue from "fastpriorityqueue";
 import {getCurrentSlot} from "./stateTransition/util/genesis";
 
@@ -61,8 +61,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   private logger: ILogger;
   private metrics: IBeaconMetrics;
   private opts: IChainOptions;
-  private attestationProcessingQueue;
-  private blockProcessingQueue; //sort by slot number
+  private attestationProcessingQueue: AsyncQueue<Function>;
+  private blockProcessingQueue: FastPriorityQueue<BeaconBlock>; //sort by slot number
 
   public constructor(opts: IChainOptions, {config, db, eth1, opPool, logger, metrics}: IBeaconChainModules) {
     super();

@@ -21,4 +21,4 @@ export function dumpQuickStartState(
 // eslint-disable-next-line
 import yargs from "yargs";
 const args = yargs.parse()._;
-dumpQuickStartState(args[0], args[1], args[2]);
+dumpQuickStartState(parseInt(args[0]), parseInt(args[1]), args[2]);

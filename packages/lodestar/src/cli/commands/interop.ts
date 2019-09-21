@@ -2,12 +2,13 @@
  * @module cli/commands
  */
 
-import {CliCommand} from "./interface";
+import {ICliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
 import fs, {existsSync, mkdirSync} from "fs";
 
 import PeerId from "peer-id";
+// @ts-ignore
 import promisify from "promisify-es6";
 // eslint-disable-next-line
 import yaml from "js-yaml";
@@ -41,7 +42,7 @@ interface IInteropCommandOptions {
   [key: string]: string;
 }
 
-export class InteropCommand implements CliCommand {
+export class InteropCommand implements ICliCommand {
   public node: BeaconNode;
   public validator: Validator;
 
@@ -157,7 +158,7 @@ export class InteropCommand implements CliCommand {
       this.startValidator(interopKeypair(i).privkey, node);
     }
   }
-  private async startValidator(privkey: Buffer, node): Promise<void> {
+  private async startValidator(privkey: Buffer, node: BeaconNode): Promise<void> {
     const modules = {
       config: node.config,
       sync: node.sync,

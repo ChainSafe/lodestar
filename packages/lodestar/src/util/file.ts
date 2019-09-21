@@ -54,7 +54,7 @@ export function ensureDirectoryExistence(filePath: string): boolean {
   return true;
 }
 
-export function rmDir(dir) {
+export function rmDir(dir: string): void {
   var list = fs.readdirSync(dir);
   for(var i = 0; i < list.length; i++) {
     var filename = path.join(dir, list[i]);

@@ -4,6 +4,7 @@
 
 import fs from "fs";
 import PeerId from "peer-id";
+// @ts-ignore
 import promisify from "promisify-es6";
 
 /**
