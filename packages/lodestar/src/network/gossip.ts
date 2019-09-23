@@ -1,28 +1,28 @@
+/* eslint-disable no-empty,@typescript-eslint/no-explicit-any */
 /**
  * @module network
  */
 
 import {EventEmitter} from "events";
 import {deserialize, serialize} from "@chainsafe/ssz";
+//@ts-ignore
 import promisify from "promisify-es6";
 import LibP2p from "libp2p";
+//@ts-ignore
 import Gossipsub from "libp2p-gossipsub";
 import {Attestation, BeaconBlock, Shard} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {SHARD_SUBNET_COUNT, BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
 import {ILogger} from "../logger";
-import {IBeaconMetrics} from "../metrics";
 
 import {shardAttestationTopic, shardSubnetAttestationTopic, blockTopic, attestationTopic} from "./util";
 import {INetworkOptions} from "./options";
-import {
-  IGossip, GossipEventEmitter,
-} from "./interface";
+import {GossipEventEmitter, IGossip,} from "./interface";
 
-interface GossipModules {
+interface IGossipModules {
   config: IBeaconConfig;
-  libp2p: any;
+  libp2p: LibP2p;
   logger: ILogger;
 }
 
@@ -34,13 +34,34 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   private pubsub: Gossipsub;
   private logger: ILogger;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, logger}: GossipModules) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger}: IGossipModules) {
     super();
     this.opts = opts;
     this.config = config;
     this.libp2p = libp2p;
     this.logger = logger;
     this.pubsub = new Gossipsub(libp2p, {gossipIncoming: false});
+  }
+
+  public async start(): Promise<void> {
+    await promisify(this.pubsub.start.bind(this.pubsub))();
+    this.pubsub.on(blockTopic(), this.handleIncomingBlock);
+    this.pubsub.on(attestationTopic(), this.handleIncomingAttestation);
+    for (let shard = 0; shard < SHARD_SUBNET_COUNT; shard++) {
+      this.pubsub.on(shardSubnetAttestationTopic(shard),
+        this.handleIncomingShardAttestation);
+    }
+    this.pubsub.on("gossipsub:heartbeat", this.emitGossipHeartbeat);
+  }
+  public async stop(): Promise<void> {
+    await promisify(this.pubsub.stop.bind(this.pubsub))();
+    this.pubsub.removeListener(blockTopic(), this.handleIncomingBlock);
+    this.pubsub.removeListener(attestationTopic(), this.handleIncomingAttestation);
+    for (let shard = 0; shard < SHARD_SUBNET_COUNT; shard++) {
+      this.pubsub.removeListener(shardSubnetAttestationTopic(shard),
+        this.handleIncomingShardAttestation);
+    }
+    this.pubsub.removeListener("gossipsub:heartbeat", this.emitGossipHeartbeat);
   }
 
   public subscribeToBlocks(): void {
@@ -64,17 +85,23 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   public async publishBlock(block: BeaconBlock): Promise<void> {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
       blockTopic(), serialize(block, this.config.types.BeaconBlock));
-    this.logger.trace(`[GOSSIP] Publishing block at slot: ${block.slot}`);
+    this.logger.verbose(`[GOSSIP] Publishing block at slot: ${block.slot}`);
   }
   public async publishAttestation(attestation: Attestation): Promise<void> {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
       attestationTopic(), serialize(attestation, this.config.types.Attestation));
-    this.logger.trace(`[GOSSIP] Publishing attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`);
+    this.logger.verbose(
+      `[GOSSIP] Publishing attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`
+    );
   }
   public async publishShardAttestation(attestation: Attestation): Promise<void> {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
-      shardSubnetAttestationTopic(attestation.data.crosslink.shard), serialize(attestation, this.config.types.Attestation));
-    this.logger.trace(`[GOSSIP] Publishing shard attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`);
+      shardSubnetAttestationTopic(attestation.data.crosslink.shard),
+      serialize(attestation, this.config.types.Attestation)
+    );
+    this.logger.verbose(
+      `[GOSSIP] Publishing shard attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`
+    );
   }
   private handleIncomingBlock = (msg: any): void => {
     try {
@@ -82,27 +109,31 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
       this.logger.verbose(`[GOSSIP] Incoming block at slot: ${block.slot}`);
       this.emit(BLOCK_TOPIC, block);
     } catch (e) {
-      this.logger.warn(`[GOSSIP] Incoming block error`, e);
+      this.logger.warn("[GOSSIP] Incoming block error", e);
     }
   };
   private handleIncomingAttestation = (msg: any): void => {
     try {
       const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
-      this.logger.verbose(`[GOSSIP] Incoming attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`);
+      this.logger.verbose(
+        `[GOSSIP] Incoming attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`
+      );
       this.emit(ATTESTATION_TOPIC, attestation);
     } catch (e) {
-      this.logger.warn(`[GOSSIP] Incoming attestation error`, e)
+      this.logger.warn("[GOSSIP] Incoming attestation error", e);
     }
   };
   private handleIncomingShardAttestation = (msg: any): void => {
     try {
       const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
-      this.logger.verbose(`[GOSSIP] Incoming shard attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`);
+      this.logger.verbose(
+        `[GOSSIP] Incoming shard attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`
+      );
       // @ts-ignore
       // we cannot type hint this
       this.emit(shardAttestationTopic(attestation.data.crosslink.shard), attestation);
     } catch (e) {
-      this.logger.warn(`[GOSSIP] Incoming attestation error`, e)
+      this.logger.warn("[GOSSIP] Incoming attestation error", e);
     }
   };
 
@@ -110,26 +141,4 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.emit("gossipsub:heartbeat");
   };
 
-  // service
-  public async start(): Promise<void> {
-    console.log("gossip start", blockTopic())
-    await promisify(this.pubsub.start.bind(this.pubsub))();
-    this.pubsub.on(blockTopic(), this.handleIncomingBlock);
-    this.pubsub.on(attestationTopic(), this.handleIncomingAttestation);
-    for (let shard = 0; shard < SHARD_SUBNET_COUNT; shard++) {
-      this.pubsub.on(shardSubnetAttestationTopic(shard),
-        this.handleIncomingShardAttestation);
-    }
-    this.pubsub.on("gossipsub:heartbeat", this.emitGossipHeartbeat);
-  }
-  public async stop(): Promise<void> {
-    await promisify(this.pubsub.stop.bind(this.pubsub))();
-    this.pubsub.removeListener(blockTopic(), this.handleIncomingBlock);
-    this.pubsub.removeListener(attestationTopic(), this.handleIncomingAttestation);
-    for (let shard = 0; shard < SHARD_SUBNET_COUNT; shard++) {
-      this.pubsub.removeListener(shardSubnetAttestationTopic(shard),
-        this.handleIncomingShardAttestation);
-    }
-    this.pubsub.removeListener("gossipsub:heartbeat", this.emitGossipHeartbeat);
-  }
 }

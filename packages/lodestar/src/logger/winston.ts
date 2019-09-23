@@ -2,8 +2,8 @@
  * @module logger
  */
 
-import {createLogger, format, Logger, transports} from 'winston';
-import {defaultLogLevel, LogLevel, LogLevels, ILogger, ILoggerOptions, customColors} from "./interface";
+import {createLogger, format, Logger, transports} from "winston";
+import {defaultLogLevel, LogLevel, ILogger, ILoggerOptions} from "./interface";
 import chalk from "chalk";
 
 export class WinstonLogger implements ILogger {
@@ -27,7 +27,7 @@ export class WinstonLogger implements ILogger {
           format: format.combine(
             format.colorize(),
             format.timestamp({
-              format: 'YYYY-MM-DD HH:mm:ss'
+              format: "YYYY-MM-DD HH:mm:ss"
             }),
             format.printf((info) => {
               // const screenSize = process.stdout.columns;
@@ -42,9 +42,12 @@ export class WinstonLogger implements ILogger {
               //   const max = screenSize - paddingPreMsg;
               //   const p2 = info.message.length - max;
               //   const msgs = [info.message.substring(0, max), info.message.substring(max)];
+              // eslint-disable-next-line max-len
               //   return (`${info.timestamp}  [${infoString.toUpperCase()}] ${info.level.padStart(infoPad)}: ${msgs[0]}\n${msgs[1].padStart(paddingPreMsg + 2)}`)
               // } else {
-                return `${info.timestamp}  [${infoString.toUpperCase()}] ${info.level.padStart(infoPad)}: ${info.message}`
+              return (
+                `${info.timestamp}  [${infoString.toUpperCase()}] ${info.level.padStart(infoPad)}: ${info.message}`
+              );
               // }
             })
           ),
@@ -53,6 +56,7 @@ export class WinstonLogger implements ILogger {
       ],
       exitOnError: false
     });
+    //@ts-ignore
     this._level = LogLevel[options.level];
     this._silent = false;
   }
@@ -85,17 +89,6 @@ export class WinstonLogger implements ILogger {
     this.createLogEntry(LogLevel.silly, message, context);
   }
 
-  private createLogEntry(level: LogLevel, message: string | object, context: object = {}): void {
-    if (this.silent || level > this._level) {
-      return;
-    }
-    if (typeof message === 'object') {
-      this.winston.log(LogLevel[level], JSON.stringify(message));
-    } else {
-      this.winston.log(LogLevel[level], message, context);
-    }
-  }
-
   public set level(level: LogLevel) {
     this.winston.level = LogLevel[level];
     this._level = level;
@@ -123,4 +116,16 @@ export class WinstonLogger implements ILogger {
 
     });
   }
+
+  private createLogEntry(level: LogLevel, message: string | object, context: object = {}): void {
+    if (this.silent || level > this._level) {
+      return;
+    }
+    if (typeof message === "object") {
+      this.winston.log(LogLevel[level], JSON.stringify(message));
+    } else {
+      this.winston.log(LogLevel[level], message, context);
+    }
+  }
+
 }

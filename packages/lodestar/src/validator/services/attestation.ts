@@ -9,7 +9,6 @@ import {
   AttestationDataAndCustodyBit,
   BeaconState,
   Fork,
-  IndexedAttestation,
   Shard,
   Slot
 } from "@chainsafe/eth2.0-types";
@@ -17,21 +16,21 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {computeEpochOfSlot, getDomain, isSlashableAttestationData,} from "../../chain/stateTransition/util";
 
-import {RpcClient} from "../rpc";
+import {IRpcClient} from "../rpc";
 
 import {DomainType} from "../../constants";
 import {IValidatorDB} from "../../db/api";
 import {ILogger} from "../../logger";
 import {Keypair} from "@chainsafe/bls";
 
-export function sleep(ms) {
+export function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 export class AttestationService {
 
   private config: IBeaconConfig;
-  private rpcClient: RpcClient;
+  private rpcClient: IRpcClient;
   private keypair: Keypair;
   private db: IValidatorDB;
   private logger: ILogger;
@@ -39,7 +38,7 @@ export class AttestationService {
   public constructor(
     config: IBeaconConfig,
     keypair: Keypair,
-    rpcClient: RpcClient,
+    rpcClient: IRpcClient,
     db: IValidatorDB,
     logger: ILogger
   ) {
@@ -68,7 +67,7 @@ export class AttestationService {
     }
     if (await this.isConflictingAttestation(attestation.data)) {
       this.logger.warn(
-        `Avoided signing conflicting attestation! `
+        "Avoided signing conflicting attestation! "
         + `Source epoch: ${attestation.data.source.epoch}, Target epoch: ${computeEpochOfSlot(this.config, slot)}`
       );
       return null;
@@ -88,7 +87,10 @@ export class AttestationService {
     ).toBytesCompressed();
     await this.storeAttestation(attestation);
     await this.rpcClient.validator.publishAttestation(attestation);
-    this.logger.info(`Signed and publish new attestation for block ${attestation.data.target.root.toString('hex')} and shard ${shard} at slot ${slot}`);
+    this.logger.info(
+      `Signed and publish new attestation for block ${attestation.data.target.root.toString("hex")} ` +
+      `and shard ${shard} at slot ${slot}`
+    );
     return attestation;
   }
 
@@ -105,7 +107,10 @@ export class AttestationService {
 
     //cleanup
     const unusedAttestations =
-      await this.db.getAttestations(this.keypair.publicKey.toBytesCompressed(), {gt: 0, lt: attestation.data.target.epoch});
+      await this.db.getAttestations(
+        this.keypair.publicKey.toBytesCompressed(),
+        {gt: 0, lt: attestation.data.target.epoch}
+      );
     await this.db.deleteAttestations(this.keypair.publicKey.toBytesCompressed(), unusedAttestations);
   }
 }

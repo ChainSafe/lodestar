@@ -8,10 +8,11 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
-import {ReputationStore} from "./reputation";
 import {ILogger} from "../logger";
+import {ISyncOptions} from "./options";
+import {ReputationStore} from "./IReputation";
 
-interface InitialSyncModules {
+interface IInitialSyncModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   chain: IBeaconChain;
@@ -27,7 +28,7 @@ export class InitialSync {
   private network: INetwork;
   private reps: ReputationStore;
   private logger: ILogger;
-  public constructor(opts, {config, db, chain, network, reps, logger}: InitialSyncModules) {
+  public constructor(opts: ISyncOptions, {config, db, chain, network, reps, logger}: IInitialSyncModules) {
     this.config = config;
     this.db = db;
     this.chain = chain;
@@ -65,7 +66,9 @@ export class InitialSync {
       startSlot += 1;
     }
     const peerLatestHello = this.reps.get(peerInfo.id.toB58String()).latestHello;
-    this.logger.info(`attempting initial sync with ${peerInfo.id.toB58String()}, slot ${startSlot} through ${peerLatestHello.headSlot}`);
+    this.logger.info(
+      `attempting initial sync with ${peerInfo.id.toB58String()}, slot ${startSlot} through ${peerLatestHello.headSlot}`
+    );
     const blocks = await this.network.reqResp.beaconBlocksByRange(peerInfo, {
       headBlockRoot: peerLatestHello.headRoot,
       startSlot,

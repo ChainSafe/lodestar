@@ -1,12 +1,8 @@
 import BN from "bn.js";
 import {expect} from "chai";
-
+import {describe, it} from "mocha";
 import {clone, equals} from "../../src";
-
-import {
-  ArrayObject,
-} from "./objects";
-
+import {ArrayObject,} from "./objects";
 import {stringifyType} from "./utils";
 
 describe("clone", () => {
@@ -27,7 +23,7 @@ describe("clone", () => {
     {value: {v:[{b:2,a:1},{b:4,a:3}]}, type: ArrayObject, expected: true},
     {value: {v:[{a:1,b:2},{b:4,a:3}]}, type: ArrayObject, expected: true},
   ];
-  for (const {value, type, expected} of testCases) {
+  for (const {value, type} of testCases) {
     it(`should correctly perform clone for ${stringifyType(type)}`, () => {
       const actual = clone(value, type);
       expect(equals(actual, value, type));

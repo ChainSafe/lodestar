@@ -35,7 +35,12 @@ export class RestValidatorApi implements IValidatorApi {
     return this.client.get<BeaconBlock>(url);
   }
 
-  public async produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, slot: Slot, shard: Shard): Promise<Attestation> {
+  public async produceAttestation(
+    validatorPubKey: BLSPubkey,
+    pocBit: boolean,
+    slot: Slot,
+    shard: Shard
+  ): Promise<Attestation> {
     const url = `/attestation?slot=${slot}&shard=${shard}&validator_pubkey=${validatorPubKey.toString("hex")}`;
     return this.client.get<Attestation>(url);
   }
@@ -48,6 +53,7 @@ export class RestValidatorApi implements IValidatorApi {
     return this.client.post("/attestation", attestation);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async getValidatorIndex(pubKey: BLSPubkey): Promise<ValidatorIndex> {
     throw new Error("Method not implemented.");
   }

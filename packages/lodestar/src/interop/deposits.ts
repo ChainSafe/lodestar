@@ -8,7 +8,11 @@ import {IProgressiveMerkleTree} from "../util/merkleTree";
 import {interopKeypairs} from "./keypairs";
 import {computeDomain} from "../chain/stateTransition/util";
 
-export function interopDeposits(config: IBeaconConfig, tree: IProgressiveMerkleTree, validatorCount: number): Deposit[] {
+export function interopDeposits(
+  config: IBeaconConfig,
+  tree: IProgressiveMerkleTree,
+  validatorCount: number
+): Deposit[] {
   return interopKeypairs(validatorCount).map(({pubkey, privkey}, i) => {
     // create DepositData
     const data: DepositData = {

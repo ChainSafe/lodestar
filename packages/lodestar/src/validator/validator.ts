@@ -14,10 +14,10 @@
  * 6. Repeat step 5
  */
 import BlockProposingService from "./services/block";
-import {Epoch, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {GenesisInfo} from "./types";
-import {RpcClient, RpcClientOverWs} from "./rpc";
+import {IRpcClient, RpcClientOverWs} from "./rpc";
 import {AttestationService} from "./services/attestation";
 import {IValidatorDB, LevelDbController, ValidatorDB} from "../db";
 import {ILogger} from "../logger";
@@ -34,9 +34,13 @@ import {ApiClientOverRest} from "./rest/apiClient";
 class Validator {
   private opts: IValidatorOptions;
   private config: IBeaconConfig;
-  private apiClient: RpcClient;
+  // @ts-ignore
+  private apiClient: IRpcClient;
+  // @ts-ignore
   private blockService: BlockProposingService;
+  // @ts-ignore
   private attestationService: AttestationService;
+  // @ts-ignore
   private genesisInfo: GenesisInfo;
   private db: IValidatorDB;
   private logger: ILogger;
@@ -60,18 +64,6 @@ class Validator {
     this.initApiClient();
   }
 
-  private initApiClient(): void {
-    if(this.opts.rpcInstance) {
-      this.apiClient = this.opts.rpcInstance;
-    } else if(this.opts.rpc) {
-      this.apiClient = new RpcClientOverWs({rpcUrl: this.opts.rpc}, {config: this.config});
-    } else if(this.opts.restUrl) {
-      this.apiClient = new ApiClientOverRest(this.opts.restUrl, this.logger);
-    } else {
-      throw new Error("Validator requires either RpcClient instance or rpc url as params");
-    }
-  }
-
   /**
    * Creates a new block processing service and starts it.
    */
@@ -87,6 +79,18 @@ class Validator {
   public async stop(): Promise<void> {
     this.isRunning = false;
     await this.apiClient.disconnect();
+  }
+
+  private initApiClient(): void {
+    if(this.opts.rpcInstance) {
+      this.apiClient = this.opts.rpcInstance;
+    } else if(this.opts.rpc) {
+      this.apiClient = new RpcClientOverWs({rpcUrl: this.opts.rpc}, {config: this.config});
+    } else if(this.opts.restUrl) {
+      this.apiClient = new ApiClientOverRest(this.opts.restUrl, this.logger);
+    } else {
+      throw new Error("Validator requires either RpcClient instance or rpc url as params");
+    }
   }
 
   private async setup(): Promise<void> {
@@ -144,12 +148,13 @@ class Validator {
     if(this.isRunning) {
       setTimeout(this.isChainLive, 1000);
     }
-  }
+    return false;
+  };
 
   private run(): void {
     this.apiClient.onNewSlot(this.checkDuties);
-    this.apiClient.onNewEpoch(this.lookAhead);
-  };
+    // this.apiClient.onNewEpoch(this.lookAhead);
+  }
 
   private checkDuties = async (slot: Slot): Promise<void> => {
     const validatorDuty =
@@ -157,7 +162,7 @@ class Validator {
         [this.opts.keypair.publicKey.toBytesCompressed()],
         computeEpochOfSlot(this.config, slot))
       )[0];
-    const fork = await this.apiClient.beacon.getFork();
+    const {fork} = await this.apiClient.beacon.getFork();
     const isAttester = validatorDuty.attestationSlot === slot;
     const isProposer = validatorDuty.blockProposalSlot === slot;
     if (isAttester) {
@@ -173,10 +178,6 @@ class Validator {
       this.blockService.createAndPublishBlock(slot, fork);
     }
   };
-
-  private lookAhead = async (currentEpoch: Epoch): Promise<void> => {
-    //in phase 1, it should obtain duties for next epoch and trigger required shard sync
-  }
 }
 
 export default Validator;

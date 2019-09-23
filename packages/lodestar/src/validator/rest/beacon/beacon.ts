@@ -1,6 +1,6 @@
 import {IBeaconApi} from "../../../api/rpc";
 import {HttpClient} from "../../../util/httpClient";
-import {bytes32, Fork, SyncingStatus, BeaconBlock, BeaconState, number64} from "@chainsafe/eth2.0-types";
+import {bytes32, Fork, SyncingStatus, BeaconBlock, BeaconState, number64, uint64} from "@chainsafe/eth2.0-types";
 import {ILogger} from "../../../logger";
 import {ApiNamespace} from "../../../api";
 
@@ -18,8 +18,8 @@ export class RestBeaconApi implements IBeaconApi {
     return this.client.get<bytes32>("/version");
   }
 
-  public async getFork(): Promise<Fork> {
-    return this.client.get<Fork>("/fork");
+  public async getFork(): Promise<{fork: Fork; chainId: uint64}> {
+    return this.client.get<{fork: Fork; chainId: uint64}>("/fork");
   }
 
   public async getGenesisTime(): Promise<number64> {

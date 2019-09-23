@@ -2,11 +2,11 @@
  * @module api/rpc/transport
  */
 
-import {LikeSocket, LikeSocketServer} from "noice-json-rpc";
+import {LikeSocket} from "noice-json-rpc";
+//@ts-ignore
 import promisify from "promisify-es6";
 import {ILogger} from "../../../logger";
 import http from "http";
-import {Service} from "../../../node";
 import {IRpcServer} from "./index";
 
 export interface IHttpServerOpts {
@@ -20,6 +20,7 @@ class MessageRequest implements LikeSocket {
   private resp: http.ServerResponse;
   private req: http.IncomingMessage;
 
+  // @ts-ignore
   private messageCallback: Function;
 
   public constructor(req: http.IncomingMessage, resp: http.ServerResponse) {
@@ -27,8 +28,8 @@ class MessageRequest implements LikeSocket {
     this.resp = resp;
   }
 
-  public on(event: string, cb: Function): any {
-    if(event === 'message') {
+  public on(event: string, cb: Function): void {
+    if(event === "message") {
       const that = this;
       this.messageCallback = cb;
       this.getRequest(this.req)
@@ -40,26 +41,27 @@ class MessageRequest implements LikeSocket {
     }
   }
 
-  public removeListener(event: string, cb: Function): any {
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+  public removeListener(event: string, cb: Function): void {
   }
 
   public send(message: string): void {
     this.sendJsonResponse(message);
   }
 
-  private sendJsonResponse(message: string) {
-    this.resp.writeHead(200, {'Content-Type': 'application/json'});
+  private sendJsonResponse(message: string): void {
+    this.resp.writeHead(200, {"Content-Type": "application/json"});
     this.resp.write(message);
     this.resp.end();
   }
 
-  private getRequest(req: http.IncomingMessage): Promise<any> {
+  private getRequest(req: http.IncomingMessage): Promise<string> {
     return new Promise((resolve) => {
-      let body = '';
-      req.on('data', chunk => {
+      let body = "";
+      req.on("data", chunk => {
         body += chunk.toString();
       });
-      req.on('end', () => {
+      req.on("end", () => {
         resolve(body);
       });
     });
@@ -74,6 +76,7 @@ export default class HttpServer implements IRpcServer {
 
   private opts: IHttpServerOpts;
 
+  // @ts-ignore
   private connectionCallback: Function;
 
   private logger: ILogger;
@@ -82,20 +85,20 @@ export default class HttpServer implements IRpcServer {
     this.opts = opts;
     this.logger = logger;
     this.server = http.createServer(async (req, resp) => {
-      if (req.method === 'POST') {
+      if (req.method === "POST") {
         if(this.connectionCallback) {
           this.connectionCallback(new MessageRequest(req, resp));
         }
       } else {
         resp.writeHead(400);
-        resp.write('Unsupported method');
+        resp.write("Unsupported method");
         resp.end();
       }
     });
   }
 
-  public on(event: string, cb: Function): any {
-    if (event === 'connection') {
+  public on(event: string, cb: Function): void {
+    if (event === "connection") {
       this.connectionCallback = cb;
     }
   }
@@ -103,11 +106,11 @@ export default class HttpServer implements IRpcServer {
   public async start(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.server.listen(this.opts.port, this.opts.host)
-        .on('listening', () => {
+        .on("listening", () => {
           this.logger.info(`JSON RPC HTTP server started on ${this.opts.host}:${this.opts.port}`);
           resolve();
         })
-        .on('error', e => {
+        .on("error", e => {
           this.logger.error(
             `Failed to start JSON RPC HTTP server on ${this.opts.host}:${this.opts.port}. Reason: ${e.message}`
           );

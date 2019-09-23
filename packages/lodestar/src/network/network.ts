@@ -3,6 +3,7 @@
  */
 
 import {EventEmitter} from "events";
+// @ts-ignore
 import promisify from "promisify-es6";
 import LibP2p from "libp2p";
 import PeerInfo from "peer-info";
@@ -14,31 +15,33 @@ import {IBeaconMetrics} from "../metrics";
 import {ReqResp} from "./reqResp";
 import {Gossip} from "./gossip";
 import {INetworkOptions} from "./options";
-import {
-  INetwork, NetworkEventEmitter,
-} from "./interface";
+import {INetwork, NetworkEventEmitter,} from "./interface";
 
-interface Libp2pModules {
+interface ILibp2pModules {
   config: IBeaconConfig;
-  libp2p: any;
+  libp2p: LibP2p;
   logger: ILogger;
   metrics: IBeaconMetrics;
 }
 
 
 export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter }) implements INetwork {
+  // @ts-ignore
+  public peerInfo: PeerInfo;
+  // @ts-ignore
+  public reqResp: ReqResp;
+  // @ts-ignore
+  public gossip: Gossip;
+
   private opts: INetworkOptions;
   private config: IBeaconConfig;
+  // @ts-ignore
   private libp2p: LibP2p;
   private inited: Promise<void>;
   private logger: ILogger;
   private metrics: IBeaconMetrics;
 
-  public peerInfo: PeerInfo;
-  public reqResp: ReqResp;
-  public gossip: Gossip;
-
-  public constructor(opts: INetworkOptions, {config, libp2p, logger, metrics}: Libp2pModules) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger, metrics}: ILibp2pModules) {
     super();
     this.opts = opts;
     this.config = config;
@@ -49,11 +52,29 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
       Promise.resolve(libp2p).then((libp2p) => {
         this.peerInfo = libp2p.peerInfo;
         this.libp2p = libp2p;
-        this.reqResp = new ReqResp(opts, {config, libp2p, logger}); 
+        this.reqResp = new ReqResp(opts, {config, libp2p, logger});
         this.gossip = new Gossip(opts, {config, libp2p, logger}); 
         resolve();
       });
     });
+  }
+
+  public async start(): Promise<void> {
+    await this.inited;
+    await promisify(this.libp2p.start.bind(this.libp2p))();
+    await this.reqResp.start();
+    await this.gossip.start();
+    this.libp2p.on("peer:connect", this.emitPeerConnect);
+    this.libp2p.on("peer:disconnect", this.emitPeerDisconnect);
+    this.logger.important(`PeerId ${this.libp2p.peerInfo.id.toB58String()}`);
+  }
+  public async stop(): Promise<void> {
+    await this.inited;
+    await this.gossip.stop();
+    await this.reqResp.stop();
+    await promisify(this.libp2p.stop.bind(this.libp2p))();
+    this.libp2p.removeListener("peer:connect", this.emitPeerConnect);
+    this.libp2p.removeListener("peer:disconnect", this.emitPeerDisconnect);
   }
 
   public getPeers(): PeerInfo[] {
@@ -73,31 +94,14 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     await promisify(this.libp2p.hangUp.bind(this.libp2p))(peerInfo);
   }
   private emitPeerConnect = (peerInfo: PeerInfo): void => {
-    this.logger.verbose("peer connected " + peerInfo.id.toB58String())
+    this.logger.verbose("peer connected " + peerInfo.id.toB58String());
     this.metrics.peers.inc();
     this.emit("peer:connect", peerInfo);
   };
   private emitPeerDisconnect = (peerInfo: PeerInfo): void => {
-    this.logger.verbose("peer disconnected " + peerInfo.id.toB58String())
+    this.logger.verbose("peer disconnected " + peerInfo.id.toB58String());
     this.metrics.peers.dec();
     this.emit("peer:disconnect", peerInfo);
   };
 
-  public async start(): Promise<void> {
-    await this.inited;
-    await promisify(this.libp2p.start.bind(this.libp2p))();
-    await this.reqResp.start();
-    await this.gossip.start();
-    this.libp2p.on("peer:connect", this.emitPeerConnect);
-    this.libp2p.on("peer:disconnect", this.emitPeerDisconnect);
-    this.logger.important(`PeerId ${this.libp2p.peerInfo.id.toB58String()}`);
-  }
-  public async stop(): Promise<void> {
-    await this.inited;
-    await this.gossip.stop();
-    await this.reqResp.stop();
-    await promisify(this.libp2p.stop.bind(this.libp2p))();
-    this.libp2p.removeListener("peer:connect", this.emitPeerConnect);
-    this.libp2p.removeListener("peer:disconnect", this.emitPeerDisconnect);
-  }
 }

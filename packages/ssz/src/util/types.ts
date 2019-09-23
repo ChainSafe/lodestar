@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
 import assert from "assert";
 
@@ -30,9 +31,9 @@ export function parseType(type: AnySSZType): FullSSZType {
   if (isFullSSZType(type)) {
     return type as FullSSZType;
   }
-  if(typeof type === 'string') {
+  if(typeof type === "string") {
     // bit
-    if (type === 'bool') {
+    if (type === "bool") {
       return {
         type: Type.bool,
       };
@@ -46,7 +47,7 @@ export function parseType(type: AnySSZType): FullSSZType {
       };
     }
     // uint
-    if (type === 'byte') {
+    if (type === "byte") {
       return {
         type: Type.uint,
         byteLength: 1,
@@ -163,6 +164,6 @@ export function isVariableSizeType(type: FullSSZType): boolean {
     case Type.vector:
       return isVariableSizeType(type.elementType);
     case Type.container:
-      return type.fields.some(([_, fieldType]) => isVariableSizeType(fieldType));
+      return type.fields.some(([, fieldType]) => isVariableSizeType(fieldType));
   }
 }

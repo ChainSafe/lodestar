@@ -5,12 +5,20 @@
 import assert from "assert";
 import {deserialize, equals, hashTreeRoot} from "@chainsafe/ssz";
 
-import {BeaconState, Crosslink, Epoch, Gwei, PendingAttestation, Shard, uint256, ValidatorIndex,} from "@chainsafe/eth2.0-types";
+import {
+  BeaconState,
+  Crosslink,
+  Epoch,
+  Gwei,
+  PendingAttestation,
+  Shard,
+  uint256,
+  ValidatorIndex,
+} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {GENESIS_EPOCH, GENESIS_START_SHARD, ZERO_HASH} from "../../../constants";
 import {
-  getActiveValidatorIndices,
   getAttestationDataSlot,
   getAttestingIndices,
   getBlockRoot,

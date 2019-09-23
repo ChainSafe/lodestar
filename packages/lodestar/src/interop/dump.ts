@@ -1,7 +1,6 @@
 import fs from "fs";
-import {hashTreeRoot, serialize, deserialize, equals} from "@chainsafe/ssz";
+import {serialize} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import assert from "assert";
 
 import {quickStartState} from "./state";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
@@ -21,4 +20,4 @@ export function dumpQuickStartState(
 // eslint-disable-next-line
 import yargs from "yargs";
 const args = yargs.parse()._;
-dumpQuickStartState(args[0], args[1], args[2]);
+dumpQuickStartState(parseInt(args[0]), parseInt(args[1]), args[2]);

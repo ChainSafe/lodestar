@@ -30,7 +30,10 @@ import {getCommitteeCount, getCrosslinkCommittee, getStartShard} from "./committ
 export function getAttestationDataSlot(config: IBeaconConfig, state: BeaconState, data: AttestationData): Slot {
   const epoch = data.target.epoch;
   const committeeCount = getCommitteeCount(config, state, epoch);
-  const offset = (data.crosslink.shard + config.params.SHARD_COUNT - getStartShard(config, state, epoch)) % config.params.SHARD_COUNT;
+  const offset =
+      (data.crosslink.shard + config.params.SHARD_COUNT - getStartShard(config, state, epoch))
+      %
+      config.params.SHARD_COUNT;
   return intDiv(computeStartSlotOfEpoch(config, epoch) + offset, intDiv(committeeCount, config.params.SLOTS_PER_EPOCH));
 }
 

@@ -3,17 +3,17 @@ import {Fork, Hash} from "@chainsafe/eth2.0-types";
 import {join} from "path";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {expect} from "chai";
-import {BaseSSZStaticTestCase} from "../../type";
+import {IBaseSSZStaticTestCase} from "../../type";
 import {hashTreeRoot, serialize} from "../../../../src";
 
-interface Result {
+interface IResult {
   root: Hash;
   serialized: Buffer;
 }
 
 ["ssz_lengthy", "ssz_max", "ssz_nil", "ssz_one", "ssz_random", "ssz_random_chaos", "ssz_zero"].forEach((caseName) => {
 
-  describeDirectorySpecTest<BaseSSZStaticTestCase<Fork>, Result>(
+  describeDirectorySpecTest<IBaseSSZStaticTestCase<Fork>, IResult>(
     `fork ${caseName} minimal`,
     join(__dirname, `../../../../../spec-test-cases/tests/minimal/phase0/ssz_static/Fork/${caseName}`),
     (testcase) => {

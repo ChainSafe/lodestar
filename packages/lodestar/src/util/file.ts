@@ -45,7 +45,7 @@ export function writeTomlConfig(fileName: string): void {
  * @param {string} filePath
  */
 export function ensureDirectoryExistence(filePath: string): boolean {
-  var dirname = path.dirname(filePath);
+  const dirname = path.dirname(filePath);
   if (fs.existsSync(dirname)) {
     return true;
   }
@@ -54,11 +54,11 @@ export function ensureDirectoryExistence(filePath: string): boolean {
   return true;
 }
 
-export function rmDir(dir) {
-  var list = fs.readdirSync(dir);
-  for(var i = 0; i < list.length; i++) {
-    var filename = path.join(dir, list[i]);
-    var stat = fs.statSync(filename);
+export function rmDir(dir: string): void {
+  const list = fs.readdirSync(dir);
+  for(let i = 0; i < list.length; i++) {
+    const filename = path.join(dir, list[i]);
+    const stat = fs.statSync(filename);
                 
     if(filename == "." || filename == "..") {
       // pass these files
@@ -71,5 +71,5 @@ export function rmDir(dir) {
     }
   }
   fs.rmdirSync(dir);
-};
+}
 

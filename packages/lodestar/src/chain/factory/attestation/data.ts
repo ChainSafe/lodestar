@@ -38,7 +38,12 @@ export async function assembleAttestationData(
 }
 
 
-export function getCrosslinkVote(config: IBeaconConfig, state: BeaconState, shard: Shard, targetEpoch: Epoch): Crosslink {
+export function getCrosslinkVote(
+  config: IBeaconConfig,
+  state: BeaconState,
+  shard: Shard,
+  targetEpoch: Epoch
+): Crosslink {
   const parentCrosslink = state.currentCrosslinks[shard];
   return  {
     startEpoch: parentCrosslink.endEpoch,
@@ -46,5 +51,5 @@ export function getCrosslinkVote(config: IBeaconConfig, state: BeaconState, shar
     dataRoot: ZERO_HASH,
     shard: shard,
     parentRoot: hashTreeRoot(state.currentCrosslinks[shard], config.types.Crosslink)
-  }
+  };
 }

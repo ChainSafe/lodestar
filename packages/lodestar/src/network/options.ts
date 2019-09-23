@@ -11,7 +11,7 @@ export interface INetworkOptions {
 }
 
 export const NetworkOptions: IConfigurationModule = {
-  name: 'network',
+  name: "network",
   fields: [
     {
       name: "maxPeers",
@@ -29,7 +29,7 @@ export const NetworkOptions: IConfigurationModule = {
       type: [String],
       configurable: true,
       process: (input: string) => {
-        return input.split(',').map((input) => input.trim());
+        return input.split(",").map((input) => input.trim());
       },
       cli: {
         flag: "bootnodes"
@@ -40,7 +40,7 @@ export const NetworkOptions: IConfigurationModule = {
       type: [String],
       configurable: true,
       process: (input: string) => {
-        return input.split(',').map((input) => input.trim());
+        return input.split(",").map((input) => input.trim());
       },
       cli: {
         flag: "multiaddrs"

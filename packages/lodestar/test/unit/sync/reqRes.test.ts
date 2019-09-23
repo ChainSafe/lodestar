@@ -3,22 +3,18 @@ import sinon from "sinon";
 import {expect} from "chai";
 import PeerInfo from "peer-info";
 import PeerId from "peer-id";
-import {
-  Hello,
-  Goodbye,
-} from "@chainsafe/eth2.0-types";
+import {Goodbye, Hello,} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 
-import {EMPTY_SIGNATURE, Method, ZERO_HASH} from "../../../src/constants";
+import {Method, ZERO_HASH} from "../../../src/constants";
 import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {WinstonLogger} from "../../../src/logger";
 import {generateState} from "../../utils/state";
 import {SyncReqResp} from "../../../src/sync/reqResp";
-import {ReputationStore} from "../../../src/sync/reputation";
-import {generateEmptyBlock} from "../../utils/block";
 import {BlockRepository, ChainRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
-import { ReqResp } from "../../../src/network/reqResp";
+import {ReqResp} from "../../../src/network/reqResp";
+import {ReputationStore} from "../../../src/sync/IReputation";
 
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();

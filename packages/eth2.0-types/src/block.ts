@@ -1,24 +1,13 @@
+/* eslint-disable @typescript-eslint/interface-name-prefix */
 /**
  * @module types
  */
 
-import {
-  bytes32,
-  Hash,
-  Slot,
-  BLSSignature,
-} from "./primitive";
+import {BLSSignature, bytes32, Hash, Slot,} from "./primitive";
 
 import {Eth1Data} from "./misc";
 
-import {
-  Attestation,
-  AttesterSlashing,
-  Deposit,
-  ProposerSlashing,
-  Transfer,
-  VoluntaryExit,
-} from "./operations";
+import {Attestation, AttesterSlashing, Deposit, ProposerSlashing, Transfer, VoluntaryExit,} from "./operations";
 
 
 export interface BeaconBlockBody {

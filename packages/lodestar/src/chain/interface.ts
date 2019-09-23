@@ -2,7 +2,7 @@ import {EventEmitter} from "events";
 
 import {Attestation, BeaconBlock, BeaconState, Checkpoint, Hash, Slot, uint16, uint64} from "@chainsafe/eth2.0-types";
 
-import {LMDGHOST} from "./forkChoice";
+import {ILMDGHOST} from "./forkChoice";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
 import StrictEventEmitter from "strict-event-emitter-types";
 
@@ -21,8 +21,8 @@ export type ChainEventEmitter = StrictEventEmitter<EventEmitter, IChainEvents>;
  * and applying the fork choice rule to update the chain head
  */
 export interface IBeaconChain extends ChainEventEmitter {
-  latestState: BeaconState;
-  forkChoice: LMDGHOST;
+  latestState: BeaconState|null;
+  forkChoice: ILMDGHOST;
   chainId: uint16;
   networkId: uint64;
   /**

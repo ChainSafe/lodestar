@@ -2,12 +2,7 @@
  * @module chain/stateTransition/util
  */
 
-import {
-  BeaconState,
-  Epoch,
-  Validator,
-  ValidatorIndex,
-} from "@chainsafe/eth2.0-types";
+import {BeaconState, Epoch, Validator, ValidatorIndex,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {FAR_FUTURE_EPOCH} from "../../../constants";
@@ -15,7 +10,6 @@ import {computeActivationExitEpoch, getCurrentEpoch} from "./epoch";
 import {getValidatorChurnLimit} from "./validator";
 import {decreaseBalance, increaseBalance} from "./balance";
 import {getBeaconProposerIndex} from "./proposer";
-import {bnMax} from "../../../util/math";
 
 
 /**

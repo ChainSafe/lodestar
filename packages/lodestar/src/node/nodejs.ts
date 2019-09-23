@@ -9,24 +9,23 @@ import {BeaconDb, LevelDbController} from "../db";
 import defaultConf, {IBeaconNodeOptions} from "./options";
 import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
 import {INetwork, Libp2pNetwork} from "../network";
-import {NodejsNode} from "../network/nodejs";
-import {createPeerId, initializePeerInfo} from "../network/util";
+import LibP2p from "libp2p";
 import {isPlainObject} from "../util/objects";
 import {Sync} from "../sync";
 import {BeaconChain, IBeaconChain} from "../chain";
 import {OpPool} from "../opPool";
 import {ILogger} from "../logger";
-import {ReputationStore} from "../sync/reputation";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 import {ApiService} from "../api";
+import {ReputationStore} from "../sync/IReputation";
 
-export interface Service {
+export interface IService {
   start(): Promise<void>;
 
   stop(): Promise<void>;
 }
 
-interface BeaconNodeModules {
+interface IBeaconNodeModules {
   config: IBeaconConfig;
   logger: ILogger;
   eth1?: IEth1Notifier;
@@ -47,12 +46,12 @@ export class BeaconNode {
   public network: INetwork;
   public chain: IBeaconChain;
   public opPool: OpPool;
-  public api: Service;
+  public api: IService;
   public sync: Sync;
   public reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, eth1, libp2p}: BeaconNodeModules) {
+  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, eth1, libp2p}: IBeaconNodeModules) {
     this.conf = deepmerge(
       defaultConf,
       opts,
@@ -127,7 +126,7 @@ export class BeaconNode {
   }
 
   public async start(): Promise<void> {
-    this.logger.info('Starting eth2 beacon node - LODESTAR!');
+    this.logger.info("Starting eth2 beacon node - LODESTAR!");
     await this.metrics.start();
     await this.metricsServer.start();
     await this.db.start();

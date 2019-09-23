@@ -8,4 +8,4 @@ const filename = args[0];
 (async function() {
   const peerId = await createPeerId();
   await savePeerId(filename, peerId);
-})()
+})();

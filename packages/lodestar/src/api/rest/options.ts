@@ -24,7 +24,7 @@ export const RestOptions: IConfigurationModule = {
   fields: [
     booleanOption("enabled", "--rest"),
     {
-      name: 'api',
+      name: "api",
       type: "string",
       process: processApiNamespaces,
       configurable: true,
@@ -33,7 +33,7 @@ export const RestOptions: IConfigurationModule = {
       }
     },
     {
-      name: 'host',
+      name: "host",
       type: "string",
       configurable: true,
       cli: {
@@ -41,7 +41,7 @@ export const RestOptions: IConfigurationModule = {
       }
     },
     {
-      name: 'port',
+      name: "port",
       type: "number",
       configurable: true,
       cli: {
@@ -49,7 +49,7 @@ export const RestOptions: IConfigurationModule = {
       }
     },
     {
-      name: 'cors',
+      name: "cors",
       type: "string",
       configurable: true,
       cli: {

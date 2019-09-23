@@ -1,18 +1,10 @@
 import {assert} from "chai";
-
+import {describe, it} from "mocha";
 import BN from "bn.js";
 
-import {
-  serialize,
-  SerializableValue,
-  Type,
-} from "../../src";
+import {SerializableValue, serialize,} from "../../src";
 
-import {
-  ArrayObject,
-  OuterObject,
-  SimpleObject,
-} from "./objects";
+import {ArrayObject, OuterObject, SimpleObject,} from "./objects";
 
 import {stringifyType} from "./utils";
 
@@ -43,24 +35,40 @@ describe("serialize", () => {
     {value: new BN("01", 16), type: "uint64", expected: "0100000000000000"},
     {value: new BN("1000000000000000", 16), type: "uint64", expected: "0000000000000010"},
     {value: new BN("ffffffffffffffff", 16), type: "uint64", expected: "ffffffffffffffff"},
-    {value: new BN("ffffffffffffffffffffffffffffffff", 16), type: "uint128", expected: "ffffffffffffffffffffffffffffffff"},
-    {value: new BN("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16), type: "uint256", expected: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"},
+    {
+      value: new BN("ffffffffffffffffffffffffffffffff", 16),
+      type: "uint128", expected: "ffffffffffffffffffffffffffffffff"
+    },
+    {
+      value: new BN("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16),
+      type: "uint256", expected: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    },
     {value: Buffer.from("deadbeef", "hex"), type: "bytes4", expected: "deadbeef"},
-    {value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"), type: "bytes16", expected: "deadbeefdeadbeefdeadbeefdeadbeef"},
+    {
+      value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"),
+      type: "bytes16", expected: "deadbeefdeadbeefdeadbeefdeadbeef"
+    },
     {value: Buffer.from("deadbeef", "hex"), type: {elementType: "byte", maxLength: 100}, expected: "deadbeef"},
     {value: Buffer.from("deadbeef", "hex"), type: {elementType: "byte", length: 4}, expected: "deadbeef"},
-    {value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"), type: {elementType: "byte", length: 16}, expected: "deadbeefdeadbeefdeadbeefdeadbeef"},
+    {
+      value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"),
+      type: {elementType: "byte", length: 16}, expected: "deadbeefdeadbeefdeadbeefdeadbeef"
+    },
     {value: Buffer.from("deadbeef", "hex"), type: {elementType: "byte", maxLength: 100}, expected: "deadbeef"},
     {value: {b:0,a:0}, type: SimpleObject, expected: "000000"},
     {value: {b:2,a:1}, type: SimpleObject, expected: "020001"},
     {value: {v:3, subV:{v:6}}, type: OuterObject, expected: "030600"},
     {value: {v: [{b:2,a:1}, {b:4,a:3}]}, type: ArrayObject, expected: "04000000020001040003"},
-    {value: [{v:3, subV:{v:6}}, {v:5, subV:{v:7}}], type: {elementType: OuterObject, maxLength: 10}, expected: "030600050700"},
+    {
+      value: [{v:3, subV:{v:6}}, {v:5, subV:{v:7}}],
+      type: {elementType: OuterObject, maxLength: 10},
+      expected: "030600050700"
+    },
     {value: [], type: {elementType: OuterObject, maxLength: 10}, expected: ""},
   ];
   for (const {value, type, expected} of testCases) {
     it(`should correctly serialize ${stringifyType(type)}`, () => {
-      const actual = serialize(value, type).toString('hex');
+      const actual = serialize(value, type).toString("hex");
       assert.equal(actual, expected);
     });
   }
@@ -72,7 +80,11 @@ describe("serialize", () => {
   }[] = [
     {value: 1, type: "foo", reason: "Invalid type"},
     {value: 1, type: "bar", reason: "Invalid type"},
-    {value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"), type: "bytes32", reason: "invalid byte array length"},
+    {
+      value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"),
+      type: "bytes32",
+      reason: "invalid byte array length"
+    },
   ];
   for (const {value, type, reason} of failCases) {
     it(`should throw an error for ${stringifyType(type)}: ${reason}`, () => {

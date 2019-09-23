@@ -4,6 +4,7 @@
 
 import fs from "fs";
 import PeerId from "peer-id";
+// @ts-ignore
 import promisify from "promisify-es6";
 
 /**
@@ -16,6 +17,7 @@ export async function savePeerId(path: string, peerId: PeerId): Promise<void> {
 /**
  * Load a peer id from disk
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function loadPeerId(path: string): Promise<PeerId> {
   const data = await promisify(fs.readFile)(path);
   return await promisify(PeerId.createFromJSON)(JSON.parse(data));

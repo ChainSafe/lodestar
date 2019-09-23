@@ -2,22 +2,19 @@
  * @module cli/commands
  */
 
-import {CliCommand} from "./interface";
+import {ICliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
 
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import {ILogger, WinstonLogger} from "../../logger";
+import {ILogger, LogLevel, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
 import {generateCommanderOptions, optionsToConfig} from "../util";
 import {getTomlConfig} from "../../util/file";
 import Validator from "../../validator";
 import {RpcClientOverInstance} from "../../validator/rpc";
-import {quickStartOptionToState} from "../../interop/cli";
-import {ProgressiveMerkleTree} from "../../util/merkleTree";
-import {InteropEth1Notifier} from "../../eth1/impl/interop";
 import {ValidatorApi} from "../../api/rpc/api/validator";
 import {BeaconApi} from "../../api/rpc/api/beacon";
 
@@ -27,8 +24,10 @@ interface IBeaconCommandOptions {
   [key: string]: string;
 }
 
-export class BeaconNodeCommand implements CliCommand {
+export class BeaconNodeCommand implements ICliCommand {
+  // @ts-ignore
   public node: BeaconNode;
+  // @ts-ignore
   public validator: Validator;
 
   public register(commander: CommanderStatic): void {
@@ -45,7 +44,7 @@ export class BeaconNodeCommand implements CliCommand {
         try {
           await this.action(options, logger);
         } catch (e) {
-          logger.error(e.message + '\n' + e.stack);
+          logger.error(e.message + "\n" + e.stack);
         }
       });
     generateCommanderOptions(command, BeaconNodeOptions);
@@ -53,11 +52,18 @@ export class BeaconNodeCommand implements CliCommand {
 
   public async action(options: IBeaconCommandOptions, logger: ILogger): Promise<void> {
     let conf: Partial<IBeaconNodeOptions> = {};
+
+    if (options.loggingLevel) {
+      // eslint-disable-next-line no-undef
+      // @ts-ignore
+      logger.setLogLevel(LogLevel[options.loggingLevel]);
+    }
+
     //merge config file
     if (options.configFile) {
-      let parsedConfig = getTomlConfig(options.configFile, BeaconNodeOptions);
+      const parsedConfig = getTomlConfig(options.configFile, BeaconNodeOptions);
       //cli will override toml config options
-      conf = deepmerge(conf, parsedConfig);
+      conf = deepmerge(conf, parsedConfig) as Partial<IBeaconNodeOptions>;
     }
     //override current config with cli config
     conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));

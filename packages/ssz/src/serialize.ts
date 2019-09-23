@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
 import BN from "bn.js";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
@@ -22,9 +23,9 @@ import {
 
 import {BYTES_PER_LENGTH_PREFIX} from "./constants";
 
-import {size, fixedSize} from "./size";
+import {fixedSize, size} from "./size";
 
-import {parseType, isVariableSizeType} from "./util/types";
+import {isVariableSizeType, parseType} from "./util/types";
 import {_assertValidValue} from "./assertValidValue";
 
 
@@ -185,8 +186,8 @@ function _serializeArray(value: SerializableArray, type: ArrayType, output: Buff
 /** @ignore */
 function _serializeObject(value: SerializableObject, type: ContainerType, output: Buffer, start: number): number {
   let fixedIndex = start;
-  let fixedLength = type.fields
-    .map(([_, fieldType]) => isVariableSizeType(fieldType) ? BYTES_PER_LENGTH_PREFIX : fixedSize(fieldType))
+  const fixedLength = type.fields
+    .map(([, fieldType]) => isVariableSizeType(fieldType) ? BYTES_PER_LENGTH_PREFIX : fixedSize(fieldType))
     .reduce((a, b) => a + b, 0);
   let currentOffsetIndex = start + fixedLength;
   let nextOffsetIndex = currentOffsetIndex;

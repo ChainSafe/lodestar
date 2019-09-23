@@ -10,13 +10,13 @@ import {
   uint16,
   uint64
 } from "@chainsafe/eth2.0-types";
-import {IBeaconChain, LMDGHOST} from "../../../../src/chain";
+import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {generateState} from "../../state";
 import {ProgressiveMerkleTree} from "../../../../src/util/merkleTree";
 
 export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public latestState: BeaconState;
-  public forkChoice: LMDGHOST;
+  public forkChoice: ILMDGHOST;
   public chainId: uint16;
   public networkId: uint64;
 

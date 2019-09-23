@@ -1,7 +1,13 @@
 import assert from "assert";
 import {
-  BeaconBlockBody, BeaconState, ProposerSlashing, AttesterSlashing, Attestation,
-  Deposit, VoluntaryExit, Transfer,
+  Attestation,
+  AttesterSlashing,
+  BeaconBlockBody,
+  BeaconState,
+  Deposit,
+  ProposerSlashing,
+  Transfer,
+  VoluntaryExit,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -69,7 +75,8 @@ export function processOperations(
   }: {
     operations: Operation[];
     maxOperations: number;
-    func: (config: IBeaconConfig, state: BeaconState, operation: Operation) => void;
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    func: (config: IBeaconConfig, state: BeaconState, operation: any) => void;
   })=>{
     assert(operations.length <= maxOperations);
     operations.forEach((operation) => {

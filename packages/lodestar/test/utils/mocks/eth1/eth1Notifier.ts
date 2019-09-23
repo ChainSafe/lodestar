@@ -2,11 +2,11 @@ import {EventEmitter} from "events";
 
 import {Hash, Deposit, number64} from "@chainsafe/eth2.0-types";
 
-import {IEth1Notifier, EthersEth1Options} from "../../../../src/eth1";
+import {IEth1Notifier, IEthersEth1Options} from "../../../../src/eth1";
 import {Block} from "ethers/providers";
 
 export class MockEth1Notifier extends EventEmitter implements IEth1Notifier {
-  public constructor(opts: EthersEth1Options) {
+  public constructor(opts: IEthersEth1Options) {
     super();
   }
 
@@ -20,7 +20,7 @@ export class MockEth1Notifier extends EventEmitter implements IEth1Notifier {
     return true;
   }
 
-  public async processBlockHeadUpdate(blockNumber): Promise<void> {
+  public async processBlockHeadUpdate(blockNumber: string|number): Promise<void> {
   }
 
   public async processDepositLog(dataHex: string, indexHex: string): Promise<void> {
@@ -46,14 +46,17 @@ export class MockEth1Notifier extends EventEmitter implements IEth1Notifier {
   }
 
   public async getBlock(blockHashOrBlockNumber: string | number): Promise<Block> {
+    // @ts-ignore
     return undefined;
   }
 
   public async getHead(): Promise<Block> {
+    // @ts-ignore
     return undefined;
   }
 
   public async depositCount(block?: string | number): Promise<number64> {
+    // @ts-ignore
     return undefined;
   }
 

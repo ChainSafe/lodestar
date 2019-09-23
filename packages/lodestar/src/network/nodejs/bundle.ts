@@ -9,17 +9,14 @@ import SECIO from "libp2p-secio";
 import Bootstrap from "libp2p-bootstrap";
 import MDNS from "libp2p-mdns";
 import PeerInfo from "peer-info";
-import deepmerge from "deepmerge";
 
-import {isPlainObject} from "../../util/objects";
-
-export interface Libp2pOptions {
+export interface ILibp2pOptions {
   peerInfo: PeerInfo;
   bootnodes?: string[];
 }
 
 export class NodejsNode extends LibP2p {
-  public constructor(options: Libp2pOptions) {
+  public constructor(options: ILibp2pOptions) {
     const defaults = {
       peerInfo: options.peerInfo,
       modules: {
@@ -43,7 +40,7 @@ export class NodejsNode extends LibP2p {
           bootstrap: {
             interval: 2000,
             enabled: true,
-            list: (options.bootnodes || []) as any[],
+            list: (options.bootnodes || []) as string[],
           }
         }
       }

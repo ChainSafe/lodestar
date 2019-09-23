@@ -4,13 +4,7 @@
 
 import BN from "bn.js";
 
-import {
-  BeaconState,
-  Epoch,
-  Validator,
-  ValidatorIndex,
-  uint64,
-} from "@chainsafe/eth2.0-types";
+import {BeaconState, Epoch, uint64, Validator, ValidatorIndex,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {intDiv} from "../../../util/math";
@@ -50,7 +44,7 @@ export function isSlashableValidator(validator: Validator, epoch: Epoch): boolea
  * Return the sequence of active validator indices at [[epoch]].
  */
 export function getActiveValidatorIndices(state: BeaconState, epoch: Epoch): ValidatorIndex[] {
-  const indices = [];
+  const indices: ValidatorIndex[] = [];
   state.validators.forEach((validator, index) => {
     if (isActiveValidator(validator, epoch)) {
       indices.push(index);

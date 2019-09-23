@@ -4,27 +4,31 @@ import {IApiModules} from "../../../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
 import {fromRestJson} from "../../utils";
 
-interface Body extends DefaultBody {
+interface IBody extends DefaultBody {
+  // eslint-disable-next-line camelcase
   beacon_block: object;
 }
 
 
 //TODO: add validation
-const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerResponse, DefaultQuery, DefaultParams, DefaultHeaders, Body> = {
-  schema: {
-    body: {
-      type: 'object',
-      requiredKeys: ["beacon_block"],
-      "beacon_block": {
-        type: 'object'
+const opts: fastify.RouteShorthandOptions<
+Server, IncomingMessage, ServerResponse, DefaultQuery, DefaultParams, DefaultHeaders, IBody
+>
+    = {
+      schema: {
+        body: {
+          type: "object",
+          requiredKeys: ["beacon_block"],
+          "beacon_block": {
+            type: "object"
+          }
+        }
       }
-    }
-  }
-};
+    };
 
 export const registerBlockPublishEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
-  fastify.post<DefaultQuery, DefaultParams, DefaultHeaders, Body>(
-    '/block',
+  fastify.post<DefaultQuery, DefaultParams, DefaultHeaders, IBody>(
+    "/block",
     opts,
     async (request, reply) => {
       await modules.chain.receiveBlock(
@@ -34,7 +38,7 @@ export const registerBlockPublishEndpoint = (fastify: IFastifyServer, modules: I
       );
       reply
         .code(200)
-        .type('application/json')
+        .type("application/json")
         .send();
     }
   );

@@ -2,13 +2,17 @@ import {Attestation, Slot, BeaconState} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {OperationsModule} from "./abstract";
-import {getAttestationDataSlot, isValidAttestationSlot, computeStartSlotOfEpoch} from "../../chain/stateTransition/util";
+import {
+  getAttestationDataSlot,
+  isValidAttestationSlot,
+  computeStartSlotOfEpoch,
+} from "../../chain/stateTransition/util";
 import {BulkRepository} from "../../db/api/beacon/repository";
 
 export class AttestationOperations extends OperationsModule<Attestation> {
   private readonly config: IBeaconConfig;
 
-  public constructor(db: BulkRepository<Attestation>, {config}) {
+  public constructor(db: BulkRepository<Attestation>, {config}: {config: IBeaconConfig}) {
     super(db);
     this.config = config;
   }

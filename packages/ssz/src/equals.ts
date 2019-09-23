@@ -1,12 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
-import assert from "assert";
 import BN from "bn.js";
 
-import {
-  AnySSZType,
-  FullSSZType,
-  Type,
-} from "./types";
+import {AnySSZType, FullSSZType, Type,} from "./types";
 import {_assertValidValue} from "./assertValidValue";
 import {parseType} from "./util/types";
 

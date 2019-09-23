@@ -2,15 +2,10 @@
  * @module chain/forkChoice
  */
 
-import {
-  Hash,
-  Gwei,
-  Slot,
-  ValidatorIndex,
-} from "@chainsafe/eth2.0-types";
+import {Gwei, Hash, Slot, ValidatorIndex,} from "@chainsafe/eth2.0-types";
 
 
-export interface LMDGHOST {
+export interface ILMDGHOST {
   addBlock(slot: Slot, blockRootBuf: Hash, parentRootBuf: Hash): void;
   addAttestation(blockRootBuf: Hash, attester: ValidatorIndex, weight: Gwei): void;
   setFinalized(blockRoot: Hash): void;

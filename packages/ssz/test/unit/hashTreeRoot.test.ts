@@ -1,20 +1,15 @@
 import {assert} from "chai";
-
+import {describe, it} from "mocha";
 import BN from "bn.js";
-
 import {
   hashTreeRoot,
   SerializableValue,
   Type,
 } from "../../src";
-import { AnySSZType } from "../../src/types";
+import {AnySSZType} from "../../src/types";
 
 
-import {
-  ArrayObject,
-  OuterObject,
-  SimpleObject,
-} from "./objects";
+import {ArrayObject, OuterObject, SimpleObject,} from "./objects";
 
 import {stringifyType} from "./utils";
 
@@ -40,17 +35,23 @@ describe("hashTreeRoot", () => {
     {value: 1, type: {type: Type.uint, byteLength: 8, offset: 2**32, useNumber: true}, expected: ""},
     {value: 2**32, type: "uint64", expected: ""},
     {value: 2**52-1, type: "uint64", expected: ""},
-    {value: 2**32, type: "number64", expected: hashTreeRoot(2**32, "uint64").toString('hex')},
-    {value: 2**52-1, type: "number64", expected: hashTreeRoot(2**52-1, "uint64").toString('hex')},
+    {value: 2**32, type: "number64", expected: hashTreeRoot(2**32, "uint64").toString("hex")},
+    {value: 2**52-1, type: "number64", expected: hashTreeRoot(2**52-1, "uint64").toString("hex")},
     {value: new BN("01", 16), type: "uint64", expected: ""},
     {value: new BN("1000000000000000", 16), type: "uint64", expected: ""},
     {value: new BN("ffffffffffffffff", 16), type: "uint64", expected: ""},
     {value: new BN("ffffffffffffffffffffffffffffffff", 16), type: "uint128", expected: ""},
-    {value: new BN("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16), type: "uint256", expected: ""},
+    {
+      value: new BN("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
+      , type: "uint256", expected: ""
+    },
     {value: Buffer.from("deadbeef", "hex"), type: "bytes4", expected: ""},
     {value: Buffer.from("deadbeef", "hex"), type: {elementType: "byte", maxLength: 100}, expected: ""},
     {value: Buffer.from("deadbeef", "hex"), type: {elementType: "byte", length: 4}, expected: ""},
-    {value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"), type: {elementType: "byte", length: 16}, expected: ""},
+    {
+      value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"),
+      type: {elementType: "byte", length: 16}, expected: ""
+    },
     {value: Buffer.from("deadbeef", "hex"), type: {elementType: "byte", maxLength: 100}, expected: ""},
     {value: {b:0,a:0}, type: SimpleObject, expected: ""},
     {value: {b:2,a:1}, type: SimpleObject, expected: ""},
@@ -60,9 +61,9 @@ describe("hashTreeRoot", () => {
     {value: [], type: {elementType: "uint16", maxLength: 100}, expected: ""},
     {value: [], type: {elementType: OuterObject, maxLength: 100}, expected: ""},
   ];
-  for (const {value, type, expected} of testCases) {
+  for (const {value, type} of testCases) {
     it(`should correctly hash ${stringifyType(type)}`, () => {
-      const actual = hashTreeRoot(value, type).toString('hex');
+      const actual = hashTreeRoot(value, type).toString("hex");
       assert(actual);
     });
   }
@@ -76,7 +77,7 @@ describe("hashTreeRoot", () => {
       elementType: {type:0, byteLength:8, useNumber:true},
       // VALIDATOR_REGISTRY_LIMIT
       maxLength: 1099511627776
-    }
+    };
     // This is the logic to calculate activeIndexRoots in processFinalUpdates
     const hash = hashTreeRoot(validatorIndexes, type).toString("hex");
     const want = "ba1031ba1a5daab0d49597cfa8664ce2b4c9b4db6ca69fbef51e0a9a325a3b63";
@@ -92,7 +93,7 @@ describe("hashTreeRoot", () => {
       accountBalances.balances.push(new BN("32000000000"));
     }
     const accountBalancesType: AnySSZType = {
-      fields: [["balances", { elementType: "uint64", maxLength: count }]]
+      fields: [["balances", {elementType: "uint64", maxLength: count}]]
     };
     const hash = hashTreeRoot(accountBalances, accountBalancesType).toString("hex");
     assert(hash);
@@ -110,8 +111,8 @@ describe("hashTreeRoot", () => {
     };
     const forkType: AnySSZType = {
       fields: [
-        ["previousVersion", { elementType: "byte", length: 4 }],
-        ["curVersion", { elementType: "byte", length: 4 }],
+        ["previousVersion", {elementType: "byte", length: 4}],
+        ["curVersion", {elementType: "byte", length: 4}],
         ["epoch", "uint64"]
       ]
     };
@@ -127,7 +128,10 @@ describe("hashTreeRoot", () => {
   }[] = [
     {value: 1, type: "foo", reason: "Invalid type"},
     {value: 1, type: "bar", reason: "Invalid type"},
-    {value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"), type: "bytes32", reason: "Invalida byte array length"},
+    {
+      value: Buffer.from("deadbeefdeadbeefdeadbeefdeadbeef", "hex"),
+      type: "bytes32", reason: "Invalida byte array length"
+    },
   ];
   for (const {value, type, reason} of failCases) {
     it(`should throw an error for ${stringifyType(type)}: ${reason}`, () => {

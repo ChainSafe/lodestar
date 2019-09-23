@@ -12,15 +12,15 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {ZERO_HASH, Method, RequestId} from "../../constants";
+import {Method, RequestId, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
-import {ReputationStore} from "../reputation";
 import {ILogger} from "../../logger";
-import {ISyncReqResp, ISyncOptions} from "./interface";
+import {ISyncOptions, ISyncReqResp} from "./interface";
+import {ReputationStore} from "../IReputation";
 
-export interface SyncReqRespModules {
+export interface ISyncReqRespModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   chain: IBeaconChain;
@@ -42,7 +42,7 @@ export class SyncReqResp implements ISyncReqResp {
   private reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: ISyncOptions, {config, db, chain, network, reps, logger}: SyncReqRespModules) {
+  public constructor(opts: ISyncOptions, {config, db, chain, network, reps, logger}: ISyncReqRespModules) {
     this.config = config;
     this.opts = opts;
     this.db = db;
@@ -50,6 +50,96 @@ export class SyncReqResp implements ISyncReqResp {
     this.network = network;
     this.reps = reps;
     this.logger = logger;
+  }
+
+  public async start(): Promise<void> {
+    this.network.on("peer:connect", this.handshake);
+    this.network.reqResp.on("request", this.onRequest);
+    await Promise.all(
+      this.network.getPeers().map(async (peerInfo) =>
+        this.network.reqResp.hello(peerInfo, await this.createHello())));
+  }
+
+  public async stop(): Promise<void> {
+    this.network.removeListener("peer:connect", this.handshake);
+    this.network.reqResp.removeListener("request", this.onRequest);
+    await Promise.all(
+      this.network.getPeers().map((peerInfo) =>
+        this.network.reqResp.goodbye(peerInfo, new BN(0))));
+  }
+
+  public onRequest = async (
+    peerInfo: PeerInfo,
+    method: Method,
+    id: RequestId,
+    body: RequestBody,
+  ): Promise<void> => {
+    switch (method) {
+      case Method.Hello:
+        return await this.onHello(peerInfo, id, body as Hello);
+      case Method.Goodbye:
+        return await this.onGoodbye(peerInfo, id, body as Goodbye);
+      case Method.BeaconBlocksByRange:
+        return await this.onBeaconBlocksByRange(id, body as BeaconBlocksByRangeRequest);
+      case Method.BeaconBlocksByRoot:
+        return await this.onBeaconBlocksByRoot(id, body as BeaconBlocksByRootRequest);
+      default:
+        this.logger.error(`Invalid request method ${method} from ${peerInfo.id.toB58String()}`);
+    }
+  };
+
+  public async onHello(peerInfo: PeerInfo, id: RequestId, request: Hello): Promise<void> {
+    // set hello on peer
+    this.reps.get(peerInfo.id.toB58String()).latestHello = request;
+    // send hello response
+    try {
+      const hello = await this.createHello();
+      this.network.reqResp.sendResponse(id, null, hello);
+    } catch (e) {
+      this.network.reqResp.sendResponse(id, e, null);
+    }
+    // TODO handle incorrect forkVersion or disjoint finalizedCheckpoint
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
+    await this.network.disconnect(peerInfo);
+  }
+
+  public async onBeaconBlocksByRange(
+    id: RequestId,
+    request: BeaconBlocksByRangeRequest
+  ): Promise<void> {
+    try {
+      const response: BeaconBlocksByRangeResponse = [];
+      for (let slot = request.startSlot; slot < request.startSlot + request.count; slot++) {
+        const block = await this.db.block.getBlockBySlot(slot);
+        if (block) {
+          response.push(block);
+        }
+      }
+      this.network.reqResp.sendResponse(id, null, response);
+    } catch (e) {
+      this.network.reqResp.sendResponse(id, e, null);
+    }
+  }
+
+  public async onBeaconBlocksByRoot(
+    id: RequestId,
+    request: BeaconBlocksByRootRequest
+  ): Promise<void> {
+    try {
+      const response: BeaconBlocksByRootResponse = [];
+      for (const blockRoot of request) {
+        const block = await this.db.block.get(blockRoot);
+        if (block) {
+          response.push(block);
+        }
+      }
+      this.network.reqResp.sendResponse(id, null, response);
+    } catch (e) {
+      this.network.reqResp.sendResponse(id, e, null);
+    }
   }
 
   private async createHello(): Promise<Hello> {
@@ -96,96 +186,5 @@ export class SyncReqResp implements ISyncReqResp {
         this.logger.error(e);
       }
     }
-  }
-
-  public onRequest = async (
-    peerInfo: PeerInfo,
-    method: Method,
-    id: RequestId,
-    body: RequestBody,
-  ): Promise<void> => {
-    switch (method) {
-      case Method.Hello:
-        return await this.onHello(peerInfo, id, body as Hello);
-      case Method.Goodbye:
-        return await this.onGoodbye(peerInfo, id, body as Goodbye);
-      case Method.BeaconBlocksByRange:
-        return await this.onBeaconBlocksByRange(id, body as BeaconBlocksByRangeRequest);
-      case Method.BeaconBlocksByRoot:
-        return await this.onBeaconBlocksByRoot(id, body as BeaconBlocksByRootRequest);
-      default:
-        this.logger.error(`Invalid request method ${method} from ${peerInfo.id.toB58String()}`);
-    }
   };
-
-  public async onHello(peerInfo: PeerInfo, id: RequestId, request: Hello): Promise<void> {
-    // set hello on peer
-    this.reps.get(peerInfo.id.toB58String()).latestHello = request;
-    // send hello response
-    try {
-      const hello = await this.createHello();
-      this.network.reqResp.sendResponse(id, null, hello);
-    } catch (e) {
-      this.network.reqResp.sendResponse(id, e, null);
-    }
-    // TODO handle incorrect forkVersion or disjoint finalizedCheckpoint
-  }
-
-  public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
-    await this.network.disconnect(peerInfo);
-  }
-
-  public async onBeaconBlocksByRange(
-    id: RequestId,
-    request: BeaconBlocksByRangeRequest
-  ): Promise<void> {
-    try {
-      const response: BeaconBlocksByRangeResponse = [];
-      for (let slot = request.startSlot; slot < request.startSlot + request.count; slot++) {
-        const block = await this.db.block.getBlockBySlot(slot);
-        if (block) {
-          response.push(block);
-        }
-      }
-      this.network.reqResp.sendResponse(id, null, response);
-    } catch (e) {
-      this.network.reqResp.sendResponse(id, e, null);
-    }
-  }
-
-  public async onBeaconBlocksByRoot(
-    id: RequestId,
-    request: BeaconBlocksByRootRequest
-  ): Promise<void> {
-    try {
-      const response: BeaconBlocksByRootResponse = [];
-      for (const blockRoot of request) {
-        const block = await this.db.block.get(blockRoot);
-        if (block) {
-          response.push(block);
-        }
-      }
-      this.network.reqResp.sendResponse(id, null, response);
-    } catch (e) {
-      this.network.reqResp.sendResponse(id, e, null);
-    }
-  }
-
-  // service
-
-  public async start(): Promise<void> {
-    this.network.on("peer:connect", this.handshake);
-    this.network.reqResp.on("request", this.onRequest)
-    await Promise.all(
-      this.network.getPeers().map(async (peerInfo) =>
-        this.network.reqResp.hello(peerInfo, await this.createHello())));
-  }
-
-  public async stop(): Promise<void> {
-    this.network.removeListener("peer:connect", this.handshake);
-    this.network.reqResp.removeListener("request", this.onRequest)
-    await Promise.all(
-      this.network.getPeers().map((peerInfo) =>
-        this.network.reqResp.goodbye(peerInfo, new BN(0))));
-  }
 }

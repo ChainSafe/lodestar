@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
 import assert from "assert";
 import BN from "bn.js";
@@ -47,35 +48,35 @@ export function assertValidValue(value: any, type: AnySSZType): void {
 export function _assertValidValue(value: any, type: FullSSZType): void {
   switch (type.type) {
     case Type.uint:
-      assert(BN.isBN(value) || value === Number(value), 'Invalid uint: not a uint');
+      assert(BN.isBN(value) || value === Number(value), "Invalid uint: not a uint");
       if (value === Infinity) {
         break;
       }
-      assert((new BN(value)).gten(0), 'Invalid uint: value < 0');
-      assert((new BN(value)).lt((new BN(2)).pow(new BN(type.byteLength * 8))), 'Invalid uint: not in range');
+      assert((new BN(value)).gten(0), "Invalid uint: value < 0");
+      assert((new BN(value)).lt((new BN(2)).pow(new BN(type.byteLength * 8))), "Invalid uint: not in range");
       break;
     case Type.bool:
-      assert(value === true || value === false, 'Invalid boolean: not a boolean');
+      assert(value === true || value === false, "Invalid boolean: not a boolean");
       break;
     case Type.bitList:
-      assert(BitList.isBitList(value), 'Invalid BitList: not a BitList');
-      assert(value.bitLength <= type.maxLength, 'Invalid BitList: longer than max length');
+      assert(BitList.isBitList(value), "Invalid BitList: not a BitList");
+      assert(value.bitLength <= type.maxLength, "Invalid BitList: longer than max length");
       break;
     case Type.bitVector:
-      assert(BitVector.isBitVector(value), 'Invalid BitVector: not a BitVector');
-      assert(value.bitLength === type.length, 'Invalid BitVector: incorrect length');
+      assert(BitVector.isBitVector(value), "Invalid BitVector: not a BitVector");
+      assert(value.bitLength === type.length, "Invalid BitVector: incorrect length");
       break;
     case Type.byteList:
-      assert(value instanceof Uint8Array || value instanceof Buffer, 'Invalid byte array: not a Uint8Array/Buffer');
-      assert(value.length <= type.maxLength, 'Invalid byte array: longer than max length');
+      assert(value instanceof Uint8Array || value instanceof Buffer, "Invalid byte array: not a Uint8Array/Buffer");
+      assert(value.length <= type.maxLength, "Invalid byte array: longer than max length");
       break;
     case Type.byteVector:
-      assert(value instanceof Uint8Array || value instanceof Buffer, 'Invalid byte array: not a Uint8Array/Buffer');
-      assert(value.length === type.length, 'Invalid byte array: incorrect length');
+      assert(value instanceof Uint8Array || value instanceof Buffer, "Invalid byte array: not a Uint8Array/Buffer");
+      assert(value.length === type.length, "Invalid byte array: incorrect length");
       break;
     case Type.list:
-      assert(Array.isArray(value), 'Invalid list: not an Array');
-      assert(value.length <= type.maxLength, 'Invalid list: longer than max length');
+      assert(Array.isArray(value), "Invalid list: not an Array");
+      assert(value.length <= type.maxLength, "Invalid list: longer than max length");
       value.forEach((element: any, i: number) => {
         try {
           _assertValidValue(element, type.elementType);
@@ -85,8 +86,8 @@ export function _assertValidValue(value: any, type: FullSSZType): void {
       });
       break;
     case Type.vector:
-      assert(Array.isArray(value), 'Invalid vector: not an Array');
-      assert(value.length === type.length, 'Invalid vector: incorrect length');
+      assert(Array.isArray(value), "Invalid vector: not an Array");
+      assert(value.length === type.length, "Invalid vector: incorrect length");
       value.forEach((element: any, i: number) => {
         try {
           _assertValidValue(element, type.elementType);
@@ -96,7 +97,7 @@ export function _assertValidValue(value: any, type: FullSSZType): void {
       });
       break;
     case Type.container:
-      assert(value === Object(value), 'Invalid container: not an Object');
+      assert(value === Object(value), "Invalid container: not an Object");
       type.fields.forEach(([fieldName, fieldType]) => {
         try {
           assert(value[fieldName] !== undefined, "field does not exist");

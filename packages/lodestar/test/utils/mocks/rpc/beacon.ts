@@ -1,7 +1,8 @@
 import {IBeaconApi} from "../../../../src/api/rpc/api/beacon";
-import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus, uint64} from "@chainsafe/eth2.0-types";
 import {getEmptyBlock} from "../../../../src/chain/genesis/genesis";
 import {ApiNamespace} from "../../../../src/api";
+import BN from "bn.js";
 
 export interface MockBeaconApiOpts {
   version?: bytes32;
@@ -31,8 +32,8 @@ export class MockBeaconApi implements IBeaconApi {
     return this.version;
   }
 
-  public async getFork(): Promise<Fork> {
-    return this.fork;
+  public async getFork(): Promise<{fork: Fork; chainId: uint64}> {
+    return {fork: this.fork, chainId: new BN(1)};
   }
 
   public async getGenesisTime(): Promise<number64> {
