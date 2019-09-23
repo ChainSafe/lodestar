@@ -46,6 +46,11 @@ export interface ISpecTestOptions<TestCase, Result> {
 
   timeout?: number;
 
+  /**
+   * Whether input is unsafe (and ssz types should be transformed)
+   */
+  unsafeInput?: boolean;
+
 }
 
 export interface ITestCaseMeta {
@@ -155,7 +160,10 @@ function loadInputFiles<TestCase, Result>(
 
 function deserializeTestCase<TestCase, Result>(file, inputName, options: ISpecTestOptions<TestCase, Result>): object {
   if (file.endsWith(InputType.SSZ)) {
-    return deserialize(readFileSync(file), transformType(options.sszTypes[inputName]));
+    const safeType = options.unsafeInput
+      ? transformType(options.sszTypes[inputName])
+      : options.sszTypes[inputName];
+    return deserialize(readFileSync(file), safeType);
   } else {
     return  objectToCamelCase(
       load(

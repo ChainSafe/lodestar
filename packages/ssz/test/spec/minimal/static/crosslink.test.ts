@@ -44,7 +44,8 @@ interface IResult {
       expectFunc: (testCase, expected, actual) => {
         expect(expected.serialized.equals(actual.serialized)).to.be.true;
         expect(expected.root.equals(actual.root)).to.be.true;
-      }
+      },
+      unsafeInput: true,
     }
   );
 
