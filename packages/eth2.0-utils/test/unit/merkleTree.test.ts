@@ -1,12 +1,13 @@
 import {assert, expect} from "chai";
-import {ProgressiveMerkleTree, verifyMerkleBranch} from "../../src/merkleTree";
+import {IMerkleTreeSerialization, ProgressiveMerkleTree, verifyMerkleBranch} from "../../src/merkleTree";
 import {LightProgressiveMerkleTree} from "../../src/merkleTree/lightMerkleTree";
-
+import sinon from "sinon";
+import {describe, it} from "mocha";
 
 describe("util/merkleTree", function() {
   describe("ProgressiveMerkleTree", function() {
     it("can push items", () => {
-      const t = ProgressiveMerkleTree.empty(4);
+      const t = ProgressiveMerkleTree.empty(4, sinon.stub() as unknown as IMerkleTreeSerialization);
       const buf = Buffer.alloc(32);
       for (let i = 1; i < 10; i++) {
         buf[0] = i;
@@ -16,7 +17,7 @@ describe("util/merkleTree", function() {
     });
 
     it("can add items", () => {
-      const t = ProgressiveMerkleTree.empty(4);
+      const t = ProgressiveMerkleTree.empty(4, sinon.stub() as unknown as IMerkleTreeSerialization);
       const buf = Buffer.alloc(32);
       for (let i = 1; i < 10; i++) {
         buf[0] = i;
@@ -27,7 +28,17 @@ describe("util/merkleTree", function() {
 
     it("returns valid proofs", () => {
       const depth = 4;
-      const t = ProgressiveMerkleTree.empty(depth);
+      const t = ProgressiveMerkleTree.empty(
+        depth,
+        {
+          deserializeTree: sinon.stub(),
+          serializeTree: sinon.stub(),
+          serializeLength: (
+            () =>
+              Buffer.from("0a00000000000000000000000000000000000000000000000000000000000000", "hex")
+          ),
+        }
+      );
       for (let i = 0; i < 10; i++) {
         const buf = Buffer.alloc(32, i);
         t.push(buf);

@@ -6,52 +6,65 @@ import assert from "assert";
 import {Hash, MerkleTree, number64} from "@chainsafe/eth2.0-types";
 import {hash} from "../crypto";
 import {intDiv} from "../math";
-import {deserialize, serialize, SimpleContainerType} from "@chainsafe/ssz";
 import {IProgressiveMerkleTree} from "./interface";
 
-const MerkleTreeType: SimpleContainerType = {
-  fields: [
-    ["depth", "number64"],
-    ["tree", {
-      elementType: {
-        elementType: {
-          elementType: "byte",
-          maxLength: 32,
-        },
-        maxLength: 32,
-      },
-      maxLength: 32,
-    }],
-  ],
-};
+// const MerkleTreeType: SimpleContainerType = {
+//   fields: [
+//     ["depth", "number64"],
+//     ["tree", {
+//       elementType: {
+//         elementType: {
+//           elementType: "byte",
+//           maxLength: 32,
+//         },
+//         maxLength: 32,
+//       },
+//       maxLength: 32,
+//     }],
+//   ],
+// };
+
+export interface IMerkleTreeSerialization {
+
+  serializeTree(tree: MerkleTree): Buffer;
+
+  serializeLength(length: number): Buffer;
+
+  deserializeTree(tree: Buffer): MerkleTree;
+
+}
 
 export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
   private readonly _depth: number;
   private readonly _zerohashes: Hash[];
+  private readonly serialization: IMerkleTreeSerialization;
   private _tree: Hash[][];
   private _dirty: boolean;
 
-  public constructor(depth: number, tree: Hash[][]) {
+  public constructor(depth: number, tree: Hash[][], serialization: IMerkleTreeSerialization) {
     assert(depth > 1 && depth <= 52, "tree depth must be between 1 and 53");
     this._depth = depth;
     this._tree = tree;
     this._zerohashes = this.generateZeroHashes();
     this._dirty = false;
+    this.serialization = serialization;
   }
 
-  public static deserialize(data: Buffer): ProgressiveMerkleTree {
-    const value = deserialize(data, MerkleTreeType);
+  public static deserialize(data: Buffer, serialization: IMerkleTreeSerialization): ProgressiveMerkleTree {
+    const value = serialization.deserializeTree(data);
     return new ProgressiveMerkleTree(
       value.depth,
-      value.tree
+      value.tree,
+      serialization
     );
   }
 
-  public static empty(depth: number): ProgressiveMerkleTree {
+  public static empty(depth: number, serialization: IMerkleTreeSerialization): ProgressiveMerkleTree {
     const tree = Array.from({length: depth + 1}, () => []);
     return new ProgressiveMerkleTree(
       depth,
-      tree
+      tree,
+      serialization
     );
   }
 
@@ -81,7 +94,7 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
       }
       index = intDiv(index, 2);
     }
-    proof.push(serialize(this._tree[0].length, "uint256"));
+    proof.push(this.serialization.serializeLength(this._tree[0].length));
     return proof;
   }
 
