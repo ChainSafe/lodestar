@@ -30,25 +30,14 @@ export class WinstonLogger implements ILogger {
               format: "YYYY-MM-DD HH:mm:ss"
             }),
             format.printf((info) => {
-              // const screenSize = process.stdout.columns;
-              // const paddingBeforeInfo = 21;
               const paddingBetweenInfo = 30;
-              // const paddingPreMsg = paddingBeforeInfo + paddingBetweenInfo + info.level.length - 19;
 
               const infoString = (info.module || info.namespace || "");
               const infoPad = paddingBetweenInfo - infoString.length;
 
-              // if (info.message.length + paddingPreMsg > screenSize) {
-              //   const max = screenSize - paddingPreMsg;
-              //   const p2 = info.message.length - max;
-              //   const msgs = [info.message.substring(0, max), info.message.substring(max)];
-              // eslint-disable-next-line max-len
-              //   return (`${info.timestamp}  [${infoString.toUpperCase()}] ${info.level.padStart(infoPad)}: ${msgs[0]}\n${msgs[1].padStart(paddingPreMsg + 2)}`)
-              // } else {
               return (
                 `${info.timestamp}  [${infoString.toUpperCase()}] ${info.level.padStart(infoPad)}: ${info.message}`
               );
-              // }
             })
           ),
           handleExceptions: true

@@ -16,6 +16,7 @@ import {
   getIndexedAttestation,
   getPreviousEpoch, isValidAttestationSlot,
   isValidIndexedAttestation,
+  getCrosslinkCommittee,
 } from "../../util";
 
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#attestations
@@ -33,6 +34,12 @@ export function processAttestation(
 
   const attestationSlot = getAttestationDataSlot(config, state, data);
   assert(isValidAttestationSlot(config, attestationSlot, state.slot));
+
+  const committee = getCrosslinkCommittee(config, state, data.target.epoch, data.crosslink.shard);
+  assert(
+    attestation.aggregationBits.bitLength === attestation.custodyBits.bitLength &&
+    attestation.aggregationBits.bitLength === committee.length
+  );
 
   // Cache pending attestation
   const pendingAttestation: PendingAttestation = {

@@ -117,7 +117,7 @@ export function getAttestingIndices(
 ): ValidatorIndex[] {
   const committee = getCrosslinkCommittee(config, state, data.target.epoch, data.crosslink.shard);
   // Find the participating attesters in the committee
-  return committee.filter((_, i) => {return bits.getBit(i);}).sort((a, b) => a - b);
+  return committee.filter((_, i) => bits.getBit(i)).sort((a, b) => a - b);
 }
 
 /**
