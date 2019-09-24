@@ -1,20 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
 import snakeCase from "snake-case";
-import {toHex} from "../../util/bytes";
+import {toHex} from "../bytes";
 import BN from "bn.js";
-import {AnySSZType, FullSSZType, parseType, Type} from "@chainsafe/ssz";
-//@ts-ignore
+import {AnySSZType, FullSSZType, parseType, Type} from "@chainsafe/ssz-type-schema";
 // eslint-disable-next-line import/default
 import camelcaseKeys from "camelcase-keys";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 
-export function toRestJson(o: object): object {
+export function toJson(o: object): object {
   o = {...o};
-  for(const key in o) {
+  for (const key in o) {
     const newKey = snakeCase(key);
     //@ts-ignore
-    o[newKey] =  o[key] !== null ? serializeToRestValue(o[key]): null;
-    if(newKey !== key) {
+    o[newKey] = o[key] !== null ? serializeToJson(o[key]) : null;
+    if (newKey !== key) {
       //@ts-ignore
       delete o[key];
     }
@@ -22,36 +22,36 @@ export function toRestJson(o: object): object {
   return o;
 }
 
-export function serializeToRestValue(value: any): any {
-  if(Buffer.isBuffer(value)) {
+function serializeToJson(value: any): any {
+  if (Buffer.isBuffer(value)) {
     return toHex(value);
   }
   if (BN.isBN(value)) {
-    return  value.toString();
+    return value.toString();
   }
-  if(BitVector.isBitVector(value)) {
-    return  Buffer.from((value as BitVector).toBitfield()).toString("hex");
+  if (BitVector.isBitVector(value)) {
+    return Buffer.from((value as BitVector).toBitfield()).toString("hex");
   }
-  if(BitList.isBitList(value)) {
-    return  Buffer.from((value as BitList).serialize()).toString("hex");
+  if (BitList.isBitList(value)) {
+    return Buffer.from((value as BitList).serialize()).toString("hex");
   }
-  if(Array.isArray(value)) {
-    return value.map(toRestJson);
+  if (Array.isArray(value)) {
+    return value.map(toJson);
   }
-  if (typeof value  === "object") {
-    return toRestJson(value);
+  if (typeof value === "object") {
+    return toJson(value);
   }
   return value;
 }
 
-export function fromRestJson<T>(value: object, type: AnySSZType): T {
+export function fromJson<T>(value: object, type: AnySSZType): T {
   value = camelcaseKeys(value, {deep: true});
   return expandJsonValue(value, parseType(type));
 }
 
 
 function expandJsonValue(value: any, type: FullSSZType): any {
-  switch(type.type) {
+  switch (type.type) {
     case Type.uint:
       if (type.byteLength > 6 && type.useNumber)
         return Infinity;

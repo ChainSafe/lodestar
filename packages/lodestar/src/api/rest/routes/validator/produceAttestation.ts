@@ -3,7 +3,7 @@ import {IFastifyServer} from "../../index";
 import fastify, {DefaultQuery} from "fastify";
 import {IApiModules} from "../../../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
-import {toRestJson} from "../../utils";
+import {toJson} from "@chainsafe/eth2.0-utils";
 import {produceAttestation} from "../../../impl/validator";
 
 interface IQuery extends DefaultQuery {
@@ -54,7 +54,7 @@ export const registerAttestationProductionEndpoint = (fastify: IFastifyServer, m
       reply
         .code(200)
         .type("application/json")
-        .send(toRestJson(attestation));
+        .send(toJson(attestation));
     }
   );
 };

@@ -41,13 +41,19 @@
   ],
   "dependencies": {
     "@chainsafe/as-sha256": "^0.1.2",
+    "@chainsafe/bit-utils": "0.1.4",
     "@chainsafe/eth2.0-types": "^0.1.1",
     "@chainsafe/ssz-type-schema": "^0.0.1",
-    "bn.js": "^5.0.0"
+    "bn.js": "^5.0.0",
+    "camelcase-keys": "^6.0.1",
+    "deepcopy": "^2.0.0",
+    "snake-case": "^2.1.0"
   },
   "devDependencies": {
+    "@types/camelcase-keys": "^5.1.1",
     "@types/chai": "^4.1.7",
     "@types/mocha": "^5.2.7",
+    "@types/snake-case": "^1.1.2",
     "chai": "^4.2.0",
     "mocha": "^6.2.0"
   }

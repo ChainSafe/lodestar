@@ -655,9 +655,10 @@
   dependencies:
     assemblyscript "https://github.com/AssemblyScript/assemblyscript.git"
 
-"@chainsafe/bit-utils@^0.1.2", "@chainsafe/bit-utils@^0.1.3":
-  version "0.1.3"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.3.tgz#d29a69c161526fda8bf0880da3d62a4a7100e169"
+"@chainsafe/bit-utils@0.1.4":
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.4.tgz#c7fcc20f8ea916b7767b82ce6fad389db675bd4e"
+  integrity sha512-pT+XpjJKoO3+Zt3w0vVJftKzYPnW4ObtkXFQ49eZHlLbmJbZ0aSM1jxU1RjFmOyMYjDSMVlaPR311c8K7lXGJQ==
 
 "@chainsafe/eth2.0-spec-test-util@^0.2.3":
   version "0.2.3"
@@ -1798,6 +1799,13 @@
   dependencies:
     "@types/node" "*"
 
+"@types/camelcase-keys@^5.1.1":
+  version "5.1.1"
+  resolved "https://registry.yarnpkg.com/@types/camelcase-keys/-/camelcase-keys-5.1.1.tgz#98b0401e7e759fee9ccf2ee1a32a26dc33b87e01"
+  integrity sha512-Nlr/xdCry/Zbr5Q3jaDazCHf0FfeETVVaDVXUszP8DUUvVfkc/kt7Mab8TaNkKS6s7AE8qNFqjYLL9Y8zKA0Bg==
+  dependencies:
+    camelcase-keys "*"
+
 "@types/camelcase@^5.2.0":
   version "5.2.0"
   resolved "https://registry.yarnpkg.com/@types/camelcase/-/camelcase-5.2.0.tgz#5c139f8618a126827129587cce9ee904f9a79863"
@@ -1969,6 +1977,13 @@
 "@types/sinon@^7.0.11":
   version "7.0.13"
   resolved "https://registry.yarnpkg.com/@types/sinon/-/sinon-7.0.13.tgz#ca039c23a9e27ebea53e0901ef928ea2a1a6d313"
+
+"@types/snake-case@^1.1.2":
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/@types/snake-case/-/snake-case-1.1.2.tgz#d1eed5604ec3e81644083c1635747ce5109c1ba2"
+  integrity sha1-0e7VYE7D6BZECDwWNXR85RCcG6I=
+  dependencies:
+    snake-case "*"
 
 "@types/superagent@*":
   version "4.1.3"
@@ -3603,6 +3618,15 @@ callsites@^3.0.0:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/callsites/-/callsites-3.1.0.tgz#b3630abd8943432f54b3f0519238e33cd7df2f73"
 
+camelcase-keys@*, camelcase-keys@^6.0.1:
+  version "6.0.1"
+  resolved "https://registry.yarnpkg.com/camelcase-keys/-/camelcase-keys-6.0.1.tgz#a0d1a03cab5499a7ddcc62b23b4874399ca1dfaf"
+  integrity sha512-Pet+fVo99HMVy183qJuyTiQECQlb0dCXg89qhixcud88j4BSns+gzhSrjRT0ustEYSWJqKMO42arm1cS1VG5FA==
+  dependencies:
+    camelcase "^5.3.1"
+    map-obj "^4.0.0"
+    quick-lru "^4.0.1"
+
 camelcase-keys@^2.0.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/camelcase-keys/-/camelcase-keys-2.1.0.tgz#308beeaffdf28119051efa1d932213c91b8f92e7"
@@ -3617,15 +3641,6 @@ camelcase-keys@^4.0.0:
     camelcase "^4.1.0"
     map-obj "^2.0.0"
     quick-lru "^1.0.0"
-
-camelcase-keys@^6.0.1:
-  version "6.0.1"
-  resolved "https://registry.yarnpkg.com/camelcase-keys/-/camelcase-keys-6.0.1.tgz#a0d1a03cab5499a7ddcc62b23b4874399ca1dfaf"
-  integrity sha512-Pet+fVo99HMVy183qJuyTiQECQlb0dCXg89qhixcud88j4BSns+gzhSrjRT0ustEYSWJqKMO42arm1cS1VG5FA==
-  dependencies:
-    camelcase "^5.3.1"
-    map-obj "^4.0.0"
-    quick-lru "^4.0.1"
 
 camelcase@*, camelcase@^5.0.0, camelcase@^5.3.1:
   version "5.3.1"
@@ -4379,6 +4394,13 @@ deep-extend@^0.6.0:
 deep-is@~0.1.3:
   version "0.1.3"
   resolved "https://registry.yarnpkg.com/deep-is/-/deep-is-0.1.3.tgz#b369d6fb5dbc13eecf524f91b070feedc357cf34"
+
+deepcopy@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/deepcopy/-/deepcopy-2.0.0.tgz#2acb9b7645f9f54d815eee991455e790e72e2252"
+  integrity sha512-d5ZK7pJw7F3k6M5vqDjGiiUS9xliIyWkdzBjnPhnSeRGjkYOGZMCFkdKVwV/WiHOe0NwzB8q+iDo7afvSf0arA==
+  dependencies:
+    type-detect "^4.0.8"
 
 deepmerge@*, deepmerge@4.0.0, deepmerge@^4.0.0:
   version "4.0.0"
@@ -10611,7 +10633,7 @@ smart-buffer@4.0.2:
   version "4.0.2"
   resolved "https://registry.yarnpkg.com/smart-buffer/-/smart-buffer-4.0.2.tgz#5207858c3815cc69110703c6b94e46c15634395d"
 
-snake-case@^2.1.0:
+snake-case@*, snake-case@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/snake-case/-/snake-case-2.1.0.tgz#41bdb1b73f30ec66a04d4e2cad1b76387d4d6d9f"
   integrity sha1-Qb2xtz8w7GagTU4srRt2OH1NbZ8=
@@ -11468,7 +11490,7 @@ type-check@~0.3.2:
   dependencies:
     prelude-ls "~1.1.2"
 
-type-detect@4.0.8, type-detect@^4.0.0, type-detect@^4.0.5:
+type-detect@4.0.8, type-detect@^4.0.0, type-detect@^4.0.5, type-detect@^4.0.8:
   version "4.0.8"
   resolved "https://registry.yarnpkg.com/type-detect/-/type-detect-4.0.8.tgz#7646fb5f18871cfbb7749e69bd39a6388eb7450c"
 
