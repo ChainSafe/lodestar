@@ -9,42 +9,31 @@ export type RequestId = string;
 export type RequestBody =
   Hello |
   Goodbye |
-  BeaconBlocksRequest |
-  RecentBeaconBlocksRequest;
+  BeaconBlocksByRangeRequest |
+  BeaconBlocksByRootRequest;
 
 export type ResponseBody =
   Hello |
   Goodbye |
-  BeaconBlocksResponse |
-  RecentBeaconBlocksResponse;
+  BeaconBlocksByRangeResponse |
+  BeaconBlocksByRootResponse;
 
 export interface Hello {
-  forkVersion: Version;
+  headForkVersion: Version;
   finalizedRoot: Hash;
   finalizedEpoch: Epoch;
   headRoot: Hash;
   headSlot: Slot;
 }
+export type Goodbye = uint64;
 
-export interface Goodbye {
-  reason: uint64;
-}
-
-export interface BeaconBlocksRequest {
+export interface BeaconBlocksByRangeRequest {
   headBlockRoot: Hash; 
   startSlot: Slot;
   count: number64;
   step: number64;
 }
+export type BeaconBlocksByRangeResponse = BeaconBlock[];
 
-export interface BeaconBlocksResponse {
-  blocks: BeaconBlock[];
-}
-
-export interface RecentBeaconBlocksRequest {
-  blockRoots: Hash[];
-}
-
-export interface RecentBeaconBlocksResponse {
-  blocks: BeaconBlock[];
-}
+export type BeaconBlocksByRootRequest = Hash[];
+export type BeaconBlocksByRootResponse = BeaconBlock[];

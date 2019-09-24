@@ -1,8 +1,8 @@
 // gossip
 
-export const BLOCK_TOPIC = "beacon_block";
-export const ATTESTATION_TOPIC = "beacon_attestation";
-export const SHARD_ATTESTATION_TOPIC = "shard{shard}_attestation";
+export const BLOCK_TOPIC = "/eth2/beacon_block";
+export const ATTESTATION_TOPIC = "/eth2/beacon_attestation";
+export const SHARD_ATTESTATION_TOPIC = "/eth2/shard{shard}_attestation";
 export const SHARD_SUBNET_COUNT = 10;
 
 // req/resp
@@ -12,8 +12,8 @@ export type RequestId = string;
 export enum Method {
   Hello = "hello",
   Goodbye = "goodbye",
-  BeaconBlocks = "beacon_blocks",
-  RecentBeaconBlocks = "recent_beacon_blocks",
+  BeaconBlocksByRange = "beacon_blocks_by_range",
+  BeaconBlocksByRoot = "beacon_blocks_by_root",
 }
 
 export enum Encoding {

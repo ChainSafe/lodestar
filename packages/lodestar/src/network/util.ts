@@ -8,7 +8,7 @@ import PeerInfo from "peer-info";
 import promisify from "promisify-es6";
 import {Shard} from "@chainsafe/eth2.0-types";
 
-import {RequestId, SHARD_ATTESTATION_TOPIC, SHARD_SUBNET_COUNT} from "../constants";
+import {RequestId, SHARD_SUBNET_COUNT, SHARD_ATTESTATION_TOPIC, BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
 
 // req/resp
 
@@ -34,8 +34,16 @@ export function createRpcProtocol(method: string, encoding: string, version: num
 
 // gossip
 
-export function shardSubnetAttestationTopic(shard: Shard): string {
-  return SHARD_ATTESTATION_TOPIC.replace("{shard}", String(shard % SHARD_SUBNET_COUNT));
+export function blockTopic(encoding: string = "ssz"): string {
+  return `${BLOCK_TOPIC}/${encoding}`;
+}
+
+export function attestationTopic(encoding: string = "ssz"): string {
+  return `${ATTESTATION_TOPIC}/${encoding}`;
+}
+
+export function shardSubnetAttestationTopic(shard: Shard, encoding: string = "ssz"): string {
+  return `${SHARD_ATTESTATION_TOPIC.replace("{shard}", String(shard % SHARD_SUBNET_COUNT))}/${encoding}`;
 }
 export function shardAttestationTopic(shard: Shard): string {
   return SHARD_ATTESTATION_TOPIC.replace("{shard}", String(shard));
@@ -54,7 +62,7 @@ export async function createPeerInfo(peerId: PeerId): Promise<PeerInfo> {
  * Return a fresh PeerId instance
  */
 export async function createPeerId(): Promise<PeerId> {
-  return await promisify(PeerId.create)({bits: 2048});
+  return await promisify(PeerId.create)({bits: 256, keyType: "secp256k1"});
 }
 
 export async function initializePeerInfo(peerId: PeerId, multiaddrs: string[]): Promise<PeerInfo> {

@@ -9,7 +9,7 @@ import {
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {DomainType} from "../../../constants";
-import {bytesToBN, intToBytes} from "../../../util/bytes";
+import {intToBytes} from "../../../util/bytes";
 
 import {getCurrentEpoch} from "./epoch";
 
@@ -17,10 +17,10 @@ import {getCurrentEpoch} from "./epoch";
  * Return the domain for the [[domainType]] and [[forkVersion]].
  */
 export function computeDomain(domainType: DomainType, forkVersion: Version = Buffer.alloc(4)): Domain {
-  return bytesToBN(Buffer.concat([
+  return Buffer.concat([
     intToBytes(domainType, 4),
     forkVersion,
-  ])).toBuffer("be", 8);
+  ]);
 }
 
 /**

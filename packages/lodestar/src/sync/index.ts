@@ -15,7 +15,6 @@ import {ILogger} from "../logger";
 import {ISyncOptions} from "./options";
 import {ISyncReqResp, SyncReqResp} from "./reqResp";
 import {ReputationStore} from "./IReputation";
-import {Slot} from "@chainsafe/eth2.0-types";
 
 export interface ISyncModules {
   config: IBeaconConfig;
@@ -60,15 +59,17 @@ export class Sync extends EventEmitter {
     this.reqResp = new SyncReqResp(opts, modules);
   }
 
-  public async isSynced(): Promise<boolean> {
+  public isSynced = async(): Promise<boolean> => {
     if (!await this.chain.isInitialized()) {
       return true;
     }
     try {
-      const bestSlot = await this.db.chain.getChainHeadSlot() as Slot;
+      const bestSlot = await this.db.chain.getChainHeadSlot();
       const bestSlotByPeers = this.network.getPeers()
         .map((peerInfo) => this.reps.get(peerInfo.id.toB58String()))
-        .map((reputation) => reputation.latestHello ? reputation.latestHello.headSlot : 0)
+        .map((reputation) => {
+          return reputation.latestHello ? reputation.latestHello.headSlot : 0;
+        })
         .reduce((a, b) => Math.max(a, b), 0);
       if (bestSlot >= bestSlotByPeers) {
         return true;
@@ -77,11 +78,13 @@ export class Sync extends EventEmitter {
       return false;
     }
     return false;
-  }
+  };
 
   public async start(): Promise<void> {
+    //await new Promise((resolve) => this.network.once("peer:connect", resolve));
     await this.reqResp.start();
     if (!await this.isSynced()) {
+      this.logger.info("Chain not synced, running initial sync...");
       const initialSync = new InitialSync(this.opts, {
         config: this.config,
         db: this.db,
@@ -93,6 +96,7 @@ export class Sync extends EventEmitter {
       await initialSync.start();
       await initialSync.stop();
     }
+    this.logger.info("Chain synced, running regular sync...");
     this.syncer = new RegularSync(this.opts, {
       config: this.config,
       db: this.db,

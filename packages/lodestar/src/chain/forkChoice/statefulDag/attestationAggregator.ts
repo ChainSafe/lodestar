@@ -73,9 +73,9 @@ export class AttestationAggregator {
         // new attestation is not new enough or slot doesn't exist
         return;
       }
+      const prevAgg = this.ensureAggregate(prevA.target);
       const newAgg = this.ensureAggregate(a.target);
-      const prevAgg = this.latestAggregates[prevA.target];
-      if (prevA.target !== a.target) { // new attestation target
+      if (prevAgg.target !== newAgg.target) { // new attestation target
         prevAgg.weight = prevAgg.weight.sub(prevA.weight);
         newAgg.weight = newAgg.weight.add(a.weight);
       } else if (!prevA.weight.eq(a.weight)) { // new attestation weight

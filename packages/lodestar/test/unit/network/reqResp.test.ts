@@ -42,8 +42,9 @@ describe("[network] rpc", () => {
       rpcB.start(),
     ]);
   });
-  afterEach(async () => {
+  afterEach(async function () {
     // teardown
+    this.timeout(10000)
     await Promise.all([
       rpcA.stop(),
       rpcB.stop(),
@@ -88,7 +89,7 @@ describe("[network] rpc", () => {
     });
     try {
       const helloExpected: Hello = {
-        forkVersion: Buffer.alloc(4),
+        headForkVersion: Buffer.alloc(4),
         finalizedRoot: Buffer.alloc(32),
         finalizedEpoch: 0,
         headRoot: Buffer.alloc(32),
@@ -107,7 +108,7 @@ describe("[network] rpc", () => {
     });
     try {
       const helloExpected: Hello = {
-        forkVersion: Buffer.alloc(4),
+        headForkVersion: Buffer.alloc(4),
         finalizedRoot: Buffer.alloc(32),
         finalizedEpoch: 0,
         headRoot: Buffer.alloc(32),

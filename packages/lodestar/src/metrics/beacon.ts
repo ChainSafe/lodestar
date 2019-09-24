@@ -6,6 +6,7 @@ import {Gauge, Counter} from "prom-client";
 import {IBeaconMetrics} from "./interface";
 import {IMetricsOptions} from "./options";
 import {Metrics} from "./metrics";
+import {ILogger} from "../logger";
 
 
 export class BeaconMetrics extends Metrics implements IBeaconMetrics {
@@ -23,9 +24,12 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
   public previousEpochStaleBlocks: Gauge;
   public propagatedAttestations: Gauge;
 
-  public constructor(opts: IMetricsOptions) {
+  private logger: ILogger;
+
+  public constructor(opts: IMetricsOptions, {logger}: {logger: ILogger}) {
     super(opts);
     const registers = [this.registry];
+    this.logger = logger;
     this.peers = new Gauge({
       name: "beaconchain_peers",
       help: "number of connected peers",

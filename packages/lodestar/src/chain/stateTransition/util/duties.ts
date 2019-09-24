@@ -44,8 +44,8 @@ export function getCommitteeAssignment(
   const committeesPerSlot = intDiv(getCommitteeCount(config, state, epoch), config.params.SLOTS_PER_EPOCH);
   const epochStartSlot = computeStartSlotOfEpoch(config, epoch);
   for (let slot = epochStartSlot; slot < epochStartSlot + config.params.SLOTS_PER_EPOCH; slot++) {
-    const slotStartShard =
-      getStartShard(config, state, epoch) + committeesPerSlot * (slot % config.params.SLOTS_PER_EPOCH);
+    const offset = committeesPerSlot * (slot % config.params.SLOTS_PER_EPOCH);
+    const slotStartShard = (getStartShard(config, state, epoch) + offset) % config.params.SHARD_COUNT;
     for (let i = 0; i < committeesPerSlot; i++) {
       const shard = (slotStartShard + i) % config.params.SHARD_COUNT;
       const committee = getCrosslinkCommittee(config, state, epoch, shard);
@@ -58,6 +58,7 @@ export function getCommitteeAssignment(
       }
     }
   }
+  return null;
 }
 
 /**

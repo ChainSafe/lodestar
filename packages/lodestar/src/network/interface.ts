@@ -7,8 +7,8 @@ import {
   Attestation, BeaconBlock, Shard,
   RequestBody, ResponseBody,
   Hello, Goodbye,
-  BeaconBlocksRequest, BeaconBlocksResponse,
-  RecentBeaconBlocksRequest, RecentBeaconBlocksResponse,
+  BeaconBlocksByRangeRequest, BeaconBlocksByRangeResponse,
+  BeaconBlocksByRootRequest, BeaconBlocksByRootResponse,
 } from "@chainsafe/eth2.0-types";
 
 import {RequestId, Method, BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
@@ -27,8 +27,8 @@ export interface IReqResp extends ReqRespEventEmitter {
 
   hello(peerInfo: PeerInfo, request: Hello): Promise<Hello>;
   goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void>;
-  beaconBlocks(peerInfo: PeerInfo, request: BeaconBlocksRequest): Promise<BeaconBlocksResponse>;
-  recentBeaconBlocks(peerInfo: PeerInfo, request: RecentBeaconBlocksRequest): Promise<RecentBeaconBlocksResponse>;
+  beaconBlocksByRange(peerInfo: PeerInfo, request: BeaconBlocksByRangeRequest): Promise<BeaconBlocksByRangeResponse>;
+  beaconBlocksByRoot(peerInfo: PeerInfo, request: BeaconBlocksByRootRequest): Promise<BeaconBlocksByRootResponse>;
 }
 
 // gossip

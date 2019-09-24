@@ -2,6 +2,7 @@ import {IConfigurationModule} from "../util/config";
 
 export interface IChainOptions {
   name: string;
+  dumpState: boolean;
 }
 
 export const ChainOptions: IConfigurationModule = {
@@ -21,11 +22,21 @@ export const ChainOptions: IConfigurationModule = {
         short: "c"
       }
     },
+    {
+      name: "dumpState",
+      description: "dump the state and blocks to disk",
+      type: "boolean",
+      configurable: true,
+      cli: {
+        flag: "dump",
+      }
+    }
   ]
 };
 
 const config: IChainOptions = {
   name: "mainnet",
+  dumpState: false,
 };
 
 export default config;

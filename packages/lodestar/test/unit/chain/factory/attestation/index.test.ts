@@ -34,7 +34,7 @@ describe("assemble attestation", function () {
     //TODO: try to test if validator bit is correctly set
     expect(result).to.not.be.null;
     expect(result.data).to.be.equal(attestationData);
-    expect(state.slot).to.be.equal(4);
+    expect(state.slot).to.be.equal(2);
     expect(assembleAttestationDataStub.calledOnceWith(dbStub, state, generateEmptyBlock(), 2));
   });
 

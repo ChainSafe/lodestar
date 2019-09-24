@@ -23,8 +23,9 @@ describe("assemble validator duty", function () {
     const publicKey = Buffer.alloc(48, 1);
     const validatorIndex = 2;
     const state = generateState();
+    state.slot = 1
     committeeAssignmentStub.returns({shard: 2, slot: 1, validators: [1, validatorIndex, 5]});
-    const result = assembleValidatorDuty(config, {publicKey, index: validatorIndex}, state, 2, validatorIndex);
+    const result = assembleValidatorDuty(config, {publicKey, index: validatorIndex}, state, 2, {2:1});
     expect(result).to.not.be.null;
     expect(result.validatorPubkey).to.be.equal(publicKey);
     expect(result.blockProposalSlot).to.be.equal(state.slot);
@@ -38,7 +39,7 @@ describe("assemble validator duty", function () {
     const validatorIndex = 2;
     const state = generateState();
     committeeAssignmentStub.returns({shard: 2, slot: 1, validators: [1, validatorIndex, 5]});
-    const result = assembleValidatorDuty(config, {publicKey, index: validatorIndex}, state, 3, 99);
+    const result = assembleValidatorDuty(config, {publicKey, index: validatorIndex}, state, 3, {99:1});
     expect(result).to.not.be.null;
     expect(result.validatorPubkey).to.be.equal(publicKey);
     expect(result.blockProposalSlot).to.be.equal(null);
@@ -52,7 +53,7 @@ describe("assemble validator duty", function () {
     const validatorIndex = 2;
     const state = generateState();
     committeeAssignmentStub.returns(null);
-    const result = assembleValidatorDuty(config, {publicKey, index: validatorIndex}, state, 3, 99);
+    const result = assembleValidatorDuty(config, {publicKey, index: validatorIndex}, state, 3, {});
     expect(result).to.not.be.null;
     expect(result.validatorPubkey).to.be.equal(publicKey);
     expect(result.blockProposalSlot).to.be.equal(null);

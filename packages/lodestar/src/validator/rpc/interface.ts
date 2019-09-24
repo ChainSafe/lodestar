@@ -15,6 +15,8 @@ export interface IRpcClient {
 
   validator: IValidatorApi;
 
+  url: string;
+
   /**
    * Initiates connection to rpc server.
    */

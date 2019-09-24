@@ -10,10 +10,12 @@ import {IBeaconDb} from "../../../db/api";
 import {OpPool} from "../../../opPool";
 import {assembleBody} from "./body";
 import {IEth1Notifier} from "../../../eth1";
-import {stateTransition} from "../../stateTransition";
+import {processSlots, stateTransition} from "../../stateTransition";
+import {IBeaconChain} from "../../interface";
 
 export async function assembleBlock(
   config: IBeaconConfig,
+  chain: IBeaconChain,
   db: IBeaconDb,
   opPool: OpPool,
   eth1: IEth1Notifier,
@@ -21,11 +23,11 @@ export async function assembleBlock(
   randao: bytes96
 ): Promise<BeaconBlock|null> {
   const [parentBlock, currentState] = await Promise.all([
-    db.block.getChainHead(),
+    db.block.get(chain.forkChoice.head()),
     db.state.getLatest(),
   ]);
-  if(!parentBlock) {
-    return null;
+  if(slot > currentState.slot) {
+    processSlots(config, currentState, slot);
   }
   const merkleTree = await db.merkleTree.getProgressiveMerkleTree(currentState.eth1DepositIndex);
   const parentHeader: BeaconBlockHeader = {
@@ -45,11 +47,8 @@ export async function assembleBlock(
     body: await assembleBody(config, opPool, eth1, merkleTree, currentState, randao),
   };
 
-  //This will effectively copy state so we avoid modifying existing state
-  const nextState = {...currentState};
-  stateTransition(config, nextState, block, false, false);
+  stateTransition(config, currentState, block, false, false);
 
-  block.stateRoot = hashTreeRoot(nextState, config.types.BeaconState);
-
+  block.stateRoot = hashTreeRoot(currentState, config.types.BeaconState);
   return block;
 }

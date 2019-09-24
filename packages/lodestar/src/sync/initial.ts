@@ -55,18 +55,21 @@ export class InitialSync {
         await this.syncToPeer(peer);
         break;
       } catch (e) {
-        this.logger.warn(`Failed to sync with peer ${peer.id.toB58String()}, trying next best peer`, e);
+        this.logger.warn(`Failed to sync with peer ${peer.id.toB58String()}, trying next best peer `, e);
       }
     }
   }
   public async syncToPeer(peerInfo: PeerInfo): Promise<void> {
-    const peerLatestHello = this.reps.get(peerInfo.id.toB58String()).latestHello;
-    if(!peerLatestHello) {
-      return;
-    }
     // fetch recent blocks and push into the chain
-    const startSlot = this.chain.latestState ? this.chain.latestState.slot : 0;
-    const {blocks} = await this.network.reqResp.beaconBlocks(peerInfo, {
+    let startSlot = await this.db.chain.getChainHeadSlot();
+    if(startSlot ===  0) {
+      startSlot += 1;
+    }
+    const peerLatestHello = this.reps.get(peerInfo.id.toB58String()).latestHello;
+    this.logger.info(
+      `attempting initial sync with ${peerInfo.id.toB58String()}, slot ${startSlot} through ${peerLatestHello.headSlot}`
+    );
+    const blocks = await this.network.reqResp.beaconBlocksByRange(peerInfo, {
       headBlockRoot: peerLatestHello.headRoot,
       startSlot,
       count: peerLatestHello.headSlot - startSlot,
@@ -78,8 +81,10 @@ export class InitialSync {
 
   }
   public async start(): Promise<void> {
+    this.logger.info("initial sync start");
     await this.syncToPeers();
   }
   public async stop(): Promise<void> {
+    this.logger.info("initial sync stop");
   }
 }

@@ -3,11 +3,12 @@ import {expect} from "chai";
 import {OpPool} from "../../../src/opPool";
 import {generateEmptyBlock} from "../../utils/block";
 import {EthersEth1Notifier} from "../../../src/eth1";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   AttesterSlashingRepository,
   DepositRepository,
   ProposerSlashingRepository, TransfersRepository,
-  VoluntaryExitRepository
+  VoluntaryExitRepository, AttestationRepository
 } from "../../../src/db/api/beacon/repositories";
 
 
@@ -17,15 +18,20 @@ describe("operation pool", function () {
   let eth1Stub, dbStub;
 
   beforeEach(()=>{
+    // @ts-ignore
     dbStub = {
       deposit: sandbox.createStubInstance(DepositRepository),
       voluntaryExit: sandbox.createStubInstance(VoluntaryExitRepository),
       proposerSlashing: sandbox.createStubInstance(ProposerSlashingRepository),
       attesterSlashing: sandbox.createStubInstance(AttesterSlashingRepository),
       transfer: sandbox.createStubInstance(TransfersRepository),
+      // @ts-ignore
+      attestation: sandbox.createStubInstance(AttestationRepository),
     };
+
     eth1Stub = sandbox.createStubInstance(EthersEth1Notifier);
     opPool = new OpPool({}, {
+      config: config,
       db: dbStub,
       eth1: eth1Stub
     });

@@ -39,9 +39,6 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
         config.params.MAX_EFFECTIVE_BALANCE);
     }
   });
-  // Update start shard
-  state.startShard =
-    (state.startShard + getShardDelta(config, state, currentEpoch)) % config.params.SHARD_COUNT;
   // Set active index root
   const indexEpoch = nextEpoch + config.params.ACTIVATION_EXIT_DELAY;
   const indexRootPosition = indexEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR;
@@ -67,6 +64,9 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
     };
     state.historicalRoots.push(hashTreeRoot(historicalBatch, config.types.HistoricalBatch));
   }
+  // Update start shard
+  state.startShard =
+      (state.startShard + getShardDelta(config, state, currentEpoch)) % config.params.SHARD_COUNT;
   // Rotate current/previous epoch attestations
   state.previousEpochAttestations = state.currentEpochAttestations;
   state.currentEpochAttestations = [];

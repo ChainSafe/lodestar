@@ -1,9 +1,10 @@
 import {expect} from "chai";
 import {BeaconMetrics} from "../../../src/metrics";
-
+import {ILogger, WinstonLogger} from "../../../../lodestar/src/logger"
 describe("BeaconMetrics", () => {
+  let logger: ILogger = new WinstonLogger();
   it("updated metrics should be reflected in the registry", async () => {
-    const m = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false, serverPort: 5000});
+    const m = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false, serverPort: 5000}, {logger});
     await m.start();
     // basic assumptions
     expect(m.registry.getMetricsAsArray().length).to.be.gt(0);

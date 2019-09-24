@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {readdirSync, readFileSync, writeFile} from "fs";
 import {isDirectory, objectToCamelCase} from "./util";
-import {basename, join} from "path";
+import {basename, parse, join} from "path";
 import {describe, it} from "mocha";
 import {AnySSZType, deserialize} from "@chainsafe/ssz";
 import {load} from "js-yaml";
@@ -9,6 +9,7 @@ import {schema} from "./yaml/schema";
 import {expect} from "chai";
 import deepMerge from "deepmerge";
 import profiler from "v8-profiler-next";
+import {transformType} from "./transform";
 
 
 export enum InputType {
@@ -21,9 +22,9 @@ export interface ISpecTestOptions<TestCase, Result> {
    * If directory contains both ssz or yaml file version,
    * you can choose which one to use. Default is ssz.
    */
-  inputTypes?: {[K in keyof TestCase]: InputType};
+  inputTypes?: {[K in keyof NonNullable<TestCase>]: InputType};
 
-  sszTypes?: {[K in keyof TestCase]: AnySSZType};
+  sszTypes?: {[K in keyof NonNullable<TestCase>]: AnySSZType};
 
   /**
    * Optionally
@@ -35,7 +36,7 @@ export interface ISpecTestOptions<TestCase, Result> {
    * Optionally pass function to transform loaded values
    * (values from input files)
    */
-  inputProcessing?: {[K in keyof TestCase]: (value: any) => any};
+  inputProcessing?: {[K: string]: (value: any) => any};
 
   shouldError?: (testCase: TestCase) => boolean;
 
@@ -45,6 +46,15 @@ export interface ISpecTestOptions<TestCase, Result> {
 
   timeout?: number;
 
+  /**
+   * Whether input is unsafe (and ssz types should be transformed)
+   */
+  unsafeInput?: boolean;
+
+}
+
+export interface ITestCaseMeta {
+  directoryName: string;
 }
 
 const defaultOptions: ISpecTestOptions<any, any> = {
@@ -61,7 +71,7 @@ const defaultOptions: ISpecTestOptions<any, any> = {
 export function describeDirectorySpecTest<TestCase, Result>(
   name: string,
   testCaseDirectoryPath: string,
-  testFunction: (testCase: TestCase) => Result,
+  testFunction: (testCase: TestCase, directoryName: string) => Result,
   options: Partial<ISpecTestOptions<TestCase, Result>>
 ): void {
   // @ts-ignore
@@ -103,14 +113,14 @@ function generateTestCase<TestCase, Result>(
       return this.skip();
     }
     if(options.shouldError && options.shouldError(testCase)) {
-      expect(testFunction.bind(null, testCase)).to.throw;
+      expect(testFunction.bind(null, testCase, basename(testCaseDirectoryPath))).to.throw;
     } else {
       const profileId = `${name}-${Date.now()}.profile`;
       const profilingDirectory = process.env.GEN_PROFILE_DIR;
       if (profilingDirectory) {
         profiler.startProfiling(profileId);
       }
-      const result = testFunction(testCase);
+      const result = testFunction(testCase, basename(testCaseDirectoryPath));
       if (profilingDirectory) {
         const profile = profiler.stopProfiling(profileId);
 
@@ -132,12 +142,15 @@ function loadInputFiles<TestCase, Result>(
       if(isDirectory(file)) {
         return false;
       }
-      const extension = options.inputTypes[basename(file)] || InputType.SSZ;
+      const extension = options.inputTypes[parse(file).name] || InputType.SSZ;
       return file.endsWith(extension);
     })
     .forEach((file) => {
       const inputName = basename(file).replace(".ssz", "").replace(".yaml", "");
       testCase[inputName] = deserializeTestCase(file, inputName, options);
+      if (file.endsWith(InputType.SSZ)) {
+        testCase[`${inputName}_raw`] = readFileSync(file);
+      }
       if(options.inputProcessing[inputName]) {
         testCase[inputName] = options.inputProcessing[inputName](testCase[inputName]);
       }
@@ -147,7 +160,10 @@ function loadInputFiles<TestCase, Result>(
 
 function deserializeTestCase<TestCase, Result>(file, inputName, options: ISpecTestOptions<TestCase, Result>): object {
   if (file.endsWith(InputType.SSZ)) {
-    return deserialize(readFileSync(file), options.sszTypes[inputName]);
+    const safeType = options.unsafeInput
+      ? transformType(options.sszTypes[inputName])
+      : options.sszTypes[inputName];
+    return deserialize(readFileSync(file), safeType);
   } else {
     return  objectToCamelCase(
       load(

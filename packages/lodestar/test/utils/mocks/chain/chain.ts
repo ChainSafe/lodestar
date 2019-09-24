@@ -6,7 +6,7 @@ import {
   BeaconState,
   Deposit,
   Eth1Data,
-  number64,
+  number64, Slot,
   uint16,
   uint64
 } from "@chainsafe/eth2.0-types";
@@ -35,7 +35,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public async isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean> {
     return true;
   }
-
+  public async advanceState(slot?: Slot): Promise<void>{}
   initializeBeaconChain(genesisState: BeaconState, merkleTree: ProgressiveMerkleTree): Promise<void> {
     throw new Error("Method not implemented.");
   }

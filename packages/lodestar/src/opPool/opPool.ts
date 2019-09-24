@@ -5,6 +5,7 @@
 import {EventEmitter} from "events";
 
 import {BeaconBlock} from "@chainsafe/eth2.0-types";
+
 import {IBeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
 import {
@@ -16,6 +17,13 @@ import {
   VoluntaryExitOperations
 } from "./modules";
 import {IEth1Notifier} from "../eth1";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
+interface IOpPoolModules {
+  config: IBeaconConfig;
+  eth1: IEth1Notifier;
+  db: IBeaconDb;
+}
 
 /**
  * Pool of operations not yet included on chain
@@ -29,14 +37,16 @@ export class OpPool extends EventEmitter {
   public proposerSlashings: ProposerSlashingOperations;
   public attesterSlashings: AttesterSlashingOperations;
 
+  private readonly config: IBeaconConfig;
   private readonly eth1: IEth1Notifier;
   private readonly db: IBeaconDb;
 
-  public constructor(opts: IOpPoolOptions, {eth1, db}: {eth1: IEth1Notifier; db: IBeaconDb}) {
+  public constructor(opts: IOpPoolOptions, {config, eth1, db}: IOpPoolModules) {
     super();
+    this.config = config;
     this.eth1 = eth1;
     this.db = db;
-    this.attestations = new AttestationOperations(this.db.attestation);
+    this.attestations = new AttestationOperations(this.db.attestation, {config});
     this.voluntaryExits = new VoluntaryExitOperations(this.db.voluntaryExit);
     this.deposits = new DepositsOperations(this.db.deposit);
     this.transfers = new TransferOperations(this.db.transfer);
@@ -68,7 +78,7 @@ export class OpPool extends EventEmitter {
       this.transfers.remove(processedBlock.body.transfers),
       this.proposerSlashings.remove(processedBlock.body.proposerSlashings),
       this.attesterSlashings.remove(processedBlock.body.attesterSlashings),
-      //TODO: remove old attestations
+      this.attestations.remove(processedBlock.body.attestations)
     ]);
   }
 }

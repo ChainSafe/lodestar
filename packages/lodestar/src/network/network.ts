@@ -52,13 +52,12 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
       Promise.resolve(libp2p).then((libp2p) => {
         this.peerInfo = libp2p.peerInfo;
         this.libp2p = libp2p;
-        this.reqResp = new ReqResp(opts, {config, libp2p, logger}); 
+        this.reqResp = new ReqResp(opts, {config, libp2p, logger});
         this.gossip = new Gossip(opts, {config, libp2p, logger}); 
         resolve();
       });
     });
   }
-
 
   public async start(): Promise<void> {
     await this.inited;
@@ -67,6 +66,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     await this.gossip.start();
     this.libp2p.on("peer:connect", this.emitPeerConnect);
     this.libp2p.on("peer:disconnect", this.emitPeerDisconnect);
+    this.logger.important(`PeerId ${this.libp2p.peerInfo.id.toB58String()}`);
   }
   public async stop(): Promise<void> {
     await this.inited;
@@ -94,11 +94,14 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     await promisify(this.libp2p.hangUp.bind(this.libp2p))(peerInfo);
   }
   private emitPeerConnect = (peerInfo: PeerInfo): void => {
+    this.logger.verbose("peer connected " + peerInfo.id.toB58String());
     this.metrics.peers.inc();
     this.emit("peer:connect", peerInfo);
   };
   private emitPeerDisconnect = (peerInfo: PeerInfo): void => {
+    this.logger.verbose("peer disconnected " + peerInfo.id.toB58String());
     this.metrics.peers.dec();
     this.emit("peer:disconnect", peerInfo);
   };
+
 }

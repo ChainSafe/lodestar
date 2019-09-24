@@ -1,8 +1,9 @@
-import {getBeaconProposerIndex} from "../../../chain/stateTransition/util";
+import {computeStartSlotOfEpoch, getBeaconProposerIndex} from "../../../chain/stateTransition/util";
 import {assembleValidatorDuty} from "../../../chain/factory/duties";
-import {BLSPubkey, Epoch, ValidatorDuty, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {BLSPubkey, Epoch, ValidatorDuty, ValidatorIndex, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {processSlots} from "../../../chain/stateTransition";
 
 export async function getValidatorDuties(
   config: IBeaconConfig,
@@ -13,10 +14,19 @@ export async function getValidatorDuties(
   const state = await db.state.getLatest();
 
   const validatorIndexes = await Promise.all(validatorPublicKeys.map(async publicKey => {
-    return  await db.getValidatorIndex(publicKey);
+    return  state.validators.findIndex((v) => v.pubkey.equals(publicKey));
   }));
 
-  const blockProposerIndex = getBeaconProposerIndex(config, state);
+  const startSlot = computeStartSlotOfEpoch(config, epoch);
+  if(state.slot < startSlot) {
+    processSlots(config, state, startSlot);
+  }
+  const slotProposerMapping: Record<ValidatorIndex, Slot> = {};
+
+  for(let slot = startSlot; slot < startSlot + config.params.SLOTS_PER_EPOCH; slot ++) {
+    const blockProposerIndex = getBeaconProposerIndex(config, {...state, slot});
+    slotProposerMapping[blockProposerIndex] = slot;
+  }
 
   return validatorPublicKeys.map(
     (validatorPublicKey: BLSPubkey, index: number) => {
@@ -29,7 +39,7 @@ export async function getValidatorDuties(
         },
         state,
         epoch,
-        blockProposerIndex
+        slotProposerMapping
       );
     }
   );
