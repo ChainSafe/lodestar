@@ -8,9 +8,8 @@ import {
   AnySSZType,
   FullSSZType,
   Type,
-} from "./types";
-
-import {parseType} from "./util/types";
+  parseType
+} from "@chainsafe/ssz-type-schema";
 
 
 /**

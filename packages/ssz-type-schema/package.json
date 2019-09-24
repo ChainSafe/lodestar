@@ -1,0 +1,54 @@
+{
+  "name": "@chainsafe/ssz-type-schema",
+  "version": "0.0.1",
+  "description": "Utility methods and types for describing of ssz object.",
+  "author": "ChainSafe Systems",
+  "license": "LGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/ChainSafe/lodestar/issues"
+  },
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "prebuild": "rm -rf lib",
+    "build": "yarn build:lib && yarn build:types",
+    "build:types": "tsc --declaration --outDir lib --emitDeclarationOnly",
+    "build:lib": "babel src -x .ts -d lib --source-maps",
+    "build:docs": "typedoc --exclude src/index.ts --out docs src",
+    "check-types": "tsc --noEmit --incremental",
+    "lint": "eslint --color --ext .ts src/",
+    "lint:fix": "eslint --color --ext .ts src/ --fix",
+    "prepublishOnly": "yarn build",
+    "pretest": "yarn run check-types",
+    "test:unit": "mocha --colors -r ts-node/register 'test/**/*.test.ts'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com:ChainSafe/lodestar.git"
+  },
+  "keywords": [
+    "ethereum",
+    "eth2.0",
+    "simple",
+    "serialize",
+    "ssz",
+    "beacon",
+    "blockchain"
+  ],
+  "dependencies": {
+    "@chainsafe/bit-utils": "^0.1.2",
+    "@types/bn.js": "^4.11.4",
+    "assert": "^2.0.0",
+    "bn.js": "^4.11.8"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.1.7",
+    "@types/mocha": "^5.2.7",
+    "chai": "^4.2.0",
+    "mocha": "^6.2.0"
+  }
+}

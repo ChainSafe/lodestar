@@ -122,3 +122,5 @@ export type FullSSZType = UintType | BoolType | BitsType | BytesType | ArrayType
 export type AnyContainerType = ContainerType | SimpleContainerType;
 
 export type AnySSZType = FullSSZType | SimpleSSZType;
+
+export * from "./utils";

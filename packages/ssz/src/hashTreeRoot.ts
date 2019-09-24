@@ -13,7 +13,9 @@ import {
   SerializableValue,
   Type,
   VectorType,
-} from "./types";
+  isBasicType,
+  parseType
+} from "@chainsafe/ssz-type-schema";
 
 import {BYTES_PER_CHUNK} from "./constants";
 
@@ -23,7 +25,6 @@ import {fixedSize} from "./size";
 
 import {chunkify, merkleize, mixInLength, pack,} from "./util/hash";
 
-import {isBasicType, parseType,} from "./util/types";
 
 
 /**
