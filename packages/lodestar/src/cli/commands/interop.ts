@@ -30,7 +30,7 @@ import {loadPeerId, NodejsNode} from "../../network/nodejs";
 import {createPeerId, initializePeerInfo} from "../../network";
 import {computeEpochOfSlot, computeStartSlotOfEpoch} from "../../chain/stateTransition/util";
 import {getCurrentSlot} from "../../chain/stateTransition/util/genesis";
-import { ProgressiveMerkleTree } from "@chainsafe/eth2.0-utils";
+import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "../../util/serialization";
 
 interface IInteropCommandOptions {

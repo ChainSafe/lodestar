@@ -5,7 +5,6 @@ import {IBeaconApi} from "../../api/rpc/api/beacon";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {getCurrentSlot} from "../../chain/stateTransition/util/genesis";
 import {INewEpochCallback, INewSlotCallback, IRpcClient} from "./interface";
-import {intDiv} from "@chainsafe/eth2.0-utils";
 
 
 export abstract class AbstractRpcClient implements IRpcClient {

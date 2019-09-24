@@ -17,8 +17,6 @@ import Validator from "../../validator";
 import {RpcClientOverInstance} from "../../validator/rpc";
 import {ValidatorApi} from "../../api/rpc/api/validator";
 import {BeaconApi} from "../../api/rpc/api/beacon";
-import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
-import {MerkleTreeSerialization} from "../../util/serialization";
 
 interface IBeaconCommandOptions {
   configFile?: string;
