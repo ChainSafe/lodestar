@@ -21,11 +21,8 @@ import {IRpcClient} from "../rpc";
 import {DomainType} from "../../constants";
 import {IValidatorDB} from "../../db/api";
 import {ILogger} from "../../logger";
+import {sleep} from "../../util/sleep";
 import {Keypair} from "@chainsafe/bls";
-
-export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 export class AttestationService {
 

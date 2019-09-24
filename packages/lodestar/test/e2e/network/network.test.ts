@@ -10,6 +10,7 @@ import {shardAttestationTopic} from "../../../src/network/util";
 import {ILogger, WinstonLogger} from "../../../src/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
+import {sleep} from "../../../src/util/sleep";
 import Libp2p from "libp2p";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
@@ -63,7 +64,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:disconnect", resolve)),
       new Promise((resolve) => netB.on("peer:disconnect", resolve)),
     ]);
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await sleep(100);
 
     await netA.disconnect(netB.peerInfo);
     await disconnection;

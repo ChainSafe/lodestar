@@ -2,6 +2,8 @@ version: '2'
 services:
     prometheus:
         image: prom/prometheus:v2.9.2
+        depends_on:
+            - lodestar
         volumes:
             - ./prometheus.yml:/etc/prometheus/prometheus.yml
         ports:

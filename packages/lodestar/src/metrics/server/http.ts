@@ -25,7 +25,7 @@ export class HttpMetricsServer implements IMetricsServer {
 
   public async start(): Promise<void> {
     if (this.opts.enabled) {
-      this.logger.info("Starting prometheus...");
+      this.logger.info(`Starting metrics HTTP server on port ${this.opts.serverPort}`);
       await promisify(this.http.listen.bind(this.http))(this.opts.serverPort);
     }
   }

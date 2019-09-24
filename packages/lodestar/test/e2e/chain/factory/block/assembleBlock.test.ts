@@ -115,8 +115,7 @@ describe("produce block", function () {
       return await assembleBlock(config, chainStub, dbStub, opPoolStub, eth1Stub, slot, randao);
     });
     const block = await blockProposingService.createAndPublishBlock(1, state.fork);
-    stateTransition(config, state, block, false)
-    //expect(() => stateTransition(config, state, block, false)).to.not.throw();
+    expect(() => stateTransition(config, state, block, false)).to.not.throw();
   });
 
   function getBlockProposingService(keypair: Keypair): BlockProposingService {

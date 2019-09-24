@@ -6,6 +6,12 @@ import {quickStartState} from "./state";
 import {ProgressiveMerkleTree} from "../util/merkleTree";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../constants";
 
+import yargs from "yargs";
+const args = yargs.parse()._;
+
+// This file runs the dump command:
+// node -r ts-node/register src/interop/dump.ts genesisTime validatorCount outputFile
+
 export function dumpQuickStartState(
   genesisTime: number,
   validatorCount: number,
@@ -17,7 +23,4 @@ export function dumpQuickStartState(
   fs.writeFileSync(output, serialize(state, BeaconState));
 }
 
-// eslint-disable-next-line
-import yargs from "yargs";
-const args = yargs.parse()._;
 dumpQuickStartState(parseInt(args[0]), parseInt(args[1]), args[2]);
