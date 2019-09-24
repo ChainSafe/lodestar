@@ -9,7 +9,7 @@ import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {generateState} from "../../../../utils/state";
 import {StatefulDagLMDGHOST} from "../../../../../../lodestar/src/chain/forkChoice";
-import {BeaconChain} from "../../../../../../lodestar/src/chain";
+import {BeaconChain} from "../../../../../src/chain";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {BlockRepository, MerkleTreeRepository, StateRepository} from "../../../../../src/db/api/beacon/repositories";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
@@ -22,8 +22,8 @@ describe("block assembly", function () {
   let assembleBodyStub, chainStub, forkChoiceStub, processBlockStub, opPool, beaconDB, eth1;
 
   beforeEach(() => {
-    assembleBodyStub = sandbox.stub(blockBodyAssembly, 'assembleBody');
-    processBlockStub = sandbox.stub(blockTransitions, 'processBlock');
+    assembleBodyStub = sandbox.stub(blockBodyAssembly, "assembleBody");
+    processBlockStub = sandbox.stub(blockTransitions, "processBlock");
 
     forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
     chainStub = sandbox.createStubInstance(BeaconChain);
@@ -44,9 +44,9 @@ describe("block assembly", function () {
 
   it("should assemble block", async function() {
     beaconDB.state.getLatest.resolves(generateState({slot: 1}));
-    const head = chainStub.forkChoice.head()
-    beaconDB.block.get.withArgs(head).returns(generateEmptyBlock())
-    beaconDB.merkleTree.getProgressiveMerkleTree.resolves(ProgressiveMerkleTree.empty(32));
+    const head = chainStub.forkChoice.head();
+    beaconDB.block.get.withArgs(head).returns(generateEmptyBlock());
+    beaconDB.merkleTree.getProgressiveMerkleTree.resolves(ProgressiveMerkleTree.empty(32, new MerkleTreeSerialization(config)));
     assembleBodyStub.resolves(generateEmptyBlock().body);
     try {
       const result = await assembleBlock(config, chainStub, beaconDB, opPool, eth1, 1, Buffer.alloc(96, 0));
@@ -55,7 +55,7 @@ describe("block assembly", function () {
       expect(result.stateRoot).to.not.be.null;
       expect(result.parentRoot).to.not.be.null;
       expect(beaconDB.state.getLatest.calledOnce).to.be.true;
-      expect(beaconDB.block.get.calledOnceWith(head))
+      expect(beaconDB.block.get.calledOnceWith(head));
       expect(assembleBodyStub.calledOnce).to.be.true;
       expect(processBlockStub.withArgs(sinon.match.any, sinon.match.any).calledOnce).to.be.true;
     } catch (e) {

@@ -17,6 +17,7 @@ export function loadYaml(yaml: string): object {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function dumpYaml(yaml: any): string {
   return dump(yaml, {schema});
 }

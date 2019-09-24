@@ -12,11 +12,12 @@ import {ZERO_HASH} from "../../../../constants";
 import {
   getAttestationDataSlot,
   getBeaconProposerIndex,
+  getCrosslinkCommittee,
   getCurrentEpoch,
   getIndexedAttestation,
-  getPreviousEpoch, isValidAttestationSlot,
+  getPreviousEpoch,
+  isValidAttestationSlot,
   isValidIndexedAttestation,
-  getCrosslinkCommittee,
 } from "../../util";
 
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#attestations

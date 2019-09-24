@@ -20,7 +20,6 @@ import Validator from "../../validator";
 import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {InteropEth1Notifier} from "../../eth1/impl/interop";
 import {quickStartOptionToState} from "../../interop/cli";
-import {ProgressiveMerkleTree} from "../../util/merkleTree";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {interopKeypair} from "../../interop/keypairs";
 import {RpcClientOverInstance} from "../../validator/rpc";
@@ -31,6 +30,8 @@ import {loadPeerId, NodejsNode} from "../../network/nodejs";
 import {createPeerId, initializePeerInfo} from "../../network";
 import {computeEpochOfSlot, computeStartSlotOfEpoch} from "../../chain/stateTransition/util";
 import {getCurrentSlot} from "../../chain/stateTransition/util/genesis";
+import { ProgressiveMerkleTree } from "@chainsafe/eth2.0-utils";
+import {MerkleTreeSerialization} from "../../util/serialization";
 
 interface IInteropCommandOptions {
   loggingLevel?: string;
@@ -124,7 +125,7 @@ export class InteropCommand implements ICliCommand {
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
     if (options.quickStart) {
       this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier(), libp2p});
-      const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
+      const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
       const state = quickStartOptionToState(config, tree, options.quickStart);
       await this.node.chain.initializeBeaconChain(state, tree);
       const targetSlot = computeStartSlotOfEpoch(

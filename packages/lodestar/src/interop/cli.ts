@@ -2,10 +2,8 @@ import {readFileSync} from "fs";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {deserialize} from "@chainsafe/ssz";
-import {loadYamlFile} from "@chainsafe/eth2.0-spec-test-util";
-
 import {interopDeposits} from "./deposits";
-import {fromYaml, loadYamlFile, IProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
+import {fromYaml, IProgressiveMerkleTree, loadYamlFile} from "@chainsafe/eth2.0-utils";
 import {quickStartState} from "./state";
 
 // either "genesisTime,validatorCount" or "genesisState.fileext"

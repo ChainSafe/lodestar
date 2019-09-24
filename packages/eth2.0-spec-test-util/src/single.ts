@@ -1,16 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {readdirSync, readFileSync, writeFile} from "fs";
-import {isDirectory, objectToCamelCase} from "./util";
-import {basename, parse, join} from "path";
-import {describe, it} from "mocha";
 import {isDirectory} from "./util";
-import {basename, join} from "path";
+import {basename, join, parse} from "path";
+import {describe, it} from "mocha";
 import {AnySSZType, deserialize} from "@chainsafe/ssz";
 import {expect} from "chai";
 import deepMerge from "deepmerge";
 import profiler from "v8-profiler-next";
 import {transformType} from "./transform";
-import {describe, it} from "mocha";
 import {loadYamlFile} from "@chainsafe/eth2.0-utils";
 
 
