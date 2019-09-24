@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {BLSPubkey, Epoch, ValidatorDuty, ValidatorIndex,BeaconState} from "@chainsafe/eth2.0-types";
+import {BLSPubkey, Epoch, ValidatorDuty, ValidatorIndex,BeaconState, Slot} from "@chainsafe/eth2.0-types";
 import {getCommitteeAssignment} from "../../stateTransition/util";
 
 
@@ -8,28 +8,29 @@ export function assembleValidatorDuty(
   validator: {publicKey: BLSPubkey; index: ValidatorIndex},
   state: BeaconState,
   epoch: Epoch,
-  blockProposerIndex: ValidatorIndex): ValidatorDuty  {
+  proposerSlotMapping: Record<ValidatorIndex, Slot>): ValidatorDuty  {
   let duty: ValidatorDuty = generateEmptyValidatorDuty(validator.publicKey);
-  const committeeAsignment = getCommitteeAssignment(
+  const committeeAssignment = getCommitteeAssignment(
     config,
     state,
     epoch,
     validator.index
   );
-  if (committeeAsignment) {
+  if (committeeAssignment) {
     duty = {
       ...duty,
-      attestationShard: committeeAsignment.shard,
-      attestationSlot: committeeAsignment.slot,
-      committeeIndex: committeeAsignment.validators.indexOf(validator.index)
+      attestationShard: committeeAssignment.shard,
+      attestationSlot: committeeAssignment.slot,
+      committeeIndex: committeeAssignment.validators.indexOf(validator.index)
     };
   }
-  if (validator.index === blockProposerIndex) {
+  if (proposerSlotMapping[validator.index] && proposerSlotMapping[validator.index] !== 0) {
     duty = {
       ...duty,
-      blockProposalSlot: state.slot
+      blockProposalSlot: proposerSlotMapping[validator.index]
     };
   }
+
   return duty;
 }
 

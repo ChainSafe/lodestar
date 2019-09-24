@@ -11,6 +11,8 @@ export interface IRpcClientOverInstanceOpts {
 
 export class RpcClientOverInstance extends AbstractRpcClient {
 
+  public url: string = "inmemory";
+
   public beacon: IBeaconApi;
 
   public validator: IValidatorApi;

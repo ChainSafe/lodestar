@@ -24,6 +24,7 @@ describe("syncing", function () {
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.latestState = generateState();
+    chainStub.config = config;
     reqRespStub = sandbox.createStubInstance(ReqResp);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     networkStub.reqResp = reqRespStub;
@@ -58,7 +59,7 @@ describe("syncing", function () {
     chainStub.chainId = 1;
 
     const expected: Hello = {
-      forkVersion: Buffer.alloc(4),
+      headForkVersion: Buffer.alloc(4),
       finalizedRoot: ZERO_HASH ,
       finalizedEpoch: 0,
       headRoot: ZERO_HASH,
@@ -94,7 +95,7 @@ describe("syncing", function () {
   it('should handle request  - onHello(success)', async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     const body: Hello = {
-      forkVersion: Buffer.alloc(4),
+      headForkVersion: Buffer.alloc(4),
       finalizedRoot: Buffer.alloc(32),
       finalizedEpoch: 1,
       headRoot: Buffer.alloc(32),
@@ -115,7 +116,7 @@ describe("syncing", function () {
   it('should handle request  - onHello(error)', async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     const body: Hello = {
-      forkVersion: Buffer.alloc(4),
+      headForkVersion: Buffer.alloc(4),
       finalizedRoot: Buffer.alloc(32),
       finalizedEpoch: 1,
       headRoot: Buffer.alloc(32),
@@ -135,9 +136,7 @@ describe("syncing", function () {
 
   it('should handle request - onGoodbye', async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
-    const goodbye: Goodbye = {
-      reason: new BN(1),
-    };
+    const goodbye: Goodbye = new BN(1);
     networkStub.disconnect.resolves(0);
     try {
       await syncRpc.onRequest(peerInfo, Method.Goodbye, "goodBye", goodbye);

@@ -15,18 +15,14 @@ import {generateCommanderOptions, optionsToConfig} from "../util";
 import {getTomlConfig} from "../../util/file";
 import Validator from "../../validator";
 import {RpcClientOverInstance} from "../../validator/rpc";
-import {quickStartOptionToState} from "../../interop/cli";
-import {InteropEth1Notifier} from "../../eth1/impl/interop";
 import {ValidatorApi} from "../../api/rpc/api/validator";
 import {BeaconApi} from "../../api/rpc/api/beacon";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "../../util/serialization";
 
 interface IBeaconCommandOptions {
-  configFile: string;
-  loggingLevel: string;
-  quickStart: string;
-  preset: string;
+  configFile?: string;
+  loggingLevel?: string;
   [key: string]: string;
 }
 
@@ -44,8 +40,6 @@ export class BeaconNodeCommand implements ICliCommand {
       .command("beacon")
       .description("Start lodestar node")
       .option("-c, --configFile [config_file]", "Config file path")
-      .option("-q, --quickStart [params]", "Start chain from known state")
-      .option("-p, --preset [preset]", "Minimal/mainnet", "mainnet")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
@@ -78,16 +72,7 @@ export class BeaconNodeCommand implements ICliCommand {
 
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
 
-    if (options.quickStart) {
-      this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier()});
-      const state = quickStartOptionToState(config, options.quickStart);
-      await this.node.chain.initializeBeaconChain(
-        state,
-        ProgressiveMerkleTree.empty(32, new MerkleTreeSerialization(config))
-      );
-    } else {
-      this.node = new BeaconNode(conf, {config, logger});
-    }
+    this.node = new BeaconNode(conf, {config, logger});
 
     if(conf.validator && conf.validator.keypair){
       conf.validator.rpcInstance = new RpcClientOverInstance({
@@ -99,7 +84,8 @@ export class BeaconNodeCommand implements ICliCommand {
             chain: this.node.chain,
             db: this.node.db,
             opPool: this.node.opPool,
-            eth1: this.node.eth1
+            eth1: this.node.eth1,
+            logger
           }
         ),
         beacon: new BeaconApi(
@@ -123,4 +109,3 @@ export class BeaconNodeCommand implements ICliCommand {
     await this.node.start();
   }
 }
-

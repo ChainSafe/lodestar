@@ -3,24 +3,20 @@ import {IValidatorApi} from "../../api/rpc/api/validator";
 import {computeEpochOfSlot} from "../../chain/stateTransition/util";
 import {IBeaconApi} from "../../api/rpc/api/beacon";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {getCurrentSlot} from "../../chain/stateTransition/util/genesis";
 import {INewEpochCallback, INewSlotCallback, IRpcClient} from "./interface";
 import {intDiv} from "@chainsafe/eth2.0-utils";
 
 
 export abstract class AbstractRpcClient implements IRpcClient {
 
-  // @ts-ignore
   protected config: IBeaconConfig;
+
   private currentSlot: Slot = 0;
-
   private currentEpoch: Epoch = 0;
-
   private newSlotCallbacks: INewSlotCallback[] = [];
   private newEpochCallbacks: INewEpochCallback[] = [];
-
   private running = false;
-
-
 
   public onNewEpoch(cb: INewEpochCallback): void {
     if (cb) {
@@ -46,7 +42,7 @@ export abstract class AbstractRpcClient implements IRpcClient {
     this.running = true;
     const genesisTime = await this.beacon.getGenesisTime();
     const diffInSeconds = (Date.now() / 1000) - genesisTime;
-    this.currentSlot = intDiv(diffInSeconds, this.config.params.SECONDS_PER_SLOT);
+    this.currentSlot = getCurrentSlot(this.config, genesisTime);
     //update slot after remaining seconds until next slot
     const diffTillNextSlot =
         (this.config.params.SECONDS_PER_SLOT - diffInSeconds % this.config.params.SECONDS_PER_SLOT) * 1000;
@@ -85,6 +81,7 @@ export abstract class AbstractRpcClient implements IRpcClient {
     }
   }
 
+  public abstract url: string;
   abstract beacon: IBeaconApi;
   abstract validator: IValidatorApi;
 

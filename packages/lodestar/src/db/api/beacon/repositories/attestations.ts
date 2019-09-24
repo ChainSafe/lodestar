@@ -12,5 +12,4 @@ export class AttestationRepository extends BulkRepository<Attestation> {
     db: IDatabaseController) {
     super(config, db, Bucket.attestation, config.types.Attestation);
   }
-
 }

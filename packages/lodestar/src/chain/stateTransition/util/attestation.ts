@@ -2,8 +2,7 @@
  * @module chain/stateTransition/util
  */
 
-import assert from "assert";
-import {hashTreeRoot, equals} from "@chainsafe/ssz";
+import {equals, hashTreeRoot} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 import {BitList} from "@chainsafe/bit-utils";
 import {
@@ -115,8 +114,6 @@ export function getAttestingIndices(
   bits: BitList
 ): ValidatorIndex[] {
   const committee = getCrosslinkCommittee(config, state, data.target.epoch, data.crosslink.shard);
-  assert(bits.bitLength === committee.length);
-
   // Find the participating attesters in the committee
   return committee.filter((_, i) => bits.getBit(i)).sort((a, b) => a - b);
 }
@@ -141,4 +138,15 @@ export function getIndexedAttestation(
     data: attestation.data,
     signature: attestation.signature,
   };
+}
+
+export function isValidAttestationSlot(
+  config: IBeaconConfig,
+  attestationSlot: Slot,
+  currentSlot: Slot
+): boolean {
+  return (
+    attestationSlot + config.params.MIN_ATTESTATION_INCLUSION_DELAY <= currentSlot &&
+    currentSlot <= attestationSlot + config.params.SLOTS_PER_EPOCH
+  );
 }

@@ -14,7 +14,7 @@ export class DepositRepository extends BulkRepository<Deposit> {
   }
 
   public async deleteOld(depositCount: number): Promise<void> {
-    await this.deleteMany(Array.from({length: depositCount}));
+    await this.deleteMany(Array.from({length: depositCount}, (v, k) => k));
   }
 
 }

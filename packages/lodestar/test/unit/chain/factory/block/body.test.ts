@@ -49,7 +49,7 @@ describe("blockAssembly - body", function () {
     // @ts-ignore
     opPool.attesterSlashings.getAll.resolves([generateEmptyAttesterSlashing()]);
     // @ts-ignore
-    opPool.attestations.getAll.resolves([generateEmptyAttestation()]);
+    opPool.attestations.getValid.resolves([generateEmptyAttestation()]);
     // @ts-ignore
     opPool.voluntaryExits.getAll.resolves([generateEmptyVoluntaryExit()]);
     generateDepositsStub.resolves([generateDeposit()]);
@@ -79,7 +79,7 @@ describe("blockAssembly - body", function () {
     // @ts-ignore
     opPool.attesterSlashings.getAll.resolves(new Array(config.params.MAX_ATTESTER_SLASHINGS + 1).map(generateEmptyAttesterSlashing));
     // @ts-ignore
-    opPool.attestations.getAll.resolves(new Array(config.params.MAX_ATTESTATIONS + 1).map(generateEmptyAttestation));
+    opPool.attestations.getValid.resolves(new Array(config.params.MAX_ATTESTATIONS + 1).map(generateEmptyAttestation));
     // @ts-ignore
     opPool.voluntaryExits.getAll.resolves(new Array(config.params.MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit));
     generateDepositsStub.resolves([generateDeposit()]);

@@ -129,16 +129,16 @@ class Validator {
   private async setupRPC(): Promise<void> {
     this.logger.info("Setting up RPC connection...");
     await this.apiClient.connect();
-    this.logger.info(`RPC connection successfully established: ${this.opts.rpc || "inmemory"}!`);
+    this.logger.info(`RPC connection successfully established: ${this.apiClient.url}!`);
   }
 
   /**
    * Recursively checks for the chain start log event from the ETH1.x deposit contract
    */
-  private async isChainLive(): Promise<boolean> {
+  private isChainLive = async (): Promise<boolean> => {
     this.logger.info("Checking if chain has started...");
     const genesisTime =  await this.apiClient.beacon.getGenesisTime();
-    if (genesisTime) {
+    if (genesisTime && (Date.now() / 1000) > genesisTime) {
       this.genesisInfo = {
         startTime: genesisTime,
       };
@@ -149,41 +149,35 @@ class Validator {
       setTimeout(this.isChainLive, 1000);
     }
     return false;
-  }
+  };
 
   private run(): void {
     this.apiClient.onNewSlot(this.checkDuties);
     // this.apiClient.onNewEpoch(this.lookAhead);
   }
 
-  private async checkDuties(slot: Slot): Promise<void> {
+  private checkDuties = async (slot: Slot): Promise<void> => {
     const validatorDuty =
       (await this.apiClient.validator.getDuties(
         [this.opts.keypair.publicKey.toBytesCompressed()],
         computeEpochOfSlot(this.config, slot))
       )[0];
-    const currentVersion = await this.apiClient.beacon.getFork();
+    const {fork} = await this.apiClient.beacon.getFork();
     const isAttester = validatorDuty.attestationSlot === slot;
     const isProposer = validatorDuty.blockProposalSlot === slot;
-    this.logger.info(
-      `[Validator] Slot: ${slot}, Fork: ${currentVersion}, 
-      isProposer: ${isProposer}, isAttester: ${isAttester}`
-    );
     if (isAttester) {
+      this.logger.info(`Validator is attester at slot ${slot} and shard ${validatorDuty.attestationShard}`);
       this.attestationService.createAndPublishAttestation(
-        slot,
+        validatorDuty.attestationSlot,
         validatorDuty.attestationShard,
-        currentVersion
+        fork
       );
     }
     if (isProposer) {
-      this.blockService.createAndPublishBlock(slot, currentVersion);
+      this.logger.info(`Validator is proposer at slot ${slot}`);
+      this.blockService.createAndPublishBlock(slot, fork);
     }
-  }
-
-  // private async lookAhead(currentEpoch: Epoch): Promise<void> {
-  //   //in phase 1, it should obtain duties for next epoch and trigger required shard sync
-  // }
+  };
 }
 
 export default Validator;

@@ -2,13 +2,16 @@
  * @module network/nodejs
  */
 
+import fs from "fs";
 import PeerId from "peer-id";
+// @ts-ignore
+import promisify from "promisify-es6";
 
 /**
  * Save a peer id to disk
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function savePeerId(peerId: PeerId, path: string): Promise<void> {
+export async function savePeerId(path: string, peerId: PeerId): Promise<void> {
+  await promisify(fs.writeFile)(path, JSON.stringify(peerId.toJSON(), null, 2));
 }
 
 /**
@@ -16,5 +19,6 @@ export async function savePeerId(peerId: PeerId, path: string): Promise<void> {
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function loadPeerId(path: string): Promise<PeerId> {
-  return null as unknown as PeerId;
+  const data = await promisify(fs.readFile)(path);
+  return await promisify(PeerId.createFromJSON)(JSON.parse(data));
 }

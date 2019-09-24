@@ -18,11 +18,11 @@ export class MerkleTreeRepository extends BulkRepository<MerkleTree> {
 
   public async getProgressiveMerkleTree(
     config: IBeaconConfig,
-    index: number, depth?: number
+    index: number
   ): Promise<IProgressiveMerkleTree> {
     const tree = await this.get(index);
     const serialization = new MerkleTreeSerialization(config);
-    if(!tree) return ProgressiveMerkleTree.empty(depth || DEPOSIT_CONTRACT_TREE_DEPTH, serialization);
+    if(!tree) return ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, serialization);
     return new ProgressiveMerkleTree(tree.depth, tree.tree, serialization);
   }
 

@@ -3,7 +3,8 @@
  */
 
 import {createLogger, format, Logger, transports} from "winston";
-import {defaultLogLevel, ILogger, ILoggerOptions, LogLevel} from "./interface";
+import {defaultLogLevel, LogLevel, ILogger, ILoggerOptions} from "./interface";
+import chalk from "chalk";
 
 export class WinstonLogger implements ILogger {
   private winston: Logger;
@@ -17,9 +18,9 @@ export class WinstonLogger implements ILogger {
       ...options,
     };
     this.winston = createLogger({
-      level: LogLevel[LogLevel.debug], // log level switching handled in `createLogEntry`
+      level: LogLevel[LogLevel.verbose], // log level switching handled in `createLogEntry`
       defaultMeta: {
-        module: options.module,
+        module: options.module || "",
       },
       transports: [
         new transports.Console({
@@ -28,9 +29,16 @@ export class WinstonLogger implements ILogger {
             format.timestamp({
               format: "YYYY-MM-DD HH:mm:ss"
             }),
-            format.printf(
-              info => `${info.timestamp} [${info.module.toUpperCase()}] ${info.level}: ${info.message}`
-            )
+            format.printf((info) => {
+              const paddingBetweenInfo = 30;
+
+              const infoString = (info.module || info.namespace || "");
+              const infoPad = paddingBetweenInfo - infoString.length;
+
+              return (
+                `${info.timestamp}  [${infoString.toUpperCase()}] ${info.level.padStart(infoPad)}: ${info.message}`
+              );
+            })
           ),
           handleExceptions: true
         }),
@@ -42,15 +50,6 @@ export class WinstonLogger implements ILogger {
     this._silent = false;
   }
 
-  public child(options: ILoggerOptions): WinstonLogger {
-    const logger = Object.create(WinstonLogger.prototype);
-    return Object.assign(logger, {
-      winston: this.winston.child({module: options.module}),
-      _level: options.level,
-      _silent: false,
-    });
-  }
-
   public debug(message: string | object, context?: object): void {
     this.createLogEntry(LogLevel.debug, message, context);
   }
@@ -59,12 +58,52 @@ export class WinstonLogger implements ILogger {
     this.createLogEntry(LogLevel.info, message, context);
   }
 
+  public important(message: string | object, context?: object): void {
+    this.createLogEntry(LogLevel.info, chalk.red(message as string), context);
+  }
+
   public error(message: string | object, context?: object): void {
     this.createLogEntry(LogLevel.error, message, context);
   }
 
   public warn(message: string | object, context?: object): void {
     this.createLogEntry(LogLevel.warn, message, context);
+  }
+
+  public verbose(message: string | object, context?: object): void {
+    this.createLogEntry(LogLevel.verbose, message, context);
+  }
+
+  public silly(message: string | object, context?: object): void {
+    this.createLogEntry(LogLevel.silly, message, context);
+  }
+
+  public set level(level: LogLevel) {
+    this.winston.level = LogLevel[level];
+    this._level = level;
+  }
+
+  public get level(): LogLevel {
+    return this._level;
+  }
+
+  public set silent(silent: boolean) {
+    this._silent = silent;
+  }
+
+  public get silent(): boolean {
+    return this._silent;
+  }
+
+  public child(options: ILoggerOptions): WinstonLogger {
+    const logger = Object.create(WinstonLogger.prototype);
+    const winston = this.winston.child({namespace: options.module});
+    return Object.assign(logger, {
+      winston,
+      _level: options.level,
+      _silent: false,
+
+    });
   }
 
   private createLogEntry(level: LogLevel, message: string | object, context: object = {}): void {
@@ -78,18 +117,4 @@ export class WinstonLogger implements ILogger {
     }
   }
 
-  public set level(level: LogLevel) {
-    this.winston.level = LogLevel[level];
-    this._level = level;
-  }
-  public get level(): LogLevel {
-    return this._level;
-  }
-
-  public set silent(silent: boolean) {
-    this._silent = silent;
-  }
-  public get silent(): boolean {
-    return this._silent;
-  }
 }

@@ -19,7 +19,9 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
     const data = await this.db.get(
       encodeKey(Bucket.lastProposedBlock, pubKey.toString("hex"))
     );
-    if(!data) return null;
+    if(!data) {
+      return null;
+    }
     return deserialize(data, this.config.types.BeaconBlock);
   }
 

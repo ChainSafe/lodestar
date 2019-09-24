@@ -15,3 +15,4 @@ yarn-error.log
 package-lock.json
 LodestarValidatorDB/
 benchmark-reports/
+validators/

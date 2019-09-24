@@ -15,14 +15,17 @@ describe("[network] nodejs libp2p", () => {
     await promisify(node.stop.bind(node))();
     assert.equal(node.isStarted(), false);
   });
-  it("can connect/disconnect to a peer", async () => {
+  it("can connect/disconnect to a peer", async function ()  {
+    this.timeout(5000)
     // setup
     const nodeA: NodejsNode = await createNode(multiaddr);
     const nodeB: NodejsNode = await createNode(multiaddr);
+
     await Promise.all([
       promisify(nodeA.start.bind(nodeA))(),
       promisify(nodeB.start.bind(nodeB))(),
     ]);
+
     // connect
     await promisify(nodeA.dial.bind(nodeA))(nodeB.peerInfo);
     await new Promise((resolve, reject) => {
@@ -32,18 +35,18 @@ describe("[network] nodejs libp2p", () => {
         resolve();
       });
     });
+
+
     // test connection
     assert(nodeA.peerBook.get(nodeB.peerInfo).isConnected());
     assert(nodeB.peerBook.get(nodeA.peerInfo).isConnected());
+
     // disconnect
+    const p = new Promise(resolve => nodeB.once("peer:disconnect", resolve));
+    await new Promise(resolve => setTimeout(resolve, 100));
     await promisify(nodeA.hangUp.bind(nodeA))(nodeB.peerInfo);
-    await new Promise((resolve, reject) => {
-      const t = setTimeout(reject, 1000);
-      nodeB.once("peer:disconnect", () => {
-        clearTimeout(t);
-        resolve();
-      });
-    });
+    await p
+
     // test disconnection
     assert(!nodeA.peerBook.get(nodeB.peerInfo).isConnected());
     assert(!nodeB.peerBook.get(nodeA.peerInfo).isConnected());

@@ -50,7 +50,7 @@ import {_assertValidValue} from "./assertValidValue";
  * );
  * ```
  */
-export function clone(value: any, type: AnySSZType): boolean {
+export function clone(value: any, type: AnySSZType): any {
   const _type = parseType(type);
   _assertValidValue(value, _type);
   return _clone(value, _type);

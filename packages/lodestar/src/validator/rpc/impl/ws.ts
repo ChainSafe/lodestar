@@ -8,31 +8,26 @@ import {AbstractRpcClient} from "../abstract";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 export interface IRpcClientOverWsOpts {
-
   rpcUrl: string;
-
 }
 
 export class RpcClientOverWs extends AbstractRpcClient {
 
+  public url: string;
   public beacon!: IBeaconApi;
-
   public validator!: IValidatorApi;
-
   // @ts-ignore
   private socket: Websocket;
 
-  private rpcUrl: string;
-
   public constructor(opts: IRpcClientOverWsOpts, {config}: {config: IBeaconConfig}) {
     super();
-    this.rpcUrl = opts.rpcUrl;
+    this.url = opts.rpcUrl;
     this.config = config;
   }
 
   public async connect(): Promise<void> {
     await super.connect();
-    this.socket = new Websocket(this.rpcUrl);
+    this.socket = new Websocket(this.url);
     const client = new jsonRpc.Client(this.socket);
     const clientApi = client.api();
     this.beacon = clientApi.beacon;

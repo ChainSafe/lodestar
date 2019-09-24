@@ -8,8 +8,7 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BeaconDb, LevelDbController} from "../db";
 import defaultConf, {IBeaconNodeOptions} from "./options";
 import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
-import {createPeerId, INetwork, initializePeerInfo, Libp2pNetwork} from "../network";
-import {NodejsNode} from "../network/nodejs";
+import {INetwork, Libp2pNetwork} from "../network";
 import LibP2p from "libp2p";
 import {isPlainObject} from "../util/objects";
 import {Sync} from "../sync";
@@ -30,6 +29,7 @@ interface IBeaconNodeModules {
   config: IBeaconConfig;
   logger: ILogger;
   eth1?: IEth1Notifier;
+  libp2p?: LibP2p;
 }
 
 // TODO move into src/node/beacon
@@ -51,7 +51,7 @@ export class BeaconNode {
   public reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, eth1}: IBeaconNodeModules) {
+  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, eth1, libp2p}: IBeaconNodeModules) {
     this.conf = deepmerge(
       defaultConf,
       opts,
@@ -62,8 +62,13 @@ export class BeaconNode {
     );
     this.config = config;
     this.logger = logger.child(this.conf.logger.node);
-    this.metrics = new BeaconMetrics(this.conf.metrics);
-    this.metricsServer = new HttpMetricsServer(this.conf.metrics, {metrics: this.metrics});
+    this.metrics = new BeaconMetrics(this.conf.metrics, {
+      logger: logger.child(this.conf.logger.metrics),
+    });
+    this.metricsServer = new HttpMetricsServer(this.conf.metrics, {
+      metrics: this.metrics,
+      logger: logger.child(this.conf.logger.metrics)
+    });
     this.reps = new ReputationStore();
     this.db = new BeaconDb({
       config,
@@ -71,16 +76,9 @@ export class BeaconNode {
         logger: logger.child(this.conf.logger.db),
       }),
     });
-    // TODO initialize outside node
-    // initialize for network type
-    const libp2p = createPeerId()
-      .then((peerId) => initializePeerInfo(peerId, this.conf.network.multiaddrs))
-      .then((peerInfo) => new NodejsNode({peerInfo}));
-
     this.network = new Libp2pNetwork(this.conf.network, {
       config,
-      //@ts-ignore
-      libp2p: libp2p as LibP2p,
+      libp2p,
       logger: logger.child(this.conf.logger.network),
       metrics: this.metrics,
     });
@@ -89,6 +87,7 @@ export class BeaconNode {
       logger: logger.child(this.conf.logger.eth1),
     });
     this.opPool = new OpPool(this.conf.opPool, {
+      config,
       eth1: this.eth1,
       db: this.db
     });
@@ -135,7 +134,7 @@ export class BeaconNode {
     await this.eth1.start();
     await this.chain.start();
     await this.opPool.start();
-    await this.sync.start();
+    this.sync.start();
     await this.api.start();
   }
 

@@ -28,17 +28,17 @@ describe("getDomain", () => {
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
     const result = getDomain(config, state, 4, 8);
-    assert.equal(result.toString('hex'), '0000000400000004');
+    assert.equal(result.toString('hex'), '0400000004000000');
   });
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
     const result = getDomain(config, state, 5, 13);
-    assert.equal(result.toString('hex'), '0000000500000005');
+    assert.equal(result.toString('hex'), '0500000005000000');
   });
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
     const result = getDomain(config, state, 5, 12);
-    assert.equal(result.toString('hex'), '0000000500000005');
+    assert.equal(result.toString('hex'), '0500000005000000');
   });
 });
 

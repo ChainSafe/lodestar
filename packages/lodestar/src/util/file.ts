@@ -53,3 +53,23 @@ export function ensureDirectoryExistence(filePath: string): boolean {
   fs.mkdirSync(dirname);
   return true;
 }
+
+export function rmDir(dir: string): void {
+  const list = fs.readdirSync(dir);
+  for(let i = 0; i < list.length; i++) {
+    const filename = path.join(dir, list[i]);
+    const stat = fs.statSync(filename);
+                
+    if(filename == "." || filename == "..") {
+      // pass these files
+    } else if(stat.isDirectory()) {
+      // rmdir recursively
+      rmDir(filename);
+    } else {
+      // rm fiilename
+      fs.unlinkSync(filename);
+    }
+  }
+  fs.rmdirSync(dir);
+}
+

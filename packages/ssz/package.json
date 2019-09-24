@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/ssz",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Simple Serialize",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -39,7 +39,7 @@
     "mocha": "^6.2.0"
   },
   "dependencies": {
-    "@chainsafe/bit-utils": "0.1.4",
+    "@chainsafe/bit-utils": "^0.1.4",
     "@chainsafe/ssz-type-schema": "^0.0.1",
     "@types/bn.js": "^4.11.4",
     "assert": "^1.4.1",

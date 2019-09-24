@@ -11,16 +11,12 @@ import promisify from "promisify-es6";
 import pull from "pull-stream";
 import * as varint from "varint";
 import {
-  BeaconBlocksRequest,
-  BeaconBlocksResponse,
-  Goodbye,
-  Hello,
-  RecentBeaconBlocksRequest,
-  RecentBeaconBlocksResponse,
-  RequestBody,
-  ResponseBody
+  RequestBody, ResponseBody,
+  Hello, Goodbye,
+  BeaconBlocksByRangeRequest, BeaconBlocksByRangeResponse,
+  BeaconBlocksByRootRequest, BeaconBlocksByRootResponse,
 } from "@chainsafe/eth2.0-types";
-import {deserialize, serialize} from "@chainsafe/ssz";
+import {serialize, deserialize} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {
@@ -83,7 +79,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
 
   public sendResponse(id: RequestId, err: Error, body: ResponseBody): void {
     // @ts-ignore
-    this.emit(`response ${id}`, err, body);
+    this.emit(createResponseEvent(id), err, body);
   }
   public async hello(peerInfo: PeerInfo, request: Hello): Promise<Hello> {
     return await this.sendRequest<Hello>(peerInfo, Method.Hello, request);
@@ -91,14 +87,17 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
   public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
     await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request, true);
   }
-  public async beaconBlocks(peerInfo: PeerInfo, request: BeaconBlocksRequest): Promise<BeaconBlocksResponse> {
-    return await this.sendRequest<BeaconBlocksResponse>(peerInfo, Method.BeaconBlocks, request);
-  }
-  public async recentBeaconBlocks(
+  public async beaconBlocksByRange(
     peerInfo: PeerInfo,
-    request: RecentBeaconBlocksRequest
-  ): Promise<RecentBeaconBlocksResponse> {
-    return await this.sendRequest<RecentBeaconBlocksResponse>(peerInfo, Method.RecentBeaconBlocks, request);
+    request: BeaconBlocksByRangeRequest
+  ): Promise<BeaconBlocksByRangeResponse> {
+    return await this.sendRequest<BeaconBlocksByRangeResponse>(peerInfo, Method.BeaconBlocksByRange, request);
+  }
+  public async beaconBlocksByRoot(
+    peerInfo: PeerInfo,
+    request: BeaconBlocksByRootRequest
+  ): Promise<BeaconBlocksByRootResponse> {
+    return await this.sendRequest<BeaconBlocksByRootResponse>(peerInfo, Method.BeaconBlocksByRoot, request);
   }
 
   /**
@@ -115,41 +114,31 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
           try {
             const request = this.decodeRequest(method, data);
             const requestId = randomRequestId();
-            this.emit("request", peerInfo, method, requestId, request);
-            this.logger.debug("request", {
-              peer: peerInfo.id.toB58String(),
-              method,
-              requestId,
-            });
+            this.logger.verbose(`${requestId} - receive ${method} request from ${peerInfo.id.toB58String()}`);
             if (!requestOnly) {
               const responseEvent = createResponseEvent(requestId);
               // eslint-disable-next-line
               let responseListener: any;
               const responseTimer = setTimeout(() => {
-                this.logger.debug("response timeout", {
-                  method,
-                  requestId,
-                });
+                this.logger.verbose(`${requestId} - send ${method} response timeout`);
                 // @ts-ignore
                 this.removeListener(responseEvent, responseListener);
                 cb(null, this.encodeResponseError(new Error(ERR_RESP_TIMEOUT)));
               }, RESP_TIMEOUT);
               responseListener = (err: Error|null, output: ResponseBody): void => {
-                this.logger.debug("response", {
-                  method,
-                  requestId,
-                });
                 // @ts-ignore
                 this.removeListener(responseEvent, responseListener);
                 clearTimeout(responseTimer);
                 if (err) return cb(null, this.encodeResponseError(err));
                 cb(null, this.encodeResponse(method, output));
+                this.logger.verbose(`${requestId} - send ${method} response`);
               };
               // @ts-ignore
               this.once(responseEvent, responseListener);
             } else {
               cb(true);
             }
+            this.emit("request", peerInfo, method, requestId, request);
           } catch (e) {
             if (!requestOnly) {
               cb(null, this.encodeResponseError(e));
@@ -168,11 +157,11 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
       case Method.Goodbye:
         output = serialize(body, this.config.types.Goodbye);
         break;
-      case Method.BeaconBlocks:
-        output = serialize(body, this.config.types.BeaconBlocksRequest);
+      case Method.BeaconBlocksByRange:
+        output = serialize(body, this.config.types.BeaconBlocksByRangeRequest);
         break;
-      case Method.RecentBeaconBlocks:
-        output = serialize(body, this.config.types.RecentBeaconBlocksRequest);
+      case Method.BeaconBlocksByRoot:
+        output = serialize(body, this.config.types.BeaconBlocksByRootRequest);
         break;
     }
     return Buffer.concat([
@@ -189,11 +178,11 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
       case Method.Goodbye:
         output = serialize(body, this.config.types.Goodbye);
         break;
-      case Method.BeaconBlocks:
-        output = serialize(body, this.config.types.BeaconBlocksResponse);
+      case Method.BeaconBlocksByRange:
+        output = serialize(body, this.config.types.BeaconBlocksByRangeResponse);
         break;
-      case Method.RecentBeaconBlocks:
-        output = serialize(body, this.config.types.RecentBeaconBlocksResponse);
+      case Method.BeaconBlocksByRoot:
+        output = serialize(body, this.config.types.BeaconBlocksByRootResponse);
         break;
     }
     return Buffer.concat([
@@ -222,10 +211,10 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
         return deserialize(data, this.config.types.Hello);
       case Method.Goodbye:
         return deserialize(data, this.config.types.Goodbye);
-      case Method.BeaconBlocks:
-        return deserialize(data, this.config.types.BeaconBlocksRequest);
-      case Method.RecentBeaconBlocks:
-        return deserialize(data, this.config.types.RecentBeaconBlocksRequest);
+      case Method.BeaconBlocksByRange:
+        return deserialize(data, this.config.types.BeaconBlocksByRangeRequest);
+      case Method.BeaconBlocksByRoot:
+        return deserialize(data, this.config.types.BeaconBlocksByRootRequest);
     }
   }
   private decodeResponse(method: Method, data: Buffer): ResponseBody {
@@ -247,10 +236,10 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
         return deserialize(data, this.config.types.Hello);
       case Method.Goodbye:
         return deserialize(data, this.config.types.Goodbye);
-      case Method.BeaconBlocks:
-        return deserialize(data, this.config.types.BeaconBlocksRequest);
-      case Method.RecentBeaconBlocks:
-        return deserialize(data, this.config.types.RecentBeaconBlocksRequest);
+      case Method.BeaconBlocksByRange:
+        return deserialize(data, this.config.types.BeaconBlocksByRangeResponse);
+      case Method.BeaconBlocksByRoot:
+        return deserialize(data, this.config.types.BeaconBlocksByRootResponse);
     }
   }
   private async sendRequest<T extends ResponseBody>(
@@ -265,6 +254,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
         if (err) {
           return reject(err);
         }
+        this.logger.verbose(`send ${method} request to ${peerInfo.id.toB58String()}`);
         // @ts-ignore
         const responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
         // pull-stream through that will resolve after the request is sent
@@ -290,6 +280,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
           conn,
           pull.drain((data) => {
             clearTimeout(responseTimer);
+            this.logger.verbose(`receive ${method} response from ${peerInfo.id.toB58String()}`);
             try {
               resolve(this.decodeResponse(method, data) as T);
             } catch (e) {

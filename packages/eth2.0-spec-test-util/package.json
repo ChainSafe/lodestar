@@ -46,6 +46,8 @@
     "camelcase": "^5.3.1",
     "chai": "^4.2.0",
     "deepmerge": "^4.0.0",
+    "chai": "^4.2.0",
+    "mocha": "^6.2.0",
     "js-yaml": "^3.13.1",
     "mocha": "^6.2.0",
     "v8-profiler-next": "^1.1.1"
@@ -56,9 +58,7 @@
     "@types/chai": "^4.1.7",
     "@types/deepmerge": "^2.2.0",
     "@types/js-yaml": "^3.12.1",
-    "@types/mocha": "^5.2.7",
-    "chai": "^4.2.0",
-    "mocha": "^6.2.0"
+    "@types/mocha": "^5.2.7"
   },
   "peerDependencies": {
     "chai": "^4.2.0",

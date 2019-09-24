@@ -1,37 +1,16 @@
-FROM node:10.16-alpine
+FROM node:10
 
-WORKDIR /usr/app
+RUN npm install -g yarn
 
-RUN apk add --update git python make g++ linux-headers paxctl gcc && \
-  rm -rf /tmp/* /var/cache/apk/*
+COPY . /root/lodestar
 
-COPY lerna.json .
-COPY package.json .
-COPY packages/lodestar/package.json ./packages/lodestar/package.json
-COPY yarn.lock .
+WORKDIR /root/lodestar
 
-RUN yarn install --frozen-lockfile && node_modules/.bin/lerna bootstrap && yarn cache clean
+RUN yarn
 
-COPY . .
+#ENTRYPOINT ["./packages/lodestar/bin/lodestar"]
+CMD ./packages/lodestar/bin/lodestar interop -p minimal --db l1 -q 1568584956,8 --multiaddrs /ip4/127.0.0.1/tcp/30607 -r -v 8
 
-RUN node_modules/.bin/lerna run build
 
-FROM node:10.16-alpine
 
-RUN apk add --update git python make g++ linux-headers paxctl gcc && \
-  rm -rf /tmp/* /var/cache/apk/*
 
-WORKDIR /app
-
-COPY --from=0 /usr/app/packages/lodestar/lib /app/lib
-COPY --from=0 /usr/app/packages/lodestar/bin /app/bin
-COPY --from=0 /usr/app/packages/lodestar/package.json /app/package.json
-COPY --from=0 /usr/app/yarn.lock /app/yarn.lock
-
-RUN yarn install --frozen-lockfile --production && yarn cache clean && apk del git python g++ gcc make
-
-RUN chown -R node: .
-
-USER node
-
-ENTRYPOINT ["/app/bin/lodestar"]

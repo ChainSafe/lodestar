@@ -14,6 +14,7 @@ import {IEth1Notifier} from "../../../../eth1";
 import {getValidatorDuties, produceAttestation} from "../../../impl/validator";
 import {ApiNamespace, IApiModules} from "../../../index";
 import {IApiOptions} from "../../../options";
+import {ILogger} from "../../../../logger";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -24,25 +25,23 @@ export class ValidatorApi implements IValidatorApi {
   private db: IBeaconDb;
   private opPool: OpPool;
   private eth1: IEth1Notifier;
+  private logger: ILogger;
 
   public constructor(
     opts: Partial<IApiOptions>,
-    {config, chain, db, opPool, eth1}: Pick<IApiModules, "config"|"chain"|"db"|"opPool"|"eth1">
+    {config, chain, db, opPool, eth1, logger}: Pick<IApiModules, "config"|"chain"|"db"|"opPool"|"eth1"|"logger">
   ) {
     this.namespace = ApiNamespace.VALIDATOR;
     this.config = config;
     this.chain = chain;
     this.db = db;
+    this.logger = logger;
     this.opPool = opPool;
     this.eth1 = eth1;
   }
 
   public async produceBlock(slot: Slot, randaoReveal: bytes96): Promise<BeaconBlock> {
-    const block = await assembleBlock(this.config, this.db, this.opPool, this.eth1, slot, randaoReveal);
-    if(!block) {
-      throw new Error("Failed to produce block");
-    }
-    return block;
+    return await assembleBlock(this.config, this.chain, this.db, this.opPool, this.eth1, slot, randaoReveal);
   }
 
   public async getDuties(validatorPublicKeys: BLSPubkey[], epoch: Epoch): Promise<ValidatorDuty[]> {
@@ -55,12 +54,16 @@ export class ValidatorApi implements IValidatorApi {
     slot: Slot,
     shard: Shard
   ): Promise<Attestation> {
-    return produceAttestation(
-      {config: this.config, chain: this.chain, db: this.db},
-      validatorPubKey,
-      shard,
-      slot
-    );
+    try {
+      return await produceAttestation(
+        {config: this.config, chain: this.chain, db: this.db},
+        validatorPubKey,
+        shard,
+        slot
+      );
+    } catch (e) {
+      this.logger.warn(`Failed to produce attestation because: ${e.message}`);
+    }
   }
 
   public async publishBlock(block: BeaconBlock): Promise<void> {
@@ -69,6 +72,10 @@ export class ValidatorApi implements IValidatorApi {
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
     await this.opPool.attestations.receive(attestation);
+  }
+
+  public async getValidatorIndex(pubKey: BLSPubkey): Promise<number> {
+    return this.db.getValidatorIndex(pubKey);
   }
 
 }

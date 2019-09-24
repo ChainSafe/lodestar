@@ -35,6 +35,7 @@ describe('validator attestation service', function () {
   });
 
   it('should not sign conflicting attestation', async function () {
+    this.timeout(10000)
     const slot = 1;
     const shard = 1;
     const attestationData = generateAttestationData(slot, 1);
@@ -54,6 +55,7 @@ describe('validator attestation service', function () {
   });
 
   it('should produce correct block', async function () {
+    this.timeout(10000)
     const slot = 1;
     const shard = 1;
     const attestationData = generateAttestationData(slot, 1);

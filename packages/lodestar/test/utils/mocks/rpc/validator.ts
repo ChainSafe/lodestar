@@ -5,11 +5,8 @@ import {
   BLSPubkey,
   bytes,
   Deposit,
-  Epoch,
   Eth1Data,
-  IndexedAttestation,
   number64,
-  Shard,
   Slot,
   ValidatorDuty,
   ValidatorIndex
@@ -18,7 +15,6 @@ import {
 import {getEmptyBlock} from "../../../../src/chain/genesis/genesis";
 
 import {IValidatorApi} from "../../../../src/api/rpc/api/validator";
-import {CommitteeAssignment} from "../../../../src/validator/types";
 import {ApiNamespace} from "../../../../src/api";
 
 export interface MockValidatorAPIOpts {
@@ -64,6 +60,10 @@ export class MockValidatorApi implements IValidatorApi {
   }
 
   public produceAttestation(validatorPubKey: Buffer, pocBit: boolean, slot: number, shard: number): Promise<Attestation> {
+    return undefined;
+  }
+
+  public getValidatorIndex(pubKey: Buffer): Promise<ValidatorIndex> {
     return undefined;
   }
 

@@ -15,6 +15,7 @@ describe("assemble attestation data", function () {
     dbStub = {
       block: sandbox.createStubInstance(BlockRepository)
     };
+    dbStub.config = config;
   });
 
   afterEach(() => {
@@ -24,10 +25,8 @@ describe("assemble attestation data", function () {
   it('should produce attestation', async function () {
     const state = generateState({slot: 2});
     const block = generateEmptyBlock();
-    dbStub.block.get.resolves(block);
     const result = await assembleAttestationData(config, dbStub, state, block, 2);
     expect(result).to.not.be.null;
-    expect(dbStub.block.get.calledOnce).to.be.true;
   });
 
 });
