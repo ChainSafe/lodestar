@@ -1,7 +1,7 @@
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 // eslint-disable-next-line import/default
 import camelCase from "camelcase";
-import {FullSSZType, parseType, Type,} from "../../src";
+import {FullSSZType, parseType, Type,} from "@chainsafe/ssz-type-schema";
 
 // remove all 'number' uint types, yaml spec tests convert all numbers to BN
 export function hydrateType(type: any): FullSSZType {

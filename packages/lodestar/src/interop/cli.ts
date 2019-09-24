@@ -4,7 +4,7 @@ import {BeaconState} from "@chainsafe/eth2.0-types";
 import {deserialize} from "@chainsafe/ssz";
 import {loadYamlFile} from "@chainsafe/eth2.0-spec-test-util";
 
-import {expandYamlValue} from "../util/expandYamlValue";
+import {fromYaml} from "@chainsafe/eth2.0-utils";
 import {quickStartState} from "./state";
 
 // either "genesisTime,validatorCount" or "genesisState.fileext"
@@ -24,6 +24,6 @@ export function quickStartOptionToState(config: IBeaconConfig, option: string): 
   if (fileExt[1] === "ssz") {
     return deserialize(readFileSync(option), config.types.BeaconState);
   } else {
-    return expandYamlValue(loadYamlFile(option), config.types.BeaconState);
+    return fromYaml<BeaconState>(loadYamlFile(option), config.types.BeaconState);
   }
 }

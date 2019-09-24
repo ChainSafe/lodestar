@@ -1,12 +1,8 @@
 import {assert} from "chai";
 import {describe, it} from "mocha";
 import BN from "bn.js";
-import {
-  hashTreeRoot,
-  SerializableValue,
-  Type,
-} from "../../src";
-import {AnySSZType} from "../../src/types";
+import {hashTreeRoot,} from "../../src";
+import {AnySSZType, SerializableValue, Type,} from "@chainsafe/ssz-type-schema";
 
 
 import {ArrayObject, OuterObject, SimpleObject,} from "./objects";
@@ -85,7 +81,7 @@ describe("hashTreeRoot", () => {
   });
 
   it("should be able to hash inner object as list of basic object", () => {
-    const accountBalances = {
+    const accountBalances: {balances: BN[]} = {
       balances: []
     };
     const count = 2;

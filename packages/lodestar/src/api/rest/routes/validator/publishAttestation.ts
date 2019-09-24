@@ -38,7 +38,6 @@ export const registerAttestationPublishEndpoint = (fastify: IFastifyServer, modu
           )
         );
       } catch (e) {
-        console.log(e);
         modules.logger.error(e.message);
       }
       reply

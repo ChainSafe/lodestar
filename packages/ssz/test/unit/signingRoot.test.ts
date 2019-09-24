@@ -1,10 +1,11 @@
 import {assert} from "chai";
 import {describe, it} from "mocha";
-import {SerializableObject, SerializableValue, signingRoot,} from "../../src";
+import {SerializableObject, SerializableValue} from "@chainsafe/ssz-type-schema";
 
 import {ArrayObject, OuterObject, SimpleObject,} from "./objects";
 
 import {stringifyType} from "./utils";
+import {signingRoot} from "../../src";
 
 describe("signedRoot", () => {
   const testCases: {
