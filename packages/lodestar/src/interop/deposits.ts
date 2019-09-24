@@ -7,9 +7,10 @@ import {DomainType, DEPOSIT_CONTRACT_TREE_DEPTH} from "../constants";
 import {interopKeypairs} from "./keypairs";
 import {computeDomain} from "../chain/stateTransition/util";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
+import {MerkleTreeSerialization} from "../util/serialization";
 
 export function interopDeposits(config: IBeaconConfig, validatorCount: number): Deposit[] {
-  const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
+  const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
   return interopKeypairs(validatorCount).map(({pubkey, privkey}, i) => {
     // create DepositData
     const data: DepositData = {

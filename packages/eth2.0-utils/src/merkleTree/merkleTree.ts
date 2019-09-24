@@ -8,22 +8,6 @@ import {hash} from "../crypto";
 import {intDiv} from "../math";
 import {IProgressiveMerkleTree} from "./interface";
 
-// const MerkleTreeType: SimpleContainerType = {
-//   fields: [
-//     ["depth", "number64"],
-//     ["tree", {
-//       elementType: {
-//         elementType: {
-//           elementType: "byte",
-//           maxLength: 32,
-//         },
-//         maxLength: 32,
-//       },
-//       maxLength: 32,
-//     }],
-//   ],
-// };
-
 export interface IMerkleTreeSerialization {
 
   serializeTree(tree: MerkleTree): Buffer;

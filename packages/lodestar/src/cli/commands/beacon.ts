@@ -20,6 +20,7 @@ import {InteropEth1Notifier} from "../../eth1/impl/interop";
 import {ValidatorApi} from "../../api/rpc/api/validator";
 import {BeaconApi} from "../../api/rpc/api/beacon";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
+import {MerkleTreeSerialization} from "../../util/serialization";
 
 interface IBeaconCommandOptions {
   configFile: string;
@@ -80,7 +81,10 @@ export class BeaconNodeCommand implements ICliCommand {
     if (options.quickStart) {
       this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier()});
       const state = quickStartOptionToState(config, options.quickStart);
-      await this.node.chain.initializeBeaconChain(state, ProgressiveMerkleTree.empty(32));
+      await this.node.chain.initializeBeaconChain(
+        state,
+        ProgressiveMerkleTree.empty(32, new MerkleTreeSerialization(config))
+      );
     } else {
       this.node = new BeaconNode(conf, {config, logger});
     }

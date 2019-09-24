@@ -11,6 +11,7 @@ import {generateState} from "../../../../utils/state";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {BlockRepository, MerkleTreeRepository, StateRepository} from "../../../../../src/db/api/beacon/repositories";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
+import {MerkleTreeSerialization} from "../../../../../src/util/serialization";
 
 describe("block assembly", function () {
 
@@ -37,7 +38,9 @@ describe("block assembly", function () {
   it("should assemble block", async function() {
     beaconDB.state.getLatest.resolves(generateState({slot: 1}));
     beaconDB.block.getChainHead.resolves(generateEmptyBlock());
-    beaconDB.merkleTree.getProgressiveMerkleTree.resolves(ProgressiveMerkleTree.empty(32));
+    beaconDB.merkleTree.getProgressiveMerkleTree.resolves(
+      ProgressiveMerkleTree.empty(32, new MerkleTreeSerialization(config))
+    );
     assembleBodyStub.resolves(generateEmptyBlock().body);
     try {
       const result = await assembleBlock(config, beaconDB, opPool, eth1, 1, Buffer.alloc(96, 0));

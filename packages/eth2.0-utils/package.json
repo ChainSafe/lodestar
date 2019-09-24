@@ -42,6 +42,7 @@
   "dependencies": {
     "@chainsafe/as-sha256": "^0.1.2",
     "@chainsafe/eth2.0-types": "^0.1.1",
+    "@chainsafe/ssz-type-schema": "^0.0.1",
     "bn.js": "^5.0.0"
   },
   "devDependencies": {

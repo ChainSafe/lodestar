@@ -6,6 +6,7 @@ import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../../schema";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "@chainsafe/eth2.0-params/src/presets/mainnet";
 import {IProgressiveMerkleTree, ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
+import {MerkleTreeSerialization} from "../../../../util/serialization";
 
 export class MerkleTreeRepository extends BulkRepository<MerkleTree> {
 
@@ -15,10 +16,14 @@ export class MerkleTreeRepository extends BulkRepository<MerkleTree> {
     super(config, db, Bucket.merkleTree, config.types.MerkleTree);
   }
 
-  public async getProgressiveMerkleTree(index: number, depth?: number): Promise<IProgressiveMerkleTree> {
+  public async getProgressiveMerkleTree(
+    config: IBeaconConfig,
+    index: number, depth?: number
+  ): Promise<IProgressiveMerkleTree> {
     const tree = await this.get(index);
-    if(!tree) return ProgressiveMerkleTree.empty(depth || DEPOSIT_CONTRACT_TREE_DEPTH);
-    return new ProgressiveMerkleTree(tree.depth, tree.tree);
+    const serialization = new MerkleTreeSerialization(config);
+    if(!tree) return ProgressiveMerkleTree.empty(depth || DEPOSIT_CONTRACT_TREE_DEPTH, serialization);
+    return new ProgressiveMerkleTree(tree.depth, tree.tree, serialization);
   }
 
 }

@@ -26,6 +26,7 @@ import {IChainOptions} from "./options";
 import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
+import {MerkleTreeSerialization} from "../util/serialization";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -225,6 +226,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const [deposits, merkleTree] = await Promise.all([
       this.db.deposit.getAll(),
       this.db.merkleTree.getProgressiveMerkleTree(
+        this.config,
         newState.eth1DepositIndex - newState.eth1Data.depositCount
       )
     ]);
@@ -248,7 +250,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   private checkGenesis = async (eth1Block: Block): Promise<void> => {
     this.logger.info(`Checking if block ${eth1Block.hash} will form valid genesis state`);
     const deposits = await this.opPool.deposits.getAll();
-    const merkleTree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
+    const merkleTree = ProgressiveMerkleTree.empty(
+      DEPOSIT_CONTRACT_TREE_DEPTH,
+      new MerkleTreeSerialization(this.config)
+    );
     const depositsWithProof = deposits
       .map((deposit, index) => {
         merkleTree.add(index, hashTreeRoot(deposit.data, this.config.types.DepositData));

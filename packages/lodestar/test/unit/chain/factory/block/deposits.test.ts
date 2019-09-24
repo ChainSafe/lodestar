@@ -9,6 +9,7 @@ import {generateState} from "../../../../utils/state";
 import {generateDeposit} from "../../../../utils/deposit";
 import {DepositsOperations} from "../../../../../src/opPool/modules";
 import {ProgressiveMerkleTree, verifyMerkleBranch} from "@chainsafe/eth2.0-utils";
+import {MerkleTreeSerialization} from "../../../../../src/util/serialization";
 
 describe("blockAssembly - deposits", function() {
 
@@ -37,14 +38,14 @@ describe("blockAssembly - deposits", function() {
         blockHash: ZERO_HASH,
         depositRoot: ZERO_HASH
       },
-      ProgressiveMerkleTree.empty(4));
+      ProgressiveMerkleTree.empty(4, new MerkleTreeSerialization(config)));
     expect(result).to.be.deep.equal([]);
   });
 
   it("return deposits with valid proofs", async function() {
     const deposits = [generateDeposit(), generateDeposit()];
     opPool.deposits.getAll.resolves(deposits);
-    const tree = ProgressiveMerkleTree.empty(4);
+    const tree = ProgressiveMerkleTree.empty(4, new MerkleTreeSerialization(config));
     deposits.forEach((d, index) => {
       tree.add(index, hashTreeRoot(d.data, config.types.DepositData));
     });

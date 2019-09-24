@@ -27,7 +27,7 @@ export async function assembleBlock(
   if(!parentBlock) {
     return null;
   }
-  const merkleTree = await db.merkleTree.getProgressiveMerkleTree(currentState.eth1DepositIndex);
+  const merkleTree = await db.merkleTree.getProgressiveMerkleTree(config, currentState.eth1DepositIndex);
   const parentHeader: BeaconBlockHeader = {
     stateRoot: parentBlock.stateRoot,
     signature: parentBlock.signature,

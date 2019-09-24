@@ -32,6 +32,7 @@ import {
 } from "../../../../../src/db/api/beacon/repositories";
 import {ValidatorApi} from "../../../../../src/api/rpc/api/validator";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
+import {MerkleTreeSerialization} from "../../../../../src/util/serialization";
 
 describe("produce block", function () {
   this.timeout(0);
@@ -76,7 +77,7 @@ describe("produce block", function () {
       balances,
       latestBlockHeader: parentHeader
     });
-    const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
+    const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
     tree.add(0, hashTreeRoot(generateDeposit().data, config.types.DepositData));
     dbStub.block.getChainHead.resolves(parentBlock);
     dbStub.state.getLatest.resolves(state);
