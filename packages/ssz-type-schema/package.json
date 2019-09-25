@@ -1,7 +1,7 @@
 {
   "name": "@chainsafe/ssz-type-schema",
   "version": "0.0.1",
-  "description": "Utility methods and types for describing of ssz object.",
+  "description": "Utility methods and types for describing an ssz object",
   "author": "ChainSafe Systems",
   "license": "LGPL-3.0",
   "bugs": {
