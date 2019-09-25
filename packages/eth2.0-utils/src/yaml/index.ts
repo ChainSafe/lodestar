@@ -1,8 +1,6 @@
 import {load, dump} from "js-yaml";
 import {readFileSync} from "fs";
 import {schema} from "./schema";
-// eslint-disable-next-line import/default
-import camelcaseKeys from "camelcase-keys";
 import {objectToCamelCase} from "../misc";
 
 export function loadYamlFile(path: string): object {
