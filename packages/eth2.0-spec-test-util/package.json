@@ -24,7 +24,7 @@
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "prepublishOnly": "yarn build",
     "pretest": "yarn run check-types",
-    "test:e2e": "mocha -r ./.babel-register 'test/e2e/**/*.test.ts'"
+    "test:e2e": "mocha --colors -r ts-node/register 'test/e2e/**/*.test.ts'"
   },
   "repository": {
     "type": "git",
@@ -41,7 +41,7 @@
   ],
   "dependencies": {
     "@chainsafe/eth2.0-utils": "^0.0.1",
-    "@chainsafe/ssz": "^0.5.1",
+    "@chainsafe/ssz": "^0.5.2",
     "bn.js": "^5.0.0",
     "camelcase": "^5.3.1",
     "chai": "^4.2.0",

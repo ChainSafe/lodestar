@@ -3,17 +3,18 @@ import {readFileSync} from "fs";
 import {schema} from "./schema";
 // eslint-disable-next-line import/default
 import camelcaseKeys from "camelcase-keys";
+import {objectToCamelCase} from "../misc";
 
 export function loadYamlFile(path: string): object {
   return loadYaml(readFileSync(path, "utf8"));
 }
 
 export function loadYaml(yaml: string): object {
-  return camelcaseKeys(
+  return objectToCamelCase(
     load(
       yaml,
       {schema}
-    ), {deep: true}
+    )
   );
 }
 

@@ -45,12 +45,12 @@
     "@chainsafe/eth2.0-types": "^0.1.1",
     "@chainsafe/ssz-type-schema": "^0.0.1",
     "bn.js": "^5.0.0",
-    "camelcase-keys": "^6.0.1",
+    "camelcase": "^5.3.1",
     "js-yaml": "^3.13.1",
     "snake-case": "^2.1.0"
   },
   "devDependencies": {
-    "@types/camelcase-keys": "^5.1.1",
+    "@types/camelcase": "^5.2.0",
     "@types/chai": "^4.1.7",
     "@types/js-yaml": "^3.12.1",
     "@types/mocha": "^5.2.7",

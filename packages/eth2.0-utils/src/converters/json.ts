@@ -4,9 +4,8 @@ import snakeCase from "snake-case";
 import {toHex} from "../bytes";
 import BN from "bn.js";
 import {AnySSZType, FullSSZType, parseType, Type} from "@chainsafe/ssz-type-schema";
-// eslint-disable-next-line import/default
-import camelcaseKeys from "camelcase-keys";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
+import {objectToCamelCase} from "../misc";
 
 export function toJson(o: object): object {
   o = {...o};
@@ -45,7 +44,7 @@ function serializeToJson(value: any): any {
 }
 
 export function fromJson<T>(value: object, type: AnySSZType): T {
-  value = camelcaseKeys(value, {deep: true});
+  value = objectToCamelCase(value);
   return expandJsonValue(value, parseType(type));
 }
 

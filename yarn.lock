@@ -1810,13 +1810,6 @@
   dependencies:
     "@types/node" "*"
 
-"@types/camelcase-keys@^5.1.1":
-  version "5.1.1"
-  resolved "https://registry.yarnpkg.com/@types/camelcase-keys/-/camelcase-keys-5.1.1.tgz#98b0401e7e759fee9ccf2ee1a32a26dc33b87e01"
-  integrity sha512-Nlr/xdCry/Zbr5Q3jaDazCHf0FfeETVVaDVXUszP8DUUvVfkc/kt7Mab8TaNkKS6s7AE8qNFqjYLL9Y8zKA0Bg==
-  dependencies:
-    camelcase-keys "*"
-
 "@types/camelcase@^5.2.0":
   version "5.2.0"
   resolved "https://registry.yarnpkg.com/@types/camelcase/-/camelcase-5.2.0.tgz#5c139f8618a126827129587cce9ee904f9a79863"
@@ -2517,9 +2510,9 @@ asn1@~0.2.3:
   dependencies:
     safer-buffer "~2.1.0"
 
-"assemblyscript@git+https://github.com/AssemblyScript/assemblyscript.git":
+"assemblyscript@https://github.com/AssemblyScript/assemblyscript.git":
   version "0.7.0"
-  resolved "git+https://github.com/AssemblyScript/assemblyscript.git#4a25bfa68d74d0d24e51c045e3f201501713b51a"
+  resolved "https://github.com/AssemblyScript/assemblyscript.git#4a25bfa68d74d0d24e51c045e3f201501713b51a"
   dependencies:
     "@protobufjs/utf8" "^1.1.0"
     binaryen "89.0.0-nightly.20190918"
@@ -3645,15 +3638,6 @@ callsites@^3.0.0:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/callsites/-/callsites-3.1.0.tgz#b3630abd8943432f54b3f0519238e33cd7df2f73"
 
-camelcase-keys@*, camelcase-keys@^6.0.1:
-  version "6.0.1"
-  resolved "https://registry.yarnpkg.com/camelcase-keys/-/camelcase-keys-6.0.1.tgz#a0d1a03cab5499a7ddcc62b23b4874399ca1dfaf"
-  integrity sha512-Pet+fVo99HMVy183qJuyTiQECQlb0dCXg89qhixcud88j4BSns+gzhSrjRT0ustEYSWJqKMO42arm1cS1VG5FA==
-  dependencies:
-    camelcase "^5.3.1"
-    map-obj "^4.0.0"
-    quick-lru "^4.0.1"
-
 camelcase-keys@^2.0.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/camelcase-keys/-/camelcase-keys-2.1.0.tgz#308beeaffdf28119051efa1d932213c91b8f92e7"
@@ -3668,6 +3652,15 @@ camelcase-keys@^4.0.0:
     camelcase "^4.1.0"
     map-obj "^2.0.0"
     quick-lru "^1.0.0"
+
+camelcase-keys@^6.0.1:
+  version "6.0.1"
+  resolved "https://registry.yarnpkg.com/camelcase-keys/-/camelcase-keys-6.0.1.tgz#a0d1a03cab5499a7ddcc62b23b4874399ca1dfaf"
+  integrity sha512-Pet+fVo99HMVy183qJuyTiQECQlb0dCXg89qhixcud88j4BSns+gzhSrjRT0ustEYSWJqKMO42arm1cS1VG5FA==
+  dependencies:
+    camelcase "^5.3.1"
+    map-obj "^4.0.0"
+    quick-lru "^4.0.1"
 
 camelcase@*, camelcase@^5.0.0, camelcase@^5.3.1:
   version "5.3.1"
