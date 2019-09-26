@@ -278,7 +278,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
     this.metrics.currentSlot.inc(1);
 
-      // forward processed block for additional processing
+    // forward processed block for additional processing
     this.emit("processedBlock", block);
   };
 

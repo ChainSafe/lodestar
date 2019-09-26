@@ -4,10 +4,10 @@
 
 import {EventEmitter} from "events";
 
-import {BeaconBlock, BeaconBlockHeader, BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {getBeaconProposerIndex} from "../chain/stateTransition/util";
+import {blockToHeader, computeEpochOfSlot, getBeaconProposerIndex} from "../chain/stateTransition/util";
 import {IBeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
 import {
@@ -19,9 +19,6 @@ import {
   VoluntaryExitOperations
 } from "./modules";
 import {IEth1Notifier} from "../eth1";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {computeEpochOfSlot} from "../chain/stateTransition/util";
-import {blockToHeader} from "../chain/stateTransition/util/blockRoot";
 
 interface IOpPoolModules {
   config: IBeaconConfig;

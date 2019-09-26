@@ -10,8 +10,9 @@ import {IBeaconDb} from "../../../db/api";
 import {OpPool} from "../../../opPool";
 import {assembleBody} from "./body";
 import {IEth1Notifier} from "../../../eth1";
-import {processSlots, stateTransition, blockToHeader} from "../../stateTransition";
+import {processSlots, stateTransition} from "../../stateTransition";
 import {IBeaconChain} from "../../interface";
+import {blockToHeader} from "../../stateTransition/util";
 
 export async function assembleBlock(
   config: IBeaconConfig,

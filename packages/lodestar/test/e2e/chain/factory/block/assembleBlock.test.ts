@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import BN from "bn.js";
-import {hashTreeRoot, clone} from "@chainsafe/ssz";
+import {clone, hashTreeRoot} from "@chainsafe/ssz";
 import sinon from "sinon";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
 import {BeaconBlockHeader} from "@chainsafe/eth2.0-types";
@@ -12,14 +12,14 @@ import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {OpPool} from "../../../../../src/opPool";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
-import {getBeaconProposerIndex, blockToHeader} from "../../../../../src/chain/stateTransition/util";
+import {blockToHeader, getBeaconProposerIndex} from "../../../../../src/chain/stateTransition/util";
 import {stateTransition} from "../../../../../src/chain/stateTransition";
 import {generateValidator} from "../../../../utils/validator";
 import BlockProposingService from "../../../../../src/validator/services/block";
 import {RpcClientOverInstance} from "../../../../../src/validator/rpc";
 import {WinstonLogger} from "../../../../../src/logger";
 import {generateDeposit} from "../../../../utils/deposit";
-import {BeaconChain} from "../../../../../../lodestar/src/chain";
+import {BeaconChain} from "../../../../../src/chain";
 import {StatefulDagLMDGHOST} from "../../../../../src/chain/forkChoice";
 
 import {
@@ -33,7 +33,6 @@ import {
   StateRepository,
   VoluntaryExitRepository
 } from "../../../../../src/db/api/beacon/repositories";
-import { createIBeaconConfig } from "@chainsafe/eth2.0-config";
 import {ValidatorApi} from "../../../../../src/api/rpc/api/validator";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "../../../../../src/util/serialization";
@@ -53,14 +52,11 @@ describe("produce block", function () {
   }; // missing transfer
   // @ts-ignore
   const opPoolStub = new OpPool({}, {config:config, db: dbStub, eth1: sinon.createStubInstance(EthersEth1Notifier)});
-  };
-  const configStub = sinon.createStubInstance(createIBeaconConfig);
-const opPoolStub = new OpPool({}, {config: configStub, db: dbStub, eth1: sinon.createStubInstance(EthersEth1Notifier)});
-const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
+  const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
   const chainStub = sinon.createStubInstance(BeaconChain);
   chainStub.forkChoice = sinon.createStubInstance(StatefulDagLMDGHOST);
 
-  it('should produce valid block - state without valid eth1 votes', async function () {
+  it("should produce valid block - state without valid eth1 votes", async function () {
     const keypairs: Keypair[] = Array.from({length: 64},  () => Keypair.generate());
     const validators = keypairs.map((keypair) => {
       const validator = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH});
@@ -72,7 +68,7 @@ const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
     const parentBlock = generateEmptyBlock();
     //if zero hash it get changed
     parentBlock.stateRoot = Buffer.alloc(32, 1);
-    const parentHeader: BeaconBlockHeader = blockToHeader(minconfig, parentBlock);
+    const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock);
     const state = generateState({
       validators: validators,
       balances,
@@ -82,7 +78,7 @@ const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
     tree.add(0, hashTreeRoot(generateDeposit().data, config.types.DepositData));
     dbStub.block.getChainHead.resolves(parentBlock);
     dbStub.state.getLatest.resolves(clone(state, config.types.BeaconState));
-    dbStub.block.get.withArgs(chainStub.forkChoice.head()).resolves(parentBlock)
+    dbStub.block.get.withArgs(chainStub.forkChoice.head()).resolves(parentBlock);
     dbStub.merkleTree.getProgressiveMerkleTree.resolves(tree);
     dbStub.proposerSlashing.getAll.resolves([]);
     dbStub.attestation.getAll.resolves([]);
@@ -91,6 +87,7 @@ const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
     dbStub.deposit.getAll.resolves([]);
     eth1Stub.depositCount.resolves(1);
     eth1Stub.depositRoot.resolves(tree.root());
+    // @ts-ignore
     eth1Stub.getEth1Data.resolves({depositCount: 1, depositRoot: tree.root(), blockHash: Buffer.alloc(32)});
     // @ts-ignore
     eth1Stub.getHead.resolves({
