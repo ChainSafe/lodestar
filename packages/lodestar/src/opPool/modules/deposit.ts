@@ -19,7 +19,12 @@ export class DepositsOperations {
   }
 
 
-  public async getAllBetween(lowerLimit: number, upperLimit: number): Promise<Deposit[]> {
+  /**
+   * Limits are not inclusive
+   * @param lowerLimit
+   * @param upperLimit
+   */
+  public async getAllBetween(lowerLimit: number|null, upperLimit: number|null): Promise<Deposit[]> {
     return await this.db.getAllBetween(lowerLimit, upperLimit);
   }
 
