@@ -17,7 +17,7 @@ export async function generateDeposits(
   merkleTree: IProgressiveMerkleTree): Promise<Deposit[]> {
   if(eth1Data.depositCount > state.eth1DepositIndex) {
     const upperIndex = Math.min(config.params.MAX_DEPOSITS, eth1Data.depositCount);
-    let deposits = await opPool.deposits.getAllBetween(state.eth1DepositIndex, upperIndex);
+    const deposits = await opPool.deposits.getAllBetween(state.eth1DepositIndex, upperIndex);
     //add all deposits to the tree before getting proof
     return processSortedDeposits(
       config,
