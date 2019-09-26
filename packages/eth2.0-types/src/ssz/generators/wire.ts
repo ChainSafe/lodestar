@@ -1,7 +1,7 @@
 /**
  * @module sszTypes/generators
  * */
-import {SimpleContainerType, AnySSZType} from "@chainsafe/ssz";
+import {SimpleContainerType, AnySSZType} from "@chainsafe/ssz-type-schema";
 
 import {IBeaconSSZTypes} from "../interface";
 
