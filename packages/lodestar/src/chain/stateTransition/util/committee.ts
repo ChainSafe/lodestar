@@ -14,12 +14,10 @@ import {
   Shard,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
-import {intDiv} from "../../../util/math";
-
 import {computeShuffledIndex, getSeed} from "./seed";
 import {getActiveValidatorIndices, computeCompactValidator} from "./validator";
 import {getCurrentEpoch} from "./epoch";
+import {intDiv} from "@chainsafe/eth2.0-utils";
 
 
 /**

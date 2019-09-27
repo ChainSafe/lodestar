@@ -3,23 +3,16 @@ import chaiAsPromised from "chai-as-promised";
 import {Contract, ethers} from "ethers";
 import ganache from "ganache-core";
 import sinon from "sinon";
-import {BaseProvider, Block, Provider} from "ethers/providers";
+import {Provider} from "ethers/providers";
 import promisify from "promisify-es6";
 import bls from "@chainsafe/bls";
 import {serialize} from "@chainsafe/ssz";
-
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {EthersEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
 import {ILogger, WinstonLogger} from "../../../src/logger";
 import {OpPool} from "../../../src/opPool";
 import {DepositsOperations} from "../../../src/opPool/modules";
-import {describe, it} from "mocha";
-import {generateEth1Data} from "../../utils/eth1Data";
-import {ZERO_HASH} from "../../../src/constants";
-import {filterValidVotes} from "../../../lib/chain/factory/block/eth1Data";
-import {generateState} from "../../utils/state";
-import {Eth1Data} from "@chainsafe/eth2.0-types";
 
 
 chai.use(chaiAsPromised);

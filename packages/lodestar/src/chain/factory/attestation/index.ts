@@ -5,7 +5,7 @@ import {IBeaconDb} from "../../../db/api";
 import {assembleAttestationData} from "./data";
 import {BitList} from "@chainsafe/bit-utils";
 import {computeEpochOfSlot, getCrosslinkCommittee} from "../../stateTransition/util";
-import {intDiv} from "../../../util/math";
+import {intDiv} from "@chainsafe/eth2.0-utils";
 
 export async function assembleAttestation(
   {config, db}: {config: IBeaconConfig; db: IBeaconDb},

@@ -2,11 +2,12 @@ import {assert} from "chai";
 import {describe, it} from "mocha";
 import BN from "bn.js";
 
-import {SerializableValue, serialize,} from "../../src";
+import {SerializableValue} from "@chainsafe/ssz-type-schema";
 
 import {ArrayObject, OuterObject, SimpleObject,} from "./objects";
 
 import {stringifyType} from "./utils";
+import {serialize} from "../../src";
 
 describe("serialize", () => {
   const testCases: {

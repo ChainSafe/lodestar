@@ -1,15 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {readdirSync, readFileSync, writeFile} from "fs";
-import {isDirectory, objectToCamelCase} from "./util";
-import {basename, parse, join} from "path";
+import {isDirectory} from "./util";
+import {basename, join, parse} from "path";
 import {describe, it} from "mocha";
 import {AnySSZType, deserialize} from "@chainsafe/ssz";
-import {load} from "js-yaml";
-import {schema} from "./yaml/schema";
 import {expect} from "chai";
 import deepMerge from "deepmerge";
 import profiler from "v8-profiler-next";
 import {transformType} from "./transform";
+import {loadYamlFile} from "@chainsafe/eth2.0-utils";
 
 
 export enum InputType {
@@ -165,17 +164,7 @@ function deserializeTestCase<TestCase, Result>(file, inputName, options: ISpecTe
       : options.sszTypes[inputName];
     return deserialize(readFileSync(file), safeType);
   } else {
-    return  objectToCamelCase(
-      load(
-        readFileSync(
-          file,
-          "utf8"
-        ),
-        {
-          schema,
-        }
-      )
-    );
+    return  loadYamlFile(file);
   }
 }
 

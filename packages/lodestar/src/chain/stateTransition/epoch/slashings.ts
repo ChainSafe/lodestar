@@ -5,10 +5,8 @@
 import BN from "bn.js";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
-import {bnMin, intDiv} from "../../../util/math";
-
 import {decreaseBalance, getCurrentEpoch, getTotalActiveBalance,} from "../util";
+import {bnMin, intDiv} from "@chainsafe/eth2.0-utils";
 
 
 /**

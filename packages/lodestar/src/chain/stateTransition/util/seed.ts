@@ -3,7 +3,6 @@
  */
 
 import assert from "assert";
-
 import {
   Epoch,
   ValidatorIndex,
@@ -11,10 +10,8 @@ import {
   Hash,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
 import {bytesToBN, intToBytes} from "../../../util/bytes";
-import {hash} from "../../../util/crypto";
-import {intDiv} from "../../../util/math";
+import {intDiv, hash} from "@chainsafe/eth2.0-utils";
 
 
 /**

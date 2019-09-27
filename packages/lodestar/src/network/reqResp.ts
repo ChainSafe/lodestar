@@ -3,6 +3,7 @@
  */
 import {EventEmitter} from "events";
 import LibP2p from "libp2p";
+import PeerInfo from "peer-info";
 //@ts-ignore
 import LibP2pConnection from "interface-connection";
 //@ts-ignore

@@ -1,4 +1,3 @@
-import {describe} from "mocha";
 import {RestApi} from "../../../../../src/api/rest";
 import {ApiNamespace} from "../../../../../src/api";
 import sinon from "sinon";
@@ -15,15 +14,17 @@ import {expect} from "chai";
 import {toHex} from "../../../../../src/util/bytes";
 import {generateEmptyBlock} from "../../../../utils/block";
 import * as blockUtils from "../../../../../src/chain/factory/block";
-import {toRestJson} from "../../../../../src/api/rest/utils";
 import {generateAttestationData, generateEmptyAttestation} from "../../../../utils/attestation";
 import {IndexedAttestation} from "@chainsafe/eth2.0-types";
 import {AttestationOperations, OpPool} from "../../../../../src/opPool";
+import {toJson} from "@chainsafe/eth2.0-utils";
+import {describe, it, after, before, beforeEach, afterEach} from "mocha";
 
-describe('Test validator rest API', function () {
+describe("Test validator rest API", function () {
   this.timeout(10000);
 
-  let restApi, getDutiesStub, assembleBlockStub, produceAttestationStub;
+  // @ts-ignore
+  let restApi: RestApi, getDutiesStub: any, assembleBlockStub: any, produceAttestationStub: any;
 
   const chain = sinon.createStubInstance(BeaconChain);
   const opPool = sinon.createStubInstance(OpPool);
@@ -36,9 +37,9 @@ describe('Test validator rest API', function () {
   before(async function () {
     restApi = new RestApi({
       api: [ApiNamespace.VALIDATOR],
-      cors: '*',
+      cors: "*",
       enabled: true,
-      host: '127.0.0.1',
+      host: "127.0.0.1",
       port: 0
     }, {
       logger: new WinstonLogger(),
@@ -68,14 +69,14 @@ describe('Test validator rest API', function () {
     sandbox.restore();
   });
 
-  it('should throw error on invalid request for duties', async function () {
+  it("should throw error on invalid request for duties", async function () {
     await supertest(restApi.server.server)
-      .get('/validator/duties')
+      .get("/validator/duties")
       .expect(400)
-      .expect('Content-Type', 'application/json; charset=utf-8');
+      .expect("Content-Type", "application/json; charset=utf-8");
   });
 
-  it('should return duties', async function () {
+  it("should return duties", async function () {
     const duty = generateEmptyValidatorDuty(
       Buffer.alloc(48, 1),
       {
@@ -87,14 +88,14 @@ describe('Test validator rest API', function () {
     getDutiesStub.resolves([duty]);
     const response = await supertest(restApi.server.server)
       .get(
-        '/validator/duties',
+        "/validator/duties",
       )
       .query({
         "validator_pubkeys[]": toHex(Buffer.alloc(32)),
         epoch: 2
       })
       .expect(200)
-      .expect('Content-Type', 'application/json; charset=utf-8');
+      .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.length).to.be.equal(1);
     expect(response.body[0].validator_pubkey).to.be.equal(toHex(duty.validatorPubkey));
     expect(response.body[0].attestation_slot).to.be.equal(2);
@@ -102,45 +103,45 @@ describe('Test validator rest API', function () {
     expect(response.body[0].block_proposal_slot).to.be.equal(2);
   });
 
-  it('should throw error on invalid request for block production', async function () {
+  it("should throw error on invalid request for block production", async function () {
     await supertest(restApi.server.server)
-      .get('/validator/block')
+      .get("/validator/block")
       .expect(400)
-      .expect('Content-Type', 'application/json; charset=utf-8');
+      .expect("Content-Type", "application/json; charset=utf-8");
   });
 
-  it('should return new block', async function () {
+  it("should return new block", async function () {
     const block = generateEmptyBlock();
     assembleBlockStub.resolves(block);
     const response = await supertest(restApi.server.server)
       .get(
-        '/validator/block',
+        "/validator/block",
       )
       .query({
         "randao_reveal": toHex(Buffer.alloc(32)),
         slot: 2
       })
       .expect(200)
-      .expect('Content-Type', 'application/json; charset=utf-8');
+      .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.parent_root).to.not.be.null;
   });
 
-  it('should publish block', async function () {
+  it("should publish block", async function () {
     const block = generateEmptyBlock();
     chain.receiveBlock.resolves();
     await supertest(restApi.server.server)
       .post(
-        '/validator/block',
+        "/validator/block",
       )
       .send({
-        "beacon_block": toRestJson(block)
+        "beacon_block": toJson(block)
       })
       .expect(200)
-      .expect('Content-Type', 'application/json');
+      .expect("Content-Type", "application/json");
     expect(chain.receiveBlock.calledOnce).to.be.true;
   });
 
-  it('should produce attestation', async function () {
+  it("should produce attestation", async function () {
     const attestation: IndexedAttestation = {
       custodyBit0Indices: [],
       custodyBit1Indices: [],
@@ -150,7 +151,7 @@ describe('Test validator rest API', function () {
     produceAttestationStub.resolves(attestation);
     await supertest(restApi.server.server)
       .get(
-        '/validator/attestation',
+        "/validator/attestation",
       )
       .query({
         "validator_pubkey": toHex(Buffer.alloc(48)),
@@ -159,23 +160,23 @@ describe('Test validator rest API', function () {
         "slot": 2
       })
       .expect(200)
-      .expect('Content-Type', 'application/json; charset=utf-8');
+      .expect("Content-Type", "application/json; charset=utf-8");
     expect(produceAttestationStub.withArgs(sinon.match.any, sinon.match.any, 3, 2).calledOnce).to.be.true;
   });
 
 
-  it('should publish attestation', async function () {
+  it("should publish attestation", async function () {
     const attestation = generateEmptyAttestation();
     attestationOperations.receive.resolves();
     await supertest(restApi.server.server)
       .post(
-        '/validator/attestation',
+        "/validator/attestation",
       )
       .send({
-        "attestation": toRestJson(attestation)
+        "attestation": toJson(attestation)
       })
       .expect(200)
-      .expect('Content-Type', 'application/json');
+      .expect("Content-Type", "application/json");
     expect(attestationOperations.receive.calledOnce).to.be.true;
   });
 

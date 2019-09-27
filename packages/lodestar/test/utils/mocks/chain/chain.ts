@@ -12,7 +12,7 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {generateState} from "../../state";
-import {ProgressiveMerkleTree} from "../../../../src/util/merkleTree";
+import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 
 export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public latestState: BeaconState;

@@ -1,4 +1,4 @@
-import {SimpleSSZType,} from "../../src";
+import {SimpleSSZType,} from "@chainsafe/ssz-type-schema";
 
 export function stringifyType (type: SimpleSSZType): string {
   if (typeof type === "string") {

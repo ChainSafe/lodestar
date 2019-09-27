@@ -1,16 +1,13 @@
 import {assert, expect} from "chai";
+import {IMerkleTreeSerialization, ProgressiveMerkleTree, verifyMerkleBranch} from "../../src/merkleTree";
+import {LightProgressiveMerkleTree} from "../../src/merkleTree/lightMerkleTree";
+import sinon from "sinon";
+import {describe, it} from "mocha";
 
-import {
-  ProgressiveMerkleTree,
-  verifyMerkleBranch,
-} from "../../../src/util/merkleTree";
-import {LightProgressiveMerkleTree} from "../../../src/util/merkleTree/lightMerkleTree";
-
-
-describe('util/merkleTree', function() {
-  describe('ProgressiveMerkleTree', function() {
+describe("util/merkleTree", function() {
+  describe("ProgressiveMerkleTree", function() {
     it("can push items", () => {
-      const t = ProgressiveMerkleTree.empty(4);
+      const t = ProgressiveMerkleTree.empty(4, sinon.stub() as unknown as IMerkleTreeSerialization);
       const buf = Buffer.alloc(32);
       for (let i = 1; i < 10; i++) {
         buf[0] = i;
@@ -20,7 +17,7 @@ describe('util/merkleTree', function() {
     });
 
     it("can add items", () => {
-      const t = ProgressiveMerkleTree.empty(4);
+      const t = ProgressiveMerkleTree.empty(4, sinon.stub() as unknown as IMerkleTreeSerialization);
       const buf = Buffer.alloc(32);
       for (let i = 1; i < 10; i++) {
         buf[0] = i;
@@ -31,9 +28,19 @@ describe('util/merkleTree', function() {
 
     it("returns valid proofs", () => {
       const depth = 4;
-      const t = ProgressiveMerkleTree.empty(depth);
+      const t = ProgressiveMerkleTree.empty(
+        depth,
+        {
+          deserializeTree: sinon.stub(),
+          serializeTree: sinon.stub(),
+          serializeLength: (
+            () =>
+              Buffer.from("0a00000000000000000000000000000000000000000000000000000000000000", "hex")
+          ),
+        }
+      );
       for (let i = 0; i < 10; i++) {
-        let buf = Buffer.alloc(32, i);
+        const buf = Buffer.alloc(32, i);
         t.push(buf);
       }
 
@@ -44,7 +51,7 @@ describe('util/merkleTree', function() {
 
   });
 
-  describe('LightProgressiveMerkleTree', function() {
+  describe("LightProgressiveMerkleTree", function() {
     it("can add items", () => {
       const t = new LightProgressiveMerkleTree(4);
       let count = 0;
@@ -61,7 +68,7 @@ describe('util/merkleTree', function() {
       const depth = 4;
       const t = new LightProgressiveMerkleTree(depth);
       for (let i = 0; i < 10; i++) {
-        let buf = Buffer.alloc(32);
+        const buf = Buffer.alloc(32);
         buf[0] = 10;
         const proof = t.push(buf);
         assert(verifyMerkleBranch(buf, proof, depth, t.count() - 1, t.root()));
@@ -72,7 +79,7 @@ describe('util/merkleTree', function() {
       const t = new LightProgressiveMerkleTree(depth);
       const clone = t.clone();
       for (let i = 0; i < 10; i++) {
-        let buf = Buffer.alloc(32);
+        const buf = Buffer.alloc(32);
         buf[0] = 10;
         t.push(buf);
       }

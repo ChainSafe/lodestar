@@ -3,21 +3,21 @@
 import BN from "bn.js";
 import {Type} from "js-yaml";
 
-function isHexCode(c): boolean {
+function isHexCode(c: number): boolean {
   return ((0x30/* 0 */ <= c) && (c <= 0x39/* 9 */)) ||
         ((0x41/* A */ <= c) && (c <= 0x46/* F */)) ||
         ((0x61/* a */ <= c) && (c <= 0x66/* f */));
 }
 
-function isOctCode(c): boolean {
+function isOctCode(c: number): boolean {
   return ((0x30/* 0 */ <= c) && (c <= 0x37/* 7 */));
 }
 
-function isDecCode(c): boolean {
+function isDecCode(c: number): boolean {
   return ((0x30/* 0 */ <= c) && (c <= 0x39/* 9 */));
 }
 
-function resolveYamlInteger(data): boolean {
+function resolveYamlInteger(data: string): boolean {
   if (data === null) return false;
 
   const max = data.length;
@@ -103,9 +103,9 @@ function resolveYamlInteger(data): boolean {
   return /^(:[0-5]?[0-9])+$/.test(data.slice(index));
 }
 
-function constructYamlInteger(data): BN {
-  let value = data, sign = 1, ch, base;
-  const digits = [];
+function constructYamlInteger(data: string): BN {
+  let value: string|BN = data, sign = 1, ch, base: number|BN;
+  const digits: number[] = [];
 
   if (value.indexOf("_") !== -1) {
     value = value.replace(/_/g, "");
@@ -131,13 +131,12 @@ function constructYamlInteger(data): BN {
     value.split(":").forEach(function (v) {
       digits.unshift(parseInt(v, 10));
     });
-
     value = new BN(0);
     base = new BN(1);
 
     digits.forEach(function (d) {
-      value = value.add(base.muln(d));
-      base = base.muln(60);
+      value = (value as BN).add((base as BN).muln(d));
+      base = (base as BN).muln(60);
     });
 
     return value.muln(sign);
@@ -147,7 +146,7 @@ function constructYamlInteger(data): BN {
   return (new BN(value, 10)).muln(sign);
 }
 
-function isInteger(object): boolean {
+function isInteger(object: object): boolean {
   return BN.isBN(object);
 }
 

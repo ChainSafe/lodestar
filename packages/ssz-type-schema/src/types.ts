@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
-/** @module ssz */
-import BN from "bn.js";
-import {BitList, BitVector} from "@chainsafe/bit-utils";
 
 // Serializable values
+
+import BN from "bn.js";
+import {BitList, BitVector} from "@chainsafe/bit-utils";
 
 export type Uint = number | BN;
 export type Bool = boolean;

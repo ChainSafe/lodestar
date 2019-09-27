@@ -2,9 +2,8 @@ import {Deposit, DepositData} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {hash, hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {sign} from "@chainsafe/bls";
-
 import {DomainType} from "../constants";
-import {IProgressiveMerkleTree} from "../util/merkleTree";
+import {IProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {interopKeypairs} from "./keypairs";
 import {computeDomain} from "../chain/stateTransition/util";
 

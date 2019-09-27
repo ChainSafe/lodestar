@@ -3,7 +3,7 @@ import fastify, {DefaultQuery} from "fastify";
 import {IApiModules} from "../../../interface";
 import {getValidatorDuties} from "../../../impl/validator";
 import {IncomingMessage, Server, ServerResponse} from "http";
-import {toRestJson} from "../../utils";
+import {toJson} from "@chainsafe/eth2.0-utils";
 
 interface IQuery extends DefaultQuery {
   // eslint-disable-next-line camelcase
@@ -44,7 +44,7 @@ export const registerDutiesEndpoint = (fastify: IFastifyServer, modules: IApiMod
         modules.db,
         request.query.validator_pubkeys.map(key => Buffer.from(key, "hex")),
         request.query.epoch
-      )).map(toRestJson);
+      )).map(toJson);
       reply
         .code(200)
         .type("application/json")

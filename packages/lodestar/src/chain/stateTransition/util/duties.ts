@@ -10,9 +10,7 @@ import {
   ValidatorIndex,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
 import {CommitteeAssignment} from "../../../validator/types";
-import {intDiv} from "../../../util/math";
 
 import {
   computeEpochOfSlot,
@@ -21,6 +19,7 @@ import {
 } from "./epoch";
 import {getCommitteeCount, getStartShard, getCrosslinkCommittee} from "./committee";
 import {getBeaconProposerIndex} from "./proposer";
+import {intDiv} from "@chainsafe/eth2.0-utils";
 
 /**
  * Return the committee assignment in the ``epoch`` for ``validator_index`` and ``registry_change``.

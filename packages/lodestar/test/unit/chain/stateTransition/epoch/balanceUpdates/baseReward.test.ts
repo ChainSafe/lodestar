@@ -4,10 +4,10 @@ import sinon from "sinon";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as utils from "../../../../../../src/chain/stateTransition/util";
-import {bnSqrt} from "../../../../../../src/util/math";
 import {generateState} from "../../../../../utils/state";
 import {generateValidators} from "../../../../../utils/validator";
 import {getBaseReward} from "../../../../../../src/chain/stateTransition/epoch/balanceUpdates/baseReward";
+import {bnSqrt} from "@chainsafe/eth2.0-utils";
 
 describe('process epoch - balance updates', function () {
 

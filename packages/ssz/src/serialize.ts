@@ -19,13 +19,11 @@ import {
   Type,
   Uint,
   UintType,
-} from "./types";
-
+  isVariableSizeType,
+  parseType
+} from "@chainsafe/ssz-type-schema";
 import {BYTES_PER_LENGTH_PREFIX} from "./constants";
-
 import {fixedSize, size} from "./size";
-
-import {isVariableSizeType, parseType} from "./util/types";
 import {_assertValidValue} from "./assertValidValue";
 
 

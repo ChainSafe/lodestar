@@ -9,7 +9,7 @@ import {
   SimpleListType,
   SimpleVectorType,
   Type,
-} from "../types";
+} from "./index";
 
 // regex to identify a bytesN type
 const bytesPattern = /^bytes\d+$/;
