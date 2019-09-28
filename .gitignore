@@ -17,4 +17,3 @@ LodestarValidatorDB/
 *.log
 data
 validators
-packages/lodestar/test/spec/test-cases/
