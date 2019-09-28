@@ -48,3 +48,16 @@ export function getTemporaryBlockHeader(config: IBeaconConfig, block: BeaconBloc
     signature: EMPTY_SIGNATURE,
   };
 }
+
+ /**
+  * Receives a block, and produces the accroding blockHeader.
+  */
+ export function blockToHeader(config: IBeaconConfig, block: BeaconBlock): BeaconBlockHeader {
+  return {
+    stateRoot: block.stateRoot,
+    signature: block.signature,
+    slot: block.slot,
+    parentRoot: block.parentRoot,
+    bodyRoot: hashTreeRoot(block.body, config.types.BeaconBlockBody),
+  }
+}
