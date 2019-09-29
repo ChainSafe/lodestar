@@ -35,12 +35,12 @@ Beacon chain parameters
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-params)
 
-### [@chainsafe/eth2.0-ssz-types](/packages/eth2.0-ssz-types)
-Beacon chain ssz types
+### [@chainsafe/eth2.0-utils](/packages/eth2.0-utils)
+Utility methods used throughout Lodestar modules.
 
-[![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-ssz-types)](https://www.npmjs.com/package/@chainsafe/eth2.0-ssz-types)
+[![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-utils)](https://www.npmjs.com/package/@chainsafe/eth2.0-utils)
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
-[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-types)
+[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-utils)
 
 ### [@chainsafe/eth2.0-config](/packages/eth2.0-config)
 Beacon chain configuration
