@@ -1,22 +1,16 @@
 import {join} from "path";
-import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
-import sinon from "sinon";
-// @ts-ignore
-import {restore, rewire} from "@chainsafe/bls";
 import {equals} from "@chainsafe/ssz";
-
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processAttesterSlashing} from "../../../../src/chain/stateTransition/block/operations";
-import {expandYamlValue} from "../../../utils/expandYamlValue";
-import {AttesterSlashingCase} from "../../../utils/specTestTypes/beaconStateComparison";
 import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {ProcessAttesterSlashingTestCase} from "./type";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<ProcessAttesterSlashingTestCase, BeaconState>(
   "process attester slashing mainnet",
-  join(__dirname, "../../../../../spec-test-cases/tests/mainnet/phase0/operations/attester_slashing/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/attester_slashing/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     processAttesterSlashing(config, state, testcase.attester_slashing);

@@ -1,22 +1,18 @@
 import {join} from "path";
-import {describeMultiSpec} from "@chainsafe/eth2.0-spec-test-util";
 import {expect} from "chai";
 // @ts-ignore
-import {restore, rewire} from "@chainsafe/bls";
-import sinon from "sinon";
 import {equals} from "@chainsafe/ssz";
 
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processBlockHeader} from "../../../../src/chain/stateTransition/block/blockHeader";
-import {expandYamlValue} from "../../../utils/expandYamlValue";
-import {BlockHeaderCase} from "../../../utils/specTestTypes/beaconStateComparison";
 import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {ProcessBlockHeader} from "./type";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<ProcessBlockHeader, BeaconState>(
   "process block header mainnet",
-  join(__dirname, "../../../../../spec-test-cases/tests/mainnet/phase0/operations/block_header/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/block_header/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     processBlockHeader(config, state, testcase.block);

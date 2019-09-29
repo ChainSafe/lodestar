@@ -6,10 +6,11 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-
 import {equals} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<StateTestCase, BeaconState>(
   "epoch_croslinks mainnet",
-  join(__dirname, "../../../../../spec-test-cases/tests/mainnet/phase0/epoch_processing/crosslinks/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "tests/mainnet/phase0/epoch_processing/crosslinks/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     processCrosslinks(config, state);

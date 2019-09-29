@@ -8,10 +8,11 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processVoluntaryExit} from "../../../../src/chain/stateTransition/block/operations";
 import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {ProcessVoluntaryExitTestCase} from "./type";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<ProcessVoluntaryExitTestCase, BeaconState>(
   "process voluntary exit mainnet",
-  join(__dirname, "../../../../../spec-test-cases/tests/mainnet/phase0/operations/voluntary_exit/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/voluntary_exit/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     processVoluntaryExit(config, state, testcase.voluntary_exit);

@@ -7,10 +7,11 @@ import {stateTransition} from "../../../../src/chain/stateTransition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BlockSanityTestCase} from "./type";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<BlockSanityTestCase, BeaconState>(
   "block sanity minimal",
-  join(__dirname, "../../../../../spec-test-cases/tests/minimal/phase0/sanity/blocks/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/sanity/blocks/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     for(let i = 0; i < testcase.meta.blocksCount.toNumber(); i++) {

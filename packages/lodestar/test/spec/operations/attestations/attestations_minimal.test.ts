@@ -8,10 +8,11 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {processAttestation} from "../../../../src/chain/stateTransition/block/operations";
 import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {ProcessAttestationTestCase} from "./type";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<ProcessAttestationTestCase, BeaconState>(
   "process attestation minimal",
-  join(__dirname, "../../../../../spec-test-cases/tests/minimal/phase0/operations/attestation/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/operations/attestation/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     processAttestation(config, state, testcase.attestation);

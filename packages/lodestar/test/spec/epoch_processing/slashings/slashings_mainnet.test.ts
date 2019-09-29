@@ -7,10 +7,11 @@ import {BeaconState} from "@chainsafe/eth2.0-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 import {processSlashings} from "../../../../src/chain/stateTransition/epoch/slashings";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<StateTestCase, BeaconState>(
   "epoch slashings mainnet",
-  join(__dirname, "../../../../../spec-test-cases/tests/mainnet/phase0/epoch_processing/slashings/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/epoch_processing/slashings/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     processSlashings(config, state);
