@@ -7,9 +7,6 @@ import BN from "bn.js";
 
 import {BeaconState, HistoricalBatch} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
-import {bnMin, intDiv} from "../../../util/math";
-
 import {
   getActiveValidatorIndices,
   getCompactCommitteesRoot,
@@ -17,6 +14,7 @@ import {
   getRandaoMix,
   getShardDelta
 } from "../util";
+import {bnMin, intDiv} from "@chainsafe/eth2.0-utils";
 
 
 export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): void {

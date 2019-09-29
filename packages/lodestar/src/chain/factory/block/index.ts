@@ -29,7 +29,7 @@ export async function assembleBlock(
   if(slot > currentState.slot) {
     processSlots(config, currentState, slot);
   }
-  const merkleTree = await db.merkleTree.getProgressiveMerkleTree(currentState.eth1DepositIndex);
+  const merkleTree = await db.merkleTree.getProgressiveMerkleTree(config, currentState.eth1DepositIndex);
   const parentHeader: BeaconBlockHeader = {
     stateRoot: parentBlock.stateRoot,
     signature: parentBlock.signature,

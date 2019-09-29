@@ -1,7 +1,5 @@
-import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 import sinon from "sinon";
 import {expect} from "chai";
-import {describe, it} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import BlockProposingService from "../../../../src/validator/services/block";
 import {RpcClientOverInstance} from "../../../../src/validator/rpc";
@@ -10,7 +8,6 @@ import {BeaconApi} from "../../../../src/api/rpc/api/beacon";
 import {ValidatorDB} from "../../../../src/db/api";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
 import {generateEmptyBlock} from "../../../utils/block";
-import {generateState} from "../../../utils/state";
 import {generateFork} from "../../../utils/fork";
 import {Keypair} from "@chainsafe/bls";
 

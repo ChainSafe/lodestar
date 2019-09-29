@@ -3,13 +3,10 @@
  */
 
 import BN from "bn.js";
-
 import {BeaconState, Epoch, uint64, Validator, ValidatorIndex,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
-import {intDiv} from "../../../util/math";
-
 import {getCurrentEpoch} from "./epoch";
+import {intDiv} from "@chainsafe/eth2.0-utils";
 
 
 export function computeCompactValidator(config: IBeaconConfig, validator: Validator, index: ValidatorIndex): uint64 {

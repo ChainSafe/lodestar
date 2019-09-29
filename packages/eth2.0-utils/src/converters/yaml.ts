@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {AnySSZType, FullSSZType, Type, parseType} from "@chainsafe/ssz";
+import {AnySSZType, FullSSZType, Type, parseType} from "@chainsafe/ssz-type-schema";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 
-export function expandYamlValue(value: any, type: AnySSZType): any {
+export function fromYaml<T>(value: any, type: AnySSZType): T {
   return _expandYamlValue(value, parseType(type));
 }
 
@@ -11,8 +11,8 @@ function _expandYamlValue(value: any, type: FullSSZType): any {
     case Type.uint:
       if (
         type.byteLength > 6
-          && type.useNumber
-          && value.toArrayLike(Buffer, type.byteLength).equals(Buffer.alloc(type.byteLength, 255))
+                && type.useNumber
+                && value.toArrayLike(Buffer, type.byteLength).equals(Buffer.alloc(type.byteLength, 255))
       ) {
         return Infinity;
       }

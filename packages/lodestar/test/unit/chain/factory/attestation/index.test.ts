@@ -1,7 +1,6 @@
 import sinon from "sinon";
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
-import {describe, it} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as attestationDataProduction from "../../../../../src/chain/factory/attestation/data";
 import {BeaconDb, IBeaconDb} from "../../../../../src/db/api";

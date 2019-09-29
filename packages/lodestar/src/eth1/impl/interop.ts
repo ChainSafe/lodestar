@@ -7,9 +7,8 @@ import {BeaconState, bytes32, Epoch, Eth1Data, Hash, number64} from "@chainsafe/
 import {IEth1Notifier} from "../";
 import {Block} from "ethers/providers";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {intDiv} from "../../util/math";
-import {hash} from "../../util/crypto";
 import {intToBytes} from "../../util/bytes";
+import {intDiv, hash} from "@chainsafe/eth2.0-utils";
 
 export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   public constructor() {

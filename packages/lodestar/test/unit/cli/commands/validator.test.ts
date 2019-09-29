@@ -1,6 +1,5 @@
 import {expect} from "chai";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
-import {describe, it, before, after} from "mocha";
 import program from "commander";
 import {ValidatorCommand} from "../../../../src/cli/commands";
 

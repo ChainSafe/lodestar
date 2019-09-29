@@ -4,13 +4,14 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ZERO_HASH} from "../../../../../src/constants";
 import {OpPool} from "../../../../../src/opPool";
-import {ProgressiveMerkleTree, verifyMerkleBranch} from "../../../../../src/util/merkleTree";
 import {generateDeposits} from "../../../../../src/chain/factory/block/deposits";
 import {generateState} from "../../../../utils/state";
 import {generateDeposit} from "../../../../utils/deposit";
 import {DepositsOperations} from "../../../../../src/opPool/modules";
+import {ProgressiveMerkleTree, verifyMerkleBranch} from "@chainsafe/eth2.0-utils";
+import {MerkleTreeSerialization} from "../../../../../src/util/serialization";
 
-describe('blockAssembly - deposits', function() {
+describe("blockAssembly - deposits", function() {
 
   const sandbox = sinon.createSandbox();
 
@@ -25,7 +26,7 @@ describe('blockAssembly - deposits', function() {
     sandbox.restore();
   });
 
-  it('return empty array if no pending deposits', async function() {
+  it("return empty array if no pending deposits", async function() {
     const result = await generateDeposits(
       config,
       opPool,
@@ -37,14 +38,14 @@ describe('blockAssembly - deposits', function() {
         blockHash: ZERO_HASH,
         depositRoot: ZERO_HASH
       },
-      ProgressiveMerkleTree.empty(4));
+      ProgressiveMerkleTree.empty(4, new MerkleTreeSerialization(config)));
     expect(result).to.be.deep.equal([]);
   });
 
-  it('return deposits with valid proofs', async function() {
+  it("return deposits with valid proofs", async function() {
     const deposits = [generateDeposit(), generateDeposit()];
     opPool.deposits.getAllBetween.resolves(deposits);
-    const tree = ProgressiveMerkleTree.empty(4);
+    const tree = ProgressiveMerkleTree.empty(4, new MerkleTreeSerialization(config));
     deposits.forEach((d, index) => {
       tree.add(index, hashTreeRoot(d.data, config.types.DepositData));
     });

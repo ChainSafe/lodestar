@@ -4,13 +4,12 @@
 
 import {BeaconBlockBody, BeaconState, bytes96} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
 import {ZERO_HASH} from "../../../constants";
 import {OpPool} from "../../../opPool";
 import {IEth1Notifier} from "../../../eth1";
-import {IProgressiveMerkleTree} from "../../../util/merkleTree";
 import {generateDeposits} from "./deposits";
 import {computeEpochOfSlot} from "../../stateTransition/util";
+import {IProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 
 export async function assembleBody(
   config: IBeaconConfig,

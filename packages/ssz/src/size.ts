@@ -10,11 +10,10 @@ import {
   SerializableValue,
   Type,
   VectorType,
-} from "./types";
+  isVariableSizeType
+} from "@chainsafe/ssz-type-schema";
 
 import {BYTES_PER_LENGTH_PREFIX} from "./constants";
-
-import {isVariableSizeType} from "./util/types";
 
 
 // Return the size of a fixed-sized type

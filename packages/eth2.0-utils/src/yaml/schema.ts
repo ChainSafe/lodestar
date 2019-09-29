@@ -1,4 +1,5 @@
 import {Schema} from "js-yaml";
+// @ts-ignore
 import failsafe from "js-yaml/lib/js-yaml/schema/failsafe";
 // @ts-ignore
 import nullType from "js-yaml/lib/js-yaml/type/null";

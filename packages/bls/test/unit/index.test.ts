@@ -3,7 +3,6 @@ import {Keypair} from "../../src/keypair";
 import {sha256} from "js-sha256";
 import {G2point} from "../../src/helpers/g2point";
 import {expect} from "chai";
-import {describe, it} from "mocha";
 
 describe("test bls", function () {
 

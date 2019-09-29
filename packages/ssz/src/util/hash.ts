@@ -1,8 +1,5 @@
 /** @module ssz */
-import {
-  FullSSZType,
-  SerializableValue,
-} from "../types";
+import {FullSSZType, SerializableValue,} from "@chainsafe/ssz-type-schema";
 import {BYTES_PER_CHUNK} from "../constants";
 import {size} from "../size";
 import {_serialize} from "../serialize";

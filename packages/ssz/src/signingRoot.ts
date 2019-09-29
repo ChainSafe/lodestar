@@ -1,11 +1,9 @@
 /** @module ssz */
 import assert from "assert";
 
-import {AnyContainerType, ContainerType, Type,} from "./types";
+import {AnyContainerType, ContainerType, Type, copyType, parseType} from "@chainsafe/ssz-type-schema";
 
 import {hashTreeRoot} from "./hashTreeRoot";
-
-import {copyType, parseType,} from "./util/types";
 
 /**
  * [[hashTreeRoot]] an SSZ object w/o its last field

@@ -1,10 +1,12 @@
 import {expect} from 'chai';
-import {CreateConfigCommand} from "../../../../src/cli/commands/index";
+import {CreateConfigCommand} from "../../../../src/cli/commands";
 import {CliError} from "../../../../src/cli/error";
-
+import chaiAsPromised from "chai-as-promised";
 import program from "commander";
+import chai from "chai";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
 
+chai.use(chaiAsPromised);
 
 describe('[CLI] create-config', () => {
 

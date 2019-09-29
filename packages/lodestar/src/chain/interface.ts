@@ -3,8 +3,8 @@ import {EventEmitter} from "events";
 import {Attestation, BeaconBlock, BeaconState, Checkpoint, Hash, Slot, uint16, uint64} from "@chainsafe/eth2.0-types";
 
 import {ILMDGHOST} from "./forkChoice";
-import {ProgressiveMerkleTree} from "../util/merkleTree";
 import StrictEventEmitter from "strict-event-emitter-types";
+import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 
 export interface IChainEvents {
   unknownBlockRoot: (root: Hash) => void;

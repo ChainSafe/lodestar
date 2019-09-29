@@ -5,7 +5,6 @@ import sinon from "sinon";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
 import {BeaconBlockHeader} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {describe, it} from "mocha";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {IValidatorDB, ValidatorDB} from "../../../../../src/db";
 import {generateEmptyBlock} from "../../../../utils/block";
@@ -16,7 +15,6 @@ import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {getBeaconProposerIndex} from "../../../../../src/chain/stateTransition/util";
 import {stateTransition} from "../../../../../src/chain/stateTransition";
 import {generateValidator} from "../../../../utils/validator";
-import {ProgressiveMerkleTree} from "../../../../../src/util/merkleTree";
 import BlockProposingService from "../../../../../src/validator/services/block";
 import {RpcClientOverInstance} from "../../../../../src/validator/rpc";
 import {WinstonLogger} from "../../../../../src/logger";
@@ -36,6 +34,8 @@ import {
   VoluntaryExitRepository
 } from "../../../../../src/db/api/beacon/repositories";
 import {ValidatorApi} from "../../../../../src/api/rpc/api/validator";
+import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
+import {MerkleTreeSerialization} from "../../../../../src/util/serialization";
 
 describe("produce block", function () {
   this.timeout(0);
@@ -80,7 +80,7 @@ describe("produce block", function () {
       balances,
       latestBlockHeader: parentHeader
     });
-    const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH);
+    const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
     tree.add(0, hashTreeRoot(generateDeposit().data, config.types.DepositData));
     dbStub.block.getChainHead.resolves(parentBlock);
     dbStub.state.getLatest.resolves(clone(state, config.types.BeaconState));

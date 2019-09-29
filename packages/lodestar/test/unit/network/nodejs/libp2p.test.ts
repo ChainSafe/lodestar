@@ -1,4 +1,5 @@
 import {assert} from "chai";
+// @ts-ignore
 import promisify from "promisify-es6";
 
 import {NodejsNode} from "../../../../src/network/nodejs";

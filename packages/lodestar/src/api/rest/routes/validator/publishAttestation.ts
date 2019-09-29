@@ -2,7 +2,7 @@ import {IFastifyServer} from "../../index";
 import fastify, {DefaultBody, DefaultHeaders, DefaultParams, DefaultQuery} from "fastify";
 import {IApiModules} from "../../../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
-import {fromRestJson} from "../../utils";
+import {fromJson} from "@chainsafe/eth2.0-utils";
 import {Attestation} from "@chainsafe/eth2.0-types";
 
 interface IBody extends DefaultBody {
@@ -32,7 +32,7 @@ export const registerAttestationPublishEndpoint = (fastify: IFastifyServer, modu
     async (request, reply) => {
       try {
         await modules.opPool.attestations.receive(
-          fromRestJson<Attestation>(
+          fromJson<Attestation>(
             request.body.attestation,
             modules.config.types.Attestation
           )

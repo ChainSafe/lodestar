@@ -2,9 +2,8 @@
 /** @module ssz */
 import BN from "bn.js";
 
-import {AnySSZType, FullSSZType, Type,} from "./types";
+import {AnySSZType, FullSSZType, Type, parseType} from "@chainsafe/ssz-type-schema";
 import {_assertValidValue} from "./assertValidValue";
-import {parseType} from "./util/types";
 
 
 /**
