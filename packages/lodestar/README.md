@@ -34,6 +34,11 @@ Open resulting html file in favorite browser.
 2. `lerna run build`
 3. `packages/lodestar/./bin/lodestar --help`
 
+Note:
+
+Spec test cases are optional dependency which can be skipped by adding `--ignore-optional` when installing dependencies.
+You can always download spec test cases by running `yarn install --force`.
+
 ### Starting private eth1 chain
 
 `./bin/lodestar eth1:dev -m "vast thought differ pull jewel broom cook wrist tribe word before omit"`
