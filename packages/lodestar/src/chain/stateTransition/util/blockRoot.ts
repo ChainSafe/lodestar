@@ -50,7 +50,7 @@ export function getTemporaryBlockHeader(config: IBeaconConfig, block: BeaconBloc
 }
 
 /**
-  * Receives a block, and produces the accroding blockHeader.
+  * Receives a BeaconBlock, and produces the corresponding BeaconBlockHeader.
   */
 export function blockToHeader(config: IBeaconConfig, block: BeaconBlock): BeaconBlockHeader {
   return {
