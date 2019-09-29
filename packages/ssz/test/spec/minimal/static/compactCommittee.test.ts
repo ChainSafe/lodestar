@@ -5,6 +5,7 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {expect} from "chai";
 import {IBaseSSZStaticTestCase} from "../../type";
 import {hashTreeRoot, serialize} from "../../../../src";
+import {TEST_CASE_LOCATION} from "../../../util/testCases";
 
 interface IResult {
   root: Hash;
@@ -15,7 +16,7 @@ interface IResult {
 
   describeDirectorySpecTest<IBaseSSZStaticTestCase<CompactCommittee>, IResult>(
     `compact committee ${caseName} minimal`,
-    join(__dirname, `../../../../../spec-test-cases/tests/minimal/phase0/ssz_static/CompactCommittee/${caseName}`),
+    join(__dirname, `${TEST_CASE_LOCATION}/tests/minimal/phase0/ssz_static/CompactCommittee/${caseName}`),
     (testcase) => {
       const serialized = serialize(testcase.serialized, config.types.CompactCommittee);
       const root = hashTreeRoot(testcase.serialized, config.types.CompactCommittee);
