@@ -13,6 +13,10 @@ export interface IValidGenericSSZTestCase {
   value: any;
 }
 
+export interface IInValidGenericSSZTestCase {
+  serialized_raw: bytes;
+}
+
 export interface IValidTestResult {
   root: Hash;
   signingRoot?: Hash;
