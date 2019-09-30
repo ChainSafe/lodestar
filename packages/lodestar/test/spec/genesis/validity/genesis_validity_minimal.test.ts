@@ -8,6 +8,7 @@ import {GenesisValidityCase} from "../../../utils/specTestTypes/genesis";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {equals} from "@chainsafe/ssz";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 interface GenesisValidityTestCase {
   is_valid: boolean;
@@ -16,7 +17,7 @@ interface GenesisValidityTestCase {
 
 describeDirectorySpecTest<GenesisValidityTestCase, boolean>(
   "genesis initialization",
-  join(__dirname, "../../../../../spec-test-cases/tests/minimal/phase0/genesis/validity/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "tests/minimal/phase0/genesis/validity/pyspec_tests"),
   (testcase) => {
     return isValidGenesisState(config, testcase.genesis);
   },

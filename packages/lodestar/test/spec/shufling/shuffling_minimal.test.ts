@@ -3,10 +3,11 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {computeShuffledIndex} from "../../../src/chain/stateTransition/util";
 import {ShufflingTestCase} from "./type";
+import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 
 describeDirectorySpecTest<ShufflingTestCase, number[]>(
   "shuffling minimal",
-  join(__dirname, "../../../../spec-test-cases/tests/minimal/phase0/shuffling/core/shuffle"),
+  join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/shuffling/core/shuffle"),
   (testcase) => {
     const output = [];
     const seed = Buffer.from(testcase.mapping.seed.replace("0x", ""),"hex");

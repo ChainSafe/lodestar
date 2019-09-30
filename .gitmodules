@@ -1,4 +1,0 @@
-[submodule "spec-test-cases-module"]
-	path = packages/spec-test-cases
-	url = https://github.com/ChainSafe/eth2.0-spec-tests.git
-	branch = v0.8.3

@@ -6,10 +6,11 @@ import {BeaconState} from "@chainsafe/eth2.0-types";
 import {processSlots} from "../../../../src/chain/stateTransition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {ProcessSlotsTestCase} from "./type";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<ProcessSlotsTestCase, BeaconState>(
   "slot sanity minimal",
-  join(__dirname, "../../../../../spec-test-cases/tests/minimal/phase0/sanity/slots/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/sanity/slots/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     processSlots(config, state, state.slot + testcase.slots.toNumber());

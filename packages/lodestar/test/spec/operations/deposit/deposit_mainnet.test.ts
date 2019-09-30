@@ -6,10 +6,11 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processDeposit} from "../../../../src/chain/stateTransition/block/operations";
 import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {ProcessDepositTestCase} from "./type";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<ProcessDepositTestCase, BeaconState>(
   "process deposit mainnet",
-  join(__dirname, "../../../../../spec-test-cases/tests/mainnet/phase0/operations/deposit/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/deposit/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     processDeposit(config, state, testcase.deposit);

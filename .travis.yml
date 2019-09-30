@@ -16,41 +16,31 @@ jobs:
     - stage: Lint and Check types
       name: Check types
       script: lerna run check-types && lerna run lint
-      git:
-        submodules: false
 
     - stage: Tests
       name: Unit
       script: lerna run test:unit && lerna run coverage
-      git:
-        submodules: false
     -
       name: e2e
       script: lerna run test:e2e
-      git:
-        submodules: false
     -
       name: spec-minimal
       if: branch != master || type = pull_request
       script:
-        - git submodule foreach git lfs pull
         - lerna run test:spec-min
       cache:
         directories:
           - node_modules
           - packages/lodestar/node_modules
-          - .git/modules/spec-test-cases-module/lfs
     -
       name: spec-full
       if: branch = master AND type != pull_request
       script:
-        - git submodule foreach git lfs pull
         - lerna run test:spec
       cache:
         directories:
           - node_modules
           - packages/lodestar/node_modules
-          - .git/modules/spec-test-cases-module/lfs
 
 before_deploy:
     - lerna run build:docs

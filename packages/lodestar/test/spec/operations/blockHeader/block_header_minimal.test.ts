@@ -7,10 +7,11 @@ import {BeaconState} from "@chainsafe/eth2.0-types";
 import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {ProcessBlockHeader} from "./type";
 import {processBlockHeader} from "../../../../src/chain/stateTransition/block/blockHeader";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<ProcessBlockHeader, BeaconState>(
   "process block header minimal",
-  join(__dirname, "../../../../../spec-test-cases/tests/minimal/phase0/operations/block_header/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/operations/block_header/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     processBlockHeader(config, state, testcase.block);

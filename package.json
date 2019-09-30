@@ -43,5 +43,8 @@
     "typedoc-plugin-markdown": "^2.0.6",
     "typescript": "^3.5.1",
     "webpack": "^4.39.1"
+  },
+  "optionalDependencies": {
+    "@chainsafe/eth2-spec-tests": "0.8.3"
   }
 }
