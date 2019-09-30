@@ -7,6 +7,15 @@ cache:
   directories:
     - node_modules
     - packages/lodestar/node_modules
+    - packages/benchmark-utils/node_modules
+    - packages/eth2.0-config/node_modules
+    - packages/eth2.0-params/node_modules
+    - packages/eth2.0-spec-test-util/node_modules
+    - packages/eth2.0-types/node_modules
+    - packages/eth2.0-utils/node_modules
+    - packages/lodestar/node_modules
+    - packages/ssz/node_modules
+    - packages/ssz-type-schema/node_modules
 
 install:
     - lerna bootstrap
@@ -28,19 +37,11 @@ jobs:
       if: branch != master || type = pull_request
       script:
         - lerna run test:spec-min
-      cache:
-        directories:
-          - node_modules
-          - packages/lodestar/node_modules
     -
       name: spec-full
       if: branch = master AND type != pull_request
       script:
         - lerna run test:spec
-      cache:
-        directories:
-          - node_modules
-          - packages/lodestar/node_modules
 
 before_deploy:
     - lerna run build:docs
