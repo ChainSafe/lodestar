@@ -3,8 +3,6 @@
  */
 import BN from "bn.js";
 
-import {Epoch, Gwei, Shard, Slot} from "@chainsafe/eth2.0-types";
-
 export interface IBeaconParams {
   // Misc
   SHARD_COUNT: number;
@@ -20,17 +18,17 @@ export interface IBeaconParams {
   DEPOSIT_CONTRACT_ADDRESS: number;
 
   // Gwei Values
-  MIN_DEPOSIT_AMOUNT: Gwei;
-  MAX_EFFECTIVE_BALANCE: Gwei;
-  EJECTION_BALANCE: Gwei;
-  EFFECTIVE_BALANCE_INCREMENT: Gwei;
+  MIN_DEPOSIT_AMOUNT: BN;
+  MAX_EFFECTIVE_BALANCE: BN;
+  EJECTION_BALANCE: BN;
+  EFFECTIVE_BALANCE_INCREMENT: BN;
 
   // Initial values
-  GENESIS_SLOT: Slot;
-  GENESIS_EPOCH: Epoch;
+  GENESIS_SLOT: number;
+  GENESIS_EPOCH: number;
   BLS_WITHDRAWAL_PREFIX_BYTE: Buffer;
   GENESIS_FORK_VERSION: Buffer;
-  GENESIS_START_SHARD: Shard;
+  GENESIS_START_SHARD: number;
 
   // Time parameters
   SECONDS_PER_SLOT: number;

@@ -3,7 +3,7 @@
  */
 
 import {IBeaconParams} from "@chainsafe/eth2.0-params";
-import {SimpleContainerType} from "@chainsafe/ssz";
+import {SimpleContainerType} from "@chainsafe/ssz-type-schema";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../constants";
 import {IBeaconSSZTypes} from "../interface";

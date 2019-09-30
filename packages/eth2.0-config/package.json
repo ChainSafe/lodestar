@@ -38,7 +38,7 @@
   ],
   "dependencies": {
     "@chainsafe/eth2.0-params": "0.1.0",
-    "@chainsafe/eth2.0-ssz-types": "0.1.1"
+    "@chainsafe/eth2.0-types": "^0.1.1"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",

@@ -1,4 +1,4 @@
-import {AnyContainerType, AnySSZType} from "@chainsafe/ssz";
+import {AnyContainerType, AnySSZType} from "@chainsafe/ssz-type-schema";
 
 export interface IBeaconSSZTypes {
   // primitive
