@@ -6,6 +6,7 @@ import {
   getAttestationDataSlot,
   isValidAttestationSlot,
   computeStartSlotOfEpoch,
+  verifyAttestation,
 } from "../../chain/stateTransition/util";
 import {BulkRepository} from "../../db/api/beacon/repository";
 
@@ -15,6 +16,14 @@ export class AttestationOperations extends OperationsModule<Attestation> {
   public constructor(db: BulkRepository<Attestation>, {config}: {config: IBeaconConfig}) {
     super(db);
     this.config = config;
+  }
+
+  public async verifyAndReceive(state: BeaconState, attestation: Attestation): Promise<boolean> {
+    if (!verifyAttestation(this.config, state, attestation)) {
+      return false;
+    }
+    await super.receive(attestation);
+    return true;
   }
 
   public async getValid(state: BeaconState): Promise<Attestation[]> {

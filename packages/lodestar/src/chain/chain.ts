@@ -6,7 +6,8 @@ import assert from "assert";
 import BN from "bn.js";
 import {EventEmitter} from "events";
 import {clone, hashTreeRoot, serialize, signingRoot} from "@chainsafe/ssz";
-import {Attestation, BeaconBlock, BeaconState, Hash, Slot, uint16, uint64} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BeaconState, Hash, Slot,
+  uint16, uint64} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "../constants";
@@ -23,7 +24,8 @@ import {
   computeEpochOfSlot,
   getAttestationDataSlot,
   getAttestingIndices,
-  isActiveValidator
+  isActiveValidator,
+  verifyAttestation
 } from "./stateTransition/util";
 import {ChainEventEmitter, IBeaconChain} from "./interface";
 import {processSortedDeposits} from "../util/deposits";
@@ -37,6 +39,7 @@ import FastPriorityQueue from "fastpriorityqueue";
 import {getCurrentSlot} from "./stateTransition/util/genesis";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "../util/serialization";
+
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -122,6 +125,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       const attestationSlot: Slot = getAttestationDataSlot(this.config, latestState, attestation.data);
       if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < latestState.slot) {
         this.logger.verbose(`Attestation ${attestationHash.toString("hex")} is too old. Ignored.`);
+        return;
+      }
+      if(!verifyAttestation(this.config, latestState, attestation)) {
+        this.logger.error(`Attestation ${attestationHash.toString("hex")} has invalid signature.`);
         return;
       }
     } catch (e) {

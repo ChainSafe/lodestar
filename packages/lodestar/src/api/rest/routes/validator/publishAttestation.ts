@@ -4,6 +4,7 @@ import {IApiModules} from "../../../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
 import {fromJson} from "@chainsafe/eth2.0-utils";
 import {Attestation} from "@chainsafe/eth2.0-types";
+import { hashTreeRoot } from "@chainsafe/ssz";
 
 interface IBody extends DefaultBody {
   attestation: object;
@@ -30,18 +31,24 @@ export const registerAttestationPublishEndpoint = (fastify: IFastifyServer, modu
     "/attestation",
     opts,
     async (request, reply) => {
+      let statusCode = 200;
       try {
-        await modules.opPool.attestations.receive(
-          fromJson<Attestation>(
-            request.body.attestation,
-            modules.config.types.Attestation
-          )
+        const attestation = fromJson<Attestation>(
+          request.body.attestation,
+          modules.config.types.Attestation
         );
+        if(!await modules.opPool.attestations.verifyAndReceive(
+          modules.chain.latestState, attestation
+        )) {
+          statusCode = 202;
+          const attestationHash = hashTreeRoot(attestation, modules.config.types.Attestation);
+          modules.logger.error(`Cannot verify attestation ${attestationHash.toString("hex")}`);
+        }
       } catch (e) {
         modules.logger.error(e.message);
       }
       reply
-        .code(200)
+        .code(statusCode)
         .type("application/json")
         .send();
     }

@@ -15,6 +15,7 @@ import {getValidatorDuties, produceAttestation} from "../../../impl/validator";
 import {ApiNamespace, IApiModules} from "../../../index";
 import {IApiOptions} from "../../../options";
 import {ILogger} from "../../../../logger";
+import { hashTreeRoot } from "@chainsafe/ssz";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -71,7 +72,10 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
-    await this.opPool.attestations.receive(attestation);
+    if (!await this.opPool.attestations.verifyAndReceive(this.chain.latestState, attestation)) {
+      const attestationHash = hashTreeRoot(attestation, this.config.types.Attestation);
+      this.logger.error(`Cannot verify attestation ${attestationHash.toString("hex")}`);
+    }
   }
 
   public async getValidatorIndex(pubKey: BLSPubkey): Promise<number> {

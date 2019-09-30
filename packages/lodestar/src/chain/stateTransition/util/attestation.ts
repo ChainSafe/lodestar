@@ -12,6 +12,7 @@ import {
   IndexedAttestation,
   Slot,
   ValidatorIndex,
+  AttestationDataAndCustodyBit,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {DomainType,} from "../../../constants";
@@ -102,6 +103,27 @@ export function isValidIndexedAttestation(
     return false;
   }
   return true;
+}
+
+export function verifyAttestation(
+  config: IBeaconConfig,
+  state: BeaconState,
+  attestation: Attestation): boolean {
+  const validatorIndexes = getAttestingIndices(config, state, attestation.data, attestation.aggregationBits);
+  const attesters = validatorIndexes.map(index => state.validators[index].pubkey);
+  const attestationDataAndCustodyBit: AttestationDataAndCustodyBit = {
+    custodyBit: false,
+    data: attestation.data,
+  };
+  const domain = getDomain(
+    config,
+    state,
+    DomainType.ATTESTATION,
+    attestation.data.target.epoch,
+  );
+  const messageHash = hashTreeRoot(attestationDataAndCustodyBit, config.types.AttestationDataAndCustodyBit);
+  const messageHashes = Array(attesters.length).fill(messageHash);
+  return bls.verifyMultiple(attesters, messageHashes, attestation.signature, domain);
 }
 
 /**
