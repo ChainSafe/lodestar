@@ -32,6 +32,13 @@ export function parseBitVectorType(name: string): {type: FullSSZType; length: ui
   };
 }
 
+export function parseBitListType(name: string): {limit: uint256} {
+  const parts = name.split("_");
+  return {
+    limit: new BN(parts[1])
+  };
+}
+
 function typeToEnum(type: string): FullSSZType {
   switch (type) {
     case "bool": return {type: Type.bool} as BoolType;
