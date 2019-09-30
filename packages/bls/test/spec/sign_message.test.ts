@@ -3,7 +3,7 @@ import bls from "../../src";
 import {padLeft} from "../../src/helpers/utils";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 
-interface SignMessageTestCase {
+interface ISignMessageTestCase {
   data: {
     input: {
       privkey: string;
@@ -14,14 +14,17 @@ interface SignMessageTestCase {
   };
 }
 
-describeDirectorySpecTest<SignMessageTestCase, string>(
+describeDirectorySpecTest<ISignMessageTestCase, string>(
   "priv_to_pub",
-  path.join(__dirname, "../../../spec-test-cases/tests/general/phase0/bls/sign_msg/small"),
+  path.join(
+    __dirname,
+    "../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/sign_msg/small"
+  ),
   (testCase => {
     const signature =  bls.sign(
       Buffer.from(testCase.data.input.privkey.replace("0x", ""), "hex"),
       Buffer.from(testCase.data.input.message.replace("0x", ""), "hex"),
-      padLeft(Buffer.from(testCase.data.input.domain.replace('0x', ''), 'hex'), 8)
+      padLeft(Buffer.from(testCase.data.input.domain.replace("0x", ""), "hex"), 8)
     );
     return `0x${signature.toString("hex")}`;
   }),

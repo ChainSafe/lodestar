@@ -5,6 +5,7 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {expect} from "chai";
 import {IBaseSSZStaticTestCase} from "../../type";
 import {hashTreeRoot, serialize, signingRoot} from "../../../../src";
+import {TEST_CASE_LOCATION} from "../../../util/testCases";
 
 interface IResult {
   root: Hash;
@@ -16,8 +17,11 @@ interface IResult {
 
   describeDirectorySpecTest<IBaseSSZStaticTestCase<Attestation>, IResult>(
     `attestation ${caseName} minimal`,
-    join(__dirname, `../../../../../spec-test-cases/tests/minimal/phase0/ssz_static/Attestation/${caseName}`),
-    (testcase) => {
+    join(
+      __dirname,
+      `${TEST_CASE_LOCATION}/tests/minimal/phase0/ssz_static/Attestation/${caseName}`
+    ),
+    (testcase: IBaseSSZStaticTestCase<Attestation>) => {
       const serialized = serialize(testcase.serialized, config.types.Attestation);
       const root = hashTreeRoot(testcase.serialized, config.types.Attestation);
       const signing = signingRoot(testcase.serialized, config.types.Attestation);

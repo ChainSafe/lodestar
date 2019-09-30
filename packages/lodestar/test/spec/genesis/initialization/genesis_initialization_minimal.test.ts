@@ -9,6 +9,7 @@ import {BeaconState, Deposit, Hash, number64, uint64} from "@chainsafe/eth2.0-ty
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {initializeBeaconStateFromEth1} from "../../../../src/chain/genesis/genesis";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 interface GenesisInitSpecTest {
   eth1_block_hash: Hash;
@@ -22,7 +23,7 @@ interface GenesisInitSpecTest {
 
 describeDirectorySpecTest<GenesisInitSpecTest, BeaconState>(
   "genesis initialization",
-  join(__dirname, "../../../../../spec-test-cases/tests/minimal/phase0/genesis/initialization/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/genesis/initialization/pyspec_tests"),
   (testcase) => {
     const deposits: Deposit[] = [];
     for(let i= 0; i < testcase.meta.depositsCount.toNumber(); i++) {

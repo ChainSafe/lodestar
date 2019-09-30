@@ -8,10 +8,11 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {processTransfer} from "../../../../src/chain/stateTransition/block/operations";
 import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {ProcessTransferTestCase} from "./type";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<ProcessTransferTestCase, BeaconState>(
   "process transfer minimal",
-  join(__dirname, "../../../../../spec-test-cases/tests/minimal/phase0/operations/transfer/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/operations/transfer/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     processTransfer(config, state, testcase.transfer);

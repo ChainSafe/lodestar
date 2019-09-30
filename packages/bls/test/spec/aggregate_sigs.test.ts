@@ -11,12 +11,15 @@ interface AggregateSigsTestCase {
 
 describeDirectorySpecTest<AggregateSigsTestCase, string>(
   "aggregate sigs",
-  path.join(__dirname, "../../../spec-test-cases/tests/general/phase0/bls/aggregate_sigs/small"),
+  path.join(
+    __dirname,
+    "../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/aggregate_sigs/small"
+  ),
   (testCase => {
     const result =  bls.aggregateSignatures(testCase.data.input.map(pubKey => {
       return Buffer.from(pubKey.replace("0x", ""), "hex");
     }));
-    return `0x${result.toString('hex')}`;
+    return `0x${result.toString("hex")}`;
   }),
   {
     inputTypes: {

@@ -7,10 +7,11 @@ import {processFinalUpdates} from "../../../../src/chain/stateTransition/epoch/f
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
+import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<StateTestCase, BeaconState>(
   "epoch final updates minimal",
-  join(__dirname, "../../../../../spec-test-cases/tests/minimal/phase0/epoch_processing/final_updates/pyspec_tests"),
+  join(SPEC_TEST_LOCATION, "tests/minimal/phase0/epoch_processing/final_updates/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
     processFinalUpdates(config, state);
