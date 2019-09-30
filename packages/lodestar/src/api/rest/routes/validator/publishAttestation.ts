@@ -4,7 +4,7 @@ import {IApiModules} from "../../../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
 import {fromJson} from "@chainsafe/eth2.0-utils";
 import {Attestation} from "@chainsafe/eth2.0-types";
-import { hashTreeRoot } from "@chainsafe/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 
 interface IBody extends DefaultBody {
   attestation: object;

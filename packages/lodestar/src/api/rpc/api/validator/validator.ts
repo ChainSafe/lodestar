@@ -15,7 +15,7 @@ import {getValidatorDuties, produceAttestation} from "../../../impl/validator";
 import {ApiNamespace, IApiModules} from "../../../index";
 import {IApiOptions} from "../../../options";
 import {ILogger} from "../../../../logger";
-import { hashTreeRoot } from "@chainsafe/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 
 export class ValidatorApi implements IValidatorApi {
 
