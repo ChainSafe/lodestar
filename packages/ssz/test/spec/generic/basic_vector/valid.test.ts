@@ -1,6 +1,6 @@
 /* eslint-disable */
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
-import {IValidGenericSSZTestCase, parseBitVectorType, IValidTestResult} from "../utils";
+import {IValidGenericSSZTestCase, parseBasicVectorType, IValidTestResult} from "../utils";
 import path from "path";
 import {deserialize, hashTreeRoot, serialize, signingRoot, equals, Type} from "../../../../src";
 import {expect} from "chai";
@@ -11,7 +11,7 @@ describeDirectorySpecTest<IValidGenericSSZTestCase, IValidTestResult>(
   "valid_basic_vector",
   path.join(TEST_CASE_LOCATION, "/tests/general/phase0/ssz_generic/basic_vector/valid"),
   ((testCase, directoryName) => {
-    const bitVectorType = parseBitVectorType(directoryName);
+    const bitVectorType = parseBasicVectorType(directoryName);
     return {
       decoded: deserialize(
         testCase.serialized_raw,
@@ -39,7 +39,7 @@ describeDirectorySpecTest<IValidGenericSSZTestCase, IValidTestResult>(
     },
     inputProcessing: {
       value: (value: any, directoryName: string) => {
-        const bitVectorType = parseBitVectorType(directoryName);
+        const bitVectorType = parseBasicVectorType(directoryName);
         return fromYaml(
             value,
             {type: Type.vector, elementType: bitVectorType.type, length: bitVectorType.length.toNumber()}
@@ -47,7 +47,7 @@ describeDirectorySpecTest<IValidGenericSSZTestCase, IValidTestResult>(
       }
     },
     expectFunc: (testCase: IValidGenericSSZTestCase, expected: any, actual: IValidTestResult, directoryName: string) => {
-      const bitVectorType = parseBitVectorType(directoryName);
+      const bitVectorType = parseBasicVectorType(directoryName);
       expect(
         equals(
           actual.decoded,

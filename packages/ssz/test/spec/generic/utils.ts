@@ -24,7 +24,7 @@ export interface IValidTestResult {
   decoded: any;
 }
 
-export function parseBitVectorType(name: string): {type: FullSSZType; length: uint256} {
+export function parseBasicVectorType(name: string): {type: FullSSZType; length: uint256} {
   const parts = name.split("_");
   return {
     type: typeToEnum(parts[1]),

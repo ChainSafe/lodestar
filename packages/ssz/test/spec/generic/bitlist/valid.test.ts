@@ -1,6 +1,6 @@
 /* eslint-disable */
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
-import {IValidGenericSSZTestCase, parseBitVectorType, IValidTestResult, parseBitListType} from "../utils";
+import {IValidGenericSSZTestCase, parseBasicVectorType, IValidTestResult, parseBitListType} from "../utils";
 import path from "path";
 import {deserialize, hashTreeRoot, serialize, signingRoot, equals, Type, BitListType} from "../../../../src";
 import {expect} from "chai";
