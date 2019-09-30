@@ -1,6 +1,5 @@
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {BeaconBlockBody, Hash} from "@chainsafe/eth2.0-types";
-import {join} from "path";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {expect} from "chai";
 import {IBaseSSZStaticTestCase} from "../../type";
@@ -16,9 +15,7 @@ interface IResult {
 
   describeDirectorySpecTest<IBaseSSZStaticTestCase<BeaconBlockBody>, IResult>(
     `beacon block body ${caseName} minimal`,
-    join(
-      __dirname,
-      `${TEST_CASE_LOCATION}/tests/minimal/phase0/ssz_static/BeaconBlockBody/${caseName}`),
+    `${TEST_CASE_LOCATION}/tests/minimal/phase0/ssz_static/BeaconBlockBody/${caseName}`,
     (testcase) => {
       const serialized = serialize(testcase.serialized, config.types.BeaconBlockBody);
       const root = hashTreeRoot(testcase.serialized, config.types.BeaconBlockBody);

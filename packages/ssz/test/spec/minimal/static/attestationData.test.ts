@@ -1,6 +1,5 @@
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {AttestationData, Hash} from "@chainsafe/eth2.0-types";
-import {join} from "path";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {expect} from "chai";
 import {IBaseSSZStaticTestCase} from "../../type";
@@ -16,10 +15,7 @@ interface IResult {
 
   describeDirectorySpecTest<IBaseSSZStaticTestCase<AttestationData>, IResult>(
     `attestation data ${caseName} minimal`,
-    join(
-      __dirname,
-      `${TEST_CASE_LOCATION}/tests/minimal/phase0/ssz_static/AttestationData/${caseName}`
-    ),
+    `${TEST_CASE_LOCATION}/tests/minimal/phase0/ssz_static/AttestationData/${caseName}`,
     (testcase) => {
       const serialized = serialize(testcase.serialized, config.types.AttestationData);
       const root = hashTreeRoot(testcase.serialized, config.types.AttestationData);

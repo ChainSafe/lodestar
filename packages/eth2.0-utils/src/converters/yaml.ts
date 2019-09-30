@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {AnySSZType, FullSSZType, Type, parseType} from "@chainsafe/ssz-type-schema";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
+import BN from "bn.js";
 
 export function fromYaml<T>(value: any, type: AnySSZType): T {
   return _expandYamlValue(value, parseType(type));
@@ -16,7 +17,7 @@ function _expandYamlValue(value: any, type: FullSSZType): any {
       ) {
         return Infinity;
       }
-      return type.useNumber ? value.toNumber() : value;
+      return type.useNumber ? value.toNumber() : new BN(value);
     case Type.bool:
       return value;
     case Type.bitList:

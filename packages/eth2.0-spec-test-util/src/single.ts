@@ -35,13 +35,13 @@ export interface ISpecTestOptions<TestCase, Result> {
    * Optionally pass function to transform loaded values
    * (values from input files)
    */
-  inputProcessing?: {[K: string]: (value: any) => any};
+  inputProcessing?: {[K: string]: (value: any, directoryName: string) => any};
 
   shouldError?: (testCase: TestCase) => boolean;
 
-  shouldSkip?: (testCase: TestCase) => boolean;
+  shouldSkip?: (testCase: TestCase, directoryName: string) => boolean;
 
-  expectFunc?: (testCase: TestCase, expected, actual) => void;
+  expectFunc?: (testCase: TestCase, expected, actual, directoryName: string) => void;
 
   timeout?: number;
 
@@ -105,10 +105,10 @@ function generateTestCase<TestCase, Result>(
   testCaseDirectoryPath: string,
   testFunction: (...args: any) => Result,
   options: ISpecTestOptions<TestCase, Result>
-): void {
+): any {
   it(basename(testCaseDirectoryPath), function () {
     const testCase = loadInputFiles(testCaseDirectoryPath, options);
-    if(options.shouldSkip && options.shouldSkip(testCase)) {
+    if(options.shouldSkip && options.shouldSkip(testCase, basename(testCaseDirectoryPath))) {
       return this.skip();
     }
     if(options.shouldError && options.shouldError(testCase)) {
@@ -126,7 +126,7 @@ function generateTestCase<TestCase, Result>(
         generateProfileReport(profile, profilingDirectory, profileId);
       }
       const expected = options.getExpected(testCase);
-      options.expectFunc(testCase, expected, result);
+      options.expectFunc(testCase, expected, result, basename(testCaseDirectoryPath));
     }
   });
 }
@@ -146,12 +146,17 @@ function loadInputFiles<TestCase, Result>(
     })
     .forEach((file) => {
       const inputName = basename(file).replace(".ssz", "").replace(".yaml", "");
-      testCase[inputName] = deserializeTestCase(file, inputName, options);
+      try {
+        testCase[inputName] = deserializeTestCase(file, inputName, options);
+      } catch (e) {
+        //failed to deserialize
+        testCase[inputName] = null;
+      }
       if (file.endsWith(InputType.SSZ)) {
         testCase[`${inputName}_raw`] = readFileSync(file);
       }
       if(options.inputProcessing[inputName]) {
-        testCase[inputName] = options.inputProcessing[inputName](testCase[inputName]);
+        testCase[inputName] = options.inputProcessing[inputName](testCase[inputName], basename(directory));
       }
     });
   return testCase as TestCase;
