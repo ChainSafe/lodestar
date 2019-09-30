@@ -90,7 +90,7 @@ describe("produce block", function () {
     dbStub.attestation.getAll.resolves([]);
     dbStub.attesterSlashing.getAll.resolves([]);
     dbStub.voluntaryExit.getAll.resolves([]);
-    dbStub.deposit.getAll.resolves([]);
+    dbStub.deposit.getAllBetween.resolves([]);
     eth1Stub.depositCount.resolves(1);
     eth1Stub.depositRoot.resolves(tree.root());
     eth1Stub.getEth1Data.resolves({depositCount: 1, depositRoot: tree.root(), blockHash: Buffer.alloc(32)});

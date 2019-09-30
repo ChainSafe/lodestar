@@ -39,6 +39,12 @@ describe("opPool - deposits", function () {
     expect(result).to.be.deep.equal(data);
   });
 
+  it('should return range', async function () {
+    dbStub.deposit.getAllBetween.resolves([]);
+    await service.getAllBetween(0, 1);
+    expect(dbStub.deposit.getAllBetween.calledOnce).to.be.true;
+  });
+
   it('should remove', async function () {
     dbStub.deposit.deleteOld.resolves();
     await service.removeOld(3);
