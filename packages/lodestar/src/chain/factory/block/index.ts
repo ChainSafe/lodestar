@@ -42,8 +42,10 @@ export async function assembleBlock(
     body: await assembleBody(config, opPool, eth1, merkleTree, currentState, randao),
   };
 
-  stateTransition(config, currentState, block, false, false);
+  block.stateRoot = hashTreeRoot(
+    stateTransition(config, currentState, block, false, false),
+    config.types.BeaconState
+  );
 
-  block.stateRoot = hashTreeRoot(currentState, config.types.BeaconState);
   return block;
 }
