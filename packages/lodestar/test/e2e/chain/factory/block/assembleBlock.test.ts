@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import BN from "bn.js";
-import {hashTreeRoot, clone} from "@chainsafe/ssz";
+import {clone, hashTreeRoot} from "@chainsafe/ssz";
 import sinon from "sinon";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
 import {BeaconBlockHeader} from "@chainsafe/eth2.0-types";
@@ -12,14 +12,14 @@ import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {OpPool} from "../../../../../src/opPool";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
-import {getBeaconProposerIndex} from "../../../../../src/chain/stateTransition/util";
+import {blockToHeader, getBeaconProposerIndex} from "../../../../../src/chain/stateTransition/util";
 import {stateTransition} from "../../../../../src/chain/stateTransition";
 import {generateValidator} from "../../../../utils/validator";
 import BlockProposingService from "../../../../../src/validator/services/block";
 import {RpcClientOverInstance} from "../../../../../src/validator/rpc";
 import {WinstonLogger} from "../../../../../src/logger";
 import {generateDeposit} from "../../../../utils/deposit";
-import {BeaconChain} from "../../../../../../lodestar/src/chain";
+import {BeaconChain} from "../../../../../src/chain";
 import {StatefulDagLMDGHOST} from "../../../../../src/chain/forkChoice";
 
 import {
@@ -56,10 +56,10 @@ describe("produce block", function () {
   const chainStub = sinon.createStubInstance(BeaconChain);
   chainStub.forkChoice = sinon.createStubInstance(StatefulDagLMDGHOST);
 
-  it('should produce valid block - state without valid eth1 votes', async function () {
+  it("should produce valid block - state without valid eth1 votes", async function () {
     const keypairs: Keypair[] = Array.from({length: 64},  () => Keypair.generate());
     const validators = keypairs.map((keypair) => {
-      const validator = generateValidator(0, FAR_FUTURE_EPOCH);
+      const validator = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH});
       validator.pubkey = keypair.publicKey.toBytesCompressed();
       validator.effectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
       return validator;
@@ -68,13 +68,7 @@ describe("produce block", function () {
     const parentBlock = generateEmptyBlock();
     //if zero hash it get changed
     parentBlock.stateRoot = Buffer.alloc(32, 1);
-    const parentHeader: BeaconBlockHeader = {
-      stateRoot: parentBlock.stateRoot,
-      signature: parentBlock.signature,
-      slot: parentBlock.slot,
-      parentRoot: parentBlock.parentRoot,
-      bodyRoot: hashTreeRoot(parentBlock.body, config.types.BeaconBlockBody),
-    };
+    const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock);
     const state = generateState({
       validators: validators,
       balances,
@@ -84,7 +78,7 @@ describe("produce block", function () {
     tree.add(0, hashTreeRoot(generateDeposit().data, config.types.DepositData));
     dbStub.block.getChainHead.resolves(parentBlock);
     dbStub.state.getLatest.resolves(clone(state, config.types.BeaconState));
-    dbStub.block.get.withArgs(chainStub.forkChoice.head()).resolves(parentBlock)
+    dbStub.block.get.withArgs(chainStub.forkChoice.head()).resolves(parentBlock);
     dbStub.merkleTree.getProgressiveMerkleTree.resolves(tree);
     dbStub.proposerSlashing.getAll.resolves([]);
     dbStub.attestation.getAll.resolves([]);
@@ -93,6 +87,7 @@ describe("produce block", function () {
     dbStub.deposit.getAllBetween.resolves([]);
     eth1Stub.depositCount.resolves(1);
     eth1Stub.depositRoot.resolves(tree.root());
+    // @ts-ignore
     eth1Stub.getEth1Data.resolves({depositCount: 1, depositRoot: tree.root(), blockHash: Buffer.alloc(32)});
     // @ts-ignore
     eth1Stub.getHead.resolves({

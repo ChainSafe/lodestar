@@ -8,7 +8,7 @@ describe("opPool - deposits", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let dbStub, service: DepositsOperations;
+  let dbStub, service;
 
   beforeEach(function () {
     dbStub = {

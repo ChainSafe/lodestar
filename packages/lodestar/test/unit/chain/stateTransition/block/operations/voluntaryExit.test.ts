@@ -50,7 +50,7 @@ describe('process block - voluntary exits', function () {
   it('should fail - already exited', function () {
     const state = generateState();
     const exit = generateEmptyVoluntaryExit();
-    state.validators.push(generateValidator(0, 1));
+    state.validators.push(generateValidator({activation: 0, exit: 1}));
     isActiveValidatorStub.returns(true);
     try {
       processVoluntaryExit(config, state, exit);
@@ -64,7 +64,7 @@ describe('process block - voluntary exits', function () {
     const state = generateState({slot: 0});
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = config.params.SLOTS_PER_EPOCH * 2;
-    state.validators.push(generateValidator(0, FAR_FUTURE_EPOCH));
+    state.validators.push(generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH}));
     isActiveValidatorStub.returns(true);
     try {
       processVoluntaryExit(config, state, exit);
@@ -78,7 +78,7 @@ describe('process block - voluntary exits', function () {
     const state = generateState({slot: config.params.SLOTS_PER_EPOCH * 2});
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = 0;
-    state.validators.push(generateValidator(0, FAR_FUTURE_EPOCH));
+    state.validators.push(generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH}));
     isActiveValidatorStub.returns(true);
     try {
       processVoluntaryExit(config, state, exit);
@@ -92,7 +92,7 @@ describe('process block - voluntary exits', function () {
     const state = generateState({slot: (config.params.PERSISTENT_COMMITTEE_PERIOD + 1) * config.params.SLOTS_PER_EPOCH});
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = 0;
-    state.validators.push(generateValidator(0, FAR_FUTURE_EPOCH));
+    state.validators.push(generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH}));
     isActiveValidatorStub.returns(true);
     blsStub.verify.returns(false);
     try {
@@ -105,7 +105,7 @@ describe('process block - voluntary exits', function () {
   });
 
   it('should process exit', function () {
-    const validator = generateValidator(1, FAR_FUTURE_EPOCH);
+    const validator = generateValidator({activation: 1, exit: FAR_FUTURE_EPOCH});
     const state = generateState({slot: (config.params.PERSISTENT_COMMITTEE_PERIOD + 1) * config.params.SLOTS_PER_EPOCH});
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = 0;
