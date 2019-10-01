@@ -12,12 +12,12 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<BlockSanityTestCase, BeaconState>(
-  "block sanity minimal",
+  "block sanity mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/sanity/blocks/pyspec_tests"),
   (testcase) => {
-    const state = testcase.pre;
+    let state = testcase.pre;
     for(let i = 0; i < testcase.meta.blocksCount.toNumber(); i++) {
-      stateTransition(config, state, testcase[`blocks_${i}`] as BeaconBlock, true, true);
+      state = stateTransition(config, state, testcase[`blocks_${i}`] as BeaconBlock, true, true);
     }
     return state;
   },
