@@ -37,6 +37,7 @@ describe('validator rpc api', function () {
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
     chainStub.config = config;
+    sinon.stub(chainStub, 'latestState').get(() => null);
     opStub = sandbox.createStubInstance(OpPool);
     opStub.attestations = sandbox.createStubInstance(AttestationOperations);
     validatorApi = new ValidatorApi({}, {config, chain: chainStub, db: dbStub, opPool: opStub, eth1: eth1Stub, logger: logger});
@@ -88,7 +89,7 @@ describe('validator rpc api', function () {
   it('publish attestation', async function() {
     const attestation = generateEmptyAttestation();
     await validatorApi.publishAttestation(attestation);
-    expect(opStub.attestations.receive.withArgs(attestation).calledOnce).to.be.true;
+    expect(opStub.attestations.verifyAndReceive.calledOnce).to.be.true;
   });
 
 });

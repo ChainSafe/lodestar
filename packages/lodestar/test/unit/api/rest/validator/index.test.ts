@@ -27,6 +27,7 @@ describe("Test validator rest API", function () {
   let restApi: RestApi, getDutiesStub: any, assembleBlockStub: any, produceAttestationStub: any;
 
   const chain = sinon.createStubInstance(BeaconChain);
+  sinon.stub(chain, 'latestState').get(() => null);
   const opPool = sinon.createStubInstance(OpPool);
   const attestationOperations = sinon.createStubInstance(AttestationOperations);
   // @ts-ignore
@@ -167,7 +168,7 @@ describe("Test validator rest API", function () {
 
   it("should publish attestation", async function () {
     const attestation = generateEmptyAttestation();
-    attestationOperations.receive.resolves();
+    attestationOperations.verifyAndReceive.resolves(true);
     await supertest(restApi.server.server)
       .post(
         "/validator/attestation",
@@ -177,7 +178,22 @@ describe("Test validator rest API", function () {
       })
       .expect(200)
       .expect("Content-Type", "application/json");
-    expect(attestationOperations.receive.calledOnce).to.be.true;
+    expect(attestationOperations.verifyAndReceive.calledOnce).to.be.true;
+  });
+
+  it("should not publish attestation", async function () {
+    const attestation = generateEmptyAttestation();
+    attestationOperations.verifyAndReceive.resolves(false);
+    await supertest(restApi.server.server)
+      .post(
+        "/validator/attestation",
+      )
+      .send({
+        "attestation": toJson(attestation)
+      })
+      .expect(202)
+      .expect("Content-Type", "application/json");
+    expect(attestationOperations.verifyAndReceive.calledTwice).to.be.true;
   });
 
 });
