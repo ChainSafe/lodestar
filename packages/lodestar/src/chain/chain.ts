@@ -166,12 +166,13 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     }
 
     await this.processBlock(block, blockHash);
-    const nextBlockInQueue = this.blockProcessingQueue.peek();
+    let nextBlockInQueue = this.blockProcessingQueue.peek();
     while (nextBlockInQueue) {
       const latestBlock = await this.db.block.getChainHead();
       if (nextBlockInQueue.parentRoot.equals(signingRoot(latestBlock, this.config.types.BeaconBlock))) {
         await this.processBlock(nextBlockInQueue, signingRoot(nextBlockInQueue, this.config.types.BeaconBlock));
         this.blockProcessingQueue.poll();
+        nextBlockInQueue = this.blockProcessingQueue.peek();
       } else{
         return;
       }
