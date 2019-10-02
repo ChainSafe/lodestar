@@ -2,7 +2,15 @@
 import {Hash, uint256} from "@chainsafe/eth2.0-types";
 import {bytes} from "@chainsafe/eth2.0-types/lib";
 import BN from "bn.js";
-import {BoolType, FullSSZType, Type, UintType} from "@chainsafe/ssz-type-schema";
+import {AnyContainerType, BoolType, FullSSZType, Type, UintType} from "@chainsafe/ssz-type-schema";
+import {
+  BitsStruct,
+  ComplexTestStruct,
+  FixedTestStruct,
+  SingleFieldTestStruct,
+  SmallTestStruct,
+  VarTestStruct
+} from "./container/types";
 
 export interface IValidGenericSSZTestCase {
   meta: {
@@ -44,6 +52,19 @@ export function parseUintType(name: string): {size: number} {
   return {
     size: parseInt(parts[1], 10)
   };
+}
+
+export function parseContainerType(name: string): AnyContainerType {
+  const parts = name.split("_");
+  switch (parts[0]) {
+    case "SingleFieldTestStruct": return SingleFieldTestStruct;
+    case "SmallTestStruct": return SmallTestStruct;
+    case "FixedTestStruct": return FixedTestStruct;
+    case "VarTestStruct": return VarTestStruct;
+    case "ComplexTestStruct": return ComplexTestStruct;
+    case "BitsStruct": return BitsStruct;
+    default: throw new Error("Unknown container type");
+  }
 }
 
 function typeToEnum(type: string): FullSSZType {

@@ -8,6 +8,7 @@ export const bytes8 = "bytes8";
 export const bytes32 = "bytes32";
 export const bytes48 = "bytes48";
 export const bytes96 = "bytes96";
+export const bytes256 = "bytes256";
 export const uint8 = "uint8";
 export const uint16 = "uint16";
 export const number64 = "number64";
