@@ -332,8 +332,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.forkChoice.addBlock(block.slot, blockRoot, block.parentRoot);
     // await this.applyForkChoiceRule();
     await this.updateDepositMerkleTree(newState);
-    // update metrics
-    this.metrics.currentSlot.set(block.slot);
+
+    this.metrics.currentSlot.inc()
 
     // Post-epoch processing
     const currentEpoch = computeEpochOfSlot(this.config, newState.slot);
@@ -344,6 +344,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
         const justifiedBlockRoot = newState.currentJustifiedCheckpoint.root;
         const justifiedBlock = await this.db.block.get(justifiedBlockRoot);
         this.logger.important(`Epoch ${computeEpochOfSlot(this.config, justifiedBlock.slot)} is justified!`);
+
+        preJustifiedEpoch !== 0 ? this.metrics.previousJustifiedEpoch.inc() : null;
+        this.metrics.currentJustifiedEpoch.inc();
+
         await Promise.all([
           this.db.chain.setJustifiedStateRoot(justifiedBlock.stateRoot),
           this.db.chain.setJustifiedBlockRoot(justifiedBlockRoot),
@@ -356,6 +360,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
         const finalizedBlockRoot = newState.finalizedCheckpoint.root;
         const finalizedBlock = await this.db.block.get(finalizedBlockRoot);
         this.logger.important(`Epoch ${computeEpochOfSlot(this.config, finalizedBlock.slot)} is finalized!`);
+        
+        this.metrics.currentFinalizedEpoch.inc();
+
         await Promise.all([
           this.db.chain.setFinalizedStateRoot(finalizedBlock.stateRoot),
           this.db.chain.setFinalizedBlockRoot(finalizedBlockRoot),
@@ -396,6 +403,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     );
     //TODO: remove deposits with index <= newState.depositIndex
     await this.db.merkleTree.set(newState.eth1DepositIndex, merkleTree.toObject());
+    
+    this.metrics.totalDeposits.set(deposits.length);
   }
 
   private checkGenesis = async (eth1Block: Block): Promise<void> => {
