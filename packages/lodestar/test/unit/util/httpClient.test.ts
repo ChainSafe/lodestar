@@ -16,6 +16,7 @@ describe("httpClient test", () => {
   beforeEach(() => {
     mock = new MockAdapter(Axios);
     const logger: ILogger = new WinstonLogger({level: LogLevel.debug.toString()});
+    logger.silent = true;
     httpClient = new HttpClient({}, {logger});
   });
 

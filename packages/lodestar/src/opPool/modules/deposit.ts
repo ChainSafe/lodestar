@@ -18,6 +18,16 @@ export class DepositsOperations {
     return await this.db.getAll();
   }
 
+
+  /**
+   * Limits are not inclusive
+   * @param lowerLimit
+   * @param upperLimit
+   */
+  public async getAllBetween(lowerLimit: number|null, upperLimit: number|null): Promise<Deposit[]> {
+    return await this.db.getAllBetween(lowerLimit, upperLimit);
+  }
+
   /**
    * Removes deposits with index <= depositCount - 1
    * @param depositCount

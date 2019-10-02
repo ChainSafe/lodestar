@@ -1,7 +1,7 @@
 import {describeDirectorySpecTest} from "../../../src/single";
 import {join} from "path";
 import {AnyContainerType, AnySSZType, serialize} from "@chainsafe/ssz";
-import {bool, number64} from "@chainsafe/eth2.0-ssz-types/lib/generators/primitive";
+import {bool, number64} from "@chainsafe/eth2.0-types/lib/ssz/generators/primitive";
 import {unlinkSync, writeFileSync} from "fs";
 import {before, after} from "mocha";
 import {loadYamlFile} from "@chainsafe/eth2.0-utils";

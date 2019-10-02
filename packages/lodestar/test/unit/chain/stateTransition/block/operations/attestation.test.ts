@@ -1,7 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {hashTreeRoot} from "@chainsafe/ssz";
-
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ZERO_HASH} from "../../../../../../src/constants";
 import {processAttestation} from "../../../../../../src/chain/stateTransition/block/operations";

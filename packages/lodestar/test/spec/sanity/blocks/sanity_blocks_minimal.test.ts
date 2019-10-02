@@ -1,6 +1,6 @@
 import {join} from "path";
 import {expect} from "chai";
-import {equals} from "@chainsafe/ssz";
+import {equals, clone} from "@chainsafe/ssz";
 import {BeaconBlock, BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {stateTransition} from "../../../../src/chain/stateTransition";
@@ -13,9 +13,9 @@ describeDirectorySpecTest<BlockSanityTestCase, BeaconState>(
   "block sanity minimal",
   join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/sanity/blocks/pyspec_tests"),
   (testcase) => {
-    const state = testcase.pre;
+    let state = testcase.pre;
     for(let i = 0; i < testcase.meta.blocksCount.toNumber(); i++) {
-      stateTransition(config, state, testcase[`blocks_${i}`] as BeaconBlock, true, true);
+      state = stateTransition(config, state, testcase[`blocks_${i}`] as BeaconBlock, true, true);
     }
     return state;
   },

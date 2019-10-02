@@ -16,8 +16,7 @@
     "@babel/preset-env": "^7.3.1",
     "@babel/preset-typescript": "^7.3.3",
     "@babel/register": "^7.0.0",
-    "@chainsafe/eth2.0-spec-test-util": "0.4.2",
-    "@chainsafe/eth2.0-ssz-types": "^0.1.0",
+    "@chainsafe/eth2.0-spec-test-util": "0.4.2"
     "@types/chai": "^4.1.7",
     "@types/chai-as-promised": "^7.1.0",
     "@types/mocha": "^5.2.5",

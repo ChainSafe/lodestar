@@ -8,7 +8,7 @@ describe("opPool - deposits", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let dbStub, service: DepositsOperations;
+  let dbStub, service;
 
   beforeEach(function () {
     dbStub = {
@@ -37,6 +37,12 @@ describe("opPool - deposits", function () {
     let result = await service.getAll();
     expect(dbStub.deposit.getAll.calledOnce).to.be.true;
     expect(result).to.be.deep.equal(data);
+  });
+
+  it('should return range', async function () {
+    dbStub.deposit.getAllBetween.resolves([]);
+    await service.getAllBetween(0, 1);
+    expect(dbStub.deposit.getAllBetween.calledOnce).to.be.true;
   });
 
   it('should remove', async function () {

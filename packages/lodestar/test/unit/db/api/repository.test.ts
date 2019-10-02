@@ -100,6 +100,11 @@ describe('database repository', function () {
     expect(controller.search.calledOnce).to.be.true;
   });
 
+  it('should return range of items', async function () {
+    await repository.getAllBetween(0, 1);
+    expect(controller.search.calledOnce).to.be.true;
+  });
+
   it('should delete given items', async function () {
     await repository.deleteMany([1, 2, 3]);
     expect(

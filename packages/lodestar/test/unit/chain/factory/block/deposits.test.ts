@@ -44,7 +44,7 @@ describe("blockAssembly - deposits", function() {
 
   it("return deposits with valid proofs", async function() {
     const deposits = [generateDeposit(), generateDeposit()];
-    opPool.deposits.getAll.resolves(deposits);
+    opPool.deposits.getAllBetween.resolves(deposits);
     const tree = ProgressiveMerkleTree.empty(4, new MerkleTreeSerialization(config));
     deposits.forEach((d, index) => {
       tree.add(index, hashTreeRoot(d.data, config.types.DepositData));

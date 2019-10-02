@@ -2,7 +2,7 @@
  * @module sszTypes/generators
  */
 import {IBeaconParams} from "@chainsafe/eth2.0-params";
-import {parseType, ContainerType} from "@chainsafe/ssz";
+import {parseType, ContainerType} from "@chainsafe/ssz-type-schema";
 
 import * as primitive from "./primitive";
 import * as misc from "./misc";
