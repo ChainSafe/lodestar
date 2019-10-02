@@ -4,7 +4,7 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BulkRepository} from "../repository";
 import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../../schema";
-import {DEPOSIT_CONTRACT_TREE_DEPTH} from "@chainsafe/eth2.0-params/src/presets/mainnet";
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../../../constants";
 import {IProgressiveMerkleTree, ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "../../../../util/serialization";
 
