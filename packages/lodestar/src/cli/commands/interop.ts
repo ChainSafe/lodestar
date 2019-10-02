@@ -132,7 +132,7 @@ export class InteropCommand implements ICliCommand {
         config,
         computeEpochOfSlot(config, getCurrentSlot(config, state.genesisTime))
       );
-      await this.node.chain.advanceState(targetSlot);
+      // await this.node.chain.advanceState(targetSlot);
     } else {
       throw new Error("Missing --quickstart flag");
     }

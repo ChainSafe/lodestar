@@ -186,7 +186,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     try {
       processSlots(this.config, state, targetSlot);
     } catch (e) {
-      this.logger.warn(`Failed to advance slot mannually because ${e.message}`);
+      this.logger.warn(`Failed to advance slot manually because ${e.message}`);
     }
     this.latestState = state;
     await this.db.state.setUnderRoot(state);
