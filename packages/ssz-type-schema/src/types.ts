@@ -122,3 +122,13 @@ export type FullSSZType = UintType | BoolType | BitsType | BytesType | ArrayType
 export type AnyContainerType = ContainerType | SimpleContainerType;
 
 export type AnySSZType = FullSSZType | SimpleSSZType;
+
+// partials
+
+export type PathElement = number | string;
+export type Path = PathElement[];
+
+export interface PartialSSZType {
+  fullType: FullSSZType;
+  paths: Path[];
+}
