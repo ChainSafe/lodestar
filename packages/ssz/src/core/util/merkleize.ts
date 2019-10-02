@@ -1,5 +1,4 @@
 /** @module ssz */
-import {BYTES_PER_CHUNK} from "../../util/constants";
 import {hash} from "../../util/hash";
 import {nextPowerOf2, bitLength} from "../../util/math";
 import {zeroHashes} from "../../util/zeros";
