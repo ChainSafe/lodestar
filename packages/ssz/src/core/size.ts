@@ -13,10 +13,10 @@ import {
   isVariableSizeType
 } from "@chainsafe/ssz-type-schema";
 
-import {BYTES_PER_LENGTH_PREFIX} from "./constants";
+import {BYTES_PER_LENGTH_PREFIX} from "../util/constants";
 
 
-// Return the size of a fixed-sized type
+// Return the size in bytes of a fixed-sized type
 // Will error if a variable-sized type is given
 /** @ignore */
 export function fixedSize(type: FullSSZType): number {
