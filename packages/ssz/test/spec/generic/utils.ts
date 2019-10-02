@@ -39,6 +39,13 @@ export function parseBitListType(name: string): {limit: uint256} {
   };
 }
 
+export function parseUintType(name: string): {size: number} {
+  const parts = name.split("_");
+  return {
+    size: parseInt(parts[1], 10)
+  };
+}
+
 function typeToEnum(type: string): FullSSZType {
   switch (type) {
     case "bool": return {type: Type.bool} as BoolType;
