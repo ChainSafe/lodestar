@@ -2500,9 +2500,9 @@ asn1@~0.2.3:
   dependencies:
     safer-buffer "~2.1.0"
 
-"assemblyscript@git+https://github.com/AssemblyScript/assemblyscript.git#5b510571f6ebfc5530d85412005059e4cf961a97":
+"assemblyscript@https://github.com/AssemblyScript/assemblyscript.git#5b510571f6ebfc5530d85412005059e4cf961a97":
   version "0.7.0"
-  resolved "git+https://github.com/AssemblyScript/assemblyscript.git#5b510571f6ebfc5530d85412005059e4cf961a97"
+  resolved "https://github.com/AssemblyScript/assemblyscript.git#5b510571f6ebfc5530d85412005059e4cf961a97"
   dependencies:
     "@protobufjs/utf8" "^1.1.0"
     binaryen "89.0.0-nightly.20190914"
