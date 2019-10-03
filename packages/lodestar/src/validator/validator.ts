@@ -16,7 +16,6 @@
 import BlockProposingService from "./services/block";
 import {Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {GenesisInfo} from "./types";
 import {IRpcClient, RpcClientOverWs} from "./rpc";
 import {AttestationService} from "./services/attestation";
 import {IValidatorDB, LevelDbController, ValidatorDB} from "../db";
@@ -40,18 +39,14 @@ class Validator {
   private blockService: BlockProposingService;
   // @ts-ignore
   private attestationService: AttestationService;
-  // @ts-ignore
-  private genesisInfo: GenesisInfo;
   private db: IValidatorDB;
   private logger: ILogger;
-  private isActive: boolean;
   private isRunning: boolean;
 
   public constructor(opts: Partial<IValidatorOptions>, modules: {config: IBeaconConfig; logger: ILogger}) {
     this.opts = deepmerge(defaultValidatorOptions, opts, {isMergeableObject: isPlainObject});
     this.config = modules.config;
     this.logger = modules.logger.child(this.opts.logger);
-    this.isActive = false;
     this.isRunning = false;
     this.db = new ValidatorDB({
       config: this.config,
@@ -70,7 +65,15 @@ class Validator {
   public async start(): Promise<void> {
     this.isRunning = true;
     await this.setup();
-    this.run();
+    this.logger.info("Checking if chain has started...");
+    this.apiClient.waitForChainLived();
+    this.apiClient.once("chainLived", this.run.bind(this));
+  }
+
+  public run(): void {
+    this.logger.info("Chain start has occured!");
+    this.apiClient.onNewSlot(this.checkDuties);
+    // this.apiClient.onNewEpoch(this.lookAhead);
   }
 
   /**
@@ -79,6 +82,7 @@ class Validator {
   public async stop(): Promise<void> {
     this.isRunning = false;
     await this.apiClient.disconnect();
+
   }
 
   private initApiClient(): void {
@@ -102,9 +106,6 @@ class Validator {
     }
 
     await this.setupRPC();
-
-    // Wait for the ChainStart log and grab validator index
-    this.isActive = await this.isChainLive();
 
     this.blockService = new BlockProposingService(
       this.config,
@@ -132,29 +133,6 @@ class Validator {
     this.logger.info(`RPC connection successfully established: ${this.apiClient.url}!`);
   }
 
-  /**
-   * Recursively checks for the chain start log event from the ETH1.x deposit contract
-   */
-  private isChainLive = async (): Promise<boolean> => {
-    this.logger.info("Checking if chain has started...");
-    const genesisTime =  await this.apiClient.beacon.getGenesisTime();
-    if (genesisTime && (Date.now() / 1000) > genesisTime) {
-      this.genesisInfo = {
-        startTime: genesisTime,
-      };
-      this.logger.info("Chain start has occured!");
-      return true;
-    }
-    if(this.isRunning) {
-      setTimeout(this.isChainLive, 1000);
-    }
-    return false;
-  };
-
-  private run(): void {
-    this.apiClient.onNewSlot(this.checkDuties);
-    // this.apiClient.onNewEpoch(this.lookAhead);
-  }
 
   private checkDuties = async (slot: Slot): Promise<void> => {
     const validatorDuty =
