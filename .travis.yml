@@ -44,7 +44,7 @@ jobs:
         - lerna run test:spec
 
 before_deploy:
-    - lerna run build:docs
+    - lerna run build:release
     - node scripts/collect-docs.js
 
 deploy:
