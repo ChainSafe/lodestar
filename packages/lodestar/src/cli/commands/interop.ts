@@ -63,6 +63,7 @@ export class InteropCommand implements ICliCommand {
       .option("--peer-id-file [peerIdFile]","peer id json file")
       .option("--peer-id [peerId]","peer id hex string")
       .option("--validators-from-yaml-key-file [validatorsYamlFile]", "validator keys")
+      .option("-a, --advanceState", "Advance the state on older genesis time. NOT SAFE FOR PRODUCTION")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
@@ -128,11 +129,13 @@ export class InteropCommand implements ICliCommand {
       const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
       const state = quickStartOptionToState(config, tree, options.quickStart);
       await this.node.chain.initializeBeaconChain(state, tree);
-      const targetSlot = computeStartSlotOfEpoch(
-        config,
-        computeEpochOfSlot(config, getCurrentSlot(config, state.genesisTime))
-      );
-      // await this.node.chain.advanceState(targetSlot);
+      if (options.advanceState){
+        const targetSlot = computeStartSlotOfEpoch(
+            config,
+            computeEpochOfSlot(config, getCurrentSlot(config, state.genesisTime))
+        );
+        await this.node.chain.advanceState(targetSlot);
+      }
     } else {
       throw new Error("Missing --quickstart flag");
     }
