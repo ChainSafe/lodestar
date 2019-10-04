@@ -1,27 +1,42 @@
-import {Attestation, Slot, BeaconState} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconState, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {OperationsModule} from "./abstract";
 import {
+  aggregateAttestation,
+  computeStartSlotOfEpoch,
   getAttestationDataSlot,
   isValidAttestationSlot,
-  computeStartSlotOfEpoch,
 } from "../../chain/stateTransition/util";
-import {BulkRepository} from "../../db/api/beacon/repository";
+import {AttestationRepository} from "../../db/api/beacon/repositories";
+import {clone, hashTreeRoot} from "@chainsafe/ssz";
+import {processAttestation} from "../../chain/stateTransition/block/operations";
 
 export class AttestationOperations extends OperationsModule<Attestation> {
   private readonly config: IBeaconConfig;
 
-  public constructor(db: BulkRepository<Attestation>, {config}: {config: IBeaconConfig}) {
+  public constructor(db: AttestationRepository, {config}: {config: IBeaconConfig}) {
     super(db);
     this.config = config;
+  }
+
+  public async receive(value: Attestation): Promise<void> {
+    const existingAttestation = await this.db.get(hashTreeRoot(value.data, this.config.types.AttestationData));
+    if(existingAttestation) {
+      value = aggregateAttestation(this.config, existingAttestation, value);
+    }
+    return super.receive(value);
   }
 
   public async getValid(state: BeaconState): Promise<Attestation[]> {
     const attestations: Attestation[] = await this.getAll();
     return attestations.filter((a: Attestation) => {
-      const attestationSlot: Slot = getAttestationDataSlot(this.config, state, a.data);
-      return isValidAttestationSlot(this.config, attestationSlot, state.slot);
+      try {
+        processAttestation(this.config, clone(state, this.config.types.BeaconState), a);
+        return true;
+      } catch (e) {
+        return false;
+      }
     });
   }
 

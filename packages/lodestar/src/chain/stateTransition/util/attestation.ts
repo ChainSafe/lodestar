@@ -20,7 +20,6 @@ import {computeStartSlotOfEpoch} from "./epoch";
 import {getDomain} from "./domain";
 import {getCommitteeCount, getCrosslinkCommittee, getStartShard} from "./committee";
 import {intDiv} from "@chainsafe/eth2.0-utils";
-import assert = require("assert");
 
 
 /**
@@ -164,9 +163,11 @@ export function aggregateAttestation(
   attestation2: Attestation
 ): Attestation {
   const aggregatedAttestation: Attestation = clone(attestation2, config.types.Attestation);
+  let hasMoreSignatures = false;
   for(let i = 0; i < attestation1.aggregationBits.bitLength; i++) {
-    if(attestation1.aggregationBits.getBit(i)) {
+    if(attestation1.aggregationBits.getBit(i) !== attestation2.aggregationBits.getBit(i)) {
       aggregatedAttestation.aggregationBits.setBit(i, true);
+      hasMoreSignatures = true;
     }
   }
   for(let i = 0; i < attestation1.custodyBits.bitLength; i++) {
@@ -174,6 +175,8 @@ export function aggregateAttestation(
       aggregatedAttestation.custodyBits.setBit(i, true);
     }
   }
-  aggregatedAttestation.signature = aggregateSignatures([attestation1.signature, attestation2.signature]);
+  if(hasMoreSignatures) {
+    aggregatedAttestation.signature = aggregateSignatures([attestation1.signature, attestation2.signature]);
+  }
   return aggregatedAttestation;
 }
