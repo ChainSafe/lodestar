@@ -17,6 +17,14 @@ cache:
     - packages/ssz/node_modules
     - packages/ssz-type-schema/node_modules
 
+before_install:
+  - |
+      if ! git diff --name-only $TRAVIS_COMMIT_RANGE | grep -qvE '(.md)|(.html)|^(LICENSE)|^(docs)|(.github)'
+      then
+        echo "Only docs were updated, not running CI!"
+        travis_terminate 0
+      fi
+
 install:
     - lerna bootstrap
 
