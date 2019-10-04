@@ -1,13 +1,8 @@
-import {Attestation, BeaconState, Slot} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconState} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {OperationsModule} from "./abstract";
-import {
-  aggregateAttestation,
-  computeStartSlotOfEpoch,
-  getAttestationDataSlot,
-  isValidAttestationSlot,
-} from "../../chain/stateTransition/util";
+import {aggregateAttestation, computeStartSlotOfEpoch, getAttestationDataSlot,} from "../../chain/stateTransition/util";
 import {AttestationRepository} from "../../db/api/beacon/repositories";
 import {clone, hashTreeRoot} from "@chainsafe/ssz";
 import {processAttestation} from "../../chain/stateTransition/block/operations";
@@ -30,9 +25,10 @@ export class AttestationOperations extends OperationsModule<Attestation> {
 
   public async getValid(state: BeaconState): Promise<Attestation[]> {
     const attestations: Attestation[] = await this.getAll();
+    state = clone(state, this.config.types.BeaconState);
     return attestations.filter((a: Attestation) => {
       try {
-        processAttestation(this.config, clone(state, this.config.types.BeaconState), a);
+        processAttestation(this.config, state, a);
         return true;
       } catch (e) {
         return false;

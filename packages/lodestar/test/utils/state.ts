@@ -1,20 +1,15 @@
 import BN from "bn.js";
 
-import {
-  BeaconState,
-  Crosslink,
-} from "@chainsafe/eth2.0-types";
+import {BeaconState, Crosslink,} from "@chainsafe/eth2.0-types";
 
 import {GENESIS_EPOCH, GENESIS_SLOT, GENESIS_START_SHARD, ZERO_HASH} from "../../src/constants";
-import {intToBytes} from "../../src/util/bytes";
-import {randBetween, randBetweenBN} from "./misc";
-import {generateValidators} from "./validator";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {generateEmptyBlock} from "./block";
 import {generateEmptyCrosslink} from "./crosslink";
 
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import { BitVector } from "@chainsafe/bit-utils";
+import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {BitVector} from "@chainsafe/bit-utils";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -27,7 +22,8 @@ type TestBeaconState = Partial<BeaconState>;
  * @param {TestBeaconState} opts
  * @returns {BeaconState}
  */
-export function generateState(opts?: TestBeaconState): BeaconState {
+export function generateState(opts?: TestBeaconState, config?: IBeaconConfig): BeaconState {
+  config = config || mainnetConfig;
   const initialCrosslinkRecord: Crosslink = generateEmptyCrosslink();
 
   return {
