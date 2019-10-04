@@ -17,10 +17,11 @@
     "bls"
   ],
   "scripts": {
-    "prebuild": "rm -rf lib && rm -rf dist",
-    "build": "yarn build-lib && yarn build-web && yarn build-types",
+    "clean": "rm -rf lib && rm -rf dist && rm -f tsconfig.tsbuildinfo",
+    "build": "yarn build-lib && yarn build-types",
+    "build:release": "yarn clean && yarn build && yarn build-web",
     "build-lib": "babel src -x .ts -d lib",
-    "build-types": "tsc --declaration --outDir lib --emitDeclarationOnly",
+    "build-types": "tsc --declaration --incremental --outDir lib --emitDeclarationOnly",
     "build-web": "webpack --mode production --entry ./lib/web.js --output ./dist/bls.min.js",
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts src/",

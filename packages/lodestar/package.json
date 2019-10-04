@@ -14,11 +14,13 @@
     "lib"
   ],
   "scripts": {
-    "build": "yarn run build:lib && yarn run build:types && yarn run build:docs",
+    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
+    "build": "yarn run build:lib && yarn run build:types",
+    "build:release": "yarn clean && yarn run build && yarn run build:docs",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:docs": "typedoc --exclude src/index.ts --out docs src",
-    "build:types": "tsc --declaration --outDir lib --emitDeclarationOnly",
-    "check-types": "tsc --noEmit",
+    "build:types": "tsc --incremental --declaration --outDir lib --emitDeclarationOnly",
+    "check-types": "tsc --incremental --noEmit",
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "pretest": "yarn run check-types",

@@ -8,13 +8,14 @@
     "lib"
   ],
   "scripts": {
-    "prebuild": "rm -rf lib && rm -rf dist",
-    "build": "yarn build-lib && yarn build-web && yarn build-types",
+    "clean": "rm -rf lib && rm -rf dist && rm -f tsconfig.tsbuildinfo",
+    "build": "yarn build-lib && yarn build-types",
+    "build:release": "yarn clean && yarn run build && yarn build-web && yarn run build:docs",
     "build:docs": "typedoc --exclude src/index.ts,src/web.ts --out docs src",
     "build-lib": "babel src -x .ts -d lib --source-maps",
-    "build-types": "tsc --declaration --outDir lib --emitDeclarationOnly",
+    "build-types": "tsc --incremental --declaration --outDir lib --emitDeclarationOnly",
     "build-web": "webpack --mode production --entry ./lib/web.js --output ./dist/ssz.min.js",
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc --incremental --noEmit",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "eslint --color --fix --ext .ts src/ test/",
     "pretest": "yarn check-types",

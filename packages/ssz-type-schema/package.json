@@ -14,9 +14,10 @@
     "lib"
   ],
   "scripts": {
-    "prebuild": "rm -rf lib",
+    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
     "build": "yarn build:lib && yarn build:types",
-    "build:types": "tsc --declaration --outDir lib --emitDeclarationOnly",
+    "build:release": "yarn clean && yarn run build && yarn run build:docs",
+    "build:types": "tsc --incremental --declaration --outDir lib --emitDeclarationOnly",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:docs": "typedoc --exclude src/index.ts --out docs src",
     "check-types": "tsc --noEmit --incremental",

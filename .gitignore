@@ -17,3 +17,4 @@ LodestarValidatorDB/
 *.log
 data
 validators
+*.tsbuildinfo
