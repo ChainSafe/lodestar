@@ -22,7 +22,7 @@ import {
   isVariableSizeType,
   parseType
 } from "@chainsafe/ssz-type-schema";
-import {BYTES_PER_LENGTH_PREFIX} from "./constants";
+import {BYTES_PER_LENGTH_PREFIX} from "../util/constants";
 import {fixedSize, size} from "./size";
 import {_assertValidValue} from "./assertValidValue";
 

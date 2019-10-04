@@ -7,25 +7,18 @@ import {
   Bytes,
   ContainerType,
   FullSSZType,
-  ListType,
   SerializableArray,
   SerializableObject,
   SerializableValue,
   Type,
-  VectorType,
   isBasicType,
   parseType
 } from "@chainsafe/ssz-type-schema";
 
-import {BYTES_PER_CHUNK} from "./constants";
-
 import {_assertValidValue} from "./assertValidValue";
 
-import {fixedSize} from "./size";
-
-import {chunkify, merkleize, mixInLength, pack,} from "./util/hash";
-
-
+import {merkleize, mixInLength} from "./util/merkleize";
+import {chunkCount, chunkify, pack} from "../util/chunk";
 
 /**
  * Merkleize an SSZ value
@@ -107,47 +100,54 @@ export function hashTreeRoot(value: any, type: AnySSZType): Buffer {
  * @param type full ssz type
  */
 export function _hashTreeRoot(value: SerializableValue, type: FullSSZType): Buffer {
+  let elementType: FullSSZType;
   switch (type.type) {
     case Type.uint:
     case Type.bool:
     case Type.byteVector:
       return merkleize(pack([value], type));
     case Type.bitVector:
-      return merkleize(chunkify(Buffer.from((value as BitVector).toBitfield())), Math.floor((type.length + 255) / 256));
+      value = value as BitVector;
+      return merkleize(chunkify(Buffer.from(value.toBitfield())), chunkCount(type));
     case Type.bitList:
+      value = value as BitList;
       return mixInLength(
-        merkleize(chunkify(Buffer.from((value as BitList).toBitfield())), Math.floor((type.maxLength + 255) / 256)),
-        (value as BitList).bitLength
+        merkleize(chunkify(Buffer.from(value.toBitfield())), chunkCount(type)),
+        value.bitLength
       );
     case Type.byteList:
-      // eslint-disable-next-line no-case-declarations
-      const sizeOfByte = 1;
-      // eslint-disable-next-line no-case-declarations
-      const chunkCount = Math.floor((type.maxLength * sizeOfByte + 31) / BYTES_PER_CHUNK);
+      value = value as Bytes;
       return mixInLength(
-        merkleize(pack([value], type), chunkCount), (value as Bytes).length);
+        merkleize(pack([value], type), chunkCount(type)),
+        value.length
+      );
     case Type.list:
       value = value as SerializableArray;
-      if (isBasicType(type.elementType)) {
-        const chunkCount = Math.floor((type.maxLength * fixedSize(type.elementType) + 31) / BYTES_PER_CHUNK);
+      elementType = type.elementType;
+      if (isBasicType(elementType)) {
         return mixInLength(
-          merkleize(pack(value, (type as ListType).elementType), chunkCount), value.length);
+          merkleize(pack(value, elementType), chunkCount(type)),
+          value.length
+        );
       } else {
         return mixInLength(
-          merkleize(value.map((v) => hashTreeRoot(v, (type as ListType).elementType)), type.maxLength),
-          value.length);
+          merkleize(value.map((v) => _hashTreeRoot(v, elementType)), type.maxLength),
+          value.length
+        );
       }
     case Type.vector:
       value = value as SerializableArray;
-      if (isBasicType(type.elementType)) {
-        return merkleize(pack(value, (type as VectorType).elementType));
+      elementType = type.elementType;
+      if (isBasicType(elementType)) {
+        return merkleize(pack(value, elementType));
       } else {
-        return merkleize(value.map((v) => hashTreeRoot(v, (type as VectorType).elementType)));
+        return merkleize(value.map((v) => _hashTreeRoot(v, elementType)));
       }
     case Type.container:
       type = type as ContainerType;
-      return merkleize(type.fields
-        .map(([fieldName, fieldType]) => hashTreeRoot((value as SerializableObject)[fieldName], fieldType)));
+      return merkleize(
+        type.fields.map(([fieldName, fieldType]) =>
+          _hashTreeRoot((value as SerializableObject)[fieldName], fieldType)));
   }
 }
 
