@@ -9,13 +9,14 @@ import {
 } from "@chainsafe/ssz-type-schema";
 
 import {
-  nextPowerOf2,
+  nextPowerOf2, bitLength,
 } from "../../util/bigintMath";
 
 import {itemLength, chunkCount} from "../../util/chunk";
 import {bit, byte} from "../../util/types";
 import {GeneralizedIndex} from "./types";
 import {alphasort} from "./alphasort";
+import { getPathIndices } from "./multiproof";
 
 /**
  * Return the type of the element of an object of the given type with the given index
@@ -94,10 +95,10 @@ export function getGeneralizedIndex(type: FullSSZType, path: Path): GeneralizedI
       assert(isListType(type));
       return root * 2n + 1n;
     } else {
-      const [pos] = getItemPosition(type, p);
       if (isListType(type)) {
         root *= 2n; // bit for length mix in
       }
+      const [pos] = getItemPosition(type, p);
       root = root * nextPowerOf2(BigInt(chunkCount(type))) + BigInt(pos);
       type = getElementType(type, p);
     }
@@ -111,4 +112,77 @@ export function getGeneralizedIndex(type: FullSSZType, path: Path): GeneralizedI
  */
 export function getGeneralizedIndices(type: FullSSZType, paths: Path[]): GeneralizedIndex[] {
   return alphasort(new Set(paths.map((p) => getGeneralizedIndex(type, p))));
+}
+
+export function getPaths(type: FullSSZType, index: GeneralizedIndex): Path[] {
+  console.log(getPathIndices(index));
+  return _getPaths(type, index, getPathIndices(index), 1n, []);
+}
+
+import {BitsType, BytesType, ArrayType} from "@chainsafe/ssz-type-schema";
+
+function maxLength(type: BitsType | BytesType | ArrayType): number {
+  switch (type.type) {
+    case Type.bitList:
+    case Type.byteList:
+    case Type.list:
+      return type.maxLength;
+    case Type.bitVector:
+    case Type.byteVector:
+    case Type.vector:
+      return type.length;
+    default:
+      throw new Error("");
+  }
+}
+
+
+function _getPaths(type: FullSSZType, index: GeneralizedIndex, pathIndices: GeneralizedIndex[], currentIndex: GeneralizedIndex, currentPath: Path): Path[] {
+  assert(!isBasicType(type));
+  const prevIndex = currentIndex;
+  const fullChunkCount = nextPowerOf2(BigInt(chunkCount(type)));
+  if (type.type === Type.container) {
+    currentIndex *= fullChunkCount;
+    for (const [fieldName, fieldType] of type.fields) {
+      const p = [...currentPath, fieldName];
+      const fieldIndex = currentIndex + BigInt(getItemPosition(type, fieldName)[0]);
+      if (fieldIndex === index) {
+        return [p];
+      }
+      if (pathIndices.includes(fieldIndex)) {
+        return _getPaths(fieldType, index, pathIndices, fieldIndex, p);
+      }
+    }
+    throw new Error("no valid paths");
+  } else {
+    let pathIndexDelta = bitLength(fullChunkCount - 1n);
+    if (isListType(type)) {
+      currentIndex = currentIndex * 2n;
+      pathIndexDelta += 1;
+      if (currentIndex + 1n === index) {
+        return [[...currentPath, "__len__"]];
+      }
+    }
+    currentIndex *= fullChunkCount;
+    const prevPathIndex = pathIndices.indexOf(prevIndex);
+    const currentPathIndex = pathIndices[prevPathIndex - pathIndexDelta];
+    const maxIndex = currentIndex + BigInt(getItemPosition(type, maxLength(type as ArrayType))[0]);
+    if (maxIndex < currentPathIndex) {
+      throw new Error("no valid paths");
+    }
+    const firstMatchedIndex = Number(currentPathIndex - currentIndex);
+    const elementType = getElementType(type, firstMatchedIndex);
+    const elementItemLength = itemLength(elementType);
+    if (isBasicType(elementType)) {
+      return Array.from({length: Math.floor(32 / elementItemLength)}, (_, i) => firstMatchedIndex + i)
+        .map((i) => ([...currentPath, i]));
+    } else {
+      const elementIndex = currentIndex + BigInt(getItemPosition(type, firstMatchedIndex)[0]);
+      const path = [...currentPath, firstMatchedIndex];
+      if (elementIndex === index) {
+        return [path];
+      }
+      return _getPaths(elementType, index, pathIndices, elementIndex, path);
+    }
+  }
 }
