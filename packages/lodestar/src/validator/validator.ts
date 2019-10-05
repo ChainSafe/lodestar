@@ -65,9 +65,6 @@ class Validator {
   public async start(): Promise<void> {
     this.isRunning = true;
     await this.setup();
-    this.logger.info("Checking if chain has started...");
-    this.apiClient.waitForChainLived();
-    this.apiClient.once("chainLived", this.run.bind(this));
   }
 
   public run(): void {
@@ -130,6 +127,8 @@ class Validator {
   private async setupRPC(): Promise<void> {
     this.logger.info("Setting up RPC connection...");
     await this.apiClient.connect();
+    this.logger.info("Checking if chain has started...");
+    this.apiClient.once("beaconChainStarted", this.run.bind(this));
     this.logger.info(`RPC connection successfully established: ${this.apiClient.url}!`);
   }
 

@@ -34,6 +34,7 @@ export abstract class AbstractRpcClient extends (EventEmitter as { new(): RpcCli
 
   public async connect(): Promise<void> {
     await this.startSlotCounting();
+    this.beaconNodeInterval = setInterval(this.pollBeaconNode.bind(this), 1000);
   }
 
   public async disconnect(): Promise<void> {
@@ -43,18 +44,13 @@ export abstract class AbstractRpcClient extends (EventEmitter as { new(): RpcCli
     }
   }
 
-  // poll BeaconNode until it starts then inform validator
-  public waitForChainLived(): void {
-    this.beaconNodeInterval = setInterval(this.pollBeaconNode.bind(this), 1000);
-  }
-
   private async pollBeaconNode(): Promise<void> {
     if (!this.running) {
       return;
     }
     const genesisTime =  await this.beacon.getGenesisTime();
     if (genesisTime && (Date.now() / 1000) > genesisTime) {
-      this.emit("chainLived");
+      this.emit("beaconChainStarted");
       clearInterval(this.beaconNodeInterval);
     }
   }

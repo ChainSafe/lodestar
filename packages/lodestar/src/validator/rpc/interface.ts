@@ -12,7 +12,7 @@ export interface INewEpochCallback {
 }
 
 export interface IRpcClientEvents {
-  chainLived: () => void;
+  beaconChainStarted: () => void;
 }
 
 export type RpcClientEventEmitter = StrictEventEmitter<EventEmitter, IRpcClientEvents>;
@@ -49,10 +49,5 @@ export interface IRpcClient extends RpcClientEventEmitter {
    * @param cb
    */
   onNewEpoch(cb: INewEpochCallback): void;
-
-  /**
-   * Poll Beacon Node until it starts.
-   */
-  waitForChainLived(): void;
 
 }
