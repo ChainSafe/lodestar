@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import sinon from "sinon";
 import Validator from "../../../src/validator";
 import {RpcClientOverInstance} from "../../../src/validator/rpc";
 import {MockBeaconApi} from "../../utils/mocks/rpc/beacon";
@@ -34,8 +35,10 @@ describe("Validator", () => {
     };
 
     const validator = new Validator(validatorCtx, {config, logger});
+    const runSpy = sinon.spy(validator, "run");
     await expect(validator.start()).to.not.throw;
-    await validator.stop();
+    setTimeout(async () => validator.stop(), 1100);
+    setTimeout(() => expect(runSpy.calledOnce).to.be.true, 1100);
   });
 
 });

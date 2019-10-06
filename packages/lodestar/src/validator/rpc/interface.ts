@@ -1,5 +1,7 @@
 import {IBeaconApi, IValidatorApi} from "../../api/rpc/api";
 import {Epoch, Slot} from "@chainsafe/eth2.0-types";
+import StrictEventEmitter from "strict-event-emitter-types";
+import {EventEmitter} from "events";
 
 export interface INewSlotCallback {
   (slot: Slot): void;
@@ -9,7 +11,13 @@ export interface INewEpochCallback {
   (slot: Epoch): void;
 }
 
-export interface IRpcClient {
+export interface IRpcClientEvents {
+  beaconChainStarted: () => void;
+}
+
+export type RpcClientEventEmitter = StrictEventEmitter<EventEmitter, IRpcClientEvents>;
+
+export interface IRpcClient extends RpcClientEventEmitter {
 
   beacon: IBeaconApi;
 
