@@ -16,16 +16,12 @@
 import BlockProposingService from "./services/block";
 import {Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {GenesisInfo} from "./types";
-import {IRpcClient, RpcClientOverWs} from "./rpc";
+import {IApiClient} from "./rpc";
 import {AttestationService} from "./services/attestation";
-import {IValidatorDB, LevelDbController, ValidatorDB} from "../db";
-import {ILogger} from "../logger";
-import defaultValidatorOptions, {IValidatorOptions} from "./options";
-import deepmerge from "deepmerge";
-import {getKeyFromFileOrKeystore} from "../util/io";
-import {isPlainObject} from "../util/objects";
-import {computeEpochOfSlot} from "../chain/stateTransition/util";
+import {IValidatorDB} from "./db/interface";
+import {ILogger} from "./logger/interface";
+import {IValidatorOptions} from "./options";
+import {computeEpochOfSlot} from "./util";
 import {ApiClientOverRest} from "./rest/apiClient";
 
 /**
@@ -34,34 +30,25 @@ import {ApiClientOverRest} from "./rest/apiClient";
 class Validator {
   private opts: IValidatorOptions;
   private config: IBeaconConfig;
-  // @ts-ignore
-  private apiClient: IRpcClient;
+  private apiClient: IApiClient;
   // @ts-ignore
   private blockService: BlockProposingService;
   // @ts-ignore
   private attestationService: AttestationService;
   // @ts-ignore
-  private genesisInfo: GenesisInfo;
   private db: IValidatorDB;
   private logger: ILogger;
   private isActive: boolean;
   private isRunning: boolean;
 
-  public constructor(opts: Partial<IValidatorOptions>, modules: {config: IBeaconConfig; logger: ILogger}) {
-    this.opts = deepmerge(defaultValidatorOptions, opts, {isMergeableObject: isPlainObject});
-    this.config = modules.config;
-    this.logger = modules.logger.child(this.opts.logger);
+  public constructor(opts: IValidatorOptions) {
+    this.opts = opts;
+    this.config = opts.config;
+    this.logger = opts.logger;
     this.isActive = false;
     this.isRunning = false;
-    this.db = new ValidatorDB({
-      config: this.config,
-      controller: new LevelDbController({
-        name: this.opts.db.name
-      }, {
-        logger: this.logger
-      })
-    });
-    this.initApiClient();
+    this.db = opts.db;
+    this.apiClient = this.initApiClient(opts.api);
   }
 
   /**
@@ -81,27 +68,16 @@ class Validator {
     await this.apiClient.disconnect();
   }
 
-  private initApiClient(): void {
-    if(this.opts.rpcInstance) {
-      this.apiClient = this.opts.rpcInstance;
-    } else if(this.opts.rpc) {
-      this.apiClient = new RpcClientOverWs({rpcUrl: this.opts.rpc}, {config: this.config});
-    } else if(this.opts.restUrl) {
-      this.apiClient = new ApiClientOverRest(this.opts.restUrl, this.logger);
-    } else {
-      throw new Error("Validator requires either RpcClient instance or rpc url as params");
+  private initApiClient(api: string | IApiClient): IApiClient {
+    if(typeof api === "string") {
+      return new ApiClientOverRest(api, this.logger);
     }
+    return api;
   }
 
   private async setup(): Promise<void> {
     this.logger.info("Setting up validator client...");
-    if(this.opts.keystore) {
-      this.opts.keypair = await getKeyFromFileOrKeystore(this.opts.keystore);
-    } else if(!this.opts.keypair) {
-      throw new Error("Missing validator keypair");
-    }
-
-    await this.setupRPC();
+    await this.setupAPI();
 
     // Wait for the ChainStart log and grab validator index
     this.isActive = await this.isChainLive();
@@ -126,7 +102,7 @@ class Validator {
   /**
    * Establishes a connection to a specified beacon chain url.
    */
-  private async setupRPC(): Promise<void> {
+  private async setupAPI(): Promise<void> {
     this.logger.info("Setting up RPC connection...");
     await this.apiClient.connect();
     this.logger.info(`RPC connection successfully established: ${this.apiClient.url}!`);
@@ -139,9 +115,6 @@ class Validator {
     this.logger.info("Checking if chain has started...");
     const genesisTime =  await this.apiClient.beacon.getGenesisTime();
     if (genesisTime && (Date.now() / 1000) > genesisTime) {
-      this.genesisInfo = {
-        startTime: genesisTime,
-      };
       this.logger.info("Chain start has occured!");
       return true;
     }

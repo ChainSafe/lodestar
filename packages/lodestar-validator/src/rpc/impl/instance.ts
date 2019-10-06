@@ -1,6 +1,6 @@
 import {IBeaconApi} from "../../../api/rpc/api/beacon";
 import {IValidatorApi} from "../../../api/rpc/api/validator";
-import {AbstractRpcClient} from "../abstract";
+import {AbstractApiClient} from "../abstract";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 export interface IRpcClientOverInstanceOpts {
@@ -9,7 +9,7 @@ export interface IRpcClientOverInstanceOpts {
   validator: IValidatorApi;
 }
 
-export class RpcClientOverInstance extends AbstractRpcClient {
+export class RpcClientOverInstance extends AbstractApiClient {
 
   public url: string = "inmemory";
 

@@ -13,21 +13,16 @@ import {
   Slot
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
-import {computeEpochOfSlot, getDomain, isSlashableAttestationData,} from "../../chain/stateTransition/util";
-
-import {IRpcClient} from "../rpc";
-
-import {DomainType} from "../../constants";
-import {IValidatorDB} from "../../db/api";
-import {ILogger} from "../../logger";
-import {sleep} from "../../util/sleep";
+import {IApiClient} from "../rpc";
 import {Keypair} from "@chainsafe/bls";
+import {IValidatorDB} from "../db/interface";
+import {ILogger} from "../logger/interface";
+import {computeEpochOfSlot, sleep} from "../util";
 
 export class AttestationService {
 
   private config: IBeaconConfig;
-  private rpcClient: IRpcClient;
+  private rpcClient: IApiClient;
   private keypair: Keypair;
   private db: IValidatorDB;
   private logger: ILogger;
@@ -35,7 +30,7 @@ export class AttestationService {
   public constructor(
     config: IBeaconConfig,
     keypair: Keypair,
-    rpcClient: IRpcClient,
+    rpcClient: IApiClient,
     db: IValidatorDB,
     logger: ILogger
   ) {

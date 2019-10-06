@@ -1,5 +1,5 @@
 import Axios, {AxiosError, AxiosInstance, AxiosResponse} from "axios";
-import {ILogger} from "../logger";
+import {ILogger} from "../logger/interface";
 
 export interface IHttpClientOptions {
   // Add more options if needed

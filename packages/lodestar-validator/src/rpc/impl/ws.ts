@@ -4,14 +4,14 @@ import * as jsonRpc from "noice-json-rpc";
 import Websocket from "ws";
 // @ts-ignore
 import promisify from "promisify-es6";
-import {AbstractRpcClient} from "../abstract";
+import {AbstractApiClient} from "../abstract";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 export interface IRpcClientOverWsOpts {
   rpcUrl: string;
 }
 
-export class RpcClientOverWs extends AbstractRpcClient {
+export class RpcClientOverWs extends AbstractApiClient {
 
   public url: string;
   public beacon!: IBeaconApi;

@@ -9,7 +9,7 @@ export interface INewEpochCallback {
   (slot: Epoch): void;
 }
 
-export interface IRpcClient {
+export interface IApiClient {
 
   beacon: IBeaconApi;
 

@@ -7,7 +7,7 @@ import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {BeaconBlock, BeaconState, Fork, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {computeEpochOfSlot, getDomain} from "../../chain/stateTransition/util";
-import {IRpcClient} from "../rpc";
+import {IApiClient} from "../rpc";
 import {DomainType} from "../../constants";
 import {IValidatorDB} from "../../db";
 import {ILogger} from "../../logger";
@@ -16,7 +16,7 @@ import {Keypair} from "@chainsafe/bls";
 export default class BlockProposingService {
   private config: IBeaconConfig;
   // @ts-ignore
-  private provider: IRpcClient;
+  private provider: IApiClient;
   private keypair: Keypair;
   private db: IValidatorDB;
   private logger: ILogger;
@@ -24,7 +24,7 @@ export default class BlockProposingService {
   public constructor(
     config: IBeaconConfig,
     keypair: Keypair,
-    provider: IRpcClient,
+    provider: IApiClient,
     db: IValidatorDB,
     logger: ILogger
   ) {
@@ -67,7 +67,7 @@ export default class BlockProposingService {
     return block;
   }
 
-  public getRpcClient(): IRpcClient {
+  public getRpcClient(): IApiClient {
     return this.provider;
   }
 

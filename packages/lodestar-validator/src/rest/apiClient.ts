@@ -1,10 +1,10 @@
-import {AbstractRpcClient} from "../rpc/abstract";
+import {AbstractApiClient} from "../rpc/abstract";
 import {IBeaconApi, IValidatorApi} from "../../api/rpc";
 import {RestValidatorApi} from "./validator/validator";
 import {RestBeaconApi} from "./beacon/beacon";
 import {ILogger} from "../../logger";
 
-export class ApiClientOverRest extends AbstractRpcClient {
+export class ApiClientOverRest extends AbstractApiClient {
   public beacon: IBeaconApi;
 
   public validator: IValidatorApi;

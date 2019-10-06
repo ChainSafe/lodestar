@@ -2,10 +2,24 @@ import BN from "bn.js";
 import {expect} from "chai";
 import {uint64} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {mostFrequent} from "../../../src/util/objects";
+import {isPlainObject, mostFrequent} from "../../src";
 import {describe, it} from "mocha";
 
 describe("Objects helper", () => {
+
+  it("should be plain object", () => {
+    expect(isPlainObject(Object.create({}))).to.be.true;
+    expect(isPlainObject(Object.create(Object.create(Object.prototype)))).to.be.true;
+    expect(isPlainObject({foo: "bar"})).to.be.true;
+    expect(isPlainObject({})).to.be.true;
+  });
+
+  it("should not be plain object", () => {
+    expect(isPlainObject(1)).to.be.false;
+    expect(isPlainObject(["foo", "bar"])).to.be.false;
+    expect(isPlainObject([])).to.be.false;
+    expect(isPlainObject(null)).to.be.false;
+  });
 
   it("return most frequent objects", () => {
     const obj1 = new BN(1);
