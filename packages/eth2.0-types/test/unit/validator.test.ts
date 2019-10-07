@@ -29,6 +29,11 @@ describe("ValidatorRegistry", () => {
     for (let i = 0; i < TOTAL_ITEM; i++) {
       expect(validatorRegistry[i].effectiveBalance.toNumber()).to.be.equal(i);
     }
+    expect(validatorRegistry.findIndexByRegistry(EFFECTIVE_BALANCES[3])).to.be.equal(3);
+    const newItem: BN = new BN(2019);
+    validatorRegistry[3] = {effectiveBalance: newItem};
+    expect(validatorRegistry.findIndexByRegistry(newItem)).to.be.equal(3);
+    expect(validatorRegistry.findIndexByRegistry(EFFECTIVE_BALANCES[3])).to.be.undefined;
   });
 
   it("should work well with forEach method", () => {
