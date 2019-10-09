@@ -17,7 +17,7 @@ import {IApiClient} from "../rpc";
 import {Keypair} from "@chainsafe/bls";
 import {IValidatorDB} from "../db/interface";
 import {ILogger} from "../logger/interface";
-import {computeEpochOfSlot, sleep} from "../util";
+import {computeEpochOfSlot, DomainType, getDomain, isSlashableAttestationData, sleep} from "../util";
 
 export class AttestationService {
 

@@ -1,5 +1,3 @@
-import {IValidatorApi} from "../../../api/rpc";
-import {HttpClient} from "../../../util/httpClient";
 import {
   Attestation,
   BeaconBlock,
@@ -11,16 +9,15 @@ import {
   ValidatorDuty,
   ValidatorIndex
 } from "@chainsafe/eth2.0-types";
-import {ILogger} from "../../../logger";
-import {ApiNamespace} from "../../../api";
+import {ILogger} from "../../logger/interface";
+import {IValidatorApi} from "../../rpc/api/validators";
+import {HttpClient} from "../../util";
 
 export class RestValidatorApi implements IValidatorApi {
 
-  public namespace: ApiNamespace;
   private client: HttpClient;
 
   public constructor(restUrl: string, logger: ILogger) {
-    this.namespace = ApiNamespace.VALIDATOR;
     this.client = new HttpClient({urlPrefix: `${restUrl}/validator`}, {logger});
   }
 

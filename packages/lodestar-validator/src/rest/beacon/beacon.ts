@@ -1,16 +1,13 @@
-import {IBeaconApi} from "../../../api/rpc";
-import {HttpClient} from "../../../util/httpClient";
 import {bytes32, Fork, SyncingStatus, BeaconBlock, BeaconState, number64, uint64} from "@chainsafe/eth2.0-types";
-import {ILogger} from "../../../logger";
-import {ApiNamespace} from "../../../api";
+import {IBeaconApi} from "../../rpc/api/beacon";
+import {HttpClient} from "../../util";
+import {ILogger} from "../../logger/interface";
 
 export class RestBeaconApi implements IBeaconApi {
-  public namespace: ApiNamespace;
-  
+
   private client: HttpClient;
 
   public constructor(restUrl: string, logger: ILogger) {
-    this.namespace = ApiNamespace.BEACON;
     this.client = new HttpClient({urlPrefix: `${restUrl}/node`}, {logger});
   }
 

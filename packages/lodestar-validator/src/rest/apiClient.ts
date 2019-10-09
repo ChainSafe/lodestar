@@ -1,8 +1,9 @@
 import {AbstractApiClient} from "../rpc/abstract";
-import {IBeaconApi, IValidatorApi} from "../../api/rpc";
 import {RestValidatorApi} from "./validator/validator";
 import {RestBeaconApi} from "./beacon/beacon";
-import {ILogger} from "../../logger";
+import {IBeaconApi} from "../rpc/api/beacon";
+import {IValidatorApi} from "../rpc/api/validators";
+import {ILogger} from "../logger/interface";
 
 export class ApiClientOverRest extends AbstractApiClient {
   public beacon: IBeaconApi;

@@ -1,10 +1,9 @@
 import {Epoch, Slot} from "@chainsafe/eth2.0-types";
-import {IValidatorApi} from "../../api/rpc/api/validator";
-import {computeEpochOfSlot} from "../../chain/stateTransition/util";
-import {IBeaconApi} from "../../api/rpc/api/beacon";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {getCurrentSlot} from "../../chain/stateTransition/util/genesis";
 import {INewEpochCallback, INewSlotCallback, IApiClient} from "./interface";
+import {computeEpochOfSlot, getCurrentSlot} from "../util";
+import {IBeaconApi} from "./api/beacon";
+import {IValidatorApi} from "./api/validators";
 
 
 export abstract class AbstractApiClient implements IApiClient {

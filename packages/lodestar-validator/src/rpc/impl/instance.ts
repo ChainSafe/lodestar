@@ -1,7 +1,7 @@
-import {IBeaconApi} from "../../../api/rpc/api/beacon";
-import {IValidatorApi} from "../../../api/rpc/api/validator";
 import {AbstractApiClient} from "../abstract";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IValidatorApi} from "../api/validators";
+import {IBeaconApi} from "../api/beacon";
 
 export interface IRpcClientOverInstanceOpts {
   config: IBeaconConfig;
