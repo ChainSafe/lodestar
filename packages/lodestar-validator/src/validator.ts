@@ -27,7 +27,7 @@ import {ApiClientOverRest} from "./rest/apiClient";
 /**
  * Main class for the Validator client.
  */
-class Validator {
+export class Validator {
   private opts: IValidatorOptions;
   private config: IBeaconConfig;
   private apiClient: IApiClient;
@@ -152,5 +152,3 @@ class Validator {
     }
   };
 }
-
-export default Validator;

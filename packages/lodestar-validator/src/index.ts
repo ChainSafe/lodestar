@@ -2,6 +2,7 @@
  * @module validator
  */
 
-import Validator from "./validator";
-
-export default Validator;
+export * from "./validator";
+export * from "./options";
+export * from "./db/interface";
+export * from "./logger/interface";
