@@ -38,7 +38,6 @@ export class Validator {
   // @ts-ignore
   private db: IValidatorDB;
   private logger: ILogger;
-  private isActive: boolean;
   private isRunning: boolean;
 
   public constructor(opts: IValidatorOptions) {
@@ -57,7 +56,14 @@ export class Validator {
   public async start(): Promise<void> {
     this.isRunning = true;
     await this.setup();
-    this.run();
+    this.logger.info("Checking if chain has started...");
+    this.apiClient.once("beaconChainStarted", this.run.bind(this));
+  }
+
+  public run(): void {
+    this.logger.info("Chain start has occured!");
+    this.apiClient.onNewSlot(this.checkDuties);
+    // this.apiClient.onNewEpoch(this.lookAhead);
   }
 
   /**
@@ -78,9 +84,6 @@ export class Validator {
   private async setup(): Promise<void> {
     this.logger.info("Setting up validator client...");
     await this.setupAPI();
-
-    // Wait for the ChainStart log and grab validator index
-    this.isActive = await this.isChainLive();
 
     this.blockService = new BlockProposingService(
       this.config,
@@ -108,26 +111,6 @@ export class Validator {
     this.logger.info(`RPC connection successfully established: ${this.apiClient.url}!`);
   }
 
-  /**
-   * Recursively checks for the chain start log event from the ETH1.x deposit contract
-   */
-  private isChainLive = async (): Promise<boolean> => {
-    this.logger.info("Checking if chain has started...");
-    const genesisTime =  await this.apiClient.beacon.getGenesisTime();
-    if (genesisTime && (Date.now() / 1000) > genesisTime) {
-      this.logger.info("Chain start has occured!");
-      return true;
-    }
-    if(this.isRunning) {
-      setTimeout(this.isChainLive, 1000);
-    }
-    return false;
-  };
-
-  private run(): void {
-    this.apiClient.onNewSlot(this.checkDuties);
-    // this.apiClient.onNewEpoch(this.lookAhead);
-  }
 
   private checkDuties = async (slot: Slot): Promise<void> => {
     const validatorDuty =

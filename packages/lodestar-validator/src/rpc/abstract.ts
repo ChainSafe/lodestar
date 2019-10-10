@@ -1,12 +1,15 @@
 import {Epoch, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {getCurrentSlot} from "../../chain/stateTransition/util/genesis";
+import {INewEpochCallback, INewSlotCallback, IRpcClient, RpcClientEventEmitter} from "./interface";
+import {EventEmitter} from "ws";
 import {INewEpochCallback, INewSlotCallback, IApiClient} from "./interface";
 import {computeEpochOfSlot, getCurrentSlot} from "../util";
 import {IBeaconApi} from "./api/beacon";
 import {IValidatorApi} from "./api/validators";
 
 
-export abstract class AbstractApiClient implements IApiClient {
+export abstract class AbstractApiClient extends (EventEmitter as { new(): RpcClientEventEmitter }) implements IApiClient {
 
   protected config: IBeaconConfig;
 
@@ -15,6 +18,7 @@ export abstract class AbstractApiClient implements IApiClient {
   private newSlotCallbacks: INewSlotCallback[] = [];
   private newEpochCallbacks: INewEpochCallback[] = [];
   private running = false;
+  private beaconNodeInterval: NodeJS.Timeout;
 
   public onNewEpoch(cb: INewEpochCallback): void {
     if (cb) {
@@ -30,10 +34,25 @@ export abstract class AbstractApiClient implements IApiClient {
 
   public async connect(): Promise<void> {
     await this.startSlotCounting();
+    this.beaconNodeInterval = setInterval(this.pollBeaconNode.bind(this), 1000);
   }
 
   public async disconnect(): Promise<void> {
     this.running = false;
+    if(this.beaconNodeInterval) {
+      clearInterval(this.beaconNodeInterval);
+    }
+  }
+
+  private async pollBeaconNode(): Promise<void> {
+    if (!this.running) {
+      return;
+    }
+    const genesisTime =  await this.beacon.getGenesisTime();
+    if (genesisTime && (Date.now() / 1000) > genesisTime) {
+      this.emit("beaconChainStarted");
+      clearInterval(this.beaconNodeInterval);
+    }
   }
 
   private async startSlotCounting(): Promise<void> {
