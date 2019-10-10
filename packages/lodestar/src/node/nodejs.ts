@@ -10,7 +10,7 @@ import defaultConf, {IBeaconNodeOptions} from "./options";
 import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
 import {INetwork, Libp2pNetwork} from "../network";
 import LibP2p from "libp2p";
-import {isPlainObject} from "../util/objects";
+import {isPlainObject} from "@chainsafe/eth2.0-utils";
 import {Sync} from "../sync";
 import {BeaconChain, IBeaconChain} from "../chain";
 import {OpPool} from "../opPool";

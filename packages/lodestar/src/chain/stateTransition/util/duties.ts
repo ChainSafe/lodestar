@@ -4,13 +4,12 @@
 
 import assert from "assert";
 import {
-  BeaconState,
+  BeaconState, CommitteeAssignment,
   Epoch,
   Slot,
   ValidatorIndex,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {CommitteeAssignment} from "../../../validator/types";
 
 import {
   computeEpochOfSlot,
@@ -34,7 +33,6 @@ export function getCommitteeAssignment(
   state: BeaconState,
   epoch: Epoch,
   validatorIndex: ValidatorIndex
-  // @ts-ignore
 ): CommitteeAssignment {
 
   const nextEpoch = getCurrentEpoch(config, state) + 1;

@@ -1,6 +1,7 @@
 import {expect, assert} from "chai";
-import Keystore from "../../../../src/validator/keystore";
 import fs from "fs";
+import {describe, it, after} from "mocha";
+import Keystore from "../../../src/util/keystore";
 
 describe("validator/keystore", function() {
   const password = "testingSecret";

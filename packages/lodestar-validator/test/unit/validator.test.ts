@@ -7,8 +7,7 @@ import sinon from "sinon";
 import {RpcClientOverInstance} from "../../src/rpc";
 import {MockBeaconApi} from "../utils/mocks/beacon";
 import {MockValidatorApi} from "../utils/mocks/validator";
-import {IValidatorOptions} from "../../src/options";
-import Validator from "../../src";
+import {IValidatorOptions,Validator} from "../../src";
 import {ValidatorDB} from "@chainsafe/lodestar/lib/db";
 
 describe("Validator", () => {

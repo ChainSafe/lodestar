@@ -6,7 +6,7 @@ import {ICliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import fs from "fs";
 import {CliError} from "../error";
-import Keystore from "../../validator/keystore";
+import Keystore from "../../util/keystore";
 import {promptPassword} from "../../util/io";
 import {defaultLogLevel, ILogger, LogLevel, WinstonLogger} from "../../logger";
 

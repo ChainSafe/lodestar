@@ -6,9 +6,7 @@ import {ICliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
 import fs, {existsSync, mkdirSync} from "fs";
-
 import PeerId from "peer-id";
-// eslint-disable-next-line
 import yaml from "js-yaml";
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ILogger, WinstonLogger} from "../../logger";
@@ -16,13 +14,11 @@ import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
 import {generateCommanderOptions, optionsToConfig,} from "../util";
 import {getTomlConfig, rmDir} from "../../util/file";
-import Validator from "../../validator";
 import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {InteropEth1Notifier} from "../../eth1/impl/interop";
 import {quickStartOptionToState} from "../../interop/cli";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {interopKeypair} from "../../interop/keypairs";
-import {RpcClientOverInstance} from "../../validator/rpc";
 import {ValidatorApi} from "../../api/rpc/api/validator";
 import {BeaconApi} from "../../api/rpc/api/beacon";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
@@ -32,6 +28,8 @@ import {computeEpochOfSlot, computeStartSlotOfEpoch} from "../../chain/stateTran
 import {getCurrentSlot} from "../../chain/stateTransition/util/genesis";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "../../util/serialization";
+import {RpcClientOverInstance} from "@chainsafe/lodestar-validator/lib/rpc";
+import {ValidatorClient} from "../../validator/nodejs";
 
 interface IInteropCommandOptions {
   loggingLevel?: string;
@@ -43,7 +41,6 @@ interface IInteropCommandOptions {
 
 export class InteropCommand implements ICliCommand {
   public node: BeaconNode;
-  public validator: Validator;
 
   private validatorDir = "./validators";
 
@@ -178,9 +175,17 @@ export class InteropCommand implements ICliCommand {
     });
     const keypair = new Keypair(PrivateKey.fromBytes(privkey));
     const index = await node.db.getValidatorIndex(keypair.publicKey.toBytesCompressed());
-    const validator = new Validator(
-      {keypair, rpcInstance, db: {name: this.validatorDir + "/validator-db-" + index}},
-      {config: node.config, logger: new WinstonLogger({module: `Validator #${index}`})});
+    const validator = new ValidatorClient(
+      {
+        validatorKey: keypair.privateKey.toHexString(),
+        restApi: rpcInstance,
+        db: this.validatorDir + "/validator-db-" + index,
+        config: node.config
+      },
+      {
+        logger: new WinstonLogger({module: `Validator #${index}`})
+      }
+    );
     validator.start();
   }
 }
