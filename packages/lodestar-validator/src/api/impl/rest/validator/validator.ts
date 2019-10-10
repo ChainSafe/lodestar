@@ -9,9 +9,9 @@ import {
   ValidatorDuty,
   ValidatorIndex
 } from "@chainsafe/eth2.0-types";
-import {ILogger} from "../../logger/interface";
-import {IValidatorApi} from "../../rpc/api/validators";
-import {HttpClient} from "../../util";
+import {IValidatorApi} from "../../../interface/validators";
+import {HttpClient} from "../../../../util";
+import {ILogger} from "../../../..";
 
 export class RestValidatorApi implements IValidatorApi {
 

@@ -1,15 +1,15 @@
 import {Epoch, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {getCurrentSlot} from "../../chain/stateTransition/util/genesis";
-import {INewEpochCallback, INewSlotCallback, IRpcClient, RpcClientEventEmitter} from "./interface";
-import {EventEmitter} from "ws";
-import {INewEpochCallback, INewSlotCallback, IApiClient} from "./interface";
+import {ApiClientEventEmitter, IApiClient, INewEpochCallback, INewSlotCallback} from "./interface";
 import {computeEpochOfSlot, getCurrentSlot} from "../util";
-import {IBeaconApi} from "./api/beacon";
-import {IValidatorApi} from "./api/validators";
+import {IBeaconApi} from "./interface/beacon";
+import {IValidatorApi} from "./interface/validators";
+import {EventEmitter} from "events";
 
 
-export abstract class AbstractApiClient extends (EventEmitter as { new(): RpcClientEventEmitter }) implements IApiClient {
+export abstract class AbstractApiClient
+  extends (EventEmitter as { new(): ApiClientEventEmitter })
+  implements IApiClient {
 
   protected config: IBeaconConfig;
 

@@ -13,7 +13,7 @@ import {
   Slot
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {IApiClient} from "../rpc";
+import {IApiClient} from "../api";
 import {Keypair} from "@chainsafe/bls";
 import {IValidatorDB} from "../db/interface";
 import {ILogger} from "../logger/interface";

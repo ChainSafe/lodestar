@@ -1,4 +1,4 @@
-import {IApiClient} from "./rpc";
+import {IApiClient} from "./api";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
 import {IValidatorDB} from "./db/interface";
 import {ILogger} from "./logger/interface";

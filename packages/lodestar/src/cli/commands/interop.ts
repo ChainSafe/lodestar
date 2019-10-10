@@ -28,7 +28,7 @@ import {computeEpochOfSlot, computeStartSlotOfEpoch} from "../../chain/stateTran
 import {getCurrentSlot} from "../../chain/stateTransition/util/genesis";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "../../util/serialization";
-import {RpcClientOverInstance} from "@chainsafe/lodestar-validator/lib/rpc";
+import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib/api";
 import {ValidatorClient} from "../../validator/nodejs";
 
 interface IInteropCommandOptions {
@@ -168,7 +168,7 @@ export class InteropCommand implements ICliCommand {
       chain: node.chain,
       db: node.db
     };
-    const rpcInstance = new RpcClientOverInstance({
+    const rpcInstance = new ApiClientOverInstance({
       config: node.config,
       validator: new ValidatorApi({}, modules),
       beacon: new BeaconApi({}, modules),

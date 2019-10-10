@@ -1,6 +1,6 @@
 import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus, uint64} from "@chainsafe/eth2.0-types";
 import BN from "bn.js";
-import {IBeaconApi} from "../../../src/rpc/api/beacon";
+import {IBeaconApi} from "../../../src/api/interface/beacon";
 import {getEmptyBlock} from "@chainsafe/lodestar/lib/chain/genesis/genesis";
 
 export interface IMockBeaconApiOpts {

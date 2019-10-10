@@ -2,7 +2,7 @@ import sinon from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {describe, it, before, after, beforeEach, afterEach} from "mocha";
-import {RpcClientOverInstance} from "../../../src/rpc";
+import {ApiClientOverInstance} from "../../../src/api";
 import {MockBeaconApi} from "../../utils/mocks/beacon";
 
 describe("RpcClientOverInstance test", function() {
@@ -26,7 +26,7 @@ describe("RpcClientOverInstance test", function() {
   });
 
   it("should not notify new slot because has not yet come", async function() {
-    const rpcClient = new RpcClientOverInstance({
+    const rpcClient = new ApiClientOverInstance({
       config,
       beacon: new MockBeaconApi({
         genesisTime: Date.now() / 1000
@@ -41,7 +41,7 @@ describe("RpcClientOverInstance test", function() {
   });
 
   it("should properly notify on new slot", async function() {
-    const rpcClient = new RpcClientOverInstance({
+    const rpcClient = new ApiClientOverInstance({
       config,
       beacon: new MockBeaconApi({
         genesisTime: Date.now() / 1000
@@ -56,7 +56,7 @@ describe("RpcClientOverInstance test", function() {
   });
 
   it("should properly notify on next slot", async function() {
-    const rpcClient = new RpcClientOverInstance({
+    const rpcClient = new ApiClientOverInstance({
       config,
       beacon: new MockBeaconApi({
         genesisTime: Date.now() / 1000
@@ -73,7 +73,7 @@ describe("RpcClientOverInstance test", function() {
   });
 
   it("should not notify new epoch because has not yet come", async function() {
-    const rpcClient = new RpcClientOverInstance({
+    const rpcClient = new ApiClientOverInstance({
       config,
       beacon: new MockBeaconApi({
         genesisTime: Date.now() / 1000
@@ -88,7 +88,7 @@ describe("RpcClientOverInstance test", function() {
   });
 
   it("should properly notify on new epoch", async function() {
-    const rpcClient = new RpcClientOverInstance({
+    const rpcClient = new ApiClientOverInstance({
       config,
       beacon: new MockBeaconApi({
         genesisTime: Date.now() / 1000
@@ -103,7 +103,7 @@ describe("RpcClientOverInstance test", function() {
   });
 
   it("should properly notify on subsequent epoch", async function() {
-    const rpcClient = new RpcClientOverInstance({
+    const rpcClient = new ApiClientOverInstance({
       config,
       beacon: new MockBeaconApi({
         genesisTime: Date.now() / 1000

@@ -16,13 +16,13 @@
 import BlockProposingService from "./services/block";
 import {Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {IApiClient} from "./rpc";
+import {IApiClient} from "./api";
 import {AttestationService} from "./services/attestation";
 import {IValidatorDB} from "./db/interface";
 import {ILogger} from "./logger/interface";
 import {IValidatorOptions} from "./options";
 import {computeEpochOfSlot} from "./util";
-import {ApiClientOverRest} from "./rest/apiClient";
+import {ApiClientOverRest} from "./api/impl/rest/apiClient";
 
 /**
  * Main class for the Validator client.
@@ -44,7 +44,6 @@ export class Validator {
     this.opts = opts;
     this.config = opts.config;
     this.logger = opts.logger;
-    this.isActive = false;
     this.isRunning = false;
     this.db = opts.db;
     this.apiClient = this.initApiClient(opts.api);

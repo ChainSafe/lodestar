@@ -5,7 +5,7 @@ import {Keypair} from "@chainsafe/bls";
 import {describe, it, beforeEach, afterEach} from "mocha";
 import {ILogger} from "../../../lib/logger/interface";
 import {WinstonLogger} from "@chainsafe/lodestar/lib/logger";
-import {RpcClientOverInstance} from "../../../src/rpc";
+import {ApiClientOverInstance} from "../../../src/api";
 import {ValidatorDB} from "@chainsafe/lodestar/lib/db";
 import {generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
 import BlockProposingService from "../../../src/services/block";
@@ -18,7 +18,7 @@ describe("block proposing service", function () {
   let rpcClientStub: any, dbStub: any, logger: any;
 
   beforeEach(() => {
-    rpcClientStub = sandbox.createStubInstance(RpcClientOverInstance);
+    rpcClientStub = sandbox.createStubInstance(ApiClientOverInstance);
     dbStub = sandbox.createStubInstance(ValidatorDB);
     logger = sandbox.createStubInstance(WinstonLogger);
   });

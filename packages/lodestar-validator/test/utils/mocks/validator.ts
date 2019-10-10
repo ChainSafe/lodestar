@@ -12,7 +12,7 @@ import {
   ValidatorDuty,
   ValidatorIndex
 } from "@chainsafe/eth2.0-types";
-import {IValidatorApi} from "../../../src/rpc/api/validators";
+import {IValidatorApi} from "../../../src/api/interface/validators";
 import {getEmptyBlock} from "@chainsafe/lodestar/lib/chain/genesis/genesis";
 
 export interface IMockValidatorAPIOpts {

@@ -1,15 +1,15 @@
 import {AbstractApiClient} from "../abstract";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {IValidatorApi} from "../api/validators";
-import {IBeaconApi} from "../api/beacon";
+import {IValidatorApi} from "../interface/validators";
+import {IBeaconApi} from "../interface/beacon";
 
-export interface IRpcClientOverInstanceOpts {
+export interface IApiClientOverInstanceOpts {
   config: IBeaconConfig;
   beacon: IBeaconApi;
   validator: IValidatorApi;
 }
 
-export class RpcClientOverInstance extends AbstractApiClient {
+export class ApiClientOverInstance extends AbstractApiClient {
 
   public url: string = "inmemory";
 
@@ -17,7 +17,7 @@ export class RpcClientOverInstance extends AbstractApiClient {
 
   public validator: IValidatorApi;
 
-  public constructor(opts: IRpcClientOverInstanceOpts) {
+  public constructor(opts: IApiClientOverInstanceOpts) {
     super();
     this.beacon = opts.beacon;
     this.validator = opts.validator;

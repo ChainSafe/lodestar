@@ -46,7 +46,8 @@
     "@chainsafe/eth2.0-utils": "^0.0.1",
     "@chainsafe/ssz": "^0.5.2",
     "axios": "^0.19.0",
-    "deepmerge": "^4.0.0"
+    "deepmerge": "^4.0.0",
+    "strict-event-emitter-types": "^2.0.0"
   },
   "devDependencies": {
     "@types/deepmerge": "^2.2.0"

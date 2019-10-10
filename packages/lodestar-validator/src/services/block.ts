@@ -6,11 +6,11 @@ import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 
 import {BeaconBlock, BeaconState, Fork, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {IApiClient} from "../rpc";
 import {Keypair} from "@chainsafe/bls";
 import {computeEpochOfSlot, DomainType, getDomain} from "../util";
-import {IValidatorDB} from "../db/interface";
-import {ILogger} from "../logger/interface";
+import {IValidatorDB,ILogger} from "../";
+import {IApiClient} from "../api";
+
 
 export default class BlockProposingService {
   private config: IBeaconConfig;

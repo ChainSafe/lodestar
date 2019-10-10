@@ -7,7 +7,7 @@ import {ILogger} from "../../../lib/logger/interface";
 import {WinstonLogger} from "@chainsafe/lodestar/lib/logger";
 import {ValidatorDB} from "@chainsafe/lodestar/lib/db";
 import {generateAttestationData} from "@chainsafe/lodestar/test/utils/attestation";
-import {RpcClientOverInstance} from "../../../src/rpc";
+import {ApiClientOverInstance} from "../../../src/api";
 import {AttestationService} from "../../../src/services/attestation";
 import {generateFork} from "@chainsafe/lodestar/test/utils/fork";
 import BN from "bn.js";
@@ -21,7 +21,7 @@ describe("validator attestation service", function () {
 
 
   beforeEach(() => {
-    rpcClientStub = sandbox.createStubInstance(RpcClientOverInstance);
+    rpcClientStub = sandbox.createStubInstance(ApiClientOverInstance);
     dbStub = sandbox.createStubInstance(ValidatorDB);
   });
 
