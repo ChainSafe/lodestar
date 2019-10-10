@@ -37,6 +37,7 @@ import {MerkleTreeSerialization} from "../../../../../src/util/serialization";
 import BlockProposingService from "@chainsafe/lodestar-validator/lib/services/block";
 import {RpcClientOverInstance} from "@chainsafe/lodestar-validator/lib/rpc";
 import {describe, it} from "mocha";
+import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
 
 describe("produce block", function () {
   this.timeout(0);
@@ -115,7 +116,7 @@ describe("produce block", function () {
   });
 
   function getBlockProposingService(keypair: Keypair): BlockProposingService {
-    const rpcClientStub = sinon.createStubInstance(RpcClientOverInstance);
+    const rpcClientStub = sinon.createStubInstance(ApiClientOverInstance);
     rpcClientStub.validator = sinon.createStubInstance(ValidatorApi);
     const validatorDbStub = sinon.createStubInstance(ValidatorDB);
     return new BlockProposingService(
