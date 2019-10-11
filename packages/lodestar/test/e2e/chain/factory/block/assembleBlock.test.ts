@@ -35,7 +35,6 @@ import {ValidatorApi} from "../../../../../src/api/rpc/api/validator";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "../../../../../src/util/serialization";
 import BlockProposingService from "@chainsafe/lodestar-validator/lib/services/block";
-import {RpcClientOverInstance} from "@chainsafe/lodestar-validator/lib/rpc";
 import {describe, it} from "mocha";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
 
