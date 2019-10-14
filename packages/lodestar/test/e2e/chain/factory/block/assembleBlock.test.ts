@@ -15,8 +15,6 @@ import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {blockToHeader, getBeaconProposerIndex} from "../../../../../src/chain/stateTransition/util";
 import {stateTransition} from "../../../../../src/chain/stateTransition";
 import {generateValidator} from "../../../../utils/validator";
-import BlockProposingService from "../../../../../src/validator/services/block";
-import {RpcClientOverInstance} from "../../../../../src/validator/rpc";
 import {WinstonLogger} from "../../../../../src/logger";
 import {generateDeposit} from "../../../../utils/deposit";
 import {BeaconChain} from "../../../../../src/chain";
@@ -36,6 +34,9 @@ import {
 import {ValidatorApi} from "../../../../../src/api/rpc/api/validator";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "../../../../../src/util/serialization";
+import BlockProposingService from "@chainsafe/lodestar-validator/lib/services/block";
+import {describe, it} from "mocha";
+import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
 
 describe("produce block", function () {
   this.timeout(0);
@@ -114,7 +115,7 @@ describe("produce block", function () {
   });
 
   function getBlockProposingService(keypair: Keypair): BlockProposingService {
-    const rpcClientStub = sinon.createStubInstance(RpcClientOverInstance);
+    const rpcClientStub = sinon.createStubInstance(ApiClientOverInstance);
     rpcClientStub.validator = sinon.createStubInstance(ValidatorApi);
     const validatorDbStub = sinon.createStubInstance(ValidatorDB);
     return new BlockProposingService(

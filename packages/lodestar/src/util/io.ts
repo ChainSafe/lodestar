@@ -1,6 +1,6 @@
 import readline from "readline";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
-import keystore from "../validator/keystore";
+import keystore from "./keystore";
 import fs from "fs";
 import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 
@@ -13,7 +13,7 @@ interface IHiddenReadlineInterface extends readline.Interface {
 
 export function promptPassword(passwordPrompt: string): Promise<string>{
   const rl: IHiddenReadlineInterface =
-    readline.createInterface({input: process.stdin, output: process.stdout});
+        readline.createInterface({input: process.stdin, output: process.stdout});
 
   rl._writeToOutput = function _writeToOutput(stringToWrite: string): void {
     if (stringToWrite === passwordPrompt || stringToWrite.match(/\n/g))

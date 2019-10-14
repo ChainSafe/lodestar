@@ -13,10 +13,6 @@ import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
 import {generateCommanderOptions, optionsToConfig} from "../util";
 import {getTomlConfig} from "../../util/file";
-import Validator from "../../validator";
-import {RpcClientOverInstance} from "../../validator/rpc";
-import {ValidatorApi} from "../../api/rpc/api/validator";
-import {BeaconApi} from "../../api/rpc/api/beacon";
 
 interface IBeaconCommandOptions {
   configFile?: string;
@@ -27,8 +23,6 @@ interface IBeaconCommandOptions {
 export class BeaconNodeCommand implements ICliCommand {
   // @ts-ignore
   public node: BeaconNode;
-  // @ts-ignore
-  public validator: Validator;
 
   public register(commander: CommanderStatic): void {
 
@@ -71,39 +65,6 @@ export class BeaconNodeCommand implements ICliCommand {
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
 
     this.node = new BeaconNode(conf, {config, logger});
-
-    if(conf.validator && conf.validator.keypair){
-      conf.validator.rpcInstance = new RpcClientOverInstance({
-        config,
-        validator: new ValidatorApi(
-          {},
-          {
-            config,
-            chain: this.node.chain,
-            db: this.node.db,
-            opPool: this.node.opPool,
-            eth1: this.node.eth1,
-            logger
-          }
-        ),
-        beacon: new BeaconApi(
-          {},
-          {
-            config,
-            logger: new WinstonLogger(),
-            sync: this.node.sync,
-            eth1: this.node.eth1,
-            opPool: this.node.opPool,
-            chain: this.node.chain,
-            db: this.node.db
-          }
-        ),
-      });
-
-      this.validator = new Validator(conf.validator, {config, logger});
-      await this.validator.start();
-    }
-
     await this.node.start();
   }
 }
