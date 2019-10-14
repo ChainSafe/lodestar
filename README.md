@@ -63,6 +63,13 @@ Beacon chain implementation
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar)
 
+### [@chainsafe/lodestar-validator](/packages/lodestar-validator)
+Eth2 validator client implementation
+
+[![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-validator)](https://www.npmjs.com/package/@chainsafe/lodestar-validator)
+[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar)
+
 ## Contributors
 Read our [contributors document](/CONTRIBUTING.md), [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or talk to us on our [discord](https://discord.gg/yjyvFRP)!
 
