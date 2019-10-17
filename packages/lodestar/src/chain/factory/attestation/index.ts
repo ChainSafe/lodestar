@@ -4,7 +4,7 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../../../db/api";
 import {assembleAttestationData} from "./data";
 import {BitList} from "@chainsafe/bit-utils";
-import {computeEpochOfSlot, getCrosslinkCommittee} from "../../stateTransition/util";
+import {computeEpochOfSlot, getCrosslinkCommittee} from "@chainsafe/eth2.0-state-transition";
 import {intDiv} from "@chainsafe/eth2.0-utils";
 
 export async function assembleAttestation(

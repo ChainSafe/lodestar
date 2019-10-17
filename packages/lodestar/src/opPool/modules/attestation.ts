@@ -6,7 +6,7 @@ import {
   getAttestationDataSlot,
   isValidAttestationSlot,
   computeStartSlotOfEpoch,
-} from "../../chain/stateTransition/util";
+} from "@chainsafe/eth2.0-state-transition";
 import {BulkRepository} from "../../db/api/beacon/repository";
 
 export class AttestationOperations extends OperationsModule<Attestation> {

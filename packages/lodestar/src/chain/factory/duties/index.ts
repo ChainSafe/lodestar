@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BLSPubkey, Epoch, ValidatorDuty, ValidatorIndex,BeaconState, Slot} from "@chainsafe/eth2.0-types";
-import {getCommitteeAssignment} from "../../stateTransition/util";
+import {getCommitteeAssignment} from "@chainsafe/eth2.0-state-transition";
 
 
 export function assembleValidatorDuty(
