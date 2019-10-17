@@ -18,14 +18,13 @@ import {processDeposit} from "./deposit";
 import {processVoluntaryExit} from "./voluntaryExit";
 import {processTransfer} from "./transfer";
 
-export {
-  processProposerSlashing,
-  processAttesterSlashing,
-  processAttestation,
-  processDeposit,
-  processVoluntaryExit,
-  processTransfer,
-};
+
+export * from "./proposerSlashing";
+export * from "./attesterSlashing";
+export * from "./attestation";
+export * from "./deposit";
+export * from "./voluntaryExit";
+export * from "./transfer";
 
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#operations
 

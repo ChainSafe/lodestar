@@ -17,7 +17,7 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {GENESIS_EPOCH, GENESIS_START_SHARD, ZERO_HASH} from "../../../constants";
+import {GENESIS_EPOCH, GENESIS_START_SHARD, ZERO_HASH} from "@chainsafe/lodestar/lib/constants";
 import {
   getAttestationDataSlot,
   getAttestingIndices,
