@@ -14,8 +14,8 @@ import {
   ValidatorIndex,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {DomainType,} from "../../../constants";
-import {isSorted} from "../../../util/sort";
+import {DomainType,} from "@chainsafe/lodestar/lib/constants";
+import {isSorted} from "@chainsafe/lodestar/lib/util/sort";
 import {computeStartSlotOfEpoch} from "./epoch";
 import {getDomain} from "./domain";
 import {getCommitteeCount, getCrosslinkCommittee, getStartShard} from "./committee";

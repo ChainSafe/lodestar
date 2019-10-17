@@ -5,7 +5,7 @@
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {GENESIS_EPOCH} from "../../../constants";
+import {GENESIS_EPOCH} from "@chainsafe/lodestar/lib/constants";
 import {getBlockRoot, getCurrentEpoch, getPreviousEpoch, getTotalActiveBalance} from "../util";
 
 import {getAttestingBalance, getMatchingTargetAttestations} from "./util";

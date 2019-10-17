@@ -8,7 +8,7 @@ import {equals, hashTreeRoot} from "@chainsafe/ssz";
 import {Attestation, BeaconState, Crosslink, PendingAttestation,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {ZERO_HASH} from "../../../../constants";
+import {ZERO_HASH} from "@chainsafe/lodestar/lib/constants";
 import {
   getAttestationDataSlot,
   getBeaconProposerIndex,

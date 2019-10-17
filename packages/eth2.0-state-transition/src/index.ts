@@ -9,14 +9,12 @@ import {BeaconBlock, BeaconState,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {processBlock} from "./block";
-import {processEpoch} from "./epoch";
 import {processSlots} from "./slot";
 
-export {
-  processSlots,
-  processBlock,
-  processEpoch,
-};
+export * from "./util";
+export * from "./epoch";
+export * from "./block";
+export * from "./slot";
 
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1
 // /specs/core/0_beacon-chain.md#beacon-chain-state-transition-function

@@ -7,7 +7,7 @@ import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {BeaconState, Slot,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {ZERO_HASH} from "../../constants";
+import {ZERO_HASH} from "@chainsafe/lodestar/lib/constants";
 
 import {processEpoch} from "./epoch";
 
