@@ -17,7 +17,7 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {
   EMPTY_SIGNATURE,
   ZERO_HASH,
-} from "@chainsafe/lodestar/lib/constants";
+} from "../constants";
 import {computeStartSlotOfEpoch} from "./epoch";
 
 

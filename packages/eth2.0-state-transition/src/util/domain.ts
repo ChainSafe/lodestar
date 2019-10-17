@@ -8,8 +8,8 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {DomainType} from "@chainsafe/lodestar/lib/constants";
-import {intToBytes} from "@chainsafe/lodestar/lib/util/bytes";
+import {DomainType} from "../constants";
+import {intToBytes} from "@chainsafe/eth2.0-utils";
 
 import {getCurrentEpoch} from "./epoch";
 
