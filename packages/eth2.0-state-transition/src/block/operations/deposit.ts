@@ -7,7 +7,7 @@ import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {verify} from "@chainsafe/bls";
 import {BeaconState, Deposit, Validator} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH,} from "../../../../constants";
+import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH,} from "@chainsafe/lodestar/lib/constants";
 import {computeDomain, increaseBalance} from "../../util";
 import {bnMin, verifyMerkleBranch} from "@chainsafe/eth2.0-utils";
 

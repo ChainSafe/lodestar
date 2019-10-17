@@ -10,7 +10,7 @@ import bls from "@chainsafe/bls";
 import {BeaconState, Transfer,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {DomainType, FAR_FUTURE_EPOCH,} from "../../../../constants";
+import {DomainType, FAR_FUTURE_EPOCH,} from "@chainsafe/lodestar/lib/constants";
 import {decreaseBalance, getBeaconProposerIndex, getCurrentEpoch, getDomain, increaseBalance,} from "../../util";
 
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#transfers
