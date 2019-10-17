@@ -5,3 +5,4 @@ export * from "./bytes";
 export * from "./converters";
 export * from "./yaml";
 export * from "./objects";
+export * from "./sort";
