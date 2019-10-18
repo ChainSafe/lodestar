@@ -65,7 +65,7 @@ export class InitialSync {
     } else {
       this.logger.debug(`Fast syncing to target ${targetEpoch}`);
       const blocks = await this.syncToTarget(targetEpoch);
-      //TODO: verify blocks
+      //TODO: verify block headers and run state transition without signature verification
       blocks.forEach((block) => this.chain.receiveBlock(block, true));
     }
   };
@@ -75,7 +75,9 @@ export class InitialSync {
     const targetSlot = computeStartSlotOfEpoch(this.config, targetEpoch);
     let chunks = chunkify(20, currentSlot, targetSlot);
     const blocks: BeaconBlock[] = [];
+    //try to fetch chunks from different peers until all chunks are fetched
     while(chunks.length > 0) {
+      //rotate peers
       const peers = new RoundRobinArray(this.peers);
       chunks = (await Promise.all(
         chunks.map(async (chunk) => {
