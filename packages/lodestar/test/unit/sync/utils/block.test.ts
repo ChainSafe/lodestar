@@ -1,4 +1,4 @@
-import {beforeEach, describe, it} from "mocha";
+import {beforeEach, afterEach, describe, it} from "mocha";
 import {ReqResp} from "../../../../src/network/reqResp";
 import sinon from "sinon";
 import {ReputationStore} from "../../../../src/sync/IReputation";
@@ -13,12 +13,18 @@ describe("sync - block utils", function () {
 
   describe("get block range from multiple peers", function () {
 
+    const sandbox = sinon.createSandbox();
+
     let repsStub: any, rpcStub: any, getBlockRangeFromPeerStub: any;
 
     beforeEach(function () {
-      repsStub = sinon.createStubInstance(ReputationStore);
-      rpcStub = sinon.createStubInstance(ReqResp);
-      getBlockRangeFromPeerStub = sinon.stub(syncUtils, "getBlockRangeFromPeer");
+      repsStub = sandbox.createStubInstance(ReputationStore);
+      rpcStub = sandbox.createStubInstance(ReqResp);
+      getBlockRangeFromPeerStub = sandbox.stub(syncUtils, "getBlockRangeFromPeer");
+    });
+
+    afterEach(function () {
+      sandbox.restore();
     });
 
     it("happy path", async function () {

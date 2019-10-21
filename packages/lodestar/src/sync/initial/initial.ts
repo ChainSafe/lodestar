@@ -9,10 +9,10 @@ import {ILogger} from "../../logger";
 import {ISyncOptions} from "../options";
 import {IInitialSyncModules, InitialSyncEventEmitter} from "./interface";
 import {EventEmitter} from "events";
-import {chunkify, getTargetEpoch, IChunk} from "../utils/sync";
-import {BeaconBlock, Checkpoint, Epoch} from "@chainsafe/eth2.0-types";
+import {getTargetEpoch, isValidHeaderChain} from "../utils/sync";
+import {BeaconState, Checkpoint} from "@chainsafe/eth2.0-types";
 import {computeStartSlotOfEpoch} from "../../chain/stateTransition/util";
-import {RoundRobinArray} from "../utils/robin";
+import {getBlockRange} from "../utils/blocks";
 
 export class InitialSync extends (EventEmitter as { new(): InitialSyncEventEmitter }) implements InitialSyncEventEmitter {
 
@@ -46,69 +46,47 @@ export class InitialSync extends (EventEmitter as { new(): InitialSyncEventEmitt
       this.emit("sync:completed", null);
       return;
     }
-    const chainCheckPoint = this.chain.latestState.finalizedCheckpoint;
+
+    const chainCheckPoint = this.chain.latestState.currentJustifiedCheckpoint;
     //listen on finalization events
-    this.chain.on("finalizedCheckpoint", this.sync);
+    this.chain.on("processedEpoch", this.sync);
     //start syncing from current chain checkpoint
-    this.sync(chainCheckPoint);
+    await this.sync(chainCheckPoint);
   }
 
   public async stop(): Promise<void> {
     this.logger.info("initial sync stop");
-    this.chain.removeListener("finalizedCheckpoint", this.sync);
+    this.chain.removeListener("processedEpoch", this.sync);
   }
 
-  private sync = async (finalizedCheckPoint: Checkpoint) => {
+  private sync = async (chainCheckPoint: Checkpoint) => {
     const peers = Array.from(this.peers);
-    const targetEpoch = getTargetEpoch(peers.map(this.reps.getFromPeerInfo), finalizedCheckPoint);
-    if(finalizedCheckPoint.epoch === targetEpoch) {
+    const targetEpoch = getTargetEpoch(peers.map(this.reps.getFromPeerInfo), chainCheckPoint);
+    if(chainCheckPoint.epoch >= targetEpoch) {
       this.logger.info("Chain already on latest finalized state");
-      this.chain.removeListener("finalizedCheckpoint", this.sync);
-      this.emit("sync:completed", finalizedCheckPoint);
+      this.chain.removeListener("processedEpoch", this.sync);
+      this.emit("sync:completed", chainCheckPoint);
     } else {
       this.logger.debug(`Fast syncing to target ${targetEpoch}`);
-      const blocks = await this.syncToTarget(targetEpoch);
-      //TODO: verify block headers and run state transition without signature verification
-      blocks.forEach((block) => this.chain.receiveBlock(block, true));
-      this.emit("sync:checkpoint", targetEpoch);
+      const latestState = this.chain.latestState as BeaconState;
+      const blocks = await getBlockRange(
+        this.rpc,
+        this.reps,
+        this.peers,
+        {start: latestState.slot, end: computeStartSlotOfEpoch(this.config, targetEpoch)},
+        this.opts.blockPerChunk
+      );
+      if(isValidHeaderChain(this.config, latestState.latestBlockHeader, blocks)) {
+        blocks.forEach((block) => this.chain.receiveBlock(block, true));
+        this.emit("sync:checkpoint", targetEpoch);
+      } else {
+        this.logger.error(`Invalid header chain (${latestState.slot}...`
+            + `${computeStartSlotOfEpoch(this.config, targetEpoch)}), blocks discarded. Retrying...`
+        );
+        await this.sync(chainCheckPoint);
+      }
     }
   };
 
-  private async syncToTarget(targetEpoch: Epoch): Promise<BeaconBlock[]> {
-    const currentSlot = this.chain.latestState.slot;
-    const targetSlot = computeStartSlotOfEpoch(this.config, targetEpoch);
-    let chunks = chunkify(this.opts.blockPerChunk, currentSlot, targetSlot);
-    const blocks: BeaconBlock[] = [];
-    //try to fetch chunks from different peers until all chunks are fetched
-    while(chunks.length > 0) {
-      //rotate peers
-      const peers = new RoundRobinArray(this.peers);
-      chunks = (await Promise.all(
-        chunks.map(async (chunk) => {
-          try {
-            const chunkBlocks = await this.fetchChunk(peers.next(), chunk);
-            blocks.concat(chunkBlocks);
-            return null;
-          } catch (e) {
-            //if failed to obtain blocks, try in next round on another peer
-            return chunk;
-          }
-        })
-      )).filter((chunk) => chunk === null);
-    }
-    return blocks;
-  }
 
-  private async fetchChunk(peer: PeerInfo, chunk: IChunk): Promise<BeaconBlock[]> {
-    const peerLatestHello = this.reps.get(peer.id.toB58String()).latestHello;
-    return await this.rpc.beaconBlocksByRange(
-      peer,
-      {
-        headBlockRoot: peerLatestHello.headRoot,
-        startSlot: chunk.start,
-        step: 1,
-        count: chunk.end - chunk.start
-      }
-    );
-  }
 }
