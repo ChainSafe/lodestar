@@ -16,23 +16,32 @@ export function getTargetEpoch(peers: IReputation[], currentCheckPoint: Checkpoi
   return currentCheckPoint.epoch;
 }
 
-export type Chunk = [Slot, Slot];
+export interface IChunk {
+  start: Slot;
+  end: Slot;
+}
 
 /**
- * Creates slot chunks returned chunks represents (inclusive) start and end slot
+ * Creates slot chunks returned chunks represents (inclusive) start and (inclusive) end slot
  * which should be fetched along all slotS(blocks) in between
  * @param blocksPerChunk
  * @param currentSlot
  * @param targetSlot
  */
-export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: Slot): Chunk[] {
-  const chunks: Chunk[] = [];
+export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: Slot): IChunk[] {
+  const chunks: IChunk[] = [];
   //currentSlot is our state slot so we need block from next slot
   for(let i = currentSlot + 1; i < targetSlot; i + blocksPerChunk + 1) {
     if(i + blocksPerChunk > targetSlot) {
-      chunks.push([i, targetSlot]);
+      chunks.push({
+        start: i,
+        end: targetSlot
+      });
     } else {
-      chunks.push([i, i + blocksPerChunk]);
+      chunks.push({
+        start: i,
+        end: i + blocksPerChunk
+      });
     }
   }
   return chunks;

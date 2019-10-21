@@ -43,7 +43,7 @@ export interface IBeaconChain extends ChainEventEmitter {
   /**
    * Pre-process and run the per slot state transition function
    */
-  receiveBlock(block: BeaconBlock): Promise<void>;
+  receiveBlock(block: BeaconBlock, trusted?: boolean): Promise<void>;
 
   /**
    * Update the chain head using LMD GHOST

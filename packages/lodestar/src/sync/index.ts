@@ -69,7 +69,7 @@ export class Sync extends EventEmitter {
 
   public async start(): Promise<void> {
     await this.reqResp.start();
-    this.initialSync.on("synced", this.startRegularSync);
+    this.initialSync.on("sync:completed", this.startRegularSync);
     this.regularSync.on("fallenBehind", this.startInitialSync);
     this.peers.concat(this.getValidPeers());
     this.network.on("peer:disconnect", this.handleLostPeer);

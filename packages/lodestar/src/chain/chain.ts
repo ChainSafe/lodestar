@@ -132,7 +132,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     });
   }
 
-  public async receiveBlock(block: BeaconBlock): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public async receiveBlock(block: BeaconBlock, trusted: boolean = false): Promise<void> {
     const blockHash = signingRoot(block, this.config.types.BeaconBlock);
     this.logger.info(
       `Received block with hash 0x${blockHash.toString("hex")}` +
