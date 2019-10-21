@@ -1,12 +1,18 @@
 import {describe, it} from "mocha";
-import {IReputation} from "../../../../src/sync/IReputation";
+import {IReputation, ReputationStore} from "../../../../src/sync/IReputation";
 import {BeaconBlock, BeaconBlockHeader, Epoch} from "@chainsafe/eth2.0-types";
-import {chunkify, getTargetEpoch, isValidHeaderChain} from "../../../../src/sync/utils/sync";
+import {chunkify, getBlockRangeFromPeer, getTargetEpoch, isValidHeaderChain} from "../../../../src/sync/utils/sync";
 import {expect} from "chai";
 import {generateEmptyBlock} from "../../../utils/block";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/src/presets/minimal";
 import {blockToHeader} from "../../../../src/chain/stateTransition/util";
+import sinon from "sinon";
+import {ReqResp} from "../../../../src/network/reqResp";
+// @ts-ignore
+import PeerId from "peer-id";
+// @ts-ignore
+import PeerInfo from "peer-info";
 
 describe("sync utils", function () {
    
@@ -90,6 +96,29 @@ describe("sync utils", function () {
       const result = isValidHeaderChain(config, startHeader, blocks);
       expect(result).to.be.false;
     });
+  });
+
+  describe("get blocks from peer", function () {
+
+    it("should get block range from peer", async function () {
+      const rpcStub = sinon.createStubInstance(ReqResp);
+      const repsStub = sinon.createStubInstance(ReputationStore);
+      // @ts-ignore
+      repsStub.get.returns({latestHello: {root: Buffer.alloc(32, 1)}});
+      rpcStub.beaconBlocksByRange
+        .withArgs(sinon.match.any, sinon.match.any)
+        .resolves([generateEmptyBlock()]);
+      const result = await getBlockRangeFromPeer(
+        rpcStub,
+        repsStub as unknown as ReputationStore,
+        {id: sinon.createStubInstance(PeerId)} as unknown as PeerInfo,
+        {start: 1, end: 4}
+      );
+      expect(result.length).to.be.greaterThan(0);
+      expect(repsStub.get.calledOnce).to.be.true;
+      expect(rpcStub.beaconBlocksByRange.calledOnce).to.be.true;
+    });
+
   });
     
 });

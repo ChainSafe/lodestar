@@ -1,8 +1,9 @@
-import {IReputation} from "../IReputation";
+import {IReputation, ReputationStore} from "../IReputation";
 import {BeaconBlock, BeaconBlockHeader, Checkpoint, Epoch, Hash, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {blockToHeader} from "../../chain/stateTransition/util";
+import {IReqResp} from "../../network";
 
 export function isValidHeaderChain(config: IBeaconConfig, start: BeaconBlockHeader, blocks: BeaconBlock[]): boolean {
   let previousRoot = hashTreeRoot(start, config.types.BeaconBlockHeader);
@@ -59,4 +60,23 @@ export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: 
     }
   }
   return chunks;
+}
+
+
+export async function getBlockRangeFromPeer(
+  rpc: IReqResp,
+  reps: ReputationStore,
+  peer: PeerInfo,
+  chunk: ISlotRange
+): Promise<BeaconBlock[]> {
+  const peerLatestHello = reps.get(peer.id.toB58String()).latestHello;
+  return await rpc.beaconBlocksByRange(
+    peer,
+    {
+      headBlockRoot: peerLatestHello.headRoot,
+      startSlot: chunk.start,
+      step: 1,
+      count: chunk.end - chunk.start
+    }
+  );
 }
