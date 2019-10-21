@@ -1,5 +1,19 @@
 import {IReputation} from "../IReputation";
-import {Checkpoint, Epoch, Slot} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconBlockHeader, Checkpoint, Epoch, Hash, Slot} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {hashTreeRoot} from "@chainsafe/ssz";
+import {blockToHeader} from "../../chain/stateTransition/util";
+
+export function isValidHeaderChain(config: IBeaconConfig, start: BeaconBlockHeader, blocks: BeaconBlock[]): boolean {
+  let previousRoot = hashTreeRoot(start, config.types.BeaconBlockHeader);
+  for(const block of blocks) {
+    if(!previousRoot.equals(block.parentRoot)) {
+      return false;
+    }
+    previousRoot = hashTreeRoot(blockToHeader(config, block), config.types.BeaconBlockHeader);
+  }
+  return true;
+}
 
 export function getTargetEpoch(peers: IReputation[], currentCheckPoint: Checkpoint): Epoch {
   const peersWithHigherFinalizedEpoch = peers.filter(peer => {
@@ -16,7 +30,7 @@ export function getTargetEpoch(peers: IReputation[], currentCheckPoint: Checkpoi
   return currentCheckPoint.epoch;
 }
 
-export interface IChunk {
+export interface ISlotRange {
   start: Slot;
   end: Slot;
 }
@@ -28,10 +42,10 @@ export interface IChunk {
  * @param currentSlot
  * @param targetSlot
  */
-export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: Slot): IChunk[] {
-  const chunks: IChunk[] = [];
+export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: Slot): ISlotRange[] {
+  const chunks: ISlotRange[] = [];
   //currentSlot is our state slot so we need block from next slot
-  for(let i = currentSlot + 1; i < targetSlot; i + blocksPerChunk + 1) {
+  for(let i = currentSlot + 1; i < targetSlot; i  = i + blocksPerChunk) {
     if(i + blocksPerChunk > targetSlot) {
       chunks.push({
         start: i,
@@ -40,7 +54,7 @@ export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: 
     } else {
       chunks.push({
         start: i,
-        end: i + blocksPerChunk
+        end: i + blocksPerChunk - 1
       });
     }
   }
