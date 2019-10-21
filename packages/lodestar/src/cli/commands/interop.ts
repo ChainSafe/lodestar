@@ -30,9 +30,13 @@ import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "../../util/serialization";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib/api";
 import {ValidatorClient} from "../../validator/nodejs";
+import {BeaconState} from "@chainsafe/eth2.0-types";
+import {quickStartState} from "../../interop/state";
 
 interface IInteropCommandOptions {
   loggingLevel?: string;
+  genesisTime?: string;
+  validatorCount?: string;
   quickStart?: string;
   preset?: string;
   validators?: string;
@@ -50,8 +54,10 @@ export class InteropCommand implements ICliCommand {
 
     //TODO: when we switch cli library make this to run as default command "./bin/lodestar"
     const command = commander
-      .command("interop")
+      .command("dev")
       .description("Start lodestar beacon node and certain amount of validator nodes")
+      .option("-t, --genesisTime", "genesis time of Beacon state", Date.now())
+      .option("-c, --validatorCount", "Number of validator for Beacon state", 8)
       .option("-q, --quickStart [params]", "Start chain from known state")
       // eslint-disable-next-line max-len
       .option("-v, --validators [range]", "Start validators, single number - validators 0-number, x,y - validators between x and y", 0)
@@ -120,19 +126,22 @@ export class InteropCommand implements ICliCommand {
       .then((peerId) => initializePeerInfo(peerId, conf.network.multiaddrs))
       .then((peerInfo) => new NodejsNode({peerInfo, bootnodes: conf.network.bootnodes}));
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
+    const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
+    let state: BeaconState;
     if (options.quickStart) {
       this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier(), libp2p});
-      const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
-      const state = quickStartOptionToState(config, tree, options.quickStart);
-      await this.node.chain.initializeBeaconChain(state, tree);
-      const targetSlot = computeStartSlotOfEpoch(
-        config,
-        computeEpochOfSlot(config, getCurrentSlot(config, state.genesisTime))
-      );
-      await this.node.chain.advanceState(targetSlot);
+      state = quickStartOptionToState(config, tree, options.quickStart);
+    } else if (options.genesisTime && options.validatorCount) {
+      state = quickStartState(config, tree, parseInt(options.genesisTime), parseInt(options.validatorCount));
     } else {
-      throw new Error("Missing --quickstart flag");
+      throw new Error("Missing either --quickstart or --genesisTime and --validatorCount flag");
     }
+    await this.node.chain.initializeBeaconChain(state, tree);
+    const targetSlot = computeStartSlotOfEpoch(
+      config,
+      computeEpochOfSlot(config, getCurrentSlot(config, state.genesisTime))
+    );
+    await this.node.chain.advanceState(targetSlot);
     await this.node.start();
     if(options.validators) {
       if(options.validators.includes(",")) {
