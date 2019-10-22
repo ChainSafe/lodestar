@@ -70,7 +70,7 @@ export class Sync extends EventEmitter {
   public async start(): Promise<void> {
     await this.reqResp.start();
     this.initialSync.on("sync:completed", this.startRegularSync);
-    this.regularSync.on("fallenBehind", this.startInitialSync);
+    //this.regularSync.on("fallenBehind", this.startInitialSync);
     this.peers.concat(this.getValidPeers());
     this.network.on("peer:disconnect", this.handleLostPeer);
     this.network.on("peer:connect", this.handleNewPeer);
@@ -86,6 +86,10 @@ export class Sync extends EventEmitter {
     await this.reqResp.stop();
     await this.initialSync.stop();
     await this.regularSync.stop();
+  }
+
+  public isSynced(): boolean {
+    return false;
   }
 
   private startRegularSync = () => {
@@ -110,6 +114,7 @@ export class Sync extends EventEmitter {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private handleLostPeer = (peer: PeerInfo) => {
     //TODO: remove peer from array
   };
