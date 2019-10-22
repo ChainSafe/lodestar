@@ -1,6 +1,6 @@
 import {join} from "path";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {computeShuffledIndex} from "../../../src/chain/stateTransition/util";
+import {computeShuffledIndex} from "../../../../eth2.0-state-transition/src/util";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {ShufflingTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
