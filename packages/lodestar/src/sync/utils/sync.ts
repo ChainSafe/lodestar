@@ -1,5 +1,5 @@
 import {IReputation, ReputationStore} from "../IReputation";
-import {BeaconBlock, BeaconBlockHeader, Checkpoint, Epoch, Hash, Slot} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconBlockHeader, Checkpoint, Epoch, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {blockToHeader} from "../../chain/stateTransition/util";

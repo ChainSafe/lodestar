@@ -14,7 +14,9 @@ import {BeaconState, Checkpoint} from "@chainsafe/eth2.0-types";
 import {computeStartSlotOfEpoch} from "../../chain/stateTransition/util";
 import {getBlockRange} from "../utils/blocks";
 
-export class InitialSync extends (EventEmitter as { new(): InitialSyncEventEmitter }) implements InitialSyncEventEmitter {
+export class InitialSync
+  extends (EventEmitter as { new(): InitialSyncEventEmitter })
+  implements InitialSyncEventEmitter {
 
   private config: IBeaconConfig;
   private opts: ISyncOptions;

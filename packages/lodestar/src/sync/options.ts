@@ -1,7 +1,7 @@
 import {IConfigurationModule} from "../util/config";
 
 export interface ISyncOptions {
-  blockPerChunk: number
+  blockPerChunk: number;
 }
 
 
