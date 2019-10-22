@@ -6,7 +6,7 @@ import {blockToHeader} from "../../chain/stateTransition/util";
 import {IReqResp} from "../../network";
 
 export function isValidHeaderChain(config: IBeaconConfig, start: BeaconBlockHeader, blocks: BeaconBlock[]): boolean {
-  // TODO: sort blocks
+  blocks = blocks.sort((b1, b2) => b1.slot - b2.slot);
   let previousRoot = hashTreeRoot(start, config.types.BeaconBlockHeader);
   for(const block of blocks) {
     if(!previousRoot.equals(block.parentRoot)) {

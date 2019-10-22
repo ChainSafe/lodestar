@@ -81,6 +81,14 @@ describe("sync utils", function () {
       expect(result).to.be.true;
     });
 
+    it("Should verify correct chain of blocks - blocks out of order", function () {
+      const startHeader = blockToHeader(config, generateEmptyBlock());
+      const blocks = generateValidChain(startHeader);
+      [blocks[0], blocks[1]] = [blocks[1], blocks[0]];
+      const result = isValidHeaderChain(config, startHeader, blocks);
+      expect(result).to.be.true;
+    });
+
     it("Should verify invalid chain of blocks - different start header", function () {
       const startHeader = blockToHeader(config, generateEmptyBlock());
       const blocks = generateValidChain(startHeader);
