@@ -6,7 +6,7 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {ProcessBlockHeader} from "./type";
-import {processBlockHeader} from "../../../../src/chain/stateTransition/block/blockHeader";
+import {processBlockHeader} from "../../../../../eth2.0-state-transition/src/block/blockHeader";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<ProcessBlockHeader, BeaconState>(

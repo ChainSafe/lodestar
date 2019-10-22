@@ -1,6 +1,6 @@
 import {join} from "path";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {processCrosslinks} from "../../../../src/chain/stateTransition/epoch/crosslinks";
+import {processCrosslinks} from "../../../../../eth2.0-state-transition/src/epoch/crosslinks";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {equals} from "@chainsafe/ssz";

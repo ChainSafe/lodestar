@@ -3,7 +3,7 @@ import {expect} from "chai";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
-import * as blockTransitions from "../../../../../src/chain/stateTransition/block";
+import * as blockTransitions from "@chainsafe/eth2.0-state-transition/lib/block";
 import {OpPool} from "../../../../../src/opPool";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
@@ -19,7 +19,7 @@ describe("block assembly", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let assembleBodyStub, chainStub, forkChoiceStub, processBlockStub, opPool, beaconDB, eth1;
+  let assembleBodyStub: any, chainStub: any, forkChoiceStub: any, processBlockStub: any, opPool: any, beaconDB: any, eth1: any;
 
   beforeEach(() => {
     assembleBodyStub = sandbox.stub(blockBodyAssembly, "assembleBody");
