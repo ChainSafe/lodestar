@@ -14,12 +14,12 @@ describe('[CLI] interop', function() {
   this.timeout(0);
   let logger: ILogger = new WinstonLogger();
   logger.silent = true;
-  let InteropCommand: any;
+  let DevCommand: any;
 
   before(function () {
     mockery.registerMock('libp2p', sinon.stub());
     mockery.enable({useCleanCache: true, warnOnReplace: false, warnOnUnregistered: false});
-    InteropCommand = require("../../../../src/cli/commands").InteropCommand;
+    DevCommand = require("../../../../src/cli/commands").DevCommand;
   });
 
   after(function () {
@@ -29,7 +29,7 @@ describe('[CLI] interop', function() {
 
 
   it('should be able to register', async () => {
-    const command = new InteropCommand();
+    const command = new DevCommand();
     const commandCount = program.commands.length;
     await expect(
       command.register(program)
@@ -38,7 +38,7 @@ describe('[CLI] interop', function() {
   });
 
   it('should throw error if missing quickstart and genesisTime and validatorCount', async () => {
-    const command = new InteropCommand();
+    const command = new DevCommand();
     await expect(
       command.action(
         {
