@@ -37,6 +37,7 @@
     "blockchain"
   ],
   "dependencies": {
+    "@chainsafe/bls": "^0.1.7",
     "@chainsafe/eth2.0-ssz-types": "^0.1.0",
     "@chainsafe/eth2.0-utils": "^0.0.1"
   },
