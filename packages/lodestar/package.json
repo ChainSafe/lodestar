@@ -45,13 +45,13 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/bit-utils": "^0.1.4",
+    "@chainsafe/bit-utils": "0.1.5",
     "@chainsafe/bls": "0.1.7",
     "@chainsafe/eth2.0-config": "^0.1.1",
     "@chainsafe/eth2.0-params": "^0.1.0",
-    "@chainsafe/eth2.0-types": "^0.1.1",
-    "@chainsafe/eth2.0-utils": "^0.0.1",
-    "@chainsafe/ssz": "0.5.2",
+    "@chainsafe/eth2.0-types": "^0.1.2",
+    "@chainsafe/eth2.0-utils": "^0.0.2",
+    "@chainsafe/ssz": "0.5.3",
     "@iarna/toml": "^2.2.3",
     "@nodeutils/defaults-deep": "^1.1.0",
     "@polkadot/util-crypto": "^0.93.1",
@@ -113,7 +113,7 @@
   },
   "devDependencies": {
     "@chainsafe/benchmark-utils": "^0.1.0",
-    "@chainsafe/eth2.0-spec-test-util": "0.4.1",
+    "@chainsafe/eth2.0-spec-test-util": "0.4.2",
     "@polkadot/ts": "^0.1.57",
     "@types/bn.js": "^4.11.4",
     "@types/buffer-xor": "^2.0.0",

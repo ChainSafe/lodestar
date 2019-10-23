@@ -655,19 +655,65 @@
   dependencies:
     assemblyscript "https://github.com/AssemblyScript/assemblyscript.git#5b510571f6ebfc5530d85412005059e4cf961a97"
 
-"@chainsafe/bit-utils@0.1.4", "@chainsafe/bit-utils@^0.1.4":
+"@chainsafe/bit-utils@0.1.4":
   version "0.1.4"
   resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.4.tgz#c7fcc20f8ea916b7767b82ce6fad389db675bd4e"
   integrity sha512-pT+XpjJKoO3+Zt3w0vVJftKzYPnW4ObtkXFQ49eZHlLbmJbZ0aSM1jxU1RjFmOyMYjDSMVlaPR311c8K7lXGJQ==
+
+"@chainsafe/bit-utils@0.1.5":
+  version "0.1.5"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.5.tgz#055b06e1e28544300caa07da9b45c736377d56a2"
+  integrity sha512-lhZaGUYuLyIcxrYRH/CA4U+wuOkC5guvBmn+y1HFifczT7K4U0CPcOFpt9ThBarevhCGvipFMBpCsUzUOcvo/g==
+  dependencies:
+    assert "^2.0.0"
 
 "@chainsafe/eth2-spec-tests@0.8.3":
   version "0.8.3"
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.8.3.tgz#5d165305bc3616fbc8b9c508d94f7a096950ccee"
   integrity sha512-3r2u9NNHAVVlLZuWzQzU3jndu8mNjh2RAiyNoTySthVdnWqQOHmgOsyPz8iy/atH9RiUj57gguEhEwcA4tkr/Q==
 
+"@chainsafe/eth2.0-spec-test-util@0.4.1":
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/eth2.0-spec-test-util/-/eth2.0-spec-test-util-0.4.1.tgz#9232fa1356fc9915d06c18356fb012d49d6c922e"
+  integrity sha512-ghhOhgpGW2LqOUrkJvB7LGJGhYrm1/gi3khKIl9EdHG8ORB1pnxbLEajuLNj4c4J1GBHTpScxS33dXjDUAzIgw==
+  dependencies:
+    "@chainsafe/eth2.0-utils" "^0.0.1"
+    "@chainsafe/ssz" "^0.5.2"
+    bn.js "^5.0.0"
+    camelcase "^5.3.1"
+    chai "^4.2.0"
+    deepmerge "^4.0.0"
+    js-yaml "^3.13.1"
+    mocha "^6.2.0"
+    v8-profiler-next "^1.1.1"
+
+"@chainsafe/eth2.0-utils@^0.0.1":
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/eth2.0-utils/-/eth2.0-utils-0.0.1.tgz#ea9429578e69c6d2e1be2279dbe346e734e0a76b"
+  integrity sha512-UJiPbLuarXrBLnEOQD/gdS2F0NEsTb20UY+Sgplk/8FZ/99xPuGG0vYI5z0kveDkK4e/vhwi6h4mlcRJXtxGOg==
+  dependencies:
+    "@chainsafe/as-sha256" "^0.1.3"
+    "@chainsafe/bit-utils" "0.1.4"
+    "@chainsafe/eth2.0-types" "^0.1.1"
+    "@chainsafe/ssz-type-schema" "^0.0.1"
+    bn.js "^5.0.0"
+    camelcase "^5.3.1"
+    js-yaml "^3.13.1"
+    snake-case "^2.1.0"
+
 "@chainsafe/milagro-crypto-js@0.1.3":
   version "0.1.3"
   resolved "https://registry.yarnpkg.com/@chainsafe/milagro-crypto-js/-/milagro-crypto-js-0.1.3.tgz#0813b5991f53e9573174637ce9ec96576218a09b"
+
+"@chainsafe/ssz-type-schema@^0.0.1":
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz-type-schema/-/ssz-type-schema-0.0.1.tgz#5b916df8e13dc7110440172e9309d22b44b20d79"
+  integrity sha512-UJh6u4n4UApz5WzZDAX7FX4ilDGzRmjX1wafbkGa5VxZKPaQaKB7e23XIKYKgY3PvoPUQ3uD+Ynw92nPR1xenQ==
+  dependencies:
+    "@chainsafe/bit-utils" "0.1.4"
+    "@types/bn.js" "^4.11.4"
+    assert "^2.0.0"
+    bn.js "^4.11.8"
 
 "@evocateur/libnpmaccess@^3.1.2":
   version "3.1.2"
