@@ -5,7 +5,7 @@ import {equals} from "@chainsafe/ssz";
 
 import {BeaconBlock, BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {stateTransition} from "../../../../../eth2.0-state-transition/src";
+import {stateTransition} from "@chainsafe/eth2.0-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {BlockSanityTestCase} from "./type";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";

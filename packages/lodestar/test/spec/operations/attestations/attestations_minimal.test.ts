@@ -5,7 +5,7 @@ import {equals} from "@chainsafe/ssz";
 
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import {processAttestation} from "../../../../../eth2.0-state-transition/src/block/operations";
+import {processAttestation} from "@chainsafe/eth2.0-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {ProcessAttestationTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";

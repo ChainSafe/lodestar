@@ -5,7 +5,7 @@ import {equals} from "@chainsafe/ssz";
 
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {processVoluntaryExit} from "../../../../../eth2.0-state-transition/src/block/operations";
+import {processVoluntaryExit} from "@chainsafe/eth2.0-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {ProcessVoluntaryExitTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
