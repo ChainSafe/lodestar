@@ -27,6 +27,7 @@ import {
   TransfersRepository,
   VoluntaryExitRepository
 } from "./repositories";
+import {AttestationDataRepository} from "./repositories/attestationsData";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
 
@@ -37,6 +38,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   public block: BlockRepository;
 
   public attestation: AttestationRepository;
+
+  public attestationData: AttestationDataRepository;
 
   public voluntaryExit: VoluntaryExitRepository;
 
@@ -55,7 +58,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.chain = new ChainRepository(this.config, this.db);
     this.state = new StateRepository(this.config, this.db, this.chain);
     this.block = new BlockRepository(this.config, this.db, this.chain);
-    this.attestation = new AttestationRepository(this.config, this.db);
+    this.attestationData = new AttestationDataRepository(this.config, this.db);
+    this.attestation = new AttestationRepository(this.config, this.db, this.attestationData);
     this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db);
     this.transfer = new TransfersRepository(this.config, this.db);
     this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db);

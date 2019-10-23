@@ -1,24 +1,50 @@
 import {Attestation, BeaconState} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
 import {OperationsModule} from "./abstract";
-import {aggregateAttestation, computeStartSlotOfEpoch, getAttestationDataSlot,} from "../../chain/stateTransition/util";
+import {
+  aggregateAttestation,
+  canBeAggregated,
+  computeStartSlotOfEpoch,
+  getAttestationDataSlot,
+} from "../../chain/stateTransition/util";
 import {AttestationRepository} from "../../db/api/beacon/repositories";
 import {clone, hashTreeRoot} from "@chainsafe/ssz";
 import {processAttestation} from "../../chain/stateTransition/block/operations";
+import {AttestationDataRepository} from "../../db/api/beacon/repositories/attestationsData";
 
 export class AttestationOperations extends OperationsModule<Attestation> {
   private readonly config: IBeaconConfig;
 
-  public constructor(db: AttestationRepository, {config}: {config: IBeaconConfig}) {
+  private readonly attestationDataDb: AttestationDataRepository;
+
+  public constructor(
+    db: AttestationRepository,
+    attestationDataDb: AttestationDataRepository,
+    {config}: {config: IBeaconConfig}
+  ) {
     super(db);
+    this.attestationDataDb = attestationDataDb;
     this.config = config;
   }
 
   public async receive(value: Attestation): Promise<void> {
-    const existingAttestation = await this.db.get(hashTreeRoot(value.data, this.config.types.AttestationData));
-    if(existingAttestation) {
-      value = aggregateAttestation(this.config, existingAttestation, value);
+    const attestationDataHash = hashTreeRoot(value.data, this.config.types.AttestationData);
+    const existingAttestationHashes = await this.attestationDataDb.get(
+      attestationDataHash
+    );
+    if(existingAttestationHashes) {
+      await Promise.all(existingAttestationHashes.map(async (attestationHash) => {
+        const existingAttestation = await this.db.get(attestationHash);
+        if(existingAttestation && canBeAggregated(this.config, existingAttestation, value)) {
+          const aggregated = aggregateAttestation(this.config, existingAttestation, value);
+          const existingAttestationHash = hashTreeRoot(existingAttestation, this.config.types.Attestation);
+          await Promise.all([
+            this.db.setUnderRoot(aggregated),
+            this.db.delete(existingAttestationHash),
+            this.attestationDataDb.removeAttestation(attestationDataHash, existingAttestationHash)
+          ]);
+        }
+      }));
     }
     return super.receive(value);
   }
@@ -37,6 +63,7 @@ export class AttestationOperations extends OperationsModule<Attestation> {
   }
 
   public async removeOld(state: BeaconState): Promise<void> {
+    //TODO: figure out how to clean attestatiodData->attestation mapping
     const finalizedEpochStartSlot = computeStartSlotOfEpoch(this.config, state.finalizedCheckpoint.epoch);
     const attestations: Attestation[] = await this.getAll();
     await this.remove(attestations.filter((a) => {
