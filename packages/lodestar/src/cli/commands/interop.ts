@@ -33,17 +33,17 @@ import {ValidatorClient} from "../../validator/nodejs";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {quickStartState} from "../../interop/state";
 
-interface IInteropCommandOptions {
+interface IDevCommandOptions {
   loggingLevel?: string;
   genesisTime?: string;
   validatorCount?: string;
-  quickStart?: string;
+  genesisState?: string;
   preset?: string;
   validators?: string;
   [key: string]: string;
 }
 
-export class InteropCommand implements ICliCommand {
+export class DevCommand implements ICliCommand {
   public node: BeaconNode;
 
   private validatorDir = "./validators";
@@ -56,9 +56,9 @@ export class InteropCommand implements ICliCommand {
     const command = commander
       .command("dev")
       .description("Start lodestar beacon node and certain amount of validator nodes")
-      .option("-t, --genesisTime", "genesis time of Beacon state", Date.now())
-      .option("-c, --validatorCount", "Number of validator for Beacon state", 8)
-      .option("-q, --quickStart [params]", "Start chain from known state")
+      .option("-t, --genesisTime [genesisTime]", "genesis time of Beacon state", Math.round(Date.now()/1000))
+      .option("-c, --validatorCount [validatorCount]", "Number of validator for Beacon state", 8)
+      .option("-s, --genesisState [params]", "Start chain from known state")
       // eslint-disable-next-line max-len
       .option("-v, --validators [range]", "Start validators, single number - validators 0-number, x,y - validators between x and y", 0)
       .option("-p, --preset [preset]", "Minimal/mainnet", "mainnet")
@@ -78,7 +78,7 @@ export class InteropCommand implements ICliCommand {
     generateCommanderOptions(command, BeaconNodeOptions);
   }
 
-  public async action(options: IInteropCommandOptions, logger: ILogger): Promise<void> {
+  public async action(options: IDevCommandOptions, logger: ILogger): Promise<void> {
     let conf: Partial<IBeaconNodeOptions> = {};
 
     //merge config file
@@ -122,21 +122,26 @@ export class InteropCommand implements ICliCommand {
     } else {
       peerId = createPeerId();
     }
+    const network: any = conf.network || {};
+    const multiaddrs = network.multiaddrs || [];
+    const bootnodes = network.bootnodes || [];
     const libp2p = await Promise.resolve(peerId)
-      .then((peerId) => initializePeerInfo(peerId, conf.network.multiaddrs))
-      .then((peerInfo) => new NodejsNode({peerInfo, bootnodes: conf.network.bootnodes}));
+      .then((peerId) => initializePeerInfo(peerId, multiaddrs))
+      .then((peerInfo) => new NodejsNode({peerInfo, bootnodes: bootnodes}));
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
     const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
     let state: BeaconState;
-    if (options.quickStart) {
-      this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier(), libp2p});
-      state = quickStartOptionToState(config, tree, options.quickStart);
+    if (options.genesisState) {
+      state = quickStartOptionToState(config, tree, options.genesisState);
     } else if (options.genesisTime && options.validatorCount) {
+      logger.info(`Starting node with genesisTime ${new Date(parseInt(options.genesisTime)*1000)} and ${options.validatorCount} validators.`);
       state = quickStartState(config, tree, parseInt(options.genesisTime), parseInt(options.validatorCount));
     } else {
       throw new Error("Missing either --quickstart or --genesisTime and --validatorCount flag");
     }
+    this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier(), libp2p});
     await this.node.chain.initializeBeaconChain(state, tree);
+
     const targetSlot = computeStartSlotOfEpoch(
       config,
       computeEpochOfSlot(config, getCurrentSlot(config, state.genesisTime))
