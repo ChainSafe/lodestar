@@ -9,12 +9,12 @@ import {
   ValidatorIndex,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {intToBytes} from "@chainsafe/eth2.0-utils";
+import {intToBytes,intDiv} from "@chainsafe/eth2.0-utils";
 
 import {getCurrentEpoch} from "./epoch";
 import {getSeed} from "./seed";
 import {getCommitteeCount, getStartShard, getCrosslinkCommittee} from "./committee";
-import {intDiv} from "@chainsafe/eth2.0-utils";
+
 
 
 /**

@@ -10,8 +10,8 @@ import {
   Hash,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {bytesToBN, intToBytes} from "@chainsafe/eth2.0-utils";
-import {intDiv, hash} from "@chainsafe/eth2.0-utils";
+import {bytesToBN, intToBytes,intDiv, hash} from "@chainsafe/eth2.0-utils";
+
 
 
 /**
