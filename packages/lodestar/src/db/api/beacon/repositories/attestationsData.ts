@@ -1,6 +1,6 @@
 import {Hash} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {BulkRepository, Id, Repository} from "../repository";
+import {Id, Repository} from "../repository";
 import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../../schema";
 
