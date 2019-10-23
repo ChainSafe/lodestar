@@ -15,11 +15,11 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {DomainType,} from "../constants";
-import {isSorted} from "@chainsafe/eth2.0-utils";
+import {isSorted,intDiv} from "@chainsafe/eth2.0-utils";
 import {computeStartSlotOfEpoch} from "./epoch";
 import {getDomain} from "./domain";
 import {getCommitteeCount, getCrosslinkCommittee, getStartShard} from "./committee";
-import {intDiv} from "@chainsafe/eth2.0-utils";
+
 
 
 /**
