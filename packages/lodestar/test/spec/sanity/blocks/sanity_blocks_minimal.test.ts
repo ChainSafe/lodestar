@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {equals, clone} from "@chainsafe/ssz";
 import {BeaconBlock, BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import {stateTransition} from "../../../../../eth2.0-state-transition/src";
+import {stateTransition} from "@chainsafe/eth2.0-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BlockSanityTestCase} from "./type";
