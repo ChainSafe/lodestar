@@ -4,7 +4,6 @@
 
 import {clone, equals, hashTreeRoot} from "@chainsafe/ssz";
 import bls, {aggregateSignatures} from "@chainsafe/bls";
-import {BitList} from "@chainsafe/bit-utils";
 import {
   Attestation,
   AttestationData,
@@ -20,6 +19,7 @@ import {computeStartSlotOfEpoch} from "./epoch";
 import {getDomain} from "./domain";
 import {getCommitteeCount, getCrosslinkCommittee, getStartShard} from "./committee";
 import {intDiv} from "@chainsafe/eth2.0-utils";
+import {BitList} from "@chainsafe/bit-utils";
 
 
 /**
@@ -151,6 +151,19 @@ export function isValidAttestationSlot(
   );
 }
 
+export function canBeAggregated(
+  config: IBeaconConfig,
+  attestation1: Attestation,
+  attestation2: Attestation): boolean {
+  if(!equals(attestation1.data, attestation2.data, config.types.AttestationData)) {
+    return false;
+  }
+  if(attestation1.aggregationBits.overlaps(attestation2.aggregationBits)) {
+    return false;
+  }
+  return true;
+}
+
 /**
  * Aggregates two attestation.
  * @param config
@@ -161,22 +174,9 @@ export function aggregateAttestation(
   config: IBeaconConfig,
   attestation1: Attestation,
   attestation2: Attestation
-): Attestation {
-  const aggregatedAttestation: Attestation = clone(attestation2, config.types.Attestation);
-  let hasMoreSignatures = false;
-  for(let i = 0; i < attestation1.aggregationBits.bitLength; i++) {
-    if(attestation1.aggregationBits.getBit(i) !== attestation2.aggregationBits.getBit(i)) {
-      aggregatedAttestation.aggregationBits.setBit(i, true);
-      hasMoreSignatures = true;
-    }
-  }
-  for(let i = 0; i < attestation1.custodyBits.bitLength; i++) {
-    if(attestation1.custodyBits.getBit(i)) {
-      aggregatedAttestation.custodyBits.setBit(i, true);
-    }
-  }
-  if(hasMoreSignatures) {
-    aggregatedAttestation.signature = aggregateSignatures([attestation1.signature, attestation2.signature]);
-  }
+): Attestation  {
+  const aggregatedAttestation: Attestation = clone(attestation1, config.types.Attestation);
+  aggregatedAttestation.aggregationBits.or(attestation2.aggregationBits);
+  aggregatedAttestation.signature = aggregateSignatures([attestation1.signature, attestation2.signature]);
   return aggregatedAttestation;
 }
