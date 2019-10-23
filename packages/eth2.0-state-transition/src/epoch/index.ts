@@ -12,6 +12,14 @@ import {processJustificationAndFinalization} from "./justification";
 import {processRegistryUpdates} from "./registryUpdates";
 import {processSlashings} from "./slashings";
 
+export * from "./balanceUpdates";
+export * from "./crosslinks";
+export * from "./finalUpdates";
+export * from "./justification";
+export * from "./registryUpdates";
+export * from "./slashings";
+
+
 export function processEpoch(config: IBeaconConfig, state: BeaconState): BeaconState {
 
   // Justification
