@@ -3,9 +3,9 @@ import BN from "bn.js";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import * as utils from "../../../../../eth2.0-state-transition/src/util";
-import {initiateValidatorExit} from "../../../../../eth2.0-state-transition/src/util";
-import {processRegistryUpdates} from "../../../../../eth2.0-state-transition/src/epoch/registryUpdates";
+import * as utils from "../../../../src/util";
+import {initiateValidatorExit} from "../../../../src/util";
+import {processRegistryUpdates} from "../../../../src/epoch/registryUpdates";
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";
 

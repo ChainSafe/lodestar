@@ -9,9 +9,9 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   FAR_FUTURE_EPOCH,
 } from "../../../../../src/constants";
-import * as utils from "../../../../../../eth2.0-state-transition/src/util";
-import {computeEpochOfSlot} from "../../../../../../eth2.0-state-transition/src/util";
-import {processTransfer} from "../../../../../../eth2.0-state-transition/src/block/operations";
+import * as utils from "../../../../../src/util";
+import {computeEpochOfSlot} from "../../../../../src/util";
+import {processTransfer} from "../../../../../src/block/operations";
 
 import {generateEmptyTransfer} from "../../../../utils/transfer";
 import {generateValidator} from "../../../../utils/validator";

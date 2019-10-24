@@ -3,8 +3,8 @@ import {expect} from "chai";
 import sinon from "sinon";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import * as utils from "../../../../../../eth2.0-state-transition/src/util";
-import {processAttesterSlashing} from "../../../../../../eth2.0-state-transition/src/block/operations";
+import * as utils from "../../../../../src/util";
+import {processAttesterSlashing} from "../../../../../src/block/operations";
 import {generateEmptyAttesterSlashing} from "../../../../utils/slashings";
 
 describe('process block - attester slashings', function () {

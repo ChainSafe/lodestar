@@ -5,18 +5,18 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {Crosslink} from "@chainsafe/eth2.0-types";
 import  * as processProposerSlashing
-  from "../../../../../../eth2.0-state-transition/src/block/operations/proposerSlashing";
+  from "../../../../../src/block/operations/proposerSlashing";
 import  * as processAttesterSlashing
-  from "../../../../../../eth2.0-state-transition/src/block/operations/attesterSlashing";
+  from "../../../../../src/block/operations/attesterSlashing";
 import  * as processAttestation
-  from "../../../../../../eth2.0-state-transition/src/block/operations/attestation";
+  from "../../../../../src/block/operations/attestation";
 import  * as processDeposit
-  from "../../../../../../eth2.0-state-transition/src/block/operations/deposit";
+  from "../../../../../src/block/operations/deposit";
 import  * as processVoluntaryExit
-  from "../../../../../../eth2.0-state-transition/src/block/operations/voluntaryExit";
+  from "../../../../../src/block/operations/voluntaryExit";
 import  * as processTransfer
-  from "../../../../../../eth2.0-state-transition/src/block/operations/transfer";
-import {processOperations} from "../../../../../../eth2.0-state-transition/src/block/operations";
+  from "../../../../../src/block/operations/transfer";
+import {processOperations} from "../../../../../src/block/operations";
 
 import {generateState} from "../../../../utils/state";
 import {generateEmptyBlock} from "../../../../utils/block";

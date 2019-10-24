@@ -6,7 +6,7 @@ import {
   getShardDelta,
   computeCommittee,
   getCrosslinkCommittee,
-} from "../../../../../eth2.0-state-transition/src/util";
+} from "../../../../src/util";
 
 
 /*

@@ -3,11 +3,11 @@ import sinon from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import * as utils1 from "../../../../../eth2.0-state-transition/src/util";
-import * as utils2 from "../../../../../eth2.0-state-transition/src/epoch/util";
+import * as utils1 from "../../../../src/util";
+import * as utils2 from "../../../../src/epoch/util";
 import {generateState} from "../../../utils/state";
 import {processJustificationAndFinalization}
-  from "../../../../../eth2.0-state-transition/src/epoch/justification";
+  from "../../../../src/epoch/justification";
 import { BitVector } from "@chainsafe/bit-utils";
 
 describe('process epoch - justification and finalization', function () {
