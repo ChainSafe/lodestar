@@ -3,10 +3,10 @@ import {expect} from "chai";
 import sinon from "sinon";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import * as utils from "../../../../../../eth2.0-state-transition/src/util";
+import * as utils from "../../../../../src/util";
 import {generateState} from "../../../../utils/state";
 import {generateValidators} from "../../../../utils/validator";
-import {getBaseReward} from "../../../../../../eth2.0-state-transition/src/epoch/balanceUpdates/baseReward";
+import {getBaseReward} from "../../../../../src/epoch/balanceUpdates/baseReward";
 import {bnSqrt} from "@chainsafe/eth2.0-utils";
 
 describe('process epoch - balance updates', function () {

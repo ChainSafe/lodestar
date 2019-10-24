@@ -4,8 +4,8 @@ import sinon from "sinon";
 import {restore, rewire} from "@chainsafe/bls";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {processProposerSlashing} from "../../../../../../eth2.0-state-transition/src/block/operations";
-import * as utils from "../../../../../../eth2.0-state-transition/src/util";
+import {processProposerSlashing} from "../../../../../src/block/operations";
+import * as utils from "../../../../../src/util";
 
 import {generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {generateValidator} from "../../../../utils/validator";

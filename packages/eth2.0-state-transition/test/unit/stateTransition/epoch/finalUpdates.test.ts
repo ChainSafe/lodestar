@@ -4,8 +4,8 @@ import {expect} from "chai";
 import * as hashTreeRoot from "@chainsafe/ssz";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import * as utils from "../../../../../eth2.0-state-transition/src/util";
-import {processFinalUpdates} from "../../../../../eth2.0-state-transition/src/epoch/finalUpdates";
+import * as utils from "../../../../src/util";
+import {processFinalUpdates} from "../../../../src/epoch/finalUpdates";
 
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";

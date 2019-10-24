@@ -3,17 +3,17 @@ import sinon from "sinon";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {GENESIS_SLOT} from "../../../../src/constants";
-import {processEpoch} from "../../../../../eth2.0-state-transition/src/epoch";
-import * as justificationUtils from "../../../../../eth2.0-state-transition/src/epoch/justification";
-import {processJustificationAndFinalization} from "../../../../../eth2.0-state-transition/src/epoch/justification";
-import * as crosslinkUtils from "../../../../../eth2.0-state-transition/src/epoch/crosslinks";
-import * as balanceUpdateUtils from "../../../../../eth2.0-state-transition/src/epoch/balanceUpdates";
-import {processRewardsAndPenalties} from "../../../../../eth2.0-state-transition/src/epoch/balanceUpdates";
-import * as registryUpdateUtils from "../../../../../eth2.0-state-transition/src/epoch/registryUpdates";
-import * as slashingUtils from "../../../../../eth2.0-state-transition/src/epoch/slashings";
-import * as finalUtils from "../../../../../eth2.0-state-transition/src/epoch/finalUpdates";
-import {processRegistryUpdates} from "../../../../../eth2.0-state-transition/src/epoch/registryUpdates";
-import {processFinalUpdates} from "../../../../../eth2.0-state-transition/src/epoch/finalUpdates";
+import {processEpoch} from "../../../../src/epoch";
+import * as justificationUtils from "../../../../src/epoch/justification";
+import {processJustificationAndFinalization} from "../../../../src/epoch/justification";
+import * as crosslinkUtils from "../../../../src/epoch/crosslinks";
+import * as balanceUpdateUtils from "../../../../src/epoch/balanceUpdates";
+import {processRewardsAndPenalties} from "../../../../src/epoch/balanceUpdates";
+import * as registryUpdateUtils from "../../../../src/epoch/registryUpdates";
+import * as slashingUtils from "../../../../src/epoch/slashings";
+import * as finalUtils from "../../../../src/epoch/finalUpdates";
+import {processRegistryUpdates} from "../../../../src/epoch/registryUpdates";
+import {processFinalUpdates} from "../../../../src/epoch/finalUpdates";
 import {generateState} from "../../../utils/state";
 
 describe('process epoch - crosslinks', function () {

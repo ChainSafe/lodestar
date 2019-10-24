@@ -4,10 +4,10 @@ import sinon from "sinon";
 import {restore, rewire} from "@chainsafe/bls";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {processRandao} from "../../../../../eth2.0-state-transition/src/block/randao";
-import * as utils from "../../../../../eth2.0-state-transition/src/util";
+import {processRandao} from "../../../../src/block/randao";
+import * as utils from "../../../../src/util";
 
-import {getCurrentEpoch} from "../../../../../eth2.0-state-transition/src/util";
+import {getCurrentEpoch} from "../../../../src/util";
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";

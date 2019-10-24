@@ -4,7 +4,7 @@ import {serialize} from "@chainsafe/ssz";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {Eth1Data} from "@chainsafe/eth2.0-types";
-import {processEth1Data} from "../../../../../eth2.0-state-transition/src/block/eth1Data";
+import {processEth1Data} from "../../../../src/block/eth1Data";
 
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";

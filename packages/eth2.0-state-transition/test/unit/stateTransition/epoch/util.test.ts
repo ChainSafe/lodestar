@@ -9,12 +9,12 @@ import {
   getMatchingSourceAttestations,
   getMatchingTargetAttestations,
   getUnslashedAttestingIndices
-} from "../../../../../eth2.0-state-transition/src/epoch/util";
-import * as utils from "../../../../../eth2.0-state-transition/src/util";
-import {getAttestationDataSlot} from "../../../../../eth2.0-state-transition/src/util";
+} from "../../../../src/epoch/util";
+import * as utils from "../../../../src/util";
+import {getAttestationDataSlot} from "../../../../src/util";
 import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
 import {generateEmptyAttestation} from "../../../utils/attestation";
-import {getAttestingIndices} from "../../../../../eth2.0-state-transition/src/util";
+import {getAttestingIndices} from "../../../../src/util";
 import {generateValidator} from "../../../utils/validator";
 import {generateState} from "../../../utils/state";
 

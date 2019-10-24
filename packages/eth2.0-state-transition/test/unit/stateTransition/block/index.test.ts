@@ -3,11 +3,11 @@ import {expect} from "chai";
 import sinon from "sinon";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import * as processEth1Data from "../../../../../eth2.0-state-transition/src/block/eth1Data";
-import * as processBlockHeader from "../../../../../eth2.0-state-transition/src/block/blockHeader";
-import * as processRandao from "../../../../../eth2.0-state-transition/src/block/randao";
-import * as processOperations from "../../../../../eth2.0-state-transition/src/block/operations";
-import {processBlock} from "../../../../../eth2.0-state-transition/src";
+import * as processEth1Data from "../../../../src/block/eth1Data";
+import * as processBlockHeader from "../../../../src/block/blockHeader";
+import * as processRandao from "../../../../src/block/randao";
+import * as processOperations from "../../../../src/block/operations";
+import {processBlock} from "../../../../src";
 import {generateEmptyBlock} from "../../../utils/block";
 
 describe('process block', function () {

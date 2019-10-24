@@ -7,8 +7,8 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   FAR_FUTURE_EPOCH,
 } from "../../../../../src/constants";
-import * as utils from "../../../../../../eth2.0-state-transition/src/util";
-import {processVoluntaryExit} from "../../../../../../eth2.0-state-transition/src/block/operations";
+import * as utils from "../../../../../src/util";
+import {processVoluntaryExit} from "../../../../../src/block/operations";
 
 import {generateValidator} from "../../../../utils/validator";
 import {generateEmptyVoluntaryExit} from "../../../../utils/voluntaryExits";
