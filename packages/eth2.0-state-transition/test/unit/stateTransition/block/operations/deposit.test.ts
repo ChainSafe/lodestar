@@ -5,7 +5,7 @@ import BN from "bn.js";
 import {expect} from "chai";
 import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import * as utils from "../../../../../../eth2.0-state-transition/src/util";
+import * as utils from "../../../../../src/util";
 import {bnMin} from "@chainsafe/eth2.0-utils";
 import {generateState} from "../../../../utils/state";
 import {generateDeposit} from "../../../../utils/deposit";
@@ -34,7 +34,7 @@ describe("process block - deposits", function () {
     getBeaconProposeIndexStub = sandbox.stub(utils, "getBeaconProposerIndex");
     blsStub.resetHistory();
     verifyMerkleBranchStub.resetHistory();
-    processDeposit = require("../../../../../../eth2.0-state-transition/src/block/operations").processDeposit;
+    processDeposit = require("../../../../../src/block/operations").processDeposit;
   });
 
   afterEach(() => {

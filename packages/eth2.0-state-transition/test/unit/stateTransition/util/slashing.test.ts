@@ -3,7 +3,7 @@ import {assert} from "chai";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {Epoch, Slot} from "@chainsafe/eth2.0-types";
 import {randBetween} from "../../../utils/misc";
-import {isSlashableAttestationData} from "../../../../../eth2.0-state-transition/src/util";
+import {isSlashableAttestationData} from "../../../../src/util";
 import {generateAttestationData} from "../../../utils/attestation";
 
 

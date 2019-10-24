@@ -3,15 +3,15 @@ import {expect} from "chai";
 import sinon from "sinon";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import * as utilsEpoch from "../../../../../../eth2.0-state-transition/src/epoch/util";
-import * as utils from "../../../../../../eth2.0-state-transition/src/util";
+import * as utilsEpoch from "../../../../../src/epoch/util";
+import * as utils from "../../../../../src/util";
 import * as baseReward
-  from "../../../../../../eth2.0-state-transition/src/epoch/balanceUpdates/baseReward";
+  from "../../../../../src/epoch/balanceUpdates/baseReward";
 
 import {generateState} from "../../../../utils/state";
 import {generateValidators} from "../../../../utils/validator";
 import {getAttestationDeltas}
-  from "../../../../../../eth2.0-state-transition/src/epoch/balanceUpdates/attestation";
+  from "../../../../../src/epoch/balanceUpdates/attestation";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 
 

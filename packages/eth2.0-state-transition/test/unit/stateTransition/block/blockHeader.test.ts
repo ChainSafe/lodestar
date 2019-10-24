@@ -7,9 +7,9 @@ import {signingRoot} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {BeaconBlockHeader} from "@chainsafe/eth2.0-types";
 import {EMPTY_SIGNATURE} from "../../../../src/constants";
-import * as utils from "../../../../../eth2.0-state-transition/src/util";
-import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../../eth2.0-state-transition/src/util";
-import {processBlockHeader} from "../../../../../eth2.0-state-transition/src/block/blockHeader";
+import * as utils from "../../../../src/util";
+import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../src/util";
+import {processBlockHeader} from "../../../../src/block/blockHeader";
 
 import {generateState} from "../../../utils/state";
 import {generateEmptyBlock} from "../../../utils/block";

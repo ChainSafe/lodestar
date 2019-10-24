@@ -6,7 +6,7 @@ import {
   getActiveValidatorIndices,
   isActiveValidator,
   isSlashableValidator,
-} from "../../../../../eth2.0-state-transition/src/util";
+} from "../../../../src/util";
 
 import {randBetween} from "../../../utils/misc";
 import {generateValidator} from "../../../utils/validator";

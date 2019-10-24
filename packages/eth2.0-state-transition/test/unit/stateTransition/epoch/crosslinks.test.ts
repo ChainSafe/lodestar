@@ -3,15 +3,15 @@ import {expect} from "chai";
 import sinon from "sinon";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import * as utils from "../../../../../eth2.0-state-transition/src/util";
+import * as utils from "../../../../src/util";
 import {
   getCrosslinkCommittee,
   getCommitteeCount,
   getStartShard
-} from "../../../../../eth2.0-state-transition/src/util";
-import * as epochUtils from "../../../../../eth2.0-state-transition/src/epoch/util";
-import {getWinningCrosslinkAndAttestingIndices} from "../../../../../eth2.0-state-transition/src/epoch/util";
-import {processCrosslinks} from "../../../../../eth2.0-state-transition/src/epoch/crosslinks";
+} from "../../../../src/util";
+import * as epochUtils from "../../../../src/epoch/util";
+import {getWinningCrosslinkAndAttestingIndices} from "../../../../src/epoch/util";
+import {processCrosslinks} from "../../../../src/epoch/crosslinks";
 import {generateEmptyCrosslink} from "../../../utils/crosslink";
 import {generateState} from "../../../utils/state";
 

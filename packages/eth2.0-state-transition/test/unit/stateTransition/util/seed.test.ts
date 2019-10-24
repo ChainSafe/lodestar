@@ -8,7 +8,7 @@ import {
 import {
   getRandaoMix,
   getSeed,
-} from "../../../../../eth2.0-state-transition/src/util";
+} from "../../../../src/util";
 
 import { generateState } from "../../../utils/state";
 

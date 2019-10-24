@@ -7,7 +7,7 @@ import {
   increaseBalance,
   decreaseBalance,
   getTotalBalance,
-} from "../../../../../eth2.0-state-transition/src/util";
+} from "../../../../src/util";
 
 import {generateValidators} from "../../../utils/validator";
 import {generateState} from "../../../utils/state";
