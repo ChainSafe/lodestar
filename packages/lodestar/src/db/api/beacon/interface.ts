@@ -58,13 +58,20 @@ export interface IBeaconDb {
   getValidatorIndex(publicKey: BLSPubkey): Promise<ValidatorIndex | null>;
 
   /**
-   * Set the head of the chain
+   * Stores block and state and set them as chain head
    */
-  setChainHeadRoots(
-    blockRoot: Hash,
-    stateRoot: Hash,
-    block?: BeaconBlock,
-    state?: BeaconState
+  setChainHead(
+    block: BeaconBlock,
+    state: BeaconState
   ): Promise<void>;
 
+  /**
+   * Fetches block and state by root and sets them as chain head
+   * @param blockRoot
+   * @param stateRoot
+   */
+  updateChainHead(
+    blockRoot: Hash,
+    stateRoot: Hash
+  ): Promise<void>;
 }

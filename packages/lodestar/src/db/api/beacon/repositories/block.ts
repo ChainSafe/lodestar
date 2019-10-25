@@ -1,6 +1,6 @@
 import {BeaconBlock, Hash, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {serialize} from "@chainsafe/ssz";
+import {AnyContainerType, serialize, signingRoot} from "@chainsafe/ssz";
 
 import {Repository} from "../repository";
 import {ChainRepository} from "./chain";
@@ -15,8 +15,20 @@ export class BlockRepository extends Repository<BeaconBlock> {
     config: IBeaconConfig,
     db: IDatabaseController,
     chain: ChainRepository) {
-    super(config, db, Bucket.state, config.types.BeaconBlock);
+    super(config, db, Bucket.block, config.types.BeaconBlock);
     this.chain = chain;
+  }
+
+  public async set(id: Hash, value: BeaconBlock): Promise<void> {
+    await Promise.all([
+      this.db.put(encodeKey(Bucket.blockSlotRefs, value.slot), id),
+      this.db.put(encodeKey(Bucket.blockRootRefs, id), serialize(value.slot, this.config.types.Slot)),
+      super.set(id, value)
+    ]);
+  }
+
+  public async setUnderRoot(block: BeaconBlock): Promise<void> {
+    await this.set(signingRoot(block, this.type as AnyContainerType), block);
   }
 
   public async getFinalizedBlock(): Promise<BeaconBlock | null> {
@@ -32,7 +44,7 @@ export class BlockRepository extends Repository<BeaconBlock> {
   }
 
   public async getBlockBySlot(slot: Slot): Promise<BeaconBlock | null> {
-    const root = await this.chain.getBlockRoot(slot);
+    const root = await this.db.get(encodeKey(Bucket.blockSlotRefs, slot));
     if (root === null) {
       return null;
     }
