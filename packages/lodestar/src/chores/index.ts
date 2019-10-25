@@ -3,7 +3,7 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db/api";
 import {IBeaconChain} from "../chain";
 import {Checkpoint} from "@chainsafe/eth2.0-types";
-import {ArchiveBlocks} from "./tasks/arhiveBlocks";
+import {ArchiveBlocksTask} from "./tasks/arhiveBlocks";
 import {ILogger} from "../logger";
 
 export interface IChoreModules {
@@ -38,7 +38,7 @@ export class ChoreService implements IService {
   }
 
   private handleFinalizedCheckpointChores = async(finalizedCheckpoint: Checkpoint) => {
-    new ArchiveBlocks(this.config, {db: this.db, logger: this.logger}, finalizedCheckpoint).run();
+    new ArchiveBlocksTask(this.config, {db: this.db, logger: this.logger}, finalizedCheckpoint).run();
   };
 
 }

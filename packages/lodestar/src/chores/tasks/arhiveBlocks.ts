@@ -13,7 +13,7 @@ export interface IArchiveBlockModules {
 /**
  * Archives finalized blocks from active bucket to archive bucket.
  */
-export class ArchiveBlocks implements ITask {
+export class ArchiveBlocksTask implements ITask {
 
   private readonly db: IBeaconDb;
   private readonly logger: ILogger;
