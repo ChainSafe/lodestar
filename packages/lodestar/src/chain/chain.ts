@@ -17,14 +17,14 @@ import {IBeaconMetrics} from "../metrics";
 
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
 
-import {processSlots, stateTransition} from "@chainsafe/eth2.0-state-transition";
-import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
-import {
+import {processSlots, stateTransition,
   computeEpochOfSlot,
   getAttestationDataSlot,
   getAttestingIndices,
   isActiveValidator
-} from "@chainsafe/eth2.0-state-transition";
+  ,getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
+import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
+
 import {ChainEventEmitter, IBeaconChain} from "./interface";
 import {processSortedDeposits} from "../util/deposits";
 import {IChainOptions} from "./options";
@@ -34,7 +34,7 @@ import fs from "fs";
 import {sleep} from "../util/sleep";
 import {AsyncQueue, queue} from "async";
 import FastPriorityQueue from "fastpriorityqueue";
-import {getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
+
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "../util/serialization";
 
