@@ -73,6 +73,9 @@ Eth2 validator client implementation
 ## Contributors
 Read our [contributors document](/CONTRIBUTING.md), [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or talk to us on our [discord](https://discord.gg/yjyvFRP)!
 
+## Meeting Notes
+Feel free to check out our meeting notes on [HackMD] (https://hackmd.io/@yBpKEsxORheI8AJoIiZj1Q/Hk_b8XfcV/https%3A%2F%2Fhackmd.io%2Fc%2FHk_b8XfcV%2Fedit%3Fedit?type=book)
+
 ## Donations
 We are a local group of Toronto open source developers. As such, all of our open source work is funded by grants. We all take the time out of our hectic lives to contribute to the Ethereum ecosystem.
 If you want to donate, you can send us ETH at the following address: 0xBceDE714283f348EBB3e5cBaF8A947Cab3C8bE8d
