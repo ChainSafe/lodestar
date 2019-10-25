@@ -18,7 +18,6 @@ import {
   VoluntaryExitRepository
 } from "./repositories";
 import {BlockArchiveRepository} from "./repositories/blockArhive";
-import {hashTreeRoot} from "@chainsafe/ssz";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
 
@@ -28,7 +27,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   public block: BlockRepository;
 
-  public blockArhiver: BlockArchiveRepository;
+  public blockArchive: BlockArchiveRepository;
 
   public attestation: AttestationRepository;
 
@@ -49,7 +48,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.chain = new ChainRepository(this.config, this.db);
     this.state = new StateRepository(this.config, this.db, this.chain);
     this.block = new BlockRepository(this.config, this.db, this.chain);
-    this.blockArhiver = new BlockArchiveRepository(this.config, this.db);
+    this.blockArchive = new BlockArchiveRepository(this.config, this.db);
     this.attestation = new AttestationRepository(this.config, this.db);
     this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db);
     this.transfer = new TransfersRepository(this.config, this.db);

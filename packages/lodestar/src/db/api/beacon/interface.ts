@@ -22,6 +22,7 @@ import {
   TransfersRepository,
   VoluntaryExitRepository
 } from "./repositories";
+import {BlockArchiveRepository} from "./repositories/blockArhive";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -35,6 +36,8 @@ export interface IBeaconDb {
   state: StateRepository;
 
   block: BlockRepository;
+
+  blockArchive: BlockArchiveRepository;
 
   attestation: AttestationRepository;
 
