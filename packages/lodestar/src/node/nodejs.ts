@@ -4,7 +4,6 @@
 
 import deepmerge from "deepmerge";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
 import {BeaconDb, LevelDbController} from "../db";
 import defaultConf, {IBeaconNodeOptions} from "./options";
 import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
@@ -18,6 +17,7 @@ import {ILogger} from "../logger";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 import {ApiService} from "../api";
 import {ReputationStore} from "../sync/IReputation";
+import {ChoreService} from "../chores";
 
 export interface IService {
   start(): Promise<void>;
@@ -49,6 +49,8 @@ export class BeaconNode {
   public api: IService;
   public sync: Sync;
   public reps: ReputationStore;
+  public chores: ChoreService;
+
   private logger: ILogger;
 
   public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, eth1, libp2p}: IBeaconNodeModules) {
@@ -122,6 +124,14 @@ export class BeaconNode {
         eth1: this.eth1
       }
     );
+    this.chores = new ChoreService(
+      this.config,
+      {
+        db: this.db,
+        chain: this.chain,
+        logger: this.logger.child(this.conf.logger.chores)
+      }
+    );
 
   }
 
@@ -136,9 +146,11 @@ export class BeaconNode {
     await this.opPool.start();
     this.sync.start();
     await this.api.start();
+    await this.chores.start();
   }
 
   public async stop(): Promise<void> {
+    await this.chores.stop();
     await this.api.stop();
     await this.sync.stop();
     await this.opPool.stop();
