@@ -58,7 +58,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.merkleTree = new MerkleTreeRepository(this.config, this.db);
   }
 
-  public async setChainHead(
+  public async storeChainHead(
     block: BeaconBlock,
     state: BeaconState
   ): Promise<void> {

@@ -211,7 +211,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const blockRoot = signingRoot(genesisBlock, this.config.types.BeaconBlock);
     this.latestState = genesisState;
     await Promise.all([
-      this.db.setChainHead(genesisBlock, genesisState),
+      this.db.storeChainHead(genesisBlock, genesisState),
       this.db.chain.setJustifiedBlockRoot(blockRoot),
       this.db.chain.setFinalizedBlockRoot(blockRoot),
       this.db.chain.setJustifiedStateRoot(stateRoot),
@@ -321,7 +321,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     }
     this.latestState = newState;
     // On successful transition, update system state
-    await this.db.setChainHead(block, newState);
+    await this.db.storeChainHead(block, newState);
     this.forkChoice.addBlock(block.slot, blockRoot, block.parentRoot);
     // await this.applyForkChoiceRule();
     await this.updateDepositMerkleTree(newState);

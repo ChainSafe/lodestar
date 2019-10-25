@@ -63,7 +63,7 @@ export interface IBeaconDb {
   /**
    * Stores block and state and set them as chain head
    */
-  setChainHead(
+  storeChainHead(
     block: BeaconBlock,
     state: BeaconState
   ): Promise<void>;
