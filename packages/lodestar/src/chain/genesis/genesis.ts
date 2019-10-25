@@ -23,9 +23,14 @@ import {
   SECONDS_PER_DAY,
   ZERO_HASH,
 } from "../../constants";
-import {getActiveValidatorIndices, getCompactCommitteesRoot, getTemporaryBlockHeader} from "@chainsafe/eth2.0-state-transition";
+import {
+  getActiveValidatorIndices,
+  getCompactCommitteesRoot,
+  getTemporaryBlockHeader,
+  processDeposit
+} from "@chainsafe/eth2.0-state-transition";
 import {hashTreeRoot} from "@chainsafe/ssz";
-import {processDeposit} from "@chainsafe/eth2.0-state-transition";
+
 import {createValue} from "../../util/createValue";
 import {bnMin} from "@chainsafe/eth2.0-utils";
 
