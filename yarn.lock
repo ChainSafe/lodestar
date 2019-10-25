@@ -660,13 +660,6 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.4.tgz#c7fcc20f8ea916b7767b82ce6fad389db675bd4e"
   integrity sha512-pT+XpjJKoO3+Zt3w0vVJftKzYPnW4ObtkXFQ49eZHlLbmJbZ0aSM1jxU1RjFmOyMYjDSMVlaPR311c8K7lXGJQ==
 
-"@chainsafe/bit-utils@^0.1.5":
-  version "0.1.5"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.5.tgz#055b06e1e28544300caa07da9b45c736377d56a2"
-  integrity sha512-lhZaGUYuLyIcxrYRH/CA4U+wuOkC5guvBmn+y1HFifczT7K4U0CPcOFpt9ThBarevhCGvipFMBpCsUzUOcvo/g==
-  dependencies:
-    assert "^2.0.0"
-
 "@chainsafe/eth2-spec-tests@0.8.3":
   version "0.8.3"
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.8.3.tgz#5d165305bc3616fbc8b9c508d94f7a096950ccee"
