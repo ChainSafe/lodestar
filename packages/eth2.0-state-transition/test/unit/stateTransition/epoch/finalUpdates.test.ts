@@ -38,7 +38,7 @@ describe('process epoch - final updates', function () {
     const state = generateState();
     state.slot = config.params.SLOTS_PER_ETH1_VOTING_PERIOD - 1;
     state.validators.push(generateValidator());
-    state.balances.push(new BN("fffffffff"));
+    state.balances.push(new BN("ffffffffff",16));
 
     getCurrentEpochStub.returns(127);
     getShardDeltaStub.returns(1);
