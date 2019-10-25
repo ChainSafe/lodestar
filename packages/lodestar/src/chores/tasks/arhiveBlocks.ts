@@ -1,6 +1,6 @@
 import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
-import {Checkpoint, Epoch} from "@chainsafe/eth2.0-types";
+import {Checkpoint} from "@chainsafe/eth2.0-types";
 import {computeEpochOfSlot} from "../../chain/stateTransition/util";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ILogger} from "../../logger";
