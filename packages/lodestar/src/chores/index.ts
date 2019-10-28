@@ -1,3 +1,7 @@
+/**
+ * @module chores
+ */
+
 import {IService} from "../node";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db/api";

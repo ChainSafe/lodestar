@@ -1,3 +1,7 @@
+/**
+ * @module chores
+ */
+
 import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
 import {Checkpoint} from "@chainsafe/eth2.0-types";
