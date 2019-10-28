@@ -1,3 +1,7 @@
+/**
+ * @module cache/items
+ */
+
 import {CacheItem} from "../abstract";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";

@@ -1,3 +1,7 @@
+/**
+ * @module cache
+ */
+
 import {AnySSZType} from "@chainsafe/ssz-type-schema";
 import {CacheId, CacheIdFunction} from "./types";
 import {clone, hashTreeRoot} from "@chainsafe/ssz";
@@ -10,6 +14,12 @@ export abstract class CacheItem<T> {
 
   protected cache: Map<CacheId, T> = new Map();
 
+  /**
+   *
+   * @param sszType
+   * @param idFunction function  to generate id for cache item. Depending on your use case
+   * it can return unique identifier or some constant ("latestState")
+   */
   protected constructor(sszType: AnySSZType, idFunction?: CacheIdFunction<T>) {
     this.sszType = sszType;
     this.idFunction = idFunction || this.hashRootIdFunction;
