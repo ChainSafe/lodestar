@@ -42,7 +42,7 @@
   ],
   "dependencies": {
     "@chainsafe/as-sha256": "^0.1.3",
-    "@chainsafe/bit-utils": "0.1.5",
+    "@chainsafe/bit-utils": "0.1.6",
     "@chainsafe/eth2.0-types": "^0.1.2",
     "@chainsafe/ssz-type-schema": "^0.0.2",
     "bn.js": "^5.0.0",
