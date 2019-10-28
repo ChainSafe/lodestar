@@ -50,12 +50,8 @@ export abstract class CacheItem<T> {
     this.cache.clear();
   }
 
-  public delete(id?: CacheId): void {
-    if(id) {
-      this.cache.delete(this.idToString(id));
-    } else {
-      this.clear();
-    }
+  public delete(id: CacheId): void {
+    this.cache.delete(this.idToString(id));
   }
 
   protected getOrFirst(id: CacheId): T | null {
