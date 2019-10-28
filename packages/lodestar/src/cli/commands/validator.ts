@@ -2,13 +2,11 @@
  * @module cli/commands
  */
 import {CommanderStatic} from "commander";
-
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ICliCommand} from "./interface";
-import {ILogger, LogLevels, WinstonLogger} from "../../logger";
-import Validator from "../../validator";
+import {ILogger, WinstonLogger} from "../../logger";
 import {generateCommanderOptions, optionsToConfig} from "../util";
-import {IValidatorOptions, ValidatorOptions} from "../../validator/options";
+import {IValidatorClientOptions, validatorClientCliConfiguration} from "../../validator/options";
+import {ValidatorClient} from "../../validator/nodejs";
 
 interface IValidatorCommandOptions {
   logLevel: string;
@@ -22,7 +20,6 @@ export class ValidatorCommand implements ICliCommand {
     const command = commander
       .command("validator")
       .description("Start lodestar validator")
-      .option(`-l, --logLevel [${LogLevels.join("|")}]`, "Log level")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
@@ -32,12 +29,12 @@ export class ValidatorCommand implements ICliCommand {
           logger.error(e.message + "\n" + e.stack);
         }
       });
-    generateCommanderOptions(command, ValidatorOptions);
+    generateCommanderOptions(command, validatorClientCliConfiguration);
   }
 
   public async action(options: IValidatorCommandOptions, logger: ILogger): Promise<void> {
-    const conf: Partial<IValidatorOptions> = optionsToConfig(options, ValidatorOptions);
-    const validator = new Validator(conf, {config, logger});
+    const conf: Partial<IValidatorClientOptions> = optionsToConfig(options, validatorClientCliConfiguration);
+    const validator = new ValidatorClient(conf, {logger});
     await validator.start();
   }
 

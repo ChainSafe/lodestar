@@ -1,23 +1,11 @@
-import {IDatabaseOptions} from "../db/options";
-import {IRpcClient} from "./rpc";
-import {defaultLogLevel, ILoggerOptions, LogLevel} from "../logger";
-import {Keypair} from "@chainsafe/bls/lib/keypair";
 import {IConfigurationModule} from "../util/config";
-import {IValidatorDB} from "../db/api";
-import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
+import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {IApiClient} from "@chainsafe/lodestar-validator/lib/api";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {LogLevel} from "../logger";
 
-export interface IValidatorOptions {
-  db: IDatabaseOptions;
-  dbInstance?: IValidatorDB;
-  restUrl: string;
-  rpc: string;
-  rpcInstance?: IRpcClient;
-  keypair: Keypair;
-  keystore?: string|null;
-  logger: ILoggerOptions;
-}
-
-export const ValidatorOptions: IConfigurationModule = {
+export const validatorClientCliConfiguration: IConfigurationModule = {
   name: "validator",
   fields: [
     {
@@ -34,51 +22,65 @@ export const ValidatorOptions: IConfigurationModule = {
       ]
     },
     {
-      name: "syncRpc.ts",
+      name: "api",
       type: String,
       configurable: true,
-      description: "Url to beacon node ws rpc",
+      description: "Url to beacon node rest api",
       cli: {
-        flag: "rpcWsUrl"
+        flag: "restApi"
       }
     },
     {
-      name: "keypair",
-      type: Keypair,
-      description: "Private key",
+      name: "validatorKey",
+      type: String,
+      description: "Hex encoded private key or path to keystore",
       configurable: true,
-      process: (privateKey) => {
-        const pk = PrivateKey.fromHexString(privateKey);
-        return new Keypair(pk);
+      cli: {
+        flag: "validatorKey"
+      }
+    },
+    {
+      name: "config",
+      type: Object,
+      description: "Either 'mainnet' or 'minimal'",
+      process: (presetName: string) => {
+        if(presetName === "minimal") {
+          return minimalConfig;
+        }
+        return mainnetConfig;
       },
+      configurable: true,
       cli: {
-        flag: "validatorPrivateKey"
+        flag: "chainConfig"
       }
     },
     {
-      name: "keystore",
+      name: "logLevel",
       type: String,
-      description: "Path to keystore file",
+      description: "One of available log levels",
       configurable: true,
       cli: {
-        flag: "validatorKeystore"
+        flag: "logLevel"
       }
     }
   ]
 };
 
-const config: IValidatorOptions = {
-  db: {
-    name: "./validator-db"
-  },
-  restUrl: "",
-  rpc: "http://localhost:8545",
-  keypair: Keypair.generate(),
-  keystore: null,
-  logger: {
-    level: LogLevel[defaultLogLevel],
-    module: "validator",
-  },
+export interface IValidatorClientOptions {
+  //hex encoded private key or path to keystore
+  validatorKey: string;
+  restApi: string | IApiClient;
+  db: string;
+  logLevel: LogLevel;
+  config: IBeaconConfig;
+}
+
+const defaultConfig: IValidatorClientOptions =  {
+  config: minimalConfig,
+  db: "validator-db",
+  logLevel: LogLevel.debug,
+  restApi: "http://localhost:9545",
+  validatorKey: ""
 };
 
-export default config;
+export default defaultConfig;

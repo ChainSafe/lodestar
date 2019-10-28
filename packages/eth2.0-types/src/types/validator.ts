@@ -3,7 +3,7 @@
  * @module types
  */
 
-import {BLSPubkey, Shard, Slot, uint64, number64} from "./primitive";
+import {BLSPubkey, Shard, Slot, uint64, number64, ValidatorIndex} from "./primitive";
 
 export interface ValidatorDuty {
   // The validator's public key, uniquely identifying them
@@ -25,4 +25,10 @@ export interface SyncingStatus {
   currentBlock: uint64;
   // The estimated highest block, or current target block number
   highestBlock: uint64;
+}
+
+export interface CommitteeAssignment {
+  validators: ValidatorIndex[];
+  shard: Shard;
+  slot: Slot;
 }

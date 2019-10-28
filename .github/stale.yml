@@ -1,7 +1,7 @@
 # Configuration for probot-stale - https://github.com/probot/stale
 
 # Number of days of inactivity before an Issue or Pull Request becomes stale
-daysUntilStale: 45 
+daysUntilStale: 60 
 
 # Number of days of inactivity before an Issue or Pull Request with the stale label is closed.
 # Set to false to disable. If disabled, issues still need to be closed manually, but will remain marked as stale.
@@ -13,15 +13,14 @@ onlyLabels: []
 # Issues or Pull Requests with these labels will never be considered stale. Set to `[]` to disable
 exemptLabels:
    - "PR state: on-ice"
-#  - pinned
-#  - security
-#  - "[Status] Maybe Later"
+   - "Good First Issue"
+   - "Status: On Ice"
 
 # Set to true to ignore issues in a project (defaults to false)
 exemptProjects: false
 
 # Set to true to ignore issues in a milestone (defaults to false)
-exemptMilestones: false
+exemptMilestones: true
 
 # Set to true to ignore issues with an assignee (defaults to false)
 exemptAssignees: false

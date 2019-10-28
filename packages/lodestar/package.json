@@ -2,7 +2,7 @@
   "name": "@chainsafe/lodestar",
   "private": true,
   "version": "0.1.0",
-  "description": "A Typescript implementation of the beacon chain and validator client",
+  "description": "A Typescript implementation of the beacon chain",
   "author": "ChainSafe Systems",
   "license": "GPL-3.0",
   "bugs": {
@@ -76,6 +76,7 @@
     "fastpriorityqueue": "^0.6.3",
     "ganache-core": "^2.5.3",
     "interface-connection": "^0.3.3",
+    "js-yaml": "^3.13.1",
     "level": "^5.0.1",
     "levelup": "^4.1.0",
     "libp2p": "^0.25.3",
@@ -108,8 +109,7 @@
     "yargs": "^14.0.0"
   },
   "bin": {
-    "lodestar": "./bin/lodestar",
-    "lodestar-validator": "./bin/lodestar-validator"
+    "lodestar": "./bin/lodestar"
   },
   "devDependencies": {
     "@chainsafe/benchmark-utils": "^0.1.0",
