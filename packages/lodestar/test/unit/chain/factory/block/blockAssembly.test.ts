@@ -3,7 +3,7 @@ import {expect} from "chai";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
-import * as blockTransitions from "@chainsafe/eth2.0-state-transition/lib/block";
+import * as blockTransitions from "@chainsafe/eth2.0-state-transition";
 import {OpPool} from "../../../../../src/opPool";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
@@ -19,11 +19,12 @@ describe("block assembly", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let assembleBodyStub: any, chainStub: any, forkChoiceStub: any, processBlockStub: any, opPool: any, beaconDB: any, eth1: any;
+  let assembleBodyStub: any, chainStub: any, forkChoiceStub: any, stateTransitionStub: any, opPool: any, beaconDB: any, eth1: any;
 
   beforeEach(() => {
     assembleBodyStub = sandbox.stub(blockBodyAssembly, "assembleBody");
-    processBlockStub = sandbox.stub(blockTransitions, "processBlock");
+    stateTransitionStub = sandbox.stub(blockTransitions, "stateTransition");
+
 
     forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
     chainStub = sandbox.createStubInstance(BeaconChain);
@@ -48,6 +49,7 @@ describe("block assembly", function () {
     beaconDB.block.get.withArgs(head).returns(generateEmptyBlock());
     beaconDB.merkleTree.getProgressiveMerkleTree.resolves(ProgressiveMerkleTree.empty(32, new MerkleTreeSerialization(config)));
     assembleBodyStub.resolves(generateEmptyBlock().body);
+    stateTransitionStub.returns(generateState());
     try {
       const result = await assembleBlock(config, chainStub, beaconDB, opPool, eth1, 1, Buffer.alloc(96, 0));
       expect(result).to.not.be.null;
@@ -57,7 +59,6 @@ describe("block assembly", function () {
       expect(beaconDB.state.getLatest.calledOnce).to.be.true;
       expect(beaconDB.block.get.calledOnceWith(head));
       expect(assembleBodyStub.calledOnce).to.be.true;
-      expect(processBlockStub.withArgs(sinon.match.any, sinon.match.any).calledOnce).to.be.true;
     } catch (e) {
       expect.fail(e.stack);
     }
