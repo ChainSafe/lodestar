@@ -2,7 +2,7 @@ import {join} from "path";
 import {expect} from "chai";
 import {equals} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import {processProposerSlashing} from "../../../../src/chain/stateTransition/block/operations";
+import {processProposerSlashing} from "@chainsafe/eth2.0-state-transition";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {ProcessProposerSlashingTestCase} from "./type";

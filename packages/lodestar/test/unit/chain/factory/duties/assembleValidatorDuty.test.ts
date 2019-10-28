@@ -1,17 +1,17 @@
 import sinon from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import * as stateTransitionUtils from "../../../../../src/chain/stateTransition/util";
+import * as stateTransitionUtils from "@chainsafe/eth2.0-state-transition/lib/util/duties";
 import {assembleValidatorDuty} from "../../../../../src/chain/factory/duties";
 import {generateState} from "../../../../utils/state";
 
 describe("assemble validator duty", function () {
 
   const sandbox = sinon.createSandbox();
-  let committeeAssignmentStub;
+  let committeeAssignmentStub: any;
 
   beforeEach(() => {
-    committeeAssignmentStub = sandbox.stub(stateTransitionUtils, 'getCommitteeAssignment');
+    committeeAssignmentStub = sandbox.stub(stateTransitionUtils, "getCommitteeAssignment");
   });
 
   afterEach(() => {
