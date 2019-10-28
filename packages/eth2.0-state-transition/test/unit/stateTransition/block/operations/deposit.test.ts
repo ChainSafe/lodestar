@@ -6,10 +6,11 @@ import {expect} from "chai";
 import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as utils from "../../../../../src/util";
-import {bnMin} from "@chainsafe/eth2.0-utils";
+import {bnMin, intToBytes} from "@chainsafe/eth2.0-utils";
 import {generateState} from "../../../../utils/state";
 import {generateDeposit} from "../../../../utils/deposit";
 import {generateValidator} from "../../../../utils/validator";
+
 
 
 describe("process block - deposits", function () {
@@ -22,6 +23,7 @@ describe("process block - deposits", function () {
     mockery.registerMock('@chainsafe/eth2.0-utils', {
       "verifyMerkleBranch": verifyMerkleBranchStub,
       "bnMin": bnMin,
+      "intToBytes": intToBytes
     });
     mockery.registerMock('@chainsafe/bls', {
       verify: blsStub
