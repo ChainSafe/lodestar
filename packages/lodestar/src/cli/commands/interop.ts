@@ -9,6 +9,7 @@ import fs, {existsSync, mkdirSync} from "fs";
 import PeerId from "peer-id";
 import yaml from "js-yaml";
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import rimraf from "rimraf";
 import {ILogger, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
@@ -32,6 +33,7 @@ import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib/api";
 import {ValidatorClient} from "../../validator/nodejs";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {quickStartState} from "../../interop/state";
+import {default as dbConfig} from "../../db/options";
 
 interface IDevCommandOptions {
   loggingLevel?: string;
@@ -143,6 +145,7 @@ export class DevCommand implements ICliCommand {
       computeEpochOfSlot(config, getCurrentSlot(config, state.genesisTime))
     );
     await this.node.chain.advanceState(targetSlot);
+    rimraf.sync(dbConfig.name);
     await this.node.start();
     if(options.validators) {
       if(options.validators.includes(",")) {
@@ -161,9 +164,8 @@ export class DevCommand implements ICliCommand {
   }
 
   private async startValidators(from: number, to: number, node: BeaconNode): Promise<void> {
-    if(!existsSync(this.validatorDir)) {
-      mkdirSync(this.validatorDir);
-    }
+    rimraf.sync(this.validatorDir);
+    mkdirSync(this.validatorDir);
     for(let i = from; i < to; i++) {
       this.startValidator(interopKeypair(i).privkey, node);
     }
