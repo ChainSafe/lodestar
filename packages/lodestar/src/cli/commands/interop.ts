@@ -5,7 +5,7 @@
 import {ICliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
-import fs, {existsSync, mkdirSync} from "fs";
+import fs, {mkdirSync} from "fs";
 import PeerId from "peer-id";
 import yaml from "js-yaml";
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
