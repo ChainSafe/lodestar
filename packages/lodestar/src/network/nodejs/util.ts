@@ -32,7 +32,7 @@ export async function loadPeerId(path: string): Promise<PeerId> {
  * 
  * @param peerId Create an instance of NodejsNode asynchronously
  */
-export async function createLibP2p(peerIdOrPromise: PeerId | Promise<PeerId>, 
+export async function createNodeJsLibp2p(peerIdOrPromise: PeerId | Promise<PeerId>, 
   network: Partial<INetworkOptions> = {}): Promise<LibP2p> {
   const peerId = await Promise.resolve(peerIdOrPromise);
   const multiaddrs = network.multiaddrs || defaults.multiaddrs;

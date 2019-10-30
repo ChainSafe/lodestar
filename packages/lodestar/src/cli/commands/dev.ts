@@ -25,7 +25,7 @@ import {BeaconApi} from "../../api/rpc/api/beacon";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 import {computeEpochOfSlot, computeStartSlotOfEpoch,getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
 
-import {loadPeerId, createLibP2p} from "../../network/nodejs";
+import {loadPeerId, createNodeJsLibp2p} from "../../network/nodejs";
 import {createPeerId} from "../../network";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "../../util/serialization";
@@ -124,7 +124,7 @@ export class DevCommand implements ICliCommand {
     } else {
       peerId = createPeerId();
     }
-    const libp2p = await createLibP2p(peerId, conf.network);
+    const libp2p = await createNodeJsLibp2p(peerId, conf.network);
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
     const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
     let state: BeaconState;
