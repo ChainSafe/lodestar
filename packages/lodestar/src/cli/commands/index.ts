@@ -8,5 +8,5 @@ export * from "./beacon";
 export * from "./create-config";
 export * from "./wallet";
 export * from "./validator";
-export * from "./interop";
+export * from "./dev";
 
