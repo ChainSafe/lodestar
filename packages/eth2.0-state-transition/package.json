@@ -1,48 +1,42 @@
 {
   "name": "@chainsafe/eth2.0-state-transition",
-  "version": "0.1.0",
   "description": "Beacon Chain state transition function and utils",
-  "author": "ChainSafe Systems",
   "license": "Apache-2.0",
+  "author": "ChainSafe Systems",
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com:ChainSafe/lodestar.git"
+  },
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "homepage": "https://github.com/ChainSafe/lodestar#readme",
+  "version": "0.1.1",
   "main": "lib/index.js",
-  "types": "lib/index.d.ts",
   "files": [
     "lib"
   ],
   "scripts": {
-    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
     "build": "yarn build:lib && yarn build:types",
-    "build:release": "yarn clean && yarn build",
-    "build:lib": "babel src -x .ts -d lib --source-maps",
-    "build:types": "tsc --incremental --declaration --outDir lib --emitDeclarationOnly",
     "build:docs": "typedoc --exclude src/index.ts --out docs src",
+    "build:lib": "babel src -x .ts -d lib --source-maps",
+    "build:release": "yarn clean && yarn build",
+    "build:types": "tsc --incremental --declaration --outDir lib --emitDeclarationOnly",
     "check-types": "tsc --noEmit --incremental",
+    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "prepublishOnly": "yarn build",
     "test:unit": "mocha --colors -r ts-node/register 'test/**/*.test.ts'"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com:ChainSafe/lodestar.git"
-  },
-  "keywords": [
-    "ethereum",
-    "beacon",
-    "typescript",
-    "blockchain"
-  ],
+  "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/bit-utils": "^0.1.4",
+    "@chainsafe/bit-utils": "0.1.6",
     "@chainsafe/bls": "^0.1.7",
     "@chainsafe/eth2.0-config": "^0.1.1",
-    "@chainsafe/eth2.0-ssz-types": "^0.1.0",
-    "@chainsafe/eth2.0-utils": "^0.0.1",
-    "@chainsafe/ssz": "^0.5.2",
+    "@chainsafe/eth2.0-types": "0.1.2",
+    "@chainsafe/eth2.0-utils": "^0.0.2",
+    "@chainsafe/ssz": "^0.5.3",
     "bn.js": "^5.0.0",
     "buffer-xor": "^2.0.2"
   },
@@ -51,5 +45,11 @@
     "@types/mocha": "^5.2.7",
     "chai": "^4.2.0",
     "mocha": "^6.2.0"
-  }
+  },
+  "keywords": [
+    "beacon",
+    "blockchain",
+    "ethereum",
+    "typescript"
+  ]
 }

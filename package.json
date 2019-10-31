@@ -16,7 +16,7 @@
     "@babel/preset-env": "^7.3.1",
     "@babel/preset-typescript": "^7.3.3",
     "@babel/register": "^7.0.0",
-    "@chainsafe/eth2.0-spec-test-util": "0.4.1",
+    "@chainsafe/eth2.0-spec-test-util": "0.4.2",
     "@types/chai": "^4.1.7",
     "@types/chai-as-promised": "^7.1.0",
     "@types/mocha": "^5.2.5",
@@ -40,7 +40,7 @@
     "typedoc-plugin-external-module-name": "^2.1.0",
     "typedoc-plugin-internal-external": "^2.0.2",
     "typedoc-plugin-markdown": "^2.0.6",
-    "typescript": "^3.5.1",
+    "typescript": "3.5.3",
     "webpack": "^4.39.1"
   },
   "optionalDependencies": {

@@ -13,13 +13,11 @@ import {
   ValidatorIndex,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {DomainType,} from "../constants";
-import {isSorted,intDiv} from "@chainsafe/eth2.0-utils";
+import {DomainType} from "../constants";
+import {intDiv, isSorted} from "@chainsafe/eth2.0-utils";
 import {computeStartSlotOfEpoch} from "./epoch";
 import {getDomain} from "./domain";
 import {getCommitteeCount, getCrosslinkCommittee, getStartShard} from "./committee";
-
-import {intDiv} from "@chainsafe/eth2.0-utils";
 import {BitList} from "@chainsafe/bit-utils";
 
 

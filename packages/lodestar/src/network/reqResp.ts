@@ -250,6 +250,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
   ): Promise<T> {
     const protocol = createRpcProtocol(method, this.encoding);
     return await new Promise((resolve, reject) => {
+      // @ts-ignore
       this.libp2p.dialProtocol(peerInfo, protocol, (err, conn): unknown => {
         if (err) {
           return reject(err);
