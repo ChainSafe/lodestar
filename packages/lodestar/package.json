@@ -28,6 +28,7 @@
     "pretest": "yarn run check-types",
     "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha  --colors -r ts-node/register 'test/unit/**/*.test.ts'",
     "test:e2e": "TS_NODE_PROJECT=tsconfig.test.json mocha --colors --timeout 5000 -r ts-node/register 'test/e2e/**/*.test.ts'",
+    "test:e2e:dev": "TS_NODE_PROJECT=tsconfig.test.json mocha --colors --timeout 5000 -r ts-node/register 'test/e2e/**/dev.test.ts'",
     "test:spec-main": "TS_NODE_PROJECT=tsconfig.test.json mocha  --colors -r ./.babel-register 'test/spec/**/*mainnet.test.ts'",
     "test:spec-min": "TS_NODE_PROJECT=tsconfig.test.json mocha  --colors -r ./.babel-register 'test/spec/**/*minimal.test.ts'",
     "test:spec": "TS_NODE_PROJECT=tsconfig.test.json mocha  --colors -r ./.babel-register 'test/spec/**/*.test.ts'",
@@ -129,7 +130,6 @@
     "chai-as-promised": "^7.1.1",
     "mocha": "^6.2.0",
     "mockery": "^2.1.0",
-    "rimraf": "^3.0.0",
     "supertest": "^4.0.2",
     "webpack": "^4.39.1"
   }

@@ -7,12 +7,11 @@ import { ILogger, WinstonLogger } from "../../../../src/logger";
 import { BeaconNode } from "../../../../src/node";
 import { InteropEth1Notifier } from "../../../../src/eth1/impl/interop";
 import { createPeerId } from "../../../../src/network";
-import { createLibP2p } from "../../../../src/network/nodejs";
+import { createNodeJsLibp2p } from "../../../../src/network/nodejs";
 import { quickStartState } from "../../../../src/interop/state";
 import { ProgressiveMerkleTree } from "@chainsafe/eth2.0-utils";
 import { MerkleTreeSerialization } from "../../../../src/util/serialization";
-import { computeStartSlotOfEpoch, computeEpochOfSlot } from "../../../../src/chain/stateTransition/util";
-import { getCurrentSlot } from "../../../../src/chain/stateTransition/util/genesis";
+import { computeStartSlotOfEpoch, computeEpochOfSlot, getCurrentSlot } from "@chainsafe/eth2.0-state-transition";
 import { existsSync, mkdirSync } from "fs";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib/api";
 import { Keypair, PrivateKey } from "@chainsafe/bls";
@@ -79,7 +78,7 @@ describe("e2e interop simulation", function() {
     minimalConfig.params.SECONDS_PER_SLOT = SECONDS_PER_SLOT;
     minimalConfig.params.SLOTS_PER_EPOCH = SLOTS_PER_EPOCH;
     const peerId = createPeerId();
-    const libp2p = await createLibP2p(peerId, {});
+    const libp2p = await createNodeJsLibp2p(peerId, {});
     node = new BeaconNode(conf, {config: minimalConfig, logger, eth1: new InteropEth1Notifier(), libp2p});
 
     const genesisTime = Math.round(Date.now()/1000);
