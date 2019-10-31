@@ -5,7 +5,7 @@ import {sign} from "@chainsafe/bls";
 import {DomainType} from "../constants";
 import {IProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {interopKeypairs} from "./keypairs";
-import {computeDomain} from "../chain/stateTransition/util";
+import {computeDomain} from "@chainsafe/eth2.0-state-transition";
 
 export function interopDeposits(
   config: IBeaconConfig,

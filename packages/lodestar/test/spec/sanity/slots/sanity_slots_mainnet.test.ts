@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {equals} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {BeaconState} from "@chainsafe/eth2.0-types";
-import {processSlots} from "../../../../src/chain/stateTransition";
+import {processSlots} from "@chainsafe/eth2.0-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {ProcessSlotsTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";

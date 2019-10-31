@@ -1,9 +1,9 @@
-import {computeStartSlotOfEpoch, getBeaconProposerIndex} from "../../../chain/stateTransition/util";
+import {computeStartSlotOfEpoch, getBeaconProposerIndex,processSlots} from "@chainsafe/eth2.0-state-transition";
 import {assembleValidatorDuty} from "../../../chain/factory/duties";
 import {BLSPubkey, Epoch, ValidatorDuty, ValidatorIndex, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {processSlots} from "../../../chain/stateTransition";
+
 
 export async function getValidatorDuties(
   config: IBeaconConfig,

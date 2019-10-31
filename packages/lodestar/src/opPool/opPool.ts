@@ -7,7 +7,7 @@ import {EventEmitter} from "events";
 import {BeaconBlock, BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {blockToHeader, computeEpochOfSlot, getBeaconProposerIndex} from "../chain/stateTransition/util";
+import {blockToHeader, computeEpochOfSlot, getBeaconProposerIndex} from "@chainsafe/eth2.0-state-transition";
 import {IBeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
 import {

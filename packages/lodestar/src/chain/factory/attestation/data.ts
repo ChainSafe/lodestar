@@ -4,7 +4,7 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {ZERO_HASH} from "../../../constants";
 import {IBeaconDb} from "../../../db/api";
-import {computeStartSlotOfEpoch, getBlockRootAtSlot, getCurrentEpoch} from "../../stateTransition/util";
+import {computeStartSlotOfEpoch, getBlockRootAtSlot, getCurrentEpoch} from "@chainsafe/eth2.0-state-transition";
 
 export async function assembleAttestationData(
   config: IBeaconConfig,

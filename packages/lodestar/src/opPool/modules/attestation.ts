@@ -6,10 +6,10 @@ import {
   canBeAggregated,
   computeStartSlotOfEpoch,
   getAttestationDataSlot,
-} from "../../chain/stateTransition/util";
+} from "@chainsafe/eth2.0-state-transition";
 import {AttestationRepository} from "../../db/api/beacon/repositories";
 import {clone, hashTreeRoot} from "@chainsafe/ssz";
-import {processAttestation} from "../../chain/stateTransition/block/operations";
+import {processAttestation} from "@chainsafe/eth2.0-state-transition";
 import {AttestationDataRepository} from "../../db/api/beacon/repositories/attestationsData";
 
 export class AttestationOperations extends OperationsModule<Attestation> {

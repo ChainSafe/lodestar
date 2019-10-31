@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {equals} from "@chainsafe/ssz";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import {processRegistryUpdates} from "../../../../src/chain/stateTransition/epoch/registryUpdates";
+import {processRegistryUpdates} from "@chainsafe/eth2.0-state-transition";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
