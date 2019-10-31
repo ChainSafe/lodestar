@@ -21,7 +21,8 @@ import {decreaseBalance, getBeaconProposerIndex, getCurrentEpoch, getDomain, inc
 export function processTransfer(
   config: IBeaconConfig,
   state: BeaconState,
-  transfer: Transfer
+  transfer: Transfer,
+  trusted: boolean = false
 ): void {
   // Verify the balance the covers amount and fee
   const senderBalance = state.balances[transfer.sender];
@@ -38,10 +39,10 @@ export function processTransfer(
     senderBalance.gte(transfer.amount.add(transfer.fee).add(new BN(config.params.MAX_EFFECTIVE_BALANCE)))
   );
   // Verify that the pubkey is valid
-  assert(state.validators[transfer.sender].withdrawalCredentials.equals(
+  assert(trusted ? true : state.validators[transfer.sender].withdrawalCredentials.equals(
     Buffer.concat([config.params.BLS_WITHDRAWAL_PREFIX_BYTE, hash(transfer.pubkey).slice(1)])));
   // Verify that the signature is valid
-  assert(bls.verify(
+  assert(trusted ? true : bls.verify(
     transfer.pubkey,
     signingRoot(transfer, config.types.Transfer),
     transfer.signature,

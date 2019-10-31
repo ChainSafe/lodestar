@@ -25,7 +25,8 @@ import {
 export function processAttestation(
   config: IBeaconConfig,
   state: BeaconState,
-  attestation: Attestation
+  attestation: Attestation,
+  trusted: boolean = false
 ): void {
   const currentEpoch = getCurrentEpoch(config, state);
   const previousEpoch = getPreviousEpoch(config, state);
@@ -70,5 +71,5 @@ export function processAttestation(
   ));
   assert(data.crosslink.dataRoot.equals(ZERO_HASH)); // [to be removed in phase 1]
   // Check signature
-  assert(isValidIndexedAttestation(config, state, getIndexedAttestation(config, state, attestation)));
+  assert(isValidIndexedAttestation(config, state, getIndexedAttestation(config, state, attestation), trusted));
 }
