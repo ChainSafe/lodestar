@@ -34,7 +34,7 @@ export function processVoluntaryExit(
   // Verify the validator has been active long enough
   assert(currentEpoch >= validator.activationEpoch + config.params.PERSISTENT_COMMITTEE_PERIOD);
   // Verify signature
-  assert(trusted ? true : bls.verify(
+  assert(trusted || bls.verify(
     validator.pubkey,
     signingRoot(exit, config.types.VoluntaryExit),
     exit.signature,

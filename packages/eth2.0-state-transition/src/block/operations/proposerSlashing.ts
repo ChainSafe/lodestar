@@ -30,14 +30,14 @@ export function processProposerSlashing(
   // Check proposer is slashable
   assert(isSlashableValidator(proposer, getCurrentEpoch(config, state)));
   // Signatures are valid
-  const proposalData1Verified = trusted ? true :  bls.verify(
+  const proposalData1Verified = trusted || bls.verify(
     proposer.pubkey,
     signingRoot(proposerSlashing.header1, config.types.BeaconBlockHeader),
     proposerSlashing.header1.signature,
     getDomain(config, state, DomainType.BEACON_PROPOSER, header1Epoch),
   );
   assert(proposalData1Verified);
-  const proposalData2Verified = trusted ? true : bls.verify(
+  const proposalData2Verified = trusted || bls.verify(
     proposer.pubkey,
     signingRoot(proposerSlashing.header2, config.types.BeaconBlockHeader),
     proposerSlashing.header2.signature,

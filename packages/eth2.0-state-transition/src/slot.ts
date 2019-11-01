@@ -18,7 +18,6 @@ export function processSlots(
   config: IBeaconConfig,
   state: BeaconState,
   slot: Slot,
-  trusted: boolean = false
 ): void{
   assert(state.slot <= slot);
 

@@ -39,7 +39,7 @@ export function stateTransition(
   // Clone state because process slots and block are not pure
   const postState = clone(state, config.types.BeaconState);
   // Process slots (including those with no blocks) since block
-  processSlots(config, postState, block.slot, trusted);
+  processSlots(config, postState, block.slot);
   // Process block
   processBlock(config, postState, block, verifySignatures, trusted);
   // Validate state root (`validate_state_root == True` in production)

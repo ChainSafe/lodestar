@@ -24,7 +24,7 @@ export function processRandao(
   const currentEpoch = getCurrentEpoch(config, state);
   const proposer = state.validators[getBeaconProposerIndex(config, state)];
   // Verify RANDAO reveal
-  assert(trusted ? true : bls.verify(
+  assert(trusted || bls.verify(
     proposer.pubkey,
     hashTreeRoot(currentEpoch, config.types.Epoch),
     body.randaoReveal,

@@ -39,10 +39,10 @@ export function processTransfer(
     senderBalance.gte(transfer.amount.add(transfer.fee).add(new BN(config.params.MAX_EFFECTIVE_BALANCE)))
   );
   // Verify that the pubkey is valid
-  assert(trusted ? true : state.validators[transfer.sender].withdrawalCredentials.equals(
+  assert(state.validators[transfer.sender].withdrawalCredentials.equals(
     Buffer.concat([config.params.BLS_WITHDRAWAL_PREFIX_BYTE, hash(transfer.pubkey).slice(1)])));
   // Verify that the signature is valid
-  assert(trusted ? true : bls.verify(
+  assert(trusted || bls.verify(
     transfer.pubkey,
     signingRoot(transfer, config.types.Transfer),
     transfer.signature,
