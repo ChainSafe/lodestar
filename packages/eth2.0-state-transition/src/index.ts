@@ -19,6 +19,15 @@ export * from "./slot";
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1
 // /specs/core/0_beacon-chain.md#beacon-chain-state-transition-function
 
+/**
+ * The ETH2.0 Beacon Chain state transition function
+ * @param config Beacon Chain configuration
+ * @param state Current state
+ * @param block Block being processed
+ * @param validateStateRoot Compare state root at the end of state execution
+ * @param verifySignatures Skip header signature verification
+ * @param trusted Skip operations signature verification
+ */
 export function stateTransition(
   config: IBeaconConfig,
   state: BeaconState,
