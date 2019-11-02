@@ -30,7 +30,7 @@ describe("beacon db api", function() {
     const block = generateEmptyBlock();
     const state = generateState();
     await db.storeChainHead(block, state);
-    expect(db.block.setUnderRoot.withArgs(block).calledOnce).to.be.true;
+    expect(db.block.add.withArgs(block).calledOnce).to.be.true;
     expect(db.state.set.withArgs(block.stateRoot, state).calledOnce).to.be.true;
     expect(db.chain.setLatestStateRoot.withArgs(block.stateRoot).calledOnce).to.be.true;
     expect(db.chain.setChainHeadSlot.withArgs(block.slot).calledOnce).to.be.true;

@@ -17,7 +17,7 @@ export class BlockArchiveRepository extends BulkRepository<BeaconBlock> {
     super(config, db, Bucket.blockArchive, config.types.BeaconBlock);
   }
 
-  public async addMultiple(blocks: BeaconBlock[]): Promise<void> {
+  public async addMany(blocks: BeaconBlock[]): Promise<void> {
     await this.db.batchPut(
       blocks.map((block) => ({
         key: encodeKey(this.bucket, block.slot),
@@ -26,7 +26,7 @@ export class BlockArchiveRepository extends BulkRepository<BeaconBlock> {
     );
   }
 
-  public async setUnderRoot(value: BeaconBlock): Promise<void> {
+  public async add(value: BeaconBlock): Promise<void> {
     return this.set(value.slot, value);
   }
 }

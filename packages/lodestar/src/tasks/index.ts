@@ -1,5 +1,5 @@
 /**
- * @module chores
+ * @module tasks used for running tasks on specific events
  */
 
 import {IService} from "../node";
@@ -7,16 +7,20 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db/api";
 import {IBeaconChain} from "../chain";
 import {Checkpoint} from "@chainsafe/eth2.0-types";
-import {ArchiveBlocksTask} from "./tasks/arhiveBlocks";
+import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
 import {ILogger} from "../logger";
 
-export interface IChoreModules {
+export interface ITasksModules {
   db: IBeaconDb;
   logger: ILogger;
   chain: IBeaconChain;
 }
 
-export class ChoreService implements IService {
+/**
+ * Used for running tasks that depends on some events or are executed
+ * periodically.
+ */
+export class TasksService implements IService {
 
   private readonly config: IBeaconConfig;
 
@@ -26,7 +30,7 @@ export class ChoreService implements IService {
 
   private readonly logger: ILogger;
 
-  public constructor(config: IBeaconConfig, modules: IChoreModules) {
+  public constructor(config: IBeaconConfig, modules: ITasksModules) {
     this.config = config;
     this.db = modules.db;
     this.chain = modules.chain;

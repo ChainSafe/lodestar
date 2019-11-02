@@ -31,7 +31,7 @@ export class BlockRepository extends BulkRepository<BeaconBlock> {
     await this.deleteMany(values.map(value => signingRoot(value, this.type as AnyContainerType)));
   }
 
-  public async setUnderRoot(block: BeaconBlock): Promise<void> {
+  public async add(block: BeaconBlock): Promise<void> {
     await this.set(signingRoot(block, this.type as AnyContainerType), block);
   }
 

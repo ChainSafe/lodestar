@@ -17,7 +17,7 @@ import {
   TransfersRepository,
   VoluntaryExitRepository
 } from "./repositories";
-import {BlockArchiveRepository} from "./repositories/blockArhive";
+import {BlockArchiveRepository} from "./repositories/blockArchive";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
 
@@ -63,7 +63,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     state: BeaconState
   ): Promise<void> {
     await Promise.all([
-      this.block.setUnderRoot(block),
+      this.block.add(block),
       this.state.set(block.stateRoot, state),
     ]);
     const slot = block.slot;

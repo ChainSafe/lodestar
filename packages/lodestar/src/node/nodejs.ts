@@ -17,7 +17,7 @@ import {ILogger} from "../logger";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 import {ApiService} from "../api";
 import {ReputationStore} from "../sync/IReputation";
-import {ChoreService} from "../chores";
+import {TasksService} from "../tasks";
 
 export interface IService {
   start(): Promise<void>;
@@ -49,7 +49,7 @@ export class BeaconNode {
   public api: IService;
   public sync: Sync;
   public reps: ReputationStore;
-  public chores: ChoreService;
+  public chores: TasksService;
 
   private logger: ILogger;
 
@@ -124,7 +124,7 @@ export class BeaconNode {
         eth1: this.eth1
       }
     );
-    this.chores = new ChoreService(
+    this.chores = new TasksService(
       this.config,
       {
         db: this.db,

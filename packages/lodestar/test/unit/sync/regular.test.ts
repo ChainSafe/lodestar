@@ -89,7 +89,7 @@ describe("syncing", function () {
     dbStub.attestation.has.resolves(false);
     dbStub.state.getLatest.resolves(state);
     opPoolStub.attestations = new AttestationOperations(dbStub.attestation, {config});
-    dbStub.attestation.setUnderRoot.resolves(0);
+    dbStub.attestation.add.resolves(0);
     chainStub.receiveAttestation.resolves(0);
     try {
       await regularSync.receiveAttestation(attestation);

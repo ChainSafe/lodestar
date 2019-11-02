@@ -22,7 +22,7 @@ import {
   TransfersRepository,
   VoluntaryExitRepository
 } from "./repositories";
-import {BlockArchiveRepository} from "./repositories/blockArhive";
+import {BlockArchiveRepository} from "./repositories/blockArchive";
 
 /**
  * The DB service manages the data layer of the beacon chain

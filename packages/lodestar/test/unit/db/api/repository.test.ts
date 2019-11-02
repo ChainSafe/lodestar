@@ -75,7 +75,7 @@ describe('database repository', function () {
 
   it('should store with hashTreeRoot as id', async function() {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    await expect(repository.setUnderRoot(item)).to.not.be.rejected;
+    await expect(repository.add(item)).to.not.be.rejected;
     expect(controller.put.calledOnce).to.be.true;
   });
 

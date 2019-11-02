@@ -189,7 +189,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.logger.warn(`Failed to advance slot mannually because ${e.message}`);
     }
     this.latestState = state;
-    await this.db.state.setUnderRoot(state);
+    await this.db.state.add(state);
     await this.db.chain.setLatestStateRoot(hashTreeRoot(state, this.config.types.BeaconState));
   }
 
