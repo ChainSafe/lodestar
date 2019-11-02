@@ -91,7 +91,7 @@ describe("initial sync", function () {
     await sync.start();
     expect(eventSpy.calledOnceWith(chainCheckPoint)).to.be.true;
     //@ts-ignore
-    expect(modules.chain.removeListener.calledOnceWith("processedEpoch", sinon.match.any)).to.be.true;
+    expect(modules.chain.removeListener.calledOnceWith("chain:processedCheckpoint", sinon.match.any)).to.be.true;
   });
 
   it("already synced - higher epoch epoch", async function () {
@@ -114,7 +114,7 @@ describe("initial sync", function () {
     await sync.start();
     expect(eventSpy.calledOnceWith(chainCheckPoint)).to.be.true;
     //@ts-ignore
-    expect(modules.chain.removeListener.calledOnceWith("processedEpoch", sinon.match.any)).to.be.true;
+    expect(modules.chain.removeListener.calledOnceWith("chain:processedCheckpoint", sinon.match.any)).to.be.true;
   });
 
   it("happy path", async function () {
