@@ -51,14 +51,14 @@ export class InitialSync
 
     const chainCheckPoint = this.chain.latestState.currentJustifiedCheckpoint;
     //listen on finalization events
-    this.chain.on("processedEpoch", this.sync);
+    this.chain.on("chain:processedCheckpoint", this.sync);
     //start syncing from current chain checkpoint
     await this.sync(chainCheckPoint);
   }
 
   public async stop(): Promise<void> {
     this.logger.info("initial sync stop");
-    this.chain.removeListener("processedEpoch", this.sync);
+    this.chain.removeListener("chain:processedCheckpoint", this.sync);
   }
 
   private sync = async (chainCheckPoint: Checkpoint) => {
@@ -66,7 +66,7 @@ export class InitialSync
     const targetEpoch = getTargetEpoch(peers.map(this.reps.getFromPeerInfo), chainCheckPoint);
     if(chainCheckPoint.epoch >= targetEpoch) {
       this.logger.info("Chain already on latest finalized state");
-      this.chain.removeListener("processedEpoch", this.sync);
+      this.chain.removeListener("chain:processedCheckpoint", this.sync);
       this.emit("sync:completed", chainCheckPoint);
     } else {
       this.logger.debug(`Fast syncing to target ${targetEpoch}`);

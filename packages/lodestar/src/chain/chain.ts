@@ -339,7 +339,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     // Post-epoch processing
     const currentEpoch = computeEpochOfSlot(this.config, newState.slot);
     if (computeEpochOfSlot(this.config, preSlot) < currentEpoch) {
-      this.emit("processedEpoch", {epoch: currentEpoch, root: blockRoot});
+      this.emit("chain:processedCheckpoint", {epoch: currentEpoch, root: blockRoot});
       // Update FFG Checkpoints
       // Newly justified epoch
       if (preJustifiedEpoch < newState.currentJustifiedCheckpoint.epoch) {
