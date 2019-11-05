@@ -5,7 +5,7 @@
 import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
 import {Checkpoint} from "@chainsafe/eth2.0-types";
-import {computeEpochOfSlot} from "../../chain/stateTransition/util";
+import {computeEpochOfSlot} from "@chainsafe/eth2.0-state-transition";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ILogger} from "../../logger";
 

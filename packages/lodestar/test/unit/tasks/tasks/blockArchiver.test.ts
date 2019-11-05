@@ -7,7 +7,7 @@ import {ArchiveBlocksTask} from "../../../../src/tasks/tasks/archiveBlocks";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {expect} from "chai";
 import {generateEmptyBlock} from "../../../utils/block";
-import {computeStartSlotOfEpoch} from "../../../../src/chain/stateTransition/util";
+import {computeStartSlotOfEpoch} from "@chainsafe/eth2.0-state-transition";
 
 describe("block archiver task", function () {
 
