@@ -10,9 +10,9 @@ import {
 } from "../../../../src/sync/utils/sync";
 import {expect} from "chai";
 import {generateEmptyBlock} from "../../../utils/block";
-import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
+import {signingRoot} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/src/presets/minimal";
-import {blockToHeader} from "../../../../src/chain/stateTransition/util";
+import {blockToHeader} from "@chainsafe/eth2.0-state-transition";
 import sinon from "sinon";
 import {ReqResp} from "../../../../src/network/reqResp";
 // @ts-ignore

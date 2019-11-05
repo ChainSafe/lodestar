@@ -11,7 +11,7 @@ import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../inte
 import {EventEmitter} from "events";
 import {getSyncTargetEpoch, isValidChainOfBlocks, isValidFinalizedCheckPoint} from "../../utils/sync";
 import {BeaconState, Checkpoint} from "@chainsafe/eth2.0-types";
-import {computeStartSlotOfEpoch} from "../../../chain/stateTransition/util";
+import {computeStartSlotOfEpoch} from "@chainsafe/eth2.0-state-transition";
 import {getBlockRange} from "../../utils/blocks";
 
 export class FastSync
