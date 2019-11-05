@@ -1,2 +1,2 @@
-export * from "./initial";
 export * from "./interface";
+export * from "./fast";

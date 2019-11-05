@@ -1,10 +1,16 @@
 import {describe, it} from "mocha";
 import {IReputation, ReputationStore} from "../../../../src/sync/IReputation";
 import {BeaconBlock, BeaconBlockHeader, Epoch} from "@chainsafe/eth2.0-types";
-import {chunkify, getBlockRangeFromPeer, getTargetEpoch, isValidHeaderChain} from "../../../../src/sync/utils/sync";
+import {
+  chunkify,
+  getBlockRangeFromPeer,
+  getSyncTargetEpoch,
+  isValidChainOfBlocks,
+  isValidFinalizedCheckPoint
+} from "../../../../src/sync/utils/sync";
 import {expect} from "chai";
 import {generateEmptyBlock} from "../../../utils/block";
-import {hashTreeRoot} from "@chainsafe/ssz";
+import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/src/presets/minimal";
 import {blockToHeader} from "../../../../src/chain/stateTransition/util";
 import sinon from "sinon";
@@ -23,11 +29,11 @@ describe("sync utils", function () {
         generateReputation(1),
         generateReputation(2),
       ];
-      const result = getTargetEpoch(peers, {epoch: 0, root: Buffer.alloc(0)});
+      const result = getSyncTargetEpoch(peers, {epoch: 0, root: Buffer.alloc(0)});
       expect(result).to.be.equal(1);
-      const result1 = getTargetEpoch(peers, {epoch: 2, root: Buffer.alloc(0)});
+      const result1 = getSyncTargetEpoch(peers, {epoch: 2, root: Buffer.alloc(0)});
       expect(result1).to.be.equal(3);
-      const result2 = getTargetEpoch(peers, {epoch: 3, root: Buffer.alloc(0)});
+      const result2 = getSyncTargetEpoch(peers, {epoch: 3, root: Buffer.alloc(0)});
       expect(result2).to.be.equal(3);
     });
 
@@ -40,14 +46,14 @@ describe("sync utils", function () {
         generateReputation(1),
         generateReputation(2),
       ];
-      const result = getTargetEpoch(peers, {epoch: 0, root: Buffer.alloc(0)});
+      const result = getSyncTargetEpoch(peers, {epoch: 0, root: Buffer.alloc(0)});
       expect(result).to.be.equal(1);
     });
 
     it("should return given epoch if no peers", function () {
       const peers: IReputation[] = [
       ];
-      const result = getTargetEpoch(peers, {epoch: 0, root: Buffer.alloc(0)});
+      const result = getSyncTargetEpoch(peers, {epoch: 0, root: Buffer.alloc(0)});
       expect(result).to.be.equal(0);
     });
   });
@@ -77,23 +83,23 @@ describe("sync utils", function () {
     it("Should verify correct chain of blocks", function () {
       const startHeader = blockToHeader(config, generateEmptyBlock());
       const blocks = generateValidChain(startHeader);
-      const result = isValidHeaderChain(config, startHeader, blocks);
+      const result = isValidChainOfBlocks(config, startHeader, blocks);
       expect(result).to.be.true;
     });
 
-    it("Should verify correct chain of blocks - blocks out of order", function () {
+    it("Should verify invalid chain of blocks - blocks out of order", function () {
       const startHeader = blockToHeader(config, generateEmptyBlock());
       const blocks = generateValidChain(startHeader);
       [blocks[0], blocks[1]] = [blocks[1], blocks[0]];
-      const result = isValidHeaderChain(config, startHeader, blocks);
-      expect(result).to.be.true;
+      const result = isValidChainOfBlocks(config, startHeader, blocks);
+      expect(result).to.be.false;
     });
 
     it("Should verify invalid chain of blocks - different start header", function () {
       const startHeader = blockToHeader(config, generateEmptyBlock());
       const blocks = generateValidChain(startHeader);
       startHeader.slot = 99;
-      const result = isValidHeaderChain(config, startHeader, blocks);
+      const result = isValidChainOfBlocks(config, startHeader, blocks);
       expect(result).to.be.false;
     });
 
@@ -101,7 +107,7 @@ describe("sync utils", function () {
       const startHeader = blockToHeader(config, generateEmptyBlock());
       const blocks = generateValidChain(startHeader);
       blocks[1].parentRoot = Buffer.alloc(32);
-      const result = isValidHeaderChain(config, startHeader, blocks);
+      const result = isValidChainOfBlocks(config, startHeader, blocks);
       expect(result).to.be.false;
     });
   });
@@ -128,17 +134,47 @@ describe("sync utils", function () {
     });
 
   });
+  
+  describe("is valid finalized checkpoint", function () {
+    
+    it("more than 50% peers have same finalized checkpoint", function () {
+      const peers: IReputation[] = [
+        // @ts-ignore
+        {latestHello: {finalizedRoot: Buffer.alloc(32, 1)}},
+        // @ts-ignore
+        {latestHello: {finalizedRoot: Buffer.alloc(32, 0)}},
+        // @ts-ignore
+        {}
+      ];
+      const result = isValidFinalizedCheckPoint(peers, {root: Buffer.alloc(32, 1), epoch: 2});
+      expect(result).to.be.true;
+    });
+
+    it("more than 50% peers have different finalized checkpoint", function () {
+      const peers: IReputation[] = [
+        // @ts-ignore
+        {latestHello: {finalizedRoot: Buffer.alloc(32, 1)}},
+        // @ts-ignore
+        {latestHello: {finalizedRoot: Buffer.alloc(32, 0)}},
+        // @ts-ignore
+        {latestHello: {finalizedRoot: Buffer.alloc(32, 0)}},
+      ];
+      const result = isValidFinalizedCheckPoint(peers, {root: Buffer.alloc(32, 1), epoch: 2});
+      expect(result).to.be.false;
+    });
+    
+  });
     
 });
 
 function generateValidChain(start: BeaconBlockHeader, n = 3): BeaconBlock[] {
   const blocks = [];
-  let parentRoot = hashTreeRoot(start, config.types.BeaconBlockHeader);
+  let parentRoot = signingRoot(start, config.types.BeaconBlockHeader);
   for(let i = 0; i < n; i++) {
     const block = generateEmptyBlock();
     block.parentRoot = parentRoot;
     block.slot = i;
-    parentRoot = hashTreeRoot(blockToHeader(config, block), config.types.BeaconBlockHeader);
+    parentRoot = signingRoot(block, config.types.BeaconBlock);
     blocks.push(block);
   }
   return blocks;

@@ -1,23 +1,22 @@
 import {IReputation, ReputationStore} from "../IReputation";
 import {BeaconBlock, BeaconBlockHeader, Checkpoint, Epoch, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {hashTreeRoot} from "@chainsafe/ssz";
-import {blockToHeader} from "../../chain/stateTransition/util";
+import {signingRoot} from "@chainsafe/ssz";
 import {IReqResp} from "../../network";
 
-export function isValidHeaderChain(config: IBeaconConfig, start: BeaconBlockHeader, blocks: BeaconBlock[]): boolean {
-  blocks = blocks.sort((b1, b2) => b1.slot - b2.slot);
-  let previousRoot = hashTreeRoot(start, config.types.BeaconBlockHeader);
+export function isValidChainOfBlocks(config: IBeaconConfig, start: BeaconBlockHeader, blocks: BeaconBlock[]): boolean {
+  let parentRoot = signingRoot(start, config.types.BeaconBlockHeader);
   for(const block of blocks) {
-    if(!previousRoot.equals(block.parentRoot)) {
+    if(!parentRoot.equals(block.parentRoot)) {
       return false;
     }
-    previousRoot = hashTreeRoot(blockToHeader(config, block), config.types.BeaconBlockHeader);
+    parentRoot = signingRoot(block, config.types.BeaconBlock);
   }
   return true;
 }
 
-export function getTargetEpoch(peers: IReputation[], currentCheckPoint: Checkpoint): Epoch {
+export function getSyncTargetEpoch(peers: IReputation[], currentCheckPoint: Checkpoint): Epoch {
+  const numberOfEpochToBatch = 1;
   const peersWithHigherFinalizedEpoch = peers.filter(peer => {
     if(!peer.latestHello) {
       return false;
@@ -27,9 +26,17 @@ export function getTargetEpoch(peers: IReputation[], currentCheckPoint: Checkpoi
     }
   });
   if(peersWithHigherFinalizedEpoch.length > 0) {
-    return currentCheckPoint.epoch + 1;
+    return currentCheckPoint.epoch + numberOfEpochToBatch;
   }
   return currentCheckPoint.epoch;
+}
+
+export function isValidFinalizedCheckPoint(peers: IReputation[], finalizedCheckPoint: Checkpoint): boolean {
+  const validPeers = peers.filter((peer) => !!peer.latestHello);
+  const peerCount = validPeers.filter(peer => {
+    return peer.latestHello.finalizedRoot.equals(finalizedCheckPoint.root);
+  }).length;
+  return peerCount >= (validPeers.length / 2);
 }
 
 export interface ISlotRange {

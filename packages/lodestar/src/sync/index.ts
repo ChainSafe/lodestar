@@ -10,7 +10,7 @@ import {OpPool} from "../opPool";
 import {IEth1Notifier} from "../eth1";
 import {IBeaconDb} from "../db";
 import {RegularSync} from "./regular";
-import {InitialSync} from "./initial";
+import {FastSync, InitialSync} from "./initial";
 import {ILogger} from "../logger";
 import {ISyncOptions} from "./options";
 import {ISyncReqResp, SyncReqResp} from "./reqResp";
@@ -57,7 +57,7 @@ export class Sync extends EventEmitter {
     this.logger = modules.logger;
     this.reqResp = new SyncReqResp(opts, modules);
     this.regularSync = new RegularSync(this.opts, modules);
-    this.initialSync = new InitialSync(
+    this.initialSync = new FastSync(
       this.opts,
       {
         ...modules,

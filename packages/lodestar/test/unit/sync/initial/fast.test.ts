@@ -1,5 +1,5 @@
 import {afterEach, beforeEach, describe, it} from "mocha";
-import {IInitialSyncModules, InitialSync} from "../../../../src/sync/initial";
+import {FastSync, IInitialSyncModules} from "../../../../src/sync/initial";
 import sinon from "sinon";
 import {BeaconChain} from "../../../../src/chain";
 import {WinstonLogger} from "../../../../src/logger";
@@ -15,7 +15,7 @@ import PeerInfo from "peer-info";
 import {generateState} from "../../../utils/state";
 import {generateEmptyBlock} from "../../../utils/block";
 
-describe("initial sync", function () {
+describe("fast sync", function () {
 
   const sandbox = sinon.createSandbox();
 
@@ -39,8 +39,8 @@ describe("initial sync", function () {
     defaultOpts = {
       blockPerChunk: 2
     };
-    getTargetEpochStub = sandbox.stub(syncUtils, "getTargetEpoch");
-    isValidHeaderChainStub = sandbox.stub(syncUtils, "isValidHeaderChain");
+    getTargetEpochStub = sandbox.stub(syncUtils, "getSyncTargetEpoch");
+    isValidHeaderChainStub = sandbox.stub(syncUtils, "isValidChainOfBlocks");
     getBlockRangeStub = sandbox.stub(blockSyncUtils, "getBlockRange");
   });
 
@@ -49,14 +49,14 @@ describe("initial sync", function () {
   });
 
   it("no peers - exit", async function () {
-    const sync = new InitialSync(defaultOpts, modules);
+    const sync = new FastSync(defaultOpts, modules);
     await sync.start();
     // @ts-ignore
     expect(modules.logger.error.calledOnce).to.be.true;
   });
 
   it("chain not initialized", async function () {
-    const sync = new InitialSync(
+    const sync = new FastSync(
       defaultOpts,
       {
         ...modules,
@@ -73,7 +73,7 @@ describe("initial sync", function () {
 
   it("already synced - same epoch", async function () {
     const peer = sinon.createStubInstance(PeerInfo);
-    const sync = new InitialSync(
+    const sync = new FastSync(
       defaultOpts,
       {
         ...modules,
@@ -83,6 +83,8 @@ describe("initial sync", function () {
     // @ts-ignore
     modules.chain.isInitialized.returns(true);
     const chainCheckPoint = {root: Buffer.alloc(32, 1), epoch: 3};
+    // @ts-ignore
+    modules.reps.getFromPeerInfo.returns({latestHello: {finalizedEpoch: 3, finalizedRoot: chainCheckPoint.root}});
     sinon.stub(modules.chain, "latestState")
       .get(() => generateState({currentJustifiedCheckpoint: chainCheckPoint}));
     getTargetEpochStub.returns(3);
@@ -96,16 +98,19 @@ describe("initial sync", function () {
 
   it("already synced - higher epoch epoch", async function () {
     const peer = sinon.createStubInstance(PeerInfo);
-    const sync = new InitialSync(
+    const sync = new FastSync(
       defaultOpts,
       {
         ...modules,
         peers: [peer]
       }
     );
+
     // @ts-ignore
     modules.chain.isInitialized.returns(true);
     const chainCheckPoint = {root: Buffer.alloc(32, 1), epoch: 4};
+    // @ts-ignore
+    modules.reps.getFromPeerInfo.returns({latestHello: {finalizedEpoch: 3, finalizedRoot: chainCheckPoint.root}});
     sinon.stub(modules.chain, "latestState")
       .get(() => generateState({currentJustifiedCheckpoint: chainCheckPoint}));
     getTargetEpochStub.returns(3);
@@ -119,7 +124,7 @@ describe("initial sync", function () {
 
   it("happy path", async function () {
     const peer = sinon.createStubInstance(PeerInfo);
-    const sync = new InitialSync(
+    const sync = new FastSync(
       defaultOpts,
       {
         ...modules,
@@ -131,6 +136,8 @@ describe("initial sync", function () {
     const chainCheckPoint = {root: Buffer.alloc(32, 1), epoch: 4};
     sinon.stub(modules.chain, "latestState")
       .get(() => generateState({currentJustifiedCheckpoint: chainCheckPoint}));
+    // @ts-ignore
+    modules.reps.getFromPeerInfo.returns({latestHello: {finalizedEpoch: 3, finalizedRoot: chainCheckPoint.root}});
     // @ts-ignore
     modules.reps.getFromPeerInfo.returns({} as unknown as IReputation);
     getTargetEpochStub.returns(5);
@@ -144,7 +151,7 @@ describe("initial sync", function () {
 
   it("invalid header chain", async function () {
     const peer = sinon.createStubInstance(PeerInfo);
-    const sync = new InitialSync(
+    const sync = new FastSync(
       defaultOpts,
       {
         ...modules,

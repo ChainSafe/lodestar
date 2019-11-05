@@ -30,5 +30,9 @@ export async function getBlockRange(
       })
     )).filter((chunk) => chunk !== null);
   }
-  return blocks;
+  return sortBlocks(blocks);
+}
+
+export function sortBlocks(blocks: BeaconBlock[]): BeaconBlock[] {
+  return blocks.sort((b1, b2) => b1.slot - b2.slot);
 }

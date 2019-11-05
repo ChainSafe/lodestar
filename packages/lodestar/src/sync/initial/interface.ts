@@ -7,6 +7,7 @@ import {ILogger} from "../../logger";
 import {Checkpoint, Epoch} from "@chainsafe/eth2.0-types";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
+import {IService} from "../../node";
 
 export interface IInitialSyncModules {
   config: IBeaconConfig;
@@ -22,3 +23,5 @@ export interface IInitialSyncEvents {
   "sync:completed": (target: Checkpoint) => void;
 }
 export type InitialSyncEventEmitter = StrictEventEmitter<EventEmitter, IInitialSyncEvents>;
+
+export type InitialSync = IService & InitialSyncEventEmitter;

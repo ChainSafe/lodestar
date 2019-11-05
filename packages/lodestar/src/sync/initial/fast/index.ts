@@ -2,21 +2,21 @@
  * @module sync/initial
  */
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {IBeaconChain} from "../../chain";
-import {ReputationStore} from "../IReputation";
-import {IReqResp} from "../../network";
-import {ILogger} from "../../logger";
-import {ISyncOptions} from "../options";
-import {IInitialSyncModules, InitialSyncEventEmitter} from "./interface";
+import {IBeaconChain} from "../../../chain";
+import {ReputationStore} from "../../IReputation";
+import {IReqResp} from "../../../network";
+import {ILogger} from "../../../logger";
+import {ISyncOptions} from "../../options";
+import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../interface";
 import {EventEmitter} from "events";
-import {getTargetEpoch, isValidHeaderChain} from "../utils/sync";
+import {getSyncTargetEpoch, isValidChainOfBlocks, isValidFinalizedCheckPoint} from "../../utils/sync";
 import {BeaconState, Checkpoint} from "@chainsafe/eth2.0-types";
-import {computeStartSlotOfEpoch} from "../../chain/stateTransition/util";
-import {getBlockRange} from "../utils/blocks";
+import {computeStartSlotOfEpoch} from "../../../chain/stateTransition/util";
+import {getBlockRange} from "../../utils/blocks";
 
-export class InitialSync
+export class FastSync
   extends (EventEmitter as { new(): InitialSyncEventEmitter })
-  implements InitialSyncEventEmitter {
+  implements InitialSync {
 
   private config: IBeaconConfig;
   private opts: ISyncOptions;
@@ -62,12 +62,15 @@ export class InitialSync
   }
 
   private sync = async (chainCheckPoint: Checkpoint) => {
-    const peers = Array.from(this.peers);
-    const targetEpoch = getTargetEpoch(peers.map(this.reps.getFromPeerInfo), chainCheckPoint);
+    const peers = Array.from(this.peers).map(this.reps.getFromPeerInfo);
+    const targetEpoch = getSyncTargetEpoch(peers, chainCheckPoint);
     if(chainCheckPoint.epoch >= targetEpoch) {
-      this.logger.info("Chain already on latest finalized state");
-      this.chain.removeListener("chain:processedCheckpoint", this.sync);
-      this.emit("sync:completed", chainCheckPoint);
+      if(isValidFinalizedCheckPoint(peers, chainCheckPoint)) {
+        this.logger.info("Chain already on latest finalized state");
+        this.chain.removeListener("chain:processedCheckpoint", this.sync);
+        this.emit("sync:completed", chainCheckPoint);
+      }
+      this.logger.error("Wrong chain synced, should clean and start over");
     } else {
       this.logger.debug(`Fast syncing to target ${targetEpoch}`);
       const latestState = this.chain.latestState as BeaconState;
@@ -78,10 +81,11 @@ export class InitialSync
         {start: latestState.slot, end: computeStartSlotOfEpoch(this.config, targetEpoch)},
         this.opts.blockPerChunk
       );
-      if(isValidHeaderChain(this.config, latestState.latestBlockHeader, blocks)) {
+      if(isValidChainOfBlocks(this.config, latestState.latestBlockHeader, blocks)) {
         blocks.forEach((block) => this.chain.receiveBlock(block, true));
         this.emit("sync:checkpoint", targetEpoch);
       } else {
+        //TODO: if finalized checkpoint is wrong, sync whole chain again
         this.logger.error(`Invalid header chain (${latestState.slot}...`
             + `${computeStartSlotOfEpoch(this.config, targetEpoch)}), blocks discarded. Retrying...`
         );
