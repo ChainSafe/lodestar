@@ -52,7 +52,7 @@ export interface IBeaconSSZTypes {
   // state
   BeaconState: AnyContainerType;
   // wire
-  Hello: AnyContainerType;
+  Status: AnyContainerType;
   Goodbye: AnyContainerType;
   BeaconBlocksByRangeRequest: AnyContainerType;
   BeaconBlocksByRangeResponse: AnyContainerType;
@@ -113,7 +113,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   // state
   "BeaconState",
   // wire
-  "Hello",
+  "Status",
   "Goodbye",
   "BeaconBlocksByRangeRequest",
   "BeaconBlocksByRangeResponse",

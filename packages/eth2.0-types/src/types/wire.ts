@@ -7,18 +7,18 @@ import {BeaconBlock} from "./block";
 export type RequestId = string;
 
 export type RequestBody =
-  Hello |
+  Status |
   Goodbye |
   BeaconBlocksByRangeRequest |
   BeaconBlocksByRootRequest;
 
 export type ResponseBody =
-  Hello |
+  Status |
   Goodbye |
   BeaconBlocksByRangeResponse |
   BeaconBlocksByRootResponse;
 
-export interface Hello {
+export interface Status {
   headForkVersion: Version;
   finalizedRoot: Hash;
   finalizedEpoch: Epoch;

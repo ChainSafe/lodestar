@@ -106,7 +106,7 @@ describe("syncing", function () {
     });
     reqRespStub.sendResponse.resolves(0);
     try {
-      await syncRpc.onRequest(peerInfo, Method.Hello, "hello", body);
+      await syncRpc.onRequest(peerInfo, Method.Status, "hello", body);
       expect(reqRespStub.sendResponse.calledOnce).to.be.true;
     }catch (e) {
       expect.fail(e.stack);
@@ -127,7 +127,7 @@ describe("syncing", function () {
     });
     try {
       reqRespStub.sendResponse.throws(new Error("server error"));
-      await syncRpc.onRequest(peerInfo, Method.Hello, "hello", body);
+      await syncRpc.onRequest(peerInfo, Method.Status, "hello", body);
     }catch (e) {
       expect(reqRespStub.sendResponse.called).to.be.true;
     }

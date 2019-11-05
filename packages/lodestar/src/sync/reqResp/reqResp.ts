@@ -75,7 +75,7 @@ export class SyncReqResp implements ISyncReqResp {
     body: RequestBody,
   ): Promise<void> => {
     switch (method) {
-      case Method.Hello:
+      case Method.Status:
         return await this.onHello(peerInfo, id, body as Hello);
       case Method.Goodbye:
         return await this.onGoodbye(peerInfo, id, body as Goodbye);
