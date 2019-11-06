@@ -1,4 +1,4 @@
-![lodestar logo](/.github/lodestar.png)
+![lodestar logo](./assets/300ppi/FullMark-BLACK.png)
 
 # Lodestar Monorepo
 ![ETH2.0_Spec_Version 0.8.3](https://img.shields.io/badge/ETH2.0_Spec_Version-0.8.3-2e86c1.svg)
