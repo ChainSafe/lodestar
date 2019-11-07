@@ -58,7 +58,7 @@ export function processDeposit(
       withdrawableEpoch: FAR_FUTURE_EPOCH,
       slashed: false,
       effectiveBalance: bnMin(
-        amount.sub(amount.mod(config.params.EFFECTIVE_BALANCE_INCREMENT)),
+        amount - (amount % config.params.EFFECTIVE_BALANCE_INCREMENT),
         config.params.MAX_EFFECTIVE_BALANCE
       ),
     };

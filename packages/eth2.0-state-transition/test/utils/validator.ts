@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import {Validator} from "@chainsafe/eth2.0-types";
 import {FAR_FUTURE_EPOCH} from "../../src/constants";
 
@@ -6,7 +5,7 @@ export interface ValidatorGeneratorOpts {
   activation?: number;
   exit?: number;
   slashed?: boolean;
-  balance?: BN;
+  balance?: bigint;
 }
 
 /**
@@ -27,7 +26,7 @@ export function generateValidator(opts: ValidatorGeneratorOpts = {}): Validator 
     exitEpoch: opts.exit || randNum(),
     withdrawableEpoch: randNum(),
     slashed: opts.slashed || false,
-    effectiveBalance: opts.balance || new BN(0)
+    effectiveBalance: opts.balance || 0n
   };
 }
 

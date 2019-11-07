@@ -5,8 +5,8 @@ import {EMPTY_SIGNATURE} from "../../src/constants";
 export function generateEmptyTransfer(): Transfer {
   return {
     slot: 0,
-    amount: new BN(0),
-    fee: new BN(0),
+    amount: 0n,
+    fee: 0n,
     pubkey: Buffer.alloc(48, 0),
     recipient: 0,
     sender: 0,

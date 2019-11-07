@@ -18,27 +18,27 @@ describe("getTotalBalance", () => {
   it("should return correct balances", () => {
     const num = 5;
     const validators: Validator[] = generateValidators(num).map((v) => {
-      v.effectiveBalance = new BN(500);
+      v.effectiveBalance = 500n;
       return v;
     });
     const state: BeaconState = generateState({validators: validators});
     const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
     const result = getTotalBalance(state, validatorIndices);
-    const expected = new BN(num).muln(500);
-    assert(result.eq(expected), `Expected: ${expected} :: Result: ${result}`);
+    const expected = BigInt(num) * 500n;
+    assert(result === expected, `Expected: ${expected} :: Result: ${result}`);
   });
 
   it("should return correct balances", () => {
     const num = 5;
     const validators: Validator[] = generateValidators(num);
-    const balances: Gwei[] = Array.from({length: num}, () => new BN(0));
+    const balances: Gwei[] = Array.from({length: num}, () => 0n);
     const state: BeaconState = generateState({validators: validators, balances});
     const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
     const result = getTotalBalance(state, validatorIndices);
-    const expected = new BN(1);
-    assert(result.eq(expected), `Expected: ${expected} :: Result: ${result}`);
+    const expected = 1n;
+    assert(result === expected, `Expected: ${expected} :: Result: ${result}`);
   });
 });
 
@@ -46,11 +46,11 @@ describe("increaseBalance", () => {
   it("should add to a validators balance", () => {
     const state = generateState();
     state.validators = generateValidators(1);
-    state.balances = [new BN(0)];
-    const delta = new BN(5);
-    for (let i = 1; i < 10; i++) {
+    state.balances = [0n];
+    const delta = 5n;
+    for (let i = 1n; i < 10n; i++) {
       increaseBalance(state, 0, delta);
-      assert(state.balances[0].eq(delta.muln(i)));
+      assert(state.balances[0] === delta * i );
     }
   });
 });
@@ -59,21 +59,21 @@ describe("decreaseBalance", () => {
   it("should subtract from a validators balance", () => {
     const state = generateState();
     state.validators = generateValidators(1);
-    const initial = new BN(100);
+    const initial = 100n
     state.balances = [initial];
-    const delta = new BN(5);
-    for (let i = 1; i < 10; i++) {
+    const delta = 5n
+    for (let i = 1n; i < 10n; i++) {
       decreaseBalance(state, 0, delta);
-      assert(state.balances[0].eq(initial.sub(delta.muln(i))));
+      assert(state.balances[0] === (initial - (delta * i)));
     }
   });
   it("should not make a validators balance < 0", () => {
     const state = generateState();
     state.validators = generateValidators(1);
-    const initial = new BN(10);
+    const initial = 10n;
     state.balances = [initial];
-    const delta = new BN(11);
+    const delta = 11n
     decreaseBalance(state, 0, delta);
-    assert(state.balances[0].eqn(0));
+    assert(state.balances[0] === 0n);
   });
 });

@@ -65,19 +65,19 @@ export function slashValidator(
 
   const slashedBalance = state.validators[slashedIndex].effectiveBalance;
   state.slashings[currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] =
-    state.slashings[currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR].add(slashedBalance);
+    state.slashings[currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] + slashedBalance;
   decreaseBalance(
     state,
     slashedIndex,
-    state.validators[slashedIndex].effectiveBalance.divn(config.params.MIN_SLASHING_PENALTY_QUOTIENT));
+    state.validators[slashedIndex].effectiveBalance / BigInt(config.params.MIN_SLASHING_PENALTY_QUOTIENT));
 
 
   const proposerIndex = getBeaconProposerIndex(config, state);
   if (whistleblowerIndex === undefined || whistleblowerIndex === null) {
     whistleblowerIndex = proposerIndex;
   }
-  const whistleblowingReward = slashedBalance.divn(config.params.WHISTLEBLOWING_REWARD_QUOTIENT);
-  const proposerReward = whistleblowingReward.divn(config.params.PROPOSER_REWARD_QUOTIENT);
+  const whistleblowingReward = slashedBalance / BigInt(config.params.WHISTLEBLOWING_REWARD_QUOTIENT);
+  const proposerReward = whistleblowingReward/ BigInt(config.params.PROPOSER_REWARD_QUOTIENT);
   increaseBalance(state, proposerIndex, proposerReward);
-  increaseBalance(state, whistleblowerIndex, whistleblowingReward.sub(proposerReward));
+  increaseBalance(state, whistleblowerIndex, whistleblowingReward - proposerReward);
 }

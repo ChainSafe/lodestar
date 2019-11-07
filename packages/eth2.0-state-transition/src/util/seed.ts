@@ -32,10 +32,10 @@ export function computeShuffledIndex(
   assert(index < indexCount);
   assert(indexCount <= 2 ** 40);
   for (let i = 0; i < config.params.SHUFFLE_ROUND_COUNT; i++) {
-    const pivot = bytesToBN(
+    const pivot = Number(bytesToBN(
       hash(Buffer.concat([seed, intToBytes(i, 1)]))
         .slice(0, 8)
-    ).modn(indexCount);
+    ) % BigInt(indexCount));
     const flip = (pivot + indexCount - permuted) % indexCount;
     const position = Math.max(permuted, flip);
     const source = hash(Buffer.concat([
