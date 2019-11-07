@@ -10,6 +10,7 @@ import {stringifyType} from "./utils";
 import {deserialize} from "../../src";
 
 describe("deserialize", () => {
+
   const testCases: {
     value: string;
     type: any;
@@ -28,20 +29,20 @@ describe("deserialize", () => {
     {value: "ffffff0f", type: "uint32", expected: 2**28-1},
     {value: "00000010", type: "uint32", expected: 2**28},
     {value: "ffffffff", type: "uint32", expected: 2**32-1},
-    {value: "0000000001000000", type: "uint64", expected: new BN(2**32)},
-    {value: "ffffffffffff0f00", type: "uint64", expected: new BN(2**52-1)},
-    {value: "0100000000000000", type: "uint64", expected: new BN("01", 16)},
-    {value: "0000000000000010", type: "uint64", expected: new BN("1000000000000000", 16)},
-    {value: "ffffffffffffffff", type: "uint64", expected: new BN("ffffffffffffffff", 16)},
+    {value: "0000000001000000", type: "uint64", expected: 2n**32n},
+    {value: "ffffffffffff0f00", type: "uint64", expected: 2n**52n-1n},
+    {value: "0100000000000000", type: "uint64", expected: 0x01n},
+    {value: "0000000000000010", type: "uint64", expected: 0x1000000000000000n},
+    {value: "ffffffffffffffff", type: "uint64", expected: 0xffffffffffffffffn},
     {
       value: "ffffffffffffffffffffffffffffffff",
       type: "uint128",
-      expected: new BN("ffffffffffffffffffffffffffffffff", 16)
+      expected: 0xffffffffffffffffffffffffffffffffn
     },
     {
       value: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
       type: "uint256",
-      expected: new BN("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
+      expected: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn
     },
     {value: "0000000001000000", type: "number64", expected: 2**32},
     {value: "ffffffffffff0f00", type: "number64", expected: 2**52-1},
@@ -77,8 +78,8 @@ describe("deserialize", () => {
   for (const {value, type, expected} of testCases) {
     it(`should correctly deserialize ${stringifyType(type)}`, () => {
       const actual = deserialize(Buffer.from(value, "hex"), type);
-      if (BN.isBN(expected)) {
-        assert(expected.eq(actual as BN), `actual: ${actual}, expected: ${expected}`);
+      if (typeof expected == "bigint") {
+        assert(expected ==  actual, `actual: ${actual}, expected: ${expected}`);
       } else {
         assert.deepEqual(actual, expected);
       }

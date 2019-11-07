@@ -42,9 +42,8 @@
   "dependencies": {
     "@chainsafe/bit-utils": "^0.1.4",
     "@chainsafe/ssz-type-schema": "^0.0.1",
-    "@types/bn.js": "^4.11.4",
     "assert": "^1.4.1",
     "bcrypto": "^4.1.0",
-    "bn.js": "^4.11.8"
+    "bigint-buffer": "^1.1.5"
   }
 }

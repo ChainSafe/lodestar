@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
-import BN from "bn.js";
 
 import {AnySSZType, FullSSZType, Type, parseType} from "@chainsafe/ssz-type-schema";
 import {_assertValidValue} from "./assertValidValue";
@@ -62,7 +61,7 @@ function _equals(value1: any, value2: any, type: FullSSZType): boolean {
       if(value1 === Infinity || value2 === Infinity) {
         return value1 === value2;
       }
-      return (new BN(value1)).eq(new BN(value2));
+      return BigInt(value1) === BigInt(value2);
     case Type.bool:
       return value1 === value2;
     case Type.bitList:

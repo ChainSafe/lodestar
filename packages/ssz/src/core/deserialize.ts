@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
 import assert from "assert";
-import BN from "bn.js";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 
 import {
@@ -114,7 +113,9 @@ export function deserialize(data: Buffer, type: AnySSZType): any {
   if (!isVariableSizeType(_type)) {
     assert(fixedSize(_type) === data.length, "Incorrect data length");
   }
-  return _deserialize(data, _type, 0, data.length);
+  const ret = _deserialize(data, _type, 0, data.length);
+  console.log(typeof ret)
+  return ret
 }
 
 /**
@@ -152,8 +153,9 @@ function _deserializeUint(data: Buffer, type: UintType, start: number): Uint {
   if (type.byteLength > 6 && type.useNumber && uintData.equals(Buffer.alloc(type.byteLength, 255))) {
     return Infinity;
   } else {
-    const bn = new BN(uintData, 16, "le");
-    return (type.useNumber || type.byteLength <= 6) ? bn.toNumber() : bn;
+    const bn = BigInt("0x" + uintData.reverse().toString('hex'));
+    console.log(type)
+    return (type.useNumber || type.byteLength <= 6) ? Number(bn) : bn;
   }
 }
 

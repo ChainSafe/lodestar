@@ -4,7 +4,7 @@
 
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 
-export type Uint = number | BigInt;
+export type Uint = number | bigint;
 export type Bool = boolean;
 export type Bits = BitList | BitVector;
 export type Bytes = Buffer | Uint8Array;

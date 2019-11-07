@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
-import BN from "bn.js";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 
 import {
@@ -26,6 +25,7 @@ import {BYTES_PER_LENGTH_PREFIX} from "../util/constants";
 import {fixedSize, size} from "./size";
 import {_assertValidValue} from "./assertValidValue";
 
+import  {toBufferLE} from "bigint-buffer"
 
 /**
  * Serialize, according to the SSZ spec
@@ -107,13 +107,14 @@ export function serialize(value: any, type: AnySSZType): Buffer {
 /** @ignore */
 function _serializeUint(value: Uint, type: UintType, output: Buffer, start: number): number {
   const offset = start + type.byteLength;
-  let bnValue: BN;
+  let bnValue: bigint;
   if (type.byteLength > 6 && type.useNumber && value === Infinity) {
-    bnValue = new BN(Buffer.alloc(type.byteLength, 255));
+    bnValue = BigInt("0x" + Buffer.alloc(type.byteLength, 255).toString('hex'));
   } else {
-    bnValue = new BN(value);
+    console.log(value)
+    bnValue = BigInt(value);
   }
-  bnValue.toArrayLike(Buffer, "le", type.byteLength)
+ toBufferLE(bnValue, type.byteLength)
     .copy(output, start);
   return offset;
 }

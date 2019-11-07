@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import {expect} from "chai";
 import {describe, it} from "mocha";
 import {clone, equals} from "../../src";
@@ -13,7 +12,7 @@ describe("clone", () => {
   }[] = [
     {value: 1, type: "uint8", expected: true},
     {value: Infinity, type: "uint8", expected: true},
-    {value: new BN(1000), type: "uint16", expected: true},
+    {value: 1000n, type: "uint16", expected: true},
     {value: true, type: "bool", expected: true},
     {value: false, type: "bool", expected: true},
     {value: Buffer.from("abcd", "hex"), type: {elementType: "byte", maxLength: 100}, expected: true},
