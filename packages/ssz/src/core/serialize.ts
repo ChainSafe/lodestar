@@ -111,7 +111,6 @@ function _serializeUint(value: Uint, type: UintType, output: Buffer, start: numb
   if (type.byteLength > 6 && type.useNumber && value === Infinity) {
     bnValue = BigInt("0x" + Buffer.alloc(type.byteLength, 255).toString('hex'));
   } else {
-    console.log(value)
     bnValue = BigInt(value);
   }
  toBufferLE(bnValue, type.byteLength)

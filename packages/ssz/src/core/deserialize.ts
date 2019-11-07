@@ -114,7 +114,6 @@ export function deserialize(data: Buffer, type: AnySSZType): any {
     assert(fixedSize(_type) === data.length, "Incorrect data length");
   }
   const ret = _deserialize(data, _type, 0, data.length);
-  console.log(typeof ret)
   return ret
 }
 
@@ -154,7 +153,6 @@ function _deserializeUint(data: Buffer, type: UintType, start: number): Uint {
     return Infinity;
   } else {
     const bn = BigInt("0x" + uintData.reverse().toString('hex'));
-    console.log(type)
     return (type.useNumber || type.byteLength <= 6) ? Number(bn) : bn;
   }
 }

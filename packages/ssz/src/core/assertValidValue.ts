@@ -50,7 +50,6 @@ export function _assertValidValue(value: any, type: FullSSZType): void {
       if (value === Infinity) {
         break;
       }
-      console.log(value < 0)
       assert(value >= 0, "Invalid uint: value < 0");
       assert(value < (BigInt(2))**(BigInt(type.byteLength * 8)), "Invalid uint: not in range");
       break;
