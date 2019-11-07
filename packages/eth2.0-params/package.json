@@ -37,8 +37,6 @@
     "blockchain"
   ],
   "dependencies": {
-    "@types/bn.js": "^4.11.4",
-    "bn.js": "^4.11.8"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",
