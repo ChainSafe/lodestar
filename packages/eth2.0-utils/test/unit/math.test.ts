@@ -7,14 +7,14 @@ describe("util/maths", function() {
 
   describe("bnMin", () => {
     it("if a is lt should return a", () => {
-      const a = new BN("1");
-      const b = new BN("2");
+      const a = 1n;
+      const b = 2n;
       const result = bnMin(a, b);
       assert.equal(result, a, "Should have returned a!");
     });
     it("if b is lt should return b", () => {
-      const a = new BN("3");
-      const b = new BN("2");
+      const a = 3n;
+      const b = 2n;
       const result = bnMin(a, b);
       assert.equal(result, b, "Should have returned b!");
     });
@@ -22,14 +22,14 @@ describe("util/maths", function() {
 
   describe("bnMax", () => {
     it("if a is gt should return a", () => {
-      const a = new BN("2");
-      const b = new BN("1");
+      const a = 2n;
+      const b = 1n;
       const result = bnMax(a, b);
       assert.equal(result, a, "Should have returned a!");
     });
     it("if b is gt should return b", () => {
-      const a = new BN("2");
-      const b = new BN("3");
+      const a = 2n;
+      const b = 3n;
       const result = bnMax(a, b);
       assert.equal(result, b, "Should have returned b!");
     });
@@ -75,28 +75,28 @@ describe("util/maths", function() {
 
   describe("bnSqrt", () => {
     it("0 should return 0", () => {
-      const result = bnSqrt(new BN("0"));
-      assert.equal(result.toString(), new BN("0").toString(), "Should have returned 0!");
+      const result = bnSqrt(0n);
+      assert.equal(result.toString(), 0n.toString(), "Should have returned 0!");
     });
     it("1 should return 1", () => {
-      const result = bnSqrt(new BN("1"));
-      assert.equal(result.toString(), new BN("1").toString(), "Should have returned 1!");
+      const result = bnSqrt(1n);
+      assert.equal(result.toString(), 1n.toString(), "Should have returned 1!");
     });
     it("3 should return 1", () => {
-      const result = bnSqrt(new BN("3"));
-      assert.equal(result.toString(), new BN("1").toString(), "Should have returned 1!");
+      const result = bnSqrt(3n);
+      assert.equal(result.toString(), 1n.toString(), "Should have returned 1!");
     });
     it("4 should return 2", () => {
-      const result = bnSqrt(new BN("4"));
-      assert.equal(result.toString(), new BN("2").toString(), "Should have returned 2!");
+      const result = bnSqrt(4n);
+      assert.equal(result.toString(), 2n.toString(), "Should have returned 2!");
     });
     it("16 should return 4", () => {
-      const result = bnSqrt(new BN("16"));
-      assert.equal(result.toString(), new BN("4").toString(), "Should have returned 4!");
+      const result = bnSqrt(16n);
+      assert.equal(result.toString(), 4n.toString(), "Should have returned 4!");
     });
     it("31 should return 5", () => {
-      const result = bnSqrt(new BN("31"));
-      assert.equal(result.toString(), new BN("5").toString(), "Should have returned 5!");
+      const result = bnSqrt(31n);
+      assert.equal(result.toString(), 5n.toString(), "Should have returned 5!");
     });
   });
 });
