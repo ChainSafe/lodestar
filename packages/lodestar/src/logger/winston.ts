@@ -2,8 +2,8 @@
  * @module logger
  */
 
-import { createLogger, format, Logger, transports } from "winston";
-import { defaultLogLevel, LogLevel, ILogger, ILoggerOptions } from "./interface";
+import {createLogger, format, Logger, transports} from "winston";
+import {defaultLogLevel, LogLevel, ILogger, ILoggerOptions} from "./interface";
 import chalk from "chalk";
 
 export class WinstonLogger implements ILogger {
@@ -47,9 +47,9 @@ export class WinstonLogger implements ILogger {
     });
     //@ts-ignore
     this._level = LogLevel[options.level];
-    this._silent = false
-    if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {
-      this._silent = process.env.LODESTAR_SILENCE === 'true';
+    this._silent = false;
+    if (typeof process !== "undefined" && typeof process.env !== "undefined") {
+      this._silent = process.env.LODESTAR_SILENCE === "true";
     }
   }
 
@@ -100,7 +100,7 @@ export class WinstonLogger implements ILogger {
 
   public child(options: ILoggerOptions): WinstonLogger {
     const logger = Object.create(WinstonLogger.prototype);
-    const winston = this.winston.child({ namespace: options.module });
+    const winston = this.winston.child({namespace: options.module});
     return Object.assign(logger, {
       winston,
       _level: options.level,
