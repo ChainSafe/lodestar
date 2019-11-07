@@ -47,7 +47,10 @@ export class WinstonLogger implements ILogger {
     });
     //@ts-ignore
     this._level = LogLevel[options.level];
-    this._silent = process.env.LODESTAR_SILENCE === 'true';
+    this._silent = false
+    if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {
+      this._silent = process.env.LODESTAR_SILENCE === 'true';
+    }
   }
 
   public debug(message: string | object, context?: object): void {
