@@ -43,7 +43,6 @@
   "dependencies": {
     "@chainsafe/eth2.0-utils": "^0.0.1",
     "@chainsafe/ssz": "^0.5.2",
-    "bn.js": "^5.0.0",
     "camelcase": "^5.3.1",
     "chai": "^4.2.0",
     "deepmerge": "^4.0.0",
@@ -54,7 +53,6 @@
     "v8-profiler-next": "^1.1.1"
   },
   "devDependencies": {
-    "@types/bn.js": "^4.11.5",
     "@types/camelcase": "^5.2.0",
     "@types/chai": "^4.1.7",
     "@types/deepmerge": "^2.2.0",
