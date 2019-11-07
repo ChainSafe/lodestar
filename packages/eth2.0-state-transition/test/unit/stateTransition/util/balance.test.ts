@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import {assert} from "chai";
 
 import {BeaconState, Gwei, Validator, ValidatorIndex} from "@chainsafe/eth2.0-types";
