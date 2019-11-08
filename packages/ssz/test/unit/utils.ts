@@ -1,6 +1,6 @@
 import {SimpleSSZType,} from "@chainsafe/ssz-type-schema";
 // @ts-ignore
-BigInt.prototype.toJSON = function() { return this.toString(); }
+BigInt.prototype.toJSON = function() { return this.toString(); };
 export function stringifyType (type: SimpleSSZType): string {
   if (typeof type === "string") {
     return type;

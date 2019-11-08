@@ -24,7 +24,7 @@ function serializeToJson(value: any): any {
   if (Buffer.isBuffer(value)) {
     return toHex(value);
   }
-  if (typeof value === 'bigint') {
+  if (typeof value === "bigint") {
     return value.toString();
   }
   if (BitVector.isBitVector(value)) {

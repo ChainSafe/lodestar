@@ -26,7 +26,7 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
   // Update effective balances with hysteresis
   state.validators.forEach((validator, index) => {
     const balance = state.balances[index];
-    const HALF_INCREMENT = config.params.EFFECTIVE_BALANCE_INCREMENT / 2n
+    const HALF_INCREMENT = config.params.EFFECTIVE_BALANCE_INCREMENT / 2n;
     if (
       (balance < validator.effectiveBalance) ||
       (validator.effectiveBalance + (HALF_INCREMENT*3n)) < balance

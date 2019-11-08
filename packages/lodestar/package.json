@@ -63,6 +63,7 @@
     "async": "^3.1.0",
     "await-to-js": "^2.1.1",
     "axios": "^0.19.0",
+    "bigint-buffer": "^1.1.5",
     "bignumber.js": "^9.0.0",
     "blakejs": "^1.1.0",
     "buffer-xor": "^2.0.2",

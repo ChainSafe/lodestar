@@ -113,8 +113,8 @@ export function deserialize(data: Buffer, type: AnySSZType): any {
   if (!isVariableSizeType(_type)) {
     assert(fixedSize(_type) === data.length, "Incorrect data length");
   }
-  const ret = _deserialize(data, _type, 0, data.length);
-  return ret
+  return _deserialize(data, _type, 0, data.length);
+
 }
 
 /**
@@ -152,7 +152,7 @@ function _deserializeUint(data: Buffer, type: UintType, start: number): Uint {
   if (type.byteLength > 6 && type.useNumber && uintData.equals(Buffer.alloc(type.byteLength, 255))) {
     return Infinity;
   } else {
-    const bn = BigInt("0x" + uintData.reverse().toString('hex'));
+    const bn = BigInt("0x" + uintData.reverse().toString("hex"));
     return (type.useNumber || type.byteLength <= 6) ? Number(bn) : bn;
   }
 }

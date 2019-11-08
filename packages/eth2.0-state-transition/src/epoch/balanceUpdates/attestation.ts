@@ -65,11 +65,11 @@ export function getAttestationDeltas(config: IBeaconConfig, state: BeaconState):
     const maxAttesterReward = baseReward - proposerReward;
     rewards[index] = rewards[index]
         +(
-        maxAttesterReward * BigInt(
-          config.params.SLOTS_PER_EPOCH +
+          maxAttesterReward * BigInt(
+            config.params.SLOTS_PER_EPOCH +
           config.params.MIN_ATTESTATION_INCLUSION_DELAY -
           earliestAttestation.inclusionDelay
-        ) / BigInt(config.params.SLOTS_PER_EPOCH));
+          ) / BigInt(config.params.SLOTS_PER_EPOCH));
   });
 
   // Inactivity penalty
@@ -82,7 +82,7 @@ export function getAttestationDeltas(config: IBeaconConfig, state: BeaconState):
         * BigInt(config.params.BASE_REWARDS_PER_EPOCH);
       if (!matchingTargetAttestingIndices.includes(index)) {
         penalties[index] = penalties[index] + (
-            state.validators[index].effectiveBalance
+          state.validators[index].effectiveBalance
              * BigInt(finalityDelay) / config.params.INACTIVITY_PENALTY_QUOTIENT);
       }
     });

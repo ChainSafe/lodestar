@@ -15,5 +15,8 @@ export function getBaseReward(
 ): Gwei {
   const totalBalance = getTotalActiveBalance(config, state);
   const effectiveBalance = state.validators[index].effectiveBalance;
-  return effectiveBalance * BigInt(config.params.BASE_REWARD_FACTOR) / bnSqrt(totalBalance) / BigInt(config.params.BASE_REWARDS_PER_EPOCH);
+  return effectiveBalance
+    * BigInt(config.params.BASE_REWARD_FACTOR)
+    / bnSqrt(totalBalance)
+    / BigInt(config.params.BASE_REWARDS_PER_EPOCH);
 }

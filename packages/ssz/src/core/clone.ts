@@ -60,7 +60,7 @@ function _clone(value: any, type: FullSSZType): any {
   const obj: any = {};
   switch (type.type) {
     case Type.uint:
-        return value;
+      return value;
     case Type.bool:
       return value;
     case Type.bitList:

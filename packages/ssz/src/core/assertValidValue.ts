@@ -46,7 +46,7 @@ export function assertValidValue(value: any, type: AnySSZType): void {
 export function _assertValidValue(value: any, type: FullSSZType): void {
   switch (type.type) {
     case Type.uint:
-      assert( typeof value === 'bigint' || typeof value === 'number', "Invalid uint: not a uint");
+      assert( typeof value === "bigint" || typeof value === "number", "Invalid uint: not a uint");
       if (value === Infinity) {
         break;
       }

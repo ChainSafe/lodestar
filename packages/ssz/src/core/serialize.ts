@@ -25,7 +25,7 @@ import {BYTES_PER_LENGTH_PREFIX} from "../util/constants";
 import {fixedSize, size} from "./size";
 import {_assertValidValue} from "./assertValidValue";
 
-import  {toBufferLE} from "bigint-buffer"
+import  {toBufferLE} from "bigint-buffer";
 
 /**
  * Serialize, according to the SSZ spec
@@ -109,11 +109,11 @@ function _serializeUint(value: Uint, type: UintType, output: Buffer, start: numb
   const offset = start + type.byteLength;
   let bnValue: bigint;
   if (type.byteLength > 6 && type.useNumber && value === Infinity) {
-    bnValue = BigInt("0x" + Buffer.alloc(type.byteLength, 255).toString('hex'));
+    bnValue = BigInt("0x" + Buffer.alloc(type.byteLength, 255).toString("hex"));
   } else {
     bnValue = BigInt(value);
   }
- toBufferLE(bnValue, type.byteLength)
+  toBufferLE(bnValue, type.byteLength)
     .copy(output, start);
   return offset;
 }

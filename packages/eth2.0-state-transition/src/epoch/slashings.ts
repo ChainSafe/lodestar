@@ -25,7 +25,7 @@ export function processSlashings(config: IBeaconConfig, state: BeaconState): voi
       (currentEpoch + intDiv(config.params.EPOCHS_PER_SLASHINGS_VECTOR, 2)) === validator.withdrawableEpoch
     ) {
       const penalty = validator.effectiveBalance / config.params.EFFECTIVE_BALANCE_INCREMENT *
-        slashingMultiplier / totalBalance * config.params.EFFECTIVE_BALANCE_INCREMENT
+        slashingMultiplier / totalBalance * config.params.EFFECTIVE_BALANCE_INCREMENT;
 
       decreaseBalance(state, index, penalty);
     }

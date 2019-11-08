@@ -1,6 +1,5 @@
 // Forked from https://github.com/nodeca/js-yaml/blob/master/lib/js-yaml/type/int.js
 // Currently only supports loading ints
-import BN from "bn.js";
 import {Type} from "js-yaml";
 
 function isHexCode(c: number): boolean {
@@ -103,8 +102,8 @@ function resolveYamlInteger(data: string): boolean {
   return /^(:[0-5]?[0-9])+$/.test(data.slice(index));
 }
 
-function constructYamlInteger(data: string): BN {
-  let value: string|BN = data, sign = 1, ch, base: number|BN;
+function constructYamlInteger(data: string): bigint {
+  let value: string|bigint= data, sign = 1, ch, base: number|bigint;
   const digits: number[] = [];
 
   if (value.indexOf("_") !== -1) {
@@ -119,35 +118,40 @@ function constructYamlInteger(data: string): BN {
     ch = value[0];
   }
 
-  if (value === "0") return new BN(0);
+  if (value === "0") return 0n;
 
   if (ch === "0") {
-    if (value[1] === "b") return (new BN(value.slice(2), 2)).muln(sign);
-    if (value[1] === "x") return (new BN(value, 16)).muln(sign);
-    return (new BN(value, 8)).muln(sign);
+    if (value[1] === "b") return BigInt("0b" + value.slice(2)) * BigInt(sign);
+    if (value[1] === "x") return BigInt( value) * BigInt(sign);
+    return BigInt("0o" + value) * BigInt(sign);
   }
 
   if (value.indexOf(":") !== -1) {
     value.split(":").forEach(function (v) {
       digits.unshift(parseInt(v, 10));
     });
-    value = new BN(0);
-    base = new BN(1);
+    value = 0n;
+    base = 1n;
 
     digits.forEach(function (d) {
-      value = (value as BN).add((base as BN).muln(d));
-      base = (base as BN).muln(60);
+      value = (BigInt(value) + BigInt(base)) * BigInt(d);
+      base = BigInt(base) * 60n;
     });
 
-    return value.muln(sign);
+    return value * BigInt(sign);
 
   }
 
-  return (new BN(value, 10)).muln(sign);
+  return BigInt(value) * BigInt(sign);
 }
 
 function isInteger(object: object): boolean {
-  return BN.isBN(object);
+  try{
+    BigInt(object);
+    return true;
+  }  catch (e){
+    return false;
+  }
 }
 
 export const intType = new Type("tag:yaml.org,2002:int", {
@@ -155,7 +159,7 @@ export const intType = new Type("tag:yaml.org,2002:int", {
   resolve: resolveYamlInteger,
   construct: constructYamlInteger,
   predicate: isInteger,
-  instanceOf: BN,
+  instanceOf: BigInt,
   // @ts-ignore
   represent: {
     binary:      function (obj: number) {
