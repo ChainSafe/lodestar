@@ -12,21 +12,20 @@ import {
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {
-  computeEpochOfSlot,
-  computeStartSlotOfEpoch,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
   getCurrentEpoch,
 } from "./epoch";
-import {getCommitteeCount, getStartShard, getCrosslinkCommittee} from "./committee";
+import {getCommitteeCountAtSlot, getBeaconCommittee} from "./committee";
 import {getBeaconProposerIndex} from "./proposer";
-import {intDiv} from "@chainsafe/eth2.0-utils";
 
 /**
- * Return the committee assignment in the ``epoch`` for ``validator_index`` and ``registry_change``.
+ * Return the committee assignment in the ``epoch`` for ``validator_index``.
  * ``assignment`` returned is a tuple of the following form:
  * ``assignment[0]`` is the list of validators in the committee
- * ``assignment[1]`` is the shard to which the committee is assigned
+ * ``assignment[1]`` is the index to which the committee is assigned
  * ``assignment[2]`` is the slot at which the committee is assigned
- * a beacon block at the assigned slot.
+ * Return None if no assignment..
  */
 export function getCommitteeAssignment(
   config: IBeaconConfig,
@@ -38,23 +37,21 @@ export function getCommitteeAssignment(
   const nextEpoch = getCurrentEpoch(config, state) + 1;
   assert(epoch <= nextEpoch);
 
-  const committeesPerSlot = intDiv(getCommitteeCount(config, state, epoch), config.params.SLOTS_PER_EPOCH);
-  const epochStartSlot = computeStartSlotOfEpoch(config, epoch);
+  const epochStartSlot = computeStartSlotAtEpoch(config, epoch);
   for (let slot = epochStartSlot; slot < epochStartSlot + config.params.SLOTS_PER_EPOCH; slot++) {
-    const offset = committeesPerSlot * (slot % config.params.SLOTS_PER_EPOCH);
-    const slotStartShard = (getStartShard(config, state, epoch) + offset) % config.params.SHARD_COUNT;
-    for (let i = 0; i < committeesPerSlot; i++) {
-      const shard = (slotStartShard + i) % config.params.SHARD_COUNT;
-      const committee = getCrosslinkCommittee(config, state, epoch, shard);
+    const committeeCount = getCommitteeCountAtSlot(config, state, slot);
+    for (let i = 0; i < committeeCount; i++) {
+      const committee = getBeaconCommittee(config, state, slot, i);
       if (committee.includes(validatorIndex)) {
         return {
           validators: committee,
-          shard,
+          committeeIndex: i,
           slot,
         };
       }
     }
   }
+
   return null;
 }
 
@@ -69,7 +66,7 @@ export function isProposerAtSlot(
 
   state = {...state, slot};
   const currentEpoch = getCurrentEpoch(config, state);
-  assert(computeEpochOfSlot(config, slot) === currentEpoch);
+  assert(computeEpochAtSlot(config, slot) === currentEpoch);
 
   return getBeaconProposerIndex(config, state) === validatorIndex;
 }

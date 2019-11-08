@@ -3,14 +3,13 @@ import {AttestationData, BeaconState, Domain, Epoch, number64, Slot, Version} fr
 import {intDiv, intToBytes} from "@chainsafe/eth2.0-utils";
 import {equals} from "@chainsafe/ssz";
 
-// Signature domains
+// Domain Types
 export enum DomainType {
   BEACON_PROPOSER = 0,
-  RANDAO = 1,
-  ATTESTATION = 2,
+  BEACON_ATTESTER = 1,
+  RANDAO = 2,
   DEPOSIT = 3,
   VOLUNTARY_EXIT = 4,
-  TRANSFER = 5,
 }
 
 export function getCurrentSlot(config: IBeaconConfig, genesisTime: number64): Slot {
@@ -21,14 +20,14 @@ export function getCurrentSlot(config: IBeaconConfig, genesisTime: number64): Sl
 /**
  * Return the starting slot of the given epoch.
  */
-export function computeStartSlotOfEpoch(config: IBeaconConfig, epoch: Epoch): Slot {
+export function computeStartSlotAtEpoch(config: IBeaconConfig, epoch: Epoch): Slot {
   return epoch * config.params.SLOTS_PER_EPOCH;
 }
 
-/**
+/**Psrc/
  * Return the epoch number of the given slot.
  */
-export function computeEpochOfSlot(config: IBeaconConfig, slot: Slot): Epoch {
+export function computeEpochAtSlot(config: IBeaconConfig, slot: Slot): Epoch {
   return Math.floor(slot / config.params.SLOTS_PER_EPOCH);
 }
 
@@ -36,7 +35,7 @@ export function computeEpochOfSlot(config: IBeaconConfig, slot: Slot): Epoch {
  * Return the current epoch of the given state.
  */
 export function getCurrentEpoch(config: IBeaconConfig, state: BeaconState): Epoch {
-  return computeEpochOfSlot(config, state.slot);
+  return computeEpochAtSlot(config, state.slot);
 }
 
 /**

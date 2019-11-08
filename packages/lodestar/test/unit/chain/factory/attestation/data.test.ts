@@ -25,7 +25,7 @@ describe("assemble attestation data", function () {
   it('should produce attestation', async function () {
     const state = generateState({slot: 2});
     const block = generateEmptyBlock();
-    const result = await assembleAttestationData(config, dbStub, state, block, 2);
+    const result = await assembleAttestationData(config, dbStub, state, block, 2, 1);
     expect(result).to.not.be.null;
   });
 

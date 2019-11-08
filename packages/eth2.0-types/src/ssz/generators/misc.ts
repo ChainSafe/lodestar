@@ -36,22 +36,13 @@ export const Validator = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const Crosslink = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  fields: [
-    ["shard", ssz.Shard],
-    ["parentRoot", ssz.Hash],
-    ["startEpoch", ssz.Epoch],
-    ["endEpoch", ssz.Epoch],
-    ["dataRoot", ssz.Hash],
-  ],
-});
-
 export const AttestationData = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
+    ["slot", ssz.Slot],
+    ["index", ssz.CommitteeIndex],
     ["beaconBlockRoot", ssz.Hash],
     ["source", ssz.Checkpoint],
     ["target", ssz.Checkpoint],
-    ["crosslink", ssz.Crosslink],
   ],
 });
 
@@ -116,19 +107,6 @@ export const DepositData = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
     ["withdrawalCredentials", ssz.Hash],
     ["amount", ssz.Gwei],
     ["signature", ssz.BLSSignature],
-  ],
-});
-
-export const CompactCommittee = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
-  fields: [
-    ["pubkeys", {
-      elementType: ssz.BLSPubkey,
-      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
-    }],
-    ["compactValidators", {
-      elementType: ssz.uint64,
-      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
-    }],
   ],
 });
 

@@ -1,4 +1,4 @@
-import {computeStartSlotOfEpoch, getBeaconProposerIndex,processSlots} from "@chainsafe/eth2.0-state-transition";
+import {computeStartSlotAtEpoch, getBeaconProposerIndex,processSlots} from "@chainsafe/eth2.0-state-transition";
 import {assembleValidatorDuty} from "../../../chain/factory/duties";
 import {BLSPubkey, Epoch, ValidatorDuty, ValidatorIndex, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconDb} from "../../../db/api";
@@ -17,7 +17,7 @@ export async function getValidatorDuties(
     return  state.validators.findIndex((v) => v.pubkey.equals(publicKey));
   }));
 
-  const startSlot = computeStartSlotOfEpoch(config, epoch);
+  const startSlot = computeStartSlotAtEpoch(config, epoch);
   if(state.slot < startSlot) {
     processSlots(config, state, startSlot);
   }

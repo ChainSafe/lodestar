@@ -653,10 +653,10 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.4.tgz#c7fcc20f8ea916b7767b82ce6fad389db675bd4e"
   integrity sha512-pT+XpjJKoO3+Zt3w0vVJftKzYPnW4ObtkXFQ49eZHlLbmJbZ0aSM1jxU1RjFmOyMYjDSMVlaPR311c8K7lXGJQ==
 
-"@chainsafe/eth2-spec-tests@0.8.3":
-  version "0.8.3"
-  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.8.3.tgz#5d165305bc3616fbc8b9c508d94f7a096950ccee"
-  integrity sha512-3r2u9NNHAVVlLZuWzQzU3jndu8mNjh2RAiyNoTySthVdnWqQOHmgOsyPz8iy/atH9RiUj57gguEhEwcA4tkr/Q==
+"@chainsafe/eth2-spec-tests@0.9.0-1":
+  version "0.9.0-1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.9.0-1.tgz#e644039c7a86cc2b5861d18b68b789ff0787e558"
+  integrity sha512-GE8orJhV4IASoGNJ5RoGOFu0WrsKSx0kqq+SbWN2TrNA9Cvic8zQYQqHg9Qo88UFXuf/uFbxnuuuwUdEbR6xug==
 
 "@chainsafe/eth2.0-ssz-types@^0.1.0":
   version "0.1.0"

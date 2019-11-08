@@ -1,7 +1,7 @@
 import {Epoch, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ApiClientEventEmitter, IApiClient, INewEpochCallback, INewSlotCallback} from "./interface";
-import {computeEpochOfSlot, getCurrentSlot} from "../util";
+import {computeEpochAtSlot, getCurrentSlot} from "../util";
 import {IBeaconApi} from "./interface/beacon";
 import {IValidatorApi} from "./interface/validators";
 import {EventEmitter} from "events";
@@ -89,7 +89,7 @@ export abstract class AbstractApiClient
   }
 
   private updateEpoch(slot: Slot): void {
-    const epoch = computeEpochOfSlot(this.config, slot);
+    const epoch = computeEpochAtSlot(this.config, slot);
     if (epoch !== this.currentEpoch && epoch !== 0) {
       this.currentEpoch = epoch;
       this.newEpochCallbacks.forEach((cb) => {

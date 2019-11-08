@@ -11,6 +11,7 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {bytesToBN, intToBytes,intDiv, hash} from "@chainsafe/eth2.0-utils";
+import {DomainType} from "../constants";
 
 
 
@@ -60,14 +61,16 @@ export function getRandaoMix(config: IBeaconConfig, state: BeaconState, epoch: E
 /**
  * Return the seed at [[epoch]].
  */
-export function getSeed(config: IBeaconConfig, state: BeaconState, epoch: Epoch): Hash {
+export function getSeed(config: IBeaconConfig, state: BeaconState, epoch: Epoch, domainType: DomainType): Hash {
+  const mix = getRandaoMix(
+    config,
+    state,
+    epoch + config.params.EPOCHS_PER_HISTORICAL_VECTOR - config.params.MIN_SEED_LOOKAHEAD - 1
+  );
+
   return hash(Buffer.concat([
-    getRandaoMix(
-      config,
-      state,
-      epoch + config.params.EPOCHS_PER_HISTORICAL_VECTOR - config.params.MIN_SEED_LOOKAHEAD - 1
-    ),
-    state.activeIndexRoots[epoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR],
-    intToBytes(epoch, 32),
+    intToBytes(domainType, 4),
+    intToBytes(epoch, 8),
+    mix
   ]));
 }

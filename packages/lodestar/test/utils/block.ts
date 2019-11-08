@@ -20,7 +20,6 @@ export function generateEmptyBlock(): BeaconBlock {
       attestations: [],
       deposits: [],
       voluntaryExits: [],
-      transfers: [],
     },
     signature: EMPTY_SIGNATURE,
   };

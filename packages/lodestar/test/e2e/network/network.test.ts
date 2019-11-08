@@ -105,9 +105,9 @@ describe("[network] network", function () {
     await received;
   });
   it("should receive shard attestations on subscription", async function () {
-    const shard = 10;
-    netA.gossip.subscribeToShardAttestations(shard);
-    const topic = shardAttestationTopic(shard);
+    const committeeIndex = 10;
+    netA.gossip.subscribeToShardAttestations(committeeIndex);
+    const topic = shardAttestationTopic(committeeIndex);
     const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
@@ -121,7 +121,7 @@ describe("[network] network", function () {
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     const attestation = generateEmptyAttestation();
-    attestation.data.crosslink.shard = shard;
+    attestation.data.index = committeeIndex;
     netB.gossip.publishShardAttestation(attestation);
     await received;
   });

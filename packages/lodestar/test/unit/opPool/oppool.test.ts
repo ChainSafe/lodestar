@@ -9,7 +9,7 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   AttesterSlashingRepository,
   DepositRepository,
-  ProposerSlashingRepository, TransfersRepository,
+  ProposerSlashingRepository,
   VoluntaryExitRepository, AttestationRepository,
   StateRepository
 } from "../../../src/db/api/beacon/repositories";
@@ -28,7 +28,6 @@ describe("operation pool", function () {
       voluntaryExit: sandbox.createStubInstance(VoluntaryExitRepository),
       proposerSlashing: sandbox.createStubInstance(ProposerSlashingRepository),
       attesterSlashing: sandbox.createStubInstance(AttesterSlashingRepository),
-      transfer: sandbox.createStubInstance(TransfersRepository),
       // @ts-ignore
       attestation: sandbox.createStubInstance(AttestationRepository),
       state: sandbox.createStubInstance(StateRepository)
@@ -64,14 +63,12 @@ describe("operation pool", function () {
     const block  = generateEmptyBlock();
     dbStub.deposit.deleteOld.resolves();
     dbStub.voluntaryExit.deleteManyByValue.resolves();
-    dbStub.transfer.deleteManyByValue.resolves();
     dbStub.proposerSlashing.deleteManyByValue.resolves();
     dbStub.attesterSlashing.deleteManyByValue.resolves();
     await opPool.processBlockOperations(block);
     expect(dbStub.deposit.deleteOld.calledOnce).to.be.true;
     expect(dbStub.voluntaryExit.deleteManyByValue.calledOnce).to.be.true;
     expect(dbStub.proposerSlashing.deleteManyByValue.calledOnce).to.be.true;
-    expect(dbStub.transfer.deleteManyByValue.calledOnce).to.be.true;
     expect(dbStub.attesterSlashing.deleteManyByValue.calledOnce).to.be.true;
   });
 

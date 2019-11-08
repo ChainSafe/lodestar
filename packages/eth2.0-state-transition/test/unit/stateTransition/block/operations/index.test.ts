@@ -3,7 +3,6 @@ import sinon from "sinon";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {Crosslink} from "@chainsafe/eth2.0-types";
 import  * as processProposerSlashing
   from "../../../../../src/block/operations/proposerSlashing";
 import  * as processAttesterSlashing
@@ -14,16 +13,13 @@ import  * as processDeposit
   from "../../../../../src/block/operations/deposit";
 import  * as processVoluntaryExit
   from "../../../../../src/block/operations/voluntaryExit";
-import  * as processTransfer
-  from "../../../../../src/block/operations/transfer";
 import {processOperations} from "../../../../../src/block/operations";
 
 import {generateState} from "../../../../utils/state";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateDeposit} from "../../../../utils/deposit";
-import {generateEmptyTransfer} from "../../../../utils/transfer";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../../utils/slashings";
-import {generateAttestationData, generateEmptyAttestation} from "../../../../utils/attestation";
+import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../../../../utils/voluntaryExits";
 
 
@@ -35,8 +31,7 @@ describe('process block - process operations', function () {
     processAttesterSlashingStub: any,
     processAttestationStub: any,
     processDepositStub: any,
-    processVoluntaryExitStub: any,
-    processTransferStub: any;
+    processVoluntaryExitStub: any;
 
   beforeEach(() => {
     processProposerSlashingStub = sandbox.stub(processProposerSlashing, "processProposerSlashing");
@@ -44,7 +39,6 @@ describe('process block - process operations', function () {
     processAttestationStub = sandbox.stub(processAttestation, "processAttestation");
     processDepositStub = sandbox.stub(processDeposit, "processDeposit");
     processVoluntaryExitStub = sandbox.stub(processVoluntaryExit, "processVoluntaryExit");
-    processTransferStub = sandbox.stub(processTransfer, "processTransfer");
   });
 
   afterEach(() => {
@@ -67,8 +61,6 @@ describe('process block - process operations', function () {
   it('should fail to process operations - duplicate transfers', function () {
     const state  = generateState();
     const body = generateEmptyBlock().body;
-    body.transfers.push(generateEmptyTransfer());
-    body.transfers.push(generateEmptyTransfer());
     try {
       processOperations(config, state, body);
       expect.fail();
@@ -168,7 +160,6 @@ describe('process block - process operations', function () {
     processAttestationStub.returns(0);
     processDepositStub.returns(0);
     processVoluntaryExitStub.returns(0);
-    body.transfers.length = config.params.MAX_TRANSFERS + 1;
     body.proposerSlashings.push(generateEmptyProposerSlashing());
     body.attesterSlashings.push(generateEmptyAttesterSlashing());
     body.attestations.push(generateEmptyAttestation());

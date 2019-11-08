@@ -16,7 +16,7 @@ export interface IBeaconSSZTypes {
   uint256: AnySSZType;
   Slot: AnySSZType;
   Epoch: AnySSZType;
-  Shard: AnySSZType;
+  CommitteeIndex: AnySSZType;
   ValidatorIndex: AnySSZType;
   Gwei: AnySSZType;
   Hash: AnySSZType;
@@ -27,7 +27,6 @@ export interface IBeaconSSZTypes {
   Fork: AnyContainerType;
   Checkpoint: AnyContainerType;
   Validator: AnyContainerType;
-  Crosslink: AnyContainerType;
   AttestationData: AnyContainerType;
   AttestationDataAndCustodyBit: AnyContainerType;
   IndexedAttestation: AnyContainerType;
@@ -35,7 +34,6 @@ export interface IBeaconSSZTypes {
   Eth1Data: AnyContainerType;
   HistoricalBatch: AnyContainerType;
   DepositData: AnyContainerType;
-  CompactCommittee: AnyContainerType;
   BeaconBlockHeader: AnyContainerType;
   FFGData: AnyContainerType;
   MerkleTree: AnyContainerType;
@@ -45,7 +43,6 @@ export interface IBeaconSSZTypes {
   Attestation: AnyContainerType;
   Deposit: AnyContainerType;
   VoluntaryExit: AnyContainerType;
-  Transfer: AnyContainerType;
   // block
   BeaconBlockBody: AnyContainerType;
   BeaconBlock: AnyContainerType;
@@ -78,7 +75,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "uint256",
   "Slot",
   "Epoch",
-  "Shard",
+  "CommitteeIndex",
   "ValidatorIndex",
   "Gwei",
   "BLSPubkey",
@@ -88,7 +85,6 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "Fork",
   "Checkpoint",
   "Validator",
-  "Crosslink",
   "AttestationData",
   "AttestationDataAndCustodyBit",
   "IndexedAttestation",
@@ -96,7 +92,6 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "Eth1Data",
   "HistoricalBatch",
   "DepositData",
-  "CompactCommittee",
   "BeaconBlockHeader",
   "FFGData",
   "MerkleTree",
@@ -106,7 +101,6 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "Attestation",
   "Deposit",
   "VoluntaryExit",
-  "Transfer",
   // block
   "BeaconBlockBody",
   "BeaconBlock",

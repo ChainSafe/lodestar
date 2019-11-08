@@ -4,8 +4,7 @@ import {
   Epoch,
 } from "@chainsafe/eth2.0-types";
 import { BitList } from "@chainsafe/bit-utils";
-import {randBetween} from "./misc";
-import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, GENESIS_START_SHARD} from "../../src/constants";
+import crypto from "crypto";
 
 /**
  * Generates a fake attestation data for test purposes.
@@ -16,7 +15,9 @@ import {FAR_FUTURE_EPOCH, GENESIS_EPOCH, GENESIS_START_SHARD} from "../../src/co
 
 export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch): AttestationData {
   return {
-    beaconBlockRoot: Buffer.alloc(32),
+    slot: 1,
+    index: 1,
+    beaconBlockRoot: crypto.randomBytes(32),
     source: {
       epoch: sourceEpoch,
       root: Buffer.alloc(32),
@@ -24,13 +25,6 @@ export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch):
     target: {
       epoch: targetEpoch,
       root: Buffer.alloc(32),
-    },
-    crosslink: {
-      shard: randBetween(0, 1024),
-      startEpoch:GENESIS_EPOCH,
-      endEpoch:GENESIS_EPOCH,
-      parentRoot:Buffer.alloc(32),
-      dataRoot: Buffer.alloc(32),
     },
   };
 }
@@ -40,6 +34,8 @@ export function generateEmptyAttestation(): Attestation {
     aggregationBits: BitList.fromBitfield(Buffer.alloc(8), 64),
     custodyBits: BitList.fromBitfield(Buffer.alloc(8), 64),
     data: {
+      slot: 0,
+      index: 0,
       beaconBlockRoot: Buffer.alloc(32),
       source: {
         epoch: 0,
@@ -49,13 +45,6 @@ export function generateEmptyAttestation(): Attestation {
         epoch: 0,
         root: Buffer.alloc(32),
       },
-      crosslink: {
-        shard: GENESIS_START_SHARD,
-        startEpoch:GENESIS_EPOCH,
-        endEpoch:GENESIS_EPOCH,
-        parentRoot:Buffer.alloc(32),
-        dataRoot: Buffer.alloc(32),
-      }
     },
     signature: Buffer.alloc(96),
   };

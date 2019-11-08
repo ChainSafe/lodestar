@@ -23,7 +23,7 @@ import {interopKeypair} from "../../interop/keypairs";
 import {ValidatorApi} from "../../api/rpc/api/validator";
 import {BeaconApi} from "../../api/rpc/api/beacon";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
-import {computeEpochOfSlot, computeStartSlotOfEpoch,getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch,getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
 
 import {loadPeerId, createNodeJsLibp2p} from "../../network/nodejs";
 import {createPeerId} from "../../network";
@@ -140,9 +140,9 @@ export class DevCommand implements ICliCommand {
     this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier(), libp2p});
     await this.node.chain.initializeBeaconChain(state, tree);
 
-    const targetSlot = computeStartSlotOfEpoch(
+    const targetSlot = computeStartSlotAtEpoch(
       config,
-      computeEpochOfSlot(config, getCurrentSlot(config, state.genesisTime))
+      computeEpochAtSlot(config, getCurrentSlot(config, state.genesisTime))
     );
     await this.node.chain.advanceState(targetSlot);
     rimraf.sync(dbConfig.name);

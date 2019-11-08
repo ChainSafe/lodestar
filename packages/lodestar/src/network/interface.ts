@@ -4,11 +4,11 @@
 import PeerInfo from "peer-info";
 import {EventEmitter} from "events";
 import {
-  Attestation, BeaconBlock, Shard,
+  Attestation, BeaconBlock,
   RequestBody, ResponseBody,
   Hello, Goodbye,
   BeaconBlocksByRangeRequest, BeaconBlocksByRangeResponse,
-  BeaconBlocksByRootRequest, BeaconBlocksByRootResponse,
+  BeaconBlocksByRootRequest, BeaconBlocksByRootResponse, CommitteeIndex,
 } from "@chainsafe/eth2.0-types";
 
 import {RequestId, Method, BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
@@ -49,10 +49,10 @@ export interface IGossip extends GossipEventEmitter {
   publishShardAttestation(attestation: Attestation): Promise<void>;
   subscribeToBlocks(): void;
   subscribeToAttestations(): void;
-  subscribeToShardAttestations(shard: Shard): void;
+  subscribeToShardAttestations(index: CommitteeIndex): void;
   unsubscribeToBlocks(): void;
   unsubscribeToAttestations(): void;
-  unsubscribeToShardAttestations(shard: Shard): void;
+  unsubscribeToShardAttestations(index: CommitteeIndex): void;
 }
 
 // network
