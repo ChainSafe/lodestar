@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import {assert} from "chai";
 import {describe, it} from "mocha";
 import {intToBytes} from "../../src";

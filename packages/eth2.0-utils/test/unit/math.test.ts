@@ -1,5 +1,4 @@
 import {assert} from "chai";
-import BN from "bn.js";
 import {bnMin, bnMax, intDiv, intSqrt, bnSqrt} from "../../src";
 
 
