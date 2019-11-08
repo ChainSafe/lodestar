@@ -8,7 +8,7 @@ import {Attestation, BeaconBlock, BLSPubkey} from "@chainsafe/eth2.0-types";
 import {DatabaseService, IDatabaseApiOptions} from "../abstract";
 import {IAttestationSearchOptions, IValidatorDB} from "./interface";
 import {Bucket, encodeKey} from "../../schema";
-import BN from "bn.js";
+import {toBigIntLE} from "bigint-buffer";
 
 export class ValidatorDB extends DatabaseService implements IValidatorDB {
   public constructor(opts: IDatabaseApiOptions) {
@@ -59,7 +59,7 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
   }
 
   private incrementPubKey(pubKey: BLSPubkey): string {
-    return new BN(pubKey).addn(1).toString("hex").replace("0x", "");
+    return (toBigIntLE(pubKey) + 1n).toString(16).replace("0x", "");
   }
 
 }

@@ -1,5 +1,3 @@
-import BN from "bn.js";
-
 import {
   BeaconState,
   Crosslink,
@@ -61,7 +59,7 @@ export function generateState(opts?: TestBeaconState): BeaconState {
     randaoMixes: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
     activeIndexRoots: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
     compactCommitteesRoots: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
-    slashings: Array.from({length: config.params.EPOCHS_PER_SLASHINGS_VECTOR}, () => new BN(0)),
+    slashings: Array.from({length: config.params.EPOCHS_PER_SLASHINGS_VECTOR}, () => 0n),
     previousEpochAttestations: [],
     currentEpochAttestations: [],
     currentCrosslinks: Array.from({length: config.params.SHARD_COUNT}, () => initialCrosslinkRecord),

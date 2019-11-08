@@ -1,5 +1,4 @@
 import {assert} from "chai";
-import BN from "bn.js";
 import promisify from "promisify-es6";
 
 import {Hello, ResponseBody} from "@chainsafe/eth2.0-types";

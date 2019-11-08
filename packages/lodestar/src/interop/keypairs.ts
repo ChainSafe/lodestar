@@ -1,11 +1,11 @@
-import BN from "bn.js";
 import {BLSPubkey, BLSSecretKey} from "@chainsafe/eth2.0-types";
 import {generatePublicKey} from "@chainsafe/bls";
 import {hash} from "@chainsafe/ssz";
 
 import {bytesToBN, intToBytes} from "../util/bytes";
+import {toBufferBE} from "bigint-buffer";
 
-const CURVE_ORDER = new BN("52435875175126190479447740508185965837690552500527637822603658699938581184513");
+const CURVE_ORDER = BigInt("52435875175126190479447740508185965837690552500527637822603658699938581184513");
 
 interface IKeypair {
   pubkey: BLSPubkey;
@@ -19,9 +19,8 @@ export function interopKeypairs(validatorCount: number): IKeypair[] {
 }
 
 export function interopKeypair(index: number): IKeypair {
-  const privkey = bytesToBN(hash(intToBytes(index, 32)))
-    .mod(CURVE_ORDER)
-    .toArrayLike(Buffer, "be", 32);
+  const privkey =
+    toBufferBE(bytesToBN(hash(intToBytes(index, 32))) % CURVE_ORDER, 32);
   const pubkey = generatePublicKey(privkey);
   return {
     privkey,

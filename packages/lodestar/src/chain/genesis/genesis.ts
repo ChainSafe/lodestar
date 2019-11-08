@@ -68,10 +68,10 @@ export function initializeBeaconStateFromEth1(
   state.validators.forEach((validator, index) => {
     const balance = state.balances[index];
     validator.effectiveBalance = bnMin(
-      balance.sub(balance.mod(config.params.EFFECTIVE_BALANCE_INCREMENT)),
+      balance - (balance % config.params.EFFECTIVE_BALANCE_INCREMENT),
       config.params.MAX_EFFECTIVE_BALANCE
     );
-    if(validator.effectiveBalance.eq(config.params.MAX_EFFECTIVE_BALANCE)) {
+    if(validator.effectiveBalance === config.params.MAX_EFFECTIVE_BALANCE) {
       validator.activationEligibilityEpoch = config.params.GENESIS_EPOCH;
       validator.activationEpoch = config.params.GENESIS_EPOCH;
     }

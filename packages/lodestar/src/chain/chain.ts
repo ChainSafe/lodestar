@@ -3,7 +3,6 @@
  */
 
 import assert from "assert";
-import BN from "bn.js";
 import {EventEmitter} from "events";
 import {clone, hashTreeRoot, serialize, signingRoot} from "@chainsafe/ssz";
 import {Attestation, BeaconBlock, BeaconState, Hash, Slot, uint16, uint64} from "@chainsafe/eth2.0-types";
@@ -77,7 +76,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.metrics = metrics;
     this.forkChoice = new StatefulDagLMDGHOST();
     this.chainId = 0; // TODO make this real
-    this.networkId = new BN(0); // TODO make this real
+    this.networkId = 0n; // TODO make this real
     this.attestationProcessingQueue = queue(async (task: Function) => {
       await task();
     }, 1);

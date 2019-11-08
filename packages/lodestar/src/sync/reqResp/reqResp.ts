@@ -2,7 +2,6 @@
  * @module sync
  */
 
-import BN from "bn.js";
 import PeerInfo from "peer-info";
 import {
   Epoch, Hash, Slot,
@@ -65,7 +64,7 @@ export class SyncReqResp implements ISyncReqResp {
     this.network.reqResp.removeListener("request", this.onRequest);
     await Promise.all(
       this.network.getPeers().map((peerInfo) =>
-        this.network.reqResp.goodbye(peerInfo, new BN(0))));
+        this.network.reqResp.goodbye(peerInfo, 0n)));
   }
 
   public onRequest = async (

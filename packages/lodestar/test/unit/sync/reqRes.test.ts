@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import sinon from "sinon";
 import {expect} from "chai";
 import PeerInfo from "peer-info";
@@ -55,7 +54,7 @@ describe("syncing", function () {
 
   it('should able to create Hello - genesis time', async function () {
     chainStub.genesisTime = 0;
-    chainStub.networkId = new BN(1);
+    chainStub.networkId = 1n;
     chainStub.chainId = 1;
 
     const expected: Hello = {
@@ -136,7 +135,7 @@ describe("syncing", function () {
 
   it('should handle request - onGoodbye', async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
-    const goodbye: Goodbye = new BN(1);
+    const goodbye: Goodbye = 1n;
     networkStub.disconnect.resolves(0);
     try {
       await syncRpc.onRequest(peerInfo, Method.Goodbye, "goodBye", goodbye);

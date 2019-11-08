@@ -1,5 +1,4 @@
 import {BaseCase} from "@chainsafe/eth2.0-spec-test-util";
-import BN from "bn.js";
 
 export interface BeaconStateComparisonCase extends BaseCase {
   pre: any;
@@ -7,7 +6,7 @@ export interface BeaconStateComparisonCase extends BaseCase {
 }
 
 export interface OperationsCase extends  BeaconStateComparisonCase {
-  bls_setting?: BN;
+  bls_setting?: bigint;
 }
 
 export interface AttestationCase extends OperationsCase {
@@ -43,5 +42,5 @@ export interface BlockSanityCase extends OperationsCase {
 }
 
 export interface SlotSanityCase extends OperationsCase {
-  slots: BN;
+  slots: bigint;
 }
