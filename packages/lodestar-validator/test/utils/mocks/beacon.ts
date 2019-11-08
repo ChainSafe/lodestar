@@ -1,5 +1,4 @@
 import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus, uint64} from "@chainsafe/eth2.0-types";
-import BN from "bn.js";
 import {IBeaconApi} from "../../../src/api/interface/beacon";
 import {getEmptyBlock} from "@chainsafe/lodestar/lib/chain/genesis/genesis";
 
@@ -29,7 +28,7 @@ export class MockBeaconApi implements IBeaconApi {
   }
 
   public async getFork(): Promise<{fork: Fork; chainId: uint64}> {
-    return {fork: this.fork, chainId: new BN(1)};
+    return {fork: this.fork, chainId: 1n};
   }
 
   public async getGenesisTime(): Promise<number64> {
