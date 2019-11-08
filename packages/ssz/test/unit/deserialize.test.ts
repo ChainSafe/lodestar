@@ -1,6 +1,5 @@
 import {assert} from "chai";
 
-import BN from "bn.js";
 import {describe, it} from "mocha";
 import {SerializableValue,} from "@chainsafe/ssz-type-schema";
 

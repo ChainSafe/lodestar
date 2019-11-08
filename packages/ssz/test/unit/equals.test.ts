@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import {expect} from "chai";
 
 import {equals} from "../../src";
