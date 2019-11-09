@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/eth2.0-utils",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Utilities required across multiple lodestar packages",
   "author": "ChainSafe Systems",
   "license": "LGPL-3.0",
