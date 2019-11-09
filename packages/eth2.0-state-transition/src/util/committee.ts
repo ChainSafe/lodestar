@@ -48,7 +48,7 @@ export function getCommitteeCountAtSlot(config: IBeaconConfig, state: BeaconStat
       config.params.MAX_COMMITTEES_PER_SLOT,
       intDiv(intDiv(activeValidatorIndices.length, config.params.SLOTS_PER_EPOCH), config.params.TARGET_COMMITTEE_SIZE),
     ),
-  ) * config.params.SLOTS_PER_EPOCH;
+  );
 }
 
 /**
