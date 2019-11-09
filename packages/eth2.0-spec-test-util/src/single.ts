@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {readdirSync, readFileSync, writeFile} from "fs";
-import {isDirectory} from "./util";
-import {basename, join, parse} from "path";
-import {describe, it} from "mocha";
-import {AnySSZType, deserialize} from "@chainsafe/ssz";
 import {expect} from "chai";
 import deepMerge from "deepmerge";
+import {readdirSync, readFileSync, writeFile} from "fs";
+import {describe, it} from "mocha";
+import {basename, join, parse} from "path";
 import profiler from "v8-profiler-next";
+import {loadYamlFile} from "@chainsafe/eth2.0-utils/lib/nodejs";
+import {AnySSZType, deserialize} from "@chainsafe/ssz";
+
 import {transformType} from "./transform";
-import {loadYamlFile} from "@chainsafe/eth2.0-utils";
+import {isDirectory} from "./util";
 
 
 export enum InputType {

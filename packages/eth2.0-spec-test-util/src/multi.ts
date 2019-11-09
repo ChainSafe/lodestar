@@ -3,7 +3,7 @@ import {writeFile} from "fs";
 import {expect} from "chai";
 import profiler from "v8-profiler-next";
 import {describe, it} from "mocha";
-import {loadYamlFile} from "@chainsafe/eth2.0-utils";
+import {loadYamlFile} from "@chainsafe/eth2.0-utils/lib/nodejs";
 
 export interface IBaseCase {
   description: string;
