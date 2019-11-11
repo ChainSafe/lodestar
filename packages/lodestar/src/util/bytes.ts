@@ -20,7 +20,7 @@ export function intToBytes(value: number | bigint, length: number): bytes {
   }
 }
 
-export function bytesToBN(value: bytes): bigint{
+export function bytesToBigInt(value: bytes): bigint{
   return toBigIntLE(value);
 }
 

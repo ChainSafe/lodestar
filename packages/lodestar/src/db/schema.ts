@@ -43,7 +43,7 @@ export function encodeKey(bucket: Bucket, key: Buffer | string | number | bigint
   if (typeof key === "string") {
     buf = Buffer.alloc(key.length + 1);
     buf.write(key, 1);
-  } else if (typeof key === "number" || typeof key === 'bigint') {
+  } else if (typeof key === "number" || typeof key === "bigint") {
     buf = Buffer.alloc(9);
     toBufferLE(BigInt(key), 8).copy(buf, 1);
   } else {
