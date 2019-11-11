@@ -10,6 +10,6 @@ export function randBetween(min: number, max: number): number {
  * Wraps randBetween and returns a bigNumber.
  * @returns {BN}
  */
-export function randBetweenBN(min: number, max: number): bigint {
+export function randBetweenBigInt(min: number, max: number): bigint {
   return BigInt(randBetween(min, max));
 }
