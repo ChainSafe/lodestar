@@ -10,14 +10,14 @@ import {
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {getCurrentEpoch} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
-import {bnMax} from "@chainsafe/eth2.0-utils";
+import {bigIntMax} from "@chainsafe/eth2.0-utils";
 
 
 /**
  * Return the combined effective balance of the [[indices]]. (1 Gwei minimum to avoid divisions by zero.)
  */
 export function getTotalBalance(state: BeaconState, indices: ValidatorIndex[]): Gwei {
-  return bnMax(
+  return bigIntMax(
     1n,
     indices.reduce((total: Gwei, index: ValidatorIndex): Gwei =>
       total + state.validators[index].effectiveBalance, 0n)

@@ -9,7 +9,7 @@ import {BeaconState, Deposit, Validator} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH,} from "../../constants";
 import {computeDomain, increaseBalance} from "../../util";
-import {bnMin, verifyMerkleBranch} from "@chainsafe/eth2.0-utils";
+import {bigIntMin, verifyMerkleBranch} from "@chainsafe/eth2.0-utils";
 
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#deposits
 
@@ -57,7 +57,7 @@ export function processDeposit(
       exitEpoch: FAR_FUTURE_EPOCH,
       withdrawableEpoch: FAR_FUTURE_EPOCH,
       slashed: false,
-      effectiveBalance: bnMin(
+      effectiveBalance: bigIntMin(
         amount - (amount % config.params.EFFECTIVE_BALANCE_INCREMENT),
         config.params.MAX_EFFECTIVE_BALANCE
       ),

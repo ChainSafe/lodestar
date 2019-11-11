@@ -6,7 +6,7 @@ import * as utils from "../../../../../src/util";
 import {generateState} from "../../../../utils/state";
 import {generateValidators} from "../../../../utils/validator";
 import {getBaseReward} from "../../../../../src/epoch/balanceUpdates/baseReward";
-import {bnSqrt} from "@chainsafe/eth2.0-utils";
+import {bigIntSqrt} from "@chainsafe/eth2.0-utils";
 
 describe('process epoch - balance updates', function () {
 
@@ -30,7 +30,7 @@ describe('process epoch - balance updates', function () {
       const result = getBaseReward(config, state, index);
       const actual = BigInt(index)
         * BigInt(config.params.BASE_REWARD_FACTOR)
-        / bnSqrt(100n)
+        / bigIntSqrt(100n)
         / BigInt(config.params.BASE_REWARDS_PER_EPOCH)
       expect(result === actual).to.be.true;
 

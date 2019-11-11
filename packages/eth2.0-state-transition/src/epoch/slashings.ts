@@ -5,7 +5,7 @@
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {decreaseBalance, getCurrentEpoch, getTotalActiveBalance,} from "../util";
-import {bnMin, intDiv} from "@chainsafe/eth2.0-utils";
+import {bigIntMin, intDiv} from "@chainsafe/eth2.0-utils";
 
 
 /**
@@ -17,7 +17,7 @@ export function processSlashings(config: IBeaconConfig, state: BeaconState): voi
   const currentEpoch = getCurrentEpoch(config, state);
   const totalBalance = getTotalActiveBalance(config, state);
   const totalSlashings = state.slashings.reduce((a, b) => a + b, 0n);
-  const slashingMultiplier = bnMin(totalSlashings * 3n, totalBalance);
+  const slashingMultiplier = bigIntMin(totalSlashings * 3n, totalBalance);
 
   state.validators.forEach((validator, index) => {
     if (

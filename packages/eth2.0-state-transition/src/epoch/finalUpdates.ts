@@ -13,7 +13,7 @@ import {
   getRandaoMix,
   getShardDelta
 } from "../util";
-import {bnMin, intDiv} from "@chainsafe/eth2.0-utils";
+import {bigIntMin, intDiv} from "@chainsafe/eth2.0-utils";
 
 
 export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): void {
@@ -31,7 +31,7 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
       (balance < validator.effectiveBalance) ||
       (validator.effectiveBalance + (HALF_INCREMENT*3n)) < balance
     ) {
-      validator.effectiveBalance = bnMin(
+      validator.effectiveBalance = bigIntMin(
         balance - (balance % config.params.EFFECTIVE_BALANCE_INCREMENT),
         config.params.MAX_EFFECTIVE_BALANCE);
     }

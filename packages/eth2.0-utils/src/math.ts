@@ -6,14 +6,14 @@
 /**
  * Return the min number between two big numbers.
  */
-export function bnMin(a: bigint, b: bigint): bigint {
+export function bigIntMin(a: bigint, b: bigint): bigint {
   return a < b ? a : b;
 }
 
 /**
  * Return the max number between two big numbers.
  */
-export function bnMax(a: bigint, b: bigint): bigint {
+export function bigIntMax(a: bigint, b: bigint): bigint {
   return a > b ? a : b;
 }
 
@@ -34,7 +34,7 @@ export function intSqrt(n: number): number {
   return x;
 }
 
-export function bnSqrt(n: bigint): bigint {
+export function bigIntSqrt(n: bigint): bigint {
   let x = n;
   let y = (x + 1n)/ 2n;
   while (y < x) {

@@ -32,7 +32,7 @@ import {
 import {hashTreeRoot} from "@chainsafe/ssz";
 
 import {createValue} from "../../util/createValue";
-import {bnMin} from "@chainsafe/eth2.0-utils";
+import {bigIntMin} from "@chainsafe/eth2.0-utils";
 
 export function initializeBeaconStateFromEth1(
   config: IBeaconConfig,
@@ -67,7 +67,7 @@ export function initializeBeaconStateFromEth1(
   // Process activations
   state.validators.forEach((validator, index) => {
     const balance = state.balances[index];
-    validator.effectiveBalance = bnMin(
+    validator.effectiveBalance = bigIntMin(
       balance - (balance % config.params.EFFECTIVE_BALANCE_INCREMENT),
       config.params.MAX_EFFECTIVE_BALANCE
     );
