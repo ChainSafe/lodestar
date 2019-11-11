@@ -95,7 +95,7 @@ describe("[network] rpc", () => {
         headRoot: Buffer.alloc(32),
         headSlot: 0,
       };
-      const helloActual = await rpcA.hello(nodeB.peerInfo, helloExpected);
+      const helloActual = await rpcA.status(nodeB.peerInfo, helloExpected);
       assert.deepEqual(JSON.stringify(helloActual), JSON.stringify(helloExpected));
     } catch (e) {
       assert.fail("hello not received");
@@ -114,7 +114,7 @@ describe("[network] rpc", () => {
         headRoot: Buffer.alloc(32),
         headSlot: 0,
       };
-      const helloActual = await rpcB.hello(nodeA.peerInfo, helloExpected);
+      const helloActual = await rpcB.status(nodeA.peerInfo, helloExpected);
       assert.deepEqual(JSON.stringify(helloActual), JSON.stringify(helloExpected));
     } catch (e) {
       assert.fail("hello not received");

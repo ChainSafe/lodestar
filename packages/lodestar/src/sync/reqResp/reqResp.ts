@@ -57,7 +57,7 @@ export class SyncReqResp implements ISyncReqResp {
     this.network.reqResp.on("request", this.onRequest);
     await Promise.all(
       this.network.getPeers().map(async (peerInfo) =>
-        this.network.reqResp.hello(peerInfo, await this.createHello())));
+        this.network.reqResp.status(peerInfo, await this.createHello())));
   }
 
   public async stop(): Promise<void> {
@@ -180,7 +180,7 @@ export class SyncReqResp implements ISyncReqResp {
     ) {
       const request = await this.createHello();
       try {
-        const response = await this.network.reqResp.hello(peerInfo, request);
+        const response = await this.network.reqResp.status(peerInfo, request);
         this.reps.get(peerInfo.id.toB58String()).latestHello = response;
       } catch (e) {
         this.logger.error(e);

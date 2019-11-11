@@ -6,9 +6,7 @@ import PeerId from "peer-id";
 import PeerInfo from "peer-info";
 //@ts-ignore
 import promisify from "promisify-es6";
-import {Shard} from "@chainsafe/eth2.0-types";
-
-import {RequestId, SHARD_SUBNET_COUNT, SHARD_ATTESTATION_TOPIC, BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
+import {RequestId,} from "../constants";
 
 // req/resp
 
@@ -30,23 +28,6 @@ export function createRpcProtocol(method: string, encoding: string, version: num
     .replace("{method}", method)
     .replace("{encoding}", encoding)
     .replace("{version}", String(version));
-}
-
-// gossip
-
-export function blockTopic(encoding: string = "ssz"): string {
-  return `${BLOCK_TOPIC}/${encoding}`;
-}
-
-export function attestationTopic(encoding: string = "ssz"): string {
-  return `${ATTESTATION_TOPIC}/${encoding}`;
-}
-
-export function shardSubnetAttestationTopic(shard: Shard, encoding: string = "ssz"): string {
-  return `${SHARD_ATTESTATION_TOPIC.replace("{shard}", String(shard % SHARD_SUBNET_COUNT))}/${encoding}`;
-}
-export function shardAttestationTopic(shard: Shard): string {
-  return SHARD_ATTESTATION_TOPIC.replace("{shard}", String(shard));
 }
 
 // peers

@@ -1,9 +1,9 @@
 // gossip
 
-export const BLOCK_TOPIC = "/eth2/beacon_block";
-export const ATTESTATION_TOPIC = "/eth2/beacon_attestation";
-export const SHARD_ATTESTATION_TOPIC = "/eth2/shard{shard}_attestation";
-export const SHARD_SUBNET_COUNT = 10;
+import {number64} from "@chainsafe/eth2.0-types";
+
+export const ATTESTATION_SUBNET_COUNT = 64;
+export const ATTESTATION_PROPAGATION_SLOT_RANGE = 23;
 
 // req/resp
 

@@ -16,9 +16,8 @@ import {
   BeaconBlocksByRootRequest,
   BeaconBlocksByRootResponse,
   Goodbye,
-  Hello,
   RequestBody,
-  ResponseBody,
+  ResponseBody, Status,
 } from "@chainsafe/eth2.0-types";
 import {deserialize, serialize} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -85,8 +84,8 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     // @ts-ignore
     this.emit(createResponseEvent(id), err, body);
   }
-  public async hello(peerInfo: PeerInfo, request: Hello): Promise<Hello> {
-    return await this.sendRequest<Hello>(peerInfo, Method.Status, request);
+  public async status(peerInfo: PeerInfo, request: Status): Promise<Status> {
+    return await this.sendRequest<Status>(peerInfo, Method.Status, request);
   }
   public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
     await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request, true);
@@ -156,7 +155,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     let output = Buffer.alloc(0);
     switch (method) {
       case Method.Status:
-        output = serialize(body, this.config.types.Hello);
+        output = serialize(body, this.config.types.Status);
         break;
       case Method.Goodbye:
         output = serialize(body, this.config.types.Goodbye);
@@ -177,7 +176,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     let output= Buffer.alloc(0);
     switch (method) {
       case Method.Status:
-        output = serialize(body, this.config.types.Hello);
+        output = serialize(body, this.config.types.Status);
         break;
       case Method.Goodbye:
         output = serialize(body, this.config.types.Goodbye);
@@ -212,7 +211,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     data = data.slice(bytes);
     switch (method) {
       case Method.Status:
-        return deserialize(data, this.config.types.Hello);
+        return deserialize(data, this.config.types.Status);
       case Method.Goodbye:
         return deserialize(data, this.config.types.Goodbye);
       case Method.BeaconBlocksByRange:
@@ -237,7 +236,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     }
     switch (method) {
       case Method.Status:
-        return deserialize(data, this.config.types.Hello);
+        return deserialize(data, this.config.types.Status);
       case Method.Goodbye:
         return deserialize(data, this.config.types.Goodbye);
       case Method.BeaconBlocksByRange:
