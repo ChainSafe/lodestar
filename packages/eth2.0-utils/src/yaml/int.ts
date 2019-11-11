@@ -121,8 +121,7 @@ function constructYamlInteger(data: string): bigint {
   if (value === "0") return 0n;
 
   if (ch === "0") {
-    if (value[1] === "b") return BigInt("0b" + value.slice(2)) * BigInt(sign);
-    if (value[1] === "x") return BigInt( value) * BigInt(sign);
+    if (value[1] === "b" || value[1] === "x") return BigInt(value) * BigInt(sign);
     return BigInt("0o" + value) * BigInt(sign);
   }
 
@@ -146,12 +145,7 @@ function constructYamlInteger(data: string): bigint {
 }
 
 function isInteger(object: object): boolean {
-  try{
-    BigInt(object);
-    return true;
-  }  catch (e){
-    return false;
-  }
+  return typeof object === "bigint" || typeof object === "number";
 }
 
 export const intType = new Type("tag:yaml.org,2002:int", {
