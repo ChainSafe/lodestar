@@ -52,7 +52,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
         this.peerInfo = libp2p.peerInfo;
         this.libp2p = libp2p;
         this.reqResp = new ReqResp(opts, {config, libp2p, logger});
-        this.gossip = new Gossip(opts, {config, libp2p, logger}); 
+        this.gossip = (new Gossip(opts, {config, libp2p, logger})) as unknown as IGossip;
         resolve();
       });
     });

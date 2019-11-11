@@ -15,7 +15,7 @@ import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {ILogger, LogLevel} from "../../logger";
 import {getAttestationSubnet, getAttestationSubnetTopic, getGossipTopic,} from "./utils";
 import {INetworkOptions} from "../options";
-import {GossipEventEmitter, IGossip, IGossipModules,} from "./interface";
+import {GossipEventEmitter, IGossip, IGossipEvents, IGossipModules,} from "./interface";
 import {GossipEvent} from "./constants";
 import {handleIncomingBlock} from "./handlers/block";
 import {handleIncomingAttestation} from "./handlers/attestation";
@@ -114,6 +114,45 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.logger.verbose(
       "Publishing attester slashing"
     );
+  }
+
+  // @ts-ignore
+  public on(event: keyof IGossipEvents, listener: Function): void {
+    if(this.listenerCount(event) === 0 && !event.startsWith("gossipsub")) {
+      this.pubsub.subscribe(getGossipTopic(event as GossipEvent, "ssz"));
+    }
+    // @ts-ignore
+    super.on(event, listener);
+  }
+
+  // @ts-ignore
+  public once(event: keyof IGossipEvents, listener: Function): void {
+    if(this.listenerCount(event) === 0 && !event.startsWith("gossipsub")) {
+      this.pubsub.subscribe(getGossipTopic(event as GossipEvent, "ssz"));
+    }
+    // @ts-ignore
+    super.once(event, (args: unknown[]) => {
+      this.pubsub.unsubscribe(getGossipTopic(event as GossipEvent, "ssz"));
+      listener(args);
+    });
+  }
+
+  // @ts-ignore
+  public removeListener(event: keyof IGossipEvents, listener: Function): void {
+    // @ts-ignore
+    super.on(event, listener);
+    if(this.listenerCount(event) === 0 && !event.startsWith("gossipsub")) {
+      this.pubsub.unsubscribe(getGossipTopic(event as GossipEvent, "ssz"));
+    }
+  }
+
+  // @ts-ignore
+  public removeAllListeners(event: keyof IGossipEvents): void {
+    // @ts-ignore
+    super.removeAllListeners(event);
+    if(!event.startsWith("gossipsub")) {
+      this.pubsub.unsubscribe(getGossipTopic(event as GossipEvent, "ssz"));
+    }
   }
 
   private registerHandlers(): Map<string, Function> {
