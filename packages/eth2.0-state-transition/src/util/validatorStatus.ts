@@ -64,8 +64,7 @@ export function slashValidator(
   );
 
   const slashedBalance = state.validators[slashedIndex].effectiveBalance;
-  state.slashings[currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] =
-    state.slashings[currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] + slashedBalance;
+  state.slashings[currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] += slashedBalance;
   decreaseBalance(
     state,
     slashedIndex,

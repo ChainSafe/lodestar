@@ -84,7 +84,7 @@ describe("process block - deposits", function () {
     const state = generateState({eth1DepositIndex: 3});
     verifyMerkleBranchStub.returns(true);
     const deposit = generateDeposit();
-    deposit.data.amount = BigInt(config.params.MAX_EFFECTIVE_BALANCE);
+    deposit.data.amount = config.params.MAX_EFFECTIVE_BALANCE;
     blsStub.returns(true);
     try {
       processDeposit(config, state, deposit);

@@ -48,9 +48,9 @@ export function getAttestationDeltas(config: IBeaconConfig, state: BeaconState):
       const attestingBalance = getTotalBalance(state, unslashedAttestingIndices);
       eligibleValidatorIndices.forEach((index) => {
         if (unslashedAttestingIndices.includes(index)) {
-          rewards[index] = rewards[index] + (getBaseReward(config, state, index) * attestingBalance / totalBalance);
+          rewards[index] += (getBaseReward(config, state, index) * attestingBalance / totalBalance);
         } else {
-          penalties[index] = penalties[index] + getBaseReward(config, state, index);
+          penalties[index] += getBaseReward(config, state, index);
         }
       });
     });
@@ -61,10 +61,9 @@ export function getAttestationDeltas(config: IBeaconConfig, state: BeaconState):
       .reduce((a1, a2) => a2.inclusionDelay < a1.inclusionDelay ? a2 : a1);
     const baseReward = getBaseReward(config, state, index);
     const proposerReward = baseReward / BigInt(config.params.PROPOSER_REWARD_QUOTIENT);
-    rewards[earliestAttestation.proposerIndex] = rewards[earliestAttestation.proposerIndex] + proposerReward;
+    rewards[earliestAttestation.proposerIndex] += proposerReward;
     const maxAttesterReward = baseReward - proposerReward;
-    rewards[index] = rewards[index]
-        +(
+    rewards[index] += (
           maxAttesterReward * BigInt(
             config.params.SLOTS_PER_EPOCH +
           config.params.MIN_ATTESTATION_INCLUSION_DELAY -
@@ -81,7 +80,7 @@ export function getAttestationDeltas(config: IBeaconConfig, state: BeaconState):
       penalties[index] = (penalties[index] + getBaseReward(config, state, index))
         * BigInt(config.params.BASE_REWARDS_PER_EPOCH);
       if (!matchingTargetAttestingIndices.includes(index)) {
-        penalties[index] = penalties[index] + (
+        penalties[index] += (
           state.validators[index].effectiveBalance
              * BigInt(finalityDelay) / config.params.INACTIVITY_PENALTY_QUOTIENT);
       }

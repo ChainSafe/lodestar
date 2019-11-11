@@ -34,9 +34,9 @@ export function getCrosslinkDeltas(config: IBeaconConfig, state: BeaconState): [
     crosslinkCommittee.forEach((index) => {
       const baseReward = getBaseReward(config, state, index);
       if (attestingIndices.includes(index)) {
-        rewards[index] = rewards[index] + (baseReward * attestingBalance / committeeBalance);
+        rewards[index] += (baseReward * attestingBalance / committeeBalance);
       } else {
-        penalties[index] = penalties[index] + baseReward;
+        penalties[index] += baseReward;
       }
     });
   }
