@@ -39,7 +39,7 @@ export function bnSqrt(n: bigint): bigint {
   let y = (x + 1n)/ 2n;
   while (y < x) {
     x = y;
-    y = (x + n/x)/ 2n;
+    y = (x + n / x)/ 2n;
   }
   return x;
 }
