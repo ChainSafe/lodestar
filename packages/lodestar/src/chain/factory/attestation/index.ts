@@ -21,17 +21,13 @@ export async function assembleAttestation(
   const committee = getCrosslinkCommittee(config, state, computeEpochOfSlot(config, slot), shard);
   const aggregationBits = getAggregationBits(committee, validatorIndex);
   const custodyBits = getEmptyBitList(committee.length);
-  try {
-    const data = await assembleAttestationData(config, db, state, headBlock, shard);
-    return {
-      aggregationBits,
-      custodyBits,
-      data,
-      signature: undefined
-    };
-  } catch (e) {
-    throw e;
-  }
+  const data = await assembleAttestationData(config, db, state, headBlock, shard);
+  return {
+    aggregationBits,
+    custodyBits,
+    data,
+    signature: undefined
+  };
 }
 
 export function getAggregationBits(committee: ValidatorIndex[], validatorIndex: ValidatorIndex): BitList {
