@@ -77,8 +77,8 @@ describe("deserialize", () => {
   for (const {value, type, expected} of testCases) {
     it(`should correctly deserialize ${stringifyType(type)}`, () => {
       const actual = deserialize(Buffer.from(value, "hex"), type);
-      if (typeof expected == "bigint") {
-        assert(expected ==  actual, `actual: ${actual}, expected: ${expected}`);
+      if (typeof expected === "bigint") {
+        assert(expected ===  actual, `actual: ${actual}, expected: ${expected}`);
       } else {
         assert.deepEqual(actual, expected);
       }

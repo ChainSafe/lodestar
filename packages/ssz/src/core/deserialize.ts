@@ -24,6 +24,7 @@ import {
 } from "@chainsafe/ssz-type-schema";
 import {BYTES_PER_LENGTH_PREFIX} from "../util/constants";
 import {fixedSize} from "./size";
+import {toBigIntLE} from "bigint-buffer";
 
 
 /**
@@ -152,7 +153,7 @@ function _deserializeUint(data: Buffer, type: UintType, start: number): Uint {
   if (type.byteLength > 6 && type.useNumber && uintData.equals(Buffer.alloc(type.byteLength, 255))) {
     return Infinity;
   } else {
-    const bn = BigInt("0x" + uintData.reverse().toString("hex"));
+    const bn = toBigIntLE(uintData);
     return (type.useNumber || type.byteLength <= 6) ? Number(bn) : bn;
   }
 }

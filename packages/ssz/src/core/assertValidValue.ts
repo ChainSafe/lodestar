@@ -51,7 +51,7 @@ export function _assertValidValue(value: any, type: FullSSZType): void {
         break;
       }
       assert(value >= 0, "Invalid uint: value < 0");
-      assert(value < (BigInt(2))**(BigInt(type.byteLength * 8)), "Invalid uint: not in range");
+      assert(value < BigInt(2)**BigInt(type.byteLength * 8), "Invalid uint: not in range");
       break;
     case Type.bool:
       assert(value === true || value === false, "Invalid boolean: not a boolean");
