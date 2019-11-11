@@ -41,13 +41,13 @@ export class InitialSync {
     const peers = this.network.getPeers().sort((peerA, peerB) => {
       const repA = this.reps.get(peerA.id.toB58String());
       const repB = this.reps.get(peerB.id.toB58String());
-      if (!repA.latestHello) {
+      if (!repA.latestStatus) {
         return -1;
       }
-      if (!repB.latestHello) {
+      if (!repB.latestStatus) {
         return 1;
       }
-      return repA.latestHello.headSlot - repB.latestHello.headSlot;
+      return repA.latestStatus.headSlot - repB.latestStatus.headSlot;
     });
     // Try to sync to a peer
     for (const peer of peers) {
@@ -65,7 +65,7 @@ export class InitialSync {
     if(startSlot ===  0) {
       startSlot += 1;
     }
-    const peerLatestHello = this.reps.get(peerInfo.id.toB58String()).latestHello;
+    const peerLatestHello = this.reps.get(peerInfo.id.toB58String()).latestStatus;
     this.logger.info(
       `attempting initial sync with ${peerInfo.id.toB58String()}, slot ${startSlot} through ${peerLatestHello.headSlot}`
     );

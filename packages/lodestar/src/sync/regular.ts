@@ -4,10 +4,8 @@
 
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {BeaconBlock, Attestation, Hash, Checkpoint} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, Checkpoint, Hash} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
-import {ATTESTATION_TOPIC, BLOCK_TOPIC} from "../constants";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
@@ -15,6 +13,7 @@ import {OpPool} from "../opPool";
 import {ILogger} from "../logger";
 import {ISyncModules} from "./index";
 import {ISyncOptions} from "./options";
+import {GossipEvent} from "../network/gossip/constants";
 
 export type IRegularSyncModules = Pick<ISyncModules, "config"|"db"|"chain"|"opPool"|"network"|"logger">;
 
@@ -37,10 +36,8 @@ export class RegularSync {
 
   public async start(): Promise<void> {
     this.logger.verbose("regular sync start");
-    this.network.gossip.subscribeToBlocks();
-    this.network.gossip.subscribeToAttestations();
-    this.network.gossip.on(BLOCK_TOPIC, this.receiveBlock);
-    this.network.gossip.on(ATTESTATION_TOPIC, this.receiveAttestation);
+    this.network.gossip.on(GossipEvent.BLOCK, this.receiveBlock);
+    this.network.gossip.on(GossipEvent.ATTESTATION, this.receiveAttestation);
     this.chain.on("processedBlock", this.onProcessedBlock);
     this.chain.on("processedAttestation", this.onProcessedAttestation);
     this.chain.on("unknownBlockRoot", this.onUnknownBlockRoot);
@@ -49,10 +46,8 @@ export class RegularSync {
 
   public async stop(): Promise<void> {
     this.logger.verbose("regular sync stop");
-    this.network.gossip.unsubscribeToBlocks();
-    this.network.gossip.unsubscribeToAttestations();
-    this.network.gossip.removeListener(BLOCK_TOPIC, this.receiveBlock);
-    this.network.gossip.removeListener(ATTESTATION_TOPIC, this.receiveAttestation);
+    this.network.gossip.removeListener(GossipEvent.BLOCK, this.receiveBlock);
+    this.network.gossip.removeListener(GossipEvent.ATTESTATION, this.receiveAttestation);
     this.chain.removeListener("processedBlock", this.onProcessedBlock);
     this.chain.removeListener("processedAttestation", this.onProcessedAttestation);
     this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
@@ -96,7 +91,7 @@ export class RegularSync {
   };
 
   private onProcessedAttestation = (attestation: Attestation): void => {
-    this.network.gossip.publishAttestation(attestation);
+    this.network.gossip.publishCommiteeAttestation(attestation);
   };
 
   private onUnknownBlockRoot = async (root: Hash): Promise<void> => {
