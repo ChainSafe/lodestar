@@ -4,10 +4,10 @@ import {
   BLSPubkey,
   bytes96,
   Epoch,
-  Shard,
   Slot,
   ValidatorDuty,
-  ValidatorIndex
+  ValidatorIndex,
+  number64
 } from "@chainsafe/eth2.0-types";
 import {IValidatorApi} from "../../../interface/validators";
 import {HttpClient} from "../../../../util";
@@ -36,7 +36,8 @@ export class RestValidatorApi implements IValidatorApi {
     validatorPubKey: BLSPubkey,
     pocBit: boolean,
     slot: Slot,
-    shard: Shard
+    // Rest API spec uses "shard" but core spec uses "committeeIndex"
+    shard: number64
   ): Promise<Attestation> {
     const url = `/attestation?slot=${slot}&shard=${shard}&validator_pubkey=${validatorPubKey.toString("hex")}`;
     return this.client.get<Attestation>(url);

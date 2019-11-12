@@ -8,7 +8,7 @@ import {ZERO_HASH} from "../../../constants";
 import {OpPool} from "../../../opPool";
 import {IEth1Notifier} from "../../../eth1";
 import {generateDeposits} from "./deposits";
-import {computeEpochOfSlot} from "@chainsafe/eth2.0-state-transition";
+import {computeEpochAtSlot} from "@chainsafe/eth2.0-state-transition";
 import {IProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 
 export async function assembleBody(
@@ -24,7 +24,7 @@ export async function assembleBody(
     opPool.attesterSlashings.getAll().then(value => value.slice(0, config.params.MAX_ATTESTER_SLASHINGS)),
     opPool.attestations.getValid(currentState).then(value => value.slice(0, config.params.MAX_ATTESTATIONS)),
     opPool.voluntaryExits.getAll().then(value => value.slice(0, config.params.MAX_VOLUNTARY_EXITS)),
-    eth1.getEth1Data(config, currentState, computeEpochOfSlot(config, currentState.slot))
+    eth1.getEth1Data(config, currentState, computeEpochAtSlot(config, currentState.slot))
   ]);
   //requires new eth1 data so it has to be done after above operations
   const deposits = await generateDeposits(config, opPool, currentState, eth1Data, merkleTree);
@@ -38,6 +38,5 @@ export async function assembleBody(
     attestations,
     deposits,
     voluntaryExits,
-    transfers: [],
   };
 }

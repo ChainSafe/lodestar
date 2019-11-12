@@ -12,16 +12,16 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {GENESIS_EPOCH} from "../constants";
 
 /**
- * Return the epoch number of the given slot.
+ * Return the epoch number at the given slot.
  */
-export function computeEpochOfSlot(config: IBeaconConfig, slot: Slot): Epoch {
+export function computeEpochAtSlot(config: IBeaconConfig, slot: Slot): Epoch {
   return Math.floor(slot / config.params.SLOTS_PER_EPOCH);
 }
 
 /**
  * Return the starting slot of the given epoch.
  */
-export function computeStartSlotOfEpoch(config: IBeaconConfig, epoch: Epoch): Slot {
+export function computeStartSlotAtEpoch(config: IBeaconConfig, epoch: Epoch): Slot {
   return epoch * config.params.SLOTS_PER_EPOCH;
 }
 
@@ -29,14 +29,14 @@ export function computeStartSlotOfEpoch(config: IBeaconConfig, epoch: Epoch): Sl
  * Return the epoch at which an activation or exit triggered in ``epoch`` takes effect.
  */
 export function computeActivationExitEpoch(config: IBeaconConfig, epoch: Epoch): Epoch {
-  return epoch + 1 + config.params.ACTIVATION_EXIT_DELAY;
+  return epoch + 1 + config.params.MAX_SEED_LOOKAHEAD;
 }
 
 /**
  * Return the current epoch of the given state.
  */
 export function getCurrentEpoch(config: IBeaconConfig, state: BeaconState): Epoch {
-  return computeEpochOfSlot(config, state.slot);
+  return computeEpochAtSlot(config, state.slot);
 }
 
 /**

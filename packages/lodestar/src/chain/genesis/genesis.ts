@@ -19,13 +19,11 @@ import {
   EMPTY_SIGNATURE,
   GENESIS_EPOCH,
   GENESIS_SLOT,
-  GENESIS_START_SHARD,
   SECONDS_PER_DAY,
   ZERO_HASH,
 } from "../../constants";
 import {
   getActiveValidatorIndices,
-  getCompactCommitteesRoot,
   getTemporaryBlockHeader,
   processDeposit
 } from "@chainsafe/eth2.0-state-transition";
@@ -77,17 +75,6 @@ export function initializeBeaconStateFromEth1(
     }
   });
 
-  // Populate active_index_roots and compact_committees_roots
-  const indices = getActiveValidatorIndices(state, config.params.GENESIS_EPOCH);
-  const activeIndexRoot = hashTreeRoot(indices, {
-    elementType: config.types.ValidatorIndex,
-    maxLength: config.params.VALIDATOR_REGISTRY_LIMIT,
-  });
-  const committeeRoot = getCompactCommitteesRoot(config, state, config.params.GENESIS_EPOCH);
-  for (let index = 0; index < config.params.EPOCHS_PER_HISTORICAL_VECTOR; index++) {
-    state.activeIndexRoots[index] = activeIndexRoot;
-    state.compactCommitteesRoots[index] = committeeRoot;
-  }
   return state;
 }
 
@@ -110,6 +97,8 @@ export function getGenesisBeaconState(
   genesisEth1Data: Partial<Eth1Data>,
   latestBlockHeader: BeaconBlockHeader
 ): BeaconState {
+  // Seed RANDAO with Eth1 entropy
+  const randaoMixes = Array<Hash>(config.params.EPOCHS_PER_HISTORICAL_VECTOR).fill(genesisEth1Data.blockHash);
 
   return createValue(config.types.BeaconState, {
     // MISC
@@ -125,26 +114,11 @@ export function getGenesisBeaconState(
 
     // Randomness and committees
     startShard: config.params.GENESIS_START_SHARD,
-
-    // Recent state
-    currentCrosslinks: Array.from({length: config.params.SHARD_COUNT}, () => ({
-      shard: GENESIS_START_SHARD,
-      startEpoch: GENESIS_EPOCH,
-      endEpoch: 0,
-      parentRoot: ZERO_HASH,
-      dataRoot: ZERO_HASH,
-    })),
-    previousCrosslinks: Array.from({length: config.params.SHARD_COUNT}, () => ({
-      shard: GENESIS_START_SHARD,
-      startEpoch: GENESIS_EPOCH,
-      endEpoch: 0,
-      parentRoot: ZERO_HASH,
-      dataRoot: ZERO_HASH,
-    })),
     latestBlockHeader: latestBlockHeader,
 
     // Ethereum 1.0 chain data
     eth1Data: genesisEth1Data,
+    randaoMixes,
   });
 }
 
@@ -162,7 +136,6 @@ export function getEmptyBlockBody(): BeaconBlockBody {
     attestations: [],
     deposits: [],
     voluntaryExits: [],
-    transfers: [],
   };
 }
 

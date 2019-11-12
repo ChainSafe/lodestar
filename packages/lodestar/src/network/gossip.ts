@@ -10,7 +10,7 @@ import promisify from "promisify-es6";
 import LibP2p from "libp2p";
 //@ts-ignore
 import Gossipsub from "libp2p-gossipsub";
-import {Attestation, BeaconBlock, Shard} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, CommitteeIndex} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {SHARD_SUBNET_COUNT, BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
@@ -70,8 +70,8 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   public subscribeToAttestations(): void {
     this.pubsub.subscribe(attestationTopic());
   }
-  public subscribeToShardAttestations(shard: Shard): void {
-    this.pubsub.subscribe(shardSubnetAttestationTopic(shard));
+  public subscribeToShardAttestations(index: CommitteeIndex): void {
+    this.pubsub.subscribe(shardSubnetAttestationTopic(index));
   }
   public unsubscribeToBlocks(): void {
     this.pubsub.unsubscribe(blockTopic());
@@ -79,8 +79,8 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   public unsubscribeToAttestations(): void {
     this.pubsub.unsubscribe(attestationTopic());
   }
-  public unsubscribeToShardAttestations(shard: Shard): void {
-    this.pubsub.unsubscribe(shardSubnetAttestationTopic(shard));
+  public unsubscribeToShardAttestations(index: CommitteeIndex): void {
+    this.pubsub.unsubscribe(shardSubnetAttestationTopic(index));
   }
   public async publishBlock(block: BeaconBlock): Promise<void> {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
@@ -96,7 +96,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   }
   public async publishShardAttestation(attestation: Attestation): Promise<void> {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
-      shardSubnetAttestationTopic(attestation.data.crosslink.shard),
+      shardSubnetAttestationTopic(attestation.data.index),
       serialize(attestation, this.config.types.Attestation)
     );
     this.logger.verbose(
@@ -131,7 +131,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
       );
       // @ts-ignore
       // we cannot type hint this
-      this.emit(shardAttestationTopic(attestation.data.crosslink.shard), attestation);
+      this.emit(shardAttestationTopic(attestation.data.index), attestation);
     } catch (e) {
       this.logger.warn("[GOSSIP] Incoming attestation error", e);
     }

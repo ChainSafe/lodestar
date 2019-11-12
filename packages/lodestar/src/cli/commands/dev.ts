@@ -5,10 +5,11 @@
 import {ICliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
-import fs, {existsSync, mkdirSync} from "fs";
+import fs, {mkdirSync} from "fs";
 import PeerId from "peer-id";
 import yaml from "js-yaml";
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import rimraf from "rimraf";
 import {ILogger, WinstonLogger} from "../../logger";
 import {BeaconNode} from "../../node";
 import {BeaconNodeOptions, IBeaconNodeOptions} from "../../node/options";
@@ -22,24 +23,29 @@ import {interopKeypair} from "../../interop/keypairs";
 import {ValidatorApi} from "../../api/rpc/api/validator";
 import {BeaconApi} from "../../api/rpc/api/beacon";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
-import {loadPeerId, NodejsNode} from "../../network/nodejs";
-import {createPeerId, initializePeerInfo} from "../../network";
-import {computeEpochOfSlot, computeStartSlotOfEpoch,getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch,getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
 
+import {loadPeerId, createNodeJsLibp2p} from "../../network/nodejs";
+import {createPeerId} from "../../network";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "../../util/serialization";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib/api";
 import {ValidatorClient} from "../../validator/nodejs";
+import {BeaconState} from "@chainsafe/eth2.0-types";
+import {quickStartState} from "../../interop/state";
+import {default as dbConfig} from "../../db/options";
 
-interface IInteropCommandOptions {
+interface IDevCommandOptions {
   loggingLevel?: string;
-  quickStart?: string;
+  genesisTime?: string;
+  validatorCount?: string;
+  genesisState?: string;
   preset?: string;
   validators?: string;
   [key: string]: string;
 }
 
-export class InteropCommand implements ICliCommand {
+export class DevCommand implements ICliCommand {
   public node: BeaconNode;
 
   private validatorDir = "./validators";
@@ -50,12 +56,14 @@ export class InteropCommand implements ICliCommand {
 
     //TODO: when we switch cli library make this to run as default command "./bin/lodestar"
     const command = commander
-      .command("interop")
+      .command("dev")
       .description("Start lodestar beacon node and certain amount of validator nodes")
-      .option("-q, --quickStart [params]", "Start chain from known state")
+      .option("-t, --genesisTime [genesisTime]", "genesis time of Beacon state", Math.round(Date.now()/1000).toString())
+      .option("-c, --validatorCount [validatorCount]", "Number of validator for Beacon state", "8")
+      .option("-s, --genesisState [params]", "Start chain from known state")
       // eslint-disable-next-line max-len
-      .option("-v, --validators [range]", "Start validators, single number - validators 0-number, x,y - validators between x and y", 0)
-      .option("-p, --preset [preset]", "Minimal/mainnet", "mainnet")
+      .option("-v, --validators [range]", "Start validators, single number - validators 0-number, x,y - validators between x and y", "8")
+      .option("-p, --preset [preset]", "Minimal/mainnet", "minimal")
       .option("-r, --resetDb", "Reset the database", true)
       .option("--peer-id-file [peerIdFile]","peer id json file")
       .option("--peer-id [peerId]","peer id hex string")
@@ -72,7 +80,7 @@ export class InteropCommand implements ICliCommand {
     generateCommanderOptions(command, BeaconNodeOptions);
   }
 
-  public async action(options: IInteropCommandOptions, logger: ILogger): Promise<void> {
+  public async action(options: IDevCommandOptions, logger: ILogger): Promise<void> {
     let conf: Partial<IBeaconNodeOptions> = {};
 
     //merge config file
@@ -116,23 +124,28 @@ export class InteropCommand implements ICliCommand {
     } else {
       peerId = createPeerId();
     }
-    const libp2p = await Promise.resolve(peerId)
-      .then((peerId) => initializePeerInfo(peerId, conf.network.multiaddrs))
-      .then((peerInfo) => new NodejsNode({peerInfo, bootnodes: conf.network.bootnodes}));
+    const libp2p = await createNodeJsLibp2p(peerId, conf.network);
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
-    if (options.quickStart) {
-      this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier(), libp2p});
-      const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
-      const state = quickStartOptionToState(config, tree, options.quickStart);
-      await this.node.chain.initializeBeaconChain(state, tree);
-      const targetSlot = computeStartSlotOfEpoch(
-        config,
-        computeEpochOfSlot(config, getCurrentSlot(config, state.genesisTime))
-      );
-      await this.node.chain.advanceState(targetSlot);
+    const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
+    let state: BeaconState;
+    if (options.genesisState) {
+      state = quickStartOptionToState(config, tree, options.genesisState);
+    } else if (options.genesisTime && options.validatorCount) {
+      logger.info(`Starting node with genesisTime ${new Date(parseInt(options.genesisTime)*1000)} and \
+       ${options.validatorCount} validators.`);
+      state = quickStartState(config, tree, parseInt(options.genesisTime), parseInt(options.validatorCount));
     } else {
-      throw new Error("Missing --quickstart flag");
+      throw new Error("Missing either --quickstart or --genesisTime and --validatorCount flag");
     }
+    this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier(), libp2p});
+    await this.node.chain.initializeBeaconChain(state, tree);
+
+    const targetSlot = computeStartSlotAtEpoch(
+      config,
+      computeEpochAtSlot(config, getCurrentSlot(config, state.genesisTime))
+    );
+    await this.node.chain.advanceState(targetSlot);
+    rimraf.sync(dbConfig.name);
     await this.node.start();
     if(options.validators) {
       if(options.validators.includes(",")) {
@@ -151,9 +164,8 @@ export class InteropCommand implements ICliCommand {
   }
 
   private async startValidators(from: number, to: number, node: BeaconNode): Promise<void> {
-    if(!existsSync(this.validatorDir)) {
-      mkdirSync(this.validatorDir);
-    }
+    rimraf.sync(this.validatorDir);
+    mkdirSync(this.validatorDir);
     for(let i = from; i < to; i++) {
       this.startValidator(interopKeypair(i).privkey, node);
     }

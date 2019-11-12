@@ -1,19 +1,20 @@
 import {join} from "path";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {processCrosslinks} from "@chainsafe/eth2.0-state-transition";
+import {expect} from "chai";
+import {equals} from "@chainsafe/ssz";
+
+import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {processRewardsAndPenalties} from "@chainsafe/eth2.0-state-transition";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
-import {equals} from "@chainsafe/ssz";
-import {expect} from "chai";
 import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<StateTestCase, BeaconState>(
-  "epoch_croslinks mainnet",
-  join(SPEC_TEST_LOCATION, "tests/mainnet/phase0/epoch_processing/crosslinks/pyspec_tests"),
+  "rewards and penalties minimal",
+  join(SPEC_TEST_LOCATION, "tests/minimal/phase0/epoch_processing/rewards_and_penalties/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    processCrosslinks(config, state);
+    processRewardsAndPenalties(config, state)
     return state;
   },
   {

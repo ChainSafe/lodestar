@@ -21,7 +21,7 @@ import {AttestationService} from "./services/attestation";
 import {IValidatorDB} from "./db/interface";
 import {ILogger} from "./logger/interface";
 import {IValidatorOptions} from "./options";
-import {computeEpochOfSlot} from "./util";
+import {computeEpochAtSlot} from "./util";
 import {ApiClientOverRest} from "./api/impl/rest/apiClient";
 
 /**
@@ -115,7 +115,7 @@ export class Validator {
     const validatorDuty =
       (await this.apiClient.validator.getDuties(
         [this.opts.keypair.publicKey.toBytesCompressed()],
-        computeEpochOfSlot(this.config, slot))
+        computeEpochAtSlot(this.config, slot))
       )[0];
     const {fork} = await this.apiClient.beacon.getFork();
     const isAttester = validatorDuty.attestationSlot === slot;

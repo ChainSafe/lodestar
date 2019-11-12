@@ -15,25 +15,11 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {DomainType,} from "../constants";
-import {isSorted,intDiv} from "@chainsafe/eth2.0-utils";
-import {computeStartSlotOfEpoch} from "./epoch";
+import {isSorted} from "@chainsafe/eth2.0-utils";
 import {getDomain} from "./domain";
-import {getCommitteeCount, getCrosslinkCommittee, getStartShard} from "./committee";
+import {getBeaconCommittee} from "./committee";
 
 
-
-/**
- * Return the slot corresponding to the attestation [[data]].
- */
-export function getAttestationDataSlot(config: IBeaconConfig, state: BeaconState, data: AttestationData): Slot {
-  const epoch = data.target.epoch;
-  const committeeCount = getCommitteeCount(config, state, epoch);
-  const offset =
-      (data.crosslink.shard + config.params.SHARD_COUNT - getStartShard(config, state, epoch))
-      %
-      config.params.SHARD_COUNT;
-  return intDiv(computeStartSlotOfEpoch(config, epoch) + offset, intDiv(committeeCount, config.params.SLOTS_PER_EPOCH));
-}
 
 /**
  * Check if [[data1]] and [[data2]] are slashable according to Casper FFG rules.
@@ -97,7 +83,7 @@ export function isValidIndexedAttestation(
       }, config.types.AttestationDataAndCustodyBit),
     ],
     indexedAttestation.signature,
-    getDomain(config, state, DomainType.ATTESTATION, indexedAttestation.data.target.epoch),
+    getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch),
   ))) {
     return false;
   }
@@ -113,7 +99,7 @@ export function getAttestingIndices(
   data: AttestationData,
   bits: BitList
 ): ValidatorIndex[] {
-  const committee = getCrosslinkCommittee(config, state, data.target.epoch, data.crosslink.shard);
+  const committee = getBeaconCommittee(config, state, data.slot, data.index);
   // Find the participating attesters in the committee
   return committee.filter((_, i) => bits.getBit(i)).sort((a, b) => a - b);
 }

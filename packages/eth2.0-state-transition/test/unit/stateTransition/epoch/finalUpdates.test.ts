@@ -14,19 +14,13 @@ describe('process epoch - final updates', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let getActiveValidatorIndicesStub: any,
-    getCurrentEpochStub: any,
+  let getCurrentEpochStub: any,
     getRandaoMixStub: any,
-    getShardDeltaStub: any,
-    getCompactCommitteesRootStub: any,
     hashTreeRootStub: any;
 
   beforeEach(() => {
-    getActiveValidatorIndicesStub = sandbox.stub(utils, "getActiveValidatorIndices");
     getCurrentEpochStub = sandbox.stub(utils, "getCurrentEpoch");
     getRandaoMixStub = sandbox.stub(utils, "getRandaoMix");
-    getShardDeltaStub = sandbox.stub(utils, "getShardDelta");
-    getCompactCommitteesRootStub = sandbox.stub(utils, "getCompactCommitteesRoot");
     hashTreeRootStub = sandbox.stub(hashTreeRoot, "hashTreeRoot");
   });
 
@@ -41,17 +35,12 @@ describe('process epoch - final updates', function () {
     state.balances.push(new BN("ffffffffff",16));
 
     getCurrentEpochStub.returns(127);
-    getShardDeltaStub.returns(1);
-    getActiveValidatorIndicesStub.returns([1,2,3,4]);
     getRandaoMixStub.returns(0);
-    getCompactCommitteesRootStub.returns(Buffer.alloc(32));
     hashTreeRootStub.returns(Buffer.from("1010"));
 
     try {
       processFinalUpdates(config, state);
       expect(getCurrentEpochStub.calledOnceWith(config, state)).to.be.true;
-      expect(getShardDeltaStub.calledOnceWith(config, state, sinon.match.number)).to.be.true;
-      expect(getActiveValidatorIndicesStub.calledOnceWith(state, sinon.match.number)).to.be.true;
       expect(getRandaoMixStub.calledOnceWith(config, state, sinon.match.number)).to.be.true;
 
     }catch (e) {

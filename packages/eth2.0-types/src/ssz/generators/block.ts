@@ -32,10 +32,6 @@ export const BeaconBlockBody = (ssz: IBeaconSSZTypes, params: IBeaconParams): Si
       elementType: ssz.VoluntaryExit,
       maxLength: params.MAX_VOLUNTARY_EXITS,
     }],
-    ["transfers", {
-      elementType: ssz.Transfer,
-      maxLength: params.MAX_TRANSFERS,
-    }],
   ],
 });
 

@@ -13,11 +13,10 @@ import {
   Gwei,
   Hash,
   number64,
-  Shard,
   Slot,
   ValidatorIndex,
   Version,
-  uint64,
+  CommitteeIndex,
 } from "./primitive";
 
 export interface Fork {
@@ -37,7 +36,7 @@ export interface Checkpoint {
 export interface Validator {
   // BLS public key
   pubkey: BLSPubkey;
-  // Commitment to pubkey for withdrawals and transfers
+  // Commitment to pubkey for withdrawals
   withdrawalCredentials: Hash;
   // Balance at stake
   effectiveBalance: Gwei;
@@ -53,32 +52,20 @@ export interface Validator {
   withdrawableEpoch: Epoch;
 }
 
-export interface Crosslink {
-  //Shard number
-  shard: Shard;
-  //Root of the previous crosslink
-  parentRoot: Hash;
-  //Crosslinking data from epochs [start....end-1]
-  startEpoch: Epoch;
-  endEpoch: Epoch;
-  //Root of the crosslinked shard data since the previous crosslink
-  dataRoot: Hash;
-}
-
 export interface AttestationData {
+  slot: Slot;
+  index: CommitteeIndex;
   // LMD GHOST vote
   beaconBlockRoot: Hash;
   // FFG vote
   source: Checkpoint;
   target: Checkpoint;
-  // Crosslink vote
-  crosslink: Crosslink;
 }
 
 export interface AttestationDataAndCustodyBit {
   // Attestation data
   data: AttestationData;
-  // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data
+  // Challengeable bit (SSZ-bool, 1 byte) for the custody of shard data
   custodyBit: bool;
 }
 
@@ -128,11 +115,6 @@ export interface DepositData {
   amount: Gwei;
   // Container self-signature
   signature: BLSSignature;
-}
-
-export interface CompactCommittee {
-  pubkeys: BLSPubkey[];
-  compactValidators: uint64[];
 }
 
 export interface BeaconBlockHeader {

@@ -2,22 +2,19 @@
  * @module chain/stateTransition/util
  */
 
-import assert from "assert";
-import {hashTreeRoot} from "@chainsafe/ssz";
-
 import {
-  Epoch,
   ValidatorIndex,
-  CompactCommittee,
   BeaconState,
   Hash,
-  Shard,
+  CommitteeIndex,
+  Slot,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {computeShuffledIndex, getSeed} from "./seed";
-import {getActiveValidatorIndices, computeCompactValidator} from "./validator";
-import {getCurrentEpoch} from "./epoch";
+import {getActiveValidatorIndices} from "./validator";
+import {computeEpochAtSlot} from "./epoch";
 import {intDiv} from "@chainsafe/eth2.0-utils";
+import {DomainType} from "../constants";
 
 
 /**
@@ -40,79 +37,36 @@ export function computeCommittee(
 
 /**
  * Return the number of committees at [[epoch]].
+ * Return the number of committees at [[slot]].
  */
-export function getCommitteeCount(config: IBeaconConfig, state: BeaconState, epoch: Epoch): number {
+export function getCommitteeCountAtSlot(config: IBeaconConfig, state: BeaconState, slot: Slot): number {
+  const epoch = computeEpochAtSlot(config, slot);
   const activeValidatorIndices = getActiveValidatorIndices(state, epoch);
   return Math.max(
     1,
     Math.min(
-      intDiv(config.params.SHARD_COUNT, config.params.SLOTS_PER_EPOCH),
+      config.params.MAX_COMMITTEES_PER_SLOT,
       intDiv(intDiv(activeValidatorIndices.length, config.params.SLOTS_PER_EPOCH), config.params.TARGET_COMMITTEE_SIZE),
     ),
-  ) * config.params.SLOTS_PER_EPOCH;
-}
-
-/**
- * Return the number of shards to increment [[state.latestStartShard]] at [[epoch]].
- */
-export function getShardDelta(config: IBeaconConfig, state: BeaconState, epoch: Epoch): number {
-  return Math.min(
-    getCommitteeCount(config, state, epoch),
-    config.params.SHARD_COUNT - intDiv(config.params.SHARD_COUNT, config.params.SLOTS_PER_EPOCH),
   );
 }
 
 /**
- * Return the start shard of the 0th committee at [[epoch]].
+ * Return the beacon committee at [[slot]] for [[index]].
  */
-export function getStartShard(config: IBeaconConfig, state: BeaconState, epoch: Epoch): Shard {
-  const currentEpoch = getCurrentEpoch(config, state);
-  let checkEpoch = currentEpoch + 1;
-  assert(epoch <= checkEpoch);
-  const shardDelta = getShardDelta(config, state, currentEpoch);
-  let shard = (state.startShard + shardDelta) % config.params.SHARD_COUNT;
-  while (checkEpoch > epoch) {
-    checkEpoch -= 1;
-    shard = (shard + config.params.SHARD_COUNT - shardDelta) % config.params.SHARD_COUNT;
-  }
-  return shard;
-}
-
-/**
- * Return the list of (committee, shard) acting as a tuple for the slot.
- */
-export function getCrosslinkCommittee(
+export function getBeaconCommittee(
   config: IBeaconConfig,
   state: BeaconState,
-  epoch: Epoch,
-  shard: Shard
+  slot: Slot,
+  index: CommitteeIndex
 ): ValidatorIndex[] {
+  const epoch = computeEpochAtSlot(config, slot);
+  const committeesPerSlot = getCommitteeCountAtSlot(config, state, slot);
   return computeCommittee(
     config,
     getActiveValidatorIndices(state, epoch),
-    getSeed(config, state, epoch),
-    (shard + config.params.SHARD_COUNT - getStartShard(config, state, epoch)) % config.params.SHARD_COUNT,
-    getCommitteeCount(config, state, epoch)
+    getSeed(config, state, epoch, DomainType.BEACON_ATTESTER),
+    (slot % config.params.SLOTS_PER_EPOCH) * committeesPerSlot + index,
+    committeesPerSlot * config.params.SLOTS_PER_EPOCH
   );
-}
-
-/**
- * Return the compact committee root at [[epoch]].
- */
-export function getCompactCommitteesRoot(config: IBeaconConfig, state: BeaconState, epoch: Epoch): Hash {
-  const committees: CompactCommittee[] = Array.from({length: config.params.SHARD_COUNT},
-    () => ({pubkeys: [], compactValidators: []}));
-  const startShard = getStartShard(config, state, epoch);
-  for (let committeeNumber = 0; committeeNumber < getCommitteeCount(config, state, epoch); committeeNumber++) {
-    const shard = (startShard + committeeNumber) % config.params.SHARD_COUNT;
-    getCrosslinkCommittee(config, state, epoch, shard).forEach((index) => {
-      const validator = state.validators[index];
-      committees[shard].pubkeys.push(validator.pubkey);
-      committees[shard].compactValidators.push(computeCompactValidator(config, validator, index));
-    });
-  }
-  return hashTreeRoot(committees, {
-    elementType: config.types.CompactCommittee,
-    length: config.params.SHARD_COUNT,
-  });
 }

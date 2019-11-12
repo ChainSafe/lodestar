@@ -1,3 +1,5 @@
+![lodestar logo](./assets/300ppi/FullMark-BLACK.png)
+
 # Lodestar Monorepo
 ![ETH2.0_Spec_Version 0.8.3](https://img.shields.io/badge/ETH2.0_Spec_Version-0.8.3-2e86c1.svg)
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
@@ -78,5 +80,5 @@ Feel free to check out our meeting notes on [HackMD](https://hackmd.io/@yBpKEsxO
 
 ## Donations
 We are a local group of Toronto open source developers. As such, all of our open source work is funded by grants. We all take the time out of our hectic lives to contribute to the Ethereum ecosystem.
-If you want to donate, you can send us ETH at the following address: 0xBceDE714283f348EBB3e5cBaF8A947Cab3C8bE8d
+If you want to donate, you can send us ETH at the following address: **lodestar.chainsafe.eth**
 

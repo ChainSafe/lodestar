@@ -65,7 +65,8 @@ describe('process block - proposer slashings', function () {
       processProposerSlashing(config, state, proposerSlashing);
       expect.fail();
     } catch (e) {
-      expect(isSlashableValidatorStub.calledOnce).to.be.true;
+      // different slot so it failed without calling isSlashableValidator
+      expect(isSlashableValidatorStub.calledOnce).to.be.false;
     }
   });
 
@@ -73,7 +74,7 @@ describe('process block - proposer slashings', function () {
     const state = generateState({validators: [generateValidator()]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
-    proposerSlashing.header2.slot = 2;
+    proposerSlashing.header2.slot = 1;
     isSlashableValidatorStub.returns(true);
     blsStub.verify.returns(false);
     try {
@@ -91,7 +92,7 @@ describe('process block - proposer slashings', function () {
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
     proposerSlashing.header1.signature = Buffer.alloc(96, 1);
-    proposerSlashing.header2.slot = 2;
+    proposerSlashing.header2.slot = 1;
     proposerSlashing.header2.signature = Buffer.alloc(96, 2);
     isSlashableValidatorStub.returns(true);
     blsStub.verify
@@ -114,7 +115,7 @@ describe('process block - proposer slashings', function () {
     const state = generateState({validators: [validator]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
-    proposerSlashing.header2.slot = 2;
+    proposerSlashing.header2.slot = 1;
     isSlashableValidatorStub.returns(true);
     blsStub.verify.returns(true);
     try {

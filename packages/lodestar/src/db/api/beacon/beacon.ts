@@ -24,7 +24,6 @@ import {
   MerkleTreeRepository,
   ProposerSlashingRepository,
   StateRepository,
-  TransfersRepository,
   VoluntaryExitRepository
 } from "./repositories";
 
@@ -39,8 +38,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   public attestation: AttestationRepository;
 
   public voluntaryExit: VoluntaryExitRepository;
-
-  public transfer: TransfersRepository;
 
   public proposerSlashing: ProposerSlashingRepository;
 
@@ -57,7 +54,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.block = new BlockRepository(this.config, this.db, this.chain);
     this.attestation = new AttestationRepository(this.config, this.db);
     this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db);
-    this.transfer = new TransfersRepository(this.config, this.db);
     this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db);
     this.attesterSlashing = new AttesterSlashingRepository(this.config, this.db);
     this.deposit = new DepositRepository(this.config, this.db);

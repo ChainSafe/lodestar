@@ -7,10 +7,10 @@ import {
   BLSPubkey,
   bytes,
   Epoch,
-  Shard,
   Slot,
   ValidatorDuty,
-  ValidatorIndex
+  ValidatorIndex,
+  CommitteeIndex
 } from "@chainsafe/eth2.0-types";
 import {IApi} from "../../../interface";
 
@@ -45,7 +45,8 @@ export interface IValidatorApi extends IApi {
    * Requests that the BeaconNode produce an IndexedAttestation,
    * with a blank signature field, which the ValidatorClient will then sign.
    */
-  produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, slot: Slot, shard: Shard): Promise<Attestation>;
+  produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, slot: Slot, index: CommitteeIndex):
+  Promise<Attestation>;
 
   /**
    * Instructs the BeaconNode to publish a newly signed beacon block

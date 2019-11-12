@@ -7,13 +7,17 @@ import {hash} from "@chainsafe/ssz";
 import {
   BeaconState,
   ValidatorIndex,
+  Hash,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {intToBytes,intDiv} from "@chainsafe/eth2.0-utils";
 
 import {getCurrentEpoch} from "./epoch";
-import {getSeed} from "./seed";
-import {getCommitteeCount, getStartShard, getCrosslinkCommittee} from "./committee";
+import {getSeed, computeShuffledIndex} from "./seed";
+import {DomainType} from "../constants";
+import {getActiveValidatorIndices} from ".";
+import assert from "assert";
+
 
 
 
@@ -22,23 +26,36 @@ import {getCommitteeCount, getStartShard, getCrosslinkCommittee} from "./committ
  */
 export function getBeaconProposerIndex(config: IBeaconConfig, state: BeaconState): ValidatorIndex {
   const currentEpoch = getCurrentEpoch(config, state);
-  const committeesPerSlot = intDiv(getCommitteeCount(config, state, currentEpoch), config.params.SLOTS_PER_EPOCH);
-  const offset = committeesPerSlot * (state.slot % config.params.SLOTS_PER_EPOCH);
-  const shard = (getStartShard(config, state, currentEpoch) + offset) % config.params.SHARD_COUNT;
-  const firstCommittee = getCrosslinkCommittee(config, state, currentEpoch, shard);
-  const seed = getSeed(config, state, currentEpoch);
+  const seed = hash(Buffer.concat([
+    getSeed(config, state, currentEpoch, DomainType.BEACON_PROPOSER),
+    intToBytes(state.slot, 8)
+  ]));
+  const indices = getActiveValidatorIndices(state, currentEpoch);
+  return computeProposerIndex(config, state, indices, seed);
+}
+
+/**
+ * Return from ``indices`` a random index sampled by effective balance.
+ */
+export function computeProposerIndex(config: IBeaconConfig, state: BeaconState, indices: ValidatorIndex[], seed: Hash):
+ValidatorIndex {
+  assert(indices.length > 0);
+  const MAX_RANDOM_BYTE = 2**8 - 1;
   let i = 0;
   /* eslint-disable-next-line no-constant-condition */
   while (true) {
-    const candidateIndex = firstCommittee[(currentEpoch + i) % firstCommittee.length];
+    const candidateIndex = indices[computeShuffledIndex(config, i % indices.length, indices.length, seed)];
     const randByte = hash(Buffer.concat([
       seed,
       intToBytes(intDiv(i, 32), 8),
     ]))[i % 32];
     const effectiveBalance = state.validators[candidateIndex].effectiveBalance;
-    if (effectiveBalance.muln(255).gte(config.params.MAX_EFFECTIVE_BALANCE.muln(randByte))) {
+    if (effectiveBalance.muln(MAX_RANDOM_BYTE).gte(config.params.MAX_EFFECTIVE_BALANCE.muln(randByte))) {
       return candidateIndex;
     }
     i += 1;
+    if (i === indices.length) {
+      return -1;
+    }
   }
 }

@@ -8,9 +8,9 @@ Typescript imlementation of the Eth2.0 beacon chain
 ## What you need
 You will need to go over the [specification](https://github.com/ethereum/eth2.0-specs). You will also need to have a [basic understanding of sharding](https://github.com/ethereum/wiki/wiki/Sharding-FAQs). Note that that the specification is an ongoing document and will get outdated. The reference implementation by the Ethereum development team is written in Python and can be found [here](https://github.com/ethereum/beacon_chain).
 
-## Run interop
+## Run dev
 
-` ./bin/lodestar interop -q 1,8 -v 8 -p minimal`
+` ./bin/lodestar dev -v 8 -p minimal`
 
 #### Using start-multi.sh
 
@@ -49,10 +49,12 @@ This will start ganache server on `http://127.0.0.1:8545`. For more configuratio
 
 `./bin/lodestar beacon --db test-db --eth1RpcUrl http://127.0.0.1:8545 --depositContract <depositContractAddress>`
 
-You will see deposit contract address in console if you used `./bin/lodestar eth1:dev`.
+You will see deposit contract address in console if you used `./bin/lodestar eth1:dev`.  
 
 ### Making validator deposit
 
 `./bin/lodestar deposit -m "vast thought differ pull jewel broom cook wrist tribe word before omit" -n http://127.0.0.1:8545 -c <depositContractAddress>>`
 
-This will trigger 10 deposits to deposit contract which will trigger beacon chain initialization. Make sure to use same mnemonic which you used to start eth1 network.
+This will trigger 10 deposits to deposit contract which will trigger beacon chain initialization. Make sure to use same mnemonic which you used to start eth1 network.  
+
+**NOTE:** If you'd like to silence the client's logs, set the `LODESTAR_SILENCE` environment variable to `true`.

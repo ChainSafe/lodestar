@@ -57,7 +57,7 @@ describe('process epoch - balance updates', function () {
     const emptyPendingAttestation = [
       {
         ...generateEmptyAttestation(),
-        inclusionDelay: 10,
+        inclusionDelay: 5,
         proposerIndex: 1
       }
     ];

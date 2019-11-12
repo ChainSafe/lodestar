@@ -4,10 +4,10 @@ import {
   BLSPubkey,
   bytes,
   Epoch,
-  Shard,
   Slot,
   ValidatorDuty,
-  ValidatorIndex
+  ValidatorIndex,
+  number64
 } from "@chainsafe/eth2.0-types";
 
 export interface IValidatorApi {
@@ -34,11 +34,12 @@ export interface IValidatorApi {
      */
   produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock>;
 
+  // Rest API spec uses "shard" but core spec uses "committeeIndex"
   /**
      * Requests that the BeaconNode produce an IndexedAttestation,
      * with a blank signature field, which the ValidatorClient will then sign.
      */
-  produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, slot: Slot, shard: Shard): Promise<Attestation>;
+  produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, slot: Slot, shard: number64): Promise<Attestation>;
 
   /**
      * Instructs the BeaconNode to publish a newly signed beacon block

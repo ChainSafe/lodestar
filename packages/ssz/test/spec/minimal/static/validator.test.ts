@@ -1,5 +1,5 @@
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
-import {CompactCommittee, Hash} from "@chainsafe/eth2.0-types";
+import {Hash, Validator} from "@chainsafe/eth2.0-types";
 import {join} from "path";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {expect} from "chai";
@@ -14,12 +14,12 @@ interface IResult {
 
 ["ssz_lengthy", "ssz_max", "ssz_nil", "ssz_one", "ssz_random", "ssz_random_chaos", "ssz_zero"].forEach((caseName) => {
 
-  describeDirectorySpecTest<IBaseSSZStaticTestCase<CompactCommittee>, IResult>(
-    `crosslink ${caseName} minimal`,
-    join(__dirname, `${TEST_CASE_LOCATION}/tests/minimal/phase0/ssz_static/Crosslink/${caseName}`),
+  describeDirectorySpecTest<IBaseSSZStaticTestCase<Validator>, IResult>(
+    `Validator ${caseName} minimal`,
+    join(__dirname, `${TEST_CASE_LOCATION}/tests/minimal/phase0/ssz_static/Validator/${caseName}`),
     (testcase) => {
-      const serialized = serialize(testcase.serialized, config.types.Crosslink);
-      const root = hashTreeRoot(testcase.serialized, config.types.Crosslink);
+      const serialized = serialize(testcase.serialized, config.types.Validator);
+      const root = hashTreeRoot(testcase.serialized, config.types.Validator);
       return {
         serialized,
         root
@@ -33,7 +33,7 @@ interface IResult {
       },
       // @ts-ignore
       sszTypes: {
-        serialized: config.types.Crosslink,
+        serialized: config.types.Validator,
       },
       getExpected: (testCase => {
         return {

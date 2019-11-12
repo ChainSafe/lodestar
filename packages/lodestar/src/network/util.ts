@@ -6,7 +6,7 @@ import PeerId from "peer-id";
 import PeerInfo from "peer-info";
 //@ts-ignore
 import promisify from "promisify-es6";
-import {Shard} from "@chainsafe/eth2.0-types";
+import {CommitteeIndex} from "@chainsafe/eth2.0-types";
 
 import {RequestId, SHARD_SUBNET_COUNT, SHARD_ATTESTATION_TOPIC, BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
 
@@ -42,11 +42,11 @@ export function attestationTopic(encoding: string = "ssz"): string {
   return `${ATTESTATION_TOPIC}/${encoding}`;
 }
 
-export function shardSubnetAttestationTopic(shard: Shard, encoding: string = "ssz"): string {
-  return `${SHARD_ATTESTATION_TOPIC.replace("{shard}", String(shard % SHARD_SUBNET_COUNT))}/${encoding}`;
+export function shardSubnetAttestationTopic(index: CommitteeIndex, encoding: string = "ssz"): string {
+  return `${SHARD_ATTESTATION_TOPIC.replace("{shard}", String(index % SHARD_SUBNET_COUNT))}/${encoding}`;
 }
-export function shardAttestationTopic(shard: Shard): string {
-  return SHARD_ATTESTATION_TOPIC.replace("{shard}", String(shard));
+export function shardAttestationTopic(index: CommitteeIndex): string {
+  return SHARD_ATTESTATION_TOPIC.replace("{shard}", String(index));
 }
 
 // peers
