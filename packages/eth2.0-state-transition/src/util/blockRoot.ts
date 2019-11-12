@@ -43,8 +43,8 @@ export function getTemporaryBlockHeader(config: IBeaconConfig, block: BeaconBloc
   return {
     slot: block.slot,
     parentRoot: block.parentRoot,
-    stateRoot: ZERO_HASH,
     // `state_root` is zeroed and overwritten in the next `process_slot` call
+    stateRoot: ZERO_HASH,
     bodyRoot: hashTreeRoot(block.body, config.types.BeaconBlockBody),
     // `signature` is zeroed
     signature: EMPTY_SIGNATURE,

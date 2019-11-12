@@ -25,7 +25,7 @@ import {getBeaconProposerIndex} from "./proposer";
  * ``assignment[0]`` is the list of validators in the committee
  * ``assignment[1]`` is the index to which the committee is assigned
  * ``assignment[2]`` is the slot at which the committee is assigned
- * Return None if no assignment..
+ * Return null if no assignment..
  */
 export function getCommitteeAssignment(
   config: IBeaconConfig,

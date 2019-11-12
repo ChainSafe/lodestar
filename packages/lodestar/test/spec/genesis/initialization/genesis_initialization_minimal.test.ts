@@ -21,38 +21,35 @@ interface GenesisInitSpecTest {
   [k: string]: Deposit|unknown|null|undefined;
 }
 
-// TODO: cannot load test for now, should resolve this test after upgrading Deposit to 0.9.0
-// https://github.com/ChainSafe/lodestar/issues/534
-
-// describeDirectorySpecTest<GenesisInitSpecTest, BeaconState>(
-//   "genesis initialization",
-//   join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/genesis/initialization/pyspec_tests"),
-//   (testcase) => {
-//     const deposits: Deposit[] = [];
-//     for(let i= 0; i < testcase.meta.depositsCount.toNumber(); i++) {
-//       deposits.push(testcase[`deposits_${i}`] as Deposit);
-//     }
-//     return initializeBeaconStateFromEth1(config, testcase.eth1_block_hash, testcase.eth1_timestamp.toNumber(), deposits);
-//   },
-//   {
-//     // @ts-ignore
-//     inputTypes: {
-//       meta: InputType.YAML,
-//       eth1_timestamp: InputType.YAML
-//     },
-//     // @ts-ignore
-//     sszTypes: {
-//       eth1_block_hash: config.types.Hash,
-//       state: config.types.BeaconState,
-//       ...generateDepositSSZTypeMapping(64, config)
-//     },
-//     timeout: 60000,
-//     getExpected: (testCase => testCase.state),
-//     expectFunc: (testCase, expected, actual) => {
-//       expect(equals(actual, expected, config.types.BeaconState)).to.be.true;
-//     }
-//   }
-// );
+describeDirectorySpecTest<GenesisInitSpecTest, BeaconState>(
+  "genesis initialization",
+  join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/genesis/initialization/pyspec_tests"),
+  (testcase) => {
+    const deposits: Deposit[] = [];
+    for(let i= 0; i < testcase.meta.depositsCount.toNumber(); i++) {
+      deposits.push(testcase[`deposits_${i}`] as Deposit);
+    }
+    return initializeBeaconStateFromEth1(config, testcase.eth1_block_hash, testcase.eth1_timestamp.toNumber(), deposits);
+  },
+  {
+    // @ts-ignore
+    inputTypes: {
+      meta: InputType.YAML,
+      eth1_timestamp: InputType.YAML
+    },
+    // @ts-ignore
+    sszTypes: {
+      eth1_block_hash: config.types.Hash,
+      state: config.types.BeaconState,
+      ...generateDepositSSZTypeMapping(64, config)
+    },
+    timeout: 60000,
+    getExpected: (testCase => testCase.state),
+    expectFunc: (testCase, expected, actual) => {
+      expect(equals(actual, expected, config.types.BeaconState)).to.be.true;
+    }
+  }
+);
 
 // function generateDepositSSZTypeMapping(n: number, config: IBeaconConfig): object {
 //   const depositMappings = {};
