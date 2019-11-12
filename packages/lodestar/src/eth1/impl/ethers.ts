@@ -105,7 +105,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     toBlock?: string | number
   ): Promise<void> {
     const logs = await this.getContractPastLogs(
-      [this.contract.interface.events.Deposit.topic],
+      [this.contract.interface.events.DepositEvent.topic],
       fromBlock,
       toBlock
     );
@@ -132,7 +132,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   }
 
   public async depositRoot(block?: string | number): Promise<Hash> {
-    const depositRootHex = await this.contract.get_hash_tree_root({blockTag: block || "latest"});
+    const depositRootHex = await this.contract.get_deposit_root({blockTag: block || "latest"});
     return Buffer.from(depositRootHex.substr(2), "hex");
   }
 

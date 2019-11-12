@@ -1,9 +1,11 @@
 import chai, {assert, expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {Contract, ethers} from "ethers";
+// @ts-ignore
 import ganache from "ganache-core";
-import sinon from "sinon";
+import sinon, {SinonSandbox} from "sinon";
 import {Provider} from "ethers/providers";
+// @ts-ignore
 import promisify from "promisify-es6";
 import bls from "@chainsafe/bls";
 import {serialize} from "@chainsafe/ssz";
@@ -13,16 +15,17 @@ import defaults from "../../../src/eth1/dev/options";
 import {ILogger, WinstonLogger} from "../../../src/logger";
 import {OpPool} from "../../../src/opPool";
 import {DepositsOperations} from "../../../src/opPool/modules";
-
+import {describe, before, after, it} from "mocha";
 
 chai.use(chaiAsPromised);
+
 describe("Eth1Notifier", () => {
   const ganacheProvider = ganache.provider();
   const provider = new ethers.providers.Web3Provider(ganacheProvider);
-  let opPool;
-  let eth1;
-  let sandbox;
-  let logger: ILogger = new WinstonLogger();
+  let opPool: any;
+  let eth1: any;
+  let sandbox: SinonSandbox;
+  const logger: ILogger = new WinstonLogger();
 
   before(async function (): Promise<void> {
     logger.silent = true;
@@ -49,7 +52,7 @@ describe("Eth1Notifier", () => {
     "should fail to start because there isn't contract at given address",
     async function (): Promise<void> {
       await expect(eth1.start())
-        .to.be.rejectedWith('There is no deposit contract at given address');
+        .to.be.rejectedWith("There is no deposit contract at given address");
     }
   );
 
@@ -66,7 +69,7 @@ describe("Eth1Notifier", () => {
         events: {
           Deposit: {
             //random hash
-            topic: 'depositHash'
+            topic: "depositHash"
           }
         },
         parseLog: sandbox.stub()
@@ -86,12 +89,12 @@ describe("Eth1Notifier", () => {
       stubContract.on.returns(null);
       stubProvider.getNetwork.resolves({
         chainId: 212,
-        ensAddress:'',
-        name: 'test'
+        ensAddress:"",
+        name: "test"
       });
       await notifier.start();
-      expect(stubProvider.on.withArgs('block', sinon.match.any).calledOnce).to.be.true;
-      expect(stubContract.on.withArgs('DepositEvent', sinon.match.any).called).to.be.true;
+      expect(stubProvider.on.withArgs("block", sinon.match.any).calledOnce).to.be.true;
+      expect(stubContract.on.withArgs("DepositEvent", sinon.match.any).called).to.be.true;
     }
   );
 
@@ -111,13 +114,13 @@ describe("Eth1Notifier", () => {
       });
       contract.removeAllListeners.returns(null);
       await notifier.stop();
-      expect(contract.removeAllListeners.withArgs('DepositEvent').calledOnce).to.be.true;
+      expect(contract.removeAllListeners.withArgs("DepositEvent").calledOnce).to.be.true;
     }
   );
 
   it("should process a Deposit log", async function () {
     const cb = sinon.spy();
-    eth1.on('deposit', cb);
+    eth1.on("deposit", cb);
 
     const pubKey = bls.generateKeyPair().publicKey.toBytesCompressed();
     const withdrawalCredentials = "0x" + Buffer.alloc(32).toString("hex");
@@ -150,7 +153,7 @@ describe("Eth1Notifier", () => {
   });
 
   it("should get latest block", async function (): Promise<void> {
-    let block = await eth1.getHead();
+    const block = await eth1.getHead();
     expect(block).to.not.be.null;
   });
 
@@ -159,7 +162,7 @@ describe("Eth1Notifier", () => {
     // @ts-ignore
     const contract: Contract = {
       // eslint-disable-next-line
-      get_hash_tree_root: spy
+      get_deposit_root: spy
     };
     const notifier = new EthersEth1Notifier({
       ...defaults,
@@ -171,7 +174,7 @@ describe("Eth1Notifier", () => {
       logger: logger
     });
     const testDepositRoot = Buffer.alloc(32);
-    spy.resolves('0x' + testDepositRoot.toString('hex'));
+    spy.resolves("0x" + testDepositRoot.toString("hex"));
 
     const depositRoot = await notifier.depositRoot();
     expect(depositRoot).to.be.deep.equal(testDepositRoot);

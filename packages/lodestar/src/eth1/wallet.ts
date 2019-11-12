@@ -7,7 +7,7 @@ import {Provider} from "ethers/providers";
 import {BigNumber, ParamType} from "ethers/utils";
 import BN from "bn.js";
 import bls from "@chainsafe/bls";
-import {hash, signingRoot} from "@chainsafe/ssz";
+import {hash, hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {DepositData} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -66,7 +66,7 @@ export class Eth1Wallet {
       signature: Buffer.alloc(96)
     };
 
-    const signature = bls.sign(
+    depositData.signature = bls.sign(
       privateKey,
       signingRoot(depositData, this.config.types.DepositData),
       Buffer.from([0, 0, 0, DomainType.DEPOSIT])
@@ -76,7 +76,8 @@ export class Eth1Wallet {
       const tx: ContractTransaction = await contract.deposit(
         pubkey,
         withdrawalCredentials,
-        signature,
+        depositData.signature,
+        hashTreeRoot(depositData, this.config.types.DepositData),
         {value});
       await tx.wait();
       return tx.hash || "";
