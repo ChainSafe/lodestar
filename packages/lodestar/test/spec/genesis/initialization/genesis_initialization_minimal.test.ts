@@ -41,7 +41,7 @@ describeDirectorySpecTest<GenesisInitSpecTest, BeaconState>(
     sszTypes: {
       eth1_block_hash: config.types.Hash,
       state: config.types.BeaconState,
-      ...generateDepositSSZTypeMapping(64, config)
+      ...generateDepositSSZTypeMapping(192, config)
     },
     timeout: 60000,
     getExpected: (testCase => testCase.state),
@@ -51,10 +51,10 @@ describeDirectorySpecTest<GenesisInitSpecTest, BeaconState>(
   }
 );
 
-// function generateDepositSSZTypeMapping(n: number, config: IBeaconConfig): object {
-//   const depositMappings = {};
-//   for(let i = 0; i<n; i++) {
-//     depositMappings[`deposits_${i}`] = config.types.Deposit;
-//   }
-//   return depositMappings;
-// }
+function generateDepositSSZTypeMapping(n: number, config: IBeaconConfig): object {
+  const depositMappings = {};
+  for(let i = 0; i<n; i++) {
+    depositMappings[`deposits_${i}`] = config.types.Deposit;
+  }
+  return depositMappings;
+}
