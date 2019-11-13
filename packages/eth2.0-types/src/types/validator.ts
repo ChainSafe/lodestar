@@ -34,7 +34,7 @@ export interface CommitteeAssignment {
 }
 
 export interface AggregateAndProof {
-  index: ValidatorIndex,
-  selectionProof: BLSSignature,
-  aggregate: Attestation
+  index: ValidatorIndex;
+  selectionProof: BLSSignature;
+  aggregate: Attestation;
 }

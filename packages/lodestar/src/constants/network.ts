@@ -1,7 +1,5 @@
 // gossip
 
-import {number64} from "@chainsafe/eth2.0-types";
-
 export const ATTESTATION_SUBNET_COUNT = 64;
 export const ATTESTATION_PROPAGATION_SLOT_RANGE = 23;
 
