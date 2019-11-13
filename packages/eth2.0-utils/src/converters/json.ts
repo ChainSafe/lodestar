@@ -44,17 +44,21 @@ function serializeToJson(value: any): any {
 }
 
 export function fromJson<T>(value: object, type: AnySSZType): T {
-  value = objectToCamelCase(value);
+  value = objectToCamelCase({...value});
   return expandJsonValue(value, parseType(type));
 }
 
 
 function expandJsonValue(value: any, type: FullSSZType): any {
   switch (type.type) {
-    case Type.uint:
-      if (type.byteLength > 6 && type.useNumber)
+    case Type.uint: {
+      const bn = new BN(value);
+      try {
+        return (type.useNumber || type.byteLength <= 6) ? bn.toNumber() : bn;
+      } catch (e) {
         return Infinity;
-      return type.useNumber ? new BN(value).toNumber() : new BN(value);
+      }
+    }
     case Type.bool:
       return value;
     case Type.bitList:
@@ -69,7 +73,7 @@ function expandJsonValue(value: any, type: FullSSZType): any {
       return value.map((element: any) => expandJsonValue(element, type.elementType));
     case Type.container:
       type.fields.forEach(([fieldName, fieldType]) => {
-        value[fieldName] = expandJsonValue(value[fieldName], fieldType);
+        value[fieldName] = expandJsonValue(value[fieldName], parseType(fieldType));
       });
       return value;
   }
