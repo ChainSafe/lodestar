@@ -3,7 +3,6 @@
  */
 
 import {SimpleContainerType} from "@chainsafe/ssz-type-schema";
-
 import {IBeaconSSZTypes} from "../interface";
 
 export const ValidatorDuty = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
@@ -20,5 +19,13 @@ export const SyncingStatus = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
     ["startingBlock", ssz.uint64],
     ["currentBlock", ssz.uint64],
     ["highestBlock", ssz.uint64],
+  ],
+});
+
+export const AggregateAndProof = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+  fields: [
+    ["index", ssz.ValidatorIndex],
+    ["selectionProof", ssz.BLSSignature],
+    ["aggregate", ssz.Attestation],
   ],
 });

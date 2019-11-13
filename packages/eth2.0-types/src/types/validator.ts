@@ -3,7 +3,8 @@
  * @module types
  */
 
-import {BLSPubkey, Slot, uint64, number64, ValidatorIndex, CommitteeIndex} from "./primitive";
+import {BLSPubkey, Slot, uint64, number64, ValidatorIndex, CommitteeIndex, BLSSignature} from "./primitive";
+import {Attestation} from "./operations";
 
 export interface ValidatorDuty {
   // The validator's public key, uniquely identifying them
@@ -30,4 +31,10 @@ export interface CommitteeAssignment {
   validators: ValidatorIndex[];
   committeeIndex: CommitteeIndex;
   slot: Slot;
+}
+
+export interface AggregateAndProof {
+  index: ValidatorIndex,
+  selectionProof: BLSSignature,
+  aggregate: Attestation
 }
