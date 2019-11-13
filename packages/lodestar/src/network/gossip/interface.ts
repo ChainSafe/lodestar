@@ -3,7 +3,14 @@
  */
 
 import {GossipEvent} from "./constants";
-import {Attestation, AttesterSlashing, BeaconBlock, ProposerSlashing, VoluntaryExit} from "@chainsafe/eth2.0-types";
+import {
+  AggregateAndProof,
+  Attestation,
+  AttesterSlashing,
+  BeaconBlock,
+  ProposerSlashing,
+  VoluntaryExit
+} from "@chainsafe/eth2.0-types";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";

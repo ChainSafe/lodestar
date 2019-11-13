@@ -9,7 +9,14 @@ import promisify from "promisify-es6";
 import LibP2p from "libp2p";
 //@ts-ignore
 import Gossipsub from "libp2p-gossipsub";
-import {Attestation, AttesterSlashing, BeaconBlock, ProposerSlashing, VoluntaryExit} from "@chainsafe/eth2.0-types";
+import {
+    AggregateAndProof,
+    Attestation,
+    AttesterSlashing,
+    BeaconBlock,
+    ProposerSlashing,
+    VoluntaryExit
+} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {ILogger, LogLevel} from "../../logger";
@@ -22,7 +29,8 @@ import {handleIncomingAttestation} from "./handlers/attestation";
 import {handleIncomingAttesterSlashing} from "./handlers/attesterSlashing";
 import {handleIncomingProposerSlashing} from "./handlers/proposerSlashing";
 import {handleIncomingVoluntaryExit} from "./handlers/voluntaryExit";
-
+import {handleIncomingAggregateAndProof} from "./handlers/aggregateAndProof";
+import {toHex} from "@chainsafe/eth2.0-utils";
 export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) implements IGossip {
 
   protected readonly  opts: INetworkOptions;
@@ -77,14 +85,16 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     );
   }
 
-  public async publishAggregatedAttestation(attestation: AggregateAndProof): Promise<void> {
+  public async publishAggregatedAttestation(aggregateAndProof: AggregateAndProof): Promise<void> {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
-      getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF), serialize(attestation, this.config.types.AggregateAndProof));
-    // await promisify(this.pubsub.publish.bind(this.pubsub))(
-    //   getGossipTopic(GossipEvent.ATTESTATION), serialize(attestation, this.config.types.Attestation)
-    // );
+      getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF), serialize(aggregateAndProof, this.config.types.AggregateAndProof));
+    //to be backward compatible
+    await promisify(this.pubsub.publish.bind(this.pubsub))(
+      getGossipTopic(GossipEvent.ATTESTATION), serialize(aggregateAndProof.aggregate, this.config.types.Attestation)
+    );
     this.logger.verbose(
-      `Publishing aggregated attestation ${hashTreeRoot(attestation, this.config.types.AggregateAndProof)}`
+      `Publishing AggregateAndProof for validator #${aggregateAndProof.index}`
+        + ` for target ${toHex(aggregateAndProof.aggregate.data.target.root)}`
     );
   }
 
@@ -160,6 +170,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     handlers.set("gossipsub:heartbeat", this.emitGossipHeartbeat);
     handlers.set(getGossipTopic(GossipEvent.BLOCK, "ssz"), handleIncomingBlock.bind(this));
     handlers.set(getGossipTopic(GossipEvent.ATTESTATION, "ssz"), handleIncomingAttestation.bind(this));
+    handlers.set(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, "ssz"), handleIncomingAggregateAndProof.bind(this));
     handlers.set(getGossipTopic(GossipEvent.ATTESTER_SLASHING, "ssz"), handleIncomingAttesterSlashing.bind(this));
     handlers.set(getGossipTopic(GossipEvent.PROPOSER_SLASHING, "ssz"), handleIncomingProposerSlashing.bind(this));
     handlers.set(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, "ssz"), handleIncomingVoluntaryExit.bind(this));

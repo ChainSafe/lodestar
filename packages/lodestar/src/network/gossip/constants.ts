@@ -2,7 +2,7 @@
  * @module network/gossip
  */
 
-import {number64} from "@chainsafe/eth2.0-types";
+import {CommitteeIndex, number64} from "@chainsafe/eth2.0-types";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 
 export enum GossipEvent {
@@ -15,7 +15,6 @@ export enum GossipEvent {
   ATTESTER_SLASHING = "/eth2/attester_slashing"
 }
 
-//TODO: replace index type with CommitteeIndex
-export function getCommitteeSubnetEvent(index: number64): string {
+export function getCommitteeSubnetEvent(index: CommitteeIndex): string {
   return GossipEvent.ATTESTATION_SUBNET.replace("{subnet}", String(index % ATTESTATION_SUBNET_COUNT));
 }
