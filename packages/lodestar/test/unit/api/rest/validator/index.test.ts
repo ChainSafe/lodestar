@@ -11,13 +11,12 @@ import {Sync} from "../../../../../src/sync";
 import * as validatorImpl from "../../../../../src/api/impl/validator";
 import {generateEmptyValidatorDuty} from "../../../../../src/chain/factory/duties";
 import {expect} from "chai";
-import {toHex} from "../../../../../src/util/bytes";
 import {generateEmptyBlock} from "../../../../utils/block";
 import * as blockUtils from "../../../../../src/chain/factory/block";
 import {generateAttestationData, generateEmptyAttestation} from "../../../../utils/attestation";
 import {IndexedAttestation} from "@chainsafe/eth2.0-types";
 import {AttestationOperations, OpPool} from "../../../../../src/opPool";
-import {toJson} from "@chainsafe/eth2.0-utils";
+import {toHex, toJson} from "@chainsafe/eth2.0-utils";
 import {describe, it, after, before, beforeEach, afterEach} from "mocha";
 
 describe("Test validator rest API", function () {

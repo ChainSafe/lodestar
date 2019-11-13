@@ -53,7 +53,7 @@ describe("syncing", function () {
   it("should able to sync to peer", async function () {
 
     repsStub.get.returns({
-      latestHello: {
+      latestStatus: {
         finalizedRoot: null,
       }
     });
@@ -72,7 +72,7 @@ describe("syncing", function () {
   it("should process sync to peers", async function () {
 
     repsStub.get.returns({
-      latestHello: {
+      latestStatus: {
         latestFinalizedRoot: null,
       }
     });

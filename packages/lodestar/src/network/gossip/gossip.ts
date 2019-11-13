@@ -47,6 +47,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.config = config;
     this.libp2p = libp2p;
     this.logger = logger.child({module: "gossip", level: LogLevel[logger.level]});
+    this.logger.silent = logger.silent;
     this.pubsub = new Gossipsub(libp2p, {gossipIncoming: false});
     this.handlers = this.registerHandlers();
   }
@@ -81,7 +82,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
       getGossipTopic(GossipEvent.ATTESTATION), serialize(attestation, this.config.types.Attestation)
     );
     this.logger.verbose(
-      `Publishing attestation ${hashTreeRoot(attestation, this.config.types.Attestation)} for subnet ${subnet}`
+      `Publishing attestation ${toHex(hashTreeRoot(attestation, this.config.types.Attestation))} for subnet ${subnet}`
     );
   }
 
