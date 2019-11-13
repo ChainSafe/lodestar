@@ -10,12 +10,12 @@ import LibP2p from "libp2p";
 //@ts-ignore
 import Gossipsub from "libp2p-gossipsub";
 import {
-    AggregateAndProof,
-    Attestation,
-    AttesterSlashing,
-    BeaconBlock,
-    ProposerSlashing,
-    VoluntaryExit
+  AggregateAndProof,
+  Attestation,
+  AttesterSlashing,
+  BeaconBlock,
+  ProposerSlashing,
+  VoluntaryExit
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
@@ -87,7 +87,9 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
 
   public async publishAggregatedAttestation(aggregateAndProof: AggregateAndProof): Promise<void> {
     await promisify(this.pubsub.publish.bind(this.pubsub))(
-      getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF), serialize(aggregateAndProof, this.config.types.AggregateAndProof));
+      getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF),
+      serialize(aggregateAndProof, this.config.types.AggregateAndProof)
+    );
     //to be backward compatible
     await promisify(this.pubsub.publish.bind(this.pubsub))(
       getGossipTopic(GossipEvent.ATTESTATION), serialize(aggregateAndProof.aggregate, this.config.types.Attestation)
