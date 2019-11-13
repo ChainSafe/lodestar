@@ -18,7 +18,7 @@ export const uint256 = "uint256";
 
 export const Slot = number64;
 export const Epoch = number64;
-export const Shard = number64;
+export const CommitteeIndex = number64;
 export const ValidatorIndex = number64;
 export const Gwei = uint64;
 export const Hash = bytes32;

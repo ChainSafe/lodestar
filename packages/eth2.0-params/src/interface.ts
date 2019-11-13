@@ -5,7 +5,7 @@ import BN from "bn.js";
 
 export interface IBeaconParams {
   // Misc
-  SHARD_COUNT: number;
+  MAX_COMMITTEES_PER_SLOT: number;
   TARGET_COMMITTEE_SIZE: number;
   MAX_VALIDATORS_PER_COMMITTEE: number;
   MIN_PER_EPOCH_CHURN_LIMIT: number;
@@ -35,13 +35,12 @@ export interface IBeaconParams {
   MIN_ATTESTATION_INCLUSION_DELAY: number;
   SLOTS_PER_EPOCH: number;
   MIN_SEED_LOOKAHEAD: number;
-  ACTIVATION_EXIT_DELAY: number;
+  MAX_SEED_LOOKAHEAD: number;
   SLOTS_PER_ETH1_VOTING_PERIOD: number;
   ETH1_FOLLOW_DISTANCE: number;
   SLOTS_PER_HISTORICAL_ROOT: number;
   MIN_VALIDATOR_WITHDRAWAL_DELAY: number;
   PERSISTENT_COMMITTEE_PERIOD: number;
-  MAX_EPOCHS_PER_CROSSLINK: number;
 
   MIN_EPOCHS_TO_INACTIVITY_PENALTY: number;
 
@@ -65,5 +64,4 @@ export interface IBeaconParams {
   MAX_ATTESTATIONS: number;
   MAX_DEPOSITS: number;
   MAX_VOLUNTARY_EXITS: number;
-  MAX_TRANSFERS: number;
 }

@@ -9,14 +9,12 @@ import {
   Gwei,
   Hash,
   number64,
-  Shard,
   Slot,
 } from "./primitive";
 
 import {
   BeaconBlockHeader,
   Checkpoint,
-  Crosslink,
   Eth1Data,
   Fork,
   PendingAttestation,
@@ -46,10 +44,7 @@ export interface BeaconState {
   balances: Gwei[];
 
   // Shuffling
-  startShard: Shard;
   randaoMixes: Hash[];
-  activeIndexRoots: Hash[];
-  compactCommitteesRoots: Hash[];
 
   // Slashings
   slashings: Gwei[]; // Balances penalized at every withdrawal period
@@ -57,10 +52,6 @@ export interface BeaconState {
   // Attestations
   previousEpochAttestations: PendingAttestation[];
   currentEpochAttestations: PendingAttestation[];
-
-  // Crosslinks
-  currentCrosslinks: Crosslink[];
-  previousCrosslinks: Crosslink[];
 
   // Finality
   justificationBits: BitVector;

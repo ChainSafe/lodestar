@@ -6,12 +6,9 @@
 import {BitList} from "@chainsafe/bit-utils";
 
 import {
-  BLSPubkey,
   BLSSignature,
   Epoch,
-  Gwei,
   Hash,
-  Slot,
   ValidatorIndex,
 } from "./primitive";
 
@@ -63,22 +60,5 @@ export interface VoluntaryExit {
   // Index of the exiting validator
   validatorIndex: ValidatorIndex;
   // Validator signature
-  signature: BLSSignature;
-}
-
-export interface Transfer {
-  // Sender index
-  sender: ValidatorIndex;
-  // Recipient index
-  recipient: ValidatorIndex;
-  // Amount in Gwei
-  amount: Gwei;
-  // Fee in Gwei for block proposer
-  fee: Gwei;
-  // Slot at which transfer must be processed
-  slot: Slot;
-  // Sender withdrawal pubkey
-  pubkey: BLSPubkey;
-  // Sender signature
   signature: BLSSignature;
 }

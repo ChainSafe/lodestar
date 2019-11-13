@@ -26,7 +26,7 @@ export type uint256 = BN;
 
 export type Slot = number64;
 export type Epoch = number64;
-export type Shard = number64;
+export type CommitteeIndex = number64;
 export type ValidatorIndex = number64;
 export type Gwei = uint64;
 export type Hash = bytes32;

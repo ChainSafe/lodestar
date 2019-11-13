@@ -11,7 +11,6 @@ import {
   getUnslashedAttestingIndices
 } from "../../../../src/epoch/util";
 import * as utils from "../../../../src/util";
-import {getAttestationDataSlot} from "../../../../src/util";
 import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
 import {generateEmptyAttestation} from "../../../utils/attestation";
 import {getAttestingIndices} from "../../../../src/util";
@@ -25,7 +24,6 @@ describe('process epoch - crosslinks', function () {
   let getActiveValidatorIndicesStub: any,
     getTotalBalanceStub: any,
     getBlockRootStub: any,
-    getAttestationDataSlotStub: any,
     getBlockRootAtSlotStub: any,
     getAttestingIndicesStub: any;
 
@@ -35,7 +33,6 @@ describe('process epoch - crosslinks', function () {
     getTotalBalanceStub = sandbox.stub(utils, "getTotalBalance");
     getBlockRootStub = sandbox.stub(utils, "getBlockRoot");
     getBlockRootAtSlotStub = sandbox.stub(utils, "getBlockRootAtSlot");
-    getAttestationDataSlotStub = sandbox.stub(utils, "getAttestationDataSlot");
   });
 
   afterEach(() => {
@@ -151,11 +148,9 @@ describe('process epoch - crosslinks', function () {
       slot: config.params.SLOTS_PER_EPOCH,
       currentEpochAttestations: currentPendingAttestations
     });
-    getAttestationDataSlotStub.returns(1);
     getBlockRootAtSlotStub.returns(blockRoot);
     try {
       const result = getMatchingHeadAttestations(config, state, 1);
-      expect(getAttestationDataSlotStub.calledTwice).to.be.true;
       expect(getBlockRootAtSlotStub.withArgs(config, sinon.match.any, 1).calledTwice).to.be.true;
       expect(result).to.be.deep.equal([currentPendingAttestations[0]]);
     } catch (e) {

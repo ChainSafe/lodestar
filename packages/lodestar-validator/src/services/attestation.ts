@@ -9,15 +9,15 @@ import {
   AttestationDataAndCustodyBit,
   BeaconState,
   Fork,
-  Shard,
-  Slot
+  Slot,
+  number64
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IApiClient} from "../api";
 import {Keypair} from "@chainsafe/bls";
 import {IValidatorDB} from "../db/interface";
 import {ILogger} from "../logger/interface";
-import {computeEpochOfSlot, DomainType, getDomain, isSlashableAttestationData, sleep} from "../util";
+import {computeEpochAtSlot, DomainType, getDomain, isSlashableAttestationData, sleep} from "../util";
 
 export class AttestationService {
 
@@ -44,7 +44,8 @@ export class AttestationService {
 
   public async createAndPublishAttestation(
     slot: Slot,
-    shard: Shard,
+    // Rest API spec uses Shard but core spec uses CommitteeIndex
+    shard: number64,
     fork: Fork): Promise<Attestation> {
     await sleep(this.config.params.SECONDS_PER_SLOT * 0.5 * 1000);
     const attestation = await this.rpcClient.validator.produceAttestation(
@@ -60,7 +61,7 @@ export class AttestationService {
     if (await this.isConflictingAttestation(attestation.data)) {
       this.logger.warn(
         "Avoided signing conflicting attestation! "
-        + `Source epoch: ${attestation.data.source.epoch}, Target epoch: ${computeEpochOfSlot(this.config, slot)}`
+        + `Source epoch: ${attestation.data.source.epoch}, Target epoch: ${computeEpochAtSlot(this.config, slot)}`
       );
       return null;
     }
@@ -73,7 +74,7 @@ export class AttestationService {
       getDomain(
         this.config,
         {fork} as BeaconState, // eslint-disable-line @typescript-eslint/no-object-literal-type-assertion
-        DomainType.ATTESTATION,
+        DomainType.BEACON_ATTESTER,
         attestation.data.target.epoch,
       )
     ).toBytesCompressed();

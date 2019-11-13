@@ -7,7 +7,7 @@ import PeerInfo from "peer-info";
 //@ts-ignore
 import promisify from "promisify-es6";
 import {RequestId,} from "../constants";
-
+import {CommitteeIndex} from "@chainsafe/eth2.0-types";
 // req/resp
 
 function randomNibble(): string {

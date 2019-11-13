@@ -48,6 +48,9 @@ export class WinstonLogger implements ILogger {
     //@ts-ignore
     this._level = LogLevel[options.level];
     this._silent = false;
+    if (typeof process !== "undefined" && typeof process.env !== "undefined") {
+      this._silent = process.env.LODESTAR_SILENCE === "true";
+    }
   }
 
   public debug(message: string | object, context?: object): void {
@@ -110,6 +113,7 @@ export class WinstonLogger implements ILogger {
     if (this.silent || level > this._level) {
       return;
     }
+
     if (typeof message === "object") {
       this.winston.log(LogLevel[level], JSON.stringify(message));
     } else {

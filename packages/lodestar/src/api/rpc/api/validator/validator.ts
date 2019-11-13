@@ -2,7 +2,8 @@
  * @module api/rpc
  */
 
-import {Attestation, BeaconBlock, BLSPubkey, bytes96, Epoch, Shard, Slot, ValidatorDuty} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BLSPubkey, bytes96, Epoch, Slot, ValidatorDuty, CommitteeIndex} 
+  from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {IBeaconDb} from "../../../../db";
@@ -52,13 +53,13 @@ export class ValidatorApi implements IValidatorApi {
     validatorPubKey: BLSPubkey,
     pocBit: boolean,
     slot: Slot,
-    shard: Shard
+    index: CommitteeIndex
   ): Promise<Attestation> {
     try {
       return await produceAttestation(
         {config: this.config, chain: this.chain, db: this.db},
         validatorPubKey,
-        shard,
+        index,
         slot
       );
     } catch (e) {

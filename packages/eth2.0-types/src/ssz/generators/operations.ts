@@ -55,15 +55,3 @@ export const VoluntaryExit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
     ["signature", ssz.BLSSignature],
   ],
 });
-
-export const Transfer = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  fields: [
-    ["sender", ssz.ValidatorIndex],
-    ["recipient", ssz.ValidatorIndex],
-    ["amount", ssz.Gwei],
-    ["fee", ssz.Gwei],
-    ["slot", ssz.Slot],
-    ["pubkey", ssz.BLSPubkey],
-    ["signature", ssz.BLSSignature],
-  ],
-});

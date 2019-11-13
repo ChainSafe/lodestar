@@ -1,11 +1,10 @@
-import {Attestation, Slot, BeaconState} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconState} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {OperationsModule} from "./abstract";
 import {
-  getAttestationDataSlot,
   isValidAttestationSlot,
-  computeStartSlotOfEpoch,
+  computeStartSlotAtEpoch,
 } from "@chainsafe/eth2.0-state-transition";
 import {BulkRepository} from "../../db/api/beacon/repository";
 
@@ -20,17 +19,15 @@ export class AttestationOperations extends OperationsModule<Attestation> {
   public async getValid(state: BeaconState): Promise<Attestation[]> {
     const attestations: Attestation[] = await this.getAll();
     return attestations.filter((a: Attestation) => {
-      const attestationSlot: Slot = getAttestationDataSlot(this.config, state, a.data);
-      return isValidAttestationSlot(this.config, attestationSlot, state.slot);
+      return isValidAttestationSlot(this.config, a.data.slot, state.slot);
     });
   }
 
   public async removeOld(state: BeaconState): Promise<void> {
-    const finalizedEpochStartSlot = computeStartSlotOfEpoch(this.config, state.finalizedCheckpoint.epoch);
+    const finalizedEpochStartSlot = computeStartSlotAtEpoch(this.config, state.finalizedCheckpoint.epoch);
     const attestations: Attestation[] = await this.getAll();
     await this.remove(attestations.filter((a) => {
-      const aSlot = getAttestationDataSlot(this.config, state, a.data);
-      return finalizedEpochStartSlot <= aSlot;
+      return finalizedEpochStartSlot <= a.data.slot;
     }));
   }
 }

@@ -61,7 +61,6 @@ describe('validator rpc api', function () {
     getDutiesStub.resolves([dutyFactory.generateEmptyValidatorDuty(publicKey)]);
     const duties = await validatorApi.getDuties([publicKey], 2);
     expect(duties.length).to.be.equal(1);
-    expect(duties[0].committeeIndex).to.be.null;
     expect(duties[0].blockProposalSlot).to.be.null;
     expect(getDutiesStub.calledOnce).to.be.true;
   });

@@ -19,7 +19,6 @@ import {
   MerkleTreeRepository,
   ProposerSlashingRepository,
   StateRepository,
-  TransfersRepository,
   VoluntaryExitRepository
 } from "./repositories";
 
@@ -39,8 +38,6 @@ export interface IBeaconDb {
   attestation: AttestationRepository;
 
   voluntaryExit: VoluntaryExitRepository;
-
-  transfer: TransfersRepository;
 
   proposerSlashing: ProposerSlashingRepository;
 

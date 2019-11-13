@@ -7,7 +7,6 @@ import {
   DepositsOperations,
   OpPool,
   ProposerSlashingOperations,
-  TransferOperations,
   VoluntaryExitOperations
 } from "../../../../../src/opPool";
 import {assembleBody} from "../../../../../src/chain/factory/block/body";
@@ -31,7 +30,6 @@ describe("blockAssembly - body", function () {
       attestations: sandbox.createStubInstance(AttestationOperations),
       voluntaryExits: sandbox.createStubInstance(VoluntaryExitOperations),
       deposits: sandbox.createStubInstance(DepositsOperations),
-      transfers: sandbox.createStubInstance(TransferOperations),
       proposerSlashings: sandbox.createStubInstance(ProposerSlashingOperations),
       attesterSlashings: sandbox.createStubInstance(AttestationOperations),
     } as unknown as OpPool;
@@ -69,7 +67,6 @@ describe("blockAssembly - body", function () {
     expect(result.voluntaryExits.length).to.be.equal(1);
     expect(result.proposerSlashings.length).to.be.equal(1);
     expect(result.deposits.length).to.be.equal(1);
-    expect(result.transfers.length).to.be.equal(0);
     expect(eth1.getEth1Data.calledOnce).to.be.true;
   });
 
@@ -99,7 +96,6 @@ describe("blockAssembly - body", function () {
     expect(result.voluntaryExits.length).to.be.equal(config.params.MAX_VOLUNTARY_EXITS);
     expect(result.proposerSlashings.length).to.be.equal(config.params.MAX_PROPOSER_SLASHINGS);
     expect(result.deposits.length).to.be.equal(1);
-    expect(result.transfers.length).to.be.equal(0);
     expect(eth1.getEth1Data.calledOnce).to.be.true;
   });
 });

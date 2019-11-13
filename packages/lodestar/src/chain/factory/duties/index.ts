@@ -19,9 +19,8 @@ export function assembleValidatorDuty(
   if (committeeAssignment) {
     duty = {
       ...duty,
-      attestationShard: committeeAssignment.shard,
+      attestationShard: committeeAssignment.committeeIndex,
       attestationSlot: committeeAssignment.slot,
-      committeeIndex: committeeAssignment.validators.indexOf(validator.index)
     };
   }
   if (proposerSlotMapping[validator.index] && proposerSlotMapping[validator.index] !== 0) {
@@ -40,7 +39,6 @@ export function generateEmptyValidatorDuty(publicKey: BLSPubkey, duty?: Partial<
     blockProposalSlot: null,
     attestationShard: null,
     attestationSlot: null,
-    committeeIndex: null,
     ...duty
   };
 }

@@ -10,9 +10,9 @@ import {BeaconState, ProposerSlashing,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {DomainType} from "../../constants";
-import {computeEpochOfSlot, getCurrentEpoch, getDomain, isSlashableValidator, slashValidator,} from "../../util";
+import {computeEpochAtSlot, getCurrentEpoch, getDomain, isSlashableValidator, slashValidator,} from "../../util";
 
-// See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#proposer-slashings
+// See https://github.com/ethereum/eth2.0-specs/blob/v0.9.0/specs/core/0_beacon-chain.md#proposer-slashings
 
 export function processProposerSlashing(
   config: IBeaconConfig,
@@ -20,10 +20,10 @@ export function processProposerSlashing(
   proposerSlashing: ProposerSlashing
 ): void {
   const proposer = state.validators[proposerSlashing.proposerIndex];
-  const header1Epoch = computeEpochOfSlot(config, proposerSlashing.header1.slot);
-  const header2Epoch = computeEpochOfSlot(config, proposerSlashing.header2.slot);
-  // Verify that the epoch is the same
-  assert(header1Epoch === header2Epoch);
+  const header1Epoch = computeEpochAtSlot(config, proposerSlashing.header1.slot);
+  const header2Epoch = computeEpochAtSlot(config, proposerSlashing.header2.slot);
+  // Verify slots match
+  assert(proposerSlashing.header1.slot === proposerSlashing.header2.slot);
   // But the headers are different
   assert(!equals(proposerSlashing.header1, proposerSlashing.header2, config.types.BeaconBlockHeader));
   // Check proposer is slashable

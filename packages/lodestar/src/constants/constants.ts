@@ -11,12 +11,11 @@ export const ZERO_HASH = Buffer.alloc(32, 0);
 export const EMPTY_SIGNATURE = Buffer.alloc(96, 0);
 export const SECONDS_PER_DAY = 86400;
 
-// Signature domains
+// Domain Types
 export enum DomainType {
   BEACON_PROPOSER = 0,
-  RANDAO = 1,
-  ATTESTATION = 2,
+  BEACON_ATTESTER = 1,
+  RANDAO = 2,
   DEPOSIT = 3,
   VOLUNTARY_EXIT = 4,
-  TRANSFER = 5,
 }

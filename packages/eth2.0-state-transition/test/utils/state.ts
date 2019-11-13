@@ -2,14 +2,12 @@ import BN from "bn.js";
 
 import {
   BeaconState,
-  Crosslink,
 } from "@chainsafe/eth2.0-types";
 
-import {GENESIS_EPOCH, GENESIS_SLOT, GENESIS_START_SHARD, ZERO_HASH} from "../../src/constants";
+import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
 
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {generateEmptyBlock} from "./block";
-import {generateEmptyCrosslink} from "./crosslink";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import { BitVector } from "@chainsafe/bit-utils";
@@ -26,8 +24,6 @@ type TestBeaconState = Partial<BeaconState>;
  * @returns {BeaconState}
  */
 export function generateState(opts?: TestBeaconState): BeaconState {
-  const initialCrosslinkRecord: Crosslink = generateEmptyCrosslink();
-
   return {
     genesisTime: Math.floor(Date.now() / 1000),
     slot: GENESIS_SLOT,
@@ -55,15 +51,10 @@ export function generateState(opts?: TestBeaconState): BeaconState {
     eth1DepositIndex: 0,
     validators: [],
     balances: [],
-    startShard: GENESIS_START_SHARD,
     randaoMixes: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
-    activeIndexRoots: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
-    compactCommitteesRoots: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
     slashings: Array.from({length: config.params.EPOCHS_PER_SLASHINGS_VECTOR}, () => new BN(0)),
     previousEpochAttestations: [],
     currentEpochAttestations: [],
-    currentCrosslinks: Array.from({length: config.params.SHARD_COUNT}, () => initialCrosslinkRecord),
-    previousCrosslinks: Array.from({length: config.params.SHARD_COUNT}, () => initialCrosslinkRecord),
     justificationBits: BitVector.fromBitfield(Buffer.alloc(1), 4),
     previousJustifiedCheckpoint: {
       epoch: GENESIS_EPOCH,
