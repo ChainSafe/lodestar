@@ -2,7 +2,7 @@
  * @module network/gossip
  */
 
-import {CommitteeIndex, number64} from "@chainsafe/eth2.0-types";
+import {CommitteeIndex} from "@chainsafe/eth2.0-types";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 
 export enum GossipEvent {
