@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/eth2.0-types",
-  "version": "0.9.1",
+  "version": "0.2.0",
   "description": "Typescript types required for eth2.0",
   "author": "ChainSafe Systems",
   "license": "LGPL-3.0",
@@ -38,7 +38,7 @@
   ],
   "dependencies": {
     "@chainsafe/bit-utils": "^0.1.4",
-    "@chainsafe/eth2.0-params": "0.9.1",
+    "@chainsafe/eth2.0-params": "0.2.0",
     "@chainsafe/ssz-type-schema": "^0.0.1",
     "@types/bn.js": "^4.11.4",
     "bn.js": "^4.11.8"

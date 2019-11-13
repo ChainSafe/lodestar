@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/lodestar-validator",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A Typescript implementation of the validator client",
   "author": "ChainSafe Systems",
   "license": "GPL-3.0",
@@ -41,9 +41,9 @@
   ],
   "dependencies": {
     "@chainsafe/bls": "^0.1.7",
-    "@chainsafe/eth2.0-config": "0.9.1",
-    "@chainsafe/eth2.0-params": "0.9.1",
-    "@chainsafe/eth2.0-utils": "^0.0.1",
+    "@chainsafe/eth2.0-config": "0.2.0",
+    "@chainsafe/eth2.0-params": "0.2.0",
+    "@chainsafe/eth2.0-utils": "0.1.0",
     "@chainsafe/ssz": "^0.5.2",
     "axios": "^0.19.0",
     "deepmerge": "^4.0.0",
