@@ -10,7 +10,7 @@ import {IBeaconDb} from "../../../db/api";
 import {OpPool} from "../../../opPool";
 import {assembleBody} from "./body";
 import {IEth1Notifier} from "../../../eth1";
-import {processSlots, stateTransition,blockToHeader} from "@chainsafe/eth2.0-state-transition";
+import {processSlots, stateTransition, blockToHeader} from "@chainsafe/eth2.0-state-transition";
 import {IBeaconChain} from "../../interface";
 
 
@@ -22,12 +22,12 @@ export async function assembleBlock(
   eth1: IEth1Notifier,
   slot: Slot,
   randao: bytes96
-): Promise<BeaconBlock|null> {
+): Promise<BeaconBlock | null> {
   const [parentBlock, currentState] = await Promise.all([
     db.block.get(chain.forkChoice.head()),
-    db.state.getLatest(),
+    db.state.get(chain.forkChoice.head()),
   ]);
-  if(slot > currentState.slot) {
+  if (slot > currentState.slot) {
     processSlots(config, currentState, slot);
   }
   const merkleTree = await db.merkleTree.getProgressiveMerkleTree(config, currentState.eth1DepositIndex);
