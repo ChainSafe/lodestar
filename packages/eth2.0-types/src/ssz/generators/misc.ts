@@ -46,20 +46,9 @@ export const AttestationData = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const AttestationDataAndCustodyBit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  fields: [
-    ["data", ssz.AttestationData],
-    ["custodyBit", ssz.bool],
-  ],
-});
-
 export const IndexedAttestation = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
   fields: [
-    ["custodyBit0Indices", {
-      elementType: ssz.ValidatorIndex,
-      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
-    }],
-    ["custodyBit1Indices", {
+    ["attestingIndices", {
       elementType: ssz.ValidatorIndex,
       maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
     }],

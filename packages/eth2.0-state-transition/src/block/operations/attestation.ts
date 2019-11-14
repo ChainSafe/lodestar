@@ -33,7 +33,6 @@ export function processAttestation(
 
   const committee = getBeaconCommittee(config, state, data.slot, data.index);
   assert(
-    attestation.aggregationBits.bitLength === attestation.custodyBits.bitLength &&
     attestation.aggregationBits.bitLength === committee.length
   );
 

@@ -31,7 +31,6 @@ export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch):
 export function generateEmptyAttestation(): Attestation {
   return {
     aggregationBits: BitList.fromBitfield(Buffer.alloc(8), 64),
-    custodyBits: BitList.fromBitfield(Buffer.alloc(8), 64),
     data: {
       slot: 1,
       index: 0,

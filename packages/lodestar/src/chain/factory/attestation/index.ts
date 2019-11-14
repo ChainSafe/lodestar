@@ -20,12 +20,10 @@ export async function assembleAttestation(
 
   const committee = getBeaconCommittee(config, state, computeEpochAtSlot(config, slot), index);
   const aggregationBits = getAggregationBits(committee, validatorIndex);
-  const custodyBits = getEmptyBitList(committee.length);
   try {
     const data = await assembleAttestationData(config, db, state, headBlock, slot, index);
     return {
       aggregationBits,
-      custodyBits,
       data,
       signature: undefined
     };

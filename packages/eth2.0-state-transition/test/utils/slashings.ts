@@ -20,14 +20,12 @@ export function generateEmptyAttesterSlashing(): AttesterSlashing {
     attestation1: {
       data: generateEmptyAttestation().data,
       signature: generateEmptyAttestation().signature,
-      custodyBit1Indices: [],
-      custodyBit0Indices: [0],
+      attestingIndices: []
     },
     attestation2: {
       data: generateEmptyAttestation().data,
       signature: generateEmptyAttestation().signature,
-      custodyBit1Indices: [],
-      custodyBit0Indices: [0],
+      attestingIndices: []
     },
   };
 }

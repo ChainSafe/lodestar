@@ -6,7 +6,6 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import {
   Attestation,
   AttestationData,
-  AttestationDataAndCustodyBit,
   BeaconState,
   Fork,
   Slot,
@@ -65,12 +64,8 @@ export class AttestationService {
       );
       return null;
     }
-    const attestationDataAndCustodyBit: AttestationDataAndCustodyBit = {
-      custodyBit: false,
-      data: attestation.data
-    };
     attestation.signature = this.keypair.privateKey.signMessage(
-      hashTreeRoot(attestationDataAndCustodyBit, this.config.types.AttestationDataAndCustodyBit),
+      hashTreeRoot(attestation.data, this.config.types.AttestationData),
       getDomain(
         this.config,
         {fork} as BeaconState, // eslint-disable-line @typescript-eslint/no-object-literal-type-assertion

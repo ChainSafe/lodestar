@@ -41,8 +41,6 @@ export interface Attestation {
   aggregationBits: BitList;
   // Attestation data
   data: AttestationData;
-  // Proof of custody bitfield
-  custodyBits: BitList;
   // BLS aggregate signature
   signature: BLSSignature;
 }
