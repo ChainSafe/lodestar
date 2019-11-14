@@ -13,7 +13,7 @@ describe("AttestationAggregator", () => {
     "c": 1,
     "d": 2,
   }
-  const blockToSlot: any = (b: any) => blockSlots[b];
+  const blockToSlot: any = (b: string) => blockSlots[b];
   it("should add attestations to the same target", () => {
     const agg = new AttestationAggregator(blockToSlot);
     const target = "a";

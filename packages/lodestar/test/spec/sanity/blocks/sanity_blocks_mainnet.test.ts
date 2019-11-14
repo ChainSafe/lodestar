@@ -16,7 +16,8 @@ describeDirectorySpecTest<BlockSanityTestCase, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/sanity/blocks/pyspec_tests"),
   (testcase) => {
     let state = testcase.pre;
-    for(let i = 0; i < testcase.meta.blocksCount.toNumber(); i++) {
+    for(let i = 0; i < Number(testcase.meta.blocksCount); i++) {
+      console.log("SDFAFSD")
       state = stateTransition(config, state, testcase[`blocks_${i}`] as BeaconBlock, true, true);
     }
     return state;
@@ -44,7 +45,7 @@ describeDirectorySpecTest<BlockSanityTestCase, BeaconState>(
 );
 
 function generateBlocksSZZTypeMapping(n: number, config: IBeaconConfig): object {
-  const blocksMapping = {};
+  const blocksMapping:any = {};
   for(let i = 0; i<n; i++) {
     blocksMapping[`blocks_${i}`] = config.types.BeaconBlock;
   }
