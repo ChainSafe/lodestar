@@ -143,8 +143,7 @@ describe("Test validator rest API", function () {
 
   it("should produce attestation", async function () {
     const attestation: IndexedAttestation = {
-      custodyBit0Indices: [],
-      custodyBit1Indices: [],
+      attestingIndices: [],
       data: generateAttestationData(0, 1),
       signature: null
     };

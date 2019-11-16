@@ -28,7 +28,6 @@ export interface IBeaconSSZTypes {
   Checkpoint: AnyContainerType;
   Validator: AnyContainerType;
   AttestationData: AnyContainerType;
-  AttestationDataAndCustodyBit: AnyContainerType;
   IndexedAttestation: AnyContainerType;
   PendingAttestation: AnyContainerType;
   Eth1Data: AnyContainerType;
@@ -86,7 +85,6 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "Checkpoint",
   "Validator",
   "AttestationData",
-  "AttestationDataAndCustodyBit",
   "IndexedAttestation",
   "PendingAttestation",
   "Eth1Data",

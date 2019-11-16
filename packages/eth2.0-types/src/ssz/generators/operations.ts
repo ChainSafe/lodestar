@@ -30,10 +30,6 @@ export const Attestation = (ssz: IBeaconSSZTypes, params: IBeaconParams): Simple
       maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
     }],
     ["data", ssz.AttestationData],
-    ["custodyBits", {
-      elementType: ssz.bool,
-      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
-    }],
     ["signature", ssz.BLSSignature],
   ],
 });

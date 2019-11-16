@@ -62,17 +62,9 @@ export interface AttestationData {
   target: Checkpoint;
 }
 
-export interface AttestationDataAndCustodyBit {
-  // Attestation data
-  data: AttestationData;
-  // Challengeable bit (SSZ-bool, 1 byte) for the custody of shard data
-  custodyBit: bool;
-}
-
 export interface IndexedAttestation {
   // Validator Indices
-  custodyBit0Indices: ValidatorIndex[];
-  custodyBit1Indices: ValidatorIndex[];
+  attestingIndices: ValidatorIndex[];
   // Attestation Data
   data: AttestationData;
   // Aggregate signature

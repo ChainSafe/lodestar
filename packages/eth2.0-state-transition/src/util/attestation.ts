@@ -47,44 +47,19 @@ export function isValidIndexedAttestation(
   state: BeaconState,
   indexedAttestation: IndexedAttestation
 ): boolean {
-  const bit0Indices = indexedAttestation.custodyBit0Indices;
-  const bit1Indices = indexedAttestation.custodyBit1Indices;
+  const indices = indexedAttestation.attestingIndices;
 
-  // Verify no index has custody bit equal to 1 [to be removed in phase 1]
-  if (!(bit1Indices.length == 0)) {
-    return false;
-  }
-  // Verify max number of indices
-  if (!(bit0Indices.length + bit1Indices.length <= config.params.MAX_VALIDATORS_PER_COMMITTEE)) {
-    return false;
-  }
-  //  Verify index sets are disjoint
-  const intersection = bit0Indices.filter((index) => bit1Indices.includes(index));
-  if (!(intersection.length == 0)) {
-    return false;
-  }
   //  Verify indices are sorted
-  if (!(isSorted(bit0Indices) && isSorted(bit1Indices))) {
+  if (!isSorted(indices)) {
     return false;
   }
   //  Verify aggregate signature
-  if (!(bls.verifyMultiple(
-    [
-      bls.aggregatePubkeys(bit0Indices.map((i) => state.validators[i].pubkey)),
-      bls.aggregatePubkeys(bit1Indices.map((i) => state.validators[i].pubkey)),
-    ], [
-      hashTreeRoot({
-        data: indexedAttestation.data,
-        custodyBit: false,
-      }, config.types.AttestationDataAndCustodyBit),
-      hashTreeRoot({
-        data: indexedAttestation.data,
-        custodyBit: true,
-      }, config.types.AttestationDataAndCustodyBit),
-    ],
+  if (!bls.verify(
+    bls.aggregatePubkeys(indices.map((i) => state.validators[i].pubkey)),
+    hashTreeRoot(indexedAttestation.data, config.types.AttestationData),
     indexedAttestation.signature,
-    getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch),
-  ))) {
+    getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch)
+  )) {
     return false;
   }
   return true;
@@ -114,13 +89,10 @@ export function getIndexedAttestation(
 ): IndexedAttestation {
   const attestingIndices =
     getAttestingIndices(config, state, attestation.data, attestation.aggregationBits);
-  const custodyBit1Indices =
-    getAttestingIndices(config, state, attestation.data, attestation.custodyBits);
-  const custodyBit0Indices = attestingIndices.filter((i) => !custodyBit1Indices.includes(i));
-
+  const sortedAttestingIndices = attestingIndices.sort(
+    (index1: ValidatorIndex, index2: ValidatorIndex) => index1 - index2);
   return {
-    custodyBit0Indices,
-    custodyBit1Indices,
+    attestingIndices: sortedAttestingIndices,
     data: attestation.data,
     signature: attestation.signature,
   };

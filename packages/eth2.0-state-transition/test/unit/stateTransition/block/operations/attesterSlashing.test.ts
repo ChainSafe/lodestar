@@ -87,29 +87,13 @@ describe('process block - attester slashings', function () {
   it('should process slashings', function () {
     const state = generateState();
     const attesterSlashing = generateEmptyAttesterSlashing();
-    attesterSlashing.attestation1.custodyBit0Indices = [1, 2];
-    attesterSlashing.attestation1.custodyBit1Indices = [];
-    attesterSlashing.attestation2.custodyBit0Indices = [1, 2];
-    attesterSlashing.attestation2.custodyBit1Indices = [3];
+    attesterSlashing.attestation1.attestingIndices = [1, 2, 3]
+    attesterSlashing.attestation2.attestingIndices = [2, 3, 4]
     isSlashableAttestationStub.returns(true);
     validateIndexedAttestationStub.returns(true);
     isSlashableValidatorStub.returns(true);
     processAttesterSlashing(config, state, attesterSlashing);
     expect(slashValidatorStub.calledTwice).to.be.true;
-  });
-
-  it('should process slashings - concatentation test', function () {
-    const state = generateState();
-    const attesterSlashing = generateEmptyAttesterSlashing();
-    attesterSlashing.attestation1.custodyBit0Indices = [1, 2];
-    attesterSlashing.attestation1.custodyBit1Indices = [3];
-    attesterSlashing.attestation2.custodyBit0Indices = [1, 2, 3];
-    attesterSlashing.attestation2.custodyBit1Indices = [];
-    isSlashableAttestationStub.returns(true);
-    validateIndexedAttestationStub.returns(true);
-    isSlashableValidatorStub.returns(true);
-    processAttesterSlashing(config, state, attesterSlashing);
-    expect(slashValidatorStub.calledThrice).to.be.true;
   });
 
 });
