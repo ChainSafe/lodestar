@@ -9,7 +9,7 @@ import {clone, hashTreeRoot, serialize, signingRoot} from "@chainsafe/ssz";
 import {Attestation, BeaconBlock, BeaconState, Hash, Slot, uint16, uint64} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "../constants";
+import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT, GENESIS_EPOCH} from "../constants";
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
 import {ILogger} from "../logger";
@@ -242,6 +242,11 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   private processAttestation = async (latestState: BeaconState, attestation: Attestation, attestationHash: Hash) => {
+    const currentEpoch = computeEpochAtSlot(this.config, latestState.slot);
+    const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
+    const epoch = attestation.data.target.epoch;
+    assert ([currentEpoch, previousEpoch].includes(epoch));
+
     const validators = getAttestingIndices(
       this.config, latestState, attestation.data, attestation.aggregationBits);
     const balances = validators.map((index) => latestState.balances[index]);
