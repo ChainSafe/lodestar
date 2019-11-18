@@ -245,7 +245,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const currentEpoch = computeEpochAtSlot(this.config, latestState.slot);
     const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
     const epoch = attestation.data.target.epoch;
-    assert ([currentEpoch, previousEpoch].includes(epoch));
+    assert([currentEpoch, previousEpoch].includes(epoch));
 
     const validators = getAttestingIndices(
       this.config, latestState, attestation.data, attestation.aggregationBits);
