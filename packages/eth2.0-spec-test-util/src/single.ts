@@ -40,7 +40,7 @@ export interface ISpecTestOptions<TestCase, Result> {
 
   shouldError?: (testCase: TestCase) => boolean;
 
-  shouldSkip?: (testCase: TestCase) => boolean;
+  shouldSkip?: (testCase: TestCase, name: string, index: number) => boolean;
 
   expectFunc?: (testCase: TestCase, expected, actual) => void;
 
@@ -88,10 +88,10 @@ export function describeDirectorySpecTest<TestCase, Result>(
       .map(name => join(testCaseDirectoryPath, name))
       .filter(isDirectory);
 
-    testCases.forEach((testCaseDirectory) => {
+    testCases.forEach((testCaseDirectory, index) => {
       generateTestCase(
-        name,
         testCaseDirectory,
+        index,
         testFunction,
         options
       );
@@ -102,25 +102,26 @@ export function describeDirectorySpecTest<TestCase, Result>(
 }
 
 function generateTestCase<TestCase, Result>(
-  name: string,
   testCaseDirectoryPath: string,
+  index: number,
   testFunction: (...args: any) => Result,
   options: ISpecTestOptions<TestCase, Result>
 ): void {
-  it(basename(testCaseDirectoryPath), function () {
+  const name = basename(testCaseDirectoryPath);
+  it(name, function () {
     const testCase = loadInputFiles(testCaseDirectoryPath, options);
-    if(options.shouldSkip && options.shouldSkip(testCase)) {
+    if(options.shouldSkip && options.shouldSkip(testCase, name, index)) {
       return this.skip();
     }
     if(options.shouldError && options.shouldError(testCase)) {
-      expect(testFunction.bind(null, testCase, basename(testCaseDirectoryPath))).to.throw;
+      expect(testFunction.bind(null, testCase, name)).to.throw;
     } else {
       const profileId = `${name}-${Date.now()}.profile`;
       const profilingDirectory = process.env.GEN_PROFILE_DIR;
       if (profilingDirectory) {
         profiler.startProfiling(profileId);
       }
-      const result = testFunction(testCase, basename(testCaseDirectoryPath));
+      const result = testFunction(testCase, name);
       if (profilingDirectory) {
         const profile = profiler.stopProfiling(profileId);
 
