@@ -24,8 +24,7 @@
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "prepublishOnly": "yarn build",
-    "pretest": "yarn run check-types",
-    "test": "mocha -r ./.babel-register 'test/**/*.test.ts'"
+    "pretest": "yarn run check-types"
   },
   "repository": {
     "type": "git",
