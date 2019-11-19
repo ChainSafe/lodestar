@@ -77,8 +77,7 @@ export function getAttestationDeltas(config: IBeaconConfig, state: BeaconState):
     const matchingTargetAttestingIndices =
       getUnslashedAttestingIndices(config, state, matchingTargetAttestations);
     eligibleValidatorIndices.forEach((index) => {
-      penalties[index] = (penalties[index] + getBaseReward(config, state, index))
-        * BigInt(config.params.BASE_REWARDS_PER_EPOCH);
+      penalties[index] += getBaseReward(config, state, index) * BigInt(config.params.BASE_REWARDS_PER_EPOCH);
       if (!matchingTargetAttestingIndices.includes(index)) {
         penalties[index] += (
           state.validators[index].effectiveBalance
