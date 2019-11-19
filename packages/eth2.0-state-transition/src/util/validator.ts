@@ -11,7 +11,7 @@ import {intDiv} from "@chainsafe/eth2.0-utils";
 export function computeCompactValidator(config: IBeaconConfig, validator: Validator, index: ValidatorIndex): uint64 {
   // `index` (top 6 bytes) + `slashed` (16th bit) + `compact_balance` (bottom 15 bits)
   const compactBalance = validator.effectiveBalance / config.params.EFFECTIVE_BALANCE_INCREMENT;
-  const compactValidator = ((BigInt(index) << 16n + BigInt(validator.slashed ? 1 : 0)) << 15n) + compactBalance;
+  const compactValidator = (BigInt(index) << 16n) + (BigInt(validator.slashed ? 1 : 0) << 15n) + compactBalance;
   return compactValidator;
 }
 
