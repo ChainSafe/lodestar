@@ -73,7 +73,7 @@ describe("validator attestation service", function () {
     dbStub.getAttestations.resolves([]);
     const service = new AttestationService(
       config,
-      new Keypair(PrivateKey.fromBytes(new BN(99).toBuffer("be", 32))),
+      new Keypair(PrivateKey.fromBytes(toBufferBE(99n, 32))),
       rpcClientStub,
       dbStub,
       logger
