@@ -20,7 +20,8 @@ import {getCurrentEpoch, getDomain, initiateValidatorExit, isActiveValidator,} f
 export function processVoluntaryExit(
   config: IBeaconConfig,
   state: BeaconState,
-  exit: VoluntaryExit
+  exit: VoluntaryExit,
+  verifySignature: boolean = true
 ): void {
   const validator = state.validators[exit.validatorIndex];
   const currentEpoch = getCurrentEpoch(config, state);
@@ -33,7 +34,7 @@ export function processVoluntaryExit(
   // Verify the validator has been active long enough
   assert(currentEpoch >= validator.activationEpoch + config.params.PERSISTENT_COMMITTEE_PERIOD);
   // Verify signature
-  assert(bls.verify(
+  assert(!verifySignature || bls.verify(
     validator.pubkey,
     signingRoot(exit, config.types.VoluntaryExit),
     exit.signature,

@@ -18,12 +18,13 @@ import {getBeaconProposerIndex, getCurrentEpoch, getDomain, getRandaoMix,} from 
 export function processRandao(
   config: IBeaconConfig,
   state: BeaconState,
-  body: BeaconBlockBody
+  body: BeaconBlockBody,
+  verifySignature: boolean = true
 ): void {
   const currentEpoch = getCurrentEpoch(config, state);
   const proposer = state.validators[getBeaconProposerIndex(config, state)];
   // Verify RANDAO reveal
-  assert(bls.verify(
+  assert(!verifySignature || bls.verify(
     proposer.pubkey,
     hashTreeRoot(currentEpoch, config.types.Epoch),
     body.randaoReveal,
