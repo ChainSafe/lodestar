@@ -18,7 +18,7 @@ export function processBlockHeader(
   config: IBeaconConfig,
   state: BeaconState,
   block: BeaconBlock,
-  verify: boolean = true
+  verifyProposer: boolean = true
 ): void {
   // Verify that the slots match
   assert(block.slot === state.slot);
@@ -30,7 +30,7 @@ export function processBlockHeader(
   const proposer = state.validators[getBeaconProposerIndex(config, state)];
   assert(!proposer.slashed);
 
-  if(verify) {
+  if(verifyProposer) {
     // Verify proposer signature
     assert(bls.verify(
       proposer.pubkey,
