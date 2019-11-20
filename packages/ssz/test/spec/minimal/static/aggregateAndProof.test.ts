@@ -4,7 +4,7 @@ import {join} from "path";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {expect} from "chai";
 import {IBaseSSZStaticTestCase} from "../../type";
-import {hashTreeRoot, serialize, signingRoot} from "../../../../src";
+import {hashTreeRoot, serialize} from "../../../../src";
 import {TEST_CASE_LOCATION} from "../../../util/testCases";
 
 interface IResult {
