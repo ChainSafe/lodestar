@@ -9,7 +9,7 @@ export abstract class OperationsModule<T> {
   }
 
   public async receive(value: T): Promise<void> {
-    await this.db.setUnderRoot(value);
+    await this.db.add(value);
   }
 
   public async getAll(): Promise<T[]> {
