@@ -19,12 +19,12 @@ export function processRandao(
   config: IBeaconConfig,
   state: BeaconState,
   body: BeaconBlockBody,
-  trusted: boolean = false
+  verifySignature: boolean = true
 ): void {
   const currentEpoch = getCurrentEpoch(config, state);
   const proposer = state.validators[getBeaconProposerIndex(config, state)];
   // Verify RANDAO reveal
-  assert(trusted || bls.verify(
+  assert(!verifySignature || bls.verify(
     proposer.pubkey,
     hashTreeRoot(currentEpoch, config.types.Epoch),
     body.randaoReveal,

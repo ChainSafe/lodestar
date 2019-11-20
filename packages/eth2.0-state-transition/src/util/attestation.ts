@@ -60,7 +60,7 @@ export function isValidIndexedAttestation(
   config: IBeaconConfig,
   state: BeaconState,
   indexedAttestation: IndexedAttestation,
-  trusted: boolean
+  verifySignature: boolean = true
 ): boolean {
   const bit0Indices = indexedAttestation.custodyBit0Indices;
   const bit1Indices = indexedAttestation.custodyBit1Indices;
@@ -83,7 +83,7 @@ export function isValidIndexedAttestation(
     return false;
   }
   //  Verify aggregate signature
-  if (trusted && !(bls.verifyMultiple(
+  if (verifySignature && !(bls.verifyMultiple(
     [
       bls.aggregatePubkeys(bit0Indices.map((i) => state.validators[i].pubkey)),
       bls.aggregatePubkeys(bit1Indices.map((i) => state.validators[i].pubkey)),

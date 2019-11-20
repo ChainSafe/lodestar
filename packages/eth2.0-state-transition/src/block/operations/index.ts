@@ -35,7 +35,7 @@ export function processOperations(
   config: IBeaconConfig,
   state: BeaconState,
   body: BeaconBlockBody,
-  trusted: boolean = false,
+  verifySignatures: boolean = true,
 ): void {
   // Verify that outstanding deposits are processed up to the maximum number of deposits
   assert.equal(body.deposits.length, Math.min(
@@ -48,45 +48,47 @@ export function processOperations(
     operations: body.proposerSlashings,
     maxOperations: config.params.MAX_PROPOSER_SLASHINGS,
     func: processProposerSlashing,
-    trusted: trusted
+    verifySignatures,
   }, {
     operations: body.attesterSlashings,
     maxOperations: config.params.MAX_ATTESTER_SLASHINGS,
     func: processAttesterSlashing,
-    trusted: trusted
+    verifySignatures,
   }, {
     operations: body.attestations,
     maxOperations: config.params.MAX_ATTESTATIONS,
     func: processAttestation,
-    trusted: trusted
+    verifySignatures,
   }, {
     operations: body.deposits,
     maxOperations: config.params.MAX_DEPOSITS,
     func: processDeposit,
-    trusted: trusted
+    verifySignatures,
   }, {
     operations: body.voluntaryExits,
     maxOperations: config.params.MAX_VOLUNTARY_EXITS,
     func: processVoluntaryExit,
-    trusted: trusted
+    verifySignatures,
   }, {
     operations: body.transfers,
     maxOperations: config.params.MAX_TRANSFERS,
     func: processTransfer,
-    trusted: trusted
+    verifySignatures,
   }].forEach(({
     operations,
     maxOperations,
     func,
+    verifySignatures,
   }: {
     operations: Operation[];
     maxOperations: number;
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    func: (config: IBeaconConfig, state: BeaconState, operation: any, trusted: boolean) => void;
-  })=>{
+    func: (config: IBeaconConfig, state: BeaconState, operation: any, verifySignatures: boolean) => void;
+    verifySignatures: boolean;
+  }) => {
     assert(operations.length <= maxOperations);
     operations.forEach((operation) => {
-      func(config, state, operation, trusted);
+      func(config, state, operation, verifySignatures);
     });
   });
 }

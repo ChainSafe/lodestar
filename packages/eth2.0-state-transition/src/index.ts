@@ -25,23 +25,23 @@ export * from "./slot";
  * @param state Current state
  * @param block Block being processed
  * @param validateStateRoot Compare state root at the end of state execution
- * @param verifySignatures Skip header signature verification
- * @param trusted Skip operations signature verification
+ * @param verifyProposer Skip block proposer signature verification
+ * @param verifySignatures Skip operations signature verification
  */
 export function stateTransition(
   config: IBeaconConfig,
   state: BeaconState,
   block: BeaconBlock,
   validateStateRoot = false,
-  verifySignatures = true,
-  trusted = false
+  verifyProposer = true,
+  verifySignatures = true
 ): BeaconState {
   // Clone state because process slots and block are not pure
   const postState = clone(state, config.types.BeaconState);
   // Process slots (including those with no blocks) since block
   processSlots(config, postState, block.slot);
   // Process block
-  processBlock(config, postState, block, verifySignatures, trusted);
+  processBlock(config, postState, block, verifyProposer, verifySignatures);
   // Validate state root (`validate_state_root == True` in production)
   if (validateStateRoot){
     assert(block.stateRoot.equals(hashTreeRoot(postState, config.types.BeaconState)));

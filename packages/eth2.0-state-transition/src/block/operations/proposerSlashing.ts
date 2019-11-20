@@ -18,7 +18,7 @@ export function processProposerSlashing(
   config: IBeaconConfig,
   state: BeaconState,
   proposerSlashing: ProposerSlashing,
-  trusted: boolean = false,
+  verifySignatures: boolean = true,
 ): void {
   const proposer = state.validators[proposerSlashing.proposerIndex];
   const header1Epoch = computeEpochOfSlot(config, proposerSlashing.header1.slot);
@@ -30,14 +30,14 @@ export function processProposerSlashing(
   // Check proposer is slashable
   assert(isSlashableValidator(proposer, getCurrentEpoch(config, state)));
   // Signatures are valid
-  const proposalData1Verified = trusted || bls.verify(
+  const proposalData1Verified = !verifySignatures || bls.verify(
     proposer.pubkey,
     signingRoot(proposerSlashing.header1, config.types.BeaconBlockHeader),
     proposerSlashing.header1.signature,
     getDomain(config, state, DomainType.BEACON_PROPOSER, header1Epoch),
   );
   assert(proposalData1Verified);
-  const proposalData2Verified = trusted || bls.verify(
+  const proposalData2Verified = !verifySignatures || bls.verify(
     proposer.pubkey,
     signingRoot(proposerSlashing.header2, config.types.BeaconBlockHeader),
     proposerSlashing.header2.signature,

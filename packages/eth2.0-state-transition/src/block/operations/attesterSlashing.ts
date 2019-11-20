@@ -26,15 +26,15 @@ export function processAttesterSlashing(
   config: IBeaconConfig,
   state: BeaconState,
   attesterSlashing: AttesterSlashing,
-  trusted: boolean = false,
+  verifySignatures: boolean = true,
 ): void {
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;
 
   // Check that the attestations are conflicting
   assert(isSlashableAttestationData(config, attestation1.data, attestation2.data));
-  assert(isValidIndexedAttestation(config, state, attestation1, trusted));
-  assert(isValidIndexedAttestation(config, state, attestation2, trusted));
+  assert(isValidIndexedAttestation(config, state, attestation1, verifySignatures));
+  assert(isValidIndexedAttestation(config, state, attestation2, verifySignatures));
 
   let slashedAny = false;
   const attestingIndices1 = attestation1.custodyBit0Indices.concat(attestation1.custodyBit1Indices);
