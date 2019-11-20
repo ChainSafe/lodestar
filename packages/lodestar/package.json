@@ -52,7 +52,7 @@
     "@chainsafe/eth2.0-state-transition": "0.2.0",
     "@chainsafe/eth2.0-types": "0.2.0",
     "@chainsafe/eth2.0-utils": "0.1.0",
-    "@chainsafe/lodestar-validator": "^0.1.0",
+    "@chainsafe/lodestar-validator": "0.2.0",
     "@chainsafe/ssz": "0.5.2",
     "@iarna/toml": "^2.2.3",
     "@nodeutils/defaults-deep": "^1.1.0",

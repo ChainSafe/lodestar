@@ -672,15 +672,7 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.9.0-1.tgz#e644039c7a86cc2b5861d18b68b789ff0787e558"
   integrity sha512-GE8orJhV4IASoGNJ5RoGOFu0WrsKSx0kqq+SbWN2TrNA9Cvic8zQYQqHg9Qo88UFXuf/uFbxnuuuwUdEbR6xug==
 
-"@chainsafe/eth2.0-config@^0.1.1":
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/eth2.0-config/-/eth2.0-config-0.1.1.tgz#59e95e059179ac47f9d80f4762100c3037037d50"
-  integrity sha512-loCtDpY1Owmvtq5Kb0DZ1bPXEUp7095ligU/N33PViUeSEushnI7AbqO5T1xLjBshB5bXkQNCZ1OmIduzm795A==
-  dependencies:
-    "@chainsafe/eth2.0-params" "0.1.0"
-    "@chainsafe/eth2.0-types" "^0.1.1"
-
-"@chainsafe/eth2.0-params@0.1.0", "@chainsafe/eth2.0-params@^0.1.0":
+"@chainsafe/eth2.0-params@^0.1.0":
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2.0-params/-/eth2.0-params-0.1.0.tgz#23bbaf1b43a050bd9e14ff80863c919f48ecdcce"
   integrity sha512-yhrc6LgYV+N1GqY1dAMyRZ9nwEBEDbJh7Yaj+ItoIwI4/PKGOcn7g2ym9iL93dvjvD+x4BJ4sYKN7a+cbyaV3g==
@@ -713,20 +705,6 @@
     camelcase "^5.3.1"
     js-yaml "^3.13.1"
     snake-case "^2.1.0"
-
-"@chainsafe/lodestar-validator@^0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/lodestar-validator/-/lodestar-validator-0.1.0.tgz#9ec74956b5c724b822d40c1ac4845ed16e49cbd6"
-  integrity sha512-tSU8E90GrYXBKIKVhwh9RrISLqiKeDbU9SU+vL4cGzI64R+pEj9my1gmjx29+CvHjgzKJEPBXla2a04yYq4S1g==
-  dependencies:
-    "@chainsafe/bls" "^0.1.7"
-    "@chainsafe/eth2.0-config" "^0.1.1"
-    "@chainsafe/eth2.0-params" "^0.1.0"
-    "@chainsafe/eth2.0-utils" "^0.0.1"
-    "@chainsafe/ssz" "^0.5.2"
-    axios "^0.19.0"
-    deepmerge "^4.0.0"
-    strict-event-emitter-types "^2.0.0"
 
 "@chainsafe/milagro-crypto-js@0.1.3":
   version "0.1.3"
@@ -2540,9 +2518,9 @@ asn1@~0.2.3:
   dependencies:
     safer-buffer "~2.1.0"
 
-"assemblyscript@git+https://github.com/AssemblyScript/assemblyscript.git#5b510571f6ebfc5530d85412005059e4cf961a97":
+"assemblyscript@https://github.com/AssemblyScript/assemblyscript.git#5b510571f6ebfc5530d85412005059e4cf961a97":
   version "0.7.0"
-  resolved "git+https://github.com/AssemblyScript/assemblyscript.git#5b510571f6ebfc5530d85412005059e4cf961a97"
+  resolved "https://github.com/AssemblyScript/assemblyscript.git#5b510571f6ebfc5530d85412005059e4cf961a97"
   dependencies:
     "@protobufjs/utf8" "^1.1.0"
     binaryen "89.0.0-nightly.20190914"
