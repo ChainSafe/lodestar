@@ -42,12 +42,12 @@ describe('process block - attester slashings', function () {
     isSlashableAttestationStub.returns(true);
     validateIndexedAttestationStub.returns(false);
     try {
-      processAttesterSlashing(config, state, attesterSlashing);
+      processAttesterSlashing(config, state, attesterSlashing, true);
       expect.fail();
     } catch (e) {
       expect(validateIndexedAttestationStub.callCount).equals(1);
       expect(validateIndexedAttestationStub.getCall(0)
-        .calledWithExactly(config, state, attesterSlashing.attestation1)).to.be.true;
+        .calledWithExactly(config, state, attesterSlashing.attestation1, true)).to.be.true;
     }
   });
 

@@ -4,6 +4,7 @@ import {BeaconState} from "@chainsafe/eth2.0-types";
 import {deserialize} from "@chainsafe/ssz";
 import {interopDeposits} from "./deposits";
 import {fromYaml, IProgressiveMerkleTree, loadYamlFile} from "@chainsafe/eth2.0-utils";
+import {loadYamlFile} from "@chainsafe/eth2.0-utils/lib/nodejs";
 
 // either "genesisTime,validatorCount" or "genesisState.fileext"
 export function quickStartOptionToState(

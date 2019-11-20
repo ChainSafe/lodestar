@@ -1,16 +1,16 @@
-import {expect} from "chai";
-import {describe, it} from "mocha";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {Libp2pNetwork} from "../../../src/network";
-import {ATTESTATION_TOPIC, BLOCK_TOPIC} from "../../../src/constants";
-import {getEmptyBlock} from "../../../src/chain/genesis/genesis";
-import {createNode} from "../../unit/network/util";
-import {generateEmptyAttestation} from "../../utils/attestation";
-import {shardAttestationTopic} from "../../../src/network/util";
-import {ILogger, WinstonLogger} from "../../../src/logger";
-import {INetworkOptions} from "../../../src/network/options";
-import {BeaconMetrics} from "../../../src/metrics";
-import {sleep} from "../../../src/util/sleep";
+import { expect } from "chai";
+import { describe, it } from "mocha";
+import { config } from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import { Libp2pNetwork } from "../../../src/network";
+import { ATTESTATION_TOPIC, BLOCK_TOPIC } from "../../../src/constants";
+import { getEmptyBlock } from "../../../src/chain/genesis/genesis";
+import { createNode } from "../../unit/network/util";
+import { generateEmptyAttestation } from "../../utils/attestation";
+import { shardAttestationTopic } from "../../../src/network/util";
+import { ILogger, WinstonLogger } from "../../../src/logger";
+import { INetworkOptions } from "../../../src/network/options";
+import { BeaconMetrics } from "../../../src/metrics";
+import { sleep } from "../../../src/util/sleep";
 import Libp2p from "libp2p";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
@@ -27,11 +27,12 @@ describe("[network] network", function () {
   this.timeout(5000)
   let netA: Libp2pNetwork, netB: Libp2pNetwork;
   const logger: ILogger = new WinstonLogger();
-  const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
+  logger.silent = true;
+  const metrics = new BeaconMetrics({ enabled: true, timeout: 5000, pushGateway: false }, { logger });
 
   beforeEach(async () => {
-    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics});
-    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics});
+    netA = new Libp2pNetwork(opts, { config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics });
+    netB = new Libp2pNetwork(opts, { config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics });
     await Promise.all([
       netA.start(),
       netB.start(),
