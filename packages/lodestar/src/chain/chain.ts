@@ -242,7 +242,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   private processAttestation = async (latestState: BeaconState, attestation: Attestation, attestationHash: Hash) => {
-    const currentEpoch = computeEpochAtSlot(this.config, latestState.slot);
+    const currentSlot = getCurrentSlot(this.config, latestState.genesisTime);
+    const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
     const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
     const epoch = attestation.data.target.epoch;
     assert([currentEpoch, previousEpoch].includes(epoch));
