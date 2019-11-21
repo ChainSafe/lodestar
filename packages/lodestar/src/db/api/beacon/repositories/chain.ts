@@ -67,7 +67,7 @@ export class ChainRepository {
 
   public async getBlockRoot(slot: Slot): Promise<Hash | null> {
     try {
-      return await this.db.get(encodeKey(Bucket.mainChain, slot));
+      return await this.db.get(encodeKey(Bucket.blockSlotRefs, slot));
     } catch (e) {
       return null;
     }
@@ -85,6 +85,10 @@ export class ChainRepository {
     }
   }
 
+  public async setChainHeadSlot(slot: number): Promise<void> {
+    await this.db.put(this.getKey(Key.chainHeight), serialize(slot, this.config.types.Slot));
+  }
+
   public async getChainHeadRoot(): Promise<Hash | null> {
     const slot  = await this.getChainHeadSlot();
     if (slot === null) {
@@ -96,5 +100,4 @@ export class ChainRepository {
   private getKey(id: Key): Buffer | string {
     return encodeKey(Bucket.chainInfo, id);
   }
-
 }

@@ -10,6 +10,7 @@ export interface IBeaconLoggerOptions {
   opPool: ILoggerOptions;
   sync: ILoggerOptions;
   metrics: ILoggerOptions;
+  chores: ILoggerOptions;
 }
 
 export interface IValidatorLoggerOptions {
@@ -48,6 +49,10 @@ const config: IBeaconLoggerOptions = {
   metrics: {
     level: LogLevel[defaultLogLevel],
     module: "metrics"
+  },
+  chores: {
+    level: LogLevel[defaultLogLevel],
+    module: "chores"
   }
 };
 
