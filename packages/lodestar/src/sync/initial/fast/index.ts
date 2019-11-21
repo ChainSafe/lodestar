@@ -51,14 +51,14 @@ export class FastSync
 
     const chainCheckPoint = this.chain.latestState.currentJustifiedCheckpoint;
     //listen on finalization events
-    this.chain.on("chain:processedCheckpoint", this.sync);
+    this.chain.on("processedCheckpoint", this.sync);
     //start syncing from current chain checkpoint
     await this.sync(chainCheckPoint);
   }
 
   public async stop(): Promise<void> {
     this.logger.info("initial sync stop");
-    this.chain.removeListener("chain:processedCheckpoint", this.sync);
+    this.chain.removeListener("processedCheckpoint", this.sync);
   }
 
   private sync = async (chainCheckPoint: Checkpoint) => {
@@ -67,7 +67,7 @@ export class FastSync
     if(chainCheckPoint.epoch >= targetEpoch) {
       if(isValidFinalizedCheckPoint(peers, chainCheckPoint)) {
         this.logger.info("Chain already on latest finalized state");
-        this.chain.removeListener("chain:processedCheckpoint", this.sync);
+        this.chain.removeListener("processedCheckpoint", this.sync);
         this.emit("sync:completed", chainCheckPoint);
       }
       this.logger.error("Wrong chain synced, should clean and start over");

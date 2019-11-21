@@ -9,7 +9,7 @@ import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 export interface IChainEvents {
   unknownBlockRoot: (root: Hash) => void;
   processedBlock: (block: BeaconBlock) => void;
-  "chain:processedCheckpoint": (checkPoint: Checkpoint) => void;
+  processedCheckpoint: (checkPoint: Checkpoint) => void;
   processedAttestation: (attestation: Attestation) => void;
   justifiedCheckpoint: (checkpoint: Checkpoint) => void;
   finalizedCheckpoint: (checkpoint: Checkpoint) => void;
