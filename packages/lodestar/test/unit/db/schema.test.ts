@@ -1,7 +1,7 @@
 import {assert} from "chai";
+import {intToBytes} from "@chainsafe/eth2.0-utils";
 
 import {Bucket, encodeKey} from "../../../src/db/schema";
-import {toBufferLE} from "bigint-buffer";
 
 
 describe("encodeKey", () => {
@@ -20,7 +20,7 @@ describe("encodeKey", () => {
       } else if (typeof key === "string") {
         expected = Buffer.concat([Buffer.from([bucket]), Buffer.from(key)]);
       } else if (typeof key === "number" || typeof key === "bigint") {
-        expected = Buffer.concat([Buffer.from([bucket]), toBufferLE(BigInt(key), 8)]);
+        expected = Buffer.concat([Buffer.from([bucket]), intToBytes(BigInt(key), 8)]);
       }
       const actual = encodeKey(bucket, key);
       assert.deepEqual(actual, expected);
