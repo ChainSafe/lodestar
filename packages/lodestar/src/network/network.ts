@@ -3,8 +3,7 @@
  */
 
 import {EventEmitter} from "events";
-// @ts-ignore
-import promisify from "promisify-es6";
+import {promisify} from "es6-promisify";
 import LibP2p from "libp2p";
 import PeerInfo from "peer-info";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -88,10 +87,10 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     return Boolean(peer.isConnected());
   }
   public async connect(peerInfo: PeerInfo): Promise<void> {
-    await promisify(this.libp2p.dial.bind(this.libp2p))(peerInfo);
+    await promisify<void, PeerInfo>(this.libp2p.dial.bind(this.libp2p))(peerInfo);
   }
   public async disconnect(peerInfo: PeerInfo): Promise<void> {
-    await promisify(this.libp2p.hangUp.bind(this.libp2p))(peerInfo);
+    await promisify<void, PeerInfo>(this.libp2p.hangUp.bind(this.libp2p))(peerInfo);
   }
   private emitPeerConnect = (peerInfo: PeerInfo): void => {
     this.logger.verbose("peer connected " + peerInfo.id.toB58String());

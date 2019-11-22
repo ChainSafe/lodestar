@@ -4,8 +4,7 @@
 
 import PeerId from "peer-id";
 import PeerInfo from "peer-info";
-//@ts-ignore
-import promisify from "promisify-es6";
+import {promisify} from "es6-promisify";
 import {Shard} from "@chainsafe/eth2.0-types";
 
 import {RequestId, SHARD_SUBNET_COUNT, SHARD_ATTESTATION_TOPIC, BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
@@ -55,13 +54,15 @@ export function shardAttestationTopic(shard: Shard): string {
  * Return a fresh PeerInfo instance
  */
 export async function createPeerInfo(peerId: PeerId): Promise<PeerInfo> {
-  return await promisify(PeerInfo.create)(peerId);
+  return new PeerInfo(peerId);
 }
 
 /**
  * Return a fresh PeerId instance
  */
 export async function createPeerId(): Promise<PeerId> {
+  //keyType is missing in types
+  // @ts-ignore
   return await promisify(PeerId.create)({bits: 256, keyType: "secp256k1"});
 }
 

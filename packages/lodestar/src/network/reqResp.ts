@@ -6,8 +6,7 @@ import LibP2p from "libp2p";
 import PeerInfo from "peer-info";
 //@ts-ignore
 import LibP2pConnection from "interface-connection";
-//@ts-ignore
-import promisify from "promisify-es6";
+import {promisify} from "es6-promisify";
 import pull from "pull-stream";
 import * as varint from "varint";
 import {
@@ -62,7 +61,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
       this.libp2p.handle(
         createRpcProtocol(method, this.encoding),
         async (protocol: string, conn: LibP2pConnection) => {
-          const peerInfo = await promisify(conn.getPeerInfo.bind(conn))();
+          const peerInfo = (await promisify(conn.getPeerInfo.bind(conn))()) as PeerInfo;
           pull(
             conn,
             this.handleRequest(peerInfo, method, method === Method.Goodbye),

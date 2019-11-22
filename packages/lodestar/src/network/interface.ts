@@ -78,3 +78,11 @@ export interface INetwork extends NetworkEventEmitter {
   start(): Promise<void>;
   stop(): Promise<void>;
 }
+
+export interface IGossipSub extends EventEmitter {
+  publish(topic: string, data: Buffer, cb: (err: unknown) => void): void;
+  start(cb: (err: unknown) => void): void;
+  stop(cb: (err: unknown) => void): void;
+  subscribe(topic: string): void;
+  unsubscribe(topic: string): void;
+}
