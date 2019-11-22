@@ -5,7 +5,7 @@ import {SimpleContainerType, AnySSZType} from "@chainsafe/ssz-type-schema";
 
 import {IBeaconSSZTypes} from "../interface";
 
-export const Hello = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+export const Status = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
     ["headForkVersion", ssz.Version],
     ["finalizedRoot", ssz.Hash],

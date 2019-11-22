@@ -116,8 +116,8 @@ describe("[sync] rpc", function () {
       netB.reqResp.once("request", resolve);
     });
     await new Promise((resolve) => setTimeout(resolve, 200));
-    expect(repsA.get(netB.peerInfo.id.toB58String()).latestHello).to.not.equal(null);
-    expect(repsB.get(netA.peerInfo.id.toB58String()).latestHello).to.not.equal(null);
+    expect(repsA.get(netB.peerInfo.id.toB58String()).latestStatus).to.not.equal(null);
+    expect(repsB.get(netA.peerInfo.id.toB58String()).latestStatus).to.not.equal(null);
   });
 
   it("goodbye on rpc stop", async function () {

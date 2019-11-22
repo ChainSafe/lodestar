@@ -1,5 +1,5 @@
 import {NodejsNode} from "../../../src/network/nodejs";
-import {createPeerId, initializePeerInfo} from "../../../src/network/util";
+import {createPeerId, initializePeerInfo} from "../../../src/network";
 
 export async function createNode(multiaddr: string): Promise<NodejsNode> {
   const peerId = await createPeerId();

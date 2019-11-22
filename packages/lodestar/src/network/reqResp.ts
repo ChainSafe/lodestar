@@ -11,20 +11,23 @@ import promisify from "promisify-es6";
 import pull from "pull-stream";
 import * as varint from "varint";
 import {
-  RequestBody, ResponseBody,
-  Hello, Goodbye,
-  BeaconBlocksByRangeRequest, BeaconBlocksByRangeResponse,
-  BeaconBlocksByRootRequest, BeaconBlocksByRootResponse,
+  BeaconBlocksByRangeRequest,
+  BeaconBlocksByRangeResponse,
+  BeaconBlocksByRootRequest,
+  BeaconBlocksByRootResponse,
+  Goodbye,
+  RequestBody,
+  ResponseBody, Status,
 } from "@chainsafe/eth2.0-types";
-import {serialize, deserialize} from "@chainsafe/ssz";
+import {deserialize, serialize} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {
   Encoding,
   ERR_INVALID_REQ,
   ERR_RESP_TIMEOUT,
+  MAX_CHUNK_SIZE,
   Method,
-  REQ_RESP_MAX_SIZE,
   RequestId,
   RESP_TIMEOUT,
 } from "../constants";
@@ -81,8 +84,8 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     // @ts-ignore
     this.emit(createResponseEvent(id), err, body);
   }
-  public async hello(peerInfo: PeerInfo, request: Hello): Promise<Hello> {
-    return await this.sendRequest<Hello>(peerInfo, Method.Hello, request);
+  public async status(peerInfo: PeerInfo, request: Status): Promise<Status> {
+    return await this.sendRequest<Status>(peerInfo, Method.Status, request);
   }
   public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
     await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request, true);
@@ -151,8 +154,8 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
   private encodeRequest(method: Method, body: RequestBody): Buffer {
     let output = Buffer.alloc(0);
     switch (method) {
-      case Method.Hello:
-        output = serialize(body, this.config.types.Hello);
+      case Method.Status:
+        output = serialize(body, this.config.types.Status);
         break;
       case Method.Goodbye:
         output = serialize(body, this.config.types.Goodbye);
@@ -172,8 +175,8 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
   private encodeResponse(method: Method, body: ResponseBody): Buffer {
     let output= Buffer.alloc(0);
     switch (method) {
-      case Method.Hello:
-        output = serialize(body, this.config.types.Hello);
+      case Method.Status:
+        output = serialize(body, this.config.types.Status);
         break;
       case Method.Goodbye:
         output = serialize(body, this.config.types.Goodbye);
@@ -201,14 +204,14 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     const bytes = varint.decode.bytes;
     if (
       length !== data.length - bytes ||
-      length > REQ_RESP_MAX_SIZE
+      length > MAX_CHUNK_SIZE
     ) {
       throw new Error(ERR_INVALID_REQ);
     }
     data = data.slice(bytes);
     switch (method) {
-      case Method.Hello:
-        return deserialize(data, this.config.types.Hello);
+      case Method.Status:
+        return deserialize(data, this.config.types.Status);
       case Method.Goodbye:
         return deserialize(data, this.config.types.Goodbye);
       case Method.BeaconBlocksByRange:
@@ -223,7 +226,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     const bytes = varint.decode.bytes;
     if (
       length !== data.length - (bytes + 1) ||
-      length > REQ_RESP_MAX_SIZE
+      length > MAX_CHUNK_SIZE
     ) {
       throw new Error(ERR_INVALID_REQ);
     }
@@ -232,8 +235,8 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
       throw new Error(data.toString("utf8"));
     }
     switch (method) {
-      case Method.Hello:
-        return deserialize(data, this.config.types.Hello);
+      case Method.Status:
+        return deserialize(data, this.config.types.Status);
       case Method.Goodbye:
         return deserialize(data, this.config.types.Goodbye);
       case Method.BeaconBlocksByRange:

@@ -13,9 +13,10 @@ import {ILogger} from "../logger";
 import {IBeaconMetrics} from "../metrics";
 
 import {ReqResp} from "./reqResp";
-import {Gossip} from "./gossip";
 import {INetworkOptions} from "./options";
 import {INetwork, NetworkEventEmitter,} from "./interface";
+import {Gossip} from "./gossip/gossip";
+import {IGossip} from "./gossip/interface";
 
 interface ILibp2pModules {
   config: IBeaconConfig;
@@ -26,12 +27,10 @@ interface ILibp2pModules {
 
 
 export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter }) implements INetwork {
-  // @ts-ignore
+
   public peerInfo: PeerInfo;
-  // @ts-ignore
   public reqResp: ReqResp;
-  // @ts-ignore
-  public gossip: Gossip;
+  public gossip: IGossip;
 
   private opts: INetworkOptions;
   private config: IBeaconConfig;
@@ -53,7 +52,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
         this.peerInfo = libp2p.peerInfo;
         this.libp2p = libp2p;
         this.reqResp = new ReqResp(opts, {config, libp2p, logger});
-        this.gossip = new Gossip(opts, {config, libp2p, logger}); 
+        this.gossip = (new Gossip(opts, {config, libp2p, logger})) as unknown as IGossip;
         resolve();
       });
     });

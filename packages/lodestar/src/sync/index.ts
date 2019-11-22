@@ -68,7 +68,7 @@ export class Sync extends EventEmitter {
       const bestSlotByPeers = this.network.getPeers()
         .map((peerInfo) => this.reps.get(peerInfo.id.toB58String()))
         .map((reputation) => {
-          return reputation.latestHello ? reputation.latestHello.headSlot : 0;
+          return reputation.latestStatus ? reputation.latestStatus.headSlot : 0;
         })
         .reduce((a, b) => Math.max(a, b), 0);
       if (bestSlot >= bestSlotByPeers) {

@@ -47,8 +47,13 @@ export interface IBeaconSSZTypes {
   BeaconBlock: AnyContainerType;
   // state
   BeaconState: AnyContainerType;
+  // validator
+  AggregateAndProof: AnyContainerType;
+  CommitteeAssignment: AnyContainerType;
+  SyncingStatus: AnyContainerType;
+  ValidatorDuty: AnyContainerType;
   // wire
-  Hello: AnyContainerType;
+  Status: AnyContainerType;
   Goodbye: AnyContainerType;
   BeaconBlocksByRangeRequest: AnyContainerType;
   BeaconBlocksByRangeResponse: AnyContainerType;
@@ -104,8 +109,13 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "BeaconBlock",
   // state
   "BeaconState",
+  //validator
+  "AggregateAndProof",
+  "CommitteeAssignment",
+  "SyncingStatus",
+  "ValidatorDuty",
   // wire
-  "Hello",
+  "Status",
   "Goodbye",
   "BeaconBlocksByRangeRequest",
   "BeaconBlocksByRangeResponse",

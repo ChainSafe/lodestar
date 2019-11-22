@@ -4,15 +4,18 @@
 import PeerInfo from "peer-info";
 import {EventEmitter} from "events";
 import {
-  Attestation, BeaconBlock,
-  RequestBody, ResponseBody,
-  Hello, Goodbye,
-  BeaconBlocksByRangeRequest, BeaconBlocksByRangeResponse,
-  BeaconBlocksByRootRequest, BeaconBlocksByRootResponse, CommitteeIndex,
+  BeaconBlocksByRangeRequest,
+  BeaconBlocksByRangeResponse,
+  BeaconBlocksByRootRequest,
+  BeaconBlocksByRootResponse,
+  Goodbye,
+  RequestBody,
+  ResponseBody, Status,
 } from "@chainsafe/eth2.0-types";
 
-import {RequestId, Method, BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
+import {Method, RequestId} from "../constants";
 import StrictEventEmitter from "strict-event-emitter-types";
+import {IGossip} from "./gossip/interface";
 
 // req/resp
 
@@ -25,34 +28,10 @@ export interface IReqResp extends ReqRespEventEmitter {
   // sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T>;
   sendResponse(id: RequestId, err: Error|null, result: ResponseBody|null): void;
 
-  hello(peerInfo: PeerInfo, request: Hello): Promise<Hello>;
+  status(peerInfo: PeerInfo, request: Status): Promise<Status>;
   goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void>;
   beaconBlocksByRange(peerInfo: PeerInfo, request: BeaconBlocksByRangeRequest): Promise<BeaconBlocksByRangeResponse>;
   beaconBlocksByRoot(peerInfo: PeerInfo, request: BeaconBlocksByRootRequest): Promise<BeaconBlocksByRootResponse>;
-}
-
-// gossip
-
-export interface IGossipEvents {
-  [BLOCK_TOPIC]: (block: BeaconBlock) => void;
-  [ATTESTATION_TOPIC]: (attestation: Attestation) => void;
-  ["gossipsub:heartbeat"]: void;
-  // shard attestation topic is generated string so we cannot typehint it
-  //[shard{shardNumber % SHARD_SUBNET_COUNT}_beacon_attestation]: (attestation: Attestation) => void;
-}
-export type GossipEventEmitter = StrictEventEmitter<EventEmitter, IGossipEvents>;
-
-
-export interface IGossip extends GossipEventEmitter {
-  publishBlock(block: BeaconBlock): Promise<void>;
-  publishAttestation(attestation: Attestation): Promise<void>;
-  publishShardAttestation(attestation: Attestation): Promise<void>;
-  subscribeToBlocks(): void;
-  subscribeToAttestations(): void;
-  subscribeToShardAttestations(index: CommitteeIndex): void;
-  unsubscribeToBlocks(): void;
-  unsubscribeToAttestations(): void;
-  unsubscribeToShardAttestations(index: CommitteeIndex): void;
 }
 
 // network

@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/eth2.0-state-transition",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Beacon Chain state transition function and utils",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -39,9 +39,8 @@
   "dependencies": {
     "@chainsafe/bit-utils": "^0.1.4",
     "@chainsafe/bls": "^0.1.7",
-    "@chainsafe/eth2.0-config": "^0.1.1",
-    "@chainsafe/eth2.0-ssz-types": "^0.1.0",
-    "@chainsafe/eth2.0-utils": "^0.0.1",
+    "@chainsafe/eth2.0-config": "0.2.0",
+    "@chainsafe/eth2.0-utils": "0.1.0",
     "@chainsafe/ssz": "^0.5.2",
     "bn.js": "^5.0.0",
     "buffer-xor": "^2.0.2"

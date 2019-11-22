@@ -1,33 +1,34 @@
 import {assert} from "chai";
-import BN from "bn.js";
+// @ts-ignore
 import promisify from "promisify-es6";
-
-import {Hello, ResponseBody} from "@chainsafe/eth2.0-types";
+import {Status, ResponseBody} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-
 import {ReqResp} from "../../../src/network/reqResp";
-
+import {describe, it, beforeEach, afterEach} from "mocha";
 import {createNode} from "./util";
 import {NodejsNode} from "../../../src/network/nodejs";
-
-import {Method} from "../../../src/constants";
 import {ILogger, WinstonLogger} from "../../../src/logger";
+import {INetworkOptions} from "../../../src/network/options";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
 describe("[network] rpc", () => {
+
   let nodeA: NodejsNode, nodeB: NodejsNode,
     rpcA: ReqResp, rpcB: ReqResp;
-  let logger: ILogger = new WinstonLogger();
+  const logger: ILogger = new WinstonLogger();
+
   beforeEach(async () => {
     // setup
     nodeA = await createNode(multiaddr);
     nodeB = await createNode(multiaddr);
     await Promise.all([
+      // @ts-ignore
       promisify(nodeA.start.bind(nodeA))(),
+      // @ts-ignore
       promisify(nodeB.start.bind(nodeB))(),
     ]);
-    const networkOptions = {
+    const networkOptions: INetworkOptions = {
       maxPeers: 10,
       multiaddrs: [],
       bootnodes: [],
@@ -44,36 +45,28 @@ describe("[network] rpc", () => {
   });
   afterEach(async function () {
     // teardown
-    this.timeout(10000)
+    this.timeout(10000);
     await Promise.all([
       rpcA.stop(),
       rpcB.stop(),
     ]);
     await Promise.all([
+      // @ts-ignore
       promisify(nodeA.stop.bind(nodeA))(),
+      // @ts-ignore
       promisify(nodeB.stop.bind(nodeB))(),
     ]);
   });
 
-  //prevents tests from exiting
-  // it('default props should work', async function() {
-  //   try {
-  //     for(let i = 0; i < networkDefaults.multiaddrs.length; i++) {
-  //       const node = await createNode(networkDefaults.multiaddrs[i]);
-  //     }
-  //     expect(networkDefaults.maxPeers).to.be.greaterThan(0);
-  //     expect(networkDefaults.rpcTimeout).to.be.greaterThan(0);
-  //   } catch (e) {
-  //     expect.fail(e);
-  //   }
-  // });
   it("can send/receive messages from connected peers", async function () {
     this.timeout(6000);
+    // @ts-ignore
     await promisify(nodeA.dial.bind(nodeA))(nodeB.peerInfo);
     try {
       await new Promise((resolve, reject) => {
         const t = setTimeout(reject, 2000);
-        nodeB.once("peer:connect", (p) => {
+        // @ts-ignore
+        nodeB.once("peer:connect", () => {
           clearTimeout(t);
           resolve();
         });
@@ -88,17 +81,18 @@ describe("[network] rpc", () => {
       }, 100);
     });
     try {
-      const helloExpected: Hello = {
+      const statusExpected: Status = {
         headForkVersion: Buffer.alloc(4),
         finalizedRoot: Buffer.alloc(32),
         finalizedEpoch: 0,
         headRoot: Buffer.alloc(32),
         headSlot: 0,
       };
-      const helloActual = await rpcA.hello(nodeB.peerInfo, helloExpected);
-      assert.deepEqual(JSON.stringify(helloActual), JSON.stringify(helloExpected));
+      // @ts-ignore
+      const statusActual = await rpcA.status(nodeB.peerInfo, statusExpected);
+      assert.deepEqual(JSON.stringify(statusActual), JSON.stringify(statusExpected));
     } catch (e) {
-      assert.fail("hello not received");
+      assert.fail("status not received");
     }
     // send hello from B to A, await hello response
     rpcA.once("request", (peerInfo, method, id, body) => {
@@ -107,17 +101,19 @@ describe("[network] rpc", () => {
       }, 100);
     });
     try {
-      const helloExpected: Hello = {
+      const statusExpected: Status = {
         headForkVersion: Buffer.alloc(4),
         finalizedRoot: Buffer.alloc(32),
         finalizedEpoch: 0,
         headRoot: Buffer.alloc(32),
         headSlot: 0,
       };
-      const helloActual = await rpcB.hello(nodeA.peerInfo, helloExpected);
-      assert.deepEqual(JSON.stringify(helloActual), JSON.stringify(helloExpected));
+
+      // @ts-ignore
+      const statusActual = await rpcB.status(nodeA.peerInfo, statusExpected);
+      assert.deepEqual(JSON.stringify(statusActual), JSON.stringify(statusExpected));
     } catch (e) {
-      assert.fail("hello not received");
+      assert.fail("statu not received");
     }
   });
 });

@@ -64,7 +64,7 @@ describe("syncing", function () {
     chainStub.isInitialized.resolves(true);
     dbStub.chain.getChainHeadSlot.resolves(10);
     repsStub.get.returns({
-      latestHello: {
+      latestStatus: {
         headSlot: 5
       },
     });
@@ -89,7 +89,7 @@ describe("syncing", function () {
     chainStub.isInitialized.resolves(true);
     dbStub.chain.getChainHeadSlot.resolves(2);
     repsStub.get.returns({
-      latestHello: {
+      latestStatus: {
         headSlot: 5,
       },
     });
@@ -111,7 +111,7 @@ describe("syncing", function () {
     chainStub.isInitialized.resolves(true);
     dbStub.chain.getChainHeadSlot.resolves(10);
     repsStub.get.returns({
-      latestHello: {
+      latestStatus: {
         headSlot: 5,
       },
     });

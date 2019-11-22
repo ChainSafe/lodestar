@@ -2,9 +2,7 @@ import BN from "bn.js";
 import {BLSPubkey, BLSSecretKey} from "@chainsafe/eth2.0-types";
 import {generatePublicKey} from "@chainsafe/bls";
 import {hash} from "@chainsafe/ssz";
-
-import {bytesToBN, intToBytes} from "../util/bytes";
-
+import {bytesToBN, intToBytes} from "@chainsafe/eth2.0-utils";
 const CURVE_ORDER = new BN("52435875175126190479447740508185965837690552500527637822603658699938581184513");
 
 interface IKeypair {

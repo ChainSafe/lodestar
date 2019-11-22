@@ -5,10 +5,15 @@
 import BN from "bn.js";
 import PeerInfo from "peer-info";
 import {
-  Epoch, Hash, Slot,
-  RequestBody, Hello, Goodbye,
-  BeaconBlocksByRangeRequest, BeaconBlocksByRangeResponse,
-  BeaconBlocksByRootRequest, BeaconBlocksByRootResponse,
+  BeaconBlocksByRangeRequest,
+  BeaconBlocksByRangeResponse,
+  BeaconBlocksByRootRequest,
+  BeaconBlocksByRootResponse,
+  Epoch,
+  Goodbye,
+  Hash,
+  RequestBody,
+  Slot, Status,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -57,7 +62,7 @@ export class SyncReqResp implements ISyncReqResp {
     this.network.reqResp.on("request", this.onRequest);
     await Promise.all(
       this.network.getPeers().map(async (peerInfo) =>
-        this.network.reqResp.hello(peerInfo, await this.createHello())));
+        this.network.reqResp.status(peerInfo, await this.createStatus())));
   }
 
   public async stop(): Promise<void> {
@@ -75,8 +80,8 @@ export class SyncReqResp implements ISyncReqResp {
     body: RequestBody,
   ): Promise<void> => {
     switch (method) {
-      case Method.Hello:
-        return await this.onHello(peerInfo, id, body as Hello);
+      case Method.Status:
+        return await this.onStatus(peerInfo, id, body as Status);
       case Method.Goodbye:
         return await this.onGoodbye(peerInfo, id, body as Goodbye);
       case Method.BeaconBlocksByRange:
@@ -88,12 +93,12 @@ export class SyncReqResp implements ISyncReqResp {
     }
   };
 
-  public async onHello(peerInfo: PeerInfo, id: RequestId, request: Hello): Promise<void> {
+  public async onStatus(peerInfo: PeerInfo, id: RequestId, request: Status): Promise<void> {
     // set hello on peer
-    this.reps.get(peerInfo.id.toB58String()).latestHello = request;
+    this.reps.get(peerInfo.id.toB58String()).latestStatus = request;
     // send hello response
     try {
-      const hello = await this.createHello();
+      const hello = await this.createStatus();
       this.network.reqResp.sendResponse(id, null, hello);
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);
@@ -142,7 +147,7 @@ export class SyncReqResp implements ISyncReqResp {
     }
   }
 
-  private async createHello(): Promise<Hello> {
+  private async createStatus(): Promise<Status> {
     let headSlot: Slot,
       headRoot: Hash,
       finalizedEpoch: Epoch,
@@ -176,12 +181,12 @@ export class SyncReqResp implements ISyncReqResp {
     await new Promise((resolve) => setTimeout(resolve, randomDelay));
     if (
       this.network.hasPeer(peerInfo) &&
-      !this.reps.get(peerInfo.id.toB58String()).latestHello
+      !this.reps.get(peerInfo.id.toB58String()).latestStatus
     ) {
-      const request = await this.createHello();
+      const request = await this.createStatus();
       try {
-        const response = await this.network.reqResp.hello(peerInfo, request);
-        this.reps.get(peerInfo.id.toB58String()).latestHello = response;
+        const response = await this.network.reqResp.status(peerInfo, request);
+        this.reps.get(peerInfo.id.toB58String()).latestStatus = response;
       } catch (e) {
         this.logger.error(e);
       }
