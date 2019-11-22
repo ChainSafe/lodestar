@@ -5,20 +5,19 @@
 
 import {EventEmitter} from "events";
 import {deserialize, serialize} from "@chainsafe/ssz";
-//@ts-ignore
-import promisify from "promisify-es6";
+import {promisify} from "es6-promisify";
 import LibP2p from "libp2p";
 //@ts-ignore
 import Gossipsub from "libp2p-gossipsub";
 import {Attestation, BeaconBlock, Shard} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {SHARD_SUBNET_COUNT, BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
+import {ATTESTATION_TOPIC, BLOCK_TOPIC, SHARD_SUBNET_COUNT} from "../constants";
 import {ILogger} from "../logger";
 
-import {shardAttestationTopic, shardSubnetAttestationTopic, blockTopic, attestationTopic} from "./util";
+import {attestationTopic, blockTopic, shardAttestationTopic, shardSubnetAttestationTopic} from "./util";
 import {INetworkOptions} from "./options";
-import {GossipEventEmitter, IGossip,} from "./interface";
+import {GossipEventEmitter, IGossip, IGossipSub,} from "./interface";
 
 interface IGossipModules {
   config: IBeaconConfig;
@@ -31,7 +30,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   private opts: INetworkOptions;
   private config: IBeaconConfig;
   private libp2p: LibP2p;
-  private pubsub: Gossipsub;
+  private pubsub: IGossipSub;
   private logger: ILogger;
 
   public constructor(opts: INetworkOptions, {config, libp2p, logger}: IGossipModules) {
@@ -83,19 +82,19 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.pubsub.unsubscribe(shardSubnetAttestationTopic(shard));
   }
   public async publishBlock(block: BeaconBlock): Promise<void> {
-    await promisify(this.pubsub.publish.bind(this.pubsub))(
+    await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
       blockTopic(), serialize(block, this.config.types.BeaconBlock));
     this.logger.verbose(`[GOSSIP] Publishing block at slot: ${block.slot}`);
   }
   public async publishAttestation(attestation: Attestation): Promise<void> {
-    await promisify(this.pubsub.publish.bind(this.pubsub))(
+    await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
       attestationTopic(), serialize(attestation, this.config.types.Attestation));
     this.logger.verbose(
       `[GOSSIP] Publishing attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`
     );
   }
   public async publishShardAttestation(attestation: Attestation): Promise<void> {
-    await promisify(this.pubsub.publish.bind(this.pubsub))(
+    await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
       shardSubnetAttestationTopic(attestation.data.crosslink.shard),
       serialize(attestation, this.config.types.Attestation)
     );

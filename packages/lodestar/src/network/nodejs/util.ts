@@ -4,8 +4,7 @@
 
 import fs from "fs";
 import PeerId from "peer-id";
-// @ts-ignore
-import promisify from "promisify-es6";
+import {promisify} from "es6-promisify";
 import LibP2p from "libp2p";
 import {NodejsNode} from ".";
 import {initializePeerInfo} from "../util";
@@ -22,15 +21,15 @@ export async function savePeerId(path: string, peerId: PeerId): Promise<void> {
 /**
  * Load a peer id from disk
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function loadPeerId(path: string): Promise<PeerId> {
-  const data = await promisify(fs.readFile)(path);
-  return await promisify(PeerId.createFromJSON)(JSON.parse(data));
+  const data = fs.readFileSync(path, "utf-8");
+  return await promisify(PeerId.createFromJSON)(JSON.parse(data)) as PeerId;
 }
 
 /**
- * 
- * @param peerId Create an instance of NodejsNode asynchronously
+ *
+ * @param peerIdOrPromise Create an instance of NodejsNode asynchronously
+ * @param network
  */
 export async function createNodeJsLibp2p(peerIdOrPromise: PeerId | Promise<PeerId>, 
   network: Partial<INetworkOptions> = {}): Promise<LibP2p> {

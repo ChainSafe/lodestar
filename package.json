@@ -10,6 +10,7 @@
   "devDependencies": {
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.3.3",
+    "@babel/generator": "^7.3.3",
     "@babel/plugin-proposal-class-properties": "^7.3.3",
     "@babel/plugin-proposal-object-rest-spread": "^7.3.2",
     "@babel/plugin-syntax-bigint": "^7.4.4",
