@@ -1,5 +1,5 @@
 import {describe, it} from "mocha";
-import {getAttestationSubnetTopic, getGossipTopic, handleGossipMessage} from "../../../../src/network/gossip/utils";
+import {getAttestationSubnetTopic, getGossipTopic, deserializeGossipMessage} from "../../../../src/network/gossip/utils";
 import {GossipEvent} from "../../../../src/network/gossip/constants";
 import {expect} from "chai";
 import {generateEmptyAttestation} from "../../../utils/attestation";
@@ -43,7 +43,7 @@ describe("gossip utils", function () {
      
     it("should deserialize gossip message", function () {
       const block = generateEmptyBlock();
-      const data = handleGossipMessage<BeaconBlock>(
+      const data = deserializeGossipMessage<BeaconBlock>(
         {data: serialize(block, config.types.BeaconBlock)},
         config.types.BeaconBlock
       );
@@ -52,7 +52,7 @@ describe("gossip utils", function () {
 
     it("should fail to deserialize too large message", function () {
       const bytes = Buffer.alloc(GOSSIP_MAX_SIZE + 1);
-      expect(() => handleGossipMessage<BeaconBlock>(
+      expect(() => deserializeGossipMessage<BeaconBlock>(
         {data: bytes},
         config.types.BeaconBlock
       )).to.throw();

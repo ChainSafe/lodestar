@@ -29,7 +29,7 @@ export function getAttestationSubnet(attestation: Attestation): string {
   return String(attestation.data.index % ATTESTATION_SUBNET_COUNT);
 }
 
-export function handleGossipMessage<T>(msg: IGossipMessage, type: AnySSZType): T {
+export function deserializeGossipMessage<T>(msg: IGossipMessage, type: AnySSZType): T {
   assert(msg.data.length <= GOSSIP_MAX_SIZE, `Message exceeds size limit of ${GOSSIP_MAX_SIZE} bytes`);
   return deserialize(msg.data, type);
 }

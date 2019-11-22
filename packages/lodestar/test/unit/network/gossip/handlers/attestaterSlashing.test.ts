@@ -16,7 +16,7 @@ describe("gossip handlers - attesterSlashing", function () {
   let handleMessageStub: any, gossipStub: any;
 
   beforeEach(function () {
-    handleMessageStub = sandbox.stub(gossipUtils, "handleGossipMessage");
+    handleMessageStub = sandbox.stub(gossipUtils, "deserializeGossipMessage");
     gossipStub = sandbox.createStubInstance(Gossip);
     gossipStub.logger = sandbox.createStubInstance(WinstonLogger);
     gossipStub.config = config;
