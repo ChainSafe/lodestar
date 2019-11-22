@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/eth2.0-utils",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Utilities required across multiple lodestar packages",
   "author": "ChainSafe Systems",
   "license": "LGPL-3.0",
@@ -11,13 +11,15 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
-    "lib"
+    "lib/**/*.js",
+    "lib/**/*.js.map",
+    "lib/**/*.d.ts"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
     "build": "yarn build:lib && yarn build:types",
     "build:release": "yarn clean && yarn build && yarn build:docs",
-    "build:types": "tsc --incremental --declaration --outDir lib --emitDeclarationOnly",
+    "build:types": "tsc --incremental --project tsconfig.build.json --declaration --outDir lib --emitDeclarationOnly",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:docs": "typedoc --exclude src/index.ts --out docs src",
     "check-types": "tsc --noEmit --incremental",

@@ -9,6 +9,7 @@ import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 export interface IChainEvents {
   unknownBlockRoot: (root: Hash) => void;
   processedBlock: (block: BeaconBlock) => void;
+  processedCheckpoint: (checkPoint: Checkpoint) => void;
   processedAttestation: (attestation: Attestation) => void;
   justifiedCheckpoint: (checkpoint: Checkpoint) => void;
   finalizedCheckpoint: (checkpoint: Checkpoint) => void;
@@ -43,7 +44,7 @@ export interface IBeaconChain extends ChainEventEmitter {
   /**
    * Pre-process and run the per slot state transition function
    */
-  receiveBlock(block: BeaconBlock): Promise<void>;
+  receiveBlock(block: BeaconBlock, trusted?: boolean): Promise<void>;
 
   /**
    * Update the chain head using LMD GHOST

@@ -5,7 +5,9 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
-    "lib"
+    "lib/**/*.js",
+    "lib/**/*.js.map",
+    "lib/**/*.d.ts"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -rf dist && rm -f tsconfig.tsbuildinfo",
@@ -22,7 +24,7 @@
     "prepublishOnly": "yarn build",
     "test:spec": "nyc -r lcov -e .ts mocha  --colors --timeout 4000 -r ./.babel-register \"test/spec/**/*.test.ts\" && nyc report",
     "test:spec-min": "yarn test:spec",
-    "test:unit": "nyc -r lcov -e .ts mocha --colors -r ./.babel-register \"test/unit/**/*.test.ts\" && nyc report"
+    "test:unit": "nyc -e .ts mocha --colors -r ./.babel-register \"test/unit/**/*.test.ts\""
   },
   "homepage": "https://github.com/chainsafe/ssz-js",
   "keywords": [

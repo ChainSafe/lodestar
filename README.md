@@ -23,6 +23,13 @@ Simple Serialize
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/ssz)
 
+### [@chainsafe/ssz-type-schema](/packages/ssz-type-schema)
+Simple Serialize Type Schema
+
+[![npm](https://img.shields.io/npm/v/@chainsafe/ssz-type-schema)](https://www.npmjs.com/package/@chainsafe/ssz-type-schema)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/ssz-type-schema)
+
 ### [@chainsafe/eth2.0-types](/packages/eth2.0-types)
 Typescript types for Ethereum 2.0 datastructures
 
@@ -50,6 +57,13 @@ Beacon chain configuration
 [![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-config)](https://www.npmjs.com/package/@chainsafe/eth2.0-config)
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-config)
+
+### [@chainsafe/eth2.0-state-transition](/packages/eth2.0-state-transition)
+Beacon chain state transition
+
+[![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-state-transition)](https://www.npmjs.com/package/@chainsafe/eth2.0-state-transition)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-state-transition)
 
 ### [@chainsafe/eth2.0-spec-test-util](/packages/eth2.0-spec-test-util)
 Ethereum 2.0 spec test utilities
