@@ -4,7 +4,7 @@ import {
 } from "@chainsafe/eth2.0-types";
 
 import {GENESIS_EPOCH, GENESIS_SLOT, GENESIS_START_SHARD, ZERO_HASH} from "../../src/constants";
-import {intToBytes} from "../../src/util/bytes";
+import {intToBytes} from "@chainsafe/eth2.0-utils";
 import {randBetween, randBetweenBigInt} from "./misc";
 import {generateValidators} from "./validator";
 import {hashTreeRoot} from "@chainsafe/ssz";

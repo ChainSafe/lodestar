@@ -1,8 +1,7 @@
 import {BLSPubkey, BLSSecretKey} from "@chainsafe/eth2.0-types";
 import {generatePublicKey} from "@chainsafe/bls";
 import {hash} from "@chainsafe/ssz";
-
-import {bytesToBigInt, intToBytes} from "../util/bytes";
+import {bytesToBigInt, intToBytes} from "@chainsafe/eth2.0-utils";
 import {toBufferBE} from "bigint-buffer";
 
 const CURVE_ORDER = BigInt("52435875175126190479447740508185965837690552500527637822603658699938581184513");
