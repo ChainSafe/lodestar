@@ -43,7 +43,7 @@ function serializeToJson(value: any): any {
 }
 
 export function fromJson<T>(value: object, type: AnySSZType): T {
-  value = objectToCamelCase(value);
+  value = objectToCamelCase({...value});
   return expandJsonValue(value, parseType(type));
 }
 
@@ -51,9 +51,12 @@ export function fromJson<T>(value: object, type: AnySSZType): T {
 function expandJsonValue(value: any, type: FullSSZType): any {
   switch (type.type) {
     case Type.uint:
-      if (type.byteLength > 6 && type.useNumber)
-        return Infinity;
-      return type.useNumber ? Number(value) : BigInt(value);
+      if (type.byteLength <= 6 || type.useNumber) {
+        const n = Number(value);
+        return Number.isSafeInteger(n) ? n : Infinity;
+      } else {
+        return BigInt(value);
+      }
     case Type.bool:
       return value;
     case Type.bitList:
@@ -68,7 +71,7 @@ function expandJsonValue(value: any, type: FullSSZType): any {
       return value.map((element: any) => expandJsonValue(element, type.elementType));
     case Type.container:
       type.fields.forEach(([fieldName, fieldType]) => {
-        value[fieldName] = expandJsonValue(value[fieldName], fieldType);
+        value[fieldName] = expandJsonValue(value[fieldName], parseType(fieldType));
       });
       return value;
   }

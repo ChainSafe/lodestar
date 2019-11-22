@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {readdirSync, readFileSync, writeFile} from "fs";
-import {isDirectory} from "./util";
-import {basename, join, parse} from "path";
-import {describe, it} from "mocha";
-import {AnySSZType, deserialize} from "@chainsafe/ssz";
 import {expect} from "chai";
 import deepMerge from "deepmerge";
+import {readdirSync, readFileSync, writeFile} from "fs";
+import {describe, it} from "mocha";
+import {basename, join, parse} from "path";
 import profiler from "v8-profiler-next";
+import {loadYamlFile} from "@chainsafe/eth2.0-utils/lib/nodejs";
+import {AnySSZType, deserialize} from "@chainsafe/ssz";
+
 import {transformType} from "./transform";
-import {loadYamlFile} from "@chainsafe/eth2.0-utils";
+import {isDirectory} from "./util";
 
 
 export enum InputType {
@@ -39,7 +40,7 @@ export interface ISpecTestOptions<TestCase, Result> {
 
   shouldError?: (testCase: TestCase) => boolean;
 
-  shouldSkip?: (testCase: TestCase) => boolean;
+  shouldSkip?: (testCase: TestCase, name: string, index: number) => boolean;
 
   expectFunc?: (testCase: TestCase, expected, actual) => void;
 
@@ -87,10 +88,10 @@ export function describeDirectorySpecTest<TestCase, Result>(
       .map(name => join(testCaseDirectoryPath, name))
       .filter(isDirectory);
 
-    testCases.forEach((testCaseDirectory) => {
+    testCases.forEach((testCaseDirectory, index) => {
       generateTestCase(
-        name,
         testCaseDirectory,
+        index,
         testFunction,
         options
       );
@@ -101,25 +102,26 @@ export function describeDirectorySpecTest<TestCase, Result>(
 }
 
 function generateTestCase<TestCase, Result>(
-  name: string,
   testCaseDirectoryPath: string,
+  index: number,
   testFunction: (...args: any) => Result,
   options: ISpecTestOptions<TestCase, Result>
 ): void {
-  it(basename(testCaseDirectoryPath), function () {
+  const name = basename(testCaseDirectoryPath);
+  it(name, function () {
     const testCase = loadInputFiles(testCaseDirectoryPath, options);
-    if(options.shouldSkip && options.shouldSkip(testCase)) {
+    if(options.shouldSkip && options.shouldSkip(testCase, name, index)) {
       return this.skip();
     }
     if(options.shouldError && options.shouldError(testCase)) {
-      expect(testFunction.bind(null, testCase, basename(testCaseDirectoryPath))).to.throw;
+      expect(testFunction.bind(null, testCase, name)).to.throw;
     } else {
       const profileId = `${name}-${Date.now()}.profile`;
       const profilingDirectory = process.env.GEN_PROFILE_DIR;
       if (profilingDirectory) {
         profiler.startProfiling(profileId);
       }
-      const result = testFunction(testCase, basename(testCaseDirectoryPath));
+      const result = testFunction(testCase, name);
       if (profilingDirectory) {
         const profile = profiler.stopProfiling(profileId);
 

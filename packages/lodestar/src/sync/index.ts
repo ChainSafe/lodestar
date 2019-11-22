@@ -10,7 +10,7 @@ import {OpPool} from "../opPool";
 import {IEth1Notifier} from "../eth1";
 import {IBeaconDb} from "../db";
 import {RegularSync} from "./regular";
-import {InitialSync} from "./initial";
+import {FastSync, InitialSync} from "./initial";
 import {ILogger} from "../logger";
 import {ISyncOptions} from "./options";
 import {ISyncReqResp, SyncReqResp} from "./reqResp";
@@ -37,79 +37,85 @@ export class Sync extends EventEmitter {
   private chain: IBeaconChain;
   private network: INetwork;
   private opPool: OpPool;
-  private eth1: IEth1Notifier;
-  private db: IBeaconDb;
   private reqResp: ISyncReqResp;
   private reps: ReputationStore;
   private logger: ILogger;
-  //@ts-ignore
-  private syncer: RegularSync;
+  //array of valid peers (peer on same fork)
+  private peers: PeerInfo[] = [];
+  private regularSync: RegularSync;
+  private initialSync: InitialSync;
+  private waitingForPeer = true;
 
   public constructor(opts: ISyncOptions, modules: ISyncModules) {
     super();
     this.opts = opts;
     this.config = modules.config;
     this.chain = modules.chain;
-    this.db = modules.db;
-    this.eth1 = modules.eth1;
     this.network = modules.network;
     this.opPool = modules.opPool;
     this.reps = modules.reps;
     this.logger = modules.logger;
     this.reqResp = new SyncReqResp(opts, modules);
+    this.regularSync = new RegularSync(this.opts, modules);
+    this.initialSync = new FastSync(
+      this.opts,
+      {
+        ...modules,
+        //let it keep reference to peers
+        peers: this.peers
+      }
+    );
   }
 
-  public isSynced = async(): Promise<boolean> => {
-    if (!await this.chain.isInitialized()) {
-      return true;
-    }
-    try {
-      const bestSlot = await this.db.chain.getChainHeadSlot();
-      const bestSlotByPeers = this.network.getPeers()
-        .map((peerInfo) => this.reps.get(peerInfo.id.toB58String()))
-        .map((reputation) => {
-          return reputation.latestHello ? reputation.latestHello.headSlot : 0;
-        })
-        .reduce((a, b) => Math.max(a, b), 0);
-      if (bestSlot >= bestSlotByPeers) {
-        return true;
-      }
-    } catch (e) {
-      return false;
-    }
-    return false;
-  };
-
   public async start(): Promise<void> {
-    //await new Promise((resolve) => this.network.once("peer:connect", resolve));
     await this.reqResp.start();
-    if (!await this.isSynced()) {
-      this.logger.info("Chain not synced, running initial sync...");
-      const initialSync = new InitialSync(this.opts, {
-        config: this.config,
-        db: this.db,
-        chain: this.chain,
-        network: this.network,
-        reps: this.reps,
-        logger: this.logger,
-      });
-      await initialSync.start();
-      await initialSync.stop();
+    this.initialSync.on("sync:completed", this.startRegularSync);
+    //this.regularSync.on("fallenBehind", this.startInitialSync);
+    this.peers.concat(this.getValidPeers());
+    this.network.on("peer:disconnect", this.handleLostPeer);
+    this.network.on("peer:connect", this.handleNewPeer);
+    if(this.peers.length >= 1) {
+      this.waitingForPeer = false;
+      await this.initialSync.start();
+    } else {
+      this.logger.warn("No peers. Waiting to connect to peer...");
     }
-    this.logger.info("Chain synced, running regular sync...");
-    this.syncer = new RegularSync(this.opts, {
-      config: this.config,
-      db: this.db,
-      chain: this.chain,
-      network: this.network,
-      opPool: this.opPool,
-      logger: this.logger,
-    });
-    this.syncer.start();
   }
 
   public async stop(): Promise<void> {
     await this.reqResp.stop();
-    await this.syncer.stop();
+    await this.initialSync.stop();
+    await this.regularSync.stop();
   }
+
+  public isSynced(): boolean {
+    return false;
+  }
+
+  private startRegularSync = () => {
+    this.regularSync.start();
+  };
+
+  private startInitialSync = () => {
+    this.initialSync.start();
+  };
+
+  private getValidPeers(): PeerInfo[] {
+    //TODO: filter and drop peers on different fork
+    return this.network.getPeers();
+  }
+
+  private handleNewPeer = (peer: PeerInfo) => {
+    //TODO: check if peer is useful
+    this.peers.push(peer);
+    if(this.waitingForPeer) {
+      this.waitingForPeer = false;
+      this.initialSync.start();
+    }
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private handleLostPeer = (peer: PeerInfo) => {
+    //TODO: remove peer from array
+  };
 }

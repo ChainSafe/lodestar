@@ -1,7 +1,7 @@
 import {bytes} from "@chainsafe/eth2.0-types";
 import {toBufferLE, toBigIntLE} from "bigint-buffer";
 /**
- * Return a byte array from a number or BN
+ * Return a byte array from a number or BigInt
  */
 export function intToBytes(value: bigint | number, length: number): bytes {
   if (typeof  value === "number" && length <= 6) { // value is a number and length is at most 6 bytes

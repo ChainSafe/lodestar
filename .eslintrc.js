@@ -6,6 +6,7 @@ module.exports = {
     browser: true,
     es6: true,
     node: true,
+    mocha: true
   },
   globals: {
     BigInt: true,
@@ -57,7 +58,6 @@ module.exports = {
       "optionalDependencies": false,
       "peerDependencies": false
     }],
-    "camelcase": "error",
     "func-call-spacing": "off",
     "max-len": ["error", {
       "code": 120

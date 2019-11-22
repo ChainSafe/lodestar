@@ -1,33 +1,22 @@
 import chai, {expect} from "chai";
-import chaiAsPromised from 'chai-as-promised';
+import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
-import {
-  Attestation,
-  AttesterSlashing,
-  BeaconBlock,
-  BeaconState, Deposit,
-  ProposerSlashing,
-  uint64,
-  VoluntaryExit
-} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-
-import * as dbKeys from "../../../../src/db/schema";
-import {Bucket, Key} from "../../../../src/db/schema";
 import {BeaconDb} from "../../../../src/db/api";
 import {LevelDbController} from "../../../../src/db/controller";
 import {BlockRepository, ChainRepository, StateRepository} from "../../../../src/db/api/beacon/repositories";
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";
+import {beforeEach, describe, it} from "mocha";
 
 chai.use(chaiAsPromised);
 
-describe('beacon db api', function() {
+describe("beacon db api", function() {
 
   const sandbox = sinon.createSandbox();
 
-  let db, controller;
+  let db: any, controller: any;
 
   beforeEach(function () {
     controller = sandbox.createStubInstance<LevelDbController>(LevelDbController);
@@ -37,49 +26,40 @@ describe('beacon db api', function() {
     db.chain = sandbox.createStubInstance(ChainRepository);
   });
 
-  it('should not set chain head roots - invalid block root', async function () {
-    const blockRoot = Buffer.alloc(32, 0);
-    const stateRoot = Buffer.alloc(32, 1);
+  it("should store chain head and update refs", async function () {
+    const block = generateEmptyBlock();
+    const state = generateState();
+    await db.storeChainHead(block, state);
+    expect(db.block.add.withArgs(block).calledOnce).to.be.true;
+    expect(db.state.set.withArgs(block.stateRoot, state).calledOnce).to.be.true;
+    expect(db.chain.setLatestStateRoot.withArgs(block.stateRoot).calledOnce).to.be.true;
+    expect(db.chain.setChainHeadSlot.withArgs(block.slot).calledOnce).to.be.true;
+  });
+
+  it("should not update chain head - missing block", async function () {
     db.block.get.resolves(null);
-    db.state.get.resolves("notNull");
-    await expect(db.setChainHeadRoots(blockRoot, stateRoot)).to.be.rejectedWith("unknown block root");
-    expect(db.block.get.withArgs(blockRoot).calledOnce).to.be.true;
-    expect(db.state.get.withArgs(stateRoot).calledOnce).to.be.true;
+    await expect(
+      db.updateChainHead(Buffer.alloc(32), Buffer.alloc(32))
+    ).to.be.eventually.rejectedWith("unknown block root");
   });
 
-  it('should not set chain head roots - invalid state root', async function () {
-    const blockRoot = Buffer.alloc(32, 0);
-    const stateRoot = Buffer.alloc(32, 1);
-    db.block.get.resolves("notNull");
+  it("should not update chain head - missing state", async function () {
+    db.block.get.resolves(generateEmptyBlock());
     db.state.get.resolves(null);
-    await expect(db.setChainHeadRoots(blockRoot, stateRoot)).to.be.rejectedWith("unknown state root");
-    expect(db.block.get.withArgs(blockRoot).calledOnce).to.be.true;
-    expect(db.state.get.withArgs(stateRoot).calledOnce).to.be.true;
+    await expect(
+      db.updateChainHead(Buffer.alloc(32), Buffer.alloc(32))
+    ).to.be.eventually.rejectedWith("unknown state root");
   });
 
-  it('should set chain head roots', async function () {
-    const blockRoot = Buffer.alloc(32, 0);
-    const stateRoot = Buffer.alloc(32, 1);
+  it("should update chain head", async function () {
     db.block.get.resolves(generateEmptyBlock());
     db.state.get.resolves(generateState());
-    await expect(db.setChainHeadRoots(blockRoot, stateRoot)).to.not.be.rejected;
-    expect(db.block.get.withArgs(blockRoot).calledOnce).to.be.true;
-    expect(db.state.get.withArgs(stateRoot).calledOnce).to.be.true;
+    await db.updateChainHead(Buffer.alloc(32), Buffer.alloc(32));
     expect(db.chain.setLatestStateRoot.calledOnce).to.be.true;
-    expect(controller.batchPut.calledOnce).to.be.true;
+    expect(db.chain.setChainHeadSlot.calledOnce).to.be.true;
   });
 
-  it('should set chain head roots - given state and block', async function () {
-    const blockRoot = Buffer.alloc(32, 0);
-    const stateRoot = Buffer.alloc(32, 1);
-    await expect(db.setChainHeadRoots(blockRoot, stateRoot, generateEmptyBlock(), generateState())).to.not.be.rejected;
-    expect(db.block.get.notCalled).to.be.true;
-    expect(db.state.get.notCalled).to.be.true;
-    expect(db.chain.setLatestStateRoot.calledOnce).to.be.true;
-    expect(controller.batchPut.calledOnce).to.be.true;
-  });
-
-  it('should get validator index', async function () {
+  it("should get validator index", async function () {
     const state = generateState({validators: [generateValidator()]});
     db.state.getLatest.resolves(state);
     const index = await db.getValidatorIndex(state.validators[0].pubkey);
@@ -87,7 +67,7 @@ describe('beacon db api', function() {
     expect(db.state.getLatest.calledOnce).to.be.true;
   });
 
-  it('should get validator index- not found', async function () {
+  it("should get validator index- not found", async function () {
     const state = generateState({validators: [generateValidator()]});
     db.state.getLatest.resolves(state);
     const index = await db.getValidatorIndex(Buffer.alloc(48, 123));

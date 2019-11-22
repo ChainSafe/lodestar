@@ -8,6 +8,9 @@ export enum Bucket {
   state, // hash -> BeaconState
   attestation, // hash -> Attestation
   block, // hash -> BeaconBlock
+  blockArchive, // hash -> BeaconBlock
+  blockSlotRefs,
+  blockRootRefs,
   invalidBlock, // bad block
   mainChain, // slot -> blockHash
   chainInfo, // Key -> number64 | stateHash | blockHash
@@ -21,6 +24,11 @@ export enum Bucket {
   // validator
   lastProposedBlock,
   proposedAttestations,
+}
+
+export enum BlockMapping {
+  slotToRoot,
+  rootToSlot
 }
 
 export enum Key {

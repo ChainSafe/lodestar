@@ -111,12 +111,8 @@ export class SyncReqResp implements ISyncReqResp {
   ): Promise<void> {
     try {
       const response: BeaconBlocksByRangeResponse = [];
-      for (let slot = request.startSlot; slot < request.startSlot + request.count; slot++) {
-        const block = await this.db.block.getBlockBySlot(slot);
-        if (block) {
-          response.push(block);
-        }
-      }
+      const blocks = await this.db.blockArchive.getAllBetween(request.startSlot - 1, request.startSlot + request.count);
+      response.push(...blocks);
       this.network.reqResp.sendResponse(id, null, response);
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);

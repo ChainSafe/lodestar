@@ -17,7 +17,7 @@ import {processEpoch} from "./epoch";
 export function processSlots(
   config: IBeaconConfig,
   state: BeaconState,
-  slot: Slot
+  slot: Slot,
 ): void{
   assert(state.slot <= slot);
 

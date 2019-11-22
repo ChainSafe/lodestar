@@ -1,7 +1,7 @@
 import {IConfigurationModule} from "../util/config";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface ISyncOptions {
+  blockPerChunk: number;
 }
 
 
@@ -10,6 +10,8 @@ export const SyncOptions: IConfigurationModule = {
   fields: []
 };
 
-const config: ISyncOptions = {};
+const config: ISyncOptions = {
+  blockPerChunk: 20
+};
 
 export default config;

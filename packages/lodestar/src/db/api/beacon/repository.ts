@@ -40,7 +40,7 @@ export abstract class Repository<T> {
     return await this.get(id) !== null;
   }
 
-  public async setUnderRoot(value: T): Promise<void> {
+  public async add(value: T): Promise<void> {
     await this.set(hashTreeRoot(value, this.type), value);
   }
 
