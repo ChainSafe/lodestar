@@ -648,13 +648,6 @@
     lodash "^4.17.13"
     to-fast-properties "^2.0.0"
 
-"@chainsafe/as-sha256@^0.1.3":
-  version "0.1.3"
-  resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-0.1.3.tgz#3aca29ea85d7394d644abe8b4ad112c8f31b245c"
-  integrity sha512-fBfBbkArATbgy/lQZQmtg7dETWHGM6JevXEh6yWJyC7bhwjxwjCdGsixKBPAKVhBiic3vCHFDGlKAdx1/Q1+tA==
-  dependencies:
-    assemblyscript "https://github.com/AssemblyScript/assemblyscript.git#5b510571f6ebfc5530d85412005059e4cf961a97"
-
 "@chainsafe/bit-utils@0.1.4", "@chainsafe/bit-utils@^0.1.3", "@chainsafe/bit-utils@^0.1.4":
   version "0.1.4"
   resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.4.tgz#c7fcc20f8ea916b7767b82ce6fad389db675bd4e"
@@ -672,20 +665,6 @@
   dependencies:
     "@chainsafe/eth2.0-params" "0.1.0"
     "@chainsafe/ssz" "0.5.1"
-
-"@chainsafe/eth2.0-utils@^0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/eth2.0-utils/-/eth2.0-utils-0.0.1.tgz#ea9429578e69c6d2e1be2279dbe346e734e0a76b"
-  integrity sha512-UJiPbLuarXrBLnEOQD/gdS2F0NEsTb20UY+Sgplk/8FZ/99xPuGG0vYI5z0kveDkK4e/vhwi6h4mlcRJXtxGOg==
-  dependencies:
-    "@chainsafe/as-sha256" "^0.1.3"
-    "@chainsafe/bit-utils" "0.1.4"
-    "@chainsafe/eth2.0-types" "^0.1.1"
-    "@chainsafe/ssz-type-schema" "^0.0.1"
-    bn.js "^5.0.0"
-    camelcase "^5.3.1"
-    js-yaml "^3.13.1"
-    snake-case "^2.1.0"
 
 "@chainsafe/milagro-crypto-js@0.1.3":
   version "0.1.3"
@@ -1750,11 +1729,6 @@
   version "0.11.1"
   resolved "https://registry.yarnpkg.com/@polkadot/wasm-crypto/-/wasm-crypto-0.11.1.tgz#5f5544659a81b5706e757577f880001de21cd298"
 
-"@protobufjs/utf8@^1.1.0":
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.1.0.tgz#a777360b5b39a1a2e5106f8e858f2fd2d060c570"
-  integrity sha1-p3c2C1s5oaLlEG+OhY8v0tBgxXA=
-
 "@sinonjs/commons@^1", "@sinonjs/commons@^1.0.2", "@sinonjs/commons@^1.4.0":
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/@sinonjs/commons/-/commons-1.4.0.tgz#7b3ec2d96af481d7a0321252e7b1c94724ec5a78"
@@ -2510,17 +2484,6 @@ asn1@~0.2.3:
   dependencies:
     safer-buffer "~2.1.0"
 
-"assemblyscript@git+https://github.com/AssemblyScript/assemblyscript.git#5b510571f6ebfc5530d85412005059e4cf961a97":
-  version "0.7.0"
-  resolved "git+https://github.com/AssemblyScript/assemblyscript.git#5b510571f6ebfc5530d85412005059e4cf961a97"
-  dependencies:
-    "@protobufjs/utf8" "^1.1.0"
-    binaryen "89.0.0-nightly.20190914"
-    glob "^7.1.4"
-    long "^4.0.0"
-    opencollective-postinstall "^2.0.0"
-    source-map-support "^0.5.13"
-
 assert-plus@1.0.0, assert-plus@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/assert-plus/-/assert-plus-1.0.0.tgz#f12e0f3c5d77b0b1cdd9146942e4e96c1e4dd525"
@@ -3240,11 +3203,6 @@ bignumber.js@^9.0.0:
 binary-extensions@^1.0.0:
   version "1.13.1"
   resolved "https://registry.yarnpkg.com/binary-extensions/-/binary-extensions-1.13.1.tgz#598afe54755b2868a5330d2aff9d4ebb53209b65"
-
-binaryen@89.0.0-nightly.20190914:
-  version "89.0.0-nightly.20190914"
-  resolved "https://registry.yarnpkg.com/binaryen/-/binaryen-89.0.0-nightly.20190914.tgz#5878787f140123fc564fb94011f4d2d2db2fe95e"
-  integrity sha512-pfGX5IwPguli8IPuPjjcCYriZ2CzoEuk0XE70g6bmibZfieDUoK7miEq0FlPLNixL+n8vvyjRSPK5NtMuCcqNg==
 
 bindings@^1.2.1, bindings@^1.3.0, bindings@^1.5.0:
   version "1.5.0"
@@ -7831,11 +7789,6 @@ lolex@^4.2.0:
   resolved "https://registry.yarnpkg.com/lolex/-/lolex-4.2.0.tgz#ddbd7f6213ca1ea5826901ab1222b65d714b3cd7"
   integrity sha512-gKO5uExCXvSm6zbF562EvM+rd1kQDnB9AZBbiQVzf1ZmdDpxUSvpnAaVOP83N/31mRK8Ml8/VE8DMvsAZQ+7wg==
 
-long@^4.0.0:
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/long/-/long-4.0.0.tgz#9a7b71cfb7d361a194ea555241c92f7468d5bf28"
-  integrity sha512-XsP+KhQif4bjX1kbuSiySJFNAehNxgLb6hPRGJ9QsUr8ajHkuXGdrHmFUTUUXhDwVX2R5bY4JNZEwbUiMhV+MA==
-
 looper@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/looper/-/looper-2.0.0.tgz#66cd0c774af3d4fedac53794f742db56da8f09ec"
@@ -10827,14 +10780,6 @@ source-map-support@^0.4.15:
   resolved "https://registry.yarnpkg.com/source-map-support/-/source-map-support-0.4.18.tgz#0286a6de8be42641338594e97ccea75f0a2c585f"
   dependencies:
     source-map "^0.5.6"
-
-source-map-support@^0.5.13:
-  version "0.5.16"
-  resolved "https://registry.yarnpkg.com/source-map-support/-/source-map-support-0.5.16.tgz#0ae069e7fe3ba7538c64c98515e35339eac5a042"
-  integrity sha512-efyLRJDr68D9hBBNIPWFjhpFzURh+KJykQwvMyW5UiZzYwoF6l4YMMDIJJEyFWxWCqfyxLzz6tSfUFR+kXXsVQ==
-  dependencies:
-    buffer-from "^1.0.0"
-    source-map "^0.6.0"
 
 source-map-support@^0.5.6, source-map-support@^0.5.9:
   version "0.5.12"
