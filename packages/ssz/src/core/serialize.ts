@@ -106,13 +106,13 @@ export function serialize(value: any, type: AnySSZType): Buffer {
 /** @ignore */
 function _serializeUint(value: Uint, type: UintType, output: Buffer, start: number): number {
   const offset = start + type.byteLength;
-  let bnValue: bigint;
+  let biValue: bigint;
   if (type.byteLength > 6 && type.useNumber && value === Infinity) {
-    bnValue = BigInt("0x" + Buffer.alloc(type.byteLength, 255).toString("hex"));
+    biValue = BigInt("0x" + Buffer.alloc(type.byteLength, 255).toString("hex"));
   } else {
-    bnValue = BigInt(value);
+    biValue = BigInt(value);
   }
-  toBufferLE(bnValue, type.byteLength)
+  toBufferLE(biValue, type.byteLength)
     .copy(output, start);
   return offset;
 }

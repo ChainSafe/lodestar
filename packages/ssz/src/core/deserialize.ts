@@ -40,7 +40,7 @@ import {toBigIntLE} from "bigint-buffer";
  * );
  *
  * // deserialize a BigInt
- * const bn: bigint = deserialize(
+ * const bi: bigint = deserialize(
  *   data,
  *   "uint64" // "uintN", N == length in bits, N >= 64
  * );
@@ -152,8 +152,8 @@ function _deserializeUint(data: Buffer, type: UintType, start: number): Uint {
   if (type.byteLength > 6 && type.useNumber && uintData.equals(Buffer.alloc(type.byteLength, 255))) {
     return Infinity;
   } else {
-    const bn = toBigIntLE(uintData);
-    return (type.useNumber || type.byteLength <= 6) ? Number(bn) : bn;
+    const bi = toBigIntLE(uintData);
+    return (type.useNumber || type.byteLength <= 6) ? Number(bi) : bi;
   }
 }
 
