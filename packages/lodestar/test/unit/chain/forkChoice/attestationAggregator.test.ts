@@ -7,7 +7,7 @@ import {
 
 
 describe("AttestationAggregator", () => {
-  const blockSlots: any = {
+  const blockSlots: Record<string, number> = {
     "a": 1,
     "b": 1,
     "c": 1,
