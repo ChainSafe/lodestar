@@ -12,13 +12,12 @@ import Gossipsub from "libp2p-gossipsub";
 import {Attestation, BeaconBlock, Shard} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {SHARD_SUBNET_COUNT, BLOCK_TOPIC, ATTESTATION_TOPIC} from "../constants";
+import {ATTESTATION_TOPIC, BLOCK_TOPIC, SHARD_SUBNET_COUNT} from "../constants";
 import {ILogger} from "../logger";
 
-import {shardAttestationTopic, shardSubnetAttestationTopic, blockTopic, attestationTopic} from "./util";
+import {attestationTopic, blockTopic, shardAttestationTopic, shardSubnetAttestationTopic} from "./util";
 import {INetworkOptions} from "./options";
 import {GossipEventEmitter, IGossip, IGossipSub,} from "./interface";
-import PeerInfo from "peer-info";
 
 interface IGossipModules {
   config: IBeaconConfig;
