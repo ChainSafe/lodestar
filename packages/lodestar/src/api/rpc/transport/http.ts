@@ -3,8 +3,7 @@
  */
 
 import {LikeSocket} from "noice-json-rpc";
-//@ts-ignore
-import promisify from "promisify-es6";
+import {promisify} from "es6-promisify";
 import {ILogger} from "../../../logger";
 import http from "http";
 import {IRpcServer} from "./index";

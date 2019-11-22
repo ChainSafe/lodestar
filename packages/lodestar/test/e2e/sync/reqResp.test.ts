@@ -28,9 +28,9 @@ const opts: INetworkOptions = {
 };
 
 describe("[sync] rpc", function () {
-  this.timeout(20000)
+  this.timeout(20000);
   const sandbox = sinon.createSandbox();
-  let logger = new WinstonLogger();
+  const logger = new WinstonLogger();
   logger.silent = true;
   const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false}, {logger});
 

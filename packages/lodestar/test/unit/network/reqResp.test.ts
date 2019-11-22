@@ -1,6 +1,5 @@
 import {assert} from "chai";
-import BN from "bn.js";
-import promisify from "promisify-es6";
+import {promisify} from "es6-promisify";
 
 import {Hello, ResponseBody} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
@@ -12,6 +11,7 @@ import {NodejsNode} from "../../../src/network/nodejs";
 
 import {Method} from "../../../src/constants";
 import {ILogger, WinstonLogger} from "../../../src/logger";
+import PeerInfo from "peer-info";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -69,7 +69,7 @@ describe("[network] rpc", () => {
   // });
   it("can send/receive messages from connected peers", async function () {
     this.timeout(6000);
-    await promisify(nodeA.dial.bind(nodeA))(nodeB.peerInfo);
+    await promisify<void, PeerInfo>(nodeA.dial.bind(nodeA))(nodeB.peerInfo);
     try {
       await new Promise((resolve, reject) => {
         const t = setTimeout(reject, 2000);

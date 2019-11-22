@@ -3,9 +3,7 @@
  */
 import http from "http";
 import url from "url";
-//@ts-ignore
-import promisify from "promisify-es6";
-
+import {promisify} from "es6-promisify";
 import {IMetrics, IMetricsServer} from "../interface";
 import {IMetricsOptions} from "../options";
 import {ILogger} from "../../logger";
@@ -26,7 +24,8 @@ export class HttpMetricsServer implements IMetricsServer {
   public async start(): Promise<void> {
     if (this.opts.enabled) {
       this.logger.info(`Starting metrics HTTP server on port ${this.opts.serverPort}`);
-      await promisify(this.http.listen.bind(this.http))(this.opts.serverPort);
+      // @ts-ignore
+      await promisify<void, number>(this.http.listen.bind(this.http))(this.opts.serverPort);
     }
   }
   public async stop(): Promise<void> {

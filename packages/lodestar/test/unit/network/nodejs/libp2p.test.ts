@@ -1,7 +1,7 @@
 import {assert} from "chai";
+import {promisify} from "es6-promisify";
 // @ts-ignore
-import promisify from "promisify-es6";
-
+import PeerInfo from "peer-info";
 import {NodejsNode} from "../../../../src/network/nodejs";
 import {createNode} from "../util";
 
@@ -27,7 +27,7 @@ describe("[network] nodejs libp2p", () => {
     ]);
 
     // connect
-    await promisify(nodeA.dial.bind(nodeA))(nodeB.peerInfo);
+    await promisify<void, PeerInfo>(nodeA.dial.bind(nodeA))(nodeB.peerInfo);
     await new Promise((resolve, reject) => {
       const t = setTimeout(reject, 1000);
       nodeB.once("peer:connect", () => {
@@ -44,7 +44,7 @@ describe("[network] nodejs libp2p", () => {
     // disconnect
     const p = new Promise(resolve => nodeB.once("peer:disconnect", resolve));
     await new Promise(resolve => setTimeout(resolve, 100));
-    await promisify(nodeA.hangUp.bind(nodeA))(nodeB.peerInfo);
+    await promisify<void, PeerInfo>(nodeA.hangUp.bind(nodeA))(nodeB.peerInfo);
     await p
 
     // test disconnection
