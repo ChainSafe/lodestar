@@ -50,7 +50,7 @@
     "@chainsafe/eth2.0-config": "^0.1.1",
     "@chainsafe/eth2.0-state-transition": "^0.1.0",
     "@chainsafe/eth2.0-types": "^0.1.1",
-    "@chainsafe/eth2.0-utils": "^0.0.1",
+    "@chainsafe/eth2.0-utils": "^0.0.2",
     "@chainsafe/lodestar-validator": "^0.1.0",
     "@chainsafe/ssz": "0.5.2",
     "@iarna/toml": "^2.2.3",
@@ -97,7 +97,6 @@
     "lodestar": "./bin/lodestar"
   },
   "devDependencies": {
-    "@babel/generator": "^7.7.2",
     "@chainsafe/benchmark-utils": "^0.1.0",
     "@chainsafe/eth2.0-spec-test-util": "0.4.1",
     "@polkadot/ts": "^0.1.57",
