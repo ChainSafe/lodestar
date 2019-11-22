@@ -65,6 +65,7 @@ module.exports = {
     "new-parens": "error",
     "no-caller": "error",
     "no-bitwise": "off",
+    "no-cond-assign": "error",
     "no-consecutive-blank-lines": 0,
     "no-console": "warn",
     "no-var": "error",
