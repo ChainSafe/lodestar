@@ -7,7 +7,7 @@ import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 import {toBufferLE, toBigIntLE} from "bigint-buffer";
 
 /**
- * Return a byte array from a number or BN
+ * Return a byte array from a number or BigInt
  */
 export function intToBytes(value: number | bigint, length: number): bytes {
   if (length <= 6 && typeof value === "number") { // value is a number and length is at most 6 bytes

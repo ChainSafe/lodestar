@@ -39,9 +39,8 @@ import  {toBufferLE} from "bigint-buffer";
  *   "uint64" // "uintN", N == length in bits
  * );
  *
- * // serialize a BN bignumber
- * import BN from "bn.js";
- * buf = serialize(new BN("1000000000000000000"), "uint64");
+ * // serialize a BigInt
+ * buf = serialize(BigInt("1000000000000000000"), "uint64");
  *
  * // serialize a boolean
  * buf = serialize(true, "bool");

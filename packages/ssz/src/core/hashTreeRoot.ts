@@ -32,9 +32,8 @@ import {chunkCount, chunkify, pack} from "../util/chunk";
  *   "uint64" // "uintN", N == length in bits
  * );
  *
- * // merkleize a BN bignumber
- * import BN from "bn.js";
- * buf = hashTreeRoot(new BN("1000000000000000000"), "uint64");
+ * // merkleize a BigInt
+ * buf = hashTreeRoot(BigInt("1000000000000000000"), "uint64");
  *
  * // merkleize a boolean
  * buf = hashTreeRoot(true, "bool");

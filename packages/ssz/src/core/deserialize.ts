@@ -39,9 +39,8 @@ import {toBigIntLE} from "bigint-buffer";
  *   "uint32" // "uintN", N == length in bits, N <= 32
  * );
  *
- * // deserialize a BN bignumber
- * import BN from "bn.js";
- * const bn: BN = deserialize(
+ * // deserialize a BigInt
+ * const bn: bigint = deserialize(
  *   data,
  *   "uint64" // "uintN", N == length in bits, N >= 64
  * );
