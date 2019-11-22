@@ -104,7 +104,7 @@ export class WinstonLogger implements ILogger {
     return Object.assign(logger, {
       winston,
       _level: options.level,
-      _silent: false,
+      _silent: this._silent,
 
     });
   }
