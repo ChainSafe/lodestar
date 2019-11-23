@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
 import assert from "assert";
-import BN from "bn.js";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 
 import {
@@ -47,12 +46,12 @@ export function assertValidValue(value: any, type: AnySSZType): void {
 export function _assertValidValue(value: any, type: FullSSZType): void {
   switch (type.type) {
     case Type.uint:
-      assert(BN.isBN(value) || value === Number(value), "Invalid uint: not a uint");
+      assert( typeof value === "bigint" || typeof value === "number", "Invalid uint: not a uint");
       if (value === Infinity) {
         break;
       }
-      assert((new BN(value)).gten(0), "Invalid uint: value < 0");
-      assert((new BN(value)).lt((new BN(2)).pow(new BN(type.byteLength * 8))), "Invalid uint: not in range");
+      assert(value >= 0, "Invalid uint: value < 0");
+      assert(value < BigInt(2)**BigInt(type.byteLength * 8), "Invalid uint: not in range");
       break;
     case Type.bool:
       assert(value === true || value === false, "Invalid boolean: not a boolean");

@@ -121,11 +121,11 @@ export function getWinningCrosslinkAndAttestingIndices(
       ),
     }))
     .reduce((a, b) => {
-      if (b.balance.gt(a.balance)) {
+      if (b.balance > a.balance) {
         return b;
-      } else if (b.balance.eq(a.balance)) {
+      } else if (b.balance === a.balance) {
         if ((deserialize(b.crosslink.dataRoot, config.types.uint256) as uint256)
-          .gt(deserialize(a.crosslink.dataRoot, config.types.uint256) as uint256)) {
+          > (deserialize(a.crosslink.dataRoot, config.types.uint256) as uint256)) {
           return b;
         }
       }

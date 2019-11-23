@@ -1,8 +1,7 @@
 /**
  * @module db/schema
  */
-
-import BN from "bn.js";
+import {intToBytes} from "@chainsafe/eth2.0-utils";
 
 // Buckets are separate database namespaces
 export enum Bucket {
@@ -48,14 +47,14 @@ export enum Key {
 /**
  * Prepend a bucket to a key
  */
-export function encodeKey(bucket: Bucket, key: Buffer | string | number | BN, useBuffer = true): Buffer | string {
+export function encodeKey(bucket: Bucket, key: Buffer | string | number | bigint, useBuffer = true): Buffer | string {
   let buf;
   if (typeof key === "string") {
     buf = Buffer.alloc(key.length + 1);
     buf.write(key, 1);
-  } else if (typeof key === "number" || BN.isBN(key)) {
+  } else if (typeof key === "number" || typeof key === "bigint") {
     buf = Buffer.alloc(9);
-    (new BN(key)).toArrayLike(Buffer, "le", 8).copy(buf, 1);
+    intToBytes(BigInt(key), 8).copy(buf, 1);
   } else {
     buf = Buffer.alloc(key.length + 1);
     key.copy(buf, 1);

@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import sinon from "sinon";
 import mockery from "mockery";
-import BN from "bn.js";
 import {expect} from "chai";
 import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as utils from "../../../../../src/util";
-import {bnMin, intToBytes} from "@chainsafe/eth2.0-utils";
+import {bigIntMin, intToBytes} from "@chainsafe/eth2.0-utils";
 import {generateState} from "../../../../utils/state";
 import {generateDeposit} from "../../../../utils/deposit";
 import {generateValidator} from "../../../../utils/validator";
@@ -22,7 +21,7 @@ describe("process block - deposits", function () {
   before(function () {
     mockery.registerMock('@chainsafe/eth2.0-utils', {
       "verifyMerkleBranch": verifyMerkleBranchStub,
-      "bnMin": bnMin,
+      "bigIntMin": bigIntMin,
       "intToBytes": intToBytes
     });
     mockery.registerMock('@chainsafe/bls', {
@@ -85,7 +84,7 @@ describe("process block - deposits", function () {
     const state = generateState({eth1DepositIndex: 3});
     verifyMerkleBranchStub.returns(true);
     const deposit = generateDeposit();
-    deposit.data.amount = new BN(config.params.MAX_EFFECTIVE_BALANCE);
+    deposit.data.amount = config.params.MAX_EFFECTIVE_BALANCE;
     blsStub.returns(true);
     try {
       processDeposit(config, state, deposit);
@@ -104,7 +103,7 @@ describe("process block - deposits", function () {
     const deposit = generateDeposit();
     const validator = generateValidator();
     state.validators.push(validator);
-    state.balances.push(new BN(0));
+    state.balances.push(0n);
     deposit.data.pubkey = validator.pubkey;
     try {
       processDeposit(config, state, deposit);

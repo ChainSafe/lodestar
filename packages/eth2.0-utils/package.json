@@ -46,8 +46,8 @@
     "@chainsafe/bit-utils": "0.1.4",
     "@chainsafe/eth2.0-types": "^0.1.1",
     "@chainsafe/ssz-type-schema": "^0.0.1",
+    "bigint-buffer": "^1.1.5",
     "bcrypto": "^4.2.6",
-    "bn.js": "^5.0.0",
     "camelcase": "^5.3.1",
     "js-yaml": "^3.13.1",
     "snake-case": "^2.1.0"

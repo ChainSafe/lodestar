@@ -1,5 +1,4 @@
 import { expect } from "chai";
-import BN from "bn.js";
 import { clone, hashTreeRoot } from "@chainsafe/ssz";
 import sinon from "sinon";
 import { Keypair } from "@chainsafe/bls/lib/keypair";
@@ -65,7 +64,7 @@ describe("produce block", function () {
       validator.effectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
       return validator;
     });
-    const balances = Array.from({ length: validators.length }, () => new BN("10000000"));
+    const balances = Array.from({length: validators.length}, () => BigInt("10000000"));
     const parentBlock = generateEmptyBlock();
     //if zero hash it get changed
     parentBlock.stateRoot = Buffer.alloc(32, 1);

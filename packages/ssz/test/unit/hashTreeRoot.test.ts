@@ -1,6 +1,5 @@
 import {assert} from "chai";
 import {describe, it} from "mocha";
-import BN from "bn.js";
 import {hashTreeRoot,} from "../../src";
 import {AnySSZType, SerializableValue, Type,} from "@chainsafe/ssz-type-schema";
 
@@ -33,12 +32,12 @@ describe("hashTreeRoot", () => {
     {value: 2**52-1, type: "uint64", expected: ""},
     {value: 2**32, type: "number64", expected: hashTreeRoot(2**32, "uint64").toString("hex")},
     {value: 2**52-1, type: "number64", expected: hashTreeRoot(2**52-1, "uint64").toString("hex")},
-    {value: new BN("01", 16), type: "uint64", expected: ""},
-    {value: new BN("1000000000000000", 16), type: "uint64", expected: ""},
-    {value: new BN("ffffffffffffffff", 16), type: "uint64", expected: ""},
-    {value: new BN("ffffffffffffffffffffffffffffffff", 16), type: "uint128", expected: ""},
+    {value: 0x1n , type: "uint64", expected: ""},
+    {value: 0x1000000000000000n, type: "uint64", expected: ""},
+    {value: 0xffffffffffffffffn, type: "uint64", expected: ""},
+    {value: 0xffffffffffffffffffffffffffffffffn, type: "uint128", expected: ""},
     {
-      value: new BN("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
+      value: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn
       , type: "uint256", expected: ""
     },
     {value: Buffer.from("deadbeef", "hex"), type: "bytes4", expected: ""},
@@ -81,12 +80,12 @@ describe("hashTreeRoot", () => {
   });
 
   it("should be able to hash inner object as list of basic object", () => {
-    const accountBalances: {balances: BN[]} = {
+    const accountBalances: {balances: bigint[]} = {
       balances: []
     };
     const count = 2;
     for (let i = 0; i < count; i++) {
-      accountBalances.balances.push(new BN("32000000000"));
+      accountBalances.balances.push(0x32000000000n);
     }
     const accountBalancesType: AnySSZType = {
       fields: [["balances", {elementType: "uint64", maxLength: count}]]
@@ -103,7 +102,7 @@ describe("hashTreeRoot", () => {
     const fork = {
       previousVersion,
       curVersion,
-      epoch: new BN("11971467576204192310")
+      epoch: 11971467576204192310n
     };
     const forkType: AnySSZType = {
       fields: [

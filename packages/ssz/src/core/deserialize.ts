@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
 import assert from "assert";
-import BN from "bn.js";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 
 import {
@@ -25,6 +24,7 @@ import {
 } from "@chainsafe/ssz-type-schema";
 import {BYTES_PER_LENGTH_PREFIX} from "../util/constants";
 import {fixedSize} from "./size";
+import {toBigIntLE} from "bigint-buffer";
 
 
 /**
@@ -39,9 +39,8 @@ import {fixedSize} from "./size";
  *   "uint32" // "uintN", N == length in bits, N <= 32
  * );
  *
- * // deserialize a BN bignumber
- * import BN from "bn.js";
- * const bn: BN = deserialize(
+ * // deserialize a BigInt
+ * const bi: bigint = deserialize(
  *   data,
  *   "uint64" // "uintN", N == length in bits, N >= 64
  * );
@@ -115,6 +114,7 @@ export function deserialize(data: Buffer, type: AnySSZType): any {
     assert(fixedSize(_type) === data.length, "Incorrect data length");
   }
   return _deserialize(data, _type, 0, data.length);
+
 }
 
 /**
@@ -152,8 +152,8 @@ function _deserializeUint(data: Buffer, type: UintType, start: number): Uint {
   if (type.byteLength > 6 && type.useNumber && uintData.equals(Buffer.alloc(type.byteLength, 255))) {
     return Infinity;
   } else {
-    const bn = new BN(uintData, 16, "le");
-    return (type.useNumber || type.byteLength <= 6) ? bn.toNumber() : bn;
+    const bi = toBigIntLE(uintData);
+    return (type.useNumber || type.byteLength <= 6) ? Number(bi) : bi;
   }
 }
 

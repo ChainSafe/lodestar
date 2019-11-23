@@ -5,7 +5,6 @@
 import bls from "@chainsafe/bls";
 import fs from "fs";
 
-import {blsPrivateKeyToHex} from "../util/bytes";
 import {decryptKey, encryptKey} from "../util/encrypt";
 import {ensureDirectoryExistence} from "../util/file";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
@@ -38,7 +37,7 @@ export default class Keystore {
     const keyPair = bls.generateKeyPair();
 
     const keys: IKeystoreObject = {
-      encryptedPrivateKey:encryptKey(blsPrivateKeyToHex(keyPair.privateKey), password),
+      encryptedPrivateKey:encryptKey(keyPair.privateKey.toHexString(), password),
       publicKey: keyPair.publicKey.toHexString(),
     };
 

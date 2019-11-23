@@ -1,6 +1,5 @@
 import {assert} from "chai";
 import {describe, it} from "mocha";
-import BN from "bn.js";
 
 import {SerializableValue} from "@chainsafe/ssz-type-schema";
 
@@ -33,15 +32,15 @@ describe("serialize", () => {
     {value: 2**32, type: "number64", expected: "0000000001000000"},
     {value: 2**52-1, type: "number64", expected: "ffffffffffff0f00"},
     {value: Infinity, type: "number64", expected: "ffffffffffffffff"},
-    {value: new BN("01", 16), type: "uint64", expected: "0100000000000000"},
-    {value: new BN("1000000000000000", 16), type: "uint64", expected: "0000000000000010"},
-    {value: new BN("ffffffffffffffff", 16), type: "uint64", expected: "ffffffffffffffff"},
+    {value: 0x01n, type: "uint64", expected: "0100000000000000"},
+    {value: 0x1000000000000000n, type: "uint64", expected: "0000000000000010"},
+    {value: 0xffffffffffffffffn, type: "uint64", expected: "ffffffffffffffff"},
     {
-      value: new BN("ffffffffffffffffffffffffffffffff", 16),
+      value: 0xffffffffffffffffffffffffffffffffn,
       type: "uint128", expected: "ffffffffffffffffffffffffffffffff"
     },
     {
-      value: new BN("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16),
+      value: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn,
       type: "uint256", expected: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
     },
     {value: Buffer.from("deadbeef", "hex"), type: "bytes4", expected: "deadbeef"},

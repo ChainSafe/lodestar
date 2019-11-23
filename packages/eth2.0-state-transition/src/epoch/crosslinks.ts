@@ -28,8 +28,8 @@ export function processCrosslinks(config: IBeaconConfig, state: BeaconState): vo
       const crosslinkCommittee = getCrosslinkCommittee(config, state, epoch, shard);
       const [winningCrosslink, attestingIndices] =
         getWinningCrosslinkAndAttestingIndices(config, state, epoch, shard);
-      if (getTotalBalance(state, attestingIndices).muln(3)
-        .gte(getTotalBalance(state, crosslinkCommittee).muln(2))) {
+      if (getTotalBalance(state, attestingIndices) * 3n
+         >= (getTotalBalance(state, crosslinkCommittee) * 2n)) {
         state.currentCrosslinks[shard] = winningCrosslink;
       }
     }

@@ -2,7 +2,6 @@
 
 import snakeCase from "snake-case";
 import {toHex} from "../bytes";
-import BN from "bn.js";
 import {AnySSZType, FullSSZType, parseType, Type} from "@chainsafe/ssz-type-schema";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 import {objectToCamelCase} from "../misc";
@@ -25,7 +24,7 @@ function serializeToJson(value: any): any {
   if (Buffer.isBuffer(value)) {
     return toHex(value);
   }
-  if (BN.isBN(value)) {
+  if (typeof value === "bigint") {
     return value.toString();
   }
   if (BitVector.isBitVector(value)) {
@@ -51,14 +50,13 @@ export function fromJson<T>(value: object, type: AnySSZType): T {
 
 function expandJsonValue(value: any, type: FullSSZType): any {
   switch (type.type) {
-    case Type.uint: {
-      const bn = new BN(value);
-      try {
-        return (type.useNumber || type.byteLength <= 6) ? bn.toNumber() : bn;
-      } catch (e) {
-        return Infinity;
+    case Type.uint:
+      if (type.byteLength <= 6 || type.useNumber) {
+        const n = Number(value);
+        return Number.isSafeInteger(n) ? n : Infinity;
+      } else {
+        return BigInt(value);
       }
-    }
     case Type.bool:
       return value;
     case Type.bitList:

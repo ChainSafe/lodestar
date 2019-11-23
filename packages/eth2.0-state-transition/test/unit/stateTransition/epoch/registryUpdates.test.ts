@@ -1,5 +1,4 @@
 import sinon from "sinon";
-import BN from "bn.js";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
@@ -32,10 +31,10 @@ describe('process epoch - slashings', function () {
   it('should make required registry updates', function () {
     getCurrentEpochStub.returns(1);
     const validatorEligble = generateValidator();
-    validatorEligble.effectiveBalance = new BN(config.params.MAX_EFFECTIVE_BALANCE);
+    validatorEligble.effectiveBalance = BigInt(config.params.MAX_EFFECTIVE_BALANCE);
 
     const validatorToExit = generateValidator({activation: 1});
-    validatorToExit.effectiveBalance = new BN("1");
+    validatorToExit.effectiveBalance = 1n;
     isActiveValidatorStub.withArgs(sinon.match.any, sinon.match.any).returns(true);
     const state = generateState({validators: [validatorEligble, validatorToExit]});
     try {

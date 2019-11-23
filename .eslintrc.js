@@ -8,6 +8,9 @@ module.exports = {
     node: true,
     mocha: true
   },
+  globals: {
+    BigInt: true,
+  },
   parser: "@typescript-eslint/parser",
   parserOptions: {
     ecmaVersion: 10,
@@ -62,12 +65,13 @@ module.exports = {
     "new-parens": "error",
     "no-caller": "error",
     "no-bitwise": "off",
-    "no-conditional-assignment": true,
-    "no-consecutive-blank-lines": false,
+    "no-cond-assign": "error",
+    "no-consecutive-blank-lines": 0,
     "no-console": "warn",
     "no-var": "error",
     "object-curly-spacing": ["error", "never"],
-    "object-literal-sort-keys": false,
+    "object-literal-sort-keys": 0,
+    "no-prototype-builtins": 0,
     "prefer-const": "error",
     "quotes": ["error", "double"],
     "semi": "off"
