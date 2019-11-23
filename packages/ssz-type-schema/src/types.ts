@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/interface-name-prefix */
+/* eslint-disable @typescript-eslint/interface-name-prefix, @typescript-eslint/no-explicit-any */
 
 // Serializable values
 
@@ -17,19 +17,19 @@ export type SerializableValue = Uint | Bool | Bits | Bytes | SerializableArray |
 // Simple types
 // These types are supplied to provide a convenient interface with which to specify types
 
-export type SimplePrimitiveType = string;
+export type SimplePrimitiveType<T=any> = string;
 
-export interface SimpleListType {
+export interface SimpleListType<T=any> {
   elementType: AnySSZType;
   maxLength: number;
 }
 
-export interface SimpleVectorType {
+export interface SimpleVectorType<T=any> {
   elementType: AnySSZType;
   length: number;
 }
 
-export interface SimpleContainerType {
+export interface SimpleContainerType<T=any> {
   fields: [string, AnySSZType][];
 }
 
@@ -39,7 +39,8 @@ export interface SimpleContainerType {
  * In most cases, types are specified by users in simple form.
  * They will be parsed to a [[FullSSZType]] before any processing.
  */
-export type SimpleSSZType = SimplePrimitiveType | SimpleListType | SimpleVectorType | SimpleContainerType;
+export type SimpleSSZType<T=any> =
+  SimplePrimitiveType<T> | SimpleListType<T> | SimpleVectorType<T> | SimpleContainerType<T>;
 
 // Full types
 // These types are used internally
@@ -56,55 +57,55 @@ export enum Type {
   container,
 }
 
-export interface UintType {
+export interface UintType<T=any> {
   type: Type.uint;
   byteLength: number;
   useNumber: boolean;
 }
 
-export interface BoolType {
+export interface BoolType<T=any> {
   type: Type.bool;
 }
 
-export interface BitListType {
+export interface BitListType<T=any> {
   type: Type.bitList;
   maxLength: number;
 }
 
-export interface BitVectorType {
+export interface BitVectorType<T=any> {
   type: Type.bitVector;
   length: number;
 }
 
-export type BitsType = BitListType | BitVectorType;
+export type BitsType<T=any> = BitListType<T> | BitVectorType<T>;
 
-export interface ByteListType {
+export interface ByteListType<T=any> {
   type: Type.byteList;
   maxLength: number;
 }
 
-export interface ByteVectorType {
+export interface ByteVectorType<T=any> {
   type: Type.byteVector;
   length: number;
 }
 
-export type BytesType = ByteListType | ByteVectorType;
+export type BytesType<T=any> = ByteListType<T> | ByteVectorType<T>;
 
-export interface ListType {
+export interface ListType<T=any> {
   type: Type.list;
   elementType: FullSSZType;
   maxLength: number;
 }
 
-export interface VectorType {
+export interface VectorType<T=any> {
   type: Type.vector;
   elementType: FullSSZType;
   length: number;
 }
 
-export type ArrayType = ListType | VectorType;
+export type ArrayType<T=any> = ListType<T> | VectorType<T>;
 
-export interface ContainerType {
+export interface ContainerType<T=any> {
   type: Type.container;
   fields: [string, FullSSZType][];
 }
@@ -114,10 +115,11 @@ export interface ContainerType {
  *
  * Full types are used internally.
  */
-export type FullSSZType = UintType | BoolType | BitsType | BytesType | ArrayType | ContainerType;
+export type FullSSZType<T=any> =
+  UintType<T> | BoolType<T> | BitsType<T> | BytesType<T> | ArrayType<T> | ContainerType<T>;
 
 // simple + full types
 
-export type AnyContainerType = ContainerType | SimpleContainerType;
+export type AnyContainerType<T=any> = ContainerType<T> | SimpleContainerType<T>;
 
-export type AnySSZType = FullSSZType | SimpleSSZType;
+export type AnySSZType<T=any> = FullSSZType<T> | SimpleSSZType<T>;

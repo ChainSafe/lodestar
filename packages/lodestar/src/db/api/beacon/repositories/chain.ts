@@ -79,7 +79,7 @@ export class ChainRepository {
       if(!heightBuf) {
         throw new Error("Missing chain height");
       }
-      return deserialize(heightBuf, this.config.types.Slot) as Slot;
+      return deserialize(heightBuf, this.config.types.Slot);
     } catch (e) {
       return null;
     }
