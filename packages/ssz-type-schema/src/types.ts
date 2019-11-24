@@ -3,8 +3,9 @@
 // Serializable values
 
 import {BitList, BitVector} from "@chainsafe/bit-utils";
+import BN from "bn.js";
 
-export type Uint = number | bigint;
+export type Uint = number | bigint | BN;
 export type Bool = boolean;
 export type Bits = BitList | BitVector;
 export type Bytes = Buffer | Uint8Array;
@@ -56,10 +57,12 @@ export enum Type {
   container,
 }
 
+export type UintImpl = "uint" | "number" | "bigint" | "bn";
+
 export interface UintType {
   type: Type.uint;
   byteLength: number;
-  useNumber: boolean;
+  use: UintImpl;
 }
 
 export interface BoolType {
@@ -121,3 +124,15 @@ export type FullSSZType = UintType | BoolType | BitsType | BytesType | ArrayType
 export type AnyContainerType = ContainerType | SimpleContainerType;
 
 export type AnySSZType = FullSSZType | SimpleSSZType;
+
+// useful primitive types
+
+export const bit: BoolType = {
+  type: Type.bool,
+};
+
+export const byte: UintType = {
+  type: Type.uint,
+  byteLength: 1,
+  use: "number",
+};

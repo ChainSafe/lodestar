@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
 import {BitList, BitVector} from "@chainsafe/bit-utils";
+import BN from "bn.js";
 
 import {
   AnySSZType,
@@ -106,14 +107,19 @@ export function serialize(value: any, type: AnySSZType): Buffer {
 /** @ignore */
 function _serializeUint(value: Uint, type: UintType, output: Buffer, start: number): number {
   const offset = start + type.byteLength;
-  let biValue: bigint;
-  if (type.byteLength > 6 && type.useNumber && value === Infinity) {
-    biValue = BigInt("0x" + Buffer.alloc(type.byteLength, 255).toString("hex"));
+  let buf: Buffer;
+  if (type.use === "bn" || BN.isBN(value)) {
+    buf = (new BN(value as number)).toArrayLike(Buffer, "le", type.byteLength);
   } else {
-    biValue = BigInt(value);
+    let biValue: bigint;
+    if (type.use === "number" && type.byteLength > 6 && value === Infinity) {
+      biValue = BigInt("0x" + Buffer.alloc(type.byteLength, 255).toString("hex"));
+    } else {
+      biValue = BigInt(value);
+    }
+    buf = toBufferLE(biValue, type.byteLength);
   }
-  toBufferLE(biValue, type.byteLength)
-    .copy(output, start);
+  buf.copy(output, start);
   return offset;
 }
 
