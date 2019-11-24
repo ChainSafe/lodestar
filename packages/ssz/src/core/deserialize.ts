@@ -52,6 +52,9 @@ import {toBigIntLE} from "bigint-buffer";
  *   "number64" // "numberN", N == length in bits
  * );
  *
+ * // deserialize a BN (forced)
+ * const bn: BN = deserialize(data, "bn64");
+ *
  * // deserialize a boolean
  * const b: boolean = deserialize(data, "bool");
  *
