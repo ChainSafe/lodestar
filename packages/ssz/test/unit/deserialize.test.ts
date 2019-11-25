@@ -1,12 +1,12 @@
 import {assert} from "chai";
 
 import {describe, it} from "mocha";
-import {SerializableValue,} from "@chainsafe/ssz-type-schema";
+import {AnySSZType, SerializableValue} from "@chainsafe/ssz-type-schema";
 
 import {ArrayObject, OuterObject, SimpleObject,} from "./objects";
 
 import {stringifyType} from "./utils";
-import {deserialize} from "../../src";
+import {serialize, deserialize} from "../../src";
 
 describe("deserialize", () => {
 
@@ -98,4 +98,27 @@ describe("deserialize", () => {
       assert.throws(() => deserialize(Buffer.from(value, "hex"), type));
     });
   }
+});
+
+interface ITestType {
+  foo: number;
+  bar: boolean;
+}
+
+describe("type inference", () => {
+  it("should detect the return type", () => {
+    const testType: AnySSZType<ITestType> = {
+      fields: [
+        ["foo", "uint8"],
+        ["bar", "bool"],
+      ],
+    };
+    const input: ITestType = {
+      foo: 1,
+      bar: true,
+    };
+    const bytes = serialize(input, testType);
+    const output = deserialize(bytes, testType);
+    assert(output.bar == true);
+  });
 });

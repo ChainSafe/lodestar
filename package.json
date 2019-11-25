@@ -42,7 +42,7 @@
     "typedoc-plugin-external-module-name": "^2.1.0",
     "typedoc-plugin-internal-external": "^2.0.2",
     "typedoc-plugin-markdown": "^2.0.6",
-    "typescript": "^3.5.1",
+    "typescript": "^3.7.2",
     "webpack": "^4.39.1"
   },
   "optionalDependencies": {
