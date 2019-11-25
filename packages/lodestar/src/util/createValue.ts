@@ -1,3 +1,4 @@
+import BN from "bn.js";
 import assert from "assert";
 import {AnySSZType, assertValidValue, FullSSZType, parseType, Type} from "@chainsafe/ssz";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
@@ -27,7 +28,9 @@ function _createValue(type: FullSSZType, defaultValue: any = null): any {
   const obj = {};
   switch(type.type) {
     case Type.uint:
-      if (type.byteLength <= 4 || type.useNumber) {
+      if (type.use === "bn") {
+        return new BN(0);
+      } else if (type.byteLength <= 4 || type.use === "number") {
         return 0;
       } else {
         return 0n;

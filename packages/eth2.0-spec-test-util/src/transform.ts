@@ -10,7 +10,7 @@ export function transformType(type: FullSSZType): FullSSZType {
     case Type.uint:
       return {
         ...type,
-        useNumber: false,
+        use: "bigint",
       };
     case Type.list:
     case Type.vector:
