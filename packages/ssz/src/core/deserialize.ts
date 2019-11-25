@@ -108,12 +108,12 @@ import {toBigIntLE} from "bigint-buffer";
  * const obj: myData = deserialize(data, myDataType);
  * ```
   */
-export function deserialize(data: Buffer, type: AnySSZType): any {
+export function deserialize<T>(data: Buffer, type: AnySSZType<T>): T {
   const _type = parseType(type);
   if (!isVariableSizeType(_type)) {
     assert(fixedSize(_type) === data.length, "Incorrect data length");
   }
-  return _deserialize(data, _type, 0, data.length);
+  return _deserialize(data, _type, 0, data.length) as unknown as T;
 
 }
 
