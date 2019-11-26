@@ -51,9 +51,8 @@ function _createValue(type: FullSSZType, value: any = null): any {
         value = {};
       }
       // eslint-disable-next-line no-case-declarations
-      const obj = {};
+      const obj: Record<string, any> = {};
       type.fields.forEach(([fieldName, fieldType]) => {
-        // @ts-ignore
         obj[fieldName] = _createValue(fieldType, value[fieldName]);
       });
       return obj;
