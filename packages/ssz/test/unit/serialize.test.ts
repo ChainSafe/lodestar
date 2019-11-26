@@ -2,6 +2,7 @@ import {assert} from "chai";
 import {describe, it} from "mocha";
 
 import {SerializableValue} from "@chainsafe/ssz-type-schema";
+import BN from "bn.js";
 
 import {ArrayObject, OuterObject, SimpleObject,} from "./objects";
 
@@ -33,6 +34,8 @@ describe("serialize", () => {
     {value: 2**52-1, type: "number64", expected: "ffffffffffff0f00"},
     {value: Infinity, type: "number64", expected: "ffffffffffffffff"},
     {value: 0x01n, type: "uint64", expected: "0100000000000000"},
+    {value: new BN(1), type: "bn64", expected: "0100000000000000"},
+    {value: new BN(1), type: "uint64", expected: "0100000000000000"},
     {value: 0x1000000000000000n, type: "uint64", expected: "0000000000000010"},
     {value: 0xffffffffffffffffn, type: "uint64", expected: "ffffffffffffffff"},
     {

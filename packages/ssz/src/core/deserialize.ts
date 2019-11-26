@@ -2,6 +2,7 @@
 /** @module ssz */
 import assert from "assert";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
+import BN from "bn.js";
 
 import {
   AnySSZType,
@@ -50,6 +51,9 @@ import {toBigIntLE} from "bigint-buffer";
  *   data,
  *   "number64" // "numberN", N == length in bits
  * );
+ *
+ * // deserialize a BN (forced)
+ * const bn: BN = deserialize(data, "bn64");
  *
  * // deserialize a boolean
  * const b: boolean = deserialize(data, "bool");
@@ -149,11 +153,13 @@ export function _deserialize(data: Buffer, type: FullSSZType, start: number, end
 function _deserializeUint(data: Buffer, type: UintType, start: number): Uint {
   const offset = start + type.byteLength;
   const uintData = data.slice(start, offset);
-  if (type.byteLength > 6 && type.useNumber && uintData.equals(Buffer.alloc(type.byteLength, 255))) {
+  if (type.use === "number" && type.byteLength > 6 && uintData.equals(Buffer.alloc(type.byteLength, 255))) {
     return Infinity;
+  } else if (type.use === "bn") {
+    return new BN(uintData, 16, "le");
   } else {
     const bi = toBigIntLE(uintData);
-    return (type.useNumber || type.byteLength <= 6) ? Number(bi) : bi;
+    return (type.use == "number" || type.byteLength <= 6) ? Number(bi) : bi;
   }
 }
 

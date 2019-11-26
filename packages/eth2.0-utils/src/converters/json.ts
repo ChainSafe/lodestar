@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import BN from "bn.js";
 import snakeCase from "snake-case";
 import {toHex} from "../bytes";
 import {AnySSZType, FullSSZType, parseType, Type} from "@chainsafe/ssz-type-schema";
@@ -51,7 +52,9 @@ export function fromJson<T>(value: object, type: AnySSZType): T {
 function expandJsonValue(value: any, type: FullSSZType): any {
   switch (type.type) {
     case Type.uint:
-      if (type.byteLength <= 6 || type.useNumber) {
+      if (type.use === "bn") {
+        return new BN(value);
+      } else if (type.byteLength <= 6 || type.use === "number") {
         const n = Number(value);
         return Number.isSafeInteger(n) ? n : Infinity;
       } else {

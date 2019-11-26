@@ -1,4 +1,5 @@
 import {assert} from "chai";
+import BN from "bn.js";
 
 import {describe, it} from "mocha";
 import {AnySSZType, SerializableValue} from "@chainsafe/ssz-type-schema";
@@ -31,6 +32,7 @@ describe("deserialize", () => {
     {value: "0000000001000000", type: "uint64", expected: 2n**32n},
     {value: "ffffffffffff0f00", type: "uint64", expected: 2n**52n-1n},
     {value: "0100000000000000", type: "uint64", expected: 0x01n},
+    {value: "0100000000000000", type: "bn64", expected: new BN(1)},
     {value: "0000000000000010", type: "uint64", expected: 0x1000000000000000n},
     {value: "ffffffffffffffff", type: "uint64", expected: 0xffffffffffffffffn},
     {
@@ -77,7 +79,9 @@ describe("deserialize", () => {
   for (const {value, type, expected} of testCases) {
     it(`should correctly deserialize ${stringifyType(type)}`, () => {
       const actual = deserialize(Buffer.from(value, "hex"), type);
-      if (typeof expected === "bigint") {
+      if (BN.isBN(expected)) {
+        assert(actual.eq(expected), `actual: ${actual}, expected: ${expected}`);
+      } else if (typeof expected === "bigint") {
         assert(expected ===  actual, `actual: ${actual}, expected: ${expected}`);
       } else {
         assert.deepEqual(actual, expected);

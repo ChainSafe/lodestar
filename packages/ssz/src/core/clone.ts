@@ -2,6 +2,8 @@
 /** @module ssz */
 
 import {AnySSZType, FullSSZType, parseType, Type} from "@chainsafe/ssz-type-schema";
+import BN from "bn.js";
+
 import {_assertValidValue} from "./assertValidValue";
 
 
@@ -60,6 +62,9 @@ function _clone(value: any, type: FullSSZType): any {
   const obj: any = {};
   switch (type.type) {
     case Type.uint:
+      if (BN.isBN(value)) {
+        return value.clone();
+      }
       return value;
     case Type.bool:
       return value;
