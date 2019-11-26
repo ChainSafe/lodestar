@@ -47,7 +47,7 @@ export function assertValidValue(value: any, type: AnySSZType): void {
 export function _assertValidValue(value: any, type: FullSSZType): void {
   switch (type.type) {
     case Type.uint:
-      if (type.use === "bn") {
+      if (type.use === "bn" || (BN.isBN(value) && type.use === "uint")) {
         assert(BN.isBN(value) || typeof value === "number", "Invalid uint: not a uint");
         value = new BN(value);
         assert(value.gten(0), "Invalid uint: value < 0");
