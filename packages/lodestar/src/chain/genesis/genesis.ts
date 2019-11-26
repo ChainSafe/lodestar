@@ -29,9 +29,7 @@ import {
   getTemporaryBlockHeader,
   processDeposit
 } from "@chainsafe/eth2.0-state-transition";
-import {hashTreeRoot} from "@chainsafe/ssz";
-
-import {createValue} from "../../util/createValue";
+import {createValue, hashTreeRoot} from "@chainsafe/ssz";
 import {bigIntMin} from "@chainsafe/eth2.0-utils";
 
 export function initializeBeaconStateFromEth1(
