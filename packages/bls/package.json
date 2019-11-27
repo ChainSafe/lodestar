@@ -41,6 +41,7 @@
     "@chainsafe/eth2.0-types": "^0.1.0",
     "@chainsafe/milagro-crypto-js": "0.1.3",
     "assert": "^1.4.1",
+    "bls-wasm": "^0.2.7",
     "js-sha256": "^0.9.0",
     "secure-random": "^1.1.1"
   },

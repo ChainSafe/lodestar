@@ -1,63 +1,56 @@
-import {BIG} from "@chainsafe/milagro-crypto-js/src/big";
-import {FP_POINT_LENGTH, SECRET_KEY_LENGTH} from "./constants";
+import {SECRET_KEY_LENGTH} from "./constants";
 import assert from "assert";
-import ctx from "./ctx";
-import {padLeft} from "./helpers/utils";
-import {G2point} from "./helpers/g2point";
-import * as random from "secure-random";
-import {BLSSecretKey, Hash, Domain} from "@chainsafe/eth2.0-types";
+import {BLSSecretKey, Domain, Hash} from "@chainsafe/eth2.0-types";
+import {SecretKeyType, SignatureType} from "@chainsafe/eth2-bls-wasm";
+import {getContext} from "./context";
 
 export class PrivateKey {
 
-  private value: BIG;
+  private value: SecretKeyType;
 
-  public constructor(value: BIG) {
+  protected constructor(value: SecretKeyType) {
     this.value = value;
   }
 
   public static fromBytes(bytes: Uint8Array): PrivateKey {
     assert(bytes.length === SECRET_KEY_LENGTH, "Private key should have 32 bytes");
-    const value = Buffer.from(bytes);
-    return new PrivateKey(
-      ctx.BIG.frombytearray(
-        padLeft(
-          value,
-          48
-        ),
-        0
-      )
-    );
+    const context = getContext();
+    const secretKey = new context.SecretKey();
+    secretKey.deserialize(Buffer.from(bytes));
+    return new PrivateKey(secretKey);
   }
 
   public static fromHexString(value: string): PrivateKey {
-    return PrivateKey.fromBytes(
-      Buffer.from(value.replace("0x", ""), "hex")
-    );
+    value = value.replace("0x", "");
+    assert(value.length === SECRET_KEY_LENGTH * 2, "secret key must have 32 bytes");
+    const context = getContext();
+    return new PrivateKey(context.deserializeHexStrToSecretKey(value));
   }
 
   public static random(): PrivateKey {
-    return PrivateKey.fromBytes(random.randomBuffer(SECRET_KEY_LENGTH));
+    const context = getContext();
+    const secretKey = new context.SecretKey();
+    secretKey.setByCSPRNG();
+    return new PrivateKey(secretKey);
   }
 
-  public getValue(): BIG {
+  public getValue(): SecretKeyType {
     return this.value;
   }
 
-  public sign(message: G2point): G2point {
-    return message.mul(this.value);
+  public sign(message: Uint8Array): SignatureType {
+    return this.value.sign(message);
   }
 
-  public signMessage(message: Hash, domain: Domain): G2point {
-    return G2point.hashToG2(message, domain).mul(this.value);
+  public signMessage(message: Hash, domain: Domain): SignatureType {
+    return this.value.signHashWithDomain(Buffer.concat([message, domain]));
   }
 
   public toBytes(): BLSSecretKey {
-    const buffer = Buffer.alloc(FP_POINT_LENGTH, 0);
-    this.value.tobytearray(buffer, 0);
-    return buffer.slice(FP_POINT_LENGTH - SECRET_KEY_LENGTH);
+    return Buffer.from(this.value.serialize());
   }
 
   public toHexString(): string {
-    return `0x${this.toBytes().toString("hex")}`;
+    return `0x${this.value.serializeToHexStr()}`;
   }
 }
