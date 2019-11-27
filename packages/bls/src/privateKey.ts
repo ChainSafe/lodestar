@@ -1,8 +1,11 @@
 import {SECRET_KEY_LENGTH} from "./constants";
 import assert from "assert";
 import {BLSSecretKey, Domain, Hash} from "@chainsafe/eth2.0-types";
-import {SecretKeyType, SignatureType} from "@chainsafe/eth2-bls-wasm";
+import {SecretKeyType} from "@chainsafe/eth2-bls-wasm";
 import {getContext} from "./context";
+import {PublicKey} from "./publicKey";
+import {Signature} from "./signature";
+import {padLeft} from "./helpers/utils";
 
 export class PrivateKey {
 
@@ -38,12 +41,17 @@ export class PrivateKey {
     return this.value;
   }
 
-  public sign(message: Uint8Array): SignatureType {
-    return this.value.sign(message);
+  // public sign(message: Uint8Array): Signature {
+  //   return Signature.fromValue(this.value.sign(message));
+  // }
+
+  public signMessage(message: Hash, domain: Domain): Signature {
+    domain = padLeft(domain, 8);
+    return Signature.fromValue(this.value.signHashWithDomain(Buffer.concat([message, domain])));
   }
 
-  public signMessage(message: Hash, domain: Domain): SignatureType {
-    return this.value.signHashWithDomain(Buffer.concat([message, domain]));
+  public toPublicKey(): PublicKey {
+    return PublicKey.fromPublicKeyType(this.value.getPublicKey());
   }
 
   public toBytes(): BLSSecretKey {

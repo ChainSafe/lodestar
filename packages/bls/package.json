@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/bls",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "description": "Implementation of bls signature verification for ethereum 2.0",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -23,7 +23,7 @@
     "build": "yarn build-lib && yarn build-types",
     "build:release": "yarn clean && yarn build && yarn build-web",
     "build-lib": "babel src -x .ts -d lib",
-    "build-types": "tsc --declaration --incremental --outDir lib --emitDeclarationOnly",
+    "build-types": "tsc --declaration --project tsconfig.build.json --incremental --outDir lib --emitDeclarationOnly",
     "build-web": "webpack --mode production --entry ./lib/web.js --output ./dist/bls.min.js",
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts src/",

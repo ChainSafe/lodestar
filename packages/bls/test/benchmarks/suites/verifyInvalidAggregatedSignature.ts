@@ -27,6 +27,7 @@ export function verifyInvalidAggregatedSignature(dir: string): BenchSuite {
   };
 
   return {
+    name: FUNCTION_NAME,
     testFunctions: [verifyInvalidAggregatedSignature],
     setup: function() {
       const {Keypair, aggregateSignatures} = require("../../../src");

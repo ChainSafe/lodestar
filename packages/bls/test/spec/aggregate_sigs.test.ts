@@ -1,5 +1,5 @@
 import path from "path";
-import bls from "../../src";
+import bls, {initLibrary} from "../../src";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 
 interface AggregateSigsTestCase {
@@ -8,6 +8,10 @@ interface AggregateSigsTestCase {
     output: string;
   };
 }
+
+before(async function f() {
+  await initLibrary();
+});
 
 describeDirectorySpecTest<AggregateSigsTestCase, string>(
   "aggregate sigs",

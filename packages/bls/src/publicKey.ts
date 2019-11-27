@@ -1,36 +1,64 @@
-import {G1point} from "./helpers/g1point";
 import {PrivateKey} from "./privateKey";
-import {BLSPubkey} from "@chainsafe/eth2.0-types";
+import {BLSPubkey, BLSSignature, Domain, Hash} from "@chainsafe/eth2.0-types";
+import {PublicKeyType} from "@chainsafe/eth2-bls-wasm";
+import {getContext} from "./context";
+import {PUBLIC_KEY_LENGTH} from "./constants";
+import assert from "assert";
+import {Signature} from "./signature";
 
 export class PublicKey {
 
-  private point: G1point;
+  private value: PublicKeyType;
 
-  public constructor(point: G1point) {
-    this.point = point;
+  protected constructor(value: PublicKeyType) {
+    this.value = value;
   }
   
   public static fromPrivateKey(privateKey: PrivateKey): PublicKey {
+    return privateKey.toPublicKey();
+  }
+
+  public static fromBytes(bytes: BLSPubkey): PublicKey {
+    const context = getContext();
+    const publicKey = new context.PublicKey();
+    publicKey.deserialize(bytes);
     return new PublicKey(
-      G1point.generator().mul(privateKey.getValue())
+      publicKey
     );
   }
 
-  public static fromBytes(publicKey: BLSPubkey): PublicKey {
+  public static fromHex(value: string): PublicKey {
+    value = value.replace("0x", "");
+    assert(value.length === PUBLIC_KEY_LENGTH * 2);
+    const context = getContext();
     return new PublicKey(
-      G1point.fromBytesCompressed(publicKey)
+      context.deserializeHexStrToPublicKey(value)
     );
   }
 
-  public getPoint(): G1point {
-    return this.point;
+  public static fromPublicKeyType(value: PublicKeyType): PublicKey {
+    return new PublicKey(value);
+  }
+
+  public add(other: PublicKey): PublicKey {
+    const agg = new PublicKey(this.value.clone());
+    agg.value.add(other.value);
+    return agg;
+  }
+
+  public verifyMessage(signature: Signature, messageHash: Hash, domain: Domain): boolean {
+    return this.value.verifyHashWithDomain(signature.getValue(), Buffer.concat([messageHash, domain]));
   }
 
   public toBytesCompressed(): BLSPubkey {
-    return  this.point.toBytesCompressed();
+    return Buffer.from(this.value.serialize());
   }
 
   public toHexString(): string {
     return `0x${this.toBytesCompressed().toString("hex")}`;
+  }
+
+  public getValue(): PublicKeyType {
+    return this.value;
   }
 }

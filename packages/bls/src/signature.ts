@@ -1,35 +1,64 @@
-import {G2point} from "./helpers/g2point";
 import assert from "assert";
 import {FP_POINT_LENGTH} from "./constants";
-import {BLSSignature} from "@chainsafe/eth2.0-types";
+import {BLSSignature, Domain, Hash} from "@chainsafe/eth2.0-types";
+import {SignatureType} from "@chainsafe/eth2-bls-wasm";
+import {getContext} from "./context";
+import {PublicKey} from "./publicKey";
+import {padLeft} from "./helpers/utils";
 
 export class Signature {
 
-  private point: G2point;
+  private value: SignatureType;
 
-  public constructor(point: G2point) {
-    this.point = point;
+  protected constructor(value: SignatureType) {
+    this.value = value;
   }
 
-  public static fromCompressedBytes(signature: BLSSignature): Signature {
+  public static fromCompressedBytes(value: BLSSignature): Signature {
     assert(
-      signature.length === 2 * FP_POINT_LENGTH,
+      value.length === 2 * FP_POINT_LENGTH,
       `Signature must have ${2 * FP_POINT_LENGTH} bytes`
     );
-    return new Signature(G2point.fromCompressedBytes(signature));
+    const context = getContext();
+    const signature = new context.Signature();
+    signature.deserialize(value);
+    return new Signature(signature);
+  }
+
+  public static fromValue(signature: SignatureType): Signature {
+    return new Signature(signature);
   }
 
   public add(other: Signature): Signature {
+    const agg = this.value.clone();
+    agg.add(other.value);
     return new Signature(
-      this.point.add(other.point)
+      agg
     );
   }
 
-  public getPoint(): G2point {
-    return this.point;
+  public getValue(): SignatureType {
+    return this.value;
+  }
+
+  public verify(publicKey: PublicKey, message: Hash, domain: Domain): boolean {
+    domain = padLeft(domain, 8);
+    return publicKey.verifyMessage(this, message, domain);
+  }
+
+  public verifyMultiple(publicKeys: PublicKey[], messages: Hash[], domain: Domain): boolean {
+    domain = padLeft(domain, 8);
+    return this.value.verifyAggregatedHashWithDomain(
+      publicKeys.map((key) => key.getValue()),
+      messages.map((message) => Buffer.concat([message, domain]))
+    );
   }
 
   public toBytesCompressed(): BLSSignature {
-    return this.point.toBytesCompressed();
+    return Buffer.from(this.value.serialize());
+  }
+
+  public toHex(): string {
+    return "0x" + this.value.serializeToHexStr();
   }
 }

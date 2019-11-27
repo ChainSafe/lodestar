@@ -1,10 +1,18 @@
-import bls from "../../src";
-import {Keypair} from "../../src/keypair";
+import bls, {aggregatePubkeys, aggregateSignatures, initLibrary, Keypair, verify, verifyMultiple} from "../../src";
 import {sha256} from "js-sha256";
-import {G2point} from "../../src/helpers/g2point";
 import {expect} from "chai";
+import {destroy} from "../../src/context";
+import {padLeft} from "../../lib/helpers/utils";
 
 describe("test bls", function () {
+
+  before(async function() {
+    await initLibrary();
+  });
+
+  after(function () {
+    destroy();
+  });
 
   describe("aggregate pubkey", function () {
     it("should aggregate empty array", function () {
@@ -17,10 +25,11 @@ describe("test bls", function () {
       const keypair = Keypair.generate();
       const messageHash = Buffer.from(sha256.arrayBuffer("Test"));
       const domain = Buffer.alloc(8, 1);
-      const signature = keypair.privateKey.sign(
-        G2point.hashToG2(messageHash, domain)
+      const signature = keypair.privateKey.signMessage(
+        messageHash,
+        domain
       );
-      const result = bls.verify(
+      const result = verify(
         keypair.publicKey.toBytesCompressed(),
         messageHash,
         signature.toBytesCompressed(),
@@ -34,11 +43,12 @@ describe("test bls", function () {
       const keypair = Keypair.generate();
       const messageHash = Buffer.from(sha256.arrayBuffer("Test"));
       const domain = Buffer.alloc(8, 1);
-      const signature = keypair.privateKey.sign(
-        G2point.hashToG2(messageHash, domain)
+      const signature = keypair.privateKey.signMessage(
+        messageHash,
+        domain
       );
       const pubKey = keypair.publicKey.toBytesCompressed();
-      bls.verify(
+      verify(
         pubKey,
         messageHash,
         signature.toBytesCompressed(),
@@ -53,7 +63,7 @@ describe("test bls", function () {
       const messageHash2 = Buffer.from(sha256.arrayBuffer("Test message2"));
       const domain = Buffer.from("01", "hex");
       const signature = Buffer.alloc(96);
-      const result = bls.verify(
+      const result = verify(
         keypair.publicKey.toBytesCompressed(),
         messageHash2,
         signature,
@@ -66,11 +76,12 @@ describe("test bls", function () {
       const keypair = Keypair.generate();
       const messageHash = Buffer.from(sha256.arrayBuffer("Test message"));
       const messageHash2 = Buffer.from(sha256.arrayBuffer("Test message2"));
-      const domain = Buffer.from("01", "hex");
-      const signature = keypair.privateKey.sign(
-        G2point.hashToG2(messageHash, domain)
+      const domain = padLeft(Buffer.from("01", "hex"), 8);
+      const signature = keypair.privateKey.signMessage(
+        messageHash,
+        domain
       );
-      const result = bls.verify(
+      const result = verify(
         keypair.publicKey.toBytesCompressed(),
         messageHash2,
         signature.toBytesCompressed(),
@@ -82,12 +93,13 @@ describe("test bls", function () {
     it("should fail verify signature of different domain", () => {
       const keypair = Keypair.generate();
       const messageHash = Buffer.from(sha256.arrayBuffer("Test message"));
-      const domain = Buffer.from("01", "hex");
-      const domain2 = Buffer.from("02", "hex");
-      const signature = keypair.privateKey.sign(
-        G2point.hashToG2(messageHash, domain)
+      const domain = padLeft(Buffer.from("01", "hex"), 8);
+      const domain2 = padLeft(Buffer.from("02", "hex"), 8);
+      const signature = keypair.privateKey.signMessage(
+        messageHash,
+        domain
       );
-      const result = bls.verify(
+      const result = verify(
         keypair.publicKey.toBytesCompressed(),
         messageHash,
         signature.toBytesCompressed(),
@@ -101,10 +113,11 @@ describe("test bls", function () {
       const keypair2 = Keypair.generate();
       const messageHash = Buffer.from(sha256.arrayBuffer("Test message"));
       const domain = Buffer.from("01", "hex");
-      const signature = keypair.privateKey.sign(
-        G2point.hashToG2(messageHash, domain)
+      const signature = keypair.privateKey.signMessage(
+        messageHash,
+        domain
       );
-      const result = bls.verify(
+      const result = verify(
         keypair2.publicKey.toBytesCompressed(),
         messageHash,
         signature.toBytesCompressed(),
@@ -127,32 +140,32 @@ describe("test bls", function () {
       const keypair3 = Keypair.generate();
       const keypair4 = Keypair.generate();
 
-      const message1 = Buffer.from("Test1", "utf-8");
-      const message2 = Buffer.from("Test2", "utf-8");
+      const message1 = Buffer.from(sha256.arrayBuffer("Test1"));
+      const message2 = Buffer.from(sha256.arrayBuffer("Test2"));
 
       const signature1 = keypair1.privateKey.signMessage(message1, domain);
       const signature2 = keypair2.privateKey.signMessage(message1, domain);
       const signature3 = keypair3.privateKey.signMessage(message2, domain);
       const signature4 = keypair4.privateKey.signMessage(message2, domain);
 
-      const aggregatePubKey12 = bls.aggregatePubkeys([
+      const aggregatePubKey12 = aggregatePubkeys([
         keypair1.publicKey.toBytesCompressed(),
         keypair2.publicKey.toBytesCompressed(),
       ]);
 
-      const aggregatePubKey34 = bls.aggregatePubkeys([
+      const aggregatePubKey34 = aggregatePubkeys([
         keypair3.publicKey.toBytesCompressed(),
         keypair4.publicKey.toBytesCompressed(),
       ]);
 
-      const aggregateSignature = bls.aggregateSignatures([
+      const aggregateSignature = aggregateSignatures([
         signature1.toBytesCompressed(),
         signature2.toBytesCompressed(),
         signature3.toBytesCompressed(),
         signature4.toBytesCompressed(),
       ]);
 
-      const result = bls.verifyMultiple(
+      const result = verifyMultiple(
         [aggregatePubKey12, aggregatePubKey34],
         [message1, message2],
         aggregateSignature,
@@ -173,21 +186,21 @@ describe("test bls", function () {
       const keypair3 = Keypair.generate();
       const keypair4 = Keypair.generate();
 
-      const message = Buffer.from("Test1", "utf-8");
+      const message = Buffer.from(sha256.arrayBuffer("Test1"));
 
       const signature1 = keypair1.privateKey.signMessage(message, domain);
       const signature2 = keypair2.privateKey.signMessage(message, domain);
       const signature3 = keypair3.privateKey.signMessage(message, domain);
       const signature4 = keypair4.privateKey.signMessage(message, domain);
 
-      const aggregateSignature = bls.aggregateSignatures([
+      const aggregateSignature = aggregateSignatures([
         signature1.toBytesCompressed(),
         signature2.toBytesCompressed(),
         signature3.toBytesCompressed(),
         signature4.toBytesCompressed(),
       ]);
 
-      const result = bls.verifyMultiple(
+      const result = verifyMultiple(
         [
           keypair1.publicKey.toBytesCompressed(),
           keypair2.publicKey.toBytesCompressed(),
@@ -212,8 +225,8 @@ describe("test bls", function () {
       const keypair3 = Keypair.generate();
       const keypair4 = Keypair.generate();
 
-      const message1 = Buffer.from("Test1", "utf-8");
-      const message2 = Buffer.from("Test2", "utf-8");
+      const message1 = Buffer.from(sha256.arrayBuffer("Test1"));
+      const message2 = Buffer.from(sha256.arrayBuffer("Test2"));
 
       const signature1 = keypair1.privateKey.signMessage(message1, domain);
       const signature2 = keypair2.privateKey.signMessage(message1, domain);
@@ -256,8 +269,8 @@ describe("test bls", function () {
       const keypair3 = Keypair.generate();
       const keypair4 = Keypair.generate();
 
-      const message1 = Buffer.from("Test1", "utf-8");
-      const message2 = Buffer.from("Test2", "utf-8");
+      const message1 = Buffer.from(sha256.arrayBuffer("Test1"));
+      const message2 = Buffer.from(sha256.arrayBuffer("Test2"));
 
       const signature1 = keypair1.privateKey.signMessage(message1, domain);
       const signature2 = keypair2.privateKey.signMessage(message1, domain);
@@ -297,8 +310,8 @@ describe("test bls", function () {
       const keypair3 = Keypair.generate();
       const keypair4 = Keypair.generate();
 
-      const message1 = Buffer.from("Test1", "utf-8");
-      const message2 = Buffer.from("Test2", "utf-8");
+      const message1 = Buffer.from(sha256.arrayBuffer("Test1"));
+      const message2 = Buffer.from(sha256.arrayBuffer("Test2"));
 
       const signature1 = keypair1.privateKey.signMessage(message1, domain);
       const signature2 = keypair2.privateKey.signMessage(message1, domain);
@@ -335,8 +348,8 @@ describe("test bls", function () {
 
       const signature = Buffer.alloc(96);
 
-      const message1 = Buffer.from("Test1", "utf-8");
-      const message2 = Buffer.from("Test2", "utf-8");
+      const message1 = Buffer.from(sha256.arrayBuffer("Test1"));
+      const message2 = Buffer.from(sha256.arrayBuffer("Test2"));
 
       const result = bls.verifyMultiple(
         [],

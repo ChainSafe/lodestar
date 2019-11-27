@@ -1,5 +1,5 @@
 import path from "path";
-import bls from "../../src";
+import bls, {initLibrary} from "../../src";
 import {padLeft} from "../../src/helpers/utils";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 
@@ -13,6 +13,10 @@ interface ISignMessageTestCase {
     output: string;
   };
 }
+
+before(async function f() {
+  await initLibrary();
+});
 
 describeDirectorySpecTest<ISignMessageTestCase, string>(
   "priv_to_pub",

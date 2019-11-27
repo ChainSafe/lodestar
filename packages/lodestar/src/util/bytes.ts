@@ -27,19 +27,6 @@ export function bytesToBN(value: bytes): BN {
   return new BN(value, "le");
 }
 
-/**
- * Converts PrivateKey to hex string
- * @param {PrivateKey} privateKey 
- * @returns {string} hex representation of bls key
- */
-export function blsPrivateKeyToHex(privateKey: PrivateKey): string {
-  const byteBuffer = Buffer.alloc(48, 0);
-  privateKey.getValue().tobytearray(byteBuffer, 0);
-  const pkBytes = byteBuffer.slice(16, 48);
-
-  return toHex(pkBytes);
-}
-
 export function toHex(buffer: Buffer): string {
   return "0x" + buffer.toString("hex");
 }
