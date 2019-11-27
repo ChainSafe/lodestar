@@ -1,5 +1,5 @@
 import {PrivateKey} from "./privateKey";
-import {BLSPubkey, BLSSignature, Domain, Hash} from "@chainsafe/eth2.0-types";
+import {BLSPubkey, Domain, Hash} from "@chainsafe/eth2.0-types";
 import {PublicKeyType} from "@chainsafe/eth2-bls-wasm";
 import {getContext} from "./context";
 import {PUBLIC_KEY_LENGTH} from "./constants";
