@@ -683,6 +683,11 @@
     js-sha256 "^0.9.0"
     secure-random "^1.1.1"
 
+"@chainsafe/eth2-bls-wasm@^0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-bls-wasm/-/eth2-bls-wasm-0.1.0.tgz#d76e42b2c5c77fdfdc67043717ac33cff4134288"
+  integrity sha512-aqp3GcJd9S3BU5hE+HiAX26CZ91SPWcupecX65N60S1xZykaEDcg8DvUgKNsPFYytpAhmXU/xn9pe866sMgOvQ==
+
 "@chainsafe/eth2-spec-tests@0.8.3":
   version "0.8.3"
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.8.3.tgz#5d165305bc3616fbc8b9c508d94f7a096950ccee"
