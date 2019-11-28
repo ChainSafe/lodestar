@@ -11,11 +11,11 @@ describeDirectorySpecTest<ShufflingTestCase, number[]>(
   (testcase) => {
     const output = [];
     const seed = Buffer.from(testcase.mapping.seed.replace("0x", ""),"hex");
-    for(let i = 0; i < testcase.mapping.count.toNumber(); i++) {
+    for(let i = 0; i < Number(testcase.mapping.count); i++) {
       output[i] = computeShuffledIndex(
         config,
         i,
-        testcase.mapping.count.toNumber(),
+        Number(testcase.mapping.count),
         seed
       );
     }
@@ -26,7 +26,7 @@ describeDirectorySpecTest<ShufflingTestCase, number[]>(
       mapping: InputType.YAML
     },
     timeout: 10000,
-    getExpected: (testCase => testCase.mapping.mapping.map((value) => value.toNumber()))
+    getExpected: (testCase => testCase.mapping.mapping.map((value) => Number(value)))
   }
 );
 

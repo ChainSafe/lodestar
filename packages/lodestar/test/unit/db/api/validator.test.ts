@@ -9,7 +9,6 @@ import {LevelDbController} from "../../../../src/db/controller";
 import {IValidatorDB, ValidatorDB} from "../../../../src/db/api";
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateEmptyAttestation} from "../../../utils/attestation";
-import BN from "bn.js";
 
 chai.use(chaiAsPromised);
 
@@ -55,7 +54,7 @@ describe('beacon db api', function () {
     dbStub.search.resolves([serialize(generateEmptyAttestation(), config.types.Attestation)]);
     await validatorDB.getAttestations(pubKey, {gt: 0, lt: 3});
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, pubKey.toString('hex') + "0").calledOnce).to.be.true;
-    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, new BN(pubKey).addn(1).toString('hex').replace('0x', '') + "3").calledOnce).to.be.true;
+    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, (BigInt(pubKey.toString("hex"))+1n).toString(16).replace('0x', '') + "3").calledOnce).to.be.true;
     expect(dbStub.search.calledOnce).to.be.true;
   });
 
@@ -64,7 +63,7 @@ describe('beacon db api', function () {
     dbStub.search.resolves([serialize(generateEmptyAttestation(), config.types.Attestation)]);
     await validatorDB.getAttestations(pubKey, {gt: 0});
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, pubKey.toString('hex') + "0").calledOnce).to.be.true;
-    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, new BN(pubKey).addn(1).toString('hex').replace('0x', '') + Number.MAX_SAFE_INTEGER).calledOnce).to.be.true;
+    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, (BigInt(pubKey.toString('hex'))+1n).toString(16).replace('0x', '') + Number.MAX_SAFE_INTEGER).calledOnce).to.be.true;
     expect(dbStub.search.calledOnce).to.be.true;
   });
 

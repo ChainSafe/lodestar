@@ -28,10 +28,12 @@ function _createValue(type: FullSSZType, defaultValue: any = null): any {
   const obj = {};
   switch(type.type) {
     case Type.uint:
-      if (type.byteLength <= 4 || type.useNumber) {
+      if (type.use === "bn") {
+        return new BN(0);
+      } else if (type.byteLength <= 4 || type.use === "number") {
         return 0;
       } else {
-        return new BN(0);
+        return 0n;
       }
     case Type.bool:
       return false;

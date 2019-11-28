@@ -1,15 +1,16 @@
 import {assert} from "chai";
-
 import BN from "bn.js";
+
 import {describe, it} from "mocha";
-import {SerializableValue,} from "@chainsafe/ssz-type-schema";
+import {AnySSZType, SerializableValue} from "@chainsafe/ssz-type-schema";
 
 import {ArrayObject, OuterObject, SimpleObject,} from "./objects";
 
 import {stringifyType} from "./utils";
-import {deserialize} from "../../src";
+import {serialize, deserialize} from "../../src";
 
 describe("deserialize", () => {
+
   const testCases: {
     value: string;
     type: any;
@@ -28,20 +29,21 @@ describe("deserialize", () => {
     {value: "ffffff0f", type: "uint32", expected: 2**28-1},
     {value: "00000010", type: "uint32", expected: 2**28},
     {value: "ffffffff", type: "uint32", expected: 2**32-1},
-    {value: "0000000001000000", type: "uint64", expected: new BN(2**32)},
-    {value: "ffffffffffff0f00", type: "uint64", expected: new BN(2**52-1)},
-    {value: "0100000000000000", type: "uint64", expected: new BN("01", 16)},
-    {value: "0000000000000010", type: "uint64", expected: new BN("1000000000000000", 16)},
-    {value: "ffffffffffffffff", type: "uint64", expected: new BN("ffffffffffffffff", 16)},
+    {value: "0000000001000000", type: "uint64", expected: 2n**32n},
+    {value: "ffffffffffff0f00", type: "uint64", expected: 2n**52n-1n},
+    {value: "0100000000000000", type: "uint64", expected: 0x01n},
+    {value: "0100000000000000", type: "bn64", expected: new BN(1)},
+    {value: "0000000000000010", type: "uint64", expected: 0x1000000000000000n},
+    {value: "ffffffffffffffff", type: "uint64", expected: 0xffffffffffffffffn},
     {
       value: "ffffffffffffffffffffffffffffffff",
       type: "uint128",
-      expected: new BN("ffffffffffffffffffffffffffffffff", 16)
+      expected: 0xffffffffffffffffffffffffffffffffn
     },
     {
       value: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
       type: "uint256",
-      expected: new BN("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
+      expected: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn
     },
     {value: "0000000001000000", type: "number64", expected: 2**32},
     {value: "ffffffffffff0f00", type: "number64", expected: 2**52-1},
@@ -78,7 +80,9 @@ describe("deserialize", () => {
     it(`should correctly deserialize ${stringifyType(type)}`, () => {
       const actual = deserialize(Buffer.from(value, "hex"), type);
       if (BN.isBN(expected)) {
-        assert(expected.eq(actual as BN), `actual: ${actual}, expected: ${expected}`);
+        assert(actual.eq(expected), `actual: ${actual}, expected: ${expected}`);
+      } else if (typeof expected === "bigint") {
+        assert(expected ===  actual, `actual: ${actual}, expected: ${expected}`);
       } else {
         assert.deepEqual(actual, expected);
       }
@@ -98,4 +102,27 @@ describe("deserialize", () => {
       assert.throws(() => deserialize(Buffer.from(value, "hex"), type));
     });
   }
+});
+
+interface ITestType {
+  foo: number;
+  bar: boolean;
+}
+
+describe("type inference", () => {
+  it("should detect the return type", () => {
+    const testType: AnySSZType<ITestType> = {
+      fields: [
+        ["foo", "uint8"],
+        ["bar", "bool"],
+      ],
+    };
+    const input: ITestType = {
+      foo: 1,
+      bar: true,
+    };
+    const bytes = serialize(input, testType);
+    const output = deserialize(bytes, testType);
+    assert(output.bar == true);
+  });
 });

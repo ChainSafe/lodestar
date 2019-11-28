@@ -3,7 +3,6 @@
  */
 
 import assert from "assert";
-import BN from "bn.js";
 import {hash, signingRoot} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 
@@ -26,7 +25,7 @@ export function processTransfer(
 ): void {
   // Verify the balance the covers amount and fee
   const senderBalance = state.balances[transfer.sender];
-  assert(senderBalance.gte(transfer.amount.add(transfer.fee)));
+  assert(senderBalance >= (transfer.amount + transfer.fee));
   // A transfer is valid in only one slot
   assert(state.slot === transfer.slot);
   // Sender must satisfy at least one of the following:
@@ -36,7 +35,7 @@ export function processTransfer(
     // Be withdrawable
     getCurrentEpoch(config, state) >= state.validators[transfer.sender].withdrawableEpoch ||
     // Have a balance of at least MAX_EFFECTIVE_BALANCE after the transfer
-    senderBalance.gte(transfer.amount.add(transfer.fee).add(new BN(config.params.MAX_EFFECTIVE_BALANCE)))
+    senderBalance >= transfer.amount + transfer.fee + config.params.MAX_EFFECTIVE_BALANCE
   );
   // Verify that the pubkey is valid
   assert(state.validators[transfer.sender].withdrawalCredentials.equals(
@@ -49,16 +48,16 @@ export function processTransfer(
     getDomain(config, state, DomainType.TRANSFER),
   ));
   // Process the transfer
-  decreaseBalance(state, transfer.sender, transfer.amount.add(transfer.fee));
+  decreaseBalance(state, transfer.sender, transfer.amount + transfer.fee);
   increaseBalance(state, transfer.recipient, transfer.amount);
   increaseBalance(state, getBeaconProposerIndex(config, state), transfer.fee);
   // Verify balances are not dust
   assert(!(
-    (new BN(0)).lt(state.balances[transfer.sender]) &&
-    state.balances[transfer.sender].lt(config.params.MIN_DEPOSIT_AMOUNT)
+    0 < (state.balances[transfer.sender]) &&
+    state.balances[transfer.sender] < config.params.MIN_DEPOSIT_AMOUNT
   ));
   assert(!(
-    (new BN(0)).lt(state.balances[transfer.recipient]) &&
-    state.balances[transfer.recipient].lt(config.params.MIN_DEPOSIT_AMOUNT)
+    0 < state.balances[transfer.recipient] &&
+    state.balances[transfer.recipient] < config.params.MIN_DEPOSIT_AMOUNT
   ));
 }

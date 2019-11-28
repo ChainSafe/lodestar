@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import {expect} from "chai";
 import sinon from "sinon";
 
@@ -49,8 +48,8 @@ describe('process epoch - balance updates', function () {
 
   it('should process rewards and penalties', function () {
     const state = generateState();
-    const reward = new BN(10);
-    const penalty = new BN(0);
+    const reward = 10n;
+    const penalty = 0n;
     state.validators.push(generateValidator());
     getCurrentEpochStub.returns(10);
     getAttestationDeltasStub.returns([[reward], [penalty]]);
@@ -58,8 +57,8 @@ describe('process epoch - balance updates', function () {
 
     try {
       processRewardsAndPenalties(config, state);
-      expect(increaseBalanceStub.calledOnceWith(state, 0, reward.add(reward)));
-      expect(decreaseBalanceStub.calledOnceWith(state, 0, penalty.add(penalty)));
+      expect(increaseBalanceStub.calledOnceWith(state, 0, reward + reward));
+      expect(decreaseBalanceStub.calledOnceWith(state, 0, penalty + penalty));
     }catch (e) {
       expect.fail(e.stack);
     }

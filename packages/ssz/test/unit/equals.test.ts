@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import {expect} from "chai";
 
 import {equals} from "../../src";
@@ -19,7 +18,7 @@ describe("equals", () => {
     {value1: 0, value2: 1, type: "uint8", expected: false},
     {value1: 0, value2: 1, type: "uint8", expected: false},
     {value1: Infinity, value2: Infinity, type: "uint8", expected: true},
-    {value1: new BN(1000), value2: 1000, type: "uint16", expected: true},
+    {value1: 1000n, value2: 1000, type: "uint16", expected: true},
     {value1: true, value2: true, type: "bool", expected: true},
     {value1: false, value2: false, type: "bool", expected: true},
     {value1: false, value2: true, type: "bool", expected: false},

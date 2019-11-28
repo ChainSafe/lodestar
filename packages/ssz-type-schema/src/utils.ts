@@ -4,21 +4,21 @@ import assert from "assert";
 
 import {
   AnySSZType,
+  bit, byte,
   FullSSZType,
   SimpleContainerType,
   SimpleListType,
   SimpleVectorType,
   Type,
-} from "./index";
+  UintImpl,
+} from "./types";
 
 // regex to identify a bytesN type
 const bytesPattern = /^bytes\d+$/;
 // regex to identify digits
 const digitsPattern = /\d+$/;
 // regex to identify a uint type
-const uintPattern = /^(uint|number)\d+$/;
-// regex to identify a number type specifically
-const numberPattern = /^number/;
+const uintPattern = /^(uint|number|bigint|bn)\d+$/;
 
 export function copyType(type: AnySSZType): AnySSZType {
   return JSON.parse(JSON.stringify(type));
@@ -34,9 +34,7 @@ export function parseType(type: AnySSZType): FullSSZType {
   if(typeof type === "string") {
     // bit
     if (type === "bool") {
-      return {
-        type: Type.bool,
-      };
+      return bit;
     }
     // bytesN
     if (type.match(bytesPattern)) {
@@ -48,21 +46,18 @@ export function parseType(type: AnySSZType): FullSSZType {
     }
     // uint
     if (type === "byte") {
-      return {
-        type: Type.uint,
-        byteLength: 1,
-        useNumber: true,
-      };
+      return byte;
     }
     // uint
-    if (type.match(uintPattern)) {
-      const useNumber = Array.isArray(type.match(numberPattern));
+    const uintMatch = type.match(uintPattern);
+    if (uintMatch) {
+      const use = uintMatch[1] as UintImpl;
       const bits = parseInt(type.match(digitsPattern) as unknown as string);
       assert([8, 16, 32, 64, 128, 256].find((b) => b === bits), `Invalid uint type: ${type}`);
       return {
         type: Type.uint,
         byteLength: bits / 8,
-        useNumber,
+        use,
       };
     }
   } else if (type === Object(type)) {

@@ -1,13 +1,11 @@
-import BN from "bn.js";
-
 import {
   BeaconState,
   Crosslink,
 } from "@chainsafe/eth2.0-types";
 
 import {GENESIS_EPOCH, GENESIS_SLOT, GENESIS_START_SHARD, ZERO_HASH} from "../../src/constants";
-import {intToBytes} from "../../src/util/bytes";
-import {randBetween, randBetweenBN} from "./misc";
+import {intToBytes} from "@chainsafe/eth2.0-utils";
+import {randBetween, randBetweenBigInt} from "./misc";
 import {generateValidators} from "./validator";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {generateEmptyBlock} from "./block";
@@ -61,7 +59,7 @@ export function generateState(opts?: TestBeaconState): BeaconState {
     randaoMixes: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
     activeIndexRoots: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
     compactCommitteesRoots: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
-    slashings: Array.from({length: config.params.EPOCHS_PER_SLASHINGS_VECTOR}, () => new BN(0)),
+    slashings: Array.from({length: config.params.EPOCHS_PER_SLASHINGS_VECTOR}, () => 0n),
     previousEpochAttestations: [],
     currentEpochAttestations: [],
     currentCrosslinks: Array.from({length: config.params.SHARD_COUNT}, () => initialCrosslinkRecord),

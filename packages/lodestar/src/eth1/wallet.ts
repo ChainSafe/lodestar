@@ -5,8 +5,7 @@
 import {ContractTransaction, ethers, Wallet} from "ethers";
 import {Provider} from "ethers/providers";
 import {BigNumber, ParamType} from "ethers/utils";
-import BN from "bn.js";
-import bls, {PrivateKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {hash, signingRoot} from "@chainsafe/ssz";
 import {DepositData} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -48,7 +47,7 @@ export class Eth1Wallet {
    */
 
   public async createValidatorDeposit(address: string, value: BigNumber): Promise<string> {
-    const amount = new BN(value.toString()).div(new BN(1000000000));
+    const amount = BigInt(value.toString()) / 1000000000n;
 
     const contract = new ethers.Contract(address, this.contractAbi, this.wallet);
     const privateKey = PrivateKey.random().toBytes();

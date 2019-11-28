@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
-import BN from "bn.js";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
+import BN from "bn.js";
 
 import {
   AnySSZType,
@@ -26,6 +26,7 @@ import {BYTES_PER_LENGTH_PREFIX} from "../util/constants";
 import {fixedSize, size} from "./size";
 import {_assertValidValue} from "./assertValidValue";
 
+import  {toBufferLE} from "bigint-buffer";
 
 /**
  * Serialize, according to the SSZ spec
@@ -39,7 +40,10 @@ import {_assertValidValue} from "./assertValidValue";
  *   "uint64" // "uintN", N == length in bits
  * );
  *
- * // serialize a BN bignumber
+ * // serialize a BigInt
+ * buf = serialize(BigInt("1000000000000000000"), "uint64");
+ *
+ * // serialize a BN
  * import BN from "bn.js";
  * buf = serialize(new BN("1000000000000000000"), "uint64");
  *
@@ -107,14 +111,19 @@ export function serialize(value: any, type: AnySSZType): Buffer {
 /** @ignore */
 function _serializeUint(value: Uint, type: UintType, output: Buffer, start: number): number {
   const offset = start + type.byteLength;
-  let bnValue: BN;
-  if (type.byteLength > 6 && type.useNumber && value === Infinity) {
-    bnValue = new BN(Buffer.alloc(type.byteLength, 255));
+  let buf: Buffer;
+  if (type.use === "bn" || BN.isBN(value)) {
+    buf = (new BN(value as number)).toArrayLike(Buffer, "le", type.byteLength);
   } else {
-    bnValue = new BN(value);
+    let biValue: bigint;
+    if (type.use === "number" && type.byteLength > 6 && value === Infinity) {
+      biValue = BigInt("0x" + Buffer.alloc(type.byteLength, 255).toString("hex"));
+    } else {
+      biValue = BigInt(value);
+    }
+    buf = toBufferLE(biValue, type.byteLength);
   }
-  bnValue.toArrayLike(Buffer, "le", type.byteLength)
-    .copy(output, start);
+  buf.copy(output, start);
   return offset;
 }
 

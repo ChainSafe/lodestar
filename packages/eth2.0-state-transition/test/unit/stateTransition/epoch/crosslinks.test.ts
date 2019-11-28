@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import {expect} from "chai";
 import sinon from "sinon";
 
@@ -55,7 +54,7 @@ describe('process epoch - crosslinks', function () {
       crosslink,
       [4, 5, 6]
     ]);
-    getTotalBalanceStub.returns(new BN(1));
+    getTotalBalanceStub.returns(1n);
     try {
       processCrosslinks(config, state);
       expect(getCurrentEpochStub.calledOnce).to.be.true;
@@ -86,8 +85,8 @@ describe('process epoch - crosslinks', function () {
       crossLink,
       [4, 5, 6]
     ]);
-    getTotalBalanceStub.withArgs(sinon.match.any, [4, 5, 6]).returns(new BN(1));
-    getTotalBalanceStub.withArgs(sinon.match.any, [1, 2, 3]).returns(new BN(5));
+    getTotalBalanceStub.withArgs(sinon.match.any, [4, 5, 6]).returns(1n);
+    getTotalBalanceStub.withArgs(sinon.match.any, [1, 2, 3]).returns(5n);
     try {
       processCrosslinks(config, state);
       expect(getCurrentEpochStub.calledOnce).to.be.true;

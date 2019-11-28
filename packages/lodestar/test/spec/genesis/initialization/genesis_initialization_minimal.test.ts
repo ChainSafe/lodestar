@@ -26,10 +26,10 @@ describeDirectorySpecTest<GenesisInitSpecTest, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/genesis/initialization/pyspec_tests"),
   (testcase) => {
     const deposits: Deposit[] = [];
-    for(let i= 0; i < testcase.meta.depositsCount.toNumber(); i++) {
+    for(let i= 0; i < Number(testcase.meta.depositsCount); i++) {
       deposits.push(testcase[`deposits_${i}`] as Deposit);
     }
-    return initializeBeaconStateFromEth1(config, testcase.eth1_block_hash, testcase.eth1_timestamp.toNumber(), deposits);
+    return initializeBeaconStateFromEth1(config, testcase.eth1_block_hash, Number(testcase.eth1_timestamp), deposits);
   },
   {
     // @ts-ignore

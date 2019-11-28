@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
 import assert from "assert";
-import BN from "bn.js";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
+import BN from "bn.js";
 
 import {
   AnySSZType,
@@ -25,6 +25,7 @@ import {
 } from "@chainsafe/ssz-type-schema";
 import {BYTES_PER_LENGTH_PREFIX} from "../util/constants";
 import {fixedSize} from "./size";
+import {toBigIntLE} from "bigint-buffer";
 
 
 /**
@@ -39,9 +40,8 @@ import {fixedSize} from "./size";
  *   "uint32" // "uintN", N == length in bits, N <= 32
  * );
  *
- * // deserialize a BN bignumber
- * import BN from "bn.js";
- * const bn: BN = deserialize(
+ * // deserialize a BigInt
+ * const bi: bigint = deserialize(
  *   data,
  *   "uint64" // "uintN", N == length in bits, N >= 64
  * );
@@ -51,6 +51,9 @@ import {fixedSize} from "./size";
  *   data,
  *   "number64" // "numberN", N == length in bits
  * );
+ *
+ * // deserialize a BN (forced)
+ * const bn: BN = deserialize(data, "bn64");
  *
  * // deserialize a boolean
  * const b: boolean = deserialize(data, "bool");
@@ -109,12 +112,13 @@ import {fixedSize} from "./size";
  * const obj: myData = deserialize(data, myDataType);
  * ```
   */
-export function deserialize(data: Buffer, type: AnySSZType): any {
+export function deserialize<T>(data: Buffer, type: AnySSZType<T>): T {
   const _type = parseType(type);
   if (!isVariableSizeType(_type)) {
     assert(fixedSize(_type) === data.length, "Incorrect data length");
   }
-  return _deserialize(data, _type, 0, data.length);
+  return _deserialize(data, _type, 0, data.length) as unknown as T;
+
 }
 
 /**
@@ -149,11 +153,13 @@ export function _deserialize(data: Buffer, type: FullSSZType, start: number, end
 function _deserializeUint(data: Buffer, type: UintType, start: number): Uint {
   const offset = start + type.byteLength;
   const uintData = data.slice(start, offset);
-  if (type.byteLength > 6 && type.useNumber && uintData.equals(Buffer.alloc(type.byteLength, 255))) {
+  if (type.use === "number" && type.byteLength > 6 && uintData.equals(Buffer.alloc(type.byteLength, 255))) {
     return Infinity;
+  } else if (type.use === "bn") {
+    return new BN(uintData, 16, "le");
   } else {
-    const bn = new BN(uintData, 16, "le");
-    return (type.useNumber || type.byteLength <= 6) ? bn.toNumber() : bn;
+    const bi = toBigIntLE(uintData);
+    return (type.use == "number" || type.byteLength <= 6) ? Number(bi) : bi;
   }
 }
 

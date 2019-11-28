@@ -2,7 +2,6 @@
  * @module chain/stateTransition/epoch
  */
 
-import BN from "bn.js";
 
 import {BeaconState, Gwei} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -20,8 +19,8 @@ import {getBaseReward} from "./baseReward";
 
 
 export function getCrosslinkDeltas(config: IBeaconConfig, state: BeaconState): [Gwei[], Gwei[]] {
-  const rewards = Array.from({length: state.validators.length}, () => new BN(0));
-  const penalties = Array.from({length: state.validators.length}, () => new BN(0));
+  const rewards = Array.from({length: state.validators.length}, () => 0n);
+  const penalties = Array.from({length: state.validators.length}, () => 0n);
   const previousEpoch = getPreviousEpoch(config, state);
   const committeeCount = getCommitteeCount(config, state, previousEpoch);
   const startShard = getStartShard(config, state, previousEpoch);
@@ -35,10 +34,9 @@ export function getCrosslinkDeltas(config: IBeaconConfig, state: BeaconState): [
     crosslinkCommittee.forEach((index) => {
       const baseReward = getBaseReward(config, state, index);
       if (attestingIndices.includes(index)) {
-        rewards[index] = rewards[index]
-          .add(baseReward.mul(attestingBalance).div(committeeBalance));
+        rewards[index] += (baseReward * attestingBalance / committeeBalance);
       } else {
-        penalties[index] = penalties[index].add(baseReward);
+        penalties[index] += baseReward;
       }
     });
   }

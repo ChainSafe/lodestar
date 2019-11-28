@@ -2,8 +2,6 @@
  * @module chain/stateTransition/epoch
  */
 
-import BN from "bn.js";
-
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -20,15 +18,15 @@ import {
 export function processRegistryUpdates(config: IBeaconConfig, state: BeaconState): BeaconState {
   const currentEpoch = getCurrentEpoch(config, state);
   // Process activation eligibility and ejections
-  const maxBalance = new BN(config.params.MAX_EFFECTIVE_BALANCE);
-  const ejectionBalance = new BN(config.params.EJECTION_BALANCE);
+  const maxBalance = config.params.MAX_EFFECTIVE_BALANCE;
+  const ejectionBalance = config.params.EJECTION_BALANCE;
   state.validators.forEach((validator, index) => {
     if (validator.activationEligibilityEpoch ===
-      FAR_FUTURE_EPOCH && validator.effectiveBalance.gte(maxBalance)) {
+      FAR_FUTURE_EPOCH && validator.effectiveBalance >= maxBalance) {
       validator.activationEligibilityEpoch = currentEpoch;
     }
     if (isActiveValidator(validator, currentEpoch) &&
-      validator.effectiveBalance.lte(ejectionBalance)) {
+      validator.effectiveBalance <= ejectionBalance) {
       initiateValidatorExit(config, state, index);
     }
   });

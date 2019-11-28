@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import {expect} from "chai";
 import {uint64} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
@@ -8,9 +7,9 @@ import {describe, it} from "mocha";
 describe("Objects helper", () => {
 
   it("return most frequent objects", () => {
-    const obj1 = new BN(1);
-    const obj2 = new BN(2);
-    const obj3 = new BN(3);
+    const obj1 = 1n;
+    const obj2 = 2n;
+    const obj3 = 3n;
     const array = [];
     array.push(obj1);
     array.push(obj1);

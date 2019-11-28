@@ -12,7 +12,7 @@ export class MerkleTreeSerialization implements IMerkleTreeSerialization {
   }
 
   public deserializeTree(tree: Buffer): MerkleTree {
-    return deserialize(tree, this.config.types.MerkleTree) as MerkleTree;
+    return deserialize(tree, this.config.types.MerkleTree);
   }
 
   public serializeLength(length: number): Buffer {

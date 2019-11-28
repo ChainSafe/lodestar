@@ -1,6 +1,5 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import BN from "bn.js";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 
 import {Method} from "../../../src/constants";
@@ -47,7 +46,7 @@ describe("[sync] rpc", function () {
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
-      networkId: new BN(0),
+      networkId: 0n,
     });
     const state = generateState();
     // @ts-ignore

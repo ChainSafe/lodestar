@@ -13,11 +13,13 @@
     "@babel/generator": "^7.3.3",
     "@babel/plugin-proposal-class-properties": "^7.3.3",
     "@babel/plugin-proposal-object-rest-spread": "^7.3.2",
+    "@babel/plugin-syntax-bigint": "^7.4.4",
     "@babel/plugin-transform-runtime": "^7.3.4",
     "@babel/preset-env": "^7.3.1",
     "@babel/preset-typescript": "^7.3.3",
     "@babel/register": "^7.0.0",
     "@chainsafe/eth2.0-spec-test-util": "0.4.1",
+    "@mpetrunic/eslint-import-resolver-lerna": "1.0.0",
     "@types/chai": "^4.1.7",
     "@types/chai-as-promised": "^7.1.0",
     "@types/mocha": "^5.2.5",
@@ -28,8 +30,7 @@
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "codecov": "^3.1.0",
-    "eslint": "^5.14.1",
-    "@mpetrunic/eslint-import-resolver-lerna": "1.0.0",
+    "eslint": "^6.6.0",
     "eslint-plugin-import": "^2.18.2",
     "lerna": "^3.15.0",
     "mocha": "^6.1.4",
@@ -41,10 +42,12 @@
     "typedoc-plugin-external-module-name": "^2.1.0",
     "typedoc-plugin-internal-external": "^2.0.2",
     "typedoc-plugin-markdown": "^2.0.6",
-    "typescript": "^3.5.1",
+    "typescript": "^3.7.2",
     "webpack": "^4.39.1"
   },
   "optionalDependencies": {
     "@chainsafe/eth2-spec-tests": "0.8.3"
+  },
+  "dependencies": {
   }
 }

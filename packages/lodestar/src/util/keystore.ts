@@ -4,8 +4,9 @@
 
 import bls from "@chainsafe/bls";
 import fs from "fs";
-import {decryptKey, encryptKey} from "./encrypt";
-import {ensureDirectoryExistence} from "./file";
+
+import {decryptKey, encryptKey} from "../util/encrypt";
+import {ensureDirectoryExistence} from "../util/file";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
 import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 

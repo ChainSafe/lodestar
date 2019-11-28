@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
-import BN from "bn.js";
 
 import {AnySSZType, FullSSZType, parseType, Type} from "@chainsafe/ssz-type-schema";
+import BN from "bn.js";
+
 import {_assertValidValue} from "./assertValidValue";
 
 
@@ -63,9 +64,8 @@ function _clone(value: any, type: FullSSZType): any {
     case Type.uint:
       if (BN.isBN(value)) {
         return value.clone();
-      } else {
-        return value;
       }
+      return value;
     case Type.bool:
       return value;
     case Type.bitList:
