@@ -6,7 +6,7 @@ import {ContractTransaction, ethers, Wallet} from "ethers";
 import {Provider} from "ethers/providers";
 import {BigNumber, ParamType} from "ethers/utils";
 import BN from "bn.js";
-import bls from "@chainsafe/bls";
+import bls, {PrivateKey} from "@chainsafe/bls";
 import {hash, signingRoot} from "@chainsafe/ssz";
 import {DepositData} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -51,7 +51,7 @@ export class Eth1Wallet {
     const amount = new BN(value.toString()).div(new BN(1000000000));
 
     const contract = new ethers.Contract(address, this.contractAbi, this.wallet);
-    const privateKey = hash(Buffer.from(address, "hex"));
+    const privateKey = PrivateKey.random().toBytes();
     const pubkey = bls.generatePublicKey(privateKey);
     const withdrawalCredentials = Buffer.concat([
       this.config.params.BLS_WITHDRAWAL_PREFIX_BYTE,

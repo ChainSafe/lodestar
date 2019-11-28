@@ -2,6 +2,7 @@
 
 import {BenchSuite} from "@chainsafe/benchmark-utils";
 import {verify} from "../../../src";
+import {sha256} from "js-sha256";
 
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -19,6 +20,10 @@ global.require = require;
 global.domain = Buffer.alloc(8);
 global.verify = verify;
 
+global.message = Buffer.from(sha256.arrayBuffer(Math.random().toString(36)));
+
+
+
 export function verifyValidSignatureBenchmark(dir: string): BenchSuite {
 
   // Set the function test
@@ -32,11 +37,11 @@ export function verifyValidSignatureBenchmark(dir: string): BenchSuite {
     name: FUNCTION_NAME,
     testFunctions: [verifyValidSignature],
     setup: function() {
-      const {Keypair} = require("../../../src");
-      const {sha256} = require('js-sha256');
-      const keypair = Keypair.generate();
+      let i = 0;
+      const {Keypair, PrivateKey} = require("../../../src");
+      const keypair = new Keypair(PrivateKey.fromInt(i));
+      i = i+1;
       global.publicKey = keypair.publicKey.toBytesCompressed();
-      global.message = Buffer.from(sha256.arrayBuffer(Math.random().toString(36)));
       global.signature = keypair.privateKey.signMessage(Buffer.from(global.message), global.domain).toBytesCompressed();
     },
     file: dir + FUNCTION_NAME + ".txt"

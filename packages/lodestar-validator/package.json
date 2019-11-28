@@ -25,7 +25,7 @@
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "pretest": "yarn run check-types",
-    "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha  --colors -r ts-node/register 'test/unit/**/*.test.ts'",
+    "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha --file ./test/unit/setup.ts --colors -r ts-node/register 'test/unit/**/*.test.ts'",
     "test": "yarn test:unit",
     "coverage": "codecov -F lodestar-validator",
     "benchmark": "ts-node test/benchmarks"

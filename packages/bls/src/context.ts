@@ -1,9 +1,9 @@
-// eslint-disable-next-line import/no-extraneous-dependencies
 import blsWasmWrapper from "@chainsafe/eth2-bls-wasm";
 
 let blsWrapper: typeof blsWasmWrapper | null = null;
 
 export async function init(): Promise<typeof blsWasmWrapper> {
+  if(blsWrapper) return blsWrapper;
   await blsWasmWrapper.init();
   blsWrapper = blsWasmWrapper;
   return blsWrapper;

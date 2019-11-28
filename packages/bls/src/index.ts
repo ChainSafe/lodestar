@@ -5,6 +5,7 @@ import {Signature} from "./signature";
 import {BLSPubkey, BLSSecretKey, BLSSignature, Domain, Hash} from "@chainsafe/eth2.0-types";
 import {init} from "./context";
 import {PUBLIC_KEY_LENGTH} from "./constants";
+
 export {Keypair, PrivateKey, PublicKey, Signature};
 
 

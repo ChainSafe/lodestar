@@ -30,6 +30,13 @@ export class PrivateKey {
     return new PrivateKey(context.deserializeHexStrToSecretKey(value));
   }
 
+  public static fromInt(num: number): PrivateKey {
+    const context = getContext();
+    const secretKey = new context.SecretKey();
+    secretKey.setInt(num);
+    return new PrivateKey(secretKey);
+  }
+
   public static random(): PrivateKey {
     const context = getContext();
     const secretKey = new context.SecretKey();
