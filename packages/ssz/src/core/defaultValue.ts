@@ -23,10 +23,10 @@ export function _defaultValue(type: FullSSZType): any {
       }
       break;
     case Type.bitList:
-      return BitList.fromBitfield(Buffer.alloc(1), 0);
+      return BitList.fromBitfield(Buffer.alloc(0), 0);
     case Type.bitVector:
       return BitVector.fromBitfield(
-        Buffer.alloc(Math.max(1, Math.min(type.length / 8))),
+        Buffer.alloc(Math.max(1, Math.ceil(type.length / 8))),
         type.length);
     case Type.byteList:
       return Buffer.alloc(0);
