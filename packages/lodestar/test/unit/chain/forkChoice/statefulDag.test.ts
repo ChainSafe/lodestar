@@ -173,6 +173,7 @@ describe("StatefulDagLMDGHOST", () => {
     lmd.setJustified(b);
     const genesisTime = Date.now() - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT * 1000;
     lmd.start(genesisTime);
+    // a slot is smaller than justified block slot (b)
     assert(lmd.shouldUpdateJustifiedCheckpoint(a) === false, "should return false");
   });
 
@@ -195,6 +196,7 @@ describe("StatefulDagLMDGHOST", () => {
     lmd.setJustified(b);
     const genesisTime = Date.now() - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT * 1000;
     lmd.start(genesisTime);
+    // c is a conflicted justified block.
     assert(lmd.shouldUpdateJustifiedCheckpoint(c) === false, "should return false");
   });
 });

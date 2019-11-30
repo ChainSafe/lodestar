@@ -10,8 +10,8 @@ import {Gwei, Hash, Slot, ValidatorIndex, number64,} from "@chainsafe/eth2.0-typ
 import {ILMDGHOST} from "../interface";
 
 import {AttestationAggregator, Root,} from "./attestationAggregator";
-import { IBeaconConfig } from "@chainsafe/eth2.0-config";
-import { computeStartSlotAtEpoch, computeEpochAtSlot, getCurrentSlot } from "@chainsafe/eth2.0-state-transition";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {computeStartSlotAtEpoch, computeEpochAtSlot, getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
 
 
 /**
@@ -260,7 +260,8 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     if(!this.justified) {
       return true;
     }
-    if(this.computeSlotsSinceEpochStart(getCurrentSlot(this.config, this.genesisTime)) < this.config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED) {
+    if(this.computeSlotsSinceEpochStart(getCurrentSlot(this.config, this.genesisTime)) < 
+       this.config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED) {
       return true;
     }
     const newJustifiedBlock = this.nodes[blockRoot.toString("hex")];
