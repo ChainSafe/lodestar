@@ -2,6 +2,7 @@ import {assert} from "chai";
 import BN from "bn.js";
 
 import {StatefulDagLMDGHOST} from "../../../../src/chain/forkChoice/statefulDag/lmdGhost";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 
 describe("StatefulDagLMDGHOST", () => {
   const genesis = Buffer.from("genesis");
@@ -23,7 +24,7 @@ describe("StatefulDagLMDGHOST", () => {
      *         \
      *           e
      */
-    const lmd = new StatefulDagLMDGHOST();
+    const lmd = new StatefulDagLMDGHOST(config);
     lmd.addBlock(1, a, genesis);
     lmd.setFinalized(a);
     lmd.setJustified(a);
@@ -45,7 +46,7 @@ describe("StatefulDagLMDGHOST", () => {
      *         \
      *           e
      */
-    const lmd = new StatefulDagLMDGHOST();
+    const lmd = new StatefulDagLMDGHOST(config);
     let head;
     lmd.addBlock(1, a, genesis);
     lmd.setFinalized(a);
@@ -94,7 +95,7 @@ describe("StatefulDagLMDGHOST", () => {
      *
      *
      */
-    const lmd = new StatefulDagLMDGHOST();
+    const lmd = new StatefulDagLMDGHOST(config);
     let head;
     lmd.addBlock(1, a, genesis);
     lmd.setFinalized(a);
@@ -128,7 +129,7 @@ describe("StatefulDagLMDGHOST", () => {
      *         \
      *           g
      */
-    const lmd = new StatefulDagLMDGHOST();
+    const lmd = new StatefulDagLMDGHOST(config);
     let head;
     lmd.addBlock(1, a, genesis);
     lmd.setFinalized(a);
@@ -145,5 +146,55 @@ describe("StatefulDagLMDGHOST", () => {
     lmd.addAttestation(g, 2, new BN(4));
     head = lmd.head();
     assert(head.equals(g), "head should be g");
+  });
+
+  it("should update justified block initially", () => {
+    const lmd = new StatefulDagLMDGHOST(config);
+    lmd.addBlock(1, a, genesis);
+    assert(lmd.shouldUpdateJustifiedCheckpoint(a) === true, "should return true")
+  });
+
+  it("should update justified block within SAFE_SLOTS_TO_UPDATE_JUSTIFIED", () => {
+    const genesisTime = Date.now() - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED - 1) * config.params.SECONDS_PER_SLOT * 1000;
+    const lmd = new StatefulDagLMDGHOST(config);
+    lmd.start(genesisTime);
+    lmd.addBlock(1, a, genesis);
+    lmd.addBlock(2, b, a);
+    assert(lmd.shouldUpdateJustifiedCheckpoint(b) === true, "should return true");
+  });
+
+  /**
+   * a -- b
+   */
+  it("should not update justified block after SAFE_SLOTS_TO_UPDATE_JUSTIFIED - 1", () => {
+    const lmd = new StatefulDagLMDGHOST(config);
+    lmd.addBlock(1, a, genesis);
+    lmd.addBlock(2, b, a);
+    lmd.setJustified(b);
+    const genesisTime = Date.now() - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT * 1000;
+    lmd.start(genesisTime);
+    assert(lmd.shouldUpdateJustifiedCheckpoint(a) === false, "should return false");
+  });
+
+  /**
+   * 
+   * a -- b
+   *  \
+   *   \
+   *    \
+   *     \
+   *      \
+   *       \
+   *        c
+   */
+  it("should not update justified block after SAFE_SLOTS_TO_UPDATE_JUSTIFIED - 2", () => {
+    const lmd = new StatefulDagLMDGHOST(config);
+    lmd.addBlock(1, a, genesis);
+    lmd.addBlock(2, b, a);
+    lmd.addBlock(3, c, a);
+    lmd.setJustified(b);
+    const genesisTime = Date.now() - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT * 1000;
+    lmd.start(genesisTime);
+    assert(lmd.shouldUpdateJustifiedCheckpoint(c) === false, "should return false");
   });
 });

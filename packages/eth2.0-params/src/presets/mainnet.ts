@@ -26,6 +26,7 @@ export const EFFECTIVE_BALANCE_INCREMENT = new BN(2 ** 0 * 1e9); // 1,000,000,00
 
 // Initial values
 export const GENESIS_SLOT = 0;
+export const SAFE_SLOTS_TO_UPDATE_JUSTIFIED = 8;
 export const GENESIS_EPOCH = 0;
 export const BLS_WITHDRAWAL_PREFIX_BYTE = Buffer.alloc(1, 0);
 export const GENESIS_FORK_VERSION = Buffer.alloc(4, 0);

@@ -25,6 +25,7 @@ export interface IBeaconParams {
 
   // Initial values
   GENESIS_SLOT: number;
+  SAFE_SLOTS_TO_UPDATE_JUSTIFIED: number;
   GENESIS_EPOCH: number;
   BLS_WITHDRAWAL_PREFIX_BYTE: Buffer;
   GENESIS_FORK_VERSION: Buffer;

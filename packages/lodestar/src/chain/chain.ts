@@ -74,7 +74,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.opPool = opPool;
     this.logger = logger;
     this.metrics = metrics;
-    this.forkChoice = new StatefulDagLMDGHOST();
+    this.forkChoice = new StatefulDagLMDGHOST(config);
     this.chainId = 0; // TODO make this real
     this.networkId = new BN(0); // TODO make this real
     this.attestationProcessingQueue = queue(async (task: Function) => {
@@ -87,6 +87,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   public async start(): Promise<void> {
     const state = this.latestState || await this.db.state.getLatest();
+    await this.forkChoice.start(state.genesisTime);
     // if state doesn't exist in the db, the chain maybe hasn't started
     if(!state) {
       // check every block if genesis
