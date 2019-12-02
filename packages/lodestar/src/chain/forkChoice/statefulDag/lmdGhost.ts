@@ -11,7 +11,7 @@ import {ILMDGHOST} from "../interface";
 
 import {AttestationAggregator, Root,} from "./attestationAggregator";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {computeStartSlotAtEpoch, computeEpochAtSlot, getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
+import {computeSlotsSinceEpochStart, getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
 
 
 /**
@@ -260,7 +260,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     if(!this.justified) {
       return true;
     }
-    if(this.computeSlotsSinceEpochStart(getCurrentSlot(this.config, this.genesisTime)) < 
+    if(computeSlotsSinceEpochStart(this.config, getCurrentSlot(this.config, this.genesisTime)) < 
        this.config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED) {
       return true;
     }
@@ -273,10 +273,6 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     }
 
     return true;
-  }
-
-  private computeSlotsSinceEpochStart(slot: Slot): number {
-    return slot - computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, slot));
   }
 
   private getAncestor(root: Root, slot: Slot): Root | null {

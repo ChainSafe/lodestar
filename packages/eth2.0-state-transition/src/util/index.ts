@@ -13,4 +13,4 @@ export * from "./proposer";
 export * from "./balance";
 export * from "./validatorStatus";
 export * from "./duties";
-export * from "./genesis";
+export * from "./slot";
