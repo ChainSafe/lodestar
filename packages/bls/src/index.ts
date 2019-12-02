@@ -3,15 +3,11 @@ import {PrivateKey} from "./privateKey";
 import {PublicKey} from "./publicKey";
 import {Signature} from "./signature";
 import {BLSPubkey, BLSSecretKey, BLSSignature, Domain, Hash} from "@chainsafe/eth2.0-types";
-import {init} from "./context";
 import {PUBLIC_KEY_LENGTH} from "./constants";
 
 export {Keypair, PrivateKey, PublicKey, Signature};
 
-
-export async function initLibrary(): Promise<void> {
-  await init();
-}
+export {init as initBLS} from "./context";
 
 /**
  * Generates new secret and public key

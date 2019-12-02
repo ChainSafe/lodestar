@@ -1,8 +1,6 @@
 import {destroy, init} from "../../src/context";
-import {PublicKey} from "../../src/publicKey";
+import {PublicKey, PrivateKey} from "../../src";
 import {expect} from "chai";
-import { PrivateKey } from "../../src/privateKey";
-
 
 describe("public key", function () {
 

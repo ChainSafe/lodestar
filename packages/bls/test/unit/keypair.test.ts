@@ -1,6 +1,4 @@
-import {PrivateKey} from "../../src/privateKey";
-import {PublicKey} from "../../src/publicKey";
-import {Keypair} from "../../src/keypair";
+import {PrivateKey,PublicKey,Keypair} from "../../src";
 import {expect} from "chai";
 import {destroy, init} from "../../src/context";
 

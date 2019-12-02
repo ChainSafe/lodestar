@@ -23,7 +23,6 @@ import {ILogger} from "./logger/interface";
 import {IValidatorOptions} from "./options";
 import {computeEpochOfSlot} from "./util";
 import {ApiClientOverRest} from "./api/impl/rest/apiClient";
-import {initLibrary} from "@chainsafe/bls";
 
 /**
  * Main class for the Validator client.
@@ -55,7 +54,6 @@ export class Validator {
    */
   public async start(): Promise<void> {
     this.isRunning = true;
-    await initLibrary();
     await this.setup();
     this.logger.info("Checking if chain has started...");
     this.apiClient.once("beaconChainStarted", this.run.bind(this));

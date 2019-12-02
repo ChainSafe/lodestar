@@ -1,4 +1,4 @@
-import bls, {aggregatePubkeys, aggregateSignatures, initLibrary, Keypair, verify, verifyMultiple} from "../../src";
+import bls, {aggregatePubkeys, aggregateSignatures, initBLS, Keypair, verify, verifyMultiple} from "../../src";
 import {sha256} from "js-sha256";
 import {expect} from "chai";
 import {destroy} from "../../src/context";
@@ -7,7 +7,7 @@ import {padLeft} from "../../lib/helpers/utils";
 describe("test bls", function () {
 
   before(async function() {
-    await initLibrary();
+    await initBLS();
   });
 
   after(function () {

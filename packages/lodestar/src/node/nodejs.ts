@@ -18,7 +18,6 @@ import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 import {ApiService} from "../api";
 import {ReputationStore} from "../sync/IReputation";
 import {TasksService} from "../tasks";
-import {initLibrary as initBlsLibrary} from "@chainsafe/bls";
 
 export interface IService {
   start(): Promise<void>;
@@ -138,7 +137,6 @@ export class BeaconNode {
 
   public async start(): Promise<void> {
     this.logger.info("Starting eth2 beacon node - LODESTAR!");
-    await initBlsLibrary();
     await this.metrics.start();
     await this.metricsServer.start();
     await this.db.start();

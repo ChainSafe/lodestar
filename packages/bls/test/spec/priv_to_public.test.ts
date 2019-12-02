@@ -1,4 +1,4 @@
-import bls, {initLibrary} from "../../src";
+import bls, {initBLS} from "../../src";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import path from "path";
 
@@ -10,7 +10,7 @@ interface IPrivToPubTestCase {
 }
 
 before(async function f() {
-  await initLibrary();
+  await initBLS();
 });
 
 describeDirectorySpecTest<IPrivToPubTestCase, string>(

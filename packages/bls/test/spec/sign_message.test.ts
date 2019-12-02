@@ -1,5 +1,5 @@
 import path from "path";
-import bls, {initLibrary} from "../../src";
+import bls, {initBLS} from "../../src";
 import {padLeft} from "../../src/helpers/utils";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 
@@ -15,7 +15,7 @@ interface ISignMessageTestCase {
 }
 
 before(async function f() {
-  await initLibrary();
+  await initBLS();
 });
 
 describeDirectorySpecTest<ISignMessageTestCase, string>(

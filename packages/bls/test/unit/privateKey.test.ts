@@ -1,4 +1,4 @@
-import {PrivateKey} from "../../src/privateKey";
+import {PrivateKey} from "../../src";
 import {expect} from "chai";
 import {SECRET_KEY_LENGTH} from "../../src/constants";
 import {destroy, init} from "../../src/context";
