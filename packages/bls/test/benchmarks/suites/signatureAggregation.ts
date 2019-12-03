@@ -25,6 +25,7 @@ export function aggregateSignaturesBenchmark(dir: string): BenchSuite {
   };
 
   return {
+    name: FUNCTION_NAME,
     testFunctions: [aggregateSignatures],
     setup: function() {
       global.signatures = [];

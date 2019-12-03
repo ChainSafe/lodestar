@@ -1,4 +1,4 @@
-import bls from "../../src";
+import bls, {initBLS} from "../../src";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import path from "path";
 
@@ -8,6 +8,10 @@ interface IAggregatePubKeysTestCase {
     output: string;
   };
 }
+
+before(async function f() {
+  await initBLS();
+});
 
 describeDirectorySpecTest<IAggregatePubKeysTestCase, string>(
   "aggregate pubkeys",
