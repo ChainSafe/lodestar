@@ -1,6 +1,7 @@
 import {BeaconBlock, BeaconState} from "@chainsafe/eth2.0-types";
+import {IBaseSpecTest} from "../../type";
 
-export interface ProcessBlockHeader {
+export interface IProcessBlockHeader extends IBaseSpecTest {
 
   block: BeaconBlock;
   pre: BeaconState;

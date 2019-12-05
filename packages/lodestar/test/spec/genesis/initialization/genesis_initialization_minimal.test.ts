@@ -1,17 +1,15 @@
 /* eslint-disable @typescript-eslint/camelcase */
 import {join} from "path";
 import {expect} from "chai";
-// @ts-ignore
 import {equals} from "@chainsafe/ssz";
-
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import {BeaconState, Deposit, Hash, number64, uint64} from "@chainsafe/eth2.0-types";
+import {config,IBeaconConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {BeaconState, Deposit, Hash, uint64} from "@chainsafe/eth2.0-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {initializeBeaconStateFromEth1} from "../../../../src/chain/genesis/genesis";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
-interface GenesisInitSpecTest {
+interface IGenesisInitSpecTest {
   eth1_block_hash: Hash;
   eth1_timestamp: uint64;
   meta: {
@@ -21,7 +19,7 @@ interface GenesisInitSpecTest {
   [k: string]: Deposit|unknown|null|undefined;
 }
 
-describeDirectorySpecTest<GenesisInitSpecTest, BeaconState>(
+describeDirectorySpecTest<IGenesisInitSpecTest, BeaconState>(
   "genesis initialization",
   join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/genesis/initialization/pyspec_tests"),
   (testcase) => {
