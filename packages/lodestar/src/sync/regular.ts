@@ -4,7 +4,8 @@
 
 import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {Attestation, BeaconBlock, Checkpoint, Hash, VoluntaryExit, ProposerSlashing, AttesterSlashing, AggregateAndProof} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, Checkpoint, Hash, VoluntaryExit, ProposerSlashing, AttesterSlashing,
+  AggregateAndProof} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
@@ -16,8 +17,8 @@ import {ISyncOptions} from "./options";
 import {GossipEvent} from "../network/gossip/constants";
 import {isValidAttesterSlashing, isValidProposerSlashing, isValidVoluntaryExit, getCurrentSlot, 
   isValidIndexedAttestation, getIndexedAttestation} from "@chainsafe/eth2.0-state-transition";
-import { ATTESTATION_PROPAGATION_SLOT_RANGE } from "../constants";
-import { getAttestationSubnet } from "../network/gossip/utils";
+import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../constants";
+import {getAttestationSubnet} from "../network/gossip/utils";
 
 export type IRegularSyncModules = Pick<ISyncModules, "config"|"db"|"chain"|"opPool"|"network"|"logger">;
 
@@ -83,7 +84,8 @@ export class RegularSync {
     }
   };
 
-  public receiveCommitteeAttestation = async (attestationSubnet: {attestation: Attestation, subnet: number}): Promise<void> => {
+  public receiveCommitteeAttestation = async (attestationSubnet: {attestation: Attestation; subnet: number}): 
+  Promise<void> => {
     const attestation = attestationSubnet.attestation;
     const subnet = attestationSubnet.subnet;
     if (String(subnet) !== getAttestationSubnet(attestation)) {
@@ -119,13 +121,13 @@ export class RegularSync {
       this.opPool.attestations.receive(attestation),
       this.chain.receiveAttestation(attestation),
     ]);
-  }
-
+  };
 
   public receiveAggregateAndProof = async (aggregation: AggregateAndProof): Promise<void> => {
     // a place holder for mainnet
     // this is for aggregated attestattions
-  }
+    this.logger.debug(aggregation);
+  };
 
   public receiveAttestation = async (attestation: Attestation): Promise<void> => {
     // skip attestation if it already exists
@@ -156,7 +158,7 @@ export class RegularSync {
       return;
     }
     await this.opPool.voluntaryExits.receive(voluntaryExit);
-  }
+  };
 
   public receiveProposerSlashing = async (proposerSlashing: ProposerSlashing): Promise<void> => {
     // skip proposer slashing if it already exists
@@ -169,7 +171,7 @@ export class RegularSync {
       return;
     }
     await this.opPool.proposerSlashings.receive(proposerSlashing);
-  }
+  };
 
   public receiveAttesterSlashing = async (attesterSlashing: AttesterSlashing): Promise<void> => {
     // skip attester slashing if it already exists
@@ -182,7 +184,7 @@ export class RegularSync {
       return;
     }
     await this.opPool.attesterSlashings.receive(attesterSlashing);
-  }
+  };
 
   private onProcessedBlock = (block: BeaconBlock): void => {
     this.network.gossip.publishBlock(block);

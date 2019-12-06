@@ -17,7 +17,8 @@ import {INetworkOptions} from "../options";
 import {GossipEventEmitter, IGossip, IGossipEvents, IGossipModules,} from "./interface";
 import {GossipEvent} from "./constants";
 import {handleIncomingBlock, publishBlock} from "./handlers/block";
-import {handleIncomingAttestation, publishCommiteeAttestation, getCommitteeAttestationHandler} from "./handlers/attestation";
+import {handleIncomingAttestation, publishCommiteeAttestation, getCommitteeAttestationHandler} 
+  from "./handlers/attestation";
 import {handleIncomingAttesterSlashing, publishAttesterSlashing} from "./handlers/attesterSlashing";
 import {handleIncomingProposerSlashing, publishProposerSlashing} from "./handlers/proposerSlashing";
 import {handleIncomingVoluntaryExit, publishVoluntaryExit} from "./handlers/voluntaryExit";

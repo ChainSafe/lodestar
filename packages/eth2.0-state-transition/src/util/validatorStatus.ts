@@ -2,7 +2,8 @@
  * @module chain/stateTransition/util
  */
 
-import {BeaconState, Epoch, Validator, ValidatorIndex, AttesterSlashing, ProposerSlashing, VoluntaryExit,} from "@chainsafe/eth2.0-types";
+import {BeaconState, Epoch, Validator, ValidatorIndex, AttesterSlashing, ProposerSlashing,
+  VoluntaryExit,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {FAR_FUTURE_EPOCH, DomainType} from "../constants";
@@ -10,8 +11,8 @@ import {computeActivationExitEpoch, getCurrentEpoch, computeEpochAtSlot} from ".
 import {getValidatorChurnLimit, isSlashableValidator, isActiveValidator} from "./validator";
 import {decreaseBalance, increaseBalance} from "./balance";
 import {getBeaconProposerIndex} from "./proposer";
-import { isSlashableAttestationData, isValidIndexedAttestation, getDomain } from ".";
-import { equals, signingRoot } from "@chainsafe/ssz";
+import {isSlashableAttestationData, isValidIndexedAttestation, getDomain} from ".";
+import {equals, signingRoot} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 
 
