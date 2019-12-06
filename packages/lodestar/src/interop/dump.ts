@@ -7,8 +7,9 @@ import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../constants";
 
 import yargs from "yargs";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {MerkleTreeSerialization} from "../util/serialization";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 const args = yargs.parse()._;
 
 // This file runs the dump command:

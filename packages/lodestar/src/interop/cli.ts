@@ -7,6 +7,7 @@ import {fromYaml, IProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {loadYamlFile} from "@chainsafe/eth2.0-utils/lib/nodejs";
 
 
+
 // either "genesisTime,validatorCount" or "genesisState.fileext"
 export function quickStartOptionToState(
   config: IBeaconConfig,
