@@ -2,13 +2,11 @@
  * @module validator/keystore
  */
 
-import bls from "@chainsafe/bls";
+import {generateKeyPair, Keypair, PrivateKey} from "@chainsafe/bls";
 import fs from "fs";
+import {decryptKey, encryptKey} from "./encrypt";
+import {ensureDirectoryExistence} from "./file";
 
-import {decryptKey, encryptKey} from "../util/encrypt";
-import {ensureDirectoryExistence} from "../util/file";
-import {Keypair} from "@chainsafe/bls/lib/keypair";
-import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
 
 export interface IKeystoreObject {
   encryptedPrivateKey: string;
@@ -34,7 +32,7 @@ export default class Keystore {
   }
 
   public static generateKeys(password: string): Keystore {
-    const keyPair = bls.generateKeyPair();
+    const keyPair = generateKeyPair();
 
     const keys: IKeystoreObject = {
       encryptedPrivateKey:encryptKey(keyPair.privateKey.toHexString(), password),
