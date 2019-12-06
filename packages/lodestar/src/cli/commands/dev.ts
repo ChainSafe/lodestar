@@ -18,7 +18,7 @@ import {getTomlConfig, rmDir} from "../../util/file";
 import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {InteropEth1Notifier} from "../../eth1/impl/interop";
 import {quickStartOptionToState} from "../../interop/cli";
-import {Keypair, PrivateKey} from "@chainsafe/bls";
+import {initBLS, Keypair, PrivateKey} from "@chainsafe/bls";
 import {interopKeypair} from "../../interop/keypairs";
 import {ValidatorApi} from "../../api/rpc/api/validator";
 import {BeaconApi} from "../../api/rpc/api/beacon";
@@ -82,6 +82,9 @@ export class DevCommand implements ICliCommand {
 
   public async action(options: IDevCommandOptions, logger: ILogger): Promise<void> {
     let conf: Partial<IBeaconNodeOptions> = {};
+
+    //find better place for this once this cli is refactored
+    await initBLS();
 
     //merge config file
     if (options.configFile) {

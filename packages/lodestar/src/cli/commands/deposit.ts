@@ -11,6 +11,7 @@ import {ILogger, LogLevels, WinstonLogger} from "../../logger";
 import {Eth1Wallet} from "../../eth1";
 import {CliError} from "../error";
 import * as ethers from "ethers/ethers";
+import {initBLS} from "@chainsafe/bls";
 
 interface IDepositCommandOptions {
   privateKey: string;
@@ -59,6 +60,7 @@ export class DepositCommand implements ICliCommand {
   }
 
   public async action(options: IDepositCommandOptions, logger: ILogger): Promise<void> {
+    await initBLS();
     const provider = new JsonRpcProvider(options.node);
     try {
       //check if we can connect to node
