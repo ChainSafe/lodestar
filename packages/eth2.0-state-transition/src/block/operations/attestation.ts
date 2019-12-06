@@ -26,7 +26,7 @@ export function processAttestation(
   config: IBeaconConfig,
   state: BeaconState,
   attestation: Attestation,
-  verifySignature: boolean = true
+  verifySignature = true
 ): void {
   const currentEpoch = getCurrentEpoch(config, state);
   const previousEpoch = getPreviousEpoch(config, state);

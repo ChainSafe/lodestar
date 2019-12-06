@@ -11,7 +11,7 @@ export interface IApiClientOverInstanceOpts {
 
 export class ApiClientOverInstance extends AbstractApiClient {
 
-  public url: string = "inmemory";
+  public url = "inmemory";
 
   public beacon: IBeaconApi;
 

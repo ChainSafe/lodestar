@@ -2,7 +2,7 @@ export class RoundRobinArray<T> {
 
   private readonly array: T[];
 
-  private index: number = 0;
+  private index = 0;
 
   public constructor(array: T[]) {
     this.array = this.shuffle(array);

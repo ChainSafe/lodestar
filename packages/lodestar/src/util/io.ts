@@ -1,8 +1,7 @@
 import readline from "readline";
-import {Keypair} from "@chainsafe/bls/lib/keypair";
 import keystore from "./keystore";
 import fs from "fs";
-import {PrivateKey} from "@chainsafe/bls/lib/privateKey";
+import {Keypair, PrivateKey} from "@chainsafe/bls";
 
 interface IHiddenReadlineInterface extends readline.Interface {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

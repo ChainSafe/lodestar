@@ -72,7 +72,7 @@ export class AttestationService {
       hashTreeRoot(attestationDataAndCustodyBit, this.config.types.AttestationDataAndCustodyBit),
       getDomain(
         this.config,
-        {fork} as BeaconState, // eslint-disable-line @typescript-eslint/no-object-literal-type-assertion
+        {fork} as BeaconState,
         DomainType.ATTESTATION,
         attestation.data.target.epoch,
       )

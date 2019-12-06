@@ -21,7 +21,7 @@ export function processTransfer(
   config: IBeaconConfig,
   state: BeaconState,
   transfer: Transfer,
-  verifySignature: boolean = true
+  verifySignature = true
 ): void {
   // Verify the balance the covers amount and fee
   const senderBalance = state.balances[transfer.sender];

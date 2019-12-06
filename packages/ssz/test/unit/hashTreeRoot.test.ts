@@ -69,6 +69,7 @@ describe("hashTreeRoot", () => {
       validatorIndexes.push(i);
     }
     const type: AnySSZType = {
+      // @ts-ignore
       elementType: {type:0, byteLength:8, useNumber:true},
       // VALIDATOR_REGISTRY_LIMIT
       maxLength: 1099511627776

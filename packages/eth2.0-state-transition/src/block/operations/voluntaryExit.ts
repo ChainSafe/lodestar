@@ -21,7 +21,7 @@ export function processVoluntaryExit(
   config: IBeaconConfig,
   state: BeaconState,
   exit: VoluntaryExit,
-  verifySignature: boolean = true
+  verifySignature = true
 ): void {
   const validator = state.validators[exit.validatorIndex];
   const currentEpoch = getCurrentEpoch(config, state);

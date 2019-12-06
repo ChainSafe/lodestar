@@ -18,7 +18,7 @@ export function processBlockHeader(
   config: IBeaconConfig,
   state: BeaconState,
   block: BeaconBlock,
-  verifyProposer: boolean = true
+  verifyProposer = true
 ): void {
   // Verify that the slots match
   assert(block.slot === state.slot);

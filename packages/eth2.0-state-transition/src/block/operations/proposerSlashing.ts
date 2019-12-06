@@ -18,7 +18,7 @@ export function processProposerSlashing(
   config: IBeaconConfig,
   state: BeaconState,
   proposerSlashing: ProposerSlashing,
-  verifySignatures: boolean = true,
+  verifySignatures = true,
 ): void {
   const proposer = state.validators[proposerSlashing.proposerIndex];
   const header1Epoch = computeEpochOfSlot(config, proposerSlashing.header1.slot);

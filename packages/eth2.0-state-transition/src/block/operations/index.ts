@@ -35,7 +35,7 @@ export function processOperations(
   config: IBeaconConfig,
   state: BeaconState,
   body: BeaconBlockBody,
-  verifySignatures: boolean = true,
+  verifySignatures = true,
 ): void {
   // Verify that outstanding deposits are processed up to the maximum number of deposits
   assert.equal(body.deposits.length, Math.min(

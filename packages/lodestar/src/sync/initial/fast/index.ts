@@ -61,7 +61,7 @@ export class FastSync
     this.chain.removeListener("processedCheckpoint", this.sync);
   }
 
-  private sync = async (chainCheckPoint: Checkpoint) => {
+  private sync = async (chainCheckPoint: Checkpoint): Promise<void> => {
     const peers = Array.from(this.peers).map(this.reps.getFromPeerInfo);
     const targetEpoch = getSyncTargetEpoch(peers, chainCheckPoint);
     if(chainCheckPoint.epoch >= targetEpoch) {

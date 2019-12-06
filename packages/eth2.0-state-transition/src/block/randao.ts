@@ -19,7 +19,7 @@ export function processRandao(
   config: IBeaconConfig,
   state: BeaconState,
   body: BeaconBlockBody,
-  verifySignature: boolean = true
+  verifySignature = true
 ): void {
   const currentEpoch = getCurrentEpoch(config, state);
   const proposer = state.validators[getBeaconProposerIndex(config, state)];
