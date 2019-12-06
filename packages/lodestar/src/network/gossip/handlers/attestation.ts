@@ -25,6 +25,23 @@ export function handleIncomingAttestation(this: Gossip, msg: IGossipMessage): vo
   }
 }
 
+export type handleCommitteeAttestationFn = (this: Gossip, msg: IGossipMessage) => void;
+
+export function getCommitteeAttestationHandler(subnet: number): handleCommitteeAttestationFn {
+  return function handleIncomingCommitteeAttestation(this: Gossip, msg: IGossipMessage): void {
+    try {
+      const attestation = deserializeGossipMessage<Attestation>(msg, this.config.types.Attestation);
+      this.logger.verbose(
+        `Received committee attestation for block ${toHex(attestation.data.beaconBlockRoot)}`
+          +`subnet: ${subnet}, (${attestation.data.source.epoch}, ${attestation.data.target.epoch})`
+      );
+      this.emit(GossipEvent.ATTESTATION_SUBNET, {attestation, subnet});
+    } catch (e) {
+      this.logger.warn("Incoming committee attestation error", e);
+    }
+  };
+}
+
 export async function publishCommiteeAttestation(this: Gossip, attestation: Attestation): Promise<void> {
   const subnet = getAttestationSubnet(attestation);
   await promisify(this.pubsub.publish.bind(this.pubsub))(

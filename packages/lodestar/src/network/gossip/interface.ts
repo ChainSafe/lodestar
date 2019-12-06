@@ -20,6 +20,7 @@ import {IService} from "../../node";
 
 export interface IGossipEvents {
   [GossipEvent.BLOCK]: (block: BeaconBlock) => void;
+  [GossipEvent.ATTESTATION_SUBNET]: (attestationSubnet: {attestation: Attestation, subnet: number}) => void;
   [GossipEvent.ATTESTATION]: (attestation: Attestation) => void;
   [GossipEvent.AGGREGATE_AND_PROOF]: (attestation: AggregateAndProof) => void;
   [GossipEvent.VOLUNTARY_EXIT]: (voluntaryExit: VoluntaryExit) => void;

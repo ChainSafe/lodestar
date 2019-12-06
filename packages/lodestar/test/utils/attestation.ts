@@ -2,6 +2,7 @@ import {
   Attestation,
   AttestationData,
   Epoch,
+  VoluntaryExit,
 } from "@chainsafe/eth2.0-types";
 import { BitList } from "@chainsafe/bit-utils";
 import crypto from "crypto";
@@ -46,5 +47,13 @@ export function generateEmptyAttestation(): Attestation {
       },
     },
     signature: Buffer.alloc(96),
+  };
+}
+
+export function generateEmptyVoluntaryExit(): VoluntaryExit {
+  return {
+    epoch: 0,
+    validatorIndex: 0,
+    signature: Buffer.alloc(96)
   };
 }

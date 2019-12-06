@@ -13,9 +13,8 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {
   getCurrentEpoch,
   isSlashableValidator,
-  isSlashableAttestationData,
-  isValidIndexedAttestation,
   slashValidator,
+  isValidAttesterSlashing,
 } from "../../util";
 
 // See https://github.com/ethereum/eth2.0-specs/blob/v0.9.1/specs/core/0_beacon-chain.md#attester-slashings
@@ -28,14 +27,11 @@ export function processAttesterSlashing(
   state: BeaconState,
   attesterSlashing: AttesterSlashing
 ): void {
+  // Check that the attestations are conflicting
+  assert(isValidAttesterSlashing(config, state, attesterSlashing));
+
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;
-
-  // Check that the attestations are conflicting
-  assert(isSlashableAttestationData(config, attestation1.data, attestation2.data));
-  assert(isValidIndexedAttestation(config, state, attestation1));
-  assert(isValidIndexedAttestation(config, state, attestation2));
-
   let slashedAny = false;
   const attestingIndices1 = attestation1.attestingIndices;
   const attestingIndices2 = attestation2.attestingIndices;

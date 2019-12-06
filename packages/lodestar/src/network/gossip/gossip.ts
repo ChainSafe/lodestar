@@ -17,7 +17,7 @@ import {INetworkOptions} from "../options";
 import {GossipEventEmitter, IGossip, IGossipEvents, IGossipModules,} from "./interface";
 import {GossipEvent} from "./constants";
 import {handleIncomingBlock, publishBlock} from "./handlers/block";
-import {handleIncomingAttestation, publishCommiteeAttestation} from "./handlers/attestation";
+import {handleIncomingAttestation, publishCommiteeAttestation, getCommitteeAttestationHandler} from "./handlers/attestation";
 import {handleIncomingAttesterSlashing, publishAttesterSlashing} from "./handlers/attesterSlashing";
 import {handleIncomingProposerSlashing, publishProposerSlashing} from "./handlers/proposerSlashing";
 import {handleIncomingVoluntaryExit, publishVoluntaryExit} from "./handlers/voluntaryExit";
@@ -120,13 +120,14 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     handlers.set(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, "ssz"), handleIncomingVoluntaryExit.bind(this));
 
     for(let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
+      const committeeAttestationHandler = getCommitteeAttestationHandler(subnet);
       handlers.set(
         getGossipTopic(
           GossipEvent.ATTESTATION_SUBNET,
           "ssz",
           new Map([["subnet", String(subnet)]])
         ),
-        handleIncomingAttestation.bind(this)
+        committeeAttestationHandler.bind(this)
       );
     }
     return handlers;
