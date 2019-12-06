@@ -2,14 +2,21 @@
   "presets": [
     [
       "@babel/env",
-      {"targets": {"node":"current"}}
+      {
+        "targets": {
+          "node": "8",
+          "browsers": ">1%, not ie 11"
+        },
+        "exclude": [
+          "transform-regenerator"
+        ]
+      }
     ],
     "@babel/typescript"
   ],
   "plugins": [
     "@babel/proposal-class-properties",
     "@babel/proposal-object-rest-spread",
-    "@babel/plugin-transform-runtime",
     "@babel/plugin-syntax-bigint",
     "const-enum"
   ]
