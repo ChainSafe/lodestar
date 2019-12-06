@@ -6,7 +6,7 @@ import {restore, rewire} from "@chainsafe/bls";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processProposerSlashing} from "../../../../../src/block/operations";
 import * as utils from "../../../../../src/util";
-
+import * as validatorUtils from "../../../../../src/util/validator";
 import {generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {generateValidator} from "../../../../utils/validator";
 import {generateState} from "../../../../utils/state";
@@ -18,7 +18,7 @@ describe('process block - proposer slashings', function () {
   let isSlashableValidatorStub: any, slashValidatorStub: any, blsStub: any;
 
   beforeEach(() => {
-    isSlashableValidatorStub = sandbox.stub(utils, "isSlashableValidator");
+    isSlashableValidatorStub = sandbox.stub(validatorUtils, "isSlashableValidator");
     slashValidatorStub = sandbox.stub(utils, "slashValidator");
     blsStub = {
       verify: sandbox.stub()
