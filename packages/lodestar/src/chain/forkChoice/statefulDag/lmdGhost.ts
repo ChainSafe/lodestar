@@ -5,7 +5,7 @@
 import assert from "assert";
 import BN from "bn.js";
 
-import {Gwei, Hash, Slot, ValidatorIndex, number64,} from "@chainsafe/eth2.0-types";
+import {Gwei, Hash, Slot, ValidatorIndex, number64, Checkpoint, Epoch,} from "@chainsafe/eth2.0-types";
 
 import {ILMDGHOST} from "../interface";
 
@@ -166,12 +166,12 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   /**
    * Last finalized block
    */
-  private finalized: Node|null;
+  private finalized: {node: Node; epoch: Epoch} | null;
 
   /**
    * Last justified block
    */
-  private justified: Node|null;
+  private justified: {node: Node; epoch: Epoch} | null;
   private synced: boolean;
 
   public constructor(config: IBeaconConfig) {
@@ -188,7 +188,8 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     this.genesisTime = genesisTime;
   }
 
-  public addBlock(slot: Slot, blockRootBuf: Hash, parentRootBuf: Hash): void {
+  public addBlock(slot: Slot, blockRootBuf: Hash, parentRootBuf: Hash,
+    justifiedCheckpoint?: Checkpoint, finalizedCheckpoint?: Checkpoint): void {
     this.synced = false;
     const blockRoot = blockRootBuf.toString("hex");
     const parentRoot = parentRootBuf.toString("hex");
@@ -206,6 +207,12 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     if (this.nodes[parentRoot]) {
       this.nodes[parentRoot].addChild(node);
     }
+    if (justifiedCheckpoint && (!this.justified || justifiedCheckpoint.epoch > this.justified.epoch)) {
+      this.setJustified(justifiedCheckpoint);
+    }
+    if (finalizedCheckpoint && (!this.finalized || finalizedCheckpoint.epoch > this.finalized.epoch)) {
+      this.setFinalized(finalizedCheckpoint);
+    }
   }
 
   public addAttestation(blockRootBuf: Hash, attester: ValidatorIndex, weight: Gwei): void {
@@ -215,21 +222,6 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       attester,
       weight,
     });
-  }
-
-  public setFinalized(blockRoot: Hash): void {
-    this.synced = false;
-    const rootHex = blockRoot.toString("hex");
-    this.finalized = this.nodes[rootHex];
-    this.prune();
-    this.aggregator.prune();
-  }
-
-  public setJustified(blockRoot: Hash): void {
-    if (this.shouldUpdateJustifiedCheckpoint(blockRoot)) {
-      const rootHex = blockRoot.toString("hex");
-      this.justified = this.nodes[rootHex];
-    }
   }
 
   public syncChanges(): void {
@@ -251,7 +243,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       this.syncChanges();
     }
     //@ts-ignore
-    return Buffer.from(this.justified.bestTarget.blockRoot, "hex");
+    return Buffer.from(this.justified.node.bestTarget.blockRoot, "hex");
   }
 
   // To address the bouncing attack, only update conflicting justified
@@ -265,14 +257,30 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       return true;
     }
     const newJustifiedBlock = this.nodes[blockRoot.toString("hex")];
-    if (newJustifiedBlock.slot <= this.justified.slot) {
+    if (newJustifiedBlock.slot <= this.justified.node.slot) {
       return false;
     }
-    if (this.getAncestor(blockRoot.toString("hex"), this.justified.slot) !== this.justified.blockRoot) {
+    if (this.getAncestor(blockRoot.toString("hex"), this.justified.node.slot) !== this.justified.node.blockRoot) {
       return false;
     }
 
     return true;
+  }
+
+  private setFinalized(checkpoint: Checkpoint): void {
+    this.synced = false;
+    const rootHex = checkpoint.root.toString("hex");
+    this.finalized = {node: this.nodes[rootHex], epoch: checkpoint.epoch};
+    this.prune();
+    this.aggregator.prune();
+  }
+
+  private setJustified(checkpoint: Checkpoint): void {
+    const {root: blockRoot, epoch} = checkpoint;
+    if (this.shouldUpdateJustifiedCheckpoint(blockRoot)) {
+      const rootHex = blockRoot.toString("hex");
+      this.justified = {node: this.nodes[rootHex], epoch};
+    }
   }
 
   private getAncestor(root: Root, slot: Slot): Root | null {
@@ -292,11 +300,11 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   private prune(): void {
     if (this.finalized) {
       Object.values(this.nodes).forEach((n) => {
-        if (n.slot < this.finalized.slot) {
+        if (n.slot < this.finalized.node.slot) {
           delete this.nodes[n.blockRoot];
         }
       });
-      this.finalized.parent = null;
+      this.finalized.node.parent = null;
     }
   }
 }

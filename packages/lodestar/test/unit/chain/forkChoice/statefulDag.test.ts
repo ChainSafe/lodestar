@@ -25,9 +25,7 @@ describe("StatefulDagLMDGHOST", () => {
      *           e
      */
     const lmd = new StatefulDagLMDGHOST(config);
-    lmd.addBlock(1, a, genesis);
-    lmd.setFinalized(a);
-    lmd.setJustified(a);
+    lmd.addBlock(1, a, genesis, {root: a, epoch: 0}, {root: a, epoch: 0});
     lmd.addBlock(2, b, a);
     lmd.addBlock(3, c, b);
     lmd.addBlock(3, d, b);
@@ -48,9 +46,7 @@ describe("StatefulDagLMDGHOST", () => {
      */
     const lmd = new StatefulDagLMDGHOST(config);
     let head;
-    lmd.addBlock(1, a, genesis);
-    lmd.setFinalized(a);
-    lmd.setJustified(a);
+    lmd.addBlock(1, a, genesis, {root: a, epoch: 0}, {root: a, epoch: 0});
     lmd.addBlock(2, b, a);
     lmd.addBlock(3, c, b);
     lmd.addBlock(3, d, b);
@@ -97,9 +93,7 @@ describe("StatefulDagLMDGHOST", () => {
      */
     const lmd = new StatefulDagLMDGHOST(config);
     let head;
-    lmd.addBlock(1, a, genesis);
-    lmd.setFinalized(a);
-    lmd.setJustified(a);
+    lmd.addBlock(1, a, genesis, {root: a, epoch: 0}, {root: a, epoch: 0});
     lmd.addBlock(2, b, a);
     lmd.addBlock(3, c, b);
     lmd.addBlock(4, d, c);
@@ -131,9 +125,7 @@ describe("StatefulDagLMDGHOST", () => {
      */
     const lmd = new StatefulDagLMDGHOST(config);
     let head;
-    lmd.addBlock(1, a, genesis);
-    lmd.setFinalized(a);
-    lmd.setJustified(a);
+    lmd.addBlock(1, a, genesis, {root: a, epoch: 0}, {root: a, epoch: 0});
     lmd.addBlock(2, b, a);
     lmd.addBlock(3, c, a);
     lmd.addBlock(4, d, b);
@@ -169,8 +161,7 @@ describe("StatefulDagLMDGHOST", () => {
   it("should not update justified block after SAFE_SLOTS_TO_UPDATE_JUSTIFIED - 1", () => {
     const lmd = new StatefulDagLMDGHOST(config);
     lmd.addBlock(1, a, genesis);
-    lmd.addBlock(2, b, a);
-    lmd.setJustified(b);
+    lmd.addBlock(2, b, a, {root: b, epoch: 0});
     const genesisTime = Math.floor(Date.now()/1000) - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
     lmd.start(genesisTime);
     // a slot is smaller than justified block slot (b)
@@ -191,9 +182,8 @@ describe("StatefulDagLMDGHOST", () => {
   it("should not update justified block after SAFE_SLOTS_TO_UPDATE_JUSTIFIED - 2", () => {
     const lmd = new StatefulDagLMDGHOST(config);
     lmd.addBlock(1, a, genesis);
-    lmd.addBlock(2, b, a);
+    lmd.addBlock(2, b, a, {root: b, epoch: 0});
     lmd.addBlock(3, c, a);
-    lmd.setJustified(b);
     const genesisTime = Math.floor(Date.now()/1000) - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
     lmd.start(genesisTime);
     // c is a conflicted justified block.

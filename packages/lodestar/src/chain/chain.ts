@@ -221,9 +221,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.db.chain.setFinalizedStateRoot(stateRoot),
       this.db.merkleTree.set(genesisState.eth1DepositIndex, merkleTree.toObject())
     ]);
-    this.forkChoice.addBlock(genesisBlock.slot, blockRoot, Buffer.alloc(32));
-    this.forkChoice.setJustified(blockRoot);
-    this.forkChoice.setFinalized(blockRoot);
+    const justifiedFinalizedCheckpoint = {root: blockRoot, epoch: computeEpochAtSlot(this.config, genesisBlock.slot)};
+    this.forkChoice.addBlock(genesisBlock.slot, blockRoot, Buffer.alloc(32), 
+      justifiedFinalizedCheckpoint, justifiedFinalizedCheckpoint);
     this.logger.info("Beacon chain initialized");
   }
 
@@ -335,7 +335,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.db.state.set(block.stateRoot, newState),
     ]);
     await this.db.setChainHeadRoots(blockRoot, block.stateRoot);
-    this.forkChoice.addBlock(block.slot, blockRoot, block.parentRoot);
+    this.forkChoice.addBlock(block.slot, blockRoot, block.parentRoot, newState.currentJustifiedCheckpoint,
+      newState.finalizedCheckpoint);
     // await this.applyForkChoiceRule();
     await this.updateDepositMerkleTree(newState);
     // update metrics
@@ -354,7 +355,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
           this.db.chain.setJustifiedStateRoot(justifiedBlock.stateRoot),
           this.db.chain.setJustifiedBlockRoot(justifiedBlockRoot),
         ]);
-        this.forkChoice.setJustified(justifiedBlockRoot);
         this.emit("justifiedCheckpoint", newState.currentJustifiedCheckpoint);
       }
       // Newly finalized epoch
@@ -366,7 +366,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
           this.db.chain.setFinalizedStateRoot(finalizedBlock.stateRoot),
           this.db.chain.setFinalizedBlockRoot(finalizedBlockRoot),
         ]);
-        this.forkChoice.setFinalized(finalizedBlockRoot);
         this.emit("finalizedCheckpoint", newState.finalizedCheckpoint);
       }
       this.metrics.previousJustifiedEpoch.set(newState.previousJustifiedCheckpoint.epoch);
