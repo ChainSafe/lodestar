@@ -9,15 +9,15 @@ import {
   BeaconBlocksByRangeRequest, BeaconBlocksByRangeResponse,
   BeaconBlocksByRootRequest, BeaconBlocksByRootResponse,
 } from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import { IBeaconConfig } from "@chainsafe/eth2.0-config";
 
-import {Method, RequestId, ZERO_HASH} from "../../constants";
-import {IBeaconDb} from "../../db";
-import {IBeaconChain} from "../../chain";
-import {INetwork} from "../../network";
-import {ILogger} from "../../logger";
-import {ISyncOptions, ISyncReqResp} from "./interface";
-import {ReputationStore} from "../IReputation";
+import { Method, RequestId, ZERO_HASH } from "../../constants";
+import { IBeaconDb } from "../../db";
+import { IBeaconChain } from "../../chain";
+import { INetwork } from "../../network";
+import { ILogger } from "../../logger";
+import { ISyncOptions, ISyncReqResp } from "./interface";
+import { ReputationStore } from "../IReputation";
 
 export interface ISyncReqRespModules {
   config: IBeaconConfig;
@@ -41,7 +41,7 @@ export class SyncReqResp implements ISyncReqResp {
   private reps: ReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: ISyncOptions, {config, db, chain, network, reps, logger}: ISyncReqRespModules) {
+  public constructor(opts: ISyncOptions, { config, db, chain, network, reps, logger }: ISyncReqRespModules) {
     this.config = config;
     this.opts = opts;
     this.db = db;
@@ -111,7 +111,11 @@ export class SyncReqResp implements ISyncReqResp {
   ): Promise<void> {
     try {
       const response: BeaconBlocksByRangeResponse = [];
-      const blocks = await this.db.blockArchive.getAllBetween(request.startSlot - 1, request.startSlot + request.count);
+      const blocks = await this.db.blockArchive.getAllBetween(
+        request.startSlot - 1,
+        request.startSlot + request.count,
+        request.step
+      );
       response.push(...blocks);
       this.network.reqResp.sendResponse(id, null, response);
     } catch (e) {

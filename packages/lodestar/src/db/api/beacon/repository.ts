@@ -1,8 +1,8 @@
-import {AnySSZType, deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import { AnySSZType, deserialize, hashTreeRoot, serialize } from "@chainsafe/ssz";
+import { IBeaconConfig } from "@chainsafe/eth2.0-config";
 
-import {IDatabaseController} from "../../controller";
-import {Bucket, encodeKey} from "../../schema";
+import { IDatabaseController } from "../../controller";
+import { Bucket, encodeKey } from "../../schema";
 
 export type Id = Buffer | string | number | bigint;
 
@@ -29,7 +29,7 @@ export abstract class Repository<T> {
   public async get(id: Id): Promise<T | null> {
     try {
       const value = await this.db.get(encodeKey(this.bucket, id));
-      if(!value) return null;
+      if (!value) return null;
       return deserialize(value, this.type);
     } catch (e) {
       return null;
@@ -64,12 +64,18 @@ export abstract class BulkRepository<T> extends Repository<T> {
     return (data || []).map((data) => deserialize(data, this.type));
   }
 
-  public async getAllBetween(lowerLimit: number|null, upperLimit: number|null): Promise<T[]> {
+  public async getAllBetween(lowerLimit: number | null, upperLimit: number | null, step?: number | null): Promise<T[]> {
     const data = await this.db.search({
       gt: encodeKey(this.bucket, lowerLimit || Buffer.alloc(0)),
       lt: encodeKey(this.bucket, upperLimit || Number.MAX_SAFE_INTEGER),
     });
-    return (data || []).map((data) => deserialize(data, this.type));
+    let processedData = data
+    if (typeof step !== 'undefined' && step !== null) {
+      processedData = data.filter((datum, index) => {
+        return index % step === 0
+      })
+    }
+    return (processedData || []).map((processedData) => deserialize(processedData, this.type));
   }
 
   public async deleteMany(ids: Id[]): Promise<void> {
