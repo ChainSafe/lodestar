@@ -1,8 +1,8 @@
-import { AnySSZType, deserialize, hashTreeRoot, serialize } from "@chainsafe/ssz";
-import { IBeaconConfig } from "@chainsafe/eth2.0-config";
+import {AnySSZType, deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import { IDatabaseController } from "../../controller";
-import { Bucket, encodeKey } from "../../schema";
+import {IDatabaseController} from "../../controller";
+import {Bucket, encodeKey} from "../../schema";
 
 export type Id = Buffer | string | number | bigint;
 
@@ -69,11 +69,11 @@ export abstract class BulkRepository<T> extends Repository<T> {
       gt: encodeKey(this.bucket, lowerLimit || Buffer.alloc(0)),
       lt: encodeKey(this.bucket, upperLimit || Number.MAX_SAFE_INTEGER),
     });
-    let processedData = data
-    if (typeof step !== 'undefined' && step !== null) {
+    let processedData = data;
+    if (typeof step !== "undefined" && step !== null) {
       processedData = data.filter((datum, index) => {
-        return index % step === 0
-      })
+        return index % step === 0;
+      });
     }
     return (processedData || []).map((processedData) => deserialize(processedData, this.type));
   }
