@@ -5,15 +5,16 @@ import {BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processProposerSlashing} from "@chainsafe/eth2.0-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
-import {ProcessProposerSlashingTestCase} from "./type";
+import {IProcessProposerSlashingTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
-describeDirectorySpecTest<ProcessProposerSlashingTestCase, BeaconState>(
+describeDirectorySpecTest<IProcessProposerSlashingTestCase, BeaconState>(
   "process proposer slashing mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/proposer_slashing/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    processProposerSlashing(config, state, testcase.proposer_slashing);
+    const verify = (!!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n);
+    processProposerSlashing(config, state, testcase.proposer_slashing, verify);
     return state;
   },
   {

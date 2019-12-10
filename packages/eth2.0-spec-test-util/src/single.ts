@@ -22,9 +22,9 @@ export interface ISpecTestOptions<TestCase, Result> {
    * If directory contains both ssz or yaml file version,
    * you can choose which one to use. Default is ssz.
    */
-  inputTypes?: {[K in keyof NonNullable<TestCase>]: InputType};
+  inputTypes?: {[K in keyof NonNullable<TestCase>]?: InputType};
 
-  sszTypes?: {[K in keyof NonNullable<TestCase>]: AnySSZType};
+  sszTypes?: {[K in keyof NonNullable<TestCase>]?: AnySSZType};
 
   /**
    * Optionally
@@ -114,7 +114,11 @@ function generateTestCase<TestCase, Result>(
       return this.skip();
     }
     if(options.shouldError && options.shouldError(testCase)) {
-      expect(testFunction.bind(null, testCase, name)).to.throw;
+      try {
+        testFunction(testCase, name);
+      } catch (e) {
+        return;
+      }
     } else {
       const profileId = `${name}-${Date.now()}.profile`;
       const profilingDirectory = process.env.GEN_PROFILE_DIR;
