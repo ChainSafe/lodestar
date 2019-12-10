@@ -1,5 +1,4 @@
 import {join} from "path";
-
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {processCrosslinks} from "@chainsafe/eth2.0-state-transition";
 import {BeaconState} from "@chainsafe/eth2.0-types";

@@ -1,24 +1,22 @@
 import {join} from "path";
 import {expect} from "chai";
 import {equals} from "@chainsafe/ssz";
-// @ts-ignore
-
 import {BeaconBlock, BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {stateTransition} from "@chainsafe/eth2.0-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
-import {BlockSanityTestCase} from "./type";
+import {IBlockSanityTestCase} from "./type";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
-describeDirectorySpecTest<BlockSanityTestCase, BeaconState>(
+describeDirectorySpecTest<IBlockSanityTestCase, BeaconState>(
   "block sanity mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/sanity/blocks/pyspec_tests"),
   (testcase) => {
     let state = testcase.pre;
+    const verify = (!!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n);
     for(let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-      console.log("SDFAFSD")
-      state = stateTransition(config, state, testcase[`blocks_${i}`] as BeaconBlock, true, true);
+      state = stateTransition(config, state, testcase[`blocks_${i}`] as BeaconBlock, verify, verify, verify);
     }
     return state;
   },

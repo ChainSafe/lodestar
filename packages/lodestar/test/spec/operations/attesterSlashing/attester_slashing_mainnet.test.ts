@@ -4,19 +4,23 @@ import {equals} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processAttesterSlashing} from "@chainsafe/eth2.0-state-transition";
-import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
-import {ProcessAttesterSlashingTestCase} from "./type";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import {IProcessAttesterSlashingTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
-describeDirectorySpecTest<ProcessAttesterSlashingTestCase, BeaconState>(
+describeDirectorySpecTest<IProcessAttesterSlashingTestCase, BeaconState>(
   "process attester slashing mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/attester_slashing/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    processAttesterSlashing(config, state, testcase.attester_slashing);
+    const verify = (!!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n);
+    processAttesterSlashing(config, state, testcase.attester_slashing, verify);
     return state;
   },
   {
+    inputTypes: {
+      meta: InputType.YAML
+    },
     sszTypes: {
       pre: config.types.BeaconState,
       post: config.types.BeaconState,
