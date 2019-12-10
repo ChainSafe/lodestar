@@ -2,8 +2,8 @@
  * @module validator/keystore
  */
 
-import fs from "fs";
 import {generateKeyPair, Keypair, PrivateKey} from "@chainsafe/bls";
+import fs from "fs";
 import {decryptKey, encryptKey} from "./encrypt";
 import {ensureDirectoryExistence} from "./file";
 

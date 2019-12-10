@@ -1,7 +1,7 @@
 import {IConfigurationModule} from "../util/config";
 import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {IApiClient} from "@chainsafe/lodestar-validator/lib/api";
+import {IApiClient} from "@chainsafe/lodestar-validator";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {LogLevel} from "../logger";
 
