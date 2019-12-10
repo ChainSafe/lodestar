@@ -15,6 +15,9 @@ export function createValue<T>(type: AnySSZType<T>, value: any = null): T {
 }
 
 function _createValue(type: FullSSZType, value: any = null): any {
+  if (value === null || value === undefined) {
+    value = defaultValue(type);
+  }
   switch(type.type) {
     case Type.uint:
     case Type.bool:
@@ -22,34 +25,18 @@ function _createValue(type: FullSSZType, value: any = null): any {
     case Type.bitVector:
     case Type.byteList:
     case Type.byteVector:
-      if (value !== null && value !== undefined) {
-        assertValidValue(value, type);
-        return value;
-      } else {
-        return defaultValue(type);
-      }
+      assertValidValue(value, type);
+      return value;
     case Type.list:
-      if (value) {
-        assert(Array.isArray(value));
-      } else {
-        value = [];
-      }
+      assert(Array.isArray(value));
       return value.map((v: any) =>
         _createValue(type.elementType, v));
     case Type.vector:
-      if (value) {
-        assert(Array.isArray(value));
-      } else {
-        value = [];
-      }
+      assert(Array.isArray(value));
       return Array.from({length: type.length}, (_, i) =>
         _createValue(type.elementType, value[i]));
     case Type.container:
-      if (value) {
-        assert(Object(value) === value);
-      } else {
-        value = {};
-      }
+      assert(Object(value) === value);
       // eslint-disable-next-line no-case-declarations
       const obj: Record<string, any> = {};
       type.fields.forEach(([fieldName, fieldType]) => {
