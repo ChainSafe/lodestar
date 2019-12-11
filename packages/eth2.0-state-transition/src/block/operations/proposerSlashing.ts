@@ -4,7 +4,7 @@
 
 import assert from "assert";
 import {equals, signingRoot} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls";
+import {verify} from "@chainsafe/bls";
 
 import {BeaconState, ProposerSlashing,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -30,14 +30,14 @@ export function processProposerSlashing(
   // Check proposer is slashable
   assert(isSlashableValidator(proposer, getCurrentEpoch(config, state)));
   // Signatures are valid
-  const proposalData1Verified = !verifySignatures || bls.verify(
+  const proposalData1Verified = !verifySignatures || verify(
     proposer.pubkey,
     signingRoot(proposerSlashing.header1, config.types.BeaconBlockHeader),
     proposerSlashing.header1.signature,
     getDomain(config, state, DomainType.BEACON_PROPOSER, header1Epoch),
   );
   assert(proposalData1Verified);
-  const proposalData2Verified = !verifySignatures || bls.verify(
+  const proposalData2Verified = !verifySignatures || verify(
     proposer.pubkey,
     signingRoot(proposerSlashing.header2, config.types.BeaconBlockHeader),
     proposerSlashing.header2.signature,

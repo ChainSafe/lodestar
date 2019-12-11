@@ -5,6 +5,7 @@ import {getContext} from "./context";
 import {PUBLIC_KEY_LENGTH} from "./constants";
 import assert from "assert";
 import {Signature} from "./signature";
+import {EMPTY_PUBLIC_KEY} from "./helpers/utils";
 
 export class PublicKey {
 
@@ -21,7 +22,9 @@ export class PublicKey {
   public static fromBytes(bytes: BLSPubkey): PublicKey {
     const context = getContext();
     const publicKey = new context.PublicKey();
-    publicKey.deserialize(bytes);
+    if(!bytes.equals(EMPTY_PUBLIC_KEY)) {
+      publicKey.deserialize(bytes);
+    }
     return new PublicKey(
       publicKey
     );

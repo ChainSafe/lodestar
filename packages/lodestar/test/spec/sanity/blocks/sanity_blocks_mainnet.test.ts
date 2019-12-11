@@ -21,11 +21,9 @@ describeDirectorySpecTest<IBlockSanityTestCase, BeaconState>(
     return state;
   },
   {
-    // @ts-ignore
     inputTypes: {
       meta: InputType.YAML
     },
-    // @ts-ignore
     sszTypes: {
       pre: config.types.BeaconState,
       post: config.types.BeaconState,

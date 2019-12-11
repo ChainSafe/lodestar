@@ -4,7 +4,7 @@
 
 import assert from "assert";
 import {signingRoot} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls";
+import {verify} from "@chainsafe/bls";
 
 import {BeaconBlock, BeaconState,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -32,7 +32,7 @@ export function processBlockHeader(
 
   if(verifyProposer) {
     // Verify proposer signature
-    assert(bls.verify(
+    assert(verify(
       proposer.pubkey,
       signingRoot(block, config.types.BeaconBlock),
       block.signature,

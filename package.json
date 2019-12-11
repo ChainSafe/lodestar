@@ -46,7 +46,5 @@
   },
   "optionalDependencies": {
     "@chainsafe/eth2-spec-tests": "0.8.3"
-  },
-  "dependencies": {
   }
 }

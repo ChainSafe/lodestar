@@ -5,7 +5,7 @@
 import assert from "assert";
 import xor from "buffer-xor";
 import {hashTreeRoot, hash} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls";
+import {verify} from "@chainsafe/bls";
 
 import {BeaconBlockBody, BeaconState} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -24,7 +24,7 @@ export function processRandao(
   const currentEpoch = getCurrentEpoch(config, state);
   const proposer = state.validators[getBeaconProposerIndex(config, state)];
   // Verify RANDAO reveal
-  assert(!verifySignature || bls.verify(
+  assert(!verifySignature || verify(
     proposer.pubkey,
     hashTreeRoot(currentEpoch, config.types.Epoch),
     body.randaoReveal,

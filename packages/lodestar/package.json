@@ -108,7 +108,6 @@
   },
   "devDependencies": {
     "@chainsafe/benchmark-utils": "^0.1.0",
-    "@chainsafe/eth2.0-spec-test-util": "0.4.1",
     "@polkadot/ts": "^0.1.57",
     "@types/buffer-xor": "^2.0.0",
     "@types/chai": "4.2.0",
