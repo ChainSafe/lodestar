@@ -12,6 +12,7 @@ import {ILMDGHOST} from "../interface";
 import {AttestationAggregator, Root,} from "./attestationAggregator";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {computeSlotsSinceEpochStart, getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
+import {sleep} from "../../../util/sleep";
 
 
 /**
@@ -172,6 +173,10 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
    * Last justified block
    */
   private justified: {node: Node; epoch: Epoch} | null;
+  /**
+   * Best justified checkpoint.
+   */
+  private bestJustifiedCheckpoint: Checkpoint;
   private synced: boolean;
 
   public constructor(config: IBeaconConfig) {
@@ -184,8 +189,26 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     this.config = config;
   }
 
-  public start(genesisTime: number): void {
+  /**
+   * Start method, should not wait for it.
+   * @param genesisTime
+   */
+  public async start(genesisTime: number): Promise<void> {
     this.genesisTime = genesisTime;
+    const numSlot = computeSlotsSinceEpochStart(this.config, getCurrentSlot(this.config, this.genesisTime));
+    const timeToWaitTillNextEpoch = (this.config.params.SLOTS_PER_EPOCH - numSlot) * 
+      this.config.params.SECONDS_PER_SLOT * 1000;
+    // Make sure we call onTick at start of each epoch
+    await sleep(timeToWaitTillNextEpoch);
+    const epochInterval = this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000;
+    setInterval(this.onTick.bind(this), epochInterval);
+  }
+
+  public onTick(): void {
+    if (this.bestJustifiedCheckpoint && (!this.justified ||
+      this.bestJustifiedCheckpoint.epoch > this.justified.epoch)) {
+      this.setJustified(this.bestJustifiedCheckpoint);
+    }
   }
 
   public addBlock(slot: Slot, blockRootBuf: Hash, parentRootBuf: Hash,
@@ -208,7 +231,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       this.nodes[parentRoot].addChild(node);
     }
     if (justifiedCheckpoint && (!this.justified || justifiedCheckpoint.epoch > this.justified.epoch)) {
-      this.setJustified(justifiedCheckpoint);
+      this.checkAndSetJustified(justifiedCheckpoint);
     }
     if (finalizedCheckpoint && (!this.finalized || finalizedCheckpoint.epoch > this.finalized.epoch)) {
       this.setFinalized(finalizedCheckpoint);
@@ -275,12 +298,17 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     this.aggregator.prune();
   }
 
+  private checkAndSetJustified(checkpoint: Checkpoint): void {
+    this.bestJustifiedCheckpoint = checkpoint;
+    if (this.shouldUpdateJustifiedCheckpoint(checkpoint.root)) {
+      this.setJustified(checkpoint);
+    }
+  }
+
   private setJustified(checkpoint: Checkpoint): void {
     const {root: blockRoot, epoch} = checkpoint;
-    if (this.shouldUpdateJustifiedCheckpoint(blockRoot)) {
-      const rootHex = blockRoot.toString("hex");
-      this.justified = {node: this.nodes[rootHex], epoch};
-    }
+    const rootHex = blockRoot.toString("hex");
+    this.justified = {node: this.nodes[rootHex], epoch};
   }
 
   private getAncestor(root: Root, slot: Slot): Root | null {

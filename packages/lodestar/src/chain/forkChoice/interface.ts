@@ -6,7 +6,7 @@ import {Gwei, Hash, Slot, ValidatorIndex, Checkpoint,} from "@chainsafe/eth2.0-t
 
 
 export interface ILMDGHOST {
-  start(genesisTime: number): void;
+  start(genesisTime: number): Promise<void>;
   addBlock(slot: Slot, blockRootBuf: Hash, parentRootBuf: Hash, justifiedCheckpoint: Checkpoint,
     finalizedCheckpoint: Checkpoint): void;
   addAttestation(blockRootBuf: Hash, attester: ValidatorIndex, weight: Gwei): void;
