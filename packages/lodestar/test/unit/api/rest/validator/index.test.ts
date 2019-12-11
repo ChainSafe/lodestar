@@ -22,8 +22,7 @@ import {describe, it, after, before, beforeEach, afterEach} from "mocha";
 describe("Test validator rest API", function () {
   this.timeout(10000);
 
-  // @ts-ignore
-  let restApi: RestApi, getDutiesStub: any, assembleBlockStub: any, produceAttestationStub: any;
+  let restApi: RestApi, getDutiesStub: any, assembleBlockStub: any, produceAttestationStub: any, getProposerDutiesStub: any;
 
   const chain = sinon.createStubInstance(BeaconChain);
   const opPool = sinon.createStubInstance(OpPool);
@@ -41,7 +40,7 @@ describe("Test validator rest API", function () {
       host: "127.0.0.1",
       port: 0
     }, {
-      logger: new WinstonLogger(),
+      logger: sandbox.createStubInstance(WinstonLogger),
       chain,
       // @ts-ignore
       sync,
@@ -60,6 +59,7 @@ describe("Test validator rest API", function () {
 
   beforeEach(function () {
     getDutiesStub = sandbox.stub(validatorImpl, "getValidatorDuties");
+    getProposerDutiesStub = sandbox.stub(validatorImpl, "getEpochProposers");
     assembleBlockStub = sandbox.stub(blockUtils, "assembleBlock");
     produceAttestationStub = sandbox.stub(validatorImpl, "produceAttestation");
   });
@@ -100,6 +100,19 @@ describe("Test validator rest API", function () {
     expect(response.body[0].attestation_slot).to.be.equal(2);
     expect(response.body[0].attestation_shard).to.be.equal(2);
     expect(response.body[0].block_proposal_slot).to.be.equal(2);
+  });
+
+
+  it("should return proposer duties", async function () {
+    getProposerDutiesStub.resolves(new Map([[1, Buffer.alloc(48)]]));
+    const response = await supertest(restApi.server.server)
+      .get(
+        "/validator/duties/proposer/2",
+      )
+      .expect(200)
+      .expect("Content-Type", "application/json; charset=utf-8");
+    expect(response.body[1]).to.be.equal(toHex(Buffer.alloc(48)));
+    expect(getProposerDutiesStub.withArgs(sinon.match.any, sinon.match.any, 2).calledOnce).to.be.true;
   });
 
   it("should throw error on invalid request for block production", async function () {
