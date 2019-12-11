@@ -1,0 +1,39 @@
+name: CI Tests
+
+on: [pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Bootstrap
+      uses: wemeetagain/actions-lerna@v0.1.0
+      with:
+        cmd: bootstrap
+    - name: Check types
+      uses: wemeetagain/actions-lerna@v0.1.0
+      with:
+        cmd: run check-types
+    - name: Lint
+      uses: wemeetagain/actions-lerna@v0.1.0
+      with:
+        cmd: run lint
+    - name: Unit tests
+      uses: wemeetagain/actions-lerna@v0.1.0
+      with:
+          cmd: run test:unit
+    - name: Coverage
+      uses: wemeetagain/actions-lerna@v0.1.0
+      with:
+          cmd: run coverage
+    - name: E2e tests
+      uses: wemeetagain/actions-lerna@v0.1.0
+      with:
+          cmd: run test:e2e
+    - name: Spec tests
+      uses: wemeetagain/actions-lerna@v0.1.0
+      with:
+          cmd: run test:spec-min
