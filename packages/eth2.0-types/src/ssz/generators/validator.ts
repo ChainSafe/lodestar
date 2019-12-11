@@ -11,7 +11,6 @@ export const ValidatorDuty = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
     ["validatorPubkey", ssz.BLSPubkey],
     ["committeeIndex", ssz.CommitteeIndex],
     ["attestationSlot", ssz.Slot],
-    ["blockProductionSlot", ssz.Slot],
   ],
 });
 

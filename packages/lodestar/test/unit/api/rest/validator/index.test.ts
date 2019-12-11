@@ -17,12 +17,17 @@ import {generateAttestationData, generateEmptyAttestation} from "../../../../uti
 import {IndexedAttestation} from "@chainsafe/eth2.0-types";
 import {AttestationOperations, OpPool} from "../../../../../src/opPool";
 import {toHex, toJson} from "@chainsafe/eth2.0-utils";
-import {describe, it, after, before, beforeEach, afterEach} from "mocha";
+import {after, afterEach, before, beforeEach, describe, it} from "mocha";
+import {Keypair} from "@chainsafe/bls";
 
 describe("Test validator rest API", function () {
   this.timeout(10000);
 
-  let restApi: RestApi, getDutiesStub: any, assembleBlockStub: any, produceAttestationStub: any, getProposerDutiesStub: any;
+  let restApi: RestApi,
+    getAttesterDuties: any,
+    assembleBlockStub: any,
+    produceAttestationStub: any,
+    getProposerDutiesStub: any;
 
   const chain = sinon.createStubInstance(BeaconChain);
   const opPool = sinon.createStubInstance(OpPool);
@@ -58,7 +63,7 @@ describe("Test validator rest API", function () {
   });
 
   beforeEach(function () {
-    getDutiesStub = sandbox.stub(validatorImpl, "getValidatorDuties");
+    getAttesterDuties = sandbox.stub(validatorImpl, "getAttesterDuties");
     getProposerDutiesStub = sandbox.stub(validatorImpl, "getEpochProposers");
     assembleBlockStub = sandbox.stub(blockUtils, "assembleBlock");
     produceAttestationStub = sandbox.stub(validatorImpl, "produceAttestation");
@@ -67,41 +72,6 @@ describe("Test validator rest API", function () {
   afterEach(function () {
     sandbox.restore();
   });
-
-  it("should throw error on invalid request for duties", async function () {
-    await supertest(restApi.server.server)
-      .get("/validator/duties")
-      .expect(400)
-      .expect("Content-Type", "application/json; charset=utf-8");
-  });
-
-  it("should return duties", async function () {
-    const duty = generateEmptyValidatorDuty(
-      Buffer.alloc(48, 1),
-      {
-        blockProposalSlot: 2,
-        attestationShard: 2,
-        attestationSlot: 2
-      }
-    );
-    getDutiesStub.resolves([duty]);
-    const response = await supertest(restApi.server.server)
-      .get(
-        "/validator/duties",
-      )
-      .query({
-        "validator_pubkeys[]": toHex(Buffer.alloc(32)),
-        epoch: 2
-      })
-      .expect(200)
-      .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.length).to.be.equal(1);
-    expect(response.body[0].validator_pubkey).to.be.equal(toHex(duty.validatorPubkey));
-    expect(response.body[0].attestation_slot).to.be.equal(2);
-    expect(response.body[0].attestation_shard).to.be.equal(2);
-    expect(response.body[0].block_proposal_slot).to.be.equal(2);
-  });
-
 
   it("should return proposer duties", async function () {
     getProposerDutiesStub.resolves(new Map([[1, Buffer.alloc(48)]]));
@@ -113,6 +83,21 @@ describe("Test validator rest API", function () {
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body[1]).to.be.equal(toHex(Buffer.alloc(48)));
     expect(getProposerDutiesStub.withArgs(sinon.match.any, sinon.match.any, 2).calledOnce).to.be.true;
+  });
+
+  it("should return attester duties", async function () {
+    const publicKey1= Keypair.generate().publicKey.toBytesCompressed();
+    const publicKey2= Buffer.alloc(48, 1);
+    getAttesterDuties.resolves([generateEmptyValidatorDuty(Buffer.alloc(48, 1))]);
+    const response = await supertest(restApi.server.server)
+      .get(
+        "/validator/duties/attester/2",
+      )
+      .query({"validator_pubkeys[]": [toHex(publicKey1), toHex(publicKey2)]})
+      .expect(200)
+      .expect("Content-Type", "application/json; charset=utf-8");
+    expect(response.body.length).to.be.equal(1);
+    expect(getAttesterDuties.withArgs(sinon.match.any, sinon.match.any, 2, [publicKey1]).calledOnce).to.be.true;
   });
 
   it("should throw error on invalid request for block production", async function () {

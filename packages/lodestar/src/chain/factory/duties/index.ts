@@ -7,8 +7,8 @@ export function assembleValidatorDuty(
   config: IBeaconConfig,
   validator: {publicKey: BLSPubkey; index: ValidatorIndex},
   state: BeaconState,
-  epoch: Epoch,
-  proposerSlotMapping: Record<ValidatorIndex, Slot>): ValidatorDuty  {
+  epoch: Epoch
+): ValidatorDuty  {
   let duty: ValidatorDuty = generateEmptyValidatorDuty(validator.publicKey);
   const committeeAssignment = getCommitteeAssignment(
     config,
@@ -19,14 +19,8 @@ export function assembleValidatorDuty(
   if (committeeAssignment) {
     duty = {
       ...duty,
-      attestationShard: committeeAssignment.committeeIndex,
+      committeeIndex: committeeAssignment.committeeIndex,
       attestationSlot: committeeAssignment.slot,
-    };
-  }
-  if (proposerSlotMapping[validator.index] && proposerSlotMapping[validator.index] !== 0) {
-    duty = {
-      ...duty,
-      blockProposalSlot: proposerSlotMapping[validator.index]
     };
   }
 
@@ -36,9 +30,8 @@ export function assembleValidatorDuty(
 export function generateEmptyValidatorDuty(publicKey: BLSPubkey, duty?: Partial<ValidatorDuty>): ValidatorDuty {
   return {
     validatorPubkey: publicKey,
-    blockProposalSlot: null,
-    attestationShard: null,
     attestationSlot: null,
+    committeeIndex: null,
     ...duty
   };
 }
