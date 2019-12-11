@@ -1,12 +1,10 @@
 name: CI Tests
 
-on: [pull_request]
+on: [pull_request, pull]
 
 jobs:
-  build:
-
+  lint:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v1
     - name: Bootstrap
@@ -21,6 +19,15 @@ jobs:
       uses: wemeetagain/actions-lerna@v0.1.0
       with:
         cmd: run lint
+
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Bootstrap
+      uses: wemeetagain/actions-lerna@v0.1.0
+      with:
+        cmd: bootstrap
     - name: Unit tests
       uses: wemeetagain/actions-lerna@v0.1.0
       with:
@@ -29,10 +36,27 @@ jobs:
       uses: wemeetagain/actions-lerna@v0.1.0
       with:
           cmd: run coverage
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Bootstrap
+      uses: wemeetagain/actions-lerna@v0.1.0
+      with:
+        cmd: bootstrap
     - name: E2e tests
       uses: wemeetagain/actions-lerna@v0.1.0
       with:
           cmd: run test:e2e
+
+  specMin:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Bootstrap
+      uses: wemeetagain/actions-lerna@v0.1.0
+      with:
+        cmd: bootstrap
     - name: Spec tests
       uses: wemeetagain/actions-lerna@v0.1.0
       with:
