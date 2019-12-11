@@ -34,6 +34,7 @@ function sleep(ms: number) {
 describe("e2e interop simulation", function() {
   this.timeout(0);
   let logger: ILogger = new WinstonLogger();
+  logger.silent = true;
   let node: BeaconNode;
   let validators: ValidatorClient[];
 
