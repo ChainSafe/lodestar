@@ -1,0 +1,28 @@
+name: Deploy docs
+
+on:
+  push:
+    branches:
+      master
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Bootstrap
+      uses: wemeetagain/actions-lerna@v0.1.0
+      with:
+        cmd: bootstrap
+    - name: Spec tests
+      uses: wemeetagain/actions-lerna@v0.1.0
+      with:
+          cmd: run run build:release
+    - name: Build docs
+      run: node scripts/collect-docs.js
+    - name: Deploy
+      uses: peaceiris/actions-gh-pages@v2
+      env:
+        PERSONAL_TOKEN: ${{ secrets.GH_PAGES_TOKEN }}
+        PUBLISH_BRANCH: gh-pages
+        PUBLISH_DIR: ./docs
