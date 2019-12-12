@@ -20,17 +20,17 @@ jobs:
     - name: Install lerna
       run: yarn global add lerna
     - name: Bootstrap
-      run: lerna bootstrap
+      run: $(yarn global bin)/lerna bootstrap
     - name: Check types
-      run: lerna run check-types
+      run: $(yarn global bin)/lerna run check-types
     - name: Lint
-      run: lerna run lint
+      run: $(yarn global bin)/lerna run lint
     - name: Unit tests
-      run: lerna run test:unit
+      run: $(yarn global bin)/lerna run test:unit
     - name: Coverage
-      run: lerna run coverage
+      run: $(yarn global bin)/lerna run coverage
     - name: E2e tests
-      run: lerna run test:e2e
+      run: $(yarn global bin)/lerna run test:e2e
 
   specMin:
     name: Minimal spec tests
@@ -49,6 +49,6 @@ jobs:
     - name: Install lerna
       run: yarn global add lerna
     - name: Bootstrap
-      run: lerna bootstrap
+      run: $(yarn global bin)/lerna bootstrap
     - name: Spec tests
-      run: lerna run test:spec-min
+      run: $(yarn global bin)/lerna run test:spec-min
