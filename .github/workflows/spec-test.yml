@@ -10,11 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
+    - name: Install lerna
+      run: yarn global add lerna
     - name: Bootstrap
-      uses: wemeetagain/actions-lerna@v0.1.0
-      with:
-        cmd: bootstrap
+      run: $(yarn global bin)/lerna bootstrap
     - name: Spec tests
-      uses: wemeetagain/actions-lerna@v0.1.0
-      with:
-          cmd: run test:spec-main
+      run: $(yarn global bin)/lerna run test:spec-main
