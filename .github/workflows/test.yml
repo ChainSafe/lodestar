@@ -8,7 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-
     - name: Get yarn cache
       id: yarn-cache
       run: echo "::set-output name=dir::$(yarn cache dir)"
@@ -18,31 +17,20 @@ jobs:
         key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
         restore-keys: |
           ${{ runner.os }}-yarn-
-
+    - name: Install lerna
+      run: yarn global add lerna
     - name: Bootstrap
-      uses: wemeetagain/actions-lerna@v0.1.0
-      with:
-        cmd: bootstrap
+      run: lerna bootstrap
     - name: Check types
-      uses: wemeetagain/actions-lerna@v0.1.0
-      with:
-        cmd: run check-types
+      run: lerna run check-types
     - name: Lint
-      uses: wemeetagain/actions-lerna@v0.1.0
-      with:
-        cmd: run lint
+      run: lerna run lint
     - name: Unit tests
-      uses: wemeetagain/actions-lerna@v0.1.0
-      with:
-          cmd: run test:unit
+      run: lerna run test:unit
     - name: Coverage
-      uses: wemeetagain/actions-lerna@v0.1.0
-      with:
-          cmd: run coverage
+      run: lerna run coverage
     - name: E2e tests
-      uses: wemeetagain/actions-lerna@v0.1.0
-      with:
-          cmd: run test:e2e
+      run: lerna run test:e2e
 
   specMin:
     name: Minimal spec tests
@@ -58,12 +46,9 @@ jobs:
         key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
         restore-keys: |
           ${{ runner.os }}-yarn-
-
+    - name: Install lerna
+      run: yarn global add lerna
     - name: Bootstrap
-      uses: wemeetagain/actions-lerna@v0.1.0
-      with:
-        cmd: bootstrap
+      run: lerna bootstrap
     - name: Spec tests
-      uses: wemeetagain/actions-lerna@v0.1.0
-      with:
-          cmd: run test:spec-min
+      run: lerna run test:spec-min
