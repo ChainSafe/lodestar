@@ -178,6 +178,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
    */
   private bestJustifiedCheckpoint: Checkpoint;
   private synced: boolean;
+  private interval: NodeJS.Timeout;
 
   public constructor(config: IBeaconConfig) {
     this.aggregator =
@@ -201,7 +202,15 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     // Make sure we call onTick at start of each epoch
     await sleep(timeToWaitTillNextEpoch);
     const epochInterval = this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000;
-    setInterval(this.onTick.bind(this), epochInterval);
+    if (!this.interval) {
+      this.interval = setInterval(this.onTick.bind(this), epochInterval);
+    }
+  }
+
+  public async stop(): Promise<void> {
+    if (this.interval) {
+      clearInterval(this.interval);
+    }
   }
 
   public onTick(): void {

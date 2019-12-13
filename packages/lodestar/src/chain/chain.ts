@@ -99,6 +99,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   public async stop(): Promise<void> {
+    await this.forkChoice.stop();
     this.eth1.removeListener("block", this.checkGenesis);
   }
 
