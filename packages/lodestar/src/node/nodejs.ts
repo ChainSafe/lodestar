@@ -118,6 +118,7 @@ export class BeaconNode {
         opPool: this.opPool,
         db: this.db,
         sync: this.sync,
+        network: this.network,
         chain: this.chain,
         eth1: this.eth1
       }

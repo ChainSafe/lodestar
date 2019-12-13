@@ -19,6 +19,7 @@ import {AttestationOperations, OpPool} from "../../../../../src/opPool";
 import {toHex, toJson} from "@chainsafe/eth2.0-utils";
 import {after, afterEach, before, beforeEach, describe, it} from "mocha";
 import {Keypair} from "@chainsafe/bls";
+import {generateAggregateAndProof} from "../../../../utils/aggregateAndProof";
 
 describe("Test validator rest API", function () {
   this.timeout(10000);
@@ -30,12 +31,16 @@ describe("Test validator rest API", function () {
     getProposerDutiesStub: any;
 
   const chain = sinon.createStubInstance(BeaconChain);
-  const opPool = sinon.createStubInstance(OpPool);
+  const opPool = sinon.createStubInstance(OpPool) as any;
   const attestationOperations = sinon.createStubInstance(AttestationOperations);
-  // @ts-ignore
   opPool.attestations = attestationOperations;
-  const sync = sinon.createStubInstance(Sync);
+  const sync = sinon.createStubInstance(Sync) as any;
   const sandbox = sinon.createSandbox();
+  const network: any = {
+    gossip: {
+      publishAggregatedAttestation: sinon.stub()
+    }
+  };
 
   before(async function () {
     restApi = new RestApi({
@@ -47,10 +52,9 @@ describe("Test validator rest API", function () {
     }, {
       logger: sandbox.createStubInstance(WinstonLogger),
       chain,
-      // @ts-ignore
       sync,
-      // @ts-ignore
       opPool,
+      network,
       db: sinon.createStubInstance(BeaconDb),
       config,
       eth1: sinon.createStubInstance(EthersEth1Notifier),
@@ -98,6 +102,18 @@ describe("Test validator rest API", function () {
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.length).to.be.equal(1);
     expect(getAttesterDuties.withArgs(sinon.match.any, sinon.match.any, 2, [publicKey1]).calledOnce).to.be.true;
+  });
+
+  it("should publish aggregate and proof", async function () {
+    network.gossip.publishAggregatedAttestation.resolves();
+    const aggregateAndProof = generateAggregateAndProof();
+    await supertest(restApi.server.server)
+      .post(
+        "/validator/aggregate",
+      )
+      .send(toJson(aggregateAndProof))
+      .expect(200);
+    expect(network.gossip.publishAggregatedAttestation.calledOnce).to.be.true;
   });
 
   it("should throw error on invalid request for block production", async function () {
@@ -168,9 +184,7 @@ describe("Test validator rest API", function () {
       .post(
         "/validator/attestation",
       )
-      .send({
-        "attestation": toJson(attestation)
-      })
+      .send(toJson(attestation))
       .expect(200)
       .expect("Content-Type", "application/json");
     expect(attestationOperations.receive.calledOnce).to.be.true;

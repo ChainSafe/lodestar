@@ -2,27 +2,27 @@ import {IFastifyServer} from "../../index";
 import fastify from "fastify";
 import {IApiModules} from "../../../interface";
 import {fromJson} from "@chainsafe/eth2.0-utils";
-import {Attestation} from "@chainsafe/eth2.0-types";
+import {AggregateAndProof} from "@chainsafe/eth2.0-types";
 
 
 const opts: fastify.RouteShorthandOptions = {
   schema: {
     body: {
-      type: "object"
+      type: "object",
     },
   }
 };
 
-export const registerAttestationPublishEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
+export const registerPublishAggregateAndProofEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
   fastify.post(
-    "/attestation",
+    "/aggregate",
     opts,
     async (request, reply) => {
       try {
-        await modules.opPool.attestations.receive(
-          fromJson<Attestation>(
+        await modules.network.gossip.publishAggregatedAttestation(
+          fromJson<AggregateAndProof>(
             request.body,
-            modules.config.types.Attestation
+            modules.config.types.AggregateAndProof
           )
         );
       } catch (e) {
