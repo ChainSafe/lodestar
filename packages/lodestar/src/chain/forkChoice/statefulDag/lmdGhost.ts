@@ -299,6 +299,13 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     return true;
   }
 
+  public getJustified(): Checkpoint {
+    if (!this.justified) {
+      return null;
+    }
+    return {root: Buffer.from(this.justified.node.blockRoot, "hex"), epoch: this.justified.epoch};
+  }
+
   private setFinalized(checkpoint: Checkpoint): void {
     this.synced = false;
     const rootHex = checkpoint.root.toString("hex");
