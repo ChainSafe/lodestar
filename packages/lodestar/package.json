@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "A Typescript implementation of the beacon chain",
   "author": "ChainSafe Systems",
-  "license": "GPL-3.0",
+  "license": "LGPL-3.0",
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
