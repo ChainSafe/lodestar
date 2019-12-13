@@ -8,19 +8,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
+    - run: export PATH=$(yarn global bin):$PATH
     - name: Install lerna
       run: yarn global add lerna
     - name: Bootstrap
-      run: $(yarn global bin)/lerna bootstrap
+      run: lerna bootstrap
     - name: Check types
-      run: $(yarn global bin)/lerna run check-types
+      run: lerna run check-types
     - name: Lint
-      run: $(yarn global bin)/lerna run lint
+      run: lerna run lint
     - name: Unit tests
-      run: $(yarn global bin)/lerna run test:unit
+      run: lerna run test:unit
     - name: Coverage
-      run: $(yarn global bin)/lerna run coverage
+      run: lerna run coverage
     - name: E2e tests
-      run: $(yarn global bin)/lerna run test:e2e
+      run: lerna run test:e2e
     - name: Spec tests
-      run: $(yarn global bin)/lerna run test:spec-min
+      run: lerna run test:spec-min
