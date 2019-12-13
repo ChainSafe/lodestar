@@ -3,11 +3,9 @@ import {Hash, IBeaconSSZTypes} from "@chainsafe/eth2.0-types";
 import {join} from "path";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {expect} from "chai";
+import {IBaseSSZStaticTestCase} from "./type";
 import {hashTreeRoot, serialize, parseType} from "../../src";
-
-import {IBaseSSZStaticTestCase} from "../spec/type";
-
-export const TEST_CASE_LOCATION = "../../../../node_modules/@chainsafe/eth2-spec-tests";
+import {TEST_CASE_LOCATION} from "../util/testCases";
 
 interface IResult {
   root: Hash;

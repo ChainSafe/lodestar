@@ -8,7 +8,7 @@ import profiler from "v8-profiler-next";
 import {loadYamlFile} from "@chainsafe/eth2.0-utils/lib/nodejs";
 import {AnySSZType, deserialize} from "@chainsafe/ssz";
 
-import {transformType} from "./transform";
+import {safeType} from "./transform";
 import {isDirectory} from "./util";
 
 
@@ -45,11 +45,6 @@ export interface ISpecTestOptions<TestCase, Result> {
   expectFunc?: (testCase: TestCase, expected, actual) => void;
 
   timeout?: number;
-
-  /**
-   * Whether input is unsafe (and ssz types should be transformed)
-   */
-  unsafeInput?: boolean;
 
 }
 
@@ -165,10 +160,7 @@ function loadInputFiles<TestCase, Result>(
 
 function deserializeTestCase<TestCase, Result>(file, inputName, options: ISpecTestOptions<TestCase, Result>): object {
   if (file.endsWith(InputType.SSZ)) {
-    const safeType = options.unsafeInput
-      ? transformType(options.sszTypes[inputName])
-      : options.sszTypes[inputName];
-    return deserialize(readFileSync(file), safeType);
+    return deserialize(readFileSync(file), options.sszTypes[inputName]);
   } else {
     return  loadYamlFile(file);
   }
