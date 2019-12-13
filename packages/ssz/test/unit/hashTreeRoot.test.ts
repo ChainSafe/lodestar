@@ -16,29 +16,28 @@ describe("hashTreeRoot", () => {
   }[] = [
     {value: true, type: "bool", expected: ""},
     {value: false, type: "bool", expected: ""},
-    {value: 0, type: "uint8", expected: ""},
-    {value: 1, type: "uint8", expected: ""},
-    {value: 255, type: "uint8", expected: ""},
-    {value: 2**8, type: "uint16", expected: ""},
-    {value: 2**12-1, type: "uint16", expected: ""},
-    {value: 2**12, type: "uint16", expected: ""},
-    {value: 2**16-1, type: "uint16", expected: ""},
-    {value: 2**16, type: "uint32", expected: ""},
-    {value: 2**28-1, type: "uint32", expected: ""},
-    {value: 2**28, type: "uint32", expected: ""},
-    {value: 2**32-1, type: "uint32", expected: ""},
-    {value: 1, type: {type: Type.uint, byteLength: 8, offset: 2**32, useNumber: true}, expected: ""},
-    {value: 2**32, type: "uint64", expected: ""},
-    {value: 2**52-1, type: "uint64", expected: ""},
-    {value: 2**32, type: "number64", expected: hashTreeRoot(2**32, "uint64").toString("hex")},
-    {value: 2**52-1, type: "number64", expected: hashTreeRoot(2**52-1, "uint64").toString("hex")},
-    {value: 0x1n , type: "uint64", expected: ""},
-    {value: 0x1000000000000000n, type: "uint64", expected: ""},
-    {value: 0xffffffffffffffffn, type: "uint64", expected: ""},
-    {value: 0xffffffffffffffffffffffffffffffffn, type: "uint128", expected: ""},
+    {value: 0, type: "number8", expected: ""},
+    {value: 1, type: "number8", expected: ""},
+    {value: 255, type: "number8", expected: ""},
+    {value: 2**8, type: "number16", expected: ""},
+    {value: 2**12-1, type: "number16", expected: ""},
+    {value: 2**12, type: "number16", expected: ""},
+    {value: 2**16-1, type: "number16", expected: ""},
+    {value: 2**16, type: "number32", expected: ""},
+    {value: 2**28-1, type: "number32", expected: ""},
+    {value: 2**28, type: "number32", expected: ""},
+    {value: 2**32-1, type: "number32", expected: ""},
+    {value: 2**32, type: "number64", expected: ""},
+    {value: 2**52-1, type: "number64", expected: ""},
+    {value: 2**32, type: "number64", expected: hashTreeRoot(2**32, "number64").toString("hex")},
+    {value: 2**52-1, type: "number64", expected: hashTreeRoot(2**52-1, "number64").toString("hex")},
+    {value: 0x1n , type: "bigint64", expected: ""},
+    {value: 0x1000000000000000n, type: "bigint64", expected: ""},
+    {value: 0xffffffffffffffffn, type: "bigint64", expected: ""},
+    {value: 0xffffffffffffffffffffffffffffffffn, type: "bigint128", expected: ""},
     {
       value: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn
-      , type: "uint256", expected: ""
+      , type: "bigint256", expected: ""
     },
     {value: Buffer.from("deadbeef", "hex"), type: "bytes4", expected: ""},
     {value: Buffer.from("deadbeef", "hex"), type: {elementType: "byte", maxLength: 100}, expected: ""},
@@ -53,7 +52,7 @@ describe("hashTreeRoot", () => {
     {value: {v:3, subV:{v:6}}, type: OuterObject, expected: ""},
     {value: {v: [{b:2,a:1}, {b:4,a:3}]}, type: ArrayObject, expected: ""},
     {value: [{v:3, subV:{v:6}}, {v:5, subV:{v:7}}], type: {elementType: OuterObject, maxLength: 100}, expected: ""},
-    {value: [], type: {elementType: "uint16", maxLength: 100}, expected: ""},
+    {value: [], type: {elementType: "number16", maxLength: 100}, expected: ""},
     {value: [], type: {elementType: OuterObject, maxLength: 100}, expected: ""},
   ];
   for (const {value, type} of testCases) {
@@ -89,7 +88,7 @@ describe("hashTreeRoot", () => {
       accountBalances.balances.push(0x32000000000n);
     }
     const accountBalancesType: AnySSZType = {
-      fields: [["balances", {elementType: "uint64", maxLength: count}]]
+      fields: [["balances", {elementType: "bigint64", maxLength: count}]]
     };
     const hash = hashTreeRoot(accountBalances, accountBalancesType).toString("hex");
     assert(hash);
@@ -109,7 +108,7 @@ describe("hashTreeRoot", () => {
       fields: [
         ["previousVersion", {elementType: "byte", length: 4}],
         ["curVersion", {elementType: "byte", length: 4}],
-        ["epoch", "uint64"]
+        ["epoch", "bigint64"]
       ]
     };
     const finalHash = hashTreeRoot(fork, forkType).toString("hex");

@@ -18,7 +18,6 @@ export function _defaultValue(type: FullSSZType): any {
         case UintImpl.bigint:
           return BigInt(0);
         case UintImpl.number:
-        case UintImpl.uint:
           return 0;
       }
       break;

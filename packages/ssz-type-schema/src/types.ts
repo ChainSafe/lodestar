@@ -59,7 +59,6 @@ export enum Type {
 }
 
 export enum UintImpl {
-  uint = "uint",
   number = "number",
   bigint = "bigint",
   bn ="bn",

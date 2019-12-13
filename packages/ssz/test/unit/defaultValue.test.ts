@@ -12,7 +12,7 @@ describe("defaultValue", () => {
     type: any;
     expected: any;
   }[] = [
-    {type: "uint8", expected: 0},
+    {type: "number8", expected: 0},
     {type: "bigint8", expected: BigInt(0)},
     {type: "bn8", expected: new BN(0)},
     {type: "bool", expected: false},
@@ -21,7 +21,7 @@ describe("defaultValue", () => {
     {type: {elementType: "byte", maxLength: 100}, expected: Buffer.alloc(0)},
     {type: {elementType: "byte", length: 100}, expected: Buffer.alloc(100)},
     {type: "bytes2", expected: Buffer.alloc(2)},
-    {type: {elementType: "uint16", maxLength: 100}, expected: []},
+    {type: {elementType: "number16", maxLength: 100}, expected: []},
     {type: ArrayObject, expected: {v: []}},
   ];
   for (const {type, expected} of testCases) {

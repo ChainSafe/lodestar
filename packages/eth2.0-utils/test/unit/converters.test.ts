@@ -11,8 +11,8 @@ interface ITestType {
 const sszType: AnyContainerType = {
   type: Type.container,
   fields: [
-    ["numberProp", "uint32"],
-    ["bigintProp", "uint64"],
+    ["numberProp", "number32"],
+    ["bigintProp", "bigint64"],
   ]
 };
 

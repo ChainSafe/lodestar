@@ -21,7 +21,8 @@ import {
   BitListType,
   BitVectorType,
   parseType,
-  isVariableSizeType
+  isVariableSizeType,
+  UintImpl
 } from "@chainsafe/ssz-type-schema";
 import {BYTES_PER_LENGTH_PREFIX} from "../util/constants";
 import {fixedSize} from "./size";
@@ -37,22 +38,16 @@ import {toBigIntLE} from "bigint-buffer";
  * // deserialize a number
  * const n: number = deserialize(
  *   data,
- *   "uint32" // "uintN", N == length in bits, N <= 32
+ *   "number" // "numberN", N == length in bits, N <= 32
  * );
  *
  * // deserialize a BigInt
  * const bi: bigint = deserialize(
  *   data,
- *   "uint64" // "uintN", N == length in bits, N >= 64
+ *   "bigint64" // "bigintN", N == length in bits
  * );
  *
- * // deserialize a number (forced)
- * const m: number = deserialize(
- *   data,
- *   "number64" // "numberN", N == length in bits
- * );
- *
- * // deserialize a BN (forced)
+ * // deserialize a BN
  * const bn: BN = deserialize(data, "bn64");
  *
  * // deserialize a boolean
@@ -74,7 +69,7 @@ import {toBigIntLE} from "bigint-buffer";
  *
  * // deserialize a variable-length byte array, max-length required
  * const buf1: Buffer = deserialize(data, {
- *   elementType: "byte", // "byte", "uint8", or "number8"
+ *   elementType: "byte", // "byte" or "number8"
  *   maxLength: 10, // max number of bytes
  * });
  *
@@ -86,13 +81,13 @@ import {toBigIntLE} from "bigint-buffer";
  *
  * // deserialize a variable-length array, max-length required
  * const arr1: number[] = deserialize(data, {
- *   elementType: "uint32",
+ *   elementType: "number32",
  *   maxLength: 10, // max number of elements
  * });
  *
  * // deserialize a fixed-length array
  * const arr2: number[] = deserialize([0, 1, 2, 3, 4, 5], {
- *   elementType: "uint32",
+ *   elementType: "number32",
  *   length: 6,
  * });
  *
@@ -104,7 +99,7 @@ import {toBigIntLE} from "bigint-buffer";
  * }
  * const myDataType: SimpleContainerType = {
  *   fields: [
- *     ["a", "uint16"], // [fieldName, fieldType]
+ *     ["a", "number16"], // [fieldName, fieldType]
  *     ["b", "bool"],
  *     ["c", "bytes96"],
  *   ],
@@ -153,13 +148,16 @@ export function _deserialize(data: Buffer, type: FullSSZType, start: number, end
 function _deserializeUint(data: Buffer, type: UintType, start: number): Uint {
   const offset = start + type.byteLength;
   const uintData = data.slice(start, offset);
-  if (type.use === "number" && type.byteLength > 6 && uintData.equals(Buffer.alloc(type.byteLength, 255))) {
-    return Infinity;
-  } else if (type.use === "bn") {
-    return new BN(uintData, 16, "le");
-  } else {
-    const bi = toBigIntLE(uintData);
-    return (type.use == "number" || type.byteLength <= 6) ? Number(bi) : bi;
+  switch (type.use) {
+    case UintImpl.bn:
+      return new BN(uintData, 16, "le");
+    case UintImpl.bigint:
+      return toBigIntLE(uintData);
+    case UintImpl.number:
+      if (type.byteLength > 6 && uintData.equals(Buffer.alloc(type.byteLength, 255))) {
+        return Infinity;
+      }
+      return Number(toBigIntLE(uintData));
   }
 }
 

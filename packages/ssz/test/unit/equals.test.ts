@@ -13,12 +13,12 @@ describe("equals", () => {
     type: any;
     expected: boolean;
   }[] = [
-    {value1: 1, value2: 1, type: "uint8", expected: true},
-    {value1: 0, value2: 1, type: "uint8", expected: false},
-    {value1: 0, value2: 1, type: "uint8", expected: false},
-    {value1: 0, value2: 1, type: "uint8", expected: false},
-    {value1: Infinity, value2: Infinity, type: "uint8", expected: true},
-    {value1: 1000n, value2: 1000, type: "uint16", expected: true},
+    {value1: 1, value2: 1, type: "number8", expected: true},
+    {value1: 0, value2: 1, type: "number8", expected: false},
+    {value1: 0, value2: 1, type: "number8", expected: false},
+    {value1: 0, value2: 1, type: "number8", expected: false},
+    {value1: Infinity, value2: Infinity, type: "number8", expected: true},
+    {value1: 1000n, value2: 1000n, type: "bigint16", expected: true},
     {value1: true, value2: true, type: "bool", expected: true},
     {value1: false, value2: false, type: "bool", expected: true},
     {value1: false, value2: true, type: "bool", expected: false},
@@ -33,25 +33,25 @@ describe("equals", () => {
     {
       value1: [0, 1, 2, 3, 4, 5],
       value2: [0, 1, 2, 3, 4, 5],
-      type: {elementType: "uint16", maxLength: 100},
+      type: {elementType: "number16", maxLength: 100},
       expected: true
     },
     {
       value1: [0, 1, 2, 3, 4, 6],
       value2: [0, 1, 2, 3, 4, 5],
-      type: {elementType: "uint16", maxLength: 100},
+      type: {elementType: "number16", maxLength: 100},
       expected: false
     },
     {
       value1: [0, 1, 2, 3, 4, 5],
       value2: [0, 1, 2, 3, 4, 5],
-      type: {elementType: "uint16", length: 6},
+      type: {elementType: "number16", length: 6},
       expected: true
     },
     {
       value1: [0, 1, 2, 3, 4, 6],
       value2: [0, 1, 2, 3, 4, 5],
-      type: {elementType: "uint16", length: 6},
+      type: {elementType: "number16", length: 6},
       expected: false
     },
     {

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {AnySSZType, FullSSZType, Type, parseType} from "@chainsafe/ssz-type-schema";
+import {AnySSZType, FullSSZType, Type, parseType, UintImpl} from "@chainsafe/ssz-type-schema";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 import BN from "bn.js";
 
@@ -10,14 +10,14 @@ export function fromYaml<T>(value: any, type: AnySSZType): T {
 function _expandYamlValue(value: any, type: FullSSZType): any {
   switch(type.type) {
     case Type.uint:
-      if (type.use === "bn") {
-        return new BN(value);
-      }
-      if (type.byteLength <= 6 || type.use === "number") {
-        const n = Number(value);
-        return Number.isSafeInteger(n) ? n : Infinity;
-      } else {
-        return BigInt(value);
+      switch (type.use) {
+        case UintImpl.bn:
+          return new BN(value);
+        case UintImpl.bigint:
+          return BigInt(value);
+        case UintImpl.number:
+          const n = Number(value);
+          return Number.isSafeInteger(n) ? n : Infinity;
       }
     case Type.bool:
       return value;
