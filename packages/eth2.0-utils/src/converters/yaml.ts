@@ -16,9 +16,9 @@ function _expandYamlValue(value: any, type: FullSSZType): any {
         case UintImpl.bigint:
           return BigInt(value);
         case UintImpl.number:
-          const n = Number(value);
-          return Number.isSafeInteger(n) ? n : Infinity;
+          return Number.isSafeInteger(Number(value)) ? Number(value) : Infinity;
       }
+      break;
     case Type.bool:
       return value;
     case Type.bitList:
