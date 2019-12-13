@@ -8,7 +8,6 @@ import profiler from "v8-profiler-next";
 import {loadYamlFile} from "@chainsafe/eth2.0-utils/lib/nodejs";
 import {AnySSZType, deserialize} from "@chainsafe/ssz";
 
-import {safeType} from "./transform";
 import {isDirectory} from "./util";
 
 
