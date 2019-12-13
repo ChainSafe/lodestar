@@ -4,7 +4,7 @@
       "@babel/env",
       {
         "targets": {
-          "node": "8",
+          "node": "10.4",
           "browsers": ">1%, not ie 11"
         },
         "exclude": [
