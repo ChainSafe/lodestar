@@ -80,7 +80,7 @@ describe("deserialize", () => {
     it(`should correctly deserialize ${stringifyType(type)}`, () => {
       const actual = deserialize(Buffer.from(value, "hex"), type);
       if (BN.isBN(expected)) {
-        assert(actual.eq(expected), `actual: ${actual}, expected: ${expected}`);
+        assert((actual as BN).eq(expected), `actual: ${actual}, expected: ${expected}`);
       } else if (typeof expected === "bigint") {
         assert(expected ===  actual, `actual: ${actual}, expected: ${expected}`);
       } else {

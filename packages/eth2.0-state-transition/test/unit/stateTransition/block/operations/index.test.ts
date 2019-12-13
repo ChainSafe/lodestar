@@ -1,21 +1,12 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {hashTreeRoot} from "@chainsafe/ssz";
-
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {Crosslink} from "@chainsafe/eth2.0-types";
-import  * as processProposerSlashing
-  from "../../../../../src/block/operations/proposerSlashing";
-import  * as processAttesterSlashing
-  from "../../../../../src/block/operations/attesterSlashing";
-import  * as processAttestation
-  from "../../../../../src/block/operations/attestation";
-import  * as processDeposit
-  from "../../../../../src/block/operations/deposit";
-import  * as processVoluntaryExit
-  from "../../../../../src/block/operations/voluntaryExit";
-import  * as processTransfer
-  from "../../../../../src/block/operations/transfer";
+import * as processProposerSlashing from "../../../../../src/block/operations/proposerSlashing";
+import * as processAttesterSlashing from "../../../../../src/block/operations/attesterSlashing";
+import * as processAttestation from "../../../../../src/block/operations/attestation";
+import * as processDeposit from "../../../../../src/block/operations/deposit";
+import * as processVoluntaryExit from "../../../../../src/block/operations/voluntaryExit";
+import * as processTransfer from "../../../../../src/block/operations/transfer";
 import {processOperations} from "../../../../../src/block/operations";
 
 import {generateState} from "../../../../utils/state";
@@ -23,11 +14,11 @@ import {generateEmptyBlock} from "../../../../utils/block";
 import {generateDeposit} from "../../../../utils/deposit";
 import {generateEmptyTransfer} from "../../../../utils/transfer";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../../utils/slashings";
-import {generateAttestationData, generateEmptyAttestation} from "../../../../utils/attestation";
+import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../../../../utils/voluntaryExits";
 
 
-describe('process block - process operations', function () {
+describe("process block - process operations", function () {
 
   const sandbox = sinon.createSandbox();
 
@@ -51,7 +42,7 @@ describe('process block - process operations', function () {
     sandbox.restore();
   });
 
-  it('should fail to process operations - outstanding deposits not processed up to the maximum', function () {
+  it("should fail to process operations - outstanding deposits not processed up to the maximum", function () {
     const state  = generateState();
     const body = generateEmptyBlock().body;
     body.deposits.push(generateDeposit());
@@ -64,7 +55,7 @@ describe('process block - process operations', function () {
 
   });
 
-  it('should fail to process operations - duplicate transfers', function () {
+  it("should fail to process operations - duplicate transfers", function () {
     const state  = generateState();
     const body = generateEmptyBlock().body;
     body.transfers.push(generateEmptyTransfer());
@@ -77,7 +68,7 @@ describe('process block - process operations', function () {
     }
   });
 
-  it('should fail to process operations - proposerSlashings length  exceed maxProposerSlashings ', function () {
+  it("should fail to process operations - proposerSlashings length  exceed maxProposerSlashings ", function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
     body.proposerSlashings.length = config.params.MAX_PROPOSER_SLASHINGS + 1;
@@ -89,7 +80,7 @@ describe('process block - process operations', function () {
     }
   });
 
-  it('should fail to process operations - attesterSlashings length  exceed maxAttesterSlashings', function () {
+  it("should fail to process operations - attesterSlashings length  exceed maxAttesterSlashings", function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
     processProposerSlashingStub.returns(0);
@@ -103,7 +94,7 @@ describe('process block - process operations', function () {
     }
   });
 
-  it('should fail to process operations - attestation length  exceed maxAttestation', function () {
+  it("should fail to process operations - attestation length  exceed maxAttestation", function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
     processProposerSlashingStub.returns(0);
@@ -122,7 +113,7 @@ describe('process block - process operations', function () {
 
   });
 
-  it('should fail to process operations - deposit length  exceed maxDeposit', function () {
+  it("should fail to process operations - deposit length  exceed maxDeposit", function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
     body.deposits.length = config.params.MAX_DEPOSITS + 1;
@@ -135,7 +126,7 @@ describe('process block - process operations', function () {
 
   });
 
-  it('should fail to process operations - voluntaryExit length  exceed maxVoluntaryExit', function () {
+  it("should fail to process operations - voluntaryExit length  exceed maxVoluntaryExit", function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
     processProposerSlashingStub.returns(0);
@@ -160,7 +151,7 @@ describe('process block - process operations', function () {
     }
   });
 
-  it('should fail to process operations - transfer length  exceed maxTransfer', function () {
+  it("should fail to process operations - transfer length  exceed maxTransfer", function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
     processProposerSlashingStub.returns(0);
@@ -188,7 +179,7 @@ describe('process block - process operations', function () {
     }
   });
 
-  it('should  process operations ', function () {
+  it("should  process operations ", function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
     processProposerSlashingStub.returns(0);

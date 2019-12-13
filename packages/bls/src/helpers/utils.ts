@@ -1,4 +1,5 @@
 import assert from "assert";
+import {PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH} from "../constants";
 
 /**
  * Pads byte array with zeroes on left side up to desired length.
@@ -12,3 +13,6 @@ export function padLeft(source: Buffer, length: number): Buffer {
   source.copy(result, length - source.length);
   return result;
 }
+
+export const EMPTY_PUBLIC_KEY = Buffer.alloc(PUBLIC_KEY_LENGTH);
+export const EMPTY_SIGNATURE = Buffer.alloc(SIGNATURE_LENGTH);

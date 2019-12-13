@@ -60,7 +60,7 @@ export function isValidIndexedAttestation(
   config: IBeaconConfig,
   state: BeaconState,
   indexedAttestation: IndexedAttestation,
-  verifySignature: boolean = true
+  verifySignature = true
 ): boolean {
   const bit0Indices = indexedAttestation.custodyBit0Indices;
   const bit1Indices = indexedAttestation.custodyBit1Indices;

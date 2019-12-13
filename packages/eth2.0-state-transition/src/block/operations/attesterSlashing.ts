@@ -26,7 +26,7 @@ export function processAttesterSlashing(
   config: IBeaconConfig,
   state: BeaconState,
   attesterSlashing: AttesterSlashing,
-  verifySignatures: boolean = true,
+  verifySignatures = true,
 ): void {
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;

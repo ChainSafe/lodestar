@@ -45,7 +45,7 @@ export class TasksService implements IService {
     this.chain.removeListener("finalizedCheckpoint", this.handleFinalizedCheckpointChores);
   }
 
-  private handleFinalizedCheckpointChores = async(finalizedCheckpoint: Checkpoint) => {
+  private handleFinalizedCheckpointChores = async (finalizedCheckpoint: Checkpoint): Promise<void> => {
     new ArchiveBlocksTask(this.config, {db: this.db, logger: this.logger}, finalizedCheckpoint).run();
   };
 

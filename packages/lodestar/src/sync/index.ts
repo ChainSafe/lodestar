@@ -92,11 +92,11 @@ export class Sync extends EventEmitter {
     return false;
   }
 
-  private startRegularSync = () => {
+  private startRegularSync = (): void => {
     this.regularSync.start();
   };
 
-  private startInitialSync = () => {
+  private startInitialSync = (): void => {
     this.initialSync.start();
   };
 
@@ -105,7 +105,7 @@ export class Sync extends EventEmitter {
     return this.network.getPeers();
   }
 
-  private handleNewPeer = (peer: PeerInfo) => {
+  private handleNewPeer = (peer: PeerInfo): void => {
     //TODO: check if peer is useful
     this.peers.push(peer);
     if(this.waitingForPeer) {
@@ -115,7 +115,7 @@ export class Sync extends EventEmitter {
   };
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private handleLostPeer = (peer: PeerInfo) => {
+  private handleLostPeer = (peer: PeerInfo): void => {
     //TODO: remove peer from array
   };
 }

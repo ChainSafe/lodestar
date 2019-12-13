@@ -35,7 +35,7 @@ export default class Keystore {
     const keyPair = generateKeyPair();
 
     const keys: IKeystoreObject = {
-      encryptedPrivateKey:encryptKey(keyPair.privateKey.toHexString(), password),
+      encryptedPrivateKey: encryptKey(keyPair.privateKey.toHexString(), password),
       publicKey: keyPair.publicKey.toHexString(),
     };
 

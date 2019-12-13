@@ -137,7 +137,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public async receiveBlock(block: BeaconBlock, trusted: boolean = false): Promise<void> {
+  public async receiveBlock(block: BeaconBlock, trusted = false): Promise<void> {
     const blockHash = signingRoot(block, this.config.types.BeaconBlock);
     this.logger.info(
       `Received block with hash 0x${blockHash.toString("hex")}` +
@@ -244,7 +244,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     return Math.floor(Date.now() / 1000) >= stateSlotTime;
   }
 
-  private processAttestation = async (latestState: BeaconState, attestation: Attestation, attestationHash: Hash) => {
+  private processAttestation =
+  async (latestState: BeaconState, attestation: Attestation, attestationHash: Hash): Promise<void> => {
     const validators = getAttestingIndices(
       this.config, latestState, attestation.data, attestation.aggregationBits);
     const balances = validators.map((index) => latestState.balances[index]);
@@ -255,7 +256,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.emit("processedAttestation", attestation);
   };
 
-  private processBlock = async (job: IBlockProcessJob, blockHash: Hash) => {
+  private processBlock = async (job: IBlockProcessJob, blockHash: Hash): Promise<void> => {
 
     const isValidBlock = await this.isValidBlock(this.latestState, job.block);
     assert(isValidBlock);

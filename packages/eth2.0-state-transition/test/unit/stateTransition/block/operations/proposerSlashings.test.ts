@@ -1,8 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-// @ts-ignore
-import {restore, rewire} from "@chainsafe/bls";
-
+import * as blsModule from "@chainsafe/bls";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processProposerSlashing} from "../../../../../src/block/operations";
 import * as utils from "../../../../../src/util";
@@ -11,7 +9,7 @@ import {generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {generateValidator} from "../../../../utils/validator";
 import {generateState} from "../../../../utils/state";
 
-describe('process block - proposer slashings', function () {
+describe("process block - proposer slashings", function () {
 
   const sandbox = sinon.createSandbox();
 
@@ -21,17 +19,15 @@ describe('process block - proposer slashings', function () {
     isSlashableValidatorStub = sandbox.stub(utils, "isSlashableValidator");
     slashValidatorStub = sandbox.stub(utils, "slashValidator");
     blsStub = {
-      verify: sandbox.stub()
+      verify: sandbox.stub(blsModule, "verify")
     };
-    rewire(blsStub);
   });
 
   afterEach(() => {
     sandbox.restore();
-    restore();
   });
 
-  it('should fail to process - different epoch', function () {
+  it("should fail to process - different epoch", function () {
     const state = generateState({validators: [generateValidator()]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
@@ -43,7 +39,7 @@ describe('process block - proposer slashings', function () {
     }
   });
 
-  it('should fail to process - same headers', function () {
+  it("should fail to process - same headers", function () {
     const state = generateState({validators: [generateValidator()]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
@@ -55,7 +51,7 @@ describe('process block - proposer slashings', function () {
     }
   });
 
-  it('should fail to process - same headers', function () {
+  it("should fail to process - same headers", function () {
     const state = generateState({validators: [generateValidator()]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
@@ -69,7 +65,7 @@ describe('process block - proposer slashings', function () {
     }
   });
 
-  it('should fail to process - invalid signature 1', function () {
+  it("should fail to process - invalid signature 1", function () {
     const state = generateState({validators: [generateValidator()]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
@@ -85,7 +81,7 @@ describe('process block - proposer slashings', function () {
     }
   });
 
-  it('should fail to process - invalid signature 2', function () {
+  it("should fail to process - invalid signature 2", function () {
     const validator = generateValidator();
     const state = generateState({validators: [validator]});
     const proposerSlashing = generateEmptyProposerSlashing();
@@ -109,7 +105,7 @@ describe('process block - proposer slashings', function () {
     }
   });
 
-  it('should process', function () {
+  it("should process", function () {
     const validator = generateValidator();
     const state = generateState({validators: [validator]});
     const proposerSlashing = generateEmptyProposerSlashing();

@@ -46,7 +46,6 @@ export default class BlockProposingService {
       slot,
       this.keypair.privateKey.signMessage(
         hashTreeRoot(computeEpochOfSlot(this.config, slot), this.config.types.Epoch),
-        // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
         getDomain(this.config, {fork} as BeaconState, DomainType.RANDAO, computeEpochOfSlot(this.config, slot))
       ).toBytesCompressed()
     );
@@ -55,7 +54,6 @@ export default class BlockProposingService {
     }
     block.signature = this.keypair.privateKey.signMessage(
       signingRoot(block, this.config.types.BeaconBlock),
-      // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
       getDomain(this.config, {fork} as BeaconState, DomainType.BEACON_PROPOSER, computeEpochOfSlot(this.config, slot))
     ).toBytesCompressed();
     await this.storeBlock(block);

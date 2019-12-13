@@ -32,8 +32,9 @@ function sleep(ms: number) {
 }
 
 describe("e2e interop simulation", function() {
-  this.timeout(0);
+  this.timeout(100000);
   let logger: ILogger = new WinstonLogger();
+  logger.silent = true;
   let node: BeaconNode;
   let validators: ValidatorClient[];
 
@@ -112,6 +113,7 @@ describe("e2e interop simulation", function() {
       chain: node.chain,
       db: node.db
     };
+    modules.logger.silent = true;
     const rpcInstance = new ApiClientOverInstance({
       config: node.config,
       validator: new ValidatorApi({}, modules),
@@ -119,6 +121,8 @@ describe("e2e interop simulation", function() {
     });
     const keypair = new Keypair(PrivateKey.fromBytes(privkey));
     const index = await node.db.getValidatorIndex(keypair.publicKey.toBytesCompressed());
+    const validatorLogger =new WinstonLogger({module: `Validator #${index}`});
+    validatorLogger.silent = true;
     const validator = new ValidatorClient(
       {
         validatorKey: keypair.privateKey.toHexString(),
@@ -127,7 +131,7 @@ describe("e2e interop simulation", function() {
         config: node.config
       },
       {
-        logger: new WinstonLogger({module: `Validator #${index}`})
+        logger
       }
     );
     validators.push(validator);

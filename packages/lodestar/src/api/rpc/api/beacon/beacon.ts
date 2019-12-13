@@ -45,7 +45,6 @@ export class BeaconApi implements IBeaconApi {
 
   public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
     // TODO: change this after sync service is implemented
-    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
     return false;
   }
 }

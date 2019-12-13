@@ -24,7 +24,6 @@ const allGenerators = {
 };
 
 export function createIBeaconSSZTypes(params: IBeaconParams): IBeaconSSZTypes {
-  // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
   const types: IBeaconSSZTypes = {} as IBeaconSSZTypes;
   // primitive types (don't need generators)
   for (const type in primitive) {

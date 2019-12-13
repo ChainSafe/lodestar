@@ -1,7 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-// @ts-ignore
-import {restore, rewire} from "@chainsafe/bls";
+import * as blsModule from "@chainsafe/bls";
 import {hash} from "@chainsafe/ssz";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
@@ -16,7 +15,7 @@ import {generateEmptyTransfer} from "../../../../utils/transfer";
 import {generateValidator} from "../../../../utils/validator";
 import {generateState} from "../../../../utils/state";
 
-describe('process block - transfers', function () {
+describe("process block - transfers", function () {
 
   const sandbox = sinon.createSandbox();
 
@@ -27,17 +26,15 @@ describe('process block - transfers', function () {
     decreaseBalanceStub = sandbox.stub(utils, "decreaseBalance");
     getBeaconProposerIndexStub = sandbox.stub(utils, "getBeaconProposerIndex");
     blsStub = {
-      verify: sandbox.stub()
+      verify: sandbox.stub(blsModule, "verify")
     };
-    rewire(blsStub);
   });
 
   afterEach(() => {
     sandbox.restore();
-    restore();
   });
 
-  it('should fail to process transfer - balance lesser than amount', function () {
+  it("should fail to process transfer - balance lesser than amount", function () {
     const state = generateState({balances: [1n]});
     const transfer = generateEmptyTransfer();
     transfer.amount = 2n;
@@ -50,7 +47,7 @@ describe('process block - transfers', function () {
   });
 
 
-  it('should fail to process transfer - balance lesser than fee', function () {
+  it("should fail to process transfer - balance lesser than fee", function () {
     const state = generateState({balances: [1n]});
     const transfer = generateEmptyTransfer();
     transfer.amount = 0n;
@@ -63,7 +60,7 @@ describe('process block - transfers', function () {
     }
   });
 
-  it('should fail to process transfer - invalid slot', function () {
+  it("should fail to process transfer - invalid slot", function () {
     const state = generateState({balances: [5n], slot: 1});
     const transfer = generateEmptyTransfer();
     transfer.amount = 2n;
@@ -77,7 +74,7 @@ describe('process block - transfers', function () {
     }
   });
 
-  it('should fail to process transfer - eligible for activation, withdrawn, or transfer', function () {
+  it("should fail to process transfer - eligible for activation, withdrawn, or transfer", function () {
     const state = generateState({balances: [5n + config.params.MAX_EFFECTIVE_BALANCE], slot: 1});
     const transfer = generateEmptyTransfer();
     transfer.amount = 2n;
@@ -91,7 +88,7 @@ describe('process block - transfers', function () {
     }
   });
 
-  it('should fail to process transfer - balance over MAX_EFFECTIVE_BALANCE', function () {
+  it("should fail to process transfer - balance over MAX_EFFECTIVE_BALANCE", function () {
     const validator = generateValidator();
     validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
     validator.withdrawableEpoch = computeEpochOfSlot(config, 1);
@@ -112,7 +109,7 @@ describe('process block - transfers', function () {
     }
   });
 
-  it('should fail to process transfer - invalid pubkey', function () {
+  it("should fail to process transfer - invalid pubkey", function () {
     const validator = generateValidator();
     validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
     validator.withdrawableEpoch = computeEpochOfSlot(config, 1);
@@ -133,7 +130,7 @@ describe('process block - transfers', function () {
     }
   });
 
-  it('should fail to process transfer - invalid signature', function () {
+  it("should fail to process transfer - invalid signature", function () {
     const validator = generateValidator();
     validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
     validator.withdrawableEpoch = computeEpochOfSlot(config, 1);
@@ -156,7 +153,7 @@ describe('process block - transfers', function () {
     }
   });
 
-  it('should fail to process transfer - sender balance is dust', function () {
+  it("should fail to process transfer - sender balance is dust", function () {
     const validator = generateValidator();
     validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
     validator.withdrawableEpoch = computeEpochOfSlot(config, 1);
@@ -186,7 +183,7 @@ describe('process block - transfers', function () {
     }
   });
 
-  it('should fail to process transfer - recipient balance is dust', function () {
+  it("should fail to process transfer - recipient balance is dust", function () {
     const validator = generateValidator();
     validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
     validator.withdrawableEpoch = computeEpochOfSlot(config, 1);
@@ -214,7 +211,7 @@ describe('process block - transfers', function () {
     }
   });
 
-  it('should process transfer', function () {
+  it("should process transfer", function () {
     const validator = generateValidator();
     validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
     validator.withdrawableEpoch = computeEpochOfSlot(config, 1);

@@ -4,7 +4,7 @@ import {BLSSignature, Domain, Hash} from "@chainsafe/eth2.0-types";
 import {SignatureType} from "@chainsafe/eth2-bls-wasm";
 import {getContext} from "./context";
 import {PublicKey} from "./publicKey";
-import {padLeft} from "./helpers/utils";
+import {EMPTY_SIGNATURE, padLeft} from "./helpers/utils";
 
 export class Signature {
 
@@ -21,7 +21,9 @@ export class Signature {
     );
     const context = getContext();
     const signature = new context.Signature();
-    signature.deserialize(value);
+    if(!value.equals(EMPTY_SIGNATURE)) {
+      signature.deserialize(value);
+    }
     return new Signature(signature);
   }
 

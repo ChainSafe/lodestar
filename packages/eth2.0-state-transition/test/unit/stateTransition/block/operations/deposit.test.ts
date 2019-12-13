@@ -10,8 +10,6 @@ import {generateState} from "../../../../utils/state";
 import {generateDeposit} from "../../../../utils/deposit";
 import {generateValidator} from "../../../../utils/validator";
 
-
-
 describe("process block - deposits", function () {
 
   const sandbox = sinon.createSandbox();
@@ -19,12 +17,12 @@ describe("process block - deposits", function () {
   let processDeposit: Function, getTemporaryBlockHeaderStub, getBeaconProposeIndexStub, blsStub = sinon.stub();
 
   before(function () {
-    mockery.registerMock('@chainsafe/eth2.0-utils', {
+    mockery.registerMock("@chainsafe/eth2.0-utils", {
       "verifyMerkleBranch": verifyMerkleBranchStub,
       "bigIntMin": bigIntMin,
       "intToBytes": intToBytes
     });
-    mockery.registerMock('@chainsafe/bls', {
+    mockery.registerMock("@chainsafe/bls", {
       verify: blsStub
     });
     mockery.enable({useCleanCache: true, warnOnReplace: false, warnOnUnregistered: false});

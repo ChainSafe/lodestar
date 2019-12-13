@@ -25,7 +25,7 @@ function _createValue(type: FullSSZType, defaultValue: any = null): any {
       return defaultValue;
     }
   }
-  const obj = {};
+  const obj: {[k: string]: unknown} = {};
   switch(type.type) {
     case Type.uint:
       if (type.use === "bn") {
@@ -62,7 +62,6 @@ function _createValue(type: FullSSZType, defaultValue: any = null): any {
         defaultValue = {};
       }
       type.fields.forEach(([fieldName, fieldType]) => {
-        // @ts-ignore
         obj[fieldName] = _createValue(fieldType, defaultValue[fieldName]);
       });
       return obj;

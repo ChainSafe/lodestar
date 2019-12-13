@@ -1,8 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-// @ts-ignore
-import {restore, rewire} from "@chainsafe/bls";
-
+import * as blsModule from "@chainsafe/bls";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   FAR_FUTURE_EPOCH,
@@ -14,7 +12,7 @@ import {generateValidator} from "../../../../utils/validator";
 import {generateEmptyVoluntaryExit} from "../../../../utils/voluntaryExits";
 import {generateState} from "../../../../utils/state";
 
-describe('process block - voluntary exits', function () {
+describe("process block - voluntary exits", function () {
 
   const sandbox = sinon.createSandbox();
 
@@ -24,17 +22,15 @@ describe('process block - voluntary exits', function () {
     isActiveValidatorStub = sandbox.stub(utils, "isActiveValidator");
     initiateValidatorExitStub = sandbox.stub(utils, "initiateValidatorExit");
     blsStub = {
-      verify: sandbox.stub()
+      verify: sandbox.stub(blsModule, "verify")
     };
-    rewire(blsStub);
   });
 
   afterEach(() => {
     sandbox.restore();
-    restore();
   });
 
-  it('should fail - validator not active', function () {
+  it("should fail - validator not active", function () {
     const state = generateState();
     const exit = generateEmptyVoluntaryExit();
     state.validators.push(generateValidator());
@@ -47,7 +43,7 @@ describe('process block - voluntary exits', function () {
     }
   });
 
-  it('should fail - already exited', function () {
+  it("should fail - already exited", function () {
     const state = generateState();
     const exit = generateEmptyVoluntaryExit();
     state.validators.push(generateValidator({activation: 0, exit: 1}));
@@ -60,7 +56,7 @@ describe('process block - voluntary exits', function () {
     }
   });
 
-  it('should fail - not valid', function () {
+  it("should fail - not valid", function () {
     const state = generateState({slot: 0});
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = config.params.SLOTS_PER_EPOCH * 2;
@@ -74,7 +70,7 @@ describe('process block - voluntary exits', function () {
     }
   });
 
-  it('should fail - validator not enough active', function () {
+  it("should fail - validator not enough active", function () {
     const state = generateState({slot: config.params.SLOTS_PER_EPOCH * 2});
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = 0;
@@ -88,7 +84,7 @@ describe('process block - voluntary exits', function () {
     }
   });
 
-  it('should fail - invalid signature', function () {
+  it("should fail - invalid signature", function () {
     const state = generateState({slot: (config.params.PERSISTENT_COMMITTEE_PERIOD + 1) * config.params.SLOTS_PER_EPOCH});
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = 0;
@@ -104,7 +100,7 @@ describe('process block - voluntary exits', function () {
     }
   });
 
-  it('should process exit', function () {
+  it("should process exit", function () {
     const validator = generateValidator({activation: 1, exit: FAR_FUTURE_EPOCH});
     const state = generateState({slot: (config.params.PERSISTENT_COMMITTEE_PERIOD + 1) * config.params.SLOTS_PER_EPOCH});
     const exit = generateEmptyVoluntaryExit();

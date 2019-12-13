@@ -1,18 +1,16 @@
 import {expect} from "chai";
 import sinon from "sinon";
-// @ts-ignore
-import {restore, rewire} from "@chainsafe/bls";
-
+import * as blsModule from "@chainsafe/bls";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {processRandao} from "../../../../src/block/randao";
+import {processRandao} from "../../../../src/block";
 import * as utils from "../../../../src/util";
-
+import {describe, beforeEach, afterEach} from "mocha";
 import {getCurrentEpoch} from "../../../../src/util";
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";
 
-describe('process block - randao', function () {
+describe("process block - randao", function () {
 
   const sandbox = sinon.createSandbox();
 
@@ -21,17 +19,15 @@ describe('process block - randao', function () {
   beforeEach(() => {
     getBeaconProposerStub = sandbox.stub(utils, "getBeaconProposerIndex");
     blsStub = {
-      verify: sandbox.stub()
+      verify: sandbox.stub(blsModule, "verify")
     };
-    rewire(blsStub);
   });
 
   afterEach(() => {
     sandbox.restore();
-    restore();
   });
 
-  it('should fail to process - invalid randao signature', function () {
+  it("should fail to process - invalid randao signature", function () {
     const state = generateState({validators: [generateValidator()]});
     const block = generateEmptyBlock();
     getBeaconProposerStub.returns(0);
@@ -45,7 +41,7 @@ describe('process block - randao', function () {
     }
   });
 
-  it('should process randao', function () {
+  it("should process randao", function () {
     const validator = generateValidator();
     const state = generateState({validators: [validator]});
     const block = generateEmptyBlock();

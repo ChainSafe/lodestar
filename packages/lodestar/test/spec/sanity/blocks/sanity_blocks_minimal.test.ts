@@ -16,16 +16,14 @@ describeDirectorySpecTest<IBlockSanityTestCase, BeaconState>(
     let state = testcase.pre;
     const verify = (!!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n);
     for(let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-      state = stateTransition(config, state, testcase[`blocks_${i}`] as BeaconBlock, verify, verify);
+      state = stateTransition(config, state, testcase[`blocks_${i}`] as BeaconBlock, verify, verify, verify);
     }
     return state;
   },
   {
-    // @ts-ignore
     inputTypes: {
       meta: InputType.YAML
     },
-    // @ts-ignore
     sszTypes: {
       pre: config.types.BeaconState,
       post: config.types.BeaconState,
