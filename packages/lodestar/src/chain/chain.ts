@@ -30,7 +30,6 @@ import {IChainOptions} from "./options";
 import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
 import fs from "fs";
-import {sleep} from "../util/sleep";
 import {AsyncQueue, queue} from "async";
 import FastPriorityQueue from "fastpriorityqueue";
 

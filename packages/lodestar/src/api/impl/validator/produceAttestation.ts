@@ -3,7 +3,7 @@ import {Attestation, BLSPubkey, CommitteeIndex, Slot} from "@chainsafe/eth2.0-ty
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconChain} from "../../../chain";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import { processSlots } from "@chainsafe/eth2.0-state-transition";
+import {processSlots} from "@chainsafe/eth2.0-state-transition";
 
 export async function produceAttestation(
   {config, db, chain}: {config: IBeaconConfig; db: IBeaconDb; chain: IBeaconChain},
