@@ -38,7 +38,7 @@ export interface IBeaconChain extends ChainEventEmitter {
   /**
    * Add attestation to the fork-choice rule
    */
-  receiveAttestation(attestation: Attestation, beaconState?: BeaconState): Promise<void>;
+  receiveAttestation(attestation: Attestation): Promise<void>;
 
   /**
    * Pre-process and run the per slot state transition function
