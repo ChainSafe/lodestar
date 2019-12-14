@@ -14,10 +14,6 @@ export async function assembleAttestation(
   validatorIndex: ValidatorIndex,
   index: CommitteeIndex,
   slot: Slot): Promise<Attestation> {
-  while(state.slot < slot) {
-    state.slot++;
-  }
-
   const committee = getBeaconCommittee(config, state, computeEpochAtSlot(config, slot), index);
   const aggregationBits = getAggregationBits(committee, validatorIndex);
   try {

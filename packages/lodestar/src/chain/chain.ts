@@ -119,7 +119,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.info(`Received attestation ${attestationHash.toString("hex")}`);
     try {
       const attestationSlot: Slot = attestation.data.slot;
-      if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < this.latestState.slot) {
+      const headBlock = await this.db.block.get(this.forkChoice.head());
+      const state = await this.db.state.get(headBlock.stateRoot);
+      if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < state.slot) {
         this.logger.verbose(`Attestation ${attestationHash.toString("hex")} is too old. Ignored.`);
         return;
       }
