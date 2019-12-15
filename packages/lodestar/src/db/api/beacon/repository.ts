@@ -64,13 +64,13 @@ export abstract class BulkRepository<T> extends Repository<T> {
     return (data || []).map((data) => deserialize(data, this.type));
   }
 
-  public async getAllBetween(lowerLimit: number | null, upperLimit: number | null, step?: number | null): Promise<T[]> {
+  public async getAllBetween(lowerLimit: number|null, upperLimit: number|null, step: number|null = null): Promise<T[]> {
     const data = await this.db.search({
       gt: encodeKey(this.bucket, lowerLimit || Buffer.alloc(0)),
       lt: encodeKey(this.bucket, upperLimit || Number.MAX_SAFE_INTEGER),
     });
     let processedData = data;
-    if (typeof step !== "undefined" && step !== null) {
+    if (step !== null) {
       processedData = data.filter((datum, index) => {
         return index % step === 0;
       });
