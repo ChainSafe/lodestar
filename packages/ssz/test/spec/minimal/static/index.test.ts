@@ -1,4 +1,4 @@
-import {testStatic} from "../../..//util/testCases";
+import {testStatic} from "../../../util/testCases";
 
 testStatic("AttestationDataAndCustodyBit");
 testStatic("AttestationData");

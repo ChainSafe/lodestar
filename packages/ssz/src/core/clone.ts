@@ -68,7 +68,7 @@ function _clone(value: any, type: FullSSZType): any {
         case UintImpl.number:
           return value;
       }
-      break;
+      throw new Error("unreachable");
     case Type.bool:
       return value;
     case Type.bitList:
