@@ -19,7 +19,7 @@ import {hashTreeRoot} from "./hashTreeRoot";
  * }
  * const myDataType: SimpleContainerType = {
  *   fields: [
- *     ["a", "uint16"],
+ *     ["a", "number16"],
  *     ["b", "bool"],
  *     ["c", "bytes96"],
  *   ],

@@ -3,20 +3,20 @@
 
 export const SimpleObject = {
   fields: [
-    ["b", "uint16"],
-    ["a", "uint8"],
+    ["b", "number16"],
+    ["a", "number8"],
   ],
 };
 
 export const InnerObject = {
   fields: [
-    ["v", "uint16"],
+    ["v", "number16"],
   ],
 };
 
 export const OuterObject = {
   fields: [
-    ["v", "uint8"],
+    ["v", "number8"],
     ["subV", InnerObject],
   ],
 };

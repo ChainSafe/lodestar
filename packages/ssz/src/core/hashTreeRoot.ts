@@ -29,15 +29,15 @@ import {chunkCount, chunkify, pack} from "../util/chunk";
  * // merkleize a number
  * buf = hashTreeRoot(
  *   10,
- *   "uint64" // "uintN", N == length in bits
+ *   "number64" // "numberN", N == length in bits
  * );
  *
  * // merkleize a BigInt
- * buf = hashTreeRoot(BigInt("1000000000000000000"), "uint64");
+ * buf = hashTreeRoot(BigInt("1000000000000000000"), "bigint64");
  *
  * // merkleize a BN
  * import BN from "bn.js";
- * buf = hashTreeRoot(new BN("1000000000000000000"), "uint64");
+ * buf = hashTreeRoot(new BN("1000000000000000000"), "bigint64");
  *
  * // merkleize a boolean
  * buf = hashTreeRoot(true, "bool");
@@ -58,7 +58,7 @@ import {chunkCount, chunkify, pack} from "../util/chunk";
  *
  * // merkleize a variable-length byte array, max-length required
  * buf = hashTreeRoot(Buffer.from("abcd", "hex"), {
- *   elementType: "byte", // "byte", "uint8", or "number8"
+ *   elementType: "byte", // "byte" or "number8"
  *   maxLength: 10, // max number of bytes
  * });
  *
@@ -70,20 +70,20 @@ import {chunkCount, chunkify, pack} from "../util/chunk";
  *
  * // merkleize a variable-length array, max-length required
  * buf = hashTreeRoot([0, 1, 2, 3, 4, 5], {
- *   elementType: "uint32",
+ *   elementType: "number32",
  *   maxLength: 10, // max number of elements
  * });
  *
  * // merkleize a fixed-length array
  * buf = hashTreeRoot([0, 1, 2, 3, 4, 5], {
- *   elementType: "uint32",
+ *   elementType: "number32",
  *   length: 6,
  * });
  *
  * // merkleize an object
  * const myDataType: SimpleContainerType = {
  *   fields: [
- *     ["a", "uint16"], // [fieldName, fieldType]
+ *     ["a", "number16"], // [fieldName, fieldType]
  *     ["b", "bool"],
  *     ["c", "bytes96"],
  *   ],

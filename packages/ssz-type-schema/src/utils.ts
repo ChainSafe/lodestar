@@ -18,7 +18,7 @@ const bytesPattern = /^bytes\d+$/;
 // regex to identify digits
 const digitsPattern = /\d+$/;
 // regex to identify a uint type
-const uintPattern = /^(uint|number|bigint|bn)\d+$/;
+const uintPattern = /^(number|bigint|bn)\d+$/;
 
 export function copyType(type: AnySSZType): AnySSZType {
   return JSON.parse(JSON.stringify(type));

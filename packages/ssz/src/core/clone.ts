@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
 
-import {AnySSZType, FullSSZType, parseType, Type} from "@chainsafe/ssz-type-schema";
-import BN from "bn.js";
+import {AnySSZType, FullSSZType, parseType, Type, UintImpl} from "@chainsafe/ssz-type-schema";
 
 import {_assertValidValue} from "./assertValidValue";
 
@@ -13,7 +12,7 @@ import {_assertValidValue} from "./assertValidValue";
  * Most useful to clone arrays/objects
  *
  * ```typescript
- * const n: number = clone(10, "uint64");
+ * const n: number = clone(10, "number64");
  *
  * const b: boolean = clone(true, "bool");
  *
@@ -28,7 +27,7 @@ import {_assertValidValue} from "./assertValidValue";
  * const arr: number[] = clone(
  *   [0, 1, 2, 3, 4, 5],
  *   {
- *     elementType: "uint32",
+ *     elementType: "number32",
  *     maxLength: 10,
  *   }
  * );
@@ -40,7 +39,7 @@ import {_assertValidValue} from "./assertValidValue";
  * }
  * const myDataType: SimpleContainerType = {
  *   fields: [
- *     ["a", "uint16"],
+ *     ["a", "number16"],
  *     ["b", "bool"],
  *     ["c", "bytes96"],
  *   ],
@@ -62,10 +61,14 @@ function _clone(value: any, type: FullSSZType): any {
   const obj: any = {};
   switch (type.type) {
     case Type.uint:
-      if (BN.isBN(value)) {
-        return value.clone();
+      switch (type.use) {
+        case UintImpl.bn:
+          return value.clone();
+        case UintImpl.bigint:
+        case UintImpl.number:
+          return value;
       }
-      return value;
+      throw new Error("unreachable");
     case Type.bool:
       return value;
     case Type.bitList:
