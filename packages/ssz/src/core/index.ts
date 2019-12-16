@@ -6,6 +6,8 @@ import {signingRoot} from "./signingRoot";
 import {equals} from "./equals";
 import {clone} from "./clone";
 import {assertValidValue} from "./assertValidValue";
+import {defaultValue} from "./defaultValue";
+import {createValue} from "./createValue";
 
 export {
   deserialize,
@@ -15,4 +17,6 @@ export {
   equals,
   clone,
   assertValidValue,
+  defaultValue,
+  createValue,
 };

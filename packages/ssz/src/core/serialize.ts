@@ -37,15 +37,15 @@ import  {toBufferLE} from "bigint-buffer";
  * // serialize a number
  * buf = serialize(
  *   10,
- *   "uint64" // "uintN", N == length in bits
+ *   "number64" // "numberN", N == length in bits
  * );
  *
  * // serialize a BigInt
- * buf = serialize(BigInt("1000000000000000000"), "uint64");
+ * buf = serialize(BigInt("1000000000000000000"), "bigint64");
  *
  * // serialize a BN
  * import BN from "bn.js";
- * buf = serialize(new BN("1000000000000000000"), "uint64");
+ * buf = serialize(new BN("1000000000000000000"), "bn64");
  *
  * // serialize a boolean
  * buf = serialize(true, "bool");
@@ -66,7 +66,7 @@ import  {toBufferLE} from "bigint-buffer";
  *
  * // serialize a variable-length byte array, max-length required
  * buf = serialize(Buffer.from("abcd", "hex"), {
- *   elementType: "byte", // "byte", "uint8", or "number8"
+ *   elementType: "byte", // "byte", or "number8"
  *   maxLength: 10, // max number of bytes
  * });
  *
@@ -78,20 +78,20 @@ import  {toBufferLE} from "bigint-buffer";
  *
  * // serialize a variable-length array, max-length required
  * buf = serialize([0, 1, 2, 3, 4, 5], {
- *   elementType: "uint32",
+ *   elementType: "number32",
  *   maxLength: 10, // max number of elements
  * });
  *
  * // serialize a fixed-length array
  * buf = serialize([0, 1, 2, 3, 4, 5], {
- *   elementType: "uint32",
+ *   elementType: "number32",
  *   length: 6,
  * });
  *
  * // serialize an object
  * const myDataType: SimpleContainerType = {
  *   fields: [
- *     ["a", "uint16"], // [fieldName, fieldType]
+ *     ["a", "number16"], // [fieldName, fieldType]
  *     ["b", "bool"],
  *     ["c", "bytes96"],
  *   ],

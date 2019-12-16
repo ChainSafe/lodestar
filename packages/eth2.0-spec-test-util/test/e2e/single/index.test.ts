@@ -4,6 +4,7 @@ import {AnyContainerType, AnySSZType, serialize} from "@chainsafe/ssz";
 import {bool, number64} from "@chainsafe/eth2.0-types/lib/ssz/generators/primitive";
 import {unlinkSync, writeFileSync} from "fs";
 import {before, after} from "mocha";
+import {fromYaml} from "@chainsafe/eth2.0-utils";
 import {loadYamlFile} from "@chainsafe/eth2.0-utils/lib/nodejs";
 
 export interface ISimpleStruct {
@@ -66,7 +67,7 @@ describeDirectorySpecTest<ISimpleCase, number>(
 );
 
 function yamlToSSZ(file: string, sszSchema: AnySSZType): void {
-  const input: any = loadYamlFile(file);
+  const input: any = fromYaml(loadYamlFile(file), sszSchema);
   if(input.number) {
     input.number = Number(input.number);
   }

@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
 
-import {AnySSZType, FullSSZType, Type, parseType} from "@chainsafe/ssz-type-schema";
-import BN from "bn.js";
+import {AnySSZType, FullSSZType, Type, parseType, UintImpl} from "@chainsafe/ssz-type-schema";
+
 import {_assertValidValue} from "./assertValidValue";
 
 
@@ -12,7 +12,7 @@ import {_assertValidValue} from "./assertValidValue";
  * Most useful to compare arrays/objects
  *
  * ```typescript
- * equals(10, 10, "uint64");
+ * equals(10, 10, "number64");
  *
  * equals(true, true, "bool");
  *
@@ -29,14 +29,14 @@ import {_assertValidValue} from "./assertValidValue";
  *   [0, 1, 2, 3, 4, 5],
  *   [0, 1, 2, 3, 4, 5],
  *   {
- *     elementType: "uint32",
+ *     elementType: "number32",
  *     maxLength: 10,
  *   }
  * );
  *
  * const myDataType: SimpleContainerType = {
  *   fields: [
- *     ["a", "uint16"],
+ *     ["a", "number16"],
  *     ["b", "bool"],
  *     ["c", "bytes96"],
  *   ],
@@ -59,13 +59,14 @@ export function equals(value1: any, value2: any, type: AnySSZType): boolean {
 function _equals(value1: any, value2: any, type: FullSSZType): boolean {
   switch (type.type) {
     case Type.uint:
-      if (type.use === "bn") {
-        return (new BN(value1)).eq(new BN(value2));
+      switch (type.use) {
+        case UintImpl.bn:
+          return value1.eq(value2);
+        case UintImpl.bigint:
+        case UintImpl.number:
+          return value1 === value2;
       }
-      if (value1 === Infinity || value2 === Infinity) {
-        return value1 === value2;
-      }
-      return BigInt(value1) === BigInt(value2);
+      break;
     case Type.bool:
       return value1 === value2;
     case Type.bitList:

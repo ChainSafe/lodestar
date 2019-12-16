@@ -8,7 +8,8 @@ import {
   AnySSZType,
   FullSSZType,
   Type,
-  parseType
+  parseType,
+  UintImpl
 } from "@chainsafe/ssz-type-schema";
 
 
@@ -20,7 +21,7 @@ import {
  * ```typescript
  * const myDataType: SimpleContainerType = {
  *   fields: [
- *     ["a", "uint16"],
+ *     ["a", "number16"],
  *     ["b", "bool"],
  *     ["c", "bytes96"],
  *   ],
@@ -47,19 +48,26 @@ export function assertValidValue(value: any, type: AnySSZType): void {
 export function _assertValidValue(value: any, type: FullSSZType): void {
   switch (type.type) {
     case Type.uint:
-      if (type.use === "bn" || (BN.isBN(value) && type.use === "uint")) {
-        assert(BN.isBN(value) || typeof value === "number", "Invalid uint: not a uint");
-        value = new BN(value);
-        assert(value.gten(0), "Invalid uint: value < 0");
-        assert(value.lt((new BN(2)).pow(new BN(type.byteLength * 8))), "Invalid uint: not in range");
-        break;
+      switch (type.use) {
+        case UintImpl.bn:
+          assert(BN.isBN(value), "Invalid uint: not a BN");
+          assert(value.gten(0), "Invalid uint: value < 0");
+          assert(value.lt((new BN(2)).pow(new BN(type.byteLength * 8))), "Invalid uint: not in range");
+          return;
+        case UintImpl.bigint:
+          assert(typeof value === "bigint", "Invalid uint: not a bigint");
+          assert(value >= 0, "Invalid uint: value < 0");
+          assert(value < BigInt(2)**BigInt(type.byteLength * 8), "Invalid uint: not in range");
+          return;
+        case UintImpl.number:
+          assert(typeof value === "number", "Invalid uint: not a number");
+          if (value === Infinity) {
+            return;
+          }
+          assert(value >= 0, "Invalid uint: value < 0");
+          assert(value < BigInt(2)**BigInt(type.byteLength * 8), "Invalid uint: not in range");
+          return;
       }
-      assert(typeof value === "bigint" || typeof value === "number", "Invalid uint: not a uint");
-      if (value === Infinity) {
-        break;
-      }
-      assert(value >= 0, "Invalid uint: value < 0");
-      assert(value < BigInt(2)**BigInt(type.byteLength * 8), "Invalid uint: not in range");
       break;
     case Type.bool:
       assert(value === true || value === false, "Invalid boolean: not a boolean");

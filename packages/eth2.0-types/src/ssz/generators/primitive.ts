@@ -8,11 +8,11 @@ export const bytes8 = "bytes8";
 export const bytes32 = "bytes32";
 export const bytes48 = "bytes48";
 export const bytes96 = "bytes96";
-export const uint8 = "uint8";
-export const uint16 = "uint16";
+export const uint8 = "number8";
+export const uint16 = "number16";
 export const number64 = "number64";
-export const uint64 = "uint64";
-export const uint256 = "uint256";
+export const uint64 = "bigint64";
+export const uint256 = "bigint256";
 
 // Custom types, defined for type hinting and readability
 
