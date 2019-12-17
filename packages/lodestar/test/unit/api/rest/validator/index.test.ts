@@ -20,7 +20,6 @@ import {toHex, toJson} from "@chainsafe/eth2.0-utils";
 import {after, afterEach, before, beforeEach, describe, it} from "mocha";
 import {Keypair} from "@chainsafe/bls";
 import {generateAggregateAndProof} from "../../../../utils/aggregateAndProof";
-import {WireAttestationRepository} from "../../../../../src/db/api/beacon/repositories";
 
 describe("Test validator rest API", function () {
   this.timeout(10000);
@@ -29,8 +28,7 @@ describe("Test validator rest API", function () {
     getAttesterDuties: any,
     assembleBlockStub: any,
     produceAttestationStub: any,
-    getProposerDutiesStub: any,
-    databaseStub: any;
+    getProposerDutiesStub: any;
 
   const chain = sinon.createStubInstance(BeaconChain);
   const opPool = sinon.createStubInstance(OpPool) as any;
@@ -40,13 +38,12 @@ describe("Test validator rest API", function () {
   const sandbox = sinon.createSandbox();
   const network: any = {
     gossip: {
-      publishAggregatedAttestation: sinon.stub()
+      publishAggregatedAttestation: sinon.stub(),
+      publishCommiteeAttestation: sinon.stub(),
     }
   };
 
   before(async function () {
-    databaseStub = sinon.createStubInstance(BeaconDb);
-    databaseStub.wireAttestation = sinon.createStubInstance(WireAttestationRepository);
     restApi = new RestApi({
       api: [ApiNamespace.VALIDATOR],
       cors: "*",
@@ -59,7 +56,7 @@ describe("Test validator rest API", function () {
       sync,
       opPool,
       network,
-      db: databaseStub,
+      db: sinon.createStubInstance(BeaconDb),
       config,
       eth1: sinon.createStubInstance(EthersEth1Notifier),
     });
@@ -184,6 +181,7 @@ describe("Test validator rest API", function () {
   it("should publish attestation", async function () {
     const attestation = generateEmptyAttestation();
     attestationOperations.receive.resolves();
+    network.gossip.publishCommiteeAttestation.resolves();
     await supertest(restApi.server.server)
       .post(
         "/validator/attestation",
@@ -192,6 +190,7 @@ describe("Test validator rest API", function () {
       .expect(200)
       .expect("Content-Type", "application/json");
     expect(attestationOperations.receive.calledOnce).to.be.true;
+    expect(network.gossip.publishCommiteeAttestation.calledOnce).to.be.true;
   });
   
   it("should get wire attestations", async function() {
@@ -199,7 +198,7 @@ describe("Test validator rest API", function () {
     const attestation = generateAttestation({
       data: generateAttestationData(1, 1, 1, 1)
     });
-    databaseStub.wireAttestation.getCommiteeAttestations.resolves([attestation]);
+    opPool.attestations.getCommiteeAttestations.resolves([attestation]);
     
     const response = await supertest(restApi.server.server)
       .get("/validator/wire_attestations")
@@ -211,7 +210,7 @@ describe("Test validator rest API", function () {
       .expect("Content-Type", "application/json; charset=utf-8");
 
     expect(response.body.length).to.be.equal(1);
-    expect(databaseStub.wireAttestation.getCommiteeAttestations.withArgs(0, 1).calledOnce).to.be.true;
+    expect(opPool.attestations.getCommiteeAttestations.withArgs(0, 1).calledOnce).to.be.true;
     
   });
 

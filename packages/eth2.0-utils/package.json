@@ -41,7 +41,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/bit-utils": "0.1.6",
+    "@chainsafe/bit-utils": "0.1.4",
     "@chainsafe/eth2.0-types": "^0.1.1",
     "@chainsafe/ssz-type-schema": "^0.0.1",
     "bcrypto": "^4.2.6",
