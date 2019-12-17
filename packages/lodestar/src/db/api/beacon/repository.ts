@@ -65,17 +65,22 @@ export abstract class BulkRepository<T> extends Repository<T> {
   }
 
   public async getAllBetween(lowerLimit: number|null, upperLimit: number|null, step: number|null = null): Promise<T[]> {
+    const safeLowerLimit = lowerLimit || Buffer.alloc(0);
+    const safeUpperLimit = upperLimit || Number.MAX_SAFE_INTEGER;
     const data = await this.db.search({
-      gt: encodeKey(this.bucket, lowerLimit || Buffer.alloc(0)),
-      lt: encodeKey(this.bucket, upperLimit || Number.MAX_SAFE_INTEGER),
+      gt: encodeKey(this.bucket, safeLowerLimit),
+      lt: encodeKey(this.bucket, safeUpperLimit),
     });
-    let processedData = data;
-    if (step !== null) {
-      processedData = data.filter((datum, index) => {
-        return index % step === 0;
+    const processedData = (data || [])
+      .map((processedData) => deserialize(processedData, this.type))
+      .filter(block => {
+        if (step !== null && typeof safeLowerLimit === "number") {
+          return (block.slot - safeLowerLimit) % step;
+        } else {
+          return true;
+        }
       });
-    }
-    return (processedData || []).map((processedData) => deserialize(processedData, this.type));
+    return processedData;
   }
 
   public async deleteMany(ids: Id[]): Promise<void> {
