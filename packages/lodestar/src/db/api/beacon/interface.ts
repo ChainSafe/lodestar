@@ -2,13 +2,7 @@
  * @module db/api/beacon
  */
 
-import {
-  BeaconBlock,
-  BeaconState,
-  BLSPubkey,
-  Hash,
-  ValidatorIndex,
-} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconState, BLSPubkey, Hash, ValidatorIndex,} from "@chainsafe/eth2.0-types";
 
 import {
   AttestationRepository,
@@ -19,7 +13,7 @@ import {
   MerkleTreeRepository,
   ProposerSlashingRepository,
   StateRepository,
-  VoluntaryExitRepository, WireAttestationRepository
+  VoluntaryExitRepository
 } from "./repositories";
 
 /**
@@ -46,8 +40,6 @@ export interface IBeaconDb {
   deposit: DepositRepository;
 
   merkleTree: MerkleTreeRepository;
-
-  wireAttestation: WireAttestationRepository;
   /**
    * Returns validator index coresponding to validator
    * public key in registry,

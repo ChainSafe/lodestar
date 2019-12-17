@@ -36,7 +36,7 @@ export const registerGetWireAttestationEndpoint = (fastify: IFastifyServer, modu
     opts,
     async (request, reply) => {
       const attestations =
-          await modules.db.wireAttestation.getCommiteeAttestations(request.query.epoch, request.query.committee_index);
+          await modules.opPool.attestations.getCommiteeAttestations(request.query.epoch, request.query.committee_index);
       reply
         .code(200)
         .type("application/json")

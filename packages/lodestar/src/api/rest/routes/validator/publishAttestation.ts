@@ -19,12 +19,14 @@ export const registerAttestationPublishEndpoint = (fastify: IFastifyServer, modu
     opts,
     async (request, reply) => {
       try {
-        await modules.opPool.attestations.receive(
-          fromJson<Attestation>(
-            request.body,
-            modules.config.types.Attestation
-          )
+        const attestation = fromJson<Attestation>(
+          request.body,
+          modules.config.types.Attestation
         );
+        await Promise.all([
+          modules.network.gossip.publishCommiteeAttestation(attestation),
+          modules.opPool.attestations.receive(attestation)
+        ]);
       } catch (e) {
         modules.logger.error(e.message);
         reply.code(500).send();

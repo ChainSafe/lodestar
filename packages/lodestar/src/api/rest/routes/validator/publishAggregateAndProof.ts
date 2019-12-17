@@ -19,12 +19,16 @@ export const registerPublishAggregateAndProofEndpoint = (fastify: IFastifyServer
     opts,
     async (request, reply) => {
       try {
-        await modules.network.gossip.publishAggregatedAttestation(
-          fromJson<AggregateAndProof>(
-            request.body,
-            modules.config.types.AggregateAndProof
-          )
+        const aggregateAndProof = fromJson<AggregateAndProof>(
+          request.body,
+          modules.config.types.AggregateAndProof
         );
+        await Promise.all([
+          modules.network.gossip.publishAggregatedAttestation(
+            aggregateAndProof
+          ),
+          modules.opPool.attestations.receiveAggregatedAttestation(aggregateAndProof)
+        ]);
       } catch (e) {
         modules.logger.error(e.message);
         reply.code(500).send();

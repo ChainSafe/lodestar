@@ -2,18 +2,12 @@
  * @module db/api/beacon
  */
 
-import {
-  BeaconBlock,
-  BeaconState,
-  BLSPubkey,
-  Hash,
-  ValidatorIndex,
-} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconState, BLSPubkey, Hash, ValidatorIndex,} from "@chainsafe/eth2.0-types";
 
 import {Bucket, encodeKey, Key} from "../../schema";
 
 import {serialize} from "@chainsafe/ssz";
-import {IDatabaseApiOptions, DatabaseService} from "../abstract";
+import {DatabaseService, IDatabaseApiOptions} from "../abstract";
 import {IBeaconDb} from "./interface";
 import {
   AttestationRepository,
@@ -24,7 +18,7 @@ import {
   MerkleTreeRepository,
   ProposerSlashingRepository,
   StateRepository,
-  VoluntaryExitRepository, WireAttestationRepository
+  VoluntaryExitRepository
 } from "./repositories";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
@@ -47,8 +41,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   public merkleTree: MerkleTreeRepository;
 
-  public wireAttestation: WireAttestationRepository;
-
   public constructor(opts: IDatabaseApiOptions) {
     super(opts);
     this.chain = new ChainRepository(this.config, this.db);
@@ -60,7 +52,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.attesterSlashing = new AttesterSlashingRepository(this.config, this.db);
     this.deposit = new DepositRepository(this.config, this.db);
     this.merkleTree = new MerkleTreeRepository(this.config, this.db);
-    this.wireAttestation = new WireAttestationRepository(this.config, this.db);
   }
 
   public async setChainHeadRoots(
