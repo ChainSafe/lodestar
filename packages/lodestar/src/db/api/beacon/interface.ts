@@ -19,7 +19,7 @@ import {
   MerkleTreeRepository,
   ProposerSlashingRepository,
   StateRepository,
-  VoluntaryExitRepository
+  VoluntaryExitRepository, WireAttestationRepository
 } from "./repositories";
 
 /**
@@ -47,6 +47,7 @@ export interface IBeaconDb {
 
   merkleTree: MerkleTreeRepository;
 
+  wireAttestation: WireAttestationRepository;
   /**
    * Returns validator index coresponding to validator
    * public key in registry,

@@ -8,6 +8,7 @@ import {IFastifyServer} from "../../index";
 import {registerProposerDutiesEndpoint} from "./duties/proposer";
 import {registerAttesterDutiesEndpoint} from "./duties/attester";
 import {registerPublishAggregateAndProofEndpoint} from "./publishAggregateAndProof";
+import {registerGetWireAttestationEndpoint} from "./getWireAttestations";
 
 export const validator =
     (fastify: IFastifyServer, opts: {prefix: string; modules: IApiModules}, done: Function): void => {
@@ -19,5 +20,6 @@ export const validator =
       registerAttestationProductionEndpoint(fastify, opts.modules);
       registerAttestationPublishEndpoint(fastify, opts.modules);
       registerSyncingMiddleware(fastify, opts.modules);
+      registerGetWireAttestationEndpoint(fastify, opts.modules);
       done();
     };

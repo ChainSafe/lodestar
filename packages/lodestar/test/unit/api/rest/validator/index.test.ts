@@ -13,13 +13,14 @@ import {generateEmptyValidatorDuty} from "../../../../../src/chain/factory/dutie
 import {expect} from "chai";
 import {generateEmptyBlock} from "../../../../utils/block";
 import * as blockUtils from "../../../../../src/chain/factory/block";
-import {generateAttestationData, generateEmptyAttestation} from "../../../../utils/attestation";
+import {generateAttestation, generateAttestationData, generateEmptyAttestation} from "../../../../utils/attestation";
 import {IndexedAttestation} from "@chainsafe/eth2.0-types";
 import {AttestationOperations, OpPool} from "../../../../../src/opPool";
 import {toHex, toJson} from "@chainsafe/eth2.0-utils";
 import {after, afterEach, before, beforeEach, describe, it} from "mocha";
 import {Keypair} from "@chainsafe/bls";
 import {generateAggregateAndProof} from "../../../../utils/aggregateAndProof";
+import {WireAttestationRepository} from "../../../../../src/db/api/beacon/repositories";
 
 describe("Test validator rest API", function () {
   this.timeout(10000);
@@ -28,7 +29,8 @@ describe("Test validator rest API", function () {
     getAttesterDuties: any,
     assembleBlockStub: any,
     produceAttestationStub: any,
-    getProposerDutiesStub: any;
+    getProposerDutiesStub: any,
+    databaseStub: any;
 
   const chain = sinon.createStubInstance(BeaconChain);
   const opPool = sinon.createStubInstance(OpPool) as any;
@@ -43,6 +45,8 @@ describe("Test validator rest API", function () {
   };
 
   before(async function () {
+    databaseStub = sinon.createStubInstance(BeaconDb);
+    databaseStub.wireAttestation = sinon.createStubInstance(WireAttestationRepository);
     restApi = new RestApi({
       api: [ApiNamespace.VALIDATOR],
       cors: "*",
@@ -55,7 +59,7 @@ describe("Test validator rest API", function () {
       sync,
       opPool,
       network,
-      db: sinon.createStubInstance(BeaconDb),
+      db: databaseStub,
       config,
       eth1: sinon.createStubInstance(EthersEth1Notifier),
     });
@@ -188,6 +192,27 @@ describe("Test validator rest API", function () {
       .expect(200)
       .expect("Content-Type", "application/json");
     expect(attestationOperations.receive.calledOnce).to.be.true;
+  });
+  
+  it("should get wire attestations", async function() {
+
+    const attestation = generateAttestation({
+      data: generateAttestationData(1, 1, 1, 1)
+    });
+    databaseStub.wireAttestation.getCommiteeAttestations.resolves([attestation]);
+    
+    const response = await supertest(restApi.server.server)
+      .get("/validator/wire_attestations")
+      .query({
+        "committee_index": 1,
+        "epoch": 0
+      })
+      .expect(200)
+      .expect("Content-Type", "application/json; charset=utf-8");
+
+    expect(response.body.length).to.be.equal(1);
+    expect(databaseStub.wireAttestation.getCommiteeAttestations.withArgs(0, 1).calledOnce).to.be.true;
+    
   });
 
 });
