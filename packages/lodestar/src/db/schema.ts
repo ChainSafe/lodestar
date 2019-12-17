@@ -9,6 +9,7 @@ export enum Bucket {
   // beacon chain
   state, // hash -> BeaconState
   attestation, // hash -> Attestation
+  wireAttestation, // hash -> Attestation
   block, // hash -> BeaconBlock
   invalidBlock, // bad block
   mainChain, // slot -> blockHash

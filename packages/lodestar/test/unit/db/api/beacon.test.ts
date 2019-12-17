@@ -1,19 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from 'chai-as-promised';
 import sinon from "sinon";
-import {
-  Attestation,
-  AttesterSlashing,
-  BeaconBlock,
-  BeaconState, Deposit,
-  ProposerSlashing,
-  uint64,
-  VoluntaryExit
-} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-
-import * as dbKeys from "../../../../src/db/schema";
-import {Bucket, Key} from "../../../../src/db/schema";
 import {BeaconDb} from "../../../../src/db/api";
 import {LevelDbController} from "../../../../src/db/controller";
 import {BlockRepository, ChainRepository, StateRepository} from "../../../../src/db/api/beacon/repositories";

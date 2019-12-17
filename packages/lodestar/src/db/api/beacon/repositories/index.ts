@@ -7,3 +7,4 @@ export * from "./merkleTree";
 export * from "./proposerSlashing";
 export * from "./state";
 export * from "./voluntaryExits";
+export * from "./wireAttestations";

@@ -24,7 +24,7 @@ import {
   MerkleTreeRepository,
   ProposerSlashingRepository,
   StateRepository,
-  VoluntaryExitRepository
+  VoluntaryExitRepository, WireAttestationRepository
 } from "./repositories";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
@@ -47,6 +47,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   public merkleTree: MerkleTreeRepository;
 
+  public wireAttestation: WireAttestationRepository;
+
   public constructor(opts: IDatabaseApiOptions) {
     super(opts);
     this.chain = new ChainRepository(this.config, this.db);
@@ -58,6 +60,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.attesterSlashing = new AttesterSlashingRepository(this.config, this.db);
     this.deposit = new DepositRepository(this.config, this.db);
     this.merkleTree = new MerkleTreeRepository(this.config, this.db);
+    this.wireAttestation = new WireAttestationRepository(this.config, this.db);
   }
 
   public async setChainHeadRoots(

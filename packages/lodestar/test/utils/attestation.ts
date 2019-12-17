@@ -1,22 +1,24 @@
 import {
   Attestation,
-  AttestationData,
-  Epoch,
+  AttestationData, CommitteeIndex,
+  Epoch, Slot,
 } from "@chainsafe/eth2.0-types";
 import { BitList } from "@chainsafe/bit-utils";
 import crypto from "crypto";
 
 /**
  * Generates a fake attestation data for test purposes.
- * @param {number} slotValue
- * @param {number} justifiedEpochValue
  * @returns {AttestationData}
+ * @param sourceEpoch
+ * @param targetEpoch
+ * @param index
+ * @param slot
  */
 
-export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch): AttestationData {
+export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch, index: CommitteeIndex = 1, slot: Slot = 1): AttestationData {
   return {
-    slot: 1,
-    index: 1,
+    slot: slot,
+    index: index,
     beaconBlockRoot: crypto.randomBytes(32),
     source: {
       epoch: sourceEpoch,
@@ -29,7 +31,7 @@ export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch):
   };
 }
 
-export function generateEmptyAttestation(): Attestation {
+export function generateAttestation(override: Partial<Attestation> = {}): Attestation {
   return {
     aggregationBits: BitList.fromBitfield(Buffer.alloc(8), 64),
     data: {
@@ -46,5 +48,10 @@ export function generateEmptyAttestation(): Attestation {
       },
     },
     signature: Buffer.alloc(96),
+    ...override
   };
+}
+
+export function generateEmptyAttestation(): Attestation {
+  return generateAttestation();
 }
