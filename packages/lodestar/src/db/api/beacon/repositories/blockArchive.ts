@@ -3,7 +3,7 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BulkRepository} from "../repository";
 import {IDatabaseController} from "../../../controller";
 import {Bucket, encodeKey} from "../../../schema";
-import {serialize} from "@chainsafe/ssz";
+import {serialize, deserialize} from "@chainsafe/ssz";
 
 /**
  * Stores finalized blocks. Block slot is identifier.
@@ -28,5 +28,28 @@ export class BlockArchiveRepository extends BulkRepository<BeaconBlock> {
 
   public async add(value: BeaconBlock): Promise<void> {
     return this.set(value.slot, value);
+  }
+
+  public async getAllBetween(
+    lowerLimit: number | null,
+    upperLimit: number | null,
+    step: number | null = null
+  ): Promise<BeaconBlock[]> {
+    const safeLowerLimit = lowerLimit || Buffer.alloc(0);
+    const safeUpperLimit = upperLimit || Number.MAX_SAFE_INTEGER;
+    const data = await this.db.search({
+      gt: encodeKey(this.bucket, safeLowerLimit),
+      lt: encodeKey(this.bucket, safeUpperLimit),
+    });
+    const processedData = (data || [])
+      .map((processedData) => deserialize(processedData, this.type))
+      .filter(block => {
+        if (step !== null && typeof safeLowerLimit === "number") {
+          return (block.slot - safeLowerLimit) % step;
+        } else {
+          return true;
+        }
+      });
+    return processedData;
   }
 }

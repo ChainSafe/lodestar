@@ -29,7 +29,7 @@ export abstract class Repository<T> {
   public async get(id: Id): Promise<T | null> {
     try {
       const value = await this.db.get(encodeKey(this.bucket, id));
-      if (!value) return null;
+      if(!value) return null;
       return deserialize(value, this.type);
     } catch (e) {
       return null;
@@ -64,23 +64,12 @@ export abstract class BulkRepository<T> extends Repository<T> {
     return (data || []).map((data) => deserialize(data, this.type));
   }
 
-  public async getAllBetween(lowerLimit: number|null, upperLimit: number|null, step: number|null = null): Promise<T[]> {
-    const safeLowerLimit = lowerLimit || Buffer.alloc(0);
-    const safeUpperLimit = upperLimit || Number.MAX_SAFE_INTEGER;
+  public async getAllBetween(lowerLimit: number|null, upperLimit: number|null): Promise<T[]> {
     const data = await this.db.search({
-      gt: encodeKey(this.bucket, safeLowerLimit),
-      lt: encodeKey(this.bucket, safeUpperLimit),
+      gt: encodeKey(this.bucket, lowerLimit || Buffer.alloc(0)),
+      lt: encodeKey(this.bucket, upperLimit || Number.MAX_SAFE_INTEGER),
     });
-    const processedData = (data || [])
-      .map((processedData) => deserialize(processedData, this.type))
-      .filter(block => {
-        if (step !== null && typeof safeLowerLimit === "number") {
-          return (block.slot - safeLowerLimit) % step;
-        } else {
-          return true;
-        }
-      });
-    return processedData;
+    return (data || []).map((data) => deserialize(data, this.type));
   }
 
   public async deleteMany(ids: Id[]): Promise<void> {
