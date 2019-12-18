@@ -18,6 +18,7 @@ import {ILogger} from "../logger";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 import {ApiService} from "../api";
 import {ReputationStore} from "../sync/IReputation";
+import {GossipMessageValidator} from "../network/gossip/validator";
 
 export interface IService {
   start(): Promise<void>;
@@ -76,11 +77,17 @@ export class BeaconNode {
         logger: logger.child(this.conf.logger.db),
       }),
     });
+    const gossipMessageValidator = new GossipMessageValidator(
+      this.db,
+      config,
+      logger.child(this.conf.logger.network),
+    );
     this.network = new Libp2pNetwork(this.conf.network, {
       config,
       libp2p,
       logger: logger.child(this.conf.logger.network),
       metrics: this.metrics,
+      validator: gossipMessageValidator,
     });
     this.eth1 = eth1 || new EthersEth1Notifier(this.conf.eth1, {
       config,

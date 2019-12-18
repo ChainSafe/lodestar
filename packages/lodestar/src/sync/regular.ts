@@ -2,8 +2,6 @@
  * @module sync
  */
 
-import {hashTreeRoot} from "@chainsafe/ssz";
-
 import {Attestation, BeaconBlock, Checkpoint, Hash, VoluntaryExit, ProposerSlashing, AttesterSlashing,
   AggregateAndProof} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -15,10 +13,6 @@ import {ILogger} from "../logger";
 import {ISyncModules} from "./index";
 import {ISyncOptions} from "./options";
 import {GossipEvent} from "../network/gossip/constants";
-import {isValidAttesterSlashing, isValidProposerSlashing, isValidVoluntaryExit, getCurrentSlot, 
-  isValidIndexedAttestation, getIndexedAttestation} from "@chainsafe/eth2.0-state-transition";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../constants";
-import {getAttestationSubnet} from "../network/gossip/utils";
 
 export type IRegularSyncModules = Pick<ISyncModules, "config"|"db"|"chain"|"opPool"|"network"|"logger">;
 
@@ -71,49 +65,13 @@ export class RegularSync {
   }
 
   public receiveBlock = async (block: BeaconBlock): Promise<void> => {
-    const root = hashTreeRoot(block, this.config.types.BeaconBlock);
-
-    // skip block if its a known bad block
-    if (await this.db.block.isBadBlock(root)) {
-      this.logger.warn(`Received bad block, block root : ${root} `);
-      return;
-    }
-    // skip block if it already exists
-    if (!await this.db.block.has(root as Buffer)) {
-      await this.chain.receiveBlock(block);
-    }
+    await this.chain.receiveBlock(block);
   };
 
   public receiveCommitteeAttestation = async (attestationSubnet: {attestation: Attestation; subnet: number}): 
   Promise<void> => {
     const attestation = attestationSubnet.attestation;
-    const subnet = attestationSubnet.subnet;
-    if (String(subnet) !== getAttestationSubnet(attestation)) {
-      return;
-    }
-    // Make sure this is unaggregated attestation
-    const aggregationBits = attestation.aggregationBits;
-    let count = 0;
-    for (let i = 0; i < aggregationBits.bitLength; i++) {
-      if (aggregationBits.getBit(i)) {
-        count++;
-      }
-    }
-    if (count !== 1) {
-      return;
-    }
-    if (await this.db.block.isBadBlock(attestation.data.beaconBlockRoot)) {
-      return;
-    }
-    const state = await this.db.state.getLatest();
-    const currentSlot = getCurrentSlot(this.config, state.genesisTime);
-    if (!(attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= currentSlot &&
-      currentSlot >= attestation.data.slot)) {
-      return;
-    }
-    if(!isValidIndexedAttestation(this.config, state, getIndexedAttestation(this.config, state, attestation))) {
-      return;
-    }
+    
     // to see if we need special process for these unaggregated attestations
     // not in the spec atm
     // send attestation on to other modules
@@ -123,23 +81,11 @@ export class RegularSync {
     ]);
   };
 
-  public receiveAggregateAndProof = async (aggregation: AggregateAndProof): Promise<void> => {
-    // a place holder for mainnet
-    // this is for aggregated attestattions
-    this.logger.debug(aggregation);
+  public receiveAggregateAndProof = async (aggregate: AggregateAndProof): Promise<void> => {
+    await this.opPool.aggregateAndProofs.receive(aggregate);
   };
 
   public receiveAttestation = async (attestation: Attestation): Promise<void> => {
-    // skip attestation if it already exists
-    const root = hashTreeRoot(attestation, this.config.types.Attestation);
-    if (await this.db.attestation.has(root as Buffer)) {
-      return;
-    }
-    // skip attestation if its too old
-    const state = await this.db.state.getLatest();
-    if (attestation.data.target.epoch < state.finalizedCheckpoint.epoch) {
-      return;
-    }
     // send attestation on to other modules
     await Promise.all([
       this.opPool.attestations.receive(attestation),
@@ -148,41 +94,14 @@ export class RegularSync {
   };
 
   public receiveVoluntaryExit = async (voluntaryExit: VoluntaryExit): Promise<void> => {
-    // skip voluntary exit if it already exists
-    const root = hashTreeRoot(voluntaryExit, this.config.types.VoluntaryExit);
-    if (await this.db.voluntaryExit.has(root as Buffer)) {
-      return;
-    }
-    const state = await this.db.state.getLatest();
-    if(!isValidVoluntaryExit(this.config, state, voluntaryExit)) {
-      return;
-    }
     await this.opPool.voluntaryExits.receive(voluntaryExit);
   };
 
   public receiveProposerSlashing = async (proposerSlashing: ProposerSlashing): Promise<void> => {
-    // skip proposer slashing if it already exists
-    const root = hashTreeRoot(proposerSlashing, this.config.types.ProposerSlashing);
-    if (await this.db.proposerSlashing.has(root as Buffer)) {
-      return;
-    }
-    const state = await this.db.state.getLatest();
-    if (!isValidProposerSlashing(this.config, state, proposerSlashing)) {
-      return;
-    }
     await this.opPool.proposerSlashings.receive(proposerSlashing);
   };
 
   public receiveAttesterSlashing = async (attesterSlashing: AttesterSlashing): Promise<void> => {
-    // skip attester slashing if it already exists
-    const root = hashTreeRoot(attesterSlashing, this.config.types.AttesterSlashing);
-    if (await this.db.attesterSlashing.has(root as Buffer)) {
-      return;
-    }
-    const state = await this.db.state.getLatest();
-    if (!isValidAttesterSlashing(this.config, state, attesterSlashing)) {
-      return;
-    }
     await this.opPool.attesterSlashings.receive(attesterSlashing);
   };
 

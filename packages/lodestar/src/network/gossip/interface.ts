@@ -34,6 +34,7 @@ export interface IGossipModules {
   config: IBeaconConfig;
   libp2p: LibP2p;
   logger: ILogger;
+  validator: IGossipMessageValidator;
 }
 
 export interface IGossip extends GossipEventEmitter, IService {
@@ -43,6 +44,16 @@ export interface IGossip extends GossipEventEmitter, IService {
   publishVoluntaryExit(voluntaryExit: VoluntaryExit): Promise<void>;
   publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<void>;
   publishProposerSlashing(proposerSlashing: ProposerSlashing): Promise<void>;
+}
+
+export interface IGossipMessageValidator {
+  isValidIncomingBlock(block: BeaconBlock): Promise<boolean>;
+  isValidIncomingCommitteeAttestation(attestation: Attestation, subnet: number): Promise<boolean>;
+  isValidIncomingAggregateAndProof(aggregateAndProof: AggregateAndProof): Promise<boolean>;
+  isValidIncomingUnaggregatedAttestation(attestation: Attestation): Promise<boolean>;
+  isValidIncomingVoluntaryExit(voluntaryExit: VoluntaryExit): Promise<boolean>;
+  isValidIncomingProposerSlashing(proposerSlashing: ProposerSlashing): Promise<boolean>;
+  isValidIncomingAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<boolean>;
 }
 
 export interface IGossipMessage {
