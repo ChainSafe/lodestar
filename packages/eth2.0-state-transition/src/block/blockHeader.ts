@@ -23,7 +23,7 @@ export function processBlockHeader(
   // Verify that the slots match
   assert(block.slot === state.slot);
   // Verify that the parent matches
-  assert(block.parentRoot.equals(signingRoot(state.latestBlockHeader, config.types.BeaconBlockHeader)));
+  assert(block.parentRoot.equals(signingRoot(config.types.BeaconBlockHeader, state.latestBlockHeader)));
   // Save current block as the new latest block
   state.latestBlockHeader = getTemporaryBlockHeader(config, block);
   // Verify proposer is not slashed
@@ -34,7 +34,7 @@ export function processBlockHeader(
     // Verify proposer signature
     assert(verify(
       proposer.pubkey,
-      signingRoot(block, config.types.BeaconBlock),
+      signingRoot(config.types.BeaconBlock, block),
       block.signature,
       getDomain(config, state, DomainType.BEACON_PROPOSER),
     ));

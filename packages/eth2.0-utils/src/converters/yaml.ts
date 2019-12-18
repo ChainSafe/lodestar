@@ -3,11 +3,11 @@ import {AnySSZType, FullSSZType, Type, parseType, UintImpl} from "@chainsafe/ssz
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 import BN from "bn.js";
 
-export function fromYaml<T>(value: any, type: AnySSZType): T {
-  return _expandYamlValue(value, parseType(type));
+export function fromYaml<T>(type: AnySSZType, value: any): T {
+  return _expandYamlValue(parseType(type), value);
 }
 
-function _expandYamlValue(value: any, type: FullSSZType): any {
+function _expandYamlValue(type: FullSSZType, value: any): any {
   switch(type.type) {
     case Type.uint:
       switch (type.use) {
@@ -30,10 +30,10 @@ function _expandYamlValue(value: any, type: FullSSZType): any {
       return Buffer.from(value.slice(2), "hex");
     case Type.list:
     case Type.vector:
-      return value.map((element: any) => _expandYamlValue(element, type.elementType));
+      return value.map((element: any) => _expandYamlValue(type.elementType, element));
     case Type.container:
       type.fields.forEach(([fieldName, fieldType]) => {
-        value[fieldName] = _expandYamlValue(value[fieldName], fieldType);
+        value[fieldName] = _expandYamlValue(fieldType, value[fieldName]);
       });
       return value;
   }

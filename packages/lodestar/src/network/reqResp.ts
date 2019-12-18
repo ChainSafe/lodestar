@@ -151,16 +151,16 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     let output = Buffer.alloc(0);
     switch (method) {
       case Method.Hello:
-        output = serialize(body, this.config.types.Hello);
+        output = serialize(this.config.types.Hello, body);
         break;
       case Method.Goodbye:
-        output = serialize(body, this.config.types.Goodbye);
+        output = serialize(this.config.types.Goodbye, body);
         break;
       case Method.BeaconBlocksByRange:
-        output = serialize(body, this.config.types.BeaconBlocksByRangeRequest);
+        output = serialize(this.config.types.BeaconBlocksByRangeRequest, body);
         break;
       case Method.BeaconBlocksByRoot:
-        output = serialize(body, this.config.types.BeaconBlocksByRootRequest);
+        output = serialize(this.config.types.BeaconBlocksByRootRequest, body);
         break;
     }
     return Buffer.concat([
@@ -172,16 +172,16 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     let output= Buffer.alloc(0);
     switch (method) {
       case Method.Hello:
-        output = serialize(body, this.config.types.Hello);
+        output = serialize(this.config.types.Hello, body);
         break;
       case Method.Goodbye:
-        output = serialize(body, this.config.types.Goodbye);
+        output = serialize(this.config.types.Goodbye, body);
         break;
       case Method.BeaconBlocksByRange:
-        output = serialize(body, this.config.types.BeaconBlocksByRangeResponse);
+        output = serialize(this.config.types.BeaconBlocksByRangeResponse, body);
         break;
       case Method.BeaconBlocksByRoot:
-        output = serialize(body, this.config.types.BeaconBlocksByRootResponse);
+        output = serialize(this.config.types.BeaconBlocksByRootResponse, body);
         break;
     }
     return Buffer.concat([
@@ -207,13 +207,13 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     data = data.slice(bytes);
     switch (method) {
       case Method.Hello:
-        return deserialize(data, this.config.types.Hello);
+        return deserialize(this.config.types.Hello, data);
       case Method.Goodbye:
-        return deserialize(data, this.config.types.Goodbye);
+        return deserialize(this.config.types.Goodbye, data);
       case Method.BeaconBlocksByRange:
-        return deserialize(data, this.config.types.BeaconBlocksByRangeRequest);
+        return deserialize(this.config.types.BeaconBlocksByRangeRequest, data);
       case Method.BeaconBlocksByRoot:
-        return deserialize(data, this.config.types.BeaconBlocksByRootRequest);
+        return deserialize(this.config.types.BeaconBlocksByRootRequest, data);
     }
   }
   private decodeResponse(method: Method, data: Buffer): ResponseBody {
@@ -232,13 +232,13 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     }
     switch (method) {
       case Method.Hello:
-        return deserialize(data, this.config.types.Hello);
+        return deserialize(this.config.types.Hello, data);
       case Method.Goodbye:
-        return deserialize(data, this.config.types.Goodbye);
+        return deserialize(this.config.types.Goodbye, data);
       case Method.BeaconBlocksByRange:
-        return deserialize(data, this.config.types.BeaconBlocksByRangeResponse);
+        return deserialize(this.config.types.BeaconBlocksByRangeResponse, data);
       case Method.BeaconBlocksByRoot:
-        return deserialize(data, this.config.types.BeaconBlocksByRootResponse);
+        return deserialize(this.config.types.BeaconBlocksByRootResponse, data);
     }
   }
   private async sendRequest<T extends ResponseBody>(

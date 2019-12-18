@@ -111,8 +111,8 @@ export function getCompactCommitteesRoot(config: IBeaconConfig, state: BeaconSta
       committees[shard].compactValidators.push(computeCompactValidator(config, validator, index));
     });
   }
-  return hashTreeRoot(committees, {
+  return hashTreeRoot({
     elementType: config.types.CompactCommittee,
     length: config.params.SHARD_COUNT,
-  });
+  }, committees);
 }

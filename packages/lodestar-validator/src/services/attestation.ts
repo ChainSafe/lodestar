@@ -69,7 +69,7 @@ export class AttestationService {
       data: attestation.data
     };
     attestation.signature = this.keypair.privateKey.signMessage(
-      hashTreeRoot(attestationDataAndCustodyBit, this.config.types.AttestationDataAndCustodyBit),
+      hashTreeRoot(this.config.types.AttestationDataAndCustodyBit, attestationDataAndCustodyBit),
       getDomain(
         this.config,
         {fork} as BeaconState,

@@ -21,7 +21,7 @@ export class BlockArchiveRepository extends BulkRepository<BeaconBlock> {
     await this.db.batchPut(
       blocks.map((block) => ({
         key: encodeKey(this.bucket, block.slot),
-        value: serialize(block, this.type)
+        value: serialize(this.type, block)
       }))
     );
   }

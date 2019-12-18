@@ -24,7 +24,7 @@ export function dumpQuickStartState(
   const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
   const state = quickStartState(config, tree, genesisTime, validatorCount);
   const BeaconState = config.types.BeaconState;
-  fs.writeFileSync(output, serialize(state, BeaconState));
+  fs.writeFileSync(output, serialize(BeaconState, state));
 }
 
 dumpQuickStartState(config, parseInt(args[0]), parseInt(args[1]), args[2]);

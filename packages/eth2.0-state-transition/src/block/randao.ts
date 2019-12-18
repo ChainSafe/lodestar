@@ -26,7 +26,7 @@ export function processRandao(
   // Verify RANDAO reveal
   assert(!verifySignature || verify(
     proposer.pubkey,
-    hashTreeRoot(currentEpoch, config.types.Epoch),
+    hashTreeRoot(config.types.Epoch, currentEpoch),
     body.randaoReveal,
     getDomain(config, state, DomainType.RANDAO),
   ));

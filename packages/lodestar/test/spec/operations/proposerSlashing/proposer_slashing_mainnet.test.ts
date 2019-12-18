@@ -28,7 +28,7 @@ describeDirectorySpecTest<IProcessProposerSlashingTestCase, BeaconState>(
     shouldError: testCase => !testCase.post,
     getExpected: (testCase => testCase.post),
     expectFunc: (testCase, expected, actual) => {
-      expect(equals(actual, expected, config.types.BeaconState)).to.be.true;
+      expect(equals(config.types.BeaconState, actual, expected)).to.be.true;
     }
   }
 );

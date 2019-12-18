@@ -169,12 +169,12 @@ describe("sync utils", function () {
 
 function generateValidChain(start: BeaconBlockHeader, n = 3): BeaconBlock[] {
   const blocks = [];
-  let parentRoot = signingRoot(start, config.types.BeaconBlockHeader);
+  let parentRoot = signingRoot(config.types.BeaconBlockHeader, start);
   for(let i = 0; i < n; i++) {
     const block = generateEmptyBlock();
     block.parentRoot = parentRoot;
     block.slot = i;
-    parentRoot = signingRoot(block, config.types.BeaconBlock);
+    parentRoot = signingRoot(config.types.BeaconBlock, block);
     blocks.push(block);
   }
   return blocks;

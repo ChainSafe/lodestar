@@ -83,12 +83,12 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   }
   public async publishBlock(block: BeaconBlock): Promise<void> {
     await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
-      blockTopic(), serialize(block, this.config.types.BeaconBlock));
+      blockTopic(), serialize(this.config.types.BeaconBlock, block));
     this.logger.verbose(`[GOSSIP] Publishing block at slot: ${block.slot}`);
   }
   public async publishAttestation(attestation: Attestation): Promise<void> {
     await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
-      attestationTopic(), serialize(attestation, this.config.types.Attestation));
+      attestationTopic(), serialize(this.config.types.Attestation, attestation));
     this.logger.verbose(
       `[GOSSIP] Publishing attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`
     );
@@ -96,7 +96,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   public async publishShardAttestation(attestation: Attestation): Promise<void> {
     await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
       shardSubnetAttestationTopic(attestation.data.crosslink.shard),
-      serialize(attestation, this.config.types.Attestation)
+      serialize(this.config.types.Attestation, attestation)
     );
     this.logger.verbose(
       `[GOSSIP] Publishing shard attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`
@@ -104,7 +104,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   }
   private handleIncomingBlock = (msg: any): void => {
     try {
-      const block: BeaconBlock = deserialize(msg.data, this.config.types.BeaconBlock);
+      const block: BeaconBlock = deserialize(this.config.types.BeaconBlock, msg.data);
       this.logger.verbose(`[GOSSIP] Incoming block at slot: ${block.slot}`);
       this.emit(BLOCK_TOPIC, block);
     } catch (e) {
@@ -113,7 +113,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   };
   private handleIncomingAttestation = (msg: any): void => {
     try {
-      const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
+      const attestation: Attestation = deserialize(this.config.types.Attestation, msg.data);
       this.logger.verbose(
         `[GOSSIP] Incoming attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`
       );
@@ -124,7 +124,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   };
   private handleIncomingShardAttestation = (msg: any): void => {
     try {
-      const attestation: Attestation = deserialize(msg.data, this.config.types.Attestation);
+      const attestation: Attestation = deserialize(this.config.types.Attestation, msg.data);
       this.logger.verbose(
         `[GOSSIP] Incoming shard attestation for beacon block root: ${attestation.data.beaconBlockRoot.toString("hex")}`
       );

@@ -58,7 +58,7 @@ describe("process block - block header", function () {
     state.validators.push(generateValidator({activation: 0, exit: 10, slashed: true}));
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.parentRoot = signingRoot(state.latestBlockHeader, config.types.BeaconBlockHeader);
+    block.parentRoot = signingRoot(config.types.BeaconBlockHeader, state.latestBlockHeader);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),
       slot: 5,
@@ -81,7 +81,7 @@ describe("process block - block header", function () {
     state.validators.push(generateValidator({activation: 0, exit: 10}));
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.parentRoot = signingRoot(state.latestBlockHeader, config.types.BeaconBlockHeader);
+    block.parentRoot = signingRoot(config.types.BeaconBlockHeader, state.latestBlockHeader);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),
       slot: 5,
@@ -106,7 +106,7 @@ describe("process block - block header", function () {
     state.validators.push(generateValidator({activation: 0, exit: 10}));
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.parentRoot = signingRoot(state.latestBlockHeader, config.types.BeaconBlockHeader);
+    block.parentRoot = signingRoot(config.types.BeaconBlockHeader, state.latestBlockHeader);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),
       slot: 5,
@@ -131,7 +131,7 @@ describe("process block - block header", function () {
     state.validators.push(validator);
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.parentRoot = signingRoot(state.latestBlockHeader, config.types.BeaconBlockHeader);
+    block.parentRoot = signingRoot(config.types.BeaconBlockHeader, state.latestBlockHeader);
     blsStub.verify.returns(true);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),

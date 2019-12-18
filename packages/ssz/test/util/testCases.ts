@@ -23,8 +23,8 @@ export function testStatic(type: keyof IBeaconSSZTypes): void {
       `${type} ${caseName} minimal`,
       join(__dirname, `${TEST_CASE_LOCATION}/tests/minimal/phase0/ssz_static/${type}/${caseName}`),
       (testcase) => {
-        const serialized = serialize(testcase.serialized, Type);
-        const root = hashTreeRoot(testcase.serialized, Type);
+        const serialized = serialize(Type, testcase.serialized);
+        const root = hashTreeRoot(Type, testcase.serialized);
         return {
           serialized,
           root

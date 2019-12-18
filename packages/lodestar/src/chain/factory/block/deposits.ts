@@ -25,7 +25,7 @@ export async function generateDeposits(
       state.eth1DepositIndex,
       eth1Data.depositCount,
       (deposit, index) => {
-        merkleTree.add(index + state.eth1DepositIndex, hashTreeRoot(deposit.data, config.types.DepositData));
+        merkleTree.add(index + state.eth1DepositIndex, hashTreeRoot(config.types.DepositData, deposit.data));
         return deposit;
       }
     ).map((deposit, index) => {

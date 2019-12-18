@@ -47,7 +47,7 @@ describe("blockAssembly - deposits", function() {
     opPool.deposits.getAllBetween.resolves(deposits);
     const tree = ProgressiveMerkleTree.empty(4, new MerkleTreeSerialization(config));
     deposits.forEach((d, index) => {
-      tree.add(index, hashTreeRoot(d.data, config.types.DepositData));
+      tree.add(index, hashTreeRoot(config.types.DepositData, d.data));
     });
     const eth1 = {
       depositCount: 2,
@@ -67,7 +67,7 @@ describe("blockAssembly - deposits", function() {
     result.forEach((deposit, index) => {
       expect(
         verifyMerkleBranch(
-          hashTreeRoot(deposit.data, config.types.DepositData),
+          hashTreeRoot(config.types.DepositData, deposit.data),
           deposit.proof,
           4,
           index,

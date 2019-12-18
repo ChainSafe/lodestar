@@ -23,7 +23,7 @@ describe("json converter", function () {
       number_prop: 167,
       bigint_prop: "100000000000000000000000000000000000000000"
     };
-    const result = fromJson<ITestType>(json, sszType);
+    const result = fromJson<ITestType>(sszType, json);
     expect(result).to.not.be.null;
     expect(result.numberProp).to.be.equal(json.number_prop);
     expect(result.bigintProp === BigInt("100000000000000000000000000000000000000000")).to.be.true;
@@ -34,7 +34,7 @@ describe("json converter", function () {
       number_prop: "100000000000000000000000000000000000000000",
       bigint_prop: BigInt("100000000000000000000000000000000000000000")
     };
-    const result = fromJson<ITestType>(json, sszType);
+    const result = fromJson<ITestType>(sszType, json);
     expect(result).to.not.be.null;
     expect(result.numberProp).to.be.equal(Infinity);
   });

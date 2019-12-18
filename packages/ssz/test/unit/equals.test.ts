@@ -8,9 +8,9 @@ import {stringifyType} from "./utils";
 
 describe("equals", () => {
   const testCases: {
+    type: any;
     value1: any;
     value2: any;
-    type: any;
     expected: boolean;
   }[] = [
     {value1: 1, value2: 1, type: "number8", expected: true},
@@ -73,9 +73,9 @@ describe("equals", () => {
       expected: false
     },
   ];
-  for (const {value1, value2, type, expected} of testCases) {
+  for (const {type, value1, value2, expected} of testCases) {
     it(`should correctly perform equal for ${stringifyType(type)}`, () => {
-      const actual = equals(value1, value2, type);
+      const actual = equals(type, value1, value2);
       expect(actual).to.equal(expected);
     });
   }

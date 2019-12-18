@@ -45,7 +45,7 @@ export function isSlashableAttestationData(
 ): boolean {
   return (
     // Double vote
-    (!equals(data1, data2, config.types.AttestationData)
+    (!equals(config.types.AttestationData, data1, data2)
       && data1.target.epoch === data2.target.epoch) ||
     // Surround vote
     (data1.source.epoch < data2.source.epoch &&
@@ -88,14 +88,14 @@ export function isValidIndexedAttestation(
       bls.aggregatePubkeys(bit0Indices.map((i) => state.validators[i].pubkey)),
       bls.aggregatePubkeys(bit1Indices.map((i) => state.validators[i].pubkey)),
     ], [
-      hashTreeRoot({
+      hashTreeRoot(config.types.AttestationDataAndCustodyBit, {
         data: indexedAttestation.data,
         custodyBit: false,
-      }, config.types.AttestationDataAndCustodyBit),
-      hashTreeRoot({
+      }),
+      hashTreeRoot(config.types.AttestationDataAndCustodyBit, {
         data: indexedAttestation.data,
         custodyBit: true,
-      }, config.types.AttestationDataAndCustodyBit),
+      }),
     ],
     indexedAttestation.signature,
     getDomain(config, state, DomainType.ATTESTATION, indexedAttestation.data.target.epoch),
