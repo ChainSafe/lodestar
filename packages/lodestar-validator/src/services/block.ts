@@ -45,7 +45,7 @@ export default class BlockProposingService {
     const block = await this.provider.validator.produceBlock(
       slot,
       this.keypair.privateKey.signMessage(
-        hashTreeRoot(computeEpochOfSlot(this.config, slot), this.config.types.Epoch),
+        hashTreeRoot(this.config.types.Epoch, computeEpochOfSlot(this.config, slot)),
         getDomain(this.config, {fork} as BeaconState, DomainType.RANDAO, computeEpochOfSlot(this.config, slot))
       ).toBytesCompressed()
     );
@@ -53,13 +53,13 @@ export default class BlockProposingService {
       return null;
     }
     block.signature = this.keypair.privateKey.signMessage(
-      signingRoot(block, this.config.types.BeaconBlock),
+      signingRoot(this.config.types.BeaconBlock, block),
       getDomain(this.config, {fork} as BeaconState, DomainType.BEACON_PROPOSER, computeEpochOfSlot(this.config, slot))
     ).toBytesCompressed();
     await this.storeBlock(block);
     await this.provider.validator.publishBlock(block);
     this.logger.info(
-      `Proposed block with hash 0x${signingRoot(block, this.config.types.BeaconBlock).toString("hex")}`
+      `Proposed block with hash 0x${signingRoot(this.config.types.BeaconBlock, block).toString("hex")}`
     );
     return block;
   }

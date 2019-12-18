@@ -22,17 +22,17 @@ export class BlockRepository extends BulkRepository<BeaconBlock> {
   public async set(id: Hash, value: BeaconBlock): Promise<void> {
     await Promise.all([
       this.db.put(encodeKey(Bucket.blockSlotRefs, value.slot), id),
-      this.db.put(encodeKey(Bucket.blockRootRefs, id), serialize(value.slot, this.config.types.Slot)),
+      this.db.put(encodeKey(Bucket.blockRootRefs, id), serialize(this.config.types.Slot, value.slot)),
       super.set(id, value)
     ]);
   }
 
   public async deleteManyByValue(values: BeaconBlock[]): Promise<void> {
-    await this.deleteMany(values.map(value => signingRoot(value, this.type as AnyContainerType)));
+    await this.deleteMany(values.map(value => signingRoot(this.type as AnyContainerType, value)));
   }
 
   public async add(block: BeaconBlock): Promise<void> {
-    await this.set(signingRoot(block, this.type as AnyContainerType), block);
+    await this.set(signingRoot(this.type as AnyContainerType, block), block);
   }
 
   public async getFinalizedBlock(): Promise<BeaconBlock | null> {
@@ -66,7 +66,7 @@ export class BlockRepository extends BulkRepository<BeaconBlock> {
   public async storeBadBlock(root: Hash): Promise<void> {
     return await this.db.put(
       encodeKey(Bucket.invalidBlock, root),
-      serialize(true, this.config.types.bool)
+      serialize(this.config.types.bool, true)
     );
   }
 

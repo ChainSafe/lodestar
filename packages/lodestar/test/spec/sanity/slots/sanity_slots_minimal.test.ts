@@ -32,7 +32,7 @@ describeDirectorySpecTest<ProcessSlotsTestCase, BeaconState>(
     timeout: 10000000,
     getExpected: (testCase => testCase.post),
     expectFunc: (testCase, expected, actual) => {
-      expect(equals(actual, expected, config.types.BeaconState)).to.be.true;
+      expect(equals(config.types.BeaconState, actual, expected)).to.be.true;
     }
   }
 );

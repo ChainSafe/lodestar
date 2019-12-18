@@ -12,7 +12,7 @@ export async function produceAttestation(
   slot: Slot
 ): Promise<Attestation|null> {
   const [headState, headBlock, validatorIndex] = await Promise.all([
-    clone(chain.latestState, config.types.BeaconState) as BeaconState,
+    clone(config.types.BeaconState, chain.latestState) as BeaconState,
     db.block.get(chain.forkChoice.head()),
     db.getValidatorIndex(validatorPubKey)
   ]);

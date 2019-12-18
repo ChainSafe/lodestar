@@ -76,9 +76,9 @@ describe("deserialize", () => {
       expected: [{v:3, subV:{v:6}}, {v:5, subV:{v:7}}]
     },
   ];
-  for (const {value, type, expected} of testCases) {
+  for (const {type, value, expected} of testCases) {
     it(`should correctly deserialize ${stringifyType(type)}`, () => {
-      const actual = deserialize(Buffer.from(value, "hex"), type);
+      const actual = deserialize(type, Buffer.from(value, "hex"));
       if (BN.isBN(expected)) {
         assert((actual as BN).eq(expected), `actual: ${actual}, expected: ${expected}`);
       } else if (typeof expected === "bigint") {
@@ -97,9 +97,9 @@ describe("deserialize", () => {
     {value: "01", type: "foo", reason: "Invalid type"},
     {value: "01", type: "bar", reason: "Invalid type"},
   ];
-  for (const {value, type, reason} of failCases) {
+  for (const {type, value, reason} of failCases) {
     it(`should throw an error for ${stringifyType(type)}: ${reason}`, () => {
-      assert.throws(() => deserialize(Buffer.from(value, "hex"), type));
+      assert.throws(() => deserialize(type, Buffer.from(value, "hex")));
     });
   }
 });
@@ -121,8 +121,8 @@ describe("type inference", () => {
       foo: 1,
       bar: true,
     };
-    const bytes = serialize(input, testType);
-    const output = deserialize(bytes, testType);
+    const bytes = serialize(testType, input);
+    const output = deserialize(testType, bytes);
     assert(output.bar == true);
   });
 });

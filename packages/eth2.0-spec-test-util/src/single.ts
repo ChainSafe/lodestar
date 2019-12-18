@@ -159,7 +159,7 @@ function loadInputFiles<TestCase, Result>(
 
 function deserializeTestCase<TestCase, Result>(file, inputName, options: ISpecTestOptions<TestCase, Result>): object {
   if (file.endsWith(InputType.SSZ)) {
-    return deserialize(readFileSync(file), options.sszTypes[inputName]);
+    return deserialize(options.sszTypes[inputName], readFileSync(file));
   } else {
     return  loadYamlFile(file);
   }

@@ -36,7 +36,7 @@ export function processVoluntaryExit(
   // Verify signature
   assert(!verifySignature || verify(
     validator.pubkey,
-    signingRoot(exit, config.types.VoluntaryExit),
+    signingRoot(config.types.VoluntaryExit, exit),
     exit.signature,
     getDomain(config, state, DomainType.VOLUNTARY_EXIT, exit.epoch),
   ));

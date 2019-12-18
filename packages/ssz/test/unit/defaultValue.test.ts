@@ -27,7 +27,7 @@ describe("defaultValue", () => {
   for (const {type, expected} of testCases) {
     it(`should correctly get the defaultValue for ${stringifyType(type)}`, () => {
       const actual = defaultValue(type);
-      expect(equals(actual, expected, type));
+      expect(equals(type, actual, expected));
     });
   }
 });

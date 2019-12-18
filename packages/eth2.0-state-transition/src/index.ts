@@ -37,14 +37,14 @@ export function stateTransition(
   verifySignatures = true
 ): BeaconState {
   // Clone state because process slots and block are not pure
-  const postState = clone(state, config.types.BeaconState);
+  const postState = clone(config.types.BeaconState, state);
   // Process slots (including those with no blocks) since block
   processSlots(config, postState, block.slot);
   // Process block
   processBlock(config, postState, block, verifyProposer, verifySignatures);
   // Validate state root (`validate_state_root == True` in production)
   if (validateStateRoot){
-    assert(block.stateRoot.equals(hashTreeRoot(postState, config.types.BeaconState)));
+    assert(block.stateRoot.equals(hashTreeRoot(config.types.BeaconState, postState)));
   }
 
   // Return post-state

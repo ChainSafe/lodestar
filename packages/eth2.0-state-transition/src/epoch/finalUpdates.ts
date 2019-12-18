@@ -40,10 +40,11 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
   const indexEpoch = nextEpoch + config.params.ACTIVATION_EXIT_DELAY;
   const indexRootPosition = indexEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR;
   state.activeIndexRoots[indexRootPosition] = hashTreeRoot(
-    getActiveValidatorIndices(state, indexEpoch), {
+    {
       elementType: config.types.ValidatorIndex,
       maxLength: config.params.VALIDATOR_REGISTRY_LIMIT,
-    }
+    },
+    getActiveValidatorIndices(state, indexEpoch),
   );
   // Set committees root
   state.compactCommitteesRoots[nextEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] =
@@ -59,7 +60,7 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
       blockRoots: state.blockRoots,
       stateRoots: state.stateRoots,
     };
-    state.historicalRoots.push(hashTreeRoot(historicalBatch, config.types.HistoricalBatch));
+    state.historicalRoots.push(hashTreeRoot(config.types.HistoricalBatch, historicalBatch));
   }
   // Update start shard
   state.startShard =

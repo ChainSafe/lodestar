@@ -43,7 +43,7 @@ export function processTransfer(
   // Verify that the signature is valid
   assert(!verifySignature || verify(
     transfer.pubkey,
-    signingRoot(transfer, config.types.Transfer),
+    signingRoot(config.types.Transfer, transfer),
     transfer.signature,
     getDomain(config, state, DomainType.TRANSFER),
   ));

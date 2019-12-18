@@ -18,9 +18,9 @@ describe("signedRoot", () => {
     {value: {v:3, subV:{v:6}}, type: OuterObject, expected: ""},
     {value: {v: [{b:2,a:1}, {b:4,a:3}]}, type: ArrayObject, expected: ""},
   ];
-  for (const {value, type} of testCases) {
+  for (const {type, value} of testCases) {
     it(`should correctly hash ${stringifyType(type)}`, () => {
-      const actual = signingRoot(value, type).toString("hex");
+      const actual = signingRoot(type, value).toString("hex");
       assert(actual);
     });
   }
@@ -33,9 +33,9 @@ describe("signedRoot", () => {
     {value: 1, type: "foo", reason: "Invalid type"},
     {value: 1, type: ["foo"], reason: "Invalid type"},
   ];
-  for (const {value, type, reason} of failCases) {
+  for (const {type, value, reason} of failCases) {
     it(`should throw an error for ${stringifyType(type)}: ${reason}`, () => {
-      assert.throws(() => signingRoot(value as SerializableObject, type));
+      assert.throws(() => signingRoot(type, value as SerializableObject));
     });
   }
 });

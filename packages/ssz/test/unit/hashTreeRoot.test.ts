@@ -29,8 +29,8 @@ describe("hashTreeRoot", () => {
     {value: 2**32-1, type: "number32", expected: ""},
     {value: 2**32, type: "number64", expected: ""},
     {value: 2**52-1, type: "number64", expected: ""},
-    {value: 2**32, type: "number64", expected: hashTreeRoot(2**32, "number64").toString("hex")},
-    {value: 2**52-1, type: "number64", expected: hashTreeRoot(2**52-1, "number64").toString("hex")},
+    {value: 2**32, type: "number64", expected: hashTreeRoot("number64", 2**32).toString("hex")},
+    {value: 2**52-1, type: "number64", expected: hashTreeRoot("number64", 2**52-1).toString("hex")},
     {value: 0x1n , type: "bigint64", expected: ""},
     {value: 0x1000000000000000n, type: "bigint64", expected: ""},
     {value: 0xffffffffffffffffn, type: "bigint64", expected: ""},
@@ -55,9 +55,9 @@ describe("hashTreeRoot", () => {
     {value: [], type: {elementType: "number16", maxLength: 100}, expected: ""},
     {value: [], type: {elementType: OuterObject, maxLength: 100}, expected: ""},
   ];
-  for (const {value, type} of testCases) {
+  for (const {type, value} of testCases) {
     it(`should correctly hash ${stringifyType(type)}`, () => {
-      const actual = hashTreeRoot(value, type).toString("hex");
+      const actual = hashTreeRoot(type, value).toString("hex");
       assert(actual);
     });
   }
@@ -74,7 +74,7 @@ describe("hashTreeRoot", () => {
       maxLength: 1099511627776
     };
     // This is the logic to calculate activeIndexRoots in processFinalUpdates
-    const hash = hashTreeRoot(validatorIndexes, type).toString("hex");
+    const hash = hashTreeRoot(type, validatorIndexes).toString("hex");
     const want = "ba1031ba1a5daab0d49597cfa8664ce2b4c9b4db6ca69fbef51e0a9a325a3b63";
     assert.strictEqual(hash, want, "hash does not match");
   });
@@ -90,7 +90,7 @@ describe("hashTreeRoot", () => {
     const accountBalancesType: AnySSZType = {
       fields: [["balances", {elementType: "bigint64", maxLength: count}]]
     };
-    const hash = hashTreeRoot(accountBalances, accountBalancesType).toString("hex");
+    const hash = hashTreeRoot(accountBalancesType, accountBalances).toString("hex");
     assert(hash);
   });
 
@@ -111,7 +111,7 @@ describe("hashTreeRoot", () => {
         ["epoch", "bigint64"]
       ]
     };
-    const finalHash = hashTreeRoot(fork, forkType).toString("hex");
+    const finalHash = hashTreeRoot(forkType, fork).toString("hex");
     const want = "3ad1264c33bc66b43a49b1258b88f34b8dbfa1649f17e6df550f589650d34992";
     assert.strictEqual(finalHash, want, "finalHash does not match");
   });
@@ -128,9 +128,9 @@ describe("hashTreeRoot", () => {
       type: "bytes32", reason: "Invalida byte array length"
     },
   ];
-  for (const {value, type, reason} of failCases) {
+  for (const {type, value, reason} of failCases) {
     it(`should throw an error for ${stringifyType(type)}: ${reason}`, () => {
-      assert.throws(() => hashTreeRoot(value, type));
+      assert.throws(() => hashTreeRoot(type, value));
     });
   }
 });

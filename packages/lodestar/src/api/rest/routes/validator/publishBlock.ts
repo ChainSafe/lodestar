@@ -33,7 +33,7 @@ export const registerBlockPublishEndpoint = (fastify: IFastifyServer, modules: I
     async (request, reply) => {
       await modules.chain.receiveBlock(
         fromJson(
-          request.body.beacon_block, modules.config.types.BeaconBlock
+          modules.config.types.BeaconBlock, request.body.beacon_block
         )
       );
       reply

@@ -12,24 +12,24 @@ import {_assertValidValue} from "./assertValidValue";
  * Most useful to clone arrays/objects
  *
  * ```typescript
- * const n: number = clone(10, "number64");
+ * const n: number = clone("number64", 10);
  *
- * const b: boolean = clone(true, "bool");
+ * const b: boolean = clone("bool", true);
  *
  * const buf: Buffer = clone(
- *   Buffer.from("abcd", "hex"),
  *   {
  *     elementType: "byte",
  *     maxLength: 10,
- *   }
+ *   },
+ *   Buffer.from("abcd", "hex")
  * );
  *
  * const arr: number[] = clone(
- *   [0, 1, 2, 3, 4, 5],
  *   {
  *     elementType: "number32",
  *     maxLength: 10,
- *   }
+ *   },
+ *   [0, 1, 2, 3, 4, 5]
  * );
  *
  * interface myData {
@@ -45,19 +45,19 @@ import {_assertValidValue} from "./assertValidValue";
  *   ],
  * };
  * const obj: myData = clone(
- *   {a: 10, b: false, c: Buffer.alloc(96)},
- *   myDataType
+ *   myDataType,
+ *   {a: 10, b: false, c: Buffer.alloc(96)}
  * );
  * ```
  */
-export function clone(value: any, type: AnySSZType): any {
+export function clone(type: AnySSZType, value: any): any {
   const _type = parseType(type);
-  _assertValidValue(value, _type);
-  return _clone(value, _type);
+  _assertValidValue(_type, value);
+  return _clone(_type, value);
 }
 
 /** @ignore */
-function _clone(value: any, type: FullSSZType): any {
+function _clone(type: FullSSZType, value: any): any {
   const obj: any = {};
   switch (type.type) {
     case Type.uint:
@@ -79,10 +79,10 @@ function _clone(value: any, type: FullSSZType): any {
       return (value as Buffer).slice();
     case Type.list:
     case Type.vector:
-      return value.map((element: any) => clone(element, type.elementType));
+      return value.map((element: any) => clone(type.elementType, element));
     case Type.container:
       type.fields.forEach(([fieldName, fieldType]) => {
-        obj[fieldName] = clone(value[fieldName], fieldType);
+        obj[fieldName] = clone(fieldType, value[fieldName]);
       });
       return obj;
   }

@@ -25,11 +25,11 @@ export function interopDeposits(
     };
     data.signature = sign(
       privkey,
-      signingRoot(data, config.types.DepositData),
+      signingRoot(config.types.DepositData, data),
       computeDomain(DomainType.DEPOSIT),
     );
     // Add to merkle tree
-    tree.add(i, hashTreeRoot(data, config.types.DepositData));
+    tree.add(i, hashTreeRoot(config.types.DepositData, data));
     return {
       proof: tree.getProof(i),
       data,

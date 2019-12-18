@@ -31,7 +31,7 @@ import {hashTreeRoot} from "./hashTreeRoot";
  * };
  *
  * // create the signing root
- * const root: Buffer = signingRoot(d, myDataType);
+ * const root: Buffer = signingRoot(myDataType, d);
  *
  * // sign the signing root, store as the final field
  * d.c = sign(privateKey, root); // hypothetical `sign` function
@@ -41,10 +41,10 @@ import {hashTreeRoot} from "./hashTreeRoot";
  * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function signingRoot(value: any, type: AnyContainerType): Buffer {
+export function signingRoot(type: AnyContainerType, value: any): Buffer {
   const _type = parseType(type);
   assert(_type.type === Type.container);
   const truncatedType = copyType(_type) as ContainerType;
   truncatedType.fields.pop();
-  return hashTreeRoot(value, truncatedType);
+  return hashTreeRoot(truncatedType, value);
 }

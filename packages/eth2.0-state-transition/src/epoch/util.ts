@@ -90,11 +90,11 @@ export function getWinningCrosslinkAndAttestingIndices(
 
   const attestations = getMatchingSourceAttestations(config, state, epoch)
     .filter((a) => a.data.crosslink.shard === shard);
-  const currentCrosslinkRoot = hashTreeRoot(state.currentCrosslinks[shard], config.types.Crosslink);
+  const currentCrosslinkRoot = hashTreeRoot(config.types.Crosslink, state.currentCrosslinks[shard]);
   const currentCrosslink = state.currentCrosslinks[shard];
   const crosslinks = attestations.filter((a) => (
     currentCrosslinkRoot.equals(a.data.crosslink.parentRoot) ||
-    equals(currentCrosslink, a.data.crosslink, config.types.Crosslink))
+    equals(config.types.Crosslink, currentCrosslink, a.data.crosslink))
   ).map((a) => a.data.crosslink);
 
   const defaultCrossLink: Crosslink = {
@@ -117,21 +117,21 @@ export function getWinningCrosslinkAndAttestingIndices(
       balance: getAttestingBalance(
         config,
         state,
-        attestations.filter((a) => equals(a.data.crosslink, crosslink, config.types.Crosslink)),
+        attestations.filter((a) => equals(config.types.Crosslink, a.data.crosslink, crosslink)),
       ),
     }))
     .reduce((a, b) => {
       if (b.balance > a.balance) {
         return b;
       } else if (b.balance === a.balance) {
-        if ((deserialize(b.crosslink.dataRoot, config.types.uint256) as uint256)
-          > (deserialize(a.crosslink.dataRoot, config.types.uint256) as uint256)) {
+        if ((deserialize(config.types.uint256, b.crosslink.dataRoot) as uint256)
+          > (deserialize(config.types.uint256, a.crosslink.dataRoot) as uint256)) {
           return b;
         }
       }
       return a;
     }).crosslink;
   const winningAttestations = attestations.filter((a) =>
-    equals(a.data.crosslink, winningCrosslink, config.types.Crosslink));
+    equals(config.types.Crosslink, a.data.crosslink, winningCrosslink));
   return [winningCrosslink, getUnslashedAttestingIndices(config, state, winningAttestations)];
 }

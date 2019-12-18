@@ -18,7 +18,7 @@ export async function assembleAttestationData(
 
   let epochBoundaryBlockRoot: Hash;
   if (epochStartSlot === headState.slot) {
-    epochBoundaryBlockRoot = signingRoot(headBlock, config.types.BeaconBlock);
+    epochBoundaryBlockRoot = signingRoot(config.types.BeaconBlock, headBlock);
   } else {
     epochBoundaryBlockRoot = getBlockRootAtSlot(config, headState, epochStartSlot);
   }
@@ -28,7 +28,7 @@ export async function assembleAttestationData(
 
   return {
     crosslink: getCrosslinkVote(config, headState, shard, currentEpoch),
-    beaconBlockRoot: signingRoot(headBlock, config.types.BeaconBlock),
+    beaconBlockRoot: signingRoot(config.types.BeaconBlock, headBlock),
     source: headState.currentJustifiedCheckpoint,
     target: {
       epoch: currentEpoch,
@@ -50,6 +50,6 @@ export function getCrosslinkVote(
     endEpoch: Math.min(targetEpoch, parentCrosslink.endEpoch + config.params.MAX_EPOCHS_PER_CROSSLINK),
     dataRoot: ZERO_HASH,
     shard: shard,
-    parentRoot: hashTreeRoot(state.currentCrosslinks[shard], config.types.Crosslink)
+    parentRoot: hashTreeRoot(config.types.Crosslink, state.currentCrosslinks[shard])
   };
 }

@@ -18,7 +18,7 @@ describe("Objects helper", () => {
     array.push(obj3);
     array.push(obj1);
     array.push(obj3);
-    const result = mostFrequent<uint64>(array, config.types.uint64);
+    const result = mostFrequent<uint64>(config.types.uint64, array);
     expect(result).to.be.deep.equal([obj1, obj3]);
   });
 

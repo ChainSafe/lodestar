@@ -23,7 +23,7 @@ export class ChainRepository {
   public async setLatestStateRoot(root: Hash): Promise<void> {
     await this.db.put(
       this.getKey(Key.latestState),
-      serialize(root, this.config.types.bytes32)
+      serialize(this.config.types.bytes32, root)
     );
   }
 
@@ -34,7 +34,7 @@ export class ChainRepository {
   public async setJustifiedStateRoot(root: Hash): Promise<void> {
     await this.db.put(
       this.getKey(Key.justifiedState),
-      serialize(root, this.config.types.bytes32)
+      serialize(this.config.types.bytes32, root)
     );
   }
 
@@ -45,7 +45,7 @@ export class ChainRepository {
   public async setFinalizedStateRoot(root: Hash): Promise<void> {
     await this.db.put(
       this.getKey(Key.finalizedState),
-      serialize(root, this.config.types.bytes32)
+      serialize(this.config.types.bytes32, root)
     );
   }
 
@@ -79,14 +79,14 @@ export class ChainRepository {
       if(!heightBuf) {
         throw new Error("Missing chain height");
       }
-      return deserialize(heightBuf, this.config.types.Slot);
+      return deserialize(this.config.types.Slot, heightBuf);
     } catch (e) {
       return null;
     }
   }
 
   public async setChainHeadSlot(slot: number): Promise<void> {
-    await this.db.put(this.getKey(Key.chainHeight), serialize(slot, this.config.types.Slot));
+    await this.db.put(this.getKey(Key.chainHeight), serialize(this.config.types.Slot, slot));
   }
 
   public async getChainHeadRoot(): Promise<Hash | null> {

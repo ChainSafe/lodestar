@@ -25,7 +25,7 @@ function _createValue(type: FullSSZType, value: any = null): any {
     case Type.bitVector:
     case Type.byteList:
     case Type.byteVector:
-      assertValidValue(value, type);
+      assertValidValue(type, value);
       return value;
     case Type.list:
       assert(Array.isArray(value));

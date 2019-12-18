@@ -67,9 +67,9 @@ describeDirectorySpecTest<ISimpleCase, number>(
 );
 
 function yamlToSSZ(file: string, sszSchema: AnySSZType): void {
-  const input: any = fromYaml(loadYamlFile(file), sszSchema);
+  const input: any = fromYaml(sszSchema, loadYamlFile(file));
   if(input.number) {
     input.number = Number(input.number);
   }
-  writeFileSync(file.replace(".yaml", ".ssz"), serialize(input, sszSchema));
+  writeFileSync(file.replace(".yaml", ".ssz"), serialize(sszSchema, input));
 }

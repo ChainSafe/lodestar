@@ -27,25 +27,25 @@ import {
  *   ],
  * };
  *
- * assertValidValue({
+ * assertValidValue(myDataType, {
  *   a: 10,
  *   b: true,
  *   c: Buffer.alloc(96),
- * }, myDataType); // no error
+ * }); // no error
  *
- * assertValidValue({
+ * assertValidValue(myDataType, {
  *   a: 10,
  *   b: true,
  *   c: 10, // errors, expects Buffer, length 96
- * }, myDataType); // error because of `c`
+ * }); // error because of `c`
  * ```
  */
-export function assertValidValue(value: any, type: AnySSZType): void {
-  _assertValidValue(value, parseType(type));
+export function assertValidValue(type: AnySSZType, value: any): void {
+  _assertValidValue(parseType(type), value);
 }
 
 /** @ignore */
-export function _assertValidValue(value: any, type: FullSSZType): void {
+export function _assertValidValue(type: FullSSZType, value: any): void {
   switch (type.type) {
     case Type.uint:
       switch (type.use) {
@@ -93,7 +93,7 @@ export function _assertValidValue(value: any, type: FullSSZType): void {
       assert(value.length <= type.maxLength, "Invalid list: longer than max length");
       value.forEach((element: any, i: number) => {
         try {
-          _assertValidValue(element, type.elementType);
+          _assertValidValue(type.elementType, element);
         } catch (e) {
           throw new Error(`Invalid list, element ${i}: ${e.message}`);
         }
@@ -104,7 +104,7 @@ export function _assertValidValue(value: any, type: FullSSZType): void {
       assert(value.length === type.length, "Invalid vector: incorrect length");
       value.forEach((element: any, i: number) => {
         try {
-          _assertValidValue(element, type.elementType);
+          _assertValidValue(type.elementType, element);
         } catch (e) {
           throw new Error(`Invalid vector, element ${i}: ${e.message}`);
         }
@@ -115,7 +115,7 @@ export function _assertValidValue(value: any, type: FullSSZType): void {
       type.fields.forEach(([fieldName, fieldType]) => {
         try {
           assert(value[fieldName] !== undefined, "field does not exist");
-          _assertValidValue(value[fieldName], fieldType);
+          _assertValidValue(fieldType, value[fieldName]);
         } catch (e) {
           throw new Error(`Invalid container, field ${fieldName}: ${e.message}`);
         }

@@ -67,7 +67,7 @@ export class Eth1Wallet {
 
     const signature = bls.sign(
       privateKey.toBytes(),
-      signingRoot(depositData, this.config.types.DepositData),
+      signingRoot(this.config.types.DepositData, depositData),
       Buffer.from([0, 0, 0, DomainType.DEPOSIT])
     );
     // Send TX

@@ -66,7 +66,7 @@ describe("process block - attestation", function () {
     attestation.data.source.epoch = 1;
     attestation.data.source.root = state.currentJustifiedCheckpoint.root;
     attestation.data.crosslink.parentRoot =
-            hashTreeRoot(state.currentCrosslinks[attestation.data.crosslink.shard], config.types.Crosslink);
+            hashTreeRoot(config.types.Crosslink, state.currentCrosslinks[attestation.data.crosslink.shard]);
     attestation.data.crosslink.endEpoch = 1;
     attestationSlotStub.returns(1);
     getCrossLinkComitteeStub.returns(Array.from({length: attestation.aggregationBits.bitLength}));
@@ -89,7 +89,7 @@ describe("process block - attestation", function () {
     attestation.data.source.epoch = 0;
     attestation.data.source.root = state.previousJustifiedCheckpoint.root;
     attestation.data.crosslink.parentRoot =
-            hashTreeRoot(state.currentCrosslinks[attestation.data.crosslink.shard], config.types.Crosslink);
+            hashTreeRoot(config.types.Crosslink, state.currentCrosslinks[attestation.data.crosslink.shard]);
     attestationSlotStub.returns(1);
     getCrossLinkComitteeStub.returns(Array.from({length: attestation.aggregationBits.bitLength}));
     expect(processAttestation(config, state, attestation)).to.not.throw;

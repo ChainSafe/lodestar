@@ -45,7 +45,7 @@ describe('database repository', function () {
 
   it('should get single item', async function() {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    controller.get.resolves(serialize(item, TestSSZType));
+    controller.get.resolves(serialize(TestSSZType, item));
     const result = await repository.get('id');
     expect(result).to.be.deep.equal(item);
     expect(controller.get.calledOnce).to.be.true;
@@ -60,7 +60,7 @@ describe('database repository', function () {
 
   it('should return true if item exists', async function() {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    controller.get.resolves(serialize(item, TestSSZType));
+    controller.get.resolves(serialize(TestSSZType, item));
     const result = await repository.has('id');
     expect(result).to.be.true;
     expect(controller.get.calledOnce).to.be.true;
@@ -92,7 +92,7 @@ describe('database repository', function () {
 
   it('should return all items', async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    const itemSerialized = serialize(item, TestSSZType);
+    const itemSerialized = serialize(TestSSZType, item);
     const items = [itemSerialized, itemSerialized, itemSerialized];
     controller.search.resolves(items);
     const result = await repository.getAll();
@@ -129,7 +129,7 @@ describe('database repository', function () {
   });
 
   it('should delete all items', async function () {
-    const item = serialize({bool: true, bytes: Buffer.alloc(32)}, TestSSZType);
+    const item = serialize(TestSSZType, {bool: true, bytes: Buffer.alloc(32)});
     const items = [item, item];
     controller.search.resolves(items);
     await repository.deleteAll();

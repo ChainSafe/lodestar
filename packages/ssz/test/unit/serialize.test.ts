@@ -69,9 +69,9 @@ describe("serialize", () => {
     },
     {value: [], type: {elementType: OuterObject, maxLength: 10}, expected: ""},
   ];
-  for (const {value, type, expected} of testCases) {
+  for (const {type, value, expected} of testCases) {
     it(`should correctly serialize ${stringifyType(type)}`, () => {
-      const actual = serialize(value, type).toString("hex");
+      const actual = serialize(type, value).toString("hex");
       assert.equal(actual, expected);
     });
   }
@@ -89,9 +89,9 @@ describe("serialize", () => {
       reason: "invalid byte array length"
     },
   ];
-  for (const {value, type, reason} of failCases) {
+  for (const {type, value, reason} of failCases) {
     it(`should throw an error for ${stringifyType(type)}: ${reason}`, () => {
-      assert.throws(() => serialize(value, type));
+      assert.throws(() => serialize(type, value));
     });
   }
 });

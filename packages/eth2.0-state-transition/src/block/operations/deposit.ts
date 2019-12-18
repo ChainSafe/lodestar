@@ -23,7 +23,7 @@ export function processDeposit(
 ): void {
   // Verify the Merkle branch
   assert(verifyMerkleBranch(
-    hashTreeRoot(deposit.data, config.types.DepositData),
+    hashTreeRoot(config.types.DepositData, deposit.data),
     deposit.proof,
     DEPOSIT_CONTRACT_TREE_DEPTH + 1,
     state.eth1DepositIndex,
@@ -42,7 +42,7 @@ export function processDeposit(
     // Note: Deposits are valid across forks, thus the deposit domain is retrieved directly from `computeDomain`.
     if (!verify(
       pubkey,
-      signingRoot(deposit.data, config.types.DepositData),
+      signingRoot(config.types.DepositData, deposit.data),
       deposit.data.signature,
       computeDomain(DomainType.DEPOSIT),
     )) {
