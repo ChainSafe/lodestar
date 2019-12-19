@@ -42,7 +42,7 @@ export class BlockArchiveRepository extends BulkRepository<BeaconBlock> {
       lt: encodeKey(this.bucket, safeUpperLimit),
     });
     const processedData = (data || [])
-      .map((datum) => deserialize(datum, this.type))
+      .map((datum) => deserialize(this.type, datum))
       .filter(block => {
         if (step !== null && typeof safeLowerLimit === "number") {
           return (block.slot - safeLowerLimit) % step;
