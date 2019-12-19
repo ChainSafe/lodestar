@@ -79,10 +79,10 @@ function _clone(type: FullSSZType, value: any): any {
       return (value as Buffer).slice();
     case Type.list:
     case Type.vector:
-      return value.map((element: any) => clone(type.elementType, element));
+      return value.map((element: any) => _clone(type.elementType, element));
     case Type.container:
       type.fields.forEach(([fieldName, fieldType]) => {
-        obj[fieldName] = clone(fieldType, value[fieldName]);
+        obj[fieldName] = _clone(fieldType, value[fieldName]);
       });
       return obj;
   }
