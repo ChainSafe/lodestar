@@ -5,7 +5,7 @@ import {Attestation, BeaconBlock, AggregateAndProof, VoluntaryExit, ProposerSlas
 import {IBeaconDb} from "../../db";
 import {getAttestationSubnet} from "./utils";
 import {getCurrentSlot, isValidIndexedAttestation, getIndexedAttestation, isValidVoluntaryExit,
-  isValidProposerSlashing, isValidAttesterSlashing, isValidBlockSignature, getAttestingIndices, 
+  isValidProposerSlashing, isValidAttesterSlashing, isValidBlockHeader, getAttestingIndices, 
   isAggregator, getDomain, computeEpochAtSlot, getBeaconProposerIndex} from "@chainsafe/eth2.0-state-transition";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
@@ -39,8 +39,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
 
     const state = await this.db.state.getLatest();
-    const proposer = state.validators[getBeaconProposerIndex(this.config, state)];
-    if (!isValidBlockSignature(this.config, state, block, proposer)) {
+    if (!isValidBlockHeader(this.config, state, block)) {
       return false;
     }
 

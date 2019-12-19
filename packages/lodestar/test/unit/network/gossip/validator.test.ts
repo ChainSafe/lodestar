@@ -21,12 +21,12 @@ import { generateValidators } from "../../../utils/validator";
 describe("GossipMessageValidator", () => {
   let sandbox = sinon.createSandbox();
   let validator: GossipMessageValidator;
-  let isValidBlockSignatureStub: any, dbStub: any, opPoolStub: any, logger: any, isValidIndexedAttestationStub: any,
+  let isValidBlockHeaderStub: any, dbStub: any, opPoolStub: any, logger: any, isValidIndexedAttestationStub: any,
   isValidIncomingVoluntaryExitStub: any, isValidIncomingProposerSlashingStub: any, isValidIncomingAttesterSlashingStub: any,
   getAttestingIndicesStub: any, isAggregatorStub: any, isBlsVerifyStub: any;
 
   beforeEach(() => {
-    isValidBlockSignatureStub = sandbox.stub(blockUtils, "isValidBlockSignature");
+    isValidBlockHeaderStub = sandbox.stub(blockUtils, "isValidBlockHeader");
     isValidIndexedAttestationStub = sandbox.stub(attestationUtils, "isValidIndexedAttestation");
     getAttestingIndicesStub = sandbox.stub(attestationUtils, "getAttestingIndices");
     isAggregatorStub = sandbox.stub(dutiesUtils, "isAggregator");
@@ -72,7 +72,7 @@ describe("GossipMessageValidator", () => {
     dbStub.block.has.resolves(false);
     let state = generateState();
     dbStub.state.getLatest.resolves(state);
-    isValidBlockSignatureStub.returns(false);
+    isValidBlockHeaderStub.returns(false);
     expect(await validator.isValidIncomingBlock(block)).to.be.equal(false);
   });
 
@@ -82,7 +82,7 @@ describe("GossipMessageValidator", () => {
     dbStub.block.has.resolves(false);
     let state = generateState();
     dbStub.state.getLatest.resolves(state);
-    isValidBlockSignatureStub.returns(true);
+    isValidBlockHeaderStub.returns(true);
     expect(await validator.isValidIncomingBlock(block)).to.be.equal(true);
   });
 
