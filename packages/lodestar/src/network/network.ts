@@ -16,13 +16,14 @@ import {ReqResp} from "./reqResp";
 import {INetworkOptions} from "./options";
 import {INetwork, NetworkEventEmitter,} from "./interface";
 import {Gossip} from "./gossip/gossip";
-import {IGossip} from "./gossip/interface";
+import {IGossip, IGossipMessageValidator} from "./gossip/interface";
 
 interface ILibp2pModules {
   config: IBeaconConfig;
   libp2p: LibP2p;
   logger: ILogger;
   metrics: IBeaconMetrics;
+  validator: IGossipMessageValidator;
 }
 
 
@@ -40,7 +41,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   private logger: ILogger;
   private metrics: IBeaconMetrics;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, logger, metrics}: ILibp2pModules) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger, metrics, validator}: ILibp2pModules) {
     super();
     this.opts = opts;
     this.config = config;
@@ -52,7 +53,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
         this.peerInfo = libp2p.peerInfo;
         this.libp2p = libp2p;
         this.reqResp = new ReqResp(opts, {config, libp2p, logger});
-        this.gossip = (new Gossip(opts, {config, libp2p, logger})) as unknown as IGossip;
+        this.gossip = (new Gossip(opts, {config, libp2p, logger, validator})) as unknown as IGossip;
         resolve();
       });
     });

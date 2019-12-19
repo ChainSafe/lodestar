@@ -12,6 +12,7 @@ import {IBeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
 import {
   AttestationOperations,
+  AggregateAndProofOperations,
   AttesterSlashingOperations,
   DepositsOperations,
   ProposerSlashingOperations,
@@ -31,6 +32,7 @@ interface IOpPoolModules {
 export class OpPool extends EventEmitter {
 
   public attestations: AttestationOperations;
+  public aggregateAndProofs: AggregateAndProofOperations;
   public voluntaryExits: VoluntaryExitOperations;
   public deposits: DepositsOperations;
   public proposerSlashings: ProposerSlashingOperations;
@@ -48,6 +50,7 @@ export class OpPool extends EventEmitter {
     this.db = db;
     this.proposers = new Map();
     this.attestations = new AttestationOperations(this.db.attestation, {config});
+    this.aggregateAndProofs = new AggregateAndProofOperations(this.db.aggregateAndProof);
     this.voluntaryExits = new VoluntaryExitOperations(this.db.voluntaryExit);
     this.deposits = new DepositsOperations(this.db.deposit);
     this.proposerSlashings = new ProposerSlashingOperations(this.db.proposerSlashing);

@@ -19,7 +19,8 @@ import {
   MerkleTreeRepository,
   ProposerSlashingRepository,
   StateRepository,
-  VoluntaryExitRepository
+  VoluntaryExitRepository,
+  AggregateAndProofRepository
 } from "./repositories";
 
 /**
@@ -36,6 +37,8 @@ export interface IBeaconDb {
   block: BlockRepository;
 
   attestation: AttestationRepository;
+
+  aggregateAndProof: AggregateAndProofRepository;
 
   voluntaryExit: VoluntaryExitRepository;
 

@@ -14,14 +14,18 @@ import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {ILogger, LogLevel} from "../../logger";
 import {getGossipTopic,} from "./utils";
 import {INetworkOptions} from "../options";
-import {GossipEventEmitter, IGossip, IGossipEvents, IGossipModules,} from "./interface";
+import {GossipEventEmitter, IGossip, IGossipEvents, IGossipModules, IGossipMessageValidator, IGossipMessage}
+  from "./interface";
 import {GossipEvent} from "./constants";
-import {handleIncomingBlock, publishBlock} from "./handlers/block";
-import {handleIncomingAttestation, publishCommiteeAttestation} from "./handlers/attestation";
-import {handleIncomingAttesterSlashing, publishAttesterSlashing} from "./handlers/attesterSlashing";
-import {handleIncomingProposerSlashing, publishProposerSlashing} from "./handlers/proposerSlashing";
-import {handleIncomingVoluntaryExit, publishVoluntaryExit} from "./handlers/voluntaryExit";
-import {handleIncomingAggregateAndProof, publishAggregatedAttestation} from "./handlers/aggregateAndProof";
+import {publishBlock, getIncomingBlockHandler} from "./handlers/block";
+import {publishCommiteeAttestation, getCommitteeAttestationHandler, getIncomingAttestationHandler} 
+  from "./handlers/attestation";
+import {publishAttesterSlashing, getIncomingAttesterSlashingHandler} from "./handlers/attesterSlashing";
+import {publishProposerSlashing, getIncomingProposerSlashingHandler} from "./handlers/proposerSlashing";
+import {publishVoluntaryExit, getIncomingVoluntaryExitHandler} from "./handlers/voluntaryExit";
+import {publishAggregatedAttestation, getIncomingAggregateAndProofHandler} from "./handlers/aggregateAndProof";
+
+export type GossipHandlerFn = (this: Gossip, msg: IGossipMessage) => void;
 
 export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) implements IGossip {
 
@@ -32,14 +36,16 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   protected readonly  logger: ILogger;
 
   private handlers: Map<string, Function>;
+  private validator: IGossipMessageValidator;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, logger}: IGossipModules) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger, validator}: IGossipModules) {
     super();
     this.opts = opts;
     this.config = config;
     this.libp2p = libp2p;
     this.logger = logger.child({module: "gossip", level: LogLevel[logger.level]});
     this.logger.silent = logger.silent;
+    this.validator = validator;
     this.pubsub = new Gossipsub(libp2p, {gossipIncoming: false});
     this.handlers = this.registerHandlers();
   }
@@ -112,21 +118,28 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   private registerHandlers(): Map<string, Function> {
     const handlers = new Map();
     handlers.set("gossipsub:heartbeat", this.emitGossipHeartbeat);
-    handlers.set(getGossipTopic(GossipEvent.BLOCK, "ssz"), handleIncomingBlock.bind(this));
-    handlers.set(getGossipTopic(GossipEvent.ATTESTATION, "ssz"), handleIncomingAttestation.bind(this));
-    handlers.set(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, "ssz"), handleIncomingAggregateAndProof.bind(this));
-    handlers.set(getGossipTopic(GossipEvent.ATTESTER_SLASHING, "ssz"), handleIncomingAttesterSlashing.bind(this));
-    handlers.set(getGossipTopic(GossipEvent.PROPOSER_SLASHING, "ssz"), handleIncomingProposerSlashing.bind(this));
-    handlers.set(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, "ssz"), handleIncomingVoluntaryExit.bind(this));
+    handlers.set(getGossipTopic(GossipEvent.BLOCK, "ssz"), 
+      getIncomingBlockHandler(this.validator).bind(this));
+    handlers.set(getGossipTopic(GossipEvent.ATTESTATION, "ssz"), 
+      getIncomingAttestationHandler(this.validator).bind(this));
+    handlers.set(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, "ssz"), 
+      getIncomingAggregateAndProofHandler(this.validator).bind(this));
+    handlers.set(getGossipTopic(GossipEvent.ATTESTER_SLASHING, "ssz"), 
+      getIncomingAttesterSlashingHandler(this.validator).bind(this));
+    handlers.set(getGossipTopic(GossipEvent.PROPOSER_SLASHING, "ssz"), 
+      getIncomingProposerSlashingHandler(this.validator).bind(this));
+    handlers.set(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, "ssz"), 
+      getIncomingVoluntaryExitHandler(this.validator).bind(this));
 
     for(let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
+      const committeeAttestationHandler = getCommitteeAttestationHandler(subnet, this.validator);
       handlers.set(
         getGossipTopic(
           GossipEvent.ATTESTATION_SUBNET,
           "ssz",
           new Map([["subnet", String(subnet)]])
         ),
-        handleIncomingAttestation.bind(this)
+        committeeAttestationHandler.bind(this)
       );
     }
     return handlers;

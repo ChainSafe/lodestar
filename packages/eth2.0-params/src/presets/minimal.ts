@@ -41,6 +41,7 @@ export const MIN_SEED_LOOKAHEAD = 2 ** 0; // epochs || 6.4 minutes
 export const MAX_SEED_LOOKAHEAD = 2 ** 2; // epochs || 25.6 minutes
 export const SLOTS_PER_ETH1_VOTING_PERIOD = 16; // CUSTOMIZED
 export const ETH1_FOLLOW_DISTANCE = 2 ** 10; // blocks || ~4 hours
+export const TARGET_AGGREGATORS_PER_COMMITTEE = 2 ** 4;
 export const SLOTS_PER_HISTORICAL_ROOT = 64; // CUSTOMIZED
 export const MIN_VALIDATOR_WITHDRAWAL_DELAY = 256; // epochs || ~27 hours
 export const PERSISTENT_COMMITTEE_PERIOD = 2048;

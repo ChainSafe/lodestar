@@ -2,8 +2,8 @@
  * @module network/gossip
  */
 
-import {IGossipMessage} from "../interface";
-import {Gossip} from "../gossip";
+import {IGossipMessage, IGossipMessageValidator} from "../interface";
+import {Gossip, GossipHandlerFn} from "../gossip";
 import {deserializeGossipMessage, getGossipTopic} from "../utils";
 import {GossipEvent} from "../constants";
 import {AggregateAndProof} from "@chainsafe/eth2.0-types";
@@ -12,17 +12,21 @@ import {serialize} from "@chainsafe/ssz";
 //@ts-ignore
 import promisify from "promisify-es6";
 
-export function handleIncomingAggregateAndProof(this: Gossip, msg: IGossipMessage): void {
-  try {
-    const aggregateAndProof = deserializeGossipMessage<AggregateAndProof>(msg, this.config.types.AggregateAndProof);
-    this.logger.verbose(
-      `Received AggregateAndProof from validator #${aggregateAndProof.index}`+
-        ` for target ${toHex(aggregateAndProof.aggregate.data.target.root)}`
-    );
-    this.emit(GossipEvent.AGGREGATE_AND_PROOF, aggregateAndProof);
-  } catch (e) {
-    this.logger.warn("Incoming aggregate and proof error", e);
-  }
+export function getIncomingAggregateAndProofHandler(validator: IGossipMessageValidator): GossipHandlerFn {
+  return async function handleIncomingAggregateAndProof(this: Gossip, msg: IGossipMessage): Promise<void> {
+    try {
+      const aggregateAndProof = deserializeGossipMessage<AggregateAndProof>(msg, this.config.types.AggregateAndProof);
+      this.logger.verbose(
+        `Received AggregateAndProof from validator #${aggregateAndProof.index}`+
+          ` for target ${toHex(aggregateAndProof.aggregate.data.target.root)}`
+      );
+      if (await validator.isValidIncomingAggregateAndProof(aggregateAndProof)) {
+        this.emit(GossipEvent.AGGREGATE_AND_PROOF, aggregateAndProof);
+      }
+    } catch (e) {
+      this.logger.warn("Incoming aggregate and proof error", e);
+    }
+  };
 }
 
 export async function publishAggregatedAttestation(this: Gossip, aggregateAndProof: AggregateAndProof): Promise<void> {

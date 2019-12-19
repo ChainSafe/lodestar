@@ -8,6 +8,7 @@ import {
   FAR_FUTURE_EPOCH,
 } from "../../../../../src/constants";
 import * as utils from "../../../../../src/util";
+import * as validatorUtils from "../../../../../src/util/validator";
 import {processVoluntaryExit} from "../../../../../src/block/operations";
 
 import {generateValidator} from "../../../../utils/validator";
@@ -21,7 +22,7 @@ describe('process block - voluntary exits', function () {
   let isActiveValidatorStub: any, initiateValidatorExitStub: any, blsStub: any;
 
   beforeEach(() => {
-    isActiveValidatorStub = sandbox.stub(utils, "isActiveValidator");
+    isActiveValidatorStub = sandbox.stub(validatorUtils, "isActiveValidator");
     initiateValidatorExitStub = sandbox.stub(utils, "initiateValidatorExit");
     blsStub = {
       verify: sandbox.stub()

@@ -1,4 +1,5 @@
 export * from "./attestations";
+export * from "./aggregateAndProof";
 export * from "./attesterSlashing";
 export * from "./block";
 export * from "./chain";

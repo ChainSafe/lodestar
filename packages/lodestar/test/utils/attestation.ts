@@ -2,9 +2,11 @@ import {
   Attestation,
   AttestationData,
   Epoch,
+  VoluntaryExit,
 } from "@chainsafe/eth2.0-types";
 import { BitList } from "@chainsafe/bit-utils";
 import crypto from "crypto";
+import { AggregateAndProof } from "@chainsafe/eth2.0-types/src";
 
 /**
  * Generates a fake attestation data for test purposes.
@@ -46,5 +48,22 @@ export function generateEmptyAttestation(): Attestation {
       },
     },
     signature: Buffer.alloc(96),
+  };
+}
+
+export function generateEmptyAggregateAndProof(): AggregateAndProof {
+  const attestation = generateEmptyAttestation();
+  return {
+    index: 0,
+    selectionProof: Buffer.alloc(96),
+    aggregate: attestation,
+  }
+}
+
+export function generateEmptyVoluntaryExit(): VoluntaryExit {
+  return {
+    epoch: 0,
+    validatorIndex: 0,
+    signature: Buffer.alloc(96)
   };
 }

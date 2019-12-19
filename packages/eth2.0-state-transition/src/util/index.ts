@@ -5,6 +5,7 @@
 export * from "./epoch";
 export * from "./domain";
 export * from "./blockRoot";
+export * from "./block";
 export * from "./validator";
 export * from "./seed";
 export * from "./committee";
