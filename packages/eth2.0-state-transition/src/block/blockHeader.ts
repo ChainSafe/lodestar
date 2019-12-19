@@ -9,8 +9,6 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {getTemporaryBlockHeader, isValidBlockHeader, getBeaconProposerIndex} from "../util";
 
-// See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#block-header
-
 export function processBlockHeader(
   config: IBeaconConfig,
   state: BeaconState,

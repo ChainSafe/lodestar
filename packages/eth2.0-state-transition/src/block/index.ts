@@ -15,8 +15,6 @@ export * from "./blockHeader";
 export * from "./randao";
 export * from "./operations";
 
-// See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#block-processing
-
 export function processBlock(
   config: IBeaconConfig,
   state: BeaconState,
