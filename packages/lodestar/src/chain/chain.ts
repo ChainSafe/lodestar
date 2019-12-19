@@ -146,14 +146,20 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       return;
     }
 
-    if(block.slot <= this.latestState.slot) {
+    if(await this.db.block.has(blockHash)) {
+      this.logger.warn(`Block ${blockHash} existed already, no need to process it.`)
+      return;
+    }
+
+    const headBlockRoot = this.forkChoice.head();
+    const headBlock = await this.db.block.get(headBlockRoot);
+    if(block.slot <= headBlock.slot) {
       this.logger.warn(
         `Block ${blockHash.toString("hex")} is in past. ` +
         "Probably fork choice/double propose/processed block. Ignored for now."
       );
       return;
     }
-
 
     await this.processBlock(block, blockHash);
     const nextBlockInQueue = this.blockProcessingQueue.peek();
@@ -326,7 +332,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.db.block.set(blockRoot, block),
       this.db.state.set(block.stateRoot, newState),
     ]);
-    await this.db.setChainHeadRoots(blockRoot, block.stateRoot);
     this.forkChoice.addBlock(block.slot, blockRoot, block.parentRoot, newState.currentJustifiedCheckpoint,
       newState.finalizedCheckpoint);
     await this.applyForkChoiceRule();
