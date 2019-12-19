@@ -19,6 +19,7 @@ import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from 
 
 import {processSlots, stateTransition,
   computeEpochAtSlot,
+  computeStartSlotAtEpoch,
   getAttestingIndices,
   isActiveValidator
   ,getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
@@ -151,12 +152,11 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       return;
     }
 
-    const headBlockRoot = this.forkChoice.head();
-    const headBlock = await this.db.block.get(headBlockRoot);
-    if(block.slot <= headBlock.slot) {
+    const finalizedCheckpoint = this.forkChoice.getFinalized();
+    if(block.slot < computeStartSlotAtEpoch(finalizedCheckpoint.epoch + 1)) {
       this.logger.warn(
-        `Block ${blockHash.toString("hex")} is in past. ` +
-        "Probably fork choice/double propose/processed block. Ignored for now."
+        `Block ${blockHash.toString("hex")} is not after ` +
+        `finalized checkpoint ${finalizedCheckpoint.root.toString("hex")}.`
       );
       return;
     }

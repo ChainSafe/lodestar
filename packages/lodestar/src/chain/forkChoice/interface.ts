@@ -13,4 +13,5 @@ export interface ILMDGHOST {
   addAttestation(blockRootBuf: Hash, attester: ValidatorIndex, weight: Gwei): void;
   head(): Hash;
   getJustified(): Checkpoint;
+  getFinalized(): Checkpoint;
 }
