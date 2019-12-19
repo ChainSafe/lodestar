@@ -14,6 +14,7 @@ export const BASE_REWARDS_PER_EPOCH = 4;
 export const SHUFFLE_ROUND_COUNT = 10; // CUSTOMIZED
 export const MIN_GENESIS_TIME = 1578009600;
 export const MIN_GENESIS_ACTIVE_VALIDATOR_COUNT = 64;
+export const TARGET_AGGREGATORS_PER_COMMITTEE = 16;
 
 // Deposit contract
 export const DEPOSIT_CONTRACT_ADDRESS = 0;

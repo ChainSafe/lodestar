@@ -46,7 +46,7 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
 
 export const registerAttesterDutiesEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
   fastify.get<IQuery, IParams>(
-    "/duties/attester/:epoch",
+    "/duties/:epoch/attester/",
     opts,
     async (request, reply) => {
       const response = (await getAttesterDuties(

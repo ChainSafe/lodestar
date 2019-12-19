@@ -4,22 +4,26 @@
 
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 
-import {BeaconBlock, BeaconState, Fork, Slot} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconState, BLSPubkey, Epoch, Fork, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {Keypair} from "@chainsafe/bls";
+import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {computeEpochAtSlot, DomainType, getDomain} from "../util";
-import {IValidatorDB,ILogger} from "../";
+import {ILogger, IValidatorDB} from "../";
 import {IApiClient} from "../api";
 
 
 export default class BlockProposingService {
-  private config: IBeaconConfig;
-  // @ts-ignore
-  private provider: IApiClient;
-  private keypair: Keypair;
-  private db: IValidatorDB;
-  private logger: ILogger;
+ 
+  private readonly config: IBeaconConfig;
+  private readonly provider: IApiClient;
+  private readonly privateKey: PrivateKey;
+  private readonly publicKey: BLSPubkey;
+  private readonly db: IValidatorDB;
+  private readonly logger: ILogger;
 
+  private nextProposalSlot: Slot|null = null;
+  
+  
   public constructor(
     config: IBeaconConfig,
     keypair: Keypair,
@@ -28,23 +32,40 @@ export default class BlockProposingService {
     logger: ILogger
   ) {
     this.config = config;
-    this.keypair = keypair;
+    this.privateKey = keypair.privateKey;
+    this.publicKey = keypair.publicKey.toBytesCompressed();
     this.provider = provider;
     this.db = db;
     this.logger = logger;
   }
+
+  public onNewEpoch = async (epoch: Epoch) => {
+    const epochProposers = await this.provider.validator.getProposerDuties(epoch);
+    epochProposers.forEach((validatorPubKey, slot) => {
+      if(validatorPubKey.equals(this.publicKey)) {
+        this.nextProposalSlot = slot;
+      }
+    });
+  };
+
+  public onNewSlot = async(slot: Slot) => {
+    if(this.nextProposalSlot === slot) {
+      await this.createAndPublishBlock(slot, (await this.provider.beacon.getFork()).fork);
+    }
+  };
 
   /**
    * IFF a validator is selected construct a block to propose.
    */
   public async createAndPublishBlock(slot: Slot, fork: Fork): Promise<BeaconBlock | null> {
     if(await this.hasProposedAlready(slot)) {
-      this.logger.info(`[Validator] Already proposed block in current epoch: ${computeEpochAtSlot(this.config, slot)}`);
+      this.logger.info(`Already proposed block in current epoch: ${computeEpochAtSlot(this.config, slot)}`);
       return null;
     }
+    this.logger.info(`Validator is proposer at slot ${slot}`);
     const block = await this.provider.validator.produceBlock(
       slot,
-      this.keypair.privateKey.signMessage(
+      this.privateKey.signMessage(
         hashTreeRoot(computeEpochAtSlot(this.config, slot), this.config.types.Epoch),
         // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
         getDomain(this.config, {fork} as BeaconState, DomainType.RANDAO, computeEpochAtSlot(this.config, slot))
@@ -53,7 +74,7 @@ export default class BlockProposingService {
     if(!block) {
       return null;
     }
-    block.signature = this.keypair.privateKey.signMessage(
+    block.signature = this.privateKey.signMessage(
       signingRoot(block, this.config.types.BeaconBlock),
       // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
       getDomain(this.config, {fork} as BeaconState, DomainType.BEACON_PROPOSER, computeEpochAtSlot(this.config, slot))
@@ -72,12 +93,12 @@ export default class BlockProposingService {
 
   private async hasProposedAlready(slot: Slot): Promise<boolean> {
     // get last proposed block from database and check if belongs in same epoch
-    const lastProposedBlock = await this.db.getBlock(this.keypair.publicKey.toBytesCompressed());
+    const lastProposedBlock = await this.db.getBlock(this.publicKey);
     if(!lastProposedBlock) return  false;
     return computeEpochAtSlot(this.config, lastProposedBlock.slot) === computeEpochAtSlot(this.config, slot);
   }
 
   private async storeBlock(block: BeaconBlock): Promise<void> {
-    await this.db.setBlock(this.keypair.publicKey.toBytesCompressed(), block);
+    await this.db.setBlock(this.publicKey, block);
   }
 }

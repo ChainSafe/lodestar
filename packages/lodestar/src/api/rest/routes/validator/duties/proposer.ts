@@ -27,7 +27,7 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
 
 export const registerProposerDutiesEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
   fastify.get<DefaultQuery, IParams>(
-    "/duties/proposer/:epoch",
+    "/duties/:epoch/proposer",
     opts,
     async (request, reply) => {
       const epochProposers = await getEpochProposers(

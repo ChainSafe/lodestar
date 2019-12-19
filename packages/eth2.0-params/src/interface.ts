@@ -13,6 +13,7 @@ export interface IBeaconParams {
   SHUFFLE_ROUND_COUNT: number;
   MIN_GENESIS_TIME: number;
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: number;
+  TARGET_AGGREGATORS_PER_COMMITTEE: number;
 
   // Deposit contract
   DEPOSIT_CONTRACT_ADDRESS: number;

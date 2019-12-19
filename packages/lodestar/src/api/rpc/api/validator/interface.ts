@@ -5,12 +5,12 @@ import {
   Attestation,
   BeaconBlock,
   BLSPubkey,
+  BLSSignature,
   bytes,
+  CommitteeIndex,
   Epoch,
   Slot,
-  ValidatorDuty,
-  ValidatorIndex,
-  CommitteeIndex
+  ValidatorDuty
 } from "@chainsafe/eth2.0-types";
 import {IApi} from "../../../interface";
 
@@ -19,19 +19,11 @@ import {IApi} from "../../../interface";
  */
 export interface IValidatorApi extends IApi {
 
-  /**
-   * Requests the BeaconNode to provide a set of “duties”,
-   * which are actions that should be performed by ValidatorClients.
-   * This API call should be polled at every slot,
-   * to ensure that any chain reorganisations are catered for,
-   * and to ensure that the currently connected BeaconNode is properly synchronised.
-   */
-  getDuties(
-    validatorPublicKeys: BLSPubkey[],
-    epoch: Epoch,
-  ): Promise<ValidatorDuty[]>;
+  getProposerDuties(epoch: Epoch): Promise<Map<Slot, BLSPubkey>>;
 
-  getValidatorIndex(pubKey: BLSPubkey): Promise<ValidatorIndex>;
+  getAttesterDuties(epoch: Epoch, validatorPubKey: BLSPubkey[]): Promise<ValidatorDuty[]>;
+
+  isAggregator(slot: Slot, committeeIndex: CommitteeIndex, slotSignature: BLSSignature): Promise<boolean>;
 
   /**
    * Requests a BeaconNode to produce a valid block,
@@ -45,7 +37,7 @@ export interface IValidatorApi extends IApi {
    * Requests that the BeaconNode produce an IndexedAttestation,
    * with a blank signature field, which the ValidatorClient will then sign.
    */
-  produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, slot: Slot, index: CommitteeIndex):
+  produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, index: CommitteeIndex, slot: Slot):
   Promise<Attestation>;
 
   /**
@@ -59,4 +51,10 @@ export interface IValidatorApi extends IApi {
    * to be incorporated into the beacon chain.
    */
   publishAttestation(attestation: Attestation): Promise<void>;
+
+  publishAggregatedAttestation(
+    aggregated: Attestation, validatorPubKey: BLSPubkey, slotSignature: BLSSignature
+  ): Promise<void>;
+
+  getWireAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]>;
 }
