@@ -17,6 +17,9 @@ export function intToBytes(value: BN | number, length: number): bytes {
   }
 }
 
+/**
+ * Convert byte array in LE to integer.
+ */
 export function bytesToInt(value: bytes): number {
   const length = value.length;
   let result = 0;
