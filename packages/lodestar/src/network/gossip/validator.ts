@@ -6,7 +6,7 @@ import {IBeaconDb} from "../../db";
 import {getAttestationSubnet} from "./utils";
 import {getCurrentSlot, isValidIndexedAttestation, getIndexedAttestation, isValidVoluntaryExit,
   isValidProposerSlashing, isValidAttesterSlashing, isValidBlockHeader, getAttestingIndices, 
-  isAggregator, getDomain, computeEpochAtSlot, getBeaconProposerIndex} from "@chainsafe/eth2.0-state-transition";
+  isAggregator, getDomain, computeEpochAtSlot} from "@chainsafe/eth2.0-state-transition";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 import {hashTreeRoot} from "@chainsafe/ssz";

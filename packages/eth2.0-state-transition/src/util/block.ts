@@ -2,10 +2,10 @@ import bls from "@chainsafe/bls";
 import {signingRoot} from "@chainsafe/ssz";
 
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {BeaconState, BeaconBlock, Validator} from "@chainsafe/eth2.0-types";
+import {BeaconState, BeaconBlock} from "@chainsafe/eth2.0-types";
 import {getDomain} from "./domain";
 import {DomainType} from "../constants";
-import { getBeaconProposerIndex } from "./proposer";
+import {getBeaconProposerIndex} from "./proposer";
 
 export function isValidBlockHeader(
   config: IBeaconConfig,

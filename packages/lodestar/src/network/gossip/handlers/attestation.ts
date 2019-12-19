@@ -37,10 +37,9 @@ export function getCommitteeAttestationHandler(subnet: number, validator: IGossi
           +`subnet: ${subnet}, (${attestation.data.source.epoch}, ${attestation.data.target.epoch})`
       );
 
-      const self = this;
-      validator.isValidIncomingCommitteeAttestation(attestation, subnet).then(function (isValid: boolean) {
+      validator.isValidIncomingCommitteeAttestation(attestation, subnet).then((isValid: boolean) => {
         if (isValid) {
-          self.emit(GossipEvent.ATTESTATION_SUBNET, {attestation, subnet});
+          this.emit(GossipEvent.ATTESTATION_SUBNET, {attestation, subnet});
         }
       });
     } catch (e) {
