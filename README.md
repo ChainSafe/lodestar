@@ -34,28 +34,28 @@ Simple Serialize Type Schema
 Typescript types for Ethereum 2.0 datastructures
 
 [![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-types)](https://www.npmjs.com/package/@chainsafe/eth2.0-types)
-[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-types)
 
 ### [@chainsafe/eth2.0-params](/packages/eth2.0-params)
 Beacon chain parameters
 
 [![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-params)](https://www.npmjs.com/package/@chainsafe/eth2.0-params)
-[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-params)
 
 ### [@chainsafe/eth2.0-utils](/packages/eth2.0-utils)
 Utility methods used throughout Lodestar modules.
 
 [![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-utils)](https://www.npmjs.com/package/@chainsafe/eth2.0-utils)
-[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-utils)
 
 ### [@chainsafe/eth2.0-config](/packages/eth2.0-config)
 Beacon chain configuration
 
 [![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-config)](https://www.npmjs.com/package/@chainsafe/eth2.0-config)
-[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-config)
 
 ### [@chainsafe/eth2.0-state-transition](/packages/eth2.0-state-transition)
