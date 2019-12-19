@@ -676,26 +676,6 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.9.1.tgz#0def64c0447a222688e35eec5ccd235caaeb21dd"
   integrity sha512-YtMS3a9wGxycmqowM3zo7QtqEq3ZFoH20+16zeNfD4MoLVFpiVWfHeOueeDHsSBQu4ZH9qrcULcy3z/qbi/LJw==
 
-"@chainsafe/eth2.0-params@^0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/eth2.0-params/-/eth2.0-params-0.1.0.tgz#23bbaf1b43a050bd9e14ff80863c919f48ecdcce"
-  integrity sha512-yhrc6LgYV+N1GqY1dAMyRZ9nwEBEDbJh7Yaj+ItoIwI4/PKGOcn7g2ym9iL93dvjvD+x4BJ4sYKN7a+cbyaV3g==
-  dependencies:
-    "@chainsafe/eth2.0-types" "^0.1.0"
-    "@types/bn.js" "^4.11.4"
-    bn.js "^4.11.8"
-
-"@chainsafe/eth2.0-types@^0.1.0", "@chainsafe/eth2.0-types@^0.1.1":
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/eth2.0-types/-/eth2.0-types-0.1.1.tgz#36f55e897e32fcb0f3a5089299335c60326c8115"
-  integrity sha512-cgff35Oa5tys6luN1YlbzNDH+aQDMaBDyGcA5q1FO8XG5l6ozffCb0s+79pIjEYPX8UZ5f87vC95QX7Z/GpI/Q==
-  dependencies:
-    "@chainsafe/bit-utils" "^0.1.4"
-    "@chainsafe/eth2.0-params" "^0.1.0"
-    "@chainsafe/ssz-type-schema" "^0.0.1"
-    "@types/bn.js" "^4.11.4"
-    bn.js "^4.11.8"
-
 "@evocateur/libnpmaccess@^3.1.2":
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/@evocateur/libnpmaccess/-/libnpmaccess-3.1.2.tgz#ecf7f6ce6b004e9f942b098d92200be4a4b1c845"
