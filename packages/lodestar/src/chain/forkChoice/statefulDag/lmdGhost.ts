@@ -84,6 +84,7 @@ class Node {
       // this is the only child, propagate itself as best target as far as necessary
       this.bestChild = child;
       let c: Node = child;
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       let p: Node = this;
       while (p) {
         if (c.equals(p.bestChild)) {

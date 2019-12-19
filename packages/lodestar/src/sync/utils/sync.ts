@@ -5,12 +5,12 @@ import {signingRoot} from "@chainsafe/ssz";
 import {IReqResp} from "../../network";
 
 export function isValidChainOfBlocks(config: IBeaconConfig, start: BeaconBlockHeader, blocks: BeaconBlock[]): boolean {
-  let parentRoot = signingRoot(start, config.types.BeaconBlockHeader);
+  let parentRoot = signingRoot(config.types.BeaconBlockHeader, start);
   for(const block of blocks) {
     if(!parentRoot.equals(block.parentRoot)) {
       return false;
     }
-    parentRoot = signingRoot(block, config.types.BeaconBlock);
+    parentRoot = signingRoot(config.types.BeaconBlock, block);
   }
   return true;
 }

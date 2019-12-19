@@ -24,7 +24,7 @@ export function createResponseEvent(id: RequestId): string {
 }
 
 const REQ_PROTOCOL = "/eth2/beacon_chain/req/{method}/{version}/{encoding}";
-export function createRpcProtocol(method: string, encoding: string, version: number = 1): string {
+export function createRpcProtocol(method: string, encoding: string, version = 1): string {
   return REQ_PROTOCOL
     .replace("{method}", method)
     .replace("{encoding}", encoding)
@@ -33,15 +33,15 @@ export function createRpcProtocol(method: string, encoding: string, version: num
 
 // gossip
 
-export function blockTopic(encoding: string = "ssz"): string {
+export function blockTopic(encoding = "ssz"): string {
   return `${BLOCK_TOPIC}/${encoding}`;
 }
 
-export function attestationTopic(encoding: string = "ssz"): string {
+export function attestationTopic(encoding = "ssz"): string {
   return `${ATTESTATION_TOPIC}/${encoding}`;
 }
 
-export function shardSubnetAttestationTopic(shard: Shard, encoding: string = "ssz"): string {
+export function shardSubnetAttestationTopic(shard: Shard, encoding = "ssz"): string {
   return `${SHARD_ATTESTATION_TOPIC.replace("{shard}", String(shard % SHARD_SUBNET_COUNT))}/${encoding}`;
 }
 export function shardAttestationTopic(shard: Shard): string {

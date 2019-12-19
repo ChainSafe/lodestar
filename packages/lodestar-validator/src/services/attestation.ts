@@ -69,10 +69,10 @@ export class AttestationService {
       data: attestation.data
     };
     attestation.signature = this.keypair.privateKey.signMessage(
-      hashTreeRoot(attestationDataAndCustodyBit, this.config.types.AttestationDataAndCustodyBit),
+      hashTreeRoot(this.config.types.AttestationDataAndCustodyBit, attestationDataAndCustodyBit),
       getDomain(
         this.config,
-        {fork} as BeaconState, // eslint-disable-line @typescript-eslint/no-object-literal-type-assertion
+        {fork} as BeaconState,
         DomainType.ATTESTATION,
         attestation.data.target.epoch,
       )

@@ -18,7 +18,7 @@ export function processEth1Data(
   state.eth1DataVotes.push(blockEth1Data);
   let occurances = 0;
   state.eth1DataVotes.forEach((eth1Data) => {
-    if (equals(blockEth1Data, eth1Data, config.types.Eth1Data)) {
+    if (equals(config.types.Eth1Data, blockEth1Data, eth1Data)) {
       occurances++;
     }
   });

@@ -18,13 +18,13 @@
     "build-types": "tsc --incremental --declaration --outDir lib --emitDeclarationOnly",
     "build-web": "webpack --mode production --entry ./lib/web.js --output ./dist/ssz.min.js",
     "check-types": "tsc --incremental --noEmit",
-    "lint": "eslint --color --ext .ts src/ test/",
-    "lint:fix": "eslint --color --fix --ext .ts src/ test/",
+    "lint": "eslint --color --ext .ts src/",
+    "lint:fix": "eslint --color --fix --ext .ts src/",
     "pretest": "yarn check-types",
     "prepublishOnly": "yarn build",
     "test:spec": "nyc -r lcov -e .ts mocha  --colors --timeout 4000 -r ./.babel-register \"test/spec/**/*.test.ts\" && nyc report",
     "test:spec-min": "yarn test:spec",
-    "test:unit": "nyc -e .ts mocha --colors -r ./.babel-register \"test/unit/**/*.test.ts\""
+    "test:unit": "nyc -e .ts mocha --colors -r ts-node/register \"test/unit/**/*.test.ts\""
   },
   "homepage": "https://github.com/chainsafe/ssz-js",
   "keywords": [

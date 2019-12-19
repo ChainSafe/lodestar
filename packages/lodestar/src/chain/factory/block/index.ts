@@ -33,7 +33,7 @@ export async function assembleBlock(
   const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock);
   const block: BeaconBlock = {
     slot,
-    parentRoot: signingRoot(parentHeader, config.types.BeaconBlockHeader),
+    parentRoot: signingRoot(config.types.BeaconBlockHeader, parentHeader),
     // @ts-ignore
     signature: undefined,
     // @ts-ignore
@@ -42,8 +42,8 @@ export async function assembleBlock(
   };
 
   block.stateRoot = hashTreeRoot(
+    config.types.BeaconState,
     stateTransition(config, currentState, block, false, false),
-    config.types.BeaconState
   );
 
   return block;

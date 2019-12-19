@@ -4,7 +4,7 @@
 
 import assert from "assert";
 import {signingRoot} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls";
+import {verify} from "@chainsafe/bls";
 
 import {BeaconState, VoluntaryExit,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -21,7 +21,7 @@ export function processVoluntaryExit(
   config: IBeaconConfig,
   state: BeaconState,
   exit: VoluntaryExit,
-  verifySignature: boolean = true
+  verifySignature = true
 ): void {
   const validator = state.validators[exit.validatorIndex];
   const currentEpoch = getCurrentEpoch(config, state);
@@ -34,9 +34,9 @@ export function processVoluntaryExit(
   // Verify the validator has been active long enough
   assert(currentEpoch >= validator.activationEpoch + config.params.PERSISTENT_COMMITTEE_PERIOD);
   // Verify signature
-  assert(!verifySignature || bls.verify(
+  assert(!verifySignature || verify(
     validator.pubkey,
-    signingRoot(exit, config.types.VoluntaryExit),
+    signingRoot(config.types.VoluntaryExit, exit),
     exit.signature,
     getDomain(config, state, DomainType.VOLUNTARY_EXIT, exit.epoch),
   ));

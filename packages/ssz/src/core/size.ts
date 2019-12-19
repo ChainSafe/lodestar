@@ -43,7 +43,7 @@ export function fixedSize(type: FullSSZType): number {
 // Return the size of a variable-sized type, dependent on the value
 // Will error if a fixed-sized type is given
 /** @ignore */
-export function variableSize(value: SerializableValue, type: FullSSZType): number {
+export function variableSize(type: FullSSZType, value: SerializableValue): number {
   switch (type.type) {
     case Type.bitList:
       return Math.ceil(((value as BitList).bitLength + 1) / 8);
@@ -52,19 +52,19 @@ export function variableSize(value: SerializableValue, type: FullSSZType): numbe
     case Type.list:
       return (value as SerializableArray)
         .map((v) =>
-          size(v, (type as ListType).elementType) +
+          size((type as ListType).elementType, v) +
           (isVariableSizeType(type.elementType) ? BYTES_PER_LENGTH_PREFIX : 0))
         .reduce((a, b) => a + b, 0);
     case Type.vector:
       return (value as SerializableArray)
         .map((v) =>
-          size(v, (type as VectorType).elementType) +
+          size((type as VectorType).elementType, v) +
           (isVariableSizeType(type.elementType) ? BYTES_PER_LENGTH_PREFIX : 0))
         .reduce((a, b) => a + b, 0);
     case Type.container:
       return type.fields
         .map(([fieldName, fieldType]) =>
-          size((value as SerializableObject)[fieldName], fieldType) +
+          size(fieldType, (value as SerializableObject)[fieldName]) +
           (isVariableSizeType(fieldType) ? BYTES_PER_LENGTH_PREFIX : 0))
         .reduce((a, b) => a + b, 0);
     default:
@@ -73,6 +73,6 @@ export function variableSize(value: SerializableValue, type: FullSSZType): numbe
 }
 
 /** @ignore */
-export function size(value: SerializableValue, type: FullSSZType): number {
-  return isVariableSizeType(type) ? variableSize(value, type) : fixedSize(type);
+export function size(type: FullSSZType, value: SerializableValue): number {
+  return isVariableSizeType(type) ? variableSize(type, value) : fixedSize(type);
 }

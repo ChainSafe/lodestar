@@ -33,8 +33,8 @@ export const registerAttestationPublishEndpoint = (fastify: IFastifyServer, modu
       try {
         await modules.opPool.attestations.receive(
           fromJson<Attestation>(
+            modules.config.types.Attestation,
             request.body.attestation,
-            modules.config.types.Attestation
           )
         );
       } catch (e) {

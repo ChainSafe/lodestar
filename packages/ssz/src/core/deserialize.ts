@@ -21,7 +21,8 @@ import {
   BitListType,
   BitVectorType,
   parseType,
-  isVariableSizeType
+  isVariableSizeType,
+  UintImpl
 } from "@chainsafe/ssz-type-schema";
 import {BYTES_PER_LENGTH_PREFIX} from "../util/constants";
 import {fixedSize} from "./size";
@@ -36,65 +37,59 @@ import {toBigIntLE} from "bigint-buffer";
  *
  * // deserialize a number
  * const n: number = deserialize(
- *   data,
- *   "uint32" // "uintN", N == length in bits, N <= 32
+ *   "number32", // "numberN", N == length in bits
+ *   data
  * );
  *
  * // deserialize a BigInt
  * const bi: bigint = deserialize(
+ *   "bigint64", // "bigintN", N == length in bits
  *   data,
- *   "uint64" // "uintN", N == length in bits, N >= 64
  * );
  *
- * // deserialize a number (forced)
- * const m: number = deserialize(
- *   data,
- *   "number64" // "numberN", N == length in bits
- * );
- *
- * // deserialize a BN (forced)
- * const bn: BN = deserialize(data, "bn64");
+ * // deserialize a BN
+ * const bn: BN = deserialize("bn64", data);
  *
  * // deserialize a boolean
- * const b: boolean = deserialize(data, "bool");
+ * const b: boolean = deserialize("bool", data);
  *
  * // deserialize a bit list
  * import {BitList} from "@chainsafe/bit-utils";
- * const bl: BitList = deserialize(data, {
+ * const bl: BitList = deserialize({
  *   elementType: "bool",
  *   maxLength: 10, // max number of bits
- * });
+ * }, data);
  *
  * // deserialize a bit vector
  * import {BitVector} from "@chainsafe/bit-utils";
- * const bv: BitVector = deserialize(data, {
+ * const bv: BitVector = deserialize({
  *   elementType: "bool",
  *   length: 10, // length in bits
- * });
+ * }, data);
  *
  * // deserialize a variable-length byte array, max-length required
- * const buf1: Buffer = deserialize(data, {
- *   elementType: "byte", // "byte", "uint8", or "number8"
+ * const buf1: Buffer = deserialize({
+ *   elementType: "byte", // "byte" or "number8"
  *   maxLength: 10, // max number of bytes
- * });
+ * }, data);
  *
  * // deserialize a fixed-length byte array
  * const buf2: Buffer = serialize(
- *   data,
- *   "bytes2" // "bytesN", N == length in bytes
+ *   "bytes2", // "bytesN", N == length in bytes
+ *   data
  * );
  *
  * // deserialize a variable-length array, max-length required
- * const arr1: number[] = deserialize(data, {
- *   elementType: "uint32",
+ * const arr1: number[] = deserialize({
+ *   elementType: "number32",
  *   maxLength: 10, // max number of elements
- * });
+ * }, data);
  *
  * // deserialize a fixed-length array
- * const arr2: number[] = deserialize([0, 1, 2, 3, 4, 5], {
- *   elementType: "uint32",
+ * const arr2: number[] = deserialize({
+ *   elementType: "number32",
  *   length: 6,
- * });
+ * }, [0, 1, 2, 3, 4, 5]);
  *
  * // deserialize an object
  * interface myData {
@@ -104,20 +99,20 @@ import {toBigIntLE} from "bigint-buffer";
  * }
  * const myDataType: SimpleContainerType = {
  *   fields: [
- *     ["a", "uint16"], // [fieldName, fieldType]
+ *     ["a", "number16"], // [fieldName, fieldType]
  *     ["b", "bool"],
  *     ["c", "bytes96"],
  *   ],
  * };
- * const obj: myData = deserialize(data, myDataType);
+ * const obj: myData = deserialize(myDataType, data);
  * ```
   */
-export function deserialize<T>(data: Buffer, type: AnySSZType<T>): T {
+export function deserialize<T>(type: AnySSZType<T>, data: Buffer): T {
   const _type = parseType(type);
   if (!isVariableSizeType(_type)) {
     assert(fixedSize(_type) === data.length, "Incorrect data length");
   }
-  return _deserialize(data, _type, 0, data.length) as unknown as T;
+  return _deserialize(_type, data, 0, data.length) as unknown as T;
 
 }
 
@@ -128,38 +123,41 @@ export function deserialize<T>(data: Buffer, type: AnySSZType<T>): T {
  * @param start starting index
  * @param end ending index
  */
-export function _deserialize(data: Buffer, type: FullSSZType, start: number, end: number): SerializableValue {
+export function _deserialize(type: FullSSZType, data: Buffer, start: number, end: number): SerializableValue {
   switch (type.type) {
     case Type.uint:
-      return _deserializeUint(data, type, start);
+      return _deserializeUint(type, data, start);
     case Type.bool:
       return _deserializeBool(data, start);
     case Type.bitList:
-      return _deserializeBitList(data, type, start, end);
+      return _deserializeBitList(type, data, start, end);
     case Type.bitVector:
-      return _deserializeBitVector(data, type, start, end);
+      return _deserializeBitVector(type, data, start, end);
     case Type.byteList:
     case Type.byteVector:
-      return _deserializeByteArray(data, type, start, end);
+      return _deserializeByteArray(type, data, start, end);
     case Type.list:
     case Type.vector:
-      return _deserializeArray(data, type, start, end);
+      return _deserializeArray(type, data, start, end);
     case Type.container:
-      return _deserializeObject(data, type, start, end);
+      return _deserializeObject(type, data, start, end);
   }
 }
 
 /** @ignore */
-function _deserializeUint(data: Buffer, type: UintType, start: number): Uint {
+function _deserializeUint(type: UintType, data: Buffer, start: number): Uint {
   const offset = start + type.byteLength;
   const uintData = data.slice(start, offset);
-  if (type.use === "number" && type.byteLength > 6 && uintData.equals(Buffer.alloc(type.byteLength, 255))) {
-    return Infinity;
-  } else if (type.use === "bn") {
-    return new BN(uintData, 16, "le");
-  } else {
-    const bi = toBigIntLE(uintData);
-    return (type.use == "number" || type.byteLength <= 6) ? Number(bi) : bi;
+  switch (type.use) {
+    case UintImpl.bn:
+      return new BN(uintData, 16, "le");
+    case UintImpl.bigint:
+      return toBigIntLE(uintData);
+    case UintImpl.number:
+      if (type.byteLength > 6 && uintData.equals(Buffer.alloc(type.byteLength, 255))) {
+        return Infinity;
+      }
+      return Number(toBigIntLE(uintData));
   }
 }
 
@@ -169,19 +167,19 @@ function _deserializeBool(data: Buffer, start: number): Bool {
 }
 
 /** @ignore */
-function _deserializeBitList(data: Buffer, type: BitListType, start: number, end: number): BitList {
+function _deserializeBitList(type: BitListType, data: Buffer, start: number, end: number): BitList {
   const bitlist = BitList.deserialize(data.slice(start, end));
   assert(bitlist.bitLength <= type.maxLength, "BitList length greater than max length");
   return bitlist;
 }
 
 /** @ignore */
-function _deserializeBitVector(data: Buffer, type: BitVectorType, start: number, end: number): BitVector {
+function _deserializeBitVector(type: BitVectorType, data: Buffer, start: number, end: number): BitVector {
   return BitVector.fromBitfield(data.slice(start, end), type.length);
 }
 
 /** @ignore */
-function _deserializeByteArray(data: Buffer, type: BytesType, start: number, end: number): Bytes {
+function _deserializeByteArray(type: BytesType, data: Buffer, start: number, end: number): Bytes {
   const length = end - start;
   if (type.type === Type.byteList) {
     assert(length <= type.maxLength, "Byte list length greater than max length");
@@ -192,7 +190,7 @@ function _deserializeByteArray(data: Buffer, type: BytesType, start: number, end
 }
 
 /** @ignore */
-function _deserializeArray(data: Buffer, type: ArrayType, start: number, end: number): SerializableArray {
+function _deserializeArray(type: ArrayType, data: Buffer, start: number, end: number): SerializableArray {
   const value: SerializableArray = [];
   if (start === end) {
     return value;
@@ -215,7 +213,7 @@ function _deserializeArray(data: Buffer, type: ArrayType, start: number, end: nu
         : start + data.readUIntLE(nextIndex, BYTES_PER_LENGTH_PREFIX);
       assert(currentOffset <= nextOffset, "Offsets must be increasing");
       value.push(
-        _deserialize(data, type.elementType, currentOffset, nextOffset)
+        _deserialize(type.elementType, data, currentOffset, nextOffset)
       );
       currentIndex = nextIndex;
       currentOffset = nextOffset;
@@ -229,7 +227,7 @@ function _deserializeArray(data: Buffer, type: ArrayType, start: number, end: nu
     for (; index < end;) {
       nextIndex = index + elementSize;
       value.push(
-        _deserialize(data, type.elementType, index, nextIndex)
+        _deserialize(type.elementType, data, index, nextIndex)
       );
       index = nextIndex;
     }
@@ -244,7 +242,7 @@ function _deserializeArray(data: Buffer, type: ArrayType, start: number, end: nu
 }
 
 /** @ignore */
-function _deserializeObject(data: Buffer, type: ContainerType, start: number, end: number): SerializableObject {
+function _deserializeObject(type: ContainerType, data: Buffer, start: number, end: number): SerializableObject {
   let currentIndex = start;
   let nextIndex = currentIndex;
   const value: SerializableObject = {};
@@ -272,12 +270,12 @@ function _deserializeObject(data: Buffer, type: ContainerType, start: number, en
     if (fieldSize === false) { // variable-sized field
       assert(offsets[offsetIndex] <= end, "Offset out of bounds");
       assert(offsets[offsetIndex] <= offsets[offsetIndex + 1], "Offsets must be increasing");
-      value[fieldName] = _deserialize(data, fieldType, offsets[offsetIndex], offsets[offsetIndex + 1]);
+      value[fieldName] = _deserialize(fieldType, data, offsets[offsetIndex], offsets[offsetIndex + 1]);
       offsetIndex++;
       currentIndex += BYTES_PER_LENGTH_PREFIX;
     } else { // fixed-sized field
       nextIndex = currentIndex + fieldSize;
-      value[fieldName] = _deserialize(data, fieldType, currentIndex, nextIndex);
+      value[fieldName] = _deserialize(fieldType, data, currentIndex, nextIndex);
       currentIndex = nextIndex;
     }
   });

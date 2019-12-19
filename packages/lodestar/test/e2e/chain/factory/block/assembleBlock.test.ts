@@ -75,9 +75,9 @@ describe("produce block", function () {
       latestBlockHeader: parentHeader
     });
     const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
-    tree.add(0, hashTreeRoot(generateDeposit().data, config.types.DepositData));
+    tree.add(0, hashTreeRoot(config.types.DepositData, generateDeposit().data));
     dbStub.block.getChainHead.resolves(parentBlock);
-    dbStub.state.get.resolves(clone(state, config.types.BeaconState));
+    dbStub.state.get.resolves(clone(config.types.BeaconState, state));
     dbStub.block.get.withArgs(chainStub.forkChoice.head()).resolves(parentBlock);
     dbStub.merkleTree.getProgressiveMerkleTree.resolves(tree);
     dbStub.proposerSlashing.getAll.resolves([]);

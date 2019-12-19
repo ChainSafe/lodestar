@@ -14,19 +14,18 @@
     "@babel/plugin-proposal-class-properties": "^7.3.3",
     "@babel/plugin-proposal-object-rest-spread": "^7.3.2",
     "@babel/plugin-syntax-bigint": "^7.4.4",
-    "@babel/plugin-transform-runtime": "^7.3.4",
     "@babel/preset-env": "^7.3.1",
     "@babel/preset-typescript": "^7.3.3",
     "@babel/register": "^7.0.0",
-    "@chainsafe/eth2.0-spec-test-util": "0.4.1",
+    "@chainsafe/eth2.0-spec-test-util": "0.4.2",
     "@mpetrunic/eslint-import-resolver-lerna": "1.0.0",
     "@types/chai": "^4.1.7",
     "@types/chai-as-promised": "^7.1.0",
     "@types/mocha": "^5.2.5",
     "@types/node": "^12.0.10",
     "@types/sinon": "^7.0.11",
-    "@typescript-eslint/eslint-plugin": "^1.3.0",
-    "@typescript-eslint/parser": "^1.3.0",
+    "@typescript-eslint/eslint-plugin": "2.10.0",
+    "@typescript-eslint/parser": "2.10.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "codecov": "^3.1.0",
@@ -37,7 +36,7 @@
     "nyc": "^14.1.1",
     "sinon": "^7.2.7",
     "supertest": "^4.0.2",
-    "ts-node": "^8.3.0",
+    "ts-node": "^8.5.4",
     "typedoc": "^0.15.0",
     "typedoc-plugin-external-module-name": "^2.1.0",
     "typedoc-plugin-internal-external": "^2.0.2",
@@ -47,7 +46,5 @@
   },
   "optionalDependencies": {
     "@chainsafe/eth2-spec-tests": "0.8.3"
-  },
-  "dependencies": {
   }
 }

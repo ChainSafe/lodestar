@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/eth2.0-spec-test-util",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Spec test suite generator from yaml test files",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -48,8 +48,6 @@
     "camelcase": "^5.3.1",
     "chai": "^4.2.0",
     "deepmerge": "^4.0.0",
-    "chai": "^4.2.0",
-    "mocha": "^6.2.0",
     "js-yaml": "^3.13.1",
     "mocha": "^6.2.0",
     "v8-profiler-next": "^1.1.1"

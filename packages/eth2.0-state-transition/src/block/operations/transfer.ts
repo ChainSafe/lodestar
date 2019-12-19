@@ -4,7 +4,7 @@
 
 import assert from "assert";
 import {hash, signingRoot} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls";
+import {verify} from "@chainsafe/bls";
 
 import {BeaconState, Transfer,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -21,7 +21,7 @@ export function processTransfer(
   config: IBeaconConfig,
   state: BeaconState,
   transfer: Transfer,
-  verifySignature: boolean = true
+  verifySignature = true
 ): void {
   // Verify the balance the covers amount and fee
   const senderBalance = state.balances[transfer.sender];
@@ -41,9 +41,9 @@ export function processTransfer(
   assert(state.validators[transfer.sender].withdrawalCredentials.equals(
     Buffer.concat([config.params.BLS_WITHDRAWAL_PREFIX_BYTE, hash(transfer.pubkey).slice(1)])));
   // Verify that the signature is valid
-  assert(!verifySignature || bls.verify(
+  assert(!verifySignature || verify(
     transfer.pubkey,
-    signingRoot(transfer, config.types.Transfer),
+    signingRoot(config.types.Transfer, transfer),
     transfer.signature,
     getDomain(config, state, DomainType.TRANSFER),
   ));

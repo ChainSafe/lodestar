@@ -21,8 +21,8 @@ export function processBlock(
   config: IBeaconConfig,
   state: BeaconState,
   block: BeaconBlock,
-  verifyProposer: boolean = true,
-  verifySignatures: boolean = true
+  verifyProposer = true,
+  verifySignatures = true
 ): void {
   // block header
   processBlockHeader(config, state, block, verifyProposer);

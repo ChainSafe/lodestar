@@ -43,13 +43,13 @@ function serializeToJson(value: any): any {
   return value;
 }
 
-export function fromJson<T>(value: object, type: AnySSZType): T {
+export function fromJson<T>(type: AnySSZType, value: object): T {
   value = objectToCamelCase({...value});
-  return expandJsonValue(value, parseType(type));
+  return expandJsonValue(parseType(type), value);
 }
 
 
-function expandJsonValue(value: any, type: FullSSZType): any {
+function expandJsonValue(type: FullSSZType, value: any): any {
   switch (type.type) {
     case Type.uint:
       if (type.use === "bn") {
@@ -71,10 +71,10 @@ function expandJsonValue(value: any, type: FullSSZType): any {
       return Buffer.from(value.slice(2), "hex");
     case Type.list:
     case Type.vector:
-      return value.map((element: any) => expandJsonValue(element, type.elementType));
+      return value.map((element: any) => expandJsonValue(type.elementType, element));
     case Type.container:
       type.fields.forEach(([fieldName, fieldType]) => {
-        value[fieldName] = expandJsonValue(value[fieldName], parseType(fieldType));
+        value[fieldName] = expandJsonValue(parseType(fieldType), value[fieldName]);
       });
       return value;
   }

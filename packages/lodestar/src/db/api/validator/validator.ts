@@ -22,13 +22,13 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
     if(!data) {
       return null;
     }
-    return deserialize(data, this.config.types.BeaconBlock);
+    return deserialize(this.config.types.BeaconBlock, data);
   }
 
   public async setBlock(pubKey: BLSPubkey,  block: BeaconBlock): Promise<void> {
     await this.db.put(
       encodeKey(Bucket.lastProposedBlock, pubKey.toString("hex")),
-      serialize(block, this.config.types.BeaconBlock)
+      serialize(this.config.types.BeaconBlock, block)
     );
   }
 
@@ -40,13 +40,13 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
       gt: encodeKey(Bucket.proposedAttestations, "" + pubKey.toString("hex") + options.gt),
       lt: encodeKey(Bucket.proposedAttestations, "" + this.incrementPubKey(pubKey) + options.lt)
     });
-    return data.map((data) => deserialize(data, this.config.types.Attestation));
+    return data.map((data) => deserialize(this.config.types.Attestation, data));
   }
 
   public async setAttestation(pubKey: BLSPubkey, attestation: Attestation): Promise<void> {
     await this.db.put(
       encodeKey(Bucket.proposedAttestations, "" + pubKey.toString("hex") + attestation.data.target.epoch),
-      serialize(attestation, this.config.types.Attestation)
+      serialize(this.config.types.Attestation, attestation)
     );
   }
 

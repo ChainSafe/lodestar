@@ -33,7 +33,7 @@ export function processSlots(
 
 function processSlot(config: IBeaconConfig, state: BeaconState): void {
   // Cache state root
-  const previousStateRoot = hashTreeRoot(state, config.types.BeaconState);
+  const previousStateRoot = hashTreeRoot(config.types.BeaconState, state);
   state.stateRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousStateRoot;
 
   // Cache latest block header state root
@@ -42,6 +42,6 @@ function processSlot(config: IBeaconConfig, state: BeaconState): void {
   }
 
   // Cache block root
-  const previousBlockRoot = signingRoot(state.latestBlockHeader, config.types.BeaconBlockHeader);
+  const previousBlockRoot = signingRoot(config.types.BeaconBlockHeader, state.latestBlockHeader);
   state.blockRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousBlockRoot;
 }

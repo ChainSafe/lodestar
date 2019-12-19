@@ -44,7 +44,7 @@ export function getTemporaryBlockHeader(config: IBeaconConfig, block: BeaconBloc
     slot: block.slot,
     parentRoot: block.parentRoot,
     stateRoot: ZERO_HASH,
-    bodyRoot: hashTreeRoot(block.body, config.types.BeaconBlockBody),
+    bodyRoot: hashTreeRoot(config.types.BeaconBlockBody, block.body),
     signature: EMPTY_SIGNATURE,
   };
 }
@@ -58,6 +58,6 @@ export function blockToHeader(config: IBeaconConfig, block: BeaconBlock): Beacon
     signature: block.signature,
     slot: block.slot,
     parentRoot: block.parentRoot,
-    bodyRoot: hashTreeRoot(block.body, config.types.BeaconBlockBody),
+    bodyRoot: hashTreeRoot(config.types.BeaconBlockBody, block.body),
   };
 }

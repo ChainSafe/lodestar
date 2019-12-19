@@ -60,7 +60,7 @@ export class RegularSync {
   }
 
   public receiveBlock = async (block: BeaconBlock): Promise<void> => {
-    const root = hashTreeRoot(block, this.config.types.BeaconBlock);
+    const root = hashTreeRoot(this.config.types.BeaconBlock, block);
 
     // skip block if its a known bad block
     if (await this.db.block.isBadBlock(root)) {
@@ -75,7 +75,7 @@ export class RegularSync {
 
   public receiveAttestation = async (attestation: Attestation): Promise<void> => {
     // skip attestation if it already exists
-    const root = hashTreeRoot(attestation, this.config.types.Attestation);
+    const root = hashTreeRoot(this.config.types.Attestation, attestation);
     if (await this.db.attestation.has(root as Buffer)) {
       return;
     }

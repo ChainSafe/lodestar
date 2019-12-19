@@ -26,7 +26,7 @@ export function processAttestation(
   config: IBeaconConfig,
   state: BeaconState,
   attestation: Attestation,
-  verifySignature: boolean = true
+  verifySignature = true
 ): void {
   const currentEpoch = getCurrentEpoch(config, state);
   const previousEpoch = getPreviousEpoch(config, state);
@@ -53,17 +53,17 @@ export function processAttestation(
 
   let parentCrosslink: Crosslink;
   if (data.target.epoch === currentEpoch) {
-    assert(equals(data.source, state.currentJustifiedCheckpoint, config.types.Checkpoint));
+    assert(equals(config.types.Checkpoint, data.source, state.currentJustifiedCheckpoint));
     parentCrosslink = state.currentCrosslinks[data.crosslink.shard];
     state.currentEpochAttestations.push(pendingAttestation);
   } else {
-    assert(equals(data.source, state.previousJustifiedCheckpoint, config.types.Checkpoint));
+    assert(equals(config.types.Checkpoint, data.source, state.previousJustifiedCheckpoint));
     parentCrosslink = state.previousCrosslinks[data.crosslink.shard];
     state.previousEpochAttestations.push(pendingAttestation);
   }
 
   // Check crosslink against expected parent crosslink
-  assert(data.crosslink.parentRoot.equals(hashTreeRoot(parentCrosslink, config.types.Crosslink)));
+  assert(data.crosslink.parentRoot.equals(hashTreeRoot(config.types.Crosslink, parentCrosslink)));
   assert(data.crosslink.startEpoch == parentCrosslink.endEpoch);
   assert(data.crosslink.endEpoch == Math.min(
     data.target.epoch,
