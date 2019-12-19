@@ -76,10 +76,10 @@ function _equals(type: FullSSZType, value1: any, value2: any): boolean {
       return value1.equals(value2);
     case Type.list:
       return value1.length === value2.length &&
-        value1.every((element1: any, i: number) => equals(type.elementType, element1, value2[i]));
+        value1.every((element1: any, i: number) => _equals(type.elementType, element1, value2[i]));
     case Type.vector:
-      return value1.every((element1: any, i: number) => equals(type.elementType, element1, value2[i]));
+      return value1.every((element1: any, i: number) => _equals(type.elementType, element1, value2[i]));
     case Type.container:
-      return type.fields.every(([fieldName, fieldType]) => equals(fieldType, value1[fieldName], value2[fieldName]));
+      return type.fields.every(([fieldName, fieldType]) => _equals(fieldType, value1[fieldName], value2[fieldName]));
   }
 }
