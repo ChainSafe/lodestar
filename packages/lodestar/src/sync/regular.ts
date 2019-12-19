@@ -24,7 +24,7 @@ export class RegularSync {
   private opPool: OpPool;
   private logger: ILogger;
 
-  public constructor(opts: ISyncOptions, modules: IRegularSyncModules) {
+  public constructor(opts: Partial<ISyncOptions>, modules: IRegularSyncModules) {
     this.config = modules.config;
     this.db = modules.db;
     this.chain = modules.chain;

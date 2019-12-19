@@ -8,8 +8,7 @@ import {deserializeGossipMessage, getGossipTopic} from "../utils";
 import {VoluntaryExit} from "@chainsafe/eth2.0-types";
 import {GossipEvent} from "../constants";
 import {serialize} from "@chainsafe/ssz";
-//@ts-ignore
-import promisify from "promisify-es6";
+import {promisify} from "es6-promisify";
 
 export function getIncomingVoluntaryExitHandler(validator: IGossipMessageValidator): GossipHandlerFn {
   return async function handleIncomingVoluntaryExit(this: Gossip, msg: IGossipMessage): Promise<void> {
@@ -28,8 +27,8 @@ export function getIncomingVoluntaryExitHandler(validator: IGossipMessageValidat
 }
 
 export async function publishVoluntaryExit(this: Gossip, voluntaryExit: VoluntaryExit): Promise<void> {
-  await promisify(this.pubsub.publish.bind(this.pubsub))(
-    getGossipTopic(GossipEvent.VOLUNTARY_EXIT), serialize(voluntaryExit, this.config.types.VoluntaryExit));
+  await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
+    getGossipTopic(GossipEvent.VOLUNTARY_EXIT), serialize(this.config.types.VoluntaryExit, voluntaryExit));
   this.logger.verbose(
     `Publishing voluntary exit for validator #${voluntaryExit.validatorIndex}`
   );

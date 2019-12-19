@@ -4,9 +4,8 @@
 
 import PeerId from "peer-id";
 import PeerInfo from "peer-info";
-//@ts-ignore
-import promisify from "promisify-es6";
-import {RequestId,} from "../constants";
+import {promisify} from "es6-promisify";
+import {RequestId} from "../constants";
 
 // req/resp
 
@@ -23,7 +22,7 @@ export function createResponseEvent(id: RequestId): string {
 }
 
 const REQ_PROTOCOL = "/eth2/beacon_chain/req/{method}/{version}/{encoding}";
-export function createRpcProtocol(method: string, encoding: string, version: number = 1): string {
+export function createRpcProtocol(method: string, encoding: string, version = 1): string {
   return REQ_PROTOCOL
     .replace("{method}", method)
     .replace("{encoding}", encoding)
@@ -36,13 +35,15 @@ export function createRpcProtocol(method: string, encoding: string, version: num
  * Return a fresh PeerInfo instance
  */
 export async function createPeerInfo(peerId: PeerId): Promise<PeerInfo> {
-  return await promisify(PeerInfo.create)(peerId);
+  return new PeerInfo(peerId);
 }
 
 /**
  * Return a fresh PeerId instance
  */
 export async function createPeerId(): Promise<PeerId> {
+  //keyType is missing in types
+  // @ts-ignore
   return await promisify(PeerId.create)({bits: 256, keyType: "secp256k1"});
 }
 

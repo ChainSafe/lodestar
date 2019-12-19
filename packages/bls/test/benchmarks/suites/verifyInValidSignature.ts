@@ -27,6 +27,7 @@ export function verifyInValidSignatureBenchmark(dir: string): BenchSuite {
   };
 
   return {
+    name: FUNCTION_NAME,
     testFunctions: [verifyInValidSignature],
     setup: function() {
       const {Keypair} = require("../../../src");

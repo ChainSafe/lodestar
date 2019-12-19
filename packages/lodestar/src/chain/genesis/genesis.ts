@@ -27,10 +27,8 @@ import {
   getTemporaryBlockHeader,
   processDeposit
 } from "@chainsafe/eth2.0-state-transition";
-import {hashTreeRoot} from "@chainsafe/ssz";
-
-import {createValue} from "../../util/createValue";
-import {bnMin} from "@chainsafe/eth2.0-utils";
+import {createValue, hashTreeRoot} from "@chainsafe/ssz";
+import {bigIntMin} from "@chainsafe/eth2.0-utils";
 
 export function initializeBeaconStateFromEth1(
   config: IBeaconConfig,
@@ -55,21 +53,21 @@ export function initializeBeaconStateFromEth1(
   const leaves = deposits.map((deposit) => deposit.data);
   deposits.forEach((deposit, index) => {
     const depositDataList = leaves.slice(0, index + 1);
-    state.eth1Data.depositRoot = hashTreeRoot(depositDataList, {
+    state.eth1Data.depositRoot = hashTreeRoot({
       elementType: config.types.DepositData,
       maxLength: Math.pow(2, DEPOSIT_CONTRACT_TREE_DEPTH),
-    });
+    }, depositDataList);
     processDeposit(config, state, deposit);
   });
 
   // Process activations
   state.validators.forEach((validator, index) => {
     const balance = state.balances[index];
-    validator.effectiveBalance = bnMin(
-      balance.sub(balance.mod(config.params.EFFECTIVE_BALANCE_INCREMENT)),
+    validator.effectiveBalance = bigIntMin(
+      balance - (balance % config.params.EFFECTIVE_BALANCE_INCREMENT),
       config.params.MAX_EFFECTIVE_BALANCE
     );
-    if(validator.effectiveBalance.eq(config.params.MAX_EFFECTIVE_BALANCE)) {
+    if(validator.effectiveBalance === config.params.MAX_EFFECTIVE_BALANCE) {
       validator.activationEligibilityEpoch = config.params.GENESIS_EPOCH;
       validator.activationEpoch = config.params.GENESIS_EPOCH;
     }

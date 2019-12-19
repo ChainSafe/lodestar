@@ -2,8 +2,6 @@
  * @module params/presets/minimal
  */
 
-import BN from "bn.js";
-
 // Misc
 export const MAX_COMMITTEES_PER_SLOT = 4; // Just 4 committees for slot for testing purposes
 export const TARGET_COMMITTEE_SIZE = 4; // CUSTOMIZED
@@ -20,10 +18,10 @@ export const DEPOSIT_CONTRACT_ADDRESS = 0;
 export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
 
 // Gwei Values
-export const MIN_DEPOSIT_AMOUNT = new BN("1000000000"); // 1,000,000,000 Gwei
-export const MAX_EFFECTIVE_BALANCE = new BN("32000000000"); // 32,000,000,000 Gwei
-export const EJECTION_BALANCE = new BN("16000000000"); // 16,000,000,000 Gwei
-export const EFFECTIVE_BALANCE_INCREMENT = new BN("1000000000"); // 1,000,000,000 Gwei
+export const MIN_DEPOSIT_AMOUNT = BigInt("1000000000"); // 1,000,000,000 Gwei
+export const MAX_EFFECTIVE_BALANCE = BigInt("32000000000"); // 32,000,000,000 Gwei
+export const EJECTION_BALANCE = BigInt("16000000000"); // 16,000,000,000 Gwei
+export const EFFECTIVE_BALANCE_INCREMENT = BigInt("1000000000"); // 1,000,000,000 Gwei
 
 // Initial values
 export const GENESIS_SLOT = 0;
@@ -58,7 +56,7 @@ export const VALIDATOR_REGISTRY_LIMIT = 1099511627776;
 export const BASE_REWARD_FACTOR = 64;
 export const WHISTLEBLOWING_REWARD_QUOTIENT = 512; // 512
 export const PROPOSER_REWARD_QUOTIENT = 8; // 8
-export const INACTIVITY_PENALTY_QUOTIENT = new BN(2 ** 25); // 33,554,432
+export const INACTIVITY_PENALTY_QUOTIENT = 2n ** 25n; // 33,554,432
 export const MIN_SLASHING_PENALTY_QUOTIENT = 32; // 3EPOCHS_PER_SLASHINGS_VECTOR2
 
 // Max operations per block

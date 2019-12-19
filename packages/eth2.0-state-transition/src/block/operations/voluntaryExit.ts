@@ -17,9 +17,10 @@ import {initiateValidatorExit, isValidVoluntaryExit,} from "../../util";
 export function processVoluntaryExit(
   config: IBeaconConfig,
   state: BeaconState,
-  exit: VoluntaryExit
+  exit: VoluntaryExit,
+  verifySignature = true
 ): void {
-  assert(isValidVoluntaryExit(config, state, exit));
+  assert(isValidVoluntaryExit(config, state, exit, verifySignature));
   // Initiate exit
   initiateValidatorExit(config, state, exit.validatorIndex);
 }

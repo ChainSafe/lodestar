@@ -1,6 +1,5 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import BN from "bn.js";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 
 import {Method} from "../../../src/constants";
@@ -16,6 +15,7 @@ import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {generateState} from "../../utils/state";
 import {BlockRepository, ChainRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
+import { IGossipMessageValidator } from "../../../src/network/gossip/interface";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -28,17 +28,18 @@ const opts: INetworkOptions = {
 };
 
 describe("[sync] rpc", function () {
-  this.timeout(20000)
+  this.timeout(20000);
   const sandbox = sinon.createSandbox();
-  let logger = new WinstonLogger();
+  const logger = new WinstonLogger();
   logger.silent = true;
   const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false}, {logger});
 
   let rpcA: SyncReqResp, netA: Libp2pNetwork, repsA: ReputationStore;
   let rpcB: SyncReqResp, netB: Libp2pNetwork, repsB: ReputationStore;
+  const validator: IGossipMessageValidator = {} as unknown as IGossipMessageValidator;
   beforeEach(async () => {
-    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics});
-    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics});
+    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator});
+    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator});
     await Promise.all([
       netA.start(),
       netB.start(),
@@ -47,7 +48,7 @@ describe("[sync] rpc", function () {
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
-      networkId: new BN(0),
+      networkId: 0n,
     });
     const state = generateState();
     // @ts-ignore

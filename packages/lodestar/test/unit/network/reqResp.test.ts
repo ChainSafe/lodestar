@@ -1,6 +1,6 @@
 import {assert} from "chai";
-// @ts-ignore
-import promisify from "promisify-es6";
+import {promisify} from "es6-promisify";
+
 import {Status, ResponseBody} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ReqResp} from "../../../src/network/reqResp";
@@ -9,6 +9,7 @@ import {createNode} from "./util";
 import {NodejsNode} from "../../../src/network/nodejs";
 import {ILogger, WinstonLogger} from "../../../src/logger";
 import {INetworkOptions} from "../../../src/network/options";
+import PeerInfo from "peer-info";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -60,8 +61,7 @@ describe("[network] rpc", () => {
 
   it("can send/receive messages from connected peers", async function () {
     this.timeout(6000);
-    // @ts-ignore
-    await promisify(nodeA.dial.bind(nodeA))(nodeB.peerInfo);
+    await promisify<void, PeerInfo>(nodeA.dial.bind(nodeA))(nodeB.peerInfo);
     try {
       await new Promise((resolve, reject) => {
         const t = setTimeout(reject, 2000);
@@ -74,7 +74,7 @@ describe("[network] rpc", () => {
     } catch (e) {
       assert.fail(e, null, "connection event not triggered");
     }
-    // send hello from A to B, await hello response
+    // send status from A to B, await status response
     rpcB.once("request", (peerInfo, method, id, body) => {
       setTimeout(() => {
         rpcB.sendResponse(id, null, body as ResponseBody);
@@ -94,7 +94,7 @@ describe("[network] rpc", () => {
     } catch (e) {
       assert.fail("status not received");
     }
-    // send hello from B to A, await hello response
+    // send status from B to A, await status response
     rpcA.once("request", (peerInfo, method, id, body) => {
       setTimeout(() => {
         rpcA.sendResponse(id, null, body as ResponseBody);

@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/eth2.0-spec-test-util",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Spec test suite generator from yaml test files",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -11,7 +11,9 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
-    "lib"
+    "lib/**/*.js",
+    "lib/**/*.js.map",
+    "lib/**/*.d.ts"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
@@ -41,20 +43,16 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/eth2.0-utils": "^0.0.1",
+    "@chainsafe/eth2.0-utils": "^0.1.0",
     "@chainsafe/ssz": "^0.5.2",
-    "bn.js": "^5.0.0",
     "camelcase": "^5.3.1",
     "chai": "^4.2.0",
     "deepmerge": "^4.0.0",
-    "chai": "^4.2.0",
-    "mocha": "^6.2.0",
     "js-yaml": "^3.13.1",
     "mocha": "^6.2.0",
     "v8-profiler-next": "^1.1.1"
   },
   "devDependencies": {
-    "@types/bn.js": "^4.11.5",
     "@types/camelcase": "^5.2.0",
     "@types/chai": "^4.1.7",
     "@types/deepmerge": "^2.2.0",

@@ -2,7 +2,6 @@
  * @module sync
  */
 
-import BN from "bn.js";
 import PeerInfo from "peer-info";
 import {
   BeaconBlocksByRangeRequest,
@@ -70,7 +69,7 @@ export class SyncReqResp implements ISyncReqResp {
     this.network.reqResp.removeListener("request", this.onRequest);
     await Promise.all(
       this.network.getPeers().map((peerInfo) =>
-        this.network.reqResp.goodbye(peerInfo, new BN(0))));
+        this.network.reqResp.goodbye(peerInfo, 0n)));
   }
 
   public onRequest = async (
@@ -94,12 +93,12 @@ export class SyncReqResp implements ISyncReqResp {
   };
 
   public async onStatus(peerInfo: PeerInfo, id: RequestId, request: Status): Promise<void> {
-    // set hello on peer
+    // set status on peer
     this.reps.get(peerInfo.id.toB58String()).latestStatus = request;
-    // send hello response
+    // send status response
     try {
-      const hello = await this.createStatus();
-      this.network.reqResp.sendResponse(id, null, hello);
+      const status = await this.createStatus();
+      this.network.reqResp.sendResponse(id, null, status);
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);
     }
@@ -117,12 +116,8 @@ export class SyncReqResp implements ISyncReqResp {
   ): Promise<void> {
     try {
       const response: BeaconBlocksByRangeResponse = [];
-      for (let slot = request.startSlot; slot < request.startSlot + request.count; slot++) {
-        const block = await this.db.block.getBlockBySlot(slot);
-        if (block) {
-          response.push(block);
-        }
-      }
+      const blocks = await this.db.blockArchive.getAllBetween(request.startSlot - 1, request.startSlot + request.count);
+      response.push(...blocks);
       this.network.reqResp.sendResponse(id, null, response);
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);

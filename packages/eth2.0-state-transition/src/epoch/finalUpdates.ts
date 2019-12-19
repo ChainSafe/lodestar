@@ -3,7 +3,6 @@
  */
 
 import {hashTreeRoot} from "@chainsafe/ssz";
-import BN from "bn.js";
 
 import {BeaconState, HistoricalBatch} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -11,7 +10,7 @@ import {
   getCurrentEpoch,
   getRandaoMix
 } from "../util";
-import {bnMin, intDiv} from "@chainsafe/eth2.0-utils";
+import {bigIntMin, intDiv} from "@chainsafe/eth2.0-utils";
 
 
 export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): void {
@@ -24,18 +23,18 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
   // Update effective balances with hysteresis
   state.validators.forEach((validator, index) => {
     const balance = state.balances[index];
-    const HALF_INCREMENT = config.params.EFFECTIVE_BALANCE_INCREMENT.div(new BN(2));
+    const HALF_INCREMENT = config.params.EFFECTIVE_BALANCE_INCREMENT / 2n;
     if (
-      balance.lt(validator.effectiveBalance) ||
-      validator.effectiveBalance.add(HALF_INCREMENT.muln(3)).lt(balance)
+      (balance < validator.effectiveBalance) ||
+      (validator.effectiveBalance + (HALF_INCREMENT*3n)) < balance
     ) {
-      validator.effectiveBalance = bnMin(
-        balance.sub(balance.mod(config.params.EFFECTIVE_BALANCE_INCREMENT)),
+      validator.effectiveBalance = bigIntMin(
+        balance - (balance % config.params.EFFECTIVE_BALANCE_INCREMENT),
         config.params.MAX_EFFECTIVE_BALANCE);
     }
   });
   // Reset slashings
-  state.slashings[nextEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] = new BN(0);
+  state.slashings[nextEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] = 0n;
   // Set randao mix
   state.randaoMixes[nextEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR] =
     getRandaoMix(config, state, currentEpoch);
@@ -45,7 +44,7 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
       blockRoots: state.blockRoots,
       stateRoots: state.stateRoots,
     };
-    state.historicalRoots.push(hashTreeRoot(historicalBatch, config.types.HistoricalBatch));
+    state.historicalRoots.push(hashTreeRoot(config.types.HistoricalBatch, historicalBatch));
   }
   // Rotate current/previous epoch attestations
   state.previousEpochAttestations = state.currentEpochAttestations;

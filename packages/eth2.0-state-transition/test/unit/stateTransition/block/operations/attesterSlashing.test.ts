@@ -1,13 +1,12 @@
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
-
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as utils from "../../../../../src/util";
 import {processAttesterSlashing} from "../../../../../src/block/operations";
 import {generateEmptyAttesterSlashing} from "../../../../utils/slashings";
 
-describe('process block - attester slashings', function () {
+describe("process block - attester slashings", function () {
 
   const sandbox = sinon.createSandbox();
 
@@ -17,24 +16,24 @@ describe('process block - attester slashings', function () {
     slashValidatorStub: any;
 
   beforeEach(() => {
-    isSlashableAttestationStub = sandbox.stub(utils, 'isSlashableAttestationData');
-    validateIndexedAttestationStub = sandbox.stub(utils, 'isValidIndexedAttestation');
-    isSlashableValidatorStub = sandbox.stub(utils, 'isSlashableValidator');
-    slashValidatorStub =sandbox.stub(utils, 'slashValidator');
+    isSlashableAttestationStub = sandbox.stub(utils, "isSlashableAttestationData");
+    validateIndexedAttestationStub = sandbox.stub(utils, "isValidIndexedAttestation");
+    isSlashableValidatorStub = sandbox.stub(utils, "isSlashableValidator");
+    slashValidatorStub =sandbox.stub(utils, "slashValidator");
   });
 
   afterEach(() => {
     sandbox.restore();
   });
 
-  it('should fail to process slashings - not conflicting', function () {
+  it("should fail to process slashings - not conflicting", function () {
     const state = generateState();
     const attesterSlashing = generateEmptyAttesterSlashing();
     isSlashableAttestationStub.returns(false);
     expect(() => processAttesterSlashing(config, state, attesterSlashing)).to.throw;
   });
 
-  it('should fail to process slashings - data incorrect', function () {
+  it("should fail to process slashings - data incorrect", function () {
     const state = generateState();
     const attesterSlashing = generateEmptyAttesterSlashing();
     attesterSlashing.attestation1.signature = Buffer.alloc(96, 1);
@@ -42,16 +41,16 @@ describe('process block - attester slashings', function () {
     isSlashableAttestationStub.returns(true);
     validateIndexedAttestationStub.returns(false);
     try {
-      processAttesterSlashing(config, state, attesterSlashing);
+      processAttesterSlashing(config, state, attesterSlashing, true);
       expect.fail();
     } catch (e) {
       expect(validateIndexedAttestationStub.callCount).equals(1);
       expect(validateIndexedAttestationStub.getCall(0)
-        .calledWithExactly(config, state, attesterSlashing.attestation1)).to.be.true;
+        .calledWithExactly(config, state, attesterSlashing.attestation1, true)).to.be.true;
     }
   });
 
-  it('should fail to process slashings - data2 incorrect', function () {
+  it("should fail to process slashings - data2 incorrect", function () {
     const state = generateState();
     const attesterSlashing = generateEmptyAttesterSlashing();
     attesterSlashing.attestation1.data.source.epoch = 2;
@@ -68,7 +67,7 @@ describe('process block - attester slashings', function () {
 
   });
 
-  it('should fail to process slashings - nothing slashed', function () {
+  it("should fail to process slashings - nothing slashed", function () {
     const state = generateState();
     const attesterSlashing = generateEmptyAttesterSlashing();
     attesterSlashing.attestation1.data.source.epoch = 2;
@@ -84,7 +83,7 @@ describe('process block - attester slashings', function () {
 
   });
 
-  it('should process slashings', function () {
+  it("should process slashings", function () {
     const state = generateState();
     const attesterSlashing = generateEmptyAttesterSlashing();
     attesterSlashing.attestation1.attestingIndices = [1, 2, 3]

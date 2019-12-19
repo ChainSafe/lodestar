@@ -32,16 +32,16 @@ export function verifyValidAggregatedSignature(dir: string): BenchSuite {
   const FUNCTION_NAME = "verifyValidAggregatedSignature"; // PLEASE FILL THIS OUT
 
   const verifyValidAggregatedSignature = function (): void {
-    global.verify(global.publicKeys, global.messages, global.signature, global.domain)
+    global.verify(global.publicKeys, global.messages, global.signature, global.domain);
   };
 
   return {
     testFunctions: [verifyValidAggregatedSignature],
     setup: function() {
-      const sha256 = require('js-sha256');
+      const sha256 = require("js-sha256");
       const {aggregateSignatures} = require("../../../src");
       const message = Buffer.from(sha256.arrayBuffer(Math.random().toString(36)));
-      const signatures = [];
+      const signatures: any[] = [];
       global.messages = [];
       global.keypairs.forEach((keypair) => {
         signatures.push(keypair.privateKey.signMessage(message, global.domain).toBytesCompressed());

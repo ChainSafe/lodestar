@@ -45,8 +45,7 @@ export default class BlockProposingService {
     const block = await this.provider.validator.produceBlock(
       slot,
       this.keypair.privateKey.signMessage(
-        hashTreeRoot(computeEpochAtSlot(this.config, slot), this.config.types.Epoch),
-        // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
+        hashTreeRoot(this.config.types.Epoch, computeEpochAtSlot(this.config, slot)),
         getDomain(this.config, {fork} as BeaconState, DomainType.RANDAO, computeEpochAtSlot(this.config, slot))
       ).toBytesCompressed()
     );
@@ -54,14 +53,13 @@ export default class BlockProposingService {
       return null;
     }
     block.signature = this.keypair.privateKey.signMessage(
-      signingRoot(block, this.config.types.BeaconBlock),
-      // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
+      signingRoot(this.config.types.BeaconBlock, block),
       getDomain(this.config, {fork} as BeaconState, DomainType.BEACON_PROPOSER, computeEpochAtSlot(this.config, slot))
     ).toBytesCompressed();
     await this.storeBlock(block);
     await this.provider.validator.publishBlock(block);
     this.logger.info(
-      `Proposed block with hash 0x${signingRoot(block, this.config.types.BeaconBlock).toString("hex")}`
+      `Proposed block with hash 0x${signingRoot(this.config.types.BeaconBlock, block).toString("hex")}`
     );
     return block;
   }

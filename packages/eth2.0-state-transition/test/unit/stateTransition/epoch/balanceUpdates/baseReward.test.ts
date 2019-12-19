@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import {expect} from "chai";
 import sinon from "sinon";
 
@@ -7,7 +6,7 @@ import * as utils from "../../../../../src/util";
 import {generateState} from "../../../../utils/state";
 import {generateValidators} from "../../../../utils/validator";
 import {getBaseReward} from "../../../../../src/epoch/balanceUpdates/baseReward";
-import {bnSqrt} from "@chainsafe/eth2.0-utils";
+import {bigIntSqrt} from "@chainsafe/eth2.0-utils";
 
 describe('process epoch - balance updates', function () {
 
@@ -24,14 +23,16 @@ describe('process epoch - balance updates', function () {
 
   it('should calculate base reward', function () {
     const state = generateState();
-    getTotalActiveBalanceStub.returns(new BN(100));
+    getTotalActiveBalanceStub.returns(100n);
     state.validators = generateValidators(10);
     state.validators.forEach((value, index)=>{
-      state.validators[index].effectiveBalance = new BN(index);
+      state.validators[index].effectiveBalance = BigInt(index);
       const result = getBaseReward(config, state, index);
-      const actual = new BN(index).muln(config.params.BASE_REWARD_FACTOR)
-        .div(bnSqrt(new BN(100))).divn(config.params.BASE_REWARDS_PER_EPOCH);
-      expect(result.eq(actual)).to.be.true;
+      const actual = BigInt(index)
+        * BigInt(config.params.BASE_REWARD_FACTOR)
+        / bigIntSqrt(100n)
+        / BigInt(config.params.BASE_REWARDS_PER_EPOCH)
+      expect(result === actual).to.be.true;
 
 
     });

@@ -3,8 +3,7 @@
  */
 
 import {LikeSocket} from "noice-json-rpc";
-//@ts-ignore
-import promisify from "promisify-es6";
+import {promisify} from "es6-promisify";
 import {ILogger} from "../../../logger";
 import http from "http";
 import {IRpcServer} from "./index";
@@ -19,8 +18,6 @@ class MessageRequest implements LikeSocket {
 
   private resp: http.ServerResponse;
   private req: http.IncomingMessage;
-
-  // @ts-ignore
   private messageCallback: Function;
 
   public constructor(req: http.IncomingMessage, resp: http.ServerResponse) {
@@ -30,6 +27,7 @@ class MessageRequest implements LikeSocket {
 
   public on(event: string, cb: Function): void {
     if(event === "message") {
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       const that = this;
       this.messageCallback = cb;
       this.getRequest(this.req)
@@ -41,7 +39,7 @@ class MessageRequest implements LikeSocket {
     }
   }
 
-  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars,@typescript-eslint/no-empty-function */
   public removeListener(event: string, cb: Function): void {
   }
 
@@ -76,7 +74,6 @@ export default class HttpServer implements IRpcServer {
 
   private opts: IHttpServerOpts;
 
-  // @ts-ignore
   private connectionCallback: Function;
 
   private logger: ILogger;

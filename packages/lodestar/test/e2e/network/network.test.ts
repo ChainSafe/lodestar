@@ -12,6 +12,7 @@ import {sleep} from "../../../src/util/sleep";
 // @ts-ignore
 import Libp2p from "libp2p";
 import {GossipEvent} from "../../../src/network/gossip/constants";
+import { IGossipMessageValidator } from "../../../src/network/gossip/interface";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -30,10 +31,11 @@ describe("[network] network", function () {
   const logger: ILogger = new WinstonLogger();
   logger.silent = true;
   const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
+  const validator: IGossipMessageValidator = {} as unknown as IGossipMessageValidator;
 
   beforeEach(async () => {
-    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics});
-    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics});
+    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator});
+    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator});
     await Promise.all([
       netA.start(),
       netB.start(),

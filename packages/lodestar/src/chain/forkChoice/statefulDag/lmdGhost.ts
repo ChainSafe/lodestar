@@ -3,7 +3,6 @@
  */
 
 import assert from "assert";
-import BN from "bn.js";
 
 import {Gwei, Hash, Slot, ValidatorIndex, number64, Checkpoint, Epoch,} from "@chainsafe/eth2.0-types";
 
@@ -54,7 +53,7 @@ class Node {
     this.blockRoot = blockRoot;
     this.parent = parent;
 
-    this.weight = new BN(0);
+    this.weight = 0n;
     this.bestChild = null;
     this.bestTarget = null;
     this.children = {};
@@ -73,9 +72,9 @@ class Node {
   public betterThan(other: Node): boolean {
     return (
       // n2 weight greater
-      this.weight.gt(other.weight) ||
+      this.weight > other.weight ||
       // equal weights and lexographically higher root
-      (this.weight.eq(other.weight) && this.blockRoot > other.blockRoot)
+      (this.weight === other.weight && this.blockRoot > other.blockRoot)
     );
   }
 
@@ -88,6 +87,7 @@ class Node {
       // this is the only child, propagate itself as best target as far as necessary
       this.bestChild = child;
       let c: Node = child;
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       let p: Node = this;
       while (p) {
         if (c.equals(p.bestChild)) {
@@ -106,9 +106,9 @@ class Node {
    * Update node weight
    */
   public propagateWeightChange(delta: Gwei): void {
-    this.weight = this.weight.add(delta);
+    this.weight += delta;
     if (this.parent) {
-      if (delta.ltn(0)) {
+      if (delta < 0) {
         this.onRemoveWeight();
       } else {
         this.onAddWeight();
@@ -258,8 +258,8 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
 
   public syncChanges(): void {
     Object.values(this.aggregator.latestAggregates).forEach((agg) => {
-      if (!agg.prevWeight.eq(agg.weight)) {
-        const delta = agg.weight.sub(agg.prevWeight);
+      if (!(agg.prevWeight === agg.weight)) {
+        const delta = agg.weight - agg.prevWeight;
         agg.prevWeight = agg.weight;
 
         this.nodes[agg.target].propagateWeightChange(delta);

@@ -35,8 +35,8 @@ describe('process block - eth1data', function () {
     const block = generateEmptyBlock();
     block.body.eth1Data = vote;
     processEth1Data(config, state, block.body);
-    expect(serialize(state.eth1Data, config.types.Eth1Data).toString('hex'))
-      .to.be.equal(serialize(vote, config.types.Eth1Data).toString('hex'));
+    expect(serialize(config.types.Eth1Data, state.eth1Data).toString('hex'))
+      .to.be.equal(serialize(config.types.Eth1Data, vote).toString('hex'));
   });
 
   it('should not set latest eth1 data', function () {
@@ -49,7 +49,7 @@ describe('process block - eth1data', function () {
     const block = generateEmptyBlock();
     block.body.eth1Data = vote;
     processEth1Data(config, state, block.body);
-    expect(serialize(state.eth1Data, config.types.Eth1Data).toString('hex'))
-      .to.not.be.equal(serialize(vote, config.types.Eth1Data).toString('hex'));
+    expect(serialize(config.types.Eth1Data, state.eth1Data).toString('hex'))
+      .to.not.be.equal(serialize(config.types.Eth1Data, vote).toString('hex'));
   });
 });

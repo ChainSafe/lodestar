@@ -6,6 +6,8 @@ import {interopDeposits} from "./deposits";
 import {fromYaml, IProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {loadYamlFile} from "@chainsafe/eth2.0-utils/lib/nodejs";
 
+
+
 // either "genesisTime,validatorCount" or "genesisState.fileext"
 export function quickStartOptionToState(
   config: IBeaconConfig,
@@ -17,10 +19,10 @@ export function quickStartOptionToState(
     throw new Error("invalid quick start options");
   }
   if (fileExt[1] === "ssz") {
-    const deserialized = deserialize(readFileSync(option), config.types.BeaconState);
+    const deserialized = deserialize<BeaconState>(config.types.BeaconState, readFileSync(option));
     interopDeposits(config, tree, deserialized.validators.length);
     return deserialized;
   } else {
-    return fromYaml<BeaconState>(loadYamlFile(option), config.types.BeaconState);
+    return fromYaml<BeaconState>(config.types.BeaconState, loadYamlFile(option));
   }
 }

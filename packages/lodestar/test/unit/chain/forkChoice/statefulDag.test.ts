@@ -1,5 +1,4 @@
 import {assert} from "chai";
-import BN from "bn.js";
 
 import {StatefulDagLMDGHOST} from "../../../../src/chain/forkChoice/statefulDag/lmdGhost";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
@@ -53,15 +52,15 @@ describe("StatefulDagLMDGHOST", () => {
     lmd.addBlock(3, e, b);
     lmd.addBlock(4, f, c);
     // add vote to e
-    lmd.addAttestation(e, 1, new BN(3));
+    lmd.addAttestation(e, 1, 3n);
     head = lmd.head();
     assert(head.equals(e), "head should be e");
     // recast e vote to f
-    lmd.addAttestation(f, 1, new BN(3));
+    lmd.addAttestation(f, 1, 3n);
     head = lmd.head();
     assert(head.equals(f), "head should be f");
     // add vote to d
-    lmd.addAttestation(d, 2, new BN(5));
+    lmd.addAttestation(d, 2, 5n);
     head = lmd.head();
     assert(head.equals(d), "head should be d");
     // add g block
@@ -69,15 +68,15 @@ describe("StatefulDagLMDGHOST", () => {
     head = lmd.head();
     assert(head.equals(g), "head should be g");
     // add vote to c
-    lmd.addAttestation(c, 3, new BN(2));
+    lmd.addAttestation(c, 3, 2n);
     head = lmd.head();
     assert(head.equals(g), "head should be g");
     // add vote to c
-    lmd.addAttestation(c, 4, new BN(1));
+    lmd.addAttestation(c, 4, 1n);
     head = lmd.head();
     assert(head.equals(f), "head should be f");
     // recast co vote to g
-    lmd.addAttestation(g, 3, new BN(1));
+    lmd.addAttestation(g, 3, 1n);
     head = lmd.head();
     assert(head.equals(g), "head should be g");
   });
@@ -100,10 +99,10 @@ describe("StatefulDagLMDGHOST", () => {
     lmd.addBlock(5, e, d);
     lmd.addBlock(2, f, a);
     lmd.addBlock(3, g, f);
-    lmd.addAttestation(e, 1, new BN(3));
+    lmd.addAttestation(e, 1, 3n);
     head = lmd.head();
     assert(head.equals(e), "head should be e");
-    lmd.addAttestation(g, 2, new BN(4));
+    lmd.addAttestation(g, 2, 4n);
     head = lmd.head();
     assert(head.equals(g), "head should be g");
   });
@@ -132,10 +131,10 @@ describe("StatefulDagLMDGHOST", () => {
     lmd.addBlock(5, e, b);
     lmd.addBlock(2, f, c);
     lmd.addBlock(3, g, c);
-    lmd.addAttestation(e, 1, new BN(3));
+    lmd.addAttestation(e, 1, 3n);
     head = lmd.head();
     assert(head.equals(e), "head should be e");
-    lmd.addAttestation(g, 2, new BN(4));
+    lmd.addAttestation(g, 2, 4n);
     head = lmd.head();
     assert(head.equals(g), "head should be g");
   });

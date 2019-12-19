@@ -74,7 +74,7 @@ export function isSlashableAttestationData(
 ): boolean {
   return (
   // Double vote
-    (!equals(data1, data2, config.types.AttestationData)
+    (!equals(config.types.AttestationData, data1, data2)
           && data1.target.epoch === data2.target.epoch) ||
       // Surround vote
       (data1.source.epoch < data2.source.epoch &&

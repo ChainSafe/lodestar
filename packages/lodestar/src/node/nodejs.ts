@@ -4,7 +4,6 @@
 
 import deepmerge from "deepmerge";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
 import {BeaconDb, LevelDbController} from "../db";
 import defaultConf, {IBeaconNodeOptions} from "./options";
 import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
@@ -19,6 +18,8 @@ import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 import {ApiService} from "../api";
 import {ReputationStore} from "../sync/IReputation";
 import {GossipMessageValidator} from "../network/gossip/validator";
+import {TasksService} from "../tasks";
+import {initBLS} from "@chainsafe/bls";
 
 export interface IService {
   start(): Promise<void>;
@@ -50,6 +51,8 @@ export class BeaconNode {
   public api: IService;
   public sync: Sync;
   public reps: ReputationStore;
+  public chores: TasksService;
+
   private logger: ILogger;
 
   public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, eth1, libp2p}: IBeaconNodeModules) {
@@ -129,11 +132,21 @@ export class BeaconNode {
         eth1: this.eth1
       }
     );
+    this.chores = new TasksService(
+      this.config,
+      {
+        db: this.db,
+        chain: this.chain,
+        logger: this.logger.child(this.conf.logger.chores)
+      }
+    );
 
   }
 
   public async start(): Promise<void> {
     this.logger.info("Starting eth2 beacon node - LODESTAR!");
+    //if this wasm inits starts piling up, we can extract them to separate methods
+    await initBLS();
     await this.metrics.start();
     await this.metricsServer.start();
     await this.db.start();
@@ -143,9 +156,11 @@ export class BeaconNode {
     await this.opPool.start();
     this.sync.start();
     await this.api.start();
+    await this.chores.start();
   }
 
   public async stop(): Promise<void> {
+    await this.chores.stop();
     await this.api.stop();
     await this.sync.stop();
     await this.opPool.stop();

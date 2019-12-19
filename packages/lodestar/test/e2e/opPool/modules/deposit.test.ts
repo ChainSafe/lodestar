@@ -10,8 +10,7 @@ import level from "level";
 // @ts-ignore
 import leveldown from "leveldown";
 import {WinstonLogger} from "../../../../src/logger";
-// @ts-ignore
-import promisify from "promisify-es6";
+import {promisify} from "es6-promisify";
 import {expect} from "chai";
 import {generateDeposit} from "../../../utils/deposit";
 
@@ -44,7 +43,7 @@ describe("opPool - deposits", function () {
 
   afterEach(async function () {
     await db.stop();
-    await promisify(leveldown.destroy)(dbLocation);
+    await promisify<void, string>(leveldown.destroy)(dbLocation);
   });
 
   it("should fetch deposit from range - upper and lower limit",async function () {

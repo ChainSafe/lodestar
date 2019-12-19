@@ -12,7 +12,7 @@ import {expect} from "chai";
 import {generateState} from "../../../../utils/state";
 import {Sync} from "../../../../../src/sync";
 
-describe('Test beacon rest api', function () {
+describe("Test beacon rest api", function () {
   this.timeout(10000);
 
   let restApi;
@@ -24,9 +24,9 @@ describe('Test beacon rest api', function () {
   before(async function () {
     restApi = new RestApi({
       api: [ApiNamespace.BEACON],
-      cors: '*',
+      cors: "*",
       enabled: true,
-      host: '127.0.0.1',
+      host: "127.0.0.1",
       port: 0
     }, {
       logger: new WinstonLogger(),
@@ -39,7 +39,7 @@ describe('Test beacon rest api', function () {
     });
     // @ts-ignore
     chain.config = config;
-    sync.isSynced = sinon.stub()
+    sync.isSynced = sinon.stub();
     return await restApi.start();
   });
 
@@ -47,29 +47,29 @@ describe('Test beacon rest api', function () {
     return await restApi.stop();
   });
 
-  it('should return version', async function () {
+  it("should return version", async function () {
     const response = await supertest(restApi.server.server)
-      .get('/node/version')
+      .get("/node/version")
       .expect(200)
-      .expect('Content-Type', 'application/json; charset=utf-8');
+      .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body).to.be.equal(`lodestar-${process.env.npm_package_version}`);
   });
 
-  it('should return genesis time', async function () {
+  it("should return genesis time", async function () {
     chain.latestState = generateState({genesisTime: Date.now()});
     const response = await supertest(restApi.server.server)
-      .get('/node/genesis_time')
+      .get("/node/genesis_time")
       .expect(200)
-      .expect('Content-Type', 'application/json; charset=utf-8');
+      .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body).to.be.equal(chain.latestState.genesisTime);
   });
 
-  it('should return sync status', async function () {
+  it("should return sync status", async function () {
     sync.isSynced.resolves(false);
     const response = await supertest(restApi.server.server)
-      .get('/node/syncing')
+      .get("/node/syncing")
       .expect(200)
-      .expect('Content-Type', 'application/json; charset=utf-8');
+      .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.is_syncing).to.be.true;
   });
 

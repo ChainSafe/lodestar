@@ -1,21 +1,20 @@
 import {join} from "path";
 import {expect} from "chai";
-// @ts-ignore
 import {equals} from "@chainsafe/ssz";
-
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processVoluntaryExit} from "@chainsafe/eth2.0-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
-import {ProcessVoluntaryExitTestCase} from "./type";
+import {IProcessVoluntaryExitTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
-describeDirectorySpecTest<ProcessVoluntaryExitTestCase, BeaconState>(
+describeDirectorySpecTest<IProcessVoluntaryExitTestCase, BeaconState>(
   "process voluntary exit mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/voluntary_exit/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    processVoluntaryExit(config, state, testcase.voluntary_exit);
+    const verify = (!!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n);
+    processVoluntaryExit(config, state, testcase.voluntary_exit, verify);
     return state;
   },
   {
@@ -29,7 +28,7 @@ describeDirectorySpecTest<ProcessVoluntaryExitTestCase, BeaconState>(
     shouldError: testCase => !testCase.post,
     getExpected: (testCase => testCase.post),
     expectFunc: (testCase, expected, actual) => {
-      expect(equals(actual, expected, config.types.BeaconState)).to.be.true;
+      expect(equals(config.types.BeaconState, actual, expected)).to.be.true;
     }
   }
 );

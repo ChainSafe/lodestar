@@ -2,20 +2,19 @@
  * @module util/math
  */
 
-import BN from "bn.js";
 
 /**
  * Return the min number between two big numbers.
  */
-export function bnMin(a: BN, b: BN): BN {
-  return a.lt(b) ? a : b;
+export function bigIntMin(a: bigint, b: bigint): bigint {
+  return a < b ? a : b;
 }
 
 /**
  * Return the max number between two big numbers.
  */
-export function bnMax(a: BN, b: BN): BN {
-  return a.gt(b) ? a : b;
+export function bigIntMax(a: bigint, b: bigint): bigint {
+  return a > b ? a : b;
 }
 
 export function intDiv(dividend: number, divisor: number): number {
@@ -35,12 +34,12 @@ export function intSqrt(n: number): number {
   return x;
 }
 
-export function bnSqrt(n: BN): BN {
-  let x = n.clone();
-  let y = x.addn(1).divn(2);
-  while (y.lt(x)) {
+export function bigIntSqrt(n: bigint): bigint {
+  let x = n;
+  let y = (x + 1n)/ 2n;
+  while (y < x) {
     x = y;
-    y = x.add(n.div(x)).divn(2);
+    y = (x + n / x)/ 2n;
   }
   return x;
 }

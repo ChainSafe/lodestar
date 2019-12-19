@@ -11,15 +11,11 @@ export async function produceAttestation(
   index: CommitteeIndex,
   slot: Slot
 ): Promise<Attestation|null> {
-  try {
-    const [headBlock, validatorIndex] = await Promise.all([
-      db.block.get(chain.forkChoice.head()),
-      db.getValidatorIndex(validatorPubKey)
-    ]);
-    const headState = await db.state.get(headBlock.stateRoot);
-    await processSlots(config, headState, slot);
-    return await assembleAttestation({config, db}, headState, headBlock, validatorIndex, index, slot);
-  } catch (e) {
-    throw e;
-  }
+  const [headBlock, validatorIndex] = await Promise.all([
+    db.block.get(chain.forkChoice.head()),
+    db.getValidatorIndex(validatorPubKey)
+  ]);
+  const headState = await db.state.get(headBlock.stateRoot);
+  await processSlots(config, headState, slot);
+  return await assembleAttestation({config, db}, headState, headBlock, validatorIndex, index, slot);
 }

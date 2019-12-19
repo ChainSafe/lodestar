@@ -1,7 +1,6 @@
 /**
  * @module params
  */
-import BN from "bn.js";
 
 export interface IBeaconParams {
   // Misc
@@ -18,10 +17,10 @@ export interface IBeaconParams {
   DEPOSIT_CONTRACT_ADDRESS: number;
 
   // Gwei Values
-  MIN_DEPOSIT_AMOUNT: BN;
-  MAX_EFFECTIVE_BALANCE: BN;
-  EJECTION_BALANCE: BN;
-  EFFECTIVE_BALANCE_INCREMENT: BN;
+  MIN_DEPOSIT_AMOUNT: bigint;
+  MAX_EFFECTIVE_BALANCE: bigint;
+  EJECTION_BALANCE: bigint;
+  EFFECTIVE_BALANCE_INCREMENT: bigint;
 
   // Initial values
   GENESIS_SLOT: number;
@@ -57,7 +56,7 @@ export interface IBeaconParams {
   BASE_REWARDS_PER_EPOCH: number;
   WHISTLEBLOWING_REWARD_QUOTIENT: number;
   PROPOSER_REWARD_QUOTIENT: number;
-  INACTIVITY_PENALTY_QUOTIENT: BN;
+  INACTIVITY_PENALTY_QUOTIENT: bigint;
   MIN_SLASHING_PENALTY_QUOTIENT: number;
 
   // Max operations per block

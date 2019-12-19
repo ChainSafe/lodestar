@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import { assert } from "chai";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
@@ -13,6 +12,8 @@ import {
   getDomain,
   getValidatorChurnLimit,
 } from "../../../../src/util";
+
+import {toBigIntLE} from "bigint-buffer";
 
 import { generateState } from "../../../utils/state";
 
@@ -49,8 +50,8 @@ describe("getBlockRoot", () => {
       blockRoots: Array.from({ length: config.params.SLOTS_PER_HISTORICAL_ROOT }, () => Buffer.from([0xAB])),
     });
     const res = getBlockRoot(config, state, GENESIS_SLOT);
-    assert((new BN(res)).eq(new BN(0xAB)),
-      `got: ${new BN(res)}, expected: ${0xAB}`);
+    assert(toBigIntLE(res) === 0xABn,
+      `got: ${toBigIntLE(res)}, expected: ${0xABn}`);
   });
   it("should fail if slot is current slot", () => {
     const state = generateState({ slot: GENESIS_SLOT });

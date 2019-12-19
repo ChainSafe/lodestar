@@ -13,7 +13,7 @@ import {generateState} from "../../../utils/state";
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateEmptyAttestation, generateEmptyVoluntaryExit, generateEmptyAggregateAndProof} from "../../../utils/attestation";
 import {AttestationRepository, BlockRepository, StateRepository} from "../../../../src/db/api/beacon/repositories";
-import {VoluntaryExitRepository, ProposerSlashingRepository, AttesterSlashingRepository, AggregateAndProofRepository} from "../../../../lib/db/api/beacon/repositories";
+import {VoluntaryExitRepository, ProposerSlashingRepository, AttesterSlashingRepository, AggregateAndProofRepository} from "../../../../src/db/api/beacon/repositories";
 import {generateEmptyProposerSlashing, generateEmptyAttesterSlashing} from "@chainsafe/eth2.0-state-transition/test/utils/slashings";
 import { GossipMessageValidator } from "../../../../src/network/gossip/validator";
 import { generateValidators } from "../../../utils/validator";

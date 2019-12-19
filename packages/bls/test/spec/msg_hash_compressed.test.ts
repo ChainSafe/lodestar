@@ -1,7 +1,7 @@
 import path from "path";
-import {padLeft} from "../../src/helpers/utils";
-import {G2point} from "../../src/helpers/g2point";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import {PrivateKey} from "../../src";
+import {padLeft} from "../../src/helpers/utils";
 
 interface IMsgHHashCOmpressed {
   data: {
@@ -20,10 +20,10 @@ describeDirectorySpecTest<IMsgHHashCOmpressed, string>(
     "../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/msg_hash_compressed/small"
   ),
   (testCase => {
-    const domain = padLeft(Buffer.from(testCase.data.input.domain.replace("0x", ""), "hex"), 8);
+    const domain = Buffer.from(testCase.data.input.domain.replace("0x", ""), "hex");
     const input = Buffer.from(testCase.data.input.message.replace("0x", ""), "hex");
-    const result = G2point.hashToG2(input, domain);
-    return `0x${result.toBytesCompressed().toString("hex")}`;
+    const result  = PrivateKey.fromInt(1).signMessage(input, domain).toBytesCompressed().toString("hex");
+    return `0x${result}`;
   }),
   {
     inputTypes: {

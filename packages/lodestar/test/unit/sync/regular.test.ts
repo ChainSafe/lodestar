@@ -13,10 +13,9 @@ import {RegularSync} from "../../../src/sync/regular";
 import {generateState} from "../../utils/state";
 import {generateEmptyBlock} from "../../utils/block";
 import {generateEmptyAttestation, generateEmptyVoluntaryExit, generateEmptyAggregateAndProof} from "../../utils/attestation";
-import {AttestationRepository, BlockRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
-import {VoluntaryExitRepository, ProposerSlashingRepository, AttesterSlashingRepository} from "../../../lib/db/api/beacon/repositories";
+import {AttestationRepository, BlockRepository, StateRepository, VoluntaryExitRepository, ProposerSlashingRepository, AttesterSlashingRepository} from "../../../src/db/api/beacon/repositories";
 import {generateEmptyProposerSlashing, generateEmptyAttesterSlashing} from "@chainsafe/eth2.0-state-transition/test/utils/slashings";
-import {ProposerSlashingOperations, AttesterSlashingOperations} from "../../../lib/opPool";
+import {ProposerSlashingOperations, AttesterSlashingOperations} from "../../../src/opPool";
 
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();

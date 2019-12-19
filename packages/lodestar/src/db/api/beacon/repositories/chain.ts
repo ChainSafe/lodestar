@@ -23,7 +23,7 @@ export class ChainRepository {
   public async setLatestStateRoot(root: Hash): Promise<void> {
     await this.db.put(
       this.getKey(Key.latestState),
-      serialize(root, this.config.types.bytes32)
+      serialize(this.config.types.bytes32, root)
     );
   }
 
@@ -34,7 +34,7 @@ export class ChainRepository {
   public async setJustifiedStateRoot(root: Hash): Promise<void> {
     await this.db.put(
       this.getKey(Key.justifiedState),
-      serialize(root, this.config.types.bytes32)
+      serialize(this.config.types.bytes32, root)
     );
   }
 
@@ -45,7 +45,7 @@ export class ChainRepository {
   public async setFinalizedStateRoot(root: Hash): Promise<void> {
     await this.db.put(
       this.getKey(Key.finalizedState),
-      serialize(root, this.config.types.bytes32)
+      serialize(this.config.types.bytes32, root)
     );
   }
 
@@ -67,7 +67,7 @@ export class ChainRepository {
 
   public async getBlockRoot(slot: Slot): Promise<Hash | null> {
     try {
-      return await this.db.get(encodeKey(Bucket.mainChain, slot));
+      return await this.db.get(encodeKey(Bucket.blockSlotRefs, slot));
     } catch (e) {
       return null;
     }
@@ -79,10 +79,14 @@ export class ChainRepository {
       if(!heightBuf) {
         throw new Error("Missing chain height");
       }
-      return deserialize(heightBuf, this.config.types.Slot) as Slot;
+      return deserialize(this.config.types.Slot, heightBuf);
     } catch (e) {
       return null;
     }
+  }
+
+  public async setChainHeadSlot(slot: number): Promise<void> {
+    await this.db.put(this.getKey(Key.chainHeight), serialize(this.config.types.Slot, slot));
   }
 
   public async getChainHeadRoot(): Promise<Hash | null> {
@@ -96,5 +100,4 @@ export class ChainRepository {
   private getKey(id: Key): Buffer | string {
     return encodeKey(Bucket.chainInfo, id);
   }
-
 }

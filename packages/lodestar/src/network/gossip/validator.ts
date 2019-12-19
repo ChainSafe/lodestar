@@ -6,7 +6,7 @@ import {IBeaconDb} from "../../db";
 import {getAttestationSubnet} from "./utils";
 import {getCurrentSlot, isValidIndexedAttestation, getIndexedAttestation, isValidVoluntaryExit,
   isValidProposerSlashing, isValidAttesterSlashing, isValidBlockSignature, getAttestingIndices, 
-  isAggregator, getDomain, computeEpochAtSlot} from "@chainsafe/eth2.0-state-transition";
+  isAggregator, getDomain, computeEpochAtSlot, getBeaconProposerIndex} from "@chainsafe/eth2.0-state-transition";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 import {hashTreeRoot} from "@chainsafe/ssz";
@@ -25,7 +25,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   }
 
   public async isValidIncomingBlock(block: BeaconBlock): Promise<boolean> {
-    const root = hashTreeRoot(block, this.config.types.BeaconBlock);
+    const root = hashTreeRoot(this.config.types.BeaconBlock, block);
 
     // skip block if its a known bad block
     if (await this.db.block.isBadBlock(root)) {
@@ -39,7 +39,8 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
 
     const state = await this.db.state.getLatest();
-    if (!isValidBlockSignature(this.config, state, block)) {
+    const proposer = state.validators[getBeaconProposerIndex(this.config, state)];
+    if (!isValidBlockSignature(this.config, state, block, proposer)) {
       return false;
     }
 
@@ -85,7 +86,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   }
 
   public async isValidIncomingAggregateAndProof(aggregationAndProof: AggregateAndProof): Promise<boolean> {
-    const root = hashTreeRoot(aggregationAndProof, this.config.types.AggregateAndProof);
+    const root = hashTreeRoot(this.config.types.AggregateAndProof, aggregationAndProof);
     if (await this.db.aggregateAndProof.has(root as Buffer)) {
       return false;
     }
@@ -111,7 +112,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     const validatorPubKey = state.validators[aggregationAndProof.index].pubkey;
     const domain = getDomain(this.config, state, DomainType.BEACON_ATTESTER, computeEpochAtSlot(this.config, slot));
     if (!verify(validatorPubKey,
-      hashTreeRoot(slot, this.config.types.Slot),
+      hashTreeRoot(this.config.types.Slot, slot),
       aggregationAndProof.selectionProof, 
       domain)) {
       return false;
@@ -128,7 +129,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
     // skip attestation if it already exists
-    const root = hashTreeRoot(attestation, this.config.types.Attestation);
+    const root = hashTreeRoot(this.config.types.Attestation, attestation);
     if (await this.db.attestation.has(root as Buffer)) {
       return false;
     }
@@ -142,7 +143,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
   public async isValidIncomingVoluntaryExit(voluntaryExit: VoluntaryExit): Promise<boolean> {
     // skip voluntary exit if it already exists
-    const root = hashTreeRoot(voluntaryExit, this.config.types.VoluntaryExit);
+    const root = hashTreeRoot(this.config.types.VoluntaryExit, voluntaryExit);
     if (await this.db.voluntaryExit.has(root as Buffer)) {
       return false;
     }
@@ -155,7 +156,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
   public async isValidIncomingProposerSlashing(proposerSlashing: ProposerSlashing): Promise<boolean> {
     // skip proposer slashing if it already exists
-    const root = hashTreeRoot(proposerSlashing, this.config.types.ProposerSlashing);
+    const root = hashTreeRoot(this.config.types.ProposerSlashing, proposerSlashing);
     if (await this.db.proposerSlashing.has(root as Buffer)) {
       return false;
     }
@@ -168,7 +169,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
   public async isValidIncomingAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<boolean> {
     // skip attester slashing if it already exists
-    const root = hashTreeRoot(attesterSlashing, this.config.types.AttesterSlashing);
+    const root = hashTreeRoot(this.config.types.AttesterSlashing, attesterSlashing);
     if (await this.db.attesterSlashing.has(root as Buffer)) {
       return false;
     }

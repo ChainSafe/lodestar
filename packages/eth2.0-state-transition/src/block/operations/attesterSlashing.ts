@@ -25,10 +25,11 @@ import {
 export function processAttesterSlashing(
   config: IBeaconConfig,
   state: BeaconState,
-  attesterSlashing: AttesterSlashing
+  attesterSlashing: AttesterSlashing,
+  verifySignatures = true,
 ): void {
   // Check that the attestations are conflicting
-  assert(isValidAttesterSlashing(config, state, attesterSlashing));
+  assert(isValidAttesterSlashing(config, state, attesterSlashing, verifySignatures));
 
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;

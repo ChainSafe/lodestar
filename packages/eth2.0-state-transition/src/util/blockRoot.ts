@@ -45,7 +45,7 @@ export function getTemporaryBlockHeader(config: IBeaconConfig, block: BeaconBloc
     parentRoot: block.parentRoot,
     // `state_root` is zeroed and overwritten in the next `process_slot` call
     stateRoot: ZERO_HASH,
-    bodyRoot: hashTreeRoot(block.body, config.types.BeaconBlockBody),
+    bodyRoot: hashTreeRoot(config.types.BeaconBlockBody, block.body),
     // `signature` is zeroed
     signature: EMPTY_SIGNATURE,
   };
@@ -60,6 +60,6 @@ export function blockToHeader(config: IBeaconConfig, block: BeaconBlock): Beacon
     signature: block.signature,
     slot: block.slot,
     parentRoot: block.parentRoot,
-    bodyRoot: hashTreeRoot(block.body, config.types.BeaconBlockBody),
+    bodyRoot: hashTreeRoot(config.types.BeaconBlockBody, block.body),
   };
 }

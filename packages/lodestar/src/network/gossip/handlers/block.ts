@@ -8,8 +8,7 @@ import {Gossip, GossipHandlerFn} from "../gossip";
 import {deserializeGossipMessage, getGossipTopic} from "../utils";
 import {GossipEvent} from "../constants";
 import {serialize} from "@chainsafe/ssz";
-//@ts-ignore
-import promisify from "promisify-es6";
+import {promisify} from "es6-promisify";
 
 export function getIncomingBlockHandler(validator: IGossipMessageValidator): GossipHandlerFn {
   return async function handleIncomingBlock(this: Gossip, msg: IGossipMessage): Promise<void> {
@@ -26,8 +25,8 @@ export function getIncomingBlockHandler(validator: IGossipMessageValidator): Gos
 }
 
 export async function publishBlock(this: Gossip, block: BeaconBlock): Promise<void> {
-  await promisify(this.pubsub.publish.bind(this.pubsub))(
-    getGossipTopic(GossipEvent.BLOCK), serialize(block, this.config.types.BeaconBlock)
+  await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
+    getGossipTopic(GossipEvent.BLOCK), serialize(this.config.types.BeaconBlock, block)
   );
   this.logger.verbose(`Publishing block at slot: ${block.slot}`);
 }

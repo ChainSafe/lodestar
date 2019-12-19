@@ -27,4 +27,8 @@ export class ReputationStore {
   public get(peerId: string): IReputation {
     return this.reputations.get(peerId) || this.add(peerId);
   }
+
+  public getFromPeerInfo(peer: PeerInfo): IReputation {
+    return this.get(peer.id.toB58String());
+  }
 }

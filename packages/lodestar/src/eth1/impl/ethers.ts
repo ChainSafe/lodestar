@@ -6,7 +6,7 @@ import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {Block, Log} from "ethers/providers";
 import {deserialize} from "@chainsafe/ssz";
-import {BeaconState, Deposit, Epoch, Eth1Data, Gwei, Hash, number64} from "@chainsafe/eth2.0-types";
+import {BeaconState, Deposit, Epoch, Eth1Data, Hash, number64} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {Eth1EventEmitter, IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
@@ -84,7 +84,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     merkleTreeIndex: string
   ): Promise<void> {
     try {
-      const index = deserialize(Buffer.from(merkleTreeIndex.substr(2), "hex"), this.config.types.number64) as number64;
+      const index = deserialize(this.config.types.number64, Buffer.from(merkleTreeIndex.substr(2), "hex"));
       const deposit = this.createDeposit(
         pubkey,
         withdrawalCredentials,
@@ -162,7 +162,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
         depositRoot
       };
     } else {
-      const frequentVotes = mostFrequent<Eth1Data>(validVotes, config.types.Eth1Data);
+      const frequentVotes = mostFrequent<Eth1Data>(config.types.Eth1Data, validVotes);
       if(frequentVotes.length === 1) {
         return frequentVotes[0];
       } else {
@@ -224,7 +224,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       data: {
         pubkey: Buffer.from(pubkey.slice(2), "hex"),
         withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), "hex"),
-        amount: deserialize(Buffer.from(amount.slice(2), "hex"), this.config.types.Gwei) as Gwei,
+        amount: deserialize(this.config.types.Gwei, Buffer.from(amount.slice(2), "hex")),
         signature: Buffer.from(signature.slice(2), "hex"),
       },
     };

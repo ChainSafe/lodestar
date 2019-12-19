@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import sinon from "sinon";
 import {expect} from "chai";
 // @ts-ignore
@@ -57,7 +56,7 @@ describe("syncing", function () {
 
   it("should able to create Status - genesis time", async function () {
     chainStub.genesisTime = 0;
-    chainStub.networkId = new BN(1);
+    chainStub.networkId = 1n;
     chainStub.chainId = 1;
 
     const expected: Status = {
@@ -81,7 +80,7 @@ describe("syncing", function () {
     networkStub.hasPeer.returns(true);
     networkStub.getPeers.returns([peerInfo, peerInfo]);
     repsStub.get.returns({
-      latestHello: {},
+      latestStatus: {},
     });
 
 
@@ -104,11 +103,11 @@ describe("syncing", function () {
       headSlot: 1,
     };
     repsStub.get.returns({
-      latestHello: null,
+      latestStatus: null,
     });
     reqRespStub.sendResponse.resolves(0);
     try {
-      await syncRpc.onRequest(peerInfo, Method.Status, "hello", body);
+      await syncRpc.onRequest(peerInfo, Method.Status, "status", body);
       expect(reqRespStub.sendResponse.calledOnce).to.be.true;
     }catch (e) {
       expect.fail(e.stack);
@@ -125,11 +124,11 @@ describe("syncing", function () {
       headSlot: 1,
     };
     repsStub.get.returns({
-      latestHello: null,
+      latestStatus: null,
     });
     try {
       reqRespStub.sendResponse.throws(new Error("server error"));
-      await syncRpc.onRequest(peerInfo, Method.Status, "hello", body);
+      await syncRpc.onRequest(peerInfo, Method.Status, "status", body);
     }catch (e) {
       expect(reqRespStub.sendResponse.called).to.be.true;
     }
@@ -138,7 +137,7 @@ describe("syncing", function () {
 
   it("should handle request - onGoodbye", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
-    const goodbye: Goodbye = new BN(1);
+    const goodbye: Goodbye = 1n;
     networkStub.disconnect.resolves(0);
     try {
       await syncRpc.onRequest(peerInfo, Method.Goodbye, "goodBye", goodbye);

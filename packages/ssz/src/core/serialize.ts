@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** @module ssz */
-import BN from "bn.js";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
+import BN from "bn.js";
 
 import {
   AnySSZType,
@@ -26,6 +26,7 @@ import {BYTES_PER_LENGTH_PREFIX} from "../util/constants";
 import {fixedSize, size} from "./size";
 import {_assertValidValue} from "./assertValidValue";
 
+import  {toBufferLE} from "bigint-buffer";
 
 /**
  * Serialize, according to the SSZ spec
@@ -35,86 +36,94 @@ import {_assertValidValue} from "./assertValidValue";
  *
  * // serialize a number
  * buf = serialize(
+ *   "number64", // "numberN", N == length in bits
  *   10,
- *   "uint64" // "uintN", N == length in bits
  * );
  *
- * // serialize a BN bignumber
+ * // serialize a BigInt
+ * buf = serialize("bigint64", BigInt("1000000000000000000"));
+ *
+ * // serialize a BN
  * import BN from "bn.js";
- * buf = serialize(new BN("1000000000000000000"), "uint64");
+ * buf = serialize("bn64", new BN("1000000000000000000"));
  *
  * // serialize a boolean
- * buf = serialize(true, "bool");
+ * buf = serialize("bool", true);
  *
  * // serialize a bit list
  * import {BitList} from "@chainsafe/bit-utils";
- * buf = serialize(BitList.fromBitfield(Buffer.alloc(1), 8), {
+ * buf = serialize({
  *   elementType: "bool",
  *   maxLength: 10, // max number of bits
- * });
+ * }, BitList.fromBitfield(Buffer.alloc(1), 8));
  *
  * // serialize a bit vector
  * import {BitVector} from "@chainsafe/bit-utils";
- * buf = serialize(BitVector.fromBitfield(Buffer.alloc(1), 8), {
+ * buf = serialize({
  *   elementType: "bool",
  *   length: 8, // length in bits
- * });
+ * }, BitVector.fromBitfield(Buffer.alloc(1), 8));
  *
  * // serialize a variable-length byte array, max-length required
- * buf = serialize(Buffer.from("abcd", "hex"), {
- *   elementType: "byte", // "byte", "uint8", or "number8"
+ * buf = serialize({
+ *   elementType: "byte", // "byte", or "number8"
  *   maxLength: 10, // max number of bytes
- * });
+ * }, Buffer.from("abcd", "hex"));
  *
  * // serialize a fixed-length byte array
  * buf = serialize(
+ *   "bytes2", // "bytesN", N == length in bytes
  *   Buffer.from("abcd", "hex"),
- *   "bytes2" // "bytesN", N == length in bytes
  * );
  *
  * // serialize a variable-length array, max-length required
- * buf = serialize([0, 1, 2, 3, 4, 5], {
- *   elementType: "uint32",
+ * buf = serialize({
+ *   elementType: "number32",
  *   maxLength: 10, // max number of elements
- * });
+ * }, [0, 1, 2, 3, 4, 5]);
  *
  * // serialize a fixed-length array
- * buf = serialize([0, 1, 2, 3, 4, 5], {
- *   elementType: "uint32",
+ * buf = serialize({
+ *   elementType: "number32",
  *   length: 6,
- * });
+ * }, [0, 1, 2, 3, 4, 5]);
  *
  * // serialize an object
  * const myDataType: SimpleContainerType = {
  *   fields: [
- *     ["a", "uint16"], // [fieldName, fieldType]
+ *     ["a", "number16"], // [fieldName, fieldType]
  *     ["b", "bool"],
  *     ["c", "bytes96"],
  *   ],
  * };
- * buf = serialize({a: 10, b: false, c: Buffer.alloc(96)}, myDataType);
+ * buf = serialize(myDataType, {a: 10, b: false, c: Buffer.alloc(96)});
  * ```
  */
 
-export function serialize(value: any, type: AnySSZType): Buffer {
+export function serialize(type: AnySSZType, value: any): Buffer {
   const _type = parseType(type);
-  _assertValidValue(value, _type);
-  const buf = Buffer.alloc(size(value, _type));
-  _serialize(value, _type, buf, 0);
+  _assertValidValue(_type, value);
+  const buf = Buffer.alloc(size(_type, value));
+  _serialize(_type, value, buf, 0);
   return buf;
 }
 
 /** @ignore */
-function _serializeUint(value: Uint, type: UintType, output: Buffer, start: number): number {
+function _serializeUint(type: UintType, value: Uint, output: Buffer, start: number): number {
   const offset = start + type.byteLength;
-  let bnValue: BN;
-  if (type.byteLength > 6 && type.useNumber && value === Infinity) {
-    bnValue = new BN(Buffer.alloc(type.byteLength, 255));
+  let buf: Buffer;
+  if (type.use === "bn" || BN.isBN(value)) {
+    buf = (new BN(value as number)).toArrayLike(Buffer, "le", type.byteLength);
   } else {
-    bnValue = new BN(value);
+    let biValue: bigint;
+    if (type.use === "number" && type.byteLength > 6 && value === Infinity) {
+      biValue = BigInt("0x" + Buffer.alloc(type.byteLength, 255).toString("hex"));
+    } else {
+      biValue = BigInt(value);
+    }
+    buf = toBufferLE(biValue, type.byteLength);
   }
-  bnValue.toArrayLike(Buffer, "le", type.byteLength)
-    .copy(output, start);
+  buf.copy(output, start);
   return offset;
 }
 
@@ -130,7 +139,7 @@ function _serializeBool(value: Bool, output: Buffer, start: number): number {
 }
 
 /** @ignore */
-function _serializeBitList(value: BitList, type: BitListType, output: Buffer, start: number): number {
+function _serializeBitList(type: BitListType, value: BitList, output: Buffer, start: number): number {
   const serialized = Buffer.from(value.serialize());
   const offset = start + serialized.length;
   serialized.copy(output, start);
@@ -138,7 +147,7 @@ function _serializeBitList(value: BitList, type: BitListType, output: Buffer, st
 }
 
 /** @ignore */
-function _serializeBitVector(value: BitVector, type: BitVectorType, output: Buffer, start: number): number {
+function _serializeBitVector(type: BitVectorType, value: BitVector, output: Buffer, start: number): number {
   const serialized = Buffer.from(value.toBitfield());
   const offset = start + serialized.length;
   serialized.copy(output, start);
@@ -146,7 +155,7 @@ function _serializeBitVector(value: BitVector, type: BitVectorType, output: Buff
 }
 
 /** @ignore */
-function _serializeByteArray(value: Bytes, type: BytesType, output: Buffer, start: number): number {
+function _serializeByteArray(type: BytesType, value: Bytes, output: Buffer, start: number): number {
   const length = type.type === Type.byteVector ? type.length : value.length;
   const offset = start + length;
   (Buffer.isBuffer(value) ? value : Buffer.from(value))
@@ -155,7 +164,7 @@ function _serializeByteArray(value: Bytes, type: BytesType, output: Buffer, star
 }
 
 /** @ignore */
-function _serializeArray(value: SerializableArray, type: ArrayType, output: Buffer, start: number): number {
+function _serializeArray(type: ArrayType, value: SerializableArray, output: Buffer, start: number): number {
   let index = start;
   if (isVariableSizeType(type.elementType)) {
     // all elements are variable-size
@@ -164,7 +173,7 @@ function _serializeArray(value: SerializableArray, type: ArrayType, output: Buff
     let nextOffsetIndex = currentOffsetIndex;
     for (const v of value) {
       // write serialized element to variable section
-      nextOffsetIndex = _serialize(v, type.elementType, output, currentOffsetIndex);
+      nextOffsetIndex = _serialize(type.elementType, v, output, currentOffsetIndex);
       // write offset
       output.writeUIntLE(currentOffsetIndex - start, fixedIndex, BYTES_PER_LENGTH_PREFIX);
       // update offset
@@ -175,14 +184,14 @@ function _serializeArray(value: SerializableArray, type: ArrayType, output: Buff
   } else {
     // all elements are fixed-size
     for (const v of value) {
-      index = _serialize(v, type.elementType, output, index);
+      index = _serialize(type.elementType, v, output, index);
     }
   }
   return index;
 }
 
 /** @ignore */
-function _serializeObject(value: SerializableObject, type: ContainerType, output: Buffer, start: number): number {
+function _serializeObject(type: ContainerType, value: SerializableObject, output: Buffer, start: number): number {
   let fixedIndex = start;
   const fixedLength = type.fields
     .map(([, fieldType]) => isVariableSizeType(fieldType) ? BYTES_PER_LENGTH_PREFIX : fixedSize(fieldType))
@@ -193,14 +202,14 @@ function _serializeObject(value: SerializableObject, type: ContainerType, output
     if (isVariableSizeType(fieldType)) {
       // field type is variable-size
       // write serialized element to variable section
-      nextOffsetIndex = _serialize(value[fieldName], fieldType, output, currentOffsetIndex);
+      nextOffsetIndex = _serialize(fieldType, value[fieldName], output, currentOffsetIndex);
       // write offset
       output.writeUIntLE(currentOffsetIndex - start, fixedIndex, BYTES_PER_LENGTH_PREFIX);
       // update offset
       currentOffsetIndex = nextOffsetIndex;
       fixedIndex += BYTES_PER_LENGTH_PREFIX;
     } else {
-      fixedIndex = _serialize(value[fieldName], fieldType, output, fixedIndex);
+      fixedIndex = _serialize(fieldType, value[fieldName], output, fixedIndex);
     }
   }
   return currentOffsetIndex;
@@ -213,23 +222,23 @@ function _serializeObject(value: SerializableObject, type: ContainerType, output
  * @param output buffer for writing serialized data
  * @param start starting index
  */
-export function _serialize(value: SerializableValue, type: FullSSZType, output: Buffer, start: number): number {
+export function _serialize(type: FullSSZType, value: SerializableValue, output: Buffer, start: number): number {
   switch(type.type) {
     case Type.bool:
       return _serializeBool(value as Bool, output, start);
     case Type.uint:
-      return _serializeUint(value as Uint, type, output, start);
+      return _serializeUint(type, value as Uint, output, start);
     case Type.bitList:
-      return _serializeBitList(value as BitList, type, output, start);
+      return _serializeBitList(type, value as BitList, output, start);
     case Type.bitVector:
-      return _serializeBitVector(value as BitVector, type, output, start);
+      return _serializeBitVector(type, value as BitVector, output, start);
     case Type.byteList:
     case Type.byteVector:
-      return _serializeByteArray(value as Bytes, type, output, start);
+      return _serializeByteArray(type, value as Bytes, output, start);
     case Type.list:
     case Type.vector:
-      return _serializeArray(value as SerializableArray, type, output, start);
+      return _serializeArray(type, value as SerializableArray, output, start);
     case Type.container:
-      return _serializeObject(value as SerializableObject, type, output, start);
+      return _serializeObject(type, value as SerializableObject, output, start);
   }
 }

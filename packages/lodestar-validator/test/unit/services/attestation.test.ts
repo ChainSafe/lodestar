@@ -10,7 +10,7 @@ import {generateAttestationData} from "@chainsafe/lodestar/test/utils/attestatio
 import {ApiClientOverInstance} from "../../../src/api";
 import {AttestationService} from "../../../src/services/attestation";
 import {generateFork} from "@chainsafe/lodestar/test/utils/fork";
-import BN from "bn.js";
+import {toBufferBE} from "bigint-buffer";
 
 describe("validator attestation service", function () {
 
@@ -49,7 +49,7 @@ describe("validator attestation service", function () {
     ]);
     const service = new AttestationService(
       config,
-      new Keypair(PrivateKey.fromBytes(new BN(98).toBuffer("be", 32))),
+      new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32))),
       rpcClientStub,
       dbStub,
       logger
@@ -73,7 +73,7 @@ describe("validator attestation service", function () {
     dbStub.getAttestations.resolves([]);
     const service = new AttestationService(
       config,
-      new Keypair(PrivateKey.fromBytes(new BN(99).toBuffer("be", 32))),
+      new Keypair(PrivateKey.fromBytes(toBufferBE(99n, 32))),
       rpcClientStub,
       dbStub,
       logger

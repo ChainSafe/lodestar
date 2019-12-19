@@ -23,33 +23,47 @@ Simple Serialize
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/ssz)
 
+### [@chainsafe/ssz-type-schema](/packages/ssz-type-schema)
+Simple Serialize Type Schema
+
+[![npm](https://img.shields.io/npm/v/@chainsafe/ssz-type-schema)](https://www.npmjs.com/package/@chainsafe/ssz-type-schema)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/ssz-type-schema)
+
 ### [@chainsafe/eth2.0-types](/packages/eth2.0-types)
 Typescript types for Ethereum 2.0 datastructures
 
 [![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-types)](https://www.npmjs.com/package/@chainsafe/eth2.0-types)
-[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-types)
 
 ### [@chainsafe/eth2.0-params](/packages/eth2.0-params)
 Beacon chain parameters
 
 [![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-params)](https://www.npmjs.com/package/@chainsafe/eth2.0-params)
-[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-params)
 
 ### [@chainsafe/eth2.0-utils](/packages/eth2.0-utils)
 Utility methods used throughout Lodestar modules.
 
 [![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-utils)](https://www.npmjs.com/package/@chainsafe/eth2.0-utils)
-[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-utils)
 
 ### [@chainsafe/eth2.0-config](/packages/eth2.0-config)
 Beacon chain configuration
 
 [![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-config)](https://www.npmjs.com/package/@chainsafe/eth2.0-config)
-[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-config)
+
+### [@chainsafe/eth2.0-state-transition](/packages/eth2.0-state-transition)
+Beacon chain state transition
+
+[![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-state-transition)](https://www.npmjs.com/package/@chainsafe/eth2.0-state-transition)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-state-transition)
 
 ### [@chainsafe/eth2.0-spec-test-util](/packages/eth2.0-spec-test-util)
 Ethereum 2.0 spec test utilities
@@ -76,7 +90,7 @@ Eth2 validator client implementation
 Read our [contributors document](/CONTRIBUTING.md), [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or talk to us on our [discord](https://discord.gg/yjyvFRP)!
 
 ## Meeting Notes
-Feel free to check out our meeting notes on [HackMD](https://hackmd.io/@yBpKEsxORheI8AJoIiZj1Q/Hk_b8XfcV/https%3A%2F%2Fhackmd.io%2Fc%2FHk_b8XfcV%2Fedit%3Fedit?type=book).
+Feel free to check out our meeting notes and documents on [HackMD](https://hackmd.io/@wemeetagain/rJTEOdqPS/%2F%40yBpKEsxORheI8AJoIiZj1Q%2FHk_b8XfcV%2F%252F6pRB5amJRLKBGEkeOJA8Cw).
 
 ## Donations
 We are a local group of Toronto open source developers. As such, all of our open source work is funded by grants. We all take the time out of our hectic lives to contribute to the Ethereum ecosystem.

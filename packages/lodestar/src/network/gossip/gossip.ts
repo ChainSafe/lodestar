@@ -5,7 +5,7 @@
 
 import {EventEmitter} from "events";
 //@ts-ignore
-import promisify from "promisify-es6";
+import {promisify} from "es6-promisify";
 import LibP2p from "libp2p";
 //@ts-ignore
 import Gossipsub from "libp2p-gossipsub";
@@ -14,11 +14,11 @@ import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {ILogger, LogLevel} from "../../logger";
 import {getGossipTopic,} from "./utils";
 import {INetworkOptions} from "../options";
-import {GossipEventEmitter, IGossip, IGossipEvents, IGossipModules, IGossipMessageValidator, IGossipMessage}
+import {GossipEventEmitter, IGossip, IGossipEvents, IGossipSub, IGossipModules, IGossipMessageValidator, IGossipMessage}
   from "./interface";
 import {GossipEvent} from "./constants";
 import {publishBlock, getIncomingBlockHandler} from "./handlers/block";
-import {publishCommiteeAttestation, getCommitteeAttestationHandler, getIncomingAttestationHandler} 
+import {publishCommiteeAttestation, getCommitteeAttestationHandler, getIncomingAttestationHandler}
   from "./handlers/attestation";
 import {publishAttesterSlashing, getIncomingAttesterSlashingHandler} from "./handlers/attesterSlashing";
 import {publishProposerSlashing, getIncomingProposerSlashingHandler} from "./handlers/proposerSlashing";
@@ -32,10 +32,10 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   protected readonly  opts: INetworkOptions;
   protected readonly config: IBeaconConfig;
   protected readonly  libp2p: LibP2p;
-  protected readonly  pubsub: Gossipsub;
+  protected readonly  pubsub: IGossipSub;
   protected readonly  logger: ILogger;
 
-  private handlers: Map<string, Function>;
+  private handlers: Map<string, GossipHandlerFn>;
   private validator: IGossipMessageValidator;
 
   public constructor(opts: INetworkOptions, {config, libp2p, logger, validator}: IGossipModules) {
@@ -115,20 +115,20 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     }
   }
 
-  private registerHandlers(): Map<string, Function> {
+  private registerHandlers(): Map<string, GossipHandlerFn> {
     const handlers = new Map();
     handlers.set("gossipsub:heartbeat", this.emitGossipHeartbeat);
-    handlers.set(getGossipTopic(GossipEvent.BLOCK, "ssz"), 
+    handlers.set(getGossipTopic(GossipEvent.BLOCK, "ssz"),
       getIncomingBlockHandler(this.validator).bind(this));
-    handlers.set(getGossipTopic(GossipEvent.ATTESTATION, "ssz"), 
+    handlers.set(getGossipTopic(GossipEvent.ATTESTATION, "ssz"),
       getIncomingAttestationHandler(this.validator).bind(this));
-    handlers.set(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, "ssz"), 
+    handlers.set(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, "ssz"),
       getIncomingAggregateAndProofHandler(this.validator).bind(this));
-    handlers.set(getGossipTopic(GossipEvent.ATTESTER_SLASHING, "ssz"), 
+    handlers.set(getGossipTopic(GossipEvent.ATTESTER_SLASHING, "ssz"),
       getIncomingAttesterSlashingHandler(this.validator).bind(this));
-    handlers.set(getGossipTopic(GossipEvent.PROPOSER_SLASHING, "ssz"), 
+    handlers.set(getGossipTopic(GossipEvent.PROPOSER_SLASHING, "ssz"),
       getIncomingProposerSlashingHandler(this.validator).bind(this));
-    handlers.set(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, "ssz"), 
+    handlers.set(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, "ssz"),
       getIncomingVoluntaryExitHandler(this.validator).bind(this));
 
     for(let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {

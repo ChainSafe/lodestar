@@ -68,40 +68,41 @@ export function slashValidator(
   );
 
   const slashedBalance = state.validators[slashedIndex].effectiveBalance;
-  state.slashings[currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] =
-    state.slashings[currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR].add(slashedBalance);
+  state.slashings[currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] += slashedBalance;
   decreaseBalance(
     state,
     slashedIndex,
-    state.validators[slashedIndex].effectiveBalance.divn(config.params.MIN_SLASHING_PENALTY_QUOTIENT));
+    state.validators[slashedIndex].effectiveBalance / BigInt(config.params.MIN_SLASHING_PENALTY_QUOTIENT));
 
 
   const proposerIndex = getBeaconProposerIndex(config, state);
   if (whistleblowerIndex === undefined || whistleblowerIndex === null) {
     whistleblowerIndex = proposerIndex;
   }
-  const whistleblowingReward = slashedBalance.divn(config.params.WHISTLEBLOWING_REWARD_QUOTIENT);
-  const proposerReward = whistleblowingReward.divn(config.params.PROPOSER_REWARD_QUOTIENT);
+  const whistleblowingReward = slashedBalance / BigInt(config.params.WHISTLEBLOWING_REWARD_QUOTIENT);
+  const proposerReward = whistleblowingReward/ BigInt(config.params.PROPOSER_REWARD_QUOTIENT);
   increaseBalance(state, proposerIndex, proposerReward);
-  increaseBalance(state, whistleblowerIndex, whistleblowingReward.sub(proposerReward));
+  increaseBalance(state, whistleblowerIndex, whistleblowingReward - proposerReward);
 }
 
 export function isValidAttesterSlashing(
   config: IBeaconConfig,
   state: BeaconState,
-  attesterSlashing: AttesterSlashing
+  attesterSlashing: AttesterSlashing,
+  verifySignatures = true
 ): boolean {
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;
   return isSlashableAttestationData(config, attestation1.data, attestation2.data) &&
-    isValidIndexedAttestation(config, state, attestation1) &&
-    isValidIndexedAttestation(config, state, attestation2);
+    isValidIndexedAttestation(config, state, attestation1, verifySignatures) &&
+    isValidIndexedAttestation(config, state, attestation2, verifySignatures);
 }
 
 export function isValidProposerSlashing(
   config: IBeaconConfig,
   state: BeaconState,
-  proposerSlashing: ProposerSlashing
+  proposerSlashing: ProposerSlashing,
+  verifySignatures = true
 ): boolean {
   const proposer = state.validators[proposerSlashing.proposerIndex];
   const header1Epoch = computeEpochAtSlot(config, proposerSlashing.header1.slot);
@@ -111,7 +112,7 @@ export function isValidProposerSlashing(
     return false;
   }
   // But the headers are different
-  if (equals(proposerSlashing.header1, proposerSlashing.header2, config.types.BeaconBlockHeader)) {
+  if (equals(config.types.BeaconBlockHeader, proposerSlashing.header1, proposerSlashing.header2)) {
     return false;
   }
   // Check proposer is slashable
@@ -119,9 +120,12 @@ export function isValidProposerSlashing(
     return false;
   }
   // Signatures are valid
+  if (!verifySignatures) {
+    return true;
+  }
   const proposalData1Verified = bls.verify(
     proposer.pubkey,
-    signingRoot(proposerSlashing.header1, config.types.BeaconBlockHeader),
+    signingRoot(config.types.BeaconBlockHeader, proposerSlashing.header1),
     proposerSlashing.header1.signature,
     getDomain(config, state, DomainType.BEACON_PROPOSER, header1Epoch),
   );
@@ -130,7 +134,7 @@ export function isValidProposerSlashing(
   }
   const proposalData2Verified = bls.verify(
     proposer.pubkey,
-    signingRoot(proposerSlashing.header2, config.types.BeaconBlockHeader),
+    signingRoot(config.types.BeaconBlockHeader, proposerSlashing.header2),
     proposerSlashing.header2.signature,
     getDomain(config, state, DomainType.BEACON_PROPOSER, header2Epoch),
   );
@@ -140,7 +144,8 @@ export function isValidProposerSlashing(
 export function isValidVoluntaryExit(
   config: IBeaconConfig,
   state: BeaconState,
-  exit: VoluntaryExit
+  exit: VoluntaryExit,
+  verifySignature = true
 ): boolean {
   const validator = state.validators[exit.validatorIndex];
   const currentEpoch = getCurrentEpoch(config, state);
@@ -153,9 +158,9 @@ export function isValidVoluntaryExit(
   // Verify the validator has been active long enough
   (currentEpoch >= validator.activationEpoch + config.params.PERSISTENT_COMMITTEE_PERIOD) &&
   // Verify signature
-  (bls.verify(
+  (!verifySignature || bls.verify(
     validator.pubkey,
-    signingRoot(exit, config.types.VoluntaryExit),
+    signingRoot(config.types.VoluntaryExit, exit),
     exit.signature,
     getDomain(config, state, DomainType.VOLUNTARY_EXIT, exit.epoch),
   ));

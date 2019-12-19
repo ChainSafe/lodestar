@@ -14,8 +14,9 @@ import {slashValidator, isValidProposerSlashing} from "../../util";
 export function processProposerSlashing(
   config: IBeaconConfig,
   state: BeaconState,
-  proposerSlashing: ProposerSlashing
+  proposerSlashing: ProposerSlashing,
+  verifySignatures = true,
 ): void {
-  assert(isValidProposerSlashing(config, state, proposerSlashing));
+  assert(isValidProposerSlashing(config, state, proposerSlashing, verifySignatures));
   slashValidator(config, state, proposerSlashing.proposerIndex);
 }

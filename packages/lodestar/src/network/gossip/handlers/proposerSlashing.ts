@@ -8,8 +8,7 @@ import {deserializeGossipMessage, getGossipTopic} from "../utils";
 import {Gossip, GossipHandlerFn} from "../gossip";
 import {GossipEvent} from "../constants";
 import {serialize} from "@chainsafe/ssz";
-//@ts-ignore
-import promisify from "promisify-es6";
+import {promisify} from "es6-promisify";
 
 export function getIncomingProposerSlashingHandler(validator: IGossipMessageValidator): GossipHandlerFn {
   return async function handleIncomingProposerSlashing(this: Gossip, msg: IGossipMessage): Promise<void> {
@@ -28,9 +27,9 @@ export function getIncomingProposerSlashingHandler(validator: IGossipMessageVali
 }
 
 export async function publishProposerSlashing(this: Gossip, proposerSlashing: ProposerSlashing): Promise<void> {
-  await promisify(this.pubsub.publish.bind(this.pubsub))(
+  await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
     getGossipTopic(GossipEvent.PROPOSER_SLASHING),
-    serialize(proposerSlashing, this.config.types.ProposerSlashing)
+    serialize(this.config.types.ProposerSlashing, proposerSlashing)
   );
   this.logger.verbose(
     `Publishing proposer slashing for validator #${proposerSlashing.proposerIndex}`

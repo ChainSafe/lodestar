@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import {expect} from "chai";
 import sinon from "sinon";
 
@@ -203,10 +202,10 @@ describe('process epoch - crosslinks', function () {
     const validator1 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: true});
     const validator2 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: false});
     const state = generateState({validators: [validator1, validator2]});
-    getTotalBalanceStub.returns(new BN(1));
+    getTotalBalanceStub.returns(1n);
     try {
       const result = getAttestingBalance(config, state, pendingAttestations);
-      expect(result.toString()).to.be.deep.equal(new BN(1).toString());
+      expect(result.toString()).to.be.deep.equal(1n.toString());
       expect(getTotalBalanceStub.withArgs(sinon.match.any, [1]).calledOnce).to.be.true;
     } catch (e) {
       expect.fail(e.stack);
