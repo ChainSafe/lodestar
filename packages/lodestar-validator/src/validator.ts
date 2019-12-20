@@ -56,7 +56,7 @@ export class Validator {
     this.apiClient.once("beaconChainStarted", this.run);
   }
 
-  public run = () => {
+  public run = (): void => {
     this.logger.info("Chain start has occured!");
     this.apiClient.onNewSlot(this.blockService.onNewSlot);
     this.apiClient.onNewEpoch(this.blockService.onNewEpoch);

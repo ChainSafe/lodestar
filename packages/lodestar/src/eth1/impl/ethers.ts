@@ -6,7 +6,7 @@ import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {Block, Log} from "ethers/providers";
 import {deserialize} from "@chainsafe/ssz";
-import {Deposit, Eth1Data, Gwei, Hash, number64} from "@chainsafe/eth2.0-types";
+import {Deposit, Eth1Data, Hash, number64} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {Eth1EventEmitter, IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
@@ -50,7 +50,6 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
         this.opts.provider.network
       );
     }
-    // @ts-ignore
     this.contract = opts.contract;
   }
 

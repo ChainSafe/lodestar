@@ -3,10 +3,10 @@
  */
 
 import {
-  AggregateAndProof,
   Attestation,
   BeaconBlock,
-  BLSPubkey, BLSSignature,
+  BLSPubkey,
+  BLSSignature,
   bytes96,
   CommitteeIndex,
   Epoch,
@@ -21,11 +21,10 @@ import {OpPool} from "../../../../opPool";
 import {IValidatorApi} from "./interface";
 import {assembleBlock} from "../../../../chain/factory/block";
 import {IEth1Notifier} from "../../../../eth1";
-import {getAttesterDuties, getEpochProposers, produceAttestation} from "../../../impl/validator";
+import {getAttesterDuties, getEpochProposers, produceAttestation,publishAttestation} from "../../../impl/validator";
 import {ApiNamespace, IApiModules} from "../../../index";
 import {IApiOptions} from "../../../options";
 import {ILogger} from "../../../../logger";
-import {publishAttestation} from "../../../impl/validator/publishAttestation";
 import {INetwork} from "../../../../network";
 import {isAggregator} from "@chainsafe/eth2.0-state-transition";
 

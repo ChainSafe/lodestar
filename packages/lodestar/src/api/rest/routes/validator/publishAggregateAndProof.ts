@@ -3,13 +3,14 @@ import fastify, {DefaultQuery} from "fastify";
 import {IApiModules} from "../../../interface";
 import {fromJson} from "@chainsafe/eth2.0-utils";
 import {AggregateAndProof, Attestation} from "@chainsafe/eth2.0-types";
+import {IncomingMessage, Server, ServerResponse} from "http";
 
 interface IQuery extends DefaultQuery {
   "validator_pubkey": string;
   "slot_signature": string;
 }
 
-const opts: fastify.RouteShorthandOptions = {
+const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerResponse, IQuery> = {
   schema: {
     querystring: {
       type: "object",

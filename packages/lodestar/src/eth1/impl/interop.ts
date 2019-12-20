@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars,@typescript-eslint/no-empty-function */
 import {EventEmitter} from "events";
 import {BeaconState, Eth1Data, Hash, number64} from "@chainsafe/eth2.0-types";
 import {IEth1Notifier} from "../";
