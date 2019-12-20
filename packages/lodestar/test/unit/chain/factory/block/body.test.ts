@@ -3,6 +3,7 @@ import {expect} from "chai";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
+  AggregateAndProofOperations,
   AttestationOperations,
   DepositsOperations,
   OpPool,
@@ -27,7 +28,7 @@ describe("blockAssembly - body", function () {
 
   beforeEach(() => {
     opPool = {
-      attestations: sandbox.createStubInstance(AttestationOperations),
+      aggregateAndProofs: sandbox.createStubInstance(AggregateAndProofOperations),
       voluntaryExits: sandbox.createStubInstance(VoluntaryExitOperations),
       deposits: sandbox.createStubInstance(DepositsOperations),
       proposerSlashings: sandbox.createStubInstance(ProposerSlashingOperations),
@@ -48,7 +49,7 @@ describe("blockAssembly - body", function () {
     // @ts-ignore
     opPool.attesterSlashings.getAll.resolves([generateEmptyAttesterSlashing()]);
     // @ts-ignore
-    opPool.attestations.getValid.resolves([generateEmptyAttestation()]);
+    opPool.aggregateAndProofs.getBlockAttestations.resolves([generateEmptyAttestation()]);
     // @ts-ignore
     opPool.voluntaryExits.getAll.resolves([generateEmptyVoluntaryExit()]);
     generateDepositsStub.resolves([generateDeposit()]);
@@ -73,13 +74,21 @@ describe("blockAssembly - body", function () {
 
   it("should generate block body with max respective field lengths", async function() {
     // @ts-ignore
-    opPool.proposerSlashings.getAll.resolves(new Array(config.params.MAX_PROPOSER_SLASHINGS + 1).map(generateEmptyProposerSlashing));
+    opPool.proposerSlashings.getAll.resolves(
+      new Array(config.params.MAX_PROPOSER_SLASHINGS + 1).map(generateEmptyProposerSlashing)
+    );
     // @ts-ignore
-    opPool.attesterSlashings.getAll.resolves(new Array(config.params.MAX_ATTESTER_SLASHINGS + 1).map(generateEmptyAttesterSlashing));
+    opPool.attesterSlashings.getAll.resolves(
+      new Array(config.params.MAX_ATTESTER_SLASHINGS + 1).map(generateEmptyAttesterSlashing)
+    );
     // @ts-ignore
-    opPool.attestations.getValid.resolves(new Array(config.params.MAX_ATTESTATIONS + 1).map(generateEmptyAttestation));
+    opPool.aggregateAndProofs.getBlockAttestations.resolves(
+        
+      new Array(config.params.MAX_ATTESTATIONS + 1).map(generateEmptyAttestation));
     // @ts-ignore
-    opPool.voluntaryExits.getAll.resolves(new Array(config.params.MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit));
+    opPool.voluntaryExits.getAll.resolves(
+      new Array(config.params.MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit)
+    );
     generateDepositsStub.resolves([generateDeposit()]);
     eth1.getEth1Vote.resolves([]);
     const result = await assembleBody(

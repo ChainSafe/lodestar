@@ -51,7 +51,7 @@ export const registerPublishAggregateAndProofEndpoint = (fastify: IFastifyServer
           modules.network.gossip.publishAggregatedAttestation(
             aggregateAndProof
           ),
-          modules.opPool.attestations.receiveAggregatedAttestation(aggregateAndProof)
+          modules.opPool.aggregateAndProofs.receive(aggregateAndProof)
         ]);
       } catch (e) {
         modules.logger.error(e.message);

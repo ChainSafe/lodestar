@@ -115,8 +115,7 @@ export class AttestationService {
       data: attestation.data,
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       aggregationBits: compatibleAttestations.reduce((aggregatedBits, current) => {
-        //TODO aggreate bits
-        return aggregatedBits;
+        return aggregatedBits.or(current.aggregationBits);
       }, compatibleAttestations[0].aggregationBits)
     };
     await this.provider.validator.publishAggregatedAttestation(

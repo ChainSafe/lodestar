@@ -40,7 +40,7 @@
     "test:spec": "TS_NODE_PROJECT=tsconfig.test.json mocha --colors 'test/spec/**/*.test.ts'",
     "test:spec-main": "TS_NODE_PROJECT=tsconfig.test.json mocha --colors 'test/spec/**/*mainnet.test.ts'",
     "test:spec-min": "TS_NODE_PROJECT=tsconfig.test.json mocha --colors 'test/spec/**/*minimal.test.ts'",
-    "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha --file ./test/setup.ts --colors -r ts-node/register 'test/unit/**/*.test.ts'"
+    "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha --colors 'test/unit/**/*.test.ts'"
   },
   "dependencies": {
     "@chainsafe/bit-utils": "0.1.6",

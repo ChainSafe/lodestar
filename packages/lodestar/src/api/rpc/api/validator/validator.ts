@@ -3,6 +3,7 @@
  */
 
 import {
+  AggregateAndProof,
   Attestation,
   BeaconBlock,
   BLSPubkey,
@@ -27,6 +28,7 @@ import {IApiOptions} from "../../../options";
 import {ILogger} from "../../../../logger";
 import {INetwork} from "../../../../network";
 import {isAggregator} from "@chainsafe/eth2.0-state-transition";
+import {Profiler} from "inspector";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -97,11 +99,15 @@ export class ValidatorApi implements IValidatorApi {
     validatorPubkey: BLSPubkey,
     slotSignature: BLSSignature
   ): Promise<void> {
-    await this.opPool.attestations.receiveAggregatedAttestation({
+    const aggregation: AggregateAndProof = {
       aggregate: aggregated,
       selectionProof: slotSignature,
       index: await this.db.getValidatorIndex(validatorPubkey)
-    });
+    };
+    await Promise.all([
+      this.opPool.aggregateAndProofs.receive(aggregation),
+      this.network.gossip.publishAggregatedAttestation(aggregation)
+    ]);
   }
 
   public async getWireAttestations(epoch: number, committeeIndex: number): Promise<Attestation[]> {

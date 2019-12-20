@@ -14,8 +14,8 @@ import {expect} from "chai";
 import {generateEmptyBlock} from "../../../../utils/block";
 import * as blockUtils from "../../../../../src/chain/factory/block";
 import {generateAttestation, generateAttestationData, generateEmptyAttestation} from "../../../../utils/attestation";
-import {Attestation, IndexedAttestation} from "@chainsafe/eth2.0-types";
-import {AttestationOperations, OpPool} from "../../../../../src/opPool";
+import {Attestation} from "@chainsafe/eth2.0-types";
+import {AggregateAndProofOperations, AttestationOperations, OpPool} from "../../../../../src/opPool";
 import {toHex, toJson} from "@chainsafe/eth2.0-utils";
 import {after, afterEach, before, beforeEach, describe, it} from "mocha";
 import {Keypair} from "@chainsafe/bls";
@@ -34,7 +34,9 @@ describe("Test validator rest API", function () {
   const chain = sinon.createStubInstance(BeaconChain);
   const opPool = sinon.createStubInstance(OpPool) as any;
   const attestationOperations = sinon.createStubInstance(AttestationOperations);
+  const aggregationOperations = sinon.createStubInstance(AggregateAndProofOperations);
   opPool.attestations = attestationOperations;
+  opPool.aggregateAndProofs = aggregationOperations;
   const sync = sinon.createStubInstance(Sync) as any;
   const sandbox = sinon.createSandbox();
   const network: any = {
@@ -110,7 +112,7 @@ describe("Test validator rest API", function () {
   it("should publish aggregate and proof", async function () {
     network.gossip.publishAggregatedAttestation.resolves();
     dbStub.getValidatorIndex.resolves(1);
-    attestationOperations.receiveAggregatedAttestation.resolves();
+    aggregationOperations.receive.resolves();
     const aggregateAndProof = generateAggregateAndProof();
     await supertest(restApi.server.server)
       .post(
