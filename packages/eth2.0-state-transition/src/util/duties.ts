@@ -3,23 +3,11 @@
  */
 
 import assert from "assert";
-import {
-  BeaconState, CommitteeAssignment,
-  Epoch,
-  Slot,
-  ValidatorIndex,
-  CommitteeIndex,
-  BLSSignature,
-} from "@chainsafe/eth2.0-types";
-import {bytesToInt} from "@chainsafe/eth2.0-utils";
+import {BeaconState, CommitteeAssignment, Epoch, Slot, ValidatorIndex,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-  getCurrentEpoch,
-} from "./epoch";
-import {getCommitteeCountAtSlot, getBeaconCommittee} from "./committee";
+import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentEpoch,} from "./epoch";
+import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
 import {getBeaconProposerIndex} from "./proposer";
 
 /**
@@ -72,16 +60,4 @@ export function isProposerAtSlot(
   assert(computeEpochAtSlot(config, slot) === currentEpoch);
 
   return getBeaconProposerIndex(config, state) === validatorIndex;
-}
-
-export function isAggregator(
-  config: IBeaconConfig,
-  state: BeaconState,
-  slot: Slot,
-  index: CommitteeIndex,
-  slotSignature: BLSSignature
-): boolean {
-  const committee = getBeaconCommittee(config, state, slot, index);
-  const modulo = Math.max(1, Math.floor(committee.length / config.params.TARGET_AGGREGATORS_PER_COMMITTEE));
-  return bytesToInt(slotSignature.slice(0, 8)) % modulo === 0;
 }

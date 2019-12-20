@@ -91,7 +91,7 @@ export class AttestationService {
     }
   };
 
-  private aggregateAttestations = async (duty: IAttesterDuty, attestation: Attestation, fork: Fork) => {
+  private aggregateAttestations = async (duty: IAttesterDuty, attestation: Attestation, fork: Fork): Promise<void> => {
     this.logger.info(
       `Aggregating attestations for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
     );
@@ -105,7 +105,7 @@ export class AttestationService {
       );
     }
     const compatibleAttestations = wireAttestations.filter((wireAttestation) => {
-      return equals(wireAttestation.data, attestation.data, this.config.types.AttestationData);
+      return equals(this.config.types.AttestationData, wireAttestation.data, attestation.data);
     });
     compatibleAttestations.push(attestation);
     const aggregatedAttestation: Attestation = {
@@ -133,12 +133,11 @@ export class AttestationService {
   private getSlotSignature(slot: Slot, fork: Fork): BLSSignature {
     const domain = getDomain(
       this.config,
-      // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
       {fork} as BeaconState,
       DomainType.BEACON_ATTESTER,
       computeEpochAtSlot(this.config, slot)
     );
-    return this.privateKey.signMessage(hashTreeRoot(slot, this.config.types.Slot), domain).toBytesCompressed();
+    return this.privateKey.signMessage(hashTreeRoot(this.config.types.Slot, slot), domain).toBytesCompressed();
   }
 
   private async createAttestation(

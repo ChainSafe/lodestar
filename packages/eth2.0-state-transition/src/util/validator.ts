@@ -14,7 +14,7 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {getCurrentEpoch} from "./epoch";
-import {hash, intDiv} from "@chainsafe/eth2.0-utils";
+import {hash, intDiv, bytesToInt} from "@chainsafe/eth2.0-utils";
 import {getBeaconCommittee} from "./committee";
 
 
@@ -78,5 +78,5 @@ export function isAggregator(
 ): boolean {
   const committee = getBeaconCommittee(config, state, slot, index);
   const modulo = Math.max(1, intDiv(committee.length, config.params.TARGET_COMMITTEE_SIZE));
-  return (new BN(hash(slotSignature).slice(0, 8), "le").toNumber() % modulo) === 0;
+  return (bytesToInt(hash(slotSignature).slice(0, 8)) % modulo) === 0;
 }

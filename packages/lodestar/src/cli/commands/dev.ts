@@ -23,17 +23,16 @@ import {interopKeypair} from "../../interop/keypairs";
 import {ValidatorApi} from "../../api/rpc/api/validator";
 import {BeaconApi} from "../../api/rpc/api/beacon";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
-import {computeEpochAtSlot, computeStartSlotAtEpoch,getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
-
-import {loadPeerId, createNodeJsLibp2p} from "../../network/nodejs";
+import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
+import {createNodeJsLibp2p, loadPeerId} from "../../network/nodejs";
 import {createPeerId} from "../../network";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "../../util/serialization";
-import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib/api";
 import {ValidatorClient} from "../../validator/nodejs";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {quickStartState} from "../../interop/state";
 import {default as dbConfig} from "../../db/options";
+import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
 
 interface IDevCommandOptions {
   loggingLevel?: string;
@@ -181,6 +180,7 @@ export class DevCommand implements ICliCommand {
       opPool: node.opPool,
       logger: new WinstonLogger({module: "API"}),
       chain: node.chain,
+      network: node.network,
       db: node.db
     };
     const rpcInstance = new ApiClientOverInstance({

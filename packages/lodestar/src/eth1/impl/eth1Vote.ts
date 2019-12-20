@@ -40,12 +40,12 @@ export async function getEth1Vote(
   );
 
   if(validVotes.length > 0) {
-    const frequentVotes = mostFrequent<Eth1Data>(validVotes, config.types.Eth1Data);
+    const frequentVotes = mostFrequent<Eth1Data>(config.types.Eth1Data, validVotes);
     if(frequentVotes.length === 1) {
       return frequentVotes[0];
     } else {
       return allEth1Data[Math.max(...frequentVotes.map(
-        (vote) => allEth1Data.findIndex((eth1Data) => equals(vote, eth1Data, config.types.Eth1Data)))
+        (vote) => allEth1Data.findIndex((eth1Data) => equals(config.types.Eth1Data, vote, eth1Data)))
       )];
     }
   } else {

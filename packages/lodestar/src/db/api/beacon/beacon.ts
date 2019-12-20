@@ -4,13 +4,9 @@
 
 import {BeaconBlock, BeaconState, BLSPubkey, Hash, ValidatorIndex,} from "@chainsafe/eth2.0-types";
 import {DatabaseService, IDatabaseApiOptions} from "../abstract";
-
-import {Bucket, encodeKey, Key} from "../../schema";
-
-import {serialize} from "@chainsafe/ssz";
-import {DatabaseService, IDatabaseApiOptions} from "../abstract";
 import {IBeaconDb} from "./interface";
 import {
+  AggregateAndProofRepository,
   AttestationRepository,
   AttesterSlashingRepository,
   BlockRepository,
@@ -19,8 +15,7 @@ import {
   MerkleTreeRepository,
   ProposerSlashingRepository,
   StateRepository,
-  VoluntaryExitRepository,
-  AggregateAndProofRepository
+  VoluntaryExitRepository
 } from "./repositories";
 import {BlockArchiveRepository} from "./repositories/blockArchive";
 

@@ -37,7 +37,7 @@ export function mostFrequent<T>(type: AnySSZType, array: T[]): T[] {
 
 export function sszEqualPredicate<T>(type: AnySSZType): (a: T, b: T) => boolean {
   return (a: T, b: T) => {
-    return equals(a, b, type);
+    return equals(type, a, b);
   };
 }
 
