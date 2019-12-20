@@ -66,6 +66,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   private metrics: IBeaconMetrics;
   private opts: IChainOptions;
   private attestationProcessingQueue: AsyncQueue<Function>;
+  private attesationWaitingQueue: FastPriorityQueue<Attestation>;
   private blockProcessingQueue: FastPriorityQueue<IBlockProcessJob>; //sort by slot number
 
   public constructor(opts: IChainOptions, {config, db, eth1, opPool, logger, metrics}: IBeaconChainModules) {
@@ -84,6 +85,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.attestationProcessingQueue = queue(async (task: Function) => {
       await task();
     }, 1);
+    this.attesationWaitingQueue = new FastPriorityQueue((a: Attestation, b: Attestation) => a.data.slot < b.data.slot);
     this.blockProcessingQueue = new FastPriorityQueue((a: IBlockProcessJob, b: IBlockProcessJob) => {
       return a.block.slot < b.block.slot;
     });
@@ -133,9 +135,34 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     } catch (e) {
       return;
     }
+    const targetRoot = attestation.data.target.root;
+    if (!await this.db.block.has(targetRoot)) {
+      this.emit("unknownBlockRoot", targetRoot);
+      this.attesationWaitingQueue.add(attestation);
+      return;
+    }
+    const beaconBlockRoot = attestation.data.beaconBlockRoot;
+    if (!await this.db.block.has(beaconBlockRoot)) {
+      this.emit("unknownBlockRoot", beaconBlockRoot);
+      this.attesationWaitingQueue.add(attestation);
+      return;
+    }
     this.attestationProcessingQueue.push(async () => {
       return this.processAttestation(attestation, attestationHash);
     });
+    const nextAttestationInQueue = this.attesationWaitingQueue.peek();
+    while (nextAttestationInQueue) {
+      if (await this.db.block.has(nextAttestationInQueue.data.target.root) &&
+          await this.db.block.has(nextAttestationInQueue.data.beaconBlockRoot)) {
+        const attestationInQueuHash = hashTreeRoot(this.config.types.Attestation, nextAttestationInQueue);
+        this.attestationProcessingQueue.push(async () => {
+          return this.processAttestation(nextAttestationInQueue, attestationInQueuHash);
+        });
+        this.attesationWaitingQueue.poll();
+      } else {
+        return;
+      }
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -246,8 +273,11 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const currentSlot = getCurrentSlot(this.config, checkpointState.genesisTime);
     const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
     const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
-    const epoch = attestation.data.target.epoch;
-    assert([currentEpoch, previousEpoch].includes(epoch));
+    const target = attestation.data.target;
+    assert([currentEpoch, previousEpoch].includes(target.epoch));
+    assert(target.epoch === computeEpochAtSlot(this.config, attestation.data.slot));
+    const block = await this.db.block.get(attestation.data.beaconBlockRoot);
+    assert(block.slot <= attestation.data.slot);
 
     const validators = getAttestingIndices(
       this.config, checkpointState, attestation.data, attestation.aggregationBits);
