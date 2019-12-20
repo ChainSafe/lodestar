@@ -43,7 +43,7 @@ export async function assembleBlock(
 
   block.stateRoot = hashTreeRoot(
     config.types.BeaconState,
-    stateTransition(config, currentState, block, false, false),
+    stateTransition(config, currentState, block, false, false, true),
   );
 
   return block;

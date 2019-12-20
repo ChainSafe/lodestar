@@ -158,7 +158,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     }
 
     const finalizedCheckpoint = this.forkChoice.getFinalized();
-    if(block.slot < computeStartSlotAtEpoch(this.config, finalizedCheckpoint.epoch + 1)) {
+    if(block.slot <= computeStartSlotAtEpoch(this.config, finalizedCheckpoint.epoch)) {
       this.logger.warn(
         `Block ${blockHash.toString("hex")} is not after ` +
         `finalized checkpoint ${finalizedCheckpoint.root.toString("hex")}.`
