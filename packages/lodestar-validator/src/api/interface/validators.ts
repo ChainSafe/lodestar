@@ -1,8 +1,8 @@
 import {
-  AggregateAndProof,
   Attestation,
   BeaconBlock,
-  BLSPubkey, BLSSignature,
+  BLSPubkey,
+  BLSSignature,
   bytes,
   CommitteeIndex,
   Epoch,
@@ -46,7 +46,7 @@ export interface IValidatorApi {
   publishAttestation(attestation: Attestation): Promise<void>;
 
   publishAggregatedAttestation(
-      aggregated: Attestation, validatorPubKey: BLSPubkey, slotSignature: BLSSignature
+    aggregated: Attestation, validatorPubKey: BLSPubkey, slotSignature: BLSSignature
   ): Promise<void>;
 
   getWireAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]>;

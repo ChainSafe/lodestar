@@ -1,14 +1,7 @@
-import {
-  Attestation,
-  AttestationData,
-  Epoch,
-  VoluntaryExit,
-  CommitteeIndex,
-  Epoch, Slot,
-} from "@chainsafe/eth2.0-types";
-import { BitList } from "@chainsafe/bit-utils";
+import {Attestation, AttestationData, CommitteeIndex, Epoch, Slot, VoluntaryExit,} from "@chainsafe/eth2.0-types";
+import {BitList} from "@chainsafe/bit-utils";
 import crypto from "crypto";
-import { AggregateAndProof } from "@chainsafe/eth2.0-types/src";
+import {AggregateAndProof} from "@chainsafe/eth2.0-types/src";
 
 /**
  * Generates a fake attestation data for test purposes.
@@ -66,7 +59,7 @@ export function generateEmptyAggregateAndProof(): AggregateAndProof {
     index: 0,
     selectionProof: Buffer.alloc(96),
     aggregate: attestation,
-  }
+  };
 }
 
 export function generateEmptyVoluntaryExit(): VoluntaryExit {

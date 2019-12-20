@@ -75,7 +75,9 @@ export class AttestationService {
       await sleep(this.config.params.SECONDS_PER_SLOT / 3 * 1000);
       const fork = (await this.provider.beacon.getFork()).fork;
       const attestation = await this.createAttestation(duty.attestationSlot, duty.committeeIndex, fork);
-
+      if(!attestation) {
+        return;
+      }
       if(duty.isAggregator) {
         setTimeout(
           this.aggregateAttestations,

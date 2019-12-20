@@ -38,29 +38,39 @@ export class MockValidatorApi implements IValidatorApi {
     this.validatorIndex = opts && opts.validatorIndex || 1;
   }
 
-  public async getDuties(validatorPublicKeys: BLSPubkey[]): Promise<ValidatorDuty[]> {
-    return [];
-  }
-
-  public async produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock> {
-    // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
-    return {} as BeaconBlock;
-  }
-
-  public async publishBlock(block: BeaconBlock): Promise<void> {
-    this.head = block;
-  }
-
-  public async publishAttestation(attestation: Attestation): Promise<void> {
-    this.attestations.push(attestation);
-  }
-
-  public produceAttestation(validatorPubKey: Buffer, pocBit: boolean, slot: number, shard: number): Promise<Attestation> {
+  getAttesterDuties(epoch: number, validatorPubKey: BLSPubkey[]): Promise<ValidatorDuty[]> {
     return undefined;
   }
 
-  public getValidatorIndex(pubKey: Buffer): Promise<ValidatorIndex> {
+  getProposerDuties(epoch: number): Promise<Map<Slot, BLSPubkey>> {
     return undefined;
   }
 
+  getWireAttestations(epoch: number, committeeIndex: number): Promise<Attestation[]> {
+    return undefined;
+  }
+
+  isAggregator(slot: number, committeeIndex: number, slotSignature: Buffer): Promise<boolean> {
+    return undefined;
+  }
+
+  produceAttestation(validatorPubKey: Buffer, pocBit: boolean, index: number, slot: number): Promise<Attestation> {
+    return undefined;
+  }
+
+  produceBlock(slot: number, randaoReveal: Buffer): Promise<BeaconBlock> {
+    return undefined;
+  }
+
+  publishAggregatedAttestation(aggregated: Attestation, validatorPubKey: Buffer, slotSignature: Buffer): Promise<void> {
+    return undefined;
+  }
+
+  publishAttestation(attestation: Attestation): Promise<void> {
+    return undefined;
+  }
+
+  publishBlock(beaconBlock: BeaconBlock): Promise<void> {
+    return undefined;
+  }
 }
