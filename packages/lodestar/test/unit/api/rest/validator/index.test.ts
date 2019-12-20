@@ -14,7 +14,7 @@ import {expect} from "chai";
 import {generateEmptyBlock} from "../../../../utils/block";
 import * as blockUtils from "../../../../../src/chain/factory/block";
 import {generateAttestation, generateAttestationData, generateEmptyAttestation} from "../../../../utils/attestation";
-import {IndexedAttestation} from "@chainsafe/eth2.0-types";
+import {Attestation, IndexedAttestation} from "@chainsafe/eth2.0-types";
 import {AttestationOperations, OpPool} from "../../../../../src/opPool";
 import {toHex, toJson} from "@chainsafe/eth2.0-utils";
 import {after, afterEach, before, beforeEach, describe, it} from "mocha";
@@ -25,6 +25,7 @@ describe("Test validator rest API", function () {
   this.timeout(10000);
 
   let restApi: RestApi,
+    dbStub: any,
     getAttesterDuties: any,
     assembleBlockStub: any,
     produceAttestationStub: any,
@@ -44,6 +45,7 @@ describe("Test validator rest API", function () {
   };
 
   before(async function () {
+    dbStub = sinon.createStubInstance(BeaconDb);
     restApi = new RestApi({
       api: [ApiNamespace.VALIDATOR],
       cors: "*",
@@ -56,7 +58,7 @@ describe("Test validator rest API", function () {
       sync,
       opPool,
       network,
-      db: sinon.createStubInstance(BeaconDb),
+      db: dbStub,
       config,
       eth1: sinon.createStubInstance(EthersEth1Notifier),
     });
@@ -82,7 +84,7 @@ describe("Test validator rest API", function () {
     getProposerDutiesStub.resolves(new Map([[1, Buffer.alloc(48)]]));
     const response = await supertest(restApi.server.server)
       .get(
-        "/validator/duties/proposer/2",
+        "/validator/duties/2/proposer",
       )
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
@@ -96,7 +98,7 @@ describe("Test validator rest API", function () {
     getAttesterDuties.resolves([generateEmptyValidatorDuty(Buffer.alloc(48, 1))]);
     const response = await supertest(restApi.server.server)
       .get(
-        "/validator/duties/attester/2",
+        "/validator/duties/2/attester",
       )
       .query({"validator_pubkeys[]": [toHex(publicKey1), toHex(publicKey2)]})
       .expect(200)
@@ -107,12 +109,15 @@ describe("Test validator rest API", function () {
 
   it("should publish aggregate and proof", async function () {
     network.gossip.publishAggregatedAttestation.resolves();
+    dbStub.getValidatorIndex.resolves(1);
+    attestationOperations.receiveAggregatedAttestation.resolves();
     const aggregateAndProof = generateAggregateAndProof();
     await supertest(restApi.server.server)
       .post(
-        "/validator/aggregate",
+        "/validator/aggregate?validator_pubkey="
+          +`${toHex(Buffer.alloc(48))}&slot_signature=${toHex(aggregateAndProof.selectionProof)}`,
       )
-      .send(toJson(aggregateAndProof))
+      .send(toJson(aggregateAndProof.aggregate))
       .expect(200);
     expect(network.gossip.publishAggregatedAttestation.calledOnce).to.be.true;
   });
@@ -156,11 +161,9 @@ describe("Test validator rest API", function () {
   });
 
   it("should produce attestation", async function () {
-    const attestation: IndexedAttestation = {
-      attestingIndices: [],
-      data: generateAttestationData(0, 1),
-      signature: null
-    };
+    const attestation: Attestation = generateAttestation({
+      data: generateAttestationData(0, 1)
+    });
     produceAttestationStub.resolves(attestation);
     await supertest(restApi.server.server)
       .get(
@@ -169,7 +172,7 @@ describe("Test validator rest API", function () {
       .query({
         "validator_pubkey": toHex(Buffer.alloc(48)),
         "poc_bit": 1,
-        "shard": 3,
+        "committee_index": 3,
         "slot": 2
       })
       .expect(200)

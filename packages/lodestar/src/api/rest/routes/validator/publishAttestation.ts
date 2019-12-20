@@ -21,8 +21,8 @@ export const registerAttestationPublishEndpoint = (fastify: IFastifyServer, modu
     async (request, reply) => {
       try {
         const attestation = fromJson<Attestation>(
-          request.body,
-          modules.config.types.Attestation
+          modules.config.types.Attestation,
+          request.body
         );
         await publishAttestation(attestation, modules.network.gossip, modules.opPool.attestations);
       } catch (e) {

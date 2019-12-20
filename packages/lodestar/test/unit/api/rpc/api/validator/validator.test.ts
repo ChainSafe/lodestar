@@ -10,20 +10,21 @@ import {AttestationOperations, OpPool} from "../../../../../../src/opPool";
 import {generateEmptyBlock} from "../../../../../utils/block";
 import {generateState} from "../../../../../utils/state";
 import {StatefulDagLMDGHOST} from "../../../../../../src/chain/forkChoice";
-import * as dutyFactory from "../../../../../../src/chain/factory/duties";
 import {EthersEth1Notifier} from "../../../../../../src/eth1";
 import {generateEmptyAttestation} from "../../../../../utils/attestation";
 import {BlockRepository, StateRepository} from "../../../../../../src/db/api/beacon/repositories";
 import * as validatorImpl from "../../../../../../src/api/impl/validator";
 import {Keypair} from "@chainsafe/bls";
-import {ILogger, WinstonLogger} from "../../../../../../src/logger"
+import {ILogger, WinstonLogger} from "../../../../../../src/logger";
+import {Gossip} from "../../../../../../src/network/gossip/gossip";
 
-describe('validator rpc api', function () {
+describe("validator rpc api", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let validatorApi, dbStub, chainStub, opStub, forkChoiceStub, eth1Stub, getDutiesStub;
-  let logger: ILogger = new WinstonLogger();
+  let validatorApi: any, dbStub: any, chainStub: any, networkStub: any,
+    opStub: any, forkChoiceStub: any, eth1Stub: any;
+  const logger: ILogger = new WinstonLogger();
 
   beforeEach(() => {
     dbStub = sandbox.createStubInstance(BeaconDb);
@@ -31,21 +32,28 @@ describe('validator rpc api', function () {
     dbStub.block = sandbox.createStubInstance(BlockRepository);
     eth1Stub = sandbox.createStubInstance(EthersEth1Notifier);
     forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
-    getDutiesStub = sandbox.stub(validatorImpl, "getValidatorDuties");
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
+    networkStub = {
+      gossip: {
+        publishCommiteeAttestation: sandbox.stub()
+      }
+    };
     chainStub.config = config;
     opStub = sandbox.createStubInstance(OpPool);
     opStub.attestations = sandbox.createStubInstance(AttestationOperations);
-    validatorApi = new ValidatorApi({}, {config, chain: chainStub, db: dbStub, opPool: opStub, eth1: eth1Stub, logger: logger});
+    validatorApi = new ValidatorApi(
+      {},
+      {config, chain: chainStub, db: dbStub, opPool: opStub, network: networkStub, eth1: eth1Stub, logger: logger}
+    );
   });
 
   afterEach(() => {
     sandbox.restore();
   });
 
-  it('produce block', async function() {
-    const assembleBlockStub = sandbox.stub(blockAssembly, 'assembleBlock');
+  it("produce block", async function() {
+    const assembleBlockStub = sandbox.stub(blockAssembly, "assembleBlock");
     assembleBlockStub.resolves(generateEmptyBlock());
     const result = await validatorApi.produceBlock(1, Buffer.alloc(96, 0));
     expect(result).to.be.not.null;
@@ -56,18 +64,9 @@ describe('validator rpc api', function () {
     ).to.be.true;
   });
 
-  it('get duties', async function() {
-    const publicKey = Buffer.alloc(48, 1);
-    getDutiesStub.resolves([dutyFactory.generateEmptyValidatorDuty(publicKey)]);
-    const duties = await validatorApi.getDuties([publicKey], 2);
-    expect(duties.length).to.be.equal(1);
-    expect(duties[0].blockProposalSlot).to.be.null;
-    expect(getDutiesStub.calledOnce).to.be.true;
-  });
-
-  it('produceAttestation - missing slots', async function() {
+  it("produceAttestation - missing slots", async function() {
     const state = generateState({slot: 1});
-    sandbox.stub(chainStub, "latestState").get(() => state);
+    dbStub.state.get.resolves(state);
     const block = generateEmptyBlock();
     dbStub.block.get.resolves(block);
     dbStub.getValidatorIndex.resolves(0);
@@ -76,13 +75,13 @@ describe('validator rpc api', function () {
     expect(dbStub.block.get.calledOnce).to.be.true;
   });
 
-  it('publish block', async function() {
+  it("publish block", async function() {
     const block = generateEmptyBlock();
     await validatorApi.publishBlock(block);
     expect(chainStub.receiveBlock.withArgs(block).calledOnce).to.be.true;
   });
 
-  it('publish attestation', async function() {
+  it("publish attestation", async function() {
     const attestation = generateEmptyAttestation();
     await validatorApi.publishAttestation(attestation);
     expect(opStub.attestations.receive.withArgs(attestation).calledOnce).to.be.true;

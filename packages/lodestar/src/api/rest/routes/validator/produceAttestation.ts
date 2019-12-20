@@ -18,7 +18,7 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   schema: {
     querystring: {
       type: "object",
-      required: ["validator_pubkey", "poc_bit", "slot", "shard"],
+      required: ["validator_pubkey", "poc_bit", "slot", "committee_index"],
       properties: {
         "validator_pubkey": {
           type: "string"

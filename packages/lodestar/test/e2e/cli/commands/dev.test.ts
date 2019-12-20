@@ -3,22 +3,22 @@ import rimraf from "rimraf";
 
 import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 
-import { ILogger, WinstonLogger } from "../../../../src/logger";
-import { BeaconNode } from "../../../../src/node";
-import { InteropEth1Notifier } from "../../../../src/eth1/impl/interop";
-import { createPeerId } from "../../../../src/network";
-import { createNodeJsLibp2p } from "../../../../src/network/nodejs";
-import { quickStartState } from "../../../../src/interop/state";
-import { ProgressiveMerkleTree } from "@chainsafe/eth2.0-utils";
-import { MerkleTreeSerialization } from "../../../../src/util/serialization";
-import { computeStartSlotAtEpoch, computeEpochAtSlot, getCurrentSlot } from "@chainsafe/eth2.0-state-transition";
-import { existsSync, mkdirSync } from "fs";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
+import {BeaconNode} from "../../../../src/node";
+import {InteropEth1Notifier} from "../../../../src/eth1/impl/interop";
+import {createPeerId} from "../../../../src/network";
+import {createNodeJsLibp2p} from "../../../../src/network/nodejs";
+import {quickStartState} from "../../../../src/interop/state";
+import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
+import {MerkleTreeSerialization} from "../../../../src/util/serialization";
+import {computeStartSlotAtEpoch, computeEpochAtSlot, getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
+import {existsSync, mkdirSync} from "fs";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib/api";
-import { Keypair, PrivateKey } from "@chainsafe/bls";
-import { interopKeypair } from "../../../../src/interop/keypairs";
-import { ValidatorClient } from "../../../../src/validator/nodejs";
-import { ValidatorApi, BeaconApi } from "../../../../src/api/rpc";
-import { DEPOSIT_CONTRACT_TREE_DEPTH } from "../../../../src/constants";
+import {Keypair, PrivateKey} from "@chainsafe/bls";
+import {interopKeypair} from "../../../../src/interop/keypairs";
+import {ValidatorClient} from "../../../../src/validator/nodejs";
+import {ValidatorApi, BeaconApi} from "../../../../src/api/rpc";
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../../../src/constants";
 
 
 const VALIDATOR_COUNT = 5;
@@ -27,13 +27,13 @@ const SLOTS_PER_EPOCH = 5;
 const VALIDATOR_DIR = "./validators";
 const LODESTAR_DIR = "lodestar-db";
 
-function sleep(ms: number) {
+function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 describe("e2e interop simulation", function() {
   this.timeout(100000);
-  let logger: ILogger = new WinstonLogger();
+  const logger: ILogger = new WinstonLogger();
   logger.silent = true;
   let node: BeaconNode;
   let validators: ValidatorClient[];
@@ -73,7 +73,7 @@ describe("e2e interop simulation", function() {
     if(!hasReceivedEvent) expect.fail("Not received justifiedCheckpoint event");
   });
 
-  async function initializeNode() {
+  async function initializeNode(): Promise<void> {
     // BeaconNode has default config
     const conf = {};
     minimalConfig.params.SECONDS_PER_SLOT = SECONDS_PER_SLOT;
@@ -84,7 +84,7 @@ describe("e2e interop simulation", function() {
 
     const genesisTime = Math.round(Date.now()/1000);
     const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(minimalConfig));
-    let state = quickStartState(minimalConfig, tree, genesisTime, VALIDATOR_COUNT);
+    const state = quickStartState(minimalConfig, tree, genesisTime, VALIDATOR_COUNT);
     await node.chain.initializeBeaconChain(state, tree);
     const targetSlot = computeStartSlotAtEpoch(
       minimalConfig,
@@ -109,6 +109,7 @@ describe("e2e interop simulation", function() {
       sync: node.sync,
       eth1: node.eth1,
       opPool: node.opPool,
+      network: node.network,
       logger: new WinstonLogger({module: "API"}),
       chain: node.chain,
       db: node.db

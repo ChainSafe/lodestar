@@ -36,8 +36,8 @@ export const registerPublishAggregateAndProofEndpoint = (fastify: IFastifyServer
     async (request, reply) => {
       try {
         const aggregatedAttestation = fromJson<Attestation>(
-          request.body,
-          modules.config.types.Attestation
+          modules.config.types.Attestation,
+          request.body
         );
         const aggregateAndProof: AggregateAndProof = {
           aggregate: aggregatedAttestation,

@@ -23,7 +23,7 @@ describe("blockAssembly - body", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let opPool: OpPool, eth1, generateDepositsStub;
+  let opPool: OpPool, eth1: any, generateDepositsStub: any;
 
   beforeEach(() => {
     opPool = {
@@ -35,6 +35,7 @@ describe("blockAssembly - body", function () {
     } as unknown as OpPool;
     generateDepositsStub = sandbox.stub(depositUtils, "generateDeposits");
     eth1 = sandbox.createStubInstance(EthersEth1Notifier);
+    eth1.getEth1Vote = sandbox.stub();
   });
 
   afterEach(() => {
@@ -51,7 +52,7 @@ describe("blockAssembly - body", function () {
     // @ts-ignore
     opPool.voluntaryExits.getAll.resolves([generateEmptyVoluntaryExit()]);
     generateDepositsStub.resolves([generateDeposit()]);
-    eth1.getEth1Data.resolves([]);
+    eth1.getEth1Vote.resolves([]);
     const result = await assembleBody(
       config,
       opPool,
@@ -67,7 +68,7 @@ describe("blockAssembly - body", function () {
     expect(result.voluntaryExits.length).to.be.equal(1);
     expect(result.proposerSlashings.length).to.be.equal(1);
     expect(result.deposits.length).to.be.equal(1);
-    expect(eth1.getEth1Data.calledOnce).to.be.true;
+    expect(eth1.getEth1Vote.calledOnce).to.be.true;
   });
 
   it("should generate block body with max respective field lengths", async function() {
@@ -80,7 +81,7 @@ describe("blockAssembly - body", function () {
     // @ts-ignore
     opPool.voluntaryExits.getAll.resolves(new Array(config.params.MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit));
     generateDepositsStub.resolves([generateDeposit()]);
-    eth1.getEth1Data.resolves([]);
+    eth1.getEth1Vote.resolves([]);
     const result = await assembleBody(
       config,
       opPool,
@@ -96,6 +97,6 @@ describe("blockAssembly - body", function () {
     expect(result.voluntaryExits.length).to.be.equal(config.params.MAX_VOLUNTARY_EXITS);
     expect(result.proposerSlashings.length).to.be.equal(config.params.MAX_PROPOSER_SLASHINGS);
     expect(result.deposits.length).to.be.equal(1);
-    expect(eth1.getEth1Data.calledOnce).to.be.true;
+    expect(eth1.getEth1Vote.calledOnce).to.be.true;
   });
 });

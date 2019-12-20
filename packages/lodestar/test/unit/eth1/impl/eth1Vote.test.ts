@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-object-literal-type-assertion */
 import {EthersEth1Notifier, IEth1Notifier} from "../../../../src/eth1";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {beforeEach, describe, it} from "mocha";
@@ -42,7 +41,7 @@ describe("et1h vote", function () {
       5
     );
     expect(eth1Notifier.getEth1Data.callCount).to.be.equal(2);
-    expect(equals(eth1Vote, expectedVote, config.types.Eth1Data)).to.be.true;
+    expect(equals(config.types.Eth1Data, eth1Vote, expectedVote)).to.be.true;
   });
 
   it("get eth1 vote - longer period tail", async function () {
@@ -67,7 +66,7 @@ describe("et1h vote", function () {
       5
     );
     expect(eth1Notifier.getEth1Data.callCount).to.be.equal(5);
-    expect(equals(eth1Vote, expectedVote, config.types.Eth1Data)).to.be.true;
+    expect(equals(config.types.Eth1Data, eth1Vote, expectedVote)).to.be.true;
   });
 
   it("get eth1 vote - tiebreak", async function () {
@@ -98,7 +97,7 @@ describe("et1h vote", function () {
       5
     );
     expect(eth1Notifier.getEth1Data.callCount).to.be.equal(2);
-    expect(equals(eth1Vote, expectedVote1, config.types.Eth1Data)).to.be.true;
+    expect(equals(config.types.Eth1Data, eth1Vote, expectedVote1)).to.be.true;
   });
 
   it("get eth1 vote - no valid votes", async function () {
@@ -118,7 +117,7 @@ describe("et1h vote", function () {
       5
     );
     expect(eth1Notifier.getEth1Data.callCount).to.be.equal(3);
-    expect(equals(eth1Vote, expectedVote, config.types.Eth1Data)).to.be.true;
+    expect(equals(config.types.Eth1Data, eth1Vote, expectedVote)).to.be.true;
   });
 
 
