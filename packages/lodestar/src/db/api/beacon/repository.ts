@@ -1,11 +1,10 @@
-import BN from "bn.js";
 import {AnySSZType, deserialize, hashTreeRoot, serialize} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {IDatabaseController} from "../../controller";
 import {Bucket, encodeKey} from "../../schema";
 
-export type Id = Buffer | string | number | BN;
+export type Id = Buffer | string | number | bigint;
 
 export abstract class Repository<T> {
   protected config: IBeaconConfig;
@@ -31,7 +30,7 @@ export abstract class Repository<T> {
     try {
       const value = await this.db.get(encodeKey(this.bucket, id));
       if(!value) return null;
-      return deserialize(value, this.type);
+      return deserialize(this.type, value);
     } catch (e) {
       return null;
     }
@@ -41,12 +40,12 @@ export abstract class Repository<T> {
     return await this.get(id) !== null;
   }
 
-  public async setUnderRoot(value: T): Promise<void> {
-    await this.set(hashTreeRoot(value, this.type), value);
+  public async add(value: T): Promise<void> {
+    await this.set(hashTreeRoot(this.type, value), value);
   }
 
   public async set(id: Id, value: T): Promise<void> {
-    await this.db.put(encodeKey(this.bucket, id), serialize(value, this.type));
+    await this.db.put(encodeKey(this.bucket, id), serialize(this.type, value));
   }
 
   public async delete(id: Id): Promise<void> {
@@ -62,7 +61,7 @@ export abstract class BulkRepository<T> extends Repository<T> {
       gt: encodeKey(this.bucket, Buffer.alloc(0)),
       lt: encodeKey(this.bucket + 1, Buffer.alloc(0)),
     });
-    return (data || []).map((data) => deserialize(data, this.type));
+    return (data || []).map((data) => deserialize(this.type, data));
   }
 
   public async getAllBetween(lowerLimit: number|null, upperLimit: number|null): Promise<T[]> {
@@ -70,7 +69,7 @@ export abstract class BulkRepository<T> extends Repository<T> {
       gt: encodeKey(this.bucket, lowerLimit || Buffer.alloc(0)),
       lt: encodeKey(this.bucket, upperLimit || Number.MAX_SAFE_INTEGER),
     });
-    return (data || []).map((data) => deserialize(data, this.type));
+    return (data || []).map((data) => deserialize(this.type, data));
   }
 
   public async deleteMany(ids: Id[]): Promise<void> {
@@ -82,13 +81,13 @@ export abstract class BulkRepository<T> extends Repository<T> {
   }
 
   public async deleteManyByValue(values: T[]): Promise<void> {
-    await this.deleteMany(values.map(value => hashTreeRoot(value, this.type)));
+    await this.deleteMany(values.map(value => hashTreeRoot(this.type, value)));
   }
 
   public async deleteAll(idFunction?: (value: T) => Id): Promise<void> {
     const data = await this.getAll();
     const defaultIdFunction: (value: T) => Id =
-      (value): Id => hashTreeRoot(value, this.type);
+      (value): Id => hashTreeRoot(this.type, value);
     await this.deleteMany(data.map(idFunction || defaultIdFunction));
   }
 

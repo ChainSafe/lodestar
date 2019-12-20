@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import BN from "bn.js";
 import snakeCase from "snake-case";
 import {toHex} from "../bytes";
-import BN from "bn.js";
 import {AnySSZType, FullSSZType, parseType, Type} from "@chainsafe/ssz-type-schema";
 import {BitList, BitVector} from "@chainsafe/bit-utils";
 import {objectToCamelCase} from "../misc";
@@ -25,7 +25,7 @@ function serializeToJson(value: any): any {
   if (Buffer.isBuffer(value)) {
     return toHex(value);
   }
-  if (BN.isBN(value)) {
+  if (typeof value === "bigint") {
     return value.toString();
   }
   if (BitVector.isBitVector(value)) {
@@ -43,18 +43,23 @@ function serializeToJson(value: any): any {
   return value;
 }
 
-export function fromJson<T>(value: object, type: AnySSZType): T {
-  value = objectToCamelCase(value);
-  return expandJsonValue(value, parseType(type));
+export function fromJson<T>(type: AnySSZType, value: object): T {
+  value = objectToCamelCase({...value});
+  return expandJsonValue(parseType(type), value);
 }
 
 
-function expandJsonValue(value: any, type: FullSSZType): any {
+function expandJsonValue(type: FullSSZType, value: any): any {
   switch (type.type) {
     case Type.uint:
-      if (type.byteLength > 6 && type.useNumber)
-        return Infinity;
-      return type.useNumber ? new BN(value).toNumber() : new BN(value);
+      if (type.use === "bn") {
+        return new BN(value);
+      } else if (type.byteLength <= 6 || type.use === "number") {
+        const n = Number(value);
+        return Number.isSafeInteger(n) ? n : Infinity;
+      } else {
+        return BigInt(value);
+      }
     case Type.bool:
       return value;
     case Type.bitList:
@@ -66,10 +71,10 @@ function expandJsonValue(value: any, type: FullSSZType): any {
       return Buffer.from(value.slice(2), "hex");
     case Type.list:
     case Type.vector:
-      return value.map((element: any) => expandJsonValue(element, type.elementType));
+      return value.map((element: any) => expandJsonValue(type.elementType, element));
     case Type.container:
       type.fields.forEach(([fieldName, fieldType]) => {
-        value[fieldName] = expandJsonValue(value[fieldName], fieldType);
+        value[fieldName] = expandJsonValue(parseType(fieldType), value[fieldName]);
       });
       return value;
   }

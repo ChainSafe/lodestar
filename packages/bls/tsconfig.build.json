@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig",
+  "include": ["src"],
+  "compilerOptions": {
+    "typeRoots": [
+      "src/@types",
+      "../../node_modules/@types"
+    ]
+  }
+}

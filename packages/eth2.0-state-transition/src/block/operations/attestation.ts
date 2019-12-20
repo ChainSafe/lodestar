@@ -18,12 +18,11 @@ import {
   getCommitteeCountAtSlot,
 } from "../../util";
 
-// See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#attestations
-
 export function processAttestation(
   config: IBeaconConfig,
   state: BeaconState,
-  attestation: Attestation
+  attestation: Attestation,
+  verifySignature = true
 ): void {
   const currentEpoch = getCurrentEpoch(config, state);
   const previousEpoch = getPreviousEpoch(config, state);
@@ -45,13 +44,13 @@ export function processAttestation(
   };
 
   if (data.target.epoch === currentEpoch) {
-    assert(equals(data.source, state.currentJustifiedCheckpoint, config.types.Checkpoint));
+    assert(equals(config.types.Checkpoint, data.source, state.currentJustifiedCheckpoint));
     state.currentEpochAttestations.push(pendingAttestation);
   } else {
-    assert(equals(data.source, state.previousJustifiedCheckpoint, config.types.Checkpoint));
+    assert(equals(config.types.Checkpoint, data.source, state.previousJustifiedCheckpoint));
     state.previousEpochAttestations.push(pendingAttestation);
   }
 
   // Check signature
-  assert(isValidIndexedAttestation(config, state, getIndexedAttestation(config, state, attestation)));
+  assert(isValidIndexedAttestation(config, state, getIndexedAttestation(config, state, attestation), verifySignature));
 }

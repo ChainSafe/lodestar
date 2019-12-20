@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "description": "Chain configuration required for eth2.0",
   "author": "ChainSafe Systems",
-  "license": "LGPL-3.0",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
@@ -11,7 +11,9 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
-    "lib"
+    "lib/**/*.js",
+    "lib/**/*.js.map",
+    "lib/**/*.d.ts"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
@@ -24,8 +26,7 @@
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "prepublishOnly": "yarn build",
-    "pretest": "yarn run check-types",
-    "test": "mocha -r ./.babel-register 'test/**/*.test.ts'"
+    "pretest": "yarn run check-types"
   },
   "repository": {
     "type": "git",

@@ -1,8 +1,8 @@
 import {assert} from "chai";
 import {describe, it} from "mocha";
-import BN from "bn.js";
 
 import {SerializableValue} from "@chainsafe/ssz-type-schema";
+import BN from "bn.js";
 
 import {ArrayObject, OuterObject, SimpleObject,} from "./objects";
 
@@ -17,32 +17,34 @@ describe("serialize", () => {
   }[] = [
     {value: true, type: "bool", expected: "01"},
     {value: false, type: "bool", expected: "00"},
-    {value: 0, type: "uint8", expected: "00"},
-    {value: 1, type: "uint8", expected: "01"},
-    {value: 255, type: "uint8", expected: "ff"},
-    {value: 2**8, type: "uint16", expected: "0001"},
-    {value: 2**12-1, type: "uint16", expected: "ff0f"},
-    {value: 2**12, type: "uint16", expected: "0010"},
-    {value: 2**16-1, type: "uint16", expected: "ffff"},
-    {value: 2**16, type: "uint32", expected: "00000100"},
-    {value: 2**28-1, type: "uint32", expected: "ffffff0f"},
-    {value: 2**28, type: "uint32", expected: "00000010"},
-    {value: 2**32-1, type: "uint32", expected: "ffffffff"},
-    {value: 2**32, type: "uint64", expected: "0000000001000000"},
-    {value: 2**52-1, type: "uint64", expected: "ffffffffffff0f00"},
+    {value: 0, type: "number8", expected: "00"},
+    {value: 1, type: "number8", expected: "01"},
+    {value: 255, type: "number8", expected: "ff"},
+    {value: 2**8, type: "number16", expected: "0001"},
+    {value: 2**12-1, type: "number16", expected: "ff0f"},
+    {value: 2**12, type: "number16", expected: "0010"},
+    {value: 2**16-1, type: "number16", expected: "ffff"},
+    {value: 2**16, type: "number32", expected: "00000100"},
+    {value: 2**28-1, type: "number32", expected: "ffffff0f"},
+    {value: 2**28, type: "number32", expected: "00000010"},
+    {value: 2**32-1, type: "number32", expected: "ffffffff"},
+    {value: 2**32, type: "number64", expected: "0000000001000000"},
+    {value: 2**52-1, type: "number64", expected: "ffffffffffff0f00"},
     {value: 2**32, type: "number64", expected: "0000000001000000"},
     {value: 2**52-1, type: "number64", expected: "ffffffffffff0f00"},
     {value: Infinity, type: "number64", expected: "ffffffffffffffff"},
-    {value: new BN("01", 16), type: "uint64", expected: "0100000000000000"},
-    {value: new BN("1000000000000000", 16), type: "uint64", expected: "0000000000000010"},
-    {value: new BN("ffffffffffffffff", 16), type: "uint64", expected: "ffffffffffffffff"},
+    {value: 0x01n, type: "bigint64", expected: "0100000000000000"},
+    {value: new BN(1), type: "bn64", expected: "0100000000000000"},
+    {value: new BN(1), type: "bn64", expected: "0100000000000000"},
+    {value: 0x1000000000000000n, type: "bigint64", expected: "0000000000000010"},
+    {value: 0xffffffffffffffffn, type: "bigint64", expected: "ffffffffffffffff"},
     {
-      value: new BN("ffffffffffffffffffffffffffffffff", 16),
-      type: "uint128", expected: "ffffffffffffffffffffffffffffffff"
+      value: 0xffffffffffffffffffffffffffffffffn,
+      type: "bigint128", expected: "ffffffffffffffffffffffffffffffff"
     },
     {
-      value: new BN("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16),
-      type: "uint256", expected: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      value: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn,
+      type: "bigint256", expected: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
     },
     {value: Buffer.from("deadbeef", "hex"), type: "bytes4", expected: "deadbeef"},
     {
@@ -67,9 +69,9 @@ describe("serialize", () => {
     },
     {value: [], type: {elementType: OuterObject, maxLength: 10}, expected: ""},
   ];
-  for (const {value, type, expected} of testCases) {
+  for (const {type, value, expected} of testCases) {
     it(`should correctly serialize ${stringifyType(type)}`, () => {
-      const actual = serialize(value, type).toString("hex");
+      const actual = serialize(type, value).toString("hex");
       assert.equal(actual, expected);
     });
   }
@@ -87,9 +89,9 @@ describe("serialize", () => {
       reason: "invalid byte array length"
     },
   ];
-  for (const {value, type, reason} of failCases) {
+  for (const {type, value, reason} of failCases) {
     it(`should throw an error for ${stringifyType(type)}: ${reason}`, () => {
-      assert.throws(() => serialize(value, type));
+      assert.throws(() => serialize(type, value));
     });
   }
 });

@@ -6,7 +6,6 @@
 // Each type exported here contains both a compile-time type
 // (a typescript interface) and a run-time ssz type (a javascript variable)
 // For more information, see ./index.ts
-import BN from "bn.js";
 
 export type bool = boolean;
 export type bytes = Buffer;
@@ -19,8 +18,8 @@ export type uint8 = number;
 export type uint16 = number;
 export type uint24 = number;
 export type number64 = number;
-export type uint64 = BN;
-export type uint256 = BN;
+export type uint64 = bigint;
+export type uint256 = bigint;
 
 // Custom types, defined for type hinting and readability
 

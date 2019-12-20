@@ -3,13 +3,15 @@
  */
 
 import assert from "assert";
-import BN from "bn.js";
 
-import {Gwei, Hash, Slot, ValidatorIndex,} from "@chainsafe/eth2.0-types";
+import {Gwei, Hash, Slot, ValidatorIndex, number64, Checkpoint, Epoch,} from "@chainsafe/eth2.0-types";
 
 import {ILMDGHOST} from "../interface";
 
 import {AttestationAggregator, Root,} from "./attestationAggregator";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {computeSlotsSinceEpochStart, getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
+import {sleep} from "../../../util/sleep";
 
 
 /**
@@ -18,7 +20,7 @@ import {AttestationAggregator, Root,} from "./attestationAggregator";
  */
 class Node {
   // block data
-  public slot: number;
+  public slot: Slot;
   public blockRoot: Root;
 
   /**
@@ -51,7 +53,7 @@ class Node {
     this.blockRoot = blockRoot;
     this.parent = parent;
 
-    this.weight = new BN(0);
+    this.weight = 0n;
     this.bestChild = null;
     this.bestTarget = null;
     this.children = {};
@@ -70,9 +72,9 @@ class Node {
   public betterThan(other: Node): boolean {
     return (
       // n2 weight greater
-      this.weight.gt(other.weight) ||
+      this.weight > other.weight ||
       // equal weights and lexographically higher root
-      (this.weight.eq(other.weight) && this.blockRoot > other.blockRoot)
+      (this.weight === other.weight && this.blockRoot > other.blockRoot)
     );
   }
 
@@ -85,6 +87,7 @@ class Node {
       // this is the only child, propagate itself as best target as far as necessary
       this.bestChild = child;
       let c: Node = child;
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       let p: Node = this;
       while (p) {
         if (c.equals(p.bestChild)) {
@@ -103,9 +106,9 @@ class Node {
    * Update node weight
    */
   public propagateWeightChange(delta: Gwei): void {
-    this.weight = this.weight.add(delta);
+    this.weight += delta;
     if (this.parent) {
-      if (delta.ltn(0)) {
+      if (delta < 0) {
         this.onRemoveWeight();
       } else {
         this.onAddWeight();
@@ -148,6 +151,9 @@ class Node {
  * See https://github.com/protolambda/lmd-ghost#state-ful-dag
  */
 export class StatefulDagLMDGHOST implements ILMDGHOST {
+  private readonly config: IBeaconConfig;
+  private genesisTime: number64;
+
   /**
    * Aggregated attestations
    */
@@ -161,24 +167,61 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   /**
    * Last finalized block
    */
-  private finalized: Node|null;
+  private finalized: {node: Node; epoch: Epoch} | null;
 
   /**
    * Last justified block
    */
-  private justified: Node|null;
+  private justified: {node: Node; epoch: Epoch} | null;
+  /**
+   * Best justified checkpoint.
+   */
+  private bestJustifiedCheckpoint: Checkpoint;
   private synced: boolean;
+  private interval: NodeJS.Timeout;
 
-  public constructor() {
+  public constructor(config: IBeaconConfig) {
     this.aggregator =
       new AttestationAggregator((hex: string) => this.nodes[hex] ? this.nodes[hex].slot : null);
     this.nodes = {};
     this.finalized = null;
     this.justified = null;
     this.synced = true;
+    this.config = config;
   }
 
-  public addBlock(slot: Slot, blockRootBuf: Hash, parentRootBuf: Hash): void {
+  /**
+   * Start method, should not wait for it.
+   * @param genesisTime
+   */
+  public async start(genesisTime: number): Promise<void> {
+    this.genesisTime = genesisTime;
+    const numSlot = computeSlotsSinceEpochStart(this.config, getCurrentSlot(this.config, this.genesisTime));
+    const timeToWaitTillNextEpoch = (this.config.params.SLOTS_PER_EPOCH - numSlot) * 
+      this.config.params.SECONDS_PER_SLOT * 1000;
+    // Make sure we call onTick at start of each epoch
+    await sleep(timeToWaitTillNextEpoch);
+    const epochInterval = this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000;
+    if (!this.interval) {
+      this.interval = setInterval(this.onTick.bind(this), epochInterval);
+    }
+  }
+
+  public async stop(): Promise<void> {
+    if (this.interval) {
+      clearInterval(this.interval);
+    }
+  }
+
+  public onTick(): void {
+    if (this.bestJustifiedCheckpoint && (!this.justified ||
+      this.bestJustifiedCheckpoint.epoch > this.justified.epoch)) {
+      this.setJustified(this.bestJustifiedCheckpoint);
+    }
+  }
+
+  public addBlock(slot: Slot, blockRootBuf: Hash, parentRootBuf: Hash,
+    justifiedCheckpoint?: Checkpoint, finalizedCheckpoint?: Checkpoint): void {
     this.synced = false;
     const blockRoot = blockRootBuf.toString("hex");
     const parentRoot = parentRootBuf.toString("hex");
@@ -196,6 +239,12 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     if (this.nodes[parentRoot]) {
       this.nodes[parentRoot].addChild(node);
     }
+    if (justifiedCheckpoint && (!this.justified || justifiedCheckpoint.epoch > this.justified.epoch)) {
+      this.checkAndSetJustified(justifiedCheckpoint);
+    }
+    if (finalizedCheckpoint && (!this.finalized || finalizedCheckpoint.epoch > this.finalized.epoch)) {
+      this.setFinalized(finalizedCheckpoint);
+    }
   }
 
   public addAttestation(blockRootBuf: Hash, attester: ValidatorIndex, weight: Gwei): void {
@@ -207,23 +256,10 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     });
   }
 
-  public setFinalized(blockRoot: Hash): void {
-    this.synced = false;
-    const rootHex = blockRoot.toString("hex");
-    this.finalized = this.nodes[rootHex];
-    this.prune();
-    this.aggregator.prune();
-  }
-
-  public setJustified(blockRoot: Hash): void {
-    const rootHex = blockRoot.toString("hex");
-    this.justified = this.nodes[rootHex];
-  }
-
   public syncChanges(): void {
     Object.values(this.aggregator.latestAggregates).forEach((agg) => {
-      if (!agg.prevWeight.eq(agg.weight)) {
-        const delta = agg.weight.sub(agg.prevWeight);
+      if (!(agg.prevWeight === agg.weight)) {
+        const delta = agg.weight - agg.prevWeight;
         agg.prevWeight = agg.weight;
 
         this.nodes[agg.target].propagateWeightChange(delta);
@@ -239,17 +275,87 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       this.syncChanges();
     }
     //@ts-ignore
-    return Buffer.from(this.justified.bestTarget.blockRoot, "hex");
+    return Buffer.from(this.justified.node.bestTarget.blockRoot, "hex");
+  }
+
+  // To address the bouncing attack, only update conflicting justified
+  //  checkpoints in the fork choice if in the early slots of the epoch.
+  public shouldUpdateJustifiedCheckpoint(blockRoot: Hash): boolean {
+    if(!this.justified) {
+      return true;
+    }
+    if(computeSlotsSinceEpochStart(this.config, getCurrentSlot(this.config, this.genesisTime)) < 
+       this.config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED) {
+      return true;
+    }
+    const newJustifiedBlock = this.nodes[blockRoot.toString("hex")];
+    if (newJustifiedBlock.slot <= this.justified.node.slot) {
+      return false;
+    }
+    if (this.getAncestor(blockRoot.toString("hex"), this.justified.node.slot) !== this.justified.node.blockRoot) {
+      return false;
+    }
+
+    return true;
+  }
+
+  public getJustified(): Checkpoint {
+    if (!this.justified) {
+      return null;
+    }
+    return {root: Buffer.from(this.justified.node.blockRoot, "hex"), epoch: this.justified.epoch};
+  }
+
+  public getFinalized(): Checkpoint {
+    if (!this.finalized) {
+      return null;
+    }
+    return {root: Buffer.from(this.finalized.node.blockRoot, "hex"), epoch: this.finalized.epoch};
+  }
+
+  private setFinalized(checkpoint: Checkpoint): void {
+    this.synced = false;
+    const rootHex = checkpoint.root.toString("hex");
+    this.finalized = {node: this.nodes[rootHex], epoch: checkpoint.epoch};
+    this.prune();
+    this.aggregator.prune();
+  }
+
+  private checkAndSetJustified(checkpoint: Checkpoint): void {
+    this.bestJustifiedCheckpoint = checkpoint;
+    if (this.shouldUpdateJustifiedCheckpoint(checkpoint.root)) {
+      this.setJustified(checkpoint);
+    }
+  }
+
+  private setJustified(checkpoint: Checkpoint): void {
+    const {root: blockRoot, epoch} = checkpoint;
+    const rootHex = blockRoot.toString("hex");
+    this.justified = {node: this.nodes[rootHex], epoch};
+  }
+
+  private getAncestor(root: Root, slot: Slot): Root | null {
+    const node = this.nodes[root];
+    if (!node) {
+      return null;
+    }
+    if (node.slot > slot) {
+      return this.getAncestor(node.parent.blockRoot, slot);
+    } else if (node.slot === slot) {
+      return node.blockRoot;
+    } else {
+      return null;
+    }
   }
 
   private prune(): void {
     if (this.finalized) {
       Object.values(this.nodes).forEach((n) => {
-        if (n.slot < this.finalized.slot) {
+        if (n.slot < this.finalized.node.slot) {
           delete this.nodes[n.blockRoot];
         }
       });
-      this.finalized.parent = null;
+      this.finalized.node.parent = null;
     }
   }
 }

@@ -2,7 +2,6 @@
  * @module chain/stateTransition/util
  */
 
-import BN from "bn.js";
 import {
   BeaconState,
   BLSSignature,
@@ -21,11 +20,8 @@ import {getBeaconCommittee} from "./committee";
 
 export function computeCompactValidator(config: IBeaconConfig, validator: Validator, index: ValidatorIndex): uint64 {
   // `index` (top 6 bytes) + `slashed` (16th bit) + `compact_balance` (bottom 15 bits)
-  const compactBalance = validator.effectiveBalance
-    .div(config.params.EFFECTIVE_BALANCE_INCREMENT);
-  const compactValidator = ((new BN(index)).shln(16))
-    .add((new BN(validator.slashed ? 1 : 0)).shln(15))
-    .add(compactBalance);
+  const compactBalance = validator.effectiveBalance / config.params.EFFECTIVE_BALANCE_INCREMENT;
+  const compactValidator = (BigInt(index) << 16n) + (BigInt(validator.slashed ? 1 : 0) << 15n) + compactBalance;
   return compactValidator;
 }
 

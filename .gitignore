@@ -18,3 +18,7 @@ LodestarValidatorDB/
 data
 validators
 *.tsbuildinfo
+**/coverage
+**/node_modules
+**/lib
+**/.nyc_output

@@ -40,7 +40,7 @@ export function getBeaconProposerIndex(config: IBeaconConfig, state: BeaconState
 export function computeProposerIndex(config: IBeaconConfig, state: BeaconState, indices: ValidatorIndex[], seed: Hash):
 ValidatorIndex {
   assert(indices.length > 0);
-  const MAX_RANDOM_BYTE = 2**8 - 1;
+  const MAX_RANDOM_BYTE = BigInt(2**8 - 1);
   let i = 0;
   /* eslint-disable-next-line no-constant-condition */
   while (true) {
@@ -50,7 +50,7 @@ ValidatorIndex {
       intToBytes(intDiv(i, 32), 8),
     ]))[i % 32];
     const effectiveBalance = state.validators[candidateIndex].effectiveBalance;
-    if (effectiveBalance.muln(MAX_RANDOM_BYTE).gte(config.params.MAX_EFFECTIVE_BALANCE.muln(randByte))) {
+    if (effectiveBalance * MAX_RANDOM_BYTE >= (config.params.MAX_EFFECTIVE_BALANCE * BigInt(randByte))) {
       return candidateIndex;
     }
     i += 1;

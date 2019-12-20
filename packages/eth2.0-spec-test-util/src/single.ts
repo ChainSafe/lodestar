@@ -8,7 +8,6 @@ import profiler from "v8-profiler-next";
 import {loadYamlFile} from "@chainsafe/eth2.0-utils/lib/nodejs";
 import {AnySSZType, deserialize} from "@chainsafe/ssz";
 
-import {transformType} from "./transform";
 import {isDirectory} from "./util";
 
 
@@ -22,9 +21,9 @@ export interface ISpecTestOptions<TestCase, Result> {
    * If directory contains both ssz or yaml file version,
    * you can choose which one to use. Default is ssz.
    */
-  inputTypes?: {[K in keyof NonNullable<TestCase>]: InputType};
+  inputTypes?: {[K in keyof NonNullable<TestCase>]?: InputType};
 
-  sszTypes?: {[K in keyof NonNullable<TestCase>]: AnySSZType};
+  sszTypes?: {[K in keyof NonNullable<TestCase>]?: AnySSZType};
 
   /**
    * Optionally
@@ -40,16 +39,11 @@ export interface ISpecTestOptions<TestCase, Result> {
 
   shouldError?: (testCase: TestCase) => boolean;
 
-  shouldSkip?: (testCase: TestCase) => boolean;
+  shouldSkip?: (testCase: TestCase, name: string, index: number) => boolean;
 
   expectFunc?: (testCase: TestCase, expected, actual) => void;
 
   timeout?: number;
-
-  /**
-   * Whether input is unsafe (and ssz types should be transformed)
-   */
-  unsafeInput?: boolean;
 
 }
 
@@ -88,10 +82,10 @@ export function describeDirectorySpecTest<TestCase, Result>(
       .map(name => join(testCaseDirectoryPath, name))
       .filter(isDirectory);
 
-    testCases.forEach((testCaseDirectory) => {
+    testCases.forEach((testCaseDirectory, index) => {
       generateTestCase(
-        name,
         testCaseDirectory,
+        index,
         testFunction,
         options
       );
@@ -102,25 +96,30 @@ export function describeDirectorySpecTest<TestCase, Result>(
 }
 
 function generateTestCase<TestCase, Result>(
-  name: string,
   testCaseDirectoryPath: string,
+  index: number,
   testFunction: (...args: any) => Result,
   options: ISpecTestOptions<TestCase, Result>
 ): void {
-  it(basename(testCaseDirectoryPath), function () {
+  const name = basename(testCaseDirectoryPath);
+  it(name, function () {
     const testCase = loadInputFiles(testCaseDirectoryPath, options);
-    if(options.shouldSkip && options.shouldSkip(testCase)) {
+    if(options.shouldSkip && options.shouldSkip(testCase, name, index)) {
       return this.skip();
     }
     if(options.shouldError && options.shouldError(testCase)) {
-      expect(testFunction.bind(null, testCase, basename(testCaseDirectoryPath))).to.throw;
+      try {
+        testFunction(testCase, name);
+      } catch (e) {
+        return;
+      }
     } else {
       const profileId = `${name}-${Date.now()}.profile`;
       const profilingDirectory = process.env.GEN_PROFILE_DIR;
       if (profilingDirectory) {
         profiler.startProfiling(profileId);
       }
-      const result = testFunction(testCase, basename(testCaseDirectoryPath));
+      const result = testFunction(testCase, name);
       if (profilingDirectory) {
         const profile = profiler.stopProfiling(profileId);
 
@@ -160,10 +159,7 @@ function loadInputFiles<TestCase, Result>(
 
 function deserializeTestCase<TestCase, Result>(file, inputName, options: ISpecTestOptions<TestCase, Result>): object {
   if (file.endsWith(InputType.SSZ)) {
-    const safeType = options.unsafeInput
-      ? transformType(options.sszTypes[inputName])
-      : options.sszTypes[inputName];
-    return deserialize(readFileSync(file), safeType);
+    return deserialize(options.sszTypes[inputName], readFileSync(file));
   } else {
     return  loadYamlFile(file);
   }

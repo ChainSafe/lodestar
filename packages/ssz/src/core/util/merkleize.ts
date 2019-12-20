@@ -1,10 +1,10 @@
 /** @module ssz */
-import {hash} from "../../util/hash";
+import {hash} from "../..";
 import {nextPowerOf2, bitLength} from "../../util/math";
 import {zeroHashes} from "../../util/zeros";
 
 /** @ignore */
-export function merkleize(chunks: Buffer[], padFor: number = 0): Buffer {
+export function merkleize(chunks: Buffer[], padFor = 0): Buffer {
   const layerCount = bitLength(nextPowerOf2(padFor || chunks.length) - 1);
   if (chunks.length == 0) {
     return zeroHashes[layerCount];

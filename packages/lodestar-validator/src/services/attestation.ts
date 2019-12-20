@@ -79,7 +79,7 @@ export class AttestationService {
       if(duty.isAggregator) {
         setTimeout(
           this.aggregateAttestations,
-          this.config.params.SECONDS_PER_SLOT / 3 * 1000, 
+          this.config.params.SECONDS_PER_SLOT / 3 * 1000,
           [duty, attestation, fork]
         );
       }
@@ -121,7 +121,7 @@ export class AttestationService {
       aggregatedAttestation,
       this.publicKey,
       this.getSlotSignature(
-        duty.attestationSlot, 
+        duty.attestationSlot,
         fork
       )
     );
@@ -164,10 +164,10 @@ export class AttestationService {
       return null;
     }
     attestation.signature = this.privateKey.signMessage(
-      hashTreeRoot(attestation.data, this.config.types.AttestationData),
+      hashTreeRoot(this.config.types.AttestationData, attestation.data),
       getDomain(
         this.config,
-        {fork} as BeaconState, // eslint-disable-line @typescript-eslint/no-object-literal-type-assertion
+        {fork} as BeaconState,
         DomainType.BEACON_ATTESTER,
         attestation.data.target.epoch,
       )

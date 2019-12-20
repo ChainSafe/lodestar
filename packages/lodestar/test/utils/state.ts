@@ -1,5 +1,3 @@
-import BN from "bn.js";
-
 import {
   BeaconState,
 } from "@chainsafe/eth2.0-types";
@@ -37,7 +35,7 @@ export function generateState(opts?: TestBeaconState, config?: IBeaconConfig): B
       slot: 0,
       parentRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
-      bodyRoot: hashTreeRoot(generateEmptyBlock().body, config.types.BeaconBlockBody),
+      bodyRoot: hashTreeRoot(config.types.BeaconBlockBody, generateEmptyBlock().body),
       signature: Buffer.alloc(96),
     },
     blockRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
@@ -53,7 +51,7 @@ export function generateState(opts?: TestBeaconState, config?: IBeaconConfig): B
     validators: [],
     balances: [],
     randaoMixes: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
-    slashings: Array.from({length: config.params.EPOCHS_PER_SLASHINGS_VECTOR}, () => new BN(0)),
+    slashings: Array.from({length: config.params.EPOCHS_PER_SLASHINGS_VECTOR}, () => 0n),
     previousEpochAttestations: [],
     currentEpochAttestations: [],
     justificationBits: BitVector.fromBitfield(Buffer.alloc(1), 4),

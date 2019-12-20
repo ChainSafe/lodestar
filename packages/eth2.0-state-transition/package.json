@@ -11,7 +11,9 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
-    "lib"
+    "lib/**/*.js",
+    "lib/**/*.js.map",
+    "lib/**/*.d.ts"
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
@@ -38,10 +40,11 @@
   ],
   "dependencies": {
     "@chainsafe/bit-utils": "^0.1.4",
-    "@chainsafe/bls": "^0.1.7",
+    "@chainsafe/bls": "0.2.0",
     "@chainsafe/eth2.0-config": "0.2.0",
     "@chainsafe/eth2.0-utils": "0.1.0",
     "@chainsafe/ssz": "^0.5.2",
+    "bigint-buffer": "^1.1.5",
     "bn.js": "^5.0.0",
     "buffer-xor": "^2.0.2"
   },

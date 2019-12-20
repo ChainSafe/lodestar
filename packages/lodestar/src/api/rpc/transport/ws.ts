@@ -4,8 +4,7 @@
 
 
 import http from "http";
-//@ts-ignore
-import promisify from "promisify-es6";
+import {promisify} from "es6-promisify";
 import WebSocket from "ws";
 import {ILogger} from "../../../logger";
 import {IRpcServer} from "./index";
@@ -33,6 +32,7 @@ export class WSServer implements IRpcServer {
     this.on = this.ws.on.bind(this.ws);
   }
   public async start(): Promise<void> {
+    // @ts-ignore
     await promisify(this.httpServer.listen.bind(this.httpServer))(this.opts.port, this.opts.host);
     this.logger.info(`JSON RPC WS server started on ${this.opts.host}:${this.opts.port}`);
   }

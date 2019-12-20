@@ -11,6 +11,7 @@ export abstract class AbstractApiClient
   extends (EventEmitter as { new(): ApiClientEventEmitter })
   implements IApiClient {
 
+
   protected config: IBeaconConfig;
 
   private currentSlot: Slot = 0;
@@ -19,6 +20,10 @@ export abstract class AbstractApiClient
   private newEpochCallbacks: INewEpochCallback[] = [];
   private running = false;
   private beaconNodeInterval: NodeJS.Timeout;
+
+  public abstract url: string;
+  abstract beacon: IBeaconApi;
+  abstract validator: IValidatorApi;
 
   public onNewEpoch(cb: INewEpochCallback): void {
     if (cb) {
@@ -65,14 +70,13 @@ export abstract class AbstractApiClient
         (this.config.params.SECONDS_PER_SLOT - diffInSeconds % this.config.params.SECONDS_PER_SLOT) * 1000;
     //subscribe to new slots and notify upon new epoch
     this.onNewSlot(this.updateEpoch.bind(this));
-    const that = this;
     setTimeout(
-      that.updateSlot.bind(that),
+      this.updateSlot,
       diffTillNextSlot
     );
   }
 
-  private updateSlot(): void {
+  private updateSlot = (): void => {
     if(!this.running) {
       return;
     }
@@ -81,14 +85,13 @@ export abstract class AbstractApiClient
       cb(this.currentSlot);
     });
     //recursively invoke update slot after SECONDS_PER_SLOT
-    const that = this;
     setTimeout(
-      that.updateSlot.bind(that),
+      this.updateSlot,
       this.config.params.SECONDS_PER_SLOT * 1000
     );
-  }
+  };
 
-  private updateEpoch(slot: Slot): void {
+  private updateEpoch = (slot: Slot): void => {
     const epoch = computeEpochAtSlot(this.config, slot);
     if (epoch !== this.currentEpoch && epoch !== 0) {
       this.currentEpoch = epoch;
@@ -96,10 +99,6 @@ export abstract class AbstractApiClient
         cb(this.currentEpoch);
       });
     }
-  }
-
-  public abstract url: string;
-  abstract beacon: IBeaconApi;
-  abstract validator: IValidatorApi;
+  };
 
 }

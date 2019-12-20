@@ -1,7 +1,6 @@
 import sinon from "sinon";
 import {describe} from "mocha";
 import {expect} from "chai";
-import BN from "bn.js";
 import {OpPool} from "../../../src/opPool";
 import {generateEmptyBlock} from "../../utils/block";
 import {EthersEth1Notifier} from "../../../src/eth1";
@@ -38,7 +37,7 @@ describe("operation pool", function () {
     // Add to state
     dbStub.state.getLatest.resolves(generateState(
       {
-        validators: generateValidators(100, {activation: 0, balance: new BN(2 ** 5 * 1e9)})
+        validators: generateValidators(100, {activation: 0, balance: 2n ** 5n * BigInt(1e9)})
       }
     ));
 

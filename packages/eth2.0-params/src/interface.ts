@@ -1,7 +1,6 @@
 /**
  * @module params
  */
-import BN from "bn.js";
 
 export interface IBeaconParams {
   // Misc
@@ -19,13 +18,14 @@ export interface IBeaconParams {
   DEPOSIT_CONTRACT_ADDRESS: number;
 
   // Gwei Values
-  MIN_DEPOSIT_AMOUNT: BN;
-  MAX_EFFECTIVE_BALANCE: BN;
-  EJECTION_BALANCE: BN;
-  EFFECTIVE_BALANCE_INCREMENT: BN;
+  MIN_DEPOSIT_AMOUNT: bigint;
+  MAX_EFFECTIVE_BALANCE: bigint;
+  EJECTION_BALANCE: bigint;
+  EFFECTIVE_BALANCE_INCREMENT: bigint;
 
   // Initial values
   GENESIS_SLOT: number;
+  SAFE_SLOTS_TO_UPDATE_JUSTIFIED: number;
   GENESIS_EPOCH: number;
   BLS_WITHDRAWAL_PREFIX_BYTE: Buffer;
   GENESIS_FORK_VERSION: Buffer;
@@ -39,6 +39,7 @@ export interface IBeaconParams {
   MAX_SEED_LOOKAHEAD: number;
   SLOTS_PER_ETH1_VOTING_PERIOD: number;
   ETH1_FOLLOW_DISTANCE: number;
+  TARGET_AGGREGATORS_PER_COMMITTEE: number;
   SLOTS_PER_HISTORICAL_ROOT: number;
   MIN_VALIDATOR_WITHDRAWAL_DELAY: number;
   PERSISTENT_COMMITTEE_PERIOD: number;
@@ -56,7 +57,7 @@ export interface IBeaconParams {
   BASE_REWARDS_PER_EPOCH: number;
   WHISTLEBLOWING_REWARD_QUOTIENT: number;
   PROPOSER_REWARD_QUOTIENT: number;
-  INACTIVITY_PENALTY_QUOTIENT: BN;
+  INACTIVITY_PENALTY_QUOTIENT: bigint;
   MIN_SLASHING_PENALTY_QUOTIENT: number;
 
   // Max operations per block

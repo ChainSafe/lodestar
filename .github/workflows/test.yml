@@ -1,0 +1,26 @@
+name: CI Tests
+
+on: [pull_request, push]
+
+jobs:
+  lint:
+    name: Quick tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install lerna
+      run: yarn global add lerna
+    - name: Bootstrap
+      run: $(yarn global bin)/lerna bootstrap
+    - name: Check types
+      run: $(yarn global bin)/lerna run check-types
+    - name: Lint
+      run: $(yarn global bin)/lerna run lint
+    - name: Unit tests
+      run: $(yarn global bin)/lerna run test:unit
+    - name: Coverage
+      run: $(yarn global bin)/lerna run coverage
+    - name: E2e tests
+      run: $(yarn global bin)/lerna run test:e2e
+    - name: Spec tests
+      run: $(yarn global bin)/lerna run test:spec-min

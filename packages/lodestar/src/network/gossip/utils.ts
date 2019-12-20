@@ -17,7 +17,7 @@ export function getGossipTopic(event: GossipEvent, encoding = "ssz", params: Map
   return topic;
 }
 
-export function getAttestationSubnetTopic(attestation: Attestation, encoding: string = "ssz"): string {
+export function getAttestationSubnetTopic(attestation: Attestation, encoding = "ssz"): string {
   return getGossipTopic(
     GossipEvent.ATTESTATION_SUBNET,
     encoding,
@@ -31,5 +31,5 @@ export function getAttestationSubnet(attestation: Attestation): string {
 
 export function deserializeGossipMessage<T>(msg: IGossipMessage, type: AnySSZType): T {
   assert(msg.data.length <= GOSSIP_MAX_SIZE, `Message exceeds size limit of ${GOSSIP_MAX_SIZE} bytes`);
-  return deserialize(msg.data, type);
+  return deserialize(type, msg.data);
 }

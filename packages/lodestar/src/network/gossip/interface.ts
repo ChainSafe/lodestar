@@ -20,6 +20,7 @@ import {IService} from "../../node";
 
 export interface IGossipEvents {
   [GossipEvent.BLOCK]: (block: BeaconBlock) => void;
+  [GossipEvent.ATTESTATION_SUBNET]: (attestationSubnet: {attestation: Attestation; subnet: number}) => void;
   [GossipEvent.ATTESTATION]: (attestation: Attestation) => void;
   [GossipEvent.AGGREGATE_AND_PROOF]: (attestation: AggregateAndProof) => void;
   [GossipEvent.VOLUNTARY_EXIT]: (voluntaryExit: VoluntaryExit) => void;
@@ -33,6 +34,15 @@ export interface IGossipModules {
   config: IBeaconConfig;
   libp2p: LibP2p;
   logger: ILogger;
+  validator: IGossipMessageValidator;
+}
+
+export interface IGossipSub extends EventEmitter {
+  publish(topic: string, data: Buffer, cb: (err: unknown) => void): void;
+  start(cb: (err: unknown) => void): void;
+  stop(cb: (err: unknown) => void): void;
+  subscribe(topic: string): void;
+  unsubscribe(topic: string): void;
 }
 
 export interface IGossip extends GossipEventEmitter, IService {
@@ -42,6 +52,16 @@ export interface IGossip extends GossipEventEmitter, IService {
   publishVoluntaryExit(voluntaryExit: VoluntaryExit): Promise<void>;
   publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<void>;
   publishProposerSlashing(proposerSlashing: ProposerSlashing): Promise<void>;
+}
+
+export interface IGossipMessageValidator {
+  isValidIncomingBlock(block: BeaconBlock): Promise<boolean>;
+  isValidIncomingCommitteeAttestation(attestation: Attestation, subnet: number): Promise<boolean>;
+  isValidIncomingAggregateAndProof(aggregateAndProof: AggregateAndProof): Promise<boolean>;
+  isValidIncomingUnaggregatedAttestation(attestation: Attestation): Promise<boolean>;
+  isValidIncomingVoluntaryExit(voluntaryExit: VoluntaryExit): Promise<boolean>;
+  isValidIncomingProposerSlashing(proposerSlashing: ProposerSlashing): Promise<boolean>;
+  isValidIncomingAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<boolean>;
 }
 
 export interface IGossipMessage {

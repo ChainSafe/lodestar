@@ -7,5 +7,5 @@ export const bit: BoolType = {
 export const byte: UintType = {
   type: Type.uint,
   byteLength: 1,
-  useNumber: true,
+  use: "number",
 };

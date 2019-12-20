@@ -1,0 +1,18 @@
+name: Mainnet spec tests
+
+on:
+  push:
+    branches:
+      master
+
+jobs:
+  specTest:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install lerna
+      run: yarn global add lerna
+    - name: Bootstrap
+      run: $(yarn global bin)/lerna bootstrap
+    - name: Spec tests
+      run: $(yarn global bin)/lerna run test:spec-main

@@ -7,8 +7,9 @@ import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../constants";
 
 import yargs from "yargs";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
 import {MerkleTreeSerialization} from "../util/serialization";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 const args = yargs.parse()._;
 
 // This file runs the dump command:
@@ -23,7 +24,7 @@ export function dumpQuickStartState(
   const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
   const state = quickStartState(config, tree, genesisTime, validatorCount);
   const BeaconState = config.types.BeaconState;
-  fs.writeFileSync(output, serialize(state, BeaconState));
+  fs.writeFileSync(output, serialize(BeaconState, state));
 }
 
 dumpQuickStartState(config, parseInt(args[0]), parseInt(args[1]), args[2]);

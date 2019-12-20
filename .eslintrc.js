@@ -6,6 +6,10 @@ module.exports = {
     browser: true,
     es6: true,
     node: true,
+    mocha: true
+  },
+  globals: {
+    BigInt: true,
   },
   parser: "@typescript-eslint/parser",
   parserOptions: {
@@ -46,28 +50,33 @@ module.exports = {
     "@typescript-eslint/no-unused-vars": ["error", {
       "varsIgnorePattern": "^_"
     }],
+    "@typescript-eslint/ban-ts-ignore": "warn",
     "@typescript-eslint/no-use-before-define": "off",
     "@typescript-eslint/semi": "error",
     "@typescript-eslint/type-annotation-spacing": "error",
+    //it doesn't recognize module/lib/something (like mainnet & minimal presets)
+    "import/no-duplicates": "off",
     "import/no-extraneous-dependencies": ["error", {
       "devDependencies": false,
       "optionalDependencies": false,
       "peerDependencies": false
     }],
-    "camelcase": "error",
     "func-call-spacing": "off",
     "max-len": ["error", {
       "code": 120
     }],
+    //if --fix is run it messes imports like /lib/presets/minimal & /lib/presets/mainnet
+    "import/no-duplicates": "off",
     "new-parens": "error",
     "no-caller": "error",
     "no-bitwise": "off",
-    "no-conditional-assignment": true,
-    "no-consecutive-blank-lines": false,
+    "no-cond-assign": "error",
+    "no-consecutive-blank-lines": 0,
     "no-console": "warn",
     "no-var": "error",
     "object-curly-spacing": ["error", "never"],
-    "object-literal-sort-keys": false,
+    "object-literal-sort-keys": 0,
+    "no-prototype-builtins": 0,
     "prefer-const": "error",
     "quotes": ["error", "double"],
     "semi": "off"

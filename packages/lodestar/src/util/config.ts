@@ -17,7 +17,7 @@ export interface IConfigurationModule {
   fields: (IConfigurationModule | IConfigurationField<unknown>)[];
 }
 
-export function booleanOption(name: string, flag: string, description: string = ""): IConfigurationField {
+export function booleanOption(name: string, flag: string, description = ""): IConfigurationField {
   return {
     name,
     description,

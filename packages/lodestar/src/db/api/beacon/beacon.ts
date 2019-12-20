@@ -3,6 +3,7 @@
  */
 
 import {BeaconBlock, BeaconState, BLSPubkey, Hash, ValidatorIndex,} from "@chainsafe/eth2.0-types";
+import {DatabaseService, IDatabaseApiOptions} from "../abstract";
 
 import {Bucket, encodeKey, Key} from "../../schema";
 
@@ -18,8 +19,10 @@ import {
   MerkleTreeRepository,
   ProposerSlashingRepository,
   StateRepository,
-  VoluntaryExitRepository
+  VoluntaryExitRepository,
+  AggregateAndProofRepository
 } from "./repositories";
+import {BlockArchiveRepository} from "./repositories/blockArchive";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
 
@@ -29,7 +32,11 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   public block: BlockRepository;
 
+  public blockArchive: BlockArchiveRepository;
+
   public attestation: AttestationRepository;
+
+  public aggregateAndProof: AggregateAndProofRepository;
 
   public voluntaryExit: VoluntaryExitRepository;
 
@@ -46,7 +53,9 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.chain = new ChainRepository(this.config, this.db);
     this.state = new StateRepository(this.config, this.db, this.chain);
     this.block = new BlockRepository(this.config, this.db, this.chain);
+    this.blockArchive = new BlockArchiveRepository(this.config, this.db);
     this.attestation = new AttestationRepository(this.config, this.db);
+    this.aggregateAndProof = new AggregateAndProofRepository(this.config, this.db);
     this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db);
     this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db);
     this.attesterSlashing = new AttesterSlashingRepository(this.config, this.db);
@@ -54,14 +63,28 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.merkleTree = new MerkleTreeRepository(this.config, this.db);
   }
 
-  public async setChainHeadRoots(
+  public async storeChainHead(
+    block: BeaconBlock,
+    state: BeaconState
+  ): Promise<void> {
+    await Promise.all([
+      this.block.add(block),
+      this.state.set(block.stateRoot, state),
+    ]);
+    const slot = block.slot;
+    await Promise.all([
+      this.chain.setLatestStateRoot(block.stateRoot),
+      this.chain.setChainHeadSlot(slot)
+    ]);
+  }
+
+  public async updateChainHead(
     blockRoot: Hash,
-    stateRoot: Hash,
-    block?: BeaconBlock,
-    state?: BeaconState): Promise<void> {
+    stateRoot: Hash
+  ): Promise<void> {
     const [storedBlock, storedState] = await Promise.all([
-      block ? block : this.block.get(blockRoot),
-      state ? state : this.state.get(stateRoot),
+      this.block.get(blockRoot),
+      this.state.get(stateRoot),
     ]);
     // block should already be set
     if(!storedBlock) {
@@ -74,13 +97,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     const slot = storedBlock.slot;
     await Promise.all([
       this.chain.setLatestStateRoot(storedBlock.stateRoot),
-      this.db.batchPut([{
-        key: encodeKey(Bucket.mainChain, slot),
-        value: blockRoot
-      }, {
-        key: encodeKey(Bucket.chainInfo, Key.chainHeight),
-        value: serialize(slot, this.config.types.uint64)
-      }]),
+      this.chain.setChainHeadSlot(slot)
     ]);
   }
 

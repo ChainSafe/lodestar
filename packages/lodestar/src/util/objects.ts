@@ -8,11 +8,11 @@ interface IElementDescription {
   count: number;
 }
 
-export function mostFrequent<T>(array: T[], type: AnySSZType): T[] {
+export function mostFrequent<T>(type: AnySSZType, array: T[]): T[] {
   const hashMap: Map<string, IElementDescription> = new Map<string, IElementDescription>();
   array.forEach((e, index) => {
     //We can optimize this by using faster hash like https://github.com/bevacqua/hash-sum
-    const hash = hashTreeRoot(e, type).toString("hex");
+    const hash = hashTreeRoot(type, e).toString("hex");
 
     const desc = hashMap.get(hash);
     if(desc) {

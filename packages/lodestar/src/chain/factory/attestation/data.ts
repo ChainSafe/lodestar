@@ -18,7 +18,7 @@ export async function assembleAttestationData(
 
   let epochBoundaryBlockRoot: Hash;
   if (epochStartSlot === headState.slot) {
-    epochBoundaryBlockRoot = signingRoot(headBlock, config.types.BeaconBlock);
+    epochBoundaryBlockRoot = signingRoot(config.types.BeaconBlock, headBlock);
   } else {
     epochBoundaryBlockRoot = getBlockRootAtSlot(config, headState, epochStartSlot);
   }
@@ -29,7 +29,7 @@ export async function assembleAttestationData(
   return {
     slot,
     index,
-    beaconBlockRoot: signingRoot(headBlock, config.types.BeaconBlock),
+    beaconBlockRoot: signingRoot(config.types.BeaconBlock, headBlock),
     source: headState.currentJustifiedCheckpoint,
     target: {
       epoch: currentEpoch,

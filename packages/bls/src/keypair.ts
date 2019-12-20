@@ -4,9 +4,9 @@ import {PrivateKey} from "./privateKey";
 
 export class Keypair {
 
-  private _publicKey: PublicKey;
+  private readonly _publicKey: PublicKey;
 
-  private _privateKey: PrivateKey;
+  private readonly _privateKey: PrivateKey;
 
   public constructor(privateKey: PrivateKey, publicKey?: PublicKey) {
     this._privateKey = privateKey;

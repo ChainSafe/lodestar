@@ -86,7 +86,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     merkleTreeIndex: string
   ): Promise<void> {
     try {
-      const index = deserialize(Buffer.from(merkleTreeIndex.substr(2), "hex"), this.config.types.number64) as number64;
+      const index = deserialize(this.config.types.number64, Buffer.from(merkleTreeIndex.substr(2), "hex"));
       const deposit = this.createDeposit(
         pubkey,
         withdrawalCredentials,
@@ -204,7 +204,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       data: {
         pubkey: Buffer.from(pubkey.slice(2), "hex"),
         withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), "hex"),
-        amount: deserialize(Buffer.from(amount.slice(2), "hex"), this.config.types.Gwei) as Gwei,
+        amount: deserialize(this.config.types.Gwei, Buffer.from(amount.slice(2), "hex")),
         signature: Buffer.from(signature.slice(2), "hex"),
       },
     };

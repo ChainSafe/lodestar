@@ -31,7 +31,7 @@ export function isSlashableAttestationData(
 ): boolean {
   return (
     // Double vote
-    (!equals(data1, data2, config.types.AttestationData)
+    (!equals(config.types.AttestationData, data1, data2)
       && data1.target.epoch === data2.target.epoch) ||
     // Surround vote
     (data1.source.epoch < data2.source.epoch &&
@@ -45,7 +45,8 @@ export function isSlashableAttestationData(
 export function isValidIndexedAttestation(
   config: IBeaconConfig,
   state: BeaconState,
-  indexedAttestation: IndexedAttestation
+  indexedAttestation: IndexedAttestation,
+  verifySignature = true
 ): boolean {
   const indices = indexedAttestation.attestingIndices;
 
@@ -54,9 +55,9 @@ export function isValidIndexedAttestation(
     return false;
   }
   //  Verify aggregate signature
-  if (!bls.verify(
+  if (verifySignature && !bls.verify(
     bls.aggregatePubkeys(indices.map((i) => state.validators[i].pubkey)),
-    hashTreeRoot(indexedAttestation.data, config.types.AttestationData),
+    hashTreeRoot(config.types.AttestationData, indexedAttestation.data),
     indexedAttestation.signature,
     getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch)
   )) {

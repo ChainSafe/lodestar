@@ -29,6 +29,7 @@ export class PouchDbController extends EventEmitter implements IDatabaseControll
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   public async start(): Promise<void> {}
 
   public async stop(): Promise<void> {

@@ -3,8 +3,6 @@
  * @module chain/forkChoice
  */
 
-import BN from "bn.js";
-
 import {Gwei, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
 
 
@@ -76,17 +74,17 @@ export class AttestationAggregator {
       const prevAgg = this.ensureAggregate(prevA.target);
       const newAgg = this.ensureAggregate(a.target);
       if (prevAgg.target !== newAgg.target) { // new attestation target
-        prevAgg.weight = prevAgg.weight.sub(prevA.weight);
-        newAgg.weight = newAgg.weight.add(a.weight);
-      } else if (!prevA.weight.eq(a.weight)) { // new attestation weight
-        newAgg.weight = newAgg.weight.add(a.weight.sub(prevA.weight));
+        prevAgg.weight -=  prevA.weight;
+        newAgg.weight += a.weight;
+      } else if (!(prevA.weight === a.weight)) { // new attestation weight
+        newAgg.weight += a.weight - prevA.weight;
       } else {
         return;
       }
     } else {
       // No parent indiviidual attestation exists yet
       this.ensureAggregate(a.target);
-      this.latestAggregates[a.target].weight = this.latestAggregates[a.target].weight.add(a.weight);
+      this.latestAggregates[a.target].weight += a.weight;
     }
     // update individual attestation
     this.latestAttestations[a.attester] = a;
@@ -101,7 +99,7 @@ export class AttestationAggregator {
     const aliveTargets: Record<Root, boolean> = {};
     Object.values(this.latestAttestations).forEach((a) => aliveTargets[a.target] = true);
     Object.values(this.latestAggregates).forEach((agg) => {
-      if (agg.prevWeight.eq(agg.weight) || !aliveTargets[agg.target]) {
+      if (agg.prevWeight === agg.weight || !aliveTargets[agg.target]) {
         delete this.latestAggregates[agg.target];
       }
     });
@@ -111,8 +109,8 @@ export class AttestationAggregator {
     if (!this.latestAggregates[target]) {
       this.latestAggregates[target] = {
         target,
-        weight: new BN(0),
-        prevWeight: new BN(0),
+        weight: 0n,
+        prevWeight: 0n,
       };
     }
     return this.latestAggregates[target];

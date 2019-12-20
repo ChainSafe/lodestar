@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import sinon from "sinon";
 import {expect} from "chai";
 
@@ -39,8 +38,8 @@ describe('process epoch - justification and finalization', function () {
     const state = generateState();
     let previousJustifiedEpoch;
     let currentJustifiedEpoch;
-    getTotalActiveBalanceStub.returns(new BN(10));
-    getAttestingBalanceStub.returns(new BN(10));
+    getTotalActiveBalanceStub.returns(10n);
+    getAttestingBalanceStub.returns(10n);
     state.justificationBits = BitVector.fromBitfield(Buffer.from([7, 0, 0, 0, 0, 0, 0, 0]), 64);
 
     getCurrentEpochStub.returns(1);

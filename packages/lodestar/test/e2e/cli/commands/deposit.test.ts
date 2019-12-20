@@ -11,7 +11,7 @@ describe("[CLI] deposit", function() {
 
   let eth1Network: PrivateEth1Network;
   const logger: ILogger = new WinstonLogger();
-
+  logger.silent = true;
   before(async function() {
     logger.silent = true;
     eth1Network = new PrivateEth1Network({

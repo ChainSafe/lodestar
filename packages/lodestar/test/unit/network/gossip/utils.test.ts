@@ -44,10 +44,10 @@ describe("gossip utils", function () {
     it("should deserialize gossip message", function () {
       const block = generateEmptyBlock();
       const data = deserializeGossipMessage<BeaconBlock>(
-        {data: serialize(block, config.types.BeaconBlock)},
+        {data: serialize(config.types.BeaconBlock, block)},
         config.types.BeaconBlock
       );
-      expect(equals(block, data, config.types.BeaconBlock)).to.be.true;
+      expect(equals(config.types.BeaconBlock, block, data)).to.be.true;
     });
 
     it("should fail to deserialize too large message", function () {

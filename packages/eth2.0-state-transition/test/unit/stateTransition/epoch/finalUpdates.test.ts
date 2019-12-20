@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import sinon from "sinon";
 import {expect} from "chai";
 import * as hashTreeRoot from "@chainsafe/ssz";
@@ -32,7 +31,7 @@ describe('process epoch - final updates', function () {
     const state = generateState();
     state.slot = config.params.SLOTS_PER_ETH1_VOTING_PERIOD - 1;
     state.validators.push(generateValidator());
-    state.balances.push(new BN("ffffffffff",16));
+    state.balances.push(0xffffffffffn);
 
     getCurrentEpochStub.returns(127);
     getRandaoMixStub.returns(0);

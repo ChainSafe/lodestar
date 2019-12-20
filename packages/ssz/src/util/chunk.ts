@@ -13,16 +13,16 @@ import {BYTES_PER_CHUNK} from "./constants";
 import {byte} from "./types";
 
 /** @ignore */
-export function pack (input: SerializableValue[], type: FullSSZType): Buffer[] {
+export function pack (type: FullSSZType, input: SerializableValue[]): Buffer[] {
   if (input.length === 0) {
     return [];
   }
   // Serialize inputs into one long buffer
-  const packedLength = input.map((v) => size(v, type)).reduce((a, b) => a + b, 0);
+  const packedLength = input.map((v) => size(type, v)).reduce((a, b) => a + b, 0);
   const packedBuf = Buffer.alloc(packedLength);
   let index = 0;
   for (const v of input) {
-    index = _serialize(v, type, packedBuf, index);
+    index = _serialize(type, v, packedBuf, index);
   }
   return chunkify(packedBuf);
 }

@@ -5,18 +5,21 @@ import {expect} from "chai";
 import {WinstonLogger} from "../../../../../src/logger";
 import {GossipEvent} from "../../../../../src/network/gossip/constants";
 import * as gossipUtils from "../../../../../src/network/gossip/utils";
+import {GossipMessageValidator} from "../../../../../src/network/gossip/validator";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {generateEmptyAttesterSlashing} from "../../../../utils/slashings";
-import {handleIncomingAttesterSlashing} from "../../../../../src/network/gossip/handlers/attesterSlashing";
+import { getIncomingAttesterSlashingHandler } from "../../../../../src/network/gossip/handlers/attesterSlashing";
+import { IGossipMessageValidator } from "../../../../../src/network/gossip/interface";
 
 describe("gossip handlers - attesterSlashing", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let handleMessageStub: any, gossipStub: any;
+  let handleMessageStub: any, gossipStub: any, validatorStub: any;
 
   beforeEach(function () {
     handleMessageStub = sandbox.stub(gossipUtils, "deserializeGossipMessage");
+    validatorStub = sandbox.createStubInstance(GossipMessageValidator);
     gossipStub = sandbox.createStubInstance(Gossip);
     gossipStub.logger = sandbox.createStubInstance(WinstonLogger);
     gossipStub.config = config;
@@ -26,16 +29,25 @@ describe("gossip handlers - attesterSlashing", function () {
     sandbox.restore();
   });
 
-  it("handle valid message", function () {
+  it("handle valid attester slashing", async function () {
     const attesterSlashing = generateEmptyAttesterSlashing();
     handleMessageStub.returns(attesterSlashing);
-    handleIncomingAttesterSlashing.bind(gossipStub)({data: Buffer.alloc(0)});
+    validatorStub.isValidIncomingAttesterSlashing.resolves(true);
+    await getIncomingAttesterSlashingHandler(validatorStub).bind(gossipStub)({data: Buffer.alloc(0)});
     expect(gossipStub.emit.withArgs(GossipEvent.ATTESTER_SLASHING).calledOnce).to.be.true;
   });
 
-  it("handle invalid message", function () {
+  it("handle invalid attester slashing", async function () {
+    const attesterSlashing = generateEmptyAttesterSlashing();
+    handleMessageStub.returns(attesterSlashing);
+    validatorStub.isValidIncomingAttesterSlashing.resolves(false);
+    await getIncomingAttesterSlashingHandler(validatorStub).bind(gossipStub)({data: Buffer.alloc(0)});
+    expect(gossipStub.emit.withArgs(GossipEvent.ATTESTER_SLASHING).notCalled).to.be.true;
+  });
+
+  it("handle invalid gossip message", async function () {
     handleMessageStub.throws();
-    handleIncomingAttesterSlashing.bind(gossipStub)({data: Buffer.alloc(0)});
+    await getIncomingAttesterSlashingHandler(validatorStub).bind(gossipStub)({data: Buffer.alloc(0)});
     expect(gossipStub.emit.withArgs(GossipEvent.ATTESTER_SLASHING).notCalled).to.be.true;
   });
     

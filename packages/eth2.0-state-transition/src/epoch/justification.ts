@@ -32,7 +32,7 @@ export function processJustificationAndFinalization(
   // If the previous epoch gets justified, fill the second last bit
   const previousEpochMatchingTargetBalance =
     getAttestingBalance(config, state, getMatchingTargetAttestations(config, state, previousEpoch));
-  if (previousEpochMatchingTargetBalance.muln(3).gte(totalActiveBalance.muln(2))) {
+  if (previousEpochMatchingTargetBalance * 3n >= (totalActiveBalance * 2n)) {
     state.currentJustifiedCheckpoint = {
       epoch: previousEpoch,
       root: getBlockRoot(config, state, previousEpoch),
@@ -42,7 +42,7 @@ export function processJustificationAndFinalization(
   // If the current epoch gets justified, fill the last bit
   const currentEpochMatchingTargetBalance =
     getAttestingBalance(config, state, getMatchingTargetAttestations(config, state, currentEpoch));
-  if (currentEpochMatchingTargetBalance.muln(3).gte(totalActiveBalance.muln(2))) {
+  if (currentEpochMatchingTargetBalance * 3n >= (totalActiveBalance * 2n)) {
     state.currentJustifiedCheckpoint = {
       epoch: currentEpoch,
       root: getBlockRoot(config, state, currentEpoch),

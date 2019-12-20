@@ -13,7 +13,7 @@ import {IApiClient} from "../api";
 
 
 export default class BlockProposingService {
- 
+
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
   private readonly privateKey: PrivateKey;
@@ -22,8 +22,7 @@ export default class BlockProposingService {
   private readonly logger: ILogger;
 
   private nextProposalSlot: Slot|null = null;
-  
-  
+
   public constructor(
     config: IBeaconConfig,
     keypair: Keypair,
@@ -82,7 +81,7 @@ export default class BlockProposingService {
     await this.storeBlock(block);
     await this.provider.validator.publishBlock(block);
     this.logger.info(
-      `Proposed block with hash 0x${signingRoot(block, this.config.types.BeaconBlock).toString("hex")}`
+      `Proposed block with hash 0x${signingRoot(this.config.types.BeaconBlock, block).toString("hex")}`
     );
     return block;
   }

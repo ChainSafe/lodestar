@@ -5,8 +5,7 @@
 import {ContractTransaction, ethers, Wallet} from "ethers";
 import {Provider} from "ethers/providers";
 import {BigNumber, ParamType} from "ethers/utils";
-import BN from "bn.js";
-import bls from "@chainsafe/bls";
+import bls, {PrivateKey} from "@chainsafe/bls";
 import {hash, hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 import {DepositData} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -48,11 +47,11 @@ export class Eth1Wallet {
    */
 
   public async createValidatorDeposit(address: string, value: BigNumber): Promise<string> {
-    const amount = new BN(value.toString()).div(new BN(1000000000));
+    const amount = BigInt(value.toString()) / 1000000000n;
 
     const contract = new ethers.Contract(address, this.contractAbi, this.wallet);
-    const privateKey = hash(Buffer.from(address, "hex"));
-    const pubkey = bls.generatePublicKey(privateKey);
+    const privateKey = PrivateKey.random();
+    const pubkey = privateKey.toPublicKey().toBytesCompressed();
     const withdrawalCredentials = Buffer.concat([
       this.config.params.BLS_WITHDRAWAL_PREFIX_BYTE,
       hash(pubkey).slice(1),
@@ -67,8 +66,8 @@ export class Eth1Wallet {
     };
 
     depositData.signature = bls.sign(
-      privateKey,
-      signingRoot(depositData, this.config.types.DepositData),
+      privateKey.toBytes(),
+      signingRoot(this.config.types.DepositData, depositData),
       Buffer.from([0, 0, 0, DomainType.DEPOSIT])
     );
     // Send TX
@@ -77,7 +76,7 @@ export class Eth1Wallet {
         pubkey,
         withdrawalCredentials,
         depositData.signature,
-        hashTreeRoot(depositData, this.config.types.DepositData),
+        hashTreeRoot(this.config.types.DepositData, depositData),
         {value});
       await tx.wait();
       return tx.hash || "";

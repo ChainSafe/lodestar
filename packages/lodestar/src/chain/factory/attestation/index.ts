@@ -14,22 +14,14 @@ export async function assembleAttestation(
   validatorIndex: ValidatorIndex,
   index: CommitteeIndex,
   slot: Slot): Promise<Attestation> {
-  while(state.slot < slot) {
-    state.slot++;
-  }
-
   const committee = getBeaconCommittee(config, state, computeEpochAtSlot(config, slot), index);
   const aggregationBits = getAggregationBits(committee, validatorIndex);
-  try {
-    const data = await assembleAttestationData(config, db, state, headBlock, slot, index);
-    return {
-      aggregationBits,
-      data,
-      signature: undefined
-    };
-  } catch (e) {
-    throw e;
-  }
+  const data = await assembleAttestationData(config, db, state, headBlock, slot, index);
+  return {
+    aggregationBits,
+    data,
+    signature: undefined
+  };
 }
 
 export function getAggregationBits(committee: ValidatorIndex[], validatorIndex: ValidatorIndex): BitList {
