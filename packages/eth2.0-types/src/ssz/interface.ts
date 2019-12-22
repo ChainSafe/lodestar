@@ -20,7 +20,7 @@ export interface IBeaconSSZTypes {
   CommitteeIndex: AnySSZType<t.CommitteeIndex>;
   ValidatorIndex: AnySSZType<t.ValidatorIndex>;
   Gwei: AnySSZType<t.Gwei>;
-  Hash: AnySSZType<t.Hash>;
+  Root: AnySSZType<t.Root>;
   Version: AnySSZType<t.Version>;
   BLSPubkey: AnySSZType<t.BLSPubkey>;
   BLSSignature: AnySSZType<t.BLSSignature>;

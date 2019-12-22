@@ -2,8 +2,9 @@
  * @module sync
  */
 
-import {Attestation, BeaconBlock, Checkpoint, Hash, VoluntaryExit, ProposerSlashing, AttesterSlashing,
-  AggregateAndProof} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, Checkpoint, VoluntaryExit, ProposerSlashing, AttesterSlashing,
+  AggregateAndProof,
+  Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
@@ -113,7 +114,7 @@ export class RegularSync {
     this.network.gossip.publishCommiteeAttestation(attestation);
   };
 
-  private onUnknownBlockRoot = async (root: Hash): Promise<void> => {
+  private onUnknownBlockRoot = async (root: Root): Promise<void> => {
     for (const peer of this.network.getPeers()) {
       try {
         this.logger.verbose(`Attempting to fetch block ${root.toString("hex")} from ${peer.id.toB58String()}`);

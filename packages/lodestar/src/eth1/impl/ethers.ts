@@ -6,7 +6,7 @@ import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {Block, Log} from "ethers/providers";
 import {deserialize} from "@chainsafe/ssz";
-import {Deposit, Eth1Data, Hash, number64} from "@chainsafe/eth2.0-types";
+import {Deposit, Eth1Data, number64, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {Eth1EventEmitter, IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
@@ -132,7 +132,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     return this.provider.getBlock(blockHashOrBlockNumber, false);
   }
 
-  public async depositRoot(block?: string | number): Promise<Hash> {
+  public async depositRoot(block?: string | number): Promise<Root> {
     const depositRootHex = await this.contract.get_deposit_root({blockTag: block || "latest"});
     return Buffer.from(depositRootHex.substr(2), "hex");
   }

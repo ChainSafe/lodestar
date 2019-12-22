@@ -4,11 +4,11 @@
 
 import assert from "assert";
 
-import {Gwei, Hash, Slot, ValidatorIndex, number64, Checkpoint, Epoch,} from "@chainsafe/eth2.0-types";
+import {Gwei, Slot, ValidatorIndex, number64, Checkpoint, Epoch, Root,} from "@chainsafe/eth2.0-types";
 
 import {ILMDGHOST} from "../interface";
 
-import {AttestationAggregator, Root,} from "./attestationAggregator";
+import {AttestationAggregator, RootHex,} from "./attestationAggregator";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {computeSlotsSinceEpochStart, getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
 import {sleep} from "../../../util/sleep";
@@ -21,7 +21,7 @@ import {sleep} from "../../../util/sleep";
 class Node {
   // block data
   public slot: Slot;
-  public blockRoot: Root;
+  public blockRoot: RootHex;
 
   /**
    * Total weight for a block and its children
@@ -46,9 +46,9 @@ class Node {
   /**
    * All direct children
    */
-  public children: Record<Root, Node>;
+  public children: Record<RootHex, Node>;
 
-  public constructor({slot, blockRoot, parent}: {slot: Slot; blockRoot: Root; parent: Node}) {
+  public constructor({slot, blockRoot, parent}: {slot: Slot; blockRoot: RootHex; parent: Node}) {
     this.slot = slot;
     this.blockRoot = blockRoot;
     this.parent = parent;
@@ -162,7 +162,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   /**
    * Recently seen blocks, pruned up to last finalized block
    */
-  private nodes: Record<Root, Node>;
+  private nodes: Record<RootHex, Node>;
 
   /**
    * Last finalized block
@@ -220,7 +220,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     }
   }
 
-  public addBlock(slot: Slot, blockRootBuf: Hash, parentRootBuf: Hash,
+  public addBlock(slot: Slot, blockRootBuf: Root, parentRootBuf: Root,
     justifiedCheckpoint?: Checkpoint, finalizedCheckpoint?: Checkpoint): void {
     this.synced = false;
     const blockRoot = blockRootBuf.toString("hex");
@@ -247,7 +247,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     }
   }
 
-  public addAttestation(blockRootBuf: Hash, attester: ValidatorIndex, weight: Gwei): void {
+  public addAttestation(blockRootBuf: Root, attester: ValidatorIndex, weight: Gwei): void {
     this.synced = false;
     this.aggregator.addAttestation({
       target: blockRootBuf.toString("hex"),
@@ -269,7 +269,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     this.synced = true;
   }
 
-  public head(): Hash {
+  public head(): Root {
     assert(this.justified);
     if (!this.synced) {
       this.syncChanges();
@@ -280,7 +280,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
 
   // To address the bouncing attack, only update conflicting justified
   //  checkpoints in the fork choice if in the early slots of the epoch.
-  public shouldUpdateJustifiedCheckpoint(blockRoot: Hash): boolean {
+  public shouldUpdateJustifiedCheckpoint(blockRoot: Root): boolean {
     if(!this.justified) {
       return true;
     }
@@ -334,7 +334,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     this.justified = {node: this.nodes[rootHex], epoch};
   }
 
-  private getAncestor(root: Root, slot: Slot): Root | null {
+  private getAncestor(root: RootHex, slot: Slot): RootHex | null {
     const node = this.nodes[root];
     if (!node) {
       return null;

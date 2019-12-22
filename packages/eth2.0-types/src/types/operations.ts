@@ -8,8 +8,8 @@ import {BitList} from "@chainsafe/bit-utils";
 import {
   BLSSignature,
   Epoch,
-  Hash,
   ValidatorIndex,
+  bytes32,
 } from "./primitive";
 
 import {
@@ -47,7 +47,7 @@ export interface Attestation {
 
 export interface Deposit {
   // Branch in the deposit tree
-  proof: Hash[];
+  proof: bytes32[];
   // Deposit data
   data: DepositData;
 }

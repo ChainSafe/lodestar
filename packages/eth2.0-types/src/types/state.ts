@@ -7,9 +7,10 @@ import {BitVector} from "@chainsafe/bit-utils";
 
 import {
   Gwei,
-  Hash,
+  Root,
   number64,
   Slot,
+  bytes32,
 } from "./primitive";
 
 import {
@@ -30,9 +31,9 @@ export interface BeaconState {
 
   // History
   latestBlockHeader: BeaconBlockHeader;
-  blockRoots: Hash[];
-  stateRoots: Hash[];
-  historicalRoots: Hash[];
+  blockRoots: Root[];
+  stateRoots: Root[];
+  historicalRoots: Root[];
   
   // Eth1
   eth1Data: Eth1Data;
@@ -44,7 +45,7 @@ export interface BeaconState {
   balances: Gwei[];
 
   // Shuffling
-  randaoMixes: Hash[];
+  randaoMixes: bytes32[];
 
   // Slashings
   slashings: Gwei[]; // Balances penalized at every withdrawal period

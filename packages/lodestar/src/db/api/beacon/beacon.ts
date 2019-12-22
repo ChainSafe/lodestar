@@ -2,7 +2,7 @@
  * @module db/api/beacon
  */
 
-import {BeaconBlock, BeaconState, BLSPubkey, Hash, ValidatorIndex,} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconState, BLSPubkey, ValidatorIndex, Root,} from "@chainsafe/eth2.0-types";
 import {DatabaseService, IDatabaseApiOptions} from "../abstract";
 import {IBeaconDb} from "./interface";
 import {
@@ -74,8 +74,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   }
 
   public async updateChainHead(
-    blockRoot: Hash,
-    stateRoot: Hash
+    blockRoot: Root,
+    stateRoot: Root
   ): Promise<void> {
     const [storedBlock, storedState] = await Promise.all([
       this.block.get(blockRoot),

@@ -1,6 +1,6 @@
 import assert from "assert";
 import {FP_POINT_LENGTH} from "./constants";
-import {BLSSignature, Domain, Hash} from "@chainsafe/eth2.0-types";
+import {BLSSignature, Domain, bytes32} from "@chainsafe/eth2.0-types";
 import {SignatureType} from "@chainsafe/eth2-bls-wasm";
 import {getContext} from "./context";
 import {PublicKey} from "./publicKey";
@@ -43,12 +43,12 @@ export class Signature {
     return this.value;
   }
 
-  public verify(publicKey: PublicKey, message: Hash, domain: Domain): boolean {
+  public verify(publicKey: PublicKey, message: bytes32, domain: Domain): boolean {
     domain = padLeft(domain, 8);
     return publicKey.verifyMessage(this, message, domain);
   }
 
-  public verifyMultiple(publicKeys: PublicKey[], messages: Hash[], domain: Domain): boolean {
+  public verifyMultiple(publicKeys: PublicKey[], messages: bytes32[], domain: Domain): boolean {
     domain = padLeft(domain, 8);
     return this.value.verifyAggregatedHashWithDomain(
       publicKeys.map((key) => key.getValue()),

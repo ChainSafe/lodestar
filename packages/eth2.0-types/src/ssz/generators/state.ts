@@ -17,15 +17,15 @@ export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): Simple
     // History
     ["latestBlockHeader", ssz.BeaconBlockHeader],
     ["blockRoots", {
-      elementType: ssz.Hash,
+      elementType: ssz.Root,
       length: params.SLOTS_PER_HISTORICAL_ROOT,
     }],
     ["stateRoots", {
-      elementType: ssz.Hash,
+      elementType: ssz.Root,
       length: params.SLOTS_PER_HISTORICAL_ROOT,
     }],
     ["historicalRoots", {
-      elementType: ssz.Hash,
+      elementType: ssz.Root,
       maxLength: params.HISTORICAL_ROOTS_LIMIT,
     }],
     // Eth1
@@ -45,7 +45,7 @@ export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): Simple
       maxLength: params.VALIDATOR_REGISTRY_LIMIT,
     }],
     ["randaoMixes", {
-      elementType: ssz.Hash,
+      elementType: ssz.bytes32,
       length: params.EPOCHS_PER_HISTORICAL_VECTOR,
     }],
     // Slashings
