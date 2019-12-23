@@ -33,7 +33,7 @@ export class BlockArchiveRepository extends BulkRepository<BeaconBlock> {
   public async getAllBetween(
     lowerLimit: number | null,
     upperLimit: number | null,
-    step: number | null = null
+    step: number | null = 1
   ): Promise<BeaconBlock[]> {
     const safeLowerLimit = lowerLimit || Buffer.alloc(0);
     const safeUpperLimit = upperLimit || Number.MAX_SAFE_INTEGER;
