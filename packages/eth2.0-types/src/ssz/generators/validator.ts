@@ -36,8 +36,8 @@ export const SyncingStatus = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
 
 export const AggregateAndProof = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
-    ["index", ssz.ValidatorIndex],
-    ["selectionProof", ssz.BLSSignature],
+    ["aggregatorIndex", ssz.ValidatorIndex],
     ["aggregate", ssz.Attestation],
+    ["selectionProof", ssz.BLSSignature],
   ],
 });

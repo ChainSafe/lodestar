@@ -16,7 +16,7 @@ export function getIncomingAggregateAndProofHandler(validator: IGossipMessageVal
     try {
       const aggregateAndProof = deserializeGossipMessage<AggregateAndProof>(msg, this.config.types.AggregateAndProof);
       this.logger.verbose(
-        `Received AggregateAndProof from validator #${aggregateAndProof.index}`+
+        `Received AggregateAndProof from validator #${aggregateAndProof.aggregatorIndex}`+
           ` for target ${toHex(aggregateAndProof.aggregate.data.target.root)}`
       );
       if (await validator.isValidIncomingAggregateAndProof(aggregateAndProof)) {
@@ -40,7 +40,7 @@ export async function publishAggregatedAttestation(this: Gossip, aggregateAndPro
     )
   ]);
   this.logger.verbose(
-    `Publishing AggregateAndProof for validator #${aggregateAndProof.index}`
+    `Publishing AggregateAndProof for validator #${aggregateAndProof.aggregatorIndex}`
         + ` for target ${toHex(aggregateAndProof.aggregate.data.target.root)}`
   );
 }

@@ -54,7 +54,7 @@ export function generateEmptyAttestation(): Attestation {
 export function generateEmptyAggregateAndProof(): AggregateAndProof {
   const attestation = generateEmptyAttestation();
   return {
-    index: 0,
+    aggregatorIndex: 0,
     selectionProof: Buffer.alloc(96),
     aggregate: attestation,
   }
