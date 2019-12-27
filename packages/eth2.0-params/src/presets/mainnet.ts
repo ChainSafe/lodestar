@@ -12,6 +12,7 @@ export const BASE_REWARDS_PER_EPOCH = 4;
 export const SHUFFLE_ROUND_COUNT = 90;
 export const MIN_GENESIS_ACTIVE_VALIDATOR_COUNT = 2 ** 14;
 export const MIN_GENESIS_TIME = 1578009600;
+export const TARGET_AGGREGATORS_PER_COMMITTEE = 16;
 
 // Deposit contract
 export const DEPOSIT_CONTRACT_ADDRESS = 0;
@@ -39,7 +40,6 @@ export const MIN_SEED_LOOKAHEAD = 2 ** 0; // epochs || 6.4 minutes
 export const MAX_SEED_LOOKAHEAD = 2 ** 2; // epochs || 25.6 minutes
 export const SLOTS_PER_ETH1_VOTING_PERIOD = 2 ** 10; // slots || ~1.7 hours
 export const ETH1_FOLLOW_DISTANCE = 2 ** 10; // blocks || ~4 hours
-export const TARGET_AGGREGATORS_PER_COMMITTEE = 2 ** 4;
 export const SLOTS_PER_HISTORICAL_ROOT = 2 ** 13; // slots || ~13 hours
 export const MIN_VALIDATOR_WITHDRAWAL_DELAY = 2 ** 8; // epochs || ~27 hours
 export const PERSISTENT_COMMITTEE_PERIOD = 2 ** 11; // epochs || 9 days

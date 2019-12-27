@@ -34,9 +34,7 @@ export async function assembleBlock(
   const block: BeaconBlock = {
     slot,
     parentRoot: signingRoot(config.types.BeaconBlockHeader, parentHeader),
-    // @ts-ignore
     signature: undefined,
-    // @ts-ignore
     stateRoot: undefined,
     body: await assembleBody(config, opPool, eth1, merkleTree, currentState, randao),
   };

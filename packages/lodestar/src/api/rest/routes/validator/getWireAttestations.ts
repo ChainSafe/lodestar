@@ -1,14 +1,13 @@
 import {IFastifyServer} from "../../index";
 import fastify, {DefaultQuery} from "fastify";
 import {IApiModules} from "../../../interface";
-import {getValidatorDuties} from "../../../impl/validator";
 import {IncomingMessage, Server, ServerResponse} from "http";
 import {toJson} from "@chainsafe/eth2.0-utils";
 
 interface IQuery extends DefaultQuery {
-  // eslint-disable-next-line camelcase
-  validator_pubkeys: string[];
   epoch: number;
+  // eslint-disable-next-line camelcase
+  committee_index: number;
 }
 
 
@@ -16,16 +15,13 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   schema: {
     querystring: {
       type: "object",
-      required: ["validator_pubkeys", "epoch"],
+      required: ["epoch", "committee_index"],
       properties: {
-        "validator_pubkeys": {
-          type: "array",
-          maxItems: 5,
-          items: {
-            types: "string"
-          }
-        },
         epoch: {
+          type: "integer",
+          minimum: 0
+        },
+        "committee_index": {
           type: "integer",
           minimum: 0
         }
@@ -34,21 +30,17 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   }
 };
 
-export const registerDutiesEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
+export const registerGetWireAttestationEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
   fastify.get<IQuery>(
-    "/duties",
+    "/wire_attestations",
     opts,
     async (request, reply) => {
-      const duties = (await getValidatorDuties(
-        modules.config,
-        modules.db,
-        request.query.validator_pubkeys.map(key => Buffer.from(key, "hex")),
-        request.query.epoch
-      )).map(toJson);
+      const attestations =
+          await modules.opPool.attestations.getCommiteeAttestations(request.query.epoch, request.query.committee_index);
       reply
         .code(200)
         .type("application/json")
-        .send(duties);
+        .send(attestations.map(toJson));
     }
   );
 };

@@ -1,13 +1,9 @@
-import {
-  BeaconState,
-} from "@chainsafe/eth2.0-types";
-
+import {BeaconState} from "@chainsafe/eth2.0-types";
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {generateEmptyBlock} from "./block";
-
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import { BitVector } from "@chainsafe/bit-utils";
+import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {BitVector} from "@chainsafe/bit-utils";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -18,9 +14,10 @@ type TestBeaconState = Partial<BeaconState>;
  * Generate beaconState, by default it will use the initial state defined when the `ChainStart` log is emitted.
  * NOTE: All fields can be overridden through `opts`.
  * @param {TestBeaconState} opts
+ * @param config
  * @returns {BeaconState}
  */
-export function generateState(opts?: TestBeaconState): BeaconState {
+export function generateState(opts?: TestBeaconState, config = mainnetConfig): BeaconState {
   return {
     genesisTime: Math.floor(Date.now() / 1000),
     slot: GENESIS_SLOT,

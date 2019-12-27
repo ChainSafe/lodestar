@@ -14,14 +14,12 @@
  * 6. Repeat step 5
  */
 import BlockProposingService from "./services/block";
-import {Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IApiClient} from "./api";
 import {AttestationService} from "./services/attestation";
 import {IValidatorDB} from "./db/interface";
 import {ILogger} from "./logger/interface";
 import {IValidatorOptions} from "./options";
-import {computeEpochAtSlot} from "./util";
 import {ApiClientOverRest} from "./api/impl/rest/apiClient";
 import {initBLS} from "@chainsafe/bls";
 
@@ -32,11 +30,8 @@ export class Validator {
   private opts: IValidatorOptions;
   private config: IBeaconConfig;
   private apiClient: IApiClient;
-  // @ts-ignore
   private blockService: BlockProposingService;
-  // @ts-ignore
   private attestationService: AttestationService;
-  // @ts-ignore
   private db: IValidatorDB;
   private logger: ILogger;
   private isRunning: boolean;
@@ -58,14 +53,16 @@ export class Validator {
     await initBLS();
     await this.setup();
     this.logger.info("Checking if chain has started...");
-    this.apiClient.once("beaconChainStarted", this.run.bind(this));
+    this.apiClient.once("beaconChainStarted", this.run);
   }
 
-  public run(): void {
+  public run = (): void => {
     this.logger.info("Chain start has occured!");
-    this.apiClient.onNewSlot(this.checkDuties);
-    // this.apiClient.onNewEpoch(this.lookAhead);
-  }
+    this.apiClient.onNewSlot(this.blockService.onNewSlot);
+    this.apiClient.onNewEpoch(this.blockService.onNewEpoch);
+    this.apiClient.onNewSlot(this.attestationService.onNewSlot);
+    this.apiClient.onNewEpoch(this.attestationService.onNewEpoch);
+  };
 
   /**
    * Stops all validator functions
@@ -77,7 +74,7 @@ export class Validator {
 
   private initApiClient(api: string | IApiClient): IApiClient {
     if(typeof api === "string") {
-      return new ApiClientOverRest(api, this.logger);
+      return new ApiClientOverRest(this.config, api, this.logger);
     }
     return api;
   }
@@ -112,27 +109,4 @@ export class Validator {
     this.logger.info(`RPC connection successfully established: ${this.apiClient.url}!`);
   }
 
-
-  private checkDuties = async (slot: Slot): Promise<void> => {
-    const validatorDuty =
-      (await this.apiClient.validator.getDuties(
-        [this.opts.keypair.publicKey.toBytesCompressed()],
-        computeEpochAtSlot(this.config, slot))
-      )[0];
-    const {fork} = await this.apiClient.beacon.getFork();
-    const isAttester = validatorDuty.attestationSlot === slot;
-    const isProposer = validatorDuty.blockProposalSlot === slot;
-    if (isAttester) {
-      this.logger.info(`Validator is attester at slot ${slot} and shard ${validatorDuty.attestationShard}`);
-      this.attestationService.createAndPublishAttestation(
-        validatorDuty.attestationSlot,
-        validatorDuty.attestationShard,
-        fork
-      );
-    }
-    if (isProposer) {
-      this.logger.info(`Validator is proposer at slot ${slot}`);
-      this.blockService.createAndPublishBlock(slot, fork);
-    }
-  };
 }

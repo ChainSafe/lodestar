@@ -6,6 +6,7 @@ import {BeaconBlock, BeaconState, BLSPubkey, Hash, ValidatorIndex,} from "@chain
 import {DatabaseService, IDatabaseApiOptions} from "../abstract";
 import {IBeaconDb} from "./interface";
 import {
+  AggregateAndProofRepository,
   AttestationRepository,
   AttesterSlashingRepository,
   BlockRepository,
@@ -14,8 +15,7 @@ import {
   MerkleTreeRepository,
   ProposerSlashingRepository,
   StateRepository,
-  VoluntaryExitRepository,
-  AggregateAndProofRepository
+  VoluntaryExitRepository
 } from "./repositories";
 import {BlockArchiveRepository} from "./repositories/blockArchive";
 
@@ -95,8 +95,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
       this.chain.setChainHeadSlot(slot)
     ]);
   }
-
-
 
   public async getValidatorIndex(publicKey: BLSPubkey): Promise<ValidatorIndex> {
     const state = await this.state.getLatest();

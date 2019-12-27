@@ -12,6 +12,7 @@ export interface IBeaconParams {
   SHUFFLE_ROUND_COUNT: number;
   MIN_GENESIS_TIME: number;
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: number;
+  TARGET_AGGREGATORS_PER_COMMITTEE: number;
 
   // Deposit contract
   DEPOSIT_CONTRACT_ADDRESS: number;
@@ -38,7 +39,6 @@ export interface IBeaconParams {
   MAX_SEED_LOOKAHEAD: number;
   SLOTS_PER_ETH1_VOTING_PERIOD: number;
   ETH1_FOLLOW_DISTANCE: number;
-  TARGET_AGGREGATORS_PER_COMMITTEE: number;
   SLOTS_PER_HISTORICAL_ROOT: number;
   MIN_VALIDATOR_WITHDRAWAL_DELAY: number;
   PERSISTENT_COMMITTEE_PERIOD: number;

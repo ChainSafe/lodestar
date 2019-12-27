@@ -3,7 +3,7 @@
  * @module types
  */
 
-import {BLSPubkey, Slot, uint64, number64, ValidatorIndex, CommitteeIndex, BLSSignature} from "./primitive";
+import {BLSPubkey, BLSSignature, CommitteeIndex, Slot, uint64, ValidatorIndex} from "./primitive";
 import {Attestation} from "./operations";
 
 export interface ValidatorDuty {
@@ -11,11 +11,8 @@ export interface ValidatorDuty {
   validatorPubkey: BLSPubkey;
   // The slot at which the validator must attest
   attestationSlot: Slot;
-  // Rest api spec is not up-to-date, should be changed to committeeIndex?
-  // The shard in which the validator must attest
-  attestationShard: number64;
-  // The slot in which a validator must propose a block, this field can be Null
-  blockProposalSlot: Slot;
+
+  committeeIndex: CommitteeIndex;
 }
 
 export interface SyncingStatus {

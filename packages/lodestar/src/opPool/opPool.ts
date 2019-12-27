@@ -11,8 +11,8 @@ import {blockToHeader, computeEpochAtSlot, getBeaconProposerIndex} from "@chains
 import {IBeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
 import {
-  AttestationOperations,
   AggregateAndProofOperations,
+  AttestationOperations,
   AttesterSlashingOperations,
   DepositsOperations,
   ProposerSlashingOperations,
@@ -50,7 +50,7 @@ export class OpPool extends EventEmitter {
     this.db = db;
     this.proposers = new Map();
     this.attestations = new AttestationOperations(this.db.attestation, {config});
-    this.aggregateAndProofs = new AggregateAndProofOperations(this.db.aggregateAndProof);
+    this.aggregateAndProofs = new AggregateAndProofOperations(this.db.aggregateAndProof, {config});
     this.voluntaryExits = new VoluntaryExitOperations(this.db.voluntaryExit);
     this.deposits = new DepositsOperations(this.db.deposit);
     this.proposerSlashings = new ProposerSlashingOperations(this.db.proposerSlashing);
@@ -80,7 +80,7 @@ export class OpPool extends EventEmitter {
       this.deposits.removeOld(processedBlock.body.eth1Data.depositCount),
       this.proposerSlashings.remove(processedBlock.body.proposerSlashings),
       this.attesterSlashings.remove(processedBlock.body.attesterSlashings),
-      this.attestations.remove(processedBlock.body.attestations),
+      this.aggregateAndProofs.removeIncluded(processedBlock.body.attestations),
       this.checkDuplicateProposer(processedBlock)
     ]);
   }

@@ -25,7 +25,7 @@
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "pretest": "yarn run check-types",
-    "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha --file ./test/unit/setup.ts --colors -r ts-node/register 'test/unit/**/*.test.ts'",
+    "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha --colors 'test/unit/**/*.test.ts'",
     "test": "yarn test:unit",
     "coverage": "codecov -F lodestar-validator",
     "benchmark": "ts-node test/benchmarks"
@@ -45,6 +45,7 @@
     "@chainsafe/bls": "0.2.0",
     "@chainsafe/eth2.0-config": "0.2.0",
     "@chainsafe/eth2.0-params": "0.2.0",
+    "@chainsafe/eth2.0-state-transition": "0.2.0",
     "@chainsafe/eth2.0-utils": "0.1.0",
     "@chainsafe/ssz": "^0.5.2",
     "axios": "^0.19.0",

@@ -659,10 +659,12 @@
     lodash "^4.17.13"
     to-fast-properties "^2.0.0"
 
-"@chainsafe/bit-utils@0.1.4", "@chainsafe/bit-utils@^0.1.4":
-  version "0.1.4"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.4.tgz#c7fcc20f8ea916b7767b82ce6fad389db675bd4e"
-  integrity sha512-pT+XpjJKoO3+Zt3w0vVJftKzYPnW4ObtkXFQ49eZHlLbmJbZ0aSM1jxU1RjFmOyMYjDSMVlaPR311c8K7lXGJQ==
+"@chainsafe/bit-utils@0.1.6":
+  version "0.1.6"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.6.tgz#f643033340b45a1170c5473e4aab54a7a7b4b9dc"
+  integrity sha512-OYmXKCeItGG52iWR+bqqqUfc1joubkUUCXh6+wACTejGn7qNAawsd9ZHKB9riZWPg1wrKulUn8vecXMe0dk36A==
+  dependencies:
+    assert "^2.0.0"
 
 "@chainsafe/eth2-bls-wasm@^0.2.0":
   version "0.2.0"
@@ -10944,10 +10946,10 @@ typescript@3.5.x, typescript@^3.5.3:
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.5.3.tgz#c830f657f93f1ea846819e929092f5fe5983e977"
   integrity sha512-ACzBtm/PhXBDId6a6sDJfroT2pOWt/oOnk4/dElG5G33ZL776N3Y6/6bKZJBFpd+b05F3Ct9qDjMeJmRWtE2/g==
 
-typescript@^3.7.2:
-  version "3.7.2"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.7.2.tgz#27e489b95fa5909445e9fef5ee48d81697ad18fb"
-  integrity sha512-ml7V7JfiN2Xwvcer+XAf2csGO1bPBdRbFCkYBczNZggrBZ9c7G3riSUeJmqEU5uOtXNPMhE3n+R4FA/3YOAWOQ==
+typescript@3.7.3:
+  version "3.7.3"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.7.3.tgz#b36840668a16458a7025b9eabfad11b66ab85c69"
+  integrity sha512-Mcr/Qk7hXqFBXMN7p7Lusj1ktCBydylfQM/FZCk5glCNQJrCUKPkMHdo9R0MTFWsC/4kPFvDS0fDPvukfCkFsw==
 
 typewise-core@^1.2, typewise-core@^1.2.0:
   version "1.2.0"
