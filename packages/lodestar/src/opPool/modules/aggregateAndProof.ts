@@ -4,7 +4,6 @@ import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/eth2.0
 import {getBitCount} from "../../util/bit";
 import {BulkRepository} from "../../db/api/beacon/repository";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import Process = NodeJS.Process;
 import {equals} from "@chainsafe/ssz";
 
 export class AggregateAndProofOperations extends OperationsModule<AggregateAndProof> {

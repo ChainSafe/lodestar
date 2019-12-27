@@ -1,4 +1,4 @@
-import {AggregateAndProof, Attestation, BeaconState, CommitteeIndex, Epoch} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconState, CommitteeIndex, Epoch} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {OperationsModule} from "./abstract";
 import {computeEpochAtSlot, computeStartSlotAtEpoch,} from "@chainsafe/eth2.0-state-transition";
