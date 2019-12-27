@@ -102,13 +102,13 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
     const attestorIndices = getAttestingIndices(this.config, state,
       aggregationAndProof.aggregate.data, aggregationAndProof.aggregate.aggregationBits);
-    if (!attestorIndices.includes(aggregationAndProof.index)) {
+    if (!attestorIndices.includes(aggregationAndProof.aggregatorIndex)) {
       return false;
     }
-    if (!isAggregator(this.config, state, slot, aggregationAndProof.index, aggregationAndProof.selectionProof)) {
+    if (!isAggregator(this.config, state, slot, aggregationAndProof.aggregatorIndex, aggregationAndProof.selectionProof)) {
       return false;
     }
-    const validatorPubKey = state.validators[aggregationAndProof.index].pubkey;
+    const validatorPubKey = state.validators[aggregationAndProof.aggregatorIndex].pubkey;
     const domain = getDomain(this.config, state, DomainType.BEACON_ATTESTER, computeEpochAtSlot(this.config, slot));
     if (!verify(validatorPubKey,
       hashTreeRoot(this.config.types.Slot, slot),

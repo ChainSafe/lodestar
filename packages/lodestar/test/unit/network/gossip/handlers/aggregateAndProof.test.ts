@@ -31,7 +31,7 @@ describe("gossip handlers - aggregate and proof", function () {
 
   it("handle valid message", async function () {
     const aggregate: AggregateAndProof = {
-      index: 0,
+      aggregatorIndex: 0,
       selectionProof: Buffer.alloc(0),
       aggregate: generateEmptyAttestation()
     };
