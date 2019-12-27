@@ -52,6 +52,7 @@ export const registerAttesterDutiesEndpoint = (fastify: IFastifyServer, modules:
       const response = (await getAttesterDuties(
         modules.config,
         modules.db,
+        modules.chain,
         request.params.epoch,
         request.query.validator_pubkeys.map((pubKey) => {
           try {

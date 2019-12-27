@@ -46,9 +46,11 @@ export const registerIsAggregatorEndpoint = (fastify: IFastifyServer, modules: I
     "/duties/:slot/aggregator",
     opts,
     async (request, reply) => {
+      const block = await modules.db.block.get(modules.chain.forkChoice.head());
+      const state = await modules.db.state.get(block.stateRoot);
       const isAttestationAggregator = isAggregator(
         modules.config,
-        await modules.db.state.getLatest(),
+        state,
         request.params.slot,
         request.query.committee_index,
         Buffer.from(request.query.slot_signature.replace("0x", ""), "hex")

@@ -80,7 +80,7 @@ export class OpPool extends EventEmitter {
       this.deposits.removeOld(processedBlock.body.eth1Data.depositCount),
       this.proposerSlashings.remove(processedBlock.body.proposerSlashings),
       this.attesterSlashings.remove(processedBlock.body.attesterSlashings),
-      this.attestations.remove(processedBlock.body.attestations),
+      this.aggregateAndProofs.removeIncluded(processedBlock.body.attestations),
       this.checkDuplicateProposer(processedBlock)
     ]);
   }

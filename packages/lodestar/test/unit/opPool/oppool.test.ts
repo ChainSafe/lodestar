@@ -10,25 +10,24 @@ import {
   DepositRepository,
   ProposerSlashingRepository,
   VoluntaryExitRepository, AttestationRepository,
-  StateRepository
+  StateRepository, AggregateAndProofRepository
 } from "../../../src/db/api/beacon/repositories";
-import { generateState } from "../../utils/state";
-import { generateValidators } from "../../utils/validator";
+import {generateState} from "../../utils/state";
+import {generateValidators} from "../../utils/validator";
 
 describe("operation pool", function () {
-  let sandbox = sinon.createSandbox();
+  const sandbox = sinon.createSandbox();
   let opPool: OpPool;
-  let eth1Stub, dbStub;
+  let eth1Stub: any, dbStub: any;
 
   beforeEach(()=>{
-    // @ts-ignore
     dbStub = {
       deposit: sandbox.createStubInstance(DepositRepository),
       voluntaryExit: sandbox.createStubInstance(VoluntaryExitRepository),
       proposerSlashing: sandbox.createStubInstance(ProposerSlashingRepository),
       attesterSlashing: sandbox.createStubInstance(AttesterSlashingRepository),
-      // @ts-ignore
       attestation: sandbox.createStubInstance(AttestationRepository),
+      aggregateAndProof: sandbox.createStubInstance(AggregateAndProofRepository),
       state: sandbox.createStubInstance(StateRepository)
     };
 
@@ -49,7 +48,7 @@ describe("operation pool", function () {
   });
 
   //receive
-  it('should start and stop operation pool ', async function () {
+  it("should start and stop operation pool ", async function () {
     try {
       await opPool.start();
       await opPool.stop();
@@ -58,12 +57,14 @@ describe("operation pool", function () {
     }
   });
 
-  it('should do cleanup after block processing', async function () {
+  it("should do cleanup after block processing", async function () {
     const block  = generateEmptyBlock();
     dbStub.deposit.deleteOld.resolves();
     dbStub.voluntaryExit.deleteManyByValue.resolves();
     dbStub.proposerSlashing.deleteManyByValue.resolves();
     dbStub.attesterSlashing.deleteManyByValue.resolves();
+    dbStub.aggregateAndProof.deleteManyByValue.resolves();
+    dbStub.aggregateAndProof.getAll.resolves([]);
     await opPool.processBlockOperations(block);
     expect(dbStub.deposit.deleteOld.calledOnce).to.be.true;
     expect(dbStub.voluntaryExit.deleteManyByValue.calledOnce).to.be.true;

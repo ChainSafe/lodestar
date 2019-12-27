@@ -1,15 +1,24 @@
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../../../../db/api";
 import {BLSPubkey, Epoch, Slot} from "@chainsafe/eth2.0-types";
-import {computeStartSlotAtEpoch, getBeaconProposerIndex, processSlots} from "@chainsafe/eth2.0-state-transition";
+import {
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  getBeaconProposerIndex,
+  processSlots
+} from "@chainsafe/eth2.0-state-transition";
+import assert from "assert";
+import {IBeaconChain} from "../../../../chain";
 
 export async function getEpochProposers(
   config: IBeaconConfig,
+  chain: IBeaconChain,
   db: IBeaconDb,
   epoch: Epoch
 ): Promise<Map<Slot, BLSPubkey>> {
-  const state = await db.state.getLatest();
-  //TODO: assert epoch isn't too far ahead
+  const block = await db.block.get(chain.forkChoice.head());
+  const state = await db.state.get(block.stateRoot);
+  assert(epoch <= computeEpochAtSlot(config, state.slot) + 2);
   const startSlot = computeStartSlotAtEpoch(config, epoch);
   if(state.slot < startSlot) {
     processSlots(config, state, startSlot);

@@ -32,6 +32,7 @@ export const registerProposerDutiesEndpoint = (fastify: IFastifyServer, modules:
     async (request, reply) => {
       const epochProposers = await getEpochProposers(
         modules.config,
+        modules.chain,
         modules.db,
         request.params.epoch
       );

@@ -91,7 +91,7 @@ describe("Test validator rest API", function () {
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body[1]).to.be.equal(toHex(Buffer.alloc(48)));
-    expect(getProposerDutiesStub.withArgs(sinon.match.any, sinon.match.any, 2).calledOnce).to.be.true;
+    expect(getProposerDutiesStub.withArgs(sinon.match.any, sinon.match.any, sinon.match.any, 2).calledOnce).to.be.true;
   });
 
   it("should return attester duties", async function () {
@@ -106,7 +106,9 @@ describe("Test validator rest API", function () {
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.length).to.be.equal(1);
-    expect(getAttesterDuties.withArgs(sinon.match.any, sinon.match.any, 2, [publicKey1]).calledOnce).to.be.true;
+    expect(getAttesterDuties.withArgs(
+      sinon.match.any, sinon.match.any, sinon.match.any, 2, [publicKey1]
+    ).calledOnce).to.be.true;
   });
 
   it("should publish aggregate and proof", async function () {

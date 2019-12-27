@@ -22,13 +22,12 @@ import {OpPool} from "../../../../opPool";
 import {IValidatorApi} from "./interface";
 import {assembleBlock} from "../../../../chain/factory/block";
 import {IEth1Notifier} from "../../../../eth1";
-import {getAttesterDuties, getEpochProposers, produceAttestation,publishAttestation} from "../../../impl/validator";
+import {getAttesterDuties, getEpochProposers, produceAttestation, publishAttestation} from "../../../impl/validator";
 import {ApiNamespace, IApiModules} from "../../../index";
 import {IApiOptions} from "../../../options";
 import {ILogger} from "../../../../logger";
 import {INetwork} from "../../../../network";
 import {isAggregator} from "@chainsafe/eth2.0-state-transition";
-import {Profiler} from "inspector";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -87,11 +86,11 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getProposerDuties(epoch: Epoch): Promise<Map<Slot, BLSPubkey>> {
-    return getEpochProposers(this.config, this.db, epoch);
+    return getEpochProposers(this.config, this.chain, this.db, epoch);
   }
   
   public async getAttesterDuties(epoch: number, validatorPubKeys: Buffer[]): Promise<ValidatorDuty[]> {
-    return getAttesterDuties(this.config, this.db, epoch, validatorPubKeys);
+    return getAttesterDuties(this.config, this.db, this.chain, epoch, validatorPubKeys);
   }
 
   public async publishAggregatedAttestation(

@@ -4,6 +4,8 @@ import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/eth2.0
 import {getBitCount} from "../../util/bit";
 import {BulkRepository} from "../../db/api/beacon/repository";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import Process = NodeJS.Process;
+import {equals} from "@chainsafe/ssz";
 
 export class AggregateAndProofOperations extends OperationsModule<AggregateAndProof> {
 
@@ -23,6 +25,15 @@ export class AggregateAndProofOperations extends OperationsModule<AggregateAndPr
       //prefer aggregated attestations
       return getBitCount(a.aggregationBits) - getBitCount(b.aggregationBits);
     });
+  }
+
+  public async removeIncluded(attestations: Attestation[]): Promise<void> {
+    const aggregates = await this.getAll();
+    await this.remove(aggregates.filter((a) => {
+      return attestations.findIndex((attestation) => {
+        return equals(this.config.types.Attestation, a.aggregate, attestation);
+      }, this);
+    }));
   }
 
   public async removeOld(state: BeaconState): Promise<void> {
