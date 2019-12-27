@@ -4,6 +4,8 @@ import PeerInfo from "peer-info";
 import PeerId from "peer-id";
 import {Goodbye, Hello,} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import * as ssz from "@chainsafe/ssz/lib/core/equals";
+import * as utils from "@chainsafe/eth2.0-state-transition/lib/util/blockRoot";
 
 import {Method, ZERO_HASH} from "../../../src/constants";
 import {BeaconChain} from "../../../src/chain";
@@ -18,7 +20,7 @@ import {ReputationStore} from "../../../src/sync/IReputation";
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();
   let syncRpc: SyncReqResp;
-  let chainStub, networkStub, dbStub, repsStub, logger, reqRespStub;
+  let chainStub, networkStub, dbStub, repsStub, logger, reqRespStub, equalsStub, getBlockRootStub;
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
@@ -33,6 +35,8 @@ describe("syncing", function () {
       block: sandbox.createStubInstance(BlockRepository),
     };
     repsStub = sandbox.createStubInstance(ReputationStore);
+    equalsStub = sandbox.stub(ssz, "equals");
+    getBlockRootStub = sandbox.stub(utils, "getBlockRoot");
     logger = new WinstonLogger();
     logger.silent = true;
 
@@ -104,9 +108,13 @@ describe("syncing", function () {
       latestHello: null,
     });
     reqRespStub.sendResponse.resolves(0);
+    dbStub.block.getChainHead.resolves(Buffer.alloc(0));
+    dbStub.state.get.resolves(generateState());
+    equalsStub.returns(true);
     try {
       await syncRpc.onRequest(peerInfo, Method.Hello, "hello", body);
       expect(reqRespStub.sendResponse.calledOnce).to.be.true;
+      expect(reqRespStub.goodbye.called).to.be.false;
     }catch (e) {
       expect.fail(e.stack);
     }
@@ -132,6 +140,62 @@ describe("syncing", function () {
     }
   });
 
+  it('should disconnect on hello - incorrect headForkVersion', async function() {
+    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
+    const body: Hello = {
+      headForkVersion: Buffer.alloc(4),
+      finalizedRoot: Buffer.alloc(32),
+      finalizedEpoch: 1,
+      headRoot: Buffer.alloc(32),
+      headSlot: 1,
+    };
+
+    dbStub.block.getChainHead.resolves(Buffer.alloc(0));
+    const state = generateState();
+    state.fork.previousVersion = Buffer.from("abcd");
+    state.fork.currentVersion = Buffer.from("efgh");
+    dbStub.state.get.resolves(state);
+    expect(await syncRpc.shouldDisconnectOnHello(peerInfo, body)).to.be.true;
+  });
+
+  it('should disconnect on hello - incorrect finalized checkpoint', async function() {
+    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
+    const body: Hello = {
+      headForkVersion: Buffer.alloc(4),
+      finalizedRoot: Buffer.from("xyz"),
+      finalizedEpoch: 1,
+      headRoot: Buffer.alloc(32),
+      headSlot: 1,
+    };
+
+    dbStub.block.getChainHead.resolves(Buffer.alloc(0));
+    const state = generateState();
+    state.fork.previousVersion = Buffer.alloc(4);
+    state.fork.currentVersion = Buffer.alloc(4);
+    dbStub.state.get.resolves(state);
+    equalsStub.returns(false);
+    getBlockRootStub.returns(Buffer.from("not xyz"));
+    expect(await syncRpc.shouldDisconnectOnHello(peerInfo, body)).to.be.true;
+  });
+
+  it('should not disconnect on hello', async function() {
+    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
+    const body: Hello = {
+      headForkVersion: Buffer.alloc(4),
+      finalizedRoot: Buffer.alloc(32),
+      finalizedEpoch: 1,
+      headRoot: Buffer.alloc(32),
+      headSlot: 1,
+    };
+
+    dbStub.block.getChainHead.resolves(Buffer.alloc(0));
+    const state = generateState();
+    state.fork.previousVersion = Buffer.alloc(4);
+    state.fork.currentVersion = Buffer.alloc(4);
+    dbStub.state.get.resolves(state);
+    equalsStub.returns(true);
+    expect(await syncRpc.shouldDisconnectOnHello(peerInfo, body)).to.be.false;
+  });
 
   it('should handle request - onGoodbye', async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));

@@ -7,7 +7,7 @@ import {
   Epoch, Hash, Slot,
   RequestBody, Hello, Goodbye,
   BeaconBlocksByRangeRequest, BeaconBlocksByRangeResponse,
-  BeaconBlocksByRootRequest, BeaconBlocksByRootResponse,
+  BeaconBlocksByRootRequest, BeaconBlocksByRootResponse, Checkpoint,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -18,6 +18,8 @@ import {INetwork} from "../../network";
 import {ILogger} from "../../logger";
 import {ISyncOptions, ISyncReqResp} from "./interface";
 import {ReputationStore} from "../IReputation";
+import {computeEpochOfSlot, getBlockRoot} from "@chainsafe/eth2.0-state-transition";
+import {equals} from "@chainsafe/ssz";
 
 export interface ISyncReqRespModules {
   config: IBeaconConfig;
@@ -97,7 +99,31 @@ export class SyncReqResp implements ISyncReqResp {
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);
     }
-    // TODO handle incorrect forkVersion or disjoint finalizedCheckpoint
+    if (await this.shouldDisconnectOnHello(peerInfo, request)) {
+      this.network.reqResp.goodbye(peerInfo, 0n);
+    }
+  }
+
+  public async shouldDisconnectOnHello(peerInfo: PeerInfo, request: Hello): Promise<boolean> {
+    const headBlock = await this.db.block.getChainHead();
+    const state = await this.db.state.get(headBlock.stateRoot);
+    const fork = state.fork;
+    const epoch = computeEpochOfSlot(this.config, request.headSlot);
+    const forkVersionHeadSlot = (epoch < fork.epoch)? fork.previousVersion : fork.currentVersion;
+    if (!forkVersionHeadSlot.equals(request.headForkVersion)) {
+      return true;
+    }
+    const requestFinalizedCheckpoint: Checkpoint = {
+      epoch: request.finalizedEpoch,
+      root: request.finalizedRoot,
+    };
+    if (!equals(this.config.types.Checkpoint, requestFinalizedCheckpoint, state.finalizedCheckpoint)) {
+      const root = getBlockRoot(this.config, state, requestFinalizedCheckpoint.epoch);
+      if (!root.equals(requestFinalizedCheckpoint.root)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
