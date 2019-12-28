@@ -5,7 +5,7 @@
 import assert from "assert";
 import {EventEmitter} from "events";
 import {clone, hashTreeRoot, serialize, signingRoot} from "@chainsafe/ssz";
-import {Attestation, BeaconBlock, BeaconState, Hash, Slot, uint16, uint64} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BeaconState, Hash, Slot, uint16, uint64, bool} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "../constants";
@@ -16,12 +16,14 @@ import {IBeaconMetrics} from "../metrics";
 
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
 
-import {processSlots, stateTransition,
+import {
+  processSlots, stateTransition,
   computeEpochOfSlot,
   getAttestationDataSlot,
   getAttestingIndices,
   isActiveValidator
-  ,getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
+  , getCurrentSlot
+} from "@chainsafe/eth2.0-state-transition";
 import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 
 import {ChainEventEmitter, IBeaconChain} from "./interface";
@@ -93,7 +95,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public async start(): Promise<void> {
     const state = this.latestState || await this.db.state.getLatest();
     // if state doesn't exist in the db, the chain maybe hasn't started
-    if(!state) {
+    if (!state) {
       // check every block if genesis
       this.logger.info("Chain not started, listening for genesis block");
       this.eth1.on("block", this.checkGenesis);
@@ -124,7 +126,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const latestState = this.latestState;
     try {
       const attestationSlot: Slot = getAttestationDataSlot(this.config, latestState, attestation.data);
-      if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < latestState.slot) {
+      if (attestationSlot + this.config.params.SLOTS_PER_EPOCH < latestState.slot) {
         this.logger.verbose(`Attestation ${attestationHash.toString("hex")} is too old. Ignored.`);
         return;
       }
@@ -144,11 +146,11 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       `at slot ${block.slot}. Current state slot ${this.latestState.slot}`
     );
 
-    if(!await this.db.block.has(block.parentRoot)) {
+    if (!await this.db.block.has(block.parentRoot)) {
       this.emit("unknownBlockRoot", block.parentRoot);
     }
 
-    if(block.slot <= this.latestState.slot) {
+    if (block.slot <= this.latestState.slot) {
       this.logger.warn(
         `Block ${blockHash.toString("hex")} is in past. ` +
         "Probably fork choice/double propose/processed block. Ignored for now."
@@ -156,10 +158,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       return;
     }
 
-    if(block.slot > this.latestState.slot) {
+    if (block.slot > this.latestState.slot) {
       //either block came too early or we are suppose to skip some slots
       const latestBlock = await this.db.block.getChainHead();
-      if(!block.parentRoot.equals(signingRoot(this.config.types.BeaconBlock, latestBlock))){
+      if (!block.parentRoot.equals(signingRoot(this.config.types.BeaconBlock, latestBlock))) {
         //block processed too early
         this.logger.warn(`Block ${blockHash.toString("hex")} tried to be processed too early. Requeue...`);
         //wait a bit to give new block a chance
@@ -177,7 +179,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       if (nextBlockInQueue.block.parentRoot.equals(signingRoot(this.config.types.BeaconBlock, latestBlock))) {
         await this.processBlock(nextBlockInQueue, signingRoot(this.config.types.BeaconBlock, nextBlockInQueue));
         this.blockProcessingQueue.poll();
-      } else{
+      } else {
         return;
       }
     }
@@ -215,6 +217,15 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     genesisBlock.stateRoot = stateRoot;
     const blockRoot = signingRoot(this.config.types.BeaconBlock, genesisBlock);
     this.latestState = genesisState;
+    // Determine whether a genesis state already in
+    // the database matches what we were provided
+    const storedGenesisBlock = await this.db.block.getBlockBySlot(GENESIS_SLOT);
+    if (storedGenesisBlock !== null) {
+      const storedGenesisState = await this.db.state.get(storedGenesisBlock.stateRoot);
+      if (storedGenesisState !== null && !this.areEqualStates(genesisState, storedGenesisState)) {
+        throw new Error("A genesis state with different configuration was detected! Please clean the database.");
+      }
+    }
     await Promise.all([
       this.db.storeChainHead(genesisBlock, genesisState),
       this.db.chain.setJustifiedBlockRoot(blockRoot),
@@ -227,6 +238,26 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.forkChoice.setJustified(blockRoot);
     this.forkChoice.setFinalized(blockRoot);
     this.logger.info("Beacon chain initialized");
+  }
+
+  // By declaring the states as records, we can check their equality
+  // without making any assumptions of what keys exist
+  private areEqualStates(first: Record<string, any> | null, second: Record<string, any> | null): boolean {
+    if (first === null && second === null) {
+      return true;
+    }
+    return Object.keys(first).every(key => {
+      const valueIsArray = first[key] instanceof Array;
+      if (valueIsArray) {
+        const firstArray = first[key];
+        const secondArray = second[key];
+        // This logic assumes that there 
+        // are no duplicates in the arrays
+        return firstArray.length === secondArray.length &&
+          firstArray.every((elem: any) => secondArray.includes(elem));
+      }
+      return first[key] === second[key];
+    });
   }
 
   public async isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean> {
@@ -316,7 +347,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
    * @param state
    * @param trusted if state transition should trust that block is valid
    */
-  private async runStateTransition(block: BeaconBlock, state: BeaconState, trusted = false): Promise<BeaconState|null> {
+  private async runStateTransition(block: BeaconBlock, state: BeaconState, trusted = false): Promise<BeaconState | null> {
     const preSlot = state.slot;
     const preFinalizedEpoch = state.finalizedCheckpoint.epoch;
     const preJustifiedEpoch = state.currentJustifiedCheckpoint.epoch;
@@ -427,7 +458,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       eth1Block.timestamp,
       depositsWithProof
     );
-    if(!isValidGenesisState(this.config, genesisState)) {
+    if (!isValidGenesisState(this.config, genesisState)) {
       this.logger.info(`Eth1 block ${eth1Block.hash} is NOT forming valid genesis state`);
       return;
     }
