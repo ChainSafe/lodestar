@@ -3,18 +3,18 @@
  */
 
 import assert from "assert";
-import {EventEmitter} from "events";
-import {clone, hashTreeRoot, serialize, signingRoot} from "@chainsafe/ssz";
-import {Attestation, BeaconBlock, BeaconState, Hash, Slot, uint16, uint64, bool} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import { EventEmitter } from "events";
+import { clone, hashTreeRoot, serialize, signingRoot } from "@chainsafe/ssz";
+import { Attestation, BeaconBlock, BeaconState, Hash, Slot, uint16, uint64 } from "@chainsafe/eth2.0-types";
+import { IBeaconConfig } from "@chainsafe/eth2.0-config";
 
-import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "../constants";
-import {IBeaconDb} from "../db";
-import {IEth1Notifier} from "../eth1";
-import {ILogger} from "../logger";
-import {IBeaconMetrics} from "../metrics";
+import { DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT } from "../constants";
+import { IBeaconDb } from "../db";
+import { IEth1Notifier } from "../eth1";
+import { ILogger } from "../logger";
+import { IBeaconMetrics } from "../metrics";
 
-import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
+import { getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState } from "./genesis/genesis";
 
 import {
   processSlots, stateTransition,
@@ -24,20 +24,20 @@ import {
   isActiveValidator
   , getCurrentSlot
 } from "@chainsafe/eth2.0-state-transition";
-import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
+import { ILMDGHOST, StatefulDagLMDGHOST } from "./forkChoice";
 
-import {ChainEventEmitter, IBeaconChain} from "./interface";
-import {processSortedDeposits} from "../util/deposits";
-import {IChainOptions} from "./options";
-import {OpPool} from "../opPool";
-import {Block} from "ethers/providers";
+import { ChainEventEmitter, IBeaconChain } from "./interface";
+import { processSortedDeposits } from "../util/deposits";
+import { IChainOptions } from "./options";
+import { OpPool } from "../opPool";
+import { Block } from "ethers/providers";
 import fs from "fs";
-import {sleep} from "../util/sleep";
-import {AsyncQueue, queue} from "async";
+import { sleep } from "../util/sleep";
+import { AsyncQueue, queue } from "async";
 import FastPriorityQueue from "fastpriorityqueue";
 
-import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
-import {MerkleTreeSerialization} from "../util/serialization";
+import { ProgressiveMerkleTree } from "@chainsafe/eth2.0-utils";
+import { MerkleTreeSerialization } from "../util/serialization";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -71,7 +71,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   private attestationProcessingQueue: AsyncQueue<Function>;
   private blockProcessingQueue: FastPriorityQueue<IBlockProcessJob>; //sort by slot number
 
-  public constructor(opts: IChainOptions, {config, db, eth1, opPool, logger, metrics}: IBeaconChainModules) {
+  public constructor(opts: IChainOptions, { config, db, eth1, opPool, logger, metrics }: IBeaconChainModules) {
     super();
     this.opts = opts;
     this.chain = opts.name;
@@ -167,12 +167,12 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
         //wait a bit to give new block a chance
         await sleep(500);
         // add to priority queue
-        this.blockProcessingQueue.add({block, trusted});
+        this.blockProcessingQueue.add({ block, trusted });
         return;
       }
     }
 
-    await this.processBlock({block, trusted: false}, blockHash);
+    await this.processBlock({ block, trusted: false }, blockHash);
     const nextBlockInQueue = this.blockProcessingQueue.peek();
     while (nextBlockInQueue) {
       const latestBlock = await this.db.block.getChainHead();
@@ -254,16 +254,16 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   private processAttestation =
-  async (latestState: BeaconState, attestation: Attestation, attestationHash: Hash): Promise<void> => {
-    const validators = getAttestingIndices(
-      this.config, latestState, attestation.data, attestation.aggregationBits);
-    const balances = validators.map((index) => latestState.balances[index]);
-    for (let i = 0; i < validators.length; i++) {
-      this.forkChoice.addAttestation(attestation.data.beaconBlockRoot, validators[i], balances[i]);
-    }
-    this.logger.info(`Attestation ${attestationHash.toString("hex")} passed to fork choice`);
-    this.emit("processedAttestation", attestation);
-  };
+    async (latestState: BeaconState, attestation: Attestation, attestationHash: Hash): Promise<void> => {
+      const validators = getAttestingIndices(
+        this.config, latestState, attestation.data, attestation.aggregationBits);
+      const balances = validators.map((index) => latestState.balances[index]);
+      for (let i = 0; i < validators.length; i++) {
+        this.forkChoice.addAttestation(attestation.data.beaconBlockRoot, validators[i], balances[i]);
+      }
+      this.logger.info(`Attestation ${attestationHash.toString("hex")} passed to fork choice`);
+      this.emit("processedAttestation", attestation);
+    };
 
   private processBlock = async (job: IBlockProcessJob, blockHash: Hash): Promise<void> => {
 
@@ -353,7 +353,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     // Post-epoch processing
     const currentEpoch = computeEpochOfSlot(this.config, newState.slot);
     if (computeEpochOfSlot(this.config, preSlot) < currentEpoch) {
-      this.emit("processedCheckpoint", {epoch: currentEpoch, root: blockRoot});
+      this.emit("processedCheckpoint", { epoch: currentEpoch, root: blockRoot });
       // Update FFG Checkpoints
       // Newly justified epoch
       if (preJustifiedEpoch < newState.currentJustifiedCheckpoint.epoch) {
