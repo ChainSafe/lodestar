@@ -82,7 +82,7 @@ export class AttestationService {
         setTimeout(
           this.aggregateAttestations,
           this.config.params.SECONDS_PER_SLOT / 3 * 1000,
-          [duty, attestation, fork]
+          duty, attestation, fork
         );
       }
       await this.provider.validator.publishAttestation(attestation);
@@ -106,10 +106,21 @@ export class AttestationService {
         `No attestations to aggregate for slot ${duty.attestationSlot} and committee ${duty.committeeIndex}`
       );
     }
-    const compatibleAttestations = wireAttestations.filter((wireAttestation) => {
-      return equals(this.config.types.AttestationData, wireAttestation.data, attestation.data);
-    });
-    compatibleAttestations.push(attestation);
+
+    // wire attestations may contain our attestation already
+    let isFound = false;
+    const compatibleAttestations: Attestation[] = [];
+    for (const wireAttestation of wireAttestations) {
+      if (!isFound && equals(this.config.types.Attestation, attestation, wireAttestation)) {
+        isFound = true;
+      }
+      if (equals(this.config.types.AttestationData, wireAttestation.data, attestation.data)) {
+        compatibleAttestations.push(wireAttestation);
+      }
+    }
+    if (!isFound) {
+      compatibleAttestations.push(attestation);
+    }
     const aggregatedAttestation: Attestation = {
       signature: aggregateSignatures(compatibleAttestations.map((a) => a.signature)),
       data: attestation.data,

@@ -4,7 +4,7 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../../../db/api";
 import {assembleAttestationData} from "./data";
 import {BitList} from "@chainsafe/bit-utils";
-import {computeEpochAtSlot, getBeaconCommittee} from "@chainsafe/eth2.0-state-transition";
+import {getBeaconCommittee} from "@chainsafe/eth2.0-state-transition";
 import {intDiv} from "@chainsafe/eth2.0-utils";
 
 export async function assembleAttestation(
@@ -14,7 +14,7 @@ export async function assembleAttestation(
   validatorIndex: ValidatorIndex,
   index: CommitteeIndex,
   slot: Slot): Promise<Attestation> {
-  const committee = getBeaconCommittee(config, state, computeEpochAtSlot(config, slot), index);
+  const committee = getBeaconCommittee(config, state, slot, index);
   const aggregationBits = getAggregationBits(committee, validatorIndex);
   const data = await assembleAttestationData(config, db, state, headBlock, slot, index);
   return {

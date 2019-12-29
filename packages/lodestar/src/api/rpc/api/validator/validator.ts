@@ -62,8 +62,8 @@ export class ValidatorApi implements IValidatorApi {
   public async produceAttestation(
     validatorPubKey: BLSPubkey,
     pocBit: boolean,
+    index: CommitteeIndex,
     slot: Slot,
-    index: CommitteeIndex
   ): Promise<Attestation> {
     try {
       return await produceAttestation(

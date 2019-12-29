@@ -25,8 +25,6 @@ export function getCommitteeAssignment(
   validatorIndex: ValidatorIndex
 ): CommitteeAssignment {
 
-  const nextEpoch = getCurrentEpoch(config, state) + 1;
-  assert(epoch <= nextEpoch);
 
   const epochStartSlot = computeStartSlotAtEpoch(config, epoch);
   for (let slot = epochStartSlot; slot < epochStartSlot + config.params.SLOTS_PER_EPOCH; slot++) {
