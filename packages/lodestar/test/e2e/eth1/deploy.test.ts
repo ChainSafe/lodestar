@@ -19,7 +19,7 @@ describe("Eth1Notifier - using deployed contract", () => {
 
   beforeEach(async function () {
     this.timeout(0);
-    logger.silent = true;
+    logger.silent = false;
     // deploy deposit contract
     eth1Network = new PrivateEth1Network({
       host: "127.0.0.1",
