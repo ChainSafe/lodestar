@@ -110,7 +110,7 @@ export class AttestationService {
     const compatibleAttestations = wireAttestations.filter((wireAttestation) => {
       return equals(this.config.types.AttestationData, wireAttestation.data, attestation.data)
                     // prevent including aggregator attestation twice
-                    && ! equals(this.config.types.Attestation, attestation, wireAttestation)
+                    && ! equals(this.config.types.Attestation, attestation, wireAttestation);
     });
     compatibleAttestations.push(attestation);
     const aggregatedAttestation: Attestation = {
