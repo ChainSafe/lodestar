@@ -107,20 +107,12 @@ export class AttestationService {
       );
     }
 
-    // wire attestations may contain our attestation already
-    let isFound = false;
-    const compatibleAttestations: Attestation[] = [];
-    for (const wireAttestation of wireAttestations) {
-      if (!isFound && equals(this.config.types.Attestation, attestation, wireAttestation)) {
-        isFound = true;
-      }
-      if (equals(this.config.types.AttestationData, wireAttestation.data, attestation.data)) {
-        compatibleAttestations.push(wireAttestation);
-      }
-    }
-    if (!isFound) {
-      compatibleAttestations.push(attestation);
-    }
+    const compatibleAttestations = wireAttestations.filter((wireAttestation) => {
+      return equals(this.config.types.AttestationData, wireAttestation.data, attestation.data)
+                    // prevent including aggregator attestation twice
+                    && ! equals(this.config.types.Attestation, attestation, wireAttestation)
+    });
+    compatibleAttestations.push(attestation);
     const aggregatedAttestation: Attestation = {
       signature: aggregateSignatures(compatibleAttestations.map((a) => a.signature)),
       data: attestation.data,
