@@ -67,7 +67,7 @@ describe("Eth1Notifier - using deployed contract", () => {
 
 
     await wallet.createValidatorDeposit(depositContractAddress, ethers.utils.parseEther("32.0"));
-    await sleep(300);
+    await sleep(600);
     assert(cb.calledOnce, "deposit event did not fire");
   });
 
