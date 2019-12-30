@@ -28,12 +28,11 @@ const opts: INetworkOptions = {
 
 describe("[network] network", function () {
   this.timeout(5000);
-  const sandbox = sinon.createSandbox();
   let netA: Libp2pNetwork, netB: Libp2pNetwork;
   const logger: ILogger = new WinstonLogger();
   logger.silent = true;
   const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
-  const validator = sandbox.createStubInstance(GossipMessageValidator);
+  const validator = sinon.createStubInstance(GossipMessageValidator);
 
   beforeEach(async () => {
     netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator});
@@ -48,7 +47,7 @@ describe("[network] network", function () {
       netA.stop(),
       netB.stop(),
     ]);
-    sandbox.restore();
+    sinon.restore();
   });
   it("should create a peer on connect", async function () {
     const connected = Promise.all([
