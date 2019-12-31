@@ -6,7 +6,7 @@ import {ContractTransaction, ethers, Wallet} from "ethers";
 import {Provider} from "ethers/providers";
 import {BigNumber, ParamType} from "ethers/utils";
 import bls, {PrivateKey} from "@chainsafe/bls";
-import {hash, hashTreeRoot, signingRoot} from "@chainsafe/ssz";
+import {hash, signingRoot} from "@chainsafe/ssz";
 import {DepositData} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
