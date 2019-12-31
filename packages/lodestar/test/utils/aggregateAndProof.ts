@@ -4,7 +4,7 @@ import {EMPTY_SIGNATURE} from "../../src/constants";
 
 export function generateAggregateAndProof(override: Partial<AggregateAndProof> = {}): AggregateAndProof {
   return {
-    index: 0,
+    aggregatorIndex: 0,
     aggregate: generateEmptyAttestation(),
     selectionProof: EMPTY_SIGNATURE,
     ...override
