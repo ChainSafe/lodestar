@@ -51,7 +51,7 @@ describe("Eth1Notifier - using deployed contract", () => {
     logger.silent = false;
   });
 
-  it("should process a Deposit log", async function () {
+  it.only("should process a Deposit log", async function () {
     this.timeout(0);
     const wallet = new Eth1Wallet(
       eth1Network.accounts()[0],
