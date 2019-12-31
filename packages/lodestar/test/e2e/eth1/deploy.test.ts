@@ -65,9 +65,12 @@ describe("Eth1Notifier - using deployed contract", () => {
     const cb = sinon.spy();
     eth1Notifier.on("deposit", cb);
 
-
+    console.log("@@@ waiting for 10s");
+    await sleep(10000);
+    console.log("@@@ creating the deposit");
     await wallet.createValidatorDeposit(depositContractAddress, ethers.utils.parseEther("32.0"));
-    await sleep(300);
+    console.log("@@@ waiting for the deposit");
+    await sleep(10000);
     assert(cb.calledOnce, "deposit event did not fire");
   });
 
