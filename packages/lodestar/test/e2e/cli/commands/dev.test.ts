@@ -27,10 +27,6 @@ const SLOTS_PER_EPOCH = 5;
 const VALIDATOR_DIR = "./validators";
 const LODESTAR_DIR = "lodestar-db";
 
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 describe("e2e interop simulation", function() {
   this.timeout(100000);
   const logger: ILogger = new WinstonLogger();
@@ -47,6 +43,7 @@ describe("e2e interop simulation", function() {
   after(async () => {
     await Promise.all(validators.map(validator => validator.stop()));
     logger.info("Stopped all validators");
+    await new Promise(resolve => setTimeout(resolve, SECONDS_PER_SLOT * 1000));
     await node.stop();
     logger.info("Stopped Beacon Node");
     rimraf.sync(VALIDATOR_DIR);
@@ -60,17 +57,15 @@ describe("e2e interop simulation", function() {
     await startValidators();
     logger.info("Validators are started");
 
-    let hasReceivedEvent = false;
-    node.chain.on("justifiedCheckpoint", () => {
-      hasReceivedEvent = true;
-      logger.info("Received justifiedCheckpoint event");
-    });
     // wait for 60 seconds at most, check every second
-    for (let i = 0; i < 60; i++) {
-      if(hasReceivedEvent) break;
-      await sleep(1000);
-    }
-    if(!hasReceivedEvent) expect.fail("Not received justifiedCheckpoint event");
+    const received = new Promise((resolve, reject) => {
+      setTimeout(reject, 60000);
+      node.chain.on("justifiedCheckpoint", () => {
+        logger.info("Received justifiedCheckpoint event");
+        resolve();
+      });
+    });
+    await received;
   });
 
   async function initializeNode(): Promise<void> {

@@ -12,7 +12,8 @@ import {sleep} from "../../../src/util/sleep";
 // @ts-ignore
 import Libp2p from "libp2p";
 import {GossipEvent} from "../../../src/network/gossip/constants";
-import { IGossipMessageValidator } from "../../../src/network/gossip/interface";
+import sinon from "sinon";
+import { GossipMessageValidator } from "../../../src/network/gossip/validator";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -31,7 +32,7 @@ describe("[network] network", function () {
   const logger: ILogger = new WinstonLogger();
   logger.silent = true;
   const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
-  const validator: IGossipMessageValidator = {} as unknown as IGossipMessageValidator;
+  const validator = sinon.createStubInstance(GossipMessageValidator);
 
   beforeEach(async () => {
     netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator});
@@ -46,6 +47,7 @@ describe("[network] network", function () {
       netA.stop(),
       netB.stop(),
     ]);
+    sinon.restore();
   });
   it("should create a peer on connect", async function () {
     const connected = Promise.all([
@@ -87,6 +89,7 @@ describe("[network] network", function () {
       netA.gossip.on(GossipEvent.BLOCK, resolve);
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
+    validator.isValidIncomingBlock.resolves(true);
     netB.gossip.publishBlock(getEmptyBlock());
     await received;
   });
@@ -102,6 +105,7 @@ describe("[network] network", function () {
       netA.gossip.on(GossipEvent.ATTESTATION, resolve);
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
+    validator.isValidIncomingUnaggregatedAttestation.resolves(true);
     netB.gossip.publishCommiteeAttestation(generateEmptyAttestation());
     await received;
   });
@@ -121,6 +125,7 @@ describe("[network] network", function () {
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     const attestation = generateEmptyAttestation();
     attestation.data.index = committeeIndex;
+    validator.isValidIncomingUnaggregatedAttestation.resolves(true);
     netB.gossip.publishCommiteeAttestation(attestation);
     await received;
   });

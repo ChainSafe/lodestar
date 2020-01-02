@@ -62,8 +62,8 @@ export class ValidatorApi implements IValidatorApi {
   public async produceAttestation(
     validatorPubKey: BLSPubkey,
     pocBit: boolean,
+    index: CommitteeIndex,
     slot: Slot,
-    index: CommitteeIndex
   ): Promise<Attestation> {
     try {
       return await produceAttestation(
@@ -101,7 +101,7 @@ export class ValidatorApi implements IValidatorApi {
     const aggregation: AggregateAndProof = {
       aggregate: aggregated,
       selectionProof: slotSignature,
-      index: await this.db.getValidatorIndex(validatorPubkey)
+      aggregatorIndex: await this.db.getValidatorIndex(validatorPubkey)
     };
     await Promise.all([
       this.opPool.aggregateAndProofs.receive(aggregation),

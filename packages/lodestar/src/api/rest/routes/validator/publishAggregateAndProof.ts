@@ -43,7 +43,7 @@ export const registerPublishAggregateAndProofEndpoint = (fastify: IFastifyServer
         const aggregateAndProof: AggregateAndProof = {
           aggregate: aggregatedAttestation,
           selectionProof: Buffer.from(request.query.slot_signature.replace("0x", ""), "hex"),
-          index: await modules.db.getValidatorIndex(
+          aggregatorIndex: await modules.db.getValidatorIndex(
             Buffer.from(request.query.validator_pubkey.replace("0x", ""), "hex")
           )
         };

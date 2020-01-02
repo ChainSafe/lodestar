@@ -105,7 +105,8 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (!attestorIndices.includes(aggregationAndProof.aggregatorIndex)) {
       return false;
     }
-    if (!isAggregator(this.config, state, slot, aggregationAndProof.aggregatorIndex, aggregationAndProof.selectionProof)) {
+    if (!isAggregator(this.config, state, slot, aggregationAndProof.aggregatorIndex, 
+      aggregationAndProof.selectionProof)) {
       return false;
     }
     const validatorPubKey = state.validators[aggregationAndProof.aggregatorIndex].pubkey;

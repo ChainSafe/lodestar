@@ -16,6 +16,6 @@ export async function produceAttestation(
     db.getValidatorIndex(validatorPubKey)
   ]);
   const headState = await db.state.get(headBlock.stateRoot);
-  await processSlots(config, headState, slot);
+  processSlots(config, headState, slot);
   return await assembleAttestation({config, db}, headState, headBlock, validatorIndex, index, slot);
 }
