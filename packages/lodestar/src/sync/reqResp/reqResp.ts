@@ -7,7 +7,7 @@ import {
   Epoch, Hash, Slot,
   RequestBody, Hello, Goodbye,
   BeaconBlocksByRangeRequest, BeaconBlocksByRangeResponse,
-  BeaconBlocksByRootRequest, BeaconBlocksByRootResponse, Checkpoint,
+  BeaconBlocksByRootRequest, BeaconBlocksByRootResponse,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -18,8 +18,7 @@ import {INetwork} from "../../network";
 import {ILogger} from "../../logger";
 import {ISyncOptions, ISyncReqResp} from "./interface";
 import {ReputationStore} from "../IReputation";
-import {computeEpochOfSlot, getBlockRoot} from "@chainsafe/eth2.0-state-transition";
-import {equals} from "@chainsafe/ssz";
+import {getBlockRoot} from "@chainsafe/eth2.0-state-transition";
 
 export interface ISyncReqRespModules {
   config: IBeaconConfig;
@@ -106,22 +105,16 @@ export class SyncReqResp implements ISyncReqResp {
 
   public async shouldDisconnectOnHello(peerInfo: PeerInfo, request: Hello): Promise<boolean> {
     const headBlock = await this.db.block.getChainHead();
-    const state = await this.db.state.get(headBlock.stateRoot);
-    const fork = state.fork;
-    const epoch = computeEpochOfSlot(this.config, request.headSlot);
-    const forkVersionHeadSlot = (epoch < fork.epoch)? fork.previousVersion : fork.currentVersion;
-    if (!forkVersionHeadSlot.equals(request.headForkVersion)) {
+    if (!headBlock) {
       return true;
     }
-    const requestFinalizedCheckpoint: Checkpoint = {
-      epoch: request.finalizedEpoch,
-      root: request.finalizedRoot,
-    };
-    if (!equals(this.config.types.Checkpoint, requestFinalizedCheckpoint, state.finalizedCheckpoint)) {
-      const root = getBlockRoot(this.config, state, requestFinalizedCheckpoint.epoch);
-      if (!root.equals(requestFinalizedCheckpoint.root)) {
-        return true;
-      }
+    const state = await this.db.state.get(headBlock.stateRoot);
+    if (!state.fork.currentVersion.equals(request.headForkVersion)) {
+      return true;
+    }
+    if (state.finalizedCheckpoint.epoch >= request.finalizedEpoch &&
+       !request.finalizedRoot.equals(getBlockRoot(this.config, state, request.finalizedEpoch))) {
+      return true;
     }
     return false;
   }
