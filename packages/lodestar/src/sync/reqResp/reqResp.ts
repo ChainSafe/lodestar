@@ -18,7 +18,8 @@ import {INetwork} from "../../network";
 import {ILogger} from "../../logger";
 import {ISyncOptions, ISyncReqResp} from "./interface";
 import {ReputationStore} from "../IReputation";
-import {getBlockRoot} from "@chainsafe/eth2.0-state-transition";
+import {computeStartSlotOfEpoch} from "@chainsafe/eth2.0-state-transition";
+import {signingRoot} from "@chainsafe/ssz";
 
 export interface ISyncReqRespModules {
   config: IBeaconConfig;
@@ -65,7 +66,7 @@ export class SyncReqResp implements ISyncReqResp {
     this.network.reqResp.removeListener("request", this.onRequest);
     await Promise.all(
       this.network.getPeers().map((peerInfo) =>
-        this.network.reqResp.goodbye(peerInfo, 0n)));
+        this.network.reqResp.goodbye(peerInfo, 1n)));
   }
 
   public onRequest = async (
@@ -98,22 +99,21 @@ export class SyncReqResp implements ISyncReqResp {
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);
     }
-    if (await this.shouldDisconnectOnHello(peerInfo, request)) {
-      this.network.reqResp.goodbye(peerInfo, 0n);
+    if (await this.shouldDisconnectOnHello(request)) {
+      this.network.reqResp.goodbye(peerInfo, 2n);
     }
   }
 
-  public async shouldDisconnectOnHello(peerInfo: PeerInfo, request: Hello): Promise<boolean> {
+  public async shouldDisconnectOnHello(request: Hello): Promise<boolean> {
     const headBlock = await this.db.block.getChainHead();
-    if (!headBlock) {
-      return true;
-    }
     const state = await this.db.state.get(headBlock.stateRoot);
     if (!state.fork.currentVersion.equals(request.headForkVersion)) {
       return true;
     }
+    const startSlot = computeStartSlotOfEpoch(this.config, request.finalizedEpoch);
+    const startBlock = await this.db.block.get(startSlot);
     if (state.finalizedCheckpoint.epoch >= request.finalizedEpoch &&
-       !request.finalizedRoot.equals(getBlockRoot(this.config, state, request.finalizedEpoch))) {
+       !request.finalizedRoot.equals(signingRoot(this.config.types.BeaconBlock, startBlock))) {
       return true;
     }
     return false;
@@ -172,11 +172,9 @@ export class SyncReqResp implements ISyncReqResp {
       finalizedRoot = ZERO_HASH;
     } else {
       headSlot = await this.db.chain.getChainHeadSlot();
-      const [bRoot, state] = await Promise.all([
-        this.db.chain.getBlockRoot(headSlot),
-        this.db.state.getLatest(),
-      ]);
-      headRoot = bRoot;
+      const headBlock = await this.db.block.getChainHead();
+      const state = await this.db.state.get(headBlock.stateRoot);
+      headRoot = signingRoot(this.config.types.BeaconBlock, headBlock);
       finalizedEpoch = state.finalizedCheckpoint.epoch;
       finalizedRoot = state.finalizedCheckpoint.root;
     }
