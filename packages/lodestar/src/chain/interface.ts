@@ -68,3 +68,8 @@ export interface IBeaconChain extends ChainEventEmitter {
 
   isInitialized(): boolean;
 }
+
+export interface IAttestationProcessor {
+  receiveBlock(block: BeaconBlock, trusted?: boolean): Promise<void>;
+  receiveAttestation(attestation: Attestation): Promise<void>;
+}

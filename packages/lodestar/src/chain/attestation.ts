@@ -1,0 +1,100 @@
+import assert from "assert";
+import {IAttestationProcessor, ChainEventEmitter} from "./interface";
+import {ILMDGHOST} from ".";
+import {Attestation, BeaconBlock, Slot, Root} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconDb} from "../db";
+import {getCurrentSlot, computeEpochAtSlot, getAttestingIndices} from "@chainsafe/eth2.0-state-transition";
+import {GENESIS_EPOCH} from "../constants";
+import {ILogger} from "../logger";
+import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
+
+type RootHex = string;
+
+export class AttestationProcessor implements IAttestationProcessor {
+  private readonly config: IBeaconConfig;
+  private db: IBeaconDb;
+  private logger: ILogger;
+  private chain: ChainEventEmitter;
+  private forkChoice: ILMDGHOST;
+  private pendingAttestations: Record<RootHex, Record<RootHex, Attestation>>;
+  
+  public constructor(chain: ChainEventEmitter, forkChoice: ILMDGHOST, 
+    {config, db, logger}: {config: IBeaconConfig; db: IBeaconDb; logger: ILogger}) {
+    this.config = config;
+    this.db = db;
+    this.logger = logger;
+    this.chain = chain;
+    this.forkChoice = forkChoice;
+    this.pendingAttestations = {};
+  }
+  
+  public async receiveAttestation(attestation: Attestation): Promise<void> {
+    const attestationHash = hashTreeRoot(this.config.types.Attestation, attestation);
+    this.logger.info(`Received attestation ${attestationHash.toString("hex")}`);
+    try {
+      const attestationSlot: Slot = attestation.data.slot;
+      const headBlock = await this.db.block.get(this.forkChoice.head());
+      const state = await this.db.state.get(headBlock.stateRoot);
+      if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < state.slot) {
+        this.logger.verbose(`Attestation ${attestationHash.toString("hex")} is too old. Ignored.`);
+        return;
+      }
+    } catch (e) {
+      return;
+    }
+    const targetRoot = attestation.data.target.root;
+    if (!await this.db.block.has(targetRoot)) {
+      this.chain.emit("unknownBlockRoot", targetRoot);
+      this.addPendingAttestation(targetRoot, attestation, attestationHash);
+      return;
+    }
+    const beaconBlockRoot = attestation.data.beaconBlockRoot;
+    if (!await this.db.block.has(beaconBlockRoot)) {
+      this.chain.emit("unknownBlockRoot", beaconBlockRoot);
+      this.addPendingAttestation(beaconBlockRoot, attestation, attestationHash);
+      return;
+    }
+    await this.processAttestation(attestation, attestationHash);
+  }
+
+  public async receiveBlock(block: BeaconBlock): Promise<void> {
+    const blockRoot = signingRoot(this.config.types.BeaconBlock, block);
+    const blockPendingAttestations = this.pendingAttestations[blockRoot.toString("hex")] || {};
+    for (const hash in blockPendingAttestations) {
+      const attestation = blockPendingAttestations[hash];
+      await this.processAttestation(attestation, Buffer.from(hash, "hex"));
+    }
+    delete this.pendingAttestations[blockRoot.toString("hex")];
+  }
+
+  public async processAttestation (attestation: Attestation, attestationHash: Root): Promise<void> {
+    const justifiedCheckpoint = this.forkChoice.getJustified();
+    const justifiedBlock = await this.db.block.get(justifiedCheckpoint.root);
+    const checkpointState = await this.db.state.get(justifiedBlock.stateRoot);
+    const currentSlot = getCurrentSlot(this.config, checkpointState.genesisTime);
+    const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
+    const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
+    const target = attestation.data.target;
+    assert([currentEpoch, previousEpoch].includes(target.epoch));
+    assert(target.epoch === computeEpochAtSlot(this.config, attestation.data.slot));
+    const block = await this.db.block.get(attestation.data.beaconBlockRoot);
+    assert(block.slot <= attestation.data.slot);
+
+    const validators = getAttestingIndices(
+      this.config, checkpointState, attestation.data, attestation.aggregationBits);
+    const balances = validators.map((index) => checkpointState.balances[index]);
+    for (let i = 0; i < validators.length; i++) {
+      this.forkChoice.addAttestation(attestation.data.beaconBlockRoot, validators[i], balances[i]);
+    }
+    this.logger.info(`Attestation ${attestationHash.toString("hex")} passed to fork choice`);
+    this.chain.emit("processedAttestation", attestation);
+  }
+
+  private addPendingAttestation(blockRoot: Root, attestation: Attestation, attestationHash: Root): void {
+    const blockPendingAttestations = this.pendingAttestations[blockRoot.toString("hex")] || {};
+    blockPendingAttestations[attestationHash.toString("hex")] = attestation;
+    this.pendingAttestations[blockRoot.toString("hex")] = blockPendingAttestations;
+  }
+
+}
