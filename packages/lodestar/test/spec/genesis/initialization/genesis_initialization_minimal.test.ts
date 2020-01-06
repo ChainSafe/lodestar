@@ -2,7 +2,8 @@
 import {join} from "path";
 import {expect} from "chai";
 import {equals} from "@chainsafe/ssz";
-import {config,IBeaconConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BeaconState, Deposit, Hash, uint64} from "@chainsafe/eth2.0-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {initializeBeaconStateFromEth1} from "../../../../src/chain/genesis/genesis";
