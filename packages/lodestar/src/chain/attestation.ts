@@ -1,7 +1,7 @@
 import assert from "assert";
 import {IAttestationProcessor, ChainEventEmitter} from "./interface";
 import {ILMDGHOST} from ".";
-import {Attestation, BeaconBlock, Slot, Root} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, Slot, Root, BlockRootHex, AttestationRootHex} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db";
 import {getCurrentSlot, computeEpochAtSlot, getAttestingIndices} from "@chainsafe/eth2.0-state-transition";
@@ -9,15 +9,13 @@ import {GENESIS_EPOCH} from "../constants";
 import {ILogger} from "../logger";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 
-type RootHex = string;
-
 export class AttestationProcessor implements IAttestationProcessor {
   private readonly config: IBeaconConfig;
   private db: IBeaconDb;
   private logger: ILogger;
   private chain: ChainEventEmitter;
   private forkChoice: ILMDGHOST;
-  private pendingAttestations: Record<RootHex, Record<RootHex, Attestation>>;
+  private pendingAttestations: Map<BlockRootHex, Map<AttestationRootHex, Attestation>>;
   
   public constructor(chain: ChainEventEmitter, forkChoice: ILMDGHOST, 
     {config, db, logger}: {config: IBeaconConfig; db: IBeaconDb; logger: ILogger}) {
@@ -26,7 +24,7 @@ export class AttestationProcessor implements IAttestationProcessor {
     this.logger = logger;
     this.chain = chain;
     this.forkChoice = forkChoice;
-    this.pendingAttestations = {};
+    this.pendingAttestations = new Map<BlockRootHex, Map<AttestationRootHex, Attestation>>();
   }
   
   public async receiveAttestation(attestation: Attestation): Promise<void> {
@@ -60,12 +58,12 @@ export class AttestationProcessor implements IAttestationProcessor {
 
   public async receiveBlock(block: BeaconBlock): Promise<void> {
     const blockRoot = signingRoot(this.config.types.BeaconBlock, block);
-    const blockPendingAttestations = this.pendingAttestations[blockRoot.toString("hex")] || {};
-    for (const hash in blockPendingAttestations) {
-      const attestation = blockPendingAttestations[hash];
+    const blockPendingAttestations = this.pendingAttestations.get(blockRoot.toString("hex")) || 
+      new Map<AttestationRootHex, Attestation>();
+    for (const [hash, attestation] of blockPendingAttestations) {
       await this.processAttestation(attestation, Buffer.from(hash, "hex"));
     }
-    delete this.pendingAttestations[blockRoot.toString("hex")];
+    this.pendingAttestations.delete(blockRoot.toString("hex"));
   }
 
   public async processAttestation (attestation: Attestation, attestationHash: Root): Promise<void> {
@@ -92,9 +90,10 @@ export class AttestationProcessor implements IAttestationProcessor {
   }
 
   private addPendingAttestation(blockRoot: Root, attestation: Attestation, attestationHash: Root): void {
-    const blockPendingAttestations = this.pendingAttestations[blockRoot.toString("hex")] || {};
-    blockPendingAttestations[attestationHash.toString("hex")] = attestation;
-    this.pendingAttestations[blockRoot.toString("hex")] = blockPendingAttestations;
+    const blockPendingAttestations = this.pendingAttestations.get(blockRoot.toString("hex")) ||
+      new Map<AttestationRootHex, Attestation>();
+    blockPendingAttestations.set(attestationHash.toString("hex"), attestation);
+    this.pendingAttestations.set(blockRoot.toString("hex"), blockPendingAttestations);
   }
 
 }
