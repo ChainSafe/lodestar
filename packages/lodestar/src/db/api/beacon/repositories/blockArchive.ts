@@ -1,9 +1,9 @@
-import { BeaconBlock } from "@chainsafe/eth2.0-types";
-import { IBeaconConfig } from "@chainsafe/eth2.0-config";
-import { BulkRepository } from "../repository";
-import { IDatabaseController } from "../../../controller";
-import { Bucket, encodeKey } from "../../../schema";
-import { serialize, deserialize } from "@chainsafe/ssz";
+import {BeaconBlock} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {BulkRepository} from "../repository";
+import {IDatabaseController} from "../../../controller";
+import {Bucket, encodeKey} from "../../../schema";
+import {serialize, deserialize} from "@chainsafe/ssz";
 
 /**
  * Stores finalized blocks. Block slot is identifier.
