@@ -10,9 +10,8 @@ import {
   BeaconBlocksByRootResponse,
   Epoch,
   Goodbye,
-  Hash,
   RequestBody,
-  Slot, Status,
+  Slot, Status, Root,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -144,9 +143,9 @@ export class SyncReqResp implements ISyncReqResp {
 
   private async createStatus(): Promise<Status> {
     let headSlot: Slot,
-      headRoot: Hash,
+      headRoot: Root,
       finalizedEpoch: Epoch,
-      finalizedRoot: Hash;
+      finalizedRoot: Root;
     if (!this.chain.isInitialized()) {
       headSlot = 0;
       headRoot = ZERO_HASH;

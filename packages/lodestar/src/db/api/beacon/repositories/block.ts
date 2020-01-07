@@ -1,4 +1,4 @@
-import {BeaconBlock, Hash, Slot} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, Slot, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {AnyContainerType, serialize, signingRoot} from "@chainsafe/ssz";
 
@@ -19,7 +19,7 @@ export class BlockRepository extends BulkRepository<BeaconBlock> {
     this.chain = chain;
   }
 
-  public async set(id: Hash, value: BeaconBlock): Promise<void> {
+  public async set(id: Root, value: BeaconBlock): Promise<void> {
     await Promise.all([
       this.db.put(encodeKey(Bucket.blockSlotRefs, value.slot), id),
       this.db.put(encodeKey(Bucket.blockRootRefs, id), serialize(this.config.types.Slot, value.slot)),
@@ -63,14 +63,14 @@ export class BlockRepository extends BulkRepository<BeaconBlock> {
     return await this.get(root);
   }
 
-  public async storeBadBlock(root: Hash): Promise<void> {
+  public async storeBadBlock(root: Root): Promise<void> {
     return await this.db.put(
       encodeKey(Bucket.invalidBlock, root),
       serialize(this.config.types.bool, true)
     );
   }
 
-  public async isBadBlock(root: Hash): Promise<boolean> {
+  public async isBadBlock(root: Root): Promise<boolean> {
     return !! await this.db.get(encodeKey(Bucket.invalidBlock, root));
   }
 

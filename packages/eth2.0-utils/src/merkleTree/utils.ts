@@ -1,4 +1,4 @@
-import {Hash} from "@chainsafe/eth2.0-types";
+import {bytes32, Root} from "@chainsafe/eth2.0-types";
 import {intDiv} from "../math";
 import {hash} from "../crypto";
 
@@ -7,11 +7,11 @@ import {hash} from "../crypto";
  * starting with the given ``root``.
  */
 export function verifyMerkleBranch(
-  leaf: Hash,
-  proof: Hash[],
+  leaf: bytes32,
+  proof: bytes32[],
   depth: number,
   index: number,
-  root: Hash,
+  root: Root,
 ): boolean {
   let value = Buffer.from(leaf);
   for (let i = 0; i < depth; i++) {

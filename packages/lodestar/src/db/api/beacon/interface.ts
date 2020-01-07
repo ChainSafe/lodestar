@@ -2,7 +2,13 @@
  * @module db/api/beacon
  */
 
-import {BeaconBlock, BeaconState, BLSPubkey, Hash, ValidatorIndex,} from "@chainsafe/eth2.0-types";
+import {
+  BeaconBlock,
+  BeaconState,
+  BLSPubkey,
+  ValidatorIndex,
+  Root,
+} from "@chainsafe/eth2.0-types";
 
 import {
   AttestationRepository,
@@ -67,7 +73,7 @@ export interface IBeaconDb {
    * @param stateRoot
    */
   updateChainHead(
-    blockRoot: Hash,
-    stateRoot: Hash
+    blockRoot: Root,
+    stateRoot: Root
   ): Promise<void>;
 }

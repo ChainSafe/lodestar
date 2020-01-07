@@ -3,7 +3,7 @@
  * @module types
  */
 
-import {BLSSignature, bytes32, Hash, Slot,} from "./primitive";
+import {BLSSignature, bytes32, Root, Slot,} from "./primitive";
 
 import {Eth1Data} from "./misc";
 
@@ -24,8 +24,8 @@ export interface BeaconBlockBody {
 export interface BeaconBlock {
   // Header
   slot: Slot;
-  parentRoot: Hash;
-  stateRoot: Hash;
+  parentRoot: Root;
+  stateRoot: Root;
   body: BeaconBlockBody;
   signature: BLSSignature;
 }

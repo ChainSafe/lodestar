@@ -1,5 +1,5 @@
 import {signingRoot} from "@chainsafe/ssz";
-import {AttestationData, BeaconBlock, BeaconState, Hash, CommitteeIndex, Slot} from "@chainsafe/eth2.0-types";
+import {AttestationData, BeaconBlock, BeaconState, CommitteeIndex, Slot, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {IBeaconDb} from "../../../db/api";
@@ -16,7 +16,7 @@ export async function assembleAttestationData(
   const currentEpoch = getCurrentEpoch(config, headState);
   const epochStartSlot = computeStartSlotAtEpoch(config, currentEpoch);
 
-  let epochBoundaryBlockRoot: Hash;
+  let epochBoundaryBlockRoot: Root;
   if (epochStartSlot === headState.slot) {
     epochBoundaryBlockRoot = signingRoot(config.types.BeaconBlock, headBlock);
   } else {

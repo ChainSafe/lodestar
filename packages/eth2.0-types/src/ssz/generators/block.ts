@@ -38,8 +38,8 @@ export const BeaconBlockBody = (ssz: IBeaconSSZTypes, params: IBeaconParams): Si
 export const BeaconBlock = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
     ["slot", ssz.Slot],
-    ["parentRoot", ssz.Hash],
-    ["stateRoot", ssz.Hash],
+    ["parentRoot", ssz.Root],
+    ["stateRoot", ssz.Root],
     ["body", ssz.BeaconBlockBody],
     ["signature", ssz.BLSSignature],
   ],

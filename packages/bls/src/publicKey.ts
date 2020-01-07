@@ -1,5 +1,5 @@
 import {PrivateKey} from "./privateKey";
-import {BLSPubkey, Domain, Hash} from "@chainsafe/eth2.0-types";
+import {BLSPubkey, Domain, bytes32} from "@chainsafe/eth2.0-types";
 import {PublicKeyType} from "@chainsafe/eth2-bls-wasm";
 import {getContext} from "./context";
 import {PUBLIC_KEY_LENGTH} from "./constants";
@@ -49,7 +49,7 @@ export class PublicKey {
     return agg;
   }
 
-  public verifyMessage(signature: Signature, messageHash: Hash, domain: Domain): boolean {
+  public verifyMessage(signature: Signature, messageHash: bytes32, domain: Domain): boolean {
     return this.value.verifyHashWithDomain(signature.getValue(), Buffer.concat([messageHash, domain]));
   }
 

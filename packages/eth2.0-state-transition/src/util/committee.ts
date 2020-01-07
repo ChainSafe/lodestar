@@ -5,9 +5,9 @@
 import {
   ValidatorIndex,
   BeaconState,
-  Hash,
   CommitteeIndex,
   Slot,
+  bytes32,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {computeShuffledIndex, getSeed} from "./seed";
@@ -24,7 +24,7 @@ import {DomainType} from "../constants";
 export function computeCommittee(
   config: IBeaconConfig,
   indices: ValidatorIndex[],
-  seed: Hash,
+  seed: bytes32,
   index: number,
   count: number
 ): ValidatorIndex[] {

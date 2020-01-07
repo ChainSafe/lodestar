@@ -5,7 +5,7 @@
 import assert from "assert";
 import {EventEmitter} from "events";
 import {clone, hashTreeRoot, serialize, signingRoot} from "@chainsafe/ssz";
-import {Attestation, BeaconBlock, BeaconState, Hash, Slot, uint16, uint64} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BeaconState, Slot, uint16, uint64, Root, bytes32} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT, GENESIS_EPOCH} from "../constants";
@@ -239,7 +239,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     return Math.floor(Date.now() / 1000) >= stateSlotTime;
   }
 
-  private processAttestation = async (attestation: Attestation, attestationHash: Hash): Promise<void> => {
+  private processAttestation = async (attestation: Attestation, attestationHash: bytes32): Promise<void> => {
     const justifiedCheckpoint = this.forkChoice.getJustified();
     const justifiedBlock = await this.db.block.get(justifiedCheckpoint.root);
     const checkpointState = await this.db.state.get(justifiedBlock.stateRoot);
@@ -259,7 +259,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.emit("processedAttestation", attestation);
   };
 
-  private processBlock = async (job: IBlockProcessJob, blockHash: Hash): Promise<void> => {
+  private processBlock = async (job: IBlockProcessJob, blockHash: Root): Promise<void> => {
     const parentBlock = await this.db.block.get(job.block.parentRoot);
     const pre = await this.db.state.get(parentBlock.stateRoot);
     const isValidBlock = await this.isValidBlock(pre, job.block);

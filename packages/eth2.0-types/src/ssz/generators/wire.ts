@@ -8,9 +8,9 @@ import {IBeaconSSZTypes} from "../interface";
 export const Status = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
     ["headForkVersion", ssz.Version],
-    ["finalizedRoot", ssz.Hash],
+    ["finalizedRoot", ssz.Root],
     ["finalizedEpoch", ssz.Epoch],
-    ["headRoot", ssz.Hash],
+    ["headRoot", ssz.Root],
     ["headSlot", ssz.Slot],
   ],
 });
@@ -19,7 +19,7 @@ export const Goodbye = (ssz: IBeaconSSZTypes): AnySSZType => ssz.uint64;
 
 export const BeaconBlocksByRangeRequest = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
-    ["headBlockRoot", ssz.Hash],
+    ["headBlockRoot", ssz.Root],
     ["startSlot", ssz.Slot],
     ["count", ssz.number64],
     ["step", ssz.number64],
@@ -32,7 +32,7 @@ export const BeaconBlocksByRangeResponse = (ssz: IBeaconSSZTypes): AnySSZType =>
 });
 
 export const BeaconBlocksByRootRequest = (ssz: IBeaconSSZTypes): AnySSZType => ({
-  elementType: ssz.Hash,
+  elementType: ssz.Root,
   maxLength: 32000,
 });
 

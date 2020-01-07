@@ -37,7 +37,7 @@ export const Attestation = (ssz: IBeaconSSZTypes, params: IBeaconParams): Simple
 export const Deposit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
     ["proof", {
-      elementType: ssz.Hash,
+      elementType: ssz.bytes32,
       length: DEPOSIT_CONTRACT_TREE_DEPTH + 1,
     }],
     ["data", ssz.DepositData],

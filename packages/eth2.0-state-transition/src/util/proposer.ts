@@ -7,7 +7,7 @@ import {hash} from "@chainsafe/ssz";
 import {
   BeaconState,
   ValidatorIndex,
-  Hash,
+  bytes32,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {intToBytes,intDiv} from "@chainsafe/eth2.0-utils";
@@ -37,8 +37,8 @@ export function getBeaconProposerIndex(config: IBeaconConfig, state: BeaconState
 /**
  * Return from ``indices`` a random index sampled by effective balance.
  */
-export function computeProposerIndex(config: IBeaconConfig, state: BeaconState, indices: ValidatorIndex[], seed: Hash):
-ValidatorIndex {
+export function computeProposerIndex(config: IBeaconConfig, state: BeaconState, indices: ValidatorIndex[], 
+  seed: bytes32): ValidatorIndex {
   assert(indices.length > 0);
   const MAX_RANDOM_BYTE = BigInt(2**8 - 1);
   let i = 0;

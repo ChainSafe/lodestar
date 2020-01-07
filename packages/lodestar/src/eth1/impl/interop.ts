@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars,@typescript-eslint/no-empty-function */
 import {EventEmitter} from "events";
-import {BeaconState, Eth1Data, Hash, number64} from "@chainsafe/eth2.0-types";
+
+import {BeaconState, Eth1Data, number64, Root} from "@chainsafe/eth2.0-types";
+
 import {IEth1Notifier} from "../";
 import {Block} from "ethers/providers";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -24,7 +26,7 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   public async processDepositLog(dataHex: string, indexHex: string): Promise<void> {
   }
 
-  public async depositRoot(): Promise<Hash> {
+  public async depositRoot(): Promise<Root> {
     return Buffer.alloc(32);
   }
 
