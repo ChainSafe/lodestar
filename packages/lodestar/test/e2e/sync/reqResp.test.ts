@@ -14,7 +14,7 @@ import {WinstonLogger} from "../../../src/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {generateState} from "../../utils/state";
-import {BlockRepository, ChainRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
+import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
 import {generateEmptyBlock} from "../../utils/block";
 import {signingRoot} from "@chainsafe/ssz";
 
@@ -61,6 +61,7 @@ describe("[sync] rpc", function () {
       state: sandbox.createStubInstance(StateRepository),
       chain: sandbox.createStubInstance(ChainRepository),
       block: sandbox.createStubInstance(BlockRepository),
+      blockArchive: sandbox.createStubInstance(BlockArchiveRepository),
     } as BeaconDb;
     // @ts-ignore
     db.state.get.resolves(state);
@@ -70,6 +71,8 @@ describe("[sync] rpc", function () {
     db.block.getChainHead.resolves(block);
     // @ts-ignore
     db.block.get.resolves(block);
+    // @ts-ignore
+    db.blockArchive.get.resolves(block);
     chain.latestState = state;
     rpcA = new SyncReqResp({}, {
       config,
