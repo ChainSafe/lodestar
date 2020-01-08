@@ -1,6 +1,7 @@
 export * from "./attestations";
 export * from "./attesterSlashing";
 export * from "./block";
+export * from "./blockArchive";
 export * from "./chain";
 export * from "./deposit";
 export * from "./merkleTree";

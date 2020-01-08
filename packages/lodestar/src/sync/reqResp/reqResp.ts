@@ -30,6 +30,12 @@ export interface ISyncReqRespModules {
   logger: ILogger;
 }
 
+enum GoodByeReasonCode {
+  CLIENT_SHUTDOWN = 1,
+  IRRELEVANT_NETWORK = 2,
+  ERROR = 3,
+}
+
 /**
  * The SyncReqResp module handles app-level requests / responses from other peers,
  * fetching state from the chain and database as needed.
@@ -66,7 +72,7 @@ export class SyncReqResp implements ISyncReqResp {
     this.network.reqResp.removeListener("request", this.onRequest);
     await Promise.all(
       this.network.getPeers().map((peerInfo) =>
-        this.network.reqResp.goodbye(peerInfo, 1n)));
+        this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN))));
   }
 
   public onRequest = async (
@@ -100,7 +106,7 @@ export class SyncReqResp implements ISyncReqResp {
       this.network.reqResp.sendResponse(id, e, null);
     }
     if (await this.shouldDisconnectOnHello(request)) {
-      this.network.reqResp.goodbye(peerInfo, 2n);
+      this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
     }
   }
 
@@ -111,7 +117,7 @@ export class SyncReqResp implements ISyncReqResp {
       return true;
     }
     const startSlot = computeStartSlotOfEpoch(this.config, request.finalizedEpoch);
-    const startBlock = await this.db.block.get(startSlot);
+    const startBlock = await this.db.blockArchive.get(startSlot);
     if (state.finalizedCheckpoint.epoch >= request.finalizedEpoch &&
        !request.finalizedRoot.equals(signingRoot(this.config.types.BeaconBlock, startBlock))) {
       return true;

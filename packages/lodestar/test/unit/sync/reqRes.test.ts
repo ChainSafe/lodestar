@@ -12,7 +12,7 @@ import {Libp2pNetwork} from "../../../src/network";
 import {WinstonLogger} from "../../../src/logger";
 import {generateState} from "../../utils/state";
 import {SyncReqResp} from "../../../src/sync/reqResp";
-import {BlockRepository, ChainRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
+import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
 import {ReqResp} from "../../../src/network/reqResp";
 import {ReputationStore} from "../../../src/sync/IReputation";
 
@@ -32,6 +32,7 @@ describe("syncing", function () {
       chain: sandbox.createStubInstance(ChainRepository),
       state: sandbox.createStubInstance(StateRepository),
       block: sandbox.createStubInstance(BlockRepository),
+      blockArchive: sandbox.createStubInstance(BlockArchiveRepository),
     };
     repsStub = sandbox.createStubInstance(ReputationStore);
     signingRootStub = sandbox.stub(ssz, "signingRoot");
@@ -54,7 +55,7 @@ describe("syncing", function () {
   });
 
 
-  it('should able to create Hello - genesis time', async function () {
+  it("should able to create Hello - genesis time", async function () {
     chainStub.genesisTime = 0;
     chainStub.networkId = 1n;
     chainStub.chainId = 1;
@@ -75,7 +76,7 @@ describe("syncing", function () {
       expect.fail(e.stack);
     }
   });
-  it('should start and stop sync rpc', async function () {
+  it("should start and stop sync rpc", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     networkStub.hasPeer.returns(true);
     networkStub.getPeers.returns([peerInfo, peerInfo]);
@@ -93,7 +94,7 @@ describe("syncing", function () {
     }
   });
 
-  it('should handle request  - onHello(success)', async function () {
+  it("should handle request  - onHello(success)", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     const body: Hello = {
       headForkVersion: Buffer.alloc(4),
@@ -117,7 +118,7 @@ describe("syncing", function () {
     }
   });
 
-  it('should handle request  - onHello(error)', async function () {
+  it("should handle request  - onHello(error)", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     const body: Hello = {
       headForkVersion: Buffer.alloc(4),
@@ -137,7 +138,7 @@ describe("syncing", function () {
     }
   });
 
-  it('should disconnect on hello - incorrect headForkVersion', async function() {
+  it("should disconnect on hello - incorrect headForkVersion", async function() {
     const body: Hello = {
       headForkVersion: Buffer.alloc(4),
       finalizedRoot: Buffer.alloc(32),
@@ -153,7 +154,7 @@ describe("syncing", function () {
     expect(await syncRpc.shouldDisconnectOnHello(body)).to.be.true;
   });
 
-  it('should disconnect on hello - incorrect finalized checkpoint', async function() {
+  it("should disconnect on hello - incorrect finalized checkpoint", async function() {
     const body: Hello = {
       headForkVersion: Buffer.alloc(4),
       finalizedRoot: Buffer.from("xyz"),
@@ -171,7 +172,7 @@ describe("syncing", function () {
     expect(await syncRpc.shouldDisconnectOnHello(body)).to.be.true;
   });
 
-  it('should not disconnect on hello', async function() {
+  it("should not disconnect on hello", async function() {
     const body: Hello = {
       headForkVersion: Buffer.alloc(4),
       finalizedRoot: Buffer.from("xyz"),
@@ -190,7 +191,7 @@ describe("syncing", function () {
     expect(await syncRpc.shouldDisconnectOnHello(body)).to.be.false;
   });
 
-  it('should handle request - onGoodbye', async function () {
+  it("should handle request - onGoodbye", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     const goodbye: Goodbye = 1n;
     networkStub.disconnect.resolves(0);
@@ -202,7 +203,7 @@ describe("syncing", function () {
     }
   });
 
-  it('should fail to handle request ', async function () {
+  it("should fail to handle request ", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     try {
       await syncRpc.onRequest(peerInfo, null, "null", null);
