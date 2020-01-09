@@ -34,3 +34,5 @@ export type BLSPubkey = bytes48;
 export type BLSSecretKey = bytes32;
 export type BLSSignature = bytes96;
 export type Domain = bytes8;
+export type BlockRootHex = string;
+export type AttestationRootHex = string;
