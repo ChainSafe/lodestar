@@ -45,7 +45,7 @@ export class BlockArchiveRepository extends BulkRepository<BeaconBlock> {
       .map((datum) => deserialize(this.type, datum))
       .filter(block => {
         if (step !== null && typeof safeLowerLimit === "number") {
-          return (block.slot - safeLowerLimit) % step === 0;
+          return block.slot >= safeLowerLimit && (block.slot - safeLowerLimit) % step === 0;
         } else {
           return true;
         }
