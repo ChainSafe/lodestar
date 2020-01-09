@@ -14,7 +14,9 @@ import {WinstonLogger} from "../../../src/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {generateState} from "../../utils/state";
-import {BlockRepository, ChainRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
+import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
+import {generateEmptyBlock} from "../../utils/block";
+import {signingRoot} from "@chainsafe/ssz";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -49,18 +51,28 @@ describe("[sync] rpc", function () {
       networkId: 0n,
     });
     const state = generateState();
+    const block = generateEmptyBlock();
+    state.finalizedCheckpoint = {
+      epoch: 0,
+      root: signingRoot(config.types.BeaconBlock, block),
+    };
     // @ts-ignore
     const db = {
       state: sandbox.createStubInstance(StateRepository),
       chain: sandbox.createStubInstance(ChainRepository),
       block: sandbox.createStubInstance(BlockRepository),
+      blockArchive: sandbox.createStubInstance(BlockArchiveRepository),
     } as BeaconDb;
     // @ts-ignore
-    db.state.getLatest.resolves(state);
-    // @ts-ignore
-    db.chain.getBlockRoot.resolves(Buffer.alloc(32));
+    db.state.get.resolves(state);
     // @ts-ignore
     db.chain.getChainHeadSlot.resolves(0);
+    // @ts-ignore
+    db.block.getChainHead.resolves(block);
+    // @ts-ignore
+    db.block.get.resolves(block);
+    // @ts-ignore
+    db.blockArchive.get.resolves(block);
     chain.latestState = state;
     rpcA = new SyncReqResp({}, {
       config,

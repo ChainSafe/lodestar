@@ -4,6 +4,7 @@ import PeerInfo from "peer-info";
 import PeerId from "peer-id";
 import {Goodbye, Hello,} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import * as ssz from "@chainsafe/ssz/lib/core/signingRoot";
 
 import {Method, ZERO_HASH} from "../../../src/constants";
 import {BeaconChain} from "../../../src/chain";
@@ -11,14 +12,14 @@ import {Libp2pNetwork} from "../../../src/network";
 import {WinstonLogger} from "../../../src/logger";
 import {generateState} from "../../utils/state";
 import {SyncReqResp} from "../../../src/sync/reqResp";
-import {BlockRepository, ChainRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
+import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
 import {ReqResp} from "../../../src/network/reqResp";
 import {ReputationStore} from "../../../src/sync/IReputation";
 
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();
   let syncRpc: SyncReqResp;
-  let chainStub, networkStub, dbStub, repsStub, logger, reqRespStub;
+  let chainStub, networkStub, dbStub, repsStub, logger, reqRespStub, signingRootStub;
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
@@ -31,8 +32,10 @@ describe("syncing", function () {
       chain: sandbox.createStubInstance(ChainRepository),
       state: sandbox.createStubInstance(StateRepository),
       block: sandbox.createStubInstance(BlockRepository),
+      blockArchive: sandbox.createStubInstance(BlockArchiveRepository),
     };
     repsStub = sandbox.createStubInstance(ReputationStore);
+    signingRootStub = sandbox.stub(ssz, "signingRoot");
     logger = new WinstonLogger();
     logger.silent = true;
 
@@ -52,7 +55,7 @@ describe("syncing", function () {
   });
 
 
-  it('should able to create Hello - genesis time', async function () {
+  it("should able to create Hello - genesis time", async function () {
     chainStub.genesisTime = 0;
     chainStub.networkId = 1n;
     chainStub.chainId = 1;
@@ -73,7 +76,7 @@ describe("syncing", function () {
       expect.fail(e.stack);
     }
   });
-  it('should start and stop sync rpc', async function () {
+  it("should start and stop sync rpc", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     networkStub.hasPeer.returns(true);
     networkStub.getPeers.returns([peerInfo, peerInfo]);
@@ -91,7 +94,7 @@ describe("syncing", function () {
     }
   });
 
-  it('should handle request  - onHello(success)', async function () {
+  it("should handle request  - onHello(success)", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     const body: Hello = {
       headForkVersion: Buffer.alloc(4),
@@ -104,15 +107,18 @@ describe("syncing", function () {
       latestHello: null,
     });
     reqRespStub.sendResponse.resolves(0);
+    dbStub.block.getChainHead.resolves(Buffer.alloc(0));
+    dbStub.state.get.resolves(generateState());
     try {
       await syncRpc.onRequest(peerInfo, Method.Hello, "hello", body);
       expect(reqRespStub.sendResponse.calledOnce).to.be.true;
+      expect(reqRespStub.goodbye.called).to.be.false;
     }catch (e) {
       expect.fail(e.stack);
     }
   });
 
-  it('should handle request  - onHello(error)', async function () {
+  it("should handle request  - onHello(error)", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     const body: Hello = {
       headForkVersion: Buffer.alloc(4),
@@ -132,8 +138,60 @@ describe("syncing", function () {
     }
   });
 
+  it("should disconnect on hello - incorrect headForkVersion", async function() {
+    const body: Hello = {
+      headForkVersion: Buffer.alloc(4),
+      finalizedRoot: Buffer.alloc(32),
+      finalizedEpoch: 1,
+      headRoot: Buffer.alloc(32),
+      headSlot: 1,
+    };
 
-  it('should handle request - onGoodbye', async function () {
+    dbStub.block.getChainHead.resolves(Buffer.alloc(0));
+    const state = generateState();
+    state.fork.currentVersion = Buffer.from("efgh");
+    dbStub.state.get.resolves(state);
+    expect(await syncRpc.shouldDisconnectOnHello(body)).to.be.true;
+  });
+
+  it("should disconnect on hello - incorrect finalized checkpoint", async function() {
+    const body: Hello = {
+      headForkVersion: Buffer.alloc(4),
+      finalizedRoot: Buffer.from("xyz"),
+      finalizedEpoch: 1,
+      headRoot: Buffer.alloc(32),
+      headSlot: 1,
+    };
+
+    dbStub.block.getChainHead.resolves(Buffer.alloc(0));
+    const state = generateState();
+    state.fork.currentVersion = Buffer.alloc(4);
+    state.finalizedCheckpoint.epoch = 2;
+    dbStub.state.get.resolves(state);
+    signingRootStub.returns(Buffer.from("not xyz"));
+    expect(await syncRpc.shouldDisconnectOnHello(body)).to.be.true;
+  });
+
+  it("should not disconnect on hello", async function() {
+    const body: Hello = {
+      headForkVersion: Buffer.alloc(4),
+      finalizedRoot: Buffer.from("xyz"),
+      finalizedEpoch: 1,
+      headRoot: Buffer.alloc(32),
+      headSlot: 1,
+    };
+
+    dbStub.block.getChainHead.resolves(Buffer.alloc(0));
+    const state = generateState();
+    state.fork.currentVersion = Buffer.alloc(4);
+    state.finalizedCheckpoint.epoch = 1;
+    dbStub.state.get.resolves(state);
+    signingRootStub.returns(Buffer.from("xyz"));
+
+    expect(await syncRpc.shouldDisconnectOnHello(body)).to.be.false;
+  });
+
+  it("should handle request - onGoodbye", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     const goodbye: Goodbye = 1n;
     networkStub.disconnect.resolves(0);
@@ -145,7 +203,7 @@ describe("syncing", function () {
     }
   });
 
-  it('should fail to handle request ', async function () {
+  it("should fail to handle request ", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     try {
       await syncRpc.onRequest(peerInfo, null, "null", null);
