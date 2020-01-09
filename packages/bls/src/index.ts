@@ -107,8 +107,8 @@ export function verifyMultiple(
   signature: BLSSignature,
   domain: Domain
 ): boolean {
-  assert(publicKey, "publicKey is null or undefined");
-  assert(messageHash, "messageHash is null or undefined");
+  assert(publicKeys, "publicKey is null or undefined");
+  assert(messageHashes, "messageHash is null or undefined");
   assert(signature, "signature is null or undefined");
   assert(domain, "domain is null or undefined");
 
