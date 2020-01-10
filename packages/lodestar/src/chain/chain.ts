@@ -16,11 +16,14 @@ import {IBeaconMetrics} from "../metrics";
 
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
 
-import {processSlots, stateTransition,
+import {
   computeEpochAtSlot,
+  processSlots, stateTransition,
   computeStartSlotAtEpoch,
+  getAttestingIndices,
   isActiveValidator
-  ,getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
+  , getCurrentSlot
+} from "@chainsafe/eth2.0-state-transition";
 import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 
 import {ChainEventEmitter, IBeaconChain, IAttestationProcessor} from "./interface";
@@ -90,7 +93,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const state = this.latestState || await this.db.state.getLatest();
     this.forkChoice.start(state.genesisTime);
     // if state doesn't exist in the db, the chain maybe hasn't started
-    if(!state) {
+    if (!state) {
       // check every block if genesis
       this.logger.info("Chain not started, listening for genesis block");
       this.eth1.on("block", this.checkGenesis);
@@ -128,7 +131,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       `at slot ${block.slot}. Current state slot ${this.latestState.slot}`
     );
 
-    if(!await this.db.block.has(block.parentRoot)) {
+    if (!await this.db.block.has(block.parentRoot)) {
       this.emit("unknownBlockRoot", block.parentRoot);
       this.blockProcessingQueue.add({block, trusted});
       return;
@@ -154,7 +157,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       if (await this.db.block.has(nextBlockInQueue.block.parentRoot)) {
         await this.processBlock(nextBlockInQueue, signingRoot(this.config.types.BeaconBlock, nextBlockInQueue));
         this.blockProcessingQueue.poll();
-      } else{
+      } else {
         return;
       }
     }
@@ -192,6 +195,13 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     genesisBlock.stateRoot = stateRoot;
     const blockRoot = signingRoot(this.config.types.BeaconBlock, genesisBlock);
     this.latestState = genesisState;
+    // Determine whether a genesis state already in
+    // the database matches what we were provided
+    const storedGenesisBlock = await this.db.block.getBlockBySlot(GENESIS_SLOT);
+    if (storedGenesisBlock !== null &&
+      !genesisBlock.stateRoot.equals(storedGenesisBlock.stateRoot)) {
+      throw new Error("A genesis state with different configuration was detected! Please clean the database.");
+    }
     await Promise.all([
       this.db.storeChainHead(genesisBlock, genesisState),
       this.db.chain.setJustifiedBlockRoot(blockRoot),
@@ -395,7 +405,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       eth1Block.timestamp,
       depositsWithProof
     );
-    if(!isValidGenesisState(this.config, genesisState)) {
+    if (!isValidGenesisState(this.config, genesisState)) {
       this.logger.info(`Eth1 block ${eth1Block.hash} is NOT forming valid genesis state`);
       return;
     }
