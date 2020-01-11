@@ -47,13 +47,17 @@
     "@chainsafe/eth2.0-utils": "^0.0.2",
     "@chainsafe/lodestar-validator": "^0.1.0",
     "@chainsafe/lodestar": "^0.1.0",
+    "@types/yargs": "^13.0.2",
+    "chalk": "^2.4.2",
     "commander": "^2.19.0",
+    "bigint-buffer": "^1.1.5",
     "deepmerge": "^3.2.0",
     "peer-id": "^0.12.2",
     "js-yaml": "^3.13.1",
     "rimraf": "^3.0.0",
-    "ethers": "^4.0.40"
-
+    "ethers": "^4.0.40",
+    "winston": "^3.2.1",
+    "yargs": "^14.0.0"
   },
   "bin": {
   },
