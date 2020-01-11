@@ -3,7 +3,6 @@
  */
 
 import {parse, stringify} from "@iarna/toml";
-import {CliError} from "../cli/error";
 import fs from "fs";
 import path from "path";
 import defaults, {BeaconNodeOptions} from "../node/options";
@@ -21,7 +20,7 @@ export function getTomlConfig<T>(fileName: string, description: IConfigurationMo
     const data = fs.readFileSync(fileName);
     return validateConfig<T>(parse(data.toString()), description);
   } catch {
-    throw new CliError(`${fileName} could not be parsed.`);
+    throw new Error(`${fileName} could not be parsed.`);
   }
 }
 
@@ -36,7 +35,7 @@ export function writeTomlConfig(fileName: string): void {
     ensureDirectoryExistence(fileName);
     fs.writeFileSync(fileName, content);
   } catch {
-    throw new CliError(`Could not write to ${fileName}`);
+    throw new Error(`Could not write to ${fileName}`);
   }
 }
 

@@ -1,0 +1,62 @@
+{
+  "name": "@chainsafe/cli",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Command line interface for other packages",
+  "author": "ChainSafe Systems",
+  "license": "LGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/ChainSafe/lodestar/issues"
+  },
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
+  "main": "lib/index.js",
+  "files": [
+  ],
+  "scripts": {
+    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
+    "build": "yarn run build:lib && yarn run build:types",
+    "build:release": "yarn clean && yarn run build && yarn run build:docs",
+    "build:lib": "babel src -x .ts -d lib --source-maps",
+    "build:docs": "typedoc --exclude src/index.ts --out docs src",
+    "build:types": "tsc --incremental --declaration --outDir lib --emitDeclarationOnly",
+    "check-types": "tsc --incremental --noEmit",
+    "lint": "eslint --color --ext .ts src/",
+    "lint:fix": "eslint --color --ext .ts src/ --fix",
+    "pretest": "yarn run check-types",
+    "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha --file ./test/setup.ts --colors -r ts-node/register 'test/unit/**/*.test.ts'",
+    "test:e2e": "TS_NODE_PROJECT=tsconfig.test.json mocha --file ./test/setup.ts --colors --timeout 5000 -r ts-node/register 'test/e2e/**/*.test.ts'",
+    "test": "yarn test:unit && yarn test:spec && yarn test:e2e",
+    "coverage": "codecov -F lodestar",
+    "benchmark": "ts-node test/benchmarks"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com:ChainSafe/lodestar.git"
+  },
+  "keywords": [
+    "Ethereum",
+    "beacon",
+    "future",
+    "p2p",
+    "blockchain"
+  ],
+  "dependencies": {
+    "@chainsafe/bls": "0.2.0",
+    "@chainsafe/eth2.0-config": "^0.1.1",
+    "@chainsafe/eth2.0-types": "^0.1.1",
+    "@chainsafe/eth2.0-utils": "^0.0.2",
+    "@chainsafe/lodestar-validator": "^0.1.0",
+    "@chainsafe/lodestar": "^0.1.0",
+    "commander": "^2.19.0",
+    "deepmerge": "^3.2.0",
+    "peer-id": "^0.12.2",
+    "js-yaml": "^3.13.1",
+    "rimraf": "^3.0.0",
+    "ethers": "^4.0.40"
+
+  },
+  "bin": {
+  },
+  "devDependencies": {
+  }
+}
