@@ -14,11 +14,6 @@ import {BeaconNodeOptions, IBeaconNodeOptions} from "@chainsafe/lodestar/lib/nod
 import {generateCommanderOptions, optionsToConfig} from "../util";
 import {getTomlConfig} from "@chainsafe/lodestar/lib/util/file";
 
-
-
-
-
-
 interface IBeaconCommandOptions {
   configFile?: string;
   loggingLevel?: string;
