@@ -60,7 +60,19 @@
     "yargs": "^14.0.0"
   },
   "bin": {
+    "lodestar": "./bin/lodestar"
   },
   "devDependencies": {
+    "@types/chai": "4.2.0",
+    "@types/chai-as-promised": "^7.1.1",
+    "@types/es6-promisify": "6.0.0",
+    "@types/mocha": "^5.2.7",
+    "@types/mockery": "^1.4.29",
+    "@types/rimraf": "^2.0.3",
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "mocha": "^6.2.0",
+    "mockery": "^2.1.0",
+    "webpack": "^4.39.1"
   }
 }
