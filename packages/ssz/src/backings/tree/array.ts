@@ -1,4 +1,4 @@
-import {Node, BranchNode, zeroNode, getDepth, TreeBacking, LeafNode} from "@chainsafe/merkle-tree";
+import {Node, BranchNode, zeroNode, TreeBacking, LeafNode} from "@chainsafe/merkle-tree";
 
 import {BasicArrayType, CompositeArrayType} from "../../types";
 import {TreeHandler, PropOfCompositeTreeBackedValue, TreeBackedValue} from "./abstract";

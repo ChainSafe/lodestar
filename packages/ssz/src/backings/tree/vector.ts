@@ -2,7 +2,6 @@ import {Node, TreeBacking, subtreeFillToLength, zeroNode} from "@chainsafe/merkl
 
 import {BasicVectorType, CompositeVectorType} from "../../types";
 import {BasicArrayTreeHandler, CompositeArrayTreeHandler} from "./array";
-import {TreeBackedValue} from "./abstract";
 
 export class BasicVectorTreeHandler<T extends ArrayLike<any>> extends BasicArrayTreeHandler<T> {
   _type: BasicVectorType<T>;
@@ -10,9 +9,9 @@ export class BasicVectorTreeHandler<T extends ArrayLike<any>> extends BasicArray
   defaultNode(): Node {
     if (!this._defaultNode) {
       this._defaultNode = subtreeFillToLength(
-        zeroNode(BigInt(0)),
-        BigInt(this.depth()),
-        BigInt(this._type.chunkCount())
+        zeroNode(0),
+        this.depth(),
+        this._type.chunkCount()
       );
     }
     return this._defaultNode;
@@ -28,8 +27,8 @@ export class CompositeVectorTreeHandler<T extends ArrayLike<any>> extends Compos
     if (!this._defaultNode) {
       this._defaultNode = subtreeFillToLength(
         this._type.elementType.tree.defaultNode(),
-        BigInt(this.depth()),
-        BigInt(this._type.length)
+        this.depth(),
+        this._type.length
       );
     }
     return this._defaultNode;
