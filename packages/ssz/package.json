@@ -43,10 +43,12 @@
   },
   "dependencies": {
     "@chainsafe/bit-utils": "^0.1.4",
+    "@chainsafe/merkle-tree": "/home/cayman/Code/merkle-tree/",
     "@chainsafe/ssz-type-schema": "^0.0.1",
     "@types/bn.js": "^4.11.5",
     "assert": "^1.4.1",
     "bcrypto": "^4.1.0",
+    "benchmark": "^2.1.4",
     "bigint-buffer": "^1.1.5",
     "bn.js": "^5.0.0"
   }

@@ -7,5 +7,6 @@ declare module 'bcrypto/lib/sha256' {
 
     public final(): Buffer;
 
+    public static digest(data: Buffer): Buffer;
   }
 }

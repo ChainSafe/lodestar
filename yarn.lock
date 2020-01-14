@@ -684,6 +684,13 @@
     "@chainsafe/eth2.0-params" "0.1.0"
     "@chainsafe/ssz" "0.5.1"
 
+"@chainsafe/merkle-tree@file:../merkle-tree":
+  version "0.0.1"
+  dependencies:
+    assert "^2.0.0"
+    bcrypto "^4.2.8"
+    bigint-buffer "^1.1.5"
+
 "@chainsafe/ssz@0.5.1":
   version "0.5.1"
   resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.5.1.tgz#5d8fa0d00ee7d91fc5de914a843bd47125213c6a"
@@ -2848,6 +2855,16 @@ bcrypto@^4.2.6:
     bufio "~1.0.6"
     loady "~0.0.1"
     nan "^2.13.2"
+
+bcrypto@^4.2.8:
+  version "4.3.2"
+  resolved "https://registry.yarnpkg.com/bcrypto/-/bcrypto-4.3.2.tgz#50d4543cc16c39a9fca1d7f457a3850703867814"
+  integrity sha512-uGmeiqLvLYUPRa0XoACDgXwxZY9wE1uiFHpdtGSs7FI2YYkakqIWZklkF8sKMzXM/HaHRIjulzQ8xuDoqptjVQ==
+  dependencies:
+    bsert "~0.0.10"
+    bufio "~1.0.6"
+    loady "~0.0.1"
+    nan "^2.14.0"
 
 before-after-hook@^2.0.0:
   version "2.1.0"
