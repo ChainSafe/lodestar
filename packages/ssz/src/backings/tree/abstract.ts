@@ -1,4 +1,4 @@
-import {Node, TreeBacking, Gindex, toGindex, LeafNode, getDepth} from "@chainsafe/merkle-tree";
+import {Node, TreeBacking, Gindex, toGindex, LeafNode, countToDepth} from "@chainsafe/merkle-tree";
 
 import {CompositeType} from "../../types";
 import { isBackedValue, BackingType } from "..";
@@ -94,7 +94,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
     return this._type.structural.serializeTo(this.createBackedValue(target), output, offset);
   }
   depth(): number {
-    return getDepth(BigInt(this._type.chunkCount()));
+    return countToDepth(BigInt(this._type.chunkCount()));
   }
   gindexOfChunk(target: TreeBacking, index: number): Gindex {
     return toGindex(BigInt(index), this.depth());

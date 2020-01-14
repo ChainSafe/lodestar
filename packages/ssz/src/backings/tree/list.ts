@@ -8,7 +8,7 @@ export class BasicListTreeHandler<T extends ArrayLike<any>> extends BasicArrayTr
   _defaultNode: Node;
   defaultNode(): Node {
     if (!this._defaultNode) {
-      this._defaultNode = new BranchNode(zeroNode(BigInt(super.depth())), zeroNode(BigInt(0)));
+      this._defaultNode = new BranchNode(zeroNode(super.depth()), zeroNode(0));
     }
     return this._defaultNode;
   }
@@ -66,7 +66,7 @@ export class CompositeListTreeHandler<T extends ArrayLike<any>> extends Composit
   _defaultNode: Node;
   defaultNode(): Node {
     if (!this._defaultNode) {
-      this._defaultNode = new BranchNode(zeroNode(BigInt(super.depth())), zeroNode(BigInt(0)));
+      this._defaultNode = new BranchNode(zeroNode(super.depth()), zeroNode(0));
     }
     return this._defaultNode;
   }
@@ -112,7 +112,7 @@ export class CompositeListTreeHandler<T extends ArrayLike<any>> extends Composit
   pop(target: TreeBacking): T[number] {
     const length = this.getLength(target);
     const value = this.get(target, length - 1);
-    super.set(target, length - 1, new TreeBacking(zeroNode(BigInt(0))));
+    super.set(target, length - 1, new TreeBacking(zeroNode(0)));
     this.setLength(target, length - 1);
     return value;
   }

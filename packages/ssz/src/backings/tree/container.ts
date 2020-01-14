@@ -10,12 +10,12 @@ export class ContainerTreeHandler<T extends object> extends TreeHandler<T> {
     return subtreeFillToContents(
       this._type.fields.map(([_, fieldType]) => {
         if (fieldType.isBasic()) {
-          return zeroNode(BigInt(0));
+          return zeroNode(0);
         } else {
           return fieldType.tree.defaultNode();
         }
       }),
-      BigInt(this.depth()),
+      this.depth(),
     );
   }
   createValue(value: any): TreeBackedValue<T> {
