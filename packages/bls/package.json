@@ -38,6 +38,7 @@
     "benchmark": "node -r ./.babel-register test/benchmarks"
   },
   "dependencies": {
+    "@chainsafe/bls-keygen": "^0.0.2",
     "@chainsafe/eth2-bls-wasm": "^0.2.0",
     "@chainsafe/eth2.0-types": "^0.1.0",
     "assert": "^1.4.1",
