@@ -39,7 +39,6 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/bls-keygen": "^0.0.2"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",

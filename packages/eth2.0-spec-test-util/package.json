@@ -43,7 +43,6 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/bls-keygen": "^0.0.2",
     "@chainsafe/eth2.0-utils": "^0.0.2",
     "@chainsafe/ssz": "^0.5.2",
     "camelcase": "^5.3.1",

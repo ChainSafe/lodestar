@@ -43,7 +43,6 @@
   },
   "dependencies": {
     "@chainsafe/bit-utils": "^0.1.4",
-    "@chainsafe/bls-keygen": "^0.0.2",
     "@chainsafe/ssz-type-schema": "^0.0.1",
     "@types/bn.js": "^4.11.5",
     "assert": "^1.4.1",
