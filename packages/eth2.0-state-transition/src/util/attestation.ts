@@ -15,25 +15,11 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {DomainType,} from "../constants";
-import {isSorted,intDiv} from "@chainsafe/eth2.0-utils";
-import {computeStartSlotOfEpoch} from "./epoch";
+import {isSorted} from "@chainsafe/eth2.0-utils";
 import {getDomain} from "./domain";
-import {getCommitteeCount, getCrosslinkCommittee, getStartShard} from "./committee";
+import {getBeaconCommittee} from "./committee";
 
 
-
-/**
- * Return the slot corresponding to the attestation [[data]].
- */
-export function getAttestationDataSlot(config: IBeaconConfig, state: BeaconState, data: AttestationData): Slot {
-  const epoch = data.target.epoch;
-  const committeeCount = getCommitteeCount(config, state, epoch);
-  const offset =
-      (data.crosslink.shard + config.params.SHARD_COUNT - getStartShard(config, state, epoch))
-      %
-      config.params.SHARD_COUNT;
-  return intDiv(computeStartSlotOfEpoch(config, epoch) + offset, intDiv(committeeCount, config.params.SLOTS_PER_EPOCH));
-}
 
 /**
  * Check if [[data1]] and [[data2]] are slashable according to Casper FFG rules.
@@ -62,44 +48,19 @@ export function isValidIndexedAttestation(
   indexedAttestation: IndexedAttestation,
   verifySignature = true
 ): boolean {
-  const bit0Indices = indexedAttestation.custodyBit0Indices;
-  const bit1Indices = indexedAttestation.custodyBit1Indices;
+  const indices = indexedAttestation.attestingIndices;
 
-  // Verify no index has custody bit equal to 1 [to be removed in phase 1]
-  if (!(bit1Indices.length == 0)) {
-    return false;
-  }
-  // Verify max number of indices
-  if (!(bit0Indices.length + bit1Indices.length <= config.params.MAX_VALIDATORS_PER_COMMITTEE)) {
-    return false;
-  }
-  //  Verify index sets are disjoint
-  const intersection = bit0Indices.filter((index) => bit1Indices.includes(index));
-  if (!(intersection.length == 0)) {
-    return false;
-  }
   //  Verify indices are sorted
-  if (!(isSorted(bit0Indices) && isSorted(bit1Indices))) {
+  if (!isSorted(indices)) {
     return false;
   }
   //  Verify aggregate signature
-  if (verifySignature && !(bls.verifyMultiple(
-    [
-      bls.aggregatePubkeys(bit0Indices.map((i) => state.validators[i].pubkey)),
-      bls.aggregatePubkeys(bit1Indices.map((i) => state.validators[i].pubkey)),
-    ], [
-      hashTreeRoot(config.types.AttestationDataAndCustodyBit, {
-        data: indexedAttestation.data,
-        custodyBit: false,
-      }),
-      hashTreeRoot(config.types.AttestationDataAndCustodyBit, {
-        data: indexedAttestation.data,
-        custodyBit: true,
-      }),
-    ],
+  if (verifySignature && !bls.verify(
+    bls.aggregatePubkeys(indices.map((i) => state.validators[i].pubkey)),
+    hashTreeRoot(config.types.AttestationData, indexedAttestation.data),
     indexedAttestation.signature,
-    getDomain(config, state, DomainType.ATTESTATION, indexedAttestation.data.target.epoch),
-  ))) {
+    getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch)
+  )) {
     return false;
   }
   return true;
@@ -114,7 +75,7 @@ export function getAttestingIndices(
   data: AttestationData,
   bits: BitList
 ): ValidatorIndex[] {
-  const committee = getCrosslinkCommittee(config, state, data.target.epoch, data.crosslink.shard);
+  const committee = getBeaconCommittee(config, state, data.slot, data.index);
   // Find the participating attesters in the committee
   return committee.filter((_, i) => bits.getBit(i)).sort((a, b) => a - b);
 }
@@ -129,13 +90,10 @@ export function getIndexedAttestation(
 ): IndexedAttestation {
   const attestingIndices =
     getAttestingIndices(config, state, attestation.data, attestation.aggregationBits);
-  const custodyBit1Indices =
-    getAttestingIndices(config, state, attestation.data, attestation.custodyBits);
-  const custodyBit0Indices = attestingIndices.filter((i) => !custodyBit1Indices.includes(i));
-
+  const sortedAttestingIndices = attestingIndices.sort(
+    (index1: ValidatorIndex, index2: ValidatorIndex) => index1 - index2);
   return {
-    custodyBit0Indices,
-    custodyBit1Indices,
+    attestingIndices: sortedAttestingIndices,
     data: attestation.data,
     signature: attestation.signature,
   };

@@ -2,10 +2,20 @@
  * @module chain/stateTransition/util
  */
 
-import {BeaconState, Epoch, uint64, Validator, ValidatorIndex,} from "@chainsafe/eth2.0-types";
+import {
+  BeaconState,
+  BLSSignature,
+  CommitteeIndex,
+  Epoch,
+  Slot,
+  uint64,
+  Validator,
+  ValidatorIndex,
+} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {getCurrentEpoch} from "./epoch";
-import {intDiv} from "@chainsafe/eth2.0-utils";
+import {hash, intDiv, bytesToInt} from "@chainsafe/eth2.0-utils";
+import {getBeaconCommittee} from "./committee";
 
 
 export function computeCompactValidator(config: IBeaconConfig, validator: Validator, index: ValidatorIndex): uint64 {
@@ -57,4 +67,16 @@ export function getValidatorChurnLimit(config: IBeaconConfig, state: BeaconState
       config.params.CHURN_LIMIT_QUOTIENT
     ),
   );
+}
+
+export function isAggregator(
+  config: IBeaconConfig,
+  state: BeaconState,
+  slot: Slot,
+  index: CommitteeIndex,
+  slotSignature: BLSSignature
+): boolean {
+  const committee = getBeaconCommittee(config, state, slot, index);
+  const modulo = Math.max(1, intDiv(committee.length, config.params.TARGET_COMMITTEE_SIZE));
+  return (bytesToInt(hash(slotSignature).slice(0, 8)) % modulo) === 0;
 }

@@ -1,10 +1,9 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import * as blsModule from "@chainsafe/bls";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processProposerSlashing} from "../../../../../src/block/operations";
 import * as utils from "../../../../../src/util";
-
+import * as validatorUtils from "../../../../../src/util/validator";
 import {generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {generateValidator} from "../../../../utils/validator";
 import {generateState} from "../../../../utils/state";
@@ -13,14 +12,11 @@ describe("process block - proposer slashings", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let isSlashableValidatorStub: any, slashValidatorStub: any, blsStub: any;
+  let isSlashableValidatorStub: any, slashValidatorStub: any;
 
   beforeEach(() => {
-    isSlashableValidatorStub = sandbox.stub(utils, "isSlashableValidator");
+    isSlashableValidatorStub = sandbox.stub(validatorUtils, "isSlashableValidator");
     slashValidatorStub = sandbox.stub(utils, "slashValidator");
-    blsStub = {
-      verify: sandbox.stub(blsModule, "verify")
-    };
   });
 
   afterEach(() => {
@@ -61,7 +57,8 @@ describe("process block - proposer slashings", function () {
       processProposerSlashing(config, state, proposerSlashing);
       expect.fail();
     } catch (e) {
-      expect(isSlashableValidatorStub.calledOnce).to.be.true;
+      // different slot so it failed without calling isSlashableValidator
+      expect(isSlashableValidatorStub.calledOnce).to.be.false;
     }
   });
 
@@ -69,14 +66,12 @@ describe("process block - proposer slashings", function () {
     const state = generateState({validators: [generateValidator()]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
-    proposerSlashing.header2.slot = 2;
+    proposerSlashing.header2.slot = 1;
     isSlashableValidatorStub.returns(true);
-    blsStub.verify.returns(false);
     try {
-      processProposerSlashing(config, state, proposerSlashing);
+      processProposerSlashing(config, state, proposerSlashing, true);
       expect.fail();
     } catch (e) {
-      expect(blsStub.verify.calledOnce).to.be.true;
       expect(isSlashableValidatorStub.calledOnce).to.be.true;
     }
   });
@@ -87,20 +82,13 @@ describe("process block - proposer slashings", function () {
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
     proposerSlashing.header1.signature = Buffer.alloc(96, 1);
-    proposerSlashing.header2.slot = 2;
+    proposerSlashing.header2.slot = 1;
     proposerSlashing.header2.signature = Buffer.alloc(96, 2);
     isSlashableValidatorStub.returns(true);
-    blsStub.verify
-      .withArgs(sinon.match.any, sinon.match.any, proposerSlashing.header1.signature, sinon.match.any)
-      .returns(true);
-    blsStub.verify
-      .withArgs(sinon.match.any, sinon.match.any, proposerSlashing.header2.signature, sinon.match.any)
-      .returns(false);
     try {
       processProposerSlashing(config, state, proposerSlashing);
       expect.fail();
     } catch (e) {
-      expect(blsStub.verify.calledTwice).to.be.true;
       expect(isSlashableValidatorStub.calledOnce).to.be.true;
     }
   });
@@ -110,14 +98,12 @@ describe("process block - proposer slashings", function () {
     const state = generateState({validators: [validator]});
     const proposerSlashing = generateEmptyProposerSlashing();
     proposerSlashing.header1.slot = 1;
-    proposerSlashing.header2.slot = 2;
+    proposerSlashing.header2.slot = 1;
     isSlashableValidatorStub.returns(true);
-    blsStub.verify.returns(true);
     try {
-      processProposerSlashing(config, state, proposerSlashing);
+      processProposerSlashing(config, state, proposerSlashing, false);
       expect(isSlashableValidatorStub.calledOnce).to.be.true;
       expect(slashValidatorStub.calledOnce).to.be.true;
-      expect(blsStub.verify.calledTwice).to.be.true;
     } catch (e) {
       expect.fail(e.stack);
     }

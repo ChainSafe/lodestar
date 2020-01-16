@@ -18,10 +18,10 @@ export function isValidChainOfBlocks(config: IBeaconConfig, start: BeaconBlockHe
 export function getSyncTargetEpoch(peers: IReputation[], currentCheckPoint: Checkpoint): Epoch {
   const numberOfEpochToBatch = 1;
   const peersWithHigherFinalizedEpoch = peers.filter(peer => {
-    if(!peer.latestHello) {
+    if(!peer.latestStatus) {
       return false;
     }
-    if(peer.latestHello.finalizedEpoch > currentCheckPoint.epoch) {
+    if(peer.latestStatus.finalizedEpoch > currentCheckPoint.epoch) {
       return true;
     }
   });
@@ -32,9 +32,9 @@ export function getSyncTargetEpoch(peers: IReputation[], currentCheckPoint: Chec
 }
 
 export function isValidFinalizedCheckPoint(peers: IReputation[], finalizedCheckPoint: Checkpoint): boolean {
-  const validPeers = peers.filter((peer) => !!peer.latestHello);
+  const validPeers = peers.filter((peer) => !!peer.latestStatus);
   const peerCount = validPeers.filter(peer => {
-    return peer.latestHello.finalizedRoot.equals(finalizedCheckPoint.root);
+    return peer.latestStatus.finalizedRoot.equals(finalizedCheckPoint.root);
   }).length;
   return peerCount >= (validPeers.length / 2);
 }
@@ -77,7 +77,7 @@ export async function getBlockRangeFromPeer(
   peer: PeerInfo,
   chunk: ISlotRange
 ): Promise<BeaconBlock[]> {
-  const peerLatestHello = reps.get(peer.id.toB58String()).latestHello;
+  const peerLatestHello = reps.get(peer.id.toB58String()).latestStatus;
   return await rpc.beaconBlocksByRange(
     peer,
     {

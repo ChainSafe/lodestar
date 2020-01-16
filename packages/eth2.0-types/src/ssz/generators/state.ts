@@ -17,15 +17,15 @@ export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): Simple
     // History
     ["latestBlockHeader", ssz.BeaconBlockHeader],
     ["blockRoots", {
-      elementType: ssz.Hash,
+      elementType: ssz.Root,
       length: params.SLOTS_PER_HISTORICAL_ROOT,
     }],
     ["stateRoots", {
-      elementType: ssz.Hash,
+      elementType: ssz.Root,
       length: params.SLOTS_PER_HISTORICAL_ROOT,
     }],
     ["historicalRoots", {
-      elementType: ssz.Hash,
+      elementType: ssz.Root,
       maxLength: params.HISTORICAL_ROOTS_LIMIT,
     }],
     // Eth1
@@ -44,18 +44,8 @@ export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): Simple
       elementType: ssz.Gwei,
       maxLength: params.VALIDATOR_REGISTRY_LIMIT,
     }],
-    // Shuffling
-    ["startShard", ssz.Shard],
     ["randaoMixes", {
-      elementType: ssz.Hash,
-      length: params.EPOCHS_PER_HISTORICAL_VECTOR,
-    }],
-    ["activeIndexRoots", {
-      elementType: ssz.Hash,
-      length: params.EPOCHS_PER_HISTORICAL_VECTOR,
-    }],
-    ["compactCommitteesRoots", {
-      elementType: ssz.Hash,
+      elementType: ssz.bytes32,
       length: params.EPOCHS_PER_HISTORICAL_VECTOR,
     }],
     // Slashings
@@ -71,15 +61,6 @@ export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): Simple
     ["currentEpochAttestations", {
       elementType: ssz.PendingAttestation,
       maxLength: params.MAX_ATTESTATIONS * params.SLOTS_PER_EPOCH,
-    }],
-    // Crosslinks
-    ["previousCrosslinks", {
-      elementType: ssz.Crosslink,
-      length: params.SHARD_COUNT,
-    }],
-    ["currentCrosslinks", {
-      elementType: ssz.Crosslink,
-      length: params.SHARD_COUNT,
     }],
     // Finality
     ["justificationBits", {

@@ -7,15 +7,15 @@ import {EventEmitter} from "events";
 import {BeaconBlock, BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {blockToHeader, computeEpochOfSlot, getBeaconProposerIndex} from "@chainsafe/eth2.0-state-transition";
+import {blockToHeader, computeEpochAtSlot, getBeaconProposerIndex} from "@chainsafe/eth2.0-state-transition";
 import {IBeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
 import {
+  AggregateAndProofOperations,
   AttestationOperations,
   AttesterSlashingOperations,
   DepositsOperations,
   ProposerSlashingOperations,
-  TransferOperations,
   VoluntaryExitOperations
 } from "./modules";
 import {IEth1Notifier} from "../eth1";
@@ -32,9 +32,9 @@ interface IOpPoolModules {
 export class OpPool extends EventEmitter {
 
   public attestations: AttestationOperations;
+  public aggregateAndProofs: AggregateAndProofOperations;
   public voluntaryExits: VoluntaryExitOperations;
   public deposits: DepositsOperations;
-  public transfers: TransferOperations;
   public proposerSlashings: ProposerSlashingOperations;
   public attesterSlashings: AttesterSlashingOperations;
 
@@ -50,9 +50,9 @@ export class OpPool extends EventEmitter {
     this.db = db;
     this.proposers = new Map();
     this.attestations = new AttestationOperations(this.db.attestation, {config});
+    this.aggregateAndProofs = new AggregateAndProofOperations(this.db.aggregateAndProof, {config});
     this.voluntaryExits = new VoluntaryExitOperations(this.db.voluntaryExit);
     this.deposits = new DepositsOperations(this.db.deposit);
-    this.transfers = new TransferOperations(this.db.transfer);
     this.proposerSlashings = new ProposerSlashingOperations(this.db.proposerSlashing);
     this.attesterSlashings = new AttesterSlashingOperations(this.db.attesterSlashing);
   }
@@ -78,16 +78,15 @@ export class OpPool extends EventEmitter {
     await Promise.all([
       this.voluntaryExits.remove(processedBlock.body.voluntaryExits),
       this.deposits.removeOld(processedBlock.body.eth1Data.depositCount),
-      this.transfers.remove(processedBlock.body.transfers),
       this.proposerSlashings.remove(processedBlock.body.proposerSlashings),
       this.attesterSlashings.remove(processedBlock.body.attesterSlashings),
-      this.attestations.remove(processedBlock.body.attestations),
+      this.aggregateAndProofs.removeIncluded(processedBlock.body.attestations),
       this.checkDuplicateProposer(processedBlock)
     ]);
   }
 
   public async checkDuplicateProposer(block: BeaconBlock): Promise<void> {
-    const epoch: Epoch = computeEpochOfSlot(this.config, block.slot);
+    const epoch: Epoch = computeEpochAtSlot(this.config, block.slot);
     const existingProposers: Map<ValidatorIndex, Slot> = this.proposers.get(epoch);
     const state: BeaconState = await this.db.state.getLatest();
 

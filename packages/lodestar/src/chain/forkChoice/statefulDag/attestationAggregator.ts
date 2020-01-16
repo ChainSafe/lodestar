@@ -11,13 +11,13 @@ import {Gwei, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
  *
  * Used here for light weight and easy comparison
  */
-export type Root = string;
+export type RootHex = string;
 
 /**
  * Minimal representation of attsetation for the purposes of fork choice
  */
 export interface ForkChoiceAttestation {
-  target: Root;
+  target: RootHex;
   attester: ValidatorIndex;
   weight: Gwei;
 }
@@ -26,7 +26,7 @@ export interface ForkChoiceAttestation {
  * Attestation aggregated across participants
  */
 export interface AggregatedAttestation {
-  target: Root;
+  target: RootHex;
   weight: Gwei;
   prevWeight: Gwei;
 }
@@ -40,7 +40,7 @@ export class AttestationAggregator {
   /**
    * aggregation: target -> sum of all attestations
    */
-  public latestAggregates: Record<Root, AggregatedAttestation>;
+  public latestAggregates: Record<RootHex, AggregatedAttestation>;
 
   /**
    * lookup: validator -> target + weight contributed by validator
@@ -96,7 +96,7 @@ export class AttestationAggregator {
    * Note: latestAttestations is currently never pruned
    */
   public prune(): void {
-    const aliveTargets: Record<Root, boolean> = {};
+    const aliveTargets: Record<RootHex, boolean> = {};
     Object.values(this.latestAttestations).forEach((a) => aliveTargets[a.target] = true);
     Object.values(this.latestAggregates).forEach((agg) => {
       if (agg.prevWeight === agg.weight || !aliveTargets[agg.target]) {
@@ -105,7 +105,7 @@ export class AttestationAggregator {
     });
   }
 
-  private ensureAggregate(target: Root): AggregatedAttestation {
+  private ensureAggregate(target: RootHex): AggregatedAttestation {
     if (!this.latestAggregates[target]) {
       this.latestAggregates[target] = {
         target,

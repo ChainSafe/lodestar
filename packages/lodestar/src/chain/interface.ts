@@ -1,13 +1,13 @@
 import {EventEmitter} from "events";
 
-import {Attestation, BeaconBlock, BeaconState, Checkpoint, Hash, Slot, uint16, uint64} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BeaconState, Checkpoint, Slot, uint16, uint64, Root} from "@chainsafe/eth2.0-types";
 
 import {ILMDGHOST} from "./forkChoice";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 
 export interface IChainEvents {
-  unknownBlockRoot: (root: Hash) => void;
+  unknownBlockRoot: (root: Root) => void;
   processedBlock: (block: BeaconBlock) => void;
   processedCheckpoint: (checkPoint: Checkpoint) => void;
   processedAttestation: (attestation: Attestation) => void;
@@ -67,4 +67,9 @@ export interface IBeaconChain extends ChainEventEmitter {
   initializeBeaconChain(genesisState: BeaconState, merkleTree: ProgressiveMerkleTree): Promise<void>;
 
   isInitialized(): boolean;
+}
+
+export interface IAttestationProcessor {
+  receiveBlock(block: BeaconBlock, trusted?: boolean): Promise<void>;
+  receiveAttestation(attestation: Attestation): Promise<void>;
 }

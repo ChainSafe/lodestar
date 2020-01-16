@@ -5,7 +5,7 @@ import sinon from "sinon";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {expect} from "chai";
 import {BlockRepository} from "../../../../../src/db/api/beacon/repositories";
-import {ChainRepository} from "../../../../../lib/db/api/beacon/repositories";
+import {ChainRepository} from "../../../../../src/db/api/beacon/repositories";
 import {Bucket, encodeKey} from "../../../../../src/db/schema";
 
 describe("block repository", function () {

@@ -8,8 +8,6 @@ import {processRewardsAndPenalties}
   from "../../../../../src/epoch/balanceUpdates";
 import * as attestationDeltas
   from "../../../../../src/epoch/balanceUpdates/attestation";
-import * as crosslinkDeltas
-  from "../../../../../src/epoch/balanceUpdates/crosslink";
 import {generateValidator} from "../../../../utils/validator";
 import {generateState} from "../../../../utils/state";
 
@@ -18,7 +16,6 @@ describe('process epoch - balance updates', function () {
   const sandbox = sinon.createSandbox();
   let getCurrentEpochStub: any,
     getAttestationDeltasStub: any,
-    getCrosslinkDeltasStub: any,
     increaseBalanceStub: any,
     decreaseBalanceStub: any;
 
@@ -27,7 +24,6 @@ describe('process epoch - balance updates', function () {
     increaseBalanceStub = sandbox.stub(utils, "increaseBalance");
     decreaseBalanceStub = sandbox.stub(utils, "decreaseBalance");
     getAttestationDeltasStub = sandbox.stub(attestationDeltas, "getAttestationDeltas");
-    getCrosslinkDeltasStub = sandbox.stub(crosslinkDeltas, "getCrosslinkDeltas");
   });
 
   afterEach(() => {
@@ -53,7 +49,6 @@ describe('process epoch - balance updates', function () {
     state.validators.push(generateValidator());
     getCurrentEpochStub.returns(10);
     getAttestationDeltasStub.returns([[reward], [penalty]]);
-    getCrosslinkDeltasStub.returns([[reward], [penalty]]);
 
     try {
       processRewardsAndPenalties(config, state);

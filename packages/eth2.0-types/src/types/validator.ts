@@ -3,19 +3,16 @@
  * @module types
  */
 
-import {BLSPubkey, Shard, Slot, uint64, number64, ValidatorIndex} from "./primitive";
+import {BLSPubkey, BLSSignature, CommitteeIndex, Slot, uint64, ValidatorIndex} from "./primitive";
+import {Attestation} from "./operations";
 
 export interface ValidatorDuty {
   // The validator's public key, uniquely identifying them
   validatorPubkey: BLSPubkey;
-  // The index of the validator in the committee
-  committeeIndex: number64;
   // The slot at which the validator must attest
   attestationSlot: Slot;
-  // The shard in which the validator must attest
-  attestationShard: Shard;
-  // The slot in which a validator must propose a block, this field can be Null
-  blockProposalSlot: Slot;
+
+  committeeIndex: CommitteeIndex;
 }
 
 export interface SyncingStatus {
@@ -29,6 +26,12 @@ export interface SyncingStatus {
 
 export interface CommitteeAssignment {
   validators: ValidatorIndex[];
-  shard: Shard;
+  committeeIndex: CommitteeIndex;
   slot: Slot;
+}
+
+export interface AggregateAndProof {
+  aggregatorIndex: ValidatorIndex;
+  aggregate: Attestation;
+  selectionProof: BLSSignature;
 }

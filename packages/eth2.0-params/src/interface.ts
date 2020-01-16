@@ -4,7 +4,7 @@
 
 export interface IBeaconParams {
   // Misc
-  SHARD_COUNT: number;
+  MAX_COMMITTEES_PER_SLOT: number;
   TARGET_COMMITTEE_SIZE: number;
   MAX_VALIDATORS_PER_COMMITTEE: number;
   MIN_PER_EPOCH_CHURN_LIMIT: number;
@@ -12,6 +12,7 @@ export interface IBeaconParams {
   SHUFFLE_ROUND_COUNT: number;
   MIN_GENESIS_TIME: number;
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: number;
+  TARGET_AGGREGATORS_PER_COMMITTEE: number;
 
   // Deposit contract
   DEPOSIT_CONTRACT_ADDRESS: number;
@@ -24,6 +25,7 @@ export interface IBeaconParams {
 
   // Initial values
   GENESIS_SLOT: number;
+  SAFE_SLOTS_TO_UPDATE_JUSTIFIED: number;
   GENESIS_EPOCH: number;
   BLS_WITHDRAWAL_PREFIX_BYTE: Buffer;
   GENESIS_FORK_VERSION: Buffer;
@@ -34,13 +36,12 @@ export interface IBeaconParams {
   MIN_ATTESTATION_INCLUSION_DELAY: number;
   SLOTS_PER_EPOCH: number;
   MIN_SEED_LOOKAHEAD: number;
-  ACTIVATION_EXIT_DELAY: number;
+  MAX_SEED_LOOKAHEAD: number;
   SLOTS_PER_ETH1_VOTING_PERIOD: number;
   ETH1_FOLLOW_DISTANCE: number;
   SLOTS_PER_HISTORICAL_ROOT: number;
   MIN_VALIDATOR_WITHDRAWAL_DELAY: number;
   PERSISTENT_COMMITTEE_PERIOD: number;
-  MAX_EPOCHS_PER_CROSSLINK: number;
 
   MIN_EPOCHS_TO_INACTIVITY_PENALTY: number;
 
@@ -64,5 +65,4 @@ export interface IBeaconParams {
   MAX_ATTESTATIONS: number;
   MAX_DEPOSITS: number;
   MAX_VOLUNTARY_EXITS: number;
-  MAX_TRANSFERS: number;
 }

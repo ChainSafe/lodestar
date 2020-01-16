@@ -2,7 +2,7 @@ import {Keypair} from "./keypair";
 import {PrivateKey} from "./privateKey";
 import {PublicKey} from "./publicKey";
 import {Signature} from "./signature";
-import {BLSPubkey, BLSSecretKey, BLSSignature, Domain, Hash} from "@chainsafe/eth2.0-types";
+import {BLSPubkey, BLSSecretKey, BLSSignature, Domain, bytes32} from "@chainsafe/eth2.0-types";
 import {PUBLIC_KEY_LENGTH} from "./constants";
 import assert from "assert";
 
@@ -33,7 +33,7 @@ export function generatePublicKey(secretKey: BLSSecretKey): BLSPubkey {
  * @param messageHash
  * @param domain
  */
-export function sign(secretKey: BLSSecretKey, messageHash: Hash, domain: Domain): BLSSignature {
+export function sign(secretKey: BLSSecretKey, messageHash: bytes32, domain: Domain): BLSSignature {
   assert(secretKey, "secretKey is null or undefined");
   assert(messageHash, "messageHash is null or undefined");
   assert(domain, "domain is null or undefined");
@@ -80,7 +80,7 @@ export function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
  * @param signature
  * @param domain
  */
-export function verify(publicKey: BLSPubkey, messageHash: Hash, signature: BLSSignature, domain: Domain): boolean {
+export function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BLSSignature, domain: Domain): boolean {
   assert(publicKey, "publicKey is null or undefined");
   assert(messageHash, "messageHash is null or undefined");
   assert(signature, "signature is null or undefined");
@@ -103,7 +103,7 @@ export function verify(publicKey: BLSPubkey, messageHash: Hash, signature: BLSSi
  */
 export function verifyMultiple(
   publicKeys: BLSPubkey[],
-  messageHashes: Hash[],
+  messageHashes: bytes32[],
   signature: BLSSignature,
   domain: Domain
 ): boolean {

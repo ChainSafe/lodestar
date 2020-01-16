@@ -34,16 +34,14 @@ export async function assembleBlock(
   const block: BeaconBlock = {
     slot,
     parentRoot: signingRoot(config.types.BeaconBlockHeader, parentHeader),
-    // @ts-ignore
     signature: undefined,
-    // @ts-ignore
     stateRoot: undefined,
     body: await assembleBody(config, opPool, eth1, merkleTree, currentState, randao),
   };
 
   block.stateRoot = hashTreeRoot(
     config.types.BeaconState,
-    stateTransition(config, currentState, block, false, false),
+    stateTransition(config, currentState, block, false, false, true),
   );
 
   return block;

@@ -4,6 +4,7 @@ import {AbstractApiClient} from "../../abstract";
 import {IBeaconApi} from "../../interface/beacon";
 import {IValidatorApi} from "../../interface/validators";
 import {ILogger} from "../../..";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 export class ApiClientOverRest extends AbstractApiClient {
   public beacon: IBeaconApi;
@@ -12,10 +13,10 @@ export class ApiClientOverRest extends AbstractApiClient {
 
   public url: string;
   
-  public constructor(restUrl: string, logger: ILogger) {
+  public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
     super();
     this.url = restUrl;
-    this.validator = new RestValidatorApi(restUrl, logger);
+    this.validator = new RestValidatorApi(config, restUrl, logger);
     this.beacon = new RestBeaconApi(restUrl, logger);
   }
 }
