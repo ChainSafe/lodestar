@@ -36,6 +36,13 @@ export class BasicArrayStructuralHandler<T extends ArrayLike<any>> extends Struc
     }
     return newValue;
   }
+  fromBytes(data: Uint8Array, start: number, end: number): T {
+    const elementSize = this._type.elementType.size();
+    return Array.from(
+      {length: (end - start) / elementSize},
+      (_, i) => this._type.elementType.fromBytes(data, start + (i * elementSize))
+    ) as unknown as T;
+  }
   serializeTo(value: T, output: Uint8Array, offset: number): number {
     const length = this.getLength(value);
     let index = offset;
@@ -97,6 +104,51 @@ export class CompositeArrayStructuralHandler<T extends ArrayLike<any>> extends S
       newValue[i] = this._type.elementType.structural.clone(value[i]);
     }
     return newValue;
+  }
+  fromBytes(data: Uint8Array, start: number, end: number): T {
+    if (this._type.isVariableSize()) {
+      const value = [];
+      // all elements variable-sized
+      // indices contain offsets
+      let currentIndex = start;
+      let nextIndex = currentIndex;
+      // data exists between offsets
+      const fixedSection = new DataView(data.buffer, data.byteOffset + start, end);
+      const firstOffset = start + fixedSection.getUint32(start);
+      let currentOffset = firstOffset;
+      let nextOffset = currentOffset;
+      while (currentIndex < firstOffset) {
+        if (currentOffset > end) {
+          throw new Error("Offset out of bounds");
+        }
+        nextIndex = currentIndex + 4;
+        nextOffset = nextIndex === firstOffset
+          ? end
+          : start + fixedSection.getUint32(nextIndex);
+        if (currentOffset > nextOffset) {
+          throw new Error("Offsets must be increasing");
+        }
+        value.push(
+          this._type.elementType.structural.fromBytes(data, currentOffset, nextOffset)
+        );
+        currentIndex = nextIndex;
+        currentOffset = nextOffset;
+      }
+      if (firstOffset !== currentIndex) {
+        throw new Error("First offset skips variable data");
+      }
+      return value as unknown as T;
+    } else {
+      const elementSize = this._type.elementType.structural.size(null);
+      return Array.from(
+        {length: (end - start) / elementSize},
+        (_, i) => this._type.elementType.structural.fromBytes(
+          data,
+          start + (i * elementSize),
+          start + ((i+1) * elementSize)
+        )
+      ) as unknown as T;
+    }
   }
   serializeTo(value: T, output: Uint8Array, offset: number): number {
     const length = this.getLength(value);

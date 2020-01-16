@@ -1,7 +1,7 @@
-import {Node, TreeBacking, Gindex, toGindex, LeafNode, countToDepth} from "@chainsafe/merkle-tree";
+import {Node, TreeBacking, Gindex, LeafNode, countToDepth, toGindexBitstring} from "@chainsafe/merkle-tree";
 
 import {CompositeType} from "../../types";
-import { isBackedValue, BackingType } from "..";
+import {isBackedValue, BackingType} from "..";
 
 export interface ITreeBackedValue<T extends object> {
   type(): CompositeType<T>;
@@ -14,11 +14,6 @@ export interface ITreeBackedValue<T extends object> {
   serializeTo(output: Uint8Array, offset: number): number;
 
   hashTreeRoot(): Uint8Array;
-  /*
-  nonzeroChunkCount(): number;
-  chunk(index: number): Uint8Array;
-  chunks(): Iterable<Uint8Array>;
-  */
 
   backingHandler(): TreeHandler<T>;
   backing(): TreeBacking;
@@ -93,11 +88,15 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   serializeTo(target: TreeBacking, output: Uint8Array, offset: number): number {
     return this._type.structural.serializeTo(this.createBackedValue(target), output, offset);
   }
+  _depth: number;
   depth(): number {
-    return countToDepth(BigInt(this._type.chunkCount()));
+    if (!this._depth) {
+      this._depth = countToDepth(BigInt(this._type.chunkCount()));
+    }
+    return this._depth;
   }
   gindexOfChunk(target: TreeBacking, index: number): Gindex {
-    return toGindex(BigInt(index), this.depth());
+    return toGindexBitstring(BigInt(index), this.depth());
   }
   getBackingAtChunk(target: TreeBacking, index: number): TreeBacking {
     return new TreeBacking(
@@ -107,18 +106,6 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   }
   setBackingAtChunk(target: TreeBacking, index: number, value: TreeBacking): void {
     target.set(this.gindexOfChunk(target, index), value.node);
-  }
-  getAtChunk(target: TreeBacking, index: number): PropOfTreeBackedValue<T, keyof T> {
-    throw new Error("Not implemented");
-  }
-  setAtChunk(target: TreeBacking, index: number, value: PropOfTreeBackedValue<T, keyof T>): void {
-    throw new Error("Not implemented");
-  }
-  chunk(target: TreeBacking, index: number): Uint8Array {
-    return target.get(this.gindexOfChunk(target, index)).merkleRoot;
-  }
-  setChunk(target: TreeBacking, index: number, chunk: Uint8Array): void {
-    target.set(this.gindexOfChunk(target, index), new LeafNode(Buffer.from(chunk)));
   }
   hashTreeRoot(target: TreeBacking): Uint8Array {
     return target.node.merkleRoot;

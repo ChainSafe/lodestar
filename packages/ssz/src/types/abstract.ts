@@ -33,7 +33,7 @@ export class BasicType<T> {
     throw new Error("Not implemented");
   }
   deserialize(data: Uint8Array): T {
-    throw new Error("Not implemented");
+    return this.fromBytes(data, 0);
   }
   defaultValue(): T {
     throw new Error("Not implemented");

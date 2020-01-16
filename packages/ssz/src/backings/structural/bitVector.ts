@@ -22,6 +22,20 @@ export class BitVectorStructuralHandler extends BasicVectorStructuralHandler<Arr
     }
     return byte;
   }
+  fromBytes(data: Uint8Array, start: number, end: number): ArrayLike<boolean> {
+    if ((end - start) !== this.size(null)) {
+      throw new Error("Invalid bitvector, length not equal to vector length");
+    }
+    const value = [];
+    const toBool = (c: string): boolean => c === "1" ? true : false;
+    for (let i = start; i < end-1; i++) {
+      value.push(...Array.prototype.map.call(data[i].toString(2), toBool));
+    }
+    const lastByte = data[end-1];
+    const lastIndex = (this._type.length-1) % 8;
+    value.push(...Array.prototype.map.call(lastByte.toString(2), toBool).slice(0, lastIndex));
+    return value as ArrayLike<boolean>;
+  }
   serializeTo(value: ArrayLike<boolean>, output: Uint8Array, offset: number): number {
     const byteLength = this.getByteLength(value);
     for (let i = 0; i < byteLength; i++) {

@@ -49,7 +49,7 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
     }
     property = Number(property);
     if (property > length) {
-      throw new Error("Invalid list index");
+      throw new Error("Invalid array index");
     }
     return this.getValueAtIndex(target, property as number);
   }
@@ -138,7 +138,7 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<any>> extends TreeHan
     }
     property = Number(property) as any;
     if (property > length) {
-      throw new Error("Invalid list index");
+      throw new Error("Invalid array index");
     }
     return this.getValueAtChunk(target, property as number);
   }

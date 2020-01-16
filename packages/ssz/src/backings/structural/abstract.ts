@@ -29,8 +29,14 @@ export class StructuralHandler<T extends object> {
   equals(target: T, other: T): boolean {
     throw new Error("Not implemented");
   }
-  deserialize(data: Uint8Array): T {
+  fromBytes(data: Uint8Array, start: number, end: number): T {
     throw new Error("Not implemented");
+  }
+  deserialize(data: Uint8Array): T {
+    if (!this._type.isVariableSize() && this.size(null) !== data.length) {
+      throw new Error("Incorrect data length");
+    }
+    return this.fromBytes(data, 0, data.length);
   }
   serialize(target: T): Uint8Array {
     const output = new Uint8Array(this._type.size(target));

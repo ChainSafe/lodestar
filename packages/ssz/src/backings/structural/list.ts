@@ -10,6 +10,12 @@ export class BasicListStructuralHandler<T extends ArrayLike<any>> extends BasicA
   getLength(value: T): number {
     return value.length;
   }
+  fromBytes(data: Uint8Array, start: number, end: number): T {
+    if ((end - start) / this._type.elementType.size() > this._type.limit) {
+      throw new Error("List length greater than limit");
+    }
+    return super.fromBytes(data, start, end);
+  }
   nonzeroChunkCount(value: T): number {
     return Math.ceil(value.length * this._type.elementType.size() / 32);
   }
@@ -25,6 +31,13 @@ export class CompositeListStructuralHandler<T extends ArrayLike<any>> extends Co
   }
   getLength(value: T): number {
     return value.length;
+  }
+  fromBytes(data: Uint8Array, start: number, end: number): T {
+    const value = super.fromBytes(data, start, end);
+    if (value.length > this._type.limit) {
+      throw new Error("List length greater than limit");
+    }
+    return value;
   }
   nonzeroChunkCount(value: T): number {
     return value.length;
