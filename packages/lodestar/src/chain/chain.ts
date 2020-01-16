@@ -20,7 +20,6 @@ import {
   computeEpochAtSlot,
   processSlots, stateTransition,
   computeStartSlotAtEpoch,
-  getAttestingIndices,
   isActiveValidator
   , getCurrentSlot
 } from "@chainsafe/eth2.0-state-transition";
