@@ -9,8 +9,8 @@ import {
   BeaconBlockHeader,
   BeaconState,
   Epoch,
-  Hash,
   Slot,
+  Root,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -18,13 +18,13 @@ import {
   EMPTY_SIGNATURE,
   ZERO_HASH,
 } from "../constants";
-import {computeStartSlotOfEpoch} from "./epoch";
+import {computeStartSlotAtEpoch} from "./epoch";
 
 
 /**
  * Return the block root at a recent [[slot]].
  */
-export function getBlockRootAtSlot(config: IBeaconConfig, state: BeaconState, slot: Slot): Hash {
+export function getBlockRootAtSlot(config: IBeaconConfig, state: BeaconState, slot: Slot): Root {
   assert(slot < state.slot);
   assert(state.slot <= slot + config.params.SLOTS_PER_HISTORICAL_ROOT);
   return state.blockRoots[slot % config.params.SLOTS_PER_HISTORICAL_ROOT];
@@ -33,8 +33,8 @@ export function getBlockRootAtSlot(config: IBeaconConfig, state: BeaconState, sl
 /**
  * Return the block root at the start of a recent [[epoch]].
  */
-export function getBlockRoot(config: IBeaconConfig, state: BeaconState, epoch: Epoch): Hash {
-  return getBlockRootAtSlot(config, state, computeStartSlotOfEpoch(config, epoch));
+export function getBlockRoot(config: IBeaconConfig, state: BeaconState, epoch: Epoch): Root {
+  return getBlockRootAtSlot(config, state, computeStartSlotAtEpoch(config, epoch));
 }
 /**
  * Return the block header corresponding to a block with ``state_root`` set to ``ZERO_HASH``.
@@ -43,8 +43,10 @@ export function getTemporaryBlockHeader(config: IBeaconConfig, block: BeaconBloc
   return {
     slot: block.slot,
     parentRoot: block.parentRoot,
+    // `state_root` is zeroed and overwritten in the next `process_slot` call
     stateRoot: ZERO_HASH,
     bodyRoot: hashTreeRoot(config.types.BeaconBlockBody, block.body),
+    // `signature` is zeroed
     signature: EMPTY_SIGNATURE,
   };
 }

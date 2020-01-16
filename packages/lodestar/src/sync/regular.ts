@@ -2,12 +2,10 @@
  * @module sync
  */
 
-import {hashTreeRoot} from "@chainsafe/ssz";
-
-import {BeaconBlock, Attestation, Hash, Checkpoint} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, Checkpoint, VoluntaryExit, ProposerSlashing, AttesterSlashing,
+  AggregateAndProof,
+  Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
-import {ATTESTATION_TOPIC, BLOCK_TOPIC} from "../constants";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
@@ -15,6 +13,7 @@ import {OpPool} from "../opPool";
 import {ILogger} from "../logger";
 import {ISyncModules} from "./index";
 import {ISyncOptions} from "./options";
+import {GossipEvent} from "../network/gossip/constants";
 
 export type IRegularSyncModules = Pick<ISyncModules, "config"|"db"|"chain"|"opPool"|"network"|"logger">;
 
@@ -37,10 +36,14 @@ export class RegularSync {
 
   public async start(): Promise<void> {
     this.logger.verbose("regular sync start");
-    this.network.gossip.subscribeToBlocks();
-    this.network.gossip.subscribeToAttestations();
-    this.network.gossip.on(BLOCK_TOPIC, this.receiveBlock);
-    this.network.gossip.on(ATTESTATION_TOPIC, this.receiveAttestation);
+    this.network.gossip.on(GossipEvent.BLOCK, this.receiveBlock);
+    this.network.gossip.on(GossipEvent.ATTESTATION_SUBNET, this.receiveCommitteeAttestation);
+    this.network.gossip.on(GossipEvent.AGGREGATE_AND_PROOF, this.receiveAggregateAndProof);
+    // For interop only, will be removed prior to mainnet
+    this.network.gossip.on(GossipEvent.ATTESTATION, this.receiveAttestation);
+    this.network.gossip.on(GossipEvent.VOLUNTARY_EXIT, this.receiveVoluntaryExit);
+    this.network.gossip.on(GossipEvent.PROPOSER_SLASHING, this.receiveProposerSlashing);
+    this.network.gossip.on(GossipEvent.ATTESTER_SLASHING, this.receiveAttesterSlashing);
     this.chain.on("processedBlock", this.onProcessedBlock);
     this.chain.on("processedAttestation", this.onProcessedAttestation);
     this.chain.on("unknownBlockRoot", this.onUnknownBlockRoot);
@@ -49,10 +52,13 @@ export class RegularSync {
 
   public async stop(): Promise<void> {
     this.logger.verbose("regular sync stop");
-    this.network.gossip.unsubscribeToBlocks();
-    this.network.gossip.unsubscribeToAttestations();
-    this.network.gossip.removeListener(BLOCK_TOPIC, this.receiveBlock);
-    this.network.gossip.removeListener(ATTESTATION_TOPIC, this.receiveAttestation);
+    this.network.gossip.removeListener(GossipEvent.BLOCK, this.receiveBlock);
+    this.network.gossip.removeListener(GossipEvent.ATTESTATION_SUBNET, this.receiveCommitteeAttestation);
+    this.network.gossip.removeListener(GossipEvent.AGGREGATE_AND_PROOF, this.receiveAggregateAndProof);
+    this.network.gossip.removeListener(GossipEvent.ATTESTATION, this.receiveAttestation);
+    this.network.gossip.removeListener(GossipEvent.VOLUNTARY_EXIT, this.receiveVoluntaryExit);
+    this.network.gossip.removeListener(GossipEvent.PROPOSER_SLASHING, this.receiveProposerSlashing);
+    this.network.gossip.removeListener(GossipEvent.ATTESTER_SLASHING, this.receiveAttesterSlashing);
     this.chain.removeListener("processedBlock", this.onProcessedBlock);
     this.chain.removeListener("processedAttestation", this.onProcessedAttestation);
     this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
@@ -60,30 +66,15 @@ export class RegularSync {
   }
 
   public receiveBlock = async (block: BeaconBlock): Promise<void> => {
-    const root = hashTreeRoot(this.config.types.BeaconBlock, block);
-
-    // skip block if its a known bad block
-    if (await this.db.block.isBadBlock(root)) {
-      this.logger.warn(`Received bad block, block root : ${root} `);
-      return;
-    }
-    // skip block if it already exists
-    if (!await this.db.block.has(root as Buffer)) {
-      await this.chain.receiveBlock(block);
-    }
+    await this.chain.receiveBlock(block);
   };
 
-  public receiveAttestation = async (attestation: Attestation): Promise<void> => {
-    // skip attestation if it already exists
-    const root = hashTreeRoot(this.config.types.Attestation, attestation);
-    if (await this.db.attestation.has(root as Buffer)) {
-      return;
-    }
-    // skip attestation if its too old
-    const state = await this.db.state.getLatest();
-    if (attestation.data.target.epoch < state.finalizedCheckpoint.epoch) {
-      return;
-    }
+  public receiveCommitteeAttestation = async (attestationSubnet: {attestation: Attestation; subnet: number}): 
+  Promise<void> => {
+    const attestation = attestationSubnet.attestation;
+    
+    // to see if we need special process for these unaggregated attestations
+    // not in the spec atm
     // send attestation on to other modules
     await Promise.all([
       this.opPool.attestations.receive(attestation),
@@ -91,15 +82,39 @@ export class RegularSync {
     ]);
   };
 
+  public receiveAggregateAndProof = async (aggregate: AggregateAndProof): Promise<void> => {
+    await this.opPool.aggregateAndProofs.receive(aggregate);
+  };
+
+  public receiveAttestation = async (attestation: Attestation): Promise<void> => {
+    // send attestation on to other modules
+    await Promise.all([
+      this.opPool.attestations.receive(attestation),
+      this.chain.receiveAttestation(attestation),
+    ]);
+  };
+
+  public receiveVoluntaryExit = async (voluntaryExit: VoluntaryExit): Promise<void> => {
+    await this.opPool.voluntaryExits.receive(voluntaryExit);
+  };
+
+  public receiveProposerSlashing = async (proposerSlashing: ProposerSlashing): Promise<void> => {
+    await this.opPool.proposerSlashings.receive(proposerSlashing);
+  };
+
+  public receiveAttesterSlashing = async (attesterSlashing: AttesterSlashing): Promise<void> => {
+    await this.opPool.attesterSlashings.receive(attesterSlashing);
+  };
+
   private onProcessedBlock = (block: BeaconBlock): void => {
     this.network.gossip.publishBlock(block);
   };
 
   private onProcessedAttestation = (attestation: Attestation): void => {
-    this.network.gossip.publishAttestation(attestation);
+    this.network.gossip.publishCommiteeAttestation(attestation);
   };
 
-  private onUnknownBlockRoot = async (root: Hash): Promise<void> => {
+  private onUnknownBlockRoot = async (root: Root): Promise<void> => {
     for (const peer of this.network.getPeers()) {
       try {
         this.logger.verbose(`Attempting to fetch block ${root.toString("hex")} from ${peer.id.toB58String()}`);

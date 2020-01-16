@@ -8,6 +8,7 @@ export enum Bucket {
   // beacon chain
   state, // hash -> BeaconState
   attestation, // hash -> Attestation
+  aggregateAndProof, // hash -> AggregateAndProof
   block, // hash -> BeaconBlock
   blockArchive, // hash -> BeaconBlock
   blockSlotRefs,
@@ -18,7 +19,6 @@ export enum Bucket {
   validator,
   deposit, // index -> Deposit
   exit, // hash -> VoluntaryExit
-  transfer, // hash -> Transfer
   proposerSlashing, // hash -> ProposerSlashing
   attesterSlashing, // hash -> AttesterSlashing
   merkleTree, // depositIndex -> MerkleTree

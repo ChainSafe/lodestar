@@ -1,7 +1,7 @@
 /**
  * @module util/objects
  */
-import {AnySSZType, hashTreeRoot} from "@chainsafe/ssz";
+import {AnySSZType, equals, hashTreeRoot} from "@chainsafe/ssz";
 
 interface IElementDescription {
   index: number;
@@ -33,4 +33,20 @@ export function mostFrequent<T>(type: AnySSZType, array: T[]): T[] {
     }
   }
   return results;
+}
+
+export function sszEqualPredicate<T>(type: AnySSZType): (a: T, b: T) => boolean {
+  return (a: T, b: T) => {
+    return equals(type, a, b);
+  };
+}
+
+export function arrayIntersection<T>(arr1: T[], arr2: T[], predicate: (a: T, b: T) => boolean): T[] {
+  return arr1.filter(
+    (item1) => {
+      return arr2.findIndex((item2) => {
+        return predicate(item1, item2);
+      }) !== -1;
+    }
+  );
 }

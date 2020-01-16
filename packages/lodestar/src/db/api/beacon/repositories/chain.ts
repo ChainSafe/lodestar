@@ -1,4 +1,4 @@
-import {Hash, Slot} from "@chainsafe/eth2.0-types";
+import {Slot, Root} from "@chainsafe/eth2.0-types";
 import {deserialize, serialize} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -16,56 +16,56 @@ export class ChainRepository {
     this.config = config;
   }
 
-  public getLatestStateRoot(): Promise<Hash|null> {
+  public getLatestStateRoot(): Promise<Root|null> {
     return this.db.get(this.getKey(Key.latestState));
   }
 
-  public async setLatestStateRoot(root: Hash): Promise<void> {
+  public async setLatestStateRoot(root: Root): Promise<void> {
     await this.db.put(
       this.getKey(Key.latestState),
       serialize(this.config.types.bytes32, root)
     );
   }
 
-  public getJustifiedStateRoot(): Promise<Hash|null> {
+  public getJustifiedStateRoot(): Promise<Root|null> {
     return this.db.get(this.getKey(Key.justifiedState));
   }
 
-  public async setJustifiedStateRoot(root: Hash): Promise<void> {
+  public async setJustifiedStateRoot(root: Root): Promise<void> {
     await this.db.put(
       this.getKey(Key.justifiedState),
       serialize(this.config.types.bytes32, root)
     );
   }
 
-  public getFinalizedStateRoot(): Promise<Hash|null> {
+  public getFinalizedStateRoot(): Promise<Root|null> {
     return this.db.get(this.getKey(Key.finalizedState));
   }
 
-  public async setFinalizedStateRoot(root: Hash): Promise<void> {
+  public async setFinalizedStateRoot(root: Root): Promise<void> {
     await this.db.put(
       this.getKey(Key.finalizedState),
       serialize(this.config.types.bytes32, root)
     );
   }
 
-  public getFinalizedBlockRoot(): Promise<Hash|null> {
+  public getFinalizedBlockRoot(): Promise<Root|null> {
     return this.db.get(this.getKey(Key.finalizedBlock));
   }
 
-  public async setFinalizedBlockRoot(root: Hash): Promise<void> {
+  public async setFinalizedBlockRoot(root: Root): Promise<void> {
     return await this.db.put(this.getKey(Key.finalizedBlock), root);
   }
 
-  public getJustifiedBlockRoot(): Promise<Hash|null> {
+  public getJustifiedBlockRoot(): Promise<Root|null> {
     return this.db.get(this.getKey(Key.justifiedBlock));
   }
 
-  public async setJustifiedBlockRoot(root: Hash): Promise<void> {
+  public async setJustifiedBlockRoot(root: Root): Promise<void> {
     return await this.db.put(this.getKey(Key.justifiedBlock), root);
   }
 
-  public async getBlockRoot(slot: Slot): Promise<Hash | null> {
+  public async getBlockRoot(slot: Slot): Promise<Root | null> {
     try {
       return await this.db.get(encodeKey(Bucket.blockSlotRefs, slot));
     } catch (e) {
@@ -89,7 +89,7 @@ export class ChainRepository {
     await this.db.put(this.getKey(Key.chainHeight), serialize(this.config.types.Slot, slot));
   }
 
-  public async getChainHeadRoot(): Promise<Hash | null> {
+  public async getChainHeadRoot(): Promise<Root | null> {
     const slot  = await this.getChainHeadSlot();
     if (slot === null) {
       return null;

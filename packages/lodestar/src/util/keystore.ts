@@ -7,7 +7,6 @@ import fs from "fs";
 import {decryptKey, encryptKey} from "./encrypt";
 import {ensureDirectoryExistence} from "./file";
 
-
 export interface IKeystoreObject {
   encryptedPrivateKey: string;
   publicKey: string;

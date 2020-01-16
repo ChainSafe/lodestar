@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/eth2.0-params",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Chain parameters required for eth2.0",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",

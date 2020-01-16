@@ -11,13 +11,13 @@ import {
   bool,
   Epoch,
   Gwei,
-  Hash,
+  Root,
   number64,
-  Shard,
   Slot,
   ValidatorIndex,
   Version,
-  uint64,
+  CommitteeIndex,
+  bytes32,
 } from "./primitive";
 
 export interface Fork {
@@ -31,14 +31,14 @@ export interface Fork {
 
 export interface Checkpoint {
   epoch: Epoch;
-  root: Hash;
+  root: Root;
 }
 
 export interface Validator {
   // BLS public key
   pubkey: BLSPubkey;
-  // Commitment to pubkey for withdrawals and transfers
-  withdrawalCredentials: Hash;
+  // Commitment to pubkey for withdrawals
+  withdrawalCredentials: bytes32;
   // Balance at stake
   effectiveBalance: Gwei;
   // Was the validator slashed
@@ -53,39 +53,19 @@ export interface Validator {
   withdrawableEpoch: Epoch;
 }
 
-export interface Crosslink {
-  //Shard number
-  shard: Shard;
-  //Root of the previous crosslink
-  parentRoot: Hash;
-  //Crosslinking data from epochs [start....end-1]
-  startEpoch: Epoch;
-  endEpoch: Epoch;
-  //Root of the crosslinked shard data since the previous crosslink
-  dataRoot: Hash;
-}
-
 export interface AttestationData {
+  slot: Slot;
+  index: CommitteeIndex;
   // LMD GHOST vote
-  beaconBlockRoot: Hash;
+  beaconBlockRoot: Root;
   // FFG vote
   source: Checkpoint;
   target: Checkpoint;
-  // Crosslink vote
-  crosslink: Crosslink;
-}
-
-export interface AttestationDataAndCustodyBit {
-  // Attestation data
-  data: AttestationData;
-  // Challengeable bit (SSZ-bool, 1 byte) for the custody of crosslink data
-  custodyBit: bool;
 }
 
 export interface IndexedAttestation {
   // Validator Indices
-  custodyBit0Indices: ValidatorIndex[];
-  custodyBit1Indices: ValidatorIndex[];
+  attestingIndices: ValidatorIndex[];
   // Attestation Data
   data: AttestationData;
   // Aggregate signature
@@ -105,41 +85,36 @@ export interface PendingAttestation {
 
 export interface Eth1Data {
   // Root of the deposit tree
-  depositRoot: Hash;
+  depositRoot: Root;
   // Total number of deposits
   depositCount: number64;
   // Block hash
-  blockHash: Hash;
+  blockHash: bytes32;
 }
 
 export interface HistoricalBatch {
   // Block roots
-  blockRoots: Hash[];
+  blockRoots: Root[];
   // State roots
-  stateRoots: Hash[];
+  stateRoots: Root[];
 }
 
 export interface DepositData {
   // BLS pubkey
   pubkey: BLSPubkey;
   // Withdrawal credentials
-  withdrawalCredentials: Hash;
+  withdrawalCredentials: bytes32;
   // Amount in Gwei
   amount: Gwei;
   // Container self-signature
   signature: BLSSignature;
 }
 
-export interface CompactCommittee {
-  pubkeys: BLSPubkey[];
-  compactValidators: uint64[];
-}
-
 export interface BeaconBlockHeader {
   slot: Slot;
-  parentRoot: Hash;
-  stateRoot: Hash;
-  bodyRoot: Hash;
+  parentRoot: Root;
+  stateRoot: Root;
+  bodyRoot: Root;
   signature: BLSSignature;
 }
 
@@ -150,5 +125,5 @@ export interface FFGData {
 
 export interface MerkleTree {
   depth: number64;
-  tree: Hash[][];
+  tree: bytes32[][];
 }

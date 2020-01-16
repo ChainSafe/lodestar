@@ -84,7 +84,7 @@ describe("fast sync", function () {
     modules.chain.isInitialized.returns(true);
     const chainCheckPoint = {root: Buffer.alloc(32, 1), epoch: 3};
     // @ts-ignore
-    modules.reps.getFromPeerInfo.returns({latestHello: {finalizedEpoch: 3, finalizedRoot: chainCheckPoint.root}});
+    modules.reps.getFromPeerInfo.returns({latestStatus: {finalizedEpoch: 3, finalizedRoot: chainCheckPoint.root}});
     sinon.stub(modules.chain, "latestState")
       .get(() => generateState({currentJustifiedCheckpoint: chainCheckPoint}));
     getTargetEpochStub.returns(3);
@@ -110,7 +110,7 @@ describe("fast sync", function () {
     modules.chain.isInitialized.returns(true);
     const chainCheckPoint = {root: Buffer.alloc(32, 1), epoch: 4};
     // @ts-ignore
-    modules.reps.getFromPeerInfo.returns({latestHello: {finalizedEpoch: 3, finalizedRoot: chainCheckPoint.root}});
+    modules.reps.getFromPeerInfo.returns({latestStatus: {finalizedEpoch: 3, finalizedRoot: chainCheckPoint.root}});
     sinon.stub(modules.chain, "latestState")
       .get(() => generateState({currentJustifiedCheckpoint: chainCheckPoint}));
     getTargetEpochStub.returns(3);
@@ -137,7 +137,7 @@ describe("fast sync", function () {
     sinon.stub(modules.chain, "latestState")
       .get(() => generateState({currentJustifiedCheckpoint: chainCheckPoint}));
     // @ts-ignore
-    modules.reps.getFromPeerInfo.returns({latestHello: {finalizedEpoch: 3, finalizedRoot: chainCheckPoint.root}});
+    modules.reps.getFromPeerInfo.returns({latestStatus: {finalizedEpoch: 3, finalizedRoot: chainCheckPoint.root}});
     // @ts-ignore
     modules.reps.getFromPeerInfo.returns({} as unknown as IReputation);
     getTargetEpochStub.returns(5);

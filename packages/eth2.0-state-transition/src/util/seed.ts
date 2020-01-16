@@ -7,10 +7,11 @@ import {
   Epoch,
   ValidatorIndex,
   BeaconState,
-  Hash,
+  bytes32,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {bytesToBigInt, intToBytes,intDiv, hash} from "@chainsafe/eth2.0-utils";
+import {DomainType} from "../constants";
 
 
 
@@ -26,7 +27,7 @@ export function computeShuffledIndex(
   config: IBeaconConfig,
   index: ValidatorIndex,
   indexCount: number,
-  seed: Hash
+  seed: bytes32
 ): number {
   let permuted = index;
   assert(index < indexCount);
@@ -53,21 +54,23 @@ export function computeShuffledIndex(
 /**
  * Return the randao mix at a recent [[epoch]].
  */
-export function getRandaoMix(config: IBeaconConfig, state: BeaconState, epoch: Epoch): Hash {
+export function getRandaoMix(config: IBeaconConfig, state: BeaconState, epoch: Epoch): bytes32 {
   return state.randaoMixes[epoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR];
 }
 
 /**
  * Return the seed at [[epoch]].
  */
-export function getSeed(config: IBeaconConfig, state: BeaconState, epoch: Epoch): Hash {
+export function getSeed(config: IBeaconConfig, state: BeaconState, epoch: Epoch, domainType: DomainType): bytes32 {
+  const mix = getRandaoMix(
+    config,
+    state,
+    epoch + config.params.EPOCHS_PER_HISTORICAL_VECTOR - config.params.MIN_SEED_LOOKAHEAD - 1
+  );
+
   return hash(Buffer.concat([
-    getRandaoMix(
-      config,
-      state,
-      epoch + config.params.EPOCHS_PER_HISTORICAL_VECTOR - config.params.MIN_SEED_LOOKAHEAD - 1
-    ),
-    state.activeIndexRoots[epoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR],
-    intToBytes(epoch, 32),
+    intToBytes(domainType, 4),
+    intToBytes(epoch, 8),
+    mix
   ]));
 }

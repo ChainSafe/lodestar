@@ -5,7 +5,7 @@
 import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
 import {Checkpoint} from "@chainsafe/eth2.0-types";
-import {computeEpochOfSlot} from "@chainsafe/eth2.0-state-transition";
+import {computeEpochAtSlot} from "@chainsafe/eth2.0-state-transition";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ILogger} from "../../logger";
 
@@ -35,7 +35,7 @@ export class ArchiveBlocksTask implements ITask {
   public async run(): Promise<void> {
     const blocks = (await this.db.block.getAll()).filter(
       (block) =>
-        computeEpochOfSlot(this.config, block.slot) <= this.finalizedCheckpoint.epoch
+        computeEpochAtSlot(this.config, block.slot) <= this.finalizedCheckpoint.epoch
     );
     this.logger.info(`Started archiving ${blocks.length} block `
         +`(finalized epoch #${this.finalizedCheckpoint.epoch})...`

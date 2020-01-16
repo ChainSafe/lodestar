@@ -65,7 +65,7 @@ export class Eth1Wallet {
       signature: Buffer.alloc(96)
     };
 
-    const signature = bls.sign(
+    depositData.signature = bls.sign(
       privateKey.toBytes(),
       signingRoot(this.config.types.DepositData, depositData),
       Buffer.from([0, 0, 0, DomainType.DEPOSIT])
@@ -75,7 +75,7 @@ export class Eth1Wallet {
       const tx: ContractTransaction = await contract.deposit(
         pubkey,
         withdrawalCredentials,
-        signature,
+        depositData.signature,
         {value});
       await tx.wait();
       return tx.hash || "";

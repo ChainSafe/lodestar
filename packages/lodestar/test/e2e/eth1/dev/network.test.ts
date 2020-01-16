@@ -3,6 +3,7 @@ import {Wallet} from "ethers";
 import * as ethers from "ethers/ethers";
 import {expect} from "chai";
 import {ILogger, WinstonLogger} from "../../../../src/logger";
+import {describe, before, after, it} from "mocha";
 
 describe("Eth1 dev network", function () {
 

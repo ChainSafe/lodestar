@@ -1,7 +1,7 @@
 import {assert} from "chai";
 import {ethers} from "ethers";
 import sinon from "sinon";
-
+import {describe, it, beforeEach, afterEach} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {Eth1Wallet, EthersEth1Notifier, IEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
@@ -13,8 +13,8 @@ describe("Eth1Notifier - using deployed contract", () => {
 
   let eth1Notifier: IEth1Notifier;
   let eth1Network: PrivateEth1Network;
-  let depositContractAddress;
-  let provider;
+  let depositContractAddress: string;
+  let provider: any;
   const logger: ILogger = new WinstonLogger();
 
   beforeEach(async function () {

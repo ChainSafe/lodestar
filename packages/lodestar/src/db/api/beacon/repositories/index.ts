@@ -1,4 +1,5 @@
 export * from "./attestations";
+export * from "./aggregateAndProof";
 export * from "./attesterSlashing";
 export * from "./block";
 export * from "./blockArchive";
@@ -7,5 +8,4 @@ export * from "./deposit";
 export * from "./merkleTree";
 export * from "./proposerSlashing";
 export * from "./state";
-export * from "./transfer";
 export * from "./voluntaryExits";

@@ -1,13 +1,9 @@
-import {Attestation, Slot, BeaconState} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconState, CommitteeIndex, Epoch} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-
 import {OperationsModule} from "./abstract";
-import {
-  getAttestationDataSlot,
-  isValidAttestationSlot,
-  computeStartSlotOfEpoch,
-} from "@chainsafe/eth2.0-state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch,} from "@chainsafe/eth2.0-state-transition";
 import {BulkRepository} from "../../db/api/beacon/repository";
+import {getBitCount} from "../../util/bit";
 
 export class AttestationOperations extends OperationsModule<Attestation> {
   private readonly config: IBeaconConfig;
@@ -17,20 +13,21 @@ export class AttestationOperations extends OperationsModule<Attestation> {
     this.config = config;
   }
 
-  public async getValid(state: BeaconState): Promise<Attestation[]> {
-    const attestations: Attestation[] = await this.getAll();
-    return attestations.filter((a: Attestation) => {
-      const attestationSlot: Slot = getAttestationDataSlot(this.config, state, a.data);
-      return isValidAttestationSlot(this.config, attestationSlot, state.slot);
+  public async getCommiteeAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]> {
+    const attestations = await this.getAll();
+    return attestations.filter((attestation) => {
+      return attestation.data.index === committeeIndex
+          && computeEpochAtSlot(this.config, attestation.data.slot) === epoch
+          //filter out aggregated attestations
+          && getBitCount(attestation.aggregationBits) === 1;
     });
   }
 
   public async removeOld(state: BeaconState): Promise<void> {
-    const finalizedEpochStartSlot = computeStartSlotOfEpoch(this.config, state.finalizedCheckpoint.epoch);
+    const finalizedEpochStartSlot = computeStartSlotAtEpoch(this.config, state.finalizedCheckpoint.epoch);
     const attestations: Attestation[] = await this.getAll();
     await this.remove(attestations.filter((a) => {
-      const aSlot = getAttestationDataSlot(this.config, state, a.data);
-      return finalizedEpochStartSlot <= aSlot;
+      return finalizedEpochStartSlot <= a.data.slot;
     }));
   }
 }

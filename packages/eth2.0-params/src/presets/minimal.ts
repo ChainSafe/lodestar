@@ -3,15 +3,16 @@
  */
 
 // Misc
-export const SHARD_COUNT = 8; // CUSTOMIZED
+export const MAX_COMMITTEES_PER_SLOT = 4; // Just 4 committees for slot for testing purposes
 export const TARGET_COMMITTEE_SIZE = 4; // CUSTOMIZED
-export const MAX_VALIDATORS_PER_COMMITTEE = 4096; // 4096
+export const MAX_VALIDATORS_PER_COMMITTEE = 2048; // 2048
 export const MIN_PER_EPOCH_CHURN_LIMIT = 2 ** 2; // 4
 export const CHURN_LIMIT_QUOTIENT = 65536; // 65536
-export const BASE_REWARDS_PER_EPOCH = 5;
+export const BASE_REWARDS_PER_EPOCH = 4;
 export const SHUFFLE_ROUND_COUNT = 10; // CUSTOMIZED
 export const MIN_GENESIS_TIME = 1578009600;
 export const MIN_GENESIS_ACTIVE_VALIDATOR_COUNT = 64;
+export const TARGET_AGGREGATORS_PER_COMMITTEE = 16;
 
 // Deposit contract
 export const DEPOSIT_CONTRACT_ADDRESS = 0;
@@ -25,26 +26,24 @@ export const EFFECTIVE_BALANCE_INCREMENT = BigInt("1000000000"); // 1,000,000,00
 
 // Initial values
 export const GENESIS_SLOT = 0;
+export const SAFE_SLOTS_TO_UPDATE_JUSTIFIED = 8;
 export const GENESIS_EPOCH = 0;
 export const BLS_WITHDRAWAL_PREFIX_BYTE = Buffer.alloc(1);
 export const GENESIS_FORK_VERSION = Buffer.alloc(4);
 export const GENESIS_START_SHARD = 0;
 
 // Time parameters
-export const SECONDS_PER_SLOT = 6;
+export const SECONDS_PER_SLOT = 12;
 export const MIN_ATTESTATION_INCLUSION_DELAY = 1; // CUSTOMIZED
 export const SLOTS_PER_EPOCH = 8; // CUSTOMIZED
 export const MIN_SEED_LOOKAHEAD = 2 ** 0; // epochs || 6.4 minutes
-export const ACTIVATION_EXIT_DELAY = 2 ** 2; // epochs || 25.6 minutes
+export const MAX_SEED_LOOKAHEAD = 2 ** 2; // epochs || 25.6 minutes
 export const SLOTS_PER_ETH1_VOTING_PERIOD = 16; // CUSTOMIZED
 export const ETH1_FOLLOW_DISTANCE = 2 ** 10; // blocks || ~4 hours
 export const SLOTS_PER_HISTORICAL_ROOT = 64; // CUSTOMIZED
 export const MIN_VALIDATOR_WITHDRAWAL_DELAY = 256; // epochs || ~27 hours
 export const PERSISTENT_COMMITTEE_PERIOD = 2048;
-export const MAX_EPOCHS_PER_CROSSLINK = 4;
 
-// should be a small constant times SHARD_COUNT // SLOTS_PER_EPOCH
-export const MAX_CROSSLINK_EPOCHS = 2 ** 6; // 64
 export const MIN_EPOCHS_TO_INACTIVITY_PENALTY = 4;
 
 // State list lengths
@@ -66,4 +65,3 @@ export const MAX_ATTESTER_SLASHINGS = 2 ** 0; // 1
 export const MAX_ATTESTATIONS = 2 ** 7; // 128
 export const MAX_DEPOSITS = 2 ** 4; // 16
 export const MAX_VOLUNTARY_EXITS = 2 ** 4; // 16
-export const MAX_TRANSFERS = 0;

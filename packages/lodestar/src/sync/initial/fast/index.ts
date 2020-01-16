@@ -11,7 +11,7 @@ import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../inte
 import {EventEmitter} from "events";
 import {getSyncTargetEpoch, isValidChainOfBlocks, isValidFinalizedCheckPoint} from "../../utils/sync";
 import {BeaconState, Checkpoint} from "@chainsafe/eth2.0-types";
-import {computeStartSlotOfEpoch} from "@chainsafe/eth2.0-state-transition";
+import {computeStartSlotAtEpoch} from "@chainsafe/eth2.0-state-transition";
 import {getBlockRange} from "../../utils/blocks";
 
 export class FastSync
@@ -78,7 +78,7 @@ export class FastSync
         this.rpc,
         this.reps,
         this.peers,
-        {start: latestState.slot, end: computeStartSlotOfEpoch(this.config, targetEpoch)},
+        {start: latestState.slot, end: computeStartSlotAtEpoch(this.config, targetEpoch)},
         this.opts.blockPerChunk
       );
       if(isValidChainOfBlocks(this.config, latestState.latestBlockHeader, blocks)) {
@@ -87,7 +87,7 @@ export class FastSync
       } else {
         //TODO: if finalized checkpoint is wrong, sync whole chain again
         this.logger.error(`Invalid header chain (${latestState.slot}...`
-            + `${computeStartSlotOfEpoch(this.config, targetEpoch)}), blocks discarded. Retrying...`
+            + `${computeStartSlotAtEpoch(this.config, targetEpoch)}), blocks discarded. Retrying...`
         );
         await this.sync(chainCheckPoint);
       }

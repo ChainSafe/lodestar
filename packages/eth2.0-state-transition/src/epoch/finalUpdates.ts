@@ -7,11 +7,8 @@ import {hashTreeRoot} from "@chainsafe/ssz";
 import {BeaconState, HistoricalBatch} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {
-  getActiveValidatorIndices,
-  getCompactCommitteesRoot,
   getCurrentEpoch,
-  getRandaoMix,
-  getShardDelta
+  getRandaoMix
 } from "../util";
 import {bigIntMin, intDiv} from "@chainsafe/eth2.0-utils";
 
@@ -36,19 +33,6 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
         config.params.MAX_EFFECTIVE_BALANCE);
     }
   });
-  // Set active index root
-  const indexEpoch = nextEpoch + config.params.ACTIVATION_EXIT_DELAY;
-  const indexRootPosition = indexEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR;
-  state.activeIndexRoots[indexRootPosition] = hashTreeRoot(
-    {
-      elementType: config.types.ValidatorIndex,
-      maxLength: config.params.VALIDATOR_REGISTRY_LIMIT,
-    },
-    getActiveValidatorIndices(state, indexEpoch),
-  );
-  // Set committees root
-  state.compactCommitteesRoots[nextEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] =
-    getCompactCommitteesRoot(config, state, nextEpoch);
   // Reset slashings
   state.slashings[nextEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] = 0n;
   // Set randao mix
@@ -62,9 +46,6 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
     };
     state.historicalRoots.push(hashTreeRoot(config.types.HistoricalBatch, historicalBatch));
   }
-  // Update start shard
-  state.startShard =
-      (state.startShard + getShardDelta(config, state, currentEpoch)) % config.params.SHARD_COUNT;
   // Rotate current/previous epoch attestations
   state.previousEpochAttestations = state.currentEpochAttestations;
   state.currentEpochAttestations = [];

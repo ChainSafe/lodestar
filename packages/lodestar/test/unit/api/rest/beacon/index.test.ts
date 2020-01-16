@@ -15,7 +15,7 @@ import {Sync} from "../../../../../src/sync";
 describe("Test beacon rest api", function () {
   this.timeout(10000);
 
-  let restApi;
+  let restApi: any;
 
   const chain = sinon.createStubInstance(BeaconChain);
   const sync = sinon.createStubInstance(Sync);

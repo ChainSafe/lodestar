@@ -6,14 +6,14 @@ import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {Block, Log} from "ethers/providers";
 import {deserialize} from "@chainsafe/ssz";
-import {BeaconState, Deposit, Epoch, Eth1Data, Hash, number64} from "@chainsafe/eth2.0-types";
+import {Deposit, Eth1Data, number64, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {Eth1EventEmitter, IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 import {ILogger} from "../../logger";
 import {IEth1Options} from "../options";
-import {mostFrequent} from "../../util/objects";
+import {getEth1Vote} from "./eth1Vote";
 
 export interface IEthersEth1Options extends IEth1Options {
   contract?: Contract;
@@ -23,6 +23,8 @@ export interface IEthersEth1Options extends IEth1Options {
  * Watch the Eth1.0 chain using Ethers
  */
 export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitter }) implements IEth1Notifier {
+
+  public getEth1Vote = getEth1Vote;
 
   private provider: ethers.providers.BaseProvider;
 
@@ -48,7 +50,6 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
         this.opts.provider.network
       );
     }
-    // @ts-ignore
     this.contract = opts.contract;
   }
 
@@ -105,7 +106,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     toBlock?: string | number
   ): Promise<void> {
     const logs = await this.getContractPastLogs(
-      [this.contract.interface.events.Deposit.topic],
+      [this.contract.interface.events.DepositEvent.topic],
       fromBlock,
       toBlock
     );
@@ -131,8 +132,8 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     return this.provider.getBlock(blockHashOrBlockNumber, false);
   }
 
-  public async depositRoot(block?: string | number): Promise<Hash> {
-    const depositRootHex = await this.contract.get_hash_tree_root({blockTag: block || "latest"});
+  public async depositRoot(block?: string | number): Promise<Root> {
+    const depositRootHex = await this.contract.get_deposit_root({blockTag: block || "latest"});
     return Buffer.from(depositRootHex.substr(2), "hex");
   }
 
@@ -141,40 +142,18 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     return Buffer.from(depositCountHex.substr(2), "hex").readUIntLE(0, 6);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public async getEth1Data(config: IBeaconConfig, state: BeaconState, currentEpoch: Epoch): Promise<Eth1Data> {
-    const [head, latestStateBlock] = await Promise.all([
-      this.getHead(),
-      this.getBlock("0x" + state.eth1Data.blockHash.toString("hex"))
+  public async getEth1Data(eth1Head: Block, distance: number64): Promise<Eth1Data> {
+    const requiredBlock = eth1Head.number - distance;
+    const blockHash = (await this.getBlock(requiredBlock)).hash;
+    const [depositCount, depositRoot] = await Promise.all([
+      this.depositCount(blockHash),
+      this.depositRoot(blockHash)
     ]);
-    const validVotes = await this.filterValidVotes(config, state.eth1DataVotes, head, latestStateBlock);
-
-    if(validVotes.length === 0) {
-      const requiredBlock = head.number - config.params.ETH1_FOLLOW_DISTANCE;
-      const blockHash = (await this.getBlock(requiredBlock)).hash;
-      const [depositCount, depositRoot] = await Promise.all([
-        this.depositCount(blockHash),
-        this.depositRoot(blockHash)
-      ]);
-      return {
-        blockHash: Buffer.from(blockHash.slice(2), "hex"),
-        depositCount,
-        depositRoot
-      };
-    } else {
-      const frequentVotes = mostFrequent<Eth1Data>(config.types.Eth1Data, validVotes);
-      if(frequentVotes.length === 1) {
-        return frequentVotes[0];
-      } else {
-        const blockNumbers = await Promise.all(
-          frequentVotes.map(
-            (vote) =>
-              this.getBlock("0x" + vote.blockHash.toString("hex")).then(b => b.number)
-          )
-        );
-        return frequentVotes[blockNumbers.indexOf(Math.max(...blockNumbers))];
-      }
-    }
+    return {
+      blockHash: Buffer.from(blockHash.slice(2), "hex"),
+      depositCount,
+      depositRoot
+    };
   }
 
   private async initContract(): Promise<void> {
@@ -228,30 +207,5 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
         signature: Buffer.from(signature.slice(2), "hex"),
       },
     };
-  }
-
-  private async filterValidVotes(
-    config: IBeaconConfig,
-    votes: Eth1Data[],
-    head: Block,
-    latestStateBlock: Block): Promise<Eth1Data[]> {
-    const potentialVotes = [];
-    for(let i = 0; i < votes.length; i++) {
-      const vote = votes[i];
-      const block = await this.getBlock(vote.blockHash.toString("hex"));
-      if(block
-          && (head.number - block.number) >= config.params.ETH1_FOLLOW_DISTANCE
-          && block.number > latestStateBlock.number
-      ) {
-        const [depositCount, depositRoot] = await Promise.all([
-          this.depositCount(vote.blockHash.toString("hex")),
-          this.depositRoot(vote.blockHash.toString("hex"))
-        ]);
-        if(depositRoot.equals(vote.depositRoot) && depositCount === vote.depositCount) {
-          potentialVotes.push(vote);
-        }
-      }
-    }
-    return potentialVotes;
   }
 }

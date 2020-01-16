@@ -40,7 +40,7 @@ describe("sync utils", function () {
     it("should obtain target epoch with incomplete hello statuses", function () {
       const peers: IReputation[] = [
         {
-          latestHello: null,
+          latestStatus: null,
           score: 1
         },
         generateReputation(1),
@@ -118,7 +118,7 @@ describe("sync utils", function () {
       const rpcStub = sinon.createStubInstance(ReqResp);
       const repsStub = sinon.createStubInstance(ReputationStore);
       // @ts-ignore
-      repsStub.get.returns({latestHello: {root: Buffer.alloc(32, 1)}});
+      repsStub.get.returns({latestStatus: {root: Buffer.alloc(32, 1)}});
       rpcStub.beaconBlocksByRange
         .withArgs(sinon.match.any, sinon.match.any)
         .resolves([generateEmptyBlock()]);
@@ -140,9 +140,9 @@ describe("sync utils", function () {
     it("more than 50% peers have same finalized checkpoint", function () {
       const peers: IReputation[] = [
         // @ts-ignore
-        {latestHello: {finalizedRoot: Buffer.alloc(32, 1)}},
+        {latestStatus: {finalizedRoot: Buffer.alloc(32, 1)}},
         // @ts-ignore
-        {latestHello: {finalizedRoot: Buffer.alloc(32, 0)}},
+        {latestStatus: {finalizedRoot: Buffer.alloc(32, 0)}},
         // @ts-ignore
         {}
       ];
@@ -153,11 +153,11 @@ describe("sync utils", function () {
     it("more than 50% peers have different finalized checkpoint", function () {
       const peers: IReputation[] = [
         // @ts-ignore
-        {latestHello: {finalizedRoot: Buffer.alloc(32, 1)}},
+        {latestStatus: {finalizedRoot: Buffer.alloc(32, 1)}},
         // @ts-ignore
-        {latestHello: {finalizedRoot: Buffer.alloc(32, 0)}},
+        {latestStatus: {finalizedRoot: Buffer.alloc(32, 0)}},
         // @ts-ignore
-        {latestHello: {finalizedRoot: Buffer.alloc(32, 0)}},
+        {latestStatus: {finalizedRoot: Buffer.alloc(32, 0)}},
       ];
       const result = isValidFinalizedCheckPoint(peers, {root: Buffer.alloc(32, 1), epoch: 2});
       expect(result).to.be.false;
@@ -183,7 +183,7 @@ function generateValidChain(start: BeaconBlockHeader, n = 3): BeaconBlock[] {
 function generateReputation(finalizedEpoch: Epoch): IReputation {
   return {
     score: 1,
-    latestHello: {
+    latestStatus: {
       finalizedEpoch: finalizedEpoch || 0,
       finalizedRoot: Buffer.alloc(1),
       headForkVersion: Buffer.alloc(4),

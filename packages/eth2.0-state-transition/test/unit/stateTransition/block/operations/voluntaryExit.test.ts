@@ -1,11 +1,11 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import * as blsModule from "@chainsafe/bls";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   FAR_FUTURE_EPOCH,
 } from "../../../../../src/constants";
 import * as utils from "../../../../../src/util";
+import * as validatorUtils from "../../../../../src/util/validator";
 import {processVoluntaryExit} from "../../../../../src/block/operations";
 
 import {generateValidator} from "../../../../utils/validator";
@@ -16,14 +16,11 @@ describe("process block - voluntary exits", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let isActiveValidatorStub: any, initiateValidatorExitStub: any, blsStub: any;
+  let isActiveValidatorStub: any, initiateValidatorExitStub: any;
 
   beforeEach(() => {
-    isActiveValidatorStub = sandbox.stub(utils, "isActiveValidator");
+    isActiveValidatorStub = sandbox.stub(validatorUtils, "isActiveValidator");
     initiateValidatorExitStub = sandbox.stub(utils, "initiateValidatorExit");
-    blsStub = {
-      verify: sandbox.stub(blsModule, "verify")
-    };
   });
 
   afterEach(() => {
@@ -90,13 +87,11 @@ describe("process block - voluntary exits", function () {
     exit.epoch = 0;
     state.validators.push(generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH}));
     isActiveValidatorStub.returns(true);
-    blsStub.verify.returns(false);
     try {
       processVoluntaryExit(config, state, exit);
       expect.fail();
     } catch (e) {
       expect(isActiveValidatorStub.calledOnce).to.be.true;
-      expect(blsStub.verify.calledOnce).to.be.true;
     }
   });
 
@@ -105,14 +100,12 @@ describe("process block - voluntary exits", function () {
     const state = generateState({slot: (config.params.PERSISTENT_COMMITTEE_PERIOD + 1) * config.params.SLOTS_PER_EPOCH});
     const exit = generateEmptyVoluntaryExit();
     exit.epoch = 0;
-    blsStub.verify.returns(true);
     state.validators.push(validator);
     isActiveValidatorStub.returns(true);
     try {
-      processVoluntaryExit(config, state, exit);
+      processVoluntaryExit(config, state, exit, false);
       expect(isActiveValidatorStub.calledOnce).to.be.true;
       expect(initiateValidatorExitStub.calledOnce).to.be.true;
-      expect(blsStub.verify.calledOnce).to.be.true;
     } catch (e) {
       expect.fail(e.stack);
     }
