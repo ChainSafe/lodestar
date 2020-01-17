@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   getCliFields,
-  IConfigurationField,
-  IConfigurationModule,
   isConfigurationModule,
   validateConfig
 } from "./config";
+import {IConfigurationField, IConfigurationModule} from "@chainsafe/lodestar/lib/util/config";
+
 import {Command} from "commander";
 
 export function generateCommanderOptions(command: Command, optionDescription: IConfigurationModule): void {

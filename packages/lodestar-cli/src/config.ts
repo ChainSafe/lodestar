@@ -1,21 +1,4 @@
-export interface IConfigurationField<T = unknown> {
-  name: string;
-  type: T;
-  description?: string;
-  configurable: boolean;
-  validation?: (input: T) => boolean;
-  process?: (input: string) => T;
-  cli?: {
-    flag: string;
-    short?: string;
-  };
-}
-
-export interface IConfigurationModule {
-  name: string;
-  description?: string;
-  fields: (IConfigurationModule | IConfigurationField<unknown>)[];
-}
+import {IConfigurationField, IConfigurationModule} from "@chainsafe/lodestar/lib/util/config";
 
 export function booleanOption(name: string, flag: string, description = ""): IConfigurationField {
   return {
