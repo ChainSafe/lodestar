@@ -25,12 +25,14 @@ export type uint256 = bigint;
 
 export type Slot = number64;
 export type Epoch = number64;
-export type Shard = number64;
+export type CommitteeIndex = number64;
 export type ValidatorIndex = number64;
 export type Gwei = uint64;
-export type Hash = bytes32;
+export type Root = bytes32;
 export type Version = bytes4;
 export type BLSPubkey = bytes48;
 export type BLSSecretKey = bytes32;
 export type BLSSignature = bytes96;
 export type Domain = bytes8;
+export type BlockRootHex = string;
+export type AttestationRootHex = string;

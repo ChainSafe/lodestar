@@ -7,16 +7,15 @@ import {BitVector} from "@chainsafe/bit-utils";
 
 import {
   Gwei,
-  Hash,
+  Root,
   number64,
-  Shard,
   Slot,
+  bytes32,
 } from "./primitive";
 
 import {
   BeaconBlockHeader,
   Checkpoint,
-  Crosslink,
   Eth1Data,
   Fork,
   PendingAttestation,
@@ -32,9 +31,9 @@ export interface BeaconState {
 
   // History
   latestBlockHeader: BeaconBlockHeader;
-  blockRoots: Hash[];
-  stateRoots: Hash[];
-  historicalRoots: Hash[];
+  blockRoots: Root[];
+  stateRoots: Root[];
+  historicalRoots: Root[];
   
   // Eth1
   eth1Data: Eth1Data;
@@ -46,10 +45,7 @@ export interface BeaconState {
   balances: Gwei[];
 
   // Shuffling
-  startShard: Shard;
-  randaoMixes: Hash[];
-  activeIndexRoots: Hash[];
-  compactCommitteesRoots: Hash[];
+  randaoMixes: bytes32[];
 
   // Slashings
   slashings: Gwei[]; // Balances penalized at every withdrawal period
@@ -57,10 +53,6 @@ export interface BeaconState {
   // Attestations
   previousEpochAttestations: PendingAttestation[];
   currentEpochAttestations: PendingAttestation[];
-
-  // Crosslinks
-  currentCrosslinks: Crosslink[];
-  previousCrosslinks: Crosslink[];
 
   // Finality
   justificationBits: BitVector;

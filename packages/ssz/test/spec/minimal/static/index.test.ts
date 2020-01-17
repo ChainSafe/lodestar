@@ -1,6 +1,6 @@
 import {testStatic} from "../../../util/testCases";
 
-testStatic("AttestationDataAndCustodyBit");
+testStatic("AggregateAndProof");
 testStatic("AttestationData");
 testStatic("Attestation");
 testStatic("AttesterSlashing");
@@ -9,9 +9,13 @@ testStatic("BeaconBlockHeader");
 testStatic("BeaconBlock");
 testStatic("BeaconState");
 testStatic("Checkpoint");
-testStatic("CompactCommittee");
-testStatic("Crosslink");
 testStatic("DepositData");
 testStatic("Deposit");
 testStatic("Eth1Data");
 testStatic("Fork");
+testStatic("HistoricalBatch");
+testStatic("IndexedAttestation");
+testStatic("PendingAttestation");
+testStatic("ProposerSlashing");
+testStatic("Validator");
+testStatic("VoluntaryExit");

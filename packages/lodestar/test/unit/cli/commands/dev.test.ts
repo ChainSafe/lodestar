@@ -4,7 +4,7 @@ import program from "commander";
 
 import chai, {expect} from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import {ILogger, WinstonLogger} from "../../../../lib/logger";
+import {ILogger, WinstonLogger} from "../../../../src/logger";
 import sinon from "sinon";
 
 

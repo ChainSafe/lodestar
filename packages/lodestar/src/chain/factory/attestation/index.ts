@@ -1,10 +1,10 @@
-import {Attestation, BeaconBlock, BeaconState, Shard, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconBlock, BeaconState, Slot, ValidatorIndex, CommitteeIndex} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {IBeaconDb} from "../../../db/api";
 import {assembleAttestationData} from "./data";
 import {BitList} from "@chainsafe/bit-utils";
-import {computeEpochOfSlot, getCrosslinkCommittee} from "@chainsafe/eth2.0-state-transition";
+import {getBeaconCommittee} from "@chainsafe/eth2.0-state-transition";
 import {intDiv} from "@chainsafe/eth2.0-utils";
 
 export async function assembleAttestation(
@@ -12,19 +12,13 @@ export async function assembleAttestation(
   state: BeaconState,
   headBlock: BeaconBlock,
   validatorIndex: ValidatorIndex,
-  shard: Shard,
+  index: CommitteeIndex,
   slot: Slot): Promise<Attestation> {
-  while(state.slot < slot) {
-    state.slot++;
-  }
-
-  const committee = getCrosslinkCommittee(config, state, computeEpochOfSlot(config, slot), shard);
+  const committee = getBeaconCommittee(config, state, slot, index);
   const aggregationBits = getAggregationBits(committee, validatorIndex);
-  const custodyBits = getEmptyBitList(committee.length);
-  const data = await assembleAttestationData(config, db, state, headBlock, shard);
+  const data = await assembleAttestationData(config, db, state, headBlock, slot, index);
   return {
     aggregationBits,
-    custodyBits,
     data,
     signature: undefined
   };

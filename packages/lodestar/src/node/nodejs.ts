@@ -17,6 +17,7 @@ import {ILogger} from "../logger";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 import {ApiService} from "../api";
 import {ReputationStore} from "../sync/IReputation";
+import {GossipMessageValidator} from "../network/gossip/validator";
 import {TasksService} from "../tasks";
 import {initBLS} from "@chainsafe/bls";
 
@@ -79,11 +80,17 @@ export class BeaconNode {
         logger: logger.child(this.conf.logger.db),
       }),
     });
+    const gossipMessageValidator = new GossipMessageValidator(
+      this.db,
+      config,
+      logger.child(this.conf.logger.network),
+    );
     this.network = new Libp2pNetwork(this.conf.network, {
       config,
       libp2p,
       logger: logger.child(this.conf.logger.network),
       metrics: this.metrics,
+      validator: gossipMessageValidator,
     });
     this.eth1 = eth1 || new EthersEth1Notifier(this.conf.eth1, {
       config,
@@ -121,6 +128,7 @@ export class BeaconNode {
         opPool: this.opPool,
         db: this.db,
         sync: this.sync,
+        network: this.network,
         chain: this.chain,
         eth1: this.eth1
       }

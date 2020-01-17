@@ -4,10 +4,14 @@
 
 import PeerInfo from "peer-info";
 import {
-  Epoch, Hash, Slot,
-  RequestBody, Hello, Goodbye,
-  BeaconBlocksByRangeRequest, BeaconBlocksByRangeResponse,
-  BeaconBlocksByRootRequest, BeaconBlocksByRootResponse,
+  BeaconBlocksByRangeRequest,
+  BeaconBlocksByRangeResponse,
+  BeaconBlocksByRootRequest,
+  BeaconBlocksByRootResponse,
+  Epoch,
+  Goodbye,
+  RequestBody,
+  Slot, Status, Root,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -18,6 +22,8 @@ import {INetwork} from "../../network";
 import {ILogger} from "../../logger";
 import {ISyncOptions, ISyncReqResp} from "./interface";
 import {ReputationStore} from "../IReputation";
+import {computeStartSlotAtEpoch} from "@chainsafe/eth2.0-state-transition";
+import {signingRoot} from "@chainsafe/ssz";
 
 export interface ISyncReqRespModules {
   config: IBeaconConfig;
@@ -26,6 +32,12 @@ export interface ISyncReqRespModules {
   network: INetwork;
   reps: ReputationStore;
   logger: ILogger;
+}
+
+enum GoodByeReasonCode {
+  CLIENT_SHUTDOWN = 1,
+  IRRELEVANT_NETWORK = 2,
+  ERROR = 3,
 }
 
 /**
@@ -56,7 +68,7 @@ export class SyncReqResp implements ISyncReqResp {
     this.network.reqResp.on("request", this.onRequest);
     await Promise.all(
       this.network.getPeers().map(async (peerInfo) =>
-        this.network.reqResp.hello(peerInfo, await this.createHello())));
+        this.network.reqResp.status(peerInfo, await this.createStatus())));
   }
 
   public async stop(): Promise<void> {
@@ -64,7 +76,7 @@ export class SyncReqResp implements ISyncReqResp {
     this.network.reqResp.removeListener("request", this.onRequest);
     await Promise.all(
       this.network.getPeers().map((peerInfo) =>
-        this.network.reqResp.goodbye(peerInfo, 0n)));
+        this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN))));
   }
 
   public onRequest = async (
@@ -74,8 +86,8 @@ export class SyncReqResp implements ISyncReqResp {
     body: RequestBody,
   ): Promise<void> => {
     switch (method) {
-      case Method.Hello:
-        return await this.onHello(peerInfo, id, body as Hello);
+      case Method.Status:
+        return await this.onStatus(peerInfo, id, body as Status);
       case Method.Goodbye:
         return await this.onGoodbye(peerInfo, id, body as Goodbye);
       case Method.BeaconBlocksByRange:
@@ -87,17 +99,34 @@ export class SyncReqResp implements ISyncReqResp {
     }
   };
 
-  public async onHello(peerInfo: PeerInfo, id: RequestId, request: Hello): Promise<void> {
-    // set hello on peer
-    this.reps.get(peerInfo.id.toB58String()).latestHello = request;
-    // send hello response
+  public async onStatus(peerInfo: PeerInfo, id: RequestId, request: Status): Promise<void> {
+    // set status on peer
+    this.reps.get(peerInfo.id.toB58String()).latestStatus = request;
+    // send status response
     try {
-      const hello = await this.createHello();
-      this.network.reqResp.sendResponse(id, null, hello);
+      const status = await this.createStatus();
+      this.network.reqResp.sendResponse(id, null, status);
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);
     }
-    // TODO handle incorrect forkVersion or disjoint finalizedCheckpoint
+    if (await this.shouldDisconnectOnStatus(request)) {
+      this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
+    }
+  }
+
+  public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
+    const headBlock = await this.db.block.getChainHead();
+    const state = await this.db.state.get(headBlock.stateRoot);
+    if (!state.fork.currentVersion.equals(request.headForkVersion)) {
+      return true;
+    }
+    const startSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
+    const startBlock = await this.db.blockArchive.get(startSlot);
+    if (state.finalizedCheckpoint.epoch >= request.finalizedEpoch &&
+       !request.finalizedRoot.equals(signingRoot(this.config.types.BeaconBlock, startBlock))) {
+      return true;
+    }
+    return false;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -111,7 +140,11 @@ export class SyncReqResp implements ISyncReqResp {
   ): Promise<void> {
     try {
       const response: BeaconBlocksByRangeResponse = [];
-      const blocks = await this.db.blockArchive.getAllBetween(request.startSlot - 1, request.startSlot + request.count);
+      const blocks = await this.db.blockArchive.getAllBetween(
+        request.startSlot - 1,
+        request.startSlot + request.count,
+        request.step
+      );
       response.push(...blocks);
       this.network.reqResp.sendResponse(id, null, response);
     } catch (e) {
@@ -137,11 +170,11 @@ export class SyncReqResp implements ISyncReqResp {
     }
   }
 
-  private async createHello(): Promise<Hello> {
+  private async createStatus(): Promise<Status> {
     let headSlot: Slot,
-      headRoot: Hash,
+      headRoot: Root,
       finalizedEpoch: Epoch,
-      finalizedRoot: Hash;
+      finalizedRoot: Root;
     if (!this.chain.isInitialized()) {
       headSlot = 0;
       headRoot = ZERO_HASH;
@@ -149,11 +182,9 @@ export class SyncReqResp implements ISyncReqResp {
       finalizedRoot = ZERO_HASH;
     } else {
       headSlot = await this.db.chain.getChainHeadSlot();
-      const [bRoot, state] = await Promise.all([
-        this.db.chain.getBlockRoot(headSlot),
-        this.db.state.getLatest(),
-      ]);
-      headRoot = bRoot;
+      const headBlock = await this.db.block.getChainHead();
+      const state = await this.db.state.get(headBlock.stateRoot);
+      headRoot = signingRoot(this.config.types.BeaconBlock, headBlock);
       finalizedEpoch = state.finalizedCheckpoint.epoch;
       finalizedRoot = state.finalizedCheckpoint.root;
     }
@@ -171,12 +202,12 @@ export class SyncReqResp implements ISyncReqResp {
     await new Promise((resolve) => setTimeout(resolve, randomDelay));
     if (
       this.network.hasPeer(peerInfo) &&
-      !this.reps.get(peerInfo.id.toB58String()).latestHello
+      !this.reps.get(peerInfo.id.toB58String()).latestStatus
     ) {
-      const request = await this.createHello();
+      const request = await this.createStatus();
       try {
-        const response = await this.network.reqResp.hello(peerInfo, request);
-        this.reps.get(peerInfo.id.toB58String()).latestHello = response;
+        const response = await this.network.reqResp.status(peerInfo, request);
+        this.reps.get(peerInfo.id.toB58String()).latestStatus = response;
       } catch (e) {
         this.logger.error(e);
       }

@@ -1,48 +1,36 @@
 {
   "name": "@chainsafe/ssz",
-  "version": "0.5.2",
   "description": "Simple Serialize",
+  "license": "Apache-2.0",
+  "author": "ChainSafe Systems",
+  "homepage": "https://github.com/chainsafe/ssz-js",
+  "version": "0.5.2",
   "main": "lib/index.js",
-  "types": "lib/index.d.ts",
   "files": [
+    "lib/**/*.d.ts",
     "lib/**/*.js",
-    "lib/**/*.js.map",
-    "lib/**/*.d.ts"
+    "lib/**/*.js.map"
   ],
   "scripts": {
-    "clean": "rm -rf lib && rm -rf dist && rm -f tsconfig.tsbuildinfo",
     "build": "yarn build-lib && yarn build-types",
-    "build:release": "yarn clean && yarn run build && yarn build-web && yarn run build:docs",
-    "build:docs": "typedoc --exclude src/index.ts,src/web.ts --out docs src",
     "build-lib": "babel src -x .ts -d lib --source-maps",
     "build-types": "tsc --incremental --declaration --outDir lib --emitDeclarationOnly",
     "build-web": "webpack --mode production --entry ./lib/web.js --output ./dist/ssz.min.js",
+    "build:docs": "typedoc --exclude src/index.ts,src/web.ts --out docs src",
+    "build:release": "yarn clean && yarn run build && yarn build-web && yarn run build:docs",
     "check-types": "tsc --incremental --noEmit",
+    "clean": "rm -rf lib && rm -rf dist && rm -f tsconfig.tsbuildinfo",
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "eslint --color --fix --ext .ts src/",
-    "pretest": "yarn check-types",
     "prepublishOnly": "yarn build",
+    "pretest": "yarn check-types",
     "test:spec": "nyc -r lcov -e .ts mocha  --colors --timeout 4000 -r ./.babel-register \"test/spec/**/*.test.ts\" && nyc report",
     "test:spec-min": "yarn test:spec",
     "test:unit": "nyc -e .ts mocha --colors -r ts-node/register \"test/unit/**/*.test.ts\""
   },
-  "homepage": "https://github.com/chainsafe/ssz-js",
-  "keywords": [
-    "ethereum",
-    "serenity",
-    "simple serialize",
-    "ssz"
-  ],
-  "author": "ChainSafe Systems",
-  "license": "Apache-2.0",
-  "devDependencies": {
-    "@types/chai": "^4.1.7",
-    "@types/mocha": "^5.2.7",
-    "chai": "^4.2.0",
-    "mocha": "^6.2.0"
-  },
+  "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/bit-utils": "^0.1.4",
+    "@chainsafe/bit-utils": "0.1.6",
     "@chainsafe/merkle-tree": "/home/cayman/Code/merkle-tree/",
     "@chainsafe/ssz-type-schema": "^0.0.1",
     "@types/bn.js": "^4.11.5",
@@ -51,5 +39,17 @@
     "benchmark": "^2.1.4",
     "bigint-buffer": "^1.1.5",
     "bn.js": "^5.0.0"
-  }
+  },
+  "devDependencies": {
+    "@types/chai": "^4.1.7",
+    "@types/mocha": "^5.2.7",
+    "chai": "^4.2.0",
+    "mocha": "^6.2.0"
+  },
+  "keywords": [
+    "ethereum",
+    "serenity",
+    "simple serialize",
+    "ssz"
+  ]
 }

@@ -11,8 +11,6 @@ import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH,} from "../../
 import {computeDomain, increaseBalance} from "../../util";
 import {bigIntMin, verifyMerkleBranch} from "@chainsafe/eth2.0-utils";
 
-// See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#deposits
-
 /**
  * Process an Eth1 deposit, registering a validator or increasing its balance.
  */

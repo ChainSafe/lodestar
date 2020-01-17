@@ -63,12 +63,7 @@ export function getAttestationDeltas(config: IBeaconConfig, state: BeaconState):
     const proposerReward = baseReward / BigInt(config.params.PROPOSER_REWARD_QUOTIENT);
     rewards[earliestAttestation.proposerIndex] += proposerReward;
     const maxAttesterReward = baseReward - proposerReward;
-    rewards[index] += (
-      maxAttesterReward * BigInt(
-        config.params.SLOTS_PER_EPOCH +
-          config.params.MIN_ATTESTATION_INCLUSION_DELAY -
-          earliestAttestation.inclusionDelay
-      ) / BigInt(config.params.SLOTS_PER_EPOCH));
+    rewards[index] += maxAttesterReward / BigInt(earliestAttestation.inclusionDelay);
   });
 
   // Inactivity penalty

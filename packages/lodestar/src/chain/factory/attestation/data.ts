@@ -1,22 +1,22 @@
-import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
-import {AttestationData, BeaconBlock, BeaconState, Crosslink, Epoch, Shard, Hash} from "@chainsafe/eth2.0-types";
+import {signingRoot} from "@chainsafe/ssz";
+import {AttestationData, BeaconBlock, BeaconState, CommitteeIndex, Slot, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {ZERO_HASH} from "../../../constants";
 import {IBeaconDb} from "../../../db/api";
-import {computeStartSlotOfEpoch, getBlockRootAtSlot, getCurrentEpoch} from "@chainsafe/eth2.0-state-transition";
+import {computeStartSlotAtEpoch, getBlockRootAtSlot, getCurrentEpoch} from "@chainsafe/eth2.0-state-transition";
 
 export async function assembleAttestationData(
   config: IBeaconConfig,
   db: IBeaconDb,
   headState: BeaconState,
   headBlock: BeaconBlock,
-  shard: Shard): Promise<AttestationData> {
+  slot: Slot,
+  index: CommitteeIndex): Promise<AttestationData> {
 
   const currentEpoch = getCurrentEpoch(config, headState);
-  const epochStartSlot = computeStartSlotOfEpoch(config, currentEpoch);
+  const epochStartSlot = computeStartSlotAtEpoch(config, currentEpoch);
 
-  let epochBoundaryBlockRoot: Hash;
+  let epochBoundaryBlockRoot: Root;
   if (epochStartSlot === headState.slot) {
     epochBoundaryBlockRoot = signingRoot(config.types.BeaconBlock, headBlock);
   } else {
@@ -27,29 +27,13 @@ export async function assembleAttestationData(
   }
 
   return {
-    crosslink: getCrosslinkVote(config, headState, shard, currentEpoch),
+    slot,
+    index,
     beaconBlockRoot: signingRoot(config.types.BeaconBlock, headBlock),
     source: headState.currentJustifiedCheckpoint,
     target: {
       epoch: currentEpoch,
       root: epochBoundaryBlockRoot,
     },
-  };
-}
-
-
-export function getCrosslinkVote(
-  config: IBeaconConfig,
-  state: BeaconState,
-  shard: Shard,
-  targetEpoch: Epoch
-): Crosslink {
-  const parentCrosslink = state.currentCrosslinks[shard];
-  return  {
-    startEpoch: parentCrosslink.endEpoch,
-    endEpoch: Math.min(targetEpoch, parentCrosslink.endEpoch + config.params.MAX_EPOCHS_PER_CROSSLINK),
-    dataRoot: ZERO_HASH,
-    shard: shard,
-    parentRoot: hashTreeRoot(config.types.Crosslink, state.currentCrosslinks[shard])
   };
 }

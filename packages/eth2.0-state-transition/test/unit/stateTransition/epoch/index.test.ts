@@ -6,7 +6,6 @@ import {GENESIS_SLOT} from "../../../../src/constants";
 import {processEpoch} from "../../../../src/epoch";
 import * as justificationUtils from "../../../../src/epoch/justification";
 import {processJustificationAndFinalization} from "../../../../src/epoch/justification";
-import * as crosslinkUtils from "../../../../src/epoch/crosslinks";
 import * as balanceUpdateUtils from "../../../../src/epoch/balanceUpdates";
 import {processRewardsAndPenalties} from "../../../../src/epoch/balanceUpdates";
 import * as registryUpdateUtils from "../../../../src/epoch/registryUpdates";
@@ -21,7 +20,6 @@ describe('process epoch - crosslinks', function () {
   const sandbox = sinon.createSandbox();
 
   let processJustificationAndFinalizationStub: any,
-    processCrosslinksStub: any,
     processRewardsAndPenaltiesStub: any,
     processRegistryUpdatesStub: any,
     processSlashingsStub: any,
@@ -30,8 +28,6 @@ describe('process epoch - crosslinks', function () {
   beforeEach(() => {
     processJustificationAndFinalizationStub =
       sandbox.stub(justificationUtils, "processJustificationAndFinalization");
-    processCrosslinksStub = sandbox.stub(
-      crosslinkUtils, "processCrosslinks");
     processRewardsAndPenaltiesStub = sandbox.stub(
       balanceUpdateUtils, "processRewardsAndPenalties");
     processRegistryUpdatesStub = sandbox.stub(
@@ -68,7 +64,6 @@ describe('process epoch - crosslinks', function () {
     try {
       processEpoch(config, generateState({slot: config.params.SLOTS_PER_EPOCH - 1}));
       expect(processJustificationAndFinalizationStub.calledOnce).to.be.true;
-      expect(processCrosslinksStub.calledOnce).to.be.true;
       expect(processRewardsAndPenaltiesStub.calledOnce).to.be.true;
       expect(processRegistryUpdatesStub.calledOnce).to.be.true;
       expect(processSlashingsStub.calledOnce).to.be.true;

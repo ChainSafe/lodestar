@@ -17,10 +17,10 @@ export interface IBeaconSSZTypes {
   uint256: AnySSZType<t.uint256>;
   Slot: AnySSZType<t.Slot>;
   Epoch: AnySSZType<t.Epoch>;
-  Shard: AnySSZType<t.Shard>;
+  CommitteeIndex: AnySSZType<t.CommitteeIndex>;
   ValidatorIndex: AnySSZType<t.ValidatorIndex>;
   Gwei: AnySSZType<t.Gwei>;
-  Hash: AnySSZType<t.Hash>;
+  Root: AnySSZType<t.Root>;
   Version: AnySSZType<t.Version>;
   BLSPubkey: AnySSZType<t.BLSPubkey>;
   BLSSignature: AnySSZType<t.BLSSignature>;
@@ -28,15 +28,12 @@ export interface IBeaconSSZTypes {
   Fork: AnyContainerType<t.Fork>;
   Checkpoint: AnyContainerType<t.Checkpoint>;
   Validator: AnyContainerType<t.Validator>;
-  Crosslink: AnyContainerType<t.Crosslink>;
   AttestationData: AnyContainerType<t.AttestationData>;
-  AttestationDataAndCustodyBit: AnyContainerType<t.AttestationDataAndCustodyBit>;
   IndexedAttestation: AnyContainerType<t.IndexedAttestation>;
   PendingAttestation: AnyContainerType<t.PendingAttestation>;
   Eth1Data: AnyContainerType<t.Eth1Data>;
   HistoricalBatch: AnyContainerType<t.HistoricalBatch>;
   DepositData: AnyContainerType<t.DepositData>;
-  CompactCommittee: AnyContainerType<t.CompactCommittee>;
   BeaconBlockHeader: AnyContainerType<t.BeaconBlockHeader>;
   FFGData: AnyContainerType<t.FFGData>;
   MerkleTree: AnyContainerType<t.MerkleTree>;
@@ -46,14 +43,18 @@ export interface IBeaconSSZTypes {
   Attestation: AnyContainerType<t.Attestation>;
   Deposit: AnyContainerType<t.Deposit>;
   VoluntaryExit: AnyContainerType<t.VoluntaryExit>;
-  Transfer: AnyContainerType<t.Transfer>;
   // block
   BeaconBlockBody: AnyContainerType<t.BeaconBlockBody>;
   BeaconBlock: AnyContainerType<t.BeaconBlock>;
   // state
   BeaconState: AnyContainerType<t.BeaconState>;
+  // Validator
+  AggregateAndProof: AnyContainerType;
+  CommitteeAssignment: AnyContainerType;
+  SyncingStatus: AnyContainerType;
+  ValidatorDuty: AnyContainerType;
   // wire
-  Hello: AnyContainerType<t.Hello>;
+  Status: AnyContainerType;
   Goodbye: AnyContainerType<t.Goodbye>;
   BeaconBlocksByRangeRequest: AnyContainerType<t.BeaconBlocksByRangeRequest>;
   BeaconBlocksByRangeResponse: AnyContainerType<t.BeaconBlocksByRangeResponse>;
@@ -79,7 +80,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "uint256",
   "Slot",
   "Epoch",
-  "Shard",
+  "CommitteeIndex",
   "ValidatorIndex",
   "Gwei",
   "BLSPubkey",
@@ -89,15 +90,12 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "Fork",
   "Checkpoint",
   "Validator",
-  "Crosslink",
   "AttestationData",
-  "AttestationDataAndCustodyBit",
   "IndexedAttestation",
   "PendingAttestation",
   "Eth1Data",
   "HistoricalBatch",
   "DepositData",
-  "CompactCommittee",
   "BeaconBlockHeader",
   "FFGData",
   "MerkleTree",
@@ -107,14 +105,18 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "Attestation",
   "Deposit",
   "VoluntaryExit",
-  "Transfer",
   // block
   "BeaconBlockBody",
   "BeaconBlock",
   // state
   "BeaconState",
+  //validator
+  "AggregateAndProof",
+  "CommitteeAssignment",
+  "SyncingStatus",
+  "ValidatorDuty",
   // wire
-  "Hello",
+  "Status",
   "Goodbye",
   "BeaconBlocksByRangeRequest",
   "BeaconBlocksByRangeResponse",

@@ -19,14 +19,14 @@ export const Fork = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
 export const Checkpoint = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
     ["epoch", ssz.Epoch],
-    ["root", ssz.Hash],
+    ["root", ssz.Root],
   ],
 });
 
 export const Validator = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
     ["pubkey", ssz.BLSPubkey],
-    ["withdrawalCredentials", ssz.Hash],
+    ["withdrawalCredentials", ssz.bytes32],
     ["effectiveBalance", ssz.Gwei],
     ["slashed", ssz.bool],
     ["activationEligibilityEpoch", ssz.Epoch],
@@ -36,39 +36,19 @@ export const Validator = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const Crosslink = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  fields: [
-    ["shard", ssz.Shard],
-    ["parentRoot", ssz.Hash],
-    ["startEpoch", ssz.Epoch],
-    ["endEpoch", ssz.Epoch],
-    ["dataRoot", ssz.Hash],
-  ],
-});
-
 export const AttestationData = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
-    ["beaconBlockRoot", ssz.Hash],
+    ["slot", ssz.Slot],
+    ["index", ssz.CommitteeIndex],
+    ["beaconBlockRoot", ssz.Root],
     ["source", ssz.Checkpoint],
     ["target", ssz.Checkpoint],
-    ["crosslink", ssz.Crosslink],
-  ],
-});
-
-export const AttestationDataAndCustodyBit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  fields: [
-    ["data", ssz.AttestationData],
-    ["custodyBit", ssz.bool],
   ],
 });
 
 export const IndexedAttestation = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
   fields: [
-    ["custodyBit0Indices", {
-      elementType: ssz.ValidatorIndex,
-      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
-    }],
-    ["custodyBit1Indices", {
+    ["attestingIndices", {
       elementType: ssz.ValidatorIndex,
       maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
     }],
@@ -91,20 +71,20 @@ export const PendingAttestation = (ssz: IBeaconSSZTypes, params: IBeaconParams):
 
 export const Eth1Data = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
-    ["depositRoot", ssz.Hash],
+    ["depositRoot", ssz.Root],
     ["depositCount", ssz.number64],
-    ["blockHash", ssz.Hash],
+    ["blockHash", ssz.bytes32],
   ],
 });
 
 export const HistoricalBatch = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
   fields: [
     ["blockRoots", {
-      elementType: ssz.Hash,
+      elementType: ssz.Root,
       length: params.SLOTS_PER_HISTORICAL_ROOT,
     }],
     ["stateRoots", {
-      elementType: ssz.Hash,
+      elementType: ssz.Root,
       length: params.SLOTS_PER_HISTORICAL_ROOT,
     }],
   ],
@@ -113,31 +93,18 @@ export const HistoricalBatch = (ssz: IBeaconSSZTypes, params: IBeaconParams): Si
 export const DepositData = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
     ["pubkey", ssz.BLSPubkey],
-    ["withdrawalCredentials", ssz.Hash],
+    ["withdrawalCredentials", ssz.bytes32],
     ["amount", ssz.Gwei],
     ["signature", ssz.BLSSignature],
-  ],
-});
-
-export const CompactCommittee = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
-  fields: [
-    ["pubkeys", {
-      elementType: ssz.BLSPubkey,
-      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
-    }],
-    ["compactValidators", {
-      elementType: ssz.uint64,
-      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
-    }],
   ],
 });
 
 export const BeaconBlockHeader = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
     ["slot", ssz.Slot],
-    ["parentRoot", ssz.Hash],
-    ["stateRoot", ssz.Hash],
-    ["bodyRoot", ssz.Hash],
+    ["parentRoot", ssz.Root],
+    ["stateRoot", ssz.Root],
+    ["bodyRoot", ssz.Root],
     ["signature", ssz.BLSSignature],
   ],
 });
@@ -154,7 +121,7 @@ export const MerkleTree = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
     ["depth", ssz.number64],
     ["tree", {
       elementType: {
-        elementType: ssz.Hash,
+        elementType: ssz.bytes32,
         maxLength: DEPOSIT_CONTRACT_TREE_DEPTH + 1,
       },
       maxLength: DEPOSIT_CONTRACT_TREE_DEPTH + 1,

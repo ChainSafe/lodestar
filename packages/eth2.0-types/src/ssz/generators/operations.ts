@@ -30,10 +30,6 @@ export const Attestation = (ssz: IBeaconSSZTypes, params: IBeaconParams): Simple
       maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
     }],
     ["data", ssz.AttestationData],
-    ["custodyBits", {
-      elementType: ssz.bool,
-      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
-    }],
     ["signature", ssz.BLSSignature],
   ],
 });
@@ -41,7 +37,7 @@ export const Attestation = (ssz: IBeaconSSZTypes, params: IBeaconParams): Simple
 export const Deposit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
     ["proof", {
-      elementType: ssz.Hash,
+      elementType: ssz.bytes32,
       length: DEPOSIT_CONTRACT_TREE_DEPTH + 1,
     }],
     ["data", ssz.DepositData],
@@ -52,18 +48,6 @@ export const VoluntaryExit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
     ["epoch", ssz.Epoch],
     ["validatorIndex", ssz.ValidatorIndex],
-    ["signature", ssz.BLSSignature],
-  ],
-});
-
-export const Transfer = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  fields: [
-    ["sender", ssz.ValidatorIndex],
-    ["recipient", ssz.ValidatorIndex],
-    ["amount", ssz.Gwei],
-    ["fee", ssz.Gwei],
-    ["slot", ssz.Slot],
-    ["pubkey", ssz.BLSPubkey],
     ["signature", ssz.BLSSignature],
   ],
 });

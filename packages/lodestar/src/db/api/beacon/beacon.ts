@@ -2,10 +2,11 @@
  * @module db/api/beacon
  */
 
-import {BeaconBlock, BeaconState, BLSPubkey, Hash, ValidatorIndex,} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconState, BLSPubkey, ValidatorIndex, Root,} from "@chainsafe/eth2.0-types";
 import {DatabaseService, IDatabaseApiOptions} from "../abstract";
 import {IBeaconDb} from "./interface";
 import {
+  AggregateAndProofRepository,
   AttestationRepository,
   AttesterSlashingRepository,
   BlockRepository,
@@ -14,7 +15,6 @@ import {
   MerkleTreeRepository,
   ProposerSlashingRepository,
   StateRepository,
-  TransfersRepository,
   VoluntaryExitRepository
 } from "./repositories";
 import {BlockArchiveRepository} from "./repositories/blockArchive";
@@ -31,9 +31,9 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   public attestation: AttestationRepository;
 
-  public voluntaryExit: VoluntaryExitRepository;
+  public aggregateAndProof: AggregateAndProofRepository;
 
-  public transfer: TransfersRepository;
+  public voluntaryExit: VoluntaryExitRepository;
 
   public proposerSlashing: ProposerSlashingRepository;
 
@@ -50,8 +50,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.block = new BlockRepository(this.config, this.db, this.chain);
     this.blockArchive = new BlockArchiveRepository(this.config, this.db);
     this.attestation = new AttestationRepository(this.config, this.db);
+    this.aggregateAndProof = new AggregateAndProofRepository(this.config, this.db);
     this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db);
-    this.transfer = new TransfersRepository(this.config, this.db);
     this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db);
     this.attesterSlashing = new AttesterSlashingRepository(this.config, this.db);
     this.deposit = new DepositRepository(this.config, this.db);
@@ -74,8 +74,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   }
 
   public async updateChainHead(
-    blockRoot: Hash,
-    stateRoot: Hash
+    blockRoot: Root,
+    stateRoot: Root
   ): Promise<void> {
     const [storedBlock, storedState] = await Promise.all([
       this.block.get(blockRoot),
@@ -95,8 +95,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
       this.chain.setChainHeadSlot(slot)
     ]);
   }
-
-
 
   public async getValidatorIndex(publicKey: BLSPubkey): Promise<ValidatorIndex> {
     const state = await this.state.getLatest();

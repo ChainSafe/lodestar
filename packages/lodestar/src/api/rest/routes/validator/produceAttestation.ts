@@ -18,7 +18,7 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   schema: {
     querystring: {
       type: "object",
-      required: ["validator_pubkey", "poc_bit", "slot", "shard"],
+      required: ["validator_pubkey", "poc_bit", "slot", "committee_index"],
       properties: {
         "validator_pubkey": {
           type: "string"
@@ -27,7 +27,7 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
           type: "integer",
           minimum: 0
         },
-        shard: {
+        "committee_index": {
           type: "integer",
           minimum: 0
         },
@@ -48,7 +48,7 @@ export const registerAttestationProductionEndpoint = (fastify: IFastifyServer, m
       const attestation = await produceAttestation(
         {db: modules.db, chain: modules.chain, config: modules.config},
         Buffer.from(request.query.validator_pubkey.replace("0x", ""), "hex"),
-        request.query.shard,
+        request.query.committee_index,
         request.query.slot
       );
       reply

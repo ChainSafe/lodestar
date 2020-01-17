@@ -3,11 +3,11 @@ import {expect} from "chai";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
+  AggregateAndProofOperations,
   AttestationOperations,
   DepositsOperations,
   OpPool,
   ProposerSlashingOperations,
-  TransferOperations,
   VoluntaryExitOperations
 } from "../../../../../src/opPool";
 import {assembleBody} from "../../../../../src/chain/factory/block/body";
@@ -24,19 +24,19 @@ describe("blockAssembly - body", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let opPool: OpPool, eth1, generateDepositsStub;
+  let opPool: OpPool, eth1: any, generateDepositsStub: any;
 
   beforeEach(() => {
     opPool = {
-      attestations: sandbox.createStubInstance(AttestationOperations),
+      aggregateAndProofs: sandbox.createStubInstance(AggregateAndProofOperations),
       voluntaryExits: sandbox.createStubInstance(VoluntaryExitOperations),
       deposits: sandbox.createStubInstance(DepositsOperations),
-      transfers: sandbox.createStubInstance(TransferOperations),
       proposerSlashings: sandbox.createStubInstance(ProposerSlashingOperations),
       attesterSlashings: sandbox.createStubInstance(AttestationOperations),
     } as unknown as OpPool;
     generateDepositsStub = sandbox.stub(depositUtils, "generateDeposits");
     eth1 = sandbox.createStubInstance(EthersEth1Notifier);
+    eth1.getEth1Vote = sandbox.stub();
   });
 
   afterEach(() => {
@@ -49,11 +49,11 @@ describe("blockAssembly - body", function () {
     // @ts-ignore
     opPool.attesterSlashings.getAll.resolves([generateEmptyAttesterSlashing()]);
     // @ts-ignore
-    opPool.attestations.getValid.resolves([generateEmptyAttestation()]);
+    opPool.aggregateAndProofs.getBlockAttestations.resolves([generateEmptyAttestation()]);
     // @ts-ignore
     opPool.voluntaryExits.getAll.resolves([generateEmptyVoluntaryExit()]);
     generateDepositsStub.resolves([generateDeposit()]);
-    eth1.getEth1Data.resolves([]);
+    eth1.getEth1Vote.resolves([]);
     const result = await assembleBody(
       config,
       opPool,
@@ -69,21 +69,28 @@ describe("blockAssembly - body", function () {
     expect(result.voluntaryExits.length).to.be.equal(1);
     expect(result.proposerSlashings.length).to.be.equal(1);
     expect(result.deposits.length).to.be.equal(1);
-    expect(result.transfers.length).to.be.equal(0);
-    expect(eth1.getEth1Data.calledOnce).to.be.true;
+    expect(eth1.getEth1Vote.calledOnce).to.be.true;
   });
 
   it("should generate block body with max respective field lengths", async function() {
     // @ts-ignore
-    opPool.proposerSlashings.getAll.resolves(new Array(config.params.MAX_PROPOSER_SLASHINGS + 1).map(generateEmptyProposerSlashing));
+    opPool.proposerSlashings.getAll.resolves(
+      new Array(config.params.MAX_PROPOSER_SLASHINGS + 1).map(generateEmptyProposerSlashing)
+    );
     // @ts-ignore
-    opPool.attesterSlashings.getAll.resolves(new Array(config.params.MAX_ATTESTER_SLASHINGS + 1).map(generateEmptyAttesterSlashing));
+    opPool.attesterSlashings.getAll.resolves(
+      new Array(config.params.MAX_ATTESTER_SLASHINGS + 1).map(generateEmptyAttesterSlashing)
+    );
     // @ts-ignore
-    opPool.attestations.getValid.resolves(new Array(config.params.MAX_ATTESTATIONS + 1).map(generateEmptyAttestation));
+    opPool.aggregateAndProofs.getBlockAttestations.resolves(
+        
+      new Array(config.params.MAX_ATTESTATIONS + 1).map(generateEmptyAttestation));
     // @ts-ignore
-    opPool.voluntaryExits.getAll.resolves(new Array(config.params.MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit));
+    opPool.voluntaryExits.getAll.resolves(
+      new Array(config.params.MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit)
+    );
     generateDepositsStub.resolves([generateDeposit()]);
-    eth1.getEth1Data.resolves([]);
+    eth1.getEth1Vote.resolves([]);
     const result = await assembleBody(
       config,
       opPool,
@@ -99,7 +106,6 @@ describe("blockAssembly - body", function () {
     expect(result.voluntaryExits.length).to.be.equal(config.params.MAX_VOLUNTARY_EXITS);
     expect(result.proposerSlashings.length).to.be.equal(config.params.MAX_PROPOSER_SLASHINGS);
     expect(result.deposits.length).to.be.equal(1);
-    expect(result.transfers.length).to.be.equal(0);
-    expect(eth1.getEth1Data.calledOnce).to.be.true;
+    expect(eth1.getEth1Vote.calledOnce).to.be.true;
   });
 });

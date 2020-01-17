@@ -14,6 +14,18 @@ export function intToBytes(value: bigint | number, length: number): bytes {
   }
 }
 
+/**
+ * Convert byte array in LE to integer.
+ */
+export function bytesToInt(value: bytes): number {
+  const length = value.length;
+  let result = 0;
+  for (let i = 0; i < length; i++) {
+    result += value[i] * 2 ** (8 * i);
+  }
+  return result;
+}
+
 export function bytesToBigInt(value: bytes): bigint {
   return toBigIntLE(value);
 }

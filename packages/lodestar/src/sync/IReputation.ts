@@ -1,10 +1,10 @@
 /**
  * @module sync
  */
-import {Hello} from "@chainsafe/eth2.0-types";
+import {Status} from "@chainsafe/eth2.0-types";
 
 export interface IReputation {
-  latestHello: Hello | null;
+  latestStatus: Status | null;
   score: number;
 }
 
@@ -15,7 +15,7 @@ export class ReputationStore {
   }
   public add(peerId: string): IReputation {
     const reputation: IReputation = {
-      latestHello: null,
+      latestStatus: null,
       score: 0
     };
     this.reputations.set(peerId, reputation);

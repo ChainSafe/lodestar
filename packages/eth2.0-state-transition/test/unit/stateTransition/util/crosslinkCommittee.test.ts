@@ -2,10 +2,9 @@ import { assert } from "chai";
 
 import {
   computeShuffledIndex,
-  getCommitteeCount,
-  getShardDelta,
+  getCommitteeCountAtSlot,
   computeCommittee,
-  getCrosslinkCommittee,
+  getBeaconCommittee,
 } from "../../../../src/util";
 
 

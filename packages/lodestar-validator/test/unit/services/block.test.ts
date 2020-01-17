@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {Keypair} from "@chainsafe/bls";
 import {describe, it, beforeEach, afterEach} from "mocha";
-import {ILogger} from "../../../lib/logger/interface";
+import {ILogger} from "../../../src";
 import {WinstonLogger} from "@chainsafe/lodestar/lib/logger";
 import {ApiClientOverInstance} from "../../../src/api";
 import {ValidatorDB} from "@chainsafe/lodestar/lib/db";

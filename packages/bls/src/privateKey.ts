@@ -1,7 +1,8 @@
 import {SECRET_KEY_LENGTH} from "./constants";
 import assert from "assert";
-import {BLSSecretKey, Domain, Hash} from "@chainsafe/eth2.0-types";
+import {BLSSecretKey, Domain, bytes32} from "@chainsafe/eth2.0-types";
 import {SecretKeyType} from "@chainsafe/eth2-bls-wasm";
+import {generateRandomSecretKey} from "@chainsafe/bls-keygen";
 import {getContext} from "./context";
 import {PublicKey} from "./publicKey";
 import {Signature} from "./signature";
@@ -38,10 +39,8 @@ export class PrivateKey {
   }
 
   public static random(): PrivateKey {
-    const context = getContext();
-    const secretKey = new context.SecretKey();
-    secretKey.setByCSPRNG();
-    return new PrivateKey(secretKey);
+    const randomKey: Buffer = generateRandomSecretKey();
+    return this.fromBytes(randomKey);
   }
 
   public getValue(): SecretKeyType {
@@ -52,7 +51,7 @@ export class PrivateKey {
   //   return Signature.fromValue(this.value.sign(message));
   // }
 
-  public signMessage(message: Hash, domain: Domain): Signature {
+  public signMessage(message: bytes32, domain: Domain): Signature {
     domain = padLeft(domain, 8);
     return Signature.fromValue(this.value.signHashWithDomain(Buffer.concat([message, domain])));
   }

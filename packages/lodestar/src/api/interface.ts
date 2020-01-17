@@ -10,6 +10,7 @@ import {ApiNamespace} from "./index";
 import {ILogger} from "../logger";
 import {Sync} from "../sync";
 import {OpPool} from "../opPool";
+import {INetwork} from "../network";
 
 export interface IApiModules {
   config: IBeaconConfig;
@@ -17,6 +18,7 @@ export interface IApiModules {
   chain: IBeaconChain;
   opPool: OpPool;
   sync: Sync;
+  network: INetwork;
   db: IBeaconDb;
   eth1: IEth1Notifier;
 }

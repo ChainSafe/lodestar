@@ -1,39 +1,39 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 import {
-  Slot, Epoch, Hash, number64, Version, uint64,
+  Slot, Epoch, Root, number64, Version, uint64,
 } from "./primitive";
 import {BeaconBlock} from "./block";
 
 export type RequestId = string;
 
 export type RequestBody =
-  Hello |
+  Status |
   Goodbye |
   BeaconBlocksByRangeRequest |
   BeaconBlocksByRootRequest;
 
 export type ResponseBody =
-  Hello |
+  Status |
   Goodbye |
   BeaconBlocksByRangeResponse |
   BeaconBlocksByRootResponse;
 
-export interface Hello {
+export interface Status {
   headForkVersion: Version;
-  finalizedRoot: Hash;
+  finalizedRoot: Root;
   finalizedEpoch: Epoch;
-  headRoot: Hash;
+  headRoot: Root;
   headSlot: Slot;
 }
 export type Goodbye = uint64;
 
 export interface BeaconBlocksByRangeRequest {
-  headBlockRoot: Hash; 
+  headBlockRoot: Root; 
   startSlot: Slot;
   count: number64;
   step: number64;
 }
 export type BeaconBlocksByRangeResponse = BeaconBlock[];
 
-export type BeaconBlocksByRootRequest = Hash[];
+export type BeaconBlocksByRootRequest = Root[];
 export type BeaconBlocksByRootResponse = BeaconBlock[];
