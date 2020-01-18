@@ -51,6 +51,7 @@
     "chalk": "^2.4.2",
     "commander": "^2.19.0",
     "bigint-buffer": "^1.1.5",
+    "@iarna/toml": "^2.2.3",
     "deepmerge": "^3.2.0",
     "peer-id": "^0.12.2",
     "js-yaml": "^3.13.1",

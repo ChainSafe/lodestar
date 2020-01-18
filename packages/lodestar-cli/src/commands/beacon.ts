@@ -10,9 +10,10 @@ import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/main
 import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {ILogger, LogLevel, WinstonLogger} from "../logger";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
-import {BeaconNodeOptions, IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import {generateCommanderOptions, optionsToConfig} from "../util";
-import {getTomlConfig} from "@chainsafe/lodestar/lib/util/file";
+import {BeaconNodeOptions} from "../lodestar/node/options";
+import {getTomlConfig} from "../lodestar/util/file";
 
 interface IBeaconCommandOptions {
   configFile?: string;

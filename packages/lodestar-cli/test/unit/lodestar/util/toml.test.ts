@@ -1,6 +1,7 @@
-import {generateTomlConfig} from "../../../src/util/toml";
-import {BeaconNodeOptions, IBeaconNodeOptions} from "../../../src/node/options";
+import {generateTomlConfig} from "../../../../src/lodestar/util/toml";
+import {IBeaconNodeOptions} from "@chainsafe/lodestar/src/node/options";
 import {expect} from "chai";
+import { BeaconNodeOptions } from "../../../../src/lodestar/node/options";
 
 describe('toml configuration', function () {
 

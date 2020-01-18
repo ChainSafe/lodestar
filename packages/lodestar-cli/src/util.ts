@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
-  getCliFields,
   isConfigurationModule,
-  validateConfig
-} from "./config";
-import {IConfigurationField, IConfigurationModule} from "@chainsafe/lodestar/lib/util/config";
+  validateConfig,
+  getCliFields,
+  IConfigurationModule,
+  IConfigurationField,
+} from "./lodestar/util/config";
 
 import {Command} from "commander";
 

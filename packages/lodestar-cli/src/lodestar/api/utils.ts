@@ -1,4 +1,4 @@
-import {ApiNamespace} from "./index";
+import {ApiNamespace} from "@chainsafe/lodestar/lib/api";
 
 export const processApiNamespaces = (input: string): ApiNamespace[] => {
   return input

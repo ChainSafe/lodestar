@@ -1,5 +1,5 @@
-import {IConfigurationField, IConfigurationModule, isConfigurationModule} from "./config";
 import {JsonMap} from "@iarna/toml";
+import {isConfigurationModule, IConfigurationModule, IConfigurationField} from "./config";
 
 export function generateTomlConfig(config: object, description: IConfigurationModule): JsonMap {
   const json = {};

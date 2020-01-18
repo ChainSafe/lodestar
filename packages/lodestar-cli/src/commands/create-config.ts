@@ -7,7 +7,7 @@ import {CommanderStatic} from "commander";
 import {ILogger, LogLevels, WinstonLogger, LogLevel, defaultLogLevel} from "../logger";
 import fs from "fs";
 import {CliError} from "../error";
-import {writeTomlConfig} from "@chainsafe/lodestar/lib/util/file";
+import {writeTomlConfig} from "../lodestar/util/file";
 
 interface ICreateConfigOptions {
   logLevel: string;

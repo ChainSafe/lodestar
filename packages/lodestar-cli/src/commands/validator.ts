@@ -5,8 +5,9 @@ import {CommanderStatic} from "commander";
 import {ICliCommand} from "./interface";
 import {ILogger, WinstonLogger} from "../logger";
 import {generateCommanderOptions, optionsToConfig} from "../util";
-import {IValidatorClientOptions, validatorClientCliConfiguration} from "@chainsafe/lodestar/lib/validator/options";
+import {IValidatorClientOptions} from "@chainsafe/lodestar/lib/validator/options";
 import {ValidatorClient} from "@chainsafe/lodestar/lib/validator/nodejs";
+import {validatorClientCliConfiguration} from "../lodestar/validator/options";
 
 interface IValidatorCommandOptions {
   logLevel: string;

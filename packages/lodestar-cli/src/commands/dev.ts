@@ -12,9 +12,9 @@ import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/main
 import rimraf from "rimraf";
 import {ILogger, WinstonLogger} from "../logger";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
-import {BeaconNodeOptions, IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import {generateCommanderOptions, optionsToConfig,} from "../util";
-import {getTomlConfig, rmDir} from "@chainsafe/lodestar/lib/util/file";
+import {rmDir} from "@chainsafe/lodestar/lib/util/file";
 import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {InteropEth1Notifier} from "@chainsafe/lodestar/lib/eth1/impl/interop";
 import {quickStartOptionToState} from "../interop/cli";
@@ -34,6 +34,8 @@ import {ValidatorClient} from "@chainsafe/lodestar/lib/validator/nodejs";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {quickStartState} from "../interop/state";
 import {default as dbConfig} from "@chainsafe/lodestar/lib/db/options";
+import {BeaconNodeOptions} from "../lodestar/node/options";
+import {getTomlConfig} from "../lodestar/util/file";
 
 interface IDevCommandOptions {
   loggingLevel?: string;
