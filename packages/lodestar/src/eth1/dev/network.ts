@@ -9,7 +9,7 @@ import {promisify} from "util";
 import * as utils from "ethers/utils";
 import deepmerge from "deepmerge";
 import * as ethers from "ethers/ethers";
-import {ILogger} from "../../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import devEth1Options from "./options";
 
 export const devNetworkOpts =  {

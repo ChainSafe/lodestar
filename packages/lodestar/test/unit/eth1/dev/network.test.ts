@@ -2,7 +2,7 @@ import {PrivateEth1Network} from "../../../../src/eth1/dev";
 import {Wallet} from "ethers";
 import * as ethers from "ethers/ethers";
 import {expect} from "chai";
-import {WinstonLogger} from "../../../../src/logger";
+import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 
 
 describe('Eth1 dev network', () => {

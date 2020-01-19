@@ -11,7 +11,7 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT} from "../constants";
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
-import {ILogger} from "../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {IBeaconMetrics} from "../metrics";
 
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";

@@ -19,7 +19,7 @@ import {Method, RequestId, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
-import {ILogger} from "../../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {ISyncOptions, ISyncReqResp} from "./interface";
 import {ReputationStore} from "../IReputation";
 import {computeStartSlotAtEpoch} from "@chainsafe/eth2.0-state-transition";

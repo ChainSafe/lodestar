@@ -11,7 +11,7 @@ import * as ssz from "@chainsafe/ssz/lib/core/signingRoot";
 import {Method, ZERO_HASH} from "../../../src/constants";
 import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
-import {WinstonLogger} from "../../../src/logger";
+import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {generateState} from "../../utils/state";
 import {SyncReqResp} from "../../../src/sync/reqResp";
 import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";

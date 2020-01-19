@@ -48,7 +48,6 @@
     "@chainsafe/lodestar-validator": "0.2.0",
     "@chainsafe/lodestar": "0.2.0",
     "@types/yargs": "^13.0.2",
-    "chalk": "^2.4.2",
     "commander": "^2.19.0",
     "bigint-buffer": "^1.1.5",
     "@iarna/toml": "^2.2.3",
@@ -57,7 +56,6 @@
     "js-yaml": "^3.13.1",
     "rimraf": "^3.0.0",
     "ethers": "^4.0.40",
-    "winston": "^3.2.1",
     "yargs": "^14.0.0"
   },
   "bin": {

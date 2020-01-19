@@ -8,7 +8,8 @@ import {BeaconBlock, BeaconState, BLSPubkey, Epoch, Fork, Slot} from "@chainsafe
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {computeEpochAtSlot, DomainType, getDomain} from "../util";
-import {ILogger, IValidatorDB} from "../";
+import {IValidatorDB} from "../";
+import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {IApiClient} from "../api";
 
 

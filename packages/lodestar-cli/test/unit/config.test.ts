@@ -1,7 +1,7 @@
 import {IBeaconNodeOptions} from "@chainsafe/lodestar/src/node/options";
 import {expect} from "chai";
 import { BeaconNodeOptions } from "../../src/lodestar/node/options";
-import {validateConfig} from "../../src/config";
+import {validateConfig} from "../../src/lodestar/util/config";
 
 describe('configuration', function () {
 

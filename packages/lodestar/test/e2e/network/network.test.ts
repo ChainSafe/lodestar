@@ -5,7 +5,7 @@ import {Libp2pNetwork} from "../../../src/network";
 import {getEmptyBlock} from "../../../src/chain/genesis/genesis";
 import {createNode} from "../../unit/network/util";
 import {generateEmptyAttestation} from "../../utils/attestation";
-import {ILogger, WinstonLogger} from "../../../src/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {sleep} from "../../../src/util/sleep";

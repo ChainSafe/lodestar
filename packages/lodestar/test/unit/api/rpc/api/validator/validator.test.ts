@@ -15,7 +15,7 @@ import {generateEmptyAttestation} from "../../../../../utils/attestation";
 import {BlockRepository, StateRepository} from "../../../../../../src/db/api/beacon/repositories";
 import * as validatorImpl from "../../../../../../src/api/impl/validator";
 import {Keypair} from "@chainsafe/bls";
-import {ILogger, WinstonLogger} from "../../../../../../src/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {Gossip} from "../../../../../../src/network/gossip/gossip";
 
 describe("validator rpc api", function () {

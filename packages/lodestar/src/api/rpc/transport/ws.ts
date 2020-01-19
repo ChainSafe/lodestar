@@ -6,7 +6,7 @@
 import http from "http";
 import {promisify} from "es6-promisify";
 import WebSocket from "ws";
-import {ILogger} from "../../../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {IRpcServer} from "./index";
 
 export interface IWsServerOpts {

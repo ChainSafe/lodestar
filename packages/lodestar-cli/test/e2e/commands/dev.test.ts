@@ -1,21 +1,20 @@
-import {expect} from "chai";
 import rimraf from "rimraf";
 
 import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 
-import {ILogger, WinstonLogger} from "../../../src/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {InteropEth1Notifier} from "@chainsafe/lodestar/lib/eth1/impl/interop";
 import {createPeerId} from "@chainsafe/lodestar/lib/network";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
-import {quickStartState} from "@chainsafe/lodestar/lib/interop/state";
+import {quickStartState} from "../../../src/lodestar/interop/state";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "@chainsafe/lodestar/lib/util/serialization";
 import {computeStartSlotAtEpoch, computeEpochAtSlot, getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
 import {existsSync, mkdirSync} from "fs";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib/api";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
-import {interopKeypair} from "@chainsafe/lodestar/lib/interop/keypairs";
+import {interopKeypair} from "../../../src/lodestar/interop/keypairs";
 import {ValidatorClient} from "@chainsafe/lodestar/lib/validator/nodejs";
 import {ValidatorApi, BeaconApi} from "@chainsafe/lodestar/lib/api/rpc";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "@chainsafe/lodestar/lib/constants";

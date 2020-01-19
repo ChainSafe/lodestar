@@ -11,7 +11,7 @@ import {IEth1Notifier} from "../eth1";
 import {IBeaconDb} from "../db";
 import {RegularSync} from "./regular";
 import {FastSync, InitialSync} from "./initial";
-import {ILogger} from "../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {ISyncOptions} from "./options";
 import {ISyncReqResp, SyncReqResp} from "./reqResp";
 import {ReputationStore} from "./IReputation";

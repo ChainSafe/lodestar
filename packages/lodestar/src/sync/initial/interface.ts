@@ -3,7 +3,7 @@ import PeerInfo from "peer-info";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
 import {ReputationStore} from "../IReputation";
-import {ILogger} from "../../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {Checkpoint, Epoch} from "@chainsafe/eth2.0-types";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";

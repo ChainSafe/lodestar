@@ -5,7 +5,7 @@
 import {ICliCommand} from "./interface";
 import {PrivateEth1Network} from "@chainsafe/lodestar/lib/eth1/dev";
 import {CommanderStatic} from "commander";
-import {ILogger, LogLevels, WinstonLogger} from "../logger";
+import {ILogger, LogLevels, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 
 interface IEth1CommandOptions {
   host: string;

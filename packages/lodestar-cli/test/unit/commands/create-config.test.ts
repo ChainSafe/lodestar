@@ -4,7 +4,7 @@ import {CliError} from "../../../src//error";
 import chaiAsPromised from "chai-as-promised";
 import program from "commander";
 import chai from "chai";
-import {ILogger, WinstonLogger} from "../../../src/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 
 chai.use(chaiAsPromised);
 

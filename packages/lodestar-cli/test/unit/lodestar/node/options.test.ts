@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import { BeaconNodeOptions } from "../../../../src/lodestar/node/options";
-import { getCliFields } from "../../../../src/config";
+import { getCliFields } from "../../../../src/lodestar/util/config";
 
 describe('beacon node options', function () {
 

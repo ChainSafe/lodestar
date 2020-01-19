@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {ILogger, WinstonLogger} from "../../../src/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import program from "commander";
 import {ValidatorCommand} from "../../../src/commands";
 

@@ -1,7 +1,7 @@
 import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {IApiClient} from "@chainsafe/lodestar-validator";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {LogLevel} from "../logger";
+import {LogLevel} from  "@chainsafe/eth2.0-utils/lib/logger";
 
 export interface IValidatorClientOptions {
   //hex encoded private key or path to keystore

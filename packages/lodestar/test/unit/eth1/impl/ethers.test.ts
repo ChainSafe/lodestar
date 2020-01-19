@@ -11,7 +11,7 @@ import {serialize} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {EthersEth1Notifier, IEth1Notifier} from "../../../../src/eth1";
 import defaults from "../../../../src/eth1/dev/options";
-import {ILogger, WinstonLogger} from "../../../../src/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {OpPool} from "../../../../src/opPool";
 import {DepositsOperations} from "../../../../src/opPool/modules";
 import {after, before, describe, it} from "mocha";

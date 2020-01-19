@@ -7,7 +7,7 @@ import {JsonRpcProvider} from "ethers/providers";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ICliCommand} from "./interface";
 import defaults from "@chainsafe/lodestar/lib/eth1/options";
-import {ILogger, LogLevels, WinstonLogger} from "../logger";
+import {ILogger, LogLevels, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {Eth1Wallet} from "@chainsafe/lodestar/lib/eth1";
 import {CliError} from "../error";
 import * as ethers from "ethers/ethers";

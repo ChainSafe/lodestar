@@ -4,7 +4,7 @@
 
 import {ICliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import {ILogger, LogLevels, WinstonLogger, LogLevel, defaultLogLevel} from "../logger";
+import {ILogger, LogLevels, WinstonLogger, LogLevel, defaultLogLevel} from "@chainsafe/eth2.0-utils/lib/logger";
 import fs from "fs";
 import {CliError} from "../error";
 import {writeTomlConfig} from "../lodestar/util/file";

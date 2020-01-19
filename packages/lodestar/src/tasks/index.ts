@@ -8,7 +8,7 @@ import {IBeaconDb} from "../db/api";
 import {IBeaconChain} from "../chain";
 import {Checkpoint} from "@chainsafe/eth2.0-types";
 import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
-import {ILogger} from "../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 
 export interface ITasksModules {
   db: IBeaconDb;

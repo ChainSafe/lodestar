@@ -5,7 +5,7 @@ import {getIncomingAggregateAndProofHandler} from "../../../../../src/network/go
 import {AggregateAndProof} from "@chainsafe/eth2.0-types";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {expect} from "chai";
-import {WinstonLogger} from "../../../../../src/logger";
+import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {GossipEvent} from "../../../../../src/network/gossip/constants";
 import * as gossipUtils from "../../../../../src/network/gossip/utils";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
