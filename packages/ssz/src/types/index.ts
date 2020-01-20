@@ -7,5 +7,6 @@ export * from "./vector";
 export * from "./bitList";
 export * from "./bitVector";
 export * from "./byteVector";
+export * from "./root";
 export * from "./container";
 export * from "./wellKnown";
