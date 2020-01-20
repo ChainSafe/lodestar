@@ -1,6 +1,6 @@
-import bls, {initBLS} from "../../src";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import path from "path";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import bls, {initBLS} from "@chainsafe/bls";
 
 interface IAggregatePubKeysTestCase {
   data: {
@@ -14,10 +14,10 @@ before(async function f() {
 });
 
 describeDirectorySpecTest<IAggregatePubKeysTestCase, string>(
-  "aggregate pubkeys",
+  "BLS - aggregate pubkeys",
   path.join(
     __dirname,
-    "../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/aggregate_pubkeys/small"
+    "../../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/aggregate_pubkeys/small"
   ),
   (testCase => {
     const result =  bls.aggregatePubkeys(testCase.data.input.map(pubKey => {

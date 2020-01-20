@@ -35,11 +35,8 @@
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "pretest": "yarn run check-types",
-    "test": "yarn test:unit && yarn test:spec && yarn test:e2e",
+    "test": "yarn test:unit && yarn test:e2e",
     "test:e2e": "TS_NODE_PROJECT=tsconfig.test.json mocha --colors --timeout 5000 'test/e2e/**/*.test.ts'",
-    "test:spec": "TS_NODE_PROJECT=tsconfig.test.json mocha --colors 'test/spec/**/*.test.ts'",
-    "test:spec-main": "TS_NODE_PROJECT=tsconfig.test.json mocha --colors 'test/spec/**/*mainnet.test.ts'",
-    "test:spec-min": "TS_NODE_PROJECT=tsconfig.test.json mocha --colors 'test/spec/**/*minimal.test.ts'",
     "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha --colors 'test/unit/**/*.test.ts'"
   },
   "dependencies": {

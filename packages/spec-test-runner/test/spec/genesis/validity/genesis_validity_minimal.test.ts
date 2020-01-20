@@ -2,9 +2,9 @@
 import {join} from "path";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import {isValidGenesisState} from "../../../../src/chain/genesis/genesis";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import {isValidGenesisState} from "@chainsafe/lodestar/lib/chain/genesis/genesis";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 interface IGenesisValidityTestCase {

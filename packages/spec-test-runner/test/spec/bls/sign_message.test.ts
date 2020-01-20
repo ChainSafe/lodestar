@@ -1,7 +1,7 @@
 import path from "path";
-import bls, {initBLS} from "../../src";
-import {padLeft} from "../../src/helpers/utils";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import bls, {initBLS} from "@chainsafe/bls";
+import {padLeft} from "@chainsafe/bls/lib/helpers/utils";
 
 interface ISignMessageTestCase {
   data: {
@@ -19,10 +19,10 @@ before(async function f() {
 });
 
 describeDirectorySpecTest<ISignMessageTestCase, string>(
-  "priv_to_pub",
+  "BLS - priv_to_pub",
   path.join(
     __dirname,
-    "../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/sign_msg/small"
+    "../../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/sign_msg/small"
   ),
   (testCase => {
     const signature =  bls.sign(

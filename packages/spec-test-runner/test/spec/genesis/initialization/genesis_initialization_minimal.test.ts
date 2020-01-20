@@ -6,7 +6,7 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BeaconState, Deposit, uint64, Root} from "@chainsafe/eth2.0-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
-import {initializeBeaconStateFromEth1} from "../../../../src/chain/genesis/genesis";
+import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar/lib/chain/genesis/genesis";
 
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
