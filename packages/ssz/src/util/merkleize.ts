@@ -3,34 +3,33 @@ import {hash} from "./hash";
 import {nextPowerOf2, bitLength} from "./math";
 import {zeroHashes} from "./zeros";
 
-export function pushHash(hashes: Uint8Array[], h: Uint8Array, i: number): void {
-  let curHash = h;
-  while (hashes[i]) {
-    curHash = hash(Buffer.from(hashes[i]), Buffer.from(curHash));
-    delete hashes[i];
-    i++;
-  }
-  hashes[i] = curHash;
-}
-
 /** @ignore */
-export function merkleize(chunks: Iterable<Uint8Array>, padFor: number): Buffer {
-  const layerCount = bitLength(nextPowerOf2(padFor) - 1);
-  const hashes: Uint8Array[] = Array.from({length: layerCount});
-  for (const chunk of chunks) {
-    pushHash(hashes, chunk, 0);
+export function merkleize(chunks: Buffer[], padFor = 0): Buffer {
+  const layerCount = bitLength(nextPowerOf2(padFor || chunks.length) - 1);
+  if (chunks.length == 0) {
+    return zeroHashes[layerCount];
   }
-  for (let i = 0; i < layerCount - 1; i++) {
-    if (hashes[i]) {
-      pushHash(hashes, zeroHashes[i], i);
+  // Instead of pushing on all padding zero chunks at the leaf level
+  // we push on zero hash chunks at the highest possible level to avoid over-hashing
+  let layer = 0;
+  while (layer < layerCount) {
+    // if the chunks.length is odd
+    // we need to push on the zero-hash of that level to merkleize that level
+    if (chunks.length % 2 == 1) {
+      chunks.push(zeroHashes[layer]);
     }
+    for (let i = 0; i < chunks.length; i += 2) {
+      chunks[i / 2] = hash(chunks[i], chunks[i + 1]);
+    }
+    chunks.splice(chunks.length / 2, chunks.length / 2);
+    layer++;
   }
-  return hashes[layerCount - 1] as Buffer;
+  return chunks[0];
 }
 
 /** @ignore */
 export function mixInLength(root: Buffer, length: number): Buffer {
   const lengthBuf = Buffer.alloc(32);
   lengthBuf.writeUIntLE(length, 0, 6);
-  return hash(root, lengthBuf) as Buffer;
+  return hash(root, lengthBuf);
 }

@@ -1,4 +1,3 @@
-import * as ssz from "../src";
 import * as types from "../src/types";
 import * as backings from "../src/backings";
 import * as mtree from "@chainsafe/merkle-tree";
@@ -25,24 +24,6 @@ interface Validator {
 }
 
 type ValidatorRegistry = types.ArrayLike<Validator>;
-
-const validatorType1 = ssz.parseType({
-  fields: [
-    ["pubkey", "bytes48"],
-    ["withdrawalCredentials", "bytes32"],
-    ["effectiveBalance", "bigint64"],
-    ["slashed", "bool"],
-    ["activationEligibilityEpoch", "number64"],
-    ["activationEpoch", "number64"],
-    ["exitEpoch", "number64"],
-    ["withdrawalEpoch", "number64"],
-  ],
-});
-
-const validatorRegistryType1 = ssz.parseType({
-  elementType: validatorType1,
-  maxLength: 2 ** 40
-});
 
 // set up new type
 
@@ -118,23 +99,17 @@ suite
   .add("set validator property - structural - 10k", () => struct10k[randInt(10000)].withdrawalEpoch = randInt(100))
   .add("set validator property - tree - 10k", () => tree10k[randInt(10000)].withdrawalEpoch = randInt(100))
 //
-  .add("serialize - old - 10k", () => updateValidator(struct10k) && ssz.serialize(validatorRegistryType1, struct10k))
   .add("serialize - structural - 10k", () => updateValidator(struct10k) && validatorRegistryType2.serialize(struct10k))
   .add("serialize - tree - 10k", () => updateValidator(tree10k) && validatorRegistryType2.serialize(tree10k))
-// .add("serialize - old - 100k", () => updateValidator(struct100k) && ssz.serialize(validatorRegistryType1, struct100k))
 //  .add("serialize - structural - 100k", () => updateValidator(struct100k) && validatorRegistryType2.serialize(struct100k))
 //  .add("serialize - tree - 100k", () => updateValidator(tree100k) && validatorRegistryType2.serialize(tree100k))
-//  .add("serialize - old - 1m", () => updateValidator(struct1m) && ssz.serialize(validatorRegistryType1, struct1m))
 // .add("serialize - structural - 1m", () => updateValidator(struct1m) && validatorRegistryType2.serialize(struct1m))
 // .add("serialize - tree - 1m", () => updateValidator(tree1m) && validatorRegistryType2.serialize(tree1m))
 //
-  .add("hashTreeRoot - old - 10k", () => updateValidator(struct10k) && ssz.hashTreeRoot(validatorRegistryType1, struct10k))
   .add("hashTreeRoot - structural - 10k", () => updateValidator(struct10k) && validatorRegistryType2.hashTreeRoot(struct10k))
   .add("hashTreeRoot - tree - 10k", () => updateValidator(tree10k) && validatorRegistryType2.hashTreeRoot(tree10k))
-//  .add("hashTreeRoot - old - 100k", () => updateValidator(struct100k) && ssz.hashTreeRoot(validatorRegistryType1, struct100k))
 // .add("hashTreeRoot - structural - 100k", () => updateValidator(struct100k) && validatorRegistryType2.hashTreeRoot(struct100k))
 // .add("hashTreeRoot - tree - 100k", () => updateValidator(tree100k) && validatorRegistryType2.hashTreeRoot(tree100k))
-// .add("hashTreeRoot - old - 1m", () => updateValidator(struct1m) && ssz.hashTreeRoot(validatorRegistryType1, struct1m))
 // .add("hashTreeRoot - structural - 1m", () => updateValidator(struct1m) && validatorRegistryType2.hashTreeRoot(struct1m))
 // .add("hashTreeRoot - tree - 1m", () => updateValidator(tree1m) && validatorRegistryType2.hashTreeRoot(tree1m))
 

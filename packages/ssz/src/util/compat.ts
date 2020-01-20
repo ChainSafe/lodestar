@@ -1,7 +1,7 @@
 import {
   merkleize as _merkleize,
   mixInLength as _mixInLength,
-} from "../core/util/merkleize";
+} from "./merkleize";
 
 export function merkleize(chunks: Iterable<Uint8Array>, padTo: number): Uint8Array {
   return _merkleize(Array.from(chunks).map(Buffer.from), padTo);
