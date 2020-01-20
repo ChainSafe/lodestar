@@ -3,7 +3,7 @@
   "description": "Simple Serialize",
   "license": "Apache-2.0",
   "author": "ChainSafe Systems",
-  "homepage": "https://github.com/chainsafe/ssz-js",
+  "homepage": "https://github.com/chainsafe/lodestar/packages/ssz",
   "version": "0.5.2",
   "main": "lib/index.js",
   "files": [
