@@ -12,7 +12,8 @@ import {
   CommitteeIndex,
   Epoch,
   Slot,
-  ValidatorDuty
+  ValidatorDuty,
+  SignedBeaconBlock
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -77,8 +78,8 @@ export class ValidatorApi implements IValidatorApi {
     }
   }
 
-  public async publishBlock(block: BeaconBlock): Promise<void> {
-    await this.chain.receiveBlock(block);
+  public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
+    await this.chain.receiveBlock(signedBlock);
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
@@ -88,7 +89,7 @@ export class ValidatorApi implements IValidatorApi {
   public async getProposerDuties(epoch: Epoch): Promise<Map<Slot, BLSPubkey>> {
     return getEpochProposers(this.config, this.chain, this.db, epoch);
   }
-  
+
   public async getAttesterDuties(epoch: number, validatorPubKeys: Buffer[]): Promise<ValidatorDuty[]> {
     return getAttesterDuties(this.config, this.db, this.chain, epoch, validatorPubKeys);
   }

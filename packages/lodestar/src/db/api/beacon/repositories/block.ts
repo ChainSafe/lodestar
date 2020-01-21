@@ -1,6 +1,6 @@
 import {Slot, Root, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {AnyContainerType, serialize, hashTreeRoot} from "@chainsafe/ssz";
+import {serialize, hashTreeRoot} from "@chainsafe/ssz";
 
 import {BulkRepository} from "../repository";
 import {ChainRepository} from "./chain";
@@ -15,8 +15,12 @@ export class BlockRepository extends BulkRepository<SignedBeaconBlock> {
     config: IBeaconConfig,
     db: IDatabaseController,
     chain: ChainRepository) {
-    super(config, db, Bucket.block, config.types.BeaconBlock);
+    super(config, db, Bucket.block, config.types.SignedBeaconBlock);
     this.chain = chain;
+  }
+
+  public getId(value: SignedBeaconBlock): Root {
+    return hashTreeRoot(this.config.types.BeaconBlock, value.message);
   }
 
   public async set(id: Root, value: SignedBeaconBlock): Promise<void> {
@@ -25,14 +29,6 @@ export class BlockRepository extends BulkRepository<SignedBeaconBlock> {
       this.db.put(encodeKey(Bucket.blockRootRefs, id), serialize(this.config.types.Slot, value.message.slot)),
       super.set(id, value)
     ]);
-  }
-
-  public async deleteManyByValue(values: SignedBeaconBlock[]): Promise<void> {
-    await this.deleteMany(values.map(value => hashTreeRoot(this.type as AnyContainerType, value.message)));
-  }
-
-  public async add(value: SignedBeaconBlock): Promise<void> {
-    await this.set(hashTreeRoot(this.type as AnyContainerType, value.message), value);
   }
 
   public async getFinalizedBlock(): Promise<SignedBeaconBlock | null> {

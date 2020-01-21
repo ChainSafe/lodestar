@@ -25,13 +25,13 @@ export async function assembleBlock(
   randao: bytes96
 ): Promise<BeaconBlock | null> {
   const parentBlock = await db.block.get(chain.forkChoice.head());
-  const currentState = await db.state.get(parentBlock.stateRoot);
+  const currentState = await db.state.get(parentBlock.message.stateRoot);
 
   if (slot > currentState.slot) {
     processSlots(config, currentState, slot);
   }
   const merkleTree = await db.merkleTree.getProgressiveMerkleTree(config, currentState.eth1DepositIndex);
-  const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock);
+  const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock.message);
   const block: BeaconBlock = {
     slot,
     parentRoot: hashTreeRoot(config.types.BeaconBlockHeader, parentHeader),

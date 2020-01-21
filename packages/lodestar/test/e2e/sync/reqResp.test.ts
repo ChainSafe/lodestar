@@ -17,7 +17,7 @@ import {generateState} from "../../utils/state";
 import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
 import { IGossipMessageValidator } from "../../../src/network/gossip/interface";
 import {generateEmptyBlock} from "../../utils/block";
-import {signingRoot} from "@chainsafe/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -56,7 +56,7 @@ describe("[sync] rpc", function () {
     const block = generateEmptyBlock();
     state.finalizedCheckpoint = {
       epoch: 0,
-      root: signingRoot(config.types.BeaconBlock, block),
+      root: hashTreeRoot(config.types.BeaconBlock, block),
     };
     // @ts-ignore
     const db = {

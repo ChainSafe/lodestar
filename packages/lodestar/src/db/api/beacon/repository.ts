@@ -40,20 +40,20 @@ export abstract class Repository<T> {
     return await this.get(id) !== null;
   }
 
-  public getId(value: T): Id {
-    return hashTreeRoot(this.type, value);
-  }
-
-  public async add(value: T): Promise<void> {
-    await this.set(this.getId(value), value);
-  }
-
   public async set(id: Id, value: T): Promise<void> {
     await this.db.put(encodeKey(this.bucket, id), serialize(this.type, value));
   }
 
   public async delete(id: Id): Promise<void> {
     await this.db.delete(encodeKey(this.bucket, id));
+  }
+
+  public getId(value: T): Id {
+    return hashTreeRoot(this.type, value);
+  }
+
+  public async add(value: T): Promise<void> {
+    await this.set(this.getId(value), value);
   }
 
 }
@@ -88,4 +88,12 @@ export abstract class BulkRepository<T> extends Repository<T> {
     await this.deleteMany(values.map(value => this.getId(value)));
   }
 
+  public async addMany(values: T[]): Promise<void> {
+    await this.db.batchPut(
+      values.map((value) => ({
+        key: encodeKey(this.bucket, this.getId(value)),
+        value: serialize(this.type, value),
+      }))
+    );
+  }
 }

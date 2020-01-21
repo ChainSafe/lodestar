@@ -6,12 +6,12 @@ import {BeaconBlockHeader} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {IValidatorDB, ValidatorDB} from "../../../../../src/db";
-import {generateEmptyBlock} from "../../../../utils/block";
+import {generateEmptyBlock, generateEmptySignedBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {OpPool} from "../../../../../src/opPool";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
-import {blockToHeader, getBeaconProposerIndex, stateTransition} from "@chainsafe/eth2.0-state-transition";
+import {blockToHeader, getBeaconProposerIndex, stateTransition, signedBlockToSignedHeader} from "@chainsafe/eth2.0-state-transition";
 import {generateValidator} from "../../../../utils/validator";
 import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {generateDeposit} from "../../../../utils/deposit";
@@ -65,14 +65,14 @@ describe("produce block", function () {
       return validator;
     });
     const balances = Array.from({length: validators.length}, () => BigInt("10000000"));
-    const parentBlock = generateEmptyBlock();
+    const parentBlock = generateEmptySignedBlock();
     //if zero hash it get changed
-    parentBlock.stateRoot = Buffer.alloc(32, 1);
-    const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock);
+    parentBlock.message.stateRoot = Buffer.alloc(32, 1);
+    const parentHeader = signedBlockToSignedHeader(config, parentBlock);
     const state = generateState({
       validators: validators,
       balances,
-      latestBlockHeader: parentHeader
+      latestBlockHeader: parentHeader.message,
     });
     const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
     tree.add(0, hashTreeRoot(config.types.DepositData, generateDeposit().data));

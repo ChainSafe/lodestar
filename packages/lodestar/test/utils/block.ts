@@ -1,4 +1,4 @@
-import {BeaconBlock} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 
 
@@ -21,6 +21,12 @@ export function generateEmptyBlock(): BeaconBlock {
       deposits: [],
       voluntaryExits: [],
     },
+  };
+}
+
+export function generateEmptySignedBlock(): SignedBeaconBlock {
+  return {
+    message: generateEmptyBlock(),
     signature: EMPTY_SIGNATURE,
   };
 }

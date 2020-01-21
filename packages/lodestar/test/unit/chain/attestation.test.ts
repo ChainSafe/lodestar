@@ -6,10 +6,10 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as utils from "@chainsafe/eth2.0-state-transition/lib/util/attestation";
 import { StateRepository, BlockRepository } from "../../../src/db/api/beacon/repositories";
 import { WinstonLogger } from "@chainsafe/eth2.0-utils/lib/logger";
-import { generateEmptyBlock } from "../../utils/block";
+import { generateEmptySignedBlock } from "../../utils/block";
 import { generateEmptyAttestation } from "../../utils/attestation";
 import { generateState } from "../../utils/state";
-import { signingRoot } from "@chainsafe/ssz";
+import { hashTreeRoot } from "@chainsafe/ssz";
 import { fail } from "assert";
 
 describe("AttestationProcessor", function() {
@@ -39,7 +39,7 @@ describe("AttestationProcessor", function() {
   it("receiveAttestation - should process attestation after receiveAttestation", async () => {
     processAttestationStub = sandbox.stub(attestationProcessor, "processAttestation");
     const attestation = generateEmptyAttestation();
-    const block = generateEmptyBlock();
+    const block = generateEmptySignedBlock();
     const state = generateState();
     dbStub.block.get.resolves(block);
     dbStub.state.get.resolves(state);
@@ -51,7 +51,7 @@ describe("AttestationProcessor", function() {
   it("receiveAttestation - should not process attestation after receiveAttestation - block not exist", async () => {
     processAttestationStub = sandbox.stub(attestationProcessor, "processAttestation");
     const attestation = generateEmptyAttestation();
-    const block = generateEmptyBlock();
+    const block = generateEmptySignedBlock();
     const state = generateState();
     dbStub.block.get.resolves(block);
     dbStub.state.get.resolves(state);
@@ -64,8 +64,8 @@ describe("AttestationProcessor", function() {
     // siomilar to above
     processAttestationStub = sandbox.stub(attestationProcessor, "processAttestation");
     const attestation = generateEmptyAttestation();
-    const block = generateEmptyBlock();
-    attestation.data.target.root = signingRoot(config.types.BeaconBlock, block);
+    const block = generateEmptySignedBlock();
+    attestation.data.target.root = hashTreeRoot(config.types.BeaconBlock, block);
     const state = generateState();
     dbStub.block.get.resolves(block);
     dbStub.state.get.resolves(state);
@@ -81,8 +81,8 @@ describe("AttestationProcessor", function() {
     try {
       const attestation = generateEmptyAttestation();
       attestation.data.target.epoch = 2019;
-      const attestationHash = signingRoot(config.types.Attestation, attestation);
-      const block = generateEmptyBlock();
+      const attestationHash = hashTreeRoot(config.types.Attestation, attestation);
+      const block = generateEmptySignedBlock();
       dbStub.block.get.resolves(block);
       const state = generateState();
       dbStub.state.get.resolves(state);
@@ -99,9 +99,9 @@ describe("AttestationProcessor", function() {
   it("processAttestation - should not call forkChoice - invalid block slot", async () => {
     try {
       const attestation = generateEmptyAttestation();
-      const attestationHash = signingRoot(config.types.Attestation, attestation);
-      const block = generateEmptyBlock();
-      block.slot = 1;
+      const attestationHash = hashTreeRoot(config.types.Attestation, attestation);
+      const block = generateEmptySignedBlock();
+      block.message.slot = 1;
       dbStub.block.get.resolves(block);
       const state = generateState();
       dbStub.state.get.resolves(state);
@@ -117,8 +117,8 @@ describe("AttestationProcessor", function() {
 
   it("processAttestation - should call forkChoice", async () => {
       const attestation = generateEmptyAttestation();
-      const attestationHash = signingRoot(config.types.Attestation, attestation);
-      const block = generateEmptyBlock();
+      const attestationHash = hashTreeRoot(config.types.Attestation, attestation);
+      const block = generateEmptySignedBlock();
       dbStub.block.get.resolves(block);
       const state = generateState();
       dbStub.state.get.resolves(state);

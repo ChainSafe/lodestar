@@ -1,7 +1,7 @@
 import assert from "assert";
 import {IAttestationProcessor, ChainEventEmitter} from "./interface";
 import {ILMDGHOST} from ".";
-import {Attestation, BeaconBlock, Slot, Root, BlockRootHex, AttestationRootHex} from "@chainsafe/eth2.0-types";
+import {Attestation, Slot, Root, BlockRootHex, AttestationRootHex, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db";
 import {getCurrentSlot, computeEpochAtSlot, getAttestingIndices} from "@chainsafe/eth2.0-state-transition";
@@ -16,9 +16,12 @@ export class AttestationProcessor implements IAttestationProcessor {
   private chain: ChainEventEmitter;
   private forkChoice: ILMDGHOST;
   private pendingAttestations: Map<BlockRootHex, Map<AttestationRootHex, Attestation>>;
-  
-  public constructor(chain: ChainEventEmitter, forkChoice: ILMDGHOST, 
-    {config, db, logger}: {config: IBeaconConfig; db: IBeaconDb; logger: ILogger}) {
+
+  public constructor(
+    chain: ChainEventEmitter,
+    forkChoice: ILMDGHOST,
+    {config, db, logger}: {config: IBeaconConfig; db: IBeaconDb; logger: ILogger}
+  ) {
     this.config = config;
     this.db = db;
     this.logger = logger;
@@ -26,14 +29,14 @@ export class AttestationProcessor implements IAttestationProcessor {
     this.forkChoice = forkChoice;
     this.pendingAttestations = new Map<BlockRootHex, Map<AttestationRootHex, Attestation>>();
   }
-  
+
   public async receiveAttestation(attestation: Attestation): Promise<void> {
     const attestationHash = hashTreeRoot(this.config.types.Attestation, attestation);
     this.logger.info(`Received attestation ${attestationHash.toString("hex")}`);
     try {
       const attestationSlot: Slot = attestation.data.slot;
       const headBlock = await this.db.block.get(this.forkChoice.head());
-      const state = await this.db.state.get(headBlock.stateRoot);
+      const state = await this.db.state.get(headBlock.message.stateRoot);
       if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < state.slot) {
         this.logger.verbose(`Attestation ${attestationHash.toString("hex")} is too old. Ignored.`);
         return;
@@ -56,9 +59,9 @@ export class AttestationProcessor implements IAttestationProcessor {
     await this.processAttestation(attestation, attestationHash);
   }
 
-  public async receiveBlock(block: BeaconBlock): Promise<void> {
-    const blockRoot = hashTreeRoot(this.config.types.BeaconBlock, block);
-    const blockPendingAttestations = this.pendingAttestations.get(blockRoot.toString("hex")) || 
+  public async receiveBlock(signedBlock: SignedBeaconBlock): Promise<void> {
+    const blockRoot = hashTreeRoot(this.config.types.BeaconBlock, signedBlock.message);
+    const blockPendingAttestations = this.pendingAttestations.get(blockRoot.toString("hex")) ||
       new Map<AttestationRootHex, Attestation>();
     for (const [hash, attestation] of blockPendingAttestations) {
       await this.processAttestation(attestation, Buffer.from(hash, "hex"));
@@ -69,7 +72,7 @@ export class AttestationProcessor implements IAttestationProcessor {
   public async processAttestation (attestation: Attestation, attestationHash: Root): Promise<void> {
     const justifiedCheckpoint = this.forkChoice.getJustified();
     const justifiedBlock = await this.db.block.get(justifiedCheckpoint.root);
-    const checkpointState = await this.db.state.get(justifiedBlock.stateRoot);
+    const checkpointState = await this.db.state.get(justifiedBlock.message.stateRoot);
     const currentSlot = getCurrentSlot(this.config, checkpointState.genesisTime);
     const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
     const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
@@ -77,7 +80,7 @@ export class AttestationProcessor implements IAttestationProcessor {
     assert([currentEpoch, previousEpoch].includes(target.epoch));
     assert(target.epoch === computeEpochAtSlot(this.config, attestation.data.slot));
     const block = await this.db.block.get(attestation.data.beaconBlockRoot);
-    assert(block.slot <= attestation.data.slot);
+    assert(block.message.slot <= attestation.data.slot);
 
     const validators = getAttestingIndices(
       this.config, checkpointState, attestation.data, attestation.aggregationBits);
@@ -95,5 +98,4 @@ export class AttestationProcessor implements IAttestationProcessor {
     blockPendingAttestations.set(attestationHash.toString("hex"), attestation);
     this.pendingAttestations.set(blockRoot.toString("hex"), blockPendingAttestations);
   }
-
 }
