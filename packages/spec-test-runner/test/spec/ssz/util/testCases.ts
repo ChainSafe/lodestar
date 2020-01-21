@@ -1,16 +1,16 @@
 import {describeDirectorySpecTest, InputType, safeType} from "@chainsafe/eth2.0-spec-test-util";
-import {Hash, IBeaconSSZTypes} from "@chainsafe/eth2.0-types";
+import {bytes32, IBeaconSSZTypes} from "@chainsafe/eth2.0-types";
 import {join} from "path";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {expect} from "chai";
-import {hashTreeRoot, serialize, parseType} from "../../src";
+import {hashTreeRoot, serialize, parseType} from "@chainsafe/ssz";
 
-import {IBaseSSZStaticTestCase} from "../spec/type";
+import {IBaseSSZStaticTestCase} from "../type";
 
-export const TEST_CASE_LOCATION = "../../../../node_modules/@chainsafe/eth2-spec-tests";
+export const TEST_CASE_LOCATION = "../../../../../../node_modules/@chainsafe/eth2-spec-tests";
 
 interface IResult {
-  root: Hash;
+  root: bytes32;
   serialized: Buffer;
 }
 
@@ -20,7 +20,7 @@ export function testStatic(type: keyof IBeaconSSZTypes): void {
   ["ssz_lengthy", "ssz_max", "ssz_nil", "ssz_one", "ssz_random", "ssz_random_chaos", "ssz_zero"].forEach((caseName) => {
 
     describeDirectorySpecTest<IBaseSSZStaticTestCase<any>, IResult>(
-      `${type} ${caseName} minimal`,
+      `SSZ - ${type} ${caseName} minimal`,
       join(__dirname, `${TEST_CASE_LOCATION}/tests/minimal/phase0/ssz_static/${type}/${caseName}`),
       (testcase) => {
         const serialized = serialize(Type, testcase.serialized);

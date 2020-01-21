@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig",
+  "include": ["test"],
+  "compilerOptions": {
+    "typeRoots": [
+      "../../node_modules/@types",
+      "../../node_modules/@polkadot/ts"
+    ],
+    "strict": false
+  }
+}

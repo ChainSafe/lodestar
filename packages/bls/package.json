@@ -31,9 +31,7 @@
     "pretest": "yarn check-types",
     "prepublishOnly": "yarn build",
     "test:unit": "nyc --cache-dir .nyc_output/.cache -r lcov -e .ts mocha --colors -r ts-node/register 'test/unit/**/*.test.ts' && nyc report",
-    "test:spec": "mocha --colors -r ts-node/register 'test/spec/**/*.test.ts'",
-    "test:spec-min": "yarn run test:spec",
-    "test": "yarn test:unit && yarn test:spec",
+    "test": "yarn test:unit",
     "coverage": "codecov -F bls",
     "benchmark": "node -r ./.babel-register test/benchmarks"
   },

@@ -24,8 +24,6 @@
     "lint:fix": "eslint --color --fix --ext .ts src/",
     "prepublishOnly": "yarn build",
     "pretest": "yarn check-types",
-    "test:spec": "nyc -r lcov -e .ts mocha  --colors --timeout 4000 -r ./.babel-register \"test/spec/**/*.test.ts\" && nyc report",
-    "test:spec-min": "yarn test:spec",
     "test:unit": "nyc -e .ts mocha --colors -r ts-node/register \"test/unit/**/*.test.ts\""
   },
   "types": "lib/index.d.ts",
