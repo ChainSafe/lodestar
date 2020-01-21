@@ -6,7 +6,7 @@ import {describe, it} from "mocha";
 import {basename, join, parse} from "path";
 import profiler from "v8-profiler-next";
 import {loadYamlFile} from "@chainsafe/eth2.0-utils/lib/nodejs";
-import {AnySSZType, deserialize} from "@chainsafe/ssz";
+import {Type} from "@chainsafe/ssz";
 
 import {isDirectory} from "./util";
 
@@ -23,7 +23,7 @@ export interface ISpecTestOptions<TestCase, Result> {
    */
   inputTypes?: {[K in keyof NonNullable<TestCase>]?: InputType};
 
-  sszTypes?: {[K in keyof NonNullable<TestCase>]?: AnySSZType};
+  sszTypes?: {[K in keyof NonNullable<TestCase>]?: Type<any>};
 
   /**
    * Optionally
@@ -159,7 +159,7 @@ function loadInputFiles<TestCase, Result>(
 
 function deserializeTestCase<TestCase, Result>(file, inputName, options: ISpecTestOptions<TestCase, Result>): object {
   if (file.endsWith(InputType.SSZ)) {
-    return deserialize(options.sszTypes[inputName], readFileSync(file));
+    return options.sszTypes[inputName].deserialize(readFileSync(file));
   } else {
     return  loadYamlFile(file);
   }
