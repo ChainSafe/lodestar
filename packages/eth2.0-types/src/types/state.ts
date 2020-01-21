@@ -3,14 +3,14 @@
  * @module types
  */
 
-import {BitVector} from "@chainsafe/bit-utils";
+import {ArrayLike} from "@chainsafe/ssz";
 
 import {
+  Bytes32,
   Gwei,
   Root,
-  number64,
+  Number64,
   Slot,
-  bytes32,
 } from "./primitive";
 
 import {
@@ -25,37 +25,37 @@ import {
 
 export interface BeaconState {
   // Misc
-  genesisTime: number64;
+  genesisTime: Number64;
   slot: Slot;
   fork: Fork; // For versioning hard forks
 
   // History
   latestBlockHeader: BeaconBlockHeader;
-  blockRoots: Root[];
-  stateRoots: Root[];
-  historicalRoots: Root[];
+  blockRoots: ArrayLike<Root>;
+  stateRoots: ArrayLike<Root>;
+  historicalRoots: ArrayLike<Root>;
   
   // Eth1
   eth1Data: Eth1Data;
-  eth1DataVotes: Eth1Data[];
-  eth1DepositIndex: number64;
+  eth1DataVotes: ArrayLike<Eth1Data>;
+  eth1DepositIndex: Number64;
   
   // Registry
-  validators: Validator[];
-  balances: Gwei[];
+  validators: ArrayLike<Validator>;
+  balances: ArrayLike<Gwei>;
 
   // Shuffling
-  randaoMixes: bytes32[];
+  randaoMixes: ArrayLike<Bytes32>;
 
   // Slashings
-  slashings: Gwei[]; // Balances penalized at every withdrawal period
+  slashings: ArrayLike<Gwei>; // Balances penalized at every withdrawal period
   
   // Attestations
-  previousEpochAttestations: PendingAttestation[];
-  currentEpochAttestations: PendingAttestation[];
+  previousEpochAttestations: ArrayLike<PendingAttestation>;
+  currentEpochAttestations: ArrayLike<PendingAttestation>;
 
   // Finality
-  justificationBits: BitVector;
+  justificationBits: ArrayLike<boolean>;
   previousJustifiedCheckpoint: Checkpoint;
   currentJustifiedCheckpoint: Checkpoint;
   finalizedCheckpoint: Checkpoint;

@@ -1,27 +1,27 @@
+import {booleanType, ByteVectorType, BigIntUintType, NumberUintType} from "@chainsafe/ssz";
 /**
  * @module sszTypes/generators
  */
 
-export const bool = "bool";
-export const bytes4 = "bytes4";
-export const bytes8 = "bytes8";
-export const bytes32 = "bytes32";
-export const bytes48 = "bytes48";
-export const bytes96 = "bytes96";
-export const uint8 = "number8";
-export const uint16 = "number16";
-export const number64 = "number64";
-export const uint64 = "bigint64";
-export const uint256 = "bigint256";
+export const Boolean = booleanType;
+export const Bytes4 = new ByteVectorType({length: 4});
+export const Bytes8 = new ByteVectorType({length: 8});
+export const Bytes32 = new ByteVectorType({length: 32});
+export const Bytes48 = new ByteVectorType({length: 48});
+export const Bytes96 = new ByteVectorType({length: 96});
+export const Uint16 = new NumberUintType({byteLength: 2});
+export const Number64 = new NumberUintType({byteLength: 8});
+export const Uint64 = new BigIntUintType({byteLength: 8});
+export const Uint256 = new BigIntUintType({byteLength: 32});
 
 // Custom types, defined for type hinting and readability
 
-export const Slot = number64;
-export const Epoch = number64;
-export const CommitteeIndex = number64;
-export const ValidatorIndex = number64;
-export const Gwei = uint64;
-export const Root = bytes32;
-export const Version = bytes4;
-export const BLSPubkey = bytes48;
-export const BLSSignature = bytes96;
+export const Slot = Number64;
+export const Epoch = Number64;
+export const CommitteeIndex = Number64;
+export const ValidatorIndex = Number64;
+export const Gwei = Uint64;
+export const Root = Bytes32;
+export const Version = Bytes4;
+export const BLSPubkey = Bytes48;
+export const BLSSignature = Bytes96;

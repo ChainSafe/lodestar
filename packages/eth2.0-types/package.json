@@ -33,11 +33,8 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/bit-utils": "0.1.6",
     "@chainsafe/eth2.0-params": "0.2.0",
-    "@chainsafe/ssz-type-schema": "^0.0.1",
-    "@types/bn.js": "^4.11.4",
-    "bn.js": "^4.11.8"
+    "@chainsafe/ssz": "0.5.2"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",
@@ -49,6 +46,7 @@
     "beacon",
     "blockchain",
     "ethereum",
+    "eth2",
     "typescript"
   ]
 }

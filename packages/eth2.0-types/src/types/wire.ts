@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 import {
-  Slot, Epoch, Root, number64, Version, uint64,
+  Slot, Epoch, Root, Number64, Uint64, Version,
 } from "./primitive";
 import {BeaconBlock} from "./block";
 
@@ -25,15 +25,15 @@ export interface Status {
   headRoot: Root;
   headSlot: Slot;
 }
-export type Goodbye = uint64;
+export type Goodbye = Uint64;
 
 export interface BeaconBlocksByRangeRequest {
   headBlockRoot: Root; 
   startSlot: Slot;
-  count: number64;
-  step: number64;
+  count: Number64;
+  step: Number64;
 }
-export type BeaconBlocksByRangeResponse = BeaconBlock[];
+export type BeaconBlocksByRangeResponse = ArrayLike<BeaconBlock>;
 
-export type BeaconBlocksByRootRequest = Root[];
-export type BeaconBlocksByRootResponse = BeaconBlock[];
+export type BeaconBlocksByRootRequest = ArrayLike<Root>;
+export type BeaconBlocksByRootResponse = ArrayLike<BeaconBlock>;

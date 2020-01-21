@@ -2,13 +2,12 @@
  * @module sszTypes/generators
  */
 
-import {IBeaconParams} from "@chainsafe/eth2.0-params";
-import {SimpleContainerType} from "@chainsafe/ssz-type-schema";
+import {ContainerType, VectorType} from "@chainsafe/ssz";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../constants";
 import {IBeaconSSZTypes} from "../interface";
 
-export const ProposerSlashing = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+export const ProposerSlashing = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
     ["proposerIndex", ssz.ValidatorIndex],
     ["header1", ssz.BeaconBlockHeader],
@@ -16,35 +15,32 @@ export const ProposerSlashing = (ssz: IBeaconSSZTypes): SimpleContainerType => (
   ],
 });
 
-export const AttesterSlashing = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+export const AttesterSlashing = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
     ["attestation1", ssz.IndexedAttestation],
     ["attestation2", ssz.IndexedAttestation],
   ],
 });
 
-export const Attestation = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
+export const Attestation = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
-    ["aggregationBits", {
-      elementType: ssz.bool,
-      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
-    }],
+    ["aggregationBits", ssz.CommitteeBits],
     ["data", ssz.AttestationData],
     ["signature", ssz.BLSSignature],
   ],
 });
 
-export const Deposit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+export const Deposit = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
-    ["proof", {
-      elementType: ssz.bytes32,
+    ["proof", new VectorType({
+      elementType: ssz.Bytes32,
       length: DEPOSIT_CONTRACT_TREE_DEPTH + 1,
-    }],
+    })],
     ["data", ssz.DepositData],
   ],
 });
 
-export const VoluntaryExit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+export const VoluntaryExit = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
     ["epoch", ssz.Epoch],
     ["validatorIndex", ssz.ValidatorIndex],

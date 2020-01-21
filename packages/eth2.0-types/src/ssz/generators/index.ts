@@ -2,7 +2,6 @@
  * @module sszTypes/generators
  */
 import {IBeaconParams} from "@chainsafe/eth2.0-params";
-import {parseType, ContainerType} from "@chainsafe/ssz-type-schema";
 
 import * as primitive from "./primitive";
 import * as misc from "./misc";
@@ -29,12 +28,12 @@ export function createIBeaconSSZTypes(params: IBeaconParams): IBeaconSSZTypes {
   for (const type in primitive) {
     // @ts-ignore
     // eslint-disable-next-line import/namespace
-    types[type] = parseType(primitive[type]);
+    types[type] = primitive[type];
   }
   // relies on list of typenames in dependency order
   typeNames.forEach((type) => {
     // @ts-ignore
-    types[type] = parseType(allGenerators[type](types, params)) as ContainerType;
+    types[type] = allGenerators[type](types, params);
   });
   /* or if we can separate out types w/ dependencies into files
   for (const type in misc) {

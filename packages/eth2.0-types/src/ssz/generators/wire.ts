@@ -1,11 +1,12 @@
 /**
  * @module sszTypes/generators
  * */
-import {SimpleContainerType, AnySSZType} from "@chainsafe/ssz-type-schema";
+
+import {ContainerType, BigIntUintType, ListType} from "@chainsafe/ssz";
 
 import {IBeaconSSZTypes} from "../interface";
 
-export const Status = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+export const Status = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
     ["headForkVersion", ssz.Version],
     ["finalizedRoot", ssz.Root],
@@ -15,28 +16,28 @@ export const Status = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const Goodbye = (ssz: IBeaconSSZTypes): AnySSZType => ssz.uint64;
+export const Goodbye = (ssz: IBeaconSSZTypes): BigIntUintType => ssz.Uint64;
 
-export const BeaconBlocksByRangeRequest = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+export const BeaconBlocksByRangeRequest = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
     ["headBlockRoot", ssz.Root],
     ["startSlot", ssz.Slot],
-    ["count", ssz.number64],
-    ["step", ssz.number64],
+    ["count", ssz.Number64],
+    ["step", ssz.Number64],
   ],
 });
 
-export const BeaconBlocksByRangeResponse = (ssz: IBeaconSSZTypes): AnySSZType => ({
+export const BeaconBlocksByRangeResponse = (ssz: IBeaconSSZTypes): ListType => new ListType({
   elementType: ssz.BeaconBlock,
-  maxLength: 32000,
+  limit: 32000,
 });
 
-export const BeaconBlocksByRootRequest = (ssz: IBeaconSSZTypes): AnySSZType => ({
+export const BeaconBlocksByRootRequest = (ssz: IBeaconSSZTypes): ListType => new ListType({
   elementType: ssz.Root,
-  maxLength: 32000,
+  limit: 32000,
 });
 
-export const BeaconBlocksByRootResponse = (ssz: IBeaconSSZTypes): AnySSZType => ({
+export const BeaconBlocksByRootResponse = (ssz: IBeaconSSZTypes): ListType => new ListType({
   elementType: ssz.BeaconBlock,
-  maxLength: 32000,
+  limit: 32000,
 });

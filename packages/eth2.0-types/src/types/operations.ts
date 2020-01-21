@@ -3,13 +3,13 @@
  * @module types
  */
 
-import {BitList} from "@chainsafe/bit-utils";
+import {ArrayLike} from "@chainsafe/ssz";
 
 import {
   BLSSignature,
+  Bytes32,
   Epoch,
   ValidatorIndex,
-  bytes32,
 } from "./primitive";
 
 import {
@@ -38,7 +38,7 @@ export interface AttesterSlashing {
 
 export interface Attestation {
   // Attester participation bitfield
-  aggregationBits: BitList;
+  aggregationBits: ArrayLike<boolean>;
   // Attestation data
   data: AttestationData;
   // BLS aggregate signature
@@ -47,7 +47,7 @@ export interface Attestation {
 
 export interface Deposit {
   // Branch in the deposit tree
-  proof: bytes32[];
+  proof: ArrayLike<Bytes32>;
   // Deposit data
   data: DepositData;
 }

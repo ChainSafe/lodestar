@@ -3,12 +3,12 @@
  */
 
 import {IBeaconParams} from "@chainsafe/eth2.0-params";
-import {SimpleContainerType} from "@chainsafe/ssz-type-schema";
+import {ContainerType, ListType, BitListType, VectorType, RootType} from "@chainsafe/ssz";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../constants";
 import {IBeaconSSZTypes} from "../interface";
 
-export const Fork = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+export const Fork = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
     ["previousVersion", ssz.Version],
     ["currentVersion", ssz.Version],
@@ -16,19 +16,19 @@ export const Fork = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const Checkpoint = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+export const Checkpoint = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
     ["epoch", ssz.Epoch],
     ["root", ssz.Root],
   ],
 });
 
-export const Validator = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+export const Validator = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
     ["pubkey", ssz.BLSPubkey],
-    ["withdrawalCredentials", ssz.bytes32],
+    ["withdrawalCredentials", ssz.Bytes32],
     ["effectiveBalance", ssz.Gwei],
-    ["slashed", ssz.bool],
+    ["slashed", ssz.Boolean],
     ["activationEligibilityEpoch", ssz.Epoch],
     ["activationEpoch", ssz.Epoch],
     ["exitEpoch", ssz.Epoch],
@@ -36,7 +36,7 @@ export const Validator = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const AttestationData = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+export const AttestationData = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
     ["slot", ssz.Slot],
     ["index", ssz.CommitteeIndex],
@@ -46,60 +46,67 @@ export const AttestationData = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   ],
 });
 
-export const IndexedAttestation = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
+export const CommitteeIndices = (ssz: IBeaconSSZTypes, params: IBeaconParams): ListType => new ListType({
+  elementType: ssz.ValidatorIndex,
+  limit: params.MAX_VALIDATORS_PER_COMMITTEE,
+});
+
+export const IndexedAttestation = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
-    ["attestingIndices", {
-      elementType: ssz.ValidatorIndex,
-      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
-    }],
+    ["attestingIndices", ssz.CommitteeIndices],
     ["data", ssz.AttestationData],
     ["signature", ssz.BLSSignature],
   ],
 });
 
-export const PendingAttestation = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
+export const CommitteeBits = (ssz: IBeaconSSZTypes, params: IBeaconParams): BitListType => new BitListType({
+  limit: params.MAX_VALIDATORS_PER_COMMITTEE,
+});
+
+export const PendingAttestation = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
-    ["aggregationBits", {
-      elementType: ssz.bool,
-      maxLength: params.MAX_VALIDATORS_PER_COMMITTEE,
-    }],
+    ["aggregationBits", ssz.CommitteeBits],
     ["data", ssz.AttestationData],
     ["inclusionDelay", ssz.Slot],
     ["proposerIndex", ssz.ValidatorIndex],
   ],
 });
 
-export const Eth1Data = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+export const Eth1Data = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
     ["depositRoot", ssz.Root],
-    ["depositCount", ssz.number64],
-    ["blockHash", ssz.bytes32],
+    ["depositCount", ssz.Number64],
+    ["blockHash", ssz.Bytes32],
   ],
 });
 
-export const HistoricalBatch = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
+export const HistoricalBlockRoots = (ssz: IBeaconSSZTypes, params: IBeaconParams): VectorType => new VectorType({
+  elementType: new RootType({expandedType: () => ssz.BeaconBlock}),
+  length: params.SLOTS_PER_HISTORICAL_ROOT,
+});
+
+export const HistoricalStateRoots = (ssz: IBeaconSSZTypes, params: IBeaconParams): VectorType => new VectorType({
+  elementType: new RootType({expandedType: () => ssz.BeaconState}),
+  length: params.SLOTS_PER_HISTORICAL_ROOT,
+});
+
+export const HistoricalBatch = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
-    ["blockRoots", {
-      elementType: ssz.Root,
-      length: params.SLOTS_PER_HISTORICAL_ROOT,
-    }],
-    ["stateRoots", {
-      elementType: ssz.Root,
-      length: params.SLOTS_PER_HISTORICAL_ROOT,
-    }],
+    ["blockRoots", ssz.HistoricalBlockRoots],
+    ["stateRoots", ssz.HistoricalStateRoots],
   ],
 });
 
-export const DepositData = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+export const DepositData = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
     ["pubkey", ssz.BLSPubkey],
-    ["withdrawalCredentials", ssz.bytes32],
+    ["withdrawalCredentials", ssz.Bytes32],
     ["amount", ssz.Gwei],
     ["signature", ssz.BLSSignature],
   ],
 });
 
-export const BeaconBlockHeader = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+export const BeaconBlockHeader = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
     ["slot", ssz.Slot],
     ["parentRoot", ssz.Root],
@@ -109,22 +116,15 @@ export const BeaconBlockHeader = (ssz: IBeaconSSZTypes): SimpleContainerType => 
   ],
 });
 
-export const FFGData = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+export const MerkleTree = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
-    ["source", ssz.Checkpoint],
-    ["target", ssz.Checkpoint],
-  ],
-});
-
-export const MerkleTree = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  fields: [
-    ["depth", ssz.number64],
-    ["tree", {
-      elementType: {
-        elementType: ssz.bytes32,
-        maxLength: DEPOSIT_CONTRACT_TREE_DEPTH + 1,
-      },
-      maxLength: DEPOSIT_CONTRACT_TREE_DEPTH + 1,
-    }]
+    ["depth", ssz.Number64],
+    ["tree", new ListType({
+      elementType: new ListType({
+        elementType: ssz.Bytes32,
+        limit: DEPOSIT_CONTRACT_TREE_DEPTH + 1,
+      }),
+      limit: DEPOSIT_CONTRACT_TREE_DEPTH + 1,
+    })]
   ]
 });

@@ -3,7 +3,9 @@
  * @module types
  */
 
-import {BLSPubkey, BLSSignature, CommitteeIndex, Slot, uint64, ValidatorIndex} from "./primitive";
+import {ArrayLike} from "@chainsafe/ssz";
+
+import {BLSPubkey, BLSSignature, CommitteeIndex, Slot, Uint64, ValidatorIndex} from "./primitive";
 import {Attestation} from "./operations";
 
 export interface ValidatorDuty {
@@ -17,15 +19,15 @@ export interface ValidatorDuty {
 
 export interface SyncingStatus {
   // The block at which syncing started (will only be reset, after the sync reached his head)
-  startingBlock: uint64;
+  startingBlock: Uint64;
   // Current Block
-  currentBlock: uint64;
+  currentBlock: Uint64;
   // The estimated highest block, or current target block number
-  highestBlock: uint64;
+  highestBlock: Uint64;
 }
 
 export interface CommitteeAssignment {
-  validators: ValidatorIndex[];
+  validators: ArrayLike<ValidatorIndex>;
   committeeIndex: CommitteeIndex;
   slot: Slot;
 }
