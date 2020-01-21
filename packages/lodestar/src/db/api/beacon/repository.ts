@@ -40,8 +40,12 @@ export abstract class Repository<T> {
     return await this.get(id) !== null;
   }
 
+  public getId(value: T): Id {
+    return hashTreeRoot(this.type, value);
+  }
+
   public async add(value: T): Promise<void> {
-    await this.set(hashTreeRoot(this.type, value), value);
+    await this.set(this.getId(value), value);
   }
 
   public async set(id: Id, value: T): Promise<void> {
@@ -81,14 +85,7 @@ export abstract class BulkRepository<T> extends Repository<T> {
   }
 
   public async deleteManyByValue(values: T[]): Promise<void> {
-    await this.deleteMany(values.map(value => hashTreeRoot(this.type, value)));
-  }
-
-  public async deleteAll(idFunction?: (value: T) => Id): Promise<void> {
-    const data = await this.getAll();
-    const defaultIdFunction: (value: T) => Id =
-      (value): Id => hashTreeRoot(this.type, value);
-    await this.deleteMany(data.map(idFunction || defaultIdFunction));
+    await this.deleteMany(values.map(value => this.getId(value)));
   }
 
 }

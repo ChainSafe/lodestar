@@ -1,4 +1,4 @@
-import {BeaconBlock} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BulkRepository} from "../repository";
 import {IDatabaseController} from "../../../controller";
@@ -8,7 +8,7 @@ import {serialize, deserialize} from "@chainsafe/ssz";
 /**
  * Stores finalized blocks. Block slot is identifier.
  */
-export class BlockArchiveRepository extends BulkRepository<BeaconBlock> {
+export class BlockArchiveRepository extends BulkRepository<SignedBeaconBlock> {
 
   public constructor(
     config: IBeaconConfig,

@@ -7,7 +7,7 @@ import {IBeaconDb} from "../db";
 import {getCurrentSlot, computeEpochAtSlot, getAttestingIndices} from "@chainsafe/eth2.0-state-transition";
 import {GENESIS_EPOCH} from "../constants";
 import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
-import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 
 export class AttestationProcessor implements IAttestationProcessor {
   private readonly config: IBeaconConfig;
@@ -57,7 +57,7 @@ export class AttestationProcessor implements IAttestationProcessor {
   }
 
   public async receiveBlock(block: BeaconBlock): Promise<void> {
-    const blockRoot = signingRoot(this.config.types.BeaconBlock, block);
+    const blockRoot = hashTreeRoot(this.config.types.BeaconBlock, block);
     const blockPendingAttestations = this.pendingAttestations.get(blockRoot.toString("hex")) || 
       new Map<AttestationRootHex, Attestation>();
     for (const [hash, attestation] of blockPendingAttestations) {

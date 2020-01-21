@@ -2,7 +2,7 @@
  * @module validator
  */
 
-import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 
 import {BeaconBlock, BeaconState, BLSPubkey, Epoch, Fork, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -74,13 +74,13 @@ export default class BlockProposingService {
       return null;
     }
     block.signature = this.privateKey.signMessage(
-      signingRoot(this.config.types.BeaconBlock, block),
+      hashTreeRoot(this.config.types.BeaconBlock, block),
       getDomain(this.config, {fork} as BeaconState, DomainType.BEACON_PROPOSER, computeEpochAtSlot(this.config, slot))
     ).toBytesCompressed();
     await this.storeBlock(block);
     await this.provider.validator.publishBlock(block);
     this.logger.info(
-      `Proposed block with hash 0x${signingRoot(this.config.types.BeaconBlock, block).toString("hex")}`
+      `Proposed block with hash 0x${hashTreeRoot(this.config.types.BeaconBlock, block).toString("hex")}`
     );
     return block;
   }

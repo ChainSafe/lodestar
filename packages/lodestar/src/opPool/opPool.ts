@@ -7,7 +7,7 @@ import {EventEmitter} from "events";
 import {BeaconBlock, BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {blockToHeader, computeEpochAtSlot, getBeaconProposerIndex} from "@chainsafe/eth2.0-state-transition";
+import {signedBlockToSignedHeader, computeEpochAtSlot, getBeaconProposerIndex} from "@chainsafe/eth2.0-state-transition";
 import {IBeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
 import {
@@ -100,8 +100,8 @@ export class OpPool extends EventEmitter {
       // Create slashing
       const slashing: ProposerSlashing = {
         proposerIndex: proposerIndex,
-        header1: blockToHeader(this.config, prevBlock),
-        header2: blockToHeader(this.config, block)
+        signedHeader1: signedBlockToSignedHeader(this.config, prevBlock),
+        signedHeader2: signedBlockToSignedHeader(this.config, block)
       };
       await this.proposerSlashings.receive(slashing);
     } else {

@@ -4,7 +4,7 @@
 
 import assert from "assert";
 import {EventEmitter} from "events";
-import {clone, hashTreeRoot, serialize, signingRoot} from "@chainsafe/ssz";
+import {clone, hashTreeRoot, serialize} from "@chainsafe/ssz";
 import {Attestation, BeaconBlock, BeaconState, Slot, uint16, uint64, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -124,7 +124,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async receiveBlock(block: BeaconBlock, trusted = false): Promise<void> {
-    const blockHash = signingRoot(this.config.types.BeaconBlock, block);
+    const blockHash = hashTreeRoot(this.config.types.BeaconBlock, block);
     this.logger.info(
       `Received block with hash 0x${blockHash.toString("hex")}` +
       `at slot ${block.slot}. Current state slot ${this.latestState.slot}`
@@ -154,7 +154,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const nextBlockInQueue = this.blockProcessingQueue.peek();
     while (nextBlockInQueue) {
       if (await this.db.block.has(nextBlockInQueue.block.parentRoot)) {
-        await this.processBlock(nextBlockInQueue, signingRoot(this.config.types.BeaconBlock, nextBlockInQueue));
+        await this.processBlock(nextBlockInQueue, hashTreeRoot(this.config.types.BeaconBlock, nextBlockInQueue));
         this.blockProcessingQueue.poll();
       } else {
         return;
@@ -192,7 +192,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const genesisBlock = getEmptyBlock();
     const stateRoot = hashTreeRoot(this.config.types.BeaconState, genesisState);
     genesisBlock.stateRoot = stateRoot;
-    const blockRoot = signingRoot(this.config.types.BeaconBlock, genesisBlock);
+    const blockRoot = hashTreeRoot(this.config.types.BeaconBlock, genesisBlock);
     this.latestState = genesisState;
     // Determine whether a genesis state already in
     // the database matches what we were provided
@@ -297,7 +297,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const preJustifiedEpoch = state.currentJustifiedCheckpoint.epoch;
     // Run the state transition
     let newState: BeaconState;
-    const blockRoot = signingRoot(this.config.types.BeaconBlock, block);
+    const blockRoot = hashTreeRoot(this.config.types.BeaconBlock, block);
     try {
       // if block is trusted don't verify state roots, proposer or signature
       newState = stateTransition(this.config, state, block, !trusted, !trusted, !trusted);

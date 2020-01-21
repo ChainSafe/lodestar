@@ -3,7 +3,7 @@
  */
 
 import {BeaconBlock, BeaconBlockHeader, bytes96, Slot} from "@chainsafe/eth2.0-types";
-import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {IBeaconDb} from "../../../db/api";
@@ -12,6 +12,7 @@ import {assembleBody} from "./body";
 import {IEth1Notifier} from "../../../eth1";
 import {processSlots, stateTransition, blockToHeader} from "@chainsafe/eth2.0-state-transition";
 import {IBeaconChain} from "../../interface";
+import {EMPTY_SIGNATURE} from "../../../constants";
 
 
 export async function assembleBlock(
@@ -33,15 +34,14 @@ export async function assembleBlock(
   const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock);
   const block: BeaconBlock = {
     slot,
-    parentRoot: signingRoot(config.types.BeaconBlockHeader, parentHeader),
-    signature: undefined,
+    parentRoot: hashTreeRoot(config.types.BeaconBlockHeader, parentHeader),
     stateRoot: undefined,
     body: await assembleBody(config, opPool, eth1, merkleTree, currentState, randao),
   };
 
   block.stateRoot = hashTreeRoot(
     config.types.BeaconState,
-    stateTransition(config, currentState, block, false, false, true),
+    stateTransition(config, currentState, {message: block, signature: EMPTY_SIGNATURE}, false, false, true),
   );
 
   return block;
