@@ -1,10 +1,5 @@
+import {ArrayLike} from "../interface";
 import {CompositeType, Type, BasicType} from "./abstract";
-
-// Typescript has an ArrayLike, but it is readonly
-export interface ArrayLike<T> {
-  readonly length: number;
-  [n: number]: T;
-}
 
 export interface IArrayOptions {
   elementType: Type<any>;

@@ -1,9 +1,10 @@
 import {Node, BranchNode, zeroNode, TreeBacking, LeafNode} from "@chainsafe/merkle-tree";
 
+import {List} from "../../interface";
 import {number32Type, BasicListType, CompositeListType} from "../../types";
 import {BasicArrayTreeHandler, CompositeArrayTreeHandler} from "./array";
 
-export class BasicListTreeHandler<T extends ArrayLike<any>> extends BasicArrayTreeHandler<T> {
+export class BasicListTreeHandler<T extends List<any>> extends BasicArrayTreeHandler<T> {
   _type: BasicListType<T>;
   _defaultNode: Node;
   defaultNode(): Node {
@@ -61,7 +62,7 @@ export class BasicListTreeHandler<T extends ArrayLike<any>> extends BasicArrayTr
   }
 }
 
-export class CompositeListTreeHandler<T extends ArrayLike<any>> extends CompositeArrayTreeHandler<T> {
+export class CompositeListTreeHandler<T extends List<any>> extends CompositeArrayTreeHandler<T> {
   _type: CompositeListType<T>;
   _defaultNode: Node;
   defaultNode(): Node {

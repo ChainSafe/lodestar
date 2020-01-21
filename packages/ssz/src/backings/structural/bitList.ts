@@ -1,9 +1,10 @@
+import {BitList} from "../../interface";
 import {BitListType} from "../../types";
 import {BasicListStructuralHandler} from "./list";
 
-export class BitListStructuralHandler extends BasicListStructuralHandler<ArrayLike<boolean>> {
+export class BitListStructuralHandler extends BasicListStructuralHandler<BitList> {
   _type: BitListType;
-  getByte(value: ArrayLike<boolean>, index: number): number {
+  getByte(value: BitList, index: number): number {
     const bits = Math.min(8, value.length - (index * 8));
     let byte = 0;
     for (let i = index * 8; i < bits; i++) {
@@ -13,20 +14,20 @@ export class BitListStructuralHandler extends BasicListStructuralHandler<ArrayLi
     }
     return byte;
   }
-  getLength(value: ArrayLike<boolean>): number {
+  getLength(value: BitList): number {
     return value.length;
   }
-  getByteLength(value: ArrayLike<boolean>): number {
+  getByteLength(value: BitList): number {
     return Math.ceil(value.length / 8);
   }
-  size(value: ArrayLike<boolean>): number {
+  size(value: BitList): number {
     if (value.length % 8 === 0) {
       return this.getByteLength(value) + 1;
     } else {
       return this.getByteLength(value);
     }
   }
-  fromBytes(data: Uint8Array, start: number, end: number): ArrayLike<boolean> {
+  fromBytes(data: Uint8Array, start: number, end: number): BitList {
     const value = [];
     const toBool = (c: string): boolean => c === "1" ? true : false;
     for (let i = start; i < end-1; i++) {
@@ -37,7 +38,7 @@ export class BitListStructuralHandler extends BasicListStructuralHandler<ArrayLi
       throw new Error("Invalid bitlist, padding bit required");
     }
     if (lastByte === 1) {
-      return value as ArrayLike<boolean>;
+      return value as BitList;
     }
     const lastBits = Array.prototype.map.call(lastByte.toString(2), toBool);
     const last1 = lastBits.lastIndexOf(true);
@@ -45,9 +46,9 @@ export class BitListStructuralHandler extends BasicListStructuralHandler<ArrayLi
     if (value.length > this._type.limit) {
       throw new Error("Invalid bitlist, length greater than limit");
     }
-    return value as ArrayLike<boolean>;
+    return value as BitList;
   }
-  serializeTo(value: ArrayLike<boolean>, output: Uint8Array, offset: number): number {
+  serializeTo(value: BitList, output: Uint8Array, offset: number): number {
     const byteLength = this.getByteLength(value);
     for (let i = 0; i < byteLength; i++) {
       output[offset + i] = this.getByte(value, i);
@@ -61,7 +62,7 @@ export class BitListStructuralHandler extends BasicListStructuralHandler<ArrayLi
       return newOffset;
     }
   }
-  chunk(value: ArrayLike<boolean>, index: number): Uint8Array {
+  chunk(value: BitList, index: number): Uint8Array {
     const output = new Uint8Array(32);
     const byteLength = Math.min(32, this.getByteLength(value) - index);
     for (let i = 0; i < byteLength; i++) {

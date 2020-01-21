@@ -1,12 +1,13 @@
+import {Vector} from "../../interface";
 import {ByteVectorType} from "../../types";
 import {BasicVectorStructuralHandler} from "./vector";
 
-export class ByteVectorStructuralHandler extends BasicVectorStructuralHandler<ArrayLike<number>> {
+export class ByteVectorStructuralHandler extends BasicVectorStructuralHandler<Vector<number>> {
   _type: ByteVectorType;
-  defaultValue(): ArrayLike<number> {
+  defaultValue(): Vector<number> {
     return new Uint8Array(this._type.length);
   }
-  serializeTo(value: ArrayLike<number>, output: Uint8Array, offset: number): number {
+  serializeTo(value: Vector<number>, output: Uint8Array, offset: number): number {
     output.set(value, offset);
     return offset + this._type.length;
   }

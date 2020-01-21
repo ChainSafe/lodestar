@@ -1,18 +1,19 @@
+import {BitVector} from "../../interface";
 import {BitVectorType} from "../../types";
 import {BasicVectorStructuralHandler} from "./vector";
 
-export class BitVectorStructuralHandler extends BasicVectorStructuralHandler<ArrayLike<boolean>> {
+export class BitVectorStructuralHandler extends BasicVectorStructuralHandler<BitVector> {
   _type: BitVectorType;
-  getLength(value: ArrayLike<boolean>): number {
+  getLength(value: BitVector): number {
     return this._type.length;
   }
-  getByteLength(value: ArrayLike<boolean>): number {
+  getByteLength(value: BitVector): number {
     return Math.ceil(this._type.length / 8);
   }
-  size(value: ArrayLike<boolean>): number {
+  size(value: BitVector): number {
     return Math.ceil(this._type.length / 8);
   }
-  getByte(value: ArrayLike<boolean>, index: number): number {
+  getByte(value: BitVector, index: number): number {
     const bits = Math.min(8, value.length - (index * 8));
     let byte = 0;
     for (let i = index * 8; i < bits; i++) {
@@ -22,7 +23,7 @@ export class BitVectorStructuralHandler extends BasicVectorStructuralHandler<Arr
     }
     return byte;
   }
-  fromBytes(data: Uint8Array, start: number, end: number): ArrayLike<boolean> {
+  fromBytes(data: Uint8Array, start: number, end: number): BitVector {
     if ((end - start) !== this.size(null)) {
       throw new Error("Invalid bitvector, length not equal to vector length");
     }
@@ -34,16 +35,16 @@ export class BitVectorStructuralHandler extends BasicVectorStructuralHandler<Arr
     const lastByte = data[end-1];
     const lastIndex = (this._type.length-1) % 8;
     value.push(...Array.prototype.map.call(lastByte.toString(2), toBool).slice(0, lastIndex));
-    return value as ArrayLike<boolean>;
+    return value as BitVector;
   }
-  serializeTo(value: ArrayLike<boolean>, output: Uint8Array, offset: number): number {
+  serializeTo(value: BitVector, output: Uint8Array, offset: number): number {
     const byteLength = this.getByteLength(value);
     for (let i = 0; i < byteLength; i++) {
       output[offset + i] = this.getByte(value, i);
     }
     return offset + byteLength;
   }
-  chunk(value: ArrayLike<boolean>, index: number): Uint8Array {
+  chunk(value: BitVector, index: number): Uint8Array {
     const output = new Uint8Array(32);
     const byteLength = Math.min(32, this.getByteLength(value) - index);
     for (let i = 0; i < byteLength; i++) {

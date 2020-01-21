@@ -1,9 +1,10 @@
 import {Node, TreeBacking, subtreeFillToLength, zeroNode} from "@chainsafe/merkle-tree";
 
+import {Vector} from "../../interface";
 import {BasicVectorType, CompositeVectorType} from "../../types";
 import {BasicArrayTreeHandler, CompositeArrayTreeHandler} from "./array";
 
-export class BasicVectorTreeHandler<T extends ArrayLike<any>> extends BasicArrayTreeHandler<T> {
+export class BasicVectorTreeHandler<T extends Vector<any>> extends BasicArrayTreeHandler<T> {
   _type: BasicVectorType<T>;
   _defaultNode: Node;
   defaultNode(): Node {
@@ -20,7 +21,7 @@ export class BasicVectorTreeHandler<T extends ArrayLike<any>> extends BasicArray
     return this._type.length;
   }
 }
-export class CompositeVectorTreeHandler<T extends ArrayLike<any>> extends CompositeArrayTreeHandler<T> {
+export class CompositeVectorTreeHandler<T extends Vector<any>> extends CompositeArrayTreeHandler<T> {
   _type: CompositeVectorType<T>;
   _defaultNode: Node;
   defaultNode(): Node {

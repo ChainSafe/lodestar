@@ -1,4 +1,5 @@
-import {BasicArrayType, CompositeArrayType, ArrayLike} from "../../types";
+import {ArrayLike} from "../../interface";
+import {BasicArrayType, CompositeArrayType} from "../../types";
 import {StructuralHandler} from "./abstract";
 
 export class BasicArrayStructuralHandler<T extends ArrayLike<any>> extends StructuralHandler<T> {

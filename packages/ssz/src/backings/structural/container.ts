@@ -1,7 +1,8 @@
-import {ContainerType, IObjectLike} from "../../types";
+import {ObjectLike} from "../../interface";
+import {ContainerType} from "../../types";
 import {StructuralHandler} from "./abstract";
 
-export class ContainerStructuralHandler<T extends IObjectLike> extends StructuralHandler<T> {
+export class ContainerStructuralHandler<T extends ObjectLike> extends StructuralHandler<T> {
   _type: ContainerType<T>;
   defaultValue(): T {
     const obj = {} as T;

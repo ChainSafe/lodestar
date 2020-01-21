@@ -1,18 +1,15 @@
+import {ObjectLike} from "../interface";
 import {CompositeType, Type} from "./abstract";
 import {
   ContainerStructuralHandler,
   ContainerTreeHandler,
 } from "../backings";
 
-export interface IObjectLike {
-  [fieldName: string]: any;
-}
-
 export interface IContainerOptions {
   fields: [string, Type<any>][];
 }
 
-export class ContainerType<T extends IObjectLike=any> extends CompositeType<T> {
+export class ContainerType<T extends ObjectLike=any> extends CompositeType<T> {
   fields: [string, Type<any>][];
   constructor(options: IContainerOptions) {
     super();

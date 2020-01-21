@@ -1,5 +1,6 @@
 import {Node, BranchNode, zeroNode, TreeBacking, LeafNode} from "@chainsafe/merkle-tree";
 
+import {ArrayLike} from "../../interface";
 import {BasicArrayType, CompositeArrayType} from "../../types";
 import {TreeHandler, PropOfCompositeTreeBackedValue, TreeBackedValue} from "./abstract";
 import { isBackedValue} from "..";

@@ -1,4 +1,5 @@
-import {ArrayLike, IArrayOptions, BasicArrayType, CompositeArrayType} from "./array";
+import {List} from "../interface";
+import {IArrayOptions, BasicArrayType, CompositeArrayType} from "./array";
 import {
   BasicListStructuralHandler, CompositeListStructuralHandler,
   BasicListTreeHandler, CompositeListTreeHandler,
@@ -8,14 +9,14 @@ export interface IListOptions extends IArrayOptions {
   limit: number;
 }
 
-export type ListType<T extends ArrayLike<any>=any> = BasicListType<T> | CompositeListType<T>;
+export type ListType<T extends List<any>=any> = BasicListType<T> | CompositeListType<T>;
 type ListTypeConstructor = {
-  new<T extends ArrayLike<any>>(options: IListOptions): ListType<T>;
+  new<T extends List<any>>(options: IListOptions): ListType<T>;
 };
 
 // Trick typescript into treating ListType as a constructor
 export const ListType: ListTypeConstructor =
-  function ListType<T extends ArrayLike<any>=any>(options: IListOptions): ListType<T> {
+  function ListType<T extends List<any>=any>(options: IListOptions): ListType<T> {
     if (options.elementType.isBasic()) {
       return new BasicListType(options);
     } else {
@@ -23,7 +24,7 @@ export const ListType: ListTypeConstructor =
     }
   } as unknown as ListTypeConstructor;
 
-export class BasicListType<T extends ArrayLike<any>=any> extends BasicArrayType<T> {
+export class BasicListType<T extends List<any>=any> extends BasicArrayType<T> {
   limit: number;
   constructor(options: IListOptions) {
     super(options);
@@ -39,7 +40,7 @@ export class BasicListType<T extends ArrayLike<any>=any> extends BasicArrayType<
   }
 }
 
-export class CompositeListType<T extends ArrayLike<any>> extends CompositeArrayType<T> {
+export class CompositeListType<T extends List<any>=any> extends CompositeArrayType<T> {
   limit: number;
   constructor(options: IListOptions) {
     super(options);

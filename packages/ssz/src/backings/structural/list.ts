@@ -1,8 +1,9 @@
+import {List} from "../../interface";
 import {BasicListType, CompositeListType} from "../../types";
 import {mixInLength} from "../../util/compat";
 import {BasicArrayStructuralHandler, CompositeArrayStructuralHandler} from "./array";
 
-export class BasicListStructuralHandler<T extends ArrayLike<any>> extends BasicArrayStructuralHandler<T> {
+export class BasicListStructuralHandler<T extends List<any>> extends BasicArrayStructuralHandler<T> {
   _type: BasicListType<T>;
   defaultValue(): T {
     return [] as unknown as T;
@@ -24,7 +25,7 @@ export class BasicListStructuralHandler<T extends ArrayLike<any>> extends BasicA
   }
 }
 
-export class CompositeListStructuralHandler<T extends ArrayLike<any>> extends CompositeArrayStructuralHandler<T> {
+export class CompositeListStructuralHandler<T extends List<any>> extends CompositeArrayStructuralHandler<T> {
   _type: CompositeListType<T>;
   defaultValue(): T {
     return [] as unknown as T;

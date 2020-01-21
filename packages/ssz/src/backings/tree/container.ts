@@ -1,10 +1,11 @@
 import {Node, subtreeFillToContents, TreeBacking, zeroNode, LeafNode} from "@chainsafe/merkle-tree";
 
+import {ObjectLike} from "../../interface";
 import {ContainerType} from "../../types";
 import {TreeHandler, PropOfTreeBackedValue, TreeBackedValue} from "./abstract";
-import { isBackedValue } from "..";
+import {isBackedValue} from "..";
 
-export class ContainerTreeHandler<T extends object> extends TreeHandler<T> {
+export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
   _type: ContainerType<T>;
   defaultNode(): Node {
     return subtreeFillToContents(

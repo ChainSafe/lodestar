@@ -7,7 +7,6 @@ export interface ArrayLike<T> {
 export type Vector<T> = ArrayLike<T>;
 
 export interface List<T> extends ArrayLike<T> {
-  readonly limit: number;
   push(value: T): number;
   pop(): T;
 }
@@ -18,3 +17,6 @@ export type BitVector = ArrayLike<boolean>;
 
 export type BitList = List<boolean>;
 
+export interface ObjectLike {
+  [fieldName: string]: any;
+}

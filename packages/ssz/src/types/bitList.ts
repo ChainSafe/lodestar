@@ -1,12 +1,13 @@
-import {BitListStructuralHandler} from "../backings/structural";
+import {BitList} from "../interface";
 import {BasicListType} from "./list";
 import {booleanType} from "./wellKnown";
+import {BitListStructuralHandler} from "../backings/structural";
 
 export interface IBitListOptions {
   limit: number;
 }
 
-export class BitListType extends BasicListType<ArrayLike<boolean>> {
+export class BitListType extends BasicListType<BitList> {
   constructor(options: IBitListOptions) {
     super({elementType: booleanType, ...options});
     this.structural = new BitListStructuralHandler(this);

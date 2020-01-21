@@ -1,7 +1,8 @@
+import {Vector} from "../../interface";
 import {BasicVectorType, CompositeVectorType} from "../../types";
 import {BasicArrayStructuralHandler, CompositeArrayStructuralHandler} from "./array";
 
-export class BasicVectorStructuralHandler<T extends ArrayLike<any>> extends BasicArrayStructuralHandler<T> {
+export class BasicVectorStructuralHandler<T extends Vector<any>> extends BasicArrayStructuralHandler<T> {
   _type: BasicVectorType<T>;
   defaultValue(): T {
     return Array.from({length: this._type.length}, () => {
@@ -19,7 +20,7 @@ export class BasicVectorStructuralHandler<T extends ArrayLike<any>> extends Basi
   }
 }
 
-export class CompositeVectorStructuralHandler<T extends ArrayLike<any>> extends CompositeArrayStructuralHandler<T> {
+export class CompositeVectorStructuralHandler<T extends Vector<any>> extends CompositeArrayStructuralHandler<T> {
   _type: CompositeVectorType<T>;
   defaultValue(): T {
     return Array.from({length: this.type.length}, () => {
