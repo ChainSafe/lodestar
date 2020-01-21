@@ -8,14 +8,14 @@ export interface IListOptions extends IArrayOptions {
   limit: number;
 }
 
-export type ListType<T extends ArrayLike<any>> = BasicListType<T> | CompositeListType<T>;
+export type ListType<T extends ArrayLike<any>=any> = BasicListType<T> | CompositeListType<T>;
 type ListTypeConstructor = {
   new<T extends ArrayLike<any>>(options: IListOptions): ListType<T>;
 };
 
 // Trick typescript into treating ListType as a constructor
 export const ListType: ListTypeConstructor =
-  function ListType<T extends ArrayLike<any>>(options: IListOptions): ListType<T> {
+  function ListType<T extends ArrayLike<any>=any>(options: IListOptions): ListType<T> {
     if (options.elementType.isBasic()) {
       return new BasicListType(options);
     } else {
@@ -23,7 +23,7 @@ export const ListType: ListTypeConstructor =
     }
   } as unknown as ListTypeConstructor;
 
-export class BasicListType<T extends ArrayLike<any>> extends BasicArrayType<T> {
+export class BasicListType<T extends ArrayLike<any>=any> extends BasicArrayType<T> {
   limit: number;
   constructor(options: IListOptions) {
     super(options);

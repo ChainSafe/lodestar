@@ -8,14 +8,14 @@ export interface IVectorOptions extends IArrayOptions {
   length: number;
 }
 
-export type VectorType<T extends ArrayLike<any>> = BasicVectorType<T> | CompositeVectorType<T>;
+export type VectorType<T extends ArrayLike<any>=any> = BasicVectorType<T> | CompositeVectorType<T>;
 type VectorTypeConstructor = {
   new<T extends ArrayLike<any>>(options: IVectorOptions): VectorType<T>;
 };
 
 // Trick typescript into treating VectorType as a constructor
 export const VectorType: VectorTypeConstructor =
-  function VectorType<T extends ArrayLike<any>>(options: IVectorOptions): VectorType<T> {
+  function VectorType<T extends ArrayLike<any>=any>(options: IVectorOptions): VectorType<T> {
     if (options.elementType.isBasic()) {
       return new BasicVectorType(options);
     } else {
@@ -23,7 +23,7 @@ export const VectorType: VectorTypeConstructor =
     }
   } as unknown as VectorTypeConstructor;
 
-export class BasicVectorType<T extends ArrayLike<any>> extends BasicArrayType<T> {
+export class BasicVectorType<T extends ArrayLike<any>=any> extends BasicArrayType<T> {
   length: number;
   constructor(options: IVectorOptions) {
     super(options);
