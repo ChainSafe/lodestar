@@ -1,10 +1,10 @@
 import path from "path";
-import bls, {initBLS} from "../../src";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import bls, {initBLS} from "@chainsafe/bls";
 
-interface AggregateSigsTestCase {
+interface IPrivToPubTestCase {
   data: {
-    input: string[];
+    input: string;
     output: string;
   };
 }
@@ -13,16 +13,14 @@ before(async function f() {
   await initBLS();
 });
 
-describeDirectorySpecTest<AggregateSigsTestCase, string>(
-  "aggregate sigs",
+describeDirectorySpecTest<IPrivToPubTestCase, string>(
+  "BLS - priv_to_pub",
   path.join(
     __dirname,
-    "../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/aggregate_sigs/small"
+    "../../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/priv_to_pub/small"
   ),
   (testCase => {
-    const result =  bls.aggregateSignatures(testCase.data.input.map(pubKey => {
-      return Buffer.from(pubKey.replace("0x", ""), "hex");
-    }));
+    const result =  bls.generatePublicKey(Buffer.from(testCase.data.input.replace("0x", ""), "hex"));
     return `0x${result.toString("hex")}`;
   }),
   {

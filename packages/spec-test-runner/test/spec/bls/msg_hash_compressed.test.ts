@@ -1,7 +1,7 @@
 import path from "path";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
-import {PrivateKey} from "../../src";
-import {padLeft} from "../../src/helpers/utils";
+import {PrivateKey} from "@chainsafe/bls";
+import {padLeft} from "@chainsafe/bls/lib/helpers/utils";
 
 interface IMsgHHashCOmpressed {
   data: {
@@ -14,10 +14,10 @@ interface IMsgHHashCOmpressed {
 }
 
 describeDirectorySpecTest<IMsgHHashCOmpressed, string>(
-  "msg_hash_compressed",
+  "BLS - msg_hash_compressed",
   path.join(
     __dirname,
-    "../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/msg_hash_compressed/small"
+    "../../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/msg_hash_compressed/small"
   ),
   (testCase => {
     const domain = Buffer.from(testCase.data.input.domain.replace("0x", ""), "hex");
