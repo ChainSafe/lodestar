@@ -13,7 +13,7 @@ import {isPlainObject} from "@chainsafe/eth2.0-utils";
 import {Sync} from "../sync";
 import {BeaconChain, IBeaconChain} from "../chain";
 import {OpPool} from "../opPool";
-import {ILogger} from "../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 import {ApiService} from "../api";
 import {ReputationStore} from "../sync/IReputation";

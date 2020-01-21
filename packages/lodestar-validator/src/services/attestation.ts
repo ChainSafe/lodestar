@@ -17,7 +17,9 @@ import {
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IApiClient} from "../api";
 import {aggregateSignatures, Keypair, PrivateKey} from "@chainsafe/bls";
-import {ILogger, IValidatorDB} from "..";
+import {IValidatorDB} from "..";
+import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
+
 import {computeEpochAtSlot, DomainType, getDomain, isSlashableAttestationData, sleep} from "../util";
 import {IAttesterDuty} from "../types";
 

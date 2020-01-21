@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {BeaconMetrics} from "../../../src/metrics";
-import {ILogger, WinstonLogger} from "../../../../lodestar/src/logger"
+import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger"
 describe("BeaconMetrics", () => {
   let logger: ILogger = new WinstonLogger();
   it("updated metrics should be reflected in the registry", async () => {

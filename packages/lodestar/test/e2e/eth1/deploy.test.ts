@@ -6,7 +6,7 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {Eth1Wallet, EthersEth1Notifier, IEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
 import {PrivateEth1Network} from "../../../src/eth1/dev";
-import {ILogger, WinstonLogger} from "../../../src/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {sleep} from "../../utils/sleep";
 
 describe("Eth1Notifier - using deployed contract", () => {

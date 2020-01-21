@@ -5,7 +5,7 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconChain} from "../../../chain";
 import {ReputationStore} from "../../IReputation";
 import {IReqResp} from "../../../network";
-import {ILogger} from "../../../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {ISyncOptions} from "../../options";
 import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../interface";
 import {EventEmitter} from "events";

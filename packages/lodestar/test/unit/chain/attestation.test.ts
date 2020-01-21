@@ -5,13 +5,12 @@ import { BeaconChain, StatefulDagLMDGHOST } from "../../../src/chain";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as utils from "@chainsafe/eth2.0-state-transition/lib/util/attestation";
 import { StateRepository, BlockRepository } from "../../../src/db/api/beacon/repositories";
-import { WinstonLogger } from "../../../src/logger";
+import { WinstonLogger } from "@chainsafe/eth2.0-utils/lib/logger";
 import { generateEmptyBlock } from "../../utils/block";
 import { generateEmptyAttestation } from "../../utils/attestation";
 import { generateState } from "../../utils/state";
 import { signingRoot } from "@chainsafe/ssz";
 import { fail } from "assert";
-import { generateValidator } from "@chainsafe/eth2.0-state-transition/test/utils/validator";
 
 describe("AttestationProcessor", function() {
   const sandbox = sinon.createSandbox();

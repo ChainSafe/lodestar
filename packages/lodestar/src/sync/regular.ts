@@ -10,7 +10,7 @@ import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
 import {OpPool} from "../opPool";
-import {ILogger} from "../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {ISyncModules} from "./index";
 import {ISyncOptions} from "./options";
 import {GossipEvent} from "../network/gossip/constants";

@@ -4,7 +4,7 @@ import {IService} from "../../node";
 import {IRestApiOptions} from "./options";
 import {IApiModules} from "../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
-import {ILogger} from "../../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import * as routes from "./routes";
 import {IBeaconChain} from "../../chain";
 import qs from "qs";

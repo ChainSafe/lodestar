@@ -8,7 +8,7 @@ import * as validatorStatusUtils from "@chainsafe/eth2.0-state-transition/lib/ut
 import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {AttestationOperations, OpPool, VoluntaryExitOperations, AggregateAndProofOperations} from "../../../src/opPool";
-import {WinstonLogger} from "../../../src/logger";
+import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {RegularSync} from "../../../src/sync/regular";
 import {generateState} from "../../utils/state";
 import {generateEmptyBlock} from "../../utils/block";

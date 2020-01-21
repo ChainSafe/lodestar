@@ -8,7 +8,7 @@ import LibP2p from "libp2p";
 import PeerInfo from "peer-info";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {ILogger} from "../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {IBeaconMetrics} from "../metrics";
 
 import {ReqResp} from "./reqResp";
