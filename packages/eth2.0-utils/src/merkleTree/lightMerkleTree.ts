@@ -1,4 +1,4 @@
-import {bytes32, Root} from "@chainsafe/eth2.0-types";
+import {Bytes32, Root} from "@chainsafe/eth2.0-types";
 import {hash} from "../crypto";
 import {intDiv} from "../math";
 import assert from "assert";
@@ -10,8 +10,8 @@ import assert from "assert";
 export class LightProgressiveMerkleTree {
   private _depth: number;
   private _count: number;
-  private _branch: bytes32[];
-  private _zerohashes: bytes32[];
+  private _branch: Bytes32[];
+  private _zerohashes: Bytes32[];
 
   public constructor(depth: number) {
     assert(depth <= 52, "tree depth must be less than 53");
@@ -36,7 +36,7 @@ export class LightProgressiveMerkleTree {
     return this._depth;
   }
 
-  public push(item: bytes32): bytes32[] {
+  public push(item: Bytes32): Bytes32[] {
     const depth = this._depth;
     const proof = this._proof();
     this._count++;
@@ -94,7 +94,7 @@ export class LightProgressiveMerkleTree {
     return root;
   }
 
-  private _proof(): bytes32[] {
+  private _proof(): Bytes32[] {
     let size = this._count;
     const proof = this._branch.slice();
     for (let i = 0; i < this._depth; i++) {

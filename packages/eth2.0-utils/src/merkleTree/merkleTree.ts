@@ -3,7 +3,7 @@
  */
 
 import assert from "assert";
-import {MerkleTree, number64, bytes32, Root} from "@chainsafe/eth2.0-types";
+import {MerkleTree, Number64, Bytes32, Root} from "@chainsafe/eth2.0-types";
 import {hash} from "../crypto";
 import {intDiv} from "../math";
 import {IProgressiveMerkleTree} from "./interface";
@@ -20,12 +20,12 @@ export interface IMerkleTreeSerialization {
 
 export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
   private readonly _depth: number;
-  private readonly _zerohashes: bytes32[];
+  private readonly _zerohashes: Bytes32[];
   private readonly serialization: IMerkleTreeSerialization;
-  private _tree: bytes32[][];
+  private _tree: Bytes32[][];
   private _dirty: boolean;
 
-  public constructor(depth: number, tree: bytes32[][], serialization: IMerkleTreeSerialization) {
+  public constructor(depth: number, tree: Bytes32[][], serialization: IMerkleTreeSerialization) {
     assert(depth > 1 && depth <= 52, "tree depth must be between 1 and 53");
     this._depth = depth;
     this._tree = tree;
@@ -38,7 +38,7 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
     const value = serialization.deserializeTree(data);
     return new ProgressiveMerkleTree(
       value.depth,
-      value.tree,
+      value.tree as Uint8Array[][],
       serialization
     );
   }
@@ -56,19 +56,19 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
     return this._depth;
   }
 
-  public push(item: bytes32): void {
+  public push(item: Bytes32): void {
     this._dirty = true;
     this._tree[0].push(item);
   }
 
-  public add(index: number64, item: bytes32): void {
+  public add(index: Number64, item: Bytes32): void {
     this._dirty = true;
     this._tree[0][index] = item;
   }
 
-  public getProof(index: number): bytes32[] {
+  public getProof(index: number): Bytes32[] {
     this.calculateBranchesIfNecessary();
-    const proof: bytes32[] = [];
+    const proof: Bytes32[] = [];
     for(let i = 0; i < this._depth; i++) {
       index = index % 2 === 1 ? index - 1 : index + 1;
       if(index < this._tree[i].length) {
@@ -115,7 +115,7 @@ export class ProgressiveMerkleTree implements IProgressiveMerkleTree {
     this._dirty = false;
   }
 
-  private generateZeroHashes(): bytes32[] {
+  private generateZeroHashes(): Bytes32[] {
     const zerohashes = Array.from({length: this._depth}, () => Buffer.alloc(32));
     for (let i = 0; i < this._depth - 1; i++) {
       zerohashes[i + 1] =

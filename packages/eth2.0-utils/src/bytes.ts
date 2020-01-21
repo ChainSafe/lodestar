@@ -1,9 +1,8 @@
-import {bytes} from "@chainsafe/eth2.0-types";
 import {toBufferLE, toBigIntLE} from "bigint-buffer";
 /**
  * Return a byte array from a number or BigInt
  */
-export function intToBytes(value: bigint | number, length: number): bytes {
+export function intToBytes(value: bigint | number, length: number): Buffer {
   if (typeof  value === "number" && length <= 6) { // value is a number and length is at most 6 bytes
     const b = Buffer.alloc(length);
     b.writeUIntLE(value, 0, length);
@@ -17,7 +16,7 @@ export function intToBytes(value: bigint | number, length: number): bytes {
 /**
  * Convert byte array in LE to integer.
  */
-export function bytesToInt(value: bytes): number {
+export function bytesToInt(value: Uint8Array): number {
   const length = value.length;
   let result = 0;
   for (let i = 0; i < length; i++) {
@@ -26,7 +25,7 @@ export function bytesToInt(value: bytes): number {
   return result;
 }
 
-export function bytesToBigInt(value: bytes): bigint {
+export function bytesToBigInt(value: Buffer): bigint {
   return toBigIntLE(value);
 }
 
