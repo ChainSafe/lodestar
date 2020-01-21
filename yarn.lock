@@ -656,11 +656,6 @@
     lodash "^4.17.13"
     to-fast-properties "^2.0.0"
 
-"@chainsafe/bit-utils@0.1.4":
-  version "0.1.4"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.4.tgz#c7fcc20f8ea916b7767b82ce6fad389db675bd4e"
-  integrity sha512-pT+XpjJKoO3+Zt3w0vVJftKzYPnW4ObtkXFQ49eZHlLbmJbZ0aSM1jxU1RjFmOyMYjDSMVlaPR311c8K7lXGJQ==
-
 "@chainsafe/bit-utils@0.1.6":
   version "0.1.6"
   resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.6.tgz#f643033340b45a1170c5473e4aab54a7a7b4b9dc"
@@ -704,16 +699,6 @@
     assert "^2.0.0"
     bcrypto "^4.2.8"
     bigint-buffer "^1.1.5"
-
-"@chainsafe/ssz-type-schema@^0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz-type-schema/-/ssz-type-schema-0.0.1.tgz#5b916df8e13dc7110440172e9309d22b44b20d79"
-  integrity sha512-UJh6u4n4UApz5WzZDAX7FX4ilDGzRmjX1wafbkGa5VxZKPaQaKB7e23XIKYKgY3PvoPUQ3uD+Ynw92nPR1xenQ==
-  dependencies:
-    "@chainsafe/bit-utils" "0.1.4"
-    "@types/bn.js" "^4.11.4"
-    assert "^2.0.0"
-    bn.js "^4.11.8"
 
 "@evocateur/libnpmaccess@^3.1.2":
   version "3.1.2"
@@ -1527,12 +1512,6 @@
 "@types/benchmark@^1.0.31":
   version "1.0.31"
   resolved "https://registry.yarnpkg.com/@types/benchmark/-/benchmark-1.0.31.tgz#2dd3514e93396f362ba5551a7c9ff0da405c1d38"
-
-"@types/bn.js@^4.11.4", "@types/bn.js@^4.11.5":
-  version "4.11.5"
-  resolved "https://registry.yarnpkg.com/@types/bn.js/-/bn.js-4.11.5.tgz#40e36197433f78f807524ec623afcf0169ac81dc"
-  dependencies:
-    "@types/node" "*"
 
 "@types/buffer-xor@^2.0.0":
   version "2.0.0"
