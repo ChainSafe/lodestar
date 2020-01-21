@@ -9,6 +9,7 @@ import {
   BLSPubkey,
   BLSSignature,
   bool,
+  Domain,
   Epoch,
   Gwei,
   Root,
@@ -99,6 +100,15 @@ export interface HistoricalBatch {
   stateRoots: Root[];
 }
 
+export interface DepositMessage {
+  // BLS pubkey
+  pubkey: BLSPubkey;
+  // Withdrawal credentials
+  withdrawalCredentials: bytes32;
+  // Amount in Gwei
+  amount: Gwei;
+}
+
 export interface DepositData {
   // BLS pubkey
   pubkey: BLSPubkey;
@@ -106,7 +116,7 @@ export interface DepositData {
   withdrawalCredentials: bytes32;
   // Amount in Gwei
   amount: Gwei;
-  // Container self-signature
+  // Signing over DepositMessage
   signature: BLSSignature;
 }
 
@@ -115,6 +125,10 @@ export interface BeaconBlockHeader {
   parentRoot: Root;
   stateRoot: Root;
   bodyRoot: Root;
+}
+
+export interface SignedBeaconBlockHeader {
+  message: BeaconBlockHeader;
   signature: BLSSignature;
 }
 

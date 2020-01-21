@@ -33,8 +33,10 @@ export interface IBeaconSSZTypes {
   PendingAttestation: AnyContainerType<t.PendingAttestation>;
   Eth1Data: AnyContainerType<t.Eth1Data>;
   HistoricalBatch: AnyContainerType<t.HistoricalBatch>;
+  DepositMessage: AnyContainerType<t.DepositMessage>;
   DepositData: AnyContainerType<t.DepositData>;
   BeaconBlockHeader: AnyContainerType<t.BeaconBlockHeader>;
+  SignedBeaconBlockHeader: AnyContainerType<t.SignedBeaconBlockHeader>;
   FFGData: AnyContainerType<t.FFGData>;
   MerkleTree: AnyContainerType<t.MerkleTree>;
   // operations
@@ -43,9 +45,11 @@ export interface IBeaconSSZTypes {
   Attestation: AnyContainerType<t.Attestation>;
   Deposit: AnyContainerType<t.Deposit>;
   VoluntaryExit: AnyContainerType<t.VoluntaryExit>;
+  SignedVoluntaryExit: AnyContainerType<t.SignedVoluntaryExit>;
   // block
   BeaconBlockBody: AnyContainerType<t.BeaconBlockBody>;
   BeaconBlock: AnyContainerType<t.BeaconBlock>;
+  SignedBeaconBlock: AnyContainerType<t.SignedBeaconBlock>;
   // state
   BeaconState: AnyContainerType<t.BeaconState>;
   // Validator

@@ -29,7 +29,7 @@ export const BeaconBlockBody = (ssz: IBeaconSSZTypes, params: IBeaconParams): Si
       maxLength: params.MAX_DEPOSITS,
     }],
     ["voluntaryExits", {
-      elementType: ssz.VoluntaryExit,
+      elementType: ssz.SignedVoluntaryExit,
       maxLength: params.MAX_VOLUNTARY_EXITS,
     }],
   ],
@@ -41,6 +41,12 @@ export const BeaconBlock = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
     ["parentRoot", ssz.Root],
     ["stateRoot", ssz.Root],
     ["body", ssz.BeaconBlockBody],
+  ],
+});
+
+export const SignedBeaconBlock = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+  fields: [
+    ["message", ssz.BeaconBlock],
     ["signature", ssz.BLSSignature],
   ],
 });

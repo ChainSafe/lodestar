@@ -2,7 +2,7 @@
 import {
   Slot, Epoch, Root, number64, Version, uint64,
 } from "./primitive";
-import {BeaconBlock} from "./block";
+import {SignedBeaconBlock} from "./block";
 
 export type RequestId = string;
 
@@ -33,7 +33,7 @@ export interface BeaconBlocksByRangeRequest {
   count: number64;
   step: number64;
 }
-export type BeaconBlocksByRangeResponse = BeaconBlock[];
+export type BeaconBlocksByRangeResponse = SignedBeaconBlock[];
 
 export type BeaconBlocksByRootRequest = Root[];
-export type BeaconBlocksByRootResponse = BeaconBlock[];
+export type BeaconBlocksByRootResponse = SignedBeaconBlock[];
