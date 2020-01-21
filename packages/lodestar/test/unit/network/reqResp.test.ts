@@ -7,7 +7,7 @@ import {ReqResp} from "../../../src/network/reqResp";
 import {describe, it, beforeEach, afterEach} from "mocha";
 import {createNode} from "./util";
 import {NodejsNode} from "../../../src/network/nodejs";
-import {ILogger, WinstonLogger} from "../../../src/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import PeerInfo from "peer-info";
 

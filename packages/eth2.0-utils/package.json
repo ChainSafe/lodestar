@@ -43,6 +43,8 @@
     "bn.js": "^5.0.0",
     "camelcase": "^5.3.1",
     "js-yaml": "^3.13.1",
+    "winston": "^3.2.1",
+    "chalk": "^2.4.2",
     "snake-case": "^2.1.0"
   },
   "devDependencies": {

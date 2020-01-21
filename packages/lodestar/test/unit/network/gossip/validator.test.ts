@@ -7,7 +7,7 @@ import * as attestationUtils from "@chainsafe/eth2.0-state-transition/lib/util/a
 import * as validatorStatusUtils from "@chainsafe/eth2.0-state-transition/lib/util/validatorStatus";
 import * as validatorUtils from "@chainsafe/eth2.0-state-transition/lib/util/validator";
 import * as bls from "@chainsafe/bls";
-import {WinstonLogger} from "../../../../src/logger";
+import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {generateState} from "../../../utils/state";
 import {generateEmptyBlock} from "../../../utils/block";
 import {

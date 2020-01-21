@@ -25,7 +25,7 @@ import {IEth1Notifier} from "../../../../eth1";
 import {getAttesterDuties, getEpochProposers, produceAttestation, publishAttestation} from "../../../impl/validator";
 import {ApiNamespace, IApiModules} from "../../../index";
 import {IApiOptions} from "../../../options";
-import {ILogger} from "../../../../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {INetwork} from "../../../../network";
 import {isAggregator} from "@chainsafe/eth2.0-state-transition";
 

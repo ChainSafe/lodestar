@@ -10,7 +10,7 @@ import {getCurrentSlot, isValidIndexedAttestation, getIndexedAttestation, isVali
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 import {hashTreeRoot} from "@chainsafe/ssz";
-import {ILogger} from "../../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {DomainType} from "@chainsafe/eth2.0-state-transition/lib/constants";
 
 export class GossipMessageValidator implements IGossipMessageValidator {

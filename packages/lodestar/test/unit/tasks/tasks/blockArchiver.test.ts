@@ -2,7 +2,7 @@ import {describe, it, beforeEach} from "mocha";
 import sinon from "sinon";
 import {BlockRepository} from "../../../../src/db/api/beacon/repositories";
 import {BlockArchiveRepository} from "../../../../src/db/api/beacon/repositories/blockArchive";
-import {WinstonLogger} from "../../../../src/logger";
+import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {ArchiveBlocksTask} from "../../../../src/tasks/tasks/archiveBlocks";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {expect} from "chai";

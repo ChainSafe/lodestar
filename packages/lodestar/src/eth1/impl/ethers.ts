@@ -11,7 +11,7 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {Eth1EventEmitter, IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
-import {ILogger} from "../../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {IEth1Options} from "../options";
 import {getEth1Vote} from "./eth1Vote";
 

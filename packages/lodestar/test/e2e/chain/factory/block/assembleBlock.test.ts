@@ -13,7 +13,7 @@ import {OpPool} from "../../../../../src/opPool";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {blockToHeader, getBeaconProposerIndex, stateTransition} from "@chainsafe/eth2.0-state-transition";
 import {generateValidator} from "../../../../utils/validator";
-import {WinstonLogger} from "../../../../../src/logger";
+import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {generateDeposit} from "../../../../utils/deposit";
 import {BeaconChain} from "../../../../../src/chain";
 import {StatefulDagLMDGHOST} from "../../../../../src/chain/forkChoice";

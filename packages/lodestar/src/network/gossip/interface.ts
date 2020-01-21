@@ -15,7 +15,7 @@ import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import LibP2p from "libp2p";
-import {ILogger} from "../../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {IService} from "../../node";
 
 export interface IGossipEvents {

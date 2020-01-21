@@ -30,7 +30,7 @@ import {
   RequestId,
   RESP_TIMEOUT,
 } from "../constants";
-import {ILogger} from "../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {createResponseEvent, createRpcProtocol, randomRequestId,} from "./util";
 
 import {IReqResp, ReqRespEventEmitter} from "./interface";

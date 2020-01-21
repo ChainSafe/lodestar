@@ -1,5 +1,5 @@
 import defaultConfig, {IValidatorClientOptions} from "./options";
-import {ILogger} from "../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {IService} from "../node";
 import {IValidatorDB, ValidatorDB} from "../db/api";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";

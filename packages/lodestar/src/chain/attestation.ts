@@ -6,7 +6,7 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db";
 import {getCurrentSlot, computeEpochAtSlot, getAttestingIndices} from "@chainsafe/eth2.0-state-transition";
 import {GENESIS_EPOCH} from "../constants";
-import {ILogger} from "../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
 
 export class AttestationProcessor implements IAttestationProcessor {

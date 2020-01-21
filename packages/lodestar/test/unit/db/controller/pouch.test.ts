@@ -1,6 +1,6 @@
 import {assert, expect} from "chai";
 import {PouchDbController} from "../../../../src/db/controller";
-import {WinstonLogger} from "../../../../src/logger";
+import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 
 describe("PouchDB controller", () => {
   const db = new PouchDbController({name: 'testDb'});

@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, it} from "mocha";
 import {FastSync, IInitialSyncModules} from "../../../../src/sync/initial";
 import sinon from "sinon";
 import {BeaconChain} from "../../../../src/chain";
-import {WinstonLogger} from "../../../../src/logger";
+import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {config} from "@chainsafe/eth2.0-config/src/presets/minimal";
 import {Libp2pNetwork} from "../../../../src/network";
 import {IReputation, ReputationStore} from "../../../../src/sync/IReputation";

@@ -2,7 +2,7 @@ import {describe} from "mocha";
 import {RestApi} from "../../../../../src/api/rest";
 import {ApiNamespace} from "../../../../../src/api";
 import sinon from "sinon";
-import {WinstonLogger} from "../../../../../src/logger";
+import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {BeaconChain} from "../../../../../src/chain";
 import {BeaconDb} from "../../../../../src/db/api";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";

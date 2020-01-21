@@ -2,8 +2,6 @@
  * @module metrics
  */
 
-import {IConfigurationModule} from "../util/config";
-
 export interface IMetricsOptions {
   enabled: boolean;
   timeout: number;
@@ -11,29 +9,6 @@ export interface IMetricsOptions {
   serverPort?: number;
   gatewayUrl?: string;
 }
-
-export const MetricsOptions: IConfigurationModule = {
-  name: "metrics",
-  fields: [
-    {
-      name: "serverPort",
-      type: "number",
-      configurable: true,
-      process: (input: string) => parseInt(input),
-      cli: {
-        flag: "metricsPort",
-      },
-    },
-    {
-      name: "boolean",
-      type: "bool",
-      configurable: true,
-      cli: {
-        flag: "metricsEnabled"
-      }
-    }
-  ],
-};
 
 const config: IMetricsOptions = {
   enabled: false,

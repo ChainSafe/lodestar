@@ -1,7 +1,7 @@
 import {bytes32, Fork, SyncingStatus, BeaconBlock, BeaconState, number64, uint64} from "@chainsafe/eth2.0-types";
 import {IBeaconApi} from "../../../interface/beacon";
 import {HttpClient} from "../../../../util";
-import {ILogger} from "../../../..";
+import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
 
 export class RestBeaconApi implements IBeaconApi {
 

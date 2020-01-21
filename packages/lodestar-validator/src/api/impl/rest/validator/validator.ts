@@ -10,7 +10,7 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IValidatorApi} from "../../../interface/validators";
 import {HttpClient} from "../../../../util";
-import {ILogger} from "../../../..";
+import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {fromJson, toHex, toJson} from "@chainsafe/eth2.0-utils";
 

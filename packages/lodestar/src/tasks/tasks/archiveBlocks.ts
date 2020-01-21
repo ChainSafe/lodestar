@@ -7,7 +7,7 @@ import {IBeaconDb} from "../../db/api";
 import {Checkpoint} from "@chainsafe/eth2.0-types";
 import {computeEpochAtSlot} from "@chainsafe/eth2.0-state-transition";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {ILogger} from "../../logger";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 
 export interface IArchiveBlockModules {
   db: IBeaconDb;
