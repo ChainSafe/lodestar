@@ -1,31 +1,31 @@
 import bls from "@chainsafe/bls";
-import {signingRoot} from "@chainsafe/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {BeaconState, BeaconBlock} from "@chainsafe/eth2.0-types";
+import {BeaconState, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {getDomain} from "./domain";
 import {DomainType} from "../constants";
 import {getBeaconProposerIndex} from "./proposer";
 
-export function isValidBlockHeader(
+export function isValidProposer(
   config: IBeaconConfig,
   state: BeaconState,
-  block: BeaconBlock,
-  verifySignature = true
 ): boolean {
   // Verify proposer is not slashed
   const proposer = state.validators[getBeaconProposerIndex(config, state)];
-  if (proposer.slashed) {
-    return false;
-  }
-  // verify signature
-  if (verifySignature && !bls.verify(
+  return proposer.slashed;
+}
+
+export function verifyBlockSignature(
+  config: IBeaconConfig,
+  state: BeaconState,
+  signedBlock: SignedBeaconBlock,
+): boolean {
+  const proposer = state.validators[getBeaconProposerIndex(config, state)];
+  return bls.verify(
     proposer.pubkey,
-    signingRoot(config.types.BeaconBlock, block),
-    block.signature,
+    hashTreeRoot(config.types.BeaconBlock, signedBlock.message),
+    signedBlock.signature,
     getDomain(config, state, DomainType.BEACON_PROPOSER),
-  )) {
-    return false;
-  }
-  return true;
+  );
 }

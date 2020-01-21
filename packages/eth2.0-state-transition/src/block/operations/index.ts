@@ -6,7 +6,7 @@ import {
   BeaconState,
   Deposit,
   ProposerSlashing,
-  VoluntaryExit,
+  SignedVoluntaryExit,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -24,7 +24,7 @@ export * from "./deposit";
 export * from "./voluntaryExit";
 
 type Operation =
-  ProposerSlashing | AttesterSlashing | Attestation | Deposit | VoluntaryExit;
+  ProposerSlashing | AttesterSlashing | Attestation | Deposit | SignedVoluntaryExit;
 
 export function processOperations(
   config: IBeaconConfig,
