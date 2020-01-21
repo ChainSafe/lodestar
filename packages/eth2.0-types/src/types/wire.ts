@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
+import {List} from "@chainsafe/ssz";
+
 import {
   Slot, Epoch, Root, Number64, Uint64, Version,
 } from "./primitive";
@@ -33,7 +35,7 @@ export interface BeaconBlocksByRangeRequest {
   count: Number64;
   step: Number64;
 }
-export type BeaconBlocksByRangeResponse = ArrayLike<BeaconBlock>;
+export type BeaconBlocksByRangeResponse = List<BeaconBlock>;
 
-export type BeaconBlocksByRootRequest = ArrayLike<Root>;
-export type BeaconBlocksByRootResponse = ArrayLike<BeaconBlock>;
+export type BeaconBlocksByRootRequest = List<Root>;
+export type BeaconBlocksByRootResponse = List<BeaconBlock>;

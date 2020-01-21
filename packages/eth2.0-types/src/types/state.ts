@@ -3,7 +3,7 @@
  * @module types
  */
 
-import {ArrayLike} from "@chainsafe/ssz";
+import {BitVector, List, Vector} from "@chainsafe/ssz";
 
 import {
   Bytes32,
@@ -31,31 +31,31 @@ export interface BeaconState {
 
   // History
   latestBlockHeader: BeaconBlockHeader;
-  blockRoots: ArrayLike<Root>;
-  stateRoots: ArrayLike<Root>;
-  historicalRoots: ArrayLike<Root>;
+  blockRoots: Vector<Root>;
+  stateRoots: Vector<Root>;
+  historicalRoots: List<Root>;
   
   // Eth1
   eth1Data: Eth1Data;
-  eth1DataVotes: ArrayLike<Eth1Data>;
+  eth1DataVotes: List<Eth1Data>;
   eth1DepositIndex: Number64;
   
   // Registry
-  validators: ArrayLike<Validator>;
-  balances: ArrayLike<Gwei>;
+  validators: List<Validator>;
+  balances: List<Gwei>;
 
   // Shuffling
-  randaoMixes: ArrayLike<Bytes32>;
+  randaoMixes: Vector<Bytes32>;
 
   // Slashings
-  slashings: ArrayLike<Gwei>; // Balances penalized at every withdrawal period
+  slashings: Vector<Gwei>; // Balances penalized at every withdrawal period
   
   // Attestations
-  previousEpochAttestations: ArrayLike<PendingAttestation>;
-  currentEpochAttestations: ArrayLike<PendingAttestation>;
+  previousEpochAttestations: List<PendingAttestation>;
+  currentEpochAttestations: List<PendingAttestation>;
 
   // Finality
-  justificationBits: ArrayLike<boolean>;
+  justificationBits: BitVector;
   previousJustifiedCheckpoint: Checkpoint;
   currentJustifiedCheckpoint: Checkpoint;
   finalizedCheckpoint: Checkpoint;

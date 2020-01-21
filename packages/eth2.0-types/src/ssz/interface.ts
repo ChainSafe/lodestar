@@ -1,5 +1,6 @@
 import {
-  BigIntUintType, BitListType, BooleanType, ByteVectorType, ContainerType, ListType, NumberUintType, VectorType,
+  BigIntUintType, BitListType, BooleanType, ByteVectorType,
+  ContainerType, List, ListType, NumberUintType, Vector, VectorType,
 } from "@chainsafe/ssz";
 
 import * as t from "../types";
@@ -30,13 +31,13 @@ export interface IBeaconSSZTypes {
   Checkpoint: ContainerType<t.Checkpoint>;
   Validator: ContainerType<t.Validator>;
   AttestationData: ContainerType<t.AttestationData>;
-  CommitteeIndices: ListType<ArrayLike<t.ValidatorIndex>>;
+  CommitteeIndices: ListType<List<t.ValidatorIndex>>;
   IndexedAttestation: ContainerType<t.IndexedAttestation>;
   CommitteeBits: BitListType;
   PendingAttestation: ContainerType<t.PendingAttestation>;
   Eth1Data: ContainerType<t.Eth1Data>;
-  HistoricalBlockRoots: VectorType<ArrayLike<t.Root>>;
-  HistoricalStateRoots: VectorType<ArrayLike<t.Root>>;
+  HistoricalBlockRoots: VectorType<Vector<t.Root>>;
+  HistoricalStateRoots: VectorType<Vector<t.Root>>;
   HistoricalBatch: ContainerType<t.HistoricalBatch>;
   DepositData: ContainerType<t.DepositData>;
   BeaconBlockHeader: ContainerType<t.BeaconBlockHeader>;
@@ -51,7 +52,7 @@ export interface IBeaconSSZTypes {
   BeaconBlockBody: ContainerType<t.BeaconBlockBody>;
   BeaconBlock: ContainerType<t.BeaconBlock>;
   // state
-  EpochAttestations: ListType<ArrayLike<t.PendingAttestation>>;
+  EpochAttestations: ListType<List<t.PendingAttestation>>;
   BeaconState: ContainerType<t.BeaconState>;
   // Validator
   AggregateAndProof: ContainerType<t.AggregateAndProof>;

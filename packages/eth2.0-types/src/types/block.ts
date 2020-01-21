@@ -3,7 +3,7 @@
  * @module types
  */
 
-import {ArrayLike} from "@chainsafe/ssz";
+import {List} from "@chainsafe/ssz";
 
 import {BLSSignature, Bytes32, Root, Slot} from "./primitive";
 import {Eth1Data} from "./misc";
@@ -14,11 +14,11 @@ export interface BeaconBlockBody {
   randaoReveal: BLSSignature;
   eth1Data: Eth1Data;
   graffiti: Bytes32;
-  proposerSlashings: ArrayLike<ProposerSlashing>;
-  attesterSlashings: ArrayLike<AttesterSlashing>;
-  attestations: ArrayLike<Attestation>;
-  deposits: ArrayLike<Deposit>;
-  voluntaryExits: ArrayLike<VoluntaryExit>;
+  proposerSlashings: List<ProposerSlashing>;
+  attesterSlashings: List<AttesterSlashing>;
+  attestations: List<Attestation>;
+  deposits: List<Deposit>;
+  voluntaryExits: List<VoluntaryExit>;
 }
 
 export interface BeaconBlock {

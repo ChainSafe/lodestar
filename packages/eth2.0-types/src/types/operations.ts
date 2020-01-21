@@ -3,7 +3,7 @@
  * @module types
  */
 
-import {ArrayLike} from "@chainsafe/ssz";
+import {BitList, Vector} from "@chainsafe/ssz";
 
 import {
   BLSSignature,
@@ -38,7 +38,7 @@ export interface AttesterSlashing {
 
 export interface Attestation {
   // Attester participation bitfield
-  aggregationBits: ArrayLike<boolean>;
+  aggregationBits: BitList;
   // Attestation data
   data: AttestationData;
   // BLS aggregate signature
@@ -47,7 +47,7 @@ export interface Attestation {
 
 export interface Deposit {
   // Branch in the deposit tree
-  proof: ArrayLike<Bytes32>;
+  proof: Vector<Bytes32>;
   // Deposit data
   data: DepositData;
 }

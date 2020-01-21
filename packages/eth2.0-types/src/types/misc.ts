@@ -3,7 +3,7 @@
  * @module types
  */
 
-import {ArrayLike} from "@chainsafe/ssz";
+import {BitList, List, Vector} from "@chainsafe/ssz";
 
 import {
   BLSPubkey,
@@ -64,7 +64,7 @@ export interface AttestationData {
 
 export interface IndexedAttestation {
   // Validator Indices
-  attestingIndices: ArrayLike<ValidatorIndex>;
+  attestingIndices: List<ValidatorIndex>;
   // Attestation Data
   data: AttestationData;
   // Aggregate signature
@@ -73,7 +73,7 @@ export interface IndexedAttestation {
 
 export interface PendingAttestation {
   // Attester aggregation bitfield
-  aggregationBits: ArrayLike<boolean>;
+  aggregationBits: BitList;
   // Attestation data
   data: AttestationData;
   // Inclusion delay
@@ -93,9 +93,9 @@ export interface Eth1Data {
 
 export interface HistoricalBatch {
   // Block roots
-  blockRoots: ArrayLike<Root>;
+  blockRoots: Vector<Root>;
   // State roots
-  stateRoots: ArrayLike<Root>;
+  stateRoots: Vector<Root>;
 }
 
 export interface DepositData {
@@ -119,5 +119,5 @@ export interface BeaconBlockHeader {
 
 export interface MerkleTree {
   depth: Number64;
-  tree: ArrayLike<ArrayLike<Bytes32>>;
+  tree: List<List<Bytes32>>;
 }

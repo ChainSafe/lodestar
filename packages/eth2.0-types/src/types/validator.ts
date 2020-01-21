@@ -3,7 +3,7 @@
  * @module types
  */
 
-import {ArrayLike} from "@chainsafe/ssz";
+import {List} from "@chainsafe/ssz";
 
 import {BLSPubkey, BLSSignature, CommitteeIndex, Slot, Uint64, ValidatorIndex} from "./primitive";
 import {Attestation} from "./operations";
@@ -27,7 +27,7 @@ export interface SyncingStatus {
 }
 
 export interface CommitteeAssignment {
-  validators: ArrayLike<ValidatorIndex>;
+  validators: List<ValidatorIndex>;
   committeeIndex: CommitteeIndex;
   slot: Slot;
 }
