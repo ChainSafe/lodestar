@@ -18,7 +18,7 @@ import {generateEmptyBlock} from "../../../../utils/block";
 import {generateDeposit} from "../../../../utils/deposit";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
-import {generateEmptyVoluntaryExit} from "../../../../utils/voluntaryExits";
+import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits";
 
 
 describe("process block - process operations", function () {
@@ -163,7 +163,7 @@ describe("process block - process operations", function () {
     body.attestations.push(generateEmptyAttestation());
     body.deposits.push(generateDeposit());
     state.eth1Data.depositCount++;
-    body.voluntaryExits.push(generateEmptyVoluntaryExit());
+    body.voluntaryExits.push(generateEmptySignedVoluntaryExit());
 
     try {
       processOperations(config, state, body);
@@ -190,7 +190,7 @@ describe("process block - process operations", function () {
     body.attestations.push(generateEmptyAttestation());
     body.deposits.push(generateDeposit());
     state.eth1Data.depositCount++;
-    body.voluntaryExits.push(generateEmptyVoluntaryExit());
+    body.voluntaryExits.push(generateEmptySignedVoluntaryExit());
     try {
       processOperations(config, state, body);
       expect.fail();
