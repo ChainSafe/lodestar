@@ -4,10 +4,12 @@
 
 import {EventEmitter} from "events";
 
-import {BeaconBlock, BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
-import {blockToHeader, computeEpochAtSlot, getBeaconProposerIndex} from "@chainsafe/eth2.0-state-transition";
+import {
+  signedBlockToSignedHeader, computeEpochAtSlot, getBeaconProposerIndex,
+} from "@chainsafe/eth2.0-state-transition";
 import {IBeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
 import {
@@ -74,19 +76,19 @@ export class OpPool extends EventEmitter {
   /**
    * Remove stored operations based on a newly processed block
    */
-  public async processBlockOperations(processedBlock: BeaconBlock): Promise<void> {
+  public async processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void> {
     await Promise.all([
-      this.voluntaryExits.remove(processedBlock.body.voluntaryExits),
-      this.deposits.removeOld(processedBlock.body.eth1Data.depositCount),
-      this.proposerSlashings.remove(processedBlock.body.proposerSlashings),
-      this.attesterSlashings.remove(processedBlock.body.attesterSlashings),
-      this.aggregateAndProofs.removeIncluded(processedBlock.body.attestations),
-      this.checkDuplicateProposer(processedBlock)
+      this.voluntaryExits.remove(signedBlock.message.body.voluntaryExits),
+      this.deposits.removeOld(signedBlock.message.body.eth1Data.depositCount),
+      this.proposerSlashings.remove(signedBlock.message.body.proposerSlashings),
+      this.attesterSlashings.remove(signedBlock.message.body.attesterSlashings),
+      this.aggregateAndProofs.removeIncluded(signedBlock.message.body.attestations),
+      this.checkDuplicateProposer(signedBlock)
     ]);
   }
 
-  public async checkDuplicateProposer(block: BeaconBlock): Promise<void> {
-    const epoch: Epoch = computeEpochAtSlot(this.config, block.slot);
+  public async checkDuplicateProposer(signedBlock: SignedBeaconBlock): Promise<void> {
+    const epoch: Epoch = computeEpochAtSlot(this.config, signedBlock.message.slot);
     const existingProposers: Map<ValidatorIndex, Slot> = this.proposers.get(epoch);
     const state: BeaconState = await this.db.state.getLatest();
 
@@ -94,19 +96,19 @@ export class OpPool extends EventEmitter {
 
     // Check if proposer already exists
     if (existingProposers && existingProposers.has(proposerIndex)) {
-      const existingSlot: Slot = this.proposers.get(epoch).get(proposerIndex);
-      const prevBlock: BeaconBlock = await this.db.block.getBlockBySlot(existingSlot);
+      const existingSlot = this.proposers.get(epoch).get(proposerIndex);
+      const prevBlock = await this.db.block.getBlockBySlot(existingSlot);
 
       // Create slashing
       const slashing: ProposerSlashing = {
         proposerIndex: proposerIndex,
-        header1: blockToHeader(this.config, prevBlock),
-        header2: blockToHeader(this.config, block)
+        signedHeader1: signedBlockToSignedHeader(this.config, prevBlock),
+        signedHeader2: signedBlockToSignedHeader(this.config, signedBlock)
       };
       await this.proposerSlashings.receive(slashing);
     } else {
       const proposers: Map<ValidatorIndex, Slot> = new Map();
-      proposers.set(proposerIndex, block.slot);
+      proposers.set(proposerIndex, signedBlock.message.slot);
       this.proposers.set(epoch, proposers);
     }
     // TODO Prune map every so often

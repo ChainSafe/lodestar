@@ -8,8 +8,8 @@ import {generateEmptyAttestation} from "./attestation";
 export function generateEmptyProposerSlashing(): ProposerSlashing {
 
   return {
-    header1: getTemporaryBlockHeader(config, generateEmptyBlock()),
-    header2: getTemporaryBlockHeader(config, generateEmptyBlock()),
+    signedHeader1: {message: getTemporaryBlockHeader(config, generateEmptyBlock()), signature: Buffer.alloc(96)},
+    signedHeader2: {message: getTemporaryBlockHeader(config, generateEmptyBlock()), signature: Buffer.alloc(96)},
     proposerIndex: 0
   };
 }

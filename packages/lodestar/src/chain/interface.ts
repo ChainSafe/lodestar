@@ -1,6 +1,8 @@
 import {EventEmitter} from "events";
 
-import {Attestation, BeaconBlock, BeaconState, Checkpoint, Slot, uint16, uint64, Root} from "@chainsafe/eth2.0-types";
+import {
+  Attestation, BeaconState, Checkpoint, Slot, uint16, uint64, Root, SignedBeaconBlock,
+} from "@chainsafe/eth2.0-types";
 
 import {ILMDGHOST} from "./forkChoice";
 import StrictEventEmitter from "strict-event-emitter-types";
@@ -8,7 +10,7 @@ import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 
 export interface IChainEvents {
   unknownBlockRoot: (root: Root) => void;
-  processedBlock: (block: BeaconBlock) => void;
+  processedBlock: (signedBlock: SignedBeaconBlock) => void;
   processedCheckpoint: (checkPoint: Checkpoint) => void;
   processedAttestation: (attestation: Attestation) => void;
   justifiedCheckpoint: (checkpoint: Checkpoint) => void;
@@ -44,7 +46,7 @@ export interface IBeaconChain extends ChainEventEmitter {
   /**
    * Pre-process and run the per slot state transition function
    */
-  receiveBlock(block: BeaconBlock, trusted?: boolean): Promise<void>;
+  receiveBlock(signedBlock: SignedBeaconBlock, trusted?: boolean): Promise<void>;
 
   /**
    * Update the chain head using LMD GHOST
@@ -54,7 +56,7 @@ export interface IBeaconChain extends ChainEventEmitter {
   /**
    * Ensure that the block is compliant with block processing validity conditions
    */
-  isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean>;
+  isValidBlock(state: BeaconState, signedBlock: SignedBeaconBlock): Promise<boolean>;
 
   advanceState(slot?: Slot): Promise<void>;
 
@@ -70,6 +72,6 @@ export interface IBeaconChain extends ChainEventEmitter {
 }
 
 export interface IAttestationProcessor {
-  receiveBlock(block: BeaconBlock, trusted?: boolean): Promise<void>;
+  receiveBlock(signedBlock: SignedBeaconBlock, trusted?: boolean): Promise<void>;
   receiveAttestation(attestation: Attestation): Promise<void>;
 }

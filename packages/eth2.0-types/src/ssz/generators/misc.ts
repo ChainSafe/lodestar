@@ -97,6 +97,14 @@ export const HistoricalBatch = (ssz: IBeaconSSZTypes): ContainerType => new Cont
   ],
 });
 
+export const DepositMessage = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: [
+    ["pubkey", ssz.BLSPubkey],
+    ["withdrawalCredentials", ssz.Bytes32],
+    ["amount", ssz.Gwei],
+  ],
+});
+
 export const DepositData = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: [
     ["pubkey", ssz.BLSPubkey],
@@ -112,6 +120,12 @@ export const BeaconBlockHeader = (ssz: IBeaconSSZTypes): ContainerType => new Co
     ["parentRoot", ssz.Root],
     ["stateRoot", ssz.Root],
     ["bodyRoot", ssz.Root],
+  ],
+});
+
+export const SignedBeaconBlockHeader = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: [
+    ["message", ssz.BeaconBlockHeader],
     ["signature", ssz.BLSSignature],
   ],
 });

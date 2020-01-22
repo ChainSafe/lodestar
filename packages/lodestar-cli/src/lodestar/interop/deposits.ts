@@ -1,6 +1,6 @@
 import {Deposit, DepositData} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {hash, hashTreeRoot, signingRoot} from "@chainsafe/ssz";
+import {hash, hashTreeRoot} from "@chainsafe/ssz";
 import {sign} from "@chainsafe/bls";
 import {DomainType} from "@chainsafe/lodestar/lib/constants";
 import {IProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
@@ -25,7 +25,7 @@ export function interopDeposits(
     };
     data.signature = sign(
       privkey,
-      signingRoot(config.types.DepositData, data),
+      hashTreeRoot(config.types.DepositMessage, data),
       computeDomain(DomainType.DEPOSIT),
     );
     // Add to merkle tree

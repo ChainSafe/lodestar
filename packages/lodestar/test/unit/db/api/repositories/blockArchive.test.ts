@@ -3,7 +3,7 @@ import {BlockArchiveRepository} from "../../../../../src/db/api/beacon/repositor
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {LevelDbController} from "../../../../../src/db/controller";
 import sinon from "sinon";
-import {generateEmptyBlock} from "../../../../utils/block";
+import {generateEmptySignedBlock} from "../../../../utils/block";
 import {expect} from "chai";
 
 describe("block archive repository", function () {
@@ -11,7 +11,7 @@ describe("block archive repository", function () {
   it("should add multiple blocks", async function () {
     const controllerStub = sinon.createStubInstance(LevelDbController);
     const archive = new BlockArchiveRepository(config, controllerStub);
-    await archive.addMany([generateEmptyBlock(), generateEmptyBlock()]);
+    await archive.addMany([generateEmptySignedBlock(), generateEmptySignedBlock()]);
     expect(controllerStub.batchPut.withArgs(sinon.match((criteria) => criteria.length === 2)).calledOnce).to.be.true;
   });
     

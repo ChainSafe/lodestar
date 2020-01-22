@@ -39,8 +39,10 @@ export interface IBeaconSSZTypes {
   HistoricalBlockRoots: VectorType<Vector<t.Root>>;
   HistoricalStateRoots: VectorType<Vector<t.Root>>;
   HistoricalBatch: ContainerType<t.HistoricalBatch>;
+  DepositMessage: ContainerType<t.DepositMessage>;
   DepositData: ContainerType<t.DepositData>;
   BeaconBlockHeader: ContainerType<t.BeaconBlockHeader>;
+  SignedBeaconBlockHeader: ContainerType<t.SignedBeaconBlockHeader>;
   MerkleTree: ContainerType<t.MerkleTree>;
   // operations
   ProposerSlashing: ContainerType<t.ProposerSlashing>;
@@ -48,9 +50,11 @@ export interface IBeaconSSZTypes {
   Attestation: ContainerType<t.Attestation>;
   Deposit: ContainerType<t.Deposit>;
   VoluntaryExit: ContainerType<t.VoluntaryExit>;
+  SignedVoluntaryExit: ContainerType<t.SignedVoluntaryExit>;
   // block
   BeaconBlockBody: ContainerType<t.BeaconBlockBody>;
   BeaconBlock: ContainerType<t.BeaconBlock>;
+  SignedBeaconBlock: ContainerType<t.SignedBeaconBlock>;
   // state
   EpochAttestations: ListType<List<t.PendingAttestation>>;
   BeaconState: ContainerType<t.BeaconState>;
@@ -102,8 +106,10 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "HistoricalBlockRoots",
   "HistoricalStateRoots",
   "HistoricalBatch",
+  "DepositMessage",
   "DepositData",
   "BeaconBlockHeader",
+  "SignedBeaconBlockHeader",
   "MerkleTree",
   // operations
   "ProposerSlashing",
@@ -111,9 +117,11 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "Attestation",
   "Deposit",
   "VoluntaryExit",
+  "SignedVoluntaryExit",
   // block
   "BeaconBlockBody",
   "BeaconBlock",
+  "SignedBeaconBlock",
   // state
   "EpochAttestations",
   "BeaconState",

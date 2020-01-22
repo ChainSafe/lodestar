@@ -2,9 +2,9 @@
  * @module validator
  */
 
-import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 
-import {BeaconBlock, BeaconState, BLSPubkey, Epoch, Fork, Slot} from "@chainsafe/eth2.0-types";
+import {BeaconState, BLSPubkey, Epoch, Fork, Slot, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {computeEpochAtSlot, DomainType, getDomain} from "../util";
@@ -57,7 +57,7 @@ export default class BlockProposingService {
   /**
    * IFF a validator is selected construct a block to propose.
    */
-  public async createAndPublishBlock(slot: Slot, fork: Fork): Promise<BeaconBlock | null> {
+  public async createAndPublishBlock(slot: Slot, fork: Fork): Promise<SignedBeaconBlock | null> {
     if(await this.hasProposedAlready(slot)) {
       this.logger.info(`Already proposed block in current epoch: ${computeEpochAtSlot(this.config, slot)}`);
       return null;
@@ -73,16 +73,19 @@ export default class BlockProposingService {
     if(!block) {
       return null;
     }
-    block.signature = this.privateKey.signMessage(
-      signingRoot(this.config.types.BeaconBlock, block),
-      getDomain(this.config, {fork} as BeaconState, DomainType.BEACON_PROPOSER, computeEpochAtSlot(this.config, slot))
-    ).toBytesCompressed();
-    await this.storeBlock(block);
-    await this.provider.validator.publishBlock(block);
+    const signedBlock: SignedBeaconBlock = {
+      message: block,
+      signature: this.privateKey.signMessage(
+        hashTreeRoot(this.config.types.BeaconBlock, block),
+        getDomain(this.config, {fork} as BeaconState, DomainType.BEACON_PROPOSER, computeEpochAtSlot(this.config, slot))
+      ).toBytesCompressed(),
+    };
+    await this.storeBlock(signedBlock);
+    await this.provider.validator.publishBlock(signedBlock);
     this.logger.info(
-      `Proposed block with hash 0x${signingRoot(this.config.types.BeaconBlock, block).toString("hex")}`
+      `Proposed block with hash 0x${hashTreeRoot(this.config.types.BeaconBlock, block).toString("hex")}`
     );
-    return block;
+    return signedBlock;
   }
 
   public getRpcClient(): IApiClient {
@@ -93,10 +96,10 @@ export default class BlockProposingService {
     // get last proposed block from database and check if belongs in same epoch
     const lastProposedBlock = await this.db.getBlock(this.publicKey);
     if(!lastProposedBlock) return  false;
-    return computeEpochAtSlot(this.config, lastProposedBlock.slot) === computeEpochAtSlot(this.config, slot);
+    return computeEpochAtSlot(this.config, lastProposedBlock.message.slot) === computeEpochAtSlot(this.config, slot);
   }
 
-  private async storeBlock(block: BeaconBlock): Promise<void> {
-    await this.db.setBlock(this.publicKey, block);
+  private async storeBlock(signedBlock: SignedBeaconBlock): Promise<void> {
+    await this.db.setBlock(this.publicKey, signedBlock);
   }
 }

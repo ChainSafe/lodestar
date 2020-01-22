@@ -4,7 +4,7 @@ import {List} from "@chainsafe/ssz";
 import {
   Slot, Epoch, Root, Number64, Uint64, Version,
 } from "./primitive";
-import {BeaconBlock} from "./block";
+import {SignedBeaconBlock} from "./block";
 
 export type RequestId = string;
 
@@ -30,12 +30,12 @@ export interface Status {
 export type Goodbye = Uint64;
 
 export interface BeaconBlocksByRangeRequest {
-  headBlockRoot: Root; 
+  headBlockRoot: Root;
   startSlot: Slot;
   count: Number64;
   step: Number64;
 }
-export type BeaconBlocksByRangeResponse = List<BeaconBlock>;
+export type BeaconBlocksByRangeResponse = List<SignedBeaconBlock>;
 
 export type BeaconBlocksByRootRequest = List<Root>;
-export type BeaconBlocksByRootResponse = List<BeaconBlock>;
+export type BeaconBlocksByRootResponse = List<SignedBeaconBlock>;

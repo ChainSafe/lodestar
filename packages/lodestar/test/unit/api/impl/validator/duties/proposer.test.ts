@@ -29,7 +29,7 @@ describe("get proposers api impl", function () {
   });
 
   it("should get proposers", async function () {
-    dbStub.block.get.resolves({stateRoot: Buffer.alloc(32)});
+    dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}});
     dbStub.state.get.resolves(
       generateState(
         {
@@ -47,7 +47,7 @@ describe("get proposers api impl", function () {
   });
 
   it("should get future proposers", async function () {
-    dbStub.block.get.resolves({stateRoot: Buffer.alloc(32)});
+    dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}});
     dbStub.state.get.resolves(
       generateState(
         {

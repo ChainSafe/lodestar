@@ -28,7 +28,7 @@ export const BeaconBlocksByRangeRequest = (ssz: IBeaconSSZTypes): ContainerType 
 });
 
 export const BeaconBlocksByRangeResponse = (ssz: IBeaconSSZTypes): ListType => new ListType({
-  elementType: ssz.BeaconBlock,
+  elementType: ssz.SignedBeaconBlock,
   limit: 32000,
 });
 
@@ -38,6 +38,6 @@ export const BeaconBlocksByRootRequest = (ssz: IBeaconSSZTypes): ListType => new
 });
 
 export const BeaconBlocksByRootResponse = (ssz: IBeaconSSZTypes): ListType => new ListType({
-  elementType: ssz.BeaconBlock,
+  elementType: ssz.SignedBeaconBlock,
   limit: 32000,
 });
