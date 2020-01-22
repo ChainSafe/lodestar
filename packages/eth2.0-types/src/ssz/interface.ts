@@ -99,8 +99,10 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "PendingAttestation",
   "Eth1Data",
   "HistoricalBatch",
+  "DepositMessage",
   "DepositData",
   "BeaconBlockHeader",
+  "SignedBeaconBlockHeader",
   "FFGData",
   "MerkleTree",
   // operations
@@ -109,9 +111,11 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "Attestation",
   "Deposit",
   "VoluntaryExit",
+  "SignedVoluntaryExit",
   // block
   "BeaconBlockBody",
   "BeaconBlock",
+  "SignedBeaconBlock",
   // state
   "BeaconState",
   //validator

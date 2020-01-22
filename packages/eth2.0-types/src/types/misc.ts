@@ -9,7 +9,6 @@ import {
   BLSPubkey,
   BLSSignature,
   bool,
-  Domain,
   Epoch,
   Gwei,
   Root,
