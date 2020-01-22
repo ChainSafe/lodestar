@@ -2,9 +2,16 @@
  * @module sync
  */
 
-import {Attestation, BeaconBlock, Checkpoint, VoluntaryExit, ProposerSlashing, AttesterSlashing,
+import {
+  Attestation,
+  Checkpoint,
+  ProposerSlashing,
+  AttesterSlashing,
   AggregateAndProof,
-  Root} from "@chainsafe/eth2.0-types";
+  Root,
+  SignedBeaconBlock,
+  SignedVoluntaryExit,
+} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
@@ -65,14 +72,15 @@ export class RegularSync {
     this.chain.removeListener("finalizedCheckpoint", this.onFinalizedCheckpoint);
   }
 
-  public receiveBlock = async (block: BeaconBlock): Promise<void> => {
-    await this.chain.receiveBlock(block);
+  public receiveBlock = async (signedBlock: SignedBeaconBlock): Promise<void> => {
+    await this.chain.receiveBlock(signedBlock);
   };
 
-  public receiveCommitteeAttestation = async (attestationSubnet: {attestation: Attestation; subnet: number}): 
-  Promise<void> => {
+  public receiveCommitteeAttestation = async (
+    attestationSubnet: {attestation: Attestation; subnet: number},
+  ): Promise<void> => {
     const attestation = attestationSubnet.attestation;
-    
+
     // to see if we need special process for these unaggregated attestations
     // not in the spec atm
     // send attestation on to other modules
@@ -94,7 +102,7 @@ export class RegularSync {
     ]);
   };
 
-  public receiveVoluntaryExit = async (voluntaryExit: VoluntaryExit): Promise<void> => {
+  public receiveVoluntaryExit = async (voluntaryExit: SignedVoluntaryExit): Promise<void> => {
     await this.opPool.voluntaryExits.receive(voluntaryExit);
   };
 
@@ -106,8 +114,8 @@ export class RegularSync {
     await this.opPool.attesterSlashings.receive(attesterSlashing);
   };
 
-  private onProcessedBlock = (block: BeaconBlock): void => {
-    this.network.gossip.publishBlock(block);
+  private onProcessedBlock = (signedBlock: SignedBeaconBlock): void => {
+    this.network.gossip.publishBlock(signedBlock);
   };
 
   private onProcessedAttestation = (attestation: Attestation): void => {

@@ -47,7 +47,7 @@ export const registerIsAggregatorEndpoint = (fastify: IFastifyServer, modules: I
     opts,
     async (request, reply) => {
       const block = await modules.db.block.get(modules.chain.forkChoice.head());
-      const state = await modules.db.state.get(block.stateRoot);
+      const state = await modules.db.state.get(block.message.stateRoot);
       const isAttestationAggregator = isAggregator(
         modules.config,
         state,

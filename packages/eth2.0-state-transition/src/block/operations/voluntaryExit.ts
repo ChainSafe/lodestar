@@ -4,7 +4,7 @@
 
 import assert from "assert";
 
-import {BeaconState, VoluntaryExit,} from "@chainsafe/eth2.0-types";
+import {BeaconState, SignedVoluntaryExit} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 
@@ -17,10 +17,10 @@ import {initiateValidatorExit, isValidVoluntaryExit,} from "../../util";
 export function processVoluntaryExit(
   config: IBeaconConfig,
   state: BeaconState,
-  exit: VoluntaryExit,
+  signedExit: SignedVoluntaryExit,
   verifySignature = true
 ): void {
-  assert(isValidVoluntaryExit(config, state, exit, verifySignature));
+  assert(isValidVoluntaryExit(config, state, signedExit, verifySignature));
   // Initiate exit
-  initiateValidatorExit(config, state, exit.validatorIndex);
+  initiateValidatorExit(config, state, signedExit.message.validatorIndex);
 }

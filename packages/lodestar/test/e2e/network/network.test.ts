@@ -2,9 +2,9 @@ import {expect} from "chai";
 import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {Libp2pNetwork} from "../../../src/network";
-import {getEmptyBlock} from "../../../src/chain/genesis/genesis";
 import {createNode} from "../../unit/network/util";
 import {generateEmptyAttestation} from "../../utils/attestation";
+import {generateEmptySignedBlock} from "../../utils/block";
 import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
@@ -90,7 +90,7 @@ describe("[network] network", function () {
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     validator.isValidIncomingBlock.resolves(true);
-    netB.gossip.publishBlock(getEmptyBlock());
+    netB.gossip.publishBlock(generateEmptySignedBlock());
     await received;
   });
   it("should receive attestations on subscription", async function () {

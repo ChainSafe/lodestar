@@ -2,7 +2,7 @@
  * @module db/api/beacon
  */
 
-import {BeaconBlock, BeaconState, BLSPubkey, ValidatorIndex, Root,} from "@chainsafe/eth2.0-types";
+import {BeaconState, BLSPubkey, ValidatorIndex, Root, SignedBeaconBlock,} from "@chainsafe/eth2.0-types";
 import {DatabaseService, IDatabaseApiOptions} from "../abstract";
 import {IBeaconDb} from "./interface";
 import {
@@ -59,16 +59,16 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   }
 
   public async storeChainHead(
-    block: BeaconBlock,
+    signedBlock: SignedBeaconBlock,
     state: BeaconState
   ): Promise<void> {
     await Promise.all([
-      this.block.add(block),
-      this.state.set(block.stateRoot, state),
+      this.block.add(signedBlock),
+      this.state.set(signedBlock.message.stateRoot, state),
     ]);
-    const slot = block.slot;
+    const slot = signedBlock.message.slot;
     await Promise.all([
-      this.chain.setLatestStateRoot(block.stateRoot),
+      this.chain.setLatestStateRoot(signedBlock.message.stateRoot),
       this.chain.setChainHeadSlot(slot)
     ]);
   }
@@ -89,9 +89,9 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     if(!storedState) {
       throw new Error("unknown state root");
     }
-    const slot = storedBlock.slot;
+    const slot = storedBlock.message.slot;
     await Promise.all([
-      this.chain.setLatestStateRoot(storedBlock.stateRoot),
+      this.chain.setLatestStateRoot(storedBlock.message.stateRoot),
       this.chain.setChainHeadSlot(slot)
     ]);
   }

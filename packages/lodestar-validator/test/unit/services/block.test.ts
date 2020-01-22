@@ -6,7 +6,7 @@ import {describe, it, beforeEach, afterEach} from "mocha";
 import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {ApiClientOverInstance} from "../../../src/api";
 import {ValidatorDB} from "@chainsafe/lodestar/lib/db";
-import {generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
+import {generateEmptySignedBlock, generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
 import BlockProposingService from "../../../src/services/block";
 import {generateFork} from "@chainsafe/lodestar/test/utils/fork";
 
@@ -27,7 +27,7 @@ describe("block proposing service", function () {
   });
 
   it("should not produce block in same epoch", async function () {
-    dbStub.getBlock.resolves(generateEmptyBlock());
+    dbStub.getBlock.resolves(generateEmptySignedBlock());
     const service = new BlockProposingService(
       config, Keypair.generate(), rpcClientStub, dbStub, logger
     );
@@ -60,7 +60,7 @@ describe("block proposing service", function () {
       publishBlock: sandbox.stub(),
     };
     rpcClientStub.validator.produceBlock.withArgs(slot, sinon.match.any).resolves(generateEmptyBlock());
-    dbStub.getBlock.resolves(generateEmptyBlock());
+    dbStub.getBlock.resolves(generateEmptySignedBlock());
     const service = new BlockProposingService(
       config, Keypair.generate(), rpcClientStub, dbStub, logger as ILogger
     );

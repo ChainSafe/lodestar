@@ -6,7 +6,8 @@ import {
   bytes96,
   CommitteeIndex,
   Slot,
-  ValidatorDuty
+  ValidatorDuty,
+  SignedBeaconBlock
 } from "@chainsafe/eth2.0-types";
 import {IValidatorApi} from "../../../interface/validators";
 import {HttpClient} from "../../../../util";
@@ -78,8 +79,8 @@ export class RestValidatorApi implements IValidatorApi {
     return fromJson<Attestation>(this.config.types.Attestation, await this.client.get<object>(url));
   }
 
-  public async publishBlock(beaconBlock: BeaconBlock): Promise<void> {
-    return this.client.post("/block", toJson(beaconBlock));
+  public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
+    return this.client.post("/block", toJson(signedBlock));
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {

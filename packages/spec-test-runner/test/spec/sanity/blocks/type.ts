@@ -1,4 +1,4 @@
-import {BeaconBlock, BeaconState, uint64} from "@chainsafe/eth2.0-types";
+import {BeaconState, uint64, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {IBaseSpecTest} from "../../type";
 
 export interface IBlockSanityTestCase extends IBaseSpecTest{
@@ -8,5 +8,5 @@ export interface IBlockSanityTestCase extends IBaseSpecTest{
   };
   pre: BeaconState;
   post: BeaconState;
-  [k: string]: BeaconBlock|unknown|null|undefined;
+  [k: string]: SignedBeaconBlock|unknown|null|undefined;
 }

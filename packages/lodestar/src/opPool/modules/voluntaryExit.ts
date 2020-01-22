@@ -1,6 +1,6 @@
 import {OperationsModule} from "./abstract";
-import {VoluntaryExit} from "@chainsafe/eth2.0-types";
+import {SignedVoluntaryExit} from "@chainsafe/eth2.0-types";
 
-export class VoluntaryExitOperations extends OperationsModule<VoluntaryExit> {
+export class VoluntaryExitOperations extends OperationsModule<SignedVoluntaryExit> {
 
 }
