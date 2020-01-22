@@ -48,7 +48,6 @@ export const VoluntaryExit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
     ["epoch", ssz.Epoch],
     ["validatorIndex", ssz.ValidatorIndex],
-    ["signature", ssz.BLSSignature],
   ],
 });
 
