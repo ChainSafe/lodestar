@@ -1,4 +1,4 @@
-import {BeaconBlock, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
+import {SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {chunkify, getBlockRangeFromPeer, ISlotRange} from "./sync";
 import {RoundRobinArray} from "./robin";
 import {IReqResp} from "../../network";

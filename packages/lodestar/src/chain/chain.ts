@@ -6,7 +6,7 @@ import assert from "assert";
 import {EventEmitter} from "events";
 import {clone, hashTreeRoot, serialize} from "@chainsafe/ssz";
 import {
-  Attestation, BeaconBlock, BeaconState, Slot, uint16, uint64, Root, SignedBeaconBlock,
+  Attestation, BeaconState, Slot, uint16, uint64, Root, SignedBeaconBlock,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
