@@ -167,6 +167,7 @@ describe("syncing", function () {
     };
 
     dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
+    dbStub.blockArchive.get.resolves(generateEmptySignedBlock());
     const state = generateState();
     state.fork.currentVersion = Buffer.alloc(4);
     state.finalizedCheckpoint.epoch = 2;
@@ -185,6 +186,7 @@ describe("syncing", function () {
     };
 
     dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
+    dbStub.blockArchive.get.resolves(generateEmptySignedBlock());
     const state = generateState();
     state.fork.currentVersion = Buffer.alloc(4);
     state.finalizedCheckpoint.epoch = 1;
