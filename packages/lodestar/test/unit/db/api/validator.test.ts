@@ -7,7 +7,7 @@ import * as dbKeys from "../../../../src/db/schema";
 import {Bucket} from "../../../../src/db/schema";
 import {LevelDbController} from "../../../../src/db/controller";
 import {IValidatorDB, ValidatorDB} from "../../../../src/db/api";
-import {generateEmptyBlock} from "../../../utils/block";
+import {generateEmptySignedBlock} from "../../../utils/block";
 import {generateEmptyAttestation} from "../../../utils/attestation";
 
 chai.use(chaiAsPromised);
@@ -35,7 +35,7 @@ describe('beacon db api', function () {
 
   it('get validator block', async function () {
     encodeKeyStub.returns('blockKey');
-    dbStub.get.withArgs('blockKey').resolves(serialize(config.types.BeaconBlock, generateEmptyBlock()));
+    dbStub.get.withArgs('blockKey').resolves(serialize(config.types.SignedBeaconBlock, generateEmptySignedBlock()));
     await validatorDB.getBlock(pubKey);
     expect(encodeKeyStub.withArgs(Bucket.lastProposedBlock, pubKey.toString('hex')).calledOnce).to.be.true;
     expect(dbStub.get.withArgs('blockKey').calledOnce).to.be.true;
@@ -44,7 +44,7 @@ describe('beacon db api', function () {
   it('set validator block', async function () {
     encodeKeyStub.returns('blockKey');
     dbStub.put.resolves({});
-    await validatorDB.setBlock(pubKey, generateEmptyBlock());
+    await validatorDB.setBlock(pubKey, generateEmptySignedBlock());
     expect(encodeKeyStub.withArgs(Bucket.lastProposedBlock, pubKey.toString('hex')).calledOnce).to.be.true;
     expect(dbStub.put.withArgs('blockKey', sinon.match.any).calledOnce).to.be.true;
   });

@@ -17,6 +17,7 @@ import {SyncReqResp} from "../../../src/sync/reqResp";
 import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
 import {ReqResp} from "../../../src/network/reqResp";
 import {ReputationStore} from "../../../src/sync/IReputation";
+import { generateEmptySignedBlock } from "../../utils/block";
 
 describe("syncing", function () {
   const sandbox = sinon.createSandbox();
@@ -109,7 +110,7 @@ describe("syncing", function () {
       latestStatus: null,
     });
     reqRespStub.sendResponse.resolves(0);
-    dbStub.block.getChainHead.resolves(Buffer.alloc(0));
+    dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
     dbStub.state.get.resolves(generateState());
     try {
       await syncRpc.onRequest(peerInfo, Method.Status, "status", body);
@@ -149,7 +150,7 @@ describe("syncing", function () {
       headSlot: 1,
     };
 
-    dbStub.block.getChainHead.resolves(Buffer.alloc(0));
+    dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
     const state = generateState();
     state.fork.currentVersion = Buffer.from("efgh");
     dbStub.state.get.resolves(state);
@@ -165,7 +166,7 @@ describe("syncing", function () {
       headSlot: 1,
     };
 
-    dbStub.block.getChainHead.resolves(Buffer.alloc(0));
+    dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
     const state = generateState();
     state.fork.currentVersion = Buffer.alloc(4);
     state.finalizedCheckpoint.epoch = 2;
@@ -183,7 +184,7 @@ describe("syncing", function () {
       headSlot: 1,
     };
 
-    dbStub.block.getChainHead.resolves(Buffer.alloc(0));
+    dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
     const state = generateState();
     state.fork.currentVersion = Buffer.alloc(4);
     state.finalizedCheckpoint.epoch = 1;

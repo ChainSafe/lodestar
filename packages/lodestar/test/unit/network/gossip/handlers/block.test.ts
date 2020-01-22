@@ -7,7 +7,7 @@ import {GossipEvent} from "../../../../../src/network/gossip/constants";
 import * as gossipUtils from "../../../../../src/network/gossip/utils";
 import {GossipMessageValidator} from "../../../../../src/network/gossip/validator";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import {generateEmptyBlock} from "../../../../utils/block";
+import {generateEmptySignedBlock} from "../../../../utils/block";
 import { getIncomingBlockHandler } from "../../../../../src/network/gossip/handlers/block";
 
 describe("gossip handlers - block", function () {
@@ -29,7 +29,7 @@ describe("gossip handlers - block", function () {
   });
 
   it("handle valid block", async function () {
-    const block = generateEmptyBlock();
+    const block = generateEmptySignedBlock();
     handleMessageStub.returns(block);
     validatorStub.isValidIncomingBlock.resolves(true);
     await getIncomingBlockHandler(validatorStub).bind(gossipStub)({data: Buffer.alloc(0)});
@@ -37,7 +37,7 @@ describe("gossip handlers - block", function () {
   });
 
   it("handle invalid block", async function () {
-    const block = generateEmptyBlock();
+    const block = generateEmptySignedBlock();
     handleMessageStub.returns(block);
     validatorStub.isValidIncomingBlock.resolves(false);
     await getIncomingBlockHandler(validatorStub).bind(gossipStub)({data: Buffer.alloc(0)});

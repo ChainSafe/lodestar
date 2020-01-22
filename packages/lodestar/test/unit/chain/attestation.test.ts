@@ -60,23 +60,6 @@ describe("AttestationProcessor", function() {
     expect(processAttestationStub.calledOnce).to.be.false;
   });
 
-  it("receiveBlock - should not process attestation after receiveAttestation then process in receiveBlock", async () => {
-    // siomilar to above
-    processAttestationStub = sandbox.stub(attestationProcessor, "processAttestation");
-    const attestation = generateEmptyAttestation();
-    const block = generateEmptySignedBlock();
-    attestation.data.target.root = hashTreeRoot(config.types.BeaconBlock, block);
-    const state = generateState();
-    dbStub.block.get.resolves(block);
-    dbStub.state.get.resolves(state);
-    dbStub.block.has.resolves(false);
-    await attestationProcessor.receiveAttestation(attestation);
-    expect(processAttestationStub.calledOnce).to.be.false;
-
-    await attestationProcessor.receiveBlock(block);
-    expect(processAttestationStub.calledOnce).to.be.true;
-  });
-
   it("processAttestation - should not call forkChoice - invalid target epoch", async () => {
     try {
       const attestation = generateEmptyAttestation();

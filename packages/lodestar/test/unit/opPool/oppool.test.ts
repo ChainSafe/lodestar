@@ -2,7 +2,7 @@ import sinon from "sinon";
 import {describe} from "mocha";
 import {expect} from "chai";
 import {OpPool} from "../../../src/opPool";
-import {generateEmptyBlock} from "../../utils/block";
+import {generateEmptySignedBlock} from "../../utils/block";
 import {EthersEth1Notifier} from "../../../src/eth1";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
@@ -58,7 +58,7 @@ describe("operation pool", function () {
   });
 
   it("should do cleanup after block processing", async function () {
-    const block  = generateEmptyBlock();
+    const block  = generateEmptySignedBlock();
     dbStub.deposit.deleteOld.resolves();
     dbStub.voluntaryExit.deleteManyByValue.resolves();
     dbStub.proposerSlashing.deleteManyByValue.resolves();

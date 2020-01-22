@@ -121,7 +121,7 @@ describe("sync utils", function () {
       repsStub.get.returns({latestStatus: {root: Buffer.alloc(32, 1)}});
       rpcStub.beaconBlocksByRange
         .withArgs(sinon.match.any, sinon.match.any)
-        .resolves([generateEmptyBlock()]);
+        .resolves([generateEmptySignedBlock()]);
       const result = await getBlockRangeFromPeer(
         rpcStub,
         repsStub as unknown as ReputationStore,
@@ -174,7 +174,7 @@ function generateValidChain(start: BeaconBlockHeader, n = 3): SignedBeaconBlock[
     const block = generateEmptySignedBlock();
     block.message.parentRoot = parentRoot;
     block.message.slot = i;
-    parentRoot = hashTreeRoot(config.types.BeaconBlock, block);
+    parentRoot = hashTreeRoot(config.types.BeaconBlock, block.message);
     blocks.push(block);
   }
   return blocks;
