@@ -10,13 +10,14 @@ import {
   number64,
   Slot,
   ValidatorDuty,
-  ValidatorIndex
+  ValidatorIndex,
+  SignedBeaconBlock
 } from "@chainsafe/eth2.0-types";
 import {IValidatorApi} from "../../../src/api/interface/validators";
 import {getEmptyBlock} from "@chainsafe/lodestar/lib/chain/genesis/genesis";
 
 export interface IMockValidatorAPIOpts {
-  head?: BeaconBlock;
+  head?: SignedBeaconBlock;
   chainId?: number64;
   validatorIndex?: ValidatorIndex;
   pendingAttestations?: Attestation[];
@@ -29,11 +30,11 @@ export class MockValidatorApi implements IValidatorApi {
   private chainId: number64;
   private validatorIndex: ValidatorIndex;
   private attestations: Attestation[];
-  private head: BeaconBlock;
+  private head: SignedBeaconBlock;
 
   public constructor(opts?: IMockValidatorAPIOpts) {
     this.attestations = opts && opts.pendingAttestations || [];
-    this.head = opts && opts.head || getEmptyBlock();
+    this.head = opts && opts.head || {message: getEmptyBlock(), signature: Buffer.alloc(96)};
     this.chainId = opts && opts.chainId || 0;
     this.validatorIndex = opts && opts.validatorIndex || 1;
   }
@@ -70,7 +71,7 @@ export class MockValidatorApi implements IValidatorApi {
     return undefined;
   }
 
-  publishBlock(beaconBlock: BeaconBlock): Promise<void> {
+  publishBlock(beaconBlock: SignedBeaconBlock): Promise<void> {
     return undefined;
   }
 }
