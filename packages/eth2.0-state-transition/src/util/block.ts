@@ -13,7 +13,7 @@ export function isValidProposer(
 ): boolean {
   // Verify proposer is not slashed
   const proposer = state.validators[getBeaconProposerIndex(config, state)];
-  return proposer.slashed;
+  return !proposer.slashed;
 }
 
 export function verifyBlockSignature(
