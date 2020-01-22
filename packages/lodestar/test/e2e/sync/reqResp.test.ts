@@ -16,7 +16,7 @@ import {BeaconMetrics} from "../../../src/metrics";
 import {generateState} from "../../utils/state";
 import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
 import { IGossipMessageValidator } from "../../../src/network/gossip/interface";
-import {generateEmptyBlock} from "../../utils/block";
+import {generateEmptySignedBlock} from "../../utils/block";
 import {hashTreeRoot} from "@chainsafe/ssz";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
@@ -53,10 +53,10 @@ describe("[sync] rpc", function () {
       networkId: 0n,
     });
     const state = generateState();
-    const block = generateEmptyBlock();
+    const block = generateEmptySignedBlock();
     state.finalizedCheckpoint = {
       epoch: 0,
-      root: hashTreeRoot(config.types.BeaconBlock, block),
+      root: hashTreeRoot(config.types.BeaconBlock, block.message),
     };
     // @ts-ignore
     const db = {
