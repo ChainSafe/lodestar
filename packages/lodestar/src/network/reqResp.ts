@@ -27,7 +27,8 @@ import {
   RESP_TIMEOUT,
 } from "../constants";
 import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
-import {createResponseEvent, createRpcProtocol, randomRequestId,} from "./util";
+import {createResponseEvent, createRpcProtocol, randomRequestId, encodeChunkifyResponse, 
+  decodeChunkifyResponse} from "./util";
 
 import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
 import {INetworkOptions} from "./options";
@@ -169,26 +170,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   }
 
   private encodeResponse(method: Method, body: ResponseBody): Buffer {
-    let output= Buffer.alloc(0);
-    switch (method) {
-      case Method.Status:
-        output = serialize(this.config.types.Status, body);
-        break;
-      case Method.Goodbye:
-        output = serialize(this.config.types.Goodbye, body);
-        break;
-      case Method.BeaconBlocksByRange:
-        output = serialize(this.config.types.BeaconBlocksByRangeResponse, body);
-        break;
-      case Method.BeaconBlocksByRoot:
-        output = serialize(this.config.types.BeaconBlocksByRootResponse, body);
-        break;
-    }
-    return Buffer.concat([
-      Buffer.alloc(1),
-      Buffer.from(varint.encode(output.length)),
-      output,
-    ]);
+    return encodeChunkifyResponse(this.config, method, body);
   }
   private encodeResponseError(err: Error): Buffer {
     const b = Buffer.from("c" + err.message);
@@ -217,29 +199,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     }
   }
   private decodeResponse(method: Method, data: Buffer): ResponseBody {
-    const code = data[0];
-    const length = varint.decode(data, 1);
-    const bytes = varint.decode.bytes;
-    if (
-      length !== data.length - (bytes + 1) ||
-      length > MAX_CHUNK_SIZE
-    ) {
-      throw new Error(ERR_INVALID_REQ);
-    }
-    data = data.slice(bytes + 1);
-    if (code !== 0) {
-      throw new Error(data.toString("utf8"));
-    }
-    switch (method) {
-      case Method.Status:
-        return deserialize(this.config.types.Status, data);
-      case Method.Goodbye:
-        return deserialize(this.config.types.Goodbye, data);
-      case Method.BeaconBlocksByRange:
-        return deserialize(this.config.types.BeaconBlocksByRangeResponse, data);
-      case Method.BeaconBlocksByRoot:
-        return deserialize(this.config.types.BeaconBlocksByRootResponse, data);
-    }
+    return decodeChunkifyResponse(this.config, method, data);
   }
   private async sendRequest<T extends ResponseBody>(
     peerInfo: PeerInfo,
