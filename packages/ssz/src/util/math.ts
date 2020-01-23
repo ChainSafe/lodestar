@@ -1,6 +1,10 @@
 /** @ignore */
 export function bitLength (n: number): number {
-  return n.toString(2).length;
+  const bitstring = n.toString(2);
+  if (bitstring === "0") {
+    return 0;
+  }
+  return bitstring.length;
 }
 
 /** @ignore */

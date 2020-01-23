@@ -4,15 +4,18 @@ import {BasicListStructuralHandler} from "./list";
 
 export class BitListStructuralHandler extends BasicListStructuralHandler<BitList> {
   _type: BitListType;
+  constructor(type: BitListType) {
+    super(type);
+    this._type = type;
+  }
   getByte(value: BitList, index: number): number {
-    const bits = Math.min(8, value.length - (index * 8));
-    let byte = 0;
-    for (let i = index * 8; i < bits; i++) {
-      if (value[i]) {
-        byte += 1 << i;
-      }
+    const firstBitIndex = index * 8;
+    const lastBitIndex = Math.min(firstBitIndex + 7, value.length - 1);
+    let bitstring = "0b";
+    for (let i = lastBitIndex; i >= firstBitIndex; i--) {
+      bitstring += value[i] ? "1" : "0";
     }
-    return byte;
+    return Number(bitstring);
   }
   getLength(value: BitList): number {
     return value.length;
@@ -31,7 +34,9 @@ export class BitListStructuralHandler extends BasicListStructuralHandler<BitList
     const value = [];
     const toBool = (c: string): boolean => c === "1" ? true : false;
     for (let i = start; i < end-1; i++) {
-      value.push(...Array.prototype.map.call(data[i].toString(2), toBool));
+      let bitstring = data[i].toString(2);
+      bitstring = "0".repeat(8 - bitstring.length) + bitstring;
+      value.push(...Array.prototype.map.call(bitstring, toBool).reverse());
     }
     const lastByte = data[end-1];
     if (lastByte === 0) {
@@ -40,9 +45,9 @@ export class BitListStructuralHandler extends BasicListStructuralHandler<BitList
     if (lastByte === 1) {
       return value as BitList;
     }
-    const lastBits = Array.prototype.map.call(lastByte.toString(2), toBool);
+    const lastBits = Array.prototype.map.call(lastByte.toString(2), toBool).reverse();
     const last1 = lastBits.lastIndexOf(true);
-    value.push(...lastBits.slice(0, last1-1));
+    value.push(...lastBits.slice(0, last1));
     if (value.length > this._type.limit) {
       throw new Error("Invalid bitlist, length greater than limit");
     }

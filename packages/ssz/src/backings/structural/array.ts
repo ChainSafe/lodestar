@@ -56,8 +56,13 @@ export class BasicArrayStructuralHandler<T extends ArrayLike<any>> extends Struc
     const output = new Uint8Array(32);
     const itemSize = this._type.elementType.size();
     const itemsInChunk = Math.floor(32 / itemSize);
-    for (let i = 0, j = itemsInChunk * index; i < itemsInChunk; i += itemSize, j++) {
-      this._type.elementType.serializeTo(value[j], output, i);
+    const firstIndex = index * itemsInChunk;
+    // not inclusive
+    const lastIndex = Math.min(this.getLength(value), firstIndex + itemsInChunk);
+    // i = array index, grows by 1
+    // j = data offset, grows by itemSize
+    for (let i = firstIndex, j = 0; i < lastIndex; i++, j += itemSize) {
+      this._type.elementType.serializeTo(value[i], output, j);
     }
     return output;
   }
@@ -107,15 +112,18 @@ export class CompositeArrayStructuralHandler<T extends ArrayLike<any>> extends S
     return newValue;
   }
   fromBytes(data: Uint8Array, start: number, end: number): T {
-    if (this._type.isVariableSize()) {
+    if (start === end) {
+      return [] as unknown as T;
+    }
+    if (this._type.elementType.isVariableSize()) {
       const value = [];
       // all elements variable-sized
       // indices contain offsets
       let currentIndex = start;
       let nextIndex = currentIndex;
       // data exists between offsets
-      const fixedSection = new DataView(data.buffer, data.byteOffset + start, end);
-      const firstOffset = start + fixedSection.getUint32(start);
+      const fixedSection = new DataView(data.buffer, data.byteOffset, end);
+      const firstOffset = start + fixedSection.getUint32(start, true);
       let currentOffset = firstOffset;
       let nextOffset = currentOffset;
       while (currentIndex < firstOffset) {
@@ -125,7 +133,7 @@ export class CompositeArrayStructuralHandler<T extends ArrayLike<any>> extends S
         nextIndex = currentIndex + 4;
         nextOffset = nextIndex === firstOffset
           ? end
-          : start + fixedSection.getUint32(nextIndex);
+          : start + fixedSection.getUint32(nextIndex, true);
         if (currentOffset > nextOffset) {
           throw new Error("Offsets must be increasing");
         }
@@ -158,7 +166,7 @@ export class CompositeArrayStructuralHandler<T extends ArrayLike<any>> extends S
       const fixedSection = new DataView(output.buffer, output.byteOffset + offset, length * 4);
       for (let i = 0; i < length; i++) {
         // write offset
-        fixedSection.setUint32(i, variableIndex - offset, true);
+        fixedSection.setUint32(i * 4, variableIndex - offset, true);
         // write serialized element to variable section
         variableIndex = this._type.elementType.structural.serializeTo(value[i], output, variableIndex);
       }

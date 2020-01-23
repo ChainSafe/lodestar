@@ -1,3 +1,4 @@
+import * as i from "../src/interface";
 import * as types from "../src/types";
 import * as backings from "../src/backings";
 import * as mtree from "@chainsafe/merkle-tree";
@@ -23,7 +24,7 @@ interface Validator {
   withdrawalEpoch: number;
 }
 
-type ValidatorRegistry = types.ArrayLike<Validator>;
+type ValidatorRegistry = i.List<Validator>;
 
 // set up new type
 

@@ -15,7 +15,7 @@ export class RootType<T extends object> extends ByteVectorType {
     this._expandedType = options.expandedType;
   }
   get expandedType(): CompositeType<T> {
-    if (typeof this._expandedType === 'function') {
+    if (typeof this._expandedType === "function") {
       this._expandedType = this._expandedType();
     }
     return this._expandedType;

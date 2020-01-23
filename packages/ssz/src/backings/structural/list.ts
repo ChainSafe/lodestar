@@ -5,6 +5,10 @@ import {BasicArrayStructuralHandler, CompositeArrayStructuralHandler} from "./ar
 
 export class BasicListStructuralHandler<T extends List<any>> extends BasicArrayStructuralHandler<T> {
   _type: BasicListType<T>;
+  constructor(type: BasicListType<T>) {
+    super();
+    this._type = type;
+  }
   defaultValue(): T {
     return [] as unknown as T;
   }
@@ -27,6 +31,10 @@ export class BasicListStructuralHandler<T extends List<any>> extends BasicArrayS
 
 export class CompositeListStructuralHandler<T extends List<any>> extends CompositeArrayStructuralHandler<T> {
   _type: CompositeListType<T>;
+  constructor(type: CompositeListType<T>) {
+    super();
+    this._type = type;
+  }
   defaultValue(): T {
     return [] as unknown as T;
   }

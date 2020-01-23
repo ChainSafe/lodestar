@@ -1,9 +1,13 @@
 import {ObjectLike} from "../../interface";
-import {ContainerType} from "../../types";
+import {ContainerType, CompositeType} from "../../types";
 import {StructuralHandler} from "./abstract";
 
 export class ContainerStructuralHandler<T extends ObjectLike> extends StructuralHandler<T> {
   _type: ContainerType<T>;
+  constructor(type: ContainerType<T>) {
+    super();
+    this._type = type;
+  }
   defaultValue(): T {
     const obj = {} as T;
     for (const [fieldName, fieldType] of this._type.fields) {
@@ -57,6 +61,69 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
     }
     return newValue;
   }
+  fromBytes(data: Uint8Array, start: number, end: number): T {
+    let currentIndex = start;
+    let nextIndex = currentIndex;
+    const value = {} as T;
+    // Since variable-sized values can be interspersed with fixed-sized values, we precalculate
+    // the offset indices so we can more easily deserialize the fields in once pass
+    // first we get the fixed sizes
+    const fixedSizes: (number | false)[] = this._type.fields
+      .map(([_, fieldType]) => !fieldType.isVariableSize() && fieldType.size(null));
+    // with the fixed sizes, we can read the offsets, and store for our single pass
+    const offsets: number[] = [];
+    const fixedSection = new DataView(data.buffer, data.byteOffset, end);
+    const fixedEnd = fixedSizes.reduce((index: number, size) => {
+      if (size === false) {
+        offsets.push(start + fixedSection.getUint32(index, true));
+        return index + 4;
+      } else {
+        return index + size;
+      }
+    }, start);
+    offsets.push(end);
+    if (fixedEnd !== offsets[0]) {
+      throw new Error("Not all variable bytes consumed");
+    }
+    let offsetIndex = 0;
+    this._type.fields.forEach(([fieldName, fieldType], i) => {
+      const fieldSize = fixedSizes[i];
+      if (fieldSize === false) { // variable-sized field
+        if (offsets[offsetIndex] > end) {
+          throw new Error("Offset out of bounds");
+        }
+        if (offsets[offsetIndex] > offsets[offsetIndex + 1]) {
+          throw new Error("Offsets must be increasing");
+        }
+        value[fieldName as keyof T] = (fieldType as CompositeType<any>).structural.fromBytes(
+          data, offsets[offsetIndex], offsets[offsetIndex + 1],
+        );
+        offsetIndex++;
+        currentIndex += 4;
+      } else { // fixed-sized field
+        nextIndex = currentIndex + fieldSize;
+        if (fieldType.isBasic()) {
+          value[fieldName as keyof T] = fieldType.fromBytes(data, currentIndex);
+        } else {
+          value[fieldName as keyof T] = fieldType.structural.fromBytes(data, currentIndex, nextIndex);
+        }
+        currentIndex = nextIndex;
+      }
+    });
+    if (offsets.length > 1) {
+      if (offsetIndex !== offsets.length - 1) {
+        throw new Error("Not all variable bytes consumed");
+      }
+      if (currentIndex !== offsets[0]) {
+        throw new Error("Not all fixed bytes consumed");
+      }
+    } else {
+      if (currentIndex !== end) {
+        throw new Error("Not all fixed bytes consumed");
+      }
+    }
+    return value;
+  }
   serializeTo(value: T, output: Uint8Array, offset: number): number {
     let variableIndex = offset + this._type.fields.reduce((total, [fieldName, fieldType]) =>
       total + (fieldType.isVariableSize() ? 4 : fieldType.size(null)), 0);
@@ -65,7 +132,7 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
     for (const [fieldName, fieldType] of this._type.fields) {
       if (fieldType.isVariableSize()) {
         // write offset
-        fixedSection.setUint32(fixedIndex - offset, variableIndex, true);
+        fixedSection.setUint32(fixedIndex - offset, variableIndex - offset, true);
         fixedIndex += 4;
         // write serialized element to variable section
         variableIndex = fieldType.serializeTo(value[fieldName], output, variableIndex);

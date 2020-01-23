@@ -8,9 +8,6 @@ import {merkleize} from "../../util/compat";
  */
 export class StructuralHandler<T extends object> {
   _type: CompositeType<T>;
-  constructor(type: CompositeType<T>) {
-    this._type = type;
-  }
   type(): CompositeType<T> {
     return this._type;
   }
