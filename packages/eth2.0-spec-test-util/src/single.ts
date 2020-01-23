@@ -69,7 +69,7 @@ export function describeDirectorySpecTest<TestCase, Result>(
   options: Partial<ISpecTestOptions<TestCase, Result>>
 ): void {
   // @ts-ignore
-  options = deepMerge(defaultOptions, options);
+  options = {...defaultOptions, ...options};
   if(!isDirectory(testCaseDirectoryPath)) {
     throw new Error(`${testCaseDirectoryPath} is not directory`);
   }

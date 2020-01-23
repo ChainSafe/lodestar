@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {Type, UintType, BigIntUintType} from "@chainsafe/ssz";
+import {Type, UintType, BigIntUintType, byteType} from "@chainsafe/ssz";
 
 /**
  * Transform the type to something that is safe to deserialize
@@ -7,20 +7,27 @@ import {Type, UintType, BigIntUintType} from "@chainsafe/ssz";
  * This mainly entails making sure all numbers are bignumbers
  */
 export function safeType(type: Type<any>): Type<any> {
-  if (type.isBasic()) {
+  if (type === byteType) {
+    return type;
+  } else if (type.isBasic()) {
     if ((type as UintType<any>).byteLength) {
       return new BigIntUintType({byteLength: (type as UintType<any>).byteLength});
     } else {
       return type;
     }
   } else {
-    const props = {...type} as any;
+    const props = Object.getOwnPropertyDescriptors(type) as any;
     if (props.elementType) {
-      props.elementType = safeType(props.elementType);
+      if (props.elementType.byteLength !== 1) {
+        props.elementType.value = safeType(props.elementType.value);
+      }
     }
     if (props.fields) {
-      props.fields = props.fields.map(f => ([f[0], safeType(f[1])]));
+      props.fields.value = props.fields.value.map(f => ([f[0], safeType(f[1])]));
     }
-    return Object.create(Object.getPrototypeOf(type), props);
+    const newtype = Object.create(Object.getPrototypeOf(type), props);
+    newtype.structural._type = newtype;
+    newtype.tree._type = newtype;
+    return newtype;
   }
 }
