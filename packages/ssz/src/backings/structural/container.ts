@@ -72,7 +72,7 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
       .map(([_, fieldType]) => !fieldType.isVariableSize() && fieldType.size(null));
     // with the fixed sizes, we can read the offsets, and store for our single pass
     const offsets: number[] = [];
-    const fixedSection = new DataView(data.buffer, data.byteOffset, end);
+    const fixedSection = new DataView(data.buffer, data.byteOffset);
     const fixedEnd = fixedSizes.reduce((index: number, size) => {
       if (size === false) {
         offsets.push(start + fixedSection.getUint32(index, true));
@@ -127,7 +127,7 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
   serializeTo(value: T, output: Uint8Array, offset: number): number {
     let variableIndex = offset + this._type.fields.reduce((total, [fieldName, fieldType]) =>
       total + (fieldType.isVariableSize() ? 4 : fieldType.size(null)), 0);
-    const fixedSection = new DataView(output.buffer, output.byteOffset + offset, variableIndex - offset);
+    const fixedSection = new DataView(output.buffer, output.byteOffset + offset);
     let fixedIndex = offset;
     for (const [fieldName, fieldType] of this._type.fields) {
       if (fieldType.isVariableSize()) {

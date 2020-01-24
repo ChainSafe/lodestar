@@ -122,7 +122,7 @@ export class CompositeArrayStructuralHandler<T extends ArrayLike<any>> extends S
       let currentIndex = start;
       let nextIndex = currentIndex;
       // data exists between offsets
-      const fixedSection = new DataView(data.buffer, data.byteOffset, end);
+      const fixedSection = new DataView(data.buffer, data.byteOffset);
       const firstOffset = start + fixedSection.getUint32(start, true);
       let currentOffset = firstOffset;
       let nextOffset = currentOffset;
@@ -163,7 +163,7 @@ export class CompositeArrayStructuralHandler<T extends ArrayLike<any>> extends S
     const length = this.getLength(value);
     if (this._type.elementType.isVariableSize()) {
       let variableIndex = offset + length * 4;
-      const fixedSection = new DataView(output.buffer, output.byteOffset + offset, length * 4);
+      const fixedSection = new DataView(output.buffer, output.byteOffset + offset);
       for (let i = 0; i < length; i++) {
         // write offset
         fixedSection.setUint32(i * 4, variableIndex - offset, true);
