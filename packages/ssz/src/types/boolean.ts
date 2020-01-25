@@ -26,7 +26,7 @@ export class BooleanType extends BasicType<boolean> {
   createValue(value: any): boolean {
     return value;
   }
-  serializeTo(value: boolean, output: Uint8Array, offset: number): number {
+  toBytes(value: boolean, output: Uint8Array, offset: number): number {
     if (value) {
       output[offset] = 1;
     }

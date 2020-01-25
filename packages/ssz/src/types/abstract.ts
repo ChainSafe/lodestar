@@ -44,15 +44,15 @@ export class BasicType<T> {
   }
   serialize(value: T): Uint8Array {
     const output = new Uint8Array(this.size());
-    this.serializeTo(value, output, 0);
+    this.toBytes(value, output, 0);
     return output;
   }
-  serializeTo(value: T, output: Uint8Array, offset: number): number {
+  toBytes(value: T, output: Uint8Array, offset: number): number {
     throw new Error("Not implemented");
   }
   hashTreeRoot(value: T): Uint8Array {
     const output = new Uint8Array(32);
-    this.serializeTo(value, output, 0);
+    this.toBytes(value, output, 0);
     return output;
   }
 }
@@ -111,11 +111,11 @@ export class CompositeType<T extends object> {
       return this.structural.serialize(value);
     }
   }
-  serializeTo(value: BackedValue<T> | T, output: Uint8Array, offset: number): number {
+  toBytes(value: BackedValue<T> | T, output: Uint8Array, offset: number): number {
     if (isBackedValue(value)) {
-      return value.serializeTo(output, offset);
+      return value.toBytes(output, offset);
     } else {
-      return this.structural.serializeTo(value, output, offset);
+      return this.structural.toBytes(value, output, offset);
     }
   }
   // hash tree root related

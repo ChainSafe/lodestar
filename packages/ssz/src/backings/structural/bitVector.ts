@@ -40,7 +40,7 @@ export class BitVectorStructuralHandler extends BasicVectorStructuralHandler<Bit
     value.push(...Array.prototype.map.call(lastByte.toString(2), toBool).reverse().slice(0, lastIndex + 1));
     return value as BitVector;
   }
-  serializeTo(value: BitVector, output: Uint8Array, offset: number): number {
+  toBytes(value: BitVector, output: Uint8Array, offset: number): number {
     const byteLength = this.getByteLength(value);
     for (let i = 0; i < byteLength; i++) {
       output[offset + i] = this.getByte(value, i);

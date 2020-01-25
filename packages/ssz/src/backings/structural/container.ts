@@ -124,7 +124,7 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
     }
     return value;
   }
-  serializeTo(value: T, output: Uint8Array, offset: number): number {
+  toBytes(value: T, output: Uint8Array, offset: number): number {
     let variableIndex = offset + this._type.fields.reduce((total, [fieldName, fieldType]) =>
       total + (fieldType.isVariableSize() ? 4 : fieldType.size(null)), 0);
     const fixedSection = new DataView(output.buffer, output.byteOffset + offset);
@@ -135,9 +135,9 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
         fixedSection.setUint32(fixedIndex - offset, variableIndex - offset, true);
         fixedIndex += 4;
         // write serialized element to variable section
-        variableIndex = fieldType.serializeTo(value[fieldName], output, variableIndex);
+        variableIndex = fieldType.toBytes(value[fieldName], output, variableIndex);
       } else {
-        fixedIndex = fieldType.serializeTo(value[fieldName], output, fixedIndex);
+        fixedIndex = fieldType.toBytes(value[fieldName], output, fixedIndex);
       }
     }
     return variableIndex;

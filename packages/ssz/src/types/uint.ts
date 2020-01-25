@@ -27,7 +27,7 @@ export class NumberUintType extends UintType<number> {
   defaultValue(): number {
     return 0;
   }
-  serializeTo(value: number, output: Uint8Array, offset: number): number {
+  toBytes(value: number, output: Uint8Array, offset: number): number {
     if (this.byteLength > 6 && value === Infinity) {
       for (let i = offset; i < offset + this.byteLength; i++) {
         output[i] = 0xff;
@@ -69,7 +69,7 @@ export class BigIntUintType extends UintType<bigint> {
   defaultValue(): bigint {
     return BigInt(0);
   }
-  serializeTo(value: bigint, output: Uint8Array, offset: number): number {
+  toBytes(value: bigint, output: Uint8Array, offset: number): number {
     let v = value;
     for (let i = 0; i < this.byteLength; i ++) {
       output[offset + i] = Number(v & BigInt(0xff));

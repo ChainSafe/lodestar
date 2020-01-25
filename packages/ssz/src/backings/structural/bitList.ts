@@ -53,7 +53,7 @@ export class BitListStructuralHandler extends BasicListStructuralHandler<BitList
     }
     return value as BitList;
   }
-  serializeTo(value: BitList, output: Uint8Array, offset: number): number {
+  toBytes(value: BitList, output: Uint8Array, offset: number): number {
     const byteLength = this.getByteLength(value);
     for (let i = 0; i < byteLength; i++) {
       output[offset + i] = this.getByte(value, i);

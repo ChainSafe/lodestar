@@ -45,7 +45,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     }
     return s;
   }
-  serializeTo(target: TreeBacking, output: Uint8Array, offset: number): number {
+  toBytes(target: TreeBacking, output: Uint8Array, offset: number): number {
     let variableIndex = offset + this._type.fields.reduce((total, [_, fieldType]) =>
       total + (fieldType.isVariableSize() ? 4 : fieldType.size(null)), 0);
     const fixedSection = new DataView(output.buffer, output.byteOffset + offset, variableIndex - offset);
@@ -61,9 +61,9 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
         fixedSection.setUint32(fixedIndex - offset, variableIndex, true);
         fixedIndex += 4;
         // write serialized element to variable section
-        variableIndex = fieldType.serializeTo(this.getBackingAtChunk(target, i), output, variableIndex);
+        variableIndex = fieldType.toBytes(this.getBackingAtChunk(target, i), output, variableIndex);
       } else {
-        fixedIndex = fieldType.serializeTo(this.getBackingAtChunk(target, i), output, fixedIndex);
+        fixedIndex = fieldType.toBytes(this.getBackingAtChunk(target, i), output, fixedIndex);
       }
       i++;
     }
@@ -94,7 +94,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     const fieldType = this._type.fields[chunkIndex][1];
     if (fieldType.isBasic()) {
       const chunk = new Uint8Array(32);
-      fieldType.serializeTo(value, chunk, 0);
+      fieldType.toBytes(value, chunk, 0);
       target.set(chunkGindex, new LeafNode(Buffer.from(chunk)));
       return true;
     } else {

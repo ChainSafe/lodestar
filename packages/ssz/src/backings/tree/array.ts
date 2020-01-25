@@ -17,7 +17,7 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
   size(target: TreeBacking): number {
     return this._type.elementType.size() * this.getLength(target);
   }
-  serializeTo(target: TreeBacking, output: Uint8Array, offset: number): number {
+  toBytes(target: TreeBacking, output: Uint8Array, offset: number): number {
     const size = this.size(target);
     let i = 0;
     let chunkIndex = 0;
@@ -59,7 +59,7 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
     const chunk = Uint8Array.from(
       target.get(chunkGindex).merkleRoot
     );
-    this._type.elementType.serializeTo(value, chunk, this.getChunkOffset(property));
+    this._type.elementType.toBytes(value, chunk, this.getChunkOffset(property));
     target.set(chunkGindex, new LeafNode(Buffer.from(chunk)), expand);
     return true;
   }
@@ -96,7 +96,7 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<any>> extends TreeHan
       return this._type.elementType.tree.size(null) * this.getLength(target);
     }
   }
-  serializeTo(target: TreeBacking, output: Uint8Array, offset: number): number {
+  toBytes(target: TreeBacking, output: Uint8Array, offset: number): number {
     const length = this.getLength(target);
     if (this._type.elementType.isVariableSize()) {
       let variableIndex = offset + length + 4;
@@ -105,7 +105,7 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<any>> extends TreeHan
         // write offset
         fixedSection.setUint32(i, variableIndex - offset, true);
         // write serialized element to variable section
-        variableIndex = this._type.elementType.tree.serializeTo(
+        variableIndex = this._type.elementType.tree.toBytes(
           this.getBackingAtChunk(target, i),
           output,
           variableIndex
@@ -115,7 +115,7 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<any>> extends TreeHan
     } else {
       let index = offset;
       for (let i = 0; i < length; i++) {
-        index = this._type.elementType.tree.serializeTo(
+        index = this._type.elementType.tree.toBytes(
           this.getBackingAtChunk(target, i),
           output,
           index

@@ -37,10 +37,10 @@ export class StructuralHandler<T extends object> {
   }
   serialize(target: T): Uint8Array {
     const output = new Uint8Array(this._type.size(target));
-    this.serializeTo(target, output, 0);
+    this.toBytes(target, output, 0);
     return output;
   }
-  serializeTo(target: T, output: Uint8Array, offset: number): number {
+  toBytes(target: T, output: Uint8Array, offset: number): number {
     throw new Error("Not implemented");
   }
   nonzeroChunkCount(value: T): number {

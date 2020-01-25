@@ -11,7 +11,7 @@ export interface ITreeBackedValue<T extends object> {
 
   size(): number;
   serialize(): Uint8Array;
-  serializeTo(output: Uint8Array, offset: number): number;
+  toBytes(output: Uint8Array, offset: number): number;
 
   hashTreeRoot(): Uint8Array;
 
@@ -82,11 +82,11 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   }
   serialize(target: TreeBacking): Uint8Array {
     const output = new Uint8Array(this.size(target));
-    this.serializeTo(target, output, 0);
+    this.toBytes(target, output, 0);
     return output;
   }
-  serializeTo(target: TreeBacking, output: Uint8Array, offset: number): number {
-    return this._type.structural.serializeTo(this.createBackedValue(target), output, offset);
+  toBytes(target: TreeBacking, output: Uint8Array, offset: number): number {
+    return this._type.structural.toBytes(this.createBackedValue(target), output, offset);
   }
   _depth: number;
   depth(): number {

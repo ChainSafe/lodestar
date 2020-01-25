@@ -44,11 +44,11 @@ export class BasicArrayStructuralHandler<T extends ArrayLike<any>> extends Struc
       (_, i) => this._type.elementType.fromBytes(data, start + (i * elementSize))
     ) as unknown as T;
   }
-  serializeTo(value: T, output: Uint8Array, offset: number): number {
+  toBytes(value: T, output: Uint8Array, offset: number): number {
     const length = this.getLength(value);
     let index = offset;
     for (let i = 0; i < length; i++) {
-      index = this._type.elementType.serializeTo(value[i], output, index);
+      index = this._type.elementType.toBytes(value[i], output, index);
     }
     return index;
   }
@@ -62,7 +62,7 @@ export class BasicArrayStructuralHandler<T extends ArrayLike<any>> extends Struc
     // i = array index, grows by 1
     // j = data offset, grows by itemSize
     for (let i = firstIndex, j = 0; i < lastIndex; i++, j += itemSize) {
-      this._type.elementType.serializeTo(value[i], output, j);
+      this._type.elementType.toBytes(value[i], output, j);
     }
     return output;
   }
@@ -159,7 +159,7 @@ export class CompositeArrayStructuralHandler<T extends ArrayLike<any>> extends S
       ) as unknown as T;
     }
   }
-  serializeTo(value: T, output: Uint8Array, offset: number): number {
+  toBytes(value: T, output: Uint8Array, offset: number): number {
     const length = this.getLength(value);
     if (this._type.elementType.isVariableSize()) {
       let variableIndex = offset + length * 4;
@@ -168,13 +168,13 @@ export class CompositeArrayStructuralHandler<T extends ArrayLike<any>> extends S
         // write offset
         fixedSection.setUint32(i * 4, variableIndex - offset, true);
         // write serialized element to variable section
-        variableIndex = this._type.elementType.structural.serializeTo(value[i], output, variableIndex);
+        variableIndex = this._type.elementType.structural.toBytes(value[i], output, variableIndex);
       }
       return variableIndex;
     } else {
       let index = offset;
       for (let i = 0; i < length; i++) {
-        index = this._type.elementType.structural.serializeTo(value[i], output, index);
+        index = this._type.elementType.structural.toBytes(value[i], output, index);
       }
       return index;
     }

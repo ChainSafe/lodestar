@@ -11,7 +11,7 @@ export class ByteVectorStructuralHandler extends BasicVectorStructuralHandler<Ve
   defaultValue(): Vector<number> {
     return new Uint8Array(this._type.length);
   }
-  serializeTo(value: Vector<number>, output: Uint8Array, offset: number): number {
+  toBytes(value: Vector<number>, output: Uint8Array, offset: number): number {
     output.set(value, offset);
     return offset + this._type.length;
   }

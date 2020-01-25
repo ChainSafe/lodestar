@@ -18,7 +18,7 @@ export class BasicListTreeHandler<T extends List<any>> extends BasicArrayTreeHan
   }
   setLength(target: TreeBacking, length: number): void {
     const chunk = new Uint8Array(32);
-    number32Type.serializeTo(length, chunk, 0);
+    number32Type.toBytes(length, chunk, 0);
     target.set(BigInt(3), new LeafNode(Buffer.from(chunk)));
   }
   depth(): number {
@@ -76,7 +76,7 @@ export class CompositeListTreeHandler<T extends List<any>> extends CompositeArra
   }
   setLength(target: TreeBacking, length: number): void {
     const chunk = new Uint8Array(32);
-    number32Type.serializeTo(length, chunk, 0);
+    number32Type.toBytes(length, chunk, 0);
     target.set(BigInt(3), new LeafNode(Buffer.from(chunk)));
   }
   depth(): number {
