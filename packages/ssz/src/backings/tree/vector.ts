@@ -3,6 +3,7 @@ import {Node, TreeBacking, subtreeFillToLength, zeroNode} from "@chainsafe/merkl
 import {Vector} from "../../interface";
 import {BasicVectorType, CompositeVectorType} from "../../types";
 import {BasicArrayTreeHandler, CompositeArrayTreeHandler} from "./array";
+import {TreeBackedValue} from "./abstract";
 
 export class BasicVectorTreeHandler<T extends Vector<any>> extends BasicArrayTreeHandler<T> {
   _type: BasicVectorType<T>;
@@ -24,7 +25,14 @@ export class BasicVectorTreeHandler<T extends Vector<any>> extends BasicArrayTre
   getLength(target: TreeBacking): number {
     return this._type.length;
   }
+  fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
+    if ((end - start) / this._type.elementType.size() !== this._type.length) {
+      throw new Error("Incorrect deserialized vector length");
+    }
+    return super.fromBytes(data, start, end);
+  }
 }
+
 export class CompositeVectorTreeHandler<T extends Vector<any>> extends CompositeArrayTreeHandler<T> {
   _type: CompositeVectorType<T>;
   constructor(type: CompositeVectorType<T>) {

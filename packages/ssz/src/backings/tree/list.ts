@@ -3,6 +3,7 @@ import {Node, BranchNode, zeroNode, TreeBacking, LeafNode} from "@chainsafe/merk
 import {List} from "../../interface";
 import {number32Type, BasicListType, CompositeListType} from "../../types";
 import {BasicArrayTreeHandler, CompositeArrayTreeHandler} from "./array";
+import {TreeBackedValue} from "./abstract";
 
 export class BasicListTreeHandler<T extends List<any>> extends BasicArrayTreeHandler<T> {
   _type: BasicListType<T>;
@@ -24,6 +25,15 @@ export class BasicListTreeHandler<T extends List<any>> extends BasicArrayTreeHan
     const chunk = new Uint8Array(32);
     number32Type.toBytes(length, chunk, 0);
     target.set(BigInt(3), new LeafNode(Buffer.from(chunk)));
+  }
+  fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
+    const length = (end - start) / this._type.elementType.size();
+    if (length > this._type.limit) {
+      throw new Error("Deserialized list length greater than limit");
+    }
+    const value = super.fromBytes(data, start, end);
+    this.setLength(value.backing(), length);
+    return value;
   }
   depth(): number {
     return super.depth() + 1;

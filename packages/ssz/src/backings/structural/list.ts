@@ -17,7 +17,7 @@ export class BasicListStructuralHandler<T extends List<any>> extends BasicArrayS
   }
   fromBytes(data: Uint8Array, start: number, end: number): T {
     if ((end - start) / this._type.elementType.size() > this._type.limit) {
-      throw new Error("List length greater than limit");
+      throw new Error("Deserialized list length greater than limit");
     }
     return super.fromBytes(data, start, end);
   }
@@ -44,7 +44,7 @@ export class CompositeListStructuralHandler<T extends List<any>> extends Composi
   fromBytes(data: Uint8Array, start: number, end: number): T {
     const value = super.fromBytes(data, start, end);
     if (value.length > this._type.limit) {
-      throw new Error("List length greater than limit");
+      throw new Error("Deserialized list length greater than limit");
     }
     return value;
   }
