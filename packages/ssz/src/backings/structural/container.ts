@@ -1,5 +1,5 @@
 import {ObjectLike} from "../../interface";
-import {ContainerType, CompositeType} from "../../types";
+import {ContainerType, CompositeType, Type} from "../../types";
 import {StructuralHandler} from "./abstract";
 
 export class ContainerStructuralHandler<T extends ObjectLike> extends StructuralHandler<T> {
@@ -30,10 +30,10 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
     }
     return s;
   }
-  assertValidValue(value: any): void {
+  assertValidValue(value: any): asserts value is T {
     for (const [fieldName, fieldType] of this._type.fields) {
       if (fieldType.isBasic()) {
-        fieldType.assertValidValue(value[fieldName]);
+        (fieldType as Type<any>).assertValidValue(value[fieldName]);
       } else {
         fieldType.structural.assertValidValue(value[fieldName]);
       }

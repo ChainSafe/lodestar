@@ -10,7 +10,7 @@ export class BasicArrayStructuralHandler<T extends ArrayLike<any>> extends Struc
   size(value: T): number {
     return this._type.elementType.size() * this.getLength(value);
   }
-  assertValidValue(value: any): void {
+  assertValidValue(value: any): asserts value is T {
     if (value.length !== this.getLength(value)) {
       throw new Error("Array has invalid length");
     }
@@ -84,7 +84,7 @@ export class CompositeArrayStructuralHandler<T extends ArrayLike<any>> extends S
       return this._type.elementType.structural.size(null) * this.getLength(value);
     }
   }
-  assertValidValue(value: any): void {
+  assertValidValue(value: any): asserts value is T {
     if (value.length !== this.getLength(value)) {
       throw new Error("Array has invalid length");
     }
