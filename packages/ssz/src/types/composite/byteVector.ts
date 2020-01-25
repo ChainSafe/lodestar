@@ -1,7 +1,7 @@
-import {Vector} from "../interface";
+import {Vector} from "../../interface";
 import {BasicVectorType} from "./vector";
-import {byteType} from "./wellKnown";
-import {ByteVectorStructuralHandler} from "../backings/structural";
+import {byteType} from "../basic";
+import {ByteVectorStructuralHandler} from "../../backings/structural";
 
 export interface IByteVectorOptions {
   length: number;

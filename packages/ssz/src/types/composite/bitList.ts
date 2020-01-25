@@ -1,7 +1,7 @@
-import {BitList} from "../interface";
+import {BitList} from "../../interface";
 import {BasicListType} from "./list";
-import {booleanType} from "./wellKnown";
-import {BitListStructuralHandler} from "../backings/structural";
+import {booleanType} from "../basic";
+import {BitListStructuralHandler} from "../../backings/structural";
 
 export interface IBitListOptions {
   limit: number;

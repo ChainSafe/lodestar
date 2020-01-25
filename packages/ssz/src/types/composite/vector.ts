@@ -1,9 +1,9 @@
-import {Vector} from "../interface";
+import {Vector} from "../../interface";
 import {IArrayOptions, BasicArrayType, CompositeArrayType} from "./array";
 import {
   BasicVectorStructuralHandler, CompositeVectorStructuralHandler,
   BasicVectorTreeHandler, CompositeVectorTreeHandler,
-} from "../backings";
+} from "../../backings";
 
 export interface IVectorOptions extends IArrayOptions {
   length: number;

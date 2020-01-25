@@ -1,9 +1,10 @@
-import {ObjectLike} from "../interface";
-import {CompositeType, Type} from "./abstract";
+import {ObjectLike} from "../../interface";
+import {CompositeType} from "./abstract";
+import {Type} from "../type";
 import {
   ContainerStructuralHandler,
   ContainerTreeHandler,
-} from "../backings";
+} from "../../backings";
 
 export interface IContainerOptions {
   fields: [string, Type<any>][];

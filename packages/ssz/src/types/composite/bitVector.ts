@@ -1,7 +1,7 @@
-import {BitVector} from "../interface";
-import {BitVectorStructuralHandler} from "../backings/structural";
+import {BitVector} from "../../interface";
 import {BasicVectorType} from "./vector";
-import {booleanType} from "./wellKnown";
+import {booleanType} from "../basic";
+import {BitVectorStructuralHandler} from "../../backings/structural";
 
 export interface IBitVectorOptions {
   length: number;

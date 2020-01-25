@@ -1,5 +1,7 @@
-import {ArrayLike} from "../interface";
-import {CompositeType, Type, BasicType} from "./abstract";
+import {ArrayLike} from "../../interface";
+import {Type} from "../type";
+import {BasicType} from "../basic";
+import {CompositeType} from "./abstract";
 
 export interface IArrayOptions {
   elementType: Type<any>;

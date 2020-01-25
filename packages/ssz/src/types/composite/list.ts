@@ -1,9 +1,9 @@
-import {List} from "../interface";
+import {List} from "../../interface";
 import {IArrayOptions, BasicArrayType, CompositeArrayType} from "./array";
 import {
   BasicListStructuralHandler, CompositeListStructuralHandler,
   BasicListTreeHandler, CompositeListTreeHandler,
-} from "../backings";
+} from "../../backings";
 
 export interface IListOptions extends IArrayOptions {
   limit: number;
