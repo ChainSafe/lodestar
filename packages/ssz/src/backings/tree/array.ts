@@ -6,7 +6,7 @@ import {TreeHandler, PropOfCompositeTreeBackedValue, TreeBackedValue} from "./ab
 import { isBackedValue} from "..";
 
 export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler<T> {
-  _type: BasicArrayType<T>;
+  protected _type: BasicArrayType<T>;
   createValue(value: any): TreeBackedValue<T> {
     const  v = this.defaultValue();
     for (let i = 0; i < value.length; i++) {
@@ -77,7 +77,7 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
 }
 
 export class CompositeArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler<T> {
-  _type: CompositeArrayType<T>;
+  protected _type: CompositeArrayType<T>;
   createValue(value: any): TreeBackedValue<T> {
     const  v = this.defaultValue();
     for (let i = 0; i < value.length; i++) {

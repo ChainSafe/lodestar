@@ -6,7 +6,7 @@ import {TreeHandler, PropOfTreeBackedValue, TreeBackedValue} from "./abstract";
 import {isBackedValue} from "..";
 
 export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
-  _type: ContainerType<T>;
+  protected _type: ContainerType<T>;
   constructor(type: ContainerType<T>) {
     super();
     this._type = type;

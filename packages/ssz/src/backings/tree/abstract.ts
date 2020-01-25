@@ -97,7 +97,7 @@ export type PropOfTreeBackedValue<T extends object, V extends keyof T> =
  *   treeBackedValue.hashTreeRoot()
  */
 export class TreeHandler<T extends object> implements ProxyHandler<T> {
-  _type: CompositeType<T>;
+  protected _type: CompositeType<T>;
   type(): CompositeType<T> {
     return this._type;
   }
@@ -178,7 +178,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
    * Deserialization
    */
   deserialize(data: Uint8Array): TreeBackedValue<T> {
-    throw new Error("Not implemented");
+    return this.fromBytes(data, 0, data.length);
   }
   /**
    * Low-level serialization
@@ -196,7 +196,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
     this.toBytes(target, output, 0);
     return output;
   }
-  _depth: number;
+  protected _depth: number;
 
   // Merkleization
 
@@ -231,7 +231,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   /**
    * Return a ITreeBackedValue method, to be called using the ITreeBackedValue interface
    */
-  getMethod<V extends keyof ITreeBackedValue<T>>(target: TreeBacking, methodName: V): ITreeBackedValue<T>[V] {
+  protected getMethod<V extends keyof ITreeBackedValue<T>>(target: TreeBacking, methodName: V): ITreeBackedValue<T>[V] {
     return (this as any)[methodName].bind(this, target);
   }
   /**
