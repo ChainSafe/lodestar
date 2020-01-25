@@ -111,8 +111,8 @@ export class DepositCommand implements ICliCommand {
 
     const wallets = [];
     for (let i = 0; i < n; i++) {
-      let wallet = base.derivePath(`${i}`);
-      wallet = wallet.connect(provider);
+      const hd = base.derivePath(`${i}`);
+      const wallet = new ethers.Wallet(hd.privateKey, provider);
       wallets.push(wallet);
     }
     return wallets;
