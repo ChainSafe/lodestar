@@ -6,6 +6,10 @@ import {BasicArrayTreeHandler, CompositeArrayTreeHandler} from "./array";
 
 export class BasicListTreeHandler<T extends List<any>> extends BasicArrayTreeHandler<T> {
   _type: BasicListType<T>;
+  constructor(type: BasicListType<T>) {
+    super();
+    this._type = type;
+  }
   _defaultNode: Node;
   defaultNode(): Node {
     if (!this._defaultNode) {
@@ -64,6 +68,10 @@ export class BasicListTreeHandler<T extends List<any>> extends BasicArrayTreeHan
 
 export class CompositeListTreeHandler<T extends List<any>> extends CompositeArrayTreeHandler<T> {
   _type: CompositeListType<T>;
+  constructor(type: CompositeListType<T>) {
+    super();
+    this._type = type;
+  }
   _defaultNode: Node;
   defaultNode(): Node {
     if (!this._defaultNode) {

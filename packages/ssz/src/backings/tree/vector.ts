@@ -6,6 +6,10 @@ import {BasicArrayTreeHandler, CompositeArrayTreeHandler} from "./array";
 
 export class BasicVectorTreeHandler<T extends Vector<any>> extends BasicArrayTreeHandler<T> {
   _type: BasicVectorType<T>;
+  constructor(type: BasicVectorType<T>) {
+    super();
+    this._type = type;
+  }
   _defaultNode: Node;
   defaultNode(): Node {
     if (!this._defaultNode) {
@@ -23,6 +27,10 @@ export class BasicVectorTreeHandler<T extends Vector<any>> extends BasicArrayTre
 }
 export class CompositeVectorTreeHandler<T extends Vector<any>> extends CompositeArrayTreeHandler<T> {
   _type: CompositeVectorType<T>;
+  constructor(type: CompositeVectorType<T>) {
+    super();
+    this._type = type;
+  }
   _defaultNode: Node;
   defaultNode(): Node {
     if (!this._defaultNode) {

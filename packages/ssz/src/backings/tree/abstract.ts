@@ -98,9 +98,6 @@ export type PropOfTreeBackedValue<T extends object, V extends keyof T> =
  */
 export class TreeHandler<T extends object> implements ProxyHandler<T> {
   _type: CompositeType<T>;
-  constructor(type: CompositeType<T>) {
-    this._type = type;
-  }
   type(): CompositeType<T> {
     return this._type;
   }
