@@ -3,6 +3,7 @@ import {IArrayOptions, BasicArrayType, CompositeArrayType} from "./array";
 import {
   BasicListStructuralHandler, CompositeListStructuralHandler,
   BasicListTreeHandler, CompositeListTreeHandler,
+  BasicListByteArrayHandler, CompositeListByteArrayHandler,
 } from "../../backings";
 
 export interface IListOptions extends IArrayOptions {
@@ -31,6 +32,7 @@ export class BasicListType<T extends List<any>=any> extends BasicArrayType<T> {
     this.limit = options.limit;
     this.structural = new BasicListStructuralHandler(this);
     this.tree = new BasicListTreeHandler(this);
+    this.byteArray = new BasicListByteArrayHandler(this);
   }
   isVariableSize(): boolean {
     return true;
@@ -47,6 +49,7 @@ export class CompositeListType<T extends List<any>=any> extends CompositeArrayTy
     this.limit = options.limit;
     this.structural = new CompositeListStructuralHandler(this);
     this.tree = new CompositeListTreeHandler(this);
+    this.byteArray = new CompositeListByteArrayHandler(this);
   }
   isVariableSize(): boolean {
     return true;

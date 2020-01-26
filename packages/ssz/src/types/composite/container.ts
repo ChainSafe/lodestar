@@ -4,6 +4,7 @@ import {Type} from "../type";
 import {
   ContainerStructuralHandler,
   ContainerTreeHandler,
+  ContainerByteArrayHandler,
 } from "../../backings";
 
 export interface IContainerOptions {
@@ -17,6 +18,7 @@ export class ContainerType<T extends ObjectLike=any> extends CompositeType<T> {
     this.fields = options.fields;
     this.structural = new ContainerStructuralHandler(this);
     this.tree = new ContainerTreeHandler(this);
+    this.byteArray = new ContainerByteArrayHandler(this);
   }
   indexElementType(index: number): Type<any> {
     return this.fields[index][1];

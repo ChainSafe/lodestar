@@ -1,6 +1,6 @@
 import {
   BackedValue, isBackedValue,
-  StructuralHandler, TreeHandler,
+  StructuralHandler, TreeHandler, ByteArrayHandler,
 } from "../../backings";
 
 import {BasicType} from "../basic";
@@ -12,6 +12,7 @@ import {BasicType} from "../basic";
 export class CompositeType<T extends object> {
   structural: StructuralHandler<T>;
   tree: TreeHandler<T>;
+  byteArray: ByteArrayHandler<T>;
 
   isBasic(): this is BasicType<T> {
     return false;

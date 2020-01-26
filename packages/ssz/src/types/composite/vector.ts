@@ -3,6 +3,7 @@ import {IArrayOptions, BasicArrayType, CompositeArrayType} from "./array";
 import {
   BasicVectorStructuralHandler, CompositeVectorStructuralHandler,
   BasicVectorTreeHandler, CompositeVectorTreeHandler,
+  BasicVectorByteArrayHandler, CompositeVectorByteArrayHandler,
 } from "../../backings";
 
 export interface IVectorOptions extends IArrayOptions {
@@ -31,6 +32,7 @@ export class BasicVectorType<T extends Vector<any>=any> extends BasicArrayType<T
     this.length = options.length;
     this.structural = new BasicVectorStructuralHandler(this);
     this.tree = new BasicVectorTreeHandler(this);
+    this.byteArray = new BasicVectorByteArrayHandler(this);
   }
   isVariableSize(): boolean {
     return false;
@@ -47,6 +49,7 @@ export class CompositeVectorType<T extends Vector<any>=any> extends CompositeArr
     this.length = options.length;
     this.structural = new CompositeVectorStructuralHandler(this);
     this.tree = new CompositeVectorTreeHandler(this);
+    this.byteArray = new CompositeVectorByteArrayHandler(this);
   }
   isVariableSize(): boolean {
     return this.elementType.isVariableSize();

@@ -1,9 +1,9 @@
 import {TreeBackedValue} from "./tree";
+import {ByteArrayBackedValue} from "./byteArray";
 
 export enum BackingType {
-  structural = "structural",
   tree = "tree",
-  serialized = "serialized",
+  byteArray = "byteArray",
 }
 
 /**
@@ -13,7 +13,7 @@ export enum BackingType {
  * - convenient access to the structural properties corresponding to its type
  * - additional methods for backing-specific implementations of ssz operations
  */
-export type BackedValue<T extends object> = TreeBackedValue<T>;
+export type BackedValue<T extends object> = TreeBackedValue<T> | ByteArrayBackedValue<T>;
 
 export function isBackedValue<T extends object>(value: any): value is BackedValue<T> {
   if (value && value.backingType) {
