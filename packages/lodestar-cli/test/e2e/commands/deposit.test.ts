@@ -39,6 +39,7 @@ describe("[CLI] deposit", function() {
           privateKey:eth1Network.accounts()[0],
           logLevel:null,
           mnemonic:null,
+          unencryptedKeys: null,
           node:eth1Network.rpcUrl(),
           value:"32",
           contract:contractAddress,
