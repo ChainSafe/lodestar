@@ -19,6 +19,7 @@ interface IDepositCommandOptions {
   logLevel: string;
   mnemonic: string;
   unencryptedKeys: string;
+  abi: string;
   node: string;
   value: string;
   contract: string;
@@ -28,6 +29,10 @@ interface IDepositCommandOptions {
 interface IJsonKeyFile {
   address: string;
   privkey: string;
+}
+
+interface IABIJsonFile {
+  abi: string;
 }
 
 export class DepositCommand implements ICliCommand {
@@ -51,6 +56,7 @@ export class DepositCommand implements ICliCommand {
         defaults.depositContract.address
       )
       .option("-a, --accounts [accounts]","Number of accounts to generate at startup", 10)
+      .option("--abi [path]", "Path to ABI file")
       .option("-u, --unencryptedKeys [path]", "Path to json key file")
       .action( async (options) => {
         const logger: ILogger = new WinstonLogger({
@@ -77,6 +83,10 @@ export class DepositCommand implements ICliCommand {
       throw new CliError(`JSON RPC node (${options.node}) not available. Reason: ${e.message}`);
     }
 
+    const abi = options.abi ? this.parseABIFile(options.abi) : defaults.depositContract.abi;
+    console.log(abi)
+    console.log(defaults.depositContract.abi);
+
     const wallets = [];
     if(options.mnemonic) {
       wallets.push(...this.fromMnemonic(options.mnemonic, provider, options.accounts));
@@ -85,7 +95,7 @@ export class DepositCommand implements ICliCommand {
     } else if (options.unencryptedKeys) {
       wallets.push(...this.fromJsonKeyFile(options.unencryptedKeys, provider));
     }else {
-      throw new CliError("You have to submit either privateKey or mnemonic. Check --help");
+      throw new CliError("You have to submit either privateKey, mnemonic, or key file. Check --help");
     }
 
     await Promise.all(
@@ -93,7 +103,7 @@ export class DepositCommand implements ICliCommand {
         try {
           const hash =
               // @ts-ignore
-              await (new Eth1Wallet(wallet.privateKey, defaults.depositContract.abi, config, logger, provider))
+              await (new Eth1Wallet(wallet.privateKey, abi, config, logger, provider))
                 .createValidatorDeposit(options.contract, ethers.utils.parseEther(options.value));
           logger.info(
             `Successfully deposited ${options.value} ETH from ${wallet.address} 
@@ -132,7 +142,15 @@ export class DepositCommand implements ICliCommand {
    */
   private fromJsonKeyFile(path: string, provider: JsonRpcProvider): ethers.Wallet[] {
     const jsonString = fs.readFileSync(path, "utf8");
-    const {keys} = JSON.parse(jsonString); 
+    const {keys} = JSON.parse(jsonString);
     return keys.map((key: IJsonKeyFile) => { return new ethers.Wallet(key.privkey, provider); });
+  }
+
+  private parseABIFile(path: string): IABIJsonFile {
+    const jsonString = fs.readFileSync(path, "utf8");
+    console.log(jsonString);
+    const {abi} = JSON.parse(jsonString);
+    console.log(abi)
+    return abi;
   }
 }
