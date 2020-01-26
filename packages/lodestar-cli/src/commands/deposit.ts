@@ -2,6 +2,7 @@
  * @module cli/commands
  */
 
+import fs from "fs";
 import {CommanderStatic} from "commander";
 import {JsonRpcProvider} from "ethers/providers";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
@@ -17,10 +18,16 @@ interface IDepositCommandOptions {
   privateKey: string;
   logLevel: string;
   mnemonic: string;
+  unencryptedKeys: string;
   node: string;
   value: string;
   contract: string;
   accounts: number;
+}
+
+interface IJsonKeyFile {
+  address: string;
+  privkey: string;
 }
 
 export class DepositCommand implements ICliCommand {
@@ -44,6 +51,7 @@ export class DepositCommand implements ICliCommand {
         defaults.depositContract.address
       )
       .option("-a, --accounts [accounts]","Number of accounts to generate at startup", 10)
+      .option("-u, --unencryptedKeys [path]", "Path to json key file")
       .action( async (options) => {
         const logger: ILogger = new WinstonLogger({
           level: options.logLevel,
@@ -74,7 +82,9 @@ export class DepositCommand implements ICliCommand {
       wallets.push(...this.fromMnemonic(options.mnemonic, provider, options.accounts));
     } else if (options.privateKey) {
       wallets.push(new ethers.Wallet(options.privateKey, provider));
-    } else {
+    } else if (options.unencryptedKeys) {
+      wallets.push(...this.fromJsonKeyFile(options.unencryptedKeys, provider));
+    }else {
       throw new CliError("You have to submit either privateKey or mnemonic. Check --help");
     }
 
@@ -113,5 +123,16 @@ export class DepositCommand implements ICliCommand {
       wallets.push(wallet);
     }
     return wallets;
+  }
+
+  /**
+   * 
+   * @param path Path to the json file
+   * @param provider 
+   */
+  private fromJsonKeyFile(path: string, provider: JsonRpcProvider): ethers.Wallet[] {
+    const jsonString = fs.readFileSync(path, "utf8");
+    const {keys} = JSON.parse(jsonString); 
+    return keys.map((key: IJsonKeyFile) => { return new ethers.Wallet(key.privkey, provider); });
   }
 }
