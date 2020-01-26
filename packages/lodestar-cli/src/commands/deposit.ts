@@ -84,8 +84,6 @@ export class DepositCommand implements ICliCommand {
     }
 
     const abi = options.abi ? this.parseABIFile(options.abi) : defaults.depositContract.abi;
-    console.log(abi)
-    console.log(defaults.depositContract.abi);
 
     const wallets = [];
     if(options.mnemonic) {
@@ -148,9 +146,7 @@ export class DepositCommand implements ICliCommand {
 
   private parseABIFile(path: string): IABIJsonFile {
     const jsonString = fs.readFileSync(path, "utf8");
-    console.log(jsonString);
     const {abi} = JSON.parse(jsonString);
-    console.log(abi)
     return abi;
   }
 }
