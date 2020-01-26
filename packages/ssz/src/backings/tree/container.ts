@@ -77,7 +77,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
             data,
             start + currentOffset,
             start + nextOffset,
-          ),
+          ).backing().node,
         );
       }
     });
@@ -99,9 +99,9 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
         fixedSection.setUint32(fixedIndex - offset, variableIndex, true);
         fixedIndex += 4;
         // write serialized element to variable section
-        variableIndex = fieldType.toBytes(this.getBackingAtChunk(target, i), output, variableIndex);
+        variableIndex = fieldType.tree.toBytes(this.getBackingAtChunk(target, i), output, variableIndex);
       } else {
-        fixedIndex = fieldType.toBytes(this.getBackingAtChunk(target, i), output, fixedIndex);
+        fixedIndex = fieldType.tree.toBytes(this.getBackingAtChunk(target, i), output, fixedIndex);
       }
       i++;
     }

@@ -19,8 +19,9 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
   }
   fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
     const target = new TreeBacking(this.defaultNode());
+    const elementSize = this._type.elementType.size();
     const byteLength = (end - start);
-    const chunkCount = this._type.chunkCount();
+    const chunkCount = Math.ceil(byteLength / 32);
     for (let i = 0; i < chunkCount; i++) {
       // view of the chunk, shared buffer from `data`
       const dataChunk = new Uint8Array(
@@ -71,6 +72,9 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
       return length as T[keyof T];
     }
     property = Number(property);
+    if (Number.isNaN(property as number)) {
+      throw new Error("Array index must be a number");
+    }
     if (property > length) {
       throw new Error("Invalid array index");
     }

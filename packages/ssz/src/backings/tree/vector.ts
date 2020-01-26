@@ -70,7 +70,7 @@ export class CompositeVectorTreeHandler<T extends Vector<any>> extends Composite
             data,
             start + currentOffset,
             start + nextOffset,
-          ),
+          ).backing().node,
         );
       }
     } else {
@@ -86,7 +86,7 @@ export class CompositeVectorTreeHandler<T extends Vector<any>> extends Composite
             data,
             start + (i * elementSize),
             start + ((i+1) * elementSize),
-          ),
+          ).backing().node,
         );
       }
     }

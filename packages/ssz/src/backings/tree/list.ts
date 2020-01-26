@@ -114,7 +114,7 @@ export class CompositeListTreeHandler<T extends List<any>> extends CompositeArra
             data,
             start + currentOffset,
             start + nextOffset,
-          ),
+          ).backing().node,
         );
       }
       this.setLength(target, offsets.length);
@@ -131,7 +131,7 @@ export class CompositeListTreeHandler<T extends List<any>> extends CompositeArra
             data,
             start + (i * elementSize),
             start + ((i+1) * elementSize),
-          ),
+          ).backing().node,
           true, // expand tree as needed
         );
       }
