@@ -49,6 +49,40 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     }
     return s;
   }
+  fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
+    const target = new TreeBacking(this.defaultNode());
+    const offsets = this._type.byteArray.getVariableOffsets(
+      new Uint8Array(data.buffer, data.byteOffset + start, end - start)
+    );
+    this._type.fields.forEach(([_, fieldType], i) => {
+      const [currentOffset, nextOffset] = offsets[i];
+      if (fieldType.isBasic()) {
+        // view of the chunk, shared buffer from `data`
+        const dataChunk = new Uint8Array(
+          data.buffer,
+          data.byteOffset + start + currentOffset,
+          nextOffset - currentOffset,
+        );
+        const chunk = new Uint8Array(32);
+        // copy chunk into new memory
+        chunk.set(dataChunk);
+        target.set(
+          this.gindexOfChunk(target, i),
+          new LeafNode(Buffer.from(chunk)),
+        );
+      } else {
+        target.set(
+          this.gindexOfChunk(target, i),
+          fieldType.tree.fromBytes(
+            data,
+            start + currentOffset,
+            start + nextOffset,
+          ),
+        );
+      }
+    });
+    return this.createBackedValue(target);
+  }
   toBytes(target: TreeBacking, output: Uint8Array, offset: number): number {
     let variableIndex = offset + this._type.fields.reduce((total, [_, fieldType]) =>
       total + (fieldType.isVariableSize() ? 4 : fieldType.size(null)), 0);

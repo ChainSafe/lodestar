@@ -31,7 +31,11 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
       // copy chunk into new memory
       const chunk = new Uint8Array(32);
       chunk.set(dataChunk);
-      target.set(this.gindexOfChunk(null, i), new LeafNode(Buffer.from(chunk)), true);
+      target.set(
+        this.gindexOfChunk(target, i),
+        new LeafNode(Buffer.from(chunk)),
+        true, // expand tree as needed
+      );
     }
     return this.createBackedValue(target);
   }
@@ -164,7 +168,7 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<any>> extends TreeHan
   set(target: TreeBacking, property: number, value: T[number], expand=false): boolean {
     const chunkGindex = this.gindexOfChunk(target, property);
     if (isBackedValue(value) && value.backingType() === this.backingType()) {
-      target.set(chunkGindex, value.backing().node);
+      target.set(chunkGindex, (value.backing() as TreeBacking).node);
       return true;
     } else {
       target.set(chunkGindex, this._type.elementType.tree.createValue(value).backing().node, expand);

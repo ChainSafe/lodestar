@@ -97,6 +97,48 @@ export class CompositeListTreeHandler<T extends List<any>> extends CompositeArra
     number32Type.toBytes(length, chunk, 0);
     target.set(BigInt(3), new LeafNode(Buffer.from(chunk)));
   }
+  fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
+    const target = new TreeBacking(this.defaultNode());
+    if (this._type.elementType.isVariableSize()) {
+      const offsets = this._type.byteArray.getVariableOffsets(
+        new Uint8Array(data.buffer, data.byteOffset + start, end - start)
+      );
+      if (offsets.length > this._type.limit) {
+        throw new Error("Deserialized list length greater than limit");
+      }
+      for (let i = 0; i < offsets.length; i++) {
+        const [currentOffset, nextOffset] = offsets[i];
+        target.set(
+          this.gindexOfChunk(target, i),
+          this._type.elementType.fromBytes(
+            data,
+            start + currentOffset,
+            start + nextOffset,
+          ),
+        );
+      }
+      this.setLength(target, offsets.length);
+    } else {
+      const elementSize = this._type.elementType.structural.size(null);
+      const length = (end - start) / elementSize;
+      if (length > this._type.limit) {
+        throw new Error("Deserialized list length greater than limit");
+      }
+      for (let i = 0; i < length; i++) {
+        target.set(
+          this.gindexOfChunk(target, i),
+          this._type.elementType.tree.fromBytes(
+            data,
+            start + (i * elementSize),
+            start + ((i+1) * elementSize),
+          ),
+          true, // expand tree as needed
+        );
+      }
+      this.setLength(target, length);
+    }
+    return this.createBackedValue(target);
+  }
   depth(): number {
     return super.depth() + 1;
   }
