@@ -24,11 +24,17 @@ export class Eth1Wallet {
 
   private logger: ILogger;
 
+  private withdrawalKey: PrivateKey;
+
+  private signingKey: PrivateKey;
+
   public constructor(
-    privateKey: string,
+    eth1PrivateKey: string,
     contractAbi: string|ParamType[],
     config: IBeaconConfig,
     logger: ILogger,
+    withdrawalKey?: PrivateKey,
+    signingKey?: PrivateKey,
     provider?: Provider
   ) {
     this.config = config;
@@ -36,8 +42,10 @@ export class Eth1Wallet {
     if(!provider) {
       provider = ethers.getDefaultProvider();
     }
-    this.wallet = new Wallet(privateKey, provider);
+    this.wallet = new Wallet(eth1PrivateKey, provider);
     this.contractAbi = contractAbi;
+    this.withdrawalKey = withdrawalKey || PrivateKey.random();
+    this.signingKey = signingKey || PrivateKey.random();
   }
 
   /**
@@ -50,11 +58,10 @@ export class Eth1Wallet {
     const amount = BigInt(value.toString()) / 1000000000n;
 
     const contract = new ethers.Contract(address, this.contractAbi, this.wallet);
-    const privateKey = PrivateKey.random();
-    const pubkey = privateKey.toPublicKey().toBytesCompressed();
+    const pubkey = this.signingKey.toPublicKey().toBytesCompressed();
     const withdrawalCredentials = Buffer.concat([
       this.config.params.BLS_WITHDRAWAL_PREFIX_BYTE,
-      hash(pubkey).slice(1),
+      hash(this.withdrawalKey.toPublicKey().toBytesCompressed()).slice(1),
     ]);
 
     // Create deposit data
@@ -66,7 +73,7 @@ export class Eth1Wallet {
     };
 
     depositData.signature = bls.sign(
-      privateKey.toBytes(),
+      this.signingKey.toBytes(),
       signingRoot(this.config.types.DepositData, depositData),
       Buffer.from([0, 0, 0, DomainType.DEPOSIT])
     );
