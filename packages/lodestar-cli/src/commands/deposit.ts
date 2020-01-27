@@ -37,7 +37,7 @@ interface IABIJsonFile {
 }
 
 interface IBLSJsonFile {
-    singing: string;
+    signing: string;
     withdrawal: string;
 }
 
@@ -110,7 +110,7 @@ export class DepositCommand implements ICliCommand {
           let signingKey, withdrawalKey;
           // if user supplied bls keys, use those
           if (blsKeys.length > 0) {
-            signingKey = PrivateKey.fromHexString(blsKeys[i].singing);
+            signingKey = PrivateKey.fromHexString(blsKeys[i].signing);
             withdrawalKey = PrivateKey.fromHexString(blsKeys[i].withdrawal);
           }
           
