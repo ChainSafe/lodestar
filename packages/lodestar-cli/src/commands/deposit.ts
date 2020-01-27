@@ -12,13 +12,14 @@ import {ILogger, LogLevels, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/log
 import {Eth1Wallet} from "@chainsafe/lodestar/lib/eth1";
 import {CliError} from "../error";
 import * as ethers from "ethers/ethers";
-import {initBLS} from "@chainsafe/bls";
+import {initBLS, PrivateKey} from "@chainsafe/bls";
 
 interface IDepositCommandOptions {
   privateKey: string;
   logLevel: string;
   mnemonic: string;
   unencryptedKeys: string;
+  unencryptedBlsKeys: string;
   abi: string;
   node: string;
   value: string;
@@ -33,6 +34,11 @@ interface IJsonKeyFile {
 
 interface IABIJsonFile {
   abi: string;
+}
+
+interface IBLSJsonFile {
+    singing: string;
+    withdrawal: string;
 }
 
 export class DepositCommand implements ICliCommand {
@@ -57,7 +63,8 @@ export class DepositCommand implements ICliCommand {
       )
       .option("-a, --accounts [accounts]","Number of accounts to generate at startup", 10)
       .option("--abi [path]", "Path to ABI file")
-      .option("-u, --unencryptedKeys [path]", "Path to json key file")
+      .option("-u, --unencrypted-keys [path]", "Path to json file containing unencrypted eth1 keys")
+      .option("--unencrypted-bls-keys [path]", "Path to json file containing hex encoded bls keys")
       .action( async (options) => {
         const logger: ILogger = new WinstonLogger({
           level: options.logLevel,
@@ -83,7 +90,8 @@ export class DepositCommand implements ICliCommand {
       throw new CliError(`JSON RPC node (${options.node}) not available. Reason: ${e.message}`);
     }
 
-    const abi = options.abi ? this.parseABIFile(options.abi) : defaults.depositContract.abi;
+    const abi = options.abi ? this.parseJSON<IABIJsonFile>(options.abi).abi : defaults.depositContract.abi;
+    const blsKeys: IBLSJsonFile[] = options.unencryptedBlsKeys ? this.parseJSON<IBLSJsonFile[]>(options.unencryptedBlsKeys) : null;
 
     const wallets = [];
     if(options.mnemonic) {
@@ -97,11 +105,18 @@ export class DepositCommand implements ICliCommand {
     }
 
     await Promise.all(
-      wallets.map(async wallet => {
+      wallets.map(async (wallet: ethers.Wallet, i: number) => {
         try {
+          let signingKey, withdrawalKey;
+          // if user supplied bls keys, use those
+          if (blsKeys.length > 0) {
+            signingKey = PrivateKey.fromHexString(blsKeys[i].singing);
+            withdrawalKey = PrivateKey.fromHexString(blsKeys[i].withdrawal);
+          }
+          
           const hash =
               // @ts-ignore
-              await (new Eth1Wallet(wallet.privateKey, abi, config, logger, provider))
+              await (new Eth1Wallet(wallet.privateKey, abi, config, logger, signingKey, withdrawalKey, provider))
                 .createValidatorDeposit(options.contract, ethers.utils.parseEther(options.value));
           logger.info(
             `Successfully deposited ${options.value} ETH from ${wallet.address} 
@@ -144,9 +159,8 @@ export class DepositCommand implements ICliCommand {
     return keys.map((key: IJsonKeyFile) => { return new ethers.Wallet(key.privkey, provider); });
   }
 
-  private parseABIFile(path: string): IABIJsonFile {
-    const jsonString = fs.readFileSync(path, "utf8");
-    const {abi} = JSON.parse(jsonString);
-    return abi;
+  private parseJSON<T>(path: string, encoding?: string): T {
+      const jsonString = fs.readFileSync(path, encoding || "utf8");
+      return JSON.parse(jsonString);
   }
 }
