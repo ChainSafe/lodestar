@@ -110,7 +110,7 @@ export class CompositeListTreeHandler<T extends List<any>> extends CompositeArra
         const [currentOffset, nextOffset] = offsets[i];
         target.set(
           this.gindexOfChunk(target, i),
-          this._type.elementType.fromBytes(
+          this._type.elementType.tree.fromBytes(
             data,
             start + currentOffset,
             start + nextOffset,
