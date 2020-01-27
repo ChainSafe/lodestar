@@ -40,7 +40,7 @@ export class BitListStructuralHandler extends BasicListStructuralHandler<BitList
     }
     const lastByte = data[end-1];
     if (lastByte === 0) {
-      throw new Error("Invalid bitlist, padding bit required");
+      throw new Error("Invalid deserialized bitlist, padding bit required");
     }
     if (lastByte === 1) {
       return value as BitList;
@@ -49,7 +49,7 @@ export class BitListStructuralHandler extends BasicListStructuralHandler<BitList
     const last1 = lastBits.lastIndexOf(true);
     value.push(...lastBits.slice(0, last1));
     if (value.length > this._type.limit) {
-      throw new Error("Invalid bitlist, length greater than limit");
+      throw new Error("Invalid deserialized bitlist, length greater than limit");
     }
     return value as BitList;
   }
