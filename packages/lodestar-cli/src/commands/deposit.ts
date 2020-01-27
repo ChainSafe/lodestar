@@ -106,10 +106,13 @@ export class DepositCommand implements ICliCommand {
    * @param n number of wallets to retrieve
    */
   private fromMnemonic(mnemonic: string, provider: JsonRpcProvider, n: number): ethers.Wallet[] {
+    const masterNode = ethers.utils.HDNode.fromMnemonic(mnemonic);
+    const base = masterNode.derivePath("m/44'/60'/0'/0");
+
     const wallets = [];
     for (let i = 0; i < n; i++) {
-      let wallet = ethers.Wallet.fromMnemonic(mnemonic, `m/44'/60'/0'/0/${i}`);
-      wallet = wallet.connect(provider);
+      const hd = base.derivePath(`${i}`);
+      const wallet = new ethers.Wallet(hd.privateKey, provider);
       wallets.push(wallet);
     }
     return wallets;
