@@ -22,6 +22,9 @@ export class CompositeArrayByteArrayHandler<T extends ArrayLike<any>> extends By
   }
   getVariableOffsets(target: ByteArrayBacking): [number, number][] {
     if (this._type.elementType.isVariableSize()) {
+      if (target.length === 0) {
+        return [];
+      }
       const offsets: [number, number][] = [];
       // all elements are variable-sized
       // indices contain offsets, which are indices deeper in the byte array

@@ -17,29 +17,36 @@ export class ContainerByteArrayHandler<T extends ObjectLike> extends ByteArrayHa
     // variable-sized value indices are serialized as offsets, indices deeper in the byte array
     let currentIndex = 0;
     let nextIndex = 0;
-    let currentOffset = 0;
-    let nextOffset = 0;
-    const fieldCount = this._type.fields.length;
     const fixedSection = new DataView(target.buffer, target.byteOffset);
+    const fixedOffsets: [number, number][] = [];
+    const variableOffsets: number[]  = [];
+    let variableIndex = 0;
     this._type.fields.forEach(([_, fieldType], i) => {
       if (fieldType.isVariableSize()) {
-        nextIndex = currentIndex + 4;
-        nextOffset = i === fieldCount - 1
-          ? target.length
-          : fixedSection.getUint32(nextIndex, true);
-        if (nextOffset > target.length) {
+        const offset = fixedSection.getUint32(currentIndex, true);
+        if (offset > target.length) {
           throw new Error("Offset out of bounds");
         }
-        if (currentOffset > nextOffset) {
-          throw new Error("Offsets must be increasing");
-        }
-        offsets.push([currentOffset, nextOffset]);
-        currentOffset = nextOffset;
-        currentIndex = nextIndex;
+        variableOffsets.push(offset);
+        currentIndex = nextIndex = currentIndex + 4;
+        variableIndex++;
       } else {
         nextIndex = currentIndex + fieldType.size(null);
-        offsets.push([currentIndex, nextIndex]);
+        fixedOffsets[i] = [currentIndex, nextIndex];
         currentIndex = nextIndex;
+      }
+    });
+    variableOffsets.push(target.length);
+    variableIndex = 0;
+    this._type.fields.forEach(([_, fieldType], i) => {
+      if (fieldType.isVariableSize()) {
+        if (variableOffsets[variableIndex] > variableOffsets[variableIndex+1]) {
+          throw new Error("Offsets must be increasing");
+        }
+        offsets.push([variableOffsets[variableIndex], variableOffsets[variableIndex+1]]);
+        variableIndex++;
+      } else {
+        offsets.push(fixedOffsets[i]);
       }
     });
     return offsets;
