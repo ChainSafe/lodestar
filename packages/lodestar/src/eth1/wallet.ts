@@ -46,7 +46,12 @@ export class Eth1Wallet {
    * @param value amount to wei to deposit on contract
    */
 
-  public async submitValidatorDeposit(address: string, value: BigNumber, signingKey: PrivateKey, withdrawalKey: PrivateKey): Promise<string> {
+  public async submitValidatorDeposit(
+    address: string, 
+    value: BigNumber, 
+    signingKey: PrivateKey, 
+    withdrawalKey: PrivateKey
+  ): Promise<string> {
     const amount = BigInt(value.toString()) / 1000000000n;
 
     const contract = new ethers.Contract(address, this.contractAbi, this.wallet);
