@@ -1,7 +1,7 @@
 import {Node, subtreeFillToContents, TreeBacking, zeroNode, LeafNode} from "@chainsafe/merkle-tree";
 
 import {ObjectLike} from "../../interface";
-import {ContainerType} from "../../types";
+import {ContainerType, CompositeType} from "../../types";
 import {TreeHandler, PropOfTreeBackedValue, TreeBackedValue} from "./abstract";
 import {isBackedValue} from "..";
 
@@ -41,7 +41,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     let i = 0;
     for (const [_, fieldType] of this._type.fields) {
       if (fieldType.isVariableSize()) {
-        s += fieldType.size(this.getBackingAtChunk(target, i)) + 4;
+        s += (fieldType as CompositeType<any>).tree.size(this.getBackingAtChunk(target, i)) + 4;
       } else {
         s += fieldType.size(null);
       }
@@ -86,7 +86,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
   toBytes(target: TreeBacking, output: Uint8Array, offset: number): number {
     let variableIndex = offset + this._type.fields.reduce((total, [_, fieldType]) =>
       total + (fieldType.isVariableSize() ? 4 : fieldType.size(null)), 0);
-    const fixedSection = new DataView(output.buffer, output.byteOffset + offset, variableIndex - offset);
+    const fixedSection = new DataView(output.buffer, output.byteOffset + offset);
     let fixedIndex = offset;
     let i = 0;
     for (const [_, fieldType] of this._type.fields) {
@@ -96,7 +96,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
         fixedIndex += s;
       } else if (fieldType.isVariableSize()) {
         // write offset
-        fixedSection.setUint32(fixedIndex - offset, variableIndex, true);
+        fixedSection.setUint32(fixedIndex - offset, variableIndex - offset, true);
         fixedIndex += 4;
         // write serialized element to variable section
         variableIndex = fieldType.tree.toBytes(this.getBackingAtChunk(target, i), output, variableIndex);
