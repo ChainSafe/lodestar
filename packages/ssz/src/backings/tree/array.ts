@@ -19,7 +19,6 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
   }
   fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
     const target = new TreeBacking(this.defaultNode());
-    const elementSize = this._type.elementType.size();
     const byteLength = (end - start);
     const chunkCount = Math.ceil(byteLength / 32);
     for (let i = 0; i < chunkCount; i++) {
@@ -125,11 +124,11 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<any>> extends TreeHan
   toBytes(target: TreeBacking, output: Uint8Array, offset: number): number {
     const length = this.getLength(target);
     if (this._type.elementType.isVariableSize()) {
-      let variableIndex = offset + length + 4;
+      let variableIndex = offset + (length * 4);
       const fixedSection = new DataView(output.buffer, output.byteOffset + offset, length * 4);
       for (let i = 0; i < length; i++) {
         // write offset
-        fixedSection.setUint32(i, variableIndex - offset, true);
+        fixedSection.setUint32(i * 4, variableIndex - offset, true);
         // write serialized element to variable section
         variableIndex = this._type.elementType.tree.toBytes(
           this.getBackingAtChunk(target, i),
