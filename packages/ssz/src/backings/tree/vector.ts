@@ -26,7 +26,7 @@ export class BasicVectorTreeHandler<T extends Vector<any>> extends BasicArrayTre
     return this._type.length;
   }
   fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
-    if ((end - start) / this._type.elementType.size() !== this._type.length) {
+    if ((end - start) !== this._type.size(null)) {
       throw new Error("Incorrect deserialized vector length");
     }
     return super.fromBytes(data, start, end);
