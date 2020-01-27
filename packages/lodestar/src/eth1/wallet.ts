@@ -33,9 +33,9 @@ export class Eth1Wallet {
     contractAbi: string|ParamType[],
     config: IBeaconConfig,
     logger: ILogger,
+    provider?: Provider,
     withdrawalKey?: PrivateKey,
     signingKey?: PrivateKey,
-    provider?: Provider
   ) {
     this.config = config;
     this.logger = logger;
