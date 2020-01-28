@@ -14,55 +14,55 @@ export const EpochAttestations = (ssz: IBeaconSSZTypes, params: IBeaconParams): 
 });
 
 export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): ContainerType => new ContainerType({
-  fields: [
+  fields: {
     // Misc
-    ["genesisTime", ssz.Number64],
-    ["slot", ssz.Slot],
-    ["fork", ssz.Fork],
+    genesisTime: ssz.Number64,
+    slot: ssz.Slot,
+    fork: ssz.Fork,
     // History
-    ["latestBlockHeader", ssz.BeaconBlockHeader],
-    ["blockRoots", ssz.HistoricalBlockRoots],
-    ["stateRoots", ssz.HistoricalStateRoots],
-    ["historicalRoots", new ListType({
+    latestBlockHeader: ssz.BeaconBlockHeader,
+    blockRoots: ssz.HistoricalBlockRoots,
+    stateRoots: ssz.HistoricalStateRoots,
+    historicalRoots: new ListType({
       elementType: new RootType({
         expandedType: ssz.HistoricalBatch,
       }),
       limit: params.HISTORICAL_ROOTS_LIMIT,
-    })],
+    }),
     // Eth1
-    ["eth1Data", ssz.Eth1Data],
-    ["eth1DataVotes", new ListType({
+    eth1Data: ssz.Eth1Data,
+    eth1DataVotes: new ListType({
       elementType: ssz.Eth1Data,
       limit: params.SLOTS_PER_ETH1_VOTING_PERIOD,
-    })],
-    ["eth1DepositIndex", ssz.Number64],
+    }),
+    eth1DepositIndex: ssz.Number64,
     // Registry
-    ["validators", new ListType({
+    validators: new ListType({
       elementType: ssz.Validator,
       limit: params.VALIDATOR_REGISTRY_LIMIT,
-    })],
-    ["balances", new ListType({
+    }),
+    balances: new ListType({
       elementType: ssz.Gwei,
       limit: params.VALIDATOR_REGISTRY_LIMIT,
-    })],
-    ["randaoMixes", new VectorType({
+    }),
+    randaoMixes: new VectorType({
       elementType: ssz.Bytes32,
       length: params.EPOCHS_PER_HISTORICAL_VECTOR,
-    })],
+    }),
     // Slashings
-    ["slashings", new VectorType({
+    slashings: new VectorType({
       elementType: ssz.Gwei,
       length: params.EPOCHS_PER_SLASHINGS_VECTOR,
-    })],
+    }),
     // Attestations
-    ["previousEpochAttestations", ssz.EpochAttestations],
-    ["currentEpochAttestations", ssz.EpochAttestations],
+    previousEpochAttestations: ssz.EpochAttestations,
+    currentEpochAttestations: ssz.EpochAttestations,
     // Finality
-    ["justificationBits", new BitVectorType({
+    justificationBits: new BitVectorType({
       length: JUSTIFICATION_BITS_LENGTH,
-    })],
-    ["previousJustifiedCheckpoint", ssz.Checkpoint],
-    ["currentJustifiedCheckpoint", ssz.Checkpoint],
-    ["finalizedCheckpoint", ssz.Checkpoint],
-  ],
+    }),
+    previousJustifiedCheckpoint: ssz.Checkpoint,
+    currentJustifiedCheckpoint: ssz.Checkpoint,
+    finalizedCheckpoint: ssz.Checkpoint,
+  },
 });
