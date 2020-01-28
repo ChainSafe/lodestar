@@ -91,7 +91,8 @@ export class DepositCommand implements ICliCommand {
     }
 
     const abi = options.abi ? this.parseJSON<IABIJsonFile>(options.abi).abi : defaults.depositContract.abi;
-    const blsKeys: IBLSJsonFile[] = options.unencryptedBlsKeys ? this.parseJSON<IBLSJsonFile[]>(options.unencryptedBlsKeys) : null;
+    const blsKeys: IBLSJsonFile[] = 
+        options.unencryptedBlsKeys ? this.parseJSON<IBLSJsonFile[]>(options.unencryptedBlsKeys) : null;
 
     const wallets = [];
     if(options.mnemonic) {
@@ -117,10 +118,10 @@ export class DepositCommand implements ICliCommand {
               // @ts-ignore
               await (new Eth1Wallet(wallet.privateKey, abi, config, logger, provider))
                 .submitValidatorDeposit(
-                    options.contract, 
-                    ethers.utils.parseEther(options.value),
-                    signingKey,
-                    withdrawalKey
+                  options.contract, 
+                  ethers.utils.parseEther(options.value),
+                  signingKey,
+                  withdrawalKey
                 );
           logger.info(
             `Successfully deposited ${options.value} ETH from ${wallet.address} 
