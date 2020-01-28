@@ -228,7 +228,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
    * Merkleization
    */
   hashTreeRoot(target: TreeBacking): Uint8Array {
-    return target.node.merkleRoot;
+    return target.getRoot(1n);
   }
 
   /**

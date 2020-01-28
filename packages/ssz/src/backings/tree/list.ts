@@ -1,4 +1,4 @@
-import {zeroNode, TreeBacking} from "@chainsafe/merkle-tree";
+import {TreeBacking, zeroBacking} from "@chainsafe/merkle-tree";
 
 import {List} from "../../interface";
 import {number32Type, BasicListType, CompositeListType} from "../../types";
@@ -14,8 +14,8 @@ export class BasicListTreeHandler<T extends List<any>> extends BasicArrayTreeHan
   _defaultBacking: TreeBacking;
   defaultBacking(): TreeBacking {
     if (!this._defaultBacking) {
-      this._defaultBacking = new TreeBacking(zeroNode(this.depth()));
-      this._defaultBacking.set(BigInt(3), zeroNode(0));
+      this._defaultBacking = zeroBacking(this.depth());
+      this._defaultBacking.setBacking(BigInt(3), zeroBacking(0));
     }
     return this._defaultBacking.clone();
   }
@@ -86,8 +86,8 @@ export class CompositeListTreeHandler<T extends List<any>> extends CompositeArra
   _defaultBacking: TreeBacking;
   defaultBacking(): TreeBacking {
     if (!this._defaultBacking) {
-      this._defaultBacking = new TreeBacking(zeroNode(this.depth()));
-      this._defaultBacking.set(BigInt(3), zeroNode(0));
+      this._defaultBacking = zeroBacking(this.depth());
+      this._defaultBacking.setBacking(BigInt(3), zeroBacking(0));
     }
     return this._defaultBacking.clone();
   }
@@ -177,7 +177,7 @@ export class CompositeListTreeHandler<T extends List<any>> extends CompositeArra
   pop(target: TreeBacking): T[number] {
     const length = this.getLength(target);
     const value = this.get(target, length - 1);
-    this.setProperty(target, length - 1, new TreeBacking(zeroNode(0)));
+    this.setProperty(target, length - 1, zeroBacking(0));
     this.setLength(target, length - 1);
     return value;
   }

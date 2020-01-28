@@ -1,4 +1,4 @@
-import {TreeBacking, subtreeFillToLength, zeroNode} from "@chainsafe/merkle-tree";
+import {TreeBacking, subtreeBackingFillToLength, zeroBacking} from "@chainsafe/merkle-tree";
 
 import {Vector} from "../../interface";
 import {BasicVectorType, CompositeVectorType} from "../../types";
@@ -14,12 +14,10 @@ export class BasicVectorTreeHandler<T extends Vector<any>> extends BasicArrayTre
   _defaultBacking: TreeBacking;
   defaultBacking(): TreeBacking {
     if (!this._defaultBacking) {
-      this._defaultBacking = new TreeBacking(
-        subtreeFillToLength(
-          zeroNode(0),
-          this.depth(),
-          this._type.chunkCount()
-        )
+      this._defaultBacking = subtreeBackingFillToLength(
+        zeroBacking(0),
+        this.depth(),
+        this._type.chunkCount()
       );
     }
     return this._defaultBacking.clone();
@@ -50,12 +48,10 @@ export class CompositeVectorTreeHandler<T extends Vector<any>> extends Composite
   _defaultBacking: TreeBacking;
   defaultBacking(): TreeBacking {
     if (!this._defaultBacking) {
-      this._defaultBacking = new TreeBacking(
-        subtreeFillToLength(
-          this._type.elementType.tree.defaultBacking().node,
-          this.depth(),
-          this._type.length
-        )
+      this._defaultBacking = subtreeBackingFillToLength(
+        this._type.elementType.tree.defaultBacking(),
+        this.depth(),
+        this._type.length
       );
     }
     return this._defaultBacking.clone();

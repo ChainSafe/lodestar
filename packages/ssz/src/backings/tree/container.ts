@@ -1,4 +1,4 @@
-import {subtreeFillToContents, TreeBacking, zeroNode} from "@chainsafe/merkle-tree";
+import {TreeBacking, subtreeBackingFillToContents, zeroBacking} from "@chainsafe/merkle-tree";
 
 import {ObjectLike} from "../../interface";
 import {ContainerType, CompositeType} from "../../types";
@@ -14,17 +14,15 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
   _defaultBacking: TreeBacking;
   defaultBacking(): TreeBacking {
     if (!this._defaultBacking) {
-      this._defaultBacking = new TreeBacking(
-        subtreeFillToContents(
-          this._type.fields.map(([_, fieldType]) => {
-            if (fieldType.isBasic()) {
-              return zeroNode(0);
-            } else {
-              return fieldType.tree.defaultBacking().node;
-            }
-          }),
-          this.depth(),
-        )
+      this._defaultBacking = subtreeBackingFillToContents(
+        this._type.fields.map(([_, fieldType]) => {
+          if (fieldType.isBasic()) {
+            return zeroBacking(0);
+          } else {
+            return fieldType.tree.defaultBacking();
+          }
+        }),
+        this.depth(),
       );
     }
     return this._defaultBacking.clone();
