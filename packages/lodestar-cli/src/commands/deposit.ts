@@ -118,7 +118,7 @@ export class DepositCommand implements ICliCommand {
     } else if (options.unencryptedKeys) {
       eth1Wallets.push(...this.eth1FromJsonKeyFile(options.unencryptedKeys, provider));
     } else {
-        throw new CliError("You have to submit either privateKey, mnemonic, or key file. Check --help");
+      throw new CliError("You have to submit either privateKey, mnemonic, or key file. Check --help");
     }
 
     await Promise.all(
