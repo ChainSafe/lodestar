@@ -107,7 +107,7 @@ export class DepositCommand implements ICliCommand {
     } else if (options.mnemonic) {
       blsWallets.push(...this.blsFromMnemonic(options.mnemonic, options.accounts));
     } else {
-      throw new CliError("You have to submit either privateKey, mnemonic, or key file for BLS keys. Check --help");
+      throw new CliError("You have to submit either privateKey, mnemonic, or key file. Check --help");
     }
 
     const eth1Wallets = [];
@@ -118,7 +118,7 @@ export class DepositCommand implements ICliCommand {
     } else if (options.unencryptedKeys) {
       eth1Wallets.push(...this.eth1FromJsonKeyFile(options.unencryptedKeys, provider));
     } else {
-      throw new CliError("You have to submit either privateKey, mnemonic, or key file for Eth1 keys. Check --help");
+        throw new CliError("You have to submit either privateKey, mnemonic, or key file. Check --help");
     }
 
     await Promise.all(
