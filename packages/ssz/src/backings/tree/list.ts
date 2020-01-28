@@ -110,13 +110,14 @@ export class CompositeListTreeHandler<T extends List<any>> extends CompositeArra
       }
       for (let i = 0; i < offsets.length; i++) {
         const [currentOffset, nextOffset] = offsets[i];
-        target.set(
-          this.gindexOfChunk(target, i),
+        this.setBackingAtChunk(
+          target,
+          i,
           this._type.elementType.tree.fromBytes(
             data,
             start + currentOffset,
             start + nextOffset,
-          ).backing().node,
+          ).backing(),
         );
       }
       this.setLength(target, offsets.length);
@@ -127,13 +128,14 @@ export class CompositeListTreeHandler<T extends List<any>> extends CompositeArra
         throw new Error("Deserialized list length greater than limit");
       }
       for (let i = 0; i < length; i++) {
-        target.set(
-          this.gindexOfChunk(target, i),
+        this.setBackingAtChunk(
+          target,
+          i,
           this._type.elementType.tree.fromBytes(
             data,
             start + (i * elementSize),
             start + ((i+1) * elementSize),
-          ).backing().node,
+          ).backing(),
           true, // expand tree as needed
         );
       }

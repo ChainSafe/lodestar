@@ -144,7 +144,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
    * Clone / copy
    */
   clone(target: TreeBacking): TreeBackedValue<T> {
-    return this.createBackedValue(new TreeBacking(target.node));
+    return this.createBackedValue(target.clone());
   }
   /**
    * Equality
@@ -213,13 +213,16 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
     return toGindexBitstring(BigInt(index), this.depth());
   }
   getBackingAtChunk(target: TreeBacking, index: number): TreeBacking {
-    return new TreeBacking(
-      target.get(this.gindexOfChunk(target, index)),
-      (v: TreeBacking): void => this.setBackingAtChunk(target, index, v),
-    );
+    return target.getBacking(this.gindexOfChunk(target, index));
   }
-  setBackingAtChunk(target: TreeBacking, index: number, value: TreeBacking): void {
-    target.set(this.gindexOfChunk(target, index), value.node);
+  setBackingAtChunk(target: TreeBacking, index: number, value: TreeBacking, expand=false): void {
+    target.setBacking(this.gindexOfChunk(target, index), value, expand);
+  }
+  getRootAtChunk(target: TreeBacking, index: number): Uint8Array {
+    return target.getRoot(this.gindexOfChunk(target, index));
+  }
+  setRootAtChunk(target: TreeBacking, index: number, value: Uint8Array, expand=false): void {
+    target.setRoot(this.gindexOfChunk(target, index), value, expand);
   }
   /**
    * Merkleization

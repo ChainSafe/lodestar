@@ -74,13 +74,14 @@ export class CompositeVectorTreeHandler<T extends Vector<any>> extends Composite
       }
       for (let i = 0; i < offsets.length; i++) {
         const [currentOffset, nextOffset] = offsets[i];
-        target.set(
-          this.gindexOfChunk(target, i),
+        this.setBackingAtChunk(
+          target,
+          i,
           this._type.elementType.fromBytes(
             data,
             start + currentOffset,
             start + nextOffset,
-          ).backing().node,
+          ).backing(),
         );
       }
     } else {
@@ -90,13 +91,14 @@ export class CompositeVectorTreeHandler<T extends Vector<any>> extends Composite
         throw new Error("Incorrect deserialized vector length");
       }
       for (let i = 0; i < length; i++) {
-        target.set(
-          this.gindexOfChunk(target, i),
+        this.setBackingAtChunk(
+          target,
+          i,
           this._type.elementType.tree.fromBytes(
             data,
             start + (i * elementSize),
             start + ((i+1) * elementSize),
-          ).backing().node,
+          ).backing(),
         );
       }
     }

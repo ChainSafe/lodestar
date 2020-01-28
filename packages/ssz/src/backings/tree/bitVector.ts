@@ -37,7 +37,7 @@ export class BitVectorTreeHandler extends BasicVectorTreeHandler<BitVector> {
     return Math.floor(index / 256);
   }
   getValueAtIndex(target: TreeBacking, index: number): boolean {
-    const chunk = target.getRoot(this.gindexOfChunk(target, this.getChunkIndex(index)));
+    const chunk = this.getRootAtChunk(target, this.getChunkIndex(index));
     const byte = chunk[this.getChunkOffset(index)];
     return !!(byte & (1 << this.getBitOffset(index)));
   }

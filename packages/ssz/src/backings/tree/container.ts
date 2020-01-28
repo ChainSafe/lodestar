@@ -72,18 +72,20 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
         const chunk = new Uint8Array(32);
         // copy chunk into new memory
         chunk.set(dataChunk);
-        target.setRoot(
-          this.gindexOfChunk(target, i),
+        this.setRootAtChunk(
+          target,
+          i,
           chunk,
         );
       } else {
-        target.set(
-          this.gindexOfChunk(target, i),
+        this.setBackingAtChunk(
+          target,
+          i,
           fieldType.tree.fromBytes(
             data,
             start + currentOffset,
             start + nextOffset,
-          ).backing().node,
+          ).backing(),
         );
       }
     });
@@ -98,7 +100,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     for (const [_, fieldType] of this._type.fields) {
       if (fieldType.isBasic()) {
         const s = fieldType.size();
-        output.set(this.getBackingAtChunk(target, i).node.merkleRoot.slice(0, s), fixedIndex);
+        output.set(this.getRootAtChunk(target, i).slice(0, s), fixedIndex);
         fixedIndex += s;
       } else if (fieldType.isVariableSize()) {
         // write offset
@@ -121,7 +123,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     }
     const fieldType = this._type.fields[chunkIndex][1];
     if (fieldType.isBasic()) {
-      const chunk = target.getRoot(this.gindexOfChunk(target, chunkIndex));
+      const chunk = this.getRootAtChunk(target, chunkIndex);
       return fieldType.fromBytes(chunk, 0);
     } else {
       return fieldType.tree.createBackedValue(
@@ -143,10 +145,10 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
       return true;
     } else {
       if (isBackedValue(value) && value.backingType() === this.backingType()) {
-        target.set(chunkGindex, value.backing().node);
+        target.setBacking(chunkGindex, value.backing());
         return true;
       } else {
-        target.set(chunkGindex, fieldType.tree.createValue(value).backing().node);
+        target.setBacking(chunkGindex, fieldType.tree.createValue(value).backing());
         return true;
       }
     }

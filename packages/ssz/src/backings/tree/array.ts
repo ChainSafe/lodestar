@@ -31,8 +31,9 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
       // copy chunk into new memory
       const chunk = new Uint8Array(32);
       chunk.set(dataChunk);
-      target.setRoot(
-        this.gindexOfChunk(target, i),
+      this.setRootAtChunk(
+        target,
+        i,
         chunk,
         true, // expand tree as needed
       );
@@ -44,10 +45,10 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
     let i = 0;
     let chunkIndex = 0;
     for (; i < size - 31; i+=32, chunkIndex += 1) {
-      output.set(target.getRoot(this.gindexOfChunk(target, chunkIndex)), offset + i);
+      output.set(this.getRootAtChunk(target, chunkIndex), offset + i);
     }
     if (i !== size) {
-      output.set(target.getRoot(this.gindexOfChunk(target, chunkIndex)).slice(0, (size - i)), offset + i);
+      output.set(this.getRootAtChunk(target, chunkIndex).slice(0, (size - i)), offset + i);
     }
     return offset + size;
   }
@@ -62,7 +63,7 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
     return Math.floor(index / Math.ceil(32 / this._type.elementType.size()));
   }
   getValueAtIndex(target: TreeBacking, index: number): T[number] {
-    const chunk = target.getRoot(this.gindexOfChunk(target, this.getChunkIndex(index)));
+    const chunk = this.getRootAtChunk(target, this.getChunkIndex(index));
     return this._type.elementType.fromBytes(chunk, this.getChunkOffset(index));
   }
   getProperty(target: TreeBacking, property: keyof T): T[keyof T] {
@@ -172,10 +173,10 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<any>> extends TreeHan
   setProperty(target: TreeBacking, property: number, value: T[number], expand=false): boolean {
     const chunkGindex = this.gindexOfChunk(target, property);
     if (isBackedValue(value) && value.backingType() === this.backingType()) {
-      target.set(chunkGindex, (value.backing() as TreeBacking).node);
+      target.setBacking(chunkGindex, (value.backing() as TreeBacking));
       return true;
     } else {
-      target.set(chunkGindex, this._type.elementType.tree.createValue(value).backing().node, expand);
+      target.setBacking(chunkGindex, this._type.elementType.tree.createValue(value).backing(), expand);
       return true;
     }
   }
