@@ -78,7 +78,7 @@ describe("[CLI] deposit", function() {
           accounts: 10
         }, logger
       )
-      ).to.be.rejectedWith(CliError, "You have to submit either privateKey, mnemonic, or key file for BLS keys.Check--help");
+      ).to.be.rejectedWith(CliError, "You have to submit either privateKey, mnemonic, or key file for BLS keys.Check --help");
   });
 
   it("Should throw error if mnemonic is invalid", async () => {
