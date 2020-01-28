@@ -27,4 +27,32 @@ export class BitVectorTreeHandler extends BasicVectorTreeHandler<BitVector> {
     const target = super.fromBytes(data, start, end).backing();
     return this.createBackedValue(target);
   }
+  getBitOffset(index: number): number {
+    return index % 8;
+  }
+  getChunkOffset(index: number): number {
+    return Math.floor((index % 256) / 8);
+  }
+  getChunkIndex(index: number): number {
+    return Math.floor(index / 256);
+  }
+  getValueAtIndex(target: TreeBacking, index: number): boolean {
+    const chunk = target.get(this.gindexOfChunk(target, this.getChunkIndex(index))).merkleRoot;
+    const byte = chunk[this.getChunkOffset(index)];
+    return !!(byte & (1 << this.getBitOffset(index)));
+  }
+  setProperty(target: TreeBacking, property: number, value: boolean): boolean {
+    const chunkGindex = this.gindexOfChunk(target, this.getChunkIndex(property));
+    const chunk = Uint8Array.from(
+      target.get(chunkGindex).merkleRoot
+    );
+    const byteOffset = this.getChunkOffset(property);
+    if (value) {
+      chunk[byteOffset] |= (1 << this.getBitOffset(property));
+    } else {
+      chunk[byteOffset] &= (0xff ^ (1 << this.getBitOffset(property)));
+    }
+    target.set(chunkGindex, new LeafNode(Buffer.from(chunk)));
+    return true;
+  }
 }

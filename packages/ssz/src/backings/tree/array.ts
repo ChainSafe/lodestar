@@ -74,12 +74,12 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
     if (Number.isNaN(property as number)) {
       throw new Error("Array index must be a number");
     }
-    if (property > length) {
+    if (property >= length) {
       throw new Error("Invalid array index");
     }
     return this.getValueAtIndex(target, property as number);
   }
-  set(target: TreeBacking, property: number, value: T[number], expand=false): boolean {
+  setProperty(target: TreeBacking, property: number, value: T[number], expand=false): boolean {
     const chunkGindex = this.gindexOfChunk(target, this.getChunkIndex(property));
     const chunk = Uint8Array.from(
       target.get(chunkGindex).merkleRoot
@@ -88,8 +88,11 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
     target.set(chunkGindex, new LeafNode(Buffer.from(chunk)), expand);
     return true;
   }
+  set(target: TreeBacking, property: number, value: T[number], expand=false): boolean {
+    return this.setProperty(target, property, value, expand);
+  }
   deleteProperty(target: TreeBacking, property: number): boolean {
-    return this.set(target, property, this._type.elementType.defaultValue());
+    return this.setProperty(target, property, this._type.elementType.defaultValue());
   }
   ownKeys(target: TreeBacking): string[] {
     return Array.from({length: this.getLength(target)}, (_, i) => String(i));
@@ -168,7 +171,7 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<any>> extends TreeHan
     }
     return this.getValueAtChunk(target, property as number);
   }
-  set(target: TreeBacking, property: number, value: T[number], expand=false): boolean {
+  setProperty(target: TreeBacking, property: number, value: T[number], expand=false): boolean {
     const chunkGindex = this.gindexOfChunk(target, property);
     if (isBackedValue(value) && value.backingType() === this.backingType()) {
       target.set(chunkGindex, (value.backing() as TreeBacking).node);
@@ -178,8 +181,11 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<any>> extends TreeHan
       return true;
     }
   }
+  set(target: TreeBacking, property: number, value: T[number], expand=false): boolean {
+    return this.setProperty(target, property, value, expand);
+  }
   deleteProperty(target: TreeBacking, property: number): boolean {
-    return this.set(target, property, this._type.elementType.tree.defaultValue());
+    return this.setProperty(target, property, this._type.elementType.tree.defaultValue());
   }
   ownKeys(target: TreeBacking): string[] {
     return Array.from({length: this.getLength(target)}, (_, i) => String(i));

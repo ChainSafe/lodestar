@@ -31,6 +31,12 @@ export class BasicVectorTreeHandler<T extends Vector<any>> extends BasicArrayTre
     }
     return super.fromBytes(data, start, end);
   }
+  setProperty(target: TreeBacking, property: number, value: T[number]): boolean {
+    if (property >= this.getLength(target)) {
+      throw new Error("Invalid array index");
+    }
+    return super.setProperty(target, property, value, false);
+  }
 }
 
 export class CompositeVectorTreeHandler<T extends Vector<any>> extends CompositeArrayTreeHandler<T> {
@@ -91,5 +97,11 @@ export class CompositeVectorTreeHandler<T extends Vector<any>> extends Composite
       }
     }
     return this.createBackedValue(target);
+  }
+  setProperty(target: TreeBacking, property: number, value: T[number]): boolean {
+    if (property >= this.getLength(target)) {
+      throw new Error("Invalid array index");
+    }
+    return super.setProperty(target, property, value, false);
   }
 }

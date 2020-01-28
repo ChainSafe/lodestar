@@ -46,7 +46,7 @@ export class BasicListTreeHandler<T extends List<any>> extends BasicArrayTreeHan
       this.push(target, value);
       return true;
     } else {
-      return super.set(target, property, value);
+      return this.setProperty(target, property, value);
     }
   }
   deleteProperty(target: TreeBacking, property: number): boolean {
@@ -63,7 +63,7 @@ export class BasicListTreeHandler<T extends List<any>> extends BasicArrayTreeHan
   push(target: TreeBacking, value: T[number]): number {
     const length = this.getLength(target);
     const expand = this.getChunkIndex(length) != this.getChunkIndex(length + 1);
-    super.set(target, length, value, expand);
+    this.setProperty(target, length, value, expand);
     this.setLength(target, length + 1);
     return length + 1;
   }
@@ -150,7 +150,7 @@ export class CompositeListTreeHandler<T extends List<any>> extends CompositeArra
       this.push(target, value);
       return true;
     } else {
-      return super.set(target, property, value);
+      return this.setProperty(target, property, value);
     }
   }
   deleteProperty(target: TreeBacking, property: number): boolean {
@@ -166,14 +166,14 @@ export class CompositeListTreeHandler<T extends List<any>> extends CompositeArra
   }
   push(target: TreeBacking, value: T[number]): number {
     const length = this.getLength(target);
-    super.set(target, length, value, true);
+    this.setProperty(target, length, value, true);
     this.setLength(target, length + 1);
     return length + 1;
   }
   pop(target: TreeBacking): T[number] {
     const length = this.getLength(target);
     const value = this.get(target, length - 1);
-    super.set(target, length - 1, new TreeBacking(zeroNode(0)));
+    this.setProperty(target, length - 1, new TreeBacking(zeroNode(0)));
     this.setLength(target, length - 1);
     return value;
   }
