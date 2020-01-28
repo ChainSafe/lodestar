@@ -12,13 +12,18 @@ import {ILogger, LogLevels, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/log
 import {Eth1Wallet} from "@chainsafe/lodestar/lib/eth1";
 import {CliError} from "../error";
 import * as ethers from "ethers/ethers";
-import {initBLS} from "@chainsafe/bls";
+import {initBLS, PrivateKey} from "@chainsafe/bls";
+import {
+  deriveKeyFromMnemonic,
+  deriveEth2ValidatorKeys,
+} from "@chainsafe/bls-keygen";
 
 interface IDepositCommandOptions {
   privateKey: string;
   logLevel: string;
   mnemonic: string;
   unencryptedKeys: string;
+  unencryptedBlsKeys: string; 
   abi: string;
   node: string;
   value: string;
@@ -33,6 +38,16 @@ interface IJsonKeyFile {
 
 interface IABIJsonFile {
   abi: string;
+}
+
+interface IBLSJsonFile {
+  signing: string;
+  withdrawal: string;
+}
+
+interface IBLSKey {
+  signing: PrivateKey;
+  withdrawal: PrivateKey;
 }
 
 export class DepositCommand implements ICliCommand {
@@ -57,7 +72,8 @@ export class DepositCommand implements ICliCommand {
       )
       .option("-a, --accounts [accounts]","Number of accounts to generate at startup", 10)
       .option("--abi [path]", "Path to ABI file")
-      .option("-u, --unencryptedKeys [path]", "Path to json key file")
+      .option("-u, --unencrypted-keys [path]", "Path to json file containing unencrypted eth1 keys")
+      .option("--unencrypted-bls-keys [path]", "Path to json file containing hex encoded bls keys")
       .action( async (options) => {
         const logger: ILogger = new WinstonLogger({
           level: options.logLevel,
@@ -83,38 +99,51 @@ export class DepositCommand implements ICliCommand {
       throw new CliError(`JSON RPC node (${options.node}) not available. Reason: ${e.message}`);
     }
 
-    const abi = options.abi ? this.parseABIFile(options.abi) : defaults.depositContract.abi;
+    const abi = options.abi ? this.parseJSON<IABIJsonFile>(options.abi).abi : defaults.depositContract.abi;
 
-    const wallets = [];
+    const blsWallets: IBLSKey[] = [];
+    if (options.unencryptedBlsKeys) {
+      blsWallets.push(...this.blsFromJsonKeyFile(options.unencryptedBlsKeys));
+    } else if (options.mnemonic) {
+      blsWallets.push(...this.blsFromMnemonic(options.mnemonic, options.accounts));
+    } else {
+      throw new CliError("You have to submit either privateKey, mnemonic, or key file. Check --help");
+    }
+
+    const eth1Wallets = [];
     if(options.mnemonic) {
-      wallets.push(...this.fromMnemonic(options.mnemonic, provider, options.accounts));
+      eth1Wallets.push(...this.eth1FromMnemonic(options.mnemonic, provider, options.accounts));
     } else if (options.privateKey) {
-      wallets.push(new ethers.Wallet(options.privateKey, provider));
+      eth1Wallets.push(new ethers.Wallet(options.privateKey, provider));
     } else if (options.unencryptedKeys) {
-      wallets.push(...this.fromJsonKeyFile(options.unencryptedKeys, provider));
-    }else {
+      eth1Wallets.push(...this.eth1FromJsonKeyFile(options.unencryptedKeys, provider));
+    } else {
       throw new CliError("You have to submit either privateKey, mnemonic, or key file. Check --help");
     }
 
     await Promise.all(
-      wallets.map(async wallet => {
+      eth1Wallets.map(async (eth1Wallet: ethers.Wallet, i: number) => {
         try {
           const hash =
               // @ts-ignore
-              await (new Eth1Wallet(wallet.privateKey, abi, config, logger, provider))
-                .createValidatorDeposit(options.contract, ethers.utils.parseEther(options.value));
+              await (new Eth1Wallet(eth1Wallet.privateKey, abi, config, logger, provider))
+                .submitValidatorDeposit(
+                  options.contract, 
+                  ethers.utils.parseEther(options.value),
+                  blsWallets[i].signing,
+                  blsWallets[i].withdrawal
+                );
           logger.info(
-            `Successfully deposited ${options.value} ETH from ${wallet.address} 
+            `Successfully deposited ${options.value} ETH from ${eth1Wallet.address} 
             to deposit contract. Tx hash: ${hash}`
           );
         } catch (e) {
           throw new CliError(
-            `Failed to make deposit for account ${wallet.address}. Reason: ${e.message}`
+            `Failed to make deposit for account ${eth1Wallet.address}. Reason: ${e.message}`
           );
         }
       })
     );
-
   }
 
   /**
@@ -123,7 +152,7 @@ export class DepositCommand implements ICliCommand {
    * @param provider
    * @param n number of wallets to retrieve
    */
-  private fromMnemonic(mnemonic: string, provider: JsonRpcProvider, n: number): ethers.Wallet[] {
+  private eth1FromMnemonic(mnemonic: string, provider: JsonRpcProvider, n: number): ethers.Wallet[] {
     const masterNode = ethers.utils.HDNode.fromMnemonic(mnemonic);
     const base = masterNode.derivePath("m/44'/60'/0'/0");
 
@@ -136,20 +165,44 @@ export class DepositCommand implements ICliCommand {
     return wallets;
   }
 
+  private blsFromMnemonic(mnemonic: string, n: number): IBLSKey[] {
+    const masterSecretKey = deriveKeyFromMnemonic(mnemonic || process.env.defaultMnemonic);
+    const arr = new Array(n);
+    return arr
+      .fill(0)
+      .map((_, i) => {
+        const {withdrawal, signing} = deriveEth2ValidatorKeys(masterSecretKey, i);
+        return {
+          signing: PrivateKey.fromBytes(withdrawal),
+          withdrawal: PrivateKey.fromBytes(signing)
+        };
+      });
+  }
+
   /**
    * 
    * @param path Path to the json file
    * @param provider 
    */
-  private fromJsonKeyFile(path: string, provider: JsonRpcProvider): ethers.Wallet[] {
+  private eth1FromJsonKeyFile(path: string, provider: JsonRpcProvider): ethers.Wallet[] {
     const jsonString = fs.readFileSync(path, "utf8");
     const {keys} = JSON.parse(jsonString);
     return keys.map((key: IJsonKeyFile) => { return new ethers.Wallet(key.privkey, provider); });
   }
 
-  private parseABIFile(path: string): IABIJsonFile {
+  private blsFromJsonKeyFile(path: string): IBLSKey[] {
     const jsonString = fs.readFileSync(path, "utf8");
-    const {abi} = JSON.parse(jsonString);
-    return abi;
+    const {keys} = JSON.parse(jsonString);
+    return keys.map((key: IBLSJsonFile) => { 
+      return {
+        signing: PrivateKey.fromHexString(key.signing),
+        withdrawal: PrivateKey.fromHexString(key.withdrawal)
+      };
+    });
+  }
+
+  private parseJSON<T>(path: string, encoding?: string): T {
+    const jsonString = fs.readFileSync(path, encoding || "utf8");
+    return JSON.parse(jsonString);
   }
 }

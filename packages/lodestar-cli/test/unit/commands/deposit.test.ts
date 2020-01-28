@@ -49,6 +49,9 @@ describe("[CLI] deposit", function() {
           privateKey: eth1Network.accounts()[0],
           logLevel: null,
           mnemonic: null,
+          unencryptedKeys: null,
+          unencryptedBlsKeys: null,
+          abi: null,
           node:"http://worong_host:123",
           value: "32",
           contract:"0x",
@@ -66,13 +69,16 @@ describe("[CLI] deposit", function() {
           privateKey: null,
           logLevel: null,
           mnemonic: null,
+          unencryptedKeys: null,
+          unencryptedBlsKeys: null,
+          abi: null,
           node: eth1Network.rpcUrl(),
           value: "32",
           contract:"0x",
           accounts: 10
         }, logger
       )
-    ).to.be.rejectedWith(CliError, "You have to submit either privateKey or mnemonic.");
+    ).to.be.rejectedWith(CliError, "You have to submit either privateKey, mnemonic, or key file. Check --help");
   });
 
   it("Should throw error if mnemonic is invalid", async () => {
@@ -83,6 +89,9 @@ describe("[CLI] deposit", function() {
           privateKey: null,
           logLevel: null,
           mnemonic: "invalid mnemonic",
+          unencryptedKeys: null,
+          unencryptedBlsKeys: null,
+          abi: null,
           node: eth1Network.rpcUrl(),
           value: "32",
           contract:"0x",
