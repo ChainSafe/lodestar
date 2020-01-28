@@ -1,4 +1,4 @@
-import {Node, BranchNode, zeroNode, TreeBacking, LeafNode} from "@chainsafe/merkle-tree";
+import {Node, BranchNode, zeroNode, TreeBacking} from "@chainsafe/merkle-tree";
 
 import {List} from "../../interface";
 import {number32Type, BasicListType, CompositeListType} from "../../types";
@@ -19,12 +19,12 @@ export class BasicListTreeHandler<T extends List<any>> extends BasicArrayTreeHan
     return this._defaultNode;
   }
   getLength(target: TreeBacking): number {
-    return number32Type.fromBytes(target.get(BigInt(3)).merkleRoot, 0);
+    return number32Type.fromBytes(target.getRoot(BigInt(3)), 0);
   }
   setLength(target: TreeBacking, length: number): void {
     const chunk = new Uint8Array(32);
     number32Type.toBytes(length, chunk, 0);
-    target.set(BigInt(3), new LeafNode(Buffer.from(chunk)));
+    target.setRoot(BigInt(3), chunk);
   }
   fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
     const length = (end - start) / this._type.elementType.size();
@@ -90,12 +90,12 @@ export class CompositeListTreeHandler<T extends List<any>> extends CompositeArra
     return this._defaultNode;
   }
   getLength(target: TreeBacking): number {
-    return number32Type.fromBytes(target.get(BigInt(3)).merkleRoot, 0);
+    return number32Type.fromBytes(target.getRoot(BigInt(3)), 0);
   }
   setLength(target: TreeBacking, length: number): void {
     const chunk = new Uint8Array(32);
     number32Type.toBytes(length, chunk, 0);
-    target.set(BigInt(3), new LeafNode(Buffer.from(chunk)));
+    target.setRoot(BigInt(3), chunk);
   }
   fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
     const target = new TreeBacking(this.defaultNode());

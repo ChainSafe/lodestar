@@ -1,4 +1,4 @@
-import {Node, TreeBacking, Gindex, LeafNode, countToDepth, toGindexBitstring} from "@chainsafe/merkle-tree";
+import {Node, TreeBacking, Gindex, countToDepth, toGindexBitstring} from "@chainsafe/merkle-tree";
 
 import {CompositeType} from "../../types";
 import {isBackedValue, BackingType} from "..";

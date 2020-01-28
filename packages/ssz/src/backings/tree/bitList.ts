@@ -1,6 +1,6 @@
-import {BitList} from "../../interface";
-import {TreeBacking, LeafNode} from "@chainsafe/merkle-tree";
+import {TreeBacking} from "@chainsafe/merkle-tree";
 
+import {BitList} from "../../interface";
 import {BitListType} from "../../types";
 import {BasicListTreeHandler} from "./list";
 import {TreeBackedValue} from "./abstract";
@@ -29,17 +29,19 @@ export class BitListTreeHandler extends BasicListTreeHandler<BitList> {
     }
     const target = super.fromBytes(data, start, end).backing();
     const lastGindex = this.gindexOfChunk(target, Math.ceil((end - start) / 32) - 1);
-    const lastChunkLeaf = target.get(lastGindex) as LeafNode;
+    // mutate lastChunk (instead of copying/creating a new chunk)
+    // this is ok only because we haven't cached hashes yet
+    const lastChunk = target.getRoot(lastGindex);
     const lastChunkByte = ((end - start) % 32) - 1;
     let length;
     if (lastByte === 1) { // zero lastChunkByte
       length = (end - start - 1) * 8;
-      lastChunkLeaf.root[lastChunkByte] = 0;
+      lastChunk[lastChunkByte] = 0;
     } else { // mask lastChunkByte
       const lastByteBitLength = lastByte.toString(2).length - 1;
       length = (end - start - 1) * 8 + lastByteBitLength;
       const mask = 0xff >> (8 - lastByteBitLength);
-      lastChunkLeaf.root[lastChunkByte] &= mask;
+      lastChunk[lastChunkByte] &= mask;
     }
     this.setLength(target, length);
     return this.createBackedValue(target);
@@ -62,22 +64,20 @@ export class BitListTreeHandler extends BasicListTreeHandler<BitList> {
     return Math.floor(index / 256);
   }
   getValueAtIndex(target: TreeBacking, index: number): boolean {
-    const chunk = target.get(this.gindexOfChunk(target, this.getChunkIndex(index))).merkleRoot;
+    const chunk = target.getRoot(this.gindexOfChunk(target, this.getChunkIndex(index)));
     const byte = chunk[this.getChunkOffset(index)];
     return !!(byte & (1 << this.getBitOffset(index)));
   }
   setProperty(target: TreeBacking, property: number, value: boolean, expand=false): boolean {
     const chunkGindex = this.gindexOfChunk(target, this.getChunkIndex(property));
-    const chunk = Uint8Array.from(
-      target.get(chunkGindex).merkleRoot
-    );
+    const chunk = target.getRoot(chunkGindex);
     const byteOffset = this.getChunkOffset(property);
     if (value) {
       chunk[byteOffset] |= (1 << this.getBitOffset(property));
     } else {
       chunk[byteOffset] &= (0xff ^ (1 <<  this.getBitOffset(property)));
     }
-    target.set(chunkGindex, new LeafNode(Buffer.from(chunk)), expand);
+    target.setRoot(chunkGindex, chunk, expand);
     return true;
   }
 }

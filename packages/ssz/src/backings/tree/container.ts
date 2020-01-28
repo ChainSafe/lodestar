@@ -1,4 +1,4 @@
-import {Node, subtreeFillToContents, TreeBacking, zeroNode, LeafNode} from "@chainsafe/merkle-tree";
+import {Node, subtreeFillToContents, TreeBacking, zeroNode} from "@chainsafe/merkle-tree";
 
 import {ObjectLike} from "../../interface";
 import {ContainerType, CompositeType} from "../../types";
@@ -66,9 +66,9 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
         const chunk = new Uint8Array(32);
         // copy chunk into new memory
         chunk.set(dataChunk);
-        target.set(
+        target.setRoot(
           this.gindexOfChunk(target, i),
-          new LeafNode(Buffer.from(chunk)),
+          chunk,
         );
       } else {
         target.set(
@@ -115,7 +115,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     }
     const fieldType = this._type.fields[chunkIndex][1];
     if (fieldType.isBasic()) {
-      const chunk = target.get(this.gindexOfChunk(target, chunkIndex)).merkleRoot;
+      const chunk = target.getRoot(this.gindexOfChunk(target, chunkIndex));
       return fieldType.fromBytes(chunk, 0);
     } else {
       return fieldType.tree.createBackedValue(
@@ -133,7 +133,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     if (fieldType.isBasic()) {
       const chunk = new Uint8Array(32);
       fieldType.toBytes(value, chunk, 0);
-      target.set(chunkGindex, new LeafNode(Buffer.from(chunk)));
+      target.setRoot(chunkGindex, chunk);
       return true;
     } else {
       if (isBackedValue(value) && value.backingType() === this.backingType()) {

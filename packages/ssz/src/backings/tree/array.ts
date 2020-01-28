@@ -1,4 +1,4 @@
-import {Node, BranchNode, zeroNode, TreeBacking, LeafNode} from "@chainsafe/merkle-tree";
+import {TreeBacking} from "@chainsafe/merkle-tree";
 
 import {ArrayLike} from "../../interface";
 import {BasicArrayType, CompositeArrayType} from "../../types";
@@ -31,9 +31,9 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
       // copy chunk into new memory
       const chunk = new Uint8Array(32);
       chunk.set(dataChunk);
-      target.set(
+      target.setRoot(
         this.gindexOfChunk(target, i),
-        new LeafNode(Buffer.from(chunk)),
+        chunk,
         true, // expand tree as needed
       );
     }
@@ -44,10 +44,10 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
     let i = 0;
     let chunkIndex = 0;
     for (; i < size - 31; i+=32, chunkIndex += 1) {
-      output.set(target.get(this.gindexOfChunk(target, chunkIndex)).merkleRoot, offset + i);
+      output.set(target.getRoot(this.gindexOfChunk(target, chunkIndex)), offset + i);
     }
     if (i !== size) {
-      output.set(target.get(this.gindexOfChunk(target, chunkIndex)).merkleRoot.slice(0, (size - i)), offset + i);
+      output.set(target.getRoot(this.gindexOfChunk(target, chunkIndex)).slice(0, (size - i)), offset + i);
     }
     return offset + size;
   }
@@ -62,7 +62,7 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
     return Math.floor(index / Math.ceil(32 / this._type.elementType.size()));
   }
   getValueAtIndex(target: TreeBacking, index: number): T[number] {
-    const chunk = target.get(this.gindexOfChunk(target, this.getChunkIndex(index))).merkleRoot;
+    const chunk = target.getRoot(this.gindexOfChunk(target, this.getChunkIndex(index)));
     return this._type.elementType.fromBytes(chunk, this.getChunkOffset(index));
   }
   getProperty(target: TreeBacking, property: keyof T): T[keyof T] {
@@ -81,11 +81,9 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
   }
   setProperty(target: TreeBacking, property: number, value: T[number], expand=false): boolean {
     const chunkGindex = this.gindexOfChunk(target, this.getChunkIndex(property));
-    const chunk = Uint8Array.from(
-      target.get(chunkGindex).merkleRoot
-    );
+    const chunk = target.getRoot(chunkGindex);
     this._type.elementType.toBytes(value, chunk, this.getChunkOffset(property));
-    target.set(chunkGindex, new LeafNode(Buffer.from(chunk)), expand);
+    target.setRoot(chunkGindex, chunk, expand);
     return true;
   }
   set(target: TreeBacking, property: number, value: T[number], expand=false): boolean {
