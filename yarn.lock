@@ -682,6 +682,17 @@
     bip39 "^3.0.2"
     buffer "^5.4.3"
 
+"@chainsafe/bls-keygen@^0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bls-keygen/-/bls-keygen-0.1.0.tgz#c5ef7afe7cfafc11ba25b4a7ee446c647049a17e"
+  integrity sha512-E/k3lAvOC1r5nNlmawKFxREuJxjTmWtjT5FU8LEE0m8cj7PCGsFZjaajGUiQl71yOWxg6BcnjHb7y9X/DlhCJg==
+  dependencies:
+    "@chainsafe/bls-hd-key" "^0.0.1"
+    assert "^2.0.0"
+    bcrypto "^4.2.6"
+    bip39 "^3.0.2"
+    buffer "^5.4.3"
+
 "@chainsafe/eth2-bls-wasm@^0.2.0":
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2-bls-wasm/-/eth2-bls-wasm-0.2.0.tgz#8dab34ab223fe5b29133f3d4ee01b09e97dba978"
