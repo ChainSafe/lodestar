@@ -18,7 +18,7 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
     return this._type.elementType.size() * this.getLength(target);
   }
   fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
-    const target = new TreeBacking(this.defaultNode());
+    const target = this.defaultBacking();
     const byteLength = (end - start);
     const chunkCount = Math.ceil(byteLength / 32);
     for (let i = 0; i < chunkCount; i++) {

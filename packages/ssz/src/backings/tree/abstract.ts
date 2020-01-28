@@ -1,4 +1,4 @@
-import {Node, TreeBacking, Gindex, countToDepth, toGindexBitstring} from "@chainsafe/merkle-tree";
+import {TreeBacking, Gindex, countToDepth, toGindexBitstring} from "@chainsafe/merkle-tree";
 
 import {CompositeType} from "../../types";
 import {isBackedValue, BackingType} from "..";
@@ -120,16 +120,16 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
     return BackingType.tree;
   }
   /**
-   * Default merkle tree
+   * Default merkle tree backing
    */
-  defaultNode(): Node {
+  defaultBacking(): TreeBacking {
     throw new Error("Not implemented");
   }
   /**
    * Default constructor
    */
   defaultValue(): TreeBackedValue<T> {
-    return this.createBackedValue(new TreeBacking(this.defaultNode()));
+    return this.createBackedValue(this.defaultBacking());
   }
   createValue(value: T): TreeBackedValue<T> {
     throw new Error("Not implemented");

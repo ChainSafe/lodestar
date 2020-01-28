@@ -1,4 +1,4 @@
-import {Node, BranchNode, zeroNode, TreeBacking} from "@chainsafe/merkle-tree";
+import {zeroNode, TreeBacking} from "@chainsafe/merkle-tree";
 
 import {List} from "../../interface";
 import {number32Type, BasicListType, CompositeListType} from "../../types";
@@ -11,12 +11,13 @@ export class BasicListTreeHandler<T extends List<any>> extends BasicArrayTreeHan
     super();
     this._type = type;
   }
-  _defaultNode: Node;
-  defaultNode(): Node {
-    if (!this._defaultNode) {
-      this._defaultNode = new BranchNode(zeroNode(super.depth()), zeroNode(0));
+  _defaultBacking: TreeBacking;
+  defaultBacking(): TreeBacking {
+    if (!this._defaultBacking) {
+      this._defaultBacking = new TreeBacking(zeroNode(this.depth()));
+      this._defaultBacking.set(BigInt(3), zeroNode(0));
     }
-    return this._defaultNode;
+    return this._defaultBacking.clone();
   }
   getLength(target: TreeBacking): number {
     return number32Type.fromBytes(target.getRoot(BigInt(3)), 0);
@@ -82,12 +83,13 @@ export class CompositeListTreeHandler<T extends List<any>> extends CompositeArra
     super();
     this._type = type;
   }
-  _defaultNode: Node;
-  defaultNode(): Node {
-    if (!this._defaultNode) {
-      this._defaultNode = new BranchNode(zeroNode(super.depth()), zeroNode(0));
+  _defaultBacking: TreeBacking;
+  defaultBacking(): TreeBacking {
+    if (!this._defaultBacking) {
+      this._defaultBacking = new TreeBacking(zeroNode(this.depth()));
+      this._defaultBacking.set(BigInt(3), zeroNode(0));
     }
-    return this._defaultNode;
+    return this._defaultBacking.clone();
   }
   getLength(target: TreeBacking): number {
     return number32Type.fromBytes(target.getRoot(BigInt(3)), 0);
@@ -98,7 +100,7 @@ export class CompositeListTreeHandler<T extends List<any>> extends CompositeArra
     target.setRoot(BigInt(3), chunk);
   }
   fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
-    const target = new TreeBacking(this.defaultNode());
+    const target = this.defaultBacking();
     if (this._type.elementType.isVariableSize()) {
       const offsets = this._type.byteArray.getVariableOffsets(
         new Uint8Array(data.buffer, data.byteOffset + start, end - start)

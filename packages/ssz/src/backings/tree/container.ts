@@ -1,4 +1,4 @@
-import {Node, subtreeFillToContents, TreeBacking, zeroNode} from "@chainsafe/merkle-tree";
+import {subtreeFillToContents, TreeBacking, zeroNode} from "@chainsafe/merkle-tree";
 
 import {ObjectLike} from "../../interface";
 import {ContainerType, CompositeType} from "../../types";
@@ -11,17 +11,23 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     super();
     this._type = type;
   }
-  defaultNode(): Node {
-    return subtreeFillToContents(
-      this._type.fields.map(([_, fieldType]) => {
-        if (fieldType.isBasic()) {
-          return zeroNode(0);
-        } else {
-          return fieldType.tree.defaultNode();
-        }
-      }),
-      this.depth(),
-    );
+  _defaultBacking: TreeBacking;
+  defaultBacking(): TreeBacking {
+    if (!this._defaultBacking) {
+      this._defaultBacking = new TreeBacking(
+        subtreeFillToContents(
+          this._type.fields.map(([_, fieldType]) => {
+            if (fieldType.isBasic()) {
+              return zeroNode(0);
+            } else {
+              return fieldType.tree.defaultBacking().node;
+            }
+          }),
+          this.depth(),
+        )
+      );
+    }
+    return this._defaultBacking.clone();
   }
   createValue(value: any): TreeBackedValue<T> {
     const v = this.defaultValue();
@@ -50,7 +56,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     return s;
   }
   fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
-    const target = new TreeBacking(this.defaultNode());
+    const target = this.defaultBacking();
     const offsets = this._type.byteArray.getVariableOffsets(
       new Uint8Array(data.buffer, data.byteOffset + start, end - start)
     );

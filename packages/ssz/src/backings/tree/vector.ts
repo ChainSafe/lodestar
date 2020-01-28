@@ -1,4 +1,4 @@
-import {Node, TreeBacking, subtreeFillToLength, zeroNode} from "@chainsafe/merkle-tree";
+import {TreeBacking, subtreeFillToLength, zeroNode} from "@chainsafe/merkle-tree";
 
 import {Vector} from "../../interface";
 import {BasicVectorType, CompositeVectorType} from "../../types";
@@ -11,16 +11,18 @@ export class BasicVectorTreeHandler<T extends Vector<any>> extends BasicArrayTre
     super();
     this._type = type;
   }
-  _defaultNode: Node;
-  defaultNode(): Node {
-    if (!this._defaultNode) {
-      this._defaultNode = subtreeFillToLength(
-        zeroNode(0),
-        this.depth(),
-        this._type.chunkCount()
+  _defaultBacking: TreeBacking;
+  defaultBacking(): TreeBacking {
+    if (!this._defaultBacking) {
+      this._defaultBacking = new TreeBacking(
+        subtreeFillToLength(
+          zeroNode(0),
+          this.depth(),
+          this._type.chunkCount()
+        )
       );
     }
-    return this._defaultNode;
+    return this._defaultBacking.clone();
   }
   getLength(target: TreeBacking): number {
     return this._type.length;
@@ -45,22 +47,24 @@ export class CompositeVectorTreeHandler<T extends Vector<any>> extends Composite
     super();
     this._type = type;
   }
-  _defaultNode: Node;
-  defaultNode(): Node {
-    if (!this._defaultNode) {
-      this._defaultNode = subtreeFillToLength(
-        this._type.elementType.tree.defaultNode(),
-        this.depth(),
-        this._type.length
+  _defaultBacking: TreeBacking;
+  defaultBacking(): TreeBacking {
+    if (!this._defaultBacking) {
+      this._defaultBacking = new TreeBacking(
+        subtreeFillToLength(
+          this._type.elementType.tree.defaultBacking().node,
+          this.depth(),
+          this._type.length
+        )
       );
     }
-    return this._defaultNode;
+    return this._defaultBacking.clone();
   }
   getLength(target: TreeBacking): number {
     return this._type.length;
   }
   fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
-    const target = new TreeBacking(this.defaultNode());
+    const target = this.defaultBacking();
     if (this._type.elementType.isVariableSize()) {
       const offsets = this._type.byteArray.getVariableOffsets(
         new Uint8Array(data.buffer, data.byteOffset + start, end - start)
