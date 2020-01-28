@@ -13,9 +13,6 @@ export class BasicArrayType<T extends ArrayLike<any>> extends CompositeType<T> {
     super();
     this.elementType = options.elementType as BasicType<T>;
   }
-  indexElementType(index: number): Type<any> {
-    return this.elementType;
-  }
 }
 
 export class CompositeArrayType<T extends ArrayLike<any>> extends CompositeType<T> {
@@ -23,8 +20,5 @@ export class CompositeArrayType<T extends ArrayLike<any>> extends CompositeType<
   constructor(options: IArrayOptions) {
     super();
     this.elementType = options.elementType as CompositeType<T>;
-  }
-  indexElementType(index: number): Type<any> {
-    return this.elementType;
   }
 }
