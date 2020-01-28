@@ -15,7 +15,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
   defaultBacking(): TreeBacking {
     if (!this._defaultBacking) {
       this._defaultBacking = subtreeBackingFillToContents(
-        this._type.fields.map(([_, fieldType]) => {
+        Object.values(this._type.fields).map((fieldType) => {
           if (fieldType.isBasic()) {
             return zeroBacking(0);
           } else {
@@ -29,7 +29,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
   }
   createValue(value: any): TreeBackedValue<T> {
     const v = this.defaultValue();
-    for (const [fieldName, fieldType] of this._type.fields) {
+    Object.entries(this._type.fields).forEach(([fieldName, fieldType]) => {
       if (value[fieldName] !== null && value[fieldName] !== undefined) {
         if (fieldType.isBasic()) {
           v[fieldName as keyof T] = value[fieldName];
@@ -37,20 +37,18 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
           v[fieldName as keyof T] = fieldType.tree.createValue(value[fieldName]);
         }
       }
-    }
+    });
     return v;
   }
   size(target: TreeBacking): number {
     let s = 0;
-    let i = 0;
-    for (const [_, fieldType] of this._type.fields) {
+    Object.values(this._type.fields).forEach((fieldType, i) => {
       if (fieldType.isVariableSize()) {
         s += (fieldType as CompositeType<any>).tree.size(this.getBackingAtChunk(target, i)) + 4;
       } else {
         s += fieldType.size(null);
       }
-      i++;
-    }
+    });
     return s;
   }
   fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
@@ -58,7 +56,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     const offsets = this._type.byteArray.getVariableOffsets(
       new Uint8Array(data.buffer, data.byteOffset + start, end - start)
     );
-    this._type.fields.forEach(([_, fieldType], i) => {
+    Object.values(this._type.fields).forEach((fieldType, i) => {
       const [currentOffset, nextOffset] = offsets[i];
       if (fieldType.isBasic()) {
         // view of the chunk, shared buffer from `data`
@@ -90,12 +88,11 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     return this.createBackedValue(target);
   }
   toBytes(target: TreeBacking, output: Uint8Array, offset: number): number {
-    let variableIndex = offset + this._type.fields.reduce((total, [_, fieldType]) =>
+    let variableIndex = offset + Object.values(this._type.fields).reduce((total, fieldType) =>
       total + (fieldType.isVariableSize() ? 4 : fieldType.size(null)), 0);
     const fixedSection = new DataView(output.buffer, output.byteOffset + offset);
     let fixedIndex = offset;
-    let i = 0;
-    for (const [_, fieldType] of this._type.fields) {
+    Object.values(this._type.fields).forEach((fieldType, i) => {
       if (fieldType.isBasic()) {
         const s = fieldType.size();
         output.set(this.getRootAtChunk(target, i).slice(0, s), fixedIndex);
@@ -109,17 +106,16 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
       } else {
         fixedIndex = fieldType.tree.toBytes(this.getBackingAtChunk(target, i), output, fixedIndex);
       }
-      i++;
-    }
+    });
     return variableIndex;
 
   }
   getProperty<V extends keyof T>(target: TreeBacking, property: V): PropOfTreeBackedValue<T, V> {
-    const chunkIndex = this._type.fields.findIndex(([fieldName]) => fieldName === property);
+    const chunkIndex = Object.keys(this._type.fields).findIndex((fieldName) => fieldName === property);
     if (chunkIndex === -1) {
       throw new Error("Invalid container field name");
     }
-    const fieldType = this._type.fields[chunkIndex][1];
+    const fieldType = this._type.fields[property as string];
     if (fieldType.isBasic()) {
       const chunk = this.getRootAtChunk(target, chunkIndex);
       return fieldType.fromBytes(chunk, 0);
@@ -130,12 +126,12 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     }
   }
   set(target: TreeBacking, property: keyof T, value: T[keyof T]): boolean {
-    const chunkIndex = this._type.fields.findIndex(([fieldName]) => fieldName === property);
+    const chunkIndex = Object.keys(this._type.fields).findIndex((fieldName) => fieldName === property);
     if (chunkIndex === -1) {
       throw new Error("Invalid container field name");
     }
     const chunkGindex = this.gindexOfChunk(target, chunkIndex);
-    const fieldType = this._type.fields[chunkIndex][1];
+    const fieldType = this._type.fields[property as string];
     if (fieldType.isBasic()) {
       const chunk = new Uint8Array(32);
       fieldType.toBytes(value, chunk, 0);
@@ -152,11 +148,11 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     }
   }
   deleteProperty(target: TreeBacking, property: keyof T): boolean {
-    const chunkIndex = this._type.fields.findIndex(([fieldName]) => fieldName === property);
+    const chunkIndex = Object.keys(this._type.fields).findIndex((fieldName) => fieldName === property);
     if (chunkIndex === -1) {
       throw new Error("Invalid container field name");
     }
-    const fieldType = this._type.fields[chunkIndex][1];
+    const fieldType = this._type.fields[property as string];
     if (fieldType.isBasic()) {
       return this.set(target, property, fieldType.defaultValue());
     } else {
@@ -164,10 +160,10 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     }
   }
   ownKeys(target: TreeBacking): string[] {
-    return this._type.fields.map(([fieldName]) => fieldName);
+    return Object.keys(this._type.fields);
   }
   getOwnPropertyDescriptor(target: TreeBacking, property: keyof T): PropertyDescriptor {
-    if (this._type.fields.find(([fieldName]) => fieldName === property)) {
+    if (this._type.fields[property as string]) {
       return {
         configurable: true,
         enumerable: true,

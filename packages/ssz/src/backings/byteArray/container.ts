@@ -21,7 +21,7 @@ export class ContainerByteArrayHandler<T extends ObjectLike> extends ByteArrayHa
     const fixedOffsets: [number, number][] = [];
     const variableOffsets: number[]  = [];
     let variableIndex = 0;
-    this._type.fields.forEach(([_, fieldType], i) => {
+    Object.values(this._type.fields).forEach((fieldType, i) => {
       if (fieldType.isVariableSize()) {
         const offset = fixedSection.getUint32(currentIndex, true);
         if (offset > target.length) {
@@ -38,7 +38,7 @@ export class ContainerByteArrayHandler<T extends ObjectLike> extends ByteArrayHa
     });
     variableOffsets.push(target.length);
     variableIndex = 0;
-    this._type.fields.forEach(([_, fieldType], i) => {
+    Object.values(this._type.fields).forEach((fieldType, i) => {
       if (fieldType.isVariableSize()) {
         if (variableOffsets[variableIndex] > variableOffsets[variableIndex+1]) {
           throw new Error("Offsets must be increasing");

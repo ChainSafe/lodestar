@@ -33,16 +33,16 @@ const bigint64Type = new types.BigIntUintType({byteLength: 8});
 const bytes48Type =  new types.ByteVectorType({length: 48});
 const bytes32Type =  new types.ByteVectorType({length: 32});
 
-const validatorType2 = new types.ContainerType<Validator>({fields: [
-  ["pubkey", bytes48Type],
-  ["withdrawalCredentials", bytes32Type],
-  ["effectiveBalance", bigint64Type],
-  ["slashed", types.booleanType],
-  ["activationEligibilityEpoch", number64Type],
-  ["activationEpoch", number64Type],
-  ["exitEpoch", number64Type],
-  ["withdrawalEpoch", number64Type],
-]})
+const validatorType2 = new types.ContainerType<Validator>({fields: {
+  pubkey: bytes48Type,
+  withdrawalCredentials: bytes32Type,
+  effectiveBalance: bigint64Type,
+  slashed: types.booleanType,
+  activationEligibilityEpoch: number64Type,
+  activationEpoch: number64Type,
+  exitEpoch: number64Type,
+  withdrawalEpoch: number64Type,
+}})
 
 const validatorRegistryType2 = new types.ListType<ValidatorRegistry>({
   elementType: validatorType2,

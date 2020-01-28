@@ -10,39 +10,39 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
   }
   defaultValue(): T {
     const obj = {} as T;
-    for (const [fieldName, fieldType] of this._type.fields) {
+    Object.entries(this._type.fields).forEach(([fieldName, fieldType]) => {
       if (fieldType.isBasic()) {
         obj[fieldName as keyof T] = fieldType.defaultValue();
       } else {
         obj[fieldName as keyof T] = fieldType.structural.defaultValue();
       }
-    }
+    });
     return obj;
   }
   size(value: T): number {
     let s = 0;
-    for (const [fieldName, fieldType] of this._type.fields) {
+    Object.entries(this._type.fields).forEach(([fieldName, fieldType]) => {
       if (fieldType.isVariableSize()) {
         s += fieldType.size(value[fieldName]) + 4;
       } else {
         s += fieldType.size(null);
       }
-    }
+    });
     return s;
   }
   assertValidValue(value: any): asserts value is T {
-    for (const [fieldName, fieldType] of this._type.fields) {
+    Object.entries(this._type.fields).forEach(([fieldName, fieldType]) => {
       if (fieldType.isBasic()) {
         (fieldType as Type<any>).assertValidValue(value[fieldName]);
       } else {
         fieldType.structural.assertValidValue(value[fieldName]);
       }
-    }
+    });
   }
   equals(value1: T, value2: T): boolean {
     this.assertValidValue(value1);
     this.assertValidValue(value2);
-    return this._type.fields.every(([fieldName, fieldType]) => {
+    return Object.entries(this._type.fields).every(([fieldName, fieldType]) => {
       if (fieldType.isBasic()) {
         return fieldType.equals(value1[fieldName], value2[fieldName]);
       } else {
@@ -52,13 +52,13 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
   }
   clone(value: T): T {
     const newValue = {} as T;
-    for (const [fieldName, fieldType] of this._type.fields) {
+    Object.entries(this._type.fields).forEach(([fieldName, fieldType]) => {
       if (fieldType.isBasic()) {
         newValue[fieldName as keyof T] = fieldType.clone(value[fieldName]);
       } else {
         newValue[fieldName as keyof T] = fieldType.structural.clone(value[fieldName]);
       }
-    }
+    });
     return newValue;
   }
   fromBytes(data: Uint8Array, start: number, end: number): T {
@@ -68,8 +68,8 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
     // Since variable-sized values can be interspersed with fixed-sized values, we precalculate
     // the offset indices so we can more easily deserialize the fields in once pass
     // first we get the fixed sizes
-    const fixedSizes: (number | false)[] = this._type.fields
-      .map(([_, fieldType]) => !fieldType.isVariableSize() && fieldType.size(null));
+    const fixedSizes: (number | false)[] = Object.values(this._type.fields)
+      .map((fieldType) => !fieldType.isVariableSize() && fieldType.size(null));
     // with the fixed sizes, we can read the offsets, and store for our single pass
     const offsets: number[] = [];
     const fixedSection = new DataView(data.buffer, data.byteOffset);
@@ -86,7 +86,7 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
       throw new Error("Not all variable bytes consumed");
     }
     let offsetIndex = 0;
-    this._type.fields.forEach(([fieldName, fieldType], i) => {
+    Object.entries(this._type.fields).forEach(([fieldName, fieldType], i) => {
       const fieldSize = fixedSizes[i];
       if (fieldSize === false) { // variable-sized field
         if (offsets[offsetIndex] > end) {
@@ -125,11 +125,11 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
     return value;
   }
   toBytes(value: T, output: Uint8Array, offset: number): number {
-    let variableIndex = offset + this._type.fields.reduce((total, [fieldName, fieldType]) =>
+    let variableIndex = offset + Object.values(this._type.fields).reduce((total, fieldType) =>
       total + (fieldType.isVariableSize() ? 4 : fieldType.size(null)), 0);
     const fixedSection = new DataView(output.buffer, output.byteOffset + offset);
     let fixedIndex = offset;
-    for (const [fieldName, fieldType] of this._type.fields) {
+    Object.entries(this._type.fields).forEach(([fieldName, fieldType]) => {
       if (fieldType.isVariableSize()) {
         // write offset
         fixedSection.setUint32(fixedIndex - offset, variableIndex - offset, true);
@@ -139,11 +139,12 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
       } else {
         fixedIndex = fieldType.toBytes(value[fieldName], output, fixedIndex);
       }
-    }
+    });
     return variableIndex;
   }
   chunk(value: T, index: number): Uint8Array {
-    const [fieldName, fieldType] = this._type.fields[index];
+    const fieldName = Object.keys(this._type.fields)[index];
+    const fieldType = this._type.fields[fieldName];
     return fieldType.hashTreeRoot(value[fieldName]);
   }
 }

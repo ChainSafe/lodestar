@@ -8,26 +8,23 @@ import {
 } from "../../backings";
 
 export interface IContainerOptions {
-  fields: [string, Type<any>][];
+  fields: Record<string, Type<any>>;
 }
 
 export class ContainerType<T extends ObjectLike=any> extends CompositeType<T> {
-  fields: [string, Type<any>][];
+  // ES6 ensures key order is chronological
+  fields: Record<string, Type<any>>;
   constructor(options: IContainerOptions) {
     super();
-    this.fields = options.fields;
+    this.fields = {...options.fields};
     this.structural = new ContainerStructuralHandler(this);
     this.tree = new ContainerTreeHandler(this);
     this.byteArray = new ContainerByteArrayHandler(this);
   }
-  indexElementType(index: number): Type<any> {
-    return this.fields[index][1];
-  }
   isVariableSize(): boolean {
-    return this.fields.some(([fieldName, fieldType]) =>
-      fieldType.isVariableSize());
+    return Object.values(this.fields).some((fieldType) => fieldType.isVariableSize());
   }
   chunkCount(): number {
-    return this.fields.length;
+    return Object.keys(this.fields).length;
   }
 }
