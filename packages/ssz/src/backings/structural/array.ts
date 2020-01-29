@@ -180,6 +180,6 @@ export class CompositeArrayStructuralHandler<T extends ArrayLike<any>> extends S
     }
   }
   chunk(value: T, index: number): Uint8Array {
-    return this._type.elementType.structural.hashTreeRoot(value[index]);
+    return this._type.elementType.hashTreeRoot(value[index]);
   }
 }

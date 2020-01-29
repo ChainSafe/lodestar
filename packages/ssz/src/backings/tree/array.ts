@@ -101,6 +101,11 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
       yield this.getValueAtIndex(target, i);
     }
   }
+  forEach(target: TreeBacking, fn: (value: any, index: number) => void): void {
+    for (let i = 0; i < this.getLength(target); i++) {
+      fn(this.getValueAtIndex(target, i), i);
+    }
+  }
 }
 
 export class CompositeArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler<T> {
@@ -192,6 +197,11 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<any>> extends TreeHan
   *[Symbol.iterator](target: TreeBacking): Iterable<PropOfCompositeTreeBackedValue<T, number>> {
     for (let i = 0; i < this.getLength(target); i++) {
       yield this.getValueAtChunk(target, i);
+    }
+  }
+  forEach(target: TreeBacking, fn: (value: any, index: number) => void): void {
+    for (let i = 0; i < this.getLength(target); i++) {
+      fn(this.getValueAtChunk(target, i), i);
     }
   }
 }

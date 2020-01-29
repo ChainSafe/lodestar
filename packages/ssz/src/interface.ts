@@ -1,7 +1,8 @@
-// Typesript has an ArrayLike, but its readonly
 export interface ArrayLike<T> {
   readonly length: number;
   [n: number]: T;
+  forEach(fn: (value: T, index: number) => void): void;
+  //  reduce<U>(fn: (accum: U, value: T, index: number) => U, initial?: U): U;
 }
 
 export type Vector<T> = ArrayLike<T>;
