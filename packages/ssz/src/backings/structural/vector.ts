@@ -22,6 +22,15 @@ export class BasicVectorStructuralHandler<T extends Vector<any>> extends BasicAr
     }
     return super.fromBytes(data, start, end);
   }
+  assertValidValue(value: any): asserts value is T {
+    const actualLength = value.length;
+    const expectedLength = this.getLength(value);
+    if (actualLength !== expectedLength) {
+      throw new Error(`Invalid vector length: expected ${expectedLength}, actual ${actualLength}`);
+    }
+    // @ts-ignore
+    super.assertValidValue(value);
+  }
 }
 
 export class CompositeVectorStructuralHandler<T extends Vector<any>> extends CompositeArrayStructuralHandler<T> {
@@ -44,5 +53,14 @@ export class CompositeVectorStructuralHandler<T extends Vector<any>> extends Com
       throw new Error("Incorrect deserialized vector length");
     }
     return value;
+  }
+  assertValidValue(value: any): asserts value is T {
+    const actualLength = value.length;
+    const expectedLength = this.getLength(value);
+    if (actualLength !== expectedLength) {
+      throw new Error(`Invalid vector length: expected ${expectedLength}, actual ${actualLength}`);
+    }
+    // @ts-ignore
+    super.assertValidValue(value);
   }
 }

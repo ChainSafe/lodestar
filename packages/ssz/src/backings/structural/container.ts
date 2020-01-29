@@ -32,10 +32,14 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
   }
   assertValidValue(value: any): asserts value is T {
     Object.entries(this._type.fields).forEach(([fieldName, fieldType]) => {
-      if (fieldType.isBasic()) {
-        (fieldType as Type<any>).assertValidValue(value[fieldName]);
-      } else {
-        fieldType.structural.assertValidValue(value[fieldName]);
+      try {
+        if (fieldType.isBasic()) {
+          (fieldType as Type<any>).assertValidValue(value[fieldName]);
+        } else {
+          fieldType.structural.assertValidValue(value[fieldName]);
+        }
+      } catch (e) {
+        throw new Error(`Invalid field ${fieldName}: ${e.message}`);
       }
     });
   }

@@ -11,14 +11,11 @@ export class BasicArrayStructuralHandler<T extends ArrayLike<any>> extends Struc
     return this._type.elementType.size() * this.getLength(value);
   }
   assertValidValue(value: any): asserts value is T {
-    if (value.length !== this.getLength(value)) {
-      throw new Error("Array has invalid length");
-    }
     for (let i = 0; i < this.getLength(value); i++) {
       try {
         this._type.elementType.assertValidValue(value[i]);
       } catch (e) {
-        throw new Error(`Array has invalid element ${i}: ${e.message}`);
+        throw new Error(`Invalid element ${i}: ${e.message}`);
       }
     }
   }
@@ -85,14 +82,12 @@ export class CompositeArrayStructuralHandler<T extends ArrayLike<any>> extends S
     }
   }
   assertValidValue(value: any): asserts value is T {
-    if (value.length !== this.getLength(value)) {
-      throw new Error("Array has invalid length");
-    }
     for (let i = 0; i < this.getLength(value); i++) {
       try {
         this._type.elementType.structural.assertValidValue(value[i]);
       } catch (e) {
-        throw new Error(`Array has invalid element ${i}: ${e.message}`);
+        console.log(typeof value[i])
+        throw new Error(`Invalid element ${i}: ${e.message}`);
       }
     }
   }
