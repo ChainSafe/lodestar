@@ -79,8 +79,9 @@ export class Eth1Wallet {
     const depositDataRoot = hashTreeRoot(this.config.types.DepositData, depositData);
     
     this.logger.info(
-        `Preparing submission :: eth1 address: ${this.wallet.address} eth1 nonce: ${nonce} blsWallet: ${signingKey.toPublicKey().toHexString()}`
-    )
+      `Preparing submission :: eth1 address: ${this.wallet.address} eth1 nonce: ${nonce}
+       blsWallet: ${signingKey.toPublicKey().toHexString()}`
+    );
 
     // Send TX
     const tx: ContractTransaction = await contract.deposit(
@@ -89,8 +90,8 @@ export class Eth1Wallet {
       depositData.signature,
       depositDataRoot,
       {
-          value,
-          nonce
+        value,
+        nonce
       }
     );
 
