@@ -29,6 +29,7 @@ interface IDepositCommandOptions {
   value: string;
   contract: string;
   accounts: number;
+  oneDepositKey: boolean;
 }
 
 interface IJsonKeyFile {
@@ -74,6 +75,7 @@ export class DepositCommand implements ICliCommand {
       .option("--abi [path]", "Path to ABI file")
       .option("-u, --unencrypted-keys [path]", "Path to json file containing unencrypted eth1 keys")
       .option("--unencrypted-bls-keys [path]", "Path to json file containing hex encoded bls keys")
+      .option("--one-deposit-key", "Use one key to make all your deposits")
       .action( async (options) => {
         const logger: ILogger = new WinstonLogger({
           level: options.logLevel,
@@ -110,7 +112,7 @@ export class DepositCommand implements ICliCommand {
       throw new CliError("You have to submit either privateKey, mnemonic, or key file. Check --help");
     }
 
-    const eth1Wallets = [];
+    const eth1Wallets: ethers.Wallet[] = [];
     if(options.mnemonic) {
       eth1Wallets.push(...this.eth1FromMnemonic(options.mnemonic, provider, options.accounts));
     } else if (options.privateKey) {
@@ -121,27 +123,80 @@ export class DepositCommand implements ICliCommand {
       throw new CliError("You have to submit either privateKey, mnemonic, or key file. Check --help");
     }
 
+    if (options.oneDepositKey) {
+        await this.deployFromOne(eth1Wallets[0], blsWallets, options, logger, abi, provider)
+    } else {
+        await this.deployFromMany(eth1Wallets, blsWallets, options, logger, abi, provider)
+    }
+  }
+
+  private async deployFromOne(
+      eth1Wallet: ethers.Wallet,
+      blsWallets: IBLSKey[],
+      options: IDepositCommandOptions,
+      logger: ILogger,
+      abi: any,
+      provider: JsonRpcProvider
+  ): Promise<void> {
+      let nonce = await eth1Wallet.getTransactionCount();
+      await Promise.all(
+          blsWallets.map(async (blsWallet: IBLSKey, i: number) => {
+              try {
+                  i > 0 ? nonce += 1 : null; // hack: first round nonce will be incorrect
+                  const hash =
+                      // @ts-ignore
+                      await (new Eth1Wallet(eth1Wallet.privateKey, abi, config, logger, provider))
+                          .submitValidatorDeposit(
+                              options.contract,
+                              ethers.utils.parseEther(options.value),
+                              blsWallet.signing,
+                              blsWallet.withdrawal,
+                              nonce
+                          );
+                  logger.info(
+                      `Successfully deposited ${options.value} ETH from ${eth1Wallet.address} 
+            to deposit contract. Tx hash: ${hash}`
+                  );
+              } catch (e) {
+                  throw new CliError(
+                      `Failed to make deposit for account ${eth1Wallet.address}. Reason: ${e.message}`
+                  );
+              }
+          })
+      );
+  }
+
+  private async deployFromMany(
+      eth1Wallets: ethers.Wallet[],
+      blsWallets: IBLSKey[],
+      options: IDepositCommandOptions, 
+      logger: ILogger,
+      abi: any,
+      provider: JsonRpcProvider
+    ): Promise<void> {
     await Promise.all(
       eth1Wallets.map(async (eth1Wallet: ethers.Wallet, i: number) => {
-        try {
-          const hash =
-              // @ts-ignore
-              await (new Eth1Wallet(eth1Wallet.privateKey, abi, config, logger, provider))
-                .submitValidatorDeposit(
-                  options.contract, 
-                  ethers.utils.parseEther(options.value),
-                  blsWallets[i].signing,
-                  blsWallets[i].withdrawal
-                );
-          logger.info(
-            `Successfully deposited ${options.value} ETH from ${eth1Wallet.address} 
+          try {
+              const nonce = await eth1Wallet.getTransactionCount();
+              const hash =
+                  // @ts-ignore
+                  await (new Eth1Wallet(eth1Wallet.privateKey, abi, config, logger, provider))
+                      .submitValidatorDeposit(
+                          options.contract,
+                          ethers.utils.parseEther(options.value),
+                          blsWallets[i].signing,
+                          blsWallets[i].withdrawal,
+                          nonce
+                      );
+              logger.info(
+                  `Successfully deposited ${options.value} ETH from ${eth1Wallet.address} 
             to deposit contract. Tx hash: ${hash}`
-          );
-        } catch (e) {
-          throw new CliError(
-            `Failed to make deposit for account ${eth1Wallet.address}. Reason: ${e.message}`
-          );
-        }
+              );
+          } catch (e) {
+              throw new CliError(
+                  `Failed to make deposit for account ${eth1Wallet.address}. Reason: ${e.message}`
+              );
+          }
       })
     );
   }

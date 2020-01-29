@@ -50,7 +50,8 @@ export class Eth1Wallet {
     address: string, 
     value: BigNumber, 
     signingKey: PrivateKey, 
-    withdrawalKey: PrivateKey
+    withdrawalKey: PrivateKey,
+    nonce: number
   ): Promise<string> {
     const amount = BigInt(value.toString()) / 1000000000n;
 
@@ -71,11 +72,15 @@ export class Eth1Wallet {
 
     depositData.signature = bls.sign(
       signingKey.toBytes(),
-      hashTreeRoot(this.config.types.DepositMessage, depositData),
+      hashTreeRoot(this.config.types.DepositData, depositData),
       Buffer.from([0, 0, 0, DomainType.DEPOSIT])
     );
 
     const depositDataRoot = hashTreeRoot(this.config.types.DepositData, depositData);
+    
+    this.logger.info(
+        `Preparing submission :: eth1 address: ${this.wallet.address} eth1 nonce: ${nonce} blsWallet: ${signingKey.toPublicKey().toHexString()}`
+    )
 
     // Send TX
     const tx: ContractTransaction = await contract.deposit(
@@ -83,10 +88,14 @@ export class Eth1Wallet {
       withdrawalCredentials,
       depositData.signature,
       depositDataRoot,
-      {value}
+      {
+          value,
+          nonce
+      }
     );
+
     await tx.wait();
-    return tx.hash || "";
+    return tx.hash;
   }
 
 }
