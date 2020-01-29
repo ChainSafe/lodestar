@@ -27,7 +27,7 @@ export function processJustificationAndFinalization(
   // Process justifications
   state.previousJustifiedCheckpoint = state.currentJustifiedCheckpoint;
   // Rotate the justification bitfield up one epoch to make room for the current epoch
-  for (let i = 1; i < bits.length; i++) {
+  for (let i = bits.length - 1; i >= 1; i--) {
     bits[i] = bits[i-1];
   }
   bits[0] = false;
@@ -51,8 +51,9 @@ export function processJustificationAndFinalization(
       epoch: currentEpoch,
       root: getBlockRoot(config, state, currentEpoch),
     };
-    state.justificationBits[0] = true;
+    bits[0] = true;
   }
+  state.justificationBits = bits;
 
   // Process finalizations
   // The 2nd/3rd/4th most recent epochs are all justified, the 2nd using the 4th as source
