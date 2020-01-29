@@ -175,6 +175,19 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
     throw new Error("Not implemented");
   }
 
+  getByteBits(target: ByteArrayBacking, offset: number): boolean[] {
+    const byte = target[offset];
+    if (!byte) {
+      return [
+        false, false, false, false,
+        false, false, false, false,
+      ];
+    }
+    const bits = Array.prototype.map.call(byte.toString(2), (c) => c === "1" ? true : false).reverse() as boolean[];
+    bits.push(...Array.from({length: 8 - bits.length}, () => false));
+    return bits;
+  }
+
   /**
    * Serialized byte length
    */

@@ -28,16 +28,23 @@ export class BitVectorStructuralHandler extends BasicVectorStructuralHandler<Bit
   }
   fromBytes(data: Uint8Array, start: number, end: number): BitVector {
     if ((end - start) !== this.size(null)) {
-      throw new Error("Invalid bitvector, length not equal to vector length");
+      throw new Error("Invalid bitvector: length not equal to vector length");
     }
     const value = [];
-    const toBool = (c: string): boolean => c === "1" ? true : false;
+    const getByteBits = this._type.byteArray.getByteBits;
     for (let i = start; i < end-1; i++) {
-      value.push(...Array.prototype.map.call(data[i].toString(2), toBool).reverse());
+      value.push(...getByteBits(data, i));
     }
-    const lastByte = data[end-1];
-    const lastIndex = (this._type.length-1) % 8;
-    value.push(...Array.prototype.map.call(lastByte.toString(2), toBool).reverse().slice(0, lastIndex + 1));
+    const lastBitLength = (this._type.length) % 8;
+    if (!lastBitLength) { // vector takes up the whole byte, no need for checks
+      value.push(...getByteBits(data, end - 1));
+    } else {
+      const lastBits = this._type.byteArray.getByteBits(data, end - 1);
+      if (lastBits.slice(lastBitLength).some(b => b)) {
+        throw new Error("Invalid bitvector: nonzero bits past length");
+      }
+      value.push(...lastBits.slice(0, lastBitLength));
+    }
     return value as BitVector;
   }
   toBytes(value: BitVector, output: Uint8Array, offset: number): number {
