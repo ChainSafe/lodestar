@@ -91,7 +91,8 @@ export class Eth1Wallet {
       depositDataRoot,
       {
         value,
-        nonce
+        nonce,
+        gasLimit: 400000
       }
     );
 

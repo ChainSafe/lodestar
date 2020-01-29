@@ -135,7 +135,7 @@ export class DepositCommand implements ICliCommand {
     blsWallets: IBLSKey[],
     options: IDepositCommandOptions,
     logger: ILogger,
-    abi: string | ethers.utils.ParamType[],
+    abi: any,
     provider: JsonRpcProvider
   ): Promise<void> {
     let nonce = await eth1Wallet.getTransactionCount();
@@ -143,6 +143,7 @@ export class DepositCommand implements ICliCommand {
       blsWallets.map(async (blsWallet: IBLSKey, i: number) => {
         try {
           i > 0 ? nonce += 1 : null; // hack: first round nonce will be incorrect
+          logger.info(`Deposit #${i+1}`);
           const hash =
                       // @ts-ignore
                       await (new Eth1Wallet(eth1Wallet.privateKey, abi, config, logger, provider))
@@ -154,7 +155,7 @@ export class DepositCommand implements ICliCommand {
                           nonce
                         );
           logger.info(
-            `Successfully deposited ${options.value} ETH from ${eth1Wallet.address} 
+            `#${i + 1} Successfully deposited ${options.value} ETH from ${eth1Wallet.address} 
             to deposit contract. Tx hash: ${hash}`
           );
         } catch (e) {
@@ -171,7 +172,7 @@ export class DepositCommand implements ICliCommand {
     blsWallets: IBLSKey[],
     options: IDepositCommandOptions, 
     logger: ILogger,
-    abi: string | ethers.utils.ParamType[],
+    abi: any,
     provider: JsonRpcProvider
   ): Promise<void> {
     await Promise.all(
