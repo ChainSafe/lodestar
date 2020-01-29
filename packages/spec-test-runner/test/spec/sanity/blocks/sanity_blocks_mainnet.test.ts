@@ -1,7 +1,7 @@
 import {join} from "path";
 import {expect} from "chai";
 import {equals} from "@chainsafe/ssz";
-import {BeaconBlock, BeaconState} from "@chainsafe/eth2.0-types";
+import {BeaconState, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {stateTransition} from "@chainsafe/eth2.0-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
@@ -16,7 +16,7 @@ describeDirectorySpecTest<IBlockSanityTestCase, BeaconState>(
     let state = testcase.pre;
     const verify = (!!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n);
     for(let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-      state = stateTransition(config, state, testcase[`blocks_${i}`] as BeaconBlock, verify, verify, verify);
+      state = stateTransition(config, state, testcase[`blocks_${i}`] as SignedBeaconBlock, verify, verify, verify);
     }
     return state;
   },
@@ -43,7 +43,7 @@ describeDirectorySpecTest<IBlockSanityTestCase, BeaconState>(
 function generateBlocksSZZTypeMapping(n: number, config: IBeaconConfig): object {
   const blocksMapping:any = {};
   for(let i = 0; i<n; i++) {
-    blocksMapping[`blocks_${i}`] = config.types.BeaconBlock;
+    blocksMapping[`blocks_${i}`] = config.types.SignedBeaconBlock;
   }
   return blocksMapping;
 }
