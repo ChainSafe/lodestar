@@ -21,7 +21,7 @@ describeDirectorySpecTest<IProcessVoluntaryExitTestCase, BeaconState>(
       pre: config.types.BeaconState,
       post: config.types.BeaconState,
       // eslint-disable-next-line @typescript-eslint/camelcase
-      voluntary_exit: config.types.VoluntaryExit,
+      voluntary_exit: config.types.SignedVoluntaryExit,
     },
     timeout: 100000000,
     shouldError: testCase => !testCase.post,

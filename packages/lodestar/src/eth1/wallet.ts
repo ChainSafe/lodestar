@@ -25,18 +25,18 @@ export class Eth1Wallet {
   private logger: ILogger;
 
   public constructor(
-    privateKey: string,
+    eth1PrivateKey: string,
     contractAbi: string|ParamType[],
     config: IBeaconConfig,
     logger: ILogger,
-    provider?: Provider
+    provider?: Provider,
   ) {
     this.config = config;
     this.logger = logger;
     if(!provider) {
       provider = ethers.getDefaultProvider();
     }
-    this.wallet = new Wallet(privateKey, provider);
+    this.wallet = new Wallet(eth1PrivateKey, provider);
     this.contractAbi = contractAbi;
   }
 
@@ -46,15 +46,19 @@ export class Eth1Wallet {
    * @param value amount to wei to deposit on contract
    */
 
-  public async createValidatorDeposit(address: string, value: BigNumber): Promise<string> {
+  public async submitValidatorDeposit(
+    address: string, 
+    value: BigNumber, 
+    signingKey: PrivateKey, 
+    withdrawalKey: PrivateKey
+  ): Promise<string> {
     const amount = BigInt(value.toString()) / 1000000000n;
 
     const contract = new ethers.Contract(address, this.contractAbi, this.wallet);
-    const privateKey = PrivateKey.random();
-    const pubkey = privateKey.toPublicKey().toBytesCompressed();
+    const pubkey = signingKey.toPublicKey().toBytesCompressed();
     const withdrawalCredentials = Buffer.concat([
       this.config.params.BLS_WITHDRAWAL_PREFIX_BYTE,
-      hash(pubkey).slice(1),
+      hash(withdrawalKey.toPublicKey().toBytesCompressed()).slice(1),
     ]);
 
     // Create deposit data
@@ -66,23 +70,23 @@ export class Eth1Wallet {
     };
 
     depositData.signature = bls.sign(
-      privateKey.toBytes(),
+      signingKey.toBytes(),
       hashTreeRoot(this.config.types.DepositMessage, depositData),
       Buffer.from([0, 0, 0, DomainType.DEPOSIT])
     );
+
+    const depositDataRoot = hashTreeRoot(this.config.types.DepositData, depositData);
+
     // Send TX
-    try {
-      const tx: ContractTransaction = await contract.deposit(
-        pubkey,
-        withdrawalCredentials,
-        depositData.signature,
-        {value});
-      await tx.wait();
-      return tx.hash || "";
-    } catch(e) {
-      this.logger.error(e.message);
-      return "";
-    }
+    const tx: ContractTransaction = await contract.deposit(
+      pubkey,
+      withdrawalCredentials,
+      depositData.signature,
+      depositDataRoot,
+      {value}
+    );
+    await tx.wait();
+    return tx.hash || "";
   }
 
 }
