@@ -74,11 +74,15 @@ export class Eth1Wallet {
       hashTreeRoot(this.config.types.DepositMessage, depositData),
       Buffer.from([0, 0, 0, DomainType.DEPOSIT])
     );
+
+    const depositDataRoot = hashTreeRoot(this.config.types.DepositData, depositData);
+
     // Send TX
     const tx: ContractTransaction = await contract.deposit(
       pubkey,
       withdrawalCredentials,
       depositData.signature,
+      depositDataRoot,
       {value}
     );
     await tx.wait();
