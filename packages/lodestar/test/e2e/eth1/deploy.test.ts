@@ -8,6 +8,7 @@ import defaults from "../../../src/eth1/dev/options";
 import {PrivateEth1Network} from "../../../src/eth1/dev";
 import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {sleep} from "../../utils/sleep";
+import { PrivateKey } from "@chainsafe/bls";
 
 describe("Eth1Notifier - using deployed contract", () => {
 
@@ -66,7 +67,7 @@ describe("Eth1Notifier - using deployed contract", () => {
     eth1Notifier.on("deposit", cb);
 
 
-    await wallet.createValidatorDeposit(depositContractAddress, ethers.utils.parseEther("32.0"));
+    await wallet.submitValidatorDeposit(depositContractAddress, ethers.utils.parseEther("32.0"), PrivateKey.random(), PrivateKey.random());
     await sleep(300);
     assert(cb.calledOnce, "deposit event did not fire");
   });

@@ -38,11 +38,14 @@ describe("[CLI] deposit", function() {
         {
           privateKey:eth1Network.accounts()[0],
           logLevel:null,
-          mnemonic:null,
+          mnemonic: eth1Network.mnemonic(),
+          unencryptedKeys: null,
+          unencryptedBlsKeys: null,
+          abi: null,
           node:eth1Network.rpcUrl(),
           value:"32",
           contract:contractAddress,
-          accounts: 10
+          accounts: 1
         }, logger
       )
     ).to.not.be.rejected;
@@ -58,6 +61,9 @@ describe("[CLI] deposit", function() {
           privateKey:null,
           logLevel:null,
           mnemonic:eth1Network.mnemonic(),
+          unencryptedKeys: null,
+          unencryptedBlsKeys: null,
+          abi: null,
           node:eth1Network.rpcUrl(),
           value:"32",
           contract:contractAddress,
