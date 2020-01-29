@@ -3,7 +3,6 @@
  */
 
 import assert from "assert";
-import {equals} from "@chainsafe/ssz";
 
 import {Attestation, BeaconState, PendingAttestation,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -32,7 +31,7 @@ export function processAttestation(
 
   const committee = getBeaconCommittee(config, state, data.slot, data.index);
   assert(
-    attestation.aggregationBits.bitLength === committee.length
+    attestation.aggregationBits.length === committee.length
   );
 
   // Cache pending attestation
@@ -44,10 +43,10 @@ export function processAttestation(
   };
 
   if (data.target.epoch === currentEpoch) {
-    assert(equals(config.types.Checkpoint, data.source, state.currentJustifiedCheckpoint));
+    assert(config.types.Checkpoint.equals(data.source, state.currentJustifiedCheckpoint));
     state.currentEpochAttestations.push(pendingAttestation);
   } else {
-    assert(equals(config.types.Checkpoint, data.source, state.previousJustifiedCheckpoint));
+    assert(config.types.Checkpoint.equals(data.source, state.previousJustifiedCheckpoint));
     state.previousEpochAttestations.push(pendingAttestation);
   }
 

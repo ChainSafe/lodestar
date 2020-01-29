@@ -4,7 +4,7 @@
 
 import assert from "assert";
 import xor from "buffer-xor";
-import {hashTreeRoot, hash} from "@chainsafe/ssz";
+import {hash} from "@chainsafe/ssz";
 import {verify} from "@chainsafe/bls";
 
 import {BeaconBlockBody, BeaconState} from "@chainsafe/eth2.0-types";
@@ -26,11 +26,11 @@ export function processRandao(
   // Verify RANDAO reveal
   assert(!verifySignature || verify(
     proposer.pubkey,
-    hashTreeRoot(config.types.Epoch, currentEpoch),
+    config.types.Epoch.hashTreeRoot(currentEpoch),
     body.randaoReveal,
     getDomain(config, state, DomainType.RANDAO),
   ));
   // Mix it in
   state.randaoMixes[currentEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR] =
-    xor(getRandaoMix(config, state, currentEpoch), hash(body.randaoReveal));
+    xor(Buffer.from(getRandaoMix(config, state, currentEpoch)), Buffer.from(hash(body.randaoReveal)));
 }

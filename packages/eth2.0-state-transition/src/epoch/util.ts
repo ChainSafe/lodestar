@@ -30,9 +30,11 @@ export function getMatchingSourceAttestations(
 ): PendingAttestation[] {
   const currentEpoch = getCurrentEpoch(config, state);
   assert(epoch === currentEpoch || epoch === getPreviousEpoch(config, state));
-  return epoch === currentEpoch
-    ? state.currentEpochAttestations
-    : state.previousEpochAttestations;
+  return Array.from(
+    epoch === currentEpoch
+      ? state.currentEpochAttestations
+      : state.previousEpochAttestations
+  );
 }
 
 export function getMatchingTargetAttestations(
@@ -42,7 +44,7 @@ export function getMatchingTargetAttestations(
 ): PendingAttestation[] {
   const blockRoot = getBlockRoot(config, state, epoch);
   return getMatchingSourceAttestations(config, state, epoch)
-    .filter((a) => a.data.target.root.equals(blockRoot));
+    .filter((a) => config.types.Root.equals(a.data.target.root, blockRoot));
 }
 
 export function getMatchingHeadAttestations(
@@ -51,8 +53,10 @@ export function getMatchingHeadAttestations(
   epoch: Epoch
 ): PendingAttestation[] {
   return getMatchingSourceAttestations(config, state, epoch)
-    .filter((a) => a.data.beaconBlockRoot
-      .equals(getBlockRootAtSlot(config, state, a.data.slot)));
+    .filter((a) => config.types.Root.equals(
+      a.data.beaconBlockRoot,
+      getBlockRootAtSlot(config, state, a.data.slot)
+    ));
 }
 
 export function getUnslashedAttestingIndices(

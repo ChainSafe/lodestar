@@ -2,8 +2,6 @@
  * @module chain/stateTransition/block
  */
 
-import {equals} from "@chainsafe/ssz";
-
 import {BeaconBlockBody, BeaconState,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -16,7 +14,7 @@ export function processEth1Data(
   state.eth1DataVotes.push(blockEth1Data);
   let occurances = 0;
   state.eth1DataVotes.forEach((eth1Data) => {
-    if (equals(config.types.Eth1Data, blockEth1Data, eth1Data)) {
+    if (config.types.Eth1Data.equals(blockEth1Data, eth1Data)) {
       occurances++;
     }
   });

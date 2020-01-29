@@ -70,7 +70,7 @@ describe("process block - process operations", function () {
   it("should fail to process operations - proposerSlashings length  exceed maxProposerSlashings ", function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
-    body.proposerSlashings.length = config.params.MAX_PROPOSER_SLASHINGS + 1;
+    body.proposerSlashings = Array.from({length: config.params.MAX_PROPOSER_SLASHINGS + 1}, () => config.types.ProposerSlashing.defaultValue());
     try {
       processOperations(config, state, body);
       expect.fail();
@@ -83,7 +83,7 @@ describe("process block - process operations", function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
     processProposerSlashingStub.returns(0);
-    body.attesterSlashings.length = config.params.MAX_ATTESTER_SLASHINGS + 1;
+    body.attesterSlashings = Array.from({length: config.params.MAX_ATTESTER_SLASHINGS + 1}, () => config.types.AttesterSlashing.defaultValue());
     body.proposerSlashings.push(generateEmptyProposerSlashing());
     try {
       processOperations(config, state, body);
@@ -98,7 +98,7 @@ describe("process block - process operations", function () {
     const body = generateEmptyBlock().body;
     processProposerSlashingStub.returns(0);
     processAttesterSlashingStub.returns(0);
-    body.attestations.length = config.params.MAX_ATTESTATIONS + 1;
+    body.attestations = Array.from({length: config.params.MAX_ATTESTATIONS + 1}, () => config.types.Attestation.defaultValue());
     body.proposerSlashings.push(generateEmptyProposerSlashing());
     body.attesterSlashings.push(generateEmptyAttesterSlashing());
 
@@ -115,7 +115,7 @@ describe("process block - process operations", function () {
   it("should fail to process operations - deposit length  exceed maxDeposit", function () {
     const state = generateState();
     const body = generateEmptyBlock().body;
-    body.deposits.length = config.params.MAX_DEPOSITS + 1;
+    body.deposits = Array.from({length: config.params.MAX_DEPOSITS + 1}, () => config.types.Deposit.defaultValue());
 
     try {
       processOperations(config, state, body);
@@ -132,7 +132,7 @@ describe("process block - process operations", function () {
     processAttesterSlashingStub.returns(0);
     processAttestationStub.returns(0);
     processDepositStub.returns(0);
-    body.voluntaryExits.length = config.params.MAX_VOLUNTARY_EXITS + 1;
+    body.voluntaryExits = Array.from({length: config.params.MAX_VOLUNTARY_EXITS + 1}, () => config.types.SignedVoluntaryExit.defaultValue());
     body.proposerSlashings.push(generateEmptyProposerSlashing());
     body.attesterSlashings.push(generateEmptyAttesterSlashing());
     body.attestations.push(generateEmptyAttestation());

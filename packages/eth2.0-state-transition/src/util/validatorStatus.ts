@@ -3,7 +3,7 @@
  */
 
 import {
-  BeaconState, Epoch, Validator, ValidatorIndex, AttesterSlashing, ProposerSlashing, SignedVoluntaryExit,
+  BeaconState, Validator, ValidatorIndex, AttesterSlashing, ProposerSlashing, SignedVoluntaryExit,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -13,7 +13,6 @@ import {getValidatorChurnLimit, isSlashableValidator, isActiveValidator} from ".
 import {decreaseBalance, increaseBalance} from "./balance";
 import {getBeaconProposerIndex} from "./proposer";
 import {isSlashableAttestationData, isValidIndexedAttestation, getDomain} from ".";
-import {equals, hashTreeRoot} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 
 
@@ -31,13 +30,13 @@ export function initiateValidatorExit(config: IBeaconConfig, state: BeaconState,
   }
 
   // Compute exit queue epoch
-  let exitQueueEpoch = state.validators.reduce((epoch: Epoch, v: Validator) => {
+  let exitQueueEpoch = computeActivationExitEpoch(config, getCurrentEpoch(config, state));
+  state.validators.forEach((v) => {
     if (v.exitEpoch !== FAR_FUTURE_EPOCH) {
-      return Math.max(v.exitEpoch, epoch);
+      exitQueueEpoch = Math.max(v.exitEpoch, exitQueueEpoch);
     }
-    return epoch;
-  }, computeActivationExitEpoch(config, getCurrentEpoch(config, state)));
-  const exitQueueChurn = state.validators
+  });
+  const exitQueueChurn = Array.from(state.validators)
     .filter((v: Validator) => v.exitEpoch === exitQueueEpoch).length;
   if (exitQueueChurn >= getValidatorChurnLimit(config, state)) {
     exitQueueEpoch += 1;
@@ -113,8 +112,7 @@ export function isValidProposerSlashing(
     return false;
   }
   // But the headers are different
-  if (equals(
-    config.types.BeaconBlockHeader,
+  if (config.types.BeaconBlockHeader.equals(
     proposerSlashing.signedHeader1.message,
     proposerSlashing.signedHeader2.message,
   )) {
@@ -130,7 +128,7 @@ export function isValidProposerSlashing(
   }
   const proposalData1Verified = bls.verify(
     proposer.pubkey,
-    hashTreeRoot(config.types.BeaconBlockHeader, proposerSlashing.signedHeader1.message),
+    config.types.BeaconBlockHeader.hashTreeRoot(proposerSlashing.signedHeader1.message),
     proposerSlashing.signedHeader1.signature,
     getDomain(config, state, DomainType.BEACON_PROPOSER, header1Epoch),
   );
@@ -139,7 +137,7 @@ export function isValidProposerSlashing(
   }
   const proposalData2Verified = bls.verify(
     proposer.pubkey,
-    hashTreeRoot(config.types.BeaconBlockHeader, proposerSlashing.signedHeader2.message),
+    config.types.BeaconBlockHeader.hashTreeRoot(proposerSlashing.signedHeader2.message),
     proposerSlashing.signedHeader2.signature,
     getDomain(config, state, DomainType.BEACON_PROPOSER, header2Epoch),
   );
@@ -165,7 +163,7 @@ export function isValidVoluntaryExit(
   // Verify signature
   (!verifySignature || bls.verify(
     validator.pubkey,
-    hashTreeRoot(config.types.VoluntaryExit, signedExit.message),
+    config.types.VoluntaryExit.hashTreeRoot(signedExit.message),
     signedExit.signature,
     getDomain(config, state, DomainType.VOLUNTARY_EXIT, signedExit.message.epoch),
   ));

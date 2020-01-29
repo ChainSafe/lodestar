@@ -33,7 +33,7 @@ export function processRegistryUpdates(config: IBeaconConfig, state: BeaconState
 
   // Queue validators eligible for activation and not dequeued
   // for activation prior to finalized epoch
-  const activationQueue = state.validators.filter((validator) =>
+  const activationQueue = Array.from(state.validators).filter((validator) =>
     validator.activationEligibilityEpoch !== FAR_FUTURE_EPOCH &&
     validator.activationEpoch >= computeActivationExitEpoch(config, state.finalizedCheckpoint.epoch)
   ).sort((a, b) => a.activationEligibilityEpoch - b.activationEligibilityEpoch);

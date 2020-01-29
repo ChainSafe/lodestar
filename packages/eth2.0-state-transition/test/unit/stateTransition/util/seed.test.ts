@@ -21,7 +21,7 @@ describe("getRandaoMix", () => {
       randaoMixes: [Buffer.from([0xAB]), Buffer.from([0xCD])]
     });
     const res = getRandaoMix(config, state, GENESIS_EPOCH);
-    assert(res.equals(Uint8Array.from([0xAB])));
+    assert(Buffer.from(res).equals(Uint8Array.from([0xAB])));
   });
   it("should return second randao mix for GENESIS_EPOCH + 1", () => {
     // Empty state in 2nd epoch
@@ -30,6 +30,6 @@ describe("getRandaoMix", () => {
       randaoMixes: [Buffer.from([0xAB]), Buffer.from([0xCD]), Buffer.from([0xEF])]
     });
     const res = getRandaoMix(config, state, GENESIS_EPOCH + 1);
-    assert(res.equals(Uint8Array.from([0xCD])));
+    assert(Buffer.from(res).equals(Uint8Array.from([0xCD])));
   });
 });

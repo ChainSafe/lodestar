@@ -3,7 +3,6 @@
  */
 
 import assert from "assert";
-import {hashTreeRoot} from "@chainsafe/ssz";
 import {
   BeaconBlock,
   BeaconBlockHeader,
@@ -46,7 +45,7 @@ export function getTemporaryBlockHeader(config: IBeaconConfig, block: BeaconBloc
     parentRoot: block.parentRoot,
     // `state_root` is zeroed and overwritten in the next `process_slot` call
     stateRoot: ZERO_HASH,
-    bodyRoot: hashTreeRoot(config.types.BeaconBlockBody, block.body),
+    bodyRoot: config.types.BeaconBlockBody.hashTreeRoot(block.body),
   };
 }
 
@@ -58,7 +57,7 @@ export function blockToHeader(config: IBeaconConfig, block: BeaconBlock): Beacon
     stateRoot: block.stateRoot,
     slot: block.slot,
     parentRoot: block.parentRoot,
-    bodyRoot: hashTreeRoot(config.types.BeaconBlockBody, block.body),
+    bodyRoot: config.types.BeaconBlockBody.hashTreeRoot(block.body),
   };
 }
 

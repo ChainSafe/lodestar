@@ -1,4 +1,5 @@
 import assert from "assert";
+import {List} from "@chainsafe/ssz";
 import {
   Attestation,
   AttesterSlashing,
@@ -67,7 +68,7 @@ export function processOperations(
     func,
     verifySignatures,
   }: {
-    operations: Operation[];
+    operations: List<Operation>;
     maxOperations: number;
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     func: (config: IBeaconConfig, state: BeaconState, operation: any, verifySignatures: boolean) => void;

@@ -23,7 +23,7 @@ describe("getActiveValidatorIndices", () => {
     const exitEpoch = 10;
     state.validators = Array.from({length: 10},
       () => generateValidator({activation: activationEpoch, exit: exitEpoch }));
-    const allActiveIndices = state.validators.map((_, i) => i);
+    const allActiveIndices = Array.from(state.validators).map((_, i) => i);
     const allInactiveIndices: any = [];
     assert.deepEqual(getActiveValidatorIndices(state, activationEpoch), allActiveIndices);
     assert.deepEqual(getActiveValidatorIndices(state, exitEpoch), allInactiveIndices);

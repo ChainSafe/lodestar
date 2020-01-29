@@ -3,7 +3,6 @@ import {
   AttestationData,
   Epoch,
 } from "@chainsafe/eth2.0-types";
-import { BitList } from "@chainsafe/bit-utils";
 
 /**
  * Generates a fake attestation data for test purposes.
@@ -30,7 +29,7 @@ export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch):
 
 export function generateEmptyAttestation(): Attestation {
   return {
-    aggregationBits: BitList.fromBitfield(Buffer.alloc(8), 64),
+    aggregationBits: Array.from({length: 64}, () => false),
     data: {
       slot: 1,
       index: 0,

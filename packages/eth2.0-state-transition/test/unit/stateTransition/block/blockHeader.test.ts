@@ -1,6 +1,5 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {hashTreeRoot} from "@chainsafe/ssz";
 import {describe, beforeEach, afterEach} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {EMPTY_SIGNATURE} from "../../../../src/constants";
@@ -56,7 +55,7 @@ describe("process block - block header", function () {
     state.validators.push(generateValidator({activation: 0, exit: 10, slashed: true}));
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.parentRoot = hashTreeRoot(config.types.BeaconBlockHeader, state.latestBlockHeader);
+    block.parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),
       slot: 5,
@@ -76,7 +75,7 @@ describe("process block - block header", function () {
     state.validators.push(generateValidator({activation: 0, exit: 10}));
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.parentRoot = hashTreeRoot(config.types.BeaconBlockHeader, state.latestBlockHeader);
+    block.parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),
       slot: 5,

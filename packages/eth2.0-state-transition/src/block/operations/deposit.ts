@@ -3,7 +3,6 @@
  */
 
 import assert from "assert";
-import {hashTreeRoot} from "@chainsafe/ssz";
 import {verify} from "@chainsafe/bls";
 import {BeaconState, Deposit, Validator} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -21,8 +20,8 @@ export function processDeposit(
 ): void {
   // Verify the Merkle branch
   assert(verifyMerkleBranch(
-    hashTreeRoot(config.types.DepositData, deposit.data),
-    deposit.proof,
+    config.types.DepositData.hashTreeRoot(deposit.data),
+    Array.from(deposit.proof),
     DEPOSIT_CONTRACT_TREE_DEPTH + 1,
     state.eth1DepositIndex,
     state.eth1Data.depositRoot,
@@ -33,14 +32,14 @@ export function processDeposit(
 
   const pubkey = deposit.data.pubkey;
   const amount = deposit.data.amount;
-  const validatorIndex = state.validators.findIndex((v) => v.pubkey.equals(pubkey));
+  const validatorIndex = Array.from(state.validators).findIndex((v) => config.types.BLSPubkey.equals(v.pubkey, pubkey));
   if (validatorIndex === -1) {
     // Verify the deposit signature (proof of possession)
     // Note: The deposit contract does not check signatures.
     // Note: Deposits are valid across forks, thus the deposit domain is retrieved directly from `computeDomain`.
     if (!verify(
       pubkey,
-      hashTreeRoot(config.types.DepositMessage, deposit.data),
+      config.types.DepositMessage.hashTreeRoot(deposit.data),
       deposit.data.signature,
       computeDomain(DomainType.DEPOSIT),
     )) {

@@ -29,7 +29,7 @@ export function getAttestationDeltas(config: IBeaconConfig, state: BeaconState):
   const totalBalance = getTotalActiveBalance(config, state);
   const rewards = Array.from({length: state.validators.length}, () => 0n);
   const penalties = Array.from({length: state.validators.length}, () => 0n);
-  const eligibleValidatorIndices = state.validators
+  const eligibleValidatorIndices = Array.from(state.validators)
     .reduce((indices: ValidatorIndex[], v, index) => {
       if (isActiveValidator(v, previousEpoch)
         || (v.slashed && previousEpoch + 1 < v.withdrawableEpoch)) {
