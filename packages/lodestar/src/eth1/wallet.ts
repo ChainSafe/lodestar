@@ -69,9 +69,11 @@ export class Eth1Wallet {
       signature: Buffer.alloc(96)
     };
 
+    const depositDataRoot = hashTreeRoot(this.config.types.DepositMessage, depositData);
+
     depositData.signature = bls.sign(
       signingKey.toBytes(),
-      hashTreeRoot(this.config.types.DepositMessage, depositData),
+      depositDataRoot,
       Buffer.from([0, 0, 0, DomainType.DEPOSIT])
     );
     // Send TX
@@ -79,6 +81,7 @@ export class Eth1Wallet {
       pubkey,
       withdrawalCredentials,
       depositData.signature,
+      depositDataRoot,
       {value}
     );
     await tx.wait();
