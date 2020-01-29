@@ -3,7 +3,7 @@ import {join} from "path";
 import {expect} from "chai";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {BeaconState, Deposit, uint64, Root} from "@chainsafe/eth2.0-types";
+import {BeaconState, Deposit, Uint64, Root} from "@chainsafe/eth2.0-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar/lib/chain/genesis/genesis";
 
@@ -11,9 +11,9 @@ import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 interface IGenesisInitSpecTest {
   eth1_block_hash: Root;
-  eth1_timestamp: uint64;
+  eth1_timestamp: Uint64;
   meta: {
-    depositsCount: uint64;
+    depositsCount: Uint64;
   };
   state: BeaconState;
   [k: string]: Deposit|unknown|null|undefined;
