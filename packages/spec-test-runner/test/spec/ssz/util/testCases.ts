@@ -5,6 +5,7 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {expect} from "chai";
 
 import {IBaseSSZStaticTestCase} from "../type";
+import { CompositeType } from "@chainsafe/ssz";
 
 export const TEST_CASE_LOCATION = "../../../../../../node_modules/@chainsafe/eth2-spec-tests";
 
@@ -14,7 +15,7 @@ interface IResult {
 }
 
 export function testStatic(type: keyof IBeaconSSZTypes): void {
-  const Type = safeType(config.types[type]);
+  const Type = safeType(config.types[type]) as CompositeType<any>;
   [
     "ssz_lengthy",
     "ssz_max",
@@ -29,6 +30,9 @@ export function testStatic(type: keyof IBeaconSSZTypes): void {
       `SSZ - ${type} ${caseName} minimal`,
       join(__dirname, `${TEST_CASE_LOCATION}/tests/minimal/phase0/ssz_static/${type}/${caseName}`),
       (testcase) => {
+        const tree = testcase.serialized;
+        //debugger;
+        // @ts-ignore
         const serialized = Type.serialize(testcase.serialized);
         const root = Type.hashTreeRoot(testcase.serialized);
         return {
@@ -60,7 +64,21 @@ export function testStatic(type: keyof IBeaconSSZTypes): void {
             console.log("serialize actual  ", Buffer.from(actual.serialized).toString('hex'))
             console.log("hashTreeRoot expected", expected.root.toString('hex'))
             console.log("hashTreeRoot actual  ", Buffer.from(actual.root).toString('hex'))
+            // @ts-ignore
+            const structural = Type.deserialize(testCase.serialized_raw)
+            const tree = testCase.serialized
+            // @ts-ignore
+              /*
+            const bbroot = Type.fields[2][1]
+            console.log("s bbroot hash", bbroot.hashTreeRoot(structural.beaconBlockRoot))
+            console.log("t bbroot hash", bbroot.hashTreeRoot(tree.beaconBlockRoot))
+               */
+            debugger;
           }
+          // @ts-ignore
+          const structural = Type.deserialize(testCase.serialized_raw)
+          expect(expected.serialized.equals(Type.serialize(structural)))
+          expect(expected.root.equals(Type.hashTreeRoot(structural)))
           expect(expected.serialized.equals(actual.serialized), "incorrect serialize").to.be.true;
           expect(expected.root.equals(actual.root), "incorrect hashTreeRoot").to.be.true;
         },

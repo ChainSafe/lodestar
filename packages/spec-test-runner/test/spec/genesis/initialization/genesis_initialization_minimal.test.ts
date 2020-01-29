@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/camelcase */
 import {join} from "path";
 import {expect} from "chai";
-import {equals} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BeaconState, Deposit, uint64, Root} from "@chainsafe/eth2.0-types";
@@ -45,7 +44,7 @@ describeDirectorySpecTest<IGenesisInitSpecTest, BeaconState>(
     timeout: 60000,
     getExpected: (testCase => testCase.state),
     expectFunc: (testCase, expected, actual) => {
-      expect(equals(config.types.BeaconState, actual, expected)).to.be.true;
+      expect(config.types.BeaconState.equals(actual, expected)).to.be.true;
     }
   }
 );
