@@ -30,6 +30,7 @@ interface IDepositCommandOptions {
   contract: string;
   accounts: number;
   oneDepositKey: boolean;
+  range: string;
 }
 
 interface IJsonKeyFile {
@@ -76,6 +77,7 @@ export class DepositCommand implements ICliCommand {
       .option("-u, --unencrypted-keys [path]", "Path to json file containing unencrypted eth1 keys")
       .option("--unencrypted-bls-keys [path]", "Path to json file containing hex encoded bls keys")
       .option("--one-deposit-key", "Use one key to make all your deposits")
+      .option("--range [range]", "BLS range of keys to use")
       .action( async (options) => {
         const logger: ILogger = new WinstonLogger({
           level: options.logLevel,
@@ -138,9 +140,12 @@ export class DepositCommand implements ICliCommand {
     abi: any,
     provider: JsonRpcProvider
   ): Promise<void> {
+    const start = Number(options.range.split(",")[0]);
+    const end = Number(options.range.split(",")[1]);
+    const arr = new Array(end-start)
     let nonce = await eth1Wallet.getTransactionCount();
     await Promise.all(
-      blsWallets.map(async (blsWallet: IBLSKey, i: number) => {
+      arr.fill(0).map(async (_, i: number) => {
         try {
           i > 0 ? nonce += 1 : null; // hack: first round nonce will be incorrect
           logger.info(`Deposit #${i+1}`);
@@ -150,8 +155,8 @@ export class DepositCommand implements ICliCommand {
                         .submitValidatorDeposit(
                           options.contract,
                           ethers.utils.parseEther(options.value),
-                          blsWallet.signing,
-                          blsWallet.withdrawal,
+                          blsWallets[start + i].signing,
+                          blsWallets[start + i].withdrawal,
                           nonce
                         );
           logger.info(
