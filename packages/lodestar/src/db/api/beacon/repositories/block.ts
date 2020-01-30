@@ -61,7 +61,7 @@ export class BlockRepository extends BulkRepository<SignedBeaconBlock> {
   public async storeBadBlock(root: Root): Promise<void> {
     return await this.db.put(
       encodeKey(Bucket.invalidBlock, root),
-      this.config.types.bool.serialize(true)
+      this.config.types.Boolean.serialize(true)
     );
   }
 
