@@ -8,13 +8,12 @@ import {deserializeGossipMessage, getGossipTopic} from "../utils";
 import {GossipEvent} from "../constants";
 import {AggregateAndProof} from "@chainsafe/eth2.0-types";
 import {toHex} from "@chainsafe/eth2.0-utils";
-import {serialize} from "@chainsafe/ssz";
 import {promisify} from "es6-promisify";
 
 export function getIncomingAggregateAndProofHandler(validator: IGossipMessageValidator): GossipHandlerFn {
   return async function handleIncomingAggregateAndProof(this: Gossip, msg: IGossipMessage): Promise<void> {
     try {
-      const aggregateAndProof = deserializeGossipMessage<AggregateAndProof>(msg, this.config.types.AggregateAndProof);
+      const aggregateAndProof = deserializeGossipMessage<AggregateAndProof>(this.config.types.AggregateAndProof, msg);
       this.logger.verbose(
         `Received AggregateAndProof from validator #${aggregateAndProof.aggregatorIndex}`+
           ` for target ${toHex(aggregateAndProof.aggregate.data.target.root)}`
@@ -32,11 +31,11 @@ export async function publishAggregatedAttestation(this: Gossip, aggregateAndPro
   await Promise.all([
     promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
       getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF),
-      serialize(this.config.types.AggregateAndProof, aggregateAndProof)
+      this.config.types.AggregateAndProof.serialize(aggregateAndProof)
     ),
     //to be backward compatible
     promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
-      getGossipTopic(GossipEvent.ATTESTATION), serialize(this.config.types.Attestation, aggregateAndProof.aggregate)
+      getGossipTopic(GossipEvent.ATTESTATION), this.config.types.Attestation.serialize(aggregateAndProof.aggregate)
     )
   ]);
   this.logger.verbose(

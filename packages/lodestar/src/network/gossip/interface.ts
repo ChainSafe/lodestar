@@ -38,7 +38,7 @@ export interface IGossipModules {
 }
 
 export interface IGossipSub extends EventEmitter {
-  publish(topic: string, data: Buffer, cb: (err: unknown) => void): void;
+  publish(topic: string, data: Uint8Array, cb: (err: unknown) => void): void;
   start(cb: (err: unknown) => void): void;
   stop(cb: (err: unknown) => void): void;
   subscribe(topic: string): void;
@@ -65,5 +65,5 @@ export interface IGossipMessageValidator {
 }
 
 export interface IGossipMessage {
-  data: Buffer;
+  data: Uint8Array;
 }
