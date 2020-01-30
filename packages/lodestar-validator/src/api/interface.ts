@@ -36,6 +36,8 @@ export interface IApiClient extends ApiClientEventEmitter {
    */
   disconnect(): Promise<void>;
 
+  getCurrentSlot(): Slot;
+
   /**
    * Invokes callback on new slot.
    * Depending on implementation it will poll for new slot or getting notified(Websockets)
