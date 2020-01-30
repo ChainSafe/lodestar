@@ -1,3 +1,4 @@
+import {Json} from "../../interface";
 import {CompositeType} from "../../types";
 import {merkleize} from "../../util/compat";
 
@@ -61,5 +62,11 @@ export class StructuralHandler<T extends object> {
   }
   hashTreeRoot(target: T): Uint8Array {
     return merkleize(this.chunks(target), this._type.chunkCount());
+  }
+  fromJson(data: Json): T {
+    throw new Error("Not implemented");
+  }
+  toJson(value: T): Json {
+    throw new Error("Not implemented");
   }
 }

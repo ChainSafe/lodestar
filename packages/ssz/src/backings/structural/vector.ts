@@ -1,4 +1,4 @@
-import {Vector} from "../../interface";
+import {Vector, Json} from "../../interface";
 import {BasicVectorType, CompositeVectorType} from "../../types";
 import {BasicArrayStructuralHandler, CompositeArrayStructuralHandler} from "./array";
 
@@ -31,6 +31,16 @@ export class BasicVectorStructuralHandler<T extends Vector<unknown>> extends Bas
     // @ts-ignore
     super.assertValidValue(value);
   }
+  fromJson(data: Json): T {
+    if (!Array.isArray(data)) {
+      throw new Error("Invalid JSON vector: expected an Array");
+    }
+    const expectedLength = this._type.length;
+    if (data.length !== expectedLength) {
+      throw new Error(`Invalid JSON vector length: expected ${expectedLength}, actual ${data.length}`);
+    }
+    return super.fromJson(data);
+  }
 }
 
 export class CompositeVectorStructuralHandler<T extends Vector<object>> extends CompositeArrayStructuralHandler<T> {
@@ -62,5 +72,15 @@ export class CompositeVectorStructuralHandler<T extends Vector<object>> extends 
     }
     // @ts-ignore
     super.assertValidValue(value);
+  }
+  fromJson(data: Json): T {
+    if (!Array.isArray(data)) {
+      throw new Error("Invalid JSON vector: expected an Array");
+    }
+    const expectedLength = this._type.length;
+    if (data.length !== expectedLength) {
+      throw new Error(`Invalid JSON vector length: expected ${expectedLength}, actual ${data.length}`);
+    }
+    return super.fromJson(data);
   }
 }

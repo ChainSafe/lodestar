@@ -1,4 +1,4 @@
-import {Vector} from "../../interface";
+import {Vector, Json} from "../../interface";
 import {ByteVectorType} from "../../types";
 import {BasicVectorStructuralHandler} from "./vector";
 
@@ -23,5 +23,18 @@ export class ByteVectorStructuralHandler extends BasicVectorStructuralHandler<Ve
   toBytes(value: Vector<number>, output: Uint8Array, offset: number): number {
     output.set(value, offset);
     return offset + this._type.length;
+  }
+  fromJson(data: Json): Vector<number> {
+    if (typeof data !== "string") {
+      throw new Error("Invalid JSON byte vector: expected hex string");
+    }
+    const value = this._type.byteArray.fromHexString(data);
+    if (value.length !== this._type.length) {
+      throw new Error(`Invalid JSON vector length: expected ${this._type.length}, actual: ${value.length}`);
+    }
+    return value;
+  }
+  toJson(value: Vector<number>): Json {
+    return this._type.byteArray.toHexString(value as Uint8Array);
   }
 }

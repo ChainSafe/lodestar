@@ -21,3 +21,11 @@ export type BitList = List<boolean>;
 export interface ObjectLike {
   [fieldName: string]: any;
 }
+
+export type Json =
+    | string
+    | number
+    | boolean
+    | null
+    | { [property: string]: Json }
+    | Json[];

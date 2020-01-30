@@ -1,4 +1,4 @@
-import {ObjectLike} from "../../interface";
+import {ObjectLike, Json} from "../../interface";
 import {ContainerType, CompositeType, Type} from "../../types";
 import {StructuralHandler} from "./abstract";
 
@@ -151,5 +151,25 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
     const fieldName = Object.keys(this._type.fields)[index];
     const fieldType = this._type.fields[fieldName];
     return fieldType.hashTreeRoot(value[fieldName]);
+  }
+  fromJson(data: Json): T {
+    if (typeof data !== "object") {
+      throw new Error("Invalid JSON container: expected Object");
+    }
+    const value = {} as T;
+    Object.entries(this._type.fields).forEach(([fieldName, fieldType]) => {
+      if ((data as Record<string, Json>)[fieldName] === undefined) {
+        throw new Error(`Invalid JSON container field: expected field ${fieldName} is undefined`);
+      }
+      value[fieldName as keyof T] = fieldType.fromJson((data as Record<string, Json>)[fieldName]);
+    });
+    return value;
+  }
+  toJson(value: T): Json {
+    const data = {} as Record<string, Json>;
+    Object.entries(this._type.fields).forEach(([fieldName, fieldType]) => {
+      data[fieldName] = fieldType.toJson(value[fieldName as keyof T]);
+    });
+    return data;
   }
 }

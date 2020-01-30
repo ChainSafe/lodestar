@@ -1,4 +1,4 @@
-import {List} from "../../interface";
+import {List, Json} from "../../interface";
 import {BasicListType, CompositeListType} from "../../types";
 import {mixInLength} from "../../util/compat";
 import {BasicArrayStructuralHandler, CompositeArrayStructuralHandler} from "./array";
@@ -27,6 +27,16 @@ export class BasicListStructuralHandler<T extends List<unknown>> extends BasicAr
   hashTreeRoot(value: T): Uint8Array {
     return mixInLength(super.hashTreeRoot(value), value.length);
   }
+  fromJson(data: Json): T {
+    if (!Array.isArray(data)) {
+      throw new Error("Invalid JSON list: expected an Array");
+    }
+    const maxLength = this._type.limit;
+    if (data.length > maxLength) {
+      throw new Error(`Invalid JSON list: length ${data.length} greater than limit ${maxLength}`);
+    }
+    return super.fromJson(data);
+  }
 }
 
 export class CompositeListStructuralHandler<T extends List<object>> extends CompositeArrayStructuralHandler<T> {
@@ -53,5 +63,15 @@ export class CompositeListStructuralHandler<T extends List<object>> extends Comp
   }
   hashTreeRoot(value: T): Uint8Array {
     return mixInLength(super.hashTreeRoot(value), value.length);
+  }
+  fromJson(data: Json): T {
+    if (!Array.isArray(data)) {
+      throw new Error("Invalid JSON list: expected an Array");
+    }
+    const maxLength = this._type.limit;
+    if (data.length > maxLength) {
+      throw new Error(`Invalid JSON list: length ${data.length} greater than limit ${maxLength}`);
+    }
+    return super.fromJson(data);
   }
 }

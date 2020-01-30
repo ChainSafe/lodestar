@@ -1,3 +1,4 @@
+import {Json} from "../../interface";
 import {
   BackedValue, isBackedValue,
   StructuralHandler, TreeHandler,
@@ -107,5 +108,19 @@ export class BasicType<T> {
     const output = new Uint8Array(32);
     this.toBytes(value, output, 0);
     return output;
+  }
+
+  /**
+   * Convert from JSON-serializable object
+   */
+  fromJson(data: Json): T {
+    throw new Error("Not implemented");
+  }
+
+  /**
+   * Convert to JSON-serializable object
+   */
+  toJson(value: T): Json {
+    throw new Error("Not implemented");
   }
 }

@@ -1,3 +1,4 @@
+import {Json} from "../../interface";
 import {BasicType} from "./abstract";
 
 export interface IUintOptions {
@@ -55,6 +56,13 @@ export class NumberUintType extends UintType<number> {
     }
     return output;
   }
+  fromJson(data: Json): number {
+    this.assertValidValue(data);
+    return data;
+  }
+  toJson(value: number): Json {
+    return value;
+  }
 }
 
 export class BigIntUintType extends UintType<bigint> {
@@ -83,5 +91,13 @@ export class BigIntUintType extends UintType<bigint> {
       output += BigInt(data[offset + i]) << BigInt(8 * i);
     }
     return output;
+  }
+  fromJson(data: Json): bigint {
+    const value = BigInt(data);
+    this.assertValidValue(value);
+    return value;
+  }
+  toJson(value: bigint): Json {
+    return value.toString();
   }
 }

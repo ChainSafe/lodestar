@@ -190,6 +190,20 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
     return bits;
   }
 
+  toHexString(target: ByteArrayBacking): string {
+    return "0x" + [...target].map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  fromHexString(data: string): ByteArrayBacking {
+    if (typeof data !== "string") {
+      throw new Error("Expected string");
+    }
+    if (data.length % 2 !== 0) {
+      throw new Error("Expected an even number of characters");
+    }
+    data = data.replace("0x", "");
+    return new Uint8Array(data.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+  }
+
   /**
    * Serialized byte length
    */

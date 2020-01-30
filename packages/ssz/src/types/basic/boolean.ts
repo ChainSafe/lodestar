@@ -1,3 +1,4 @@
+import {Json} from "../../interface";
 import {BasicType} from "./abstract";
 
 export class BooleanType extends BasicType<boolean> {
@@ -40,5 +41,12 @@ export class BooleanType extends BasicType<boolean> {
     } else {
       throw new Error("Invalid boolean value");
     }
+  }
+  fromJson(data: Json): boolean {
+    this.assertValidValue(data);
+    return data;
+  }
+  toJson(value: boolean): Json {
+    return value;
   }
 }

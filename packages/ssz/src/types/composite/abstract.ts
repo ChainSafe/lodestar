@@ -1,3 +1,4 @@
+import {Json} from "../../interface";
 import {
   BackedValue, isBackedValue,
   StructuralHandler, TreeHandler, ByteArrayHandler,
@@ -133,5 +134,19 @@ export class CompositeType<T extends object> {
     } else {
       return this.structural.hashTreeRoot(value);
     }
+  }
+
+  /**
+   * Convert from a JSON-serializable object
+   */
+  fromJson(data: Json): T {
+    return this.structural.fromJson(data);
+  }
+
+  /**
+   * Convert to a JSON-serializable object
+   */
+  toJson(value: T): Json {
+    return this.structural.toJson(value);
   }
 }

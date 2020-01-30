@@ -1,4 +1,4 @@
-import {ArrayLike} from "../../interface";
+import {ArrayLike, Json} from "../../interface";
 import {BasicArrayType, CompositeArrayType} from "../../types";
 import {StructuralHandler} from "./abstract";
 
@@ -62,6 +62,18 @@ export class BasicArrayStructuralHandler<T extends ArrayLike<unknown>> extends S
       this._type.elementType.toBytes(value[i], output, j);
     }
     return output;
+  }
+  fromJson(data: Json[]): T {
+    return Array.from(
+      {length: data.length},
+      (_, i) => this._type.elementType.fromJson(data[i]),
+    ) as unknown as T;
+  }
+  toJson(value: T): Json {
+    return Array.from(
+      {length: this.getLength(value)},
+      (_, i) => this._type.elementType.toJson(value[i]),
+    );
   }
 }
 
@@ -175,5 +187,17 @@ export class CompositeArrayStructuralHandler<T extends ArrayLike<object>> extend
   }
   chunk(value: T, index: number): Uint8Array {
     return this._type.elementType.hashTreeRoot(value[index]);
+  }
+  fromJson(data: Json[]): T {
+    return Array.from(
+      {length: data.length},
+      (_, i) => this._type.elementType.structural.fromJson(data[i]),
+    ) as unknown as T;
+  }
+  toJson(value: T): Json {
+    return Array.from(
+      {length: this.getLength(value)},
+      (_, i) => this._type.elementType.structural.toJson(value[i]),
+    );
   }
 }

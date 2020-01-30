@@ -1,4 +1,4 @@
-import {BitList} from "../../interface";
+import {BitList, Json} from "../../interface";
 import {BitListType} from "../../types";
 import {BasicListStructuralHandler} from "./list";
 
@@ -74,5 +74,15 @@ export class BitListStructuralHandler extends BasicListStructuralHandler<BitList
       output[i] = this.getByte(value, i + index);
     }
     return output;
+  }
+  fromJson(data: Json): BitList {
+    if (typeof data !== "string") {
+      throw new Error("Invalid JSON bitlist: expected hex string");
+    }
+    const bytes = this._type.byteArray.fromHexString(data);
+    return this.fromBytes(bytes, 0, bytes.length);
+  }
+  toJson(value: BitList): Json {
+    return this._type.byteArray.toHexString(this.serialize(value));
   }
 }
