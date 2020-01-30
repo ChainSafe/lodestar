@@ -1,6 +1,5 @@
 import {IMerkleTreeSerialization} from "@chainsafe/eth2.0-utils";
 import {MerkleTree} from "@chainsafe/eth2.0-types";
-import {deserialize, serialize} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 export class MerkleTreeSerialization implements IMerkleTreeSerialization {
@@ -12,15 +11,15 @@ export class MerkleTreeSerialization implements IMerkleTreeSerialization {
   }
 
   public deserializeTree(tree: Buffer): MerkleTree {
-    return deserialize(this.config.types.MerkleTree, tree);
+    return this.config.types.MerkleTree.deserialize(tree);
   }
 
   public serializeLength(length: number): Buffer {
-    return serialize(this.config.types.uint256, BigInt(length));
+    return this.config.types.uint256.serialize(BigInt(length));
   }
 
   public serializeTree(tree: MerkleTree): Buffer {
-    return serialize(this.config.types.MerkleTree, tree);
+    return this.config.types.MerkleTree.serialize(tree);
   }
 
 }

@@ -1,7 +1,6 @@
 import {IReputation, ReputationStore} from "../IReputation";
 import {BeaconBlockHeader, Checkpoint, Epoch, Slot, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {hashTreeRoot} from "@chainsafe/ssz";
 import {IReqResp} from "../../network";
 
 export function isValidChainOfBlocks(
@@ -9,12 +8,12 @@ export function isValidChainOfBlocks(
   start: BeaconBlockHeader,
   signedBlocks: SignedBeaconBlock[],
 ): boolean {
-  let parentRoot = hashTreeRoot(config.types.BeaconBlockHeader, start);
+  let parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(start);
   for(const signedBlock of signedBlocks) {
     if(!parentRoot.equals(signedBlock.message.parentRoot)) {
       return false;
     }
-    parentRoot = hashTreeRoot(config.types.BeaconBlock, signedBlock.message);
+    parentRoot = config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
   }
   return true;
 }

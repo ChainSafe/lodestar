@@ -1,6 +1,5 @@
 import {Slot, Root, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {serialize, hashTreeRoot} from "@chainsafe/ssz";
 
 import {BulkRepository} from "../repository";
 import {ChainRepository} from "./chain";
@@ -20,13 +19,13 @@ export class BlockRepository extends BulkRepository<SignedBeaconBlock> {
   }
 
   public getId(value: SignedBeaconBlock): Root {
-    return hashTreeRoot(this.config.types.BeaconBlock, value.message);
+    return this.config.types.BeaconBlock.hashTreeRoot(value.message);
   }
 
   public async set(id: Root, value: SignedBeaconBlock): Promise<void> {
     await Promise.all([
       this.db.put(encodeKey(Bucket.blockSlotRefs, value.message.slot), id),
-      this.db.put(encodeKey(Bucket.blockRootRefs, id), serialize(this.config.types.Slot, value.message.slot)),
+      this.db.put(encodeKey(Bucket.blockRootRefs, id), this.config.types.Slot.serialize(value.message.slot)),
       super.set(id, value)
     ]);
   }
@@ -62,7 +61,7 @@ export class BlockRepository extends BulkRepository<SignedBeaconBlock> {
   public async storeBadBlock(root: Root): Promise<void> {
     return await this.db.put(
       encodeKey(Bucket.invalidBlock, root),
-      serialize(this.config.types.bool, true)
+      this.config.types.bool.serialize(true)
     );
   }
 

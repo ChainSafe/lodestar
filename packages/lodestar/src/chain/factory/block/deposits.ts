@@ -2,7 +2,6 @@
  * @module chain/blockAssembly
  */
 
-import {hashTreeRoot} from "@chainsafe/ssz";
 import {BeaconState, Deposit, Eth1Data} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {OpPool} from "../../../opPool";
@@ -25,7 +24,7 @@ export async function generateDeposits(
       state.eth1DepositIndex,
       eth1Data.depositCount,
       (deposit, index) => {
-        merkleTree.add(index + state.eth1DepositIndex, hashTreeRoot(config.types.DepositData, deposit.data));
+        merkleTree.add(index + state.eth1DepositIndex, config.types.DepositData.hashTreeRoot(deposit.data));
         return deposit;
       }
     ).map((deposit, index) => {

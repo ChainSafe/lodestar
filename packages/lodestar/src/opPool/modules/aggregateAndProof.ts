@@ -4,7 +4,6 @@ import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/eth2.0
 import {getBitCount} from "../../util/bit";
 import {BulkRepository} from "../../db/api/beacon/repository";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {equals} from "@chainsafe/ssz";
 
 export class AggregateAndProofOperations extends OperationsModule<AggregateAndProof> {
 
@@ -30,7 +29,7 @@ export class AggregateAndProofOperations extends OperationsModule<AggregateAndPr
     const aggregates = await this.getAll();
     await this.remove(aggregates.filter((a) => {
       return attestations.findIndex((attestation) => {
-        return equals(this.config.types.Attestation, a.aggregate, attestation);
+        return this.config.types.Attestation.equals(a.aggregate, attestation);
       }, this);
     }));
   }

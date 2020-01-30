@@ -1,18 +1,18 @@
 /**
  * @module util/objects
  */
-import {AnySSZType, equals, hashTreeRoot} from "@chainsafe/ssz";
+import {Type} from "@chainsafe/ssz";
 
 interface IElementDescription {
   index: number;
   count: number;
 }
 
-export function mostFrequent<T>(type: AnySSZType, array: T[]): T[] {
+export function mostFrequent<T>(type: Type<T>, array: T[]): T[] {
   const hashMap: Map<string, IElementDescription> = new Map<string, IElementDescription>();
   array.forEach((e, index) => {
     //We can optimize this by using faster hash like https://github.com/bevacqua/hash-sum
-    const hash = hashTreeRoot(type, e).toString("hex");
+    const hash = type.hashTreeRoot(e).toString("hex");
 
     const desc = hashMap.get(hash);
     if(desc) {
@@ -35,9 +35,9 @@ export function mostFrequent<T>(type: AnySSZType, array: T[]): T[] {
   return results;
 }
 
-export function sszEqualPredicate<T>(type: AnySSZType): (a: T, b: T) => boolean {
+export function sszEqualPredicate<T>(type: Type<T>): (a: T, b: T) => boolean {
   return (a: T, b: T) => {
-    return equals(type, a, b);
+    return type.equals(a, b);
   };
 }
 

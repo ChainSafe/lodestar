@@ -18,7 +18,6 @@ import {
   RequestBody,
   ResponseBody, Status,
 } from "@chainsafe/eth2.0-types";
-import {deserialize, serialize} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {
@@ -154,16 +153,16 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     let output = Buffer.alloc(0);
     switch (method) {
       case Method.Status:
-        output = serialize(this.config.types.Status, body);
+        output = this.config.types.Status.serialize(body);
         break;
       case Method.Goodbye:
-        output = serialize(this.config.types.Goodbye, body);
+        output = this.config.types.Goodbye.serialize(body);
         break;
       case Method.BeaconBlocksByRange:
-        output = serialize(this.config.types.BeaconBlocksByRangeRequest, body);
+        output = this.config.types.BeaconBlocksByRangeRequest.serialize(body);
         break;
       case Method.BeaconBlocksByRoot:
-        output = serialize(this.config.types.BeaconBlocksByRootRequest, body);
+        output = this.config.types.BeaconBlocksByRootRequest.serialize(body);
         break;
     }
     return Buffer.concat([
@@ -175,16 +174,16 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     let output= Buffer.alloc(0);
     switch (method) {
       case Method.Status:
-        output = serialize(this.config.types.Status, body);
+        output = this.config.types.Status.serialize(body);
         break;
       case Method.Goodbye:
-        output = serialize(this.config.types.Goodbye, body);
+        output = this.config.types.Goodbye.serialize(body);
         break;
       case Method.BeaconBlocksByRange:
-        output = serialize(this.config.types.BeaconBlocksByRangeResponse, body);
+        output = this.config.types.BeaconBlocksByRangeResponse.serialize(body);
         break;
       case Method.BeaconBlocksByRoot:
-        output = serialize(this.config.types.BeaconBlocksByRootResponse, body);
+        output = this.config.types.BeaconBlocksByRootResponse.serialize(body);
         break;
     }
     return Buffer.concat([
@@ -210,13 +209,13 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     data = data.slice(bytes);
     switch (method) {
       case Method.Status:
-        return deserialize(this.config.types.Status, data);
+        return this.config.types.Status.deserialize(data);
       case Method.Goodbye:
-        return deserialize(this.config.types.Goodbye, data);
+        return this.config.types.Goodbye.deserialize(data);
       case Method.BeaconBlocksByRange:
-        return deserialize(this.config.types.BeaconBlocksByRangeRequest, data);
+        return this.config.types.BeaconBlocksByRangeRequest.deserialize(data);
       case Method.BeaconBlocksByRoot:
-        return deserialize(this.config.types.BeaconBlocksByRootRequest, data);
+        return this.config.types.BeaconBlocksByRootRequest.deserialize(data);
     }
   }
   private decodeResponse(method: Method, data: Buffer): ResponseBody {
@@ -235,13 +234,13 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     }
     switch (method) {
       case Method.Status:
-        return deserialize(this.config.types.Status, data);
+        return this.config.types.Status.deserialize(data);
       case Method.Goodbye:
-        return deserialize(this.config.types.Goodbye, data);
+        return this.config.types.Goodbye.deserialize(data);
       case Method.BeaconBlocksByRange:
-        return deserialize(this.config.types.BeaconBlocksByRangeResponse, data);
+        return this.config.types.BeaconBlocksByRangeResponse.deserialize(data);
       case Method.BeaconBlocksByRoot:
-        return deserialize(this.config.types.BeaconBlocksByRootResponse, data);
+        return this.config.types.BeaconBlocksByRootResponse.deserialize(data);
     }
   }
   private async sendRequest<T extends ResponseBody>(

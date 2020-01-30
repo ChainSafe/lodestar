@@ -1,5 +1,4 @@
 import {Slot, Root} from "@chainsafe/eth2.0-types";
-import {deserialize, serialize} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {IDatabaseController} from "../../../controller";
@@ -27,7 +26,7 @@ export class ChainRepository {
   public async setLatestStateRoot(root: Root): Promise<void> {
     await this.db.put(
       this.getKey(Key.latestState),
-      serialize(this.config.types.bytes32, root)
+      this.config.types.bytes32.serialize(root)
     );
   }
 
@@ -38,7 +37,7 @@ export class ChainRepository {
   public async setJustifiedStateRoot(root: Root): Promise<void> {
     await this.db.put(
       this.getKey(Key.justifiedState),
-      serialize(this.config.types.bytes32, root)
+      this.config.types.bytes32.serialize(root)
     );
   }
 
@@ -49,7 +48,7 @@ export class ChainRepository {
   public async setFinalizedStateRoot(root: Root): Promise<void> {
     await this.db.put(
       this.getKey(Key.finalizedState),
-      serialize(this.config.types.bytes32, root)
+      this.config.types.bytes32.serialize(root)
     );
   }
 
@@ -83,14 +82,14 @@ export class ChainRepository {
       if(!heightBuf) {
         throw new Error("Missing chain height");
       }
-      return deserialize(this.config.types.Slot, heightBuf);
+      return this.config.types.Slot.deserialize(heightBuf);
     } catch (e) {
       return null;
     }
   }
 
   public async setChainHeadSlot(slot: number): Promise<void> {
-    await this.db.put(this.getKey(Key.chainHeight), serialize(this.config.types.Slot, slot));
+    await this.db.put(this.getKey(Key.chainHeight), this.config.types.Slot.serialize(slot));
   }
 
   public async getChainHeadRoot(): Promise<Root | null> {

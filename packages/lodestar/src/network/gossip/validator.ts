@@ -12,7 +12,6 @@ import {
 } from "@chainsafe/eth2.0-state-transition";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
-import {hashTreeRoot} from "@chainsafe/ssz";
 import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {DomainType} from "@chainsafe/eth2.0-state-transition/lib/constants";
 
@@ -28,7 +27,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   }
 
   public async isValidIncomingBlock(signedBlock: SignedBeaconBlock): Promise<boolean> {
-    const root = hashTreeRoot(this.config.types.BeaconBlock, signedBlock.message);
+    const root = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
 
     // skip block if its a known bad block
     if (await this.db.block.isBadBlock(root)) {
@@ -88,7 +87,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   }
 
   public async isValidIncomingAggregateAndProof(aggregationAndProof: AggregateAndProof): Promise<boolean> {
-    const root = hashTreeRoot(this.config.types.AggregateAndProof, aggregationAndProof);
+    const root = this.config.types.AggregateAndProof.hashTreeRoot(aggregationAndProof);
     if (await this.db.aggregateAndProof.has(root as Buffer)) {
       return false;
     }
@@ -120,7 +119,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     const validatorPubKey = state.validators[aggregationAndProof.aggregatorIndex].pubkey;
     const domain = getDomain(this.config, state, DomainType.BEACON_ATTESTER, computeEpochAtSlot(this.config, slot));
     if (!verify(validatorPubKey,
-      hashTreeRoot(this.config.types.Slot, slot),
+      this.config.types.Slot.hashTreeRoot(slot),
       aggregationAndProof.selectionProof,
       domain)) {
       return false;
@@ -137,7 +136,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
     // skip attestation if it already exists
-    const root = hashTreeRoot(this.config.types.Attestation, attestation);
+    const root = this.config.types.Attestation.hashTreeRoot(attestation);
     if (await this.db.attestation.has(root as Buffer)) {
       return false;
     }
@@ -151,7 +150,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
   public async isValidIncomingVoluntaryExit(voluntaryExit: SignedVoluntaryExit): Promise<boolean> {
     // skip voluntary exit if it already exists
-    const root = hashTreeRoot(this.config.types.SignedVoluntaryExit, voluntaryExit);
+    const root = this.config.types.SignedVoluntaryExit.hashTreeRoot(voluntaryExit);
     if (await this.db.voluntaryExit.has(root as Buffer)) {
       return false;
     }
@@ -164,7 +163,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
   public async isValidIncomingProposerSlashing(proposerSlashing: ProposerSlashing): Promise<boolean> {
     // skip proposer slashing if it already exists
-    const root = hashTreeRoot(this.config.types.ProposerSlashing, proposerSlashing);
+    const root = this.config.types.ProposerSlashing.hashTreeRoot(proposerSlashing);
     if (await this.db.proposerSlashing.has(root as Buffer)) {
       return false;
     }
@@ -177,7 +176,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
   public async isValidIncomingAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<boolean> {
     // skip attester slashing if it already exists
-    const root = hashTreeRoot(this.config.types.AttesterSlashing, attesterSlashing);
+    const root = this.config.types.AttesterSlashing.hashTreeRoot(attesterSlashing);
     if (await this.db.attesterSlashing.has(root as Buffer)) {
       return false;
     }

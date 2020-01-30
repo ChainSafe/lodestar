@@ -5,7 +5,6 @@
 import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {Block, Log} from "ethers/providers";
-import {deserialize} from "@chainsafe/ssz";
 import {Deposit, Eth1Data, number64, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {Eth1EventEmitter, IEth1Notifier} from "../interface";
@@ -85,7 +84,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     merkleTreeIndex: string
   ): Promise<void> {
     try {
-      const index = deserialize(this.config.types.number64, Buffer.from(merkleTreeIndex.substr(2), "hex"));
+      const index = this.config.types.number64.deserialize(Buffer.from(merkleTreeIndex.substr(2), "hex"));
       const deposit = this.createDeposit(
         pubkey,
         withdrawalCredentials,
@@ -203,7 +202,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       data: {
         pubkey: Buffer.from(pubkey.slice(2), "hex"),
         withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), "hex"),
-        amount: deserialize(this.config.types.Gwei, Buffer.from(amount.slice(2), "hex")),
+        amount: this.config.types.Gwei.deserialize(Buffer.from(amount.slice(2), "hex")),
         signature: Buffer.from(signature.slice(2), "hex"),
       },
     };

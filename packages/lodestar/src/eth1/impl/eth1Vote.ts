@@ -3,7 +3,6 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BeaconState, Eth1Data, number64} from "@chainsafe/eth2.0-types";
 import {intSqrt} from "@chainsafe/eth2.0-utils";
 import {arrayIntersection, mostFrequent, sszEqualPredicate} from "../../util/objects";
-import {equals} from "@chainsafe/ssz";
 import {Block} from "ethers/providers";
 
 export async function getEth1Vote(
@@ -45,7 +44,7 @@ export async function getEth1Vote(
       return frequentVotes[0];
     } else {
       return allEth1Data[Math.max(...frequentVotes.map(
-        (vote) => allEth1Data.findIndex((eth1Data) => equals(config.types.Eth1Data, vote, eth1Data)))
+        (vote) => allEth1Data.findIndex((eth1Data) => config.types.Eth1Data.equals(vote, eth1Data)))
       )];
     }
   } else {

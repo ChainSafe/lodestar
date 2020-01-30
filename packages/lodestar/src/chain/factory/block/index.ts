@@ -3,7 +3,6 @@
  */
 
 import {BeaconBlock, BeaconBlockHeader, bytes96, Slot} from "@chainsafe/eth2.0-types";
-import {hashTreeRoot} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {IBeaconDb} from "../../../db/api";
@@ -34,13 +33,12 @@ export async function assembleBlock(
   const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock.message);
   const block: BeaconBlock = {
     slot,
-    parentRoot: hashTreeRoot(config.types.BeaconBlockHeader, parentHeader),
+    parentRoot: config.types.BeaconBlockHeader.hashTreeRoot(parentHeader),
     stateRoot: undefined,
     body: await assembleBody(config, opPool, eth1, merkleTree, currentState, randao),
   };
 
-  block.stateRoot = hashTreeRoot(
-    config.types.BeaconState,
+  block.stateRoot = config.types.BeaconState.hashTreeRoot(
     stateTransition(config, currentState, {message: block, signature: EMPTY_SIGNATURE}, false, false, true),
   );
 

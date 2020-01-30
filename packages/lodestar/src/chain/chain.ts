@@ -4,7 +4,6 @@
 
 import assert from "assert";
 import {EventEmitter} from "events";
-import {clone, hashTreeRoot, serialize} from "@chainsafe/ssz";
 import {
   Attestation, BeaconState, Slot, uint16, uint64, Root, SignedBeaconBlock,
 } from "@chainsafe/eth2.0-types";
@@ -109,7 +108,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   public get latestState(): BeaconState {
-    return clone(this.config.types.BeaconState, this._latestState);
+    return this.config.types.BeaconState.clone(this._latestState);
   }
 
   public set latestState(state: BeaconState) {
@@ -126,7 +125,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async receiveBlock(signedBlock: SignedBeaconBlock, trusted = false): Promise<void> {
-    const blockHash = hashTreeRoot(this.config.types.BeaconBlock, signedBlock.message);
+    const blockHash = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
     this.logger.info(
       `Received block with hash 0x${blockHash.toString("hex")}` +
       `at slot ${signedBlock.message.slot}. Current state slot ${this.latestState.slot}`
@@ -158,7 +157,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       if (await this.db.block.has(nextBlockInQueue.signedBlock.message.parentRoot)) {
         await this.processBlock(
           nextBlockInQueue,
-          hashTreeRoot(this.config.types.BeaconBlock, nextBlockInQueue.signedBlock.message),
+          this.config.types.BeaconBlock.hashTreeRoot(nextBlockInQueue.signedBlock.message),
         );
         this.blockProcessingQueue.poll();
       } else {
@@ -179,7 +178,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     }
     this.latestState = state;
     await this.db.state.add(state);
-    await this.db.chain.setLatestStateRoot(hashTreeRoot(this.config.types.BeaconState, state));
+    await this.db.chain.setLatestStateRoot(this.config.types.BeaconState.hashTreeRoot(state));
   }
 
   public async applyForkChoiceRule(): Promise<void> {
@@ -195,9 +194,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public async initializeBeaconChain(genesisState: BeaconState, merkleTree: ProgressiveMerkleTree): Promise<void> {
     this.logger.info(`Initializing beacon chain with genesisTime ${genesisState.genesisTime}`);
     const genesisBlock = getEmptyBlock();
-    const stateRoot = hashTreeRoot(this.config.types.BeaconState, genesisState);
+    const stateRoot = this.config.types.BeaconState.hashTreeRoot(genesisState);
     genesisBlock.stateRoot = stateRoot;
-    const blockRoot = hashTreeRoot(this.config.types.BeaconBlock, genesisBlock);
+    const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(genesisBlock);
     this.latestState = genesisState;
     // Determine whether a genesis state already in
     // the database matches what we were provided
@@ -249,7 +248,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
     this.logger.info(
       `Slot ${job.signedBlock.message.slot} Block 0x${blockHash.toString("hex")} ` +
-      `State ${hashTreeRoot(this.config.types.BeaconState, post).toString("hex")} passed state transition`
+      `State ${this.config.types.BeaconState.hashTreeRoot(post).toString("hex")} passed state transition`
     );
     await this.opPool.processBlockOperations(job.signedBlock);
     job.signedBlock.message.body.attestations.forEach((attestation) => {
@@ -277,9 +276,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
     fs.mkdirSync(baseDir + curDir);
 
-    const sblock = serialize(this.config.types.SignedBeaconBlock, signedBlock);
-    const sPre = serialize(this.config.types.BeaconState, pre);
-    const sPost = serialize(this.config.types.BeaconState, post);
+    const sblock = this.config.types.SignedBeaconBlock.serialize(signedBlock);
+    const sPre = this.config.types.BeaconState.serialize(pre);
+    const sPost = this.config.types.BeaconState.serialize(post);
 
     fs.writeFile(full + "/block.ssz", sblock, (e) => {
       if (e) throw e;
@@ -308,7 +307,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const preJustifiedEpoch = state.currentJustifiedCheckpoint.epoch;
     // Run the state transition
     let newState: BeaconState;
-    const blockRoot = hashTreeRoot(this.config.types.BeaconBlock, signedBlock.message);
+    const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
     try {
       // if block is trusted don't verify state roots, proposer or signature
       newState = stateTransition(this.config, state, signedBlock, !trusted, !trusted, !trusted);
@@ -389,7 +388,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       (deposit, index) => {
         merkleTree.add(
           index + newState.eth1DepositIndex,
-          hashTreeRoot(this.config.types.DepositData, deposit.data)
+          this.config.types.DepositData.hashTreeRoot(deposit.data)
         );
         return deposit;
       }
@@ -407,7 +406,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     );
     const depositsWithProof = deposits
       .map((deposit, index) => {
-        merkleTree.add(index, hashTreeRoot(this.config.types.DepositData, deposit.data));
+        merkleTree.add(index, this.config.types.DepositData.hashTreeRoot(deposit.data));
         return deposit;
       })
       .map((deposit, index) => {

@@ -1,4 +1,3 @@
-import {hashTreeRoot} from "@chainsafe/ssz";
 import {AttestationData, BeaconBlock, BeaconState, CommitteeIndex, Slot, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -18,7 +17,7 @@ export async function assembleAttestationData(
 
   let epochBoundaryBlockRoot: Root;
   if (epochStartSlot === headState.slot) {
-    epochBoundaryBlockRoot = hashTreeRoot(config.types.BeaconBlock, headBlock);
+    epochBoundaryBlockRoot = config.types.BeaconBlock.hashTreeRoot(headBlock);
   } else {
     epochBoundaryBlockRoot = getBlockRootAtSlot(config, headState, epochStartSlot);
   }
@@ -29,7 +28,7 @@ export async function assembleAttestationData(
   return {
     slot,
     index,
-    beaconBlockRoot: hashTreeRoot(config.types.BeaconBlock, headBlock),
+    beaconBlockRoot: config.types.BeaconBlock.hashTreeRoot(headBlock),
     source: headState.currentJustifiedCheckpoint,
     target: {
       epoch: currentEpoch,

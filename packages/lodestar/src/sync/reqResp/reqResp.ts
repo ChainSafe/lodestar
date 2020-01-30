@@ -23,7 +23,6 @@ import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {ISyncOptions, ISyncReqResp} from "./interface";
 import {ReputationStore} from "../IReputation";
 import {computeStartSlotAtEpoch} from "@chainsafe/eth2.0-state-transition";
-import {hashTreeRoot} from "@chainsafe/ssz";
 
 export interface ISyncReqRespModules {
   config: IBeaconConfig;
@@ -123,7 +122,7 @@ export class SyncReqResp implements ISyncReqResp {
     const startSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
     const startBlock = await this.db.blockArchive.get(startSlot);
     if (state.finalizedCheckpoint.epoch >= request.finalizedEpoch &&
-       !request.finalizedRoot.equals(hashTreeRoot(this.config.types.BeaconBlock, startBlock.message))) {
+       !request.finalizedRoot.equals(this.config.types.BeaconBlock.hashTreeRoot(startBlock.message))) {
       return true;
     }
     return false;
@@ -184,7 +183,7 @@ export class SyncReqResp implements ISyncReqResp {
       headSlot = await this.db.chain.getChainHeadSlot();
       const headBlock = await this.db.block.getChainHead();
       const state = await this.db.state.get(headBlock.message.stateRoot);
-      headRoot = hashTreeRoot(this.config.types.BeaconBlock, headBlock.message);
+      headRoot = this.config.types.BeaconBlock.hashTreeRoot(headBlock.message);
       finalizedEpoch = state.finalizedCheckpoint.epoch;
       finalizedRoot = state.finalizedCheckpoint.root;
     }
