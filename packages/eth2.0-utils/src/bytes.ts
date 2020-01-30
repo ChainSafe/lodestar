@@ -33,3 +33,7 @@ export function bytesToBigInt(value: Buffer): bigint {
 export function toHex(buffer: Uint8Array): string {
   return "0x" + Buffer.from(buffer).toString("hex");
 }
+
+export function fromHex(hex: string): Uint8Array {
+  return Uint8Array.from(Buffer.from(hex.replace("0x", ""), "hex"));
+}
