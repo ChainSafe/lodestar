@@ -25,15 +25,23 @@ export function bytesToInt(value: Uint8Array): number {
   return result;
 }
 
-export function bytesToBigInt(value: Buffer): bigint {
-  return toBigIntLE(value);
+export function bytesToBigInt(value: Uint8Array): bigint {
+  return toBigIntLE(value as Buffer);
+}
+
+export function bigIntToBytes(value: bigint, length: number): Uint8Array {
+  const b = toBufferLE(value, length);
+  // @ts-ignore
+  return Uint8Array.from(b.buffer, b.byteOffset);
 }
 
 
 export function toHex(buffer: Uint8Array): string {
-  return "0x" + Buffer.from(buffer).toString("hex");
+  return "0x" + Buffer.from(buffer.buffer, buffer.byteOffset).toString("hex");
 }
 
 export function fromHex(hex: string): Uint8Array {
-  return Uint8Array.from(Buffer.from(hex.replace("0x", ""), "hex"));
+  const b = Buffer.from(hex.replace("0x", ""), "hex");
+  // @ts-ignore
+  return Uint8Array.from(b.buffer, b.byteOffset);
 }
