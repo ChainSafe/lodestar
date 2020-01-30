@@ -51,8 +51,8 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   public isUnaggregatedAttestation(attestation: Attestation): boolean {
     const aggregationBits = attestation.aggregationBits;
     let count = 0;
-    for (let i = 0; i < aggregationBits.bitLength; i++) {
-      if (aggregationBits.getBit(i)) {
+    for (let i = 0; i < aggregationBits.length; i++) {
+      if (aggregationBits[i]) {
         count++;
       }
     }

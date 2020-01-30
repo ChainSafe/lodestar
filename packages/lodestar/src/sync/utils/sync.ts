@@ -10,7 +10,7 @@ export function isValidChainOfBlocks(
 ): boolean {
   let parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(start);
   for(const signedBlock of signedBlocks) {
-    if(!parentRoot.equals(signedBlock.message.parentRoot)) {
+    if(!config.types.Root.equals(parentRoot, signedBlock.message.parentRoot)) {
       return false;
     }
     parentRoot = config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
@@ -37,7 +37,7 @@ export function getSyncTargetEpoch(peers: IReputation[], currentCheckPoint: Chec
 export function isValidFinalizedCheckPoint(peers: IReputation[], finalizedCheckPoint: Checkpoint): boolean {
   const validPeers = peers.filter((peer) => !!peer.latestStatus);
   const peerCount = validPeers.filter(peer => {
-    return peer.latestStatus.finalizedRoot.equals(finalizedCheckPoint.root);
+    return Buffer.from(peer.latestStatus.finalizedRoot).equals(finalizedCheckPoint.root);
   }).length;
   return peerCount >= (validPeers.length / 2);
 }
@@ -89,5 +89,5 @@ export async function getBlockRangeFromPeer(
       step: 1,
       count: chunk.end - chunk.start
     }
-  );
+  ) as SignedBeaconBlock[];
 }

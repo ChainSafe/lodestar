@@ -116,13 +116,18 @@ export class SyncReqResp implements ISyncReqResp {
   public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
     const headBlock = await this.db.block.getChainHead();
     const state = await this.db.state.get(headBlock.message.stateRoot);
-    if (!state.fork.currentVersion.equals(request.headForkVersion)) {
+    if (!this.config.types.Version.equals(state.fork.currentVersion, request.headForkVersion)) {
       return true;
     }
     const startSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
     const startBlock = await this.db.blockArchive.get(startSlot);
-    if (state.finalizedCheckpoint.epoch >= request.finalizedEpoch &&
-       !request.finalizedRoot.equals(this.config.types.BeaconBlock.hashTreeRoot(startBlock.message))) {
+    if (
+      state.finalizedCheckpoint.epoch >= request.finalizedEpoch &&
+      !this.config.types.Root.equals(
+        request.finalizedRoot,
+        this.config.types.BeaconBlock.hashTreeRoot(startBlock.message)
+      )
+    ) {
       return true;
     }
     return false;
