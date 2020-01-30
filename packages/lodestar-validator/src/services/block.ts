@@ -46,6 +46,9 @@ export default class BlockProposingService {
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
     const epochProposers = await this.provider.validator.getProposerDuties(epoch);
+    if(!epochProposers) {
+      return;
+    }
     Array.from(epochProposers.entries()).findIndex((epochProposerEntry: [Slot, BLSPubkey]) => {
       if(epochProposerEntry[1].equals(this.publicKey)) {
         this.nextProposalSlot = epochProposerEntry[0];

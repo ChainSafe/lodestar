@@ -57,7 +57,7 @@ export class AttestationService {
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
     const attesterDuties = await this.provider.validator.getAttesterDuties(epoch + 1, [this.publicKey]);
-    if(attesterDuties.length === 1 && attesterDuties[0].validatorPubkey.equals(this.publicKey)) {
+    if(attesterDuties && attesterDuties.length === 1 && attesterDuties[0].validatorPubkey.equals(this.publicKey)) {
       const duty = attesterDuties[0];
       const fork = (await this.provider.beacon.getFork()).fork;
       const isAggregator = await this.provider.validator.isAggregator(
