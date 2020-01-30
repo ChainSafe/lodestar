@@ -3,8 +3,7 @@ import fastify, {DefaultParams, DefaultQuery} from "fastify";
 import {IApiModules} from "../../../../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
 import {getAttesterDuties} from "../../../../impl/validator";
-import {PublicKey} from "@chainsafe/bls";
-import {toJson} from "@chainsafe/eth2.0-utils";
+import {fromHex} from "@chainsafe/eth2.0-utils";
 
 interface IParams extends DefaultParams {
   epoch: number;
@@ -49,28 +48,17 @@ export const registerAttesterDutiesEndpoint = (fastify: IFastifyServer, modules:
     "/duties/:epoch/attester",
     opts,
     async (request, reply) => {
-      const response = (await getAttesterDuties(
+      const duties = await getAttesterDuties(
         modules.config,
         modules.db,
         modules.chain,
         request.params.epoch,
-        request.query.validator_pubkeys.map((pubKey) => {
-          try {
-            return PublicKey.fromBytes(
-              Buffer.from(
-                pubKey.replace("0x", ""),
-                "hex"
-              )
-            ).toBytesCompressed();
-          } catch (e) {
-            return null;
-          }
-        }).filter(pubKey => !!pubKey)
-      )).map(toJson);
+        request.query.validator_pubkeys.map((pubKeyHex) => fromHex(pubKeyHex))
+      );
       reply
         .code(200)
         .type("application/json")
-        .send(response);
+        .send(duties.map(modules.config.types.ValidatorDuty.toJson));
     }
   );
 };

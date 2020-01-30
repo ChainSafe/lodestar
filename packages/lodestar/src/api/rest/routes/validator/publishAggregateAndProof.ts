@@ -1,9 +1,9 @@
 import {IFastifyServer} from "../../index";
 import fastify, {DefaultQuery} from "fastify";
 import {IApiModules} from "../../../interface";
-import {fromJson} from "@chainsafe/eth2.0-utils";
-import {AggregateAndProof, Attestation} from "@chainsafe/eth2.0-types";
+import {AggregateAndProof} from "@chainsafe/eth2.0-types";
 import {IncomingMessage, Server, ServerResponse} from "http";
+import {fromHex} from "@chainsafe/eth2.0-utils";
 
 interface IQuery extends DefaultQuery {
   "validator_pubkey": string;
@@ -36,16 +36,11 @@ export const registerPublishAggregateAndProofEndpoint = (fastify: IFastifyServer
     opts,
     async (request, reply) => {
       try {
-        const aggregatedAttestation = fromJson<Attestation>(
-          modules.config.types.Attestation,
-          request.body
-        );
+        const aggregatedAttestation = modules.config.types.Attestation.fromJson(request.body);
         const aggregateAndProof: AggregateAndProof = {
           aggregate: aggregatedAttestation,
-          selectionProof: Buffer.from(request.query.slot_signature.replace("0x", ""), "hex"),
-          aggregatorIndex: await modules.db.getValidatorIndex(
-            Buffer.from(request.query.validator_pubkey.replace("0x", ""), "hex")
-          )
+          selectionProof: fromHex(request.query.slot_signature),
+          aggregatorIndex: await modules.db.getValidatorIndex(fromHex(request.query.validator_pubkey)),
         };
         await Promise.all([
           modules.network.gossip.publishAggregatedAttestation(

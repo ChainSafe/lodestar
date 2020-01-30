@@ -2,7 +2,6 @@ import {IFastifyServer} from "../../index";
 import fastify, {DefaultQuery} from "fastify";
 import {IApiModules} from "../../../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
-import {toJson} from "@chainsafe/eth2.0-utils";
 
 interface IQuery extends DefaultQuery {
   epoch: number;
@@ -40,7 +39,7 @@ export const registerGetWireAttestationEndpoint = (fastify: IFastifyServer, modu
       reply
         .code(200)
         .type("application/json")
-        .send(attestations.map(toJson));
+        .send(attestations.map(modules.config.types.Attestation.toJson));
     }
   );
 };
