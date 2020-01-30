@@ -30,13 +30,14 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
     });
     return s;
   }
-  assertValidValue(value: any): asserts value is T {
+  assertValidValue(value: unknown): asserts value is T {
     Object.entries(this._type.fields).forEach(([fieldName, fieldType]) => {
       try {
         if (fieldType.isBasic()) {
-          (fieldType as Type<any>).assertValidValue(value[fieldName]);
+          (fieldType as Type<T[keyof T]>).assertValidValue((value as T)[fieldName]);
         } else {
-          fieldType.structural.assertValidValue(value[fieldName]);
+          // @ts-ignore
+          fieldType.structural.assertValidValue((value as T)[fieldName]);
         }
       } catch (e) {
         throw new Error(`Invalid field ${fieldName}: ${e.message}`);
@@ -99,7 +100,7 @@ export class ContainerStructuralHandler<T extends ObjectLike> extends Structural
         if (offsets[offsetIndex] > offsets[offsetIndex + 1]) {
           throw new Error("Offsets must be increasing");
         }
-        value[fieldName as keyof T] = (fieldType as CompositeType<any>).structural.fromBytes(
+        value[fieldName as keyof T] = (fieldType as CompositeType<T[keyof T]>).structural.fromBytes(
           data, offsets[offsetIndex], offsets[offsetIndex + 1],
         );
         offsetIndex++;

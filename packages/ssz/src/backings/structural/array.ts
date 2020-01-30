@@ -2,7 +2,7 @@ import {ArrayLike} from "../../interface";
 import {BasicArrayType, CompositeArrayType} from "../../types";
 import {StructuralHandler} from "./abstract";
 
-export class BasicArrayStructuralHandler<T extends ArrayLike<any>> extends StructuralHandler<T> {
+export class BasicArrayStructuralHandler<T extends ArrayLike<unknown>> extends StructuralHandler<T> {
   _type: BasicArrayType<T>;
   getLength(value: T): number {
     throw new Error("Not implemented");
@@ -10,10 +10,10 @@ export class BasicArrayStructuralHandler<T extends ArrayLike<any>> extends Struc
   size(value: T): number {
     return this._type.elementType.size() * this.getLength(value);
   }
-  assertValidValue(value: any): asserts value is T {
-    for (let i = 0; i < this.getLength(value); i++) {
+  assertValidValue(value: unknown): asserts value is T {
+    for (let i = 0; i < this.getLength(value as T); i++) {
       try {
-        this._type.elementType.assertValidValue(value[i]);
+        this._type.elementType.assertValidValue((value as T)[i]);
       } catch (e) {
         throw new Error(`Invalid element ${i}: ${e.message}`);
       }
@@ -65,7 +65,7 @@ export class BasicArrayStructuralHandler<T extends ArrayLike<any>> extends Struc
   }
 }
 
-export class CompositeArrayStructuralHandler<T extends ArrayLike<any>> extends StructuralHandler<T> {
+export class CompositeArrayStructuralHandler<T extends ArrayLike<object>> extends StructuralHandler<T> {
   _type: CompositeArrayType<T>;
   getLength(value: T): number {
     throw new Error("Not implemented");
@@ -81,12 +81,11 @@ export class CompositeArrayStructuralHandler<T extends ArrayLike<any>> extends S
       return this._type.elementType.structural.size(null) * this.getLength(value);
     }
   }
-  assertValidValue(value: any): asserts value is T {
-    for (let i = 0; i < this.getLength(value); i++) {
+  assertValidValue(value: unknown): asserts value is T {
+    for (let i = 0; i < this.getLength(value as T); i++) {
       try {
-        this._type.elementType.structural.assertValidValue(value[i]);
+        this._type.elementType.structural.assertValidValue((value as T)[i]);
       } catch (e) {
-        console.log(typeof value[i])
         throw new Error(`Invalid element ${i}: ${e.message}`);
       }
     }

@@ -5,7 +5,7 @@ import {number32Type, BasicListType, CompositeListType} from "../../types";
 import {BasicArrayTreeHandler, CompositeArrayTreeHandler} from "./array";
 import {TreeBackedValue} from "./abstract";
 
-export class BasicListTreeHandler<T extends List<any>> extends BasicArrayTreeHandler<T> {
+export class BasicListTreeHandler<T extends List<unknown>> extends BasicArrayTreeHandler<T> {
   _type: BasicListType<T>;
   constructor(type: BasicListType<T>) {
     super();
@@ -77,7 +77,7 @@ export class BasicListTreeHandler<T extends List<any>> extends BasicArrayTreeHan
   }
 }
 
-export class CompositeListTreeHandler<T extends List<any>> extends CompositeArrayTreeHandler<T> {
+export class CompositeListTreeHandler<T extends List<object>> extends CompositeArrayTreeHandler<T> {
   _type: CompositeListType<T>;
   constructor(type: CompositeListType<T>) {
     super();
@@ -179,6 +179,6 @@ export class CompositeListTreeHandler<T extends List<any>> extends CompositeArra
     const value = this.get(target, length - 1);
     this.setProperty(target, length - 1, zeroBacking(0));
     this.setLength(target, length - 1);
-    return value;
+    return value as T[number];
   }
 }

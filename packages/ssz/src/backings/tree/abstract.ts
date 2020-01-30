@@ -256,7 +256,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   /**
    * ES6 Proxy trap to set a property of T
    */
-  set(target: any, property: PropertyKey, value: any): boolean {
+  set(target: any, property: PropertyKey, value: unknown): boolean {
     throw new Error("Not implemented");
   }
 }

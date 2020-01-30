@@ -2,7 +2,7 @@ import {ArrayLike} from "../../interface";
 import {BasicArrayType, CompositeArrayType} from "../../types";
 import {ByteArrayHandler, ByteArrayBacking} from "./abstract";
 
-export class BasicArrayByteArrayHandler<T extends ArrayLike<any>> extends ByteArrayHandler<T> {
+export class BasicArrayByteArrayHandler<T extends ArrayLike<unknown>> extends ByteArrayHandler<T> {
   _type: BasicArrayType<T>;
   getLength(target: ByteArrayBacking): number {
     throw new Error("Not implemented");
@@ -12,7 +12,7 @@ export class BasicArrayByteArrayHandler<T extends ArrayLike<any>> extends ByteAr
   }
 }
 
-export class CompositeArrayByteArrayHandler<T extends ArrayLike<any>> extends ByteArrayHandler<T> {
+export class CompositeArrayByteArrayHandler<T extends ArrayLike<unknown>> extends ByteArrayHandler<T> {
   _type: CompositeArrayType<T>;
   getLength(target: ByteArrayBacking): number {
     throw new Error("Not implemented");

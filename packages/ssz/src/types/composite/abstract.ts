@@ -21,7 +21,7 @@ export class CompositeType<T extends object> {
   /**
    * Valid value assertion
    */
-  assertValidValue(value: any): asserts value is T {
+  assertValidValue(value: unknown): asserts value is T {
     this.structural.assertValidValue(value);
   }
 

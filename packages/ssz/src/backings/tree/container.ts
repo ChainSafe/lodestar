@@ -44,7 +44,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     let s = 0;
     Object.values(this._type.fields).forEach((fieldType, i) => {
       if (fieldType.isVariableSize()) {
-        s += (fieldType as CompositeType<any>).tree.size(this.getBackingAtChunk(target, i)) + 4;
+        s += (fieldType as CompositeType<T[keyof T]>).tree.size(this.getBackingAtChunk(target, i)) + 4;
       } else {
         s += fieldType.size(null);
       }

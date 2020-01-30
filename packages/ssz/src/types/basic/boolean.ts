@@ -10,7 +10,7 @@ export class BooleanType extends BasicType<boolean> {
   isBasic(): boolean {
     return true;
   }
-  assertValidValue(value: any): asserts value is boolean {
+  assertValidValue(value: unknown): asserts value is boolean {
     if (value !== true && value !== false) {
       throw new Error("Boolean value must be true or false");
     }

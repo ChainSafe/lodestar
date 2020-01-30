@@ -20,7 +20,7 @@ export class StructuralHandler<T extends object> {
   size(target: T): number {
     throw new Error("Not implemented");
   }
-  assertValidValue(target: T): void {
+  assertValidValue(target: unknown): asserts target is T {
     throw new Error("Not implemented");
   }
   equals(target: T, other: T): boolean {

@@ -4,7 +4,7 @@ import {mixInLength} from "../../util/compat";
 import {BasicArrayByteArrayHandler, CompositeArrayByteArrayHandler} from "./array";
 import {ByteArrayBacking} from "./abstract";
 
-export class BasicVectorByteArrayHandler<T extends Vector<any>> extends BasicArrayByteArrayHandler<T> {
+export class BasicVectorByteArrayHandler<T extends Vector<unknown>> extends BasicArrayByteArrayHandler<T> {
   _type: BasicVectorType<T>;
   constructor(type: BasicVectorType<T>) {
     super();
@@ -15,7 +15,7 @@ export class BasicVectorByteArrayHandler<T extends Vector<any>> extends BasicArr
   }
 }
 
-export class CompositeVectorByteArrayHandler<T extends Vector<any>> extends CompositeArrayByteArrayHandler<T> {
+export class CompositeVectorByteArrayHandler<T extends Vector<object>> extends CompositeArrayByteArrayHandler<T> {
   _type: CompositeVectorType<T>;
   constructor(type: CompositeVectorType<T>) {
     super();

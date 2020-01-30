@@ -5,7 +5,7 @@ import {BasicVectorType, CompositeVectorType} from "../../types";
 import {BasicArrayTreeHandler, CompositeArrayTreeHandler} from "./array";
 import {TreeBackedValue} from "./abstract";
 
-export class BasicVectorTreeHandler<T extends Vector<any>> extends BasicArrayTreeHandler<T> {
+export class BasicVectorTreeHandler<T extends Vector<unknown>> extends BasicArrayTreeHandler<T> {
   _type: BasicVectorType<T>;
   constructor(type: BasicVectorType<T>) {
     super();
@@ -39,7 +39,7 @@ export class BasicVectorTreeHandler<T extends Vector<any>> extends BasicArrayTre
   }
 }
 
-export class CompositeVectorTreeHandler<T extends Vector<any>> extends CompositeArrayTreeHandler<T> {
+export class CompositeVectorTreeHandler<T extends Vector<object>> extends CompositeArrayTreeHandler<T> {
   _type: CompositeVectorType<T>;
   constructor(type: CompositeVectorType<T>) {
     super();
@@ -73,7 +73,7 @@ export class CompositeVectorTreeHandler<T extends Vector<any>> extends Composite
         this.setBackingAtChunk(
           target,
           i,
-          this._type.elementType.fromBytes(
+          this._type.elementType.tree.fromBytes(
             data,
             start + currentOffset,
             start + nextOffset,

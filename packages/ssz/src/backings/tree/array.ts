@@ -5,7 +5,7 @@ import {BasicArrayType, CompositeArrayType} from "../../types";
 import {TreeHandler, PropOfCompositeTreeBackedValue, TreeBackedValue} from "./abstract";
 import { isBackedValue} from "..";
 
-export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler<T> {
+export class BasicArrayTreeHandler<T extends ArrayLike<unknown>> extends TreeHandler<T> {
   protected _type: BasicArrayType<T>;
   createValue(value: any): TreeBackedValue<T> {
     const  v = this.defaultValue();
@@ -101,14 +101,14 @@ export class BasicArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler
       yield this.getValueAtIndex(target, i);
     }
   }
-  forEach(target: TreeBacking, fn: (value: any, index: number) => void): void {
+  forEach(target: TreeBacking, fn: (value: unknown, index: number) => void): void {
     for (let i = 0; i < this.getLength(target); i++) {
       fn(this.getValueAtIndex(target, i), i);
     }
   }
 }
 
-export class CompositeArrayTreeHandler<T extends ArrayLike<any>> extends TreeHandler<T> {
+export class CompositeArrayTreeHandler<T extends ArrayLike<object>> extends TreeHandler<T> {
   protected _type: CompositeArrayType<T>;
   createValue(value: any): TreeBackedValue<T> {
     const  v = this.defaultValue();
@@ -162,18 +162,18 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<any>> extends TreeHan
   getValueAtChunk(target: TreeBacking, index: number): PropOfCompositeTreeBackedValue<T, number> {
     return this._type.elementType.tree.createBackedValue(
       this.getBackingAtChunk(target, index)
-    );
+    ) as PropOfCompositeTreeBackedValue<T, number>;
   }
   getProperty<V extends keyof T>(target: TreeBacking, property: V): PropOfCompositeTreeBackedValue<T, V> {
     const length = this.getLength(target);
     if (property === "length") {
-      return length as PropOfCompositeTreeBackedValue<T, V>;
+      return length as unknown as PropOfCompositeTreeBackedValue<T, V>;
     }
-    property = Number(property) as any;
+    property = Number(property) as V;
     if (property > length) {
       throw new Error("Invalid array index");
     }
-    return this.getValueAtChunk(target, property as number);
+    return this.getValueAtChunk(target, property as number) as unknown as PropOfCompositeTreeBackedValue<T, V>;
   }
   setProperty(target: TreeBacking, property: number, value: T[number], expand=false): boolean {
     const chunkGindex = this.gindexOfChunk(target, property);
@@ -181,7 +181,7 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<any>> extends TreeHan
       target.setBacking(chunkGindex, (value.backing() as TreeBacking));
       return true;
     } else {
-      target.setBacking(chunkGindex, this._type.elementType.tree.createValue(value).backing(), expand);
+      target.setBacking(chunkGindex, this._type.elementType.tree.createValue(value as object).backing(), expand);
       return true;
     }
   }
@@ -199,7 +199,7 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<any>> extends TreeHan
       yield this.getValueAtChunk(target, i);
     }
   }
-  forEach(target: TreeBacking, fn: (value: any, index: number) => void): void {
+  forEach(target: TreeBacking, fn: (value: unknown, index: number) => void): void {
     for (let i = 0; i < this.getLength(target); i++) {
       fn(this.getValueAtChunk(target, i), i);
     }

@@ -2,7 +2,7 @@ import {Vector} from "../../interface";
 import {BasicVectorType, CompositeVectorType} from "../../types";
 import {BasicArrayStructuralHandler, CompositeArrayStructuralHandler} from "./array";
 
-export class BasicVectorStructuralHandler<T extends Vector<any>> extends BasicArrayStructuralHandler<T> {
+export class BasicVectorStructuralHandler<T extends Vector<unknown>> extends BasicArrayStructuralHandler<T> {
   _type: BasicVectorType<T>;
   constructor(type: BasicVectorType<T>) {
     super();
@@ -22,9 +22,9 @@ export class BasicVectorStructuralHandler<T extends Vector<any>> extends BasicAr
     }
     return super.fromBytes(data, start, end);
   }
-  assertValidValue(value: any): asserts value is T {
-    const actualLength = value.length;
-    const expectedLength = this.getLength(value);
+  assertValidValue(value: unknown): asserts value is T {
+    const actualLength = (value as T).length;
+    const expectedLength = this.getLength((value as T));
     if (actualLength !== expectedLength) {
       throw new Error(`Invalid vector length: expected ${expectedLength}, actual ${actualLength}`);
     }
@@ -33,7 +33,7 @@ export class BasicVectorStructuralHandler<T extends Vector<any>> extends BasicAr
   }
 }
 
-export class CompositeVectorStructuralHandler<T extends Vector<any>> extends CompositeArrayStructuralHandler<T> {
+export class CompositeVectorStructuralHandler<T extends Vector<object>> extends CompositeArrayStructuralHandler<T> {
   _type: CompositeVectorType<T>;
   constructor(type: CompositeVectorType<T>) {
     super();
@@ -54,9 +54,9 @@ export class CompositeVectorStructuralHandler<T extends Vector<any>> extends Com
     }
     return value;
   }
-  assertValidValue(value: any): asserts value is T {
-    const actualLength = value.length;
-    const expectedLength = this.getLength(value);
+  assertValidValue(value: unknown): asserts value is T {
+    const actualLength = (value as T).length;
+    const expectedLength = this.getLength(value as T);
     if (actualLength !== expectedLength) {
       throw new Error(`Invalid vector length: expected ${expectedLength}, actual ${actualLength}`);
     }

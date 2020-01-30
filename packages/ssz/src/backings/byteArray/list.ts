@@ -4,7 +4,7 @@ import {mixInLength} from "../../util/compat";
 import {BasicArrayByteArrayHandler, CompositeArrayByteArrayHandler} from "./array";
 import {ByteArrayBacking} from "./abstract";
 
-export class BasicListByteArrayHandler<T extends List<any>> extends BasicArrayByteArrayHandler<T> {
+export class BasicListByteArrayHandler<T extends List<unknown>> extends BasicArrayByteArrayHandler<T> {
   _type: BasicListType<T>;
   constructor(type: BasicListType<T>) {
     super();
@@ -18,7 +18,7 @@ export class BasicListByteArrayHandler<T extends List<any>> extends BasicArrayBy
   }
 }
 
-export class CompositeListByteArrayHandler<T extends List<any>> extends CompositeArrayByteArrayHandler<T> {
+export class CompositeListByteArrayHandler<T extends List<object>> extends CompositeArrayByteArrayHandler<T> {
   _type: CompositeListType<T>;
   constructor(type: CompositeListType<T>) {
     super();

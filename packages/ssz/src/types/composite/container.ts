@@ -11,7 +11,7 @@ export interface IContainerOptions {
   fields: Record<string, Type<any>>;
 }
 
-export class ContainerType<T extends ObjectLike=any> extends CompositeType<T> {
+export class ContainerType<T extends ObjectLike=ObjectLike> extends CompositeType<T> {
   // ES6 ensures key order is chronological
   fields: Record<string, Type<any>>;
   constructor(options: IContainerOptions) {

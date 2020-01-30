@@ -16,7 +16,7 @@ export class BasicType<T> {
   /**
    * Valid value assertion
    */
-  assertValidValue(value: any): asserts value is T {
+  assertValidValue(value: unknown): asserts value is T {
     throw new Error("Not implemented");
   }
 

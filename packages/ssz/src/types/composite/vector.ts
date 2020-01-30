@@ -10,14 +10,14 @@ export interface IVectorOptions extends IArrayOptions {
   length: number;
 }
 
-export type VectorType<T extends Vector<any>=any> = BasicVectorType<T> | CompositeVectorType<T>;
+export type VectorType<T extends Vector<any>=Vector<any>> = BasicVectorType<T> | CompositeVectorType<T>;
 type VectorTypeConstructor = {
   new<T extends Vector<any>>(options: IVectorOptions): VectorType<T>;
 };
 
 // Trick typescript into treating VectorType as a constructor
 export const VectorType: VectorTypeConstructor =
-  function VectorType<T extends Vector<any>=any>(options: IVectorOptions): VectorType<T> {
+  function VectorType<T extends Vector<any>=Vector<any>>(options: IVectorOptions): VectorType<T> {
     if (options.elementType.isBasic()) {
       return new BasicVectorType(options);
     } else {
@@ -25,7 +25,7 @@ export const VectorType: VectorTypeConstructor =
     }
   } as unknown as VectorTypeConstructor;
 
-export class BasicVectorType<T extends Vector<any>=any> extends BasicArrayType<T> {
+export class BasicVectorType<T extends Vector<unknown>=Vector<unknown>> extends BasicArrayType<T> {
   length: number;
   constructor(options: IVectorOptions) {
     super(options);
@@ -42,7 +42,7 @@ export class BasicVectorType<T extends Vector<any>=any> extends BasicArrayType<T
   }
 }
 
-export class CompositeVectorType<T extends Vector<any>=any> extends CompositeArrayType<T> {
+export class CompositeVectorType<T extends Vector<object>=Vector<object>> extends CompositeArrayType<T> {
   length: number;
   constructor(options: IVectorOptions) {
     super(options);

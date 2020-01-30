@@ -3,7 +3,7 @@ import {BasicListType, CompositeListType} from "../../types";
 import {mixInLength} from "../../util/compat";
 import {BasicArrayStructuralHandler, CompositeArrayStructuralHandler} from "./array";
 
-export class BasicListStructuralHandler<T extends List<any>> extends BasicArrayStructuralHandler<T> {
+export class BasicListStructuralHandler<T extends List<unknown>> extends BasicArrayStructuralHandler<T> {
   _type: BasicListType<T>;
   constructor(type: BasicListType<T>) {
     super();
@@ -25,11 +25,11 @@ export class BasicListStructuralHandler<T extends List<any>> extends BasicArrayS
     return Math.ceil(value.length * this._type.elementType.size() / 32);
   }
   hashTreeRoot(value: T): Uint8Array {
-    return mixInLength(super.hashTreeRoot(value), value.length); 
+    return mixInLength(super.hashTreeRoot(value), value.length);
   }
 }
 
-export class CompositeListStructuralHandler<T extends List<any>> extends CompositeArrayStructuralHandler<T> {
+export class CompositeListStructuralHandler<T extends List<object>> extends CompositeArrayStructuralHandler<T> {
   _type: CompositeListType<T>;
   constructor(type: CompositeListType<T>) {
     super();
@@ -52,6 +52,6 @@ export class CompositeListStructuralHandler<T extends List<any>> extends Composi
     return value.length;
   }
   hashTreeRoot(value: T): Uint8Array {
-    return mixInLength(super.hashTreeRoot(value), value.length); 
+    return mixInLength(super.hashTreeRoot(value), value.length);
   }
 }
