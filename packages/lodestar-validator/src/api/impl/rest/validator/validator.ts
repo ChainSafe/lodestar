@@ -13,7 +13,8 @@ import {IValidatorApi} from "../../../interface/validators";
 import {HttpClient} from "../../../../util";
 import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {fromJson, toHex, toJson, fromHex} from "@chainsafe/eth2.0-utils";
+import {Json} from "@chainsafe/ssz";
+import {toHex, fromHex} from "@chainsafe/eth2.0-utils";
 
 export class RestValidatorApi implements IValidatorApi {
 
@@ -40,8 +41,8 @@ export class RestValidatorApi implements IValidatorApi {
   public async getAttesterDuties(epoch: number, validatorPubKeys: Buffer[]): Promise<ValidatorDuty[]> {
     const hexPubKeys = validatorPubKeys.map(toHex);
     const url = `/duties/${epoch.toString()}/attester?validator_pubkeys=${JSON.stringify(hexPubKeys)}`;
-    const responseData = await this.client.get<object[]>(url);
-    return responseData.map(value => fromJson<ValidatorDuty>(this.config.types.ValidatorDuty, value));
+    const responseData = await this.client.get<Json[]>(url);
+    return responseData.map(value =>this.config.types.ValidatorDuty.fromJson(value));
   }
 
   public async publishAggregatedAttestation(
@@ -51,19 +52,19 @@ export class RestValidatorApi implements IValidatorApi {
   ): Promise<void> {
     return this.client.post(
       `/aggregate?validator_pubkey=${toHex(validatorPubkey)}&slot_signature=${toHex(slotSignature)}`,
-      toJson(aggregatedAttestation)
+      this.config.types.Attestation.toJson(aggregatedAttestation)
     );
   }
 
   public async getWireAttestations(epoch: number, committeeIndex: number): Promise<Attestation[]> {
     const url = `/wire_attestations?epoch=${epoch}&committee_index=${committeeIndex}`;
-    const responseData = await this.client.get<object[]>(url);
-    return responseData.map(value => fromJson<Attestation>(this.config.types.Attestation, value));
+    const responseData = await this.client.get<Json[]>(url);
+    return responseData.map(value => this.config.types.Attestation.fromJson(value));
   }
 
   public async produceBlock(slot: Slot, randaoReveal: Bytes96): Promise<BeaconBlock> {
     const url = `/block?slot=${slot}&randao_reveal=${toHex(randaoReveal)}`;
-    return fromJson<BeaconBlock>(this.config.types.BeaconBlock, await this.client.get<object>(url));
+    return this.config.types.BeaconBlock.fromJson(await this.client.get<Json>(url));
   }
 
   public async produceAttestation(
@@ -74,15 +75,15 @@ export class RestValidatorApi implements IValidatorApi {
   ): Promise<Attestation> {
     const url = "/attestation"
         +`?slot=${slot}&committee_index=${committeeIndex}&validator_pubkey=${toHex(validatorPubKey)}`;
-    return fromJson<Attestation>(this.config.types.Attestation, await this.client.get<object>(url));
+    return this.config.types.Attestation.fromJson(await this.client.get<Json>(url));
   }
 
   public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
-    return this.client.post("/block", toJson(signedBlock));
+    return this.client.post("/block", this.config.types.SignedBeaconBlock.toJson(signedBlock));
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
-    return this.client.post("/attestation", toJson(attestation));
+    return this.client.post("/attestation", this.config.types.Attestation.toJson(attestation));
   }
 
   public async isAggregator(slot: Slot, committeeIndex: CommitteeIndex, slotSignature: BLSSignature): Promise<boolean> {
