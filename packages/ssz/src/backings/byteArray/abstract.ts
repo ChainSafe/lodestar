@@ -183,8 +183,10 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
         false, false, false, false,
       ];
     }
-    const bits = Array.prototype.map.call(byte.toString(2), (c) => c === "1" ? true : false).reverse() as boolean[];
-    bits.push(...Array.from({length: 8 - bits.length}, () => false));
+    const bits = Array.prototype.map.call(
+      byte.toString(2).padStart(8, "0"),
+      (c) => c === "1" ? true : false
+    ).reverse() as boolean[];
     return bits;
   }
 
