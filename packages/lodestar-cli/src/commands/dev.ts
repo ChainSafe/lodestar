@@ -6,6 +6,7 @@ import {ICliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
 import fs, {mkdirSync} from "fs";
+import {join} from "path";
 import PeerId from "peer-id";
 import yaml from "js-yaml";
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
@@ -67,8 +68,8 @@ export class DevCommand implements ICliCommand {
       .option("-v, --validators [range]", "Start validators, single number - validators 0-number, x,y - validators between x and y", "8")
       .option("-p, --preset [preset]", "Minimal/mainnet", "minimal")
       .option("-r, --resetDb", "Reset the database", true)
-      .option("--peer-id-file [peerIdFile]","peer id json file")
-      .option("--peer-id [peerId]","peer id hex string")
+      .option("--peer-id-file [peerIdFile]", "peer id json file")
+      .option("--peer-id [peerId]", "peer id hex string")
       .option("--validators-from-yaml-key-file [validatorsYamlFile]", "validator keys")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
@@ -105,7 +106,7 @@ export class DevCommand implements ICliCommand {
       }
       if (options.validators && fs.existsSync("./validators")) {
         let start = 0, end = 0;
-        if(options.validators.includes(",")) {
+        if (options.validators.includes(",")) {
           const parts = options.validators.split(",");
           start = parseInt(parts[0]);
           end = parseInt(parts[1]);
@@ -114,20 +115,23 @@ export class DevCommand implements ICliCommand {
         }
         for (let i = start; i < end; i++) {
           const validatorPath = `./validators/validator-db-${i}`;
-          if(fs.existsSync(validatorPath)) {
+          if (fs.existsSync(validatorPath)) {
             rmDir(validatorPath);
           }
         }
       }
     }
 
-    let peerId;
+    let peerId: PeerId;
     if (options["peerId"]) {
       peerId = PeerId.createFromHexString(options["peerId"]);
     } else if (options["peerIdFile"]) {
-      peerId = loadPeerId(options["peerId"]);
+      peerId = await loadPeerId(options["peerId"]);
     } else {
-      peerId = createPeerId();
+      peerId = await createPeerId();
+    }
+    if (!conf.db) {
+      conf.db = {name: join(".", "lodestar-db", peerId.toB58String())};
     }
     const libp2p = await createNodeJsLibp2p(peerId, conf.network);
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
@@ -136,7 +140,7 @@ export class DevCommand implements ICliCommand {
     if (options.genesisState) {
       state = quickStartOptionToState(config, tree, options.genesisState);
     } else if (options.genesisTime && options.validatorCount) {
-      logger.info(`Starting node with genesisTime ${new Date(parseInt(options.genesisTime)*1000)} and \
+      logger.info(`Starting node with genesisTime ${new Date(parseInt(options.genesisTime) * 1000)} and \
        ${options.validatorCount} validators.`);
       state = quickStartState(config, tree, parseInt(options.genesisTime), parseInt(options.validatorCount));
     } else {
@@ -152,8 +156,8 @@ export class DevCommand implements ICliCommand {
     await this.node.chain.advanceState(targetSlot);
     rimraf.sync(dbConfig.name);
     await this.node.start();
-    if(options.validators) {
-      if(options.validators.includes(",")) {
+    if (options.validators) {
+      if (options.validators.includes(",")) {
         const rangeParts = options.validators.split(",");
         this.startValidators(parseInt(rangeParts[0]), parseInt(rangeParts[1]), this.node);
       } else {
@@ -171,7 +175,7 @@ export class DevCommand implements ICliCommand {
   private async startValidators(from: number, to: number, node: BeaconNode): Promise<void> {
     rimraf.sync(this.validatorDir);
     mkdirSync(this.validatorDir);
-    for(let i = from; i < to; i++) {
+    for (let i = from; i < to; i++) {
       this.startValidator(interopKeypair(i).privkey, node);
     }
   }
