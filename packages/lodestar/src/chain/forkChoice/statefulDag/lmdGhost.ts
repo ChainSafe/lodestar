@@ -4,7 +4,7 @@
 
 import assert from "assert";
 
-import {Gwei, Slot, ValidatorIndex, number64, Checkpoint, Epoch, Root,} from "@chainsafe/eth2.0-types";
+import {Gwei, Slot, ValidatorIndex, Number64, Checkpoint, Epoch, Root,} from "@chainsafe/eth2.0-types";
 
 import {ILMDGHOST} from "../interface";
 
@@ -152,7 +152,7 @@ class Node {
  */
 export class StatefulDagLMDGHOST implements ILMDGHOST {
   private readonly config: IBeaconConfig;
-  private genesisTime: number64;
+  private genesisTime: Number64;
 
   /**
    * Aggregated attestations

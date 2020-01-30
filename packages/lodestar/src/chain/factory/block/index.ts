@@ -2,7 +2,7 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconBlock, BeaconBlockHeader, bytes96, Slot} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconBlockHeader, Bytes96, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {IBeaconDb} from "../../../db/api";
@@ -21,7 +21,7 @@ export async function assembleBlock(
   opPool: OpPool,
   eth1: IEth1Notifier,
   slot: Slot,
-  randao: bytes96
+  randao: Bytes96
 ): Promise<BeaconBlock | null> {
   const parentBlock = await db.block.get(chain.forkChoice.head());
   const currentState = await db.state.get(parentBlock.message.stateRoot);

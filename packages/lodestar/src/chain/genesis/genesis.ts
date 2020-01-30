@@ -9,8 +9,8 @@ import {
   BeaconState,
   Deposit,
   Eth1Data,
-  number64,
-  bytes32,
+  Number64,
+  Bytes32,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -32,8 +32,8 @@ import {bigIntMin} from "@chainsafe/eth2.0-utils";
 
 export function initializeBeaconStateFromEth1(
   config: IBeaconConfig,
-  eth1BlockHash: bytes32,
-  eth1Timestamp: number64,
+  eth1BlockHash: Bytes32,
+  eth1Timestamp: Number64,
   deposits: Deposit[]): BeaconState {
   const state = getGenesisBeaconState(
     config,
@@ -91,12 +91,12 @@ export function isValidGenesisState(config: IBeaconConfig, state: BeaconState): 
  */
 export function getGenesisBeaconState(
   config: IBeaconConfig,
-  genesisTime: number64,
+  genesisTime: Number64,
   genesisEth1Data: Partial<Eth1Data>,
   latestBlockHeader: BeaconBlockHeader
 ): BeaconState {
   // Seed RANDAO with Eth1 entropy
-  const randaoMixes = Array<bytes32>(config.params.EPOCHS_PER_HISTORICAL_VECTOR).fill(genesisEth1Data.blockHash);
+  const randaoMixes = Array<Bytes32>(config.params.EPOCHS_PER_HISTORICAL_VECTOR).fill(genesisEth1Data.blockHash);
 
   return createValue(config.types.BeaconState, {
     // MISC

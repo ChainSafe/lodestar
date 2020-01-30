@@ -26,7 +26,7 @@ export class ChainRepository {
   public async setLatestStateRoot(root: Root): Promise<void> {
     await this.db.put(
       this.getKey(Key.latestState),
-      this.config.types.bytes32.serialize(root)
+      this.config.types.Root.serialize(root)
     );
   }
 
@@ -37,7 +37,7 @@ export class ChainRepository {
   public async setJustifiedStateRoot(root: Root): Promise<void> {
     await this.db.put(
       this.getKey(Key.justifiedState),
-      this.config.types.bytes32.serialize(root)
+      this.config.types.Root.serialize(root)
     );
   }
 
@@ -48,7 +48,7 @@ export class ChainRepository {
   public async setFinalizedStateRoot(root: Root): Promise<void> {
     await this.db.put(
       this.getKey(Key.finalizedState),
-      this.config.types.bytes32.serialize(root)
+      this.config.types.Root.serialize(root)
     );
   }
 

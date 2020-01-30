@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars,@typescript-eslint/no-empty-function */
 import {EventEmitter} from "events";
 
-import {BeaconState, Eth1Data, number64, Root} from "@chainsafe/eth2.0-types";
+import {BeaconState, Eth1Data, Number64, Root} from "@chainsafe/eth2.0-types";
 
 import {IEth1Notifier} from "../";
 import {Block} from "ethers/providers";
@@ -38,7 +38,7 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
     return null as unknown as Block;
   }
 
-  public async depositCount(block?: string | number): Promise<number64> {
+  public async depositCount(block?: string | number): Promise<Number64> {
     return 0;
   }
 

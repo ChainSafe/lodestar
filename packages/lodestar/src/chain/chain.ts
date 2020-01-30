@@ -5,7 +5,7 @@
 import assert from "assert";
 import {EventEmitter} from "events";
 import {
-  Attestation, BeaconState, Slot, uint16, uint64, Root, SignedBeaconBlock,
+  Attestation, BeaconState, Slot, Uint16, Uint64, Root, SignedBeaconBlock,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -57,8 +57,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public chain: string;
   public _latestState: BeaconState = null;
   public forkChoice: ILMDGHOST;
-  public chainId: uint16;
-  public networkId: uint64;
+  public chainId: Uint16;
+  public networkId: Uint64;
 
   private readonly config: IBeaconConfig;
   private db: IBeaconDb;

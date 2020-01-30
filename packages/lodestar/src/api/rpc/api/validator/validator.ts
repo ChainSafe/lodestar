@@ -8,7 +8,7 @@ import {
   BeaconBlock,
   BLSPubkey,
   BLSSignature,
-  bytes96,
+  Bytes96,
   CommitteeIndex,
   Epoch,
   Slot,
@@ -56,7 +56,7 @@ export class ValidatorApi implements IValidatorApi {
     this.eth1 = modules.eth1;
   }
 
-  public async produceBlock(slot: Slot, randaoReveal: bytes96): Promise<BeaconBlock> {
+  public async produceBlock(slot: Slot, randaoReveal: Bytes96): Promise<BeaconBlock> {
     return await assembleBlock(this.config, this.chain, this.db, this.opPool, this.eth1, slot, randaoReveal);
   }
 

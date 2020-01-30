@@ -5,7 +5,7 @@
 import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {Block, Log} from "ethers/providers";
-import {Deposit, Eth1Data, number64, Root} from "@chainsafe/eth2.0-types";
+import {Deposit, Eth1Data, Number64, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {Eth1EventEmitter, IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
@@ -84,7 +84,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     merkleTreeIndex: string
   ): Promise<void> {
     try {
-      const index = this.config.types.number64.deserialize(Buffer.from(merkleTreeIndex.substr(2), "hex"));
+      const index = this.config.types.Number64.deserialize(Buffer.from(merkleTreeIndex.substr(2), "hex"));
       const deposit = this.createDeposit(
         pubkey,
         withdrawalCredentials,
@@ -141,7 +141,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     return Buffer.from(depositCountHex.substr(2), "hex").readUIntLE(0, 6);
   }
 
-  public async getEth1Data(eth1Head: Block, distance: number64): Promise<Eth1Data> {
+  public async getEth1Data(eth1Head: Block, distance: Number64): Promise<Eth1Data> {
     const requiredBlock = eth1Head.number - distance;
     const blockHash = (await this.getBlock(requiredBlock)).hash;
     const [depositCount, depositRoot] = await Promise.all([
@@ -176,8 +176,8 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
 
   private async getContractPastLogs(
     topics: string[],
-    fromBlock: number64 | string = this.opts.depositContract.deployedAt,
-    toBlock: number64 | string | null = null
+    fromBlock: Number64 | string = this.opts.depositContract.deployedAt,
+    toBlock: Number64 | string | null = null
   ): Promise<Log[]> {
     const filter = {
       fromBlock,

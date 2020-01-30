@@ -1,7 +1,7 @@
 import {EventEmitter} from "events";
 
 import {
-  Attestation, BeaconState, Checkpoint, Slot, uint16, uint64, Root, SignedBeaconBlock,
+  Attestation, BeaconState, Checkpoint, Slot, Uint16, Uint64, Root, SignedBeaconBlock,
 } from "@chainsafe/eth2.0-types";
 
 import {ILMDGHOST} from "./forkChoice";
@@ -26,8 +26,8 @@ export type ChainEventEmitter = StrictEventEmitter<EventEmitter, IChainEvents>;
 export interface IBeaconChain extends ChainEventEmitter {
   latestState: BeaconState|null;
   forkChoice: ILMDGHOST;
-  chainId: uint16;
-  networkId: uint64;
+  chainId: Uint16;
+  networkId: Uint64;
   /**
    * Start beacon chain processing
    */

@@ -15,7 +15,7 @@ export enum Bucket {
   blockRootRefs,
   invalidBlock, // bad block
   mainChain, // slot -> blockHash
-  chainInfo, // Key -> number64 | stateHash | blockHash
+  chainInfo, // Key -> Number64 | stateHash | blockHash
   validator,
   deposit, // index -> Deposit
   exit, // hash -> VoluntaryExit

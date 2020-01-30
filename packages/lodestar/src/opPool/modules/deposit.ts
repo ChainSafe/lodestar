@@ -1,4 +1,4 @@
-import {Deposit, number64} from "@chainsafe/eth2.0-types";
+import {Deposit, Number64} from "@chainsafe/eth2.0-types";
 
 import {DepositRepository} from "../../db/api/beacon/repositories";
 
@@ -32,7 +32,7 @@ export class DepositsOperations {
    * Removes deposits with index <= depositCount - 1
    * @param depositCount
    */
-  public async removeOld(depositCount: number64): Promise<void> {
+  public async removeOld(depositCount: Number64): Promise<void> {
     await this.db.deleteOld(depositCount);
   }
 

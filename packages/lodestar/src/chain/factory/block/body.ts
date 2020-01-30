@@ -2,7 +2,7 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconBlockBody, BeaconState, bytes96} from "@chainsafe/eth2.0-types";
+import {BeaconBlockBody, BeaconState, Bytes96} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ZERO_HASH} from "../../../constants";
 import {OpPool} from "../../../opPool";
@@ -17,7 +17,7 @@ export async function assembleBody(
   eth1: IEth1Notifier,
   merkleTree: IProgressiveMerkleTree,
   currentState: BeaconState,
-  randao: bytes96
+  randao: Bytes96
 ): Promise<BeaconBlockBody> {
   const [proposerSlashings, attesterSlashings, attestations, voluntaryExits, eth1Data] = await Promise.all([
     opPool.proposerSlashings.getAll().then(value => value.slice(0, config.params.MAX_PROPOSER_SLASHINGS)),

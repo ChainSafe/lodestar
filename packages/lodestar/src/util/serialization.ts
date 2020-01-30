@@ -15,7 +15,7 @@ export class MerkleTreeSerialization implements IMerkleTreeSerialization {
   }
 
   public serializeLength(length: number): Buffer {
-    return this.config.types.uint256.serialize(BigInt(length));
+    return this.config.types.Uint256.serialize(BigInt(length));
   }
 
   public serializeTree(tree: MerkleTree): Buffer {
