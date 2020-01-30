@@ -4,7 +4,7 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IDatabaseController} from "../../controller";
 import {Bucket, encodeKey} from "../../schema";
 
-export type Id = Buffer | string | number | bigint;
+export type Id = Uint8Array | string | number | bigint;
 
 export abstract class Repository<T> {
   protected config: IBeaconConfig;
