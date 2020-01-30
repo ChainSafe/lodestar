@@ -50,7 +50,10 @@ export class AttestationService {
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
     const attesterDuties = await this.provider.validator.getAttesterDuties(epoch + 1, [this.publicKey]);
-    if(attesterDuties.length === 1 && this.config.types.BLSPubkey.equals(attesterDuties[0].validatorPubkey, this.publicKey)) {
+    if(
+      attesterDuties.length === 1 &&
+      this.config.types.BLSPubkey.equals(attesterDuties[0].validatorPubkey, this.publicKey)
+    ) {
       const duty = attesterDuties[0];
       const fork = (await this.provider.beacon.getFork()).fork;
       const isAggregator = await this.provider.validator.isAggregator(
@@ -117,10 +120,12 @@ export class AttestationService {
     const aggregatedAttestation: Attestation = {
       signature: aggregateSignatures(compatibleAttestations.map((a) => a.signature)),
       data: attestation.data,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       aggregationBits: compatibleAttestations.reduce((aggregatedBits, current) => {
-        return aggregatedBits.or(current.aggregationBits);
-      }, compatibleAttestations[0].aggregationBits)
+        for (let i = 0; i < aggregatedBits.length; i++) {
+          aggregatedBits[i] = aggregatedBits[i] || current.aggregationBits[i];
+        }
+        return aggregatedBits;
+      }, Array.from({length: attestation.aggregationBits.length}, () => false)),
     };
     await this.provider.validator.publishAggregatedAttestation(
       aggregatedAttestation,

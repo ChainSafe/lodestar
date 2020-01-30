@@ -13,7 +13,7 @@ import {IValidatorApi} from "../../../interface/validators";
 import {HttpClient} from "../../../../util";
 import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {fromJson, toHex, toJson} from "@chainsafe/eth2.0-utils";
+import {fromJson, toHex, toJson, fromHex} from "@chainsafe/eth2.0-utils";
 
 export class RestValidatorApi implements IValidatorApi {
 
@@ -26,15 +26,13 @@ export class RestValidatorApi implements IValidatorApi {
     this.config = config;
   }
 
-  public async getProposerDuties(epoch: number): Promise<Map<number, Buffer>> {
+  public async getProposerDuties(epoch: number): Promise<Map<Slot, BLSPubkey>> {
     const url = `/duties/${epoch.toString()}/proposer`;
     const responseData = await this.client.get<Record<Slot, string>>(url);
 
     const result = new Map<Slot, BLSPubkey>();
-    for(const key in responseData) {
-      if(responseData.hasOwnProperty(key)) {
-        result.set(Number(key), Buffer.from(responseData[key].replace("0x", ""), "hex"));
-      }
+    for(const [key, value] of Object.entries(responseData)) {
+      result.set(Number(key), fromHex(value));
     }
     return result;
   }
