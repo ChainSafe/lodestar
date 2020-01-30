@@ -33,9 +33,9 @@ export class BlockArchiveRepository extends BulkRepository<SignedBeaconBlock> {
     });
     const processedData = (data || [])
       .map((datum) => this.type.deserialize(datum))
-      .filter(block => {
+      .filter(signedBlock => {
         if (step !== null && typeof safeLowerLimit === "number") {
-          return block.slot >= safeLowerLimit && (block.slot - safeLowerLimit) % step === 0;
+          return signedBlock.message.slot >= safeLowerLimit && (signedBlock.message.slot - safeLowerLimit) % step === 0;
         } else {
           return true;
         }
