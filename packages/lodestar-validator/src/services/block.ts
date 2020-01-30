@@ -2,14 +2,13 @@
  * @module validator
  */
 
-import {hashTreeRoot} from "@chainsafe/ssz";
-
 import {BeaconState, BLSPubkey, Epoch, Fork, Slot, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
+import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {toHex} from "@chainsafe/eth2.0-utils";
 import {computeEpochAtSlot, DomainType, getDomain} from "../util";
 import {IValidatorDB} from "../";
-import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {IApiClient} from "../api";
 
 
@@ -42,7 +41,7 @@ export default class BlockProposingService {
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
     const epochProposers = await this.provider.validator.getProposerDuties(epoch);
     epochProposers.forEach((validatorPubKey, slot) => {
-      if(validatorPubKey.equals(this.publicKey)) {
+      if(this.config.types.BLSPubkey.equals(validatorPubKey, this.publicKey)) {
         this.nextProposalSlot = slot;
       }
     });
@@ -66,7 +65,7 @@ export default class BlockProposingService {
     const block = await this.provider.validator.produceBlock(
       slot,
       this.privateKey.signMessage(
-        hashTreeRoot(this.config.types.Epoch, computeEpochAtSlot(this.config, slot)),
+        this.config.types.Epoch.hashTreeRoot(computeEpochAtSlot(this.config, slot)),
         getDomain(this.config, {fork} as BeaconState, DomainType.RANDAO, computeEpochAtSlot(this.config, slot))
       ).toBytesCompressed()
     );
@@ -76,14 +75,14 @@ export default class BlockProposingService {
     const signedBlock: SignedBeaconBlock = {
       message: block,
       signature: this.privateKey.signMessage(
-        hashTreeRoot(this.config.types.BeaconBlock, block),
+        this.config.types.BeaconBlock.hashTreeRoot(block),
         getDomain(this.config, {fork} as BeaconState, DomainType.BEACON_PROPOSER, computeEpochAtSlot(this.config, slot))
       ).toBytesCompressed(),
     };
     await this.storeBlock(signedBlock);
     await this.provider.validator.publishBlock(signedBlock);
     this.logger.info(
-      `Proposed block with hash 0x${hashTreeRoot(this.config.types.BeaconBlock, block).toString("hex")}`
+      `Proposed block with hash ${toHex(this.config.types.BeaconBlock.hashTreeRoot(block))}`
     );
     return signedBlock;
   }

@@ -3,7 +3,7 @@ import {
   BeaconBlock,
   BLSPubkey,
   BLSSignature,
-  bytes96,
+  Bytes96,
   CommitteeIndex,
   Slot,
   ValidatorDuty,
@@ -63,8 +63,8 @@ export class RestValidatorApi implements IValidatorApi {
     return responseData.map(value => fromJson<Attestation>(this.config.types.Attestation, value));
   }
 
-  public async produceBlock(slot: Slot, randaoReveal: bytes96): Promise<BeaconBlock> {
-    const url = `/block?slot=${slot}&randao_reveal=${randaoReveal.toString("hex")}`;
+  public async produceBlock(slot: Slot, randaoReveal: Bytes96): Promise<BeaconBlock> {
+    const url = `/block?slot=${slot}&randao_reveal=${toHex(randaoReveal)}`;
     return fromJson<BeaconBlock>(this.config.types.BeaconBlock, await this.client.get<object>(url));
   }
 
@@ -75,7 +75,7 @@ export class RestValidatorApi implements IValidatorApi {
     committeeIndex: CommitteeIndex
   ): Promise<Attestation> {
     const url = "/attestation"
-        +`?slot=${slot}&committee_index=${committeeIndex}&validator_pubkey=${validatorPubKey.toString("hex")}`;
+        +`?slot=${slot}&committee_index=${committeeIndex}&validator_pubkey=${toHex(validatorPubKey)}`;
     return fromJson<Attestation>(this.config.types.Attestation, await this.client.get<object>(url));
   }
 

@@ -1,7 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {AttestationData, BeaconState, Domain, Epoch, number64, Slot, Version} from "@chainsafe/eth2.0-types";
+import {AttestationData, BeaconState, Domain, Epoch, Number64, Slot, Version} from "@chainsafe/eth2.0-types";
 import {intDiv, intToBytes} from "@chainsafe/eth2.0-utils";
-import {equals} from "@chainsafe/ssz";
 
 // Domain Types
 export enum DomainType {
@@ -12,7 +11,7 @@ export enum DomainType {
   VOLUNTARY_EXIT = 4,
 }
 
-export function getCurrentSlot(config: IBeaconConfig, genesisTime: number64): Slot {
+export function getCurrentSlot(config: IBeaconConfig, genesisTime: Number64): Slot {
   const diffInSeconds = (Date.now() / 1000) - genesisTime;
   return intDiv(diffInSeconds, config.params.SECONDS_PER_SLOT);
 }
@@ -74,7 +73,7 @@ export function isSlashableAttestationData(
 ): boolean {
   return (
   // Double vote
-    (!equals(config.types.AttestationData, data1, data2)
+    (!config.types.AttestationData.equals(data1, data2)
           && data1.target.epoch === data2.target.epoch) ||
       // Surround vote
       (data1.source.epoch < data2.source.epoch &&
