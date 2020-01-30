@@ -1,8 +1,10 @@
 /* eslint-disable camelcase */
-import {IFastifyServer} from "../../index";
-import fastify, {DefaultQuery} from "fastify";
-import {IApiModules} from "../../../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
+import fastify, {DefaultQuery} from "fastify";
+import {fromHex} from "@chainsafe/eth2.0-utils";
+
+import {IFastifyServer} from "../../index";
+import {IApiModules} from "../../../interface";
 import {produceAttestation} from "../../../impl/validator";
 
 interface IQuery extends DefaultQuery {
@@ -46,7 +48,7 @@ export const registerAttestationProductionEndpoint = (fastify: IFastifyServer, m
     async (request, reply) => {
       const attestation = await produceAttestation(
         {db: modules.db, chain: modules.chain, config: modules.config},
-        Buffer.from(request.query.validator_pubkey.replace("0x", ""), "hex"),
+        fromHex(request.query.validator_pubkey),
         request.query.committee_index,
         request.query.slot
       );

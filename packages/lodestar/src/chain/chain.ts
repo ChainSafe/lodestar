@@ -13,6 +13,7 @@ import {DEPOSIT_CONTRACT_TREE_DEPTH, GENESIS_SLOT, EMPTY_SIGNATURE} from "../con
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
 import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {fromHex, toHex} from "@chainsafe/eth2.0-utils";
 import {IBeaconMetrics} from "../metrics";
 
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
@@ -126,8 +127,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async receiveBlock(signedBlock: SignedBeaconBlock, trusted = false): Promise<void> {
     const blockHash = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
+    const hexBlockHash = toHex(blockHash);
     this.logger.info(
-      `Received block with hash 0x${blockHash.toString("hex")}` +
+      `Received block with hash ${hexBlockHash}` +
       `at slot ${signedBlock.message.slot}. Current state slot ${this.latestState.slot}`
     );
 
@@ -138,15 +140,15 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     }
 
     if(await this.db.block.has(blockHash)) {
-      this.logger.warn(`Block ${blockHash} existed already, no need to process it.`);
+      this.logger.warn(`Block ${hexBlockHash} existed already, no need to process it.`);
       return;
     }
 
     const finalizedCheckpoint = this.forkChoice.getFinalized();
     if(signedBlock.message.slot <= computeStartSlotAtEpoch(this.config, finalizedCheckpoint.epoch)) {
       this.logger.warn(
-        `Block ${blockHash.toString("hex")} is not after ` +
-        `finalized checkpoint ${finalizedCheckpoint.root.toString("hex")}.`
+        `Block ${hexBlockHash} is not after ` +
+        `finalized checkpoint ${toHex(finalizedCheckpoint.root)}.`
       );
       return;
     }
@@ -184,10 +186,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public async applyForkChoiceRule(): Promise<void> {
     const currentRoot = await this.db.chain.getChainHeadRoot();
     const headRoot = this.forkChoice.head();
-    if (currentRoot && !currentRoot.equals(headRoot)) {
+    if (currentRoot && !this.config.types.Root.equals(currentRoot, headRoot)) {
       const signedBlock = await this.db.block.get(headRoot);
       await this.db.updateChainHead(headRoot, signedBlock.message.stateRoot);
-      this.logger.info(`Fork choice changed head to 0x${headRoot.toString("hex")}`);
+      this.logger.info(`Fork choice changed head to 0x${toHex(headRoot)}`);
     }
   }
 
@@ -202,7 +204,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     // the database matches what we were provided
     const storedGenesisBlock = await this.db.block.getBlockBySlot(GENESIS_SLOT);
     if (storedGenesisBlock !== null &&
-      !genesisBlock.stateRoot.equals(storedGenesisBlock.message.stateRoot)) {
+      !this.config.types.Root.equals(genesisBlock.stateRoot, storedGenesisBlock.message.stateRoot)) {
       throw new Error("A genesis state with different configuration was detected! Please clean the database.");
     }
     await Promise.all([
@@ -241,14 +243,15 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const pre = await this.db.state.get(parentBlock.message.stateRoot);
     const isValidBlock = await this.isValidBlock(pre, job.signedBlock);
     assert(isValidBlock);
-    this.logger.info(`0x${blockHash.toString("hex")} is valid, running state transition...`);
+    const hexBlockHash = toHex(blockHash);
+    this.logger.info(`${hexBlockHash} is valid, running state transition...`);
 
     // process current slot
     const post = await this.runStateTransition(job.signedBlock, pre);
 
     this.logger.info(
-      `Slot ${job.signedBlock.message.slot} Block 0x${blockHash.toString("hex")} ` +
-      `State ${this.config.types.BeaconState.hashTreeRoot(post).toString("hex")} passed state transition`
+      `Slot ${job.signedBlock.message.slot} Block ${hexBlockHash} ` +
+      `State ${toHex(this.config.types.BeaconState.hashTreeRoot(post))} passed state transition`
     );
     await this.opPool.processBlockOperations(job.signedBlock);
     job.signedBlock.message.body.attestations.forEach((attestation) => {
@@ -314,7 +317,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     } catch (e) {
       // store block root in db and terminate
       await this.db.block.storeBadBlock(blockRoot);
-      this.logger.warn(`Found bad block, block root: 0x${blockRoot.toString("hex")} ` + e.message);
+      this.logger.warn(`Found bad block, block root: ${toHex(blockRoot)} ` + e.message);
       return;
     }
     this.latestState = newState;
@@ -415,7 +418,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       });
     const genesisState = initializeBeaconStateFromEth1(
       this.config,
-      Buffer.from(eth1Block.hash.replace("0x", ""), "hex"),
+      fromHex(eth1Block.hash),
       eth1Block.timestamp,
       depositsWithProof
     );

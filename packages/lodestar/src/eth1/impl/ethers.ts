@@ -7,10 +7,12 @@ import {Contract, ethers} from "ethers";
 import {Block, Log} from "ethers/providers";
 import {Deposit, Eth1Data, Number64, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {fromHex} from "@chainsafe/eth2.0-utils";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+
 import {Eth1EventEmitter, IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
 import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {IEth1Options} from "../options";
 import {getEth1Vote} from "./eth1Vote";
 
@@ -84,7 +86,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     merkleTreeIndex: string
   ): Promise<void> {
     try {
-      const index = this.config.types.Number64.deserialize(Buffer.from(merkleTreeIndex.substr(2), "hex"));
+      const index = this.config.types.Number64.deserialize(fromHex(merkleTreeIndex));
       const deposit = this.createDeposit(
         pubkey,
         withdrawalCredentials,
@@ -133,12 +135,12 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
 
   public async depositRoot(block?: string | number): Promise<Root> {
     const depositRootHex = await this.contract.get_deposit_root({blockTag: block || "latest"});
-    return Buffer.from(depositRootHex.substr(2), "hex");
+    return fromHex(depositRootHex);
   }
 
   public async depositCount(block?: string | number): Promise<number> {
     const depositCountHex = await this.contract.get_deposit_count({blockTag: block || "latest"});
-    return Buffer.from(depositCountHex.substr(2), "hex").readUIntLE(0, 6);
+    return Buffer.from(fromHex(depositCountHex)).readUIntLE(0, 6);
   }
 
   public async getEth1Data(eth1Head: Block, distance: Number64): Promise<Eth1Data> {
@@ -149,7 +151,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       this.depositRoot(blockHash)
     ]);
     return {
-      blockHash: Buffer.from(blockHash.slice(2), "hex"),
+      blockHash: fromHex(blockHash),
       depositCount,
       depositRoot
     };
@@ -200,10 +202,10 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     return {
       proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH}, () => Buffer.alloc(32)),
       data: {
-        pubkey: Buffer.from(pubkey.slice(2), "hex"),
-        withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), "hex"),
-        amount: this.config.types.Gwei.deserialize(Buffer.from(amount.slice(2), "hex")),
-        signature: Buffer.from(signature.slice(2), "hex"),
+        pubkey: fromHex(pubkey),
+        withdrawalCredentials: fromHex(withdrawalCredentials),
+        amount: this.config.types.Gwei.deserialize(fromHex(amount)),
+        signature: fromHex(signature),
       },
     };
   }
