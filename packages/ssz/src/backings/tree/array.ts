@@ -101,9 +101,35 @@ export class BasicArrayTreeHandler<T extends ArrayLike<unknown>> extends TreeHan
       yield this.getValueAtIndex(target, i);
     }
   }
-  forEach(target: TreeBacking, fn: (value: unknown, index: number) => void): void {
+  find(
+    target: TreeBacking,
+    fn: (value: T[keyof T], index: number, array: ArrayLike<unknown>) => boolean
+  ): T[keyof T] | undefined {
+    const value = this.createBackedValue(target);
     for (let i = 0; i < this.getLength(target); i++) {
-      fn(this.getValueAtIndex(target, i), i);
+      const elementValue = this.getValueAtIndex(target, i);
+      if (fn(elementValue, i, value)) {
+        return elementValue;
+      }
+    }
+    return undefined;
+  }
+  findIndex(
+    target: TreeBacking,
+    fn: (value: T[keyof T], index: number, array: ArrayLike<unknown>) => boolean
+  ): number {
+    const value = this.createBackedValue(target);
+    for (let i = 0; i < this.getLength(target); i++) {
+      if (fn(this.getValueAtIndex(target, i), i, value)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+  forEach(target: TreeBacking, fn: (value: T[keyof T], index: number, array: ArrayLike<unknown>) => void): void {
+    const value = this.createBackedValue(target);
+    for (let i = 0; i < this.getLength(target); i++) {
+      fn(this.getValueAtIndex(target, i), i, value);
     }
   }
 }
@@ -199,9 +225,35 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<object>> extends Tree
       yield this.getValueAtChunk(target, i);
     }
   }
-  forEach(target: TreeBacking, fn: (value: unknown, index: number) => void): void {
+  find(
+    target: TreeBacking,
+    fn: (value: PropOfCompositeTreeBackedValue<T, number>, index: number, array: ArrayLike<unknown>) => boolean
+  ): PropOfCompositeTreeBackedValue<T, number> | undefined {
+    const value = this.createBackedValue(target);
     for (let i = 0; i < this.getLength(target); i++) {
-      fn(this.getValueAtChunk(target, i), i);
+      const elementValue = this.getValueAtChunk(target, i);
+      if (fn(elementValue, i, value)) {
+        return elementValue;
+      }
+    }
+    return undefined;
+  }
+  findIndex(
+    target: TreeBacking,
+    fn: (value: PropOfCompositeTreeBackedValue<T, number>, index: number, array: ArrayLike<unknown>) => boolean
+  ): number {
+    const value = this.createBackedValue(target);
+    for (let i = 0; i < this.getLength(target); i++) {
+      if (fn(this.getValueAtChunk(target, i), i, value)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+  forEach(target: TreeBacking, fn: (value: unknown, index: number, array: ArrayLike<object>) => void): void {
+    const value = this.createBackedValue(target);
+    for (let i = 0; i < this.getLength(target); i++) {
+      fn(this.getValueAtChunk(target, i), i, value);
     }
   }
 }

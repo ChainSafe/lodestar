@@ -1,7 +1,10 @@
 export interface ArrayLike<T> {
   readonly length: number;
   [n: number]: T;
-  forEach(fn: (value: T, index: number) => void): void;
+  [Symbol.iterator](): Iterator<T>;
+  find(fn: (value: T, index: number, array: this) => boolean): T | undefined;
+  findIndex(fn: (value: T, index: number, array: this) => boolean): number;
+  forEach(fn: (value: T, index: number, array: this) => void): void;
   //  reduce<U>(fn: (accum: U, value: T, index: number) => U, initial?: U): U;
 }
 
