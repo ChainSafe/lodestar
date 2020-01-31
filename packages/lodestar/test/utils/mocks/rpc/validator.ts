@@ -3,13 +3,13 @@ import {
   AttestationData,
   BeaconBlock,
   BLSPubkey,
-  bytes,
   Deposit,
   Eth1Data,
-  number64,
+  Number64,
   Slot,
   ValidatorDuty,
-  ValidatorIndex
+  ValidatorIndex,
+  BLSSignature
 } from "@chainsafe/eth2.0-types";
 
 import {getEmptyBlock} from "../../../../src/chain/genesis/genesis";
@@ -19,7 +19,7 @@ import {ApiNamespace} from "../../../../src/api";
 
 export interface MockValidatorAPIOpts {
   head?: BeaconBlock;
-  chainId?: number64;
+  chainId?: Number64;
   validatorIndex?: ValidatorIndex;
   pendingAttestations?: Attestation[];
   getPendingDeposits?: Deposit[];
@@ -29,7 +29,7 @@ export interface MockValidatorAPIOpts {
 
 export class MockValidatorApi implements IValidatorApi {
   public namespace: ApiNamespace;
-  private chainId: number64;
+  private chainId: Number64;
   private validatorIndex: ValidatorIndex;
   private attestations;
   private head: BeaconBlock;
@@ -46,7 +46,7 @@ export class MockValidatorApi implements IValidatorApi {
     return [];
   }
 
-  public async produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock> {
+  public async produceBlock(slot: Slot, randaoReveal: BLSSignature): Promise<BeaconBlock> {
     // eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
     return {} as BeaconBlock;
   }

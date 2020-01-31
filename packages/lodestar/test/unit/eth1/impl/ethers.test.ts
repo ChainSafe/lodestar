@@ -122,9 +122,9 @@ describe("Eth1Notifier", () => {
 
     const pubKey = bls.generateKeyPair().publicKey.toBytesCompressed();
     const withdrawalCredentials = "0x" + Buffer.alloc(32).toString("hex");
-    const amount = "0x" + config.types.number64.serialize(32000000000).toString("hex");
+    const amount = "0x" + config.types.Number64.serialize(32000000000).toString("hex");
     const signature = "0x" + Buffer.alloc(94).toString("hex");
-    const merkleTreeIndex = "0x" + config.types.number64.serialize(0).toString("hex");
+    const merkleTreeIndex = "0x" + config.types.Number64.serialize(0).toString("hex");
     await eth1.processDepositLog(pubKey.toString("hex"), withdrawalCredentials, amount, signature, merkleTreeIndex);
     assert(cb.calledOnce, "deposit event did not fire");
   });

@@ -6,9 +6,9 @@ import {
   BeaconState,
   Deposit,
   Eth1Data,
-  number64, Slot,
-  uint16,
-  uint64,
+  Slot,
+  Uint16,
+  Uint64,
   SignedBeaconBlock
 } from "@chainsafe/eth2.0-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
@@ -18,8 +18,8 @@ import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public latestState: BeaconState;
   public forkChoice: ILMDGHOST;
-  public chainId: uint16;
-  public networkId: uint64;
+  public chainId: Uint16;
+  public networkId: Uint64;
 
   public constructor({genesisTime, chainId, networkId}) {
     super();
