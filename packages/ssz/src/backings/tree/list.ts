@@ -44,7 +44,7 @@ export class BasicListTreeHandler<T extends List<unknown>> extends BasicArrayTre
     if (property > length) {
       throw new Error("Invalid length index");
     } else if (property == length) {
-      this.push(target, value);
+      this.pushSingle(target, value);
       return true;
     } else {
       return this.setProperty(target, property, value);
@@ -61,12 +61,17 @@ export class BasicListTreeHandler<T extends List<unknown>> extends BasicArrayTre
       return super.deleteProperty(target, property);
     }
   }
-  push(target: TreeBacking, value: T[number]): number {
+  pushSingle(target: TreeBacking, value: T[number]): number {
     const length = this.getLength(target);
     const expand = this.getChunkIndex(length) != this.getChunkIndex(length + 1);
     this.setProperty(target, length, value, expand);
     this.setLength(target, length + 1);
     return length + 1;
+  }
+  push(target: TreeBacking, values: T[number][]): number {
+    let newLength;
+    values.forEach((value) => newLength = this.pushSingle(target, value));
+    return newLength;
   }
   pop(target: TreeBacking): T[number] {
     const length = this.getLength(target);
@@ -151,7 +156,7 @@ export class CompositeListTreeHandler<T extends List<object>> extends CompositeA
     if (property > length) {
       throw new Error("Invalid length index");
     } else if (property == length) {
-      this.push(target, value);
+      this.pushSingle(target, value);
       return true;
     } else {
       return this.setProperty(target, property, value);
@@ -168,11 +173,16 @@ export class CompositeListTreeHandler<T extends List<object>> extends CompositeA
       return super.deleteProperty(target, property);
     }
   }
-  push(target: TreeBacking, value: T[number]): number {
+  pushSingle(target: TreeBacking, value: T[number]): number {
     const length = this.getLength(target);
     this.setProperty(target, length, value, true);
     this.setLength(target, length + 1);
     return length + 1;
+  }
+  push(target: TreeBacking, values: T[number][]): number {
+    let newLength;
+    values.forEach((value) => newLength = this.pushSingle(target, value));
+    return newLength;
   }
   pop(target: TreeBacking): T[number] {
     const length = this.getLength(target);

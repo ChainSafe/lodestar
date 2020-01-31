@@ -8,7 +8,7 @@ export interface ArrayLike<T> {
 export type Vector<T> = ArrayLike<T>;
 
 export interface List<T> extends ArrayLike<T> {
-  push(value: T): number;
+  push(...values: T[]): number;
   pop(): T;
 }
 
