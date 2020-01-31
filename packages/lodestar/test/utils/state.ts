@@ -3,7 +3,6 @@ import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
 import {hashTreeRoot} from "@chainsafe/ssz";
 import {generateEmptyBlock} from "./block";
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {BitVector} from "@chainsafe/bit-utils";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -48,7 +47,7 @@ export function generateState(opts?: TestBeaconState, config = mainnetConfig): B
     slashings: Array.from({length: config.params.EPOCHS_PER_SLASHINGS_VECTOR}, () => 0n),
     previousEpochAttestations: [],
     currentEpochAttestations: [],
-    justificationBits: BitVector.fromBitfield(Buffer.alloc(1), 4),
+    justificationBits: Array.from({length: 4}, () => false),
     previousJustifiedCheckpoint: {
       epoch: GENESIS_EPOCH,
       root: ZERO_HASH,
