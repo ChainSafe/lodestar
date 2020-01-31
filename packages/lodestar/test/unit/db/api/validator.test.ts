@@ -1,7 +1,6 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from 'chai-as-promised';
 import sinon from "sinon";
-import {serialize} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as dbKeys from "../../../../src/db/schema";
 import {Bucket} from "../../../../src/db/schema";
@@ -35,7 +34,7 @@ describe('beacon db api', function () {
 
   it('get validator block', async function () {
     encodeKeyStub.returns('blockKey');
-    dbStub.get.withArgs('blockKey').resolves(serialize(config.types.SignedBeaconBlock, generateEmptySignedBlock()));
+    dbStub.get.withArgs('blockKey').resolves(config.types.SignedBeaconBlock.serialize(generateEmptySignedBlock()));
     await validatorDB.getBlock(pubKey);
     expect(encodeKeyStub.withArgs(Bucket.lastProposedBlock, pubKey.toString('hex')).calledOnce).to.be.true;
     expect(dbStub.get.withArgs('blockKey').calledOnce).to.be.true;
@@ -51,7 +50,7 @@ describe('beacon db api', function () {
 
   it('get validator attestation', async function () {
     encodeKeyStub.returns('attestationKey');
-    dbStub.search.resolves([serialize(config.types.Attestation, generateEmptyAttestation())]);
+    dbStub.search.resolves([config.types.Attestation.serialize(generateEmptyAttestation())]);
     await validatorDB.getAttestations(pubKey, {gt: 0, lt: 3});
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, pubKey.toString('hex') + "0").calledOnce).to.be.true;
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, (BigInt(pubKey.toString("hex"))+1n).toString(16).replace('0x', '') + "3").calledOnce).to.be.true;
@@ -60,7 +59,7 @@ describe('beacon db api', function () {
 
   it('get validator attestation - just lower constraint', async function () {
     encodeKeyStub.returns('attestationKey');
-    dbStub.search.resolves([serialize(config.types.Attestation, generateEmptyAttestation())]);
+    dbStub.search.resolves([config.types.Attestation.serialize(generateEmptyAttestation())]);
     await validatorDB.getAttestations(pubKey, {gt: 0});
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, pubKey.toString('hex') + "0").calledOnce).to.be.true;
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, (BigInt(pubKey.toString('hex'))+1n).toString(16).replace('0x', '') + Number.MAX_SAFE_INTEGER).calledOnce).to.be.true;

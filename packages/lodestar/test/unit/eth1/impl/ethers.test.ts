@@ -7,7 +7,6 @@ import sinon, {SinonSandbox} from "sinon";
 import {Block, Provider} from "ethers/providers";
 import {promisify} from "es6-promisify";
 import bls from "@chainsafe/bls";
-import {serialize} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {EthersEth1Notifier, IEth1Notifier} from "../../../../src/eth1";
 import defaults from "../../../../src/eth1/dev/options";
@@ -123,9 +122,9 @@ describe("Eth1Notifier", () => {
 
     const pubKey = bls.generateKeyPair().publicKey.toBytesCompressed();
     const withdrawalCredentials = "0x" + Buffer.alloc(32).toString("hex");
-    const amount = "0x" + serialize(config.types.number64, 32000000000).toString("hex");
+    const amount = "0x" + config.types.number64.serialize(32000000000).toString("hex");
     const signature = "0x" + Buffer.alloc(94).toString("hex");
-    const merkleTreeIndex = "0x" + serialize(config.types.number64, 0).toString("hex");
+    const merkleTreeIndex = "0x" + config.types.number64.serialize(0).toString("hex");
     await eth1.processDepositLog(pubKey.toString("hex"), withdrawalCredentials, amount, signature, merkleTreeIndex);
     assert(cb.calledOnce, "deposit event did not fire");
   });

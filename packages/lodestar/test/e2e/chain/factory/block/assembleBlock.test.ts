@@ -1,5 +1,4 @@
 import {expect} from "chai";
-import {clone, hashTreeRoot} from "@chainsafe/ssz";
 import sinon from "sinon";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
 import {BeaconBlockHeader} from "@chainsafe/eth2.0-types";
@@ -77,9 +76,9 @@ describe("produce block", function () {
       latestBlockHeader: parentHeader.message,
     });
     const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
-    tree.add(0, hashTreeRoot(config.types.DepositData, generateDeposit().data));
+    tree.add(0, config.types.DepositData.hashTreeRoot(generateDeposit().data));
     dbStub.block.getChainHead.resolves(parentBlock);
-    dbStub.state.get.resolves(clone(config.types.BeaconState, state));
+    dbStub.state.get.resolves(config.types.BeaconState.clone(state));
     dbStub.block.get.withArgs(chainStub.forkChoice.head()).resolves(parentBlock);
     dbStub.merkleTree.getProgressiveMerkleTree.resolves(tree);
     dbStub.proposerSlashing.getAll.resolves([]);

@@ -1,6 +1,5 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {hashTreeRoot} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ZERO_HASH} from "../../../../../src/constants";
 import {OpPool} from "../../../../../src/opPool";
@@ -47,7 +46,7 @@ describe("blockAssembly - deposits", function() {
     opPool.deposits.getAllBetween.resolves(deposits);
     const tree = ProgressiveMerkleTree.empty(4, new MerkleTreeSerialization(config));
     deposits.forEach((d, index) => {
-      tree.add(index, hashTreeRoot(config.types.DepositData, d.data));
+      tree.add(index, config.types.DepositData.hashTreeRoot(d.data));
     });
     const eth1 = {
       depositCount: 2,
@@ -67,7 +66,7 @@ describe("blockAssembly - deposits", function() {
     result.forEach((deposit, index) => {
       expect(
         verifyMerkleBranch(
-          hashTreeRoot(config.types.DepositData, deposit.data),
+          config.types.DepositData.hashTreeRoot(deposit.data),
           deposit.proof,
           4,
           index,

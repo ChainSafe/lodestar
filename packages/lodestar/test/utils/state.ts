@@ -1,6 +1,5 @@
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
-import {hashTreeRoot} from "@chainsafe/ssz";
 import {generateEmptyBlock} from "./block";
 import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 
@@ -29,7 +28,7 @@ export function generateState(opts?: TestBeaconState, config = mainnetConfig): B
       slot: 0,
       parentRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
-      bodyRoot: hashTreeRoot(config.types.BeaconBlockBody, generateEmptyBlock().body),
+      bodyRoot: config.types.BeaconBlockBody.hashTreeRoot(generateEmptyBlock().body),
     },
     blockRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
     stateRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
