@@ -29,12 +29,12 @@ export function getIncomingAggregateAndProofHandler(validator: IGossipMessageVal
 
 export async function publishAggregatedAttestation(this: Gossip, aggregateAndProof: AggregateAndProof): Promise<void> {
   await Promise.all([
-    promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
+    promisify<void, string, Uint8Array>(this.pubsub.publish.bind(this.pubsub))(
       getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF),
       this.config.types.AggregateAndProof.serialize(aggregateAndProof)
     ),
     //to be backward compatible
-    promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
+    promisify<void, string, Uint8Array>(this.pubsub.publish.bind(this.pubsub))(
       getGossipTopic(GossipEvent.ATTESTATION), this.config.types.Attestation.serialize(aggregateAndProof.aggregate)
     )
   ]);

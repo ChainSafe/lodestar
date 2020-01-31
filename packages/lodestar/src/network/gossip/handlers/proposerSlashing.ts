@@ -26,7 +26,7 @@ export function getIncomingProposerSlashingHandler(validator: IGossipMessageVali
 }
 
 export async function publishProposerSlashing(this: Gossip, proposerSlashing: ProposerSlashing): Promise<void> {
-  await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
+  await promisify<void, string, Uint8Array>(this.pubsub.publish.bind(this.pubsub))(
     getGossipTopic(GossipEvent.PROPOSER_SLASHING),
     this.config.types.ProposerSlashing.serialize(proposerSlashing)
   );

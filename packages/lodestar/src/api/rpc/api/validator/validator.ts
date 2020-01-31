@@ -90,7 +90,7 @@ export class ValidatorApi implements IValidatorApi {
     return getEpochProposers(this.config, this.chain, this.db, epoch);
   }
 
-  public async getAttesterDuties(epoch: number, validatorPubKeys: Buffer[]): Promise<ValidatorDuty[]> {
+  public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<ValidatorDuty[]> {
     return getAttesterDuties(this.config, this.db, this.chain, epoch, validatorPubKeys);
   }
 

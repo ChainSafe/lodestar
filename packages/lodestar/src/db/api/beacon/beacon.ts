@@ -99,7 +99,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   public async getValidatorIndex(publicKey: BLSPubkey): Promise<ValidatorIndex> {
     const state = await this.state.getLatest();
     //TODO: cache this (hashmap)
-    return state.validators.findIndex(value => value.pubkey.equals(publicKey));
+    return state.validators.findIndex(value => this.config.types.BLSPubkey.equals(value.pubkey, publicKey));
   }
 
 }

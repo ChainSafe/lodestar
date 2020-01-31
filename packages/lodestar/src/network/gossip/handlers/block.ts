@@ -24,7 +24,7 @@ export function getIncomingBlockHandler(validator: IGossipMessageValidator): Gos
 }
 
 export async function publishBlock(this: Gossip, signedBlock: SignedBeaconBlock): Promise<void> {
-  await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
+  await promisify<void, string, Uint8Array>(this.pubsub.publish.bind(this.pubsub))(
     getGossipTopic(GossipEvent.BLOCK), this.config.types.SignedBeaconBlock.serialize(signedBlock)
   );
   this.logger.verbose(`Publishing block at slot: ${signedBlock.message.slot}`);

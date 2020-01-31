@@ -49,10 +49,10 @@ export function getCommitteeAttestationHandler(subnet: number, validator: IGossi
 
 export async function publishCommiteeAttestation(this: Gossip, attestation: Attestation): Promise<void> {
   const subnet = getAttestationSubnet(attestation);
-  await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
+  await promisify<void, string, Uint8Array>(this.pubsub.publish.bind(this.pubsub))(
     getAttestationSubnetTopic(attestation), this.config.types.Attestation.serialize(attestation));
   //backward compatible
-  await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
+  await promisify<void, string, Uint8Array>(this.pubsub.publish.bind(this.pubsub))(
     getGossipTopic(GossipEvent.ATTESTATION), this.config.types.Attestation.serialize(attestation)
   );
   this.logger.verbose(
