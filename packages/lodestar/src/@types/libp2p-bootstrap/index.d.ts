@@ -8,11 +8,11 @@
 
 declare namespace LibP2pBootstrap {
   type Options = {
-    list: Array<string | Multiaddr.Multiaddr>,
-    interval?: number
+    list: Array<string | Multiaddr.Multiaddr>;
+    interval?: number;
   };
 
-  type Events = 'peer';
+  type Events = "peer";
 }
 
 declare class LibP2pBootstrap {
@@ -21,6 +21,6 @@ declare class LibP2pBootstrap {
   on (event: LibP2pBootstrap.Events, cb: (peerInfo: PeerInfo) => any): this;
 }
 
-declare module 'libp2p-bootstrap' {
-export default LibP2pBootstrap;
+declare module "libp2p-bootstrap" {
+  export default LibP2pBootstrap;
 }

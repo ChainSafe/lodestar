@@ -16,8 +16,8 @@ declare type LibP2pSpdy = {
   muticodec: string;
 };
 
-declare module 'libp2p-spdy' {
-const spdy: LibP2pSpdy;
+declare module "libp2p-spdy" {
+  const spdy: LibP2pSpdy;
 
-export default spdy;
+  export default spdy;
 }

@@ -10,34 +10,34 @@ declare namespace PeerId {
     type CreateCb = (error: Error | null, peerId?: PeerId) => any;
 
     type CreateOptions = {
-        bits: number
+      bits: number;
     };
 
     type JSON = {
-        id: string,
-        pubKey: string,
-        privKey: string
+      id: string;
+      pubKey: string;
+      privKey: string;
     };
 }
 
 declare class PeerId {
-    constructor(id: Buffer, privKey?: LibP2pCrypto.PrivateKey, pubKey?: LibP2pCrypto.PublicKey);
+  constructor(id: Buffer, privKey?: LibP2pCrypto.PrivateKey, pubKey?: LibP2pCrypto.PublicKey);
 
-    static create(optsOrCb: PeerId.CreateOptions | PeerId.CreateCb, cb?: PeerId.CreateCb): void;
-    static createFromB58String(str: string): PeerId;
-    static createFromBytes(buf: Buffer): PeerId;
-    static createFromHexString(str: string): PeerId;
-    static createFromJSON(json: JSON): PeerId;
-    static createFromPubKey(key: Buffer): PeerId;
-    static createFromPrivKey(key: Buffer, cb: PeerId.CreateCb): void;
+  static create(optsOrCb: PeerId.CreateOptions | PeerId.CreateCb, cb?: PeerId.CreateCb): void;
+  static createFromB58String(str: string): PeerId;
+  static createFromBytes(buf: Buffer): PeerId;
+  static createFromHexString(str: string): PeerId;
+  static createFromJSON(json: JSON): PeerId;
+  static createFromPubKey(key: Buffer): PeerId;
+  static createFromPrivKey(key: Buffer, cb: PeerId.CreateCb): void;
 
-    isEqual(other: PeerId | Buffer): boolean;
-    toB58String(): string;
-    toBytes(): Buffer;
-    toHexString(): string;
-    toJSON(): PeerId.JSON;
+  isEqual(other: PeerId | Buffer): boolean;
+  toB58String(): string;
+  toBytes(): Buffer;
+  toHexString(): string;
+  toJSON(): PeerId.JSON;
 }
 
-declare module 'peer-id' {
-    export default PeerId;
+declare module "peer-id" {
+  export default PeerId;
 }

@@ -6,8 +6,8 @@
 declare interface PullMplex {
 }
 
-declare module 'pull-mplex' {
-const mplex: PullMplex;
+declare module "pull-mplex" {
+  const mplex: PullMplex;
 
-export default mplex;
+  export default mplex;
 }

@@ -6,11 +6,11 @@
 /// <reference types="peer-id"/>
 
 declare type LibP2pSecio = {
-  encrypt (localId: PeerId, conn: any, remoteId: PeerId, callback: () => any): void
-}
+  encrypt (localId: PeerId, conn: any, remoteId: PeerId, callback: () => any): void;
+};
 
-declare module 'libp2p-secio' {
-const secio: LibP2pSecio;
+declare module "libp2p-secio" {
+  const secio: LibP2pSecio;
 
-export default secio;
+  export default secio;
 }

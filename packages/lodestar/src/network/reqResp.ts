@@ -67,10 +67,15 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
           pipe(
             stream.source,
             // @ts-ignore
-            async (source) => {
-              for await (const val of source) {
-                return await this.handleRequest(peerId, method, val);
-              }
+            (source) => {
+              // @ts-ignore
+              const self = this;
+              return (async function * () { // A generator is async iterable
+                for await (const val of source) {
+                  const response = await self.handleRequest(peerId, method, val.slice(0, val.length));
+                  yield response;
+                }
+              })();
             },
             stream.sink
           );
@@ -108,7 +113,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
   }
 
   private handleRequest = async (peerId: PeerId, method: Method, data: Buffer): Promise<Buffer> => {
-    return await new Promise((resolve) => {
+    return new Promise((resolve) => {
       const request = this.decodeRequest(method, data);
       const requestId = randomRequestId();
       this.logger.verbose(`${requestId} - receive ${method} request from ${peerId.toB58String()}`);
@@ -156,6 +161,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
       output,
     ]);
   }
+
   private encodeResponse(method: Method, body: ResponseBody): Buffer {
     let output= Buffer.alloc(0);
     switch (method) {
@@ -249,7 +255,8 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
           // TODO: support response chunks
           const srcs = [];
           for await (const data of source) {
-            srcs.push(data);
+            // data is BufferList, need to convert to Buffer
+            srcs.push(data.slice(0, data.length));
           }
           const data = Buffer.concat(srcs);
           clearTimeout(responseTimer);

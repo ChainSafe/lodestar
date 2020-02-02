@@ -16,8 +16,8 @@ declare interface LibP2pMplex {
   muticodec: string;
 }
 
-declare module 'libp2p-mplex' {
-const mplex: LibP2pMplex;
+declare module "libp2p-mplex" {
+  const mplex: LibP2pMplex;
 
-export default mplex;
+  export default mplex;
 }

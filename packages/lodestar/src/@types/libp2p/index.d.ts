@@ -17,62 +17,62 @@
 
 declare namespace LibP2p {
   export type OptionsConfig = {
-      contentRouting?: {},
-      dht?: {
-          kBucketSize?: number
-      },
-      peerDiscovery?: {
-          autoDial?: boolean,
-          enabled?: boolean,
-          bootstrap?: {
-              interval?: number
-              enabled?: boolean
-              list?: Multiaddr.Multiaddr[]
-          },
-          mdns?: {
-              interval?: number
-              enabled?: boolean
-          },
-          webRTCStar?: {
-              interval?: number
-              enabled?: boolean
-          },
-          websocketStar?: {
-              enabled?: boolean
-          }
-      },
-      peerRouting?: {},
-      pubsub?: {
-          enabled?: boolean,
-          emitSelf?: boolean,
-          signMessages?: boolean,
-          strictSigning?: boolean
-      },
-      relay?: {
-          enabled?: boolean,
-          hop?: {
-              enabled?: boolean,
-              active?: boolean
-          }
-      }
+    contentRouting?: {};
+    dht?: {
+      kBucketSize?: number;
+    };
+    peerDiscovery?: {
+      autoDial?: boolean;
+      enabled?: boolean;
+      bootstrap?: {
+        interval?: number;
+        enabled?: boolean;
+        list?: Multiaddr.Multiaddr[];
+      };
+      mdns?: {
+        interval?: number;
+        enabled?: boolean;
+      };
+      webRTCStar?: {
+        interval?: number;
+        enabled?: boolean;
+      };
+      websocketStar?: {
+        enabled?: boolean;
+      };
+    };
+    peerRouting?: {};
+    pubsub?: {
+      enabled?: boolean;
+      emitSelf?: boolean;
+      signMessages?: boolean;
+      strictSigning?: boolean;
+    };
+    relay?: {
+      enabled?: boolean;
+      hop?: {
+        enabled?: boolean;
+        active?: boolean;
+      };
+    };
   };
 
   export type OptionsModules = {
-      connEncryption?: Array<LibP2pSecio>,
-      streamMuxer: Array<LibP2pMplex | LibP2pSpdy | PullMplex>,
-      dht?: typeof LibP2pKadDht,
-      peerDiscovery: Array<typeof LibP2pBootstrap>,
-      transport: LibP2pTransport[]
+    connEncryption?: Array<LibP2pSecio>;
+    streamMuxer: Array<LibP2pMplex | LibP2pSpdy | PullMplex>;
+    dht?: typeof LibP2pKadDht;
+    peerDiscovery: Array<typeof LibP2pBootstrap>;
+    transport: LibP2pTransport[];
   };
 
   export type Options = {
-      config: OptionsConfig,
-      modules: OptionsModules,
-      peerBook?: PeerBook,
-      peerInfo: PeerInfo,
+    config: OptionsConfig;
+    modules: OptionsModules;
+    peerBook?: PeerBook;
+    peerInfo: PeerInfo;
   };
 
-  export type Events = 'peer:connect' | 'peer:disconnect' | 'peer:discovery' | 'start' | 'stop';
+  export type Events = "peer:connect" | "peer:disconnect" | "peer:discovery" | "start" | "stop";
 }
 
 declare class LibP2p {
@@ -97,6 +97,6 @@ declare class LibP2p {
   stop(): Promise<void>;
 }
 
-declare module 'libp2p' {
+declare module "libp2p" {
   export default LibP2p;
 }

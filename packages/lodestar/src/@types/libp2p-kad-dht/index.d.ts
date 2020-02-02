@@ -9,9 +9,9 @@ declare class LibP2pKadDht {
   randomWalk: {
     start (queries?: number, period?: number, maxTimeout?: number): void;
     stop (): void;
-  }
+  };
 }
 
-declare module 'libp2p-kad-dht' {
-export default LibP2pKadDht;
+declare module "libp2p-kad-dht" {
+  export default LibP2pKadDht;
 }

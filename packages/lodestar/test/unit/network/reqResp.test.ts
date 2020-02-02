@@ -11,7 +11,7 @@ import {INetworkOptions} from "../../../src/network/options";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
-describe.only("[network] rpc", () => {
+describe("[network] rpc", () => {
 
   let nodeA: NodejsNode, nodeB: NodejsNode,
     rpcA: ReqResp, rpcB: ReqResp;
@@ -111,7 +111,7 @@ describe.only("[network] rpc", () => {
       const statusActual = await rpcB.status(nodeA.peerInfo.id, statusExpected);
       assert.deepEqual(JSON.stringify(statusActual), JSON.stringify(statusExpected));
     } catch (e) {
-      assert.fail("statu not received");
+      assert.fail("status not received");
     }
   });
 });

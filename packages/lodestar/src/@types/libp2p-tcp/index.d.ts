@@ -8,6 +8,6 @@
 declare class LibP2pTcp implements LibP2pTransport {
 }
 
-declare module 'libp2p-tcp' {
-export default LibP2pTcp;
+declare module "libp2p-tcp" {
+  export default LibP2pTcp;
 }

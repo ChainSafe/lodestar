@@ -7,15 +7,15 @@
 /// <reference types="peer-id"/>
 
 declare namespace Multiaddr {
-    type Code = number
-    type Size = number
+    type Code = number;
+    type Size = number;
 
     type Protocol = {
-      code: Code,
-      size: Size,
-      name: string,
-      resolvable: boolean
-    }
+      code: Code;
+      size: Size;
+      name: string;
+      resolvable: boolean;
+    };
 
     interface Protocols {
       (proto: string | number): Protocol;
@@ -30,17 +30,17 @@ declare namespace Multiaddr {
     }
 
     type Options = {
-      family: string,
-      host: string,
-      transport: string,
-      port: string
-    }
+      family: string;
+      host: string;
+      transport: string;
+      port: string;
+    };
 
     type NodeAddress = {
-      family: string,
-      address: string,
-      port: string
-    }
+      family: string;
+      address: string;
+      port: string;
+    };
 
     interface Multiaddr {
       readonly buffer: Buffer;
@@ -73,13 +73,13 @@ declare namespace Multiaddr {
       isName(name: any): boolean;
       resolve(value: any, cb: (error: Error) => void): void;
     }
-  }
+}
 
-declare module 'multiaddr' {
-const multiaddr: Multiaddr.Exports
+declare module "multiaddr" {
+  const multiaddr: Multiaddr.Exports;
 
-export type Multiaddr = Multiaddr.Multiaddr
-export type Protocol = Multiaddr.Protocol
+  export type Multiaddr = Multiaddr.Multiaddr;
+  export type Protocol = Multiaddr.Protocol;
 
-export default multiaddr
+  export default multiaddr;
 }

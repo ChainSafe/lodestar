@@ -6,7 +6,7 @@
 /// <reference types="node"/>
 
 declare namespace LibP2pCrypto {
-  type KeyTypes = 'ed25519' | 'rsa' | 'secp256k1';
+  type KeyTypes = "ed25519" | "rsa" | "secp256k1";
 
   interface PublicKey {
     hash(cb: (error: Error | null, hash: Buffer) => void): void;
@@ -16,7 +16,7 @@ declare namespace LibP2pCrypto {
     readonly public: PublicKey;
 
     hash(cb: (error: Error | null, hash: Buffer) => void): void;
-    id(cb: (error: Error | null, id: string) => void): void
+    id(cb: (error: Error | null, id: string) => void): void;
   }
 
   interface KeyExports {
@@ -41,17 +41,17 @@ declare namespace LibP2pCrypto {
   }
 
   interface Crypto {
-    readonly keys: Keys,
-    readonly aes: AES
+    readonly keys: Keys;
+    readonly aes: AES;
   }
 }
 
-declare module 'libp2p-crypto' {
+declare module "libp2p-crypto" {
   const crypto: LibP2pCrypto.Crypto;
 
   export default crypto;
 
-  export type KeyType = 'ed25519' | 'rsa' | 'secp256k1';
+  export type KeyType = "ed25519" | "rsa" | "secp256k1";
 
   export interface PublicKey {
     hash(cb: (error: Error | null, hash: Buffer) => void): void;
@@ -61,7 +61,7 @@ declare module 'libp2p-crypto' {
     readonly public: PublicKey;
 
     hash(cb: (error: Error | null, hash: Buffer) => void): void;
-    id(cb: (error: Error | null, id: string) => void): void
+    id(cb: (error: Error | null, id: string) => void): void;
   }
 
   export interface KeyExports {
