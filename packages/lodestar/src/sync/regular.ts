@@ -126,7 +126,7 @@ export class RegularSync {
     for (const peer of this.network.getPeers()) {
       try {
         this.logger.verbose(`Attempting to fetch block ${root.toString("hex")} from ${peer.id.toB58String()}`);
-        const [block] = await this.network.reqResp.beaconBlocksByRoot(peer, [root]);
+        const [block] = await this.network.reqResp.beaconBlocksByRoot(peer.id, [root]);
         await this.chain.receiveBlock(block);
         break;
       } catch (e) {

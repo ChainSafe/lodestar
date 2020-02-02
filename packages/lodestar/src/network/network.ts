@@ -67,6 +67,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     this.libp2p.on("peer:disconnect", this.emitPeerDisconnect);
     this.logger.important(`PeerId ${this.libp2p.peerInfo.id.toB58String()}`);
   }
+
   public async stop(): Promise<void> {
     await this.inited;
     await this.gossip.stop();
@@ -79,6 +80,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   public getPeers(): PeerInfo[] {
     return this.libp2p.peerBook.getAllArray().filter((peerInfo) => peerInfo.isConnected());
   }
+
   public hasPeer(peerInfo: PeerInfo): boolean {
     const peer = this.libp2p.peerBook.get(peerInfo);
     if (!peer) {
@@ -86,17 +88,23 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     }
     return Boolean(peer.isConnected());
   }
-  public async connect(peerInfo: PeerInfo): Promise<void> {
-    await promisify<void, PeerInfo>(this.libp2p.dial.bind(this.libp2p))(peerInfo);
+
+  public async connect(peerId: PeerId): Promise<void> {
+    // @ts-ignore
+    await this.libp2p.dial(peerId);
   }
-  public async disconnect(peerInfo: PeerInfo): Promise<void> {
-    await promisify<void, PeerInfo>(this.libp2p.hangUp.bind(this.libp2p))(peerInfo);
+
+  public async disconnect(peerId: PeerId): Promise<void> {
+    // @ts-ignore
+    await this.libp2p.hangUp(peerId);
   }
+
   private emitPeerConnect = (peerInfo: PeerInfo): void => {
     this.logger.verbose("peer connected " + peerInfo.id.toB58String());
     this.metrics.peers.inc();
     this.emit("peer:connect", peerInfo);
   };
+
   private emitPeerDisconnect = (peerInfo: PeerInfo): void => {
     this.logger.verbose("peer disconnected " + peerInfo.id.toB58String());
     this.metrics.peers.dec();

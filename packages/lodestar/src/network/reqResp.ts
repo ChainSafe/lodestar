@@ -3,12 +3,9 @@
  */
 import {EventEmitter} from "events";
 import LibP2p from "libp2p";
-import PeerInfo from "peer-info";
 //@ts-ignore
-import LibP2pConnection from "interface-connection";
-import {promisify} from "es6-promisify";
-import pull from "pull-stream";
 import * as varint from "varint";
+import {pipe} from "it-pipe";
 import {
   BeaconBlocksByRangeRequest,
   BeaconBlocksByRangeResponse,
@@ -63,14 +60,22 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     Object.values(Method).forEach((method) => {
       this.libp2p.handle(
         createRpcProtocol(method, this.encoding),
-        async (protocol: string, conn: LibP2pConnection) => {
-          const peerInfo = (await promisify(conn.getPeerInfo.bind(conn))()) as PeerInfo;
-          pull(
-            conn,
-            this.handleRequest(peerInfo, method, method === Method.Goodbye),
-            conn,
+        // @ts-ignore
+        async ({connection, stream}) => {
+          const peerId = connection.remotePeer;
+          // @ts-ignore
+          pipe(
+            stream.source,
+            // @ts-ignore
+            async (source) => {
+              for await (const val of source) {
+                return await this.handleRequest(peerId, method, val);
+              }
+            },
+            stream.sink
           );
-        });
+        }
+      );
     });
   }
   public async stop(): Promise<void> {
@@ -83,73 +88,53 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     // @ts-ignore
     this.emit(createResponseEvent(id), err, body);
   }
-  public async status(peerInfo: PeerInfo, request: Status): Promise<Status> {
-    return await this.sendRequest<Status>(peerInfo, Method.Status, request);
+  public async status(peerId: PeerId, request: Status): Promise<Status> {
+    return await this.sendRequest<Status>(peerId, Method.Status, request);
   }
-  public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
-    await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request, true);
+  public async goodbye(peerId: PeerId, request: Goodbye): Promise<void> {
+    await this.sendRequest<Goodbye>(peerId, Method.Goodbye, request);
   }
   public async beaconBlocksByRange(
-    peerInfo: PeerInfo,
+    peerId: PeerId,
     request: BeaconBlocksByRangeRequest
   ): Promise<BeaconBlocksByRangeResponse> {
-    return await this.sendRequest<BeaconBlocksByRangeResponse>(peerInfo, Method.BeaconBlocksByRange, request);
+    return await this.sendRequest<BeaconBlocksByRangeResponse>(peerId, Method.BeaconBlocksByRange, request);
   }
   public async beaconBlocksByRoot(
-    peerInfo: PeerInfo,
+    peerId: PeerId,
     request: BeaconBlocksByRootRequest
   ): Promise<BeaconBlocksByRootResponse> {
-    return await this.sendRequest<BeaconBlocksByRootResponse>(peerInfo, Method.BeaconBlocksByRoot, request);
+    return await this.sendRequest<BeaconBlocksByRootResponse>(peerId, Method.BeaconBlocksByRoot, request);
   }
 
-  /**
-   * Return a "through" pull-stream that processes a request and waits for/returns a response
-   */
-  private handleRequest = (peerInfo: PeerInfo, method: Method, requestOnly?: boolean) => {
-    //@ts-ignore
-    return (read) => {
-      //@ts-ignore
-      return (end, cb) => {
-        //@ts-ignore
-        read(end, (end, data) => {
-          if (end) return cb(end);
-          try {
-            const request = this.decodeRequest(method, data);
-            const requestId = randomRequestId();
-            this.logger.verbose(`${requestId} - receive ${method} request from ${peerInfo.id.toB58String()}`);
-            if (!requestOnly) {
-              const responseEvent = createResponseEvent(requestId);
-              // eslint-disable-next-line
-              let responseListener: any;
-              const responseTimer = setTimeout(() => {
-                this.logger.verbose(`${requestId} - send ${method} response timeout`);
-                // @ts-ignore
-                this.removeListener(responseEvent, responseListener);
-                cb(null, this.encodeResponseError(new Error(ERR_RESP_TIMEOUT)));
-              }, RESP_TIMEOUT);
-              responseListener = (err: Error|null, output: ResponseBody): void => {
-                // @ts-ignore
-                this.removeListener(responseEvent, responseListener);
-                clearTimeout(responseTimer);
-                if (err) return cb(null, this.encodeResponseError(err));
-                cb(null, this.encodeResponse(method, output));
-                this.logger.verbose(`${requestId} - send ${method} response`);
-              };
-              // @ts-ignore
-              this.once(responseEvent, responseListener);
-            } else {
-              cb(true);
-            }
-            this.emit("request", peerInfo, method, requestId, request);
-          } catch (e) {
-            if (!requestOnly) {
-              cb(null, this.encodeResponseError(e));
-            }
-          }
-        });
+  private handleRequest = async (peerId: PeerId, method: Method, data: Buffer): Promise<Buffer> => {
+    return await new Promise((resolve) => {
+      const request = this.decodeRequest(method, data);
+      const requestId = randomRequestId();
+      this.logger.verbose(`${requestId} - receive ${method} request from ${peerId.toB58String()}`);
+      const responseEvent = createResponseEvent(requestId);
+      // eslint-disable-next-line
+      let responseListener: any;
+      const responseTimer = setTimeout(() => {
+        this.logger.verbose(`${requestId} - send ${method} response timeout`);
+        // @ts-ignore
+        this.removeListener(responseEvent, responseListener);
+        resolve(this.encodeResponseError(new Error(ERR_RESP_TIMEOUT)));
+      }, RESP_TIMEOUT);
+      responseListener = (err: Error|null, output: ResponseBody): void => {
+        // @ts-ignore
+        this.removeListener(responseEvent, responseListener);
+        clearTimeout(responseTimer);
+        if (err) resolve(this.encodeResponseError(err));
+        this.logger.verbose(`${requestId} - send ${method} response`);
+        resolve(this.encodeResponse(method, output));
       };
-    };
+      // @ts-ignore
+      this.once(responseEvent, responseListener);
+      this.emit("request", peerId, method, requestId, request);
+    });
   };
+
   private encodeRequest(method: Method, body: RequestBody): Buffer {
     let output = Buffer.alloc(0);
     switch (method) {
@@ -245,52 +230,37 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     }
   }
   private async sendRequest<T extends ResponseBody>(
-    peerInfo: PeerInfo,
+    peerId: PeerId,
     method: Method,
-    body: RequestBody,
-    requestOnly?: boolean
+    body: RequestBody
   ): Promise<T> {
     const protocol = createRpcProtocol(method, this.encoding);
+    // @ts-ignore
+    const {stream} = await this.libp2p.dialProtocol(peerId, protocol);
     return await new Promise((resolve, reject) => {
-      this.libp2p.dialProtocol(peerInfo, protocol, (err, conn): unknown => {
-        if (err) {
-          return reject(err);
+      this.logger.verbose(`send ${method} request to ${peerId.toB58String()}`);
+      const responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
+      // @ts-ignore
+      pipe(
+        [this.encodeRequest(method, body)],
+        stream,
+        // @ts-ignore
+        async (source) => {
+          // TODO: support response chunks
+          const srcs = [];
+          for await (const data of source) {
+            srcs.push(data);
+          }
+          const data = Buffer.concat(srcs);
+          clearTimeout(responseTimer);
+          this.logger.verbose(`receive ${method} response from ${peerId.toB58String()}`);
+          try {
+            resolve(this.decodeResponse(method, data) as T);
+          } catch (e) {
+            reject(e);
+          }
         }
-        this.logger.verbose(`send ${method} request to ${peerInfo.id.toB58String()}`);
-        // @ts-ignore
-        const responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
-        // pull-stream through that will resolve after the request is sent
-        // @ts-ignore
-        const requestOnlyThrough =(read): unknown => {
-          // @ts-ignore
-          return (end, cb) => {
-            // @ts-ignore
-            read(end, (end, data) => {
-              if (end) {
-                cb(end);
-                clearTimeout(responseTimer);
-                return resolve();
-              }
-              cb(null, data);
-            });
-          };
-        };
-        // @ts-ignore
-        pull(
-          pull.values([this.encodeRequest(method, body)]),
-          requestOnly && requestOnlyThrough,
-          conn,
-          pull.drain((data) => {
-            clearTimeout(responseTimer);
-            this.logger.verbose(`receive ${method} response from ${peerInfo.id.toB58String()}`);
-            try {
-              resolve(this.decodeResponse(method, data) as T);
-            } catch (e) {
-              reject(e);
-            }
-          }),
-        );
-      });
+      );
     });
   }
 }

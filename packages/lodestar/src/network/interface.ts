@@ -20,18 +20,19 @@ import {IGossip} from "./gossip/interface";
 // req/resp
 
 export interface IReqRespEvents {
-  request: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => void;
+  request: (peerId: PeerId, method: Method, id: RequestId, body: RequestBody) => void;
 }
+
 export type ReqRespEventEmitter = StrictEventEmitter<EventEmitter, IReqRespEvents>;
 
 export interface IReqResp extends ReqRespEventEmitter {
   // sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T>;
   sendResponse(id: RequestId, err: Error|null, result: ResponseBody|null): void;
 
-  status(peerInfo: PeerInfo, request: Status): Promise<Status>;
-  goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void>;
-  beaconBlocksByRange(peerInfo: PeerInfo, request: BeaconBlocksByRangeRequest): Promise<BeaconBlocksByRangeResponse>;
-  beaconBlocksByRoot(peerInfo: PeerInfo, request: BeaconBlocksByRootRequest): Promise<BeaconBlocksByRootResponse>;
+  status(peerId: PeerId, request: Status): Promise<Status>;
+  goodbye(peerId: PeerId, request: Goodbye): Promise<void>;
+  beaconBlocksByRange(peerId: PeerId, request: BeaconBlocksByRangeRequest): Promise<BeaconBlocksByRangeResponse>;
+  beaconBlocksByRoot(peerId: PeerId, request: BeaconBlocksByRootRequest): Promise<BeaconBlocksByRootResponse>;
 }
 
 // network
@@ -51,8 +52,8 @@ export interface INetwork extends NetworkEventEmitter {
   peerInfo: PeerInfo;
   getPeers(): PeerInfo[];
   hasPeer(peerInfo: PeerInfo): boolean;
-  connect(peerInfo: PeerInfo): Promise<void>;
-  disconnect(peerInfo: PeerInfo): void;
+  connect(peerId: PeerId): Promise<void>;
+  disconnect(peerId: PeerId): void;
   // Service
   start(): Promise<void>;
   stop(): Promise<void>;
