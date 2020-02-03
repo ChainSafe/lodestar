@@ -79,7 +79,6 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   // @ts-ignore
   public on(event: keyof IGossipEvents, listener: Function): void {
     if(this.listenerCount(event) === 0 && !event.startsWith("gossipsub")) {
-      // @ts-ignore
       this.pubsub.subscribe(getGossipTopic(event as GossipEvent, "ssz"));
     }
     // @ts-ignore
