@@ -3,7 +3,6 @@
  */
 
 import {EventEmitter} from "events";
-import {promisify} from "es6-promisify";
 import LibP2p from "libp2p";
 import PeerInfo from "peer-info";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -60,7 +59,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
 
   public async start(): Promise<void> {
     await this.inited;
-    await promisify(this.libp2p.start.bind(this.libp2p))();
+    await this.libp2p.start();
     await this.reqResp.start();
     await this.gossip.start();
     this.libp2p.on("peer:connect", this.emitPeerConnect);
@@ -72,31 +71,29 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     await this.inited;
     await this.gossip.stop();
     await this.reqResp.stop();
-    await promisify(this.libp2p.stop.bind(this.libp2p))();
+    await this.libp2p.stop();
     this.libp2p.removeListener("peer:connect", this.emitPeerConnect);
     this.libp2p.removeListener("peer:disconnect", this.emitPeerDisconnect);
   }
 
   public getPeers(): PeerInfo[] {
-    return this.libp2p.peerBook.getAllArray().filter((peerInfo) => peerInfo.isConnected());
+    // @ts-ignore
+    return Array.from(this.libp2p.peerStore.peers.values()).filter((peerInfo) => this.libp2p.registrar.getConnection(peerInfo));
   }
 
   public hasPeer(peerInfo: PeerInfo): boolean {
-    const peer = this.libp2p.peerBook.get(peerInfo);
-    if (!peer) {
-      return false;
-    }
-    return Boolean(peer.isConnected());
+    // @ts-ignore
+    return !!this.libp2p.registrar.getConnection(peerInfo);
   }
 
-  public async connect(peerId: PeerId): Promise<void> {
+  public async connect(peerInfo: PeerInfo): Promise<void> {
     // @ts-ignore
-    await this.libp2p.dial(peerId);
+    await this.libp2p.dial(peerInfo);
   }
 
-  public async disconnect(peerId: PeerId): Promise<void> {
+  public async disconnect(peerInfo: PeerInfo): Promise<void> {
     // @ts-ignore
-    await this.libp2p.hangUp(peerId);
+    await this.libp2p.hangUp(peerInfo);
   }
 
   private emitPeerConnect = (peerInfo: PeerInfo): void => {

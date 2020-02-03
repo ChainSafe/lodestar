@@ -52,8 +52,8 @@ export interface INetwork extends NetworkEventEmitter {
   peerInfo: PeerInfo;
   getPeers(): PeerInfo[];
   hasPeer(peerInfo: PeerInfo): boolean;
-  connect(peerId: PeerId): Promise<void>;
-  disconnect(peerId: PeerId): void;
+  connect(eerInfo: PeerInfo): Promise<void>;
+  disconnect(eerInfo: PeerInfo): void;
   // Service
   start(): Promise<void>;
   stop(): Promise<void>;

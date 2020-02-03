@@ -4,7 +4,6 @@
 
 import PeerId from "peer-id";
 import PeerInfo from "peer-info";
-import {promisify} from "es6-promisify";
 import {RequestId} from "../constants";
 
 // req/resp

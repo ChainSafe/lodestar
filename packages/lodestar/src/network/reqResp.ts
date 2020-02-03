@@ -72,7 +72,8 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
               const self = this;
               return (async function * () { // A generator is async iterable
                 for await (const val of source) {
-                  const response = await self.handleRequest(peerId, method, val.slice(0, val.length));
+                  const data = Buffer.isBuffer(val) ? val : val.slice();
+                  const response = await self.handleRequest(peerId, method, data);
                   yield response;
                 }
               })();
@@ -97,7 +98,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     return await this.sendRequest<Status>(peerId, Method.Status, request);
   }
   public async goodbye(peerId: PeerId, request: Goodbye): Promise<void> {
-    await this.sendRequest<Goodbye>(peerId, Method.Goodbye, request);
+    await this.sendRequest<Goodbye>(peerId, Method.Goodbye, request, true);
   }
   public async beaconBlocksByRange(
     peerId: PeerId,
@@ -238,7 +239,8 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
   private async sendRequest<T extends ResponseBody>(
     peerId: PeerId,
     method: Method,
-    body: RequestBody
+    body: RequestBody,
+    requestOnly?: boolean
   ): Promise<T> {
     const protocol = createRpcProtocol(method, this.encoding);
     // @ts-ignore
@@ -254,15 +256,19 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
         async (source) => {
           // TODO: support response chunks
           const srcs = [];
-          for await (const data of source) {
-            // data is BufferList, need to convert to Buffer
-            srcs.push(data.slice(0, data.length));
+          for await (const val of source) {
+            const data = Buffer.isBuffer(val) ? val : val.slice();
+            srcs.push(data);
           }
           const data = Buffer.concat(srcs);
           clearTimeout(responseTimer);
           this.logger.verbose(`receive ${method} response from ${peerId.toB58String()}`);
           try {
-            resolve(this.decodeResponse(method, data) as T);
+            if(!requestOnly) {
+              resolve(this.decodeResponse(method, data) as T);
+            } else {
+              resolve();
+            }
           } catch (e) {
             reject(e);
           }
