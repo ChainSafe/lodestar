@@ -45,22 +45,8 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.logger = logger.child({module: "gossip", level: LogLevel[logger.level]});
     this.logger.silent = logger.silent;
     this.validator = validator;
-    // This is required by Gossipsub, not in use for now
-    const registrar = {
-      // @ts-ignore
-      handle: (multicodecs, handle) => {
-        this.logger.debug(`Gossip handle: multicodecs=${multicodecs}, handle=${handle}`);
-      },
-      // @ts-ignore
-      register: (multicodecs, handlers) => {
-        this.logger.debug(`Gossip register: multicodecs=${multicodecs}, handlers=${handlers}`);
-      },
-      // @ts-ignore
-      unregister: (id) => {
-        this.logger.debug(`Gossip unregister: id=${id}`);
-      }
-    };
-    this.pubsub = new Gossipsub(libp2p.peerInfo, registrar, {gossipIncoming: false});
+    // @ts-ignore
+    this.pubsub = new Gossipsub(libp2p.peerInfo, libp2p.registrar, {gossipIncoming: false});
     this.handlers = this.registerHandlers();
   }
 
@@ -93,6 +79,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   // @ts-ignore
   public on(event: keyof IGossipEvents, listener: Function): void {
     if(this.listenerCount(event) === 0 && !event.startsWith("gossipsub")) {
+      // @ts-ignore
       this.pubsub.subscribe(getGossipTopic(event as GossipEvent, "ssz"));
     }
     // @ts-ignore
