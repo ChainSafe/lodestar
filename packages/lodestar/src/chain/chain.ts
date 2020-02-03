@@ -374,6 +374,11 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     await this.initializeBeaconChain(genesisState, merkleTree);
   };
 
+  /**
+   * To prevent queue process stalling (if it receives multiple blocks at same time),
+   * this introduces continuous queue processing. If there is block ready it will be processed sequentially
+   * and if next block is missing or errors, it will stall for 500ms.
+   */
   private pollBlock = async (): Promise<void> => {
     if(!this.isPollingBlocks) {
       return;
