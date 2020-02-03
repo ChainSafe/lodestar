@@ -2,41 +2,41 @@
  * @module cli/commands
  */
 
-import { ICliCommand } from "./interface";
-import { CommanderStatic } from "commander";
+import {ICliCommand} from "./interface";
+import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
-import fs, { mkdirSync } from "fs";
-import { join } from "path";
+import fs, {mkdirSync} from "fs";
+import {join} from "path";
 import PeerId from "peer-id";
 import yaml from "js-yaml";
-import { config as mainnetConfig } from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import rimraf from "rimraf";
-import { ILogger, WinstonLogger } from "@chainsafe/eth2.0-utils/lib/logger";
-import { BeaconNode } from "@chainsafe/lodestar/lib/node";
-import { IBeaconNodeOptions } from "@chainsafe/lodestar/lib/node/options";
-import { generateCommanderOptions, optionsToConfig, } from "../util";
-import { rmDir } from "@chainsafe/lodestar/lib/util/file";
-import { config as minimalConfig } from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import { InteropEth1Notifier } from "@chainsafe/lodestar/lib/eth1/impl/interop";
-import { quickStartOptionToState } from "../lodestar/interop/cli";
-import { initBLS, Keypair, PrivateKey } from "@chainsafe/bls";
-import { computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentSlot } from "@chainsafe/eth2.0-state-transition";
-import { interopKeypair } from "../lodestar/interop/keypairs";
-import { ValidatorApi } from "@chainsafe/lodestar/lib/api/rpc/api/validator";
-import { BeaconApi } from "@chainsafe/lodestar/lib/api/rpc/api/beacon";
-import { DEPOSIT_CONTRACT_TREE_DEPTH } from "@chainsafe/lodestar/lib/constants";
+import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {BeaconNode} from "@chainsafe/lodestar/lib/node";
+import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {generateCommanderOptions, optionsToConfig,} from "../util";
+import {rmDir} from "@chainsafe/lodestar/lib/util/file";
+import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {InteropEth1Notifier} from "@chainsafe/lodestar/lib/eth1/impl/interop";
+import {quickStartOptionToState} from "../lodestar/interop/cli";
+import {initBLS, Keypair, PrivateKey} from "@chainsafe/bls";
+import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
+import {interopKeypair} from "../lodestar/interop/keypairs";
+import {ValidatorApi} from "@chainsafe/lodestar/lib/api/rpc/api/validator";
+import {BeaconApi} from "@chainsafe/lodestar/lib/api/rpc/api/beacon";
+import {DEPOSIT_CONTRACT_TREE_DEPTH} from "@chainsafe/lodestar/lib/constants";
 
-import { loadPeerId, createNodeJsLibp2p } from "@chainsafe/lodestar/lib/network/nodejs";
-import { createPeerId } from "@chainsafe/lodestar/lib/network";
-import { ProgressiveMerkleTree } from "@chainsafe/eth2.0-utils";
-import { MerkleTreeSerialization } from "@chainsafe/lodestar/lib/util/serialization";
-import { ApiClientOverInstance } from "@chainsafe/lodestar-validator/lib/api";
-import { ValidatorClient } from "@chainsafe/lodestar/lib/validator/nodejs";
-import { BeaconState } from "@chainsafe/eth2.0-types";
-import { quickStartState } from "../lodestar/interop/state";
-import { default as dbConfig } from "@chainsafe/lodestar/lib/db/options";
-import { BeaconNodeOptions } from "../lodestar/node/options";
-import { getTomlConfig } from "../lodestar/util/file";
+import {loadPeerId, createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
+import {createPeerId} from "@chainsafe/lodestar/lib/network";
+import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
+import {MerkleTreeSerialization} from "@chainsafe/lodestar/lib/util/serialization";
+import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib/api";
+import {ValidatorClient} from "@chainsafe/lodestar/lib/validator/nodejs";
+import {BeaconState} from "@chainsafe/eth2.0-types";
+import {quickStartState} from "../lodestar/interop/state";
+import {default as dbConfig} from "@chainsafe/lodestar/lib/db/options";
+import {BeaconNodeOptions} from "../lodestar/node/options";
+import {getTomlConfig} from "../lodestar/util/file";
 
 interface IDevCommandOptions {
   loggingLevel?: string;
@@ -61,7 +61,7 @@ export class DevCommand implements ICliCommand {
     const command = commander
       .command("dev")
       .description("Start lodestar beacon node and certain amount of validator nodes")
-      .option("-t, --genesisTime [genesisTime]", "genesis time of Beacon state", Math.round(Date.now() / 1000).toString())
+      .option("-t, --genesisTime [genesisTime]", "genesis time of Beacon state", Math.round(Date.now()/1000).toString())
       .option("-c, --validatorCount [validatorCount]", "Number of validator for Beacon state", "8")
       .option("-s, --genesisState [params]", "Start chain from known state")
       // eslint-disable-next-line max-len
@@ -132,7 +132,7 @@ export class DevCommand implements ICliCommand {
     }
     if (!conf.db) {
       conf.db = {
-        name: join('.', '.tmp', 'lodestar-db', peerId.toB58String())
+        name: join(".", ".tmp", "lodestar-db", peerId.toB58String())
       };
     }
     const libp2p = await createNodeJsLibp2p(peerId, conf.network);
@@ -148,7 +148,7 @@ export class DevCommand implements ICliCommand {
     } else {
       throw new Error("Missing either --quickstart or --genesisTime and --validatorCount flag");
     }
-    this.node = new BeaconNode(conf, { config, logger, eth1: new InteropEth1Notifier(), libp2p });
+    this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier(), libp2p});
     await this.node.chain.initializeBeaconChain(state, tree);
 
     const targetSlot = computeStartSlotAtEpoch(
@@ -168,7 +168,7 @@ export class DevCommand implements ICliCommand {
     } else if (options.validatorsFromYamlKeyFile) {
       // @ts-ignore
       const keys = yaml.load(fs.readFileSync(options.validatorsFromYamlKeyFile));
-      for (const { privkey } of keys) {
+      for (const {privkey} of keys) {
         this.startValidator(Buffer.from(privkey.slice(2), "hex"), this.node);
       }
     }
@@ -187,7 +187,7 @@ export class DevCommand implements ICliCommand {
       sync: node.sync,
       eth1: node.eth1,
       opPool: node.opPool,
-      logger: new WinstonLogger({ module: "API" }),
+      logger: new WinstonLogger({module: "API"}),
       chain: node.chain,
       network: node.network,
       db: node.db
@@ -207,7 +207,7 @@ export class DevCommand implements ICliCommand {
         config: node.config
       },
       {
-        logger: new WinstonLogger({ module: `Validator #${index}` })
+        logger: new WinstonLogger({module: `Validator #${index}`})
       }
     );
     validator.start();
