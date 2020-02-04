@@ -1,5 +1,6 @@
 import {BitList, Json} from "../../interface";
 import {BitListType} from "../../types";
+import {fromHexString, toHexString} from "../byteArray";
 import {BasicListStructuralHandler} from "./list";
 
 export class BitListStructuralHandler extends BasicListStructuralHandler<BitList> {
@@ -76,13 +77,10 @@ export class BitListStructuralHandler extends BasicListStructuralHandler<BitList
     return output;
   }
   fromJson(data: Json): BitList {
-    if (typeof data !== "string") {
-      throw new Error("Invalid JSON bitlist: expected hex string");
-    }
-    const bytes = this._type.byteArray.fromHexString(data);
+    const bytes = fromHexString(data as string);
     return this.fromBytes(bytes, 0, bytes.length);
   }
   toJson(value: BitList): Json {
-    return this._type.byteArray.toHexString(this.serialize(value));
+    return toHexString(this.serialize(value));
   }
 }

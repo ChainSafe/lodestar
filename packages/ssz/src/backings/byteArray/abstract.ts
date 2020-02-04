@@ -1,5 +1,20 @@
+import {ByteVector} from "../../interface";
 import {CompositeType} from "../../types";
 import {isBackedValue, BackingType} from "..";
+
+export function toHexString(target: Uint8Array | ByteVector): string {
+  return "0x" + [...target].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+export function fromHexString(data: string): Uint8Array {
+  if (typeof data !== "string") {
+    throw new Error("Expected hex string to be a string");
+  }
+  if (data.length % 2 !== 0) {
+    throw new Error("Expected an even number of characters");
+  }
+  data = data.replace("0x", "");
+  return new Uint8Array(data.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+}
 
 /**
  * The IByteArrayBackedValue interface represents the public API that attach to byte-array-backed Proxy objects
@@ -186,20 +201,6 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
       (c) => c === "1" ? true : false
     ).reverse() as boolean[];
     return bits;
-  }
-
-  toHexString(target: Uint8Array): string {
-    return "0x" + [...target].map(b => b.toString(16).padStart(2, "0")).join("");
-  }
-  fromHexString(data: string): Uint8Array {
-    if (typeof data !== "string") {
-      throw new Error("Expected string");
-    }
-    if (data.length % 2 !== 0) {
-      throw new Error("Expected an even number of characters");
-    }
-    data = data.replace("0x", "");
-    return new Uint8Array(data.match(/.{1,2}/g).map(b => parseInt(b, 16)));
   }
 
   /**
