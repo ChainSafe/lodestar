@@ -17,7 +17,7 @@ describeDirectorySpecTest<AggregateSigsTestCase, string>(
   "BLS - aggregate sigs",
   path.join(
     __dirname,
-    "../../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/aggregate_sigs/small"
+    "../../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/aggregate/small"
   ),
   (testCase => {
     const result =  bls.aggregateSignatures(testCase.data.input.map(pubKey => {
