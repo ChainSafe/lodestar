@@ -27,7 +27,9 @@ import assert from "assert";
 export function getBeaconProposerIndex(config: IBeaconConfig, state: BeaconState): ValidatorIndex {
   const currentEpoch = getCurrentEpoch(config, state);
   const seed = hash(Buffer.concat([
-    getSeed(config, state, currentEpoch, DomainType.BEACON_PROPOSER),
+    config.types.Bytes32.serialize(
+      getSeed(config, state, currentEpoch, DomainType.BEACON_PROPOSER)
+    ),
     intToBytes(state.slot, 8)
   ]));
   const indices = getActiveValidatorIndices(state, currentEpoch);
@@ -46,11 +48,12 @@ export function computeProposerIndex(
   assert(indices.length > 0);
   const MAX_RANDOM_BYTE = BigInt(2**8 - 1);
   let i = 0;
+  const _seed = config.types.Bytes32.serialize(seed);
   /* eslint-disable-next-line no-constant-condition */
   while (true) {
     const candidateIndex = indices[computeShuffledIndex(config, i % indices.length, indices.length, seed)];
     const randByte = hash(Buffer.concat([
-      seed,
+      _seed,
       intToBytes(intDiv(i, 32), 8),
     ]))[i % 32];
     const effectiveBalance = state.validators[candidateIndex].effectiveBalance;

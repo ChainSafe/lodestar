@@ -19,7 +19,7 @@ import {getCurrentEpoch} from "./epoch";
 export function computeDomain(domainType: DomainType, forkVersion: Version = Buffer.alloc(4)): Domain {
   return Buffer.concat([
     intToBytes(domainType, 4),
-    forkVersion,
+    Buffer.from(forkVersion as Uint8Array),
   ]);
 }
 
