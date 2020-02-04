@@ -1,6 +1,6 @@
 import {ObjectLike} from "../../interface";
 import {ContainerType, CompositeType, Type} from "../../types";
-import {ByteArrayHandler, ByteArrayBacking} from "./abstract";
+import {ByteArrayHandler} from "./abstract";
 
 export class ContainerByteArrayHandler<T extends ObjectLike> extends ByteArrayHandler<T> {
   _type: ContainerType<T>;
@@ -8,10 +8,10 @@ export class ContainerByteArrayHandler<T extends ObjectLike> extends ByteArrayHa
     super();
     this._type = type;
   }
-  defaultBacking(): ByteArrayBacking {
+  defaultBacking(): Uint8Array {
     throw new Error("Not implelented");
   }
-  getVariableOffsets(target: ByteArrayBacking): [number, number][] {
+  getVariableOffsets(target: Uint8Array): [number, number][] {
     const offsets: [number, number][] = [];
     // variable-sized values can be interspersed with fixed-sized values
     // variable-sized value indices are serialized as offsets, indices deeper in the byte array

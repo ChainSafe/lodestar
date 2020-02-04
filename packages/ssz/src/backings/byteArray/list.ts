@@ -2,7 +2,6 @@ import {List} from "../../interface";
 import {BasicListType, CompositeListType} from "../../types";
 import {mixInLength} from "../../util/compat";
 import {BasicArrayByteArrayHandler, CompositeArrayByteArrayHandler} from "./array";
-import {ByteArrayBacking} from "./abstract";
 
 export class BasicListByteArrayHandler<T extends List<unknown>> extends BasicArrayByteArrayHandler<T> {
   _type: BasicListType<T>;
@@ -10,10 +9,10 @@ export class BasicListByteArrayHandler<T extends List<unknown>> extends BasicArr
     super();
     this._type = type;
   }
-  defaultBacking(): ByteArrayBacking {
+  defaultBacking(): Uint8Array {
     return new Uint8Array(0);
   }
-  hashTreeRoot(target: ByteArrayBacking): Uint8Array {
+  hashTreeRoot(target: Uint8Array): Uint8Array {
     return mixInLength(super.hashTreeRoot(target), this.getLength(target));
   }
 }
@@ -24,10 +23,10 @@ export class CompositeListByteArrayHandler<T extends List<object>> extends Compo
     super();
     this._type = type;
   }
-  defaultBacking(): ByteArrayBacking {
+  defaultBacking(): Uint8Array {
     return new Uint8Array(0);
   }
-  hashTreeRoot(target: ByteArrayBacking): Uint8Array {
+  hashTreeRoot(target: Uint8Array): Uint8Array {
     return mixInLength(super.hashTreeRoot(target), this.getLength(target));
   }
 }

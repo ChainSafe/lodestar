@@ -1,26 +1,26 @@
 import {ArrayLike} from "../../interface";
 import {BasicArrayType, CompositeArrayType} from "../../types";
-import {ByteArrayHandler, ByteArrayBacking} from "./abstract";
+import {ByteArrayHandler} from "./abstract";
 
 export class BasicArrayByteArrayHandler<T extends ArrayLike<unknown>> extends ByteArrayHandler<T> {
   _type: BasicArrayType<T>;
-  getLength(target: ByteArrayBacking): number {
+  getLength(target: Uint8Array): number {
     throw new Error("Not implemented");
   }
-  chunk(target: ByteArrayBacking, index: number): Uint8Array {
+  chunk(target: Uint8Array, index: number): Uint8Array {
     throw new Error("Not implemented");
   }
 }
 
 export class CompositeArrayByteArrayHandler<T extends ArrayLike<unknown>> extends ByteArrayHandler<T> {
   _type: CompositeArrayType<T>;
-  getLength(target: ByteArrayBacking): number {
+  getLength(target: Uint8Array): number {
     throw new Error("Not implemented");
   }
-  chunk(target: ByteArrayBacking, index: number): Uint8Array {
+  chunk(target: Uint8Array, index: number): Uint8Array {
     throw new Error("Not implemented");
   }
-  getVariableOffsets(target: ByteArrayBacking): [number, number][] {
+  getVariableOffsets(target: Uint8Array): [number, number][] {
     if (this._type.elementType.isVariableSize()) {
       if (target.length === 0) {
         return [];

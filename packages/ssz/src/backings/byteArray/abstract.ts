@@ -1,8 +1,6 @@
 import {CompositeType} from "../../types";
 import {isBackedValue, BackingType} from "..";
 
-export type ByteArrayBacking = Uint8Array;
-
 /**
  * The IByteArrayBackedValue interface represents the public API that attach to byte-array-backed Proxy objects
  *
@@ -47,7 +45,7 @@ export interface IByteArrayBackedValue<T extends object> {
   /**
    * The byte array backing
    */
-  backing(): ByteArrayBacking;
+  backing(): Uint8Array;
   /**
    * The attached ByteArrayHandler
    */
@@ -104,7 +102,7 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
   /**
    * The byte array backing
    */
-  backing(target: ByteArrayBacking): ByteArrayBacking {
+  backing(target: Uint8Array): Uint8Array {
     return target;
   }
   /**
@@ -122,7 +120,7 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
   /**
    * Default byte array
    */
-  defaultBacking(): ByteArrayBacking {
+  defaultBacking(): Uint8Array {
     throw new Error("Not implemented");
   }
   /**
@@ -137,13 +135,13 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
   /**
    * Return an ES6 Proxy-wrapped byte array backing
    */
-  createBackedValue(target: ByteArrayBacking): ByteArrayBackedValue<T> {
+  createBackedValue(target: Uint8Array): ByteArrayBackedValue<T> {
     return new Proxy(target, this) as ByteArrayBackedValue<T>;
   }
   /**
    * Clone / copy
    */
-  clone(target: ByteArrayBacking): ByteArrayBackedValue<T> {
+  clone(target: Uint8Array): ByteArrayBackedValue<T> {
     const newTarget = new Uint8Array(target.length);
     newTarget.set(target);
     return this.createBackedValue(newTarget);
@@ -153,7 +151,7 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
    *
    * If both values are byte-array-backed, use equality byte-by-byte, else use structural equality
    */
-  equals(target: ByteArrayBacking, other: ByteArrayBackedValue<T>): boolean {
+  equals(target: Uint8Array, other: ByteArrayBackedValue<T>): boolean {
     if (isBackedValue(other) && other.backingType() === this.backingType()) {
       const otherTarget = other.backing();
       if (target.length !== otherTarget.length) {
@@ -171,11 +169,11 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
 
   // Serialization
 
-  getVariableOffsets(target: ByteArrayBacking): [number, number][] {
+  getVariableOffsets(target: Uint8Array): [number, number][] {
     throw new Error("Not implemented");
   }
 
-  getByteBits(target: ByteArrayBacking, offset: number): boolean[] {
+  getByteBits(target: Uint8Array, offset: number): boolean[] {
     const byte = target[offset];
     if (!byte) {
       return [
@@ -190,10 +188,10 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
     return bits;
   }
 
-  toHexString(target: ByteArrayBacking): string {
+  toHexString(target: Uint8Array): string {
     return "0x" + [...target].map(b => b.toString(16).padStart(2, "0")).join("");
   }
-  fromHexString(data: string): ByteArrayBacking {
+  fromHexString(data: string): Uint8Array {
     if (typeof data !== "string") {
       throw new Error("Expected string");
     }
@@ -207,7 +205,7 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
   /**
    * Serialized byte length
    */
-  size(target: ByteArrayBacking): number {
+  size(target: Uint8Array): number {
     return target.length;
   }
   /**
@@ -229,14 +227,14 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
    *
    * Serializes to a pre-allocated Uint8Array
    */
-  toBytes(target: ByteArrayBacking, output: Uint8Array, offset: number): number {
+  toBytes(target: Uint8Array, output: Uint8Array, offset: number): number {
     output.set(target, offset);
     return offset + target.length;
   }
   /**
    * Serialization
    */
-  serialize(target: ByteArrayBacking): Uint8Array {
+  serialize(target: Uint8Array): Uint8Array {
     const output = new Uint8Array(this.size(target));
     this.toBytes(target, output, 0);
     return output;
@@ -245,20 +243,20 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
   /**
    * Merkleization
    */
-  hashTreeRoot(target: ByteArrayBacking): Uint8Array {
+  hashTreeRoot(target: Uint8Array): Uint8Array {
     throw new Error("Not implemented");
   }
 
   /**
    * Return a IByteArrayBackedValue method, to be called using the IByteArrayBackedValue interface
    */
-  protected getMethod<V extends keyof IByteArrayBackedValue<T>>(target: ByteArrayBacking, methodName: V): IByteArrayBackedValue<T>[V] {
+  protected getMethod<V extends keyof IByteArrayBackedValue<T>>(target: Uint8Array, methodName: V): IByteArrayBackedValue<T>[V] {
     return (this as any)[methodName].bind(this, target);
   }
   /**
    * Return a property of T, either a subarray ByteArrayBackedValue or a primitive, of a basic type
    */
-  getProperty(target: ByteArrayBacking, property: keyof T): PropOfByteArrayBackedValue<T, keyof T> {
+  getProperty(target: Uint8Array, property: keyof T): PropOfByteArrayBackedValue<T, keyof T> {
     throw new Error("Not implemented");
   }
   /**
