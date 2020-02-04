@@ -16,7 +16,7 @@ import {getCurrentEpoch} from "./epoch";
 /**
  * Return the domain for the [[domainType]] and [[forkVersion]].
  */
-export function computeDomain(domainType: DomainType, forkVersion: Version = Buffer.alloc(4)): Domain {
+export function computeDomain(domainType: DomainType, forkVersion: Version = Buffer.alloc(4)): Buffer {
   return Buffer.concat([
     intToBytes(domainType, 4),
     Buffer.from(forkVersion as Uint8Array),
@@ -31,7 +31,7 @@ export function getDomain(
   state: BeaconState,
   domainType: DomainType,
   messageEpoch: Epoch | null = null
-): Domain {
+): Buffer {
   const epoch = messageEpoch || getCurrentEpoch(config, state);
   const forkVersion = epoch < state.fork.epoch
     ? state.fork.previousVersion

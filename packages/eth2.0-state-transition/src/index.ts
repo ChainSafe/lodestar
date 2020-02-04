@@ -11,6 +11,7 @@ import {verifyBlockSignature} from "./util/block";
 import {processBlock} from "./block";
 import {processSlots} from "./slot";
 
+export * from "./constants";
 export * from "./util";
 export * from "./epoch";
 export * from "./block";

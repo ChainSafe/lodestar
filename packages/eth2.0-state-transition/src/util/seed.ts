@@ -62,7 +62,7 @@ export function getRandaoMix(config: IBeaconConfig, state: BeaconState, epoch: E
 /**
  * Return the seed at [[epoch]].
  */
-export function getSeed(config: IBeaconConfig, state: BeaconState, epoch: Epoch, domainType: DomainType): Bytes32 {
+export function getSeed(config: IBeaconConfig, state: BeaconState, epoch: Epoch, domainType: DomainType): Uint8Array {
   const mix = getRandaoMix(
     config,
     state,
