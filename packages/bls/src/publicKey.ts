@@ -49,8 +49,8 @@ export class PublicKey {
     return agg;
   }
 
-  public verifyMessage(signature: Signature, messageHash: bytes32, domain: Domain): boolean {
-    return this.value.verifyHashWithDomain(signature.getValue(), Buffer.concat([messageHash, domain]));
+  public verifyMessage(signature: Signature, messageHash: bytes32): boolean {
+    return this.value.verifyHashWithDomain(signature.getValue(), messageHash);
   }
 
   public toBytesCompressed(): BLSPubkey {

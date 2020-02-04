@@ -2,7 +2,7 @@ import {Keypair} from "./keypair";
 import {PrivateKey} from "./privateKey";
 import {PublicKey} from "./publicKey";
 import {Signature} from "./signature";
-import {BLSPubkey, BLSSecretKey, BLSSignature, Domain, bytes32} from "@chainsafe/eth2.0-types";
+import {BLSPubkey, BLSSecretKey, BLSSignature, bytes32} from "@chainsafe/eth2.0-types";
 import {PUBLIC_KEY_LENGTH} from "./constants";
 import assert from "assert";
 
@@ -31,14 +31,12 @@ export function generatePublicKey(secretKey: BLSSecretKey): BLSPubkey {
  * Signs given message using secret key.
  * @param secretKey
  * @param messageHash
- * @param domain
  */
-export function sign(secretKey: BLSSecretKey, messageHash: bytes32, domain: Domain): BLSSignature {
+export function sign(secretKey: BLSSecretKey, messageHash: bytes32): BLSSignature {
   assert(secretKey, "secretKey is null or undefined");
   assert(messageHash, "messageHash is null or undefined");
-  assert(domain, "domain is null or undefined");
   const privateKey = PrivateKey.fromBytes(secretKey);
-  return privateKey.signMessage(messageHash, domain).toBytesCompressed();
+  return privateKey.signMessage(messageHash).toBytesCompressed();
 }
 
 /**
@@ -78,17 +76,15 @@ export function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
  * @param publicKey
  * @param messageHash
  * @param signature
- * @param domain
  */
-export function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BLSSignature, domain: Domain): boolean {
+export function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BLSSignature): boolean {
   assert(publicKey, "publicKey is null or undefined");
   assert(messageHash, "messageHash is null or undefined");
   assert(signature, "signature is null or undefined");
-  assert(domain, "domain is null or undefined");
   try {
     return PublicKey
       .fromBytes(publicKey)
-      .verifyMessage(Signature.fromCompressedBytes(signature), messageHash, domain);
+      .verifyMessage(Signature.fromCompressedBytes(signature), messageHash);
   } catch (e) {
     return false;
   }
@@ -99,18 +95,15 @@ export function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BL
  * @param publicKeys
  * @param messageHashes
  * @param signature
- * @param domain
  */
 export function verifyMultiple(
   publicKeys: BLSPubkey[],
   messageHashes: bytes32[],
-  signature: BLSSignature,
-  domain: Domain
+  signature: BLSSignature
 ): boolean {
   assert(publicKeys, "publicKey is null or undefined");
   assert(messageHashes, "messageHash is null or undefined");
   assert(signature, "signature is null or undefined");
-  assert(domain, "domain is null or undefined");
 
   if(publicKeys.length === 0 || publicKeys.length != messageHashes.length) {
     return false;
@@ -120,8 +113,7 @@ export function verifyMultiple(
       .fromCompressedBytes(signature)
       .verifyMultiple(
         publicKeys.map((key) => PublicKey.fromBytes(key)),
-        messageHashes,
-        domain
+        messageHashes
       );
   } catch (e) {
     return false;
