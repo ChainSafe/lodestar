@@ -5,6 +5,8 @@ export interface ArrayLike<T> {
   find(fn: (value: T, index: number, array: this) => boolean): T | undefined;
   findIndex(fn: (value: T, index: number, array: this) => boolean): number;
   forEach(fn: (value: T, index: number, array: this) => void): void;
+  //map<U>(fn: (value: T, index: number, array: this) => U): U[];
+  //map(fn: (value: number, index: number, array: this) => number): Uint8Array;
   //  reduce<U>(fn: (accum: U, value: T, index: number) => U, initial?: U): U;
 }
 
@@ -17,7 +19,9 @@ export interface List<T> extends ArrayLike<T> {
 
 export type Container<T extends object> = T;
 
-export type BitVector = ArrayLike<boolean>;
+export type ByteVector = Vector<number>;
+
+export type BitVector = Vector<boolean>;
 
 export type BitList = List<boolean>;
 

@@ -1,17 +1,17 @@
-import {Vector, Json} from "../../interface";
+import {ByteVector, Json} from "../../interface";
 import {ByteVectorType} from "../../types";
 import {BasicVectorStructuralHandler} from "./vector";
 
-export class ByteVectorStructuralHandler extends BasicVectorStructuralHandler<Vector<number>> {
+export class ByteVectorStructuralHandler extends BasicVectorStructuralHandler<ByteVector> {
   _type: ByteVectorType;
   constructor(type: ByteVectorType) {
     super(type);
     this._type = type;
   }
-  defaultValue(): Vector<number> {
+  defaultValue(): ByteVector {
     return new Uint8Array(this._type.length);
   }
-  fromBytes(data: Uint8Array, start: number, end: number): Vector<number> {
+  fromBytes(data: Uint8Array, start: number, end: number): ByteVector {
     const length = end - start;
     if (length !== this._type.length) {
       throw new Error(`Invalid deserialized vector length: expected ${this._type.length}, actual: ${length}`);
@@ -20,11 +20,11 @@ export class ByteVectorStructuralHandler extends BasicVectorStructuralHandler<Ve
     value.set(data.slice(start, end));
     return value;
   }
-  toBytes(value: Vector<number>, output: Uint8Array, offset: number): number {
+  toBytes(value: ByteVector, output: Uint8Array, offset: number): number {
     output.set(value, offset);
     return offset + this._type.length;
   }
-  fromJson(data: Json): Vector<number> {
+  fromJson(data: Json): ByteVector {
     if (typeof data !== "string") {
       throw new Error("Invalid JSON byte vector: expected hex string");
     }
@@ -34,7 +34,7 @@ export class ByteVectorStructuralHandler extends BasicVectorStructuralHandler<Ve
     }
     return value;
   }
-  toJson(value: Vector<number>): Json {
+  toJson(value: ByteVector): Json {
     return this._type.byteArray.toHexString(value as Uint8Array);
   }
 }
