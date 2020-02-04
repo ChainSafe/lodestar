@@ -699,10 +699,10 @@
   dependencies:
     buffer "^5.4.3"
 
-"@chainsafe/eth2-spec-tests@0.9.2":
-  version "0.9.2"
-  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.9.2.tgz#82a1b4109e7defc218d4be1cf5803de840968ed2"
-  integrity sha512-d26cJZt9zh+3YF3o1LKMUsuND17nzmZvtRxm3QZIDjDD01Dwax+S9cHMoMEHjz8Okw8GBkvg/Z3N1WK5Cz4ggg==
+"@chainsafe/eth2-spec-tests@0.10.1":
+  version "0.10.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.10.1.tgz#a5705e0efc7333172426d4c3abdccb265c0c9ebb"
+  integrity sha512-87HnZbXT1g390sbw2ptKMON/9T61H8m5/cbfzDZFulF8ZWAZGpOdXhMArQi/PFS2o78pNHCqRKsSh1LPnjpUDg==
 
 "@evocateur/libnpmaccess@^3.1.2":
   version "3.1.2"
