@@ -1,4 +1,4 @@
-import {TreeBacking, subtreeBackingFillToContents, zeroBacking} from "@chainsafe/merkle-tree";
+import {Node, Tree, subtreeFillToContents, zeroNode} from "@chainsafe/merkle-tree";
 
 import {ObjectLike} from "../../interface";
 import {ContainerType, CompositeType} from "../../types";
@@ -6,26 +6,29 @@ import {TreeHandler, PropOfTreeBackedValue, TreeBackedValue} from "./abstract";
 import {isBackedValue} from "..";
 
 export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
-  protected _type: ContainerType<T>;
+  _type: ContainerType<T>;
+  _defaultNode: Node;
   constructor(type: ContainerType<T>) {
     super();
     this._type = type;
   }
-  _defaultBacking: TreeBacking;
-  defaultBacking(): TreeBacking {
-    if (!this._defaultBacking) {
-      this._defaultBacking = subtreeBackingFillToContents(
+  defaultNode(): Node {
+    if (!this._defaultNode) {
+      this._defaultNode = subtreeFillToContents(
         Object.values(this._type.fields).map((fieldType) => {
           if (fieldType.isBasic()) {
-            return zeroBacking(0);
+            return zeroNode(0);
           } else {
-            return fieldType.tree.defaultBacking();
+            return fieldType.tree.defaultNode();
           }
         }),
         this.depth(),
       );
     }
-    return this._defaultBacking.clone();
+    return this._defaultNode;
+  }
+  defaultBacking(): Tree {
+    return new Tree(this.defaultNode());
   }
   createValue(value: any): TreeBackedValue<T> {
     const v = this.defaultValue();
@@ -40,11 +43,11 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     });
     return v;
   }
-  size(target: TreeBacking): number {
+  size(target: Tree): number {
     let s = 0;
     Object.values(this._type.fields).forEach((fieldType, i) => {
       if (fieldType.isVariableSize()) {
-        s += (fieldType as CompositeType<T[keyof T]>).tree.size(this.getBackingAtChunk(target, i)) + 4;
+        s += (fieldType as CompositeType<T[keyof T]>).tree.size(this.getSubtreeAtChunk(target, i)) + 4;
       } else {
         s += fieldType.size(null);
       }
@@ -74,7 +77,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
           chunk,
         );
       } else {
-        this.setBackingAtChunk(
+        this.setSubtreeAtChunk(
           target,
           i,
           fieldType.tree.fromBytes(
@@ -87,7 +90,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     });
     return this.createBackedValue(target);
   }
-  toBytes(target: TreeBacking, output: Uint8Array, offset: number): number {
+  toBytes(target: Tree, output: Uint8Array, offset: number): number {
     let variableIndex = offset + Object.values(this._type.fields).reduce((total, fieldType) =>
       total + (fieldType.isVariableSize() ? 4 : fieldType.size(null)), 0);
     const fixedSection = new DataView(output.buffer, output.byteOffset + offset);
@@ -102,15 +105,15 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
         fixedSection.setUint32(fixedIndex - offset, variableIndex - offset, true);
         fixedIndex += 4;
         // write serialized element to variable section
-        variableIndex = fieldType.tree.toBytes(this.getBackingAtChunk(target, i), output, variableIndex);
+        variableIndex = fieldType.tree.toBytes(this.getSubtreeAtChunk(target, i), output, variableIndex);
       } else {
-        fixedIndex = fieldType.tree.toBytes(this.getBackingAtChunk(target, i), output, fixedIndex);
+        fixedIndex = fieldType.tree.toBytes(this.getSubtreeAtChunk(target, i), output, fixedIndex);
       }
     });
     return variableIndex;
 
   }
-  getProperty<V extends keyof T>(target: TreeBacking, property: V): PropOfTreeBackedValue<T, V> {
+  getProperty<V extends keyof T>(target: Tree, property: V): PropOfTreeBackedValue<T, V> {
     const chunkIndex = Object.keys(this._type.fields).findIndex((fieldName) => fieldName === property);
     if (chunkIndex === -1) {
       throw new Error("Invalid container field name");
@@ -121,11 +124,11 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
       return fieldType.fromBytes(chunk, 0);
     } else {
       return fieldType.tree.createBackedValue(
-        this.getBackingAtChunk(target, chunkIndex)
+        this.getSubtreeAtChunk(target, chunkIndex)
       );
     }
   }
-  set(target: TreeBacking, property: keyof T, value: T[keyof T]): boolean {
+  set(target: Tree, property: keyof T, value: T[keyof T]): boolean {
     const chunkIndex = Object.keys(this._type.fields).findIndex((fieldName) => fieldName === property);
     if (chunkIndex === -1) {
       throw new Error("Invalid container field name");
@@ -139,15 +142,15 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
       return true;
     } else {
       if (isBackedValue(value) && value.backingType() === this.backingType()) {
-        target.setBacking(chunkGindex, value.backing());
+        target.setSubtree(chunkGindex, value.backing());
         return true;
       } else {
-        target.setBacking(chunkGindex, fieldType.tree.createValue(value).backing());
+        target.setSubtree(chunkGindex, fieldType.tree.createValue(value).backing());
         return true;
       }
     }
   }
-  deleteProperty(target: TreeBacking, property: keyof T): boolean {
+  deleteProperty(target: Tree, property: keyof T): boolean {
     const chunkIndex = Object.keys(this._type.fields).findIndex((fieldName) => fieldName === property);
     if (chunkIndex === -1) {
       throw new Error("Invalid container field name");
@@ -159,10 +162,10 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
       return this.set(target, property, fieldType.tree.defaultValue());
     }
   }
-  ownKeys(target: TreeBacking): string[] {
+  ownKeys(target: Tree): string[] {
     return Object.keys(this._type.fields);
   }
-  getOwnPropertyDescriptor(target: TreeBacking, property: keyof T): PropertyDescriptor {
+  getOwnPropertyDescriptor(target: Tree, property: keyof T): PropertyDescriptor {
     if (this._type.fields[property as string]) {
       return {
         configurable: true,

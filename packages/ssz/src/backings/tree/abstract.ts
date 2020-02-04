@@ -1,4 +1,4 @@
-import {TreeBacking, Gindex, countToDepth, toGindexBitstring} from "@chainsafe/merkle-tree";
+import {Node, Tree, Gindex, countToDepth, toGindexBitstring} from "@chainsafe/merkle-tree";
 
 import {CompositeType} from "../../types";
 import {isBackedValue, BackingType} from "..";
@@ -47,7 +47,7 @@ export interface ITreeBackedValue<T extends object> {
   /**
    * The merkle tree backing
    */
-  backing(): TreeBacking;
+  backing(): Tree;
   /**
    * The attached TreeHandler
    */
@@ -92,7 +92,7 @@ export type PropOfTreeBackedValue<T extends object, V extends keyof T> =
  *
  * These methods can be used in both contexts (when part of ITreeBackedValue):
  * eg:
- *   Type.tree.hashTreeRoot(treeBacking)
+ *   Type.tree.hashTreeRoot(tree)
  *   and
  *   treeBackedValue.hashTreeRoot()
  */
@@ -104,7 +104,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   /**
    * The merkle tree backing
    */
-  backing(target: TreeBacking): TreeBacking {
+  backing(target: Tree): Tree {
     return target;
   }
   /**
@@ -119,10 +119,14 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   backingType(): BackingType {
     return BackingType.tree;
   }
+
+  defaultNode(): Node {
+    throw new Error("Not implemented");
+  }
   /**
    * Default merkle tree backing
    */
-  defaultBacking(): TreeBacking {
+  defaultBacking(): Tree {
     throw new Error("Not implemented");
   }
   /**
@@ -137,13 +141,13 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   /**
    * Return an ES6 Proxy-wrapped tree backing
    */
-  createBackedValue(target: TreeBacking): TreeBackedValue<T> {
+  createBackedValue(target: Tree): TreeBackedValue<T> {
     return new Proxy(target, this) as TreeBackedValue<T>;
   }
   /**
    * Clone / copy
    */
-  clone(target: TreeBacking): TreeBackedValue<T> {
+  clone(target: Tree): TreeBackedValue<T> {
     return this.createBackedValue(target.clone());
   }
   /**
@@ -151,7 +155,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
    *
    * If both values are tree-backed, use equality by merkle root, else use structural equality
    */
-  equals(target: TreeBacking, other: TreeBackedValue<T>): boolean {
+  equals(target: Tree, other: TreeBackedValue<T>): boolean {
     if (isBackedValue(other) && other.backingType() === this.backingType()) {
       const aRoot = this.hashTreeRoot(target);
       const bRoot = this.hashTreeRoot(other.backing());
@@ -165,7 +169,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   /**
    * Serialized byte length
    */
-  size(target: TreeBacking): number {
+  size(target: Tree): number {
     return this._type.structural.size(this.createBackedValue(target));
   }
   /**
@@ -185,13 +189,13 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
    *
    * Serializes to a pre-allocated Uint8Array
    */
-  toBytes(target: TreeBacking, output: Uint8Array, offset: number): number {
+  toBytes(target: Tree, output: Uint8Array, offset: number): number {
     return this._type.structural.toBytes(this.createBackedValue(target), output, offset);
   }
   /**
    * Serialization
    */
-  serialize(target: TreeBacking): Uint8Array {
+  serialize(target: Tree): Uint8Array {
     const output = new Uint8Array(this.size(target));
     this.toBytes(target, output, 0);
     return output;
@@ -209,38 +213,38 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
     }
     return this._depth;
   }
-  gindexOfChunk(target: TreeBacking, index: number): Gindex {
+  gindexOfChunk(target: Tree, index: number): Gindex {
     return toGindexBitstring(BigInt(index), this.depth());
   }
-  getBackingAtChunk(target: TreeBacking, index: number): TreeBacking {
-    return target.getBacking(this.gindexOfChunk(target, index));
+  getSubtreeAtChunk(target: Tree, index: number): Tree {
+    return target.getSubtree(this.gindexOfChunk(target, index));
   }
-  setBackingAtChunk(target: TreeBacking, index: number, value: TreeBacking, expand=false): void {
-    target.setBacking(this.gindexOfChunk(target, index), value, expand);
+  setSubtreeAtChunk(target: Tree, index: number, value: Tree, expand=false): void {
+    target.setSubtree(this.gindexOfChunk(target, index), value, expand);
   }
-  getRootAtChunk(target: TreeBacking, index: number): Uint8Array {
+  getRootAtChunk(target: Tree, index: number): Uint8Array {
     return target.getRoot(this.gindexOfChunk(target, index));
   }
-  setRootAtChunk(target: TreeBacking, index: number, value: Uint8Array, expand=false): void {
+  setRootAtChunk(target: Tree, index: number, value: Uint8Array, expand=false): void {
     target.setRoot(this.gindexOfChunk(target, index), value, expand);
   }
   /**
    * Merkleization
    */
-  hashTreeRoot(target: TreeBacking): Uint8Array {
-    return target.getRoot(1n);
+  hashTreeRoot(target: Tree): Uint8Array {
+    return target.root;
   }
 
   /**
    * Return a ITreeBackedValue method, to be called using the ITreeBackedValue interface
    */
-  protected getMethod<V extends keyof ITreeBackedValue<T>>(target: TreeBacking, methodName: V): ITreeBackedValue<T>[V] {
+  protected getMethod<V extends keyof ITreeBackedValue<T>>(target: Tree, methodName: V): ITreeBackedValue<T>[V] {
     return (this as any)[methodName].bind(this, target);
   }
   /**
    * Return a property of T, either a subtree TreeBackedValue or a primitive, of a basic type
    */
-  getProperty(target: TreeBacking, property: keyof T): PropOfTreeBackedValue<T, keyof T> {
+  getProperty(target: Tree, property: keyof T): PropOfTreeBackedValue<T, keyof T> {
     throw new Error("Not implemented");
   }
   /**

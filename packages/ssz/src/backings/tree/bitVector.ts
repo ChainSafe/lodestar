@@ -1,4 +1,4 @@
-import {TreeBacking} from "@chainsafe/merkle-tree";
+import {Tree} from "@chainsafe/merkle-tree";
 
 import {BitVector} from "../../interface";
 import {BitVectorType} from "../../types";
@@ -11,10 +11,10 @@ export class BitVectorTreeHandler extends BasicVectorTreeHandler<BitVector> {
     super(type);
     this._type = type;
   }
-  getByteLength(target: TreeBacking): number {
+  getByteLength(target: Tree): number {
     return Math.ceil(this.getLength(target) / 8);
   }
-  size(target: TreeBacking): number {
+  size(target: Tree): number {
     return this.getByteLength(target);
   }
   fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<BitVector> {
@@ -36,12 +36,12 @@ export class BitVectorTreeHandler extends BasicVectorTreeHandler<BitVector> {
   getChunkIndex(index: number): number {
     return Math.floor(index / 256);
   }
-  getValueAtIndex(target: TreeBacking, index: number): boolean {
+  getValueAtIndex(target: Tree, index: number): boolean {
     const chunk = this.getRootAtChunk(target, this.getChunkIndex(index));
     const byte = chunk[this.getChunkOffset(index)];
     return !!(byte & (1 << this.getBitOffset(index)));
   }
-  setProperty(target: TreeBacking, property: number, value: boolean): boolean {
+  setProperty(target: Tree, property: number, value: boolean): boolean {
     const chunkGindex = this.gindexOfChunk(target, this.getChunkIndex(property));
     const chunk = target.getRoot(chunkGindex);
     const byteOffset = this.getChunkOffset(property);

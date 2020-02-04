@@ -1,4 +1,4 @@
-import {TreeBacking, zeroBacking} from "@chainsafe/merkle-tree";
+import {Node, Tree, zeroNode, BranchNode} from "@chainsafe/merkle-tree";
 
 import {List} from "../../interface";
 import {number32Type, BasicListType, CompositeListType} from "../../types";
@@ -7,22 +7,24 @@ import {TreeBackedValue} from "./abstract";
 
 export class BasicListTreeHandler<T extends List<unknown>> extends BasicArrayTreeHandler<T> {
   _type: BasicListType<T>;
+  _defaultNode: Node;
   constructor(type: BasicListType<T>) {
     super();
     this._type = type;
   }
-  _defaultBacking: TreeBacking;
-  defaultBacking(): TreeBacking {
-    if (!this._defaultBacking) {
-      this._defaultBacking = zeroBacking(this.depth());
-      this._defaultBacking.setBacking(BigInt(3), zeroBacking(0));
+  defaultNode(): Node {
+    if (!this._defaultNode) {
+      this._defaultNode = new BranchNode(zeroNode(super.depth()), zeroNode(0));
     }
-    return this._defaultBacking.clone();
+    return this._defaultNode;
   }
-  getLength(target: TreeBacking): number {
+  defaultBacking(): Tree {
+    return new Tree(this.defaultNode());
+  }
+  getLength(target: Tree): number {
     return number32Type.fromBytes(target.getRoot(BigInt(3)), 0);
   }
-  setLength(target: TreeBacking, length: number): void {
+  setLength(target: Tree, length: number): void {
     const chunk = new Uint8Array(32);
     number32Type.toBytes(length, chunk, 0);
     target.setRoot(BigInt(3), chunk);
@@ -39,7 +41,7 @@ export class BasicListTreeHandler<T extends List<unknown>> extends BasicArrayTre
   depth(): number {
     return super.depth() + 1;
   }
-  set(target: TreeBacking, property: number, value: T[number]): boolean {
+  set(target: Tree, property: number, value: T[number]): boolean {
     const length = this.getLength(target);
     if (property > length) {
       throw new Error("Invalid length index");
@@ -50,7 +52,7 @@ export class BasicListTreeHandler<T extends List<unknown>> extends BasicArrayTre
       return this.setProperty(target, property, value);
     }
   }
-  deleteProperty(target: TreeBacking, property: number): boolean {
+  deleteProperty(target: Tree, property: number): boolean {
     const length = this.getLength(target);
     if (property > length) {
       throw new Error("Invalid length index");
@@ -61,19 +63,19 @@ export class BasicListTreeHandler<T extends List<unknown>> extends BasicArrayTre
       return super.deleteProperty(target, property);
     }
   }
-  pushSingle(target: TreeBacking, value: T[number]): number {
+  pushSingle(target: Tree, value: T[number]): number {
     const length = this.getLength(target);
     const expand = this.getChunkIndex(length) != this.getChunkIndex(length + 1);
     this.setProperty(target, length, value, expand);
     this.setLength(target, length + 1);
     return length + 1;
   }
-  push(target: TreeBacking, values: T[number][]): number {
+  push(target: Tree, values: T[number][]): number {
     let newLength;
     values.forEach((value) => newLength = this.pushSingle(target, value));
     return newLength;
   }
-  pop(target: TreeBacking): T[number] {
+  pop(target: Tree): T[number] {
     const length = this.getLength(target);
     const value = this.get(target, length - 1);
     super.deleteProperty(target, length - 1);
@@ -84,22 +86,24 @@ export class BasicListTreeHandler<T extends List<unknown>> extends BasicArrayTre
 
 export class CompositeListTreeHandler<T extends List<object>> extends CompositeArrayTreeHandler<T> {
   _type: CompositeListType<T>;
+  _defaultNode: Node;
   constructor(type: CompositeListType<T>) {
     super();
     this._type = type;
   }
-  _defaultBacking: TreeBacking;
-  defaultBacking(): TreeBacking {
-    if (!this._defaultBacking) {
-      this._defaultBacking = zeroBacking(this.depth());
-      this._defaultBacking.setBacking(BigInt(3), zeroBacking(0));
+  defaultNode(): Node {
+    if (!this._defaultNode) {
+      this._defaultNode = new BranchNode(zeroNode(super.depth()), zeroNode(0));
     }
-    return this._defaultBacking.clone();
+    return this._defaultNode;
   }
-  getLength(target: TreeBacking): number {
+  defaultBacking(): Tree {
+    return new Tree(this.defaultNode());
+  }
+  getLength(target: Tree): number {
     return number32Type.fromBytes(target.getRoot(BigInt(3)), 0);
   }
-  setLength(target: TreeBacking, length: number): void {
+  setLength(target: Tree, length: number): void {
     const chunk = new Uint8Array(32);
     number32Type.toBytes(length, chunk, 0);
     target.setRoot(BigInt(3), chunk);
@@ -115,7 +119,7 @@ export class CompositeListTreeHandler<T extends List<object>> extends CompositeA
       }
       for (let i = 0; i < offsets.length; i++) {
         const [currentOffset, nextOffset] = offsets[i];
-        this.setBackingAtChunk(
+        this.setSubtreeAtChunk(
           target,
           i,
           this._type.elementType.tree.fromBytes(
@@ -133,7 +137,7 @@ export class CompositeListTreeHandler<T extends List<object>> extends CompositeA
         throw new Error("Deserialized list length greater than limit");
       }
       for (let i = 0; i < length; i++) {
-        this.setBackingAtChunk(
+        this.setSubtreeAtChunk(
           target,
           i,
           this._type.elementType.tree.fromBytes(
@@ -151,7 +155,7 @@ export class CompositeListTreeHandler<T extends List<object>> extends CompositeA
   depth(): number {
     return super.depth() + 1;
   }
-  set(target: TreeBacking, property: number, value: T[number]): boolean {
+  set(target: Tree, property: number, value: T[number]): boolean {
     const length = this.getLength(target);
     if (property > length) {
       throw new Error("Invalid length index");
@@ -162,7 +166,7 @@ export class CompositeListTreeHandler<T extends List<object>> extends CompositeA
       return this.setProperty(target, property, value);
     }
   }
-  deleteProperty(target: TreeBacking, property: number): boolean {
+  deleteProperty(target: Tree, property: number): boolean {
     const length = this.getLength(target);
     if (property > length) {
       throw new Error("Invalid length index");
@@ -173,21 +177,21 @@ export class CompositeListTreeHandler<T extends List<object>> extends CompositeA
       return super.deleteProperty(target, property);
     }
   }
-  pushSingle(target: TreeBacking, value: T[number]): number {
+  pushSingle(target: Tree, value: T[number]): number {
     const length = this.getLength(target);
     this.setProperty(target, length, value, true);
     this.setLength(target, length + 1);
     return length + 1;
   }
-  push(target: TreeBacking, values: T[number][]): number {
+  push(target: Tree, values: T[number][]): number {
     let newLength;
     values.forEach((value) => newLength = this.pushSingle(target, value));
     return newLength;
   }
-  pop(target: TreeBacking): T[number] {
+  pop(target: Tree): T[number] {
     const length = this.getLength(target);
     const value = this.get(target, length - 1);
-    this.setProperty(target, length - 1, zeroBacking(0));
+    this.setProperty(target, length - 1, new Tree(zeroNode(0)));
     this.setLength(target, length - 1);
     return value as T[number];
   }

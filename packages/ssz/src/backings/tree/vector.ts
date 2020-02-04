@@ -1,4 +1,4 @@
-import {TreeBacking, subtreeBackingFillToLength, zeroBacking} from "@chainsafe/merkle-tree";
+import {Node, Tree, subtreeFillToLength, zeroNode} from "@chainsafe/merkle-tree";
 
 import {Vector} from "../../interface";
 import {BasicVectorType, CompositeVectorType} from "../../types";
@@ -7,22 +7,25 @@ import {TreeBackedValue} from "./abstract";
 
 export class BasicVectorTreeHandler<T extends Vector<unknown>> extends BasicArrayTreeHandler<T> {
   _type: BasicVectorType<T>;
+  _defaultNode: Node;
   constructor(type: BasicVectorType<T>) {
     super();
     this._type = type;
   }
-  _defaultBacking: TreeBacking;
-  defaultBacking(): TreeBacking {
-    if (!this._defaultBacking) {
-      this._defaultBacking = subtreeBackingFillToLength(
-        zeroBacking(0),
+  defaultNode(): Node {
+    if (!this._defaultNode) {
+      this._defaultNode = subtreeFillToLength(
+        zeroNode(0),
         this.depth(),
         this._type.chunkCount()
       );
     }
-    return this._defaultBacking.clone();
+    return this._defaultNode;
   }
-  getLength(target: TreeBacking): number {
+  defaultBacking(): Tree {
+    return new Tree(this.defaultNode());
+  }
+  getLength(target: Tree): number {
     return this._type.length;
   }
   fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
@@ -31,7 +34,7 @@ export class BasicVectorTreeHandler<T extends Vector<unknown>> extends BasicArra
     }
     return super.fromBytes(data, start, end);
   }
-  setProperty(target: TreeBacking, property: number, value: T[number]): boolean {
+  setProperty(target: Tree, property: number, value: T[number]): boolean {
     if (property >= this.getLength(target)) {
       throw new Error("Invalid array index");
     }
@@ -41,22 +44,25 @@ export class BasicVectorTreeHandler<T extends Vector<unknown>> extends BasicArra
 
 export class CompositeVectorTreeHandler<T extends Vector<object>> extends CompositeArrayTreeHandler<T> {
   _type: CompositeVectorType<T>;
+  _defaultNode: Node;
   constructor(type: CompositeVectorType<T>) {
     super();
     this._type = type;
   }
-  _defaultBacking: TreeBacking;
-  defaultBacking(): TreeBacking {
-    if (!this._defaultBacking) {
-      this._defaultBacking = subtreeBackingFillToLength(
-        this._type.elementType.tree.defaultBacking(),
+  defaultNode(): Node {
+    if (!this._defaultNode) {
+      this._defaultNode = subtreeFillToLength(
+        this._type.elementType.tree.defaultNode(),
         this.depth(),
         this._type.length
       );
     }
-    return this._defaultBacking.clone();
+    return this._defaultNode;
   }
-  getLength(target: TreeBacking): number {
+  defaultBacking(): Tree {
+    return new Tree(this.defaultNode());
+  }
+  getLength(target: Tree): number {
     return this._type.length;
   }
   fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
@@ -70,7 +76,7 @@ export class CompositeVectorTreeHandler<T extends Vector<object>> extends Compos
       }
       for (let i = 0; i < offsets.length; i++) {
         const [currentOffset, nextOffset] = offsets[i];
-        this.setBackingAtChunk(
+        this.setSubtreeAtChunk(
           target,
           i,
           this._type.elementType.tree.fromBytes(
@@ -87,7 +93,7 @@ export class CompositeVectorTreeHandler<T extends Vector<object>> extends Compos
         throw new Error("Incorrect deserialized vector length");
       }
       for (let i = 0; i < length; i++) {
-        this.setBackingAtChunk(
+        this.setSubtreeAtChunk(
           target,
           i,
           this._type.elementType.tree.fromBytes(
@@ -100,7 +106,7 @@ export class CompositeVectorTreeHandler<T extends Vector<object>> extends Compos
     }
     return this.createBackedValue(target);
   }
-  setProperty(target: TreeBacking, property: number, value: T[number]): boolean {
+  setProperty(target: Tree, property: number, value: T[number]): boolean {
     if (property >= this.getLength(target)) {
       throw new Error("Invalid array index");
     }

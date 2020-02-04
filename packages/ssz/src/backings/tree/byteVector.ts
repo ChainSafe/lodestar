@@ -1,4 +1,4 @@
-import {TreeBacking} from "@chainsafe/merkle-tree";
+import {Tree} from "@chainsafe/merkle-tree";
 
 import {Vector} from "../../interface";
 import {ByteVectorType} from "../../types";
@@ -10,7 +10,7 @@ export class ByteVectorTreeHandler extends BasicVectorTreeHandler<Vector<number>
     super(type);
     this._type = type;
   }
-  valueOf(target: TreeBacking, x: any): Uint8Array {
+  valueOf(target: Tree, x: any): Uint8Array {
     return this.serialize(target);
   }
 }
