@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/ChainSafe/lodestar.svg?branch=master)](https://travis-ci.org/ChainSafe/lodestar)
 [![codecov](https://codecov.io/gh/ChainSafe/lodestar/branch/master/graph/badge.svg)](https://codecov.io/gh/ChainSafe/lodestar)
-![ETH2.0_Spec_Version 0.9.2](https://img.shields.io/badge/ETH2.0_Spec_Version-0.8.2-2e86c1.svg)
+![ETH2.0_Spec_Version 0.9.3](https://img.shields.io/badge/ETH2.0_Spec_Version-0.9.3-2e86c1.svg)
 
 This is a Javascript library that implements BLS (Boneh-Lynn-Shacham) signatures and supports signature aggregation.
 
