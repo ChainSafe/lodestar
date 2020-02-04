@@ -6,8 +6,8 @@ import {BeaconState, BLSPubkey, Epoch, Fork, Slot, SignedBeaconBlock} from "@cha
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
-import {toHex} from "@chainsafe/eth2.0-utils";
-import {computeEpochAtSlot, DomainType, getDomain} from "../util";
+import {toHexString} from "@chainsafe/ssz";
+import {computeEpochAtSlot, DomainType, getDomain} from "@chainsafe/eth2.0-state-transition";
 import {IValidatorDB} from "../";
 import {IApiClient} from "../api";
 
@@ -66,7 +66,12 @@ export default class BlockProposingService {
       slot,
       this.privateKey.signMessage(
         this.config.types.Epoch.hashTreeRoot(computeEpochAtSlot(this.config, slot)),
-        getDomain(this.config, {fork} as BeaconState, DomainType.RANDAO, computeEpochAtSlot(this.config, slot))
+        Buffer.from(getDomain(
+          this.config,
+          {fork} as BeaconState,
+          DomainType.RANDAO,
+          computeEpochAtSlot(this.config, slot)
+        ) as Uint8Array)
       ).toBytesCompressed()
     );
     if(!block) {
@@ -76,13 +81,18 @@ export default class BlockProposingService {
       message: block,
       signature: this.privateKey.signMessage(
         this.config.types.BeaconBlock.hashTreeRoot(block),
-        getDomain(this.config, {fork} as BeaconState, DomainType.BEACON_PROPOSER, computeEpochAtSlot(this.config, slot))
+        Buffer.from(getDomain(
+          this.config,
+          {fork} as BeaconState,
+          DomainType.BEACON_PROPOSER,
+          computeEpochAtSlot(this.config, slot)
+        ) as Uint8Array)
       ).toBytesCompressed(),
     };
     await this.storeBlock(signedBlock);
     await this.provider.validator.publishBlock(signedBlock);
     this.logger.info(
-      `Proposed block with hash ${toHex(this.config.types.BeaconBlock.hashTreeRoot(block))}`
+      `Proposed block with hash ${toHexString(this.config.types.BeaconBlock.hashTreeRoot(block))}`
     );
     return signedBlock;
   }

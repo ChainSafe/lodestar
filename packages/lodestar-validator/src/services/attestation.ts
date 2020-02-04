@@ -16,10 +16,13 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IApiClient} from "../api";
 import {aggregateSignatures, Keypair, PrivateKey} from "@chainsafe/bls";
 import {IValidatorDB} from "..";
-import {toHex} from "@chainsafe/eth2.0-utils";
+import {toHexString} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {
+  computeEpochAtSlot, DomainType, getDomain, isSlashableAttestationData,
+} from "@chainsafe/eth2.0-state-transition";
 
-import {computeEpochAtSlot, DomainType, getDomain, isSlashableAttestationData, sleep} from "../util";
+import {sleep} from "../util";
 import {IAttesterDuty} from "../types";
 
 export class AttestationService {
@@ -91,7 +94,7 @@ export class AttestationService {
       }
       await this.provider.validator.publishAttestation(attestation);
       this.logger.info(
-        `Published new attestation for block ${toHex(attestation.data.target.root)} ` +
+        `Published new attestation for block ${toHexString(attestation.data.target.root)} ` +
           `and committee ${duty.committeeIndex} at slot ${slot}`
       );
     }
@@ -147,7 +150,10 @@ export class AttestationService {
       DomainType.BEACON_ATTESTER,
       computeEpochAtSlot(this.config, slot)
     );
-    return this.privateKey.signMessage(this.config.types.Slot.hashTreeRoot(slot), domain).toBytesCompressed();
+    return this.privateKey.signMessage(
+      this.config.types.Slot.hashTreeRoot(slot),
+      Buffer.from(domain as Uint8Array)
+    ).toBytesCompressed();
   }
 
   private async createAttestation(
@@ -183,7 +189,7 @@ export class AttestationService {
     ).toBytesCompressed();
     await this.storeAttestation(attestation);
     this.logger.info(
-      `Signed new attestation for block ${toHex(attestation.data.target.root)} ` +
+      `Signed new attestation for block ${toHexString(attestation.data.target.root)} ` +
             `and committee ${committeeIndex} at slot ${slot}`
     );
     return attestation;

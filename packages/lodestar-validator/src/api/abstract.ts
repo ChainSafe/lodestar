@@ -1,7 +1,7 @@
 import {Epoch, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ApiClientEventEmitter, IApiClient, INewEpochCallback, INewSlotCallback} from "./interface";
-import {computeEpochAtSlot, getCurrentSlot} from "../util";
+import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
 import {IBeaconApi} from "./interface/beacon";
 import {IValidatorApi} from "./interface/validators";
 import {EventEmitter} from "events";
