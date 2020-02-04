@@ -23,7 +23,7 @@ export function generateKeyPair(): Keypair {
  */
 export function generatePublicKey(secretKey: BLSSecretKey): BLSPubkey {
   assert(secretKey, "secretKey is null or undefined");
-  const keypair = new Keypair(PrivateKey.fromBytes(secretKey));
+  const keypair = new Keypair(PrivateKey.fromBytes(Buffer.from(secretKey as Uint8Array)));
   return keypair.publicKey.toBytesCompressed();
 }
 
@@ -37,8 +37,11 @@ export function sign(secretKey: BLSSecretKey, messageHash: Bytes32, domain: Doma
   assert(secretKey, "secretKey is null or undefined");
   assert(messageHash, "messageHash is null or undefined");
   assert(domain, "domain is null or undefined");
-  const privateKey = PrivateKey.fromBytes(secretKey);
-  return privateKey.signMessage(messageHash, domain).toBytesCompressed();
+  const privateKey = PrivateKey.fromBytes(Buffer.from(secretKey as Uint8Array));
+  return privateKey.signMessage(
+    Buffer.from(messageHash as Uint8Array),
+    Buffer.from(domain as Uint8Array)
+  ).toBytesCompressed();
 }
 
 /**
@@ -48,7 +51,7 @@ export function sign(secretKey: BLSSecretKey, messageHash: Bytes32, domain: Doma
 export function aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
   assert(signatures, "signatures is null or undefined");
   return signatures.map((signature): Signature => {
-    return Signature.fromCompressedBytes(signature);
+    return Signature.fromCompressedBytes(Buffer.from(signature as Uint8Array));
   }).reduce((previousValue, currentValue): Signature => {
     return previousValue.add(currentValue);
   }).toBytesCompressed();
@@ -63,7 +66,7 @@ export function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
   if(publicKeys.length === 0) {
     return Buffer.alloc(PUBLIC_KEY_LENGTH);
   }
-  return publicKeys.map(PublicKey.fromBytes).reduce((agg, pubKey) => {
+  return publicKeys.map((p) => PublicKey.fromBytes(Buffer.from(p as Uint8Array))).reduce((agg, pubKey) => {
     if(agg) {
       return agg.add(pubKey);
     } else {
@@ -87,8 +90,12 @@ export function verify(publicKey: BLSPubkey, messageHash: Bytes32, signature: BL
   assert(domain, "domain is null or undefined");
   try {
     return PublicKey
-      .fromBytes(publicKey)
-      .verifyMessage(Signature.fromCompressedBytes(signature), messageHash, domain);
+      .fromBytes(Buffer.from(publicKey as Uint8Array))
+      .verifyMessage(
+        Signature.fromCompressedBytes(Buffer.from(signature as Uint8Array)),
+        Buffer.from(messageHash as Uint8Array),
+        Buffer.from(domain as Uint8Array)
+      );
   } catch (e) {
     return false;
   }
@@ -117,11 +124,11 @@ export function verifyMultiple(
   }
   try {
     return Signature
-      .fromCompressedBytes(signature)
+      .fromCompressedBytes(Buffer.from(signature as Uint8Array))
       .verifyMultiple(
-        publicKeys.map((key) => PublicKey.fromBytes(key)),
-        messageHashes,
-        domain
+        publicKeys.map((key) => PublicKey.fromBytes(Buffer.from(key as Uint8Array))),
+        messageHashes.map((m) => Buffer.from(m as Uint8Array)),
+        Buffer.from(domain as Uint8Array),
       );
   } catch (e) {
     return false;

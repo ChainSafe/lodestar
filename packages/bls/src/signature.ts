@@ -1,6 +1,5 @@
 import assert from "assert";
 import {FP_POINT_LENGTH} from "./constants";
-import {BLSSignature, Bytes32, Domain} from "@chainsafe/eth2.0-types";
 import {SignatureType} from "@chainsafe/eth2-bls-wasm";
 import {getContext} from "./context";
 import {PublicKey} from "./publicKey";
@@ -14,7 +13,7 @@ export class Signature {
     this.value = value;
   }
 
-  public static fromCompressedBytes(value: BLSSignature): Signature {
+  public static fromCompressedBytes(value: Uint8Array): Signature {
     assert(
       value.length === 2 * FP_POINT_LENGTH,
       `Signature must have ${2 * FP_POINT_LENGTH} bytes`
@@ -43,20 +42,20 @@ export class Signature {
     return this.value;
   }
 
-  public verify(publicKey: PublicKey, message: Bytes32, domain: Domain): boolean {
+  public verify(publicKey: PublicKey, message: Uint8Array, domain: Uint8Array): boolean {
     domain = padLeft(domain, 8);
     return publicKey.verifyMessage(this, message, domain);
   }
 
-  public verifyMultiple(publicKeys: PublicKey[], messages: Bytes32[], domain: Domain): boolean {
+  public verifyMultiple(publicKeys: PublicKey[], messages: Uint8Array[], domain: Uint8Array): boolean {
     domain = padLeft(domain, 8);
     return this.value.verifyAggregatedHashWithDomain(
       publicKeys.map((key) => key.getValue()),
-      messages.map((message) => Buffer.concat([message, domain]))
+      messages.map((message) => Buffer.concat([Buffer.from(message as Uint8Array), domain as Uint8Array]))
     );
   }
 
-  public toBytesCompressed(): BLSSignature {
+  public toBytesCompressed(): Buffer {
     return Buffer.from(this.value.serialize());
   }
 

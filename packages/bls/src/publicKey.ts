@@ -1,5 +1,4 @@
 import {PrivateKey} from "./privateKey";
-import {BLSPubkey, Bytes32, Domain} from "@chainsafe/eth2.0-types";
 import {PublicKeyType} from "@chainsafe/eth2-bls-wasm";
 import {getContext} from "./context";
 import {PUBLIC_KEY_LENGTH} from "./constants";
@@ -14,12 +13,12 @@ export class PublicKey {
   protected constructor(value: PublicKeyType) {
     this.value = value;
   }
-  
+
   public static fromPrivateKey(privateKey: PrivateKey): PublicKey {
     return privateKey.toPublicKey();
   }
 
-  public static fromBytes(bytes: BLSPubkey): PublicKey {
+  public static fromBytes(bytes: Uint8Array): PublicKey {
     const context = getContext();
     const publicKey = new context.PublicKey();
     if(!EMPTY_PUBLIC_KEY.equals(bytes)) {
@@ -49,11 +48,11 @@ export class PublicKey {
     return agg;
   }
 
-  public verifyMessage(signature: Signature, messageHash: Bytes32, domain: Domain): boolean {
+  public verifyMessage(signature: Signature, messageHash: Uint8Array, domain: Uint8Array): boolean {
     return this.value.verifyHashWithDomain(signature.getValue(), Buffer.concat([messageHash, domain]));
   }
 
-  public toBytesCompressed(): BLSPubkey {
+  public toBytesCompressed(): Buffer {
     return Buffer.from(this.value.serialize());
   }
 
