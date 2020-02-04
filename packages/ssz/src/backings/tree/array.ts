@@ -1,4 +1,4 @@
-import {Tree} from "@chainsafe/merkle-tree";
+import {Tree, iterateAtDepth} from "@chainsafe/merkle-tree";
 
 import {ArrayLike} from "../../interface";
 import {BasicArrayType, CompositeArrayType} from "../../types";
@@ -221,8 +221,11 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<object>> extends Tree
     return Array.from({length: this.getLength(target)}, (_, i) => String(i));
   }
   *[Symbol.iterator](target: Tree): Iterable<PropOfCompositeTreeBackedValue<T, number>> {
-    for (let i = 0; i < this.getLength(target); i++) {
-      yield this.getValueAtChunk(target, i);
+    const elementTreeHandler = this._type.elementType.tree;
+    for (const gindex of iterateAtDepth(BigInt(0), BigInt(this.getLength(target)), this.depth())) {
+      yield elementTreeHandler.createBackedValue(
+        target.getSubtree(gindex)
+      ) as PropOfCompositeTreeBackedValue<T, number>;
     }
   }
   find(
@@ -230,11 +233,16 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<object>> extends Tree
     fn: (value: PropOfCompositeTreeBackedValue<T, number>, index: number, array: ArrayLike<unknown>) => boolean
   ): PropOfCompositeTreeBackedValue<T, number> | undefined {
     const value = this.createBackedValue(target);
-    for (let i = 0; i < this.getLength(target); i++) {
-      const elementValue = this.getValueAtChunk(target, i);
+    const elementTreeHandler = this._type.elementType.tree;
+    let i = 0;
+    for (const gindex of iterateAtDepth(BigInt(0), BigInt(this.getLength(target)), this.depth())) {
+      const elementValue = elementTreeHandler.createBackedValue(
+        target.getSubtree(gindex)
+      ) as PropOfCompositeTreeBackedValue<T, number>;
       if (fn(elementValue, i, value)) {
         return elementValue;
       }
+      i++;
     }
     return undefined;
   }
@@ -243,17 +251,29 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<object>> extends Tree
     fn: (value: PropOfCompositeTreeBackedValue<T, number>, index: number, array: ArrayLike<unknown>) => boolean
   ): number {
     const value = this.createBackedValue(target);
-    for (let i = 0; i < this.getLength(target); i++) {
-      if (fn(this.getValueAtChunk(target, i), i, value)) {
+    const elementTreeHandler = this._type.elementType.tree;
+    let i = 0;
+    for (const gindex of iterateAtDepth(BigInt(0), BigInt(this.getLength(target)), this.depth())) {
+      const elementValue = elementTreeHandler.createBackedValue(
+        target.getSubtree(gindex)
+      ) as PropOfCompositeTreeBackedValue<T, number>;
+      if (fn(elementValue, i, value)) {
         return i;
       }
+      i++;
     }
     return -1;
   }
   forEach(target: Tree, fn: (value: unknown, index: number, array: ArrayLike<object>) => void): void {
     const value = this.createBackedValue(target);
-    for (let i = 0; i < this.getLength(target); i++) {
-      fn(this.getValueAtChunk(target, i), i, value);
+    const elementTreeHandler = this._type.elementType.tree;
+    let i = 0;
+    for (const gindex of iterateAtDepth(BigInt(0), BigInt(this.getLength(target)), this.depth())) {
+      const elementValue = elementTreeHandler.createBackedValue(
+        target.getSubtree(gindex)
+      ) as PropOfCompositeTreeBackedValue<T, number>;
+      fn(elementValue, i, value);
+      i++;
     }
   }
 }
