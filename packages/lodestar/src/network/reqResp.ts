@@ -69,11 +69,11 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
             // @ts-ignore
             (source) => {
               // @ts-ignore
-              const self = this;
+              const handleRequest = this.handleRequest;
               return (async function * () { // A generator is async iterable
                 for await (const val of source) {
                   const data = Buffer.isBuffer(val) ? val : val.slice();
-                  const response = await self.handleRequest(peerId, method, data);
+                  const response = await handleRequest(peerId, method, data);
                   yield response;
                 }
               })();

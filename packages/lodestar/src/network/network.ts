@@ -78,7 +78,9 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
 
   public getPeers(): PeerInfo[] {
     // @ts-ignore
-    return Array.from(this.libp2p.peerStore.peers.values()).filter((peerInfo) => this.libp2p.registrar.getConnection(peerInfo));
+    return Array.from(this.libp2p.peerStore.peers.values()).filter(
+      // @ts-ignore
+      (peerInfo) => this.libp2p.registrar.getConnection(peerInfo));
   }
 
   public hasPeer(peerInfo: PeerInfo): boolean {

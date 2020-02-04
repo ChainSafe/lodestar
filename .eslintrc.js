@@ -88,6 +88,19 @@ module.exports = {
         "import/no-extraneous-dependencies": "off",
         "@typescript-eslint/no-explicit-any": "off"
       }
+    },
+    {
+      "files": ["**/src/@types/**/*.d.ts"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/member-ordering": "off",
+        "@typescript-eslint/interface-name-prefix": "off",
+        "@typescript-eslint/no-empty-interface": "off",
+        "no-redeclare": "off",
+        "max-len": "off",
+        "no-undef": "off",
+        "@typescript-eslint/no-this-alias": "off"
+      }
     }
   ]
 };
