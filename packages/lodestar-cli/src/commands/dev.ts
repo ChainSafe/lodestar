@@ -142,8 +142,9 @@ export class DevCommand implements ICliCommand {
     if (options.genesisState) {
       state = quickStartOptionToState(config, tree, options.genesisState);
     } else if (options.genesisTime && options.validatorCount) {
-      logger.info(`Starting node with genesisTime ${new Date(parseInt(options.genesisTime) * 1000)} and \
-       ${options.validatorCount} validators.`);
+      logger.info("Starting node with genesisTime "
+          +`${parseInt(options.genesisTime)} (${new Date(parseInt(options.genesisTime) * 1000)}) and `
+          +`${options.validatorCount} validators.`);
       state = quickStartState(config, tree, parseInt(options.genesisTime), parseInt(options.validatorCount));
     } else {
       throw new Error("Missing either --quickstart or --genesisTime and --validatorCount flag");

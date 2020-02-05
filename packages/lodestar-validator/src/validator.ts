@@ -62,6 +62,8 @@ export class Validator {
     this.apiClient.onNewEpoch(this.blockService.onNewEpoch);
     this.apiClient.onNewSlot(this.attestationService.onNewSlot);
     this.apiClient.onNewEpoch(this.attestationService.onNewEpoch);
+    this.blockService.start();
+    this.attestationService.start();
   };
 
   /**

@@ -12,7 +12,6 @@ import {IValidatorDB} from "../";
 import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {IApiClient} from "../api";
 
-
 export default class BlockProposingService {
 
   private readonly config: IBeaconConfig;
@@ -39,12 +38,23 @@ export default class BlockProposingService {
     this.logger = logger;
   }
 
+  public start = async (): Promise<void> => {
+    //trigger getting duties for current epoch
+    const slot = this.provider.getCurrentSlot();
+    this.onNewEpoch(computeEpochAtSlot(this.config, slot));
+  };
+
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
     const epochProposers = await this.provider.validator.getProposerDuties(epoch);
-    epochProposers.forEach((validatorPubKey, slot) => {
-      if(validatorPubKey.equals(this.publicKey)) {
-        this.nextProposalSlot = slot;
+    if(!epochProposers) {
+      return;
+    }
+    Array.from(epochProposers.entries()).findIndex((epochProposerEntry: [Slot, BLSPubkey]) => {
+      if(epochProposerEntry[1].equals(this.publicKey)) {
+        this.nextProposalSlot = epochProposerEntry[0];
+        return true;
       }
+      return false;
     });
   };
 

@@ -35,7 +35,7 @@ export class ArchiveBlocksTask implements ITask {
   public async run(): Promise<void> {
     const blocks = (await this.db.block.getAll()).filter(
       (block) =>
-        computeEpochAtSlot(this.config, block.message.slot) <= this.finalizedCheckpoint.epoch
+        computeEpochAtSlot(this.config, block.message.slot) < this.finalizedCheckpoint.epoch
     );
     this.logger.info(`Started archiving ${blocks.length} block `
         +`(finalized epoch #${this.finalizedCheckpoint.epoch})...`

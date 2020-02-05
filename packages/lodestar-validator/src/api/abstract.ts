@@ -49,6 +49,10 @@ export abstract class AbstractApiClient
     }
   }
 
+  public getCurrentSlot(): Slot {
+    return this.currentSlot;
+  }
+
   private async pollBeaconNode(): Promise<void> {
     if (!this.running) {
       return;
@@ -69,7 +73,7 @@ export abstract class AbstractApiClient
     const diffTillNextSlot =
         (this.config.params.SECONDS_PER_SLOT - diffInSeconds % this.config.params.SECONDS_PER_SLOT) * 1000;
     //subscribe to new slots and notify upon new epoch
-    this.onNewSlot(this.updateEpoch.bind(this));
+    this.onNewSlot(this.updateEpoch);
     setTimeout(
       this.updateSlot,
       diffTillNextSlot
@@ -93,7 +97,7 @@ export abstract class AbstractApiClient
 
   private updateEpoch = (slot: Slot): void => {
     const epoch = computeEpochAtSlot(this.config, slot);
-    if (epoch !== this.currentEpoch && epoch !== 0) {
+    if (epoch !== this.currentEpoch) {
       this.currentEpoch = epoch;
       this.newEpochCallbacks.forEach((cb) => {
         cb(this.currentEpoch);
