@@ -117,12 +117,12 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.subscribe(GossipEvent.ATTESTER_SLASHING, callback);
   }
 
-  public subscribeToAttestationSubnet(subnet: string, callback: (block: BeaconBlock) => void): void {
-    this.subscribe(GossipEvent.ATTESTATION_SUBNET, callback, new Map([["subnet", subnet]]));
+  public subscribeToAttestationSubnet(subnet: number|string, callback: (block: BeaconBlock) => void): void {
+    this.subscribe(GossipEvent.ATTESTATION_SUBNET, callback, new Map([["subnet", subnet.toString()]]));
   }
 
-  public unsubscribeFromAttestationSubnet(subnet: string, callback: (block: BeaconBlock) => void): void {
-    this.unsubscribe(GossipEvent.ATTESTATION_SUBNET, callback, new Map([["subnet", subnet]]));
+  public unsubscribeFromAttestationSubnet(subnet: number|string, callback: (block: BeaconBlock) => void): void {
+    this.unsubscribe(GossipEvent.ATTESTATION_SUBNET, callback, new Map([["subnet", subnet.toString()]]));
   }
 
   public unsubscribe(event: keyof IGossipEvents, listener: unknown, params: Map<string, string> = new Map()): void {
