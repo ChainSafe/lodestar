@@ -36,14 +36,13 @@ export class RegularSync {
 
   public async start(): Promise<void> {
     this.logger.verbose("regular sync start");
-    this.network.gossip.on(GossipEvent.BLOCK, this.receiveBlock);
-    this.network.gossip.on(GossipEvent.ATTESTATION_SUBNET, this.receiveCommitteeAttestation);
-    this.network.gossip.on(GossipEvent.AGGREGATE_AND_PROOF, this.receiveAggregateAndProof);
+    this.network.gossip.subscribeToBlock(this.receiveBlock);
+    this.network.gossip.subscribeToAggregateAndProof(this.receiveAggregateAndProof);
     // For interop only, will be removed prior to mainnet
-    this.network.gossip.on(GossipEvent.ATTESTATION, this.receiveAttestation);
-    this.network.gossip.on(GossipEvent.VOLUNTARY_EXIT, this.receiveVoluntaryExit);
-    this.network.gossip.on(GossipEvent.PROPOSER_SLASHING, this.receiveProposerSlashing);
-    this.network.gossip.on(GossipEvent.ATTESTER_SLASHING, this.receiveAttesterSlashing);
+    this.network.gossip.subscribeToAttestation(this.receiveAttestation);
+    this.network.gossip.subscribeToVoluntaryExit(this.receiveVoluntaryExit);
+    this.network.gossip.subscribeToProposerSlashing(this.receiveProposerSlashing);
+    this.network.gossip.subscribeToAttesterSlashing(this.receiveAttesterSlashing);
     this.chain.on("processedBlock", this.onProcessedBlock);
     this.chain.on("processedAttestation", this.onProcessedAttestation);
     this.chain.on("unknownBlockRoot", this.onUnknownBlockRoot);
@@ -52,13 +51,12 @@ export class RegularSync {
 
   public async stop(): Promise<void> {
     this.logger.verbose("regular sync stop");
-    this.network.gossip.removeListener(GossipEvent.BLOCK, this.receiveBlock);
-    this.network.gossip.removeListener(GossipEvent.ATTESTATION_SUBNET, this.receiveCommitteeAttestation);
-    this.network.gossip.removeListener(GossipEvent.AGGREGATE_AND_PROOF, this.receiveAggregateAndProof);
-    this.network.gossip.removeListener(GossipEvent.ATTESTATION, this.receiveAttestation);
-    this.network.gossip.removeListener(GossipEvent.VOLUNTARY_EXIT, this.receiveVoluntaryExit);
-    this.network.gossip.removeListener(GossipEvent.PROPOSER_SLASHING, this.receiveProposerSlashing);
-    this.network.gossip.removeListener(GossipEvent.ATTESTER_SLASHING, this.receiveAttesterSlashing);
+    this.network.gossip.unsubscribe(GossipEvent.BLOCK, this.receiveBlock);
+    this.network.gossip.unsubscribe(GossipEvent.AGGREGATE_AND_PROOF, this.receiveAggregateAndProof);
+    this.network.gossip.unsubscribe(GossipEvent.ATTESTATION, this.receiveAttestation);
+    this.network.gossip.unsubscribe(GossipEvent.VOLUNTARY_EXIT, this.receiveVoluntaryExit);
+    this.network.gossip.unsubscribe(GossipEvent.PROPOSER_SLASHING, this.receiveProposerSlashing);
+    this.network.gossip.unsubscribe(GossipEvent.ATTESTER_SLASHING, this.receiveAttesterSlashing);
     this.chain.removeListener("processedBlock", this.onProcessedBlock);
     this.chain.removeListener("processedAttestation", this.onProcessedAttestation);
     this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
@@ -71,15 +69,7 @@ export class RegularSync {
 
   public receiveCommitteeAttestation = async (attestationSubnet: {attestation: Attestation; subnet: number}): 
   Promise<void> => {
-    const attestation = attestationSubnet.attestation;
-    
-    // to see if we need special process for these unaggregated attestations
-    // not in the spec atm
-    // send attestation on to other modules
-    await Promise.all([
-      this.opPool.attestations.receive(attestation),
-      this.chain.receiveAttestation(attestation),
-    ]);
+    await this.opPool.attestations.receive(attestationSubnet.attestation);
   };
 
   public receiveAggregateAndProof = async (aggregate: AggregateAndProof): Promise<void> => {
