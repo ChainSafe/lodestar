@@ -11,8 +11,8 @@ import {IBeaconSSZTypes} from "../interface";
 export const ProposerSlashing = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
     ["proposerIndex", ssz.ValidatorIndex],
-    ["header1", ssz.BeaconBlockHeader],
-    ["header2", ssz.BeaconBlockHeader],
+    ["signedHeader1", ssz.SignedBeaconBlockHeader],
+    ["signedHeader2", ssz.SignedBeaconBlockHeader],
   ],
 });
 
@@ -48,6 +48,12 @@ export const VoluntaryExit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
   fields: [
     ["epoch", ssz.Epoch],
     ["validatorIndex", ssz.ValidatorIndex],
+  ],
+});
+
+export const SignedVoluntaryExit = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
+  fields: [
+    ["message", ssz.VoluntaryExit],
     ["signature", ssz.BLSSignature],
   ],
 });

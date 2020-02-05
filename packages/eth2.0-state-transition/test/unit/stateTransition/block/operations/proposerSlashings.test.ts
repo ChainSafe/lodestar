@@ -26,8 +26,8 @@ describe("process block - proposer slashings", function () {
   it("should fail to process - different epoch", function () {
     const state = generateState({validators: [generateValidator()]});
     const proposerSlashing = generateEmptyProposerSlashing();
-    proposerSlashing.header1.slot = 1;
-    proposerSlashing.header2.slot = config.params.SLOTS_PER_EPOCH + 1;
+    proposerSlashing.signedHeader1.message.slot = 1;
+    proposerSlashing.signedHeader2.message.slot = config.params.SLOTS_PER_EPOCH + 1;
     try {
       processProposerSlashing(config, state, proposerSlashing);
       expect.fail();
@@ -38,8 +38,8 @@ describe("process block - proposer slashings", function () {
   it("should fail to process - same headers", function () {
     const state = generateState({validators: [generateValidator()]});
     const proposerSlashing = generateEmptyProposerSlashing();
-    proposerSlashing.header1.slot = 1;
-    proposerSlashing.header2.slot = proposerSlashing.header1.slot;
+    proposerSlashing.signedHeader1.message.slot = 1;
+    proposerSlashing.signedHeader2.message.slot = proposerSlashing.signedHeader1.message.slot;
     try {
       processProposerSlashing(config, state, proposerSlashing);
       expect.fail();
@@ -50,8 +50,8 @@ describe("process block - proposer slashings", function () {
   it("should fail to process - same headers", function () {
     const state = generateState({validators: [generateValidator()]});
     const proposerSlashing = generateEmptyProposerSlashing();
-    proposerSlashing.header1.slot = 1;
-    proposerSlashing.header2.slot = 2;
+    proposerSlashing.signedHeader1.message.slot = 1;
+    proposerSlashing.signedHeader2.message.slot = 2;
     isSlashableValidatorStub.returns(false);
     try {
       processProposerSlashing(config, state, proposerSlashing);
@@ -65,8 +65,8 @@ describe("process block - proposer slashings", function () {
   it("should fail to process - invalid signature 1", function () {
     const state = generateState({validators: [generateValidator()]});
     const proposerSlashing = generateEmptyProposerSlashing();
-    proposerSlashing.header1.slot = 1;
-    proposerSlashing.header2.slot = 1;
+    proposerSlashing.signedHeader1.message.slot = 1;
+    proposerSlashing.signedHeader2.message.slot = 1;
     isSlashableValidatorStub.returns(true);
     try {
       processProposerSlashing(config, state, proposerSlashing, true);
@@ -80,10 +80,10 @@ describe("process block - proposer slashings", function () {
     const validator = generateValidator();
     const state = generateState({validators: [validator]});
     const proposerSlashing = generateEmptyProposerSlashing();
-    proposerSlashing.header1.slot = 1;
-    proposerSlashing.header1.signature = Buffer.alloc(96, 1);
-    proposerSlashing.header2.slot = 1;
-    proposerSlashing.header2.signature = Buffer.alloc(96, 2);
+    proposerSlashing.signedHeader1.message.slot = 1;
+    proposerSlashing.signedHeader1.signature = Buffer.alloc(96, 1);
+    proposerSlashing.signedHeader2.message.slot = 1;
+    proposerSlashing.signedHeader2.signature = Buffer.alloc(96, 2);
     isSlashableValidatorStub.returns(true);
     try {
       processProposerSlashing(config, state, proposerSlashing);
@@ -97,8 +97,8 @@ describe("process block - proposer slashings", function () {
     const validator = generateValidator();
     const state = generateState({validators: [validator]});
     const proposerSlashing = generateEmptyProposerSlashing();
-    proposerSlashing.header1.slot = 1;
-    proposerSlashing.header2.slot = 1;
+    proposerSlashing.signedHeader1.message.slot = 1;
+    proposerSlashing.signedHeader2.message.slot = 1;
     isSlashableValidatorStub.returns(true);
     try {
       processProposerSlashing(config, state, proposerSlashing, false);

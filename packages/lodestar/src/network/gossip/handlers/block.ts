@@ -3,7 +3,7 @@
  */
 
 import {IGossipMessage, IGossipMessageValidator} from "../interface";
-import {BeaconBlock} from "@chainsafe/eth2.0-types";
+import {SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {Gossip, GossipHandlerFn} from "../gossip";
 import {deserializeGossipMessage, getGossipTopic} from "../utils";
 import {GossipEvent} from "../constants";
@@ -13,10 +13,10 @@ import {promisify} from "es6-promisify";
 export function getIncomingBlockHandler(validator: IGossipMessageValidator): GossipHandlerFn {
   return async function handleIncomingBlock(this: Gossip, msg: IGossipMessage): Promise<void> {
     try {
-      const block = deserializeGossipMessage<BeaconBlock>(msg, this.config.types.BeaconBlock);
-      this.logger.verbose(`Incoming block at slot: ${block.slot}`);
-      if (await validator.isValidIncomingBlock(block)) {
-        this.emit(GossipEvent.BLOCK, block);
+      const signedBlock = deserializeGossipMessage<SignedBeaconBlock>(msg, this.config.types.SignedBeaconBlock);
+      this.logger.verbose(`Incoming block at slot: ${signedBlock.message.slot}`);
+      if (await validator.isValidIncomingBlock(signedBlock)) {
+        this.emit(GossipEvent.BLOCK, signedBlock);
       }
     } catch (e) {
       this.logger.warn("Incoming block error", e);
@@ -24,9 +24,9 @@ export function getIncomingBlockHandler(validator: IGossipMessageValidator): Gos
   };
 }
 
-export async function publishBlock(this: Gossip, block: BeaconBlock): Promise<void> {
+export async function publishBlock(this: Gossip, signedBlock: SignedBeaconBlock): Promise<void> {
   await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
-    getGossipTopic(GossipEvent.BLOCK), serialize(this.config.types.BeaconBlock, block)
+    getGossipTopic(GossipEvent.BLOCK), serialize(this.config.types.SignedBeaconBlock, signedBlock)
   );
-  this.logger.verbose(`Publishing block at slot: ${block.slot}`);
+  this.logger.verbose(`Publishing block at slot: ${signedBlock.message.slot}`);
 }

@@ -1,6 +1,6 @@
 import {describe, it} from "mocha";
 import {IReputation, ReputationStore} from "../../../../src/sync/IReputation";
-import {BeaconBlock, BeaconBlockHeader, Epoch} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconBlockHeader, Epoch, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {
   chunkify,
   getBlockRangeFromPeer,
@@ -9,8 +9,8 @@ import {
   isValidFinalizedCheckPoint
 } from "../../../../src/sync/utils/sync";
 import {expect} from "chai";
-import {generateEmptyBlock} from "../../../utils/block";
-import {signingRoot} from "@chainsafe/ssz";
+import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block";
+import {hashTreeRoot} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/src/presets/minimal";
 import {blockToHeader} from "@chainsafe/eth2.0-state-transition";
 import sinon from "sinon";
@@ -106,7 +106,7 @@ describe("sync utils", function () {
     it("Should verify invalid chain of blocks - invalid middle root", function () {
       const startHeader = blockToHeader(config, generateEmptyBlock());
       const blocks = generateValidChain(startHeader);
-      blocks[1].parentRoot = Buffer.alloc(32);
+      blocks[1].message.parentRoot = Buffer.alloc(32);
       const result = isValidChainOfBlocks(config, startHeader, blocks);
       expect(result).to.be.false;
     });
@@ -121,7 +121,7 @@ describe("sync utils", function () {
       repsStub.get.returns({latestStatus: {root: Buffer.alloc(32, 1)}});
       rpcStub.beaconBlocksByRange
         .withArgs(sinon.match.any, sinon.match.any)
-        .resolves([generateEmptyBlock()]);
+        .resolves([generateEmptySignedBlock()]);
       const result = await getBlockRangeFromPeer(
         rpcStub,
         repsStub as unknown as ReputationStore,
@@ -167,14 +167,14 @@ describe("sync utils", function () {
     
 });
 
-function generateValidChain(start: BeaconBlockHeader, n = 3): BeaconBlock[] {
+function generateValidChain(start: BeaconBlockHeader, n = 3): SignedBeaconBlock[] {
   const blocks = [];
-  let parentRoot = signingRoot(config.types.BeaconBlockHeader, start);
+  let parentRoot = hashTreeRoot(config.types.BeaconBlockHeader, start);
   for(let i = 0; i < n; i++) {
-    const block = generateEmptyBlock();
-    block.parentRoot = parentRoot;
-    block.slot = i;
-    parentRoot = signingRoot(config.types.BeaconBlock, block);
+    const block = generateEmptySignedBlock();
+    block.message.parentRoot = parentRoot;
+    block.message.slot = i;
+    parentRoot = hashTreeRoot(config.types.BeaconBlock, block.message);
     blocks.push(block);
   }
   return blocks;

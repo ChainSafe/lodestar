@@ -16,6 +16,10 @@ export class ChainRepository {
     this.config = config;
   }
 
+  public getKey(id: Key): Buffer | string {
+    return encodeKey(Bucket.chainInfo, id);
+  }
+
   public getLatestStateRoot(): Promise<Root|null> {
     return this.db.get(this.getKey(Key.latestState));
   }
@@ -95,9 +99,5 @@ export class ChainRepository {
       return null;
     }
     return await this.getBlockRoot(slot);
-  }
-
-  private getKey(id: Key): Buffer | string {
-    return encodeKey(Bucket.chainInfo, id);
   }
 }

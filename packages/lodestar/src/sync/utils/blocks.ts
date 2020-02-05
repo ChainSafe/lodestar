@@ -1,4 +1,4 @@
-import {BeaconBlock} from "@chainsafe/eth2.0-types";
+import {SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {chunkify, getBlockRangeFromPeer, ISlotRange} from "./sync";
 import {RoundRobinArray} from "./robin";
 import {IReqResp} from "../../network";
@@ -10,9 +10,9 @@ export async function getBlockRange(
   peers: PeerInfo[],
   range: ISlotRange,
   blocksPerChunk = 10
-): Promise<BeaconBlock[]> {
+): Promise<SignedBeaconBlock[]> {
   let chunks = chunkify(blocksPerChunk, range.start, range.end);
-  let blocks: BeaconBlock[] = [];
+  let blocks: SignedBeaconBlock[] = [];
   //try to fetch chunks from different peers until all chunks are fetched
   while(chunks.length > 0) {
     //rotate peers
@@ -33,6 +33,6 @@ export async function getBlockRange(
   return sortBlocks(blocks);
 }
 
-export function sortBlocks(blocks: BeaconBlock[]): BeaconBlock[] {
-  return blocks.sort((b1, b2) => b1.slot - b2.slot);
+export function sortBlocks(blocks: SignedBeaconBlock[]): SignedBeaconBlock[] {
+  return blocks.sort((b1, b2) => b1.message.slot - b2.message.slot);
 }

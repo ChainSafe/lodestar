@@ -19,11 +19,10 @@ export function processBlock(
   config: IBeaconConfig,
   state: BeaconState,
   block: BeaconBlock,
-  verifyProposer = true,
   verifySignatures = true
 ): void {
   // block header
-  processBlockHeader(config, state, block, verifyProposer);
+  processBlockHeader(config, state, block);
 
   // RANDAO
   processRandao(config, state, block.body, verifySignatures);

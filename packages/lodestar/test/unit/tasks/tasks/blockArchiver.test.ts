@@ -6,7 +6,7 @@ import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {ArchiveBlocksTask} from "../../../../src/tasks/tasks/archiveBlocks";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {expect} from "chai";
-import {generateEmptyBlock} from "../../../utils/block";
+import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block";
 import {computeStartSlotAtEpoch} from "@chainsafe/eth2.0-state-transition";
 
 describe("block archiver task", function () {
@@ -35,12 +35,15 @@ describe("block archiver task", function () {
       }
     );
     dbStub.block.getAll.resolves([
-      generateEmptyBlock(),
-      generateEmptyBlock(),
+      generateEmptySignedBlock(),
+      generateEmptySignedBlock(),
       {
-        ...generateEmptyBlock(),
-        slot: computeStartSlotAtEpoch(config, 4)
-      }
+        message: {
+          ...generateEmptyBlock(),
+          slot: computeStartSlotAtEpoch(config, 4)
+        },
+        signature: Buffer.alloc(96),
+      },
     ]);
     await archiverTask.run();
     expect(
