@@ -3,11 +3,11 @@
  */
 
 import {
-  BeaconBlock,
   BeaconState,
   BLSPubkey,
   ValidatorIndex,
   Root,
+  SignedBeaconBlock,
 } from "@chainsafe/eth2.0-types";
 
 import {
@@ -63,7 +63,7 @@ export interface IBeaconDb {
    * Stores block and state and set them as chain head
    */
   storeChainHead(
-    block: BeaconBlock,
+    block: SignedBeaconBlock,
     state: BeaconState
   ): Promise<void>;
 

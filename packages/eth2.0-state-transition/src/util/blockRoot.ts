@@ -11,11 +11,12 @@ import {
   Epoch,
   Slot,
   Root,
+  SignedBeaconBlock,
+  SignedBeaconBlockHeader,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {
-  EMPTY_SIGNATURE,
   ZERO_HASH,
 } from "../constants";
 import {computeStartSlotAtEpoch} from "./epoch";
@@ -46,8 +47,6 @@ export function getTemporaryBlockHeader(config: IBeaconConfig, block: BeaconBloc
     // `state_root` is zeroed and overwritten in the next `process_slot` call
     stateRoot: ZERO_HASH,
     bodyRoot: hashTreeRoot(config.types.BeaconBlockBody, block.body),
-    // `signature` is zeroed
-    signature: EMPTY_SIGNATURE,
   };
 }
 
@@ -57,9 +56,21 @@ export function getTemporaryBlockHeader(config: IBeaconConfig, block: BeaconBloc
 export function blockToHeader(config: IBeaconConfig, block: BeaconBlock): BeaconBlockHeader {
   return {
     stateRoot: block.stateRoot,
-    signature: block.signature,
     slot: block.slot,
     parentRoot: block.parentRoot,
     bodyRoot: hashTreeRoot(config.types.BeaconBlockBody, block.body),
+  };
+}
+
+/**
+  * Receives a SignedBeaconBlock, and produces the corresponding SignedBeaconBlockHeader.
+  */
+export function signedBlockToSignedHeader(
+  config: IBeaconConfig,
+  signedBlock: SignedBeaconBlock,
+): SignedBeaconBlockHeader {
+  return {
+    message: blockToHeader(config, signedBlock.message),
+    signature: signedBlock.signature,
   };
 }

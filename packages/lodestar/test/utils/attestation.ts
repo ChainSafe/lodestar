@@ -1,4 +1,4 @@
-import {Attestation, AttestationData, CommitteeIndex, Epoch, Slot, VoluntaryExit,} from "@chainsafe/eth2.0-types";
+import {Attestation, AttestationData, CommitteeIndex, Epoch, Slot, VoluntaryExit, SignedVoluntaryExit,} from "@chainsafe/eth2.0-types";
 import {BitList} from "@chainsafe/bit-utils";
 import crypto from "crypto";
 import {AggregateAndProof} from "@chainsafe/eth2.0-types/src";
@@ -66,6 +66,12 @@ export function generateEmptyVoluntaryExit(): VoluntaryExit {
   return {
     epoch: 0,
     validatorIndex: 0,
-    signature: Buffer.alloc(96)
+  };
+}
+
+export function generateEmptySignedVoluntaryExit(): SignedVoluntaryExit {
+  return {
+    message: generateEmptyVoluntaryExit(),
+    signature: Buffer.alloc(96),
   };
 }

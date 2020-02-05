@@ -146,6 +146,5 @@ export function getEmptyBlock(): BeaconBlock {
     parentRoot: ZERO_HASH,
     stateRoot: ZERO_HASH,
     body: getEmptyBlockBody(),
-    signature: EMPTY_SIGNATURE,
   };
 }

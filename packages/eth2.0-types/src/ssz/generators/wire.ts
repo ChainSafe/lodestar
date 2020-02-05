@@ -27,7 +27,7 @@ export const BeaconBlocksByRangeRequest = (ssz: IBeaconSSZTypes): SimpleContaine
 });
 
 export const BeaconBlocksByRangeResponse = (ssz: IBeaconSSZTypes): AnySSZType => ({
-  elementType: ssz.BeaconBlock,
+  elementType: ssz.SignedBeaconBlock,
   maxLength: 32000,
 });
 
@@ -37,6 +37,6 @@ export const BeaconBlocksByRootRequest = (ssz: IBeaconSSZTypes): AnySSZType => (
 });
 
 export const BeaconBlocksByRootResponse = (ssz: IBeaconSSZTypes): AnySSZType => ({
-  elementType: ssz.BeaconBlock,
+  elementType: ssz.SignedBeaconBlock,
   maxLength: 32000,
 });

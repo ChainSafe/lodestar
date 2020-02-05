@@ -15,3 +15,4 @@ export * from "./balance";
 export * from "./validatorStatus";
 export * from "./duties";
 export * from "./slot";
+export * from "./activation";

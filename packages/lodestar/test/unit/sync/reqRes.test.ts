@@ -6,7 +6,7 @@ import PeerInfo from "peer-info";
 import PeerId from "peer-id";
 import {Goodbye, Status} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import * as ssz from "@chainsafe/ssz/lib/core/signingRoot";
+import * as ssz from "@chainsafe/ssz/lib/core/hashTreeRoot";
 
 import {Method, ZERO_HASH} from "../../../src/constants";
 import {BeaconChain} from "../../../src/chain";
@@ -17,11 +17,12 @@ import {SyncReqResp} from "../../../src/sync/reqResp";
 import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
 import {ReqResp} from "../../../src/network/reqResp";
 import {ReputationStore} from "../../../src/sync/IReputation";
+import { generateEmptySignedBlock } from "../../utils/block";
 
 describe("syncing", function () {
   const sandbox = sinon.createSandbox();
   let syncRpc: SyncReqResp;
-  let chainStub, networkStub, dbStub, repsStub, logger, reqRespStub, signingRootStub;
+  let chainStub, networkStub, dbStub, repsStub, logger, reqRespStub, hashTreeRootStub;
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
@@ -37,7 +38,7 @@ describe("syncing", function () {
       blockArchive: sandbox.createStubInstance(BlockArchiveRepository),
     };
     repsStub = sandbox.createStubInstance(ReputationStore);
-    signingRootStub = sandbox.stub(ssz, "signingRoot");
+    hashTreeRootStub = sandbox.stub(ssz, "hashTreeRoot");
     logger = new WinstonLogger();
     logger.silent = true;
 
@@ -109,7 +110,7 @@ describe("syncing", function () {
       latestStatus: null,
     });
     reqRespStub.sendResponse.resolves(0);
-    dbStub.block.getChainHead.resolves(Buffer.alloc(0));
+    dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
     dbStub.state.get.resolves(generateState());
     try {
       await syncRpc.onRequest(peerInfo, Method.Status, "status", body);
@@ -149,7 +150,7 @@ describe("syncing", function () {
       headSlot: 1,
     };
 
-    dbStub.block.getChainHead.resolves(Buffer.alloc(0));
+    dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
     const state = generateState();
     state.fork.currentVersion = Buffer.from("efgh");
     dbStub.state.get.resolves(state);
@@ -165,12 +166,13 @@ describe("syncing", function () {
       headSlot: 1,
     };
 
-    dbStub.block.getChainHead.resolves(Buffer.alloc(0));
+    dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
+    dbStub.blockArchive.get.resolves(generateEmptySignedBlock());
     const state = generateState();
     state.fork.currentVersion = Buffer.alloc(4);
     state.finalizedCheckpoint.epoch = 2;
     dbStub.state.get.resolves(state);
-    signingRootStub.returns(Buffer.from("not xyz"));
+    hashTreeRootStub.returns(Buffer.from("not xyz"));
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.true;
   });
 
@@ -183,12 +185,13 @@ describe("syncing", function () {
       headSlot: 1,
     };
 
-    dbStub.block.getChainHead.resolves(Buffer.alloc(0));
+    dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
+    dbStub.blockArchive.get.resolves(generateEmptySignedBlock());
     const state = generateState();
     state.fork.currentVersion = Buffer.alloc(4);
     state.finalizedCheckpoint.epoch = 1;
     dbStub.state.get.resolves(state);
-    signingRootStub.returns(Buffer.from("xyz"));
+    hashTreeRootStub.returns(Buffer.from("xyz"));
 
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.false;
   });

@@ -9,11 +9,11 @@ import * as validatorUtils from "@chainsafe/eth2.0-state-transition/lib/util/val
 import * as bls from "@chainsafe/bls";
 import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {generateState} from "../../../utils/state";
-import {generateEmptyBlock} from "../../../utils/block";
+import {generateEmptySignedBlock} from "../../../utils/block";
 import {
   generateEmptyAggregateAndProof,
   generateEmptyAttestation,
-  generateEmptyVoluntaryExit
+  generateEmptySignedVoluntaryExit
 } from "../../../utils/attestation";
 import {
   AggregateAndProofRepository,
@@ -34,13 +34,13 @@ import {generateValidators} from "../../../utils/validator";
 describe("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();
   let validator: GossipMessageValidator;
-  let isValidBlockHeaderStub: any, dbStub: any, logger: any, isValidIndexedAttestationStub: any,
+  let verifyBlockSignatureStub: any, dbStub: any, logger: any, isValidIndexedAttestationStub: any,
     isValidIncomingVoluntaryExitStub: any, isValidIncomingProposerSlashingStub: any,
     isValidIncomingAttesterSlashingStub: any,
     getAttestingIndicesStub: any, isAggregatorStub: any, isBlsVerifyStub: any;
 
   beforeEach(() => {
-    isValidBlockHeaderStub = sandbox.stub(blockUtils, "isValidBlockHeader");
+    verifyBlockSignatureStub = sandbox.stub(blockUtils, "verifyBlockSignature");
     isValidIndexedAttestationStub = sandbox.stub(attestationUtils, "isValidIndexedAttestation");
     getAttestingIndicesStub = sandbox.stub(attestationUtils, "getAttestingIndices");
     isAggregatorStub = sandbox.stub(validatorUtils, "isAggregator");
@@ -68,35 +68,35 @@ describe("GossipMessageValidator", () => {
   });
 
   it("should return invalid incoming block - bad block", async () => {
-    const block = generateEmptyBlock();
+    const block = generateEmptySignedBlock();
     dbStub.block.isBadBlock.resolves(true);
     expect(await validator.isValidIncomingBlock(block)).to.be.equal(false);
   });
 
   it("should return invalid incoming block - existing block", async () => {
-    const block = generateEmptyBlock();
+    const block = generateEmptySignedBlock();
     dbStub.block.isBadBlock.resolves(false);
     dbStub.block.has.resolves(true);
     expect(await validator.isValidIncomingBlock(block)).to.be.equal(false);
   });
 
   it("should return invalid incoming block - invalid signature", async () => {
-    const block = generateEmptyBlock();
+    const block = generateEmptySignedBlock();
     dbStub.block.isBadBlock.resolves(false);
     dbStub.block.has.resolves(false);
     const state = generateState();
     dbStub.state.getLatest.resolves(state);
-    isValidBlockHeaderStub.returns(false);
+    verifyBlockSignatureStub.returns(false);
     expect(await validator.isValidIncomingBlock(block)).to.be.equal(false);
   });
 
   it("should return valid incoming block", async () => {
-    const block = generateEmptyBlock();
+    const block = generateEmptySignedBlock();
     dbStub.block.isBadBlock.resolves(false);
     dbStub.block.has.resolves(false);
     const state = generateState();
     dbStub.state.getLatest.resolves(state);
-    isValidBlockHeaderStub.returns(true);
+    verifyBlockSignatureStub.returns(true);
     expect(await validator.isValidIncomingBlock(block)).to.be.equal(true);
   });
 
@@ -304,13 +304,13 @@ describe("GossipMessageValidator", () => {
   });
 
   it("should return invalid Voluntary Exit - existing", async () => {
-    const voluntaryExit = generateEmptyVoluntaryExit();
+    const voluntaryExit = generateEmptySignedVoluntaryExit();
     dbStub.voluntaryExit.has.resolves(true);
     expect(await validator.isValidIncomingVoluntaryExit(voluntaryExit)).to.be.equal(false);
   });
 
   it("should return invalid Voluntary Exit - invalid", async () => {
-    const voluntaryExit = generateEmptyVoluntaryExit();
+    const voluntaryExit = generateEmptySignedVoluntaryExit();
     dbStub.voluntaryExit.has.resolves(false);
     const state = generateState();
     dbStub.state.getLatest.resolves(state);
@@ -319,7 +319,7 @@ describe("GossipMessageValidator", () => {
   });
 
   it("should return valid Voluntary Exit", async () => {
-    const voluntaryExit = generateEmptyVoluntaryExit();
+    const voluntaryExit = generateEmptySignedVoluntaryExit();
     dbStub.voluntaryExit.has.resolves(false);
     const state = generateState();
     dbStub.state.getLatest.resolves(state);

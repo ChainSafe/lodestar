@@ -7,7 +7,7 @@ import {BLSSignature, bytes32, Root, Slot,} from "./primitive";
 
 import {Eth1Data} from "./misc";
 
-import {Attestation, AttesterSlashing, Deposit, ProposerSlashing, VoluntaryExit,} from "./operations";
+import {Attestation, AttesterSlashing, Deposit, ProposerSlashing, SignedVoluntaryExit,} from "./operations";
 
 
 export interface BeaconBlockBody {
@@ -18,7 +18,7 @@ export interface BeaconBlockBody {
   attesterSlashings: AttesterSlashing[];
   attestations: Attestation[];
   deposits: Deposit[];
-  voluntaryExits: VoluntaryExit[];
+  voluntaryExits: SignedVoluntaryExit[];
 }
 
 export interface BeaconBlock {
@@ -27,5 +27,9 @@ export interface BeaconBlock {
   parentRoot: Root;
   stateRoot: Root;
   body: BeaconBlockBody;
+}
+
+export interface SignedBeaconBlock {
+  message: BeaconBlock;
   signature: BLSSignature;
 }

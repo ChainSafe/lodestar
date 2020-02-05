@@ -13,8 +13,7 @@ describeDirectorySpecTest<IProcessBlockHeader, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/operations/block_header/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    const verify = (!!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n);
-    processBlockHeader(config, state, testcase.block, verify);
+    processBlockHeader(config, state, testcase.block);
     return state;
   },
   {

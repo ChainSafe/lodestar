@@ -10,7 +10,7 @@ import { EthersEth1Notifier } from "../../../../../src/eth1";
 import { generateState } from "../../../../utils/state";
 import { StatefulDagLMDGHOST } from "../../../../../../lodestar/src/chain/forkChoice";
 import { BeaconChain } from "../../../../../src/chain";
-import { generateEmptyBlock } from "../../../../utils/block";
+import { generateEmptyBlock, generateEmptySignedBlock } from "../../../../utils/block";
 import { BlockRepository, MerkleTreeRepository, StateRepository } from "../../../../../src/db/api/beacon/repositories";
 import { ProgressiveMerkleTree } from "@chainsafe/eth2.0-utils";
 import { MerkleTreeSerialization } from "../../../../../src/util/serialization";
@@ -45,7 +45,7 @@ describe("block assembly", function () {
 
   it("should assemble block", async function () {
     const head = chainStub.forkChoice.head();
-    beaconDB.block.get.withArgs(head).returns(generateEmptyBlock());
+    beaconDB.block.get.withArgs(head).returns(generateEmptySignedBlock());
     beaconDB.state.get.resolves(generateState({ slot: 1 }));
     beaconDB.merkleTree.getProgressiveMerkleTree.resolves(ProgressiveMerkleTree.empty(32, new MerkleTreeSerialization(config)));
     assembleBodyStub.resolves(generateEmptyBlock().body);

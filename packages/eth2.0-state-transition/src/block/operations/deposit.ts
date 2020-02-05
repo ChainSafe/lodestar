@@ -3,7 +3,7 @@
  */
 
 import assert from "assert";
-import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 import {verify} from "@chainsafe/bls";
 import {BeaconState, Deposit, Validator} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -40,7 +40,7 @@ export function processDeposit(
     // Note: Deposits are valid across forks, thus the deposit domain is retrieved directly from `computeDomain`.
     if (!verify(
       pubkey,
-      signingRoot(config.types.DepositData, deposit.data),
+      hashTreeRoot(config.types.DepositMessage, deposit.data),
       deposit.data.signature,
       computeDomain(DomainType.DEPOSIT),
     )) {
