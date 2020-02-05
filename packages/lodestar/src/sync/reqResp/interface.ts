@@ -5,6 +5,7 @@
 import {RequestBody} from "@chainsafe/eth2.0-types";
 
 import {Method, RequestId} from "../../constants";
+import PeerId from "peer-id";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface ISyncOptions {

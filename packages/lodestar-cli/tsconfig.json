@@ -4,7 +4,7 @@
   "compilerOptions": {
     "typeRoots": [
       "../../node_modules/@types",
-      "../../packages/lodestar/src/@types"
+      "../../node_modules/libp2p-ts/types"
     ],
   }
 }

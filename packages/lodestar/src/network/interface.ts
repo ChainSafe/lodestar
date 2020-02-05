@@ -2,6 +2,7 @@
  * @module network
  */
 import PeerInfo from "peer-info";
+import PeerId from "peer-id";
 import {EventEmitter} from "events";
 import {
   BeaconBlocksByRangeRequest,

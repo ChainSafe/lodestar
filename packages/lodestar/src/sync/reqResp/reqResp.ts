@@ -3,6 +3,7 @@
  */
 
 import PeerInfo from "peer-info";
+import PeerId from "peer-id";
 import {
   BeaconBlocksByRangeRequest,
   BeaconBlocksByRangeResponse,

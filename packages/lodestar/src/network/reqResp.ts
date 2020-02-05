@@ -32,6 +32,7 @@ import {createResponseEvent, createRpcProtocol, randomRequestId,} from "./util";
 
 import {IReqResp, ReqRespEventEmitter} from "./interface";
 import {INetworkOptions} from "./options";
+import PeerId from "peer-id";
 
 interface IReqRespEventEmitterClass {
   new(): ReqRespEventEmitter;

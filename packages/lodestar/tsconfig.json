@@ -5,7 +5,7 @@
   "compilerOptions": { 
     "typeRoots": [
       "../../node_modules/@types",
-      "src/@types"
+      "../../node_modules/libp2p-ts/types"
     ],
     "outDir": "lib",
     /* Redirect output structure to the directory. */
