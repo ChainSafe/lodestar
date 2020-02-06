@@ -45,7 +45,6 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.logger = logger.child({module: "gossip", level: LogLevel[logger.level]});
     this.logger.silent = logger.silent;
     this.validator = validator;
-    // @ts-ignore
     this.pubsub = new Gossipsub(libp2p.peerInfo, libp2p.registrar, {gossipIncoming: false});
     this.handlers = this.registerHandlers();
   }

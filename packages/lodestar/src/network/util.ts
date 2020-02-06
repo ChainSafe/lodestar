@@ -42,7 +42,6 @@ export async function createPeerInfo(peerId: PeerId): Promise<PeerInfo> {
  */
 export async function createPeerId(): Promise<PeerId> {
   //keyType is missing in types
-  // @ts-ignore
   return await PeerId.create({bits: 256, keyType: "secp256k1"});
 }
 

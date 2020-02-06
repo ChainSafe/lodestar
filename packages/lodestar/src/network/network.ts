@@ -33,7 +33,6 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
 
   private opts: INetworkOptions;
   private config: IBeaconConfig;
-  // @ts-ignore
   private libp2p: LibP2p;
   private inited: Promise<void>;
   private logger: ILogger;
@@ -77,24 +76,19 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   }
 
   public getPeers(): PeerInfo[] {
-    // @ts-ignore
     return Array.from(this.libp2p.peerStore.peers.values()).filter(
-      // @ts-ignore
       (peerInfo) => this.libp2p.registrar.getConnection(peerInfo));
   }
 
   public hasPeer(peerInfo: PeerInfo): boolean {
-    // @ts-ignore
     return !!this.libp2p.registrar.getConnection(peerInfo);
   }
 
   public async connect(peerInfo: PeerInfo): Promise<void> {
-    // @ts-ignore
     await this.libp2p.dial(peerInfo);
   }
 
   public async disconnect(peerInfo: PeerInfo): Promise<void> {
-    // @ts-ignore
     await this.libp2p.hangUp(peerInfo);
   }
 
