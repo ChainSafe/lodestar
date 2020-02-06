@@ -4,7 +4,7 @@
 
 import assert from "assert";
 
-import {Gwei, Slot, ValidatorIndex, Number64, Checkpoint, Epoch, Root,} from "@chainsafe/eth2.0-types";
+import {Gwei, Slot, ValidatorIndex, Number64, Checkpoint, Epoch} from "@chainsafe/eth2.0-types";
 
 import {ILMDGHOST} from "../interface";
 
@@ -12,7 +12,7 @@ import {AttestationAggregator, RootHex,} from "./attestationAggregator";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {computeSlotsSinceEpochStart, getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
 import {sleep} from "../../../util/sleep";
-import {fromHex, toHex} from "@chainsafe/eth2.0-utils";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 
 
 /**
@@ -222,11 +222,11 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     }
   }
 
-  public addBlock(slot: Slot, blockRootBuf: Root, parentRootBuf: Root,
+  public addBlock(slot: Slot, blockRootBuf: Uint8Array, parentRootBuf: Uint8Array,
     justifiedCheckpoint?: Checkpoint, finalizedCheckpoint?: Checkpoint): void {
     this.synced = false;
-    const blockRoot = toHex(blockRootBuf);
-    const parentRoot = toHex(parentRootBuf);
+    const blockRoot = toHexString(blockRootBuf);
+    const parentRoot = toHexString(parentRootBuf);
     // ensure blockRoot exists
     const node: Node = this.nodes[blockRoot] || new Node({
       slot,
@@ -249,10 +249,10 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     }
   }
 
-  public addAttestation(blockRootBuf: Root, attester: ValidatorIndex, weight: Gwei): void {
+  public addAttestation(blockRootBuf: Uint8Array, attester: ValidatorIndex, weight: Gwei): void {
     this.synced = false;
     this.aggregator.addAttestation({
-      target: toHex(blockRootBuf),
+      target: toHexString(blockRootBuf),
       attester,
       weight,
     });
@@ -271,17 +271,17 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     this.synced = true;
   }
 
-  public head(): Root {
+  public head(): Uint8Array {
     assert(this.justified);
     if (!this.synced) {
       this.syncChanges();
     }
-    return fromHex(this.justified.node.bestTarget.blockRoot);
+    return fromHexString(this.justified.node.bestTarget.blockRoot);
   }
 
   // To address the bouncing attack, only update conflicting justified
   //  checkpoints in the fork choice if in the early slots of the epoch.
-  public shouldUpdateJustifiedCheckpoint(blockRoot: Root): boolean {
+  public shouldUpdateJustifiedCheckpoint(blockRoot: Uint8Array): boolean {
     if(!this.justified) {
       return true;
     }
@@ -289,7 +289,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
        this.config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED) {
       return true;
     }
-    const hexBlockRoot = toHex(blockRoot);
+    const hexBlockRoot = toHexString(blockRoot);
     const newJustifiedBlock = this.nodes[hexBlockRoot];
     if (newJustifiedBlock.slot <= this.justified.node.slot) {
       return false;
@@ -305,19 +305,19 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     if (!this.justified) {
       return null;
     }
-    return {root: fromHex(this.justified.node.blockRoot), epoch: this.justified.epoch};
+    return {root: fromHexString(this.justified.node.blockRoot), epoch: this.justified.epoch};
   }
 
   public getFinalized(): Checkpoint {
     if (!this.finalized) {
       return null;
     }
-    return {root: fromHex(this.finalized.node.blockRoot), epoch: this.finalized.epoch};
+    return {root: fromHexString(this.finalized.node.blockRoot), epoch: this.finalized.epoch};
   }
 
   private setFinalized(checkpoint: Checkpoint): void {
     this.synced = false;
-    const rootHex = toHex(checkpoint.root);
+    const rootHex = toHexString(checkpoint.root);
     this.finalized = {node: this.nodes[rootHex], epoch: checkpoint.epoch};
     this.prune();
     this.aggregator.prune();
@@ -332,7 +332,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
 
   private setJustified(checkpoint: Checkpoint): void {
     const {root: blockRoot, epoch} = checkpoint;
-    const rootHex = toHex(blockRoot);
+    const rootHex = toHexString(blockRoot);
     this.justified = {node: this.nodes[rootHex], epoch};
   }
 
