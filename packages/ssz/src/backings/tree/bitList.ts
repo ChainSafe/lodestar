@@ -22,12 +22,12 @@ export class BitListTreeHandler extends BasicListTreeHandler<BitList> {
       return this.getByteLength(target);
     }
   }
-  fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<BitList> {
+  fromBytes(data: Uint8Array, start: number, end: number): Tree {
     const lastByte = data[end - 1];
     if (lastByte === 0) {
       throw new Error("Invalid deserialized bitlist, padding bit required");
     }
-    const target = super.fromBytes(data, start, end).backing();
+    const target = super.fromBytes(data, start, end);
     const lastGindex = this.gindexOfChunk(target, Math.ceil((end - start) / 32) - 1);
     // mutate lastChunk (instead of copying/creating a new chunk)
     // this is ok only because we haven't cached hashes yet
@@ -44,7 +44,7 @@ export class BitListTreeHandler extends BasicListTreeHandler<BitList> {
       lastChunk[lastChunkByte] &= mask;
     }
     this.setLength(target, length);
-    return this.createBackedValue(target);
+    return target;
   }
   toBytes(target: Tree, output: Uint8Array, offset: number): number {
     const newOffset = super.toBytes(target, output, offset);

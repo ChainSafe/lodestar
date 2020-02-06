@@ -28,7 +28,7 @@ export class BasicVectorTreeHandler<T extends Vector<unknown>> extends BasicArra
   getLength(target: Tree): number {
     return this._type.length;
   }
-  fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
+  fromBytes(data: Uint8Array, start: number, end: number): Tree {
     if ((end - start) !== this._type.size(null)) {
       throw new Error("Incorrect deserialized vector length");
     }
@@ -65,7 +65,7 @@ export class CompositeVectorTreeHandler<T extends Vector<object>> extends Compos
   getLength(target: Tree): number {
     return this._type.length;
   }
-  fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
+  fromBytes(data: Uint8Array, start: number, end: number): Tree {
     const target = this.defaultBacking();
     if (this._type.elementType.isVariableSize()) {
       const offsets = this._type.byteArray.getVariableOffsets(
@@ -83,7 +83,7 @@ export class CompositeVectorTreeHandler<T extends Vector<object>> extends Compos
             data,
             start + currentOffset,
             start + nextOffset,
-          ).backing(),
+          ),
         );
       }
     } else {
@@ -100,11 +100,11 @@ export class CompositeVectorTreeHandler<T extends Vector<object>> extends Compos
             data,
             start + (i * elementSize),
             start + ((i+1) * elementSize),
-          ).backing(),
+          ),
         );
       }
     }
-    return this.createBackedValue(target);
+    return target;
   }
   setProperty(target: Tree, property: number, value: T[number]): boolean {
     if (property >= this.getLength(target)) {

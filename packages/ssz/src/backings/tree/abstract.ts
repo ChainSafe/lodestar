@@ -1,4 +1,4 @@
-import {Node, Tree, Gindex, countToDepth, toGindexBitstring} from "@chainsafe/merkle-tree";
+import {Node, Tree, Gindex, countToDepth, toGindex} from "@chainsafe/merkle-tree";
 
 import {CompositeType} from "../../types";
 import {isBackedValue, BackingType} from "..";
@@ -175,14 +175,14 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   /**
    * Low-level deserialization
    */
-  fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
+  fromBytes(data: Uint8Array, start: number, end: number): Tree {
     throw new Error("Not implemented");
   }
   /**
    * Deserialization
    */
   deserialize(data: Uint8Array): TreeBackedValue<T> {
-    return this.fromBytes(data, 0, data.length);
+    return this.createBackedValue(this.fromBytes(data, 0, data.length));
   }
   /**
    * Low-level serialization
@@ -214,7 +214,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
     return this._depth;
   }
   gindexOfChunk(target: Tree, index: number): Gindex {
-    return toGindexBitstring(BigInt(index), this.depth());
+    return toGindex(BigInt(index), this.depth());
   }
   getSubtreeAtChunk(target: Tree, index: number): Tree {
     return target.getSubtree(this.gindexOfChunk(target, index));

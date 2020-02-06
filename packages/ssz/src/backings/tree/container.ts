@@ -54,7 +54,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     });
     return s;
   }
-  fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
+  fromBytes(data: Uint8Array, start: number, end: number): Tree {
     const target = this.defaultBacking();
     const offsets = this._type.byteArray.getVariableOffsets(
       new Uint8Array(data.buffer, data.byteOffset + start, end - start)
@@ -84,11 +84,11 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
             data,
             start + currentOffset,
             start + nextOffset,
-          ).backing(),
+          ),
         );
       }
     });
-    return this.createBackedValue(target);
+    return target;
   }
   toBytes(target: Tree, output: Uint8Array, offset: number): number {
     let variableIndex = offset + Object.values(this._type.fields).reduce((total, fieldType) =>

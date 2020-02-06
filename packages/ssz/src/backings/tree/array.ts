@@ -17,7 +17,7 @@ export class BasicArrayTreeHandler<T extends ArrayLike<unknown>> extends TreeHan
   size(target: Tree): number {
     return this._type.elementType.size() * this.getLength(target);
   }
-  fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
+  fromBytes(data: Uint8Array, start: number, end: number): Tree {
     const target = this.defaultBacking();
     const byteLength = (end - start);
     const chunkCount = Math.ceil(byteLength / 32);
@@ -38,7 +38,7 @@ export class BasicArrayTreeHandler<T extends ArrayLike<unknown>> extends TreeHan
         true, // expand tree as needed
       );
     }
-    return this.createBackedValue(target);
+    return target;
   }
   toBytes(target: Tree, output: Uint8Array, offset: number): number {
     const size = this.size(target);

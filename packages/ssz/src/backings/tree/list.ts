@@ -29,13 +29,13 @@ export class BasicListTreeHandler<T extends List<unknown>> extends BasicArrayTre
     number32Type.toBytes(length, chunk, 0);
     target.setRoot(BigInt(3), chunk);
   }
-  fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
+  fromBytes(data: Uint8Array, start: number, end: number): Tree {
     const length = (end - start) / this._type.elementType.size();
     if (length > this._type.limit) {
       throw new Error("Deserialized list length greater than limit");
     }
     const value = super.fromBytes(data, start, end);
-    this.setLength(value.backing(), length);
+    this.setLength(value, length);
     return value;
   }
   depth(): number {
@@ -108,7 +108,7 @@ export class CompositeListTreeHandler<T extends List<object>> extends CompositeA
     number32Type.toBytes(length, chunk, 0);
     target.setRoot(BigInt(3), chunk);
   }
-  fromBytes(data: Uint8Array, start: number, end: number): TreeBackedValue<T> {
+  fromBytes(data: Uint8Array, start: number, end: number): Tree {
     const target = this.defaultBacking();
     if (this._type.elementType.isVariableSize()) {
       const offsets = this._type.byteArray.getVariableOffsets(
@@ -126,7 +126,7 @@ export class CompositeListTreeHandler<T extends List<object>> extends CompositeA
             data,
             start + currentOffset,
             start + nextOffset,
-          ).backing(),
+          ),
         );
       }
       this.setLength(target, offsets.length);
@@ -144,13 +144,13 @@ export class CompositeListTreeHandler<T extends List<object>> extends CompositeA
             data,
             start + (i * elementSize),
             start + ((i+1) * elementSize),
-          ).backing(),
+          ),
           true, // expand tree as needed
         );
       }
       this.setLength(target, length);
     }
-    return this.createBackedValue(target);
+    return target;
   }
   depth(): number {
     return super.depth() + 1;
