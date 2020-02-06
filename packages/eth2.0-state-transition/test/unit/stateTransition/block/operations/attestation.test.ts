@@ -56,6 +56,7 @@ describe("process block - attestation", function () {
     validateIndexedAttestationStub.returns(true);
     getBeaconProposerIndexStub.returns(2);
     const attestation = generateEmptyAttestation();
+    attestation.data.slot = config.params.SLOTS_PER_EPOCH + 1;
     attestation.data.target.epoch = 1;
     attestation.data.source.epoch = 1;
     attestation.data.source.root = state.currentJustifiedCheckpoint.root;

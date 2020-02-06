@@ -8,6 +8,7 @@ import {Attestation, BeaconState, PendingAttestation,} from "@chainsafe/eth2.0-t
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {
+  computeEpochAtSlot,
   getBeaconProposerIndex,
   getBeaconCommittee,
   getCurrentEpoch,
@@ -28,6 +29,7 @@ export function processAttestation(
   const data = attestation.data;
   assert(data.index < getCommitteeCountAtSlot(config, state, data.slot));
   assert(data.target.epoch === previousEpoch || data.target.epoch === currentEpoch);
+  assert(data.target.epoch === computeEpochAtSlot(config, data.slot));
 
   const committee = getBeaconCommittee(config, state, data.slot, data.index);
   assert(

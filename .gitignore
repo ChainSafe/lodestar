@@ -22,3 +22,4 @@ validators
 **/node_modules
 **/lib
 **/.nyc_output
+.tmp

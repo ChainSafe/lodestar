@@ -50,7 +50,7 @@ export function isValidIndexedAttestation(
   const indices = Array.from(indexedAttestation.attestingIndices);
 
   //  Verify indices are sorted
-  if (!isSorted(indices)) {
+  if (!isSorted([...new Set(indices).values()])) {
     return false;
   }
   //  Verify aggregate signature
