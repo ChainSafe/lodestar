@@ -30,12 +30,16 @@ import {
 import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {createResponseEvent, createRpcProtocol, randomRequestId,} from "./util";
 
-import {IReqResp, ReqRespEventEmitter} from "./interface";
+import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
 import {INetworkOptions} from "./options";
 import PeerId from "peer-id";
 
-interface IReqRespEventEmitterClass {
-  new(): ReqRespEventEmitter;
+interface IReqEventEmitterClass {
+  new(): ReqEventEmitter;
+}
+
+interface IRespEventEmitterClass {
+  new(): RespEventEmitter;
 }
 
 interface IReqRespModules {
@@ -44,11 +48,25 @@ interface IReqRespModules {
   logger: ILogger;
 }
 
-export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) implements IReqResp {
+class ResponseEventListener extends (EventEmitter as IRespEventEmitterClass) {
+  public waitForResponse(requestId: string, responseListener: ResponseCallbackFn): NodeJS.Timeout {
+    const responseEvent = createResponseEvent(requestId);
+    this.once(responseEvent, responseListener);
+
+    const timer =  setTimeout(() => {
+      this.removeListener(responseEvent, responseListener);
+      responseListener(new Error(ERR_RESP_TIMEOUT), null);
+    }, RESP_TIMEOUT);
+    return timer;
+  }
+}
+
+export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements IReqResp {
   private config: IBeaconConfig;
   private libp2p: LibP2p;
   private logger: ILogger;
   private encoding: Encoding;
+  private responseListener: ResponseEventListener;
 
   public constructor(opts: INetworkOptions, {config, libp2p, logger}: IReqRespModules) {
     super();
@@ -56,6 +74,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     this.libp2p = libp2p;
     this.logger = logger;
     this.encoding = Encoding.ssz;
+    this.responseListener = new ResponseEventListener();
   }
   public async start(): Promise<void> {
     Object.values(Method).forEach((method) => {
@@ -88,8 +107,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
   }
 
   public sendResponse(id: RequestId, err: Error, body: ResponseBody): void {
-    // @ts-ignore
-    this.emit(createResponseEvent(id), err, body);
+    this.responseListener.emit(createResponseEvent(id), err, body);
   }
   public async status(peerId: PeerId, request: Status): Promise<Status> {
     return await this.sendRequest<Status>(peerId, Method.Status, request);
@@ -115,25 +133,15 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
       const request = this.decodeRequest(method, data);
       const requestId = randomRequestId();
       this.logger.verbose(`${requestId} - receive ${method} request from ${peerId.toB58String()}`);
-      const responseEvent = createResponseEvent(requestId);
       // eslint-disable-next-line
-      let responseListener: any;
-      const responseTimer = setTimeout(() => {
-        this.logger.verbose(`${requestId} - send ${method} response timeout`);
-        // @ts-ignore
-        this.removeListener(responseEvent, responseListener);
-        resolve(this.encodeResponseError(new Error(ERR_RESP_TIMEOUT)));
-      }, RESP_TIMEOUT);
-      responseListener = (err: Error|null, output: ResponseBody): void => {
-        // @ts-ignore
-        this.removeListener(responseEvent, responseListener);
+      let responseTimer: NodeJS.Timeout;
+      const responseListenerFn = (err: Error|null, output: ResponseBody): void => {
         clearTimeout(responseTimer);
         if (err) resolve(this.encodeResponseError(err));
         this.logger.verbose(`${requestId} - send ${method} response`);
         resolve(this.encodeResponse(method, output));
       };
-      // @ts-ignore
-      this.once(responseEvent, responseListener);
+      responseTimer = this.responseListener.waitForResponse(requestId, responseListenerFn);
       this.emit("request", peerId, method, requestId, request);
     });
   };

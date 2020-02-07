@@ -20,13 +20,20 @@ import {IGossip} from "./gossip/interface";
 
 // req/resp
 
-export interface IReqRespEvents {
+export type ResponseCallbackFn = (err: Error|null, output: ResponseBody|null) => void;
+
+interface IRespEvents {
+  [responseEvent: string]: ResponseCallbackFn;
+}
+
+export interface IReqEvents {
   request: (peerId: PeerId, method: Method, id: RequestId, body: RequestBody) => void;
 }
 
-export type ReqRespEventEmitter = StrictEventEmitter<EventEmitter, IReqRespEvents>;
+export type ReqEventEmitter = StrictEventEmitter<EventEmitter, IReqEvents>;
+export type RespEventEmitter = StrictEventEmitter<EventEmitter, IRespEvents>;
 
-export interface IReqResp extends ReqRespEventEmitter {
+export interface IReqResp extends ReqEventEmitter {
   // sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T>;
   sendResponse(id: RequestId, err: Error|null, result: ResponseBody|null): void;
 
