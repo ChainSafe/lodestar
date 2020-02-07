@@ -106,7 +106,6 @@ export function verifyAggregate(publicKeys: BLSPubkey[], messageHash: bytes32, s
       .fromCompressedBytes(signature)
       .verifyAggregate(publicKeys, messageHash);
   } catch (e) {
-    console.log(e)
     return false;
   }
 }
