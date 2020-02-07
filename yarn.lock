@@ -7766,9 +7766,9 @@ libp2p-tcp@^0.14.1:
     multiaddr "^7.2.1"
     stream-to-it "^0.2.0"
 
-"libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git#tuyen/fix-libp2p-api-declaration":
+"libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git#tuyen/stream":
   version "0.1.0"
-  resolved "https://github.com/ChainSafe/libp2p-ts.git#c8e1c8e4363d92e5056c985d5edc01266a4f8ba9"
+  resolved "https://github.com/ChainSafe/libp2p-ts.git#c2b2bdf4c7a9ba9360e3db53471df73f6e3c1f94"
   dependencies:
     "@types/node" "^13.7.0"
     libp2p-crypto "^0.17.2"

@@ -61,15 +61,11 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     Object.values(Method).forEach((method) => {
       this.libp2p.handle(
         createRpcProtocol(method, this.encoding),
-        // @ts-ignore
         async ({connection, stream}) => {
           const peerId = connection.remotePeer;
-          // @ts-ignore
           pipe(
             stream.source,
-            // @ts-ignore
-            (source) => {
-              // @ts-ignore
+            (source: Promise<Buffer | {slice: () => Buffer}>[]) => {
               const handleRequest = this.handleRequest;
               return (async function * () { // A generator is async iterable
                 for await (const val of source) {
@@ -249,12 +245,10 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     return await new Promise((resolve, reject) => {
       this.logger.verbose(`send ${method} request to ${peerId.toB58String()}`);
       const responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
-      // @ts-ignore
       pipe(
         [this.encodeRequest(method, body)],
         stream,
-        // @ts-ignore
-        async (source) => {
+        async (source: Promise<Buffer | {slice: () => Buffer}>[]) => {
           // TODO: support response chunks
           const srcs = [];
           for await (const val of source) {
