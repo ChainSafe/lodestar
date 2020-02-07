@@ -1,7 +1,6 @@
 import path from "path";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import bls, {initBLS} from "@chainsafe/bls";
-import {padLeft} from "@chainsafe/bls/lib/helpers/utils";
 
 interface ISignMessageTestCase {
   data: {
