@@ -2,7 +2,7 @@ import path from "path";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
 import bls, {initBLS} from "@chainsafe/bls";
 
-interface AggregateSigsTestCase {
+interface IAggregateSigsTestCase {
   data: {
     input: string[];
     output: string;
@@ -13,7 +13,7 @@ before(async function f() {
   await initBLS();
 });
 
-describeDirectorySpecTest<AggregateSigsTestCase, string>(
+describeDirectorySpecTest<IAggregateSigsTestCase, string>(
   "BLS - aggregate sigs",
   path.join(
     __dirname,
