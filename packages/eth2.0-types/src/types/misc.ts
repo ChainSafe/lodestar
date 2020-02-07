@@ -129,8 +129,3 @@ export interface SignedBeaconBlockHeader {
   message: BeaconBlockHeader;
   signature: BLSSignature;
 }
-
-export interface MerkleTree {
-  depth: Number64;
-  tree: List<List<Bytes32>>;
-}

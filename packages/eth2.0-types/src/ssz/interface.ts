@@ -43,7 +43,7 @@ export interface IBeaconSSZTypes {
   DepositData: ContainerType<t.DepositData>;
   BeaconBlockHeader: ContainerType<t.BeaconBlockHeader>;
   SignedBeaconBlockHeader: ContainerType<t.SignedBeaconBlockHeader>;
-  MerkleTree: ContainerType<t.MerkleTree>;
+  DepositDataRootList: ContainerType<List<t.Root>>;
   // operations
   ProposerSlashing: ContainerType<t.ProposerSlashing>;
   AttesterSlashing: ContainerType<t.AttesterSlashing>;
@@ -110,7 +110,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "DepositData",
   "BeaconBlockHeader",
   "SignedBeaconBlockHeader",
-  "MerkleTree",
+  "DepositDataRootList",
   // operations
   "ProposerSlashing",
   "AttesterSlashing",

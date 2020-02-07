@@ -130,15 +130,9 @@ export const SignedBeaconBlockHeader = (ssz: IBeaconSSZTypes): ContainerType => 
   },
 });
 
-export const MerkleTree = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
-  fields: {
-    depth: ssz.Number64,
-    tree: new ListType({
-      elementType: new ListType({
-        elementType: ssz.Bytes32,
-        limit: DEPOSIT_CONTRACT_TREE_DEPTH + 1,
-      }),
-      limit: DEPOSIT_CONTRACT_TREE_DEPTH + 1,
-    }),
-  }
+export const DepositDataRootList = (ssz: IBeaconSSZTypes): ListType => new ListType({
+  elementType: new RootType({
+    expandedType: ssz.DepositData,
+  }),
+  limit: 2 ** DEPOSIT_CONTRACT_TREE_DEPTH,
 });
