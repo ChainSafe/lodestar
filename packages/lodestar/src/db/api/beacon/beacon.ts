@@ -10,14 +10,14 @@ import {
   AttestationRepository,
   AttesterSlashingRepository,
   BlockRepository,
+  BlockArchiveRepository,
   ChainRepository,
-  DepositRepository,
-  MerkleTreeRepository,
+  DepositDataRepository,
+  DepositDataRootListRepository,
   ProposerSlashingRepository,
   StateRepository,
   VoluntaryExitRepository
 } from "./repositories";
-import {BlockArchiveRepository} from "./repositories/blockArchive";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
 
@@ -39,9 +39,9 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   public attesterSlashing: AttesterSlashingRepository;
 
-  public deposit: DepositRepository;
+  public depositData: DepositDataRepository;
 
-  public merkleTree: MerkleTreeRepository;
+  public depositDataRootList: DepositDataRootListRepository;
 
   public constructor(opts: IDatabaseApiOptions) {
     super(opts);
@@ -54,8 +54,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db);
     this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db);
     this.attesterSlashing = new AttesterSlashingRepository(this.config, this.db);
-    this.deposit = new DepositRepository(this.config, this.db);
-    this.merkleTree = new MerkleTreeRepository(this.config, this.db);
+    this.depositData = new DepositDataRepository(this.config, this.db);
+    this.depositDataRootList = new DepositDataRootListRepository(this.config, this.db);
   }
 
   public async storeChainHead(

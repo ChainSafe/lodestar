@@ -29,13 +29,13 @@ export async function assembleBlock(
   if (slot > currentState.slot) {
     processSlots(config, currentState, slot);
   }
-  const merkleTree = await db.merkleTree.getProgressiveMerkleTree(config, currentState.eth1DepositIndex);
+  const depositDataRootList = await db.depositDataRootList.get(currentState.eth1DepositIndex);
   const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock.message);
   const block: BeaconBlock = {
     slot,
     parentRoot: config.types.BeaconBlockHeader.hashTreeRoot(parentHeader),
     stateRoot: undefined,
-    body: await assembleBody(config, opPool, eth1, merkleTree, currentState, randao),
+    body: await assembleBody(config, opPool, eth1, depositDataRootList, currentState, randao),
   };
 
   block.stateRoot = config.types.BeaconState.hashTreeRoot(

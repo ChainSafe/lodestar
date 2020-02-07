@@ -4,6 +4,7 @@
 
 import assert from "assert";
 import {EventEmitter} from "events";
+import {TreeBackedValue} from "@chainsafe/ssz";
 import {
   Attestation,
   BeaconState,
@@ -33,12 +34,10 @@ import {
 import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 
 import {ChainEventEmitter, IAttestationProcessor, IBeaconChain} from "./interface";
-import {processSortedDeposits} from "../util/deposits";
 import {IChainOptions} from "./options";
 import {OpPool} from "../opPool";
 import {Block} from "ethers/providers";
 import FastPriorityQueue from "fastpriorityqueue";
-import {MerkleTreeSerialization} from "../util/serialization";
 import {AttestationProcessor} from "./attestation";
 import {sleep} from "../util/sleep";
 
@@ -187,7 +186,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     }
   }
 
-  public async initializeBeaconChain(genesisState: BeaconState, merkleTree: ProgressiveMerkleTree): Promise<void> {
+  public async initializeBeaconChain(genesisState: BeaconState, depositDataRootList: TreeBackedValue<List<Root>>): Promise<void> {
     const genesisBlock = getEmptyBlock();
     const stateRoot = this.config.types.BeaconState.hashTreeRoot(genesisState);
     genesisBlock.stateRoot = stateRoot;
@@ -209,7 +208,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.db.chain.setFinalizedBlockRoot(blockRoot),
       this.db.chain.setJustifiedStateRoot(stateRoot),
       this.db.chain.setFinalizedStateRoot(stateRoot),
-      this.db.merkleTree.set(genesisState.eth1DepositIndex, merkleTree.toObject())
+      this.db.depositDataRootList.set(genesisState.eth1DepositIndex, depositDataRootList)
     ]);
     const justifiedFinalizedCheckpoint = {
       root: blockRoot,
@@ -346,58 +345,44 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   private async updateDepositMerkleTree(newState: BeaconState): Promise<void> {
-    const [deposits, merkleTree] = await Promise.all([
-      this.db.deposit.getAll(),
-      this.db.merkleTree.getProgressiveMerkleTree(
-        this.config,
-        newState.eth1DepositIndex
-      )
-    ]);
-    processSortedDeposits(
-      this.config,
-      deposits,
-      newState.eth1DepositIndex,
-      newState.eth1Data.depositCount,
-      (deposit, index) => {
-        merkleTree.add(
-          index + newState.eth1DepositIndex,
-          this.config.types.DepositData.hashTreeRoot(deposit.data)
-        );
-        return deposit;
-      }
+    const upperIndex = newState.eth1DepositIndex + Math.min(
+      this.config.params.MAX_DEPOSITS,
+      newState.eth1Data.depositCount - newState.eth1DepositIndex
     );
+    const [depositDatas, depositDataRootList] = await Promise.all([
+      this.db.depositData.getAllBetween(newState.eth1DepositIndex, upperIndex),
+      this.db.depositDataRootList.get(newState.eth1DepositIndex),
+    ]);
+
+    depositDataRootList.push(...depositDatas.map(this.config.types.DepositData.hashTreeRoot));
     //TODO: remove deposits with index <= newState.depositIndex
-    await this.db.merkleTree.set(newState.eth1DepositIndex, merkleTree.toObject());
+    await this.db.depositDataRootList.set(newState.eth1DepositIndex, depositDataRootList);
   }
 
   private checkGenesis = async (eth1Block: Block): Promise<void> => {
     this.logger.info(`Checking if block ${eth1Block.hash} will form valid genesis state`);
-    const deposits = await this.opPool.deposits.getAll();
-    const merkleTree = ProgressiveMerkleTree.empty(
-      DEPOSIT_CONTRACT_TREE_DEPTH,
-      new MerkleTreeSerialization(this.config)
-    );
-    const depositsWithProof = deposits
-      .map((deposit, index) => {
-        merkleTree.add(index, this.config.types.DepositData.hashTreeRoot(deposit.data));
-        return deposit;
-      })
-      .map((deposit, index) => {
-        deposit.proof = merkleTree.getProof(index);
-        return deposit;
-      });
+    const depositDatas = await this.opPool.depositData.getAll();
+    const depositDataRootList = this.config.types.DepositDataRootList.tree.defaultValue();
+    depositDataRootList.push(...depositDatas.map(this.config.types.DepositData.hashTreeRoot));
+    const tree = depositDataRootList.backing();
+
     const genesisState = initializeBeaconStateFromEth1(
       this.config,
       fromHex(eth1Block.hash),
       eth1Block.timestamp,
-      depositsWithProof
+      depositDatas.map((data, index) => {
+        return {
+          proof: tree.getSingleProof(),
+          data,
+        };
+      })
     );
     if (!isValidGenesisState(this.config, genesisState)) {
       this.logger.info(`Eth1 block ${eth1Block.hash} is NOT forming valid genesis state`);
       return;
     }
     this.logger.info(`Initializing beacon chain with eth1 block ${eth1Block.hash}`);
-    await this.initializeBeaconChain(genesisState, merkleTree);
+    await this.initializeBeaconChain(genesisState, depositDataRootList);
   };
 
   /**

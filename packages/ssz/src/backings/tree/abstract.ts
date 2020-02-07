@@ -38,6 +38,10 @@ export interface ITreeBackedValue<T extends object> {
   serialize(): Uint8Array;
 
   /**
+   * The depth of the merkle tree
+   */
+  depth(): number;
+  /**
    * Merkleization
    */
   hashTreeRoot(): Uint8Array;

@@ -17,11 +17,11 @@ export enum Bucket {
   mainChain, // slot -> blockHash
   chainInfo, // Key -> Number64 | stateHash | blockHash
   validator,
-  deposit, // index -> Deposit
+  depositData, // index -> DepositData
   exit, // hash -> VoluntaryExit
   proposerSlashing, // hash -> ProposerSlashing
   attesterSlashing, // hash -> AttesterSlashing
-  merkleTree, // depositIndex -> MerkleTree
+  depositDataRootList, // depositIndex -> DepositDataRootList
   // validator
   lastProposedBlock,
   proposedAttestations,

@@ -27,14 +27,20 @@ export abstract class Repository<T> {
   }
 
   public async get(id: Id): Promise<T | null> {
+    const serialized = await this.getSerialized(id);
+    return serialized && this.type.deserialize(serialized);
+  }
+
+  public async getSerialized(id: Id): Promise<Uint8Array | null> {
     try {
       const value = await this.db.get(encodeKey(this.bucket, id));
       if(!value) return null;
-      return this.type.deserialize(value);
+      return value;
     } catch (e) {
       return null;
     }
   }
+
 
   public async has(id: Id): Promise<boolean> {
     return await this.get(id) !== null;

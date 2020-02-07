@@ -15,8 +15,8 @@ import {
   AttesterSlashingRepository,
   BlockRepository,
   ChainRepository,
-  DepositRepository,
-  MerkleTreeRepository,
+  DepositDataRepository,
+  DepositDataRootListRepository,
   ProposerSlashingRepository,
   StateRepository,
   VoluntaryExitRepository,
@@ -49,9 +49,9 @@ export interface IBeaconDb {
 
   attesterSlashing: AttesterSlashingRepository;
 
-  deposit: DepositRepository;
+  depositData: DepositDataRepository;
 
-  merkleTree: MerkleTreeRepository;
+  depositDataRootList: DepositDataRootListRepository;
   /**
    * Returns validator index coresponding to validator
    * public key in registry,

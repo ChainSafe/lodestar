@@ -2,20 +2,20 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconBlockBody, BeaconState, Bytes96} from "@chainsafe/eth2.0-types";
+import {TreeBackedValue, List} from "@chainsafe/ssz";
+import {BeaconBlockBody, BeaconState, Bytes96, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ZERO_HASH} from "../../../constants";
 import {OpPool} from "../../../opPool";
 import {IEth1Notifier} from "../../../eth1";
 import {generateDeposits} from "./deposits";
 import {computeEpochAtSlot} from "@chainsafe/eth2.0-state-transition";
-import {IProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 
 export async function assembleBody(
   config: IBeaconConfig,
   opPool: OpPool,
   eth1: IEth1Notifier,
-  merkleTree: IProgressiveMerkleTree,
+  depositDataRootList: TreeBackedValue<List<Root>>,
   currentState: BeaconState,
   randao: Bytes96
 ): Promise<BeaconBlockBody> {
@@ -28,8 +28,8 @@ export async function assembleBody(
     eth1.getEth1Vote(config, currentState, computeEpochAtSlot(config, currentState.slot))
   ]);
   //requires new eth1 data so it has to be done after above operations
-  const deposits = await generateDeposits(config, opPool, currentState, eth1Data, merkleTree);
-  eth1Data.depositRoot = merkleTree.root();
+  const deposits = await generateDeposits(config, opPool, currentState, eth1Data, depositDataRootList);
+  eth1Data.depositRoot = depositDataRootList.backing().root;
   return {
     randaoReveal: randao,
     eth1Data: eth1Data,

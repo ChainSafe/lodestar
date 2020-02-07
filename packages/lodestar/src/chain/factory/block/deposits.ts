@@ -2,34 +2,32 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconState, Deposit, Eth1Data} from "@chainsafe/eth2.0-types";
+import {List, TreeBackedValue} from "@chainsafe/ssz";
+import {BeaconState, Deposit, Eth1Data, DepositData, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {OpPool} from "../../../opPool";
-import {processSortedDeposits} from "../../../util/deposits";
-import {IProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 
 export async function generateDeposits(
   config: IBeaconConfig,
   opPool: OpPool,
   state: BeaconState,
   eth1Data: Eth1Data,
-  merkleTree: IProgressiveMerkleTree): Promise<Deposit[]> {
+  depositDataRootList: TreeBackedValue<List<Root>>): Promise<Deposit[]> {
   if(eth1Data.depositCount > state.eth1DepositIndex) {
-    const upperIndex = Math.min(config.params.MAX_DEPOSITS, eth1Data.depositCount);
-    const deposits = await opPool.deposits.getAllBetween(state.eth1DepositIndex, upperIndex);
+    const eth1DepositIndex = state.eth1DepositIndex;
+    const upperIndex = eth1DepositIndex + Math.min(config.params.MAX_DEPOSITS, eth1Data.depositCount);
+    const depositDatas = await opPool.depositData.getAllBetween(
+      eth1DepositIndex,
+      upperIndex
+    );
     //add all deposits to the tree before getting proof
-    return processSortedDeposits(
-      config,
-      deposits,
-      state.eth1DepositIndex,
-      eth1Data.depositCount,
-      (deposit, index) => {
-        merkleTree.add(index + state.eth1DepositIndex, config.types.DepositData.hashTreeRoot(deposit.data));
-        return deposit;
-      }
-    ).map((deposit, index) => {
-      deposit.proof = merkleTree.getProof(index + state.eth1DepositIndex);
-      return deposit;
+    depositDataRootList.push(...depositDatas.map(config.types.DepositData.hashTreeRoot));
+    const tree = depositDataRootList.backing();
+    return depositDatas.map((data, index) => {
+      return {
+        proof: tree.getSingleProof(BigInt(index + eth1DepositIndex)),
+        data,
+      };
     });
   }
   return [];
