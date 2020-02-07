@@ -50,7 +50,7 @@ export class PublicKey {
   }
 
   public verifyMessage(signature: Signature, messageHash: bytes32): boolean {
-    return this.value.verifyHashWithDomain(signature.getValue(), messageHash);
+    return this.value.verify(signature.getValue(), messageHash);
   }
 
   public toBytesCompressed(): BLSPubkey {

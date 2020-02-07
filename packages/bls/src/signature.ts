@@ -1,6 +1,6 @@
 import assert from "assert";
 import {FP_POINT_LENGTH} from "./constants";
-import {BLSSignature, bytes32} from "@chainsafe/eth2.0-types";
+import {BLSPubkey, BLSSignature, bytes, bytes32} from "@chainsafe/eth2.0-types";
 import {SignatureType} from "@chainsafe/eth2-bls-wasm";
 import {getContext} from "./context";
 import {PublicKey} from "./publicKey";
@@ -12,6 +12,7 @@ export class Signature {
 
   protected constructor(value: SignatureType) {
     this.value = value;
+    assert(this.value.isValidOrder());
   }
 
   public static fromCompressedBytes(value: BLSSignature): Signature {
@@ -31,6 +32,15 @@ export class Signature {
     return new Signature(signature);
   }
 
+  public static aggregate(signatures: Signature[]): Signature {
+    const context = getContext();
+    const signature = new context.Signature();
+    signature.aggregate(signatures.map((sig) => sig.getValue()));
+    return new Signature(
+      signature
+    );
+  }
+
   public add(other: Signature): Signature {
     const agg = this.value.clone();
     agg.add(other.value);
@@ -43,14 +53,21 @@ export class Signature {
     return this.value;
   }
 
-  public verify(publicKey: PublicKey, message: bytes32): boolean {
-    return publicKey.verifyMessage(this, message);
+  public verifyAggregate(publicKey: BLSPubkey[], message: bytes32): boolean {
+    return this.value.fastAggregateVerify(
+      publicKey.map((bytes) => PublicKey.fromBytes(bytes).getValue()),
+      message
+    );
   }
 
-  public verifyMultiple(publicKeys: PublicKey[], messages: bytes32[]): boolean {
-    return this.value.verifyAggregatedHashWithDomain(
+  public verifyMultiple(publicKeys: PublicKey[], messages: bytes32[], fast = false): boolean {
+    const msgs = Buffer.concat(messages);
+    if(!fast && !getContext().areAllMsgDifferent(msgs)) {
+      return false;
+    }
+    return this.value.aggregateVerifyNoCheck(
       publicKeys.map((key) => key.getValue()),
-      messages
+      msgs
     );
   }
 

@@ -45,11 +45,12 @@ export function sign(secretKey: BLSSecretKey, messageHash: bytes32): BLSSignatur
  */
 export function aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
   assert(signatures, "signatures is null or undefined");
-  return signatures.map((signature): Signature => {
-    return Signature.fromCompressedBytes(signature);
-  }).reduce((previousValue, currentValue): Signature => {
-    return previousValue.add(currentValue);
-  }).toBytesCompressed();
+
+  return Signature.aggregate(
+    signatures.map((signature): Signature => {
+      return Signature.fromCompressedBytes(signature);
+    })
+  ).toBytesCompressed();
 }
 
 /**
@@ -91,15 +92,37 @@ export function verify(publicKey: BLSPubkey, messageHash: bytes32, signature: BL
 }
 
 /**
+ * Verifies if aggregated signature is same message signed with given public keys.
+ * @param publicKeys
+ * @param messageHash
+ * @param signature
+ */
+export function verifyAggregate(publicKeys: BLSPubkey[], messageHash: bytes32, signature: BLSSignature): boolean {
+  assert(publicKeys, "publicKey is null or undefined");
+  assert(messageHash, "messageHash is null or undefined");
+  assert(signature, "signature is null or undefined");
+  try {
+    return Signature
+      .fromCompressedBytes(signature)
+      .verifyAggregate(publicKeys, messageHash);
+  } catch (e) {
+    console.log(e)
+    return false;
+  }
+}
+
+/**
  * Verifies if signature is list of message signed with corresponding public key.
  * @param publicKeys
  * @param messageHashes
  * @param signature
+ * @param fast Check if all messages are different
  */
 export function verifyMultiple(
   publicKeys: BLSPubkey[],
   messageHashes: bytes32[],
-  signature: BLSSignature
+  signature: BLSSignature,
+  fast = false
 ): boolean {
   assert(publicKeys, "publicKey is null or undefined");
   assert(messageHashes, "messageHash is null or undefined");
@@ -113,7 +136,8 @@ export function verifyMultiple(
       .fromCompressedBytes(signature)
       .verifyMultiple(
         publicKeys.map((key) => PublicKey.fromBytes(key)),
-        messageHashes
+        messageHashes,
+        fast
       );
   } catch (e) {
     return false;
@@ -127,5 +151,6 @@ export default {
   aggregateSignatures,
   aggregatePubkeys,
   verify,
+  verifyAggregate,
   verifyMultiple
 };

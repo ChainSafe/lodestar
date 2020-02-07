@@ -51,7 +51,7 @@ export class PrivateKey {
   // }
 
   public signMessage(message: bytes32): Signature {
-    return Signature.fromValue(this.value.signHashWithDomain(Buffer.concat([message])));
+    return Signature.fromValue(this.value.sign(Buffer.concat([message])));
   }
 
   public toPublicKey(): PublicKey {
