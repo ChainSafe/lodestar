@@ -3,7 +3,6 @@
  */
 import {EventEmitter} from "events";
 import LibP2p from "libp2p";
-//@ts-ignore
 import * as varint from "varint";
 import {pipe} from "it-pipe";
 import {
@@ -267,11 +266,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
           clearTimeout(responseTimer);
           this.logger.verbose(`receive ${method} response from ${peerId.toB58String()}`);
           try {
-            if(!requestOnly) {
-              resolve(this.decodeResponse(method, data) as T);
-            } else {
-              resolve();
-            }
+            resolve(requestOnly? undefined : this.decodeResponse(method, data) as T);
           } catch (e) {
             reject(e);
           }
