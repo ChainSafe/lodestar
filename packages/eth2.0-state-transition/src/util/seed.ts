@@ -32,7 +32,7 @@ export function computeShuffledIndex(
   let permuted = index;
   assert(index < indexCount);
   assert(indexCount <= 2 ** 40);
-  const _seed = config.types.Bytes32.serialize(seed);
+  const _seed = seed.valueOf() as Uint8Array;
   for (let i = 0; i < config.params.SHUFFLE_ROUND_COUNT; i++) {
     const pivot = Number(bytesToBigInt(
       hash(Buffer.concat([_seed, intToBytes(i, 1)]))
@@ -72,6 +72,6 @@ export function getSeed(config: IBeaconConfig, state: BeaconState, epoch: Epoch,
   return hash(Buffer.concat([
     intToBytes(domainType, 4),
     intToBytes(epoch, 8),
-    config.types.Bytes32.serialize(mix),
+    mix.valueOf() as Uint8Array,
   ]));
 }

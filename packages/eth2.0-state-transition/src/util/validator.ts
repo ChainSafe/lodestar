@@ -78,6 +78,5 @@ export function isAggregator(
 ): boolean {
   const committee = getBeaconCommittee(config, state, slot, index);
   const modulo = Math.max(1, intDiv(committee.length, config.params.TARGET_COMMITTEE_SIZE));
-  const _slotSignature = config.types.BLSSignature.serialize(slotSignature);
-  return (bytesToInt(hash(_slotSignature).slice(0, 8)) % modulo) === 0;
+  return (bytesToInt(hash(slotSignature.valueOf() as Uint8Array).slice(0, 8)) % modulo) === 0;
 }
