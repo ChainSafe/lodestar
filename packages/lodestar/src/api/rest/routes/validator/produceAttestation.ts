@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 import {IncomingMessage, Server, ServerResponse} from "http";
 import fastify, {DefaultQuery} from "fastify";
-import {fromHex} from "@chainsafe/eth2.0-utils";
+import {fromHexString} from "@chainsafe/ssz";
 
 import {IFastifyServer} from "../../index";
 import {IApiModules} from "../../../interface";
@@ -48,7 +48,7 @@ export const registerAttestationProductionEndpoint = (fastify: IFastifyServer, m
     async (request, reply) => {
       const attestation = await produceAttestation(
         {db: modules.db, chain: modules.chain, config: modules.config},
-        fromHex(request.query.validator_pubkey),
+        fromHexString(request.query.validator_pubkey),
         request.query.committee_index,
         request.query.slot
       );

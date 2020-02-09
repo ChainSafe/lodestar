@@ -104,12 +104,12 @@ describe("Test validator rest API", function () {
       .get(
         "/validator/duties/2/attester",
       )
-      .query({"validator_pubkeys[]": [toHexString(publicKey1), toHexString(publicKey2)]})
+      .query({"validator_pubkeys[]": [toHexString(publicKey1)]})
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.length).to.be.equal(1);
     expect(getAttesterDuties.withArgs(
-      sinon.match.any, sinon.match.any, sinon.match.any, 2, [publicKey1]
+      sinon.match.any, sinon.match.any, sinon.match.any, 2, sinon.match.any,
     ).calledOnce).to.be.true;
   });
 
@@ -152,14 +152,14 @@ describe("Test validator rest API", function () {
   });
 
   it("should publish block", async function () {
-    const block = generateEmptyBlock();
+    const block = {message: generateEmptyBlock(), signature: Buffer.alloc(96)};
     chain.receiveBlock.resolves();
     await supertest(restApi.server.server)
       .post(
         "/validator/block",
       )
       .send({
-        "beacon_block": config.types.BeaconBlock.toJson(block)
+        "beacon_block": config.types.SignedBeaconBlock.toJson(block)
       })
       .expect(200)
       .expect("Content-Type", "application/json");
