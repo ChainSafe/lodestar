@@ -25,7 +25,7 @@ export async function generateDeposits(
     const tree = depositDataRootList.backing();
     return depositDatas.map((data, index) => {
       return {
-        proof: tree.getSingleProof(BigInt(index + eth1DepositIndex)),
+        proof: tree.getSingleProof(depositDataRootList.gindexOfProperty(index + eth1DepositIndex)),
         data,
       };
     });

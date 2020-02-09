@@ -374,7 +374,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       eth1Block.timestamp,
       depositDatas.map((data, index) => {
         return {
-          proof: tree.getSingleProof(),
+          proof: tree.getSingleProof(depositDataRootList.gindexOfProperty(index)),
           data,
         };
       })
