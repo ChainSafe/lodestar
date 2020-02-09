@@ -21,10 +21,10 @@ export function processDeposit(
   // Verify the Merkle branch
   assert(verifyMerkleBranch(
     config.types.DepositData.hashTreeRoot(deposit.data),
-    Array.from(deposit.proof),
+    Array.from(deposit.proof).map((p) => p.valueOf() as Uint8Array),
     DEPOSIT_CONTRACT_TREE_DEPTH + 1,
     state.eth1DepositIndex,
-    state.eth1Data.depositRoot,
+    state.eth1Data.depositRoot.valueOf() as Uint8Array,
   ));
 
   // Deposits must be processed in order
