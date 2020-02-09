@@ -1,4 +1,4 @@
-import {Node, Tree, subtreeFillToContents, zeroNode} from "@chainsafe/merkle-tree";
+import {Node, Tree, subtreeFillToContents, zeroNode, Gindex} from "@chainsafe/merkle-tree";
 
 import {ObjectLike} from "../../interface";
 import {ContainerType, CompositeType} from "../../types";
@@ -112,6 +112,13 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     });
     return variableIndex;
 
+  }
+  gindexOfProperty(target: Tree, prop: PropertyKey): Gindex {
+    const chunkIndex = Object.keys(this._type.fields).findIndex((fieldName) => fieldName === prop);
+    if (chunkIndex === -1) {
+      throw new Error("Invalid container field name");
+    }
+    return this.gindexOfChunk(target, chunkIndex);
   }
   getProperty<V extends keyof T>(target: Tree, property: V): PropOfTreeBackedValue<T, V> {
     const chunkIndex = Object.keys(this._type.fields).findIndex((fieldName) => fieldName === property);

@@ -1,4 +1,4 @@
-import {Tree, iterateAtDepth} from "@chainsafe/merkle-tree";
+import {Tree, iterateAtDepth, Gindex} from "@chainsafe/merkle-tree";
 
 import {ArrayLike} from "../../interface";
 import {BasicArrayType, CompositeArrayType} from "../../types";
@@ -51,6 +51,9 @@ export class BasicArrayTreeHandler<T extends ArrayLike<unknown>> extends TreeHan
       output.set(this.getRootAtChunk(target, chunkIndex).slice(0, (size - i)), offset + i);
     }
     return offset + size;
+  }
+  gindexOfProperty(target: Tree, prop: PropertyKey): Gindex {
+    return this.gindexOfChunk(target, this.getChunkIndex(prop as number));
   }
   getLength(target: Tree): number {
     throw new Error("Not implemented");
@@ -181,6 +184,9 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<object>> extends Tree
       }
       return index;
     }
+  }
+  gindexOfProperty(target: Tree, prop: PropertyKey): Gindex {
+    return this.gindexOfChunk(target, prop as number);
   }
   getLength(target: Tree): number {
     throw new Error("Not implemented");
