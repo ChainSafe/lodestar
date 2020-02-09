@@ -45,7 +45,7 @@ describe("block assembly", function () {
     const head = chainStub.forkChoice.head();
     beaconDB.block.get.withArgs(head).returns(generateEmptySignedBlock());
     beaconDB.state.get.resolves(generateState({ slot: 1 }));
-    beaconDB.depositDataRootList.get.resolves(config.types.DepositDataRootList.tree.defaultValue());
+    beaconDB.depositDataRootList.getSerialized.resolves(config.types.DepositDataRootList.tree.defaultValue().serialize());
     assembleBodyStub.resolves(generateEmptyBlock().body);
     stateTransitionStub.returns(generateState());
     try {

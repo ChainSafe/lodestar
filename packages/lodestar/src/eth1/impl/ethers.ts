@@ -5,9 +5,9 @@
 import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {Block, Log} from "ethers/providers";
+import {fromHexString} from "@chainsafe/ssz";
 import {Deposit, Eth1Data, Number64, Root, DepositData} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {fromHex} from "@chainsafe/eth2.0-utils";
 import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 
 import {Eth1EventEmitter, IEth1Notifier} from "../interface";
@@ -86,7 +86,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     merkleTreeIndex: string
   ): Promise<void> {
     try {
-      const index = this.config.types.Number64.deserialize(fromHex(merkleTreeIndex));
+      const index = this.config.types.Number64.deserialize(fromHexString(merkleTreeIndex));
       const depositData = this.createDepositData(
         pubkey,
         withdrawalCredentials,
@@ -135,12 +135,12 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
 
   public async depositRoot(block?: string | number): Promise<Uint8Array> {
     const depositRootHex = await this.contract.get_deposit_root({blockTag: block || "latest"});
-    return fromHex(depositRootHex);
+    return fromHexString(depositRootHex);
   }
 
   public async depositCount(block?: string | number): Promise<number> {
     const depositCountHex = await this.contract.get_deposit_count({blockTag: block || "latest"});
-    return Buffer.from(fromHex(depositCountHex)).readUIntLE(0, 6);
+    return Buffer.from(fromHexString(depositCountHex)).readUIntLE(0, 6);
   }
 
   public async getEth1Data(eth1Head: Block, distance: Number64): Promise<Eth1Data> {
@@ -151,7 +151,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       this.depositRoot(blockHash)
     ]);
     return {
-      blockHash: fromHex(blockHash),
+      blockHash: fromHexString(blockHash),
       depositCount,
       depositRoot
     };
@@ -200,10 +200,10 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     signature: string,
   ): DepositData {
     return {
-      pubkey: fromHex(pubkey),
-      withdrawalCredentials: fromHex(withdrawalCredentials),
-      amount: this.config.types.Gwei.deserialize(fromHex(amount)),
-      signature: fromHex(signature),
+      pubkey: fromHexString(pubkey),
+      withdrawalCredentials: fromHexString(withdrawalCredentials),
+      amount: this.config.types.Gwei.deserialize(fromHexString(amount)),
+      signature: fromHexString(signature),
     };
   }
 }

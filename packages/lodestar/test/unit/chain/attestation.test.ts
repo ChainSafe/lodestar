@@ -104,7 +104,7 @@ describe("AttestationProcessor", function() {
       dbStub.block.get.resolves(block);
       const state = generateState();
       dbStub.state.get.resolves(state);
-      forkChoiceStub.getJustified.returns({});
+      forkChoiceStub.getJustified.returns(config.types.Checkpoint.defaultValue());
       getAttestingIndicesStub.returns([0]);
       state.balances = [1n, 2n, 3n];
   

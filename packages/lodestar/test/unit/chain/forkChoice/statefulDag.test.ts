@@ -54,7 +54,7 @@ describe("StatefulDagLMDGHOST", () => {
      *           e
      */
     const lmd = new StatefulDagLMDGHOST(config);
-    let head;
+    let head: Uint8Array;
     lmd.addBlock(1, a, genesis, {root: a, epoch: 0}, {root: a, epoch: 0});
     lmd.addBlock(2, b, a);
     lmd.addBlock(3, c, b);
@@ -64,31 +64,31 @@ describe("StatefulDagLMDGHOST", () => {
     // add vote to e
     lmd.addAttestation(e, 1, 3n);
     head = lmd.head();
-    assert(head.equals(e), "head should be e");
+    assert.deepEqual(head, e, "head should be e");
     // recast e vote to f
     lmd.addAttestation(f, 1, 3n);
     head = lmd.head();
-    assert(head.equals(f), "head should be f");
+    assert.deepEqual(head, f, "head should be f");
     // add vote to d
     lmd.addAttestation(d, 2, 5n);
     head = lmd.head();
-    assert(head.equals(d), "head should be d");
+    assert.deepEqual(head, d, "head should be d");
     // add g block
     lmd.addBlock(4, g, d);
     head = lmd.head();
-    assert(head.equals(g), "head should be g");
+    assert.deepEqual(head, g, "head should be g");
     // add vote to c
     lmd.addAttestation(c, 3, 2n);
     head = lmd.head();
-    assert(head.equals(g), "head should be g");
+    assert.deepEqual(head, g, "head should be g");
     // add vote to c
     lmd.addAttestation(c, 4, 1n);
     head = lmd.head();
-    assert(head.equals(f), "head should be f");
+    assert.deepEqual(head, f, "head should be f");
     // recast co vote to g
     lmd.addAttestation(g, 3, 1n);
     head = lmd.head();
-    assert(head.equals(g), "head should be g");
+    assert.deepEqual(head, g, "head should be g");
   });
   it("should accept attestations and correctly compute the head - 2", () => {
     /*
@@ -101,7 +101,7 @@ describe("StatefulDagLMDGHOST", () => {
      *
      */
     const lmd = new StatefulDagLMDGHOST(config);
-    let head;
+    let head: Uint8Array;
     lmd.addBlock(1, a, genesis, {root: a, epoch: 0}, {root: a, epoch: 0});
     lmd.addBlock(2, b, a);
     lmd.addBlock(3, c, b);
@@ -111,10 +111,10 @@ describe("StatefulDagLMDGHOST", () => {
     lmd.addBlock(3, g, f);
     lmd.addAttestation(e, 1, 3n);
     head = lmd.head();
-    assert(head.equals(e), "head should be e");
+    assert.deepEqual(head, e, "head should be e");
     lmd.addAttestation(g, 2, 4n);
     head = lmd.head();
-    assert(head.equals(g), "head should be g");
+    assert.deepEqual(head, g, "head should be g");
   });
    it("should accept attestations and correctly compute the head - 3", () => {
     /*
@@ -133,7 +133,7 @@ describe("StatefulDagLMDGHOST", () => {
      *           g
      */
     const lmd = new StatefulDagLMDGHOST(config);
-    let head;
+    let head: Uint8Array;
     lmd.addBlock(1, a, genesis, {root: a, epoch: 0}, {root: a, epoch: 0});
     lmd.addBlock(2, b, a);
     lmd.addBlock(3, c, a);
@@ -143,10 +143,10 @@ describe("StatefulDagLMDGHOST", () => {
     lmd.addBlock(3, g, c);
     lmd.addAttestation(e, 1, 3n);
     head = lmd.head();
-    assert(head.equals(e), "head should be e");
+    assert.deepEqual(head, e, "head should be e");
     lmd.addAttestation(g, 2, 4n);
     head = lmd.head();
-    assert(head.equals(g), "head should be g");
+    assert.deepEqual(head, g, "head should be g");
   });
 
   it("should update justified block initially", () => {

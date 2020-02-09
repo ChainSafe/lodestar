@@ -57,7 +57,7 @@ export function encodeKey(bucket: Bucket, key: Uint8Array | string | number | bi
     intToBytes(BigInt(key), 8).copy(buf, 1);
   } else {
     buf = Buffer.alloc(key.length + 1);
-    key.set(buf, 1);
+    buf.set(key, 1);
   }
   buf.writeUInt8(bucket, 0);
   return useBuffer ? buf : buf.toString("hex");

@@ -90,8 +90,9 @@ describe("[network] rpc", () => {
       };
       // @ts-ignore
       const statusActual = await rpcA.status(nodeB.peerInfo, statusExpected);
-      assert.deepEqual(JSON.stringify(statusActual), JSON.stringify(statusExpected));
+      assert.deepEqual(statusActual, statusExpected);
     } catch (e) {
+      console.log(e)
       assert.fail("status not received");
     }
     // send status from B to A, await status response
@@ -111,7 +112,7 @@ describe("[network] rpc", () => {
 
       // @ts-ignore
       const statusActual = await rpcB.status(nodeA.peerInfo, statusExpected);
-      assert.deepEqual(JSON.stringify(statusActual), JSON.stringify(statusExpected));
+      assert.deepEqual(statusActual, statusExpected);
     } catch (e) {
       assert.fail("statu not received");
     }

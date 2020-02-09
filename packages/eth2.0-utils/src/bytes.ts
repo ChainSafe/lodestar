@@ -31,8 +31,7 @@ export function bytesToBigInt(value: Uint8Array): bigint {
 
 export function bigIntToBytes(value: bigint, length: number): Uint8Array {
   const b = toBufferLE(value, length);
-  // @ts-ignore
-  return Uint8Array.from(b.buffer, b.byteOffset);
+  return new Uint8Array(b.buffer, b.byteOffset, length);
 }
 
 
@@ -42,6 +41,5 @@ export function toHex(buffer: Uint8Array): string {
 
 export function fromHex(hex: string): Uint8Array {
   const b = Buffer.from(hex.replace("0x", ""), "hex");
-  // @ts-ignore
-  return Uint8Array.from(b.buffer, b.byteOffset);
+  return new Uint8Array(b.buffer, b.byteOffset, b.length);
 }

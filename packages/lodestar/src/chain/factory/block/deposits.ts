@@ -21,7 +21,7 @@ export async function generateDeposits(
       upperIndex
     );
     //add all deposits to the tree before getting proof
-    depositDataRootList.push(...depositDatas.map(config.types.DepositData.hashTreeRoot));
+    depositDataRootList.push(...depositDatas.map((data) => config.types.DepositData.hashTreeRoot(data)));
     const tree = depositDataRootList.backing();
     return depositDatas.map((data, index) => {
       return {

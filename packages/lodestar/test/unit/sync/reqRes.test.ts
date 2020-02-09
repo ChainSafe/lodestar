@@ -176,7 +176,7 @@ describe("syncing", function () {
   it("should not disconnect on status", async function() {
     const body: Status = {
       headForkVersion: Buffer.alloc(4),
-      finalizedRoot: Buffer.from("xyz"),
+      finalizedRoot: config.types.BeaconBlock.hashTreeRoot(generateEmptySignedBlock().message),
       finalizedEpoch: 1,
       headRoot: Buffer.alloc(32),
       headSlot: 1,
