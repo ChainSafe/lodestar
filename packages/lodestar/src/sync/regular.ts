@@ -2,6 +2,7 @@
  * @module sync
  */
 
+import {toHexString} from "@chainsafe/ssz";
 import {
   Attestation,
   Checkpoint,
@@ -13,7 +14,6 @@ import {
   SignedVoluntaryExit,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {toHex} from "@chainsafe/eth2.0-utils";
 import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
@@ -124,7 +124,7 @@ export class RegularSync {
   };
 
   private onUnknownBlockRoot = async (root: Root): Promise<void> => {
-    const hexRoot = toHex(root);
+    const hexRoot = toHexString(root);
     for (const peer of this.network.getPeers()) {
       try {
         this.logger.verbose(`Attempting to fetch block ${hexRoot} from ${peer.id.toB58String()}`);

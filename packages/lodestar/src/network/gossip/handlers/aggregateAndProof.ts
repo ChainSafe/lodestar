@@ -2,12 +2,12 @@
  * @module network/gossip
  */
 
+import {toHexString} from "@chainsafe/ssz";
+import {AggregateAndProof} from "@chainsafe/eth2.0-types";
 import {IGossipMessage, IGossipMessageValidator} from "../interface";
 import {Gossip, GossipHandlerFn} from "../gossip";
 import {deserializeGossipMessage, getGossipTopic} from "../utils";
 import {GossipEvent} from "../constants";
-import {AggregateAndProof} from "@chainsafe/eth2.0-types";
-import {toHex} from "@chainsafe/eth2.0-utils";
 import {promisify} from "es6-promisify";
 
 export function getIncomingAggregateAndProofHandler(validator: IGossipMessageValidator): GossipHandlerFn {
@@ -16,7 +16,7 @@ export function getIncomingAggregateAndProofHandler(validator: IGossipMessageVal
       const aggregateAndProof = deserializeGossipMessage<AggregateAndProof>(this.config.types.AggregateAndProof, msg);
       this.logger.verbose(
         `Received AggregateAndProof from validator #${aggregateAndProof.aggregatorIndex}`+
-          ` for target ${toHex(aggregateAndProof.aggregate.data.target.root)}`
+          ` for target ${toHexString(aggregateAndProof.aggregate.data.target.root)}`
       );
       if (await validator.isValidIncomingAggregateAndProof(aggregateAndProof)) {
         this.emit(GossipEvent.AGGREGATE_AND_PROOF, aggregateAndProof);
@@ -40,6 +40,6 @@ export async function publishAggregatedAttestation(this: Gossip, aggregateAndPro
   ]);
   this.logger.verbose(
     `Publishing AggregateAndProof for validator #${aggregateAndProof.aggregatorIndex}`
-        + ` for target ${toHex(aggregateAndProof.aggregate.data.target.root)}`
+        + ` for target ${toHexString(aggregateAndProof.aggregate.data.target.root)}`
   );
 }

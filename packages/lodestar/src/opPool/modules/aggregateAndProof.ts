@@ -1,3 +1,4 @@
+import {ArrayLike} from "@chainsafe/ssz";
 import {AggregateAndProof, Attestation, BeaconState} from "@chainsafe/eth2.0-types";
 import {OperationsModule} from "./abstract";
 import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/eth2.0-state-transition";
@@ -24,12 +25,12 @@ export class AggregateAndProofOperations extends OperationsModule<AggregateAndPr
     });
   }
 
-  public async removeIncluded(attestations: Attestation[]): Promise<void> {
+  public async removeIncluded(attestations: ArrayLike<Attestation>): Promise<void> {
     const aggregates = await this.getAll();
     await this.remove(aggregates.filter((a) => {
-      return attestations.findIndex((attestation) => {
+      return attestations.findIndex((attestation: Attestation) => {
         return this.config.types.Attestation.equals(a.aggregate, attestation);
-      }, this);
+      });
     }));
   }
 

@@ -115,7 +115,7 @@ export class SyncReqResp implements ISyncReqResp {
 
   public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
     const headBlock = await this.db.block.getChainHead();
-    const state = await this.db.state.get(headBlock.message.stateRoot);
+    const state = await this.db.state.get(headBlock.message.stateRoot.valueOf() as Uint8Array);
     if (!this.config.types.Version.equals(state.fork.currentVersion, request.headForkVersion)) {
       return true;
     }
@@ -163,7 +163,7 @@ export class SyncReqResp implements ISyncReqResp {
     try {
       const response: BeaconBlocksByRootResponse = [];
       for (const blockRoot of request) {
-        const block = await this.db.block.get(blockRoot);
+        const block = await this.db.block.get(blockRoot.valueOf() as Uint8Array);
         if (block) {
           response.push(block);
         }
@@ -187,7 +187,7 @@ export class SyncReqResp implements ISyncReqResp {
     } else {
       headSlot = await this.db.chain.getChainHeadSlot();
       const headBlock = await this.db.block.getChainHead();
-      const state = await this.db.state.get(headBlock.message.stateRoot);
+      const state = await this.db.state.get(headBlock.message.stateRoot.valueOf() as Uint8Array);
       headRoot = this.config.types.BeaconBlock.hashTreeRoot(headBlock.message);
       finalizedEpoch = state.finalizedCheckpoint.epoch;
       finalizedRoot = state.finalizedCheckpoint.root;

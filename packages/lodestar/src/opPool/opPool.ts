@@ -54,7 +54,7 @@ export class OpPool extends EventEmitter {
     this.attestations = new AttestationOperations(this.db.attestation, {config});
     this.aggregateAndProofs = new AggregateAndProofOperations(this.db.aggregateAndProof, {config});
     this.voluntaryExits = new VoluntaryExitOperations(this.db.voluntaryExit);
-    this.depositData = new DepositDataOperations(this.db.deposit);
+    this.depositData = new DepositDataOperations(this.db.depositData);
     this.proposerSlashings = new ProposerSlashingOperations(this.db.proposerSlashing);
     this.attesterSlashings = new AttesterSlashingOperations(this.db.attesterSlashing);
   }

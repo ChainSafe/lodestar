@@ -2,20 +2,20 @@
  * @module network/gossip
  */
 
+import {toHexString} from "@chainsafe/ssz";
+import {Attestation} from "@chainsafe/eth2.0-types";
+import {promisify} from "es6-promisify";
 import {Gossip, GossipHandlerFn} from "../gossip";
 import {IGossipMessage, IGossipMessageValidator} from "../interface";
 import {deserializeGossipMessage, getAttestationSubnet, getAttestationSubnetTopic, getGossipTopic} from "../utils";
-import {Attestation} from "@chainsafe/eth2.0-types";
-import {toHex} from "@chainsafe/eth2.0-utils";
 import {GossipEvent} from "../constants";
-import {promisify} from "es6-promisify";
 
 export function getIncomingAttestationHandler(validator: IGossipMessageValidator): GossipHandlerFn {
   return async function handleIncomingAttestation(this: Gossip, msg: IGossipMessage): Promise<void> {
     try {
       const attestation = deserializeGossipMessage<Attestation>(this.config.types.Attestation, msg);
       this.logger.verbose(
-        `Received attestation for block ${toHex(attestation.data.beaconBlockRoot)}`
+        `Received attestation for block ${toHexString(attestation.data.beaconBlockRoot)}`
           +` (${attestation.data.source.epoch}, ${attestation.data.target.epoch})`
       );
       if (await validator.isValidIncomingUnaggregatedAttestation(attestation)) {
@@ -32,7 +32,7 @@ export function getCommitteeAttestationHandler(subnet: number, validator: IGossi
     try {
       const attestation = deserializeGossipMessage<Attestation>(this.config.types.Attestation, msg);
       this.logger.verbose(
-        `Received committee attestation for block ${toHex(attestation.data.beaconBlockRoot)}`
+        `Received committee attestation for block ${toHexString(attestation.data.beaconBlockRoot)}`
           +`subnet: ${subnet}, (${attestation.data.source.epoch}, ${attestation.data.target.epoch})`
       );
 
@@ -56,6 +56,6 @@ export async function publishCommiteeAttestation(this: Gossip, attestation: Atte
     getGossipTopic(GossipEvent.ATTESTATION), this.config.types.Attestation.serialize(attestation)
   );
   this.logger.verbose(
-    `Publishing attestation ${toHex(this.config.types.Attestation.hashTreeRoot(attestation))} for subnet ${subnet}`
+    `Publishing attestation ${toHexString(this.config.types.Attestation.hashTreeRoot(attestation))} for subnet ${subnet}`
   );
 }

@@ -5,7 +5,7 @@
 import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {Block, Log} from "ethers/providers";
-import {Deposit, Eth1Data, Number64, Root} from "@chainsafe/eth2.0-types";
+import {Deposit, Eth1Data, Number64, Root, DepositData} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {fromHex} from "@chainsafe/eth2.0-utils";
 import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
@@ -87,7 +87,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   ): Promise<void> {
     try {
       const index = this.config.types.Number64.deserialize(fromHex(merkleTreeIndex));
-      const deposit = this.createDeposit(
+      const depositData = this.createDepositData(
         pubkey,
         withdrawalCredentials,
         amount,
@@ -96,7 +96,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       this.logger.info(
         `Received validator deposit event index=${index}`
       );
-      this.emit("deposit", index, deposit);
+      this.emit("deposit", index, depositData);
     } catch (e) {
       this.logger.error(`Failed to process deposit log. Error: ${e.message}`);
     }
@@ -113,7 +113,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     );
     const pastDeposits = logs.map((log) => {
       const logDescription = this.contract.interface.parseLog(log);
-      return this.createDeposit(
+      return this.createDepositData(
         logDescription.values.pubkey,
         logDescription.values.withdrawalCredentials,
         logDescription.values.amount,
@@ -191,22 +191,19 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   }
 
   /**
-   * Parse deposit log elements to a [[Deposit]]
+   * Parse deposit log elements to a [[DepositData]]
    */
-  private createDeposit(
+  private createDepositData(
     pubkey: string,
     withdrawalCredentials: string,
     amount: string,
     signature: string,
-  ): Deposit {
+  ): DepositData {
     return {
-      proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH}, () => Buffer.alloc(32)),
-      data: {
-        pubkey: fromHex(pubkey),
-        withdrawalCredentials: fromHex(withdrawalCredentials),
-        amount: this.config.types.Gwei.deserialize(fromHex(amount)),
-        signature: fromHex(signature),
-      },
+      pubkey: fromHex(pubkey),
+      withdrawalCredentials: fromHex(withdrawalCredentials),
+      amount: this.config.types.Gwei.deserialize(fromHex(amount)),
+      signature: fromHex(signature),
     };
   }
 }

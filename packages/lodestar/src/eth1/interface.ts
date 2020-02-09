@@ -4,14 +4,14 @@
 
 import {EventEmitter} from "events";
 
-import {BeaconState, Deposit, Eth1Data, Number64, Root} from "@chainsafe/eth2.0-types";
+import {BeaconState, Eth1Data, Number64, Root, DepositData} from "@chainsafe/eth2.0-types";
 import {Block} from "ethers/providers";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 export interface IEth1Events {
   block: (block: Block) => void;
-  deposit: (index: Number64, deposit: Deposit) => void;
+  deposit: (index: Number64, depositData: DepositData) => void;
 }
 
 export type Eth1EventEmitter = StrictEventEmitter<EventEmitter, IEth1Events>;

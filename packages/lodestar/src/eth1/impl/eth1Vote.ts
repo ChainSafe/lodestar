@@ -33,7 +33,7 @@ export async function getEth1Vote(
   }
 
   const validVotes = arrayIntersection<Eth1Data>(
-    state.eth1DataVotes,
+    Array.from(state.eth1DataVotes),
     votesToConsider,
     sszEqualPredicate(config.types.Eth1Data)
   );

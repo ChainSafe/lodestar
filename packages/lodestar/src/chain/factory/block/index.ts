@@ -24,7 +24,7 @@ export async function assembleBlock(
   randao: Bytes96
 ): Promise<BeaconBlock | null> {
   const parentBlock = await db.block.get(chain.forkChoice.head());
-  const currentState = await db.state.get(parentBlock.message.stateRoot);
+  const currentState = await db.state.get(parentBlock.message.stateRoot.valueOf() as Uint8Array);
 
   if (slot > currentState.slot) {
     processSlots(config, currentState, slot);

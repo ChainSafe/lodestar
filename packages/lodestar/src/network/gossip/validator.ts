@@ -36,7 +36,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
 
     // ignore if we have this block already
-    if (await this.db.block.has(root as Buffer)) {
+    if (await this.db.block.has(root)) {
       return false;
     }
 
@@ -70,7 +70,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (!this.isUnaggregatedAttestation(attestation)) {
       return false;
     }
-    const blockRoot = attestation.data.beaconBlockRoot;
+    const blockRoot = attestation.data.beaconBlockRoot.valueOf() as Uint8Array;
     if (!await this.db.block.has(blockRoot) || await this.db.block.isBadBlock(blockRoot)) {
       return false;
     }
@@ -91,7 +91,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.aggregateAndProof.has(root as Buffer)) {
       return false;
     }
-    const blockRoot = aggregationAndProof.aggregate.data.beaconBlockRoot;
+    const blockRoot = aggregationAndProof.aggregate.data.beaconBlockRoot.valueOf() as Uint8Array;
     if (!await this.db.block.has(blockRoot) || await this.db.block.isBadBlock(blockRoot)) {
       return false;
     }

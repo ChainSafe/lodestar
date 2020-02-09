@@ -34,10 +34,11 @@ export function getSyncTargetEpoch(peers: IReputation[], currentCheckPoint: Chec
   return currentCheckPoint.epoch;
 }
 
-export function isValidFinalizedCheckPoint(peers: IReputation[], finalizedCheckPoint: Checkpoint): boolean {
+export function isValidFinalizedCheckPoint(peers: IReputation[], finalizedCheckpoint: Checkpoint): boolean {
   const validPeers = peers.filter((peer) => !!peer.latestStatus);
+  const finalizedRoot = Buffer.from(finalizedCheckpoint.root as Uint8Array);
   const peerCount = validPeers.filter(peer => {
-    return Buffer.from(peer.latestStatus.finalizedRoot).equals(finalizedCheckPoint.root);
+    return Buffer.from(peer.latestStatus.finalizedRoot as Uint8Array).equals(finalizedRoot);
   }).length;
   return peerCount >= (validPeers.length / 2);
 }

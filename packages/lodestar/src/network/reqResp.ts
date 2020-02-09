@@ -150,19 +150,19 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     };
   };
   private encodeRequest(method: Method, body: RequestBody): Buffer {
-    let output = Buffer.alloc(0);
+    let output: Uint8Array;
     switch (method) {
       case Method.Status:
-        output = this.config.types.Status.serialize(body);
+        output = this.config.types.Status.serialize(body as Status);
         break;
       case Method.Goodbye:
-        output = this.config.types.Goodbye.serialize(body);
+        output = this.config.types.Goodbye.serialize(body as Goodbye);
         break;
       case Method.BeaconBlocksByRange:
-        output = this.config.types.BeaconBlocksByRangeRequest.serialize(body);
+        output = this.config.types.BeaconBlocksByRangeRequest.serialize(body as BeaconBlocksByRangeRequest);
         break;
       case Method.BeaconBlocksByRoot:
-        output = this.config.types.BeaconBlocksByRootRequest.serialize(body);
+        output = this.config.types.BeaconBlocksByRootRequest.serialize(body as BeaconBlocksByRootRequest);
         break;
     }
     return Buffer.concat([
@@ -171,19 +171,19 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     ]);
   }
   private encodeResponse(method: Method, body: ResponseBody): Buffer {
-    let output= Buffer.alloc(0);
+    let output: Uint8Array;
     switch (method) {
       case Method.Status:
-        output = this.config.types.Status.serialize(body);
+        output = this.config.types.Status.serialize(body as Status);
         break;
       case Method.Goodbye:
-        output = this.config.types.Goodbye.serialize(body);
+        output = this.config.types.Goodbye.serialize(body as Goodbye);
         break;
       case Method.BeaconBlocksByRange:
-        output = this.config.types.BeaconBlocksByRangeResponse.serialize(body);
+        output = this.config.types.BeaconBlocksByRangeResponse.serialize(body as BeaconBlocksByRangeResponse);
         break;
       case Method.BeaconBlocksByRoot:
-        output = this.config.types.BeaconBlocksByRootResponse.serialize(body);
+        output = this.config.types.BeaconBlocksByRootResponse.serialize(body as BeaconBlocksByRootResponse);
         break;
     }
     return Buffer.concat([

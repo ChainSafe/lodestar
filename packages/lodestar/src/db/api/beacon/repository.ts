@@ -1,4 +1,4 @@
-import {Type} from "@chainsafe/ssz";
+import {ArrayLike, Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {IDatabaseController} from "../../controller";
@@ -90,16 +90,19 @@ export abstract class BulkRepository<T> extends Repository<T> {
     await this.db.batchDelete(criteria);
   }
 
-  public async deleteManyByValue(values: T[]): Promise<void> {
-    await this.deleteMany(values.map(value => this.getId(value)));
+  public async deleteManyByValue(values: ArrayLike<T>): Promise<void> {
+    await this.deleteMany(Array.from({length: values.length}, (_, i) => this.getId(values[i])));
   }
 
-  public async addMany(values: T[]): Promise<void> {
+  public async addMany(values: ArrayLike<T>): Promise<void> {
     await this.db.batchPut(
-      values.map((value) => ({
-        key: encodeKey(this.bucket, this.getId(value)),
-        value: this.type.serialize(value),
-      }))
+      Array.from({length: values.length}, (_, i) => {
+        const value = values[i];
+        return {
+          key: encodeKey(this.bucket, this.getId(value)),
+          value: this.type.serialize(value),
+        };
+      })
     );
   }
 }
