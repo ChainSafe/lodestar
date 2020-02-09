@@ -248,8 +248,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     requestOnly?: boolean
   ): Promise<T> {
     const protocol = createRpcProtocol(method, this.encoding);
-    // eslint-disable-next-line @typescript-eslint/ban-types
-    const {stream} = await this.libp2p.dialProtocol(peerInfo, protocol) as {stream: Object};
+    const {stream} = await this.libp2p.dialProtocol(peerInfo, protocol) as {stream: Stream};
     return await new Promise((resolve, reject) => {
       this.logger.verbose(`send ${method} request to ${peerInfo.id.toB58String()}`);
       const responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
