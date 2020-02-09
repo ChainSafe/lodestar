@@ -4,7 +4,7 @@
 
 import {EventEmitter} from "events";
 
-import {BeaconState, Eth1Data, Number64, Root, DepositData} from "@chainsafe/eth2.0-types";
+import {BeaconState, Eth1Data, Number64, DepositData} from "@chainsafe/eth2.0-types";
 import {Block} from "ethers/providers";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -67,7 +67,7 @@ export interface IEth1Notifier extends Eth1EventEmitter {
   /**
    * Return the merkle root of the deposits
    */
-  depositRoot(block?: string | number): Promise<Root>;
+  depositRoot(block?: string | number): Promise<Uint8Array>;
 
   /**
    * Retruns deposit count

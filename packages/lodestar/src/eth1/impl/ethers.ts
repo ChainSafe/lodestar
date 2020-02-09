@@ -133,7 +133,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     return this.provider.getBlock(blockHashOrBlockNumber, false);
   }
 
-  public async depositRoot(block?: string | number): Promise<Root> {
+  public async depositRoot(block?: string | number): Promise<Uint8Array> {
     const depositRootHex = await this.contract.get_deposit_root({blockTag: block || "latest"});
     return fromHex(depositRootHex);
   }

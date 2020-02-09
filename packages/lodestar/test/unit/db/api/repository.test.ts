@@ -12,22 +12,22 @@ import {Bucket} from "../../../../src/db/schema";
 
 chai.use(chaiAsPromised);
 
-const TestSSZType = new ContainerType({
+interface TestType {
+  bool: boolean;
+  bytes: Bytes32;
+}
+
+const TestSSZType = new ContainerType<TestType>({
   fields: {
     bool: config.types.Boolean,
     bytes: config.types.Bytes32,
   },
 });
 
-interface TestType {
-  bool: boolean;
-  bytes: Bytes32;
-}
-
 class TestRepository extends BulkRepository<TestType> {
 
   public constructor(db: IDatabaseController) {
-    super(config, db, Bucket.deposit, TestSSZType);
+    super(config, db, Bucket.depositData, TestSSZType);
   }
 
 }

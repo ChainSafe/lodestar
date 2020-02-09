@@ -41,7 +41,7 @@ describe("StatefulDagLMDGHOST", () => {
     lmd.addBlock(3, e, b);
     lmd.addBlock(4, f, c);
     const head = lmd.head();
-    assert(head.equals(f));
+    assert.deepEqual(head, f);
   });
   it("should accept attestations and correctly compute the head - 1", () => {
     /*

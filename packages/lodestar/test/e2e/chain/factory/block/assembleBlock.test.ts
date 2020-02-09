@@ -22,15 +22,13 @@ import {
   AttesterSlashingRepository,
   BlockRepository,
   ChainRepository,
-  DepositRepository,
-  MerkleTreeRepository,
+  DepositDataRepository,
+  DepositDataRootListRepository,
   ProposerSlashingRepository,
   StateRepository,
   VoluntaryExitRepository
 } from "../../../../../src/db/api/beacon/repositories";
 import {ValidatorApi} from "../../../../../src/api/rpc/api/validator";
-import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
-import {MerkleTreeSerialization} from "../../../../../src/util/serialization";
 import BlockProposingService from "@chainsafe/lodestar-validator/lib/services/block";
 import {describe, it} from "mocha";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
@@ -42,12 +40,12 @@ describe("produce block", function () {
     chain: sinon.createStubInstance(ChainRepository),
     block: sinon.createStubInstance(BlockRepository),
     state: sinon.createStubInstance(StateRepository),
-    merkleTree: sinon.createStubInstance(MerkleTreeRepository),
+    depositDataRootList: sinon.createStubInstance(DepositDataRootListRepository),
     proposerSlashing: sinon.createStubInstance(ProposerSlashingRepository),
     attesterSlashing: sinon.createStubInstance(AttesterSlashingRepository),
     aggregateAndProof: sinon.createStubInstance(AggregateAndProofRepository),
     voluntaryExit: sinon.createStubInstance(VoluntaryExitRepository),
-    deposit: sinon.createStubInstance(DepositRepository),
+    depositData: sinon.createStubInstance(DepositDataRepository),
   }; // missing transfer
   // @ts-ignore
   const opPoolStub = new OpPool({}, {config: config, db: dbStub, eth1: sinon.createStubInstance(EthersEth1Notifier)});
@@ -75,20 +73,21 @@ describe("produce block", function () {
       balances,
       latestBlockHeader: parentHeader.message,
     });
-    const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
-    tree.add(0, config.types.DepositData.hashTreeRoot(generateDeposit().data));
+    const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
+    const tree = depositDataRootList.backing();
+    depositDataRootList.push(config.types.DepositData.hashTreeRoot(generateDeposit().data));
     dbStub.block.getChainHead.resolves(parentBlock);
     dbStub.state.get.resolves(config.types.BeaconState.clone(state));
     dbStub.block.get.withArgs(chainStub.forkChoice.head()).resolves(parentBlock);
-    dbStub.merkleTree.getProgressiveMerkleTree.resolves(tree);
+    dbStub.depositDataRootList.get.resolves(depositDataRootList);
     dbStub.proposerSlashing.getAll.resolves([]);
     dbStub.aggregateAndProof.getAll.resolves([]);
     dbStub.attesterSlashing.getAll.resolves([]);
     dbStub.voluntaryExit.getAll.resolves([]);
-    dbStub.deposit.getAllBetween.resolves([]);
+    dbStub.depositData.getAllBetween.resolves([]);
     eth1Stub.depositCount.resolves(1);
-    eth1Stub.depositRoot.resolves(tree.root());
-    eth1Stub.getEth1Vote.resolves({depositCount: 1, depositRoot: tree.root(), blockHash: Buffer.alloc(32)});
+    eth1Stub.depositRoot.resolves(tree.root);
+    eth1Stub.getEth1Vote.resolves({depositCount: 1, depositRoot: tree.root, blockHash: Buffer.alloc(32)});
     // @ts-ignore
     eth1Stub.getHead.resolves({
       hash: "0x" + ZERO_HASH.toString("hex"),

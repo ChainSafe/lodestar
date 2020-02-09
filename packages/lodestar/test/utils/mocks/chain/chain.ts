@@ -9,11 +9,12 @@ import {
   Slot,
   Uint16,
   Uint64,
-  SignedBeaconBlock
+  SignedBeaconBlock,
+  Root
 } from "@chainsafe/eth2.0-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {generateState} from "../../state";
-import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
+import { TreeBackedValue, List } from "@chainsafe/ssz";
 
 export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public latestState: BeaconState;
@@ -37,7 +38,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     return true;
   }
   public async advanceState(slot?: Slot): Promise<void>{}
-  initializeBeaconChain(genesisState: BeaconState, merkleTree: ProgressiveMerkleTree): Promise<void> {
+  initializeBeaconChain(genesisState: BeaconState, depositDataRootList: TreeBackedValue<List<Root>>): Promise<void> {
     throw new Error("Method not implemented.");
   }
   isInitialized(): boolean {
