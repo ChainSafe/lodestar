@@ -3,7 +3,6 @@
  */
 
 import PeerInfo from "peer-info";
-import PeerId from "peer-id";
 import {
   BeaconBlocksByRangeRequest,
   BeaconBlocksByRangeResponse,
@@ -70,7 +69,7 @@ export class SyncReqResp implements ISyncReqResp {
     const myStatus = await this.createStatus();
     await Promise.all(
       this.network.getPeers().map((peerInfo) =>
-        this.network.reqResp.status(peerInfo.id, myStatus)));
+        this.network.reqResp.status(peerInfo, myStatus)));
   }
 
   public async stop(): Promise<void> {
@@ -78,32 +77,32 @@ export class SyncReqResp implements ISyncReqResp {
     this.network.reqResp.removeListener("request", this.onRequest);
     await Promise.all(
       this.network.getPeers().map((peerInfo) =>
-        this.network.reqResp.goodbye(peerInfo.id, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN))));
+        this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN))));
   }
 
   public onRequest = async (
-    peerId: PeerId,
+    peerInfo: PeerInfo,
     method: Method,
     id: RequestId,
     body: RequestBody,
   ): Promise<void> => {
     switch (method) {
       case Method.Status:
-        return await this.onStatus(peerId, id, body as Status);
+        return await this.onStatus(peerInfo, id, body as Status);
       case Method.Goodbye:
-        return await this.onGoodbye(peerId, id, body as Goodbye);
+        return await this.onGoodbye(peerInfo, id, body as Goodbye);
       case Method.BeaconBlocksByRange:
         return await this.onBeaconBlocksByRange(id, body as BeaconBlocksByRangeRequest);
       case Method.BeaconBlocksByRoot:
         return await this.onBeaconBlocksByRoot(id, body as BeaconBlocksByRootRequest);
       default:
-        this.logger.error(`Invalid request method ${method} from ${peerId.toB58String()}`);
+        this.logger.error(`Invalid request method ${method} from ${peerInfo.id.toB58String()}`);
     }
   };
 
-  public async onStatus(peerId: PeerId, id: RequestId, request: Status): Promise<void> {
+  public async onStatus(peerInfo: PeerInfo, id: RequestId, request: Status): Promise<void> {
     // set status on peer
-    this.reps.get(peerId.toB58String()).latestStatus = request;
+    this.reps.get(peerInfo.id.toB58String()).latestStatus = request;
     // send status response
     try {
       const status = await this.createStatus();
@@ -112,7 +111,7 @@ export class SyncReqResp implements ISyncReqResp {
       this.network.reqResp.sendResponse(id, e, null);
     }
     if (await this.shouldDisconnectOnStatus(request)) {
-      this.network.reqResp.goodbye(peerId, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
+      this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
     }
   }
 
@@ -132,9 +131,9 @@ export class SyncReqResp implements ISyncReqResp {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public async onGoodbye(peerId: PeerId, id: RequestId, request: Goodbye): Promise<void> {
+  public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
     this.network.reqResp.sendResponse(id, null, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
-    await this.network.disconnect(new PeerInfo(peerId));
+    await this.network.disconnect(peerInfo);
   }
 
   public async onBeaconBlocksByRange(
@@ -209,7 +208,7 @@ export class SyncReqResp implements ISyncReqResp {
     ) {
       const request = await this.createStatus();
       try {
-        const response = await this.network.reqResp.status(peerInfo.id, request);
+        const response = await this.network.reqResp.status(peerInfo, request);
         this.reps.get(peerInfo.id.toB58String()).latestStatus = response;
       } catch (e) {
         this.logger.error(e);

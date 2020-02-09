@@ -2,10 +2,10 @@
  * @module sync
  */
 
+import PeerInfo from "peer-info";
 import {RequestBody} from "@chainsafe/eth2.0-types";
 
 import {Method, RequestId} from "../../constants";
-import PeerId from "peer-id";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface ISyncOptions {
@@ -19,5 +19,5 @@ export interface ISyncReqResp {
   start: () => Promise<void>;
   stop: () => Promise<void>;
 
-  onRequest: (peerId: PeerId, method: Method, id: RequestId, body: RequestBody) => Promise<void>;
+  onRequest: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => Promise<void>;
 }

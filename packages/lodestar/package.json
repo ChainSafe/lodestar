@@ -77,7 +77,7 @@
     "libp2p-tcp": "^0.14.1",
     "libp2p-crypto": "0.17.2",
     "noice-json-rpc": "^1.2.0",
-    "peer-id": "^0.13.4",
+    "peer-id": "^0.13.7",
     "peer-info": "^0.17.0",
     "pouchdb-adapter-memory": "^7.0.0",
     "pouchdb-core": "^7.0.0",

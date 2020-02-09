@@ -2,7 +2,6 @@
  * @module network
  */
 import PeerInfo from "peer-info";
-import PeerId from "peer-id";
 import {EventEmitter} from "events";
 import {
   BeaconBlocksByRangeRequest,
@@ -27,7 +26,7 @@ interface IRespEvents {
 }
 
 export interface IReqEvents {
-  request: (peerId: PeerId, method: Method, id: RequestId, body: RequestBody) => void;
+  request: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => void;
 }
 
 export type ReqEventEmitter = StrictEventEmitter<EventEmitter, IReqEvents>;
@@ -37,10 +36,10 @@ export interface IReqResp extends ReqEventEmitter {
   // sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T>;
   sendResponse(id: RequestId, err: Error|null, result: ResponseBody|null): void;
 
-  status(peerId: PeerId, request: Status): Promise<Status>;
-  goodbye(peerId: PeerId, request: Goodbye): Promise<void>;
-  beaconBlocksByRange(peerId: PeerId, request: BeaconBlocksByRangeRequest): Promise<BeaconBlocksByRangeResponse>;
-  beaconBlocksByRoot(peerId: PeerId, request: BeaconBlocksByRootRequest): Promise<BeaconBlocksByRootResponse>;
+  status(peerInfo: PeerInfo, request: Status): Promise<Status>;
+  goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void>;
+  beaconBlocksByRange(peerInfo: PeerInfo, request: BeaconBlocksByRangeRequest): Promise<BeaconBlocksByRangeResponse>;
+  beaconBlocksByRoot(peerInfo: PeerInfo, request: BeaconBlocksByRootRequest): Promise<BeaconBlocksByRootResponse>;
 }
 
 // network

@@ -32,6 +32,7 @@ import {createResponseEvent, createRpcProtocol, randomRequestId,} from "./util";
 import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
 import {INetworkOptions} from "./options";
 import PeerId from "peer-id";
+import PeerInfo from "peer-info";
 
 interface IReqEventEmitterClass {
   new(): ReqEventEmitter;
@@ -108,23 +109,23 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   public sendResponse(id: RequestId, err: Error, body: ResponseBody): void {
     this.responseListener.emit(createResponseEvent(id), err, body);
   }
-  public async status(peerId: PeerId, request: Status): Promise<Status> {
-    return await this.sendRequest<Status>(peerId, Method.Status, request);
+  public async status(peerInfo: PeerInfo, request: Status): Promise<Status> {
+    return await this.sendRequest<Status>(peerInfo, Method.Status, request);
   }
-  public async goodbye(peerId: PeerId, request: Goodbye): Promise<void> {
-    await this.sendRequest<Goodbye>(peerId, Method.Goodbye, request, true);
+  public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
+    await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request, true);
   }
   public async beaconBlocksByRange(
-    peerId: PeerId,
+    peerInfo: PeerInfo,
     request: BeaconBlocksByRangeRequest
   ): Promise<BeaconBlocksByRangeResponse> {
-    return await this.sendRequest<BeaconBlocksByRangeResponse>(peerId, Method.BeaconBlocksByRange, request);
+    return await this.sendRequest<BeaconBlocksByRangeResponse>(peerInfo, Method.BeaconBlocksByRange, request);
   }
   public async beaconBlocksByRoot(
-    peerId: PeerId,
+    peerInfo: PeerInfo,
     request: BeaconBlocksByRootRequest
   ): Promise<BeaconBlocksByRootResponse> {
-    return await this.sendRequest<BeaconBlocksByRootResponse>(peerId, Method.BeaconBlocksByRoot, request);
+    return await this.sendRequest<BeaconBlocksByRootResponse>(peerInfo, Method.BeaconBlocksByRoot, request);
   }
 
   private handleRequest = async (peerId: PeerId, method: Method, data: Buffer): Promise<Buffer> => {
@@ -141,7 +142,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         resolve(this.encodeResponse(method, output));
       };
       responseTimer = this.responseListener.waitForResponse(requestId, responseListenerFn);
-      this.emit("request", peerId, method, requestId, request);
+      this.emit("request", new PeerInfo(peerId), method, requestId, request);
     });
   };
 
@@ -241,16 +242,16 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     }
   }
   private async sendRequest<T extends ResponseBody>(
-    peerId: PeerId,
+    peerInfo: PeerInfo,
     method: Method,
     body: RequestBody,
     requestOnly?: boolean
   ): Promise<T> {
     const protocol = createRpcProtocol(method, this.encoding);
     // eslint-disable-next-line @typescript-eslint/ban-types
-    const {stream} = await this.libp2p.dialProtocol(peerId, protocol) as {stream: Object};
+    const {stream} = await this.libp2p.dialProtocol(peerInfo, protocol) as {stream: Object};
     return await new Promise((resolve, reject) => {
-      this.logger.verbose(`send ${method} request to ${peerId.toB58String()}`);
+      this.logger.verbose(`send ${method} request to ${peerInfo.id.toB58String()}`);
       const responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
       pipe(
         [this.encodeRequest(method, body)],
@@ -264,7 +265,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
           }
           const data = Buffer.concat(srcs);
           clearTimeout(responseTimer);
-          this.logger.verbose(`receive ${method} response from ${peerId.toB58String()}`);
+          this.logger.verbose(`receive ${method} response from ${peerInfo.id.toB58String()}`);
           try {
             resolve(requestOnly? undefined : this.decodeResponse(method, data) as T);
           } catch (e) {

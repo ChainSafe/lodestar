@@ -1,8 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
-// @ts-ignore
 import PeerInfo from "peer-info";
-// @ts-ignore
 import PeerId from "peer-id";
 import {Goodbye, Status} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
@@ -17,7 +15,7 @@ import {SyncReqResp} from "../../../src/sync/reqResp";
 import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
 import {ReqResp} from "../../../src/network/reqResp";
 import {ReputationStore} from "../../../src/sync/IReputation";
-import { generateEmptySignedBlock } from "../../utils/block";
+import {generateEmptySignedBlock} from "../../utils/block";
 
 describe("syncing", function () {
   const sandbox = sinon.createSandbox();
@@ -98,7 +96,7 @@ describe("syncing", function () {
   });
 
   it("should handle request  - onStatus(success)", async function () {
-    const peerId: PeerId = new PeerId(Buffer.from("lodestar")); 
+    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     const body: Status = {
       headForkVersion: Buffer.alloc(4),
       finalizedRoot: Buffer.alloc(32),
@@ -113,7 +111,7 @@ describe("syncing", function () {
     dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
     dbStub.state.get.resolves(generateState());
     try {
-      await syncRpc.onRequest(peerId, Method.Status, "status", body);
+      await syncRpc.onRequest(peerInfo, Method.Status, "status", body);
       expect(reqRespStub.sendResponse.calledOnce).to.be.true;
       expect(reqRespStub.goodbye.called).to.be.false;
     }catch (e) {
@@ -122,7 +120,7 @@ describe("syncing", function () {
   });
 
   it("should handle request  - onStatus(error)", async function () {
-    const peerId: PeerId = new PeerId(Buffer.from("lodestar")); 
+    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     const body: Status = {
       headForkVersion: Buffer.alloc(4),
       finalizedRoot: Buffer.alloc(32),
@@ -135,7 +133,7 @@ describe("syncing", function () {
     });
     try {
       reqRespStub.sendResponse.throws(new Error("server error"));
-      await syncRpc.onRequest(peerId, Method.Status, "status", body);
+      await syncRpc.onRequest(peerInfo, Method.Status, "status", body);
     }catch (e) {
       expect(reqRespStub.sendResponse.called).to.be.true;
     }
@@ -197,11 +195,11 @@ describe("syncing", function () {
   });
 
   it("should handle request - onGoodbye", async function () {
-    const peerId: PeerId = new PeerId(Buffer.from("lodestar")); 
+    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     const goodbye: Goodbye = 1n;
     networkStub.disconnect.resolves(0);
     try {
-      await syncRpc.onRequest(peerId, Method.Goodbye, "goodBye", goodbye);
+      await syncRpc.onRequest(peerInfo, Method.Goodbye, "goodBye", goodbye);
       expect(networkStub.disconnect.calledOnce).to.be.true;
     }catch (e) {
       expect.fail(e.stack);
@@ -209,9 +207,9 @@ describe("syncing", function () {
   });
 
   it("should fail to handle request ", async function () {
-    const peerId: PeerId = new PeerId(Buffer.from("lodestar")); 
+    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     try {
-      await syncRpc.onRequest(peerId, null, "null", null);
+      await syncRpc.onRequest(peerInfo, null, "null", null);
     }catch (e) {
       expect.fail(e.stack);
     }
