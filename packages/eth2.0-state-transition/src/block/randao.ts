@@ -13,8 +13,6 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {DomainType} from "../constants";
 import {getBeaconProposerIndex, getCurrentEpoch, getDomain, getRandaoMix,} from "../util";
 
-// See https://github.com/ethereum/eth2.0-specs/blob/v0.8.1/specs/core/0_beacon-chain.md#randao
-
 export function processRandao(
   config: IBeaconConfig,
   state: BeaconState,

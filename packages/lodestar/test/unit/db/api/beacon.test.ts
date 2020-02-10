@@ -5,7 +5,7 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {BeaconDb} from "../../../../src/db/api";
 import {LevelDbController} from "../../../../src/db/controller";
 import {BlockRepository, ChainRepository, StateRepository} from "../../../../src/db/api/beacon/repositories";
-import {generateEmptyBlock} from "../../../utils/block";
+import {generateEmptySignedBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";
 import {beforeEach, describe, it} from "mocha";
@@ -27,13 +27,13 @@ describe("beacon db api", function() {
   });
 
   it("should store chain head and update refs", async function () {
-    const block = generateEmptyBlock();
+    const block = generateEmptySignedBlock();
     const state = generateState();
     await db.storeChainHead(block, state);
     expect(db.block.add.withArgs(block).calledOnce).to.be.true;
-    expect(db.state.set.withArgs(block.stateRoot, state).calledOnce).to.be.true;
-    expect(db.chain.setLatestStateRoot.withArgs(block.stateRoot).calledOnce).to.be.true;
-    expect(db.chain.setChainHeadSlot.withArgs(block.slot).calledOnce).to.be.true;
+    expect(db.state.set.withArgs(block.message.stateRoot, state).calledOnce).to.be.true;
+    expect(db.chain.setLatestStateRoot.withArgs(block.message.stateRoot).calledOnce).to.be.true;
+    expect(db.chain.setChainHeadSlot.withArgs(block.message.slot).calledOnce).to.be.true;
   });
 
   it("should not update chain head - missing block", async function () {
@@ -44,7 +44,7 @@ describe("beacon db api", function() {
   });
 
   it("should not update chain head - missing state", async function () {
-    db.block.get.resolves(generateEmptyBlock());
+    db.block.get.resolves(generateEmptySignedBlock());
     db.state.get.resolves(null);
     await expect(
       db.updateChainHead(Buffer.alloc(32), Buffer.alloc(32))
@@ -52,7 +52,7 @@ describe("beacon db api", function() {
   });
 
   it("should update chain head", async function () {
-    db.block.get.resolves(generateEmptyBlock());
+    db.block.get.resolves(generateEmptySignedBlock());
     db.state.get.resolves(generateState());
     await db.updateChainHead(Buffer.alloc(32), Buffer.alloc(32));
     expect(db.chain.setLatestStateRoot.calledOnce).to.be.true;

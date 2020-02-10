@@ -1,6 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {signingRoot} from "@chainsafe/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 import {describe, beforeEach, afterEach} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {EMPTY_SIGNATURE} from "../../../../src/constants";
@@ -17,11 +17,12 @@ describe("process block - block header", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let getTemporaryBlockHeaderStub: any, getBeaconProposeIndexStub: any;
+  let getTemporaryBlockHeaderStub: any, getBeaconProposeIndexStub: any, isValidProposerStub: any;
 
   beforeEach(() => {
     getTemporaryBlockHeaderStub = sandbox.stub(utils, "getTemporaryBlockHeader");
     getBeaconProposeIndexStub = sandbox.stub(utilsProposer, "getBeaconProposerIndex");
+    isValidProposerStub = sandbox.stub(utils, "isValidProposer");
   });
 
   afterEach(() => {
@@ -55,11 +56,10 @@ describe("process block - block header", function () {
     state.validators.push(generateValidator({activation: 0, exit: 10, slashed: true}));
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.parentRoot = signingRoot(config.types.BeaconBlockHeader, state.latestBlockHeader);
+    block.parentRoot = hashTreeRoot(config.types.BeaconBlockHeader, state.latestBlockHeader);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),
       slot: 5,
-      signature: EMPTY_SIGNATURE,
       stateRoot: Buffer.alloc(10),
       blockBodyRoot: Buffer.alloc(10)
     });
@@ -71,44 +71,22 @@ describe("process block - block header", function () {
     }
   });
 
-  it("fail to process header - invalid signature", function () {
+  it("should process block", function () {
     const state = generateState({slot: 5});
     state.validators.push(generateValidator({activation: 0, exit: 10}));
     const block = generateEmptyBlock();
     block.slot = 5;
-    block.parentRoot = signingRoot(config.types.BeaconBlockHeader, state.latestBlockHeader);
+    block.parentRoot = hashTreeRoot(config.types.BeaconBlockHeader, state.latestBlockHeader);
     getTemporaryBlockHeaderStub.returns({
       previousBlockRoot: Buffer.alloc(10),
       slot: 5,
-      signature: EMPTY_SIGNATURE,
       stateRoot: Buffer.alloc(10),
       blockBodyRoot: Buffer.alloc(10)
     });
+    getBeaconProposeIndexStub.returns(0);
+    isValidProposerStub.returns(true);
     try {
       processBlockHeader(config, state, block);
-      expect.fail();
-    } catch (e) {
-    getBeaconProposeIndexStub.returns(0);
-      expect(getTemporaryBlockHeaderStub.calledOnce).to.be.true;
-    }
-  });
-
-  it("should process block - without signature verification", function () {
-    const state = generateState({slot: 5});
-    state.validators.push(generateValidator({activation: 0, exit: 10}));
-    const block = generateEmptyBlock();
-    block.slot = 5;
-    block.parentRoot = signingRoot(config.types.BeaconBlockHeader, state.latestBlockHeader);
-    getTemporaryBlockHeaderStub.returns({
-      previousBlockRoot: Buffer.alloc(10),
-      slot: 5,
-      signature: EMPTY_SIGNATURE,
-      stateRoot: Buffer.alloc(10),
-      blockBodyRoot: Buffer.alloc(10)
-    });
-    getBeaconProposeIndexStub.returns(0);
-    try {
-      processBlockHeader(config, state, block, false);
       expect(getTemporaryBlockHeaderStub.calledOnce).to.be.true;
 
     } catch (e) {

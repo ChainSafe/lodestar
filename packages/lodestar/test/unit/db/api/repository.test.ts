@@ -127,19 +127,4 @@ describe('database repository', function () {
         ).calledOnce
     ).to.be.true;
   });
-
-  it('should delete all items', async function () {
-    const item = serialize(TestSSZType, {bool: true, bytes: Buffer.alloc(32)});
-    const items = [item, item];
-    controller.search.resolves(items);
-    await repository.deleteAll();
-    expect(
-      controller
-        .batchDelete
-        .withArgs(
-          sinon.match((criteria) => criteria.length === 2)
-        ).calledOnce
-    ).to.be.true;
-  });
-
 });

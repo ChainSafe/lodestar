@@ -2,8 +2,9 @@
  * @module chain/stateTransition/util
  */
 
-import {BeaconState, Epoch, Validator, ValidatorIndex, AttesterSlashing, ProposerSlashing,
-  VoluntaryExit,} from "@chainsafe/eth2.0-types";
+import {
+  BeaconState, Epoch, Validator, ValidatorIndex, AttesterSlashing, ProposerSlashing, SignedVoluntaryExit,
+} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {FAR_FUTURE_EPOCH, DomainType} from "../constants";
@@ -12,7 +13,7 @@ import {getValidatorChurnLimit, isSlashableValidator, isActiveValidator} from ".
 import {decreaseBalance, increaseBalance} from "./balance";
 import {getBeaconProposerIndex} from "./proposer";
 import {isSlashableAttestationData, isValidIndexedAttestation, getDomain} from ".";
-import {equals, signingRoot} from "@chainsafe/ssz";
+import {equals, hashTreeRoot} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 
 
@@ -105,14 +106,18 @@ export function isValidProposerSlashing(
   verifySignatures = true
 ): boolean {
   const proposer = state.validators[proposerSlashing.proposerIndex];
-  const header1Epoch = computeEpochAtSlot(config, proposerSlashing.header1.slot);
-  const header2Epoch = computeEpochAtSlot(config, proposerSlashing.header2.slot);
+  const header1Epoch = computeEpochAtSlot(config, proposerSlashing.signedHeader1.message.slot);
+  const header2Epoch = computeEpochAtSlot(config, proposerSlashing.signedHeader2.message.slot);
   // Verify slots match
-  if (proposerSlashing.header1.slot !== proposerSlashing.header2.slot) {
+  if (proposerSlashing.signedHeader1.message.slot !== proposerSlashing.signedHeader2.message.slot) {
     return false;
   }
   // But the headers are different
-  if (equals(config.types.BeaconBlockHeader, proposerSlashing.header1, proposerSlashing.header2)) {
+  if (equals(
+    config.types.BeaconBlockHeader,
+    proposerSlashing.signedHeader1.message,
+    proposerSlashing.signedHeader2.message,
+  )) {
     return false;
   }
   // Check proposer is slashable
@@ -125,8 +130,8 @@ export function isValidProposerSlashing(
   }
   const proposalData1Verified = bls.verify(
     proposer.pubkey,
-    signingRoot(config.types.BeaconBlockHeader, proposerSlashing.header1),
-    proposerSlashing.header1.signature,
+    hashTreeRoot(config.types.BeaconBlockHeader, proposerSlashing.signedHeader1.message),
+    proposerSlashing.signedHeader1.signature,
     getDomain(config, state, DomainType.BEACON_PROPOSER, header1Epoch),
   );
   if (!proposalData1Verified) {
@@ -134,8 +139,8 @@ export function isValidProposerSlashing(
   }
   const proposalData2Verified = bls.verify(
     proposer.pubkey,
-    signingRoot(config.types.BeaconBlockHeader, proposerSlashing.header2),
-    proposerSlashing.header2.signature,
+    hashTreeRoot(config.types.BeaconBlockHeader, proposerSlashing.signedHeader2.message),
+    proposerSlashing.signedHeader2.signature,
     getDomain(config, state, DomainType.BEACON_PROPOSER, header2Epoch),
   );
   return proposalData2Verified;
@@ -144,24 +149,24 @@ export function isValidProposerSlashing(
 export function isValidVoluntaryExit(
   config: IBeaconConfig,
   state: BeaconState,
-  exit: VoluntaryExit,
+  signedExit: SignedVoluntaryExit,
   verifySignature = true
 ): boolean {
-  const validator = state.validators[exit.validatorIndex];
+  const validator = state.validators[signedExit.message.validatorIndex];
   const currentEpoch = getCurrentEpoch(config, state);
   // Verify the validator is active
   return (isActiveValidator(validator, currentEpoch)) &&
   // Verify the validator has not yet exited
   (validator.exitEpoch === FAR_FUTURE_EPOCH) &&
   // Exits must specify an epoch when they become valid; they are not valid before then
-  (currentEpoch >= exit.epoch) &&
+  (currentEpoch >= signedExit.message.epoch) &&
   // Verify the validator has been active long enough
   (currentEpoch >= validator.activationEpoch + config.params.PERSISTENT_COMMITTEE_PERIOD) &&
   // Verify signature
   (!verifySignature || bls.verify(
     validator.pubkey,
-    signingRoot(config.types.VoluntaryExit, exit),
-    exit.signature,
-    getDomain(config, state, DomainType.VOLUNTARY_EXIT, exit.epoch),
+    hashTreeRoot(config.types.VoluntaryExit, signedExit.message),
+    signedExit.signature,
+    getDomain(config, state, DomainType.VOLUNTARY_EXIT, signedExit.message.epoch),
   ));
 }

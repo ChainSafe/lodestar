@@ -14,7 +14,7 @@ import {
 
 import {
   AttestationData,
-  BeaconBlockHeader,
+  SignedBeaconBlockHeader,
   DepositData,
   IndexedAttestation,
 } from "./misc";
@@ -24,9 +24,9 @@ export interface ProposerSlashing {
   // Proposer index
   proposerIndex: ValidatorIndex;
   // First block header
-  header1: BeaconBlockHeader;
+  signedHeader1: SignedBeaconBlockHeader;
   // Second block header
-  header2: BeaconBlockHeader;
+  signedHeader2: SignedBeaconBlockHeader;
 }
 
 export interface AttesterSlashing {
@@ -57,6 +57,10 @@ export interface VoluntaryExit {
   epoch: Epoch;
   // Index of the exiting validator
   validatorIndex: ValidatorIndex;
+}
+
+export interface SignedVoluntaryExit {
+  message: VoluntaryExit;
   // Validator signature
   signature: BLSSignature;
 }

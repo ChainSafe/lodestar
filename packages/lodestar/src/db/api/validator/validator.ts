@@ -4,7 +4,7 @@
 
 import {deserialize, serialize} from "@chainsafe/ssz";
 import deepmerge from "deepmerge";
-import {Attestation, BeaconBlock, BLSPubkey} from "@chainsafe/eth2.0-types";
+import {Attestation, BLSPubkey, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {DatabaseService, IDatabaseApiOptions} from "../abstract";
 import {IAttestationSearchOptions, IValidatorDB} from "./interface";
 import {Bucket, encodeKey} from "../../schema";
@@ -15,20 +15,20 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
     super(opts);
   }
 
-  public async getBlock(pubKey: BLSPubkey): Promise<BeaconBlock|null> {
+  public async getBlock(pubKey: BLSPubkey): Promise<SignedBeaconBlock|null> {
     const data = await this.db.get(
       encodeKey(Bucket.lastProposedBlock, pubKey.toString("hex"))
     );
     if(!data) {
       return null;
     }
-    return deserialize(this.config.types.BeaconBlock, data);
+    return deserialize(this.config.types.SignedBeaconBlock, data);
   }
 
-  public async setBlock(pubKey: BLSPubkey,  block: BeaconBlock): Promise<void> {
+  public async setBlock(pubKey: BLSPubkey, signedBlock: SignedBeaconBlock): Promise<void> {
     await this.db.put(
       encodeKey(Bucket.lastProposedBlock, pubKey.toString("hex")),
-      serialize(this.config.types.BeaconBlock, block)
+      serialize(this.config.types.SignedBeaconBlock, signedBlock)
     );
   }
 

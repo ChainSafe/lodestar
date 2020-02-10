@@ -7,7 +7,7 @@ import {GossipEvent} from "../../../../../src/network/gossip/constants";
 import * as gossipUtils from "../../../../../src/network/gossip/utils";
 import {GossipMessageValidator} from "../../../../../src/network/gossip/validator";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import {generateEmptyVoluntaryExit} from "../../../../utils/voluntaryExits";
+import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits";
 import { getIncomingVoluntaryExitHandler } from "../../../../../src/network/gossip/handlers/voluntaryExit";
 
 describe("gossip handlers - voluntaryExit", function () {
@@ -29,7 +29,7 @@ describe("gossip handlers - voluntaryExit", function () {
   });
 
   it("handle valid voluntary exit", async function () {
-    const voluntaryExit = generateEmptyVoluntaryExit();
+    const voluntaryExit = generateEmptySignedVoluntaryExit();
     handleMessageStub.returns(voluntaryExit);
     validatorStub.isValidIncomingVoluntaryExit.resolves(true);
     await getIncomingVoluntaryExitHandler(validatorStub).bind(gossipStub)({data: Buffer.alloc(0)});
@@ -38,7 +38,7 @@ describe("gossip handlers - voluntaryExit", function () {
   });
 
   it("handle invalid voluntary exit", async function () {
-    const voluntaryExit = generateEmptyVoluntaryExit();
+    const voluntaryExit = generateEmptySignedVoluntaryExit();
     handleMessageStub.returns(voluntaryExit);
     validatorStub.isValidIncomingVoluntaryExit.resolves(false);
     await getIncomingVoluntaryExitHandler(validatorStub).bind(gossipStub)({data: Buffer.alloc(0)});

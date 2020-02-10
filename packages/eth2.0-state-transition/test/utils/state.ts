@@ -35,7 +35,6 @@ export function generateState(opts?: TestBeaconState): BeaconState {
       parentRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
       bodyRoot: hashTreeRoot(config.types.BeaconBlockBody, generateEmptyBlock().body),
-      signature: Buffer.alloc(96),
     },
     blockRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
     stateRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),

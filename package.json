@@ -8,15 +8,15 @@
     "postinstall": "lerna run build"
   },
   "devDependencies": {
-    "@babel/cli": "^7.2.3",
-    "@babel/core": "^7.3.3",
-    "@babel/generator": "^7.3.3",
-    "@babel/plugin-proposal-class-properties": "^7.3.3",
-    "@babel/plugin-proposal-object-rest-spread": "^7.3.2",
-    "@babel/plugin-syntax-bigint": "^7.4.4",
-    "@babel/preset-env": "^7.3.1",
-    "@babel/preset-typescript": "^7.3.3",
-    "@babel/register": "^7.0.0",
+    "@babel/cli": "^7.8.3",
+    "@babel/core": "^7.8.3",
+    "@babel/generator": "^7.8.3",
+    "@babel/plugin-proposal-class-properties": "^7.8.3",
+    "@babel/plugin-proposal-object-rest-spread": "^7.8.3",
+    "@babel/plugin-syntax-bigint": "^7.8.3",
+    "@babel/preset-env": "^7.8.3",
+    "@babel/preset-typescript": "^7.8.3",
+    "@babel/register": "^7.8.3",
     "@mpetrunic/eslint-import-resolver-lerna": "1.0.0",
     "@types/chai": "^4.1.7",
     "@types/chai-as-promised": "^7.1.0",
@@ -44,6 +44,6 @@
     "webpack": "^4.39.1"
   },
   "optionalDependencies": {
-    "@chainsafe/eth2-spec-tests": "0.9.2"
+    "@chainsafe/eth2-spec-tests": "0.9.4"
   }
 }

@@ -8,7 +8,8 @@ import {
   Eth1Data,
   number64, Slot,
   uint16,
-  uint64
+  uint64,
+  SignedBeaconBlock
 } from "@chainsafe/eth2.0-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {generateState} from "../../state";
@@ -30,9 +31,9 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public async start(): Promise<void> {}
   public async stop(): Promise<void> {}
   public async receiveAttestation(attestation: Attestation): Promise<void> {}
-  public async receiveBlock(block: BeaconBlock): Promise<void> {}
+  public async receiveBlock(signedBlock: SignedBeaconBlock): Promise<void> {}
   public async applyForkChoiceRule(): Promise<void> {}
-  public async isValidBlock(state: BeaconState, block: BeaconBlock): Promise<boolean> {
+  public async isValidBlock(state: BeaconState, block: SignedBeaconBlock): Promise<boolean> {
     return true;
   }
   public async advanceState(slot?: Slot): Promise<void>{}

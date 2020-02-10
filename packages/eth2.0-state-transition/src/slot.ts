@@ -3,7 +3,7 @@
  */
 
 import assert from "assert";
-import {hashTreeRoot, signingRoot} from "@chainsafe/ssz";
+import {hashTreeRoot} from "@chainsafe/ssz";
 import {BeaconState, Slot,} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -39,6 +39,6 @@ function processSlot(config: IBeaconConfig, state: BeaconState): void {
   }
 
   // Cache block root
-  const previousBlockRoot = signingRoot(config.types.BeaconBlockHeader, state.latestBlockHeader);
+  const previousBlockRoot = hashTreeRoot(config.types.BeaconBlockHeader, state.latestBlockHeader);
   state.blockRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousBlockRoot;
 }

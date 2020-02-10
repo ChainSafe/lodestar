@@ -1,0 +1,2 @@
+--file ./test/setup.ts
+-r ts-node/register

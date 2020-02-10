@@ -40,7 +40,7 @@ describe('process epoch - slashings', function () {
     try {
       processRegistryUpdates(config, state);
       expect(initiateValidatorExitStub.calledOnceWith(sinon.match.any, sinon.match.any, 1)).to.be.true;
-      expect(state.validators[0].activationEligibilityEpoch).to.be.equal(1);
+      expect(state.validators[0].activationEligibilityEpoch).to.be.equal(2);
     } catch (e) {
       expect.fail(e.stack);
     }

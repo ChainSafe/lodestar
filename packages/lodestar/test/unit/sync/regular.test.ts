@@ -11,8 +11,8 @@ import {AttestationOperations, OpPool, VoluntaryExitOperations, AggregateAndProo
 import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {RegularSync} from "../../../src/sync/regular";
 import {generateState} from "../../utils/state";
-import {generateEmptyBlock} from "../../utils/block";
-import {generateEmptyAttestation, generateEmptyVoluntaryExit, generateEmptyAggregateAndProof} from "../../utils/attestation";
+import {generateEmptySignedBlock} from "../../utils/block";
+import {generateEmptyAttestation, generateEmptyAggregateAndProof, generateEmptySignedVoluntaryExit} from "../../utils/attestation";
 import {AttestationRepository, BlockRepository, StateRepository, VoluntaryExitRepository, ProposerSlashingRepository, AttesterSlashingRepository} from "../../../src/db/api/beacon/repositories";
 import {generateEmptyProposerSlashing, generateEmptyAttesterSlashing} from "@chainsafe/eth2.0-state-transition/test/utils/slashings";
 import {ProposerSlashingOperations, AttesterSlashingOperations} from "../../../src/opPool";
@@ -62,7 +62,7 @@ describe("syncing", function () {
 
 
   it('should able to receive block', async function () {
-    let block = generateEmptyBlock();
+    let block = generateEmptySignedBlock();
     dbStub.block.has.resolves(false);
     chainStub.receiveBlock.resolves(0);
     try {
@@ -104,7 +104,7 @@ describe("syncing", function () {
   });
 
   it('should receive Voluntary Exit', async function() {
-    let voluntaryExit = generateEmptyVoluntaryExit();
+    let voluntaryExit = generateEmptySignedVoluntaryExit();
     await regularSync.receiveVoluntaryExit(voluntaryExit);
     expect(opPoolStub.voluntaryExits.receive.calledOnceWith(voluntaryExit)).to.be.equal(true);
   });

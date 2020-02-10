@@ -12,7 +12,7 @@ export async function getAttesterDuties(
   publicKeys: BLSPubkey[]
 ): Promise<ValidatorDuty[]> {
   const block = await db.block.get(chain.forkChoice.head());
-  const state = await db.state.get(block.stateRoot);
+  const state = await db.state.get(block.message.stateRoot);
 
   const validatorIndexes = await Promise.all(publicKeys.map(async publicKey => {
     return  state.validators.findIndex((v) => v.pubkey.equals(publicKey));

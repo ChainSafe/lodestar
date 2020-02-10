@@ -6,7 +6,7 @@ import {ContractTransaction, ethers, Wallet} from "ethers";
 import {Provider} from "ethers/providers";
 import {BigNumber, ParamType} from "ethers/utils";
 import bls, {PrivateKey} from "@chainsafe/bls";
-import {hash, signingRoot} from "@chainsafe/ssz";
+import {hash, hashTreeRoot} from "@chainsafe/ssz";
 import {DepositData} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -71,14 +71,18 @@ export class Eth1Wallet {
 
     depositData.signature = bls.sign(
       signingKey.toBytes(),
-      signingRoot(this.config.types.DepositData, depositData),
+      hashTreeRoot(this.config.types.DepositMessage, depositData),
       Buffer.from([0, 0, 0, DomainType.DEPOSIT])
     );
+
+    const depositDataRoot = hashTreeRoot(this.config.types.DepositData, depositData);
+
     // Send TX
     const tx: ContractTransaction = await contract.deposit(
       pubkey,
       withdrawalCredentials,
       depositData.signature,
+      depositDataRoot,
       {value}
     );
     await tx.wait();

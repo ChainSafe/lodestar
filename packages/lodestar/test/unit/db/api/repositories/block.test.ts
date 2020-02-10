@@ -2,7 +2,7 @@ import {beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {LevelDbController} from "../../../../../src/db/controller";
 import sinon from "sinon";
-import {generateEmptyBlock} from "../../../../utils/block";
+import {generateEmptySignedBlock} from "../../../../utils/block";
 import {expect} from "chai";
 import {BlockRepository} from "../../../../../src/db/api/beacon/repositories";
 import {ChainRepository} from "../../../../../src/db/api/beacon/repositories";
@@ -21,10 +21,10 @@ describe("block repository", function () {
 
   it("should add block refs", async function () {
     const blockRepo = new BlockRepository(config, controllerStub, chainStub);
-    const block = generateEmptyBlock();
+    const block = generateEmptySignedBlock();
     await blockRepo.set(Buffer.alloc(32), block);
     expect(
-      controllerStub.put.withArgs(encodeKey(Bucket.blockSlotRefs, block.slot), sinon.match.any).calledOnce
+      controllerStub.put.withArgs(encodeKey(Bucket.blockSlotRefs, block.message.slot), sinon.match.any).calledOnce
     ).to.be.true;
     expect(
       controllerStub.put.withArgs(encodeKey(Bucket.blockRootRefs, Buffer.alloc(32)), sinon.match.any).calledOnce

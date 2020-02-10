@@ -7,9 +7,9 @@ import {
   AggregateAndProof,
   Attestation,
   AttesterSlashing,
-  BeaconBlock,
   ProposerSlashing,
-  VoluntaryExit
+  SignedBeaconBlock,
+  SignedVoluntaryExit
 } from "@chainsafe/eth2.0-types";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
@@ -19,11 +19,11 @@ import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {IService} from "../../node";
 
 export interface IGossipEvents {
-  [GossipEvent.BLOCK]: (block: BeaconBlock) => void;
+  [GossipEvent.BLOCK]: (signedBlock: SignedBeaconBlock) => void;
   [GossipEvent.ATTESTATION_SUBNET]: (attestationSubnet: {attestation: Attestation; subnet: number}) => void;
   [GossipEvent.ATTESTATION]: (attestation: Attestation) => void;
   [GossipEvent.AGGREGATE_AND_PROOF]: (attestation: AggregateAndProof) => void;
-  [GossipEvent.VOLUNTARY_EXIT]: (voluntaryExit: VoluntaryExit) => void;
+  [GossipEvent.VOLUNTARY_EXIT]: (voluntaryExit: SignedVoluntaryExit) => void;
   [GossipEvent.PROPOSER_SLASHING]: (proposerSlashing: ProposerSlashing) => void;
   [GossipEvent.ATTESTER_SLASHING]: (attesterSlashing: AttesterSlashing) => void;
   ["gossipsub:heartbeat"]: () => void;
@@ -46,16 +46,16 @@ export interface IGossipSub extends EventEmitter {
 }
 
 export interface IGossip extends IService {
-  publishBlock(block: BeaconBlock): Promise<void>;
+  publishBlock(signedBlock: SignedBeaconBlock): Promise<void>;
   publishCommiteeAttestation(attestation: Attestation): Promise<void>;
   publishAggregatedAttestation(aggregateAndProof: AggregateAndProof): Promise<void>;
-  publishVoluntaryExit(voluntaryExit: VoluntaryExit): Promise<void>;
+  publishVoluntaryExit(voluntaryExit: SignedVoluntaryExit): Promise<void>;
   publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<void>;
   publishProposerSlashing(proposerSlashing: ProposerSlashing): Promise<void>;
-  subscribeToBlock(callback: (block: BeaconBlock) => void): void;
+  subscribeToBlock(callback: (signedBlock: SignedBeaconBlock) => void): void;
   subscribeToAggregateAndProof(callback: (aggregate: AggregateAndProof) => void): void;
   subscribeToAttestation(callback: (attestation: Attestation) => void): void;
-  subscribeToVoluntaryExit(callback: (voluntaryExit: VoluntaryExit) => void): void;
+  subscribeToVoluntaryExit(callback: (voluntaryExit: SignedVoluntaryExit) => void): void;
   subscribeToProposerSlashing(callback: (slashing: ProposerSlashing) => void): void;
   subscribeToAttesterSlashing(callback: (slashing: AttesterSlashing) => void): void;
   subscribeToAttestationSubnet(subnet: number|string, callback: (block: BeaconBlock) => void): void;
@@ -64,11 +64,11 @@ export interface IGossip extends IService {
 }
 
 export interface IGossipMessageValidator {
-  isValidIncomingBlock(block: BeaconBlock): Promise<boolean>;
+  isValidIncomingBlock(signedBlock: SignedBeaconBlock): Promise<boolean>;
   isValidIncomingCommitteeAttestation(attestation: Attestation, subnet: number): Promise<boolean>;
   isValidIncomingAggregateAndProof(aggregateAndProof: AggregateAndProof): Promise<boolean>;
   isValidIncomingUnaggregatedAttestation(attestation: Attestation): Promise<boolean>;
-  isValidIncomingVoluntaryExit(voluntaryExit: VoluntaryExit): Promise<boolean>;
+  isValidIncomingVoluntaryExit(voluntaryExit: SignedVoluntaryExit): Promise<boolean>;
   isValidIncomingProposerSlashing(proposerSlashing: ProposerSlashing): Promise<boolean>;
   isValidIncomingAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<boolean>;
 }

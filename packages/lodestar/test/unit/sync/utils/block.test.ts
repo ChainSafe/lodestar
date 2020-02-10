@@ -7,7 +7,7 @@ import {getBlockRange} from "../../../../src/sync/utils/blocks";
 // @ts-ignore
 import PeerInfo from "peer-info";
 import {expect} from "chai";
-import {generateEmptyBlock} from "../../../utils/block";
+import {generateEmptySignedBlock} from "../../../utils/block";
 
 describe("sync - block utils", function () {
 
@@ -33,10 +33,10 @@ describe("sync - block utils", function () {
       const peers = [peer1, peer2];
       getBlockRangeFromPeerStub
         .withArgs(sinon.match.any, sinon.match.any, peer1, sinon.match.any)
-        .resolves([generateEmptyBlock()]);
+        .resolves([generateEmptySignedBlock()]);
       getBlockRangeFromPeerStub
         .withArgs(sinon.match.any, sinon.match.any, peer2, sinon.match.any)
-        .resolves([generateEmptyBlock(), generateEmptyBlock()]);
+        .resolves([generateEmptySignedBlock(), generateEmptySignedBlock()]);
       const blocks = await getBlockRange(rpcStub, repsStub, peers, {start: 0, end: 4}, 2);
       expect(blocks.length).to.be.equal(3);
     });
@@ -47,7 +47,7 @@ describe("sync - block utils", function () {
       const peers = [peer1, peer2];
       getBlockRangeFromPeerStub
         .withArgs(sinon.match.any, sinon.match.any, peer1, sinon.match.any)
-        .resolves([generateEmptyBlock()]);
+        .resolves([generateEmptySignedBlock()]);
       getBlockRangeFromPeerStub
         .withArgs(sinon.match.any, sinon.match.any, peer2, sinon.match.any)
         .throws();
