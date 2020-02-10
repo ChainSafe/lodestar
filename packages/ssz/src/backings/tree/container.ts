@@ -123,7 +123,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
   getProperty<V extends keyof T>(target: Tree, property: V): PropOfTreeBackedValue<T, V> {
     const chunkIndex = Object.keys(this._type.fields).findIndex((fieldName) => fieldName === property);
     if (chunkIndex === -1) {
-      throw new Error("Invalid container field name");
+      return undefined;
     }
     const fieldType = this._type.fields[property as string];
     if (fieldType.isBasic()) {

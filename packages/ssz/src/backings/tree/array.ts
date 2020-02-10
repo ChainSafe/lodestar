@@ -74,14 +74,14 @@ export class BasicArrayTreeHandler<T extends ArrayLike<unknown>> extends TreeHan
     if (property === "length") {
       return length as T[keyof T];
     }
-    property = Number(property);
-    if (Number.isNaN(property as number)) {
-      throw new Error("Array index must be a number");
+    const index = Number(property);
+    if (Number.isNaN(index as number)) {
+      return undefined;
     }
-    if (property >= length) {
-      throw new Error("Invalid array index");
+    if (index >= length) {
+      return undefined;
     }
-    return this.getValueAtIndex(target, property as number);
+    return this.getValueAtIndex(target, index);
   }
   setProperty(target: Tree, property: number, value: T[number], expand=false): boolean {
     const chunkGindex = this.gindexOfChunk(target, this.getChunkIndex(property));
@@ -204,11 +204,14 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<object>> extends Tree
     if (property === "length") {
       return length as unknown as PropOfCompositeTreeBackedValue<T, V>;
     }
-    property = Number(property) as V;
-    if (property > length) {
-      throw new Error("Invalid array index");
+    const index = Number(property);
+    if (Number.isNaN(index as number)) {
+      return undefined;
     }
-    return this.getValueAtChunk(target, property as number) as unknown as PropOfCompositeTreeBackedValue<T, V>;
+    if (index >= length) {
+      return undefined;
+    }
+    return this.getValueAtChunk(target, index) as unknown as PropOfCompositeTreeBackedValue<T, V>;
   }
   setProperty(target: Tree, property: number, value: T[number], expand=false): boolean {
     const chunkGindex = this.gindexOfChunk(target, property);
