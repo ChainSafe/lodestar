@@ -26,7 +26,7 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   public async processDepositLog(dataHex: string, indexHex: string): Promise<void> {
   }
 
-  public async depositRoot(): Promise<Root> {
+  public async depositRoot(): Promise<Uint8Array> {
     return Buffer.alloc(32);
   }
 

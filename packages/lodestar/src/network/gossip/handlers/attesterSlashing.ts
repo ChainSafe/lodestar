@@ -28,7 +28,7 @@ export function getIncomingAttesterSlashingHandler(validator: IGossipMessageVali
 export async function publishAttesterSlashing(this: Gossip, attesterSlashing: AttesterSlashing): Promise<void> {
   await promisify<void, string, Uint8Array>(this.pubsub.publish.bind(this.pubsub))(
     getGossipTopic(GossipEvent.PROPOSER_SLASHING),
-    this.config.types.AttesterSlashing.serialize(attesterSlashing)
+    Buffer.from(this.config.types.AttesterSlashing.serialize(attesterSlashing))
   );
   this.logger.verbose(
     "Publishing attester slashing"

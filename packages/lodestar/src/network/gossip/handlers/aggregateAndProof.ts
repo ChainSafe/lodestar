@@ -31,7 +31,7 @@ export async function publishAggregatedAttestation(this: Gossip, aggregateAndPro
   await Promise.all([
     promisify<void, string, Uint8Array>(this.pubsub.publish.bind(this.pubsub))(
       getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF),
-      this.config.types.AggregateAndProof.serialize(aggregateAndProof)
+      Buffer.from(this.config.types.AggregateAndProof.serialize(aggregateAndProof))
     ),
     //to be backward compatible
     promisify<void, string, Uint8Array>(this.pubsub.publish.bind(this.pubsub))(

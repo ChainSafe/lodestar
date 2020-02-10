@@ -50,10 +50,10 @@ export function getCommitteeAttestationHandler(subnet: number, validator: IGossi
 export async function publishCommiteeAttestation(this: Gossip, attestation: Attestation): Promise<void> {
   const subnet = getAttestationSubnet(attestation);
   await promisify<void, string, Uint8Array>(this.pubsub.publish.bind(this.pubsub))(
-    getAttestationSubnetTopic(attestation), this.config.types.Attestation.serialize(attestation));
+    getAttestationSubnetTopic(attestation), Buffer.from(this.config.types.Attestation.serialize(attestation)));
   //backward compatible
   await promisify<void, string, Uint8Array>(this.pubsub.publish.bind(this.pubsub))(
-    getGossipTopic(GossipEvent.ATTESTATION), this.config.types.Attestation.serialize(attestation)
+    getGossipTopic(GossipEvent.ATTESTATION), Buffer.from(this.config.types.Attestation.serialize(attestation))
   );
   this.logger.verbose(
     `Publishing attestation ${toHexString(this.config.types.Attestation.hashTreeRoot(attestation))} for subnet ${subnet}`
