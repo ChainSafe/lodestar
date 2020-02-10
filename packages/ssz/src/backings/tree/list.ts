@@ -70,7 +70,7 @@ export class BasicListTreeHandler<T extends List<unknown>> extends BasicArrayTre
     this.setLength(target, length + 1);
     return length + 1;
   }
-  push(target: Tree, values: T[number][]): number {
+  push(target: Tree, ...values: T[number][]): number {
     let newLength;
     values.forEach((value) => newLength = this.pushSingle(target, value));
     return newLength;
@@ -183,7 +183,7 @@ export class CompositeListTreeHandler<T extends List<object>> extends CompositeA
     this.setLength(target, length + 1);
     return length + 1;
   }
-  push(target: Tree, values: T[number][]): number {
+  push(target: Tree, ...values: T[number][]): number {
     let newLength;
     values.forEach((value) => newLength = this.pushSingle(target, value));
     return newLength;
