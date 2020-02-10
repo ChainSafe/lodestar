@@ -3,12 +3,8 @@
  */
 import {EventEmitter} from "events";
 import LibP2p from "libp2p";
-import PeerInfo from "peer-info";
-//@ts-ignore
-import LibP2pConnection from "interface-connection";
-import {promisify} from "es6-promisify";
-import pull from "pull-stream";
 import * as varint from "varint";
+import {pipe} from "it-pipe";
 import {
   BeaconBlocksByRangeRequest,
   BeaconBlocksByRangeResponse,
@@ -33,11 +29,17 @@ import {
 import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {createResponseEvent, createRpcProtocol, randomRequestId,} from "./util";
 
-import {IReqResp, ReqRespEventEmitter} from "./interface";
+import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
 import {INetworkOptions} from "./options";
+import PeerId from "peer-id";
+import PeerInfo from "peer-info";
 
-interface IReqRespEventEmitterClass {
-  new(): ReqRespEventEmitter;
+interface IReqEventEmitterClass {
+  new(): ReqEventEmitter;
+}
+
+interface IRespEventEmitterClass {
+  new(): RespEventEmitter;
 }
 
 interface IReqRespModules {
@@ -46,11 +48,25 @@ interface IReqRespModules {
   logger: ILogger;
 }
 
-export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) implements IReqResp {
+class ResponseEventListener extends (EventEmitter as IRespEventEmitterClass) {
+  public waitForResponse(requestId: string, responseListener: ResponseCallbackFn): NodeJS.Timeout {
+    const responseEvent = createResponseEvent(requestId);
+    this.once(responseEvent, responseListener);
+
+    const timer =  setTimeout(() => {
+      this.removeListener(responseEvent, responseListener);
+      responseListener(new Error(ERR_RESP_TIMEOUT), null);
+    }, RESP_TIMEOUT);
+    return timer;
+  }
+}
+
+export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements IReqResp {
   private config: IBeaconConfig;
   private libp2p: LibP2p;
   private logger: ILogger;
   private encoding: Encoding;
+  private responseListener: ResponseEventListener;
 
   public constructor(opts: INetworkOptions, {config, libp2p, logger}: IReqRespModules) {
     super();
@@ -58,19 +74,30 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     this.libp2p = libp2p;
     this.logger = logger;
     this.encoding = Encoding.ssz;
+    this.responseListener = new ResponseEventListener();
   }
   public async start(): Promise<void> {
     Object.values(Method).forEach((method) => {
       this.libp2p.handle(
         createRpcProtocol(method, this.encoding),
-        async (protocol: string, conn: LibP2pConnection) => {
-          const peerInfo = (await promisify(conn.getPeerInfo.bind(conn))()) as PeerInfo;
-          pull(
-            conn,
-            this.handleRequest(peerInfo, method, method === Method.Goodbye),
-            conn,
+        async ({connection, stream}) => {
+          const peerId = connection.remotePeer;
+          pipe(
+            stream.source,
+            (source: Promise<Buffer | {slice: () => Buffer}>[]) => {
+              const handleRequest = this.handleRequest;
+              return (async function * () { // A generator is async iterable
+                for await (const val of source) {
+                  const data = Buffer.isBuffer(val) ? val : val.slice();
+                  const response = await handleRequest(peerId, method, data);
+                  yield response;
+                }
+              })();
+            },
+            stream.sink
           );
-        });
+        }
+      );
     });
   }
   public async stop(): Promise<void> {
@@ -80,8 +107,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
   }
 
   public sendResponse(id: RequestId, err: Error, body: ResponseBody): void {
-    // @ts-ignore
-    this.emit(createResponseEvent(id), err, body);
+    this.responseListener.emit(createResponseEvent(id), err, body);
   }
   public async status(peerInfo: PeerInfo, request: Status): Promise<Status> {
     return await this.sendRequest<Status>(peerInfo, Method.Status, request);
@@ -102,54 +128,24 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     return await this.sendRequest<BeaconBlocksByRootResponse>(peerInfo, Method.BeaconBlocksByRoot, request);
   }
 
-  /**
-   * Return a "through" pull-stream that processes a request and waits for/returns a response
-   */
-  private handleRequest = (peerInfo: PeerInfo, method: Method, requestOnly?: boolean) => {
-    //@ts-ignore
-    return (read) => {
-      //@ts-ignore
-      return (end, cb) => {
-        //@ts-ignore
-        read(end, (end, data) => {
-          if (end) return cb(end);
-          try {
-            const request = this.decodeRequest(method, data);
-            const requestId = randomRequestId();
-            this.logger.verbose(`${requestId} - receive ${method} request from ${peerInfo.id.toB58String()}`);
-            if (!requestOnly) {
-              const responseEvent = createResponseEvent(requestId);
-              // eslint-disable-next-line
-              let responseListener: any;
-              const responseTimer = setTimeout(() => {
-                this.logger.verbose(`${requestId} - send ${method} response timeout`);
-                // @ts-ignore
-                this.removeListener(responseEvent, responseListener);
-                cb(null, this.encodeResponseError(new Error(ERR_RESP_TIMEOUT)));
-              }, RESP_TIMEOUT);
-              responseListener = (err: Error|null, output: ResponseBody): void => {
-                // @ts-ignore
-                this.removeListener(responseEvent, responseListener);
-                clearTimeout(responseTimer);
-                if (err) return cb(null, this.encodeResponseError(err));
-                cb(null, this.encodeResponse(method, output));
-                this.logger.verbose(`${requestId} - send ${method} response`);
-              };
-              // @ts-ignore
-              this.once(responseEvent, responseListener);
-            } else {
-              cb(true);
-            }
-            this.emit("request", peerInfo, method, requestId, request);
-          } catch (e) {
-            if (!requestOnly) {
-              cb(null, this.encodeResponseError(e));
-            }
-          }
-        });
+  private handleRequest = async (peerId: PeerId, method: Method, data: Buffer): Promise<Buffer> => {
+    return new Promise((resolve) => {
+      const request = this.decodeRequest(method, data);
+      const requestId = randomRequestId();
+      this.logger.verbose(`${requestId} - receive ${method} request from ${peerId.toB58String()}`);
+      // eslint-disable-next-line
+      let responseTimer: NodeJS.Timeout;
+      const responseListenerFn = (err: Error|null, output: ResponseBody): void => {
+        clearTimeout(responseTimer);
+        if (err) resolve(this.encodeResponseError(err));
+        this.logger.verbose(`${requestId} - send ${method} response`);
+        resolve(this.encodeResponse(method, output));
       };
-    };
+      responseTimer = this.responseListener.waitForResponse(requestId, responseListenerFn);
+      this.emit("request", new PeerInfo(peerId), method, requestId, request);
+    });
   };
+
   private encodeRequest(method: Method, body: RequestBody): Buffer {
     let output = Buffer.alloc(0);
     switch (method) {
@@ -171,6 +167,7 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
       output,
     ]);
   }
+
   private encodeResponse(method: Method, body: ResponseBody): Buffer {
     let output= Buffer.alloc(0);
     switch (method) {
@@ -251,46 +248,30 @@ export class ReqResp extends (EventEmitter as IReqRespEventEmitterClass) impleme
     requestOnly?: boolean
   ): Promise<T> {
     const protocol = createRpcProtocol(method, this.encoding);
+    const {stream} = await this.libp2p.dialProtocol(peerInfo, protocol) as {stream: Stream};
     return await new Promise((resolve, reject) => {
-      this.libp2p.dialProtocol(peerInfo, protocol, (err, conn): unknown => {
-        if (err) {
-          return reject(err);
+      this.logger.verbose(`send ${method} request to ${peerInfo.id.toB58String()}`);
+      const responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
+      pipe(
+        [this.encodeRequest(method, body)],
+        stream,
+        async (source: Promise<Buffer | {slice: () => Buffer}>[]) => {
+          // TODO: support response chunks
+          const srcs = [];
+          for await (const val of source) {
+            const data = Buffer.isBuffer(val) ? val : val.slice();
+            srcs.push(data);
+          }
+          const data = Buffer.concat(srcs);
+          clearTimeout(responseTimer);
+          this.logger.verbose(`receive ${method} response from ${peerInfo.id.toB58String()}`);
+          try {
+            resolve(requestOnly? undefined : this.decodeResponse(method, data) as T);
+          } catch (e) {
+            reject(e);
+          }
         }
-        this.logger.verbose(`send ${method} request to ${peerInfo.id.toB58String()}`);
-        // @ts-ignore
-        const responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
-        // pull-stream through that will resolve after the request is sent
-        // @ts-ignore
-        const requestOnlyThrough =(read): unknown => {
-          // @ts-ignore
-          return (end, cb) => {
-            // @ts-ignore
-            read(end, (end, data) => {
-              if (end) {
-                cb(end);
-                clearTimeout(responseTimer);
-                return resolve();
-              }
-              cb(null, data);
-            });
-          };
-        };
-        // @ts-ignore
-        pull(
-          pull.values([this.encodeRequest(method, body)]),
-          requestOnly && requestOnlyThrough,
-          conn,
-          pull.drain((data) => {
-            clearTimeout(responseTimer);
-            this.logger.verbose(`receive ${method} response from ${peerInfo.id.toB58String()}`);
-            try {
-              resolve(this.decodeResponse(method, data) as T);
-            } catch (e) {
-              reject(e);
-            }
-          }),
-        );
-      });
+      );
     });
   }
 }

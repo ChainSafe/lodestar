@@ -9,7 +9,6 @@ import {GossipEvent} from "../constants";
 import {AggregateAndProof} from "@chainsafe/eth2.0-types";
 import {toHex} from "@chainsafe/eth2.0-utils";
 import {serialize} from "@chainsafe/ssz";
-import {promisify} from "es6-promisify";
 
 export function getIncomingAggregateAndProofHandler(validator: IGossipMessageValidator): GossipHandlerFn {
   return async function handleIncomingAggregateAndProof(this: Gossip, msg: IGossipMessage): Promise<void> {
@@ -30,12 +29,12 @@ export function getIncomingAggregateAndProofHandler(validator: IGossipMessageVal
 
 export async function publishAggregatedAttestation(this: Gossip, aggregateAndProof: AggregateAndProof): Promise<void> {
   await Promise.all([
-    promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
+    this.pubsub.publish(
       getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF),
       serialize(this.config.types.AggregateAndProof, aggregateAndProof)
     ),
     //to be backward compatible
-    promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
+    this.pubsub.publish(
       getGossipTopic(GossipEvent.ATTESTATION), serialize(this.config.types.Attestation, aggregateAndProof.aggregate)
     )
   ]);

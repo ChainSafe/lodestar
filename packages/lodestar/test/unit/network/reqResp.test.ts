@@ -1,5 +1,4 @@
 import {assert} from "chai";
-import {promisify} from "es6-promisify";
 
 import {Status, ResponseBody} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
@@ -9,7 +8,6 @@ import {createNode} from "./util";
 import {NodejsNode} from "../../../src/network/nodejs";
 import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
-import PeerInfo from "peer-info";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -25,9 +23,9 @@ describe("[network] rpc", () => {
     nodeB = await createNode(multiaddr);
     await Promise.all([
       // @ts-ignore
-      promisify(nodeA.start.bind(nodeA))(),
+      nodeA.start(),
       // @ts-ignore
-      promisify(nodeB.start.bind(nodeB))(),
+      nodeB.start()
     ]);
     const networkOptions: INetworkOptions = {
       maxPeers: 10,
@@ -53,15 +51,15 @@ describe("[network] rpc", () => {
     ]);
     await Promise.all([
       // @ts-ignore
-      promisify(nodeA.stop.bind(nodeA))(),
+      nodeA.stop(),
       // @ts-ignore
-      promisify(nodeB.stop.bind(nodeB))(),
+      nodeB.stop()
     ]);
   });
 
   it("can send/receive messages from connected peers", async function () {
     this.timeout(6000);
-    await promisify<void, PeerInfo>(nodeA.dial.bind(nodeA))(nodeB.peerInfo);
+    await nodeA.dial(nodeB.peerInfo)
     try {
       await new Promise((resolve, reject) => {
         const t = setTimeout(reject, 2000);
@@ -113,7 +111,7 @@ describe("[network] rpc", () => {
       const statusActual = await rpcB.status(nodeA.peerInfo, statusExpected);
       assert.deepEqual(JSON.stringify(statusActual), JSON.stringify(statusExpected));
     } catch (e) {
-      assert.fail("statu not received");
+      assert.fail("status not received");
     }
   });
 });

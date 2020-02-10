@@ -9,7 +9,6 @@ import {Attestation} from "@chainsafe/eth2.0-types";
 import {toHex} from "@chainsafe/eth2.0-utils";
 import {GossipEvent} from "../constants";
 import {hashTreeRoot, serialize} from "@chainsafe/ssz";
-import {promisify} from "es6-promisify";
 
 export function getIncomingAttestationHandler(validator: IGossipMessageValidator): GossipHandlerFn {
   return async function handleIncomingAttestation(this: Gossip, msg: IGossipMessage): Promise<void> {
@@ -50,10 +49,10 @@ export function getCommitteeAttestationHandler(subnet: number, validator: IGossi
 
 export async function publishCommiteeAttestation(this: Gossip, attestation: Attestation): Promise<void> {
   const subnet = getAttestationSubnet(attestation);
-  await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
+  await this.pubsub.publish(
     getAttestationSubnetTopic(attestation), serialize(this.config.types.Attestation, attestation));
   //backward compatible
-  await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
+  await this.pubsub.publish(
     getGossipTopic(GossipEvent.ATTESTATION), serialize(this.config.types.Attestation, attestation)
   );
   this.logger.verbose(

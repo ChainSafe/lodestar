@@ -38,9 +38,9 @@ export interface IGossipModules {
 }
 
 export interface IGossipSub extends EventEmitter {
-  publish(topic: string, data: Buffer, cb: (err: unknown) => void): void;
-  start(cb: (err: unknown) => void): void;
-  stop(cb: (err: unknown) => void): void;
+  publish(topic: string, data: Buffer): Promise<void>;
+  start(): Promise<void>;
+  stop(): Promise<void>;
   subscribe(topic: string): void;
   unsubscribe(topic: string): void;
 }

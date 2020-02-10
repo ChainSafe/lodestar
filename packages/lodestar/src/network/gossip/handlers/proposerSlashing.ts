@@ -8,7 +8,6 @@ import {deserializeGossipMessage, getGossipTopic} from "../utils";
 import {Gossip, GossipHandlerFn} from "../gossip";
 import {GossipEvent} from "../constants";
 import {serialize} from "@chainsafe/ssz";
-import {promisify} from "es6-promisify";
 
 export function getIncomingProposerSlashingHandler(validator: IGossipMessageValidator): GossipHandlerFn {
   return async function handleIncomingProposerSlashing(this: Gossip, msg: IGossipMessage): Promise<void> {
@@ -27,7 +26,7 @@ export function getIncomingProposerSlashingHandler(validator: IGossipMessageVali
 }
 
 export async function publishProposerSlashing(this: Gossip, proposerSlashing: ProposerSlashing): Promise<void> {
-  await promisify<void, string, Buffer>(this.pubsub.publish.bind(this.pubsub))(
+  await this.pubsub.publish(
     getGossipTopic(GossipEvent.PROPOSER_SLASHING),
     serialize(this.config.types.ProposerSlashing, proposerSlashing)
   );
