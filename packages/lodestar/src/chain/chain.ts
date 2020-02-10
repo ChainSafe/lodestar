@@ -42,6 +42,8 @@ import {ProgressiveMerkleTree, toHex} from "@chainsafe/eth2.0-utils";
 import {MerkleTreeSerialization} from "../util/serialization";
 import {AttestationProcessor} from "./attestation";
 import {sleep} from "../util/sleep";
+import {IBeaconClock} from "./clock/interface";
+import {LocalClock} from "./clock/local/LocalClock";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -62,6 +64,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public chain: string;
   public _latestState: BeaconState = null;
   public forkChoice: ILMDGHOST;
+  public clock: IBeaconClock;
   public chainId: uint16;
   public networkId: uint64;
 
@@ -106,12 +109,15 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     }
     this.latestState = state;
     this.logger.info("Chain started, waiting blocks and attestations");
+    this.clock = new LocalClock(this.config, this.latestState.genesisTime);
+    await this.clock.start();
     this.isPollingBlocks = true;
     this.pollBlock();
   }
 
   public async stop(): Promise<void> {
     await this.forkChoice.stop();
+    await this.clock.stop();
     this.eth1.removeListener("block", this.checkGenesis);
     this.isPollingBlocks = false;
     this.logger.warn(`Discarding ${this.blockProcessingQueue.size} blocks from queue...`);
