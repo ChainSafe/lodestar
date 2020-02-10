@@ -1,4 +1,4 @@
-import {SignedBeaconBlock, Slot} from "@chainsafe/eth2.0-types";
+import {Root, SignedBeaconBlock, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BulkRepository} from "../repository";
 import {IDatabaseController} from "../../../controller";

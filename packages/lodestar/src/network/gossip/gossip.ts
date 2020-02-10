@@ -11,7 +11,7 @@ import Gossipsub from "libp2p-gossipsub";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {ILogger, LogLevel} from "@chainsafe/eth2.0-utils/lib/logger";
-import {getAttestationSubnet, getGossipTopic,} from "./utils";
+import {getGossipTopic,} from "./utils";
 import {INetworkOptions} from "../options";
 import {
   GossipEventEmitter,
@@ -37,9 +37,9 @@ import {
   AggregateAndProof,
   Attestation,
   AttesterSlashing,
-  BeaconBlock,
   ProposerSlashing,
-  VoluntaryExit
+  SignedBeaconBlock,
+  SignedVoluntaryExit
 } from "@chainsafe/eth2.0-types";
 
 export type GossipHandlerFn = (this: Gossip, msg: IGossipMessage) => void;
@@ -93,7 +93,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
 
   public publishAttesterSlashing = publishAttesterSlashing;
 
-  public subscribeToBlock(callback: (block: BeaconBlock) => void): void {
+  public subscribeToBlock(callback: (block: SignedBeaconBlock) => void): void {
     this.subscribe(GossipEvent.BLOCK, callback);
   }
 
@@ -105,7 +105,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.subscribe(GossipEvent.ATTESTATION, callback);
   }
 
-  public subscribeToVoluntaryExit(callback: (voluntaryExit: VoluntaryExit) => void): void {
+  public subscribeToVoluntaryExit(callback: (signed: SignedVoluntaryExit) => void): void {
     this.subscribe(GossipEvent.VOLUNTARY_EXIT, callback);
   }
 
@@ -117,11 +117,11 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.subscribe(GossipEvent.ATTESTER_SLASHING, callback);
   }
 
-  public subscribeToAttestationSubnet(subnet: number|string, callback: (block: BeaconBlock) => void): void {
+  public subscribeToAttestationSubnet(subnet: number|string, callback: (attestation: Attestation) => void): void {
     this.subscribe(GossipEvent.ATTESTATION_SUBNET, callback, new Map([["subnet", subnet.toString()]]));
   }
 
-  public unsubscribeFromAttestationSubnet(subnet: number|string, callback: (block: BeaconBlock) => void): void {
+  public unsubscribeFromAttestationSubnet(subnet: number|string, callback: (attestation: Attestation) => void): void {
     this.unsubscribe(GossipEvent.ATTESTATION_SUBNET, callback, new Map([["subnet", subnet.toString()]]));
   }
 
