@@ -156,7 +156,7 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
    * Default constructor
    */
   defaultValue(): ByteArrayBacked<T> {
-    return this.createBackedValue((this.defaultBacking()));
+    return this.asByteArrayBacked((this.defaultBacking()));
   }
   createValue(value: T): ByteArrayBacked<T> {
     throw new Error("Not implemented");
@@ -164,7 +164,7 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
   /**
    * Return an ES6 Proxy-wrapped byte array backing
    */
-  createBackedValue(target: Uint8Array): ByteArrayBacked<T> {
+  asByteArrayBacked(target: Uint8Array): ByteArrayBacked<T> {
     return new Proxy(target, this) as ByteArrayBacked<T>;
   }
   /**
@@ -173,7 +173,7 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
   clone(target: Uint8Array): ByteArrayBacked<T> {
     const newTarget = new Uint8Array(target.length);
     newTarget.set(target);
-    return this.createBackedValue(newTarget);
+    return this.asByteArrayBacked(newTarget);
   }
   /**
    * Equality
@@ -193,7 +193,7 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
       }
       return true;
     }
-    return this._type.structural.equals(this.createBackedValue(target), other);
+    return this._type.structural.equals(this.asByteArrayBacked(target), other);
   }
 
   // Serialization
@@ -229,7 +229,7 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
   fromBytes(data: Uint8Array, start: number, end: number): ByteArrayBacked<T> {
     const target = new Uint8Array(end - start);
     target.set(new Uint8Array(data.buffer, data.byteOffset + start, end - start));
-    return this.createBackedValue(target);
+    return this.asByteArrayBacked(target);
   }
   /**
    * Deserialization

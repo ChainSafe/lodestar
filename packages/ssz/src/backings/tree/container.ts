@@ -129,7 +129,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
       const chunk = this.getRootAtChunk(target, chunkIndex);
       return fieldType.fromBytes(chunk, 0);
     } else {
-      return fieldType.tree.createBackedValue(
+      return fieldType.tree.asTreeBacked(
         this.getSubtreeAtChunk(target, chunkIndex)
       );
     }

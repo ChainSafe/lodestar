@@ -150,7 +150,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
    * Default constructor
    */
   defaultValue(): TreeBacked<T> {
-    return this.createBackedValue(this.defaultBacking());
+    return this.asTreeBacked(this.defaultBacking());
   }
   createValue(value: T): TreeBacked<T> {
     throw new Error("Not implemented");
@@ -158,14 +158,14 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   /**
    * Return an ES6 Proxy-wrapped tree backing
    */
-  createBackedValue(target: Tree): TreeBacked<T> {
+  asTreeBacked(target: Tree): TreeBacked<T> {
     return new Proxy(target, this) as TreeBacked<T>;
   }
   /**
    * Clone / copy
    */
   clone(target: Tree): TreeBacked<T> {
-    return this.createBackedValue(target.clone());
+    return this.asTreeBacked(target.clone());
   }
   /**
    * Equality
@@ -179,7 +179,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
         this.hashTreeRoot(other.backing()),
       );
     }
-    return this._type.structural.equals(this.createBackedValue(target), other);
+    return this._type.structural.equals(this.asTreeBacked(target), other);
   }
 
   // Serialization
@@ -188,7 +188,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
    * Serialized byte length
    */
   size(target: Tree): number {
-    return this._type.structural.size(this.createBackedValue(target));
+    return this._type.structural.size(this.asTreeBacked(target));
   }
   /**
    * Low-level deserialization
@@ -200,7 +200,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
    * Deserialization
    */
   deserialize(data: Uint8Array): TreeBacked<T> {
-    return this.createBackedValue(this.fromBytes(data, 0, data.length));
+    return this.asTreeBacked(this.fromBytes(data, 0, data.length));
   }
   /**
    * Low-level serialization
@@ -208,7 +208,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
    * Serializes to a pre-allocated Uint8Array
    */
   toBytes(target: Tree, output: Uint8Array, offset: number): number {
-    return this._type.structural.toBytes(this.createBackedValue(target), output, offset);
+    return this._type.structural.toBytes(this.asTreeBacked(target), output, offset);
   }
   /**
    * Serialization
