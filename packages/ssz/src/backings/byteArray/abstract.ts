@@ -1,6 +1,6 @@
 import {ByteVector} from "../../interface";
 import {CompositeType} from "../../types";
-import {isBackedValue, BackingType} from "..";
+import {BackingType} from "../backedValue";
 
 export function toHexString(target: Uint8Array | ByteVector): string {
   return "0x" + [...target].map(b => b.toString(16).padStart(2, "0")).join("");
@@ -14,6 +14,13 @@ export function fromHexString(data: string): Uint8Array {
   }
   data = data.replace("0x", "");
   return new Uint8Array(data.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+}
+
+export function isByteArrayBackedValue<T extends object>(value: T): value is ByteArrayBackedValue<T> {
+  return (
+    (value as ByteArrayBackedValue<T>).backingType &&
+    (value as ByteArrayBackedValue<T>).backingType() === BackingType.byteArray
+  );
 }
 
 /**
@@ -167,7 +174,7 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
    * If both values are byte-array-backed, use equality byte-by-byte, else use structural equality
    */
   equals(target: Uint8Array, other: ByteArrayBackedValue<T>): boolean {
-    if (isBackedValue(other) && other.backingType() === this.backingType()) {
+    if (isByteArrayBackedValue(other)) {
       const otherTarget = other.backing();
       if (target.length !== otherTarget.length) {
         return false;

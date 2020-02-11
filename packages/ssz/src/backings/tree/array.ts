@@ -2,8 +2,7 @@ import {Tree, iterateAtDepth, Gindex} from "@chainsafe/persistent-merkle-tree";
 
 import {ArrayLike} from "../../interface";
 import {BasicArrayType, CompositeArrayType} from "../../types";
-import {TreeHandler, PropOfCompositeTreeBackedValue, TreeBackedValue} from "./abstract";
-import {isBackedValue} from "..";
+import {isTreeBackedValue, TreeHandler, PropOfCompositeTreeBackedValue, TreeBackedValue} from "./abstract";
 
 export class BasicArrayTreeHandler<T extends ArrayLike<unknown>> extends TreeHandler<T> {
   protected _type: BasicArrayType<T>;
@@ -215,8 +214,8 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<object>> extends Tree
   }
   setProperty(target: Tree, property: number, value: T[number], expand=false): boolean {
     const chunkGindex = this.gindexOfChunk(target, property);
-    if (isBackedValue(value) && value.backingType() === this.backingType()) {
-      target.setSubtree(chunkGindex, (value.backing() as Tree));
+    if (isTreeBackedValue(value)) {
+      target.setSubtree(chunkGindex, value.backing());
       return true;
     } else {
       target.setSubtree(chunkGindex, this._type.elementType.tree.createValue(value as object).backing(), expand);

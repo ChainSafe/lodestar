@@ -15,7 +15,7 @@ export enum BackingType {
  */
 export type BackedValue<T extends object> = TreeBackedValue<T> | ByteArrayBackedValue<T>;
 
-export function isBackedValue<T extends object>(value: unknown): value is BackedValue<T> {
+export function isBackedValue<T extends object>(value: T): value is BackedValue<T> {
   if (value && (value as BackedValue<T>).backingType) {
     return true;
   } else {

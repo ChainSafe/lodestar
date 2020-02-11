@@ -1,7 +1,15 @@
 import {Node, Tree, Gindex, countToDepth, toGindex} from "@chainsafe/persistent-merkle-tree";
 
 import {CompositeType} from "../../types";
-import {isBackedValue, BackingType} from "..";
+import {BackingType} from "../backedValue";
+
+
+export function isTreeBackedValue<T extends object>(value: T): value is TreeBackedValue<T> {
+  return (
+    (value as TreeBackedValue<T>).backingType &&
+    (value as TreeBackedValue<T>).backingType() === BackingType.tree
+  );
+}
 
 /**
  * The ITreeBackedValue interface represents the public API that attach to tree-backed Proxy objects
@@ -164,7 +172,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
    * If both values are tree-backed, use equality by merkle root, else use structural equality
    */
   equals(target: Tree, other: TreeBackedValue<T>): boolean {
-    if (isBackedValue(other) && other.backingType() === this.backingType()) {
+    if (isTreeBackedValue(other)) {
       const aRoot = this.hashTreeRoot(target);
       const bRoot = this.hashTreeRoot(other.backing());
       return aRoot.every((v, i) => v === bRoot[i]);

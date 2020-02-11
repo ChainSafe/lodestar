@@ -2,8 +2,7 @@ import {Node, Tree, subtreeFillToContents, zeroNode, Gindex} from "@chainsafe/pe
 
 import {ObjectLike} from "../../interface";
 import {ContainerType, CompositeType} from "../../types";
-import {TreeHandler, PropOfTreeBackedValue, TreeBackedValue} from "./abstract";
-import {isBackedValue} from "..";
+import {isTreeBackedValue, TreeHandler, PropOfTreeBackedValue, TreeBackedValue} from "./abstract";
 
 export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
   _type: ContainerType<T>;
@@ -148,7 +147,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
       target.setRoot(chunkGindex, chunk);
       return true;
     } else {
-      if (isBackedValue(value) && value.backingType() === this.backingType()) {
+      if (isTreeBackedValue(value)) {
         target.setSubtree(chunkGindex, value.backing());
         return true;
       } else {
