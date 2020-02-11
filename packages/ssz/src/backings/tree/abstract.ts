@@ -64,7 +64,7 @@ export interface ITreeBacked<T extends object> {
   /**
    * The merkle tree backing
    */
-  backing(): Tree;
+  tree(): Tree;
   /**
    * The attached TreeHandler
    */
@@ -173,7 +173,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
     if (isTreeBacked(other)) {
       return byteArrayEquals(
         this.hashTreeRoot(target),
-        this.hashTreeRoot(other.backing()),
+        this.hashTreeRoot(other.tree()),
       );
     }
     return this._type.structural.equals(this.asTreeBacked(target), other);

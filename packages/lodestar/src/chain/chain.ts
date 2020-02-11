@@ -366,7 +366,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const depositDatas = await this.opPool.depositData.getAll();
     const depositDataRootList = this.config.types.DepositDataRootList.tree.defaultValue();
     depositDataRootList.push(...depositDatas.map(this.config.types.DepositData.hashTreeRoot));
-    const tree = depositDataRootList.backing();
+    const tree = depositDataRootList.tree();
 
     const genesisState = initializeBeaconStateFromEth1(
       this.config,

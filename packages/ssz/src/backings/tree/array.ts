@@ -11,7 +11,7 @@ export class BasicArrayTreeHandler<T extends ArrayLike<unknown>> extends TreeHan
     for (let i = 0; i < value.length; i++) {
       (v as ArrayLike<unknown>)[i as number] = value[i];
     }
-    return v.backing();
+    return v.tree();
   }
   size(target: Tree): number {
     return this._type.elementType.size() * this.getLength(target);
@@ -146,7 +146,7 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<object>> extends Tree
     for (let i = 0; i < value.length; i++) {
       (v as ArrayLike<object>)[i as number] = value[i];
     }
-    return v.backing();
+    return v.tree();
   }
   size(target: Tree): number {
     if (this._type.elementType.isVariableSize()) {
@@ -215,7 +215,7 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<object>> extends Tree
   setProperty(target: Tree, property: number, value: T[number], expand=false): boolean {
     const chunkGindex = this.gindexOfChunk(target, property);
     if (isTreeBacked(value)) {
-      target.setSubtree(chunkGindex, value.backing());
+      target.setSubtree(chunkGindex, value.tree());
     } else {
       target.setSubtree(chunkGindex, this._type.elementType.tree.fromStructural(value), expand);
     }

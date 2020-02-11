@@ -29,7 +29,7 @@ export async function assembleBody(
   ]);
   //requires new eth1 data so it has to be done after above operations
   const deposits = await generateDeposits(config, opPool, currentState, eth1Data, depositDataRootList);
-  eth1Data.depositRoot = depositDataRootList.backing().root;
+  eth1Data.depositRoot = depositDataRootList.tree().root;
   return {
     randaoReveal: randao,
     eth1Data: eth1Data,

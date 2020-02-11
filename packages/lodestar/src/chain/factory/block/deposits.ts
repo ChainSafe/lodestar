@@ -22,7 +22,7 @@ export async function generateDeposits(
     );
     //add all deposits to the tree before getting proof
     depositDataRootList.push(...depositDatas.map((data) => config.types.DepositData.hashTreeRoot(data)));
-    const tree = depositDataRootList.backing();
+    const tree = depositDataRootList.tree();
     return depositDatas.map((data, index) => {
       return {
         proof: tree.getSingleProof(depositDataRootList.gindexOfProperty(index + eth1DepositIndex)),

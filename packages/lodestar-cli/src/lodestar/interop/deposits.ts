@@ -11,7 +11,7 @@ export function interopDeposits(
   depositDataRootList: TreeBacked<List<Root>>,
   validatorCount: number
 ): Deposit[] {
-  const tree = depositDataRootList.backing();
+  const tree = depositDataRootList.tree();
   return interopKeypairs(validatorCount).map(({pubkey, privkey}, i) => {
     // create DepositData
     const data: DepositData = {

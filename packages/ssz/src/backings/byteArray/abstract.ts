@@ -74,7 +74,7 @@ export interface IByteArrayBacked<T extends object> {
   /**
    * The byte array backing
    */
-  backing(): Uint8Array;
+  byteArray(): Uint8Array;
   /**
    * The attached ByteArrayHandler
    */
@@ -182,16 +182,8 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
    */
   equals(target: Uint8Array, other: ByteArrayBacked<T>): boolean {
     if (isByteArrayBacked(other)) {
-      const otherTarget = other.backing();
-      if (target.length !== otherTarget.length) {
-        return false;
-      }
-      for (let i = 0; i < target.length; i++) {
-        if (target[i] !== otherTarget[i]) {
-          return false;
-        }
-      }
-      return true;
+      const otherTarget = other.byteArray();
+      return byteArrayEquals(target, otherTarget);
     }
     return this._type.structural.equals(this.asByteArrayBacked(target), other);
   }

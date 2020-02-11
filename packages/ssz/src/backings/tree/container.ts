@@ -34,7 +34,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     Object.keys(this._type.fields).forEach((fieldName) => {
       v[fieldName as keyof T] = value[fieldName];
     });
-    return v.backing();
+    return v.tree();
   }
   size(target: Tree): number {
     let s = 0;
@@ -142,7 +142,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
       return true;
     } else {
       if (isTreeBacked(value)) {
-        target.setSubtree(chunkGindex, value.backing());
+        target.setSubtree(chunkGindex, value.tree());
       } else {
         target.setSubtree(chunkGindex, fieldType.tree.fromStructural(value));
       }
