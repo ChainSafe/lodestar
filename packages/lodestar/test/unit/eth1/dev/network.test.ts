@@ -5,9 +5,9 @@ import {expect} from "chai";
 import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 
 
-describe('Eth1 dev network', () => {
+describe("Eth1 dev network", () => {
 
-  let logger: WinstonLogger = new WinstonLogger();
+  const logger: WinstonLogger = new WinstonLogger();
 
   before(() => {
     logger.silent = true;
@@ -17,11 +17,11 @@ describe('Eth1 dev network', () => {
     logger.silent = false;
   });
 
-  it('should start as configured', async () => {
+  it("should start as configured", async () => {
     const network = new PrivateEth1Network({
-      host: '127.0.0.1',
+      host: "127.0.0.1",
       port: 34568,
-      mnemonic: 'test',
+      mnemonic: "test",
       defaultBalance: 1400
     }
     ,
@@ -32,18 +32,18 @@ describe('Eth1 dev network', () => {
     const accountBalance = await new Wallet(
       network.accounts()[9],
       new ethers.providers.JsonRpcProvider(network.rpcUrl())).getBalance();
-    expect(accountBalance.gt(ethers.utils.parseEther('1300'))).to.be.true;
-    expect(network.rpcUrl()).to.be.equal('http://127.0.0.1:34568');
-    expect(network.mnemonic()).to.be.equal('test');
+    expect(accountBalance.gt(ethers.utils.parseEther("1300"))).to.be.true;
+    expect(network.rpcUrl()).to.be.equal("http://127.0.0.1:34568");
+    expect(network.mnemonic()).to.be.equal("test");
     expect(network.accounts().length).to.be.equal(10);
     await network.stop();
   });
 
-  it('should deploy deposit contract', async () => {
+  it("should deploy deposit contract", async () => {
     const network = new PrivateEth1Network({
-      host: '127.0.0.1',
+      host: "127.0.0.1",
       port: 34567,
-      mnemonic: 'test',
+      mnemonic: "test",
       defaultBalance: 1400
     },
     {

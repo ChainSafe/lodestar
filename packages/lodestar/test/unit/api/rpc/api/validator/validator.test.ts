@@ -44,7 +44,11 @@ describe("validator rpc api", function () {
     opStub.attestations = sandbox.createStubInstance(AttestationOperations);
     validatorApi = new ValidatorApi(
       {},
-      {config, chain: chainStub, db: dbStub, opPool: opStub, network: networkStub, eth1: eth1Stub, logger: logger}
+      {
+        config, chain: chainStub, db: dbStub,
+        opPool: opStub, sync: null, network: networkStub,
+        eth1: eth1Stub, logger: logger
+      }
     );
   });
 
