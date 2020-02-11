@@ -29,9 +29,11 @@ describe("Eth1 dev network", () => {
       logger,
     });
     await network.start();
-    const accountBalance = await new Wallet(
-      network.accounts()[9],
-      new ethers.providers.JsonRpcProvider(network.rpcUrl())).getBalance();
+    const accountBalance = await (
+      new Wallet(
+        network.accounts()[9],
+        new ethers.providers.JsonRpcProvider(network.rpcUrl()))
+    ).getBalance();
     expect(accountBalance.gt(ethers.utils.parseEther("1300"))).to.be.true;
     expect(network.rpcUrl()).to.be.equal("http://127.0.0.1:34568");
     expect(network.mnemonic()).to.be.equal("test");
@@ -42,7 +44,7 @@ describe("Eth1 dev network", () => {
   it("should deploy deposit contract", async () => {
     const network = new PrivateEth1Network({
       host: "127.0.0.1",
-      port: 34567,
+      port: 0,
       mnemonic: "test",
       defaultBalance: 1400
     },
