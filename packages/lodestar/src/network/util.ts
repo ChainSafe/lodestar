@@ -4,7 +4,6 @@
 
 import PeerId from "peer-id";
 import PeerInfo from "peer-info";
-import {promisify} from "es6-promisify";
 import {RequestId} from "../constants";
 
 // req/resp
@@ -43,8 +42,7 @@ export async function createPeerInfo(peerId: PeerId): Promise<PeerInfo> {
  */
 export async function createPeerId(): Promise<PeerId> {
   //keyType is missing in types
-  // @ts-ignore
-  return await promisify(PeerId.create)({bits: 256, keyType: "secp256k1"});
+  return await PeerId.create({bits: 256, keyType: "secp256k1"});
 }
 
 export async function initializePeerInfo(peerId: PeerId, multiaddrs: string[]): Promise<PeerInfo> {
