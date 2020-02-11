@@ -6,12 +6,12 @@ import {isTreeBacked, TreeHandler, PropOfCompositeTreeBacked, TreeBacked} from "
 
 export class BasicArrayTreeHandler<T extends ArrayLike<unknown>> extends TreeHandler<T> {
   protected _type: BasicArrayType<T>;
-  createValue(value: any): TreeBacked<T> {
+  fromStructural(value: T): Tree {
     const  v = this.defaultValue();
     for (let i = 0; i < value.length; i++) {
-      v[i] = value[i];
+      (v as ArrayLike<unknown>)[i as number] = value[i];
     }
-    return v;
+    return v.backing();
   }
   size(target: Tree): number {
     return this._type.elementType.size() * this.getLength(target);
@@ -141,12 +141,12 @@ export class BasicArrayTreeHandler<T extends ArrayLike<unknown>> extends TreeHan
 
 export class CompositeArrayTreeHandler<T extends ArrayLike<object>> extends TreeHandler<T> {
   protected _type: CompositeArrayType<T>;
-  createValue(value: any): TreeBacked<T> {
+  fromStructural(value: T): Tree {
     const  v = this.defaultValue();
     for (let i = 0; i < value.length; i++) {
-      v[i] = value[i];
+      (v as ArrayLike<object>)[i as number] = value[i];
     }
-    return v;
+    return v.backing();
   }
   size(target: Tree): number {
     if (this._type.elementType.isVariableSize()) {
@@ -216,11 +216,10 @@ export class CompositeArrayTreeHandler<T extends ArrayLike<object>> extends Tree
     const chunkGindex = this.gindexOfChunk(target, property);
     if (isTreeBacked(value)) {
       target.setSubtree(chunkGindex, value.backing());
-      return true;
     } else {
-      target.setSubtree(chunkGindex, this._type.elementType.tree.createValue(value as object).backing(), expand);
-      return true;
+      target.setSubtree(chunkGindex, this._type.elementType.tree.fromStructural(value), expand);
     }
+    return true;
   }
   set(target: Tree, property: number, value: T[number], expand=false): boolean {
     return this.setProperty(target, property, value, expand);

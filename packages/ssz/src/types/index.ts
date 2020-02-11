@@ -8,7 +8,6 @@
  * - equality
  * - valid value assertion
  * - copy / clone
- * - constructor from partially formed value
  * - serialized byte length (for serialization)
  * - chunk count (for merkleization)
  *

@@ -55,13 +55,6 @@ export class CompositeType<T extends object> {
     }
   }
 
-  /**
-   * Constructor for partially formed input
-   */
-  createValue(value: any): T {
-    throw new Error("Not implemented");
-  }
-
   // Serialization / Deserialization
 
   /**

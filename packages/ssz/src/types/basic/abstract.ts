@@ -36,16 +36,6 @@ export class BasicType<T> {
   }
 
   /**
-   * Constructor for partially formed input
-   *
-   * For basic types, there is no partially formed input
-   */
-  createValue(value: any): T {
-    this.assertValidValue(value);
-    return value;
-  }
-
-  /**
    * Equality
    */
   equals(value1: T, value2: T): boolean {

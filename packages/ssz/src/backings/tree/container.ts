@@ -29,18 +29,12 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
   defaultBacking(): Tree {
     return new Tree(this.defaultNode());
   }
-  createValue(value: any): TreeBacked<T> {
+  fromStructural(value: T): Tree {
     const v = this.defaultValue();
-    Object.entries(this._type.fields).forEach(([fieldName, fieldType]) => {
-      if (value[fieldName] !== null && value[fieldName] !== undefined) {
-        if (fieldType.isBasic()) {
-          v[fieldName as keyof T] = value[fieldName];
-        } else {
-          v[fieldName as keyof T] = fieldType.tree.createValue(value[fieldName]);
-        }
-      }
+    Object.keys(this._type.fields).forEach((fieldName) => {
+      v[fieldName as keyof T] = value[fieldName];
     });
-    return v;
+    return v.backing();
   }
   size(target: Tree): number {
     let s = 0;
@@ -149,11 +143,10 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     } else {
       if (isTreeBacked(value)) {
         target.setSubtree(chunkGindex, value.backing());
-        return true;
       } else {
-        target.setSubtree(chunkGindex, fieldType.tree.createValue(value).backing());
-        return true;
+        target.setSubtree(chunkGindex, fieldType.tree.fromStructural(value));
       }
+      return true;
     }
   }
   deleteProperty(target: Tree, property: keyof T): boolean {

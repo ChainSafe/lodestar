@@ -24,9 +24,6 @@ export class BooleanType extends BasicType<boolean> {
   defaultValue(): boolean {
     return false;
   }
-  createValue(value: any): boolean {
-    return value;
-  }
   toBytes(value: boolean, output: Uint8Array, offset: number): number {
     if (value) {
       output[offset] = 1;

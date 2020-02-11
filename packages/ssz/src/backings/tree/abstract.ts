@@ -152,9 +152,6 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   defaultValue(): TreeBacked<T> {
     return this.asTreeBacked(this.defaultBacking());
   }
-  createValue(value: T): TreeBacked<T> {
-    throw new Error("Not implemented");
-  }
   /**
    * Return an ES6 Proxy-wrapped tree backing
    */
@@ -180,6 +177,17 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
       );
     }
     return this._type.structural.equals(this.asTreeBacked(target), other);
+  }
+
+  createValue(value: T): TreeBacked<T> {
+    this._type.assertValidValue(value);
+    return this.asTreeBacked(this.fromStructural(value));
+  }
+  fromStructural(value: T): Tree {
+    throw new Error("Not implemented");
+  }
+  toStructural(target: Tree): T {
+    return this._type.structural.clone(this.asTreeBacked(target));
   }
 
   // Serialization
