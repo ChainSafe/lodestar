@@ -911,9 +911,10 @@
     bip39 "^3.0.2"
     buffer "^5.4.3"
 
-"@chainsafe/eth2-bls-wasm@^0.2.0":
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-bls-wasm/-/eth2-bls-wasm-0.2.0.tgz#8dab34ab223fe5b29133f3d4ee01b09e97dba978"
+"@chainsafe/eth2-bls-wasm@^0.2.1":
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-bls-wasm/-/eth2-bls-wasm-0.2.1.tgz#82710c4b81676eb8a2940394efffc0e59216e731"
+  integrity sha512-optSPu5Ez8tT0iEeCsLhjhMJYyXAZRyPFT2k4q+WrQxr82or5+IVQx4jHdy/uQwMvGB0rlvFYlwsyBrkioTCVw==
   dependencies:
     buffer "^5.4.3"
 
