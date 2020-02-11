@@ -49,7 +49,7 @@ describe("getBlockRoot", () => {
       slot:  GENESIS_SLOT + 1,
       blockRoots: Array.from({ length: config.params.SLOTS_PER_HISTORICAL_ROOT }, () => Buffer.from([0xAB])),
     });
-    const res = Buffer.from(getBlockRoot(config, state, GENESIS_SLOT));
+    const res = Buffer.from(getBlockRoot(config, state, GENESIS_SLOT) as Uint8Array);
     assert(toBigIntLE(res) === 0xABn,
       `got: ${toBigIntLE(res)}, expected: ${0xABn}`);
   });
