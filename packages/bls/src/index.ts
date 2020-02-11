@@ -21,7 +21,7 @@ export function generateKeyPair(): Keypair {
  * Generates public key from given secret.
  * @param {BLSSecretKey} secretKey
  */
-export function generatePublicKey(secretKey: BLSSecretKey): BLSPubkey {
+export function generatePublicKey(secretKey: BLSSecretKey): Buffer {
   assert(secretKey, "secretKey is null or undefined");
   const keypair = new Keypair(PrivateKey.fromBytes(Buffer.from(secretKey as Uint8Array)));
   return keypair.publicKey.toBytesCompressed();
@@ -33,7 +33,7 @@ export function generatePublicKey(secretKey: BLSSecretKey): BLSPubkey {
  * @param messageHash
  * @param domain
  */
-export function sign(secretKey: BLSSecretKey, messageHash: Bytes32, domain: Domain): BLSSignature {
+export function sign(secretKey: BLSSecretKey, messageHash: Bytes32, domain: Domain): Buffer {
   assert(secretKey, "secretKey is null or undefined");
   assert(messageHash, "messageHash is null or undefined");
   assert(domain, "domain is null or undefined");
@@ -48,7 +48,7 @@ export function sign(secretKey: BLSSecretKey, messageHash: Bytes32, domain: Doma
  * Compines all given signature into one.
  * @param signatures
  */
-export function aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
+export function aggregateSignatures(signatures: BLSSignature[]): Buffer {
   assert(signatures, "signatures is null or undefined");
   return signatures.map((signature): Signature => {
     return Signature.fromCompressedBytes(Buffer.from(signature as Uint8Array));
@@ -61,7 +61,7 @@ export function aggregateSignatures(signatures: BLSSignature[]): BLSSignature {
  * Combines all given public keys into single one
  * @param publicKeys
  */
-export function aggregatePubkeys(publicKeys: BLSPubkey[]): BLSPubkey {
+export function aggregatePubkeys(publicKeys: BLSPubkey[]): Buffer {
   assert(publicKeys, "publicKeys is null or undefined");
   if(publicKeys.length === 0) {
     return Buffer.alloc(PUBLIC_KEY_LENGTH);
