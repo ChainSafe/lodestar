@@ -5,7 +5,6 @@
 
 import {EventEmitter} from "events";
 //@ts-ignore
-import {promisify} from "es6-promisify";
 import LibP2p from "libp2p";
 //@ts-ignore
 import Gossipsub from "libp2p-gossipsub";
@@ -46,19 +45,19 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.logger = logger.child({module: "gossip", level: LogLevel[logger.level]});
     this.logger.silent = logger.silent;
     this.validator = validator;
-    this.pubsub = new Gossipsub(libp2p, {gossipIncoming: false});
+    this.pubsub = new Gossipsub(libp2p.peerInfo, libp2p.registrar, {gossipIncoming: false});
     this.handlers = this.registerHandlers();
   }
 
   public async start(): Promise<void> {
-    await promisify(this.pubsub.start.bind(this.pubsub))();
+    await this.pubsub.start();
     this.handlers.forEach((handler, topic) => {
       this.pubsub.on(topic, handler);
     });
   }
 
   public async stop(): Promise<void> {
-    await promisify(this.pubsub.stop.bind(this.pubsub))();
+    await this.pubsub.stop();
     this.handlers.forEach((handler, topic) => {
       this.pubsub.removeListener(topic, handler);
     });

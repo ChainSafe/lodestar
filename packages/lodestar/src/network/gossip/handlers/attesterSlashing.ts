@@ -7,7 +7,6 @@ import {AttesterSlashing} from "@chainsafe/eth2.0-types";
 import {deserializeGossipMessage, getGossipTopic} from "../utils";
 import {Gossip, GossipHandlerFn} from "../gossip";
 import {GossipEvent} from "../constants";
-import {promisify} from "es6-promisify";
 
 export function getIncomingAttesterSlashingHandler(validator: IGossipMessageValidator): GossipHandlerFn {
   return async function handleIncomingAttesterSlashing(this: Gossip, msg: IGossipMessage): Promise<void> {
@@ -26,7 +25,7 @@ export function getIncomingAttesterSlashingHandler(validator: IGossipMessageVali
 }
 
 export async function publishAttesterSlashing(this: Gossip, attesterSlashing: AttesterSlashing): Promise<void> {
-  await promisify<void, string, Uint8Array>(this.pubsub.publish.bind(this.pubsub))(
+  await this.pubsub.publish(
     getGossipTopic(GossipEvent.PROPOSER_SLASHING),
     Buffer.from(this.config.types.AttesterSlashing.serialize(attesterSlashing))
   );

@@ -8,7 +8,6 @@ import {IGossipMessage, IGossipMessageValidator} from "../interface";
 import {Gossip, GossipHandlerFn} from "../gossip";
 import {deserializeGossipMessage, getGossipTopic} from "../utils";
 import {GossipEvent} from "../constants";
-import {promisify} from "es6-promisify";
 
 export function getIncomingAggregateAndProofHandler(validator: IGossipMessageValidator): GossipHandlerFn {
   return async function handleIncomingAggregateAndProof(this: Gossip, msg: IGossipMessage): Promise<void> {
@@ -29,13 +28,14 @@ export function getIncomingAggregateAndProofHandler(validator: IGossipMessageVal
 
 export async function publishAggregatedAttestation(this: Gossip, aggregateAndProof: AggregateAndProof): Promise<void> {
   await Promise.all([
-    promisify<void, string, Uint8Array>(this.pubsub.publish.bind(this.pubsub))(
+    this.pubsub.publish(
       getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF),
       Buffer.from(this.config.types.AggregateAndProof.serialize(aggregateAndProof))
     ),
     //to be backward compatible
-    promisify<void, string, Uint8Array>(this.pubsub.publish.bind(this.pubsub))(
-      getGossipTopic(GossipEvent.ATTESTATION), this.config.types.Attestation.serialize(aggregateAndProof.aggregate)
+    this.pubsub.publish(
+      getGossipTopic(GossipEvent.ATTESTATION),
+      Buffer.from(this.config.types.Attestation.serialize(aggregateAndProof.aggregate))
     )
   ]);
   this.logger.verbose(

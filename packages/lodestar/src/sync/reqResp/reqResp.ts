@@ -65,9 +65,10 @@ export class SyncReqResp implements ISyncReqResp {
   public async start(): Promise<void> {
     this.network.on("peer:connect", this.handshake);
     this.network.reqResp.on("request", this.onRequest);
+    const myStatus = await this.createStatus();
     await Promise.all(
-      this.network.getPeers().map(async (peerInfo) =>
-        this.network.reqResp.status(peerInfo, await this.createStatus())));
+      this.network.getPeers().map((peerInfo) =>
+        this.network.reqResp.status(peerInfo, myStatus)));
   }
 
   public async stop(): Promise<void> {
@@ -138,6 +139,7 @@ export class SyncReqResp implements ISyncReqResp {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
+    this.network.reqResp.sendResponse(id, null, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
     await this.network.disconnect(peerInfo);
   }
 

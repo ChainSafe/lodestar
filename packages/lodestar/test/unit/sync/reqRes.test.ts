@@ -1,8 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
-// @ts-ignore
 import PeerInfo from "peer-info";
-// @ts-ignore
 import PeerId from "peer-id";
 import {Goodbye, Status} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
@@ -16,7 +14,7 @@ import {SyncReqResp} from "../../../src/sync/reqResp";
 import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
 import {ReqResp} from "../../../src/network/reqResp";
 import {ReputationStore} from "../../../src/sync/IReputation";
-import { generateEmptySignedBlock } from "../../utils/block";
+import {generateEmptySignedBlock} from "../../utils/block";
 
 describe("syncing", function () {
   const sandbox = sinon.createSandbox();

@@ -36,6 +36,7 @@ export class NodejsNode extends LibP2p {
         peerDiscovery: {
           autoDial: true,
           mdns: {
+            peerInfo: options.peerInfo
           },
           bootstrap: {
             interval: 2000,
@@ -45,7 +46,6 @@ export class NodejsNode extends LibP2p {
         }
       }
     };
-    // @ts-ignore
     super(defaults);
   }
 }
