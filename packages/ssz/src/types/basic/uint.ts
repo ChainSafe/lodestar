@@ -57,10 +57,14 @@ export class NumberUintType extends UintType<number> {
     return output;
   }
   fromJson(data: Json): number {
-    this.assertValidValue(data);
-    return data;
+    const n = Number(data);
+    this.assertValidValue(n);
+    return n;
   }
   toJson(value: number): Json {
+    if (this.byteLength > 4) {
+      return String(value);
+    }
     return value;
   }
 }
