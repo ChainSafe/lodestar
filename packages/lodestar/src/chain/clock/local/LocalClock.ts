@@ -51,7 +51,7 @@ export class LocalClock implements IBeaconClock {
     }
   }
 
-  private updateSlot = () => {
+  private updateSlot = (): void => {
     if(!this.isRunning) {
       return;
     }

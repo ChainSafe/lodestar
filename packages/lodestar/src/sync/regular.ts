@@ -10,7 +10,7 @@ import {
   AggregateAndProof,
   Root,
   SignedBeaconBlock,
-  SignedVoluntaryExit,
+  SignedVoluntaryExit, CommitteeIndex, Slot,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db";
@@ -21,6 +21,7 @@ import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {ISyncModules} from "./index";
 import {ISyncOptions} from "./options";
 import {GossipEvent} from "../network/gossip/constants";
+import {AttestationCollector} from "./subnet/attestation-collector";
 
 export type IRegularSyncModules = Pick<ISyncModules, "config"|"db"|"chain"|"opPool"|"network"|"logger">;
 
@@ -29,6 +30,7 @@ export class RegularSync {
   private db: IBeaconDb;
   private chain: IBeaconChain;
   private network: INetwork;
+  private attestationCollector: AttestationCollector;
   private opPool: OpPool;
   private logger: ILogger;
 
@@ -39,10 +41,15 @@ export class RegularSync {
     this.network = modules.network;
     this.opPool = modules.opPool;
     this.logger = modules.logger;
+    this.attestationCollector = new AttestationCollector(
+      this.config,
+      {chain: this.chain, network: this.network, opPool: this.opPool}
+    );
   }
 
   public async start(): Promise<void> {
     this.logger.verbose("regular sync start");
+    await this.attestationCollector.start();
     this.network.gossip.subscribeToBlock(this.receiveBlock);
     this.network.gossip.subscribeToAggregateAndProof(this.receiveAggregateAndProof);
     // For interop only, will be removed prior to mainnet
@@ -58,6 +65,7 @@ export class RegularSync {
 
   public async stop(): Promise<void> {
     this.logger.verbose("regular sync stop");
+    await this.attestationCollector.stop();
     this.network.gossip.unsubscribe(GossipEvent.BLOCK, this.receiveBlock);
     this.network.gossip.unsubscribe(GossipEvent.AGGREGATE_AND_PROOF, this.receiveAggregateAndProof);
     this.network.gossip.unsubscribe(GossipEvent.ATTESTATION, this.receiveAttestation);
@@ -85,10 +93,7 @@ export class RegularSync {
 
   public receiveAttestation = async (attestation: Attestation): Promise<void> => {
     // send attestation on to other modules
-    await Promise.all([
-      this.opPool.attestations.receive(attestation),
-      this.chain.receiveAttestation(attestation),
-    ]);
+    await this.opPool.attestations.receive(attestation);
   };
 
   public receiveVoluntaryExit = async (voluntaryExit: SignedVoluntaryExit): Promise<void> => {
@@ -102,6 +107,10 @@ export class RegularSync {
   public receiveAttesterSlashing = async (attesterSlashing: AttesterSlashing): Promise<void> => {
     await this.opPool.attesterSlashings.receive(attesterSlashing);
   };
+
+  public collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
+    this.attestationCollector.subscribeToCommitteeAttestations(slot, committeeIndex);
+  }
 
   private onProcessedBlock = (signedBlock: SignedBeaconBlock): void => {
     this.network.gossip.publishBlock(signedBlock);

@@ -3,7 +3,7 @@
  */
 
 import {ATTESTATION_SUBNET_COUNT, GOSSIP_MAX_SIZE} from "../../constants";
-import {Attestation} from "@chainsafe/eth2.0-types";
+import {Attestation, CommitteeIndex} from "@chainsafe/eth2.0-types";
 import {IGossipMessage} from "./interface";
 import assert from "assert";
 import {AnySSZType, deserialize} from "@chainsafe/ssz";
@@ -26,7 +26,11 @@ export function getAttestationSubnetTopic(attestation: Attestation, encoding = "
 }
 
 export function getAttestationSubnet(attestation: Attestation): string {
-  return String(attestation.data.index % ATTESTATION_SUBNET_COUNT);
+  return getCommitteeIndexSubnet(attestation.data.index);
+}
+
+export function getCommitteeIndexSubnet(committeeIndex: CommitteeIndex): string {
+  return String(committeeIndex % ATTESTATION_SUBNET_COUNT);
 }
 
 export function deserializeGossipMessage<T>(msg: IGossipMessage, type: AnySSZType): T {

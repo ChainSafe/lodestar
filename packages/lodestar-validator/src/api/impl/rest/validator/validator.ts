@@ -92,4 +92,21 @@ export class RestValidatorApi implements IValidatorApi {
       `/duties/${slot}/aggregator?committee_index=${committeeIndex}&slot_signature=${toHex(slotSignature)}`
     );
   }
+  
+  public async subscribeCommitteeSubnet(
+    slot: Slot,
+    slotSignature: BLSSignature,
+    committeeIndex: CommitteeIndex,
+    aggregatorPubkey: BLSPubkey
+  ): Promise<void> {
+    return this.client.post(
+      "/beacon_committee_subscription",
+      toJson({
+        slot,
+        slotSignature,
+        committeeIndex,
+        aggregatorPubkey
+      })
+    );
+  }
 }

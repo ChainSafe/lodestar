@@ -117,26 +117,34 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.subscribe(GossipEvent.ATTESTER_SLASHING, callback);
   }
 
-  public subscribeToAttestationSubnet(subnet: number|string, callback: (attestation: Attestation) => void): void {
+  public subscribeToAttestationSubnet(
+    subnet: number|string, callback?: (attestation: {attestation: Attestation; subnet: number}) => void
+  ): void {
     this.subscribe(GossipEvent.ATTESTATION_SUBNET, callback, new Map([["subnet", subnet.toString()]]));
   }
 
-  public unsubscribeFromAttestationSubnet(subnet: number|string, callback: (attestation: Attestation) => void): void {
+  public unsubscribeFromAttestationSubnet(
+    subnet: number|string, callback?: (attestation: {attestation: Attestation; subnet: number}) => void
+  ): void {
     this.unsubscribe(GossipEvent.ATTESTATION_SUBNET, callback, new Map([["subnet", subnet.toString()]]));
   }
 
-  public unsubscribe(event: keyof IGossipEvents, listener: unknown, params: Map<string, string> = new Map()): void {
+  public unsubscribe(event: keyof IGossipEvents, listener?: unknown, params: Map<string, string> = new Map()): void {
     if(this.listenerCount(event) === 1 && !event.startsWith("gossipsub")) {
       this.pubsub.unsubscribe(getGossipTopic(event as GossipEvent, "ssz", params));
     }
-    this.removeListener(event, listener as (...args: unknown[]) => void);
+    if(listener) {
+      this.removeListener(event, listener as (...args: unknown[]) => void);
+    }
   }
 
-  private subscribe(event: keyof IGossipEvents, listener: unknown, params: Map<string, string> = new Map()): void {
+  private subscribe(event: keyof IGossipEvents, listener?: unknown, params: Map<string, string> = new Map()): void {
     if(this.listenerCount(event) === 0 && !event.startsWith("gossipsub")) {
       this.pubsub.subscribe(getGossipTopic(event as GossipEvent, "ssz", params));
     }
-    this.on(event, listener as (...args: unknown[]) => void);
+    if(listener) {
+      this.on(event, listener as (...args: unknown[]) => void);
+    }
   }
 
   private registerHandlers(): Map<string, GossipHandlerFn> {

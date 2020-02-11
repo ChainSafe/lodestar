@@ -60,10 +60,11 @@ export class AttestationService {
     if(attesterDuties && attesterDuties.length === 1 && attesterDuties[0].validatorPubkey.equals(this.publicKey)) {
       const duty = attesterDuties[0];
       const fork = (await this.provider.beacon.getFork()).fork;
+      const slotSignature = this.getSlotSignature(duty.attestationSlot, fork);
       const isAggregator = await this.provider.validator.isAggregator(
         duty.attestationSlot,
         duty.committeeIndex,
-        this.getSlotSignature(duty.attestationSlot, fork)
+        slotSignature
       );
       this.nextAttesterDuties.set(
         duty.attestationSlot,
@@ -72,7 +73,12 @@ export class AttestationService {
           isAggregator
         });
       if(isAggregator) {
-        //TODO: subscribe to committee subnet
+        await this.provider.validator.subscribeCommitteeSubnet(
+          duty.attestationSlot,
+          slotSignature,
+          duty.committeeIndex,
+          this.publicKey
+        );
       }
     }
   };

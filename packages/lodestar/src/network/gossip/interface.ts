@@ -58,8 +58,14 @@ export interface IGossip extends IService {
   subscribeToVoluntaryExit(callback: (voluntaryExit: SignedVoluntaryExit) => void): void;
   subscribeToProposerSlashing(callback: (slashing: ProposerSlashing) => void): void;
   subscribeToAttesterSlashing(callback: (slashing: AttesterSlashing) => void): void;
-  subscribeToAttestationSubnet(subnet: number|string, callback: (attestation: Attestation) => void): void;
-  unsubscribeFromAttestationSubnet(subnet: number|string, callback: (attestation: Attestation) => void): void;
+  subscribeToAttestationSubnet(
+    subnet: number|string,
+    callback?: (attestation:  {attestation: Attestation; subnet: number}) => void
+  ): void;
+  unsubscribeFromAttestationSubnet(
+    subnet: number|string,
+    callback?: (attestation:  {attestation: Attestation; subnet: number}) => void
+  ): void;
   unsubscribe(event: keyof IGossipEvents, listener: unknown, params?: Map<string, string>): void;
 }
 
