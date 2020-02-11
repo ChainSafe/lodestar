@@ -1,4 +1,4 @@
-import {Node, Tree, subtreeFillToContents, zeroNode, Gindex} from "@chainsafe/merkle-tree";
+import {Node, Tree, subtreeFillToContents, zeroNode, Gindex} from "@chainsafe/persistent-merkle-tree";
 
 import {ObjectLike} from "../../interface";
 import {ContainerType, CompositeType} from "../../types";

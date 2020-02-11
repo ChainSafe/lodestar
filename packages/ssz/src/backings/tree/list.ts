@@ -1,4 +1,4 @@
-import {Node, Tree, zeroNode, BranchNode} from "@chainsafe/merkle-tree";
+import {Node, Tree, zeroNode, BranchNode} from "@chainsafe/persistent-merkle-tree";
 
 import {List} from "../../interface";
 import {number32Type, BasicListType, CompositeListType} from "../../types";

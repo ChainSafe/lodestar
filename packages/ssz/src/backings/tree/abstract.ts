@@ -1,4 +1,4 @@
-import {Node, Tree, Gindex, countToDepth, toGindex} from "@chainsafe/merkle-tree";
+import {Node, Tree, Gindex, countToDepth, toGindex} from "@chainsafe/persistent-merkle-tree";
 
 import {CompositeType} from "../../types";
 import {isBackedValue, BackingType} from "..";

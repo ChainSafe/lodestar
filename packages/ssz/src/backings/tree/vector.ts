@@ -1,4 +1,4 @@
-import {Node, Tree, subtreeFillToLength, zeroNode} from "@chainsafe/merkle-tree";
+import {Node, Tree, subtreeFillToLength, zeroNode} from "@chainsafe/persistent-merkle-tree";
 
 import {Vector} from "../../interface";
 import {BasicVectorType, CompositeVectorType} from "../../types";

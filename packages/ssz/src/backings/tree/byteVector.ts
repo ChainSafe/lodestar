@@ -1,4 +1,4 @@
-import {Tree} from "@chainsafe/merkle-tree";
+import {Tree} from "@chainsafe/persistent-merkle-tree";
 
 import {ByteVector} from "../../interface";
 import {ByteVectorType} from "../../types";

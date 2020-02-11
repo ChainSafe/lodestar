@@ -1,4 +1,4 @@
-import {Tree, iterateAtDepth, Gindex} from "@chainsafe/merkle-tree";
+import {Tree, iterateAtDepth, Gindex} from "@chainsafe/persistent-merkle-tree";
 
 import {ArrayLike} from "../../interface";
 import {BasicArrayType, CompositeArrayType} from "../../types";

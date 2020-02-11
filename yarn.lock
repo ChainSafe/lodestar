@@ -922,12 +922,12 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.9.4.tgz#2a250eee523c31c1662eaf9d8def1a6697296fdd"
   integrity sha512-yA+zvS9Qbxz+Yd6mV+0T2mqGtAs3tvIRIvkLnQb1Yr9+r0mgr1CWmh7u50pJNYMLaElI3oc1MhPB+VPuKyBRMQ==
 
-"@chainsafe/merkle-tree@file:../merkle-tree":
-  version "0.0.1"
+"@chainsafe/persistent-merkle-tree@^0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.1.0.tgz#ead0e1c63a965252dcc08eb517281bb8888c3414"
+  integrity sha512-cT9NGP/2B4mpva/AvOw3wwC6DSPlACVD7jkgvhDA3uBLy9akkwXtqGJ/uYH/w9CHFdgLjR2FbYNz6Uf0NlLt7A==
   dependencies:
-    assert "^2.0.0"
     bcrypto "^4.2.8"
-    bigint-buffer "^1.1.5"
 
 "@evocateur/libnpmaccess@^3.1.2":
   version "3.1.2"

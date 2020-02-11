@@ -28,7 +28,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/merkle-tree": "/home/cayman/Code/merkle-tree/",
+    "@chainsafe/persistent-merkle-tree": "^0.1.0",
     "bcrypto": "^4.1.0"
   },
   "devDependencies": {
