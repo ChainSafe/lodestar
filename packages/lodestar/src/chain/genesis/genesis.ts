@@ -54,7 +54,7 @@ export function initializeBeaconStateFromEth1(
   deposits.forEach((deposit, index) => {
     const depositDataList = leaves.slice(0, index + 1);
     state.eth1Data.depositRoot = config.types.DepositDataRootList.hashTreeRoot(
-      depositDataList.map(config.types.DepositData.hashTreeRoot)
+      depositDataList.map((d) => config.types.DepositData.hashTreeRoot(d))
     );
     processDeposit(config, state, deposit);
   });

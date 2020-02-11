@@ -31,7 +31,7 @@ export function interopDeposits(
     // Add to merkle tree
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(data));
     return {
-      proof: tree.getSingleProof(BigInt(i)),
+      proof: tree.getSingleProof(depositDataRootList.gindexOfProperty(i)),
       data,
     };
   });

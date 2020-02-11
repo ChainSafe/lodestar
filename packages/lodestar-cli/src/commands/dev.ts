@@ -24,12 +24,9 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentSlot} from "@chai
 import {interopKeypair} from "../lodestar/interop/keypairs";
 import {ValidatorApi} from "@chainsafe/lodestar/lib/api/rpc/api/validator";
 import {BeaconApi} from "@chainsafe/lodestar/lib/api/rpc/api/beacon";
-import {DEPOSIT_CONTRACT_TREE_DEPTH} from "@chainsafe/lodestar/lib/constants";
 
 import {loadPeerId, createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {createPeerId} from "@chainsafe/lodestar/lib/network";
-import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
-import {MerkleTreeSerialization} from "@chainsafe/lodestar/lib/util/serialization";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib/api";
 import {ValidatorClient} from "@chainsafe/lodestar/lib/validator/nodejs";
 import {BeaconState} from "@chainsafe/eth2.0-types";
@@ -137,20 +134,25 @@ export class DevCommand implements ICliCommand {
     }
     const libp2p = await createNodeJsLibp2p(peerId, conf.network);
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
-    const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(config));
+    const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
     let state: BeaconState;
     if (options.genesisState) {
-      state = quickStartOptionToState(config, tree, options.genesisState);
+      state = quickStartOptionToState(config, depositDataRootList, options.genesisState);
     } else if (options.genesisTime && options.validatorCount) {
       logger.info("Starting node with genesisTime "
           +`${parseInt(options.genesisTime)} (${new Date(parseInt(options.genesisTime) * 1000)}) and `
           +`${options.validatorCount} validators.`);
-      state = quickStartState(config, tree, parseInt(options.genesisTime), parseInt(options.validatorCount));
+      state = quickStartState(
+        config,
+        depositDataRootList,
+        parseInt(options.genesisTime),
+        parseInt(options.validatorCount)
+      );
     } else {
       throw new Error("Missing either --quickstart or --genesisTime and --validatorCount flag");
     }
     this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier(), libp2p});
-    await this.node.chain.initializeBeaconChain(state, tree);
+    await this.node.chain.initializeBeaconChain(state, depositDataRootList);
 
     const targetSlot = computeStartSlotAtEpoch(
       config,

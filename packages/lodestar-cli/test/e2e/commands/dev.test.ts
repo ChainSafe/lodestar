@@ -8,8 +8,6 @@ import {InteropEth1Notifier} from "@chainsafe/lodestar/lib/eth1/impl/interop";
 import {createPeerId} from "@chainsafe/lodestar/lib/network";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {quickStartState} from "../../../src/lodestar/interop/state";
-import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
-import {MerkleTreeSerialization} from "@chainsafe/lodestar/lib/util/serialization";
 import {computeStartSlotAtEpoch, computeEpochAtSlot, getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
 import {existsSync, mkdirSync} from "fs";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib/api";
@@ -17,7 +15,6 @@ import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {interopKeypair} from "../../../src/lodestar/interop/keypairs";
 import {ValidatorClient} from "@chainsafe/lodestar/lib/validator/nodejs";
 import {ValidatorApi, BeaconApi} from "@chainsafe/lodestar/lib/api/rpc";
-import {DEPOSIT_CONTRACT_TREE_DEPTH} from "@chainsafe/lodestar/lib/constants";
 
 
 const VALIDATOR_COUNT = 5;
@@ -77,9 +74,9 @@ describe("e2e interop simulation", function() {
     node = new BeaconNode(conf, {config: minimalConfig, logger, eth1: new InteropEth1Notifier(), libp2p});
 
     const genesisTime = Math.round(Date.now()/1000);
-    const tree = ProgressiveMerkleTree.empty(DEPOSIT_CONTRACT_TREE_DEPTH, new MerkleTreeSerialization(minimalConfig));
-    const state = quickStartState(minimalConfig, tree, genesisTime, VALIDATOR_COUNT);
-    await node.chain.initializeBeaconChain(state, tree);
+    const depositDataRootList = minimalConfig.types.DepositDataRootList.tree.defaultValue();
+    const state = quickStartState(minimalConfig, depositDataRootList, genesisTime, VALIDATOR_COUNT);
+    await node.chain.initializeBeaconChain(state, depositDataRootList);
     const targetSlot = computeStartSlotAtEpoch(
       minimalConfig,
       computeEpochAtSlot(minimalConfig, getCurrentSlot(minimalConfig, state.genesisTime))
