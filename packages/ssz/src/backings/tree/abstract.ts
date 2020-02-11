@@ -2,6 +2,7 @@ import {Node, Tree, Gindex, countToDepth, toGindex} from "@chainsafe/persistent-
 
 import {CompositeType} from "../../types";
 import {BackingType} from "../backedValue";
+import {byteArrayEquals} from "../byteArray";
 
 
 export function isTreeBackedValue<T extends object>(value: T): value is TreeBackedValue<T> {
@@ -173,9 +174,10 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
    */
   equals(target: Tree, other: TreeBackedValue<T>): boolean {
     if (isTreeBackedValue(other)) {
-      const aRoot = this.hashTreeRoot(target);
-      const bRoot = this.hashTreeRoot(other.backing());
-      return aRoot.every((v, i) => v === bRoot[i]);
+      return byteArrayEquals(
+        this.hashTreeRoot(target),
+        this.hashTreeRoot(other.backing()),
+      );
     }
     return this._type.structural.equals(this.createBackedValue(target), other);
   }

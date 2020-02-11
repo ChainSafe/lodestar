@@ -16,6 +16,13 @@ export function fromHexString(data: string): Uint8Array {
   return new Uint8Array(data.match(/.{1,2}/g).map(b => parseInt(b, 16)));
 }
 
+export function byteArrayEquals(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  return a.every((v, i) => v === b[i]);
+}
+
 export function isByteArrayBackedValue<T extends object>(value: T): value is ByteArrayBackedValue<T> {
   return (
     (value as ByteArrayBackedValue<T>).backingType &&
