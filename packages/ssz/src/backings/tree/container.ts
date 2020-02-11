@@ -2,7 +2,7 @@ import {Node, Tree, subtreeFillToContents, zeroNode, Gindex} from "@chainsafe/pe
 
 import {ObjectLike} from "../../interface";
 import {ContainerType, CompositeType} from "../../types";
-import {isTreeBackedValue, TreeHandler, PropOfTreeBackedValue, TreeBackedValue} from "./abstract";
+import {isTreeBacked, TreeHandler, PropOfTreeBacked, TreeBacked} from "./abstract";
 
 export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
   _type: ContainerType<T>;
@@ -29,7 +29,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
   defaultBacking(): Tree {
     return new Tree(this.defaultNode());
   }
-  createValue(value: any): TreeBackedValue<T> {
+  createValue(value: any): TreeBacked<T> {
     const v = this.defaultValue();
     Object.entries(this._type.fields).forEach(([fieldName, fieldType]) => {
       if (value[fieldName] !== null && value[fieldName] !== undefined) {
@@ -119,7 +119,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
     }
     return this.gindexOfChunk(target, chunkIndex);
   }
-  getProperty<V extends keyof T>(target: Tree, property: V): PropOfTreeBackedValue<T, V> {
+  getProperty<V extends keyof T>(target: Tree, property: V): PropOfTreeBacked<T, V> {
     const chunkIndex = Object.keys(this._type.fields).findIndex((fieldName) => fieldName === property);
     if (chunkIndex === -1) {
       return undefined;
@@ -147,7 +147,7 @@ export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
       target.setRoot(chunkGindex, chunk);
       return true;
     } else {
-      if (isTreeBackedValue(value)) {
+      if (isTreeBacked(value)) {
         target.setSubtree(chunkGindex, value.backing());
         return true;
       } else {

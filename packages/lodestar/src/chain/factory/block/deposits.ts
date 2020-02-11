@@ -2,7 +2,7 @@
  * @module chain/blockAssembly
  */
 
-import {List, TreeBackedValue} from "@chainsafe/ssz";
+import {List, TreeBacked} from "@chainsafe/ssz";
 import {BeaconState, Deposit, Eth1Data, DepositData, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {OpPool} from "../../../opPool";
@@ -12,7 +12,7 @@ export async function generateDeposits(
   opPool: OpPool,
   state: BeaconState,
   eth1Data: Eth1Data,
-  depositDataRootList: TreeBackedValue<List<Root>>): Promise<Deposit[]> {
+  depositDataRootList: TreeBacked<List<Root>>): Promise<Deposit[]> {
   if(eth1Data.depositCount > state.eth1DepositIndex) {
     const eth1DepositIndex = state.eth1DepositIndex;
     const upperIndex = eth1DepositIndex + Math.min(config.params.MAX_DEPOSITS, eth1Data.depositCount);

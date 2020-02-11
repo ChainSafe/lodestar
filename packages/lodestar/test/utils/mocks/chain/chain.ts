@@ -14,7 +14,7 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {generateState} from "../../state";
-import { TreeBackedValue, List } from "@chainsafe/ssz";
+import { TreeBacked, List } from "@chainsafe/ssz";
 
 export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public latestState: BeaconState;
@@ -38,7 +38,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     return true;
   }
   public async advanceState(slot?: Slot): Promise<void>{}
-  initializeBeaconChain(genesisState: BeaconState, depositDataRootList: TreeBackedValue<List<Root>>): Promise<void> {
+  initializeBeaconChain(genesisState: BeaconState, depositDataRootList: TreeBacked<List<Root>>): Promise<void> {
     throw new Error("Method not implemented.");
   }
   isInitialized(): boolean {

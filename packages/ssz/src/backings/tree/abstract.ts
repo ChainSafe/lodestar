@@ -5,19 +5,19 @@ import {BackingType} from "../backedValue";
 import {byteArrayEquals} from "../byteArray";
 
 
-export function isTreeBackedValue<T extends object>(value: T): value is TreeBackedValue<T> {
+export function isTreeBacked<T extends object>(value: T): value is TreeBacked<T> {
   return (
-    (value as TreeBackedValue<T>).backingType &&
-    (value as TreeBackedValue<T>).backingType() === BackingType.tree
+    (value as TreeBacked<T>).backingType &&
+    (value as TreeBacked<T>).backingType() === BackingType.tree
   );
 }
 
 /**
- * The ITreeBackedValue interface represents the public API that attach to tree-backed Proxy objects
+ * The ITreeBacked interface represents the public API that attach to tree-backed Proxy objects
  *
  * This is an alternative way of calling methods of the attached TreeHandler
  */
-export interface ITreeBackedValue<T extends object> {
+export interface ITreeBacked<T extends object> {
   type(): CompositeType<T>;
 
   /**
@@ -29,7 +29,7 @@ export interface ITreeBackedValue<T extends object> {
   /**
    * Clone / Copy
    */
-  clone(): TreeBackedValue<T>;
+  clone(): TreeBacked<T>;
 
   /**
    * Serialized byte length
@@ -79,35 +79,35 @@ export interface ITreeBackedValue<T extends object> {
  * Since tree-backed values return tree-backed-values from non-basic-type property getters,
  * we need this type to recursively wrap subobjects (non-basic values) as tree-backed values.
  */
-export type TreeBackedValueify<T> = {
-  [P in keyof T]: T[P] extends object ? TreeBackedValue<T[P]> : T[P];
+export type TreeBackedify<T> = {
+  [P in keyof T]: T[P] extends object ? TreeBacked<T[P]> : T[P];
 };
 
 /**
- * A tree-backed value has the ITreeBackedValue public API as well as tree-backed getters/setters
+ * A tree-backed value has the ITreeBacked public API as well as tree-backed getters/setters
  */
-export type TreeBackedValue<T extends object> = ITreeBackedValue<T> & TreeBackedValueify<T> & T;
+export type TreeBacked<T extends object> = ITreeBacked<T> & TreeBackedify<T> & T;
 
 /**
  * Every property of a 'basic' tree-backed value is of a basic type, ie not a tree-backed value
  */
-export type PropOfBasicTreeBackedValue<T extends object, V extends keyof T> = T[V];
+export type PropOfBasicTreeBacked<T extends object, V extends keyof T> = T[V];
 
 /**
  * Every property of a 'composite' tree-backed value is of a composite type, ie a tree-backed value
  */
-export type PropOfCompositeTreeBackedValue<T extends object, V extends keyof T> =
-  T[V] extends object ? TreeBackedValue<T[V]> : never;
+export type PropOfCompositeTreeBacked<T extends object, V extends keyof T> =
+  T[V] extends object ? TreeBacked<T[V]> : never;
 
-export type PropOfTreeBackedValue<T extends object, V extends keyof T> =
-  PropOfBasicTreeBackedValue<T, V> | PropOfCompositeTreeBackedValue<T, V>;
+export type PropOfTreeBacked<T extends object, V extends keyof T> =
+  PropOfBasicTreeBacked<T, V> | PropOfCompositeTreeBacked<T, V>;
 
 /**
  * A TreeHandler instance handles tree-backed-specific logic.
  * It is a property of its associated CompositeType, and vice-versa.
- * It is also attached to each TreeBackedValue as its ES6 Proxy handler
+ * It is also attached to each TreeBacked as its ES6 Proxy handler
  *
- * These methods can be used in both contexts (when part of ITreeBackedValue):
+ * These methods can be used in both contexts (when part of ITreeBacked):
  * eg:
  *   Type.tree.hashTreeRoot(tree)
  *   and
@@ -149,22 +149,22 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   /**
    * Default constructor
    */
-  defaultValue(): TreeBackedValue<T> {
+  defaultValue(): TreeBacked<T> {
     return this.createBackedValue(this.defaultBacking());
   }
-  createValue(value: T): TreeBackedValue<T> {
+  createValue(value: T): TreeBacked<T> {
     throw new Error("Not implemented");
   }
   /**
    * Return an ES6 Proxy-wrapped tree backing
    */
-  createBackedValue(target: Tree): TreeBackedValue<T> {
-    return new Proxy(target, this) as TreeBackedValue<T>;
+  createBackedValue(target: Tree): TreeBacked<T> {
+    return new Proxy(target, this) as TreeBacked<T>;
   }
   /**
    * Clone / copy
    */
-  clone(target: Tree): TreeBackedValue<T> {
+  clone(target: Tree): TreeBacked<T> {
     return this.createBackedValue(target.clone());
   }
   /**
@@ -172,8 +172,8 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
    *
    * If both values are tree-backed, use equality by merkle root, else use structural equality
    */
-  equals(target: Tree, other: TreeBackedValue<T>): boolean {
-    if (isTreeBackedValue(other)) {
+  equals(target: Tree, other: TreeBacked<T>): boolean {
+    if (isTreeBacked(other)) {
       return byteArrayEquals(
         this.hashTreeRoot(target),
         this.hashTreeRoot(other.backing()),
@@ -199,7 +199,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   /**
    * Deserialization
    */
-  deserialize(data: Uint8Array): TreeBackedValue<T> {
+  deserialize(data: Uint8Array): TreeBacked<T> {
     return this.createBackedValue(this.fromBytes(data, 0, data.length));
   }
   /**
@@ -257,23 +257,23 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   }
 
   /**
-   * Return a ITreeBackedValue method, to be called using the ITreeBackedValue interface
+   * Return a ITreeBacked method, to be called using the ITreeBacked interface
    */
-  protected getMethod<V extends keyof ITreeBackedValue<T>>(target: Tree, methodName: V): ITreeBackedValue<T>[V] {
+  protected getMethod<V extends keyof ITreeBacked<T>>(target: Tree, methodName: V): ITreeBacked<T>[V] {
     return (this as any)[methodName].bind(this, target);
   }
   /**
-   * Return a property of T, either a subtree TreeBackedValue or a primitive, of a basic type
+   * Return a property of T, either a subtree TreeBacked or a primitive, of a basic type
    */
-  getProperty(target: Tree, property: keyof T): PropOfTreeBackedValue<T, keyof T> {
+  getProperty(target: Tree, property: keyof T): PropOfTreeBacked<T, keyof T> {
     throw new Error("Not implemented");
   }
   /**
-   * ES6 Proxy trap to get a ITreeBackedValue method or property of T
+   * ES6 Proxy trap to get a ITreeBacked method or property of T
    */
-  get(target: any, property: PropertyKey): PropOfTreeBackedValue<T, keyof T> | ITreeBackedValue<T>[keyof ITreeBackedValue<T>] {
+  get(target: any, property: PropertyKey): PropOfTreeBacked<T, keyof T> | ITreeBacked<T>[keyof ITreeBacked<T>] {
     if (property in this) {
-      return this.getMethod(target, property as keyof ITreeBackedValue<T>);
+      return this.getMethod(target, property as keyof ITreeBacked<T>);
     } else {
       return this.getProperty(target, property as keyof T);
     }

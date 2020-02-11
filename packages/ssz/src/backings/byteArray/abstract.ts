@@ -23,19 +23,19 @@ export function byteArrayEquals(a: Uint8Array, b: Uint8Array): boolean {
   return a.every((v, i) => v === b[i]);
 }
 
-export function isByteArrayBackedValue<T extends object>(value: T): value is ByteArrayBackedValue<T> {
+export function isByteArrayBacked<T extends object>(value: T): value is ByteArrayBacked<T> {
   return (
-    (value as ByteArrayBackedValue<T>).backingType &&
-    (value as ByteArrayBackedValue<T>).backingType() === BackingType.byteArray
+    (value as ByteArrayBacked<T>).backingType &&
+    (value as ByteArrayBacked<T>).backingType() === BackingType.byteArray
   );
 }
 
 /**
- * The IByteArrayBackedValue interface represents the public API that attach to byte-array-backed Proxy objects
+ * The IByteArrayBacked interface represents the public API that attach to byte-array-backed Proxy objects
  *
  * This is an alternative way of calling methods of the attached ByteArrayHandler
  */
-export interface IByteArrayBackedValue<T extends object> {
+export interface IByteArrayBacked<T extends object> {
   type(): CompositeType<T>;
 
   /**
@@ -47,7 +47,7 @@ export interface IByteArrayBackedValue<T extends object> {
   /**
    * Clone / Copy
    */
-  clone(): ByteArrayBackedValue<T>;
+  clone(): ByteArrayBacked<T>;
 
   /**
    * Serialized byte length
@@ -89,35 +89,35 @@ export interface IByteArrayBackedValue<T extends object> {
  * Since byte-array-backed values return byte-array-backed-values from non-basic-type property getters,
  * we need this type to recursively wrap subobjects (non-basic values) as byte-array-backed values.
  */
-export type ByteArrayBackedValueify<T> = {
-  [P in keyof T]: T[P] extends object ? ByteArrayBackedValue<T[P]> : T[P];
+export type ByteArrayBackedify<T> = {
+  [P in keyof T]: T[P] extends object ? ByteArrayBacked<T[P]> : T[P];
 };
 
 /**
- * A byte-array-backed value has the IByteArrayBackedValue public API as well as byte-array-backed getters/setters
+ * A byte-array-backed value has the IByteArrayBacked public API as well as byte-array-backed getters/setters
  */
-export type ByteArrayBackedValue<T extends object> = IByteArrayBackedValue<T> & ByteArrayBackedValueify<T> & T;
+export type ByteArrayBacked<T extends object> = IByteArrayBacked<T> & ByteArrayBackedify<T> & T;
 
 /**
  * Every property of a 'basic' byte-array-backed value is of a basic type, ie not a byte-array-backed value
  */
-export type PropOfBasicByteArrayBackedValue<T extends object, V extends keyof T> = T[V];
+export type PropOfBasicByteArrayBacked<T extends object, V extends keyof T> = T[V];
 
 /**
  * Every property of a 'composite' byte-array-backed value is of a composite type, ie a byte-array-backed value
  */
-export type PropOfCompositeByteArrayBackedValue<T extends object, V extends keyof T> =
-  T[V] extends object ? ByteArrayBackedValue<T[V]> : never;
+export type PropOfCompositeByteArrayBacked<T extends object, V extends keyof T> =
+  T[V] extends object ? ByteArrayBacked<T[V]> : never;
 
-export type PropOfByteArrayBackedValue<T extends object, V extends keyof T> =
-  PropOfBasicByteArrayBackedValue<T, V> | PropOfCompositeByteArrayBackedValue<T, V>;
+export type PropOfByteArrayBacked<T extends object, V extends keyof T> =
+  PropOfBasicByteArrayBacked<T, V> | PropOfCompositeByteArrayBacked<T, V>;
 
 /**
  * A ByteArrayHandler instance handles byte-array-backed-specific logic.
  * It is a property of its associated CompositeType, and vice-versa.
- * It is also attached to each ByteArrayBackedValue as its ES6 Proxy handler
+ * It is also attached to each ByteArrayBacked as its ES6 Proxy handler
  *
- * These methods can be used in both contexts (when part of IByteArrayBackedValue):
+ * These methods can be used in both contexts (when part of IByteArrayBacked):
  * eg:
  *   Type.byteArray.serialize(byteArrayBacking)
  *   and
@@ -155,22 +155,22 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
   /**
    * Default constructor
    */
-  defaultValue(): ByteArrayBackedValue<T> {
+  defaultValue(): ByteArrayBacked<T> {
     return this.createBackedValue((this.defaultBacking()));
   }
-  createValue(value: T): ByteArrayBackedValue<T> {
+  createValue(value: T): ByteArrayBacked<T> {
     throw new Error("Not implemented");
   }
   /**
    * Return an ES6 Proxy-wrapped byte array backing
    */
-  createBackedValue(target: Uint8Array): ByteArrayBackedValue<T> {
-    return new Proxy(target, this) as ByteArrayBackedValue<T>;
+  createBackedValue(target: Uint8Array): ByteArrayBacked<T> {
+    return new Proxy(target, this) as ByteArrayBacked<T>;
   }
   /**
    * Clone / copy
    */
-  clone(target: Uint8Array): ByteArrayBackedValue<T> {
+  clone(target: Uint8Array): ByteArrayBacked<T> {
     const newTarget = new Uint8Array(target.length);
     newTarget.set(target);
     return this.createBackedValue(newTarget);
@@ -180,8 +180,8 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
    *
    * If both values are byte-array-backed, use equality byte-by-byte, else use structural equality
    */
-  equals(target: Uint8Array, other: ByteArrayBackedValue<T>): boolean {
-    if (isByteArrayBackedValue(other)) {
+  equals(target: Uint8Array, other: ByteArrayBacked<T>): boolean {
+    if (isByteArrayBacked(other)) {
       const otherTarget = other.backing();
       if (target.length !== otherTarget.length) {
         return false;
@@ -226,7 +226,7 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
   /**
    * Low-level deserialization
    */
-  fromBytes(data: Uint8Array, start: number, end: number): ByteArrayBackedValue<T> {
+  fromBytes(data: Uint8Array, start: number, end: number): ByteArrayBacked<T> {
     const target = new Uint8Array(end - start);
     target.set(new Uint8Array(data.buffer, data.byteOffset + start, end - start));
     return this.createBackedValue(target);
@@ -234,7 +234,7 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
   /**
    * Deserialization
    */
-  deserialize(data: Uint8Array): ByteArrayBackedValue<T> {
+  deserialize(data: Uint8Array): ByteArrayBacked<T> {
     return this.fromBytes(data, 0, data.length);
   }
   /**
@@ -263,23 +263,23 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
   }
 
   /**
-   * Return a IByteArrayBackedValue method, to be called using the IByteArrayBackedValue interface
+   * Return a IByteArrayBacked method, to be called using the IByteArrayBacked interface
    */
-  protected getMethod<V extends keyof IByteArrayBackedValue<T>>(target: Uint8Array, methodName: V): IByteArrayBackedValue<T>[V] {
+  protected getMethod<V extends keyof IByteArrayBacked<T>>(target: Uint8Array, methodName: V): IByteArrayBacked<T>[V] {
     return (this as any)[methodName].bind(this, target);
   }
   /**
-   * Return a property of T, either a subarray ByteArrayBackedValue or a primitive, of a basic type
+   * Return a property of T, either a subarray ByteArrayBacked or a primitive, of a basic type
    */
-  getProperty(target: Uint8Array, property: keyof T): PropOfByteArrayBackedValue<T, keyof T> {
+  getProperty(target: Uint8Array, property: keyof T): PropOfByteArrayBacked<T, keyof T> {
     throw new Error("Not implemented");
   }
   /**
-   * ES6 Proxy trap to get a IByteArrayBackedValue method or property of T
+   * ES6 Proxy trap to get a IByteArrayBacked method or property of T
    */
-  get(target: any, property: PropertyKey): PropOfByteArrayBackedValue<T, keyof T> | IByteArrayBackedValue<T>[keyof IByteArrayBackedValue<T>] {
+  get(target: any, property: PropertyKey): PropOfByteArrayBacked<T, keyof T> | IByteArrayBacked<T>[keyof IByteArrayBacked<T>] {
     if (property in this) {
-      return this.getMethod(target, property as keyof IByteArrayBackedValue<T>);
+      return this.getMethod(target, property as keyof IByteArrayBacked<T>);
     } else {
       return this.getProperty(target, property as keyof T);
     }

@@ -1,4 +1,4 @@
-import {CompositeType, List, TreeBackedValue} from "@chainsafe/ssz";
+import {CompositeType, List, TreeBacked} from "@chainsafe/ssz";
 import {Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -19,7 +19,7 @@ export class DepositDataRootListRepository extends BulkRepository<List<Root>> {
     return value.length - 1;
   }
 
-  public async get(id: Id): Promise<TreeBackedValue<List<Root>>> {
+  public async get(id: Id): Promise<TreeBacked<List<Root>>> {
     const serialized = await this.getSerialized(id);
     return serialized && (this.type as CompositeType<List<Root>>).tree.deserialize(serialized);
   }

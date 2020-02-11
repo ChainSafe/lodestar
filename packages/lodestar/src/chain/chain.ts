@@ -4,7 +4,7 @@
 
 import assert from "assert";
 import {EventEmitter} from "events";
-import {fromHexString, toHexString, TreeBackedValue, List} from "@chainsafe/ssz";
+import {fromHexString, toHexString, TreeBacked, List} from "@chainsafe/ssz";
 import {
   Attestation,
   BeaconState,
@@ -187,7 +187,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   public async initializeBeaconChain(
     genesisState: BeaconState,
-    depositDataRootList: TreeBackedValue<List<Root>>
+    depositDataRootList: TreeBacked<List<Root>>
   ): Promise<void> {
     const genesisBlock = getEmptyBlock();
     const stateRoot = this.config.types.BeaconState.hashTreeRoot(genesisState);

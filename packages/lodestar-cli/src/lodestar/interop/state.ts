@@ -1,4 +1,4 @@
-import {TreeBackedValue, List} from "@chainsafe/ssz";
+import {TreeBacked, List} from "@chainsafe/ssz";
 import {BeaconState, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -10,7 +10,7 @@ const INTEROP_TIMESTAMP = Math.pow(2, 40);
 
 export function quickStartState(
   config: IBeaconConfig,
-  depositDataRootList: TreeBackedValue<List<Root>>,
+  depositDataRootList: TreeBacked<List<Root>>,
   genesisTime: number,
   validatorCount: number,
 ): BeaconState {

@@ -3,7 +3,7 @@ import {Node, Tree, subtreeFillToLength, zeroNode} from "@chainsafe/persistent-m
 import {Vector} from "../../interface";
 import {BasicVectorType, CompositeVectorType} from "../../types";
 import {BasicArrayTreeHandler, CompositeArrayTreeHandler} from "./array";
-import {TreeBackedValue} from "./abstract";
+import {TreeBacked} from "./abstract";
 
 export class BasicVectorTreeHandler<T extends Vector<unknown>> extends BasicArrayTreeHandler<T> {
   _type: BasicVectorType<T>;

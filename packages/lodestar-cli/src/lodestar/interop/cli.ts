@@ -1,5 +1,5 @@
 import {readFileSync} from "fs";
-import {TreeBackedValue, List} from "@chainsafe/ssz";
+import {TreeBacked, List} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BeaconState, Root} from "@chainsafe/eth2.0-types";
 import {interopDeposits} from "./deposits";
@@ -9,7 +9,7 @@ import {interopDeposits} from "./deposits";
 // either "genesisTime,validatorCount" or "genesisState.fileext"
 export function quickStartOptionToState(
   config: IBeaconConfig,
-  depositDataRootList: TreeBackedValue<List<Root>>,
+  depositDataRootList: TreeBacked<List<Root>>,
   option: string
 ): BeaconState {
   const fileExt = /.(ssz)$/.exec(option);

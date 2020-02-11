@@ -1,4 +1,4 @@
-import {hash, TreeBackedValue, List} from "@chainsafe/ssz";
+import {hash, TreeBacked, List} from "@chainsafe/ssz";
 import {Deposit, DepositData, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {sign} from "@chainsafe/bls";
@@ -8,7 +8,7 @@ import {computeDomain} from "@chainsafe/eth2.0-state-transition";
 
 export function interopDeposits(
   config: IBeaconConfig,
-  depositDataRootList: TreeBackedValue<List<Root>>,
+  depositDataRootList: TreeBacked<List<Root>>,
   validatorCount: number
 ): Deposit[] {
   const tree = depositDataRootList.backing();

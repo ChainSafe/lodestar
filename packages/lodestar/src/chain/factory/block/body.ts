@@ -2,7 +2,7 @@
  * @module chain/blockAssembly
  */
 
-import {TreeBackedValue, List} from "@chainsafe/ssz";
+import {TreeBacked, List} from "@chainsafe/ssz";
 import {BeaconBlockBody, BeaconState, Bytes96, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ZERO_HASH} from "../../../constants";
@@ -15,7 +15,7 @@ export async function assembleBody(
   config: IBeaconConfig,
   opPool: OpPool,
   eth1: IEth1Notifier,
-  depositDataRootList: TreeBackedValue<List<Root>>,
+  depositDataRootList: TreeBacked<List<Root>>,
   currentState: BeaconState,
   randao: Bytes96
 ): Promise<BeaconBlockBody> {

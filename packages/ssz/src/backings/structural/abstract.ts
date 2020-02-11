@@ -5,7 +5,7 @@ import {merkleize} from "../../util/compat";
 /**
  * StructuralHandler differs slightly from the TreeHandler in that it is NOT a ProxyHandler.
  * It is only meant to be called via the CompositeType.structural object, rather than through a Proxied call.
- * It also acts on targets of type T rather than TreeBackedValue<T>.
+ * It also acts on targets of type T rather than TreeBacked<T>.
  */
 export class StructuralHandler<T extends object> {
   _type: CompositeType<T>;

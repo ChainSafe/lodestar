@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 
-import {TreeBackedValue, List} from "@chainsafe/ssz";
+import {TreeBacked, List} from "@chainsafe/ssz";
 import {
   Attestation, BeaconState, Checkpoint, Slot, Uint16, Uint64, Root, SignedBeaconBlock,
 } from "@chainsafe/eth2.0-types";
@@ -64,7 +64,7 @@ export interface IBeaconChain extends ChainEventEmitter {
    * Used for starting beacon chain with fake genesis state (dev, test, interop).
    * Note: Invoke this before {@link start}
    */
-  initializeBeaconChain(genesisState: BeaconState, depositDataRootList: TreeBackedValue<List<Root>>): Promise<void>;
+  initializeBeaconChain(genesisState: BeaconState, depositDataRootList: TreeBacked<List<Root>>): Promise<void>;
 
   isInitialized(): boolean;
 }
