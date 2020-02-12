@@ -240,8 +240,12 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       this.nodes[parentRoot].addChild(node);
     }
     if (justifiedCheckpoint && (!this.justified || justifiedCheckpoint.epoch > this.justified.epoch)) {
-      if (this.bestJustifiedCheckpoint && (!this.justified ||
-        justifiedCheckpoint.epoch > this.bestJustifiedCheckpoint.epoch)) {
+      if (this.bestJustifiedCheckpoint) {
+        if (!this.justified ||
+          justifiedCheckpoint.epoch > this.bestJustifiedCheckpoint.epoch) {
+          this.checkAndSetJustified(justifiedCheckpoint);
+        }
+      } else {
         this.checkAndSetJustified(justifiedCheckpoint);
       }
     }
