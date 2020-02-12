@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {Node, Tree, subtreeFillToLength, zeroNode} from "@chainsafe/persistent-merkle-tree";
 
 import {Vector} from "../../interface";
 import {BasicVectorType, CompositeVectorType} from "../../types";
 import {BasicArrayTreeHandler, CompositeArrayTreeHandler} from "./array";
-import {TreeBacked} from "./abstract";
 
 export class BasicVectorTreeHandler<T extends Vector<unknown>> extends BasicArrayTreeHandler<T> {
   _type: BasicVectorType<T>;

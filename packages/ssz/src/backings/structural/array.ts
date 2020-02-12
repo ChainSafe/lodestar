@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {ArrayLike, Json} from "../../interface";
 import {BasicArrayType, CompositeArrayType} from "../../types";
 import {StructuralHandler} from "./abstract";

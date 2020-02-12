@@ -3,7 +3,6 @@ import {Node, Tree, zeroNode, BranchNode} from "@chainsafe/persistent-merkle-tre
 import {List} from "../../interface";
 import {number32Type, BasicListType, CompositeListType} from "../../types";
 import {BasicArrayTreeHandler, CompositeArrayTreeHandler} from "./array";
-import {TreeBacked} from "./abstract";
 
 export class BasicListTreeHandler<T extends List<unknown>> extends BasicArrayTreeHandler<T> {
   _type: BasicListType<T>;

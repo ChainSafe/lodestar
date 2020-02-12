@@ -1,8 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {Json} from "../../interface";
-import {
-  BackedValue, isBackedValue,
-  StructuralHandler, TreeHandler,
-} from "../../backings";
 
 /**
  * A BasicType is a terminal type, which has no flexibility in its representation.

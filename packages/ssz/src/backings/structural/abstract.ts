@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {Json} from "../../interface";
 import {CompositeType} from "../../types";
 import {merkleize} from "../../util/compat";
@@ -51,9 +52,10 @@ export class StructuralHandler<T extends object> {
     throw new Error("Not implemented");
   }
   chunks(value: T): Iterable<Uint8Array> {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const t = this;
     const chunkCount = this.nonzeroChunkCount(value);
-    const iterator = function* () {
+    const iterator = function* (): Iterable<Uint8Array> {
       for (let i = 0; i < chunkCount; i++) {
         yield t.chunk(value, i);
       }

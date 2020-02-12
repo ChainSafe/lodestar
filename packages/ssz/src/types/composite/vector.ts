@@ -10,13 +10,16 @@ export interface IVectorOptions extends IArrayOptions {
   length: number;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type VectorType<T extends Vector<any>=Vector<any>> = BasicVectorType<T> | CompositeVectorType<T>;
 type VectorTypeConstructor = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   new<T extends Vector<any>>(options: IVectorOptions): VectorType<T>;
 };
 
 // Trick typescript into treating VectorType as a constructor
 export const VectorType: VectorTypeConstructor =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function VectorType<T extends Vector<any>=Vector<any>>(options: IVectorOptions): VectorType<T> {
     if (options.elementType.isBasic()) {
       return new BasicVectorType(options);

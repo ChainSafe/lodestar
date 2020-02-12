@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {ByteVector} from "../../interface";
 import {CompositeType} from "../../types";
 import {BackingType} from "../backedValue";
@@ -255,12 +256,6 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
   }
 
   /**
-   * Return a IByteArrayBacked method, to be called using the IByteArrayBacked interface
-   */
-  protected getMethod<V extends keyof IByteArrayBacked<T>>(target: Uint8Array, methodName: V): IByteArrayBacked<T>[V] {
-    return (this as any)[methodName].bind(this, target);
-  }
-  /**
    * Return a property of T, either a subarray ByteArrayBacked or a primitive, of a basic type
    */
   getProperty(target: Uint8Array, property: keyof T): PropOfByteArrayBacked<T, keyof T> {
@@ -269,7 +264,10 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
   /**
    * ES6 Proxy trap to get a IByteArrayBacked method or property of T
    */
-  get(target: any, property: PropertyKey): PropOfByteArrayBacked<T, keyof T> | IByteArrayBacked<T>[keyof IByteArrayBacked<T>] {
+  get(
+    target: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+    property: PropertyKey
+  ): PropOfByteArrayBacked<T, keyof T> | IByteArrayBacked<T>[keyof IByteArrayBacked<T>] {
     if (property in this) {
       return this.getMethod(target, property as keyof IByteArrayBacked<T>);
     } else {
@@ -279,7 +277,15 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
   /**
    * ES6 Proxy trap to set a property of T
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   set(target: any, property: PropertyKey, value: unknown): boolean {
     throw new Error("Not implemented");
+  }
+
+  /**
+   * Return a IByteArrayBacked method, to be called using the IByteArrayBacked interface
+   */
+  protected getMethod<V extends keyof IByteArrayBacked<T>>(target: Uint8Array, methodName: V): IByteArrayBacked<T>[V] {
+    return (this[methodName as keyof this] as unknown as Function).bind(this, target);
   }
 }

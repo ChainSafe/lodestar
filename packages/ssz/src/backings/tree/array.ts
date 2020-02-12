@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {Tree, iterateAtDepth, Gindex} from "@chainsafe/persistent-merkle-tree";
 
 import {ArrayLike} from "../../interface";
 import {BasicArrayType, CompositeArrayType} from "../../types";
-import {isTreeBacked, TreeHandler, PropOfCompositeTreeBacked, TreeBacked} from "./abstract";
+import {isTreeBacked, TreeHandler, PropOfCompositeTreeBacked} from "./abstract";
 
 export class BasicArrayTreeHandler<T extends ArrayLike<unknown>> extends TreeHandler<T> {
   protected _type: BasicArrayType<T>;

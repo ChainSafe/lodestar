@@ -4,6 +4,7 @@ import {BasicType} from "../basic";
 import {CompositeType} from "./abstract";
 
 export interface IArrayOptions {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   elementType: Type<any>;
 }
 

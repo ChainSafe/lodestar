@@ -10,13 +10,16 @@ export interface IListOptions extends IArrayOptions {
   limit: number;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ListType<T extends List<any>=List<any>> = BasicListType<T> | CompositeListType<T>;
 type ListTypeConstructor = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   new<T extends List<any>>(options: IListOptions): ListType<T>;
 };
 
 // Trick typescript into treating ListType as a constructor
 export const ListType: ListTypeConstructor =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function ListType<T extends List<any>=List<any>>(options: IListOptions): ListType<T> {
     if (options.elementType.isBasic()) {
       return new BasicListType(options);

@@ -3,7 +3,6 @@ import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitVector} from "../../interface";
 import {BitVectorType} from "../../types";
 import {BasicVectorTreeHandler} from "./vector";
-import {TreeBacked} from "./abstract";
 
 export class BitVectorTreeHandler extends BasicVectorTreeHandler<BitVector> {
   _type: BitVectorType;

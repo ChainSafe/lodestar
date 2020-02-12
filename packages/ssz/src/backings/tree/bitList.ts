@@ -3,7 +3,6 @@ import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitList} from "../../interface";
 import {BitListType} from "../../types";
 import {BasicListTreeHandler} from "./list";
-import {TreeBacked} from "./abstract";
 
 export class BitListTreeHandler extends BasicListTreeHandler<BitList> {
   _type: BitListType;

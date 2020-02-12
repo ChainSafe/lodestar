@@ -1,6 +1,5 @@
 import {Vector} from "../../interface";
 import {BasicVectorType, CompositeVectorType} from "../../types";
-import {mixInLength} from "../../util/compat";
 import {BasicArrayByteArrayHandler, CompositeArrayByteArrayHandler} from "./array";
 
 export class BasicVectorByteArrayHandler<T extends Vector<unknown>> extends BasicArrayByteArrayHandler<T> {
@@ -21,7 +20,6 @@ export class CompositeVectorByteArrayHandler<T extends Vector<object>> extends C
     this._type = type;
   }
   defaultBacking(): Uint8Array {
-    // @ts-ignore
     const defaultElementBacking = this._type.elementType.byteArray.defaultBacking();
     const totalSize = defaultElementBacking.length * this._type.length;
     const target = new Uint8Array(totalSize);

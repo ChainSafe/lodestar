@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {BitVector, Json} from "../../interface";
 import {BitVectorType} from "../../types";
 import {toHexString, fromHexString} from "../byteArray";

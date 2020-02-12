@@ -1,5 +1,5 @@
 import {ObjectLike} from "../../interface";
-import {ContainerType, CompositeType, Type} from "../../types";
+import {ContainerType} from "../../types";
 import {ByteArrayHandler} from "./abstract";
 
 export class ContainerByteArrayHandler<T extends ObjectLike> extends ByteArrayHandler<T> {

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/interface-name-prefix */
+
 export interface ArrayLike<T> {
   readonly length: number;
   [n: number]: T;
@@ -26,6 +28,7 @@ export type BitVector = Vector<boolean>;
 export type BitList = List<boolean>;
 
 export interface ObjectLike {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [fieldName: string]: any;
 }
 

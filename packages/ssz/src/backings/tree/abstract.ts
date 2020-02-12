@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {Node, Tree, Gindex, countToDepth, toGindex} from "@chainsafe/persistent-merkle-tree";
 
 import {CompositeType} from "../../types";
@@ -115,6 +116,8 @@ export type PropOfTreeBacked<T extends object, V extends keyof T> =
  */
 export class TreeHandler<T extends object> implements ProxyHandler<T> {
   protected _type: CompositeType<T>;
+  protected _depth: number;
+
   type(): CompositeType<T> {
     return this._type;
   }
@@ -226,7 +229,6 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
     this.toBytes(target, output, 0);
     return output;
   }
-  protected _depth: number;
 
   // Merkleization
 
@@ -265,12 +267,6 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   }
 
   /**
-   * Return a ITreeBacked method, to be called using the ITreeBacked interface
-   */
-  protected getMethod<V extends keyof ITreeBacked<T>>(target: Tree, methodName: V): ITreeBacked<T>[V] {
-    return (this as any)[methodName].bind(this, target);
-  }
-  /**
    * Return a property of T, either a subtree TreeBacked or a primitive, of a basic type
    */
   getProperty(target: Tree, property: keyof T): PropOfTreeBacked<T, keyof T> {
@@ -279,6 +275,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   /**
    * ES6 Proxy trap to get a ITreeBacked method or property of T
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   get(target: any, property: PropertyKey): PropOfTreeBacked<T, keyof T> | ITreeBacked<T>[keyof ITreeBacked<T>] {
     if (property in this) {
       return this.getMethod(target, property as keyof ITreeBacked<T>);
@@ -289,7 +286,15 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   /**
    * ES6 Proxy trap to set a property of T
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   set(target: any, property: PropertyKey, value: unknown): boolean {
     throw new Error("Not implemented");
+  }
+
+  /**
+   * Return a ITreeBacked method, to be called using the ITreeBacked interface
+   */
+  protected getMethod<V extends keyof ITreeBacked<T>>(target: Tree, methodName: V): ITreeBacked<T>[V] {
+    return (this[methodName as keyof this] as unknown as Function).bind(this, target);
   }
 }

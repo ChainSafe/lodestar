@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {Node, Tree, subtreeFillToContents, zeroNode, Gindex} from "@chainsafe/persistent-merkle-tree";
 
 import {ObjectLike} from "../../interface";
 import {ContainerType, CompositeType} from "../../types";
-import {isTreeBacked, TreeHandler, PropOfTreeBacked, TreeBacked} from "./abstract";
+import {isTreeBacked, TreeHandler, PropOfTreeBacked} from "./abstract";
 
 export class ContainerTreeHandler<T extends ObjectLike> extends TreeHandler<T> {
   _type: ContainerType<T>;

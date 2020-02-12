@@ -8,11 +8,13 @@ import {
 } from "../../backings";
 
 export interface IContainerOptions {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fields: Record<string, Type<any>>;
 }
 
 export class ContainerType<T extends ObjectLike=ObjectLike> extends CompositeType<T> {
   // ES6 ensures key order is chronological
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fields: Record<string, Type<any>>;
   constructor(options: IContainerOptions) {
     super();
