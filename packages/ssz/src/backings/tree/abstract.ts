@@ -124,7 +124,7 @@ export class TreeHandler<T extends object> implements ProxyHandler<T> {
   /**
    * The merkle tree backing
    */
-  backing(target: Tree): Tree {
+  tree(target: Tree): Tree {
     return target;
   }
   /**

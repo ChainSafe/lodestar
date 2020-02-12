@@ -132,7 +132,7 @@ export class ByteArrayHandler<T extends object> implements ProxyHandler<T> {
   /**
    * The byte array backing
    */
-  backing(target: Uint8Array): Uint8Array {
+  byteArray(target: Uint8Array): Uint8Array {
     return target;
   }
   /**

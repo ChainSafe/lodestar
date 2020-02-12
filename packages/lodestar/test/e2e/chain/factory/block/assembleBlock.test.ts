@@ -74,7 +74,7 @@ describe("produce block", function () {
       latestBlockHeader: parentHeader.message,
     });
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
-    const tree = depositDataRootList.backing();
+    const tree = depositDataRootList.tree();
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(generateDeposit().data));
     dbStub.block.getChainHead.resolves(parentBlock);
     dbStub.state.get.resolves(config.types.BeaconState.clone(state));

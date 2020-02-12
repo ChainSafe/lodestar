@@ -45,7 +45,7 @@ describe("blockAssembly - deposits", function() {
     const deposits = [generateDepositData(), generateDepositData()];
     opPool.depositData.getAllBetween.resolves(deposits);
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
-    const tree = depositDataRootList.backing();
+    const tree = depositDataRootList.tree();
 
     depositDataRootList.push(...deposits.map((d) => config.types.DepositData.hashTreeRoot(d)));
 
