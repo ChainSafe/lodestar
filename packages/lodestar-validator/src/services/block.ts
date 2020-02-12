@@ -76,12 +76,12 @@ export default class BlockProposingService {
       slot,
       this.privateKey.signMessage(
         this.config.types.Epoch.hashTreeRoot(computeEpochAtSlot(this.config, slot)),
-        Buffer.from(getDomain(
+        getDomain(
           this.config,
           {fork} as BeaconState,
           DomainType.RANDAO,
           computeEpochAtSlot(this.config, slot)
-        ) as Uint8Array)
+        ),
       ).toBytesCompressed()
     );
     if(!block) {
@@ -91,12 +91,12 @@ export default class BlockProposingService {
       message: block,
       signature: this.privateKey.signMessage(
         this.config.types.BeaconBlock.hashTreeRoot(block),
-        Buffer.from(getDomain(
+        getDomain(
           this.config,
           {fork} as BeaconState,
           DomainType.BEACON_PROPOSER,
           computeEpochAtSlot(this.config, slot)
-        ) as Uint8Array)
+        ),
       ).toBytesCompressed(),
     };
     await this.storeBlock(signedBlock);

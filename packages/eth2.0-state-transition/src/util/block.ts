@@ -21,9 +21,9 @@ export function verifyBlockSignature(
 ): boolean {
   const proposer = state.validators[getBeaconProposerIndex(config, state)];
   return bls.verify(
-    proposer.pubkey,
+    proposer.pubkey.valueOf() as Uint8Array,
     config.types.BeaconBlock.hashTreeRoot(signedBlock.message),
-    signedBlock.signature,
+    signedBlock.signature.valueOf() as Uint8Array,
     getDomain(config, state, DomainType.BEACON_PROPOSER),
   );
 }

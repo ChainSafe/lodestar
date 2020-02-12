@@ -127,7 +127,7 @@ export class AttestationService {
     });
     compatibleAttestations.push(attestation);
     const aggregatedAttestation: Attestation = {
-      signature: aggregateSignatures(compatibleAttestations.map((a) => a.signature)),
+      signature: aggregateSignatures(compatibleAttestations.map((a) => a.signature.valueOf() as Uint8Array)),
       data: attestation.data,
       aggregationBits: compatibleAttestations.reduce((aggregatedBits, current) => {
         for (let i = 0; i < aggregatedBits.length; i++) {
@@ -158,7 +158,7 @@ export class AttestationService {
     );
     return this.privateKey.signMessage(
       this.config.types.Slot.hashTreeRoot(slot),
-      Buffer.from(domain as Uint8Array)
+      domain.valueOf() as Uint8Array,
     ).toBytesCompressed();
   }
 

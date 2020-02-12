@@ -55,9 +55,9 @@ export function isValidIndexedAttestation(
   }
   //  Verify aggregate signature
   if (verifySignature && !bls.verify(
-    bls.aggregatePubkeys(indices.map((i) => state.validators[i].pubkey)),
+    bls.aggregatePubkeys(indices.map((i) => state.validators[i].pubkey.valueOf() as Uint8Array)),
     config.types.AttestationData.hashTreeRoot(indexedAttestation.data),
-    indexedAttestation.signature,
+    indexedAttestation.signature.valueOf() as Uint8Array,
     getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch)
   )) {
     return false;

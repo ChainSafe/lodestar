@@ -38,9 +38,9 @@ export function processDeposit(
     // Note: The deposit contract does not check signatures.
     // Note: Deposits are valid across forks, thus the deposit domain is retrieved directly from `computeDomain`.
     if (!verify(
-      pubkey,
+      pubkey.valueOf() as Uint8Array,
       config.types.DepositMessage.hashTreeRoot(deposit.data),
-      deposit.data.signature,
+      deposit.data.signature.valueOf() as Uint8Array,
       computeDomain(DomainType.DEPOSIT),
     )) {
       return;

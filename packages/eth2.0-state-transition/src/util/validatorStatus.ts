@@ -127,18 +127,18 @@ export function isValidProposerSlashing(
     return true;
   }
   const proposalData1Verified = bls.verify(
-    proposer.pubkey,
+    proposer.pubkey.valueOf() as Uint8Array,
     config.types.BeaconBlockHeader.hashTreeRoot(proposerSlashing.signedHeader1.message),
-    proposerSlashing.signedHeader1.signature,
+    proposerSlashing.signedHeader1.signature.valueOf() as Uint8Array,
     getDomain(config, state, DomainType.BEACON_PROPOSER, header1Epoch),
   );
   if (!proposalData1Verified) {
     return false;
   }
   const proposalData2Verified = bls.verify(
-    proposer.pubkey,
+    proposer.pubkey.valueOf() as Uint8Array,
     config.types.BeaconBlockHeader.hashTreeRoot(proposerSlashing.signedHeader2.message),
-    proposerSlashing.signedHeader2.signature,
+    proposerSlashing.signedHeader2.signature.valueOf() as Uint8Array,
     getDomain(config, state, DomainType.BEACON_PROPOSER, header2Epoch),
   );
   return proposalData2Verified;
@@ -162,9 +162,9 @@ export function isValidVoluntaryExit(
   (currentEpoch >= validator.activationEpoch + config.params.PERSISTENT_COMMITTEE_PERIOD) &&
   // Verify signature
   (!verifySignature || bls.verify(
-    validator.pubkey,
+    validator.pubkey.valueOf() as Uint8Array,
     config.types.VoluntaryExit.hashTreeRoot(signedExit.message),
-    signedExit.signature,
+    signedExit.signature.valueOf() as Uint8Array,
     getDomain(config, state, DomainType.VOLUNTARY_EXIT, signedExit.message.epoch),
   ));
 }

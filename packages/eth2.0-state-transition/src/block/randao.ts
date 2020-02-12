@@ -23,9 +23,9 @@ export function processRandao(
   const proposer = state.validators[getBeaconProposerIndex(config, state)];
   // Verify RANDAO reveal
   assert(!verifySignature || verify(
-    proposer.pubkey,
+    proposer.pubkey.valueOf() as Uint8Array,
     config.types.Epoch.hashTreeRoot(currentEpoch),
-    body.randaoReveal,
+    body.randaoReveal.valueOf() as Uint8Array,
     getDomain(config, state, DomainType.RANDAO),
   ));
   // Mix it in
