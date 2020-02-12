@@ -1,6 +1,6 @@
 import assert from "assert";
 import {FP_POINT_LENGTH} from "./constants";
-import {BLSPubkey, BLSSignature, bytes, bytes32} from "@chainsafe/eth2.0-types";
+import {BLSPubkey, BLSSignature, bytes32} from "@chainsafe/eth2.0-types";
 import {SignatureType} from "@chainsafe/eth2-bls-wasm";
 import {getContext} from "./context";
 import {PublicKey} from "./publicKey";
