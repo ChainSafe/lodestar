@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {expect} from "chai";
-import deepMerge from "deepmerge";
 import {readdirSync, readFileSync, writeFile} from "fs";
 import {describe, it} from "mocha";
 import {basename, join, parse} from "path";

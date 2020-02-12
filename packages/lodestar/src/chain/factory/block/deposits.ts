@@ -3,7 +3,7 @@
  */
 
 import {List, TreeBacked} from "@chainsafe/ssz";
-import {BeaconState, Deposit, Eth1Data, DepositData, Root} from "@chainsafe/eth2.0-types";
+import {BeaconState, Deposit, Eth1Data, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {OpPool} from "../../../opPool";
 

@@ -2,7 +2,7 @@
  * @module chain/stateTransition/util
  */
 
-import {BitList, List} from "@chainsafe/ssz";
+import {BitList} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 import {
   Attestation,

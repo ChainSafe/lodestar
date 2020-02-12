@@ -4,7 +4,7 @@
 import {
   Epoch,
   Version,
-  BeaconState, Domain,
+  BeaconState,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 

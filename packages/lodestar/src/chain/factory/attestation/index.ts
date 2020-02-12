@@ -4,7 +4,6 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../../../db/api";
 import {assembleAttestationData} from "./data";
 import {getBeaconCommittee} from "@chainsafe/eth2.0-state-transition";
-import {intDiv} from "@chainsafe/eth2.0-utils";
 
 export async function assembleAttestation(
   {config, db}: {config: IBeaconConfig; db: IBeaconDb},

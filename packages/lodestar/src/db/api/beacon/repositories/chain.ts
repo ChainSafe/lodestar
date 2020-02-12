@@ -1,4 +1,4 @@
-import {Slot, Root} from "@chainsafe/eth2.0-types";
+import {Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {IDatabaseController} from "../../../controller";

@@ -4,7 +4,6 @@
 
 import {toHexString} from "@chainsafe/ssz";
 import {Attestation} from "@chainsafe/eth2.0-types";
-import {promisify} from "es6-promisify";
 import {Gossip, GossipHandlerFn} from "../gossip";
 import {IGossipMessage, IGossipMessageValidator} from "../interface";
 import {deserializeGossipMessage, getAttestationSubnet, getAttestationSubnetTopic, getGossipTopic} from "../utils";

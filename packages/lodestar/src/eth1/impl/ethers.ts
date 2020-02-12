@@ -6,13 +6,12 @@ import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {Block, Log} from "ethers/providers";
 import {fromHexString} from "@chainsafe/ssz";
-import {Deposit, Eth1Data, Number64, Root, DepositData} from "@chainsafe/eth2.0-types";
+import {Eth1Data, Number64, DepositData} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 
 import {Eth1EventEmitter, IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
-import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
 import {IEth1Options} from "../options";
 import {getEth1Vote} from "./eth1Vote";
 

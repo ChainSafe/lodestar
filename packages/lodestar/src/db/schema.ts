@@ -47,7 +47,11 @@ export enum Key {
 /**
  * Prepend a bucket to a key
  */
-export function encodeKey(bucket: Bucket, key: Uint8Array | string | number | bigint, useBuffer = true): Buffer | string {
+export function encodeKey(
+  bucket: Bucket,
+  key: Uint8Array | string | number | bigint,
+  useBuffer = true
+): Buffer | string {
   let buf;
   if (typeof key === "string") {
     buf = Buffer.alloc(key.length + 1);

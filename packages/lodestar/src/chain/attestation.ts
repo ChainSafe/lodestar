@@ -86,7 +86,11 @@ export class AttestationProcessor implements IAttestationProcessor {
       this.config, checkpointState, attestation.data, attestation.aggregationBits);
     const balances = validators.map((index) => checkpointState.balances[index]);
     for (let i = 0; i < validators.length; i++) {
-      this.forkChoice.addAttestation(attestation.data.beaconBlockRoot.valueOf() as Uint8Array, validators[i], balances[i]);
+      this.forkChoice.addAttestation(
+        attestation.data.beaconBlockRoot.valueOf() as Uint8Array,
+        validators[i],
+        balances[i]
+      );
     }
     this.logger.info(`Attestation ${toHexString(attestationHash)} passed to fork choice`);
     this.chain.emit("processedAttestation", attestation);

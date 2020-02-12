@@ -16,7 +16,6 @@ import {
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {
-  DEPOSIT_CONTRACT_TREE_DEPTH,
   EMPTY_SIGNATURE,
   GENESIS_EPOCH,
   GENESIS_SLOT,

@@ -26,7 +26,9 @@ export function getIncomingVoluntaryExitHandler(validator: IGossipMessageValidat
 
 export async function publishVoluntaryExit(this: Gossip, voluntaryExit: SignedVoluntaryExit): Promise<void> {
   await this.pubsub.publish(
-    getGossipTopic(GossipEvent.VOLUNTARY_EXIT), Buffer.from(this.config.types.SignedVoluntaryExit.serialize(voluntaryExit)));
+    getGossipTopic(GossipEvent.VOLUNTARY_EXIT),
+    Buffer.from(this.config.types.SignedVoluntaryExit.serialize(voluntaryExit))
+  );
   this.logger.verbose(
     `Publishing voluntary exit for validator #${voluntaryExit.message.validatorIndex}`
   );
