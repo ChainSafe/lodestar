@@ -35,7 +35,7 @@
     "@chainsafe/eth2.0-utils": "0.1.0",
     "@chainsafe/lodestar-validator": "0.2.0",
     "@chainsafe/lodestar": "0.2.0",
-    "@chainsafe/ssz": "0.5.2",
+    "@chainsafe/ssz": "0.5.3",
     "@types/chai": "4.2.0",
     "@types/chai-as-promised": "^7.1.1",
     "@types/mocha": "^5.2.7",
