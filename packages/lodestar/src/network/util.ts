@@ -6,9 +6,10 @@ import PeerId from "peer-id";
 import PeerInfo from "peer-info";
 import {RequestId, Method, MAX_CHUNK_SIZE, ERR_INVALID_REQ} from "../constants";
 import {ResponseBody, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
-import {serialize, deserialize} from "@chainsafe/ssz";
+import {serialize, deserialize, AnyContainerType} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import * as varint from "varint";
+import {ChunkResponse} from "./interface";
 
 // req/resp
 
@@ -55,19 +56,28 @@ export async function initializePeerInfo(peerId: PeerId, multiaddrs: string[]): 
   return peerInfo;
 }
 
-export function encodeChunkifyResponse(config: IBeaconConfig, method: Method, body: ResponseBody): Buffer {
-  let output= Buffer.alloc(0);
+export function encodeChunkifyResponse(config: IBeaconConfig, method: Method, {err, output}: ChunkResponse): Buffer {
+  if (err) {
+    return encodeResponseError(err);
+  }
+  let data = Buffer.alloc(0);
+  let type: AnyContainerType;
   switch (method) {
     case Method.Status:
-      output = serialize(config.types.Status, body);
-      return encodeSingleChunk(output);
+      type = config.types.Status;
+      break;
     case Method.Goodbye:
-      output = serialize(config.types.Goodbye, body);
-      return encodeSingleChunk(output);
+      type = config.types.Goodbye;
+      break;
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
-      return encodeBlockChunks(config, body as SignedBeaconBlock[]);
+      type = config.types.SignedBeaconBlock;
+      break;
+    default:
+      throw new Error(`Unhandled method ${method}`);
   }
+  data = serialize(type, output);
+  return encodeSingleChunk(data);
 }
 
 export function decodeChunkifyResponse(config: IBeaconConfig, method: Method, chunks: Buffer): ResponseBody {
@@ -77,13 +87,22 @@ export function decodeChunkifyResponse(config: IBeaconConfig, method: Method, ch
       return decodeSingleChunk(config, method, chunks) as ResponseBody;
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
+      // lodestar response multple single block chunks
+      // but other clients might response multiple n block chunks
+      // this handle both cases
       return decodeBlockChunks(config, method, chunks);
   }
 }
 
-function encodeBlockChunks(config: IBeaconConfig, blocks: SignedBeaconBlock[]): Buffer {
+export function encodeBlockChunks(config: IBeaconConfig, blocks: SignedBeaconBlock[]): Buffer {
   const chunkArr = blocks.map(block => encodeSingleChunk(serialize(config.types.SignedBeaconBlock, block)));
   return Buffer.concat(chunkArr);
+}
+
+function encodeResponseError(err: Error): Buffer {
+  const b = Buffer.from("c" + "error_message:" + err.message);
+  b[0] = err.message === ERR_INVALID_REQ ? 1 : 2;
+  return b;
 }
 
 function encodeSingleChunk(data: Buffer): Buffer {
@@ -115,6 +134,9 @@ function decodeBlockChunks(config: IBeaconConfig, method: Method, chunks: Buffer
 
 function decodeSingleChunk(config: IBeaconConfig, method: Method, chunk: Buffer): ResponseBody | SignedBeaconBlock {
   const code = chunk[0];
+  if (code !== 0) {
+    throw new Error(chunk.slice(1).toString("utf8"));
+  }
   const length = varint.decode(chunk, 1);
   const bytes = varint.decode.bytes;
   if (
@@ -124,9 +146,7 @@ function decodeSingleChunk(config: IBeaconConfig, method: Method, chunk: Buffer)
     throw new Error(ERR_INVALID_REQ);
   }
   const data = chunk.slice(bytes + 1);
-  if (code !== 0) {
-    throw new Error(data.toString("utf8"));
-  }
+  
   switch (method) {
     case Method.Status:
       return deserialize(config.types.Status, data);
