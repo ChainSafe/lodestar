@@ -223,23 +223,27 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         [this.encodeRequest(method, body)],
         stream,
         async (source: Promise<Buffer | {slice: () => Buffer}>[]) => {
-          const responses = [];
-          for await (const val of source) {
-            const data = Buffer.isBuffer(val) ? val : val.slice();
-            const response = this.decodeResponse(method, data);
-            // status, goodbye returns 1 time
-            // blocks may return multiple time, each can contain 1 or n blocks
-            if (Array.isArray(response)) {
-              const blocks = response as SignedBeaconBlock[];
-              responses.push(...blocks);
-            } else {
-              responses.push(response);
-            }
-          }
-          const finalResponse = (method === Method.Goodbye || method === Method.Status) ? responses[0] : responses;
-          clearTimeout(responseTimer);
-          this.logger.verbose(`receive ${method} response from ${peerInfo.id.toB58String()}`);
           try {
+            const responses = [];
+            for await (const val of source) {
+              const data = Buffer.isBuffer(val) ? val : val.slice();
+              const response = this.decodeResponse(method, data);
+              // status, goodbye returns 1 time
+              // blocks may return multiple time, each can contain 1 or n blocks
+              if (Array.isArray(response)) {
+                const blocks = response as SignedBeaconBlock[];
+                responses.push(...blocks);
+              } else {
+                responses.push(response);
+              }
+            }
+            if (!requestOnly && responses.length === 0) {
+              reject(`No response returned for method ${method}`);
+              return;
+            }
+            const finalResponse = (method === Method.Status) ? responses[0] : responses;
+            clearTimeout(responseTimer);
+            this.logger.verbose(`receive ${method} response from ${peerInfo.id.toB58String()}`);
             resolve(requestOnly? undefined : finalResponse as T);
           } catch (e) {
             reject(e);
