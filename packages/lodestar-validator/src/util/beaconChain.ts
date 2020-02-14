@@ -12,9 +12,13 @@ export enum DomainType {
   VOLUNTARY_EXIT = 4,
 }
 
-export function getCurrentSlot(config: IBeaconConfig, genesisTime: number64): Slot {
+export function getSlotsSinceGenesis(config: IBeaconConfig, genesisTime: number64): number64 {
   const diffInSeconds = (Date.now() / 1000) - genesisTime;
   return intDiv(diffInSeconds, config.params.SECONDS_PER_SLOT);
+}
+
+export function getCurrentSlot(config: IBeaconConfig, genesisTime: number64): Slot {
+  return config.params.GENESIS_SLOT + getSlotsSinceGenesis(config, genesisTime);
 }
 
 /**
@@ -73,11 +77,11 @@ export function isSlashableAttestationData(
   data2: AttestationData
 ): boolean {
   return (
-  // Double vote
+    // Double vote
     (!equals(config.types.AttestationData, data1, data2)
-          && data1.target.epoch === data2.target.epoch) ||
-      // Surround vote
-      (data1.source.epoch < data2.source.epoch &&
-          data2.target.epoch < data1.target.epoch)
+      && data1.target.epoch === data2.target.epoch) ||
+    // Surround vote
+    (data1.source.epoch < data2.source.epoch &&
+      data2.target.epoch < data1.target.epoch)
   );
 }
