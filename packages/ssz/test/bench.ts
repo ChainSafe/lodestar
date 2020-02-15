@@ -1,7 +1,7 @@
 import * as i from "../src/interface";
 import * as types from "../src/types";
 import * as backings from "../src/backings";
-import * as mtree from "@chainsafe/merkle-tree";
+import * as mtree from "@chainsafe/persistent-merkle-tree";
 // @ts-ignore
 import benchmark from "benchmark";
 // @ts-ignore
