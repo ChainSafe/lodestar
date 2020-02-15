@@ -34,27 +34,28 @@ export class NumberUintType extends UintType<number> {
         output[i] = 0xff;
       }
     } else {
-      let v = value;
+      let v = BigInt(value);
+      const MAX_BYTE = BigInt(0xff);
       for (let i = 0; i < this.byteLength; i ++) {
-        output[offset + i] = v & 0xff;
-        v >>= 8;
+        output[offset + i] = Number(v & MAX_BYTE);
+        v >>= BigInt(8);
       }
     }
     return offset + this.byteLength;
   }
   fromBytes(data: Uint8Array, offset: number): number {
     let isInfinity = true;
-    let output = 0;
+    let output = BigInt(0);
     for (let i = 0; i < this.byteLength; i++) {
-      output += data[offset + i] << (8 * i);
-      if (data[offset + i] !== 255) {
+      output += BigInt(data[offset + i]) << BigInt(8 * i);
+      if (data[offset + i] !== 0xff) {
         isInfinity = false;
       }
     }
     if (this.byteLength > 6 && isInfinity) {
       return Infinity;
     }
-    return output;
+    return Number(output);
   }
   fromJson(data: Json): number {
     const n = Number(data);

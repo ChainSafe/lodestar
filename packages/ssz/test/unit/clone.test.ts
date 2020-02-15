@@ -1,8 +1,7 @@
 import {expect} from "chai";
 import {describe, it} from "mocha";
-import {clone, equals} from "../../src";
-import {ArrayObject,} from "./objects";
-import {stringifyType} from "./utils";
+import {booleanType, byteType} from "../../src";
+import {ArrayObject, bigint16Type, bytes2Type, number16Type, number16Vector6Type, number16List100Type} from "./objects";
 
 describe("clone", () => {
   const testCases: {
@@ -10,22 +9,21 @@ describe("clone", () => {
     type: any;
     expected: boolean;
   }[] = [
-    {value: 1, type: "number8", expected: true},
-    {value: Infinity, type: "number8", expected: true},
-    {value: 1000n, type: "bigint16", expected: true},
-    {value: true, type: "bool", expected: true},
-    {value: false, type: "bool", expected: true},
-    {value: Buffer.from("abcd", "hex"), type: {elementType: "byte", maxLength: 100}, expected: true},
-    {value: Buffer.from("abcd", "hex"), type: "bytes2", expected: true},
-    {value: [0,1,2,3,4,5], type: {elementType: "number16", maxLength: 100}, expected: true},
-    {value: [0,1,2,3,4,5], type: {elementType: "number16", length: 6}, expected: true},
+    {value: 1, type: byteType, expected: true},
+    {value: Infinity, type: byteType, expected: true},
+    {value: 1000n, type: bigint16Type, expected: true},
+    {value: true, type: booleanType, expected: true},
+    {value: false, type: booleanType, expected: true},
+    {value: Buffer.from("abcd", "hex"), type: bytes2Type, expected: true},
+    {value: [0,1,2,3,4,5], type: number16List100Type, expected: true},
+    {value: [0,1,2,3,4,5], type: number16Vector6Type, expected: true},
     {value: {v:[{b:2,a:1},{b:4,a:3}]}, type: ArrayObject, expected: true},
     {value: {v:[{a:1,b:2},{b:4,a:3}]}, type: ArrayObject, expected: true},
   ];
   for (const {type, value} of testCases) {
-    it(`should correctly perform clone for ${stringifyType(type)}`, () => {
-      const actual = clone(type, value);
-      expect(equals(type, actual, value));
+    it(`should correctly perform clone for ${type}`, () => {
+      const actual = type.clone(value);
+      expect(type.equals(actual, value));
     });
   }
 });
