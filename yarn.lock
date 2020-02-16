@@ -7754,7 +7754,7 @@ libp2p-tcp@^0.14.1:
 
 "libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git":
   version "0.1.0"
-  resolved "https://github.com/ChainSafe/libp2p-ts.git#24eed9844cf530e1bd09060faa36ca83c1d43641"
+  resolved "https://github.com/ChainSafe/libp2p-ts.git#3b86156525fb290682567ca26a5ea6b95920950e"
   dependencies:
     "@types/node" "^13.7.0"
     libp2p-crypto "^0.17.2"

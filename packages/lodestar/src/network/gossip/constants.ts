@@ -15,6 +15,11 @@ export enum GossipEvent {
   ATTESTER_SLASHING = "/eth2/attester_slashing"
 }
 
+export const AttestationSubnetTopicPrefix = "/eth2/committee_index";
+export const AttestationSubnetTopicSuffix = "_beacon_attestation";
+
+export const AttestationSubnetRegExp = new RegExp("^/eth2/committee_index[0-9]+_beacon_attestation/[a-z]+$");
+
 export function getCommitteeSubnetEvent(index: CommitteeIndex): string {
   return GossipEvent.ATTESTATION_SUBNET.replace("{subnet}", String(index % ATTESTATION_SUBNET_COUNT));
 }

@@ -64,6 +64,7 @@ export interface IGossipMessageValidator {
   isValidIncomingAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<boolean>;
 }
 
-export interface IGossipMessage {
-  data: Buffer;
-}
+export type GossipObject = SignedBeaconBlock | Attestation | AggregateAndProof | 
+SignedVoluntaryExit | ProposerSlashing | AttesterSlashing;
+
+export type GossipMessageValidatorFn = (message: GossipObject, subnet?: number) => Promise<boolean>;
