@@ -6,9 +6,12 @@ import {IService} from "../node";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db/api";
 import {IBeaconChain} from "../chain";
-import {Checkpoint} from "@chainsafe/eth2.0-types";
+import {Checkpoint, Epoch} from "@chainsafe/eth2.0-types";
 import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
 import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import FastPriorityQueue from "fastpriorityqueue";
+import {IBlockProcessJob} from "../chain";
+import {computeEpochAtSlot} from "@chainsafe/eth2.0-state-transition";
 
 export interface ITasksModules {
   db: IBeaconDb;
@@ -39,14 +42,30 @@ export class TasksService implements IService {
 
   public async start(): Promise<void> {
     this.chain.on("finalizedCheckpoint", this.handleFinalizedCheckpointChores);
+    this.chain.on("newEpoch", this.blockProcessingQueueCleanUp);
   }
 
   public async stop(): Promise<void> {
     this.chain.removeListener("finalizedCheckpoint", this.handleFinalizedCheckpointChores);
+    this.chain.removeListener("newEpoch", this.blockProcessingQueueCleanUp);
   }
 
   private handleFinalizedCheckpointChores = async (finalizedCheckpoint: Checkpoint): Promise<void> => {
     new ArchiveBlocksTask(this.config, {db: this.db, logger: this.logger}, finalizedCheckpoint).run();
   };
 
+  private blockProcessingQueueCleanUp = 
+  async (newEpoch: Epoch, blockProcessingQueue: FastPriorityQueue<IBlockProcessJob>): Promise<void> => {
+    return new Promise((resolve): void => {
+      while (!blockProcessingQueue.isEmpty()) {
+        const blockProcessJob = blockProcessingQueue.poll();
+        if(computeEpochAtSlot(this.config, blockProcessJob.signedBlock.message.slot) < newEpoch){
+          // orphan block
+        }
+      }
+      if(blockProcessingQueue.isEmpty()) {
+        resolve();
+      }
+    });
+  };
 }

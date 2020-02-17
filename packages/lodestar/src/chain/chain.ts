@@ -333,6 +333,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
           this.db.chain.setFinalizedBlockRoot(finalizedBlockRoot),
         ]);
         this.emit("finalizedCheckpoint", newState.finalizedCheckpoint);
+        this.emit("newEpoch", computeEpochAtSlot(this.config, finalizedBlock.message.slot), this.blockProcessingQueue);
       }
       this.metrics.previousJustifiedEpoch.set(newState.previousJustifiedCheckpoint.epoch);
       this.metrics.currentJustifiedEpoch.set(newState.currentJustifiedCheckpoint.epoch);

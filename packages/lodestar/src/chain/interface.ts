@@ -1,12 +1,14 @@
 import {EventEmitter} from "events";
 
 import {
-  Attestation, BeaconState, Checkpoint, Slot, uint16, uint64, Root, SignedBeaconBlock,
+  Attestation, BeaconState, Checkpoint, Epoch, Slot, uint16, uint64, Root, SignedBeaconBlock,
 } from "@chainsafe/eth2.0-types";
 
 import {ILMDGHOST} from "./forkChoice";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
+import {IBlockProcessJob} from "../chain";
+import FastPriorityQueue from "fastpriorityqueue";
 
 export interface IChainEvents {
   unknownBlockRoot: (root: Root) => void;
@@ -15,6 +17,7 @@ export interface IChainEvents {
   processedAttestation: (attestation: Attestation) => void;
   justifiedCheckpoint: (checkpoint: Checkpoint) => void;
   finalizedCheckpoint: (checkpoint: Checkpoint) => void;
+  newEpoch: (newEpoch: Epoch, blockProcessingQueue: FastPriorityQueue<IBlockProcessJob>) => void;
 }
 
 export type ChainEventEmitter = StrictEventEmitter<EventEmitter, IChainEvents>;
