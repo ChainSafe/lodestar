@@ -45,7 +45,7 @@ export interface IGossipSub extends EventEmitter {
   unsubscribe(topic: string): void;
 }
 
-export interface IGossip extends IService {
+export interface IGossip extends IService, GossipEventEmitter {
   publishBlock(signedBlock: SignedBeaconBlock): Promise<void>;
   publishCommiteeAttestation(attestation: Attestation): Promise<void>;
   publishAggregatedAttestation(aggregateAndProof: AggregateAndProof): Promise<void>;
