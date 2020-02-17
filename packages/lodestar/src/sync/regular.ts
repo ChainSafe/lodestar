@@ -3,21 +3,23 @@
  */
 
 import {
-  Attestation,
-  Checkpoint,
-  ProposerSlashing,
-  AttesterSlashing,
   AggregateAndProof,
+  Attestation,
+  AttesterSlashing,
+  Checkpoint,
+  CommitteeIndex,
+  ProposerSlashing,
   Root,
   SignedBeaconBlock,
-  SignedVoluntaryExit, CommitteeIndex, Slot,
+  SignedVoluntaryExit,
+  Slot,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
 import {OpPool} from "../opPool";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {ISyncModules} from "./index";
 import {ISyncOptions} from "./options";
 import {GossipEvent} from "../network/gossip/constants";
@@ -80,11 +82,6 @@ export class RegularSync {
 
   public receiveBlock = async (signedBlock: SignedBeaconBlock): Promise<void> => {
     await this.chain.receiveBlock(signedBlock);
-  };
-
-  public receiveCommitteeAttestation = async (attestationSubnet: {attestation: Attestation; subnet: number}): 
-  Promise<void> => {
-    await this.opPool.attestations.receive(attestationSubnet.attestation);
   };
 
   public receiveAggregateAndProof = async (aggregate: AggregateAndProof): Promise<void> => {

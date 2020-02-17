@@ -1,22 +1,18 @@
-import {IBeaconClock} from "../interface";
+import {IBeaconClock, NewEpochCallback, NewSlotCallback} from "../interface";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
-import {Epoch, Slot} from "@chainsafe/eth2.0-types";
+import {EventEmitter} from "events";
 
-type NewSlotCallback = (slot: Slot) => void;
-type NewEpochCallback = (epoch: Epoch) => void;
-
-export class LocalClock implements IBeaconClock {
+export class LocalClock extends EventEmitter implements IBeaconClock {
 
   private readonly config: IBeaconConfig;
   private readonly genesisTime: number;
   private currentSlot: number;
   private isRunning: boolean;
-  private newSlotCallbacks: NewSlotCallback[] = [];
-  private newEpochCallbacks: NewEpochCallback[] = [];
-
+  private timeoutId: NodeJS.Timeout;
 
   public constructor(config: IBeaconConfig, genesisTime: number) {
+    super();
     this.config = config;
     this.genesisTime = genesisTime;
     //this assumes clock time is trusted
@@ -33,6 +29,7 @@ export class LocalClock implements IBeaconClock {
   }
   public async stop(): Promise<void> {
     this.isRunning = false;
+    clearTimeout(this.timeoutId);
   }
 
   public getCurrentSlot(): number {
@@ -40,15 +37,19 @@ export class LocalClock implements IBeaconClock {
   }
 
   public onNewEpoch(cb: NewEpochCallback): void {
-    if(cb) {
-      this.newEpochCallbacks.push(cb);
-    }
+    this.on("epoch", cb);
   }
 
   public onNewSlot(cb: NewSlotCallback): void {
-    if(cb) {
-      this.newSlotCallbacks.push(cb);
-    }
+    this.on("slot", cb);
+  }
+
+  public unsubscribeFromNewEpoch(cb: NewEpochCallback): void {
+    this.removeListener("epoch", cb);
+  }
+
+  public unsubscribeFromNewSlot(cb: NewSlotCallback): void {
+    this.removeListener("slot", cb);
   }
 
   private updateSlot = (): void => {
@@ -57,14 +58,10 @@ export class LocalClock implements IBeaconClock {
     }
     const previousSlot = this.currentSlot;
     this.currentSlot++;
-    this.newSlotCallbacks.forEach((cb) => {
-      cb(this.currentSlot);
-    });
+    this.emit("slot", this.currentSlot);
     const currentEpoch = computeEpochAtSlot(this.config, this.currentSlot);
     if(computeEpochAtSlot(this.config, previousSlot) < currentEpoch) {
-      this.newEpochCallbacks.forEach((cb) => {
-        cb(currentEpoch);
-      });
+      this.emit("epoch", currentEpoch);
     }
     //recursively invoke update slot
     setTimeout(
