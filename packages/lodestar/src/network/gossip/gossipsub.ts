@@ -4,7 +4,7 @@ import {getGossipTopic, isAttestationSubnetTopic, getSubnetFromAttestationSubnet
 import {GossipEvent} from "./constants";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {utils} from "libp2p-pubsub";
-import {ATTESTATION_SUBNET_COUNT, GOSSIP_MAX_SIZE} from "../../constants";
+import {GOSSIP_MAX_SIZE} from "../../constants";
 import {AnySSZType, deserialize} from "@chainsafe/ssz";
 import assert from "assert";
 import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
@@ -66,10 +66,8 @@ export class LodestarGossipsub extends Gossipsub {
 
 
   private getTopicValidator(topic: string): GossipMessageValidatorFn {
-    for(let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-      if (topic === getGossipTopic(GossipEvent.ATTESTATION_SUBNET, "ssz", new Map([["subnet", String(subnet)]]))) {
-        return this.validator.isValidIncomingCommitteeAttestation as GossipMessageValidatorFn;
-      }
+    if (isAttestationSubnetTopic(topic)) {
+      return this.validator.isValidIncomingCommitteeAttestation as GossipMessageValidatorFn;
     }
 
     let result: Function;

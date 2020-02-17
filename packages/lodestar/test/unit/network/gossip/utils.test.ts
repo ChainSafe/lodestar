@@ -3,7 +3,7 @@ import {getAttestationSubnetTopic, getGossipTopic, isAttestationSubnetTopic, get
 import {GossipEvent} from "../../../../src/network/gossip/constants";
 import {expect} from "chai";
 import {generateEmptyAttestation} from "../../../utils/attestation";
-import { ATTESTATION_SUBNET_COUNT } from "../../../../src/constants";
+import {ATTESTATION_SUBNET_COUNT} from "../../../../src/constants";
 
 describe("gossip utils", function () {
    

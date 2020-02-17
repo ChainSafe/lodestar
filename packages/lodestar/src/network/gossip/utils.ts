@@ -4,8 +4,7 @@
 
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {Attestation} from "@chainsafe/eth2.0-types";
-import {GossipEvent, AttestationSubnetRegExp, AttestationSubnetTopicPrefix,
-  AttestationSubnetTopicSuffix} from "./constants";
+import {GossipEvent, AttestationSubnetRegExp} from "./constants";
 import assert from "assert";
 
 export function getGossipTopic(event: GossipEvent, encoding = "ssz", params: Map<string, string> = new Map()): string {
@@ -34,8 +33,7 @@ export function isAttestationSubnetTopic(topic: string): boolean {
 
 export function getSubnetFromAttestationSubnetTopic(topic: string): number {
   assert(isAttestationSubnetTopic(topic), "should be an attestation topic");
-  const startIndex = AttestationSubnetTopicPrefix.length;
-  const endIndex = topic.indexOf(AttestationSubnetTopicSuffix);
-  const subnetStr = topic.slice(startIndex, endIndex);
+  const groups = topic.match(AttestationSubnetRegExp);
+  const subnetStr = groups[2];
   return parseInt(subnetStr);
 }
