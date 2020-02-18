@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
@@ -34,7 +34,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/eth2.0-types": "^0.2.0",
+    "@chainsafe/eth2.0-types": "^0.2.1",
     "bcrypto": "^4.2.6",
     "bigint-buffer": "^1.1.5",
     "camelcase": "^5.3.1",
