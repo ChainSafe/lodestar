@@ -10,16 +10,16 @@ import {
   BeaconBlocksByRootResponse,
   Goodbye,
   RequestBody,
-  ResponseBody, Status,
+  ResponseBody, Status, SignedBeaconBlock,
 } from "@chainsafe/eth2.0-types";
 
 import {Method, RequestId} from "../constants";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {IGossip} from "./gossip/interface";
 
-// req/resp
+export type ResponseCallbackFn = (response: {err?: Error; output?: ResponseBody}) => void;
 
-export type ResponseCallbackFn = (err: Error|null, output: ResponseBody|null) => void;
+export type ResponseChunk = {err?: Error; output: Status | Goodbye | SignedBeaconBlock};
 
 interface IRespEvents {
   [responseEvent: string]: ResponseCallbackFn;

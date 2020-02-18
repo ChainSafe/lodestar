@@ -12,7 +12,7 @@ import {
   BeaconBlocksByRootResponse,
   Goodbye,
   RequestBody,
-  ResponseBody, Status,
+  ResponseBody, Status, SignedBeaconBlock,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -26,9 +26,10 @@ import {
   RESP_TIMEOUT,
 } from "../constants";
 import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
-import {createResponseEvent, createRpcProtocol, randomRequestId,} from "./util";
+import {createResponseEvent, createRpcProtocol, randomRequestId, encodeResponseChunk, 
+  decodeResponseChunk} from "./util";
 
-import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
+import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn, ResponseChunk} from "./interface";
 import {INetworkOptions} from "./options";
 import PeerId from "peer-id";
 import PeerInfo from "peer-info";
@@ -54,7 +55,7 @@ class ResponseEventListener extends (EventEmitter as IRespEventEmitterClass) {
 
     const timer =  setTimeout(() => {
       this.removeListener(responseEvent, responseListener);
-      responseListener(new Error(ERR_RESP_TIMEOUT), null);
+      responseListener({err: new Error(ERR_RESP_TIMEOUT)});
     }, RESP_TIMEOUT);
     return timer;
   }
@@ -83,15 +84,13 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
           const peerId = connection.remotePeer;
           pipe(
             stream.source,
-            (source: Promise<Buffer | {slice: () => Buffer}>[]) => {
-              const handleRequest = this.handleRequest;
-              return (async function * () { // A generator is async iterable
-                for await (const val of source) {
-                  const data = Buffer.isBuffer(val) ? val : val.slice();
-                  const response = await handleRequest(peerId, method, data);
-                  yield response;
-                }
-              })();
+            // handle request
+            async (source: Promise<Buffer | {slice: () => Buffer}>[]) => {
+              return this.handleRpcRequestStream(peerId, method, source);
+            },
+            // transform
+            (source: Promise<{[Symbol.asyncIterator]: () => AsyncIterator<ResponseChunk>}>) => {
+              return this.transformResponse(method, source);
             },
             stream.sink
           );
@@ -99,6 +98,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       );
     });
   }
+
   public async stop(): Promise<void> {
     Object.values(Method).forEach((method) => {
       this.libp2p.unhandle(createRpcProtocol(method, this.encoding));
@@ -106,7 +106,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   }
 
   public sendResponse(id: RequestId, err: Error, body: ResponseBody): void {
-    this.responseListener.emit(createResponseEvent(id), err, body);
+    this.responseListener.emit(createResponseEvent(id), {err, output: body});
   }
   public async status(peerInfo: PeerInfo, request: Status): Promise<Status> {
     return await this.sendRequest<Status>(peerInfo, Method.Status, request);
@@ -127,18 +127,48 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     return await this.sendRequest<BeaconBlocksByRootResponse>(peerInfo, Method.BeaconBlocksByRoot, request);
   }
 
-  private handleRequest = async (peerId: PeerId, method: Method, data: Buffer): Promise<Buffer> => {
+  private async handleRpcRequestStream(
+    peerId: PeerId, method: Method, source: Promise<Buffer | {slice: () => Buffer}>[]): Promise<ResponseChunk[]> {
+    const result: ResponseChunk[] = [];
+    for await (const val of source) {
+      const data = Buffer.isBuffer(val) ? val : val.slice();
+      const response = await this.handleRequest(peerId, method, data);
+      if (!response.err && (method === Method.BeaconBlocksByRange || method === Method.BeaconBlocksByRoot)) {
+        const blocks = response.output as SignedBeaconBlock[];
+        const chunkResponses = blocks.map(block => ({output: block}));
+        result.push(...(chunkResponses));
+      } else {
+        result.push(response as ResponseChunk);
+      }
+    }  
+    return result;
+  }
+
+  private transformResponse(
+    method: Method,
+    source: Promise<{[Symbol.asyncIterator]: () => AsyncIterator<ResponseChunk>}>
+  ): AsyncIterator<Buffer> {
+    const config = this.config;
+    return (async function * () {
+      const sourceVal = await source;
+      for await (const val of sourceVal) {
+        // each yield result will be sent to stream.sink immediately
+        yield encodeResponseChunk(config, method, val);
+      }
+    })();
+  }
+
+  private handleRequest = async (peerId: PeerId, method: Method, data: Buffer):
+  Promise<{err?: Error; output?: ResponseBody}> => {
     return new Promise((resolve) => {
       const request = this.decodeRequest(method, data);
       const requestId = randomRequestId();
       this.logger.verbose(`${requestId} - receive ${method} request from ${peerId.toB58String()}`);
       // eslint-disable-next-line
       let responseTimer: NodeJS.Timeout;
-      const responseListenerFn = (err: Error|null, output: ResponseBody): void => {
+      const responseListenerFn = (response: {err?: Error; output?: ResponseBody}): void => {
         clearTimeout(responseTimer);
-        if (err) resolve(this.encodeResponseError(err));
-        this.logger.verbose(`${requestId} - send ${method} response`);
-        resolve(this.encodeResponse(method, output));
+        resolve(response);
       };
       responseTimer = this.responseListener.waitForResponse(requestId, responseListenerFn);
       this.emit("request", new PeerInfo(peerId), method, requestId, request);
@@ -167,33 +197,6 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     ]);
   }
 
-  private encodeResponse(method: Method, body: ResponseBody): Buffer {
-    let output: Uint8Array;
-    switch (method) {
-      case Method.Status:
-        output = this.config.types.Status.serialize(body as Status);
-        break;
-      case Method.Goodbye:
-        output = this.config.types.Goodbye.serialize(body as Goodbye);
-        break;
-      case Method.BeaconBlocksByRange:
-        output = this.config.types.BeaconBlocksByRangeResponse.serialize(body as BeaconBlocksByRangeResponse);
-        break;
-      case Method.BeaconBlocksByRoot:
-        output = this.config.types.BeaconBlocksByRootResponse.serialize(body as BeaconBlocksByRootResponse);
-        break;
-    }
-    return Buffer.concat([
-      Buffer.alloc(1),
-      Buffer.from(varint.encode(output.length)),
-      output,
-    ]);
-  }
-  private encodeResponseError(err: Error): Buffer {
-    const b = Buffer.from("c" + err.message);
-    b[0] = err.message === ERR_INVALID_REQ ? 1 : 2;
-    return b;
-  }
   private decodeRequest(method: Method, data: Buffer): RequestBody {
     const length = varint.decode(data);
     const bytes = varint.decode.bytes;
@@ -215,31 +218,6 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         return this.config.types.BeaconBlocksByRootRequest.deserialize(data);
     }
   }
-  private decodeResponse(method: Method, data: Buffer): ResponseBody {
-    const code = data[0];
-    const length = varint.decode(data, 1);
-    const bytes = varint.decode.bytes;
-    if (
-      length !== data.length - (bytes + 1) ||
-      length > MAX_CHUNK_SIZE
-    ) {
-      throw new Error(ERR_INVALID_REQ);
-    }
-    data = data.slice(bytes + 1);
-    if (code !== 0) {
-      throw new Error(data.toString("utf8"));
-    }
-    switch (method) {
-      case Method.Status:
-        return this.config.types.Status.deserialize(data);
-      case Method.Goodbye:
-        return this.config.types.Goodbye.deserialize(data);
-      case Method.BeaconBlocksByRange:
-        return this.config.types.BeaconBlocksByRangeResponse.deserialize(data);
-      case Method.BeaconBlocksByRoot:
-        return this.config.types.BeaconBlocksByRootResponse.deserialize(data);
-    }
-  }
   private async sendRequest<T extends ResponseBody>(
     peerInfo: PeerInfo,
     method: Method,
@@ -255,17 +233,21 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         [this.encodeRequest(method, body)],
         stream,
         async (source: Promise<Buffer | {slice: () => Buffer}>[]) => {
-          // TODO: support response chunks
-          const srcs = [];
-          for await (const val of source) {
-            const data = Buffer.isBuffer(val) ? val : val.slice();
-            srcs.push(data);
-          }
-          const data = Buffer.concat(srcs);
-          clearTimeout(responseTimer);
-          this.logger.verbose(`receive ${method} response from ${peerInfo.id.toB58String()}`);
           try {
-            resolve(requestOnly? undefined : this.decodeResponse(method, data) as T);
+            const responses = [];
+            for await (const val of source) {
+              const data = Buffer.isBuffer(val) ? val : val.slice();
+              const response = decodeResponseChunk(this.config, method, data);
+              responses.push(response.output);
+            }
+            if (!requestOnly && responses.length === 0) {
+              reject(`No response returned for method ${method}`);
+              return;
+            }
+            const finalResponse = (method === Method.Status) ? responses[0] : responses;
+            clearTimeout(responseTimer);
+            this.logger.verbose(`receive ${method} response from ${peerInfo.id.toB58String()}`);
+            resolve(requestOnly? undefined : finalResponse as T);
           } catch (e) {
             reject(e);
           }
