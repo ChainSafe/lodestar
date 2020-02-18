@@ -12,7 +12,7 @@ describe("[network] nodejs libp2p", () => {
     await node.stop();
     assert.equal(node.isStarted(), false);
   });
-  it.only("can connect/disconnect to a peer", async function ()  {
+  it("can connect/disconnect to a peer", async function ()  {
     this.timeout(5000);
     // setup
     const nodeA: NodejsNode = await createNode(multiaddr);
