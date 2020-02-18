@@ -14,13 +14,5 @@ jobs:
       run: $(yarn global bin)/lerna bootstrap
     - name: Check types
       run: $(yarn global bin)/lerna run check-types
-    - name: Lint
-      run: $(yarn global bin)/lerna run lint
     - name: Unit tests
       run: $(yarn global bin)/lerna run test:unit
-    - name: Coverage
-      run: $(yarn global bin)/lerna run coverage
-    - name: E2e tests
-      run: $(yarn global bin)/lerna run test:e2e
-    - name: Spec tests
-      run: $(yarn global bin)/lerna run test:spec-min
