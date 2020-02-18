@@ -86,11 +86,12 @@ export class AttestationProcessor implements IAttestationProcessor {
     assert(target.epoch === computeEpochAtSlot(this.config, attestation.data.slot));
     assert(
       getCurrentSlot(this.config, checkpointState.genesisTime) >= computeStartSlotAtEpoch(this.config, target.epoch)
+      , "egenesis time"
     );
     const block = await this.db.block.get(attestation.data.beaconBlockRoot);
-    assert(block.message.slot <= attestation.data.slot);
+    assert(block.message.slot <= attestation.data.slot, "blok slot");
 
-    assert(getCurrentSlot(this.config, checkpointState.genesisTime) >= attestation.data.slot + 1);
+    assert(getCurrentSlot(this.config, checkpointState.genesisTime) >= attestation.data.slot + 1, "attsts slot");
     const validators = getAttestingIndices(
       this.config, checkpointState, attestation.data, attestation.aggregationBits);
     const balances = validators.map((index) => checkpointState.balances[index]);

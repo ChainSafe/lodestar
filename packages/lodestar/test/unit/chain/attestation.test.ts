@@ -9,8 +9,13 @@ import { WinstonLogger } from "@chainsafe/eth2.0-utils/lib/logger";
 import { generateEmptySignedBlock } from "../../utils/block";
 import { generateEmptyAttestation } from "../../utils/attestation";
 import { generateState } from "../../utils/state";
+import { generateValidators } from "../../utils/validator";
 import { hashTreeRoot } from "@chainsafe/ssz";
 import { fail } from "assert";
+
+const timeout = s => {
+  return new Promise(resolve => setTimeout(resolve, s * 1000));
+}
 
 describe("AttestationProcessor", function () {
   const sandbox = sinon.createSandbox();
@@ -98,7 +103,7 @@ describe("AttestationProcessor", function () {
     }
   });
 
-  it("processAttestation - should call forkChoice", async () => {
+  it.only("processAttestation - should call forkChoice", async () => {
     const attestation = generateEmptyAttestation();
     const attestationHash = hashTreeRoot(config.types.Attestation, attestation);
     const block = generateEmptySignedBlock();
@@ -107,9 +112,13 @@ describe("AttestationProcessor", function () {
     dbStub.state.get.resolves(state);
     forkChoiceStub.getJustified.returns({});
     getAttestingIndicesStub.returns([0]);
-    state.balances = [1n, 2n, 3n];
+    state.balances = [];
+    state.validators = generateValidators(3, {})
 
-    await attestationProcessor.processAttestation(attestation, attestationHash);
+    await timeout(config.params.SECONDS_PER_SLOT)
+    try {
+      await attestationProcessor.processAttestation(attestation, attestationHash);
+    } catch (e) { throw new Error(e.message) }
     expect(getAttestingIndicesStub.called).to.be.true;
     expect(forkChoiceStub.addAttestation.called).to.be.true;
   });

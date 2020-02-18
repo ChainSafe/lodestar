@@ -37,7 +37,7 @@
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
     "test:e2e": "TS_NODE_PROJECT=tsconfig.test.json mocha --colors --timeout 5000 'test/e2e/**/*.test.ts'",
-    "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha --colors 'test/unit/**/*.test.ts'"
+    "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha --colors --timeout 12500 'test/unit/**/*.test.ts'"
   },
   "dependencies": {
     "@chainsafe/bit-utils": "0.1.6",
