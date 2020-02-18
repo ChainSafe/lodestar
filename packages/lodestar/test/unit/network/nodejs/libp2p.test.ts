@@ -13,7 +13,7 @@ describe("[network] nodejs libp2p", () => {
     assert.equal(node.isStarted(), false);
   });
   it.only("can connect/disconnect to a peer", async function ()  {
-    this.timeout(5000 * 100);
+    this.timeout(5000 * 100 * 2);
     for (let i = 0; i < 100; i++) {
       // setup
       const nodeA: NodejsNode = await createNode(multiaddr);
@@ -27,7 +27,7 @@ describe("[network] nodejs libp2p", () => {
       // connect
       await nodeA.dial(nodeB.peerInfo);
       await new Promise((resolve, reject) => {
-        const t = setTimeout(reject, 1000);
+        const t = setTimeout(reject, 1000 * 2, '!!! connect timed out');
         nodeB.once("peer:connect", () => {
           clearTimeout(t);
           resolve();
