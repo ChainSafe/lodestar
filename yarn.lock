@@ -923,20 +923,6 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.9.4.tgz#2a250eee523c31c1662eaf9d8def1a6697296fdd"
   integrity sha512-yA+zvS9Qbxz+Yd6mV+0T2mqGtAs3tvIRIvkLnQb1Yr9+r0mgr1CWmh7u50pJNYMLaElI3oc1MhPB+VPuKyBRMQ==
 
-"@chainsafe/eth2.0-spec-test-util@0.4.2":
-  version "0.4.2"
-  resolved "https://registry.yarnpkg.com/@chainsafe/eth2.0-spec-test-util/-/eth2.0-spec-test-util-0.4.2.tgz#69cb01613d5ce1d9dc21c3de95d8660103791215"
-  integrity sha512-Dve34BLry1ejEz0V13P297zUDmxxFRykBBFFcCFJE9eKjNST6DLdlc63O7NjuSniWoT7EbFVtPH95UsFlbZRdA==
-  dependencies:
-    "@chainsafe/eth2.0-utils" "^0.1.0"
-    "@chainsafe/ssz" "^0.5.2"
-    camelcase "^5.3.1"
-    chai "^4.2.0"
-    deepmerge "^4.0.0"
-    js-yaml "^3.13.1"
-    mocha "^6.2.0"
-    v8-profiler-next "^1.1.1"
-
 "@evocateur/libnpmaccess@^3.1.2":
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/@evocateur/libnpmaccess/-/libnpmaccess-3.1.2.tgz#ecf7f6ce6b004e9f942b098d92200be4a4b1c845"
