@@ -37,15 +37,6 @@ describe("[network] nodejs libp2p", () => {
           nodeA.dial(nodeB.peerInfo),
         ]
       );
-      // await nodeA.dial(nodeB.peerInfo);
-      // await new Promise((resolve, reject) => {
-      //   const t = setTimeout(reject, 1000 * 2, '!!! connect timed out');
-      //   nodeB.once("peer:connect", () => {
-      //     clearTimeout(t);
-      //     resolve();
-      //   });
-      // });
-  
   
       // test connection
       // @ts-ignore
