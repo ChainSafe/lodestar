@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/bls",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Implementation of bls signature verification for ethereum 2.0",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -40,7 +40,7 @@
   "dependencies": {
     "@chainsafe/bls-keygen": "^0.0.2",
     "@chainsafe/eth2-bls-wasm": "^0.2.1",
-    "@chainsafe/eth2.0-types": "^0.2.0",
+    "@chainsafe/eth2.0-types": "^0.2.1",
     "assert": "^1.4.1"
   },
   "devDependencies": {
