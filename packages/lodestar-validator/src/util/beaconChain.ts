@@ -12,7 +12,7 @@ export enum DomainType {
   VOLUNTARY_EXIT = 4,
 }
 
-export function getSlotsSinceGenesis(config: IBeaconConfig, genesisTime: number64): number64 {
+export function getSlotsSinceGenesis(config: IBeaconConfig, genesisTime: number64): Slot {
   const diffInSeconds = (Date.now() / 1000) - genesisTime;
   return intDiv(diffInSeconds, config.params.SECONDS_PER_SLOT);
 }

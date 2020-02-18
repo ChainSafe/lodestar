@@ -91,10 +91,6 @@ export class AttestationProcessor implements IAttestationProcessor {
     const block = await this.db.block.get(attestation.data.beaconBlockRoot);
     assert(block.message.slot <= attestation.data.slot, "Attestation is for past block");
 
-    assert(
-      getCurrentSlot(this.config, checkpointState.genesisTime) >= attestation.data.slot + 1,
-      "Attestation slot is not in the past"
-    );
     const validators = getAttestingIndices(
       this.config, checkpointState, attestation.data, attestation.aggregationBits);
     const balances = validators.map((index) => checkpointState.balances[index]);
