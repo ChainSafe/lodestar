@@ -17,12 +17,9 @@ import {Method, RequestId} from "../constants";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {IGossip} from "./gossip/interface";
 
-// req/resp
-export type Response = {err?: Error; output?: ResponseBody};
+export type ResponseCallbackFn = (response: {err?: Error; output?: ResponseBody}) => void;
 
-export type ResponseCallbackFn = (response: Response) => void;
-
-export type ChunkResponse = {err?: Error; output: Status | Goodbye | SignedBeaconBlock};
+export type ResponseChunk = {err?: Error; output: Status | Goodbye | SignedBeaconBlock};
 
 interface IRespEvents {
   [responseEvent: string]: ResponseCallbackFn;

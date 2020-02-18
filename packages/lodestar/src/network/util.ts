@@ -5,11 +5,11 @@
 import PeerId from "peer-id";
 import PeerInfo from "peer-info";
 import {RequestId, Method, MAX_CHUNK_SIZE, ERR_INVALID_REQ} from "../constants";
-import {ResponseBody, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
+import {SignedBeaconBlock, Status, Goodbye} from "@chainsafe/eth2.0-types";
 import {serialize, deserialize, AnyContainerType} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import * as varint from "varint";
-import {ChunkResponse} from "./interface";
+import {ResponseChunk} from "./interface";
 
 // req/resp
 
@@ -56,7 +56,7 @@ export async function initializePeerInfo(peerId: PeerId, multiaddrs: string[]): 
   return peerInfo;
 }
 
-export function encodeChunkifyResponse(config: IBeaconConfig, method: Method, {err, output}: ChunkResponse): Buffer {
+export function encodeResponseChunk(config: IBeaconConfig, method: Method, {err, output}: ResponseChunk): Buffer {
   if (err) {
     return encodeResponseError(err);
   }
@@ -80,23 +80,36 @@ export function encodeChunkifyResponse(config: IBeaconConfig, method: Method, {e
   return encodeSingleChunk(data);
 }
 
-export function decodeChunkifyResponse(config: IBeaconConfig, method: Method, chunks: Buffer): ResponseBody {
+export function decodeResponseChunk(config: IBeaconConfig, method: Method, chunk: Buffer): ResponseChunk {
+  const code = chunk[0];
+  if (code !== 0) {
+    throw new Error(chunk.slice(1).toString("utf8"));
+  }
+  const length = varint.decode(chunk, 1);
+  const bytes = varint.decode.bytes;
+  if (
+    length !== chunk.length - (bytes + 1) ||
+    length > MAX_CHUNK_SIZE
+  ) {
+    throw new Error(ERR_INVALID_REQ);
+  }
+  const data = chunk.slice(bytes + 1);
+  let output: Status | Goodbye | SignedBeaconBlock;
   switch (method) {
     case Method.Status:
+      output = deserialize(config.types.Status, data);
+      break;
     case Method.Goodbye:
-      return decodeSingleChunk(config, method, chunks) as ResponseBody;
+      output = deserialize(config.types.Goodbye, data);
+      break;
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
-      // lodestar response multple single block chunks
-      // but other clients might response multiple n block chunks
-      // this handle both cases
-      return decodeBlockChunks(config, method, chunks);
+      output = deserialize(config.types.SignedBeaconBlock, data);
+      break;
+    default:
+      throw new Error(`Unhandled method ${method}`);
   }
-}
-
-export function encodeBlockChunks(config: IBeaconConfig, blocks: SignedBeaconBlock[]): Buffer {
-  const chunkArr = blocks.map(block => encodeSingleChunk(serialize(config.types.SignedBeaconBlock, block)));
-  return Buffer.concat(chunkArr);
+  return {output};
 }
 
 function encodeResponseError(err: Error): Buffer {
@@ -111,49 +124,4 @@ function encodeSingleChunk(data: Buffer): Buffer {
     Buffer.from(varint.encode(data.length)),
     data,
   ]);
-}
-
-function decodeBlockChunks(config: IBeaconConfig, method: Method, chunks: Buffer): SignedBeaconBlock[] {
-  let chunkIndex = 0;
-  const count = chunks.length;
-  const result: SignedBeaconBlock[] = [];
-  if (count <= 1) {
-    throw new Error(chunks.toString("utf8"));
-  }
-  while(chunkIndex < count) {
-    const length = varint.decode(chunks, chunkIndex + 1);
-    const bytes = varint.decode.bytes;
-    const nextChunkIndex = chunkIndex + 1 + bytes + length;
-    const chunk = chunks.slice(chunkIndex, nextChunkIndex);
-    const block = decodeSingleChunk(config, method, chunk) as SignedBeaconBlock;
-    result.push(block);
-    chunkIndex = nextChunkIndex;
-  }
-  return result;
-}
-
-function decodeSingleChunk(config: IBeaconConfig, method: Method, chunk: Buffer): ResponseBody | SignedBeaconBlock {
-  const code = chunk[0];
-  if (code !== 0) {
-    throw new Error(chunk.slice(1).toString("utf8"));
-  }
-  const length = varint.decode(chunk, 1);
-  const bytes = varint.decode.bytes;
-  if (
-    length !== chunk.length - (bytes + 1) ||
-    length > MAX_CHUNK_SIZE
-  ) {
-    throw new Error(ERR_INVALID_REQ);
-  }
-  const data = chunk.slice(bytes + 1);
-  
-  switch (method) {
-    case Method.Status:
-      return deserialize(config.types.Status, data);
-    case Method.Goodbye:
-      return deserialize(config.types.Goodbye, data);
-    case Method.BeaconBlocksByRange:
-    case Method.BeaconBlocksByRoot:
-      return deserialize(config.types.SignedBeaconBlock, data);
-  }
 }
