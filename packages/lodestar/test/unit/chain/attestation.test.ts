@@ -13,10 +13,6 @@ import { generateValidators } from "../../utils/validator";
 import { hashTreeRoot } from "@chainsafe/ssz";
 import { fail } from "assert";
 
-const timeout = s => {
-  return new Promise(resolve => setTimeout(resolve, s * 1000));
-}
-
 describe("AttestationProcessor", function () {
   const sandbox = sinon.createSandbox();
   let attestationProcessor: AttestationProcessor;
@@ -109,16 +105,14 @@ describe("AttestationProcessor", function () {
     const block = generateEmptySignedBlock();
     dbStub.block.get.resolves(block);
     const state = generateState();
+    state.genesisTime = state.genesisTime - config.params.SECONDS_PER_SLOT
     dbStub.state.get.resolves(state);
     forkChoiceStub.getJustified.returns({});
     getAttestingIndicesStub.returns([0]);
     state.balances = [];
     state.validators = generateValidators(3, {})
 
-    await timeout(config.params.SECONDS_PER_SLOT)
-    try {
-      await attestationProcessor.processAttestation(attestation, attestationHash);
-    } catch (e) { throw new Error(e.message) }
+    await attestationProcessor.processAttestation(attestation, attestationHash);
     expect(getAttestingIndicesStub.called).to.be.true;
     expect(forkChoiceStub.addAttestation.called).to.be.true;
   });
