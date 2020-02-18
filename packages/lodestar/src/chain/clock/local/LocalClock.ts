@@ -64,7 +64,7 @@ export class LocalClock extends EventEmitter implements IBeaconClock {
       this.emit("epoch", currentEpoch);
     }
     //recursively invoke update slot
-    setTimeout(
+    this.timeoutId = setTimeout(
       this.updateSlot,
       this.getDiffTillNextSlot()
     );
