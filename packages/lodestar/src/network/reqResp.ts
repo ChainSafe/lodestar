@@ -87,30 +87,11 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
             stream.source,
             // handle request
             async (source: Promise<Buffer | {slice: () => Buffer}>[]) => {
-              const result: ResponseChunk[] = [];
-              for await (const val of source) {
-                const data = Buffer.isBuffer(val) ? val : val.slice();
-                const response = await this.handleRequest(peerId, method, data);
-                if (!response.err && (method === Method.BeaconBlocksByRange || method === Method.BeaconBlocksByRoot)) {
-                  const blocks = response.output as SignedBeaconBlock[];
-                  const chunkResponses = blocks.map(block => ({output: block}));
-                  result.push(...(chunkResponses));
-                } else {
-                  result.push(response as ResponseChunk);
-                }
-              }  
-              return result;
+              return this.handleRpcRequestStream(peerId, method, source);
             },
             // transform
             (source: Promise<{[Symbol.asyncIterator]: () => AsyncIterator<ResponseChunk>}>) => {
-              const config = this.config;
-              return (async function * () {
-                const sourceVal = await source;
-                for await (const val of sourceVal) {
-                  // each yield result will be sent to stream.sink immediately
-                  yield encodeResponseChunk(config, method, val);
-                }
-              })();
+              return this.transformResponse(method, source);
             },
             stream.sink
           );
@@ -118,6 +99,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       );
     });
   }
+
   public async stop(): Promise<void> {
     Object.values(Method).forEach((method) => {
       this.libp2p.unhandle(createRpcProtocol(method, this.encoding));
@@ -144,6 +126,37 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     request: BeaconBlocksByRootRequest
   ): Promise<BeaconBlocksByRootResponse> {
     return await this.sendRequest<BeaconBlocksByRootResponse>(peerInfo, Method.BeaconBlocksByRoot, request);
+  }
+
+  private async handleRpcRequestStream(
+    peerId: PeerId, method: Method, source: Promise<Buffer | {slice: () => Buffer}>[]): Promise<ResponseChunk[]> {
+    const result: ResponseChunk[] = [];
+    for await (const val of source) {
+      const data = Buffer.isBuffer(val) ? val : val.slice();
+      const response = await this.handleRequest(peerId, method, data);
+      if (!response.err && (method === Method.BeaconBlocksByRange || method === Method.BeaconBlocksByRoot)) {
+        const blocks = response.output as SignedBeaconBlock[];
+        const chunkResponses = blocks.map(block => ({output: block}));
+        result.push(...(chunkResponses));
+      } else {
+        result.push(response as ResponseChunk);
+      }
+    }  
+    return result;
+  }
+
+  private transformResponse(
+    method: Method,
+    source: Promise<{[Symbol.asyncIterator]: () => AsyncIterator<ResponseChunk>}>
+  ): AsyncIterator<Buffer> {
+    const config = this.config;
+    return (async function * () {
+      const sourceVal = await source;
+      for await (const val of sourceVal) {
+        // each yield result will be sent to stream.sink immediately
+        yield encodeResponseChunk(config, method, val);
+      }
+    })();
   }
 
   private handleRequest = async (peerId: PeerId, method: Method, data: Buffer):
