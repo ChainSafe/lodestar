@@ -37,7 +37,6 @@ export function processRegistryUpdates(config: IBeaconConfig, state: BeaconState
   ).sort((a, b) => (a.activationEligibilityEpoch - b.activationEligibilityEpoch) || -1);
   // Dequeued validators for activation up to churn limit
   activationQueue.slice(0, getValidatorChurnLimit(config, state)).forEach((validator) => {
-    console.log(validator);
     validator.activationEpoch = computeActivationExitEpoch(config, currentEpoch);
   });
   return state;
