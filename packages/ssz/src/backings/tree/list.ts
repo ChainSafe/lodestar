@@ -30,6 +30,9 @@ export class BasicListTreeHandler<T extends List<unknown>> extends BasicArrayTre
   }
   fromBytes(data: Uint8Array, start: number, end: number): Tree {
     const length = (end - start) / this._type.elementType.size();
+    if (!Number.isSafeInteger(length)) {
+      throw new Error("Deserialized list byte length must be divisible by element size");
+    }
     if (length > this._type.limit) {
       throw new Error("Deserialized list length greater than limit");
     }
@@ -132,6 +135,9 @@ export class CompositeListTreeHandler<T extends List<object>> extends CompositeA
     } else {
       const elementSize = this._type.elementType.structural.size(null);
       const length = (end - start) / elementSize;
+      if (!Number.isSafeInteger(length)) {
+        throw new Error("Deserialized list byte length must be divisible by element size");
+      }
       if (length > this._type.limit) {
         throw new Error("Deserialized list length greater than limit");
       }
