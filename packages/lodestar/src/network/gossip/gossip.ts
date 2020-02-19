@@ -11,17 +11,27 @@ import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {ILogger, LogLevel} from "@chainsafe/eth2.0-utils/lib/logger";
 import {getGossipTopic,} from "./utils";
 import {INetworkOptions} from "../options";
-import {GossipEventEmitter, IGossip, IGossipEvents, IGossipSub, IGossipModules,
-  GossipObject} from "./interface";
+import {GossipEventEmitter, GossipObject, IGossip, IGossipEvents, IGossipModules, IGossipSub} from "./interface";
 import {GossipEvent} from "./constants";
-import {publishBlock, handleIncomingBlock} from "./handlers/block";
-import {publishCommiteeAttestation, getCommitteeAttestationHandler, handleIncomingAttestation}
-  from "./handlers/attestation";
-import {publishAttesterSlashing, handleIncomingAttesterSlashing} from "./handlers/attesterSlashing";
-import {publishProposerSlashing, handleIncomingProposerSlashing} from "./handlers/proposerSlashing";
-import {publishVoluntaryExit, handleIncomingVoluntaryExit} from "./handlers/voluntaryExit";
-import {publishAggregatedAttestation, handleIncomingAggregateAndProof} from "./handlers/aggregateAndProof";
+import {handleIncomingBlock, publishBlock} from "./handlers/block";
+import {
+  getCommitteeAttestationHandler,
+  handleIncomingAttestation,
+  publishCommiteeAttestation
+} from "./handlers/attestation";
+import {handleIncomingAttesterSlashing, publishAttesterSlashing} from "./handlers/attesterSlashing";
+import {handleIncomingProposerSlashing, publishProposerSlashing} from "./handlers/proposerSlashing";
+import {handleIncomingVoluntaryExit, publishVoluntaryExit} from "./handlers/voluntaryExit";
+import {handleIncomingAggregateAndProof, publishAggregatedAttestation} from "./handlers/aggregateAndProof";
 import {LodestarGossipsub} from "./gossipsub";
+import {
+  AggregateAndProof,
+  Attestation,
+  AttesterSlashing,
+  ProposerSlashing,
+  SignedBeaconBlock,
+  SignedVoluntaryExit
+} from "@chainsafe/eth2.0-types";
 
 
 export type GossipHandlerFn = (this: Gossip, obj: GossipObject ) => void;

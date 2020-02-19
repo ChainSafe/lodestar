@@ -6,6 +6,7 @@ import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {Attestation} from "@chainsafe/eth2.0-types";
 import {GossipEvent, AttestationSubnetRegExp} from "./constants";
 import assert from "assert";
+import {CommitteeIndex} from "@chainsafe/eth2.0-types/lib";
 
 export function getGossipTopic(event: GossipEvent, encoding = "ssz", params: Map<string, string> = new Map()): string {
   let topic = `${event}/${encoding}`;

@@ -1,6 +1,6 @@
-import Gossipsub, {IGossipMessage, Registrar, Options} from "libp2p-gossipsub";
-import {IGossipMessageValidator, GossipObject, GossipMessageValidatorFn} from "./interface";
-import {getGossipTopic, isAttestationSubnetTopic, getSubnetFromAttestationSubnetTopic} from "./utils";
+import Gossipsub, {IGossipMessage, Options, Registrar} from "libp2p-gossipsub";
+import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator} from "./interface";
+import {getGossipTopic, getSubnetFromAttestationSubnetTopic, isAttestationSubnetTopic} from "./utils";
 import {GossipEvent} from "./constants";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {utils} from "libp2p-pubsub";
