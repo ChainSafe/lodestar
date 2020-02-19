@@ -9,15 +9,18 @@ import {IGossipMessageValidator, GossipObject, GossipMessageValidatorFn} from ".
 import {getGossipTopic, isAttestationSubnetTopic, getSubnetFromAttestationSubnetTopic} from "./utils";
 import {GossipEvent} from "./constants";
 import {GOSSIP_MAX_SIZE} from "../../constants";
+import {hash} from "@chainsafe/eth2.0-utils";
 
 /**
  * This validates messages in Gossipsub and emit the transformed messages.
  * We don't want to double deserialize messages for performance benefit.
  */
 export class LodestarGossipsub extends Gossipsub {
-  private transformedObjects: Map<string, GossipObject>;
+  private transformedObjects: Map<string, {createdAt: Date; object: GossipObject}>;
   private config: IBeaconConfig;
   private validator: IGossipMessageValidator;
+  private interval: NodeJS.Timeout;
+  private timeToLive: number;
   private readonly  logger: ILogger;
 
   constructor (config: IBeaconConfig, validator: IGossipMessageValidator, logger: ILogger, peerInfo: PeerInfo,
@@ -26,7 +29,32 @@ export class LodestarGossipsub extends Gossipsub {
     this.transformedObjects = new Map();
     this.config = config;
     this.validator = validator;
+    // This can be epoch/daily/hourly ...
+    this.timeToLive = this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000;
     this.logger = logger;
+  }
+
+  public async start(): Promise<void> {
+    if (!this.interval) {
+      this.interval = setInterval(this.cleanUp.bind(this), this.timeToLive);
+    }
+    super.start();
+  }
+
+  public async stop(): Promise<void> {
+    if (this.interval) {
+      clearInterval(this.interval);
+    }
+    super.stop();
+  }
+
+  // Override message-id
+  public _publish(messages: IGossipMessage[]): void {
+    messages.forEach((message) => {
+      const sha256Hash = hash(message.data);
+      message["message-id"] = sha256Hash.toString("base64");
+    });
+    super._publish(messages);
   }
 
   public async validate(rawMessage: IGossipMessage): Promise<boolean> {
@@ -34,6 +62,10 @@ export class LodestarGossipsub extends Gossipsub {
     assert(message.topicIDs && message.topicIDs.length === 1, `Invalid topicIDs: ${message.topicIDs}`);
     assert(message.data.length <= GOSSIP_MAX_SIZE, `Message exceeds size limit of ${GOSSIP_MAX_SIZE} bytes`);
     const topic = message.topicIDs[0];
+    // avoid duplicate
+    if (this.transformedObjects.get(message["message-id"])) {
+      return false;
+    }
 
     let isValid;
     let transformedObj: GossipObject;
@@ -47,7 +79,7 @@ export class LodestarGossipsub extends Gossipsub {
       this.logger.error(`Cannot validate message from ${message.from}, topic ${message.topicIDs}, error: ${err}`);
     }
     if (isValid && transformedObj) {
-      this.transformedObjects.set(this.getKey(message), transformedObj);
+      this.transformedObjects.set(message["message-id"], {createdAt: new Date(), object: transformedObj});
     }
     return isValid;
   }
@@ -56,10 +88,9 @@ export class LodestarGossipsub extends Gossipsub {
     const subscribedTopics = super.getTopics();
     topics.forEach((topic) => {
       if (subscribedTopics.includes(topic)) {
-        const transformedObj = this.transformedObjects.get(this.getKey(message));
+        const transformedObj = this.transformedObjects.get(message["message-id"]).object;
         if (transformedObj) {
           super.emit(topic, transformedObj);
-          this.transformedObjects.delete(this.getKey(message));
         }
       }
     });
@@ -129,9 +160,16 @@ export class LodestarGossipsub extends Gossipsub {
     return {object: objType.deserialize(message.data)};
   }
 
-  private getKey(message: IGossipMessage): string {
-    const key = Buffer.concat([Buffer.from(message.from as string), message.seqno]);
-    return key.toString("hex");
+  private cleanUp(): void {
+    const keysToDelete: string[] = [];
+    for (const [key, val] of this.transformedObjects) {
+      if (Date.now() - val.createdAt.getTime() > this.timeToLive) {
+        keysToDelete.push(key);
+      }
+    }
+    for (const key of keysToDelete) {
+      this.transformedObjects.delete(key);
+    }
   }
 
 }

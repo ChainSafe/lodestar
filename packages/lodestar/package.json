@@ -101,7 +101,7 @@
     "@types/supertest": "^2.0.8",
     "@types/varint": "^5.0.0",
     "@types/ws": "^6.0.1",
-    "libp2p-ts": "https://github.com/ChainSafe/libp2p-ts.git",
+    "libp2p-ts": "https://github.com/ChainSafe/libp2p-ts.git#tuyen/gossip-message-id",
     "babel-plugin-const-enum": "^0.0.4",
     "benchmark": "^2.1.4",
     "chai": "^4.2.0",
