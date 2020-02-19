@@ -14,9 +14,12 @@ export type Bytes8 = ByteVector;
 export type Bytes32 = ByteVector;
 export type Bytes48 = ByteVector;
 export type Bytes96 = ByteVector;
+export type Uint8 = number;
 export type Uint16 = number;
+export type Uint32 = number;
 export type Number64 = number;
 export type Uint64 = bigint;
+export type Uint128 = bigint;
 export type Uint256 = bigint;
 
 // Custom types, defined for type hinting and readability

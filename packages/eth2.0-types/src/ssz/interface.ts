@@ -13,9 +13,12 @@ export interface IBeaconSSZTypes {
   Bytes32: ByteVectorType;
   Bytes48: ByteVectorType;
   Bytes96: ByteVectorType;
+  Uint8: NumberUintType;
   Uint16: NumberUintType;
+  Uint32: NumberUintType;
   Number64: NumberUintType;
   Uint64: BigIntUintType;
+  Uint128: BigIntUintType;
   Uint256: BigIntUintType;
   Slot: NumberUintType;
   Epoch: NumberUintType;
