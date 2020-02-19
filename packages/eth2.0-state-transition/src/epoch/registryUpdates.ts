@@ -20,9 +20,9 @@ export function processRegistryUpdates(config: IBeaconConfig, state: BeaconState
   const currentEpoch = getCurrentEpoch(config, state);
   // Process activation eligibility and ejections
   const ejectionBalance = config.params.EJECTION_BALANCE;
-  state.validators.forEach((validator, index, validators) => {
+  state.validators.forEach((validator, index) => {
     if (isEligibleForActivationQueue(config, validator)) {
-      validators[index].activationEligibilityEpoch = currentEpoch + 1;
+      validator.activationEligibilityEpoch = currentEpoch + 1;
     }
     if (isActiveValidator(validator, currentEpoch) &&
       validator.effectiveBalance <= ejectionBalance) {
