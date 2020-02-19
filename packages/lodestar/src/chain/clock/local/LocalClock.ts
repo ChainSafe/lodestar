@@ -22,7 +22,7 @@ export class LocalClock extends EventEmitter implements IBeaconClock {
   public async start(): Promise<void> {
     this.isRunning = true;
     const diffTillNextSlot = this.getDiffTillNextSlot();
-    setTimeout(
+    this.timeoutId = setTimeout(
       this.updateSlot,
       diffTillNextSlot
     );
