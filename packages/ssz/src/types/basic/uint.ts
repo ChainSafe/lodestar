@@ -21,7 +21,7 @@ export class NumberUintType extends UintType<number> {
     if (!(Number.isSafeInteger(value as number) || value === Infinity)) {
       throw new Error("Uint value is not a number");
     }
-    if (value as unknown as number < 0) {
+    if (value as number < 0) {
       throw new Error("Uint value must be gte 0");
     }
   }

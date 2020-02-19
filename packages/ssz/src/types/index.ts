@@ -32,7 +32,7 @@
  *     Values backed by a tree are wrapped in an ES6 Proxy object to provide a convenient, 'structural' interface
  *     for property getters/setters.
  *
- * - Serialized - This backing has a byte array representation.
+ * - ByteArray - This backing has a byte array representation.
  *     The data is always represented as a Uint8Array, and within operations,
  *     the serialized structure is harnessed as much as possible.
  *     Property getters return sub-arrays except for basic types, when the native value

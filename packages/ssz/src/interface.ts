@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 
+/**
+ * These interfaces are consistent across all backings.
+ * As long as these interfaces are respected, the backing can be abstracted entirely.
+ */
+
 export interface ArrayLike<T> {
   readonly length: number;
   [n: number]: T;
@@ -7,9 +12,6 @@ export interface ArrayLike<T> {
   find(fn: (value: T, index: number, array: this) => boolean): T | undefined;
   findIndex(fn: (value: T, index: number, array: this) => boolean): number;
   forEach(fn: (value: T, index: number, array: this) => void): void;
-  //map<U>(fn: (value: T, index: number, array: this) => U): U[];
-  //map(fn: (value: number, index: number, array: this) => number): Uint8Array;
-  //  reduce<U>(fn: (accum: U, value: T, index: number) => U, initial?: U): U;
 }
 
 export type Vector<T> = ArrayLike<T>;
@@ -32,6 +34,9 @@ export interface ObjectLike {
   [fieldName: string]: any;
 }
 
+/**
+ * The Json interface is used for json-serializable input
+ */
 export type Json =
     | string
     | number
