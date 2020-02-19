@@ -99,7 +99,7 @@ describe("AttestationProcessor", function () {
     }
   });
 
-  it.only("processAttestation - should call forkChoice", async () => {
+  it("processAttestation - should call forkChoice", async () => {
     const attestation = generateEmptyAttestation();
     const attestationHash = hashTreeRoot(config.types.Attestation, attestation);
     const block = generateEmptySignedBlock();
