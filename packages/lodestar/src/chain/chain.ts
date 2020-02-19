@@ -231,11 +231,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     // latest_eth1_data.block_hash has been processed and accepted.
     // TODO: implement
 
-    // The node's Unix time is greater than or equal to state.
-    const stateSlotTime = state.genesisTime + (
-      (signedBlock.message.slot - GENESIS_SLOT) * this.config.params.SECONDS_PER_SLOT
-    );
-    return Math.floor(Date.now() / 1000) >= stateSlotTime;
+    return getCurrentSlot(this.config, state.genesisTime) >= signedBlock.message.slot;
   }
 
   private processBlock = async (job: IBlockProcessJob, blockHash: Root): Promise<void> => {
