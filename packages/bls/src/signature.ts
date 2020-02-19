@@ -51,7 +51,7 @@ export class Signature {
     domain = padLeft(domain, 8);
     return this.value.verifyAggregatedHashWithDomain(
       publicKeys.map((key) => key.getValue()),
-      messages.map((message) => Buffer.concat([Buffer.from(message as Uint8Array), domain as Uint8Array]))
+      messages.map((message) => Buffer.concat([message, domain]))
     );
   }
 

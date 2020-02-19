@@ -57,7 +57,7 @@ export class PublicKey {
   }
 
   public toHexString(): string {
-    return `0x${Buffer.from(this.toBytesCompressed()).toString("hex")}`;
+    return `0x${this.toBytesCompressed().toString("hex")}`;
   }
 
   public getValue(): PublicKeyType {
