@@ -2,26 +2,22 @@
  * @module network/gossip
  */
 
-import {IGossipMessage, IGossipMessageValidator} from "../interface";
 import {ProposerSlashing} from "@chainsafe/eth2.0-types";
-import {deserializeGossipMessage, getGossipTopic} from "../utils";
-import {Gossip, GossipHandlerFn} from "../gossip";
+import {getGossipTopic} from "../utils";
+import {Gossip} from "../gossip";
 import {GossipEvent} from "../constants";
+import {GossipObject} from "../interface";
 
-export function getIncomingProposerSlashingHandler(validator: IGossipMessageValidator): GossipHandlerFn {
-  return async function handleIncomingProposerSlashing(this: Gossip, msg: IGossipMessage): Promise<void> {
-    try {
-      const proposerSlashing = deserializeGossipMessage<ProposerSlashing>(this.config.types.ProposerSlashing, msg);
-      this.logger.verbose(
-        `Received slashing for proposer #${proposerSlashing.proposerIndex}`
-      );
-      if (await validator.isValidIncomingProposerSlashing(proposerSlashing)) {
-        this.emit(GossipEvent.PROPOSER_SLASHING, proposerSlashing);
-      }
-    } catch (e) {
-      this.logger.warn("Incoming proposer slashing error", e);
-    }
-  };
+export async function handleIncomingProposerSlashing(this: Gossip, obj: GossipObject): Promise<void> {
+  try {
+    const proposerSlashing = obj as ProposerSlashing;
+    this.logger.verbose(
+      `Received slashing for proposer #${proposerSlashing.proposerIndex}`
+    );
+    this.emit(GossipEvent.PROPOSER_SLASHING, proposerSlashing);
+  } catch (e) {
+    this.logger.warn("Incoming proposer slashing error", e);
+  }
 }
 
 export async function publishProposerSlashing(this: Gossip, proposerSlashing: ProposerSlashing): Promise<void> {
