@@ -38,14 +38,14 @@ export class LodestarGossipsub extends Gossipsub {
     if (!this.interval) {
       this.interval = setInterval(this.cleanUp.bind(this), this.timeToLive);
     }
-    super.start();
+    await super.start();
   }
 
   public async stop(): Promise<void> {
     if (this.interval) {
       clearInterval(this.interval);
     }
-    super.stop();
+    await super.stop();
   }
 
   // Override message-id
