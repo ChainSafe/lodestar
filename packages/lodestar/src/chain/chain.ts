@@ -138,7 +138,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const blockHash = hashTreeRoot(this.config.types.BeaconBlock, signedBlock.message);
     this.logger.info(
       `Received block with hash 0x${blockHash.toString("hex")}` +
-            `at slot ${signedBlock.message.slot}. Current state slot ${this.latestState.slot}`
+      `at slot ${signedBlock.message.slot}. Current state slot ${this.latestState.slot}`
     );
 
     if (!await this.db.block.has(signedBlock.message.parentRoot)) {
@@ -154,7 +154,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     if (signedBlock.message.slot <= computeStartSlotAtEpoch(this.config, finalizedCheckpoint.epoch)) {
       this.logger.warn(
         `Block ${blockHash.toString("hex")} is not after ` +
-                `finalized checkpoint ${finalizedCheckpoint.root.toString("hex")}.`
+        `finalized checkpoint ${finalizedCheckpoint.root.toString("hex")}.`
       );
       return;
     }
@@ -193,14 +193,14 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     genesisBlock.stateRoot = stateRoot;
     const blockRoot = hashTreeRoot(this.config.types.BeaconBlock, genesisBlock);
     this.logger.info(`Initializing beacon chain with state root ${toHex(stateRoot)}`
-            + ` and genesis block root ${toHex(blockRoot)}`
+      + ` and genesis block root ${toHex(blockRoot)}`
     );
     this.latestState = genesisState;
     // Determine whether a genesis state already in
     // the database matches what we were provided
     const storedGenesisBlock = await this.db.block.getBlockBySlot(GENESIS_SLOT);
     if (storedGenesisBlock !== null &&
-            !genesisBlock.stateRoot.equals(storedGenesisBlock.message.stateRoot)) {
+      !genesisBlock.stateRoot.equals(storedGenesisBlock.message.stateRoot)) {
       throw new Error("A genesis state with different configuration was detected! Please clean the database.");
     }
     await Promise.all([
@@ -230,11 +230,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     // latest_eth1_data.block_hash has been processed and accepted.
     // TODO: implement
 
-    // The node's Unix time is greater than or equal to state.
-    const stateSlotTime = state.genesisTime + (
-      (signedBlock.message.slot - GENESIS_SLOT) * this.config.params.SECONDS_PER_SLOT
-    );
-    return Math.floor(Date.now() / 1000) >= stateSlotTime;
+    return getCurrentSlot(this.config, state.genesisTime) >= signedBlock.message.slot;
   }
 
   private processBlock = async (job: IBlockProcessJob, blockHash: Root): Promise<void> => {
@@ -249,7 +245,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
     this.logger.info(
       `Slot ${job.signedBlock.message.slot} Block 0x${blockHash.toString("hex")} ` +
-            `State ${hashTreeRoot(this.config.types.BeaconState, post).toString("hex")} passed state transition`
+      `State ${hashTreeRoot(this.config.types.BeaconState, post).toString("hex")} passed state transition`
     );
     await this.opPool.processBlockOperations(job.signedBlock);
     job.signedBlock.message.body.attestations.forEach((attestation: Attestation) => {

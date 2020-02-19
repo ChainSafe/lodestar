@@ -1,21 +1,22 @@
 import sinon from "sinon";
-import {expect} from "chai";
+import { expect } from "chai";
 import { AttestationProcessor } from "../../../src/chain/attestation";
 import { BeaconChain, StatefulDagLMDGHOST } from "../../../src/chain";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import { config } from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as utils from "@chainsafe/eth2.0-state-transition/lib/util/attestation";
 import { StateRepository, BlockRepository } from "../../../src/db/api/beacon/repositories";
 import { WinstonLogger } from "@chainsafe/eth2.0-utils/lib/logger";
 import { generateEmptySignedBlock } from "../../utils/block";
 import { generateEmptyAttestation } from "../../utils/attestation";
 import { generateState } from "../../utils/state";
+import { generateValidators } from "../../utils/validator";
 import { hashTreeRoot } from "@chainsafe/ssz";
 import { fail } from "assert";
 
-describe("AttestationProcessor", function() {
+describe("AttestationProcessor", function () {
   const sandbox = sinon.createSandbox();
   let attestationProcessor: AttestationProcessor;
-  let chainStub: any, forkChoiceStub: any, dbStub: any, logger: any, 
+  let chainStub: any, forkChoiceStub: any, dbStub: any, logger: any,
     processAttestationStub: any, getAttestingIndicesStub: any;
 
   beforeEach(() => {
@@ -27,7 +28,7 @@ describe("AttestationProcessor", function() {
     };
     logger = new WinstonLogger();
     logger.silent = true;
-    attestationProcessor = new AttestationProcessor(chainStub, forkChoiceStub, {config, db: dbStub, logger})
+    attestationProcessor = new AttestationProcessor(chainStub, forkChoiceStub, { config, db: dbStub, logger })
     getAttestingIndicesStub = sandbox.stub(utils, "getAttestingIndices");
   });
 
@@ -70,10 +71,10 @@ describe("AttestationProcessor", function() {
       const state = generateState();
       dbStub.state.get.resolves(state);
       forkChoiceStub.getJustified.returns({})
-  
+
       await attestationProcessor.processAttestation(attestation, attestationHash);
       fail("expect an AssertionError");
-    } catch(err) {
+    } catch (err) {
       expect(getAttestingIndicesStub.called).to.be.false;
       expect(forkChoiceStub.addAttestation.called).to.be.false;
     }
@@ -89,28 +90,30 @@ describe("AttestationProcessor", function() {
       const state = generateState();
       dbStub.state.get.resolves(state);
       forkChoiceStub.getJustified.returns({})
-  
+
       await attestationProcessor.processAttestation(attestation, attestationHash);
       fail("expect an AssertionError");
-    } catch(err) {
+    } catch (err) {
       expect(getAttestingIndicesStub.called).to.be.false;
       expect(forkChoiceStub.addAttestation.called).to.be.false;
     }
   });
 
-  it("processAttestation - should call forkChoice", async () => {
-      const attestation = generateEmptyAttestation();
-      const attestationHash = hashTreeRoot(config.types.Attestation, attestation);
-      const block = generateEmptySignedBlock();
-      dbStub.block.get.resolves(block);
-      const state = generateState();
-      dbStub.state.get.resolves(state);
-      forkChoiceStub.getJustified.returns({});
-      getAttestingIndicesStub.returns([0]);
-      state.balances = [1n, 2n, 3n];
-  
-      await attestationProcessor.processAttestation(attestation, attestationHash);
-      expect(getAttestingIndicesStub.called).to.be.true;
-      expect(forkChoiceStub.addAttestation.called).to.be.true;
+  it.only("processAttestation - should call forkChoice", async () => {
+    const attestation = generateEmptyAttestation();
+    const attestationHash = hashTreeRoot(config.types.Attestation, attestation);
+    const block = generateEmptySignedBlock();
+    dbStub.block.get.resolves(block);
+    const state = generateState();
+    state.genesisTime = state.genesisTime - config.params.SECONDS_PER_SLOT
+    dbStub.state.get.resolves(state);
+    forkChoiceStub.getJustified.returns({});
+    getAttestingIndicesStub.returns([0]);
+    state.balances = [];
+    state.validators = generateValidators(3, {})
+
+    await attestationProcessor.processAttestation(attestation, attestationHash);
+    expect(getAttestingIndicesStub.called).to.be.true;
+    expect(forkChoiceStub.addAttestation.called).to.be.true;
   });
 });
