@@ -42,12 +42,12 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/bls": "0.2.2",
+    "@chainsafe/bls": "0.3.0",
     "@chainsafe/eth2.0-config": "0.2.1",
     "@chainsafe/eth2.0-params": "0.2.1",
     "@chainsafe/eth2.0-state-transition": "0.2.1",
     "@chainsafe/eth2.0-utils": "0.1.1",
-    "@chainsafe/ssz": "^0.5.4",
+    "@chainsafe/ssz": "^0.6.0",
     "axios": "^0.19.0",
     "axios-mock-adapter": "^1.17.0",
     "deepmerge": "^4.0.0",
