@@ -1,6 +1,4 @@
 import bls from "@chainsafe/bls";
-import {hashTreeRoot} from "@chainsafe/ssz";
-
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {getDomain} from "./domain";
@@ -23,9 +21,9 @@ export function verifyBlockSignature(
 ): boolean {
   const proposer = state.validators[getBeaconProposerIndex(config, state)];
   return bls.verify(
-    proposer.pubkey,
-    hashTreeRoot(config.types.BeaconBlock, signedBlock.message),
-    signedBlock.signature,
+    proposer.pubkey.valueOf() as Uint8Array,
+    config.types.BeaconBlock.hashTreeRoot(signedBlock.message),
+    signedBlock.signature.valueOf() as Uint8Array,
     getDomain(config, state, DomainType.BEACON_PROPOSER),
   );
 }

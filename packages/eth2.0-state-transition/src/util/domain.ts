@@ -4,7 +4,7 @@
 import {
   Epoch,
   Version,
-  BeaconState, Domain,
+  BeaconState,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -16,10 +16,10 @@ import {getCurrentEpoch} from "./epoch";
 /**
  * Return the domain for the [[domainType]] and [[forkVersion]].
  */
-export function computeDomain(domainType: DomainType, forkVersion: Version = Buffer.alloc(4)): Domain {
+export function computeDomain(domainType: DomainType, forkVersion: Version = Buffer.alloc(4)): Buffer {
   return Buffer.concat([
     intToBytes(domainType, 4),
-    forkVersion,
+    forkVersion.valueOf() as Uint8Array,
   ]);
 }
 
@@ -31,7 +31,7 @@ export function getDomain(
   state: BeaconState,
   domainType: DomainType,
   messageEpoch: Epoch | null = null
-): Domain {
+): Buffer {
   const epoch = messageEpoch || getCurrentEpoch(config, state);
   const forkVersion = epoch < state.fork.epoch
     ? state.fork.previousVersion

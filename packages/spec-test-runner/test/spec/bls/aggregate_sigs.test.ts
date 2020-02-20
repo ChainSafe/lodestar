@@ -23,7 +23,7 @@ describeDirectorySpecTest<AggregateSigsTestCase, string>(
     const result =  bls.aggregateSignatures(testCase.data.input.map(pubKey => {
       return Buffer.from(pubKey.replace("0x", ""), "hex");
     }));
-    return `0x${result.toString("hex")}`;
+    return `0x${Buffer.from(result).toString("hex")}`;
   }),
   {
     inputTypes: {

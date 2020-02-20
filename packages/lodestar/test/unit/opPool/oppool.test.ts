@@ -7,7 +7,7 @@ import {EthersEth1Notifier} from "../../../src/eth1";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   AttesterSlashingRepository,
-  DepositRepository,
+  DepositDataRepository,
   ProposerSlashingRepository,
   VoluntaryExitRepository, AttestationRepository,
   StateRepository, AggregateAndProofRepository
@@ -22,7 +22,7 @@ describe("operation pool", function () {
 
   beforeEach(()=>{
     dbStub = {
-      deposit: sandbox.createStubInstance(DepositRepository),
+      depositData: sandbox.createStubInstance(DepositDataRepository),
       voluntaryExit: sandbox.createStubInstance(VoluntaryExitRepository),
       proposerSlashing: sandbox.createStubInstance(ProposerSlashingRepository),
       attesterSlashing: sandbox.createStubInstance(AttesterSlashingRepository),
@@ -59,14 +59,14 @@ describe("operation pool", function () {
 
   it("should do cleanup after block processing", async function () {
     const block  = generateEmptySignedBlock();
-    dbStub.deposit.deleteOld.resolves();
+    dbStub.depositData.deleteOld.resolves();
     dbStub.voluntaryExit.deleteManyByValue.resolves();
     dbStub.proposerSlashing.deleteManyByValue.resolves();
     dbStub.attesterSlashing.deleteManyByValue.resolves();
     dbStub.aggregateAndProof.deleteManyByValue.resolves();
     dbStub.aggregateAndProof.getAll.resolves([]);
     await opPool.processBlockOperations(block);
-    expect(dbStub.deposit.deleteOld.calledOnce).to.be.true;
+    expect(dbStub.depositData.deleteOld.calledOnce).to.be.true;
     expect(dbStub.voluntaryExit.deleteManyByValue.calledOnce).to.be.true;
     expect(dbStub.proposerSlashing.deleteManyByValue.calledOnce).to.be.true;
     expect(dbStub.attesterSlashing.deleteManyByValue.calledOnce).to.be.true;

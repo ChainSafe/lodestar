@@ -3,14 +3,14 @@
  * @module types
  */
 
-import {BitVector} from "@chainsafe/bit-utils";
+import {BitVector, List, Vector} from "@chainsafe/ssz";
 
 import {
+  Bytes32,
   Gwei,
   Root,
-  number64,
+  Number64,
   Slot,
-  bytes32,
 } from "./primitive";
 
 import {
@@ -25,34 +25,34 @@ import {
 
 export interface BeaconState {
   // Misc
-  genesisTime: number64;
+  genesisTime: Number64;
   slot: Slot;
   fork: Fork; // For versioning hard forks
 
   // History
   latestBlockHeader: BeaconBlockHeader;
-  blockRoots: Root[];
-  stateRoots: Root[];
-  historicalRoots: Root[];
+  blockRoots: Vector<Root>;
+  stateRoots: Vector<Root>;
+  historicalRoots: List<Root>;
   
   // Eth1
   eth1Data: Eth1Data;
-  eth1DataVotes: Eth1Data[];
-  eth1DepositIndex: number64;
+  eth1DataVotes: List<Eth1Data>;
+  eth1DepositIndex: Number64;
   
   // Registry
-  validators: Validator[];
-  balances: Gwei[];
+  validators: List<Validator>;
+  balances: List<Gwei>;
 
   // Shuffling
-  randaoMixes: bytes32[];
+  randaoMixes: Vector<Bytes32>;
 
   // Slashings
-  slashings: Gwei[]; // Balances penalized at every withdrawal period
+  slashings: Vector<Gwei>; // Balances penalized at every withdrawal period
   
   // Attestations
-  previousEpochAttestations: PendingAttestation[];
-  currentEpochAttestations: PendingAttestation[];
+  previousEpochAttestations: List<PendingAttestation>;
+  currentEpochAttestations: List<PendingAttestation>;
 
   // Finality
   justificationBits: BitVector;

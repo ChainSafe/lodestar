@@ -40,7 +40,6 @@
     "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha --colors --timeout 12500 'test/unit/**/*.test.ts'"
   },
   "dependencies": {
-    "@chainsafe/bit-utils": "0.1.6",
     "@chainsafe/bls": "0.2.2",
     "@chainsafe/eth2.0-config": "0.2.1",
     "@chainsafe/eth2.0-params": "0.2.1",

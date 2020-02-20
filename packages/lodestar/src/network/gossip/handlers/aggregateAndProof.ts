@@ -2,12 +2,11 @@
  * @module network/gossip
  */
 
+import {toHexString} from "@chainsafe/ssz";
+import {AggregateAndProof} from "@chainsafe/eth2.0-types";
 import {Gossip} from "../gossip";
 import {getGossipTopic} from "../utils";
 import {GossipEvent} from "../constants";
-import {AggregateAndProof} from "@chainsafe/eth2.0-types";
-import {toHex} from "@chainsafe/eth2.0-utils";
-import {serialize} from "@chainsafe/ssz";
 import {GossipObject} from "../interface";
 
 export async function handleIncomingAggregateAndProof(this: Gossip, obj: GossipObject): Promise<void> {
@@ -15,7 +14,7 @@ export async function handleIncomingAggregateAndProof(this: Gossip, obj: GossipO
     const aggregateAndProof = obj as AggregateAndProof;
     this.logger.verbose(
       `Received AggregateAndProof from validator #${aggregateAndProof.aggregatorIndex}`+
-        ` for target ${toHex(aggregateAndProof.aggregate.data.target.root)}`
+        ` for target ${toHexString(aggregateAndProof.aggregate.data.target.root)}`
     );
     this.emit(GossipEvent.AGGREGATE_AND_PROOF, aggregateAndProof);
   } catch (e) {
@@ -27,16 +26,17 @@ export async function publishAggregatedAttestation(this: Gossip, aggregateAndPro
   await Promise.all([
     this.pubsub.publish(
       getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF),
-      serialize(this.config.types.AggregateAndProof, aggregateAndProof)
+      Buffer.from(this.config.types.AggregateAndProof.serialize(aggregateAndProof))
     ),
     //to be backward compatible
     this.pubsub.publish(
-      getGossipTopic(GossipEvent.ATTESTATION), serialize(this.config.types.Attestation, aggregateAndProof.aggregate)
+      getGossipTopic(GossipEvent.ATTESTATION),
+      Buffer.from(this.config.types.Attestation.serialize(aggregateAndProof.aggregate))
     )
   ]);
 
   this.logger.verbose(
     `Publishing AggregateAndProof for validator #${aggregateAndProof.aggregatorIndex}`
-        + ` for target ${toHex(aggregateAndProof.aggregate.data.target.root)}`
+        + ` for target ${toHexString(aggregateAndProof.aggregate.data.target.root)}`
   );
 }

@@ -5,7 +5,7 @@ import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {
   AggregateAndProofOperations,
   AttestationOperations,
-  DepositsOperations,
+  DepositDataOperations,
   OpPool,
   ProposerSlashingOperations,
   VoluntaryExitOperations
@@ -18,7 +18,6 @@ import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../.
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {generateEmptyVoluntaryExit} from "../../../../utils/voluntaryExits";
 import {generateDeposit} from "../../../../utils/deposit";
-import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 
 describe("blockAssembly - body", function () {
 
@@ -30,7 +29,7 @@ describe("blockAssembly - body", function () {
     opPool = {
       aggregateAndProofs: sandbox.createStubInstance(AggregateAndProofOperations),
       voluntaryExits: sandbox.createStubInstance(VoluntaryExitOperations),
-      deposits: sandbox.createStubInstance(DepositsOperations),
+      depositData: sandbox.createStubInstance(DepositDataOperations),
       proposerSlashings: sandbox.createStubInstance(ProposerSlashingOperations),
       attesterSlashings: sandbox.createStubInstance(AttestationOperations),
     } as unknown as OpPool;
@@ -58,7 +57,7 @@ describe("blockAssembly - body", function () {
       config,
       opPool,
       eth1,
-      sandbox.createStubInstance(ProgressiveMerkleTree),
+      config.types.DepositDataRootList.tree.defaultValue(),
       generateState(),
       Buffer.alloc(96, 0)
     );
@@ -95,7 +94,7 @@ describe("blockAssembly - body", function () {
       config,
       opPool,
       eth1,
-      sandbox.createStubInstance(ProgressiveMerkleTree),
+      config.types.DepositDataRootList.tree.defaultValue(),
       generateState(),
       Buffer.alloc(96, 0)
     );

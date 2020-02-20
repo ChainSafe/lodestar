@@ -106,7 +106,7 @@ describe("GossipMessageValidator", () => {
 
   it("should return valid unaggregated attestation", () => {
     const attestation = generateEmptyAttestation();
-    attestation.aggregationBits.setBit(0, true);
+    attestation.aggregationBits[0] = true;
     expect(validator.isUnaggregatedAttestation(attestation)).to.be.equal(true);
   });
 
@@ -123,14 +123,14 @@ describe("GossipMessageValidator", () => {
 
   it("should return invalid committee attestation - block not exist", async () => {
     const attestation = generateEmptyAttestation();
-    attestation.aggregationBits.setBit(0, true);
+    attestation.aggregationBits[0] = true;
     dbStub.block.has.resolves(false);
     expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.equal(false);
   });
 
   it("should return invalid committee attestation - bad block", async () => {
     const attestation = generateEmptyAttestation();
-    attestation.aggregationBits.setBit(0, true);
+    attestation.aggregationBits[0] = true;
     dbStub.block.has.resolves(true);
     dbStub.block.isBadBlock.resolves(true);
     expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.equal(false);
@@ -138,7 +138,7 @@ describe("GossipMessageValidator", () => {
 
   it("should return invalid committee attestation - invalid slot", async () => {
     const attestation = generateEmptyAttestation();
-    attestation.aggregationBits.setBit(0, true);
+    attestation.aggregationBits[0] = true;
     dbStub.block.has.resolves(true);
     dbStub.block.isBadBlock.resolves(false);
     const state = generateState();
@@ -149,7 +149,7 @@ describe("GossipMessageValidator", () => {
 
   it("should return invalid committee attestation - invalid attestation", async () => {
     const attestation = generateEmptyAttestation();
-    attestation.aggregationBits.setBit(0, true);
+    attestation.aggregationBits[0] = true;
     dbStub.block.has.resolves(true);
     dbStub.block.isBadBlock.resolves(false);
     const state = generateState();
@@ -160,7 +160,7 @@ describe("GossipMessageValidator", () => {
 
   it("should return valid committee attestation", async () => {
     const attestation = generateEmptyAttestation();
-    attestation.aggregationBits.setBit(0, true);
+    attestation.aggregationBits[0] = true;
     dbStub.block.has.resolves(true);
     dbStub.block.isBadBlock.resolves(false);
     const state = generateState();
@@ -276,14 +276,14 @@ describe("GossipMessageValidator", () => {
 
   it("should return invalid unaggregated attestation - attestation existed", async () => {
     const attestation = generateEmptyAttestation();
-    attestation.aggregationBits.setBit(0, true);
+    attestation.aggregationBits[0] = true;
     dbStub.attestation.has.resolves(true);
     expect(await validator.isValidIncomingUnaggregatedAttestation(attestation)).to.be.equal(false);
   });
 
   it("should return invalid unaggregated attestation - attestation is too old", async () => {
     const attestation = generateEmptyAttestation();
-    attestation.aggregationBits.setBit(0, true);
+    attestation.aggregationBits[0] = true;
     dbStub.attestation.has.resolves(false);
     const state = generateState();
     state.finalizedCheckpoint.epoch = 2;
@@ -294,7 +294,7 @@ describe("GossipMessageValidator", () => {
 
   it("should return valid unaggregated attestation", async () => {
     const attestation = generateEmptyAttestation();
-    attestation.aggregationBits.setBit(0, true);
+    attestation.aggregationBits[0] = true;
     dbStub.attestation.has.resolves(false);
     const state = generateState();
     state.finalizedCheckpoint.epoch = 2;

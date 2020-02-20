@@ -3,50 +3,54 @@
  */
 
 import {IBeaconParams} from "@chainsafe/eth2.0-params";
-import {SimpleContainerType} from "@chainsafe/ssz-type-schema";
+import {ContainerType, ListType, RootType} from "@chainsafe/ssz";
 
 import {IBeaconSSZTypes} from "../interface";
 
-export const BeaconBlockBody = (ssz: IBeaconSSZTypes, params: IBeaconParams): SimpleContainerType => ({
-  fields: [
-    ["randaoReveal", ssz.BLSSignature],
-    ["eth1Data", ssz.Eth1Data],
-    ["graffiti", ssz.bytes32],
-    ["proposerSlashings", {
+export const BeaconBlockBody = (ssz: IBeaconSSZTypes, params: IBeaconParams): ContainerType => new ContainerType({
+  fields: {
+    randaoReveal: ssz.BLSSignature,
+    eth1Data: ssz.Eth1Data,
+    graffiti: ssz.Bytes32,
+    proposerSlashings: new ListType({
       elementType: ssz.ProposerSlashing,
-      maxLength: params.MAX_PROPOSER_SLASHINGS,
-    }],
-    ["attesterSlashings", {
+      limit: params.MAX_PROPOSER_SLASHINGS,
+    }),
+    attesterSlashings: new ListType({
       elementType: ssz.AttesterSlashing,
-      maxLength: params.MAX_ATTESTER_SLASHINGS,
-    }],
-    ["attestations", {
+      limit: params.MAX_ATTESTER_SLASHINGS,
+    }),
+    attestations: new ListType({
       elementType: ssz.Attestation,
-      maxLength: params.MAX_ATTESTATIONS,
-    }],
-    ["deposits", {
+      limit: params.MAX_ATTESTATIONS,
+    }),
+    deposits: new ListType({
       elementType: ssz.Deposit,
-      maxLength: params.MAX_DEPOSITS,
-    }],
-    ["voluntaryExits", {
+      limit: params.MAX_DEPOSITS,
+    }),
+    voluntaryExits: new ListType({
       elementType: ssz.SignedVoluntaryExit,
-      maxLength: params.MAX_VOLUNTARY_EXITS,
-    }],
-  ],
+      limit: params.MAX_VOLUNTARY_EXITS,
+    }),
+  },
 });
 
-export const BeaconBlock = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  fields: [
-    ["slot", ssz.Slot],
-    ["parentRoot", ssz.Root],
-    ["stateRoot", ssz.Root],
-    ["body", ssz.BeaconBlockBody],
-  ],
+export const BeaconBlock = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    slot: ssz.Slot,
+    parentRoot: new RootType({
+      expandedType: () => ssz.BeaconBlock,
+    }),
+    stateRoot: new RootType({
+      expandedType: () => ssz.BeaconState,
+    }),
+    body: ssz.BeaconBlockBody,
+  },
 });
 
-export const SignedBeaconBlock = (ssz: IBeaconSSZTypes): SimpleContainerType => ({
-  fields: [
-    ["message", ssz.BeaconBlock],
-    ["signature", ssz.BLSSignature],
-  ],
+export const SignedBeaconBlock = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    message: ssz.BeaconBlock,
+    signature: ssz.BLSSignature,
+  },
 });

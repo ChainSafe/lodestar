@@ -31,7 +31,7 @@ export function processRegistryUpdates(config: IBeaconConfig, state: BeaconState
   });
 
   // Queue validators eligible for activation and not yet dequeued for activation
-  const activationQueue = state.validators.filter((validator) =>
+  const activationQueue = Array.from(state.validators).filter((validator) =>
     isEligibleForActivation(config, state, validator)
     // Order by the sequence of activation_eligibility_epoch setting and then index
   ).sort((a, b) => (a.activationEligibilityEpoch - b.activationEligibilityEpoch) || 1);

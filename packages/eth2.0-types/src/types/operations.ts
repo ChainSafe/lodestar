@@ -3,13 +3,13 @@
  * @module types
  */
 
-import {BitList} from "@chainsafe/bit-utils";
+import {BitList, Vector} from "@chainsafe/ssz";
 
 import {
   BLSSignature,
+  Bytes32,
   Epoch,
   ValidatorIndex,
-  bytes32,
 } from "./primitive";
 
 import {
@@ -47,7 +47,7 @@ export interface Attestation {
 
 export interface Deposit {
   // Branch in the deposit tree
-  proof: bytes32[];
+  proof: Vector<Bytes32>;
   // Deposit data
   data: DepositData;
 }

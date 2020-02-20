@@ -4,10 +4,9 @@ import {
   AttestationData,
   BeaconBlock,
   BLSPubkey,
-  bytes,
   Deposit,
   Eth1Data,
-  number64,
+  Number64,
   Slot,
   ValidatorDuty,
   ValidatorIndex,
@@ -18,7 +17,7 @@ import {getEmptyBlock} from "@chainsafe/lodestar/lib/chain/genesis/genesis";
 
 export interface IMockValidatorAPIOpts {
   head?: SignedBeaconBlock;
-  chainId?: number64;
+  chainId?: Number64;
   validatorIndex?: ValidatorIndex;
   pendingAttestations?: Attestation[];
   getPendingDeposits?: Deposit[];
@@ -27,7 +26,7 @@ export interface IMockValidatorAPIOpts {
 }
 
 export class MockValidatorApi implements IValidatorApi {
-  private chainId: number64;
+  private chainId: Number64;
   private validatorIndex: ValidatorIndex;
   private attestations: Attestation[];
   private head: SignedBeaconBlock;

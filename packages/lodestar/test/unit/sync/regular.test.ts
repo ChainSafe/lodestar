@@ -88,7 +88,7 @@ describe("syncing", function () {
 
   it('should receive committee attestation', async function () {
     let attestation = generateEmptyAttestation();
-    attestation.aggregationBits.setBit(0, true);
+    attestation.aggregationBits[0] = true;
     let state = generateState();
     dbStub.state.getLatest.resolves(state);
     isValidIndexedAttestationStub.returns(true);

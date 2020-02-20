@@ -3,21 +3,20 @@
  * @module types
  */
 
-import {BitList} from "@chainsafe/bit-utils";
+import {BitList, List, Vector} from "@chainsafe/ssz";
 
 import {
   BLSPubkey,
   BLSSignature,
-  bool,
   Epoch,
   Gwei,
   Root,
-  number64,
+  Number64,
   Slot,
   ValidatorIndex,
   Version,
   CommitteeIndex,
-  bytes32,
+  Bytes32,
 } from "./primitive";
 
 export interface Fork {
@@ -38,11 +37,11 @@ export interface Validator {
   // BLS public key
   pubkey: BLSPubkey;
   // Commitment to pubkey for withdrawals
-  withdrawalCredentials: bytes32;
+  withdrawalCredentials: Bytes32;
   // Balance at stake
   effectiveBalance: Gwei;
   // Was the validator slashed
-  slashed: bool;
+  slashed: boolean;
   // When criteria for activation were met
   activationEligibilityEpoch: Epoch;
   // Epoch when validator activated
@@ -65,7 +64,7 @@ export interface AttestationData {
 
 export interface IndexedAttestation {
   // Validator Indices
-  attestingIndices: ValidatorIndex[];
+  attestingIndices: List<ValidatorIndex>;
   // Attestation Data
   data: AttestationData;
   // Aggregate signature
@@ -87,23 +86,23 @@ export interface Eth1Data {
   // Root of the deposit tree
   depositRoot: Root;
   // Total number of deposits
-  depositCount: number64;
+  depositCount: Number64;
   // Block hash
-  blockHash: bytes32;
+  blockHash: Bytes32;
 }
 
 export interface HistoricalBatch {
   // Block roots
-  blockRoots: Root[];
+  blockRoots: Vector<Root>;
   // State roots
-  stateRoots: Root[];
+  stateRoots: Vector<Root>;
 }
 
 export interface DepositMessage {
   // BLS pubkey
   pubkey: BLSPubkey;
   // Withdrawal credentials
-  withdrawalCredentials: bytes32;
+  withdrawalCredentials: Bytes32;
   // Amount in Gwei
   amount: Gwei;
 }
@@ -112,7 +111,7 @@ export interface DepositData {
   // BLS pubkey
   pubkey: BLSPubkey;
   // Withdrawal credentials
-  withdrawalCredentials: bytes32;
+  withdrawalCredentials: Bytes32;
   // Amount in Gwei
   amount: Gwei;
   // Signing over DepositMessage
@@ -129,14 +128,4 @@ export interface BeaconBlockHeader {
 export interface SignedBeaconBlockHeader {
   message: BeaconBlockHeader;
   signature: BLSSignature;
-}
-
-export interface FFGData {
-  source: Checkpoint;
-  target: Checkpoint;
-}
-
-export interface MerkleTree {
-  depth: number64;
-  tree: bytes32[][];
 }

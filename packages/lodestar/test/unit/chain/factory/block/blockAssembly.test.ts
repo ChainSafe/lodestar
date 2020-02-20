@@ -11,9 +11,7 @@ import { generateState } from "../../../../utils/state";
 import { StatefulDagLMDGHOST } from "../../../../../../lodestar/src/chain/forkChoice";
 import { BeaconChain } from "../../../../../src/chain";
 import { generateEmptyBlock, generateEmptySignedBlock } from "../../../../utils/block";
-import { BlockRepository, MerkleTreeRepository, StateRepository } from "../../../../../src/db/api/beacon/repositories";
-import { ProgressiveMerkleTree } from "@chainsafe/eth2.0-utils";
-import { MerkleTreeSerialization } from "../../../../../src/util/serialization";
+import { BlockRepository, DepositDataRootListRepository, StateRepository } from "../../../../../src/db/api/beacon/repositories";
 
 describe("block assembly", function () {
 
@@ -34,7 +32,7 @@ describe("block assembly", function () {
     beaconDB = {
       block: sandbox.createStubInstance(BlockRepository),
       state: sandbox.createStubInstance(StateRepository),
-      merkleTree: sandbox.createStubInstance(MerkleTreeRepository)
+      depositDataRootList: sandbox.createStubInstance(DepositDataRootListRepository)
     };
     eth1 = sandbox.createStubInstance(EthersEth1Notifier);
   });
@@ -47,7 +45,7 @@ describe("block assembly", function () {
     const head = chainStub.forkChoice.head();
     beaconDB.block.get.withArgs(head).returns(generateEmptySignedBlock());
     beaconDB.state.get.resolves(generateState({ slot: 1 }));
-    beaconDB.merkleTree.getProgressiveMerkleTree.resolves(ProgressiveMerkleTree.empty(32, new MerkleTreeSerialization(config)));
+    beaconDB.depositDataRootList.getSerialized.resolves(config.types.DepositDataRootList.tree.defaultValue().serialize());
     assembleBodyStub.resolves(generateEmptyBlock().body);
     stateTransitionStub.returns(generateState());
     try {

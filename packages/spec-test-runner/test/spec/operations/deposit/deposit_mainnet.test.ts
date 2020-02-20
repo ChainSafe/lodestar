@@ -1,6 +1,5 @@
 import {join} from "path";
 import {expect} from "chai";
-import {equals} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {processDeposit} from "@chainsafe/eth2.0-state-transition";
@@ -26,7 +25,7 @@ describeDirectorySpecTest<ProcessDepositTestCase, BeaconState>(
     shouldError: testCase => !testCase.post,
     getExpected: (testCase => testCase.post),
     expectFunc: (testCase, expected, actual) => {
-      expect(equals(config.types.BeaconState, actual, expected)).to.be.true;
+      expect(config.types.BeaconState.equals(actual, expected)).to.be.true;
     }
   }
 );

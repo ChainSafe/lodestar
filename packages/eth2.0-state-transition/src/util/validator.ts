@@ -8,7 +8,7 @@ import {
   CommitteeIndex,
   Epoch,
   Slot,
-  uint64,
+  Uint64,
   Validator,
   ValidatorIndex,
 } from "@chainsafe/eth2.0-types";
@@ -18,7 +18,7 @@ import {hash, intDiv, bytesToInt} from "@chainsafe/eth2.0-utils";
 import {getBeaconCommittee} from "./committee";
 
 
-export function computeCompactValidator(config: IBeaconConfig, validator: Validator, index: ValidatorIndex): uint64 {
+export function computeCompactValidator(config: IBeaconConfig, validator: Validator, index: ValidatorIndex): Uint64 {
   // `index` (top 6 bytes) + `slashed` (16th bit) + `compact_balance` (bottom 15 bits)
   const compactBalance = validator.effectiveBalance / config.params.EFFECTIVE_BALANCE_INCREMENT;
   const compactValidator = (BigInt(index) << 16n) + (BigInt(validator.slashed ? 1 : 0) << 15n) + compactBalance;
@@ -78,5 +78,5 @@ export function isAggregator(
 ): boolean {
   const committee = getBeaconCommittee(config, state, slot, index);
   const modulo = Math.max(1, intDiv(committee.length, config.params.TARGET_COMMITTEE_SIZE));
-  return (bytesToInt(hash(slotSignature).slice(0, 8)) % modulo) === 0;
+  return (bytesToInt(hash(slotSignature.valueOf() as Uint8Array).slice(0, 8)) % modulo) === 0;
 }

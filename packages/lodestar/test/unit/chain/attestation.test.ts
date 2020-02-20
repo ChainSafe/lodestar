@@ -10,7 +10,6 @@ import { generateEmptySignedBlock } from "../../utils/block";
 import { generateEmptyAttestation } from "../../utils/attestation";
 import { generateState } from "../../utils/state";
 import { generateValidators } from "../../utils/validator";
-import { hashTreeRoot } from "@chainsafe/ssz";
 import { fail } from "assert";
 
 describe("AttestationProcessor", function () {
@@ -65,7 +64,7 @@ describe("AttestationProcessor", function () {
     try {
       const attestation = generateEmptyAttestation();
       attestation.data.target.epoch = 2019;
-      const attestationHash = hashTreeRoot(config.types.Attestation, attestation);
+      const attestationHash = config.types.Attestation.hashTreeRoot(attestation);
       const block = generateEmptySignedBlock();
       dbStub.block.get.resolves(block);
       const state = generateState();
@@ -83,7 +82,7 @@ describe("AttestationProcessor", function () {
   it("processAttestation - should not call forkChoice - invalid block slot", async () => {
     try {
       const attestation = generateEmptyAttestation();
-      const attestationHash = hashTreeRoot(config.types.Attestation, attestation);
+      const attestationHash = config.types.Attestation.hashTreeRoot(attestation);
       const block = generateEmptySignedBlock();
       block.message.slot = 1;
       dbStub.block.get.resolves(block);
@@ -101,13 +100,13 @@ describe("AttestationProcessor", function () {
 
   it("processAttestation - should call forkChoice", async () => {
     const attestation = generateEmptyAttestation();
-    const attestationHash = hashTreeRoot(config.types.Attestation, attestation);
+    const attestationHash = config.types.Attestation.hashTreeRoot(attestation);
     const block = generateEmptySignedBlock();
     dbStub.block.get.resolves(block);
     const state = generateState();
     state.genesisTime = state.genesisTime - config.params.SECONDS_PER_SLOT
     dbStub.state.get.resolves(state);
-    forkChoiceStub.getJustified.returns({});
+    forkChoiceStub.getJustified.returns(config.types.Checkpoint.defaultValue());
     getAttestingIndicesStub.returns([0]);
     state.balances = [];
     state.validators = generateValidators(3, {})

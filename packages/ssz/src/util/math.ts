@@ -1,12 +1,10 @@
 /** @ignore */
 export function bitLength (n: number): number {
-  let length = 0;
-  while (n !== 0) {
-    // rshift only works to 32 bits, so we int div by 2 instead
-    n = Math.floor(n / 2);
-    length++;
+  const bitstring = n.toString(2);
+  if (bitstring === "0") {
+    return 0;
   }
-  return length;
+  return bitstring.length;
 }
 
 /** @ignore */

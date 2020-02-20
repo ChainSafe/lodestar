@@ -7,10 +7,10 @@ import {PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH} from "../constants";
  * @param source
  * @param length
  */
-export function padLeft(source: Buffer, length: number): Buffer {
+export function padLeft(source: Uint8Array, length: number): Buffer {
   assert(source.length <= length, "Given array must be smaller or equal to desired array size");
   const result = Buffer.alloc(length, 0);
-  source.copy(result, length - source.length);
+  result.set(source, length - source.length);
   return result;
 }
 

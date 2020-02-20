@@ -1,33 +1,28 @@
 import {expect} from "chai";
 import {describe, it} from "mocha";
-import BN from "bn.js";
-import {BitList, BitVector} from "@chainsafe/bit-utils";
 
-import {defaultValue, equals} from "../../src";
-import {ArrayObject,} from "./objects";
-import {stringifyType} from "./utils";
+import {booleanType, byteType} from "../../src";
+import {ArrayObject, bigint16Type, bitList100Type, bitVector100Type, byteVector100Type, bytes2Type, number16Type, number16Vector6Type, number16List100Type} from "./objects";
 
 describe("defaultValue", () => {
   const testCases: {
     type: any;
     expected: any;
   }[] = [
-    {type: "number8", expected: 0},
-    {type: "bigint8", expected: BigInt(0)},
-    {type: "bn8", expected: new BN(0)},
-    {type: "bool", expected: false},
-    {type: {elementType: "bool", maxLength: 100}, expected: BitList.fromBitfield(Buffer.alloc(0), 0)},
-    {type: {elementType: "bool", length: 100}, expected: BitVector.fromBitfield(Buffer.alloc(Math.ceil(100 / 8)), 100)},
-    {type: {elementType: "byte", maxLength: 100}, expected: Buffer.alloc(0)},
-    {type: {elementType: "byte", length: 100}, expected: Buffer.alloc(100)},
-    {type: "bytes2", expected: Buffer.alloc(2)},
-    {type: {elementType: "number16", maxLength: 100}, expected: []},
+    {type: byteType, expected: 0},
+    {type: bigint16Type, expected: BigInt(0)},
+    {type: booleanType, expected: false},
+    {type: bitList100Type, expected: []},
+    {type: bitVector100Type, expected: Array.from({length: 100}, () => false)},
+    {type: byteVector100Type, expected: Buffer.alloc(100)},
+    {type: bytes2Type, expected: Buffer.alloc(2)},
+    {type: number16List100Type, expected: []},
     {type: ArrayObject, expected: {v: []}},
   ];
   for (const {type, expected} of testCases) {
-    it(`should correctly get the defaultValue for ${stringifyType(type)}`, () => {
-      const actual = defaultValue(type);
-      expect(equals(type, actual, expected));
+    it(`should correctly get the defaultValue for ${type}`, () => {
+      const actual = type.defaultValue();
+      expect(type.equals(actual, expected));
     });
   }
 });

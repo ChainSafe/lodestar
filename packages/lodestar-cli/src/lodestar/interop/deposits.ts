@@ -1,17 +1,17 @@
-import {Deposit, DepositData} from "@chainsafe/eth2.0-types";
+import {hash, TreeBacked, List} from "@chainsafe/ssz";
+import {Deposit, DepositData, Root} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {hash, hashTreeRoot} from "@chainsafe/ssz";
 import {sign} from "@chainsafe/bls";
 import {DomainType} from "@chainsafe/lodestar/lib/constants";
-import {IProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {interopKeypairs} from "./keypairs";
 import {computeDomain} from "@chainsafe/eth2.0-state-transition";
 
 export function interopDeposits(
   config: IBeaconConfig,
-  tree: IProgressiveMerkleTree,
+  depositDataRootList: TreeBacked<List<Root>>,
   validatorCount: number
 ): Deposit[] {
+  const tree = depositDataRootList.tree();
   return interopKeypairs(validatorCount).map(({pubkey, privkey}, i) => {
     // create DepositData
     const data: DepositData = {
@@ -25,13 +25,13 @@ export function interopDeposits(
     };
     data.signature = sign(
       privkey,
-      hashTreeRoot(config.types.DepositMessage, data),
+      config.types.DepositMessage.hashTreeRoot(data),
       computeDomain(DomainType.DEPOSIT),
     );
     // Add to merkle tree
-    tree.add(i, hashTreeRoot(config.types.DepositData, data));
+    depositDataRootList.push(config.types.DepositData.hashTreeRoot(data));
     return {
-      proof: tree.getProof(i),
+      proof: tree.getSingleProof(depositDataRootList.gindexOfProperty(i)),
       data,
     };
   });
