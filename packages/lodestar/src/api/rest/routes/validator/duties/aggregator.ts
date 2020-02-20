@@ -1,8 +1,10 @@
-import {IFastifyServer} from "../../../index";
-import fastify, {DefaultParams, DefaultQuery} from "fastify";
-import {IApiModules} from "../../../../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
+import fastify, {DefaultParams, DefaultQuery} from "fastify";
+import {fromHexString} from "@chainsafe/ssz";
 import {isAggregator} from "@chainsafe/eth2.0-state-transition";
+
+import {IFastifyServer} from "../../../index";
+import {IApiModules} from "../../../../interface";
 
 interface IParams extends DefaultParams {
   slot: number;
@@ -47,13 +49,13 @@ export const registerIsAggregatorEndpoint = (fastify: IFastifyServer, modules: I
     opts,
     async (request, reply) => {
       const block = await modules.db.block.get(modules.chain.forkChoice.head());
-      const state = await modules.db.state.get(block.message.stateRoot);
+      const state = await modules.db.state.get(block.message.stateRoot.valueOf() as Uint8Array);
       const isAttestationAggregator = isAggregator(
         modules.config,
         state,
         request.params.slot,
         request.query.committee_index,
-        Buffer.from(request.query.slot_signature.replace("0x", ""), "hex")
+        fromHexString(request.query.slot_signature),
       );
       reply
         .code(200)

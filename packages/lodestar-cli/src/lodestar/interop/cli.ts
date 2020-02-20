@@ -1,28 +1,22 @@
 import {readFileSync} from "fs";
+import {TreeBacked, List} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {BeaconState} from "@chainsafe/eth2.0-types";
-import {deserialize} from "@chainsafe/ssz";
+import {BeaconState, Root} from "@chainsafe/eth2.0-types";
 import {interopDeposits} from "./deposits";
-import {fromYaml, IProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
-import {loadYamlFile} from "@chainsafe/eth2.0-utils/lib/nodejs";
 
 
 
 // either "genesisTime,validatorCount" or "genesisState.fileext"
 export function quickStartOptionToState(
   config: IBeaconConfig,
-  tree: IProgressiveMerkleTree,
+  depositDataRootList: TreeBacked<List<Root>>,
   option: string
 ): BeaconState {
-  const fileExt = /.(ssz|ya?ml)$/.exec(option);
+  const fileExt = /.(ssz)$/.exec(option);
   if (!fileExt) {
     throw new Error("invalid quick start options");
   }
-  if (fileExt[1] === "ssz") {
-    const deserialized = deserialize<BeaconState>(config.types.BeaconState, readFileSync(option));
-    interopDeposits(config, tree, deserialized.validators.length);
-    return deserialized;
-  } else {
-    return fromYaml<BeaconState>(config.types.BeaconState, loadYamlFile(option));
-  }
+  const deserialized = config.types.BeaconState.deserialize(readFileSync(option));
+  interopDeposits(config, depositDataRootList, deserialized.validators.length);
+  return deserialized;
 }

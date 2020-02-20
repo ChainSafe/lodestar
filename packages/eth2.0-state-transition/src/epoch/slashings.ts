@@ -16,7 +16,7 @@ import {bigIntMin, intDiv} from "@chainsafe/eth2.0-utils";
 export function processSlashings(config: IBeaconConfig, state: BeaconState): void {
   const currentEpoch = getCurrentEpoch(config, state);
   const totalBalance = getTotalActiveBalance(config, state);
-  const totalSlashings = state.slashings.reduce((a, b) => a + b, 0n);
+  const totalSlashings = Array.from(state.slashings).reduce((a, b) => a + b, 0n);
   const slashingMultiplier = bigIntMin(totalSlashings * 3n, totalBalance);
 
   state.validators.forEach((validator, index) => {

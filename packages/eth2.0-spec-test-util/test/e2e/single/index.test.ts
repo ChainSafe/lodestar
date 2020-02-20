@@ -1,11 +1,13 @@
-import {describeDirectorySpecTest} from "../../../src/single";
-import {join} from "path";
-import {AnyContainerType, AnySSZType, serialize} from "@chainsafe/ssz";
-import {bool, number64} from "@chainsafe/eth2.0-types/lib/ssz/generators/primitive";
 import {unlinkSync, writeFileSync} from "fs";
+import {join} from "path";
+
 import {before, after} from "mocha";
-import {fromYaml} from "@chainsafe/eth2.0-utils";
+
+import {ContainerType, Type, Json} from "@chainsafe/ssz";
+import {Boolean, Number64} from "@chainsafe/eth2.0-types/lib/ssz/generators/primitive";
 import {loadYamlFile} from "@chainsafe/eth2.0-utils/lib/nodejs";
+import {describeDirectorySpecTest} from "../../../src/single";
+
 
 export interface ISimpleStruct {
   test: boolean;
@@ -17,12 +19,12 @@ export interface ISimpleCase extends Iterable<string> {
   output: number;
 }
 
-const inputSchema: AnyContainerType = {
-  fields: [
-    ["test", bool],
-    ["number", number64]
-  ]
-};
+const inputSchema = new ContainerType({
+  fields: {
+    test: Boolean,
+    number: Number64,
+  }
+});
 
 before(() => {
   yamlToSSZ(
@@ -31,7 +33,7 @@ before(() => {
   );
   yamlToSSZ(
     join(__dirname, "../_test_files/single/case0/output.yaml"),
-    number64
+    Number64
   );
   yamlToSSZ(
     join(__dirname, "../_test_files/single/case1/input.yaml"),
@@ -39,7 +41,7 @@ before(() => {
   );
   yamlToSSZ(
     join(__dirname, "../_test_files/single/case1/output.yaml"),
-    number64
+    Number64
   );
 });
 
@@ -59,17 +61,17 @@ describeDirectorySpecTest<ISimpleCase, number>(
   {
     sszTypes: {
       input: inputSchema,
-      output: number64
+      output: Number64
     },
     shouldError: (testCase => !testCase.input.test),
     getExpected: (testCase) => testCase.output,
   }
 );
 
-function yamlToSSZ(file: string, sszSchema: AnySSZType): void {
-  const input: any = fromYaml(sszSchema, loadYamlFile(file));
+function yamlToSSZ(file: string, sszSchema: Type<any>): void {
+  const input: any = sszSchema.fromJson(loadYamlFile(file) as Json);
   if(input.number) {
     input.number = Number(input.number);
   }
-  writeFileSync(file.replace(".yaml", ".ssz"), serialize(sszSchema, input));
+  writeFileSync(file.replace(".yaml", ".ssz"), sszSchema.serialize(input));
 }

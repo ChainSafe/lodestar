@@ -6,14 +6,14 @@ import ganache from "ganache-core";
 import sinon, {SinonSandbox} from "sinon";
 import {Block, Provider} from "ethers/providers";
 import {promisify} from "es6-promisify";
+import {toHexString} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
-import {serialize} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {EthersEth1Notifier, IEth1Notifier} from "../../../../src/eth1";
 import defaults from "../../../../src/eth1/dev/options";
 import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {OpPool} from "../../../../src/opPool";
-import {DepositsOperations} from "../../../../src/opPool/modules";
+import {DepositDataOperations} from "../../../../src/opPool/modules";
 import {after, before, describe, it} from "mocha";
 
 chai.use(chaiAsPromised);
@@ -30,7 +30,7 @@ describe("Eth1Notifier", () => {
     logger.silent = true;
     sandbox = sinon.createSandbox();
     opPool = sandbox.createStubInstance(OpPool);
-    opPool.deposits = sandbox.createStubInstance(DepositsOperations);
+    opPool.deposits = sandbox.createStubInstance(DepositDataOperations);
     eth1 = new EthersEth1Notifier({
       ...defaults,
       providerInstance: provider
@@ -108,7 +108,7 @@ describe("Eth1Notifier", () => {
         contract
       },
       {
-        opPool,
+        config,
         logger: logger
       });
       contract.removeAllListeners.returns(null);
@@ -121,12 +121,12 @@ describe("Eth1Notifier", () => {
     const cb = sinon.spy();
     eth1.on("deposit", cb);
 
-    const pubKey = bls.generateKeyPair().publicKey.toBytesCompressed();
-    const withdrawalCredentials = "0x" + Buffer.alloc(32).toString("hex");
-    const amount = "0x" + serialize(config.types.number64, 32000000000).toString("hex");
-    const signature = "0x" + Buffer.alloc(94).toString("hex");
-    const merkleTreeIndex = "0x" + serialize(config.types.number64, 0).toString("hex");
-    await eth1.processDepositLog(pubKey.toString("hex"), withdrawalCredentials, amount, signature, merkleTreeIndex);
+    const pubKey = toHexString(bls.generateKeyPair().publicKey.toBytesCompressed());
+    const withdrawalCredentials = toHexString(Buffer.alloc(32));
+    const amount = toHexString(config.types.Number64.serialize(32000000000));
+    const signature = toHexString(Buffer.alloc(94));
+    const merkleTreeIndex = toHexString(config.types.Number64.serialize(0));
+    await eth1.processDepositLog(pubKey, withdrawalCredentials, amount, signature, merkleTreeIndex);
     assert(cb.calledOnce, "deposit event did not fire");
   });
 

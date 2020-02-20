@@ -1,9 +1,10 @@
-import {IFastifyServer} from "../../../index";
-import fastify, {DefaultParams, DefaultQuery} from "fastify";
-import {IApiModules} from "../../../../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
+import fastify, {DefaultParams, DefaultQuery} from "fastify";
+import {toHexString} from "@chainsafe/ssz";
+
+import {IFastifyServer} from "../../../index";
+import {IApiModules} from "../../../../interface";
 import {getEpochProposers} from "../../../../impl/validator";
-import {toHex} from "@chainsafe/eth2.0-utils";
 
 interface IParams extends DefaultParams {
   epoch: number;
@@ -38,7 +39,7 @@ export const registerProposerDutiesEndpoint = (fastify: IFastifyServer, modules:
       );
       const response: {[k: number]: string} = {};
       epochProposers.forEach((value, key) => {
-        response[key] = toHex(value);
+        response[key] = toHexString(value);
       });
       reply
         .code(200)

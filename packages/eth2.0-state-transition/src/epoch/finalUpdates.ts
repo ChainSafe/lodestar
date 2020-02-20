@@ -2,8 +2,6 @@
  * @module chain/stateTransition/epoch
  */
 
-import {hashTreeRoot} from "@chainsafe/ssz";
-
 import {BeaconState, HistoricalBatch} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {
@@ -44,7 +42,7 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
       blockRoots: state.blockRoots,
       stateRoots: state.stateRoots,
     };
-    state.historicalRoots.push(hashTreeRoot(config.types.HistoricalBatch, historicalBatch));
+    state.historicalRoots.push(config.types.HistoricalBatch.hashTreeRoot(historicalBatch));
   }
   // Rotate current/previous epoch attestations
   state.previousEpochAttestations = state.currentEpochAttestations;

@@ -3,8 +3,7 @@
  */
 
 import assert from "assert";
-import {hashTreeRoot} from "@chainsafe/ssz";
-import {BeaconState, Slot,} from "@chainsafe/eth2.0-types";
+import {BeaconState, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {ZERO_HASH} from "./constants";
@@ -30,15 +29,15 @@ export function processSlots(
 
 function processSlot(config: IBeaconConfig, state: BeaconState): void {
   // Cache state root
-  const previousStateRoot = hashTreeRoot(config.types.BeaconState, state);
+  const previousStateRoot = config.types.BeaconState.hashTreeRoot(state);
   state.stateRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousStateRoot;
 
   // Cache latest block header state root
-  if (state.latestBlockHeader.stateRoot.equals(ZERO_HASH)) {
+  if (config.types.Root.equals(state.latestBlockHeader.stateRoot, ZERO_HASH)) {
     state.latestBlockHeader.stateRoot = previousStateRoot;
   }
 
   // Cache block root
-  const previousBlockRoot = hashTreeRoot(config.types.BeaconBlockHeader, state.latestBlockHeader);
+  const previousBlockRoot = config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
   state.blockRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousBlockRoot;
 }

@@ -17,7 +17,7 @@ export async function getEpochProposers(
   epoch: Epoch
 ): Promise<Map<Slot, BLSPubkey>> {
   const block = await db.block.get(chain.forkChoice.head());
-  const state = await db.state.get(block.message.stateRoot);
+  const state = await db.state.get(block.message.stateRoot.valueOf() as Uint8Array);
   assert(epoch >= 0 && epoch <= computeEpochAtSlot(config, state.slot) + 2);
   const startSlot = computeStartSlotAtEpoch(config, epoch);
   if(state.slot < startSlot) {

@@ -1,7 +1,6 @@
 import {IReputation, ReputationStore} from "../IReputation";
 import {BeaconBlockHeader, Checkpoint, Epoch, Slot, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {hashTreeRoot} from "@chainsafe/ssz";
 import {IReqResp} from "../../network";
 
 export function isValidChainOfBlocks(
@@ -9,12 +8,12 @@ export function isValidChainOfBlocks(
   start: BeaconBlockHeader,
   signedBlocks: SignedBeaconBlock[],
 ): boolean {
-  let parentRoot = hashTreeRoot(config.types.BeaconBlockHeader, start);
+  let parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(start);
   for(const signedBlock of signedBlocks) {
-    if(!parentRoot.equals(signedBlock.message.parentRoot)) {
+    if(!config.types.Root.equals(parentRoot, signedBlock.message.parentRoot)) {
       return false;
     }
-    parentRoot = hashTreeRoot(config.types.BeaconBlock, signedBlock.message);
+    parentRoot = config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
   }
   return true;
 }
@@ -35,10 +34,11 @@ export function getSyncTargetEpoch(peers: IReputation[], currentCheckPoint: Chec
   return currentCheckPoint.epoch;
 }
 
-export function isValidFinalizedCheckPoint(peers: IReputation[], finalizedCheckPoint: Checkpoint): boolean {
+export function isValidFinalizedCheckPoint(peers: IReputation[], finalizedCheckpoint: Checkpoint): boolean {
   const validPeers = peers.filter((peer) => !!peer.latestStatus);
+  const finalizedRoot = Buffer.from(finalizedCheckpoint.root as Uint8Array);
   const peerCount = validPeers.filter(peer => {
-    return peer.latestStatus.finalizedRoot.equals(finalizedCheckPoint.root);
+    return Buffer.from(peer.latestStatus.finalizedRoot as Uint8Array).equals(finalizedRoot);
   }).length;
   return peerCount >= (validPeers.length / 2);
 }
@@ -90,5 +90,5 @@ export async function getBlockRangeFromPeer(
       step: 1,
       count: chunk.end - chunk.start
     }
-  );
+  ) as SignedBeaconBlock[];
 }

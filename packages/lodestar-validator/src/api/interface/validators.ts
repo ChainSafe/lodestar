@@ -3,7 +3,6 @@ import {
   BeaconBlock,
   BLSPubkey,
   BLSSignature,
-  bytes,
   CommitteeIndex,
   Epoch,
   Slot,
@@ -24,7 +23,7 @@ export interface IValidatorApi {
    * which can then be signed by a ValidatorClient.
    * @returns {Promise<BeaconBlock>} A proposed BeaconBlock object
    */
-  produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock>;
+  produceBlock(slot: Slot, randaoReveal: Uint8Array): Promise<BeaconBlock>;
 
   /**
    * Requests that the BeaconNode produce an IndexedAttestation,

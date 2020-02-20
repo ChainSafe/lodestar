@@ -3,7 +3,6 @@ import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BulkRepository} from "../repository";
 import {IDatabaseController} from "../../../controller";
 import {Bucket, encodeKey} from "../../../schema";
-import {deserialize, serialize} from "@chainsafe/ssz";
 
 /**
  * Stores finalized blocks. Block slot is identifier.
@@ -27,7 +26,7 @@ export class BlockArchiveRepository extends BulkRepository<SignedBeaconBlock> {
     await this.db.batchPut(
       blocks.map((block) => ({
         key: encodeKey(this.bucket, this.getId(block)),
-        value: serialize(this.type, block)
+        value: this.type.serialize(block)
       }))
     );
   }
@@ -47,8 +46,8 @@ export class BlockArchiveRepository extends BulkRepository<SignedBeaconBlock> {
       gt: encodeKey(this.bucket, safeLowerLimit),
       lt: encodeKey(this.bucket, safeUpperLimit),
     });
-    const processedData = (data || [])
-      .map((datum) => deserialize(this.type, datum))
+    return (data || [])
+      .map((datum) => this.type.deserialize(datum))
       .filter(signedBlock => {
         if (step !== null && typeof safeLowerLimit === "number") {
           return signedBlock.message.slot >= safeLowerLimit && (signedBlock.message.slot - safeLowerLimit) % step === 0;
@@ -56,6 +55,5 @@ export class BlockArchiveRepository extends BulkRepository<SignedBeaconBlock> {
           return true;
         }
       });
-    return processedData;
   }
 }

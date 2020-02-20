@@ -3,12 +3,14 @@
  * @module db/controller/impl
  */
 
+import {EventEmitter} from "events";
 // @ts-ignore
 import PouchDB from "pouchdb-core";
 // @ts-ignore
 import MemoryAdapter from "pouchdb-adapter-memory";
+import {toHexString} from "@chainsafe/ssz";
+
 import {IDatabaseController, ISearchOptions} from "../interface";
-import {EventEmitter} from "events";
 import {IDatabaseOptions} from "../../options";
 
 PouchDB.plugin(MemoryAdapter);
@@ -44,7 +46,7 @@ export class PouchDbController extends EventEmitter implements IDatabaseControll
     const deletions: Buffer[] = [];
     //not really optimized,
     items.forEach(async item => {
-      const doc = await this.db.get(item.toString("hex"));
+      const doc = await this.db.get(typeof item === "string" ? item : toHexString(item));
       if(doc) {
         await this.db.remove(doc);
       }
@@ -67,7 +69,7 @@ export class PouchDbController extends EventEmitter implements IDatabaseControll
 
   public async get(key: any): Promise<Buffer | null> {
     if(typeof key !== "string") {
-      key = key.toString("hex");
+      key = toHexString(key);
     }
     const result = await this.db.get(key);
     if(!result) return null;
@@ -75,7 +77,9 @@ export class PouchDbController extends EventEmitter implements IDatabaseControll
   }
 
   public put(key: any, value: any): Promise<any> {
-    key = key.toString("hex");
+    if(typeof key !== "string") {
+      key = toHexString(key);
+    }
     value = Buffer.from(value);
     return this.db.put({
       _id: key,
@@ -88,8 +92,8 @@ export class PouchDbController extends EventEmitter implements IDatabaseControll
 
   public async search(opts: ISearchOptions): Promise<any[]> {
     const data = await this.db.allDocs({
-      startkey: opts.gt.toString("hex"),
-      endkey: opts.lt.toString("hex"),
+      startkey: typeof opts.gt === "string" ? opts.gt : toHexString(opts.gt),
+      endkey: typeof opts.lt === "string" ? opts.lt : toHexString(opts.lt),
       // eslint-disable-next-line camelcase,@typescript-eslint/camelcase
       include_docs: true,
       // eslint-disable-next-line camelcase,@typescript-eslint/camelcase
@@ -100,7 +104,7 @@ export class PouchDbController extends EventEmitter implements IDatabaseControll
 
   public async delete(key: any): Promise<void> {
     if(typeof key !== "string") {
-      key = key.toString("hex");
+      key = toHexString(key);
     }
     await this.db.remove(key);
   }

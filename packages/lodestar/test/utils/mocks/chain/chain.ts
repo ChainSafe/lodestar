@@ -1,27 +1,17 @@
 import {EventEmitter} from "events";
 
-import {
-  Attestation,
-  BeaconBlock,
-  BeaconState,
-  Deposit,
-  Eth1Data,
-  number64, Slot,
-  uint16,
-  uint64,
-  SignedBeaconBlock
-} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconState, Root, SignedBeaconBlock, Slot, Uint16, Uint64} from "@chainsafe/eth2.0-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {generateState} from "../../state";
-import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
+import {List, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
 
 export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public latestState: BeaconState;
   public forkChoice: ILMDGHOST;
-  public chainId: uint16;
+  public chainId: Uint16;
+  public networkId: Uint64;
   public clock: IBeaconClock;
-  public networkId: uint64;
 
   public constructor({genesisTime, chainId, networkId}) {
     super();
@@ -39,7 +29,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     return true;
   }
   public async advanceState(slot?: Slot): Promise<void>{}
-  initializeBeaconChain(genesisState: BeaconState, merkleTree: ProgressiveMerkleTree): Promise<void> {
+  initializeBeaconChain(genesisState: BeaconState, depositDataRootList: TreeBacked<List<Root>>): Promise<void> {
     throw new Error("Method not implemented.");
   }
   isInitialized(): boolean {

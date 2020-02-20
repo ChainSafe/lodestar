@@ -1,8 +1,8 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {DepositsOperations} from "../../../../src/opPool/modules";
-import {generateDeposit} from "../../../utils/deposit";
-import {DepositRepository} from "../../../../src/db/api/beacon/repositories";
+import {DepositDataOperations} from "../../../../src/opPool/modules";
+import {generateDepositData} from "../../../utils/deposit";
+import {DepositDataRepository} from "../../../../src/db/api/beacon/repositories";
 
 describe("opPool - deposits", function () {
 
@@ -12,9 +12,9 @@ describe("opPool - deposits", function () {
 
   beforeEach(function () {
     dbStub = {
-      deposit: sandbox.createStubInstance(DepositRepository)
+      depositData: sandbox.createStubInstance(DepositDataRepository)
     };
-    service = new DepositsOperations(dbStub.deposit);
+    service = new DepositDataOperations(dbStub.depositData);
   });
 
   afterEach(function () {
@@ -22,33 +22,33 @@ describe("opPool - deposits", function () {
   });
 
   it('should receive', async function () {
-    const data = generateDeposit();
+    const data = generateDepositData();
 
-    dbStub.deposit.set.resolves();
+    dbStub.depositData.set.resolves();
     await service.receive(0, data);
-    expect(dbStub.deposit.set.calledOnce).to.be.true;
+    expect(dbStub.depositData.set.calledOnce).to.be.true;
   });
 
 
   it('should return all', async function () {
-    const data = [generateDeposit()];
+    const data = [generateDepositData()];
 
-    dbStub.deposit.getAll.resolves(data);
+    dbStub.depositData.getAll.resolves(data);
     let result = await service.getAll();
-    expect(dbStub.deposit.getAll.calledOnce).to.be.true;
+    expect(dbStub.depositData.getAll.calledOnce).to.be.true;
     expect(result).to.be.deep.equal(data);
   });
 
   it('should return range', async function () {
-    dbStub.deposit.getAllBetween.resolves([]);
+    dbStub.depositData.getAllBetween.resolves([]);
     await service.getAllBetween(0, 1);
-    expect(dbStub.deposit.getAllBetween.calledOnce).to.be.true;
+    expect(dbStub.depositData.getAllBetween.calledOnce).to.be.true;
   });
 
   it('should remove', async function () {
-    dbStub.deposit.deleteOld.resolves();
+    dbStub.depositData.deleteOld.resolves();
     await service.removeOld(3);
-    expect(dbStub.deposit.deleteOld.withArgs(3).calledOnce).to.be.true;
+    expect(dbStub.depositData.deleteOld.withArgs(3).calledOnce).to.be.true;
   });
 
 });

@@ -1,12 +1,12 @@
 import {EventEmitter} from "events";
 
+import {TreeBacked, List} from "@chainsafe/ssz";
 import {
-  Attestation, BeaconState, Checkpoint, Slot, uint16, uint64, Root, SignedBeaconBlock,
+  Attestation, BeaconState, Checkpoint, Slot, Uint16, Uint64, Root, SignedBeaconBlock,
 } from "@chainsafe/eth2.0-types";
 
 import {ILMDGHOST} from "./forkChoice";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 import {IBeaconClock} from "./clock/interface";
 
 export interface IChainEvents {
@@ -28,8 +28,8 @@ export interface IBeaconChain extends ChainEventEmitter {
   latestState: BeaconState|null;
   forkChoice: ILMDGHOST;
   clock: IBeaconClock;
-  chainId: uint16;
-  networkId: uint64;
+  chainId: Uint16;
+  networkId: Uint64;
   /**
    * Start beacon chain processing
    */
@@ -65,10 +65,8 @@ export interface IBeaconChain extends ChainEventEmitter {
   /**
    * Used for starting beacon chain with fake genesis state (dev, test, interop).
    * Note: Invoke this before {@link start}
-   * @param genesisState
-   * @param merkleTree
    */
-  initializeBeaconChain(genesisState: BeaconState, merkleTree: ProgressiveMerkleTree): Promise<void>;
+  initializeBeaconChain(genesisState: BeaconState, depositDataRootList: TreeBacked<List<Root>>): Promise<void>;
 
   isInitialized(): boolean;
 }

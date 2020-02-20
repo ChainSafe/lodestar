@@ -2,9 +2,8 @@
  * @module chain/stateTransition/util
  */
 
-import {equals, hashTreeRoot} from "@chainsafe/ssz";
+import {BitList} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
-import {BitList} from "@chainsafe/bit-utils";
 import {
   Attestation,
   AttestationData,
@@ -31,7 +30,7 @@ export function isSlashableAttestationData(
 ): boolean {
   return (
     // Double vote
-    (!equals(config.types.AttestationData, data1, data2)
+    (!config.types.AttestationData.equals(data1, data2)
       && data1.target.epoch === data2.target.epoch) ||
     // Surround vote
     (data1.source.epoch < data2.source.epoch &&
@@ -48,7 +47,7 @@ export function isValidIndexedAttestation(
   indexedAttestation: IndexedAttestation,
   verifySignature = true
 ): boolean {
-  const indices = indexedAttestation.attestingIndices;
+  const indices = Array.from(indexedAttestation.attestingIndices);
 
   //  Verify indices are sorted
   if (!isSorted([...new Set(indices).values()])) {
@@ -56,9 +55,9 @@ export function isValidIndexedAttestation(
   }
   //  Verify aggregate signature
   if (verifySignature && !bls.verify(
-    bls.aggregatePubkeys(indices.map((i) => state.validators[i].pubkey)),
-    hashTreeRoot(config.types.AttestationData, indexedAttestation.data),
-    indexedAttestation.signature,
+    bls.aggregatePubkeys(indices.map((i) => state.validators[i].pubkey.valueOf() as Uint8Array)),
+    config.types.AttestationData.hashTreeRoot(indexedAttestation.data),
+    indexedAttestation.signature.valueOf() as Uint8Array,
     getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch)
   )) {
     return false;
@@ -77,7 +76,7 @@ export function getAttestingIndices(
 ): ValidatorIndex[] {
   const committee = getBeaconCommittee(config, state, data.slot, data.index);
   // Find the participating attesters in the committee
-  return committee.filter((_, i) => bits.getBit(i)).sort((a, b) => a - b);
+  return committee.filter((_, i) => bits[i]).sort((a, b) => a - b);
 }
 
 /**

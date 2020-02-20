@@ -1,9 +1,10 @@
 /* eslint-disable camelcase */
-import {IFastifyServer} from "../../index";
-import fastify, {DefaultQuery} from "fastify";
-import {IApiModules} from "../../../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
-import {toJson} from "@chainsafe/eth2.0-utils";
+import fastify, {DefaultQuery} from "fastify";
+import {fromHexString} from "@chainsafe/ssz";
+
+import {IFastifyServer} from "../../index";
+import {IApiModules} from "../../../interface";
 import {produceAttestation} from "../../../impl/validator";
 
 interface IQuery extends DefaultQuery {
@@ -47,14 +48,14 @@ export const registerAttestationProductionEndpoint = (fastify: IFastifyServer, m
     async (request, reply) => {
       const attestation = await produceAttestation(
         {db: modules.db, chain: modules.chain, config: modules.config},
-        Buffer.from(request.query.validator_pubkey.replace("0x", ""), "hex"),
+        fromHexString(request.query.validator_pubkey),
         request.query.committee_index,
         request.query.slot
       );
       reply
         .code(200)
         .type("application/json")
-        .send(toJson(attestation));
+        .send(modules.config.types.Attestation.toJson(attestation));
     }
   );
 };

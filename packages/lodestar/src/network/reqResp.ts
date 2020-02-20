@@ -14,7 +14,6 @@ import {
   RequestBody,
   ResponseBody, Status, SignedBeaconBlock,
 } from "@chainsafe/eth2.0-types";
-import {deserialize, serialize} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {
@@ -177,19 +176,19 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   };
 
   private encodeRequest(method: Method, body: RequestBody): Buffer {
-    let output = Buffer.alloc(0);
+    let output: Uint8Array;
     switch (method) {
       case Method.Status:
-        output = serialize(this.config.types.Status, body);
+        output = this.config.types.Status.serialize(body as Status);
         break;
       case Method.Goodbye:
-        output = serialize(this.config.types.Goodbye, body);
+        output = this.config.types.Goodbye.serialize(body as Goodbye);
         break;
       case Method.BeaconBlocksByRange:
-        output = serialize(this.config.types.BeaconBlocksByRangeRequest, body);
+        output = this.config.types.BeaconBlocksByRangeRequest.serialize(body as BeaconBlocksByRangeRequest);
         break;
       case Method.BeaconBlocksByRoot:
-        output = serialize(this.config.types.BeaconBlocksByRootRequest, body);
+        output = this.config.types.BeaconBlocksByRootRequest.serialize(body as BeaconBlocksByRootRequest);
         break;
     }
     return Buffer.concat([
@@ -210,17 +209,14 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     data = data.slice(bytes);
     switch (method) {
       case Method.Status:
-        return deserialize(this.config.types.Status, data);
+        return this.config.types.Status.deserialize(data);
       case Method.Goodbye:
-        return deserialize(this.config.types.Goodbye, data);
+        return this.config.types.Goodbye.deserialize(data);
       case Method.BeaconBlocksByRange:
-        return deserialize(this.config.types.BeaconBlocksByRangeRequest, data);
+        return this.config.types.BeaconBlocksByRangeRequest.deserialize(data);
       case Method.BeaconBlocksByRoot:
-        return deserialize(this.config.types.BeaconBlocksByRootRequest, data);
+        return this.config.types.BeaconBlocksByRootRequest.deserialize(data);
     }
-  }
-  private decodeResponse(method: Method, data: Buffer): ResponseChunk {
-    return decodeResponseChunk(this.config, method, data);
   }
   private async sendRequest<T extends ResponseBody>(
     peerInfo: PeerInfo,
@@ -241,7 +237,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
             const responses = [];
             for await (const val of source) {
               const data = Buffer.isBuffer(val) ? val : val.slice();
-              const response = this.decodeResponse(method, data);
+              const response = decodeResponseChunk(this.config, method, data);
               responses.push(response.output);
             }
             if (!requestOnly && responses.length === 0) {

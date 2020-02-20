@@ -73,9 +73,20 @@ describe("@chainsafe/eth2.0-types", () => {
   //
   // put runtime type variables into an object
   const vars = {};
+  const blackList: Record<string, boolean> = {
+    Boolean: true,
+    CommitteeIndices: true,
+    CommitteeBits: true,
+    HistoricalBlockRoots: true,
+    HistoricalStateRoots: true,
+    DepositDataRootList: true,
+    EpochAttestations: true,
+  };
   for (const name in sszTypes) {
-    // @ts-ignore
-    vars[name] = sszTypes[name];
+    if (!blackList[name]) {
+      // @ts-ignore
+      vars[name] = sszTypes[name];
+    }
   }
   // Now that we have an object of interfaces and and object of runtime type variables, we can perform our tests
   it("Every runtime type variable should have a corresponding interface", () => {

@@ -4,11 +4,13 @@
 
 import PeerId from "peer-id";
 import PeerInfo from "peer-info";
-import {RequestId, Method, MAX_CHUNK_SIZE, ERR_INVALID_REQ} from "../constants";
-import {SignedBeaconBlock, Status, Goodbye} from "@chainsafe/eth2.0-types";
-import {serialize, deserialize, AnyContainerType} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import * as varint from "varint";
+
+import {SignedBeaconBlock, Status, Goodbye} from "@chainsafe/eth2.0-types";
+import {Type} from "@chainsafe/ssz";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+
+import {RequestId, Method, MAX_CHUNK_SIZE, ERR_INVALID_REQ} from "../constants";
 import {ResponseChunk} from "./interface";
 
 // req/resp
@@ -61,7 +63,8 @@ export function encodeResponseChunk(config: IBeaconConfig, method: Method, {err,
     return encodeResponseError(err);
   }
   let data = Buffer.alloc(0);
-  let type: AnyContainerType;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let type: Type<any>;
   switch (method) {
     case Method.Status:
       type = config.types.Status;
@@ -76,7 +79,7 @@ export function encodeResponseChunk(config: IBeaconConfig, method: Method, {err,
     default:
       throw new Error(`Unhandled method ${method}`);
   }
-  data = serialize(type, output);
+  data = Buffer.from(type.serialize(output));
   return encodeSingleChunk(data);
 }
 
@@ -97,14 +100,14 @@ export function decodeResponseChunk(config: IBeaconConfig, method: Method, chunk
   let output: Status | Goodbye | SignedBeaconBlock;
   switch (method) {
     case Method.Status:
-      output = deserialize(config.types.Status, data);
+      output = config.types.Status.deserialize(data);
       break;
     case Method.Goodbye:
-      output = deserialize(config.types.Goodbye, data);
+      output = config.types.Goodbye.deserialize(data);
       break;
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
-      output = deserialize(config.types.SignedBeaconBlock, data);
+      output = config.types.SignedBeaconBlock.deserialize(data);
       break;
     default:
       throw new Error(`Unhandled method ${method}`);

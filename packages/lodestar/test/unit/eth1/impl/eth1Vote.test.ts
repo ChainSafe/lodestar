@@ -6,7 +6,6 @@ import {generateState} from "../../../utils/state";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {Block} from "ethers/providers";
 import {Eth1Data} from "@chainsafe/eth2.0-types";
-import {equals} from "@chainsafe/ssz";
 import {expect} from "chai";
 
 describe("et1h vote", function () {
@@ -41,7 +40,7 @@ describe("et1h vote", function () {
       5
     );
     expect(eth1Notifier.getEth1Data.callCount).to.be.equal(2);
-    expect(equals(config.types.Eth1Data, eth1Vote, expectedVote)).to.be.true;
+    expect(config.types.Eth1Data.equals(eth1Vote, expectedVote)).to.be.true;
   });
 
   it("get eth1 vote - longer period tail", async function () {
@@ -66,7 +65,7 @@ describe("et1h vote", function () {
       5
     );
     expect(eth1Notifier.getEth1Data.callCount).to.be.equal(5);
-    expect(equals(config.types.Eth1Data, eth1Vote, expectedVote)).to.be.true;
+    expect(config.types.Eth1Data.equals(eth1Vote, expectedVote)).to.be.true;
   });
 
   it("get eth1 vote - tiebreak", async function () {
@@ -97,7 +96,7 @@ describe("et1h vote", function () {
       5
     );
     expect(eth1Notifier.getEth1Data.callCount).to.be.equal(2);
-    expect(equals(config.types.Eth1Data, eth1Vote, expectedVote1)).to.be.true;
+    expect(config.types.Eth1Data.equals(eth1Vote, expectedVote1)).to.be.true;
   });
 
   it("get eth1 vote - no valid votes", async function () {
@@ -117,7 +116,7 @@ describe("et1h vote", function () {
       5
     );
     expect(eth1Notifier.getEth1Data.callCount).to.be.equal(3);
-    expect(equals(config.types.Eth1Data, eth1Vote, expectedVote)).to.be.true;
+    expect(config.types.Eth1Data.equals(eth1Vote, expectedVote)).to.be.true;
   });
 
 

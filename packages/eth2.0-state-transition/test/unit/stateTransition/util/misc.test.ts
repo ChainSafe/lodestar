@@ -29,17 +29,17 @@ describe("getDomain", () => {
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
     const result = getDomain(config, state, 4, 8);
-    assert.equal(result.toString('hex'), '0400000004000000');
+    assert.equal(Buffer.from(result).toString('hex'), '0400000004000000');
   });
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
     const result = getDomain(config, state, 5, 13);
-    assert.equal(result.toString('hex'), '0500000005000000');
+    assert.equal(Buffer.from(result).toString('hex'), '0500000005000000');
   });
 
   it("epoch before fork epoch should result in domain === previous fork version * 2**32 + domain type", () => {
     const result = getDomain(config, state, 5, 12);
-    assert.equal(result.toString('hex'), '0500000005000000');
+    assert.equal(Buffer.from(result).toString('hex'), '0500000005000000');
   });
 });
 
@@ -49,7 +49,7 @@ describe("getBlockRoot", () => {
       slot:  GENESIS_SLOT + 1,
       blockRoots: Array.from({ length: config.params.SLOTS_PER_HISTORICAL_ROOT }, () => Buffer.from([0xAB])),
     });
-    const res = getBlockRoot(config, state, GENESIS_SLOT);
+    const res = Buffer.from(getBlockRoot(config, state, GENESIS_SLOT) as Uint8Array);
     assert(toBigIntLE(res) === 0xABn,
       `got: ${toBigIntLE(res)}, expected: ${0xABn}`);
   });

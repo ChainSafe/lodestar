@@ -30,7 +30,7 @@ describeDirectorySpecTest<ISignMessageTestCase, string>(
       Buffer.from(testCase.data.input.message.replace("0x", ""), "hex"),
       padLeft(Buffer.from(testCase.data.input.domain.replace("0x", ""), "hex"), 8)
     );
-    return `0x${signature.toString("hex")}`;
+    return `0x${Buffer.from(signature).toString("hex")}`;
   }),
   {
     inputTypes: {

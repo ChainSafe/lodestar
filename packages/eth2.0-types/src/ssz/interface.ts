@@ -1,87 +1,93 @@
-import {AnyContainerType, AnySSZType} from "@chainsafe/ssz-type-schema";
+import {
+  BigIntUintType, BitListType, BooleanType, ByteVectorType,
+  ContainerType, List, ListType, NumberUintType, Vector, VectorType,
+} from "@chainsafe/ssz";
+
 import * as t from "../types";
 
 export interface IBeaconSSZTypes {
   // primitive
-  bool: AnySSZType<t.bool>;
-  bytes4: AnySSZType<t.bytes4>;
-  bytes8: AnySSZType<t.bytes8>;
-  bytes32: AnySSZType<t.bytes32>;
-  bytes48: AnySSZType<t.bytes48>;
-  bytes96: AnySSZType<t.bytes96>;
-  uint8: AnySSZType<t.uint8>;
-  uint16: AnySSZType<t.uint16>;
-  uint24: AnySSZType<t.uint24>;
-  number64: AnySSZType<t.number64>;
-  uint64: AnySSZType<t.uint64>;
-  uint256: AnySSZType<t.uint256>;
-  Slot: AnySSZType<t.Slot>;
-  Epoch: AnySSZType<t.Epoch>;
-  CommitteeIndex: AnySSZType<t.CommitteeIndex>;
-  ValidatorIndex: AnySSZType<t.ValidatorIndex>;
-  Gwei: AnySSZType<t.Gwei>;
-  Root: AnySSZType<t.Root>;
-  Version: AnySSZType<t.Version>;
-  BLSPubkey: AnySSZType<t.BLSPubkey>;
-  BLSSignature: AnySSZType<t.BLSSignature>;
+  Boolean: BooleanType;
+  Bytes4: ByteVectorType;
+  Bytes8: ByteVectorType;
+  Bytes32: ByteVectorType;
+  Bytes48: ByteVectorType;
+  Bytes96: ByteVectorType;
+  Uint8: NumberUintType;
+  Uint16: NumberUintType;
+  Uint32: NumberUintType;
+  Number64: NumberUintType;
+  Uint64: BigIntUintType;
+  Uint128: BigIntUintType;
+  Uint256: BigIntUintType;
+  Slot: NumberUintType;
+  Epoch: NumberUintType;
+  CommitteeIndex: NumberUintType;
+  ValidatorIndex: NumberUintType;
+  Gwei: BigIntUintType;
+  Root: ByteVectorType;
+  Version: ByteVectorType;
+  BLSPubkey: ByteVectorType;
+  BLSSignature: ByteVectorType;
   // misc
-  Fork: AnyContainerType<t.Fork>;
-  Checkpoint: AnyContainerType<t.Checkpoint>;
-  Validator: AnyContainerType<t.Validator>;
-  AttestationData: AnyContainerType<t.AttestationData>;
-  IndexedAttestation: AnyContainerType<t.IndexedAttestation>;
-  PendingAttestation: AnyContainerType<t.PendingAttestation>;
-  Eth1Data: AnyContainerType<t.Eth1Data>;
-  HistoricalBatch: AnyContainerType<t.HistoricalBatch>;
-  DepositMessage: AnyContainerType<t.DepositMessage>;
-  DepositData: AnyContainerType<t.DepositData>;
-  BeaconBlockHeader: AnyContainerType<t.BeaconBlockHeader>;
-  SignedBeaconBlockHeader: AnyContainerType<t.SignedBeaconBlockHeader>;
-  FFGData: AnyContainerType<t.FFGData>;
-  MerkleTree: AnyContainerType<t.MerkleTree>;
+  Fork: ContainerType<t.Fork>;
+  Checkpoint: ContainerType<t.Checkpoint>;
+  Validator: ContainerType<t.Validator>;
+  AttestationData: ContainerType<t.AttestationData>;
+  CommitteeIndices: ListType<List<t.ValidatorIndex>>;
+  IndexedAttestation: ContainerType<t.IndexedAttestation>;
+  CommitteeBits: BitListType;
+  PendingAttestation: ContainerType<t.PendingAttestation>;
+  Eth1Data: ContainerType<t.Eth1Data>;
+  HistoricalBlockRoots: VectorType<Vector<t.Root>>;
+  HistoricalStateRoots: VectorType<Vector<t.Root>>;
+  HistoricalBatch: ContainerType<t.HistoricalBatch>;
+  DepositMessage: ContainerType<t.DepositMessage>;
+  DepositData: ContainerType<t.DepositData>;
+  BeaconBlockHeader: ContainerType<t.BeaconBlockHeader>;
+  SignedBeaconBlockHeader: ContainerType<t.SignedBeaconBlockHeader>;
+  DepositDataRootList: ContainerType<List<t.Root>>;
   // operations
-  ProposerSlashing: AnyContainerType<t.ProposerSlashing>;
-  AttesterSlashing: AnyContainerType<t.AttesterSlashing>;
-  Attestation: AnyContainerType<t.Attestation>;
-  Deposit: AnyContainerType<t.Deposit>;
-  VoluntaryExit: AnyContainerType<t.VoluntaryExit>;
-  SignedVoluntaryExit: AnyContainerType<t.SignedVoluntaryExit>;
+  ProposerSlashing: ContainerType<t.ProposerSlashing>;
+  AttesterSlashing: ContainerType<t.AttesterSlashing>;
+  Attestation: ContainerType<t.Attestation>;
+  Deposit: ContainerType<t.Deposit>;
+  VoluntaryExit: ContainerType<t.VoluntaryExit>;
+  SignedVoluntaryExit: ContainerType<t.SignedVoluntaryExit>;
   // block
-  BeaconBlockBody: AnyContainerType<t.BeaconBlockBody>;
-  BeaconBlock: AnyContainerType<t.BeaconBlock>;
-  SignedBeaconBlock: AnyContainerType<t.SignedBeaconBlock>;
+  BeaconBlockBody: ContainerType<t.BeaconBlockBody>;
+  BeaconBlock: ContainerType<t.BeaconBlock>;
+  SignedBeaconBlock: ContainerType<t.SignedBeaconBlock>;
   // state
-  BeaconState: AnyContainerType<t.BeaconState>;
+  EpochAttestations: ListType<List<t.PendingAttestation>>;
+  BeaconState: ContainerType<t.BeaconState>;
   // Validator
-  AggregateAndProof: AnyContainerType;
-  CommitteeAssignment: AnyContainerType;
-  SyncingStatus: AnyContainerType;
-  ValidatorDuty: AnyContainerType;
+  AggregateAndProof: ContainerType<t.AggregateAndProof>;
+  CommitteeAssignment: ContainerType<t.CommitteeAssignment>;
+  SyncingStatus: ContainerType<t.SyncingStatus>;
+  ValidatorDuty: ContainerType<t.ValidatorDuty>;
   // wire
-  Status: AnyContainerType;
-  Goodbye: AnyContainerType<t.Goodbye>;
-  BeaconBlocksByRangeRequest: AnyContainerType<t.BeaconBlocksByRangeRequest>;
-  BeaconBlocksByRangeResponse: AnyContainerType<t.BeaconBlocksByRangeResponse>;
-  BeaconBlocksByRootRequest: AnyContainerType<t.BeaconBlocksByRootRequest>;
-  BeaconBlocksByRootResponse: AnyContainerType<t.BeaconBlocksByRootResponse>;
+  Status: ContainerType<t.Status>;
+  Goodbye: BigIntUintType;
+  BeaconBlocksByRangeRequest: ContainerType<t.BeaconBlocksByRangeRequest>;
+  BeaconBlocksByRangeResponse: ContainerType<t.BeaconBlocksByRangeResponse>;
+  BeaconBlocksByRootRequest: ContainerType<t.BeaconBlocksByRootRequest>;
+  BeaconBlocksByRootResponse: ContainerType<t.BeaconBlocksByRootResponse>;
 }
 
 export const typeNames: (keyof IBeaconSSZTypes)[] = [
   // primitive
   /*
-  "bool",
-  "bytes",
-  "bytes4",
-  "bytes8",
-  "bytes32",
-  "bytes48",
-  "bytes96",
-  "uint8",
-  "uint16",
-  "uint24",
-  "number64",
-  "uint64",
-  "uint256",
+  "Boolean",
+  "Bytes4",
+  "Bytes8",
+  "Bytes32",
+  "Bytes48",
+  "Bytes96",
+  "Uint16",
+  "Number64",
+  "Uint64",
+  "Uint256",
   "Slot",
   "Epoch",
   "CommitteeIndex",
@@ -95,16 +101,19 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "Checkpoint",
   "Validator",
   "AttestationData",
+  "CommitteeIndices",
   "IndexedAttestation",
+  "CommitteeBits",
   "PendingAttestation",
   "Eth1Data",
+  "HistoricalBlockRoots",
+  "HistoricalStateRoots",
   "HistoricalBatch",
   "DepositMessage",
   "DepositData",
   "BeaconBlockHeader",
   "SignedBeaconBlockHeader",
-  "FFGData",
-  "MerkleTree",
+  "DepositDataRootList",
   // operations
   "ProposerSlashing",
   "AttesterSlashing",
@@ -117,6 +126,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "BeaconBlock",
   "SignedBeaconBlock",
   // state
+  "EpochAttestations",
   "BeaconState",
   //validator
   "AggregateAndProof",

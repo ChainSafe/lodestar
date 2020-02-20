@@ -1,13 +1,17 @@
+import assert from "assert";
+import {utils} from "libp2p-pubsub";
+import Gossipsub, {IGossipMessage, Registrar, Options} from "libp2p-gossipsub";
+import {Type} from "@chainsafe/ssz";
+import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
+
+import {IGossipMessageValidator, GossipObject, GossipMessageValidatorFn} from "./interface";
+import {getGossipTopic, isAttestationSubnetTopic, getSubnetFromAttestationSubnetTopic} from "./utils";
 import Gossipsub, {IGossipMessage, Options, Registrar} from "libp2p-gossipsub";
 import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator} from "./interface";
 import {getGossipTopic, getSubnetFromAttestationSubnetTopic, isAttestationSubnetTopic} from "./utils";
 import {GossipEvent} from "./constants";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {utils} from "libp2p-pubsub";
 import {GOSSIP_MAX_SIZE} from "../../constants";
-import {AnySSZType, deserialize} from "@chainsafe/ssz";
-import assert from "assert";
-import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
 
 /**
  * This validates messages in Gossipsub and emit the transformed messages.
@@ -99,9 +103,10 @@ export class LodestarGossipsub extends Gossipsub {
   private deserializeGossipMessage(topic: string, message: IGossipMessage): { object: GossipObject; subnet?: number} {
     if (isAttestationSubnetTopic(topic)) {
       const subnet = getSubnetFromAttestationSubnetTopic(topic);
-      return {object: deserialize(this.config.types.Attestation, message.data), subnet};
+      return {object: this.config.types.Attestation.deserialize(message.data), subnet};
     }
-    let objType: AnySSZType;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let objType: Type<any>;
     switch(topic) {
       case getGossipTopic(GossipEvent.BLOCK, "ssz"):
         objType = this.config.types.SignedBeaconBlock;
@@ -124,7 +129,7 @@ export class LodestarGossipsub extends Gossipsub {
       default:
         throw new Error(`Don't know how to deserialize object received under topic ${topic}`); 
     }
-    return {object: deserialize(objType, message.data)};
+    return {object: objType.deserialize(message.data)};
   }
 
   private getKey(message: IGossipMessage): string {

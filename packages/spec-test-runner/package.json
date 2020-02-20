@@ -20,9 +20,12 @@
     "lib/**/*.js.map"
   ],
   "scripts": {
-    "test:spec": "mocha --colors 'test/spec/**/*.test.ts'",
-    "test:spec-main": "mocha --colors 'test/spec/**/*mainnet.test.ts'",
-    "test:spec-min": "mocha --colors 'test/spec/**/*minimal.test.ts' 'test/spec/bls/*.test.ts'"
+    "test:ssz": "mocha --colors 'test/spec/ssz/**/*.test.ts'",
+    "test:ssz-main": "mocha --colors 'test/spec/ssz/**/*mainnet.test.ts'",
+    "test:ssz-min": "mocha --colors 'test/spec/ssz/**/*minimal.test.ts'",
+    "test:spec": "mocha --colors --exclude 'test/spec/ssz/**/*' 'test/spec/**/*.test.ts' && yarn test:ssz",
+    "test:spec-main": "mocha --colors --exclude 'test/spec/ssz/**/*' 'test/spec/**/*mainnet.test.ts' && yarn test:ssz-main",
+    "test:spec-min": "mocha --colors --exclude 'test/spec/ssz/**/*' 'test/spec/**/*minimal.test.ts' 'test/spec/bls/*.test.ts' && yarn test:ssz-min"
   },
   "dependencies": {
     "@chainsafe/bit-utils": "0.1.6",

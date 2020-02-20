@@ -3,7 +3,7 @@
   "description": "Simple Serialize",
   "license": "Apache-2.0",
   "author": "ChainSafe Systems",
-  "homepage": "https://github.com/chainsafe/ssz-js",
+  "homepage": "https://github.com/chainsafe/lodestar/packages/ssz",
   "version": "0.5.4",
   "main": "lib/index.js",
   "files": [
@@ -28,13 +28,8 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/bit-utils": "0.1.6",
-    "@chainsafe/ssz-type-schema": "^0.0.2",
-    "@types/bn.js": "^4.11.5",
-    "assert": "^1.4.1",
-    "bcrypto": "^4.1.0",
-    "bigint-buffer": "^1.1.5",
-    "bn.js": "^5.0.0"
+    "@chainsafe/persistent-merkle-tree": "^0.1.1",
+    "bcrypto": "^4.1.0"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",

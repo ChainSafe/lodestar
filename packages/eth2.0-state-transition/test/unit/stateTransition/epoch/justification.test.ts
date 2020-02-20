@@ -7,7 +7,6 @@ import * as utils2 from "../../../../src/epoch/util";
 import {generateState} from "../../../utils/state";
 import {processJustificationAndFinalization}
   from "../../../../src/epoch/justification";
-import { BitVector } from "@chainsafe/bit-utils";
 
 describe('process epoch - justification and finalization', function () {
 
@@ -40,7 +39,7 @@ describe('process epoch - justification and finalization', function () {
     let currentJustifiedEpoch;
     getTotalActiveBalanceStub.returns(10n);
     getAttestingBalanceStub.returns(10n);
-    state.justificationBits = BitVector.fromBitfield(Buffer.from([7, 0, 0, 0, 0, 0, 0, 0]), 64);
+    state.justificationBits = Array.from({length: 64}, () => false);
 
     getCurrentEpochStub.returns(1);
     processJustificationAndFinalization(config, state);

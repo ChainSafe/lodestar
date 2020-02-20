@@ -19,7 +19,7 @@ describe("Encode/decode network request/response domain", () => {
     };
     const chunk = encodeResponseChunk(config, Method.Status, {output: status});
     const response = decodeResponseChunk(config, Method.Status, chunk);
-    assert.deepEqual(JSON.stringify(status), JSON.stringify(response.output));
+    assert.deepEqual(status, response.output);
   });
 
   it("should encode decode Goodbye message correctly", () => {

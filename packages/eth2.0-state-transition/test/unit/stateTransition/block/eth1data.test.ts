@@ -1,6 +1,5 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {serialize} from "@chainsafe/ssz";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {Eth1Data} from "@chainsafe/eth2.0-types";
@@ -35,8 +34,8 @@ describe('process block - eth1data', function () {
     const block = generateEmptyBlock();
     block.body.eth1Data = vote;
     processEth1Data(config, state, block.body);
-    expect(serialize(config.types.Eth1Data, state.eth1Data).toString('hex'))
-      .to.be.equal(serialize(config.types.Eth1Data, vote).toString('hex'));
+    expect(config.types.Eth1Data.serialize(state.eth1Data))
+      .to.be.deep.equal(config.types.Eth1Data.serialize(vote));
   });
 
   it('should not set latest eth1 data', function () {
@@ -49,7 +48,7 @@ describe('process block - eth1data', function () {
     const block = generateEmptyBlock();
     block.body.eth1Data = vote;
     processEth1Data(config, state, block.body);
-    expect(serialize(config.types.Eth1Data, state.eth1Data).toString('hex'))
-      .to.not.be.equal(serialize(config.types.Eth1Data, vote).toString('hex'));
+    expect(config.types.Eth1Data.serialize(state.eth1Data))
+      .to.not.be.deep.equal(config.types.Eth1Data.serialize(vote));
   });
 });

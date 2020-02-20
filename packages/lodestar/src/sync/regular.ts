@@ -2,6 +2,7 @@
  * @module sync
  */
 
+import {toHexString} from "@chainsafe/ssz";
 import {
   AggregateAndProof,
   Attestation,
@@ -15,11 +16,11 @@ import {
   Slot,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
 import {OpPool} from "../opPool";
-import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {ISyncModules} from "./index";
 import {ISyncOptions} from "./options";
 import {GossipEvent} from "../network/gossip/constants";
@@ -118,14 +119,15 @@ export class RegularSync {
   };
 
   private onUnknownBlockRoot = async (root: Root): Promise<void> => {
+    const hexRoot = toHexString(root);
     for (const peer of this.network.getPeers()) {
       try {
-        this.logger.verbose(`Attempting to fetch block ${root.toString("hex")} from ${peer.id.toB58String()}`);
+        this.logger.verbose(`Attempting to fetch block ${hexRoot} from ${peer.id.toB58String()}`);
         const [block] = await this.network.reqResp.beaconBlocksByRoot(peer, [root]);
         await this.chain.receiveBlock(block);
         break;
       } catch (e) {
-        this.logger.verbose(`Unable to fetch block ${root.toString("hex")}: ${e}`);
+        this.logger.verbose(`Unable to fetch block ${hexRoot}: ${e}`);
       }
     }
   };
