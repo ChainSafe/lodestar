@@ -10,7 +10,6 @@ import {
 } from "../../../../src/sync/utils/sync";
 import {expect} from "chai";
 import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block";
-import {hashTreeRoot} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/src/presets/minimal";
 import {blockToHeader} from "@chainsafe/eth2.0-state-transition";
 import sinon from "sinon";
@@ -169,12 +168,12 @@ describe("sync utils", function () {
 
 function generateValidChain(start: BeaconBlockHeader, n = 3): SignedBeaconBlock[] {
   const blocks = [];
-  let parentRoot = hashTreeRoot(config.types.BeaconBlockHeader, start);
+  let parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(start);
   for(let i = 0; i < n; i++) {
     const block = generateEmptySignedBlock();
     block.message.parentRoot = parentRoot;
     block.message.slot = i;
-    parentRoot = hashTreeRoot(config.types.BeaconBlock, block.message);
+    parentRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
     blocks.push(block);
   }
   return blocks;

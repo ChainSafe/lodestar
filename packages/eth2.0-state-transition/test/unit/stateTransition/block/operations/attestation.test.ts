@@ -60,7 +60,7 @@ describe("process block - attestation", function () {
     attestation.data.target.epoch = 1;
     attestation.data.source.epoch = 1;
     attestation.data.source.root = state.currentJustifiedCheckpoint.root;
-    getBeaconComitteeStub.returns(Array.from({length: attestation.aggregationBits.bitLength}));
+    getBeaconComitteeStub.returns(Array.from({length: attestation.aggregationBits.length}));
     expect(processAttestation(config, state, attestation)).to.not.throw;
     expect(state.currentEpochAttestations.length).to.be.equal(1);
     expect(state.previousEpochAttestations.length).to.be.equal(0);
@@ -79,7 +79,7 @@ describe("process block - attestation", function () {
     attestation.data.target.epoch = 0;
     attestation.data.source.epoch = 0;
     attestation.data.source.root = state.previousJustifiedCheckpoint.root;
-    getBeaconComitteeStub.returns(Array.from({length: attestation.aggregationBits.bitLength}));
+    getBeaconComitteeStub.returns(Array.from({length: attestation.aggregationBits.length}));
     expect(processAttestation(config, state, attestation)).to.not.throw;
     expect(state.currentEpochAttestations.length).to.be.equal(0);
     expect(state.previousEpochAttestations.length).to.be.equal(1);

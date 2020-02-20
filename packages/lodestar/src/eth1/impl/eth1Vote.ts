@@ -1,13 +1,12 @@
 import {IEth1Notifier} from "../interface";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {BeaconState, Eth1Data, number64} from "@chainsafe/eth2.0-types";
+import {BeaconState, Eth1Data, Number64} from "@chainsafe/eth2.0-types";
 import {intSqrt} from "@chainsafe/eth2.0-utils";
 import {arrayIntersection, mostFrequent, sszEqualPredicate} from "../../util/objects";
-import {equals} from "@chainsafe/ssz";
 import {Block} from "ethers/providers";
 
 export async function getEth1Vote(
-  this: IEth1Notifier, config: IBeaconConfig, state: BeaconState, previousEth1Distance: number64
+  this: IEth1Notifier, config: IBeaconConfig, state: BeaconState, previousEth1Distance: Number64
 ): Promise<Eth1Data> {
   const eth1Head = await this.getHead();
   const allEth1Data = await getEth1DataRange(
@@ -34,7 +33,7 @@ export async function getEth1Vote(
   }
 
   const validVotes = arrayIntersection<Eth1Data>(
-    state.eth1DataVotes,
+    Array.from(state.eth1DataVotes),
     votesToConsider,
     sszEqualPredicate(config.types.Eth1Data)
   );
@@ -45,7 +44,7 @@ export async function getEth1Vote(
       return frequentVotes[0];
     } else {
       return allEth1Data[Math.max(...frequentVotes.map(
-        (vote) => allEth1Data.findIndex((eth1Data) => equals(config.types.Eth1Data, vote, eth1Data)))
+        (vote) => allEth1Data.findIndex((eth1Data) => config.types.Eth1Data.equals(vote, eth1Data)))
       )];
     }
   } else {
@@ -54,10 +53,10 @@ export async function getEth1Vote(
 }
 
 async function getEth1DataRange(
-  getEth1Data: (eth1Head: Block, distance: number64) => Promise<Eth1Data>,
+  getEth1Data: (eth1Head: Block, distance: Number64) => Promise<Eth1Data>,
   eth1Head: Block,
-  startDistance: number64,
-  endDistance: number64
+  startDistance: Number64,
+  endDistance: Number64
 ): Promise<Eth1Data[]> {
   const promises: Promise<Eth1Data>[] = [];
   for(let distance = startDistance; distance < endDistance; distance++) {

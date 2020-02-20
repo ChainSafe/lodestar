@@ -4,7 +4,6 @@ import PeerInfo from "peer-info";
 import PeerId from "peer-id";
 import {Goodbye, Status} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import * as ssz from "@chainsafe/ssz/lib/core/hashTreeRoot";
 
 import {Method, ZERO_HASH} from "../../../src/constants";
 import {BeaconChain} from "../../../src/chain";
@@ -20,7 +19,7 @@ import {generateEmptySignedBlock} from "../../utils/block";
 describe("syncing", function () {
   const sandbox = sinon.createSandbox();
   let syncRpc: SyncReqResp;
-  let chainStub, networkStub, dbStub, repsStub, logger, reqRespStub, hashTreeRootStub;
+  let chainStub, networkStub, dbStub, repsStub, logger, reqRespStub;
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
@@ -36,7 +35,6 @@ describe("syncing", function () {
       blockArchive: sandbox.createStubInstance(BlockArchiveRepository),
     };
     repsStub = sandbox.createStubInstance(ReputationStore);
-    hashTreeRootStub = sandbox.stub(ssz, "hashTreeRoot");
     logger = new WinstonLogger();
     logger.silent = true;
 
@@ -170,14 +168,13 @@ describe("syncing", function () {
     state.fork.currentVersion = Buffer.alloc(4);
     state.finalizedCheckpoint.epoch = 2;
     dbStub.state.get.resolves(state);
-    hashTreeRootStub.returns(Buffer.from("not xyz"));
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.true;
   });
 
   it("should not disconnect on status", async function() {
     const body: Status = {
       headForkVersion: Buffer.alloc(4),
-      finalizedRoot: Buffer.from("xyz"),
+      finalizedRoot: config.types.BeaconBlock.hashTreeRoot(generateEmptySignedBlock().message),
       finalizedEpoch: 1,
       headRoot: Buffer.alloc(32),
       headSlot: 1,
@@ -189,7 +186,6 @@ describe("syncing", function () {
     state.fork.currentVersion = Buffer.alloc(4);
     state.finalizedCheckpoint.epoch = 1;
     dbStub.state.get.resolves(state);
-    hashTreeRootStub.returns(Buffer.from("xyz"));
 
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.false;
   });

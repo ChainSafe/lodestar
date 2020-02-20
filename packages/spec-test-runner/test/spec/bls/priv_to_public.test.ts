@@ -21,7 +21,7 @@ describeDirectorySpecTest<IPrivToPubTestCase, string>(
   ),
   (testCase => {
     const result =  bls.generatePublicKey(Buffer.from(testCase.data.input.replace("0x", ""), "hex"));
-    return `0x${result.toString("hex")}`;
+    return `0x${Buffer.from(result).toString("hex")}`;
   }),
   {
     inputTypes: {

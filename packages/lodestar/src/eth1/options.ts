@@ -1,15 +1,15 @@
-import {number64} from "@chainsafe/eth2.0-types";
+import {Number64} from "@chainsafe/eth2.0-types";
 import {BaseProvider} from "ethers/providers";
 import {EventFragment, FunctionFragment, Interface, ParamType, BigNumber} from "ethers/utils";
 
 export interface IEth1Options {
   provider: {
     url: string;
-    network: number64;
+    network: Number64;
   };
   providerInstance?: BaseProvider;
   depositContract: {
-    deployedAt: number64;
+    deployedAt: Number64;
     address: string;
     abi: (string | ParamType | EventFragment | FunctionFragment)[] | string | Interface;
     bytecode: string;

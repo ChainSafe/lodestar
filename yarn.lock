@@ -923,6 +923,13 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.9.4.tgz#2a250eee523c31c1662eaf9d8def1a6697296fdd"
   integrity sha512-yA+zvS9Qbxz+Yd6mV+0T2mqGtAs3tvIRIvkLnQb1Yr9+r0mgr1CWmh7u50pJNYMLaElI3oc1MhPB+VPuKyBRMQ==
 
+"@chainsafe/persistent-merkle-tree@^0.1.1":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.1.1.tgz#6a8384b80595ea87dc8b6aee11e4ee236d9854b1"
+  integrity sha512-bUjUEBFMPx+r/RHAhWJXvHnsfYEHfIVHkwMxdgjMUt4gcMHxiFciaIQBD/FRvAffft/8B5+S5ASknqPvGVk1kA==
+  dependencies:
+    bcrypto "^4.2.8"
+
 "@evocateur/libnpmaccess@^3.1.2":
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/@evocateur/libnpmaccess/-/libnpmaccess-3.1.2.tgz#ecf7f6ce6b004e9f942b098d92200be4a4b1c845"
@@ -1739,12 +1746,6 @@
 "@types/benchmark@^1.0.31":
   version "1.0.31"
   resolved "https://registry.yarnpkg.com/@types/benchmark/-/benchmark-1.0.31.tgz#2dd3514e93396f362ba5551a7c9ff0da405c1d38"
-
-"@types/bn.js@^4.11.4", "@types/bn.js@^4.11.5":
-  version "4.11.5"
-  resolved "https://registry.yarnpkg.com/@types/bn.js/-/bn.js-4.11.5.tgz#40e36197433f78f807524ec623afcf0169ac81dc"
-  dependencies:
-    "@types/node" "*"
 
 "@types/buffer-xor@^2.0.0":
   version "2.0.0"
@@ -3117,6 +3118,16 @@ bcrypto@^4.2.6:
     bufio "~1.0.6"
     loady "~0.0.1"
     nan "^2.13.2"
+
+bcrypto@^4.2.8:
+  version "4.3.2"
+  resolved "https://registry.yarnpkg.com/bcrypto/-/bcrypto-4.3.2.tgz#50d4543cc16c39a9fca1d7f457a3850703867814"
+  integrity sha512-uGmeiqLvLYUPRa0XoACDgXwxZY9wE1uiFHpdtGSs7FI2YYkakqIWZklkF8sKMzXM/HaHRIjulzQ8xuDoqptjVQ==
+  dependencies:
+    bsert "~0.0.10"
+    bufio "~1.0.6"
+    loady "~0.0.1"
+    nan "^2.14.0"
 
 before-after-hook@^2.0.0:
   version "2.1.0"
@@ -7740,7 +7751,7 @@ libp2p-tcp@^0.14.1:
 
 "libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git":
   version "0.1.0"
-  resolved "https://github.com/ChainSafe/libp2p-ts.git#24eed9844cf530e1bd09060faa36ca83c1d43641"
+  resolved "https://github.com/ChainSafe/libp2p-ts.git#3b86156525fb290682567ca26a5ea6b95920950e"
   dependencies:
     "@types/node" "^13.7.0"
     libp2p-crypto "^0.17.2"

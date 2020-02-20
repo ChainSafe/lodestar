@@ -1,6 +1,5 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import * as hashTreeRoot from "@chainsafe/ssz";
 
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as utils from "../../../../src/util";
@@ -14,13 +13,11 @@ describe('process epoch - final updates', function () {
   const sandbox = sinon.createSandbox();
 
   let getCurrentEpochStub: any,
-    getRandaoMixStub: any,
-    hashTreeRootStub: any;
+    getRandaoMixStub: any;
 
   beforeEach(() => {
     getCurrentEpochStub = sandbox.stub(utils, "getCurrentEpoch");
     getRandaoMixStub = sandbox.stub(utils, "getRandaoMix");
-    hashTreeRootStub = sandbox.stub(hashTreeRoot, "hashTreeRoot");
   });
 
   afterEach(() => {
@@ -35,7 +32,6 @@ describe('process epoch - final updates', function () {
 
     getCurrentEpochStub.returns(127);
     getRandaoMixStub.returns(0);
-    hashTreeRootStub.returns(Buffer.from("1010"));
 
     try {
       processFinalUpdates(config, state);

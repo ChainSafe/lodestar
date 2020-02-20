@@ -6,20 +6,21 @@ import {
   BeaconState,
   Deposit,
   Eth1Data,
-  number64, Slot,
-  uint16,
-  uint64,
-  SignedBeaconBlock
+  Slot,
+  Uint16,
+  Uint64,
+  SignedBeaconBlock,
+  Root
 } from "@chainsafe/eth2.0-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {generateState} from "../../state";
-import {ProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
+import { TreeBacked, List } from "@chainsafe/ssz";
 
 export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public latestState: BeaconState;
   public forkChoice: ILMDGHOST;
-  public chainId: uint16;
-  public networkId: uint64;
+  public chainId: Uint16;
+  public networkId: Uint64;
 
   public constructor({genesisTime, chainId, networkId}) {
     super();
@@ -37,7 +38,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     return true;
   }
   public async advanceState(slot?: Slot): Promise<void>{}
-  initializeBeaconChain(genesisState: BeaconState, merkleTree: ProgressiveMerkleTree): Promise<void> {
+  initializeBeaconChain(genesisState: BeaconState, depositDataRootList: TreeBacked<List<Root>>): Promise<void> {
     throw new Error("Method not implemented.");
   }
   isInitialized(): boolean {

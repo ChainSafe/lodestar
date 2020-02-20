@@ -4,14 +4,14 @@
 
 import {EventEmitter} from "events";
 
-import {BeaconState, Deposit, Eth1Data, number64, Root} from "@chainsafe/eth2.0-types";
+import {BeaconState, Eth1Data, Number64, DepositData} from "@chainsafe/eth2.0-types";
 import {Block} from "ethers/providers";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 export interface IEth1Events {
   block: (block: Block) => void;
-  deposit: (index: number64, deposit: Deposit) => void;
+  deposit: (index: Number64, depositData: DepositData) => void;
 }
 
 export type Eth1EventEmitter = StrictEventEmitter<EventEmitter, IEth1Events>;
@@ -50,7 +50,7 @@ export interface IEth1Notifier extends Eth1EventEmitter {
    * @param toBlock optional, if not submitted it will assume latest
    */
   processPastDeposits(
-    fromBlock: string | number64, toBlock?: string | number64
+    fromBlock: string | Number64, toBlock?: string | Number64
   ): Promise<void>;
 
   /**
@@ -67,15 +67,15 @@ export interface IEth1Notifier extends Eth1EventEmitter {
   /**
    * Return the merkle root of the deposits
    */
-  depositRoot(block?: string | number): Promise<Root>;
+  depositRoot(block?: string | number): Promise<Uint8Array>;
 
   /**
    * Retruns deposit count
    * @param block
    */
-  depositCount(block?: string | number): Promise<number64>;
+  depositCount(block?: string | number): Promise<Number64>;
 
-  getEth1Vote(config: IBeaconConfig, state: BeaconState, previousEth1Distance: number64): Promise<Eth1Data>;
+  getEth1Vote(config: IBeaconConfig, state: BeaconState, previousEth1Distance: Number64): Promise<Eth1Data>;
 
-  getEth1Data(eth1Head: Block, distance: number64): Promise<Eth1Data>;
+  getEth1Data(eth1Head: Block, distance: Number64): Promise<Eth1Data>;
 }

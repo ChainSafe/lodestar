@@ -3,7 +3,6 @@
  */
 
 import assert from "assert";
-import {hashTreeRoot, clone} from "@chainsafe/ssz";
 
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
@@ -12,6 +11,7 @@ import {verifyBlockSignature} from "./util/block";
 import {processBlock} from "./block";
 import {processSlots} from "./slot";
 
+export * from "./constants";
 export * from "./util";
 export * from "./epoch";
 export * from "./block";
@@ -35,7 +35,7 @@ export function stateTransition(
   verifySignatures = true
 ): BeaconState {
   // Clone state because process slots and block are not pure
-  const postState = clone(config.types.BeaconState, state);
+  const postState = config.types.BeaconState.clone(state);
   // Process slots (including those with no blocks) since block
   processSlots(config, postState, signedBlock.message.slot);
   // Verify block signature
@@ -46,7 +46,10 @@ export function stateTransition(
   processBlock(config, postState, signedBlock.message, verifySignatures);
   // Validate state root (`validate_state_root == True` in production)
   if (validateStateRoot){
-    assert(signedBlock.message.stateRoot.equals(hashTreeRoot(config.types.BeaconState, postState)));
+    assert(config.types.Root.equals(
+      signedBlock.message.stateRoot,
+      config.types.BeaconState.hashTreeRoot(postState)
+    ));
   }
 
   // Return post-state

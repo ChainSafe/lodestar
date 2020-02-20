@@ -54,8 +54,8 @@ describe('beacon rpc api', function () {
     // When chain didn't start, latest state is null
     dbStub.state.getLatest.resolves(null);
     const {fork} = await beaconApi.getFork();
-    expect(fork.previousVersion.compare(Buffer.alloc(4))).to.be.equal(0);
-    expect(fork.currentVersion.compare(Buffer.alloc(4))).to.be.equal(0);
+    expect(fork.previousVersion).to.be.deep.equal(Buffer.alloc(4));
+    expect(fork.currentVersion).to.be.deep.equal(Buffer.alloc(4));
     expect(fork.epoch).to.be.equal(0);
   });
 

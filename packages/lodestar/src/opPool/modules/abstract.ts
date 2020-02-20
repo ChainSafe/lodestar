@@ -1,3 +1,4 @@
+import {ArrayLike} from "@chainsafe/ssz";
 import {BulkRepository} from "../../db/api/beacon/repository";
 
 export abstract class OperationsModule<T> {
@@ -16,7 +17,7 @@ export abstract class OperationsModule<T> {
     return await this.db.getAll();
   }
 
-  public async remove(values: T[]): Promise<void> {
+  public async remove(values: ArrayLike<T>): Promise<void> {
     await this.db.deleteManyByValue(values);
   }
 

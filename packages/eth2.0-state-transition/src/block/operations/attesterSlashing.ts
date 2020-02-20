@@ -32,8 +32,8 @@ export function processAttesterSlashing(
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;
   let slashedAny = false;
-  const attestingIndices1 = attestation1.attestingIndices;
-  const attestingIndices2 = attestation2.attestingIndices;
+  const attestingIndices1 = Array.from(attestation1.attestingIndices);
+  const attestingIndices2 = Array.from(attestation2.attestingIndices);
   const intersectionIndices = attestingIndices1.filter((i) => attestingIndices2.indexOf(i) !== -1);
   const sortedIndices = intersectionIndices.sort((index1: ValidatorIndex, index2: ValidatorIndex) => index1 - index2);
 

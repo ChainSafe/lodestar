@@ -2,8 +2,8 @@ import sinon from "sinon";
 import chai, {expect} from "chai";
 import chaiAsPromised from 'chai-as-promised';
 
-import {serialize, SimpleContainerType} from "@chainsafe/ssz";
-import {bytes32} from "@chainsafe/eth2.0-types";
+import {ContainerType} from "@chainsafe/ssz";
+import {Bytes32} from "@chainsafe/eth2.0-types";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 
 import {BulkRepository} from "../../../../src/db/api/beacon/repository";
@@ -12,22 +12,22 @@ import {Bucket} from "../../../../src/db/schema";
 
 chai.use(chaiAsPromised);
 
-const TestSSZType: SimpleContainerType = {
-  fields: [
-    ["bool", config.types.bool],
-    ["bytes", config.types.bytes32],
-  ],
-};
-
 interface TestType {
   bool: boolean;
-  bytes: bytes32;
+  bytes: Bytes32;
 }
+
+const TestSSZType = new ContainerType<TestType>({
+  fields: {
+    bool: config.types.Boolean,
+    bytes: config.types.Bytes32,
+  },
+});
 
 class TestRepository extends BulkRepository<TestType> {
 
   public constructor(db: IDatabaseController) {
-    super(config, db, Bucket.deposit, TestSSZType);
+    super(config, db, Bucket.depositData, TestSSZType);
   }
 
 }
@@ -45,7 +45,7 @@ describe('database repository', function () {
 
   it('should get single item', async function() {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    controller.get.resolves(serialize(TestSSZType, item));
+    controller.get.resolves(TestSSZType.serialize(item));
     const result = await repository.get('id');
     expect(result).to.be.deep.equal(item);
     expect(controller.get.calledOnce).to.be.true;
@@ -60,7 +60,7 @@ describe('database repository', function () {
 
   it('should return true if item exists', async function() {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    controller.get.resolves(serialize(TestSSZType, item));
+    controller.get.resolves(TestSSZType.serialize(item));
     const result = await repository.has('id');
     expect(result).to.be.true;
     expect(controller.get.calledOnce).to.be.true;
@@ -92,7 +92,7 @@ describe('database repository', function () {
 
   it('should return all items', async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    const itemSerialized = serialize(TestSSZType, item);
+    const itemSerialized = TestSSZType.serialize(item);
     const items = [itemSerialized, itemSerialized, itemSerialized];
     controller.search.resolves(items);
     const result = await repository.getAll();
