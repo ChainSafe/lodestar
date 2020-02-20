@@ -67,7 +67,7 @@ export abstract class AbstractApiClient
   private async startSlotCounting(): Promise<void> {
     this.running = true;
     const genesisTime = await this.beacon.getGenesisTime();
-    const diffInSeconds = (Date.now() / 1000) - genesisTime;
+    const diffInSeconds = (Math.floor(Date.now() / 1000)) - genesisTime;
     this.currentSlot = getCurrentSlot(this.config, genesisTime);
     //update slot after remaining seconds until next slot
     const diffTillNextSlot =
