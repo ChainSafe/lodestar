@@ -95,6 +95,7 @@ export class Sync extends EventEmitter {
   }
 
   private startRegularSync = (): void => {
+    this.emit("regularSyncStarted");
     this.regularSync.start();
   };
 
