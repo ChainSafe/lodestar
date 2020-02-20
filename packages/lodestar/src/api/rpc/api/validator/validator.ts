@@ -30,9 +30,9 @@ import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {INetwork} from "../../../../network";
 import {getDomain, isAggregator} from "@chainsafe/eth2.0-state-transition";
 import {verify} from "@chainsafe/bls";
-import {hashTreeRoot} from "@chainsafe/ssz";
-import {computeEpochAtSlot, DomainType} from "@chainsafe/lodestar-validator/lib/util";
 import {Sync} from "../../../../sync";
+import {DomainType} from "../../../../constants";
+import {computeEpochAtSlot} from "@chainsafe/eth2.0-state-transition/lib";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -128,9 +128,9 @@ export class ValidatorApi implements IValidatorApi {
     slot: Slot, slotSignature: BLSSignature, committeeIndex: CommitteeIndex, aggregatorPubkey: BLSPubkey
   ): Promise<void> {
     const valid = verify(
-      aggregatorPubkey,
-      hashTreeRoot(this.config.types.Slot, slot),
-      slotSignature,
+      aggregatorPubkey.valueOf() as Uint8Array,
+      this.config.types.Slot.hashTreeRoot(slot),
+      slotSignature.valueOf() as Uint8Array,
       getDomain(
         this.config,
         this.chain.latestState,

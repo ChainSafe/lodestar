@@ -3,9 +3,8 @@ import fastify, {DefaultBody, DefaultHeaders, DefaultParams, DefaultQuery} from 
 import {IApiModules} from "../../../interface";
 import {verify} from "@chainsafe/bls";
 import {hexToBuffer} from "../../../../util/hex";
-import {hashTreeRoot} from "@chainsafe/ssz";
-import {getDomain} from "@chainsafe/eth2.0-state-transition";
-import {computeEpochAtSlot, DomainType} from "@chainsafe/lodestar-validator/lib/util";
+import {computeEpochAtSlot, getDomain} from "@chainsafe/eth2.0-state-transition";
+import {DomainType} from "../../../../constants";
 
 
 const opts: fastify.RouteShorthandOptions = {
@@ -44,7 +43,7 @@ export const registerSubscribeToCommitteeSubnet = (fastify: IFastifyServer, modu
       const slot = Number(request.body.slot);
       const valid = verify(
         hexToBuffer(request.body.aggregator_pubkey),
-        hashTreeRoot(modules.config.types.Slot, slot),
+        modules.config.types.Slot.hashTreeRoot(slot),
         hexToBuffer(request.body.slot_signature),
         getDomain(
           modules.config,

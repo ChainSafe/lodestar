@@ -1,4 +1,4 @@
-import {Root, SignedBeaconBlock, Slot} from "@chainsafe/eth2.0-types";
+import {SignedBeaconBlock, Slot} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {BulkRepository} from "../repository";
 import {IDatabaseController} from "../../../controller";
@@ -14,12 +14,6 @@ export class BlockArchiveRepository extends BulkRepository<SignedBeaconBlock> {
     db: IDatabaseController
   ) {
     super(config, db, Bucket.blockArchive, config.types.SignedBeaconBlock);
-  }
-
-  public async getByRoot(root: Root): Promise<SignedBeaconBlock|null> {
-    return this.get(
-      await this.db.get(encodeKey(Bucket.blockRootRefs, root))
-    );
   }
 
   public async addMany(blocks: SignedBeaconBlock[]): Promise<void> {

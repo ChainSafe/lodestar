@@ -10,6 +10,7 @@ import * as block from "./block";
 import * as state from "./state";
 import * as validator from "./validator";
 import * as wire from "./wire";
+import * as api from "./api";
 
 import {IBeaconSSZTypes, typeNames} from "../interface";
 
@@ -20,6 +21,7 @@ const allGenerators = {
   ...state,
   ...validator,
   ...wire,
+  ...api,
 };
 
 export function createIBeaconSSZTypes(params: IBeaconParams): IBeaconSSZTypes {
