@@ -2,7 +2,7 @@
  * @module chain/stateTransition/epoch
  */
 
-import {BeaconState} from "@chainsafe/eth2.0-types";
+import {BeaconState, Validator} from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
 import {
@@ -31,10 +31,16 @@ export function processRegistryUpdates(config: IBeaconConfig, state: BeaconState
   });
 
   // Queue validators eligible for activation and not yet dequeued for activation
-  const activationQueue = Array.from(state.validators).filter((validator) =>
-    isEligibleForActivation(config, state, validator)
+  const activationQueue = Array.from(state.validators)
+    .filter((validator) =>
+      isEligibleForActivation(config, state, validator)
     // Order by the sequence of activation_eligibility_epoch setting and then index
-  ).sort((a, b) => (a.activationEligibilityEpoch - b.activationEligibilityEpoch) || 1);
+    )
+    .map((val: Validator, index: number) => {
+      return {val, index};
+    })
+    .sort((a, b) => (a.val.activationEligibilityEpoch - b.val.activationEligibilityEpoch) || a.index - b.index)
+    .map((obj) => obj.val);
   // Dequeued validators for activation up to churn limit
   activationQueue.slice(0, getValidatorChurnLimit(config, state)).forEach((validator) => {
     validator.activationEpoch = computeActivationExitEpoch(config, currentEpoch);
