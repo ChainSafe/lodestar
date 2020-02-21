@@ -40,14 +40,14 @@
     "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha --colors --timeout 12500 'test/unit/**/*.test.ts'"
   },
   "dependencies": {
-    "@chainsafe/bls": "0.2.2",
+    "@chainsafe/bls": "0.3.0",
     "@chainsafe/eth2.0-config": "0.2.1",
     "@chainsafe/eth2.0-params": "0.2.1",
     "@chainsafe/eth2.0-state-transition": "0.2.1",
     "@chainsafe/eth2.0-types": "0.2.1",
     "@chainsafe/eth2.0-utils": "0.1.1",
     "@chainsafe/lodestar-validator": "0.2.1",
-    "@chainsafe/ssz": "0.5.4",
+    "@chainsafe/ssz": "0.6.0",
     "libp2p-pubsub": "~0.4.1",
     "@types/async": "^3.0.1",
     "assert": "^2.0.0",

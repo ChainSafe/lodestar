@@ -56,9 +56,6 @@
     "beacon",
     "blockchain",
     "eth2.0",
-    "ethereum",
-    "serialize",
-    "simple",
-    "ssz"
+    "ethereum"
   ]
 }
