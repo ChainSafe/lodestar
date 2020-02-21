@@ -47,6 +47,7 @@
     "@chainsafe/eth2.0-utils": "0.1.1",
     "@chainsafe/lodestar": "0.2.0",
     "@chainsafe/lodestar-validator": "0.2.1",
+    "@chainsafe/ssz": "^0.6.0",
     "@iarna/toml": "^2.2.3",
     "@types/yargs": "^13.0.2",
     "bigint-buffer": "^1.1.5",
