@@ -1,4 +1,4 @@
-import sinon from "sinon";
+import sinon, { SinonStubbedInstance } from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {ZERO_HASH} from "../../../../../src/constants";
@@ -13,11 +13,13 @@ describe("blockAssembly - deposits", function() {
 
   const sandbox = sinon.createSandbox();
 
-  let opPool;
+  let opPool: SinonStubbedInstance<OpPool>;
+  let depositDataStub: SinonStubbedInstance<DepositDataOperations>;
 
   beforeEach(() => {
     opPool = sandbox.createStubInstance(OpPool);
-    opPool.depositData = sandbox.createStubInstance(DepositDataOperations);
+    depositDataStub = sandbox.createStubInstance(DepositDataOperations);
+    opPool.depositData = depositDStub as unknown as DepositDataOperations;
   });
 
   afterEach(() => {
@@ -27,7 +29,7 @@ describe("blockAssembly - deposits", function() {
   it("return empty array if no pending deposits", async function() {
     const result = await generateDeposits(
       config,
-      opPool,
+      opPool as unknown as OpPool,
       generateState({
         eth1DepositIndex: 1,
       }),
@@ -43,7 +45,7 @@ describe("blockAssembly - deposits", function() {
 
   it("return deposits with valid proofs", async function() {
     const deposits = [generateDepositData(), generateDepositData()];
-    opPool.depositData.getAllBetween.resolves(deposits);
+    depositDataStub.getAllBetween.resolves(deposits);
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
     const tree = depositDataRootList.tree();
 
@@ -56,7 +58,7 @@ describe("blockAssembly - deposits", function() {
     };
     const result = await generateDeposits(
       config,
-      opPool,
+      opPool as unknown as OpPool,
       generateState({
         eth1DepositIndex: 0,
       }),

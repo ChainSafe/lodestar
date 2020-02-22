@@ -22,7 +22,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public chainId: Uint16;
   public networkId: Uint64;
 
-  public constructor({genesisTime, chainId, networkId}) {
+  public constructor({genesisTime, chainId, networkId}: {genesisTime: number64; chainId: uint16; networkId: uint64}) {
     super();
     this.latestState = generateState({genesisTime});
     this.chainId = chainId;

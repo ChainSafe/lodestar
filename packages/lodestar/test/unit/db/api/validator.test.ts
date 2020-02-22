@@ -1,6 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from 'chai-as-promised';
-import sinon from "sinon";
+import sinon, { SinonStubbedInstance, SinonStub } from "sinon";
+import {serialize} from "@chainsafe/ssz";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import * as dbKeys from "../../../../src/db/schema";
 import {Bucket} from "../../../../src/db/schema";
@@ -19,7 +20,7 @@ describe('beacon db api', function () {
 
   const pubKey = Buffer.alloc(48);
 
-  let encodeKeyStub, dbStub, validatorDB: IValidatorDB;
+  let encodeKeyStub: SinonStub<[Bucket, string | number | bigint | Buffer, boolean?], string | Buffer>, dbStub: SinonStubbedInstance<LevelDbController>, validatorDB: IValidatorDB;
 
   beforeEach(() => {
     encodeKeyStub = sandbox.stub(dbKeys, 'encodeKey');

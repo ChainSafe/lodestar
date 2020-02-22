@@ -9,16 +9,21 @@ import {
   number64,
   Slot,
   ValidatorDuty,
-  ValidatorIndex
+  ValidatorIndex,
+  SignedBeaconBlock,
+  CommitteeIndex,
+  Epoch,
+  BLSSignature
 } from "@chainsafe/eth2.0-types";
 
-import {getEmptyBlock} from "../../../../src/chain/genesis/genesis";
+import {getEmptySignedBlock} from "../../../../src/chain/genesis/genesis";
 
 import {IValidatorApi} from "../../../../src/api/rpc/api/validator";
 import {ApiNamespace} from "../../../../src/api";
+import { generateEmptyAttestation } from "../../attestation";
 
 export interface MockValidatorAPIOpts {
-  head?: BeaconBlock;
+  head?: SignedBeaconBlock;
   chainId?: number64;
   validatorIndex?: ValidatorIndex;
   pendingAttestations?: Attestation[];
@@ -31,18 +36,36 @@ export class MockValidatorApi implements IValidatorApi {
   public namespace: ApiNamespace;
   private chainId: number64;
   private validatorIndex: ValidatorIndex;
-  private attestations;
-  private head: BeaconBlock;
+  private attestations: Attestation[];
+  private head: SignedBeaconBlock;
 
   public constructor(opts?: MockValidatorAPIOpts) {
     this.namespace = ApiNamespace.VALIDATOR;
     this.attestations = opts && opts.pendingAttestations || [];
-    this.head = opts && opts.head || getEmptyBlock();
+    this.head = opts && opts.head || getEmptySignedBlock();
     this.chainId = opts && opts.chainId || 0;
     this.validatorIndex = opts && opts.validatorIndex || 1;
   }
 
-  public async getDuties(validatorPublicKeys: BLSPubkey[]): Promise<ValidatorDuty[]> {
+  public async getProposerDuties(epoch: Epoch): Promise<Map<Slot, BLSPubkey>> {
+    return new Map();
+  }
+
+  public async getAttesterDuties(epoch: Epoch, validatorPubKey: BLSPubkey[]): Promise<ValidatorDuty[]> {
+    return [];
+  }
+
+  public async isAggregator(slot: Slot, committeeIndex: CommitteeIndex, slotSignature: BLSSignature): Promise<boolean> {
+    return false;
+  }
+
+  public async publishAggregatedAttestation(
+    aggregated: Attestation, validatorPubKey: BLSPubkey, slotSignature: BLSSignature
+  ): Promise<void> {
+    // do nothing
+  }
+
+  public async getWireAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]> {
     return [];
   }
 
@@ -51,20 +74,20 @@ export class MockValidatorApi implements IValidatorApi {
     return {} as BeaconBlock;
   }
 
-  public async publishBlock(block: BeaconBlock): Promise<void> {
-    this.head = block;
+  public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
+    this.head = signedBlock;
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
     this.attestations.push(attestation);
   }
 
-  public produceAttestation(validatorPubKey: Buffer, pocBit: boolean, slot: number, shard: number): Promise<Attestation> {
-    return undefined;
+  public async produceAttestation(validatorPubKey: Buffer, pocBit: boolean, slot: number, shard: number): Promise<Attestation> {
+    return generateEmptyAttestation();
   }
 
-  public getValidatorIndex(pubKey: Buffer): Promise<ValidatorIndex> {
-    return undefined;
+  public async getValidatorIndex(pubKey: Buffer): Promise<ValidatorIndex> {
+    return 0;
   }
 
 }

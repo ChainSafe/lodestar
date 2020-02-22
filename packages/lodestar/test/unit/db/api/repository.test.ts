@@ -1,4 +1,4 @@
-import sinon from "sinon";
+import sinon, { SinonStubbedInstance } from "sinon";
 import chai, {expect} from "chai";
 import chaiAsPromised from 'chai-as-promised';
 
@@ -36,7 +36,7 @@ describe('database repository', function () {
 
   const sandbox = sinon.createSandbox();
 
-  let repository: TestRepository, controller;
+  let repository: TestRepository, controller: SinonStubbedInstance<LevelDbController>;
 
   beforeEach(function () {
     controller = sandbox.createStubInstance(LevelDbController);
