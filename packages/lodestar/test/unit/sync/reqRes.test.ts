@@ -15,13 +15,12 @@ import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepositor
 import {ReqResp} from "../../../src/network/reqResp";
 import {ReputationStore} from "../../../src/sync/IReputation";
 import {generateEmptySignedBlock} from "../../utils/block";
-import { AnySSZType } from "@chainsafe/ssz";
 import { IBeaconDb } from "../../db";
 
 describe("syncing", function () {
   const sandbox = sinon.createSandbox();
   let syncRpc: SyncReqResp;
-  let chainStub: SinonStubbedInstance<BeaconChain>, networkStub: SinonStubbedInstance<Libp2pNetwork>, repsStub: SinonStubbedInstance<ReputationStore>, logger: WinstonLogger, reqRespStub: SinonStubbedInstance<ReqResp>, hashTreeRootStub: SinonStub<[AnySSZType<any>, any], Buffer>;
+  let chainStub: SinonStubbedInstance<BeaconChain>, networkStub: SinonStubbedInstance<Libp2pNetwork>, repsStub: SinonStubbedInstance<ReputationStore>, logger: WinstonLogger, reqRespStub: SinonStubbedInstance<ReqResp>;
   let dbStub: {
     chain: SinonStubbedInstance<ChainRepository>;
     state: SinonStubbedInstance<StateRepository>;

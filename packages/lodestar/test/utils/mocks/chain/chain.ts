@@ -2,11 +2,9 @@ import {EventEmitter} from "events";
 
 import {
   Attestation,
-  BeaconBlock,
   BeaconState,
-  Deposit,
-  Eth1Data,
   Slot,
+  Number64,
   Uint16,
   Uint64,
   SignedBeaconBlock,
@@ -22,7 +20,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public chainId: Uint16;
   public networkId: Uint64;
 
-  public constructor({genesisTime, chainId, networkId}: {genesisTime: number64; chainId: uint16; networkId: uint64}) {
+  public constructor({genesisTime, chainId, networkId}: {genesisTime: Number64; chainId: Uint16; networkId: Uint64}) {
     super();
     this.latestState = generateState({genesisTime});
     this.chainId = chainId;

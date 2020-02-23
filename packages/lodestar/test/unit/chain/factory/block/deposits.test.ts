@@ -5,7 +5,7 @@ import {ZERO_HASH} from "../../../../../src/constants";
 import {OpPool} from "../../../../../src/opPool";
 import {generateDeposits} from "../../../../../src/chain/factory/block/deposits";
 import {generateState} from "../../../../utils/state";
-import {generateDeposit, generateDepositData} from "../../../../utils/deposit";
+import {generateDepositData} from "../../../../utils/deposit";
 import {DepositDataOperations} from "../../../../../src/opPool/modules";
 import {verifyMerkleBranch} from "@chainsafe/eth2.0-utils";
 
@@ -19,7 +19,7 @@ describe("blockAssembly - deposits", function() {
   beforeEach(() => {
     opPool = sandbox.createStubInstance(OpPool);
     depositDataStub = sandbox.createStubInstance(DepositDataOperations);
-    opPool.depositData = depositDStub as unknown as DepositDataOperations;
+    opPool.depositData = depositDataStub as unknown as DepositDataOperations;
   });
 
   afterEach(() => {

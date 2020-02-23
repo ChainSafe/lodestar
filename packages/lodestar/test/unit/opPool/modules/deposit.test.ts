@@ -9,10 +9,10 @@ describe("opPool - deposits", function () {
   const sandbox = sinon.createSandbox();
 
   let dbStub: {
-    deposit: SinonStubbedInstance<DepositRepository>;
+    depositData: SinonStubbedInstance<DepositDataRepository>;
   };
 
-  let service: DepositsOperations;
+  let service: DepositDataOperations;
 
   beforeEach(function () {
     dbStub = {
