@@ -29,7 +29,7 @@
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:release": "yarn clean && yarn run build && yarn run build:docs",
     "build:types": "tsc --incremental --declaration --outDir lib --project tsconfig.build.json --emitDeclarationOnly",
-    "check-types": "tsc --incremental --noEmit",
+    "check-types": "tsc --noEmit",
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo && rm -f tsconfig.build.tsbuildinfo",
     "coverage": "codecov -F lodestar",
     "lint": "eslint --color --ext .ts src/",
