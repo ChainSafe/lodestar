@@ -1,12 +1,12 @@
 import assert from "assert";
 import {utils} from "libp2p-pubsub";
-import Gossipsub, {IGossipMessage, Registrar, Options} from "libp2p-gossipsub";
+import Gossipsub, {IGossipMessage, Options, Registrar} from "libp2p-gossipsub";
 import {Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
 
-import {IGossipMessageValidator, GossipObject, GossipMessageValidatorFn} from "./interface";
-import {getGossipTopic, isAttestationSubnetTopic, getSubnetFromAttestationSubnetTopic} from "./utils";
+import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator} from "./interface";
+import {getGossipTopic, getSubnetFromAttestationSubnetTopic, isAttestationSubnetTopic} from "./utils";
 import {GossipEvent} from "./constants";
 import {GOSSIP_MAX_SIZE} from "../../constants";
 import {hash} from "@chainsafe/eth2.0-utils";

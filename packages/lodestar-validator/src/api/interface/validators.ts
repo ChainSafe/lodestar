@@ -49,4 +49,8 @@ export interface IValidatorApi {
   ): Promise<void>;
 
   getWireAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]>;
+  
+  subscribeCommitteeSubnet(
+    slot: Slot, slotSignature: BLSSignature, committeeIndex: CommitteeIndex, aggregatorPubkey: BLSPubkey
+  ): Promise<void>;
 }

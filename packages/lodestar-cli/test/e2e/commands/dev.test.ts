@@ -73,7 +73,7 @@ describe("e2e interop simulation", function() {
     const libp2p = await createNodeJsLibp2p(peerId, {});
     node = new BeaconNode(conf, {config: minimalConfig, logger, eth1: new InteropEth1Notifier(), libp2p});
 
-    const genesisTime = Math.round(Date.now()/1000);
+    const genesisTime = Math.floor(Date.now()/1000);
     const depositDataRootList = minimalConfig.types.DepositDataRootList.tree.defaultValue();
     const state = quickStartState(minimalConfig, depositDataRootList, genesisTime, VALIDATOR_COUNT);
     await node.chain.initializeBeaconChain(state, depositDataRootList);

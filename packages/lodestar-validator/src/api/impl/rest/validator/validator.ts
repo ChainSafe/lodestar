@@ -41,7 +41,7 @@ export class RestValidatorApi implements IValidatorApi {
     const hexPubKeys = validatorPubKeys.map(toHexString);
     const url = `/duties/${epoch.toString()}/attester?validator_pubkeys=${JSON.stringify(hexPubKeys)}`;
     const responseData = await this.client.get<Json[]>(url);
-    return responseData.map(value =>this.config.types.ValidatorDuty.fromJson(value));
+    return responseData.map(value => this.config.types.ValidatorDuty.fromJson(value));
   }
 
   public async publishAggregatedAttestation(
@@ -88,6 +88,23 @@ export class RestValidatorApi implements IValidatorApi {
   public async isAggregator(slot: Slot, committeeIndex: CommitteeIndex, slotSignature: BLSSignature): Promise<boolean> {
     return this.client.get<boolean>(
       `/duties/${slot}/aggregator?committee_index=${committeeIndex}&slot_signature=${toHexString(slotSignature)}`
+    );
+  }
+  
+  public async subscribeCommitteeSubnet(
+    slot: Slot,
+    slotSignature: BLSSignature,
+    committeeIndex: CommitteeIndex,
+    aggregatorPubkey: BLSPubkey
+  ): Promise<void> {
+    return this.client.post(
+      "/beacon_committee_subscription",
+      this.config.types.SubscribeToCommitteeSubnetPayload.toJson({
+        slot,
+        slotSignature,
+        committeeIndex,
+        aggregatorPubkey
+      })
     );
   }
 }

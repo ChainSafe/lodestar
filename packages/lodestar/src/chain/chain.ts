@@ -39,6 +39,8 @@ import {Block} from "ethers/providers";
 import FastPriorityQueue from "fastpriorityqueue";
 import {AttestationProcessor} from "./attestation";
 import {sleep} from "../util/sleep";
+import {IBeaconClock} from "./clock/interface";
+import {LocalClock} from "./clock/local/LocalClock";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -61,6 +63,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public forkChoice: ILMDGHOST;
   public chainId: Uint16;
   public networkId: Uint64;
+  public clock: IBeaconClock;
 
   private readonly config: IBeaconConfig;
   private db: IBeaconDb;
@@ -103,12 +106,15 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     }
     this.latestState = state;
     this.logger.info("Chain started, waiting blocks and attestations");
+    this.clock = new LocalClock(this.config, this.latestState.genesisTime);
+    await this.clock.start();
     this.isPollingBlocks = true;
     this.pollBlock();
   }
 
   public async stop(): Promise<void> {
     await this.forkChoice.stop();
+    await this.clock.stop();
     this.eth1.removeListener("block", this.checkGenesis);
     this.isPollingBlocks = false;
     this.logger.warn(`Discarding ${this.blockProcessingQueue.size} blocks from queue...`);
@@ -262,11 +268,11 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   };
 
   /**
-     *
-     * @param block
-     * @param state
-     * @param trusted if state transition should trust that block is valid
-     */
+   *
+   * @param signedBlock
+   * @param state
+   * @param trusted if state transition should trust that block is valid
+   */
   private async runStateTransition(
     signedBlock: SignedBeaconBlock,
     state: BeaconState,

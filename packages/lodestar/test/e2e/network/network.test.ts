@@ -3,7 +3,7 @@ import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {Libp2pNetwork} from "../../../src/network";
 import {createNode} from "../../unit/network/util";
-import {generateEmptyAttestation} from "../../utils/attestation";
+import {generateEmptyAggregateAndProof, generateEmptyAttestation} from "../../utils/attestation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
@@ -85,22 +85,21 @@ describe("[network] network", function () {
     ]);
     await netA.connect(netB.peerInfo);
     await connected;
-    let count = 0;
+    const spy = sinon.spy();
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
-      netA.gossip.on(GossipEvent.BLOCK, () => {
-        count ++;
-      });
-      setTimeout(() => resolve(count), 1000);
+      netA.gossip.subscribeToBlock(spy);
+      setTimeout(resolve, 1000);
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     validator.isValidIncomingBlock.resolves(true);
     const block = generateEmptySignedBlock();
     block.message.slot = 2020;
     for (let i = 0; i < 5; i++) {
-      netB.gossip.publishBlock(block);
+      await netB.gossip.publishBlock(block);
     }
-    expect(await received).to.be.equal(1);
+    await received;
+    expect(spy.callCount).to.be.equal(1);
   });
   it("should receive blocks on subscription", async function () {
     const connected = Promise.all([
@@ -111,7 +110,7 @@ describe("[network] network", function () {
     await connected;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
-      netA.gossip.on(GossipEvent.BLOCK, (signedBlock: SignedBeaconBlock): void => {
+      netA.gossip.subscribeToBlock((signedBlock: SignedBeaconBlock): void => {
         resolve(signedBlock);
       });
     });
@@ -123,7 +122,7 @@ describe("[network] network", function () {
     const receivedBlock = await received;
     expect(receivedBlock).to.be.deep.equal(block);
   });
-  it("should receive attestations on subscription", async function () {
+  it("should receive aggregate on subscription", async function () {
     const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
@@ -132,18 +131,14 @@ describe("[network] network", function () {
     await connected;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
-      netA.gossip.on(GossipEvent.ATTESTATION, (attestation: Attestation): void => {resolve(attestation);});
+      netA.gossip.subscribeToAttestation(resolve);
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     validator.isValidIncomingUnaggregatedAttestation.resolves(true);
-    const attestation = generateEmptyAttestation();
-    attestation.data.slot = 2020;
-    netB.gossip.publishCommiteeAttestation(attestation);
-    const receivedAttestation = await received;
-    expect(receivedAttestation).to.be.deep.equal(attestation);
+    await netB.gossip.publishAggregatedAttestation(generateEmptyAggregateAndProof());
+    await received;
   });
   it("should receive shard attestations on subscription", async function () {
-    const committeeIndex = 10;
     const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
@@ -152,14 +147,13 @@ describe("[network] network", function () {
     await connected;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
-      // @ts-ignore
-      netA.gossip.on(GossipEvent.ATTESTATION, resolve);
+      netA.gossip.subscribeToAttestationSubnet(0, resolve);
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     const attestation = generateEmptyAttestation();
-    attestation.data.index = committeeIndex;
-    validator.isValidIncomingUnaggregatedAttestation.resolves(true);
-    netB.gossip.publishCommiteeAttestation(attestation);
+    attestation.data.index = 0;
+    validator.isValidIncomingCommitteeAttestation.resolves(true);
+    await netB.gossip.publishCommiteeAttestation(attestation);
     await received;
   });
 });

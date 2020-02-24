@@ -73,4 +73,10 @@ export class MockValidatorApi implements IValidatorApi {
   publishBlock(beaconBlock: SignedBeaconBlock): Promise<void> {
     return undefined;
   }
+
+  subscribeCommitteeSubnet(
+    slot: number, slotSignature: Buffer, committeeIndex: number, aggregatorPubkey: Buffer
+  ): Promise<void> {
+    return undefined;
+  }
 }

@@ -12,13 +12,15 @@ import {
 } from "@chainsafe/eth2.0-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {generateState} from "../../state";
-import { TreeBacked, List } from "@chainsafe/ssz";
+import {List, TreeBacked} from "@chainsafe/ssz";
+import {IBeaconClock} from "../../../../src/chain/clock/interface";
 
 export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public latestState: BeaconState;
   public forkChoice: ILMDGHOST;
   public chainId: Uint16;
   public networkId: Uint64;
+  public clock: IBeaconClock;
 
   public constructor({genesisTime, chainId, networkId}: {genesisTime: Number64; chainId: Uint16; networkId: Uint64}) {
     super();

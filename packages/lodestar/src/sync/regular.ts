@@ -4,14 +4,16 @@
 
 import {toHexString} from "@chainsafe/ssz";
 import {
-  Attestation,
-  Checkpoint,
-  ProposerSlashing,
-  AttesterSlashing,
   AggregateAndProof,
+  Attestation,
+  AttesterSlashing,
+  Checkpoint,
+  CommitteeIndex,
+  ProposerSlashing,
   Root,
   SignedBeaconBlock,
   SignedVoluntaryExit,
+  Slot,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
@@ -22,6 +24,7 @@ import {OpPool} from "../opPool";
 import {ISyncModules} from "./index";
 import {ISyncOptions} from "./options";
 import {GossipEvent} from "../network/gossip/constants";
+import {AttestationCollector} from "./subnet/attestation-collector";
 
 export type IRegularSyncModules = Pick<ISyncModules, "config"|"db"|"chain"|"opPool"|"network"|"logger">;
 
@@ -30,6 +33,7 @@ export class RegularSync {
   private db: IBeaconDb;
   private chain: IBeaconChain;
   private network: INetwork;
+  private attestationCollector: AttestationCollector;
   private opPool: OpPool;
   private logger: ILogger;
 
@@ -40,18 +44,22 @@ export class RegularSync {
     this.network = modules.network;
     this.opPool = modules.opPool;
     this.logger = modules.logger;
+    this.attestationCollector = new AttestationCollector(
+      this.config,
+      {chain: this.chain, network: this.network, opPool: this.opPool}
+    );
   }
 
   public async start(): Promise<void> {
     this.logger.verbose("regular sync start");
-    this.network.gossip.on(GossipEvent.BLOCK, this.receiveBlock);
-    this.network.gossip.on(GossipEvent.ATTESTATION_SUBNET, this.receiveCommitteeAttestation);
-    this.network.gossip.on(GossipEvent.AGGREGATE_AND_PROOF, this.receiveAggregateAndProof);
+    await this.attestationCollector.start();
+    this.network.gossip.subscribeToBlock(this.receiveBlock);
+    this.network.gossip.subscribeToAggregateAndProof(this.receiveAggregateAndProof);
     // For interop only, will be removed prior to mainnet
-    this.network.gossip.on(GossipEvent.ATTESTATION, this.receiveAttestation);
-    this.network.gossip.on(GossipEvent.VOLUNTARY_EXIT, this.receiveVoluntaryExit);
-    this.network.gossip.on(GossipEvent.PROPOSER_SLASHING, this.receiveProposerSlashing);
-    this.network.gossip.on(GossipEvent.ATTESTER_SLASHING, this.receiveAttesterSlashing);
+    this.network.gossip.subscribeToAttestation(this.receiveAttestation);
+    this.network.gossip.subscribeToVoluntaryExit(this.receiveVoluntaryExit);
+    this.network.gossip.subscribeToProposerSlashing(this.receiveProposerSlashing);
+    this.network.gossip.subscribeToAttesterSlashing(this.receiveAttesterSlashing);
     this.chain.on("processedBlock", this.onProcessedBlock);
     this.chain.on("processedAttestation", this.onProcessedAttestation);
     this.chain.on("unknownBlockRoot", this.onUnknownBlockRoot);
@@ -60,13 +68,13 @@ export class RegularSync {
 
   public async stop(): Promise<void> {
     this.logger.verbose("regular sync stop");
-    this.network.gossip.removeListener(GossipEvent.BLOCK, this.receiveBlock);
-    this.network.gossip.removeListener(GossipEvent.ATTESTATION_SUBNET, this.receiveCommitteeAttestation);
-    this.network.gossip.removeListener(GossipEvent.AGGREGATE_AND_PROOF, this.receiveAggregateAndProof);
-    this.network.gossip.removeListener(GossipEvent.ATTESTATION, this.receiveAttestation);
-    this.network.gossip.removeListener(GossipEvent.VOLUNTARY_EXIT, this.receiveVoluntaryExit);
-    this.network.gossip.removeListener(GossipEvent.PROPOSER_SLASHING, this.receiveProposerSlashing);
-    this.network.gossip.removeListener(GossipEvent.ATTESTER_SLASHING, this.receiveAttesterSlashing);
+    await this.attestationCollector.stop();
+    this.network.gossip.unsubscribe(GossipEvent.BLOCK, this.receiveBlock);
+    this.network.gossip.unsubscribe(GossipEvent.AGGREGATE_AND_PROOF, this.receiveAggregateAndProof);
+    this.network.gossip.unsubscribe(GossipEvent.ATTESTATION, this.receiveAttestation);
+    this.network.gossip.unsubscribe(GossipEvent.VOLUNTARY_EXIT, this.receiveVoluntaryExit);
+    this.network.gossip.unsubscribe(GossipEvent.PROPOSER_SLASHING, this.receiveProposerSlashing);
+    this.network.gossip.unsubscribe(GossipEvent.ATTESTER_SLASHING, this.receiveAttesterSlashing);
     this.chain.removeListener("processedBlock", this.onProcessedBlock);
     this.chain.removeListener("processedAttestation", this.onProcessedAttestation);
     this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
@@ -77,30 +85,13 @@ export class RegularSync {
     await this.chain.receiveBlock(signedBlock);
   };
 
-  public receiveCommitteeAttestation = async (
-    attestationSubnet: {attestation: Attestation; subnet: number},
-  ): Promise<void> => {
-    const attestation = attestationSubnet.attestation;
-
-    // to see if we need special process for these unaggregated attestations
-    // not in the spec atm
-    // send attestation on to other modules
-    await Promise.all([
-      this.opPool.attestations.receive(attestation),
-      this.chain.receiveAttestation(attestation),
-    ]);
-  };
-
   public receiveAggregateAndProof = async (aggregate: AggregateAndProof): Promise<void> => {
     await this.opPool.aggregateAndProofs.receive(aggregate);
   };
 
   public receiveAttestation = async (attestation: Attestation): Promise<void> => {
     // send attestation on to other modules
-    await Promise.all([
-      this.opPool.attestations.receive(attestation),
-      this.chain.receiveAttestation(attestation),
-    ]);
+    await this.opPool.attestations.receive(attestation);
   };
 
   public receiveVoluntaryExit = async (voluntaryExit: SignedVoluntaryExit): Promise<void> => {
@@ -114,6 +105,10 @@ export class RegularSync {
   public receiveAttesterSlashing = async (attesterSlashing: AttesterSlashing): Promise<void> => {
     await this.opPool.attesterSlashings.receive(attesterSlashing);
   };
+
+  public collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
+    this.attestationCollector.subscribeToCommitteeAttestations(slot, committeeIndex);
+  }
 
   private onProcessedBlock = (signedBlock: SignedBeaconBlock): void => {
     this.network.gossip.publishBlock(signedBlock);

@@ -16,6 +16,15 @@ export class BlockArchiveRepository extends BulkRepository<SignedBeaconBlock> {
     super(config, db, Bucket.blockArchive, config.types.SignedBeaconBlock);
   }
 
+  public async addMany(blocks: SignedBeaconBlock[]): Promise<void> {
+    await this.db.batchPut(
+      blocks.map((block) => ({
+        key: encodeKey(this.bucket, this.getId(block)),
+        value: this.type.serialize(block)
+      }))
+    );
+  }
+
   public getId(value: SignedBeaconBlock): Slot {
     return value.message.slot;
   }
@@ -31,7 +40,7 @@ export class BlockArchiveRepository extends BulkRepository<SignedBeaconBlock> {
       gt: encodeKey(this.bucket, safeLowerLimit),
       lt: encodeKey(this.bucket, safeUpperLimit),
     });
-    const processedData = (data || [])
+    return (data || [])
       .map((datum) => this.type.deserialize(datum))
       .filter(signedBlock => {
         if (step !== null && typeof safeLowerLimit === "number") {
@@ -40,6 +49,5 @@ export class BlockArchiveRepository extends BulkRepository<SignedBeaconBlock> {
           return true;
         }
       });
-    return processedData;
   }
 }

@@ -7,6 +7,7 @@ import {
 
 import {ILMDGHOST} from "./forkChoice";
 import StrictEventEmitter from "strict-event-emitter-types";
+import {IBeaconClock} from "./clock/interface";
 
 export interface IChainEvents {
   unknownBlockRoot: (root: Root) => void;
@@ -26,6 +27,7 @@ export type ChainEventEmitter = StrictEventEmitter<EventEmitter, IChainEvents>;
 export interface IBeaconChain extends ChainEventEmitter {
   latestState: BeaconState|null;
   forkChoice: ILMDGHOST;
+  clock: IBeaconClock;
   chainId: Uint16;
   networkId: Uint64;
   /**

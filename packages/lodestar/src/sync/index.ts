@@ -32,6 +32,9 @@ export interface ISyncModules {
  * The strategy may differ depending on whether the chain is synced or not
  */
 export class Sync extends EventEmitter {
+
+  public regularSync: RegularSync;
+
   private opts: ISyncOptions;
   private config: IBeaconConfig;
   private chain: IBeaconChain;
@@ -42,7 +45,6 @@ export class Sync extends EventEmitter {
   private logger: ILogger;
   //array of valid peers (peer on same fork)
   private peers: PeerInfo[] = [];
-  private regularSync: RegularSync;
   private initialSync: InitialSync;
   private waitingForPeer = true;
 
@@ -93,6 +95,7 @@ export class Sync extends EventEmitter {
   }
 
   private startRegularSync = (): void => {
+    this.emit("regularSyncStarted");
     this.regularSync.start();
   };
 
