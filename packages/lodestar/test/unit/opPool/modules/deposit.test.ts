@@ -1,4 +1,4 @@
-import sinon from "sinon";
+import sinon, { SinonStubbedInstance } from "sinon";
 import {expect} from "chai";
 import {DepositDataOperations} from "../../../../src/opPool/modules";
 import {generateDepositData} from "../../../utils/deposit";
@@ -8,13 +8,17 @@ describe("opPool - deposits", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let dbStub, service;
+  let dbStub: {
+    depositData: SinonStubbedInstance<DepositDataRepository>;
+  };
+
+  let service: DepositDataOperations;
 
   beforeEach(function () {
     dbStub = {
       depositData: sandbox.createStubInstance(DepositDataRepository)
     };
-    service = new DepositDataOperations(dbStub.depositData);
+    service = new DepositDataOperations(dbStub.depositData as unknown as DepositDataRepository);
   });
 
   afterEach(function () {

@@ -1,9 +1,10 @@
 import {EventEmitter} from "events";
 
-import {Hash, Deposit, number64} from "@chainsafe/eth2.0-types";
+import {Root, Deposit, number64, Eth1Data, BeaconState} from "@chainsafe/eth2.0-types";
 
 import {IEth1Notifier, IEthersEth1Options} from "../../../../src/eth1";
 import {Block} from "ethers/providers";
+import { IBeaconConfig } from "@chainsafe/eth2.0-config";
 
 export class MockEth1Notifier extends EventEmitter implements IEth1Notifier {
   public constructor(opts: IEthersEth1Options) {
@@ -37,7 +38,7 @@ export class MockEth1Notifier extends EventEmitter implements IEth1Notifier {
     return [];
   }
 
-  public async depositRoot(): Promise<Hash> {
+  public async depositRoot(block?: string | number): Promise<Root> {
     return Buffer.alloc(32);
   }
 
@@ -63,4 +64,13 @@ export class MockEth1Notifier extends EventEmitter implements IEth1Notifier {
   public async processPastDeposits(fromBlock: string | number, toBlock?: string | number): Promise<void> {
     return undefined;
   }
+
+  public async getEth1Vote(config: IBeaconConfig, state: BeaconState, previousEth1Distance: number64): Promise<Eth1Data> {
+    return undefined;
+  }
+
+  public async getEth1Data(eth1Head: Block, distance: number64): Promise<Eth1Data> {
+    return undefined;
+  }
+
 }

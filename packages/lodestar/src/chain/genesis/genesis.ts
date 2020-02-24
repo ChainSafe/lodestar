@@ -12,6 +12,7 @@ import {
   Number64,
   Bytes32,
   Fork,
+  SignedBeaconBlock,
 } from "@chainsafe/eth2.0-types";
 import {IBeaconConfig} from "@chainsafe/eth2.0-config";
 
@@ -132,6 +133,17 @@ export function getEmptyBlockBody(): BeaconBlockBody {
     attestations: [],
     deposits: [],
     voluntaryExits: [],
+  };
+}
+
+/**
+ * Get an empty [[BeaconBlock]].
+ */
+export function getEmptySignedBlock(): SignedBeaconBlock {
+  const block = getEmptyBlock();
+  return {
+    message: block,
+    signature: Buffer.alloc(96),
   };
 }
 

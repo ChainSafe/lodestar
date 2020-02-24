@@ -1,4 +1,4 @@
-import sinon from "sinon";
+import sinon, { SinonStub } from "sinon";
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
@@ -7,11 +7,13 @@ import {BeaconDb, IBeaconDb} from "../../../../../src/db/api";
 import {assembleAttestation} from "../../../../../src/chain/factory/attestation";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateAttestationData} from "../../../../utils/attestation";
+import { IBeaconConfig } from "@chainsafe/eth2.0-config";
+import { BeaconState, BeaconBlock, AttestationData } from "@chainsafe/eth2.0-types";
 
 describe("assemble attestation", function () {
 
   const sandbox = sinon.createSandbox();
-  let assembleAttestationDataStub, dbStub: IBeaconDb;
+  let assembleAttestationDataStub: SinonStub<[IBeaconConfig, IBeaconDb, BeaconState, BeaconBlock, number, number], Promise<AttestationData>>, dbStub: IBeaconDb;
 
   beforeEach(() => {
     assembleAttestationDataStub = sandbox.stub(
@@ -34,7 +36,7 @@ describe("assemble attestation", function () {
     expect(result).to.not.be.null;
     expect(result.data).to.be.equal(attestationData);
     expect(state.slot).to.be.equal(1);
-    expect(assembleAttestationDataStub.calledOnceWith(dbStub, state, generateEmptyBlock(), 2));
+    expect(assembleAttestationDataStub.calledOnceWith(config, dbStub, state, generateEmptyBlock(), 2, 0));
   });
 
 });
