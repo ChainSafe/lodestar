@@ -85,22 +85,21 @@ describe("[network] network", function () {
     ]);
     await netA.connect(netB.peerInfo);
     await connected;
-    let count = 0;
+    const spy = sinon.spy();
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
-      netA.gossip.on(GossipEvent.BLOCK, () => {
-        count ++;
-      });
-      setTimeout(() => resolve(count), 1000);
+      netA.gossip.subscribeToBlock(spy);
+      setTimeout(resolve, 1000);
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     validator.isValidIncomingBlock.resolves(true);
     const block = generateEmptySignedBlock();
     block.message.slot = 2020;
     for (let i = 0; i < 5; i++) {
-      netB.gossip.publishBlock(block);
+      await netB.gossip.publishBlock(block);
     }
-    expect(await received).to.be.equal(1);
+    await received;
+    expect(spy.callCount).to.be.equal(1);
   });
   it("should receive blocks on subscription", async function () {
     const connected = Promise.all([
