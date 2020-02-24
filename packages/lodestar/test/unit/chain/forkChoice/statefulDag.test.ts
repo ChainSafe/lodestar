@@ -2,7 +2,7 @@ import {assert} from "chai";
 
 import {StatefulDagLMDGHOST} from "../../../../src/chain/forkChoice/statefulDag/lmdGhost";
 import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import sinon from "sinon";
+import sinon, {SinonFakeTimers} from "sinon";
 
 describe("StatefulDagLMDGHOST", () => {
   const genesis = Buffer.from("genesis");
@@ -14,13 +14,14 @@ describe("StatefulDagLMDGHOST", () => {
   const f = Buffer.from("f");
   const g = Buffer.from("g");
   const h = Buffer.from("h");
+  let clock: SinonFakeTimers;
 
   beforeEach(() => {
-    this.clock = sinon.useFakeTimers();
+    clock = sinon.useFakeTimers();
   });
 
   afterEach(() => {
-    this.clock.restore();
+    clock.restore();
   });
 
   it("should accept blocks to create a DAG", () => {

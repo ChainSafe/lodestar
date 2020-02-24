@@ -14,6 +14,7 @@ import Libp2p from "libp2p";
 import {GossipEvent} from "../../../src/network/gossip/constants";
 import sinon from "sinon";
 import { GossipMessageValidator } from "../../../src/network/gossip/validator";
+import { SignedBeaconBlock, Attestation } from "@chainsafe/eth2.0-types";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -77,6 +78,30 @@ describe("[network] network", function () {
     expect(netA.getPeers().length).to.equal(0);
     expect(netB.getPeers().length).to.equal(0);
   });
+  it("should not receive duplicate block", async function() {
+    const connected = Promise.all([
+      new Promise((resolve) => netA.on("peer:connect", resolve)),
+      new Promise((resolve) => netB.on("peer:connect", resolve)),
+    ]);
+    await netA.connect(netB.peerInfo);
+    await connected;
+    let count = 0;
+    const received = new Promise((resolve, reject) => {
+      setTimeout(reject, 4000);
+      netA.gossip.on(GossipEvent.BLOCK, () => {
+        count ++;
+      });
+      setTimeout(() => resolve(count), 1000);
+    });
+    await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
+    validator.isValidIncomingBlock.resolves(true);
+    const block = generateEmptySignedBlock();
+    block.message.slot = 2020;
+    for (let i = 0; i < 5; i++) {
+      netB.gossip.publishBlock(block);
+    }
+    expect(await received).to.be.equal(1);
+  });
   it("should receive blocks on subscription", async function () {
     const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
@@ -86,12 +111,17 @@ describe("[network] network", function () {
     await connected;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
-      netA.gossip.subscribeToBlock(resolve);
+      netA.gossip.subscribeToBlock((signedBlock: SignedBeaconBlock): void => {
+        resolve(signedBlock);
+      });
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     validator.isValidIncomingBlock.resolves(true);
-    netB.gossip.publishBlock(generateEmptySignedBlock());
-    await received;
+    const block = generateEmptySignedBlock();
+    block.message.slot = 2020;
+    netB.gossip.publishBlock(block);
+    const receivedBlock = await received;
+    expect(receivedBlock).to.be.deep.equal(block);
   });
   it("should receive aggregate on subscription", async function () {
     const connected = Promise.all([

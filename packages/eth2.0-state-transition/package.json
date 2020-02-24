@@ -34,16 +34,16 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/bit-utils": "0.1.6",
-    "@chainsafe/bls": "0.2.2",
+    "@chainsafe/bls": "0.3.0",
     "@chainsafe/eth2.0-config": "0.2.1",
     "@chainsafe/eth2.0-utils": "0.1.1",
-    "@chainsafe/ssz": "^0.5.4",
+    "@chainsafe/ssz": "^0.6.0",
     "bigint-buffer": "^1.1.5",
     "bn.js": "^5.0.0",
     "buffer-xor": "^2.0.2"
   },
   "devDependencies": {
-    "@types/chai": "^4.1.7",
+    "@types/chai": "4.2.0",
     "@types/mocha": "^5.2.7",
     "chai": "^4.2.0",
     "mocha": "^6.2.0"

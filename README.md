@@ -9,27 +9,6 @@
 Welcome to the ChainSafe lodestar monorepo!
 This repository contains a suite of Ethereum 2.0 packages.
 
-### [@chainsafe/bls](/packages/bls)
-Ethereum 2.0 BLS signature verification
-
-[![npm](https://img.shields.io/npm/v/@chainsafe/bls)](https://www.npmjs.com/package/@chainsafe/bls)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/bls)
-
-### [@chainsafe/ssz](/packages/ssz)
-Simple Serialize
-
-[![npm](https://img.shields.io/npm/v/@chainsafe/ssz)](https://www.npmjs.com/package/@chainsafe/ssz)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/ssz)
-
-### [@chainsafe/ssz-type-schema](/packages/ssz-type-schema)
-Simple Serialize Type Schema
-
-[![npm](https://img.shields.io/npm/v/@chainsafe/ssz-type-schema)](https://www.npmjs.com/package/@chainsafe/ssz-type-schema)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/ssz-type-schema)
-
 ### [@chainsafe/eth2.0-types](/packages/eth2.0-types)
 Typescript types for Ethereum 2.0 datastructures
 

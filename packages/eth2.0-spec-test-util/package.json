@@ -44,7 +44,7 @@
   ],
   "dependencies": {
     "@chainsafe/eth2.0-utils": "^0.1.1",
-    "@chainsafe/ssz": "^0.5.4",
+    "@chainsafe/ssz": "^0.6.0",
     "camelcase": "^5.3.1",
     "chai": "^4.2.0",
     "deepmerge": "^4.0.0",
@@ -54,7 +54,7 @@
   },
   "devDependencies": {
     "@types/camelcase": "^5.2.0",
-    "@types/chai": "^4.1.7",
+    "@types/chai": "4.2.0",
     "@types/deepmerge": "^2.2.0",
     "@types/js-yaml": "^3.12.1",
     "@types/mocha": "^5.2.7"

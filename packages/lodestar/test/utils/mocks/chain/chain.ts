@@ -1,6 +1,15 @@
 import {EventEmitter} from "events";
 
-import {Attestation, BeaconState, Root, SignedBeaconBlock, Slot, Uint16, Uint64} from "@chainsafe/eth2.0-types";
+import {
+  Attestation,
+  BeaconState,
+  Slot,
+  Number64,
+  Uint16,
+  Uint64,
+  SignedBeaconBlock,
+  Root
+} from "@chainsafe/eth2.0-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {generateState} from "../../state";
 import {List, TreeBacked} from "@chainsafe/ssz";
@@ -13,7 +22,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public networkId: Uint64;
   public clock: IBeaconClock;
 
-  public constructor({genesisTime, chainId, networkId}) {
+  public constructor({genesisTime, chainId, networkId}: {genesisTime: Number64; chainId: Uint16; networkId: Uint64}) {
     super();
     this.latestState = generateState({genesisTime});
     this.chainId = chainId;
