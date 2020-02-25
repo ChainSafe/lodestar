@@ -4,15 +4,15 @@
 
 import assert from "assert";
 
-import { fromHexString, toHexString } from "@chainsafe/ssz";
-import { Gwei, Slot, ValidatorIndex, Number64, Checkpoint, Epoch } from "@chainsafe/lodestar-types";
-import { IBeaconConfig } from "@chainsafe/lodestar-config";
-import { computeSlotsSinceEpochStart, getCurrentSlot } from "@chainsafe/lodestar-beacon-state-transition";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {Gwei, Slot, ValidatorIndex, Number64, Checkpoint, Epoch} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {computeSlotsSinceEpochStart, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
-import { ILMDGHOST } from "../interface";
+import {ILMDGHOST} from "../interface";
 
-import { AttestationAggregator, RootHex, } from "./attestationAggregator";
-import { sleep } from "../../../util/sleep";
+import {AttestationAggregator, RootHex,} from "./attestationAggregator";
+import {sleep} from "../../../util/sleep";
 
 
 /**
@@ -49,7 +49,7 @@ class Node {
    */
   public children: Record<RootHex, Node>;
 
-  public constructor({ slot, blockRoot, parent }: { slot: Slot; blockRoot: RootHex; parent: Node }) {
+  public constructor({slot, blockRoot, parent}: { slot: Slot; blockRoot: RootHex; parent: Node }) {
     this.slot = slot;
     this.blockRoot = blockRoot;
     this.parent = parent;
@@ -312,20 +312,20 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     if (!this.justified) {
       return null;
     }
-    return { root: fromHexString(this.justified.node.blockRoot), epoch: this.justified.epoch };
+    return {root: fromHexString(this.justified.node.blockRoot), epoch: this.justified.epoch};
   }
 
   public getFinalized(): Checkpoint {
     if (!this.finalized) {
       return null;
     }
-    return { root: fromHexString(this.finalized.node.blockRoot), epoch: this.finalized.epoch };
+    return {root: fromHexString(this.finalized.node.blockRoot), epoch: this.finalized.epoch};
   }
 
   private setFinalized(checkpoint: Checkpoint): void {
     this.synced = false;
     const rootHex = toHexString(checkpoint.root);
-    this.finalized = { node: this.nodes[rootHex], epoch: checkpoint.epoch };
+    this.finalized = {node: this.nodes[rootHex], epoch: checkpoint.epoch};
     this.prune();
     this.aggregator.prune();
   }
@@ -338,9 +338,9 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   }
 
   private setJustified(checkpoint: Checkpoint): void {
-    const { root: blockRoot, epoch } = checkpoint;
+    const {root: blockRoot, epoch} = checkpoint;
     const rootHex = toHexString(blockRoot);
-    this.justified = { node: this.nodes[rootHex], epoch };
+    this.justified = {node: this.nodes[rootHex], epoch};
   }
 
   private getAncestor(root: RootHex, slot: Slot): RootHex | null {
