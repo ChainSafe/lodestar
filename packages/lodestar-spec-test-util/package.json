@@ -35,10 +35,7 @@
   },
   "keywords": [
     "ethereum",
-    "eth2.0",
-    "tests",
-    "spec-test",
-    "yaml-test",
+    "eth2",
     "beacon",
     "blockchain"
   ],

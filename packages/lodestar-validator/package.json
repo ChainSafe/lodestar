@@ -35,10 +35,9 @@
     "url": "git+https://github.com:ChainSafe/lodestar.git"
   },
   "keywords": [
-    "Ethereum",
+    "ethereum",
+    "eth2",
     "beacon",
-    "future",
-    "p2p",
     "blockchain"
   ],
   "dependencies": {
