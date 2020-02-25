@@ -1,10 +1,10 @@
-import {number64} from "@chainsafe/eth2.0-types";
+import {Number64} from "@chainsafe/lodestar-types";
 
 export interface INetworkOptions {
-  maxPeers: number64;
+  maxPeers: Number64;
   multiaddrs: string[];
   bootnodes: string[];
-  rpcTimeout: number64;
+  rpcTimeout: Number64;
   connectTimeout: number;
   disconnectTimeout: number;
 }

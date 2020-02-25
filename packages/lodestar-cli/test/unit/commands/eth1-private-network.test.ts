@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {Eth1PrivateNetworkCommand} from "../../../src/commands/index";
 
 import program from "commander";
-import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 describe("[CLI] eth1:dev", function () {
   this.timeout(4000);

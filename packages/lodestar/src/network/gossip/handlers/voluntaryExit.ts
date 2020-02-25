@@ -4,9 +4,8 @@
 
 import {Gossip} from "../gossip";
 import {getGossipTopic} from "../utils";
-import {SignedVoluntaryExit} from "@chainsafe/eth2.0-types";
+import {SignedVoluntaryExit} from "@chainsafe/lodestar-types";
 import {GossipEvent} from "../constants";
-import {serialize} from "@chainsafe/ssz";
 import {GossipObject} from "../interface";
 
 
@@ -24,7 +23,9 @@ export async function handleIncomingVoluntaryExit(this: Gossip, obj: GossipObjec
 
 export async function publishVoluntaryExit(this: Gossip, voluntaryExit: SignedVoluntaryExit): Promise<void> {
   await this.pubsub.publish(
-    getGossipTopic(GossipEvent.VOLUNTARY_EXIT), serialize(this.config.types.SignedVoluntaryExit, voluntaryExit));
+    getGossipTopic(GossipEvent.VOLUNTARY_EXIT),
+    Buffer.from(this.config.types.SignedVoluntaryExit.serialize(voluntaryExit))
+  );
   this.logger.verbose(
     `Publishing voluntary exit for validator #${voluntaryExit.message.validatorIndex}`
   );

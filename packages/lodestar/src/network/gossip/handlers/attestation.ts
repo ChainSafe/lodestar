@@ -2,19 +2,18 @@
  * @module network/gossip
  */
 
+import {toHexString} from "@chainsafe/ssz";
 import {Gossip, GossipHandlerFn} from "../gossip";
 import {getAttestationSubnet, getAttestationSubnetTopic, getGossipTopic} from "../utils";
-import {Attestation} from "@chainsafe/eth2.0-types";
-import {toHex} from "@chainsafe/eth2.0-utils";
+import {Attestation} from "@chainsafe/lodestar-types";
 import {GossipEvent} from "../constants";
-import {hashTreeRoot, serialize} from "@chainsafe/ssz";
 import {GossipObject} from "../interface";
 
 export async function handleIncomingAttestation(this: Gossip, obj: GossipObject): Promise<void> {
   try {
     const attestation = obj as Attestation;
     this.logger.verbose(
-      `Received attestation for block ${toHex(attestation.data.beaconBlockRoot)}`
+      `Received attestation for block ${toHexString(attestation.data.beaconBlockRoot)}`
         +` (${attestation.data.source.epoch}, ${attestation.data.target.epoch})`
     );
     this.emit(GossipEvent.ATTESTATION, attestation);
@@ -28,7 +27,7 @@ export function getCommitteeAttestationHandler(subnet: number): GossipHandlerFn 
     try {
       const attestation = obj as Attestation;
       this.logger.verbose(
-        `Received committee attestation for block ${toHex(attestation.data.beaconBlockRoot)}`
+        `Received committee attestation for block ${toHexString(attestation.data.beaconBlockRoot)}`
           +`subnet: ${subnet}, (${attestation.data.source.epoch}, ${attestation.data.target.epoch})`
       );
       this.emit(GossipEvent.ATTESTATION_SUBNET, {attestation, subnet});
@@ -41,13 +40,13 @@ export function getCommitteeAttestationHandler(subnet: number): GossipHandlerFn 
 export async function publishCommiteeAttestation(this: Gossip, attestation: Attestation): Promise<void> {
   const subnet = getAttestationSubnet(attestation);
   await this.pubsub.publish(
-    getAttestationSubnetTopic(attestation), serialize(this.config.types.Attestation, attestation));
+    getAttestationSubnetTopic(attestation), Buffer.from(this.config.types.Attestation.serialize(attestation)));
   //backward compatible
   await this.pubsub.publish(
-    getGossipTopic(GossipEvent.ATTESTATION), serialize(this.config.types.Attestation, attestation)
+    getGossipTopic(GossipEvent.ATTESTATION), Buffer.from(this.config.types.Attestation.serialize(attestation))
   );
-
+  const attestationHex = toHexString(this.config.types.Attestation.hashTreeRoot(attestation));
   this.logger.verbose(
-    `Publishing attestation ${toHex(hashTreeRoot(this.config.types.Attestation, attestation))} for subnet ${subnet}`
+    `Publishing attestation ${attestationHex} for subnet ${subnet}`
   );
 }

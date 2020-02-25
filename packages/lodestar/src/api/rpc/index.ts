@@ -5,7 +5,7 @@
 import {IService} from "../../node";
 import {IApiConstructor, IApiModules} from "../interface";
 import defaultOptions, {IRpcOptions} from "./options";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import {IRpcServer, TransportType, WSServer} from "./transport";
 import HttpServer from "./transport/http";
 import * as jsonRpc from "noice-json-rpc";

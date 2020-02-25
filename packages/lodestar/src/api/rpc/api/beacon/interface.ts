@@ -3,7 +3,7 @@
  */
 
 import {IApi} from "../../../interface";
-import {bytes32, Fork, number64, SyncingStatus, uint64} from "@chainsafe/eth2.0-types";
+import {Bytes32, Fork, Number64, SyncingStatus, Uint64} from "@chainsafe/lodestar-types";
 
 export interface IBeaconApi extends IApi {
 
@@ -13,12 +13,12 @@ export interface IBeaconApi extends IApi {
    * @returns An ASCII-encoded hex string which
    * uniquely defines the implementation of the BeaconNode and its current software version.
    */
-  getClientVersion(): Promise<bytes32>;
+  getClientVersion(): Promise<Bytes32>;
 
   /**
    * Requests the BeaconNode to provide which fork version it is currently on.
    */
-  getFork(): Promise<{fork: Fork; chainId: uint64}>;
+  getFork(): Promise<{fork: Fork; chainId: Uint64}>;
 
   /**
    * Requests the genesis_time parameter from the BeaconNode,
@@ -26,7 +26,7 @@ export interface IBeaconApi extends IApi {
    * @returns The genesis_time,
    * which is a fairly static configuration option for the BeaconNode.
    */
-  getGenesisTime(): Promise<number64>;
+  getGenesisTime(): Promise<Number64>;
 
   /**
    * Requests the BeaconNode to describe if it's currently syncing or not,

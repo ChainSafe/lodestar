@@ -1,20 +1,19 @@
-import {AggregateAndProof, Attestation, BeaconState} from "@chainsafe/eth2.0-types";
+import {ArrayLike} from "@chainsafe/ssz";
+import {AggregateAndProof, Attestation, BeaconState} from "@chainsafe/lodestar-types";
 import {OperationsModule} from "./abstract";
-import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/eth2.0-state-transition";
-import {getBitCount} from "../../util/bit";
+import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {BulkRepository} from "../../db/api/beacon/repository";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {equals} from "@chainsafe/ssz";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export class AggregateAndProofOperations extends OperationsModule<AggregateAndProof> {
 
   protected config: IBeaconConfig;
-  
+
   public constructor(db: BulkRepository<AggregateAndProof>, {config}: {config: IBeaconConfig}) {
     super(db);
     this.config = config;
   }
-    
+
   public async getBlockAttestations(state: BeaconState): Promise<Attestation[]> {
     const aggregates: AggregateAndProof[] = await this.getAll();
     return aggregates.map(aggregate => aggregate.aggregate).filter((a: Attestation) => {
@@ -22,16 +21,16 @@ export class AggregateAndProofOperations extends OperationsModule<AggregateAndPr
       return isValidAttestationSlot(this.config, a.data.slot, state.slot);
     }).sort((a, b) => {
       //prefer aggregated attestations
-      return getBitCount(a.aggregationBits) - getBitCount(b.aggregationBits);
+      return a.aggregationBits.length - b.aggregationBits.length;
     });
   }
 
-  public async removeIncluded(attestations: Attestation[]): Promise<void> {
+  public async removeIncluded(attestations: ArrayLike<Attestation>): Promise<void> {
     const aggregates = await this.getAll();
     await this.remove(aggregates.filter((a) => {
-      return attestations.findIndex((attestation) => {
-        return equals(this.config.types.Attestation, a.aggregate, attestation);
-      }, this);
+      return attestations.findIndex((attestation: Attestation) => {
+        return this.config.types.Attestation.equals(a.aggregate, attestation);
+      });
     }));
   }
 

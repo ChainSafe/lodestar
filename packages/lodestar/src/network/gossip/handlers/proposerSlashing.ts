@@ -2,11 +2,10 @@
  * @module network/gossip
  */
 
-import {ProposerSlashing} from "@chainsafe/eth2.0-types";
+import {ProposerSlashing} from "@chainsafe/lodestar-types";
 import {getGossipTopic} from "../utils";
 import {Gossip} from "../gossip";
 import {GossipEvent} from "../constants";
-import {serialize} from "@chainsafe/ssz";
 import {GossipObject} from "../interface";
 
 export async function handleIncomingProposerSlashing(this: Gossip, obj: GossipObject): Promise<void> {
@@ -24,7 +23,7 @@ export async function handleIncomingProposerSlashing(this: Gossip, obj: GossipOb
 export async function publishProposerSlashing(this: Gossip, proposerSlashing: ProposerSlashing): Promise<void> {
   await this.pubsub.publish(
     getGossipTopic(GossipEvent.PROPOSER_SLASHING),
-    serialize(this.config.types.ProposerSlashing, proposerSlashing)
+    Buffer.from(this.config.types.ProposerSlashing.serialize(proposerSlashing))
   );
   this.logger.verbose(
     `Publishing proposer slashing for validator #${proposerSlashing.proposerIndex}`

@@ -1,7 +1,7 @@
 import {join} from "path";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {computeShuffledIndex} from "@chainsafe/eth2.0-state-transition";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {computeShuffledIndex} from "@chainsafe/lodestar-beacon-state-transition";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {ShufflingTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 

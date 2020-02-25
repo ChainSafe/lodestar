@@ -3,7 +3,7 @@
  */
 import {CommanderStatic} from "commander";
 import {ICliCommand} from "./interface";
-import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateCommanderOptions, optionsToConfig} from "../util";
 import {IValidatorClientOptions} from "@chainsafe/lodestar/lib/validator/options";
 import {ValidatorClient} from "@chainsafe/lodestar/lib/validator/nodejs";

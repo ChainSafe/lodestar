@@ -2,11 +2,10 @@
  * @module network/gossip
  */
 
-import {SignedBeaconBlock} from "@chainsafe/eth2.0-types";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {Gossip} from "../gossip";
 import {getGossipTopic} from "../utils";
 import {GossipEvent} from "../constants";
-import {serialize} from "@chainsafe/ssz";
 import {GossipObject} from "../interface";
 
 export async function handleIncomingBlock(this: Gossip, obj: GossipObject): Promise<void> {
@@ -21,7 +20,7 @@ export async function handleIncomingBlock(this: Gossip, obj: GossipObject): Prom
 
 export async function publishBlock(this: Gossip, signedBlock: SignedBeaconBlock): Promise<void> {
   await this.pubsub.publish(
-    getGossipTopic(GossipEvent.BLOCK), serialize(this.config.types.SignedBeaconBlock, signedBlock)
+    getGossipTopic(GossipEvent.BLOCK), Buffer.from(this.config.types.SignedBeaconBlock.serialize(signedBlock))
   );
   this.logger.verbose(`Publishing block at slot: ${signedBlock.message.slot}`);
 }

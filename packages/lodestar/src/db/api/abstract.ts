@@ -1,5 +1,5 @@
 import {IDatabaseController} from "../controller";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IService} from "../../node";
 
 export interface IDatabaseApiOptions {

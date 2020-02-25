@@ -10,12 +10,12 @@ import {
   ProposerSlashing,
   SignedBeaconBlock,
   SignedVoluntaryExit
-} from "@chainsafe/eth2.0-types";
+} from "@chainsafe/lodestar-types";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import LibP2p from "libp2p";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import {IService} from "../../node";
 
 export interface IGossipEvents {
@@ -26,7 +26,7 @@ export interface IGossipEvents {
   [GossipEvent.VOLUNTARY_EXIT]: (voluntaryExit: SignedVoluntaryExit) => void;
   [GossipEvent.PROPOSER_SLASHING]: (proposerSlashing: ProposerSlashing) => void;
   [GossipEvent.ATTESTER_SLASHING]: (attesterSlashing: AttesterSlashing) => void;
-  ["gossipsub:heartbeat"]: void;
+  ["gossipsub:heartbeat"]: () => void;
 }
 export type GossipEventEmitter = StrictEventEmitter<EventEmitter, IGossipEvents>;
 
@@ -45,13 +45,28 @@ export interface IGossipSub extends EventEmitter {
   unsubscribe(topic: string): void;
 }
 
-export interface IGossip extends GossipEventEmitter, IService {
+export interface IGossip extends IService, GossipEventEmitter {
   publishBlock(signedBlock: SignedBeaconBlock): Promise<void>;
   publishCommiteeAttestation(attestation: Attestation): Promise<void>;
   publishAggregatedAttestation(aggregateAndProof: AggregateAndProof): Promise<void>;
   publishVoluntaryExit(voluntaryExit: SignedVoluntaryExit): Promise<void>;
   publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<void>;
   publishProposerSlashing(proposerSlashing: ProposerSlashing): Promise<void>;
+  subscribeToBlock(callback: (signedBlock: SignedBeaconBlock) => void): void;
+  subscribeToAggregateAndProof(callback: (aggregate: AggregateAndProof) => void): void;
+  subscribeToAttestation(callback: (attestation: Attestation) => void): void;
+  subscribeToVoluntaryExit(callback: (voluntaryExit: SignedVoluntaryExit) => void): void;
+  subscribeToProposerSlashing(callback: (slashing: ProposerSlashing) => void): void;
+  subscribeToAttesterSlashing(callback: (slashing: AttesterSlashing) => void): void;
+  subscribeToAttestationSubnet(
+    subnet: number|string,
+    callback?: (attestation:  {attestation: Attestation; subnet: number}) => void
+  ): void;
+  unsubscribeFromAttestationSubnet(
+    subnet: number|string,
+    callback?: (attestation:  {attestation: Attestation; subnet: number}) => void
+  ): void;
+  unsubscribe(event: keyof IGossipEvents, listener: unknown, params?: Map<string, string>): void;
 }
 
 export interface IGossipMessageValidator {

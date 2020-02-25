@@ -1,9 +1,8 @@
-import {SignedBeaconBlock, Slot} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BulkRepository} from "../repository";
 import {IDatabaseController} from "../../../controller";
 import {Bucket, encodeKey} from "../../../schema";
-import {deserialize} from "@chainsafe/ssz";
 
 /**
  * Stores finalized blocks. Block slot is identifier.
@@ -15,6 +14,15 @@ export class BlockArchiveRepository extends BulkRepository<SignedBeaconBlock> {
     db: IDatabaseController
   ) {
     super(config, db, Bucket.blockArchive, config.types.SignedBeaconBlock);
+  }
+
+  public async addMany(blocks: SignedBeaconBlock[]): Promise<void> {
+    await this.db.batchPut(
+      blocks.map((block) => ({
+        key: encodeKey(this.bucket, this.getId(block)),
+        value: this.type.serialize(block)
+      }))
+    );
   }
 
   public getId(value: SignedBeaconBlock): Slot {
@@ -32,8 +40,8 @@ export class BlockArchiveRepository extends BulkRepository<SignedBeaconBlock> {
       gt: encodeKey(this.bucket, safeLowerLimit),
       lt: encodeKey(this.bucket, safeUpperLimit),
     });
-    const processedData = (data || [])
-      .map((datum) => deserialize(this.type, datum))
+    return (data || [])
+      .map((datum) => this.type.deserialize(datum))
       .filter(signedBlock => {
         if (step !== null && typeof safeLowerLimit === "number") {
           return signedBlock.message.slot >= safeLowerLimit && (signedBlock.message.slot - safeLowerLimit) % step === 0;
@@ -41,6 +49,5 @@ export class BlockArchiveRepository extends BulkRepository<SignedBeaconBlock> {
           return true;
         }
       });
-    return processedData;
   }
 }

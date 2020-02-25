@@ -1,4 +1,4 @@
-import {AggregateAndProof} from "@chainsafe/eth2.0-types";
+import {AggregateAndProof} from "@chainsafe/lodestar-types";
 import {generateEmptyAttestation} from "./attestation";
 import {EMPTY_SIGNATURE} from "../../src/constants";
 

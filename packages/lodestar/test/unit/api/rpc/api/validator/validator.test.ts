@@ -1,7 +1,7 @@
 import sinon from "sinon";
 import {expect} from "chai";
 import {describe} from "mocha";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as blockAssembly from "../../../../../../src/chain/factory/block";
 import {ValidatorApi} from "../../../../../../src/api/rpc/api/validator";
 import {BeaconDb} from "../../../../../../src/db/api";
@@ -15,7 +15,7 @@ import {generateEmptyAttestation} from "../../../../../utils/attestation";
 import {BlockRepository, StateRepository} from "../../../../../../src/db/api/beacon/repositories";
 import * as validatorImpl from "../../../../../../src/api/impl/validator";
 import {Keypair} from "@chainsafe/bls";
-import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {Gossip} from "../../../../../../src/network/gossip/gossip";
 
 describe("validator rpc api", function () {
@@ -44,7 +44,11 @@ describe("validator rpc api", function () {
     opStub.attestations = sandbox.createStubInstance(AttestationOperations);
     validatorApi = new ValidatorApi(
       {},
-      {config, chain: chainStub, db: dbStub, opPool: opStub, network: networkStub, eth1: eth1Stub, logger: logger}
+      {
+        config, chain: chainStub, db: dbStub,
+        opPool: opStub, sync: null, network: networkStub,
+        eth1: eth1Stub, logger: logger
+      }
     );
   });
 

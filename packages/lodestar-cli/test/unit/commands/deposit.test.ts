@@ -5,7 +5,7 @@ import {DepositCommand} from "../../../src/commands";
 import chaiAsPromised from "chai-as-promised";
 import {CliError} from "../../../src/error";
 import program from "commander";
-import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 chai.use(chaiAsPromised);
 

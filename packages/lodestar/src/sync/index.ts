@@ -3,7 +3,7 @@
  */
 
 import {EventEmitter} from "events";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
 import {OpPool} from "../opPool";
@@ -11,7 +11,7 @@ import {IEth1Notifier} from "../eth1";
 import {IBeaconDb} from "../db";
 import {RegularSync} from "./regular";
 import {FastSync, InitialSync} from "./initial";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import {ISyncOptions} from "./options";
 import {ISyncReqResp, SyncReqResp} from "./reqResp";
 import {ReputationStore} from "./IReputation";
@@ -32,6 +32,9 @@ export interface ISyncModules {
  * The strategy may differ depending on whether the chain is synced or not
  */
 export class Sync extends EventEmitter {
+
+  public regularSync: RegularSync;
+
   private opts: ISyncOptions;
   private config: IBeaconConfig;
   private chain: IBeaconChain;
@@ -42,7 +45,6 @@ export class Sync extends EventEmitter {
   private logger: ILogger;
   //array of valid peers (peer on same fork)
   private peers: PeerInfo[] = [];
-  private regularSync: RegularSync;
   private initialSync: InitialSync;
   private waitingForPeer = true;
 
@@ -93,6 +95,7 @@ export class Sync extends EventEmitter {
   }
 
   private startRegularSync = (): void => {
+    this.emit("regularSyncStarted");
     this.regularSync.start();
   };
 

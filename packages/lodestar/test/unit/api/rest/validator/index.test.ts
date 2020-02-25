@@ -1,24 +1,26 @@
+import {expect} from "chai";
+import {after, afterEach, before, beforeEach, describe, it} from "mocha";
+import supertest from "supertest";
+import sinon from "sinon";
+
+import {toHexString} from "@chainsafe/ssz";
+import {Attestation} from "@chainsafe/lodestar-types";
+import {Keypair} from "@chainsafe/bls";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+
 import {RestApi} from "../../../../../src/api/rest";
 import {ApiNamespace} from "../../../../../src/api";
-import sinon from "sinon";
-import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
 import {BeaconChain} from "../../../../../src/chain";
 import {BeaconDb} from "../../../../../src/db/api";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
-import supertest from "supertest";
 import {Sync} from "../../../../../src/sync";
 import * as validatorImpl from "../../../../../src/api/impl/validator";
 import {generateEmptyValidatorDuty} from "../../../../../src/chain/factory/duties";
-import {expect} from "chai";
 import {generateEmptyBlock} from "../../../../utils/block";
 import * as blockUtils from "../../../../../src/chain/factory/block";
 import {generateAttestation, generateAttestationData, generateEmptyAttestation} from "../../../../utils/attestation";
-import {Attestation} from "@chainsafe/eth2.0-types";
 import {AggregateAndProofOperations, AttestationOperations, OpPool} from "../../../../../src/opPool";
-import {toHex, toJson} from "@chainsafe/eth2.0-utils";
-import {after, afterEach, before, beforeEach, describe, it} from "mocha";
-import {Keypair} from "@chainsafe/bls";
 import {generateAggregateAndProof} from "../../../../utils/aggregateAndProof";
 
 describe("Test validator rest API", function () {
@@ -90,7 +92,7 @@ describe("Test validator rest API", function () {
       )
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body[1]).to.be.equal(toHex(Buffer.alloc(48)));
+    expect(response.body[1]).to.be.equal(toHexString(Buffer.alloc(48)));
     expect(getProposerDutiesStub.withArgs(sinon.match.any, sinon.match.any, sinon.match.any, 2).calledOnce).to.be.true;
   });
 
@@ -102,12 +104,12 @@ describe("Test validator rest API", function () {
       .get(
         "/validator/duties/2/attester",
       )
-      .query({"validator_pubkeys[]": [toHex(publicKey1), toHex(publicKey2)]})
+      .query({"validator_pubkeys[]": [toHexString(publicKey1)]})
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.length).to.be.equal(1);
     expect(getAttesterDuties.withArgs(
-      sinon.match.any, sinon.match.any, sinon.match.any, 2, [publicKey1]
+      sinon.match.any, sinon.match.any, sinon.match.any, 2, sinon.match.any,
     ).calledOnce).to.be.true;
   });
 
@@ -119,9 +121,9 @@ describe("Test validator rest API", function () {
     await supertest(restApi.server.server)
       .post(
         "/validator/aggregate?validator_pubkey="
-          +`${toHex(Buffer.alloc(48))}&slot_signature=${toHex(aggregateAndProof.selectionProof)}`,
+          +`${toHexString(Buffer.alloc(48))}&slot_signature=${toHexString(aggregateAndProof.selectionProof)}`,
       )
-      .send(toJson(aggregateAndProof.aggregate))
+      .send(config.types.AggregateAndProof.fields.aggregate.toJson((aggregateAndProof.aggregate)) as object)
       .expect(200);
     expect(network.gossip.publishAggregatedAttestation.calledOnce).to.be.true;
   });
@@ -141,7 +143,7 @@ describe("Test validator rest API", function () {
         "/validator/block",
       )
       .query({
-        "randao_reveal": toHex(Buffer.alloc(32)),
+        "randao_reveal": toHexString(Buffer.alloc(32)),
         slot: 2
       })
       .expect(200)
@@ -150,14 +152,14 @@ describe("Test validator rest API", function () {
   });
 
   it("should publish block", async function () {
-    const block = generateEmptyBlock();
+    const block = {message: generateEmptyBlock(), signature: Buffer.alloc(96)};
     chain.receiveBlock.resolves();
     await supertest(restApi.server.server)
       .post(
         "/validator/block",
       )
       .send({
-        "beacon_block": toJson(block)
+        "beacon_block": config.types.SignedBeaconBlock.toJson(block)
       })
       .expect(200)
       .expect("Content-Type", "application/json");
@@ -174,7 +176,7 @@ describe("Test validator rest API", function () {
         "/validator/attestation",
       )
       .query({
-        "validator_pubkey": toHex(Buffer.alloc(48)),
+        "validator_pubkey": toHexString(Buffer.alloc(48)),
         "poc_bit": 1,
         "committee_index": 3,
         "slot": 2
@@ -193,7 +195,7 @@ describe("Test validator rest API", function () {
       .post(
         "/validator/attestation",
       )
-      .send(toJson(attestation))
+      .send(config.types.Attestation.toJson(attestation) as object)
       .expect(200)
       .expect("Content-Type", "application/json");
     expect(attestationOperations.receive.calledOnce).to.be.true;

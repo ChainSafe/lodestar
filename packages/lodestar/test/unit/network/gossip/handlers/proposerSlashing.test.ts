@@ -2,9 +2,9 @@ import {afterEach, beforeEach, describe, it} from "mocha";
 import sinon from "sinon";
 import {Gossip} from "../../../../../src/network/gossip/gossip";
 import {expect} from "chai";
-import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {GossipEvent} from "../../../../../src/network/gossip/constants";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {handleIncomingProposerSlashing} from "../../../../../src/network/gossip/handlers/proposerSlashing";
 

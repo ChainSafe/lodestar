@@ -1,14 +1,13 @@
-import {BLSPubkey, BLSSecretKey} from "@chainsafe/eth2.0-types";
-import {generatePublicKey} from "@chainsafe/bls";
 import {hash} from "@chainsafe/ssz";
-import {bytesToBigInt, intToBytes} from "@chainsafe/eth2.0-utils";
+import {generatePublicKey} from "@chainsafe/bls";
+import {bytesToBigInt, intToBytes} from "@chainsafe/lodestar-utils";
 import {toBufferBE} from "bigint-buffer";
 
 const CURVE_ORDER = BigInt("52435875175126190479447740508185965837690552500527637822603658699938581184513");
 
 interface IKeypair {
-  pubkey: BLSPubkey;
-  privkey: BLSSecretKey;
+  pubkey: Buffer;
+  privkey: Buffer;
 }
 
 export function interopKeypairs(validatorCount: number): IKeypair[] {

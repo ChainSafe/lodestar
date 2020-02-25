@@ -1,7 +1,7 @@
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {AttesterSlashing, ProposerSlashing} from "@chainsafe/eth2.0-types";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {AttesterSlashing, ProposerSlashing} from "@chainsafe/lodestar-types";
 import {generateEmptyBlock} from "./block";
-import {getTemporaryBlockHeader} from "@chainsafe/eth2.0-state-transition";
+import {getTemporaryBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {generateEmptyAttestation} from "./attestation";
 
 

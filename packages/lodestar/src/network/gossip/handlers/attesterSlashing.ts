@@ -2,11 +2,10 @@
  * @module network/gossip
  */
 
-import {AttesterSlashing} from "@chainsafe/eth2.0-types";
+import {AttesterSlashing} from "@chainsafe/lodestar-types";
 import {getGossipTopic} from "../utils";
 import {Gossip} from "../gossip";
 import {GossipEvent} from "../constants";
-import {serialize} from "@chainsafe/ssz";
 import {GossipObject} from "../interface";
 
 export async function handleIncomingAttesterSlashing(this: Gossip, obj: GossipObject): Promise<void> {
@@ -24,7 +23,7 @@ export async function handleIncomingAttesterSlashing(this: Gossip, obj: GossipOb
 export async function publishAttesterSlashing(this: Gossip, attesterSlashing: AttesterSlashing): Promise<void> {
   await this.pubsub.publish(
     getGossipTopic(GossipEvent.PROPOSER_SLASHING),
-    serialize(this.config.types.AttesterSlashing, attesterSlashing)
+    Buffer.from(this.config.types.AttesterSlashing.serialize(attesterSlashing))
   );
   this.logger.verbose(
     "Publishing attester slashing"

@@ -1,10 +1,9 @@
 import {join} from "path";
 import {expect} from "chai";
-import {equals} from "@chainsafe/ssz";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import {BeaconState} from "@chainsafe/eth2.0-types";
-import {processSlots} from "@chainsafe/eth2.0-state-transition";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {BeaconState} from "@chainsafe/lodestar-types";
+import {processSlots} from "@chainsafe/lodestar-beacon-state-transition";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {ProcessSlotsTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
@@ -32,7 +31,7 @@ describeDirectorySpecTest<ProcessSlotsTestCase, BeaconState>(
     timeout: 10000000,
     getExpected: (testCase => testCase.post),
     expectFunc: (testCase, expected, actual) => {
-      expect(equals(config.types.BeaconState, actual, expected)).to.be.true;
+      expect(config.types.BeaconState.equals(actual, expected)).to.be.true;
     }
   }
 );

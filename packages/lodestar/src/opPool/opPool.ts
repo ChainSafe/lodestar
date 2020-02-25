@@ -4,19 +4,19 @@
 
 import {EventEmitter} from "events";
 
-import {BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {
   signedBlockToSignedHeader, computeEpochAtSlot, getBeaconProposerIndex,
-} from "@chainsafe/eth2.0-state-transition";
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
 import {
   AggregateAndProofOperations,
   AttestationOperations,
   AttesterSlashingOperations,
-  DepositsOperations,
+  DepositDataOperations,
   ProposerSlashingOperations,
   VoluntaryExitOperations
 } from "./modules";
@@ -36,7 +36,7 @@ export class OpPool extends EventEmitter {
   public attestations: AttestationOperations;
   public aggregateAndProofs: AggregateAndProofOperations;
   public voluntaryExits: VoluntaryExitOperations;
-  public deposits: DepositsOperations;
+  public depositData: DepositDataOperations;
   public proposerSlashings: ProposerSlashingOperations;
   public attesterSlashings: AttesterSlashingOperations;
 
@@ -54,7 +54,7 @@ export class OpPool extends EventEmitter {
     this.attestations = new AttestationOperations(this.db.attestation, {config});
     this.aggregateAndProofs = new AggregateAndProofOperations(this.db.aggregateAndProof, {config});
     this.voluntaryExits = new VoluntaryExitOperations(this.db.voluntaryExit);
-    this.deposits = new DepositsOperations(this.db.deposit);
+    this.depositData = new DepositDataOperations(this.db.depositData);
     this.proposerSlashings = new ProposerSlashingOperations(this.db.proposerSlashing);
     this.attesterSlashings = new AttesterSlashingOperations(this.db.attesterSlashing);
   }
@@ -63,14 +63,14 @@ export class OpPool extends EventEmitter {
    * Start operation processing
    */
   public async start(): Promise<void> {
-    this.eth1.on("deposit", this.deposits.receive);
+    this.eth1.on("deposit", this.depositData.receive);
   }
 
   /**
    * Stop operation processing
    */
   public async stop(): Promise<void> {
-    this.eth1.removeListener("deposit", this.deposits.receive);
+    this.eth1.removeListener("deposit", this.depositData.receive);
   }
 
   /**
@@ -79,7 +79,7 @@ export class OpPool extends EventEmitter {
   public async processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void> {
     await Promise.all([
       this.voluntaryExits.remove(signedBlock.message.body.voluntaryExits),
-      this.deposits.removeOld(signedBlock.message.body.eth1Data.depositCount),
+      this.depositData.removeOld(signedBlock.message.body.eth1Data.depositCount),
       this.proposerSlashings.remove(signedBlock.message.body.proposerSlashings),
       this.attesterSlashings.remove(signedBlock.message.body.attesterSlashings),
       this.aggregateAndProofs.removeIncluded(signedBlock.message.body.attestations),

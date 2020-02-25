@@ -1,5 +1,5 @@
 import path from "path";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import bls, {initBLS} from "@chainsafe/bls";
 
 interface IPrivToPubTestCase {
@@ -21,7 +21,7 @@ describeDirectorySpecTest<IPrivToPubTestCase, string>(
   ),
   (testCase => {
     const result =  bls.generatePublicKey(Buffer.from(testCase.data.input.replace("0x", ""), "hex"));
-    return `0x${result.toString("hex")}`;
+    return `0x${Buffer.from(result).toString("hex")}`;
   }),
   {
     inputTypes: {

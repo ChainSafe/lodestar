@@ -2,35 +2,32 @@
  * @module chain/blockAssembly
  */
 
-import {hashTreeRoot} from "@chainsafe/ssz";
-import {BeaconState, Deposit, Eth1Data} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {List, TreeBacked} from "@chainsafe/ssz";
+import {BeaconState, Deposit, Eth1Data, Root} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {OpPool} from "../../../opPool";
-import {processSortedDeposits} from "../../../util/deposits";
-import {IProgressiveMerkleTree} from "@chainsafe/eth2.0-utils";
 
 export async function generateDeposits(
   config: IBeaconConfig,
   opPool: OpPool,
   state: BeaconState,
   eth1Data: Eth1Data,
-  merkleTree: IProgressiveMerkleTree): Promise<Deposit[]> {
+  depositDataRootList: TreeBacked<List<Root>>): Promise<Deposit[]> {
   if(eth1Data.depositCount > state.eth1DepositIndex) {
-    const upperIndex = Math.min(config.params.MAX_DEPOSITS, eth1Data.depositCount);
-    const deposits = await opPool.deposits.getAllBetween(state.eth1DepositIndex, upperIndex);
+    const eth1DepositIndex = state.eth1DepositIndex;
+    const upperIndex = eth1DepositIndex + Math.min(config.params.MAX_DEPOSITS, eth1Data.depositCount);
+    const depositDatas = await opPool.depositData.getAllBetween(
+      eth1DepositIndex,
+      upperIndex
+    );
     //add all deposits to the tree before getting proof
-    return processSortedDeposits(
-      config,
-      deposits,
-      state.eth1DepositIndex,
-      eth1Data.depositCount,
-      (deposit, index) => {
-        merkleTree.add(index + state.eth1DepositIndex, hashTreeRoot(config.types.DepositData, deposit.data));
-        return deposit;
-      }
-    ).map((deposit, index) => {
-      deposit.proof = merkleTree.getProof(index + state.eth1DepositIndex);
-      return deposit;
+    depositDataRootList.push(...depositDatas.map((data) => config.types.DepositData.hashTreeRoot(data)));
+    const tree = depositDataRootList.tree();
+    return depositDatas.map((data, index) => {
+      return {
+        proof: tree.getSingleProof(depositDataRootList.gindexOfProperty(index + eth1DepositIndex)),
+        data,
+      };
     });
   }
   return [];

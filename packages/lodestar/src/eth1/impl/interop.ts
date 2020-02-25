@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars,@typescript-eslint/no-empty-function */
 import {EventEmitter} from "events";
 
-import {BeaconState, Eth1Data, number64, Root} from "@chainsafe/eth2.0-types";
+import {BeaconState, Eth1Data, Number64, Root} from "@chainsafe/lodestar-types";
 
 import {IEth1Notifier} from "../";
 import {Block} from "ethers/providers";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {hash, intDiv, intToBytes} from "@chainsafe/eth2.0-utils";
-import {computeEpochAtSlot} from "@chainsafe/eth2.0-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {hash, intDiv, intToBytes} from "@chainsafe/lodestar-utils";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   public constructor() {
@@ -26,7 +26,7 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   public async processDepositLog(dataHex: string, indexHex: string): Promise<void> {
   }
 
-  public async depositRoot(): Promise<Root> {
+  public async depositRoot(): Promise<Uint8Array> {
     return Buffer.alloc(32);
   }
 
@@ -38,7 +38,7 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
     return null as unknown as Block;
   }
 
-  public async depositCount(block?: string | number): Promise<number64> {
+  public async depositCount(block?: string | number): Promise<Number64> {
     return 0;
   }
 
