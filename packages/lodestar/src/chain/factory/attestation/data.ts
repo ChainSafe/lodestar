@@ -2,7 +2,9 @@ import {AttestationData, BeaconBlock, BeaconState, CommitteeIndex, Slot, Root} f
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconDb} from "../../../db/api";
-import {computeStartSlotAtEpoch, getBlockRootAtSlot, getCurrentEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeStartSlotAtEpoch, getBlockRootAtSlot, getCurrentEpoch,
+} from "@chainsafe/lodestar-beacon-state-transition";
 
 export async function assembleAttestationData(
   config: IBeaconConfig,
