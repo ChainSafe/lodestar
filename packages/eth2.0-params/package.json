@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/eth2.0-params",
-  "version": "0.2.1",
+  "version": "0.5.0",
   "description": "Chain parameters required for eth2.0",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -38,8 +38,6 @@
     "beacon",
     "blockchain"
   ],
-  "dependencies": {
-  },
   "devDependencies": {
     "@types/chai": "4.2.0",
     "@types/mocha": "^5.2.7",
