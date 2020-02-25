@@ -3,12 +3,12 @@
  */
 
 import {IService} from "../node";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db/api";
 import {IBeaconChain} from "../chain";
-import {Checkpoint} from "@chainsafe/eth2.0-types";
+import {Checkpoint} from "@chainsafe/lodestar-types";
 import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
-import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {Sync} from "../sync";
 import {InteropSubnetsJoiningTask} from "./tasks/interopSubnetsJoiningTask";
 import {INetwork} from "../network";

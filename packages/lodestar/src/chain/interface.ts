@@ -3,7 +3,7 @@ import {EventEmitter} from "events";
 import {TreeBacked, List} from "@chainsafe/ssz";
 import {
   Attestation, BeaconState, Checkpoint, Slot, Uint16, Uint64, Root, SignedBeaconBlock,
-} from "@chainsafe/eth2.0-types";
+} from "@chainsafe/lodestar-types";
 
 import {ILMDGHOST} from "./forkChoice";
 import StrictEventEmitter from "strict-event-emitter-types";

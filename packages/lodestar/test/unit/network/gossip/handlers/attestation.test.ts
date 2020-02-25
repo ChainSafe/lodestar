@@ -3,9 +3,9 @@ import sinon from "sinon";
 import {Gossip} from "../../../../../src/network/gossip/gossip";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {expect} from "chai";
-import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {GossipEvent} from "../../../../../src/network/gossip/constants";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {handleIncomingAttestation} from "../../../../../src/network/gossip/handlers/attestation";
 
 describe("gossip handlers - attestation", function () {

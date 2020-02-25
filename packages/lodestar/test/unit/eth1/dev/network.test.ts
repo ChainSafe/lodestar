@@ -2,7 +2,7 @@ import {PrivateEth1Network} from "../../../../src/eth1/dev";
 import {Wallet} from "ethers";
 import * as ethers from "ethers/ethers";
 import {expect} from "chai";
-import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 //Tests failing when run in group, works when run individually
 describe.skip("Eth1 dev network", () => {

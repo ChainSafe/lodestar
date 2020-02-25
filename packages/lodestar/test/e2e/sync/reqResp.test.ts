@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
 import {Method} from "../../../src/constants";
 import {SyncReqResp} from "../../../src/sync/reqResp";
@@ -10,7 +10,7 @@ import {BeaconDb} from "../../../src/db";
 import Libp2p from "libp2p";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../unit/network/util";
-import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {generateState} from "../../utils/state";

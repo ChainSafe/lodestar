@@ -1,5 +1,5 @@
 import {ArrayLike, Type} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IDatabaseController} from "../../controller";
 import {Bucket, encodeKey} from "../../schema";

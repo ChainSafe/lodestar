@@ -1,7 +1,7 @@
 import {assert} from "chai";
 
 import {StatefulDagLMDGHOST} from "../../../../src/chain/forkChoice/statefulDag/lmdGhost";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import sinon, {SinonFakeTimers} from "sinon";
 
 describe("StatefulDagLMDGHOST", () => {

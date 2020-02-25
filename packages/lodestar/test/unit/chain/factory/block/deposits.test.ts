@@ -1,13 +1,13 @@
 import sinon, { SinonStubbedInstance } from "sinon";
 import {expect} from "chai";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {ZERO_HASH} from "../../../../../src/constants";
 import {OpPool} from "../../../../../src/opPool";
 import {generateDeposits} from "../../../../../src/chain/factory/block/deposits";
 import {generateState} from "../../../../utils/state";
 import {generateDepositData} from "../../../../utils/deposit";
 import {DepositDataOperations} from "../../../../../src/opPool/modules";
-import {verifyMerkleBranch} from "@chainsafe/eth2.0-utils";
+import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 
 describe("blockAssembly - deposits", function() {
 

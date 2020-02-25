@@ -1,6 +1,6 @@
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../../../db/api";
-import {BLSPubkey, Epoch, ValidatorDuty} from "@chainsafe/eth2.0-types";
+import {BLSPubkey, Epoch, ValidatorDuty} from "@chainsafe/lodestar-types";
 import {assembleValidatorDuty} from "../../../../chain/factory/duties";
 import {IBeaconChain} from "../../../../chain";
 

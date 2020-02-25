@@ -1,7 +1,7 @@
-import {Attestation, BeaconState, CommitteeIndex, Epoch} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {Attestation, BeaconState, CommitteeIndex, Epoch} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {OperationsModule} from "./abstract";
-import {computeEpochAtSlot, computeStartSlotAtEpoch,} from "@chainsafe/eth2.0-state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch,} from "@chainsafe/lodestar-beacon-state-transition";
 import {BulkRepository} from "../../db/api/beacon/repository";
 
 export class AttestationOperations extends OperationsModule<Attestation> {

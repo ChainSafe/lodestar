@@ -8,7 +8,7 @@ import {IDatabaseController, ISearchOptions} from "../interface";
 import {EventEmitter} from "events";
 //@ts-ignore
 import level from "level";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import {IDatabaseOptions} from "../../options";
 
 export interface ILevelDBOptions extends IDatabaseOptions {

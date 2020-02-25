@@ -11,7 +11,7 @@ describe("util/file", function() {
     fs.unlinkSync(testFilePath);
   });
 
-  it("@chainsafe/eth2.0-config", () => {
+  it("@chainsafe/lodestar-config", () => {
     writeTomlConfig(testFilePath);
     assert.isTrue(fs.existsSync(testFilePath));
   });

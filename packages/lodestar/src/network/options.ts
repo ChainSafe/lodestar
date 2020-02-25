@@ -1,4 +1,4 @@
-import {Number64} from "@chainsafe/eth2.0-types";
+import {Number64} from "@chainsafe/lodestar-types";
 
 export interface INetworkOptions {
   maxPeers: Number64;

@@ -1,5 +1,5 @@
-import {DepositData} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {DepositData} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {BulkRepository} from "../repository";
 import {IDatabaseController} from "../../../controller";

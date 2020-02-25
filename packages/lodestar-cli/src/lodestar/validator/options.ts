@@ -1,5 +1,5 @@
-import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {IConfigurationModule} from "../util/config";
 
 

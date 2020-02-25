@@ -13,8 +13,8 @@ import {
   Bytes32,
   Fork,
   SignedBeaconBlock,
-} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {
   EMPTY_SIGNATURE,
@@ -27,8 +27,8 @@ import {
   getActiveValidatorIndices,
   getTemporaryBlockHeader,
   processDeposit
-} from "@chainsafe/eth2.0-state-transition";
-import {bigIntMin} from "@chainsafe/eth2.0-utils";
+} from "@chainsafe/lodestar-beacon-state-transition";
+import {bigIntMin} from "@chainsafe/lodestar-utils";
 
 export function initializeBeaconStateFromEth1(
   config: IBeaconConfig,

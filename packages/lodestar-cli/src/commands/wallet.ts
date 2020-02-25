@@ -8,7 +8,7 @@ import fs from "fs";
 import {CliError} from "../error";
 import Keystore from "@chainsafe/lodestar/lib/util/keystore";
 import {promptPassword} from "@chainsafe/lodestar/lib/util/io";
-import {defaultLogLevel, ILogger, LogLevel, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {defaultLogLevel, ILogger, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 interface IWalletCommandOptions {
   outputFile: string;

@@ -1,5 +1,5 @@
-import {Slot, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {Slot, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {BulkRepository} from "../repository";
 import {ChainRepository} from "./chain";

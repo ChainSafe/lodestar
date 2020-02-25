@@ -1,7 +1,7 @@
 import {IncomingMessage, Server, ServerResponse} from "http";
 import fastify, {DefaultParams, DefaultQuery} from "fastify";
 import {fromHexString} from "@chainsafe/ssz";
-import {isAggregator} from "@chainsafe/eth2.0-state-transition";
+import {isAggregator} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IFastifyServer} from "../../../index";
 import {IApiModules} from "../../../../interface";

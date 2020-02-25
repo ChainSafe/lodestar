@@ -14,9 +14,9 @@ import {
   SignedBeaconBlock,
   SignedVoluntaryExit,
   Slot,
-} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconDb} from "../db";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";

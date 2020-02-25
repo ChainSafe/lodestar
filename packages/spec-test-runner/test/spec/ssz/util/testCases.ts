@@ -1,7 +1,7 @@
-import {describeDirectorySpecTest, InputType, safeType} from "@chainsafe/eth2.0-spec-test-util";
-import {Bytes32, IBeaconSSZTypes} from "@chainsafe/eth2.0-types";
+import {describeDirectorySpecTest, InputType, safeType} from "@chainsafe/lodestar-spec-test-util";
+import {Bytes32, IBeaconSSZTypes} from "@chainsafe/lodestar-types";
 import {join} from "path";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {expect} from "chai";
 
 import {IBaseSSZStaticTestCase} from "../type";

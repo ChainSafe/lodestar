@@ -3,7 +3,7 @@ import Axios from "axios";
 import MockAdapter from "axios-mock-adapter";
 import {HttpClient} from "../../../src/util";
 import {describe, it, beforeEach} from "mocha";
-import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import sinon from "sinon";
 
 interface IUser {

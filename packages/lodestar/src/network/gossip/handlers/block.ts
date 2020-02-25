@@ -2,7 +2,7 @@
  * @module network/gossip
  */
 
-import {SignedBeaconBlock} from "@chainsafe/eth2.0-types";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {Gossip} from "../gossip";
 import {getGossipTopic} from "../utils";
 import {GossipEvent} from "../constants";

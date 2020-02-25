@@ -1,5 +1,5 @@
 
-import {Deposit, DepositData} from "@chainsafe/eth2.0-types";
+import {Deposit, DepositData} from "@chainsafe/lodestar-types";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, EMPTY_SIGNATURE} from "../../src/constants";
 
 /**

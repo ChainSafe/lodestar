@@ -14,12 +14,12 @@ import {
   Uint16,
   Uint64,
   Validator,
-} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {EMPTY_SIGNATURE, GENESIS_SLOT} from "../constants";
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
-import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconMetrics} from "../metrics";
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
 import {
@@ -29,7 +29,7 @@ import {
   isActiveValidator,
   processSlots,
   stateTransition
-} from "@chainsafe/eth2.0-state-transition";
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 
 import {ChainEventEmitter, IAttestationProcessor, IBeaconChain} from "./interface";

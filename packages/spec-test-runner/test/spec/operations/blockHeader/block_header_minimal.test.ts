@@ -1,10 +1,10 @@
 import {join} from "path";
 import {expect} from "chai";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import {BeaconState} from "@chainsafe/eth2.0-types";
-import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {BeaconState} from "@chainsafe/lodestar-types";
+import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessBlockHeader} from "./type";
-import {processBlockHeader} from "@chainsafe/eth2.0-state-transition";
+import {processBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<IProcessBlockHeader, BeaconState>(

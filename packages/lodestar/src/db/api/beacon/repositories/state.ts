@@ -1,5 +1,5 @@
-import {BeaconState} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {BeaconState} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {Repository} from "../repository";
 import {IDatabaseController} from "../../../controller";

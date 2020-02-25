@@ -1,4 +1,4 @@
-import {Attestation} from "@chainsafe/eth2.0-types";
+import {Attestation} from "@chainsafe/lodestar-types";
 import {IGossip} from "../../../network/gossip/interface";
 import {AttestationOperations} from "../../../opPool/modules";
 

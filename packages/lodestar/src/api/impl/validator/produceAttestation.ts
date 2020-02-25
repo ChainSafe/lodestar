@@ -1,9 +1,9 @@
 import {assembleAttestation} from "../../../chain/factory/attestation";
-import {Attestation, BLSPubkey, CommitteeIndex, Slot} from "@chainsafe/eth2.0-types";
+import {Attestation, BLSPubkey, CommitteeIndex, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconChain} from "../../../chain";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {processSlots} from "@chainsafe/eth2.0-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {processSlots} from "@chainsafe/lodestar-beacon-state-transition";
 
 export async function produceAttestation(
   {config, db, chain}: {config: IBeaconConfig; db: IBeaconDb; chain: IBeaconChain},

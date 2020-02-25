@@ -1,8 +1,8 @@
 import {ITask} from "../interface";
 import {INetwork} from "../../network";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
-import {randBetween} from "@chainsafe/eth2.0-utils";
+import {randBetween} from "@chainsafe/lodestar-utils";
 
 export interface IInteropSubnetsJoiningModules {
   network: INetwork;

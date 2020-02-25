@@ -4,7 +4,7 @@ import {expect} from "chai";
 import {OpPool} from "../../../src/opPool";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {EthersEth1Notifier} from "../../../src/eth1";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {
   AttesterSlashingRepository,
   DepositDataRepository,

@@ -5,7 +5,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {Gossip, GossipHandlerFn} from "../gossip";
 import {getAttestationSubnet, getAttestationSubnetTopic, getGossipTopic} from "../utils";
-import {Attestation} from "@chainsafe/eth2.0-types";
+import {Attestation} from "@chainsafe/lodestar-types";
 import {GossipEvent} from "../constants";
 import {GossipObject} from "../interface";
 

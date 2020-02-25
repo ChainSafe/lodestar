@@ -1,7 +1,7 @@
 import {IncomingMessage, Server, ServerResponse} from "http";
 import fastify, {DefaultQuery} from "fastify";
 import {fromHexString} from "@chainsafe/ssz";
-import {AggregateAndProof} from "@chainsafe/eth2.0-types";
+import {AggregateAndProof} from "@chainsafe/lodestar-types";
 
 import {IApiModules} from "../../../interface";
 import {IFastifyServer} from "../../index";

@@ -5,9 +5,9 @@
 import assert from "assert";
 
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {Gwei, Slot, ValidatorIndex, Number64, Checkpoint, Epoch} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {computeSlotsSinceEpochStart, getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
+import {Gwei, Slot, ValidatorIndex, Number64, Checkpoint, Epoch} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {computeSlotsSinceEpochStart, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {ILMDGHOST} from "../interface";
 

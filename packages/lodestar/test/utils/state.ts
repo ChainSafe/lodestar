@@ -1,7 +1,7 @@
-import {BeaconState} from "@chainsafe/eth2.0-types";
+import {BeaconState} from "@chainsafe/lodestar-types";
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
 import {generateEmptyBlock} from "./block";
-import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.

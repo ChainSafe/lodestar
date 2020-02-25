@@ -10,12 +10,12 @@ import {
   ProposerSlashing,
   SignedBeaconBlock,
   SignedVoluntaryExit
-} from "@chainsafe/eth2.0-types";
+} from "@chainsafe/lodestar-types";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import LibP2p from "libp2p";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import {IService} from "../../node";
 
 export interface IGossipEvents {

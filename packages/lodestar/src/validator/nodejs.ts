@@ -1,14 +1,14 @@
 import defaultConfig, {IValidatorClientOptions} from "./options";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import {IService} from "../node";
 import {IValidatorDB, ValidatorDB} from "../db/api";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {LevelDbController} from "../db/controller";
 import {Validator} from "@chainsafe/lodestar-validator";
 import {getKeyFromFileOrKeystore} from "../util/io";
 import deepmerge from "deepmerge";
 
-import {isPlainObject} from "@chainsafe/eth2.0-utils";
+import {isPlainObject} from "@chainsafe/lodestar-utils";
 
 export class ValidatorClient implements IService {
 

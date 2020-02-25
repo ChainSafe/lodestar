@@ -1,4 +1,4 @@
-import {Number64} from "@chainsafe/eth2.0-types";
+import {Number64} from "@chainsafe/lodestar-types";
 import {BaseProvider} from "ethers/providers";
 import {EventFragment, FunctionFragment, Interface, ParamType, BigNumber} from "ethers/utils";
 
@@ -26,7 +26,7 @@ const config: IEth1Options = {
     deployedAt: 0,
     address: "TBD",
     // eslint-disable-next-line max-len
-    // taken from https://raw.githubusercontent.com/ethereum/eth2.0-specs/v0.9.3/deposit_contract/contracts/validator_registration.json
+    // taken from https://raw.githubusercontent.com/ethereum/lodestar-specs/v0.9.3/deposit_contract/contracts/validator_registration.json
     // eslint-disable-next-line max-len
     abi: [{"name": "DepositEvent", "inputs": [{"type": "bytes", "name": "pubkey", "indexed": false}, {"type": "bytes", "name": "withdrawal_credentials", "indexed": false}, {"type": "bytes", "name": "amount", "indexed": false}, {"type": "bytes", "name": "signature", "indexed": false}, {"type": "bytes", "name": "index", "indexed": false}], "anonymous": false, "type": "event"}, {"outputs": [], "inputs": [], "constant": false, "payable": false, "type": "constructor"}, {"name": "get_deposit_root", "outputs": [{"type": "bytes32", "name": "out"}], "inputs": [], "constant": true, "payable": false, "type": "function", "gas": new BigNumber(95727)}, {"name": "get_deposit_count", "outputs": [{"type": "bytes", "name": "out"}], "inputs": [], "constant": true, "payable": false, "type": "function", "gas": new BigNumber(18283)}, {"name": "deposit", "outputs": [], "inputs": [{"type": "bytes", "name": "pubkey"}, {"type": "bytes", "name": "withdrawal_credentials"}, {"type": "bytes", "name": "signature"}, {"type": "bytes32", "name": "deposit_data_root"}], "constant": false, "payable": true, "type": "function", "gas": new BigNumber(1342680)}],
     // eslint-disable-next-line max-len

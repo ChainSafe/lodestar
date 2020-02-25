@@ -2,7 +2,7 @@
  * @module chain/forkChoice
  */
 
-import {Gwei, Slot, ValidatorIndex, Checkpoint} from "@chainsafe/eth2.0-types";
+import {Gwei, Slot, ValidatorIndex, Checkpoint} from "@chainsafe/lodestar-types";
 
 
 export interface ILMDGHOST {

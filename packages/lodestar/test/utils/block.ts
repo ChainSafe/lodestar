@@ -1,4 +1,4 @@
-import {BeaconBlock, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 
 

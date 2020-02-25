@@ -3,7 +3,7 @@
  */
 
 import {toHexString} from "@chainsafe/ssz";
-import {AggregateAndProof} from "@chainsafe/eth2.0-types";
+import {AggregateAndProof} from "@chainsafe/lodestar-types";
 import {Gossip} from "../gossip";
 import {getGossipTopic} from "../utils";
 import {GossipEvent} from "../constants";

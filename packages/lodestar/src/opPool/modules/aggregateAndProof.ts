@@ -1,9 +1,9 @@
 import {ArrayLike} from "@chainsafe/ssz";
-import {AggregateAndProof, Attestation, BeaconState} from "@chainsafe/eth2.0-types";
+import {AggregateAndProof, Attestation, BeaconState} from "@chainsafe/lodestar-types";
 import {OperationsModule} from "./abstract";
-import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/eth2.0-state-transition";
+import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {BulkRepository} from "../../db/api/beacon/repository";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export class AggregateAndProofOperations extends OperationsModule<AggregateAndProof> {
 

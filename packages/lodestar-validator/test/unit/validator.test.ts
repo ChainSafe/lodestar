@@ -1,8 +1,8 @@
 import {expect} from "chai";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {describe, it} from "mocha";
-import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import sinon from "sinon";
 import {ApiClientOverInstance} from "../../src/api";
 import {MockBeaconApi} from "../utils/mocks/beacon";

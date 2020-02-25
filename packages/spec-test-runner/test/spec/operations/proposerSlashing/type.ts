@@ -1,4 +1,4 @@
-import {BeaconState, ProposerSlashing} from "@chainsafe/eth2.0-types";
+import {BeaconState, ProposerSlashing} from "@chainsafe/lodestar-types";
 import {IBaseSpecTest} from "../../type";
 
 export interface IProcessProposerSlashingTestCase extends IBaseSpecTest {

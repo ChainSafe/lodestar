@@ -1,7 +1,7 @@
 import {readFileSync} from "fs";
 import {TreeBacked, List} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {BeaconState, Root} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {BeaconState, Root} from "@chainsafe/lodestar-types";
 import {interopDeposits} from "./deposits";
 
 

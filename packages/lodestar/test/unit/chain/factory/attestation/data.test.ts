@@ -1,11 +1,11 @@
 import sinon, { SinonStubbedInstance } from "sinon";
 import {expect} from "chai";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {assembleAttestationData} from "../../../../../src/chain/factory/attestation/data";
 import {generateState} from "../../../../utils/state";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {BlockRepository} from "../../../../../src/db/api/beacon/repositories";
-import { IBeaconConfig } from "@chainsafe/eth2.0-config";
+import { IBeaconConfig } from "@chainsafe/lodestar-config";
 import { IBeaconDb } from "../../../../db";
 
 describe("assemble attestation data", function () {

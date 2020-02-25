@@ -1,5 +1,5 @@
-import {Slot} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {Slot} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IDatabaseController} from "../../../controller";
 import {Bucket, encodeKey, Key} from "../../../schema";

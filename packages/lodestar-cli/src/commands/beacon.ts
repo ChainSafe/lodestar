@@ -6,9 +6,9 @@ import {ICliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
 
-import {config as mainnetConfig} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {config as minimalConfig} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import {ILogger, LogLevel, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {ILogger, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import {generateCommanderOptions, optionsToConfig} from "../util";

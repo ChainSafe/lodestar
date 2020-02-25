@@ -14,8 +14,8 @@ import {
   SignedBeaconBlock,
   Slot,
   ValidatorDuty
-} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconDb} from "../../../../db";
 import {IBeaconChain} from "../../../../chain";
@@ -26,13 +26,13 @@ import {IEth1Notifier} from "../../../../eth1";
 import {getAttesterDuties, getEpochProposers, produceAttestation, publishAttestation} from "../../../impl/validator";
 import {ApiNamespace, IApiModules} from "../../../index";
 import {IApiOptions} from "../../../options";
-import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetwork} from "../../../../network";
-import {getDomain, isAggregator} from "@chainsafe/eth2.0-state-transition";
+import {getDomain, isAggregator} from "@chainsafe/lodestar-beacon-state-transition";
 import {verify} from "@chainsafe/bls";
 import {Sync} from "../../../../sync";
 import {DomainType} from "../../../../constants";
-import {computeEpochAtSlot} from "@chainsafe/eth2.0-state-transition/lib";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition/lib";
 
 export class ValidatorApi implements IValidatorApi {
 

@@ -1,11 +1,11 @@
 import {expect} from "chai";
 import {afterEach, beforeEach, describe, it} from "mocha";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Libp2pNetwork} from "../../../src/network";
 import {createNode} from "../../unit/network/util";
 import {generateEmptyAggregateAndProof, generateEmptyAttestation} from "../../utils/attestation";
 import {generateEmptySignedBlock} from "../../utils/block";
-import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {sleep} from "../../../src/util/sleep";
@@ -14,7 +14,7 @@ import Libp2p from "libp2p";
 import {GossipEvent} from "../../../src/network/gossip/constants";
 import sinon from "sinon";
 import { GossipMessageValidator } from "../../../src/network/gossip/validator";
-import { SignedBeaconBlock, Attestation } from "@chainsafe/eth2.0-types";
+import { SignedBeaconBlock, Attestation } from "@chainsafe/lodestar-types";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 

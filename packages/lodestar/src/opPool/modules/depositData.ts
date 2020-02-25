@@ -1,4 +1,4 @@
-import {DepositData, Number64} from "@chainsafe/eth2.0-types";
+import {DepositData, Number64} from "@chainsafe/lodestar-types";
 
 import {DepositDataRepository} from "../../db/api/beacon/repositories";
 

@@ -3,7 +3,7 @@
  */
 
 import {IApi} from "../../../interface";
-import {Bytes32, Fork, Number64, SyncingStatus, Uint64} from "@chainsafe/eth2.0-types";
+import {Bytes32, Fork, Number64, SyncingStatus, Uint64} from "@chainsafe/lodestar-types";
 
 export interface IBeaconApi extends IApi {
 

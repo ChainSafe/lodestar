@@ -1,4 +1,4 @@
-import {Fork, Uint64, BeaconState} from "@chainsafe/eth2.0-types";
+import {Fork, Uint64, BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../../db";
 import {IBeaconChain} from "../../../chain";
 

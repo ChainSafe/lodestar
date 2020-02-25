@@ -12,17 +12,17 @@ import {
   Goodbye,
   RequestBody,
   Slot, Status, Root,
-} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {Method, RequestId, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import {ISyncOptions, ISyncReqResp} from "./interface";
 import {ReputationStore} from "../IReputation";
-import {computeStartSlotAtEpoch} from "@chainsafe/eth2.0-state-transition";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface ISyncReqRespModules {
   config: IBeaconConfig;

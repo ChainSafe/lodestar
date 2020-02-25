@@ -6,9 +6,9 @@
 import {EventEmitter} from "events";
 //@ts-ignore
 import LibP2p from "libp2p";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
-import {ILogger, LogLevel} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
 import {getGossipTopic,} from "./utils";
 import {INetworkOptions} from "../options";
 import {GossipEventEmitter, GossipObject, IGossip, IGossipEvents, IGossipModules, IGossipSub} from "./interface";
@@ -31,7 +31,7 @@ import {
   ProposerSlashing,
   SignedBeaconBlock,
   SignedVoluntaryExit
-} from "@chainsafe/eth2.0-types";
+} from "@chainsafe/lodestar-types";
 
 
 export type GossipHandlerFn = (this: Gossip, obj: GossipObject ) => void;

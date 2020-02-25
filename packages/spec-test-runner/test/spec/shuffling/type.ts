@@ -1,4 +1,4 @@
-import {Uint64} from "@chainsafe/eth2.0-types";
+import {Uint64} from "@chainsafe/lodestar-types";
 
 export interface ShufflingTestCase {
   mapping: {

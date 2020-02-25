@@ -11,7 +11,7 @@ import {
   ValidatorDuty,
   ValidatorIndex,
   SignedBeaconBlock
-} from "@chainsafe/eth2.0-types";
+} from "@chainsafe/lodestar-types";
 import {IValidatorApi} from "../../../src/api/interface/validators";
 import {getEmptyBlock} from "@chainsafe/lodestar/lib/chain/genesis/genesis";
 

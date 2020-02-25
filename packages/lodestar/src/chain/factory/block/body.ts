@@ -3,13 +3,13 @@
  */
 
 import {TreeBacked, List} from "@chainsafe/ssz";
-import {BeaconBlockBody, BeaconState, Bytes96, Root} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {BeaconBlockBody, BeaconState, Bytes96, Root} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ZERO_HASH} from "../../../constants";
 import {OpPool} from "../../../opPool";
 import {IEth1Notifier} from "../../../eth1";
 import {generateDeposits} from "./deposits";
-import {computeEpochAtSlot} from "@chainsafe/eth2.0-state-transition";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 export async function assembleBody(
   config: IBeaconConfig,

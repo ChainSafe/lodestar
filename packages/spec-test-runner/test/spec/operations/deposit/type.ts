@@ -1,4 +1,4 @@
-import {BeaconState, Deposit} from "@chainsafe/eth2.0-types";
+import {BeaconState, Deposit} from "@chainsafe/lodestar-types";
 
 export interface ProcessDepositTestCase {
 

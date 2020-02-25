@@ -1,14 +1,14 @@
 import assert from "assert";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {Attestation, Slot, Root, BlockRootHex, AttestationRootHex, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {Attestation, Slot, Root, BlockRootHex, AttestationRootHex, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   getCurrentSlot,
   computeEpochAtSlot,
   getAttestingIndices,
   computeStartSlotAtEpoch
-} from "@chainsafe/eth2.0-state-transition";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+} from "@chainsafe/lodestar-beacon-state-transition";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 
 import {IAttestationProcessor, ChainEventEmitter} from "./interface";
 import {ILMDGHOST} from ".";

@@ -4,12 +4,12 @@
 
 import {EventEmitter} from "events";
 
-import {BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {
   signedBlockToSignedHeader, computeEpochAtSlot, getBeaconProposerIndex,
-} from "@chainsafe/eth2.0-state-transition";
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
 import {

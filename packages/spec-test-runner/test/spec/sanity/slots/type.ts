@@ -1,4 +1,4 @@
-import {BeaconState, Uint64} from "@chainsafe/eth2.0-types";
+import {BeaconState, Uint64} from "@chainsafe/lodestar-types";
 
 export interface ProcessSlotsTestCase {
   pre: BeaconState;

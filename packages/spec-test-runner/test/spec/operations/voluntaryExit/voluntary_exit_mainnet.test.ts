@@ -1,9 +1,9 @@
 import {join} from "path";
 import {expect} from "chai";
-import {BeaconState} from "@chainsafe/eth2.0-types";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {processVoluntaryExit} from "@chainsafe/eth2.0-state-transition";
-import {describeDirectorySpecTest} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import {BeaconState} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {processVoluntaryExit} from "@chainsafe/lodestar-beacon-state-transition";
+import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessVoluntaryExitTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 

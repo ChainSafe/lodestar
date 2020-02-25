@@ -1,7 +1,7 @@
-import {Bytes32, Fork, SyncingStatus, BeaconBlock, BeaconState, Number64, Uint64} from "@chainsafe/eth2.0-types";
+import {Bytes32, Fork, SyncingStatus, BeaconBlock, BeaconState, Number64, Uint64} from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "../../../interface/beacon";
 import {HttpClient} from "../../../../util";
-import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 export class RestBeaconApi implements IBeaconApi {
 

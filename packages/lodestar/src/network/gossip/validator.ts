@@ -2,18 +2,18 @@ import {verify} from "@chainsafe/bls";
 import {IGossipMessageValidator} from "./interface";
 import {
   Attestation, AggregateAndProof, ProposerSlashing, AttesterSlashing, SignedBeaconBlock, SignedVoluntaryExit,
-} from "@chainsafe/eth2.0-types";
+} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
 import {getAttestationSubnet} from "./utils";
 import {
   getCurrentSlot, isValidIndexedAttestation, getIndexedAttestation, isValidVoluntaryExit,
   isValidProposerSlashing, isValidAttesterSlashing, getAttestingIndices,
   isAggregator, getDomain, computeEpochAtSlot, verifyBlockSignature,
-} from "@chainsafe/eth2.0-state-transition";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
-import {DomainType} from "@chainsafe/eth2.0-state-transition/lib/constants";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {DomainType} from "@chainsafe/lodestar-beacon-state-transition/lib/constants";
 
 export class GossipMessageValidator implements IGossipMessageValidator {
   private db: IBeaconDb;
