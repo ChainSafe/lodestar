@@ -5,27 +5,36 @@
 
 import {EventEmitter} from "events";
 //@ts-ignore
-import {promisify} from "es6-promisify";
 import LibP2p from "libp2p";
-//@ts-ignore
-import Gossipsub from "libp2p-gossipsub";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
-import {ILogger, LogLevel} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
 import {getGossipTopic,} from "./utils";
 import {INetworkOptions} from "../options";
-import {GossipEventEmitter, IGossip, IGossipEvents, IGossipSub, IGossipModules, IGossipMessageValidator, IGossipMessage}
-  from "./interface";
+import {GossipEventEmitter, GossipObject, IGossip, IGossipEvents, IGossipModules, IGossipSub} from "./interface";
 import {GossipEvent} from "./constants";
-import {publishBlock, getIncomingBlockHandler} from "./handlers/block";
-import {publishCommiteeAttestation, getCommitteeAttestationHandler, getIncomingAttestationHandler}
-  from "./handlers/attestation";
-import {publishAttesterSlashing, getIncomingAttesterSlashingHandler} from "./handlers/attesterSlashing";
-import {publishProposerSlashing, getIncomingProposerSlashingHandler} from "./handlers/proposerSlashing";
-import {publishVoluntaryExit, getIncomingVoluntaryExitHandler} from "./handlers/voluntaryExit";
-import {publishAggregatedAttestation, getIncomingAggregateAndProofHandler} from "./handlers/aggregateAndProof";
+import {handleIncomingBlock, publishBlock} from "./handlers/block";
+import {
+  getCommitteeAttestationHandler,
+  handleIncomingAttestation,
+  publishCommiteeAttestation
+} from "./handlers/attestation";
+import {handleIncomingAttesterSlashing, publishAttesterSlashing} from "./handlers/attesterSlashing";
+import {handleIncomingProposerSlashing, publishProposerSlashing} from "./handlers/proposerSlashing";
+import {handleIncomingVoluntaryExit, publishVoluntaryExit} from "./handlers/voluntaryExit";
+import {handleIncomingAggregateAndProof, publishAggregatedAttestation} from "./handlers/aggregateAndProof";
+import {LodestarGossipsub} from "./gossipsub";
+import {
+  AggregateAndProof,
+  Attestation,
+  AttesterSlashing,
+  ProposerSlashing,
+  SignedBeaconBlock,
+  SignedVoluntaryExit
+} from "@chainsafe/lodestar-types";
 
-export type GossipHandlerFn = (this: Gossip, msg: IGossipMessage) => void;
+
+export type GossipHandlerFn = (this: Gossip, obj: GossipObject ) => void;
 
 export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) implements IGossip {
 
@@ -36,7 +45,6 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   protected readonly  logger: ILogger;
 
   private handlers: Map<string, GossipHandlerFn>;
-  private validator: IGossipMessageValidator;
 
   public constructor(opts: INetworkOptions, {config, libp2p, logger, validator}: IGossipModules) {
     super();
@@ -45,20 +53,20 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.libp2p = libp2p;
     this.logger = logger.child({module: "gossip", level: LogLevel[logger.level]});
     this.logger.silent = logger.silent;
-    this.validator = validator;
-    this.pubsub = new Gossipsub(libp2p, {gossipIncoming: false});
+    this.pubsub = new LodestarGossipsub(config, validator, this.logger,
+      libp2p.peerInfo, libp2p.registrar, {gossipIncoming: false});
     this.handlers = this.registerHandlers();
   }
 
   public async start(): Promise<void> {
-    await promisify(this.pubsub.start.bind(this.pubsub))();
+    await this.pubsub.start();
     this.handlers.forEach((handler, topic) => {
       this.pubsub.on(topic, handler);
     });
   }
 
   public async stop(): Promise<void> {
-    await promisify(this.pubsub.stop.bind(this.pubsub))();
+    await this.pubsub.stop();
     this.handlers.forEach((handler, topic) => {
       this.pubsub.removeListener(topic, handler);
     });
@@ -76,42 +84,57 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
 
   public publishAttesterSlashing = publishAttesterSlashing;
 
-  // @ts-ignore
-  public on(event: keyof IGossipEvents, listener: Function): void {
-    if(this.listenerCount(event) === 0 && !event.startsWith("gossipsub")) {
-      this.pubsub.subscribe(getGossipTopic(event as GossipEvent, "ssz"));
-    }
-    // @ts-ignore
-    super.on(event, listener);
+  public subscribeToBlock(callback: (block: SignedBeaconBlock) => void): void {
+    this.subscribe(GossipEvent.BLOCK, callback);
   }
 
-  // @ts-ignore
-  public once(event: keyof IGossipEvents, listener: Function): void {
-    if(this.listenerCount(event) === 0 && !event.startsWith("gossipsub")) {
-      this.pubsub.subscribe(getGossipTopic(event as GossipEvent, "ssz"));
-    }
-    // @ts-ignore
-    super.once(event, (args: unknown[]) => {
-      this.pubsub.unsubscribe(getGossipTopic(event as GossipEvent, "ssz"));
-      listener(args);
-    });
+  public subscribeToAggregateAndProof(callback: (aggregate: AggregateAndProof) => void): void {
+    this.subscribe(GossipEvent.AGGREGATE_AND_PROOF, callback);
   }
 
-  // @ts-ignore
-  public removeListener(event: keyof IGossipEvents, listener: Function): void {
-    // @ts-ignore
-    super.on(event, listener);
-    if(this.listenerCount(event) === 0 && !event.startsWith("gossipsub")) {
-      this.pubsub.unsubscribe(getGossipTopic(event as GossipEvent, "ssz"));
+  public subscribeToAttestation(callback: (attestation: Attestation) => void): void {
+    this.subscribe(GossipEvent.ATTESTATION, callback);
+  }
+
+  public subscribeToVoluntaryExit(callback: (signed: SignedVoluntaryExit) => void): void {
+    this.subscribe(GossipEvent.VOLUNTARY_EXIT, callback);
+  }
+
+  public subscribeToProposerSlashing(callback: (slashing: ProposerSlashing) => void): void {
+    this.subscribe(GossipEvent.PROPOSER_SLASHING, callback);
+  }
+
+  public subscribeToAttesterSlashing(callback: (slashing: AttesterSlashing) => void): void {
+    this.subscribe(GossipEvent.ATTESTER_SLASHING, callback);
+  }
+
+  public subscribeToAttestationSubnet(
+    subnet: number|string, callback?: (attestation: {attestation: Attestation; subnet: number}) => void
+  ): void {
+    this.subscribe(GossipEvent.ATTESTATION_SUBNET, callback, new Map([["subnet", subnet.toString()]]));
+  }
+
+  public unsubscribeFromAttestationSubnet(
+    subnet: number|string, callback?: (attestation: {attestation: Attestation; subnet: number}) => void
+  ): void {
+    this.unsubscribe(GossipEvent.ATTESTATION_SUBNET, callback, new Map([["subnet", subnet.toString()]]));
+  }
+
+  public unsubscribe(event: keyof IGossipEvents, listener?: unknown, params: Map<string, string> = new Map()): void {
+    if(this.listenerCount(event) === 1 && !event.startsWith("gossipsub")) {
+      this.pubsub.unsubscribe(getGossipTopic(event as GossipEvent, "ssz", params));
+    }
+    if(listener) {
+      this.removeListener(event, listener as (...args: unknown[]) => void);
     }
   }
 
-  // @ts-ignore
-  public removeAllListeners(event: keyof IGossipEvents): void {
-    // @ts-ignore
-    super.removeAllListeners(event);
-    if(!event.startsWith("gossipsub")) {
-      this.pubsub.unsubscribe(getGossipTopic(event as GossipEvent, "ssz"));
+  private subscribe(event: keyof IGossipEvents, listener?: unknown, params: Map<string, string> = new Map()): void {
+    if(this.listenerCount(event) === 0 && !event.startsWith("gossipsub")) {
+      this.pubsub.subscribe(getGossipTopic(event as GossipEvent, "ssz", params));
+    }
+    if(listener) {
+      this.on(event, listener as (...args: unknown[]) => void);
     }
   }
 
@@ -119,20 +142,20 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     const handlers = new Map();
     handlers.set("gossipsub:heartbeat", this.emitGossipHeartbeat);
     handlers.set(getGossipTopic(GossipEvent.BLOCK, "ssz"),
-      getIncomingBlockHandler(this.validator).bind(this));
+      handleIncomingBlock.bind(this));
     handlers.set(getGossipTopic(GossipEvent.ATTESTATION, "ssz"),
-      getIncomingAttestationHandler(this.validator).bind(this));
+      handleIncomingAttestation.bind(this));
     handlers.set(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, "ssz"),
-      getIncomingAggregateAndProofHandler(this.validator).bind(this));
+      handleIncomingAggregateAndProof.bind(this));
     handlers.set(getGossipTopic(GossipEvent.ATTESTER_SLASHING, "ssz"),
-      getIncomingAttesterSlashingHandler(this.validator).bind(this));
+      handleIncomingAttesterSlashing.bind(this));
     handlers.set(getGossipTopic(GossipEvent.PROPOSER_SLASHING, "ssz"),
-      getIncomingProposerSlashingHandler(this.validator).bind(this));
+      handleIncomingProposerSlashing.bind(this));
     handlers.set(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, "ssz"),
-      getIncomingVoluntaryExitHandler(this.validator).bind(this));
+      handleIncomingVoluntaryExit.bind(this));
 
     for(let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-      const committeeAttestationHandler = getCommitteeAttestationHandler(subnet, this.validator);
+      const committeeAttestationHandler = getCommitteeAttestationHandler(subnet);
       handlers.set(
         getGossipTopic(
           GossipEvent.ATTESTATION_SUBNET,

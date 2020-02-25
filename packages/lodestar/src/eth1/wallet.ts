@@ -6,12 +6,12 @@ import {ContractTransaction, ethers, Wallet} from "ethers";
 import {Provider} from "ethers/providers";
 import {BigNumber, ParamType} from "ethers/utils";
 import bls, {PrivateKey} from "@chainsafe/bls";
-import {hash, hashTreeRoot} from "@chainsafe/ssz";
-import {DepositData} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {hash} from "@chainsafe/ssz";
+import {DepositData} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {DomainType} from "../constants";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 
 
 export class Eth1Wallet {
@@ -71,11 +71,11 @@ export class Eth1Wallet {
 
     depositData.signature = bls.sign(
       signingKey.toBytes(),
-      hashTreeRoot(this.config.types.DepositMessage, depositData),
+      this.config.types.DepositMessage.hashTreeRoot(depositData),
       Buffer.from([0, 0, 0, DomainType.DEPOSIT])
     );
 
-    const depositDataRoot = hashTreeRoot(this.config.types.DepositData, depositData);
+    const depositDataRoot = this.config.types.DepositData.hashTreeRoot(depositData);
 
     // Send TX
     const tx: ContractTransaction = await contract.deposit(

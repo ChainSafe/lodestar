@@ -1,5 +1,5 @@
 import Axios, {AxiosError, AxiosInstance, AxiosResponse} from "axios";
-import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 export interface IHttpClientOptions {
   // Add more options if needed

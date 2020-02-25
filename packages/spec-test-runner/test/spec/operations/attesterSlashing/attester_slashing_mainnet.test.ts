@@ -1,10 +1,9 @@
 import {join} from "path";
 import {expect} from "chai";
-import {equals} from "@chainsafe/ssz";
-import {BeaconState} from "@chainsafe/eth2.0-types";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {processAttesterSlashing} from "@chainsafe/eth2.0-state-transition";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import {BeaconState} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {processAttesterSlashing} from "@chainsafe/lodestar-beacon-state-transition";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessAttesterSlashingTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
@@ -31,7 +30,7 @@ describeDirectorySpecTest<IProcessAttesterSlashingTestCase, BeaconState>(
     shouldError: testCase => !testCase.post,
     getExpected: (testCase => testCase.post),
     expectFunc: (testCase, expected, actual) => {
-      expect(equals(config.types.BeaconState, actual, expected)).to.be.true;
+      expect(config.types.BeaconState.equals(actual, expected)).to.be.true;
     }
   }
 );

@@ -1,4 +1,4 @@
-import {defaultLogLevel, ILoggerOptions, LogLevel} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {defaultLogLevel, ILoggerOptions, LogLevel} from  "@chainsafe/lodestar-utils/lib/logger";
 
 export interface IBeaconLoggerOptions {
   chain: ILoggerOptions;

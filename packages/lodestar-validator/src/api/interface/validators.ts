@@ -3,13 +3,12 @@ import {
   BeaconBlock,
   BLSPubkey,
   BLSSignature,
-  bytes,
   CommitteeIndex,
   Epoch,
   Slot,
   ValidatorDuty,
   SignedBeaconBlock
-} from "@chainsafe/eth2.0-types";
+} from "@chainsafe/lodestar-types";
 
 export interface IValidatorApi {
   
@@ -24,7 +23,7 @@ export interface IValidatorApi {
    * which can then be signed by a ValidatorClient.
    * @returns {Promise<BeaconBlock>} A proposed BeaconBlock object
    */
-  produceBlock(slot: Slot, randaoReveal: bytes): Promise<BeaconBlock>;
+  produceBlock(slot: Slot, randaoReveal: Uint8Array): Promise<BeaconBlock>;
 
   /**
    * Requests that the BeaconNode produce an IndexedAttestation,
@@ -50,4 +49,8 @@ export interface IValidatorApi {
   ): Promise<void>;
 
   getWireAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]>;
+  
+  subscribeCommitteeSubnet(
+    slot: Slot, slotSignature: BLSSignature, committeeIndex: CommitteeIndex, aggregatorPubkey: BLSPubkey
+  ): Promise<void>;
 }

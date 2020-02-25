@@ -5,6 +5,7 @@ import {createReportDir, runSuite} from "@chainsafe/benchmark-utils";
 const directory: string = createReportDir();
 
 // Run benchmarks
-for (let bench in benchmarks) {
+for (const bench in benchmarks) {
+  // @ts-ignore
   runSuite(benchmarks[bench](directory));
 }

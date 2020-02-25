@@ -3,7 +3,7 @@
  * @module chain/forkChoice
  */
 
-import {Gwei, Slot, ValidatorIndex} from "@chainsafe/eth2.0-types";
+import {Gwei, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 
 
 /**

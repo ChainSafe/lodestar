@@ -6,17 +6,16 @@ import {
   BeaconState,
   BLSPubkey,
   ValidatorIndex,
-  Root,
   SignedBeaconBlock,
-} from "@chainsafe/eth2.0-types";
+} from "@chainsafe/lodestar-types";
 
 import {
   AttestationRepository,
   AttesterSlashingRepository,
   BlockRepository,
   ChainRepository,
-  DepositRepository,
-  MerkleTreeRepository,
+  DepositDataRepository,
+  DepositDataRootListRepository,
   ProposerSlashingRepository,
   StateRepository,
   VoluntaryExitRepository,
@@ -49,9 +48,9 @@ export interface IBeaconDb {
 
   attesterSlashing: AttesterSlashingRepository;
 
-  deposit: DepositRepository;
+  depositData: DepositDataRepository;
 
-  merkleTree: MerkleTreeRepository;
+  depositDataRootList: DepositDataRootListRepository;
   /**
    * Returns validator index coresponding to validator
    * public key in registry,
@@ -73,7 +72,7 @@ export interface IBeaconDb {
    * @param stateRoot
    */
   updateChainHead(
-    blockRoot: Root,
-    stateRoot: Root
+    blockRoot: Uint8Array,
+    stateRoot: Uint8Array
   ): Promise<void>;
 }

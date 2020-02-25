@@ -1,11 +1,11 @@
 import {expect} from "chai";
 import {afterEach, beforeEach, describe, it} from "mocha";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Libp2pNetwork} from "../../../src/network";
 import {createNode} from "../../unit/network/util";
-import {generateEmptyAttestation} from "../../utils/attestation";
+import {generateEmptyAggregateAndProof, generateEmptyAttestation} from "../../utils/attestation";
 import {generateEmptySignedBlock} from "../../utils/block";
-import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {sleep} from "../../../src/util/sleep";
@@ -14,6 +14,7 @@ import Libp2p from "libp2p";
 import {GossipEvent} from "../../../src/network/gossip/constants";
 import sinon from "sinon";
 import { GossipMessageValidator } from "../../../src/network/gossip/validator";
+import { SignedBeaconBlock, Attestation } from "@chainsafe/lodestar-types";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -77,6 +78,29 @@ describe("[network] network", function () {
     expect(netA.getPeers().length).to.equal(0);
     expect(netB.getPeers().length).to.equal(0);
   });
+  it("should not receive duplicate block", async function() {
+    const connected = Promise.all([
+      new Promise((resolve) => netA.on("peer:connect", resolve)),
+      new Promise((resolve) => netB.on("peer:connect", resolve)),
+    ]);
+    await netA.connect(netB.peerInfo);
+    await connected;
+    const spy = sinon.spy();
+    const received = new Promise((resolve, reject) => {
+      setTimeout(reject, 4000);
+      netA.gossip.subscribeToBlock(spy);
+      setTimeout(resolve, 1000);
+    });
+    await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
+    validator.isValidIncomingBlock.resolves(true);
+    const block = generateEmptySignedBlock();
+    block.message.slot = 2020;
+    for (let i = 0; i < 5; i++) {
+      await netB.gossip.publishBlock(block);
+    }
+    await received;
+    expect(spy.callCount).to.be.equal(1);
+  });
   it("should receive blocks on subscription", async function () {
     const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
@@ -86,14 +110,19 @@ describe("[network] network", function () {
     await connected;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
-      netA.gossip.on(GossipEvent.BLOCK, resolve);
+      netA.gossip.subscribeToBlock((signedBlock: SignedBeaconBlock): void => {
+        resolve(signedBlock);
+      });
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     validator.isValidIncomingBlock.resolves(true);
-    netB.gossip.publishBlock(generateEmptySignedBlock());
-    await received;
+    const block = generateEmptySignedBlock();
+    block.message.slot = 2020;
+    netB.gossip.publishBlock(block);
+    const receivedBlock = await received;
+    expect(receivedBlock).to.be.deep.equal(block);
   });
-  it("should receive attestations on subscription", async function () {
+  it("should receive aggregate on subscription", async function () {
     const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
@@ -102,15 +131,14 @@ describe("[network] network", function () {
     await connected;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
-      netA.gossip.on(GossipEvent.ATTESTATION, resolve);
+      netA.gossip.subscribeToAttestation(resolve);
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     validator.isValidIncomingUnaggregatedAttestation.resolves(true);
-    netB.gossip.publishCommiteeAttestation(generateEmptyAttestation());
+    await netB.gossip.publishAggregatedAttestation(generateEmptyAggregateAndProof());
     await received;
   });
   it("should receive shard attestations on subscription", async function () {
-    const committeeIndex = 10;
     const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
@@ -119,14 +147,13 @@ describe("[network] network", function () {
     await connected;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
-      // @ts-ignore
-      netA.gossip.on(GossipEvent.ATTESTATION, resolve);
+      netA.gossip.subscribeToAttestationSubnet(0, resolve);
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     const attestation = generateEmptyAttestation();
-    attestation.data.index = committeeIndex;
-    validator.isValidIncomingUnaggregatedAttestation.resolves(true);
-    netB.gossip.publishCommiteeAttestation(attestation);
+    attestation.data.index = 0;
+    validator.isValidIncomingCommitteeAttestation.resolves(true);
+    await netB.gossip.publishCommiteeAttestation(attestation);
     await received;
   });
 });

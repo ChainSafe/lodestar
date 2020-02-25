@@ -1,8 +1,6 @@
 /**
  * @module validator/attestation
  */
-import {equals, hashTreeRoot} from "@chainsafe/ssz";
-
 import {
   Attestation,
   AttestationData,
@@ -13,14 +11,18 @@ import {
   Epoch,
   Fork,
   Slot
-} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IApiClient} from "../api";
 import {aggregateSignatures, Keypair, PrivateKey} from "@chainsafe/bls";
 import {IValidatorDB} from "..";
-import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {toHexString} from "@chainsafe/ssz";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {
+  computeEpochAtSlot, DomainType, getDomain, isSlashableAttestationData,
+} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {computeEpochAtSlot, DomainType, getDomain, isSlashableAttestationData, sleep} from "../util";
+import {sleep} from "../util";
 import {IAttesterDuty} from "../types";
 
 export class AttestationService {
@@ -57,13 +59,17 @@ export class AttestationService {
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
     const attesterDuties = await this.provider.validator.getAttesterDuties(epoch + 1, [this.publicKey]);
-    if(attesterDuties && attesterDuties.length === 1 && attesterDuties[0].validatorPubkey.equals(this.publicKey)) {
+    if(
+      attesterDuties && attesterDuties.length === 1 &&
+      this.config.types.BLSPubkey.equals(attesterDuties[0].validatorPubkey, this.publicKey)
+    ) {
       const duty = attesterDuties[0];
       const fork = (await this.provider.beacon.getFork()).fork;
+      const slotSignature = this.getSlotSignature(duty.attestationSlot, fork);
       const isAggregator = await this.provider.validator.isAggregator(
         duty.attestationSlot,
         duty.committeeIndex,
-        this.getSlotSignature(duty.attestationSlot, fork)
+        slotSignature
       );
       this.nextAttesterDuties.set(
         duty.attestationSlot,
@@ -72,7 +78,12 @@ export class AttestationService {
           isAggregator
         });
       if(isAggregator) {
-        //TODO: subscribe to committee subnet
+        await this.provider.validator.subscribeCommitteeSubnet(
+          duty.attestationSlot,
+          slotSignature,
+          duty.committeeIndex,
+          this.publicKey
+        );
       }
     }
   };
@@ -95,7 +106,7 @@ export class AttestationService {
       }
       await this.provider.validator.publishAttestation(attestation);
       this.logger.info(
-        `Published new attestation for block ${attestation.data.target.root.toString("hex")} ` +
+        `Published new attestation for block ${toHexString(attestation.data.target.root)} ` +
           `and committee ${duty.committeeIndex} at slot ${slot}`
       );
     }
@@ -116,18 +127,20 @@ export class AttestationService {
     }
 
     const compatibleAttestations = wireAttestations.filter((wireAttestation) => {
-      return equals(this.config.types.AttestationData, wireAttestation.data, attestation.data)
+      return this.config.types.AttestationData.equals(wireAttestation.data, attestation.data)
                     // prevent including aggregator attestation twice
-                    && ! equals(this.config.types.Attestation, attestation, wireAttestation);
+                    && ! this.config.types.Attestation.equals(attestation, wireAttestation);
     });
     compatibleAttestations.push(attestation);
     const aggregatedAttestation: Attestation = {
-      signature: aggregateSignatures(compatibleAttestations.map((a) => a.signature)),
+      signature: aggregateSignatures(compatibleAttestations.map((a) => a.signature.valueOf() as Uint8Array)),
       data: attestation.data,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       aggregationBits: compatibleAttestations.reduce((aggregatedBits, current) => {
-        return aggregatedBits.or(current.aggregationBits);
-      }, compatibleAttestations[0].aggregationBits)
+        for (let i = 0; i < aggregatedBits.length; i++) {
+          aggregatedBits[i] = aggregatedBits[i] || current.aggregationBits[i];
+        }
+        return aggregatedBits;
+      }, Array.from({length: attestation.aggregationBits.length}, () => false)),
     };
     await this.provider.validator.publishAggregatedAttestation(
       aggregatedAttestation,
@@ -149,7 +162,10 @@ export class AttestationService {
       DomainType.BEACON_ATTESTER,
       computeEpochAtSlot(this.config, slot)
     );
-    return this.privateKey.signMessage(hashTreeRoot(this.config.types.Slot, slot), domain).toBytesCompressed();
+    return this.privateKey.signMessage(
+      this.config.types.Slot.hashTreeRoot(slot),
+      domain.valueOf() as Uint8Array,
+    ).toBytesCompressed();
   }
 
   private async createAttestation(
@@ -175,7 +191,7 @@ export class AttestationService {
       return null;
     }
     attestation.signature = this.privateKey.signMessage(
-      hashTreeRoot(this.config.types.AttestationData, attestation.data),
+      this.config.types.AttestationData.hashTreeRoot(attestation.data),
       getDomain(
         this.config,
         {fork} as BeaconState,
@@ -185,7 +201,7 @@ export class AttestationService {
     ).toBytesCompressed();
     await this.storeAttestation(attestation);
     this.logger.info(
-      `Signed new attestation for block ${attestation.data.target.root.toString("hex")} ` +
+      `Signed new attestation for block ${toHexString(attestation.data.target.root)} ` +
             `and committee ${committeeIndex} at slot ${slot}`
     );
     return attestation;

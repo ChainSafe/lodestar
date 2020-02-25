@@ -1,9 +1,11 @@
 import {assert, expect} from "chai";
+// @ts-ignore
 import level from "level";
+// @ts-ignore
 import leveldown from "leveldown";
 import {LevelDbController} from "../../../../src/db/controller";
 import {promisify} from "es6-promisify";
-import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 describe("LevelDB controller", () => {
   const logger: ILogger = new WinstonLogger();

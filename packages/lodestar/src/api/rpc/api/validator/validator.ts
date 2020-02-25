@@ -8,14 +8,14 @@ import {
   BeaconBlock,
   BLSPubkey,
   BLSSignature,
-  bytes96,
+  Bytes96,
   CommitteeIndex,
   Epoch,
+  SignedBeaconBlock,
   Slot,
-  ValidatorDuty,
-  SignedBeaconBlock
-} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+  ValidatorDuty
+} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconDb} from "../../../../db";
 import {IBeaconChain} from "../../../../chain";
@@ -26,9 +26,13 @@ import {IEth1Notifier} from "../../../../eth1";
 import {getAttesterDuties, getEpochProposers, produceAttestation, publishAttestation} from "../../../impl/validator";
 import {ApiNamespace, IApiModules} from "../../../index";
 import {IApiOptions} from "../../../options";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetwork} from "../../../../network";
-import {isAggregator} from "@chainsafe/eth2.0-state-transition";
+import {getDomain, isAggregator} from "@chainsafe/lodestar-beacon-state-transition";
+import {verify} from "@chainsafe/bls";
+import {Sync} from "../../../../sync";
+import {DomainType} from "../../../../constants";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition/lib";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -38,25 +42,27 @@ export class ValidatorApi implements IValidatorApi {
   private chain: IBeaconChain;
   private db: IBeaconDb;
   private network: INetwork;
+  private sync: Sync;
   private opPool: OpPool;
   private eth1: IEth1Notifier;
   private logger: ILogger;
 
   public constructor(
     opts: Partial<IApiOptions>,
-    modules: Pick<IApiModules, "config"|"chain"|"db"|"opPool"|"eth1"|"network"|"logger">
+    modules: Pick<IApiModules, "config"|"chain"|"db"|"opPool"|"eth1"|"sync"|"network"|"logger">
   ) {
     this.namespace = ApiNamespace.VALIDATOR;
     this.config = modules.config;
     this.chain = modules.chain;
     this.db = modules.db;
     this.network = modules.network;
+    this.sync = modules.sync;
     this.logger = modules.logger;
     this.opPool = modules.opPool;
     this.eth1 = modules.eth1;
   }
 
-  public async produceBlock(slot: Slot, randaoReveal: bytes96): Promise<BeaconBlock> {
+  public async produceBlock(slot: Slot, randaoReveal: Bytes96): Promise<BeaconBlock> {
     return await assembleBlock(this.config, this.chain, this.db, this.opPool, this.eth1, slot, randaoReveal);
   }
 
@@ -90,7 +96,7 @@ export class ValidatorApi implements IValidatorApi {
     return getEpochProposers(this.config, this.chain, this.db, epoch);
   }
 
-  public async getAttesterDuties(epoch: number, validatorPubKeys: Buffer[]): Promise<ValidatorDuty[]> {
+  public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<ValidatorDuty[]> {
     return getAttesterDuties(this.config, this.db, this.chain, epoch, validatorPubKeys);
   }
 
@@ -116,6 +122,28 @@ export class ValidatorApi implements IValidatorApi {
 
   public async isAggregator(slot: Slot, committeeIndex: CommitteeIndex, slotSignature: BLSSignature): Promise<boolean> {
     return isAggregator(this.config, await this.db.state.getLatest(), slot, committeeIndex, slotSignature);
+  }
+
+  public async subscribeCommitteeSubnet(
+    slot: Slot, slotSignature: BLSSignature, committeeIndex: CommitteeIndex, aggregatorPubkey: BLSPubkey
+  ): Promise<void> {
+    const valid = verify(
+      aggregatorPubkey.valueOf() as Uint8Array,
+      this.config.types.Slot.hashTreeRoot(slot),
+      slotSignature.valueOf() as Uint8Array,
+      getDomain(
+        this.config,
+        this.chain.latestState,
+        DomainType.BEACON_ATTESTER,
+        computeEpochAtSlot(this.config, slot))
+    );
+    if(!valid) {
+      throw new Error("Ivalid slot signature");
+    }
+    this.sync.regularSync.collectAttestations(
+      slot,
+      committeeIndex
+    );
   }
 
 }

@@ -5,13 +5,13 @@
 import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {Block, Log} from "ethers/providers";
-import {deserialize} from "@chainsafe/ssz";
-import {Deposit, Eth1Data, number64, Root} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {fromHexString} from "@chainsafe/ssz";
+import {Eth1Data, Number64, DepositData} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+
 import {Eth1EventEmitter, IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";
-import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../../constants";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
 import {IEth1Options} from "../options";
 import {getEth1Vote} from "./eth1Vote";
 
@@ -85,8 +85,8 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     merkleTreeIndex: string
   ): Promise<void> {
     try {
-      const index = deserialize(this.config.types.number64, Buffer.from(merkleTreeIndex.substr(2), "hex"));
-      const deposit = this.createDeposit(
+      const index = this.config.types.Number64.deserialize(fromHexString(merkleTreeIndex));
+      const depositData = this.createDepositData(
         pubkey,
         withdrawalCredentials,
         amount,
@@ -95,7 +95,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       this.logger.info(
         `Received validator deposit event index=${index}`
       );
-      this.emit("deposit", index, deposit);
+      this.emit("deposit", index, depositData);
     } catch (e) {
       this.logger.error(`Failed to process deposit log. Error: ${e.message}`);
     }
@@ -112,7 +112,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     );
     const pastDeposits = logs.map((log) => {
       const logDescription = this.contract.interface.parseLog(log);
-      return this.createDeposit(
+      return this.createDepositData(
         logDescription.values.pubkey,
         logDescription.values.withdrawalCredentials,
         logDescription.values.amount,
@@ -132,17 +132,17 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     return this.provider.getBlock(blockHashOrBlockNumber, false);
   }
 
-  public async depositRoot(block?: string | number): Promise<Root> {
+  public async depositRoot(block?: string | number): Promise<Uint8Array> {
     const depositRootHex = await this.contract.get_deposit_root({blockTag: block || "latest"});
-    return Buffer.from(depositRootHex.substr(2), "hex");
+    return fromHexString(depositRootHex);
   }
 
   public async depositCount(block?: string | number): Promise<number> {
     const depositCountHex = await this.contract.get_deposit_count({blockTag: block || "latest"});
-    return Buffer.from(depositCountHex.substr(2), "hex").readUIntLE(0, 6);
+    return Buffer.from(fromHexString(depositCountHex)).readUIntLE(0, 6);
   }
 
-  public async getEth1Data(eth1Head: Block, distance: number64): Promise<Eth1Data> {
+  public async getEth1Data(eth1Head: Block, distance: Number64): Promise<Eth1Data> {
     const requiredBlock = eth1Head.number - distance;
     const blockHash = (await this.getBlock(requiredBlock)).hash;
     const [depositCount, depositRoot] = await Promise.all([
@@ -150,7 +150,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       this.depositRoot(blockHash)
     ]);
     return {
-      blockHash: Buffer.from(blockHash.slice(2), "hex"),
+      blockHash: fromHexString(blockHash),
       depositCount,
       depositRoot
     };
@@ -177,8 +177,8 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
 
   private async getContractPastLogs(
     topics: string[],
-    fromBlock: number64 | string = this.opts.depositContract.deployedAt,
-    toBlock: number64 | string | null = null
+    fromBlock: Number64 | string = this.opts.depositContract.deployedAt,
+    toBlock: Number64 | string | null = null
   ): Promise<Log[]> {
     const filter = {
       fromBlock,
@@ -190,22 +190,19 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   }
 
   /**
-   * Parse deposit log elements to a [[Deposit]]
+   * Parse deposit log elements to a [[DepositData]]
    */
-  private createDeposit(
+  private createDepositData(
     pubkey: string,
     withdrawalCredentials: string,
     amount: string,
     signature: string,
-  ): Deposit {
+  ): DepositData {
     return {
-      proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH}, () => Buffer.alloc(32)),
-      data: {
-        pubkey: Buffer.from(pubkey.slice(2), "hex"),
-        withdrawalCredentials: Buffer.from(withdrawalCredentials.slice(2), "hex"),
-        amount: deserialize(this.config.types.Gwei, Buffer.from(amount.slice(2), "hex")),
-        signature: Buffer.from(signature.slice(2), "hex"),
-      },
+      pubkey: fromHexString(pubkey),
+      withdrawalCredentials: fromHexString(withdrawalCredentials),
+      amount: this.config.types.Gwei.deserialize(fromHexString(amount)),
+      signature: fromHexString(signature),
     };
   }
 }

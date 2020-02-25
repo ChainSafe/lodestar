@@ -2,7 +2,7 @@
  * @module db/api/validator
  */
 
-import {Attestation, BLSPubkey, Epoch, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
+import {Attestation, BLSPubkey, Epoch, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 
 export interface IAttestationSearchOptions {
   gt?: Epoch;

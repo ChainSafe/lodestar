@@ -4,7 +4,7 @@
 
 import {ICliCommand} from "./interface";
 import {CommanderStatic} from "commander";
-import {ILogger, LogLevels, WinstonLogger, LogLevel, defaultLogLevel} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger, LogLevels, WinstonLogger, LogLevel, defaultLogLevel} from "@chainsafe/lodestar-utils/lib/logger";
 import fs from "fs";
 import {CliError} from "../error";
 import {writeTomlConfig} from "../lodestar/util/file";
@@ -19,7 +19,7 @@ export class CreateConfigCommand implements ICliCommand {
 
 
     commander
-      .command("@chainsafe/eth2.0-config")
+      .command("@chainsafe/lodestar-config")
       .description("Create default config file")
       .option(`-l, --logLevel [${LogLevels.join("|")}]`, "Log level")
       .option("-o, --outputFile [output_file]"

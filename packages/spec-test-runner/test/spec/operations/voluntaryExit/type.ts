@@ -1,4 +1,4 @@
-import {BeaconState, SignedVoluntaryExit} from "@chainsafe/eth2.0-types";
+import {BeaconState, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
 import {IBaseSpecTest} from "../../type";
 
 export interface IProcessVoluntaryExitTestCase extends IBaseSpecTest {

@@ -1,36 +1,41 @@
-import sinon from "sinon";
+import sinon, { SinonStubbedInstance, SinonStub } from "sinon";
 import {expect} from "chai";
-// @ts-ignore
 import PeerInfo from "peer-info";
-// @ts-ignore
 import PeerId from "peer-id";
-import {Goodbye, Status} from "@chainsafe/eth2.0-types";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import * as ssz from "@chainsafe/ssz/lib/core/hashTreeRoot";
+import {Goodbye, Status} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
 import {Method, ZERO_HASH} from "../../../src/constants";
 import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
-import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateState} from "../../utils/state";
 import {SyncReqResp} from "../../../src/sync/reqResp";
 import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
 import {ReqResp} from "../../../src/network/reqResp";
 import {ReputationStore} from "../../../src/sync/IReputation";
-import { generateEmptySignedBlock } from "../../utils/block";
+import {generateEmptySignedBlock} from "../../utils/block";
+import { IBeaconDb } from "../../db";
 
 describe("syncing", function () {
   const sandbox = sinon.createSandbox();
   let syncRpc: SyncReqResp;
-  let chainStub, networkStub, dbStub, repsStub, logger, reqRespStub, hashTreeRootStub;
+  let chainStub: SinonStubbedInstance<BeaconChain>, networkStub: SinonStubbedInstance<Libp2pNetwork>, repsStub: SinonStubbedInstance<ReputationStore>, logger: WinstonLogger, reqRespStub: SinonStubbedInstance<ReqResp>;
+  let dbStub: {
+    chain: SinonStubbedInstance<ChainRepository>;
+    state: SinonStubbedInstance<StateRepository>;
+    block: SinonStubbedInstance<BlockRepository>;
+    blockArchive: SinonStubbedInstance<BlockArchiveRepository>;
+  };
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.latestState = generateState();
+    // @ts-ignore
     chainStub.config = config;
     reqRespStub = sandbox.createStubInstance(ReqResp);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
-    networkStub.reqResp = reqRespStub;
+    networkStub.reqResp = reqRespStub as unknown as ReqResp;
     dbStub = {
       chain: sandbox.createStubInstance(ChainRepository),
       state: sandbox.createStubInstance(StateRepository),
@@ -38,16 +43,15 @@ describe("syncing", function () {
       blockArchive: sandbox.createStubInstance(BlockArchiveRepository),
     };
     repsStub = sandbox.createStubInstance(ReputationStore);
-    hashTreeRootStub = sandbox.stub(ssz, "hashTreeRoot");
     logger = new WinstonLogger();
     logger.silent = true;
 
     syncRpc = new SyncReqResp({}, {
       config,
-      db: dbStub,
+      db: dbStub as unknown as IBeaconDb,
       chain: chainStub,
       network: networkStub,
-      reps: repsStub,
+      reps: repsStub as unknown as ReputationStore,
       logger,
     });
   });
@@ -59,7 +63,7 @@ describe("syncing", function () {
 
 
   it("should able to create Status - genesis time", async function () {
-    chainStub.genesisTime = 0;
+    // chainStub.genesisTime = 0;
     chainStub.networkId = 1n;
     chainStub.chainId = 1;
 
@@ -84,7 +88,7 @@ describe("syncing", function () {
     networkStub.hasPeer.returns(true);
     networkStub.getPeers.returns([peerInfo, peerInfo]);
     repsStub.get.returns({
-      latestStatus: {},
+      latestStatus: null, score: 0
     });
 
 
@@ -107,7 +111,7 @@ describe("syncing", function () {
       headSlot: 1,
     };
     repsStub.get.returns({
-      latestStatus: null,
+      latestStatus: null, score: 0
     });
     reqRespStub.sendResponse.resolves(0);
     dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
@@ -131,7 +135,7 @@ describe("syncing", function () {
       headSlot: 1,
     };
     repsStub.get.returns({
-      latestStatus: null,
+      latestStatus: null, score: 0
     });
     try {
       reqRespStub.sendResponse.throws(new Error("server error"));
@@ -172,14 +176,13 @@ describe("syncing", function () {
     state.fork.currentVersion = Buffer.alloc(4);
     state.finalizedCheckpoint.epoch = 2;
     dbStub.state.get.resolves(state);
-    hashTreeRootStub.returns(Buffer.from("not xyz"));
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.true;
   });
 
   it("should not disconnect on status", async function() {
     const body: Status = {
       headForkVersion: Buffer.alloc(4),
-      finalizedRoot: Buffer.from("xyz"),
+      finalizedRoot: config.types.BeaconBlock.hashTreeRoot(generateEmptySignedBlock().message),
       finalizedEpoch: 1,
       headRoot: Buffer.alloc(32),
       headSlot: 1,
@@ -191,7 +194,6 @@ describe("syncing", function () {
     state.fork.currentVersion = Buffer.alloc(4);
     state.finalizedCheckpoint.epoch = 1;
     dbStub.state.get.resolves(state);
-    hashTreeRootStub.returns(Buffer.from("xyz"));
 
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.false;
   });
@@ -199,7 +201,7 @@ describe("syncing", function () {
   it("should handle request - onGoodbye", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     const goodbye: Goodbye = 1n;
-    networkStub.disconnect.resolves(0);
+    networkStub.disconnect.resolves();
     try {
       await syncRpc.onRequest(peerInfo, Method.Goodbye, "goodBye", goodbye);
       expect(networkStub.disconnect.calledOnce).to.be.true;

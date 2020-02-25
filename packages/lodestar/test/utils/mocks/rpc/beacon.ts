@@ -1,22 +1,22 @@
 import {IBeaconApi} from "../../../../src/api/rpc/api/beacon";
-import {BeaconBlock, BeaconState, bytes32, Fork, number64, SyncingStatus, uint64} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconState, Bytes32, Fork, Number64, SyncingStatus, Uint64} from "@chainsafe/lodestar-types";
 import {getEmptyBlock} from "../../../../src/chain/genesis/genesis";
 import {ApiNamespace} from "../../../../src/api";
 
 export interface MockBeaconApiOpts {
-  version?: bytes32;
+  version?: Bytes32;
   fork?: Fork;
   head?: BeaconBlock;
-  genesisTime?: number64;
+  genesisTime?: Number64;
 }
 
 export class MockBeaconApi implements IBeaconApi {
 
   public namespace: ApiNamespace;
-  private version: bytes32;
+  private version: Bytes32;
   private fork: Fork;
   private head: BeaconBlock;
-  private genesisTime: number64;
+  private genesisTime: Number64;
 
   public constructor(opts?: MockBeaconApiOpts) {
     this.namespace = ApiNamespace.BEACON;
@@ -27,15 +27,15 @@ export class MockBeaconApi implements IBeaconApi {
     this.genesisTime = opts && opts.genesisTime || Date.now();
   }
 
-  public async getClientVersion(): Promise<bytes32> {
+  public async getClientVersion(): Promise<Bytes32> {
     return this.version;
   }
 
-  public async getFork(): Promise<{fork: Fork; chainId: uint64}> {
+  public async getFork(): Promise<{fork: Fork; chainId: Uint64}> {
     return {fork: this.fork, chainId: 1n};
   }
 
-  public async getGenesisTime(): Promise<number64> {
+  public async getGenesisTime(): Promise<Number64> {
     return this.genesisTime;
   }
 

@@ -1,5 +1,5 @@
 import {assert} from "chai";
-import {intToBytes} from "@chainsafe/eth2.0-utils";
+import {intToBytes} from "@chainsafe/lodestar-utils";
 
 import {Bucket, encodeKey} from "../../../src/db/schema";
 

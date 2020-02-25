@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
 import {Method} from "../../../src/constants";
 import {SyncReqResp} from "../../../src/sync/reqResp";
@@ -10,14 +10,13 @@ import {BeaconDb} from "../../../src/db";
 import Libp2p from "libp2p";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../unit/network/util";
-import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {generateState} from "../../utils/state";
 import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
 import { IGossipMessageValidator } from "../../../src/network/gossip/interface";
 import {generateEmptySignedBlock} from "../../utils/block";
-import {hashTreeRoot} from "@chainsafe/ssz";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -56,7 +55,7 @@ describe("[sync] rpc", function () {
     const block = generateEmptySignedBlock();
     state.finalizedCheckpoint = {
       epoch: 0,
-      root: hashTreeRoot(config.types.BeaconBlock, block.message),
+      root: config.types.BeaconBlock.hashTreeRoot(block.message),
     };
     // @ts-ignore
     const db = {

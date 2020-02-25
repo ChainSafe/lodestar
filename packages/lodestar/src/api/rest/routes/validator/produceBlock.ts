@@ -3,7 +3,6 @@ import fastify, {DefaultQuery} from "fastify";
 import {IApiModules} from "../../../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
 import {assembleBlock} from "../../../../chain/factory/block";
-import {toJson} from "@chainsafe/eth2.0-utils";
 
 interface IQuery extends DefaultQuery {
   slot: number;
@@ -47,7 +46,7 @@ export const registerBlockProductionEndpoint = (fastify: IFastifyServer, modules
       reply
         .code(200)
         .type("application/json")
-        .send(toJson(block));
+        .send(modules.config.types.BeaconBlock.toJson(block));
     }
   );
 };

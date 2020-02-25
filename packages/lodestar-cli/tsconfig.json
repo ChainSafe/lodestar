@@ -1,10 +1,10 @@
 {
   "extends": "../../tsconfig",
-  "include": ["src"],
+  "include": ["src","test"],
   "compilerOptions": {
     "typeRoots": [
       "../../node_modules/@types",
-      "../../node_modules/@polkadot/ts"
+      "../../node_modules/libp2p-ts/types"
     ],
   }
 }

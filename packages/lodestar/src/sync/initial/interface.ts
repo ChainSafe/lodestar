@@ -1,10 +1,10 @@
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import PeerInfo from "peer-info";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
 import {ReputationStore} from "../IReputation";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
-import {Checkpoint, Epoch} from "@chainsafe/eth2.0-types";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {Checkpoint, Epoch} from "@chainsafe/lodestar-types";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
 import {IService} from "../../node";

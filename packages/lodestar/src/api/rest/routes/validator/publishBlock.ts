@@ -2,11 +2,11 @@ import {IFastifyServer} from "../../index";
 import fastify, {DefaultBody, DefaultHeaders, DefaultParams, DefaultQuery} from "fastify";
 import {IApiModules} from "../../../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
-import {fromJson} from "@chainsafe/eth2.0-utils";
+import {Json} from "@chainsafe/ssz";
 
 interface IBody extends DefaultBody {
   // eslint-disable-next-line camelcase
-  beacon_block: object;
+  beacon_block: Json;
 }
 
 
@@ -32,8 +32,8 @@ export const registerBlockPublishEndpoint = (fastify: IFastifyServer, modules: I
     opts,
     async (request, reply) => {
       await modules.chain.receiveBlock(
-        fromJson(
-          modules.config.types.BeaconBlock, request.body.beacon_block
+        modules.config.types.SignedBeaconBlock.fromJson(
+          request.body.beacon_block
         )
       );
       reply

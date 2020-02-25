@@ -1,10 +1,10 @@
-import sinon from "sinon";
+import sinon, { SinonStubbedInstance } from "sinon";
 import chai, {expect} from "chai";
-import chaiAsPromised from 'chai-as-promised';
+import chaiAsPromised from "chai-as-promised";
 
-import {serialize, SimpleContainerType} from "@chainsafe/ssz";
-import {bytes32} from "@chainsafe/eth2.0-types";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {ContainerType} from "@chainsafe/ssz";
+import {Bytes32} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
 import {BulkRepository} from "../../../../src/db/api/beacon/repository";
 import {IDatabaseController, LevelDbController} from "../../../../src/db/controller";
@@ -12,87 +12,87 @@ import {Bucket} from "../../../../src/db/schema";
 
 chai.use(chaiAsPromised);
 
-const TestSSZType: SimpleContainerType = {
-  fields: [
-    ["bool", config.types.bool],
-    ["bytes", config.types.bytes32],
-  ],
-};
-
 interface TestType {
   bool: boolean;
-  bytes: bytes32;
+  bytes: Bytes32;
 }
+
+const TestSSZType = new ContainerType<TestType>({
+  fields: {
+    bool: config.types.Boolean,
+    bytes: config.types.Bytes32,
+  },
+});
 
 class TestRepository extends BulkRepository<TestType> {
 
   public constructor(db: IDatabaseController) {
-    super(config, db, Bucket.deposit, TestSSZType);
+    super(config, db, Bucket.depositData, TestSSZType);
   }
 
 }
 
-describe('database repository', function () {
+describe("database repository", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let repository: TestRepository, controller;
+  let repository: TestRepository, controller: SinonStubbedInstance<LevelDbController>;
 
   beforeEach(function () {
     controller = sandbox.createStubInstance(LevelDbController);
     repository = new TestRepository(controller);
   });
 
-  it('should get single item', async function() {
+  it("should get single item", async function() {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    controller.get.resolves(serialize(TestSSZType, item));
-    const result = await repository.get('id');
+    controller.get.resolves(TestSSZType.serialize(item) as Buffer);
+    const result = await repository.get("id");
     expect(result).to.be.deep.equal(item);
     expect(controller.get.calledOnce).to.be.true;
   });
 
-  it('should return null if item not found', async function() {
+  it("should return null if item not found", async function() {
     controller.get.resolves(null);
-    const result = await repository.get('id');
+    const result = await repository.get("id");
     expect(result).to.be.deep.equal(null);
     expect(controller.get.calledOnce).to.be.true;
   });
 
-  it('should return true if item exists', async function() {
+  it("should return true if item exists", async function() {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    controller.get.resolves(serialize(TestSSZType, item));
-    const result = await repository.has('id');
+    controller.get.resolves(TestSSZType.serialize(item) as Buffer);
+    const result = await repository.has("id");
     expect(result).to.be.true;
     expect(controller.get.calledOnce).to.be.true;
   });
 
-  it('should return false if item doesnt exists', async function() {
+  it("should return false if item doesnt exists", async function() {
     controller.get.resolves(null);
-    const result = await repository.has('id');
+    const result = await repository.has("id");
     expect(result).to.be.false;
     expect(controller.get.calledOnce).to.be.true;
   });
 
-  it('should store with hashTreeRoot as id', async function() {
+  it("should store with hashTreeRoot as id", async function() {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await expect(repository.add(item)).to.not.be.rejected;
     expect(controller.put.calledOnce).to.be.true;
   });
 
-  it('should store with given id', async function() {
+  it("should store with given id", async function() {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await expect(repository.set(1, item)).to.not.be.rejected;
     expect(controller.put.calledOnce).to.be.true;
   });
 
-  it('should delete', async function() {
+  it("should delete", async function() {
     await expect(repository.delete(1)).to.not.be.rejected;
     expect(controller.delete.calledOnce).to.be.true;
   });
 
-  it('should return all items', async function () {
+  it("should return all items", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    const itemSerialized = serialize(TestSSZType, item);
+    const itemSerialized = TestSSZType.serialize(item);
     const items = [itemSerialized, itemSerialized, itemSerialized];
     controller.search.resolves(items);
     const result = await repository.getAll();
@@ -100,12 +100,12 @@ describe('database repository', function () {
     expect(controller.search.calledOnce).to.be.true;
   });
 
-  it('should return range of items', async function () {
+  it("should return range of items", async function () {
     await repository.getAllBetween(0, 1);
     expect(controller.search.calledOnce).to.be.true;
   });
 
-  it('should delete given items', async function () {
+  it("should delete given items", async function () {
     await repository.deleteMany([1, 2, 3]);
     expect(
       controller
@@ -116,7 +116,7 @@ describe('database repository', function () {
     ).to.be.true;
   });
 
-  it('should delete given items by value', async function () {
+  it("should delete given items by value", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await repository.deleteManyByValue([item, item]);
     expect(

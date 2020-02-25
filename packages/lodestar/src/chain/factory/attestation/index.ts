@@ -1,11 +1,9 @@
-import {Attestation, BeaconBlock, BeaconState, Slot, ValidatorIndex, CommitteeIndex} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {Attestation, BeaconBlock, BeaconState, Slot, ValidatorIndex, CommitteeIndex} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconDb} from "../../../db/api";
 import {assembleAttestationData} from "./data";
-import {BitList} from "@chainsafe/bit-utils";
-import {getBeaconCommittee} from "@chainsafe/eth2.0-state-transition";
-import {intDiv} from "@chainsafe/eth2.0-utils";
+import {getBeaconCommittee} from "@chainsafe/lodestar-beacon-state-transition";
 
 export async function assembleAttestation(
   {config, db}: {config: IBeaconConfig; db: IBeaconDb},
@@ -24,19 +22,6 @@ export async function assembleAttestation(
   };
 }
 
-export function getAggregationBits(committee: ValidatorIndex[], validatorIndex: ValidatorIndex): BitList {
-  const aggregationBits = getEmptyBitList(committee.length);
-  committee.forEach((committeeValidator, index) => {
-    if(committeeValidator === validatorIndex) {
-      aggregationBits.setBit(index, true);
-    }
-  });
-  return aggregationBits;
-}
-
-export function getEmptyBitList(length: number): BitList {
-  return BitList.fromBitfield(
-    Buffer.alloc(intDiv(length + 7, 8)),
-    length
-  );
+export function getAggregationBits(committee: ValidatorIndex[], validatorIndex: ValidatorIndex): boolean[] {
+  return Array.from({length: committee.length}, (_, i) => committee[i] === validatorIndex);
 }

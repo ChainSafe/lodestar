@@ -1,12 +1,11 @@
 import {join} from "path";
 import {expect} from "chai";
-import {equals} from "@chainsafe/ssz";
-import {BeaconState, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {stateTransition} from "@chainsafe/eth2.0-state-transition";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {stateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IBlockSanityTestCase} from "./type";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<IBlockSanityTestCase, BeaconState>(
@@ -35,7 +34,7 @@ describeDirectorySpecTest<IBlockSanityTestCase, BeaconState>(
     timeout: 10000000,
     getExpected: (testCase => testCase.post),
     expectFunc: (testCase, expected, actual) => {
-      expect(equals(config.types.BeaconState, actual, expected)).to.be.true;
+      expect(config.types.BeaconState.equals(actual, expected)).to.be.true;
     }
   }
 );

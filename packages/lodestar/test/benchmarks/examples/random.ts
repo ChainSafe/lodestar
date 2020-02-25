@@ -15,6 +15,7 @@ export const bench = (dir: string): BenchSuite => {
   };
 
   return {
+    name: "examples",
     testFunctions: [regExp, indexOf],
     file: dir + FUNCTION_NAME + ".txt"
   };

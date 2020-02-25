@@ -1,9 +1,8 @@
-import {Attestation, BeaconState, CommitteeIndex, Epoch} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {Attestation, BeaconState, CommitteeIndex, Epoch} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {OperationsModule} from "./abstract";
-import {computeEpochAtSlot, computeStartSlotAtEpoch,} from "@chainsafe/eth2.0-state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch,} from "@chainsafe/lodestar-beacon-state-transition";
 import {BulkRepository} from "../../db/api/beacon/repository";
-import {getBitCount} from "../../util/bit";
 
 export class AttestationOperations extends OperationsModule<Attestation> {
   private readonly config: IBeaconConfig;
@@ -19,7 +18,7 @@ export class AttestationOperations extends OperationsModule<Attestation> {
       return attestation.data.index === committeeIndex
           && computeEpochAtSlot(this.config, attestation.data.slot) === epoch
           //filter out aggregated attestations
-          && getBitCount(attestation.aggregationBits) === 1;
+          && attestation.aggregationBits.length === 1;
     });
   }
 

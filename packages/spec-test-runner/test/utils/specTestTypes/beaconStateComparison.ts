@@ -1,4 +1,4 @@
-import {BaseCase} from "@chainsafe/eth2.0-spec-test-util";
+import {BaseCase} from "@chainsafe/lodestar-spec-test-util";
 
 export interface BeaconStateComparisonCase extends BaseCase {
   pre: any;

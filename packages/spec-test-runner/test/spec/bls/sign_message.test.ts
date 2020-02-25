@@ -1,5 +1,5 @@
 import path from "path";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import bls, {initBLS} from "@chainsafe/bls";
 import {padLeft} from "@chainsafe/bls/lib/helpers/utils";
 
@@ -30,7 +30,7 @@ describeDirectorySpecTest<ISignMessageTestCase, string>(
       Buffer.from(testCase.data.input.message.replace("0x", ""), "hex"),
       padLeft(Buffer.from(testCase.data.input.domain.replace("0x", ""), "hex"), 8)
     );
-    return `0x${signature.toString("hex")}`;
+    return `0x${Buffer.from(signature).toString("hex")}`;
   }),
   {
     inputTypes: {

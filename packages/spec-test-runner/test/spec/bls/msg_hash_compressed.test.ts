@@ -1,5 +1,5 @@
 import path from "path";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {PrivateKey} from "@chainsafe/bls";
 import {padLeft} from "@chainsafe/bls/lib/helpers/utils";
 
@@ -22,8 +22,8 @@ describeDirectorySpecTest<IMsgHHashCOmpressed, string>(
   (testCase => {
     const domain = Buffer.from(testCase.data.input.domain.replace("0x", ""), "hex");
     const input = Buffer.from(testCase.data.input.message.replace("0x", ""), "hex");
-    const result  = PrivateKey.fromInt(1).signMessage(input, domain).toBytesCompressed().toString("hex");
-    return `0x${result}`;
+    const result  = PrivateKey.fromInt(1).signMessage(input, domain).toBytesCompressed();
+    return `0x${Buffer.from(result).toString("hex")}`;
   }),
   {
     inputTypes: {

@@ -1,5 +1,5 @@
 import {AbstractApiClient} from "../abstract";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IValidatorApi} from "../interface/validators";
 import {IBeaconApi} from "../interface/beacon";
 

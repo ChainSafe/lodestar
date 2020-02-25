@@ -1,6 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {describe, it, before, after, beforeEach, afterEach} from "mocha";
 import {ApiClientOverInstance} from "../../../src/api";
 import {MockBeaconApi} from "../../utils/mocks/beacon";

@@ -1,15 +1,15 @@
 {
   "extends": "../../tsconfig",
-  "include": ["src"],
-  "exclude": ["test"],
-  "compilerOptions": {
+  "include": ["src","test"],
+  "exclude": [],
+  "compilerOptions": { 
     "typeRoots": [
       "../../node_modules/@types",
-      "../../node_modules/@polkadot/ts"
+      "../../node_modules/libp2p-ts/types"
     ],
     "outDir": "lib",
     /* Redirect output structure to the directory. */
-    "rootDir": "./src"
+    "rootDirs": ["./src","./test"]
     /* Specify the root directory of input files. Use to control the output directory structure with --outDir. */
   }
 }

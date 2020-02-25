@@ -1,7 +1,7 @@
 // import path from "path";
 // import {padLeft} from "../../src/helpers/utils";
 // import {G2point} from "../../src/helpers/g2point";
-// import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+// import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 //
 // interface IMsgHHashUnCompressed {
 //   data: {

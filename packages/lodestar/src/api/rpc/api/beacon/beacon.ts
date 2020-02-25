@@ -2,8 +2,8 @@
  * @module api/rpc
  */
 
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {bytes32, Fork, number64, SyncingStatus, uint64} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {Bytes32, Fork, Number64, SyncingStatus, Uint64} from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "./interface";
 import {IBeaconChain} from "../../../../chain";
 import {IBeaconDb} from "../../../../db";
@@ -28,15 +28,15 @@ export class BeaconApi implements IBeaconApi {
   }
 
 
-  public async getClientVersion(): Promise<bytes32> {
+  public async getClientVersion(): Promise<Bytes32> {
     return Buffer.from(`lodestar-${process.env.npm_package_version}`, "utf-8");
   }
 
-  public async getFork(): Promise<{fork: Fork; chainId: uint64}> {
+  public async getFork(): Promise<{fork: Fork; chainId: Uint64}> {
     return getFork(this.db, this.chain);
   }
 
-  public async getGenesisTime(): Promise<number64> {
+  public async getGenesisTime(): Promise<Number64> {
     if (this.chain.latestState) {
       return this.chain.latestState.genesisTime;
     }
