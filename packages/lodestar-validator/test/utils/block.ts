@@ -1,6 +1,6 @@
-import { BeaconBlock } from "@chainsafe/eth2.0-types";
+import { BeaconBlock } from "@chainsafe/lodestar-types";
 import crypto from "crypto";
-import { ZERO_HASH } from "@chainsafe/eth2.0-state-transition";
+import { ZERO_HASH } from "@chainsafe/lodestar-beacon-state-transition";
 
 export function generateEmptyBlock(): BeaconBlock {
   return {

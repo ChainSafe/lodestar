@@ -1,25 +1,15 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
-<<<<<<< HEAD
-import {BeaconBlockHeader} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
-=======
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
 import {FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
->>>>>>> Fix compilation errors for remaining packages
 import {IValidatorDB, ValidatorDB} from "../../../../../src/db";
 import {generateEmptySignedBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {OpPool} from "../../../../../src/opPool";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
-<<<<<<< HEAD
-import {blockToHeader, getBeaconProposerIndex, stateTransition, signedBlockToSignedHeader} from "@chainsafe/lodestar-beacon-state-transition";
-=======
-import {getBeaconProposerIndex, stateTransition, signedBlockToSignedHeader} from "@chainsafe/eth2.0-state-transition";
->>>>>>> Fix compilation errors for remaining packages
+import {getBeaconProposerIndex, stateTransition, signedBlockToSignedHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {generateValidator} from "../../../../utils/validator";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateDeposit} from "../../../../utils/deposit";

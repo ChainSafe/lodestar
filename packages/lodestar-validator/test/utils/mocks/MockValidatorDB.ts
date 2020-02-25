@@ -1,5 +1,5 @@
 import { IValidatorDB, IAttestationSearchOptions } from "../../db/interface";
-import { BLSPubkey, SignedBeaconBlock, Attestation } from "@chainsafe/eth2.0-types";
+import { BLSPubkey, SignedBeaconBlock, Attestation } from "@chainsafe/lodestar-types";
 
 
 export class MockValidatorDB implements IValidatorDB {
