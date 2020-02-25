@@ -4,10 +4,10 @@ import supertest from "supertest";
 import sinon from "sinon";
 
 import {toHexString} from "@chainsafe/ssz";
-import {Attestation} from "@chainsafe/eth2.0-types";
+import {Attestation} from "@chainsafe/lodestar-types";
 import {Keypair} from "@chainsafe/bls";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
-import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 import {RestApi} from "../../../../../src/api/rest";
 import {ApiNamespace} from "../../../../../src/api";

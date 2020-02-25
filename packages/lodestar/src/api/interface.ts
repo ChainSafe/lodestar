@@ -1,13 +1,13 @@
 /**
  * @module api
  */
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../chain";
 import {IBeaconDb} from "../db/api";
 import {IEth1Notifier} from "../eth1";
 import {IApiOptions} from "./options";
 import {ApiNamespace} from "./index";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import {Sync} from "../sync";
 import {OpPool} from "../opPool";
 import {INetwork} from "../network";

@@ -4,10 +4,10 @@
 
 import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
-import {Checkpoint} from "@chainsafe/eth2.0-types";
-import {computeEpochAtSlot} from "@chainsafe/eth2.0-state-transition";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {Checkpoint} from "@chainsafe/lodestar-types";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 
 export interface IArchiveBlockModules {
   db: IBeaconDb;

@@ -2,11 +2,11 @@ import {assert} from "chai";
 import {ethers} from "ethers";
 import sinon from "sinon";
 import {describe, it, beforeEach, afterEach} from "mocha";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Eth1Wallet, EthersEth1Notifier, IEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
 import {PrivateEth1Network} from "../../../src/eth1/dev";
-import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {sleep} from "../../utils/sleep";
 import { PrivateKey } from "@chainsafe/bls";
 

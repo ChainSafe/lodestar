@@ -7,11 +7,11 @@ import {Provider} from "ethers/providers";
 import {BigNumber, ParamType} from "ethers/utils";
 import bls, {PrivateKey} from "@chainsafe/bls";
 import {hash} from "@chainsafe/ssz";
-import {DepositData} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {DepositData} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {DomainType} from "../constants";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 
 
 export class Eth1Wallet {

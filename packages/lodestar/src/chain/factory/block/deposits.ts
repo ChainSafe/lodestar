@@ -3,8 +3,8 @@
  */
 
 import {List, TreeBacked} from "@chainsafe/ssz";
-import {BeaconState, Deposit, Eth1Data, Root} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {BeaconState, Deposit, Eth1Data, Root} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {OpPool} from "../../../opPool";
 
 export async function generateDeposits(

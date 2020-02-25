@@ -1,14 +1,14 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {afterEach, beforeEach, describe, it} from "mocha";
-import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ValidatorDB} from "@chainsafe/lodestar/lib/db";
 import {ApiClientOverInstance} from "../../../src/api";
 import {AttestationService} from "../../../src/services/attestation";
 import {toBufferBE} from "bigint-buffer";
-import {ValidatorDuty} from "@chainsafe/eth2.0-types";
+import {ValidatorDuty} from "@chainsafe/lodestar-types";
 import {generateFork} from "@chainsafe/lodestar/test/utils/fork";
 import {
   generateAttestation,

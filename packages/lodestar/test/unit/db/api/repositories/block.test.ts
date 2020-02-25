@@ -1,5 +1,5 @@
 import {beforeEach, describe, it} from "mocha";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {LevelDbController} from "../../../../../src/db/controller";
 import sinon from "sinon";
 import {generateEmptySignedBlock} from "../../../../utils/block";

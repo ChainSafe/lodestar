@@ -1,5 +1,5 @@
-import {AggregateAndProof} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {AggregateAndProof} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {BulkRepository} from "../repository";
 import {IDatabaseController} from "../../../controller";

@@ -1,9 +1,9 @@
-import {Status, Goodbye, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
+import {Status, Goodbye, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import crypto from "crypto";
 import {assert, expect} from "chai";
 import {describe, it} from "mocha";
 import { encodeResponseChunk, decodeResponseChunk } from "../../../src/network";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import { Method } from "../../../src/constants";
 import { generateEmptySignedBlock } from "../../utils/block";
 

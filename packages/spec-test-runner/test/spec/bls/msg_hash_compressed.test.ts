@@ -1,5 +1,5 @@
 import path from "path";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {PrivateKey} from "@chainsafe/bls";
 import {padLeft} from "@chainsafe/bls/lib/helpers/utils";
 

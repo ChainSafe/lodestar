@@ -1,12 +1,12 @@
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../../../db/api";
-import {BLSPubkey, Epoch, Slot} from "@chainsafe/eth2.0-types";
+import {BLSPubkey, Epoch, Slot} from "@chainsafe/lodestar-types";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getBeaconProposerIndex,
   processSlots
-} from "@chainsafe/eth2.0-state-transition";
+} from "@chainsafe/lodestar-beacon-state-transition";
 import assert from "assert";
 import {IBeaconChain} from "../../../../chain";
 

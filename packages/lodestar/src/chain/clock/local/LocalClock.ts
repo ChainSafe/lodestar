@@ -1,6 +1,6 @@
 import {IBeaconClock, NewEpochCallback, NewSlotCallback} from "../interface";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/eth2.0-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {EventEmitter} from "events";
 
 export class LocalClock extends EventEmitter implements IBeaconClock {

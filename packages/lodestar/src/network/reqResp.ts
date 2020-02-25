@@ -13,8 +13,8 @@ import {
   Goodbye,
   RequestBody,
   ResponseBody, Status, SignedBeaconBlock,
-} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {
   Encoding,
@@ -25,7 +25,7 @@ import {
   RequestId,
   RESP_TIMEOUT,
 } from "../constants";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import {createResponseEvent, createRpcProtocol, randomRequestId, encodeResponseChunk, 
   decodeResponseChunk} from "./util";
 

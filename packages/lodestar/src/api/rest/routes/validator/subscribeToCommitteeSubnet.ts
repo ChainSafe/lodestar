@@ -3,7 +3,7 @@ import fastify, {DefaultBody, DefaultHeaders, DefaultParams, DefaultQuery} from 
 import {IApiModules} from "../../../interface";
 import {verify} from "@chainsafe/bls";
 import {hexToBuffer} from "../../../../util/hex";
-import {computeEpochAtSlot, getDomain} from "@chainsafe/eth2.0-state-transition";
+import {computeEpochAtSlot, getDomain} from "@chainsafe/lodestar-beacon-state-transition";
 import {DomainType} from "../../../../constants";
 
 

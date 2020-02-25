@@ -1,9 +1,9 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Keypair} from "@chainsafe/bls";
 import {describe, it, beforeEach, afterEach} from "mocha";
-import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ApiClientOverInstance} from "../../../src/api";
 import {ValidatorDB} from "@chainsafe/lodestar/lib/db";
 import {generateEmptySignedBlock, generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";

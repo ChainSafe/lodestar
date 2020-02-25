@@ -1,17 +1,17 @@
 /**
  * @module sync/initial
  */
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../../chain";
 import {ReputationStore} from "../../IReputation";
 import {IReqResp} from "../../../network";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import {ISyncOptions} from "../../options";
 import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../interface";
 import {EventEmitter} from "events";
 import {getSyncTargetEpoch, isValidChainOfBlocks, isValidFinalizedCheckPoint} from "../../utils/sync";
-import {BeaconState, Checkpoint} from "@chainsafe/eth2.0-types";
-import {computeStartSlotAtEpoch} from "@chainsafe/eth2.0-state-transition";
+import {BeaconState, Checkpoint} from "@chainsafe/lodestar-types";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {getBlockRange} from "../../utils/blocks";
 
 export class FastSync

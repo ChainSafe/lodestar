@@ -4,10 +4,10 @@
 
 import {EventEmitter} from "events";
 
-import {BeaconState, Eth1Data, Number64, DepositData} from "@chainsafe/eth2.0-types";
+import {BeaconState, Eth1Data, Number64, DepositData} from "@chainsafe/lodestar-types";
 import {Block} from "ethers/providers";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export interface IEth1Events {
   block: (block: Block) => void;

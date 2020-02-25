@@ -11,7 +11,7 @@ import {
   Slot,
   ValidatorDuty,
   SignedBeaconBlock
-} from "@chainsafe/eth2.0-types";
+} from "@chainsafe/lodestar-types";
 import {IApi} from "../../../interface";
 
 /**

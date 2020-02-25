@@ -4,7 +4,7 @@
 
 import {Gossip} from "../gossip";
 import {getGossipTopic} from "../utils";
-import {SignedVoluntaryExit} from "@chainsafe/eth2.0-types";
+import {SignedVoluntaryExit} from "@chainsafe/lodestar-types";
 import {GossipEvent} from "../constants";
 import {GossipObject} from "../interface";
 

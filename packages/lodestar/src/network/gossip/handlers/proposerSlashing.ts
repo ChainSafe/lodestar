@@ -2,7 +2,7 @@
  * @module network/gossip
  */
 
-import {ProposerSlashing} from "@chainsafe/eth2.0-types";
+import {ProposerSlashing} from "@chainsafe/lodestar-types";
 import {getGossipTopic} from "../utils";
 import {Gossip} from "../gossip";
 import {GossipEvent} from "../constants";

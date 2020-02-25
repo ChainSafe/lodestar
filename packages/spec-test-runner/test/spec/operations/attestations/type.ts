@@ -1,4 +1,4 @@
-import {Attestation, BeaconState,number64} from "@chainsafe/eth2.0-types";
+import {Attestation, BeaconState,number64} from "@chainsafe/lodestar-types";
 import {IBaseSpecTest} from "../../type";
 
 

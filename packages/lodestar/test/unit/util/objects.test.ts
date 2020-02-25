@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {Uint64} from "@chainsafe/eth2.0-types";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {Uint64} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {arrayIntersection, mostFrequent, sszEqualPredicate} from "../../../src/util/objects";
 import {describe, it} from "mocha";
 

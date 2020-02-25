@@ -11,7 +11,7 @@ import {
   Goodbye,
   RequestBody,
   ResponseBody, Status, SignedBeaconBlock,
-} from "@chainsafe/eth2.0-types";
+} from "@chainsafe/lodestar-types";
 
 import {Method, RequestId} from "../constants";
 import StrictEventEmitter from "strict-event-emitter-types";

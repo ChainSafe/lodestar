@@ -1,5 +1,5 @@
 import {getEpochProposers} from "../../../../../../src/api/impl/validator";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon from "sinon";
 import {BlockRepository, StateRepository} from "../../../../../../src/db/api/beacon/repositories";
 import {generateState} from "../../../../../utils/state";

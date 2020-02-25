@@ -2,8 +2,8 @@
  * @module api/rpc
  */
 
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {Bytes32, Fork, Number64, SyncingStatus, Uint64} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {Bytes32, Fork, Number64, SyncingStatus, Uint64} from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "./interface";
 import {IBeaconChain} from "../../../../chain";
 import {IBeaconDb} from "../../../../db";

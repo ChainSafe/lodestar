@@ -1,6 +1,6 @@
 import {CompositeType, List, TreeBacked} from "@chainsafe/ssz";
-import {Root} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {Root} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {BulkRepository, Id} from "../repository";
 import {IDatabaseController} from "../../../controller";

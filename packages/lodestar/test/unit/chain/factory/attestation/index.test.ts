@@ -1,14 +1,14 @@
 import sinon, { SinonStub } from "sinon";
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as attestationDataProduction from "../../../../../src/chain/factory/attestation/data";
 import {BeaconDb, IBeaconDb} from "../../../../../src/db/api";
 import {assembleAttestation} from "../../../../../src/chain/factory/attestation";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateAttestationData} from "../../../../utils/attestation";
-import { IBeaconConfig } from "@chainsafe/eth2.0-config";
-import { BeaconState, BeaconBlock, AttestationData } from "@chainsafe/eth2.0-types";
+import { IBeaconConfig } from "@chainsafe/lodestar-config";
+import { BeaconState, BeaconBlock, AttestationData } from "@chainsafe/lodestar-types";
 
 describe("assemble attestation", function () {
 

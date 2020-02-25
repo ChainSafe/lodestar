@@ -1,5 +1,5 @@
-import {Fork} from "@chainsafe/eth2.0-types";
-import {intToBytes} from "@chainsafe/eth2.0-utils";
+import {Fork} from "@chainsafe/lodestar-types";
+import {intToBytes} from "@chainsafe/lodestar-utils";
 
 /**
  * Generates a fake fork data test purposes.

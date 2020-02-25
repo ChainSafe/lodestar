@@ -4,8 +4,8 @@
 
 import deepmerge from "deepmerge";
 import {toHexString} from "@chainsafe/ssz";
-import {Attestation, BLSPubkey, SignedBeaconBlock} from "@chainsafe/eth2.0-types";
-import {bytesToBigInt, bigIntToBytes} from "@chainsafe/eth2.0-utils";
+import {Attestation, BLSPubkey, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {bytesToBigInt, bigIntToBytes} from "@chainsafe/lodestar-utils";
 
 import {DatabaseService, IDatabaseApiOptions} from "../abstract";
 import {IAttestationSearchOptions, IValidatorDB} from "./interface";

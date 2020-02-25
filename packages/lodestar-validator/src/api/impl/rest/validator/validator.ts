@@ -8,11 +8,11 @@ import {
   Slot,
   ValidatorDuty,
   SignedBeaconBlock
-} from "@chainsafe/eth2.0-types";
+} from "@chainsafe/lodestar-types";
 import {IValidatorApi} from "../../../interface/validators";
 import {HttpClient} from "../../../../util";
-import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {toHexString, fromHexString, Json} from "@chainsafe/ssz";
 
 export class RestValidatorApi implements IValidatorApi {

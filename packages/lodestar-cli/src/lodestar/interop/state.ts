@@ -1,6 +1,6 @@
 import {TreeBacked, List} from "@chainsafe/ssz";
-import {BeaconState, Root} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {BeaconState, Root} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar/lib/chain/genesis/genesis";
 import {interopDeposits} from "./deposits";

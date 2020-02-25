@@ -4,7 +4,7 @@
 
 import {LikeSocket} from "noice-json-rpc";
 import {promisify} from "es6-promisify";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import http from "http";
 import {IRpcServer} from "./index";
 

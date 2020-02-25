@@ -1,7 +1,7 @@
 /**
  * @module sync
  */
-import {Status} from "@chainsafe/eth2.0-types";
+import {Status} from "@chainsafe/lodestar-types";
 
 export interface IReputation {
   latestStatus: Status | null;

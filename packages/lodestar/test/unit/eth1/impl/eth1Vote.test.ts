@@ -3,9 +3,9 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {beforeEach, describe, it} from "mocha";
 import {getEth1Vote} from "../../../../src/eth1/impl/eth1Vote";
 import {generateState} from "../../../utils/state";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {Block} from "ethers/providers";
-import {Eth1Data} from "@chainsafe/eth2.0-types";
+import {Eth1Data} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 
 describe("et1h vote", function () {

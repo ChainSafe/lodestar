@@ -1,11 +1,11 @@
 import fs from "fs";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 
 import {quickStartState} from "./state";
 
 import yargs from "yargs";
 
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 const args = yargs.parse()._;
 
 // This file runs the dump command:

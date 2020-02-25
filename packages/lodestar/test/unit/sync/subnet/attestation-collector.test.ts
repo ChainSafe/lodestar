@@ -1,5 +1,5 @@
 import {describe, it} from "mocha";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {AttestationCollector} from "../../../../src/sync/subnet/attestation-collector";
 import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
 import sinon from "sinon";

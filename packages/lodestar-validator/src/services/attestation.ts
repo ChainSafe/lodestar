@@ -11,16 +11,16 @@ import {
   Epoch,
   Fork,
   Slot
-} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IApiClient} from "../api";
 import {aggregateSignatures, Keypair, PrivateKey} from "@chainsafe/bls";
 import {IValidatorDB} from "..";
 import {toHexString} from "@chainsafe/ssz";
-import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {
   computeEpochAtSlot, DomainType, getDomain, isSlashableAttestationData,
-} from "@chainsafe/eth2.0-state-transition";
+} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {sleep} from "../util";
 import {IAttesterDuty} from "../types";

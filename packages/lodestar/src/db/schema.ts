@@ -1,7 +1,7 @@
 /**
  * @module db/schema
  */
-import {intToBytes} from "@chainsafe/eth2.0-utils";
+import {intToBytes} from "@chainsafe/lodestar-utils";
 
 // Buckets are separate database namespaces
 export enum Bucket {

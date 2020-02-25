@@ -6,9 +6,9 @@ import PeerId from "peer-id";
 import PeerInfo from "peer-info";
 import * as varint from "varint";
 
-import {SignedBeaconBlock, Status, Goodbye} from "@chainsafe/eth2.0-types";
+import {SignedBeaconBlock, Status, Goodbye} from "@chainsafe/lodestar-types";
 import {Type} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {RequestId, Method, MAX_CHUNK_SIZE, ERR_INVALID_REQ} from "../constants";
 import {ResponseChunk} from "./interface";

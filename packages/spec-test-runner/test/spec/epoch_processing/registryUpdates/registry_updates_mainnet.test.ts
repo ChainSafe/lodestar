@@ -1,11 +1,11 @@
 import {join} from "path";
 import {expect} from "chai";
 
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import {BeaconState} from "@chainsafe/eth2.0-types";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/eth2.0-spec-test-util/lib/single";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {BeaconState} from "@chainsafe/lodestar-types";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
-import {processRegistryUpdates} from "@chainsafe/eth2.0-state-transition";
+import {processRegistryUpdates} from "@chainsafe/lodestar-beacon-state-transition";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<StateTestCase, BeaconState>(

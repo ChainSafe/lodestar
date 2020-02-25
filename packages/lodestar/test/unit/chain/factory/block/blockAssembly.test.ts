@@ -1,9 +1,9 @@
 import sinon from "sinon";
 import { expect } from "chai";
 
-import { config } from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import { config } from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
-import * as blockTransitions from "@chainsafe/eth2.0-state-transition";
+import * as blockTransitions from "@chainsafe/lodestar-beacon-state-transition";
 import { OpPool } from "../../../../../src/opPool";
 import { assembleBlock } from "../../../../../src/chain/factory/block";
 import { EthersEth1Notifier } from "../../../../../src/eth1";

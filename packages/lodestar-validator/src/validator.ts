@@ -14,11 +14,11 @@
  * 6. Repeat step 5
  */
 import BlockProposingService from "./services/block";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IApiClient} from "./api";
 import {AttestationService} from "./services/attestation";
 import {IValidatorDB} from "./db/interface";
-import {ILogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IValidatorOptions} from "./options";
 import {ApiClientOverRest} from "./api/impl/rest/apiClient";
 import {initBLS} from "@chainsafe/bls";

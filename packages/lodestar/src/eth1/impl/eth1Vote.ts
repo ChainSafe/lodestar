@@ -1,7 +1,7 @@
 import {IEth1Notifier} from "../interface";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {BeaconState, Eth1Data, Number64} from "@chainsafe/eth2.0-types";
-import {intSqrt} from "@chainsafe/eth2.0-utils";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {BeaconState, Eth1Data, Number64} from "@chainsafe/lodestar-types";
+import {intSqrt} from "@chainsafe/lodestar-utils";
 import {arrayIntersection, mostFrequent, sszEqualPredicate} from "../../util/objects";
 import {Block} from "ethers/providers";
 

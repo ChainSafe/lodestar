@@ -1,7 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {BeaconDb} from "../../../../src/db/api";
 import {LevelDbController} from "../../../../src/db/controller";
 import {BlockRepository, ChainRepository, StateRepository} from "../../../../src/db/api/beacon/repositories";

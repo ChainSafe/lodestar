@@ -1,13 +1,13 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
-import * as blockUtils from "@chainsafe/eth2.0-state-transition/lib/util/block";
-import * as attestationUtils from "@chainsafe/eth2.0-state-transition/lib/util/attestation";
-import * as validatorStatusUtils from "@chainsafe/eth2.0-state-transition/lib/util/validatorStatus";
-import * as validatorUtils from "@chainsafe/eth2.0-state-transition/lib/util/validator";
+import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/block";
+import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
+import * as validatorStatusUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validatorStatus";
+import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
 import * as bls from "@chainsafe/bls";
-import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateState} from "../../../utils/state";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {
@@ -27,7 +27,7 @@ import {
 import {
   generateEmptyAttesterSlashing,
   generateEmptyProposerSlashing
-} from "@chainsafe/eth2.0-state-transition/test/utils/slashings";
+} from "@chainsafe/lodestar-beacon-state-transition/test/utils/slashings";
 import {GossipMessageValidator} from "../../../../src/network/gossip/validator";
 import {generateValidators} from "../../../utils/validator";
 

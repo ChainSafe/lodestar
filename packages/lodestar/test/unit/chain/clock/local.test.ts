@@ -1,6 +1,6 @@
 import {describe, it} from "mocha";
 import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon from "sinon";
 import {expect} from "chai";
 

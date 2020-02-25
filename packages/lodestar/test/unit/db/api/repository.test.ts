@@ -3,8 +3,8 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 
 import {ContainerType} from "@chainsafe/ssz";
-import {Bytes32} from "@chainsafe/eth2.0-types";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {Bytes32} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
 import {BulkRepository} from "../../../../src/db/api/beacon/repository";
 import {IDatabaseController, LevelDbController} from "../../../../src/db/controller";

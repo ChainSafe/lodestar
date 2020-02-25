@@ -2,12 +2,12 @@ import {describe, it, beforeEach, afterEach} from "mocha";
 import sinon from "sinon";
 import {Gossip} from "../../../../../src/network/gossip/gossip";
 import {handleIncomingAggregateAndProof} from "../../../../../src/network/gossip/handlers/aggregateAndProof";
-import {AggregateAndProof} from "@chainsafe/eth2.0-types";
+import {AggregateAndProof} from "@chainsafe/lodestar-types";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {expect} from "chai";
-import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {GossipEvent} from "../../../../../src/network/gossip/constants";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 
 describe("gossip handlers - aggregate and proof", function () {
 

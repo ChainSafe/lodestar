@@ -6,9 +6,9 @@ import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {Block, Log} from "ethers/providers";
 import {fromHexString} from "@chainsafe/ssz";
-import {Eth1Data, Number64, DepositData} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {ILogger} from  "@chainsafe/eth2.0-utils/lib/logger";
+import {Eth1Data, Number64, DepositData} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 
 import {Eth1EventEmitter, IEth1Notifier} from "../interface";
 import {isValidAddress} from "../../util/address";

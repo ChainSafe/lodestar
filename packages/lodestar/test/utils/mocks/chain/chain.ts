@@ -9,7 +9,7 @@ import {
   Uint64,
   SignedBeaconBlock,
   Root
-} from "@chainsafe/eth2.0-types";
+} from "@chainsafe/lodestar-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {generateState} from "../../state";
 import {List, TreeBacked} from "@chainsafe/ssz";

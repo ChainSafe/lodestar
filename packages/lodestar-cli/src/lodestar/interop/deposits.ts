@@ -1,10 +1,10 @@
 import {hash, TreeBacked, List} from "@chainsafe/ssz";
-import {Deposit, DepositData, Root} from "@chainsafe/eth2.0-types";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
+import {Deposit, DepositData, Root} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {sign} from "@chainsafe/bls";
 import {DomainType} from "@chainsafe/lodestar/lib/constants";
 import {interopKeypairs} from "./keypairs";
-import {computeDomain} from "@chainsafe/eth2.0-state-transition";
+import {computeDomain} from "@chainsafe/lodestar-beacon-state-transition";
 
 export function interopDeposits(
   config: IBeaconConfig,

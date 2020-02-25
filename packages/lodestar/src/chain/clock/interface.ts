@@ -1,4 +1,4 @@
-import {Epoch, Slot} from "@chainsafe/eth2.0-types";
+import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {IService} from "../../node";
 
 export type NewSlotCallback = (slot: Slot) => void;

@@ -4,12 +4,12 @@ import sinon from "sinon";
 import {EthersEth1Notifier, IEth1Notifier} from "../../../../src/eth1";
 import {BeaconDb} from "../../../../src/db/api";
 import {LevelDbController} from "../../../../src/db/controller";
-import {config} from "@chainsafe/eth2.0-config/src/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/src/presets/minimal";
 // @ts-ignore
 import level from "level";
 // @ts-ignore
 import leveldown from "leveldown";
-import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {promisify} from "es6-promisify";
 import {expect} from "chai";
 import {generateDepositData} from "../../../utils/deposit";

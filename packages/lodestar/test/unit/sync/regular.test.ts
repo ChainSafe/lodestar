@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import sinon from "sinon";
 import {expect} from "chai";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
-import * as attestationUtils from "@chainsafe/eth2.0-state-transition/lib/util/attestation";
-import * as validatorStatusUtils from "@chainsafe/eth2.0-state-transition/lib/util/validatorStatus";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
+import * as validatorStatusUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validatorStatus";
 import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {
@@ -14,7 +14,7 @@ import {
   ProposerSlashingOperations,
   VoluntaryExitOperations
 } from "../../../src/opPool";
-import {WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {RegularSync} from "../../../src/sync/regular";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {
@@ -33,7 +33,7 @@ import {
 import {
   generateEmptyAttesterSlashing,
   generateEmptyProposerSlashing
-} from "@chainsafe/eth2.0-state-transition/test/utils/slashings";
+} from "@chainsafe/lodestar-beacon-state-transition/test/utils/slashings";
 import {describe, it, beforeEach, afterEach} from "mocha";
 
 

@@ -1,7 +1,7 @@
 import {IBeaconChain} from "../../chain";
 import {OpPool} from "../../opPool";
-import {IBeaconConfig} from "@chainsafe/eth2.0-config";
-import {Attestation, CommitteeIndex, Slot} from "@chainsafe/eth2.0-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {Attestation, CommitteeIndex, Slot} from "@chainsafe/lodestar-types";
 import {IService} from "../../node";
 import {INetwork} from "../../network";
 import {getCommitteeIndexSubnet} from "../../network/gossip/utils";

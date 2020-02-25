@@ -1,12 +1,12 @@
 import {assert} from "chai";
 
-import {Status, ResponseBody, SignedBeaconBlock, Slot, BeaconBlocksByRangeRequest} from "@chainsafe/eth2.0-types";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {Status, ResponseBody, SignedBeaconBlock, Slot, BeaconBlocksByRangeRequest} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {ReqResp} from "../../../src/network/reqResp";
 import {describe, it, beforeEach, afterEach} from "mocha";
 import {createNode} from "./util";
 import {NodejsNode} from "../../../src/network/nodejs";
-import {ILogger, WinstonLogger} from "@chainsafe/eth2.0-utils/lib/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {generateEmptySignedBlock} from "../../utils/block";
 

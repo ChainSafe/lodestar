@@ -1,7 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon, { SinonStubbedInstance, SinonStub } from "sinon";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as dbKeys from "../../../../src/db/schema";
 import {Bucket} from "../../../../src/db/schema";
 import {LevelDbController} from "../../../../src/db/controller";
@@ -9,7 +9,7 @@ import {IValidatorDB, ValidatorDB} from "../../../../src/db/api";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {generateEmptyAttestation} from "../../../utils/attestation";
 import { toHexString } from "@chainsafe/ssz";
-import { bigIntToBytes, bytesToBigInt } from "@chainsafe/eth2.0-utils";
+import { bigIntToBytes, bytesToBigInt } from "@chainsafe/lodestar-utils";
 import { Id } from "../../../db/api/beacon/repository";
 
 chai.use(chaiAsPromised);

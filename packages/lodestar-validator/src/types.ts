@@ -1,7 +1,7 @@
 /**
  * @module validator
  */
-import {ValidatorDuty} from "@chainsafe/eth2.0-types";
+import {ValidatorDuty} from "@chainsafe/lodestar-types";
 
 // eslint-disable-next-line @typescript-eslint/interface-name-prefix
 export interface GenesisInfo {

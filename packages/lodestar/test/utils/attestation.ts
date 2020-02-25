@@ -1,6 +1,6 @@
-import {Attestation, AttestationData, CommitteeIndex, Epoch, Slot, VoluntaryExit, SignedVoluntaryExit,} from "@chainsafe/eth2.0-types";
+import {Attestation, AttestationData, CommitteeIndex, Epoch, Slot, VoluntaryExit, SignedVoluntaryExit,} from "@chainsafe/lodestar-types";
 import crypto from "crypto";
-import {AggregateAndProof} from "@chainsafe/eth2.0-types/src";
+import {AggregateAndProof} from "@chainsafe/lodestar-types/src";
 
 /**
  * Generates a fake attestation data for test purposes.

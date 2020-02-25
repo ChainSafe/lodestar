@@ -1,4 +1,4 @@
-import {BeaconBlock, BeaconState, Bytes32, Fork, Number64, SyncingStatus, Uint64} from "@chainsafe/eth2.0-types";
+import {BeaconBlock, BeaconState, Bytes32, Fork, Number64, SyncingStatus, Uint64} from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "../../../src/api/interface/beacon";
 import {getEmptyBlock} from "@chainsafe/lodestar/lib/chain/genesis/genesis";
 

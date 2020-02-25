@@ -3,9 +3,9 @@ import {getAttestationSubnetTopic, getGossipTopic, isAttestationSubnetTopic, get
 import {GossipEvent} from "../../../../src/network/gossip/constants";
 import {expect} from "chai";
 import {generateEmptyAttestation} from "../../../utils/attestation";
-import {BeaconBlock} from "@chainsafe/eth2.0-types";
+import {BeaconBlock} from "@chainsafe/lodestar-types";
 import {generateEmptyBlock} from "../../../utils/block";
-import {config} from "@chainsafe/eth2.0-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {GOSSIP_MAX_SIZE} from "../../../../src/constants";
 import {ATTESTATION_SUBNET_COUNT} from "../../../../src/constants";
 
