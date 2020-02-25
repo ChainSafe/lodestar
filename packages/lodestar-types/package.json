@@ -43,10 +43,9 @@
     "mocha": "^6.2.0"
   },
   "keywords": [
-    "beacon",
-    "blockchain",
     "ethereum",
     "eth2",
-    "typescript"
+    "beacon",
+    "blockchain"
   ]
 }

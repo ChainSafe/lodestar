@@ -111,10 +111,9 @@
     "webpack": "^4.39.1"
   },
   "keywords": [
-    "Ethereum",
+    "ethereum",
+    "eth2",
     "beacon",
-    "blockchain",
-    "future",
-    "p2p"
+    "blockchain"
   ]
 }
