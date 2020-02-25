@@ -9,47 +9,47 @@
 Welcome to the ChainSafe lodestar monorepo!
 This repository contains a suite of Ethereum 2.0 packages.
 
-### [@chainsafe/eth2.0-types](/packages/eth2.0-types)
+### [@chainsafe/lodestar-types](/packages/lodestar-types)
 Typescript types for Ethereum 2.0 datastructures
 
-[![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-types)](https://www.npmjs.com/package/@chainsafe/eth2.0-types)
+[![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-types)](https://www.npmjs.com/package/@chainsafe/lodestar-types)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-types)
+[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-types)
 
-### [@chainsafe/eth2.0-params](/packages/eth2.0-params)
+### [@chainsafe/lodestar-params](/packages/lodestar-params)
 Beacon chain parameters
 
-[![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-params)](https://www.npmjs.com/package/@chainsafe/eth2.0-params)
+[![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-params)](https://www.npmjs.com/package/@chainsafe/lodestar-params)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-params)
+[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-params)
 
-### [@chainsafe/eth2.0-utils](/packages/eth2.0-utils)
+### [@chainsafe/lodestar-utils](/packages/lodestar-utils)
 Utility methods used throughout Lodestar modules.
 
-[![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-utils)](https://www.npmjs.com/package/@chainsafe/eth2.0-utils)
+[![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-utils)](https://www.npmjs.com/package/@chainsafe/lodestar-utils)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-utils)
+[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-utils)
 
-### [@chainsafe/eth2.0-config](/packages/eth2.0-config)
+### [@chainsafe/lodestar-config](/packages/lodestar-config)
 Beacon chain configuration
 
-[![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-config)](https://www.npmjs.com/package/@chainsafe/eth2.0-config)
+[![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-config)](https://www.npmjs.com/package/@chainsafe/lodestar-config)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-config)
+[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-config)
 
-### [@chainsafe/eth2.0-state-transition](/packages/eth2.0-state-transition)
+### [@chainsafe/lodestar-beacon-state-transition](/packages/lodestar-beacon-state-transition)
 Beacon chain state transition
 
-[![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-state-transition)](https://www.npmjs.com/package/@chainsafe/eth2.0-state-transition)
+[![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-beacon-state-transition)](https://www.npmjs.com/package/@chainsafe/lodestar-beacon-state-transition)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-state-transition)
+[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-beacon-state-transition)
 
-### [@chainsafe/eth2.0-spec-test-util](/packages/eth2.0-spec-test-util)
+### [@chainsafe/lodestar-spec-test-util](/packages/lodestar-spec-test-util)
 Ethereum 2.0 spec test utilities
 
-[![npm](https://img.shields.io/npm/v/@chainsafe/eth2.0-spec-test-util)](https://www.npmjs.com/package/@chainsafe/eth2.0-spec-test-util)
+[![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-spec-test-util)](https://www.npmjs.com/package/@chainsafe/lodestar-spec-test-util)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/eth2.0-spec-test-util)
+[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-spec-test-util)
 
 ### [@chainsafe/lodestar](/packages/lodestar)
 Beacon chain implementation
