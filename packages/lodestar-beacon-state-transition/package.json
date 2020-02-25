@@ -19,13 +19,13 @@
     "lib/**/*.js.map"
   ],
   "scripts": {
-    "build": "yarn build:lib && yarn build:types",
+    "build": "yarn build:lib && yarn check-types && yarn build:types",
     "build:docs": "typedoc --exclude src/index.ts --out docs src",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:release": "yarn clean && yarn build",
-    "build:types": "tsc --incremental --declaration --outDir lib --emitDeclarationOnly",
+    "build:types": "tsc --incremental --declaration --outDir lib --project tsconfig.build.json --emitDeclarationOnly",
     "check-types": "tsc --noEmit --incremental",
-    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
+    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo && rm -f tsconfig.build.tsbuildinfo",
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "prepublishOnly": "yarn build",

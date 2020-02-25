@@ -5,10 +5,10 @@ import {Keypair} from "@chainsafe/bls";
 import {describe, it, beforeEach, afterEach} from "mocha";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ApiClientOverInstance} from "../../../src/api";
-import {ValidatorDB} from "@chainsafe/lodestar/lib/db";
 import {generateEmptySignedBlock, generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
 import BlockProposingService from "../../../src/services/block";
-import {generateFork} from "@chainsafe/lodestar/test/utils/fork";
+import {generateFork} from "../../utils/fork";
+import {MockValidatorDB} from "../../utils/mocks/MockValidatorDB";
 
 describe("block proposing service", function () {
 
@@ -18,7 +18,7 @@ describe("block proposing service", function () {
 
   beforeEach(() => {
     rpcClientStub = sandbox.createStubInstance(ApiClientOverInstance);
-    dbStub = sandbox.createStubInstance(ValidatorDB);
+    dbStub = sandbox.createStubInstance(MockValidatorDB);
     logger = sandbox.createStubInstance(WinstonLogger);
   });
 
