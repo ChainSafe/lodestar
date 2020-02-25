@@ -13,7 +13,7 @@ import {
   SignedBeaconBlock
 } from "@chainsafe/lodestar-types";
 import {IValidatorApi} from "../../../src/api/interface/validators";
-import {getEmptyBlock} from "@chainsafe/lodestar/lib/chain/genesis/genesis";
+import {generateEmptyBlock} from "../../utils/block";
 
 export interface IMockValidatorAPIOpts {
   head?: SignedBeaconBlock;
@@ -33,7 +33,7 @@ export class MockValidatorApi implements IValidatorApi {
 
   public constructor(opts?: IMockValidatorAPIOpts) {
     this.attestations = opts && opts.pendingAttestations || [];
-    this.head = opts && opts.head || {message: getEmptyBlock(), signature: Buffer.alloc(96)};
+    this.head = opts && opts.head || {message: generateEmptyBlock(), signature: Buffer.alloc(96)};
     this.chainId = opts && opts.chainId || 0;
     this.validatorIndex = opts && opts.validatorIndex || 1;
   }

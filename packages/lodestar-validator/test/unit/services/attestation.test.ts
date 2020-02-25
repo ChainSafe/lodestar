@@ -4,12 +4,12 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {afterEach, beforeEach, describe, it} from "mocha";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {ValidatorDB} from "@chainsafe/lodestar/lib/db";
 import {ApiClientOverInstance} from "../../../src/api";
 import {AttestationService} from "../../../src/services/attestation";
 import {toBufferBE} from "bigint-buffer";
 import {ValidatorDuty} from "@chainsafe/lodestar-types";
-import {generateFork} from "@chainsafe/lodestar/test/utils/fork";
+import {MockValidatorDB} from "../../utils/mocks/MockValidatorDB";
+import {generateFork} from "../../utils/fork";
 import {
   generateAttestation,
   generateAttestationData,
@@ -29,7 +29,7 @@ describe("validator attestation service", function () {
 
   beforeEach(() => {
     rpcClientStub = sandbox.createStubInstance(ApiClientOverInstance);
-    dbStub = sandbox.createStubInstance(ValidatorDB);
+    dbStub = sandbox.createStubInstance(MockValidatorDB);
   });
 
   afterEach(() => {

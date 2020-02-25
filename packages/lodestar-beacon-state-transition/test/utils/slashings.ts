@@ -1,7 +1,7 @@
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {AttesterSlashing, ProposerSlashing} from "@chainsafe/lodestar-types";
 import {generateEmptyBlock} from "./block";
-import {getTemporaryBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";
+import {getTemporaryBlockHeader} from "../../src/util/blockRoot";
 import {generateEmptyAttestation} from "./attestation";
 
 

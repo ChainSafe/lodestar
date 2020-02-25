@@ -8,7 +8,7 @@ import {ApiClientOverInstance} from "../../src/api";
 import {MockBeaconApi} from "../utils/mocks/beacon";
 import {MockValidatorApi} from "../utils/mocks/validator";
 import {IValidatorOptions,Validator} from "../../src";
-import {ValidatorDB} from "@chainsafe/lodestar/lib/db";
+import {MockValidatorDB} from "../utils/mocks/MockValidatorDB";
 
 describe("Validator", () => {
 
@@ -25,7 +25,7 @@ describe("Validator", () => {
       api: apiClient,
       keypair: Keypair.generate(),
       config,
-      db: sinon.createStubInstance(ValidatorDB),
+      db: sinon.createStubInstance(MockValidatorDB),
       logger: sinon.createStubInstance(WinstonLogger)
     };
 

@@ -1,16 +1,15 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
-import {BeaconBlockHeader} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {DEPOSIT_CONTRACT_TREE_DEPTH, FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
+import {FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {IValidatorDB, ValidatorDB} from "../../../../../src/db";
-import {generateEmptyBlock, generateEmptySignedBlock} from "../../../../utils/block";
+import {generateEmptySignedBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {OpPool} from "../../../../../src/opPool";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
-import {blockToHeader, getBeaconProposerIndex, stateTransition, signedBlockToSignedHeader} from "@chainsafe/lodestar-beacon-state-transition";
+import {getBeaconProposerIndex, stateTransition, signedBlockToSignedHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {generateValidator} from "../../../../utils/validator";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateDeposit} from "../../../../utils/deposit";
@@ -28,11 +27,11 @@ import {
   StateRepository,
   VoluntaryExitRepository
 } from "../../../../../src/db/api/beacon/repositories";
-import {ValidatorApi} from "../../../../../src/api/rpc/api/validator";
 import BlockProposingService from "@chainsafe/lodestar-validator/lib/services/block";
 import {describe, it} from "mocha";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
 import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/block";
+import {ValidatorApi} from "../../../../../src/api/rpc/api/validator";
 
 describe("produce block", function () {
   this.timeout(0);
