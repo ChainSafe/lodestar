@@ -12,12 +12,13 @@ import {
   RequestBody,
   ResponseBody, Status, SignedBeaconBlock,
 } from "@chainsafe/lodestar-types";
-
 import {Method, RequestId} from "../constants";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {IGossip} from "./gossip/interface";
 
-export type ResponseCallbackFn = (response: {err?: Error; output?: ResponseBody}) => void;
+export type Response = {err?: Error; output: ResponseBody};
+
+export type ResponseCallbackFn = ((response: Partial<Response>) => void);
 
 export type ResponseChunk = {err?: Error; output: Status | Goodbye | SignedBeaconBlock};
 
