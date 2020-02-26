@@ -3,6 +3,7 @@
  */
 
 import assert from "assert";
+import {hash} from "@chainsafe/ssz";
 import {
   Epoch,
   ValidatorIndex,
@@ -10,7 +11,7 @@ import {
   Bytes32,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {bytesToBigInt, intToBytes,intDiv, hash} from "@chainsafe/lodestar-utils";
+import {bytesToBigInt, intToBytes,intDiv} from "@chainsafe/lodestar-utils";
 import {DomainType} from "../constants";
 
 

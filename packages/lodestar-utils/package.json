@@ -35,7 +35,7 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/lodestar-types": "^0.5.0",
-    "bcrypto": "^4.2.6",
+    "@chainsafe/ssz": "^0.6.1",
     "bigint-buffer": "^1.1.5",
     "camelcase": "^5.3.1",
     "chalk": "^2.4.2",
