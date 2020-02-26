@@ -23,9 +23,7 @@ describe("[network] rpc", () => {
     nodeA = await createNode(multiaddr);
     nodeB = await createNode(multiaddr);
     await Promise.all([
-      // @ts-ignore
       nodeA.start(),
-      // @ts-ignore
       nodeB.start()
     ]);
     const networkOptions: INetworkOptions = {
@@ -42,6 +40,7 @@ describe("[network] rpc", () => {
       rpcA.start(),
       rpcB.start(),
     ]);
+    await nodeA.dial(nodeB.peerInfo);
   });
   afterEach(async function () {
     // teardown
@@ -51,20 +50,16 @@ describe("[network] rpc", () => {
       rpcB.stop(),
     ]);
     await Promise.all([
-      // @ts-ignore
       nodeA.stop(),
-      // @ts-ignore
       nodeB.stop()
     ]);
   });
 
   it("can send/receive status messages from connected peers", async function () {
     this.timeout(6000);
-    await nodeA.dial(nodeB.peerInfo)
     try {
       await new Promise((resolve, reject) => {
         const t = setTimeout(reject, 2000);
-        // @ts-ignore
         nodeB.once("peer:connect", () => {
           clearTimeout(t);
           resolve();
@@ -87,11 +82,9 @@ describe("[network] rpc", () => {
         headRoot: Buffer.alloc(32),
         headSlot: 0,
       };
-      // @ts-ignore
       const statusActual = await rpcA.status(nodeB.peerInfo, statusExpected);
       assert.deepEqual(statusActual, statusExpected);
     } catch (e) {
-      console.log(e)
       assert.fail("status not received");
     }
     // send status from B to A, await status response
@@ -109,7 +102,6 @@ describe("[network] rpc", () => {
         headSlot: 0,
       };
 
-      // @ts-ignore
       const statusActual = await rpcB.status(nodeA.peerInfo, statusExpected);
       assert.deepEqual(statusActual, statusExpected);
     } catch (e) {
@@ -120,11 +112,9 @@ describe("[network] rpc", () => {
   it("can handle multiple block requests from connected peers at the same time", async function () {
     this.timeout(6000);
     const NUM_REQUEST = 5;
-    await nodeA.dial(nodeB.peerInfo)
     try {
       await new Promise((resolve, reject) => {
         const t = setTimeout(reject, 2000);
-        // @ts-ignore
         nodeB.once("peer:connect", () => {
           clearTimeout(t);
           resolve();
@@ -145,9 +135,7 @@ describe("[network] rpc", () => {
       for (let i = requestBody.startSlot; i < + requestBody.startSlot + requestBody.count; i++) {
         blocks.push(generateBlockForSlot(i));
       }
-      setTimeout(() => {
-        rpcB.sendResponse(id, null, blocks);
-      }, 100);
+      rpcB.sendResponse(id, null, blocks);
     });
     try {
       const reqs: BeaconBlocksByRangeRequest[] = [];
@@ -159,7 +147,6 @@ describe("[network] rpc", () => {
           step: 1
         });
       }
-      // @ts-ignore
       const resps = await Promise.all(reqs.map(req => rpcA.beaconBlocksByRange(nodeB.peerInfo, req)));
       let reqIndex = 0;
       for (const resp of resps) {
@@ -172,6 +159,7 @@ describe("[network] rpc", () => {
       }
 
     } catch (e) {
+      console.log(e);
       assert.fail(`Cannot receive response, error: ${e.message}`);
     }
   });

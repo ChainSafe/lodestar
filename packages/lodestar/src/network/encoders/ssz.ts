@@ -3,7 +3,8 @@ import {BasicType, ContainerType, ObjectLike} from "@chainsafe/ssz";
 
 export class SszEncoder implements IReqRespEncoder {
 
-  public decode(type: ContainerType<unknown>|BasicType<unknown>, data: unknown): ObjectLike {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public decode(type: ContainerType<any>|BasicType<unknown>, data: unknown): ObjectLike {
     return type.deserialize(data as Uint8Array);
   }
 

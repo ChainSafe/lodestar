@@ -44,7 +44,7 @@ export class ReqRespEncoder {
     method: Method
   ): ((source: AsyncIterable<ResponseChunk|Partial<Response>>) => AsyncGenerator<Buffer>) {
     const encoders = this.getEncoders(method, this.encoding);
-    const type = getRequestMethodSSZType(this.config, method);
+    const type = getResponseMethodSSZType(this.config, method);
     const writeLP = this.writeLengthPrefixed;
     const writeStatus = this.writeStatus;
     return (source: AsyncIterable<ResponseChunk|Partial<Response>>) => {

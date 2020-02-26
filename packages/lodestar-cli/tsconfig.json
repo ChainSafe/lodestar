@@ -3,6 +3,7 @@
   "include": ["src","test"],
   "compilerOptions": {
     "typeRoots": [
+      "../lodestar/types",
       "../../node_modules/@types",
       "../../node_modules/libp2p-ts/types"
     ],
