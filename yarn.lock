@@ -939,10 +939,10 @@
   dependencies:
     bcrypto "^4.2.8"
 
-"@chainsafe/ssz@0.6.0", "@chainsafe/ssz@^0.6.0":
-  version "0.6.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.6.0.tgz#9f496cc70abc9c7f7802c727396508e539d94697"
-  integrity sha512-i0lo6SFeg7mn8LXrHpZ9Wo730M04nYMItaJAx4kYFu3E3IEcEDQH/Aon8+MHQ6nVHAAPaVLs9zyhNUvgNUAofA==
+"@chainsafe/ssz@0.6.1", "@chainsafe/ssz@^0.6.1":
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.6.1.tgz#07944684befd557d9e2e85942da5534d38be67d2"
+  integrity sha512-ycSA0HPflbh5MJt9heRHc4adD835KMx/Vqiu/aM1LNMDyMgrRUmVSem+8xtqigROyfi4J/cUiN1j7L5aTygilA==
   dependencies:
     "@chainsafe/persistent-merkle-tree" "^0.1.1"
     bcrypto "^4.1.0"

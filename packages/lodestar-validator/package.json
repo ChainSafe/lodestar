@@ -46,7 +46,7 @@
     "@chainsafe/lodestar-params": "^0.5.0",
     "@chainsafe/lodestar-beacon-state-transition": "^0.5.0",
     "@chainsafe/lodestar-utils": "^0.5.0",
-    "@chainsafe/ssz": "^0.6.0",
+    "@chainsafe/ssz": "^0.6.1",
     "axios": "^0.19.0",
     "axios-mock-adapter": "^1.17.0",
     "deepmerge": "^4.0.0",
