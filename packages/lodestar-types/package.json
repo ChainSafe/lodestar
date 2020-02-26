@@ -24,7 +24,7 @@
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:release": "yarn clean && yarn build",
     "build:types": "tsc --incremental --declaration --outDir lib --project tsconfig.build.json --emitDeclarationOnly",
-    "check-types": "tsc --noEmit --incremental",
+    "check-types": "tsc --noEmit",
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo && rm -f tsconfig.build.tsbuildinfo",
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "eslint --color --ext .ts src/ --fix",
