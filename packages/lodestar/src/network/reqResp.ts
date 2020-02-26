@@ -162,7 +162,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     const {stream} = await this.libp2p.dialProtocol(peerInfo, protocol) as {stream: Stream};
     return await new Promise((resolve, reject) => {
       this.logger.verbose(`send ${method} request to ${peerInfo.id.toB58String()}`);
-      // const responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
+      const responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
       pipe(
         [this.encoder.encodeRequest(method, body)],
         stream,
@@ -178,7 +178,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
               return;
             }
             const finalResponse = (method === Method.Status) ? responses[0] : responses;
-            // clearTimeout(responseTimer);
+            clearTimeout(responseTimer);
             this.logger.verbose(`receive ${method} response from ${peerInfo.id.toB58String()}`);
             resolve(requestOnly? undefined : finalResponse as T);
           } catch (e) {
@@ -188,4 +188,6 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       );
     });
   }
+
+  private
 }
