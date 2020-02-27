@@ -5,7 +5,7 @@
 
 import PeerId from "peer-id";
 import PeerInfo from "peer-info";
-import {BasicType, ContainerType} from "@chainsafe/ssz";
+import {BasicType, ContainerType, Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, RequestId} from "../constants";
 
@@ -55,8 +55,8 @@ export async function initializePeerInfo(peerId: PeerId, multiaddrs: string[]): 
 
 export function getRequestMethodSSZType(
   config: IBeaconConfig, method: Method
-): ContainerType<any>|BasicType<any> {
-  let type: ContainerType<any>|BasicType<any>;
+): Type<any> {
+  let type: Type<any>;
   switch (method) {
     case Method.Status:
       type = config.types.Status;
@@ -76,8 +76,8 @@ export function getRequestMethodSSZType(
 
 export function getResponseMethodSSZType(
   config: IBeaconConfig, method: Method
-): ContainerType<any>|BasicType<any> {
-  let type: ContainerType<any>|BasicType<any>;
+): Type<any> {
+  let type: Type<any>;
   switch (method) {
     case Method.Status:
       type = config.types.Status;

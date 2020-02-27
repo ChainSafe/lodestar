@@ -1,10 +1,8 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ERR_INVALID_REQ, MAX_CHUNK_SIZE, Method, ReqRespEncoding} from "../constants";
 import {RequestBody, ResponseBody} from "@chainsafe/lodestar-types";
-import {IReqRespEncoder} from "./encoders/interface";
+import {IReqRespEncoder, SnappyEncoder, SszEncoder} from "./encoders";
 import {getRequestMethodSSZType, getResponseMethodSSZType} from "./util";
-import {SszEncoder} from "./encoders/ssz";
-import {SnappyEncoder} from "./encoders/snappy";
 import * as varint from "varint";
 import {Response, ResponseChunk} from "./interface";
 // eslint-disable-next-line import/no-extraneous-dependencies
@@ -23,7 +21,7 @@ export class ReqRespEncoder {
 
   public encodeRequest(method: Method, data: RequestBody): Buffer {
     const type = getRequestMethodSSZType(this.config, method);
-    const encoders = this.getEncoders(method, this.encoding);
+    const encoders = this.getEncoders(this.encoding);
     const encodedPayload =  encoders.reduce((result: unknown, encoder) => {
       return encoder.encode(type, result);
     }, data) as Buffer;
@@ -34,7 +32,7 @@ export class ReqRespEncoder {
     data = this.readLengthPrefixed(data);
     const type = getRequestMethodSSZType(this.config, method);
     //decoding is done backwards
-    const encoders = this.getEncoders(method, this.encoding).reverse();
+    const encoders = this.getEncoders(this.encoding).reverse();
     return encoders.reduce((result: unknown, encoder) => {
       return encoder.decode(type, result);
     }, data) as RequestBody;
@@ -43,7 +41,7 @@ export class ReqRespEncoder {
   public encodeResponse(
     method: Method
   ): ((source: AsyncIterable<ResponseChunk|Partial<Response>>) => AsyncGenerator<Buffer>) {
-    const encoders = this.getEncoders(method, this.encoding);
+    const encoders = this.getEncoders(this.encoding);
     const type = getResponseMethodSSZType(this.config, method);
     const writeLP = this.writeLengthPrefixed;
     const writeStatus = this.writeStatus;
@@ -69,7 +67,7 @@ export class ReqRespEncoder {
 
   public decodeResponse(method: Method): ((source: AsyncIterable<Buffer|BufferList>) => AsyncGenerator<ResponseBody>) {
     //decoding is done backwards
-    const encoders = this.getEncoders(method, this.encoding).reverse();
+    const encoders = this.getEncoders(this.encoding).reverse();
     const readLP = this.readLengthPrefixed;
     const readStatus= this.readStatus;
     const type = getResponseMethodSSZType(this.config, method);
@@ -85,7 +83,7 @@ export class ReqRespEncoder {
     };
   }
 
-  private getEncoders(method: Method, encoding: ReqRespEncoding): IReqRespEncoder[] {
+  private getEncoders(encoding: ReqRespEncoding): IReqRespEncoder<unknown>[] {
     switch (encoding) {
       case ReqRespEncoding.SSZ:
         return [new SszEncoder()];

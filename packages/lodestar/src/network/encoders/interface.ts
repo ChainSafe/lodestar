@@ -1,6 +1,6 @@
-import {BasicType, ContainerType} from "@chainsafe/ssz";
+import {Type} from "@chainsafe/ssz";
 
-export interface IReqRespEncoder {
-  encode(type: ContainerType<unknown>|BasicType<unknown>, data: unknown): unknown;
-  decode(type: ContainerType<unknown>|BasicType<unknown>, data: unknown): unknown;
+export interface IReqRespEncoder<T = Type<unknown>> {
+  encode(type: T, data: unknown): unknown;
+  decode(type: T, data: unknown): unknown;
 }
