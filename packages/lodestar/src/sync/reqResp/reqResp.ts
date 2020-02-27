@@ -5,13 +5,11 @@
 import PeerInfo from "peer-info";
 import {
   BeaconBlocksByRangeRequest,
-  BeaconBlocksByRangeResponse,
   BeaconBlocksByRootRequest,
-  BeaconBlocksByRootResponse,
   Epoch,
   Goodbye,
   RequestBody,
-  Slot, Status, Root,
+  Slot, Status, Root, SignedBeaconBlock,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
@@ -105,7 +103,7 @@ export class SyncReqResp implements ISyncReqResp {
     // send status response
     try {
       const status = await this.createStatus();
-      this.network.reqResp.sendResponse(id, null, status);
+      this.network.reqResp.sendResponse(id, null, [status]);
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);
     }
@@ -139,7 +137,7 @@ export class SyncReqResp implements ISyncReqResp {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
-    this.network.reqResp.sendResponse(id, null, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
+    this.network.reqResp.sendResponse(id, null, [BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN)]);
     await this.network.disconnect(peerInfo);
   }
 
@@ -148,14 +146,14 @@ export class SyncReqResp implements ISyncReqResp {
     request: BeaconBlocksByRangeRequest
   ): Promise<void> {
     try {
-      const response: BeaconBlocksByRangeResponse = [];
+      const responses: SignedBeaconBlock[] = [];
       const blocks = await this.db.blockArchive.getAllBetween(
         request.startSlot - 1,
         request.startSlot + request.count,
         request.step
       );
-      response.push(...blocks);
-      this.network.reqResp.sendResponse(id, null, response);
+      responses.push(...blocks);
+      this.network.reqResp.sendResponse(id, null, responses);
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);
     }
@@ -166,7 +164,7 @@ export class SyncReqResp implements ISyncReqResp {
     request: BeaconBlocksByRootRequest
   ): Promise<void> {
     try {
-      const response: BeaconBlocksByRootResponse = [];
+      const response: SignedBeaconBlock[] = [];
       for (const blockRoot of request) {
         const block = await this.db.block.get(blockRoot.valueOf() as Uint8Array);
         if (block) {

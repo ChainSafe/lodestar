@@ -1,4 +1,4 @@
-import sinon, { SinonStubbedInstance, SinonStub } from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import PeerInfo from "peer-info";
 import PeerId from "peer-id";
@@ -11,16 +11,25 @@ import {Libp2pNetwork} from "../../../src/network";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateState} from "../../utils/state";
 import {SyncReqResp} from "../../../src/sync/reqResp";
-import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
+import {
+  BlockArchiveRepository,
+  BlockRepository,
+  ChainRepository,
+  StateRepository
+} from "../../../src/db/api/beacon/repositories";
 import {ReqResp} from "../../../src/network/reqResp";
 import {ReputationStore} from "../../../src/sync/IReputation";
 import {generateEmptySignedBlock} from "../../utils/block";
-import { IBeaconDb } from "../../db";
+import {IBeaconDb} from "../../../src/db/api";
 
 describe("syncing", function () {
   const sandbox = sinon.createSandbox();
   let syncRpc: SyncReqResp;
-  let chainStub: SinonStubbedInstance<BeaconChain>, networkStub: SinonStubbedInstance<Libp2pNetwork>, repsStub: SinonStubbedInstance<ReputationStore>, logger: WinstonLogger, reqRespStub: SinonStubbedInstance<ReqResp>;
+  let chainStub: SinonStubbedInstance<BeaconChain>,
+    networkStub: SinonStubbedInstance<Libp2pNetwork>,
+    repsStub: SinonStubbedInstance<ReputationStore>,
+    logger: WinstonLogger,
+    reqRespStub: SinonStubbedInstance<ReqResp>;
   let dbStub: {
     chain: SinonStubbedInstance<ChainRepository>;
     state: SinonStubbedInstance<StateRepository>;
@@ -30,7 +39,7 @@ describe("syncing", function () {
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
-    chainStub.latestState = generateState();
+    chainStub["latestState"] = generateState();
     // @ts-ignore
     chainStub.config = config;
     reqRespStub = sandbox.createStubInstance(ReqResp);

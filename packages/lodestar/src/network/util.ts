@@ -5,7 +5,7 @@
 
 import PeerId from "peer-id";
 import PeerInfo from "peer-info";
-import {BasicType, ContainerType, Type} from "@chainsafe/ssz";
+import {Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, RequestId} from "../constants";
 

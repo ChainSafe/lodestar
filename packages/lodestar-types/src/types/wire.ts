@@ -17,8 +17,7 @@ export type RequestBody =
 export type ResponseBody =
   Status |
   Goodbye |
-  BeaconBlocksByRangeResponse |
-  BeaconBlocksByRootResponse;
+  SignedBeaconBlock;
 
 export interface Status {
   headForkVersion: Version;
@@ -35,7 +34,5 @@ export interface BeaconBlocksByRangeRequest {
   count: Number64;
   step: Number64;
 }
-export type BeaconBlocksByRangeResponse = List<SignedBeaconBlock>;
 
 export type BeaconBlocksByRootRequest = List<Root>;
-export type BeaconBlocksByRootResponse = List<SignedBeaconBlock>;

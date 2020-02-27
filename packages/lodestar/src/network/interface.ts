@@ -5,22 +5,21 @@ import PeerInfo from "peer-info";
 import {EventEmitter} from "events";
 import {
   BeaconBlocksByRangeRequest,
-  BeaconBlocksByRangeResponse,
   BeaconBlocksByRootRequest,
-  BeaconBlocksByRootResponse,
   Goodbye,
   RequestBody,
-  ResponseBody, Status, SignedBeaconBlock,
+  ResponseBody,
+  SignedBeaconBlock,
+  Status,
 } from "@chainsafe/lodestar-types";
 import {Method, RequestId} from "../constants";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {IGossip} from "./gossip/interface";
 
-export type Response = {err?: Error; output: ResponseBody};
 
-export type ResponseCallbackFn = ((response: Partial<Response>) => void);
+export type ResponseCallbackFn = ((response: ResponseChunk[]) => void);
 
-export type ResponseChunk = {err?: Error; output: Status | Goodbye | SignedBeaconBlock};
+export type ResponseChunk = {err?: Error; output?: ResponseBody};
 
 interface IRespEvents {
   [responseEvent: string]: ResponseCallbackFn;
@@ -35,12 +34,12 @@ export type RespEventEmitter = StrictEventEmitter<EventEmitter, IRespEvents>;
 
 export interface IReqResp extends ReqEventEmitter {
   // sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T>;
-  sendResponse(id: RequestId, err: Error|null, result: ResponseBody|null): void;
+  sendResponse(id: RequestId, err: Error|null, result: ResponseBody[]): void;
 
   status(peerInfo: PeerInfo, request: Status): Promise<Status>;
   goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void>;
-  beaconBlocksByRange(peerInfo: PeerInfo, request: BeaconBlocksByRangeRequest): Promise<BeaconBlocksByRangeResponse>;
-  beaconBlocksByRoot(peerInfo: PeerInfo, request: BeaconBlocksByRootRequest): Promise<BeaconBlocksByRootResponse>;
+  beaconBlocksByRange(peerInfo: PeerInfo, request: BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[]>;
+  beaconBlocksByRoot(peerInfo: PeerInfo, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]>;
 }
 
 // network

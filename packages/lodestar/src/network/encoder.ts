@@ -4,7 +4,7 @@ import {RequestBody, ResponseBody} from "@chainsafe/lodestar-types";
 import {IReqRespEncoder, SnappyEncoder, SszEncoder} from "./encoders";
 import {getRequestMethodSSZType, getResponseMethodSSZType} from "./util";
 import * as varint from "varint";
-import {Response, ResponseChunk} from "./interface";
+import {ResponseChunk} from "./interface";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import BufferList from "bl";
 
@@ -40,16 +40,16 @@ export class ReqRespEncoder {
 
   public encodeResponse(
     method: Method
-  ): ((source: AsyncIterable<ResponseChunk|Partial<Response>>) => AsyncGenerator<Buffer>) {
+  ): ((source: AsyncIterable<ResponseChunk>) => AsyncGenerator<Buffer>) {
     const encoders = this.getEncoders(this.encoding);
     const type = getResponseMethodSSZType(this.config, method);
     const writeLP = this.writeLengthPrefixed;
     const writeStatus = this.writeStatus;
-    return (source: AsyncIterable<ResponseChunk|Partial<Response>>) => {
+    return (source: AsyncIterable<ResponseChunk>) => {
       return (async function * () {
         for await (const chunk of source) {
           let encodedPayload: Buffer = Buffer.alloc(0);
-          if(chunk && chunk.output !== null){
+          if(chunk && (chunk.output !== null && chunk.output !== undefined)){
             encodedPayload = encoders.reduce((result: unknown, encoder) => {
               return encoder.encode(type, result);
             }, chunk.output) as Buffer;

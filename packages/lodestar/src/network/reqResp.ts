@@ -6,9 +6,7 @@ import LibP2p from "libp2p";
 import {pipe} from "it-pipe";
 import {
   BeaconBlocksByRangeRequest,
-  BeaconBlocksByRangeResponse,
   BeaconBlocksByRootRequest,
-  BeaconBlocksByRootResponse,
   Goodbye,
   RequestBody,
   ResponseBody,
@@ -19,7 +17,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ERR_RESP_TIMEOUT, Method, ReqRespEncoding, RequestId, RESP_TIMEOUT,} from "../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {createResponseEvent, createRpcProtocol, randomRequestId} from "./util";
-import {IReqResp, ReqEventEmitter, RespEventEmitter, Response, ResponseCallbackFn, ResponseChunk} from "./interface";
+import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn, ResponseChunk} from "./interface";
 import {INetworkOptions} from "./options";
 import PeerId from "peer-id";
 import PeerInfo from "peer-info";
@@ -48,7 +46,7 @@ class ResponseEventListener extends (EventEmitter as IRespEventEmitterClass) {
 
     return setTimeout(() => {
       this.removeListener(responseEvent, responseListener);
-      responseListener({err: new Error(ERR_RESP_TIMEOUT)});
+      responseListener([{err: new Error(ERR_RESP_TIMEOUT)}]);
     }, RESP_TIMEOUT);
   }
 }
@@ -91,8 +89,12 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     });
   }
 
-  public sendResponse(id: RequestId, err: Error, body: ResponseBody): void {
-    this.responseListener.emit(createResponseEvent(id), {err, output: body});
+  public sendResponse(id: RequestId, err: Error, chunks: ResponseBody[]): void {
+    if(err) {
+      this.responseListener.emit(createResponseEvent(id), [{err}]);
+    } else {
+      this.responseListener.emit(createResponseEvent(id), chunks.map((chunk) => ({output: chunk})));
+    }
   }
   public async status(peerInfo: PeerInfo, request: Status): Promise<Status> {
     return await this.sendRequest<Status>(peerInfo, Method.Status, request);
@@ -103,32 +105,29 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   public async beaconBlocksByRange(
     peerInfo: PeerInfo,
     request: BeaconBlocksByRangeRequest
-  ): Promise<BeaconBlocksByRangeResponse> {
-    return await this.sendRequest<BeaconBlocksByRangeResponse>(peerInfo, Method.BeaconBlocksByRange, request);
+  ): Promise<SignedBeaconBlock[]> {
+    return await this.sendRequest<SignedBeaconBlock[]>(peerInfo, Method.BeaconBlocksByRange, request);
   }
   public async beaconBlocksByRoot(
     peerInfo: PeerInfo,
     request: BeaconBlocksByRootRequest
-  ): Promise<BeaconBlocksByRootResponse> {
-    return await this.sendRequest<BeaconBlocksByRootResponse>(peerInfo, Method.BeaconBlocksByRoot, request);
+  ): Promise<SignedBeaconBlock[]> {
+    return await this.sendRequest<SignedBeaconBlock[]>(peerInfo, Method.BeaconBlocksByRoot, request);
   }
 
   private handleRpcRequests(
     peerId: PeerId, method: Method
-  ): ((source: AsyncIterable<Buffer|BufferList>) => AsyncGenerator<Partial<Response>|ResponseChunk>) {
+  ): ((source: AsyncIterable<Buffer|BufferList>) => AsyncGenerator<ResponseChunk>) {
     const getResponse = this.getResponse;
     return (source: AsyncIterable<Buffer|BufferList>) => {
       return (async function * () {
         for await (const val of source) {
           const data = Buffer.isBuffer(val) ? val : val.slice();
           const response = await getResponse(peerId, method, data);
-          if (!response.err && (method === Method.BeaconBlocksByRange || method === Method.BeaconBlocksByRoot)) {
-            const blocks = response.output as SignedBeaconBlock[];
-            yield* blocks.map(block => ({output: block}));
-          } else if(!response.err && !response.output) {
-            yield {err: new Error("Missing response data")};
+          if(response.length) {
+            yield* response;
           } else {
-            yield response;
+            yield {err: new Error("Missing response data")} as ResponseChunk;
           }
         }
       })();
@@ -136,7 +135,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   }
 
   private getResponse = async (peerId: PeerId, method: Method, data: Buffer):
-  Promise<Partial<Response>> => {
+  Promise<ResponseChunk[]> => {
     return new Promise((resolve) => {
       const request = this.encoder.decodeRequest(method, data);
       const requestId = randomRequestId();
@@ -152,7 +151,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     });
   };
 
-  private async sendRequest<T extends ResponseBody>(
+  private async sendRequest<T extends ResponseBody|ResponseBody[]>(
     peerInfo: PeerInfo,
     method: Method,
     body: RequestBody,

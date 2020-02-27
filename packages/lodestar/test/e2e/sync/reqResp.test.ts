@@ -15,7 +15,7 @@ import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {generateState} from "../../utils/state";
 import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
-import { IGossipMessageValidator } from "../../../src/network/gossip/interface";
+import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {generateEmptySignedBlock} from "../../utils/block";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
@@ -39,8 +39,14 @@ describe("[sync] rpc", function () {
   let rpcB: SyncReqResp, netB: Libp2pNetwork, repsB: ReputationStore;
   const validator: IGossipMessageValidator = {} as unknown as IGossipMessageValidator;
   beforeEach(async () => {
-    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator});
-    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator});
+    netA = new Libp2pNetwork(
+      opts,
+      {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator}
+    );
+    netB = new Libp2pNetwork(
+      opts,
+      {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator}
+    );
     await Promise.all([
       netA.start(),
       netB.start(),

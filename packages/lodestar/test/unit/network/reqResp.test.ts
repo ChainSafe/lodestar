@@ -1,9 +1,9 @@
 import {assert} from "chai";
 
-import {Status, ResponseBody, SignedBeaconBlock, Slot, BeaconBlocksByRangeRequest} from "@chainsafe/lodestar-types";
+import {BeaconBlocksByRangeRequest, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {ReqResp} from "../../../src/network/reqResp";
-import {describe, it, beforeEach, afterEach} from "mocha";
+import {afterEach, beforeEach, describe, it} from "mocha";
 import {createNode} from "./util";
 import {NodejsNode} from "../../../src/network/nodejs";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -71,7 +71,7 @@ describe("[network] rpc", () => {
     // send status from A to B, await status response
     rpcB.once("request", (peerInfo, method, id, body) => {
       setTimeout(() => {
-        rpcB.sendResponse(id, null, body as ResponseBody);
+        rpcB.sendResponse(id, null, [body as Status]);
       }, 100);
     });
     try {
@@ -90,7 +90,7 @@ describe("[network] rpc", () => {
     // send status from B to A, await status response
     rpcA.once("request", (peerInfo, method, id, body) => {
       setTimeout(() => {
-        rpcA.sendResponse(id, null, body as ResponseBody);
+        rpcA.sendResponse(id, null, [body as Status]);
       }, 100);
     });
     try {
