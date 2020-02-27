@@ -2,6 +2,7 @@
  * @module chain/stateTransition/util
  */
 
+import {hash} from "@chainsafe/ssz";
 import {
   BeaconState,
   BLSSignature,
@@ -14,7 +15,7 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getCurrentEpoch} from "./epoch";
-import {hash, intDiv, bytesToInt} from "@chainsafe/lodestar-utils";
+import {intDiv, bytesToInt} from "@chainsafe/lodestar-utils";
 import {getBeaconCommittee} from "./committee";
 
 

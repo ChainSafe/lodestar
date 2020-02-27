@@ -1,7 +1,7 @@
 import assert from "assert";
 import {utils} from "libp2p-pubsub";
 import Gossipsub, {IGossipMessage, Options, Registrar} from "libp2p-gossipsub";
-import {Type} from "@chainsafe/ssz";
+import {hash, Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
@@ -9,7 +9,6 @@ import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator} from ".
 import {getGossipTopic, getSubnetFromAttestationSubnetTopic, isAttestationSubnetTopic} from "./utils";
 import {GossipEvent} from "./constants";
 import {GOSSIP_MAX_SIZE} from "../../constants";
-import {hash} from "@chainsafe/lodestar-utils";
 
 /**
  * This validates messages in Gossipsub and emit the transformed messages.
@@ -52,7 +51,7 @@ export class LodestarGossipsub extends Gossipsub {
   public _publish(messages: IGossipMessage[]): void {
     messages.forEach((message) => {
       const sha256Hash = hash(message.data);
-      message["message-id"] = sha256Hash.toString("base64");
+      message["message-id"] = Buffer.from(sha256Hash).toString("base64");
     });
     super._publish(messages);
   }
