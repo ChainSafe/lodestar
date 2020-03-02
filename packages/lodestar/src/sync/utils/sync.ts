@@ -18,7 +18,7 @@ export function isValidChainOfBlocks(
   return true;
 }
 
-export function getSyncTargetEpoch(peers: IReputation[], currentCheckPoint: Checkpoint): Epoch {
+export function getInitalSyncTargetEpoch(peers: IReputation[], currentCheckPoint: Checkpoint): Epoch {
   const numberOfEpochToBatch = 1;
   const peersWithHigherFinalizedEpoch = peers.filter(peer => {
     if(!peer.latestStatus) {
@@ -32,6 +32,24 @@ export function getSyncTargetEpoch(peers: IReputation[], currentCheckPoint: Chec
     return currentCheckPoint.epoch + numberOfEpochToBatch;
   }
   return currentCheckPoint.epoch;
+}
+
+export function getHighestCommonSlot(peers: IReputation[]): Slot {
+  const slotStatuses = peers.reduce<Map<Slot, number>>((current, peer) => {
+    if(peer.latestStatus && current.has(peer.latestStatus.headSlot)) {
+      current.set(peer.latestStatus.headSlot + 1, current.get(peer.latestStatus.headSlot) + 1);
+    } else if(peer.latestStatus) {
+      current.set(peer.latestStatus.headSlot + 1, 1);
+    }
+    return current;
+  }, new Map<Slot, number>());
+  return [...slotStatuses.entries()].sort((a, b) => {
+    return a[1] - b[1];
+  })[0][0];
+}
+
+export function isSynced(slot: Slot, peers: IReputation[]): boolean {
+  return slot >= getHighestCommonSlot(peers);
 }
 
 export function isValidFinalizedCheckPoint(peers: IReputation[], finalizedCheckpoint: Checkpoint): boolean {

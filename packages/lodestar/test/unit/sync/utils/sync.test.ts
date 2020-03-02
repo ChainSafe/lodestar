@@ -4,7 +4,7 @@ import {BeaconBlock, BeaconBlockHeader, Epoch, SignedBeaconBlock} from "@chainsa
 import {
   chunkify,
   getBlockRangeFromPeer,
-  getSyncTargetEpoch,
+  getInitalSyncTargetEpoch,
   isValidChainOfBlocks,
   isValidFinalizedCheckPoint
 } from "../../../../src/sync/utils/sync";
@@ -28,11 +28,11 @@ describe("sync utils", function () {
         generateReputation(1),
         generateReputation(2),
       ];
-      const result = getSyncTargetEpoch(peers, {epoch: 0, root: Buffer.alloc(0)});
+      const result = getInitalSyncTargetEpoch(peers, {epoch: 0, root: Buffer.alloc(0)});
       expect(result).to.be.equal(1);
-      const result1 = getSyncTargetEpoch(peers, {epoch: 2, root: Buffer.alloc(0)});
+      const result1 = getInitalSyncTargetEpoch(peers, {epoch: 2, root: Buffer.alloc(0)});
       expect(result1).to.be.equal(3);
-      const result2 = getSyncTargetEpoch(peers, {epoch: 3, root: Buffer.alloc(0)});
+      const result2 = getInitalSyncTargetEpoch(peers, {epoch: 3, root: Buffer.alloc(0)});
       expect(result2).to.be.equal(3);
     });
 
@@ -45,14 +45,14 @@ describe("sync utils", function () {
         generateReputation(1),
         generateReputation(2),
       ];
-      const result = getSyncTargetEpoch(peers, {epoch: 0, root: Buffer.alloc(0)});
+      const result = getInitalSyncTargetEpoch(peers, {epoch: 0, root: Buffer.alloc(0)});
       expect(result).to.be.equal(1);
     });
 
     it("should return given epoch if no peers", function () {
       const peers: IReputation[] = [
       ];
-      const result = getSyncTargetEpoch(peers, {epoch: 0, root: Buffer.alloc(0)});
+      const result = getInitalSyncTargetEpoch(peers, {epoch: 0, root: Buffer.alloc(0)});
       expect(result).to.be.equal(0);
     });
   });

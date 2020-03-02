@@ -39,7 +39,7 @@ describe("fast sync", function () {
     defaultOpts = {
       blockPerChunk: 2
     };
-    getTargetEpochStub = sandbox.stub(syncUtils, "getSyncTargetEpoch");
+    getTargetEpochStub = sandbox.stub(syncUtils, "getInitalSyncTargetEpoch");
     isValidHeaderChainStub = sandbox.stub(syncUtils, "isValidChainOfBlocks");
     getBlockRangeStub = sandbox.stub(blockSyncUtils, "getBlockRange");
   });

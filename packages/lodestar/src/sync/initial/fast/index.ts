@@ -9,7 +9,7 @@ import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import {ISyncOptions} from "../../options";
 import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../interface";
 import {EventEmitter} from "events";
-import {getSyncTargetEpoch, isValidChainOfBlocks, isValidFinalizedCheckPoint} from "../../utils/sync";
+import {getInitalSyncTargetEpoch, isValidChainOfBlocks, isValidFinalizedCheckPoint} from "../../utils/sync";
 import {BeaconState, Checkpoint} from "@chainsafe/lodestar-types";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {getBlockRange} from "../../utils/blocks";
@@ -63,7 +63,7 @@ export class FastSync
 
   private sync = async (chainCheckPoint: Checkpoint): Promise<void> => {
     const peers = Array.from(this.peers).map(this.reps.getFromPeerInfo);
-    const targetEpoch = getSyncTargetEpoch(peers, chainCheckPoint);
+    const targetEpoch = getInitalSyncTargetEpoch(peers, chainCheckPoint);
     if(chainCheckPoint.epoch >= targetEpoch) {
       if(isValidFinalizedCheckPoint(peers, chainCheckPoint)) {
         this.logger.info("Chain already on latest finalized state");
