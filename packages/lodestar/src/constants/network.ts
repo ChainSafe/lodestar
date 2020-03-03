@@ -14,8 +14,9 @@ export enum Method {
   BeaconBlocksByRoot = "beacon_blocks_by_root",
 }
 
-export enum Encoding {
-  ssz = "ssz",
+export enum ReqRespEncoding {
+  SSZ = "ssz",
+  SSZ_SNAPPY = "ssz_snappy",
 }
 
 export const ERR_INVALID_REQ = "invalid request";
