@@ -14,7 +14,7 @@ import {
   Status,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ERR_RESP_TIMEOUT, Method, ReqRespEncoding, RequestId, RESP_TIMEOUT,} from "../constants";
+import {ERR_RESP_TIMEOUT, Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, TTFB_TIMEOUT,} from "../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {createResponseEvent, createRpcProtocol, randomRequestId} from "./util";
 import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn, ResponseChunk} from "./interface";
@@ -161,11 +161,20 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     const {stream} = await this.libp2p.dialProtocol(peerInfo, protocol) as {stream: Stream};
     return await new Promise((resolve, reject) => {
       this.logger.verbose(`send ${method} request to ${peerInfo.id.toB58String()}`);
-      const responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
+      let responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), TTFB_TIMEOUT);
       pipe(
         [this.encoder.encodeRequest(method, body)],
         stream,
         this.encoder.decodeResponse(method),
+        function handleTimeout(source: AsyncIterable<ResponseBody>): AsyncIterable<ResponseBody> {
+          return (async function * () {
+            for await (const resp of source) {
+              clearTimeout(responseTimer);
+              responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
+              yield resp;
+            }
+          })();
+        },
         async (source: AsyncIterable<ResponseBody>) => {
           try {
             const  responses = [];
