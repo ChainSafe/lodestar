@@ -241,16 +241,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     if (this.nodes[parentRoot]) {
       this.nodes[parentRoot].addChild(node);
     }
-    if (justifiedCheckpoint && (!this.justified || justifiedCheckpoint.epoch > this.justified.epoch)) {
-      if (this.bestJustifiedCheckpoint) {
-        if (!this.justified ||
-          justifiedCheckpoint.epoch > this.bestJustifiedCheckpoint.epoch) {
-          this.checkAndSetJustified(justifiedCheckpoint);
-        }
-      } else {
-        this.checkAndSetJustified(justifiedCheckpoint);
-      }
-    }
+    this.checkAndSetJustified(justifiedCheckpoint);
     if (finalizedCheckpoint && (!this.finalized || finalizedCheckpoint.epoch > this.finalized.epoch)) {
       this.setFinalized(finalizedCheckpoint);
     }
@@ -331,9 +322,21 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   }
 
   private checkAndSetJustified(checkpoint: Checkpoint): void {
-    this.bestJustifiedCheckpoint = checkpoint;
-    if (this.shouldUpdateJustifiedCheckpoint(checkpoint.root.valueOf() as Uint8Array)) {
-      this.setJustified(checkpoint);
+    if (checkpoint && (!this.justified || checkpoint.epoch > this.justified.epoch)) {
+      if (this.bestJustifiedCheckpoint) {
+        if (!this.justified ||
+          checkpoint.epoch > this.bestJustifiedCheckpoint.epoch) {
+          this.bestJustifiedCheckpoint = checkpoint;
+          if (this.shouldUpdateJustifiedCheckpoint(checkpoint.root.valueOf() as Uint8Array)) {
+            this.setJustified(checkpoint);
+          }
+        }
+      } else {
+        this.bestJustifiedCheckpoint = checkpoint;
+        if (this.shouldUpdateJustifiedCheckpoint(checkpoint.root.valueOf() as Uint8Array)) {
+          this.setJustified(checkpoint);
+        }
+      }
     }
   }
 
