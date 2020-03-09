@@ -162,19 +162,15 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     return await new Promise((resolve, reject) => {
       this.logger.verbose(`send ${method} request to ${peerInfo.id.toB58String()}`);
       let responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), TTFB_TIMEOUT);
+      const renewTimer = (): void => {
+        clearTimeout(responseTimer);
+        responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
+      };
       pipe(
         [this.encoder.encodeRequest(method, body)],
         stream,
         this.encoder.decodeResponse(method),
-        function handleTimeout(source: AsyncIterable<ResponseBody>): AsyncIterable<ResponseBody> {
-          return (async function * () {
-            for await (const resp of source) {
-              clearTimeout(responseTimer);
-              responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
-              yield resp;
-            }
-          })();
-        },
+        this.handleTimeout(renewTimer),
         async (source: AsyncIterable<ResponseBody>) => {
           try {
             const  responses = [];
@@ -195,5 +191,17 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         }
       );
     });
+  }
+
+  private handleTimeout(renewTimer: () => void):
+  (source: AsyncIterable<ResponseBody>) => AsyncIterable<ResponseBody> {
+    return function(source: AsyncIterable<ResponseBody>): AsyncIterable<ResponseBody> {
+      return (async function * () {
+        for await (const resp of source) {
+          renewTimer();
+          yield resp;
+        }
+      })();
+    };
   }
 }
