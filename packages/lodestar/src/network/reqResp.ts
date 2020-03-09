@@ -166,23 +166,26 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         clearTimeout(responseTimer);
         responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
       };
+      const cancelTimer = (): void => {
+        clearTimeout(responseTimer);
+      };
       pipe(
         [this.encoder.encodeRequest(method, body)],
         stream,
         this.encoder.decodeResponse(method),
-        this.handleTimeout(renewTimer),
         async (source: AsyncIterable<ResponseBody>) => {
           try {
             const  responses = [];
             for await (const response of source) {
+              renewTimer();
               responses.push(response);
             }
+            cancelTimer();
             if (!requestOnly && responses.length === 0) {
               reject(`No response returned for method ${method}`);
               return;
             }
             const finalResponse = (method === Method.Status) ? responses[0] : responses;
-            clearTimeout(responseTimer);
             this.logger.verbose(`receive ${method} response from ${peerInfo.id.toB58String()}`);
             resolve(requestOnly? undefined : finalResponse as T);
           } catch (e) {
@@ -191,17 +194,5 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         }
       );
     });
-  }
-
-  private handleTimeout(renewTimer: () => void):
-  (source: AsyncIterable<ResponseBody>) => AsyncIterable<ResponseBody> {
-    return function(source: AsyncIterable<ResponseBody>): AsyncIterable<ResponseBody> {
-      return (async function * () {
-        for await (const resp of source) {
-          renewTimer();
-          yield resp;
-        }
-      })();
-    };
   }
 }
