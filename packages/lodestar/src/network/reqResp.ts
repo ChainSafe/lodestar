@@ -14,7 +14,7 @@ import {
   Status,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ERR_RESP_TIMEOUT, Method, ReqRespEncoding, RequestId, RESP_TIMEOUT,} from "../constants";
+import {ERR_RESP_TIMEOUT, Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, TTFB_TIMEOUT,} from "../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {createResponseEvent, createRpcProtocol, randomRequestId} from "./util";
 import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn, ResponseChunk} from "./interface";
@@ -161,7 +161,14 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     const {stream} = await this.libp2p.dialProtocol(peerInfo, protocol) as {stream: Stream};
     return await new Promise((resolve, reject) => {
       this.logger.verbose(`send ${method} request to ${peerInfo.id.toB58String()}`);
-      const responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
+      let responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), TTFB_TIMEOUT);
+      const renewTimer = (): void => {
+        clearTimeout(responseTimer);
+        responseTimer = setTimeout(() => reject(new Error(ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
+      };
+      const cancelTimer = (): void => {
+        clearTimeout(responseTimer);
+      };
       pipe(
         [this.encoder.encodeRequest(method, body)],
         stream,
@@ -170,14 +177,15 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
           try {
             const  responses = [];
             for await (const response of source) {
+              renewTimer();
               responses.push(response);
             }
+            cancelTimer();
             if (!requestOnly && responses.length === 0) {
               reject(`No response returned for method ${method}`);
               return;
             }
             const finalResponse = (method === Method.Status) ? responses[0] : responses;
-            clearTimeout(responseTimer);
             this.logger.verbose(`receive ${method} response from ${peerInfo.id.toB58String()}`);
             resolve(requestOnly? undefined : finalResponse as T);
           } catch (e) {
