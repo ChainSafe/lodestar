@@ -6,7 +6,7 @@ export function objectToCamelCase(obj: object): object {
     Object.getOwnPropertyNames(obj).forEach((name) => {
       const newName = camelcase(name);
       // @ts-ignore
-      if (obj[newName]) {
+      if (obj.hasOwnProperty(newName)) {
         throw new Error(`object already has a ${newName} property`);
       }
       if (newName !== name) {
