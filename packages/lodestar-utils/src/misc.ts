@@ -5,11 +5,11 @@ export function objectToCamelCase(obj: object): object {
   if (Object(obj) === obj) {
     Object.getOwnPropertyNames(obj).forEach((name) => {
       const newName = camelcase(name);
-      // @ts-ignore
-      if (obj.hasOwnProperty(newName)) {
-        throw new Error(`object already has a ${newName} property`);
-      }
       if (newName !== name) {
+        // @ts-ignore
+        if (obj.hasOwnProperty(newName)) {
+          throw new Error(`object already has a ${newName} property`);
+        }
         // @ts-ignore
         obj[newName] = obj[name];
         // @ts-ignore
