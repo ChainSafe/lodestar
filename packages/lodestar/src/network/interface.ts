@@ -15,11 +15,12 @@ import {
 import {Method, RequestId} from "../constants";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {IGossip} from "./gossip/interface";
+import {RpcError} from "./error";
 
 
 export type ResponseCallbackFn = ((response: ResponseChunk[]) => void);
 
-export type ResponseChunk = {err?: Error; output?: ResponseBody};
+export type ResponseChunk = {err?: RpcError; output?: ResponseBody};
 
 interface IRespEvents {
   [responseEvent: string]: ResponseCallbackFn;

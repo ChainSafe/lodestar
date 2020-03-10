@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ERR_INVALID_REQ, MAX_CHUNK_SIZE, Method, ReqRespEncoding} from "../constants";
+import {MAX_CHUNK_SIZE, Method, ReqRespEncoding, RpcErrorCode} from "../constants";
 import {RequestBody, ResponseBody} from "@chainsafe/lodestar-types";
 import {IReqRespEncoder, SnappyEncoder, SszEncoder} from "./encoders";
 import {getRequestMethodSSZType, getResponseMethodSSZType} from "./util";
@@ -7,6 +7,7 @@ import * as varint from "varint";
 import {ResponseChunk} from "./interface";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import BufferList from "bl";
+import {RpcError} from "./error";
 
 export class ReqRespEncoder {
 
@@ -54,12 +55,12 @@ export class ReqRespEncoder {
               return encoder.encode(type, result);
             }, chunk.output) as Buffer;
           }
-          let status = 0;
-          if(chunk.err) {
-            status = chunk.err.message === ERR_INVALID_REQ ? 1 : 2;
-            //TODO: stop yielding
-          }
+          const status = chunk.err && chunk.err.status;
           yield writeStatus(writeLP(encodedPayload), status);
+          if(status) {
+            // error => stop yielding response_chunk
+            break;
+          }
         }
       })();
     };
@@ -107,7 +108,7 @@ export class ReqRespEncoder {
       length !== encodedPayload.length - lengthBytes ||
           length > MAX_CHUNK_SIZE
     ) {
-      throw new Error(ERR_INVALID_REQ);
+      throw new RpcError(RpcErrorCode.ERR_INVALID_REQ);
     }
     return encodedPayload.slice(lengthBytes);
   }
