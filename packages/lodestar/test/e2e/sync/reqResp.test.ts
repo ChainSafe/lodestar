@@ -17,6 +17,7 @@ import {generateState} from "../../utils/state";
 import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {generateEmptySignedBlock} from "../../utils/block";
+import { BeaconBlocksByRootRequest, BeaconBlocksByRangeRequest } from "@chainsafe/lodestar-types";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -27,6 +28,10 @@ const opts: INetworkOptions = {
   disconnectTimeout: 5000,
   multiaddrs: [],
 };
+
+const block = generateEmptySignedBlock();
+const BLOCK_SLOT = 2020;
+block.message.slot = BLOCK_SLOT;
 
 describe("[sync] rpc", function () {
   this.timeout(20000);
@@ -58,7 +63,7 @@ describe("[sync] rpc", function () {
       networkId: 0n,
     });
     const state = generateState();
-    const block = generateEmptySignedBlock();
+    
     state.finalizedCheckpoint = {
       epoch: 0,
       root: config.types.BeaconBlock.hashTreeRoot(block.message),
@@ -80,6 +85,10 @@ describe("[sync] rpc", function () {
     db.block.get.resolves(block);
     // @ts-ignore
     db.blockArchive.get.resolves(block);
+    // @ts-ignore
+    db.blockArchive.getAllBetweenStream.returns(async function * () {
+      yield block;
+    }());
     chain.latestState = state;
     rpcA = new SyncReqResp({}, {
       config,
@@ -155,5 +164,26 @@ describe("[sync] rpc", function () {
     await rpcA.stop();
     const goodbye = await goodbyeEvent;
     expect(goodbye).to.equal(Method.Goodbye);
+  });
+
+  it("beacon block by root", async function () {
+    const request: BeaconBlocksByRootRequest = [Buffer.alloc(32)];
+    const response = await netA.reqResp.beaconBlocksByRoot(netB.peerInfo, request);
+    expect(response.length).to.equal(1);
+    const block = response[0];
+    expect(block.message.slot).to.equal(BLOCK_SLOT);
+  });
+
+  it("beacon blocks by range", async () => {
+    const request: BeaconBlocksByRangeRequest = {
+      headBlockRoot: Buffer.alloc(32),
+      startSlot: BLOCK_SLOT,
+      count: 1,
+      step: 1,
+    };
+    const response = await netA.reqResp.beaconBlocksByRange(netB.peerInfo, request);
+    expect(response.length).to.equal(1);
+    const block = response[0];
+    expect(block.message.slot).to.equal(BLOCK_SLOT);
   });
 });

@@ -9,7 +9,7 @@ import {
   Epoch,
   Goodbye,
   RequestBody,
-  Slot, Status, Root, SignedBeaconBlock,
+  Slot, Status, Root,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
@@ -146,14 +146,12 @@ export class SyncReqResp implements ISyncReqResp {
     request: BeaconBlocksByRangeRequest
   ): Promise<void> {
     try {
-      const responses: SignedBeaconBlock[] = [];
-      const blocks = await this.db.blockArchive.getAllBetween(
+      const blockIter = this.db.blockArchive.getAllBetweenStream(
         request.startSlot - 1,
         request.startSlot + request.count,
         request.step
       );
-      responses.push(...blocks);
-      this.network.reqResp.sendResponse(id, null, responses);
+      this.network.reqResp.sendResponseStream(id, null, blockIter);
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);
     }
@@ -164,14 +162,16 @@ export class SyncReqResp implements ISyncReqResp {
     request: BeaconBlocksByRootRequest
   ): Promise<void> {
     try {
-      const response: SignedBeaconBlock[] = [];
-      for (const blockRoot of request) {
-        const block = await this.db.block.get(blockRoot.valueOf() as Uint8Array);
-        if (block) {
-          response.push(block);
+      const getBlock = this.db.block.get;
+      const blockGenerator = async function* () {
+        for (const blockRoot of request) {
+          const block = await getBlock(blockRoot.valueOf() as Uint8Array);
+          if (block) {
+            yield block;
+          }
         }
-      }
-      this.network.reqResp.sendResponse(id, null, response);
+      }();
+      this.network.reqResp.sendResponseStream(id, null, blockGenerator);
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);
     }

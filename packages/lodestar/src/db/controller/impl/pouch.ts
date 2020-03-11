@@ -102,6 +102,14 @@ export class PouchDbController extends EventEmitter implements IDatabaseControll
     return data.rows.map((item: any) => Buffer.from(item.doc.value.data));
   }
 
+  public searchStream(opts: ISearchOptions): AsyncIterable<any> {
+    const search = this.search;
+    return async function * () {
+      const dataArr = await search(opts);
+      yield* dataArr;
+    }();
+  }
+
   public async delete(key: any): Promise<void> {
     if(typeof key !== "string") {
       key = toHexString(key);
