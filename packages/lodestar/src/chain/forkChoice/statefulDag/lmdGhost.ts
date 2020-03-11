@@ -32,7 +32,7 @@ class Node {
   /**
    * Parent node, the previous block
    */
-  public parent: Node|null;
+  public parent: Node | null;
 
   /**
    * Child node with the most weight
@@ -49,7 +49,7 @@ class Node {
    */
   public children: Record<RootHex, Node>;
 
-  public constructor({slot, blockRoot, parent}: {slot: Slot; blockRoot: RootHex; parent: Node}) {
+  public constructor({slot, blockRoot, parent}: { slot: Slot; blockRoot: RootHex; parent: Node }) {
     this.slot = slot;
     this.blockRoot = blockRoot;
     this.parent = parent;
@@ -168,12 +168,12 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   /**
    * Last finalized block
    */
-  private finalized: {node: Node; epoch: Epoch} | null;
+  private finalized: { node: Node; epoch: Epoch } | null;
 
   /**
    * Last justified block
    */
-  private justified: {node: Node; epoch: Epoch} | null;
+  private justified: { node: Node; epoch: Epoch } | null;
   /**
    * Best justified checkpoint.
    */
@@ -241,9 +241,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     if (this.nodes[parentRoot]) {
       this.nodes[parentRoot].addChild(node);
     }
-    if (justifiedCheckpoint && (!this.justified || justifiedCheckpoint.epoch > this.justified.epoch)) {
-      this.checkAndSetJustified(justifiedCheckpoint);
-    }
+    this.checkAndSetJustified(justifiedCheckpoint);
     if (finalizedCheckpoint && (!this.finalized || finalizedCheckpoint.epoch > this.finalized.epoch)) {
       this.setFinalized(finalizedCheckpoint);
     }
@@ -282,11 +280,11 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   // To address the bouncing attack, only update conflicting justified
   //  checkpoints in the fork choice if in the early slots of the epoch.
   public shouldUpdateJustifiedCheckpoint(blockRoot: Uint8Array): boolean {
-    if(!this.justified) {
+    if (!this.justified) {
       return true;
     }
-    if(computeSlotsSinceEpochStart(this.config, getCurrentSlot(this.config, this.genesisTime)) <
-       this.config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED) {
+    if (computeSlotsSinceEpochStart(this.config, getCurrentSlot(this.config, this.genesisTime)) <
+      this.config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED) {
       return true;
     }
     const hexBlockRoot = toHexString(blockRoot);
@@ -324,9 +322,21 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   }
 
   private checkAndSetJustified(checkpoint: Checkpoint): void {
-    this.bestJustifiedCheckpoint = checkpoint;
-    if (this.shouldUpdateJustifiedCheckpoint(checkpoint.root.valueOf() as Uint8Array)) {
-      this.setJustified(checkpoint);
+    if (checkpoint && (!this.justified || checkpoint.epoch > this.justified.epoch)) {
+      if (this.bestJustifiedCheckpoint) {
+        if (!this.justified ||
+          checkpoint.epoch > this.bestJustifiedCheckpoint.epoch) {
+          this.bestJustifiedCheckpoint = checkpoint;
+          if (this.shouldUpdateJustifiedCheckpoint(checkpoint.root.valueOf() as Uint8Array)) {
+            this.setJustified(checkpoint);
+          }
+        }
+      } else {
+        this.bestJustifiedCheckpoint = checkpoint;
+        if (this.shouldUpdateJustifiedCheckpoint(checkpoint.root.valueOf() as Uint8Array)) {
+          this.setJustified(checkpoint);
+        }
+      }
     }
   }
 
