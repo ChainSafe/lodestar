@@ -11,15 +11,16 @@ import {computeSlotsSinceEpochStart, getCurrentSlot} from "@chainsafe/lodestar-b
 
 import {ILMDGHOST} from "../interface";
 
-import {AttestationAggregator, RootHex,} from "./attestationAggregator";
+import {AttestationAggregator} from "./attestationAggregator";
 import {sleep} from "../../../util/sleep";
+import {RootHex, NodeInfo, HexCheckpoint} from "./interface";
 
 
 /**
  * A block root with additional metadata required to form a DAG
  * with vote weights and best blocks stored as metadata
  */
-class Node {
+export class Node {
   // block data
   public slot: Slot;
   public blockRoot: RootHex;
@@ -45,14 +46,26 @@ class Node {
   public bestTarget: Node;
 
   /**
+   * State's current justified check point respective to this block/node.
+   */
+  public justifiedCheckpoint: HexCheckpoint;
+
+  /**
+   * State's finalized check point respective to this block/node
+   */
+  public finalizedCheckpoint: HexCheckpoint;
+
+  /**
    * All direct children
    */
   public children: Record<RootHex, Node>;
 
-  public constructor({slot, blockRoot, parent}: { slot: Slot; blockRoot: RootHex; parent: Node }) {
+  public constructor({slot, blockRoot, parent, justifiedCheckpoint, finalizedCheckpoint}: NodeInfo) {
     this.slot = slot;
     this.blockRoot = blockRoot;
     this.parent = parent;
+    this.justifiedCheckpoint = justifiedCheckpoint;
+    this.finalizedCheckpoint = finalizedCheckpoint;
 
     this.weight = 0n;
     this.bestChild = null;
@@ -64,13 +77,29 @@ class Node {
    * Compare two nodes for equality
    */
   public equals(other: Node): boolean {
-    return this.blockRoot === other.blockRoot;
+    return other? this.blockRoot === other.blockRoot : false;
   }
 
   /**
    * Determine which node is 'better'
+   * Weighing system: correct justified/finalized epoch first, then the  internal weight
+   * then lexographically higher root
+   * @param justifiedCheckpoint the store's justified check point
+   * @param finalizedCheckpoint the store's finalized check point
    */
-  public betterThan(other: Node): boolean {
+  public betterThan(other: Node, justifiedCheckpoint: HexCheckpoint, finalizedCheckpoint: HexCheckpoint): boolean {
+    const isThisGoodForBestTarget = this.bestTarget.isCandidateForBestTarget(justifiedCheckpoint, finalizedCheckpoint);
+    const isOtherGoodForBestTarget =
+      other.bestTarget.isCandidateForBestTarget(justifiedCheckpoint, finalizedCheckpoint);
+    // make sure best target is good first
+    if (isThisGoodForBestTarget && !isOtherGoodForBestTarget) {
+      return true;
+    }
+
+    if (!isThisGoodForBestTarget && isOtherGoodForBestTarget) {
+      return false;
+    }
+
     return (
       // n2 weight greater
       this.weight > other.weight ||
@@ -80,49 +109,67 @@ class Node {
   }
 
   /**
-   * Add child node
+   * Add child node.
+   * @justifiedCheckpoint: the store's justified check point
+   * @finalizedCheckpoint: the store's finalized check point
    */
-  public addChild(child: Node): void {
+  public addChild(child: Node, justifiedCheckpoint: HexCheckpoint, finalizedCheckpoint: HexCheckpoint): void {
     this.children[child.blockRoot] = child;
-    if (Object.values(this.children).length === 1) {
-      // this is the only child, propagate itself as best target as far as necessary
+    if (!this.bestChild) {
+      // propagate itself as best target as far as necessary
       this.bestChild = child;
-      let c: Node = child;
-      // eslint-disable-next-line @typescript-eslint/no-this-alias
-      let p: Node = this;
-      while (p) {
-        if (c.equals(p.bestChild)) {
-          p.bestTarget = child.bestTarget;
-          c = p;
-          p = p.parent;
-        } else {
-          // stop propagating when the child is not the best child of the parent
-          break;
-        }
-      }
+      child.propagateWeightChange(0n, justifiedCheckpoint, finalizedCheckpoint);
     }
   }
 
   /**
-   * Update node weight
+   * Check if a leaf is eligible to be a head
+   * @param justifiedCheckpoint the store's justified check point
+   * @param finalizedCheckpoint the store's finalized check point
    */
-  public propagateWeightChange(delta: Gwei): void {
+  public isCandidateForBestTarget(justifiedCheckpoint: HexCheckpoint, finalizedCheckpoint: HexCheckpoint): boolean {
+    if (!justifiedCheckpoint || !finalizedCheckpoint) {
+      return true;
+    }
+    return this.justifiedCheckpoint.epoch === justifiedCheckpoint.epoch &&
+      this.justifiedCheckpoint.rootHex === justifiedCheckpoint.rootHex &&
+      this.finalizedCheckpoint.epoch === finalizedCheckpoint.epoch &&
+      this.finalizedCheckpoint.rootHex === finalizedCheckpoint.rootHex;
+  }
+
+  /**
+   * Update node weight.
+   * delta = 0: node's best target's epochs are conflict to the store or become conform to the store.
+   * delta > 0: propagate onAddWeight
+   * delta < 0: propagate onRemoveWeight
+   * @param justifiedCheckpoint the store's justified check point
+   * @param finalizedCheckpoint the store's finalized check point
+   */
+  public propagateWeightChange(delta: Gwei,
+    justifiedCheckpoint: HexCheckpoint,
+    finalizedCheckpoint: HexCheckpoint): void {
     this.weight += delta;
+    const isAddWeight = (delta > 0)? true :
+      (delta < 0)? false : this.bestTarget.isCandidateForBestTarget(justifiedCheckpoint, finalizedCheckpoint);
     if (this.parent) {
-      if (delta < 0) {
-        this.onRemoveWeight();
-      } else {
-        this.onAddWeight();
-      }
-      this.parent.propagateWeightChange(delta);
+      isAddWeight? this.onAddWeight(justifiedCheckpoint, finalizedCheckpoint) :
+        this.onRemoveWeight(justifiedCheckpoint, finalizedCheckpoint);
+      this.parent.propagateWeightChange(delta, justifiedCheckpoint, finalizedCheckpoint);
     }
   }
 
   /**
    * Update parent best child / best target in the added weight case
+   * @param justifiedCheckpoint the store's justified check point
+   * @param finalizedCheckpoint the store's finalized check point
    */
-  private onAddWeight(): void {
-    if (this.equals(this.parent.bestChild) || this.betterThan(this.parent.bestChild)) {
+  private onAddWeight(justifiedCheckpoint: HexCheckpoint, finalizedCheckpoint: HexCheckpoint): void {
+    const isFirstBestChild = !this.parent.bestChild &&
+      this.bestTarget.isCandidateForBestTarget(justifiedCheckpoint, finalizedCheckpoint);
+    const needUpdateBestTarget = this.parent.bestChild &&
+      (this.equals(this.parent.bestChild) ||
+      this.betterThan(this.parent.bestChild, justifiedCheckpoint, finalizedCheckpoint));
+    if (isFirstBestChild || needUpdateBestTarget) {
       this.parent.bestChild = this;
       this.parent.bestTarget = this.bestTarget;
     }
@@ -130,16 +177,24 @@ class Node {
 
   /**
    * Update parent best child / best target in the removed weight case
+   * @param justifiedCheckpoint the store's justified check point
+   * @param finalizedCheckpoint the store's finalized check point
    */
-  private onRemoveWeight(): void {
+  private onRemoveWeight(justifiedCheckpoint: HexCheckpoint, finalizedCheckpoint: HexCheckpoint): void {
     // if this node is the best child it may lose that position
-    if (this.equals(this.parent.bestChild)) {
+    if (this.parent.bestChild && this.equals(this.parent.bestChild)) {
       const newBest = Object.values(this.parent.children)
-        .reduce((a, b) => b.betterThan(a) ? b : a, this);
+        .reduce((a, b) => b.betterThan(a, justifiedCheckpoint, finalizedCheckpoint) ? b : a, this);
       // no longer the best
       if (!this.equals(newBest)) {
         this.parent.bestChild = newBest;
         this.parent.bestTarget = newBest.bestTarget;
+      } else {
+        if (!this.bestTarget.isCandidateForBestTarget(justifiedCheckpoint, finalizedCheckpoint)) {
+          // I'm not good but noone is better than me, do a soft unlink to the tree
+          // the next addChild call will assign the bestChild
+          this.parent.bestChild = null;
+        }
       }
     }
   }
@@ -219,11 +274,12 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     if (this.bestJustifiedCheckpoint && (!this.justified ||
       this.bestJustifiedCheckpoint.epoch > this.justified.epoch)) {
       this.setJustified(this.bestJustifiedCheckpoint);
+      this.ensureCorrectBestTargets();
     }
   }
 
   public addBlock(slot: Slot, blockRootBuf: Uint8Array, parentRootBuf: Uint8Array,
-    justifiedCheckpoint?: Checkpoint, finalizedCheckpoint?: Checkpoint): void {
+    justifiedCheckpoint: Checkpoint, finalizedCheckpoint: Checkpoint): void {
     this.synced = false;
     const blockRoot = toHexString(blockRootBuf);
     const parentRoot = toHexString(parentRootBuf);
@@ -232,19 +288,52 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       slot,
       blockRoot,
       parent: this.nodes[parentRoot],
+      justifiedCheckpoint: {rootHex: toHexString(justifiedCheckpoint.root), epoch: justifiedCheckpoint.epoch},
+      finalizedCheckpoint: {rootHex: toHexString(finalizedCheckpoint.root), epoch: finalizedCheckpoint.epoch},
     });
     // best target is the node itself
     node.bestTarget = node;
     this.nodes[blockRoot] = node;
 
+    let shouldCheckBestTarget = false;
+    if (!this.justified || justifiedCheckpoint.epoch > this.justified.epoch) {
+      if (!this.bestJustifiedCheckpoint || justifiedCheckpoint.epoch > this.bestJustifiedCheckpoint.epoch) {
+        this.bestJustifiedCheckpoint = justifiedCheckpoint;
+      }
+      if (this.shouldUpdateJustifiedCheckpoint(justifiedCheckpoint.root.valueOf() as Uint8Array)) {
+        this.setJustified(justifiedCheckpoint);
+        shouldCheckBestTarget = true;
+      }
+    }
+    if (!this.finalized || finalizedCheckpoint.epoch > this.finalized.epoch) {
+      this.setFinalized(finalizedCheckpoint);
+      shouldCheckBestTarget = true;
+    }
     // if parent root exists, link to blockRoot
     if (this.nodes[parentRoot]) {
-      this.nodes[parentRoot].addChild(node);
+      this.nodes[parentRoot].addChild(
+        node,
+        this.getJustifiedCheckpoint(), 
+        this.getFinalizedCheckpoint());
     }
-    this.checkAndSetJustified(justifiedCheckpoint);
-    if (finalizedCheckpoint && (!this.finalized || finalizedCheckpoint.epoch > this.finalized.epoch)) {
-      this.setFinalized(finalizedCheckpoint);
+    if (shouldCheckBestTarget) {
+      this.ensureCorrectBestTargets();
     }
+  }
+
+  public getNode(blockRootBuf: Uint8Array): Node {
+    const blockRoot = toHexString(blockRootBuf);
+    return this.nodes[blockRoot];
+  }
+
+  // Make sure bestTarget has correct justified_checkpoint and finalized_checkpoint
+  public ensureCorrectBestTargets(): void {
+    const leafNodes = Object.values(this.nodes).filter(n => (Object.values(n.children).length === 0));
+    const incorrectBestTargets = leafNodes.filter(
+      leaf => !leaf.isCandidateForBestTarget(this.getJustifiedCheckpoint(), this.getFinalizedCheckpoint()));
+    // step down as best targets
+    incorrectBestTargets.forEach(
+      node => node.propagateWeightChange(0n, this.getJustifiedCheckpoint(), this.getFinalizedCheckpoint()));
   }
 
   public addAttestation(blockRootBuf: Uint8Array, attester: ValidatorIndex, weight: Gwei): void {
@@ -262,7 +351,10 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
         const delta = agg.weight - agg.prevWeight;
         agg.prevWeight = agg.weight;
 
-        this.nodes[agg.target].propagateWeightChange(delta);
+        this.nodes[agg.target].propagateWeightChange(
+          delta,
+          this.getJustifiedCheckpoint(),
+          this.getFinalizedCheckpoint());
       }
     });
 
@@ -313,31 +405,26 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     return {root: fromHexString(this.finalized.node.blockRoot), epoch: this.finalized.epoch};
   }
 
+  private getJustifiedCheckpoint(): HexCheckpoint {
+    if (!this.justified) {
+      return null;
+    }
+    return {rootHex: this.justified.node.blockRoot, epoch: this.justified.epoch};
+  }
+
+  private getFinalizedCheckpoint(): HexCheckpoint {
+    if (!this.finalized) {
+      return null;
+    }
+    return {rootHex: this.finalized.node.blockRoot, epoch: this.finalized.epoch};
+  }
+
   private setFinalized(checkpoint: Checkpoint): void {
     this.synced = false;
     const rootHex = toHexString(checkpoint.root);
     this.finalized = {node: this.nodes[rootHex], epoch: checkpoint.epoch};
     this.prune();
     this.aggregator.prune();
-  }
-
-  private checkAndSetJustified(checkpoint: Checkpoint): void {
-    if (checkpoint && (!this.justified || checkpoint.epoch > this.justified.epoch)) {
-      if (this.bestJustifiedCheckpoint) {
-        if (!this.justified ||
-          checkpoint.epoch > this.bestJustifiedCheckpoint.epoch) {
-          this.bestJustifiedCheckpoint = checkpoint;
-          if (this.shouldUpdateJustifiedCheckpoint(checkpoint.root.valueOf() as Uint8Array)) {
-            this.setJustified(checkpoint);
-          }
-        }
-      } else {
-        this.bestJustifiedCheckpoint = checkpoint;
-        if (this.shouldUpdateJustifiedCheckpoint(checkpoint.root.valueOf() as Uint8Array)) {
-          this.setJustified(checkpoint);
-        }
-      }
-    }
   }
 
   private setJustified(checkpoint: Checkpoint): void {
@@ -352,7 +439,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       return null;
     }
     if (node.slot > slot) {
-      return this.getAncestor(node.parent.blockRoot, slot);
+      return (node.parent)? this.getAncestor(node.parent.blockRoot, slot) : null;
     } else if (node.slot === slot) {
       return node.blockRoot;
     } else {
