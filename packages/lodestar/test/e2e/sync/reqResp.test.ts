@@ -17,7 +17,7 @@ import {generateState} from "../../utils/state";
 import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {generateEmptySignedBlock} from "../../utils/block";
-import { BeaconBlocksByRootRequest, BeaconBlocksByRangeRequest } from "@chainsafe/lodestar-types";
+import {BeaconBlocksByRootRequest, BeaconBlocksByRangeRequest} from "@chainsafe/lodestar-types";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -32,6 +32,8 @@ const opts: INetworkOptions = {
 const block = generateEmptySignedBlock();
 const BLOCK_SLOT = 2020;
 block.message.slot = BLOCK_SLOT;
+const block2 = generateEmptySignedBlock();
+block2.message.slot = BLOCK_SLOT + 1;
 
 describe("[sync] rpc", function () {
   this.timeout(20000);
@@ -88,6 +90,7 @@ describe("[sync] rpc", function () {
     // @ts-ignore
     db.blockArchive.getAllBetweenStream.returns(async function * () {
       yield block;
+      yield block2;
     }());
     chain.latestState = state;
     rpcA = new SyncReqResp({}, {
@@ -108,6 +111,7 @@ describe("[sync] rpc", function () {
       logger: logger
     })
     ;
+    
     netA.reqResp.on("request", rpcA.onRequest.bind(rpcA));
     netB.reqResp.on("request", rpcB.onRequest.bind(rpcB));
     await Promise.all([
@@ -178,12 +182,15 @@ describe("[sync] rpc", function () {
     const request: BeaconBlocksByRangeRequest = {
       headBlockRoot: Buffer.alloc(32),
       startSlot: BLOCK_SLOT,
-      count: 1,
+      count: 2,
       step: 1,
     };
+    
     const response = await netA.reqResp.beaconBlocksByRange(netB.peerInfo, request);
-    expect(response.length).to.equal(1);
+    expect(response.length).to.equal(2);
     const block = response[0];
     expect(block.message.slot).to.equal(BLOCK_SLOT);
+    const block2 = response[1];
+    expect(block2.message.slot).to.equal(BLOCK_SLOT + 1);
   });
 });
