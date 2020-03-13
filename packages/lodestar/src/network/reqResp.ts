@@ -108,10 +108,10 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     }
   }
 
-  public sendResponseStream(id: RequestId, err: Error, chunkIter: AsyncIterable<ResponseBody>): void {
+  public sendResponseStream(id: RequestId, err: RpcError, chunkIter: AsyncIterable<ResponseBody>): void {
     if(err) {
       this.responseListener.emit(createResponseEvent(id), async function* () {
-        yield {err};
+        yield {err: err};
       }());
     } else {
       const asyncIter = async function* () {
