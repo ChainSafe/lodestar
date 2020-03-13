@@ -14,6 +14,7 @@ import {ILMDGHOST} from "../interface";
 import {AttestationAggregator} from "./attestationAggregator";
 import {sleep} from "../../../util/sleep";
 import {RootHex, NodeInfo, HexCheckpoint} from "./interface";
+import {GENESIS_EPOCH} from "../../../constants";
 
 
 /**
@@ -405,15 +406,27 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     return {root: fromHexString(this.finalized.node.blockRoot), epoch: this.finalized.epoch};
   }
 
+  /**
+   * Don't want to check the initial justified/finalized checkpoint for the 1st epoch
+   * because initial state does not have checkpoints in database.
+   * First addBlock (for genesis block) call has checkpoints but from the 2nd call in the
+   * first epoch it has ZERO finalized/justified checkpoints.
+   */
   private getJustifiedCheckpoint(): HexCheckpoint {
-    if (!this.justified) {
+    if (this.finalized.epoch === GENESIS_EPOCH) {
       return null;
     }
     return {rootHex: this.justified.node.blockRoot, epoch: this.justified.epoch};
   }
 
+  /**
+   * Don't want to check the initial justified/finalized checkpoint for the 1st epoch
+   * because initial state does not have checkpoints in database.
+   * First addBlock (for genesis block) call has checkpoints but from the 2nd call in the
+   * first epoch it has ZERO finalized/justified checkpoints.
+   */
   private getFinalizedCheckpoint(): HexCheckpoint {
-    if (!this.finalized) {
+    if (this.finalized.epoch === GENESIS_EPOCH) {
       return null;
     }
     return {rootHex: this.finalized.node.blockRoot, epoch: this.finalized.epoch};
