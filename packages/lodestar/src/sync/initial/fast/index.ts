@@ -4,8 +4,8 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../../chain";
 import {ReputationStore} from "../../IReputation";
-import {IReqResp} from "../../../network";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {INetwork} from "../../../network";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ISyncOptions} from "../../options";
 import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../interface";
 import {EventEmitter} from "events";
@@ -22,7 +22,7 @@ export class FastSync
   private opts: ISyncOptions;
   private chain: IBeaconChain;
   private reps: ReputationStore;
-  private rpc: IReqResp;
+  private network: INetwork;
   private logger: ILogger;
   private peers: PeerInfo[];
 
@@ -33,7 +33,7 @@ export class FastSync
     this.peers = peers;
     this.reps = reps;
     this.opts = opts;
-    this.rpc = network.reqResp;
+    this.network = network;
     this.logger = logger;
   }
 
@@ -62,7 +62,7 @@ export class FastSync
   }
 
   private sync = async (chainCheckPoint: Checkpoint): Promise<void> => {
-    const peers = Array.from(this.peers).map(this.reps.getFromPeerInfo);
+    const peers = Array.from(this.peers).map((peer) => this.reps.getFromPeerInfo(peer));
     const targetEpoch = getInitalSyncTargetEpoch(peers, chainCheckPoint);
     if(chainCheckPoint.epoch >= targetEpoch) {
       if(isValidFinalizedCheckPoint(peers, chainCheckPoint)) {
@@ -75,7 +75,7 @@ export class FastSync
       this.logger.debug(`Fast syncing to target ${targetEpoch}`);
       const latestState = this.chain.latestState as BeaconState;
       const blocks = await getBlockRange(
-        this.rpc,
+        this.network.reqResp,
         this.reps,
         this.peers,
         {start: latestState.slot, end: computeStartSlotAtEpoch(this.config, targetEpoch)},
