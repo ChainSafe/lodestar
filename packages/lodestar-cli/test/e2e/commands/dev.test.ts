@@ -77,11 +77,6 @@ describe("e2e interop simulation", function() {
     const depositDataRootList = minimalConfig.types.DepositDataRootList.tree.defaultValue();
     const state = quickStartState(minimalConfig, depositDataRootList, genesisTime, VALIDATOR_COUNT);
     await node.chain.initializeBeaconChain(state, depositDataRootList);
-    const targetSlot = computeStartSlotAtEpoch(
-      minimalConfig,
-      computeEpochAtSlot(minimalConfig, getCurrentSlot(minimalConfig, state.genesisTime))
-    );
-    await node.chain.advanceState(targetSlot);
     await node.start();
   }
 
