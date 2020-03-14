@@ -43,9 +43,13 @@ export function getHighestCommonSlot(peers: IReputation[]): Slot {
     }
     return current;
   }, new Map<Slot, number>());
-  return [...slotStatuses.entries()].sort((a, b) => {
-    return a[1] - b[1];
-  })[0][0];
+  if(slotStatuses.size) {
+    return [...slotStatuses.entries()].sort((a, b) => {
+      return a[1] - b[1];
+    })[0][0];
+  } else {
+    return 0;
+  }
 }
 
 export function isSynced(slot: Slot, peers: IReputation[]): boolean {
@@ -76,7 +80,7 @@ export interface ISlotRange {
 export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: Slot): ISlotRange[] {
   const chunks: ISlotRange[] = [];
   //currentSlot is our state slot so we need block from next slot
-  for(let i = currentSlot + 1; i < targetSlot; i  = i + blocksPerChunk) {
+  for(let i = currentSlot; i < targetSlot; i  = i + blocksPerChunk) {
     if(i + blocksPerChunk > targetSlot) {
       chunks.push({
         start: i,

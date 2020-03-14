@@ -9,12 +9,13 @@ import {INetwork} from "../network";
 import {OpPool} from "../opPool";
 import {IEth1Notifier} from "../eth1";
 import {IBeaconDb} from "../db";
-import {RegularSync} from "./regular";
 import {FastSync, InitialSync} from "./initial";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ISyncOptions} from "./options";
 import {ISyncReqResp, SyncReqResp} from "./reqResp";
 import {ReputationStore} from "./IReputation";
+import {NaiveRegularSync} from "./regular/naive/naive";
+import {IRegularSync} from "./regular/interface";
 
 export interface ISyncModules {
   config: IBeaconConfig;
@@ -33,7 +34,7 @@ export interface ISyncModules {
  */
 export class Sync extends EventEmitter {
 
-  public regularSync: RegularSync;
+  public regularSync: IRegularSync;
 
   private opts: ISyncOptions;
   private config: IBeaconConfig;
@@ -58,7 +59,7 @@ export class Sync extends EventEmitter {
     this.reps = modules.reps;
     this.logger = modules.logger;
     this.reqResp = new SyncReqResp(opts, modules);
-    this.regularSync = new RegularSync(this.opts, modules);
+    this.regularSync = new NaiveRegularSync(this.opts, {...modules, peers: this.peers});
     this.initialSync = new FastSync(
       this.opts,
       {
@@ -72,16 +73,10 @@ export class Sync extends EventEmitter {
   public async start(): Promise<void> {
     await this.reqResp.start();
     this.initialSync.on("sync:completed", this.startRegularSync);
-    //this.regularSync.on("fallenBehind", this.startInitialSync);
     this.peers.concat(this.getValidPeers());
     this.network.on("peer:disconnect", this.handleLostPeer);
     this.network.on("peer:connect", this.handleNewPeer);
-    if(this.peers.length >= 1) {
-      this.waitingForPeer = false;
-      await this.initialSync.start();
-    } else {
-      this.logger.warn("No peers. Waiting to connect to peer...");
-    }
+    this.startInitialSync();
   }
 
   public async stop(): Promise<void> {
@@ -94,18 +89,27 @@ export class Sync extends EventEmitter {
     return false;
   }
 
-  private startRegularSync = (): void => {
-    this.emit("regularSyncStarted");
-    this.regularSync.start();
+  private startInitialSync = (): void => {
+    if(this.getValidPeers().length >= 1) {
+      this.waitingForPeer = false;
+      this.initialSync.start();
+    } else {
+      this.logger.warn("No peers. Waiting to connect to peer...");
+      setTimeout(this.startInitialSync, 2000);
+    }
   };
 
-  private startInitialSync = (): void => {
-    this.initialSync.start();
+  private startRegularSync = async (): Promise<void> => {
+    this.emit("regularSyncStarted");
+    await this.initialSync.stop();
+    this.regularSync.start();
   };
 
   private getValidPeers(): PeerInfo[] {
     //TODO: filter and drop peers on different fork
-    return this.network.getPeers();
+    return this.network.getPeers().filter((peer) => {
+      return !!(this.reps.get(peer.id.toB58String()).latestStatus);
+    });
   }
 
   private handleNewPeer = (peer: PeerInfo): void => {
