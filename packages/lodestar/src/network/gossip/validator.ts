@@ -26,7 +26,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     this.logger = logger;
   }
 
-  public async isValidIncomingBlock(signedBlock: SignedBeaconBlock): Promise<boolean> {
+  public isValidIncomingBlock = async (signedBlock: SignedBeaconBlock): Promise<boolean> => {
     const root = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
 
     // skip block if its a known bad block
@@ -41,14 +41,10 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
 
     const state = await this.db.state.getLatest();
-    if (!verifyBlockSignature(this.config, state, signedBlock)) {
-      return false;
-    }
+    return verifyBlockSignature(this.config, state, signedBlock);
+  };
 
-    return true;
-  }
-
-  public isUnaggregatedAttestation(attestation: Attestation): boolean {
+  public isUnaggregatedAttestation = (attestation: Attestation): boolean => {
     const aggregationBits = attestation.aggregationBits;
     let count = 0;
     for (let i = 0; i < aggregationBits.length; i++) {
@@ -56,13 +52,10 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         count++;
       }
     }
-    if (count !== 1) {
-      return false;
-    }
-    return true;
-  }
+    return count === 1;
+  };
 
-  public async isValidIncomingCommitteeAttestation(attestation: Attestation, subnet: number): Promise<boolean> {
+  public isValidIncomingCommitteeAttestation = async (attestation: Attestation, subnet: number): Promise<boolean> => {
     if (String(subnet) !== getAttestationSubnet(attestation)) {
       return false;
     }
@@ -77,16 +70,13 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     const state = await this.db.state.getLatest();
     const currentSlot = getCurrentSlot(this.config, state.genesisTime);
     if (!(attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= currentSlot &&
-      currentSlot >= attestation.data.slot)) {
+        currentSlot >= attestation.data.slot)) {
       return false;
     }
-    if(!isValidIndexedAttestation(this.config, state, getIndexedAttestation(this.config, state, attestation))) {
-      return false;
-    }
-    return true;
-  }
+    return isValidIndexedAttestation(this.config, state, getIndexedAttestation(this.config, state, attestation));
+  };
 
-  public async isValidIncomingAggregateAndProof(aggregationAndProof: AggregateAndProof): Promise<boolean> {
+  public isValidIncomingAggregateAndProof = async (aggregationAndProof: AggregateAndProof): Promise<boolean> => {
     const root = this.config.types.AggregateAndProof.hashTreeRoot(aggregationAndProof);
     if (await this.db.aggregateAndProof.has(root as Buffer)) {
       return false;
@@ -126,13 +116,10 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
     const indexedAttestation = getIndexedAttestation(this.config, state, aggregationAndProof.aggregate);
-    if (!isValidIndexedAttestation(this.config, state, indexedAttestation)) {
-      return false;
-    }
-    return true;
-  }
+    return isValidIndexedAttestation(this.config, state, indexedAttestation);
+  };
 
-  public async isValidIncomingUnaggregatedAttestation(attestation: Attestation): Promise<boolean> {
+  public isValidIncomingUnaggregatedAttestation = async (attestation: Attestation): Promise<boolean> => {
     if (!this.isUnaggregatedAttestation(attestation)) {
       return false;
     }
@@ -143,48 +130,36 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
     // skip attestation if its too old
     const state = await this.db.state.getLatest();
-    if (attestation.data.target.epoch < state.finalizedCheckpoint.epoch) {
-      return false;
-    }
-    return true;
-  }
+    return attestation.data.target.epoch >= state.finalizedCheckpoint.epoch;
+  };
 
-  public async isValidIncomingVoluntaryExit(voluntaryExit: SignedVoluntaryExit): Promise<boolean> {
+  public isValidIncomingVoluntaryExit = async(voluntaryExit: SignedVoluntaryExit): Promise<boolean> => {
     // skip voluntary exit if it already exists
     const root = this.config.types.SignedVoluntaryExit.hashTreeRoot(voluntaryExit);
     if (await this.db.voluntaryExit.has(root as Buffer)) {
       return false;
     }
     const state = await this.db.state.getLatest();
-    if(!isValidVoluntaryExit(this.config, state, voluntaryExit)) {
-      return false;
-    }
-    return true;
-  }
+    return isValidVoluntaryExit(this.config, state, voluntaryExit);
+  };
 
-  public async isValidIncomingProposerSlashing(proposerSlashing: ProposerSlashing): Promise<boolean> {
+  public isValidIncomingProposerSlashing = async(proposerSlashing: ProposerSlashing): Promise<boolean> => {
     // skip proposer slashing if it already exists
     const root = this.config.types.ProposerSlashing.hashTreeRoot(proposerSlashing);
     if (await this.db.proposerSlashing.has(root as Buffer)) {
       return false;
     }
     const state = await this.db.state.getLatest();
-    if (!isValidProposerSlashing(this.config, state, proposerSlashing)) {
-      return false;
-    }
-    return true;
-  }
+    return isValidProposerSlashing(this.config, state, proposerSlashing);
+  };
 
-  public async isValidIncomingAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<boolean> {
+  public isValidIncomingAttesterSlashing = async (attesterSlashing: AttesterSlashing): Promise<boolean> => {
     // skip attester slashing if it already exists
     const root = this.config.types.AttesterSlashing.hashTreeRoot(attesterSlashing);
     if (await this.db.attesterSlashing.has(root as Buffer)) {
       return false;
     }
     const state = await this.db.state.getLatest();
-    if (!isValidAttesterSlashing(this.config, state, attesterSlashing)) {
-      return false;
-    }
-    return true;
-  }
+    return isValidAttesterSlashing(this.config, state, attesterSlashing);
+  };
 }
