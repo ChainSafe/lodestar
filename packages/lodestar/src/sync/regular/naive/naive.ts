@@ -4,7 +4,7 @@ import {IBeaconChain} from "../../../chain";
 import {getHighestCommonSlot, isValidChainOfBlocks} from "../../utils/sync";
 import {IBeaconDb} from "../../../db/api";
 import {OpPool} from "../../../opPool";
-import {blockToHeader, computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {getBlockRange} from "../../utils/blocks";
 import {defaultOptions, IRegularSyncOptions} from "../options";
 import deepmerge from "deepmerge";
@@ -12,7 +12,8 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {GossipEvent} from "../../../network/gossip/constants";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ReputationStore} from "../../IReputation";
-import {Attestation, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {AggregateAndProof, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {AttestationCollector} from "../../utils/attestation-collector";
 
 export class NaiveRegularSync implements IRegularSync {
 
@@ -32,6 +33,8 @@ export class NaiveRegularSync implements IRegularSync {
 
   private readonly logger: ILogger;
 
+  private readonly attestationCollector: AttestationCollector;
+
   private readonly opts: IRegularSyncOptions;
   
   private targetSlot: Slot;
@@ -46,28 +49,47 @@ export class NaiveRegularSync implements IRegularSync {
     this.reps = modules.reps;
     this.logger = modules.logger;
     this.opts = deepmerge(defaultOptions, options);
+    this.attestationCollector = new AttestationCollector(
+      this.config,
+      {chain: this.chain, network: this.network, opPool: this.opPool}
+    );
   }
 
   public async start(): Promise<void> {
     this.logger.info("Started regular syncing");
     this.chain.on("processedBlock", this.onProcessedBlock);
+    await this.attestationCollector.start();
+    this.logger.info("Started subscribing to gossip topics...");
     this.startGossiping();
     if(!await this.syncUp()) {
-      this.logger.info("Started subscribing to gossip topics...");
       this.chain.removeListener("processedBlock", this.onProcessedBlock);
     }
   }
 
   public async stop(): Promise<void> {
     this.chain.removeListener("processedBlock", this.onProcessedBlock);
-    this.network.gossip.removeListener(GossipEvent.BLOCK, this.receiveBlock);
-    this.network.gossip.removeListener(GossipEvent.ATTESTATION, this.receiveAttestation);
+    this.stopGossiping();
+    await this.attestationCollector.stop();
+  }
+
+  public collectAttestations(slot: number, committeeIndex: number): void {
+    this.attestationCollector.subscribeToCommitteeAttestations(slot, committeeIndex);
   }
 
   private startGossiping(): void {
-    this.network.gossip.on(GossipEvent.BLOCK, this.receiveBlock);
-    this.network.gossip.on(GossipEvent.ATTESTATION, this.receiveAttestation);
-    //TODO: add rest of topics
+    this.network.gossip.subscribeToBlock(this.chain.receiveBlock);
+    this.network.gossip.subscribeToAggregateAndProof(this.onAggregatedAttestation);
+    this.network.gossip.subscribeToAttesterSlashing(this.opPool.attesterSlashings.receive);
+    this.network.gossip.subscribeToProposerSlashing(this.opPool.proposerSlashings.receive);
+    this.network.gossip.subscribeToVoluntaryExit(this.opPool.voluntaryExits.receive);
+  }
+
+  private stopGossiping(): void {
+    this.network.gossip.unsubscribe(GossipEvent.BLOCK, this.chain.receiveBlock);
+    this.network.gossip.unsubscribe(GossipEvent.AGGREGATE_AND_PROOF, this.onAggregatedAttestation);
+    this.network.gossip.unsubscribe(GossipEvent.ATTESTER_SLASHING, this.opPool.attesterSlashings.receive);
+    this.network.gossip.unsubscribe(GossipEvent.PROPOSER_SLASHING, this.opPool.proposerSlashings.receive);
+    this.network.gossip.unsubscribe(GossipEvent.VOLUNTARY_EXIT, this.opPool.voluntaryExits.receive);
   }
 
   /**
@@ -83,25 +105,21 @@ export class NaiveRegularSync implements IRegularSync {
       this.logger.info("Chain already synced!");
       return false;
     }
-    if(computeEpochAtSlot(this.config, currentSlot) < computeEpochAtSlot(this.config, highestCommonSlot)) {
-      this.targetSlot = computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, currentSlot)  + 1);
-    } else {
-      this.targetSlot = highestCommonSlot;
-    }
-    this.logger.info(`Syncing slots ${currentSlot}...${this.targetSlot + 1}`);
+    this.targetSlot = currentSlot + Math.min(highestCommonSlot, this.config.params.SLOTS_PER_EPOCH);
+    this.logger.info(`Syncing slots ${currentSlot + 1}...${this.targetSlot}`);
     const blocks = await getBlockRange(
       this.network.reqResp,
       this.reps,
       this.peers,
-      {start: currentSlot, end: this.targetSlot + 1},
+      {start: currentSlot + 1, end: this.targetSlot},
       this.opts.blockPerChunk
     );
     const startBlockHeader = blockToHeader(this.config, (await this.db.block.getBlockBySlot(latestState.slot)).message);
     if(isValidChainOfBlocks(this.config, startBlockHeader, blocks)) {
-      this.logger.info(`Processing blocks for slots ${currentSlot}...${this.targetSlot + 1}`);
+      this.logger.info(`Processing blocks for slots ${currentSlot}...${this.targetSlot}`);
       blocks.forEach((block) => this.chain.receiveBlock(block, false));
     } else {
-      this.logger.warn(`Received invalid chain  of blocks for slots ${currentSlot}...${this.targetSlot + 1}`);
+      this.logger.warn(`Received invalid chain  of blocks for slots ${currentSlot}...${this.targetSlot}`);
       this.syncUp();
     }
     return true;
@@ -111,43 +129,14 @@ export class NaiveRegularSync implements IRegularSync {
     if (this.targetSlot > block.message.slot) {
       return;
     }
-    //synced to target, try new target or start gossiping;
+    //synced to target, try new targetg;
     if(await this.syncUp()) {
 
       this.logger.important("Synced up!");
     }
   };
 
-  private receiveBlock = async (block: SignedBeaconBlock): Promise<void> => {
-    console.log("Received gossiped block for slot ", block.message.slot);
-    const root = this.config.types.SignedBeaconBlock.hashTreeRoot(block);
-
-    // skip block if its a known bad block
-    if (await this.db.block.isBadBlock(root)) {
-      this.logger.warn(`Received bad block, block root : ${root} `);
-      return;
-    }
-    // skip block if it already exists
-    if (!await this.db.block.has(root)) {
-      await this.chain.receiveBlock(block);
-    }
-  };
-
-  private receiveAttestation = async (attestation: Attestation): Promise<void> => {
-    // skip attestation if it already exists
-    const root = this.config.types.Attestation.hashTreeRoot(attestation);
-    if (await this.db.attestation.has(root)) {
-      return;
-    }
-    // skip attestation if its too old
-    const state = await this.db.state.getLatest();
-    if (attestation.data.target.epoch < state.finalizedCheckpoint.epoch) {
-      return;
-    }
-    // send attestation on to other modules
-    await Promise.all([
-      this.opPool.attestations.receive(attestation),
-      this.chain.receiveAttestation(attestation),
-    ]);
+  private onAggregatedAttestation = async (aggregate: AggregateAndProof): Promise<void> => {
+    await this.chain.receiveAttestation(aggregate.aggregate);
   };
 }
