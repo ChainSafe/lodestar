@@ -121,7 +121,7 @@ export class DevCommand implements ICliCommand {
 
     let peerId: PeerId;
     if (options["peerId"]) {
-      peerId = PeerId.createFromHexString(options["peerId"]);
+      peerId = PeerId.createFromB58String(options["peerId"]);
     } else if (options["peerIdFile"]) {
       peerId = await loadPeerId(options["peerId"]);
     } else {
