@@ -16,56 +16,59 @@ import fs, {mkdirSync} from "fs";
 import rimraf from "rimraf";
 import {dirname} from "path";
 
-export function resetPath(path: string) {
-    rimraf.sync(path);
-    mkdirSync(dirname(path), {recursive: true});
+export function resetPath(path: string): void {
+  rimraf.sync(path);
+  mkdirSync(dirname(path), {recursive: true});
 }
 
 
 export function getConfig(options: IDevCommandOptions): Partial<IBeaconNodeOptions> {
-    let conf:Partial<IBeaconNodeOptions> = {};
-    //merge config file
-    if (options.configFile) {
-        const parsedConfig = getTomlConfig(options.configFile, BeaconNodeOptions);
-        //cli will override toml config options
-        conf = deepmerge(conf, parsedConfig);
-    }
+  let conf: Partial<IBeaconNodeOptions> = {};
+  //merge config file
+  if (options.configFile) {
+    const parsedConfig = getTomlConfig(options.configFile, BeaconNodeOptions);
+    //cli will override toml config options
+    conf = deepmerge(conf, parsedConfig);
+  }
 
-    //override current config with cli config
-    conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
-    return conf;
+  //override current config with cli config
+  conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
+  return conf;
 }
 
-export async function getPeerId(peerIdOption: string = ""): Promise<PeerId> {
-    let peerId: PeerId;
-    peerId = PeerId.createFromHexString(peerIdOption);
+export async function getPeerId(peerIdOption = ""): Promise<PeerId> {
+  let peerId: PeerId;
+  peerId = PeerId.createFromHexString(peerIdOption);
+  if(peerId.isValid()) {
+    return peerId;
+  }
+  try {
+    peerId = await loadPeerIdFromJsonFile(peerIdOption);
     if(peerId.isValid()) {
-        return peerId;
+      return peerId;
     }
-    try {
-        peerId = await loadPeerIdFromJsonFile(peerIdOption);
-        if(peerId.isValid()) {
-            return peerId;
-        }
-    } catch (e) {
-    }
-    return await createPeerId();
+  } catch (e) {
+    //ignored
+  }
+  return await createPeerId();
 }
 
-export function getDevGenesisState(options: IDevCommandOptions, config: IBeaconConfig, deposits: TreeBacked<List<Root>>): BeaconState {
-    let state: BeaconState;
-    if (options.genesisTime && options.validatorCount) {
-        state = quickStartState(
-            config,
-            deposits,
-            parseInt(options.genesisTime),
-            parseInt(options.validatorCount)
-        );
-        fs.writeFileSync(options.genesisState, config.types.BeaconState.serialize(state));
-    } else if (options.genesisState) {
-        state = quickStartOptionToState(config, deposits, options.genesisState);
-    } else {
-        throw new Error("Missing either --genesisState or --genesisTime and --validatorCount flag");
-    }
-    return state;
+export function getDevGenesisState(
+  options: IDevCommandOptions, config: IBeaconConfig, deposits: TreeBacked<List<Root>>
+): BeaconState {
+  let state: BeaconState;
+  if (options.genesisTime && options.validatorCount) {
+    state = quickStartState(
+      config,
+      deposits,
+      parseInt(options.genesisTime),
+      parseInt(options.validatorCount)
+    );
+    fs.writeFileSync(options.genesisState, config.types.BeaconState.serialize(state));
+  } else if (options.genesisState) {
+    state = quickStartOptionToState(config, deposits, options.genesisState);
+  } else {
+    throw new Error("Missing either --genesisState or --genesisTime and --validatorCount flag");
+  }
+  return state;
 }
