@@ -9,7 +9,10 @@ import {
   Epoch,
   Goodbye,
   RequestBody,
-  Slot, Status, Root, SignedBeaconBlock,
+  Root,
+  SignedBeaconBlock,
+  Slot,
+  Status,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
@@ -17,10 +20,9 @@ import {Method, RequestId, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ISyncOptions, ISyncReqResp} from "./interface";
 import {ReputationStore} from "../IReputation";
-import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface ISyncReqRespModules {
   config: IBeaconConfig;
@@ -108,7 +110,7 @@ export class SyncReqResp implements ISyncReqResp {
       this.network.reqResp.sendResponse(id, e, null);
     }
     if (await this.shouldDisconnectOnStatus(request)) {
-      this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
+      await this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
     }
   }
 
@@ -116,23 +118,23 @@ export class SyncReqResp implements ISyncReqResp {
     const headBlock = await this.db.block.getChainHead();
     const state = await this.db.state.get(headBlock.message.stateRoot.valueOf() as Uint8Array);
     // peer is on a different fork version
-    if (!this.config.types.Version.equals(state.fork.currentVersion, request.headForkVersion)) {
-      return true;
-    }
-    const startSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
-    const startBlock = await this.db.blockArchive.get(startSlot);
-    // we're on a further (or equal) finalized epoch
-    // but the peer's block root at that epoch doesn't match ours
-    if (
-      state.finalizedCheckpoint.epoch >= request.finalizedEpoch &&
-      !this.config.types.Root.equals(
-        request.finalizedRoot,
-        this.config.types.BeaconBlock.hashTreeRoot(startBlock.message)
-      )
-    ) {
-      return true;
-    }
-    return false;
+    return !this.config.types.Version.equals(state.fork.currentVersion, request.headForkVersion);
+    
+    //TODO: fix this, doesn't work if we are starting sync(archive is empty) or we don't have finalized epoch
+    // const startSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
+    // const startBlock = await this.db.blockArchive.get(startSlot);
+    // // we're on a further (or equal) finalized epoch
+    // // but the peer's block root at that epoch doesn't match ours
+    // if (
+    //   state.finalizedCheckpoint.epoch >= request.finalizedEpoch &&
+    //   !this.config.types.Root.equals(
+    //     request.finalizedRoot,
+    //     this.config.types.BeaconBlock.hashTreeRoot(startBlock.message)
+    //   )
+    // ) {
+    //   return true;
+    // }
+    // return false;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -153,6 +155,18 @@ export class SyncReqResp implements ISyncReqResp {
         request.step
       );
       responses.push(...blocks);
+      if(blocks.length < request.count) {
+        for(
+          let i = request.startSlot;
+          i <= (request.startSlot + request.count) && responses.length < request.count;
+          i += request.step
+        ) {
+          const block = await this.db.block.getBlockBySlot(i);
+          if(block) {
+            responses.push(block);
+          }
+        }
+      }
       this.network.reqResp.sendResponse(id, null, responses);
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);
@@ -213,8 +227,7 @@ export class SyncReqResp implements ISyncReqResp {
     ) {
       const request = await this.createStatus();
       try {
-        const response = await this.network.reqResp.status(peerInfo, request);
-        this.reps.get(peerInfo.id.toB58String()).latestStatus = response;
+        this.reps.get(peerInfo.id.toB58String()).latestStatus = await this.network.reqResp.status(peerInfo, request);
       } catch (e) {
         this.logger.error(e);
       }
