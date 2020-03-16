@@ -15,13 +15,14 @@ import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {interopKeypair} from "../../../src/lodestar/interop/keypairs";
 import {ValidatorClient} from "@chainsafe/lodestar/lib/validator/nodejs";
 import {ValidatorApi, BeaconApi} from "@chainsafe/lodestar/lib/api/rpc";
+import {join} from "path";
 
 
 const VALIDATOR_COUNT = 5;
 const SECONDS_PER_SLOT = 2;
 const SLOTS_PER_EPOCH = 5;
-const VALIDATOR_DIR = "./validators";
-const LODESTAR_DIR = "lodestar-db";
+const VALIDATOR_DIR = ".tmp/test/validators";
+const LODESTAR_DIR = ".tmp/test/lodestar-db";
 
 describe("e2e interop simulation", function() {
   this.timeout(100000);
@@ -66,7 +67,10 @@ describe("e2e interop simulation", function() {
 
   async function initializeNode(): Promise<void> {
     // BeaconNode has default config
-    const conf = {};
+    mkdirSync(LODESTAR_DIR, {recursive: true});
+    const conf = {
+      db: {name: LODESTAR_DIR}
+    };
     minimalConfig.params.SECONDS_PER_SLOT = SECONDS_PER_SLOT;
     minimalConfig.params.SLOTS_PER_EPOCH = SLOTS_PER_EPOCH;
     const peerId = createPeerId();
@@ -82,7 +86,7 @@ describe("e2e interop simulation", function() {
 
   async function startValidators(): Promise<void> {
     if(!existsSync(VALIDATOR_DIR)) {
-      mkdirSync(VALIDATOR_DIR);
+      mkdirSync(VALIDATOR_DIR, {recursive: true});
     }
     for(let i = 0; i < VALIDATOR_COUNT; i++) {
       startValidator(interopKeypair(i).privkey, node);
@@ -114,7 +118,7 @@ describe("e2e interop simulation", function() {
       {
         validatorKey: keypair.privateKey.toHexString(),
         restApi: rpcInstance,
-        db: VALIDATOR_DIR + "/validator-db-" + index,
+        db: join(VALIDATOR_DIR, "validator-db-" + index),
         config: node.config
       },
       {
