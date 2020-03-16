@@ -12,7 +12,7 @@ import {quickStartOptionToState} from "../../lodestar/interop/cli";
 import {quickStartState} from "../../lodestar/interop/state";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {List, TreeBacked} from "@chainsafe/ssz";
-import fs, {mkdirSync} from "fs";
+import {mkdirSync} from "fs";
 import rimraf from "rimraf";
 import {dirname} from "path";
 
@@ -57,18 +57,17 @@ export function getDevGenesisState(
   options: IDevCommandOptions, config: IBeaconConfig, deposits: TreeBacked<List<Root>>
 ): BeaconState {
   let state: BeaconState;
-  if (options.genesisTime && options.validatorCount) {
+  if (options.validatorCount) {
     state = quickStartState(
       config,
       deposits,
       parseInt(options.genesisTime),
       parseInt(options.validatorCount)
     );
-    fs.writeFileSync(options.genesisState, config.types.BeaconState.serialize(state));
   } else if (options.genesisState) {
     state = quickStartOptionToState(config, deposits, options.genesisState);
   } else {
-    throw new Error("Missing either --genesisState or --genesisTime and --validatorCount flag");
+    throw new Error("Missing either --genesisState or --validatorCount flag");
   }
   return state;
 }
