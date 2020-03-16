@@ -10,7 +10,7 @@ import {CommitteeIndex} from "@chainsafe/lodestar-types/lib";
 import {IGossipMessage} from "libp2p-gossipsub";
 import {utils} from "libp2p-pubsub";
 import {ILodestarGossipMessage} from "./interface";
-import {hash} from "@chainsafe/lodestar-utils";
+import {hash} from "@chainsafe/ssz";
 
 export function getGossipTopic(event: GossipEvent, encoding = "ssz", params: Map<string, string> = new Map()): string {
   let topic = `${event}/${encoding}`;
@@ -56,5 +56,5 @@ export function normalizeInRpcMessage(rawMessage: IGossipMessage): ILodestarGoss
 }
 
 export function getMessageId(rawMessage: IGossipMessage): string {
-  return hash(rawMessage.data).toString("base64");
+  return Buffer.from(hash(rawMessage.data)).toString("base64");
 }
