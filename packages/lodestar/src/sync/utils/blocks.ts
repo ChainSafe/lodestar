@@ -9,7 +9,8 @@ export async function getBlockRange(
   reps: ReputationStore,
   peers: PeerInfo[],
   range: ISlotRange,
-  blocksPerChunk = 10
+  blocksPerChunk = 10,
+  maxRetry = 3
 ): Promise<SignedBeaconBlock[]> {
   let chunks = chunkify(blocksPerChunk, range.start, range.end);
   let blocks: SignedBeaconBlock[] = [];
@@ -32,7 +33,7 @@ export async function getBlockRange(
       })
     )).filter((chunk) => chunk !== null);
     retry++;
-    if(retry > 5) {
+    if(retry > maxRetry) {
       throw new Error("Max req retry for blocks by range");
     }
   }
