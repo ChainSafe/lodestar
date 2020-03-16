@@ -226,6 +226,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.logger.warn(`Block(${toHexString(blockHash)}) at slot ${job.signedBlock.message.slot} `
           + ` is missing parent block (${toHexString(job.signedBlock.message.parentRoot)}).`
       );
+      this.emit("unknownBlockRoot", job.signedBlock.message.parentRoot.valueOf() as Uint8Array);
       setTimeout((queue) => queue.add(job), 1000, this.blockProcessingQueue);
       return;
     }

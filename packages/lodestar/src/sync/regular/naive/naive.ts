@@ -12,8 +12,9 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {GossipEvent} from "../../../network/gossip/constants";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ReputationStore} from "../../IReputation";
-import {AggregateAndProof, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {AggregateAndProof, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {AttestationCollector} from "../../utils/attestation-collector";
+import {RoundRobinArray} from "../../utils/robin";
 
 export class NaiveRegularSync implements IRegularSync {
 
@@ -61,6 +62,7 @@ export class NaiveRegularSync implements IRegularSync {
     await this.attestationCollector.start();
     this.logger.info("Started subscribing to gossip topics...");
     this.startGossiping();
+    this.chain.on("unknownBlockRoot", this.onUnknownBlockRoot);
     if(!await this.syncUp()) {
       this.chain.removeListener("processedBlock", this.onProcessedBlock);
     }
@@ -69,6 +71,7 @@ export class NaiveRegularSync implements IRegularSync {
   public async stop(): Promise<void> {
     this.chain.removeListener("processedBlock", this.onProcessedBlock);
     this.stopGossiping();
+    this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
     await this.attestationCollector.stop();
   }
 
@@ -145,5 +148,18 @@ export class NaiveRegularSync implements IRegularSync {
 
   private onBlock = async (block: SignedBeaconBlock): Promise<void> => {
     await this.chain.receiveBlock(block);
+  };
+
+  private onUnknownBlockRoot = async (root: Root): Promise<void> => {
+    const peerBalancer = new RoundRobinArray(this.peers);
+    let peer = peerBalancer.next();
+    let block: SignedBeaconBlock;
+    while (!block && peer) {
+      block = (await this.network.reqResp.beaconBlocksByRoot(peer, [root]))[0];
+      peer = peerBalancer.next();
+    }
+    if(block) {
+      await this.chain.receiveBlock(block);
+    }
   };
 }
