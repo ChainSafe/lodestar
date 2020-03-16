@@ -14,6 +14,7 @@ export async function getBlockRange(
   let chunks = chunkify(blocksPerChunk, range.start, range.end);
   let blocks: SignedBeaconBlock[] = [];
   //try to fetch chunks from different peers until all chunks are fetched
+  let retry = 0;
   while(chunks.length > 0) {
     //rotate peers
     const peerBalancer = new RoundRobinArray(peers);
@@ -29,6 +30,10 @@ export async function getBlockRange(
         }
       })
     )).filter((chunk) => chunk !== null);
+    retry++;
+    if(retry > 5) {
+      throw new Error("Max req retry for blocks by range");
+    }
   }
   return sortBlocks(blocks);
 }
