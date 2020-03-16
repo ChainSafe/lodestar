@@ -1,6 +1,6 @@
 import assert from "assert";
 import Gossipsub, {IGossipMessage, Options, Registrar} from "libp2p-gossipsub";
-import {hash, Type} from "@chainsafe/ssz";
+import {Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
