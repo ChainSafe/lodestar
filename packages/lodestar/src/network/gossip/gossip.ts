@@ -4,7 +4,6 @@
  */
 
 import {EventEmitter} from "events";
-//@ts-ignore
 import LibP2p from "libp2p";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
@@ -54,7 +53,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.logger = logger.child({module: "gossip", level: LogLevel[logger.level]});
     this.logger.silent = logger.silent;
     this.pubsub = new LodestarGossipsub(config, validator, this.logger,
-      libp2p.peerInfo, libp2p.registrar, {gossipIncoming: false});
+      libp2p.peerInfo, libp2p.registrar, {gossipIncoming: true});
     this.handlers = this.registerHandlers();
   }
 
@@ -72,17 +71,17 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     });
   }
 
-  public publishBlock = publishBlock;
+  public publishBlock = publishBlock.bind(this);
 
-  public publishCommiteeAttestation = publishCommiteeAttestation;
+  public publishCommiteeAttestation = publishCommiteeAttestation.bind(this);
 
-  public publishAggregatedAttestation = publishAggregatedAttestation;
+  public publishAggregatedAttestation = publishAggregatedAttestation.bind(this);
 
-  public publishVoluntaryExit = publishVoluntaryExit;
+  public publishVoluntaryExit = publishVoluntaryExit.bind(this);
 
-  public publishProposerSlashing = publishProposerSlashing;
+  public publishProposerSlashing = publishProposerSlashing.bind(this);
 
-  public publishAttesterSlashing = publishAttesterSlashing;
+  public publishAttesterSlashing = publishAttesterSlashing.bind(this);
 
   public subscribeToBlock(callback: (block: SignedBeaconBlock) => void): void {
     this.subscribe(GossipEvent.BLOCK, callback);
