@@ -122,7 +122,9 @@ export class DevCommand implements ICliCommand {
     }
   }
 
-  private async startValidators(from: number, to: number, node: BeaconNode, options: IDevCommandOptions): Promise<void> {
+  private async startValidators(
+    from: number, to: number, node: BeaconNode, options: IDevCommandOptions
+  ): Promise<void> {
     for (let i = from; i < to; i++) {
       this.startValidator(interopKeypair(i).privkey, node, options);
     }

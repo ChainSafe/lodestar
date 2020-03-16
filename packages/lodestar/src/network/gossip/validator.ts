@@ -16,7 +16,6 @@ import {
   isValidIndexedAttestation,
   isValidProposerSlashing,
   isValidVoluntaryExit,
-  verifyBlockSignature,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";

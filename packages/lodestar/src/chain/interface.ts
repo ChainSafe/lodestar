@@ -7,7 +7,6 @@ import {
   Checkpoint,
   Root,
   SignedBeaconBlock,
-  Slot,
   Uint16,
   Uint64,
 } from "@chainsafe/lodestar-types";

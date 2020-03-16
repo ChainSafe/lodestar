@@ -6,14 +6,14 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator, ILodestarGossipMessage} from "./interface";
 import {
-  getGossipTopic, getMessageId,
+  getGossipTopic,
+  getMessageId,
   getSubnetFromAttestationSubnetTopic,
   isAttestationSubnetTopic,
   normalizeInRpcMessage
 } from "./utils";
 import {GossipEvent} from "./constants";
 import {GOSSIP_MAX_SIZE} from "../../constants";
-import {hash} from "@chainsafe/lodestar-utils";
 
 /**
  * This validates messages in Gossipsub and emit the transformed messages.

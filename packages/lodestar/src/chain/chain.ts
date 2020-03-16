@@ -4,17 +4,8 @@
 
 import assert from "assert";
 import {EventEmitter} from "events";
-import {fromHexString, toHexString, TreeBacked, List} from "@chainsafe/ssz";
-import {
-  Attestation,
-  BeaconState,
-  Root,
-  SignedBeaconBlock,
-  Slot,
-  Uint16,
-  Uint64,
-  Validator,
-} from "@chainsafe/lodestar-types";
+import {fromHexString, List, toHexString, TreeBacked} from "@chainsafe/ssz";
+import {Attestation, BeaconState, Root, SignedBeaconBlock, Uint16, Uint64, Validator,} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {EMPTY_SIGNATURE, GENESIS_SLOT} from "../constants";
 import {IBeaconDb} from "../db";
@@ -27,7 +18,6 @@ import {
   computeStartSlotAtEpoch,
   getCurrentSlot,
   isActiveValidator,
-  processSlots,
   stateTransition
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
