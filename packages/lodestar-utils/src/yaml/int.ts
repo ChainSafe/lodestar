@@ -156,14 +156,17 @@ export const intType = new Type("tag:yaml.org,2002:int", {
   instanceOf: BigInt,
   // @ts-ignore
   represent: {
+    // @ts-ignore
     binary:      function (obj: number) {
       return obj >= 0 ? "0b" + obj.toString(2) : "-0b" + obj.toString(2).slice(1);
     },
+    // @ts-ignore
     octal:       function (obj: number) {
       return obj >= 0 ? "0"  + obj.toString(8) : "-0"  + obj.toString(8).slice(1);
     },
+    // @ts-ignore
     decimal:     function (obj: number) { return obj.toString(10); },
-    /* eslint-disable max-len */
+    // @ts-ignore
     hexadecimal: function (obj: number) {
       return obj >= 0 ? "0x" + obj.toString(16).toUpperCase() :  "-0x" + obj.toString(16).toUpperCase().slice(1);
     }

@@ -1,5 +1,5 @@
 import {intDiv} from "./math";
-import {hash} from "./crypto";
+import {hash} from "@chainsafe/ssz";
 
 /**
  * Verify that the given ``leaf`` is on the merkle branch ``proof``
@@ -12,7 +12,7 @@ export function verifyMerkleBranch(
   index: number,
   root: Uint8Array,
 ): boolean {
-  let value = Buffer.from(leaf);
+  let value = leaf;
   for (let i = 0; i < depth; i++) {
     if (intDiv(index, 2**i) % 2) {
       value = hash(Buffer.concat([proof[i], value]));
@@ -20,5 +20,5 @@ export function verifyMerkleBranch(
       value = hash(Buffer.concat([value, proof[i]]));
     }
   }
-  return value.equals(root);
+  return Buffer.from(value).equals(root);
 }

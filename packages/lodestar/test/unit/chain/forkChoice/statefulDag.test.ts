@@ -1,8 +1,8 @@
-import {assert} from "chai";
+import { assert } from "chai";
 
-import {StatefulDagLMDGHOST} from "../../../../src/chain/forkChoice/statefulDag/lmdGhost";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import sinon, {SinonFakeTimers} from "sinon";
+import { StatefulDagLMDGHOST } from "../../../../src/chain/forkChoice/statefulDag/lmdGhost";
+import { config } from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import sinon, { SinonFakeTimers } from "sinon";
 
 describe("StatefulDagLMDGHOST", () => {
   const genesis = Buffer.from("genesis");
@@ -35,7 +35,7 @@ describe("StatefulDagLMDGHOST", () => {
      *           e
      */
     const lmd = new StatefulDagLMDGHOST(config);
-    lmd.addBlock(1, a, genesis, {root: a, epoch: 0}, {root: a, epoch: 0});
+    lmd.addBlock(1, a, genesis, { root: a, epoch: 0 }, { root: a, epoch: 0 });
     lmd.addBlock(2, b, a);
     lmd.addBlock(3, c, b);
     lmd.addBlock(3, d, b);
@@ -56,7 +56,7 @@ describe("StatefulDagLMDGHOST", () => {
      */
     const lmd = new StatefulDagLMDGHOST(config);
     let head: Uint8Array;
-    lmd.addBlock(1, a, genesis, {root: a, epoch: 0}, {root: a, epoch: 0});
+    lmd.addBlock(1, a, genesis, { root: a, epoch: 0 }, { root: a, epoch: 0 });
     lmd.addBlock(2, b, a);
     lmd.addBlock(3, c, b);
     lmd.addBlock(3, d, b);
@@ -103,7 +103,7 @@ describe("StatefulDagLMDGHOST", () => {
      */
     const lmd = new StatefulDagLMDGHOST(config);
     let head: Uint8Array;
-    lmd.addBlock(1, a, genesis, {root: a, epoch: 0}, {root: a, epoch: 0});
+    lmd.addBlock(1, a, genesis, { root: a, epoch: 0 }, { root: a, epoch: 0 });
     lmd.addBlock(2, b, a);
     lmd.addBlock(3, c, b);
     lmd.addBlock(4, d, c);
@@ -117,7 +117,7 @@ describe("StatefulDagLMDGHOST", () => {
     head = lmd.head();
     assert.deepEqual(head, g, "head should be g");
   });
-   it("should accept attestations and correctly compute the head - 3", () => {
+  it("should accept attestations and correctly compute the head - 3", () => {
     /*
      *           d
      *         /
@@ -135,7 +135,7 @@ describe("StatefulDagLMDGHOST", () => {
      */
     const lmd = new StatefulDagLMDGHOST(config);
     let head: Uint8Array;
-    lmd.addBlock(1, a, genesis, {root: a, epoch: 0}, {root: a, epoch: 0});
+    lmd.addBlock(1, a, genesis, { root: a, epoch: 0 }, { root: a, epoch: 0 });
     lmd.addBlock(2, b, a);
     lmd.addBlock(3, c, a);
     lmd.addBlock(4, d, b);
@@ -157,7 +157,7 @@ describe("StatefulDagLMDGHOST", () => {
   });
 
   it("should update justified block within SAFE_SLOTS_TO_UPDATE_JUSTIFIED", () => {
-    const genesisTime = Math.floor(Date.now()/1000) - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED - 1) * config.params.SECONDS_PER_SLOT;
+    const genesisTime = Math.floor(Date.now() / 1000) - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED - 1) * config.params.SECONDS_PER_SLOT;
     const lmd = new StatefulDagLMDGHOST(config);
     lmd.start(genesisTime);
     lmd.addBlock(1, a, genesis);
@@ -171,8 +171,8 @@ describe("StatefulDagLMDGHOST", () => {
   it("should not update justified block after SAFE_SLOTS_TO_UPDATE_JUSTIFIED - 1", () => {
     const lmd = new StatefulDagLMDGHOST(config);
     lmd.addBlock(1, a, genesis);
-    lmd.addBlock(2, b, a, {root: b, epoch: 0});
-    const genesisTime = Math.floor(Date.now()/1000) - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
+    lmd.addBlock(2, b, a, { root: b, epoch: 0 });
+    const genesisTime = Math.floor(Date.now() / 1000) - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
     lmd.start(genesisTime);
     // a slot is smaller than justified block slot (b)
     assert(lmd.shouldUpdateJustifiedCheckpoint(a) === false, "should return false");
@@ -192,9 +192,9 @@ describe("StatefulDagLMDGHOST", () => {
   it("should not update justified block after SAFE_SLOTS_TO_UPDATE_JUSTIFIED - 2", () => {
     const lmd = new StatefulDagLMDGHOST(config);
     lmd.addBlock(1, a, genesis);
-    lmd.addBlock(2, b, a, {root: b, epoch: 0});
+    lmd.addBlock(2, b, a, { root: b, epoch: 0 });
     lmd.addBlock(3, c, a);
-    const genesisTime = Math.floor(Date.now()/1000) - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
+    const genesisTime = Math.floor(Date.now() / 1000) - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
     lmd.start(genesisTime);
     // c is a conflicted justified block.
     assert(lmd.shouldUpdateJustifiedCheckpoint(c) === false, "should return false");

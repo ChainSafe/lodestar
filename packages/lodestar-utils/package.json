@@ -24,7 +24,7 @@
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:release": "yarn clean && yarn build && yarn build:docs",
     "build:types": "tsc --incremental --project tsconfig.build.json --declaration --outDir lib --emitDeclarationOnly",
-    "check-types": "tsc --noEmit --incremental",
+    "check-types": "tsc --noEmit",
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "eslint --color --ext .ts src/ --fix",
@@ -35,7 +35,7 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/lodestar-types": "^0.5.0",
-    "bcrypto": "^4.2.6",
+    "@chainsafe/ssz": "^0.6.1",
     "bigint-buffer": "^1.1.5",
     "camelcase": "^5.3.1",
     "chalk": "^2.4.2",

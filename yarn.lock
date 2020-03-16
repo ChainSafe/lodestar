@@ -939,10 +939,18 @@
   dependencies:
     bcrypto "^4.2.8"
 
-"@chainsafe/ssz@0.6.0", "@chainsafe/ssz@^0.6.0":
-  version "0.6.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.6.0.tgz#9f496cc70abc9c7f7802c727396508e539d94697"
-  integrity sha512-i0lo6SFeg7mn8LXrHpZ9Wo730M04nYMItaJAx4kYFu3E3IEcEDQH/Aon8+MHQ6nVHAAPaVLs9zyhNUvgNUAofA==
+"@chainsafe/ssz@0.6.1", "@chainsafe/ssz@^0.6.1":
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.6.1.tgz#07944684befd557d9e2e85942da5534d38be67d2"
+  integrity sha512-ycSA0HPflbh5MJt9heRHc4adD835KMx/Vqiu/aM1LNMDyMgrRUmVSem+8xtqigROyfi4J/cUiN1j7L5aTygilA==
+  dependencies:
+    "@chainsafe/persistent-merkle-tree" "^0.1.1"
+    bcrypto "^4.1.0"
+
+"@chainsafe/ssz@^0.6.1":
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.6.1.tgz#07944684befd557d9e2e85942da5534d38be67d2"
+  integrity sha512-ycSA0HPflbh5MJt9heRHc4adD835KMx/Vqiu/aM1LNMDyMgrRUmVSem+8xtqigROyfi4J/cUiN1j7L5aTygilA==
   dependencies:
     "@chainsafe/persistent-merkle-tree" "^0.1.1"
     bcrypto "^4.1.0"
@@ -7630,6 +7638,7 @@ lru-cache@^4.0.1:
 lru-cache@^5.1.1:
   version "5.1.1"
   resolved "https://registry.yarnpkg.com/lru-cache/-/lru-cache-5.1.1.tgz#1da27e6710271947695daf6848e847f01d84b920"
+  integrity sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==
   dependencies:
     yallist "^3.0.2"
 
@@ -11272,10 +11281,10 @@ typescript@3.5.x, typescript@^3.5.3:
   version "3.5.3"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.5.3.tgz#c830f657f93f1ea846819e929092f5fe5983e977"
 
-typescript@3.7.3:
-  version "3.7.3"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.7.3.tgz#b36840668a16458a7025b9eabfad11b66ab85c69"
-  integrity sha512-Mcr/Qk7hXqFBXMN7p7Lusj1ktCBydylfQM/FZCk5glCNQJrCUKPkMHdo9R0MTFWsC/4kPFvDS0fDPvukfCkFsw==
+typescript@^3.8.2:
+  version "3.8.2"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.8.2.tgz#91d6868aaead7da74f493c553aeff76c0c0b1d5a"
+  integrity sha512-EgOVgL/4xfVrCMbhYKUQTdF37SQn4Iw73H5BgCrF1Abdun7Kwy/QZsE/ssAy0y4LxBbvua3PIbFsbRczWWnDdQ==
 
 typewise-core@^1.2, typewise-core@^1.2.0:
   version "1.2.0"

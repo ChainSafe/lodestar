@@ -19,10 +19,13 @@ export enum ReqRespEncoding {
   SSZ_SNAPPY = "ssz_snappy",
 }
 
-export const ERR_INVALID_REQ = "invalid request";
-export const ERR_RESP_TIMEOUT = "response timeout";
+export enum RpcErrorCode {
+  ERR_INVALID_REQ = 1,
+  ERR_RESP_TIMEOUT = 2,
+}
+
 export const GOSSIP_MAX_SIZE = 2**20;
 export const MAX_CHUNK_SIZE = 2**20;
-export const TTFB_TIMEOUT = 5 * 1000; // 10 sec
+export const TTFB_TIMEOUT = 5 * 1000; // 5 sec
 export const RESP_TIMEOUT = 10 * 1000; // 10 sec
 

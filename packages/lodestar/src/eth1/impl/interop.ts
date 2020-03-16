@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unused-vars,@typescript-eslint/no-empty-function */
 import {EventEmitter} from "events";
+import {Block} from "ethers/providers";
 
+import {hash} from "@chainsafe/ssz";
 import {BeaconState, Eth1Data, Number64, Root} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {intDiv, intToBytes} from "@chainsafe/lodestar-utils";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IEth1Notifier} from "../";
-import {Block} from "ethers/providers";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {hash, intDiv, intToBytes} from "@chainsafe/lodestar-utils";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   public constructor() {
