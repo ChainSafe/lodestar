@@ -7,6 +7,10 @@ import {Attestation} from "@chainsafe/lodestar-types";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {GossipEvent, AttestationSubnetRegExp} from "./constants";
 import {CommitteeIndex} from "@chainsafe/lodestar-types/lib";
+import {IGossipMessage} from "libp2p-gossipsub";
+import {utils} from "libp2p-pubsub";
+import {ILodestarGossipMessage} from "./interface";
+import {hash} from "@chainsafe/lodestar-utils";
 
 export function getGossipTopic(event: GossipEvent, encoding = "ssz", params: Map<string, string> = new Map()): string {
   let topic = `${event}/${encoding}`;
@@ -41,4 +45,16 @@ export function getSubnetFromAttestationSubnetTopic(topic: string): number {
   const groups = topic.match(AttestationSubnetRegExp);
   const subnetStr = groups[2];
   return parseInt(subnetStr);
+}
+
+export function normalizeInRpcMessage(rawMessage: IGossipMessage): ILodestarGossipMessage {
+  const message: IGossipMessage = utils.normalizeInRpcMessage(rawMessage);
+  return {
+    ...message,
+    messageId: getMessageId(message)
+  };
+}
+
+export function getMessageId(rawMessage: IGossipMessage): string {
+  return hash(rawMessage.data).toString("base64");
 }

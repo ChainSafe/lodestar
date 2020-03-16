@@ -17,6 +17,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import LibP2p from "libp2p";
 import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import {IService} from "../../node";
+import {IGossipMessage} from "libp2p-gossipsub";
 
 export interface IGossipEvents {
   [GossipEvent.BLOCK]: (signedBlock: SignedBeaconBlock) => void;
@@ -83,3 +84,7 @@ export type GossipObject = SignedBeaconBlock | Attestation | AggregateAndProof |
 SignedVoluntaryExit | ProposerSlashing | AttesterSlashing;
 
 export type GossipMessageValidatorFn = (message: GossipObject, subnet?: number) => Promise<boolean>;
+
+export interface ILodestarGossipMessage extends IGossipMessage{
+  messageId: string;
+}
