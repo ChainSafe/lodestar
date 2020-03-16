@@ -77,7 +77,7 @@ export class NaiveRegularSync implements IRegularSync {
   }
 
   private startGossiping(): void {
-    this.network.gossip.subscribeToBlock(this.chain.receiveBlock);
+    this.network.gossip.subscribeToBlock(this.onBlock);
     this.network.gossip.subscribeToAggregateAndProof(this.onAggregatedAttestation);
     this.network.gossip.subscribeToAttesterSlashing(this.opPool.attesterSlashings.receive);
     this.network.gossip.subscribeToProposerSlashing(this.opPool.proposerSlashings.receive);
@@ -85,7 +85,7 @@ export class NaiveRegularSync implements IRegularSync {
   }
 
   private stopGossiping(): void {
-    this.network.gossip.unsubscribe(GossipEvent.BLOCK, this.chain.receiveBlock);
+    this.network.gossip.unsubscribe(GossipEvent.BLOCK, this.onBlock);
     this.network.gossip.unsubscribe(GossipEvent.AGGREGATE_AND_PROOF, this.onAggregatedAttestation);
     this.network.gossip.unsubscribe(GossipEvent.ATTESTER_SLASHING, this.opPool.attesterSlashings.receive);
     this.network.gossip.unsubscribe(GossipEvent.PROPOSER_SLASHING, this.opPool.proposerSlashings.receive);
@@ -114,7 +114,10 @@ export class NaiveRegularSync implements IRegularSync {
       {start: currentSlot + 1, end: this.targetSlot},
       this.opts.blockPerChunk
     );
-    const startBlockHeader = blockToHeader(this.config, (await this.db.block.getBlockBySlot(latestState.slot)).message);
+    const startBlockHeader = blockToHeader(
+      this.config,
+      (await this.db.block.get(blocks[0].message.parentRoot.valueOf() as Uint8Array)).message
+    );
     if(isValidChainOfBlocks(this.config, startBlockHeader, blocks)) {
       this.logger.info(`Processing blocks for slots ${currentSlot}...${this.targetSlot}`);
       blocks.forEach((block) => this.chain.receiveBlock(block, false));
@@ -138,5 +141,9 @@ export class NaiveRegularSync implements IRegularSync {
 
   private onAggregatedAttestation = async (aggregate: AggregateAndProof): Promise<void> => {
     await this.chain.receiveAttestation(aggregate.aggregate);
+  };
+
+  private onBlock = async (block: SignedBeaconBlock): Promise<void> => {
+    await this.chain.receiveBlock(block);
   };
 }
