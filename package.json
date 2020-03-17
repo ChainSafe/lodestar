@@ -21,7 +21,7 @@
     "@types/chai": "4.2.0",
     "@types/chai-as-promised": "^7.1.2",
     "@types/mocha": "^5.2.7",
-    "@types/node": "^13.9.0",
+    "@types/node": "^12.12.21",
     "@types/sinon": "^7.2.7",
     "@typescript-eslint/eslint-plugin": "2.23.0",
     "@typescript-eslint/parser": "2.23.0",
