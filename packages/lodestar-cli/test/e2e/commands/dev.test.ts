@@ -1,20 +1,17 @@
 import rimraf from "rimraf";
-
 import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
-
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {InteropEth1Notifier} from "@chainsafe/lodestar/lib/eth1/impl/interop";
 import {createPeerId} from "@chainsafe/lodestar/lib/network";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {quickStartState} from "../../../src/lodestar/interop/state";
-import {computeStartSlotAtEpoch, computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {existsSync, mkdirSync} from "fs";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib/api";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {interopKeypair} from "../../../src/lodestar/interop/keypairs";
 import {ValidatorClient} from "@chainsafe/lodestar/lib/validator/nodejs";
-import {ValidatorApi, BeaconApi} from "@chainsafe/lodestar/lib/api/rpc";
+import {BeaconApi, ValidatorApi} from "@chainsafe/lodestar/lib/api/rpc";
 import {join} from "path";
 
 
@@ -38,7 +35,8 @@ describe("e2e interop simulation", function() {
   });
 
   after(async () => {
-    await Promise.all(validators.map(validator => validator.stop()));
+    const promises = validators.map((validator: ValidatorClient) => validator.stop());
+    await Promise.all(promises);
     logger.info("Stopped all validators");
     await new Promise(resolve => setTimeout(resolve, SECONDS_PER_SLOT * 1000));
     await node.stop();
@@ -126,6 +124,6 @@ describe("e2e interop simulation", function() {
       }
     );
     validators.push(validator);
-    validator.start();
+    await validator.start();
   }
 });

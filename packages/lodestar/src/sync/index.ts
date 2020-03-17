@@ -48,6 +48,7 @@ export class Sync extends EventEmitter {
   private peers: PeerInfo[] = [];
   private initialSync: InitialSync;
   private waitingForPeer = true;
+  private peerCheckingTimeout: NodeJS.Timeout;
 
   public constructor(opts: ISyncOptions, modules: ISyncModules) {
     super();
@@ -80,6 +81,9 @@ export class Sync extends EventEmitter {
   }
 
   public async stop(): Promise<void> {
+    if(this.peerCheckingTimeout) {
+      clearTimeout(this.peerCheckingTimeout);
+    }
     await this.reqResp.stop();
     await this.initialSync.stop();
     await this.regularSync.stop();
@@ -95,7 +99,7 @@ export class Sync extends EventEmitter {
       this.initialSync.start();
     } else {
       this.logger.warn("No peers. Waiting to connect to peer...");
-      setTimeout(this.startInitialSync, 2000);
+      this.peerCheckingTimeout = setTimeout(this.startInitialSync, 2000);
     }
   };
 
