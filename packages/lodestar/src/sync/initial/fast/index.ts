@@ -69,6 +69,7 @@ export class FastSync
         this.logger.info("Chain already on latest finalized state");
         this.chain.removeListener("processedCheckpoint", this.sync);
         this.emit("sync:completed", chainCheckPoint);
+        return;
       }
       this.logger.error("Wrong chain synced, should clean and start over");
     } else {
