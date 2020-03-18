@@ -16,10 +16,15 @@ import {
   isValidIndexedAttestation,
   isValidProposerSlashing,
   isValidVoluntaryExit,
+  isAggregator,
+  getAttestingIndices,
+  getDomain,
+  computeEpochAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
+import {ATTESTATION_PROPAGATION_SLOT_RANGE, DomainType} from "../../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {verify} from "@chainsafe/bls";
 
 export class GossipMessageValidator implements IGossipMessageValidator {
   private db: IBeaconDb;
@@ -85,48 +90,46 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public isValidIncomingAggregateAndProof = async (aggregationAndProof: AggregateAndProof): Promise<boolean> => {
-    return true;
-    //TODO: fix this
-    // const root = this.config.types.AggregateAndProof.hashTreeRoot(aggregationAndProof);
-    // if (await this.db.aggregateAndProof.has(root as Buffer)) {
-    //   return false;
-    // }
-    // const blockRoot = aggregationAndProof.aggregate.data.beaconBlockRoot.valueOf() as Uint8Array;
-    // if (!await this.db.block.has(blockRoot) || await this.db.block.isBadBlock(blockRoot)) {
-    //   return false;
-    // }
-    // const state = await this.db.state.getLatest();
-    // const currentSlot = getCurrentSlot(this.config, state.genesisTime);
-    // const slot = aggregationAndProof.aggregate.data.slot;
-    // if (!(slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= currentSlot &&
-    //   currentSlot >= slot)) {
-    //   return false;
-    // }
-    // const attestorIndices = getAttestingIndices(this.config, state,
-    //   aggregationAndProof.aggregate.data, aggregationAndProof.aggregate.aggregationBits);
-    // if (!attestorIndices.includes(aggregationAndProof.aggregatorIndex)) {
-    //   return false;
-    // }
-    // if (!isAggregator(
-    //   this.config,
-    //   state,
-    //   slot,
-    //   aggregationAndProof.aggregatorIndex,
-    //   aggregationAndProof.selectionProof
-    // )) {
-    //   return false;
-    // }
-    // const validatorPubKey = state.validators[aggregationAndProof.aggregatorIndex].pubkey;
-    // const domain = getDomain(this.config, state, DomainType.BEACON_ATTESTER, computeEpochAtSlot(this.config, slot));
-    // if (!verify(validatorPubKey.valueOf() as Uint8Array,
-    //   this.config.types.Slot.hashTreeRoot(slot),
-    //   aggregationAndProof.selectionProof.valueOf() as Uint8Array,
-    //   domain,
-    // )) {
-    //   return false;
-    // }
-    // const indexedAttestation = getIndexedAttestation(this.config, state, aggregationAndProof.aggregate);
-    // return isValidIndexedAttestation(this.config, state, indexedAttestation);
+    const root = this.config.types.AggregateAndProof.hashTreeRoot(aggregationAndProof);
+    if (await this.db.aggregateAndProof.has(root as Buffer)) {
+      return false;
+    }
+    const blockRoot = aggregationAndProof.aggregate.data.beaconBlockRoot.valueOf() as Uint8Array;
+    if (!await this.db.block.has(blockRoot) || await this.db.block.isBadBlock(blockRoot)) {
+      return false;
+    }
+    const state = await this.db.state.getLatest();
+    const currentSlot = getCurrentSlot(this.config, state.genesisTime);
+    const slot = aggregationAndProof.aggregate.data.slot;
+    if (!(slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= currentSlot &&
+      currentSlot >= slot)) {
+      return false;
+    }
+    const attestorIndices = getAttestingIndices(this.config, state,
+      aggregationAndProof.aggregate.data, aggregationAndProof.aggregate.aggregationBits);
+    if (!attestorIndices.includes(aggregationAndProof.aggregatorIndex)) {
+      return false;
+    }
+    if (!isAggregator(
+      this.config,
+      state,
+      slot,
+      aggregationAndProof.aggregate.data.index,
+      aggregationAndProof.selectionProof
+    )) {
+      return false;
+    }
+    const validatorPubKey = state.validators[aggregationAndProof.aggregatorIndex].pubkey;
+    const domain = getDomain(this.config, state, DomainType.BEACON_ATTESTER, computeEpochAtSlot(this.config, slot));
+    if (!verify(validatorPubKey.valueOf() as Uint8Array,
+      this.config.types.Slot.hashTreeRoot(slot),
+      aggregationAndProof.selectionProof.valueOf() as Uint8Array,
+      domain,
+    )) {
+      return false;
+    }
+    const indexedAttestation = getIndexedAttestation(this.config, state, aggregationAndProof.aggregate);
+    return isValidIndexedAttestation(this.config, state, indexedAttestation);
   };
 
   public isValidIncomingUnaggregatedAttestation = async (attestation: Attestation): Promise<boolean> => {
