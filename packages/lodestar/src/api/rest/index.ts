@@ -1,16 +1,13 @@
 import * as fastify from "fastify";
+import {FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
 import {IService} from "../../node";
 import {IRestApiOptions} from "./options";
-import {IApiModules} from "../interface";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import * as routes from "./routes";
 import qs from "qs";
 import {ApiNamespace} from "../index";
-import {BeaconApi} from "../impl/beacon";
-import {ValidatorApi} from "../impl/validator";
-import {FastifyInstance} from "fastify";
-import {applySyncingMiddleware} from "./middleware/syncing";
+import {IRestApiModules} from "./interface";
 
 export class RestApi implements IService {
 
@@ -19,7 +16,10 @@ export class RestApi implements IService {
   private opts: IRestApiOptions;
   private logger: ILogger;
 
-  public constructor(opts: IRestApiOptions, modules: IApiModules) {
+  public constructor(
+    opts: IRestApiOptions, 
+    modules: IRestApiModules
+  ) {
     this.opts = opts;
     this.logger = modules.logger;
     this.server = this.setupServer(modules);
@@ -39,7 +39,7 @@ export class RestApi implements IService {
     await this.server.close();
   }
 
-  private  setupServer(modules: IApiModules): FastifyInstance {
+  private  setupServer(modules: IRestApiModules): FastifyInstance {
     const server = fastify.default({
       //TODO: somehow pass winston here
       logger: false,
@@ -52,14 +52,17 @@ export class RestApi implements IService {
         origin: corsArr
       });
     }
-    const beacon = new BeaconApi({}, modules);
-    const validator = new ValidatorApi({}, modules);
+    const api = {
+      beacon: modules.beacon,
+      validator: modules.validator
+    };
     if(this.opts.api.includes(ApiNamespace.BEACON)) {
-      server.register(routes.beacon, {prefix: "/node", api: {beacon, validator}, config: modules.config});
+      server.register(routes.beacon, {prefix: "/node", api, config: modules.config});
     }
     if(this.opts.api.includes(ApiNamespace.VALIDATOR)) {
-      applySyncingMiddleware(server, "/validator/*", modules);
-      server.register(routes.validator, {prefix: "/validator", api: {beacon, validator}, config: modules.config});
+      //TODO: enable when syncing status api working
+      // applySyncingMiddleware(server, "/validator/*", modules);
+      server.register(routes.validator, {prefix: "/validator", api, config: modules.config});
     }
 
     return server;

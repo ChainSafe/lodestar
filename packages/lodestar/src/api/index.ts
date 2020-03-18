@@ -3,6 +3,8 @@ import defaultOptions, {IApiOptions} from "./options";
 import {IApiModules} from "./interface";
 import deepmerge from "deepmerge";
 import {RestApi} from "./rest";
+import {BeaconApi} from "./impl/beacon";
+import {ValidatorApi} from "./impl/validator";
 
 export * from "./interface";
 
@@ -38,6 +40,13 @@ export class ApiService implements IService {
   }
 
   private setupRestApi(modules: IApiModules): RestApi {
-    return new RestApi(this.opts.rest, modules);
+    return new RestApi(
+      this.opts.rest,
+      {
+        config: modules.config,
+        logger: modules.logger,
+        beacon: new BeaconApi({}, modules),
+        validator: new ValidatorApi({}, modules)
+      });
   }
 }

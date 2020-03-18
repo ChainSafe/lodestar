@@ -14,8 +14,7 @@ import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib/api";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {interopKeypair} from "../../../src/lodestar/interop/keypairs";
 import {ValidatorClient} from "@chainsafe/lodestar/lib/validator/nodejs";
-import {ValidatorApi, BeaconApi} from "@chainsafe/lodestar/lib/api/rpc";
-
+import {BeaconApi, ValidatorApi} from "@chainsafe/lodestar/lib/api/impl";
 
 const VALIDATOR_COUNT = 5;
 const SECONDS_PER_SLOT = 2;

@@ -22,9 +22,6 @@ import {quickStartOptionToState} from "../lodestar/interop/cli";
 import {initBLS, Keypair, PrivateKey} from "@chainsafe/bls";
 import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {interopKeypair} from "../lodestar/interop/keypairs";
-import {ValidatorApi} from "@chainsafe/lodestar/lib/api/rpc/api/validator";
-import {BeaconApi} from "@chainsafe/lodestar/lib/api/rpc/api/beacon";
-
 import {loadPeerId, createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {createPeerId} from "@chainsafe/lodestar/lib/network";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib/api";
@@ -34,6 +31,7 @@ import {quickStartState} from "../lodestar/interop/state";
 import {default as dbConfig} from "@chainsafe/lodestar/lib/db/options";
 import {BeaconNodeOptions} from "../lodestar/node/options";
 import {getTomlConfig} from "../lodestar/util/file";
+import {BeaconApi, ValidatorApi} from "@chainsafe/lodestar/lib/api/impl";
 
 interface IDevCommandOptions {
   loggingLevel?: string;

@@ -86,7 +86,14 @@ export class ValidatorApi implements IValidatorApi {
       ]);
       const headState = await this.db.state.get(headBlock.message.stateRoot.valueOf() as Uint8Array);
       processSlots(this.config, headState, slot);
-      return await assembleAttestation({config: this.config, db: this.db}, headState, headBlock.message, validatorIndex, index, slot);
+      return await assembleAttestation(
+        {config: this.config, db: this.db},
+        headState,
+        headBlock.message,
+        validatorIndex,
+        index,
+        slot
+      );
     } catch (e) {
       this.logger.warn(`Failed to produce attestation because: ${e.message}`);
     }
@@ -130,10 +137,10 @@ export class ValidatorApi implements IValidatorApi {
 
     return validatorIndexes.map((validatorIndex) => {
       return assembleValidatorDuty(
-          this.config,
-          {publicKey: state.validators[validatorIndex].pubkey, index: validatorIndex},
-          state,
-          epoch
+        this.config,
+        {publicKey: state.validators[validatorIndex].pubkey, index: validatorIndex},
+        state,
+        epoch
       );
     });
   }

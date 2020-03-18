@@ -31,7 +31,7 @@ interface IBody extends DefaultBody {
   aggregator_pubkey: string;
 }
 
-export const registerSubscribeToCommitteeSubnet: LodestarRestApiEndpoint = (fastify, {api, config}): void => {
+export const registerSubscribeToCommitteeSubnet: LodestarRestApiEndpoint = (fastify, {api}): void => {
   fastify.post<DefaultQuery, DefaultParams, DefaultHeaders, IBody>(
     "/beacon_committee_subscription",
     opts,
