@@ -3,14 +3,13 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Bytes32, Fork, Number64, SyncingStatus, Uint64} from "@chainsafe/lodestar-types";
+import {BeaconState, Bytes32, ForkResponse, Number64, SyncingStatus, Uint64} from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "./interface";
-import {IBeaconChain} from "../../../../chain";
-import {IBeaconDb} from "../../../../db";
-import {IApiOptions} from "../../../options";
-import {IApiModules} from "../../../interface";
-import {ApiNamespace} from "../../../index";
-import {getFork} from "../../../impl/beacon/fork";
+import {IBeaconChain} from "../../../chain";
+import {IBeaconDb} from "../../../db";
+import {IApiOptions} from "../../options";
+import {IApiModules} from "../../interface";
+import {ApiNamespace} from "../../index";
 
 export class BeaconApi implements IBeaconApi {
 
@@ -32,8 +31,18 @@ export class BeaconApi implements IBeaconApi {
     return Buffer.from(`lodestar-${process.env.npm_package_version}`, "utf-8");
   }
 
-  public async getFork(): Promise<{fork: Fork; chainId: Uint64}> {
-    return getFork(this.db, this.chain);
+  public async getFork(): Promise<ForkResponse> {
+    const state: BeaconState = await this.db.state.getLatest();
+    const networkId: Uint64 = this.chain.networkId;
+    const fork = state? state.fork : {
+      previousVersion: Buffer.alloc(4),
+      currentVersion: Buffer.alloc(4),
+      epoch: 0
+    };
+    return {
+      fork,
+      chainId: networkId
+    };
   }
 
   public async getGenesisTime(): Promise<Number64> {
