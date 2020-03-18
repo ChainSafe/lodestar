@@ -1,4 +1,4 @@
-import {getEpochProposers} from "../../../../../../src/api/impl/validator";
+import {getEpochProposers} from "../../../../../../src/api/impl/backup/validator";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon from "sinon";
 import {BlockRepository, StateRepository} from "../../../../../../src/db/api/beacon/repositories";

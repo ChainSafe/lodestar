@@ -2,7 +2,7 @@ import sinon, { SinonStubbedInstance } from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {BeaconApi} from "../../../../../../src/api/rpc/api/beacon";
+import {BeaconApi} from "../../../../../../src/api/impl/beacon";
 import {BeaconChain} from "../../../../../../src/chain";
 
 import {generateState} from "../../../../../utils/state";

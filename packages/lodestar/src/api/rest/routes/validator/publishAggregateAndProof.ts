@@ -1,10 +1,7 @@
 import {IncomingMessage, Server, ServerResponse} from "http";
 import fastify, {DefaultQuery} from "fastify";
 import {fromHexString} from "@chainsafe/ssz";
-import {AggregateAndProof} from "@chainsafe/lodestar-types";
-
-import {IApiModules} from "../../../interface";
-import {IFastifyServer} from "../../index";
+import {LodestarRestApiEndpoint} from "../../interface";
 
 interface IQuery extends DefaultQuery {
   "validator_pubkey": string;
@@ -31,26 +28,18 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   }
 };
 
-export const registerPublishAggregateAndProofEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
+export const registerPublishAggregateAndProofEndpoint: LodestarRestApiEndpoint = (fastify, {api, config}): void => {
   fastify.post<IQuery>(
     "/aggregate",
     opts,
     async (request, reply) => {
       try {
-        const aggregatedAttestation = modules.config.types.Attestation.fromJson(request.body);
-        const aggregateAndProof: AggregateAndProof = {
-          aggregate: aggregatedAttestation,
-          selectionProof: fromHexString(request.query.slot_signature),
-          aggregatorIndex: await modules.db.getValidatorIndex(fromHexString(request.query.validator_pubkey)),
-        };
-        await Promise.all([
-          modules.network.gossip.publishAggregatedAttestation(
-            aggregateAndProof
-          ),
-          modules.opPool.aggregateAndProofs.receive(aggregateAndProof)
-        ]);
+        await api.validator.publishAggregatedAttestation(
+          config.types.Attestation.fromJson(request.body),
+          fromHexString(request.query.validator_pubkey),
+          fromHexString(request.query.slot_signature)
+        );
       } catch (e) {
-        modules.logger.error(e.message);
         reply.code(500).send();
         return;
       }

@@ -1,4 +1,4 @@
-import {IBeaconApi} from "../../../../src/api/rpc/api/beacon";
+import {IBeaconApi} from "../../../../src/api/impl/beacon";
 import {BeaconBlock, BeaconState, Bytes32, Fork, Number64, SyncingStatus, Uint64} from "@chainsafe/lodestar-types";
 import {getEmptyBlock} from "../../../../src/chain/genesis/genesis";
 import {ApiNamespace} from "../../../../src/api";

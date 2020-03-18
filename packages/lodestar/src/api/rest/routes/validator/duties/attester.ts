@@ -1,9 +1,7 @@
-import {IFastifyServer} from "../../../index";
 import fastify, {DefaultParams, DefaultQuery} from "fastify";
-import {IApiModules} from "../../../../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
-import {getAttesterDuties} from "../../../../impl/validator";
 import {fromHexString} from "@chainsafe/ssz";
+import {LodestarRestApiEndpoint} from "../../../interface";
 
 interface IParams extends DefaultParams {
   epoch: number;
@@ -43,22 +41,23 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   }
 };
 
-export const registerAttesterDutiesEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
+export const registerAttesterDutiesEndpoint: LodestarRestApiEndpoint = (fastify, {api, config}): void => {
   fastify.get<IQuery, IParams>(
     "/duties/:epoch/attester",
     opts,
     async (request, reply) => {
-      const duties = (await getAttesterDuties(
-        modules.config,
-        modules.db,
-        modules.chain,
+      const responseValue = await api.validator.getAttesterDuties(
         request.params.epoch,
         request.query.validator_pubkeys.map((pubKeyHex) => fromHexString(pubKeyHex))
-      )).map((d) => modules.config.types.ValidatorDuty.toJson(d));
+      );
       reply
         .code(200)
         .type("application/json")
-        .send(duties);
+        .send(responseValue.map((value) => {
+          return config.types.ValidatorDuty.toJson(
+            value
+          );
+        }));
     }
   );
 };

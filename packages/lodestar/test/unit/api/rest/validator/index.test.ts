@@ -15,7 +15,7 @@ import {BeaconChain} from "../../../../../src/chain";
 import {BeaconDb} from "../../../../../src/db/api";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {Sync} from "../../../../../src/sync";
-import * as validatorImpl from "../../../../../src/api/impl/validator";
+import * as validatorImpl from "../../../../../src/api/impl/backup/validator";
 import {generateEmptyValidatorDuty} from "../../../../../src/chain/factory/duties";
 import {generateEmptyBlock} from "../../../../utils/block";
 import * as blockUtils from "../../../../../src/chain/factory/block";
