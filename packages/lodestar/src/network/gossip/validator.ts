@@ -20,6 +20,9 @@ import {
   getAttestingIndices,
   getDomain,
   computeEpochAtSlot,
+  verifyBlockSignature,
+  computeStartSlotAtEpoch,
+  processSlots,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE, DomainType} from "../../constants";
@@ -50,10 +53,14 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.block.has(root)) {
       return false;
     }
-    return true;
-    //TODO: fix this
-    // const state = await this.db.state.getLatest();
-    // return verifyBlockSignature(this.config, state, signedBlock);
+    const headBlock = await this.db.block.getChainHead();
+    const state = await this.db.state.get(headBlock.message.stateRoot.valueOf() as Uint8Array);
+    const epoch = computeEpochAtSlot(this.config, signedBlock.message.slot);
+    const startSlot = computeStartSlotAtEpoch(this.config, epoch);
+    if(state.slot < startSlot) {
+      processSlots(this.config, state, startSlot);
+    }
+    return verifyBlockSignature(this.config, {...state, slot: signedBlock.message.slot}, signedBlock);
   };
 
   public isUnaggregatedAttestation = (attestation: Attestation): boolean => {
