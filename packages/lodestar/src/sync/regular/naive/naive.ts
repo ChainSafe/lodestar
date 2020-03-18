@@ -117,15 +117,20 @@ export class NaiveRegularSync implements IRegularSync {
       {start: currentSlot + 1, end: this.targetSlot},
       this.opts.blockPerChunk
     );
-    const startBlockHeader = blockToHeader(
-      this.config,
-      (await this.db.block.get(blocks[0].message.parentRoot.valueOf() as Uint8Array)).message
-    );
-    if(isValidChainOfBlocks(this.config, startBlockHeader, blocks)) {
-      this.logger.info(`Processing blocks for slots ${currentSlot}...${this.targetSlot}`);
-      blocks.forEach((block) => this.chain.receiveBlock(block, false));
+    if(blocks.length > 0) {
+      const startBlockHeader = blockToHeader(
+          this.config,
+          (await this.db.block.get(blocks[0].message.parentRoot.valueOf() as Uint8Array)).message
+      );
+      if(isValidChainOfBlocks(this.config, startBlockHeader, blocks)) {
+        this.logger.info(`Processing blocks for slots ${currentSlot}...${this.targetSlot}`);
+        blocks.forEach((block) => this.chain.receiveBlock(block, false));
+      } else {
+        this.logger.warn(`Received invalid chain  of blocks for slots ${currentSlot}...${this.targetSlot}`);
+        this.syncUp();
+      }
     } else {
-      this.logger.warn(`Received invalid chain  of blocks for slots ${currentSlot}...${this.targetSlot}`);
+      this.targetSlot++;
       this.syncUp();
     }
     return true;
