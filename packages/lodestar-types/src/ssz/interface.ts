@@ -73,6 +73,7 @@ export interface IBeaconSSZTypes {
   BeaconBlocksByRootRequest: ContainerType<t.BeaconBlocksByRootRequest>;
   //api
   SubscribeToCommitteeSubnetPayload: ContainerType<t.SubscribeToCommitteeSubnetPayload>;
+  ForkResponse: ContainerType<t.ForkResponse>;
 }
 
 export const typeNames: (keyof IBeaconSSZTypes)[] = [
@@ -138,4 +139,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "Goodbye",
   "BeaconBlocksByRangeRequest",
   "BeaconBlocksByRootRequest",
+  //api
+  "SubscribeToCommitteeSubnetPayload",
+  "ForkResponse"
 ];

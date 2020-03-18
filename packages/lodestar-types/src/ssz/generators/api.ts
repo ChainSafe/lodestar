@@ -9,3 +9,10 @@ export const SubscribeToCommitteeSubnetPayload = (ssz: IBeaconSSZTypes): Contain
     aggregatorPubkey: ssz.BLSPubkey
   },
 });
+
+export const ForkResponse = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    fork: ssz.Fork,
+    chainId: ssz.Uint64
+  }
+});
