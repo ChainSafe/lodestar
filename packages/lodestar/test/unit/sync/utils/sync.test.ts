@@ -1,12 +1,13 @@
 import {describe, it} from "mocha";
 import {IReputation, ReputationStore} from "../../../../src/sync/IReputation";
-import {BeaconBlock, BeaconBlockHeader, Epoch, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {BeaconBlockHeader, Epoch, SignedBeaconBlock, Status, BeaconState} from "@chainsafe/lodestar-types";
 import {
   chunkify,
   getBlockRangeFromPeer,
   getInitalSyncTargetEpoch,
   isValidChainOfBlocks,
-  isValidFinalizedCheckPoint
+  isValidFinalizedCheckPoint,
+  isValidPeerForInitSync
 } from "../../../../src/sync/utils/sync";
 import {expect} from "chai";
 import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block";
@@ -18,6 +19,8 @@ import {ReqResp} from "../../../../src/network/reqResp";
 import PeerId from "peer-id";
 // @ts-ignore
 import PeerInfo from "peer-info";
+import { generateState } from "../../../utils/state";
+import { GENESIS_EPOCH } from "../../../../src/constants/constants";
 
 describe("sync utils", function () {
    
@@ -162,6 +165,63 @@ describe("sync utils", function () {
       expect(result).to.be.false;
     });
     
+  });
+
+  describe("is valid peer for init sync", function() {
+    it("should return false because no peer status", function() {
+      expect(isValidPeerForInitSync(config, null, null)).to.be.false;
+    });
+
+    it("should return false because of different folk", function() {
+      const peerStatus: Status = {
+        finalizedEpoch: 0,
+        finalizedRoot: Buffer.alloc(32),
+        headForkVersion: Buffer.alloc(4),
+        headRoot: Buffer.alloc(32),
+        headSlot: 0,
+      };
+      const state: BeaconState = generateState();
+      state.fork.currentVersion = Buffer.from("abc");
+      expect(isValidPeerForInitSync(config, state, peerStatus)).to.be.false;
+    });
+
+    it("should return false if does not have finalized checkpoint", function() {
+      const peerStatus: Status = {
+        finalizedEpoch: GENESIS_EPOCH,
+        finalizedRoot: Buffer.alloc(32),
+        headForkVersion: Buffer.alloc(4),
+        headRoot: Buffer.alloc(32),
+        headSlot: 0,
+      };
+      const state: BeaconState = generateState();
+      expect(isValidPeerForInitSync(config, state, peerStatus)).to.be.false;
+    });
+
+    it("should return false because of out of date finalized checkpoint", function() {
+      const peerStatus: Status = {
+        finalizedEpoch: 5,
+        finalizedRoot: Buffer.alloc(32),
+        headForkVersion: Buffer.alloc(4),
+        headRoot: Buffer.alloc(32),
+        headSlot: 0,
+      };
+      const state: BeaconState = generateState();
+      state.finalizedCheckpoint.epoch = 10;
+      expect(isValidPeerForInitSync(config, state, peerStatus)).to.be.false;
+    });
+
+    it("should return true", function() {
+      const peerStatus: Status = {
+        finalizedEpoch: 10,
+        finalizedRoot: Buffer.alloc(32),
+        headForkVersion: Buffer.alloc(4),
+        headRoot: Buffer.alloc(32),
+        headSlot: 0,
+      };
+      const state: BeaconState = generateState();
+      state.finalizedCheckpoint.epoch = 5;
+      expect(isValidPeerForInitSync(config, state, peerStatus)).to.be.true;
+    });
   });
     
 });

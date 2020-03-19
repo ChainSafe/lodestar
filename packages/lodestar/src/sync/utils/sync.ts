@@ -1,7 +1,9 @@
 import {IReputation, ReputationStore} from "../IReputation";
-import {BeaconBlockHeader, Checkpoint, Epoch, Slot, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {BeaconBlockHeader, Checkpoint, Epoch, Slot, SignedBeaconBlock, Status,
+  BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IReqResp} from "../../network";
+import {GENESIS_EPOCH} from "../../constants";
 
 export function isValidChainOfBlocks(
   config: IBeaconConfig,
@@ -63,6 +65,22 @@ export function isValidFinalizedCheckPoint(peers: IReputation[], finalizedCheckp
     return Buffer.from(peer.latestStatus.finalizedRoot as Uint8Array).equals(finalizedRoot);
   }).length;
   return peerCount >= (validPeers.length / 2);
+}
+
+export function isValidPeerForInitSync(config: IBeaconConfig, myState: BeaconState, peerStatus: Status): boolean {
+  if (!peerStatus) {
+    return false;
+  }
+  if (!config.types.Version.equals(myState.fork.currentVersion, peerStatus.headForkVersion)) {
+    return false;
+  }
+  if (!peerStatus.finalizedRoot || peerStatus.finalizedEpoch <= GENESIS_EPOCH) {
+    return false;
+  }
+  if (peerStatus.finalizedEpoch < myState.finalizedCheckpoint.epoch) {
+    return false;
+  }
+  return true;
 }
 
 export interface ISlotRange {
