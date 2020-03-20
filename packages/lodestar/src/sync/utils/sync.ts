@@ -72,9 +72,7 @@ export function isValidPeerForInitSync(config: IBeaconConfig, myState: BeaconSta
     return false;
   }
   // TODO: compare fork_digest in the latest spec?
-  if (!peerStatus.finalizedRoot || peerStatus.finalizedEpoch <= GENESIS_EPOCH) {
-    return false;
-  }
+
   if (peerStatus.finalizedEpoch < myState.finalizedCheckpoint.epoch) {
     return false;
   }
