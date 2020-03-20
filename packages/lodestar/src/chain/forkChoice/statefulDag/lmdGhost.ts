@@ -5,16 +5,16 @@
 import assert from "assert";
 
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {Gwei, Slot, ValidatorIndex, Number64, Checkpoint, Epoch} from "@chainsafe/lodestar-types";
+import {Gwei, Slot, ValidatorIndex, Number64, Checkpoint, Epoch, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeSlotsSinceEpochStart, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {ILMDGHOST} from "../interface";
 
-import {AttestationAggregator} from "./attestationAggregator";
 import {sleep} from "../../../util/sleep";
-import {RootHex, NodeInfo, HexCheckpoint} from "./interface";
+import {RootHex, NodeInfo, HexCheckpoint, BlockChainInfo} from "./interface";
 import {GENESIS_EPOCH} from "../../../constants";
+import {AttestationAggregator} from "./attestationAggregator";
 
 
 /**
@@ -25,6 +25,7 @@ export class Node {
   // block data
   public slot: Slot;
   public blockRoot: RootHex;
+  public stateRoot: Root;
 
   /**
    * Total weight for a block and its children
@@ -61,9 +62,10 @@ export class Node {
    */
   public children: Record<RootHex, Node>;
 
-  public constructor({slot, blockRoot, parent, justifiedCheckpoint, finalizedCheckpoint}: NodeInfo) {
+  public constructor({slot, blockRoot, stateRoot, parent, justifiedCheckpoint, finalizedCheckpoint}: NodeInfo) {
     this.slot = slot;
     this.blockRoot = blockRoot;
+    this.stateRoot = stateRoot;
     this.parent = parent;
     this.justifiedCheckpoint = justifiedCheckpoint;
     this.finalizedCheckpoint = finalizedCheckpoint;
@@ -279,8 +281,8 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     }
   }
 
-  public addBlock(slot: Slot, blockRootBuf: Uint8Array, parentRootBuf: Uint8Array,
-    justifiedCheckpoint: Checkpoint, finalizedCheckpoint: Checkpoint): void {
+  public addBlock({slot, blockRootBuf, stateRootBuf, parentRootBuf,
+    justifiedCheckpoint, finalizedCheckpoint}: BlockChainInfo): void {
     this.synced = false;
     const blockRoot = toHexString(blockRootBuf);
     const parentRoot = toHexString(parentRootBuf);
@@ -288,6 +290,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     const node: Node = this.nodes[blockRoot] || new Node({
       slot,
       blockRoot,
+      stateRoot: stateRootBuf,
       parent: this.nodes[parentRoot],
       justifiedCheckpoint: {rootHex: toHexString(justifiedCheckpoint.root), epoch: justifiedCheckpoint.epoch},
       finalizedCheckpoint: {rootHex: toHexString(finalizedCheckpoint.root), epoch: finalizedCheckpoint.epoch},
@@ -368,6 +371,14 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       this.syncChanges();
     }
     return fromHexString(this.justified.node.bestTarget.blockRoot);
+  }
+
+  public headStateRoot(): Uint8Array {
+    assert(this.justified);
+    if (!this.synced) {
+      this.syncChanges();
+    }
+    return this.justified.node.bestTarget.stateRoot.valueOf() as Uint8Array;
   }
 
   // To address the bouncing attack, only update conflicting justified

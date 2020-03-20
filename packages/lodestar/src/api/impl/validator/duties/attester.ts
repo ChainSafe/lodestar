@@ -11,8 +11,7 @@ export async function getAttesterDuties(
   epoch: Epoch,
   publicKeys: BLSPubkey[]
 ): Promise<ValidatorDuty[]> {
-  const block = await db.block.get(chain.forkChoice.head());
-  const state = await db.state.get(block.message.stateRoot.valueOf() as Uint8Array);
+  const state = await db.state.get(chain.forkChoice.headStateRoot());
 
   const validatorIndexes = await Promise.all(publicKeys.map(async publicKey => {
     return  state.validators.findIndex((v) => config.types.BLSPubkey.equals(v.pubkey, publicKey));

@@ -6,7 +6,6 @@
 import {Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {RootHex, AggregatedAttestation, ForkChoiceAttestation} from "./interface";
 
-
 /**
  * Keep track of the latest attestations per validator
  * as well as aggregated attestations per block root

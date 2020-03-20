@@ -2,21 +2,17 @@
  * @module chain/forkChoice
  */
 
-import {Gwei, Slot, ValidatorIndex, Checkpoint} from "@chainsafe/lodestar-types";
+import {Gwei, ValidatorIndex, Checkpoint} from "@chainsafe/lodestar-types";
+import {BlockChainInfo} from "./statefulDag/interface";
 
 
 export interface ILMDGHOST {
   start(genesisTime: number): Promise<void>;
   stop(): Promise<void>;
-  addBlock(
-    slot: Slot,
-    blockRootBuf: Uint8Array,
-    parentRootBuf: Uint8Array,
-    justifiedCheckpoint: Checkpoint,
-    finalizedCheckpoint: Checkpoint
-  ): void;
+  addBlock(info: BlockChainInfo): void;
   addAttestation(blockRootBuf: Uint8Array, attester: ValidatorIndex, weight: Gwei): void;
   head(): Uint8Array;
+  headStateRoot(): Uint8Array;
   getJustified(): Checkpoint;
   getFinalized(): Checkpoint;
 }

@@ -41,8 +41,7 @@ export class AttestationProcessor implements IAttestationProcessor {
     this.logger.info(`Received attestation ${toHexString(attestationHash)}`);
     try {
       const attestationSlot: Slot = attestation.data.slot;
-      const headBlock = await this.db.block.get(this.forkChoice.head());
-      const state = await this.db.state.get(headBlock.message.stateRoot.valueOf() as Uint8Array);
+      const state = await this.db.state.get(this.forkChoice.headStateRoot());
       if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < state.slot) {
         this.logger.verbose(`Attestation ${toHexString(attestationHash)} is too old. Ignored.`);
         return;
