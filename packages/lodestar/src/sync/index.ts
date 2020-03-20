@@ -16,6 +16,7 @@ import {ISyncReqResp, SyncReqResp} from "./reqResp";
 import {ReputationStore} from "./IReputation";
 import {NaiveRegularSync} from "./regular/naive/naive";
 import {IRegularSync} from "./regular/interface";
+import {isValidPeerForInitSync} from "./utils/sync";
 
 export interface ISyncModules {
   config: IBeaconConfig;
@@ -45,7 +46,7 @@ export class Sync extends EventEmitter {
   private reps: ReputationStore;
   private logger: ILogger;
   //array of valid peers (peer on same fork)
-  private peers: PeerInfo[] = [];
+  private readonly peers: PeerInfo[] = [];
   private initialSync: InitialSync;
   private waitingForPeer = true;
   private peerCheckingTimeout: NodeJS.Timeout;
@@ -110,23 +111,25 @@ export class Sync extends EventEmitter {
   };
 
   private getValidPeers(): PeerInfo[] {
-    //TODO: filter and drop peers on different fork
-    return this.network.getPeers().filter((peer) => {
-      return !!(this.reps.get(peer.id.toB58String()).latestStatus);
-    });
+    const myState = this.chain.latestState;
+    return this.network.getPeers().filter(
+      (peer) => isValidPeerForInitSync(this.config, myState, this.reps.get(peer.id.toB58String()).latestStatus));
   }
 
   private handleNewPeer = (peer: PeerInfo): void => {
-    //TODO: check if peer is useful
     this.peers.push(peer);
-    if(this.waitingForPeer) {
+    const myState = this.chain.latestState;
+    if(this.waitingForPeer &&
+      isValidPeerForInitSync(this.config, myState, this.reps.get(peer.id.toB58String()).latestStatus)) {
       this.waitingForPeer = false;
       this.initialSync.start();
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private handleLostPeer = (peer: PeerInfo): void => {
-    //TODO: remove peer from array
+    const index = this.peers.indexOf(peer);
+    if (index !== -1) {
+      this.peers.splice(index, 1);
+    }
   };
 }
