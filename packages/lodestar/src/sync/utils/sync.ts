@@ -3,7 +3,6 @@ import {BeaconBlockHeader, Checkpoint, Epoch, Slot, SignedBeaconBlock, Status,
   BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IReqResp} from "../../network";
-import {GENESIS_EPOCH} from "../../constants";
 
 export function isValidChainOfBlocks(
   config: IBeaconConfig,
