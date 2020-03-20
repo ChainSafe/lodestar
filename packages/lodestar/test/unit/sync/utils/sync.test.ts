@@ -172,19 +172,6 @@ describe("sync utils", function () {
       expect(isValidPeerForInitSync(config, null, null)).to.be.false;
     });
 
-    it("should return false because of different folk", function() {
-      const peerStatus: Status = {
-        finalizedEpoch: 0,
-        finalizedRoot: Buffer.alloc(32),
-        headForkVersion: Buffer.alloc(4),
-        headRoot: Buffer.alloc(32),
-        headSlot: 0,
-      };
-      const state: BeaconState = generateState();
-      state.fork.currentVersion = Buffer.from("abc");
-      expect(isValidPeerForInitSync(config, state, peerStatus)).to.be.false;
-    });
-
     it("should return false if does not have finalized checkpoint", function() {
       const peerStatus: Status = {
         finalizedEpoch: GENESIS_EPOCH,
