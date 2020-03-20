@@ -19,7 +19,9 @@ Lodestart is a Typescript implementation of the Eth 2 Beacon chain spec.
 * [Prerequisites](#prerequisites)
 * [Getting Started](#getting-started)
 * [Packages](#packages)
-* [Tests](#tests)
+* [Contributors](#contributors)
+* [Meeting Notes](#meeting-notes)
+* [Donations](#donations)
 
 # Prerequisites
 
@@ -37,12 +39,12 @@ To get an instance of Lodestar up & running, start a terminal from the root of t
 
 2. Run the build script:
 ```
-	lerna run build
+	yarn run build
 ```
 
 3. Lodestar should now be ready for use:
 ```
-	./packages/lodestar-cli/bin/lodestar --help
+	yarn run cli --help
 ```
 
 ## Packages
