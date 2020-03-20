@@ -11,6 +11,57 @@
 Welcome to the ChainSafe lodestar monorepo!
 This repository contains a suite of Ethereum 2.0 packages.
 
+## Tl;Dr:
+
+Lodestart is a Typescript implementation of the Eth 2 Beacon chain spec.
+
+## Index
+* [Prerequisites](#prerequisites)
+* [Getting Started](#getting-started)
+* [Packages](#packages)
+* [Tests](#tests)
+
+# Prerequisites
+
+* [Lerna]()
+* [Yarn]()
+
+# Getting Started
+
+To get an instance of Lodestar up & running, start a terminal from the root of the this repo:
+
+1. Install dependencies accross all packages:
+```
+	yarn install
+```
+
+2. Run the build script:
+```
+	lerna run build
+```
+
+3. Lodestar should now be ready for use:
+```
+	./packages/lodestar-cli/bin/lodestar --help
+```
+
+## Packages
+
+### [@chainsafe/lodestar](/packages/lodestar)
+Beacon chain implementation
+
+[![npm](https://img.shields.io/npm/v/@chainsafe/lodestar)](https://www.npmjs.com/package/@chainsafe/lodestar)
+[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar)
+
+### [@chainsafe/lodestar-validator](/packages/lodestar-validator)
+Eth2 validator client implementation
+
+[![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-validator)](https://www.npmjs.com/package/@chainsafe/lodestar-validator)
+[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar)
+
+
 ### [@chainsafe/lodestar-types](/packages/lodestar-types)
 Typescript types for Ethereum 2.0 datastructures
 
@@ -53,19 +104,6 @@ Ethereum 2.0 spec test utilities
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-spec-test-util)
 
-### [@chainsafe/lodestar](/packages/lodestar)
-Beacon chain implementation
-
-[![npm](https://img.shields.io/npm/v/@chainsafe/lodestar)](https://www.npmjs.com/package/@chainsafe/lodestar)
-[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
-[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar)
-
-### [@chainsafe/lodestar-validator](/packages/lodestar-validator)
-Eth2 validator client implementation
-
-[![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-validator)](https://www.npmjs.com/package/@chainsafe/lodestar-validator)
-[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
-[![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar)
 
 ## Contributors
 Read our [contributors document](/CONTRIBUTING.md), [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or talk to us on our [discord](https://discord.gg/yjyvFRP)!
