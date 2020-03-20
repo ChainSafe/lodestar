@@ -11,41 +11,52 @@
 Welcome to the ChainSafe lodestar monorepo!
 This repository contains a suite of Ethereum 2.0 packages.
 
+## Index
+* [Tl;Dr](#tl-dr)
+* [Prerequisites](#prerequisites)
+* [Getting Started](#getting-started)
+* [Contributors](#contributors)
+* [Meeting Notes](#meeting-notes)
+* [Donations](#donations)
+* [Packages](#packages)
+
 ## Tl;Dr:
 
 Lodestart is a Typescript implementation of the Eth 2 Beacon chain spec.
 
-## Index
-* [Prerequisites](#prerequisites)
-* [Getting Started](#getting-started)
-* [Packages](#packages)
-* [Contributors](#contributors)
-* [Meeting Notes](#meeting-notes)
-* [Donations](#donations)
+## Prerequisites
 
-# Prerequisites
+* [Lerna](https://github.com/lerna/lerna)
+* [Yarn](https://yarnpkg.com/)
 
-* [Lerna]()
-* [Yarn]()
-
-# Getting Started
+## Getting Started
 
 To get an instance of Lodestar up & running, start a terminal from the root of the this repo:
 
 1. Install dependencies accross all packages:
 ```
-	yarn install
+yarn install
 ```
 
 2. Run the build script:
 ```
-	yarn run build
+yarn run build
 ```
 
 3. Lodestar should now be ready for use:
 ```
-	yarn run cli --help
+yarn run cli --help
 ```
+
+## Contributors
+Read our [contributors document](/CONTRIBUTING.md), [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or talk to us on our [discord](https://discord.gg/yjyvFRP)!
+
+## Meeting Notes
+Feel free to check out our meeting notes and documents on [HackMD](https://hackmd.io/@wemeetagain/rJTEOdqPS/%2F%40yBpKEsxORheI8AJoIiZj1Q%2FHk_b8XfcV%2F%252F6pRB5amJRLKBGEkeOJA8Cw).
+
+## Donations
+We are a local group of Toronto open source developers. As such, all of our open source work is funded by grants. We all take the time out of our hectic lives to contribute to the Ethereum ecosystem.
+If you want to donate, you can send us ETH at the following address: **lodestar.chainsafe.eth**
 
 ## Packages
 
@@ -105,15 +116,3 @@ Ethereum 2.0 spec test utilities
 [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-spec-test-util)](https://www.npmjs.com/package/@chainsafe/lodestar-spec-test-util)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![documentation](https://img.shields.io/badge/documentation-typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-spec-test-util)
-
-
-## Contributors
-Read our [contributors document](/CONTRIBUTING.md), [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or talk to us on our [discord](https://discord.gg/yjyvFRP)!
-
-## Meeting Notes
-Feel free to check out our meeting notes and documents on [HackMD](https://hackmd.io/@wemeetagain/rJTEOdqPS/%2F%40yBpKEsxORheI8AJoIiZj1Q%2FHk_b8XfcV%2F%252F6pRB5amJRLKBGEkeOJA8Cw).
-
-## Donations
-We are a local group of Toronto open source developers. As such, all of our open source work is funded by grants. We all take the time out of our hectic lives to contribute to the Ethereum ecosystem.
-If you want to donate, you can send us ETH at the following address: **lodestar.chainsafe.eth**
-
