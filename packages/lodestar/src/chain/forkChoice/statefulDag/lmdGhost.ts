@@ -9,13 +9,12 @@ import {Gwei, Slot, ValidatorIndex, Number64, Checkpoint, Epoch, Root} from "@ch
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeSlotsSinceEpochStart, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {ILMDGHOST} from "../interface";
+import {ILMDGHOST, BlockChainInfo} from "../interface";
 
 import {sleep} from "../../../util/sleep";
-import {RootHex, NodeInfo, HexCheckpoint, BlockChainInfo} from "./interface";
+import {RootHex, NodeInfo, HexCheckpoint} from "./interface";
 import {GENESIS_EPOCH} from "../../../constants";
 import {AttestationAggregator} from "./attestationAggregator";
-
 
 /**
  * A block root with additional metadata required to form a DAG
