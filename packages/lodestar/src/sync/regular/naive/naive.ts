@@ -119,8 +119,8 @@ export class NaiveRegularSync implements IRegularSync {
     );
     if(blocks.length > 0) {
       const startBlockHeader = blockToHeader(
-          this.config,
-          (await this.db.block.get(blocks[0].message.parentRoot.valueOf() as Uint8Array)).message
+        this.config,
+        (await this.db.block.get(blocks[0].message.parentRoot.valueOf() as Uint8Array)).message
       );
       if(isValidChainOfBlocks(this.config, startBlockHeader, blocks)) {
         this.logger.info(`Processing blocks for slots ${currentSlot}...${this.targetSlot}`);
