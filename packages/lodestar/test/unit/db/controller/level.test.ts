@@ -77,6 +77,28 @@ describe("LevelDB controller", () => {
     expect(result.length).to.be.equal(2);
   });
 
+  it("test search stream", async () => {
+    await db.batchPut([
+      {
+        key: "search1",
+        value: "value"
+      },
+      {
+        key: "search2",
+        value: "value"
+      }
+    ]);
+    const resultStream = db.searchStream({
+      gt: "search0",
+      lt: "search99"
+    });
+    const result = [];
+    for await (const item of resultStream) {
+      result.push(item);
+    }
+    expect(result.length).to.be.equal(2);
+  });
+
   it("test batch delete", async () => {
     await db.batchPut([
       {

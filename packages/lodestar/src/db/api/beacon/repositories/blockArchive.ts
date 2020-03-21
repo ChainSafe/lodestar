@@ -3,6 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BulkRepository} from "../repository";
 import {IDatabaseController} from "../../../controller";
 import {Bucket, encodeKey} from "../../../schema";
+import {isEligibleBlock} from "./util";
 
 /**
  * Stores finalized blocks. Block slot is identifier.
@@ -34,20 +35,31 @@ export class BlockArchiveRepository extends BulkRepository<SignedBeaconBlock> {
     upperLimit: number | null,
     step: number | null = 1
   ): Promise<SignedBeaconBlock[]> {
+    const result = [];
+    for await (const signedBlock of this.getAllBetweenStream(lowerLimit, upperLimit, step)) {
+      result.push(signedBlock);
+    }
+    return result;
+  }
+
+  public getAllBetweenStream(
+    lowerLimit: number | null,
+    upperLimit: number | null,
+    step: number | null = 1
+  ): AsyncIterable<SignedBeaconBlock> {
     const safeLowerLimit = lowerLimit || Buffer.alloc(0);
     const safeUpperLimit = upperLimit || Number.MAX_SAFE_INTEGER;
-    const data = await this.db.search({
+    const dataStream = this.db.searchStream({
       gt: encodeKey(this.bucket, safeLowerLimit),
       lt: encodeKey(this.bucket, safeUpperLimit),
     });
-    return (data || [])
-      .map((datum) => this.type.deserialize(datum))
-      .filter(signedBlock => {
-        if (step !== null && typeof safeLowerLimit === "number") {
-          return signedBlock.message.slot >= safeLowerLimit && (signedBlock.message.slot - safeLowerLimit) % step === 0;
-        } else {
-          return true;
+    const deserialize = this.type.deserialize;
+    return (async function * () {
+      for await (const data of dataStream) {
+        if (isEligibleBlock(deserialize(data), step, safeLowerLimit)) {
+          yield data;
         }
-      });
+      }
+    })();
   }
 }

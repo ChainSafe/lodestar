@@ -3,33 +3,9 @@
  * @module chain/forkChoice
  */
 
-import {Gwei, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {RootHex, AggregatedAttestation, ForkChoiceAttestation} from "./interface";
 
-
-/**
- * Root is a block root as a hex string
- *
- * Used here for light weight and easy comparison
- */
-export type RootHex = string;
-
-/**
- * Minimal representation of attsetation for the purposes of fork choice
- */
-export interface ForkChoiceAttestation {
-  target: RootHex;
-  attester: ValidatorIndex;
-  weight: Gwei;
-}
-
-/**
- * Attestation aggregated across participants
- */
-export interface AggregatedAttestation {
-  target: RootHex;
-  weight: Gwei;
-  prevWeight: Gwei;
-}
 
 /**
  * Keep track of the latest attestations per validator

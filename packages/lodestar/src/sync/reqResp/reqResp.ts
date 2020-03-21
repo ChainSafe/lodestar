@@ -119,7 +119,7 @@ export class SyncReqResp implements ISyncReqResp {
     const state = await this.db.state.get(headBlock.message.stateRoot.valueOf() as Uint8Array);
     // peer is on a different fork version
     return !this.config.types.Version.equals(state.fork.currentVersion, request.headForkVersion);
-    
+
     //TODO: fix this, doesn't work if we are starting sync(archive is empty) or we don't have finalized epoch
     // const startSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
     // const startBlock = await this.db.blockArchive.get(startSlot);
@@ -148,12 +148,12 @@ export class SyncReqResp implements ISyncReqResp {
     request: BeaconBlocksByRangeRequest
   ): Promise<void> {
     try {
-      const responses: SignedBeaconBlock[] = [];
-      const blocks = await this.db.blockArchive.getAllBetween(
+      const blockIter = this.db.blockArchive.getAllBetweenStream(
         request.startSlot - 1,
         request.startSlot + request.count,
         request.step
       );
+      this.network.reqResp.sendResponseStream(id, null, blockIter);
       responses.push(...blocks);
       if(blocks.length < request.count) {
         for(
@@ -178,14 +178,16 @@ export class SyncReqResp implements ISyncReqResp {
     request: BeaconBlocksByRootRequest
   ): Promise<void> {
     try {
-      const response: SignedBeaconBlock[] = [];
-      for (const blockRoot of request) {
-        const block = await this.db.block.get(blockRoot.valueOf() as Uint8Array);
-        if (block) {
-          response.push(block);
+      const getBlock = this.db.block.get;
+      const blockGenerator = async function* () {
+        for (const blockRoot of request) {
+          const block = await getBlock(blockRoot.valueOf() as Uint8Array);
+          if (block) {
+            yield block;
+          }
         }
-      }
-      this.network.reqResp.sendResponse(id, null, response);
+      }();
+      this.network.reqResp.sendResponseStream(id, null, blockGenerator);
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);
     }

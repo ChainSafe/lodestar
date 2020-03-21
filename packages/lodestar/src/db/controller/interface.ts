@@ -25,6 +25,13 @@ export interface IDatabaseController extends EventEmitter{
   search(opts: ISearchOptions): Promise<any[]>;
 
   /**
+   * Similar to search but returns data chunk asap instead of waiting for the whole
+   * data array to return.
+   * @param opts 
+   */
+  searchStream(opts: ISearchOptions): AsyncIterable<any>;
+
+  /**
    * Should insert or update
    * @param key
    * @param value
