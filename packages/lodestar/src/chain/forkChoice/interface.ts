@@ -1,22 +1,30 @@
+/* eslint-disable @typescript-eslint/interface-name-prefix */
 /**
  * @module chain/forkChoice
  */
 
-import {Gwei, Slot, ValidatorIndex, Checkpoint} from "@chainsafe/lodestar-types";
+import {Gwei, ValidatorIndex, Checkpoint, Slot} from "@chainsafe/lodestar-types";
 
 
 export interface ILMDGHOST {
   start(genesisTime: number): Promise<void>;
   stop(): Promise<void>;
-  addBlock(
-    slot: Slot,
-    blockRootBuf: Uint8Array,
-    parentRootBuf: Uint8Array,
-    justifiedCheckpoint: Checkpoint,
-    finalizedCheckpoint: Checkpoint
-  ): void;
+  addBlock(info: BlockChainInfo): void;
   addAttestation(blockRootBuf: Uint8Array, attester: ValidatorIndex, weight: Gwei): void;
   head(): Uint8Array;
+  headStateRoot(): Uint8Array;
   getJustified(): Checkpoint;
   getFinalized(): Checkpoint;
+}
+
+/*
+ * Info of Block and Chain for forkchoice
+ */
+export interface BlockChainInfo {
+  slot: Slot;
+  blockRootBuf: Uint8Array;
+  parentRootBuf: Uint8Array;
+  stateRootBuf: Uint8Array;
+  justifiedCheckpoint: Checkpoint;
+  finalizedCheckpoint: Checkpoint;
 }

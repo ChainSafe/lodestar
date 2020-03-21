@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
-import {Slot, Epoch, ValidatorIndex, Gwei} from "@chainsafe/lodestar-types";
+import {Slot, ValidatorIndex, Gwei, Root, Epoch} from "@chainsafe/lodestar-types";
 import {Node} from "./lmdGhost";
 
 /**
@@ -11,6 +11,7 @@ export interface NodeInfo {
   parent: Node;
   justifiedCheckpoint: HexCheckpoint;
   finalizedCheckpoint: HexCheckpoint;
+  stateRoot: Root;
 }
 
 /**

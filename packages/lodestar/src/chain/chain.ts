@@ -222,8 +222,14 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       root: blockRoot,
       epoch: computeEpochAtSlot(this.config, genesisBlock.slot)
     };
-    this.forkChoice.addBlock(genesisBlock.slot, blockRoot, Buffer.alloc(32),
-      justifiedFinalizedCheckpoint, justifiedFinalizedCheckpoint);
+    this.forkChoice.addBlock({
+      slot: genesisBlock.slot, 
+      blockRootBuf: blockRoot, 
+      stateRootBuf: stateRoot,
+      parentRootBuf: Buffer.alloc(32),
+      justifiedCheckpoint: justifiedFinalizedCheckpoint,
+      finalizedCheckpoint: justifiedFinalizedCheckpoint,
+    });
     this.logger.info("Beacon chain initialized");
   }
 
@@ -299,13 +305,14 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.db.state.set(signedBlock.message.stateRoot.valueOf() as Uint8Array, newState),
       this.db.block.set(blockRoot, signedBlock),
     ]);
-    this.forkChoice.addBlock(
-      signedBlock.message.slot,
-      blockRoot,
-      signedBlock.message.parentRoot.valueOf() as Uint8Array,
-      newState.currentJustifiedCheckpoint,
-      newState.finalizedCheckpoint
-    );
+    this.forkChoice.addBlock({
+      slot: signedBlock.message.slot,
+      blockRootBuf: blockRoot,
+      stateRootBuf: signedBlock.message.stateRoot.valueOf() as Uint8Array,
+      parentRootBuf: signedBlock.message.parentRoot.valueOf() as Uint8Array,
+      justifiedCheckpoint: newState.currentJustifiedCheckpoint,
+      finalizedCheckpoint: newState.finalizedCheckpoint
+    });
     await this.applyForkChoiceRule();
     await this.updateDepositMerkleTree(newState);
     // update metrics
