@@ -15,12 +15,9 @@ import {config} from "@chainsafe/lodestar-config/src/presets/minimal";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import sinon from "sinon";
 import {ReqResp} from "../../../../src/network/reqResp";
-// @ts-ignore
 import PeerId from "peer-id";
-// @ts-ignore
 import PeerInfo from "peer-info";
-import { generateState } from "../../../utils/state";
-import { GENESIS_EPOCH } from "../../../../src/constants/constants";
+import {generateState} from "../../../utils/state";
 
 describe("sync utils", function () {
    
@@ -64,18 +61,18 @@ describe("sync utils", function () {
     it("should return chunks of block range", function () {
       const result = chunkify(10, 0, 30);
       expect(result.length).to.be.equal(3);
-      expect(result[0].start).to.be.equal(1);
-      expect(result[0].end).to.be.equal(10);
-      expect(result[1].start).to.be.equal(11);
-      expect(result[1].end).to.be.equal(20);
-      expect(result[2].start).to.be.equal(21);
-      expect(result[2].end).to.be.equal(30);
+      expect(result[0].start).to.be.equal(0);
+      expect(result[0].end).to.be.equal(9);
+      expect(result[1].start).to.be.equal(10);
+      expect(result[1].end).to.be.equal(19);
+      expect(result[2].start).to.be.equal(20);
+      expect(result[2].end).to.be.equal(29);
     });
 
     it("should return chunks of block range - not rounded", function () {
       const result = chunkify(10, 0, 25);
       expect(result.length).to.be.equal(3);
-      expect(result[2].start).to.be.equal(21);
+      expect(result[2].start).to.be.equal(20);
       expect(result[2].end).to.be.equal(25);
     });
   });

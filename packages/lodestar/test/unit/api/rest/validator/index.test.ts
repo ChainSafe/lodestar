@@ -45,6 +45,7 @@ describe("Test validator rest API", function () {
     gossip: {
       publishAggregatedAttestation: sinon.stub(),
       publishCommiteeAttestation: sinon.stub(),
+      publishBlock: sinon.stub(),
     }
   };
 
@@ -154,6 +155,7 @@ describe("Test validator rest API", function () {
   it("should publish block", async function () {
     const block = {message: generateEmptyBlock(), signature: Buffer.alloc(96)};
     chain.receiveBlock.resolves();
+    network.gossip.publishBlock.resolves();
     await supertest(restApi.server.server)
       .post(
         "/validator/block",

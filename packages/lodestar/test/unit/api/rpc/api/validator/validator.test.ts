@@ -36,7 +36,8 @@ describe("validator rpc api", function () {
     chainStub.forkChoice = forkChoiceStub;
     networkStub = {
       gossip: {
-        publishCommiteeAttestation: sandbox.stub()
+        publishCommiteeAttestation: sandbox.stub(),
+        publishBlock: sandbox.stub()
       }
     };
     chainStub.config = config;
