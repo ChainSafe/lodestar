@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/interface-name-prefix */
 /**
  * @module chain/forkChoice
  */
 
-import {Gwei, ValidatorIndex, Checkpoint} from "@chainsafe/lodestar-types";
-import {BlockChainInfo} from "./statefulDag/interface";
+import {Gwei, ValidatorIndex, Checkpoint, Slot} from "@chainsafe/lodestar-types";
 
 
 export interface ILMDGHOST {
@@ -15,4 +15,16 @@ export interface ILMDGHOST {
   headStateRoot(): Uint8Array;
   getJustified(): Checkpoint;
   getFinalized(): Checkpoint;
+}
+
+/*
+ * Info of Block and Chain for forkchoice
+ */
+export interface BlockChainInfo {
+  slot: Slot;
+  blockRootBuf: Uint8Array;
+  parentRootBuf: Uint8Array;
+  stateRootBuf: Uint8Array;
+  justifiedCheckpoint: Checkpoint;
+  finalizedCheckpoint: Checkpoint;
 }

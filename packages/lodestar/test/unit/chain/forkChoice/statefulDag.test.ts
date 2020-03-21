@@ -1,9 +1,9 @@
-import { assert } from "chai";
+import {assert} from "chai";
 
-import { StatefulDagLMDGHOST } from "../../../../src/chain/forkChoice/statefulDag/lmdGhost";
-import { config } from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import sinon, { SinonFakeTimers } from "sinon";
-import { Checkpoint, Slot } from "@chainsafe/lodestar-types";
+import {StatefulDagLMDGHOST} from "../../../../src/chain/forkChoice/statefulDag/lmdGhost";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import sinon, {SinonFakeTimers} from "sinon";
+import {Checkpoint, Slot} from "@chainsafe/lodestar-types";
 
 describe("StatefulDagLMDGHOST", () => {
   const genesis = Buffer.from("genesis");
@@ -180,7 +180,7 @@ describe("StatefulDagLMDGHOST", () => {
 
   it("should update justified block initially", () => {
     const lmd = new StatefulDagLMDGHOST(config);
-    addBlock(lmd, 1, blockA, stateA, genesis, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
+    // addBlock(lmd, 1, blockA, stateA, genesis, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     assert(lmd.shouldUpdateJustifiedCheckpoint(blockA) === true, "should return true");
   });
 
@@ -220,8 +220,8 @@ describe("StatefulDagLMDGHOST", () => {
   it("should not update justified block after SAFE_SLOTS_TO_UPDATE_JUSTIFIED - 2", () => {
     const lmd = new StatefulDagLMDGHOST(config);
     addBlock(lmd, 1, blockA, stateA, genesis, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
-    addBlock(lmd, 2, blockB, stateB, blockA, {root: blockB, epoch: 0}, {root: blockB, epoch: 0});
-    addBlock(lmd, 3, blockC, stateC, blockA, {root: blockB, epoch: 0}, {root: blockB, epoch: 0});
+    addBlock(lmd, 2, blockB, stateB, blockA, {root: blockB, epoch: 1}, {root: blockB, epoch: 1});
+    addBlock(lmd, 3, blockC, stateC, blockA, {root: blockB, epoch: 1}, {root: blockB, epoch: 1});
     const genesisTime = Math.floor(Date.now() / 1000) - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
     lmd.start(genesisTime);
     // c is a conflicted justified block.
@@ -271,6 +271,8 @@ describe("StatefulDagLMDGHOST", () => {
     lmd.addAttestation(blockE, 2, 3n);
     // e branch is used to be not eligible for bestTarget but now it's good thanks for h
     assert.deepEqual(lmd.head(), blockH, "h should be the head because e has more votes");
+    const headStateRoot = lmd.headStateRoot();
+    assert.deepEqual(headStateRoot, stateH);
   });
 
   /**
@@ -286,24 +288,26 @@ describe("StatefulDagLMDGHOST", () => {
    */
   it("should switch best target - bad best target has bad sibling too", () => {
     const lmd = new StatefulDagLMDGHOST(config);
-    addBlock(lmd, 1, blockA, stateA, genesis, {root: a, epoch: 0}, {root: blockA, epoch: 0});
-    addBlock(lmd, 2, b, blockA, {root: b, epoch: 1}, {root: blockA, epoch: 0});
-    addBlock(lmd, 3, c, b, {root: b, epoch: 1}, {root: blockA, epoch: 0});
-    addBlock(lmd, 4, d, c, {root: b, epoch: 1}, {root: blockA, epoch: 0});
-    addBlock(lmd, 5, e, d, {root: b, epoch: 1}, {root: blockA, epoch: 0});
-    addBlock(lmd, 6, f, d, {root: b, epoch: 1}, {root: blockA, epoch: 0});
+    addBlock(lmd, 1, blockA, stateA, genesis, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
+    addBlock(lmd, 2, blockB, stateB, blockA, {root: blockB, epoch: 1}, {root: blockA, epoch: 0});
+    addBlock(lmd, 3, blockC, stateC, blockB, {root: blockB, epoch: 1}, {root: blockA, epoch: 0});
+    addBlock(lmd, 4, blockD, stateD, blockC, {root: blockB, epoch: 1}, {root: blockA, epoch: 0});
+    addBlock(lmd, 5, blockE, stateE, blockD, {root: blockB, epoch: 1}, {root: blockA, epoch: 0});
+    addBlock(lmd, 6, blockF, stateF, blockD, {root: blockB, epoch: 1}, {root: blockA, epoch: 0});
     // add vote for e
-    lmd.addAttestation(e, 1, 3n);
-    assert.deepEqual(lmd.head(), e, "e should be the head initially");
+    lmd.addAttestation(blockE, 1, 3n);
+    assert.deepEqual(lmd.head(), blockE, "e should be the head initially");
 
     // g is added with conflict epochs
-    lmd.addBlock(7, g, c, {root: c, epoch: 2}, {root: b, epoch: 1});
-    assert.deepEqual(lmd.head(), g, "g should be the head because it has correct epochs");
+    addBlock(lmd, 7, blockG, stateG, blockC, {root: blockC, epoch: 2}, {root: blockB, epoch: 1});
+    assert.deepEqual(lmd.head(), blockG, "g should be the head because it has correct epochs");
 
     // h is added with good epochs
-    lmd.addBlock(8, h, e, {root: c, epoch: 2}, {root: b, epoch: 1});
+    addBlock(lmd, 8, blockH, stateH, blockE, {root: blockC, epoch: 2}, {root: blockB, epoch: 1});
     // since we voted for e already, h should be the new head
-    assert.deepEqual(lmd.head(), h, "h should be the head because e was voted");
+    assert.deepEqual(lmd.head(), blockH, "h should be the head because e was voted");
+    const headStateRoot = lmd.headStateRoot();
+    assert.deepEqual(headStateRoot, stateH);
   });
 
   /**
@@ -338,5 +342,7 @@ describe("StatefulDagLMDGHOST", () => {
     // add vote for e
     lmd.addAttestation(blockE, 2, 6n);
     assert.deepEqual(lmd.head(), blockI, "i should be the head");
+    const headStateRoot = lmd.headStateRoot();
+    assert.deepEqual(headStateRoot, stateI);
   });
 });

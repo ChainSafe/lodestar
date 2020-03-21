@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
-import {Slot, ValidatorIndex, Gwei, Root, Epoch, Checkpoint} from "@chainsafe/lodestar-types";
+import {Slot, ValidatorIndex, Gwei, Root, Epoch} from "@chainsafe/lodestar-types";
 import {Node} from "./lmdGhost";
 
 /**
@@ -46,16 +46,4 @@ export interface AggregatedAttestation {
 export interface HexCheckpoint {
   rootHex: RootHex;
   epoch: Epoch;
-}
-
-/*
- * Info of Block and Chain for forkchoice
- */
-export interface BlockChainInfo {
-  slot: Slot;
-  blockRootBuf: Uint8Array;
-  parentRootBuf: Uint8Array;
-  stateRootBuf: Uint8Array;
-  justifiedCheckpoint: Checkpoint;
-  finalizedCheckpoint: Checkpoint;
 }
