@@ -23,6 +23,7 @@ import {INetwork} from "../../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ISyncOptions, ISyncReqResp} from "./interface";
 import {ReputationStore} from "../IReputation";
+import {BlockRepository} from "../../db/api/beacon/repositories";
 
 export interface ISyncReqRespModules {
   config: IBeaconConfig;
@@ -148,26 +149,13 @@ export class SyncReqResp implements ISyncReqResp {
     request: BeaconBlocksByRangeRequest
   ): Promise<void> {
     try {
-      const blockIter = this.db.blockArchive.getAllBetweenStream(
+      const archiveBlocksStream = this.db.blockArchive.getAllBetweenStream(
         request.startSlot - 1,
         request.startSlot + request.count,
         request.step
       );
-      this.network.reqResp.sendResponseStream(id, null, blockIter);
-      responses.push(...blocks);
-      if(blocks.length < request.count) {
-        for(
-          let i = request.startSlot;
-          i <= (request.startSlot + request.count) && responses.length < request.count;
-          i += request.step
-        ) {
-          const block = await this.db.block.getBlockBySlot(i);
-          if(block) {
-            responses.push(block);
-          }
-        }
-      }
-      this.network.reqResp.sendResponse(id, null, responses);
+      const responseStream = this.injectRecentBlocks(archiveBlocksStream, this.db.block, request);
+      this.network.reqResp.sendResponseStream(id, null, responseStream);
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);
     }
@@ -232,6 +220,30 @@ export class SyncReqResp implements ISyncReqResp {
         this.reps.get(peerInfo.id.toB58String()).latestStatus = await this.network.reqResp.status(peerInfo, request);
       } catch (e) {
         this.logger.error(e);
+      }
+    }
+  };
+
+  private injectRecentBlocks = async function* (
+    archiveStream: AsyncIterable<SignedBeaconBlock>,
+    blockDb: BlockRepository,
+    request: BeaconBlocksByRangeRequest
+  ): AsyncIterable<SignedBeaconBlock> {
+    let count = 0;
+    for await(const archiveBlock of archiveStream) {
+      count++;
+      yield archiveBlock;
+    }
+    if(count < request.count) {
+      for(
+        let i = request.startSlot;
+        i <= (request.startSlot + request.count) && count < request.count;
+        i += request.step
+      ) {
+        const block = await blockDb.getBlockBySlot(i);
+        if(block) {
+          yield block;
+        }
       }
     }
   };
