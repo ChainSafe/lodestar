@@ -3,15 +3,35 @@
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 ![ETH2.0_Spec_Version 0.9.4](https://img.shields.io/badge/ETH2.0_Spec_Version-0.9.4-2e86c1.svg)
 
-Typescript imlementation of the Eth2.0 beacon chain
+
+## Prerequisites
+
+* [Lerna](https://github.com/lerna/lerna)
+* [Yarn](https://yarnpkg.com/)
+
+
 
 ## What you need
 You will need to go over the [specification](https://github.com/ethereum/lodestar-specs). You will also need to have a [basic understanding of sharding](https://github.com/ethereum/wiki/wiki/Sharding-FAQs). Note that that the specification is an ongoing document and will get outdated. The reference implementation by the Ethereum development team is written in Python and can be found [here](https://github.com/ethereum/beacon_chain).
 
-## Usage
-1. If you haven't `yarn install`
-2. `lerna run build`
-3. `./packages/lodestar-cli/bin/lodestar --help`
+## Getting Started
+
+To get an instance of Lodestar up & running, start a terminal from the root of the this repo:
+
+1. Install dependencies accross all packages:
+```
+yarn install
+```
+
+2. Run the build script:
+```
+yarn run build
+```
+
+3. Lodestar should now be ready for use:
+```
+yarn run cli --help
+```
 
 Note:
 

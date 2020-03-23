@@ -12,7 +12,7 @@ Welcome to the ChainSafe lodestar monorepo!
 This repository contains a suite of Ethereum 2.0 packages.
 
 ## Index
-* [Tl;Dr](#tl-dr)
+* [Tl;Dr](#tldr)
 * [Prerequisites](#prerequisites)
 * [Getting Started](#getting-started)
 * [Contributors](#contributors)
