@@ -4,17 +4,8 @@
 
 import assert from "assert";
 import {EventEmitter} from "events";
-import {fromHexString, toHexString, TreeBacked, List} from "@chainsafe/ssz";
-import {
-  Attestation,
-  BeaconState,
-  Root,
-  SignedBeaconBlock,
-  Slot,
-  Uint16,
-  Uint64,
-  Validator,
-} from "@chainsafe/lodestar-types";
+import {fromHexString, List, toHexString, TreeBacked} from "@chainsafe/ssz";
+import {Attestation, BeaconState, Root, SignedBeaconBlock, Uint16, Uint64, Validator,} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {EMPTY_SIGNATURE, GENESIS_SLOT} from "../constants";
 import {IBeaconDb} from "../db";
@@ -27,7 +18,6 @@ import {
   computeStartSlotAtEpoch,
   getCurrentSlot,
   isActiveValidator,
-  processSlots,
   stateTransition
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
@@ -96,6 +86,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   public async start(): Promise<void> {
+    this.logger.verbose("asokdoasjdiajsdijas");
     const state = this.latestState || await this.db.state.getLatest();
     this.forkChoice.start(state.genesisTime);
     // if state doesn't exist in the db, the chain maybe hasn't started
@@ -145,11 +136,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       `at slot ${signedBlock.message.slot}. Current state slot ${this.latestState.slot}`
     );
 
-    if (!await this.db.block.has(signedBlock.message.parentRoot.valueOf() as Uint8Array)) {
-      this.logger.warn(`Block ${blockHash} existed already, no need to process it.`);
-      return;
-    }
-
     if (await this.db.block.has(blockHash)) {
       this.logger.warn(`Block ${hexBlockHash} existed already, no need to process it.`);
       return;
@@ -164,21 +150,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     }
 
     this.blockProcessingQueue.add({signedBlock, trusted});
-  }
-
-  public async advanceState(slot?: Slot): Promise<void> {
-    const targetSlot = slot || getCurrentSlot(this.config, this.latestState.genesisTime);
-    this.logger.info(`Manually advancing slot from state slot ${this.latestState.slot} to ${targetSlot} `);
-    const state = this.latestState;
-
-    try {
-      processSlots(this.config, state, targetSlot);
-    } catch (e) {
-      this.logger.warn(`Failed to advance slot mannually because ${e.message}`);
-    }
-    this.latestState = state;
-    await this.db.state.add(state);
-    await this.db.chain.setLatestStateRoot(this.config.types.BeaconState.hashTreeRoot(state));
   }
 
   public async applyForkChoiceRule(): Promise<void> {
@@ -248,6 +219,14 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   private processBlock = async (job: IBlockProcessJob, blockHash: Root): Promise<void> => {
     const parentBlock = await this.db.block.get(job.signedBlock.message.parentRoot.valueOf() as Uint8Array);
+    if (!parentBlock) {
+      this.logger.warn(`Block(${toHexString(blockHash)}) at slot ${job.signedBlock.message.slot} `
+          + ` is missing parent block (${toHexString(job.signedBlock.message.parentRoot)}).`
+      );
+      this.emit("unknownBlockRoot", job.signedBlock.message.parentRoot.valueOf() as Uint8Array);
+      setTimeout((queue) => queue.add(job), 1000, this.blockProcessingQueue);
+      return;
+    }
     const pre = await this.db.state.get(parentBlock.message.stateRoot.valueOf() as Uint8Array);
     const isValidBlock = await this.isValidBlock(pre, job.signedBlock);
     assert(isValidBlock);

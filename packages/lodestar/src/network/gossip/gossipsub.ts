@@ -1,12 +1,17 @@
 import assert from "assert";
-import {utils} from "libp2p-pubsub";
 import Gossipsub, {IGossipMessage, Options, Registrar} from "libp2p-gossipsub";
-import {hash, Type} from "@chainsafe/ssz";
+import {Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
-import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator} from "./interface";
-import {getGossipTopic, getSubnetFromAttestationSubnetTopic, isAttestationSubnetTopic} from "./utils";
+import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator, ILodestarGossipMessage} from "./interface";
+import {
+  getGossipTopic,
+  getMessageId,
+  getSubnetFromAttestationSubnetTopic,
+  isAttestationSubnetTopic,
+  normalizeInRpcMessage
+} from "./utils";
 import {GossipEvent} from "./constants";
 import {GOSSIP_MAX_SIZE} from "../../constants";
 
@@ -47,22 +52,13 @@ export class LodestarGossipsub extends Gossipsub {
     await super.stop();
   }
 
-  // Override message-id
-  public _publish(messages: IGossipMessage[]): void {
-    messages.forEach((message) => {
-      const sha256Hash = hash(message.data);
-      message["message-id"] = Buffer.from(sha256Hash).toString("base64");
-    });
-    super._publish(messages);
-  }
-
   public async validate(rawMessage: IGossipMessage): Promise<boolean> {
-    const message: IGossipMessage = utils.normalizeInRpcMessage(rawMessage);
+    const message: ILodestarGossipMessage = normalizeInRpcMessage(rawMessage);
     assert(message.topicIDs && message.topicIDs.length === 1, `Invalid topicIDs: ${message.topicIDs}`);
     assert(message.data.length <= GOSSIP_MAX_SIZE, `Message exceeds size limit of ${GOSSIP_MAX_SIZE} bytes`);
     const topic = message.topicIDs[0];
     // avoid duplicate
-    if (this.transformedObjects.get(message["message-id"])) {
+    if (this.transformedObjects.get(message.messageId)) {
       return false;
     }
 
@@ -78,7 +74,7 @@ export class LodestarGossipsub extends Gossipsub {
       this.logger.error(`Cannot validate message from ${message.from}, topic ${message.topicIDs}, error: ${err}`);
     }
     if (isValid && transformedObj) {
-      this.transformedObjects.set(message["message-id"], {createdAt: new Date(), object: transformedObj});
+      this.transformedObjects.set(message.messageId, {createdAt: new Date(), object: transformedObj});
     }
     return isValid;
   }
@@ -87,9 +83,9 @@ export class LodestarGossipsub extends Gossipsub {
     const subscribedTopics = super.getTopics();
     topics.forEach((topic) => {
       if (subscribedTopics.includes(topic)) {
-        const transformedObj = this.transformedObjects.get(message["message-id"]).object;
-        if (transformedObj) {
-          super.emit(topic, transformedObj);
+        const transformedObj = this.transformedObjects.get(getMessageId(message));
+        if (transformedObj && transformedObj.object) {
+          super.emit(topic, transformedObj.object);
         }
       }
     });

@@ -2,8 +2,8 @@ import {describe} from "mocha";
 import mockery from "mockery";
 import program from "commander";
 
-import chai, {expect} from 'chai';
-import chaiAsPromised from 'chai-as-promised';
+import chai, {expect} from "chai";
+import chaiAsPromised from "chai-as-promised";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import sinon from "sinon";
 
@@ -12,7 +12,7 @@ chai.use(chaiAsPromised);
 
 describe("[CLI] interop", function() {
   this.timeout(0);
-  let logger: ILogger = new WinstonLogger();
+  const logger: ILogger = new WinstonLogger();
   logger.silent = true;
   let DevCommand: any;
 
@@ -45,6 +45,6 @@ describe("[CLI] interop", function() {
           multiaddrs: ","
         }, logger
       )
-    ).to.be.rejectedWith(Error, "Missing either --quickstart or --genesisTime and --validatorCount flag");
+    ).to.be.rejectedWith(Error, "Missing either --genesisState or --validatorCount flag");
   });
 });

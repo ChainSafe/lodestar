@@ -21,9 +21,9 @@ export async function savePeerId(path: string, peerId: PeerId): Promise<void> {
 /**
  * Load a peer id from disk
  */
-export async function loadPeerId(path: string): Promise<PeerId> {
+export async function loadPeerIdFromJsonFile(path: string): Promise<PeerId> {
   const data = fs.readFileSync(path, "utf-8");
-  return await promisify(PeerId.createFromJSON)(JSON.parse(data)) as PeerId;
+  return await PeerId.createFromJSON(JSON.parse(data));
 }
 
 /**
