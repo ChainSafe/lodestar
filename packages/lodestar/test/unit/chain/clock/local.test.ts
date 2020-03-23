@@ -1,15 +1,22 @@
 import {describe, it} from "mocha";
 import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import sinon from "sinon";
+import sinon, { SinonFakeTimers } from "sinon";
 import {expect} from "chai";
 
 describe("LocalClock", function() {
 
-  const sandbox = sinon.createSandbox();
+  let realClock: SinonFakeTimers;
+
+  beforeEach(() => {
+    realClock = sinon.useFakeTimers();
+  });
+
+  afterEach(() => {
+    realClock.restore();
+  });
 
   it("Should notify on new slot", async function () {
-    const realClock = sandbox.useFakeTimers();
     const clock = new LocalClock(config, Math.round(new Date().getTime() / 1000));
     const spy = sinon.spy();
     clock.onNewSlot(spy);
@@ -20,7 +27,6 @@ describe("LocalClock", function() {
   });
 
   it("Should notify on new epoch", async function () {
-    const realClock = sandbox.useFakeTimers();
     const clock = new LocalClock(config, Math.round(new Date().getTime() / 1000));
     const spy = sinon.spy();
     clock.onNewEpoch(spy);
