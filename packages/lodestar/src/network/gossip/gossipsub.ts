@@ -1,19 +1,20 @@
 import assert from "assert";
 import Gossipsub, {IGossipMessage, Options, Registrar} from "libp2p-gossipsub";
-import {Type} from "@chainsafe/ssz";
+import {Type, hash} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator, ILodestarGossipMessage} from "./interface";
 import {
   getGossipTopic,
-  getMessageId,
   getSubnetFromAttestationSubnetTopic,
   isAttestationSubnetTopic,
   normalizeInRpcMessage
 } from "./utils";
 import {GossipEvent} from "./constants";
 import {GOSSIP_MAX_SIZE} from "../../constants";
+
+const msgIdFn = (message: IGossipMessage): string => Buffer.from(hash(message.data)).toString("base64");
 
 /**
  * This validates messages in Gossipsub and emit the transformed messages.
@@ -29,7 +30,7 @@ export class LodestarGossipsub extends Gossipsub {
 
   constructor (config: IBeaconConfig, validator: IGossipMessageValidator, logger: ILogger, peerInfo: PeerInfo,
     registrar: Registrar, options: Options = {}) {
-    super(peerInfo, registrar, options);
+    super(peerInfo, registrar, Object.assign(options, {msgIdFn}));
     this.transformedObjects = new Map();
     this.config = config;
     this.validator = validator;
@@ -58,7 +59,7 @@ export class LodestarGossipsub extends Gossipsub {
     assert(message.data.length <= GOSSIP_MAX_SIZE, `Message exceeds size limit of ${GOSSIP_MAX_SIZE} bytes`);
     const topic = message.topicIDs[0];
     // avoid duplicate
-    if (this.transformedObjects.get(message.messageId)) {
+    if (this.transformedObjects.get(msgIdFn(message))) {
       return false;
     }
 
@@ -74,7 +75,7 @@ export class LodestarGossipsub extends Gossipsub {
       this.logger.error(`Cannot validate message from ${message.from}, topic ${message.topicIDs}, error: ${err}`);
     }
     if (isValid && transformedObj) {
-      this.transformedObjects.set(message.messageId, {createdAt: new Date(), object: transformedObj});
+      this.transformedObjects.set(msgIdFn(message), {createdAt: new Date(), object: transformedObj});
     }
     return isValid;
   }
@@ -83,7 +84,7 @@ export class LodestarGossipsub extends Gossipsub {
     const subscribedTopics = super.getTopics();
     topics.forEach((topic) => {
       if (subscribedTopics.includes(topic)) {
-        const transformedObj = this.transformedObjects.get(getMessageId(message));
+        const transformedObj = this.transformedObjects.get(msgIdFn(message));
         if (transformedObj && transformedObj.object) {
           super.emit(topic, transformedObj.object);
         }
