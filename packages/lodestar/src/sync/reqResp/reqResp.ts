@@ -166,10 +166,12 @@ export class SyncReqResp implements ISyncReqResp {
     request: BeaconBlocksByRootRequest
   ): Promise<void> {
     try {
-      const getBlock = this.db.block.get;
+      const getBlock = this.db.block.get.bind(this.db.block);
+      const getBlockArchieve = this.db.blockArchive.get.bind(this.db.blockArchive);
       const blockGenerator = async function* () {
         for (const blockRoot of request) {
-          const block = await getBlock(blockRoot.valueOf() as Uint8Array);
+          const root = blockRoot.valueOf() as Uint8Array;
+          const block = await getBlock(root) || await getBlockArchieve(root);
           if (block) {
             yield block;
           }
