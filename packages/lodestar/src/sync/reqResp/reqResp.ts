@@ -171,7 +171,7 @@ export class SyncReqResp implements ISyncReqResp {
       const blockGenerator = async function* () {
         for (const blockRoot of request) {
           const root = blockRoot.valueOf() as Uint8Array;
-          const block = await getBlock(root) || await getBlockArchieve(root);
+          const block = await getBlock(root) || await getBlockArchive(root);
           if (block) {
             yield block;
           }
