@@ -167,7 +167,7 @@ export class SyncReqResp implements ISyncReqResp {
   ): Promise<void> {
     try {
       const getBlock = this.db.block.get.bind(this.db.block);
-      const getBlockArchieve = this.db.blockArchive.get.bind(this.db.blockArchive);
+      const getBlockArchive = this.db.blockArchive.get.bind(this.db.blockArchive);
       const blockGenerator = async function* () {
         for (const blockRoot of request) {
           const root = blockRoot.valueOf() as Uint8Array;
