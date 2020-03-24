@@ -100,7 +100,10 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
-    await this.chain.receiveBlock(signedBlock);
+    await Promise.all([
+      this.chain.receiveBlock(signedBlock),
+      this.network.gossip.publishBlock(signedBlock)
+    ]);
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {

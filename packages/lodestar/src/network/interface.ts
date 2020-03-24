@@ -18,7 +18,7 @@ import {IGossip} from "./gossip/interface";
 import {RpcError} from "./error";
 
 
-export type ResponseCallbackFn = ((response: ResponseChunk[]) => void);
+export type ResponseCallbackFn = ((responseIter: AsyncIterable<ResponseChunk>) => void);
 
 export type ResponseChunk = {err?: RpcError; output?: ResponseBody};
 
@@ -36,6 +36,7 @@ export type RespEventEmitter = StrictEventEmitter<EventEmitter, IRespEvents>;
 export interface IReqResp extends ReqEventEmitter {
   // sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T>;
   sendResponse(id: RequestId, err: Error|null, result: ResponseBody[]): void;
+  sendResponseStream(id: RequestId, err: RpcError, chunkIter: AsyncIterable<ResponseBody>): void;
 
   status(peerInfo: PeerInfo, request: Status): Promise<Status>;
   goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void>;

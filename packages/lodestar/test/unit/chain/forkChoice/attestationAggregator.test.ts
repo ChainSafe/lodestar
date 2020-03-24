@@ -2,7 +2,6 @@ import {assert} from "chai";
 
 import {
   AttestationAggregator,
-  ForkChoiceAttestation,
 } from "../../../../src/chain/forkChoice/statefulDag/attestationAggregator";
 
 

@@ -1,8 +1,14 @@
 import {EventEmitter} from "events";
 
-import {TreeBacked, List} from "@chainsafe/ssz";
+import {List, TreeBacked} from "@chainsafe/ssz";
 import {
-  Attestation, BeaconState, Checkpoint, Slot, Uint16, Uint64, Root, SignedBeaconBlock,
+  Attestation,
+  BeaconState,
+  Checkpoint,
+  Root,
+  SignedBeaconBlock,
+  Uint16,
+  Uint64,
 } from "@chainsafe/lodestar-types";
 
 import {ILMDGHOST} from "./forkChoice";
@@ -59,8 +65,6 @@ export interface IBeaconChain extends ChainEventEmitter {
    * Ensure that the block is compliant with block processing validity conditions
    */
   isValidBlock(state: BeaconState, signedBlock: SignedBeaconBlock): Promise<boolean>;
-
-  advanceState(slot?: Slot): Promise<void>;
 
   /**
    * Used for starting beacon chain with fake genesis state (dev, test, interop).
