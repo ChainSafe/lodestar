@@ -24,6 +24,7 @@ import {
   ZERO_HASH,
 } from "../../constants";
 import {
+  computeEpochAtSlot,
   getActiveValidatorIndices,
   getTemporaryBlockHeader,
   processDeposit
@@ -67,8 +68,8 @@ export function initializeBeaconStateFromEth1(
       config.params.MAX_EFFECTIVE_BALANCE
     );
     if(validator.effectiveBalance === config.params.MAX_EFFECTIVE_BALANCE) {
-      validator.activationEligibilityEpoch = config.params.GENESIS_EPOCH;
-      validator.activationEpoch = config.params.GENESIS_EPOCH;
+      validator.activationEligibilityEpoch = computeEpochAtSlot(config, config.params.GENESIS_SLOT);
+      validator.activationEpoch = computeEpochAtSlot(config, config.params.GENESIS_SLOT);
     }
   });
 
@@ -79,7 +80,7 @@ export function isValidGenesisState(config: IBeaconConfig, state: BeaconState): 
   if(state.genesisTime < config.params.MIN_GENESIS_TIME) {
     return false;
   }
-  return getActiveValidatorIndices(state, config.params.GENESIS_EPOCH).length
+  return getActiveValidatorIndices(state, computeEpochAtSlot(config, config.params.GENESIS_SLOT)).length
       >=
       config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT;
 

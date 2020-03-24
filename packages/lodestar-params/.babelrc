@@ -1,6 +1,10 @@
 {
   "extends": "../../.babelrc",
   "plugins": [
-    "convert-to-json"
+    ["babel-plugin-inline-import", {
+      "extensions": [
+        ".yaml"
+      ]
+    }]
   ]
 }

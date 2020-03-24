@@ -44,7 +44,7 @@ export function initiateValidatorExit(config: IBeaconConfig, state: BeaconState,
 
   // Set validator exit epoch and withdrawable epoch
   validator.exitEpoch = exitQueueEpoch;
-  validator.withdrawableEpoch = validator.exitEpoch + config.params.MIN_VALIDATOR_WITHDRAWAL_DELAY;
+  validator.withdrawableEpoch = validator.exitEpoch + config.params.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
 }
 
 /**
@@ -79,7 +79,7 @@ export function slashValidator(
   if (whistleblowerIndex === undefined || whistleblowerIndex === null) {
     whistleblowerIndex = proposerIndex;
   }
-  const whistleblowingReward = slashedBalance / BigInt(config.params.WHISTLEBLOWING_REWARD_QUOTIENT);
+  const whistleblowingReward = slashedBalance / BigInt(config.params.WHISTLEBLOWER_REWARD_QUOTIENT);
   const proposerReward = whistleblowingReward/ BigInt(config.params.PROPOSER_REWARD_QUOTIENT);
   increaseBalance(state, proposerIndex, proposerReward);
   increaseBalance(state, whistleblowerIndex, whistleblowingReward - proposerReward);

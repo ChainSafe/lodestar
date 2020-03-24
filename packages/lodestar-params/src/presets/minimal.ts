@@ -1,7 +1,9 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
 // @ts-ignore
 import minimalYaml from "./minimal.yaml";
-import {IBeaconParams} from "../interface";
+import {convertTypes, schema} from "../utils";
+import {typeMap} from "../types";
+import {load} from "js-yaml";
 
 
-export const params = minimalYaml as IBeaconParams;
+export const params = convertTypes(load(minimalYaml, {schema}), typeMap);
