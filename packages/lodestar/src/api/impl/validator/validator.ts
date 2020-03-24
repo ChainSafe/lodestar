@@ -80,11 +80,11 @@ export class ValidatorApi implements IValidatorApi {
     slot: Slot,
   ): Promise<Attestation> {
     try {
-      const [headBlock, validatorIndex] = await Promise.all([
+      const [headBlock, headState, validatorIndex] = await Promise.all([
         this.db.block.get(this.chain.forkChoice.head()),
+        this.db.state.get(this.chain.forkChoice.headStateRoot()),
         this.db.getValidatorIndex(validatorPubKey)
       ]);
-      const headState = await this.db.state.get(headBlock.message.stateRoot.valueOf() as Uint8Array);
       processSlots(this.config, headState, slot);
       return await assembleAttestation(
         {config: this.config, db: this.db},
@@ -114,8 +114,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getProposerDuties(epoch: Epoch): Promise<Map<Slot, BLSPubkey>> {
-    const block = await this.db.block.get(this.chain.forkChoice.head());
-    const state = await this.db.state.get(block.message.stateRoot.valueOf() as Uint8Array);
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
     assert(epoch >= 0 && epoch <= computeEpochAtSlot(this.config, state.slot) + 2);
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
     if(state.slot < startSlot) {
@@ -131,8 +130,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<ValidatorDuty[]> {
-    const block = await this.db.block.get(this.chain.forkChoice.head());
-    const state = await this.db.state.get(block.message.stateRoot.valueOf() as Uint8Array);
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
 
     const validatorIndexes = await Promise.all(validatorPubKeys.map(async publicKey => {
       return  state.validators.findIndex((v) => this.config.types.BLSPubkey.equals(v.pubkey, publicKey));
