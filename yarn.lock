@@ -989,6 +989,17 @@
     "@chainsafe/eth2-bls-wasm" "^0.2.1"
     assert "^1.4.1"
 
+"@chainsafe/bls@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bls/-/bls-1.0.0.tgz#1db8d26b14e8b27c6b6deba7c94342629588e263"
+  integrity sha512-IBQK77Hr0RsvxC/KfOLsuR7fv5IZwiLcUUv4l39AQUnclckewoBEzzV1dExQtLuFrm+JOWJ2OAulAsg6vuS41Q==
+  dependencies:
+    "@chainsafe/bls-keygen" "^0.0.2"
+    "@chainsafe/eth2-bls-wasm" "^0.4.0"
+    assert "^1.4.1"
+  optionalDependencies:
+    "@chainsafe/eth2-spec-tests" "^0.10.1-fix"
+
 "@chainsafe/eth2-bls-wasm@^0.2.1":
   version "0.2.1"
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2-bls-wasm/-/eth2-bls-wasm-0.2.1.tgz#82710c4b81676eb8a2940394efffc0e59216e731"
@@ -996,7 +1007,14 @@
   dependencies:
     buffer "^5.4.3"
 
-"@chainsafe/eth2-spec-tests@0.10.1-fix":
+"@chainsafe/eth2-bls-wasm@^0.4.0":
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-bls-wasm/-/eth2-bls-wasm-0.4.0.tgz#94e89e4e53ec6cdcc07178dbfeb0b80215550d2f"
+  integrity sha512-4BGktOKmUyyYJNCio5Zn1LdxaGWLhPqdUoZXokrfCLW3SKhw4E6MlnpAHwPtvnDuGSkmdF/GLhYeyjQYTtovqg==
+  dependencies:
+    buffer "^5.4.3"
+
+"@chainsafe/eth2-spec-tests@0.10.1-fix", "@chainsafe/eth2-spec-tests@^0.10.1-fix":
   version "0.10.1-fix"
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.10.1-fix.tgz#c0fb839b5b93fae0a7cd247fd686d2a9ea926240"
   integrity sha512-mnfIDUFZ/IsAHmJQ7hkZ3t3s7rxrr5olLz3pH1RS2kWsuQonAKzVOZTQNkHYowpeI4ebYo8H+NPRtD5mkbTTzg==
@@ -1890,12 +1908,6 @@
   resolved "https://registry.yarnpkg.com/@types/camelcase/-/camelcase-5.2.0.tgz#5c139f8618a126827129587cce9ee904f9a79863"
   dependencies:
     camelcase "*"
-
-"@types/chai-as-promised@^7.1.0":
-  version "7.1.0"
-  resolved "https://registry.yarnpkg.com/@types/chai-as-promised/-/chai-as-promised-7.1.0.tgz#010b04cde78eacfb6e72bfddb3e58fe23c2e78b9"
-  dependencies:
-    "@types/chai" "*"
 
 "@types/chai-as-promised@^7.1.1":
   version "7.1.2"

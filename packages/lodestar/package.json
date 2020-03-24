@@ -85,8 +85,6 @@
     "@chainsafe/benchmark-utils": "^0.5.0",
     "@types/bl": "^2.1.0",
     "@types/buffer-xor": "^2.0.0",
-    "@types/chai": "4.2.0",
-    "@types/chai-as-promised": "^7.1.1",
     "@types/es6-promisify": "6.0.0",
     "@types/levelup": "^3.1.0",
     "@types/mocha": "^5.2.7",

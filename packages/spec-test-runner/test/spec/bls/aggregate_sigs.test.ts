@@ -1,6 +1,6 @@
 import path from "path";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import bls, {initBLS} from "@chainsafe/bls";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib";
 
 interface IAggregateSigsTestCase {
   data: {
