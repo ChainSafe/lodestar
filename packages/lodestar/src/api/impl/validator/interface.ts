@@ -12,7 +12,7 @@ import {
   ValidatorDuty,
   SignedBeaconBlock
 } from "@chainsafe/lodestar-types";
-import {IApi} from "../../../interface";
+import {IApi} from "../../interface";
 
 /**
  * The API interface defines the calls that can be made from a Validator

@@ -2,8 +2,9 @@ import {IService} from "../node";
 import defaultOptions, {IApiOptions} from "./options";
 import {IApiModules} from "./interface";
 import deepmerge from "deepmerge";
-import {JsonRpc} from "./rpc";
 import {RestApi} from "./rest";
+import {BeaconApi} from "./impl/beacon";
+import {ValidatorApi} from "./impl/validator";
 
 export * from "./interface";
 
@@ -17,8 +18,6 @@ export class ApiService implements IService {
 
   private opts: IApiOptions;
 
-  private rpc: IService;
-
   private rest: IService;
 
   public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
@@ -26,34 +25,28 @@ export class ApiService implements IService {
     if(this.opts.rest.enabled) {
       this.rest = this.setupRestApi(modules);
     }
-    if(this.opts.rpc.transports.length) {
-      this.rpc = this.setupRpc(modules);
-    }
   }
 
   public async start(): Promise<void> {
-    if(this.rpc) {
-      await this.rpc.start();
-    }
     if(this.rest) {
       await this.rest.start();
     }
   }
 
   public async stop(): Promise<void> {
-    if(this.rpc) {
-      await this.rpc.stop();
-    }
     if(this.rest) {
       await this.rest.stop();
     }
   }
 
-  private setupRpc(modules: IApiModules): JsonRpc {
-    return new JsonRpc(this.opts.rpc, modules);
-  }
-
   private setupRestApi(modules: IApiModules): RestApi {
-    return new RestApi(this.opts.rest, modules);
+    return new RestApi(
+      this.opts.rest,
+      {
+        config: modules.config,
+        logger: modules.logger,
+        beacon: new BeaconApi({}, modules),
+        validator: new ValidatorApi({}, modules)
+      });
   }
 }

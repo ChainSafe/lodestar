@@ -1,14 +1,13 @@
 import {registerVersionEndpoint} from "./version";
 import {registerGenesisTimeEndpoint} from "./genesisTime";
 import {registerForkEndpoint} from "./fork";
-import {IApiModules} from "../../../interface";
 import {registerSyncingEndpoint} from "./syncing";
-import {IFastifyServer} from "../../index";
+import {LodestarApiPlugin} from "../../interface";
 
-export const beacon = (fastify: IFastifyServer, opts: {prefix: string; modules: IApiModules}, done: Function): void => {
-  registerVersionEndpoint(fastify);
-  registerGenesisTimeEndpoint(fastify, opts.modules);
-  registerForkEndpoint(fastify, opts.modules);
-  registerSyncingEndpoint(fastify, opts.modules);
+export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void => {
+  registerVersionEndpoint(fastify, opts);
+  registerGenesisTimeEndpoint(fastify, opts);
+  registerForkEndpoint(fastify, opts);
+  registerSyncingEndpoint(fastify, opts);
   done();
 };

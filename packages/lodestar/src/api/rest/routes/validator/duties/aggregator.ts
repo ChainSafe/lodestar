@@ -1,10 +1,7 @@
 import {IncomingMessage, Server, ServerResponse} from "http";
 import fastify, {DefaultParams, DefaultQuery} from "fastify";
 import {fromHexString} from "@chainsafe/ssz";
-import {isAggregator} from "@chainsafe/lodestar-beacon-state-transition";
-
-import {IFastifyServer} from "../../../index";
-import {IApiModules} from "../../../../interface";
+import {LodestarRestApiEndpoint} from "../../../interface";
 
 interface IParams extends DefaultParams {
   slot: number;
@@ -43,23 +40,20 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   }
 };
 
-export const registerIsAggregatorEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
+export const registerIsAggregatorEndpoint: LodestarRestApiEndpoint = (fastify, {api, config}): void => {
   fastify.get<IQuery, IParams>(
     "/duties/:slot/aggregator",
     opts,
     async (request, reply) => {
-      const state = await modules.db.state.get(modules.chain.forkChoice.headStateRoot());
-      const isAttestationAggregator = isAggregator(
-        modules.config,
-        state,
+      const responseValue = await api.validator.isAggregator(
         request.params.slot,
         request.query.committee_index,
-        fromHexString(request.query.slot_signature),
+        fromHexString(request.query.slot_signature)
       );
       reply
         .code(200)
         .type("application/json")
-        .send(isAttestationAggregator);
+        .send(config.types.Boolean.toJson(responseValue));
     }
   );
 };

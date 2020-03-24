@@ -16,23 +16,30 @@ import {
   ValidatorDuty
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-
-import {IBeaconDb} from "../../../../db";
-import {IBeaconChain} from "../../../../chain";
-import {OpPool} from "../../../../opPool";
+import {IBeaconDb} from "../../../db";
+import {IBeaconChain} from "../../../chain";
+import {OpPool} from "../../../opPool";
 import {IValidatorApi} from "./interface";
-import {assembleBlock} from "../../../../chain/factory/block";
-import {IEth1Notifier} from "../../../../eth1";
-import {getAttesterDuties, getEpochProposers, produceAttestation, publishAttestation} from "../../../impl/validator";
-import {ApiNamespace, IApiModules} from "../../../index";
-import {IApiOptions} from "../../../options";
+import {assembleBlock} from "../../../chain/factory/block";
+import {IEth1Notifier} from "../../../eth1";
+import {ApiNamespace, IApiModules} from "../../index";
+import {IApiOptions} from "../../options";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {INetwork} from "../../../../network";
-import {getDomain, isAggregator} from "@chainsafe/lodestar-beacon-state-transition";
+import {INetwork} from "../../../network";
+import {
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  getBeaconProposerIndex,
+  getDomain,
+  isAggregator,
+  processSlots
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {verify} from "@chainsafe/bls";
-import {Sync} from "../../../../sync";
-import {DomainType} from "../../../../constants";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition/lib";
+import {Sync} from "../../../sync";
+import {DomainType} from "../../../constants";
+import {assembleValidatorDuty} from "../../../chain/factory/duties";
+import assert from "assert";
+import {assembleAttestation} from "../../../chain/factory/attestation";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -73,9 +80,17 @@ export class ValidatorApi implements IValidatorApi {
     slot: Slot,
   ): Promise<Attestation> {
     try {
-      return await produceAttestation(
-        {config: this.config, chain: this.chain, db: this.db},
-        validatorPubKey,
+      const [headBlock, headState, validatorIndex] = await Promise.all([
+        this.db.block.get(this.chain.forkChoice.head()),
+        this.db.state.get(this.chain.forkChoice.headStateRoot()),
+        this.db.getValidatorIndex(validatorPubKey)
+      ]);
+      processSlots(this.config, headState, slot);
+      return await assembleAttestation(
+        {config: this.config, db: this.db},
+        headState,
+        headBlock.message,
+        validatorIndex,
         index,
         slot
       );
@@ -92,15 +107,43 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
-    await publishAttestation(attestation, this.network.gossip, this.opPool.attestations);
+    await Promise.all([
+      this.network.gossip.publishCommiteeAttestation(attestation),
+      this.opPool.attestations.receive(attestation)
+    ]);
   }
 
   public async getProposerDuties(epoch: Epoch): Promise<Map<Slot, BLSPubkey>> {
-    return getEpochProposers(this.config, this.chain, this.db, epoch);
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    assert(epoch >= 0 && epoch <= computeEpochAtSlot(this.config, state.slot) + 2);
+    const startSlot = computeStartSlotAtEpoch(this.config, epoch);
+    if(state.slot < startSlot) {
+      processSlots(this.config, state, startSlot);
+    }
+    const slotProposerMapping: Map<Slot, BLSPubkey> = new Map();
+
+    for(let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot ++) {
+      const blockProposerIndex = getBeaconProposerIndex(this.config, {...state, slot});
+      slotProposerMapping.set(slot, state.validators[blockProposerIndex].pubkey);
+    }
+    return slotProposerMapping;
   }
 
   public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<ValidatorDuty[]> {
-    return getAttesterDuties(this.config, this.db, this.chain, epoch, validatorPubKeys);
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+
+    const validatorIndexes = await Promise.all(validatorPubKeys.map(async publicKey => {
+      return  state.validators.findIndex((v) => this.config.types.BLSPubkey.equals(v.pubkey, publicKey));
+    }));
+
+    return validatorIndexes.map((validatorIndex) => {
+      return assembleValidatorDuty(
+        this.config,
+        {publicKey: state.validators[validatorIndex].pubkey, index: validatorIndex},
+        state,
+        epoch
+      );
+    });
   }
 
   public async publishAggregatedAttestation(

@@ -15,13 +15,12 @@ import {generateCommanderOptions,} from "../../util";
 import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {InteropEth1Notifier} from "@chainsafe/lodestar/lib/eth1/impl/interop";
 import {initBLS, Keypair, PrivateKey} from "@chainsafe/bls";
-import {interopKeypair} from "../../lodestar/interop/keypairs";
-import {ValidatorApi} from "@chainsafe/lodestar/lib/api/rpc/api/validator";
-import {BeaconApi} from "@chainsafe/lodestar/lib/api/rpc/api/beacon";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
+import {interopKeypair} from "../../lodestar/interop/keypairs";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib/api";
 import {ValidatorClient} from "@chainsafe/lodestar/lib/validator/nodejs";
 import {BeaconState} from "@chainsafe/lodestar-types";
+import {BeaconApi, ValidatorApi} from "@chainsafe/lodestar/lib/api/impl";
 import {BeaconNodeOptions} from "../../lodestar/node/options";
 import {getConfig, getDevGenesisState, getPeerId, resetPath} from "./utils";
 
