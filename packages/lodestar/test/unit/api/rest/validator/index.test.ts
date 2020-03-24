@@ -19,7 +19,6 @@ import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {BeaconApi} from "../../../../../src/api/impl/beacon";
 
 describe("Test validator rest API", function () {
-  this.timeout(10000);
 
   let restApi: RestApi, validatorApi: SinonStubbedInstance<ValidatorApi>, beaconApi: SinonStubbedInstance<BeaconApi>;
   const sandbox = sinon.createSandbox();
@@ -42,11 +41,8 @@ describe("Test validator rest API", function () {
     return await restApi.start();
   });
 
-  after(async function () {
-    return await restApi.stop();
-  });
-
-  afterEach(function () {
+  afterEach(async function () {
+    await restApi.stop();
     sandbox.restore();
   });
 
