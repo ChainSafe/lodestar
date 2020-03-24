@@ -1,6 +1,5 @@
 const HexBufferType = (value: string): Buffer => {
-  console.log(Buffer.from(BigInt(value).toString(16), "hex").toString("hex"));
-  return Buffer.from(BigInt(value).toString(16), "hex");
+  return Buffer.from(value.replace("0x", ""), "hex");
 };
 
 export const typeMap: TypeMap = {
