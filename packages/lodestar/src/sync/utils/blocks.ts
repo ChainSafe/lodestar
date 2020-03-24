@@ -9,11 +9,13 @@ export async function getBlockRange(
   reps: ReputationStore,
   peers: PeerInfo[],
   range: ISlotRange,
-  blocksPerChunk = 10
+  blocksPerChunk = 10,
+  maxRetry = 3
 ): Promise<SignedBeaconBlock[]> {
   let chunks = chunkify(blocksPerChunk, range.start, range.end);
   let blocks: SignedBeaconBlock[] = [];
   //try to fetch chunks from different peers until all chunks are fetched
+  let retry = 0;
   while(chunks.length > 0) {
     //rotate peers
     const peerBalancer = new RoundRobinArray(peers);
@@ -24,11 +26,16 @@ export async function getBlockRange(
           blocks = blocks.concat(chunkBlocks);
           return null;
         } catch (e) {
+          console.log(e);
           //if failed to obtain blocks, try in next round on another peer
           return chunk;
         }
       })
     )).filter((chunk) => chunk !== null);
+    retry++;
+    if(retry > maxRetry) {
+      throw new Error("Max req retry for blocks by range");
+    }
   }
   return sortBlocks(blocks);
 }
