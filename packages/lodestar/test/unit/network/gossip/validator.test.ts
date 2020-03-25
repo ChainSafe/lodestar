@@ -57,6 +57,7 @@ describe("GossipMessageValidator", () => {
       attesterSlashing: sandbox.createStubInstance(AttesterSlashingRepository),
       state: sandbox.createStubInstance(StateRepository),
       aggregateAndProof: sandbox.createStubInstance(AggregateAndProofRepository),
+      getStateForSlot: sandbox.stub(),
     };
     logger = new WinstonLogger();
     logger.silent = true;
@@ -80,23 +81,47 @@ describe("GossipMessageValidator", () => {
     expect(await validator.isValidIncomingBlock(block)).to.be.equal(false);
   });
 
-  //TODO: fix this with proper validation
-  it.skip("should return invalid incoming block - invalid signature", async () => {
+  it("should return invalid incoming block - block is too old", async () => {
+    const block = generateEmptySignedBlock();
+    block.message.slot = 10;
+    dbStub.block.isBadBlock.resolves(false);
+    dbStub.block.has.resolves(false);
+    const state = generateState();
+    state.finalizedCheckpoint.epoch = 1000;
+    dbStub.getStateForSlot.resolves(state);
+    expect(await validator.isValidIncomingBlock(block)).to.be.equal(false);
+  });
+
+  it("should return invalid incoming block - invalid signature", async () => {
     const block = generateEmptySignedBlock();
     dbStub.block.isBadBlock.resolves(false);
     dbStub.block.has.resolves(false);
     const state = generateState();
-    dbStub.state.getLatest.resolves(state);
+    dbStub.getStateForSlot.resolves(state);
     verifyBlockSignatureStub.returns(false);
     expect(await validator.isValidIncomingBlock(block)).to.be.equal(false);
   });
 
   it("should return valid incoming block", async () => {
     const block = generateEmptySignedBlock();
+    block.message.slot = 10;
     dbStub.block.isBadBlock.resolves(false);
     dbStub.block.has.resolves(false);
     const state = generateState();
-    dbStub.state.getLatest.resolves(state);
+    dbStub.getStateForSlot.resolves(state);
+    verifyBlockSignatureStub.returns(true);
+    expect(await validator.isValidIncomingBlock(block)).to.be.equal(true);
+  });
+
+  it("should return valid incoming block - block in previous epoch", async () => {
+    const block = generateEmptySignedBlock();
+    const epoch = 10;
+    block.message.slot = (epoch - 1) * config.params.SLOTS_PER_EPOCH + 1;
+    dbStub.block.isBadBlock.resolves(false);
+    dbStub.block.has.resolves(false);
+    const state = generateState();
+    state.slot = epoch * config.params.SLOTS_PER_EPOCH + 1;
+    dbStub.getStateForSlot.resolves(state);
     verifyBlockSignatureStub.returns(true);
     expect(await validator.isValidIncomingBlock(block)).to.be.equal(true);
   });

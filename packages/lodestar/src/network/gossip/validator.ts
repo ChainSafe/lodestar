@@ -16,6 +16,8 @@ import {
   isValidIndexedAttestation,
   isValidProposerSlashing,
   isValidVoluntaryExit,
+  verifyBlockSignature,
+  computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
@@ -45,10 +47,12 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.block.has(root)) {
       return false;
     }
-    return true;
-    //TODO: fix this
-    // const state = await this.db.state.getLatest();
-    // return verifyBlockSignature(this.config, state, signedBlock);
+    const state = await this.db.getStateForSlot(signedBlock.message.slot);
+    // block is too old
+    if (signedBlock.message.slot <= computeStartSlotAtEpoch(this.config, state.finalizedCheckpoint.epoch)) {
+      return false;
+    }
+    return verifyBlockSignature(this.config, {...state, slot: signedBlock.message.slot}, signedBlock);
   };
 
   public isUnaggregatedAttestation = (attestation: Attestation): boolean => {
@@ -86,7 +90,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public isValidIncomingAggregateAndProof = async (aggregationAndProof: AggregateAndProof): Promise<boolean> => {
     return true;
-    //TODO: fix this
+    // TODO: fix this
     // const root = this.config.types.AggregateAndProof.hashTreeRoot(aggregationAndProof);
     // if (await this.db.aggregateAndProof.has(root as Buffer)) {
     //   return false;
@@ -111,7 +115,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     //   this.config,
     //   state,
     //   slot,
-    //   aggregationAndProof.aggregatorIndex,
+    //   aggregationAndProof.aggregate.data.index,
     //   aggregationAndProof.selectionProof
     // )) {
     //   return false;
