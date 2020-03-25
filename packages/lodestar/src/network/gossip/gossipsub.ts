@@ -29,7 +29,7 @@ export class LodestarGossipsub extends Gossipsub {
 
   constructor (config: IBeaconConfig, validator: IGossipMessageValidator, logger: ILogger, peerInfo: PeerInfo,
     registrar: Registrar, options: Options = {}) {
-    super(peerInfo, registrar, options);
+    super(peerInfo, registrar, Object.assign(options, {msgIdFn: getMessageId}));
     this.transformedObjects = new Map();
     this.config = config;
     this.validator = validator;
