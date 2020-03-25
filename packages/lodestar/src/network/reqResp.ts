@@ -202,7 +202,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
               responses.push(response);
             }
             cancelTimer();
-            if (!requestOnly && responses.length === 0) {
+            if (!requestOnly && method === Method.Status && responses.length === 0) {
+              // allow empty response for beacon blocks by range/root
               reject(`No response returned for method ${method}`);
               return;
             }
