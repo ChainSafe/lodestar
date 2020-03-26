@@ -2,7 +2,7 @@ const HexBufferType = (value: string): Buffer => {
   return Buffer.from(value.replace("0x", ""), "hex");
 };
 
-export const typeMap: TypeMap = {
+export const typeMap: TypeMap<string, Buffer|BigInt> = {
   MIN_DEPOSIT_AMOUNT: BigInt,
   MAX_EFFECTIVE_BALANCE: BigInt,
   EJECTION_BALANCE: BigInt,
@@ -13,4 +13,4 @@ export const typeMap: TypeMap = {
   GENESIS_FORK_VERSION: HexBufferType,
 };
 
-export type TypeMap = {[k: string]: (value: any) => any};
+export type TypeMap<S, E> = {[k: string]: (value: S) => E};
