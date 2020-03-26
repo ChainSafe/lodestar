@@ -2,7 +2,7 @@
  * @module db/api/beacon
  */
 
-import {BeaconState, BLSPubkey, ValidatorIndex, SignedBeaconBlock, Slot,} from "@chainsafe/lodestar-types";
+import {BeaconState, BLSPubkey, ValidatorIndex, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {DatabaseService, IDatabaseApiOptions} from "../abstract";
 import {IBeaconDb} from "./interface";
 import {
@@ -18,7 +18,6 @@ import {
   StateRepository,
   VoluntaryExitRepository
 } from "./repositories";
-import {computeEpochAtSlot, computeStartSlotAtEpoch, processSlots} from "@chainsafe/lodestar-beacon-state-transition";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
 
@@ -101,22 +100,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     const state = await this.state.getLatest();
     //TODO: cache this (hashmap)
     return state.validators.findIndex(value => this.config.types.BLSPubkey.equals(value.pubkey, publicKey));
-  }
-
-  public async getStateForSlot(slot: Slot): Promise<BeaconState> {
-    const epoch = computeEpochAtSlot(this.config, slot);
-    const startSlot = computeStartSlotAtEpoch(this.config, epoch);
-    const blockRoot = await this.chain.getBlockRoot(startSlot);
-    if (blockRoot) {
-      const block = await this.block.get(blockRoot);
-      return await this.state.get(block.message.stateRoot.valueOf() as Uint8Array);
-    }
-    const headBlock = await this.block.getChainHead();
-    const state = await this.state.get(headBlock.message.stateRoot.valueOf() as Uint8Array);
-    if(state.slot < startSlot) {
-      processSlots(this.config, state, startSlot);
-    }
-    return state;
   }
 
 }

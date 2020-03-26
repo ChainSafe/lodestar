@@ -7,7 +7,6 @@ import {
   BLSPubkey,
   ValidatorIndex,
   SignedBeaconBlock,
-  Slot,
 } from "@chainsafe/lodestar-types";
 
 import {
@@ -76,12 +75,4 @@ export interface IBeaconDb {
     blockRoot: Uint8Array,
     stateRoot: Uint8Array
   ): Promise<void>;
-
-  /**
-   * This is NOT the state corresponding to a slot.
-   * If slot is in the past we return state of epoch's start slot.
-   * If slot is in the future, we use head state and process it up until start slot of same epoch.
-   * @param slot 
-   */
-  getStateForSlot(slot: Slot): Promise<BeaconState>;
 }
