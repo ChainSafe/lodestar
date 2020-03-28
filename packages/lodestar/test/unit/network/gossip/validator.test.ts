@@ -205,20 +205,20 @@ describe("GossipMessageValidator", () => {
     expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.equal(true);
   });
 
-  it.skip("should return invalid aggregation and proof - existed", async () => {
+  it("should return invalid aggregation and proof - existed", async () => {
     const aggregateProof = generateEmptyAggregateAndProof();
     dbStub.aggregateAndProof.has.resolves(true);
     expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(false);
   });
 
-  it.skip("should return invalid aggregation and proof - block not existed", async () => {
+  it("should return invalid aggregation and proof - block not existed", async () => {
     const aggregateProof = generateEmptyAggregateAndProof();
     dbStub.aggregateAndProof.has.resolves(false);
     dbStub.block.has.resolves(false);
     expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(false);
   });
 
-  it.skip("should return invalid aggregation and proof - invalid block", async () => {
+  it("should return invalid aggregation and proof - invalid block", async () => {
     const aggregateProof = generateEmptyAggregateAndProof();
     dbStub.aggregateAndProof.has.resolves(false);
     dbStub.block.has.resolves(true);
@@ -226,7 +226,7 @@ describe("GossipMessageValidator", () => {
     expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(false);
   });
 
-  it.skip("should return invalid aggregation and proof - invalid slot", async () => {
+  it("should return invalid aggregation and proof - invalid slot", async () => {
     const aggregateProof = generateEmptyAggregateAndProof();
     dbStub.aggregateAndProof.has.resolves(false);
     dbStub.block.has.resolves(true);
@@ -238,7 +238,7 @@ describe("GossipMessageValidator", () => {
     expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(false);
   });
 
-  it.skip("should return invalid aggregation and proof - invalid attestor index", async () => {
+  it("should return invalid aggregation and proof - invalid attestor index", async () => {
     const aggregateProof = generateEmptyAggregateAndProof();
     dbStub.aggregateAndProof.has.resolves(false);
     dbStub.block.has.resolves(true);
@@ -250,7 +250,7 @@ describe("GossipMessageValidator", () => {
     expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(false);
   });
 
-  it.skip("should return invalid aggregation and proof - not aggregator", async () => {
+  it("should return invalid aggregation and proof - not aggregator", async () => {
     const aggregateProof = generateEmptyAggregateAndProof();
     dbStub.aggregateAndProof.has.resolves(false);
     dbStub.block.has.resolves(true);
@@ -263,7 +263,7 @@ describe("GossipMessageValidator", () => {
     expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(false);
   });
 
-  it.skip("should return invalid aggregation and proof - invalid selection proof", async () => {
+  it("should return invalid aggregation and proof - invalid selection proof", async () => {
     const aggregateProof = generateEmptyAggregateAndProof();
     dbStub.aggregateAndProof.has.resolves(false);
     dbStub.block.has.resolves(true);
@@ -279,7 +279,7 @@ describe("GossipMessageValidator", () => {
     expect(isValidIndexedAttestationStub.calledOnce).to.be.equal(false);
   });
 
-  it.skip("should return invalid aggregation and proof - invalid indexed attestation", async () => {
+  it("should return invalid aggregation and proof - invalid indexed attestation", async () => {
     const aggregateProof = generateEmptyAggregateAndProof();
     dbStub.aggregateAndProof.has.resolves(false);
     dbStub.block.has.resolves(true);
@@ -295,7 +295,7 @@ describe("GossipMessageValidator", () => {
     expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(false);
   });
 
-  it.skip("should return valid aggregation and proof", async () => {
+  it("should return valid aggregation and proof", async () => {
     const aggregateProof = generateEmptyAggregateAndProof();
     dbStub.aggregateAndProof.has.resolves(false);
     dbStub.block.has.resolves(true);
