@@ -18,17 +18,22 @@ import {
   isValidVoluntaryExit,
   verifyBlockSignature,
   computeStartSlotAtEpoch,
+  processSlots,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {IBeaconChain} from "../../chain";
 
 export class GossipMessageValidator implements IGossipMessageValidator {
+  private chain: IBeaconChain;
   private db: IBeaconDb;
   private config: IBeaconConfig;
   private logger: ILogger;
 
-  public constructor(db: IBeaconDb, config: IBeaconConfig, logger: ILogger) {
+  public constructor({chain, db, config, logger}:
+  {chain: IBeaconChain; db: IBeaconDb; config: IBeaconConfig; logger: ILogger}) {
+    this.chain = chain;
     this.db = db;
     this.config = config;
     this.logger = logger;
@@ -47,12 +52,16 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.block.has(root)) {
       return false;
     }
-    const state = await this.db.getStateForSlot(signedBlock.message.slot);
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    const slot = signedBlock.message.slot;
+    if(state.slot < slot) {
+      processSlots(this.config, state, slot);
+    }
     // block is too old
     if (signedBlock.message.slot <= computeStartSlotAtEpoch(this.config, state.finalizedCheckpoint.epoch)) {
       return false;
     }
-    return verifyBlockSignature(this.config, {...state, slot: signedBlock.message.slot}, signedBlock);
+    return verifyBlockSignature(this.config, state, signedBlock);
   };
 
   public isUnaggregatedAttestation = (attestation: Attestation): boolean => {
@@ -78,7 +87,10 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (!await this.db.block.has(blockRoot) || await this.db.block.isBadBlock(blockRoot)) {
       return false;
     }
-    const state = await this.db.state.getLatest();
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    if (state.slot < attestation.data.slot) {
+      processSlots(this.config, state, attestation.data.slot);
+    }
     const currentSlot = getCurrentSlot(this.config, state.genesisTime);
     if (!(attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= currentSlot &&
         currentSlot >= attestation.data.slot)) {
@@ -143,7 +155,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
     // skip attestation if its too old
-    const state = await this.db.state.getLatest();
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
     return attestation.data.target.epoch >= state.finalizedCheckpoint.epoch;
   };
 
@@ -153,7 +165,11 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.voluntaryExit.has(root as Buffer)) {
       return false;
     }
-    const state = await this.db.state.getLatest();
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    const startSlot = computeStartSlotAtEpoch(this.config, voluntaryExit.message.epoch);
+    if (state.slot < startSlot) {
+      processSlots(this.config, state, startSlot);
+    }
     return isValidVoluntaryExit(this.config, state, voluntaryExit);
   };
 
@@ -163,7 +179,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.proposerSlashing.has(root as Buffer)) {
       return false;
     }
-    const state = await this.db.state.getLatest();
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
     return isValidProposerSlashing(this.config, state, proposerSlashing);
   };
 
@@ -173,7 +189,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.attesterSlashing.has(root as Buffer)) {
       return false;
     }
-    const state = await this.db.state.getLatest();
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
     return isValidAttesterSlashing(this.config, state, attesterSlashing);
   };
 }
