@@ -911,15 +911,6 @@
     bip39 "^3.0.2"
     buffer "^5.4.3"
 
-"@chainsafe/bls@0.3.0":
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bls/-/bls-0.3.0.tgz#5c93023aeaf75003b479db9a3be01162c37accc4"
-  integrity sha512-2zq9Ua1E5UTseW7oMpkXTyNllf8rkncBAu7QS4Tbq6D+Ya3K23/Ce0WWGaUFXAewNAy47J4vtm6fydECKoYCVQ==
-  dependencies:
-    "@chainsafe/bls-keygen" "^0.0.2"
-    "@chainsafe/eth2-bls-wasm" "^0.2.1"
-    assert "^1.4.1"
-
 "@chainsafe/bls@1.0.0":
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/bls/-/bls-1.0.0.tgz#1db8d26b14e8b27c6b6deba7c94342629588e263"
@@ -930,13 +921,6 @@
     assert "^1.4.1"
   optionalDependencies:
     "@chainsafe/eth2-spec-tests" "^0.10.1-fix"
-
-"@chainsafe/eth2-bls-wasm@^0.2.1":
-  version "0.2.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-bls-wasm/-/eth2-bls-wasm-0.2.1.tgz#82710c4b81676eb8a2940394efffc0e59216e731"
-  integrity sha512-optSPu5Ez8tT0iEeCsLhjhMJYyXAZRyPFT2k4q+WrQxr82or5+IVQx4jHdy/uQwMvGB0rlvFYlwsyBrkioTCVw==
-  dependencies:
-    buffer "^5.4.3"
 
 "@chainsafe/eth2-bls-wasm@^0.4.0":
   version "0.4.0"
