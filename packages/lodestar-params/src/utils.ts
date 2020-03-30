@@ -3,11 +3,11 @@ import {IBeaconParams} from "./interface";
 import {FAILSAFE_SCHEMA, Schema, Type} from "js-yaml";
 import * as constants from "./constants";
 
-export function convertTypes(params: Record<string, unknown>, typeMap: TypeMap): IBeaconParams {
+export function convertTypes(params: Record<string, unknown>, typeMap: TypeMap<string, unknown>): IBeaconParams {
   for(const k in params) {
     if(params.hasOwnProperty(k)) {
       if(typeMap[k]) {
-        params[k] = typeMap[k](params[k]);
+        params[k] = typeMap[k](params[k] as string);
       } else {
         params[k] = Number(params[k]);
       }
