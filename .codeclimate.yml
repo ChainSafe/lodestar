@@ -2,7 +2,7 @@ version: "2"         # required to adjust maintainability checks
 checks:
   argument-count:
     config:
-      threshold: 5
+      threshold: 6
   complex-logic:
     config:
       threshold: 7
@@ -17,7 +17,7 @@ checks:
       threshold: 20
   method-lines:
     config:
-      threshold: 25
+      threshold: 30
   nested-control-flow:
     config:
       threshold: 4
@@ -26,7 +26,7 @@ checks:
       threshold: 10
   similar-code:
     config:
-      threshold: 85
+      threshold: 95
   identical-code:
     config:
       threshold: 95
