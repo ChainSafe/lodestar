@@ -17,6 +17,7 @@ import {
   Version,
   CommitteeIndex,
   Bytes32,
+  Domain,
 } from "./primitive";
 
 export interface Fork {
@@ -128,4 +129,9 @@ export interface BeaconBlockHeader {
 export interface SignedBeaconBlockHeader {
   message: BeaconBlockHeader;
   signature: BLSSignature;
+}
+
+export interface SigningRoot {
+  objectRoot: Root;
+  domain: Domain;
 }

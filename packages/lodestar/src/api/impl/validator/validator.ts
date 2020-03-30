@@ -32,7 +32,8 @@ import {
   getBeaconProposerIndex,
   getDomain,
   isAggregator,
-  processSlots
+  processSlots,
+  computeSigningRoot
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {verify} from "@chainsafe/bls";
 import {Sync} from "../../../sync";
@@ -173,15 +174,16 @@ export class ValidatorApi implements IValidatorApi {
   public async subscribeCommitteeSubnet(
     slot: Slot, slotSignature: BLSSignature, committeeIndex: CommitteeIndex, aggregatorPubkey: BLSPubkey
   ): Promise<void> {
+    const domain = getDomain(
+      this.config,
+      this.chain.latestState,
+      DomainType.BEACON_ATTESTER,
+      computeEpochAtSlot(this.config, slot));
+    const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
     const valid = verify(
       aggregatorPubkey.valueOf() as Uint8Array,
-      this.config.types.Slot.hashTreeRoot(slot),
+      signingRoot,
       slotSignature.valueOf() as Uint8Array,
-      getDomain(
-        this.config,
-        this.chain.latestState,
-        DomainType.BEACON_ATTESTER,
-        computeEpochAtSlot(this.config, slot))
     );
     if(!valid) {
       throw new Error("Ivalid slot signature");

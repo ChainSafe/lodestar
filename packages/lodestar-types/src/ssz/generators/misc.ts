@@ -130,6 +130,13 @@ export const SignedBeaconBlockHeader = (ssz: IBeaconSSZTypes): ContainerType => 
   },
 });
 
+export const SigningRoot = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    objectRoot: ssz.Root,
+    domain: ssz.Domain,
+  },
+});
+
 export const DepositDataRootList = (ssz: IBeaconSSZTypes): ListType => new ListType({
   elementType: new RootType({
     expandedType: ssz.DepositData,

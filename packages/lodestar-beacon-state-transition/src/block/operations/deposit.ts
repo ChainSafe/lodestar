@@ -9,6 +9,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH,} from "../../constants";
 import {computeDomain, increaseBalance} from "../../util";
 import {bigIntMin, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
+import {computeSigningRoot} from "../../util/signingRoot";
 
 /**
  * Process an Eth1 deposit, registering a validator or increasing its balance.
@@ -34,14 +35,15 @@ export function processDeposit(
   const amount = deposit.data.amount;
   const validatorIndex = Array.from(state.validators).findIndex((v) => config.types.BLSPubkey.equals(v.pubkey, pubkey));
   if (validatorIndex === -1) {
+    const domain = computeDomain(DomainType.DEPOSIT);
+    const signingRoot = computeSigningRoot(config, config.types.DepositMessage, deposit.data, domain);
     // Verify the deposit signature (proof of possession)
     // Note: The deposit contract does not check signatures.
     // Note: Deposits are valid across forks, thus the deposit domain is retrieved directly from `computeDomain`.
     if (!verify(
       pubkey.valueOf() as Uint8Array,
-      config.types.DepositMessage.hashTreeRoot(deposit.data),
+      signingRoot,
       deposit.data.signature.valueOf() as Uint8Array,
-      computeDomain(DomainType.DEPOSIT),
     )) {
       return;
     }
