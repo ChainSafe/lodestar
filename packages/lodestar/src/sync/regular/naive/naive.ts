@@ -99,7 +99,7 @@ export class NaiveRegularSync implements IRegularSync {
      * @return false if it's already synced up, true if submitted blocks for chain processing
      */
   private async syncUp(): Promise<boolean> {
-    const latestState = this.chain.latestState;
+    const latestState = await this.chain.getHeadState();
     const currentSlot = latestState.slot;
     const highestCommonSlot = getHighestCommonSlot(
       Array.from(this.peers).map((peer) => this.reps.getFromPeerInfo(peer))

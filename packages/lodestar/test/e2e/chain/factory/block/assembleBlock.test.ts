@@ -9,7 +9,11 @@ import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {OpPool} from "../../../../../src/opPool";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
-import {getBeaconProposerIndex, stateTransition, signedBlockToSignedHeader} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  getBeaconProposerIndex,
+  signedBlockToSignedHeader,
+  stateTransition
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {generateValidator} from "../../../../utils/validator";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateDeposit} from "../../../../utils/deposit";

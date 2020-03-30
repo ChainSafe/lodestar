@@ -202,7 +202,7 @@ export class SyncReqResp implements ISyncReqResp {
       finalizedRoot = state.finalizedCheckpoint.root;
     }
     return {
-      headForkVersion: this.chain.latestState.fork.currentVersion,
+      headForkVersion: (await this.chain.getHeadState()).fork.currentVersion,
       finalizedRoot,
       finalizedEpoch,
       headRoot,

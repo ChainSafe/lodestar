@@ -10,7 +10,7 @@ export function postProcess(
   config: IBeaconConfig, db: IBeaconDb, logger: ILogger, metrics: IBeaconMetrics, eventBus: ChainEventEmitter
 ): (source: AsyncIterable<{preState: BeaconState; postState: BeaconState; block: SignedBeaconBlock}>) => void {
   return (source) => {
-    (async function*() {
+    (async function() {
       for await(const item of source) {
         metrics.currentSlot.set(item.block.message.slot);
         const preSlot = item.preState.slot;

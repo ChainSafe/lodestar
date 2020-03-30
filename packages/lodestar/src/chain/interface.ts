@@ -45,6 +45,10 @@ export interface IBeaconChain extends ChainEventEmitter {
    */
   stop(): Promise<void>;
 
+  getHeadState(): Promise<BeaconState|null>;
+
+  getHeadBlock(): Promise<SignedBeaconBlock|null>;
+
   /**
    * Add attestation to the fork-choice rule
    */

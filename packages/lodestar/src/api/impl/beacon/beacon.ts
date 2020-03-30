@@ -6,7 +6,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconState, Bytes32, ForkResponse, Number64, SyncingStatus, Uint64} from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "./interface";
 import {IBeaconChain} from "../../../chain";
-import {IBeaconDb} from "../../../db";
 import {IApiOptions} from "../../options";
 import {IApiModules} from "../../interface";
 import {ApiNamespace} from "../../index";
@@ -15,14 +14,12 @@ export class BeaconApi implements IBeaconApi {
 
   public namespace: ApiNamespace;
 
-  private config: IBeaconConfig;
-  private chain: IBeaconChain;
-  private db: IBeaconDb;
+  private readonly config: IBeaconConfig;
+  private readonly chain: IBeaconChain;
 
   public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
     this.namespace = ApiNamespace.BEACON;
     this.config = modules.config;
-    this.db = modules.db;
     this.chain = modules.chain;
   }
 
@@ -32,7 +29,7 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getFork(): Promise<ForkResponse> {
-    const state: BeaconState = await this.db.state.getLatest();
+    const state: BeaconState = await this.chain.getHeadState();
     const networkId: Uint64 = this.chain.networkId;
     const fork = state? state.fork : {
       previousVersion: Buffer.alloc(4),
@@ -46,8 +43,9 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getGenesisTime(): Promise<Number64> {
-    if (this.chain.latestState) {
-      return this.chain.latestState.genesisTime;
+    const state = await this.chain.getHeadState();
+    if(state) {
+      return state.genesisTime;
     }
     return 0;
   }

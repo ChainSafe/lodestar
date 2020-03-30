@@ -41,9 +41,9 @@ export interface IBlockProcessJob {
 export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) implements IBeaconChain {
 
   public readonly chain: string;
-  public readonly forkChoice: ILMDGHOST;
-  public readonly chainId: Uint16;
-  public readonly networkId: Uint64;
+  public forkChoice: ILMDGHOST;
+  public chainId: Uint16;
+  public networkId: Uint64;
   public clock: IBeaconClock;
 
   private readonly config: IBeaconConfig;
@@ -71,6 +71,14 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.networkId = 0n; // TODO make this real
     this.blockProcessor = new BlockProcessor(config, logger, db, this.forkChoice, metrics, this);
     this.attestationProcessor = new AttestationProcessor(this, this.forkChoice, {config, db, logger});
+  }
+
+  public async getHeadState(): Promise<BeaconState|null> {
+    return this.db.state.get(this.forkChoice.headStateRoot());
+  }
+
+  public async getHeadBlock(): Promise<SignedBeaconBlock|null> {
+    return this.db.block.get(this.forkChoice.head());
   }
 
   public isInitialized(): boolean {

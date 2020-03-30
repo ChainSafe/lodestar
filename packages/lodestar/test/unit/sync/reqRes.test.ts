@@ -39,7 +39,7 @@ describe("sync req resp", function () {
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
-    chainStub["latestState"] = generateState();
+    chainStub.getHeadState.resolves(generateState());
     // @ts-ignore
     chainStub.config = config;
     reqRespStub = sandbox.createStubInstance(ReqResp);
@@ -72,7 +72,6 @@ describe("sync req resp", function () {
 
 
   it("should able to create Status - genesis time", async function () {
-    // chainStub.genesisTime = 0;
     chainStub.networkId = 1n;
     chainStub.chainId = 1;
 
