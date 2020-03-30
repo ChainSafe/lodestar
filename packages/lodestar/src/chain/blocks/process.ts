@@ -21,16 +21,9 @@ export function processBlock(
           continue;
         }
         // Run the state transition
-        let newState: BeaconState;
-        const trusted = job.trusted;
-        try {
-          // if block is trusted don't verify state roots, proposer or signature
-          newState = stateTransition(config, preState, job.signedBlock, !trusted, !trusted, !trusted);
-        } catch (e) {
-          // store block root in db and terminate
-          await db.block.storeBadBlock(blockRoot);
-          logger.warn(`Found bad block, block root: ${toHexString(blockRoot)} ` + e.message);
-          return;
+        const newState = await runStateTransition(config, db, logger, preState, job);
+        if(!newState) {
+          continue;
         }
         // On successful transition, update system state
         await Promise.all([
@@ -110,4 +103,20 @@ export async function updateDepositMerkleTree(
   depositDataRootList.push(...depositDatas.map(config.types.DepositData.hashTreeRoot));
   //TODO: remove deposits with index <= newState.depositIndex
   await db.depositDataRootList.set(newState.eth1DepositIndex, depositDataRootList);
+}
+
+export async function runStateTransition(
+  config: IBeaconConfig, db: IBeaconDb, logger: ILogger,
+  preState: BeaconState, job: IBlockProcessJob
+): Promise<BeaconState|null> {
+  try {
+    // if block is trusted don't verify state roots, proposer or signature
+    return stateTransition(config, preState, job.signedBlock, !job.trusted, !job.trusted, !job.trusted);
+  } catch (e) {
+    const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
+    // store block root in db and terminate
+    await db.block.storeBadBlock(blockRoot);
+    logger.warn(`Found bad block, block root: ${toHexString(blockRoot)} ` + e.message);
+    return null;
+  }
 }

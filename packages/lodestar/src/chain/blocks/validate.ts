@@ -13,22 +13,19 @@ export function validateBlock(
     return (async function*() {
       for await(const job of source) {
         const blockHash = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
-        const hexBlockHash = toHexString(blockHash);
         const currentSlot = db.chain.getChainHeadSlot();
         logger.info(
-          `Received block with hash ${hexBlockHash}` +
+          `Received block with hash ${toHexString(blockHash)}` +
                     `at slot ${job.signedBlock.message.slot}. Current state slot ${currentSlot}`
         );
-
         if (await db.block.has(blockHash)) {
-          logger.warn(`Block ${hexBlockHash} existed already, no need to process it.`);
+          logger.warn(`Block ${toHexString(blockHash)} existed already, no need to process it.`);
           continue;
         }
-
         const finalizedCheckpoint = forkChoice.getFinalized();
         if (job.signedBlock.message.slot <= computeStartSlotAtEpoch(config, finalizedCheckpoint.epoch)) {
           logger.warn(
-            `Block ${hexBlockHash} is not after ` +
+            `Block ${toHexString(blockHash)} is not after ` +
                         `finalized checkpoint ${toHexString(finalizedCheckpoint.root)}.`
           );
           continue;
