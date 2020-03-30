@@ -82,7 +82,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   public isInitialized(): boolean {
-    throw new Error("Method not implemented.");
+    //TODO: implement
+    return true;
   }
 
   public async start(): Promise<void> {

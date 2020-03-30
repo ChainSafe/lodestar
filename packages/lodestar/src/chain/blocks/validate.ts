@@ -13,7 +13,7 @@ export function validateBlock(
     return (async function*() {
       for await(const job of source) {
         const blockHash = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
-        const currentSlot = db.chain.getChainHeadSlot();
+        const currentSlot = (await db.block.get(forkChoice.head())).message.slot;
         logger.info(
           `Received block with hash ${toHexString(blockHash)}` +
                     `at slot ${job.signedBlock.message.slot}. Current state slot ${currentSlot}`

@@ -6,8 +6,6 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconMetrics} from "../../metrics";
 import {ChainEventEmitter} from "../interface";
 import {Epoch} from "@chainsafe/lodestar-types/lib";
-import {promisify} from "es6-promisify";
-import Promise = promisify.Promise;
 
 export function postProcess(
   config: IBeaconConfig, db: IBeaconDb, logger: ILogger, metrics: IBeaconMetrics, eventBus: ChainEventEmitter
@@ -47,7 +45,7 @@ async function setJustified(
   if (preJustifiedEpoch < postState.currentJustifiedCheckpoint.epoch) {
     const justifiedBlockRoot = postState.currentJustifiedCheckpoint.root;
     const justifiedBlock = await db.block.get(justifiedBlockRoot.valueOf() as Uint8Array);
-    logger.important(`Epoch ${computeEpochAtSlot(config, justifiedBlock.message.slot)} is justified!`);
+    logger.important(`Epoch ${postState.currentJustifiedCheckpoint.epoch} is justified!`);
     await Promise.all([
       db.chain.setJustifiedStateRoot(justifiedBlock.message.stateRoot.valueOf() as Uint8Array),
       db.chain.setJustifiedBlockRoot(justifiedBlockRoot.valueOf() as Uint8Array),
@@ -64,7 +62,7 @@ async function setFinalized(
   if (preFinalizedEpoch < postState.finalizedCheckpoint.epoch) {
     const finalizedBlockRoot = postState.finalizedCheckpoint.root;
     const finalizedBlock = await db.block.get(finalizedBlockRoot.valueOf() as Uint8Array);
-    logger.important(`Epoch ${computeEpochAtSlot(config, finalizedBlock.message.slot)} is finalized!`);
+    logger.important(`Epoch ${postState.finalizedCheckpoint.epoch} is finalized!`);
     await Promise.all([
       db.chain.setFinalizedStateRoot(finalizedBlock.message.stateRoot.valueOf() as Uint8Array),
       db.chain.setFinalizedBlockRoot(finalizedBlockRoot.valueOf() as Uint8Array),

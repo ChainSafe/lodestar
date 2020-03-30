@@ -29,12 +29,14 @@ export class BlockPool {
   public onProcessedBlock(block: SignedBeaconBlock): void {
     const key = toHexString(this.config.types.BeaconBlock.hashTreeRoot(block.message));
     const jobs = this.pool.get(key);
-    this.pool.delete(key);
-    jobs
-      .sort((a, b) => a.signedBlock.message.slot - b.signedBlock.message.slot)
-      .forEach((job) => {
-        this.blockProcessorSource.push(job);
-      });
+    if(jobs) {
+      this.pool.delete(key);
+      jobs
+        .sort((a, b) => a.signedBlock.message.slot - b.signedBlock.message.slot)
+        .forEach((job) => {
+          this.blockProcessorSource.push(job);
+        }); 
+    }
   }
 
   private getKey(block: SignedBeaconBlock): string {
