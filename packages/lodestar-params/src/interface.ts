@@ -34,6 +34,7 @@ export interface IBeaconParams {
   GENESIS_START_SHARD: number;
 
   // Time parameters
+  MIN_GENESIS_DELAY: number;
   SECONDS_PER_SLOT: number;
   MIN_ATTESTATION_INCLUSION_DELAY: number;
   SLOTS_PER_EPOCH: number;

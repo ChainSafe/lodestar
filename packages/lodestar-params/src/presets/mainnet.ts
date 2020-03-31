@@ -36,6 +36,7 @@ export const GENESIS_FORK_VERSION = Buffer.alloc(4, 0);
 export const GENESIS_START_SHARD = 0;
 
 // Time parameters
+export const MIN_GENESIS_DELAY = 86400;
 export const SECONDS_PER_SLOT = 12;
 export const MIN_ATTESTATION_INCLUSION_DELAY = 1; // slots || 12 seconds
 export const SLOTS_PER_EPOCH = 32; // slots || 6.4 minutes
