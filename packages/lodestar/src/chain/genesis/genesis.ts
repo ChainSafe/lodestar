@@ -20,7 +20,6 @@ import {
   EMPTY_SIGNATURE,
   GENESIS_EPOCH,
   GENESIS_SLOT,
-  SECONDS_PER_DAY,
   ZERO_HASH,
 } from "../../constants";
 import {
@@ -37,7 +36,7 @@ export function initializeBeaconStateFromEth1(
   deposits: Deposit[]): BeaconState {
   const state = getGenesisBeaconState(
     config,
-    eth1Timestamp - eth1Timestamp % SECONDS_PER_DAY + 2 * SECONDS_PER_DAY,
+    eth1Timestamp - eth1Timestamp % config.params.MIN_GENESIS_DELAY + 2 * config.params.MIN_GENESIS_DELAY,
     {
       depositCount: deposits.length,
       depositRoot: new Uint8Array(32),

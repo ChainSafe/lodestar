@@ -21,5 +21,6 @@ testStatic("ProposerSlashing");
 testStatic("SignedBeaconBlock");
 testStatic("SignedBeaconBlockHeader");
 testStatic("SignedVoluntaryExit");
+testStatic("SigningRoot");
 testStatic("Validator");
 testStatic("VoluntaryExit");
