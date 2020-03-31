@@ -11,7 +11,7 @@ import {DepositData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {DomainType} from "../constants";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 
 export class Eth1Wallet {
@@ -57,7 +57,7 @@ export class Eth1Wallet {
     const contract = new ethers.Contract(address, this.contractAbi, this.wallet);
     const pubkey = signingKey.toPublicKey().toBytesCompressed();
     const withdrawalCredentials = Buffer.concat([
-      this.config.params.BLS_WITHDRAWAL_PREFIX_BYTE,
+      this.config.params.BLS_WITHDRAWAL_PREFIX,
       hash(withdrawalKey.toPublicKey().toBytesCompressed()).slice(1),
     ]);
 
