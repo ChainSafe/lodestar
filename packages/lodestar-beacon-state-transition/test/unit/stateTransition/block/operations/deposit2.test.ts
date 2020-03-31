@@ -1,13 +1,14 @@
-import { generatePublicKey } from "@chainsafe/bls";
-import { computeDomain } from "../../../../../src/util/domain";
+import {generatePublicKey, PrivateKey} from "@chainsafe/bls";
+import {computeDomain} from "../../../../../src/util/domain";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import { computeSigningRoot } from "../../../../../src/util/signingRoot";
+import {computeSigningRoot} from "../../../../../src/util/signingRoot";
 import bls, {initBLS} from "@chainsafe/bls";
 import {assert} from "chai";
 import {DepositMessage} from "@chainsafe/lodestar-types";
-import { DomainType } from "../../../../../src/constants";
+import {DomainType} from "../../../../../src/constants";
 
-
+// TODO: This is to investigate failed spec test in v0.10.1, should be deleted
+// once we figure out why the test failed
 it("should verify deposit 2222", async () => {
   await initBLS();
   // Same deposit used in genesis_initialization_minimal.test.ts
@@ -57,15 +58,16 @@ it("should verify deposit 2222", async () => {
   `;
     
   const deposit = config.types.Deposit.fromJson(JSON.parse(specJson));
-  const privKey: Uint8Array = new Uint8Array(32);
-  privKey[31] = 1;
+  const privKey: Uint8Array = PrivateKey.fromInt(1).toBytes();
   // Make sure we use correct privKey
   assert.deepEqual(deposit.data.pubkey, generatePublicKey(privKey));
   const domain = computeDomain(DomainType.DEPOSIT, config.params.GENESIS_FORK_VERSION);
   const signingRoot = computeSigningRoot(config, config.types.DepositMessage, deposit.data, domain);
   const signature = bls.sign(privKey, signingRoot);
-  // This is different from the signature we saw above
+  // The signature above is from spec 0.10.1: https://media.githubusercontent.com/media/ethereum/eth2.0-spec-tests/v0.10.1/tests/minimal/phase0/genesis/initialization/pyspec_tests/initialize_beacon_state_from_eth1/deposits_0.yaml
+  // This is the same to spec 0.10.0: https://media.githubusercontent.com/media/ethereum/eth2.0-spec-tests/v0.10.0/tests/minimal/phase0/genesis/initialization/pyspec_tests/initialize_beacon_state_from_eth1/deposits_0.yaml
   // b04653bcd8bd711e653fbdfdf14325bcc5d0f8fe55f69388b0f547669e02746225bbac72e0b7dad758a404cf223b58040c287f112e4662a2cb9602a1bc0c99a0b03479c17f500ea3b00ec2efc7f0aca84ce71639e1da9270ee3bb75831ca1f63
+  // not sure what caused the change
   console.log("signature of deposit data is", signature.toString("hex"));
   deposit.data.signature = signature;
 
