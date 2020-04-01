@@ -9,9 +9,9 @@ import {Epoch} from "@chainsafe/lodestar-types/lib";
 
 export function postProcess(
   config: IBeaconConfig, db: IBeaconDb, logger: ILogger, metrics: IBeaconMetrics, eventBus: ChainEventEmitter
-): (source: AsyncIterable<{preState: BeaconState; postState: BeaconState; block: SignedBeaconBlock}>) => void {
-  return (source) => {
-    (async function() {
+): (source: AsyncIterable<{preState: BeaconState; postState: BeaconState; block: SignedBeaconBlock}>) => Promise<void> {
+  return async (source) => {
+    return (async function() {
       for await(const item of source) {
         metrics.currentSlot.set(item.block.message.slot);
         const preSlot = item.preState.slot;
@@ -21,24 +21,23 @@ export function postProcess(
         if (computeEpochAtSlot(config, preSlot) < currentEpoch) {
           const blockRoot = config.types.BeaconBlock.hashTreeRoot(item.block.message);
           eventBus.emit("processedCheckpoint", {epoch: currentEpoch, root: blockRoot});
+          await Promise.all([
+            setJustified(config, db, eventBus, logger, metrics, item.postState, preJustifiedEpoch),
+            setFinalized(config, db, eventBus, logger, metrics, item.postState, preFinalizedEpoch)
+          ]);
 
-          await setJustified(config, db, eventBus, logger, item.postState, preJustifiedEpoch);
-          await setFinalized(config, db, eventBus, logger, item.postState, preFinalizedEpoch);
-
-          metrics.previousJustifiedEpoch.set(item.postState.previousJustifiedCheckpoint.epoch);
-          metrics.currentJustifiedEpoch.set(item.postState.currentJustifiedCheckpoint.epoch);
-          metrics.currentFinalizedEpoch.set(item.postState.finalizedCheckpoint.epoch);
           metrics.currentEpochLiveValidators.set(
             Array.from(item.postState.validators).filter((v: Validator) => isActiveValidator(v, currentEpoch)).length
           );
         }
       }
+      return;
     })();
   };
 }
 
 async function setJustified(
-  config: IBeaconConfig, db: IBeaconDb, eventBus: ChainEventEmitter, logger: ILogger,
+  config: IBeaconConfig, db: IBeaconDb, eventBus: ChainEventEmitter, logger: ILogger, metrics: IBeaconMetrics,
   postState: BeaconState, preJustifiedEpoch: Epoch
 ): Promise<void> {
   // Newly justified epoch
@@ -50,12 +49,14 @@ async function setJustified(
       db.chain.setJustifiedStateRoot(justifiedBlock.message.stateRoot.valueOf() as Uint8Array),
       db.chain.setJustifiedBlockRoot(justifiedBlockRoot.valueOf() as Uint8Array),
     ]);
+    metrics.previousJustifiedEpoch.set(preJustifiedEpoch);
+    metrics.currentJustifiedEpoch.set(postState.currentJustifiedCheckpoint.epoch);
     eventBus.emit("justifiedCheckpoint", postState.currentJustifiedCheckpoint);
   }
 }
 
 async function setFinalized(
-  config: IBeaconConfig, db: IBeaconDb, eventBus: ChainEventEmitter, logger: ILogger,
+  config: IBeaconConfig, db: IBeaconDb, eventBus: ChainEventEmitter, logger: ILogger, metrics: IBeaconMetrics,
   postState: BeaconState, preFinalizedEpoch: Epoch
 ): Promise<void> {
   // Newly finalized epoch
@@ -67,6 +68,7 @@ async function setFinalized(
       db.chain.setFinalizedStateRoot(finalizedBlock.message.stateRoot.valueOf() as Uint8Array),
       db.chain.setFinalizedBlockRoot(finalizedBlockRoot.valueOf() as Uint8Array),
     ]);
+    metrics.currentFinalizedEpoch.set(postState.finalizedCheckpoint.epoch);
     eventBus.emit("finalizedCheckpoint", postState.finalizedCheckpoint);
   }
 }
