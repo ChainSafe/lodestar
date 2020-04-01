@@ -17,7 +17,7 @@ export function interopDeposits(
     const data: DepositData = {
       pubkey,
       withdrawalCredentials: Buffer.concat([
-        config.params.BLS_WITHDRAWAL_PREFIX_BYTE,
+        config.params.BLS_WITHDRAWAL_PREFIX,
         hash(pubkey).slice(1),
       ]),
       amount: config.params.MAX_EFFECTIVE_BALANCE,
