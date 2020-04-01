@@ -3,6 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {Pushable} from "it-pushable";
+import {ChainEventEmitter} from "../interface";
 
 export class BlockPool {
 
@@ -10,10 +11,12 @@ export class BlockPool {
 
   private readonly config: IBeaconConfig;
   private readonly blockProcessorSource: Pushable<IBlockProcessJob>;
+  private readonly eventBus: ChainEventEmitter;
 
-  constructor(config: IBeaconConfig, blockProcessorSource: Pushable<IBlockProcessJob>) {
+  constructor(config: IBeaconConfig, blockProcessorSource: Pushable<IBlockProcessJob>, eventBus: ChainEventEmitter) {
     this.config = config;
     this.blockProcessorSource = blockProcessorSource;
+    this.eventBus = eventBus;
   }
 
   public addPendingBlock(job: IBlockProcessJob): void {
@@ -22,7 +25,7 @@ export class BlockPool {
       this.pool.get(key).push(job);
     } else {
       this.pool.set(key, [job]);
-      //TODO: emit unknown block root event
+      this.eventBus.emit("unknownBlockRoot", job.signedBlock.message.parentRoot);
     }
   }
 

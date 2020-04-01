@@ -44,7 +44,7 @@ export class BlockProcessor implements IService {
     this.forkChoice = forkChoice;
     this.metrics = metrics;
     this.eventBus = eventBus;
-    this.pendingBlocks = new BlockPool(config, this.blockProcessingSource);
+    this.pendingBlocks = new BlockPool(config, this.blockProcessingSource, this.eventBus);
   }
 
   public async start(): Promise<void> {
