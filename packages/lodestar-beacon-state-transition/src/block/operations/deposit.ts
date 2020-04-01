@@ -35,7 +35,7 @@ export function processDeposit(
   const amount = deposit.data.amount;
   const validatorIndex = Array.from(state.validators).findIndex((v) => config.types.BLSPubkey.equals(v.pubkey, pubkey));
   if (validatorIndex === -1) {
-    const domain = computeDomain(DomainType.DEPOSIT);
+    const domain = computeDomain(config, DomainType.DEPOSIT);
     const signingRoot = computeSigningRoot(config, config.types.DepositMessage, deposit.data, domain);
     // Verify the deposit signature (proof of possession)
     // Note: The deposit contract does not check signatures.

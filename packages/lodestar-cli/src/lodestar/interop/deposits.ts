@@ -23,7 +23,7 @@ export function interopDeposits(
       amount: config.params.MAX_EFFECTIVE_BALANCE,
       signature: Buffer.alloc(0),
     };
-    const domain = computeDomain(DomainType.DEPOSIT);
+    const domain = computeDomain(config, DomainType.DEPOSIT);
     const signingRoot = computeSigningRoot(config, config.types.DepositMessage, data, domain);
     data.signature = sign(
       privkey,
