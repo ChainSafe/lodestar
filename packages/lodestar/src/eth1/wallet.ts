@@ -70,7 +70,7 @@ export class Eth1Wallet {
       signature: Buffer.alloc(96)
     };
 
-    const domain = computeDomain(DomainType.DEPOSIT);
+    const domain = computeDomain(this.config, DomainType.DEPOSIT);
     const signingroot = computeSigningRoot(this.config, this.config.types.DepositMessage, depositData, domain);
     depositData.signature = bls.sign(
       signingKey.toBytes(),
