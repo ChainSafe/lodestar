@@ -10,7 +10,7 @@ import {ILMDGHOST, StatefulDagLMDGHOST} from "../../../../src/chain/forkChoice";
 import {collect} from "./utils";
 import { expect } from "chai";
 
-describe("block validate process", function () {
+describe("block validate stream", function () {
 
     let blockDbStub: SinonStubbedInstance<BlockRepository>;
     let dbStub: SinonStubbedInstance<BeaconDb>;
