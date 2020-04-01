@@ -16,17 +16,30 @@ import {
   isValidIndexedAttestation,
   isValidProposerSlashing,
   isValidVoluntaryExit,
+  verifyBlockSignature,
+  computeStartSlotAtEpoch,
+  processSlots,
+  getAttestingIndices,
+  isAggregator,
+  getDomain,
+  computeEpochAtSlot,
+  computeSigningRoot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
+import {ATTESTATION_PROPAGATION_SLOT_RANGE, DomainType} from "../../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {IBeaconChain} from "../../chain";
+import {verify} from "@chainsafe/bls";
 
 export class GossipMessageValidator implements IGossipMessageValidator {
+  private chain: IBeaconChain;
   private db: IBeaconDb;
   private config: IBeaconConfig;
   private logger: ILogger;
 
-  public constructor(db: IBeaconDb, config: IBeaconConfig, logger: ILogger) {
+  public constructor({chain, db, config, logger}:
+  {chain: IBeaconChain; db: IBeaconDb; config: IBeaconConfig; logger: ILogger}) {
+    this.chain = chain;
     this.db = db;
     this.config = config;
     this.logger = logger;
@@ -45,10 +58,16 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.block.has(root)) {
       return false;
     }
-    return true;
-    //TODO: fix this
-    // const state = await this.db.state.getLatest();
-    // return verifyBlockSignature(this.config, state, signedBlock);
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    const slot = signedBlock.message.slot;
+    if(state.slot < slot) {
+      processSlots(this.config, state, slot);
+    }
+    // block is too old
+    if (signedBlock.message.slot <= computeStartSlotAtEpoch(this.config, state.finalizedCheckpoint.epoch)) {
+      return false;
+    }
+    return verifyBlockSignature(this.config, state, signedBlock);
   };
 
   public isUnaggregatedAttestation = (attestation: Attestation): boolean => {
@@ -74,7 +93,10 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (!await this.db.block.has(blockRoot) || await this.db.block.isBadBlock(blockRoot)) {
       return false;
     }
-    const state = await this.db.state.getLatest();
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    if (state.slot < attestation.data.slot) {
+      processSlots(this.config, state, attestation.data.slot);
+    }
     const currentSlot = getCurrentSlot(this.config, state.genesisTime);
     if (!(attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= currentSlot &&
         currentSlot >= attestation.data.slot)) {
@@ -85,48 +107,49 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public isValidIncomingAggregateAndProof = async (aggregationAndProof: AggregateAndProof): Promise<boolean> => {
-    return true;
-    //TODO: fix this
-    // const root = this.config.types.AggregateAndProof.hashTreeRoot(aggregationAndProof);
-    // if (await this.db.aggregateAndProof.has(root as Buffer)) {
-    //   return false;
-    // }
-    // const blockRoot = aggregationAndProof.aggregate.data.beaconBlockRoot.valueOf() as Uint8Array;
-    // if (!await this.db.block.has(blockRoot) || await this.db.block.isBadBlock(blockRoot)) {
-    //   return false;
-    // }
-    // const state = await this.db.state.getLatest();
-    // const currentSlot = getCurrentSlot(this.config, state.genesisTime);
-    // const slot = aggregationAndProof.aggregate.data.slot;
-    // if (!(slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= currentSlot &&
-    //   currentSlot >= slot)) {
-    //   return false;
-    // }
-    // const attestorIndices = getAttestingIndices(this.config, state,
-    //   aggregationAndProof.aggregate.data, aggregationAndProof.aggregate.aggregationBits);
-    // if (!attestorIndices.includes(aggregationAndProof.aggregatorIndex)) {
-    //   return false;
-    // }
-    // if (!isAggregator(
-    //   this.config,
-    //   state,
-    //   slot,
-    //   aggregationAndProof.aggregatorIndex,
-    //   aggregationAndProof.selectionProof
-    // )) {
-    //   return false;
-    // }
-    // const validatorPubKey = state.validators[aggregationAndProof.aggregatorIndex].pubkey;
-    // const domain = getDomain(this.config, state, DomainType.BEACON_ATTESTER, computeEpochAtSlot(this.config, slot));
-    // if (!verify(validatorPubKey.valueOf() as Uint8Array,
-    //   this.config.types.Slot.hashTreeRoot(slot),
-    //   aggregationAndProof.selectionProof.valueOf() as Uint8Array,
-    //   domain,
-    // )) {
-    //   return false;
-    // }
-    // const indexedAttestation = getIndexedAttestation(this.config, state, aggregationAndProof.aggregate);
-    // return isValidIndexedAttestation(this.config, state, indexedAttestation);
+    const root = this.config.types.AggregateAndProof.hashTreeRoot(aggregationAndProof);
+    if (await this.db.aggregateAndProof.has(root as Buffer)) {
+      return false;
+    }
+    const blockRoot = aggregationAndProof.aggregate.data.beaconBlockRoot.valueOf() as Uint8Array;
+    if (!await this.db.block.has(blockRoot) || await this.db.block.isBadBlock(blockRoot)) {
+      return false;
+    }
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    if (state.slot < aggregationAndProof.aggregate.data.slot) {
+      processSlots(this.config, state, aggregationAndProof.aggregate.data.slot);
+    }
+    const currentSlot = getCurrentSlot(this.config, state.genesisTime);
+    const slot = aggregationAndProof.aggregate.data.slot;
+    if (!(slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= currentSlot &&
+      currentSlot >= slot)) {
+      return false;
+    }
+    const attestorIndices = getAttestingIndices(this.config, state,
+      aggregationAndProof.aggregate.data, aggregationAndProof.aggregate.aggregationBits);
+    if (!attestorIndices.includes(aggregationAndProof.aggregatorIndex)) {
+      return false;
+    }
+    if (!isAggregator(
+      this.config,
+      state,
+      slot,
+      aggregationAndProof.aggregate.data.index,
+      aggregationAndProof.selectionProof
+    )) {
+      return false;
+    }
+    const validatorPubKey = state.validators[aggregationAndProof.aggregatorIndex].pubkey;
+    const domain = getDomain(this.config, state, DomainType.BEACON_ATTESTER, computeEpochAtSlot(this.config, slot));
+    const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
+    if (!verify(validatorPubKey.valueOf() as Uint8Array,
+      signingRoot,
+      aggregationAndProof.selectionProof.valueOf() as Uint8Array,
+    )) {
+      return false;
+    }
+    const indexedAttestation = getIndexedAttestation(this.config, state, aggregationAndProof.aggregate);
+    return isValidIndexedAttestation(this.config, state, indexedAttestation);
   };
 
   public isValidIncomingUnaggregatedAttestation = async (attestation: Attestation): Promise<boolean> => {
@@ -139,7 +162,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
     // skip attestation if its too old
-    const state = await this.db.state.getLatest();
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
     return attestation.data.target.epoch >= state.finalizedCheckpoint.epoch;
   };
 
@@ -149,7 +172,11 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.voluntaryExit.has(root as Buffer)) {
       return false;
     }
-    const state = await this.db.state.getLatest();
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    const startSlot = computeStartSlotAtEpoch(this.config, voluntaryExit.message.epoch);
+    if (state.slot < startSlot) {
+      processSlots(this.config, state, startSlot);
+    }
     return isValidVoluntaryExit(this.config, state, voluntaryExit);
   };
 
@@ -159,7 +186,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.proposerSlashing.has(root as Buffer)) {
       return false;
     }
-    const state = await this.db.state.getLatest();
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
     return isValidProposerSlashing(this.config, state, proposerSlashing);
   };
 
@@ -169,7 +196,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.attesterSlashing.has(root as Buffer)) {
       return false;
     }
-    const state = await this.db.state.getLatest();
+    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
     return isValidAttesterSlashing(this.config, state, attesterSlashing);
   };
 }
