@@ -26,7 +26,6 @@ export interface IBeaconParams {
   EFFECTIVE_BALANCE_INCREMENT: bigint;
 
   // Initial values
-  GENESIS_SLOT: number;
   SAFE_SLOTS_TO_UPDATE_JUSTIFIED: number;
   BLS_WITHDRAWAL_PREFIX: Buffer;
   GENESIS_FORK_VERSION: Buffer;
