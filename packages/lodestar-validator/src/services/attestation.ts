@@ -22,7 +22,6 @@ import {
   computeEpochAtSlot, DomainType, getDomain, isSlashableAttestationData, computeSigningRoot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
-import {sleep} from "../util";
 import {IAttesterDuty} from "../types";
 
 export class AttestationService {
@@ -91,7 +90,6 @@ export class AttestationService {
   public onNewSlot = async (slot: Slot): Promise<void> => {
     const duty = this.nextAttesterDuties.get(slot);
     if(duty) {
-      await sleep(this.config.params.SECONDS_PER_SLOT / 3 * 1000);
       const fork = (await this.provider.beacon.getFork()).fork;
       const attestation = await this.createAttestation(duty.attestationSlot, duty.committeeIndex, fork);
       if(!attestation) {

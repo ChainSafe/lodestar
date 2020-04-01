@@ -81,6 +81,20 @@ export class ValidatorApi implements IValidatorApi {
     slot: Slot,
   ): Promise<Attestation> {
     try {
+      let subscribeFunc: (block: SignedBeaconBlock) => Promise<void>;
+      await new Promise((resolve) => {
+        setTimeout(resolve, this.config.params.SECONDS_PER_SLOT / 3 * 1000);
+        subscribeFunc = async (block: SignedBeaconBlock): Promise<void> => {
+          if (block.message.slot === slot) {
+            resolve();
+          }
+        };
+        this.chain.on("processedBlock", subscribeFunc);
+      });
+      if (subscribeFunc) {
+        this.chain.removeListener("processedBlock", subscribeFunc);
+      }
+
       const [headBlock, headState, validatorIndex] = await Promise.all([
         this.db.block.get(this.chain.forkChoice.head()),
         this.db.state.get(this.chain.forkChoice.headStateRoot()),
