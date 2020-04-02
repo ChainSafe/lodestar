@@ -5,7 +5,7 @@ import {expect} from "chai";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 //Tests failing when run in group, works when run individually
-describe.skip("Eth1 dev network", () => {
+describe("Eth1 dev network", () => {
 
   const logger: WinstonLogger = new WinstonLogger();
 

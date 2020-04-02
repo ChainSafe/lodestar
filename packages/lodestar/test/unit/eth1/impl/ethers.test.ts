@@ -129,7 +129,7 @@ describe("Eth1Notifier", () => {
     assert(cb.calledOnce, "deposit event did not fire");
   });
 
-  it.skip("should process a new block", async function () {
+  it("should process a new block", async function () {
     const cb = sinon.spy();
     eth1.on("block", cb);
 
@@ -137,18 +137,18 @@ describe("Eth1Notifier", () => {
     assert(cb.calledOnce, "new block event did not fire");
   });
 
-  it.skip("should get block 0", async function (): Promise<void> {
+  it("should get block 0", async function (): Promise<void> {
     const block = await eth1.getBlock(0);
     expect(block).to.not.be.null;
   });
 
-  it.skip("should get block by hash", async function (): Promise<void> {
+  it("should get block by hash", async function (): Promise<void> {
     let block = await eth1.getBlock(0);
     block = await eth1.getBlock(block.hash);
     expect(block).to.not.be.null;
   });
 
-  it.skip("should get latest block", async function (): Promise<void> {
+  it("should get latest block", async function (): Promise<void> {
     const block = await eth1.getHead();
     expect(block).to.not.be.null;
   });
