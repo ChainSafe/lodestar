@@ -16,6 +16,7 @@ import {IEth1Options} from "../options";
 import {getEth1Vote} from "./eth1Vote";
 import {BlockCache} from "./blocks";
 import {getEth1BlockCandidateRange, isCandidateBlock, getLatestEth1BlockTimestamp} from "./utils";
+import {retryable, GetInstanceFunc} from "../../util/function";
 
 export interface IEthersEth1Options extends IEth1Options {
   contract?: Contract;
@@ -102,19 +103,23 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     this.logger.verbose(`Received eth1 block ${blockNumber}`);
     const block = await this.provider.getBlock(blockNumber);
     this.emit("block", block);
-    let requestedBlockNumber = this.blocksCache.requestNewBlock(block);
-    if (requestedBlockNumber) {
-      let requestedBlock: Block;
-      let retry = 0;
-      while (!requestedBlock && retry < GET_ETH1_BLOCK_RETRY) {
-        requestedBlock = await this.getBlock(requestedBlockNumber);
-        requestedBlockNumber++;
-        retry++;
+    const requestedBlockNumber = this.blocksCache.requestNewBlock(block);
+    /* eslint-disable @typescript-eslint/no-this-alias */
+    const self = this;
+    const getBlock = this.getBlock;
+    function* blockNumberGen(): Generator<GetInstanceFunc<Block>> {
+      let i = requestedBlockNumber;
+      while(true) {
+        yield getBlock.bind(self, i++);
       }
+    }
+    
+    if (requestedBlockNumber) {
+      const requestedBlock = await retryable<Block>(blockNumberGen(), GET_ETH1_BLOCK_RETRY);
       if (requestedBlock) {
         this.blocksCache.addBlock(requestedBlock);
       } else {
-        this.logger.error(`Cannot find eth1 block ${requestedBlockNumber - retry} till ${requestedBlockNumber}`);
+        this.logger.error(`Cannot find eth1 block ${requestedBlockNumber}, retried ${GET_ETH1_BLOCK_RETRY} times`);
       }
     }
   }
