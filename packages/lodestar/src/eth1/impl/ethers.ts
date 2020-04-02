@@ -6,18 +6,22 @@ import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {Block, Log} from "ethers/providers";
 import {fromHexString} from "@chainsafe/ssz";
-import {Eth1Data, Number64, DepositData} from "@chainsafe/lodestar-types";
+import {Eth1Data, Number64, DepositData, BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 
-import {Eth1EventEmitter, IEth1Notifier} from "../interface";
+import {Eth1EventEmitter, IEth1Notifier, IBlockCache} from "../interface";
 import {isValidAddress} from "../../util/address";
 import {IEth1Options} from "../options";
 import {getEth1Vote} from "./eth1Vote";
+import {BlockCache} from "./blocks";
+import {getEth1BlockCandidateRange, isCandidateBlock, getLatestEth1BlockTimestamp} from "./utils";
 
 export interface IEthersEth1Options extends IEth1Options {
   contract?: Contract;
 }
+
+const GET_ETH1_BLOCK_RETRY = 3;
 
 /**
  * Watch the Eth1.0 chain using Ethers
@@ -25,6 +29,8 @@ export interface IEthersEth1Options extends IEth1Options {
 export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitter }) implements IEth1Notifier {
 
   public getEth1Vote = getEth1Vote;
+
+  private blocksCache: IBlockCache<Block>;
 
   private provider: ethers.providers.BaseProvider;
 
@@ -51,6 +57,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       );
     }
     this.contract = opts.contract;
+    this.blocksCache = new BlockCache<Block>();
   }
 
   public async start(): Promise<void> {
@@ -63,8 +70,17 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     this.logger.info(
       `Started listening on eth1 events on chain ${(await this.provider.getNetwork()).chainId}`
     );
+  }
 
-
+  public async initBlockCache(config: IBeaconConfig, state: BeaconState): Promise<void> {
+    const head = await this.getHead();
+    const range = getEth1BlockCandidateRange(config, state, head);
+    const promises: Promise<Block>[] = [];
+    for(let blockNumber = range.fromNumber; blockNumber < range.toNumber; blockNumber++) {
+      promises.push(this.getBlock(blockNumber));
+    }
+    const blocks = await Promise.all(promises);
+    this.blocksCache.init(blocks, head);
   }
 
   public async stop(): Promise<void> {
@@ -72,10 +88,35 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     this.contract.removeAllListeners("DepositEvent");
   }
 
+  public pruneBlockCache(config: IBeaconConfig, finalizedState: BeaconState): void {
+    const timestamp = getLatestEth1BlockTimestamp(config, finalizedState);
+    this.blocksCache.prune(timestamp);
+  }
+
+  public findBlocks(config: IBeaconConfig, periodStart: Number64): Block[] {
+    const allBlocks = this.blocksCache.findBlocksByTimestamp();
+    return allBlocks.filter(block => isCandidateBlock(config, block, periodStart));
+  }
+
   public async processBlockHeadUpdate(blockNumber: number): Promise<void> {
     this.logger.verbose(`Received eth1 block ${blockNumber}`);
     const block = await this.provider.getBlock(blockNumber);
     this.emit("block", block);
+    let requestedBlockNumber = this.blocksCache.requestNewBlock(block);
+    if (requestedBlockNumber) {
+      let requestedBlock: Block;
+      let retry = 0;
+      while (!requestedBlock && retry < GET_ETH1_BLOCK_RETRY) {
+        requestedBlock = await this.getBlock(requestedBlockNumber);
+        requestedBlockNumber++;
+        retry++;
+      }
+      if (requestedBlock) {
+        this.blocksCache.addBlock(requestedBlock);
+      } else {
+        this.logger.error(`Cannot find eth1 block ${requestedBlockNumber - retry} till ${requestedBlockNumber}`);
+      }
+    }
   }
 
   public async processDepositLog(
@@ -142,9 +183,8 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     return Buffer.from(fromHexString(depositCountHex)).readUIntLE(0, 6);
   }
 
-  public async getEth1Data(eth1Head: Block, distance: Number64): Promise<Eth1Data> {
-    const requiredBlock = eth1Head.number - distance;
-    const blockHash = (await this.getBlock(requiredBlock)).hash;
+  public async getEth1Data(block: Block): Promise<Eth1Data> {
+    const blockHash = block.hash;
     const [depositCount, depositRoot] = await Promise.all([
       this.depositCount(blockHash),
       this.depositRoot(blockHash)

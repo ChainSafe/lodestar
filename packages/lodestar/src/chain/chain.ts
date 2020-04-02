@@ -86,8 +86,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   public async start(): Promise<void> {
-    this.logger.verbose("asokdoasjdiajsdijas");
+    this.logger.verbose("Starting chain");
     const state = this.latestState || await this.db.state.getLatest();
+    this.eth1.initBlockCache(this.config, state);
     this.forkChoice.start(state.genesisTime);
     // if state doesn't exist in the db, the chain maybe hasn't started
     if (!state) {
@@ -322,6 +323,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
           this.db.chain.setFinalizedStateRoot(finalizedBlock.message.stateRoot.valueOf() as Uint8Array),
           this.db.chain.setFinalizedBlockRoot(finalizedBlockRoot.valueOf() as Uint8Array),
         ]);
+        this.eth1.pruneBlockCache(this.config, {...newState, slot: finalizedBlock.message.slot});
         this.emit("finalizedCheckpoint", newState.finalizedCheckpoint);
       }
       this.metrics.previousJustifiedEpoch.set(newState.previousJustifiedCheckpoint.epoch);
