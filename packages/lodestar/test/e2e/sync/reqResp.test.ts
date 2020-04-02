@@ -14,7 +14,9 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {generateState} from "../../utils/state";
-import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
+import {
+  BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository
+} from "../../../src/db/api/beacon/repositories";
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {BeaconBlocksByRootRequest, BeaconBlocksByRangeRequest} from "@chainsafe/lodestar-types";
@@ -59,12 +61,13 @@ describe("[sync] rpc", function () {
       netB.start(),
     ]);
     repsA = new ReputationStore();
+    const state = generateState();
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
       networkId: 0n,
+      state
     });
-    const state = generateState();
     
     state.finalizedCheckpoint = {
       epoch: 0,
@@ -92,7 +95,6 @@ describe("[sync] rpc", function () {
       yield block;
       yield block2;
     }());
-    chain.latestState = state;
     rpcA = new SyncReqResp({}, {
       config,
       db,

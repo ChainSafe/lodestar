@@ -75,7 +75,7 @@ export class Sync extends EventEmitter {
   public async start(): Promise<void> {
     await this.reqResp.start();
     this.initialSync.on("sync:completed", this.startRegularSync);
-    this.peers.concat(this.getValidPeers());
+    this.peers.concat(await this.getValidPeers());
     this.network.on("peer:disconnect", this.handleLostPeer);
     this.network.on("peer:connect", this.handleNewPeer);
     this.startInitialSync();
@@ -94,8 +94,8 @@ export class Sync extends EventEmitter {
     return false;
   }
 
-  private startInitialSync = (): void => {
-    if(this.getValidPeers().length >= 1) {
+  private startInitialSync = async (): Promise<void> => {
+    if((await this.getValidPeers()).length >= 1) {
       this.waitingForPeer = false;
       this.initialSync.start();
     } else {
@@ -110,15 +110,15 @@ export class Sync extends EventEmitter {
     this.regularSync.start();
   };
 
-  private getValidPeers(): PeerInfo[] {
-    const myState = this.chain.latestState;
+  private async getValidPeers(): Promise<PeerInfo[]> {
+    const myState = await this.chain.getHeadState();
     return this.network.getPeers().filter(
       (peer) => isValidPeerForInitSync(this.config, myState, this.reps.get(peer.id.toB58String()).latestStatus));
   }
 
-  private handleNewPeer = (peer: PeerInfo): void => {
+  private handleNewPeer = async (peer: PeerInfo): Promise<void> => {
     this.peers.push(peer);
-    const myState = this.chain.latestState;
+    const myState = await this.chain.getHeadState();
     if(this.waitingForPeer &&
       isValidPeerForInitSync(this.config, myState, this.reps.get(peer.id.toB58String()).latestStatus)) {
       this.waitingForPeer = false;

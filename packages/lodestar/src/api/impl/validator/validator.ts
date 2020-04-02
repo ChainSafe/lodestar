@@ -81,8 +81,8 @@ export class ValidatorApi implements IValidatorApi {
   ): Promise<Attestation> {
     try {
       const [headBlock, headState, validatorIndex] = await Promise.all([
-        this.db.block.get(this.chain.forkChoice.head()),
-        this.db.state.get(this.chain.forkChoice.headStateRoot()),
+        this.chain.getHeadBlock(),
+        this.chain.getHeadState(),
         this.db.getValidatorIndex(validatorPubKey)
       ]);
       processSlots(this.config, headState, slot);
@@ -114,7 +114,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getProposerDuties(epoch: Epoch): Promise<Map<Slot, BLSPubkey>> {
-    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    const state = await this.chain.getHeadState();
     assert(epoch >= 0 && epoch <= computeEpochAtSlot(this.config, state.slot) + 2);
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
     if(state.slot < startSlot) {
@@ -130,7 +130,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<ValidatorDuty[]> {
-    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    const state = await this.chain.getHeadState();
 
     const validatorIndexes = await Promise.all(validatorPubKeys.map(async publicKey => {
       return  state.validators.findIndex((v) => this.config.types.BLSPubkey.equals(v.pubkey, publicKey));
@@ -167,7 +167,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async isAggregator(slot: Slot, committeeIndex: CommitteeIndex, slotSignature: BLSSignature): Promise<boolean> {
-    return isAggregator(this.config, await this.db.state.getLatest(), slot, committeeIndex, slotSignature);
+    return isAggregator(this.config, await this.chain.getHeadState(), slot, committeeIndex, slotSignature);
   }
 
   public async subscribeCommitteeSubnet(
@@ -179,7 +179,7 @@ export class ValidatorApi implements IValidatorApi {
       slotSignature.valueOf() as Uint8Array,
       getDomain(
         this.config,
-        this.chain.latestState,
+        await this.chain.getHeadState(),
         DomainType.BEACON_ATTESTER,
         computeEpochAtSlot(this.config, slot))
     );

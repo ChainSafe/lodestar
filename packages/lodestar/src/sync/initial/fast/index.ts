@@ -10,7 +10,7 @@ import {ISyncOptions} from "../../options";
 import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../interface";
 import {EventEmitter} from "events";
 import {getInitalSyncTargetEpoch, isValidChainOfBlocks, isValidFinalizedCheckPoint} from "../../utils/sync";
-import {BeaconState, Checkpoint} from "@chainsafe/lodestar-types";
+import {Checkpoint} from "@chainsafe/lodestar-types";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {getBlockRange} from "../../utils/blocks";
 
@@ -49,7 +49,7 @@ export class FastSync
       return;
     }
 
-    const chainCheckPoint = this.chain.latestState.currentJustifiedCheckpoint;
+    const chainCheckPoint = (await this.chain.getHeadState()).currentJustifiedCheckpoint;
     //listen on finalization events
     this.chain.on("processedCheckpoint", this.sync);
     //start syncing from current chain checkpoint
@@ -74,7 +74,7 @@ export class FastSync
       this.logger.error("Wrong chain synced, should clean and start over");
     } else {
       this.logger.debug(`Fast syncing to target ${targetEpoch}`);
-      const latestState = this.chain.latestState as BeaconState;
+      const latestState = await this.chain.getHeadState();
       const blocks = await getBlockRange(
         this.network.reqResp,
         this.reps,

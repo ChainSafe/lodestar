@@ -66,16 +66,13 @@ export function isValidFinalizedCheckPoint(peers: IReputation[], finalizedCheckp
   return peerCount >= (validPeers.length / 2);
 }
 
-export function isValidPeerForInitSync(config: IBeaconConfig, myState: BeaconState, peerStatus: Status): boolean {
+export function isValidPeerForInitSync(config: IBeaconConfig, myState: BeaconState|null, peerStatus: Status): boolean {
   if (!peerStatus) {
     return false;
   }
   // TODO: compare fork_digest in the latest spec?
+  return !(myState && peerStatus.finalizedEpoch < myState.finalizedCheckpoint.epoch);
 
-  if (peerStatus.finalizedEpoch < myState.finalizedCheckpoint.epoch) {
-    return false;
-  }
-  return true;
 }
 
 export interface ISlotRange {

@@ -31,7 +31,6 @@ export type ChainEventEmitter = StrictEventEmitter<EventEmitter, IChainEvents>;
  * and applying the fork choice rule to update the chain head
  */
 export interface IBeaconChain extends ChainEventEmitter {
-  latestState: BeaconState|null;
   forkChoice: ILMDGHOST;
   clock: IBeaconClock;
   chainId: Uint16;
@@ -46,6 +45,10 @@ export interface IBeaconChain extends ChainEventEmitter {
    */
   stop(): Promise<void>;
 
+  getHeadState(): Promise<BeaconState|null>;
+
+  getHeadBlock(): Promise<SignedBeaconBlock|null>;
+
   /**
    * Add attestation to the fork-choice rule
    */
@@ -55,16 +58,6 @@ export interface IBeaconChain extends ChainEventEmitter {
    * Pre-process and run the per slot state transition function
    */
   receiveBlock(signedBlock: SignedBeaconBlock, trusted?: boolean): Promise<void>;
-
-  /**
-   * Update the chain head using LMD GHOST
-   */
-  applyForkChoiceRule(): Promise<void>;
-
-  /**
-   * Ensure that the block is compliant with block processing validity conditions
-   */
-  isValidBlock(state: BeaconState, signedBlock: SignedBeaconBlock): Promise<boolean>;
 
   /**
    * Used for starting beacon chain with fake genesis state (dev, test, interop).
