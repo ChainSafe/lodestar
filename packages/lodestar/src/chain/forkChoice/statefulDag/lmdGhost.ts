@@ -292,7 +292,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       slot,
       blockRoot,
       stateRoot: stateRootBuf,
-      parent: this.nodes[parentRoot], 
+      parent: this.nodes[parentRoot],
       justifiedCheckpoint: {rootHex: toHexString(justifiedCheckpoint.root), epoch: justifiedCheckpoint.epoch},
       finalizedCheckpoint: {rootHex: toHexString(finalizedCheckpoint.root), epoch: finalizedCheckpoint.epoch},
     });
