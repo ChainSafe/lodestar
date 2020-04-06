@@ -324,6 +324,13 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     if (!this.finalized || finalizedCheckpoint.epoch > this.finalized.epoch) {
       this.setFinalized(finalizedCheckpoint);
       shouldCheckBestTarget = true;
+      const finalizedSlot = computeStartSlotAtEpoch(this.config, this.finalized.epoch);
+      // Update justified if new justified is later than store justified
+      // or if store justified is not in chain with finalized checkpoint
+      if (justifiedCheckpoint.epoch > this.justified.epoch ||
+        this.getAncestor(this.justified.node.blockRoot, finalizedSlot) !== this.finalized.node.blockRoot) {
+        this.setJustified(justifiedCheckpoint);
+      }
     }
     // if parent root exists, link to blockRoot
     if (this.nodes[parentRoot]) {
