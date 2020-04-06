@@ -7,7 +7,9 @@ import assert from "assert";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {Gwei, Slot, ValidatorIndex, Number64, Checkpoint, Epoch, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeSlotsSinceEpochStart, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeSlotsSinceEpochStart,
+  getCurrentSlot,
+  computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {ILMDGHOST, BlockChainInfo} from "../interface";
 
@@ -297,6 +299,17 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     // best target is the node itself
     node.bestTarget = node;
     this.nodes[blockRoot] = node;
+    // Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
+    if (this.finalized) {
+      const finalizedSlot = computeStartSlotAtEpoch(this.config, this.finalized.epoch);
+      assert(node.slot > finalizedSlot,
+        `Fork choice: node slot ${node.slot} should be bigger than finalized slot ${finalizedSlot}`);
+      // Check block is a descendant of the finalized block at the checkpoint finalized slot
+      assert.equal(
+        this.getAncestor(blockRoot, finalizedSlot),
+        this.finalized.node.blockRoot,
+        `Fork choice: Block slot ${node.slot} is not on the same chain`);
+    }
 
     let shouldCheckBestTarget = false;
     if (!this.justified || justifiedCheckpoint.epoch > this.justified.epoch) {
@@ -391,11 +404,8 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       return true;
     }
     const hexBlockRoot = toHexString(blockRoot);
-    const newJustifiedBlock = this.nodes[hexBlockRoot];
-    if (newJustifiedBlock.slot <= this.justified.node.slot) {
-      return false;
-    }
-    if (this.getAncestor(hexBlockRoot, this.justified.node.slot) !== this.justified.node.blockRoot) {
+    const justifiedSlot = computeStartSlotAtEpoch(this.config, this.justified.epoch);
+    if (this.getAncestor(hexBlockRoot, justifiedSlot) !== this.justified.node.blockRoot) {
       return false;
     }
 
@@ -466,7 +476,8 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     } else if (node.slot === slot) {
       return node.blockRoot;
     } else {
-      return null;
+      // root is older than queried slot, thus a skip slot. Return latest root prior to slot
+      return root;
     }
   }
 
