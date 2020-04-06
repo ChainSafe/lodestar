@@ -245,6 +245,46 @@ describe("StatefulDagLMDGHOST", () => {
     });
   });
 
+  describe("update justified checkpoint after finalized checkpoint is set", () => {
+    /**
+       *              b -- d -- e
+       *             / \
+       *            /   c -- f -- g
+       * genesis - a
+       */
+    // shouldUpdateJustifiedCheckpoint returns false but we still update justified checkpoint finally
+    it("should update justified checkpoint - new justified is conflict to the previous justified", () => {
+      const lmd = new StatefulDagLMDGHOST(config);
+      addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      const slotA = 1 * config.params.SLOTS_PER_EPOCH;
+      addBlock(lmd, slotA, blockA, stateA, genesis, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      const slotB = 2 * config.params.SLOTS_PER_EPOCH;
+      addBlock(lmd, slotB, blockB, stateB, blockA, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      const slotC = 3 * config.params.SLOTS_PER_EPOCH;
+      addBlock(lmd, slotC, blockC, stateC, blockB, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      const slotD = 4 * config.params.SLOTS_PER_EPOCH;
+      addBlock(lmd, slotD, blockD, stateD, blockB, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      const slotE = 5 * config.params.SLOTS_PER_EPOCH;
+      addBlock(lmd, slotE, blockE, stateE, blockD, {root: blockD, epoch: 4}, {root: blockA, epoch: 1});
+      assert.deepEqual(lmd.getFinalized(), {root: blockA, epoch: 1});
+      assert.deepEqual(lmd.getJustified(), {root: blockD, epoch: 4});
+
+      // This creates a justified with conflict fork, still update it
+      const slotF = 6 * config.params.SLOTS_PER_EPOCH;
+      addBlock(lmd, slotF, blockF, stateF, blockC, {root: blockC, epoch: 3}, {root: blockA, epoch: 1});
+      assert.equal(lmd.shouldUpdateJustifiedCheckpoint(blockF), false);
+      assert.deepEqual(lmd.getFinalized(), {root: blockA, epoch: 1});
+      // C is conflict to D so not able to update justified
+      assert.deepEqual(lmd.getJustified(), {root: blockD, epoch: 4});
+      const slotG = 7 * config.params.SLOTS_PER_EPOCH;
+      addBlock(lmd, slotG, blockG, stateG, blockF, {root: blockF, epoch: 6}, {root: blockC, epoch: 3});
+
+      assert.deepEqual(lmd.getFinalized(), {root: blockC, epoch: 3});
+      // F is conflict to the previous justified block but we still set it finally
+      assert.deepEqual(lmd.getJustified(), {root: blockF, epoch: 6});
+    });
+  });
+
   describe("ensure bestTarget has same finalized/justified checkpoint like the store", () => {
     /**
        *                g

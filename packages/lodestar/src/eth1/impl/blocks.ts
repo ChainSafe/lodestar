@@ -47,6 +47,9 @@ export class BlockCache<T extends IBlock> implements IBlockCache<T> {
   }
 
   public requestNewBlock(head: T): number | undefined {
+    if (!this.blocks) {
+      return undefined;
+    }
     // in case of reorg, we don't want to update our cache
     const lastBlock = this.blocks[this.blocks.length - 1];
     if (head.number - lastBlock.number > this.distanceToHead) {
