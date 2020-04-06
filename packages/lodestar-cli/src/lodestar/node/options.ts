@@ -7,6 +7,7 @@ import {SyncOptions} from "../sync/options";
 import {BeaconLoggerOptions} from "./loggerOptions";
 import {MetricsOptions} from "../metrics/options";
 import {IConfigurationModule} from "../util/config";
+import {ApiOptions} from "../api/options";
 
 export const BeaconNodeOptions: IConfigurationModule = {
   name: "config",
@@ -17,6 +18,7 @@ export const BeaconNodeOptions: IConfigurationModule = {
     Eth1Options,
     NetworkOptions,
     OpPoolOptions,
+    ApiOptions,
     SyncOptions,
     BeaconLoggerOptions,
     MetricsOptions,

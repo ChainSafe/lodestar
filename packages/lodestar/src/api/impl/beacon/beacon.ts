@@ -3,12 +3,21 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconState, Bytes32, ForkResponse, Number64, SyncingStatus, Uint64} from "@chainsafe/lodestar-types";
+import {
+  BeaconState,
+  Bytes32,
+  ForkResponse,
+  Number64,
+  SignedBeaconBlock,
+  SyncingStatus,
+  Uint64
+} from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "./interface";
 import {IBeaconChain} from "../../../chain";
 import {IApiOptions} from "../../options";
 import {IApiModules} from "../../interface";
 import {ApiNamespace} from "../../index";
+import EventIterator from "event-iterator/lib/event-iterator";
 
 export class BeaconApi implements IBeaconApi {
 
@@ -22,7 +31,6 @@ export class BeaconApi implements IBeaconApi {
     this.config = modules.config;
     this.chain = modules.chain;
   }
-
 
   public async getClientVersion(): Promise<Bytes32> {
     return Buffer.from(`lodestar-${process.env.npm_package_version}`, "utf-8");
@@ -53,5 +61,14 @@ export class BeaconApi implements IBeaconApi {
   public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
     // TODO: change this after sync service is implemented
     return false;
+  }
+
+  public getBlockStream(): AsyncIterable<SignedBeaconBlock> {
+    return new EventIterator<SignedBeaconBlock>((push) => {
+      this.chain.on("processedBlock", (block) => {
+        console.log("new block");
+        push(block);
+      });
+    });
   }
 }

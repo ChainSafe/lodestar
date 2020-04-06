@@ -3,7 +3,7 @@
  */
 
 import {IApi} from "../../interface";
-import {Bytes32, ForkResponse, Number64, SyncingStatus} from "@chainsafe/lodestar-types";
+import {Bytes32, ForkResponse, Number64, SignedBeaconBlock, SyncingStatus} from "@chainsafe/lodestar-types";
 
 export interface IBeaconApi extends IApi {
 
@@ -36,4 +36,6 @@ export interface IBeaconApi extends IApi {
    * or a SyncingStatus object if it is.
    */
   getSyncingStatus(): Promise<boolean | SyncingStatus>;
+
+  getBlockStream(): AsyncIterable<SignedBeaconBlock>;
 }
