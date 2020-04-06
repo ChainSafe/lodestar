@@ -191,7 +191,8 @@ describe("Eth1Notifier", () => {
       expect(hash).to.be.equal("0x" + requiredBlockHash.toString("hex"));
       return Buffer.alloc(32);
     };
-    const eth1Data = await eth1.getEth1Data({number: 90} as Block, 10);
+    const block = await eth1.getBlock(80);
+    const eth1Data = await eth1.getEth1Data(block);
     expect(eth1Data).to.not.be.null;
     expect(eth1Data.blockHash).to.be.deep.equal(requiredBlockHash);
     expect(eth1Data.depositRoot).to.be.deep.equal(Buffer.alloc(32));

@@ -15,6 +15,7 @@ export interface IBeaconParams {
   TARGET_AGGREGATORS_PER_COMMITTEE: number;
   RANDOM_SUBNETS_PER_VALIDATOR: number;
   EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION: number;
+  SECONDS_PER_ETH1_BLOCK: number;
 
   // Deposit contract
   DEPOSIT_CONTRACT_ADDRESS: number;
