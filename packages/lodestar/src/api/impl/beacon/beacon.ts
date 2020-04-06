@@ -17,7 +17,7 @@ import {IBeaconChain} from "../../../chain";
 import {IApiOptions} from "../../options";
 import {IApiModules} from "../../interface";
 import {ApiNamespace} from "../../index";
-import EventIterator from "event-iterator/lib/event-iterator";
+import EventIterator from "event-iterator";
 
 export class BeaconApi implements IBeaconApi {
 
@@ -66,7 +66,6 @@ export class BeaconApi implements IBeaconApi {
   public getBlockStream(): AsyncIterable<SignedBeaconBlock> {
     return new EventIterator<SignedBeaconBlock>((push) => {
       this.chain.on("processedBlock", (block) => {
-        console.log("new block");
         push(block);
       });
     });
