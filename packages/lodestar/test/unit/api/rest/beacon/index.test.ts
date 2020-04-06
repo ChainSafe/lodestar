@@ -57,7 +57,7 @@ describe("Test beacon rest api", function () {
       .get("/node/genesis_time")
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body).to.be.equal(String(genesis));
+    expect(response.body).to.be.equal(genesis);
   });
 
   it("should return sync status", async function () {

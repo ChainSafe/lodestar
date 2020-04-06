@@ -8,7 +8,7 @@ export const registerVersionEndpoint: LodestarRestApiEndpoint
         {}, 
         async (request, reply) => {
           reply.code(200).type("application/json").send(
-            ((await api.beacon.getClientVersion()) as Buffer).toString("utf-8")
+            JSON.stringify(((await api.beacon.getClientVersion()) as Buffer).toString("utf-8"))
           );
         });
     };
