@@ -11,6 +11,7 @@ import {DepositData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {DomainType} from "../constants";
+import {computeSigningRoot, computeDomain} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 
@@ -69,10 +70,11 @@ export class Eth1Wallet {
       signature: Buffer.alloc(96)
     };
 
+    const domain = computeDomain(this.config, DomainType.DEPOSIT);
+    const signingroot = computeSigningRoot(this.config, this.config.types.DepositMessage, depositData, domain);
     depositData.signature = bls.sign(
       signingKey.toBytes(),
-      this.config.types.DepositMessage.hashTreeRoot(depositData),
-      Buffer.from([0, 0, 0, DomainType.DEPOSIT])
+      signingroot
     );
 
     const depositDataRoot = this.config.types.DepositData.hashTreeRoot(depositData);

@@ -87,7 +87,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   public async start(): Promise<void> {
+    this.logger.verbose("Starting chain");
     const state = await this.db.state.getLatest();
+    this.eth1.initBlockCache(this.config, state);
     this.forkChoice.start(state.genesisTime);
     // if state doesn't exist in the db, the chain maybe hasn't started
     if (!state) {

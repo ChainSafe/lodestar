@@ -2,7 +2,7 @@
 
 export const ATTESTATION_SUBNET_COUNT = 64;
 export const ATTESTATION_PROPAGATION_SLOT_RANGE = 23;
-
+export const MAXIMUM_GOSSIP_CLOCK_DISPARITY = 500;
 // req/resp
 
 export type RequestId = string;

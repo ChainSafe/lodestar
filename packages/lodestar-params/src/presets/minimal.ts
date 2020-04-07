@@ -5,5 +5,4 @@ import {convertTypes, schema} from "../utils";
 import {typeMap} from "../types";
 import {load} from "js-yaml";
 
-
 export const params = convertTypes(load(minimalYaml, {schema}), typeMap);
