@@ -31,6 +31,6 @@ describe("getEth1BlockCandidateRange", () => {
     }
     const periodStart = votingPeriodStartTime(config, state);
     const candidateBlocks = blocks.filter(block => isCandidateBlock(config, block, periodStart));
-    expect(candidateBlocks.length).to.be.equal(config.params.ETH1_FOLLOW_DISTANCE);
+    expect(candidateBlocks.length).to.be.gte(config.params.ETH1_FOLLOW_DISTANCE);
   });
 });
