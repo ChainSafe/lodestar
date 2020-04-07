@@ -14,6 +14,7 @@ export function postProcess(
     return (async function() {
       for await(const item of source) {
         metrics.currentSlot.set(item.block.message.slot);
+        eventBus.emit("processedBlock", item.block);
         const preSlot = item.preState.slot;
         const preFinalizedEpoch = item.preState.finalizedCheckpoint.epoch;
         const preJustifiedEpoch = item.preState.currentJustifiedCheckpoint.epoch;

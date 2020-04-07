@@ -5,14 +5,14 @@ export const RestOptions: IConfigurationModule = {
   name: "rest",
   description: "Options to configure rest api server",
   fields: [
-    booleanOption("enabled", "--rest"),
+    booleanOption("enabled", "rest"),
     {
       name: "api",
       type: "string",
       process: processApiNamespaces,
       configurable: true,
       cli: {
-        flag: "--rest-api"
+        flag: "restApi"
       }
     },
     {
@@ -20,7 +20,7 @@ export const RestOptions: IConfigurationModule = {
       type: "string",
       configurable: true,
       cli: {
-        flag: "--rest-host"
+        flag: "restHost"
       }
     },
     {
@@ -28,7 +28,7 @@ export const RestOptions: IConfigurationModule = {
       type: "number",
       configurable: true,
       cli: {
-        flag: "--rest-port"
+        flag: "restPort"
       }
     },
     {
@@ -36,7 +36,7 @@ export const RestOptions: IConfigurationModule = {
       type: "string",
       configurable: true,
       cli: {
-        flag: "--rest-cors"
+        flag: "restCors"
       }
     }
   ]
