@@ -128,7 +128,7 @@ describe("[network] rpc", () => {
       block.message.slot = slot;
       return block;
     };
-    // send status from A to B, await status response
+    // send block by range requests from A to B
     rpcB.on("request", (peerInfo, method, id, body) => {
       const requestBody = body as BeaconBlocksByRangeRequest;
       const blocks: SignedBeaconBlock[] = [];
@@ -162,5 +162,34 @@ describe("[network] rpc", () => {
       console.log(e);
       assert.fail(`Cannot receive response, error: ${e.message}`);
     }
+  });
+
+  it("allow empty lists in streamed response", async function() {
+    this.timeout(6000);
+    try {
+      await new Promise((resolve, reject) => {
+        const t = setTimeout(reject, 2000);
+        nodeB.once("peer:connect", () => {
+          clearTimeout(t);
+          resolve();
+        });
+      });
+    } catch (e) {
+      assert.fail(e, null, "connection event not triggered");
+    }
+
+    rpcB.on("request", (peerInfo, method, id, body) => {
+      rpcB.sendResponse(id, null, []);
+    });
+
+    const request: BeaconBlocksByRangeRequest = {
+      headBlockRoot: Buffer.alloc(32),
+      startSlot: 100,
+      count: 10,
+      step: 1
+    };
+
+    const response = await rpcA.beaconBlocksByRange(nodeB.peerInfo, request);
+    assert.deepEqual(response, []);
   });
 });

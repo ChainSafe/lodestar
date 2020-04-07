@@ -19,60 +19,47 @@ describe("et1h vote", function () {
   });
 
   it("get eth1 vote - happy path", async function () {
-    config.params.ETH1_FOLLOW_DISTANCE = 3;
-    eth1Notifier.getHead.resolves({
+    eth1Notifier.findBlocks.returns([{
 
-    } as Block);
+    } as Block]);
     const expectedVote: Eth1Data = {
       blockHash: Buffer.alloc(32),
       depositRoot: Buffer.alloc(32),
       depositCount: 10
     };
-    eth1Notifier.getEth1Data.onFirstCall().resolves(expectedVote);
-    eth1Notifier.getEth1Data.resolves({
-      blockHash: Buffer.alloc(32, 1),
-      depositRoot: Buffer.alloc(32, 1),
-      depositCount: 12
-    });
+    eth1Notifier.getEth1Data.resolves(expectedVote);
     const eth1Vote = await getEth1Vote.bind(eth1Notifier)(
       config,
       generateState({slot: 5, eth1DataVotes: [expectedVote]}),
-      5
     );
-    expect(eth1Notifier.getEth1Data.callCount).to.be.equal(2);
+    expect(eth1Notifier.getEth1Data.callCount).to.be.equal(1);
     expect(config.types.Eth1Data.equals(eth1Vote, expectedVote)).to.be.true;
   });
 
-  it("get eth1 vote - longer period tail", async function () {
-    config.params.ETH1_FOLLOW_DISTANCE = 3;
-    eth1Notifier.getHead.resolves({
+  it("get eth1 vote - default vote", async function () {
+    eth1Notifier.findBlocks.returns([{
 
-    } as Block);
+    } as Block]);
     const expectedVote: Eth1Data = {
       blockHash: Buffer.alloc(32),
       depositRoot: Buffer.alloc(32),
       depositCount: 10
     };
-    eth1Notifier.getEth1Data.onThirdCall().resolves(expectedVote);
-    eth1Notifier.getEth1Data.resolves({
-      blockHash: Buffer.alloc(32, 1),
-      depositRoot: Buffer.alloc(32, 1),
-      depositCount: 12
-    });
+    eth1Notifier.getEth1Data.resolves(expectedVote);
     const eth1Vote = await getEth1Vote.bind(eth1Notifier)(
       config,
-      generateState({slot: 3, eth1DataVotes: [expectedVote]}),
-      5
+      generateState({slot: 3, eth1DataVotes: [{
+        blockHash: Buffer.alloc(32, 1),
+        depositRoot: Buffer.alloc(32, 1),
+        depositCount: 12
+      }]}),
     );
-    expect(eth1Notifier.getEth1Data.callCount).to.be.equal(5);
+    expect(eth1Notifier.getEth1Data.callCount).to.be.equal(1);
     expect(config.types.Eth1Data.equals(eth1Vote, expectedVote)).to.be.true;
   });
 
   it("get eth1 vote - tiebreak", async function () {
-    config.params.ETH1_FOLLOW_DISTANCE = 3;
-    eth1Notifier.getHead.resolves({
-
-    } as Block);
+    eth1Notifier.findBlocks.returns([{} as Block, {} as Block]);
     const expectedVote1: Eth1Data = {
       blockHash: Buffer.alloc(32),
       depositRoot: Buffer.alloc(32),
@@ -85,25 +72,18 @@ describe("et1h vote", function () {
     };
     eth1Notifier.getEth1Data.onFirstCall().resolves(expectedVote2);
     eth1Notifier.getEth1Data.onSecondCall().resolves(expectedVote1);
-    eth1Notifier.getEth1Data.resolves({
-      blockHash: Buffer.alloc(32, 1),
-      depositRoot: Buffer.alloc(32, 1),
-      depositCount: 12
-    });
     const eth1Vote = await getEth1Vote.bind(eth1Notifier)(
       config,
       generateState({slot: 5, eth1DataVotes: [expectedVote2, expectedVote1]}),
-      5
     );
     expect(eth1Notifier.getEth1Data.callCount).to.be.equal(2);
     expect(config.types.Eth1Data.equals(eth1Vote, expectedVote1)).to.be.true;
   });
 
-  it("get eth1 vote - no valid votes", async function () {
-    config.params.ETH1_FOLLOW_DISTANCE = 3;
-    eth1Notifier.getHead.resolves({
+  it("get eth1 vote - no vote in state", async function () {
+    eth1Notifier.findBlocks.returns([{
 
-    } as Block);
+    } as Block]);
     const expectedVote: Eth1Data = {
       blockHash: Buffer.alloc(32),
       depositRoot: Buffer.alloc(32),
@@ -113,9 +93,8 @@ describe("et1h vote", function () {
     const eth1Vote = await getEth1Vote.bind(eth1Notifier)(
       config,
       generateState({slot: 5, eth1DataVotes: []}),
-      5
     );
-    expect(eth1Notifier.getEth1Data.callCount).to.be.equal(3);
+    expect(eth1Notifier.getEth1Data.callCount).to.be.equal(1);
     expect(config.types.Eth1Data.equals(eth1Vote, expectedVote)).to.be.true;
   });
 

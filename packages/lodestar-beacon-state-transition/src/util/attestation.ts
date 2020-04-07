@@ -17,6 +17,7 @@ import {DomainType,} from "../constants";
 import {isSorted} from "@chainsafe/lodestar-utils";
 import {getDomain} from "./domain";
 import {getBeaconCommittee} from "./committee";
+import {computeSigningRoot} from "./signingRoot";
 
 
 
@@ -53,12 +54,14 @@ export function isValidIndexedAttestation(
   if (!isSorted([...new Set(indices).values()])) {
     return false;
   }
+  const pubKeys = indices.map((i) => state.validators[i].pubkey.valueOf() as Uint8Array);
+  const domain = getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch);
+  const signingRoot = computeSigningRoot(config, config.types.AttestationData, indexedAttestation.data, domain);
   //  Verify aggregate signature
-  if (verifySignature && !bls.verify(
-    bls.aggregatePubkeys(indices.map((i) => state.validators[i].pubkey.valueOf() as Uint8Array)),
-    config.types.AttestationData.hashTreeRoot(indexedAttestation.data),
+  if (verifySignature && !bls.verifyAggregate(
+    pubKeys,
+    signingRoot,
     indexedAttestation.signature.valueOf() as Uint8Array,
-    getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch)
   )) {
     return false;
   }
