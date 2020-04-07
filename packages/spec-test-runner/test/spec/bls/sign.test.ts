@@ -1,14 +1,12 @@
 import path from "path";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib";
 import bls, {initBLS} from "@chainsafe/bls";
-import {padLeft} from "@chainsafe/bls/lib/helpers/utils";
 
 interface ISignMessageTestCase {
   data: {
     input: {
       privkey: string;
       message: string;
-      domain: string;
     };
     output: string;
   };
@@ -19,16 +17,15 @@ before(async function f() {
 });
 
 describeDirectorySpecTest<ISignMessageTestCase, string>(
-  "BLS - priv_to_pub",
+  "BLS - sign",
   path.join(
     __dirname,
-    "../../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/sign_msg/small"
+    "../../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/sign/small"
   ),
   (testCase => {
     const signature =  bls.sign(
       Buffer.from(testCase.data.input.privkey.replace("0x", ""), "hex"),
-      Buffer.from(testCase.data.input.message.replace("0x", ""), "hex"),
-      padLeft(Buffer.from(testCase.data.input.domain.replace("0x", ""), "hex"), 8)
+      Buffer.from(testCase.data.input.message.replace("0x", ""), "hex")
     );
     return `0x${Buffer.from(signature).toString("hex")}`;
   }),

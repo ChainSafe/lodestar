@@ -7,7 +7,8 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
-import {computeEpochAtSlot, DomainType, getDomain} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, DomainType, getDomain, computeSigningRoot}
+  from "@chainsafe/lodestar-beacon-state-transition";
 import {IValidatorDB} from "../";
 import {IApiClient} from "../api";
 
@@ -72,32 +73,34 @@ export default class BlockProposingService {
       return null;
     }
     this.logger.info(`Validator is proposer at slot ${slot}`);
+    const epoch = computeEpochAtSlot(this.config, slot);
+    const randaoDomain = getDomain(
+      this.config,
+      {fork} as BeaconState,
+      DomainType.RANDAO,
+      epoch
+    );
+    const randaoSigningRoot = computeSigningRoot(this.config, this.config.types.Epoch, epoch, randaoDomain);
     const block = await this.provider.validator.produceBlock(
       slot,
       this.privateKey.signMessage(
-        this.config.types.Epoch.hashTreeRoot(computeEpochAtSlot(this.config, slot)),
-        getDomain(
-          this.config,
-          {fork} as BeaconState,
-          DomainType.RANDAO,
-          computeEpochAtSlot(this.config, slot)
-        ),
+        randaoSigningRoot
       ).toBytesCompressed()
     );
     if(!block) {
       return null;
     }
+    const proposerDomain = getDomain(
+      this.config,
+      {fork} as BeaconState,
+      DomainType.BEACON_PROPOSER,
+      computeEpochAtSlot(this.config, slot)
+    );
+    const blockSigningRoot = computeSigningRoot(this.config, this.config.types.BeaconBlock, block, proposerDomain);
+
     const signedBlock: SignedBeaconBlock = {
       message: block,
-      signature: this.privateKey.signMessage(
-        this.config.types.BeaconBlock.hashTreeRoot(block),
-        getDomain(
-          this.config,
-          {fork} as BeaconState,
-          DomainType.BEACON_PROPOSER,
-          computeEpochAtSlot(this.config, slot)
-        ),
-      ).toBytesCompressed(),
+      signature: this.privateKey.signMessage(blockSigningRoot).toBytesCompressed(),
     };
     await this.storeBlock(signedBlock);
     await this.provider.validator.publishBlock(signedBlock);

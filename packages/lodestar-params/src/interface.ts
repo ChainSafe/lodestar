@@ -15,6 +15,7 @@ export interface IBeaconParams {
   TARGET_AGGREGATORS_PER_COMMITTEE: number;
   RANDOM_SUBNETS_PER_VALIDATOR: number;
   EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION: number;
+  SECONDS_PER_ETH1_BLOCK: number;
 
   // Deposit contract
   DEPOSIT_CONTRACT_ADDRESS: number;
@@ -26,13 +27,13 @@ export interface IBeaconParams {
   EFFECTIVE_BALANCE_INCREMENT: bigint;
 
   // Initial values
-  GENESIS_SLOT: number;
   SAFE_SLOTS_TO_UPDATE_JUSTIFIED: number;
   BLS_WITHDRAWAL_PREFIX: Buffer;
   GENESIS_FORK_VERSION: Buffer;
   GENESIS_START_SHARD: number;
 
   // Time parameters
+  MIN_GENESIS_DELAY: number;
   SECONDS_PER_SLOT: number;
   MIN_ATTESTATION_INCLUSION_DELAY: number;
   SLOTS_PER_EPOCH: number;
