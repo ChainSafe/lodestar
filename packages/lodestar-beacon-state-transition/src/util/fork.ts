@@ -15,5 +15,5 @@ export function computeForkDigest(
   currentVersion: Version,
   genesisValidatorsRoot: Root): ForkDigest {
   const root = computeForkDataRoot(config, currentVersion, genesisValidatorsRoot);
-  return [root[0], root[1], root[2], root[3]];
+  return (root.valueOf() as Uint8Array).slice(0,4);
 }

@@ -27,15 +27,9 @@ export function computeDomain(
     forkVersion = config.params.GENESIS_FORK_VERSION;
   }
   const forkDataRoot = computeForkDataRoot(config, forkVersion, genesisValidatorRoot);
-  const forkDataRootForDomain = Buffer.alloc(28);
-  forkDataRoot.forEach((value, index) => {
-    if (index < 28) {
-      forkDataRootForDomain[index] = value;
-    }
-  });
   return Buffer.concat([
     intToBytes(domainType, 4),
-    forkDataRootForDomain,
+    (forkDataRoot.valueOf() as Uint8Array).slice(0,28),
   ]);
 }
 
