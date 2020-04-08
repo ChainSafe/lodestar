@@ -7,7 +7,7 @@ import {
   CommitteeIndex,
   Slot,
   ValidatorDuty,
-  SignedBeaconBlock
+  SignedBeaconBlock,
 } from "@chainsafe/lodestar-types";
 import {IValidatorApi} from "../../../interface/validators";
 import {HttpClient} from "../../../../util";
@@ -61,8 +61,9 @@ export class RestValidatorApi implements IValidatorApi {
     return responseData.map(value => this.config.types.Attestation.fromJson(value));
   }
 
-  public async produceBlock(slot: Slot, randaoReveal: Bytes96): Promise<BeaconBlock> {
-    const url = `/block?slot=${slot}&randao_reveal=${toHexString(randaoReveal)}`;
+  public async produceBlock(slot: Slot, proposerPubkey: BLSPubkey, randaoReveal: Bytes96): Promise<BeaconBlock> {
+    const url =
+      `/block?slot=${slot}&proposer_pubkey=${toHexString(proposerPubkey)}&randao_reveal=${toHexString(randaoReveal)}`;
     return this.config.types.BeaconBlock.fromJson(await this.client.get<Json>(url));
   }
 

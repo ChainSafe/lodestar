@@ -7,7 +7,7 @@ import {
   Epoch,
   Slot,
   ValidatorDuty,
-  SignedBeaconBlock
+  SignedBeaconBlock,
 } from "@chainsafe/lodestar-types";
 
 export interface IValidatorApi {
@@ -23,7 +23,7 @@ export interface IValidatorApi {
    * which can then be signed by a ValidatorClient.
    * @returns {Promise<BeaconBlock>} A proposed BeaconBlock object
    */
-  produceBlock(slot: Slot, randaoReveal: Uint8Array): Promise<BeaconBlock>;
+  produceBlock(slot: Slot, proposerPubkey: BLSPubkey, randaoReveal: Uint8Array): Promise<BeaconBlock>;
 
   /**
    * Requests that the BeaconNode produce an IndexedAttestation,

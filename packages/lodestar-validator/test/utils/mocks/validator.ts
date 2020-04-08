@@ -58,7 +58,7 @@ export class MockValidatorApi implements IValidatorApi {
     return undefined;
   }
 
-  produceBlock(slot: number, randaoReveal: Buffer): Promise<BeaconBlock> {
+  produceBlock(slot: number, proposerPubkey: Buffer, randaoReveal: Buffer): Promise<BeaconBlock> {
     return undefined;
   }
 

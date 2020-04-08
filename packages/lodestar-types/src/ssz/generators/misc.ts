@@ -117,6 +117,7 @@ export const DepositData = (ssz: IBeaconSSZTypes): ContainerType => new Containe
 export const BeaconBlockHeader = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
     slot: ssz.Slot,
+    proposerIndex: ssz.ValidatorIndex,
     parentRoot: ssz.Root,
     stateRoot: ssz.Root,
     bodyRoot: ssz.Root,

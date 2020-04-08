@@ -38,6 +38,7 @@ export const BeaconBlockBody = (ssz: IBeaconSSZTypes, params: IBeaconParams): Co
 export const BeaconBlock = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
     slot: ssz.Slot,
+    proposerIndex: ssz.ValidatorIndex,
     parentRoot: new RootType({
       expandedType: () => ssz.BeaconBlock,
     }),

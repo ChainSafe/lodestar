@@ -152,6 +152,7 @@ export function getEmptySignedBlock(): SignedBeaconBlock {
 export function getEmptyBlock(): BeaconBlock {
   return {
     slot: GENESIS_SLOT,
+    proposerIndex: 0,
     parentRoot: ZERO_HASH,
     stateRoot: ZERO_HASH,
     body: getEmptyBlockBody(),

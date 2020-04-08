@@ -5,6 +5,7 @@ import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 export function generateEmptyBlock(): BeaconBlock {
   return {
     slot: 0,
+    proposerIndex: 0,
     parentRoot: Buffer.alloc(32),
     stateRoot: ZERO_HASH,
     body: {

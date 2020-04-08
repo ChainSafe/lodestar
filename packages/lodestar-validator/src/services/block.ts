@@ -83,6 +83,7 @@ export default class BlockProposingService {
     const randaoSigningRoot = computeSigningRoot(this.config, this.config.types.Epoch, epoch, randaoDomain);
     const block = await this.provider.validator.produceBlock(
       slot,
+      this.publicKey,
       this.privateKey.signMessage(
         randaoSigningRoot
       ).toBytesCompressed()

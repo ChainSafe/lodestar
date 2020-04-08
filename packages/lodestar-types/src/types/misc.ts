@@ -121,6 +121,7 @@ export interface DepositData {
 
 export interface BeaconBlockHeader {
   slot: Slot;
+  proposerIndex: ValidatorIndex;
   parentRoot: Root;
   stateRoot: Root;
   bodyRoot: Root;

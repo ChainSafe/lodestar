@@ -42,6 +42,7 @@ export function getBlockRoot(config: IBeaconConfig, state: BeaconState, epoch: E
 export function getTemporaryBlockHeader(config: IBeaconConfig, block: BeaconBlock): BeaconBlockHeader {
   return {
     slot: block.slot,
+    proposerIndex: block.proposerIndex,
     parentRoot: block.parentRoot,
     // `state_root` is zeroed and overwritten in the next `process_slot` call
     stateRoot: ZERO_HASH,
@@ -55,6 +56,7 @@ export function getTemporaryBlockHeader(config: IBeaconConfig, block: BeaconBloc
 export function blockToHeader(config: IBeaconConfig, block: BeaconBlock): BeaconBlockHeader {
   return {
     stateRoot: block.stateRoot,
+    proposerIndex: block.proposerIndex,
     slot: block.slot,
     parentRoot: block.parentRoot,
     bodyRoot: config.types.BeaconBlockBody.hashTreeRoot(block.body),

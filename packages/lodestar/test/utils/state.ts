@@ -26,6 +26,7 @@ export function generateState(opts?: TestBeaconState, config = mainnetConfig): B
     },
     latestBlockHeader: {
       slot: 0,
+      proposerIndex: 0,
       parentRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
       bodyRoot: config.types.BeaconBlockBody.hashTreeRoot(generateEmptyBlock().body),

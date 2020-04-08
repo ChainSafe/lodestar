@@ -53,7 +53,6 @@ describe("produce block", function () {
   // @ts-ignore
   const opPoolStub = new OpPool({}, {config: config, db: dbStub, eth1: sinon.createStubInstance(EthersEth1Notifier)});
   const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
-  const isValidProposerStub = sinon.stub(stateTransitionUtils, "isValidProposer");
   eth1Stub.getEth1Vote = sinon.stub();
   const chainStub = sinon.createStubInstance(BeaconChain);
   chainStub.forkChoice = sinon.createStubInstance(StatefulDagLMDGHOST);
@@ -101,16 +100,15 @@ describe("produce block", function () {
       hash: "0x" + ZERO_HASH.toString("hex"),
       number: 1
     });
-    isValidProposerStub.returns(true);
     const validatorIndex = getBeaconProposerIndex(config, {...state, slot: 1});
 
     const blockProposingService = getBlockProposingService(
       keypairs[validatorIndex]
     );
     // @ts-ignore
-    blockProposingService.getRpcClient().validator.produceBlock.callsFake(async (slot, randao) => {
+    blockProposingService.getRpcClient().validator.produceBlock.callsFake(async (slot, validatorPubkey, randao) => {
       // @ts-ignore
-      return await assembleBlock(config, chainStub, dbStub, opPoolStub, eth1Stub, slot, randao);
+      return await assembleBlock(config, chainStub, dbStub, opPoolStub, eth1Stub, slot, validatorIndex, randao);
     });
     const block = await blockProposingService.createAndPublishBlock(1, state.fork);
     expect(() => stateTransition(config, state, block, false)).to.not.throw();

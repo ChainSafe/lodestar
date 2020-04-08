@@ -4,11 +4,12 @@
 
 import {EventEmitter} from "events";
 
-import {BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {Epoch, ProposerSlashing, Slot, ValidatorIndex, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {
-  signedBlockToSignedHeader, computeEpochAtSlot, getBeaconProposerIndex,
+  signedBlockToSignedHeader,
+  computeEpochAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
@@ -90,9 +91,8 @@ export class OpPool extends EventEmitter {
   public async checkDuplicateProposer(signedBlock: SignedBeaconBlock): Promise<void> {
     const epoch: Epoch = computeEpochAtSlot(this.config, signedBlock.message.slot);
     const existingProposers: Map<ValidatorIndex, Slot> = this.proposers.get(epoch);
-    const state: BeaconState = await this.db.state.getLatest();
 
-    const proposerIndex: ValidatorIndex = await getBeaconProposerIndex(this.config, state);
+    const proposerIndex: ValidatorIndex = signedBlock.message.proposerIndex;
 
     // Check if proposer already exists
     if (existingProposers && existingProposers.has(proposerIndex)) {
@@ -101,7 +101,6 @@ export class OpPool extends EventEmitter {
 
       // Create slashing
       const slashing: ProposerSlashing = {
-        proposerIndex: proposerIndex,
         signedHeader1: signedBlockToSignedHeader(this.config, prevBlock),
         signedHeader2: signedBlockToSignedHeader(this.config, signedBlock)
       };
