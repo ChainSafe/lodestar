@@ -29,6 +29,7 @@ export interface IBeaconSSZTypes {
   Version: ByteVectorType;
   BLSPubkey: ByteVectorType;
   BLSSignature: ByteVectorType;
+  Domain: ByteVectorType;
   // misc
   Fork: ContainerType<t.Fork>;
   Checkpoint: ContainerType<t.Checkpoint>;
@@ -46,6 +47,7 @@ export interface IBeaconSSZTypes {
   DepositData: ContainerType<t.DepositData>;
   BeaconBlockHeader: ContainerType<t.BeaconBlockHeader>;
   SignedBeaconBlockHeader: ContainerType<t.SignedBeaconBlockHeader>;
+  SigningRoot: ContainerType<t.SigningRoot>;
   DepositDataRootList: ContainerType<List<t.Root>>;
   // operations
   ProposerSlashing: ContainerType<t.ProposerSlashing>;
@@ -114,6 +116,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "DepositData",
   "BeaconBlockHeader",
   "SignedBeaconBlockHeader",
+  "SigningRoot",
   "DepositDataRootList",
   // operations
   "ProposerSlashing",

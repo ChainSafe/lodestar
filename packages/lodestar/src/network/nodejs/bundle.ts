@@ -5,6 +5,7 @@
 import LibP2p from "libp2p";
 import TCP from "libp2p-tcp";
 import Mplex from "libp2p-mplex";
+import {NOISE} from "libp2p-noise";
 import SECIO from "libp2p-secio";
 import Bootstrap from "libp2p-bootstrap";
 import MDNS from "libp2p-mdns";
@@ -29,7 +30,7 @@ export class NodejsNode extends LibP2p {
     const defaults = {
       peerInfo: options.peerInfo,
       modules: {
-        connEncryption: [SECIO],
+        connEncryption: [NOISE, SECIO],
         transport: [TCP],
         streamMuxer: [Mplex],
         peerDiscovery: [

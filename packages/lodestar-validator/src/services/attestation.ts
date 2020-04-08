@@ -19,7 +19,7 @@ import {IValidatorDB} from "..";
 import {toHexString} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {
-  computeEpochAtSlot, DomainType, getDomain, isSlashableAttestationData,
+  computeEpochAtSlot, DomainType, getDomain, isSlashableAttestationData, computeSigningRoot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
 import {sleep} from "../util";
@@ -162,10 +162,8 @@ export class AttestationService {
       DomainType.BEACON_ATTESTER,
       computeEpochAtSlot(this.config, slot)
     );
-    return this.privateKey.signMessage(
-      this.config.types.Slot.hashTreeRoot(slot),
-      domain.valueOf() as Uint8Array,
-    ).toBytesCompressed();
+    const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
+    return this.privateKey.signMessage(signingRoot).toBytesCompressed();
   }
 
   private async createAttestation(
@@ -190,14 +188,15 @@ export class AttestationService {
       );
       return null;
     }
+    const domain = getDomain(
+      this.config,
+      {fork} as BeaconState,
+      DomainType.BEACON_ATTESTER,
+      attestation.data.target.epoch,
+    );
+    const signingRoot = computeSigningRoot(this.config, this.config.types.AttestationData, attestation.data, domain);
     attestation.signature = this.privateKey.signMessage(
-      this.config.types.AttestationData.hashTreeRoot(attestation.data),
-      getDomain(
-        this.config,
-        {fork} as BeaconState,
-        DomainType.BEACON_ATTESTER,
-        attestation.data.target.epoch,
-      )
+      signingRoot
     ).toBytesCompressed();
     await this.storeAttestation(attestation);
     this.logger.info(

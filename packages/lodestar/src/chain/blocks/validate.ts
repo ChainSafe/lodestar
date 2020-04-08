@@ -18,7 +18,8 @@ export function validateBlock(
           continue;
         }
         const finalizedCheckpoint = forkChoice.getFinalized();
-        if (computeEpochAtSlot(config, job.signedBlock.message.slot) <= finalizedCheckpoint.epoch) {
+        if (finalizedCheckpoint.epoch > 0
+            && computeEpochAtSlot(config, job.signedBlock.message.slot) <= finalizedCheckpoint.epoch) {
           logger.warn(
             `Block ${toHexString(blockHash)} with slot ${job.signedBlock.message.slot} is not after ` +
                         `finalized epoch (${finalizedCheckpoint.epoch}).`
