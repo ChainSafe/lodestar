@@ -922,7 +922,7 @@
   optionalDependencies:
     "@chainsafe/eth2-spec-tests" "^0.10.1-fix"
 
-"@chainsafe/discv5@0.1.0":
+"@chainsafe/discv5@0.1.0", "@chainsafe/discv5@^0.1.0":
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.1.0.tgz#9f9d0b6007b1a9364d877d90d0a7e7efa380a511"
   integrity sha512-qsLJp/0qEBCVUwEJ+oOVnQOmNQy6owWlNMZobN9FVhVUJ+RxtbAwub+Be35I2oPqURFxo8MF0cu7opspXSyt2w==

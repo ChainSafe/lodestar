@@ -12,13 +12,12 @@ import MDNS from "libp2p-mdns";
 import PeerInfo from "peer-info";
 import {Discv5Discovery} from "../discovery/discv5";
 import {ENR} from "@chainsafe/discv5";
-import Multiaddr from "multiaddr";
 
 
 export interface ILibp2pOptions {
   peerInfo: PeerInfo;
   discv5: {
-    bindAddr: Multiaddr;
+    bindAddr: string;
     enr: ENR;
     bootEnrs?: ENR[];
   };

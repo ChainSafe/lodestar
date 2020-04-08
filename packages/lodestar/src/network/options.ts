@@ -1,5 +1,4 @@
 import {Number64} from "@chainsafe/lodestar-types";
-import Multiaddr from "multiaddr";
 import {ENR} from "@chainsafe/discv5";
 import {IDiscv5DiscoveryInputOptions} from "./discovery/discv5";
 
@@ -18,7 +17,7 @@ const config: INetworkOptions = {
   multiaddrs: ["/ip4/127.0.0.1/tcp/30606"],
   bootnodes: [],
   discv5: {
-    bindAddr: Multiaddr("/ip4/0.0.0.0/udp/5500"),
+    bindAddr: "/ip4/0.0.0.0/udp/5500",
     enr: new ENR(),
     bootEnrs: [],
   },

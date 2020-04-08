@@ -10,7 +10,7 @@ import {
 
 export interface IDiscv5DiscoveryInputOptions {
   enr: ENR;
-  bindAddr: Multiaddr;
+  bindAddr: string;
   bootEnrs: ENR[];
 }
 
@@ -29,7 +29,7 @@ export class Discv5Discovery extends EventEmitter {
 
   constructor(options: IDiscv5DiscoveryOptions) {
     super();
-    this.discv5 = Discv5.create(options.enr, options.peerInfo.id, options.bindAddr);
+    this.discv5 = Discv5.create(options.enr, options.peerInfo.id, Multiaddr(options.bindAddr));
     options.bootEnrs.forEach((bootEnr) => this.discv5.addEnr(bootEnr));
   }
 
