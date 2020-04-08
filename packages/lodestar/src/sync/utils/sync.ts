@@ -70,7 +70,7 @@ export function isValidPeerForInitSync(config: IBeaconConfig, myState: BeaconSta
   if (!peerStatus) {
     return false;
   }
-  // TODO: compare fork_digest in the latest spec?
+  // fork_digest comparision should be done in network discv5
   return !(myState && peerStatus.finalizedEpoch < myState.finalizedCheckpoint.epoch);
 
 }
