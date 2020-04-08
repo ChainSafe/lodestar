@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
-import {BLSPubkey, BLSSignature, CommitteeIndex, Slot, Uint64} from "./primitive";
+import {BLSPubkey, BLSSignature, CommitteeIndex, Slot, Uint64, Root} from "./primitive";
 import {Fork} from "./misc";
 
 export interface SubscribeToCommitteeSubnetPayload {
@@ -12,4 +12,5 @@ export interface SubscribeToCommitteeSubnetPayload {
 export interface ForkResponse {
   chainId: Uint64;
   fork: Fork;
+  genesisValidatorsRoot: Root;
 }

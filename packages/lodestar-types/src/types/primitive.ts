@@ -31,6 +31,7 @@ export type ValidatorIndex = Number64;
 export type Gwei = Uint64;
 export type Root = Bytes32;
 export type Version = Bytes4;
+export type ForkDigest = Bytes4;
 export type BLSPubkey = Bytes48;
 export type BLSSecretKey = Bytes32;
 export type BLSSignature = Bytes96;

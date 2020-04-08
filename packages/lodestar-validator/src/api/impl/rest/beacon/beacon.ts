@@ -1,4 +1,5 @@
-import {Bytes32, Fork, SyncingStatus, BeaconBlock, BeaconState, Number64, Uint64} from "@chainsafe/lodestar-types";
+import {Bytes32, Fork, SyncingStatus, BeaconBlock, BeaconState,
+  Number64, Uint64, Root} from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "../../../interface/beacon";
 import {HttpClient} from "../../../../util";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -15,8 +16,8 @@ export class RestBeaconApi implements IBeaconApi {
     return this.client.get<Bytes32>("/version");
   }
 
-  public async getFork(): Promise<{fork: Fork; chainId: Uint64}> {
-    return this.client.get<{fork: Fork; chainId: Uint64}>("/fork");
+  public async getFork(): Promise<{fork: Fork; chainId: Uint64; genesisValidatorsRoot: Root}> {
+    return this.client.get<{fork: Fork; chainId: Uint64; genesisValidatorsRoot: Root}>("/fork");
   }
 
   public async getGenesisTime(): Promise<Number64> {

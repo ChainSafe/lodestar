@@ -21,8 +21,9 @@ export async function handleIncomingAttesterSlashing(this: Gossip, obj: GossipOb
 }
 
 export async function publishAttesterSlashing(this: Gossip, attesterSlashing: AttesterSlashing): Promise<void> {
+  const forkDigestValue = await this.getForkDigest(attesterSlashing.attestation1.data.slot);
   await this.pubsub.publish(
-    getGossipTopic(GossipEvent.PROPOSER_SLASHING),
+    getGossipTopic(GossipEvent.PROPOSER_SLASHING, forkDigestValue),
     Buffer.from(this.config.types.AttesterSlashing.serialize(attesterSlashing))
   );
   this.logger.verbose(

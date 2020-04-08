@@ -38,12 +38,15 @@ export function getCommitteeAttestationHandler(subnet: number): GossipHandlerFn 
 }
 
 export async function publishCommiteeAttestation(this: Gossip, attestation: Attestation): Promise<void> {
+  const forkDigestValue = await this.getForkDigest(attestation.data.slot);
   const subnet = getAttestationSubnet(attestation);
   await this.pubsub.publish(
-    getAttestationSubnetTopic(attestation), Buffer.from(this.config.types.Attestation.serialize(attestation)));
+    getAttestationSubnetTopic(attestation, forkDigestValue),
+    Buffer.from(this.config.types.Attestation.serialize(attestation)));
   //backward compatible
   await this.pubsub.publish(
-    getGossipTopic(GossipEvent.ATTESTATION), Buffer.from(this.config.types.Attestation.serialize(attestation))
+    getGossipTopic(GossipEvent.ATTESTATION, forkDigestValue),
+    Buffer.from(this.config.types.Attestation.serialize(attestation))
   );
   const attestationHex = toHexString(this.config.types.Attestation.hashTreeRoot(attestation));
   this.logger.verbose(

@@ -18,6 +18,8 @@ import LibP2p from "libp2p";
 import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import {IService} from "../../node";
 import {IGossipMessage} from "libp2p-gossipsub";
+import {IBeaconChain} from "../../chain";
+import {ForkDigest} from "@chainsafe/lodestar-types";
 
 export interface IGossipEvents {
   [GossipEvent.BLOCK]: (signedBlock: SignedBeaconBlock) => void;
@@ -36,6 +38,7 @@ export interface IGossipModules {
   libp2p: LibP2p;
   logger: ILogger;
   validator: IGossipMessageValidator;
+  chain: IBeaconChain;
 }
 
 export interface IGossipSub extends EventEmitter {
@@ -53,21 +56,25 @@ export interface IGossip extends IService, GossipEventEmitter {
   publishVoluntaryExit(voluntaryExit: SignedVoluntaryExit): Promise<void>;
   publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<void>;
   publishProposerSlashing(proposerSlashing: ProposerSlashing): Promise<void>;
-  subscribeToBlock(callback: (signedBlock: SignedBeaconBlock) => void): void;
-  subscribeToAggregateAndProof(callback: (aggregate: AggregateAndProof) => void): void;
-  subscribeToAttestation(callback: (attestation: Attestation) => void): void;
-  subscribeToVoluntaryExit(callback: (voluntaryExit: SignedVoluntaryExit) => void): void;
-  subscribeToProposerSlashing(callback: (slashing: ProposerSlashing) => void): void;
-  subscribeToAttesterSlashing(callback: (slashing: AttesterSlashing) => void): void;
+  subscribeToBlock(forkDigest: ForkDigest, callback: (signedBlock: SignedBeaconBlock) => void): void;
+  subscribeToAggregateAndProof(forkDigest: ForkDigest, callback: (aggregate: AggregateAndProof) => void): void;
+  subscribeToAttestation(forkDigest: ForkDigest, callback: (attestation: Attestation) => void): void;
+  subscribeToVoluntaryExit(
+    forkDigest: ForkDigest, callback: (voluntaryExit: SignedVoluntaryExit) => void): void;
+  subscribeToProposerSlashing(forkDigest: ForkDigest, callback: (slashing: ProposerSlashing) => void): void;
+  subscribeToAttesterSlashing(forkDigest: ForkDigest, callback: (slashing: AttesterSlashing) => void): void;
   subscribeToAttestationSubnet(
+    forkDigest: ForkDigest,
     subnet: number|string,
     callback?: (attestation:  {attestation: Attestation; subnet: number}) => void
   ): void;
   unsubscribeFromAttestationSubnet(
+    forkDigest: ForkDigest,
     subnet: number|string,
     callback?: (attestation:  {attestation: Attestation; subnet: number}) => void
   ): void;
-  unsubscribe(event: keyof IGossipEvents, listener: unknown, params?: Map<string, string>): void;
+  unsubscribe(
+    forkDigest: ForkDigest, event: keyof IGossipEvents, listener: unknown, params?: Map<string, string>): void;
 }
 
 export interface IGossipMessageValidator {

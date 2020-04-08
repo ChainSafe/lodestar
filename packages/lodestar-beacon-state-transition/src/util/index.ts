@@ -3,6 +3,7 @@
  */
 
 export * from "./epoch";
+export * from "./fork";
 export * from "./domain";
 export * from "./blockRoot";
 export * from "./block";

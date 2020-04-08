@@ -21,8 +21,9 @@ export async function handleIncomingProposerSlashing(this: Gossip, obj: GossipOb
 }
 
 export async function publishProposerSlashing(this: Gossip, proposerSlashing: ProposerSlashing): Promise<void> {
+  const forkDigestValue = await this.getForkDigest(proposerSlashing.signedHeader1.message.slot);
   await this.pubsub.publish(
-    getGossipTopic(GossipEvent.PROPOSER_SLASHING),
+    getGossipTopic(GossipEvent.PROPOSER_SLASHING, forkDigestValue),
     Buffer.from(this.config.types.ProposerSlashing.serialize(proposerSlashing))
   );
   this.logger.verbose(

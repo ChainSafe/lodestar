@@ -17,6 +17,7 @@ export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): Contai
   fields: {
     // Misc
     genesisTime: ssz.Number64,
+    genesisValidatorsRoot: ssz.Root,
     slot: ssz.Slot,
     fork: ssz.Fork,
     // History

@@ -46,7 +46,8 @@ export class BeaconApi implements IBeaconApi {
     };
     return {
       fork,
-      chainId: networkId
+      chainId: networkId,
+      genesisValidatorsRoot: state.genesisValidatorsRoot,
     };
   }
 

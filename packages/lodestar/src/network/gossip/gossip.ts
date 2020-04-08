@@ -29,8 +29,13 @@ import {
   AttesterSlashing,
   ProposerSlashing,
   SignedBeaconBlock,
-  SignedVoluntaryExit
+  SignedVoluntaryExit,
+  Slot,
+  ForkDigest,
+  Epoch
 } from "@chainsafe/lodestar-types";
+import {IBeaconChain} from "../../chain";
+import {computeForkDigest, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 
 export type GossipHandlerFn = (this: Gossip, obj: GossipObject ) => void;
@@ -41,11 +46,12 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   protected readonly config: IBeaconConfig;
   protected readonly  libp2p: LibP2p;
   protected readonly  pubsub: IGossipSub;
+  protected readonly chain: IBeaconChain;
   protected readonly  logger: ILogger;
 
   private handlers: Map<string, GossipHandlerFn>;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, logger, validator}: IGossipModules) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger, validator, chain}: IGossipModules) {
     super();
     this.opts = opts;
     this.config = config;
@@ -54,10 +60,11 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.logger.silent = logger.silent;
     this.pubsub = new LodestarGossipsub(config, validator, this.logger,
       libp2p.peerInfo, libp2p.registrar, {gossipIncoming: true});
-    this.handlers = this.registerHandlers();
+    this.chain = chain;
   }
 
   public async start(): Promise<void> {
+    this.handlers = this.registerHandlers();
     await this.pubsub.start();
     this.handlers.forEach((handler, topic) => {
       this.pubsub.on(topic, handler);
@@ -83,54 +90,84 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
 
   public publishAttesterSlashing = publishAttesterSlashing.bind(this);
 
-  public subscribeToBlock(callback: (block: SignedBeaconBlock) => void): void {
-    this.subscribe(GossipEvent.BLOCK, callback);
+  public subscribeToBlock(forkDigest: ForkDigest, callback: (block: SignedBeaconBlock) => void): void {
+    this.subscribe(forkDigest, GossipEvent.BLOCK, callback);
   }
 
-  public subscribeToAggregateAndProof(callback: (aggregate: AggregateAndProof) => void): void {
-    this.subscribe(GossipEvent.AGGREGATE_AND_PROOF, callback);
+  public subscribeToAggregateAndProof(
+    forkDigest: ForkDigest, callback: (aggregate: AggregateAndProof) => void): void {
+    this.subscribe(forkDigest, GossipEvent.AGGREGATE_AND_PROOF, callback);
   }
 
-  public subscribeToAttestation(callback: (attestation: Attestation) => void): void {
-    this.subscribe(GossipEvent.ATTESTATION, callback);
+  public subscribeToAttestation(
+    forkDigest: ForkDigest, callback: (attestation: Attestation) => void): void {
+    this.subscribe(forkDigest, GossipEvent.ATTESTATION, callback);
   }
 
-  public subscribeToVoluntaryExit(callback: (signed: SignedVoluntaryExit) => void): void {
-    this.subscribe(GossipEvent.VOLUNTARY_EXIT, callback);
+  public subscribeToVoluntaryExit(
+    forkDigest: ForkDigest, callback: (signed: SignedVoluntaryExit) => void): void {
+    this.subscribe(forkDigest, GossipEvent.VOLUNTARY_EXIT, callback);
   }
 
-  public subscribeToProposerSlashing(callback: (slashing: ProposerSlashing) => void): void {
-    this.subscribe(GossipEvent.PROPOSER_SLASHING, callback);
+  public subscribeToProposerSlashing(
+    forkDigest: ForkDigest, callback: (slashing: ProposerSlashing) => void): void {
+    this.subscribe(forkDigest, GossipEvent.PROPOSER_SLASHING, callback);
   }
 
-  public subscribeToAttesterSlashing(callback: (slashing: AttesterSlashing) => void): void {
-    this.subscribe(GossipEvent.ATTESTER_SLASHING, callback);
+  public subscribeToAttesterSlashing(
+    forkDigest: ForkDigest, callback: (slashing: AttesterSlashing) => void): void {
+    this.subscribe(forkDigest, GossipEvent.ATTESTER_SLASHING, callback);
   }
 
   public subscribeToAttestationSubnet(
-    subnet: number|string, callback?: (attestation: {attestation: Attestation; subnet: number}) => void
+    forkDigest: ForkDigest,
+    subnet: number|string,
+    callback?: (attestation: {attestation: Attestation; subnet: number}) => void
   ): void {
-    this.subscribe(GossipEvent.ATTESTATION_SUBNET, callback, new Map([["subnet", subnet.toString()]]));
+    this.subscribe(forkDigest, GossipEvent.ATTESTATION_SUBNET, callback, new Map([["subnet", subnet.toString()]]));
   }
 
   public unsubscribeFromAttestationSubnet(
-    subnet: number|string, callback?: (attestation: {attestation: Attestation; subnet: number}) => void
+    forkDigest: ForkDigest,
+    subnet: number|string,
+    callback?: (attestation: {attestation: Attestation; subnet: number}) => void
   ): void {
-    this.unsubscribe(GossipEvent.ATTESTATION_SUBNET, callback, new Map([["subnet", subnet.toString()]]));
+    this.unsubscribe(forkDigest, GossipEvent.ATTESTATION_SUBNET, callback, new Map([["subnet", subnet.toString()]]));
   }
 
-  public unsubscribe(event: keyof IGossipEvents, listener?: unknown, params: Map<string, string> = new Map()): void {
+  public unsubscribe(
+    forkDigest: ForkDigest,
+    event: keyof IGossipEvents,
+    listener?: unknown,
+    params: Map<string, string> = new Map()): void {
     if(this.listenerCount(event) === 1 && !event.startsWith("gossipsub")) {
-      this.pubsub.unsubscribe(getGossipTopic(event as GossipEvent, "ssz", params));
+      this.pubsub.unsubscribe(getGossipTopic(event as GossipEvent, forkDigest, "ssz", params));
     }
     if(listener) {
       this.removeListener(event, listener as (...args: unknown[]) => void);
     }
   }
 
-  private subscribe(event: keyof IGossipEvents, listener?: unknown, params: Map<string, string> = new Map()): void {
+  public async getForkDigest(slot: Slot): Promise<ForkDigest> {
+    const epoch = computeEpochAtSlot(this.config, slot);
+    return this.getForkDigestByEpoch(epoch);
+  }
+
+  public async getForkDigestByEpoch(epoch: Epoch): Promise<ForkDigest> {
+    const state = await this.chain.getHeadState();
+    const forkVersion = epoch < state.fork.epoch
+      ? state.fork.previousVersion
+      : state.fork.currentVersion;
+    return computeForkDigest(this.config, forkVersion, state.genesisValidatorsRoot);
+  }
+
+  private subscribe(
+    forkDigest: ForkDigest,
+    event: keyof IGossipEvents,
+    listener?: unknown,
+    params: Map<string, string> = new Map()): void {
     if(this.listenerCount(event) === 0 && !event.startsWith("gossipsub")) {
-      this.pubsub.subscribe(getGossipTopic(event as GossipEvent, "ssz", params));
+      this.pubsub.subscribe(getGossipTopic(event as GossipEvent, forkDigest, "ssz", params));
     }
     if(listener) {
       this.on(event, listener as (...args: unknown[]) => void);
@@ -138,19 +175,20 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   }
 
   private registerHandlers(): Map<string, GossipHandlerFn> {
+    const forkDigest = this.chain.currentForkDigest;
     const handlers = new Map();
     handlers.set("gossipsub:heartbeat", this.emitGossipHeartbeat);
-    handlers.set(getGossipTopic(GossipEvent.BLOCK, "ssz"),
+    handlers.set(getGossipTopic(GossipEvent.BLOCK, forkDigest, "ssz"),
       handleIncomingBlock.bind(this));
-    handlers.set(getGossipTopic(GossipEvent.ATTESTATION, "ssz"),
+    handlers.set(getGossipTopic(GossipEvent.ATTESTATION, forkDigest, "ssz"),
       handleIncomingAttestation.bind(this));
-    handlers.set(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, "ssz"),
+    handlers.set(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkDigest, "ssz"),
       handleIncomingAggregateAndProof.bind(this));
-    handlers.set(getGossipTopic(GossipEvent.ATTESTER_SLASHING, "ssz"),
+    handlers.set(getGossipTopic(GossipEvent.ATTESTER_SLASHING, forkDigest, "ssz"),
       handleIncomingAttesterSlashing.bind(this));
-    handlers.set(getGossipTopic(GossipEvent.PROPOSER_SLASHING, "ssz"),
+    handlers.set(getGossipTopic(GossipEvent.PROPOSER_SLASHING, forkDigest, "ssz"),
       handleIncomingProposerSlashing.bind(this));
-    handlers.set(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, "ssz"),
+    handlers.set(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, forkDigest, "ssz"),
       handleIncomingVoluntaryExit.bind(this));
 
     for(let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
@@ -158,6 +196,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
       handlers.set(
         getGossipTopic(
           GossipEvent.ATTESTATION_SUBNET,
+          forkDigest,
           "ssz",
           new Map([["subnet", String(subnet)]])
         ),

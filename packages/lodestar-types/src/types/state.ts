@@ -26,6 +26,7 @@ import {
 export interface BeaconState {
   // Misc
   genesisTime: Number64;
+  genesisValidatorsRoot: Root;
   slot: Slot;
   fork: Fork; // For versioning hard forks
 

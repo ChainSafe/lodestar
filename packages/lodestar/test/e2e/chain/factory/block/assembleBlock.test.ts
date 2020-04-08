@@ -112,7 +112,7 @@ describe("produce block", function () {
       // @ts-ignore
       return await assembleBlock(config, chainStub, dbStub, opPoolStub, eth1Stub, slot, randao);
     });
-    const block = await blockProposingService.createAndPublishBlock(1, state.fork);
+    const block = await blockProposingService.createAndPublishBlock(1, state.fork, ZERO_HASH);
     expect(() => stateTransition(config, state, block, false)).to.not.throw();
   });
 

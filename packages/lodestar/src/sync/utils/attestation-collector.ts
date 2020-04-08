@@ -37,7 +37,8 @@ export class AttestationCollector implements IService {
   }
 
   public subscribeToCommitteeAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
-    this.network.gossip.subscribeToAttestationSubnet(getCommitteeIndexSubnet(committeeIndex));
+    const forkDigest = this.chain.currentForkDigest;
+    this.network.gossip.subscribeToAttestationSubnet(forkDigest, getCommitteeIndexSubnet(committeeIndex));
     if(this.aggregationDuties.has(slot)) {
       this.aggregationDuties.get(slot).add(committeeIndex);
     } else {
@@ -47,8 +48,10 @@ export class AttestationCollector implements IService {
 
   private checkDuties = (slot: Slot): void => {
     const committees = this.aggregationDuties.get(slot) || new Set();
+    const forkDigest = this.chain.currentForkDigest;
     committees.forEach((committeeIndex) => {
       this.network.gossip.subscribeToAttestationSubnet(
+        forkDigest,
         getCommitteeIndexSubnet(committeeIndex),
         this.handleCommitteeAttestation
       );
@@ -62,7 +65,8 @@ export class AttestationCollector implements IService {
   };
 
   private unsubscribeSubnet = (subnet: number): void => {
-    this.network.gossip.unsubscribeFromAttestationSubnet(subnet, this.handleCommitteeAttestation);
+    const forkDigest = this.chain.currentForkDigest;
+    this.network.gossip.unsubscribeFromAttestationSubnet(forkDigest, subnet, this.handleCommitteeAttestation);
   };
 
   private handleCommitteeAttestation = async ({attestation}: {attestation: Attestation}): Promise<void> => {
