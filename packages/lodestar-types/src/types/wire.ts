@@ -2,7 +2,7 @@
 import {List} from "@chainsafe/ssz";
 
 import {
-  Slot, Epoch, Root, Number64, Uint64, Version,
+  Slot, Epoch, Root, Number64, Uint64, ForkDigest,
 } from "./primitive";
 import {SignedBeaconBlock} from "./block";
 
@@ -20,7 +20,7 @@ export type ResponseBody =
   SignedBeaconBlock;
 
 export interface Status {
-  headForkVersion: Version;
+  forkDigest: ForkDigest;
   finalizedRoot: Root;
   finalizedEpoch: Epoch;
   headRoot: Root;

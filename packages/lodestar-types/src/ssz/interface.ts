@@ -27,6 +27,7 @@ export interface IBeaconSSZTypes {
   Gwei: BigIntUintType;
   Root: ByteVectorType;
   Version: ByteVectorType;
+  ForkDigest: ByteVectorType;
   BLSPubkey: ByteVectorType;
   BLSSignature: ByteVectorType;
   Domain: ByteVectorType;

@@ -8,7 +8,7 @@ import {IBeaconSSZTypes} from "../interface";
 
 export const Status = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
-    headForkVersion: ssz.Version,
+    forkDigest: ssz.ForkDigest,
     finalizedRoot: ssz.Root,
     finalizedEpoch: ssz.Epoch,
     headRoot: ssz.Root,

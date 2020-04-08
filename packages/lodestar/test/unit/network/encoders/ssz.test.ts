@@ -15,7 +15,7 @@ describe("ssz encoder", function () {
     const data: Status = {
       finalizedEpoch: 3,
       finalizedRoot: Buffer.alloc(32),
-      headForkVersion: Buffer.alloc(4),
+      forkDigest: Buffer.alloc(4),
       headRoot: Buffer.alloc(32),
       headSlot: 13
     };

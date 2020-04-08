@@ -42,6 +42,7 @@ describe("sync req resp", function () {
     chainStub.getHeadState.resolves(generateState());
     // @ts-ignore
     chainStub.config = config;
+    sandbox.stub(chainStub, "currentForkDigest").get(() => Buffer.alloc(4));
     reqRespStub = sandbox.createStubInstance(ReqResp);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     networkStub.reqResp = reqRespStub as unknown as ReqResp;
@@ -76,7 +77,7 @@ describe("sync req resp", function () {
     chainStub.chainId = 1;
 
     const expected: Status = {
-      headForkVersion: Buffer.alloc(4),
+      forkDigest: Buffer.alloc(4),
       finalizedRoot: ZERO_HASH ,
       finalizedEpoch: 0,
       headRoot: ZERO_HASH,
@@ -112,7 +113,7 @@ describe("sync req resp", function () {
   it("should handle request  - onStatus(success)", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     const body: Status = {
-      headForkVersion: Buffer.alloc(4),
+      forkDigest: Buffer.alloc(4),
       finalizedRoot: Buffer.alloc(32),
       finalizedEpoch: 1,
       headRoot: Buffer.alloc(32),
@@ -136,7 +137,7 @@ describe("sync req resp", function () {
   it("should handle request  - onStatus(error)", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     const body: Status = {
-      headForkVersion: Buffer.alloc(4),
+      forkDigest: Buffer.alloc(4),
       finalizedRoot: Buffer.alloc(32),
       finalizedEpoch: 1,
       headRoot: Buffer.alloc(32),
@@ -155,23 +156,20 @@ describe("sync req resp", function () {
 
   it("should disconnect on status - incorrect headForkVersion", async function() {
     const body: Status = {
-      headForkVersion: Buffer.alloc(4),
+      forkDigest: Buffer.alloc(4),
       finalizedRoot: Buffer.alloc(32),
       finalizedEpoch: 1,
       headRoot: Buffer.alloc(32),
       headSlot: 1,
     };
 
-    dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
-    const state = generateState();
-    state.fork.currentVersion = Buffer.from("efgh");
-    dbStub.state.get.resolves(state);
+    sandbox.stub(chainStub, "currentForkDigest").get(() => Buffer.alloc(4).fill(1));
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.true;
   });
 
   it("should not disconnect on status", async function() {
     const body: Status = {
-      headForkVersion: Buffer.alloc(4),
+      forkDigest: Buffer.alloc(4),
       finalizedRoot: config.types.BeaconBlock.hashTreeRoot(generateEmptySignedBlock().message),
       finalizedEpoch: 1,
       headRoot: Buffer.alloc(32),

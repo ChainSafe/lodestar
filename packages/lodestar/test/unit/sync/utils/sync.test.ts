@@ -173,7 +173,7 @@ describe("sync utils", function () {
       const peerStatus: Status = {
         finalizedEpoch: 5,
         finalizedRoot: Buffer.alloc(32),
-        headForkVersion: Buffer.alloc(4),
+        forkDigest: Buffer.alloc(4),
         headRoot: Buffer.alloc(32),
         headSlot: 0,
       };
@@ -186,7 +186,7 @@ describe("sync utils", function () {
       const peerStatus: Status = {
         finalizedEpoch: 10,
         finalizedRoot: Buffer.alloc(32),
-        headForkVersion: Buffer.alloc(4),
+        forkDigest: Buffer.alloc(4),
         headRoot: Buffer.alloc(32),
         headSlot: 0,
       };
@@ -217,7 +217,7 @@ function generateReputation(finalizedEpoch: Epoch): IReputation {
     latestStatus: {
       finalizedEpoch: finalizedEpoch || 0,
       finalizedRoot: Buffer.alloc(1),
-      headForkVersion: Buffer.alloc(4),
+      forkDigest: Buffer.alloc(4),
       headRoot: Buffer.alloc(1),
       headSlot: 0
     }
