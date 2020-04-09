@@ -1,9 +1,10 @@
-import sinon from "sinon";
+import sinon, {SinonSpy} from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {afterEach, beforeEach, describe, it} from "mocha";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import EventSource from "eventsource";
 import {ApiClientOverInstance} from "../../../src/api";
 import {AttestationService} from "../../../src/services/attestation";
 import {toBufferBE} from "bigint-buffer";
@@ -15,6 +16,7 @@ import {
   generateAttestationData,
   generateEmptyAttestation
 } from "@chainsafe/lodestar/test/utils/attestation";
+import {generateEmptySignedBlock} from "@chainsafe/lodestar/test/utils/block";
 
 const clock = sinon.useFakeTimers({shouldAdvanceTime: true, toFake: ["setTimeout"]});
 
@@ -23,13 +25,14 @@ describe("validator attestation service", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let rpcClientStub: any, dbStub: any;
+  let rpcClientStub: any, dbStub: any, eventSourceSpy: SinonSpy;
   const logger: ILogger = sinon.createStubInstance(WinstonLogger);
 
 
   beforeEach(() => {
     rpcClientStub = sandbox.createStubInstance(ApiClientOverInstance);
     dbStub = sandbox.createStubInstance(MockValidatorDB);
+    eventSourceSpy = sandbox.spy(EventSource.prototype, "addEventListener");
   });
 
   afterEach(() => {
@@ -206,4 +209,57 @@ describe("validator attestation service", function () {
         .publishAttestation.notCalled
     ).to.be.true;
   });
+
+  it("on  new slot - with duty - SSE message comes before 1/3 slot time", async function () {
+    const  keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    rpcClientStub.beacon = {
+      getFork: sinon.stub()
+    };
+    rpcClientStub.validator = {
+      produceAttestation: sinon.stub(),
+      publishAttestation: sinon.stub()
+    };
+    const service = new AttestationService(
+      config,
+      keypair,
+      rpcClientStub,
+      dbStub,
+      logger
+    );
+    const duty: ValidatorDuty = {
+      attestationSlot: 1,
+      committeeIndex: 1,
+      validatorPubkey: keypair.publicKey.toBytesCompressed()
+    };
+    service["nextAttesterDuties"].set(10, {...duty, isAggregator: false});
+    rpcClientStub.beacon.getFork.resolves({fork: generateFork()});
+    rpcClientStub.validator.produceAttestation.resolves(generateEmptyAttestation());
+    rpcClientStub.validator.publishAttestation.resolves();
+    dbStub.getAttestations.resolves([]);
+    dbStub.setAttestation.resolves();
+    const promise = service.onNewSlot(10);
+    setTimeout(() => {
+      const signedBlock = generateEmptySignedBlock();
+      signedBlock.message.slot = 10;
+      const eventSource = eventSourceSpy.thisValues[0] as EventSource;
+      eventSource.onmessage({
+        data: JSON.stringify(config.types.SignedBeaconBlock.toJson(signedBlock)),
+        lastEventId: "10",
+        origin: ""
+      } as MessageEvent);
+    }, 1000);
+    // don't need to wait for 1/3 slot time which is 4000
+    clock.tick(1001);
+    await promise;
+    expect(
+      rpcClientStub.validator
+        .produceAttestation.withArgs(
+          keypair.publicKey.toBytesCompressed(),
+          false,
+          1,
+          1
+        ).calledOnce
+    ).to.be.true;
+  });
+
 });
