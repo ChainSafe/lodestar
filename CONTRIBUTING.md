@@ -4,10 +4,9 @@
 
 # Getting Started
 - Run `lerna bootstrap` or `yarn install` to install dependencies
+- NOTE: By default the spec tests (5GB) will be installed with other dependencies. If you would like to avoid downloading the spec tests, instead run `yarn install --ignore-optional`.
 
 # Tests
-- To run spec tests, you will need [git lfs](https://git-lfs.github.com/) installed, then execute `git submodule foreach git lfs pull` to download the spec tests submodule
-  - NOTE: The spec tests submodule is HUGE, uses ~5GB
 - Run `lerna run test:spec-min` for minimal spec tests
 - Run `lerna run test:spec-main` for mainnet spec tests
 - Run `lerna run test:unit` for unit tests
