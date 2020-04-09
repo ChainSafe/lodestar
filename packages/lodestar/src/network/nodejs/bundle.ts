@@ -10,8 +10,7 @@ import SECIO from "libp2p-secio";
 import Bootstrap from "libp2p-bootstrap";
 import MDNS from "libp2p-mdns";
 import PeerInfo from "peer-info";
-import {Discv5Discovery} from "../discovery/discv5";
-import {ENR} from "@chainsafe/discv5";
+import {ENR, Discv5Discovery} from "@chainsafe/discv5";
 
 
 export interface ILibp2pOptions {
