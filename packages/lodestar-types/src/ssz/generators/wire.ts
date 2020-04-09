@@ -20,7 +20,6 @@ export const Goodbye = (ssz: IBeaconSSZTypes): BigIntUintType => ssz.Uint64;
 
 export const BeaconBlocksByRangeRequest = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
-    headBlockRoot: ssz.Root,
     startSlot: ssz.Slot,
     count: ssz.Number64,
     step: ssz.Number64,

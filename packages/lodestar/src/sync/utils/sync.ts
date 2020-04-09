@@ -113,11 +113,9 @@ export async function getBlockRangeFromPeer(
   peer: PeerInfo,
   chunk: ISlotRange
 ): Promise<SignedBeaconBlock[]> {
-  const peerLatestHello = reps.get(peer.id.toB58String()).latestStatus;
   return await rpc.beaconBlocksByRange(
     peer,
     {
-      headBlockRoot: peerLatestHello.headRoot,
       startSlot: chunk.start,
       step: 1,
       count: chunk.end - chunk.start
