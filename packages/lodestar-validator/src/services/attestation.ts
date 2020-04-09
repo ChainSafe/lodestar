@@ -92,24 +92,7 @@ export class AttestationService {
   public onNewSlot = async (slot: Slot): Promise<void> => {
     const duty = this.nextAttesterDuties.get(slot);
     if(duty) {
-      const eventSource = new EventSource(
-        `${this.provider.url}/node/blocks/stream`,
-        {https: {rejectUnauthorized: false}}
-      );
-      await new Promise((resolve) => {
-        eventSource.onmessage = (evt: MessageEvent) => {
-          try {
-            const signedBlock: SignedBeaconBlock = this.config.types.SignedBeaconBlock.fromJson(JSON.parse(evt.data));
-            if(signedBlock.message.slot === slot) {
-              resolve();
-            }
-          } catch (err) {
-            this.logger.error(`Failed to parse block from SSE. Error: ${err.message}`);
-          }
-        };
-        setTimeout(resolve, this.config.params.SECONDS_PER_SLOT / 3 * 1000);
-      });
-      eventSource.close();
+      await this.waitForAttestationBlock(slot);
       const fork = (await this.provider.beacon.getFork()).fork;
       const attestation = await this.createAttestation(duty.attestationSlot, duty.committeeIndex, fork);
       if(!attestation) {
@@ -129,6 +112,27 @@ export class AttestationService {
       );
     }
   };
+
+  private async waitForAttestationBlock(slot: Slot): Promise<void> {
+    const eventSource = new EventSource(
+      `${this.provider.url}/node/blocks/stream`,
+      {https: {rejectUnauthorized: false}}
+    );
+    await new Promise((resolve) => {
+      eventSource.onmessage = (evt: MessageEvent) => {
+        try {
+          const signedBlock: SignedBeaconBlock = this.config.types.SignedBeaconBlock.fromJson(JSON.parse(evt.data));
+          if(signedBlock.message.slot === slot) {
+            resolve();
+          }
+        } catch (err) {
+          this.logger.error(`Failed to parse block from SSE. Error: ${err.message}`);
+        }
+      };
+      setTimeout(resolve, this.config.params.SECONDS_PER_SLOT / 3 * 1000);
+    });
+    eventSource.close();
+  }
 
   private aggregateAttestations = async (duty: IAttesterDuty, attestation: Attestation, fork: Fork): Promise<void> => {
     this.logger.info(
