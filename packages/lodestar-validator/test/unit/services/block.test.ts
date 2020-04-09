@@ -59,7 +59,7 @@ describe("block proposing service", function () {
       produceBlock: sandbox.stub(),
       publishBlock: sandbox.stub(),
     };
-    rpcClientStub.validator.produceBlock.withArgs(slot, sinon.match.any).resolves(generateEmptyBlock());
+    rpcClientStub.validator.produceBlock.withArgs(slot, sinon.match.any, sinon.match.any).resolves(generateEmptyBlock());
     dbStub.getBlock.resolves(generateEmptySignedBlock());
     const service = new BlockProposingService(
       config, Keypair.generate(), rpcClientStub, dbStub, logger as ILogger

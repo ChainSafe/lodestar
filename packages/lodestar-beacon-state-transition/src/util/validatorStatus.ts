@@ -105,29 +105,30 @@ export function isValidProposerSlashing(
   proposerSlashing: ProposerSlashing,
   verifySignatures = true
 ): boolean {
-  const proposer = state.validators[proposerSlashing.proposerIndex];
-  const header1Epoch = computeEpochAtSlot(config, proposerSlashing.signedHeader1.message.slot);
-  const header2Epoch = computeEpochAtSlot(config, proposerSlashing.signedHeader2.message.slot);
-  // Verify slots match
-  if (proposerSlashing.signedHeader1.message.slot !== proposerSlashing.signedHeader2.message.slot) {
+  const header1 = proposerSlashing.signedHeader1.message;
+  const header2 = proposerSlashing.signedHeader2.message;
+  // Verify the header slots match
+  if (header1.slot !== header2.slot) {
     return false;
   }
-  // But the headers are different
-  if (config.types.BeaconBlockHeader.equals(
-    proposerSlashing.signedHeader1.message,
-    proposerSlashing.signedHeader2.message,
-  )) {
+  // Verify header proposer indices match
+  if (header1.proposerIndex !== header2.proposerIndex) {
     return false;
   }
+  // Verify the headers are different
+  if (config.types.BeaconBlockHeader.equals(header1, header2)) {
+    return false;
+  }
+  const proposer = state.validators[header1.proposerIndex];
   // Check proposer is slashable
   if (!isSlashableValidator(proposer, getCurrentEpoch(config, state))) {
     return false;
   }
-  // Signatures are valid
+  // Verify signatures
   if (!verifySignatures) {
     return true;
   }
-  const domain = getDomain(config, state, DomainType.BEACON_PROPOSER, header1Epoch);
+  const domain = getDomain(config, state, DomainType.BEACON_PROPOSER, computeEpochAtSlot(config, header1.slot));
   const signingRoot = computeSigningRoot(config, config.types.BeaconBlockHeader,
     proposerSlashing.signedHeader1.message, domain);
   const proposalData1Verified = bls.verify(
@@ -138,7 +139,7 @@ export function isValidProposerSlashing(
   if (!proposalData1Verified) {
     return false;
   }
-  const domain2 = getDomain(config, state, DomainType.BEACON_PROPOSER, header2Epoch);
+  const domain2 = getDomain(config, state, DomainType.BEACON_PROPOSER, computeEpochAtSlot(config, header2.slot));
   const signingRoot2 = computeSigningRoot(config, config.types.BeaconBlockHeader,
     proposerSlashing.signedHeader2.message, domain2);
   const proposalData2Verified = bls.verify(

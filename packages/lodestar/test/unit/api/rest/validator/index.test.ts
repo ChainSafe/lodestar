@@ -102,7 +102,8 @@ describe("Test validator rest API", function () {
       )
       .query({
         "randao_reveal": toHexString(Buffer.alloc(32)),
-        slot: 2
+        "proposer_pubkey": toHexString(Buffer.alloc(48)),
+        slot: 2,
       })
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");

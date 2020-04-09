@@ -9,7 +9,6 @@ import {IBeaconSSZTypes} from "../interface";
 
 export const ProposerSlashing = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
-    proposerIndex: ssz.ValidatorIndex,
     signedHeader1: ssz.SignedBeaconBlockHeader,
     signedHeader2: ssz.SignedBeaconBlockHeader,
   },

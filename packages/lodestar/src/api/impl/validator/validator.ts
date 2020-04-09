@@ -70,8 +70,11 @@ export class ValidatorApi implements IValidatorApi {
     this.eth1 = modules.eth1;
   }
 
-  public async produceBlock(slot: Slot, randaoReveal: Bytes96): Promise<BeaconBlock> {
-    return await assembleBlock(this.config, this.chain, this.db, this.opPool, this.eth1, slot, randaoReveal);
+  public async produceBlock(slot: Slot, validatorPubkey: BLSPubkey, randaoReveal: Bytes96): Promise<BeaconBlock> {
+    const validatorIndex = await this.db.getValidatorIndex(validatorPubkey);
+    return await assembleBlock(
+      this.config, this.chain, this.db, this.opPool, this.eth1, slot, validatorIndex, randaoReveal
+    );
   }
 
   public async produceAttestation(

@@ -5,7 +5,7 @@
 
 import {List} from "@chainsafe/ssz";
 
-import {BLSSignature, Bytes32, Root, Slot} from "./primitive";
+import {BLSSignature, Bytes32, Root, Slot, ValidatorIndex} from "./primitive";
 import {Eth1Data} from "./misc";
 import {Attestation, AttesterSlashing, Deposit, ProposerSlashing, SignedVoluntaryExit} from "./operations";
 
@@ -24,6 +24,7 @@ export interface BeaconBlockBody {
 export interface BeaconBlock {
   // Header
   slot: Slot;
+  proposerIndex: ValidatorIndex;
   parentRoot: Root;
   stateRoot: Root;
   body: BeaconBlockBody;
