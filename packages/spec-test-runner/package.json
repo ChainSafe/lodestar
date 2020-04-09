@@ -46,7 +46,7 @@
     "@types/yargs": "^13.0.2",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
-    "mocha": "^6.2.0"
+    "mocha": "^6.2.2"
   },
   "keywords": [
     "Ethereum",
