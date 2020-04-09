@@ -27,7 +27,7 @@ describe('process block - eth1data', function () {
       depositRoot: Buffer.alloc(32),
     };
     state.eth1DataVotes = new Array(
-      config.params.SLOTS_PER_ETH1_VOTING_PERIOD * 2
+      config.params.EPOCHS_PER_ETH1_VOTING_PERIOD * 2
     ).fill(undefined).map(() => {
       return vote;
     });
