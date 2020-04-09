@@ -1,11 +1,11 @@
 import {describe} from "mocha";
-import {PrivateEth1Network} from "@chainsafe/lodestar/lib/eth1/dev";
 import chai, {expect} from "chai";
 import {DepositCommand} from "../../../src/commands";
 import chaiAsPromised from "chai-as-promised";
 import {CliError} from "../../../src/error";
 import program from "commander";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {PrivateEth1Network} from "@chainsafe/lodestar/lib/eth1/dev";
 
 chai.use(chaiAsPromised);
 

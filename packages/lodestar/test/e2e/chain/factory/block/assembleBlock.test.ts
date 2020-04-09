@@ -9,7 +9,11 @@ import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {OpPool} from "../../../../../src/opPool";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
-import {getBeaconProposerIndex, stateTransition, signedBlockToSignedHeader} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  getBeaconProposerIndex,
+  signedBlockToSignedHeader,
+  stateTransition
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {generateValidator} from "../../../../utils/validator";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateDeposit} from "../../../../utils/deposit";
@@ -31,7 +35,7 @@ import BlockProposingService from "@chainsafe/lodestar-validator/lib/services/bl
 import {describe, it} from "mocha";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
 import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/block";
-import {ValidatorApi} from "../../../../../src/api/rpc/api/validator";
+import {ValidatorApi} from "../../../../../src/api/impl/validator";
 
 describe("produce block", function () {
   this.timeout(0);

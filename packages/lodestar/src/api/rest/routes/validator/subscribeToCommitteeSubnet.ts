@@ -1,10 +1,6 @@
-import {IFastifyServer} from "../../index";
 import fastify, {DefaultBody, DefaultHeaders, DefaultParams, DefaultQuery} from "fastify";
-import {IApiModules} from "../../../interface";
-import {verify} from "@chainsafe/bls";
-import {hexToBuffer} from "../../../../util/hex";
-import {computeEpochAtSlot, getDomain} from "@chainsafe/lodestar-beacon-state-transition";
-import {DomainType} from "../../../../constants";
+import {LodestarRestApiEndpoint} from "../../interface";
+import {fromHexString} from "@chainsafe/ssz";
 
 
 const opts: fastify.RouteShorthandOptions = {
@@ -35,31 +31,16 @@ interface IBody extends DefaultBody {
   aggregator_pubkey: string;
 }
 
-export const registerSubscribeToCommitteeSubnet = (fastify: IFastifyServer, modules: IApiModules): void => {
+export const registerSubscribeToCommitteeSubnet: LodestarRestApiEndpoint = (fastify, {api}): void => {
   fastify.post<DefaultQuery, DefaultParams, DefaultHeaders, IBody>(
     "/beacon_committee_subscription",
     opts,
     async (request, reply) => {
-      const slot = Number(request.body.slot);
-      const valid = verify(
-        hexToBuffer(request.body.aggregator_pubkey),
-        modules.config.types.Slot.hashTreeRoot(slot),
-        hexToBuffer(request.body.slot_signature),
-        getDomain(
-          modules.config,
-          modules.chain.latestState,
-          DomainType.BEACON_ATTESTER,
-          computeEpochAtSlot(modules.config, slot))
-      );
-      if(!valid) {
-        reply
-          .code(403)
-          .send();
-        return;
-      }
-      modules.sync.regularSync.collectAttestations(
-        slot,
-        Number(request.body.committee_index)
+      await api.validator.subscribeCommitteeSubnet(
+        Number(request.body.slot),
+        fromHexString(request.body.slot_signature),
+        Number(request.body.committee_index),
+        fromHexString(request.body.aggregator_pubkey)
       );
       reply
         .code(200)

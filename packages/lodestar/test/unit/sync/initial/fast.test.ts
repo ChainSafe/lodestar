@@ -10,7 +10,6 @@ import {ISyncOptions} from "../../../../src/sync/options";
 import {expect} from "chai";
 import * as syncUtils from "../../../../src/sync/utils/sync";
 import * as blockSyncUtils from "../../../../src/sync/utils/blocks";
-// @ts-ignore
 import PeerInfo from "peer-info";
 import {generateState} from "../../../utils/state";
 import {generateEmptyBlock} from "../../../utils/block";
@@ -39,7 +38,7 @@ describe("fast sync", function () {
     defaultOpts = {
       blockPerChunk: 2
     };
-    getTargetEpochStub = sandbox.stub(syncUtils, "getSyncTargetEpoch");
+    getTargetEpochStub = sandbox.stub(syncUtils, "getInitalSyncTargetEpoch");
     isValidHeaderChainStub = sandbox.stub(syncUtils, "isValidChainOfBlocks");
     getBlockRangeStub = sandbox.stub(blockSyncUtils, "getBlockRange");
   });
@@ -85,8 +84,8 @@ describe("fast sync", function () {
     const chainCheckPoint = {root: Buffer.alloc(32, 1), epoch: 3};
     // @ts-ignore
     modules.reps.getFromPeerInfo.returns({latestStatus: {finalizedEpoch: 3, finalizedRoot: chainCheckPoint.root}});
-    sinon.stub(modules.chain, "latestState")
-      .get(() => generateState({currentJustifiedCheckpoint: chainCheckPoint}));
+    // @ts-ignore
+    modules.chain.getHeadState.resolves(generateState({currentJustifiedCheckpoint: chainCheckPoint}))
     getTargetEpochStub.returns(3);
     const eventSpy = sinon.spy();
     sync.once("sync:completed", eventSpy);
@@ -111,8 +110,8 @@ describe("fast sync", function () {
     const chainCheckPoint = {root: Buffer.alloc(32, 1), epoch: 4};
     // @ts-ignore
     modules.reps.getFromPeerInfo.returns({latestStatus: {finalizedEpoch: 3, finalizedRoot: chainCheckPoint.root}});
-    sinon.stub(modules.chain, "latestState")
-      .get(() => generateState({currentJustifiedCheckpoint: chainCheckPoint}));
+    // @ts-ignore
+    modules.chain.getHeadState.resolves(generateState({currentJustifiedCheckpoint: chainCheckPoint}));
     getTargetEpochStub.returns(3);
     const eventSpy = sinon.spy();
     sync.once("sync:completed", eventSpy);
@@ -134,8 +133,8 @@ describe("fast sync", function () {
     // @ts-ignore
     modules.chain.isInitialized.returns(true);
     const chainCheckPoint = {root: Buffer.alloc(32, 1), epoch: 4};
-    sinon.stub(modules.chain, "latestState")
-      .get(() => generateState({currentJustifiedCheckpoint: chainCheckPoint}));
+    // @ts-ignore
+    modules.chain.getHeadState.resolves(generateState({currentJustifiedCheckpoint: chainCheckPoint}));
     // @ts-ignore
     modules.reps.getFromPeerInfo.returns({latestStatus: {finalizedEpoch: 3, finalizedRoot: chainCheckPoint.root}});
     // @ts-ignore
@@ -161,8 +160,8 @@ describe("fast sync", function () {
     // @ts-ignore
     modules.chain.isInitialized.returns(true);
     const chainCheckPoint = {root: Buffer.alloc(32, 1), epoch: 4};
-    sinon.stub(modules.chain, "latestState")
-      .get(() => generateState({currentJustifiedCheckpoint: chainCheckPoint}));
+    // @ts-ignore
+    modules.chain.getHeadState.resolves(generateState({currentJustifiedCheckpoint: chainCheckPoint}));
     // @ts-ignore
     modules.reps.getFromPeerInfo.returns({} as unknown as IReputation);
     getTargetEpochStub.returns(5);

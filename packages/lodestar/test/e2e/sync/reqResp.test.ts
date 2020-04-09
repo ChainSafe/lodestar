@@ -14,9 +14,12 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {generateState} from "../../utils/state";
-import {BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository} from "../../../src/db/api/beacon/repositories";
+import {
+  BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository
+} from "../../../src/db/api/beacon/repositories";
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {generateEmptySignedBlock} from "../../utils/block";
+import {BeaconBlocksByRootRequest, BeaconBlocksByRangeRequest} from "@chainsafe/lodestar-types";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -27,6 +30,12 @@ const opts: INetworkOptions = {
   disconnectTimeout: 5000,
   multiaddrs: [],
 };
+
+const block = generateEmptySignedBlock();
+const BLOCK_SLOT = 2020;
+block.message.slot = BLOCK_SLOT;
+const block2 = generateEmptySignedBlock();
+block2.message.slot = BLOCK_SLOT + 1;
 
 describe("[sync] rpc", function () {
   this.timeout(20000);
@@ -52,13 +61,14 @@ describe("[sync] rpc", function () {
       netB.start(),
     ]);
     repsA = new ReputationStore();
+    const state = generateState();
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
       networkId: 0n,
+      state
     });
-    const state = generateState();
-    const block = generateEmptySignedBlock();
+    
     state.finalizedCheckpoint = {
       epoch: 0,
       root: config.types.BeaconBlock.hashTreeRoot(block.message),
@@ -80,7 +90,11 @@ describe("[sync] rpc", function () {
     db.block.get.resolves(block);
     // @ts-ignore
     db.blockArchive.get.resolves(block);
-    chain.latestState = state;
+    // @ts-ignore
+    db.blockArchive.getAllBetweenStream.returns(async function * () {
+      yield block;
+      yield block2;
+    }());
     rpcA = new SyncReqResp({}, {
       config,
       db,
@@ -99,6 +113,7 @@ describe("[sync] rpc", function () {
       logger: logger
     })
     ;
+    
     netA.reqResp.on("request", rpcA.onRequest.bind(rpcA));
     netB.reqResp.on("request", rpcB.onRequest.bind(rpcB));
     await Promise.all([
@@ -155,5 +170,29 @@ describe("[sync] rpc", function () {
     await rpcA.stop();
     const goodbye = await goodbyeEvent;
     expect(goodbye).to.equal(Method.Goodbye);
+  });
+
+  it("beacon block by root", async function () {
+    const request: BeaconBlocksByRootRequest = [Buffer.alloc(32)];
+    const response = await netA.reqResp.beaconBlocksByRoot(netB.peerInfo, request);
+    expect(response.length).to.equal(1);
+    const block = response[0];
+    expect(block.message.slot).to.equal(BLOCK_SLOT);
+  });
+
+  it("beacon blocks by range", async () => {
+    const request: BeaconBlocksByRangeRequest = {
+      headBlockRoot: Buffer.alloc(32),
+      startSlot: BLOCK_SLOT,
+      count: 2,
+      step: 1,
+    };
+    
+    const response = await netA.reqResp.beaconBlocksByRange(netB.peerInfo, request);
+    expect(response.length).to.equal(2);
+    const block = response[0];
+    expect(block.message.slot).to.equal(BLOCK_SLOT);
+    const block2 = response[1];
+    expect(block2.message.slot).to.equal(BLOCK_SLOT + 1);
   });
 });

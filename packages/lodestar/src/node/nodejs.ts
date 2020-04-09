@@ -80,18 +80,6 @@ export class BeaconNode {
         logger: logger.child(this.conf.logger.db),
       }),
     });
-    const gossipMessageValidator = new GossipMessageValidator(
-      this.db,
-      config,
-      logger.child(this.conf.logger.network),
-    );
-    this.network = new Libp2pNetwork(this.conf.network, {
-      config,
-      libp2p,
-      logger: logger.child(this.conf.logger.network),
-      metrics: this.metrics,
-      validator: gossipMessageValidator,
-    });
     this.eth1 = eth1 || new EthersEth1Notifier(this.conf.eth1, {
       config,
       logger: logger.child(this.conf.logger.eth1),
@@ -110,6 +98,19 @@ export class BeaconNode {
       metrics: this.metrics,
     });
 
+    const gossipMessageValidator = new GossipMessageValidator({
+      chain: this.chain,
+      db: this.db,
+      config,
+      logger: logger.child(this.conf.logger.network)
+    });
+    this.network = new Libp2pNetwork(this.conf.network, {
+      config,
+      libp2p,
+      logger: logger.child(this.conf.logger.network),
+      metrics: this.metrics,
+      validator: gossipMessageValidator,
+    });
     this.sync = new Sync(this.conf.sync, {
       config,
       db: this.db,

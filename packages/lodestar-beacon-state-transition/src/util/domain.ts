@@ -16,7 +16,10 @@ import {getCurrentEpoch} from "./epoch";
 /**
  * Return the domain for the [[domainType]] and [[forkVersion]].
  */
-export function computeDomain(domainType: DomainType, forkVersion: Version = Buffer.alloc(4)): Buffer {
+export function computeDomain(config: IBeaconConfig, domainType: DomainType, forkVersion?: Version): Buffer {
+  if (!forkVersion) {
+    forkVersion = config.params.GENESIS_FORK_VERSION;
+  }
   return Buffer.concat([
     intToBytes(domainType, 4),
     forkVersion.valueOf() as Uint8Array,
@@ -36,5 +39,5 @@ export function getDomain(
   const forkVersion = epoch < state.fork.epoch
     ? state.fork.previousVersion
     : state.fork.currentVersion;
-  return computeDomain(domainType, forkVersion);
+  return computeDomain(config, domainType, forkVersion);
 }

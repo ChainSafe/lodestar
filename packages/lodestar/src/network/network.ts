@@ -63,7 +63,8 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     await this.gossip.start();
     this.libp2p.on("peer:connect", this.emitPeerConnect);
     this.libp2p.on("peer:disconnect", this.emitPeerDisconnect);
-    this.logger.important(`PeerId ${this.libp2p.peerInfo.id.toB58String()}`);
+    const multiaddresses = this.libp2p.peerInfo.multiaddrs.toArray().map((m) => m.toString()).join(",");
+    this.logger.important(`PeerId ${this.libp2p.peerInfo.id.toB58String()}, Multiaddrs ${multiaddresses}`);
   }
 
   public async stop(): Promise<void> {

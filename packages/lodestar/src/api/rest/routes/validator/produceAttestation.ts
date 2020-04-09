@@ -2,16 +2,13 @@
 import {IncomingMessage, Server, ServerResponse} from "http";
 import fastify, {DefaultQuery} from "fastify";
 import {fromHexString} from "@chainsafe/ssz";
-
-import {IFastifyServer} from "../../index";
-import {IApiModules} from "../../../interface";
-import {produceAttestation} from "../../../impl/validator";
+import {LodestarRestApiEndpoint} from "../../interface";
 
 interface IQuery extends DefaultQuery {
   validator_pubkey: string;
   poc_bit: number;
   slot: number;
-  shard: number;
+  committee_index: number;
 }
 
 
@@ -41,21 +38,21 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   }
 };
 
-export const registerAttestationProductionEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
+export const registerAttestationProductionEndpoint: LodestarRestApiEndpoint = (fastify, {api, config}): void => {
   fastify.get<IQuery>(
     "/attestation",
     opts,
     async (request, reply) => {
-      const attestation = await produceAttestation(
-        {db: modules.db, chain: modules.chain, config: modules.config},
+      const responseValue = await api.validator.produceAttestation(
         fromHexString(request.query.validator_pubkey),
+        false,
         request.query.committee_index,
         request.query.slot
       );
       reply
         .code(200)
         .type("application/json")
-        .send(modules.config.types.Attestation.toJson(attestation));
+        .send(config.types.Attestation.toJson(responseValue));
     }
   );
 };

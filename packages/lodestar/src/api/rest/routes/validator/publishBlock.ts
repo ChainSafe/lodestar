@@ -1,8 +1,7 @@
-import {IFastifyServer} from "../../index";
 import fastify, {DefaultBody, DefaultHeaders, DefaultParams, DefaultQuery} from "fastify";
-import {IApiModules} from "../../../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
 import {Json} from "@chainsafe/ssz";
+import {LodestarRestApiEndpoint} from "../../interface";
 
 interface IBody extends DefaultBody {
   // eslint-disable-next-line camelcase
@@ -26,13 +25,13 @@ Server, IncomingMessage, ServerResponse, DefaultQuery, DefaultParams, DefaultHea
       }
     };
 
-export const registerBlockPublishEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
+export const registerBlockPublishEndpoint: LodestarRestApiEndpoint = (fastify, {api, config}): void => {
   fastify.post<DefaultQuery, DefaultParams, DefaultHeaders, IBody>(
     "/block",
     opts,
     async (request, reply) => {
-      await modules.chain.receiveBlock(
-        modules.config.types.SignedBeaconBlock.fromJson(
+      await api.validator.publishBlock(
+        config.types.SignedBeaconBlock.fromJson(
           request.body.beacon_block
         )
       );

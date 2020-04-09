@@ -8,6 +8,7 @@ export * from "./blockRoot";
 export * from "./block";
 export * from "./validator";
 export * from "./seed";
+export * from "./signingRoot";
 export * from "./committee";
 export * from "./attestation";
 export * from "./proposer";

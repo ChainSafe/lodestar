@@ -1,7 +1,6 @@
 import chai, {assert, expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {Contract, ethers} from "ethers";
-// @ts-ignore
 import ganache from "ganache-core";
 import sinon, {SinonSandbox} from "sinon";
 import {Block, Provider} from "ethers/providers";
@@ -19,8 +18,8 @@ import {after, before, describe, it} from "mocha";
 chai.use(chaiAsPromised);
 
 describe("Eth1Notifier", () => {
-  const ganacheProvider = ganache.provider();
-  const provider = new ethers.providers.Web3Provider(ganacheProvider);
+  const ganacheProvider = ganache.provider({blockTime: 1});
+  const provider = new ethers.providers.Web3Provider(ganacheProvider as any);
   let opPool: any;
   let eth1: IEth1Notifier;
   let sandbox: SinonSandbox;
@@ -130,9 +129,7 @@ describe("Eth1Notifier", () => {
     assert(cb.calledOnce, "deposit event did not fire");
   });
 
-  it("should process a new block", async function (): Promise<void> {
-    this.timeout(0);
-
+  it("should process a new block", async function () {
     const cb = sinon.spy();
     eth1.on("block", cb);
 
@@ -194,7 +191,8 @@ describe("Eth1Notifier", () => {
       expect(hash).to.be.equal("0x" + requiredBlockHash.toString("hex"));
       return Buffer.alloc(32);
     };
-    const eth1Data = await eth1.getEth1Data({number: 90} as Block, 10);
+    const block = await eth1.getBlock(80);
+    const eth1Data = await eth1.getEth1Data(block);
     expect(eth1Data).to.not.be.null;
     expect(eth1Data.blockHash).to.be.deep.equal(requiredBlockHash);
     expect(eth1Data.depositRoot).to.be.deep.equal(Buffer.alloc(32));

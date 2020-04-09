@@ -9,12 +9,10 @@ import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {sleep} from "../../../src/util/sleep";
-// @ts-ignore
 import Libp2p from "libp2p";
-import {GossipEvent} from "../../../src/network/gossip/constants";
 import sinon from "sinon";
-import { GossipMessageValidator } from "../../../src/network/gossip/validator";
-import { SignedBeaconBlock, Attestation } from "@chainsafe/lodestar-types";
+import {GossipMessageValidator} from "../../../src/network/gossip/validator";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -34,6 +32,10 @@ describe("[network] network", function () {
   logger.silent = true;
   const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
   const validator = sinon.createStubInstance(GossipMessageValidator);
+  validator.isValidIncomingBlock = sinon.stub();
+  validator.isValidIncomingAggregateAndProof = sinon.stub();
+  validator.isValidIncomingUnaggregatedAttestation = sinon.stub();
+  validator.isValidIncomingCommitteeAttestation = sinon.stub();
 
   beforeEach(async () => {
     netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator});

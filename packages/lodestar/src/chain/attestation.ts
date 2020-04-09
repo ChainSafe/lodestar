@@ -1,16 +1,16 @@
 import assert from "assert";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {Attestation, Slot, Root, BlockRootHex, AttestationRootHex, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {Attestation, AttestationRootHex, BlockRootHex, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
-  getCurrentSlot,
   computeEpochAtSlot,
+  computeStartSlotAtEpoch,
   getAttestingIndices,
-  computeStartSlotAtEpoch
+  getCurrentSlot
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
-import {IAttestationProcessor, ChainEventEmitter} from "./interface";
+import {ChainEventEmitter, IAttestationProcessor} from "./interface";
 import {ILMDGHOST} from ".";
 import {IBeaconDb} from "../db";
 import {GENESIS_EPOCH} from "../constants";
@@ -41,8 +41,7 @@ export class AttestationProcessor implements IAttestationProcessor {
     this.logger.info(`Received attestation ${toHexString(attestationHash)}`);
     try {
       const attestationSlot: Slot = attestation.data.slot;
-      const headBlock = await this.db.block.get(this.forkChoice.head());
-      const state = await this.db.state.get(headBlock.message.stateRoot.valueOf() as Uint8Array);
+      const state = await this.db.state.get(this.forkChoice.headStateRoot());
       if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < state.slot) {
         this.logger.verbose(`Attestation ${toHexString(attestationHash)} is too old. Ignored.`);
         return;
@@ -62,7 +61,11 @@ export class AttestationProcessor implements IAttestationProcessor {
       this.addPendingAttestation(beaconBlockRoot, attestation, attestationHash);
       return;
     }
-    await this.processAttestation(attestation, attestationHash);
+    try {
+      await this.processAttestation(attestation, attestationHash);
+    } catch (e) {
+      this.logger.warn("Failed to process attestation. Reason: " + JSON.stringify(e));
+    }
   }
 
   public async receiveBlock(signedBlock: SignedBeaconBlock): Promise<void> {

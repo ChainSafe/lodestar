@@ -4,7 +4,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {sign} from "@chainsafe/bls";
 import {DomainType} from "@chainsafe/lodestar/lib/constants";
 import {interopKeypairs} from "./keypairs";
-import {computeDomain} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 
 export function interopDeposits(
   config: IBeaconConfig,
@@ -17,16 +17,17 @@ export function interopDeposits(
     const data: DepositData = {
       pubkey,
       withdrawalCredentials: Buffer.concat([
-        config.params.BLS_WITHDRAWAL_PREFIX_BYTE,
+        config.params.BLS_WITHDRAWAL_PREFIX,
         hash(pubkey).slice(1),
       ]),
       amount: config.params.MAX_EFFECTIVE_BALANCE,
       signature: Buffer.alloc(0),
     };
+    const domain = computeDomain(config, DomainType.DEPOSIT);
+    const signingRoot = computeSigningRoot(config, config.types.DepositMessage, data, domain);
     data.signature = sign(
       privkey,
-      config.types.DepositMessage.hashTreeRoot(data),
-      computeDomain(DomainType.DEPOSIT),
+      signingRoot
     );
     // Add to merkle tree
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(data));

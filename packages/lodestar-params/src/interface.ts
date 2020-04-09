@@ -15,6 +15,7 @@ export interface IBeaconParams {
   TARGET_AGGREGATORS_PER_COMMITTEE: number;
   RANDOM_SUBNETS_PER_VALIDATOR: number;
   EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION: number;
+  SECONDS_PER_ETH1_BLOCK: number;
 
   // Deposit contract
   DEPOSIT_CONTRACT_ADDRESS: number;
@@ -26,14 +27,13 @@ export interface IBeaconParams {
   EFFECTIVE_BALANCE_INCREMENT: bigint;
 
   // Initial values
-  GENESIS_SLOT: number;
   SAFE_SLOTS_TO_UPDATE_JUSTIFIED: number;
-  GENESIS_EPOCH: number;
-  BLS_WITHDRAWAL_PREFIX_BYTE: Buffer;
+  BLS_WITHDRAWAL_PREFIX: Buffer;
   GENESIS_FORK_VERSION: Buffer;
   GENESIS_START_SHARD: number;
 
   // Time parameters
+  MIN_GENESIS_DELAY: number;
   SECONDS_PER_SLOT: number;
   MIN_ATTESTATION_INCLUSION_DELAY: number;
   SLOTS_PER_EPOCH: number;
@@ -42,7 +42,7 @@ export interface IBeaconParams {
   SLOTS_PER_ETH1_VOTING_PERIOD: number;
   ETH1_FOLLOW_DISTANCE: number;
   SLOTS_PER_HISTORICAL_ROOT: number;
-  MIN_VALIDATOR_WITHDRAWAL_DELAY: number;
+  MIN_VALIDATOR_WITHDRAWABILITY_DELAY: number;
   PERSISTENT_COMMITTEE_PERIOD: number;
 
   MIN_EPOCHS_TO_INACTIVITY_PENALTY: number;
@@ -56,7 +56,7 @@ export interface IBeaconParams {
   // Reward and penalty quotients
   BASE_REWARD_FACTOR: number;
   BASE_REWARDS_PER_EPOCH: number;
-  WHISTLEBLOWING_REWARD_QUOTIENT: number;
+  WHISTLEBLOWER_REWARD_QUOTIENT: number;
   PROPOSER_REWARD_QUOTIENT: number;
   INACTIVITY_PENALTY_QUOTIENT: bigint;
   MIN_SLASHING_PENALTY_QUOTIENT: number;

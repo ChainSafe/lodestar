@@ -3,7 +3,7 @@ export interface IDatabaseOptions {
 }
 
 const config: IDatabaseOptions = {
-  name: "./lodestar-db",
+  name: "./.tmp/lodestar-db",
 };
 
 export default config;

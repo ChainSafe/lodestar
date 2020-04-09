@@ -22,7 +22,7 @@ import {ReputationStore} from "../../../src/sync/IReputation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {IBeaconDb} from "../../../src/db/api";
 
-describe("syncing", function () {
+describe("sync req resp", function () {
   const sandbox = sinon.createSandbox();
   let syncRpc: SyncReqResp;
   let chainStub: SinonStubbedInstance<BeaconChain>,
@@ -39,7 +39,7 @@ describe("syncing", function () {
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
-    chainStub["latestState"] = generateState();
+    chainStub.getHeadState.resolves(generateState());
     // @ts-ignore
     chainStub.config = config;
     reqRespStub = sandbox.createStubInstance(ReqResp);
@@ -72,7 +72,6 @@ describe("syncing", function () {
 
 
   it("should able to create Status - genesis time", async function () {
-    // chainStub.genesisTime = 0;
     chainStub.networkId = 1n;
     chainStub.chainId = 1;
 
@@ -166,24 +165,6 @@ describe("syncing", function () {
     dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
     const state = generateState();
     state.fork.currentVersion = Buffer.from("efgh");
-    dbStub.state.get.resolves(state);
-    expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.true;
-  });
-
-  it("should disconnect on status - incorrect finalized checkpoint", async function() {
-    const body: Status = {
-      headForkVersion: Buffer.alloc(4),
-      finalizedRoot: Buffer.from("xyz"),
-      finalizedEpoch: 1,
-      headRoot: Buffer.alloc(32),
-      headSlot: 1,
-    };
-
-    dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
-    dbStub.blockArchive.get.resolves(generateEmptySignedBlock());
-    const state = generateState();
-    state.fork.currentVersion = Buffer.alloc(4);
-    state.finalizedCheckpoint.epoch = 2;
     dbStub.state.get.resolves(state);
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.true;
   });

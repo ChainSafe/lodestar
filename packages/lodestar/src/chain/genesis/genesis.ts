@@ -18,15 +18,14 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {
   EMPTY_SIGNATURE,
-  GENESIS_EPOCH,
   GENESIS_SLOT,
-  SECONDS_PER_DAY,
   ZERO_HASH,
 } from "../../constants";
 import {
+  computeEpochAtSlot,
   getActiveValidatorIndices,
   getTemporaryBlockHeader,
-  processDeposit
+  processDeposit,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
 
@@ -37,7 +36,7 @@ export function initializeBeaconStateFromEth1(
   deposits: Deposit[]): BeaconState {
   const state = getGenesisBeaconState(
     config,
-    eth1Timestamp - eth1Timestamp % SECONDS_PER_DAY + 2 * SECONDS_PER_DAY,
+    eth1Timestamp - eth1Timestamp % config.params.MIN_GENESIS_DELAY + 2 * config.params.MIN_GENESIS_DELAY,
     {
       depositCount: deposits.length,
       depositRoot: new Uint8Array(32),
@@ -67,8 +66,8 @@ export function initializeBeaconStateFromEth1(
       config.params.MAX_EFFECTIVE_BALANCE
     );
     if(validator.effectiveBalance === config.params.MAX_EFFECTIVE_BALANCE) {
-      validator.activationEligibilityEpoch = config.params.GENESIS_EPOCH;
-      validator.activationEpoch = config.params.GENESIS_EPOCH;
+      validator.activationEligibilityEpoch = computeEpochAtSlot(config, GENESIS_SLOT);
+      validator.activationEpoch = computeEpochAtSlot(config, GENESIS_SLOT);
     }
   });
 
@@ -79,7 +78,7 @@ export function isValidGenesisState(config: IBeaconConfig, state: BeaconState): 
   if(state.genesisTime < config.params.MIN_GENESIS_TIME) {
     return false;
   }
-  return getActiveValidatorIndices(state, config.params.GENESIS_EPOCH).length
+  return getActiveValidatorIndices(state, computeEpochAtSlot(config, GENESIS_SLOT)).length
       >=
       config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT;
 
@@ -104,7 +103,7 @@ export function getGenesisBeaconState(
   state.fork = {
     previousVersion: config.params.GENESIS_FORK_VERSION,
     currentVersion: config.params.GENESIS_FORK_VERSION,
-    epoch: GENESIS_EPOCH,
+    epoch: computeEpochAtSlot(config, GENESIS_SLOT),
   } as Fork;
 
   // Validator registry

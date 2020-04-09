@@ -1,6 +1,6 @@
 import {describe, it} from "mocha";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {AttestationCollector} from "../../../../src/sync/subnet/attestation-collector";
+import {AttestationCollector} from "../../../../src/sync/utils/attestation-collector";
 import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
 import sinon from "sinon";
 import {Gossip} from "../../../../src/network/gossip/gossip";
