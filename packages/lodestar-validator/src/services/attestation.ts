@@ -109,6 +109,7 @@ export class AttestationService {
         };
         setTimeout(resolve, this.config.params.SECONDS_PER_SLOT / 3 * 1000);
       });
+      eventSource.close();
       const fork = (await this.provider.beacon.getFork()).fork;
       const attestation = await this.createAttestation(duty.attestationSlot, duty.committeeIndex, fork);
       if(!attestation) {
