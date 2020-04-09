@@ -6008,6 +6008,21 @@ fastify-plugin@^1.5.0:
   dependencies:
     semver "^6.0.0"
 
+fastify-plugin@^1.6.1:
+  version "1.6.1"
+  resolved "https://registry.yarnpkg.com/fastify-plugin/-/fastify-plugin-1.6.1.tgz#122f5a5eeb630d55c301713145a9d188e6d5dd5b"
+  integrity sha512-APBcb27s+MjaBIerFirYmBLatoPCgmHZM6XP0K+nDL9k0yX8NJPWDY1RAC3bh6z+AB5ULS2j31BUfLMT3uaZ4A==
+  dependencies:
+    semver "^6.3.0"
+
+fastify-sse-v2@^1.0.3:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/fastify-sse-v2/-/fastify-sse-v2-1.0.3.tgz#1546d732f91447de98ecd92991b52f32a5577de1"
+  integrity sha512-7ByrlLZEo2xCr55kj2HIduvqveNuhOQHpyUuryNurmEeVkt0QHlolR235wiqcONGl/srnpYzxtQNogs0Mlk8yg==
+  dependencies:
+    fastify-plugin "^1.6.1"
+    it-to-stream "^0.1.1"
+
 fastify@2.13.0:
   version "2.13.0"
   resolved "https://registry.yarnpkg.com/fastify/-/fastify-2.13.0.tgz#236906311122e38c45c6610cbd09b8818471d9cf"
