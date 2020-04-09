@@ -25,6 +25,7 @@ import {BeaconNodeOptions} from "../../lodestar/node/options";
 import {getConfig, getDevGenesisState, getPeerId, resetPath} from "./utils";
 
 export interface IDevCommandOptions {
+  [key: string]: string;
   loggingLevel?: string;
   genesisTime?: string;
   validatorCount?: string;
@@ -32,7 +33,6 @@ export interface IDevCommandOptions {
   preset?: string;
   validators?: string;
   db?: string;
-  [key: string]: string;
 }
 
 const BASE_DIRECTORY = path.join(".", ".tmp");
