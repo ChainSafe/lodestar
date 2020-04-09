@@ -27,11 +27,13 @@ export interface IBeaconSSZTypes {
   Gwei: BigIntUintType;
   Root: ByteVectorType;
   Version: ByteVectorType;
+  ForkDigest: ByteVectorType;
   BLSPubkey: ByteVectorType;
   BLSSignature: ByteVectorType;
   Domain: ByteVectorType;
   // misc
   Fork: ContainerType<t.Fork>;
+  ForkData: ContainerType<t.ForkData>;
   Checkpoint: ContainerType<t.Checkpoint>;
   Validator: ContainerType<t.Validator>;
   AttestationData: ContainerType<t.AttestationData>;
@@ -101,6 +103,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
    */
   // misc
   "Fork",
+  "ForkData",
   "Checkpoint",
   "Validator",
   "AttestationData",

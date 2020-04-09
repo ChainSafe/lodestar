@@ -1,6 +1,7 @@
-import {BeaconBlock, BeaconState, Bytes32, Fork, Number64, SyncingStatus, Uint64} from "@chainsafe/lodestar-types";
+import {BeaconBlock, BeaconState, Bytes32, Fork, Number64, SyncingStatus, Uint64, Root} from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "../../../src/api/interface/beacon";
 import {generateEmptyBlock} from "../block";
+import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IMockBeaconApiOpts {
   version?: Bytes32;
@@ -27,8 +28,8 @@ export class MockBeaconApi implements IBeaconApi {
     return this.version;
   }
 
-  public async getFork(): Promise<{fork: Fork; chainId: Uint64}> {
-    return {fork: this.fork, chainId: 1n};
+  public async getFork(): Promise<{fork: Fork; chainId: Uint64; genesisValidatorsRoot: Root}> {
+    return {fork: this.fork, chainId: 1n, genesisValidatorsRoot: ZERO_HASH};
   }
 
   public async getGenesisTime(): Promise<Number64> {

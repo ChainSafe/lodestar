@@ -6,7 +6,7 @@ import sinon from "sinon";
 import {Gossip} from "../../../../src/network/gossip/gossip";
 import {OpPool} from "../../../../src/opPool";
 import {getCommitteeIndexSubnet} from "../../../../src/network/gossip/utils";
-import { expect } from "chai";
+import {expect} from "chai";
 
 describe("Attestation collector",function() {
 
@@ -22,7 +22,8 @@ describe("Attestation collector",function() {
             {
                 // @ts-ignore
                 chain: {
-                    clock: realClock
+                    clock: realClock,
+                    currentForkDigest: Buffer.alloc(4),
                 },
                 // @ts-ignore
                 network: {
@@ -34,12 +35,12 @@ describe("Attestation collector",function() {
         );
         await realClock.start();
         await collector.start();
-        collector.subscribeToCommitteeAttestations(1, 1);
-        expect(fakeGossip.subscribeToAttestationSubnet.withArgs(getCommitteeIndexSubnet(1)).calledOnce).to.be.true;
+        await collector.subscribeToCommitteeAttestations(1, 1);
+        expect(fakeGossip.subscribeToAttestationSubnet.withArgs(Buffer.alloc(4), getCommitteeIndexSubnet(1)).calledOnce).to.be.true;
         clock.tick(config.params.SECONDS_PER_SLOT * 1000);
-        expect(fakeGossip.subscribeToAttestationSubnet.withArgs(getCommitteeIndexSubnet(1), sinon.match.any).calledOnce).to.be.true;
+        expect(fakeGossip.subscribeToAttestationSubnet.withArgs(Buffer.alloc(4), getCommitteeIndexSubnet(1), sinon.match.any).calledOnce).to.be.true;
         clock.tick(config.params.SECONDS_PER_SLOT * 1000);
-        expect(fakeGossip.unsubscribeFromAttestationSubnet.withArgs(getCommitteeIndexSubnet(1), sinon.match.func).calledOnce).to.be.true;
+        expect(fakeGossip.unsubscribeFromAttestationSubnet.withArgs(Buffer.alloc(4), getCommitteeIndexSubnet(1), sinon.match.func).calledOnce).to.be.true;
         await collector.stop();
         await realClock.stop();
     });

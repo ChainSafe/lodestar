@@ -10,7 +10,8 @@ import {
   CommitteeIndex,
   Epoch,
   Fork,
-  Slot
+  Slot,
+  Root
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IApiClient} from "../api";
@@ -64,8 +65,8 @@ export class AttestationService {
       this.config.types.BLSPubkey.equals(attesterDuties[0].validatorPubkey, this.publicKey)
     ) {
       const duty = attesterDuties[0];
-      const fork = (await this.provider.beacon.getFork()).fork;
-      const slotSignature = this.getSlotSignature(duty.attestationSlot, fork);
+      const {fork, genesisValidatorsRoot} = (await this.provider.beacon.getFork());
+      const slotSignature = this.getSlotSignature(duty.attestationSlot, fork, genesisValidatorsRoot);
       const isAggregator = await this.provider.validator.isAggregator(
         duty.attestationSlot,
         duty.committeeIndex,
@@ -92,8 +93,12 @@ export class AttestationService {
     const duty = this.nextAttesterDuties.get(slot);
     if(duty) {
       await sleep(this.config.params.SECONDS_PER_SLOT / 3 * 1000);
-      const fork = (await this.provider.beacon.getFork()).fork;
-      const attestation = await this.createAttestation(duty.attestationSlot, duty.committeeIndex, fork);
+      const {fork, genesisValidatorsRoot} = (await this.provider.beacon.getFork());
+      const attestation = await this.createAttestation(
+        duty.attestationSlot,
+        duty.committeeIndex,
+        fork,
+        genesisValidatorsRoot);
       if(!attestation) {
         return;
       }
@@ -112,7 +117,8 @@ export class AttestationService {
     }
   };
 
-  private aggregateAttestations = async (duty: IAttesterDuty, attestation: Attestation, fork: Fork): Promise<void> => {
+  private aggregateAttestations = async (
+    duty: IAttesterDuty, attestation: Attestation, fork: Fork, genesisValidatorsRoot: Root): Promise<void> => {
     this.logger.info(
       `Aggregating attestations for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
     );
@@ -147,7 +153,8 @@ export class AttestationService {
       this.publicKey,
       this.getSlotSignature(
         duty.attestationSlot,
-        fork
+        fork,
+        genesisValidatorsRoot
       )
     );
     this.logger.info(
@@ -155,10 +162,10 @@ export class AttestationService {
     );
   };
 
-  private getSlotSignature(slot: Slot, fork: Fork): BLSSignature {
+  private getSlotSignature(slot: Slot, fork: Fork, genesisValidatorsRoot: Root): BLSSignature {
     const domain = getDomain(
       this.config,
-      {fork} as BeaconState,
+      {fork, genesisValidatorsRoot} as BeaconState,
       DomainType.BEACON_ATTESTER,
       computeEpochAtSlot(this.config, slot)
     );
@@ -169,7 +176,8 @@ export class AttestationService {
   private async createAttestation(
     slot: Slot,
     committeeIndex: CommitteeIndex,
-    fork: Fork): Promise<Attestation> {
+    fork: Fork,
+    genesisValidatorsRoot: Root): Promise<Attestation> {
     const attestation = await this.provider.validator.produceAttestation(
       this.publicKey,
       false,
@@ -190,7 +198,7 @@ export class AttestationService {
     }
     const domain = getDomain(
       this.config,
-      {fork} as BeaconState,
+      {fork, genesisValidatorsRoot} as BeaconState,
       DomainType.BEACON_ATTESTER,
       attestation.data.target.epoch,
     );

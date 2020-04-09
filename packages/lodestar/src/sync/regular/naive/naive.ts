@@ -80,19 +80,21 @@ export class NaiveRegularSync implements IRegularSync {
   }
 
   private startGossiping(): void {
-    this.network.gossip.subscribeToBlock(this.onBlock);
-    this.network.gossip.subscribeToAggregateAndProof(this.onAggregatedAttestation);
-    this.network.gossip.subscribeToAttesterSlashing(this.opPool.attesterSlashings.receive);
-    this.network.gossip.subscribeToProposerSlashing(this.opPool.proposerSlashings.receive);
-    this.network.gossip.subscribeToVoluntaryExit(this.opPool.voluntaryExits.receive);
+    const forkDigest = this.chain.currentForkDigest;
+    this.network.gossip.subscribeToBlock(forkDigest, this.onBlock);
+    this.network.gossip.subscribeToAggregateAndProof(forkDigest, this.onAggregatedAttestation);
+    this.network.gossip.subscribeToAttesterSlashing(forkDigest, this.opPool.attesterSlashings.receive);
+    this.network.gossip.subscribeToProposerSlashing(forkDigest, this.opPool.proposerSlashings.receive);
+    this.network.gossip.subscribeToVoluntaryExit(forkDigest, this.opPool.voluntaryExits.receive);
   }
 
   private stopGossiping(): void {
-    this.network.gossip.unsubscribe(GossipEvent.BLOCK, this.onBlock);
-    this.network.gossip.unsubscribe(GossipEvent.AGGREGATE_AND_PROOF, this.onAggregatedAttestation);
-    this.network.gossip.unsubscribe(GossipEvent.ATTESTER_SLASHING, this.opPool.attesterSlashings.receive);
-    this.network.gossip.unsubscribe(GossipEvent.PROPOSER_SLASHING, this.opPool.proposerSlashings.receive);
-    this.network.gossip.unsubscribe(GossipEvent.VOLUNTARY_EXIT, this.opPool.voluntaryExits.receive);
+    const forkDigest = this.chain.currentForkDigest;
+    this.network.gossip.unsubscribe(forkDigest, GossipEvent.BLOCK, this.onBlock);
+    this.network.gossip.unsubscribe(forkDigest, GossipEvent.AGGREGATE_AND_PROOF, this.onAggregatedAttestation);
+    this.network.gossip.unsubscribe(forkDigest, GossipEvent.ATTESTER_SLASHING, this.opPool.attesterSlashings.receive);
+    this.network.gossip.unsubscribe(forkDigest, GossipEvent.PROPOSER_SLASHING, this.opPool.proposerSlashings.receive);
+    this.network.gossip.unsubscribe(forkDigest, GossipEvent.VOLUNTARY_EXIT, this.opPool.voluntaryExits.receive);
   }
 
   /**

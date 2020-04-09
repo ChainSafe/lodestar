@@ -16,6 +16,13 @@ export const Fork = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   },
 });
 
+export const ForkData = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    currentVersion: ssz.Version,
+    genesisValidatorsRoot: ssz.Root,
+  },
+});
+
 export const Checkpoint = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
     epoch: ssz.Epoch,

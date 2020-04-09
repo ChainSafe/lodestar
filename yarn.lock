@@ -929,10 +929,10 @@
   dependencies:
     buffer "^5.4.3"
 
-"@chainsafe/eth2-spec-tests@0.10.1-fix":
-  version "0.10.1-fix"
-  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.10.1-fix.tgz#c0fb839b5b93fae0a7cd247fd686d2a9ea926240"
-  integrity sha512-mnfIDUFZ/IsAHmJQ7hkZ3t3s7rxrr5olLz3pH1RS2kWsuQonAKzVOZTQNkHYowpeI4ebYo8H+NPRtD5mkbTTzg==
+"@chainsafe/eth2-spec-tests@0.11.1":
+  version "0.11.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.11.1.tgz#30638da57a5b5c7227163d3dcf8ef78e2ec4ecf6"
+  integrity sha512-Ti1NrIdNuI5liLelNFeWVxgOOqfkxAlSg+zkR8NPZFwxhZgueyk7Bl8icw8TgjjMXsinzsxlqz7uE5t6aP1Iww==
 
 "@chainsafe/eth2-spec-tests@^0.10.1-fix":
   version "0.10.1"

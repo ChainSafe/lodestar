@@ -2,7 +2,7 @@
  * @module validator
  */
 
-import {BeaconState, BLSPubkey, Epoch, Fork, Slot, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {BeaconState, BLSPubkey, Epoch, Fork, Slot, SignedBeaconBlock, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -60,14 +60,16 @@ export default class BlockProposingService {
 
   public onNewSlot = async(slot: Slot): Promise<void> => {
     if(this.nextProposalSlot === slot) {
-      await this.createAndPublishBlock(slot, (await this.provider.beacon.getFork()).fork);
+      const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
+      await this.createAndPublishBlock(slot, fork, genesisValidatorsRoot);
     }
   };
 
   /**
    * IFF a validator is selected construct a block to propose.
    */
-  public async createAndPublishBlock(slot: Slot, fork: Fork): Promise<SignedBeaconBlock | null> {
+  public async createAndPublishBlock(
+    slot: Slot, fork: Fork, genesisValidatorsRoot: Root): Promise<SignedBeaconBlock | null> {
     if(await this.hasProposedAlready(slot)) {
       this.logger.info(`Already proposed block in current epoch: ${computeEpochAtSlot(this.config, slot)}`);
       return null;
@@ -76,7 +78,7 @@ export default class BlockProposingService {
     const epoch = computeEpochAtSlot(this.config, slot);
     const randaoDomain = getDomain(
       this.config,
-      {fork} as BeaconState,
+      {fork, genesisValidatorsRoot} as BeaconState,
       DomainType.RANDAO,
       epoch
     );
@@ -93,7 +95,7 @@ export default class BlockProposingService {
     }
     const proposerDomain = getDomain(
       this.config,
-      {fork} as BeaconState,
+      {fork, genesisValidatorsRoot} as BeaconState,
       DomainType.BEACON_PROPOSER,
       computeEpochAtSlot(this.config, slot)
     );

@@ -58,7 +58,7 @@ export class TasksService implements IService {
   };
   
   private handleRegularSyncStartedTasks = async (): Promise<void> => {
-    new InteropSubnetsJoiningTask(this.config, {network: this.network}).run();
+    new InteropSubnetsJoiningTask(this.config, {chain: this.chain, network: this.network}).run();
   };
 
 }

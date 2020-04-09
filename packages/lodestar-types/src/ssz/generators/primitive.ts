@@ -26,6 +26,7 @@ export const ValidatorIndex = Number64;
 export const Gwei = Uint64;
 export const Root = Bytes32;
 export const Version = Bytes4;
+export const ForkDigest = Bytes4;
 export const BLSPubkey = Bytes48;
 export const BLSSignature = Bytes96;
 export const Domain = Bytes8;

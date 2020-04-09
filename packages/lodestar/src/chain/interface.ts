@@ -9,6 +9,7 @@ import {
   SignedBeaconBlock,
   Uint16,
   Uint64,
+  ForkDigest,
 } from "@chainsafe/lodestar-types";
 
 import {ILMDGHOST} from "./forkChoice";
@@ -35,6 +36,7 @@ export interface IBeaconChain extends ChainEventEmitter {
   clock: IBeaconClock;
   chainId: Uint16;
   networkId: Uint64;
+  currentForkDigest: ForkDigest;
   /**
    * Start beacon chain processing
    */

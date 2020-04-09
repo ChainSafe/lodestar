@@ -23,14 +23,15 @@ export async function handleIncomingAggregateAndProof(this: Gossip, obj: GossipO
 }
 
 export async function publishAggregatedAttestation(this: Gossip, aggregateAndProof: AggregateAndProof): Promise<void> {
+  const forkDigestValue = await this.getForkDigest(aggregateAndProof.aggregate.data.slot);
   await Promise.all([
     this.pubsub.publish(
-      getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF),
+      getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkDigestValue),
       Buffer.from(this.config.types.AggregateAndProof.serialize(aggregateAndProof))
     ),
     //to be backward compatible
     this.pubsub.publish(
-      getGossipTopic(GossipEvent.ATTESTATION),
+      getGossipTopic(GossipEvent.ATTESTATION, forkDigestValue),
       Buffer.from(this.config.types.Attestation.serialize(aggregateAndProof.aggregate))
     )
   ]);

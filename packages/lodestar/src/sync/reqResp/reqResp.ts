@@ -116,10 +116,8 @@ export class SyncReqResp implements ISyncReqResp {
   }
 
   public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
-    const headBlock = await this.db.block.getChainHead();
-    const state = await this.db.state.get(headBlock.message.stateRoot.valueOf() as Uint8Array);
-    // peer is on a different fork version
-    return !this.config.types.Version.equals(state.fork.currentVersion, request.headForkVersion);
+    const currentForkDigest = this.chain.currentForkDigest;
+    return !this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest);
 
     //TODO: fix this, doesn't work if we are starting sync(archive is empty) or we don't have finalized epoch
     // const startSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
@@ -202,7 +200,7 @@ export class SyncReqResp implements ISyncReqResp {
       finalizedRoot = state.finalizedCheckpoint.root;
     }
     return {
-      headForkVersion: (await this.chain.getHeadState()).fork.currentVersion,
+      forkDigest: this.chain.currentForkDigest,
       finalizedRoot,
       finalizedEpoch,
       headRoot,

@@ -29,6 +29,13 @@ export interface Fork {
   epoch: Epoch;
 }
 
+export interface ForkData {
+  // Current fork version
+  currentVersion: Version;
+  // root of genesis validator list
+  genesisValidatorsRoot: Root;
+}
+
 export interface Checkpoint {
   epoch: Epoch;
   root: Root;
