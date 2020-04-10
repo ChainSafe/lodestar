@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
-import {BLSPubkey, BLSSignature, CommitteeIndex, Number64, Slot, Uint64} from "./primitive";
-import {Fork} from "./misc";
+import {BLSPubkey, BLSSignature, CommitteeIndex, Number64, Slot, Uint64, ValidatorIndex} from "./primitive";
+import {Fork, Validator} from "./misc";
 
 export interface SubscribeToCommitteeSubnetPayload {
   slot: Slot;
@@ -32,4 +32,8 @@ export interface SyncingStatus {
   currentBlock: Uint64;
   // The estimated highest block, or current target block number
   highestBlock: Uint64;
+}
+
+export interface ValidatorResponse extends Validator {
+  index: ValidatorIndex;
 }

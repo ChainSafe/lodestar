@@ -34,3 +34,10 @@ export const SyncingStatus = (ssz: IBeaconSSZTypes): ContainerType => new Contai
   },
 });
 
+export const ValidatorResponse = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    ...ssz.Validator.fields,
+    index: ssz.ValidatorIndex
+  },
+});
+
