@@ -34,7 +34,7 @@ export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): Contai
     eth1Data: ssz.Eth1Data,
     eth1DataVotes: new ListType({
       elementType: ssz.Eth1Data,
-      limit: params.EPOCHS_PER_ETH1_VOTING_PERIOD,
+      limit: params.EPOCHS_PER_ETH1_VOTING_PERIOD * params.SLOTS_PER_EPOCH,
     }),
     eth1DepositIndex: ssz.Number64,
     // Registry
