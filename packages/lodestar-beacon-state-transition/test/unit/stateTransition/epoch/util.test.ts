@@ -129,7 +129,7 @@ describe('process epoch - crosslinks', function () {
   });
 
   it('should get matching head attestation', function () {
-    const blockRoot = Buffer.alloc(36, 2);
+    const blockRoot = Buffer.alloc(32, 2);
     const currentPendingAttestations = [
       {
         ...generateEmptyAttestation(),
@@ -148,6 +148,7 @@ describe('process epoch - crosslinks', function () {
       currentEpochAttestations: currentPendingAttestations
     });
     getBlockRootAtSlotStub.returns(blockRoot);
+    getBlockRootStub.returns(Buffer.alloc(32));
     try {
       const result = getMatchingHeadAttestations(config, state, 1);
       expect(getBlockRootAtSlotStub.withArgs(config, sinon.match.any, 1).calledTwice).to.be.true;

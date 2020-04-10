@@ -52,7 +52,7 @@ export function getMatchingHeadAttestations(
   state: BeaconState,
   epoch: Epoch
 ): PendingAttestation[] {
-  return getMatchingSourceAttestations(config, state, epoch)
+  return getMatchingTargetAttestations(config, state, epoch)
     .filter((a) => config.types.Root.equals(
       a.data.beaconBlockRoot,
       getBlockRootAtSlot(config, state, a.data.slot)
