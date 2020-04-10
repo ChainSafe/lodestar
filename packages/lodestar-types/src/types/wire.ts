@@ -29,7 +29,6 @@ export interface Status {
 export type Goodbye = Uint64;
 
 export interface BeaconBlocksByRangeRequest {
-  headBlockRoot: Root;
   startSlot: Slot;
   count: Number64;
   step: Number64;

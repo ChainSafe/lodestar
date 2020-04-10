@@ -115,20 +115,15 @@ describe("sync utils", function () {
 
     it("should get block range from peer", async function () {
       const rpcStub = sinon.createStubInstance(ReqResp);
-      const repsStub = sinon.createStubInstance(ReputationStore);
-      // @ts-ignore
-      repsStub.get.returns({latestStatus: {root: Buffer.alloc(32, 1)}});
       rpcStub.beaconBlocksByRange
         .withArgs(sinon.match.any, sinon.match.any)
         .resolves([generateEmptySignedBlock()]);
       const result = await getBlockRangeFromPeer(
         rpcStub,
-        repsStub as unknown as ReputationStore,
         {id: sinon.createStubInstance(PeerId)} as unknown as PeerInfo,
         {start: 1, end: 4}
       );
       expect(result.length).to.be.greaterThan(0);
-      expect(repsStub.get.calledOnce).to.be.true;
       expect(rpcStub.beaconBlocksByRange.calledOnce).to.be.true;
     });
 

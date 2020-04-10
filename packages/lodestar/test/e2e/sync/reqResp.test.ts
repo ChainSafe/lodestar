@@ -185,7 +185,6 @@ describe("[sync] rpc", function () {
 
   it("beacon blocks by range", async () => {
     const request: BeaconBlocksByRangeRequest = {
-      headBlockRoot: Buffer.alloc(32),
       startSlot: BLOCK_SLOT,
       count: 2,
       step: 1,
