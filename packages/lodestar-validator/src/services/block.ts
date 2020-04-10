@@ -2,13 +2,17 @@
  * @module validator
  */
 
-import {BeaconState, BLSPubkey, Epoch, Fork, Slot, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {BeaconState, BLSPubkey, Epoch, Fork, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
-import {computeEpochAtSlot, DomainType, getDomain, computeSigningRoot}
-  from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeEpochAtSlot,
+  computeSigningRoot,
+  DomainType,
+  getDomain
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IValidatorDB} from "../";
 import {IApiClient} from "../api";
 
@@ -45,7 +49,7 @@ export default class BlockProposingService {
   };
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
-    const epochProposers = await this.provider.validator.getProposerDuties(epoch);
+    const epochProposers = await this.provider.validator.getProposerDuties(epoch, [this.publicKey]);
     if(!epochProposers) {
       return;
     }

@@ -1,16 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
+  AggregateAndProof,
   Attestation,
   AttestationData,
+  AttesterDuty,
   BeaconBlock,
   BLSPubkey,
   Deposit,
   Eth1Data,
   Number64,
+  SignedBeaconBlock,
   Slot,
-  ValidatorDuty,
-  ValidatorIndex,
-  SignedBeaconBlock
+  ValidatorIndex
 } from "@chainsafe/lodestar-types";
 import {IValidatorApi} from "../../../src/api/interface/validators";
 import {generateEmptyBlock} from "../../utils/block";
@@ -38,7 +39,11 @@ export class MockValidatorApi implements IValidatorApi {
     this.validatorIndex = opts && opts.validatorIndex || 1;
   }
 
-  getAttesterDuties(epoch: number, validatorPubKey: BLSPubkey[]): Promise<ValidatorDuty[]> {
+  public async produceAggregatedAttestation(attestationData: AttestationData): Promise<Attestation> {
+    throw new Error("Method not implemented.");
+  }
+
+  getAttesterDuties(epoch: number, validatorPubKey: BLSPubkey[]): Promise<AttesterDuty[]> {
     return undefined;
   }
 
@@ -54,7 +59,7 @@ export class MockValidatorApi implements IValidatorApi {
     return undefined;
   }
 
-  produceAttestation(validatorPubKey: Buffer, pocBit: boolean, index: number, slot: number): Promise<Attestation> {
+  produceAttestation(validatorPubKey: Buffer, index: number, slot: number): Promise<Attestation> {
     return undefined;
   }
 
@@ -62,7 +67,7 @@ export class MockValidatorApi implements IValidatorApi {
     return undefined;
   }
 
-  publishAggregatedAttestation(aggregated: Attestation, validatorPubKey: Buffer, slotSignature: Buffer): Promise<void> {
+  publishAggregatedAttestation(aggregated: AggregateAndProof): Promise<void> {
     return undefined;
   }
 

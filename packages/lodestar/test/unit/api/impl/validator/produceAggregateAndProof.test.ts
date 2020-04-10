@@ -32,7 +32,7 @@ describe("get proposers api impl", function () {
         getCommitteeAttestation(generateEmptyAttestation(), PrivateKey.fromInt(1), 1),
         getCommitteeAttestation(generateEmptyAttestation(), PrivateKey.fromInt(2), 2)
     ]);
-    const result = await api.produceAggregateAndProof(generateEmptyAttestation().data);
+    const result = await api.produceAggregatedAttestation(generateEmptyAttestation().data);
     expect(result.signature).to.not.be.null;
     expect(result.aggregationBits[0]).to.be.false;
     expect(result.aggregationBits[1]).to.be.true;

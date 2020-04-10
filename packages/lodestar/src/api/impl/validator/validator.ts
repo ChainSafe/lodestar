@@ -75,7 +75,6 @@ export class ValidatorApi implements IValidatorApi {
 
   public async produceAttestation(
     validatorPubKey: BLSPubkey,
-    pocBit: boolean,
     index: CommitteeIndex,
     slot: Slot,
   ): Promise<Attestation> {
@@ -160,7 +159,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
 
-  public async produceAggregateAndProof(attestationData: AttestationData): Promise<Attestation> {
+  public async produceAggregatedAttestation(attestationData: AttestationData): Promise<Attestation> {
     const attestations = (await this.getWireAttestations(
       computeEpochAtSlot(this.config, attestationData.slot),
       attestationData.index

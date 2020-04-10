@@ -139,7 +139,7 @@ describe("Test validator rest API", function () {
       })
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(validatorApi.produceAttestation.withArgs(sinon.match.any, false, 3, 2).calledOnce).to.be.true;
+    expect(validatorApi.produceAttestation.withArgs(sinon.match.any, 3, 2).calledOnce).to.be.true;
   });
 
 

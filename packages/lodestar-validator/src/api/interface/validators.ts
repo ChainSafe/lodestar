@@ -1,22 +1,22 @@
 import {
+  AggregateAndProof,
   Attestation,
+  AttestationData,
+  AttesterDuty,
   BeaconBlock,
   BLSPubkey,
   BLSSignature,
   CommitteeIndex,
   Epoch,
-  Slot,
-  ValidatorDuty,
-  SignedBeaconBlock
+  SignedBeaconBlock,
+  Slot
 } from "@chainsafe/lodestar-types";
 
 export interface IValidatorApi {
   
-  getProposerDuties(epoch: Epoch): Promise<Map<Slot, BLSPubkey>>;
+  getProposerDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<Map<Slot, BLSPubkey>>;
 
-  getAttesterDuties(epoch: Epoch, validatorPubKey: BLSPubkey[]): Promise<ValidatorDuty[]>;
-
-  isAggregator(slot: Slot, committeeIndex: CommitteeIndex, slotSignature: BLSSignature): Promise<boolean>;
+  getAttesterDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]>;
 
   /**
    * Requests a BeaconNode to produce a valid block,
@@ -29,7 +29,7 @@ export interface IValidatorApi {
    * Requests that the BeaconNode produce an IndexedAttestation,
    * with a blank signature field, which the ValidatorClient will then sign.
    */
-  produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, index: CommitteeIndex, slot: Slot):
+  produceAttestation(validatorPubKey: BLSPubkey, index: CommitteeIndex, slot: Slot):
   Promise<Attestation>;
 
   /**
@@ -45,11 +45,13 @@ export interface IValidatorApi {
   publishAttestation(attestation: Attestation): Promise<void>;
 
   publishAggregatedAttestation(
-    aggregated: Attestation, validatorPubKey: BLSPubkey, slotSignature: BLSSignature
+    aggregated: AggregateAndProof
   ): Promise<void>;
 
   getWireAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]>;
-  
+
+  produceAggregatedAttestation(attestationData: AttestationData): Promise<Attestation>;
+
   subscribeCommitteeSubnet(
     slot: Slot, slotSignature: BLSSignature, committeeIndex: CommitteeIndex, aggregatorPubkey: BLSPubkey
   ): Promise<void>;

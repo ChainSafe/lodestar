@@ -29,7 +29,7 @@ export const registerAggregateAndProofProductionEndpoint: LodestarRestApiEndpoin
     opts,
     async (request, reply) => {
       const serialized = fromHex(request.query.attestation_data);
-      const aggregatedAttestation = await api.validator.produceAggregateAndProof(
+      const aggregatedAttestation = await api.validator.produceAggregatedAttestation(
         config.types.AttestationData.deserialize(serialized)
       );
       reply

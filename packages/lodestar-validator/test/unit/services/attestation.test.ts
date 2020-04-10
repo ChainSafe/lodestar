@@ -7,7 +7,7 @@ import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ApiClientOverInstance} from "../../../src/api";
 import {AttestationService} from "../../../src/services/attestation";
 import {toBufferBE} from "bigint-buffer";
-import {ValidatorDuty} from "@chainsafe/lodestar-types";
+import {AttesterDuty} from "@chainsafe/lodestar-types";
 import {MockValidatorDB} from "../../utils/mocks/MockValidatorDB";
 import {generateFork} from "../../utils/fork";
 import {
@@ -75,9 +75,10 @@ describe("validator attestation service", function () {
       dbStub,
       logger
     );
-    const duty: ValidatorDuty = {
+    const duty: AttesterDuty = {
       attestationSlot: 1,
       committeeIndex: 1,
+      aggregatorModulo: 0,
       validatorPubkey: keypair.publicKey.toBytesCompressed()
     };
     rpcClientStub.validator.getAttesterDuties.resolves([duty]);
@@ -119,9 +120,10 @@ describe("validator attestation service", function () {
       dbStub,
       logger
     );
-    const duty: ValidatorDuty = {
+    const duty: AttesterDuty = {
       attestationSlot: 1,
       committeeIndex: 1,
+      aggregatorModulo: 0,
       validatorPubkey: keypair.publicKey.toBytesCompressed()
     };
     service["nextAttesterDuties"].set(0, {...duty, isAggregator: false});
@@ -170,9 +172,10 @@ describe("validator attestation service", function () {
       dbStub,
       logger
     );
-    const duty: ValidatorDuty = {
+    const duty: AttesterDuty = {
       attestationSlot: 1,
       committeeIndex: 1,
+      aggregatorModulo: 0,
       validatorPubkey: keypair.publicKey.toBytesCompressed()
     };
     service["nextAttesterDuties"].set(0, {...duty, isAggregator: false});

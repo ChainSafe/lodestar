@@ -35,7 +35,7 @@ export interface IValidatorApi extends IApi {
    * Requests that the BeaconNode produce an IndexedAttestation,
    * with a blank signature field, which the ValidatorClient will then sign.
    */
-  produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, index: CommitteeIndex, slot: Slot):
+  produceAttestation(validatorPubKey: BLSPubkey, index: CommitteeIndex, slot: Slot):
   Promise<Attestation>;
 
   /**
@@ -54,7 +54,7 @@ export interface IValidatorApi extends IApi {
     aggregate: AggregateAndProof
   ): Promise<void>;
 
-  produceAggregateAndProof(attestationData: AttestationData): Promise<Attestation>;
+  produceAggregatedAttestation(attestationData: AttestationData): Promise<Attestation>;
 
   getWireAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]>;
 
