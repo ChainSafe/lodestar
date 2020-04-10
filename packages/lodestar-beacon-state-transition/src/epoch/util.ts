@@ -71,10 +71,14 @@ export function getUnslashedAttestingIndices(
   return Array.from(output).filter((index) => !state.validators[index].slashed).sort();
 }
 
+/**
+ * Return the combined effective balance of the set of unslashed validators participating in `attestations`.
+ * Note: `getTotalBalance` returns `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero.
+ */
 export function getAttestingBalance(
   config: IBeaconConfig,
   state: BeaconState,
   attestations: PendingAttestation[]
 ): Gwei {
-  return getTotalBalance(state, getUnslashedAttestingIndices(config, state, attestations));
+  return getTotalBalance(config, state, getUnslashedAttestingIndices(config, state, attestations));
 }

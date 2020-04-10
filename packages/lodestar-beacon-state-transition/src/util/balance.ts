@@ -14,11 +14,12 @@ import {bigIntMax} from "@chainsafe/lodestar-utils";
 
 
 /**
- * Return the combined effective balance of the [[indices]]. (1 Gwei minimum to avoid divisions by zero.)
+ * Return the combined effective balance of the [[indices]].
+ * `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero.
  */
-export function getTotalBalance(state: BeaconState, indices: ValidatorIndex[]): Gwei {
+export function getTotalBalance(config: IBeaconConfig, state: BeaconState, indices: ValidatorIndex[]): Gwei {
   return bigIntMax(
-    1n,
+    config.params.EFFECTIVE_BALANCE_INCREMENT,
     indices.reduce((total: Gwei, index: ValidatorIndex): Gwei =>
       total + state.validators[index].effectiveBalance, 0n)
   );
@@ -26,9 +27,10 @@ export function getTotalBalance(state: BeaconState, indices: ValidatorIndex[]): 
 
 /**
  * Return the combined effective balance of the active validators.
+ * Note: `getTotalBalance` returns `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero.
  */
 export function getTotalActiveBalance(config: IBeaconConfig, state: BeaconState): Gwei {
-  return getTotalBalance(state, getActiveValidatorIndices(state, getCurrentEpoch(config, state)));
+  return getTotalBalance(config, state, getActiveValidatorIndices(state, getCurrentEpoch(config, state)));
 }
 
 /**
