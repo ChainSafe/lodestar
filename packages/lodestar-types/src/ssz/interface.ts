@@ -67,7 +67,7 @@ export interface IBeaconSSZTypes {
   AggregateAndProof: ContainerType<t.AggregateAndProof>;
   CommitteeAssignment: ContainerType<t.CommitteeAssignment>;
   SyncingStatus: ContainerType<t.SyncingStatus>;
-  ValidatorDuty: ContainerType<t.ValidatorDuty>;
+  AttesterDuty: ContainerType<t.AttesterDuty>;
   // wire
   Status: ContainerType<t.Status>;
   Goodbye: BigIntUintType;
@@ -135,8 +135,6 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   //validator
   "AggregateAndProof",
   "CommitteeAssignment",
-  "SyncingStatus",
-  "ValidatorDuty",
   // wire
   "Status",
   "Goodbye",
@@ -144,5 +142,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "BeaconBlocksByRootRequest",
   //api
   "SubscribeToCommitteeSubnetPayload",
-  "ForkResponse"
+  "ForkResponse",
+  "SyncingStatus",
+  "AttesterDuty"
 ];

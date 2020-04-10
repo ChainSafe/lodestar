@@ -16,3 +16,21 @@ export const ForkResponse = (ssz: IBeaconSSZTypes): ContainerType => new Contain
     chainId: ssz.Uint64
   }
 });
+
+export const AttesterDuty = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    validatorPubkey: ssz.BLSPubkey,
+    aggregatorModulo: ssz.Number64,
+    committeeIndex: ssz.CommitteeIndex,
+    attestationSlot: ssz.Slot,
+  },
+});
+
+export const SyncingStatus = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    startingBlock: ssz.Uint64,
+    currentBlock: ssz.Uint64,
+    highestBlock: ssz.Uint64,
+  },
+});
+
