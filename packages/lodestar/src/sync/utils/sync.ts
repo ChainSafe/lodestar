@@ -1,4 +1,4 @@
-import {IReputation, ReputationStore} from "../IReputation";
+import {IReputation} from "../IReputation";
 import {BeaconBlockHeader, Checkpoint, Epoch, Slot, SignedBeaconBlock, Status,
   BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -109,15 +109,12 @@ export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: 
 
 export async function getBlockRangeFromPeer(
   rpc: IReqResp,
-  reps: ReputationStore,
   peer: PeerInfo,
   chunk: ISlotRange
 ): Promise<SignedBeaconBlock[]> {
-  const peerLatestHello = reps.get(peer.id.toB58String()).latestStatus;
   return await rpc.beaconBlocksByRange(
     peer,
     {
-      headBlockRoot: peerLatestHello.headRoot,
       startSlot: chunk.start,
       step: 1,
       count: chunk.end - chunk.start

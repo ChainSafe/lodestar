@@ -1,7 +1,6 @@
 import {beforeEach, afterEach, describe, it} from "mocha";
 import {ReqResp} from "../../../../src/network/reqResp";
 import sinon from "sinon";
-import {ReputationStore} from "../../../../src/sync/IReputation";
 import * as syncUtils from "../../../../src/sync/utils/sync";
 import {getBlockRange} from "../../../../src/sync/utils/blocks";
 // @ts-ignore
@@ -15,10 +14,9 @@ describe("sync - block utils", function () {
 
     const sandbox = sinon.createSandbox();
 
-    let repsStub: any, rpcStub: any, getBlockRangeFromPeerStub: any;
+    let rpcStub: any, getBlockRangeFromPeerStub: any;
 
     beforeEach(function () {
-      repsStub = sandbox.createStubInstance(ReputationStore);
       rpcStub = sandbox.createStubInstance(ReqResp);
       getBlockRangeFromPeerStub = sandbox.stub(syncUtils, "getBlockRangeFromPeer");
     });
@@ -32,12 +30,12 @@ describe("sync - block utils", function () {
       const peer2 = {id: 2} as unknown as PeerInfo;
       const peers = [peer1, peer2];
       getBlockRangeFromPeerStub
-        .withArgs(sinon.match.any, sinon.match.any, peer1, sinon.match.any)
+        .withArgs(sinon.match.any, peer1, sinon.match.any)
         .resolves([generateEmptySignedBlock()]);
       getBlockRangeFromPeerStub
-        .withArgs(sinon.match.any, sinon.match.any, peer2, sinon.match.any)
+        .withArgs(sinon.match.any, peer2, sinon.match.any)
         .resolves([generateEmptySignedBlock(), generateEmptySignedBlock()]);
-      const blocks = await getBlockRange(rpcStub, repsStub, peers, {start: 0, end: 4}, 2);
+      const blocks = await getBlockRange(rpcStub, peers, {start: 0, end: 4}, 2);
       expect(blocks.length).to.be.equal(3);
     });
 
@@ -51,14 +49,14 @@ describe("sync - block utils", function () {
       getBlockRangeFromPeerStub
         .withArgs(sinon.match.any, sinon.match.any, peer2, sinon.match.any)
         .throws();
-      const blocks = await getBlockRange(rpcStub, repsStub, peers, {start: 0, end: 4}, 2);
+      const blocks = await getBlockRange(rpcStub, peers, {start: 0, end: 4}, 2);
       expect(blocks.length).to.be.equal(2);
     });
 
     it("no chunks", async function () {
       const peer1 = {id: 1} as unknown as PeerInfo;
       const peers = [peer1];
-      const blocks = await getBlockRange(rpcStub, repsStub, peers, {start: 4, end: 4}, 2);
+      const blocks = await getBlockRange(rpcStub, peers, {start: 4, end: 4}, 2);
       expect(blocks.length).to.be.equal(0);
     });
 

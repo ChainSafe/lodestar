@@ -114,7 +114,6 @@ export class NaiveRegularSync implements IRegularSync {
     this.logger.info(`Syncing slots ${currentSlot + 1}...${this.targetSlot}`);
     const blocks = await getBlockRange(
       this.network.reqResp,
-      this.reps,
       this.peers,
       {start: currentSlot + 1, end: this.targetSlot},
       this.opts.blockPerChunk
