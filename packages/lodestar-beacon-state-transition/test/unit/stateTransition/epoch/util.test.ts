@@ -207,7 +207,7 @@ describe('process epoch - crosslinks', function () {
     try {
       const result = getAttestingBalance(config, state, pendingAttestations);
       expect(result.toString()).to.be.deep.equal(1n.toString());
-      expect(getTotalBalanceStub.withArgs(sinon.match.any, [1]).calledOnce).to.be.true;
+      expect(getTotalBalanceStub.withArgs(sinon.match.any, sinon.match.any, [1]).calledOnce).to.be.true;
     } catch (e) {
       expect.fail(e.stack);
     }
