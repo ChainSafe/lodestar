@@ -3,7 +3,15 @@
  */
 
 import {IApi} from "../../interface";
-import {Bytes32, ForkResponse, Number64, SignedBeaconBlock, SyncingStatus} from "@chainsafe/lodestar-types";
+import {
+  BLSPubkey,
+  Bytes32,
+  ForkResponse,
+  Number64,
+  SignedBeaconBlock,
+  SyncingStatus,
+  Validator, ValidatorResponse
+} from "@chainsafe/lodestar-types";
 
 export interface IBeaconApi extends IApi {
 
@@ -19,6 +27,8 @@ export interface IBeaconApi extends IApi {
    * Requests the BeaconNode to provide which fork version it is currently on.
    */
   getFork(): Promise<ForkResponse>;
+
+  getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse|null>;
 
   /**
    * Requests the genesis_time parameter from the BeaconNode,

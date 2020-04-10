@@ -8,6 +8,7 @@ import {registerPublishAggregateAndProofEndpoint} from "./publishAggregateAndPro
 import {registerGetWireAttestationEndpoint} from "./getWireAttestations";
 import {LodestarApiPlugin} from "../../interface";
 import {registerSubscribeToCommitteeSubnet} from "./subscribeToCommitteeSubnet";
+import {registerAggregateAndProofProductionEndpoint} from "./produceAggregateAndProof";
 
 export const validator: LodestarApiPlugin =
     (fastify, opts, callback): void => {
@@ -20,5 +21,6 @@ export const validator: LodestarApiPlugin =
       registerAttestationPublishEndpoint(fastify, opts);
       registerSubscribeToCommitteeSubnet(fastify, opts);
       registerGetWireAttestationEndpoint(fastify, opts);
+      registerAggregateAndProofProductionEndpoint(fastify, opts);
       callback();
     };
