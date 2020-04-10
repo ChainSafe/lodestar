@@ -12,7 +12,7 @@
 
 
 ## What you need
-You will need to go over the [specification](https://github.com/ethereum/lodestar-specs). You will also need to have a [basic understanding of sharding](https://github.com/ethereum/wiki/wiki/Sharding-FAQs). Note that that the specification is an ongoing document and will get outdated. The reference implementation by the Ethereum development team is written in Python and can be found [here](https://github.com/ethereum/beacon_chain).
+You will need to go over the [specification](https://github.com/ethereum/eth2.0-specs). You will also need to have a [basic understanding of sharding](https://github.com/ethereum/wiki/wiki/Sharding-FAQs). 
 
 ## Getting Started
 
@@ -41,12 +41,6 @@ You can always download spec test cases by running `yarn install --force`.
 ## Run dev
 
 ` ./bin/lodestar dev -v 8 -p minimal`
-
-#### Using start-multi.sh
-
-`sh ./start-multi.sh <number_of_beacon_nodes> <total_validators> <validator_distribution_per_node>`
-`sh ./start-multi.sh 4 8 8,0,0,0`
-
 
 ### Starting private eth1 chain
 

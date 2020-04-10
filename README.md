@@ -22,7 +22,7 @@ This repository contains a suite of Ethereum 2.0 packages.
 
 ## Tl;Dr:
 
-Lodestart is a Typescript implementation of the Eth 2 Beacon chain spec.
+Lodestar is a Typescript implementation of the Eth 2 Beacon chain spec.
 
 ## Prerequisites
 
