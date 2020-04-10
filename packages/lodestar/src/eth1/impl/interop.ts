@@ -48,7 +48,7 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   }
 
   public async getEth1Vote(config: IBeaconConfig, state: BeaconState): Promise<Eth1Data> {
-    const epochsPerPeriod = intDiv(config.params.SLOTS_PER_ETH1_VOTING_PERIOD, config.params.SLOTS_PER_EPOCH);
+    const epochsPerPeriod = config.params.EPOCHS_PER_ETH1_VOTING_PERIOD;
     const votingPeriod = intDiv(computeEpochAtSlot(config, state.slot), epochsPerPeriod);
     const depositRoot = hash(intToBytes(votingPeriod, 32));
     return {

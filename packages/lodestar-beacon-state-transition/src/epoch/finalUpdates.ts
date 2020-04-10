@@ -15,7 +15,7 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
   const currentEpoch = getCurrentEpoch(config, state);
   const nextEpoch = currentEpoch + 1;
   // Reset eth1 data votes
-  if ((state.slot + 1) % config.params.SLOTS_PER_ETH1_VOTING_PERIOD === 0) {
+  if (nextEpoch % config.params.EPOCHS_PER_ETH1_VOTING_PERIOD === 0) {
     state.eth1DataVotes = [];
   }
   // Update effective balances with hysteresis

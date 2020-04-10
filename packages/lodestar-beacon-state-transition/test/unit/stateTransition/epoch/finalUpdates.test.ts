@@ -26,7 +26,7 @@ describe('process epoch - final updates', function () {
 
   it('should make required final updates', function () {
     const state = generateState();
-    state.slot = config.params.SLOTS_PER_ETH1_VOTING_PERIOD - 1;
+    state.slot = config.params.EPOCHS_PER_ETH1_VOTING_PERIOD - 1;
     state.validators.push(generateValidator());
     state.balances.push(0xffffffffffn);
 
