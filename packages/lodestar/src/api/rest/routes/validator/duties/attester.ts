@@ -54,7 +54,7 @@ export const registerAttesterDutiesEndpoint: LodestarRestApiEndpoint = (fastify,
         .code(200)
         .type("application/json")
         .send(responseValue.map((value) => {
-          return config.types.ValidatorDuty.toJson(
+          return config.types.AttesterDuty.toJson(
             value
           );
         }));

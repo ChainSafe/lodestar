@@ -5,6 +5,7 @@
 import {
   AggregateAndProof,
   Attestation,
+  AttestationData, AttesterDuty,
   BeaconBlock,
   BLSPubkey,
   BLSSignature,
@@ -12,8 +13,7 @@ import {
   CommitteeIndex,
   Epoch,
   SignedBeaconBlock,
-  Slot,
-  ValidatorDuty
+  Slot
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../../db";
@@ -28,17 +28,16 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetwork} from "../../../network";
 import {
   computeEpochAtSlot,
+  computeSigningRoot,
   computeStartSlotAtEpoch,
   getBeaconProposerIndex,
   getDomain,
-  isAggregator,
-  processSlots,
-  computeSigningRoot
+  processSlots
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {verify} from "@chainsafe/bls";
+import {Signature, verify} from "@chainsafe/bls";
 import {Sync} from "../../../sync";
 import {DomainType} from "../../../constants";
-import {assembleValidatorDuty} from "../../../chain/factory/duties";
+import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import assert from "assert";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 
@@ -130,7 +129,7 @@ export class ValidatorApi implements IValidatorApi {
     return slotProposerMapping;
   }
 
-  public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<ValidatorDuty[]> {
+  public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
     const state = await this.chain.getHeadState();
 
     const validatorIndexes = await Promise.all(validatorPubKeys.map(async publicKey => {
@@ -138,7 +137,7 @@ export class ValidatorApi implements IValidatorApi {
     }));
 
     return validatorIndexes.map((validatorIndex) => {
-      return assembleValidatorDuty(
+      return assembleAttesterDuty(
         this.config,
         {publicKey: state.validators[validatorIndex].pubkey, index: validatorIndex},
         state,
@@ -148,18 +147,11 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishAggregatedAttestation(
-    aggregated: Attestation,
-    validatorPubkey: BLSPubkey,
-    slotSignature: BLSSignature
+    aggregated: AggregateAndProof
   ): Promise<void> {
-    const aggregation: AggregateAndProof = {
-      aggregate: aggregated,
-      selectionProof: slotSignature,
-      aggregatorIndex: await this.db.getValidatorIndex(validatorPubkey)
-    };
     await Promise.all([
-      this.opPool.aggregateAndProofs.receive(aggregation),
-      this.network.gossip.publishAggregatedAttestation(aggregation)
+      this.opPool.aggregateAndProofs.receive(aggregated),
+      this.network.gossip.publishAggregatedAttestation(aggregated)
     ]);
   }
 
@@ -167,8 +159,33 @@ export class ValidatorApi implements IValidatorApi {
     return await this.opPool.attestations.getCommiteeAttestations(epoch, committeeIndex);
   }
 
-  public async isAggregator(slot: Slot, committeeIndex: CommitteeIndex, slotSignature: BLSSignature): Promise<boolean> {
-    return isAggregator(this.config, await this.chain.getHeadState(), slot, committeeIndex, slotSignature);
+
+  public async produceAggregateAndProof(attestationData: AttestationData): Promise<Attestation> {
+    const attestations = (await this.getWireAttestations(
+      computeEpochAtSlot(this.config, attestationData.slot),
+      attestationData.index
+    )
+    );
+    return attestations.filter((a) => {
+      return this.config.types.AttestationData.equals(a.data, attestationData);
+    }).reduce((aggregate, attestation) => {
+      try {
+        aggregate.signature = Signature
+          .fromCompressedBytes(aggregate.signature.valueOf() as Uint8Array)
+          .add(Signature.fromCompressedBytes(attestation.signature.valueOf() as Uint8Array))
+          .toBytesCompressed();
+        let index = 0;
+        for(const bit of attestation.aggregationBits) {
+          if(bit) {
+            aggregate.aggregationBits[index] = true;
+          }
+          index++;
+        }
+      } catch (e) {
+        //ignored
+      }
+      return aggregate;
+    });
   }
 
   public async subscribeCommitteeSubnet(

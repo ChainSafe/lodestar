@@ -11,7 +11,7 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 import {RestApi} from "../../../../../src/api/rest";
 import {ApiNamespace} from "../../../../../src/api";
-import {generateEmptyValidatorDuty} from "../../../../../src/chain/factory/duties";
+import {generateEmptyAttesterDuty} from "../../../../../src/chain/factory/duties";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateAttestation, generateAttestationData, generateEmptyAttestation} from "../../../../utils/attestation";
 import {generateAggregateAndProof} from "../../../../utils/aggregateAndProof";
@@ -60,7 +60,7 @@ describe("Test validator rest API", function () {
 
   it("should return attester duties", async function () {
     const publicKey1= Keypair.generate().publicKey.toBytesCompressed();
-    validatorApi.getAttesterDuties.resolves([generateEmptyValidatorDuty(Buffer.alloc(48, 1))]);
+    validatorApi.getAttesterDuties.resolves([generateEmptyAttesterDuty(Buffer.alloc(48, 1))]);
     const response = await supertest(restApi.server.server)
       .get(
         "/validator/duties/2/attester",
@@ -78,10 +78,9 @@ describe("Test validator rest API", function () {
     const aggregateAndProof = generateAggregateAndProof();
     await supertest(restApi.server.server)
       .post(
-        "/validator/aggregate?validator_pubkey="
-          +`${toHexString(Buffer.alloc(48))}&slot_signature=${toHexString(aggregateAndProof.selectionProof)}`,
+        "/validator/aggregate_and_proof",
       )
-      .send(config.types.AggregateAndProof.fields.aggregate.toJson((aggregateAndProof.aggregate)) as object)
+      .send([config.types.AggregateAndProof.toJson(aggregateAndProof) as object])
       .expect(200);
     expect(validatorApi.publishAggregatedAttestation.calledOnce).to.be.true;
   });
@@ -150,7 +149,7 @@ describe("Test validator rest API", function () {
       .post(
         "/validator/attestation",
       )
-      .send(config.types.Attestation.toJson(attestation) as object)
+      .send([config.types.Attestation.toJson(attestation) as object])
       .expect(200)
       .expect("Content-Type", "application/json");
     expect(validatorApi.publishAttestation.calledOnce).to.be.true;
