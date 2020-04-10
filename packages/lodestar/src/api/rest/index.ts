@@ -8,6 +8,7 @@ import * as routes from "./routes";
 import qs from "qs";
 import {ApiNamespace} from "../index";
 import {IRestApiModules} from "./interface";
+import {FastifySSEPlugin} from "fastify-sse-v2";
 
 export class RestApi implements IService {
 
@@ -52,6 +53,7 @@ export class RestApi implements IService {
         origin: corsArr
       });
     }
+    server.register(FastifySSEPlugin);
     const api = {
       beacon: modules.beacon,
       validator: modules.validator
