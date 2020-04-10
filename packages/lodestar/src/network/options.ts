@@ -1,6 +1,5 @@
 import {Number64} from "@chainsafe/lodestar-types";
-import {ENR} from "@chainsafe/discv5";
-import {IDiscv5DiscoveryInputOptions} from "./discovery/discv5";
+import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 
 export interface INetworkOptions {
   maxPeers: Number64;
