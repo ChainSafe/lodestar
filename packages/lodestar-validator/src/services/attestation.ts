@@ -11,9 +11,11 @@ import {
   Epoch,
   Fork,
   Slot,
-  Root
+  Root,
+  SignedBeaconBlock
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import EventSource from "eventsource";
 import {IApiClient} from "../api";
 import {aggregateSignatures, Keypair, PrivateKey} from "@chainsafe/bls";
 import {IValidatorDB} from "..";
@@ -23,7 +25,6 @@ import {
   computeEpochAtSlot, DomainType, getDomain, isSlashableAttestationData, computeSigningRoot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
-import {sleep} from "../util";
 import {IAttesterDuty} from "../types";
 
 export class AttestationService {
@@ -92,13 +93,14 @@ export class AttestationService {
   public onNewSlot = async (slot: Slot): Promise<void> => {
     const duty = this.nextAttesterDuties.get(slot);
     if(duty) {
-      await sleep(this.config.params.SECONDS_PER_SLOT / 3 * 1000);
+      await this.waitForAttestationBlock(slot);
       const {fork, genesisValidatorsRoot} = (await this.provider.beacon.getFork());
       const attestation = await this.createAttestation(
         duty.attestationSlot,
         duty.committeeIndex,
         fork,
-        genesisValidatorsRoot);
+        genesisValidatorsRoot
+      );
       if(!attestation) {
         return;
       }
@@ -117,8 +119,33 @@ export class AttestationService {
     }
   };
 
+  private async waitForAttestationBlock(slot: Slot): Promise<void> {
+    const eventSource = new EventSource(
+      `${this.provider.url}/node/blocks/stream`,
+      {https: {rejectUnauthorized: false}}
+    );
+    await new Promise((resolve) => {
+      eventSource.onmessage = (evt: MessageEvent) => {
+        try {
+          const signedBlock: SignedBeaconBlock = this.config.types.SignedBeaconBlock.fromJson(JSON.parse(evt.data));
+          if(signedBlock.message.slot === slot) {
+            resolve();
+          }
+        } catch (err) {
+          this.logger.error(`Failed to parse block from SSE. Error: ${err.message}`);
+        }
+      };
+      setTimeout(resolve, this.config.params.SECONDS_PER_SLOT / 3 * 1000);
+    });
+    eventSource.close();
+  }
+
   private aggregateAttestations = async (
-    duty: IAttesterDuty, attestation: Attestation, fork: Fork, genesisValidatorsRoot: Root): Promise<void> => {
+    duty: IAttesterDuty,
+    attestation: Attestation,
+    fork: Fork,
+    genesisValidatorsRoot: Root
+  ): Promise<void> => {
     this.logger.info(
       `Aggregating attestations for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
     );

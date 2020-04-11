@@ -7,6 +7,7 @@ import {CommanderStatic} from "commander";
 import fs from "fs";
 import path, {join, resolve} from "path";
 import yaml from "js-yaml";
+import {ENR} from "@chainsafe/discv5";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
@@ -25,6 +26,7 @@ import {BeaconNodeOptions} from "../../lodestar/node/options";
 import {getConfig, getDevGenesisState, getPeerId, resetPath} from "./utils";
 
 export interface IDevCommandOptions {
+  [key: string]: string;
   loggingLevel?: string;
   genesisTime?: string;
   validatorCount?: string;
@@ -32,7 +34,6 @@ export interface IDevCommandOptions {
   preset?: string;
   validators?: string;
   db?: string;
-  [key: string]: string;
 }
 
 const BASE_DIRECTORY = path.join(".", ".tmp");
@@ -87,6 +88,11 @@ export class DevCommand implements ICliCommand {
     }
     resetPath(conf.db.name);
 
+    conf.network.discv5 = Object.assign(
+      {},
+      {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/0.0.0.0/udp/5501"},
+      conf.network.discv5,
+    );
     const libp2p = await createNodeJsLibp2p(peerId, conf.network);
 
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;

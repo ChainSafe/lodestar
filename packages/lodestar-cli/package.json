@@ -24,7 +24,7 @@
     "pretest": "yarn run check-types",
     "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha --file ./test/setup.ts --colors -r ts-node/register 'test/unit/**/*.test.ts'",
     "test:e2e": "TS_NODE_PROJECT=tsconfig.test.json mocha --file ./test/setup.ts --colors --timeout 5000 -r ts-node/register 'test/e2e/**/*.test.ts'",
-    "test": "yarn test:unit && yarn test:spec && yarn test:e2e",
+    "test": "yarn test:unit && yarn test:e2e",
     "coverage": "codecov -F lodestar",
     "benchmark": "ts-node test/benchmarks"
   },
@@ -41,10 +41,11 @@
   "dependencies": {
     "@chainsafe/bls": "1.0.0",
     "@chainsafe/bls-keygen": "^0.1.0",
+    "@chainsafe/discv5": "^0.1.0",
+    "@chainsafe/lodestar": "^0.5.0",
     "@chainsafe/lodestar-config": "^0.5.0",
     "@chainsafe/lodestar-types": "^0.5.0",
     "@chainsafe/lodestar-utils": "^0.5.0",
-    "@chainsafe/lodestar": "^0.5.0",
     "@chainsafe/lodestar-validator": "^0.5.0",
     "@chainsafe/ssz": "^0.6.1",
     "@iarna/toml": "^2.2.3",
@@ -70,7 +71,7 @@
     "@types/rimraf": "^2.0.3",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
-    "mocha": "^6.2.0",
+    "mocha": "^6.2.2",
     "mockery": "^2.1.0",
     "webpack": "^4.39.1"
   }
