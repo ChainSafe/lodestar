@@ -1,4 +1,5 @@
 import rimraf from "rimraf";
+import {ENR} from "@chainsafe/discv5";
 import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
@@ -70,8 +71,8 @@ describe("e2e interop simulation", function() {
     };
     minimalConfig.params.SECONDS_PER_SLOT = SECONDS_PER_SLOT;
     minimalConfig.params.SLOTS_PER_EPOCH = SLOTS_PER_EPOCH;
-    const peerId = createPeerId();
-    const libp2p = await createNodeJsLibp2p(peerId, {});
+    const peerId = await createPeerId();
+    const libp2p = await createNodeJsLibp2p(peerId, {discv5: {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/0.0.0.0/udp/5551", bootEnrs: []}});
     node = new BeaconNode(conf, {config: minimalConfig, logger, eth1: new InteropEth1Notifier(), libp2p});
 
     const genesisTime = Math.floor(Date.now()/1000);
