@@ -46,6 +46,7 @@ describe("e2e interop simulation", function() {
 
   
   it("should be able to run until a justified epoch with minimal config", async () => {
+    process.setMaxListeners(15);
     await initializeNode();
     logger.info("Node is initialized");
     await startValidators();
