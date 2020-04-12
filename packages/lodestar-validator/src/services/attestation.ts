@@ -12,7 +12,9 @@ import {
   Fork,
   Slot,
   Root,
-  SignedBeaconBlock
+  SignedBeaconBlock,
+  AggregateAndProof,
+  SignedAggregateAndProof
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import EventSource from "eventsource";
@@ -156,17 +158,35 @@ export class AttestationService {
       fork,
       genesisValidatorsRoot
     );
-    await this.provider.validator.publishAggregateAndProof(aggregateAndProof);
+    const signedAggregateAndProof: SignedAggregateAndProof = {
+      message: aggregateAndProof,
+      signature: this.getAggregateAndProofSignature(fork, genesisValidatorsRoot, aggregateAndProof),
+    };
+    await this.provider.validator.publishAggregateAndProof(signedAggregateAndProof);
     this.logger.info(
-      `Published aggregated attestation for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
+      `Published signed aggregatte and proof for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
     );
   };
+
+  private getAggregateAndProofSignature(
+    fork: Fork,
+    genesisValidatorsRoot: Root,
+    aggregateAndProof: AggregateAndProof): BLSSignature {
+    const aggregate = aggregateAndProof.aggregate;
+    const domain = getDomain(
+      this.config,
+      {fork, genesisValidatorsRoot} as BeaconState,
+      DomainType.AGGREGATE_AND_PROOF,
+      computeEpochAtSlot(this.config, aggregate.data.slot));
+    const signingRoot = computeSigningRoot(this.config, this.config.types.AggregateAndProof, aggregateAndProof, domain);
+    return this.privateKey.signMessage(signingRoot).toBytesCompressed();
+  }
 
   private getSlotSignature(slot: Slot, fork: Fork, genesisValidatorsRoot: Root): BLSSignature {
     const domain = getDomain(
       this.config,
       {fork, genesisValidatorsRoot} as BeaconState,
-      DomainType.BEACON_ATTESTER,
+      DomainType.SELECTION_PROOF,
       computeEpochAtSlot(this.config, slot)
     );
     const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);

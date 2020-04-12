@@ -24,7 +24,6 @@ import {handleIncomingVoluntaryExit, publishVoluntaryExit} from "./handlers/volu
 import {handleIncomingAggregateAndProof, publishAggregatedAttestation} from "./handlers/aggregateAndProof";
 import {LodestarGossipsub} from "./gossipsub";
 import {
-  AggregateAndProof,
   Attestation,
   AttesterSlashing,
   ProposerSlashing,
@@ -32,7 +31,8 @@ import {
   SignedVoluntaryExit,
   Slot,
   ForkDigest,
-  Epoch
+  Epoch,
+  SignedAggregateAndProof
 } from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../chain";
 import {computeForkDigest, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
@@ -95,7 +95,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   }
 
   public subscribeToAggregateAndProof(
-    forkDigest: ForkDigest, callback: (aggregate: AggregateAndProof) => void): void {
+    forkDigest: ForkDigest, callback: (signedAggregate: SignedAggregateAndProof) => void): void {
     this.subscribe(forkDigest, GossipEvent.AGGREGATE_AND_PROOF, callback);
   }
 

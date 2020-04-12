@@ -2,7 +2,7 @@ import {describe, it, beforeEach, afterEach} from "mocha";
 import sinon from "sinon";
 import {Gossip} from "../../../../../src/network/gossip/gossip";
 import {handleIncomingAggregateAndProof} from "../../../../../src/network/gossip/handlers/aggregateAndProof";
-import {AggregateAndProof} from "@chainsafe/lodestar-types";
+import {AggregateAndProof, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {expect} from "chai";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -31,8 +31,12 @@ describe("gossip handlers - aggregate and proof", function () {
       selectionProof: Buffer.alloc(0),
       aggregate: generateEmptyAttestation()
     };
-    await handleIncomingAggregateAndProof.bind(gossipStub)(aggregate);
-    expect(gossipStub.emit.withArgs(GossipEvent.AGGREGATE_AND_PROOF, aggregate).calledOnce).to.be.true;
+    const signedAggregate: SignedAggregateAndProof = {
+      message: aggregate,
+      signature: Buffer.alloc(96),
+    };
+    await handleIncomingAggregateAndProof.bind(gossipStub)(signedAggregate);
+    expect(gossipStub.emit.withArgs(GossipEvent.AGGREGATE_AND_PROOF, signedAggregate).calledOnce).to.be.true;
   });
     
 });

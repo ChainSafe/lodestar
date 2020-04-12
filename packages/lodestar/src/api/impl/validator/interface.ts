@@ -11,7 +11,8 @@ import {
   CommitteeIndex,
   Epoch, ProposerDuty,
   SignedBeaconBlock,
-  Slot
+  Slot,
+  SignedAggregateAndProof
 } from "@chainsafe/lodestar-types";
 import {IApi} from "../../interface";
 
@@ -51,7 +52,7 @@ export interface IValidatorApi extends IApi {
   publishAttestation(attestation: Attestation): Promise<void>;
 
   publishAggregateAndProof(
-    aggregate: AggregateAndProof
+    signedAggregateAndProof: SignedAggregateAndProof
   ): Promise<void>;
 
   produceAggregateAndProof(attestationData: AttestationData, aggregator: BLSPubkey): Promise<AggregateAndProof>;

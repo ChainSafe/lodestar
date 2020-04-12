@@ -1,11 +1,11 @@
 import {IGossipMessageValidator} from "./interface";
 import {
-  AggregateAndProof,
   Attestation,
   AttesterSlashing,
   ProposerSlashing,
   SignedBeaconBlock,
   SignedVoluntaryExit,
+  SignedAggregateAndProof,
 } from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
 import {getAttestationSubnet} from "./utils";
@@ -24,48 +24,44 @@ import {
   getDomain,
   computeEpochAtSlot,
   computeSigningRoot,
+  getBeaconProposerIndex,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE, DomainType, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconChain} from "../../chain";
 import {verify} from "@chainsafe/bls";
+import {OpPool} from "../../opPool";
+
+/* eslint-disable @typescript-eslint/interface-name-prefix */
+interface GossipMessageValidatorModules {
+  chain: IBeaconChain;
+  db: IBeaconDb;
+  opPool: OpPool;
+  config: IBeaconConfig;
+  logger: ILogger;
+}
 
 export class GossipMessageValidator implements IGossipMessageValidator {
-  private chain: IBeaconChain;
-  private db: IBeaconDb;
-  private config: IBeaconConfig;
-  private logger: ILogger;
+  private readonly chain: IBeaconChain;
+  private readonly db: IBeaconDb;
+  private readonly opPool: OpPool;
+  private readonly config: IBeaconConfig;
+  private readonly logger: ILogger;
 
-  public constructor({chain, db, config, logger}:
-  {chain: IBeaconChain; db: IBeaconDb; config: IBeaconConfig; logger: ILogger}) {
+  public constructor({chain, db, opPool, config, logger}: GossipMessageValidatorModules) {
     this.chain = chain;
     this.db = db;
+    this.opPool = opPool;
     this.config = config;
     this.logger = logger;
   }
 
   public isValidIncomingBlock = async (signedBlock: SignedBeaconBlock): Promise<boolean> => {
-    const root = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
-
-    // skip block if its a known bad block
-    if (await this.db.block.isBadBlock(root)) {
-      this.logger.warn(`Received bad block, block root : ${root} `);
-      return false;
-    }
-
-    // ignore if we have this block already
-    if (await this.db.block.has(root)) {
-      return false;
-    }
     const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
     const slot = signedBlock.message.slot;
     if (state.slot < slot) {
       processSlots(this.config, state, slot);
-    }
-    // block is too old
-    if (signedBlock.message.slot <= computeStartSlotAtEpoch(this.config, state.finalizedCheckpoint.epoch)) {
-      return false;
     }
     // block is not in the future
     const milliSecPerSlot = this.config.params.SECONDS_PER_SLOT * 1000;
@@ -73,7 +69,35 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       getCurrentSlot(this.config, state.genesisTime) * milliSecPerSlot + MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
       return false;
     }
-    return verifyBlockSignature(this.config, state, signedBlock);
+
+    // block is too old
+    if (signedBlock.message.slot <= computeStartSlotAtEpoch(this.config, state.finalizedCheckpoint.epoch)) {
+      return false;
+    }
+    
+    const existingBLock = await this.db.block.getBlockBySlot(signedBlock.message.slot);
+    if (existingBLock && existingBLock.message.proposerIndex === signedBlock.message.proposerIndex) {
+      // same proposer submitted twice
+      return false;
+    }
+
+    const root = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
+    // skip block if its a known bad block
+    if (await this.db.block.isBadBlock(root)) {
+      this.logger.warn(`Received bad block, block root : ${root} `);
+      return false;
+    }
+
+    if (!verifyBlockSignature(this.config, state, signedBlock)) {
+      return false;
+    }
+
+    const supposedProposerIndex = getBeaconProposerIndex(this.config, state);
+    if (supposedProposerIndex !== signedBlock.message.proposerIndex) {
+      return false;
+    }
+
+    return true;
   };
 
   public isUnaggregatedAttestation = (attestation: Attestation): boolean => {
@@ -108,55 +132,91 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         currentSlot >= attestation.data.slot)) {
       return false;
     }
+    const existingAttestations = await this.opPool.attestations.geAttestationsBySlot(attestation.data.slot) || [];
+    // each attestation has only 1 validator index
+    const existingValidatorIndexes = existingAttestations.map(
+      item => getAttestingIndices(this.config, state, item.data, item.aggregationBits)[0]);
+    // attestation is unaggregated attestation as validated above
+    const validatorIndex = getAttestingIndices(this.config, state, attestation.data, attestation.aggregationBits)[0];
+    if (existingValidatorIndexes.includes(validatorIndex)) {
+      return false;
+    }
     return isValidIndexedAttestation(this.config, state, getIndexedAttestation(this.config, state, attestation));
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public isValidIncomingAggregateAndProof = async (aggregationAndProof: AggregateAndProof): Promise<boolean> => {
-    const root = this.config.types.AggregateAndProof.hashTreeRoot(aggregationAndProof);
-    if (await this.db.aggregateAndProof.has(root as Buffer)) {
-      return false;
-    }
-    const blockRoot = aggregationAndProof.aggregate.data.beaconBlockRoot.valueOf() as Uint8Array;
-    if (!await this.db.block.has(blockRoot) || await this.db.block.isBadBlock(blockRoot)) {
-      return false;
-    }
+  public isValidIncomingAggregateAndProof = 
+  async (signedAggregationAndProof: SignedAggregateAndProof): Promise<boolean> => {
+    const aggregateAndProof = signedAggregationAndProof.message;
+    const aggregate = aggregateAndProof.aggregate;
+    const attestationData = aggregate.data;
     const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
-    if (state.slot < aggregationAndProof.aggregate.data.slot) {
-      processSlots(this.config, state, aggregationAndProof.aggregate.data.slot);
+    const slot = attestationData.slot;
+    if (state.slot < slot) {
+      processSlots(this.config, state, slot);
     }
+
     const currentSlot = getCurrentSlot(this.config, state.genesisTime);
-    const slot = aggregationAndProof.aggregate.data.slot;
     const milliSecPerSlot = this.config.params.SECONDS_PER_SLOT * 1000;
     const currentSlotTime = currentSlot * milliSecPerSlot;
     if (!((slot + ATTESTATION_PROPAGATION_SLOT_RANGE) * milliSecPerSlot + MAXIMUM_GOSSIP_CLOCK_DISPARITY
       >= currentSlotTime && currentSlotTime >= slot * milliSecPerSlot - MAXIMUM_GOSSIP_CLOCK_DISPARITY)) {
       return false;
     }
-    const attestorIndices = getAttestingIndices(this.config, state,
-      aggregationAndProof.aggregate.data, aggregationAndProof.aggregate.aggregationBits);
-    if (!attestorIndices.includes(aggregationAndProof.aggregatorIndex)) {
+
+    if (await this.opPool.aggregateAndProofs.hasAttestation(aggregate)) {
       return false;
     }
-    if (!isAggregator(
+
+    const aggregatorIndex = aggregateAndProof.aggregatorIndex;
+    const existingAttestations = await this.opPool.aggregateAndProofs.getByAggregatorAndSlot(
+      aggregatorIndex, slot) || [];
+    if (existingAttestations.length > 0) {
+      return false;
+    }
+
+    const blockRoot = aggregate.data.beaconBlockRoot.valueOf() as Uint8Array;
+    if (!await this.db.block.has(blockRoot) || await this.db.block.isBadBlock(blockRoot)) {
+      return false;
+    }
+
+    const selectionProof = aggregateAndProof.selectionProof;
+    if (!isAggregator(this.config, state, slot, attestationData.index, selectionProof)) {
+      return false;
+    }
+    
+    const attestorIndices = getAttestingIndices(this.config, state, attestationData, aggregate.aggregationBits);
+    if (!attestorIndices.includes(aggregatorIndex)) {
+      return false;
+    }
+
+    const epoch = computeEpochAtSlot(this.config, slot);
+    const selectionProofDomain = getDomain(this.config, state, DomainType.SELECTION_PROOF, epoch);
+    const selectionProofSigningRoot = computeSigningRoot(
+      this.config, this.config.types.Slot, slot, selectionProofDomain);
+    const validatorPubKey = state.validators[aggregatorIndex].pubkey;
+    if (!verify(
+      validatorPubKey.valueOf() as Uint8Array,
+      selectionProofSigningRoot,
+      selectionProof.valueOf() as Uint8Array,
+    )) {
+      return false;
+    }
+
+    const aggregatorDomain = getDomain(this.config, state, DomainType.AGGREGATE_AND_PROOF, epoch);
+    const aggregatorSigningRoot = computeSigningRoot(
       this.config,
-      state,
-      slot,
-      aggregationAndProof.aggregate.data.index,
-      aggregationAndProof.selectionProof
+      this.config.types.AggregateAndProof,
+      aggregateAndProof,
+      aggregatorDomain);
+    if (!verify(
+      validatorPubKey.valueOf() as Uint8Array,
+      aggregatorSigningRoot,
+      signedAggregationAndProof.signature.valueOf() as Uint8Array,
     )) {
       return false;
     }
-    const validatorPubKey = state.validators[aggregationAndProof.aggregatorIndex].pubkey;
-    const domain = getDomain(this.config, state, DomainType.BEACON_ATTESTER, computeEpochAtSlot(this.config, slot));
-    const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
-    if (!verify(validatorPubKey.valueOf() as Uint8Array,
-      signingRoot,
-      aggregationAndProof.selectionProof.valueOf() as Uint8Array,
-    )) {
-      return false;
-    }
-    const indexedAttestation = getIndexedAttestation(this.config, state, aggregationAndProof.aggregate);
+
+    const indexedAttestation = getIndexedAttestation(this.config, state, aggregate);
     return isValidIndexedAttestation(this.config, state, indexedAttestation);
   };
 

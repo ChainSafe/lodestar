@@ -101,6 +101,7 @@ export class BeaconNode {
     const gossipMessageValidator = new GossipMessageValidator({
       chain: this.chain,
       db: this.db,
+      opPool: this.opPool,
       config,
       logger: logger.child(this.conf.logger.network)
     });

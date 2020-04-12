@@ -20,3 +20,10 @@ export const AggregateAndProof = (ssz: IBeaconSSZTypes): ContainerType => new Co
     selectionProof: ssz.BLSSignature,
   },
 });
+
+export const SignedAggregateAndProof = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    message: ssz.AggregateAndProof,
+    signature: ssz.BLSSignature,
+  },
+});

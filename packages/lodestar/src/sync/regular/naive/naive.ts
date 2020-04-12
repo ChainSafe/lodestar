@@ -12,7 +12,7 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {GossipEvent} from "../../../network/gossip/constants";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ReputationStore} from "../../IReputation";
-import {AggregateAndProof, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {Root, SignedBeaconBlock, Slot, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
 import {AttestationCollector} from "../../utils/attestation-collector";
 import {RoundRobinArray} from "../../utils/robin";
 
@@ -148,8 +148,9 @@ export class NaiveRegularSync implements IRegularSync {
     }
   };
 
-  private onAggregatedAttestation = async (aggregate: AggregateAndProof): Promise<void> => {
-    await this.chain.receiveAttestation(aggregate.aggregate);
+  private onAggregatedAttestation = async (signedAggregate: SignedAggregateAndProof): Promise<void> => {
+    this.opPool.aggregateAndProofs.receive(signedAggregate.message);
+    await this.chain.receiveAttestation(signedAggregate.message.aggregate);
   };
 
   private onBlock = async (block: SignedBeaconBlock): Promise<void> => {

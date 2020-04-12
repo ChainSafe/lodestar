@@ -11,7 +11,8 @@ import {
   Epoch,
   ProposerDuty,
   SignedBeaconBlock,
-  Slot
+  Slot,
+  SignedAggregateAndProof,
 } from "@chainsafe/lodestar-types";
 import {IValidatorApi} from "../../../interface/validators";
 import {HttpClient} from "../../../../util";
@@ -43,12 +44,10 @@ export class RestValidatorApi implements IValidatorApi {
     return responseData.map(value => this.config.types.AttesterDuty.fromJson(value));
   }
 
-  public async publishAggregateAndProof(
-    aggregate: AggregateAndProof,
-  ): Promise<void> {
+  public async publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {
     return this.client.post(
       "/aggregate_and_proof",
-      [this.config.types.AggregateAndProof.toJson(aggregate)]
+      [this.config.types.SignedAggregateAndProof.toJson(signedAggregateAndProof)]
     );
   }
 

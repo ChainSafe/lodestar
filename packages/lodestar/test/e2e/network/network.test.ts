@@ -3,7 +3,7 @@ import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Libp2pNetwork} from "../../../src/network";
 import {createNode} from "../../unit/network/util";
-import {generateEmptyAggregateAndProof, generateEmptyAttestation} from "../../utils/attestation";
+import {generateEmptyAttestation, generateEmptySignedAggregateAndProof} from "../../utils/attestation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
@@ -184,7 +184,7 @@ describe("[network] network", function () {
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     validator.isValidIncomingUnaggregatedAttestation.resolves(true);
-    await netB.gossip.publishAggregatedAttestation(generateEmptyAggregateAndProof());
+    await netB.gossip.publishAggregatedAttestation(generateEmptySignedAggregateAndProof());
     await received;
   });
   it("should receive shard attestations on subscription", async function () {
