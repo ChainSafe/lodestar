@@ -16,9 +16,9 @@ import {BeaconNodeOptions} from "../lodestar/node/options";
 import {getTomlConfig} from "../lodestar/util/file";
 
 interface IBeaconCommandOptions {
+  [key: string]: string;
   configFile?: string;
   loggingLevel?: string;
-  [key: string]: string;
 }
 
 export class BeaconNodeCommand implements ICliCommand {

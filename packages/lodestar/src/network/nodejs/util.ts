@@ -31,11 +31,13 @@ export async function loadPeerIdFromJsonFile(path: string): Promise<PeerId> {
  * @param peerIdOrPromise Create an instance of NodejsNode asynchronously
  * @param network
  */
-export async function createNodeJsLibp2p(peerIdOrPromise: PeerId | Promise<PeerId>, 
-  network: Partial<INetworkOptions> = {}): Promise<LibP2p> {
+export async function createNodeJsLibp2p(
+  peerIdOrPromise: PeerId | Promise<PeerId>,
+  network: Partial<INetworkOptions> = {}
+): Promise<LibP2p> {
   const peerId = await Promise.resolve(peerIdOrPromise);
   const multiaddrs = network.multiaddrs || defaults.multiaddrs;
   const bootnodes = network.bootnodes || defaults.bootnodes;
   const peerInfo = await initializePeerInfo(peerId, multiaddrs);
-  return new NodejsNode({peerInfo, bootnodes: bootnodes});
+  return new NodejsNode({peerInfo, bootnodes: bootnodes, discv5: network.discv5});
 }
