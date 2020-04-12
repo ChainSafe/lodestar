@@ -133,8 +133,7 @@ describe("Test validator rest API", function () {
       )
       .query({
         "validator_pubkey": toHexString(Buffer.alloc(48)),
-        "poc_bit": 1,
-        "committee_index": 3,
+        "attestation_committee_index": 3,
         "slot": 2
       })
       .expect(200)

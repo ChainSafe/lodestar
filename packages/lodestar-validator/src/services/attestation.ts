@@ -71,13 +71,13 @@ export class AttestationService {
       const duty = attesterDuties[0];
       const fork = (await this.provider.beacon.getFork()).fork;
       const slotSignature = this.getSlotSignature(duty.attestationSlot, fork);
-      const isAggregator =
-                this.nextAttesterDuties.set(
-                  duty.attestationSlot,
-                  {
-                    ...duty,
-                    isAggregator: isValidatorAggregator(slotSignature, duty.aggregatorModulo)
-                  });
+      const isAggregator = isValidatorAggregator(slotSignature, duty.aggregatorModulo);
+      this.nextAttesterDuties.set(
+        duty.attestationSlot,
+        {
+          ...duty,
+          isAggregator
+        });
       if (isAggregator) {
         await this.provider.validator.subscribeCommitteeSubnet(
           duty.attestationSlot,

@@ -63,7 +63,6 @@ describe("validator attestation service", function () {
     const  keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
     rpcClientStub.validator = {
       getAttesterDuties: sinon.stub(),
-      isAggregator: sinon.stub()
     };
     rpcClientStub.beacon = {
       getFork: sinon.stub()
@@ -83,13 +82,11 @@ describe("validator attestation service", function () {
     };
     rpcClientStub.validator.getAttesterDuties.resolves([duty]);
     rpcClientStub.beacon.getFork.resolves({fork: generateFork()});
-    rpcClientStub.validator.isAggregator.resolves(false);
     await service.onNewEpoch(1);
     expect(
       rpcClientStub.validator.getAttesterDuties.withArgs(2, [keypair.publicKey.toBytesCompressed()]).calledOnce
     ).to.be.true;
     expect(rpcClientStub.beacon.getFork.calledOnce).to.be.true;
-    expect(rpcClientStub.validator.isAggregator.withArgs(1, 1,  sinon.match.any).calledOnce).to.be.true;
   });
   
   it("on  new slot - without duty", async function () {
@@ -123,7 +120,7 @@ describe("validator attestation service", function () {
     const duty: AttesterDuty = {
       attestationSlot: 1,
       committeeIndex: 1,
-      aggregatorModulo: 0,
+      aggregatorModulo: 1,
       validatorPubkey: keypair.publicKey.toBytesCompressed()
     };
     service["nextAttesterDuties"].set(0, {...duty, isAggregator: false});
@@ -139,7 +136,6 @@ describe("validator attestation service", function () {
       rpcClientStub.validator
         .produceAttestation.withArgs(
           keypair.publicKey.toBytesCompressed(),
-          false,
           1,
           1
         ).calledOnce
@@ -175,7 +171,7 @@ describe("validator attestation service", function () {
     const duty: AttesterDuty = {
       attestationSlot: 1,
       committeeIndex: 1,
-      aggregatorModulo: 0,
+      aggregatorModulo: 1,
       validatorPubkey: keypair.publicKey.toBytesCompressed()
     };
     service["nextAttesterDuties"].set(0, {...duty, isAggregator: false});
@@ -199,7 +195,6 @@ describe("validator attestation service", function () {
       rpcClientStub.validator
         .produceAttestation.withArgs(
           keypair.publicKey.toBytesCompressed(),
-          false,
           1,
           1
         ).calledOnce

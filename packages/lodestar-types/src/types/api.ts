@@ -1,5 +1,15 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
-import {BLSPubkey, BLSSignature, CommitteeIndex, Number64, Slot, Uint64, ValidatorIndex} from "./primitive";
+import {
+  BLSPubkey,
+  BLSSignature,
+  Bytes32,
+  CommitteeIndex, Epoch,
+  Gwei,
+  Number64,
+  Slot,
+  Uint64,
+  ValidatorIndex
+} from "./primitive";
 import {Fork, Validator} from "./misc";
 
 export interface SubscribeToCommitteeSubnetPayload {
@@ -34,6 +44,22 @@ export interface SyncingStatus {
   highestBlock: Uint64;
 }
 
-export interface ValidatorResponse extends Validator {
+export interface ValidatorResponse {
   index: ValidatorIndex;
+  // BLS public key
+  pubkey: BLSPubkey;
+  // Commitment to pubkey for withdrawals
+  withdrawalCredentials: Bytes32;
+  // Balance at stake
+  effectiveBalance: Gwei;
+  // Was the validator slashed
+  slashed: boolean;
+  // When criteria for activation were met
+  activationEligibilityEpoch: Epoch;
+  // Epoch when validator activated
+  activationEpoch: Epoch;
+  // Epoch when validator exited
+  exitEpoch: Epoch;
+  // When validator can withdraw or transfer funds
+  withdrawableEpoch: Epoch;
 }

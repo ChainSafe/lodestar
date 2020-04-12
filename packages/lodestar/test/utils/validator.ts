@@ -1,13 +1,5 @@
 import {Validator} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "../../src/constants";
-
-export interface ValidatorGeneratorOpts {
-  activation?: number;
-  exit?: number;
-  slashed?: boolean;
-  balance?: bigint;
-}
-
 /**
  * Generates a single fake validator, for tests purposes only.
  * @returns {Validator}
@@ -32,8 +24,9 @@ export function generateValidator(opts: Partial<Validator> = {}): Validator {
 /**
  * Generates n number of validators, for tests purposes only.
  * @param {number} n
+ * @param opts
  * @returns {Validator[]}
  */
-export function generateValidators(n: number, opts?: ValidatorGeneratorOpts): Validator[] {
+export function generateValidators(n: number, opts?: Partial<Validator>): Validator[] {
   return Array.from({length: n}, () => generateValidator(opts));
 }

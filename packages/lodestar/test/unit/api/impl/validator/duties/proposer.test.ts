@@ -39,7 +39,7 @@ describe("get proposers api impl", function () {
           slot: 0,
           validators: generateValidators(
             25,
-            {balance: config.params.MAX_EFFECTIVE_BALANCE, activation: 0, exit: FAR_FUTURE_EPOCH}
+            {effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE, activationEpoch: 0, exitEpoch: FAR_FUTURE_EPOCH}
           ),
           balances: Array.from({length: 25}, () => config.params.MAX_EFFECTIVE_BALANCE)
         }, config),
@@ -56,7 +56,7 @@ describe("get proposers api impl", function () {
           slot: config.params.SLOTS_PER_EPOCH - 3,
           validators: generateValidators(
             25,
-            {balance: config.params.MAX_EFFECTIVE_BALANCE, activation: 0, exit: FAR_FUTURE_EPOCH}
+            {effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE, activationEpoch: 0, exitEpoch: FAR_FUTURE_EPOCH}
           ),
           balances: Array.from({length: 25}, () => config.params.MAX_EFFECTIVE_BALANCE)
         }, config),
