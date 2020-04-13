@@ -1,7 +1,5 @@
-import {IFastifyServer} from "../../index";
 import fastify from "fastify";
-import {IApiModules} from "../../../interface";
-import {publishAttestation} from "../../../impl/validator/publishAttestation";
+import {LodestarRestApiEndpoint} from "../../interface";
 
 
 const opts: fastify.RouteShorthandOptions = {
@@ -12,16 +10,17 @@ const opts: fastify.RouteShorthandOptions = {
   }
 };
 
-export const registerAttestationPublishEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
+export const registerAttestationPublishEndpoint: LodestarRestApiEndpoint = (fastify, {api, config}): void => {
   fastify.post(
     "/attestation",
     opts,
     async (request, reply) => {
       try {
-        const attestation = modules.config.types.Attestation.fromJson(request.body);
-        await publishAttestation(attestation, modules.network.gossip, modules.opPool.attestations);
+        const attestation = config.types.Attestation.fromJson(request.body);
+        await api.validator.publishAttestation(
+          attestation
+        );
       } catch (e) {
-        modules.logger.error(e.message);
         reply.code(500).send();
         return;
       }

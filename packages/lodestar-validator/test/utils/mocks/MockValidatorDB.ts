@@ -1,4 +1,4 @@
-import { IValidatorDB, IAttestationSearchOptions } from "../../db/interface";
+import { IValidatorDB, IAttestationSearchOptions } from "../../../src/db/interface";
 import { BLSPubkey, SignedBeaconBlock, Attestation } from "@chainsafe/lodestar-types";
 
 

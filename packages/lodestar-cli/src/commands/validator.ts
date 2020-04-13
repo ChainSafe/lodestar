@@ -10,8 +10,8 @@ import {ValidatorClient} from "@chainsafe/lodestar/lib/validator/nodejs";
 import {validatorClientCliConfiguration} from "../lodestar/validator/options";
 
 interface IValidatorCommandOptions {
-  logLevel: string;
   [key: string]: string;
+  logLevel: string;
 }
 
 export class ValidatorCommand implements ICliCommand {

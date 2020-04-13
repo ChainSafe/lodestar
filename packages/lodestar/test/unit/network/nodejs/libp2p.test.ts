@@ -5,6 +5,7 @@ import {createNode} from "../util";
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
 describe("[network] nodejs libp2p", () => {
+
   it("can start and stop a node", async () => {
     const node: NodejsNode = await createNode(multiaddr);
     await node.start();
@@ -12,6 +13,7 @@ describe("[network] nodejs libp2p", () => {
     await node.stop();
     assert.equal(node.isStarted(), false);
   });
+
   it("can connect/disconnect to a peer", async function ()  {
     this.timeout(5000);
     // setup
@@ -27,7 +29,7 @@ describe("[network] nodejs libp2p", () => {
     await Promise.all(
       [
         new Promise((resolve, reject) => {
-          const t = setTimeout(reject, 1000, 'connection timed out');
+          const t = setTimeout(reject, 1000, "connection timed out");
           nodeB.once("peer:connect", () => {
             clearTimeout(t);
             resolve();
@@ -38,9 +40,7 @@ describe("[network] nodejs libp2p", () => {
     );
 
     // test connection
-    // @ts-ignore
     assert(nodeA.registrar.getConnection(nodeB.peerInfo));
-    // @ts-ignore
     assert(nodeB.registrar.getConnection(nodeA.peerInfo));
 
     // disconnect
@@ -50,9 +50,7 @@ describe("[network] nodejs libp2p", () => {
     await p;
 
     // test disconnection
-    // @ts-ignore
     assert(!nodeA.registrar.getConnection(nodeB.peerInfo));
-    // @ts-ignore
     assert(!nodeB.registrar.getConnection(nodeA.peerInfo));
     // teardown
     await Promise.all([

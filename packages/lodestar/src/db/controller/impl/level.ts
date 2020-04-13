@@ -10,6 +10,7 @@ import {EventEmitter} from "events";
 import level from "level";
 import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import {IDatabaseOptions} from "../../options";
+import pushable from "it-pushable";
 
 export interface ILevelDBOptions extends IDatabaseOptions {
   db?: LevelUp;
@@ -79,19 +80,26 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
     await this.db.del(key);
   }
 
-  public search(opts: ISearchOptions): Promise<any> {
-    return new Promise<any[]>((resolve) => {
-      const searchData: any[] = [];
-      this.db.createValueStream({
-        gt: opts.gt,
-        lt: opts.lt,
-      }).on("data", function (data) {
-        searchData.push(data);
-      }).on("close", function () {
-        resolve(searchData);
-      }).on("end", function () {
-        resolve(searchData);
-      });
+  public async search(opts: ISearchOptions): Promise<any> {
+    const searchData: any[] = [];
+    for await (const data of this.searchStream(opts)) {
+      searchData.push(data);
+    }
+    return searchData;
+  }
+
+  public searchStream(opts: ISearchOptions): AsyncIterable<any> {
+    const source = pushable();
+    this.db.createValueStream({
+      gt: opts.gt,
+      lt: opts.lt,
+    }).on("data", function (data) {
+      source.push(data);
+    }).on("close", function () {
+      source.end();
+    }).on("end", function () {
+      source.end();
     });
+    return source;
   }
 }

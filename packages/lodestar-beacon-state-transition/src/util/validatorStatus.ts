@@ -6,6 +6,7 @@ import {
   BeaconState, Validator, ValidatorIndex, AttesterSlashing, ProposerSlashing, SignedVoluntaryExit,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import bls from "@chainsafe/bls";
 
 import {FAR_FUTURE_EPOCH, DomainType} from "../constants";
 import {computeActivationExitEpoch, getCurrentEpoch, computeEpochAtSlot} from "./epoch";
@@ -13,7 +14,7 @@ import {getValidatorChurnLimit, isSlashableValidator, isActiveValidator} from ".
 import {decreaseBalance, increaseBalance} from "./balance";
 import {getBeaconProposerIndex} from "./proposer";
 import {isSlashableAttestationData, isValidIndexedAttestation, getDomain} from ".";
-import bls from "@chainsafe/bls";
+import {computeSigningRoot} from "./signingRoot";
 
 
 /**
@@ -44,7 +45,7 @@ export function initiateValidatorExit(config: IBeaconConfig, state: BeaconState,
 
   // Set validator exit epoch and withdrawable epoch
   validator.exitEpoch = exitQueueEpoch;
-  validator.withdrawableEpoch = validator.exitEpoch + config.params.MIN_VALIDATOR_WITHDRAWAL_DELAY;
+  validator.withdrawableEpoch = validator.exitEpoch + config.params.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
 }
 
 /**
@@ -79,7 +80,7 @@ export function slashValidator(
   if (whistleblowerIndex === undefined || whistleblowerIndex === null) {
     whistleblowerIndex = proposerIndex;
   }
-  const whistleblowingReward = slashedBalance / BigInt(config.params.WHISTLEBLOWING_REWARD_QUOTIENT);
+  const whistleblowingReward = slashedBalance / BigInt(config.params.WHISTLEBLOWER_REWARD_QUOTIENT);
   const proposerReward = whistleblowingReward/ BigInt(config.params.PROPOSER_REWARD_QUOTIENT);
   increaseBalance(state, proposerIndex, proposerReward);
   increaseBalance(state, whistleblowerIndex, whistleblowingReward - proposerReward);
@@ -126,20 +127,24 @@ export function isValidProposerSlashing(
   if (!verifySignatures) {
     return true;
   }
+  const domain = getDomain(config, state, DomainType.BEACON_PROPOSER, header1Epoch);
+  const signingRoot = computeSigningRoot(config, config.types.BeaconBlockHeader,
+    proposerSlashing.signedHeader1.message, domain);
   const proposalData1Verified = bls.verify(
     proposer.pubkey.valueOf() as Uint8Array,
-    config.types.BeaconBlockHeader.hashTreeRoot(proposerSlashing.signedHeader1.message),
+    signingRoot,
     proposerSlashing.signedHeader1.signature.valueOf() as Uint8Array,
-    getDomain(config, state, DomainType.BEACON_PROPOSER, header1Epoch),
   );
   if (!proposalData1Verified) {
     return false;
   }
+  const domain2 = getDomain(config, state, DomainType.BEACON_PROPOSER, header2Epoch);
+  const signingRoot2 = computeSigningRoot(config, config.types.BeaconBlockHeader,
+    proposerSlashing.signedHeader2.message, domain2);
   const proposalData2Verified = bls.verify(
     proposer.pubkey.valueOf() as Uint8Array,
-    config.types.BeaconBlockHeader.hashTreeRoot(proposerSlashing.signedHeader2.message),
+    signingRoot2,
     proposerSlashing.signedHeader2.signature.valueOf() as Uint8Array,
-    getDomain(config, state, DomainType.BEACON_PROPOSER, header2Epoch),
   );
   return proposalData2Verified;
 }
@@ -152,6 +157,8 @@ export function isValidVoluntaryExit(
 ): boolean {
   const validator = state.validators[signedExit.message.validatorIndex];
   const currentEpoch = getCurrentEpoch(config, state);
+  const domain = getDomain(config, state, DomainType.VOLUNTARY_EXIT, signedExit.message.epoch);
+  const signingRoot = computeSigningRoot(config, config.types.VoluntaryExit, signedExit.message, domain);
   // Verify the validator is active
   return (isActiveValidator(validator, currentEpoch)) &&
   // Verify the validator has not yet exited
@@ -163,8 +170,7 @@ export function isValidVoluntaryExit(
   // Verify signature
   (!verifySignature || bls.verify(
     validator.pubkey.valueOf() as Uint8Array,
-    config.types.VoluntaryExit.hashTreeRoot(signedExit.message),
+    signingRoot,
     signedExit.signature.valueOf() as Uint8Array,
-    getDomain(config, state, DomainType.VOLUNTARY_EXIT, signedExit.message.epoch),
   ));
 }

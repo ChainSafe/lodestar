@@ -10,19 +10,20 @@ import {
   CommitteeIndex,
   Epoch,
   Fork,
-  Slot
+  Slot,
+  SignedBeaconBlock
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import EventSource from "eventsource";
 import {IApiClient} from "../api";
 import {aggregateSignatures, Keypair, PrivateKey} from "@chainsafe/bls";
 import {IValidatorDB} from "..";
 import {toHexString} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {
-  computeEpochAtSlot, DomainType, getDomain, isSlashableAttestationData,
+  computeEpochAtSlot, DomainType, getDomain, isSlashableAttestationData, computeSigningRoot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
-import {sleep} from "../util";
 import {IAttesterDuty} from "../types";
 
 export class AttestationService {
@@ -91,7 +92,7 @@ export class AttestationService {
   public onNewSlot = async (slot: Slot): Promise<void> => {
     const duty = this.nextAttesterDuties.get(slot);
     if(duty) {
-      await sleep(this.config.params.SECONDS_PER_SLOT / 3 * 1000);
+      await this.waitForAttestationBlock(slot);
       const fork = (await this.provider.beacon.getFork()).fork;
       const attestation = await this.createAttestation(duty.attestationSlot, duty.committeeIndex, fork);
       if(!attestation) {
@@ -111,6 +112,27 @@ export class AttestationService {
       );
     }
   };
+
+  private async waitForAttestationBlock(slot: Slot): Promise<void> {
+    const eventSource = new EventSource(
+      `${this.provider.url}/node/blocks/stream`,
+      {https: {rejectUnauthorized: false}}
+    );
+    await new Promise((resolve) => {
+      eventSource.onmessage = (evt: MessageEvent) => {
+        try {
+          const signedBlock: SignedBeaconBlock = this.config.types.SignedBeaconBlock.fromJson(JSON.parse(evt.data));
+          if(signedBlock.message.slot === slot) {
+            resolve();
+          }
+        } catch (err) {
+          this.logger.error(`Failed to parse block from SSE. Error: ${err.message}`);
+        }
+      };
+      setTimeout(resolve, this.config.params.SECONDS_PER_SLOT / 3 * 1000);
+    });
+    eventSource.close();
+  }
 
   private aggregateAttestations = async (duty: IAttesterDuty, attestation: Attestation, fork: Fork): Promise<void> => {
     this.logger.info(
@@ -162,10 +184,8 @@ export class AttestationService {
       DomainType.BEACON_ATTESTER,
       computeEpochAtSlot(this.config, slot)
     );
-    return this.privateKey.signMessage(
-      this.config.types.Slot.hashTreeRoot(slot),
-      domain.valueOf() as Uint8Array,
-    ).toBytesCompressed();
+    const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
+    return this.privateKey.signMessage(signingRoot).toBytesCompressed();
   }
 
   private async createAttestation(
@@ -190,14 +210,15 @@ export class AttestationService {
       );
       return null;
     }
+    const domain = getDomain(
+      this.config,
+      {fork} as BeaconState,
+      DomainType.BEACON_ATTESTER,
+      attestation.data.target.epoch,
+    );
+    const signingRoot = computeSigningRoot(this.config, this.config.types.AttestationData, attestation.data, domain);
     attestation.signature = this.privateKey.signMessage(
-      this.config.types.AttestationData.hashTreeRoot(attestation.data),
-      getDomain(
-        this.config,
-        {fork} as BeaconState,
-        DomainType.BEACON_ATTESTER,
-        attestation.data.target.epoch,
-      )
+      signingRoot
     ).toBytesCompressed();
     await this.storeAttestation(attestation);
     this.logger.info(

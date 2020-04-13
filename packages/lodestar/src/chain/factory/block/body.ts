@@ -9,7 +9,6 @@ import {ZERO_HASH} from "../../../constants";
 import {OpPool} from "../../../opPool";
 import {IEth1Notifier} from "../../../eth1";
 import {generateDeposits} from "./deposits";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 export async function assembleBody(
   config: IBeaconConfig,
@@ -25,7 +24,7 @@ export async function assembleBody(
     opPool.aggregateAndProofs.getBlockAttestations(currentState)
       .then(value => value.slice(0, config.params.MAX_ATTESTATIONS)),
     opPool.voluntaryExits.getAll().then(value => value.slice(0, config.params.MAX_VOLUNTARY_EXITS)),
-    eth1.getEth1Vote(config, currentState, computeEpochAtSlot(config, currentState.slot))
+    eth1.getEth1Vote(config, currentState)
   ]);
   //requires new eth1 data so it has to be done after above operations
   const deposits = await generateDeposits(config, opPool, currentState, eth1Data, depositDataRootList);

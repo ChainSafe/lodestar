@@ -1,8 +1,6 @@
-import {IFastifyServer} from "../../index";
 import fastify, {DefaultQuery} from "fastify";
-import {IApiModules} from "../../../interface";
 import {IncomingMessage, Server, ServerResponse} from "http";
-import {assembleBlock} from "../../../../chain/factory/block";
+import {LodestarRestApiEndpoint} from "../../interface";
 
 interface IQuery extends DefaultQuery {
   slot: number;
@@ -29,24 +27,19 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   }
 };
 
-export const registerBlockProductionEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
+export const registerBlockProductionEndpoint: LodestarRestApiEndpoint = (fastify, {api, config}): void => {
   fastify.get<IQuery>(
     "/block",
     opts,
     async (request, reply) => {
-      const block = await assembleBlock(
-        modules.config,
-        modules.chain,
-        modules.db,
-        modules.opPool,
-        modules.eth1,
+      const block = await api.validator.produceBlock(
         request.query.slot,
         Buffer.from(request.query.randao_reveal)
       );
       reply
         .code(200)
         .type("application/json")
-        .send(modules.config.types.BeaconBlock.toJson(block));
+        .send(config.types.BeaconBlock.toJson(block));
     }
   );
 };

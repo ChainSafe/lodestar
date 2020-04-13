@@ -1,28 +1,26 @@
 import * as fastify from "fastify";
+import {FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
 import {IService} from "../../node";
 import {IRestApiOptions} from "./options";
-import {IApiModules} from "../interface";
-import {IncomingMessage, Server, ServerResponse} from "http";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import * as routes from "./routes";
-import {IBeaconChain} from "../../chain";
 import qs from "qs";
 import {ApiNamespace} from "../index";
-
-export interface IFastifyServer extends fastify.FastifyInstance<Server, IncomingMessage, ServerResponse> {
-  logger: ILogger;
-  chain: IBeaconChain;
-}
+import {IRestApiModules} from "./interface";
+import {FastifySSEPlugin} from "fastify-sse-v2";
 
 export class RestApi implements IService {
 
-  public server: IFastifyServer;
+  public server: FastifyInstance;
 
   private opts: IRestApiOptions;
   private logger: ILogger;
 
-  public constructor(opts: IRestApiOptions, modules: IApiModules) {
+  public constructor(
+    opts: IRestApiOptions, 
+    modules: IRestApiModules
+  ) {
     this.opts = opts;
     this.logger = modules.logger;
     this.server = this.setupServer(modules);
@@ -42,12 +40,12 @@ export class RestApi implements IService {
     await this.server.close();
   }
 
-  private  setupServer(modules: IApiModules): IFastifyServer {
+  private  setupServer(modules: IRestApiModules): FastifyInstance {
     const server = fastify.default({
       //TODO: somehow pass winston here
       logger: false,
       querystringParser: qs.parse
-    }) as IFastifyServer;
+    });
 
     if(this.opts.cors) {
       const corsArr = this.opts.cors.split(",");
@@ -55,14 +53,18 @@ export class RestApi implements IService {
         origin: corsArr
       });
     }
-
+    server.register(FastifySSEPlugin);
+    const api = {
+      beacon: modules.beacon,
+      validator: modules.validator
+    };
     if(this.opts.api.includes(ApiNamespace.BEACON)) {
-      //@ts-ignore
-      server.register(routes.beacon, {prefix: "/node", modules});
+      server.register(routes.beacon, {prefix: "/node", api, config: modules.config});
     }
     if(this.opts.api.includes(ApiNamespace.VALIDATOR)) {
-      //@ts-ignore
-      server.register(routes.validator, {prefix: "/validator", modules});
+      //TODO: enable when syncing status api working
+      // applySyncingMiddleware(server, "/validator/*", modules);
+      server.register(routes.validator, {prefix: "/validator", api, config: modules.config});
     }
 
     return server;

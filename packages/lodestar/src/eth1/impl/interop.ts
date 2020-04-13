@@ -58,7 +58,20 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
     };
   }
 
-  public async getEth1Data(eth1Head: Block, distance: number): Promise<Eth1Data> {
+  public async getEth1Data(eth1Head: Block): Promise<Eth1Data> {
     return null;
+
+  }
+
+  public initBlockCache(config: IBeaconConfig, state: BeaconState): Promise<void> {
+    return Promise.resolve();
+  }
+
+  public pruneBlockCache(config: IBeaconConfig, finalizedState: BeaconState): void {
+
+  }
+
+  public findBlocks(config: IBeaconConfig, periodStart: Number64): Block[] {
+    return [];
   }
 }

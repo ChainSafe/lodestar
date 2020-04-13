@@ -9,7 +9,10 @@ import {
   Epoch,
   Goodbye,
   RequestBody,
-  Slot, Status, Root, SignedBeaconBlock,
+  Root,
+  SignedBeaconBlock,
+  Slot,
+  Status,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
@@ -17,10 +20,10 @@ import {Method, RequestId, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ISyncOptions, ISyncReqResp} from "./interface";
 import {ReputationStore} from "../IReputation";
-import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {BlockRepository} from "../../db/api/beacon/repositories";
 
 export interface ISyncReqRespModules {
   config: IBeaconConfig;
@@ -108,7 +111,7 @@ export class SyncReqResp implements ISyncReqResp {
       this.network.reqResp.sendResponse(id, e, null);
     }
     if (await this.shouldDisconnectOnStatus(request)) {
-      this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
+      await this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
     }
   }
 
@@ -116,23 +119,23 @@ export class SyncReqResp implements ISyncReqResp {
     const headBlock = await this.db.block.getChainHead();
     const state = await this.db.state.get(headBlock.message.stateRoot.valueOf() as Uint8Array);
     // peer is on a different fork version
-    if (!this.config.types.Version.equals(state.fork.currentVersion, request.headForkVersion)) {
-      return true;
-    }
-    const startSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
-    const startBlock = await this.db.blockArchive.get(startSlot);
-    // we're on a further (or equal) finalized epoch
-    // but the peer's block root at that epoch doesn't match ours
-    if (
-      state.finalizedCheckpoint.epoch >= request.finalizedEpoch &&
-      !this.config.types.Root.equals(
-        request.finalizedRoot,
-        this.config.types.BeaconBlock.hashTreeRoot(startBlock.message)
-      )
-    ) {
-      return true;
-    }
-    return false;
+    return !this.config.types.Version.equals(state.fork.currentVersion, request.headForkVersion);
+
+    //TODO: fix this, doesn't work if we are starting sync(archive is empty) or we don't have finalized epoch
+    // const startSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
+    // const startBlock = await this.db.blockArchive.get(startSlot);
+    // // we're on a further (or equal) finalized epoch
+    // // but the peer's block root at that epoch doesn't match ours
+    // if (
+    //   state.finalizedCheckpoint.epoch >= request.finalizedEpoch &&
+    //   !this.config.types.Root.equals(
+    //     request.finalizedRoot,
+    //     this.config.types.BeaconBlock.hashTreeRoot(startBlock.message)
+    //   )
+    // ) {
+    //   return true;
+    // }
+    // return false;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -146,14 +149,13 @@ export class SyncReqResp implements ISyncReqResp {
     request: BeaconBlocksByRangeRequest
   ): Promise<void> {
     try {
-      const responses: SignedBeaconBlock[] = [];
-      const blocks = await this.db.blockArchive.getAllBetween(
+      const archiveBlocksStream = this.db.blockArchive.getAllBetweenStream(
         request.startSlot - 1,
         request.startSlot + request.count,
         request.step
       );
-      responses.push(...blocks);
-      this.network.reqResp.sendResponse(id, null, responses);
+      const responseStream = this.injectRecentBlocks(archiveBlocksStream, this.db.block, request);
+      this.network.reqResp.sendResponseStream(id, null, responseStream);
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);
     }
@@ -164,14 +166,18 @@ export class SyncReqResp implements ISyncReqResp {
     request: BeaconBlocksByRootRequest
   ): Promise<void> {
     try {
-      const response: SignedBeaconBlock[] = [];
-      for (const blockRoot of request) {
-        const block = await this.db.block.get(blockRoot.valueOf() as Uint8Array);
-        if (block) {
-          response.push(block);
+      const getBlock = this.db.block.get.bind(this.db.block);
+      const getBlockArchive = this.db.blockArchive.get.bind(this.db.blockArchive);
+      const blockGenerator = async function* () {
+        for (const blockRoot of request) {
+          const root = blockRoot.valueOf() as Uint8Array;
+          const block = await getBlock(root) || await getBlockArchive(root);
+          if (block) {
+            yield block;
+          }
         }
-      }
-      this.network.reqResp.sendResponse(id, null, response);
+      }();
+      this.network.reqResp.sendResponseStream(id, null, blockGenerator);
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);
     }
@@ -196,7 +202,7 @@ export class SyncReqResp implements ISyncReqResp {
       finalizedRoot = state.finalizedCheckpoint.root;
     }
     return {
-      headForkVersion: this.chain.latestState.fork.currentVersion,
+      headForkVersion: (await this.chain.getHeadState()).fork.currentVersion,
       finalizedRoot,
       finalizedEpoch,
       headRoot,
@@ -213,10 +219,33 @@ export class SyncReqResp implements ISyncReqResp {
     ) {
       const request = await this.createStatus();
       try {
-        const response = await this.network.reqResp.status(peerInfo, request);
-        this.reps.get(peerInfo.id.toB58String()).latestStatus = response;
+        this.reps.get(peerInfo.id.toB58String()).latestStatus = await this.network.reqResp.status(peerInfo, request);
       } catch (e) {
         this.logger.error(e);
+      }
+    }
+  };
+
+  private injectRecentBlocks = async function* (
+    archiveStream: AsyncIterable<SignedBeaconBlock>,
+    blockDb: BlockRepository,
+    request: BeaconBlocksByRangeRequest
+  ): AsyncIterable<SignedBeaconBlock> {
+    let count = 0;
+    for await(const archiveBlock of archiveStream) {
+      count++;
+      yield archiveBlock;
+    }
+    if(count < request.count) {
+      for(
+        let i = request.startSlot;
+        i <= (request.startSlot + request.count) && count < request.count;
+        i += request.step
+      ) {
+        const block = await blockDb.getBlockBySlot(i);
+        if(block) {
+          yield block;
+        }
       }
     }
   };

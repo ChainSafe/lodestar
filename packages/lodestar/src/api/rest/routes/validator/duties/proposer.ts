@@ -1,10 +1,6 @@
 import {IncomingMessage, Server, ServerResponse} from "http";
 import fastify, {DefaultParams, DefaultQuery} from "fastify";
-import {toHexString} from "@chainsafe/ssz";
-
-import {IFastifyServer} from "../../../index";
-import {IApiModules} from "../../../../interface";
-import {getEpochProposers} from "../../../../impl/validator";
+import {LodestarRestApiEndpoint} from "../../../interface";
 
 interface IParams extends DefaultParams {
   epoch: number;
@@ -26,20 +22,15 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   }
 };
 
-export const registerProposerDutiesEndpoint = (fastify: IFastifyServer, modules: IApiModules): void => {
+export const registerProposerDutiesEndpoint: LodestarRestApiEndpoint = (fastify, {api, config}): void => {
   fastify.get<DefaultQuery, IParams>(
     "/duties/:epoch/proposer",
     opts,
     async (request, reply) => {
-      const epochProposers = await getEpochProposers(
-        modules.config,
-        modules.chain,
-        modules.db,
-        request.params.epoch
-      );
+      const responseValue = await api.validator.getProposerDuties(request.params.epoch);
       const response: {[k: number]: string} = {};
-      epochProposers.forEach((value, key) => {
-        response[key] = toHexString(value);
+      responseValue.forEach((value, key) => {
+        response[key] = config.types.BLSPubkey.toJson(value) as string;
       });
       reply
         .code(200)

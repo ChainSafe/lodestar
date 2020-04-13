@@ -21,9 +21,9 @@ export async function savePeerId(path: string, peerId: PeerId): Promise<void> {
 /**
  * Load a peer id from disk
  */
-export async function loadPeerId(path: string): Promise<PeerId> {
+export async function loadPeerIdFromJsonFile(path: string): Promise<PeerId> {
   const data = fs.readFileSync(path, "utf-8");
-  return await promisify(PeerId.createFromJSON)(JSON.parse(data)) as PeerId;
+  return await PeerId.createFromJSON(JSON.parse(data));
 }
 
 /**
@@ -31,11 +31,13 @@ export async function loadPeerId(path: string): Promise<PeerId> {
  * @param peerIdOrPromise Create an instance of NodejsNode asynchronously
  * @param network
  */
-export async function createNodeJsLibp2p(peerIdOrPromise: PeerId | Promise<PeerId>, 
-  network: Partial<INetworkOptions> = {}): Promise<LibP2p> {
+export async function createNodeJsLibp2p(
+  peerIdOrPromise: PeerId | Promise<PeerId>,
+  network: Partial<INetworkOptions> = {}
+): Promise<LibP2p> {
   const peerId = await Promise.resolve(peerIdOrPromise);
   const multiaddrs = network.multiaddrs || defaults.multiaddrs;
   const bootnodes = network.bootnodes || defaults.bootnodes;
   const peerInfo = await initializePeerInfo(peerId, multiaddrs);
-  return new NodejsNode({peerInfo, bootnodes: bootnodes});
+  return new NodejsNode({peerInfo, bootnodes: bootnodes, discv5: network.discv5});
 }

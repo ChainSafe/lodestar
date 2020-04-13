@@ -4,13 +4,13 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../../chain";
 import {ReputationStore} from "../../IReputation";
-import {IReqResp} from "../../../network";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {INetwork} from "../../../network";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ISyncOptions} from "../../options";
 import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../interface";
 import {EventEmitter} from "events";
-import {getSyncTargetEpoch, isValidChainOfBlocks, isValidFinalizedCheckPoint} from "../../utils/sync";
-import {BeaconState, Checkpoint} from "@chainsafe/lodestar-types";
+import {getInitalSyncTargetEpoch, isValidChainOfBlocks, isValidFinalizedCheckPoint} from "../../utils/sync";
+import {Checkpoint} from "@chainsafe/lodestar-types";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {getBlockRange} from "../../utils/blocks";
 
@@ -22,7 +22,7 @@ export class FastSync
   private opts: ISyncOptions;
   private chain: IBeaconChain;
   private reps: ReputationStore;
-  private rpc: IReqResp;
+  private network: INetwork;
   private logger: ILogger;
   private peers: PeerInfo[];
 
@@ -33,7 +33,7 @@ export class FastSync
     this.peers = peers;
     this.reps = reps;
     this.opts = opts;
-    this.rpc = network.reqResp;
+    this.network = network;
     this.logger = logger;
   }
 
@@ -49,7 +49,7 @@ export class FastSync
       return;
     }
 
-    const chainCheckPoint = this.chain.latestState.currentJustifiedCheckpoint;
+    const chainCheckPoint = (await this.chain.getHeadState()).currentJustifiedCheckpoint;
     //listen on finalization events
     this.chain.on("processedCheckpoint", this.sync);
     //start syncing from current chain checkpoint
@@ -62,20 +62,21 @@ export class FastSync
   }
 
   private sync = async (chainCheckPoint: Checkpoint): Promise<void> => {
-    const peers = Array.from(this.peers).map(this.reps.getFromPeerInfo);
-    const targetEpoch = getSyncTargetEpoch(peers, chainCheckPoint);
+    const peers = Array.from(this.peers).map((peer) => this.reps.getFromPeerInfo(peer));
+    const targetEpoch = getInitalSyncTargetEpoch(peers, chainCheckPoint);
     if(chainCheckPoint.epoch >= targetEpoch) {
       if(isValidFinalizedCheckPoint(peers, chainCheckPoint)) {
         this.logger.info("Chain already on latest finalized state");
         this.chain.removeListener("processedCheckpoint", this.sync);
         this.emit("sync:completed", chainCheckPoint);
+        return;
       }
       this.logger.error("Wrong chain synced, should clean and start over");
     } else {
       this.logger.debug(`Fast syncing to target ${targetEpoch}`);
-      const latestState = this.chain.latestState as BeaconState;
+      const latestState = await this.chain.getHeadState();
       const blocks = await getBlockRange(
-        this.rpc,
+        this.network.reqResp,
         this.reps,
         this.peers,
         {start: latestState.slot, end: computeStartSlotAtEpoch(this.config, targetEpoch)},

@@ -1,12 +1,13 @@
 import {describe, it} from "mocha";
-import {getAttestationSubnetTopic, getGossipTopic, isAttestationSubnetTopic, getSubnetFromAttestationSubnetTopic} from "../../../../src/network/gossip/utils";
+import {
+  getAttestationSubnetTopic,
+  getGossipTopic,
+  getSubnetFromAttestationSubnetTopic,
+  isAttestationSubnetTopic
+} from "../../../../src/network/gossip/utils";
 import {GossipEvent} from "../../../../src/network/gossip/constants";
 import {expect} from "chai";
 import {generateEmptyAttestation} from "../../../utils/attestation";
-import {BeaconBlock} from "@chainsafe/lodestar-types";
-import {generateEmptyBlock} from "../../../utils/block";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {GOSSIP_MAX_SIZE} from "../../../../src/constants";
 import {ATTESTATION_SUBNET_COUNT} from "../../../../src/constants";
 
 describe("gossip utils", function () {

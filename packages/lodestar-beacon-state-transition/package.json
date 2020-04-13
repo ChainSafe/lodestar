@@ -33,20 +33,18 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/bit-utils": "0.1.6",
-    "@chainsafe/bls": "0.3.0",
+    "@chainsafe/bls": "1.0.0",
     "@chainsafe/lodestar-config": "^0.5.0",
     "@chainsafe/lodestar-utils": "^0.5.0",
     "@chainsafe/ssz": "^0.6.1",
     "bigint-buffer": "^1.1.5",
-    "bn.js": "^5.0.0",
     "buffer-xor": "^2.0.2"
   },
   "devDependencies": {
     "@types/chai": "4.2.0",
     "@types/mocha": "^5.2.7",
     "chai": "^4.2.0",
-    "mocha": "^6.2.0"
+    "mocha": "^6.2.2"
   },
   "keywords": [
     "ethereum",
