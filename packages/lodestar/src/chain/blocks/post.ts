@@ -1,5 +1,5 @@
 import {computeEpochAtSlot, isActiveValidator} from "@chainsafe/lodestar-beacon-state-transition";
-import {BeaconState, SignedBeaconBlock, Validator, Attestation} from "@chainsafe/lodestar-types";
+import {BeaconState, SignedBeaconBlock, Validator} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -16,11 +16,6 @@ export function postProcess(
     return (async function() {
       for await(const item of source) {
         await opPool.processBlockOperations(item.block);
-        const promises: Promise<void>[] = [];
-        item.block.message.body.attestations.forEach((attestation: Attestation) => {
-          promises.push(attestationProcessor.receiveAttestation(attestation));
-        });
-        await Promise.all(promises);
         await attestationProcessor.receiveBlock(item.block);
         metrics.currentSlot.set(item.block.message.slot);
         eventBus.emit("processedBlock", item.block);

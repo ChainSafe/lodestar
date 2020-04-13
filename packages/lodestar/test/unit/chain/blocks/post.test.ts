@@ -85,7 +85,6 @@ describe("post block process stream", function () {
         expect(chainDbStub.setJustifiedStateRoot.notCalled).to.be.true;
         expect(opPoolStub.processBlockOperations.calledOnce).to.be.true;
         expect(attestationProcessorStub.receiveBlock.calledOnce).to.be.true;
-        expect(attestationProcessorStub.receiveAttestation.calledOnce).to.be.true;
     });
 
     it("epoch transition - justified and finalized", async function () {
@@ -117,7 +116,6 @@ describe("post block process stream", function () {
         expect(chainDbStub.setJustifiedStateRoot.calledOnce).to.be.true;
         expect(opPoolStub.processBlockOperations.calledOnce).to.be.true;
         expect(attestationProcessorStub.receiveBlock.calledOnce).to.be.true;
-        expect(attestationProcessorStub.receiveAttestation.calledOnce).to.be.true;
     });
 
 });

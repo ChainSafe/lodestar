@@ -69,6 +69,13 @@ export class AttestationProcessor implements IAttestationProcessor {
   }
 
   public async receiveBlock(signedBlock: SignedBeaconBlock): Promise<void> {
+    // process block's attestations
+    const promises: Promise<void>[] = [];
+    signedBlock.message.body.attestations.forEach((attestation: Attestation) => {
+      promises.push(this.receiveAttestation(attestation));
+    });
+    await Promise.all(promises);
+    // process pending attestations due to this block
     const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
     const blockPendingAttestations = this.pendingAttestations.get(toHexString(blockRoot)) ||
       new Map<AttestationRootHex, Attestation>();
