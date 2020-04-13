@@ -10,6 +10,9 @@ import {generateState} from "../../../utils/state";
 import {postProcess} from "../../../../src/chain/blocks/post";
 import {BeaconMetrics, IBeaconMetrics} from "../../../../src/metrics";
 import {Gauge} from "prom-client";
+import {OpPool} from "../../../../src/opPool";
+import {AttestationProcessor} from "../../../../src/chain/attestation";
+import {generateEmptyAttestation} from "../../../utils/attestation";
 
 describe("post block process stream", function () {
 
@@ -20,6 +23,8 @@ describe("post block process stream", function () {
     let slotMetricsStub: SinonStubbedInstance<Gauge>;
     let currentEpochLiveValidatorsMetricsStub: SinonStubbedInstance<Gauge>;
     let eventBusStub: SinonStubbedInstance<ChainEventEmitter>;
+    let opPoolStub: SinonStubbedInstance<OpPool>;
+    let attestationProcessorStub: SinonStubbedInstance<AttestationProcessor>;
 
     beforeEach(function () {
         dbStub = sinon.createStubInstance(BeaconDb);
@@ -36,6 +41,8 @@ describe("post block process stream", function () {
         metricsStub.currentJustifiedEpoch = sinon.createStubInstance(Gauge) as unknown as Gauge;
         metricsStub.previousJustifiedEpoch = sinon.createStubInstance(Gauge) as unknown as Gauge;
         eventBusStub = sinon.createStubInstance(BeaconChain);
+        opPoolStub = sinon.createStubInstance(OpPool);
+        attestationProcessorStub = sinon.createStubInstance(AttestationProcessor);
     });
 
     it("no epoch transition", async function () {
@@ -49,7 +56,7 @@ describe("post block process stream", function () {
         };
         await pipe(
             [item],
-            postProcess(config, dbStub, sinon.createStubInstance(WinstonLogger), metricsStub, eventBusStub),
+            postProcess(config, dbStub, sinon.createStubInstance(WinstonLogger), metricsStub, eventBusStub, opPoolStub as unknown as OpPool, attestationProcessorStub),
         );
         expect(slotMetricsStub.set.withArgs(0).calledOnce).to.be.true;
     });
@@ -58,6 +65,7 @@ describe("post block process stream", function () {
         const preState = generateState();
         const postState = generateState({slot: config.params.SLOTS_PER_EPOCH});
         const block = config.types.SignedBeaconBlock.defaultValue();
+        block.message.body.attestations = [generateEmptyAttestation()]
         const item = {
             preState,
             postState,
@@ -65,7 +73,8 @@ describe("post block process stream", function () {
         };
         await pipe(
             [item],
-            postProcess(config, dbStub, sinon.createStubInstance(WinstonLogger), metricsStub, eventBusStub),
+            postProcess(config, dbStub, sinon.createStubInstance(WinstonLogger), metricsStub, eventBusStub,
+            opPoolStub as unknown as OpPool, attestationProcessorStub),
         );
         expect(slotMetricsStub.set.withArgs(0).calledOnce).to.be.true;
         // @ts-ignore
@@ -74,6 +83,9 @@ describe("post block process stream", function () {
         expect(chainDbStub.setJustifiedBlockRoot.notCalled).to.be.true;
         expect(chainDbStub.setFinalizedStateRoot.notCalled).to.be.true;
         expect(chainDbStub.setJustifiedStateRoot.notCalled).to.be.true;
+        expect(opPoolStub.processBlockOperations.calledOnce).to.be.true;
+        expect(attestationProcessorStub.receiveBlock.calledOnce).to.be.true;
+        expect(attestationProcessorStub.receiveAttestation.calledOnce).to.be.true;
     });
 
     it("epoch transition - justified and finalized", async function () {
@@ -84,6 +96,7 @@ describe("post block process stream", function () {
             finalizedCheckpoint: {epoch: 1, root: Buffer.alloc(1)}
         });
         const block = config.types.SignedBeaconBlock.defaultValue();
+        block.message.body.attestations = [generateEmptyAttestation()]
         const item = {
             preState,
             postState,
@@ -92,7 +105,8 @@ describe("post block process stream", function () {
         blockDbStub.get.resolves(block);
         await pipe(
             [item],
-            postProcess(config, dbStub, sinon.createStubInstance(WinstonLogger), metricsStub, eventBusStub),
+            postProcess(config, dbStub, sinon.createStubInstance(WinstonLogger), metricsStub, eventBusStub,
+            opPoolStub as unknown as OpPool, attestationProcessorStub),
         );
         expect(slotMetricsStub.set.withArgs(0).calledOnce).to.be.true;
         // @ts-ignore
@@ -101,6 +115,9 @@ describe("post block process stream", function () {
         expect(chainDbStub.setJustifiedBlockRoot.calledOnce).to.be.true;
         expect(chainDbStub.setFinalizedStateRoot.calledOnce).to.be.true;
         expect(chainDbStub.setJustifiedStateRoot.calledOnce).to.be.true;
+        expect(opPoolStub.processBlockOperations.calledOnce).to.be.true;
+        expect(attestationProcessorStub.receiveBlock.calledOnce).to.be.true;
+        expect(attestationProcessorStub.receiveAttestation.calledOnce).to.be.true;
     });
 
 });
