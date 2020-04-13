@@ -6,6 +6,7 @@ import {
   SignedBeaconBlock,
   SignedVoluntaryExit,
   SignedAggregateAndProof,
+  ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
 import {getAttestationSubnet} from "./utils";
@@ -32,6 +33,7 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconChain} from "../../chain";
 import {verify} from "@chainsafe/bls";
 import {OpPool} from "../../opPool";
+import {arrayIntersection, sszEqualPredicate} from "../../util/objects";
 
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 interface GossipMessageValidatorModules {
@@ -236,8 +238,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
   public isValidIncomingVoluntaryExit = async(voluntaryExit: SignedVoluntaryExit): Promise<boolean> => {
     // skip voluntary exit if it already exists
-    const root = this.config.types.SignedVoluntaryExit.hashTreeRoot(voluntaryExit);
-    if (await this.db.voluntaryExit.has(root as Buffer)) {
+    if (await this.db.voluntaryExit.has(voluntaryExit.message.validatorIndex)) {
       return false;
     }
     const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
@@ -250,8 +251,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
   public isValidIncomingProposerSlashing = async(proposerSlashing: ProposerSlashing): Promise<boolean> => {
     // skip proposer slashing if it already exists
-    const root = this.config.types.ProposerSlashing.hashTreeRoot(proposerSlashing);
-    if (await this.db.proposerSlashing.has(root as Buffer)) {
+    if (await this.db.proposerSlashing.has(proposerSlashing.signedHeader1.message.proposerIndex)) {
       return false;
     }
     const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
@@ -259,11 +259,15 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   };
 
   public isValidIncomingAttesterSlashing = async (attesterSlashing: AttesterSlashing): Promise<boolean> => {
-    // skip attester slashing if it already exists
-    const root = this.config.types.AttesterSlashing.hashTreeRoot(attesterSlashing);
-    if (await this.db.attesterSlashing.has(root as Buffer)) {
+    const attesterSlashedIndices = arrayIntersection<ValidatorIndex>(
+      attesterSlashing.attestation1.attestingIndices.valueOf() as ValidatorIndex[],
+      attesterSlashing.attestation2.attestingIndices.valueOf() as ValidatorIndex[],
+      sszEqualPredicate(this.config.types.ValidatorIndex)
+    );
+    if (await this.opPool.attesterSlashings.hasAll(attesterSlashedIndices)) {
       return false;
     }
+
     const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
     return isValidAttesterSlashing(this.config, state, attesterSlashing);
   };

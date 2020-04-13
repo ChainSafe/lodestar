@@ -33,7 +33,7 @@ import {GossipMessageValidator} from "../../../../src/network/gossip/validator";
 import {generateValidators} from "../../../utils/validator";
 import {BeaconChain, StatefulDagLMDGHOST} from "../../../../src/chain";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {OpPool, AggregateAndProofOperations, AttestationOperations} from "../../../../src/opPool";
+import {OpPool, AggregateAndProofOperations, AttestationOperations, AttesterSlashingOperations} from "../../../../src/opPool";
 import Sinon from "sinon";
 
 describe("GossipMessageValidator", () => {
@@ -58,7 +58,8 @@ describe("GossipMessageValidator", () => {
     isBlsVerifyStub = sandbox.stub(bls, "verify");
     opPoolStub = {
       attestations: sandbox.createStubInstance(AttestationOperations),
-      aggregateAndProofs: sandbox.createStubInstance(AggregateAndProofOperations)
+      aggregateAndProofs: sandbox.createStubInstance(AggregateAndProofOperations),
+      attesterSlashings: sandbox.createStubInstance(AttesterSlashingOperations)
     } as unknown as OpPool;
     getBeaconProposerIndexStub = sandbox.stub(proposerUtils, "getBeaconProposerIndex");
 
@@ -471,22 +472,22 @@ describe("GossipMessageValidator", () => {
       const voluntaryExit = generateEmptySignedVoluntaryExit();
       dbStub.voluntaryExit.has.resolves(true);
       expect(await validator.isValidIncomingVoluntaryExit(voluntaryExit)).to.be.false;
+      expect(isValidIncomingVoluntaryExitStub.called).to.be.false;
     });
   
     it("should return invalid Voluntary Exit - invalid", async () => {
       const voluntaryExit = generateEmptySignedVoluntaryExit();
       dbStub.voluntaryExit.has.resolves(false);
-      chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
       const state = generateState();
       dbStub.state.get.resolves(state);
       isValidIncomingVoluntaryExitStub.returns(false);
       expect(await validator.isValidIncomingVoluntaryExit(voluntaryExit)).to.be.false;
+      expect(isValidIncomingVoluntaryExitStub.called).to.be.true;
     });
   
     it("should return valid Voluntary Exit", async () => {
       const voluntaryExit = generateEmptySignedVoluntaryExit();
       dbStub.voluntaryExit.has.resolves(false);
-      chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
       const state = generateState();
       dbStub.state.get.resolves(state);
       isValidIncomingVoluntaryExitStub.returns(true);
@@ -499,22 +500,22 @@ describe("GossipMessageValidator", () => {
       const slashing = generateEmptyProposerSlashing();
       dbStub.proposerSlashing.has.resolves(true);
       expect(await validator.isValidIncomingProposerSlashing(slashing)).to.be.false;
+      expect(isValidIncomingProposerSlashingStub.called).to.be.false;
     });
   
     it("should return invalid proposer slashing - invalid", async () => {
       const slashing = generateEmptyProposerSlashing();
       dbStub.proposerSlashing.has.resolves(false);
-      chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
       const state = generateState();
       dbStub.state.get.resolves(state);
       isValidIncomingProposerSlashingStub.returns(false);
       expect(await validator.isValidIncomingProposerSlashing(slashing)).to.be.false;
+      expect(isValidIncomingProposerSlashingStub.called).to.be.true;
     });
   
     it("should return valid proposer slashing", async () => {
       const slashing = generateEmptyProposerSlashing();
       dbStub.proposerSlashing.has.resolves(false);
-      chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
       const state = generateState();
       dbStub.state.get.resolves(state);
       isValidIncomingProposerSlashingStub.returns(true);
@@ -525,24 +526,24 @@ describe("GossipMessageValidator", () => {
   describe("validate attester slashing", () => {
     it("should return invalid attester slashing - already exisits", async () => {
       const slashing = generateEmptyAttesterSlashing();
-      dbStub.attesterSlashing.has.resolves(true);
+      opPoolStub.attesterSlashings.hasAll.resolves(true);
       expect(await validator.isValidIncomingAttesterSlashing(slashing)).to.be.false;
+      expect(isValidIncomingAttesterSlashingStub.called).to.be.false;
     });
   
     it("should return invalid attester slashing - invalid", async () => {
       const slashing = generateEmptyAttesterSlashing();
-      dbStub.attesterSlashing.has.resolves(false);
-      chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
+      opPoolStub.attesterSlashings.hasAll.resolves(false);
       const state = generateState();
       dbStub.state.get.resolves(state);
       isValidIncomingAttesterSlashingStub.returns(false);
       expect(await validator.isValidIncomingAttesterSlashing(slashing)).to.be.false;
+      expect(isValidIncomingAttesterSlashingStub.called).to.be.true;
     });
   
     it("should return valid attester slashing", async () => {
       const slashing = generateEmptyAttesterSlashing();
-      dbStub.attesterSlashing.has.resolves(false);
-      chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
+      opPoolStub.attesterSlashings.hasAll.resolves(false);
       const state = generateState();
       dbStub.state.get.resolves(state);
       isValidIncomingAttesterSlashingStub.returns(true);
