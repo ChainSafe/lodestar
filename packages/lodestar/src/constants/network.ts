@@ -10,6 +10,8 @@ export type RequestId = string;
 export enum Method {
   Status = "status",
   Goodbye = "goodbye",
+  Ping = "ping",
+  Metadata = "metadata",
   BeaconBlocksByRange = "beacon_blocks_by_range",
   BeaconBlocksByRoot = "beacon_blocks_by_root",
 }

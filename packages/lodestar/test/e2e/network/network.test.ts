@@ -120,6 +120,34 @@ describe("[network] network", function () {
     await received;
     expect(spy.callCount).to.be.equal(1);
   });
+  it("should send/receive ping messages", async function () {
+    const connected = Promise.all([
+      new Promise((resolve) => netA.on("peer:connect", resolve)),
+      new Promise((resolve) => netB.on("peer:connect", resolve)),
+    ]);
+    await netA.connect(netB.peerInfo);
+    await connected;
+
+    netB.reqResp.once("request", (peerId, method, requestId, request) => {
+      netB.reqResp.sendResponse(requestId, null, [netB.metadata.seqNumber]);
+    });
+    const seqNumber = await netA.reqResp.ping(netB.peerInfo, netA.metadata.seqNumber);
+    expect(seqNumber).to.equal(netB.metadata.seqNumber);
+  });
+  it("should send/receive metadata messages", async function () {
+    const connected = Promise.all([
+      new Promise((resolve) => netA.on("peer:connect", resolve)),
+      new Promise((resolve) => netB.on("peer:connect", resolve)),
+    ]);
+    await netA.connect(netB.peerInfo);
+    await connected;
+
+    netB.reqResp.once("request", (peerId, method, requestId, request) => {
+      netB.reqResp.sendResponse(requestId, null, [netB.metadata]);
+    });
+    const metadata = await netA.reqResp.metadata(netB.peerInfo);
+    expect(metadata).to.deep.equal(netB.metadata.metadata);
+  });
   it("should receive blocks on subscription", async function () {
     const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),

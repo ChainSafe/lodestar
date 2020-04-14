@@ -18,6 +18,15 @@ export const Status = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType
 
 export const Goodbye = (ssz: IBeaconSSZTypes): BigIntUintType => ssz.Uint64;
 
+export const Ping = (ssz: IBeaconSSZTypes): BigIntUintType => ssz.Uint64;
+
+export const Metadata = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    seqNumber: ssz.Uint64,
+    attnets: ssz.AttestationSubnets,
+  },
+});
+
 export const BeaconBlocksByRangeRequest = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
     startSlot: ssz.Slot,

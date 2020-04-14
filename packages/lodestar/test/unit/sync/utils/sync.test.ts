@@ -40,6 +40,7 @@ describe("sync utils", function () {
       const peers: IReputation[] = [
         {
           latestStatus: null,
+          latestMetadata: null,
           score: 1
         },
         generateReputation(1),
@@ -209,6 +210,7 @@ function generateValidChain(start: BeaconBlockHeader, n = 3): SignedBeaconBlock[
 function generateReputation(finalizedEpoch: Epoch): IReputation {
   return {
     score: 1,
+    latestMetadata: null,
     latestStatus: {
       finalizedEpoch: finalizedEpoch || 0,
       finalizedRoot: Buffer.alloc(1),

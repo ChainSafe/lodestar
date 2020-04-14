@@ -1,6 +1,6 @@
 import {
   BigIntUintType, BitListType, BooleanType, ByteVectorType,
-  ContainerType, List, ListType, NumberUintType, Vector, VectorType,
+  ContainerType, List, ListType, NumberUintType, Vector, VectorType, BitVectorType,
 } from "@chainsafe/ssz";
 
 import * as t from "../types";
@@ -51,6 +51,7 @@ export interface IBeaconSSZTypes {
   SignedBeaconBlockHeader: ContainerType<t.SignedBeaconBlockHeader>;
   SigningRoot: ContainerType<t.SigningRoot>;
   DepositDataRootList: ContainerType<List<t.Root>>;
+  AttestationSubnets: BitVectorType;
   // operations
   ProposerSlashing: ContainerType<t.ProposerSlashing>;
   AttesterSlashing: ContainerType<t.AttesterSlashing>;
@@ -73,6 +74,8 @@ export interface IBeaconSSZTypes {
   // wire
   Status: ContainerType<t.Status>;
   Goodbye: BigIntUintType;
+  Ping: BigIntUintType;
+  Metadata: ContainerType<t.Metadata>;
   BeaconBlocksByRangeRequest: ContainerType<t.BeaconBlocksByRangeRequest>;
   BeaconBlocksByRootRequest: ContainerType<t.BeaconBlocksByRootRequest>;
   //api
@@ -121,6 +124,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "SignedBeaconBlockHeader",
   "SigningRoot",
   "DepositDataRootList",
+  "AttestationSubnets",
   // operations
   "ProposerSlashing",
   "AttesterSlashing",
@@ -143,6 +147,8 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   // wire
   "Status",
   "Goodbye",
+  "Ping",
+  "Metadata",
   "BeaconBlocksByRangeRequest",
   "BeaconBlocksByRootRequest",
   //api

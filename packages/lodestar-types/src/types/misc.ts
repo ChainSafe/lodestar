@@ -3,7 +3,7 @@
  * @module types
  */
 
-import {BitList, List, Vector} from "@chainsafe/ssz";
+import {BitList, List, Vector, BitVector} from "@chainsafe/ssz";
 
 import {
   BLSPubkey,
@@ -143,3 +143,5 @@ export interface SigningRoot {
   objectRoot: Root;
   domain: Domain;
 }
+
+export type AttestationSubnets = BitVector;

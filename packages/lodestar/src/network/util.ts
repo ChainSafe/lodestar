@@ -64,6 +64,9 @@ export function getRequestMethodSSZType(
     case Method.Goodbye:
       type = config.types.Goodbye;
       break;
+    case Method.Ping:
+      type = config.types.Ping;
+      break;
     case Method.BeaconBlocksByRange:
       type = config.types.BeaconBlocksByRangeRequest;
       break;
@@ -84,6 +87,12 @@ export function getResponseMethodSSZType(
       break;
     case Method.Goodbye:
       type = config.types.Goodbye;
+      break;
+    case Method.Ping:
+      type = config.types.Ping;
+      break;
+    case Method.Metadata:
+      type = config.types.Metadata;
       break;
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:

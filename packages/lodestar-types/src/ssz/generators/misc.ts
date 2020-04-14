@@ -3,9 +3,9 @@
  */
 
 import {IBeaconParams} from "@chainsafe/lodestar-params";
-import {ContainerType, ListType, BitListType, VectorType, RootType} from "@chainsafe/ssz";
+import {ContainerType, ListType, BitListType, VectorType, RootType, BitVectorType} from "@chainsafe/ssz";
 
-import {DEPOSIT_CONTRACT_TREE_DEPTH} from "../constants";
+import {DEPOSIT_CONTRACT_TREE_DEPTH, ATTESTATION_SUBNET_COUNT} from "../constants";
 import {IBeaconSSZTypes} from "../interface";
 
 export const Fork = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
@@ -150,4 +150,8 @@ export const DepositDataRootList = (ssz: IBeaconSSZTypes): ListType => new ListT
     expandedType: ssz.DepositData,
   }),
   limit: 2 ** DEPOSIT_CONTRACT_TREE_DEPTH,
+});
+
+export const AttestationSubnets = (): BitVectorType => new BitVectorType({
+  length: ATTESTATION_SUBNET_COUNT,
 });
