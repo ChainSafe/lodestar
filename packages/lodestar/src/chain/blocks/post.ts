@@ -4,15 +4,19 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconMetrics} from "../../metrics";
-import {ChainEventEmitter} from "../interface";
+import {ChainEventEmitter, IAttestationProcessor} from "../interface";
 import {Epoch} from "@chainsafe/lodestar-types/lib";
+import {OpPool} from "../../opPool";
 
 export function postProcess(
-  config: IBeaconConfig, db: IBeaconDb, logger: ILogger, metrics: IBeaconMetrics, eventBus: ChainEventEmitter
+  config: IBeaconConfig, db: IBeaconDb, logger: ILogger, metrics: IBeaconMetrics, eventBus: ChainEventEmitter,
+  opPool: OpPool, attestationProcessor: IAttestationProcessor
 ): (source: AsyncIterable<{preState: BeaconState; postState: BeaconState; block: SignedBeaconBlock}>) => Promise<void> {
   return async (source) => {
     return (async function() {
       for await(const item of source) {
+        await opPool.processBlockOperations(item.block);
+        await attestationProcessor.receiveBlock(item.block);
         metrics.currentSlot.set(item.block.message.slot);
         eventBus.emit("processedBlock", item.block);
         const preSlot = item.preState.slot;
