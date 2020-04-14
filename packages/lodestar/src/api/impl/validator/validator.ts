@@ -36,7 +36,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {Signature, verify} from "@chainsafe/bls";
 import {Sync} from "../../../sync";
-import {DomainType} from "../../../constants";
+import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import assert from "assert";
 import {assembleAttestation} from "../../../chain/factory/attestation";
@@ -159,13 +159,15 @@ export class ValidatorApi implements IValidatorApi {
   }
 
 
-  public async produceAggregatedAttestation(attestationData: AttestationData): Promise<Attestation> {
+  public async produceAggregateAndProof(
+    attestationData: AttestationData, aggregator: BLSPubkey
+  ): Promise<AggregateAndProof> {
     const attestations = (await this.getWireAttestations(
       computeEpochAtSlot(this.config, attestationData.slot),
       attestationData.index
     )
     );
-    return attestations.filter((a) => {
+    const aggregate = attestations.filter((a) => {
       return this.config.types.AttestationData.equals(a.data, attestationData);
     }).reduce((aggregate, attestation) => {
       try {
@@ -185,6 +187,11 @@ export class ValidatorApi implements IValidatorApi {
       }
       return aggregate;
     });
+    return {
+      aggregate,
+      aggregatorIndex: await this.db.getValidatorIndex(aggregator),
+      selectionProof: EMPTY_SIGNATURE
+    };
   }
 
   public async subscribeCommitteeSubnet(

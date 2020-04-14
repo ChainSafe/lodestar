@@ -39,7 +39,9 @@ export class MockValidatorApi implements IValidatorApi {
     this.validatorIndex = opts && opts.validatorIndex || 1;
   }
 
-  public async produceAggregatedAttestation(attestationData: AttestationData): Promise<Attestation> {
+  public async produceAggregateAndProof(
+    attestationData: AttestationData, aggregator: BLSPubkey
+  ): Promise<AggregateAndProof> {
     throw new Error("Method not implemented.");
   }
 

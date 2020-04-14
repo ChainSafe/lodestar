@@ -54,7 +54,7 @@ export interface IValidatorApi extends IApi {
     aggregate: AggregateAndProof
   ): Promise<void>;
 
-  produceAggregatedAttestation(attestationData: AttestationData): Promise<Attestation>;
+  produceAggregateAndProof(attestationData: AttestationData, aggregator: BLSPubkey): Promise<AggregateAndProof>;
 
   getWireAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]>;
 

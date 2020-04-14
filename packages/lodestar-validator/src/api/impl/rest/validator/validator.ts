@@ -72,10 +72,12 @@ export class RestValidatorApi implements IValidatorApi {
     return this.config.types.Attestation.fromJson(await this.client.get<Json>(url));
   }
 
-  public async produceAggregatedAttestation(attestationData: AttestationData): Promise<Attestation> {
-    // eslint-disable-next-line max-len
-    const url = `/aggregate_and_proof?attestation_data=${toHexString(this.config.types.AttestationData.serialize(attestationData))}`;
-    return this.config.types.Attestation.fromJson(await this.client.get<Json[]>(url));
+  public async produceAggregateAndProof(
+    attestationData: AttestationData, aggregator: BLSPubkey
+  ): Promise<AggregateAndProof> {
+    const url = `/aggregate_and_proof?aggregator_pubkey=${toHexString(aggregator)}`
+        +`&attestation_data=${toHexString(this.config.types.AttestationData.serialize(attestationData))}`;
+    return this.config.types.AggregateAndProof.fromJson(await this.client.get<Json>(url));
   }
 
   public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {

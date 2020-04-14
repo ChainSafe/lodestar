@@ -139,16 +139,10 @@ export class AttestationService {
     this.logger.info(
       `Aggregating attestations for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
     );
-    const aggregatedAttestation = await this.provider.validator.produceAggregatedAttestation(attestation.data);
-    await this.provider.validator.publishAggregatedAttestation(
-      {
-        aggregate: aggregatedAttestation,
-        selectionProof: this.getSlotSignature(
-          duty.attestationSlot,
-          fork
-        ),
-        aggregatorIndex: (await (this.provider.beacon.getValidator(this.publicKey))).index
-      }
+    const aggregateAndProof = await this.provider.validator.produceAggregateAndProof(attestation.data, this.publicKey);
+    aggregateAndProof.selectionProof = this.getSlotSignature(
+      duty.attestationSlot,
+      fork
     );
     this.logger.info(
       `Published aggregated attestation for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
