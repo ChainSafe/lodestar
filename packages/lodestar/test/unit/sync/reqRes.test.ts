@@ -97,7 +97,7 @@ describe("sync req resp", function () {
     networkStub.hasPeer.returns(true);
     networkStub.getPeers.returns([peerInfo, peerInfo]);
     repsStub.get.returns({
-      latestStatus: null, score: 0
+      latestMetadata: null, latestStatus: null, score: 0
     });
 
 
@@ -120,7 +120,7 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
     repsStub.get.returns({
-      latestStatus: null, score: 0
+      latestMetadata: null, latestStatus: null, score: 0
     });
     reqRespStub.sendResponse.resolves(0);
     dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
@@ -144,7 +144,7 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
     repsStub.get.returns({
-      latestStatus: null, score: 0
+      latestMetadata: null, latestStatus: null, score: 0
     });
     try {
       reqRespStub.sendResponse.throws(new Error("server error"));

@@ -1,2 +1,3 @@
 export const DEPOSIT_CONTRACT_TREE_DEPTH = 2 ** 5; // 32
 export const JUSTIFICATION_BITS_LENGTH = 4;
+export const ATTESTATION_SUBNET_COUNT = 64;

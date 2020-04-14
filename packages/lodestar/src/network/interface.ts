@@ -11,11 +11,14 @@ import {
   ResponseBody,
   SignedBeaconBlock,
   Status,
+  Metadata,
+  Ping,
 } from "@chainsafe/lodestar-types";
 import {Method, RequestId} from "../constants";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {IGossip} from "./gossip/interface";
 import {RpcError} from "./error";
+import {MetadataController} from "./metadata";
 
 
 export type ResponseCallbackFn = ((responseIter: AsyncIterable<ResponseChunk>) => void);
@@ -40,6 +43,8 @@ export interface IReqResp extends ReqEventEmitter {
 
   status(peerInfo: PeerInfo, request: Status): Promise<Status>;
   goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void>;
+  ping(peerInfo: PeerInfo, request: Ping): Promise<Ping>;
+  metadata(peerInfo: PeerInfo): Promise<Metadata>;
   beaconBlocksByRange(peerInfo: PeerInfo, request: BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[]>;
   beaconBlocksByRoot(peerInfo: PeerInfo, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]>;
 }
@@ -55,6 +60,7 @@ export type NetworkEventEmitter = StrictEventEmitter<EventEmitter, INetworkEvent
 export interface INetwork extends NetworkEventEmitter {
   reqResp: IReqResp;
   gossip: IGossip;
+  metadata: MetadataController;
   /**
    * Our network identity
    */
