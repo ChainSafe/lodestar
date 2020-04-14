@@ -27,15 +27,17 @@ export const registerProposerDutiesEndpoint: LodestarRestApiEndpoint = (fastify,
     "/duties/:epoch/proposer",
     opts,
     async (request, reply) => {
-      const responseValue = await api.validator.getProposerDuties(request.params.epoch);
-      const response: {[k: number]: string} = {};
-      responseValue.forEach((value, key) => {
-        response[key] = config.types.BLSPubkey.toJson(value) as string;
-      });
-      reply
-        .code(200)
-        .type("application/json")
-        .send(response);
+      try {
+        const responseValue = await api.validator.getProposerDuties(request.params.epoch);
+        const response = responseValue.map(duty => config.types.ProposerDuty.toJson(duty));
+        reply
+          .code(200)
+          .type("application/json")
+          .send(response);
+      } catch (e) {
+        console.log(e);
+        throw e;
+      }
     }
   );
 };

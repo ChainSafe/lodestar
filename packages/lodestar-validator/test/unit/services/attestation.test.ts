@@ -224,9 +224,10 @@ describe("validator attestation service", function () {
       dbStub,
       logger
     );
-    const duty: ValidatorDuty = {
+    const duty: AttesterDuty = {
       attestationSlot: 1,
       committeeIndex: 1,
+      aggregatorModulo: 1,
       validatorPubkey: keypair.publicKey.toBytesCompressed()
     };
     service["nextAttesterDuties"].set(10, {...duty, isAggregator: false});
@@ -253,7 +254,6 @@ describe("validator attestation service", function () {
       rpcClientStub.validator
         .produceAttestation.withArgs(
           keypair.publicKey.toBytesCompressed(),
-          false,
           1,
           1
         ).calledOnce

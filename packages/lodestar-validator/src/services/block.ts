@@ -25,7 +25,7 @@ export default class BlockProposingService {
   private readonly db: IValidatorDB;
   private readonly logger: ILogger;
 
-  private nextProposalSlot: Slot|null = null;
+  private nextProposalSlots: Slot[] = [];
 
   public constructor(
     config: IBeaconConfig,
@@ -49,21 +49,17 @@ export default class BlockProposingService {
   };
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
-    const epochProposers = await this.provider.validator.getProposerDuties(epoch, [this.publicKey]);
-    if(!epochProposers) {
+    const proposerDuties = await this.provider.validator.getProposerDuties(epoch, [this.publicKey]);
+    if(!proposerDuties) {
       return;
     }
-    Array.from(epochProposers.entries()).findIndex((epochProposerEntry: [Slot, BLSPubkey]) => {
-      if(this.config.types.BLSPubkey.equals(epochProposerEntry[1], this.publicKey)) {
-        this.nextProposalSlot = epochProposerEntry[0];
-        return true;
-      }
-      return false;
-    });
+    this.nextProposalSlots = proposerDuties.filter((proposerDuty) => {
+      return this.config.types.BLSPubkey.equals(proposerDuty.proposerPubkey, this.publicKey);
+    }).map((duty) => duty.slot);
   };
 
   public onNewSlot = async(slot: Slot): Promise<void> => {
-    if(this.nextProposalSlot === slot) {
+    if(this.nextProposalSlots.includes(slot)) {
       await this.createAndPublishBlock(slot, (await this.provider.beacon.getFork()).fork);
     }
   };
@@ -122,7 +118,7 @@ export default class BlockProposingService {
     // get last proposed block from database and check if belongs in same epoch
     const lastProposedBlock = await this.db.getBlock(this.publicKey);
     if(!lastProposedBlock) return  false;
-    return computeEpochAtSlot(this.config, lastProposedBlock.message.slot) === computeEpochAtSlot(this.config, slot);
+    return this.config.types.Slot.equals(lastProposedBlock.message.slot, slot);
   }
 
   private async storeBlock(signedBlock: SignedBeaconBlock): Promise<void> {

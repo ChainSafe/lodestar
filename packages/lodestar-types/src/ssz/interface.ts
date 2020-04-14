@@ -68,6 +68,7 @@ export interface IBeaconSSZTypes {
   CommitteeAssignment: ContainerType<t.CommitteeAssignment>;
   SyncingStatus: ContainerType<t.SyncingStatus>;
   AttesterDuty: ContainerType<t.AttesterDuty>;
+  ProposerDuty: ContainerType<t.ProposerDuty>;
   // wire
   Status: ContainerType<t.Status>;
   Goodbye: BigIntUintType;
@@ -146,5 +147,6 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "ForkResponse",
   "SyncingStatus",
   "AttesterDuty",
+  "ProposerDuty",
   "ValidatorResponse"
 ];

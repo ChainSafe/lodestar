@@ -49,7 +49,9 @@ export class BeaconApi implements IBeaconApi {
     });
     if(index !==-1) {
       return {
-        ...state.validators[index],
+        validator: state.validators[index],
+        balance: state.balances[index],
+        pubkey: pubkey,
         index
       };
     } else {

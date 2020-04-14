@@ -26,6 +26,13 @@ export const AttesterDuty = (ssz: IBeaconSSZTypes): ContainerType => new Contain
   },
 });
 
+export const ProposerDuty = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    slot: ssz.Slot,
+    proposerPubkey: ssz.BLSPubkey
+  },
+});
+
 export const SyncingStatus = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
     startingBlock: ssz.Uint64,
@@ -36,8 +43,10 @@ export const SyncingStatus = (ssz: IBeaconSSZTypes): ContainerType => new Contai
 
 export const ValidatorResponse = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
-    ...ssz.Validator.fields,
-    index: ssz.ValidatorIndex
+    index: ssz.ValidatorIndex,
+    pubkey: ssz.BLSPubkey,
+    balance: ssz.Gwei,
+    validator: ssz.Validator
   },
 });
 

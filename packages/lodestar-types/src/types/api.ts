@@ -35,6 +35,11 @@ export interface AttesterDuty {
   committeeIndex: CommitteeIndex;
 }
 
+export interface ProposerDuty {
+  slot: Slot;
+  proposerPubkey: BLSPubkey;
+}
+
 export interface SyncingStatus {
   // The block at which syncing started (will only be reset, after the sync reached his head)
   startingBlock: Uint64;
@@ -48,18 +53,6 @@ export interface ValidatorResponse {
   index: ValidatorIndex;
   // BLS public key
   pubkey: BLSPubkey;
-  // Commitment to pubkey for withdrawals
-  withdrawalCredentials: Bytes32;
-  // Balance at stake
-  effectiveBalance: Gwei;
-  // Was the validator slashed
-  slashed: boolean;
-  // When criteria for activation were met
-  activationEligibilityEpoch: Epoch;
-  // Epoch when validator activated
-  activationEpoch: Epoch;
-  // Epoch when validator exited
-  exitEpoch: Epoch;
-  // When validator can withdraw or transfer funds
-  withdrawableEpoch: Epoch;
+  balance: Gwei;
+  validator: Validator;
 }

@@ -7,14 +7,14 @@ import {
   BLSPubkey,
   BLSSignature,
   CommitteeIndex,
-  Epoch,
+  Epoch, ProposerDuty,
   SignedBeaconBlock,
   Slot
 } from "@chainsafe/lodestar-types";
 
 export interface IValidatorApi {
   
-  getProposerDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<Map<Slot, BLSPubkey>>;
+  getProposerDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<ProposerDuty[]>;
 
   getAttesterDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]>;
 

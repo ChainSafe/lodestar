@@ -46,7 +46,7 @@ describe("get proposers api impl", function () {
 
     );
     const result = await api.getProposerDuties(1);
-    expect(result.size).to.be.equal(config.params.SLOTS_PER_EPOCH);
+    expect(result.length).to.be.equal(config.params.SLOTS_PER_EPOCH);
   });
 
   it("should get future proposers", async function () {
@@ -63,7 +63,7 @@ describe("get proposers api impl", function () {
 
     );
     const result = await api.getProposerDuties(2);
-    expect(result.size).to.be.equal(config.params.SLOTS_PER_EPOCH);
+    expect(result.length).to.be.equal(config.params.SLOTS_PER_EPOCH);
   });
     
 });

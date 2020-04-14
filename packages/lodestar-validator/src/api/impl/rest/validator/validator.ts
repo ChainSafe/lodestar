@@ -8,7 +8,7 @@ import {
   BLSSignature,
   Bytes96,
   CommitteeIndex,
-  Epoch,
+  Epoch, ProposerDuty,
   SignedBeaconBlock,
   Slot
 } from "@chainsafe/lodestar-types";
@@ -29,15 +29,10 @@ export class RestValidatorApi implements IValidatorApi {
     this.config = config;
   }
 
-  public async getProposerDuties(epoch: Epoch): Promise<Map<Slot, BLSPubkey>> {
+  public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
     const url = `/duties/${epoch.toString()}/proposer`;
-    const responseData = await this.client.get<Record<Slot, string>>(url);
-
-    const result = new Map<Slot, BLSPubkey>();
-    for(const [key, value] of Object.entries(responseData)) {
-      result.set(Number(key), fromHexString(value));
-    }
-    return result;
+    const responseData = await this.client.get<Json[]>(url);
+    return responseData.map(this.config.types.ProposerDuty.fromJson);
   }
 
   public async getAttesterDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {

@@ -47,14 +47,14 @@ describe("Test validator rest API", function () {
   });
 
   it("should return proposer duties", async function () {
-    validatorApi.getProposerDuties.resolves(new Map([[1, Buffer.alloc(48)]]));
+    validatorApi.getProposerDuties.resolves([{slot: 1, proposerPubkey: Buffer.alloc(48)}]);
     const response = await supertest(restApi.server.server)
       .get(
         "/validator/duties/2/proposer",
       )
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body[1]).to.be.equal(toHexString(Buffer.alloc(48)));
+    expect(response.body[0].proposerPubkey).to.be.equal(toHexString(Buffer.alloc(48)));
     expect(validatorApi.getProposerDuties.withArgs(2).calledOnce).to.be.true;
   });
 

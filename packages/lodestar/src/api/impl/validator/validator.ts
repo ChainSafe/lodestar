@@ -11,7 +11,7 @@ import {
   BLSSignature,
   Bytes96,
   CommitteeIndex,
-  Epoch,
+  Epoch, ProposerDuty,
   SignedBeaconBlock,
   Slot
 } from "@chainsafe/lodestar-types";
@@ -112,20 +112,20 @@ export class ValidatorApi implements IValidatorApi {
     ]);
   }
 
-  public async getProposerDuties(epoch: Epoch): Promise<Map<Slot, BLSPubkey>> {
+  public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
     const state = await this.chain.getHeadState();
     assert(epoch >= 0 && epoch <= computeEpochAtSlot(this.config, state.slot) + 2);
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
     if(state.slot < startSlot) {
       processSlots(this.config, state, startSlot);
     }
-    const slotProposerMapping: Map<Slot, BLSPubkey> = new Map();
+    const duties: ProposerDuty[] = [];
 
     for(let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot ++) {
       const blockProposerIndex = getBeaconProposerIndex(this.config, {...state, slot});
-      slotProposerMapping.set(slot, state.validators[blockProposerIndex].pubkey);
+      duties.push({slot, proposerPubkey: state.validators[blockProposerIndex].pubkey});
     }
-    return slotProposerMapping;
+    return duties;
   }
 
   public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {

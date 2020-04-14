@@ -9,12 +9,12 @@ import {
   Deposit,
   Eth1Data,
   Number64,
+  ProposerDuty,
   SignedBeaconBlock,
-  Slot,
   ValidatorIndex
 } from "@chainsafe/lodestar-types";
 import {IValidatorApi} from "../../../src/api/interface/validators";
-import {generateEmptyBlock} from "../../utils/block";
+import {generateEmptyBlock} from "../block";
 
 export interface IMockValidatorAPIOpts {
   head?: SignedBeaconBlock;
@@ -47,7 +47,7 @@ export class MockValidatorApi implements IValidatorApi {
     return undefined;
   }
 
-  getProposerDuties(epoch: number): Promise<Map<Slot, BLSPubkey>> {
+  getProposerDuties(epoch: number): Promise<ProposerDuty[]> {
     return undefined;
   }
 
