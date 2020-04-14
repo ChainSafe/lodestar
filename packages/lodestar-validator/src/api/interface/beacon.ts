@@ -16,7 +16,7 @@ export interface IBeaconApi {
   getFork(): Promise<{fork: Fork; chainId: Uint64}>;
 
   /**
-     * Requests the BeaconNode to provide which fork version it is currently on.
+     * Requests the BeaconNode to provide validator details for given public key.
      */
   getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse|null>;
 

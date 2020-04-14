@@ -26,7 +26,7 @@ export interface IValidatorApi {
   produceBlock(slot: Slot, randaoReveal: Uint8Array): Promise<BeaconBlock>;
 
   /**
-   * Requests that the BeaconNode produce an IndexedAttestation,
+   * Requests that the BeaconNode produce an Attestation,
    * with a blank signature field, which the ValidatorClient will then sign.
    */
   produceAttestation(validatorPubKey: BLSPubkey, index: CommitteeIndex, slot: Slot):
@@ -39,7 +39,7 @@ export interface IValidatorApi {
   publishBlock(signedBlock: SignedBeaconBlock): Promise<void>;
 
   /**
-   * Instructs the BeaconNode to publish a newly signed IndexedAttestation object,
+   * Instructs the BeaconNode to publish a newly signed Attestation object,
    * to be incorporated into the beacon chain.
    */
   publishAttestation(attestation: Attestation): Promise<void>;
