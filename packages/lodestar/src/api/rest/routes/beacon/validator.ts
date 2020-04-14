@@ -21,7 +21,7 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   }
 };
 
-export const registerGenesisTimeEndpoint: LodestarRestApiEndpoint = (server, {api, config}): void => {
+export const registerGetValidatorEndpoint: LodestarRestApiEndpoint = (server, {api, config}): void => {
   server.get<IQuery, {}, unknown>(
     "/validators/{pubkey}",
     opts,
