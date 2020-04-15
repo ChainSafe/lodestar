@@ -10,7 +10,7 @@ import {
   Number64,
   SignedBeaconBlock,
   SyncingStatus,
-  Validator, ValidatorResponse
+  ValidatorResponse
 } from "@chainsafe/lodestar-types";
 
 export interface IBeaconApi extends IApi {

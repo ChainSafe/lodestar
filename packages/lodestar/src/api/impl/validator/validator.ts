@@ -145,7 +145,7 @@ export class ValidatorApi implements IValidatorApi {
     });
   }
 
-  public async publishAggregatedAttestation(
+  public async publishAggregateAndProof(
     aggregated: AggregateAndProof
   ): Promise<void> {
     await Promise.all([
@@ -169,23 +169,23 @@ export class ValidatorApi implements IValidatorApi {
     );
     const aggregate = attestations.filter((a) => {
       return this.config.types.AttestationData.equals(a.data, attestationData);
-    }).reduce((aggregate, attestation) => {
+    }).reduce((current, attestation) => {
       try {
-        aggregate.signature = Signature
-          .fromCompressedBytes(aggregate.signature.valueOf() as Uint8Array)
+        current.signature = Signature
+          .fromCompressedBytes(current.signature.valueOf() as Uint8Array)
           .add(Signature.fromCompressedBytes(attestation.signature.valueOf() as Uint8Array))
           .toBytesCompressed();
         let index = 0;
         for(const bit of attestation.aggregationBits) {
           if(bit) {
-            aggregate.aggregationBits[index] = true;
+            current.aggregationBits[index] = true;
           }
           index++;
         }
       } catch (e) {
         //ignored
       }
-      return aggregate;
+      return current;
     });
     return {
       aggregate,

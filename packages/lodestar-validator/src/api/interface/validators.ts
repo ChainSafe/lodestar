@@ -44,7 +44,7 @@ export interface IValidatorApi {
    */
   publishAttestation(attestation: Attestation): Promise<void>;
 
-  publishAggregatedAttestation(
+  publishAggregateAndProof(
     aggregated: AggregateAndProof
   ): Promise<void>;
 

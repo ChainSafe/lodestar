@@ -57,10 +57,6 @@ export class MockValidatorApi implements IValidatorApi {
     return undefined;
   }
 
-  isAggregator(slot: number, committeeIndex: number, slotSignature: Buffer): Promise<boolean> {
-    return undefined;
-  }
-
   produceAttestation(validatorPubKey: Buffer, index: number, slot: number): Promise<Attestation> {
     return undefined;
   }
@@ -69,7 +65,7 @@ export class MockValidatorApi implements IValidatorApi {
     return undefined;
   }
 
-  publishAggregatedAttestation(aggregated: AggregateAndProof): Promise<void> {
+  publishAggregateAndProof(aggregated: AggregateAndProof): Promise<void> {
     return undefined;
   }
 

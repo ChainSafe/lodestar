@@ -20,18 +20,13 @@ export const registerPublishAggregateAndProofEndpoint: LodestarRestApiEndpoint =
     "/aggregate_and_proof",
     opts,
     async (request, reply) => {
-      try {
-        await Promise.all(
-          request.body.map((payload) => {
-            api.validator.publishAggregatedAttestation(
-              config.types.AggregateAndProof.fromJson(payload)
-            );
-          })
-        );
-      } catch (e) {
-        reply.code(500).send();
-        return;
-      }
+      await Promise.all(
+        request.body.map((payload) => {
+          api.validator.publishAggregateAndProof(
+            config.types.AggregateAndProof.fromJson(payload)
+          );
+        })
+      );
       reply
         .code(200)
         .type("application/json")

@@ -1,15 +1,5 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
-import {
-  BLSPubkey,
-  BLSSignature,
-  Bytes32,
-  CommitteeIndex, Epoch,
-  Gwei,
-  Number64,
-  Slot,
-  Uint64,
-  ValidatorIndex
-} from "./primitive";
+import {BLSPubkey, BLSSignature, CommitteeIndex, Gwei, Number64, Slot, Uint64, ValidatorIndex} from "./primitive";
 import {Fork, Validator} from "./misc";
 
 export interface SubscribeToCommitteeSubnetPayload {

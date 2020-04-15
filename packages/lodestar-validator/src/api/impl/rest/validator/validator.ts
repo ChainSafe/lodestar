@@ -8,7 +8,8 @@ import {
   BLSSignature,
   Bytes96,
   CommitteeIndex,
-  Epoch, ProposerDuty,
+  Epoch,
+  ProposerDuty,
   SignedBeaconBlock,
   Slot
 } from "@chainsafe/lodestar-types";
@@ -16,7 +17,7 @@ import {IValidatorApi} from "../../../interface/validators";
 import {HttpClient} from "../../../../util";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {fromHexString, Json, toHexString} from "@chainsafe/ssz";
+import {Json, toHexString} from "@chainsafe/ssz";
 
 export class RestValidatorApi implements IValidatorApi {
 
@@ -42,7 +43,7 @@ export class RestValidatorApi implements IValidatorApi {
     return responseData.map(value => this.config.types.AttesterDuty.fromJson(value));
   }
 
-  public async publishAggregatedAttestation(
+  public async publishAggregateAndProof(
     aggregate: AggregateAndProof,
   ): Promise<void> {
     return this.client.post(

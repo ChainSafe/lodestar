@@ -144,6 +144,7 @@ export class AttestationService {
       duty.attestationSlot,
       fork
     );
+    await this.provider.validator.publishAggregateAndProof(aggregateAndProof);
     this.logger.info(
       `Published aggregated attestation for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
     );

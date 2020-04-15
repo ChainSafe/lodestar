@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {after, afterEach, describe, it} from "mocha";
+import {afterEach, describe, it} from "mocha";
 import supertest from "supertest";
 import sinon, {SinonStubbedInstance} from "sinon";
 
@@ -82,7 +82,7 @@ describe("Test validator rest API", function () {
       )
       .send([config.types.AggregateAndProof.toJson(aggregateAndProof) as object])
       .expect(200);
-    expect(validatorApi.publishAggregatedAttestation.calledOnce).to.be.true;
+    expect(validatorApi.publishAggregateAndProof.calledOnce).to.be.true;
   });
 
   it("should throw error on invalid request for block production", async function () {

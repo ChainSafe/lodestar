@@ -50,7 +50,7 @@ export interface IValidatorApi extends IApi {
    */
   publishAttestation(attestation: Attestation): Promise<void>;
 
-  publishAggregatedAttestation(
+  publishAggregateAndProof(
     aggregate: AggregateAndProof
   ): Promise<void>;
 
