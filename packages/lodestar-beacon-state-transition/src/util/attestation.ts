@@ -50,7 +50,7 @@ export function isValidIndexedAttestation(
 ): boolean {
   const indices = Array.from(indexedAttestation.attestingIndices);
 
-  //  Verify indices are sorted
+  //  Verify indices are sorted and unique
   if (!isSorted([...new Set(indices).values()])) {
     return false;
   }

@@ -71,6 +71,9 @@ export function initializeBeaconStateFromEth1(
     }
   });
 
+  // Set genesis validators root for domain separation and chain versioning
+  state.genesisValidatorsRoot = config.types.BeaconState.fields.validators.hashTreeRoot(state.validators);
+
   return state;
 }
 
