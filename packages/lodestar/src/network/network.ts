@@ -61,7 +61,8 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     await this.libp2p.start();
     await this.reqResp.start();
     await this.gossip.start();
-    this.libp2p.on("peer:connect", this.emitPeerConnect);
+    // @ts-ignore
+    this.libp2p.peerStore.on("peer", this.emitPeerConnect);
     this.libp2p.on("peer:disconnect", this.emitPeerDisconnect);
     const multiaddresses = this.libp2p.peerInfo.multiaddrs.toArray().map((m) => m.toString()).join(",");
     this.logger.important(`PeerId ${this.libp2p.peerInfo.id.toB58String()}, Multiaddrs ${multiaddresses}`);
@@ -77,12 +78,11 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   }
 
   public getPeers(): PeerInfo[] {
-    return Array.from(this.libp2p.peerStore.peers.values()).filter(
-      (peerInfo) => this.libp2p.registrar.getConnection(peerInfo));
+    return Array.from(this.libp2p.peerStore.peers.values());
   }
 
   public hasPeer(peerInfo: PeerInfo): boolean {
-    return !!this.libp2p.registrar.getConnection(peerInfo);
+    return this.libp2p.peerStore.peers.has(peerInfo.id.toB58String());
   }
 
   public async connect(peerInfo: PeerInfo): Promise<void> {

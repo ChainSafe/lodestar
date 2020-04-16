@@ -12,7 +12,7 @@ import {
   Root,
   SignedBeaconBlock,
   Slot,
-  Status,
+  Status, Version,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
@@ -24,6 +24,7 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ISyncOptions, ISyncReqResp} from "./interface";
 import {ReputationStore} from "../IReputation";
 import {BlockRepository} from "../../db/api/beacon/repositories";
+import {sleep} from "../../util/sleep";
 
 export interface ISyncReqRespModules {
   config: IBeaconConfig;
@@ -64,12 +65,18 @@ export class SyncReqResp implements ISyncReqResp {
   }
 
   public async start(): Promise<void> {
+    // TODO: enable after we add peerbook persisting
+    // //refresh peer statuses
+    // const myStatus = await this.createStatus();
+    // await Promise.all(
+    //   this.network.getPeers().map(async (peerInfo) => {
+    //     this.reps.get(peerInfo.id.toB58String()).latestStatus =
+    //         await this.network.reqResp.status(peerInfo, myStatus);
+    //   }
+    //   )
+    // );
     this.network.on("peer:connect", this.handshake);
     this.network.reqResp.on("request", this.onRequest);
-    const myStatus = await this.createStatus();
-    await Promise.all(
-      this.network.getPeers().map((peerInfo) =>
-        this.network.reqResp.status(peerInfo, myStatus)));
   }
 
   public async stop(): Promise<void> {
@@ -101,6 +108,9 @@ export class SyncReqResp implements ISyncReqResp {
   };
 
   public async onStatus(peerInfo: PeerInfo, id: RequestId, request: Status): Promise<void> {
+    if (await this.shouldDisconnectOnStatus(request)) {
+      await this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
+    }
     // set status on peer
     this.reps.get(peerInfo.id.toB58String()).latestStatus = request;
     // send status response
@@ -108,16 +118,13 @@ export class SyncReqResp implements ISyncReqResp {
       const status = await this.createStatus();
       this.network.reqResp.sendResponse(id, null, [status]);
     } catch (e) {
+      this.logger.error("Failed to create response status", e.message);
       this.network.reqResp.sendResponse(id, e, null);
-    }
-    if (await this.shouldDisconnectOnStatus(request)) {
-      await this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
     }
   }
 
   public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
-    const headBlock = await this.db.block.getChainHead();
-    const state = await this.db.state.get(headBlock.message.stateRoot.valueOf() as Uint8Array);
+    const state = await this.chain.getHeadState();
     // peer is on a different fork version
     return !this.config.types.Version.equals(state.fork.currentVersion, request.headForkVersion);
 
@@ -187,22 +194,25 @@ export class SyncReqResp implements ISyncReqResp {
     let headSlot: Slot,
       headRoot: Root,
       finalizedEpoch: Epoch,
-      finalizedRoot: Root;
+      finalizedRoot: Root,
+      headForkVersion: Version;
     if (!this.chain.isInitialized()) {
       headSlot = 0;
       headRoot = ZERO_HASH;
+      headRoot = this.config.params.GENESIS_FORK_VERSION;
       finalizedEpoch = 0;
       finalizedRoot = ZERO_HASH;
     } else {
       headSlot = await this.db.chain.getChainHeadSlot();
-      const headBlock = await this.db.block.getChainHead();
-      const state = await this.db.state.get(headBlock.message.stateRoot.valueOf() as Uint8Array);
+      const headBlock = await this.chain.getHeadBlock();
+      const state = await this.chain.getHeadState();
       headRoot = this.config.types.BeaconBlock.hashTreeRoot(headBlock.message);
       finalizedEpoch = state.finalizedCheckpoint.epoch;
       finalizedRoot = state.finalizedCheckpoint.root;
+      headForkVersion = state.fork.currentVersion;
     }
     return {
-      headForkVersion: (await this.chain.getHeadState()).fork.currentVersion,
+      headForkVersion,
       finalizedRoot,
       finalizedEpoch,
       headRoot,
@@ -212,7 +222,7 @@ export class SyncReqResp implements ISyncReqResp {
 
   private handshake = async (peerInfo: PeerInfo): Promise<void> => {
     const randomDelay = Math.floor(Math.random() * 5000);
-    await new Promise((resolve) => setTimeout(resolve, randomDelay));
+    await sleep(randomDelay);
     if (
       this.network.hasPeer(peerInfo) &&
       !this.reps.get(peerInfo.id.toB58String()).latestStatus
