@@ -4,12 +4,8 @@
 
 import {EventEmitter} from "events";
 
-import {BeaconState, Epoch, ProposerSlashing, Slot, ValidatorIndex, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {Epoch, SignedBeaconBlock, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-
-import {
-  signedBlockToSignedHeader, computeEpochAtSlot, getBeaconProposerIndex,
-} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconDb} from "../db";
 import {IOpPoolOptions} from "./options";
 import {
@@ -82,35 +78,7 @@ export class OpPool extends EventEmitter {
       this.depositData.removeOld(signedBlock.message.body.eth1Data.depositCount),
       this.proposerSlashings.remove(signedBlock.message.body.proposerSlashings),
       this.attesterSlashings.remove(signedBlock.message.body.attesterSlashings),
-      this.aggregateAndProofs.removeIncluded(signedBlock.message.body.attestations),
-      this.checkDuplicateProposer(signedBlock)
+      this.aggregateAndProofs.removeIncluded(signedBlock.message.body.attestations)
     ]);
-  }
-
-  public async checkDuplicateProposer(signedBlock: SignedBeaconBlock): Promise<void> {
-    const epoch: Epoch = computeEpochAtSlot(this.config, signedBlock.message.slot);
-    const existingProposers: Map<ValidatorIndex, Slot> = this.proposers.get(epoch);
-    const state: BeaconState = await this.db.state.getLatest();
-
-    const proposerIndex: ValidatorIndex = await getBeaconProposerIndex(this.config, state);
-
-    // Check if proposer already exists
-    if (existingProposers && existingProposers.has(proposerIndex)) {
-      const existingSlot = this.proposers.get(epoch).get(proposerIndex);
-      const prevBlock = await this.db.block.getBlockBySlot(existingSlot);
-
-      // Create slashing
-      const slashing: ProposerSlashing = {
-        proposerIndex: proposerIndex,
-        signedHeader1: signedBlockToSignedHeader(this.config, prevBlock),
-        signedHeader2: signedBlockToSignedHeader(this.config, signedBlock)
-      };
-      await this.proposerSlashings.receive(slashing);
-    } else {
-      const proposers: Map<ValidatorIndex, Slot> = new Map();
-      proposers.set(proposerIndex, signedBlock.message.slot);
-      this.proposers.set(epoch, proposers);
-    }
-    // TODO Prune map every so often
   }
 }

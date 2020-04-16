@@ -26,8 +26,10 @@ describe("block proposing service", function () {
     sandbox.restore();
   });
 
-  it("should not produce block in same epoch", async function () {
-    dbStub.getBlock.resolves(generateEmptySignedBlock());
+  it("should not produce block in same slot", async function () {
+    const lastBlock = generateEmptySignedBlock();
+    lastBlock.message.slot = 1;
+    dbStub.getBlock.resolves(lastBlock);
     const service = new BlockProposingService(
       config, Keypair.generate(), rpcClientStub, dbStub, logger
     );

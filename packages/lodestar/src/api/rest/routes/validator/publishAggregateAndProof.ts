@@ -1,48 +1,32 @@
 import {IncomingMessage, Server, ServerResponse} from "http";
-import fastify, {DefaultQuery} from "fastify";
-import {fromHexString} from "@chainsafe/ssz";
+import fastify, {DefaultHeaders, DefaultParams, DefaultQuery} from "fastify";
+import {Json} from "@chainsafe/ssz";
 import {LodestarRestApiEndpoint} from "../../interface";
 
-interface IQuery extends DefaultQuery {
-  "validator_pubkey": string;
-  "slot_signature": string;
-}
+type IBody = Json[];
 
-const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerResponse, IQuery> = {
+const opts: fastify.RouteShorthandOptions<
+Server, IncomingMessage, ServerResponse, DefaultQuery, DefaultParams, DefaultHeaders, IBody
+> = {
   schema: {
-    querystring: {
-      type: "object",
-      required: ["validator_pubkey", "slot_signature"],
-      properties: {
-        "validator_pubkey": {
-          type: "string"
-        },
-        "slot_signature": {
-          type: "string"
-        }
-      }
-    },
     body: {
-      type: "object",
+      type: "array",
     },
   }
 };
 
 export const registerPublishAggregateAndProofEndpoint: LodestarRestApiEndpoint = (fastify, {api, config}): void => {
-  fastify.post<IQuery>(
-    "/aggregate",
+  fastify.post<DefaultQuery, DefaultParams, DefaultHeaders, IBody>(
+    "/aggregate_and_proof",
     opts,
     async (request, reply) => {
-      try {
-        await api.validator.publishAggregatedAttestation(
-          config.types.Attestation.fromJson(request.body),
-          fromHexString(request.query.validator_pubkey),
-          fromHexString(request.query.slot_signature)
-        );
-      } catch (e) {
-        reply.code(500).send();
-        return;
-      }
+      await Promise.all(
+        request.body.map((payload) => {
+          api.validator.publishAggregateAndProof(
+            config.types.AggregateAndProof.fromJson(payload)
+          );
+        })
+      );
       reply
         .code(200)
         .type("application/json")

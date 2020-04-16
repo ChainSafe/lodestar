@@ -1,14 +1,36 @@
-import {Bytes32, Fork, SyncingStatus, BeaconBlock, BeaconState, Number64, Uint64} from "@chainsafe/lodestar-types";
+import {
+  BeaconBlock,
+  BeaconState,
+  BLSPubkey,
+  Bytes32,
+  Fork,
+  Number64,
+  SyncingStatus,
+  Uint64,
+  ValidatorResponse
+} from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "../../../interface/beacon";
 import {HttpClient} from "../../../../util";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {toHexString} from "@chainsafe/ssz";
 
 export class RestBeaconApi implements IBeaconApi {
 
-  private client: HttpClient;
+  private readonly client: HttpClient;
 
-  public constructor(restUrl: string, logger: ILogger) {
-    this.client = new HttpClient({urlPrefix: `${restUrl}/node`}, {logger});
+  private readonly config: IBeaconConfig;
+
+  public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
+    this.client = new HttpClient({urlPrefix: `${restUrl}/validator`}, {logger});
+    this.config = config;
+  }
+
+
+  public async getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse|null> {
+    return this.config.types.ValidatorResponse.fromJson(
+      await this.client.get(`/validators/${toHexString(pubkey)}`)
+    );
   }
 
   public async getClientVersion(): Promise<Bytes32> {
