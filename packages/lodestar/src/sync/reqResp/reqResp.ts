@@ -14,6 +14,7 @@ import {
   Slot,
   Status,
   Ping,
+  Version,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
@@ -25,6 +26,7 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ISyncOptions, ISyncReqResp} from "./interface";
 import {ReputationStore} from "../IReputation";
 import {BlockRepository} from "../../db/api/beacon/repositories";
+import {sleep} from "../../util/sleep";
 
 export interface ISyncReqRespModules {
   config: IBeaconConfig;
@@ -106,6 +108,9 @@ export class SyncReqResp implements ISyncReqResp {
   };
 
   public async onStatus(peerInfo: PeerInfo, id: RequestId, request: Status): Promise<void> {
+    if (await this.shouldDisconnectOnStatus(request)) {
+      await this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
+    }
     // set status on peer
     this.reps.get(peerInfo.id.toB58String()).latestStatus = request;
     // send status response
@@ -113,6 +118,7 @@ export class SyncReqResp implements ISyncReqResp {
       const status = await this.createStatus();
       this.network.reqResp.sendResponse(id, null, [status]);
     } catch (e) {
+      this.logger.error("Failed to create response status", e.message);
       this.network.reqResp.sendResponse(id, e, null);
     }
     if (await this.shouldDisconnectOnStatus(request)) {
@@ -200,16 +206,19 @@ export class SyncReqResp implements ISyncReqResp {
     let headSlot: Slot,
       headRoot: Root,
       finalizedEpoch: Epoch,
-      finalizedRoot: Root;
+      finalizedRoot: Root,
+      headForkVersion: Version;
     if (!this.chain.isInitialized()) {
       headSlot = 0;
       headRoot = ZERO_HASH;
       finalizedEpoch = 0;
       finalizedRoot = ZERO_HASH;
     } else {
-      headSlot = await this.db.chain.getChainHeadSlot();
-      const headBlock = await this.db.block.getChainHead();
-      const state = await this.db.state.get(headBlock.message.stateRoot.valueOf() as Uint8Array);
+      const [headBlock, state] = await Promise.all([
+          this.chain.getHeadBlock(),
+          this.chain.getHeadState()
+      ])
+      headSlot = state.slot;
       headRoot = this.config.types.BeaconBlock.hashTreeRoot(headBlock.message);
       finalizedEpoch = state.finalizedCheckpoint.epoch;
       finalizedRoot = state.finalizedCheckpoint.root;
@@ -225,7 +234,7 @@ export class SyncReqResp implements ISyncReqResp {
 
   private handshake = async (peerInfo: PeerInfo): Promise<void> => {
     const randomDelay = Math.floor(Math.random() * 5000);
-    await new Promise((resolve) => setTimeout(resolve, randomDelay));
+    await sleep(randomDelay);
     if (
       this.network.hasPeer(peerInfo) &&
       !this.reps.get(peerInfo.id.toB58String()).latestStatus

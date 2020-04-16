@@ -107,6 +107,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         }
       }();
       this.responseListener.emit(createResponseEvent(id), asyncIter);
+      this.logger.verbose("Sent response for request " + id);
     }
   }
 
@@ -195,7 +196,6 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     requestOnly?: boolean
   ): Promise<T> {
     return await new Promise((resolve, reject) => {
-      this.logger.verbose(`send ${method} request to ${peerInfo.id.toB58String()}`);
       let responseTimer = setTimeout(() => reject(new RpcError(RpcErrorCode.ERR_RESP_TIMEOUT)), TTFB_TIMEOUT);
       const renewTimer = (): void => {
         clearTimeout(responseTimer);
