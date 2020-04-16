@@ -17,15 +17,20 @@ import {
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import EventSource from "eventsource";
 import {IApiClient} from "../api";
-import {aggregateSignatures, Keypair, PrivateKey} from "@chainsafe/bls";
+import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {IValidatorDB} from "..";
 import {toHexString} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {
-  computeEpochAtSlot, DomainType, getDomain, isSlashableAttestationData, computeSigningRoot,
+  computeEpochAtSlot,
+  computeSigningRoot,
+  DomainType,
+  getDomain,
+  isSlashableAttestationData,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IAttesterDuty} from "../types";
+import {isValidatorAggregator} from "../util/aggregator";
 
 export class AttestationService {
 
@@ -61,25 +66,21 @@ export class AttestationService {
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
     const attesterDuties = await this.provider.validator.getAttesterDuties(epoch + 1, [this.publicKey]);
-    if(
+    if (
       attesterDuties && attesterDuties.length === 1 &&
-      this.config.types.BLSPubkey.equals(attesterDuties[0].validatorPubkey, this.publicKey)
+            this.config.types.BLSPubkey.equals(attesterDuties[0].validatorPubkey, this.publicKey)
     ) {
       const duty = attesterDuties[0];
       const {fork, genesisValidatorsRoot} = (await this.provider.beacon.getFork());
       const slotSignature = this.getSlotSignature(duty.attestationSlot, fork, genesisValidatorsRoot);
-      const isAggregator = await this.provider.validator.isAggregator(
-        duty.attestationSlot,
-        duty.committeeIndex,
-        slotSignature
-      );
+      const isAggregator = isValidatorAggregator(slotSignature, duty.aggregatorModulo);
       this.nextAttesterDuties.set(
         duty.attestationSlot,
         {
           ...duty,
           isAggregator
         });
-      if(isAggregator) {
+      if (isAggregator) {
         await this.provider.validator.subscribeCommitteeSubnet(
           duty.attestationSlot,
           slotSignature,
@@ -104,7 +105,7 @@ export class AttestationService {
       if(!attestation) {
         return;
       }
-      if(duty.isAggregator) {
+      if (duty.isAggregator) {
         setTimeout(
           this.aggregateAttestations,
           this.config.params.SECONDS_PER_SLOT / 3 * 1000,
@@ -114,7 +115,7 @@ export class AttestationService {
       await this.provider.validator.publishAttestation(attestation);
       this.logger.info(
         `Published new attestation for block ${toHexString(attestation.data.target.root)} ` +
-          `and committee ${duty.committeeIndex} at slot ${slot}`
+                `and committee ${duty.committeeIndex} at slot ${slot}`
       );
     }
   };
@@ -149,41 +150,13 @@ export class AttestationService {
     this.logger.info(
       `Aggregating attestations for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
     );
-    const wireAttestations = await this.provider.validator.getWireAttestations(
-      computeEpochAtSlot(this.config, duty.attestationSlot),
-      duty.committeeIndex
+    const aggregateAndProof = await this.provider.validator.produceAggregateAndProof(attestation.data, this.publicKey);
+    aggregateAndProof.selectionProof = this.getSlotSignature(
+      duty.attestationSlot,
+      fork,
+      genesisValidatorsRoot
     );
-    if(wireAttestations.length === 0) {
-      this.logger.warn(
-        `No attestations to aggregate for slot ${duty.attestationSlot} and committee ${duty.committeeIndex}`
-      );
-    }
-
-    const compatibleAttestations = wireAttestations.filter((wireAttestation) => {
-      return this.config.types.AttestationData.equals(wireAttestation.data, attestation.data)
-                    // prevent including aggregator attestation twice
-                    && ! this.config.types.Attestation.equals(attestation, wireAttestation);
-    });
-    compatibleAttestations.push(attestation);
-    const aggregatedAttestation: Attestation = {
-      signature: aggregateSignatures(compatibleAttestations.map((a) => a.signature.valueOf() as Uint8Array)),
-      data: attestation.data,
-      aggregationBits: compatibleAttestations.reduce((aggregatedBits, current) => {
-        for (let i = 0; i < aggregatedBits.length; i++) {
-          aggregatedBits[i] = aggregatedBits[i] || current.aggregationBits[i];
-        }
-        return aggregatedBits;
-      }, Array.from({length: attestation.aggregationBits.length}, () => false)),
-    };
-    await this.provider.validator.publishAggregatedAttestation(
-      aggregatedAttestation,
-      this.publicKey,
-      this.getSlotSignature(
-        duty.attestationSlot,
-        fork,
-        genesisValidatorsRoot
-      )
-    );
+    await this.provider.validator.publishAggregateAndProof(aggregateAndProof);
     this.logger.info(
       `Published aggregated attestation for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
     );
@@ -207,7 +180,6 @@ export class AttestationService {
     genesisValidatorsRoot: Root): Promise<Attestation> {
     const attestation = await this.provider.validator.produceAttestation(
       this.publicKey,
-      false,
       committeeIndex,
       slot
     );
@@ -219,7 +191,7 @@ export class AttestationService {
       this.logger.warn(
         "Avoided signing conflicting attestation! "
                 + `Source epoch: ${attestation.data.source.epoch}, `
-                +`Target epoch: ${computeEpochAtSlot(this.config, slot)}`
+                + `Target epoch: ${computeEpochAtSlot(this.config, slot)}`
       );
       return null;
     }

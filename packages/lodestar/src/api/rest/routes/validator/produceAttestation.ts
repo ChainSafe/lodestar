@@ -8,7 +8,7 @@ interface IQuery extends DefaultQuery {
   validator_pubkey: string;
   poc_bit: number;
   slot: number;
-  committee_index: number;
+  attestation_committee_index: number;
 }
 
 
@@ -16,16 +16,12 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   schema: {
     querystring: {
       type: "object",
-      required: ["validator_pubkey", "poc_bit", "slot", "committee_index"],
+      required: ["validator_pubkey", "slot", "attestation_committee_index"],
       properties: {
         "validator_pubkey": {
           type: "string"
         },
-        "poc_bit": {
-          type: "integer",
-          minimum: 0
-        },
-        "committee_index": {
+        "attestation_committee_index": {
           type: "integer",
           minimum: 0
         },
@@ -45,8 +41,7 @@ export const registerAttestationProductionEndpoint: LodestarRestApiEndpoint = (f
     async (request, reply) => {
       const responseValue = await api.validator.produceAttestation(
         fromHexString(request.query.validator_pubkey),
-        false,
-        request.query.committee_index,
+        request.query.attestation_committee_index,
         request.query.slot
       );
       reply

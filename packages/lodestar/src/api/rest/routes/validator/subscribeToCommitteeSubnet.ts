@@ -8,7 +8,7 @@ const opts: fastify.RouteShorthandOptions = {
     body: {
       type: "object",
       requiredKeys: ["committee_index", "slot", "slot_signature", "aggregator_pubkey"],
-      "committee_index": {
+      "attestation_committee_index": {
         type: "string"
       },
       "slot": {
@@ -25,7 +25,7 @@ const opts: fastify.RouteShorthandOptions = {
 };
 
 interface IBody extends DefaultBody {
-  committee_index: string;
+  attestation_committee_index: string;
   slot: string;
   slot_signature: string;
   aggregator_pubkey: string;
@@ -39,7 +39,7 @@ export const registerSubscribeToCommitteeSubnet: LodestarRestApiEndpoint = (fast
       await api.validator.subscribeCommitteeSubnet(
         Number(request.body.slot),
         fromHexString(request.body.slot_signature),
-        Number(request.body.committee_index),
+        Number(request.body.attestation_committee_index),
         fromHexString(request.body.aggregator_pubkey)
       );
       reply

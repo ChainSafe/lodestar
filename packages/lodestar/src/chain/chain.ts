@@ -70,8 +70,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.forkChoice = new StatefulDagLMDGHOST(config);
     this.chainId = 0; // TODO make this real
     this.networkId = 0n; // TODO make this real
-    this.blockProcessor = new BlockProcessor(config, logger, db, this.forkChoice, metrics, this);
     this.attestationProcessor = new AttestationProcessor(this, this.forkChoice, {config, db, logger});
+    this.blockProcessor = new BlockProcessor(
+      config, logger, db, this.forkChoice, metrics, this, this.opPool, this.attestationProcessor);
   }
 
   public async getHeadState(): Promise<BeaconState|null> {

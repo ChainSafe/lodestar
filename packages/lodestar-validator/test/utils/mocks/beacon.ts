@@ -1,4 +1,13 @@
-import {BeaconBlock, BeaconState, Bytes32, Fork, Number64, SyncingStatus, Uint64, Root} from "@chainsafe/lodestar-types";
+import {
+  BeaconBlock,
+  BeaconState,
+  Bytes32,
+  Fork,
+  Number64,
+  SyncingStatus,
+  Root,
+  Uint64
+} from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "../../../src/api/interface/beacon";
 import {generateEmptyBlock} from "../block";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
@@ -22,6 +31,10 @@ export class MockBeaconApi implements IBeaconApi {
       || {previousVersion: Buffer.alloc(0), currentVersion: Buffer.alloc(0), epoch: 0};
     this.head = opts && opts.head || generateEmptyBlock();
     this.genesisTime = opts && opts.genesisTime || Date.now();
+  }
+
+  public async getValidator(): Promise<any> {
+    throw new Error("Method not implemented.");
   }
 
   public async getClientVersion(): Promise<Bytes32> {

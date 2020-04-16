@@ -39,14 +39,14 @@ describe("get proposers api impl", function () {
           slot: 0,
           validators: generateValidators(
             25,
-            {balance: config.params.MAX_EFFECTIVE_BALANCE, activation: 0, exit: FAR_FUTURE_EPOCH}
+            {effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE, activationEpoch: 0, exitEpoch: FAR_FUTURE_EPOCH}
           ),
           balances: Array.from({length: 25}, () => config.params.MAX_EFFECTIVE_BALANCE)
         }, config),
 
     );
     const result = await api.getProposerDuties(1);
-    expect(result.size).to.be.equal(config.params.SLOTS_PER_EPOCH);
+    expect(result.length).to.be.equal(config.params.SLOTS_PER_EPOCH);
   });
 
   it("should get future proposers", async function () {
@@ -56,14 +56,14 @@ describe("get proposers api impl", function () {
           slot: config.params.SLOTS_PER_EPOCH - 3,
           validators: generateValidators(
             25,
-            {balance: config.params.MAX_EFFECTIVE_BALANCE, activation: 0, exit: FAR_FUTURE_EPOCH}
+            {effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE, activationEpoch: 0, exitEpoch: FAR_FUTURE_EPOCH}
           ),
           balances: Array.from({length: 25}, () => config.params.MAX_EFFECTIVE_BALANCE)
         }, config),
 
     );
     const result = await api.getProposerDuties(2);
-    expect(result.size).to.be.equal(config.params.SLOTS_PER_EPOCH);
+    expect(result.length).to.be.equal(config.params.SLOTS_PER_EPOCH);
   });
     
 });

@@ -2,7 +2,7 @@ import sinon from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/duties";
-import {assembleValidatorDuty} from "../../../../../src/chain/factory/duties";
+import {assembleAttesterDuty} from "../../../../../src/chain/factory/duties";
 import {generateState} from "../../../../utils/state";
 
 describe("assemble validator duty", function () {
@@ -24,7 +24,7 @@ describe("assemble validator duty", function () {
     const state = generateState();
     state.slot = 1;
     committeeAssignmentStub.returns({committeeIndex: 2, slot: 1, validators: [1, validatorIndex, 5]});
-    const result = assembleValidatorDuty(config, {publicKey, index: validatorIndex}, state, 2);
+    const result = assembleAttesterDuty(config, {publicKey, index: validatorIndex}, state, 2);
     expect(result).to.not.be.null;
     expect(result.validatorPubkey).to.be.equal(publicKey);
     expect(result.attestationSlot).to.be.equal(1);
@@ -36,7 +36,7 @@ describe("assemble validator duty", function () {
     const validatorIndex = 2;
     const state = generateState();
     committeeAssignmentStub.returns({committeeIndex: 2, slot: 1, validators: [1, validatorIndex, 5]});
-    const result = assembleValidatorDuty(config, {publicKey, index: validatorIndex}, state, 3);
+    const result = assembleAttesterDuty(config, {publicKey, index: validatorIndex}, state, 3);
     expect(result).to.not.be.null;
     expect(result.validatorPubkey).to.be.equal(publicKey);
     expect(result.attestationSlot).to.be.equal(1);
@@ -48,7 +48,7 @@ describe("assemble validator duty", function () {
     const validatorIndex = 2;
     const state = generateState();
     committeeAssignmentStub.returns(null);
-    const result = assembleValidatorDuty(config, {publicKey, index: validatorIndex}, state, 3);
+    const result = assembleAttesterDuty(config, {publicKey, index: validatorIndex}, state, 3);
     expect(result).to.not.be.null;
     expect(result.validatorPubkey).to.be.equal(publicKey);
     expect(result.attestationSlot).to.be.equal(null);
