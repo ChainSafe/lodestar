@@ -24,6 +24,8 @@ import {BeaconState} from "@chainsafe/lodestar-types";
 import {BeaconApi, ValidatorApi} from "@chainsafe/lodestar/lib/api/impl";
 import {BeaconNodeOptions} from "../../lodestar/node/options";
 import {getConfig, getDevGenesisState, getPeerId, resetPath} from "./utils";
+import deepmerge from "deepmerge";
+import {isPlainObject} from "@chainsafe/lodestar-utils";
 
 export interface IDevCommandOptions {
   [key: string]: string;
@@ -87,11 +89,10 @@ export class DevCommand implements ICliCommand {
       };
     }
     resetPath(conf.db.name);
-
-    conf.network.discv5 = Object.assign(
-      {},
-      {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/0.0.0.0/udp/5501"},
-      conf.network.discv5,
+    conf.network = deepmerge(
+      conf.network || {},
+      {discv5: {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/127.0.0.1/udp/0"}},
+      {isMergeableObject: isPlainObject}
     );
     const libp2p = await createNodeJsLibp2p(peerId, conf.network);
 
