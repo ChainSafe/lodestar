@@ -10,7 +10,7 @@ describe("beacon cli", function() {
   this.timeout(0);
 
   const logger: ILogger = new WinstonLogger();
-  logger.silent = false;
+  logger.silent = true;
   //same folder of default db
   const tmpDir = ".tmp";
 
@@ -25,7 +25,7 @@ describe("beacon cli", function() {
     rimraf.sync(tmpDir);
   });
 
-  it.only("standalone - should start/stop beacon node from eth1", async function() {
+  it("standalone - should start/stop beacon node from eth1", async function() {
     // start eth1 and deploy contract
     const eth1Network = new PrivateEth1Network(
       {host: "127.0.0.1", port: 32567, "total_accounts": 64},

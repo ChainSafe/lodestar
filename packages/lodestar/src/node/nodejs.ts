@@ -20,8 +20,6 @@ import {ReputationStore} from "../sync/IReputation";
 import {GossipMessageValidator} from "../network/gossip/validator";
 import {TasksService} from "../tasks";
 import {initBLS} from "@chainsafe/bls";
-import {BeaconState, Root} from "@chainsafe/lodestar-types";
-import {TreeBacked, List} from "@chainsafe/ssz";
 
 export interface IService {
   start(): Promise<void>;
