@@ -69,4 +69,5 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   stop(): Promise<void> {
     return undefined;
   }
+
 }

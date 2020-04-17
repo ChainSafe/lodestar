@@ -20,6 +20,8 @@ import {ReputationStore} from "../sync/IReputation";
 import {GossipMessageValidator} from "../network/gossip/validator";
 import {TasksService} from "../tasks";
 import {initBLS} from "@chainsafe/bls";
+import {BeaconState, Root} from "@chainsafe/lodestar-types";
+import {TreeBacked, List} from "@chainsafe/ssz";
 
 export interface IService {
   start(): Promise<void>;
@@ -146,8 +148,13 @@ export class BeaconNode {
         logger: this.logger.child(this.conf.logger.chores)
       }
     );
-
   }
+
+  // public async initFromEth1(eth1BlockNum: number): Promise<void> {
+  //   // TODO: how can we check this step
+  //   await this.eth1.initContract();
+  //   await this.chain.genesisStateFromEth1(eth1BlockNum);
+  // }
 
   public async start(): Promise<void> {
     this.logger.info("Starting eth2 beacon node - LODESTAR!");

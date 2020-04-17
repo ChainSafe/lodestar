@@ -80,7 +80,8 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     for(let blockNumber = range.fromNumber; blockNumber < range.toNumber; blockNumber++) {
       promises.push(this.getBlock(blockNumber));
     }
-    const blocks = await Promise.all(promises);
+    // some block maybe null because range.to > head
+    const blocks = (await Promise.all(promises)).filter(block => !!block);
     this.blocksCache.init(blocks, head);
   }
 
@@ -150,7 +151,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   public async processPastDeposits(
     fromBlock: string | number  = this.opts.depositContract.deployedAt,
     toBlock?: string | number
-  ): Promise<void> {
+  ): Promise<DepositData[]> {
     const logs = await this.getContractPastLogs(
       [this.contract.interface.events.DepositEvent.topic],
       fromBlock,
@@ -160,7 +161,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       const logDescription = this.contract.interface.parseLog(log);
       return this.createDepositData(
         logDescription.values.pubkey,
-        logDescription.values.withdrawalCredentials,
+        logDescription.values["withdrawal_credentials"],
         logDescription.values.amount,
         logDescription.values.signature,
       );
@@ -168,6 +169,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     pastDeposits.forEach((pastDeposit, index) => {
       this.emit("deposit", index, pastDeposit);
     });
+    return pastDeposits;
   }
 
   public async getHead(): Promise<Block> {
@@ -201,7 +203,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     };
   }
 
-  private async initContract(): Promise<void> {
+  public async initContract(): Promise<void> {
     const address = this.opts.depositContract.address;
     const abi = this.opts.depositContract.abi;
     if (!(await this.contractExists(address))) {

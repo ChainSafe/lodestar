@@ -20,6 +20,9 @@ export const Eth1Options: IConfigurationModule = {
           name: "network",
           description: "Eth1 network id",
           type: "number",
+          process: (input) => {
+            return parseInt(input);
+          },
           configurable: true,
           cli: {
             flag: "networkId"
@@ -35,6 +38,9 @@ export const Eth1Options: IConfigurationModule = {
           description: "Block number at which contract is deployed",
           type: "number",
           configurable: true,
+          process: (input) => {
+            return parseInt(input);
+          },
           cli: {
             flag: "depositContractBlockNum"
           }
