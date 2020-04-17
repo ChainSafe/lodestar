@@ -29,4 +29,4 @@ export const Version = Bytes4;
 export const ForkDigest = Bytes4;
 export const BLSPubkey = Bytes48;
 export const BLSSignature = Bytes96;
-export const Domain = Bytes8;
+export const Domain = Bytes32;
