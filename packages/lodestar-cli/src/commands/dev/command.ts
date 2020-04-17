@@ -1,7 +1,7 @@
 /**
  * @module cli/commands
  */
-
+process.setMaxListeners(15);
 import {ICliCommand} from "../interface";
 import {CommanderStatic} from "commander";
 import fs from "fs";
@@ -73,7 +73,6 @@ export class DevCommand implements ICliCommand {
   }
 
   public async action(options: IDevCommandOptions, logger: ILogger): Promise<void> {
-
     //find better place for this once this cli is refactored
     await initBLS();
 
@@ -88,10 +87,10 @@ export class DevCommand implements ICliCommand {
     }
     resetPath(conf.db.name);
 
-    conf.network.discv5 = Object.assign(
+    conf.network = Object.assign(
       {},
-      {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/0.0.0.0/udp/5501"},
-      conf.network.discv5,
+      conf.network,
+      {discv5: {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/0.0.0.0/udp/5501"}},
     );
     const libp2p = await createNodeJsLibp2p(peerId, conf.network);
 

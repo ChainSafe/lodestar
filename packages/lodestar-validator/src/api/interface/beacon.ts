@@ -1,4 +1,5 @@
-import {Bytes32, Fork, Number64, SyncingStatus, Uint64, Root} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Bytes32, Fork, Number64, SyncingStatus, Uint64, Root,
+  ValidatorResponse} from "@chainsafe/lodestar-types";
 
 export interface IBeaconApi {
 
@@ -14,6 +15,11 @@ export interface IBeaconApi {
      * Requests the BeaconNode to provide which fork version it is currently on.
      */
   getFork(): Promise<{fork: Fork; chainId: Uint64; genesisValidatorsRoot: Root}>;
+
+  /**
+     * Requests the BeaconNode to provide validator details for given public key.
+     */
+  getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse|null>;
 
   /**
      * Requests the genesis_time parameter from the BeaconNode,

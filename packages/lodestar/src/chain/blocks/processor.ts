@@ -14,7 +14,8 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconDb} from "../../db/api";
 import {ILMDGHOST} from "../forkChoice";
 import {IBeaconMetrics} from "../../metrics";
-import {ChainEventEmitter} from "../interface";
+import {ChainEventEmitter, IAttestationProcessor} from "../interface";
+import {OpPool} from "../../opPool";
 
 export class BlockProcessor implements IService {
 
@@ -24,6 +25,8 @@ export class BlockProcessor implements IService {
   private readonly forkChoice: ILMDGHOST;
   private readonly metrics: IBeaconMetrics;
   private readonly eventBus: ChainEventEmitter;
+  private readonly opPool: OpPool;
+  private readonly attestationProcessor: IAttestationProcessor;
 
   /**
      * map where key is required parent block root and value are blocks that require that parent block
@@ -36,7 +39,8 @@ export class BlockProcessor implements IService {
 
   constructor(
     config: IBeaconConfig, logger: ILogger, db: IBeaconDb,
-    forkChoice: ILMDGHOST, metrics: IBeaconMetrics, eventBus: ChainEventEmitter
+    forkChoice: ILMDGHOST, metrics: IBeaconMetrics, eventBus: ChainEventEmitter,
+    opPool: OpPool, attestationProcessor: IAttestationProcessor
   ) {
     this.config = config;
     this.logger = logger;
@@ -44,6 +48,8 @@ export class BlockProcessor implements IService {
     this.forkChoice = forkChoice;
     this.metrics = metrics;
     this.eventBus = eventBus;
+    this.opPool = opPool;
+    this.attestationProcessor = attestationProcessor;
     this.pendingBlocks = new BlockPool(config, this.blockProcessingSource, this.eventBus);
   }
 
@@ -59,7 +65,14 @@ export class BlockProcessor implements IService {
       },
       validateBlock(this.config, this.logger, this.db, this.forkChoice),
       processBlock(this.config, this.db, this.logger, this.forkChoice, this.pendingBlocks),
-      postProcess(this.config, this.db, this.logger, this.metrics, this.eventBus)
+      postProcess(
+        this.config,
+        this.db,
+        this.logger,
+        this.metrics,
+        this.eventBus,
+        this.opPool,
+        this.attestationProcessor)
     );
   }
 

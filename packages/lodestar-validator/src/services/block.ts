@@ -7,8 +7,12 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
-import {computeEpochAtSlot, DomainType, getDomain, computeSigningRoot}
-  from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeEpochAtSlot,
+  computeSigningRoot,
+  DomainType,
+  getDomain
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IValidatorDB} from "../";
 import {IApiClient} from "../api";
 
@@ -21,7 +25,7 @@ export default class BlockProposingService {
   private readonly db: IValidatorDB;
   private readonly logger: ILogger;
 
-  private nextProposalSlot: Slot|null = null;
+  private nextProposalSlots: Slot[] = [];
 
   public constructor(
     config: IBeaconConfig,
@@ -45,21 +49,17 @@ export default class BlockProposingService {
   };
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
-    const epochProposers = await this.provider.validator.getProposerDuties(epoch);
-    if(!epochProposers) {
+    const proposerDuties = await this.provider.validator.getProposerDuties(epoch, [this.publicKey]);
+    if(!proposerDuties) {
       return;
     }
-    Array.from(epochProposers.entries()).findIndex((epochProposerEntry: [Slot, BLSPubkey]) => {
-      if(this.config.types.BLSPubkey.equals(epochProposerEntry[1], this.publicKey)) {
-        this.nextProposalSlot = epochProposerEntry[0];
-        return true;
-      }
-      return false;
-    });
+    this.nextProposalSlots = proposerDuties.filter((proposerDuty) => {
+      return this.config.types.BLSPubkey.equals(proposerDuty.proposerPubkey, this.publicKey);
+    }).map((duty) => duty.slot);
   };
 
   public onNewSlot = async(slot: Slot): Promise<void> => {
-    if(this.nextProposalSlot === slot) {
+    if(this.nextProposalSlots.includes(slot)) {
       const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
       await this.createAndPublishBlock(slot, fork, genesisValidatorsRoot);
     }
@@ -121,7 +121,7 @@ export default class BlockProposingService {
     // get last proposed block from database and check if belongs in same epoch
     const lastProposedBlock = await this.db.getBlock(this.publicKey);
     if(!lastProposedBlock) return  false;
-    return computeEpochAtSlot(this.config, lastProposedBlock.message.slot) === computeEpochAtSlot(this.config, slot);
+    return this.config.types.Slot.equals(lastProposedBlock.message.slot, slot);
   }
 
   private async storeBlock(signedBlock: SignedBeaconBlock): Promise<void> {

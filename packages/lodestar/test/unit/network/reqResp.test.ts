@@ -158,7 +158,6 @@ describe("[network] rpc", () => {
       }
 
     } catch (e) {
-      console.log(e);
       assert.fail(`Cannot receive response, error: ${e.message}`);
     }
   });

@@ -1,25 +1,31 @@
-import fastify from "fastify";
+import fastify, {DefaultHeaders, DefaultParams, DefaultQuery} from "fastify";
 import {LodestarRestApiEndpoint} from "../../interface";
+import {Json} from "@chainsafe/ssz";
 
+type IBody = Json[];
 
 const opts: fastify.RouteShorthandOptions = {
   schema: {
     body: {
-      type: "object"
+      type: "array"
     },
   }
 };
 
 export const registerAttestationPublishEndpoint: LodestarRestApiEndpoint = (fastify, {api, config}): void => {
-  fastify.post(
+  fastify.post<DefaultQuery, DefaultParams, DefaultHeaders, IBody>(
     "/attestation",
     opts,
     async (request, reply) => {
       try {
-        const attestation = config.types.Attestation.fromJson(request.body);
-        await api.validator.publishAttestation(
-          attestation
-        );
+        await Promise.all([
+          request.body.map((payload) => {
+            return api.validator.publishAttestation(
+              config.types.Attestation.fromJson(payload)
+            );
+          })
+        ]);
+        
       } catch (e) {
         reply.code(500).send();
         return;

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {after, afterEach, describe, it} from "mocha";
+import {afterEach, describe, it} from "mocha";
 import supertest from "supertest";
 import sinon, {SinonStubbedInstance} from "sinon";
 
@@ -11,7 +11,7 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 import {RestApi} from "../../../../../src/api/rest";
 import {ApiNamespace} from "../../../../../src/api";
-import {generateEmptyValidatorDuty} from "../../../../../src/chain/factory/duties";
+import {generateEmptyAttesterDuty} from "../../../../../src/chain/factory/duties";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateAttestation, generateAttestationData, generateEmptyAttestation} from "../../../../utils/attestation";
 import {generateAggregateAndProof} from "../../../../utils/aggregateAndProof";
@@ -47,20 +47,20 @@ describe("Test validator rest API", function () {
   });
 
   it("should return proposer duties", async function () {
-    validatorApi.getProposerDuties.resolves(new Map([[1, Buffer.alloc(48)]]));
+    validatorApi.getProposerDuties.resolves([{slot: 1, proposerPubkey: Buffer.alloc(48)}]);
     const response = await supertest(restApi.server.server)
       .get(
         "/validator/duties/2/proposer",
       )
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body[1]).to.be.equal(toHexString(Buffer.alloc(48)));
+    expect(response.body[0].proposerPubkey).to.be.equal(toHexString(Buffer.alloc(48)));
     expect(validatorApi.getProposerDuties.withArgs(2).calledOnce).to.be.true;
   });
 
   it("should return attester duties", async function () {
     const publicKey1= Keypair.generate().publicKey.toBytesCompressed();
-    validatorApi.getAttesterDuties.resolves([generateEmptyValidatorDuty(Buffer.alloc(48, 1))]);
+    validatorApi.getAttesterDuties.resolves([generateEmptyAttesterDuty(Buffer.alloc(48, 1))]);
     const response = await supertest(restApi.server.server)
       .get(
         "/validator/duties/2/attester",
@@ -78,12 +78,11 @@ describe("Test validator rest API", function () {
     const aggregateAndProof = generateAggregateAndProof();
     await supertest(restApi.server.server)
       .post(
-        "/validator/aggregate?validator_pubkey="
-          +`${toHexString(Buffer.alloc(48))}&slot_signature=${toHexString(aggregateAndProof.selectionProof)}`,
+        "/validator/aggregate_and_proof",
       )
-      .send(config.types.AggregateAndProof.fields.aggregate.toJson((aggregateAndProof.aggregate)) as object)
+      .send([config.types.AggregateAndProof.toJson(aggregateAndProof) as object])
       .expect(200);
-    expect(validatorApi.publishAggregatedAttestation.calledOnce).to.be.true;
+    expect(validatorApi.publishAggregateAndProof.calledOnce).to.be.true;
   });
 
   it("should throw error on invalid request for block production", async function () {
@@ -135,13 +134,12 @@ describe("Test validator rest API", function () {
       )
       .query({
         "validator_pubkey": toHexString(Buffer.alloc(48)),
-        "poc_bit": 1,
-        "committee_index": 3,
+        "attestation_committee_index": 3,
         "slot": 2
       })
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(validatorApi.produceAttestation.withArgs(sinon.match.any, false, 3, 2).calledOnce).to.be.true;
+    expect(validatorApi.produceAttestation.withArgs(sinon.match.any, 3, 2).calledOnce).to.be.true;
   });
 
 
@@ -151,7 +149,7 @@ describe("Test validator rest API", function () {
       .post(
         "/validator/attestation",
       )
-      .send(config.types.Attestation.toJson(attestation) as object)
+      .send([config.types.Attestation.toJson(attestation) as object])
       .expect(200)
       .expect("Content-Type", "application/json");
     expect(validatorApi.publishAttestation.calledOnce).to.be.true;
