@@ -36,11 +36,11 @@ import {
   computeSigningRoot
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {verify} from "@chainsafe/bls";
-import {Sync} from "../../../sync";
 import {DomainType} from "../../../constants";
 import {assembleValidatorDuty} from "../../../chain/factory/duties";
 import assert from "assert";
 import {assembleAttestation} from "../../../chain/factory/attestation";
+import {IBeaconSync} from "../../../sync";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -50,7 +50,7 @@ export class ValidatorApi implements IValidatorApi {
   private chain: IBeaconChain;
   private db: IBeaconDb;
   private network: INetwork;
-  private sync: Sync;
+  private sync: IBeaconSync;
   private opPool: OpPool;
   private eth1: IEth1Notifier;
   private logger: ILogger;
@@ -188,10 +188,11 @@ export class ValidatorApi implements IValidatorApi {
     if(!valid) {
       throw new Error("Ivalid slot signature");
     }
-    this.sync.regularSync.collectAttestations(
-      slot,
-      committeeIndex
-    );
+    //TODO: fix this
+    // this.sync.regularSync.collectAttestations(
+    //   slot,
+    //   committeeIndex
+    // );
   }
 
 }

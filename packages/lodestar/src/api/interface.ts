@@ -7,8 +7,8 @@ import {IBeaconDb} from "../db/api";
 import {IEth1Notifier} from "../eth1";
 import {IApiOptions} from "./options";
 import {ApiNamespace} from "./index";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
-import {Sync} from "../sync";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {IBeaconSync} from "../sync";
 import {OpPool} from "../opPool";
 import {INetwork} from "../network";
 
@@ -17,7 +17,7 @@ export interface IApiModules {
   logger: ILogger;
   chain: IBeaconChain;
   opPool: OpPool;
-  sync: Sync;
+  sync: IBeaconSync;
   network: INetwork;
   db: IBeaconDb;
   eth1: IEth1Notifier;

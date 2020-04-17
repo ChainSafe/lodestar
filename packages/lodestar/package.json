@@ -24,7 +24,7 @@
   ],
   "scripts": {
     "benchmark": "ts-node test/benchmarks",
-    "build": "yarn run build:lib && yarn run check-types && yarn run build:types",
+    "build": "yarn run build:lib && yarn run build:types",
     "build:docs": "typedoc --exclude src/index.ts --out docs src",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:release": "yarn clean && yarn run build && yarn run build:docs",

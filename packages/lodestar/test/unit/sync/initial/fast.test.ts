@@ -31,14 +31,13 @@ describe("fast sync", function () {
       logger: sandbox.createStubInstance(WinstonLogger),
       config,
       network: sandbox.createStubInstance(Libp2pNetwork),
-      peers: [],
       // @ts-ignore
       reps: sandbox.createStubInstance(ReputationStore)
     };
     defaultOpts = {
+      minPeers: 0,
       blockPerChunk: 2
     };
-    getTargetEpochStub = sandbox.stub(syncUtils, "getInitalSyncTargetEpoch");
     isValidHeaderChainStub = sandbox.stub(syncUtils, "isValidChainOfBlocks");
     getBlockRangeStub = sandbox.stub(blockSyncUtils, "getBlockRange");
   });
@@ -59,7 +58,6 @@ describe("fast sync", function () {
       defaultOpts,
       {
         ...modules,
-        peers: [sinon.createStubInstance(PeerInfo)]
       }
     );
     // @ts-ignore
@@ -76,7 +74,6 @@ describe("fast sync", function () {
       defaultOpts,
       {
         ...modules,
-        peers: [peer]
       }
     );
     // @ts-ignore
@@ -101,7 +98,6 @@ describe("fast sync", function () {
       defaultOpts,
       {
         ...modules,
-        peers: [peer]
       }
     );
 
@@ -127,7 +123,6 @@ describe("fast sync", function () {
       defaultOpts,
       {
         ...modules,
-        peers: [peer]
       }
     );
     // @ts-ignore

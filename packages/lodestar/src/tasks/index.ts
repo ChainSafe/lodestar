@@ -9,7 +9,7 @@ import {IBeaconChain} from "../chain";
 import {Checkpoint} from "@chainsafe/lodestar-types";
 import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {Sync} from "../sync";
+import {IBeaconSync} from "../sync";
 import {InteropSubnetsJoiningTask} from "./tasks/interopSubnetsJoiningTask";
 import {INetwork} from "../network";
 
@@ -17,7 +17,7 @@ export interface ITasksModules {
   db: IBeaconDb;
   logger: ILogger;
   chain: IBeaconChain;
-  sync: Sync;
+  sync: IBeaconSync;
   network: INetwork;
 }
 
@@ -30,7 +30,7 @@ export class TasksService implements IService {
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly chain: IBeaconChain;
-  private readonly sync: Sync;
+  private readonly sync: IBeaconSync;
   private readonly network: INetwork;
   private readonly logger: ILogger;
 
@@ -45,12 +45,11 @@ export class TasksService implements IService {
 
   public async start(): Promise<void> {
     this.chain.on("finalizedCheckpoint", this.handleFinalizedCheckpointChores);
-    this.sync.on("regularSyncStarted", this.handleRegularSyncStartedTasks);
+    await this.handleRegularSyncStartedTasks();
   }
 
   public async stop(): Promise<void> {
     this.chain.removeListener("finalizedCheckpoint", this.handleFinalizedCheckpointChores);
-    this.sync.removeListener("regularSyncStarted", this.handleRegularSyncStartedTasks);
   }
 
   private handleFinalizedCheckpointChores = async (finalizedCheckpoint: Checkpoint): Promise<void> => {

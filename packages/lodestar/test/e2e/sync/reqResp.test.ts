@@ -3,7 +3,6 @@ import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
 import {Method} from "../../../src/constants";
-import {SyncReqResp} from "../../../src/sync/reqResp";
 import {ReputationStore} from "../../../src/sync/IReputation";
 import {Libp2pNetwork} from "../../../src/network";
 import {BeaconDb} from "../../../src/db";
@@ -20,6 +19,7 @@ import {
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {BeaconBlocksByRootRequest, BeaconBlocksByRangeRequest} from "@chainsafe/lodestar-types";
+import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -44,8 +44,8 @@ describe("[sync] rpc", function () {
   logger.silent = true;
   const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false}, {logger});
 
-  let rpcA: SyncReqResp, netA: Libp2pNetwork, repsA: ReputationStore;
-  let rpcB: SyncReqResp, netB: Libp2pNetwork, repsB: ReputationStore;
+  let rpcA: IReqRespHandler, netA: Libp2pNetwork, repsA: ReputationStore;
+  let rpcB: IReqRespHandler, netB: Libp2pNetwork, repsB: ReputationStore;
   const validator: IGossipMessageValidator = {} as unknown as IGossipMessageValidator;
   beforeEach(async () => {
     netA = new Libp2pNetwork(
@@ -95,21 +95,21 @@ describe("[sync] rpc", function () {
       yield block;
       yield block2;
     }());
-    rpcA = new SyncReqResp({}, {
+    rpcA = new BeaconReqRespHandler({
       config,
       db,
       chain,
       network: netA,
-      reps: repsA,
+      reputationStore: repsA,
       logger,
     });
     repsB = new ReputationStore();
-    rpcB = new SyncReqResp({}, {
+    rpcB = new BeaconReqRespHandler({
       config,
       db,
       chain,
       network: netB,
-      reps: repsB,
+      reputationStore: repsB,
       logger: logger
     })
     ;
