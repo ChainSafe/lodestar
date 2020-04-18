@@ -212,6 +212,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
             resolve(requestOnly? undefined : finalResponse as T);
           });
       } catch (e) {
+        this.logger.error(e.message);
         reject(e);
       }
     });
