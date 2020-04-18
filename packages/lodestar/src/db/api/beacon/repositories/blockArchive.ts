@@ -46,18 +46,24 @@ export class BlockArchiveRepository extends BulkRepository<SignedBeaconBlock> {
     lowerLimit: number | null,
     upperLimit: number | null,
     step: number | null = 1
-  ): AsyncIterable<SignedBeaconBlock> {
-    const safeLowerLimit = lowerLimit || Buffer.alloc(0);
+  ): AsyncGenerator<SignedBeaconBlock> {
+    let safeLowerLimit;
+    if(lowerLimit === null) {
+      safeLowerLimit = Buffer.alloc(0);
+    } else {
+      safeLowerLimit = lowerLimit;
+    }
     const safeUpperLimit = upperLimit || Number.MAX_SAFE_INTEGER;
     const dataStream = this.db.searchStream({
       gt: encodeKey(this.bucket, safeLowerLimit),
       lt: encodeKey(this.bucket, safeUpperLimit),
     });
-    const deserialize = this.type.deserialize;
+    const deserialize = this.type.deserialize.bind(this.type);
     return (async function * () {
       for await (const data of dataStream) {
-        if (isEligibleBlock(deserialize(data), step, safeLowerLimit)) {
-          yield data;
+        const block = deserialize(data);
+        if (isEligibleBlock(block, step, safeLowerLimit)) {
+          yield block;
         }
       }
     })();
