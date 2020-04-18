@@ -8,11 +8,16 @@ import deepmerge from "deepmerge";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ReputationStore} from "../../IReputation";
-import {Checkpoint, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";
-import {getStatusFinalizedCheckpoint} from "../../initial";
-import {fetchBlockChunks, getHighestCommonSlot, processBlocks, targetSlotToBlockChunks} from "../../utils";
+import {
+  fetchBlockChunks,
+  getHighestCommonSlot,
+  getStatusFinalizedCheckpoint,
+  processBlocks,
+  targetSlotToBlockChunks
+} from "../../utils";
 
 export class NaiveRegularSync implements IRegularSync {
 
@@ -67,14 +72,12 @@ export class NaiveRegularSync implements IRegularSync {
       //chain is processing blocks but not yet at target slot
       return;
     }
-    const headState = await this.chain.getHeadState();
     //either we aren't processing blocks or we reached target
     // we should either set new target or end sync
     const newTarget = getHighestCommonSlot(
-      this.getSyncPeers(
-        headState.finalizedCheckpoint,
+      (await this.getSyncPeers(
         0
-      ).map((peer) => this.reps.getFromPeerInfo(peer))
+      )).map((peer) => this.reps.getFromPeerInfo(peer))
     );
     if(newTarget === this.currentTarget) {
       this.logger.debug("Caught up to latest slot " + newTarget);
@@ -94,11 +97,15 @@ export class NaiveRegularSync implements IRegularSync {
     );
   }
   
-  private getSyncPeers = (finalizedCheckpoint: Checkpoint, minSlot: Slot): PeerInfo[] => {
+  private getSyncPeers = async (minSlot: Slot): Promise<PeerInfo[]> => {
+    const chainFinalizedCheckpoint = (await this.chain.getHeadState()).finalizedCheckpoint;
     return this.network.getPeers().filter((peer) => {
       const latestStatus = this.reps.getFromPeerInfo(peer).latestStatus;
       return latestStatus
-          && this.config.types.Checkpoint.equals(getStatusFinalizedCheckpoint(latestStatus), finalizedCheckpoint) 
+          && this.config.types.Checkpoint.equals(
+            getStatusFinalizedCheckpoint(latestStatus),
+            chainFinalizedCheckpoint
+          ) 
           && latestStatus.headSlot >= minSlot;
     });
   };

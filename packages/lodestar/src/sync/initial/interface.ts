@@ -1,9 +1,8 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import PeerInfo from "peer-info";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
 import {ReputationStore} from "../IReputation";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {Checkpoint, Epoch} from "@chainsafe/lodestar-types";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
@@ -13,9 +12,8 @@ export interface IInitialSyncModules {
   config: IBeaconConfig;
   chain: IBeaconChain;
   network: INetwork;
-  reps: ReputationStore;
+  reputationStore: ReputationStore;
   logger: ILogger;
-  peers: PeerInfo[];
 }
 
 export interface IInitialSyncEvents {

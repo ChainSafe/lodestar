@@ -51,12 +51,9 @@ export class BeaconSync implements IBeaconSync {
     await this.reqResp.start();
     this.chain.on("unknownBlockRoot", this.onUnknownBlockRoot);
     // so we don't wait indefinitely
-    (async () => {
-      await this.waitForPeers(); 
-      await this.startInitialSync();
-      await this.startRegularSync();
-      await this.gossip.start();
-    })();
+    await this.waitForPeers();
+    await this.startInitialSync();
+    await this.startRegularSync();
   }
 
   public async stop(): Promise<void> {
@@ -84,7 +81,10 @@ export class BeaconSync implements IBeaconSync {
   private async startRegularSync(): Promise<void> {
     this.mode = SyncMode.REGULAR_SYNCING;
     await this.initialSync.stop();
-    await this.regularSync.start();
+    await Promise.all([
+      this.gossip.start(),
+      this.regularSync.start()
+    ]);
   }
   
   private async waitForPeers(): Promise<void> {
