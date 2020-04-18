@@ -13,17 +13,16 @@ import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import {generateCommanderOptions, optionsToConfig} from "../util";
 import {BeaconNodeOptions} from "../lodestar/node/options";
 import {getTomlConfig} from "../lodestar/util/file";
-import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
+import {createNodeJsLibp2p, loadPeerIdFromJsonFile} from "@chainsafe/lodestar/lib/network/nodejs";
 import {ENR} from "@chainsafe/discv5";
-import {getPeerId} from "./dev/utils";
 import {initBLS} from "@chainsafe/bls";
 
 interface IBeaconCommandOptions {
   [key: string]: string;
+  peerId: string;
   configFile?: string;
   preset?: string;
   loggingLevel?: string;
-  peerId?: string;
   eth1BlockNum?: string;
 }
 
@@ -40,7 +39,7 @@ export class BeaconNodeCommand implements ICliCommand {
       .description("Start lodestar node")
       .option("-c, --configFile [config_file]", "Config file path")
       .option("-p, --preset [preset]", "Minimal/mainnet", "minimal")
-      .option("--peer-id [peerId]", "peer id hex string or json file path")
+      .option("--peer-id [peerId]", "json file path")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
@@ -72,7 +71,7 @@ export class BeaconNodeCommand implements ICliCommand {
     }
     //override current config with cli config
     nodeOptions = deepmerge(nodeOptions, optionsToConfig(cmdOptions, BeaconNodeOptions));
-    const peerId = await getPeerId(cmdOptions.peerId);
+    const peerId = await loadPeerIdFromJsonFile(cmdOptions.peerId);
     const defaultDiscv5Opt = {
       enr: ENR.createFromPeerId(peerId),
       bindAddr: "/ip4/127.0.0.1/udp/0",

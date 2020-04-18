@@ -5,23 +5,28 @@ import {BeaconNodeCommand, DepositCommand} from "../../../src/commands";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {PrivateEth1Network} from "@chainsafe/lodestar/lib/eth1/dev";
 import {JsonRpcProvider} from "ethers/providers";
+import {createPeerId} from "@chainsafe/lodestar/lib/network";
+import {savePeerId} from "@chainsafe/lodestar/lib/network/nodejs";
 
 describe("beacon cli", function() {
   this.timeout(0);
 
   const logger: ILogger = new WinstonLogger();
-  logger.silent = true;
+  logger.silent = false;
   //same folder of default db
   const tmpDir = ".tmp";
+  const peerIdPath = `${tmpDir}/peer-id.json`;
 
-  beforeEach(async () => {
+  before(async () => {
     if (fs.existsSync(tmpDir)) {
       rimraf.sync(tmpDir);
     }
     fs.mkdirSync(`${tmpDir}/lodestar-db`, {recursive: true});
+    const peerId = await createPeerId();
+    await savePeerId(peerIdPath, peerId);
   });
 
-  afterEach(() => {
+  after(() => {
     rimraf.sync(tmpDir);
   });
 
@@ -56,6 +61,7 @@ describe("beacon cli", function() {
     const cmdOptions = {
       preset: "minimal",
       eth1: "ganache",
+      peerId: peerIdPath,
       eth1BlockNum: block.number.toString(),
       eth1RpcUrl: eth1Network.rpcUrl(),
       networkId: "999",
