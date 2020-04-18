@@ -13,13 +13,14 @@ import {Checkpoint, Slot} from "@chainsafe/lodestar-types";
 import pushable, {Pushable} from "it-pushable";
 import {
   fetchBlockChunks,
-  getCommonFinalizedCheckpoint, getStatusFinalizedCheckpoint,
+  getCommonFinalizedCheckpoint,
+  getStatusFinalizedCheckpoint,
   processBlocks,
-  targetSlotToBlockChunks,
-  validateBlocks
+  targetSlotToBlockChunks
 } from "../../utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import pipe from "it-pipe";
+import {toHexString} from "@chainsafe/ssz";
 
 export class FastSync
   extends (EventEmitter as { new(): InitialSyncEventEmitter })
@@ -68,17 +69,19 @@ export class FastSync
     this.chain.removeListener("processedCheckpoint", this.checkProgress);
   }
 
-  private setTarget(target: Checkpoint): void {
+  private setTarget = (target: Checkpoint): void => {
     this.targetCheckpoint = target;
-    this.syncTriggerSource.push(computeStartSlotAtEpoch(this.config, target.epoch));
-  }
+    this.syncTriggerSource.push(computeStartSlotAtEpoch(this.config, target.epoch + 1));
+  };
 
   private async sync(): Promise<void> {
     await pipe(
       this.syncTriggerSource,
       targetSlotToBlockChunks(this.config, this.chain),
       fetchBlockChunks(this.chain, this.network.reqResp, this.getInitialSyncPeers, this.opts.blockPerChunk),
-      validateBlocks(this.config, this.chain, this.logger, this.setTarget),
+      //validate get's executed before previous chunk is processed, chain will indirectly fail if incorrect hash
+      // but sync will probably stuck
+      // validateBlocks(this.config, this.chain, this.logger, this.setTarget),
       processBlocks(this.chain, this.logger)
     );
   }
@@ -86,7 +89,8 @@ export class FastSync
   private checkProgress = async (processedCheckpoint: Checkpoint): Promise<void> => {
     if(processedCheckpoint.epoch === this.targetCheckpoint.epoch) {
       if(!this.config.types.Root.equals(processedCheckpoint.root, this.targetCheckpoint.root)) {
-        this.logger.error("Different finalized root. SOmething fishy is going on");
+        this.logger.error("Different finalized root. Something fishy is going on: "
+        + `expected ${toHexString(this.targetCheckpoint.root)}, actual ${toHexString(processedCheckpoint.root)}`);
         throw new Error("Should delete chain and start again. Invalid blocks synced");
       }
       const newTarget = getCommonFinalizedCheckpoint(
