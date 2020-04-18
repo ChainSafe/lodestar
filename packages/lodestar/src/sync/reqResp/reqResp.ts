@@ -25,6 +25,7 @@ import {IReqRespHandler} from "./interface";
 import {BlockRepository} from "../../db/api/beacon/repositories";
 import {sleep} from "../../util/sleep";
 import {ReputationStore} from "../IReputation";
+import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;
@@ -204,7 +205,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       headSlot = await this.db.chain.getChainHeadSlot();
       const headBlock = await this.chain.getHeadBlock();
       const state = await this.chain.getHeadState();
-      headRoot = this.config.types.BeaconBlock.hashTreeRoot(headBlock.message);
+      headRoot = this.config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(this.config, headBlock.message));
       finalizedEpoch = state.finalizedCheckpoint.epoch;
       finalizedRoot = state.finalizedCheckpoint.root;
       headForkVersion = state.fork.currentVersion;
@@ -238,7 +239,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     archiveStream: AsyncIterable<SignedBeaconBlock>,
     blockDb: BlockRepository,
     request: BeaconBlocksByRangeRequest
-  ): AsyncIterable<SignedBeaconBlock> {
+  ): AsyncGenerator<SignedBeaconBlock> {
     let count = 0;
     for await(const archiveBlock of archiveStream) {
       count++;
