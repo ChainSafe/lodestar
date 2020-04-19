@@ -15,8 +15,6 @@ jobs:
         docker rmi $(docker image ls -aq)
         df -h
     - uses: actions/checkout@v1
-    - name: Install lerna
-      run: yarn global add lerna
     - name: Restore dependencies
       uses: actions/cache@master
       id: cache-deps
@@ -27,17 +25,17 @@ jobs:
         key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
     - name: Bootstrap
       if: steps.cache-deps.outputs.cache-hit != 'true'
-      run: $(yarn global bin)/lerna bootstrap
+      run: node_modules/.bin/lerna bootstrap
     - name: Build
-      run: $(yarn global bin)/lerna run build
+      run: node_modules/.bin/lerna run build
       if: steps.cache-deps.outputs.cache-hit == 'true'
     - name: Lint
-      run: $(yarn global bin)/lerna run lint
+      run: node_modules/.bin/lerna run lint
     - name: Unit tests
-      run: $(yarn global bin)/lerna run test:unit
+      run: node_modules/.bin/lerna run test:unit
     - name: Coverage
-      run: $(yarn global bin)/lerna run coverage
+      run: node_modules/.bin/lerna run coverage
     - name: E2e tests
-      run: $(yarn global bin)/lerna run test:e2e
+      run: node_modules/.bin/lerna run test:e2e
     - name: Spec tests
-      run: $(yarn global bin)/lerna run test:spec-min
+      run: node_modules/.bin/lerna run test:spec-min
