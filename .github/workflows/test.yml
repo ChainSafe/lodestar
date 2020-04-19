@@ -25,7 +25,7 @@ jobs:
         key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
     - name: Bootstrap
       if: steps.cache-deps.outputs.cache-hit != 'true'
-      run: node_modules/.bin/lerna bootstrap
+      run: yarn install --frozen-lockfile
     - name: Build
       run: node_modules/.bin/lerna run build
       if: steps.cache-deps.outputs.cache-hit == 'true'
