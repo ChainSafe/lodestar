@@ -3,7 +3,7 @@
  */
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../../chain";
-import {ReputationStore} from "../../IReputation";
+import {IReputationStore} from "../../IReputation";
 import {INetwork} from "../../../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ISyncOptions} from "../../options";
@@ -29,7 +29,7 @@ export class FastSync
   private readonly opts: ISyncOptions;
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
-  private readonly reps: ReputationStore;
+  private readonly reps: IReputationStore;
   private readonly network: INetwork;
   private readonly logger: ILogger;
 
@@ -59,7 +59,7 @@ export class FastSync
       this.logger.debug("No peers with higher finalized epoch");
       return;
     }
-    setTimeout(() => this.setTarget(target), 100);
+    this.setTarget(target);
     await this.sync();
   }
 
@@ -82,7 +82,7 @@ export class FastSync
       //validate get's executed before previous chunk is processed, chain will indirectly fail if incorrect hash
       // but sync will probably stuck
       // validateBlocks(this.config, this.chain, this.logger, this.setTarget),
-      processSyncBlocks(this.chain, this.logger)
+      processSyncBlocks(this.chain, this.logger, true)
     );
   }
   

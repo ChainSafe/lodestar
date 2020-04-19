@@ -131,11 +131,11 @@ export function validateBlocks(
 }
 
 export function processSyncBlocks(
-  chain: IBeaconChain, logger: ILogger
+  chain: IBeaconChain, logger: ILogger, trusted = false
 ): (source: AsyncIterable<SignedBeaconBlock[]>) => void {
   return async (source) => {
     for await (const blocks of source) {
-      await Promise.all(blocks.map((block) => chain.receiveBlock(block)));
+      await Promise.all(blocks.map((block) => chain.receiveBlock(block, trusted)));
       if(blocks.length > 0) {
         logger.info(`Imported blocks ${blocks[0].message.slot}....${blocks[blocks.length - 1].message.slot}`);
       }
