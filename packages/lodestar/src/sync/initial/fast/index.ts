@@ -15,7 +15,7 @@ import {
   fetchBlockChunks,
   getCommonFinalizedCheckpoint,
   getStatusFinalizedCheckpoint,
-  processBlocks,
+  processSyncBlocks,
   targetSlotToBlockChunks
 } from "../../utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
@@ -82,7 +82,7 @@ export class FastSync
       //validate get's executed before previous chunk is processed, chain will indirectly fail if incorrect hash
       // but sync will probably stuck
       // validateBlocks(this.config, this.chain, this.logger, this.setTarget),
-      processBlocks(this.chain, this.logger)
+      processSyncBlocks(this.chain, this.logger)
     );
   }
   

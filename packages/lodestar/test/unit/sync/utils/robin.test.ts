@@ -1,5 +1,5 @@
 import {describe, it} from "mocha";
-import {RoundRobinArray} from "../../../../src/sync/utils/robin";
+import {RoundRobinArray} from "../../../../src/sync/utils";
 import {expect} from "chai";
 
 describe("Round robin array", function () {

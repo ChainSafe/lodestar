@@ -19,9 +19,9 @@ export function getHighestCommonSlot(peers: IReputation[]): Slot {
     return current;
   }, new Map<Slot, number>());
   if(slotStatuses.size) {
-    return [...slotStatuses.entries()].sort((a, b) => {
-      return a[1] - b[1];
-    })[0][0];
+    const best =  [...slotStatuses.entries()]
+      .sort((a, b) => b[1] - a[1]);
+    return best[0][0];
   } else {
     return 0;
   }
@@ -130,7 +130,7 @@ export function validateBlocks(
   };
 }
 
-export function processBlocks(
+export function processSyncBlocks(
   chain: IBeaconChain, logger: ILogger
 ): (source: AsyncIterable<SignedBeaconBlock[]>) => void {
   return async (source) => {

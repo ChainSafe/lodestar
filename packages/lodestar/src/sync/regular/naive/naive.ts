@@ -15,7 +15,7 @@ import {
   fetchBlockChunks,
   getHighestCommonSlot,
   getStatusFinalizedCheckpoint,
-  processBlocks,
+  processSyncBlocks,
   targetSlotToBlockChunks
 } from "../../utils";
 
@@ -93,7 +93,7 @@ export class NaiveRegularSync implements IRegularSync {
       this.targetSlotSource,
       targetSlotToBlockChunks(this.config, this.chain), 
       fetchBlockChunks(this.chain, this.network.reqResp, this.getSyncPeers, this.opts.blockPerChunk),
-      processBlocks(this.chain, this.logger)
+      processSyncBlocks(this.chain, this.logger)
     );
   }
   

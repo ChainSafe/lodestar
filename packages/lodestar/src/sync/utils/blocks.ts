@@ -68,7 +68,6 @@ export async function getBlockRange(
           blocks = blocks.concat(chunkBlocks);
           return null;
         } catch (e) {
-          console.log(e);
           //if failed to obtain blocks, try in next round on another peer
           return chunk;
         }
