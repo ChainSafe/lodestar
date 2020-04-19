@@ -24,7 +24,7 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IReqRespHandler} from "./interface";
 import {BlockRepository} from "../../db/api/beacon/repositories";
 import {sleep} from "../../util/sleep";
-import {ReputationStore} from "../IReputation";
+import {IReputationStore} from "../IReputation";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IReqRespHandlerModules {
@@ -32,7 +32,7 @@ export interface IReqRespHandlerModules {
   db: IBeaconDb;
   chain: IBeaconChain;
   network: INetwork;
-  reputationStore: ReputationStore;
+  reputationStore: IReputationStore;
   logger: ILogger;
 }
 
@@ -51,7 +51,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   private db: IBeaconDb;
   private chain: IBeaconChain;
   private network: INetwork;
-  private reps: ReputationStore;
+  private reps: IReputationStore;
   private logger: ILogger;
 
   public constructor({config, db, chain, network, reputationStore, logger}: IReqRespHandlerModules) {

@@ -1,7 +1,7 @@
 import {IBeaconSync, ISyncModules} from "./interface";
 import {ISyncOptions} from "./options";
 import {INetwork} from "../network";
-import {ReputationStore} from "./IReputation";
+import {IReputationStore} from "./IReputation";
 import {sleep} from "../util/sleep";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {Root, SignedBeaconBlock, SyncingStatus} from "@chainsafe/lodestar-types";
@@ -9,7 +9,7 @@ import {FastSync, InitialSync} from "./initial";
 import {IRegularSync} from "./regular";
 import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
 import {BeaconGossipHandler, IGossipHandler} from "./gossip";
-import {RoundRobinArray} from "./utils/robin";
+import {RoundRobinArray} from "./utils";
 import {IBeaconChain} from "../chain";
 import {NaiveRegularSync} from "./regular/naive";
 
@@ -26,7 +26,7 @@ export class BeaconSync implements IBeaconSync {
   private readonly logger: ILogger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
-  private readonly peerReputations: ReputationStore;
+  private readonly peerReputations: IReputationStore;
 
   private mode: SyncMode = SyncMode.WAITING_PEERS;
   private initialSync: InitialSync;
@@ -39,7 +39,6 @@ export class BeaconSync implements IBeaconSync {
     this.network = modules.network;
     this.chain = modules.chain;
     this.logger = modules.logger;
-    this.peerReputations = modules.reputationStore;
     this.peerReputations = modules.reputationStore;
     this.initialSync = modules.initialSync || new FastSync(opts, modules);
     this.regularSync = modules.regularSync || new NaiveRegularSync(opts, modules);

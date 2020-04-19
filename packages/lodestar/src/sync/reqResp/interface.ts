@@ -3,7 +3,7 @@
  */
 
 import PeerInfo from "peer-info";
-import {RequestBody, Slot} from "@chainsafe/lodestar-types";
+import {RequestBody} from "@chainsafe/lodestar-types";
 
 import {Method, RequestId} from "../../constants";
 
