@@ -31,8 +31,6 @@ jobs:
     - name: Build
       run: $(yarn global bin)/lerna run build
       if: steps.cache-deps.outputs.cache-hit == 'true'
-    - name: Check types
-      run: $(yarn global bin)/lerna run check-types
     - name: Lint
       run: $(yarn global bin)/lerna run lint
     - name: Unit tests
