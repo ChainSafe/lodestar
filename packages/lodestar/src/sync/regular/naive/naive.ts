@@ -1,37 +1,25 @@
 import {IRegularSync, IRegularSyncModules} from "../interface";
 import {INetwork} from "../../../network";
 import {IBeaconChain} from "../../../chain";
-import {IBeaconDb} from "../../../db/api";
-import {OpPool} from "../../../opPool";
 import {defaultOptions, IRegularSyncOptions} from "../options";
 import deepmerge from "deepmerge";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ReputationStore} from "../../IReputation";
+import {IReputationStore} from "../../IReputation";
 import {SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";
-import {
-  fetchBlockChunks,
-  getHighestCommonSlot,
-  getStatusFinalizedCheckpoint,
-  processSyncBlocks,
-  targetSlotToBlockChunks
-} from "../../utils";
+import {fetchBlockChunks, getHighestCommonSlot, processSyncBlocks, targetSlotToBlockChunks} from "../../utils";
 
 export class NaiveRegularSync implements IRegularSync {
 
   private readonly config: IBeaconConfig;
 
-  private readonly db: IBeaconDb;
-
-  private readonly opPool: OpPool;
-
   private readonly network: INetwork;
 
   private readonly chain: IBeaconChain;
 
-  private readonly reps: ReputationStore;
+  private readonly reps: IReputationStore;
 
   private readonly logger: ILogger;
 
@@ -42,8 +30,6 @@ export class NaiveRegularSync implements IRegularSync {
 
   constructor(options: Partial<IRegularSyncOptions>, modules: IRegularSyncModules) {
     this.config = modules.config;
-    this.db = modules.db;
-    this.opPool = modules.opPool;
     this.network = modules.network;
     this.chain = modules.chain;
     this.reps = modules.reputationStore;
@@ -55,6 +41,7 @@ export class NaiveRegularSync implements IRegularSync {
   public async start(): Promise<void> {
     this.logger.info("Started regular syncing");
     this.chain.on("processedBlock", this.setNewTarget);
+    this.currentTarget = (await this.chain.getHeadBlock()).message.slot;
     this.targetSlotSource = pushable<Slot>();
     await Promise.all([
       this.sync(),

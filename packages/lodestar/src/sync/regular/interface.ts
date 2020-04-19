@@ -4,4 +4,4 @@ import {ISyncModules} from "../index";
 export type IRegularSync = IService;
 
 export type IRegularSyncModules =
-    Pick<ISyncModules, "config"|"db"|"chain"|"opPool"|"network"|"logger"|"reputationStore">;
+    Pick<ISyncModules, "config"|"chain"|"network"|"logger"|"reputationStore">;

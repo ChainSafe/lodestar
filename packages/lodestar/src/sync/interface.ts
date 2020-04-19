@@ -1,6 +1,6 @@
 import {IService} from "../node";
 import {INetwork} from "../network";
-import {ReputationStore} from "./IReputation";
+import {IReputationStore} from "./IReputation";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {Slot, SyncingStatus} from "@chainsafe/lodestar-types";
 import {InitialSync} from "./initial";
@@ -26,7 +26,7 @@ export interface ISyncModules {
   config: IBeaconConfig;
   network: INetwork;
   db: IBeaconDb;
-  reputationStore: ReputationStore;
+  reputationStore: IReputationStore;
   logger: ILogger;
   chain: IBeaconChain;
   opPool: OpPool;
