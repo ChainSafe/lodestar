@@ -18,7 +18,8 @@ describe("[network] rpc", () => {
     rpcA: ReqResp, rpcB: ReqResp;
   const logger: ILogger = new WinstonLogger();
 
-  beforeEach(async () => {
+  beforeEach(async function() {
+    this.timeout(10000);
     // setup
     nodeA = await createNode(multiaddr);
     nodeB = await createNode(multiaddr);
@@ -40,7 +41,6 @@ describe("[network] rpc", () => {
       rpcA.start(),
       rpcB.start(),
     ]);
-    nodeA.dial(nodeB.peerInfo);
   });
   afterEach(async function () {
     // teardown
@@ -74,6 +74,7 @@ describe("[network] rpc", () => {
         rpcB.sendResponse(id, null, [body as Status]);
       }, 100);
     });
+    await nodeA.dial(nodeB.peerInfo);
     try {
       const statusExpected: Status = {
         forkDigest: Buffer.alloc(4),
@@ -128,6 +129,7 @@ describe("[network] rpc", () => {
       block.message.slot = slot;
       return block;
     };
+    await nodeA.dial(nodeB.peerInfo);
     // send block by range requests from A to B
     rpcB.on("request", (peerInfo, method, id, body) => {
       const requestBody = body as BeaconBlocksByRangeRequest;
@@ -175,7 +177,7 @@ describe("[network] rpc", () => {
     } catch (e) {
       assert.fail(e, null, "connection event not triggered");
     }
-
+    await nodeA.dial(nodeB.peerInfo);
     rpcB.on("request", (peerInfo, method, id, body) => {
       rpcB.sendResponse(id, null, []);
     });
