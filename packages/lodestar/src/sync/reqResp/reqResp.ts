@@ -206,20 +206,16 @@ export class SyncReqResp implements ISyncReqResp {
     let headSlot: Slot,
       headRoot: Root,
       finalizedEpoch: Epoch,
-      finalizedRoot: Root,
-      headForkVersion: Version;
+      finalizedRoot: Root;
     if (!this.chain.isInitialized()) {
       headSlot = 0;
       headRoot = ZERO_HASH;
       finalizedEpoch = 0;
       finalizedRoot = ZERO_HASH;
     } else {
-      const [headBlock, state] = await Promise.all([
-          this.chain.getHeadBlock(),
-          this.chain.getHeadState()
-      ])
+      const state = await this.chain.getHeadState();
       headSlot = state.slot;
-      headRoot = this.config.types.BeaconBlock.hashTreeRoot(headBlock.message);
+      headRoot = this.config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
       finalizedEpoch = state.finalizedCheckpoint.epoch;
       finalizedRoot = state.finalizedCheckpoint.root;
     }
