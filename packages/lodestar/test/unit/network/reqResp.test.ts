@@ -40,7 +40,7 @@ describe("[network] rpc", () => {
       rpcA.start(),
       rpcB.start(),
     ]);
-    await nodeA.dial(nodeB.peerInfo);
+    nodeA.dial(nodeB.peerInfo);
   });
   afterEach(async function () {
     // teardown

@@ -122,14 +122,17 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerInfo);
-    await connected;
     const spy = sinon.spy();
     const forkDigest = chain.currentForkDigest;
     const received = new Promise((resolve) => {
-      netA.gossip.subscribeToBlock(forkDigest, spy);
-      setTimeout(resolve, 1000);
+      netA.gossip.subscribeToBlock(forkDigest, () => {
+        spy();
+        resolve();
+      });
+      setTimeout(resolve, 2000);
     });
+    await netA.connect(netB.peerInfo);
+    await connected;
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     validator.isValidIncomingBlock.resolves(true);
     const block = generateEmptySignedBlock();

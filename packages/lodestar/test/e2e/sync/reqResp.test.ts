@@ -126,12 +126,12 @@ describe("[sync] rpc", function () {
   });
   afterEach(async () => {
     await Promise.all([
-      netA.stop(),
-      netB.stop(),
-    ]);
-    await Promise.all([
       rpcA.stop(),
       rpcB.stop(),
+    ]);
+    await Promise.all([
+      netA.stop(),
+      netB.stop(),
     ]);
     netA.reqResp.removeListener("request", rpcA.onRequest.bind(rpcA));
     netB.reqResp.removeListener("request", rpcB.onRequest.bind(rpcB));
