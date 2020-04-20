@@ -19,7 +19,7 @@
     "lib/**/*.js.map"
   ],
   "scripts": {
-    "build": "yarn build:lib && yarn check-types && yarn build:types",
+    "build": "yarn build:lib && yarn build:types",
     "build:docs": "typedoc --exclude src/index.ts --out docs src",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:release": "yarn clean && yarn build",

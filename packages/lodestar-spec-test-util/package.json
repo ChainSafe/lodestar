@@ -17,7 +17,7 @@
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo && rm -f tsconfig.build.tsbuildinfo",
-    "build": "yarn build:lib && yarn check-types && yarn build:types",
+    "build": "yarn build:lib && yarn build:types",
     "build:release": "yarn clean && yarn build && yarn build:docs",
     "build:types": "tsc --incremental --declaration --project tsconfig.build.json --emitDeclarationOnly",
     "build:lib": "babel src -x .ts -d lib --source-maps",
