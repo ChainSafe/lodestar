@@ -124,7 +124,10 @@ describe("[sync] rpc", function () {
       rpcB.start(),
     ]);
   });
+
   afterEach(async () => {
+    netA.reqResp.removeListener("request", rpcA.onRequest.bind(rpcA));
+    netB.reqResp.removeListener("request", rpcB.onRequest.bind(rpcB));
     await Promise.all([
       rpcA.stop(),
       rpcB.stop(),
@@ -133,12 +136,9 @@ describe("[sync] rpc", function () {
       netA.stop(),
       netB.stop(),
     ]);
-    netA.reqResp.removeListener("request", rpcA.onRequest.bind(rpcA));
-    netB.reqResp.removeListener("request", rpcB.onRequest.bind(rpcB));
   });
 
   it("hello handshake on peer connect", async function () {
-    this.timeout(6000);
     const connected = Promise.all([
       new Promise((resolve) => netA.once("peer:connect", resolve)),
       new Promise((resolve) => netB.once("peer:connect", resolve)),
@@ -157,7 +157,6 @@ describe("[sync] rpc", function () {
   });
 
   it("goodbye on rpc stop", async function () {
-    this.timeout(6000);
     const connected = Promise.all([
       new Promise((resolve) => netA.once("peer:connect", resolve)),
       new Promise((resolve) => netB.once("peer:connect", resolve)),
