@@ -198,9 +198,9 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     if (!this.chain.isInitialized()) {
       headSlot = 0;
       headRoot = ZERO_HASH;
-      headRoot = this.config.params.GENESIS_FORK_VERSION;
       finalizedEpoch = 0;
       finalizedRoot = ZERO_HASH;
+      headForkVersion = this.config.params.GENESIS_FORK_VERSION;
     } else {
       headSlot = await this.db.chain.getChainHeadSlot();
       const headBlock = await this.chain.getHeadBlock();

@@ -74,10 +74,10 @@ describe("sync req resp", function () {
   it("should able to create Status - genesis time", async function () {
     chainStub.networkId = 1n;
     chainStub.chainId = 1;
-
+    chainStub.isInitialized.returns(false);
     const expected: Status = {
-      headForkVersion: Buffer.alloc(4),
-      finalizedRoot: ZERO_HASH ,
+      headForkVersion: config.params.GENESIS_FORK_VERSION,
+      finalizedRoot: ZERO_HASH,
       finalizedEpoch: 0,
       headRoot: ZERO_HASH,
       headSlot: 0,
@@ -91,6 +91,7 @@ describe("sync req resp", function () {
       expect.fail(e.stack);
     }
   });
+
   it("should start and stop sync rpc", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     networkStub.hasPeer.returns(true);
@@ -161,11 +162,9 @@ describe("sync req resp", function () {
       headRoot: Buffer.alloc(32),
       headSlot: 1,
     };
-
-    dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
     const state = generateState();
     state.fork.currentVersion = Buffer.from("efgh");
-    dbStub.state.get.resolves(state);
+    chainStub.getHeadState.resolves(state);
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.true;
   });
 

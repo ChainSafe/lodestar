@@ -1,5 +1,5 @@
 import {describe, it} from "mocha";
-import {BlockArchiveRepository} from "../../../../../src/db/api/beacon/repositories/blockArchive";
+import {BlockArchiveRepository} from "../../../../../src/db/api/beacon/repositories";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {LevelDbController} from "../../../../../src/db/controller";
 import sinon from "sinon";
@@ -23,14 +23,16 @@ describe("block archive repository", function () {
     const archive = new BlockArchiveRepository(config, controllerStub);
     const blockSource = pushable();
     controllerStub.searchStream.returns(blockSource);
+    const validBlock = generateEmptySignedBlock();
+    validBlock.message.slot = 1;
     blockSource.push(config.types.SignedBeaconBlock.serialize(generateEmptySignedBlock()));
-    blockSource.push(config.types.SignedBeaconBlock.serialize(generateEmptySignedBlock()));
+    blockSource.push(config.types.SignedBeaconBlock.serialize(validBlock));
     blockSource.end();
     const result = await pipe(
       archive.getAllBetweenStream(0, 1, 1),
       collect
     );
-    expect(result.length).to.be.equal(2);
+    expect(result.length).to.be.equal(1);
   });
     
 });
