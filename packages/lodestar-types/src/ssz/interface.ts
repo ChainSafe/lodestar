@@ -68,6 +68,7 @@ export interface IBeaconSSZTypes {
   BeaconState: ContainerType<t.BeaconState>;
   // Validator
   AggregateAndProof: ContainerType<t.AggregateAndProof>;
+  SignedAggregateAndProof: ContainerType<t.SignedAggregateAndProof>;
   CommitteeAssignment: ContainerType<t.CommitteeAssignment>;
   SyncingStatus: ContainerType<t.SyncingStatus>;
   AttesterDuty: ContainerType<t.AttesterDuty>;
@@ -143,6 +144,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "BeaconState",
   //validator
   "AggregateAndProof",
+  "SignedAggregateAndProof",
   "CommitteeAssignment",
   // wire
   "Status",

@@ -1,4 +1,4 @@
-import {SignedVoluntaryExit} from "@chainsafe/lodestar-types";
+import {SignedVoluntaryExit, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {BulkRepository} from "../repository";
@@ -11,6 +11,10 @@ export class VoluntaryExitRepository extends BulkRepository<SignedVoluntaryExit>
     config: IBeaconConfig,
     db: IDatabaseController) {
     super(config, db, Bucket.exit, config.types.SignedVoluntaryExit);
+  }
+
+  public getId(value: SignedVoluntaryExit): ValidatorIndex {
+    return value.message.validatorIndex;
   }
 
 }

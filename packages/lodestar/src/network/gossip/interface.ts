@@ -4,12 +4,12 @@
 
 import {GossipEvent} from "./constants";
 import {
-  AggregateAndProof,
   Attestation,
   AttesterSlashing,
   ProposerSlashing,
   SignedBeaconBlock,
-  SignedVoluntaryExit
+  SignedVoluntaryExit,
+  SignedAggregateAndProof
 } from "@chainsafe/lodestar-types";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
@@ -25,7 +25,7 @@ export interface IGossipEvents {
   [GossipEvent.BLOCK]: (signedBlock: SignedBeaconBlock) => void;
   [GossipEvent.ATTESTATION_SUBNET]: (attestationSubnet: {attestation: Attestation; subnet: number}) => void;
   [GossipEvent.ATTESTATION]: (attestation: Attestation) => void;
-  [GossipEvent.AGGREGATE_AND_PROOF]: (attestation: AggregateAndProof) => void;
+  [GossipEvent.AGGREGATE_AND_PROOF]: (attestation: SignedAggregateAndProof) => void;
   [GossipEvent.VOLUNTARY_EXIT]: (voluntaryExit: SignedVoluntaryExit) => void;
   [GossipEvent.PROPOSER_SLASHING]: (proposerSlashing: ProposerSlashing) => void;
   [GossipEvent.ATTESTER_SLASHING]: (attesterSlashing: AttesterSlashing) => void;
@@ -52,12 +52,12 @@ export interface IGossipSub extends EventEmitter {
 export interface IGossip extends IService, GossipEventEmitter {
   publishBlock(signedBlock: SignedBeaconBlock): Promise<void>;
   publishCommiteeAttestation(attestation: Attestation): Promise<void>;
-  publishAggregatedAttestation(aggregateAndProof: AggregateAndProof): Promise<void>;
+  publishAggregatedAttestation(signedAggregateAndProof: SignedAggregateAndProof): Promise<void>;
   publishVoluntaryExit(voluntaryExit: SignedVoluntaryExit): Promise<void>;
   publishAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<void>;
   publishProposerSlashing(proposerSlashing: ProposerSlashing): Promise<void>;
   subscribeToBlock(forkDigest: ForkDigest, callback: (signedBlock: SignedBeaconBlock) => void): void;
-  subscribeToAggregateAndProof(forkDigest: ForkDigest, callback: (aggregate: AggregateAndProof) => void): void;
+  subscribeToAggregateAndProof(forkDigest: ForkDigest, callback: (aggregate: SignedAggregateAndProof) => void): void;
   subscribeToAttestation(forkDigest: ForkDigest, callback: (attestation: Attestation) => void): void;
   subscribeToVoluntaryExit(
     forkDigest: ForkDigest, callback: (voluntaryExit: SignedVoluntaryExit) => void): void;
@@ -80,14 +80,14 @@ export interface IGossip extends IService, GossipEventEmitter {
 export interface IGossipMessageValidator {
   isValidIncomingBlock(signedBlock: SignedBeaconBlock): Promise<boolean>;
   isValidIncomingCommitteeAttestation(attestation: Attestation, subnet: number): Promise<boolean>;
-  isValidIncomingAggregateAndProof(aggregateAndProof: AggregateAndProof): Promise<boolean>;
+  isValidIncomingAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<boolean>;
   isValidIncomingUnaggregatedAttestation(attestation: Attestation): Promise<boolean>;
   isValidIncomingVoluntaryExit(voluntaryExit: SignedVoluntaryExit): Promise<boolean>;
   isValidIncomingProposerSlashing(proposerSlashing: ProposerSlashing): Promise<boolean>;
   isValidIncomingAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<boolean>;
 }
 
-export type GossipObject = SignedBeaconBlock | Attestation | AggregateAndProof | 
+export type GossipObject = SignedBeaconBlock | Attestation | SignedAggregateAndProof | 
 SignedVoluntaryExit | ProposerSlashing | AttesterSlashing;
 
 export type GossipMessageValidatorFn = (message: GossipObject, subnet?: number) => Promise<boolean>;
