@@ -16,6 +16,11 @@ export enum Method {
   BeaconBlocksByRoot = "beacon_blocks_by_root",
 }
 
+// Methods that returns 1 single response_chunk
+export const SINGLE_CHUNK_METHODS = [Method.Status, Method.Ping, Method.Metadata];
+// Request only method
+export const NO_CHUNK_METHODS = [Method.Goodbye];
+
 export enum ReqRespEncoding {
   SSZ = "ssz",
   SSZ_SNAPPY = "ssz_snappy",
