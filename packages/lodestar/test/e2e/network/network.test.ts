@@ -99,7 +99,7 @@ describe("[network] network", function () {
     expect(netA.getPeers().length).to.equal(1);
     expect(netB.getPeers().length).to.equal(1);
   });
-  it.skip("should delete a peer on disconnect", async function () {
+  it("should delete a peer on disconnect", async function () {
     const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
