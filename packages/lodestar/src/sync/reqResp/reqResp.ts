@@ -14,7 +14,6 @@ import {
   Slot,
   Status,
   Ping,
-  Version,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
