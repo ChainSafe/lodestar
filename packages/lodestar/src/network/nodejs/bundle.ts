@@ -46,13 +46,12 @@ export class NodejsNode extends LibP2p {
           }
         },
         peerDiscovery: {
-          autoDial: false,
+          autoDial: true,
           mdns: {
             peerInfo: options.peerInfo
           },
           bootstrap: {
             interval: 2000,
-            enabled: true,
             list: (options.bootnodes || []) as string[],
           },
           discv5: {

@@ -126,8 +126,6 @@ describe("[sync] rpc", function () {
   });
 
   afterEach(async () => {
-    netA.reqResp.removeListener("request", rpcA.onRequest.bind(rpcA));
-    netB.reqResp.removeListener("request", rpcB.onRequest.bind(rpcB));
     await Promise.all([
       rpcA.stop(),
       rpcB.stop(),
@@ -136,6 +134,8 @@ describe("[sync] rpc", function () {
       netA.stop(),
       netB.stop(),
     ]);
+    netA.reqResp.removeListener("request", rpcA.onRequest.bind(rpcA));
+    netB.reqResp.removeListener("request", rpcB.onRequest.bind(rpcB));
   });
 
   it("hello handshake on peer connect", async function () {

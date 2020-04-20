@@ -120,9 +120,6 @@ export class SyncReqResp implements ISyncReqResp {
       this.logger.error("Failed to create response status", e.message);
       this.network.reqResp.sendResponse(id, e, null);
     }
-    if (await this.shouldDisconnectOnStatus(request)) {
-      await this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
-    }
   }
 
   public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
