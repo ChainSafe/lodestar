@@ -10,8 +10,10 @@ import {
   Eth1Data,
   Number64,
   ProposerDuty,
+  ValidatorIndex,
+  Slot,
   SignedBeaconBlock,
-  ValidatorIndex
+  SignedAggregateAndProof
 } from "@chainsafe/lodestar-types";
 import {IValidatorApi} from "../../../src/api/interface/validators";
 import {generateEmptyBlock} from "../block";
@@ -61,11 +63,11 @@ export class MockValidatorApi implements IValidatorApi {
     return undefined;
   }
 
-  produceBlock(slot: number, randaoReveal: Buffer): Promise<BeaconBlock> {
+  produceBlock(slot: number, proposerPubkey: Buffer, randaoReveal: Buffer): Promise<BeaconBlock> {
     return undefined;
   }
 
-  publishAggregateAndProof(aggregated: AggregateAndProof): Promise<void> {
+  publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {
     return undefined;
   }
 

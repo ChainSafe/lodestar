@@ -18,6 +18,7 @@ type TestBeaconState = Partial<BeaconState>;
 export function generateState(opts?: TestBeaconState, config = mainnetConfig): BeaconState {
   return {
     genesisTime: Math.floor(Date.now() / 1000),
+    genesisValidatorsRoot: ZERO_HASH,
     slot: GENESIS_SLOT,
     fork: {
       previousVersion: config.params.GENESIS_FORK_VERSION,
@@ -26,6 +27,7 @@ export function generateState(opts?: TestBeaconState, config = mainnetConfig): B
     },
     latestBlockHeader: {
       slot: 0,
+      proposerIndex: 0,
       parentRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
       bodyRoot: config.types.BeaconBlockBody.hashTreeRoot(generateEmptyBlock().body),

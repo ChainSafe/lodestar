@@ -17,4 +17,6 @@ export enum DomainType {
   RANDAO = 2,
   DEPOSIT = 3,
   VOLUNTARY_EXIT = 4,
+  SELECTION_PROOF = 5,
+  AGGREGATE_AND_PROOF = 6,
 }

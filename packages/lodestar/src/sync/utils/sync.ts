@@ -1,4 +1,4 @@
-import {IReputation, ReputationStore} from "../IReputation";
+import {IReputation} from "../IReputation";
 import {BeaconBlockHeader, Checkpoint, Epoch, Slot, SignedBeaconBlock, Status,
   BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -70,7 +70,7 @@ export function isValidPeerForInitSync(config: IBeaconConfig, myState: BeaconSta
   if (!peerStatus) {
     return false;
   }
-  // TODO: compare fork_digest in the latest spec?
+  // fork_digest comparision should be done in network discv5
   return !(myState && peerStatus.finalizedEpoch < myState.finalizedCheckpoint.epoch);
 
 }
@@ -109,15 +109,12 @@ export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: 
 
 export async function getBlockRangeFromPeer(
   rpc: IReqResp,
-  reps: ReputationStore,
   peer: PeerInfo,
   chunk: ISlotRange
 ): Promise<SignedBeaconBlock[]> {
-  const peerLatestHello = reps.get(peer.id.toB58String()).latestStatus;
   return await rpc.beaconBlocksByRange(
     peer,
     {
-      headBlockRoot: peerLatestHello.headRoot,
       startSlot: chunk.start,
       step: 1,
       count: chunk.end - chunk.start

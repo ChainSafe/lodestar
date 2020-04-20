@@ -3,7 +3,7 @@
  */
 
 import {toHexString} from "@chainsafe/ssz";
-import {AggregateAndProof} from "@chainsafe/lodestar-types";
+import {SignedAggregateAndProof} from "@chainsafe/lodestar-types";
 import {Gossip} from "../gossip";
 import {getGossipTopic} from "../utils";
 import {GossipEvent} from "../constants";
@@ -11,32 +11,34 @@ import {GossipObject} from "../interface";
 
 export async function handleIncomingAggregateAndProof(this: Gossip, obj: GossipObject): Promise<void> {
   try {
-    const aggregateAndProof = obj as AggregateAndProof;
+    const signedAggregateAndProof = obj as SignedAggregateAndProof;
     this.logger.verbose(
-      `Received AggregateAndProof from validator #${aggregateAndProof.aggregatorIndex}`+
-        ` for target ${toHexString(aggregateAndProof.aggregate.data.target.root)}`
+      `Received AggregateAndProof from validator #${signedAggregateAndProof.message.aggregatorIndex}`+
+        ` for target ${toHexString(signedAggregateAndProof.message.aggregate.data.target.root)}`
     );
-    this.emit(GossipEvent.AGGREGATE_AND_PROOF, aggregateAndProof);
+    this.emit(GossipEvent.AGGREGATE_AND_PROOF, signedAggregateAndProof);
   } catch (e) {
     this.logger.warn("Incoming aggregate and proof error", e);
   }
 }
 
-export async function publishAggregatedAttestation(this: Gossip, aggregateAndProof: AggregateAndProof): Promise<void> {
+export async function publishAggregatedAttestation(
+  this: Gossip, signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {
+  const forkDigestValue = await this.getForkDigest(signedAggregateAndProof.message.aggregate.data.slot);
   await Promise.all([
     this.pubsub.publish(
-      getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF),
-      Buffer.from(this.config.types.AggregateAndProof.serialize(aggregateAndProof))
+      getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkDigestValue),
+      Buffer.from(this.config.types.SignedAggregateAndProof.serialize(signedAggregateAndProof))
     ),
     //to be backward compatible
     this.pubsub.publish(
-      getGossipTopic(GossipEvent.ATTESTATION),
-      Buffer.from(this.config.types.Attestation.serialize(aggregateAndProof.aggregate))
+      getGossipTopic(GossipEvent.ATTESTATION, forkDigestValue),
+      Buffer.from(this.config.types.Attestation.serialize(signedAggregateAndProof.message.aggregate))
     )
   ]);
 
   this.logger.verbose(
-    `Publishing AggregateAndProof for validator #${aggregateAndProof.aggregatorIndex}`
-        + ` for target ${toHexString(aggregateAndProof.aggregate.data.target.root)}`
+    `Publishing SignedAggregateAndProof for validator #${signedAggregateAndProof.message.aggregatorIndex}`
+        + ` for target ${toHexString(signedAggregateAndProof.message.aggregate.data.target.root)}`
   );
 }

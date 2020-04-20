@@ -17,6 +17,7 @@ export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): Contai
   fields: {
     // Misc
     genesisTime: ssz.Number64,
+    genesisValidatorsRoot: ssz.Root,
     slot: ssz.Slot,
     fork: ssz.Fork,
     // History
@@ -33,7 +34,7 @@ export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): Contai
     eth1Data: ssz.Eth1Data,
     eth1DataVotes: new ListType({
       elementType: ssz.Eth1Data,
-      limit: params.SLOTS_PER_ETH1_VOTING_PERIOD,
+      limit: params.EPOCHS_PER_ETH1_VOTING_PERIOD * params.SLOTS_PER_EPOCH,
     }),
     eth1DepositIndex: ssz.Number64,
     // Registry

@@ -18,6 +18,7 @@ describe("syncing", function () {
 
   it('should able to add reputation', async function () {
     const expected: IReputation = {
+      latestMetadata: null,
       latestStatus: null,
       score: 0,
     };
@@ -32,6 +33,7 @@ describe("syncing", function () {
 
   it('should able to remove reputation', async function () {
     const expected: IReputation = {
+      latestMetadata: null,
       latestStatus: null,
       score: 0,
     };

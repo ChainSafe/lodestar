@@ -2,10 +2,7 @@ import sinon from "sinon";
 import {expect} from "chai";
 import {describe, beforeEach, afterEach} from "mocha";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {EMPTY_SIGNATURE} from "../../../../src/constants";
 import * as utils from "../../../../src/util";
-import * as utilsProposer from "../../../../src/util/proposer";
-import {getBeaconProposerIndex, getTemporaryBlockHeader} from "../../../../src/util";
 import {processBlockHeader} from "../../../../src/block";
 
 import {generateState} from "../../../utils/state";
@@ -16,12 +13,11 @@ describe("process block - block header", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let getTemporaryBlockHeaderStub: any, getBeaconProposeIndexStub: any, isValidProposerStub: any;
+  let getTemporaryBlockHeaderStub: any, getBeaconProposeIndexStub: any;
 
   beforeEach(() => {
     getTemporaryBlockHeaderStub = sandbox.stub(utils, "getTemporaryBlockHeader");
-    getBeaconProposeIndexStub = sandbox.stub(utilsProposer, "getBeaconProposerIndex");
-    isValidProposerStub = sandbox.stub(utils, "isValidProposer");
+    getBeaconProposeIndexStub = sandbox.stub(utils, "getBeaconProposerIndex");
   });
 
   afterEach(() => {
@@ -56,17 +52,10 @@ describe("process block - block header", function () {
     const block = generateEmptyBlock();
     block.slot = 5;
     block.parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
-    getTemporaryBlockHeaderStub.returns({
-      previousBlockRoot: Buffer.alloc(10),
-      slot: 5,
-      stateRoot: Buffer.alloc(10),
-      blockBodyRoot: Buffer.alloc(10)
-    });
     try {
       processBlockHeader(config, state, block);
       expect.fail();
     } catch (e) {
-      expect(getTemporaryBlockHeaderStub.calledOnce).to.be.true;
     }
   });
 
@@ -76,18 +65,9 @@ describe("process block - block header", function () {
     const block = generateEmptyBlock();
     block.slot = 5;
     block.parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
-    getTemporaryBlockHeaderStub.returns({
-      previousBlockRoot: Buffer.alloc(10),
-      slot: 5,
-      stateRoot: Buffer.alloc(10),
-      blockBodyRoot: Buffer.alloc(10)
-    });
     getBeaconProposeIndexStub.returns(0);
-    isValidProposerStub.returns(true);
     try {
       processBlockHeader(config, state, block);
-      expect(getTemporaryBlockHeaderStub.calledOnce).to.be.true;
-
     } catch (e) {
       expect.fail(e.stack);
     }

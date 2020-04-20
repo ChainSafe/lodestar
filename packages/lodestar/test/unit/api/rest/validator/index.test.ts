@@ -13,8 +13,7 @@ import {RestApi} from "../../../../../src/api/rest";
 import {ApiNamespace} from "../../../../../src/api";
 import {generateEmptyAttesterDuty} from "../../../../../src/chain/factory/duties";
 import {generateEmptyBlock} from "../../../../utils/block";
-import {generateAttestation, generateAttestationData, generateEmptyAttestation} from "../../../../utils/attestation";
-import {generateAggregateAndProof} from "../../../../utils/aggregateAndProof";
+import {generateAttestation, generateAttestationData, generateEmptyAttestation, generateEmptySignedAggregateAndProof} from "../../../../utils/attestation";
 import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {BeaconApi} from "../../../../../src/api/impl/beacon";
 
@@ -75,12 +74,12 @@ describe("Test validator rest API", function () {
   });
 
   it("should publish aggregate and proof", async function () {
-    const aggregateAndProof = generateAggregateAndProof();
+    const signedAggregateAndProof = generateEmptySignedAggregateAndProof();
     await supertest(restApi.server.server)
       .post(
         "/validator/aggregate_and_proof",
       )
-      .send([config.types.AggregateAndProof.toJson(aggregateAndProof) as object])
+      .send([config.types.SignedAggregateAndProof.toJson(signedAggregateAndProof) as object])
       .expect(200);
     expect(validatorApi.publishAggregateAndProof.calledOnce).to.be.true;
   });
@@ -101,7 +100,8 @@ describe("Test validator rest API", function () {
       )
       .query({
         "randao_reveal": toHexString(Buffer.alloc(32)),
-        slot: 2
+        "proposer_pubkey": toHexString(Buffer.alloc(48)),
+        slot: 2,
       })
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");

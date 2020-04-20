@@ -18,7 +18,7 @@ export function processEth1Data(
       occurances++;
     }
   });
-  if (occurances * 2 > config.params.SLOTS_PER_ETH1_VOTING_PERIOD) {
+  if (occurances * 2 > config.params.EPOCHS_PER_ETH1_VOTING_PERIOD * config.params.SLOTS_PER_EPOCH) {
     state.eth1Data = body.eth1Data;
   }
 }

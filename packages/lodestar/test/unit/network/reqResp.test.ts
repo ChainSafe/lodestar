@@ -76,7 +76,7 @@ describe("[network] rpc", () => {
     });
     try {
       const statusExpected: Status = {
-        headForkVersion: Buffer.alloc(4),
+        forkDigest: Buffer.alloc(4),
         finalizedRoot: Buffer.alloc(32),
         finalizedEpoch: 0,
         headRoot: Buffer.alloc(32),
@@ -95,7 +95,7 @@ describe("[network] rpc", () => {
     });
     try {
       const statusExpected: Status = {
-        headForkVersion: Buffer.alloc(4),
+        forkDigest: Buffer.alloc(4),
         finalizedRoot: Buffer.alloc(32),
         finalizedEpoch: 0,
         headRoot: Buffer.alloc(32),
@@ -141,7 +141,6 @@ describe("[network] rpc", () => {
       const reqs: BeaconBlocksByRangeRequest[] = [];
       for (let i = 0; i < NUM_REQUEST; i++) {
         reqs.push({
-          headBlockRoot: Buffer.alloc(32),
           startSlot: i*100,
           count: 10,
           step: 1
@@ -182,7 +181,6 @@ describe("[network] rpc", () => {
     });
 
     const request: BeaconBlocksByRangeRequest = {
-      headBlockRoot: Buffer.alloc(32),
       startSlot: 100,
       count: 10,
       step: 1

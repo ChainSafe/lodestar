@@ -5,6 +5,7 @@ import { ZERO_HASH } from "@chainsafe/lodestar-beacon-state-transition";
 export function generateEmptyBlock(): BeaconBlock {
   return {
     slot: 0,
+    proposerIndex: 0,
     parentRoot: crypto.randomBytes(32),
     stateRoot: ZERO_HASH,
     body: {

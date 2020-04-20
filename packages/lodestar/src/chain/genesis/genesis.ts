@@ -71,6 +71,9 @@ export function initializeBeaconStateFromEth1(
     }
   });
 
+  // Set genesis validators root for domain separation and chain versioning
+  state.genesisValidatorsRoot = config.types.BeaconState.fields.validators.hashTreeRoot(state.validators);
+
   return state;
 }
 
@@ -152,6 +155,7 @@ export function getEmptySignedBlock(): SignedBeaconBlock {
 export function getEmptyBlock(): BeaconBlock {
   return {
     slot: GENESIS_SLOT,
+    proposerIndex: 0,
     parentRoot: ZERO_HASH,
     stateRoot: ZERO_HASH,
     body: getEmptyBlockBody(),

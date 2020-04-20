@@ -3,7 +3,6 @@
  */
 
 import {
-  AggregateAndProof,
   Attestation,
   AttestationData, AttesterDuty,
   BeaconBlock,
@@ -13,7 +12,9 @@ import {
   CommitteeIndex,
   Epoch, ProposerDuty,
   SignedBeaconBlock,
-  Slot
+  Slot,
+  SignedAggregateAndProof,
+  AggregateAndProof
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../../db";
@@ -69,8 +70,11 @@ export class ValidatorApi implements IValidatorApi {
     this.eth1 = modules.eth1;
   }
 
-  public async produceBlock(slot: Slot, randaoReveal: Bytes96): Promise<BeaconBlock> {
-    return await assembleBlock(this.config, this.chain, this.db, this.opPool, this.eth1, slot, randaoReveal);
+  public async produceBlock(slot: Slot, validatorPubkey: BLSPubkey, randaoReveal: Bytes96): Promise<BeaconBlock> {
+    const validatorIndex = await this.db.getValidatorIndex(validatorPubkey);
+    return await assembleBlock(
+      this.config, this.chain, this.db, this.opPool, this.eth1, slot, validatorIndex, randaoReveal
+    );
   }
 
   public async produceAttestation(
@@ -146,11 +150,11 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishAggregateAndProof(
-    aggregated: AggregateAndProof
+    signedAggregateAndProof: SignedAggregateAndProof,
   ): Promise<void> {
     await Promise.all([
-      this.opPool.aggregateAndProofs.receive(aggregated),
-      this.network.gossip.publishAggregatedAttestation(aggregated)
+      this.opPool.aggregateAndProofs.receive(signedAggregateAndProof.message),
+      this.network.gossip.publishAggregatedAttestation(signedAggregateAndProof)
     ]);
   }
 
@@ -200,7 +204,7 @@ export class ValidatorApi implements IValidatorApi {
     const domain = getDomain(
       this.config,
       await this.chain.getHeadState(),
-      DomainType.BEACON_ATTESTER,
+      DomainType.SELECTION_PROOF,
       computeEpochAtSlot(this.config, slot));
     const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
     const valid = verify(

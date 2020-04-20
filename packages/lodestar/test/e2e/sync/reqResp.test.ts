@@ -47,32 +47,35 @@ describe("[sync] rpc", function () {
   let rpcA: SyncReqResp, netA: Libp2pNetwork, repsA: ReputationStore;
   let rpcB: SyncReqResp, netB: Libp2pNetwork, repsB: ReputationStore;
   const validator: IGossipMessageValidator = {} as unknown as IGossipMessageValidator;
+
   beforeEach(async () => {
+    const state = generateState();
+    
+    state.finalizedCheckpoint = {
+      epoch: 0,
+      root: config.types.BeaconBlock.hashTreeRoot(block.message),
+    };
+    const chain = new MockBeaconChain({
+      genesisTime: 0,
+      chainId: 0,
+      networkId: 0n,
+      state,
+      config
+    });
     netA = new Libp2pNetwork(
       opts,
-      {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator}
+      {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator, chain}
     );
     netB = new Libp2pNetwork(
       opts,
-      {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator}
+      {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator, chain}
     );
     await Promise.all([
       netA.start(),
       netB.start(),
     ]);
     repsA = new ReputationStore();
-    const state = generateState();
-    const chain = new MockBeaconChain({
-      genesisTime: 0,
-      chainId: 0,
-      networkId: 0n,
-      state
-    });
     
-    state.finalizedCheckpoint = {
-      epoch: 0,
-      root: config.types.BeaconBlock.hashTreeRoot(block.message),
-    };
     // @ts-ignore
     const db = {
       state: sandbox.createStubInstance(StateRepository),
@@ -182,7 +185,6 @@ describe("[sync] rpc", function () {
 
   it("beacon blocks by range", async () => {
     const request: BeaconBlocksByRangeRequest = {
-      headBlockRoot: Buffer.alloc(32),
       startSlot: BLOCK_SLOT,
       count: 2,
       step: 1,

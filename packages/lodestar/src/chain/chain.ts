@@ -4,7 +4,8 @@
 
 import {EventEmitter} from "events";
 import {fromHexString, List, toHexString, TreeBacked} from "@chainsafe/ssz";
-import {Attestation, BeaconState, Root, SignedBeaconBlock, Uint16, Uint64,} from "@chainsafe/lodestar-types";
+import {Attestation, BeaconState, Root, SignedBeaconBlock, Uint16, Uint64,
+  ForkDigest} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {EMPTY_SIGNATURE, GENESIS_SLOT} from "../constants";
 import {IBeaconDb} from "../db";
@@ -12,7 +13,7 @@ import {IEth1Notifier} from "../eth1";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconMetrics} from "../metrics";
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 
 import {ChainEventEmitter, IAttestationProcessor, IBeaconChain} from "./interface";
@@ -45,7 +46,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public chainId: Uint16;
   public networkId: Uint64;
   public clock: IBeaconClock;
-
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly opPool: OpPool;
@@ -54,6 +54,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   private readonly metrics: IBeaconMetrics;
   private readonly opts: IChainOptions;
   private blockProcessor: BlockProcessor;
+  private _currentForkDigest: ForkDigest;
   private attestationProcessor: IAttestationProcessor;
 
   public constructor(opts: IChainOptions, {config, db, eth1, opPool, logger, metrics}: IBeaconChainModules) {
@@ -102,6 +103,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.clock = new LocalClock(this.config, state.genesisTime);
     await this.clock.start();
     await this.blockProcessor.start();
+    this._currentForkDigest = await this.getCurrentForkDigest();
   }
 
   public async stop(): Promise<void> {
@@ -109,6 +111,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     await this.clock.stop();
     await this.blockProcessor.stop();
     this.eth1.removeListener("block", this.checkGenesis);
+  }
+
+  public get currentForkDigest(): ForkDigest {
+    return this._currentForkDigest;
   }
 
   public async receiveAttestation(attestation: Attestation): Promise<void> {
@@ -160,6 +166,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.info("Beacon chain initialized");
   }
   
+  private async getCurrentForkDigest(): Promise<ForkDigest> {
+    const state = await this.getHeadState();
+    return computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
+  }
 
   private checkGenesis = async (eth1Block: Block): Promise<void> => {
     this.logger.info(`Checking if block ${eth1Block.hash} will form valid genesis state`);

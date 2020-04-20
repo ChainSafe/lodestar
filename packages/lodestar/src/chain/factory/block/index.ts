@@ -2,7 +2,7 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconBlock, BeaconBlockHeader, Bytes96, Slot} from "@chainsafe/lodestar-types";
+import {BeaconBlock, BeaconBlockHeader, Bytes96, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconDb} from "../../../db/api";
@@ -21,6 +21,7 @@ export async function assembleBlock(
   opPool: OpPool,
   eth1: IEth1Notifier,
   slot: Slot,
+  proposerIndex: ValidatorIndex,
   randao: Bytes96
 ): Promise<BeaconBlock | null> {
   const parentBlock = await db.block.get(chain.forkChoice.head());
@@ -33,6 +34,7 @@ export async function assembleBlock(
   const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock.message);
   const block: BeaconBlock = {
     slot,
+    proposerIndex,
     parentRoot: config.types.BeaconBlockHeader.hashTreeRoot(parentHeader),
     stateRoot: undefined,
     body: await assembleBody(config, opPool, eth1, depositDataRootList, currentState, randao),

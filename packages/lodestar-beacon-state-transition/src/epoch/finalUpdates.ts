@@ -15,16 +15,18 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
   const currentEpoch = getCurrentEpoch(config, state);
   const nextEpoch = currentEpoch + 1;
   // Reset eth1 data votes
-  if ((state.slot + 1) % config.params.SLOTS_PER_ETH1_VOTING_PERIOD === 0) {
+  if (nextEpoch % config.params.EPOCHS_PER_ETH1_VOTING_PERIOD === 0) {
     state.eth1DataVotes = [];
   }
   // Update effective balances with hysteresis
   state.validators.forEach((validator, index) => {
     const balance = state.balances[index];
-    const HALF_INCREMENT = config.params.EFFECTIVE_BALANCE_INCREMENT / 2n;
+    const HYSTERESIS_INCREMENT = config.params.EFFECTIVE_BALANCE_INCREMENT / BigInt(config.params.HYSTERESIS_QUOTIENT);
+    const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * BigInt(config.params.HYSTERESIS_DOWNWARD_MULTIPLIER);
+    const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * BigInt(config.params.HYSTERESIS_UPWARD_MULTIPLIER);
     if (
-      (balance < validator.effectiveBalance) ||
-      (validator.effectiveBalance + (HALF_INCREMENT*3n)) < balance
+      ((balance + DOWNWARD_THRESHOLD) < validator.effectiveBalance) ||
+      ((validator.effectiveBalance + UPWARD_THRESHOLD) < balance)
     ) {
       validator.effectiveBalance = bigIntMin(
         balance - (balance % config.params.EFFECTIVE_BALANCE_INCREMENT),

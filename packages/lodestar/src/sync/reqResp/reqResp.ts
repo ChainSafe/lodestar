@@ -13,6 +13,7 @@ import {
   SignedBeaconBlock,
   Slot,
   Status,
+  Ping,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
@@ -84,13 +85,17 @@ export class SyncReqResp implements ISyncReqResp {
     peerInfo: PeerInfo,
     method: Method,
     id: RequestId,
-    body: RequestBody,
+    body?: RequestBody,
   ): Promise<void> => {
     switch (method) {
       case Method.Status:
         return await this.onStatus(peerInfo, id, body as Status);
       case Method.Goodbye:
         return await this.onGoodbye(peerInfo, id, body as Goodbye);
+      case Method.Ping:
+        return await this.onPing(peerInfo, id, body as Ping);
+      case Method.Metadata:
+        return await this.onMetadata(peerInfo, id);
       case Method.BeaconBlocksByRange:
         return await this.onBeaconBlocksByRange(id, body as BeaconBlocksByRangeRequest);
       case Method.BeaconBlocksByRoot:
@@ -116,10 +121,8 @@ export class SyncReqResp implements ISyncReqResp {
   }
 
   public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
-    const headBlock = await this.db.block.getChainHead();
-    const state = await this.db.state.get(headBlock.message.stateRoot.valueOf() as Uint8Array);
-    // peer is on a different fork version
-    return !this.config.types.Version.equals(state.fork.currentVersion, request.headForkVersion);
+    const currentForkDigest = this.chain.currentForkDigest;
+    return !this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest);
 
     //TODO: fix this, doesn't work if we are starting sync(archive is empty) or we don't have finalized epoch
     // const startSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
@@ -142,6 +145,16 @@ export class SyncReqResp implements ISyncReqResp {
   public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
     this.network.reqResp.sendResponse(id, null, [BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN)]);
     await this.network.disconnect(peerInfo);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public async onPing(peerInfo: PeerInfo, id: RequestId, request: Ping): Promise<void> {
+    this.network.reqResp.sendResponse(id, null, [this.network.metadata.seqNumber]);
+    // TODO handle peer sequence number update
+  }
+
+  public async onMetadata(peerInfo: PeerInfo, id: RequestId): Promise<void> {
+    this.network.reqResp.sendResponse(id, null, [this.network.metadata.metadata]);
   }
 
   public async onBeaconBlocksByRange(
@@ -202,7 +215,7 @@ export class SyncReqResp implements ISyncReqResp {
       finalizedRoot = state.finalizedCheckpoint.root;
     }
     return {
-      headForkVersion: (await this.chain.getHeadState()).fork.currentVersion,
+      forkDigest: this.chain.currentForkDigest,
       finalizedRoot,
       finalizedEpoch,
       headRoot,

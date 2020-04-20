@@ -1,16 +1,18 @@
 import {EventEmitter} from "events";
 
-import {Number64, Uint16, Uint64} from "@chainsafe/lodestar-types";
+import {Number64, Uint16, Uint64, ForkDigest} from "@chainsafe/lodestar-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
-import {ITreeBacked, List, TreeBackedify} from "@chainsafe/ssz";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {BeaconState} from "@chainsafe/lodestar-types";
+import { computeForkDigest } from "@chainsafe/lodestar-beacon-state-transition";
+import { IBeaconConfig } from "@chainsafe/lodestar-config";
 
 export interface IMockChainParams {
   genesisTime: Number64;
   chainId: Uint16;
   networkId: Uint64;
   state: BeaconState;
+  config: IBeaconConfig;
 }
 
 export class MockBeaconChain extends EventEmitter implements IBeaconChain {
@@ -21,13 +23,15 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
 
   private initialized: boolean;
   private state: BeaconState|null;
+  private config: IBeaconConfig;
 
-  public constructor({genesisTime, chainId, networkId, state}: Partial<IMockChainParams>) {
+  public constructor({genesisTime, chainId, networkId, state, config}: Partial<IMockChainParams>) {
     super();
     this.initialized = genesisTime > 0;
     this.chainId = chainId || 0;
     this.networkId = networkId || 0n;
-    this.state = state; 
+    this.state = state;
+    this.config = config;
   }
 
   getHeadBlock(): Promise<| null> {
@@ -36,6 +40,10 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
 
   public async getHeadState(): Promise<BeaconState| null> {
     return this.state;
+  }
+
+  public get currentForkDigest(): ForkDigest {
+    return computeForkDigest(this.config, this.state.fork.currentVersion, this.state.genesisValidatorsRoot);
   }
 
   public async initializeBeaconChain(): Promise<void> {

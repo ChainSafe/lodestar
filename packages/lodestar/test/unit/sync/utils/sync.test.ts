@@ -40,6 +40,7 @@ describe("sync utils", function () {
       const peers: IReputation[] = [
         {
           latestStatus: null,
+          latestMetadata: null,
           score: 1
         },
         generateReputation(1),
@@ -115,20 +116,15 @@ describe("sync utils", function () {
 
     it("should get block range from peer", async function () {
       const rpcStub = sinon.createStubInstance(ReqResp);
-      const repsStub = sinon.createStubInstance(ReputationStore);
-      // @ts-ignore
-      repsStub.get.returns({latestStatus: {root: Buffer.alloc(32, 1)}});
       rpcStub.beaconBlocksByRange
         .withArgs(sinon.match.any, sinon.match.any)
         .resolves([generateEmptySignedBlock()]);
       const result = await getBlockRangeFromPeer(
         rpcStub,
-        repsStub as unknown as ReputationStore,
         {id: sinon.createStubInstance(PeerId)} as unknown as PeerInfo,
         {start: 1, end: 4}
       );
       expect(result.length).to.be.greaterThan(0);
-      expect(repsStub.get.calledOnce).to.be.true;
       expect(rpcStub.beaconBlocksByRange.calledOnce).to.be.true;
     });
 
@@ -173,7 +169,7 @@ describe("sync utils", function () {
       const peerStatus: Status = {
         finalizedEpoch: 5,
         finalizedRoot: Buffer.alloc(32),
-        headForkVersion: Buffer.alloc(4),
+        forkDigest: Buffer.alloc(4),
         headRoot: Buffer.alloc(32),
         headSlot: 0,
       };
@@ -186,7 +182,7 @@ describe("sync utils", function () {
       const peerStatus: Status = {
         finalizedEpoch: 10,
         finalizedRoot: Buffer.alloc(32),
-        headForkVersion: Buffer.alloc(4),
+        forkDigest: Buffer.alloc(4),
         headRoot: Buffer.alloc(32),
         headSlot: 0,
       };
@@ -214,10 +210,11 @@ function generateValidChain(start: BeaconBlockHeader, n = 3): SignedBeaconBlock[
 function generateReputation(finalizedEpoch: Epoch): IReputation {
   return {
     score: 1,
+    latestMetadata: null,
     latestStatus: {
       finalizedEpoch: finalizedEpoch || 0,
       finalizedRoot: Buffer.alloc(1),
-      headForkVersion: Buffer.alloc(4),
+      forkDigest: Buffer.alloc(4),
       headRoot: Buffer.alloc(1),
       headSlot: 0
     }

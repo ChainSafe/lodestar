@@ -12,7 +12,7 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {GossipEvent} from "../../../network/gossip/constants";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ReputationStore} from "../../IReputation";
-import {AggregateAndProof, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {Root, SignedBeaconBlock, Slot, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
 import {AttestationCollector} from "../../utils/attestation-collector";
 import {RoundRobinArray} from "../../utils/robin";
 
@@ -80,19 +80,21 @@ export class NaiveRegularSync implements IRegularSync {
   }
 
   private startGossiping(): void {
-    this.network.gossip.subscribeToBlock(this.onBlock);
-    this.network.gossip.subscribeToAggregateAndProof(this.onAggregatedAttestation);
-    this.network.gossip.subscribeToAttesterSlashing(this.opPool.attesterSlashings.receive);
-    this.network.gossip.subscribeToProposerSlashing(this.opPool.proposerSlashings.receive);
-    this.network.gossip.subscribeToVoluntaryExit(this.opPool.voluntaryExits.receive);
+    const forkDigest = this.chain.currentForkDigest;
+    this.network.gossip.subscribeToBlock(forkDigest, this.onBlock);
+    this.network.gossip.subscribeToAggregateAndProof(forkDigest, this.onAggregatedAttestation);
+    this.network.gossip.subscribeToAttesterSlashing(forkDigest, this.opPool.attesterSlashings.receive);
+    this.network.gossip.subscribeToProposerSlashing(forkDigest, this.opPool.proposerSlashings.receive);
+    this.network.gossip.subscribeToVoluntaryExit(forkDigest, this.opPool.voluntaryExits.receive);
   }
 
   private stopGossiping(): void {
-    this.network.gossip.unsubscribe(GossipEvent.BLOCK, this.onBlock);
-    this.network.gossip.unsubscribe(GossipEvent.AGGREGATE_AND_PROOF, this.onAggregatedAttestation);
-    this.network.gossip.unsubscribe(GossipEvent.ATTESTER_SLASHING, this.opPool.attesterSlashings.receive);
-    this.network.gossip.unsubscribe(GossipEvent.PROPOSER_SLASHING, this.opPool.proposerSlashings.receive);
-    this.network.gossip.unsubscribe(GossipEvent.VOLUNTARY_EXIT, this.opPool.voluntaryExits.receive);
+    const forkDigest = this.chain.currentForkDigest;
+    this.network.gossip.unsubscribe(forkDigest, GossipEvent.BLOCK, this.onBlock);
+    this.network.gossip.unsubscribe(forkDigest, GossipEvent.AGGREGATE_AND_PROOF, this.onAggregatedAttestation);
+    this.network.gossip.unsubscribe(forkDigest, GossipEvent.ATTESTER_SLASHING, this.opPool.attesterSlashings.receive);
+    this.network.gossip.unsubscribe(forkDigest, GossipEvent.PROPOSER_SLASHING, this.opPool.proposerSlashings.receive);
+    this.network.gossip.unsubscribe(forkDigest, GossipEvent.VOLUNTARY_EXIT, this.opPool.voluntaryExits.receive);
   }
 
   /**
@@ -112,7 +114,6 @@ export class NaiveRegularSync implements IRegularSync {
     this.logger.info(`Syncing slots ${currentSlot + 1}...${this.targetSlot}`);
     const blocks = await getBlockRange(
       this.network.reqResp,
-      this.reps,
       this.peers,
       {start: currentSlot + 1, end: this.targetSlot},
       this.opts.blockPerChunk
@@ -147,8 +148,9 @@ export class NaiveRegularSync implements IRegularSync {
     }
   };
 
-  private onAggregatedAttestation = async (aggregate: AggregateAndProof): Promise<void> => {
-    await this.chain.receiveAttestation(aggregate.aggregate);
+  private onAggregatedAttestation = async (signedAggregate: SignedAggregateAndProof): Promise<void> => {
+    this.opPool.aggregateAndProofs.receive(signedAggregate.message);
+    await this.chain.receiveAttestation(signedAggregate.message.aggregate);
   };
 
   private onBlock = async (block: SignedBeaconBlock): Promise<void> => {

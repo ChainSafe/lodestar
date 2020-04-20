@@ -49,7 +49,7 @@ describe("block assembly", function () {
     assembleBodyStub.resolves(generateEmptyBlock().body);
     stateTransitionStub.returns(generateState());
     try {
-      const result = await assembleBlock(config, chainStub, beaconDB, opPool, eth1, 1, Buffer.alloc(96, 0));
+      const result = await assembleBlock(config, chainStub, beaconDB, opPool, eth1, 1, 1, Buffer.alloc(96, 0));
       expect(result).to.not.be.null;
       expect(result.slot).to.equal(1);
       expect(result.stateRoot).to.not.be.null;

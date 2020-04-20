@@ -1,5 +1,5 @@
 import {ArrayLike} from "@chainsafe/ssz";
-import {AggregateAndProof, Attestation, BeaconState} from "@chainsafe/lodestar-types";
+import {AggregateAndProof, Attestation, BeaconState, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {OperationsModule} from "./abstract";
 import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {BulkRepository} from "../../db/api/beacon/repository";
@@ -23,6 +23,20 @@ export class AggregateAndProofOperations extends OperationsModule<AggregateAndPr
       //prefer aggregated attestations
       return a.aggregationBits.length - b.aggregationBits.length;
     });
+  }
+
+  public async getByAggregatorAndSlot(aggregatorIndex: ValidatorIndex, slot: Slot): Promise<Attestation[]> {
+    const aggregates: AggregateAndProof[] = await this.getAll() || [];
+    return aggregates
+      .filter((aggregate) => aggregate.aggregate.data.slot === slot && aggregate.aggregatorIndex === aggregatorIndex)
+      .map((aggregate) => aggregate.aggregate);
+  }
+
+  public async hasAttestation(attestation: Attestation): Promise<boolean> {
+    const aggregates: AggregateAndProof[] = await this.getAll();
+    const index = aggregates.findIndex(
+      aggregate => this.config.types.Attestation.equals(aggregate.aggregate, attestation));
+    return index !== -1;
   }
 
   public async removeIncluded(attestations: ArrayLike<Attestation>): Promise<void> {

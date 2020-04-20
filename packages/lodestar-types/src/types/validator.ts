@@ -18,3 +18,8 @@ export interface AggregateAndProof {
   aggregate: Attestation;
   selectionProof: BLSSignature;
 }
+
+export interface SignedAggregateAndProof {
+  message: AggregateAndProof;
+  signature: BLSSignature;
+}

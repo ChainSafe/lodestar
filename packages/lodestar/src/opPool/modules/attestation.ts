@@ -1,4 +1,4 @@
-import {Attestation, BeaconState, CommitteeIndex, Epoch} from "@chainsafe/lodestar-types";
+import {Attestation, BeaconState, CommitteeIndex, Epoch, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {OperationsModule} from "./abstract";
 import {computeEpochAtSlot, computeStartSlotAtEpoch,} from "@chainsafe/lodestar-beacon-state-transition";
@@ -20,6 +20,11 @@ export class AttestationOperations extends OperationsModule<Attestation> {
           //filter out aggregated attestations
           && attestation.aggregationBits.length === 1;
     });
+  }
+
+  public async geAttestationsBySlot(slot: Slot): Promise<Attestation[]> {
+    const attestations = await this.getAll() || [];
+    return attestations.filter((attestation) => attestation.data.slot === slot);
   }
 
   public async removeOld(state: BeaconState): Promise<void> {

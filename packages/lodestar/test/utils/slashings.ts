@@ -10,7 +10,6 @@ export function generateEmptyProposerSlashing(): ProposerSlashing {
   return {
     signedHeader1: {message: getTemporaryBlockHeader(config, generateEmptyBlock()), signature: Buffer.alloc(96)},
     signedHeader2: {message: getTemporaryBlockHeader(config, generateEmptyBlock()), signature: Buffer.alloc(96)},
-    proposerIndex: 0
   };
 }
 

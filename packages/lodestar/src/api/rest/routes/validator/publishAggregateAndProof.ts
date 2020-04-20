@@ -23,7 +23,7 @@ export const registerPublishAggregateAndProofEndpoint: LodestarRestApiEndpoint =
       await Promise.all(
         request.body.map((payload) => {
           api.validator.publishAggregateAndProof(
-            config.types.AggregateAndProof.fromJson(payload)
+            config.types.SignedAggregateAndProof.fromJson(payload)
           );
         })
       );

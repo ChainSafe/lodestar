@@ -77,7 +77,6 @@ export class FastSync
       const latestState = await this.chain.getHeadState();
       const blocks = await getBlockRange(
         this.network.reqResp,
-        this.reps,
         this.peers,
         {start: latestState.slot, end: computeStartSlotAtEpoch(this.config, targetEpoch)},
         this.opts.blockPerChunk

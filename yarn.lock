@@ -2,6 +2,11 @@
 # yarn lockfile v1
 
 
+"@assemblyscript/loader@^0.9.2":
+  version "0.9.4"
+  resolved "https://registry.yarnpkg.com/@assemblyscript/loader/-/loader-0.9.4.tgz#a483c54c1253656bb33babd464e3154a173e1577"
+  integrity sha512-HazVq9zwTVwGmqdwYzu7WyQ6FQVZ7SwET0KKQuKm55jD0IfUpZgN0OPIiZG3zV1iSrVYcN0bdwLRXI/VNCYsUA==
+
 "@babel/cli@^7.8.3":
   version "7.8.3"
   resolved "https://registry.yarnpkg.com/@babel/cli/-/cli-7.8.3.tgz#121beb7c273e0521eb2feeb3883a2b7435d12328"
@@ -874,6 +879,14 @@
     lodash "^4.17.13"
     to-fast-properties "^2.0.0"
 
+"@chainsafe/as-sha256@^0.2.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-0.2.0.tgz#3ebe061d59d30af9e95a8c22ff4813cbf0e89dbc"
+  integrity sha512-reKklZhY4jSj7JdxdAjUfsaiMt2pdm8V/IqlOR5c4m6Y4tRCxt4f0HBMfyiE2ZQF4tqPPqRVf/ulXwK+LjLIxw==
+  dependencies:
+    "@assemblyscript/loader" "^0.9.2"
+    buffer "^5.4.3"
+
 "@chainsafe/bit-utils@0.1.6":
   version "0.1.6"
   resolved "https://registry.yarnpkg.com/@chainsafe/bit-utils/-/bit-utils-0.1.6.tgz#f643033340b45a1170c5473e4aab54a7a7b4b9dc"
@@ -964,30 +977,30 @@
   dependencies:
     buffer "^5.4.3"
 
-"@chainsafe/eth2-spec-tests@0.10.1-fix":
-  version "0.10.1-fix"
-  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.10.1-fix.tgz#c0fb839b5b93fae0a7cd247fd686d2a9ea926240"
-  integrity sha512-mnfIDUFZ/IsAHmJQ7hkZ3t3s7rxrr5olLz3pH1RS2kWsuQonAKzVOZTQNkHYowpeI4ebYo8H+NPRtD5mkbTTzg==
+"@chainsafe/eth2-spec-tests@0.11.1-fixed":
+  version "0.11.1-fixed"
+  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.11.1-fixed.tgz#4c873a627740aa43c9dd85fbfcb90a528a7e6467"
+  integrity sha512-kjxeVrg5DJJXhrbydD+FSNdNj6Z2JIOitRUY7gnXVI9DRDEjAa59tZ9ZqFjx7M0UAOCJ9DLR6JdHAU/0nLLIZQ==
 
 "@chainsafe/eth2-spec-tests@^0.10.1-fix":
   version "0.10.1"
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.10.1.tgz#a5705e0efc7333172426d4c3abdccb265c0c9ebb"
   integrity sha512-87HnZbXT1g390sbw2ptKMON/9T61H8m5/cbfzDZFulF8ZWAZGpOdXhMArQi/PFS2o78pNHCqRKsSh1LPnjpUDg==
 
-"@chainsafe/persistent-merkle-tree@^0.1.1":
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.1.1.tgz#6a8384b80595ea87dc8b6aee11e4ee236d9854b1"
-  integrity sha512-bUjUEBFMPx+r/RHAhWJXvHnsfYEHfIVHkwMxdgjMUt4gcMHxiFciaIQBD/FRvAffft/8B5+S5ASknqPvGVk1kA==
+"@chainsafe/persistent-merkle-tree@^0.1.2":
+  version "0.1.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.1.2.tgz#d052e068fa69be60117f47d686b28caf4b6d9b5a"
+  integrity sha512-W3WLCMnuYpXHALnDD1wd09H8m3dNtv1Rqx8+3VS/6gbILJaydGDUvroDIltshRg3bpVMTsTSxAM54J9ddNOApw==
   dependencies:
-    bcrypto "^4.2.8"
+    "@chainsafe/as-sha256" "^0.2.0"
 
-"@chainsafe/ssz@0.6.1", "@chainsafe/ssz@^0.6.1":
-  version "0.6.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.6.1.tgz#07944684befd557d9e2e85942da5534d38be67d2"
-  integrity sha512-ycSA0HPflbh5MJt9heRHc4adD835KMx/Vqiu/aM1LNMDyMgrRUmVSem+8xtqigROyfi4J/cUiN1j7L5aTygilA==
+"@chainsafe/ssz@0.6.2", "@chainsafe/ssz@^0.6.2":
+  version "0.6.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.6.2.tgz#f548f13ca17ce2f9a06bfe16b7521a566faa6067"
+  integrity sha512-w6wk6kBB2KXeiu1wI2VXPDQqNjen7P0uK+NcxXAzBcD3HDr/XHzjBz1U1BI96uTjRI6kbXhujejAWFUOSNAunA==
   dependencies:
-    "@chainsafe/persistent-merkle-tree" "^0.1.1"
-    bcrypto "^4.1.0"
+    "@chainsafe/as-sha256" "^0.2.0"
+    "@chainsafe/persistent-merkle-tree" "^0.1.2"
 
 "@evocateur/libnpmaccess@^3.1.2":
   version "3.1.2"
@@ -3506,15 +3519,6 @@ bcrypto@5.1.0:
   dependencies:
     bufio "~1.0.6"
     loady "~0.0.1"
-
-bcrypto@^4.1.0:
-  version "4.1.0"
-  resolved "https://registry.yarnpkg.com/bcrypto/-/bcrypto-4.1.0.tgz#04fd2ec095e4eba121412e287b9c542cd7230a57"
-  dependencies:
-    bsert "~0.0.10"
-    bufio "~1.0.6"
-    loady "~0.0.1"
-    nan "^2.13.2"
 
 bcrypto@^4.2.6:
   version "4.2.6"
