@@ -12,7 +12,7 @@ describe("beacon cli", function() {
   this.timeout(0);
 
   const logger: ILogger = new WinstonLogger();
-  logger.silent = false;
+  logger.silent = true;
   //same folder of default db
   const tmpDir = ".tmp";
   const peerIdPath = `${tmpDir}/peer-id.json`;

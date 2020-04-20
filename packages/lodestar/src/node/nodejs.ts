@@ -148,12 +148,6 @@ export class BeaconNode {
     );
   }
 
-  // public async initFromEth1(eth1BlockNum: number): Promise<void> {
-  //   // TODO: how can we check this step
-  //   await this.eth1.initContract();
-  //   await this.chain.genesisStateFromEth1(eth1BlockNum);
-  // }
-
   public async start(): Promise<void> {
     this.logger.info("Starting eth2 beacon node - LODESTAR!");
     //if this wasm inits starts piling up, we can extract them to separate methods
