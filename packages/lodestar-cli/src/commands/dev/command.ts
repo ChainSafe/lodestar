@@ -40,6 +40,8 @@ const BASE_DIRECTORY = path.join(".", ".tmp");
 
 export class DevCommand implements ICliCommand {
   public node: BeaconNode;
+  public validators: ValidatorClient[] = [];
+
 
   public register(commander: CommanderStatic): void {
 
@@ -87,12 +89,14 @@ export class DevCommand implements ICliCommand {
     }
     resetPath(conf.db.name);
 
-    conf.network = Object.assign(
-      {},
-      conf.network,
-      {discv5: {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/0.0.0.0/udp/5501"}},
-    );
-    const libp2p = await createNodeJsLibp2p(peerId, conf.network);
+    const defaultDiscv5Opt = {
+      enr: ENR.createFromPeerId(peerId),
+      bindAddr: "/ip4/0.0.0.0/udp/5501",
+      bootEnrs: [] as ENR[]};
+    const discv5 = conf.network? Object.assign(defaultDiscv5Opt, conf.network.discv5) : defaultDiscv5Opt;
+    const libp2pOpt = conf.network? Object.assign(conf.network, {discv5}) : {discv5};
+
+    const libp2p = await createNodeJsLibp2p(peerId, libp2pOpt);
 
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
@@ -167,6 +171,7 @@ export class DevCommand implements ICliCommand {
         logger: new WinstonLogger({module: `Validator #${index}`})
       }
     );
+    this.validators.push(validator);
     validator.start();
   }
 }

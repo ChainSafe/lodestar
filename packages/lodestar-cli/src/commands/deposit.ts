@@ -5,7 +5,8 @@
 import fs from "fs";
 import {CommanderStatic} from "commander";
 import {JsonRpcProvider} from "ethers/providers";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {ICliCommand} from "./interface";
 import defaults from "@chainsafe/lodestar/lib/eth1/options";
 import {ILogger, LogLevels, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -29,6 +30,7 @@ interface IDepositCommandOptions {
   value: string;
   contract: string;
   accounts: number;
+  preset?: string;
 }
 
 interface IJsonKeyFile {
@@ -63,6 +65,7 @@ export class DepositCommand implements ICliCommand {
         "-m, --mnemonic [mnemonic]",
         "If mnemonic is submitted, first 10 accounts will make deposit"
       )
+      .option("-p, --preset [preset]", "Minimal/mainnet", "minimal")
       .option("-n, --node [node]", "Url of eth1 node", "http://127.0.0.1:8545")
       .option("-v, --value [value]", "Amount of ether to deposit", "32")
       .option(
@@ -121,6 +124,8 @@ export class DepositCommand implements ICliCommand {
       throw new CliError("You have to submit either privateKey, mnemonic, or key file. Check --help");
     }
 
+    const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
+
     await Promise.all(
       eth1Wallets.map(async (eth1Wallet: ethers.Wallet, i: number) => {
         try {
@@ -173,8 +178,8 @@ export class DepositCommand implements ICliCommand {
       .map((_, i) => {
         const {withdrawal, signing} = deriveEth2ValidatorKeys(masterSecretKey, i);
         return {
-          signing: PrivateKey.fromBytes(withdrawal),
-          withdrawal: PrivateKey.fromBytes(signing)
+          signing: PrivateKey.fromBytes(signing),
+          withdrawal: PrivateKey.fromBytes(withdrawal)
         };
       });
   }

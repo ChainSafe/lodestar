@@ -1,5 +1,19 @@
 import {IConfigurationModule} from "../util/config";
 
+const Discv5Options: IConfigurationModule = {
+  name: "discv5",
+  fields: [
+    {
+      name: "bindAddr",
+      type: "string",
+      configurable: true,
+      cli: {
+        flag: "bindAddr"
+      }
+    }
+  ]
+};
+
 export const NetworkOptions: IConfigurationModule = {
   name: "network",
   fields: [
@@ -36,5 +50,6 @@ export const NetworkOptions: IConfigurationModule = {
         flag: "multiaddrs"
       }
     },
+    Discv5Options
   ]
 };

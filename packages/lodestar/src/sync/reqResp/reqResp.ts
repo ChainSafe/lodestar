@@ -67,10 +67,13 @@ export class SyncReqResp implements ISyncReqResp {
   public async start(): Promise<void> {
     this.network.on("peer:connect", this.handshake);
     this.network.reqResp.on("request", this.onRequest);
-    const myStatus = await this.createStatus();
-    await Promise.all(
-      this.network.getPeers().map((peerInfo) =>
-        this.network.reqResp.status(peerInfo, myStatus)));
+    const hasPeers = this.network.getPeers() && this.network.getPeers().length > 0;
+    if (hasPeers) {
+      const myStatus = await this.createStatus();
+      await Promise.all(
+        this.network.getPeers().map((peerInfo) =>
+          this.network.reqResp.status(peerInfo, myStatus)));
+    }
   }
 
   public async stop(): Promise<void> {

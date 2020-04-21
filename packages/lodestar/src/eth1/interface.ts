@@ -73,7 +73,7 @@ export interface IEth1Notifier extends Eth1EventEmitter {
    */
   processPastDeposits(
     fromBlock: string | Number64, toBlock?: string | Number64
-  ): Promise<void>;
+  ): Promise<DepositData[]>;
 
   /**
    * Return the latest block
@@ -100,6 +100,8 @@ export interface IEth1Notifier extends Eth1EventEmitter {
   getEth1Vote(config: IBeaconConfig, state: BeaconState): Promise<Eth1Data>;
 
   getEth1Data(block: Block): Promise<Eth1Data>;
+  
+  initContract(): Promise<void>;
 }
 
 /**
