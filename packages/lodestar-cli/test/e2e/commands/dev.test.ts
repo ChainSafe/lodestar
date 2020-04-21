@@ -45,14 +45,14 @@ describe("e2e interop simulation", function() {
     rimraf.sync(LODESTAR_DIR);
   });
 
-  
+
   it("should be able to run until a justified epoch with minimal config", async () => {
     await initializeNode();
     logger.info("Node is initialized");
     await startValidators();
     logger.info("Validators are started");
 
-    // wait for 60 seconds at most, check every second
+    // wait for 60 seconds at most
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 60000);
       node.chain.on("justifiedCheckpoint", () => {
@@ -72,7 +72,9 @@ describe("e2e interop simulation", function() {
     minimalConfig.params.SECONDS_PER_SLOT = SECONDS_PER_SLOT;
     minimalConfig.params.SLOTS_PER_EPOCH = SLOTS_PER_EPOCH;
     const peerId = await createPeerId();
-    const libp2p = await createNodeJsLibp2p(peerId, {discv5: {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/0.0.0.0/udp/5551", bootEnrs: []}});
+    const libp2p = await createNodeJsLibp2p(
+      peerId, {maxPeers: 0, discv5: {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/0.0.0.0/udp/0", bootEnrs: []}}
+    );
     node = new BeaconNode(conf, {config: minimalConfig, logger, eth1: new InteropEth1Notifier(), libp2p});
 
     const genesisTime = Math.floor(Date.now()/1000);

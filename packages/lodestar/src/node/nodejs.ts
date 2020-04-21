@@ -168,7 +168,6 @@ export class BeaconNode {
     await this.api.stop();
     await this.sync.stop();
     await this.opPool.stop();
-
     await this.chain.stop();
     await this.eth1.stop();
     await this.network.stop();
