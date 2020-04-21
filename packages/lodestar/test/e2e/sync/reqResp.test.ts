@@ -21,8 +21,9 @@ import {
 } from "../../../src/db/api/beacon/repositories";
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {generateEmptySignedBlock} from "../../utils/block";
-import {BeaconBlocksByRootRequest, BeaconBlocksByRangeRequest} from "@chainsafe/lodestar-types";
+import {BeaconBlocksByRangeRequest, BeaconBlocksByRootRequest} from "@chainsafe/lodestar-types";
 import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
+import {sleep} from "../../utils/sleep";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {

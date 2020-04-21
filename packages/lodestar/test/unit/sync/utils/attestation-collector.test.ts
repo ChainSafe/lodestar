@@ -35,11 +35,21 @@ describe("Attestation collector",function() {
     await realClock.start();
     await collector.start();
     collector.subscribeToCommitteeAttestations(1, 1);
-    expect(fakeGossip.subscribeToAttestationSubnet.withArgs(getCommitteeIndexSubnet(1)).calledOnce).to.be.true;
+    expect(
+      fakeGossip.subscribeToAttestationSubnet.withArgs(sinon.match.any, getCommitteeIndexSubnet(1)).calledOnce
+    ).to.be.true;
     clock.tick(config.params.SECONDS_PER_SLOT * 1000);
-    expect(fakeGossip.subscribeToAttestationSubnet.withArgs(getCommitteeIndexSubnet(1), sinon.match.any).calledOnce).to.be.true;
+    expect(
+      fakeGossip.subscribeToAttestationSubnet.withArgs(
+        sinon.match.any, getCommitteeIndexSubnet(1), sinon.match.any
+      ).calledOnce
+    ).to.be.true;
     clock.tick(config.params.SECONDS_PER_SLOT * 1000);
-    expect(fakeGossip.unsubscribeFromAttestationSubnet.withArgs(getCommitteeIndexSubnet(1), sinon.match.func).calledOnce).to.be.true;
+    expect(
+      fakeGossip.unsubscribeFromAttestationSubnet.withArgs(
+        sinon.match.any, getCommitteeIndexSubnet(1), sinon.match.func
+      ).calledOnce
+    ).to.be.true;
     await collector.stop();
     await realClock.stop();
   });

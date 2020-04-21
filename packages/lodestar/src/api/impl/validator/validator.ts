@@ -3,18 +3,20 @@
  */
 
 import {
+  AggregateAndProof,
   Attestation,
-  AttestationData, AttesterDuty,
+  AttestationData,
+  AttesterDuty,
   BeaconBlock,
   BLSPubkey,
   BLSSignature,
   Bytes96,
   CommitteeIndex,
-  Epoch, ProposerDuty,
-  SignedBeaconBlock,
-  Slot,
+  Epoch,
+  ProposerDuty,
   SignedAggregateAndProof,
-  AggregateAndProof
+  SignedBeaconBlock,
+  Slot
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../../db";
@@ -36,7 +38,6 @@ import {
   processSlots
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {Signature, verify} from "@chainsafe/bls";
-import {Sync} from "../../../sync";
 import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import assert from "assert";

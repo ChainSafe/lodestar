@@ -39,7 +39,6 @@ export async function getBlockRangeFromPeer(
   return await rpc.beaconBlocksByRange(
     peer,
     {
-      headBlockRoot: ZERO_HASH,
       startSlot: chunk.start,
       step: 1,
       count: chunk.end - chunk.start
@@ -64,7 +63,7 @@ export async function getBlockRange(
     chunks = (await Promise.all(
       chunks.map(async (chunk) => {
         try {
-          const chunkBlocks = await getBlockRangeFromPeer(rpc, reps, peerBalancer.next(), chunk);
+          const chunkBlocks = await getBlockRangeFromPeer(rpc, peerBalancer.next(), chunk);
           blocks = blocks.concat(chunkBlocks);
           return null;
         } catch (e) {

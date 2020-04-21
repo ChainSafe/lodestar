@@ -9,12 +9,11 @@ import {
 } from "../../../../src/opPool";
 import {IGossip} from "../../../../src/network/gossip/interface";
 import {Gossip} from "../../../../src/network/gossip/gossip";
-import {BeaconGossipHandler} from "../../../../src/sync/gossip/handler";
+import {BeaconGossipHandler} from "../../../../src/sync/gossip";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {expect} from "chai";
-import {generateAggregateAndProof} from "../../../utils/aggregateAndProof";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../utils/slashings";
-import {generateEmptySignedVoluntaryExit} from "../../../utils/attestation";
+import {generateEmptySignedAggregateAndProof, generateEmptySignedVoluntaryExit} from "../../../utils/attestation";
 
 describe("gossip handler", function () {
 
@@ -37,7 +36,7 @@ describe("gossip handler", function () {
   });
     
   it("should handle new block", async function () {
-    gossipStub.subscribeToBlock.callsFake(async (callback) => {
+    gossipStub.subscribeToBlock.callsFake(async (digest, callback) => {
       await callback(generateEmptySignedBlock());
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, opPoolStub as OpPool);
@@ -46,18 +45,18 @@ describe("gossip handler", function () {
   });
     
   it("should handle new aggregate and proof", async function () {
-    const aggregateAndProof = generateAggregateAndProof();
-    gossipStub.subscribeToAggregateAndProof.callsFake(async (callback) => {
+    const aggregateAndProof = generateEmptySignedAggregateAndProof();
+    gossipStub.subscribeToAggregateAndProof.callsFake(async (digest, callback) => {
       await callback(aggregateAndProof);
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, opPoolStub as OpPool);
     await handler.start();
-    expect(chainStub.receiveAttestation.withArgs(aggregateAndProof.aggregate).calledOnce).to.be.true;
+    expect(chainStub.receiveAttestation.withArgs(aggregateAndProof.message.aggregate).calledOnce).to.be.true;
   });
     
   it("should handle new attester slashing", async function () {
     opPoolStub.attesterSlashings = sinon.createStubInstance(AttesterSlashingOperations);
-    gossipStub.subscribeToAttesterSlashing.callsFake(async (callback) => {
+    gossipStub.subscribeToAttesterSlashing.callsFake(async (digest, callback) => {
       await callback(generateEmptyAttesterSlashing());
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, opPoolStub as OpPool);
@@ -67,7 +66,7 @@ describe("gossip handler", function () {
     
   it("should handle new proposer slashing", async function () {
     opPoolStub.proposerSlashings = sinon.createStubInstance(ProposerSlashingOperations);
-    gossipStub.subscribeToProposerSlashing.callsFake(async (callback) => {
+    gossipStub.subscribeToProposerSlashing.callsFake(async (digest, callback) => {
       await callback(generateEmptyProposerSlashing());
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, opPoolStub as OpPool);
@@ -77,7 +76,7 @@ describe("gossip handler", function () {
     
   it("should handle new voluntary exit", async function () {
     opPoolStub.voluntaryExits = sinon.createStubInstance(VoluntaryExitOperations);
-    gossipStub.subscribeToVoluntaryExit.callsFake(async (callback) => {
+    gossipStub.subscribeToVoluntaryExit.callsFake(async (digest, callback) => {
       await callback(generateEmptySignedVoluntaryExit());
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, opPoolStub as OpPool);
