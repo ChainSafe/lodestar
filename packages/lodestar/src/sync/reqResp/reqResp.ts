@@ -66,8 +66,8 @@ export class SyncReqResp implements ISyncReqResp {
   }
 
   public async start(): Promise<void> {
-    this.network.on("peer:connect", this.handshake);
     this.network.reqResp.on("request", this.onRequest);
+    this.network.on("peer:connect", this.handshake);
     const myStatus = await this.createStatus();
     await Promise.all(
       this.network.getPeers().map((peerInfo) =>
@@ -78,8 +78,9 @@ export class SyncReqResp implements ISyncReqResp {
     this.network.removeListener("peer:connect", this.handshake);
     this.network.reqResp.removeListener("request", this.onRequest);
     await Promise.all(
-      this.network.getPeers().map((peerInfo) =>
-        this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN))));
+      this.network.getPeers().map((peerInfo) => {
+        this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
+      }));
   }
 
   public onRequest = async (
@@ -146,7 +147,8 @@ export class SyncReqResp implements ISyncReqResp {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
     this.network.reqResp.sendResponse(id, null, [BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN)]);
-    await this.network.disconnect(peerInfo);
+    //  TODO: enable once we can check if response is sent
+    // this.network.disconnect(peerInfo);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -224,13 +226,8 @@ export class SyncReqResp implements ISyncReqResp {
     };
   }
 
-  private handshake = async (peerInfo: PeerInfo): Promise<void> => {
-    const randomDelay = Math.floor(Math.random() * 5000);
-    await sleep(randomDelay);
-    if (
-      this.network.hasPeer(peerInfo) &&
-      !this.reps.get(peerInfo.id.toB58String()).latestStatus
-    ) {
+  private handshake = async (peerInfo: PeerInfo, direction: "inbound"|"outbound"): Promise<void> => {
+    if(direction === "outbound") {
       const request = await this.createStatus();
       try {
         this.reps.get(peerInfo.id.toB58String()).latestStatus = await this.network.reqResp.status(peerInfo, request);

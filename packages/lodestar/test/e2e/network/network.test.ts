@@ -92,6 +92,10 @@ describe("[network] network", function () {
         resolve();
       })),
     ]);
+    // @ts-ignore
+    netA.libp2p.peerStore.peers.clear();
+    // @ts-ignore
+    netB.libp2p.peerStore.peers.clear();
     await netA.connect(netB.peerInfo);
     await connected;
     expect(connectACount).to.be.equal(1);
@@ -114,8 +118,9 @@ describe("[network] network", function () {
 
     await netA.disconnect(netB.peerInfo);
     await disconnection;
+    await sleep(200);
     expect(netA.getPeers().length).to.equal(0);
-    expect(netB.getPeers().length).to.equal(1);
+    expect(netB.getPeers().length).to.equal(0);
   });
   it("should not receive duplicate block", async function() {
     const connected = Promise.all([
@@ -151,7 +156,7 @@ describe("[network] network", function () {
     await netA.connect(netB.peerInfo);
     await connected;
 
-    netB.reqResp.once("request", (peerId, method, requestId, request) => {
+    netB.reqResp.once("request", (peerId, method, requestId) => {
       netB.reqResp.sendResponse(requestId, null, [netB.metadata.seqNumber]);
     });
     const seqNumber = await netA.reqResp.ping(netB.peerInfo, netA.metadata.seqNumber);
@@ -165,7 +170,7 @@ describe("[network] network", function () {
     await netA.connect(netB.peerInfo);
     await connected;
 
-    netB.reqResp.once("request", (peerId, method, requestId, request) => {
+    netB.reqResp.once("request", (peerId, method, requestId) => {
       netB.reqResp.sendResponse(requestId, null, [netB.metadata]);
     });
     const metadata = await netA.reqResp.metadata(netB.peerInfo);

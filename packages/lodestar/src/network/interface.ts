@@ -52,7 +52,7 @@ export interface IReqResp extends ReqEventEmitter {
 // network
 
 export interface INetworkEvents {
-  ["peer:connect"]: (peerInfo: PeerInfo) => void;
+  ["peer:connect"]: (peerInfo: PeerInfo, direction: "inbound"|"outbound") => void;
   ["peer:disconnect"]: (peerInfo: PeerInfo) => void;
 }
 export type NetworkEventEmitter = StrictEventEmitter<EventEmitter, INetworkEvents>;
