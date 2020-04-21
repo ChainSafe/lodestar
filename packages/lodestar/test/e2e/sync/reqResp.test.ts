@@ -1,8 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-
-import {Method} from "../../../src/constants";
 import {SyncReqResp} from "../../../src/sync/reqResp";
 import {ReputationStore} from "../../../src/sync/IReputation";
 import {Libp2pNetwork} from "../../../src/network";
@@ -15,11 +13,16 @@ import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {generateState} from "../../utils/state";
 import {
-  BlockRepository, ChainRepository, StateRepository, BlockArchiveRepository
+  BlockArchiveRepository,
+  BlockRepository,
+  ChainRepository,
+  StateRepository
 } from "../../../src/db/api/beacon/repositories";
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {generateEmptySignedBlock} from "../../utils/block";
-import {BeaconBlocksByRootRequest, BeaconBlocksByRangeRequest} from "@chainsafe/lodestar-types";
+import {sleep} from "../../utils/sleep";
+import {BeaconBlocksByRangeRequest, BeaconBlocksByRootRequest} from "@chainsafe/lodestar-types";
+import {Method} from "../../../src/constants";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -40,7 +43,7 @@ block2.message.slot = BLOCK_SLOT + 1;
 describe("[sync] rpc", function () {
   this.timeout(20000);
   const sandbox = sinon.createSandbox();
-  const logger = new WinstonLogger();
+  const logger = new WinstonLogger({level: "VERBOSE"});
   logger.silent = true;
   const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false}, {logger});
 
@@ -116,29 +119,26 @@ describe("[sync] rpc", function () {
       logger: logger
     })
     ;
-    
-    netA.reqResp.on("request", rpcA.onRequest.bind(rpcA));
-    netB.reqResp.on("request", rpcB.onRequest.bind(rpcB));
     await Promise.all([
       rpcA.start(),
       rpcB.start(),
     ]);
   });
+
   afterEach(async () => {
-    await Promise.all([
-      netA.stop(),
-      netB.stop(),
-    ]);
     await Promise.all([
       rpcA.stop(),
       rpcB.stop(),
     ]);
-    netA.reqResp.removeListener("request", rpcA.onRequest.bind(rpcA));
-    netB.reqResp.removeListener("request", rpcB.onRequest.bind(rpcB));
+    //allow goodbye to propagate
+    await sleep(200);
+    await Promise.all([
+      netA.stop(),
+      netB.stop(),
+    ]);
   });
 
   it("hello handshake on peer connect", async function () {
-    this.timeout(6000);
     const connected = Promise.all([
       new Promise((resolve) => netA.once("peer:connect", resolve)),
       new Promise((resolve) => netB.once("peer:connect", resolve)),
@@ -148,16 +148,14 @@ describe("[sync] rpc", function () {
     expect(netA.hasPeer(netB.peerInfo)).to.equal(true);
     expect(netB.hasPeer(netA.peerInfo)).to.equal(true);
     await new Promise((resolve) => {
-      netA.reqResp.once("request", resolve);
       netB.reqResp.once("request", resolve);
     });
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await sleep(200);
     expect(repsA.get(netB.peerInfo.id.toB58String()).latestStatus).to.not.equal(null);
     expect(repsB.get(netA.peerInfo.id.toB58String()).latestStatus).to.not.equal(null);
   });
 
   it("goodbye on rpc stop", async function () {
-    this.timeout(6000);
     const connected = Promise.all([
       new Promise((resolve) => netA.once("peer:connect", resolve)),
       new Promise((resolve) => netB.once("peer:connect", resolve)),
@@ -189,7 +187,7 @@ describe("[sync] rpc", function () {
       count: 2,
       step: 1,
     };
-    
+
     const response = await netA.reqResp.beaconBlocksByRange(netB.peerInfo, request);
     expect(response.length).to.equal(2);
     const block = response[0];

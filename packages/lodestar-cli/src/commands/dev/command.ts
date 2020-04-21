@@ -24,6 +24,8 @@ import {BeaconState} from "@chainsafe/lodestar-types";
 import {BeaconApi, ValidatorApi} from "@chainsafe/lodestar/lib/api/impl";
 import {BeaconNodeOptions} from "../../lodestar/node/options";
 import {getConfig, getDevGenesisState, getPeerId, resetPath} from "./utils";
+import deepmerge from "deepmerge";
+import {isPlainObject} from "@chainsafe/lodestar-utils";
 
 export interface IDevCommandOptions {
   [key: string]: string;
@@ -88,15 +90,12 @@ export class DevCommand implements ICliCommand {
       };
     }
     resetPath(conf.db.name);
-
-    const defaultDiscv5Opt = {
-      enr: ENR.createFromPeerId(peerId),
-      bindAddr: "/ip4/0.0.0.0/udp/5501",
-      bootEnrs: [] as ENR[]};
-    const discv5 = conf.network? Object.assign(defaultDiscv5Opt, conf.network.discv5) : defaultDiscv5Opt;
-    const libp2pOpt = conf.network? Object.assign(conf.network, {discv5}) : {discv5};
-
-    const libp2p = await createNodeJsLibp2p(peerId, libp2pOpt);
+    conf.network = deepmerge(
+      conf.network || {},
+      {discv5: {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/127.0.0.1/udp/0"}},
+      {isMergeableObject: isPlainObject}
+    );
+    const libp2p = await createNodeJsLibp2p(peerId, conf.network);
 
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();

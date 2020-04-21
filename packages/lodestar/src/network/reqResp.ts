@@ -107,6 +107,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         }
       }();
       this.responseListener.emit(createResponseEvent(id), asyncIter);
+      this.logger.verbose("Sent response for request " + id);
     }
   }
 
@@ -129,7 +130,11 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     return await this.sendRequest<Status>(peerInfo, Method.Status, request);
   }
   public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
-    await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request, true);
+    try {
+      await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request, true);
+    } catch (e) {
+      this.logger.warn("Failed to send goodbye request");
+    }
   }
   public async ping(peerInfo: PeerInfo, request: Ping): Promise<Ping> {
     return await this.sendRequest<Ping>(peerInfo, Method.Ping, request);
@@ -158,10 +163,12 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       return (async function * () {
         if (method === Method.Metadata) {
           yield* getResponse(peerId, method, undefined);
+          return;
         }
         for await (const val of source) {
           const data = Buffer.isBuffer(val) ? val : val.slice();
           yield* getResponse(peerId, method, data);
+          break;
         }
       })();
     };
@@ -195,7 +202,6 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     requestOnly?: boolean
   ): Promise<T> {
     return await new Promise((resolve, reject) => {
-      this.logger.verbose(`send ${method} request to ${peerInfo.id.toB58String()}`);
       let responseTimer = setTimeout(() => reject(new RpcError(RpcErrorCode.ERR_RESP_TIMEOUT)), TTFB_TIMEOUT);
       const renewTimer = (): void => {
         clearTimeout(responseTimer);
@@ -206,7 +212,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       };
       try {
         const responses: Array<T> = [];
-        pipe(this.sendRequestStream(peerInfo, method, body),
+        pipe(
+          this.sendRequestStream(peerInfo, method, body),
           async (source: AsyncIterable<T>): Promise<void> => {
             for await (const response of source) {
               renewTimer();
