@@ -71,10 +71,10 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   }
 
   public async stop(): Promise<void> {
-    await this.pubsub.stop();
     this.handlers.forEach((handler, topic) => {
       this.pubsub.removeListener(topic, handler);
     });
+    await this.pubsub.stop();
   }
 
   public publishBlock = publishBlock.bind(this);

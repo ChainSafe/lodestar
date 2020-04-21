@@ -54,9 +54,10 @@ describe("e2e interop simulation", function() {
 
     // wait for 60 seconds at most
     const received = new Promise((resolve, reject) => {
-      setTimeout(reject, 60000);
+      const timer = setTimeout(reject, 60000);
       node.chain.on("justifiedCheckpoint", () => {
         logger.info("Received justifiedCheckpoint event");
+        clearTimeout(timer);
         resolve();
       });
     });

@@ -32,8 +32,8 @@ export class AttestationCollector implements IService {
     this.chain.clock.onNewSlot(this.checkDuties);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   public async stop(): Promise<void> {
+    this.chain.clock.unsubscribeFromNewSlot(this.checkDuties);
   }
 
   public subscribeToCommitteeAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {

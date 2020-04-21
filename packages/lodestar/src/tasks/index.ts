@@ -34,6 +34,8 @@ export class TasksService implements IService {
   private readonly network: INetwork;
   private readonly logger: ILogger;
 
+  private interopSubnetsTask: InteropSubnetsJoiningTask;
+
   public constructor(config: IBeaconConfig, modules: ITasksModules) {
     this.config = config;
     this.db = modules.db;
@@ -41,23 +43,21 @@ export class TasksService implements IService {
     this.logger = modules.logger;
     this.sync = modules.sync;
     this.network = modules.network;
+    this.interopSubnetsTask = new InteropSubnetsJoiningTask(this.config, {chain: this.chain, network: this.network})
   }
 
   public async start(): Promise<void> {
     this.chain.on("finalizedCheckpoint", this.handleFinalizedCheckpointChores);
-    await this.handleRegularSyncStartedTasks();
+    await this.interopSubnetsTask.run();
   }
 
   public async stop(): Promise<void> {
     this.chain.removeListener("finalizedCheckpoint", this.handleFinalizedCheckpointChores);
+    await this.interopSubnetsTask.stop();
   }
 
   private handleFinalizedCheckpointChores = async (finalizedCheckpoint: Checkpoint): Promise<void> => {
     new ArchiveBlocksTask(this.config, {db: this.db, logger: this.logger}, finalizedCheckpoint).run();
-  };
-  
-  private handleRegularSyncStartedTasks = async (): Promise<void> => {
-    new InteropSubnetsJoiningTask(this.config, {chain: this.chain, network: this.network}).run();
   };
 
 }

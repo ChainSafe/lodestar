@@ -17,7 +17,8 @@ export enum SyncMode {
   WAITING_PEERS,
   INITIAL_SYNCING,
   REGULAR_SYNCING,
-  SYNCED
+  SYNCED,
+  STOPPED
 }
 
 export class BeaconSync implements IBeaconSync {
@@ -54,11 +55,15 @@ export class BeaconSync implements IBeaconSync {
     this.chain.on("unknownBlockRoot", this.onUnknownBlockRoot);
     // so we don't wait indefinitely
     await this.waitForPeers();
+    if(this.mode === SyncMode.STOPPED) {
+      return;
+    }
     await this.startInitialSync();
     await this.startRegularSync();
   }
 
   public async stop(): Promise<void> {
+    this.mode = SyncMode.STOPPED;
     this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
     await this.initialSync.stop();
     await this.regularSync.stop();
@@ -96,8 +101,8 @@ export class BeaconSync implements IBeaconSync {
   
   private async waitForPeers(): Promise<void> {
     this.logger.info("Waiting for peers...", this.getPeers());
-    while (this.getPeers().length <= this.opts.minPeers) {
-      await sleep(3000);
+    while (this.mode !== SyncMode.STOPPED && this.getPeers().length <= this.opts.minPeers) {
+      await sleep(1000);
     }
   }
 

@@ -17,6 +17,8 @@ export class InteropSubnetsJoiningTask implements ITask {
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
 
+  private timers: (NodeJS.Timeout)[] = [];
+  
   public constructor(config: IBeaconConfig, modules: IInteropSubnetsJoiningModules) {
     this.config = config;
     this.network = modules.network;
@@ -28,6 +30,10 @@ export class InteropSubnetsJoiningTask implements ITask {
     for (let i = 0; i < this.config.params.RANDOM_SUBNETS_PER_VALIDATOR; i++) {
       this.subscribeToRandomSubnet(forkDigest);
     }
+  }
+  
+  public async stop(): Promise<void> {
+    this.timers.forEach((timer) => clearTimeout(timer));
   }
 
   //TODO: handle cleanup and unsubscribing
@@ -46,7 +52,7 @@ export class InteropSubnetsJoiningTask implements ITask {
       this.config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
       2 * this.config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
     );
-    setTimeout(
+    this.timers.push(setTimeout(
       this.handleChangeSubnets,
       subscriptionLifetime
             * this.config.params.SLOTS_PER_EPOCH
@@ -54,7 +60,7 @@ export class InteropSubnetsJoiningTask implements ITask {
             * 1000,
       forkDigest,
       subnet
-    );
+    ) as unknown as NodeJS.Timeout);
     return subnet;
   }
 

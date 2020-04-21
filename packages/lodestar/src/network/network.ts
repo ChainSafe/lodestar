@@ -74,11 +74,11 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   }
 
   public async stop(): Promise<void> {
-    this.libp2p.removeListener("peer:connect", this.emitPeerConnect);
-    this.libp2p.removeListener("peer:disconnect", this.emitPeerDisconnect);
     await this.gossip.stop();
     await this.reqResp.stop();
     await this.libp2p.stop();
+    this.libp2p.removeListener("peer:connect", this.emitPeerConnect);
+    this.libp2p.removeListener("peer:disconnect", this.emitPeerDisconnect);
   }
 
   public getPeers(): PeerInfo[] {
@@ -87,7 +87,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   }
 
   public hasPeer(peerInfo: PeerInfo): boolean {
-    return this.libp2p.peerStore.peers.has(peerInfo.id.toB58String());
+    return !!this.libp2p.registrar.getConnection(peerInfo);
   }
 
   public getConnection(peer: PeerInfo): LibP2pConnection {

@@ -143,8 +143,14 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
     this.network.reqResp.sendResponse(id, null, [BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN)]);
-    //  TODO: enable once we can check if response is sent
-    // this.network.disconnect(peerInfo);
+    // //  TODO: fix once we can check if response is sent
+    setTimeout(() => {
+      try {
+        this.network.disconnect(peerInfo);
+      } catch (e) {
+        //ignored probably peer disconnected already
+      }
+    }, 400);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

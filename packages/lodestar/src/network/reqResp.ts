@@ -8,12 +8,12 @@ import {
   BeaconBlocksByRangeRequest,
   BeaconBlocksByRootRequest,
   Goodbye,
+  Metadata,
+  Ping,
   RequestBody,
   ResponseBody,
   SignedBeaconBlock,
   Status,
-  Ping,
-  Metadata,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcErrorCode, TTFB_TIMEOUT,} from "../constants";
