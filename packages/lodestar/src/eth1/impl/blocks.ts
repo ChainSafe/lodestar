@@ -7,7 +7,7 @@ export class BlockCache<T extends IBlock> implements IBlockCache<T> {
 
   public init(blocks: T[], head: T): void {
     this.blocks = blocks;
-    this.distanceToHead = head.number - this.blocks[this.blocks.length - 1].number;
+    this.distanceToHead = (blocks.length > 0)? head.number - this.blocks[blocks.length - 1].number : 0;
   }
 
   public addBlock(block: T): void {

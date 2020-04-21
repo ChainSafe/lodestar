@@ -146,7 +146,6 @@ export class BeaconNode {
         logger: this.logger.child(this.conf.logger.chores)
       }
     );
-
   }
 
   public async start(): Promise<void> {

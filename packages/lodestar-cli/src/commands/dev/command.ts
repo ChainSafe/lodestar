@@ -42,6 +42,8 @@ const BASE_DIRECTORY = path.join(".", ".tmp");
 
 export class DevCommand implements ICliCommand {
   public node: BeaconNode;
+  public validators: ValidatorClient[] = [];
+
 
   public register(commander: CommanderStatic): void {
 
@@ -168,6 +170,7 @@ export class DevCommand implements ICliCommand {
         logger: new WinstonLogger({module: `Validator #${index}`})
       }
     );
+    this.validators.push(validator);
     validator.start();
   }
 }
