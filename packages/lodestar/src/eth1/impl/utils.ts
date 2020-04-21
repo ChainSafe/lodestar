@@ -6,7 +6,7 @@ import {Eth1BlockRange} from "../interface";
 
 export function votingPeriodStartTime(config: IBeaconConfig, state: BeaconState): Number64 {
   const eth1VotingPeriodStartSlot = state.slot -
-    state.slot % (config.params.SLOTS_PER_ETH1_VOTING_PERIOD);
+    state.slot % (config.params.EPOCHS_PER_ETH1_VOTING_PERIOD * config.params.SLOTS_PER_EPOCH);
   return computeTimeAtSlot(config, eth1VotingPeriodStartSlot, state.genesisTime);
 }
 

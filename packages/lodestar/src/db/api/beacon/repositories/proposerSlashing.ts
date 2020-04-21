@@ -1,4 +1,4 @@
-import {ProposerSlashing} from "@chainsafe/lodestar-types";
+import {ProposerSlashing, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {BulkRepository} from "../repository";
@@ -11,6 +11,10 @@ export class ProposerSlashingRepository extends BulkRepository<ProposerSlashing>
     config: IBeaconConfig,
     db: IDatabaseController) {
     super(config, db, Bucket.proposerSlashing, config.types.ProposerSlashing);
+  }
+
+  public getId(value: ProposerSlashing): ValidatorIndex {
+    return value.signedHeader1.message.proposerIndex;
   }
 
 }

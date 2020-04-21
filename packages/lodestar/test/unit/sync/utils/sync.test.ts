@@ -228,6 +228,7 @@ function generateReputation(overiddes: Partial<IReputation>): IReputation {
   return deepmerge(
     {
       score: 1,
+      latestMetadata: null,
       latestStatus: {
         finalizedEpoch: 0,
         finalizedRoot: Buffer.alloc(1),

@@ -2,15 +2,17 @@
  * @module api/rpc
  */
 import {
-  Attestation,
+  AggregateAndProof,
+  Attestation, AttestationData,
+  AttesterDuty,
   BeaconBlock,
   BLSPubkey,
   BLSSignature,
   CommitteeIndex,
-  Epoch,
+  Epoch, ProposerDuty,
+  SignedBeaconBlock,
   Slot,
-  ValidatorDuty,
-  SignedBeaconBlock
+  SignedAggregateAndProof
 } from "@chainsafe/lodestar-types";
 import {IApi} from "../../interface";
 
@@ -19,24 +21,22 @@ import {IApi} from "../../interface";
  */
 export interface IValidatorApi extends IApi {
 
-  getProposerDuties(epoch: Epoch): Promise<Map<Slot, BLSPubkey>>;
+  getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]>;
 
-  getAttesterDuties(epoch: Epoch, validatorPubKey: BLSPubkey[]): Promise<ValidatorDuty[]>;
-
-  isAggregator(slot: Slot, committeeIndex: CommitteeIndex, slotSignature: BLSSignature): Promise<boolean>;
+  getAttesterDuties(epoch: Epoch, validatorPubKey: BLSPubkey[]): Promise<AttesterDuty[]>;
 
   /**
    * Requests a BeaconNode to produce a valid block,
    * which can then be signed by a ValidatorClient.
    * @returns {Promise<BeaconBlock>} A proposed BeaconBlock object
    */
-  produceBlock(slot: Slot, randaoReveal: BLSSignature): Promise<BeaconBlock>;
+  produceBlock(slot: Slot, proposerPubkey: BLSPubkey, randaoReveal: BLSSignature): Promise<BeaconBlock>;
 
   /**
    * Requests that the BeaconNode produce an IndexedAttestation,
    * with a blank signature field, which the ValidatorClient will then sign.
    */
-  produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, index: CommitteeIndex, slot: Slot):
+  produceAttestation(validatorPubKey: BLSPubkey, index: CommitteeIndex, slot: Slot):
   Promise<Attestation>;
 
   /**
@@ -51,9 +51,11 @@ export interface IValidatorApi extends IApi {
    */
   publishAttestation(attestation: Attestation): Promise<void>;
 
-  publishAggregatedAttestation(
-    aggregated: Attestation, validatorPubKey: BLSPubkey, slotSignature: BLSSignature
+  publishAggregateAndProof(
+    signedAggregateAndProof: SignedAggregateAndProof
   ): Promise<void>;
+
+  produceAggregateAndProof(attestationData: AttestationData, aggregator: BLSPubkey): Promise<AggregateAndProof>;
 
   getWireAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]>;
 

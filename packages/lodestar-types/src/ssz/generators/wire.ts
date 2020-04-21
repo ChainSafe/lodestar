@@ -8,7 +8,7 @@ import {IBeaconSSZTypes} from "../interface";
 
 export const Status = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
-    headForkVersion: ssz.Version,
+    forkDigest: ssz.ForkDigest,
     finalizedRoot: ssz.Root,
     finalizedEpoch: ssz.Epoch,
     headRoot: ssz.Root,
@@ -18,9 +18,17 @@ export const Status = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType
 
 export const Goodbye = (ssz: IBeaconSSZTypes): BigIntUintType => ssz.Uint64;
 
+export const Ping = (ssz: IBeaconSSZTypes): BigIntUintType => ssz.Uint64;
+
+export const Metadata = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    seqNumber: ssz.Uint64,
+    attnets: ssz.AttestationSubnets,
+  },
+});
+
 export const BeaconBlocksByRangeRequest = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
-    headBlockRoot: ssz.Root,
     startSlot: ssz.Slot,
     count: ssz.Number64,
     step: ssz.Number64,

@@ -3,7 +3,7 @@ import {EventEmitter} from "events";
 import {Block} from "ethers/providers";
 
 import {hash} from "@chainsafe/ssz";
-import {BeaconState, Eth1Data, Number64, Root} from "@chainsafe/lodestar-types";
+import {BeaconState, Eth1Data, Number64, Root, DepositData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intDiv, intToBytes} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
@@ -43,12 +43,12 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
     return 0;
   }
 
-  public async processPastDeposits(fromBlock: string | number, toBlock?: string | number): Promise<void> {
-    return;
+  public async processPastDeposits(fromBlock: string | number, toBlock?: string | number): Promise<DepositData[]> {
+    return [];
   }
 
   public async getEth1Vote(config: IBeaconConfig, state: BeaconState): Promise<Eth1Data> {
-    const epochsPerPeriod = intDiv(config.params.SLOTS_PER_ETH1_VOTING_PERIOD, config.params.SLOTS_PER_EPOCH);
+    const epochsPerPeriod = config.params.EPOCHS_PER_ETH1_VOTING_PERIOD;
     const votingPeriod = intDiv(computeEpochAtSlot(config, state.slot), epochsPerPeriod);
     const depositRoot = hash(intToBytes(votingPeriod, 32));
     return {
@@ -60,8 +60,12 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   public async getEth1Data(eth1Head: Block): Promise<Eth1Data> {
     return null;
-
   }
+
+  public async initContract(): Promise<void> {
+    return null;
+  }
+
 
   public initBlockCache(config: IBeaconConfig, state: BeaconState): Promise<void> {
     return Promise.resolve();

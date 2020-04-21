@@ -45,7 +45,7 @@ export function getAttestationDeltas(config: IBeaconConfig, state: BeaconState):
   [matchingSourceAttestations, matchingTargetAttestations, matchingHeadAttestations]
     .forEach((attestations) => {
       const unslashedAttestingIndices = getUnslashedAttestingIndices(config, state, attestations);
-      const attestingBalance = getTotalBalance(state, unslashedAttestingIndices);
+      const attestingBalance = getTotalBalance(config, state, unslashedAttestingIndices);
       eligibleValidatorIndices.forEach((index) => {
         if (unslashedAttestingIndices.includes(index)) {
           rewards[index] += (getBaseReward(config, state, index) * attestingBalance / totalBalance);

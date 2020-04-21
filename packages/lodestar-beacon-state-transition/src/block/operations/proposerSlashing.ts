@@ -16,5 +16,5 @@ export function processProposerSlashing(
   verifySignatures = true,
 ): void {
   assert(isValidProposerSlashing(config, state, proposerSlashing, verifySignatures));
-  slashValidator(config, state, proposerSlashing.proposerIndex);
+  slashValidator(config, state, proposerSlashing.signedHeader1.message.proposerIndex);
 }

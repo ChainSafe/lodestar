@@ -1,35 +1,36 @@
 import {
+  AggregateAndProof,
   Attestation,
+  AttestationData,
+  AttesterDuty,
   BeaconBlock,
   BLSPubkey,
   BLSSignature,
   CommitteeIndex,
-  Epoch,
+  Epoch, ProposerDuty,
+  SignedBeaconBlock,
   Slot,
-  ValidatorDuty,
-  SignedBeaconBlock
+  SignedAggregateAndProof,
 } from "@chainsafe/lodestar-types";
 
 export interface IValidatorApi {
-  
-  getProposerDuties(epoch: Epoch): Promise<Map<Slot, BLSPubkey>>;
 
-  getAttesterDuties(epoch: Epoch, validatorPubKey: BLSPubkey[]): Promise<ValidatorDuty[]>;
+  getProposerDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<ProposerDuty[]>;
 
-  isAggregator(slot: Slot, committeeIndex: CommitteeIndex, slotSignature: BLSSignature): Promise<boolean>;
+  getAttesterDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]>;
 
   /**
    * Requests a BeaconNode to produce a valid block,
    * which can then be signed by a ValidatorClient.
    * @returns {Promise<BeaconBlock>} A proposed BeaconBlock object
    */
-  produceBlock(slot: Slot, randaoReveal: Uint8Array): Promise<BeaconBlock>;
+  produceBlock(slot: Slot, proposerPubkey: BLSPubkey, randaoReveal: Uint8Array): Promise<BeaconBlock>;
 
   /**
-   * Requests that the BeaconNode produce an IndexedAttestation,
+   * Requests that the BeaconNode produce an Attestation,
    * with a blank signature field, which the ValidatorClient will then sign.
    */
-  produceAttestation(validatorPubKey: BLSPubkey, pocBit: boolean, index: CommitteeIndex, slot: Slot):
+  produceAttestation(validatorPubKey: BLSPubkey, index: CommitteeIndex, slot: Slot):
   Promise<Attestation>;
 
   /**
@@ -39,17 +40,17 @@ export interface IValidatorApi {
   publishBlock(signedBlock: SignedBeaconBlock): Promise<void>;
 
   /**
-   * Instructs the BeaconNode to publish a newly signed IndexedAttestation object,
+   * Instructs the BeaconNode to publish a newly signed Attestation object,
    * to be incorporated into the beacon chain.
    */
   publishAttestation(attestation: Attestation): Promise<void>;
 
-  publishAggregatedAttestation(
-    aggregated: Attestation, validatorPubKey: BLSPubkey, slotSignature: BLSSignature
-  ): Promise<void>;
+  publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void>;
 
   getWireAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]>;
-  
+
+  produceAggregateAndProof(attestationData: AttestationData, aggregator: BLSPubkey): Promise<AggregateAndProof>;
+
   subscribeCommitteeSubnet(
     slot: Slot, slotSignature: BLSSignature, committeeIndex: CommitteeIndex, aggregatorPubkey: BLSPubkey
   ): Promise<void>;

@@ -5,11 +5,13 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   BeaconState,
+  BLSPubkey,
   Bytes32,
   ForkResponse,
   Number64,
   SignedBeaconBlock,
   SyncingStatus,
+  ValidatorResponse,
   Uint64
 } from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "./interface";
@@ -18,6 +20,7 @@ import {IApiOptions} from "../../options";
 import {IApiModules} from "../../interface";
 import {ApiNamespace} from "../../index";
 import EventIterator from "event-iterator";
+import {IBeaconDb} from "../../../db/api";
 
 export class BeaconApi implements IBeaconApi {
 
@@ -25,15 +28,35 @@ export class BeaconApi implements IBeaconApi {
 
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
+  private readonly db: IBeaconDb;
 
   public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
     this.namespace = ApiNamespace.BEACON;
     this.config = modules.config;
     this.chain = modules.chain;
+    this.db = modules.db;
   }
 
   public async getClientVersion(): Promise<Bytes32> {
     return Buffer.from(`lodestar-${process.env.npm_package_version}`, "utf-8");
+  }
+
+
+  public async getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse|null> {
+    const state = await this.chain.getHeadState();
+    const index = state.validators.findIndex((v) => {
+      return this.config.types.BLSPubkey.equals(pubkey, v.pubkey);
+    });
+    if(index !==-1) {
+      return {
+        validator: state.validators[index],
+        balance: state.balances[index],
+        pubkey: pubkey,
+        index
+      };
+    } else {
+      return null;
+    }
   }
 
   public async getFork(): Promise<ForkResponse> {
@@ -46,7 +69,8 @@ export class BeaconApi implements IBeaconApi {
     };
     return {
       fork,
-      chainId: networkId
+      chainId: networkId,
+      genesisValidatorsRoot: state.genesisValidatorsRoot,
     };
   }
 

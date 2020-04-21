@@ -3,7 +3,7 @@ import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Libp2pNetwork} from "../../../src/network";
 import {createNode} from "../../unit/network/util";
-import {generateEmptyAggregateAndProof, generateEmptyAttestation} from "../../utils/attestation";
+import {generateEmptyAttestation, generateEmptySignedAggregateAndProof} from "../../utils/attestation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
@@ -13,6 +13,9 @@ import Libp2p from "libp2p";
 import sinon from "sinon";
 import {GossipMessageValidator} from "../../../src/network/gossip/validator";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {generateState} from "../../utils/state";
+import {MockBeaconChain} from "../../utils/mocks/chain/chain";
+import {IBeaconChain} from "../../../src/chain";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -36,10 +39,30 @@ describe("[network] network", function () {
   validator.isValidIncomingAggregateAndProof = sinon.stub();
   validator.isValidIncomingUnaggregatedAttestation = sinon.stub();
   validator.isValidIncomingCommitteeAttestation = sinon.stub();
+  let chain: IBeaconChain;
 
   beforeEach(async () => {
-    netA = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator});
-    netB = new Libp2pNetwork(opts, {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator});
+    const state = generateState();
+    const block = generateEmptySignedBlock();
+    state.finalizedCheckpoint = {
+      epoch: 0,
+      root: config.types.BeaconBlock.hashTreeRoot(block.message),
+    };
+    chain = new MockBeaconChain({
+      genesisTime: 0,
+      chainId: 0,
+      networkId: 0n,
+      state,
+      config
+    });
+    netA = new Libp2pNetwork(
+      opts,
+      {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator, chain}
+    );
+    netB = new Libp2pNetwork(
+      opts,
+      {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator, chain}
+    );
     await Promise.all([
       netA.start(),
       netB.start(),
@@ -50,15 +73,33 @@ describe("[network] network", function () {
       netA.stop(),
       netB.stop(),
     ]);
+    // @ts-ignore
+    netA.libp2p.peerStore.peers.clear();
+    // @ts-ignore
+    netB.libp2p.peerStore.peers.clear();
     sinon.restore();
   });
   it("should create a peer on connect", async function () {
+    let connectACount = 0;
+    let connectBCount = 0;
     const connected = Promise.all([
-      new Promise((resolve) => netA.on("peer:connect", resolve)),
-      new Promise((resolve) => netB.on("peer:connect", resolve)),
+      new Promise((resolve) => netA.on("peer:connect", () => {
+        connectACount++;
+        resolve();
+      })),
+      new Promise((resolve) => netB.on("peer:connect", () => {
+        connectBCount++;
+        resolve();
+      })),
     ]);
+    // @ts-ignore
+    netA.libp2p.peerStore.peers.clear();
+    // @ts-ignore
+    netB.libp2p.peerStore.peers.clear();
     await netA.connect(netB.peerInfo);
     await connected;
+    expect(connectACount).to.be.equal(1);
+    expect(connectBCount).to.be.equal(1);
     expect(netA.getPeers().length).to.equal(1);
     expect(netB.getPeers().length).to.equal(1);
   });
@@ -77,6 +118,7 @@ describe("[network] network", function () {
 
     await netA.disconnect(netB.peerInfo);
     await disconnection;
+    await sleep(200);
     expect(netA.getPeers().length).to.equal(0);
     expect(netB.getPeers().length).to.equal(0);
   });
@@ -85,14 +127,17 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
+    const spy = sinon.spy();
+    const forkDigest = chain.currentForkDigest;
+    const received = new Promise((resolve) => {
+      netA.gossip.subscribeToBlock(forkDigest, () => {
+        spy();
+        resolve();
+      });
+      setTimeout(resolve, 2000);
+    });
     await netA.connect(netB.peerInfo);
     await connected;
-    const spy = sinon.spy();
-    const received = new Promise((resolve, reject) => {
-      setTimeout(reject, 4000);
-      netA.gossip.subscribeToBlock(spy);
-      setTimeout(resolve, 1000);
-    });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     validator.isValidIncomingBlock.resolves(true);
     const block = generateEmptySignedBlock();
@@ -103,6 +148,34 @@ describe("[network] network", function () {
     await received;
     expect(spy.callCount).to.be.equal(1);
   });
+  it("should send/receive ping messages", async function () {
+    const connected = Promise.all([
+      new Promise((resolve) => netA.on("peer:connect", resolve)),
+      new Promise((resolve) => netB.on("peer:connect", resolve)),
+    ]);
+    await netA.connect(netB.peerInfo);
+    await connected;
+
+    netB.reqResp.once("request", (peerId, method, requestId) => {
+      netB.reqResp.sendResponse(requestId, null, [netB.metadata.seqNumber]);
+    });
+    const seqNumber = await netA.reqResp.ping(netB.peerInfo, netA.metadata.seqNumber);
+    expect(seqNumber).to.equal(netB.metadata.seqNumber);
+  });
+  it("should send/receive metadata messages", async function () {
+    const connected = Promise.all([
+      new Promise((resolve) => netA.on("peer:connect", resolve)),
+      new Promise((resolve) => netB.on("peer:connect", resolve)),
+    ]);
+    await netA.connect(netB.peerInfo);
+    await connected;
+
+    netB.reqResp.once("request", (peerId, method, requestId) => {
+      netB.reqResp.sendResponse(requestId, null, [netB.metadata]);
+    });
+    const metadata = await netA.reqResp.metadata(netB.peerInfo);
+    expect(metadata).to.deep.equal(netB.metadata.metadata);
+  });
   it("should receive blocks on subscription", async function () {
     const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
@@ -110,9 +183,10 @@ describe("[network] network", function () {
     ]);
     await netA.connect(netB.peerInfo);
     await connected;
+    const forkDigest = chain.currentForkDigest;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
-      netA.gossip.subscribeToBlock((signedBlock: SignedBeaconBlock): void => {
+      netA.gossip.subscribeToBlock(forkDigest, (signedBlock: SignedBeaconBlock): void => {
         resolve(signedBlock);
       });
     });
@@ -131,13 +205,14 @@ describe("[network] network", function () {
     ]);
     await netA.connect(netB.peerInfo);
     await connected;
+    const forkDigest = chain.currentForkDigest;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
-      netA.gossip.subscribeToAttestation(resolve);
+      netA.gossip.subscribeToAttestation(forkDigest, resolve);
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     validator.isValidIncomingUnaggregatedAttestation.resolves(true);
-    await netB.gossip.publishAggregatedAttestation(generateEmptyAggregateAndProof());
+    await netB.gossip.publishAggregatedAttestation(generateEmptySignedAggregateAndProof());
     await received;
   });
   it("should receive shard attestations on subscription", async function () {
@@ -147,9 +222,10 @@ describe("[network] network", function () {
     ]);
     await netA.connect(netB.peerInfo);
     await connected;
+    const forkDigest = chain.currentForkDigest;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
-      netA.gossip.subscribeToAttestationSubnet(0, resolve);
+      netA.gossip.subscribeToAttestationSubnet(forkDigest, 0, resolve);
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     const attestation = generateEmptyAttestation();

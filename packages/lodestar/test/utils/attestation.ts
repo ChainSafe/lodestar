@@ -1,4 +1,5 @@
-import {Attestation, AttestationData, CommitteeIndex, Epoch, Slot, VoluntaryExit, SignedVoluntaryExit,} from "@chainsafe/lodestar-types";
+import {Attestation, AttestationData, CommitteeIndex, Epoch, Slot, VoluntaryExit,
+  SignedVoluntaryExit, SignedAggregateAndProof,} from "@chainsafe/lodestar-types";
 import crypto from "crypto";
 import {AggregateAndProof} from "@chainsafe/lodestar-types/src";
 
@@ -50,6 +51,14 @@ export function generateAttestation(override: Partial<Attestation> = {}): Attest
 
 export function generateEmptyAttestation(): Attestation {
   return generateAttestation();
+}
+
+export function generateEmptySignedAggregateAndProof(): SignedAggregateAndProof {
+  const message = generateEmptyAggregateAndProof();
+  return {
+    message,
+    signature: Buffer.alloc(96),
+  };
 }
 
 export function generateEmptyAggregateAndProof(): AggregateAndProof {

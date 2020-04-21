@@ -6,11 +6,11 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator, ILodestarGossipMessage} from "./interface";
 import {
-  getGossipTopic,
   getMessageId,
   getSubnetFromAttestationSubnetTopic,
   isAttestationSubnetTopic,
-  normalizeInRpcMessage
+  normalizeInRpcMessage,
+  getGossipEvent
 } from "./utils";
 import {GossipEvent} from "./constants";
 import {GOSSIP_MAX_SIZE} from "../../constants";
@@ -98,23 +98,24 @@ export class LodestarGossipsub extends Gossipsub {
     }
 
     let result: Function;
-    switch(topic) {
-      case getGossipTopic(GossipEvent.BLOCK, "ssz"):
+    const gossipEvent = getGossipEvent(topic);
+    switch(gossipEvent) {
+      case GossipEvent.BLOCK:
         result = this.validator.isValidIncomingBlock;
         break;
-      case getGossipTopic(GossipEvent.ATTESTATION, "ssz"):
+      case GossipEvent.ATTESTATION:
         result =  this.validator.isValidIncomingUnaggregatedAttestation;
         break;
-      case getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, "ssz"):
+      case GossipEvent.AGGREGATE_AND_PROOF:
         result =  this.validator.isValidIncomingAggregateAndProof;
         break;
-      case getGossipTopic(GossipEvent.ATTESTER_SLASHING, "ssz"):
+      case GossipEvent.ATTESTER_SLASHING:
         result =  this.validator.isValidIncomingAttesterSlashing;
         break;
-      case getGossipTopic(GossipEvent.PROPOSER_SLASHING, "ssz"):
+      case GossipEvent.PROPOSER_SLASHING:
         result = this.validator.isValidIncomingProposerSlashing;
         break;
-      case getGossipTopic(GossipEvent.VOLUNTARY_EXIT, "ssz"):
+      case GossipEvent.VOLUNTARY_EXIT:
         result =  this.validator.isValidIncomingVoluntaryExit;
         break;
       default:
@@ -130,23 +131,24 @@ export class LodestarGossipsub extends Gossipsub {
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let objType: Type<any>;
-    switch(topic) {
-      case getGossipTopic(GossipEvent.BLOCK, "ssz"):
+    const gossipEvent = getGossipEvent(topic);
+    switch(gossipEvent) {
+      case GossipEvent.BLOCK:
         objType = this.config.types.SignedBeaconBlock;
         break;
-      case getGossipTopic(GossipEvent.ATTESTATION, "ssz"):
+      case GossipEvent.ATTESTATION:
         objType = this.config.types.Attestation;
         break;
-      case getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, "ssz"):
+      case GossipEvent.AGGREGATE_AND_PROOF:
         objType = this.config.types.AggregateAndProof;
         break;
-      case getGossipTopic(GossipEvent.ATTESTER_SLASHING, "ssz"):
+      case GossipEvent.ATTESTER_SLASHING:
         objType = this.config.types.AttesterSlashing;
         break;
-      case getGossipTopic(GossipEvent.PROPOSER_SLASHING, "ssz"):
+      case GossipEvent.PROPOSER_SLASHING:
         objType = this.config.types.ProposerSlashing;
         break;
-      case getGossipTopic(GossipEvent.VOLUNTARY_EXIT, "ssz"):
+      case GossipEvent.VOLUNTARY_EXIT:
         objType = this.config.types.SignedVoluntaryExit;
         break;
       default:

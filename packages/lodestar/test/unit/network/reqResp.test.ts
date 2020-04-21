@@ -18,7 +18,8 @@ describe("[network] rpc", () => {
     rpcA: ReqResp, rpcB: ReqResp;
   const logger: ILogger = new WinstonLogger();
 
-  beforeEach(async () => {
+  beforeEach(async function() {
+    this.timeout(10000);
     // setup
     nodeA = await createNode(multiaddr);
     nodeB = await createNode(multiaddr);
@@ -40,34 +41,36 @@ describe("[network] rpc", () => {
       rpcA.start(),
       rpcB.start(),
     ]);
-    await nodeA.dial(nodeB.peerInfo);
+    try {
+      await Promise.all([
+        nodeA.dial(nodeB.peerInfo),
+        new Promise((resolve, reject) => {
+          const t = setTimeout(reject, 2000);
+          nodeB.once("peer:connect", () => {
+            clearTimeout(t);
+            resolve();
+          });
+        })
+      ]);
+    } catch (e) {
+      assert.fail(e, null, "connection event not triggered");
+    }
   });
   afterEach(async function () {
     // teardown
     this.timeout(10000);
     await Promise.all([
-      rpcA.stop(),
-      rpcB.stop(),
-    ]);
-    await Promise.all([
       nodeA.stop(),
       nodeB.stop()
+    ]);
+    await Promise.all([
+      rpcA.stop(),
+      rpcB.stop(),
     ]);
   });
 
   it("can send/receive status messages from connected peers", async function () {
     this.timeout(6000);
-    try {
-      await new Promise((resolve, reject) => {
-        const t = setTimeout(reject, 2000);
-        nodeB.once("peer:connect", () => {
-          clearTimeout(t);
-          resolve();
-        });
-      });
-    } catch (e) {
-      assert.fail(e, null, "connection event not triggered");
-    }
     // send status from A to B, await status response
     rpcB.once("request", (peerInfo, method, id, body) => {
       setTimeout(() => {
@@ -76,7 +79,7 @@ describe("[network] rpc", () => {
     });
     try {
       const statusExpected: Status = {
-        headForkVersion: Buffer.alloc(4),
+        forkDigest: Buffer.alloc(4),
         finalizedRoot: Buffer.alloc(32),
         finalizedEpoch: 0,
         headRoot: Buffer.alloc(32),
@@ -95,7 +98,7 @@ describe("[network] rpc", () => {
     });
     try {
       const statusExpected: Status = {
-        headForkVersion: Buffer.alloc(4),
+        forkDigest: Buffer.alloc(4),
         finalizedRoot: Buffer.alloc(32),
         finalizedEpoch: 0,
         headRoot: Buffer.alloc(32),
@@ -112,17 +115,6 @@ describe("[network] rpc", () => {
   it("can handle multiple block requests from connected peers at the same time", async function () {
     this.timeout(6000);
     const NUM_REQUEST = 5;
-    try {
-      await new Promise((resolve, reject) => {
-        const t = setTimeout(reject, 2000);
-        nodeB.once("peer:connect", () => {
-          clearTimeout(t);
-          resolve();
-        });
-      });
-    } catch (e) {
-      assert.fail(e, null, "connection event not triggered");
-    }
     const generateBlockForSlot = (slot: Slot): SignedBeaconBlock => {
       const block = generateEmptySignedBlock();
       block.message.slot = slot;
@@ -141,7 +133,6 @@ describe("[network] rpc", () => {
       const reqs: BeaconBlocksByRangeRequest[] = [];
       for (let i = 0; i < NUM_REQUEST; i++) {
         reqs.push({
-          headBlockRoot: Buffer.alloc(32),
           startSlot: i*100,
           count: 10,
           step: 1
@@ -159,31 +150,17 @@ describe("[network] rpc", () => {
       }
 
     } catch (e) {
-      console.log(e);
       assert.fail(`Cannot receive response, error: ${e.message}`);
     }
   });
 
   it("allow empty lists in streamed response", async function() {
     this.timeout(6000);
-    try {
-      await new Promise((resolve, reject) => {
-        const t = setTimeout(reject, 2000);
-        nodeB.once("peer:connect", () => {
-          clearTimeout(t);
-          resolve();
-        });
-      });
-    } catch (e) {
-      assert.fail(e, null, "connection event not triggered");
-    }
-
-    rpcB.on("request", (peerInfo, method, id, body) => {
+    rpcB.on("request", (peerInfo, method, id) => {
       rpcB.sendResponse(id, null, []);
     });
 
     const request: BeaconBlocksByRangeRequest = {
-      headBlockRoot: Buffer.alloc(32),
       startSlot: 100,
       count: 10,
       step: 1

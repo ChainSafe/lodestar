@@ -6,7 +6,7 @@ import assert from "assert";
 import {BeaconBlock, BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
-import {getTemporaryBlockHeader, isValidProposer} from "../util";
+import {getTemporaryBlockHeader, getBeaconProposerIndex} from "../util";
 
 export function processBlockHeader(
   config: IBeaconConfig,
@@ -15,6 +15,8 @@ export function processBlockHeader(
 ): void {
   // Verify that the slots match
   assert(block.slot === state.slot);
+  // Verify that proposer index is the correct index
+  assert(block.proposerIndex === getBeaconProposerIndex(config, state));
   // Verify that the parent matches
   assert(config.types.Root.equals(
     block.parentRoot,
@@ -23,5 +25,6 @@ export function processBlockHeader(
   // Save current block as the new latest block
   state.latestBlockHeader = getTemporaryBlockHeader(config, block);
 
-  assert(isValidProposer(config, state));
+  // Verify proposer is not slashed
+  assert(!state.validators[block.proposerIndex].slashed);
 }

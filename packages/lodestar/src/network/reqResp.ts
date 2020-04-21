@@ -12,6 +12,8 @@ import {
   ResponseBody,
   SignedBeaconBlock,
   Status,
+  Ping,
+  Metadata,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcErrorCode, TTFB_TIMEOUT,} from "../constants";
@@ -128,7 +130,17 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     return await this.sendRequest<Status>(peerInfo, Method.Status, request);
   }
   public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
-    await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request, true);
+    try {
+      await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request, true);
+    } catch (e) {
+      this.logger.warn("Failed to send goodbye request");
+    }
+  }
+  public async ping(peerInfo: PeerInfo, request: Ping): Promise<Ping> {
+    return await this.sendRequest<Ping>(peerInfo, Method.Ping, request);
+  }
+  public async metadata(peerInfo: PeerInfo): Promise<Metadata> {
+    return await this.sendRequest<Metadata>(peerInfo, Method.Metadata);
   }
   public async beaconBlocksByRange(
     peerInfo: PeerInfo,
@@ -149,16 +161,21 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     const getResponse = this.getResponse;
     return (source: AsyncIterable<Buffer|BufferList>) => {
       return (async function * () {
+        if (method === Method.Metadata) {
+          yield* getResponse(peerId, method, undefined);
+          return;
+        }
         for await (const val of source) {
           const data = Buffer.isBuffer(val) ? val : val.slice();
           yield* getResponse(peerId, method, data);
+          break;
         }
       })();
     };
   }
 
   private getResponse = (peerId: PeerId, method: Method, data: Buffer): AsyncIterable<ResponseChunk> => {
-    const request = this.encoder.decodeRequest(method, data);
+    const request = method === Method.Metadata ? undefined : this.encoder.decodeRequest(method, data);
     const requestId = randomRequestId();
     this.logger.verbose(`${requestId} - receive ${method} request from ${peerId.toB58String()}`);
     // eslint-disable-next-line
@@ -181,7 +198,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   private async sendRequest<T extends ResponseBody|ResponseBody[]>(
     peerInfo: PeerInfo,
     method: Method,
-    body: RequestBody,
+    body?: RequestBody,
     requestOnly?: boolean
   ): Promise<T> {
     return await new Promise((resolve, reject) => {
@@ -195,7 +212,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       };
       try {
         const responses: Array<T> = [];
-        pipe(this.sendRequestStream(peerInfo, method, body),
+        pipe(
+          this.sendRequestStream(peerInfo, method, body),
           async (source: AsyncIterable<T>): Promise<void> => {
             for await (const response of source) {
               renewTimer();
@@ -207,7 +225,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
               reject(`No response returned for method ${method}`);
               return;
             }
-            const finalResponse = (method === Method.Status) ? responses[0] : responses;
+            const finalResponse =
+              [Method.Status, Method.Ping, Method.Metadata].includes(method) ? responses[0] : responses;
             this.logger.verbose(`receive ${method} response from ${peerInfo.id.toB58String()}`);
             resolve(requestOnly? undefined : finalResponse as T);
           });
@@ -221,7 +240,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   private sendRequestStream<T extends ResponseBody|ResponseBody[]>(
     peerInfo: PeerInfo,
     method: Method,
-    body: RequestBody,
+    body?: RequestBody,
   ): AsyncIterable<T> {
     const {encoder, libp2p, logger} = this;
     
@@ -231,7 +250,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       const promise = new Promise<AsyncIterable<T>>((resolve) => {
         logger.verbose(`send ${method} request to ${peerInfo.id.toB58String()}`);
         pipe(
-          [encoder.encodeRequest(method, body)],
+          body === undefined ? [] : [encoder.encodeRequest(method, body)],
           stream,
           encoder.decodeResponse(method),
           (source: AsyncIterable<T>) => {

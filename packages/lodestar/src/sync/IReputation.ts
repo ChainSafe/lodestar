@@ -1,10 +1,11 @@
 /**
  * @module sync
  */
-import {Status} from "@chainsafe/lodestar-types";
+import {Status, Metadata} from "@chainsafe/lodestar-types";
 
 export interface IReputation {
   latestStatus: Status | null;
+  latestMetadata: Metadata | null;
   score: number;
 }
 
@@ -23,6 +24,7 @@ export class ReputationStore implements IReputationStore {
   public add(peerId: string): IReputation {
     const reputation: IReputation = {
       latestStatus: null,
+      latestMetadata: null,
       score: 0
     };
     this.reputations.set(peerId, reputation);

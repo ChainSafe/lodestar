@@ -12,6 +12,7 @@ import { SignedBeaconBlock } from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 import { createPeerId } from "../../../../src/network";
 import PeerInfo from "peer-info";
+const forkValue = Buffer.alloc(4);
 
 describe("validate", function() {
   const sandbox = sinon.createSandbox();
@@ -25,7 +26,7 @@ describe("validate", function() {
       data: Buffer.from(config.types.SignedBeaconBlock.serialize(signedBLock)),
       from: "0",
       seqno: Buffer.from("0"),
-      topicIDs: [getGossipTopic(GossipEvent.BLOCK)]
+      topicIDs: [getGossipTopic(GossipEvent.BLOCK, forkValue)]
     };
     validator = sinon.createStubInstance(GossipMessageValidator);
     const registrar = {

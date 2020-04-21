@@ -101,6 +101,7 @@ export class BeaconNode {
     const gossipMessageValidator = new GossipMessageValidator({
       chain: this.chain,
       db: this.db,
+      opPool: this.opPool,
       config,
       logger: logger.child(this.conf.logger.network)
     });
@@ -110,6 +111,7 @@ export class BeaconNode {
       logger: logger.child(this.conf.logger.network),
       metrics: this.metrics,
       validator: gossipMessageValidator,
+      chain: this.chain,
     });
     this.sync = new BeaconSync(this.conf.sync, {
       config,
@@ -143,7 +145,6 @@ export class BeaconNode {
         logger: this.logger.child(this.conf.logger.chores)
       }
     );
-
   }
 
   public async start(): Promise<void> {
@@ -153,9 +154,9 @@ export class BeaconNode {
     await this.metrics.start();
     await this.metricsServer.start();
     await this.db.start();
-    await this.network.start();
     await this.eth1.start();
     await this.chain.start();
+    await this.network.start();
     await this.opPool.start();
     this.sync.start();
     await this.api.start();

@@ -1,6 +1,6 @@
 import {
   BigIntUintType, BitListType, BooleanType, ByteVectorType,
-  ContainerType, List, ListType, NumberUintType, Vector, VectorType,
+  ContainerType, List, ListType, NumberUintType, Vector, VectorType, BitVectorType,
 } from "@chainsafe/ssz";
 
 import * as t from "../types";
@@ -27,11 +27,13 @@ export interface IBeaconSSZTypes {
   Gwei: BigIntUintType;
   Root: ByteVectorType;
   Version: ByteVectorType;
+  ForkDigest: ByteVectorType;
   BLSPubkey: ByteVectorType;
   BLSSignature: ByteVectorType;
   Domain: ByteVectorType;
   // misc
   Fork: ContainerType<t.Fork>;
+  ForkData: ContainerType<t.ForkData>;
   Checkpoint: ContainerType<t.Checkpoint>;
   Validator: ContainerType<t.Validator>;
   AttestationData: ContainerType<t.AttestationData>;
@@ -49,6 +51,7 @@ export interface IBeaconSSZTypes {
   SignedBeaconBlockHeader: ContainerType<t.SignedBeaconBlockHeader>;
   SigningRoot: ContainerType<t.SigningRoot>;
   DepositDataRootList: ContainerType<List<t.Root>>;
+  AttestationSubnets: BitVectorType;
   // operations
   ProposerSlashing: ContainerType<t.ProposerSlashing>;
   AttesterSlashing: ContainerType<t.AttesterSlashing>;
@@ -65,17 +68,22 @@ export interface IBeaconSSZTypes {
   BeaconState: ContainerType<t.BeaconState>;
   // Validator
   AggregateAndProof: ContainerType<t.AggregateAndProof>;
+  SignedAggregateAndProof: ContainerType<t.SignedAggregateAndProof>;
   CommitteeAssignment: ContainerType<t.CommitteeAssignment>;
   SyncingStatus: ContainerType<t.SyncingStatus>;
-  ValidatorDuty: ContainerType<t.ValidatorDuty>;
+  AttesterDuty: ContainerType<t.AttesterDuty>;
+  ProposerDuty: ContainerType<t.ProposerDuty>;
   // wire
   Status: ContainerType<t.Status>;
   Goodbye: BigIntUintType;
+  Ping: BigIntUintType;
+  Metadata: ContainerType<t.Metadata>;
   BeaconBlocksByRangeRequest: ContainerType<t.BeaconBlocksByRangeRequest>;
   BeaconBlocksByRootRequest: ContainerType<t.BeaconBlocksByRootRequest>;
   //api
   SubscribeToCommitteeSubnetPayload: ContainerType<t.SubscribeToCommitteeSubnetPayload>;
   ForkResponse: ContainerType<t.ForkResponse>;
+  ValidatorResponse: ContainerType<t.ValidatorResponse>;
 }
 
 export const typeNames: (keyof IBeaconSSZTypes)[] = [
@@ -101,6 +109,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
    */
   // misc
   "Fork",
+  "ForkData",
   "Checkpoint",
   "Validator",
   "AttestationData",
@@ -118,6 +127,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "SignedBeaconBlockHeader",
   "SigningRoot",
   "DepositDataRootList",
+  "AttestationSubnets",
   // operations
   "ProposerSlashing",
   "AttesterSlashing",
@@ -134,15 +144,20 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "BeaconState",
   //validator
   "AggregateAndProof",
+  "SignedAggregateAndProof",
   "CommitteeAssignment",
-  "SyncingStatus",
-  "ValidatorDuty",
   // wire
   "Status",
   "Goodbye",
+  "Ping",
+  "Metadata",
   "BeaconBlocksByRangeRequest",
   "BeaconBlocksByRootRequest",
   //api
   "SubscribeToCommitteeSubnetPayload",
-  "ForkResponse"
+  "ForkResponse",
+  "SyncingStatus",
+  "AttesterDuty",
+  "ProposerDuty",
+  "ValidatorResponse"
 ];

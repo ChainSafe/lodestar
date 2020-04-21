@@ -5,7 +5,6 @@
 import {ICliCommand} from "./interface";
 import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
-
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {ILogger, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -14,11 +13,17 @@ import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import {generateCommanderOptions, optionsToConfig} from "../util";
 import {BeaconNodeOptions} from "../lodestar/node/options";
 import {getTomlConfig} from "../lodestar/util/file";
+import {createNodeJsLibp2p, loadPeerIdFromJsonFile} from "@chainsafe/lodestar/lib/network/nodejs";
+import {ENR} from "@chainsafe/discv5";
+import {initBLS} from "@chainsafe/bls";
 
 interface IBeaconCommandOptions {
   [key: string]: string;
+  peerId: string;
   configFile?: string;
+  preset?: string;
   loggingLevel?: string;
+  eth1BlockNum?: string;
 }
 
 export class BeaconNodeCommand implements ICliCommand {
@@ -33,6 +38,8 @@ export class BeaconNodeCommand implements ICliCommand {
       .command("beacon")
       .description("Start lodestar node")
       .option("-c, --configFile [config_file]", "Config file path")
+      .option("-p, --preset [preset]", "Minimal/mainnet", "minimal")
+      .option("--peer-id [peerId]", "json file path")
       .action(async (options) => {
         // library is not awaiting this method so don't allow error propagation
         // (unhandled promise rejections)
@@ -45,27 +52,36 @@ export class BeaconNodeCommand implements ICliCommand {
     generateCommanderOptions(command, BeaconNodeOptions);
   }
 
-  public async action(options: IBeaconCommandOptions, logger: ILogger): Promise<void> {
-    let conf: Partial<IBeaconNodeOptions> = {};
+  public async action(cmdOptions: IBeaconCommandOptions, logger: ILogger): Promise<void> {
+    let nodeOptions: Partial<IBeaconNodeOptions> = {};
+    //find better place for this once this cli is refactored
+    await initBLS();
 
-    if (options.loggingLevel) {
+    if (cmdOptions.loggingLevel) {
       // eslint-disable-next-line no-undef
       // @ts-ignore
-      logger.setLogLevel(LogLevel[options.loggingLevel]);
+      logger.setLogLevel(LogLevel[cmdOptions.loggingLevel]);
     }
 
     //merge config file
-    if (options.configFile) {
-      const parsedConfig = getTomlConfig(options.configFile, BeaconNodeOptions);
+    if (cmdOptions.configFile) {
+      const parsedConfig = getTomlConfig(cmdOptions.configFile, BeaconNodeOptions);
       //cli will override toml config options
-      conf = deepmerge(conf, parsedConfig) as Partial<IBeaconNodeOptions>;
+      nodeOptions = deepmerge(nodeOptions, parsedConfig) as Partial<IBeaconNodeOptions>;
     }
     //override current config with cli config
-    conf = deepmerge(conf, optionsToConfig(options, BeaconNodeOptions));
-
-    const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
-
-    this.node = new BeaconNode(conf, {config, logger});
+    nodeOptions = deepmerge(nodeOptions, optionsToConfig(cmdOptions, BeaconNodeOptions));
+    const peerId = await loadPeerIdFromJsonFile(cmdOptions.peerId);
+    const defaultDiscv5Opt = {
+      enr: ENR.createFromPeerId(peerId),
+      bindAddr: "/ip4/127.0.0.1/udp/0",
+      bootEnrs: [] as ENR[]};
+    const discv5 = nodeOptions.network? Object.assign(defaultDiscv5Opt, nodeOptions.network.discv5) : defaultDiscv5Opt;
+    const libp2pOpt = nodeOptions.network? Object.assign(nodeOptions.network, {discv5}) : {discv5};
+    const libp2p = await createNodeJsLibp2p(peerId, libp2pOpt);
+    const config = cmdOptions.preset === "minimal" ? minimalConfig : mainnetConfig;
+    // nodejs will create EthersEth1Notifier by default
+    this.node = new BeaconNode(nodeOptions, {config, logger, libp2p});
     await this.node.start();
   }
 }

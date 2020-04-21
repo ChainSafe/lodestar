@@ -64,7 +64,7 @@ export async function getBlockRange(
     chunks = (await Promise.all(
       chunks.map(async (chunk) => {
         try {
-          const chunkBlocks = await getBlockRangeFromPeer(rpc, peerBalancer.next(), chunk);
+          const chunkBlocks = await getBlockRangeFromPeer(rpc, reps, peerBalancer.next(), chunk);
           blocks = blocks.concat(chunkBlocks);
           return null;
         } catch (e) {

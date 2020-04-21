@@ -1,19 +1,22 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
+  AggregateAndProof,
   Attestation,
   AttestationData,
+  AttesterDuty,
   BeaconBlock,
   BLSPubkey,
   Deposit,
   Eth1Data,
   Number64,
-  Slot,
-  ValidatorDuty,
+  ProposerDuty,
   ValidatorIndex,
-  SignedBeaconBlock
+  Slot,
+  SignedBeaconBlock,
+  SignedAggregateAndProof
 } from "@chainsafe/lodestar-types";
 import {IValidatorApi} from "../../../src/api/interface/validators";
-import {generateEmptyBlock} from "../../utils/block";
+import {generateEmptyBlock} from "../block";
 
 export interface IMockValidatorAPIOpts {
   head?: SignedBeaconBlock;
@@ -38,11 +41,17 @@ export class MockValidatorApi implements IValidatorApi {
     this.validatorIndex = opts && opts.validatorIndex || 1;
   }
 
-  getAttesterDuties(epoch: number, validatorPubKey: BLSPubkey[]): Promise<ValidatorDuty[]> {
+  public async produceAggregateAndProof(
+    attestationData: AttestationData, aggregator: BLSPubkey
+  ): Promise<AggregateAndProof> {
+    throw new Error("Method not implemented.");
+  }
+
+  getAttesterDuties(epoch: number, validatorPubKey: BLSPubkey[]): Promise<AttesterDuty[]> {
     return undefined;
   }
 
-  getProposerDuties(epoch: number): Promise<Map<Slot, BLSPubkey>> {
+  getProposerDuties(epoch: number): Promise<ProposerDuty[]> {
     return undefined;
   }
 
@@ -50,19 +59,15 @@ export class MockValidatorApi implements IValidatorApi {
     return undefined;
   }
 
-  isAggregator(slot: number, committeeIndex: number, slotSignature: Buffer): Promise<boolean> {
+  produceAttestation(validatorPubKey: Buffer, index: number, slot: number): Promise<Attestation> {
     return undefined;
   }
 
-  produceAttestation(validatorPubKey: Buffer, pocBit: boolean, index: number, slot: number): Promise<Attestation> {
+  produceBlock(slot: number, proposerPubkey: Buffer, randaoReveal: Buffer): Promise<BeaconBlock> {
     return undefined;
   }
 
-  produceBlock(slot: number, randaoReveal: Buffer): Promise<BeaconBlock> {
-    return undefined;
-  }
-
-  publishAggregatedAttestation(aggregated: Attestation, validatorPubKey: Buffer, slotSignature: Buffer): Promise<void> {
+  publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {
     return undefined;
   }
 

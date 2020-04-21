@@ -129,7 +129,7 @@ describe('process epoch - crosslinks', function () {
   });
 
   it('should get matching head attestation', function () {
-    const blockRoot = Buffer.alloc(36, 2);
+    const blockRoot = Buffer.alloc(32, 2);
     const currentPendingAttestations = [
       {
         ...generateEmptyAttestation(),
@@ -148,6 +148,7 @@ describe('process epoch - crosslinks', function () {
       currentEpochAttestations: currentPendingAttestations
     });
     getBlockRootAtSlotStub.returns(blockRoot);
+    getBlockRootStub.returns(Buffer.alloc(32));
     try {
       const result = getMatchingHeadAttestations(config, state, 1);
       expect(getBlockRootAtSlotStub.withArgs(config, sinon.match.any, 1).calledTwice).to.be.true;
@@ -206,7 +207,7 @@ describe('process epoch - crosslinks', function () {
     try {
       const result = getAttestingBalance(config, state, pendingAttestations);
       expect(result.toString()).to.be.deep.equal(1n.toString());
-      expect(getTotalBalanceStub.withArgs(sinon.match.any, [1]).calledOnce).to.be.true;
+      expect(getTotalBalanceStub.withArgs(sinon.match.any, sinon.match.any, [1]).calledOnce).to.be.true;
     } catch (e) {
       expect.fail(e.stack);
     }

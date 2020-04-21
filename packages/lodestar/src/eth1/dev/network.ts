@@ -27,6 +27,7 @@ export interface IPrivateNetworkOpts {
   dbPath?: string;
   blockTime?: number;
   mnemonic?: string;
+  "total_accounts"?: number;
 }
 
 export class PrivateEth1Network {

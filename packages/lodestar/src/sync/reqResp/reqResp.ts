@@ -8,6 +8,7 @@ import {
   BeaconBlocksByRootRequest,
   Epoch,
   Goodbye,
+  Ping,
   RequestBody,
   Root,
   SignedBeaconBlock,
@@ -64,39 +65,38 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   }
 
   public async start(): Promise<void> {
-    // TODO: enable after we add peerbook persisting
-    // //refresh peer statuses
-    // const myStatus = await this.createStatus();
-    // await Promise.all(
-    //   this.network.getPeers().map(async (peerInfo) => {
-    //     this.reps.get(peerInfo.id.toB58String()).latestStatus =
-    //         await this.network.reqResp.status(peerInfo, myStatus);
-    //   }
-    //   )
-    // );
-    this.network.on("peer:connect", this.handshake);
     this.network.reqResp.on("request", this.onRequest);
+    this.network.on("peer:connect", this.handshake);
+    const myStatus = await this.createStatus();
+    await Promise.all(
+      this.network.getPeers().map((peerInfo) =>
+        this.network.reqResp.status(peerInfo, myStatus)));
   }
 
   public async stop(): Promise<void> {
     this.network.removeListener("peer:connect", this.handshake);
     this.network.reqResp.removeListener("request", this.onRequest);
     await Promise.all(
-      this.network.getPeers().map((peerInfo) =>
-        this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN))));
+      this.network.getPeers().map((peerInfo) => {
+        this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
+      }));
   }
 
   public onRequest = async (
     peerInfo: PeerInfo,
     method: Method,
     id: RequestId,
-    body: RequestBody,
+    body?: RequestBody,
   ): Promise<void> => {
     switch (method) {
       case Method.Status:
         return await this.onStatus(peerInfo, id, body as Status);
       case Method.Goodbye:
         return await this.onGoodbye(peerInfo, id, body as Goodbye);
+      case Method.Ping:
+        return await this.onPing(peerInfo, id, body as Ping);
+      case Method.Metadata:
+        return await this.onMetadata(peerInfo, id);
       case Method.BeaconBlocksByRange:
         return await this.onBeaconBlocksByRange(id, body as BeaconBlocksByRangeRequest);
       case Method.BeaconBlocksByRoot:
@@ -123,9 +123,8 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   }
 
   public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
-    const state = await this.chain.getHeadState();
-    // peer is on a different fork version
-    return !this.config.types.Version.equals(state.fork.currentVersion, request.headForkVersion);
+    const currentForkDigest = this.chain.currentForkDigest;
+    return !this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest);
 
     //TODO: fix this, doesn't work if we are starting sync(archive is empty) or we don't have finalized epoch
     // const startSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
@@ -147,7 +146,18 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
     this.network.reqResp.sendResponse(id, null, [BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN)]);
-    await this.network.disconnect(peerInfo);
+    //  TODO: enable once we can check if response is sent
+    // this.network.disconnect(peerInfo);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public async onPing(peerInfo: PeerInfo, id: RequestId, request: Ping): Promise<void> {
+    this.network.reqResp.sendResponse(id, null, [this.network.metadata.seqNumber]);
+    // TODO handle peer sequence number update
+  }
+
+  public async onMetadata(peerInfo: PeerInfo, id: RequestId): Promise<void> {
+    this.network.reqResp.sendResponse(id, null, [this.network.metadata.metadata]);
   }
 
   public async onBeaconBlocksByRange(
@@ -200,18 +210,15 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       headRoot = ZERO_HASH;
       finalizedEpoch = 0;
       finalizedRoot = ZERO_HASH;
-      headForkVersion = this.config.params.GENESIS_FORK_VERSION;
-    } else {
-      headSlot = await this.db.chain.getChainHeadSlot();
-      const headBlock = await this.chain.getHeadBlock();
+      } else {
       const state = await this.chain.getHeadState();
-      headRoot = this.config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(this.config, headBlock.message));
+      headSlot = state.slot;
+      headRoot = this.config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
       finalizedEpoch = state.finalizedCheckpoint.epoch;
       finalizedRoot = state.finalizedCheckpoint.root;
-      headForkVersion = state.fork.currentVersion;
     }
     return {
-      headForkVersion,
+      forkDigest: this.chain.currentForkDigest,
       finalizedRoot,
       finalizedEpoch,
       headRoot,
@@ -219,13 +226,8 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     };
   }
 
-  private handshake = async (peerInfo: PeerInfo): Promise<void> => {
-    const randomDelay = Math.floor(Math.random() * 5000);
-    await sleep(randomDelay);
-    if (
-      this.network.hasPeer(peerInfo) &&
-      !this.reps.get(peerInfo.id.toB58String()).latestStatus
-    ) {
+  private handshake = async (peerInfo: PeerInfo, direction: "inbound"|"outbound"): Promise<void> => {
+    if(direction === "outbound") {
       const request = await this.createStatus();
       try {
         this.reps.get(peerInfo.id.toB58String()).latestStatus = await this.network.reqResp.status(peerInfo, request);

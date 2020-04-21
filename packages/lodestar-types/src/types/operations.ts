@@ -21,8 +21,6 @@ import {
 
 
 export interface ProposerSlashing {
-  // Proposer index
-  proposerIndex: ValidatorIndex;
   // First block header
   signedHeader1: SignedBeaconBlockHeader;
   // Second block header

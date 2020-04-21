@@ -3,7 +3,7 @@
  * @module types
  */
 
-import {BitList, List, Vector} from "@chainsafe/ssz";
+import {BitList, List, Vector, BitVector} from "@chainsafe/ssz";
 
 import {
   BLSPubkey,
@@ -27,6 +27,13 @@ export interface Fork {
   currentVersion: Version;
   // Fork epoch number
   epoch: Epoch;
+}
+
+export interface ForkData {
+  // Current fork version
+  currentVersion: Version;
+  // root of genesis validator list
+  genesisValidatorsRoot: Root;
 }
 
 export interface Checkpoint {
@@ -121,6 +128,7 @@ export interface DepositData {
 
 export interface BeaconBlockHeader {
   slot: Slot;
+  proposerIndex: ValidatorIndex;
   parentRoot: Root;
   stateRoot: Root;
   bodyRoot: Root;
@@ -135,3 +143,5 @@ export interface SigningRoot {
   objectRoot: Root;
   domain: Domain;
 }
+
+export type AttestationSubnets = BitVector;

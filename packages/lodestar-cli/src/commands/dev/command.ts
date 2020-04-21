@@ -1,7 +1,7 @@
 /**
  * @module cli/commands
  */
-
+process.setMaxListeners(15);
 import {ICliCommand} from "../interface";
 import {CommanderStatic} from "commander";
 import fs from "fs";
@@ -42,6 +42,8 @@ const BASE_DIRECTORY = path.join(".", ".tmp");
 
 export class DevCommand implements ICliCommand {
   public node: BeaconNode;
+  public validators: ValidatorClient[] = [];
+
 
   public register(commander: CommanderStatic): void {
 
@@ -75,7 +77,6 @@ export class DevCommand implements ICliCommand {
   }
 
   public async action(options: IDevCommandOptions, logger: ILogger): Promise<void> {
-
     //find better place for this once this cli is refactored
     await initBLS();
 
@@ -169,6 +170,7 @@ export class DevCommand implements ICliCommand {
         logger: new WinstonLogger({module: `Validator #${index}`})
       }
     );
+    this.validators.push(validator);
     validator.start();
   }
 }

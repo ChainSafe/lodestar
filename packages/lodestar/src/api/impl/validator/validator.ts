@@ -3,17 +3,18 @@
  */
 
 import {
-  AggregateAndProof,
   Attestation,
+  AttestationData, AttesterDuty,
   BeaconBlock,
   BLSPubkey,
   BLSSignature,
   Bytes96,
   CommitteeIndex,
-  Epoch,
+  Epoch, ProposerDuty,
   SignedBeaconBlock,
   Slot,
-  ValidatorDuty
+  SignedAggregateAndProof,
+  AggregateAndProof
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../../db";
@@ -28,16 +29,16 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetwork} from "../../../network";
 import {
   computeEpochAtSlot,
+  computeSigningRoot,
   computeStartSlotAtEpoch,
   getBeaconProposerIndex,
   getDomain,
-  isAggregator,
-  processSlots,
-  computeSigningRoot
+  processSlots
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {verify} from "@chainsafe/bls";
-import {DomainType} from "../../../constants";
-import {assembleValidatorDuty} from "../../../chain/factory/duties";
+import {Signature, verify} from "@chainsafe/bls";
+import {Sync} from "../../../sync";
+import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
+import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import assert from "assert";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {IBeaconSync} from "../../../sync";
@@ -70,13 +71,15 @@ export class ValidatorApi implements IValidatorApi {
     this.eth1 = modules.eth1;
   }
 
-  public async produceBlock(slot: Slot, randaoReveal: Bytes96): Promise<BeaconBlock> {
-    return await assembleBlock(this.config, this.chain, this.db, this.opPool, this.eth1, slot, randaoReveal);
+  public async produceBlock(slot: Slot, validatorPubkey: BLSPubkey, randaoReveal: Bytes96): Promise<BeaconBlock> {
+    const validatorIndex = await this.db.getValidatorIndex(validatorPubkey);
+    return await assembleBlock(
+      this.config, this.chain, this.db, this.opPool, this.eth1, slot, validatorIndex, randaoReveal
+    );
   }
 
   public async produceAttestation(
     validatorPubKey: BLSPubkey,
-    pocBit: boolean,
     index: CommitteeIndex,
     slot: Slot,
   ): Promise<Attestation> {
@@ -114,23 +117,23 @@ export class ValidatorApi implements IValidatorApi {
     ]);
   }
 
-  public async getProposerDuties(epoch: Epoch): Promise<Map<Slot, BLSPubkey>> {
+  public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
     const state = await this.chain.getHeadState();
     assert(epoch >= 0 && epoch <= computeEpochAtSlot(this.config, state.slot) + 2);
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
     if(state.slot < startSlot) {
       processSlots(this.config, state, startSlot);
     }
-    const slotProposerMapping: Map<Slot, BLSPubkey> = new Map();
+    const duties: ProposerDuty[] = [];
 
     for(let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot ++) {
       const blockProposerIndex = getBeaconProposerIndex(this.config, {...state, slot});
-      slotProposerMapping.set(slot, state.validators[blockProposerIndex].pubkey);
+      duties.push({slot, proposerPubkey: state.validators[blockProposerIndex].pubkey});
     }
-    return slotProposerMapping;
+    return duties;
   }
 
-  public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<ValidatorDuty[]> {
+  public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
     const state = await this.chain.getHeadState();
 
     const validatorIndexes = await Promise.all(validatorPubKeys.map(async publicKey => {
@@ -138,7 +141,7 @@ export class ValidatorApi implements IValidatorApi {
     }));
 
     return validatorIndexes.map((validatorIndex) => {
-      return assembleValidatorDuty(
+      return assembleAttesterDuty(
         this.config,
         {publicKey: state.validators[validatorIndex].pubkey, index: validatorIndex},
         state,
@@ -147,19 +150,12 @@ export class ValidatorApi implements IValidatorApi {
     });
   }
 
-  public async publishAggregatedAttestation(
-    aggregated: Attestation,
-    validatorPubkey: BLSPubkey,
-    slotSignature: BLSSignature
+  public async publishAggregateAndProof(
+    signedAggregateAndProof: SignedAggregateAndProof,
   ): Promise<void> {
-    const aggregation: AggregateAndProof = {
-      aggregate: aggregated,
-      selectionProof: slotSignature,
-      aggregatorIndex: await this.db.getValidatorIndex(validatorPubkey)
-    };
     await Promise.all([
-      this.opPool.aggregateAndProofs.receive(aggregation),
-      this.network.gossip.publishAggregatedAttestation(aggregation)
+      this.opPool.aggregateAndProofs.receive(signedAggregateAndProof.message),
+      this.network.gossip.publishAggregatedAttestation(signedAggregateAndProof)
     ]);
   }
 
@@ -167,8 +163,40 @@ export class ValidatorApi implements IValidatorApi {
     return await this.opPool.attestations.getCommiteeAttestations(epoch, committeeIndex);
   }
 
-  public async isAggregator(slot: Slot, committeeIndex: CommitteeIndex, slotSignature: BLSSignature): Promise<boolean> {
-    return isAggregator(this.config, await this.chain.getHeadState(), slot, committeeIndex, slotSignature);
+
+  public async produceAggregateAndProof(
+    attestationData: AttestationData, aggregator: BLSPubkey
+  ): Promise<AggregateAndProof> {
+    const attestations = (await this.getWireAttestations(
+      computeEpochAtSlot(this.config, attestationData.slot),
+      attestationData.index
+    )
+    );
+    const aggregate = attestations.filter((a) => {
+      return this.config.types.AttestationData.equals(a.data, attestationData);
+    }).reduce((current, attestation) => {
+      try {
+        current.signature = Signature
+          .fromCompressedBytes(current.signature.valueOf() as Uint8Array)
+          .add(Signature.fromCompressedBytes(attestation.signature.valueOf() as Uint8Array))
+          .toBytesCompressed();
+        let index = 0;
+        for(const bit of attestation.aggregationBits) {
+          if(bit) {
+            current.aggregationBits[index] = true;
+          }
+          index++;
+        }
+      } catch (e) {
+        //ignored
+      }
+      return current;
+    });
+    return {
+      aggregate,
+      aggregatorIndex: await this.db.getValidatorIndex(aggregator),
+      selectionProof: EMPTY_SIGNATURE
+    };
   }
 
   public async subscribeCommitteeSubnet(
@@ -177,7 +205,7 @@ export class ValidatorApi implements IValidatorApi {
     const domain = getDomain(
       this.config,
       await this.chain.getHeadState(),
-      DomainType.BEACON_ATTESTER,
+      DomainType.SELECTION_PROOF,
       computeEpochAtSlot(this.config, slot));
     const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
     const valid = verify(

@@ -15,6 +15,8 @@ import {INetworkOptions} from "./options";
 import {INetwork, NetworkEventEmitter,} from "./interface";
 import {Gossip} from "./gossip/gossip";
 import {IGossip, IGossipMessageValidator} from "./gossip/interface";
+import {IBeaconChain} from "../chain";
+import {MetadataController} from "./metadata";
 
 interface ILibp2pModules {
   config: IBeaconConfig;
@@ -22,6 +24,7 @@ interface ILibp2pModules {
   logger: ILogger;
   metrics: IBeaconMetrics;
   validator: IGossipMessageValidator;
+  chain: IBeaconChain;
 }
 
 
@@ -30,6 +33,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   public peerInfo: PeerInfo;
   public reqResp: ReqResp;
   public gossip: IGossip;
+  public metadata: MetadataController;
 
   private opts: INetworkOptions;
   private config: IBeaconConfig;
@@ -38,7 +42,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   private logger: ILogger;
   private metrics: IBeaconMetrics;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, logger, metrics, validator}: ILibp2pModules) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger, metrics, validator, chain}: ILibp2pModules) {
     super();
     this.opts = opts;
     this.config = config;
@@ -50,7 +54,9 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
         this.peerInfo = libp2p.peerInfo;
         this.libp2p = libp2p;
         this.reqResp = new ReqResp(opts, {config, libp2p, logger});
-        this.gossip = (new Gossip(opts, {config, libp2p, logger, validator})) as unknown as IGossip;
+        this.gossip = (new Gossip(opts, {config, libp2p, logger, validator, chain})) as unknown as IGossip;
+        const enr = opts.discv5 && opts.discv5.enr || undefined;
+        this.metadata = new MetadataController({enr}, {config});
         resolve();
       });
     });
@@ -61,28 +67,30 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     await this.libp2p.start();
     await this.reqResp.start();
     await this.gossip.start();
-    // @ts-ignore
-    this.libp2p.peerStore.on("peer", this.emitPeerConnect);
     this.libp2p.on("peer:disconnect", this.emitPeerDisconnect);
     const multiaddresses = this.libp2p.peerInfo.multiaddrs.toArray().map((m) => m.toString()).join(",");
     this.logger.important(`PeerId ${this.libp2p.peerInfo.id.toB58String()}, Multiaddrs ${multiaddresses}`);
   }
 
   public async stop(): Promise<void> {
-    await this.inited;
+    this.libp2p.removeListener("peer:connect", this.emitPeerConnect);
+    this.libp2p.removeListener("peer:disconnect", this.emitPeerDisconnect);
     await this.gossip.stop();
     await this.reqResp.stop();
     await this.libp2p.stop();
-    this.libp2p.removeListener("peer:connect", this.emitPeerConnect);
-    this.libp2p.removeListener("peer:disconnect", this.emitPeerDisconnect);
   }
 
   public getPeers(): PeerInfo[] {
-    return Array.from(this.libp2p.peerStore.peers.values());
+    return Array.from(this.libp2p.peerStore.peers.values()).filter(
+      (peerInfo) => !!this.getConnection(peerInfo));
   }
 
   public hasPeer(peerInfo: PeerInfo): boolean {
     return this.libp2p.peerStore.peers.has(peerInfo.id.toB58String());
+  }
+
+  public getConnection(peer: PeerInfo): LibP2pConnection {
+    return this.libp2p.registrar.getConnection(peer);
   }
 
   public async connect(peerInfo: PeerInfo): Promise<void> {
@@ -94,9 +102,10 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   }
 
   private emitPeerConnect = (peerInfo: PeerInfo): void => {
-    this.logger.verbose("peer connected " + peerInfo.id.toB58String());
+    const conn = this.getConnection(peerInfo);
     this.metrics.peers.inc();
-    this.emit("peer:connect", peerInfo);
+    this.logger.verbose("peer connected " + peerInfo.id.toB58String() + " " + conn.stat.direction);
+    this.emit("peer:connect", peerInfo, conn.stat.direction);
   };
 
   private emitPeerDisconnect = (peerInfo: PeerInfo): void => {
