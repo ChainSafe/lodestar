@@ -144,9 +144,10 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
     this.network.reqResp.sendResponse(id, null, [BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN)]);
     // //  TODO: fix once we can check if response is sent
-    setTimeout(() => {
+    const disconnect = this.network.disconnect.bind(this.network);
+    setTimeout(async () => {
       try {
-        this.network.disconnect(peerInfo);
+        await disconnect(peerInfo);
       } catch (e) {
         //ignored probably peer disconnected already
       }

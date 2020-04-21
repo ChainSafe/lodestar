@@ -43,7 +43,7 @@ export class TasksService implements IService {
     this.logger = modules.logger;
     this.sync = modules.sync;
     this.network = modules.network;
-    this.interopSubnetsTask = new InteropSubnetsJoiningTask(this.config, {chain: this.chain, network: this.network})
+    this.interopSubnetsTask = new InteropSubnetsJoiningTask(this.config, {chain: this.chain, network: this.network});
   }
 
   public async start(): Promise<void> {
