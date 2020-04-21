@@ -1,6 +1,5 @@
 {
   "name": "@chainsafe/lodestar-cli",
-  "private": true,
   "version": "0.5.0",
   "description": "Command line interface for other packages",
   "author": "ChainSafe Systems",
