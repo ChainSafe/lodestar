@@ -5,7 +5,7 @@ about: Create a report to help us improve
 ---
 
 <!--NOTE: -->
-<!--- General questions should go to the gitter room instead of the issue tracker.-->
+<!--- General questions should go to the discord chat instead of the issue tracker.-->
 
 **Describe the bug**
 <!--A clear and concise description of what the bug is and steps to reproduce it.-->

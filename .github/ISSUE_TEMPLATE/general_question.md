@@ -6,7 +6,7 @@ about: Suggest an idea for this project
 
 <!--
 NOTE: 
-- General questions should go to the gitter room instead of the issue tracker.
+- General questions should go to the discord chat instead of the issue tracker.
 -->
 
 **What is your question?**
