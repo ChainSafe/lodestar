@@ -8,12 +8,12 @@ import {
   BeaconBlocksByRootRequest,
   Epoch,
   Goodbye,
+  Ping,
   RequestBody,
   Root,
   SignedBeaconBlock,
   Slot,
   Status,
-  Ping,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
@@ -25,7 +25,6 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ISyncOptions, ISyncReqResp} from "./interface";
 import {ReputationStore} from "../IReputation";
 import {BlockRepository} from "../../db/api/beacon/repositories";
-import {sleep} from "../../util/sleep";
 
 export interface ISyncReqRespModules {
   config: IBeaconConfig;
