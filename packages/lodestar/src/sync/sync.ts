@@ -4,12 +4,12 @@ import {INetwork} from "../network";
 import {IReputationStore} from "./IReputation";
 import {sleep} from "../util/sleep";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {Root, SignedBeaconBlock, SyncingStatus} from "@chainsafe/lodestar-types";
+import {CommitteeIndex, Root, SignedBeaconBlock, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
 import {FastSync, InitialSync} from "./initial";
 import {IRegularSync} from "./regular";
 import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
 import {BeaconGossipHandler, IGossipHandler} from "./gossip";
-import {RoundRobinArray} from "./utils";
+import {AttestationCollector, RoundRobinArray} from "./utils";
 import {IBeaconChain} from "../chain";
 import {NaiveRegularSync} from "./regular/naive";
 
@@ -33,6 +33,7 @@ export class BeaconSync implements IBeaconSync {
   private regularSync: IRegularSync;
   private reqResp: IReqRespHandler;
   private gossip: IGossipHandler;
+  private attestationCollector: AttestationCollector;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
     this.opts = opts;
@@ -44,10 +45,12 @@ export class BeaconSync implements IBeaconSync {
     this.regularSync = modules.regularSync || new NaiveRegularSync(opts, modules);
     this.reqResp = modules.reqRespHandler || new BeaconReqRespHandler(modules);
     this.gossip = modules.gossipHandler || new BeaconGossipHandler(modules.chain, modules.network, modules.opPool);
+    this.attestationCollector = modules.attestationCollector || new AttestationCollector(modules.config, modules);
   }
 
   public async start(): Promise<void> {
     await this.reqResp.start();
+    await this.attestationCollector.start();
     this.chain.on("unknownBlockRoot", this.onUnknownBlockRoot);
     // so we don't wait indefinitely
     await this.waitForPeers();
@@ -59,6 +62,7 @@ export class BeaconSync implements IBeaconSync {
     this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
     await this.initialSync.stop();
     await this.regularSync.stop();
+    await this.attestationCollector.stop();
     await this.reqResp.stop();
     await this.gossip.stop();
   }
@@ -69,6 +73,10 @@ export class BeaconSync implements IBeaconSync {
 
   public isSynced(): boolean {
     return this.mode !== SyncMode.SYNCED;
+  }
+
+  public collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
+    this.attestationCollector.subscribeToCommitteeAttestations(slot, committeeIndex);
   }
 
   private async startInitialSync(): Promise<void> {

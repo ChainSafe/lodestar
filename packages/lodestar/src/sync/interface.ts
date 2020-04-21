@@ -2,7 +2,7 @@ import {IService} from "../node";
 import {INetwork} from "../network";
 import {IReputationStore} from "./IReputation";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {Slot, SyncingStatus} from "@chainsafe/lodestar-types";
+import {CommitteeIndex, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
 import {InitialSync} from "./initial";
 import {IRegularSync} from "./regular";
 import {IGossipHandler} from "./gossip";
@@ -11,10 +11,12 @@ import {IBeaconChain} from "../chain";
 import {OpPool} from "../opPool";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db/api";
+import {AttestationCollector} from "./utils";
 
 export interface IBeaconSync extends IService {
   getSyncStatus(): SyncingStatus|null;
   isSynced(): boolean;
+  collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void;
 }
 
 export interface ISlotRange {
@@ -34,4 +36,5 @@ export interface ISyncModules {
   regularSync?: IRegularSync;
   reqRespHandler?: IReqRespHandler;
   gossipHandler?: IGossipHandler;
+  attestationCollector?: AttestationCollector;
 }

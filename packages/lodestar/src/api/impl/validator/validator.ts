@@ -215,13 +215,12 @@ export class ValidatorApi implements IValidatorApi {
       slotSignature.valueOf() as Uint8Array,
     );
     if(!valid) {
-      throw new Error("Ivalid slot signature");
+      throw new Error("Invalid slot signature");
     }
-    //TODO: fix this
-    // this.sync.regularSync.collectAttestations(
-    //   slot,
-    //   committeeIndex
-    // );
+    this.sync.collectAttestations(
+      slot,
+      committeeIndex
+    );
   }
 
 }
