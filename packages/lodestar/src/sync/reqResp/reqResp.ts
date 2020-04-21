@@ -14,7 +14,6 @@ import {
   SignedBeaconBlock,
   Slot,
   Status,
-  Version,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, RequestId, ZERO_HASH} from "../../constants";
@@ -24,9 +23,7 @@ import {INetwork} from "../../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IReqRespHandler} from "./interface";
 import {BlockRepository} from "../../db/api/beacon/repositories";
-import {sleep} from "../../util/sleep";
 import {IReputationStore} from "../IReputation";
-import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;
@@ -203,14 +200,13 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     let headSlot: Slot,
       headRoot: Root,
       finalizedEpoch: Epoch,
-      finalizedRoot: Root,
-      headForkVersion: Version;
+      finalizedRoot: Root;
     if (!this.chain.isInitialized()) {
       headSlot = 0;
       headRoot = ZERO_HASH;
       finalizedEpoch = 0;
       finalizedRoot = ZERO_HASH;
-      } else {
+    } else {
       const state = await this.chain.getHeadState();
       headSlot = state.slot;
       headRoot = this.config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);

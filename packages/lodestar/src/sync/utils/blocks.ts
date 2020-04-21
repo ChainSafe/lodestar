@@ -1,7 +1,6 @@
 import {BeaconBlockHeader, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {RoundRobinArray} from "./robin";
 import {IReqResp} from "../../network";
-import {ZERO_HASH} from "../../constants";
 import {ISlotRange} from "../interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
