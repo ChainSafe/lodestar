@@ -1,10 +1,10 @@
 import {Json} from "@chainsafe/ssz";
 import defaults, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 
-import {readFile, writeFile} from "../lodestar/util";
-import {BeaconNodeOptions} from "../lodestar/node/options";
-import {generateTomlConfig} from "../lodestar/util/toml";
-import {validateConfig} from "../lodestar/util/config";
+import {readFile, writeFile} from "../util";
+import {BeaconNodeOptions} from "../../lodestar/node/options";
+import {generateTomlConfig} from "../../lodestar/util/toml";
+import {validateConfig} from "../../lodestar/util/config";
 
 export function createBeaconConfig(): IBeaconNodeOptions {
   return {...defaults};

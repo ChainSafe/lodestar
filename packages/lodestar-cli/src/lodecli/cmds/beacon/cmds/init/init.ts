@@ -1,8 +1,8 @@
 import * as path from "path";
 
-import {mkdir} from "../../lodestar/util";
-import {initBeaconConfig} from "../../config";
-import {initPeerId, initEnr, readPeerId} from "../../network";
+import {mkdir} from "../../../../util";
+import {initBeaconConfig} from "../../../../config";
+import {initPeerId, initEnr, readPeerId} from "../../../../network";
 
 /**
  * Initialize lodestar-cli with an on-disk configuration

@@ -1,12 +1,17 @@
 import {Argv} from "yargs";
 
-export const command = "beacon";
+import * as init from "./cmds/init";
+
+export const command = "beacon <command>";
 
 export const description = "Beacon node";
 
 export function builder(yargs: Argv): Argv {
-  return yargs.commandDir("beaconCmds");
+  return yargs
+    .command(init)
+    .help();
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
-export function handler(): void {}
+export function handler(): void {
+}

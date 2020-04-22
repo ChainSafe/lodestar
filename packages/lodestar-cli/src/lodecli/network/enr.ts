@@ -1,7 +1,7 @@
 import PeerId from "peer-id";
 import {ENR, createKeypairFromPeerId} from "@chainsafe/discv5";
 
-import {writeFile, readFile} from "../lodestar/util";
+import {writeFile, readFile} from "../util";
 
 
 export async function createEnr(peerId: PeerId): Promise<ENR> {

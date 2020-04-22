@@ -1,7 +1,9 @@
 import * as yargs from "yargs";
 
+import * as beacon from "./cmds/beacon";
+
 yargs
-  .commandDir("cmds")
+  .command(beacon)
   .demandCommand()
   .help()
   .argv;
