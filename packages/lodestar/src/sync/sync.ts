@@ -35,6 +35,8 @@ export class BeaconSync implements IBeaconSync {
   private reqResp: IReqRespHandler;
   private gossip: IGossipHandler;
   private attestationCollector: AttestationCollector;
+  
+  private startingBlock: Slot = 0;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
     this.opts = opts;
@@ -60,6 +62,8 @@ export class BeaconSync implements IBeaconSync {
     }
     await this.startInitialSync();
     await this.startRegularSync();
+    this.mode = SyncMode.SYNCED;
+    this.startingBlock = (await this.chain.getHeadBlock()).message.slot;
   }
 
   public async stop(): Promise<void> {
@@ -72,12 +76,25 @@ export class BeaconSync implements IBeaconSync {
     await this.gossip.stop();
   }
 
-  public getSyncStatus(): SyncingStatus|null {
-    throw new Error("Method not implemented.");
+  public async getSyncStatus(): Promise<SyncingStatus|null> {
+    if(this.isSynced()) {
+      return null;
+    }
+    let target: Slot = 0;
+    if(this.mode === SyncMode.INITIAL_SYNCING) {
+      target = await this.initialSync.getHighestBlock();
+    } else {
+      target = await this.regularSync.getHighestBlock();
+    }
+    return {
+      startingBlock: BigInt(this.startingBlock),
+      currentBlock: BigInt((await this.chain.getHeadBlock()).message.slot),
+      highestBlock: BigInt(target)
+    };
   }
 
   public isSynced(): boolean {
-    return this.mode !== SyncMode.SYNCED;
+    return this.mode === SyncMode.SYNCED;
   }
 
   public collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
@@ -101,7 +118,7 @@ export class BeaconSync implements IBeaconSync {
   
   private async waitForPeers(): Promise<void> {
     this.logger.info("Waiting for peers...", this.getPeers());
-    while (this.mode !== SyncMode.STOPPED && this.getPeers().length <= this.opts.minPeers) {
+    while (this.mode !== SyncMode.STOPPED && this.getPeers().length < this.opts.minPeers) {
       await sleep(1000);
     }
   }

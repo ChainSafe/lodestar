@@ -69,6 +69,10 @@ export class FastSync
     this.chain.removeListener("processedCheckpoint", this.checkProgress);
   }
 
+  public getHighestBlock(): Slot {
+    return computeStartSlotAtEpoch(this.config, this.targetCheckpoint.epoch);
+  }
+
   private setTarget = (target: Checkpoint): void => {
     this.targetCheckpoint = target;
     this.syncTriggerSource.push(computeStartSlotAtEpoch(this.config, target.epoch + 1));
