@@ -58,7 +58,8 @@
     "yargs": "^15.3.1"
   },
   "bin": {
-    "lodestar": "./bin/lodestar"
+    "lodestar": "./bin/lodestar",
+    "lodecli": "./bin/lodecli"
   },
   "devDependencies": {
     "@types/chai": "4.2.0",
