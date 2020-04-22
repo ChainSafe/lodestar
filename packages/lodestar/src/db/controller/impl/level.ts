@@ -8,9 +8,9 @@ import {IDatabaseController, ISearchOptions} from "../interface";
 import {EventEmitter} from "events";
 //@ts-ignore
 import level from "level";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IDatabaseOptions} from "../../options";
-import pushable from "it-pushable";
+import pushable, {Pushable} from "it-pushable";
 
 export interface ILevelDBOptions extends IDatabaseOptions {
   db?: LevelUp;
@@ -88,7 +88,7 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
     return searchData;
   }
 
-  public searchStream(opts: ISearchOptions): AsyncIterable<any> {
+  public searchStream(opts: ISearchOptions): Pushable<any> {
     const source = pushable();
     this.db.createValueStream({
       gt: opts.gt,

@@ -3,96 +3,122 @@
  */
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../../chain";
-import {ReputationStore} from "../../IReputation";
+import {IReputationStore} from "../../IReputation";
 import {INetwork} from "../../../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ISyncOptions} from "../../options";
 import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../interface";
 import {EventEmitter} from "events";
-import {getInitalSyncTargetEpoch, isValidChainOfBlocks, isValidFinalizedCheckPoint} from "../../utils/sync";
-import {Checkpoint} from "@chainsafe/lodestar-types";
+import {Checkpoint, Slot} from "@chainsafe/lodestar-types";
+import pushable, {Pushable} from "it-pushable";
+import {
+  fetchBlockChunks,
+  getCommonFinalizedCheckpoint,
+  getStatusFinalizedCheckpoint,
+  processSyncBlocks,
+  targetSlotToBlockChunks
+} from "../../utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {getBlockRange} from "../../utils/blocks";
+import pipe from "it-pipe";
+import {toHexString} from "@chainsafe/ssz";
 
 export class FastSync
   extends (EventEmitter as { new(): InitialSyncEventEmitter })
   implements InitialSync {
 
-  private config: IBeaconConfig;
-  private opts: ISyncOptions;
-  private chain: IBeaconChain;
-  private reps: ReputationStore;
-  private network: INetwork;
-  private logger: ILogger;
-  private peers: PeerInfo[];
+  private readonly opts: ISyncOptions;
+  private readonly config: IBeaconConfig;
+  private readonly chain: IBeaconChain;
+  private readonly reps: IReputationStore;
+  private readonly network: INetwork;
+  private readonly logger: ILogger;
 
-  public constructor(opts: ISyncOptions, {config, chain, network, reps, logger, peers}: IInitialSyncModules) {
+  private targetCheckpoint: Checkpoint;
+  private syncTriggerSource: Pushable<Slot>;
+
+  public constructor(opts: ISyncOptions, {config, chain, network, reputationStore, logger}: IInitialSyncModules) {
     super();
     this.config = config;
     this.chain = chain;
-    this.peers = peers;
-    this.reps = reps;
+    this.reps = reputationStore;
     this.opts = opts;
     this.network = network;
     this.logger = logger;
+    this.syncTriggerSource = pushable<Slot>();
   }
 
   public async start(): Promise<void> {
-    this.logger.info("initial sync start");
-    if(this.peers.length === 0) {
-      this.logger.error("No peers. Exiting initial sync");
+    this.logger.info("Started initial syncing");
+    this.chain.on("processedCheckpoint", this.checkProgress);
+    this.syncTriggerSource = pushable<Slot>();
+    const target = getCommonFinalizedCheckpoint(
+      this.config,
+      this.network.getPeers().map((peer) => this.reps.getFromPeerInfo(peer))
+    );
+    if(!target || target.epoch == 0) {
+      this.logger.debug("No peers with higher finalized epoch");
       return;
     }
-    if(!this.chain.isInitialized()) {
-      this.logger.warn("Chain not initialized.");
-      this.emit("sync:completed", null);
-      return;
-    }
-
-    const chainCheckPoint = (await this.chain.getHeadState()).currentJustifiedCheckpoint;
-    //listen on finalization events
-    this.chain.on("processedCheckpoint", this.sync);
-    //start syncing from current chain checkpoint
-    await this.sync(chainCheckPoint);
+    this.setTarget(target);
+    await this.sync();
   }
 
   public async stop(): Promise<void> {
     this.logger.info("initial sync stop");
-    this.chain.removeListener("processedCheckpoint", this.sync);
+    this.syncTriggerSource.end();
+    this.chain.removeListener("processedCheckpoint", this.checkProgress);
   }
 
-  private sync = async (chainCheckPoint: Checkpoint): Promise<void> => {
-    const peers = Array.from(this.peers).map((peer) => this.reps.getFromPeerInfo(peer));
-    const targetEpoch = getInitalSyncTargetEpoch(peers, chainCheckPoint);
-    if(chainCheckPoint.epoch >= targetEpoch) {
-      if(isValidFinalizedCheckPoint(peers, chainCheckPoint)) {
-        this.logger.info("Chain already on latest finalized state");
-        this.chain.removeListener("processedCheckpoint", this.sync);
-        this.emit("sync:completed", chainCheckPoint);
+  private setTarget = (target: Checkpoint): void => {
+    this.targetCheckpoint = target;
+    this.syncTriggerSource.push(computeStartSlotAtEpoch(this.config, target.epoch + 1));
+  };
+
+  private async sync(): Promise<void> {
+    await pipe(
+      this.syncTriggerSource,
+      targetSlotToBlockChunks(this.config, this.chain),
+      fetchBlockChunks(this.chain, this.network.reqResp, this.getInitialSyncPeers, this.opts.blockPerChunk),
+      //validate get's executed before previous chunk is processed, chain will indirectly fail if incorrect hash
+      // but sync will probably stuck
+      // validateBlocks(this.config, this.chain, this.logger, this.setTarget),
+      processSyncBlocks(this.chain, this.logger, true)
+    );
+  }
+  
+  private checkProgress = async (processedCheckpoint: Checkpoint): Promise<void> => {
+    if(processedCheckpoint.epoch === this.targetCheckpoint.epoch) {
+      if(!this.config.types.Root.equals(processedCheckpoint.root, this.targetCheckpoint.root)) {
+        this.logger.error("Different finalized root. Something fishy is going on: "
+        + `expected ${toHexString(this.targetCheckpoint.root)}, actual ${toHexString(processedCheckpoint.root)}`);
+        throw new Error("Should delete chain and start again. Invalid blocks synced");
+      }
+      const newTarget = getCommonFinalizedCheckpoint(
+        this.config,
+        this.network.getPeers().map((peer) => this.reps.getFromPeerInfo(peer))
+      );
+      if(newTarget.epoch > this.targetCheckpoint.epoch) {
+        this.setTarget(newTarget);
         return;
       }
-      this.logger.error("Wrong chain synced, should clean and start over");
-    } else {
-      this.logger.debug(`Fast syncing to target ${targetEpoch}`);
-      const latestState = await this.chain.getHeadState();
-      const blocks = await getBlockRange(
-        this.network.reqResp,
-        this.peers,
-        {start: latestState.slot, end: computeStartSlotAtEpoch(this.config, targetEpoch)},
-        this.opts.blockPerChunk
-      );
-      if(isValidChainOfBlocks(this.config, latestState.latestBlockHeader, blocks)) {
-        blocks.forEach((block) => this.chain.receiveBlock(block, true));
-        this.emit("sync:checkpoint", targetEpoch);
-      } else {
-        //TODO: if finalized checkpoint is wrong, sync whole chain again
-        this.logger.error(`Invalid header chain (${latestState.slot}...`
-            + `${computeStartSlotAtEpoch(this.config, targetEpoch)}), blocks discarded. Retrying...`
-        );
-        await this.sync(chainCheckPoint);
-      }
+      //finished initial sync
+      await this.stop();
     }
   };
 
-
+  /**
+   * Returns peers which has same finalized Checkpoint
+   */
+  private getInitialSyncPeers = async (): Promise<PeerInfo[]> => {
+    return this.network.getPeers().reduce( (validPeers: PeerInfo[], peer: PeerInfo) => {
+      const rep = this.reps.getFromPeerInfo(peer);
+      if(rep 
+          && rep.latestStatus 
+          && this.config.types.Checkpoint.equals(this.targetCheckpoint, getStatusFinalizedCheckpoint(rep.latestStatus))
+      ) {
+        validPeers.push(peer);
+      }
+      return validPeers;
+    }, [] as PeerInfo[]);
+  };
 }

@@ -17,7 +17,6 @@ export function processBlock(
         const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
         const preState = await getPreState(config, db, pool, logger, job);
         if(!preState) {
-          logger.error(`Missing prestate for block ${toHexString(blockRoot)}`);
           continue;
         }
         // Run the state transition

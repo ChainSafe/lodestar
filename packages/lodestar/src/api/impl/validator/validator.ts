@@ -3,18 +3,20 @@
  */
 
 import {
+  AggregateAndProof,
   Attestation,
-  AttestationData, AttesterDuty,
+  AttestationData,
+  AttesterDuty,
   BeaconBlock,
   BLSPubkey,
   BLSSignature,
   Bytes96,
   CommitteeIndex,
-  Epoch, ProposerDuty,
-  SignedBeaconBlock,
-  Slot,
+  Epoch,
+  ProposerDuty,
   SignedAggregateAndProof,
-  AggregateAndProof
+  SignedBeaconBlock,
+  Slot
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../../db";
@@ -36,11 +38,11 @@ import {
   processSlots
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {Signature, verify} from "@chainsafe/bls";
-import {Sync} from "../../../sync";
 import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import assert from "assert";
 import {assembleAttestation} from "../../../chain/factory/attestation";
+import {IBeaconSync} from "../../../sync";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -50,7 +52,7 @@ export class ValidatorApi implements IValidatorApi {
   private chain: IBeaconChain;
   private db: IBeaconDb;
   private network: INetwork;
-  private sync: Sync;
+  private sync: IBeaconSync;
   private opPool: OpPool;
   private eth1: IEth1Notifier;
   private logger: ILogger;
@@ -213,9 +215,9 @@ export class ValidatorApi implements IValidatorApi {
       slotSignature.valueOf() as Uint8Array,
     );
     if(!valid) {
-      throw new Error("Ivalid slot signature");
+      throw new Error("Invalid slot signature");
     }
-    this.sync.regularSync.collectAttestations(
+    this.sync.collectAttestations(
       slot,
       committeeIndex
     );

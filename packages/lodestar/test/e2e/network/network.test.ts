@@ -67,22 +67,22 @@ describe("[network] network", function () {
       netA.start(),
       netB.start(),
     ]);
+    // @ts-ignore
+    netA.libp2p.peerStore.peers.clear();
+    // @ts-ignore
+    netB.libp2p.peerStore.peers.clear();
   });
   afterEach(async () => {
     await Promise.all([
       netA.stop(),
       netB.stop(),
     ]);
-    // @ts-ignore
-    netA.libp2p.peerStore.peers.clear();
-    // @ts-ignore
-    netB.libp2p.peerStore.peers.clear();
     sinon.restore();
   });
   it("should create a peer on connect", async function () {
     let connectACount = 0;
     let connectBCount = 0;
-    const connected = Promise.all([
+    await Promise.all([
       new Promise((resolve) => netA.on("peer:connect", () => {
         connectACount++;
         resolve();
@@ -91,13 +91,8 @@ describe("[network] network", function () {
         connectBCount++;
         resolve();
       })),
+      netA.connect(netB.peerInfo)
     ]);
-    // @ts-ignore
-    netA.libp2p.peerStore.peers.clear();
-    // @ts-ignore
-    netB.libp2p.peerStore.peers.clear();
-    await netA.connect(netB.peerInfo);
-    await connected;
     expect(connectACount).to.be.equal(1);
     expect(connectBCount).to.be.equal(1);
     expect(netA.getPeers().length).to.equal(1);

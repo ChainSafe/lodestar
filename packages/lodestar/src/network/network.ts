@@ -74,20 +74,21 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   }
 
   public async stop(): Promise<void> {
-    this.libp2p.removeListener("peer:connect", this.emitPeerConnect);
-    this.libp2p.removeListener("peer:disconnect", this.emitPeerDisconnect);
     await this.gossip.stop();
     await this.reqResp.stop();
     await this.libp2p.stop();
+    this.libp2p.removeListener("peer:connect", this.emitPeerConnect);
+    this.libp2p.removeListener("peer:disconnect", this.emitPeerDisconnect);
   }
 
   public getPeers(): PeerInfo[] {
-    return Array.from(this.libp2p.peerStore.peers.values()).filter(
+    const peers =  Array.from(this.libp2p.peerStore.peers.values()).filter(
       (peerInfo) => !!this.getConnection(peerInfo));
+    return peers || [];
   }
 
   public hasPeer(peerInfo: PeerInfo): boolean {
-    return this.libp2p.peerStore.peers.has(peerInfo.id.toB58String());
+    return !!this.libp2p.registrar.getConnection(peerInfo);
   }
 
   public getConnection(peer: PeerInfo): LibP2pConnection {
@@ -98,13 +99,14 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     await this.libp2p.dial(peerInfo);
   }
 
-  public async  disconnect(peerInfo: PeerInfo): Promise<void> {
+  public async disconnect(peerInfo: PeerInfo): Promise<void> {
     await this.libp2p.hangUp(peerInfo);
   }
 
   private emitPeerConnect = (peerInfo: PeerInfo): void => {
     const conn = this.getConnection(peerInfo);
     this.metrics.peers.inc();
+    this.logger.verbose("peer connected " + peerInfo.id.toB58String() + " " + conn.stat.direction);
     this.emit("peer:connect", peerInfo, conn.stat.direction);
   };
 

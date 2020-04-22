@@ -1,177 +1,134 @@
-import {afterEach, beforeEach, describe, it} from "mocha";
-import {FastSync, IInitialSyncModules} from "../../../../src/sync/initial";
-import sinon from "sinon";
-import {BeaconChain} from "../../../../src/chain";
+import {describe} from "mocha";
+import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+import {FastSync} from "../../../../src/sync/initial/fast";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {BeaconChain, IBeaconChain} from "../../../../src/chain";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {config} from "@chainsafe/lodestar-config/src/presets/minimal";
-import {Libp2pNetwork} from "../../../../src/network";
-import {IReputation, ReputationStore} from "../../../../src/sync/IReputation";
-import {ISyncOptions} from "../../../../src/sync/options";
+import {INetwork, Libp2pNetwork} from "../../../../src/network";
+import {ReputationStore} from "../../../../src/sync/IReputation";
+import * as syncUtils from "../../../../src/sync/utils";
+import {Checkpoint} from "@chainsafe/lodestar-types";
+import {EventEmitter} from "events";
 import {expect} from "chai";
-import * as syncUtils from "../../../../src/sync/utils/sync";
-import * as blockSyncUtils from "../../../../src/sync/utils/blocks";
-import PeerInfo from "peer-info";
-import {generateState} from "../../../utils/state";
-import {generateEmptyBlock} from "../../../utils/block";
 
 describe("fast sync", function () {
 
   const sandbox = sinon.createSandbox();
-
-  let modules: IInitialSyncModules,
-    defaultOpts: ISyncOptions,
-    getTargetEpochStub: any,
-    getBlockRangeStub: any,
-    isValidHeaderChainStub: any
-  ;
-
+  
+  let chainStub: SinonStubbedInstance<IBeaconChain>;
+  let networkStub: SinonStubbedInstance<INetwork>;
+  let repsStub: SinonStubbedInstance<ReputationStore>;
+  let getTargetStub: SinonStub;
+  let targetSlotToBlockChunksStub: SinonStub;
+  
   beforeEach(function () {
-    modules = {
-      chain: sandbox.createStubInstance(BeaconChain),
-      logger: sandbox.createStubInstance(WinstonLogger),
-      config,
-      network: sandbox.createStubInstance(Libp2pNetwork),
-      peers: [],
-      // @ts-ignore
-      reps: sandbox.createStubInstance(ReputationStore)
-    };
-    defaultOpts = {
-      blockPerChunk: 2
-    };
-    getTargetEpochStub = sandbox.stub(syncUtils, "getInitalSyncTargetEpoch");
-    isValidHeaderChainStub = sandbox.stub(syncUtils, "isValidChainOfBlocks");
-    getBlockRangeStub = sandbox.stub(blockSyncUtils, "getBlockRange");
+    chainStub = sinon.createStubInstance(BeaconChain);
+    networkStub = sinon.createStubInstance(Libp2pNetwork);
+    repsStub = sinon.createStubInstance(ReputationStore);
+    getTargetStub = sandbox.stub(syncUtils, "getCommonFinalizedCheckpoint");
+    targetSlotToBlockChunksStub = sandbox.stub(syncUtils, "targetSlotToBlockChunks");
   });
-
+  
   afterEach(function () {
     sandbox.restore();
   });
-
-  it("no peers - exit", async function () {
-    const sync = new FastSync(defaultOpts, modules);
-    await sync.start();
-    // @ts-ignore
-    expect(modules.logger.error.calledOnce).to.be.true;
-  });
-
-  it("chain not initialized", async function () {
+  
+  it("no peers with finalized epoch", async function () {
     const sync = new FastSync(
-      defaultOpts,
+      {blockPerChunk: 5, minPeers: 0},
       {
-        ...modules,
-        peers: [sinon.createStubInstance(PeerInfo)]
+        config,
+        chain: chainStub,
+        logger: sinon.createStubInstance(WinstonLogger),
+        network: networkStub,
+        reputationStore: repsStub
       }
     );
-    // @ts-ignore
-    modules.chain.isInitialized.returns(false);
-    const eventSpy = sinon.spy();
-    sync.once("sync:completed", eventSpy);
+    getTargetStub.returns({
+      epoch: 0
+    });
+    networkStub.getPeers.returns([]);
     await sync.start();
-    expect(eventSpy.called).to.be.true;
   });
-
-  it("already synced - same epoch", async function () {
-    const peer = sinon.createStubInstance(PeerInfo);
+  
+  it("should sync till target and end", function (done) {
+    const chainEventEmitter = new EventEmitter();
     const sync = new FastSync(
-      defaultOpts,
+      {blockPerChunk: 5, minPeers: 0},
       {
-        ...modules,
-        peers: [peer]
+        config,
+        //@ts-ignore
+        chain: chainEventEmitter,
+        logger: sinon.createStubInstance(WinstonLogger),
+        network: networkStub,
+        reputationStore: repsStub
       }
     );
+    const target: Checkpoint = {
+      epoch: 2,
+      root: Buffer.alloc(32, 1)
+    };
+    getTargetStub.returns(target);
+    networkStub.getPeers.returns([]);
+    targetSlotToBlockChunksStub.returns((source: any) => {
+      return (async function* () {
+        for await (const data of source) {
+          if(data === 0) yield data;
+        }
+      })();
+    });
+    const endCallbackStub = sinon.stub(chainEventEmitter, "removeListener");
     // @ts-ignore
-    modules.chain.isInitialized.returns(true);
-    const chainCheckPoint = {root: Buffer.alloc(32, 1), epoch: 3};
-    // @ts-ignore
-    modules.reps.getFromPeerInfo.returns({latestStatus: {finalizedEpoch: 3, finalizedRoot: chainCheckPoint.root}});
-    // @ts-ignore
-    modules.chain.getHeadState.resolves(generateState({currentJustifiedCheckpoint: chainCheckPoint}))
-    getTargetEpochStub.returns(3);
-    const eventSpy = sinon.spy();
-    sync.once("sync:completed", eventSpy);
-    await sync.start();
-    expect(eventSpy.calledOnceWith(chainCheckPoint)).to.be.true;
-    //@ts-ignore
-    expect(modules.chain.removeListener.calledOnceWith("processedCheckpoint", sinon.match.any)).to.be.true;
+    endCallbackStub.callsFake(() => {
+      expect(getTargetStub.calledTwice).to.be.true;
+      done();
+      return this;
+    });
+    sync.start();
+    chainEventEmitter.emit("processedCheckpoint", {epoch: 1, root: Buffer.alloc(32)} as Checkpoint);
+    chainEventEmitter.emit("processedCheckpoint", target);
   });
 
-  it("already synced - higher epoch epoch", async function () {
-    const peer = sinon.createStubInstance(PeerInfo);
+  it("should continue syncing if there is new target", function (done) {
+    const chainEventEmitter = new EventEmitter();
     const sync = new FastSync(
-      defaultOpts,
+      {blockPerChunk: 5, minPeers: 0},
       {
-        ...modules,
-        peers: [peer]
+        config,
+        //@ts-ignore
+        chain: chainEventEmitter,
+        logger: sinon.createStubInstance(WinstonLogger),
+        network: networkStub,
+        reputationStore: repsStub
       }
     );
-
+    const target1: Checkpoint = {
+      epoch: 2,
+      root: Buffer.alloc(32, 1)
+    };
+    const target2: Checkpoint = {
+      epoch: 4,
+      root: Buffer.alloc(32, 1)
+    };
+    getTargetStub.onFirstCall().returns(target1).onSecondCall().returns(target2).onThirdCall().returns(target2);
+    networkStub.getPeers.returns([]);
+    targetSlotToBlockChunksStub.returns((source: any) => {
+      return (async function* () {
+        for await (const data of source) {
+          if(data === 0) yield data;
+        }
+      })();
+    });
+    const endCallbackStub = sinon.stub(chainEventEmitter, "removeListener");
     // @ts-ignore
-    modules.chain.isInitialized.returns(true);
-    const chainCheckPoint = {root: Buffer.alloc(32, 1), epoch: 4};
-    // @ts-ignore
-    modules.reps.getFromPeerInfo.returns({latestStatus: {finalizedEpoch: 3, finalizedRoot: chainCheckPoint.root}});
-    // @ts-ignore
-    modules.chain.getHeadState.resolves(generateState({currentJustifiedCheckpoint: chainCheckPoint}));
-    getTargetEpochStub.returns(3);
-    const eventSpy = sinon.spy();
-    sync.once("sync:completed", eventSpy);
-    await sync.start();
-    expect(eventSpy.calledOnceWith(chainCheckPoint)).to.be.true;
-    //@ts-ignore
-    expect(modules.chain.removeListener.calledOnceWith("processedCheckpoint", sinon.match.any)).to.be.true;
-  });
-
-  it("happy path", async function () {
-    const peer = sinon.createStubInstance(PeerInfo);
-    const sync = new FastSync(
-      defaultOpts,
-      {
-        ...modules,
-        peers: [peer]
-      }
-    );
-    // @ts-ignore
-    modules.chain.isInitialized.returns(true);
-    const chainCheckPoint = {root: Buffer.alloc(32, 1), epoch: 4};
-    // @ts-ignore
-    modules.chain.getHeadState.resolves(generateState({currentJustifiedCheckpoint: chainCheckPoint}));
-    // @ts-ignore
-    modules.reps.getFromPeerInfo.returns({latestStatus: {finalizedEpoch: 3, finalizedRoot: chainCheckPoint.root}});
-    // @ts-ignore
-    modules.reps.getFromPeerInfo.returns({} as unknown as IReputation);
-    getTargetEpochStub.returns(5);
-    getBlockRangeStub.resolves([generateEmptyBlock(), generateEmptyBlock()]);
-    isValidHeaderChainStub.returns(true);
-    const eventSpy = sinon.spy();
-    sync.on("sync:checkpoint", eventSpy);
-    await sync.start();
-    expect(eventSpy.withArgs(5).calledOnce).to.be.true;
-  });
-
-  it("invalid header chain", async function () {
-    const peer = sinon.createStubInstance(PeerInfo);
-    const sync = new FastSync(
-      defaultOpts,
-      {
-        ...modules,
-        peers: [peer]
-      }
-    );
-    // @ts-ignore
-    modules.chain.isInitialized.returns(true);
-    const chainCheckPoint = {root: Buffer.alloc(32, 1), epoch: 4};
-    // @ts-ignore
-    modules.chain.getHeadState.resolves(generateState({currentJustifiedCheckpoint: chainCheckPoint}));
-    // @ts-ignore
-    modules.reps.getFromPeerInfo.returns({} as unknown as IReputation);
-    getTargetEpochStub.returns(5);
-    getBlockRangeStub.resolves([generateEmptyBlock(), generateEmptyBlock()]);
-    isValidHeaderChainStub.onFirstCall().returns(false);
-    isValidHeaderChainStub.onSecondCall().returns(true);
-    const eventSpy = sinon.spy();
-    sync.on("sync:checkpoint", eventSpy);
-    await sync.start();
-    expect(eventSpy.withArgs(5).calledOnce).to.be.true;
+    endCallbackStub.callsFake(() => {
+      expect(getTargetStub.calledThrice).to.be.true;
+      done();
+      return this;
+    });
+    sync.start();
+    chainEventEmitter.emit("processedCheckpoint", target1);
+    chainEventEmitter.emit("processedCheckpoint", target2);
   });
 
 });

@@ -16,22 +16,21 @@ import {
   Status,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-
 import {Method, RequestId, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {ISyncOptions, ISyncReqResp} from "./interface";
-import {ReputationStore} from "../IReputation";
+import {IReqRespHandler} from "./interface";
 import {BlockRepository} from "../../db/api/beacon/repositories";
+import {IReputationStore} from "../IReputation";
 
-export interface ISyncReqRespModules {
+export interface IReqRespHandlerModules {
   config: IBeaconConfig;
   db: IBeaconDb;
   chain: IBeaconChain;
   network: INetwork;
-  reps: ReputationStore;
+  reputationStore: IReputationStore;
   logger: ILogger;
 }
 
@@ -42,25 +41,23 @@ enum GoodByeReasonCode {
 }
 
 /**
- * The SyncReqResp module handles app-level requests / responses from other peers,
+ * The BeaconReqRespHandler module handles app-level requests / responses from other peers,
  * fetching state from the chain and database as needed.
  */
-export class SyncReqResp implements ISyncReqResp {
-  private opts: ISyncOptions;
+export class BeaconReqRespHandler implements IReqRespHandler {
   private config: IBeaconConfig;
   private db: IBeaconDb;
   private chain: IBeaconChain;
   private network: INetwork;
-  private reps: ReputationStore;
+  private reps: IReputationStore;
   private logger: ILogger;
 
-  public constructor(opts: ISyncOptions, {config, db, chain, network, reps, logger}: ISyncReqRespModules) {
+  public constructor({config, db, chain, network, reputationStore, logger}: IReqRespHandlerModules) {
     this.config = config;
-    this.opts = opts;
     this.db = db;
     this.chain = chain;
     this.network = network;
-    this.reps = reps;
+    this.reps = reputationStore;
     this.logger = logger;
   }
 
@@ -146,8 +143,15 @@ export class SyncReqResp implements ISyncReqResp {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
     this.network.reqResp.sendResponse(id, null, [BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN)]);
-    //  TODO: enable once we can check if response is sent
-    // this.network.disconnect(peerInfo);
+    // //  TODO: fix once we can check if response is sent
+    const disconnect = this.network.disconnect.bind(this.network);
+    setTimeout(async () => {
+      try {
+        await disconnect(peerInfo);
+      } catch (e) {
+        //ignored probably peer disconnected already
+      }
+    }, 400);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -240,7 +244,7 @@ export class SyncReqResp implements ISyncReqResp {
     archiveStream: AsyncIterable<SignedBeaconBlock>,
     blockDb: BlockRepository,
     request: BeaconBlocksByRangeRequest
-  ): AsyncIterable<SignedBeaconBlock> {
+  ): AsyncGenerator<SignedBeaconBlock> {
     let count = 0;
     for await(const archiveBlock of archiveStream) {
       count++;

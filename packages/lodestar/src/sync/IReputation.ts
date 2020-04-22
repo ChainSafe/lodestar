@@ -9,7 +9,14 @@ export interface IReputation {
   score: number;
 }
 
-export class ReputationStore {
+export interface IReputationStore {
+  add(peerId: string): IReputation;
+  remove(peerId: string): void;
+  get(peerId: string): IReputation;
+  getFromPeerInfo(peer: PeerInfo): IReputation;
+}
+
+export class ReputationStore implements IReputationStore {
   private reputations: Map<string, IReputation>;
   public constructor() {
     this.reputations = new Map<string, IReputation>();

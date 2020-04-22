@@ -64,7 +64,7 @@ export class AttestationProcessor implements IAttestationProcessor {
     try {
       await this.processAttestation(attestation, attestationHash);
     } catch (e) {
-      this.logger.warn("Failed to process attestation. Reason: " + JSON.stringify(e));
+      this.logger.warn("Failed to process attestation. Reason: " + e.message);
     }
   }
 
@@ -90,8 +90,11 @@ export class AttestationProcessor implements IAttestationProcessor {
     const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
     const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
     const target = attestation.data.target;
-    assert([currentEpoch, previousEpoch].includes(target.epoch));
-    assert(target.epoch === computeEpochAtSlot(this.config, attestation.data.slot));
+    assert([currentEpoch, previousEpoch].includes(target.epoch), "attestation is targeting too old epoch");
+    assert(
+      target.epoch === computeEpochAtSlot(this.config, attestation.data.slot),
+      "attestation is not targeting current epoch"
+    );
     assert(
       getCurrentSlot(this.config, checkpointState.genesisTime) >= computeStartSlotAtEpoch(this.config, target.epoch)
       , "Current slot less than this target epoch's start slot"

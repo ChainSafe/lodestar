@@ -24,8 +24,7 @@ export function postProcess(
         const preJustifiedEpoch = item.preState.currentJustifiedCheckpoint.epoch;
         const currentEpoch = computeEpochAtSlot(config, item.postState.slot);
         if (computeEpochAtSlot(config, preSlot) < currentEpoch) {
-          const blockRoot = config.types.BeaconBlock.hashTreeRoot(item.block.message);
-          eventBus.emit("processedCheckpoint", {epoch: currentEpoch, root: blockRoot});
+          eventBus.emit("processedCheckpoint", {epoch: currentEpoch, root: await db.chain.getBlockRoot(preSlot)});
           await Promise.all([
             setJustified(config, db, eventBus, logger, metrics, item.postState, preJustifiedEpoch),
             setFinalized(config, db, eventBus, logger, metrics, item.postState, preFinalizedEpoch)

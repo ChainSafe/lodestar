@@ -1,7 +1,8 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {SyncReqResp} from "../../../src/sync/reqResp";
+
+import {Method} from "../../../src/constants";
 import {ReputationStore} from "../../../src/sync/IReputation";
 import {Libp2pNetwork} from "../../../src/network";
 import {BeaconDb} from "../../../src/db";
@@ -20,9 +21,9 @@ import {
 } from "../../../src/db/api/beacon/repositories";
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {generateEmptySignedBlock} from "../../utils/block";
-import {sleep} from "../../utils/sleep";
 import {BeaconBlocksByRangeRequest, BeaconBlocksByRootRequest} from "@chainsafe/lodestar-types";
-import {Method} from "../../../src/constants";
+import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
+import {sleep} from "../../utils/sleep";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -47,13 +48,13 @@ describe("[sync] rpc", function () {
   logger.silent = true;
   const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false}, {logger});
 
-  let rpcA: SyncReqResp, netA: Libp2pNetwork, repsA: ReputationStore;
-  let rpcB: SyncReqResp, netB: Libp2pNetwork, repsB: ReputationStore;
+  let rpcA: IReqRespHandler, netA: Libp2pNetwork, repsA: ReputationStore;
+  let rpcB: IReqRespHandler, netB: Libp2pNetwork, repsB: ReputationStore;
   const validator: IGossipMessageValidator = {} as unknown as IGossipMessageValidator;
 
   beforeEach(async () => {
     const state = generateState();
-    
+
     state.finalizedCheckpoint = {
       epoch: 0,
       root: config.types.BeaconBlock.hashTreeRoot(block.message),
@@ -78,7 +79,7 @@ describe("[sync] rpc", function () {
       netB.start(),
     ]);
     repsA = new ReputationStore();
-    
+
     // @ts-ignore
     const db = {
       state: sandbox.createStubInstance(StateRepository),
@@ -101,21 +102,21 @@ describe("[sync] rpc", function () {
       yield block;
       yield block2;
     }());
-    rpcA = new SyncReqResp({}, {
+    rpcA = new BeaconReqRespHandler({
       config,
       db,
       chain,
       network: netA,
-      reps: repsA,
+      reputationStore: repsA,
       logger,
     });
     repsB = new ReputationStore();
-    rpcB = new SyncReqResp({}, {
+    rpcB = new BeaconReqRespHandler({
       config,
       db,
       chain,
       network: netB,
-      reps: repsB,
+      reputationStore: repsB,
       logger: logger
     })
     ;

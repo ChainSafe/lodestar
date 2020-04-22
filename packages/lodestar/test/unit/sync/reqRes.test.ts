@@ -10,7 +10,6 @@ import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateState} from "../../utils/state";
-import {SyncReqResp} from "../../../src/sync/reqResp";
 import {
   BlockArchiveRepository,
   BlockRepository,
@@ -21,10 +20,11 @@ import {ReqResp} from "../../../src/network/reqResp";
 import {ReputationStore} from "../../../src/sync/IReputation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {IBeaconDb} from "../../../src/db/api";
+import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
 
 describe("sync req resp", function () {
   const sandbox = sinon.createSandbox();
-  let syncRpc: SyncReqResp;
+  let syncRpc: BeaconReqRespHandler;
   let chainStub: SinonStubbedInstance<BeaconChain>,
     networkStub: SinonStubbedInstance<Libp2pNetwork>,
     repsStub: SinonStubbedInstance<ReputationStore>,
@@ -56,12 +56,12 @@ describe("sync req resp", function () {
     logger = new WinstonLogger();
     logger.silent = true;
 
-    syncRpc = new SyncReqResp({}, {
+    syncRpc = new BeaconReqRespHandler({
       config,
       db: dbStub as unknown as IBeaconDb,
       chain: chainStub,
       network: networkStub,
-      reps: repsStub as unknown as ReputationStore,
+      reputationStore: repsStub,
       logger,
     });
   });
@@ -75,7 +75,7 @@ describe("sync req resp", function () {
   it("should able to create Status - genesis time", async function () {
     chainStub.networkId = 1n;
     chainStub.chainId = 1;
-
+    chainStub.isInitialized.returns(false);
     const expected: Status = {
       forkDigest: Buffer.alloc(4),
       finalizedRoot: ZERO_HASH ,
@@ -92,6 +92,7 @@ describe("sync req resp", function () {
       expect.fail(e.stack);
     }
   });
+
   it("should start and stop sync rpc", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     networkStub.hasPeer.returns(true);

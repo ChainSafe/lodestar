@@ -10,10 +10,10 @@ import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
 import {INetwork, Libp2pNetwork} from "../network";
 import LibP2p from "libp2p";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
-import {Sync} from "../sync";
+import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain} from "../chain";
 import {OpPool} from "../opPool";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 import {ApiService} from "../api";
 import {ReputationStore} from "../sync/IReputation";
@@ -49,7 +49,7 @@ export class BeaconNode {
   public chain: IBeaconChain;
   public opPool: OpPool;
   public api: IService;
-  public sync: Sync;
+  public sync: IBeaconSync;
   public reps: ReputationStore;
   public chores: TasksService;
 
@@ -113,14 +113,13 @@ export class BeaconNode {
       validator: gossipMessageValidator,
       chain: this.chain,
     });
-    this.sync = new Sync(this.conf.sync, {
+    this.sync = new BeaconSync(this.conf.sync, {
       config,
       db: this.db,
-      eth1: this.eth1,
       chain: this.chain,
       opPool: this.opPool,
       network: this.network,
-      reps: this.reps,
+      reputationStore: this.reps,
       logger: logger.child(this.conf.logger.sync),
     });
     this.api = new ApiService(
@@ -169,7 +168,6 @@ export class BeaconNode {
     await this.api.stop();
     await this.sync.stop();
     await this.opPool.stop();
-
     await this.chain.stop();
     await this.eth1.stop();
     await this.network.stop();

@@ -1,123 +1,144 @@
 import {IReputation} from "../IReputation";
-import {BeaconBlockHeader, Checkpoint, Epoch, Slot, SignedBeaconBlock, Status,
-  BeaconState} from "@chainsafe/lodestar-types";
+import {Checkpoint, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IReqResp} from "../../network";
-
-export function isValidChainOfBlocks(
-  config: IBeaconConfig,
-  start: BeaconBlockHeader,
-  signedBlocks: SignedBeaconBlock[],
-): boolean {
-  let parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(start);
-  for(const signedBlock of signedBlocks) {
-    if(!config.types.Root.equals(parentRoot, signedBlock.message.parentRoot)) {
-      return false;
-    }
-    parentRoot = config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
-  }
-  return true;
-}
-
-export function getInitalSyncTargetEpoch(peers: IReputation[], currentCheckPoint: Checkpoint): Epoch {
-  const numberOfEpochToBatch = 1;
-  const peersWithHigherFinalizedEpoch = peers.filter(peer => {
-    if(!peer.latestStatus) {
-      return false;
-    }
-    if(peer.latestStatus.finalizedEpoch > currentCheckPoint.epoch) {
-      return true;
-    }
-  });
-  if(peersWithHigherFinalizedEpoch.length > 0) {
-    return currentCheckPoint.epoch + numberOfEpochToBatch;
-  }
-  return currentCheckPoint.epoch;
-}
+import {ISlotRange} from "../interface";
+import {IBeaconChain} from "../../chain";
+import {chunkify, getBlockRange, isValidChainOfBlocks} from "./blocks";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {toHexString} from "@chainsafe/ssz";
+import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 
 export function getHighestCommonSlot(peers: IReputation[]): Slot {
   const slotStatuses = peers.reduce<Map<Slot, number>>((current, peer) => {
     if(peer.latestStatus && current.has(peer.latestStatus.headSlot)) {
-      current.set(peer.latestStatus.headSlot + 1, current.get(peer.latestStatus.headSlot) + 1);
+      current.set(peer.latestStatus.headSlot, current.get(peer.latestStatus.headSlot) + 1);
     } else if(peer.latestStatus) {
-      current.set(peer.latestStatus.headSlot + 1, 1);
+      current.set(peer.latestStatus.headSlot, 1);
     }
     return current;
   }, new Map<Slot, number>());
   if(slotStatuses.size) {
-    return [...slotStatuses.entries()].sort((a, b) => {
-      return a[1] - b[1];
-    })[0][0];
+    const best =  [...slotStatuses.entries()]
+      .sort((a, b) => b[1] - a[1]);
+    return best[0][0];
   } else {
     return 0;
   }
 }
 
-export function isSynced(slot: Slot, peers: IReputation[]): boolean {
-  return slot >= getHighestCommonSlot(peers);
+export function getStatusFinalizedCheckpoint(status: Status): Checkpoint {
+  return {epoch: status.finalizedEpoch, root: status.finalizedRoot};
 }
 
-export function isValidFinalizedCheckPoint(peers: IReputation[], finalizedCheckpoint: Checkpoint): boolean {
-  const validPeers = peers.filter((peer) => !!peer.latestStatus);
-  const finalizedRoot = Buffer.from(finalizedCheckpoint.root as Uint8Array);
-  const peerCount = validPeers.filter(peer => {
-    return Buffer.from(peer.latestStatus.finalizedRoot as Uint8Array).equals(finalizedRoot);
-  }).length;
-  return peerCount >= (validPeers.length / 2);
-}
-
-export function isValidPeerForInitSync(config: IBeaconConfig, myState: BeaconState|null, peerStatus: Status): boolean {
-  if (!peerStatus) {
-    return false;
+export function getCommonFinalizedCheckpoint(config: IBeaconConfig, peers: IReputation[]): Checkpoint|null {
+  const checkpointVotes = peers.reduce<Map<string, {checkpoint: Checkpoint; votes: number}>>(
+    (current, peer) => {
+      if(!peer.latestStatus) {
+        return current; 
+      }
+      const peerCheckpoint = getStatusFinalizedCheckpoint(peer.latestStatus);
+      const root = toHexString(config.types.Checkpoint.hashTreeRoot(peerCheckpoint));
+      if(current.has(root)) {
+        current.get(root).votes++;
+      } else {
+        current.set(root, {checkpoint: peerCheckpoint, votes: 1});
+      }
+      return current;
+    }, new Map());
+  
+  if(checkpointVotes.size > 0) {
+    return Array.from(checkpointVotes.values())
+      .sort((voteA, voteB) => {
+        return voteB.votes - voteA.votes;
+      }).shift().checkpoint;
+  } else {
+    return null;
   }
-  // fork_digest comparision should be done in network discv5
-  return !(myState && peerStatus.finalizedEpoch < myState.finalizedCheckpoint.epoch);
-
 }
 
-export interface ISlotRange {
-  start: Slot;
-  end: Slot;
+
+
+export function targetSlotToBlockChunks(
+  config: IBeaconConfig, chain: IBeaconChain
+): (source: AsyncIterable<Slot>) => AsyncGenerator<ISlotRange> {
+  return (source) => {
+    return (async function*() {
+      for await (const targetSlot of source) {
+        yield* chunkify(config.params.SLOTS_PER_EPOCH, (await chain.getHeadState()).slot + 1, targetSlot);
+      }
+    })();
+  };
 }
 
-/**
- * Creates slot chunks returned chunks represents (inclusive) start and (inclusive) end slot
- * which should be fetched along all slotS(blocks) in between
- * @param blocksPerChunk
- * @param currentSlot
- * @param targetSlot
- */
-export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: Slot): ISlotRange[] {
-  const chunks: ISlotRange[] = [];
-  //currentSlot is our state slot so we need block from next slot
-  for(let i = currentSlot; i < targetSlot; i  = i + blocksPerChunk) {
-    if(i + blocksPerChunk > targetSlot) {
-      chunks.push({
-        start: i,
-        end: targetSlot
-      });
-    } else {
-      chunks.push({
-        start: i,
-        end: i + blocksPerChunk - 1
-      });
+
+
+export function fetchBlockChunks(
+  chain: IBeaconChain,
+  reqResp: IReqResp,
+  getPeers: (minSlot: Slot) => Promise<PeerInfo[]>,
+  blocksPerChunk = 10
+): (source: AsyncIterable<ISlotRange>,) => AsyncGenerator<SignedBeaconBlock[]> {
+  return (source) => {
+    return (async function*() {
+      for await (const blockRange of source) {
+        const peers = await getPeers(
+          blockRange.end
+        );
+        if(peers.length > 0) {
+          yield await getBlockRange(
+            reqResp,
+            peers,
+            blockRange,
+            blocksPerChunk
+          );
+        }
+      }
+    })();
+  };
+}
+
+export function validateBlocks(
+  config: IBeaconConfig, chain: IBeaconChain, logger: ILogger, onBlockVerificationFail: Function
+): (source: AsyncIterable<SignedBeaconBlock[]>) => AsyncGenerator<SignedBeaconBlock[]> {
+  return (source) => {
+    return (async function*() {
+      for await (const blockChunk of source) {
+        if(blockChunk.length === 0) {
+          continue;
+        }
+        const head =  blockToHeader(config, (await chain.getHeadBlock()).message);
+        if(
+          isValidChainOfBlocks(
+            config,
+            head,
+            blockChunk
+          )
+        ) {
+          yield blockChunk;
+        } else {
+          logger.warn(
+            "Hash chain doesnt match! " 
+              + `Head(${head.slot}): ${toHexString(config.types.BeaconBlockHeader.hashTreeRoot(head))}`
+              + `Blocks: (${blockChunk[0].message.slot}..${blockChunk[blockChunk.length - 1].message.slot})`
+          );
+          //discard blocks and trigger resync so we try to fetch blocks again
+          onBlockVerificationFail();
+        }
+      }
+    })();
+  };
+}
+
+export function processSyncBlocks(
+  chain: IBeaconChain, logger: ILogger, trusted = false
+): (source: AsyncIterable<SignedBeaconBlock[]>) => void {
+  return async (source) => {
+    for await (const blocks of source) {
+      await Promise.all(blocks.map((block) => chain.receiveBlock(block, trusted)));
+      if(blocks.length > 0) {
+        logger.info(`Imported blocks ${blocks[0].message.slot}....${blocks[blocks.length - 1].message.slot}`);
+      }
     }
-  }
-  return chunks;
-}
-
-
-export async function getBlockRangeFromPeer(
-  rpc: IReqResp,
-  peer: PeerInfo,
-  chunk: ISlotRange
-): Promise<SignedBeaconBlock[]> {
-  return await rpc.beaconBlocksByRange(
-    peer,
-    {
-      startSlot: chunk.start,
-      step: 1,
-      count: chunk.end - chunk.start
-    }
-  ) as SignedBeaconBlock[];
+  };
 }
