@@ -47,7 +47,7 @@ export class NodejsNode extends LibP2p {
           }
         },
         peerDiscovery: {
-          autoDial: options.autoDial,
+          autoDial: true,
           mdns: {
             peerInfo: options.peerInfo
           },
