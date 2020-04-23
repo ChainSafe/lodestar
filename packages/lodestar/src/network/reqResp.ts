@@ -16,10 +16,9 @@ import {
   Status,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcErrorCode, TTFB_TIMEOUT,
-  SINGLE_CHUNK_METHODS, NO_CHUNK_METHODS,} from "../constants";
+import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcErrorCode, TTFB_TIMEOUT} from "../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {createResponseEvent, createRpcProtocol, randomRequestId} from "./util";
+import {createResponseEvent, createRpcProtocol, randomRequestId, isRequestOnly, isRequestSingleChunk} from "./util";
 import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn, ResponseChunk} from "./interface";
 import {INetworkOptions} from "./options";
 import PeerId from "peer-id";
@@ -166,7 +165,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         // source is an array of 1 item or empty array
         for await (const val of source) {
           data = Buffer.isBuffer(val) ? val : val.slice();
-          break;
+          yield* getResponse(peerId, method, data);
+          return;
         }
         yield* getResponse(peerId, method, data);
       })();
@@ -174,7 +174,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   }
 
   private getResponse = (peerId: PeerId, method: Method, data: Buffer): AsyncIterable<ResponseChunk> => {
-    const request = data ? this.encoder.decodeRequest(method, data) : undefined;
+    const request = this.encoder.decodeRequest(method, data);
     const requestId = randomRequestId();
     this.logger.verbose(`${requestId} - receive ${method} request from ${peerId.toB58String()}`);
     // eslint-disable-next-line
@@ -199,8 +199,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     method: Method,
     body?: RequestBody,
   ): Promise<T> {
-    const requestOnly = NO_CHUNK_METHODS.includes(method);
-    const requestSingleChunk = SINGLE_CHUNK_METHODS.includes(method);
+    const requestOnly = isRequestOnly(method);
+    const requestSingleChunk = isRequestSingleChunk(method);
     return await new Promise((resolve, reject) => {
       let responseTimer = setTimeout(() => reject(new RpcError(RpcErrorCode.ERR_RESP_TIMEOUT)), TTFB_TIMEOUT);
       const renewTimer = (): void => {

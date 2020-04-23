@@ -28,8 +28,11 @@ export class ReqRespEncoder {
     }, data) as Buffer;
     return this.writeLengthPrefixed(encodedPayload);
   }
-  
+
   public decodeRequest(method: Method, data: Buffer): RequestBody {
+    if (!data) {
+      return undefined;
+    }
     data = this.readLengthPrefixed(data);
     const type = getRequestMethodSSZType(this.config, method);
     //decoding is done backwards
