@@ -1,12 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import PeerId from "peer-id";
 import {Json} from "@chainsafe/ssz";
-import {ENR, createKeypairFromPeerId} from "@chainsafe/discv5";
-import defaults from "@chainsafe/lodestar/lib/node/options";
-import {BeaconNodeOptions} from "../../lodestar/node/options";
-import {generateTomlConfig} from "../../lodestar/util/toml";
 
 /**
  * Maybe create a directory
@@ -30,7 +25,8 @@ export enum FileFormat {
  *
  * Serialize either to json, yaml, or toml
  */
-export async function writeFile(filename: string, obj: Json, fileFormat = FileFormat.json): Promise<void> {
+export async function writeFile(filename: string, obj: Json): Promise<void> {
+  const fileFormat = path.extname(filename).substr(1);
   let contents: string;
   switch (fileFormat) {
     case FileFormat.json:
@@ -39,7 +35,7 @@ export async function writeFile(filename: string, obj: Json, fileFormat = FileFo
     default:
       throw new Error("Invalid filetype");
   }
-  await fs.promises.writeFile(`${filename}.${fileFormat}`, contents, "utf-8");
+  await fs.promises.writeFile(filename, contents, "utf-8");
 }
 
 
@@ -48,8 +44,9 @@ export async function writeFile(filename: string, obj: Json, fileFormat = FileFo
  *
  * Parse either from json, yaml, or toml
  */
-export async function readFile<T=Json>(filename: string, fileFormat = FileFormat.json): Promise<T> {
-  const contents = await fs.promises.readFile(`${filename}.${fileFormat}`, "utf-8");
+export async function readFile<T=Json>(filename: string): Promise<T> {
+  const fileFormat = path.extname(filename).substr(1);
+  const contents = await fs.promises.readFile(filename, "utf-8");
   switch (fileFormat) {
     case FileFormat.json:
       return JSON.parse(contents);

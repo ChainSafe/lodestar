@@ -1,9 +1,14 @@
 import * as yargs from "yargs";
 
-import * as beacon from "./cmds/beacon";
+import * as options from "./options";
+
+import * as beaconCmd from "./cmds/beacon";
 
 yargs
-  .command(beacon)
+  .env("LODECLI")
+  .options(options)
+  .command(beaconCmd as any)
   .demandCommand()
   .help()
+  .wrap(yargs.terminalWidth())
   .argv;

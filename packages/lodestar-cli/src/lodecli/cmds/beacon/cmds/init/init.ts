@@ -1,22 +1,26 @@
 import * as path from "path";
+import {Arguments} from "yargs";
 
+import {IBeaconArgs} from "../../options";
 import {mkdir} from "../../../../util";
-import {initBeaconConfig} from "../../../../config";
 import {initPeerId, initEnr, readPeerId} from "../../../../network";
+import {initBeaconConfig} from "../../config";
 
 /**
  * Initialize lodestar-cli with an on-disk configuration
  */
-export async function init(lodestarRoot: string): Promise<void> {
+export async function init(args: Arguments<IBeaconArgs>): Promise<void> {
   // initialize root directory
-  await mkdir(lodestarRoot);
-  // initialize network directory
-  await mkdir(path.join(lodestarRoot, "network"));
+  await mkdir(args.rootDir);
+  // initialize beacon directory
+  await mkdir(args.beaconDir);
   // initialize beacon configuration file
-  await initBeaconConfig(path.join(lodestarRoot, "beacon.config"));
+  await initBeaconConfig(args.configPath, args);
+  // initialize beacon db path
+  await mkdir(args.dbPath);
   // initialize peer id
-  await initPeerId(path.join(lodestarRoot, "network", "peer-id"));
-  const peerId = await readPeerId(path.join(lodestarRoot, "network", "peer-id"));
+  await initPeerId(args.peerIdPath);
+  const peerId = await readPeerId(args.peerIdPath);
   // initialize local enr
-  await initEnr(path.join(lodestarRoot, "network", "enr"), peerId);
+  await initEnr(args.enrPath, peerId);
 }

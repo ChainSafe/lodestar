@@ -11,6 +11,7 @@ export async function createEnr(peerId: PeerId): Promise<ENR> {
 
 export async function writeEnr(filename: string, enr: ENR, peerId: PeerId): Promise<void> {
   const keypair = createKeypairFromPeerId(peerId);
+  console.log(enr)
   await writeFile(filename, enr.encodeTxt(keypair.privateKey));
 }
 
