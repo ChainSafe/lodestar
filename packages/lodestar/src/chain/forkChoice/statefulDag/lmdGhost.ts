@@ -13,7 +13,6 @@ import {computeSlotsSinceEpochStart,
 
 import {ILMDGHOST, BlockChainInfo} from "../interface";
 
-import {sleep} from "../../../util/sleep";
 import {RootHex, NodeInfo, HexCheckpoint} from "./interface";
 import {GENESIS_EPOCH} from "../../../constants";
 import {AttestationAggregator} from "./attestationAggregator";
@@ -239,6 +238,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
    */
   private bestJustifiedCheckpoint: Checkpoint;
   private synced: boolean;
+  private clock: IBeaconClock;
 
   public constructor(config: IBeaconConfig) {
     this.aggregator =
@@ -256,18 +256,13 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
    */
   public async start(genesisTime: number, clock: IBeaconClock): Promise<void> {
     this.genesisTime = genesisTime;
-    const numSlot = computeSlotsSinceEpochStart(this.config, getCurrentSlot(this.config, this.genesisTime));
-    const timeToWaitTillNextEpoch = (
-      (this.config.params.SLOTS_PER_EPOCH - numSlot) * this.config.params.SECONDS_PER_SLOT * 1000
-    );
     // Make sure we call onTick at start of each epoch
-    await sleep(timeToWaitTillNextEpoch);
     clock.onNewEpoch(this.onTick);
+    this.clock = clock;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   public async stop(): Promise<void> {
-    // not in use for now
+    this.clock.unsubscribeFromNewEpoch(this.onTick);
   }
 
   public onTick(): void {

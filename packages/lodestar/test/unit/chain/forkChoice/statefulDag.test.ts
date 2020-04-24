@@ -61,10 +61,13 @@ describe("StatefulDagLMDGHOST", () => {
     const promise = sleep(timePerEpoch);
     clock.tick(timePerEpoch);
     await promise;
-    // 1 more epoch to execute onTick
+    expect(spy.callCount).to.be.equal(1);
+    await lmd.stop();
+    // 1 more epoch to check execute onTick
     const promise2 = sleep(timePerEpoch);
     clock.tick(1 * timePerEpoch);
     await promise2;
+    // no more onTick call
     expect(spy.callCount).to.be.equal(1);
   });
 
