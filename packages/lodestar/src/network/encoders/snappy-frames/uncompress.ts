@@ -1,12 +1,13 @@
 import BufferList from "bl";
 import {uncompress} from "snappyjs";
+import {IDecompressor} from "../interface";
 
 const IDENTIFIER = new Buffer([
   0x73, 0x4e, 0x61, 0x50, 0x70, 0x59
 ]);
 
-export class SnappyFramesUncompress {
-    
+export class SnappyFramesUncompress implements IDecompressor {
+
   private buffer = new BufferList();
 
   private state: IUncompressState = {

@@ -42,8 +42,7 @@ export const Methods = {
     responseType: MethodResponseType.SingleRespone
   },
   [Method.Metadata]: {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    requestSSZType: (config: IBeaconConfig): Type<unknown> => undefined,
+    requestSSZType: (): null => null,
     responseSSZType: (config: IBeaconConfig) => config.types.Metadata,
     responseType: MethodResponseType.SingleRespone
   },

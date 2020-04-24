@@ -87,6 +87,7 @@
     "randombytes": "^2.1.0",
     "snappy-stream": "^3.0.1",
     "snappyjs": "^0.6.0",
+    "stream-to-it": "^0.2.0",
     "strict-event-emitter-types": "^2.0.0",
     "varint": "^5.0.0",
     "ws": "^7.0.1"
