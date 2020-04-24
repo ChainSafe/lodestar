@@ -61,6 +61,13 @@ export class SnappyFramesUncompress implements IDecompressor {
       return result.slice();
     }
   }
+
+  reset(): void {
+    this.buffer = new BufferList();
+    this.state = {
+      foundIdentifier: false
+    };
+  }
 }
 
 interface IUncompressState {

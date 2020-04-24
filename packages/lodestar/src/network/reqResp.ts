@@ -16,7 +16,7 @@ import {
   Status,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcErrorCode, TTFB_TIMEOUT} from "../constants";
+import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcResponseStatus, TTFB_TIMEOUT} from "../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {createResponseEvent, createRpcProtocol, randomRequestId, isRequestOnly, isRequestSingleChunk} from "./util";
 import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn, ResponseChunk} from "./interface";
@@ -50,7 +50,7 @@ class ResponseEventListener extends (EventEmitter as IRespEventEmitterClass) {
     return setTimeout(() => {
       this.removeListener(responseEvent, responseListener);
       const errorGenerator: AsyncGenerator<ResponseChunk> = async function* () {
-        yield {err: new RpcError(RpcErrorCode.ERR_RESP_TIMEOUT)};
+        yield {err: new RpcError(RpcResponseStatus.ERR_RESP_TIMEOUT)};
       }();
       responseListener(errorGenerator);
     }, RESP_TIMEOUT);
@@ -202,10 +202,10 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     const requestOnly = isRequestOnly(method);
     const requestSingleChunk = isRequestSingleChunk(method);
     return await new Promise((resolve, reject) => {
-      let responseTimer = setTimeout(() => reject(new RpcError(RpcErrorCode.ERR_RESP_TIMEOUT)), TTFB_TIMEOUT);
+      let responseTimer = setTimeout(() => reject(new RpcError(RpcResponseStatus.ERR_RESP_TIMEOUT)), TTFB_TIMEOUT);
       const renewTimer = (): void => {
         clearTimeout(responseTimer);
-        responseTimer = setTimeout(() => reject(new RpcError(RpcErrorCode.ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
+        responseTimer = setTimeout(() => reject(new RpcError(RpcResponseStatus.ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
       };
       const cancelTimer = (): void => {
         clearTimeout(responseTimer);

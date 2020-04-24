@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {MAX_CHUNK_SIZE, Method, ReqRespEncoding, RpcErrorCode} from "../constants";
+import {MAX_CHUNK_SIZE, Method, ReqRespEncoding, RpcResponseStatus} from "../constants";
 import {RequestBody, ResponseBody} from "@chainsafe/lodestar-types";
 import {IReqRespEncoder, SnappyEncoder, SszEncoder} from "./encoders";
 import {getRequestMethodSSZType, getResponseMethodSSZType} from "./util";
@@ -111,7 +111,7 @@ export class ReqRespEncoder {
       length !== encodedPayload.length - lengthBytes ||
           length > MAX_CHUNK_SIZE
     ) {
-      throw new RpcError(RpcErrorCode.ERR_INVALID_REQ);
+      throw new RpcError(RpcResponseStatus.ERR_INVALID_REQ);
     }
     return encodedPayload.slice(lengthBytes);
   }

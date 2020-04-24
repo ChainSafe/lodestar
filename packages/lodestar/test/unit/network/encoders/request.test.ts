@@ -1,12 +1,12 @@
 import pipe from "it-pipe";
 import {eth2RequestDecode, eth2RequestEncode} from "../../../../src/network/encoders/request";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {Method, ReqRespEncoding, ZERO_HASH} from "../../../../src/constants";
+import {Method, ReqRespEncoding} from "../../../../src/constants";
 import {collect} from "../../chain/blocks/utils";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
-import {Status} from "@chainsafe/lodestar-types";
+import {createStatus} from "./utils";
 
 describe("request encoders", function () {
     
@@ -134,13 +134,3 @@ describe("request encoders", function () {
   });
     
 });
-
-function createStatus(): Status {
-  return {
-    finalizedEpoch: 1,
-    finalizedRoot: ZERO_HASH,
-    forkDigest: Buffer.alloc(4),
-    headRoot: ZERO_HASH,
-    headSlot: 10
-  };
-}

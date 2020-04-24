@@ -33,7 +33,7 @@ export const Methods = {
   },
   [Method.Goodbye]: {
     requestSSZType: (config: IBeaconConfig) => config.types.Goodbye,
-    responseSSZType: (config: IBeaconConfig) => config.types.Goodbye,
+    responseSSZType: (): null => null,
     responseType: MethodResponseType.NoResponse
   },
   [Method.Ping]: {
@@ -63,7 +63,8 @@ export enum ReqRespEncoding {
   SSZ_SNAPPY = "ssz_snappy",
 }
 
-export enum RpcErrorCode {
+export enum RpcResponseStatus {
+  SUCCESS = 0,
   ERR_INVALID_REQ = 1,
   ERR_RESP_TIMEOUT = 2,
 }
