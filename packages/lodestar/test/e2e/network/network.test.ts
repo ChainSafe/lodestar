@@ -19,6 +19,7 @@ import PeerId from "peer-id";
 import {ENR, Discv5Discovery} from "@chainsafe/discv5";
 import {createNode} from "../../utils/network";
 import {ReputationStore} from "../../../src/sync/IReputation";
+import {getAttestationSubnetEvent} from "../../../src/network/gossip/utils";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -235,9 +236,9 @@ describe("[network] network", function () {
     validator.isValidIncomingCommitteeAttestation.resolves(true);
     await netB.gossip.publishCommiteeAttestation(attestation);
     await received;
-    expect(netA.gossip.listenerCount("0")).to.be.equal(1);
+    expect(netA.gossip.listenerCount(getAttestationSubnetEvent(0))).to.be.equal(1);
     netA.gossip.unsubscribeFromAttestationSubnet(forkDigest, "0", callback);
-    expect(netA.gossip.listenerCount("0")).to.be.equal(0);
+    expect(netA.gossip.listenerCount(getAttestationSubnetEvent(0))).to.be.equal(0);
   });
   it("should connect to new peer by subnet", async function() {
     const subnet = 10;

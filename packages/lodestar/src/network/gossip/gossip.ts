@@ -7,7 +7,7 @@ import {EventEmitter} from "events";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {ILogger, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
-import {getGossipTopic, mapGossipEvent,} from "./utils";
+import {getGossipTopic, mapGossipEvent, getAttestationSubnetEvent,} from "./utils";
 import {INetworkOptions} from "../options";
 import {GossipEventEmitter, GossipObject, IGossip, IGossipEvents, IGossipModules, IGossipSub} from "./interface";
 import {GossipEvent} from "./constants";
@@ -127,7 +127,8 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     callback?: (attestation: {attestation: Attestation; subnet: number}) => void
   ): void {
     const subnetNum: number = (typeof subnet === "string")? parseInt(subnet) : subnet as number;
-    this.subscribe(forkDigest, subnetNum, callback, new Map([["subnet", subnet.toString()]]));
+    this.subscribe(forkDigest, getAttestationSubnetEvent(subnetNum), callback,
+      new Map([["subnet", subnet.toString()]]));
 
     // Metadata
     const attnets = this.metadata.attnets;
@@ -143,7 +144,8 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     callback?: (attestation: {attestation: Attestation; subnet: number}) => void
   ): void {
     const subnetNum: number = (typeof subnet === "string")? parseInt(subnet) : subnet as number;
-    this.unsubscribe(forkDigest, subnetNum, callback, new Map([["subnet", subnet.toString()]]));
+    this.unsubscribe(forkDigest, getAttestationSubnetEvent(subnetNum), callback,
+      new Map([["subnet", subnet.toString()]]));
     // Metadata
     const attnets = this.metadata.attnets;
     if (attnets[subnetNum]) {

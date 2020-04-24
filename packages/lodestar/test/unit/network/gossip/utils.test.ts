@@ -5,7 +5,8 @@ import {
   getSubnetFromAttestationSubnetTopic,
   isAttestationSubnetTopic,
   topicToGossipEvent,
-  mapGossipEvent
+  mapGossipEvent,
+  getAttestationSubnetEvent
 } from "../../../../src/network/gossip/utils";
 import {GossipEvent} from "../../../../src/network/gossip/constants";
 import {expect} from "chai";
@@ -65,8 +66,8 @@ describe("gossip utils", function () {
 
   describe("mapGossipEvent", () => {
     it("should get correct GossipEvents from IGossipEvent", () => {
-      expect(mapGossipEvent(0)).to.be.equal(GossipEvent.ATTESTATION_SUBNET);
-      expect(mapGossipEvent(1)).to.be.equal(GossipEvent.ATTESTATION_SUBNET);
+      expect(mapGossipEvent(getAttestationSubnetEvent(0))).to.be.equal(GossipEvent.ATTESTATION_SUBNET);
+      expect(mapGossipEvent(getAttestationSubnetEvent(1))).to.be.equal(GossipEvent.ATTESTATION_SUBNET);
       expect(mapGossipEvent(GossipEvent.BLOCK)).to.be.equal(GossipEvent.BLOCK);
       expect(mapGossipEvent(GossipEvent.ATTESTATION)).to.be.equal(GossipEvent.ATTESTATION);
       expect(mapGossipEvent(GossipEvent.AGGREGATE_AND_PROOF)).to.be.equal(GossipEvent.AGGREGATE_AND_PROOF);

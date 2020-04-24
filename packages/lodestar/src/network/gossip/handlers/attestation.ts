@@ -4,7 +4,7 @@
 
 import {toHexString} from "@chainsafe/ssz";
 import {Gossip, GossipHandlerFn} from "../gossip";
-import {getAttestationSubnet, getAttestationSubnetTopic, getGossipTopic} from "../utils";
+import {getAttestationSubnet, getAttestationSubnetTopic, getGossipTopic, getAttestationSubnetEvent} from "../utils";
 import {Attestation} from "@chainsafe/lodestar-types";
 import {GossipEvent} from "../constants";
 import {GossipObject} from "../interface";
@@ -30,7 +30,7 @@ export function getCommitteeAttestationHandler(subnet: number): GossipHandlerFn 
         `Received committee attestation for block ${toHexString(attestation.data.beaconBlockRoot)}`
           +`subnet: ${subnet}, (${attestation.data.source.epoch}, ${attestation.data.target.epoch})`
       );
-      this.emit(subnet, {attestation, subnet});
+      this.emit(getAttestationSubnetEvent(subnet), {attestation, subnet});
     } catch (e) {
       this.logger.warn("Incoming committee attestation error", e);
     }
