@@ -13,10 +13,10 @@ import {computeSlotsSinceEpochStart,
 
 import {ILMDGHOST, BlockChainInfo} from "../interface";
 
-import {sleep} from "../../../util/sleep";
 import {RootHex, NodeInfo, HexCheckpoint} from "./interface";
 import {GENESIS_EPOCH} from "../../../constants";
 import {AttestationAggregator} from "./attestationAggregator";
+import {IBeaconClock} from "../../clock/interface";
 
 /**
  * A block root with additional metadata required to form a DAG
@@ -238,7 +238,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
    */
   private bestJustifiedCheckpoint: Checkpoint;
   private synced: boolean;
-  private interval: NodeJS.Timeout;
+  private clock: IBeaconClock;
 
   public constructor(config: IBeaconConfig) {
     this.aggregator =
@@ -254,24 +254,15 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
    * Start method, should not wait for it.
    * @param genesisTime
    */
-  public async start(genesisTime: number): Promise<void> {
+  public async start(genesisTime: number, clock: IBeaconClock): Promise<void> {
     this.genesisTime = genesisTime;
-    const numSlot = computeSlotsSinceEpochStart(this.config, getCurrentSlot(this.config, this.genesisTime));
-    const timeToWaitTillNextEpoch = (
-      (this.config.params.SLOTS_PER_EPOCH - numSlot) * this.config.params.SECONDS_PER_SLOT * 1000
-    );
     // Make sure we call onTick at start of each epoch
-    await sleep(timeToWaitTillNextEpoch);
-    const epochInterval = this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000;
-    if (!this.interval) {
-      this.interval = setInterval(this.onTick.bind(this), epochInterval);
-    }
+    clock.onNewEpoch(this.onTick);
+    this.clock = clock;
   }
 
   public async stop(): Promise<void> {
-    if (this.interval) {
-      clearInterval(this.interval);
-    }
+    this.clock.unsubscribeFromNewEpoch(this.onTick);
   }
 
   public onTick(): void {
@@ -336,7 +327,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     if (this.nodes[parentRoot]) {
       this.nodes[parentRoot].addChild(
         node,
-        this.getJustifiedCheckpoint(), 
+        this.getJustifiedCheckpoint(),
         this.getFinalizedCheckpoint());
     }
     if (shouldCheckBestTarget) {
