@@ -7,5 +7,6 @@
       "../../node_modules/@types",
       "../../node_modules/libp2p-ts/types"
     ],
+    "skipLibCheck": true,
   }
 }
