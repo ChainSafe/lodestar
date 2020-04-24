@@ -4,11 +4,10 @@
  */
 
 import {EventEmitter} from "events";
-import LibP2p from "libp2p";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {ILogger, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
-import {getGossipTopic,} from "./utils";
+import {getGossipTopic, mapGossipEvent,} from "./utils";
 import {INetworkOptions} from "../options";
 import {GossipEventEmitter, GossipObject, IGossip, IGossipEvents, IGossipModules, IGossipSub} from "./interface";
 import {GossipEvent} from "./constants";
@@ -36,6 +35,7 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../chain";
 import {computeForkDigest, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {MetadataController} from "../metadata";
 
 
 export type GossipHandlerFn = (this: Gossip, obj: GossipObject ) => void;
@@ -44,20 +44,23 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
 
   protected readonly  opts: INetworkOptions;
   protected readonly config: IBeaconConfig;
-  protected readonly  libp2p: LibP2p;
   protected readonly  pubsub: IGossipSub;
   protected readonly chain: IBeaconChain;
   protected readonly  logger: ILogger;
 
   private handlers: Map<string, GossipHandlerFn>;
+  private metadata: MetadataController;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, logger, validator, chain}: IGossipModules) {
+  public constructor(
+    opts: INetworkOptions,
+    metadata: MetadataController,
+    {config, libp2p, logger, validator, chain, pubsub}: IGossipModules) {
     super();
     this.opts = opts;
+    this.metadata = metadata;
     this.config = config;
-    this.libp2p = libp2p;
     this.logger = logger.child({module: "gossip", level: LogLevel[logger.level]});
-    this.pubsub = new LodestarGossipsub(config, validator, this.logger,
+    this.pubsub = pubsub || new LodestarGossipsub(config, validator, this.logger,
       libp2p.peerInfo, libp2p.registrar, {gossipIncoming: true});
     this.chain = chain;
   }
@@ -123,7 +126,15 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     subnet: number|string,
     callback?: (attestation: {attestation: Attestation; subnet: number}) => void
   ): void {
-    this.subscribe(forkDigest, GossipEvent.ATTESTATION_SUBNET, callback, new Map([["subnet", subnet.toString()]]));
+    const subnetNum: number = (typeof subnet === "string")? parseInt(subnet) : subnet as number;
+    this.subscribe(forkDigest, subnetNum, callback, new Map([["subnet", subnet.toString()]]));
+
+    // Metadata
+    const attnets = this.metadata.attnets;
+    if (!attnets[subnetNum]) {
+      attnets[subnetNum] = true;
+      this.metadata.attnets = attnets;
+    }
   }
 
   public unsubscribeFromAttestationSubnet(
@@ -131,7 +142,14 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     subnet: number|string,
     callback?: (attestation: {attestation: Attestation; subnet: number}) => void
   ): void {
-    this.unsubscribe(forkDigest, GossipEvent.ATTESTATION_SUBNET, callback, new Map([["subnet", subnet.toString()]]));
+    const subnetNum: number = (typeof subnet === "string")? parseInt(subnet) : subnet as number;
+    this.unsubscribe(forkDigest, subnetNum, callback, new Map([["subnet", subnet.toString()]]));
+    // Metadata
+    const attnets = this.metadata.attnets;
+    if (attnets[subnetNum]) {
+      attnets[subnetNum] = false;
+      this.metadata.attnets = attnets;
+    }
   }
 
   public unsubscribe(
@@ -139,8 +157,8 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     event: keyof IGossipEvents,
     listener?: unknown,
     params: Map<string, string> = new Map()): void {
-    if(this.listenerCount(event) === 1 && !event.startsWith("gossipsub")) {
-      this.pubsub.unsubscribe(getGossipTopic(event as GossipEvent, forkDigest, "ssz", params));
+    if(this.listenerCount(event.toString()) === 1 && !event.toString().startsWith("gossipsub")) {
+      this.pubsub.unsubscribe(getGossipTopic(mapGossipEvent(event), forkDigest, "ssz", params));
     }
     if(listener) {
       this.removeListener(event, listener as (...args: unknown[]) => void);
@@ -165,8 +183,8 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     event: keyof IGossipEvents,
     listener?: unknown,
     params: Map<string, string> = new Map()): void {
-    if(this.listenerCount(event) === 0 && !event.startsWith("gossipsub")) {
-      this.pubsub.subscribe(getGossipTopic(event as GossipEvent, forkDigest, "ssz", params));
+    if(this.listenerCount(event.toString()) === 0 && !event.toString().startsWith("gossipsub")) {
+      this.pubsub.subscribe(getGossipTopic(mapGossipEvent(event), forkDigest, "ssz", params));
     }
     if(listener) {
       this.on(event, listener as (...args: unknown[]) => void);

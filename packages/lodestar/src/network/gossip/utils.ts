@@ -9,7 +9,7 @@ import {GossipEvent, AttestationSubnetRegExp, GossipTopicRegExp} from "./constan
 import {CommitteeIndex} from "@chainsafe/lodestar-types/lib";
 import {IGossipMessage} from "libp2p-gossipsub";
 import {utils} from "libp2p-pubsub";
-import {ILodestarGossipMessage} from "./interface";
+import {ILodestarGossipMessage, IGossipEvents} from "./interface";
 import {hash, toHexString} from "@chainsafe/ssz";
 
 export function getGossipTopic(
@@ -41,7 +41,14 @@ export function getAttestationSubnet(attestation: Attestation): string {
   return getCommitteeIndexSubnet(attestation.data.index);
 }
 
-export function getGossipEvent(topic: string): GossipEvent {
+export function mapGossipEvent(event: keyof IGossipEvents): GossipEvent {
+  if (typeof event === "number") {
+    return GossipEvent.ATTESTATION_SUBNET;
+  }
+  return event as GossipEvent;
+}
+
+export function topicToGossipEvent(topic: string): GossipEvent {
   const groups = topic.match(GossipTopicRegExp);
   const topicName = groups[3] as keyof typeof GossipEvent;
   return topicName as GossipEvent;
