@@ -1,7 +1,6 @@
 // gossip
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Type} from "@chainsafe/ssz";
 
 export const ATTESTATION_SUBNET_COUNT = 64;
 export const ATTESTATION_PROPAGATION_SLOT_RANGE = 23;
