@@ -94,10 +94,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     // if we run from scratch, we want to wait for genesis state
     const state = await this.waitForState();
     this.eth1.initBlockCache(this.config, state);
-    this.forkChoice.start(state.genesisTime);
     this.logger.info("Chain started, waiting blocks and attestations");
     this.clock = new LocalClock(this.config, state.genesisTime);
     await this.clock.start();
+    this.forkChoice.start(state.genesisTime, this.clock);
     await this.blockProcessor.start();
     this._currentForkDigest = await this.getCurrentForkDigest();
   }
@@ -151,8 +151,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       epoch: computeEpochAtSlot(this.config, genesisBlock.slot)
     };
     this.forkChoice.addBlock({
-      slot: genesisBlock.slot, 
-      blockRootBuf: blockRoot, 
+      slot: genesisBlock.slot,
+      blockRootBuf: blockRoot,
       stateRootBuf: stateRoot,
       parentRootBuf: Buffer.alloc(32),
       justifiedCheckpoint: justifiedFinalizedCheckpoint,
@@ -160,7 +160,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     });
     this.logger.info("Beacon chain initialized");
   }
-  
+
   private async getCurrentForkDigest(): Promise<ForkDigest> {
     const state = await this.getHeadState();
     return computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
