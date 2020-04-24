@@ -93,7 +93,7 @@ export function eth2ResponseDecode(
               decompressor.reset();
               status = null;
               sszLength = null;
-              if(Methods[method].responseType === MethodResponseType.SingleRespone) {
+              if(Methods[method].responseType === MethodResponseType.SingleResponse) {
                 break;
               }
             } catch (e) {

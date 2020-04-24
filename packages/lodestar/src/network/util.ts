@@ -70,5 +70,5 @@ export function isRequestOnly(method: Method): boolean {
 }
 
 export function isRequestSingleChunk(method: Method): boolean {
-  return Methods[method].responseType === MethodResponseType.SingleRespone;
+  return Methods[method].responseType === MethodResponseType.SingleResponse;
 }

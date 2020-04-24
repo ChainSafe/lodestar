@@ -1,5 +1,5 @@
 import {ReqRespEncoding} from "../../constants";
-import {createCompressStream} from "snappy-stream";
+import {createCompressStream} from "@chainsafe/snappy-stream";
 import {source} from "stream-to-it";
 import {IDecompressor} from "./interface";
 import {SnappyFramesUncompress} from "./snappy-frames/uncompress";

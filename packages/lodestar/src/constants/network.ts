@@ -20,7 +20,7 @@ export enum Method {
 }
 
 export enum MethodResponseType {
-  SingleRespone = "SingleRespone",
+  SingleResponse = "SingleResponse",
   NoResponse = "NoResponse",
   Stream = "Stream",
 }
@@ -29,22 +29,22 @@ export const Methods = {
   [Method.Status]: {
     requestSSZType: (config: IBeaconConfig) => config.types.Status,
     responseSSZType: (config: IBeaconConfig) => config.types.Status,
-    responseType: MethodResponseType.SingleRespone
+    responseType: MethodResponseType.SingleResponse
   },
   [Method.Goodbye]: {
     requestSSZType: (config: IBeaconConfig) => config.types.Goodbye,
-    responseSSZType: (): null => null,
-    responseType: MethodResponseType.NoResponse
+    responseSSZType: (config: IBeaconConfig) => config.types.Goodbye,
+    responseType: MethodResponseType.SingleResponse
   },
   [Method.Ping]: {
     requestSSZType: (config: IBeaconConfig) => config.types.Ping,
     responseSSZType: (config: IBeaconConfig) => config.types.Ping,
-    responseType: MethodResponseType.SingleRespone
+    responseType: MethodResponseType.SingleResponse
   },
   [Method.Metadata]: {
     requestSSZType: (): null => null,
     responseSSZType: (config: IBeaconConfig) => config.types.Metadata,
-    responseType: MethodResponseType.SingleRespone
+    responseType: MethodResponseType.SingleResponse
   },
   [Method.BeaconBlocksByRange]: {
     requestSSZType: (config: IBeaconConfig) => config.types.BeaconBlocksByRangeRequest,

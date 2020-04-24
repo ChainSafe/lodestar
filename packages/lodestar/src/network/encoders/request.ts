@@ -2,8 +2,6 @@ import {Method, Methods, ReqRespEncoding} from "../../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {RequestBody} from "@chainsafe/lodestar-types";
 import {decode, encode} from "varint";
-import {IDecompressor} from "./interface";
-import {SnappyFramesUncompress} from "./snappy-frames/uncompress";
 import BufferList from "bl";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getCompressor, getDecompressor} from "./utils";
@@ -14,9 +12,9 @@ export function eth2RequestEncode(
   return (source => {
     return (async function*() {
       const type = Methods[method].requestSSZType(config);
-      const compressor = getCompressor(encoding);
+      let compressor = getCompressor(encoding);
       for await (const request of source) {
-        if(!type) continue;
+        if(!type || !request) continue;
         let serialized: Uint8Array;
         try {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -27,6 +25,8 @@ export function eth2RequestEncode(
         }
         yield Buffer.from(encode(serialized.length));
         yield* compressor(Buffer.from(serialized.buffer, serialized.byteOffset, serialized.length));
+        //reset compressor
+        compressor = getCompressor(encoding);
       }
     })();
   });
@@ -34,7 +34,7 @@ export function eth2RequestEncode(
 
 export function eth2RequestDecode(
   config: IBeaconConfig, logger: ILogger, method: Method, encoding: ReqRespEncoding
-): (source: AsyncIterable<Buffer>) => AsyncGenerator<RequestBody> {
+): (source: AsyncIterable<Buffer|BufferList>) => AsyncGenerator<RequestBody> {
   return (source) => {
     return (async function*() {
       let sszDataLength: number = null;
@@ -42,8 +42,11 @@ export function eth2RequestDecode(
       const buffer = new BufferList();
       const type = Methods[method].requestSSZType(config);
       for await (let chunk of source) {
+        if(!chunk || chunk.length === 0) {
+          continue;
+        }
         if(sszDataLength === null) {
-          sszDataLength = decode(chunk);
+          sszDataLength = decode(chunk.slice());
           chunk = chunk.slice(decode.bytes);
           if(chunk.length === 0) {
             continue;
@@ -51,7 +54,7 @@ export function eth2RequestDecode(
         }
         let uncompressed: Buffer;
         try {
-          uncompressed = decompressor.uncompress(chunk);
+          uncompressed = decompressor.uncompress(chunk.slice());
         } catch (e) {
           logger.warn("Failed to decompress request data. Error: " + e.message);
           break;

@@ -1,4 +1,4 @@
-declare module "snappy-stream" {
+declare module "@chainsafe/snappy-stream" {
     
   import {Transform} from "stream";
 

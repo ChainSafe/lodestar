@@ -152,7 +152,7 @@ describe("[network] network", function () {
     await connected;
 
     netB.reqResp.once("request", (peerId, method, requestId) => {
-      netB.reqResp.sendResponse(requestId, null, [netB.metadata.seqNumber]);
+      netB.reqResp.sendResponse(requestId, null, netB.metadata.seqNumber);
     });
     const seqNumber = await netA.reqResp.ping(netB.peerInfo, netA.metadata.seqNumber);
     expect(seqNumber).to.equal(netB.metadata.seqNumber);
@@ -166,7 +166,7 @@ describe("[network] network", function () {
     await connected;
 
     netB.reqResp.once("request", (peerId, method, requestId) => {
-      netB.reqResp.sendResponse(requestId, null, [netB.metadata]);
+      netB.reqResp.sendResponse(requestId, null, netB.metadata);
     });
     const metadata = await netA.reqResp.metadata(netB.peerInfo);
     expect(metadata).to.deep.equal(netB.metadata.metadata);

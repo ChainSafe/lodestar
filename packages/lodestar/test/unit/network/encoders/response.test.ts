@@ -59,26 +59,6 @@ describe("response decoders", function () {
     expect(responses.length).to.be.equal(0);
   });
 
-  it("should work - no response (but sent) - ssz", async function () {
-    const responses = await pipe(
-      [{status: 0, body: 1n}],
-      eth2ResponseEncode(config, loggerStub, Method.Goodbye, ReqRespEncoding.SSZ),
-      eth2ResponseDecode(config, loggerStub, Method.Goodbye, ReqRespEncoding.SSZ),
-      collect
-    );
-    expect(responses.length).to.be.equal(0);
-  });
-
-  it("should work - no response (but sent) - ssz_snappy", async function () {
-    const responses = await pipe(
-      [{status: 0, body: 1n}],
-      eth2ResponseEncode(config, loggerStub, Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY),
-      eth2ResponseDecode(config, loggerStub, Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY),
-      collect
-    );
-    expect(responses.length).to.be.equal(0);
-  });
-
   it("should work - single response simple- ssz", async function () {
     const responses = await pipe(
       [{status: 0, body: 1n}],
