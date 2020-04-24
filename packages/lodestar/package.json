@@ -62,7 +62,6 @@
     "fastify-sse-v2": "^1.0.3",
     "fastpriorityqueue": "^0.6.3",
     "ganache-core": "^2.10.2",
-    "it-length-prefixed": "^3.0.1",
     "it-pipe": "^1.1.0",
     "it-pushable": "^1.4.0",
     "level": "^5.0.1",
