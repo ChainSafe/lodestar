@@ -1,4 +1,4 @@
-import {Arguments} from "yargs";
+import {Argv, Arguments} from "yargs";
 
 import {IBeaconArgs} from "../../options";
 

@@ -1,30 +1,27 @@
 import {Json} from "@chainsafe/ssz";
-import defaults, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import _yargs from "yargs/yargs";
 
-import {readFile, writeFile} from "../../util";
+import {readFile, writeFile, getSubObject, setSubObject} from "../../util";
 
 import {beaconRunOptions, IBeaconArgs} from "./options";
-
 
 export function createBeaconConfig(args: IBeaconArgs): Partial<IBeaconNodeOptions> {
   const cliDefaults = _yargs().default(args).options(beaconRunOptions).parse([]) as Partial<IBeaconNodeOptions>;
   // cliDefaults contains a bunch of extra keys created from yargs' leniency
   // We only want to store the 'canonical' ones
-  // Remove any nested keys that contain hyphens or are not in the template object
-  const removeSuperfluousKeys = (obj: any, templateObj: any): void => {
-    if (obj && typeof obj === "object") {
-      for (const k of Object.keys(obj)) {
-        if (k.indexOf("-") === -1 && templateObj[k] !== undefined) {
-          removeSuperfluousKeys(obj[k], templateObj[k]);
-        } else {
-          delete obj[k];
-        }
-      }
+
+  // take each option's first alias as the 'preferred' form
+  // don't create hidden options
+  const config: Partial<IBeaconNodeOptions> = {};
+  for (const option of Object.values(beaconRunOptions)) {
+    if (!option.hidden && option.default !== undefined) {
+      // handle duck typed access to a subobject
+      const preferredNameArr = (Array.isArray(option.alias) ? option.alias[0] : option.alias).split(".");
+      setSubObject(config, preferredNameArr, getSubObject(cliDefaults, preferredNameArr));
     }
-  };
-  removeSuperfluousKeys(cliDefaults, defaults);
-  return cliDefaults;
+  }
+  return config;
 }
 
 export async function writeBeaconConfig(filename: string, config: Partial<IBeaconNodeOptions>): Promise<void> {

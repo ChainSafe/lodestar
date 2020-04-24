@@ -17,7 +17,7 @@ import * as beaconFile from "./beaconFile";
 export interface IBeaconArgs extends IBeaconFileArgs {}
 
 export function beaconOptions(yargs: Argv<IGlobalArgs>): Argv<IBeaconArgs> {
-  return mergeOptions(mergeOptions(yargs, beaconDir), beaconFile);
+  return mergeOptions(mergeOptions(yargs.exitProcess(false), beaconDir), beaconFile).exitProcess(true);
 }
 
 export const beaconRunOptions = {

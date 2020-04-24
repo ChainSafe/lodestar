@@ -15,8 +15,8 @@ export const logChain: Options = {
 
 export const logDb: Options = {
   alias: [
-    "log.db",
     "logger.db",
+    "log.db",
   ],
   hidden: true,
   type: "string",
@@ -27,8 +27,8 @@ export const logDb: Options = {
 
 export const logEth1: Options = {
   alias: [
-    "log.eth1",
     "logger.eth1",
+    "log.eth1",
   ],
   hidden: true,
   type: "string",
@@ -39,8 +39,8 @@ export const logEth1: Options = {
 
 export const logNode: Options = {
   alias: [
-    "log.node",
     "logger.node",
+    "log.node",
   ],
   hidden: true,
   type: "string",
@@ -51,8 +51,8 @@ export const logNode: Options = {
 
 export const logNetwork: Options = {
   alias: [
-    "log.network",
     "logger.network",
+    "log.network",
   ],
   hidden: true,
   type: "string",
@@ -63,8 +63,8 @@ export const logNetwork: Options = {
 
 export const logOpPool: Options = {
   alias: [
-    "log.opPool",
     "logger.opPool",
+    "log.opPool",
   ],
   hidden: true,
   type: "string",
@@ -75,8 +75,8 @@ export const logOpPool: Options = {
 
 export const logSync: Options = {
   alias: [
-    "log.sync",
     "logger.sync",
+    "log.sync",
   ],
   hidden: true,
   type: "string",
@@ -87,8 +87,8 @@ export const logSync: Options = {
 
 export const logMetrics: Options = {
   alias: [
-    "log.metrics",
     "logger.metrics",
+    "log.metrics",
   ],
   hidden: true,
   type: "string",
@@ -99,8 +99,8 @@ export const logMetrics: Options = {
 
 export const logChores: Options = {
   alias: [
-    "log.chores",
     "logger.chores",
+    "log.chores",
   ],
   hidden: true,
   type: "string",

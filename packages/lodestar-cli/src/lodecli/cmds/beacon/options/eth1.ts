@@ -2,7 +2,6 @@ import {Options} from "yargs";
 
 export const eth1ProviderUrl: Options = {
   alias: [
-    "eth1.providerUrl",
     "eth1.provider.url",
   ],
   description: "Url to Eth1 node with enabled rpc",
@@ -33,7 +32,7 @@ export const eth1DepositContractDeployedAt: Options = {
 
 export const eth1DepositContractAddress: Options = {
   alias: [
-    "eth1.depositContract.contract",
+    "eth1.depositContract.address",
   ],
   description: "Address of deposit contract",
   type: "string",
