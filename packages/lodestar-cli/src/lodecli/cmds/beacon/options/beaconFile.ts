@@ -1,36 +1,36 @@
 import * as path from "path";
-import {Options, Argv} from "yargs";
-import {IGlobalArgs} from "../../../options";
-import {IBeaconDirArgs}  from "./beaconDir";
+import {Options} from "yargs";
 
-export interface IBeaconFileArgs extends IBeaconDirArgs {
-  configPath: string;
+import {IBeaconConfigArgs}  from "./beaconConfig";
+
+export interface IBeaconFileArgs extends IBeaconConfigArgs {
   dbPath: string;
-  peerIdPath: string;
-  enrPath: string;
+  network: {
+    peerIdPath: string;
+    enrPath: string;
+  };
 }
 
-export const configPath = (args: IBeaconDirArgs): Options => ({
-  alias: ["configPath", "config"],
-  default: path.join(args.beaconDir, "beacon.config.json"),
-  description: "Beacon node configuration file",
-  type: "string",
-});
-
-export const dbPath = (args: IBeaconDirArgs): Options => ({
+export const dbPath = (args: IBeaconConfigArgs): Options => ({
+  alias: ["dbPath", "db.path", "db.name"],
   hidden: true,
-  default: path.join(args.beaconDir, "beacon-db"),
+  default: path.join(args.beaconDir, "chain-db"),
+  normalize: true,
   type: "string",
 });
 
-export const peerIdPath = (args: IBeaconDirArgs): Options => ({
+export const peerIdPath = (args: IBeaconConfigArgs): Options => ({
+  alias: ["network.peerIdPath"],
   hidden: true,
   default: path.join(args.beaconDir, "peer-id.json"),
+  normalize: true,
   type: "string",
 });
 
-export const enrPath = (args: IBeaconDirArgs): Options => ({
+export const enrPath = (args: IBeaconConfigArgs): Options => ({
+  alias: ["network.enrPath"],
   hidden: true,
   default: path.join(args.beaconDir, "enr.json"),
+  normalize: true,
   type: "string",
 });

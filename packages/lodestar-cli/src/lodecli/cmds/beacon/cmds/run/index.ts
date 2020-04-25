@@ -1,17 +1,19 @@
 import {Argv} from "yargs";
+import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 
-import {IGlobalArgs} from "../../../../options";
+import {beaconRunOptions, IBeaconArgs} from "../../options";
+import {readBeaconConfig} from "../../config";
 
-import {beaconRunOptions} from "../../options";
-
-import {IBeaconRunArgs, run} from "./run";
+import {run} from "./run";
+import * as fs from "fs";
 
 export const command = "run";
 
-export const description = "Run a beacon node";
+export const description = "Run a lodestar beacon node";
 
-export function builder(yargs: Argv<IGlobalArgs>): Argv<IBeaconRunArgs> {
-  return yargs.options(beaconRunOptions) as unknown as Argv<IBeaconRunArgs>;
+export function builder(yargs: Argv<IBeaconArgs>): Argv<IBeaconArgs & Partial<IBeaconNodeOptions>> {
+  const args = yargs.parse(process.argv, true as unknown as object, function() {});
+  return yargs.options(beaconRunOptions).config(readBeaconConfig(args.config)) as unknown as Argv<IBeaconArgs & Partial<IBeaconNodeOptions>>;
 }
 
 export const handler = run;

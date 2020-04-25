@@ -1,32 +1,26 @@
 import process from "process";
-import * as path from "path";
-import deepmerge from "deepmerge";
 import {Arguments} from "yargs";
+import deepmerge from "deepmerge";
 import {initBLS} from "@chainsafe/bls";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 
-import {readPeerId, readEnr} from "../../../../network";
-import {readBeaconConfig} from "../../config";
+import {readPeerId, readEnr, writeEnr} from "../../../../network";
 import {IBeaconArgs} from "../../options";
-
-export interface IBeaconRunArgs extends IBeaconArgs {
-}
 
 /**
  * Run a beacon node
  */
-export async function run(args: Arguments<IBeaconRunArgs>): Promise<void> {
+export async function run(options: Arguments<IBeaconArgs & Partial<IBeaconNodeOptions>>): Promise<void> {
   await initBLS();
 
-  const peerId = await readPeerId(args.peerIdPath);
-  const enr = await readEnr(args.enrPath);
+  options = deepmerge(defaultOptions, options) as Arguments<IBeaconArgs & Partial<IBeaconNodeOptions>>;
 
-  let options = await readBeaconConfig(args.configPath);
-  options = deepmerge(options, args);
-  options.network.discv5.enr = enr;
+  const peerId = await readPeerId(options.network.peerIdPath);
+  options.network.discv5.enr = await readEnr(options.network.enrPath);
 
   const config = options.chain.name === "mainnet" ? mainnetConfig : mainnetConfig;
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
@@ -39,6 +33,8 @@ export async function run(args: Arguments<IBeaconRunArgs>): Promise<void> {
   });
 
   async function cleanup(): Promise<void> {
+    await node.stop();
+    await writeEnr(options.network.enrPath, options.network.discv5.enr, peerId);
   }
 
   process.on("SIGTERM", cleanup);

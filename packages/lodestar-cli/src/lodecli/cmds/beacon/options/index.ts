@@ -12,12 +12,13 @@ import * as metrics from "./metrics";
 import * as network from "./network";
 
 import * as beaconDir from "./beaconDir";
+import * as beaconConfig from "./beaconConfig";
 import * as beaconFile from "./beaconFile";
 
 export interface IBeaconArgs extends IBeaconFileArgs {}
 
-export function beaconOptions(yargs: Argv<IGlobalArgs>): Argv<IBeaconArgs> {
-  return mergeOptions(mergeOptions(yargs, beaconDir), beaconFile);
+export function mergeBeaconOptions(yargs: Argv<IGlobalArgs>): Argv<IBeaconArgs> {
+  return mergeOptions(mergeOptions(mergeOptions(yargs, beaconDir), beaconConfig), beaconFile);
 }
 
 export const beaconRunOptions = canonicalOptions({

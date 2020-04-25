@@ -1,17 +1,14 @@
+import * as fs from "fs";
+import _yargs from "yargs/yargs";
 import {Json} from "@chainsafe/ssz";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
-import _yargs from "yargs/yargs";
 
-import {readFile, writeFile, getSubObject, setSubObject} from "../../util";
-
-import {beaconRunOptions, IBeaconArgs} from "./options";
+import {readFileSync, writeFile, getSubObject, setSubObject} from "../../util";
+import {beaconRunOptions, mergeBeaconOptions, IBeaconArgs} from "./options";
 
 export function createBeaconConfig(args: IBeaconArgs): Partial<IBeaconNodeOptions> {
-  const cliDefaults = _yargs().default(args).options(beaconRunOptions).parse([]) as Partial<IBeaconNodeOptions>;
+  const cliDefaults = mergeBeaconOptions(_yargs().default(args)).options(beaconRunOptions).parse([]) as Partial<IBeaconNodeOptions>;
   // cliDefaults contains a bunch of extra keys created from yargs' leniency
-  // We only want to store the 'canonical' ones
-
-  // take each option's first alias as the 'preferred' form
   // don't create hidden options
   const config: Partial<IBeaconNodeOptions> = {};
   for (const [alias, option] of Object.entries(beaconRunOptions)) {
@@ -28,8 +25,11 @@ export async function writeBeaconConfig(filename: string, config: Partial<IBeaco
   await writeFile(filename, config as Json);
 }
 
-export async function readBeaconConfig(filename: string): Promise<Partial<IBeaconNodeOptions>> {
-  return readFile(filename) as Partial<IBeaconNodeOptions>;
+/**
+ * This needs to be a synchronous function because it will be run as part of the yargs 'build' step
+ */
+export function readBeaconConfig(filename: string): Partial<IBeaconNodeOptions> {
+  return readFileSync(filename) as Partial<IBeaconNodeOptions>;
 }
 
 export async function initBeaconConfig(filename: string, args: IBeaconArgs): Promise<void> {
