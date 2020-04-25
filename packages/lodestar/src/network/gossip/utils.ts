@@ -41,7 +41,7 @@ export function getAttestationSubnet(attestation: Attestation): string {
   return getCommitteeIndexSubnet(attestation.data.index);
 }
 
-export function mapGossipEvent(event: keyof IGossipEvents): GossipEvent {
+export function mapGossipEvent(event: keyof IGossipEvents | string): GossipEvent {
   if (isAttestationSubnetEvent(event)) {
     return GossipEvent.ATTESTATION_SUBNET;
   }
@@ -62,7 +62,7 @@ export function getAttestationSubnetEvent(subnet: number): string {
   return GossipEvent.ATTESTATION_SUBNET + "_" + subnet;
 }
 
-export function isAttestationSubnetEvent(event: keyof IGossipEvents): boolean {
+export function isAttestationSubnetEvent(event: keyof IGossipEvents | string): boolean {
   return event.toString().startsWith(GossipEvent.ATTESTATION_SUBNET);
 }
 

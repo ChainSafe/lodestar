@@ -156,14 +156,14 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
 
   public unsubscribe(
     forkDigest: ForkDigest,
-    event: keyof IGossipEvents,
+    event: keyof IGossipEvents | string,
     listener?: unknown,
     params: Map<string, string> = new Map()): void {
     if(this.listenerCount(event.toString()) === 1 && !event.toString().startsWith("gossipsub")) {
       this.pubsub.unsubscribe(getGossipTopic(mapGossipEvent(event), forkDigest, "ssz", params));
     }
     if(listener) {
-      this.removeListener(event, listener as (...args: unknown[]) => void);
+      this.removeListener(event as keyof IGossipEvents, listener as (...args: unknown[]) => void);
     }
   }
 
@@ -182,14 +182,14 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
 
   private subscribe(
     forkDigest: ForkDigest,
-    event: keyof IGossipEvents,
+    event: keyof IGossipEvents | string,
     listener?: unknown,
     params: Map<string, string> = new Map()): void {
     if(this.listenerCount(event.toString()) === 0 && !event.toString().startsWith("gossipsub")) {
       this.pubsub.subscribe(getGossipTopic(mapGossipEvent(event), forkDigest, "ssz", params));
     }
     if(listener) {
-      this.on(event, listener as (...args: unknown[]) => void);
+      this.on(event as keyof IGossipEvents, listener as (...args: unknown[]) => void);
     }
   }
 

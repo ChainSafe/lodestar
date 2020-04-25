@@ -22,18 +22,13 @@ import {IBeaconChain} from "../../chain";
 import {ForkDigest} from "@chainsafe/lodestar-types";
 
 export interface IGossipEvents {
-  [attSubnetTopic: string]: (attestationSubnet: {attestation: Attestation; subnet: number}) => void;
-  // @ts-ignore
+  // attestation subnet event is dynamic following this signature
+  // [attSubnetTopic: string]: (attestationSubnet: {attestation: Attestation; subnet: number}) => void;
   [GossipEvent.BLOCK]: (signedBlock: SignedBeaconBlock) => void;
-  // @ts-ignore
   [GossipEvent.ATTESTATION]: (attestation: Attestation) => void;
-  // @ts-ignore
   [GossipEvent.AGGREGATE_AND_PROOF]: (attestation: SignedAggregateAndProof) => void;
-  // @ts-ignore
   [GossipEvent.VOLUNTARY_EXIT]: (voluntaryExit: SignedVoluntaryExit) => void;
-  // @ts-ignore
   [GossipEvent.PROPOSER_SLASHING]: (proposerSlashing: ProposerSlashing) => void;
-  // @ts-ignore
   [GossipEvent.ATTESTER_SLASHING]: (attesterSlashing: AttesterSlashing) => void;
   ["gossipsub:heartbeat"]: () => void;
 

@@ -30,6 +30,7 @@ export function getCommitteeAttestationHandler(subnet: number): GossipHandlerFn 
         `Received committee attestation for block ${toHexString(attestation.data.beaconBlockRoot)}`
           +`subnet: ${subnet}, (${attestation.data.source.epoch}, ${attestation.data.target.epoch})`
       );
+      // @ts-ignore
       this.emit(getAttestationSubnetEvent(subnet), {attestation, subnet});
     } catch (e) {
       this.logger.warn("Incoming committee attestation error", e);
