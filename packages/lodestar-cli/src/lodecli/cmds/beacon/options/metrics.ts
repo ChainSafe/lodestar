@@ -7,7 +7,7 @@ export const metricsEnabled: Options = {
   type: "boolean",
   default: false,
   group: "metrics",
-}
+};
 
 export const metricsServerPort: Options = {
   alias: [

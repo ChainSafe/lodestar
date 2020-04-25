@@ -1,12 +1,15 @@
 import {Argv, Options} from "yargs";
 import {canonicalOptions} from "./canonicalOptions";
+import {parseArgs} from "./parseArgs";
 
 /**
- * Generate options based on the current yargs
+ * Generate options based on the currently built yargs
  */
-export function mergeOptions<T, U>(yargs: Argv<T>, optionsFns: Record<string, ((args: T) => Options) | Options>): Argv<U> {
-  // parse args without exiting
-  const args = yargs.parse(process.argv, true as unknown as object, function() {});
+export function mergeOptions<T, U>(
+  yargs: Argv<T>,
+  optionsFns: Record<string, ((args: T) => Options) | Options>
+): Argv<U> {
+  const args = parseArgs(yargs);
   const options: Record<string, Options> = {};
   for (const [optionName, optionOrFn] of Object.entries(optionsFns)) {
     if (typeof optionOrFn === "function") {

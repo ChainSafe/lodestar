@@ -15,6 +15,7 @@ import * as beaconDir from "./beaconDir";
 import * as beaconConfig from "./beaconConfig";
 import * as beaconFile from "./beaconFile";
 
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface IBeaconArgs extends IBeaconFileArgs {}
 
 export function mergeBeaconOptions(yargs: Argv<IGlobalArgs>): Argv<IBeaconArgs> {

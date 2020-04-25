@@ -7,6 +7,7 @@ import * as beaconCmd from "./cmds/beacon";
 yargs
   .env("LODECLI")
   .options(options)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   .command(beaconCmd as any)
   .demandCommand()
   .showHelpOnFail(false)

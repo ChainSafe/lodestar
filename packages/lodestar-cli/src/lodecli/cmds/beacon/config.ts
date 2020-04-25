@@ -1,4 +1,3 @@
-import * as fs from "fs";
 import _yargs from "yargs/yargs";
 import {Json} from "@chainsafe/ssz";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
@@ -7,7 +6,9 @@ import {readFileSync, writeFile, getSubObject, setSubObject} from "../../util";
 import {beaconRunOptions, mergeBeaconOptions, IBeaconArgs} from "./options";
 
 export function createBeaconConfig(args: IBeaconArgs): Partial<IBeaconNodeOptions> {
-  const cliDefaults = mergeBeaconOptions(_yargs().default(args)).options(beaconRunOptions).parse([]) as Partial<IBeaconNodeOptions>;
+  const cliDefaults = mergeBeaconOptions(_yargs().default(args))
+    .options(beaconRunOptions)
+    .parse([]) as Partial<IBeaconNodeOptions>;
   // cliDefaults contains a bunch of extra keys created from yargs' leniency
   // don't create hidden options
   const config: Partial<IBeaconNodeOptions> = {};

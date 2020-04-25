@@ -1,4 +1,3 @@
-import * as path from "path";
 import {Arguments} from "yargs";
 
 import {IBeaconArgs} from "../../options";

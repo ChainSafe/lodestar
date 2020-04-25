@@ -2,7 +2,7 @@ import {Argv} from "yargs";
 
 import {IGlobalArgs} from "../../options";
 
-import {mergeBeaconOptions, IBeaconArgs} from "./options";
+import {mergeBeaconOptions} from "./options";
 import * as init from "./cmds/init";
 import * as run from "./cmds/run";
 
