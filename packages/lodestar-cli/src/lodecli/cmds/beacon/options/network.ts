@@ -44,7 +44,7 @@ export const networkLocalMultiaddrs: Options = {
   ],
   type: "array",
   default: [
-    "ip4/0.0.0.0/tcp/30606"
+    "/ip4/0.0.0.0/tcp/30606"
   ],
   group: "network",
 };

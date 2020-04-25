@@ -6,7 +6,7 @@ export const eth1ProviderUrl: Options = {
   ],
   description: "Url to Eth1 node with enabled rpc",
   type: "string",
-  default: "http://loclahost:8545",
+  default: "http://localhost:8545",
   group: "eth1",
 };
 

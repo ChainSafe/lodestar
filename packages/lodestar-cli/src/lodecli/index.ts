@@ -9,6 +9,7 @@ yargs
   .options(options)
   .command(beaconCmd as any)
   .demandCommand()
+  .showHelpOnFail(false)
   .help()
   .wrap(yargs.terminalWidth())
   .argv;
