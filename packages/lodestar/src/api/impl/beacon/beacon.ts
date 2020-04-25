@@ -21,6 +21,7 @@ import {IApiModules} from "../../interface";
 import {ApiNamespace} from "../../index";
 import EventIterator from "event-iterator";
 import {IBeaconDb} from "../../../db/api";
+import {IBeaconSync} from "../../../sync";
 
 export class BeaconApi implements IBeaconApi {
 
@@ -29,12 +30,14 @@ export class BeaconApi implements IBeaconApi {
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
   private readonly db: IBeaconDb;
+  private readonly sync: IBeaconSync;
 
   public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
     this.namespace = ApiNamespace.BEACON;
     this.config = modules.config;
     this.chain = modules.chain;
     this.db = modules.db;
+    this.sync = modules.sync;
   }
 
   public async getClientVersion(): Promise<Bytes32> {
@@ -83,8 +86,11 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
-    // TODO: change this after sync service is implemented
-    return false;
+    const status = await this.sync.getSyncStatus();
+    if(!status) {
+      return false;
+    }
+    return status;
   }
 
   public getBlockStream(): AsyncIterable<SignedBeaconBlock> {

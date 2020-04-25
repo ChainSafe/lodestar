@@ -69,7 +69,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     this.config = config;
     this.libp2p = libp2p;
     this.logger = logger;
-    this.encoder = new ReqRespEncoder(config, ReqRespEncoding.SSZ);
+    this.encoder = new ReqRespEncoder(config, ReqRespEncoding.SSZ_SNAPPY);
     this.responseListener = new ResponseEventListener();
   }
   public async start(): Promise<void> {

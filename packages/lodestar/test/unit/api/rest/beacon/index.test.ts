@@ -61,12 +61,12 @@ describe("Test beacon rest api", function () {
   });
 
   it("should return sync status", async function () {
-    beaconApi.getSyncingStatus.resolves(true);
+    beaconApi.getSyncingStatus.resolves(false);
     const response = await supertest(restApi.server.server)
       .get("/node/syncing")
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.is_syncing).to.be.true;
+    expect(response.body.is_syncing).to.be.false;
   });
 
   it("should get block stream",  function (done) {

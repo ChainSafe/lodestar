@@ -15,7 +15,7 @@ import {ENR, Discv5Discovery} from "@chainsafe/discv5";
 
 export interface ILibp2pOptions {
   peerInfo: PeerInfo;
-  autoDial?: boolean;
+  autoDial: boolean;
   discv5: {
     bindAddr: string;
     enr: ENR;

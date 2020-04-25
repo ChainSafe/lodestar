@@ -14,9 +14,13 @@ import {IBeaconDb} from "../db/api";
 import {AttestationCollector} from "./utils";
 
 export interface IBeaconSync extends IService {
-  getSyncStatus(): SyncingStatus|null;
+  getSyncStatus(): Promise<SyncingStatus|null>;
   isSynced(): boolean;
   collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void;
+}
+
+export interface ISyncModule {
+  getHighestBlock(): Slot;
 }
 
 export interface ISlotRange {
