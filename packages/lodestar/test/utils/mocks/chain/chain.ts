@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 
-import {Number64, Uint16, Uint64, ForkDigest} from "@chainsafe/lodestar-types";
+import {Number64, Uint16, Uint64, ForkDigest, ENRForkID} from "@chainsafe/lodestar-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {BeaconState} from "@chainsafe/lodestar-types";
@@ -47,6 +47,10 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   }
 
   public async initializeBeaconChain(): Promise<void> {
+    return undefined;
+  }
+
+  public async getENRForkID(): Promise<ENRForkID> {
     return undefined;
   }
 

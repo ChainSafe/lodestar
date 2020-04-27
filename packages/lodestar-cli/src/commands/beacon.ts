@@ -16,10 +16,13 @@ import {getTomlConfig} from "../lodestar/util/file";
 import {createNodeJsLibp2p, loadPeerIdFromJsonFile} from "@chainsafe/lodestar/lib/network/nodejs";
 import {ENR} from "@chainsafe/discv5";
 import {initBLS} from "@chainsafe/bls";
+import fs from "fs";
+import {load} from "js-yaml";
 
 interface IBeaconCommandOptions {
   [key: string]: string;
   peerId: string;
+  forkFile?: string;
   configFile?: string;
   preset?: string;
   loggingLevel?: string;
@@ -52,7 +55,7 @@ export class BeaconNodeCommand implements ICliCommand {
     generateCommanderOptions(command, BeaconNodeOptions);
   }
 
-  public async action(cmdOptions: IBeaconCommandOptions, logger: ILogger): Promise<void> {
+  public async action(cmdOptions: IBeaconCommandOptions, logger: ILogger): Promise<BeaconNode> {
     let nodeOptions: Partial<IBeaconNodeOptions> = {};
     //find better place for this once this cli is refactored
     await initBLS();
@@ -81,7 +84,12 @@ export class BeaconNodeCommand implements ICliCommand {
     const libp2p = await createNodeJsLibp2p(peerId, libp2pOpt);
     const config = cmdOptions.preset === "minimal" ? minimalConfig : mainnetConfig;
     // nodejs will create EthersEth1Notifier by default
+    if (cmdOptions.forkFile) {
+      // @ts-ignore
+      config.params.ALL_FORKS = load(fs.readFileSync(cmdOptions.forkFile));
+    }
     this.node = new BeaconNode(nodeOptions, {config, logger, libp2p});
     await this.node.start();
+    return this.node;
   }
 }

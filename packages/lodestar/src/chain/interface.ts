@@ -10,6 +10,7 @@ import {
   Uint16,
   Uint64,
   ForkDigest,
+  ENRForkID,
 } from "@chainsafe/lodestar-types";
 
 import {ILMDGHOST} from "./forkChoice";
@@ -23,6 +24,8 @@ export interface IChainEvents {
   processedAttestation: (attestation: Attestation) => void;
   justifiedCheckpoint: (checkpoint: Checkpoint) => void;
   finalizedCheckpoint: (checkpoint: Checkpoint) => void;
+  forkDigestChanged: () => void;
+  forkDigest: (forkDigest: ForkDigest) => void;
 }
 
 export type ChainEventEmitter = StrictEventEmitter<EventEmitter, IChainEvents>;
@@ -46,6 +49,11 @@ export interface IBeaconChain extends ChainEventEmitter {
    * Stop beacon chain processing
    */
   stop(): Promise<void>;
+
+  /**
+   * Return ENRForkID.
+   */
+  getENRForkID(): Promise<ENRForkID>;
 
   getHeadState(): Promise<BeaconState|null>;
 

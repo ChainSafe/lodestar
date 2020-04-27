@@ -23,6 +23,14 @@ export const ForkData = (ssz: IBeaconSSZTypes): ContainerType => new ContainerTy
   },
 });
 
+export const ENRForkID = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    forkDigest: ssz.ForkDigest,
+    nextForkVersion: ssz.Version,
+    nextForkEpoch: ssz.Epoch,
+  },
+});
+
 export const Checkpoint = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
     epoch: ssz.Epoch,
