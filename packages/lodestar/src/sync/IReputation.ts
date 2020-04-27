@@ -2,6 +2,7 @@
  * @module sync
  */
 import {Status, Metadata} from "@chainsafe/lodestar-types";
+import {ATTESTATION_SUBNET_COUNT} from "../constants";
 
 export interface IReputation {
   latestStatus: Status | null;
@@ -14,6 +15,7 @@ export interface IReputationStore {
   remove(peerId: string): void;
   get(peerId: string): IReputation;
   getFromPeerInfo(peer: PeerInfo): IReputation;
+  getPeerIdsBySubnet(subnetStr: string): string[];
 }
 
 export class ReputationStore implements IReputationStore {
@@ -39,5 +41,22 @@ export class ReputationStore implements IReputationStore {
 
   public getFromPeerInfo(peer: PeerInfo): IReputation {
     return this.get(peer.id.toB58String());
+  }
+
+  public getPeerIdsBySubnet(subnetStr: string): string[] {
+    if (!new RegExp("^\\d+$").test(subnetStr)) {
+      throw new Error(`Invalid subnet ${subnetStr}`);
+    }
+    const subnet = parseInt(subnetStr);
+    if (subnet < 0 || subnet >= ATTESTATION_SUBNET_COUNT) {
+      throw new Error(`Invalid subnet ${subnetStr}`);
+    }
+    const peerIds = [];
+    for (const [peerId, rep] of this.reputations) {
+      if (rep.latestMetadata && rep.latestMetadata.attnets[subnet]) {
+        peerIds.push(peerId);
+      }
+    }
+    return peerIds;
   }
 }

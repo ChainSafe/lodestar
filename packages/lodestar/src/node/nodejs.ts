@@ -105,7 +105,7 @@ export class BeaconNode {
       config,
       logger: logger.child(this.conf.logger.network)
     });
-    this.network = new Libp2pNetwork(this.conf.network, {
+    this.network = new Libp2pNetwork(this.conf.network, this.reps, {
       config,
       libp2p,
       logger: logger.child(this.conf.logger.network),
@@ -132,7 +132,7 @@ export class BeaconNode {
         sync: this.sync,
         network: this.network,
         chain: this.chain,
-        eth1: this.eth1
+        eth1: this.eth1,
       }
     );
     this.chores = new TasksService(

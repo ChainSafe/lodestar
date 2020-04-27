@@ -4,11 +4,11 @@ import {BeaconBlocksByRangeRequest, SignedBeaconBlock, Slot, Status} from "@chai
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {ReqResp} from "../../../src/network/reqResp";
 import {afterEach, beforeEach, describe, it} from "mocha";
-import {createNode} from "./util";
 import {NodejsNode} from "../../../src/network/nodejs";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {generateEmptySignedBlock} from "../../utils/block";
+import {createNode} from "../../utils/network";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 

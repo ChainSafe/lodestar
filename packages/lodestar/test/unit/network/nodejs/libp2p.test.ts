@@ -1,6 +1,6 @@
 import {assert} from "chai";
 import {NodejsNode} from "../../../../src/network/nodejs";
-import {createNode} from "../util";
+import {createNode} from "../../../utils/network";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 

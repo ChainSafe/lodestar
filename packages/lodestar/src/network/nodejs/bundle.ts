@@ -21,6 +21,7 @@ export interface ILibp2pOptions {
     enr: ENR;
     bootEnrs?: ENR[];
   };
+  peerDiscovery?: (typeof Bootstrap | typeof MDNS | typeof Discv5Discovery)[];
   bootnodes?: string[];
 }
 
@@ -32,7 +33,7 @@ export class NodejsNode extends LibP2p {
         connEncryption: [NOISE, SECIO],
         transport: [TCP],
         streamMuxer: [Mplex],
-        peerDiscovery: [
+        peerDiscovery: options.peerDiscovery || [
           Bootstrap,
           MDNS,
           Discv5Discovery,

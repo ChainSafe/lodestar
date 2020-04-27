@@ -4,7 +4,9 @@ import {
   getGossipTopic,
   getSubnetFromAttestationSubnetTopic,
   isAttestationSubnetTopic,
-  getGossipEvent
+  topicToGossipEvent,
+  mapGossipEvent,
+  getAttestationSubnetEvent
 } from "../../../../src/network/gossip/utils";
 import {GossipEvent} from "../../../../src/network/gossip/constants";
 import {expect} from "chai";
@@ -13,9 +15,9 @@ import {ATTESTATION_SUBNET_COUNT} from "../../../../src/constants";
 
 const forkValue = Buffer.alloc(4);
 describe("gossip utils", function () {
-   
+
   describe("getGossipTopic", function () {
-      
+
     it("should get gossip topic with default encoding", function () {
       const topic = getGossipTopic(GossipEvent.BLOCK, forkValue);
       expect(topic).to.be.equal("/eth2/00000000/beacon_block/ssz");
@@ -40,7 +42,7 @@ describe("gossip utils", function () {
       const topic = getAttestationSubnetTopic(generateEmptyAttestation(), forkValue);
       expect(topic).to.be.equal("/eth2/00000000/committee_index0_beacon_attestation/ssz");
     });
-      
+
   });
 
   describe("isAttestationSubnetTopic", () => {
@@ -62,14 +64,27 @@ describe("gossip utils", function () {
     });
   });
 
-  describe("getGossipEvent", () => {
-    it("should get correct GossipEvent", () => {
-      expect(getGossipEvent(getGossipTopic(GossipEvent.BLOCK, forkValue))).to.be.equal(GossipEvent.BLOCK);
-      expect(getGossipEvent(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkValue))).to.be.equal(GossipEvent.AGGREGATE_AND_PROOF);
-      expect(getGossipEvent(getGossipTopic(GossipEvent.ATTESTATION, forkValue))).to.be.equal(GossipEvent.ATTESTATION);
-      expect(getGossipEvent(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, forkValue))).to.be.equal(GossipEvent.VOLUNTARY_EXIT);
-      expect(getGossipEvent(getGossipTopic(GossipEvent.PROPOSER_SLASHING, forkValue))).to.be.equal(GossipEvent.PROPOSER_SLASHING);
-      expect(getGossipEvent(getGossipTopic(GossipEvent.ATTESTER_SLASHING, forkValue))).to.be.equal(GossipEvent.ATTESTER_SLASHING);
+  describe("mapGossipEvent", () => {
+    it("should get correct GossipEvents from IGossipEvent", () => {
+      expect(mapGossipEvent(getAttestationSubnetEvent(0))).to.be.equal(GossipEvent.ATTESTATION_SUBNET);
+      expect(mapGossipEvent(getAttestationSubnetEvent(1))).to.be.equal(GossipEvent.ATTESTATION_SUBNET);
+      expect(mapGossipEvent(GossipEvent.BLOCK)).to.be.equal(GossipEvent.BLOCK);
+      expect(mapGossipEvent(GossipEvent.ATTESTATION)).to.be.equal(GossipEvent.ATTESTATION);
+      expect(mapGossipEvent(GossipEvent.AGGREGATE_AND_PROOF)).to.be.equal(GossipEvent.AGGREGATE_AND_PROOF);
+      expect(mapGossipEvent(GossipEvent.VOLUNTARY_EXIT)).to.be.equal(GossipEvent.VOLUNTARY_EXIT);
+      expect(mapGossipEvent(GossipEvent.PROPOSER_SLASHING)).to.be.equal(GossipEvent.PROPOSER_SLASHING);
+      expect(mapGossipEvent(GossipEvent.ATTESTER_SLASHING)).to.be.equal(GossipEvent.ATTESTER_SLASHING);
+    });
+  });
+
+  describe("topicToGossipEvent", () => {
+    it("should get correct GossipEvent from topic", () => {
+      expect(topicToGossipEvent(getGossipTopic(GossipEvent.BLOCK, forkValue))).to.be.equal(GossipEvent.BLOCK);
+      expect(topicToGossipEvent(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkValue))).to.be.equal(GossipEvent.AGGREGATE_AND_PROOF);
+      expect(topicToGossipEvent(getGossipTopic(GossipEvent.ATTESTATION, forkValue))).to.be.equal(GossipEvent.ATTESTATION);
+      expect(topicToGossipEvent(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, forkValue))).to.be.equal(GossipEvent.VOLUNTARY_EXIT);
+      expect(topicToGossipEvent(getGossipTopic(GossipEvent.PROPOSER_SLASHING, forkValue))).to.be.equal(GossipEvent.PROPOSER_SLASHING);
+      expect(topicToGossipEvent(getGossipTopic(GossipEvent.ATTESTER_SLASHING, forkValue))).to.be.equal(GossipEvent.ATTESTER_SLASHING);
     });
   });
 
@@ -86,5 +101,5 @@ describe("gossip utils", function () {
       }
     });
   });
-    
+
 });
