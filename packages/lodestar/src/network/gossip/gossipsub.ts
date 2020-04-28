@@ -10,7 +10,7 @@ import {
   getSubnetFromAttestationSubnetTopic,
   isAttestationSubnetTopic,
   normalizeInRpcMessage,
-  getGossipEvent
+  topicToGossipEvent
 } from "./utils";
 import {GossipEvent} from "./constants";
 import {GOSSIP_MAX_SIZE} from "../../constants";
@@ -98,7 +98,7 @@ export class LodestarGossipsub extends Gossipsub {
     }
 
     let result: Function;
-    const gossipEvent = getGossipEvent(topic);
+    const gossipEvent = topicToGossipEvent(topic);
     switch(gossipEvent) {
       case GossipEvent.BLOCK:
         result = this.validator.isValidIncomingBlock;
@@ -119,7 +119,7 @@ export class LodestarGossipsub extends Gossipsub {
         result =  this.validator.isValidIncomingVoluntaryExit;
         break;
       default:
-        throw new Error(`No validator for topic ${topic}`); 
+        throw new Error(`No validator for topic ${topic}`);
     }
     return result as GossipMessageValidatorFn;
   }
@@ -131,7 +131,7 @@ export class LodestarGossipsub extends Gossipsub {
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let objType: Type<any>;
-    const gossipEvent = getGossipEvent(topic);
+    const gossipEvent = topicToGossipEvent(topic);
     switch(gossipEvent) {
       case GossipEvent.BLOCK:
         objType = this.config.types.SignedBeaconBlock;
@@ -152,7 +152,7 @@ export class LodestarGossipsub extends Gossipsub {
         objType = this.config.types.SignedVoluntaryExit;
         break;
       default:
-        throw new Error(`Don't know how to deserialize object received under topic ${topic}`); 
+        throw new Error(`Don't know how to deserialize object received under topic ${topic}`);
     }
     return {object: objType.deserialize(message.data)};
   }

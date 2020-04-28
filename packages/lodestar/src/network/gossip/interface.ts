@@ -22,14 +22,16 @@ import {IBeaconChain} from "../../chain";
 import {ForkDigest} from "@chainsafe/lodestar-types";
 
 export interface IGossipEvents {
+  // attestation subnet event is dynamic following this signature
+  // [attSubnetTopic: string]: (attestationSubnet: {attestation: Attestation; subnet: number}) => void;
   [GossipEvent.BLOCK]: (signedBlock: SignedBeaconBlock) => void;
-  [GossipEvent.ATTESTATION_SUBNET]: (attestationSubnet: {attestation: Attestation; subnet: number}) => void;
   [GossipEvent.ATTESTATION]: (attestation: Attestation) => void;
   [GossipEvent.AGGREGATE_AND_PROOF]: (attestation: SignedAggregateAndProof) => void;
   [GossipEvent.VOLUNTARY_EXIT]: (voluntaryExit: SignedVoluntaryExit) => void;
   [GossipEvent.PROPOSER_SLASHING]: (proposerSlashing: ProposerSlashing) => void;
   [GossipEvent.ATTESTER_SLASHING]: (attesterSlashing: AttesterSlashing) => void;
   ["gossipsub:heartbeat"]: () => void;
+
 }
 export type GossipEventEmitter = StrictEventEmitter<EventEmitter, IGossipEvents>;
 
@@ -39,6 +41,7 @@ export interface IGossipModules {
   logger: ILogger;
   validator: IGossipMessageValidator;
   chain: IBeaconChain;
+  pubsub?: IGossipSub;
 }
 
 export interface IGossipSub extends EventEmitter {
@@ -87,7 +90,7 @@ export interface IGossipMessageValidator {
   isValidIncomingAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<boolean>;
 }
 
-export type GossipObject = SignedBeaconBlock | Attestation | SignedAggregateAndProof | 
+export type GossipObject = SignedBeaconBlock | Attestation | SignedAggregateAndProof |
 SignedVoluntaryExit | ProposerSlashing | AttesterSlashing;
 
 export type GossipMessageValidatorFn = (message: GossipObject, subnet?: number) => Promise<boolean>;

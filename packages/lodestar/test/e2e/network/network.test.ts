@@ -1,8 +1,7 @@
 import {expect} from "chai";
 import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {Libp2pNetwork} from "../../../src/network";
-import {createNode} from "../../unit/network/util";
+import {Libp2pNetwork, createPeerId} from "../../../src/network";
 import {generateEmptyAttestation, generateEmptySignedAggregateAndProof} from "../../utils/attestation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -12,10 +11,15 @@ import {sleep} from "../../../src/util/sleep";
 import Libp2p from "libp2p";
 import sinon from "sinon";
 import {GossipMessageValidator} from "../../../src/network/gossip/validator";
-import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock, Attestation} from "@chainsafe/lodestar-types";
 import {generateState} from "../../utils/state";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {IBeaconChain} from "../../../src/chain";
+import PeerId from "peer-id";
+import {ENR, Discv5Discovery} from "@chainsafe/discv5";
+import {createNode} from "../../utils/network";
+import {ReputationStore} from "../../../src/sync/IReputation";
+import {getAttestationSubnetEvent} from "../../../src/network/gossip/utils";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -31,6 +35,9 @@ const opts: INetworkOptions = {
 describe("[network] network", function () {
   this.timeout(5000);
   let netA: Libp2pNetwork, netB: Libp2pNetwork;
+  let peerIdB: PeerId;
+  let libP2pA: LibP2p;
+  let libP2pB: LibP2p;
   const logger: ILogger = new WinstonLogger();
   logger.silent = true;
   const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
@@ -55,14 +62,13 @@ describe("[network] network", function () {
       state,
       config
     });
-    netA = new Libp2pNetwork(
-      opts,
-      {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator, chain}
-    );
-    netB = new Libp2pNetwork(
-      opts,
-      {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator, chain}
-    );
+    peerIdB = await createPeerId();
+    [libP2pA, libP2pB] = await Promise.all([
+      createNode(multiaddr) as unknown as Libp2p,
+      createNode(multiaddr, peerIdB) as unknown as Libp2p
+    ]);
+    netA = new Libp2pNetwork(opts, new ReputationStore(), {config, libp2p: libP2pA, logger, metrics, validator, chain});
+    netB = new Libp2pNetwork(opts, new ReputationStore(), {config, libp2p: libP2pB, logger, metrics, validator, chain});
     await Promise.all([
       netA.start(),
       netB.start(),
@@ -210,7 +216,7 @@ describe("[network] network", function () {
     await netB.gossip.publishAggregatedAttestation(generateEmptySignedAggregateAndProof());
     await received;
   });
-  it("should receive shard attestations on subscription", async function () {
+  it("should receive committee attestations on subscription", async function () {
     const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
@@ -218,9 +224,11 @@ describe("[network] network", function () {
     await netA.connect(netB.peerInfo);
     await connected;
     const forkDigest = chain.currentForkDigest;
+    let callback: (attestation:  {attestation: Attestation; subnet: number}) => void;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
       netA.gossip.subscribeToAttestationSubnet(forkDigest, 0, resolve);
+      callback = resolve;
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     const attestation = generateEmptyAttestation();
@@ -228,5 +236,29 @@ describe("[network] network", function () {
     validator.isValidIncomingCommitteeAttestation.resolves(true);
     await netB.gossip.publishCommiteeAttestation(attestation);
     await received;
+    expect(netA.gossip.listenerCount(getAttestationSubnetEvent(0))).to.be.equal(1);
+    netA.gossip.unsubscribeFromAttestationSubnet(forkDigest, "0", callback);
+    expect(netA.gossip.listenerCount(getAttestationSubnetEvent(0))).to.be.equal(0);
+  });
+  it("should connect to new peer by subnet", async function() {
+    const subnet = 10;
+    netB.metadata.attnets[subnet] = true;
+    const connected = Promise.all([
+      new Promise((resolve) => netA.on("peer:connect", resolve)),
+      new Promise((resolve) => netB.on("peer:connect", resolve)),
+    ]);
+    netB.reqResp.once("request", (peerId, method, requestId, request) => {
+      netB.reqResp.sendResponse(requestId, null, [netB.metadata]);
+    });
+
+    const enrB = ENR.createFromPeerId(peerIdB);
+    enrB.set("attnets", Buffer.from(config.types.AttestationSubnets.serialize(netB.metadata.attnets)));
+    enrB.multiaddrTCP = libP2pB.peerInfo.multiaddrs.toArray()[0];
+    // let discv5 of A know enr of B
+    const discovery: Discv5Discovery = libP2pA._discovery.get("discv5") as Discv5Discovery;
+    discovery.discv5.addEnr(enrB);
+    await netA.searchSubnetPeers(subnet.toString());
+    await connected;
+    expect(netA.getPeers().length).to.be.equal(1);
   });
 });

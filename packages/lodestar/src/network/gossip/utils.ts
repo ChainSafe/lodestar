@@ -9,7 +9,7 @@ import {GossipEvent, AttestationSubnetRegExp, GossipTopicRegExp} from "./constan
 import {CommitteeIndex} from "@chainsafe/lodestar-types/lib";
 import {IGossipMessage} from "libp2p-gossipsub";
 import {utils} from "libp2p-pubsub";
-import {ILodestarGossipMessage} from "./interface";
+import {ILodestarGossipMessage, IGossipEvents} from "./interface";
 import {hash, toHexString} from "@chainsafe/ssz";
 
 export function getGossipTopic(
@@ -41,7 +41,14 @@ export function getAttestationSubnet(attestation: Attestation): string {
   return getCommitteeIndexSubnet(attestation.data.index);
 }
 
-export function getGossipEvent(topic: string): GossipEvent {
+export function mapGossipEvent(event: keyof IGossipEvents | string): GossipEvent {
+  if (isAttestationSubnetEvent(event)) {
+    return GossipEvent.ATTESTATION_SUBNET;
+  }
+  return event as GossipEvent;
+}
+
+export function topicToGossipEvent(topic: string): GossipEvent {
   const groups = topic.match(GossipTopicRegExp);
   const topicName = groups[3] as keyof typeof GossipEvent;
   return topicName as GossipEvent;
@@ -49,6 +56,14 @@ export function getGossipEvent(topic: string): GossipEvent {
 
 export function getCommitteeIndexSubnet(committeeIndex: CommitteeIndex): string {
   return String(committeeIndex % ATTESTATION_SUBNET_COUNT);
+}
+
+export function getAttestationSubnetEvent(subnet: number): string {
+  return GossipEvent.ATTESTATION_SUBNET + "_" + subnet;
+}
+
+export function isAttestationSubnetEvent(event: keyof IGossipEvents | string): boolean {
+  return event.toString().startsWith(GossipEvent.ATTESTATION_SUBNET);
 }
 
 export function isAttestationSubnetTopic(topic: string): boolean {

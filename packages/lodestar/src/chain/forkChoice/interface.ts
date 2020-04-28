@@ -4,10 +4,11 @@
  */
 
 import {Gwei, ValidatorIndex, Checkpoint, Slot} from "@chainsafe/lodestar-types";
+import {IBeaconClock} from "../clock/interface";
 
 
 export interface ILMDGHOST {
-  start(genesisTime: number): Promise<void>;
+  start(genesisTime: number, clock: IBeaconClock): Promise<void>;
   stop(): Promise<void>;
   addBlock(info: BlockChainInfo): void;
   addAttestation(blockRootBuf: Uint8Array, attester: ValidatorIndex, weight: Gwei): void;

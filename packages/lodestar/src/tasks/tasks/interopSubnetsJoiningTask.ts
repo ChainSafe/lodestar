@@ -18,7 +18,7 @@ export class InteropSubnetsJoiningTask implements ITask {
   private readonly chain: IBeaconChain;
 
   private timers: (NodeJS.Timeout)[] = [];
-  
+
   public constructor(config: IBeaconConfig, modules: IInteropSubnetsJoiningModules) {
     this.config = config;
     this.network = modules.network;
@@ -31,7 +31,7 @@ export class InteropSubnetsJoiningTask implements ITask {
       this.subscribeToRandomSubnet(forkDigest);
     }
   }
-  
+
   public async stop(): Promise<void> {
     this.timers.forEach((timer) => clearTimeout(timer));
   }

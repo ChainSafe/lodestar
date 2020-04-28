@@ -43,6 +43,7 @@ import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import assert from "assert";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {IBeaconSync} from "../../../sync";
+import {getCommitteeIndexSubnet} from "../../../network/gossip/utils";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -221,6 +222,8 @@ export class ValidatorApi implements IValidatorApi {
       slot,
       committeeIndex
     );
+    const subnet = getCommitteeIndexSubnet(committeeIndex);
+    await this.network.searchSubnetPeers(subnet);
   }
 
 }

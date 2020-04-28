@@ -39,5 +39,5 @@ export async function createNodeJsLibp2p(
   const multiaddrs = network.multiaddrs || defaults.multiaddrs;
   const bootnodes = network.bootnodes || defaults.bootnodes;
   const peerInfo = await initializePeerInfo(peerId, multiaddrs);
-  return new NodejsNode({peerInfo, bootnodes: bootnodes, discv5: network.discv5});
+  return new NodejsNode({peerInfo, autoDial: true, bootnodes: bootnodes, discv5: network.discv5});
 }
