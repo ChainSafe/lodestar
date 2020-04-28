@@ -16,7 +16,6 @@ export enum Bucket {
   invalidBlock, // bad block
   mainChain, // slot -> blockHash
   chainInfo, // Key -> Number64 | stateHash | blockHash
-  validator,
   depositData, // index -> DepositData
   exit, // hash -> VoluntaryExit
   proposerSlashing, // hash -> ProposerSlashing
@@ -25,11 +24,6 @@ export enum Bucket {
   // validator
   lastProposedBlock,
   proposedAttestations,
-}
-
-export enum BlockMapping {
-  slotToRoot,
-  rootToSlot
 }
 
 export enum Key {
@@ -41,7 +35,6 @@ export enum Key {
 
   finalizedBlock,
   justifiedBlock,
-  progressiveMerkleTree,
 }
 
 /**
