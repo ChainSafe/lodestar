@@ -2,9 +2,10 @@ import {Argv} from "yargs";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 
 import {parseArgs} from "../../../../util";
-import {beaconRunOptions, IBeaconArgs} from "../../options";
+import {IBeaconArgs} from "../../options";
 import {readBeaconConfig} from "../../config";
 
+import {beaconRunOptions} from "./options";
 import {run} from "./run";
 
 export const command = "run";

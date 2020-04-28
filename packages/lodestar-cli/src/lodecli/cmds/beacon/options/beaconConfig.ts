@@ -9,6 +9,7 @@ export interface IBeaconConfigArgs extends IBeaconDirArgs {
 
 export const config = (args: IBeaconDirArgs): Options => ({
   default: path.join(args.beaconDir, "beacon.config.json"),
+  alias: ["configFile", "config"],
   description: "Beacon node configuration file",
   type: "string",
   normalize: true,

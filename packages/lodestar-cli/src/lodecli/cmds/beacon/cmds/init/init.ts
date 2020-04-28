@@ -16,10 +16,10 @@ export async function init(args: Arguments<IBeaconArgs>): Promise<void> {
   // initialize beacon configuration file
   await initBeaconConfig(args.config, args);
   // initialize beacon db path
-  await mkdir(args.dbPath);
+  await mkdir(args.dbDir);
   // initialize peer id
-  await initPeerId(args.network.peerIdPath);
-  const peerId = await readPeerId(args.network.peerIdPath);
+  await initPeerId(args.network.peerIdFile);
+  const peerId = await readPeerId(args.network.peerIdFile);
   // initialize local enr
-  await initEnr(args.network.enrPath, peerId);
+  await initEnr(args.network.enrFile, peerId);
 }

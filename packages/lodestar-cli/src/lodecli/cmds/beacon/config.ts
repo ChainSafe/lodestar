@@ -3,7 +3,8 @@ import {Json} from "@chainsafe/ssz";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 
 import {readFileSync, writeFile, getSubObject, setSubObject} from "../../util";
-import {beaconRunOptions, mergeBeaconOptions, IBeaconArgs} from "./options";
+import {mergeBeaconOptions, IBeaconArgs} from "./options";
+import {beaconRunOptions} from "./cmds/run/options";
 
 export function createBeaconConfig(args: IBeaconArgs): Partial<IBeaconNodeOptions> {
   const cliDefaults = mergeBeaconOptions(_yargs().default(args))

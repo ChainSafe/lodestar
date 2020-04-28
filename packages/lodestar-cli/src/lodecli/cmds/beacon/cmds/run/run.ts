@@ -19,8 +19,8 @@ export async function run(options: Arguments<IBeaconArgs & Partial<IBeaconNodeOp
 
   options = deepmerge(defaultOptions, options) as Arguments<IBeaconArgs & Partial<IBeaconNodeOptions>>;
 
-  const peerId = await readPeerId(options.network.peerIdPath);
-  options.network.discv5.enr = await readEnr(options.network.enrPath);
+  const peerId = await readPeerId(options.network.peerIdFile);
+  options.network.discv5.enr = await readEnr(options.network.enrFile);
 
   const config = options.chain.name === "mainnet" ? mainnetConfig : mainnetConfig;
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
@@ -34,7 +34,7 @@ export async function run(options: Arguments<IBeaconArgs & Partial<IBeaconNodeOp
 
   async function cleanup(): Promise<void> {
     await node.stop();
-    await writeEnr(options.network.enrPath, options.network.discv5.enr, peerId);
+    await writeEnr(options.network.enrFile, options.network.discv5.enr, peerId);
   }
 
   process.on("SIGTERM", cleanup);
