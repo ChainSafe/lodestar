@@ -13,7 +13,7 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST, StatefulDagLMDGHOST} from "../../../../src/chain/forkChoice";
 import {collect} from "./utils";
 import {expect} from "chai";
-import {IBlockProcessJob} from "../../../../src/chain";
+import {IBlockProcessJob, ChainEventEmitter, BeaconChain} from "../../../../src/chain";
 import {BlockPool} from "../../../../src/chain/blocks/pool";
 import {processBlock} from "../../../../src/chain/blocks/process";
 import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition";
@@ -32,6 +32,7 @@ describe("block process stream", function () {
     let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
     let blockPoolStub: SinonStubbedInstance<BlockPool>;
     let stateTransitionStub: SinonStub;
+    let eventBusStub: SinonStubbedInstance<ChainEventEmitter>;
 
     const sandbox = sinon.createSandbox();
 
@@ -49,7 +50,8 @@ describe("block process stream", function () {
         dbStub.depositDataRootList = depositDataRootListDbStub as unknown as DepositDataRootListRepository;
         blockPoolStub = sinon.createStubInstance(BlockPool);
         forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
-        stateTransitionStub = sandbox.stub(stateTransitionUtils, "stateTransition")
+        stateTransitionStub = sandbox.stub(stateTransitionUtils, "stateTransition");
+        eventBusStub = sinon.createStubInstance(BeaconChain);
     });
 
     afterEach(function () {
@@ -64,7 +66,7 @@ describe("block process stream", function () {
         blockDbStub.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(null);
         const result = await pipe(
             [receivedJob],
-            processBlock(config, dbStub, sinon.createStubInstance(WinstonLogger), forkChoiceStub, blockPoolStub as unknown as BlockPool),
+            processBlock(config, dbStub, sinon.createStubInstance(WinstonLogger), forkChoiceStub, blockPoolStub as unknown as BlockPool, eventBusStub),
             collect
         );
         expect(result).to.have.length(0);
@@ -81,7 +83,7 @@ describe("block process stream", function () {
         stateDbStub.get.resolves(null);
         const result = await pipe(
             [receivedJob],
-            processBlock(config, dbStub, sinon.createStubInstance(WinstonLogger), forkChoiceStub, blockPoolStub as unknown as BlockPool),
+            processBlock(config, dbStub, sinon.createStubInstance(WinstonLogger), forkChoiceStub, blockPoolStub as unknown as BlockPool, eventBusStub),
             collect
         );
         expect(result).to.have.length(0);
@@ -98,7 +100,7 @@ describe("block process stream", function () {
         stateTransitionStub.throws();
         const result = await pipe(
             [receivedJob],
-            processBlock(config, dbStub, sinon.createStubInstance(WinstonLogger), forkChoiceStub, blockPoolStub as unknown as BlockPool),
+            processBlock(config, dbStub, sinon.createStubInstance(WinstonLogger), forkChoiceStub, blockPoolStub as unknown as BlockPool, eventBusStub),
             collect
         );
         expect(result).to.have.length(0);
@@ -118,7 +120,7 @@ describe("block process stream", function () {
         forkChoiceStub.head.returns(Buffer.alloc(32, 1));
         const result = await pipe(
             [receivedJob],
-            processBlock(config, dbStub, sinon.createStubInstance(WinstonLogger), forkChoiceStub, blockPoolStub as unknown as BlockPool),
+            processBlock(config, dbStub, sinon.createStubInstance(WinstonLogger), forkChoiceStub, blockPoolStub as unknown as BlockPool, eventBusStub),
             collect
         );
         expect(result).to.have.length(1);
@@ -145,7 +147,7 @@ describe("block process stream", function () {
         blockDbStub.get.resolves(receivedJob.signedBlock);
         const result = await pipe(
             [receivedJob],
-            processBlock(config, dbStub, sinon.createStubInstance(WinstonLogger), forkChoiceStub, blockPoolStub as unknown as BlockPool),
+            processBlock(config, dbStub, sinon.createStubInstance(WinstonLogger), forkChoiceStub, blockPoolStub as unknown as BlockPool, eventBusStub),
             collect
         );
         expect(result).to.have.length(1);

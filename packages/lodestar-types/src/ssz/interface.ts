@@ -34,6 +34,7 @@ export interface IBeaconSSZTypes {
   // misc
   Fork: ContainerType<t.Fork>;
   ForkData: ContainerType<t.ForkData>;
+  ENRForkID: ContainerType<t.ENRForkID>;
   Checkpoint: ContainerType<t.Checkpoint>;
   Validator: ContainerType<t.Validator>;
   AttestationData: ContainerType<t.AttestationData>;
@@ -110,6 +111,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   // misc
   "Fork",
   "ForkData",
+  "ENRForkID",
   "Checkpoint",
   "Validator",
   "AttestationData",

@@ -1,15 +1,21 @@
 import {IBlockProcessJob} from "../chain";
 import {BeaconState, Root, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {stateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {stateTransition, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST} from "../forkChoice";
 import {BlockPool} from "./pool";
+import {ChainEventEmitter} from "..";
 
 export function processBlock(
-  config: IBeaconConfig, db: IBeaconDb, logger: ILogger, forkChoice: ILMDGHOST, pool: BlockPool
+  config: IBeaconConfig,
+  db: IBeaconDb,
+  logger: ILogger,
+  forkChoice: ILMDGHOST,
+  pool: BlockPool,
+  eventBus: ChainEventEmitter,
 ): (source: AsyncIterable<IBlockProcessJob>) => AsyncGenerator<{block: SignedBeaconBlock; postState: BeaconState}> {
   return (source) => {
     return (async function*() {
@@ -32,6 +38,12 @@ export function processBlock(
         const newChainHeadRoot = await updateForkChoice(config, db, forkChoice, job.signedBlock, newState);
         if(newChainHeadRoot) {
           logger.important(`Fork choice changed head to 0x${toHexString(newChainHeadRoot)}`);
+          if(!config.types.Fork.equals(preState.fork, newState.fork)) {
+            const epoch = computeEpochAtSlot(config, newState.slot);
+            const currentVersion = newState.fork.currentVersion;
+            logger.important(`Fork version changed to ${currentVersion} at slot ${newState.slot} and epoch ${epoch}`);
+            eventBus.emit("forkDigestChanged");
+          }
           await updateDepositMerkleTree(config, db, newState);
         }
         pool.onProcessedBlock(job.signedBlock);

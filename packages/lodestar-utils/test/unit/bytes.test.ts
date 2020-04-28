@@ -2,10 +2,11 @@ import {assert, expect} from "chai";
 import {describe, it} from "mocha";
 import {intToBytes, bytesToInt} from "../../src";
 
-describe("intToBytes", () => {                                    
+describe("intToBytes", () => {
   const zeroedArray = (length: number): number[] => Array.from({length}, () => 0);
   const testCases: { input: [bigint | number, number]; output: Buffer }[] = [
-    {input: [255, 1], output: Buffer.from([255])},                                        
+    {input: [255, 1], output: Buffer.from([255])},
+    {input: [1, 4], output: Buffer.from([1, 0, 0, 0])},
     {input: [255n, 1], output: Buffer.from([255])},
     {input: [65535, 2], output: Buffer.from([255, 255])},
     {input: [65535n, 2], output: Buffer.from([255, 255])},
@@ -31,7 +32,7 @@ describe("intToBytes", () => {
   }
 });
 
-describe.only("bytesToInt", () => {
+describe("bytesToInt", () => {
   const testCases: { input: Buffer; output: number}[] = [
     {input: Buffer.from([3]), output: 3},
     {input: Buffer.from([20, 0]), output: 20},
