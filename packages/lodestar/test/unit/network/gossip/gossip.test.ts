@@ -8,7 +8,7 @@ import sinon from "sinon";
 import {NodejsNode} from "../../../../src/network/nodejs";
 import {GossipMessageValidator} from "../../../../src/network/gossip/validator";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {IBeaconChain} from "../../../../src/chain/interface";
+import {IBeaconChain} from "../../../../src/chain";
 import {expect} from "chai";
 import {GossipEvent} from "../../../../src/network/gossip/constants";
 import {getGossipTopic} from "../../../../src/network/gossip/utils";
@@ -18,6 +18,7 @@ import {MockGossipSub} from "../../../utils/mocks/gossipsub";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateState} from "../../../utils/state";
 import {generateEmptySignedBlock} from "../../../utils/block";
+import {GossipEncoding} from "../../../../src/network/gossip/encoding";
 
 describe("Network Gossip", function() {
   let gossip: Gossip;
@@ -40,6 +41,7 @@ describe("Network Gossip", function() {
     metadata = new MetadataController({enr}, {config});
     const libp2p = sandbox.createStubInstance(NodejsNode);
     const logger = new WinstonLogger();
+    logger.silent = true;
     const validator = sandbox.createStubInstance(GossipMessageValidator);
     chain = new MockBeaconChain({
       genesisTime: 0,
@@ -65,7 +67,15 @@ describe("Network Gossip", function() {
       gossip.subscribeToAttestationSubnet(chain.currentForkDigest, "1", anotherSpy);
       gossip.subscribeToAttestationSubnet(chain.currentForkDigest, "2", spy);
       const attestation = generateEmptyAttestation();
-      pubsub.emit(getGossipTopic(GossipEvent.ATTESTATION_SUBNET, chain.currentForkDigest, "ssz", new Map([["subnet", "1"]])), attestation);
+      pubsub.emit(
+        getGossipTopic(
+          GossipEvent.ATTESTATION_SUBNET,
+          chain.currentForkDigest,
+          GossipEncoding.SSZ_SNAPPY,
+          new Map([["subnet", "1"]])
+        ),
+        attestation
+      );
       // should not emit to 2 different subnets
       expect(spy.callCount).to.be.equal(1);
       expect(anotherSpy.callCount).to.be.equal(1);
@@ -77,7 +87,24 @@ describe("Network Gossip", function() {
       // should not unsubscribe wrong subnet
       gossip.unsubscribeFromAttestationSubnet(chain.currentForkDigest, "1", spy);
       const attestation = generateEmptyAttestation();
-      pubsub.emit(getGossipTopic(GossipEvent.ATTESTATION_SUBNET, chain.currentForkDigest, "ssz", new Map([["subnet", "1"]])), attestation);
+      pubsub.emit(
+        getGossipTopic(
+          GossipEvent.ATTESTATION_SUBNET,
+          chain.currentForkDigest,
+          GossipEncoding.SSZ_SNAPPY,
+          new Map([["subnet", "1"]])
+        ),
+        attestation
+      );
+      pubsub.emit(
+        getGossipTopic(
+          GossipEvent.ATTESTATION_SUBNET,
+          chain.currentForkDigest,
+          GossipEncoding.SSZ,
+          new Map([["subnet", "1"]])
+        ),
+        attestation
+      );
       expect(spy.callCount).to.be.equal(0);
     });
 
@@ -89,7 +116,15 @@ describe("Network Gossip", function() {
       // should not unsubscribe wrong subnet
       gossip.unsubscribeFromAttestationSubnet(chain.currentForkDigest, "2", spy2);
       const attestation = generateEmptyAttestation();
-      pubsub.emit(getGossipTopic(GossipEvent.ATTESTATION_SUBNET, chain.currentForkDigest, "ssz", new Map([["subnet", "1"]])), attestation);
+      pubsub.emit(
+        getGossipTopic(
+          GossipEvent.ATTESTATION_SUBNET,
+          chain.currentForkDigest,
+          GossipEncoding.SSZ_SNAPPY,
+          new Map([["subnet", "1"]])
+        ),
+        attestation
+      );
       expect(spy.callCount).to.be.equal(1);
       expect(spy2.callCount).to.be.equal(0);
     });
@@ -100,16 +135,17 @@ describe("Network Gossip", function() {
       gossip.subscribeToBlock(chain.currentForkDigest, spy);
       gossip.subscribeToBlock(chain.currentForkDigest, anotherSpy);
       const block = generateEmptySignedBlock();
-      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest, "ssz", new Map()), block);
+      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest), block);
       expect(spy.callCount).to.be.equal(1);
       expect(anotherSpy.callCount).to.be.equal(1);
       // unsubscribe spy
       gossip.unsubscribe(chain.currentForkDigest, GossipEvent.BLOCK, spy, new Map());
-      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest, "ssz", new Map()), block);
+      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest), block);
+      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest, GossipEncoding.SSZ), block);
       // still 1
       expect(spy.callCount).to.be.equal(1);
       // 1 more time => 2
-      expect(anotherSpy.callCount).to.be.equal(2);
+      expect(anotherSpy.callCount).to.be.equal(3);
     });
 
     // other topics are the same

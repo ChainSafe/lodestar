@@ -11,11 +11,12 @@ import {IGossipMessage} from "libp2p-gossipsub";
 import {utils} from "libp2p-pubsub";
 import {ILodestarGossipMessage, IGossipEvents} from "./interface";
 import {hash, toHexString} from "@chainsafe/ssz";
+import {GossipEncoding} from "./encoding";
 
 export function getGossipTopic(
   event: GossipEvent,
   forkDigestValue: ForkDigest,
-  encoding = "ssz",
+  encoding = GossipEncoding.SSZ_SNAPPY,
   params: Map<string, string> = new Map()): string {
   const forkDigestHash = toHexString(forkDigestValue).toLowerCase().substring(2);
   let topic = `/eth2/${forkDigestHash}/${event}/${encoding}`;
@@ -28,7 +29,7 @@ export function getGossipTopic(
 export function getAttestationSubnetTopic(
   attestation: Attestation,
   forkDigestValue: ForkDigest,
-  encoding = "ssz"): string {
+  encoding = GossipEncoding.SSZ_SNAPPY): string {
   return getGossipTopic(
     GossipEvent.ATTESTATION_SUBNET,
     forkDigestValue,
