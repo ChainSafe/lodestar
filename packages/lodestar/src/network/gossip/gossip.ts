@@ -192,8 +192,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   }
 
   private handleForkDigest = async (forkDigest: ForkDigest): Promise<void> => {
-    const forkDigestHash = toHexString(forkDigest).toLowerCase().substring(2);
-    this.logger.important(`Gossip: received new fork digest ${forkDigestHash}`);
+    this.logger.important(`Gossip: received new fork digest ${toHexString(forkDigest)}`);
     this.unregisterHandlers();
     this.registerHandlers(forkDigest);
   };

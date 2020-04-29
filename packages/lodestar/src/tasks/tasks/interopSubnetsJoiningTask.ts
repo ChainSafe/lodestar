@@ -50,8 +50,7 @@ export class InteropSubnetsJoiningTask implements ITask {
   }
 
   private handleForkDigest = async (forkDigest: ForkDigest): Promise<void> => {
-    const forkDigestHash = toHexString(forkDigest).toLowerCase().substring(2);
-    this.logger.important(`InteropSubnetsJoiningTask: received new fork digest ${forkDigestHash}`);
+    this.logger.important(`InteropSubnetsJoiningTask: received new fork digest ${toHexString(forkDigest)}`);
     await this.cleanUp();
     this.forkDigest = forkDigest;
     await this.run();

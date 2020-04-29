@@ -65,8 +65,7 @@ export class MetadataController {
   }
 
   private async handleForkDigest(forkDigest: ForkDigest): Promise<void> {
-    const forkDigestHash = toHexString(forkDigest).toLowerCase().substring(2);
-    this.logger.important(`Metadata: received new fork digest ${forkDigestHash}`);
+    this.logger.important(`Metadata: received new fork digest ${toHexString(forkDigest)}`);
     if (this.enr) {
       this.enr.set("eth2", Buffer.from(this.config.types.ENRForkID.serialize(await this.chain.getENRForkID())));
     }
