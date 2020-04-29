@@ -1,8 +1,9 @@
-import {BitVector} from "@chainsafe/ssz";
+import {BitVector, toHexString} from "@chainsafe/ssz";
 import {ENR} from "@chainsafe/discv5";
 import {Metadata, ForkDigest} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../chain";
+import {ILogger} from "@chainsafe/lodestar-utils";
 
 export interface IMetadataOpts {
   enr?: ENR;
@@ -12,6 +13,7 @@ export interface IMetadataOpts {
 export interface IMetadataModules {
   config: IBeaconConfig;
   chain: IBeaconChain;
+  logger: ILogger;
 }
 
 export class MetadataController {
@@ -20,11 +22,13 @@ export class MetadataController {
   private config: IBeaconConfig;
   private chain: IBeaconChain;
   private _metadata: Metadata;
+  private logger: ILogger;
 
   constructor(opts: IMetadataOpts, modules: IMetadataModules) {
     this.enr = opts.enr;
     this.config = modules.config;
     this.chain = modules.chain;
+    this.logger = modules.logger;
     this._metadata = opts.metadata || this.config.types.Metadata.defaultValue();
   }
 
@@ -60,8 +64,9 @@ export class MetadataController {
     return this._metadata;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private async handleForkDigest(forkDigest: ForkDigest): Promise<void> {
+    const forkDigestHash = toHexString(forkDigest).toLowerCase().substring(2);
+    this.logger.important(`Metadata: received new fork digest ${forkDigestHash}`);
     if (this.enr) {
       this.enr.set("eth2", Buffer.from(this.config.types.ENRForkID.serialize(await this.chain.getENRForkID())));
     }

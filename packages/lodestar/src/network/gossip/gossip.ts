@@ -36,6 +36,7 @@ import {
 import {IBeaconChain} from "../../chain";
 import {computeForkDigest, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {MetadataController} from "../metadata";
+import {toHexString} from "@chainsafe/ssz";
 
 
 export type GossipHandlerFn = (this: Gossip, obj: GossipObject ) => void;
@@ -66,17 +67,14 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   }
 
   public async start(): Promise<void> {
-    this.handlers = this.registerHandlers();
     await this.pubsub.start();
-    this.handlers.forEach((handler, topic) => {
-      this.pubsub.on(topic, handler);
-    });
+    this.registerHandlers(this.chain.currentForkDigest);
+    this.chain.on("forkDigest", this.handleForkDigest);
   }
 
   public async stop(): Promise<void> {
-    this.handlers.forEach((handler, topic) => {
-      this.pubsub.removeListener(topic, handler);
-    });
+    this.unregisterHandlers();
+    this.chain.removeListener("forkDigest", this.handleForkDigest);
     await this.pubsub.stop();
   }
 
@@ -193,8 +191,27 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     }
   }
 
-  private registerHandlers(): Map<string, GossipHandlerFn> {
-    const forkDigest = this.chain.currentForkDigest;
+  private handleForkDigest = async (forkDigest: ForkDigest): Promise<void> => {
+    const forkDigestHash = toHexString(forkDigest).toLowerCase().substring(2);
+    this.logger.important(`Gossip: received new fork digest ${forkDigestHash}`);
+    this.unregisterHandlers();
+    this.registerHandlers(forkDigest);
+  };
+
+  private registerHandlers(forkDigest: ForkDigest): void {
+    this.handlers = this.createHandlers(forkDigest);
+    this.handlers.forEach((handler, topic) => {
+      this.pubsub.on(topic, handler);
+    });
+  }
+
+  private unregisterHandlers(): void {
+    this.handlers.forEach((handler, topic) => {
+      this.pubsub.removeListener(topic, handler);
+    });
+  }
+
+  private createHandlers(forkDigest: ForkDigest): Map<string, GossipHandlerFn> {
     const handlers = new Map();
     handlers.set("gossipsub:heartbeat", this.emitGossipHeartbeat);
     handlers.set(getGossipTopic(GossipEvent.BLOCK, forkDigest, "ssz"),
