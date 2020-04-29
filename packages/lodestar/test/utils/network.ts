@@ -16,5 +16,5 @@ export async function createNode(
   const randomPort = Math.round(Math.random() * 40000) + 1000;
   const bindAddr = `/ip4/127.0.0.1/udp/${randomPort}`;
   const peerInfo = await initializePeerInfo(peerId, [multiaddr]);
-  return new NodejsNode({peerInfo, autoDial: true, discv5: {...defaults.discv5, enr, bindAddr}, peerDiscovery});
+  return new NodejsNode({peerInfo, autoDial: false, discv5: {...defaults.discv5, enr, bindAddr}, peerDiscovery});
 }
