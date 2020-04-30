@@ -1,5 +1,5 @@
 import {ArrayLike} from "@chainsafe/ssz";
-import {AggregateAndProof, Attestation, BeaconState, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {AggregateAndProof, Attestation, BeaconState, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -26,10 +26,11 @@ export class AggregateAndProofOperations extends OperationsModule<AggregateAndPr
     });
   }
 
-  public async getByAggregatorAndSlot(aggregatorIndex: ValidatorIndex, slot: Slot): Promise<Attestation[]> {
+  public async getByAggregatorAndEpoch(aggregatorIndex: ValidatorIndex, epoch: Epoch): Promise<Attestation[]> {
     const aggregates: AggregateAndProof[] = await this.getAll() || [];
     return aggregates
-      .filter((aggregate) => aggregate.aggregate.data.slot === slot && aggregate.aggregatorIndex === aggregatorIndex)
+      .filter(
+        (aggregate) => aggregate.aggregate.data.target.epoch === epoch && aggregate.aggregatorIndex === aggregatorIndex)
       .map((aggregate) => aggregate.aggregate);
   }
 
