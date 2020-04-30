@@ -74,7 +74,7 @@ describe("[network] rpc", () => {
     // send status from A to B, await status response
     rpcB.once("request", (peerInfo, method, id, body) => {
       setTimeout(() => {
-        rpcB.sendResponse(id, null, [body as Status]);
+        rpcB.sendResponse(id, null, body as Status);
       }, 100);
     });
     try {
@@ -93,7 +93,7 @@ describe("[network] rpc", () => {
     // send status from B to A, await status response
     rpcA.once("request", (peerInfo, method, id, body) => {
       setTimeout(() => {
-        rpcA.sendResponse(id, null, [body as Status]);
+        rpcA.sendResponse(id, null, body as Status);
       }, 100);
     });
     try {
@@ -127,7 +127,9 @@ describe("[network] rpc", () => {
       for (let i = requestBody.startSlot; i < + requestBody.startSlot + requestBody.count; i++) {
         blocks.push(generateBlockForSlot(i));
       }
-      rpcB.sendResponse(id, null, blocks);
+      rpcB.sendResponseStream(id, null, async function*() {
+        yield * blocks;
+      }());
     });
     try {
       const reqs: BeaconBlocksByRangeRequest[] = [];
@@ -157,7 +159,9 @@ describe("[network] rpc", () => {
   it("allow empty lists in streamed response", async function() {
     this.timeout(6000);
     rpcB.on("request", (peerInfo, method, id) => {
-      rpcB.sendResponse(id, null, []);
+      rpcB.sendResponseStream(id, null, async function* (): any {
+        if(id === "-1") yield null;
+      }());
     });
 
     const request: BeaconBlocksByRangeRequest = {

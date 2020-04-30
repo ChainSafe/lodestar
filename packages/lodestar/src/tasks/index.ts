@@ -43,12 +43,13 @@ export class TasksService implements IService {
     this.logger = modules.logger;
     this.sync = modules.sync;
     this.network = modules.network;
-    this.interopSubnetsTask = new InteropSubnetsJoiningTask(this.config, {chain: this.chain, network: this.network});
+    this.interopSubnetsTask = new InteropSubnetsJoiningTask(this.config,
+      {chain: this.chain, network: this.network, logger: this.logger});
   }
 
   public async start(): Promise<void> {
     this.chain.on("finalizedCheckpoint", this.handleFinalizedCheckpointChores);
-    await this.interopSubnetsTask.run();
+    await this.interopSubnetsTask.start();
   }
 
   public async stop(): Promise<void> {

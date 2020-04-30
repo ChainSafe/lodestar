@@ -112,7 +112,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     // send status response
     try {
       const status = await this.createStatus();
-      this.network.reqResp.sendResponse(id, null, [status]);
+      this.network.reqResp.sendResponse(id, null, status);
     } catch (e) {
       this.logger.error("Failed to create response status", e.message);
       this.network.reqResp.sendResponse(id, e, null);
@@ -142,7 +142,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
-    this.network.reqResp.sendResponse(id, null, [BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN)]);
+    this.network.reqResp.sendResponse(id, null, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
     // //  TODO: fix once we can check if response is sent
     const disconnect = this.network.disconnect.bind(this.network);
     setTimeout(async () => {
@@ -156,12 +156,12 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async onPing(peerInfo: PeerInfo, id: RequestId, request: Ping): Promise<void> {
-    this.network.reqResp.sendResponse(id, null, [this.network.metadata.seqNumber]);
+    this.network.reqResp.sendResponse(id, null, this.network.metadata.seqNumber);
     // TODO handle peer sequence number update
   }
 
   public async onMetadata(peerInfo: PeerInfo, id: RequestId): Promise<void> {
-    this.network.reqResp.sendResponse(id, null, [this.network.metadata.metadata]);
+    this.network.reqResp.sendResponse(id, null, this.network.metadata.metadata);
   }
 
   public async onBeaconBlocksByRange(

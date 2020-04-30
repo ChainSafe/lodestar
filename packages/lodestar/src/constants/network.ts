@@ -1,7 +1,6 @@
 // gossip
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Type} from "@chainsafe/ssz";
 
 export const ATTESTATION_SUBNET_COUNT = 64;
 export const ATTESTATION_PROPAGATION_SLOT_RANGE = 23;
@@ -20,7 +19,7 @@ export enum Method {
 }
 
 export enum MethodResponseType {
-  SingleRespone = "SingleRespone",
+  SingleResponse = "SingleResponse",
   NoResponse = "NoResponse",
   Stream = "Stream",
 }
@@ -29,23 +28,22 @@ export const Methods = {
   [Method.Status]: {
     requestSSZType: (config: IBeaconConfig) => config.types.Status,
     responseSSZType: (config: IBeaconConfig) => config.types.Status,
-    responseType: MethodResponseType.SingleRespone
+    responseType: MethodResponseType.SingleResponse
   },
   [Method.Goodbye]: {
     requestSSZType: (config: IBeaconConfig) => config.types.Goodbye,
     responseSSZType: (config: IBeaconConfig) => config.types.Goodbye,
-    responseType: MethodResponseType.NoResponse
+    responseType: MethodResponseType.SingleResponse
   },
   [Method.Ping]: {
     requestSSZType: (config: IBeaconConfig) => config.types.Ping,
     responseSSZType: (config: IBeaconConfig) => config.types.Ping,
-    responseType: MethodResponseType.SingleRespone
+    responseType: MethodResponseType.SingleResponse
   },
   [Method.Metadata]: {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    requestSSZType: (config: IBeaconConfig): Type<unknown> => undefined,
+    requestSSZType: (): null => null,
     responseSSZType: (config: IBeaconConfig) => config.types.Metadata,
-    responseType: MethodResponseType.SingleRespone
+    responseType: MethodResponseType.SingleResponse
   },
   [Method.BeaconBlocksByRange]: {
     requestSSZType: (config: IBeaconConfig) => config.types.BeaconBlocksByRangeRequest,
@@ -64,7 +62,8 @@ export enum ReqRespEncoding {
   SSZ_SNAPPY = "ssz_snappy",
 }
 
-export enum RpcErrorCode {
+export enum RpcResponseStatus {
+  SUCCESS = 0,
   ERR_INVALID_REQ = 1,
   ERR_RESP_TIMEOUT = 2,
 }

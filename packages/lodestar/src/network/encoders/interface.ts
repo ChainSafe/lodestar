@@ -1,6 +1,17 @@
-import {Type} from "@chainsafe/ssz";
+import {RpcResponseStatus} from "../../constants";
+import {ResponseBody} from "@chainsafe/lodestar-types";
 
-export interface IReqRespEncoder<T = Type<unknown>> {
-  encode(type: T, data: unknown): unknown;
-  decode(type: T, data: unknown): unknown;
+export interface IDecompressor {
+  uncompress(chunk: Buffer): Buffer|null;
+
+  reset(): void;
+}
+
+export interface IResponseChunk {
+
+  status: RpcResponseStatus;
+
+  //missing body if status !== 0
+  body?: ResponseBody;
+
 }

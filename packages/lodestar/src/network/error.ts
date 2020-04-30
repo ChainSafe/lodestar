@@ -1,12 +1,12 @@
-import {RpcErrorCode} from "../constants";
+import {RpcResponseStatus} from "../constants";
 
 /**
  * Error of network req/resp
  */
 
 export class RpcError extends Error {
-  public status: RpcErrorCode;
-  constructor(status: RpcErrorCode, message?: string) {
+  public status: RpcResponseStatus;
+  constructor(status: RpcResponseStatus, message?: string) {
     super(message);
     this.status = status;
   }

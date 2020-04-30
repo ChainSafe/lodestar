@@ -164,8 +164,10 @@ describe("[sync] rpc", function () {
     });
     await new Promise((resolve) => setTimeout(resolve, 200));
     const goodbyeEvent = new Promise((resolve) => netB.reqResp.once("request", (_, method) => resolve(method)));
-    await rpcA.stop();
-    const goodbye = await goodbyeEvent;
+    const [goodbye] = await Promise.all([
+      goodbyeEvent,
+      rpcA.stop()
+    ]);
     expect(goodbye).to.equal(Method.Goodbye);
   });
 

@@ -6,45 +6,69 @@ import {
   ProposerSlashing,
   SignedAggregateAndProof,
   SignedBeaconBlock,
-  SignedVoluntaryExit
+  SignedVoluntaryExit,
+  ForkDigest
 } from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../chain";
 import {OpPool} from "../../opPool";
+import {toHexString} from "@chainsafe/ssz";
+import {ILogger} from "@chainsafe/lodestar-utils";
 
 export class BeaconGossipHandler implements IGossipHandler {
-    
+
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
   private readonly opPool: OpPool;
+  private readonly logger: ILogger;
+  private currentForkDigest: ForkDigest;
 
-  constructor(chain: IBeaconChain, network: INetwork, opPool: OpPool) {
+  constructor(chain: IBeaconChain, network: INetwork, opPool: OpPool, logger: ILogger) {
     this.chain = chain;
     this.network = network;
     this.opPool = opPool;
+    this.logger = logger;
   }
 
   public async start(): Promise<void> {
-    this.network.gossip.subscribeToBlock(this.chain.currentForkDigest, this.onBlock);
-    this.network.gossip.subscribeToAggregateAndProof(this.chain.currentForkDigest, this.onAggregatedAttestation);
-    this.network.gossip.subscribeToAttesterSlashing(this.chain.currentForkDigest, this.onAttesterSlashing);
-    this.network.gossip.subscribeToProposerSlashing(this.chain.currentForkDigest, this.onProposerSlashing);
-    this.network.gossip.subscribeToVoluntaryExit(this.chain.currentForkDigest, this.onVoluntaryExit);
+    this.currentForkDigest = this.chain.currentForkDigest;
+    this.subscribe(this.currentForkDigest);
+    this.chain.on("forkDigest", this.handleForkDigest);
   }
 
   public async stop(): Promise<void> {
-    this.network.gossip.unsubscribe(this.chain.currentForkDigest, GossipEvent.BLOCK, this.onBlock);
-    this.network.gossip.unsubscribe(
-      this.chain.currentForkDigest, GossipEvent.AGGREGATE_AND_PROOF, this.onAggregatedAttestation
-    );
-    this.network.gossip.unsubscribe(
-      this.chain.currentForkDigest, GossipEvent.ATTESTER_SLASHING, this.onAttesterSlashing
-    );
-    this.network.gossip.unsubscribe(
-      this.chain.currentForkDigest, GossipEvent.PROPOSER_SLASHING, this.onProposerSlashing
-    );
-    this.network.gossip.unsubscribe(this.chain.currentForkDigest, GossipEvent.VOLUNTARY_EXIT, this.onVoluntaryExit);
+    this.unsubscribe(this.currentForkDigest);
+    this.chain.removeListener("forkDigest", this.handleForkDigest);
   }
-  
+
+  private handleForkDigest = async (forkDigest: ForkDigest): Promise<void> => {
+    this.logger.important(`Gossip handler: received new fork digest ${toHexString(forkDigest)}`);
+    this.unsubscribe(this.currentForkDigest);
+    this.currentForkDigest = forkDigest;
+    this.subscribe(forkDigest);
+  };
+
+  private subscribe = (forkDigest: ForkDigest): void => {
+    this.network.gossip.subscribeToBlock(forkDigest, this.onBlock);
+    this.network.gossip.subscribeToAggregateAndProof(forkDigest, this.onAggregatedAttestation);
+    this.network.gossip.subscribeToAttesterSlashing(forkDigest, this.onAttesterSlashing);
+    this.network.gossip.subscribeToProposerSlashing(forkDigest, this.onProposerSlashing);
+    this.network.gossip.subscribeToVoluntaryExit(forkDigest, this.onVoluntaryExit);
+  };
+
+  private unsubscribe = (forkDigest: ForkDigest): void => {
+    this.network.gossip.unsubscribe(forkDigest, GossipEvent.BLOCK, this.onBlock);
+    this.network.gossip.unsubscribe(
+      forkDigest, GossipEvent.AGGREGATE_AND_PROOF, this.onAggregatedAttestation
+    );
+    this.network.gossip.unsubscribe(
+      forkDigest, GossipEvent.ATTESTER_SLASHING, this.onAttesterSlashing
+    );
+    this.network.gossip.unsubscribe(
+      forkDigest, GossipEvent.PROPOSER_SLASHING, this.onProposerSlashing
+    );
+    this.network.gossip.unsubscribe(forkDigest, GossipEvent.VOLUNTARY_EXIT, this.onVoluntaryExit);
+  };
+
   private onBlock = async (block: SignedBeaconBlock): Promise<void> => {
     await this.chain.receiveBlock(block);
   };
