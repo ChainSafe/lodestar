@@ -4,8 +4,8 @@ import {Number64, Uint16, Uint64, ForkDigest, ENRForkID} from "@chainsafe/lodest
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {BeaconState} from "@chainsafe/lodestar-types";
-import { computeForkDigest } from "@chainsafe/lodestar-beacon-state-transition";
-import { IBeaconConfig } from "@chainsafe/lodestar-config";
+import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export interface IMockChainParams {
   genesisTime: Number64;
