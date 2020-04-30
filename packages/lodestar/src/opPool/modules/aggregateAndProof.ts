@@ -1,15 +1,16 @@
 import {ArrayLike} from "@chainsafe/ssz";
 import {AggregateAndProof, Attestation, BeaconState, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {OperationsModule} from "./abstract";
-import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {BulkRepository} from "../../db/api/beacon/repository";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/lodestar-beacon-state-transition";
+
+import {OperationsModule} from "./abstract";
+import {Repository} from "../../db/api/beacon/repositories";
 
 export class AggregateAndProofOperations extends OperationsModule<AggregateAndProof> {
 
   protected config: IBeaconConfig;
 
-  public constructor(db: BulkRepository<AggregateAndProof>, {config}: {config: IBeaconConfig}) {
+  public constructor(db: Repository<Uint8Array, AggregateAndProof>, {config}: {config: IBeaconConfig}) {
     super(db);
     this.config = config;
   }

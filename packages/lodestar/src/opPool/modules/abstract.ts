@@ -1,11 +1,11 @@
 import {ArrayLike} from "@chainsafe/ssz";
-import {BulkRepository} from "../../db/api/beacon/repository";
+import {Repository, Id} from "../../db/api/beacon/repositories";
 
 export abstract class OperationsModule<T> {
 
-  protected readonly db: BulkRepository<T>;
+  protected readonly db: Repository<Id, T>;
 
-  public constructor(db: BulkRepository<T>) {
+  public constructor(db: Repository<Id, T>) {
     this.db = db;
   }
 
@@ -14,11 +14,11 @@ export abstract class OperationsModule<T> {
   }
 
   public async getAll(): Promise<T[]> {
-    return await this.db.getAll();
+    return await this.db.values();
   }
 
   public async remove(values: ArrayLike<T>): Promise<void> {
-    await this.db.deleteManyByValue(values);
+    await this.db.batchRemove(values);
   }
 
 }

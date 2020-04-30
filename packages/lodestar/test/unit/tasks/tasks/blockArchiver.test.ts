@@ -8,18 +8,19 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {expect} from "chai";
 import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import { StubbedBeaconDb } from "../../../utils/stub";
 
 describe("block archiver task", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let dbStub: any, loggerStub: any;
+  let dbStub: StubbedBeaconDb, loggerStub: any;
 
   beforeEach(function () {
     dbStub = {
       block: sandbox.createStubInstance(BlockRepository),
       blockArchive: sandbox.createStubInstance(BlockArchiveRepository)
-    };
+    } as StubbedBeaconDb;
     loggerStub = sandbox.createStubInstance(WinstonLogger);
   });
 
@@ -34,7 +35,7 @@ describe("block archiver task", function () {
         root: Buffer.alloc(32)
       }
     );
-    dbStub.block.getAll.resolves([
+    dbStub.block.values.resolves([
       generateEmptySignedBlock(),
       generateEmptySignedBlock(),
       {
@@ -47,10 +48,10 @@ describe("block archiver task", function () {
     ]);
     await archiverTask.run();
     expect(
-      dbStub.blockArchive.addMany.calledOnceWith(sinon.match((criteria) => criteria.length === 2))
+      dbStub.blockArchive.batchAdd.calledOnceWith(sinon.match((criteria) => criteria.length === 2))
     ).to.be.true;
     expect(
-      dbStub.block.deleteManyByValue.calledOnceWith(sinon.match((criteria) => criteria.length === 2))
+      dbStub.block.batchRemove.calledOnceWith(sinon.match((criteria) => criteria.length === 2))
     ).to.be.true;
   });
 

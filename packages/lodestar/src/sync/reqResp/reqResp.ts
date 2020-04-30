@@ -169,11 +169,11 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     request: BeaconBlocksByRangeRequest
   ): Promise<void> {
     try {
-      const archiveBlocksStream = this.db.blockArchive.getAllBetweenStream(
-        request.startSlot - 1,
-        request.startSlot + request.count,
-        request.step
-      );
+      const archiveBlocksStream = this.db.blockArchive.valuesStream({
+        gte: request.startSlot,
+        lt: request.startSlot + request.count,
+        step: request.step,
+      });
       const responseStream = this.injectRecentBlocks(archiveBlocksStream, this.db.block, request);
       this.network.reqResp.sendResponseStream(id, null, responseStream);
     } catch (e) {
@@ -187,11 +187,10 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   ): Promise<void> {
     try {
       const getBlock = this.db.block.get.bind(this.db.block);
-      const getBlockArchive = this.db.blockArchive.get.bind(this.db.blockArchive);
       const blockGenerator = async function* () {
         for (const blockRoot of request) {
           const root = blockRoot.valueOf() as Uint8Array;
-          const block = await getBlock(root) || await getBlockArchive(root);
+          const block = await getBlock(root);
           if (block) {
             yield block;
           }
@@ -256,7 +255,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         i <= (request.startSlot + request.count) && count < request.count;
         i += request.step
       ) {
-        const block = await blockDb.getBlockBySlot(i);
+        const block = await blockDb.getBySlot(i);
         if(block) {
           yield block;
         }

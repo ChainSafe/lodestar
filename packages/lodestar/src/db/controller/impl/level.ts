@@ -1,11 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * @module db/controller/impl
  */
 
 import {LevelUp} from "levelup";
-import {IDatabaseController, ISearchOptions} from "../interface";
-import {EventEmitter} from "events";
+import {IDatabaseController, IFilterOptions, IKeyValue} from "../interface";
 //@ts-ignore
 import level from "level";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -19,7 +17,7 @@ export interface ILevelDBOptions extends IDatabaseOptions {
 /**
  * The LevelDB implementation of DB
  */
-export class LevelDbController extends EventEmitter implements IDatabaseController {
+export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
 
   private db: LevelUp;
 
@@ -28,7 +26,6 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
   private logger: ILogger;
 
   public constructor(opts: ILevelDBOptions, {logger}: {logger: ILogger}) {
-    super();
     this.opts = opts;
     this.logger = logger;
     this.db =
@@ -49,7 +46,7 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
     await this.db.close();
   }
 
-  public async get(key: any): Promise<Buffer | null> {
+  public async get(key: Buffer): Promise<Buffer | null> {
     try {
       return await this.db.get(key);
     } catch (e) {
@@ -60,40 +57,31 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
     }
   }
 
-  public put(key: any, value: any): Promise<any> {
-    return this.db.put(key, value);
+  public async put(key: Buffer, value: Buffer): Promise<void> {
+    await this.db.put(key, value);
   }
 
-  public async batchPut(items: { key: any; value: any }[]): Promise<any> {
+  public async delete(key: Buffer): Promise<void> {
+    await this.db.del(key);
+  }
+
+  public async batchPut(items: IKeyValue<Buffer, Buffer>[]): Promise<void> {
     const batch = this.db.batch();
     items.forEach(item => batch.put(item.key, item.value));
     await batch.write();
   }
 
-  public async batchDelete(items: any[]): Promise<any> {
+  public async batchDelete(keys: Buffer[]): Promise<void> {
     const batch = this.db.batch();
-    items.forEach(item => batch.del(item));
+    keys.forEach(key => batch.del(key));
     await batch.write();
   }
 
-  public async delete(key: any): Promise<void> {
-    await this.db.del(key);
-  }
-
-  public async search(opts: ISearchOptions): Promise<any> {
-    const searchData: any[] = [];
-    for await (const data of this.searchStream(opts)) {
-      searchData.push(data);
-    }
-    return searchData;
-  }
-
-  public searchStream(opts: ISearchOptions): Pushable<any> {
-    const source = pushable();
-    this.db.createValueStream({
-      gt: opts.gt,
-      lt: opts.lt,
-    }).on("data", function (data) {
+  public keysStream(opts?: IFilterOptions<Buffer>): Pushable<Buffer> {
+    const source: Pushable<Buffer> = pushable();
+    this.db.createKeyStream(
+      {...opts}
+    ).on("data", function (data) {
       source.push(data);
     }).on("close", function () {
       source.end();
@@ -101,5 +89,57 @@ export class LevelDbController extends EventEmitter implements IDatabaseControll
       source.end();
     });
     return source;
+  }
+
+  public async keys(opts?: IFilterOptions<Buffer>): Promise<Buffer[]> {
+    const keys: Buffer[] = [];
+    for await (const key of this.keysStream(opts)) {
+      keys.push(key);
+    }
+    return keys;
+  }
+
+  public valuesStream(opts?: IFilterOptions<Buffer>): Pushable<Buffer> {
+    const source: Pushable<Buffer> = pushable();
+    this.db.createValueStream(
+      {...opts}
+    ).on("data", function (data) {
+      source.push(data);
+    }).on("close", function () {
+      source.end();
+    }).on("end", function () {
+      source.end();
+    });
+    return source;
+  }
+
+  public async values(opts?: IFilterOptions<Buffer>): Promise<Buffer[]> {
+    const values: Buffer[] = [];
+    for await (const value of this.valuesStream(opts)) {
+      values.push(value);
+    }
+    return values;
+  }
+
+  public entriesStream(opts?: IFilterOptions<Buffer>): Pushable<IKeyValue<Buffer, Buffer>> {
+    const source: Pushable<IKeyValue<Buffer, Buffer>> = pushable();
+    this.db.createReadStream(
+      {...opts}
+    ).on("data", function (data) {
+      source.push(data);
+    }).on("close", function () {
+      source.end();
+    }).on("end", function () {
+      source.end();
+    });
+    return source;
+  }
+
+  public async entries(opts?: IFilterOptions<Buffer>): Promise<IKeyValue<Buffer, Buffer>[]> {
+    const entries: IKeyValue<Buffer, Buffer>[] = [];
+    for await (const entry of this.entriesStream(opts)) {
+      entries.push(entry);
+    }
+    return entries;
   }
 }

@@ -9,6 +9,7 @@ import {generateEmptySignedBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";
 import {beforeEach, describe, it} from "mocha";
+import { StubbedBeaconDb } from "../../../utils/stub";
 
 chai.use(chaiAsPromised);
 
@@ -16,14 +17,14 @@ describe("beacon db api", function() {
 
   const sandbox = sinon.createSandbox();
 
-  let db: any, controller: any;
+  let db: StubbedBeaconDb, controller: any;
 
   beforeEach(function () {
     controller = sandbox.createStubInstance<LevelDbController>(LevelDbController);
-    db = new BeaconDb({controller, config});
-    db.block = sandbox.createStubInstance(BlockRepository);
-    db.state = sandbox.createStubInstance(StateRepository);
-    db.chain = sandbox.createStubInstance(ChainRepository);
+    db = new BeaconDb({controller, config}) as unknown as StubbedBeaconDb;
+    db.block = sandbox.createStubInstance(BlockRepository) as any;
+    db.state = sandbox.createStubInstance(StateRepository) as any;
+    db.chain = sandbox.createStubInstance(ChainRepository) as any;
   });
 
   it("should store chain head and update refs", async function () {
@@ -31,8 +32,8 @@ describe("beacon db api", function() {
     const state = generateState();
     await db.storeChainHead(block, state);
     expect(db.block.add.withArgs(block).calledOnce).to.be.true;
-    expect(db.state.set.withArgs(block.message.stateRoot, state).calledOnce).to.be.true;
-    expect(db.chain.setLatestStateRoot.withArgs(block.message.stateRoot).calledOnce).to.be.true;
+    expect(db.state.put.withArgs(block.message.stateRoot as Uint8Array, state).calledOnce).to.be.true;
+    expect(db.chain.setLatestStateRoot.withArgs(block.message.stateRoot as Uint8Array).calledOnce).to.be.true;
     expect(db.chain.setChainHeadSlot.withArgs(block.message.slot).calledOnce).to.be.true;
   });
 

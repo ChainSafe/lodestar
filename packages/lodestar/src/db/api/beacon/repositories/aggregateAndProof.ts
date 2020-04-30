@@ -1,15 +1,19 @@
 import {AggregateAndProof} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
-import {BulkRepository} from "../repository";
 import {IDatabaseController} from "../../../controller";
-import {Bucket} from "../../../schema";
+import {Bucket} from "../../schema";
+import {Repository} from "./abstract";
 
-export class AggregateAndProofRepository extends BulkRepository<AggregateAndProof> {
+/**
+ * AggregateAndProof indexed by root
+ */
+export class AggregateAndProofRepository extends Repository<Uint8Array, AggregateAndProof> {
 
   public constructor(
     config: IBeaconConfig,
-    db: IDatabaseController) {
+    db: IDatabaseController<Buffer, Buffer>
+  ) {
     super(config, db, Bucket.aggregateAndProof, config.types.AggregateAndProof);
   }
 }

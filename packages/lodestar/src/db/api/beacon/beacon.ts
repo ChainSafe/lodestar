@@ -9,6 +9,7 @@ import {
   AggregateAndProofRepository,
   AttestationRepository,
   AttesterSlashingRepository,
+  BadBlockRepository,
   BlockRepository,
   BlockArchiveRepository,
   ChainRepository,
@@ -24,6 +25,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   public chain: ChainRepository;
 
   public state: StateRepository;
+
+  public badBlock: BadBlockRepository;
 
   public block: BlockRepository;
 
@@ -47,6 +50,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     super(opts);
     this.chain = new ChainRepository(this.config, this.db);
     this.state = new StateRepository(this.config, this.db, this.chain);
+    this.badBlock = new BadBlockRepository(this.config, this.db);
     this.block = new BlockRepository(this.config, this.db, this.chain);
     this.blockArchive = new BlockArchiveRepository(this.config, this.db);
     this.attestation = new AttestationRepository(this.config, this.db);
@@ -64,7 +68,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   ): Promise<void> {
     await Promise.all([
       this.block.add(signedBlock),
-      this.state.set(signedBlock.message.stateRoot.valueOf() as Uint8Array, state),
+      this.state.put(signedBlock.message.stateRoot.valueOf() as Uint8Array, state),
     ]);
     const slot = signedBlock.message.slot;
     await Promise.all([

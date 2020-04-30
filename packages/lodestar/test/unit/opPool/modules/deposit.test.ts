@@ -25,31 +25,31 @@ describe("opPool - deposits", function () {
     sandbox.restore();
   });
 
-  it('should receive', async function () {
+  it("should receive", async function () {
     const data = generateDepositData();
 
-    dbStub.depositData.set.resolves();
+    dbStub.depositData.put.resolves();
     await service.receive(0, data);
-    expect(dbStub.depositData.set.calledOnce).to.be.true;
+    expect(dbStub.depositData.put.calledOnce).to.be.true;
   });
 
 
-  it('should return all', async function () {
+  it("should return all", async function () {
     const data = [generateDepositData()];
 
-    dbStub.depositData.getAll.resolves(data);
+    dbStub.depositData.values.resolves(data);
     let result = await service.getAll();
-    expect(dbStub.depositData.getAll.calledOnce).to.be.true;
+    expect(dbStub.depositData.values.calledOnce).to.be.true;
     expect(result).to.be.deep.equal(data);
   });
 
-  it('should return range', async function () {
-    dbStub.depositData.getAllBetween.resolves([]);
+  it("should return range", async function () {
+    dbStub.depositData.values.resolves([]);
     await service.getAllBetween(0, 1);
-    expect(dbStub.depositData.getAllBetween.calledOnce).to.be.true;
+    expect(dbStub.depositData.values.calledOnce).to.be.true;
   });
 
-  it('should remove', async function () {
+  it("should remove", async function () {
     dbStub.depositData.deleteOld.resolves();
     await service.removeOld(3);
     expect(dbStub.depositData.deleteOld.withArgs(3).calledOnce).to.be.true;

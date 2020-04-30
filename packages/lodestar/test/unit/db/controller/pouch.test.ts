@@ -1,81 +1,78 @@
 import {assert, expect} from "chai";
 import {PouchDbController} from "../../../../src/db/controller";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 describe("PouchDB controller", () => {
   const db = new PouchDbController({name: 'testDb'});
-  let logger = new WinstonLogger();
 
   before(async () => {
-    logger.silent = true;
     await db.start();
   });
 
   after(async () => {
     await db.stop();
-    logger.silent = false;
   });
 
-  it('test put', async () => {
-    await db.put('test', 'some value');
-    assert(true);
+  it("test put/get/delete", async () => {
+    const key = Buffer.from("test");
+    const value = Buffer.from("some value");
+    await db.put(key, value);
+    expect(await db.get(key)).to.deep.equal(value);
+    await db.delete(key);
+    expect(await db.get(key)).to.be.null;
   });
 
-  it('test get', async () => {
-    await db.put('test1', 'some value');
-    const value = await db.get('test1');
-    expect(value.toString('utf8')).to.be.equal('some value');
-  });
-
-  it('test batchPut', async () => {
+  it("test batchPut", async () => {
+    const k1 = Buffer.from("test1");
+    const k2 = Buffer.from("test2");
     await db.batchPut([
       {
-        key: 'test3',
-        value: 'value'
+        key: k1,
+        value: Buffer.from("value")
       },
       {
-        key: 'test3',
-        value: 'value'
-      }
+        key: k2,
+        value: Buffer.from("value")
+      },
     ]);
-    expect(true);
+    expect(await db.get(k1)).to.not.be.null;
+    expect(await db.get(k2)).to.not.be.null;
   });
 
-  it('test search', async () => {
+  it("test batch delete", async () => {
+    const k1 = Buffer.from("test1");
+    const k2 = Buffer.from("test2");
     await db.batchPut([
       {
-        key: 'search1',
-        value: 'value'
+        key: k1,
+        value: Buffer.from("value")
       },
       {
-        key: 'search2',
-        value: 'value'
-      }
+        key: k2,
+        value: Buffer.from("value")
+      },
     ]);
-    const result = await db.search({
-      gt: 'search0',
-      lt: 'search99'
-    });
+    expect((await db.entries()).length).to.be.equal(2);
+    await db.batchDelete([k1, k2]);
+    //await db.batchDelete([k1, k2]);
+
+    expect((await db.entries()).length).to.be.equal(0);
+  });
+
+  it("test entries", async () => {
+    const k1 = Buffer.from("test1");
+    const k2 = Buffer.from("test2");
+    await db.batchPut([
+      {
+        key: k1,
+        value: Buffer.from("value")
+      },
+      {
+        key: k2,
+        value: Buffer.from("value")
+      },
+    ]);
+    const result = await db.entries();
     expect(result.length).to.be.equal(2);
-  });
-
-  it('test batch delete', async () => {
-    await db.batchPut([
-      {
-        key: 'search1',
-        value: 'value'
-      },
-      {
-        key: 'search2',
-        value: 'value'
-      }
-    ]);
-    const result = await db.search({
-      gt: 'search0',
-      lt: 'search99'
-    });
-    expect(result.length).to.be.equal(2);
-    await db.batchDelete(["search1", "search2"]);
   });
 
 });

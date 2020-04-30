@@ -140,7 +140,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     );
     // Determine whether a genesis state already in
     // the database matches what we were provided
-    const storedGenesisBlock = await this.db.block.getBlockBySlot(GENESIS_SLOT);
+    const storedGenesisBlock = await this.db.block.getBySlot(GENESIS_SLOT);
     if (storedGenesisBlock !== null &&
       !this.config.types.Root.equals(genesisBlock.stateRoot, storedGenesisBlock.message.stateRoot)) {
       throw new Error("A genesis state with different configuration was detected! Please clean the database.");
@@ -151,7 +151,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.db.chain.setFinalizedBlockRoot(blockRoot),
       this.db.chain.setJustifiedStateRoot(stateRoot),
       this.db.chain.setFinalizedStateRoot(stateRoot),
-      this.db.depositDataRootList.set(genesisState.eth1DepositIndex, depositDataRootList)
+      this.db.depositDataRootList.put(genesisState.eth1DepositIndex, depositDataRootList)
     ]);
     const justifiedFinalizedCheckpoint = {
       root: blockRoot,
